@@ -10875,3 +10875,24 @@ prove-pose run, and NOT needed concurrently NOW. The v7.5 optimal-form audit (#3
 EXACTLY the priority: pose banked → d_seg is everything → is v7.5 the optimal-form d_seg config? Pointer
 0.19110 UNMOVED (S 0.566 > 0.19110 entirely on d_seg; no move until a converged-d_seg witness). verdict_scope:
 instance — SHIPPABLE on THIS R1 ckpt via store-nothing; the d_seg blocker is separate + open.
+
+## FEED-v75actuate (2026-07-08) — BINDING operator directive: turn ON the horizon fix + ALL optimal, ALL via DSL, recorded in triality (fires on #367 audit-land)
+Operator: "The horizon fix and all optimal need to be turned on. And all through DSL and recorded in
+triality." This is the ACTUATION charter for v7.5 (sequel to the #367 3-agent optimal-form audit). BINDING
+requirements: (1) HORIZON FIX ON — temporal-screw-consistency (P0 force #360, built; removes the inter-
+frame Undriv/horizon JITTER that clean-canonical measured at floor 0.0016 vs live 0.082) + 0-byte
+horizon-weighted margin (#169 surviving lever) + sky=rotation-only stratification. (2) ALL OPTIMAL ON —
+the #367 audit's ranked measured-EV d_seg levers in their OPTIMAL COMBINATION (NOT the naive union):
+turn on every best-measured lever, in the synergy-correct order (basis-match BEFORE capacity), with the
+MEASURED-HARMFUL antagonists STAYING OFF/FIXED (l7 d_seg-defect, fixed-β hosc divergence → anneal/step,
+lane-prior-phi1 replace=NO-OP → paint, isotropic-capacity-before-basis-match). (3) DYNAMIC CURRICULUM ON
+— anti-hardcoded-epochs: event-triggered stage hand-offs that actually fire + costate-controller
+actuation (per #367-B's actuation-safety split) replacing --tau-start-epoch/--muon-start-epoch. (4) R1
+warm-start technique (per #367-C: descend from a converged-d_seg basin). (5) ALL VIA DSL — every lever a
+`Lever` factory / WitnessProgram in `tac.witness_dsl` (never-invent-flags; config-orphan discipline), NOT
+hand-added trainer flags. (6) RECORDED IN TRIALITY — DSL leg (the WitnessProgram) + DAG FEED + canonical
+equations, all three consistent. SEQUENCE: #367 audits land → synthesize the optimal-form set → BUILD the
+v7.5 optimal WitnessProgram (all-on, horizon fix, dynamic curriculum, R1 warm-start) via DSL + triality →
+seal → launch on operator-GO (launch stays held; the CONFIG actuation is GO'd here). NOT actuating BEFORE
+the audit (optimal-combination requires the audit's synergy/antagonism verdict — blind turn-on risks the
+measured-harmful levers). Pointer 0.19110 UNMOVED.
