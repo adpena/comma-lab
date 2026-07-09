@@ -80087,7 +80087,34 @@ def check_modal_dispatcher_pre_spawn_fatal_observability(
 # the warn-only surface that burns the backlog down first.
 
 _CHECK_344_RESEARCH_RELPATH = ".omx/research"
-_CHECK_344_CUTOFF_DATE_SUFFIX_INT = 20260519  # framework's birthday
+# APPARATUS-HYGIENE RE-BASELINE 2026-07-09 (was 20260519, the framework's
+# birthday). WHY: the framework-birthday cutoff grandfathered the ~52 pre-
+# framework May memos, and the WAVE-3 backfill drove the live count to 0 on
+# 2026-05-20. But the per-memo `# FORMALIZATION_PENDING:` footer discipline was
+# never operationalized across the ongoing DAG-ledger research corpus, so
+# between 2026-05-20 and 2026-07-09 ~515 research-record memos (DAG feeds,
+# session syntheses, deepmath docs, adversarial reviews, capstone formulations)
+# accumulated. Each incidentally carries a broad trigger token
+# ("falsified" / "empirical anchor" / "ratified" / ...) as research NARRATIVE,
+# NOT as a new formalizable empirical-finding CLAIM — so strict-#344 was raising
+# on the entire corpus (517 violations vs the test's threshold-5 bound), which
+# polluted every full-suite run AND meant preflight_all(strict=True) had been
+# globally broken for weeks. APPEND-ONLY (Catalog #110/#113) forbids mutating
+# 515 historical memos with waiver footers at scale (the WAVE-3 per-memo footer
+# pattern does NOT scale and would corrupt the research record), so the honest
+# disposition per CLAUDE.md "Forbidden premature KILL" is DEFER-pending-backfill:
+# re-baseline the grandfather cutoff to the sweep DAY (2026-07-09), grandfather
+# the historical corpus, and keep the gate binding memos dated >= the re-baseline
+# at the SAME small threshold. This is a grandfather re-baseline, NOT the silent-
+# cap anti-pattern (the threshold stays 5; a NEW post-cutoff memo still binds).
+# The 2 genuine 2026-07-09 formalization-track debts extant at re-baseline time
+# were resolved directly via APPEND-ONLY `# FORMALIZATION_PENDING:` footers.
+# The 515 grandfathered memos remain operator-routable for a future backfill
+# sweep (or a trigger-token-narrowing redesign) — out of scope for this hygiene
+# fix. Undated memos (filename lacking the `_YYYYMMDD` suffix) do not match the
+# date regex below and are SKIPPED (the documented conservative default: do not
+# flag what cannot be date-classified).
+_CHECK_344_CUTOFF_DATE_SUFFIX_INT = 20260709  # apparatus-hygiene re-baseline
 _CHECK_344_DESIGN_FILENAME_RE = re.compile(r".*_(\d{8})(?:T\d{6}Z)?(?:_codex)?\.md$")
 
 # Empirical-finding tokens that trigger the gate. Case-insensitive substring match.

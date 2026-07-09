@@ -178,3 +178,6 @@ Its "sharpness" is relative-to-Fourier on smooth PDE fields and does NOT cure ou
 erasure (same bilinear class as our R). **VERDICT: AFFIRMATION-only** — it validates that we are in the right
 (advection) family and that advecting by an *analytic ξ* (not a learned δ) is the rate-optimal choice; it
 does not open a byte-closed-exact-row path to sub-0.19. Pointer 0.19110 UNMOVED.
+
+<!-- APPEND-ONLY apparatus-hygiene footer (Catalog #344 re-baseline sweep 2026-07-09, per Catalog #110/#113 HISTORICAL_PROVENANCE; body unchanged). -->
+# FORMALIZATION_PENDING: AFFIRMATION-only deep-dive — no NEW registrable canonical equation until the analytic-xi advection warp is MEASURED byte-closed on n600; the incidental empirical-narrative tokens are review NARRATIVE, not a new formalizable finding claim.

@@ -368,3 +368,6 @@ pose-finish stays TERMINAL, actuator deferred to the run-2 A/B); (6) triality le
 actuator = run-2 lever); (7) build-timing: T0+T1 live as OBSERVERS on the v7.5 launch, offline-against-
 checkpoints retained as backup + run-2 A/B substrate. The Jacobian conditioning is the INSTRUMENT; the
 earlier-engage optimality is a HYPOTHESIS the run-2 resume-A/B MEASURES.
+
+<!-- APPEND-ONLY apparatus-hygiene footer (Catalog #344 re-baseline sweep 2026-07-09, per Catalog #110/#113 HISTORICAL_PROVENANCE; body unchanged). -->
+# FORMALIZATION_PENDING: proposes canonical equation pose_jacobian_basin_conditioning_v1 (sigma_min(J_xi) coherence sensor + basin trigger) but it is NOT YET registered in tac.canonical_equations — registration deferred until the T1 sigma_min authority telemetry lands its first MEASURED n600 anchor.

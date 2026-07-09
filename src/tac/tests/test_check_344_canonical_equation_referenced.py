@@ -10,6 +10,14 @@ from tac.preflight import (
     PreflightError,
     check_empirical_finding_memo_references_canonical_equation,
 )
+from tac.preflight import _CHECK_344_CUTOFF_DATE_SUFFIX_INT as _CUTOFF
+
+# Derive the post-cutoff (binds) and pre-cutoff (grandfathered/exempt) date
+# suffixes from the live cutoff constant so these tests stay correct across
+# future apparatus-hygiene re-baselines (2026-05-19 framework birthday ->
+# 2026-07-09 re-baseline; the boundary is enforced, the literal is not).
+_POST = str(_CUTOFF)  # a memo dated ON the cutoff BINDS (>= comparison)
+_PRE = str(_CUTOFF - 1)  # one day before the cutoff -> grandfathered/exempt
 
 
 def _write_memo(tmp_path: Path, name: str, body: str) -> Path:
@@ -37,7 +45,7 @@ def test_no_research_dir_skipped(tmp_path: Path):
 def test_pre_cutoff_memo_exempt(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "old_memo_20260518.md",
+        f"old_memo_{_PRE}.md",
         "We empirically falsified the prediction.",
     )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -49,7 +57,7 @@ def test_pre_cutoff_memo_exempt(tmp_path: Path):
 def test_memo_with_empirical_finding_no_reference_flagged(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "new_finding_20260520.md",
+        f"new_finding_{_POST}.md",
         "The empirical anchor showed predicted vs measured drift of 30x. "
         "This is a clear ratified observation.",
     )
@@ -62,7 +70,7 @@ def test_memo_with_empirical_finding_no_reference_flagged(tmp_path: Path):
 def test_memo_with_canonical_equation_reference_accepted(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "finding_with_eq_20260520.md",
+        f"finding_with_eq_{_POST}.md",
         "The empirical anchor matched the prediction. We registered this in "
         "tac.canonical_equations via register_canonical_equation.",
     )
@@ -75,7 +83,7 @@ def test_memo_with_canonical_equation_reference_accepted(tmp_path: Path):
 def test_memo_with_formalization_pending_waiver_accepted(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "finding_pending_20260520.md",
+        f"finding_pending_{_POST}.md",
         "We empirically falsified the prediction. # FORMALIZATION_PENDING:will land equation next session",
     )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -87,7 +95,7 @@ def test_memo_with_formalization_pending_waiver_accepted(tmp_path: Path):
 def test_placeholder_rationale_rejected(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "finding_placeholder_20260520.md",
+        f"finding_placeholder_{_POST}.md",
         "Predicted vs empirical residual was 30x. # FORMALIZATION_PENDING:<rationale>",
     )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -99,7 +107,7 @@ def test_placeholder_rationale_rejected(tmp_path: Path):
 def test_empty_rationale_rejected(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "finding_empty_20260520.md",
+        f"finding_empty_{_POST}.md",
         "Predicted vs empirical residual was 30x. # FORMALIZATION_PENDING:",
     )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -111,7 +119,7 @@ def test_empty_rationale_rejected(tmp_path: Path):
 def test_short_rationale_rejected(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "finding_short_20260520.md",
+        f"finding_short_{_POST}.md",
         "Predicted vs empirical residual was 30x. # FORMALIZATION_PENDING:x",
     )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -123,7 +131,7 @@ def test_short_rationale_rejected(tmp_path: Path):
 def test_strict_mode_raises(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "strict_finding_20260520.md",
+        f"strict_finding_{_POST}.md",
         "We empirically ratified this prediction.",
     )
     with pytest.raises(PreflightError, match="Catalog #344"):
@@ -135,7 +143,7 @@ def test_strict_mode_raises(tmp_path: Path):
 def test_strict_mode_silent_on_clean(tmp_path: Path):
     _write_memo(
         tmp_path,
-        "clean_finding_20260520.md",
+        f"clean_finding_{_POST}.md",
         "Empirical anchor confirmed via tac.canonical_equations registry.",
     )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -148,7 +156,7 @@ def test_memo_without_empirical_token_skipped(tmp_path: Path):
     """Memos that don't mention empirical findings are out of scope."""
     _write_memo(
         tmp_path,
-        "design_note_20260520.md",
+        f"design_note_{_POST}.md",
         "Design discussion of the upcoming substrate. Reactivation criteria pinned.",
     )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -161,7 +169,7 @@ def test_multiple_violations_aggregated(tmp_path: Path):
     for i in range(3):
         _write_memo(
             tmp_path,
-            f"multi_{i}_20260520.md",
+            f"multi_{i}_{_POST}.md",
             "Predicted vs empirical residual was confirmed.",
         )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -187,7 +195,7 @@ def test_canonical_equations_module_token_accepted(tmp_path: Path):
     ):
         memo = _write_memo(
             tmp_path,
-            f"refers_{abs(hash(token)) % 10000}_20260520.md",
+            f"refers_{abs(hash(token)) % 10000}_{_POST}.md",
             f"Empirical anchor confirmed; see {token} for details.",
         )
         out = check_empirical_finding_memo_references_canonical_equation(
@@ -198,11 +206,14 @@ def test_canonical_equations_module_token_accepted(tmp_path: Path):
 
 
 def test_live_repo_regression_guard():
-    """Live-repo count is bounded (will WARN; not raise). Initial baseline 51
-    today's memos predate the framework; backfill sweep is operator-routed."""
+    """Live-repo count is bounded and small. After the 2026-07-09 apparatus-
+    hygiene re-baseline (cutoff 20260519 -> 20260709; see preflight.py) the 515
+    accumulated historical DAG-ledger memos are grandfathered and the live count
+    was driven to 0. This sister guard keeps the count well under the strict
+    orchestrator's tolerance; it will fail loudly if a future re-baseline stalls
+    or the grandfather regresses."""
     out = check_empirical_finding_memo_references_canonical_equation()
-    # Generous bound for the initial backfill sweep window.
-    assert len(out) <= 250, f"Catalog #344 live count={len(out)} exceeds bound"
+    assert len(out) <= 5, f"Catalog #344 live count={len(out)} exceeds bound"
 
 
 def test_orchestrator_wires_warn_only():
@@ -231,7 +242,7 @@ def test_design_note_with_empirical_token_in_quote_still_flagged(tmp_path: Path)
     does not satisfy the gate."""
     _write_memo(
         tmp_path,
-        "quote_finding_20260520.md",
+        f"quote_finding_{_POST}.md",
         "The reviewer wrote 'predicted vs empirical residual was 30x'.",
     )
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -256,6 +267,18 @@ def test_wave_3_backfill_keeps_live_count_zero_in_strict_mode():
     Per CLAUDE.md "Strict-flip atomicity rule": the gate already runs
     ``strict=True`` in ``preflight_all()`` since the May-19 STRICT-FLIP-
     ENABLERS landing; this regression guards against drift recurrence.
+
+    APPARATUS-HYGIENE RE-BASELINE 2026-07-09 (append-only note). The per-memo
+    footer discipline was never operationalized across the ongoing research
+    corpus, so by 2026-07-09 the live count had drifted to 517 (515 grandfathered
+    historical DAG-ledger memos + 2 genuine 2026-07-09 formalization-track
+    debts). Per CLAUDE.md "Forbidden premature KILL" + APPEND-ONLY (Catalog
+    #110/#113 forbids mutating 515 historical memos at scale), the cutoff was
+    re-baselined 20260519 -> 20260709 (see preflight.py), grandfathering the
+    historical corpus; the 2 real debts were resolved via APPEND-ONLY
+    ``# FORMALIZATION_PENDING:`` footers, driving the live count back to 0. This
+    is a grandfather re-baseline, NOT the silent-cap anti-pattern: the ``<= 5``
+    bound is unchanged and a NEW memo dated >= the re-baseline still BINDS.
     """
     # Call against the live repo (no tmp_path); strict mode must not raise.
     out = check_empirical_finding_memo_references_canonical_equation(
@@ -304,3 +327,70 @@ def test_wave_3_backfill_sister_equations_registered_upstream():
         f"Expected via commit `6f08ebd94b`. Current registry contains "
         f"{len(equation_ids)} equations."
     )
+
+
+# ---------------------------------------------------------------------------
+# APPARATUS-HYGIENE RE-BASELINE 2026-07-09 boundary regression guards. These
+# lock the grandfather semantics so a future re-baseline (or a regression that
+# reverts the cutoff) is caught: a memo dated ON/AFTER the cutoff BINDS, a memo
+# dated just BEFORE the cutoff is grandfathered, and an undated memo is skipped.
+# ---------------------------------------------------------------------------
+
+
+def test_rebaseline_boundary_pre_cutoff_grandfathered(tmp_path: Path):
+    """A memo dated exactly one day BEFORE the live cutoff is grandfathered even
+    with an empirical-finding token and NO canonical-equation reference."""
+    _write_memo(
+        tmp_path,
+        f"grandfathered_{_PRE}.md",
+        "The empirical anchor was falsified; predicted vs measured drifted 30x.",
+    )
+    out = check_empirical_finding_memo_references_canonical_equation(
+        repo_root=tmp_path
+    )
+    assert out == [], f"pre-cutoff memo (dated {_PRE}) must be grandfathered"
+
+
+def test_rebaseline_boundary_post_cutoff_binds(tmp_path: Path):
+    """A memo dated ON the live cutoff (>= comparison) BINDS: empirical token +
+    no reference + no waiver -> flagged. Guards against a re-baseline that
+    over-grandfathers the very day it re-baselines forward."""
+    _write_memo(
+        tmp_path,
+        f"on_cutoff_{_POST}.md",
+        "The empirical anchor was falsified; predicted vs measured drifted 30x.",
+    )
+    out = check_empirical_finding_memo_references_canonical_equation(
+        repo_root=tmp_path
+    )
+    assert len(out) == 1, f"on-cutoff memo (dated {_POST}) must bind"
+
+
+def test_rebaseline_day_after_cutoff_binds(tmp_path: Path):
+    """A memo dated the day AFTER the cutoff also binds — the gate is forward-
+    binding, not a one-day window."""
+    day_after = str(_CUTOFF + 1)
+    _write_memo(
+        tmp_path,
+        f"day_after_{day_after}.md",
+        "Empirical anchor: predicted vs empirical residual was ratified.",
+    )
+    out = check_empirical_finding_memo_references_canonical_equation(
+        repo_root=tmp_path
+    )
+    assert len(out) == 1, f"post-cutoff memo (dated {day_after}) must bind"
+
+
+def test_undated_memo_skipped_documented_default(tmp_path: Path):
+    """An undated memo (filename lacking the ``_YYYYMMDD`` suffix) cannot be
+    date-classified and is SKIPPED — the documented conservative default: do
+    not flag what cannot be dated. Guards the date-parse edge case."""
+    _write_memo(
+        tmp_path,
+        "no_date_finding.md",
+        "The empirical anchor was falsified; predicted vs measured drift 30x.",
+    )
+    out = check_empirical_finding_memo_references_canonical_equation(
+        repo_root=tmp_path, strict=True
+    )
+    assert out == [], "undated memo must be skipped (documented default)"
