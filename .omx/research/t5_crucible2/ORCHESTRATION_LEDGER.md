@@ -122,7 +122,32 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       exp-asymptote FORMULATION, island-lower-threshold FORMULATION-rejected, muon-event INSTANCE).
       `[no-triality]` · $0 · no GPU · run dirs READ-ONLY · #205 UNTOUCHED · pointer 0.19110 UNMOVED.
       <!-- P5: no concurrent heavy GPU; box untouched; reading + code re-derivation + arithmetic only -->
-- [ ] **P6 SEAL-TO-RECESS** — fold the 6 P5 amendments into the design, THEN the recursive seal below.
+- [x] **P5b AMENDMENTS-FOLDED SEAL CANDIDATE** — `SYNTHESIS_v3_v752_20260709.md` landed (SUPERSEDES v2
+      90d562a5a; v2 preserved APPEND-ONLY). **6/6 P5 amendments folded, amendment-grade, NO rewrite, NO
+      settled decision re-opened.** (1, load-bearing) owed-1 PRIMARY = **robust ROLLING-SLOPE ≈0 on DE-NOISED
+      σ_min** (EMA-smooth and/or larger σ_min-probe k) + **noise/fit-quality guard** → ship-banked-R1 on a
+      degenerate signal — REPLACES the v2 exp-asymptote fit (P4-M1 DEGENERATE: CV-0.21 oscillation, s_inf
+      ±891%); (2, load-bearing) owed-1 canary RE-SPEC = **$0 NEGATIVE-control** (must-not-fire on stopped-run
+      rising σ_min) **+ SYNTHETIC-positive** unit test pre-launch, **REAL positive = GOVERNED telemetry-ON
+      replay** (new owed-14, NON-blocking), **ship-banked-R1 covers the gap** + honest floor stated; (3)
+      `--jacobian-basin-telemetry` VERIFIED default-True (L10213; forbid `--no-`) + DENSIFY terminal-window
+      σ_min cadence; (4) owed-3 amber×Muon **DEMOTED out of launch-blocking → WATCH** (M3: crush arm tests a
+      NON-mechanism) + Muon-only exemption **DROPPED** (redundant+asymmetric, out.*→Adam L1884) + real WATCH
+      sensor set {per-class d_seg-slope vs amber-OFF · effective-STEP ‖lr·update‖ · direction-cosine}; (5)
+      owed-12 CORRECTED "build it"→**ALREADY-BUILT (L9222)**; EXTEND whitelist at SAME 40% firing + non-halting
+      >25% WATCH band + small-denominator guard; island_amplify stays WATCH-not-halt; (6) `--muon-start-event`
+      → **`powerlaw_meat`** (choices=["powerlaw_meat"] ONLY, L11125). **Owed-before-launch REORDERED — new
+      launch-blocking top-3:** (1) repaired pose-gate BUILD (rolling-slope + noise guard + $0 negative/synthetic
+      canary + telemetry-ON default + densified cadence + disengaged alarm); (2) full-config dry-start = startup
+      all-gate-registration; (3) speed-stack + wall-clock budget. amber×Muon (was launch-blocking #3) → WATCH
+      item 11. Wall-clock budget UNCHANGED (~6–16 h + ~11 min GPU); AMENDMENT-3 densified cadence is
+      telemetry-only/score-neutral (noted in §B wall_clock.owed). A.2 provenance rows refreshed (amber row:
+      exemption dropped/crush demoted; pose row: rolling-slope PRIMARY). `[no-triality]` · $0 · no GPU · run
+      dirs READ-ONLY · #205 UNTOUCHED · pointer 0.19110 UNMOVED. **v3 = SEAL CANDIDATE; P6 next.**
+      Full: `SYNTHESIS_v3_v752_20260709.md`.
+      <!-- P5b: no concurrent heavy GPU; box untouched; reading + amendment-fold + 2 argparse re-verifies only -->
+- [ ] **P6 SEAL-TO-RECESS** — the 6 P5 amendments are FOLDED into `SYNTHESIS_v3_v752` (P5b done); run the
+      recursive seal below against v3.
 - [ ] **P6 RECURSIVE SEAL** — 3 consecutive clean rounds across BOTH lenses (finding-disposition VERIFY +
       DEEP-MATH MEAT HUNT: re-derive every law · hunt unconsumed levers vs the DELTA · bug-hunt the
       config-as-written · fresh-math sweep) via `tac.review_counter` surface **`crucible2_v752`**; then the
@@ -192,15 +217,17 @@ B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event trigger (CE→ta
    question: is a torch-parity twin worth building for Modal A/B fan-out? (S4 owns.)
 
 ## The one-line resume state
-P0+P1(all 6 seats)+P2+P3+P3b landed. **A-1 RESOLVED into SYNTHESIS_v2** (relative-plateau PRIMARY, σ*
-advisory, canary-fail⇒ship-R1, σ*-build OFF the launch-blocking path); σ_cc′ moved to Class-B ladder;
-wall-clock speed-block + budget added; micro-batch-pairs EXCLUDED. NEXT ACTION: **P4 EMPIRICAL RECESS** —
-the cheapest remaining debate-settling probe is now the RELATIVE-plateau side: one jacobian_basin σ_min
-readout on the current ckpt to fit σ_min(∞) and CONFIRM the relaxation curve is fittable (the plateau
-criterion's precondition), plus the W-8 σ_min-before/after-head-solve measurement (amplifier claim is
-INFERRED). The λ_min(F) probe is now ADVISORY-only (σ* demoted), no longer launch-blocking. Then P5 (2nd
-red-team) re-derives the owed-additions as unreviewed new code/config. Read SYNTHESIS_v2, NOT v1, for all
-launch decisions. #205 STOPPED (box free); pointer 0.19110 UNMOVED.
+P0+P1(all 6 seats)+P2+P3+P3b+P4+P5+P5b landed. **A-1 RESOLVED + HARDENED into SYNTHESIS_v3** (v3 SUPERSEDES
+v2 90d562a5a): PRIMARY = **robust ROLLING-SLOPE ≈0 on DE-NOISED σ_min** + noise/fit-quality guard (REPLACES
+the v2 exp-asymptote fit P4 disproved); canary RE-SPEC = $0 negative+synthetic controls + governed
+telemetry-replay (owed-14, non-blocking) + ship-banked-R1 covers the gap; amber×Muon crush-arm DEMOTED to
+WATCH + Muon-only exemption DROPPED; term_domination ALREADY-BUILT → EXTEND whitelist (+>25% WATCH band +
+small-denominator guard); `--muon-start-event powerlaw_meat`; `--jacobian-basin-telemetry` default-True
+forbid-`--no-` + densified terminal cadence. σ_cc′ Class-B ladder-1b; micro-batch-pairs EXCLUDED; wall-clock
+budget UNCHANGED. NEXT ACTION: **P6 SEAL-TO-RECESS** — run the recursive seal (3 clean rounds, both lenses,
+BLIND structural re-derivation + DEEP-MATH MEAT HUNT) against **SYNTHESIS_v3** via `tac.review_counter` surface
+`crucible2_v752`, then the #363 self-reflection seal. Reviewers RE-DERIVE from primary artifacts (do NOT trust
+v3). **Read SYNTHESIS_v3, NOT v2/v1, for all launch decisions.** #205 STOPPED (box free); pointer 0.19110 UNMOVED.
 
 ## OPERATOR BINDING CONSTRAINT (2026-07-09, mid-P1) — POSE ENGAGEMENT GATE
 Verbatim: "pose must not be fired for joint descent until optimal it needs dseg to be sufficiently
