@@ -199,7 +199,7 @@ is a designed quantity and the byte-close cadence (A.10) is costed.
 - **H-6 (N3 core):** dry-start catches the F-1 startup-KeyError class (registration unconditional). HELD.
 - **H-8 (D10):** S6's BLIND 6-block skeleton converging to the incumbent spine with zero PR95 stage-echo
   is a genuine seal signal (the anti-cargo-cult LAW's own test passed). HELD.
-- **H-9 (D9):** torch-twin NO-GO is sound — a torch-trained arm ≠ MLX-trained arm measures the ENGINE
+- **H-9 (D9):** torch-twin NO-GO is sound (verdict_scope: FORMULATION — the full-trainer torch twin for Modal TRAINING fan-out; untested formulations / alternatives: scorer-only torch verdict offload [bit-identity-gated], EXO/JACCL local fleet arms #297, Modal-CPU measurement offload [in use] — the archive boundary remains the parity-safe surface) — a torch-trained arm ≠ MLX-trained arm measures the ENGINE
   (NO-FAKE #8); archive-level exact-eval is the parity-safe boundary (S5-N11 agrees). HELD. (Minor: the
   "~$0.25/paired-row" is an ESTIMATE not a quote — owed a live provider quote before the $20 spend.)
 - **H-3/H-4/H-5/H-7** per §1 table.
