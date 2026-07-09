@@ -11795,3 +11795,54 @@ DEFERRED on HTML (GAP; quality unverified).
 - **16 NO-FAKE tests** (`src/tac/tests/test_aa_coverage_render_220.py`, all pass): zero-arg byte-identity; supersample emits aa-supersample-not-ipe-footprint; ipe expressible (emits ipe-footprint-not-supersample) + default footprint 1.0; grid<384 refused (H and W) + exactly-384 boundary OK + >384 OK for ipe too; bad-mode/ss<1 refused; ss=1 identity; composable-via-bare-name; ALL emitted flags REAL trainer flags (both modes + raised grid, via `build_real_trainer_parser` AST — never-invent-flags); auto-registered never-fired/duty-to-measure; **resume-guard 3-case on the REAL pure `_resume_lever_divergences`** (factor-change flagged / same-factor clean / legacy-sidecar no-spurious). Regression: 96 pass across test_feed07*/autoconfig/lever_registry (1 PRE-EXISTING sister failure — `StepNativeActivation` test's stale `beta_start <= beta_end` match string vs the new `validate_step_native_config` message; unrelated to #220, flagged to the StepNative owner).
 - **Triality all 3 legs CONSISTENT:** DSL (`curriculum_dsl.AACoverageRender` completed — mode/grid params, never-invent-flags clean, auto-discovered) ↔ equations (existing `aa_supersample_lane_recall_lift_v1` REFERENCED in the factory docstring; no new equation owed — the lane-recall lift is already registered) ↔ DAG (this block). Activation ledger: `AACoverageRender` NEVER-FIRED / duty-to-measure; significance seed row added (UNMEASURED / duty-to-ESTIMATE, axis d_seg — honest: oracle-R lane-recall +0.38 is MEASURED, through-witness-training ΔS is ASSUMED_AWAITING_VERIFICATION).
 - **VERDICT SCOPE (owed a converged n600 A/B):** the +0.38 lane-recall / floor 0.00091 are oracle-R MEASURED (the DOF/lever existence); the through-training d_seg ΔS of arming AA in a real witness run is UNMEASURED — exit criterion is a CONVERGED n600 byte-close A/B (AA-ON vs OFF ckpts; surviving lane-dash flips must move to no-alias survival). This landing COMPLETES the fireable-lever triality + hardens 2 real gaps; it makes NO score claim. means != ends: pointer 0.19110 UNMOVED. #205 alive+untouched. $0 code build (no GPU, no launch).
+
+### DAG FEED 2026-07-09 (#342 SOLVE-DON'T-TRAIN inventory — where the witness SOLVES instead of trains)
+
+**Memo:** `.omx/research/solve_dont_train_inventory_20260709.md`. $0, read-only, no GPU, no launch.
+8-block inventory (block · form · where · when · readiness), each grounded in a real code path
+(NO-FAKE, no aspirational blocks):
+
+- **Row 1 — #341 terminal head finisher (TOP by impact×readiness = the GO):** Gauss-Newton /
+  damped-Newton-CG (LM λ 0.1→0.033→0.011, 16 CG iters, HVP=vjp-of-grad) on the ~791-param AFFINE
+  head (`out_sdf.{w,b}`+`out_tex.{w,b}`+`palette`; FiLM EXCLUDED — non-affine). Head chart near-quadratic
+  CONFIRMED (LM ρ 0.847/0.868, MEASURED). Replaces the terminal fine-tune leg. **Full-P (P=600) ONLY** —
+  K=8 subset OVERFITS +5.1% n600 (FORMULATION NO-GO, measured). ~3 h GPU (NOT $0). eq
+  `quadratic_head_chart_subset_solve_gap_v1`.
+- **Row 2 — #288 per-class OT head offsets b_c (TOP $0-IMMEDIATE):** damped-Newton semi-discrete OT
+  (`laguerre_logit_offset.py:177` `damped_newton_ot_offsets`, FULL solver, <1s, byte-free → folds into
+  `out_sdf.bias`). Attacks Lane/Movable erasure (~57% of flips Lane↔Road). **BUILT but UNWIRED** — trainer
+  wires only the Menon `-τ·log π` heuristic init (`:4378`) → ORPHANED high-value, duty-to-measure.
+- **Row 3 — #157 KKT reverse-waterfill:** CLOSED-FORM (`frontier_exact_bitalloc.py:331`). ALREADY SOLVED — cite.
+- **Rows 4–5 — geometric/rate generators:** horizon poly-fit (`road_horizon_component.py:245`, lstsq deg1-2)
+  + SE(3) B-spline pose-ξ fit (`ego_xi_trajectory.py:421`, pose banked per L68). READY.
+- **Rows 6–8:** latent GN seed (probe), init-time SDF redistance (done), curriculum lstsq-slope (S-neutral control).
+
+**HONEST NEGATIVES (verdict_scope):** (a) FiLM-per-pair-as-lstsq DISPROVEN-by-structure (non-affine;
+only the additive head is solvable) — FORMULATION-level. (b) live eikonal FMM re-init NOT built (eikonal
+is a LOSS term today, `:1406-1556`); only init distance-transform SDF exists — ASPIRATIONAL, flagged not solved.
+
+**TOP NEXT SOLVE + firing condition:** #341 full-P head GN/CG. Fire at TERMINAL (tau-best EMA ckpt) IFF
+LM ρ∈~[0.8,1.2] re-verified on the CURRENT ckpt, over ALL 600 pairs (never subset), the ~791 affine head,
+exact tau-stage loss, `--fused-r-kernel` bit-identity, verdict through R + frozen CPU SegNet. **$0 companion
+to fire FIRST:** wire `damped_newton_ot_offsets` (replacing Menon heuristic), solve b* vs GT class masses,
+fold byte-free, confirm through R.
+
+**means != ends:** pointer 0.19110 UNMOVED. #205 alive+untouched. This is an inventory/schedule, no score
+claim. Triality: [no-triality] inventory (no lever built, no equation registered — the #341 law already
+exists as `quadratic_head_chart_subset_solve_gap_v1`; #288 solver already exists in code).
+
+---
+## FEED-clipprofile2 (2026-07-09) — #328 PHASE-2 clip_profile consumer rewire (measured-no-regression) `[no-triality]`
+**Phase 1 (`clip_profile.py`) BUILT the canonical MEASURED per-clip SoT; phase 2 populates its cache + rewires the FIRST safe advisory consumer to READ it, and INVENTORIES the byte-coupled/contended rest with two GOLD discrepancy findings.**
+- **ENABLING INFRA (committed):** populated the canonical deterministic cache `.omx/state/clip_profiles/<sha>.json` (sha `2611f5f3…`, 0.mkv = comma2k19 RAV4, 37,545,489 B) via `for_video(..., lstars=gt_n600)`. `for_video("upstream/videos/0.mkv")` now returns the profile repo-wide WITHOUT the 5 GB argmax load (cache hit, no lstars needed). This is the precondition every rewire depends on.
+- **MEASURED GROUND TRUTH (0.mkv, n600 argmax):** v_horizon **175.0** (p10/p90 166/181) · device_height **1.22** · class_index `{Road:0,Lane:1,Undrivable:2,Movable:3,MyCar:4}` (canonical ✓) · camera `_neo_config` native fx/fy/cx/cy = 910/910/582/437, scorer = 400.3/399.5/256/192.
+- **🟡 DISCREPANCY FINDINGS (the gold — did NOT silently switch, per contract):**
+  - **(1) v_horizon: MEASURED median 175.0 vs hardcoded `lane_sdf_component._V_HORIZON = 174.0`.** The 174 is a DELIBERATE n600-swept optimum (#327), NOT a raw median — so the 1-row gap is expected (swept-optimal ≠ measured-median), NOT a stale bug. Switching it would change IPM geometry → byte-close output. ROUTED to 2b; do NOT auto-adopt the measured median for `_V_HORIZON` (the swept value is the intended one; if anything clip_profile should expose a `v_horizon_swept_optimal` field distinct from the measured median — flagged to the profile owner).
+  - **(2) camera height: `lane_sdf_component._CAM_H = 1.2` vs canonical `OPENPILOT_DEVICE_HEIGHT_M = 1.22`.** Known 1.2-vs-1.22 split (clip_profile's own docstring + `measure_lane_ipm_vhorizon_reconciliation.py` calls it 2nd-order fit↔render-cancelling). The lane-IPM path still uses 1.2 while the pose path uses 1.22; clip_profile canonicalizes 1.22. Score-relevant IPM → ROUTED to 2b (needs the reconciliation verdict before switching, not a silent plumbing flip).
+- **REWIRED (1 surface, bit-identical):** `tools/measure_pose_warp_dseg.py` NATIVE_FX/FY/CX/CY + CAMERA_HEIGHT_M + NATIVE_W/H now READ `clip_profile.for_video(0.mkv).camera` / `.device_height_m` (value-provenance MEASURED-ANCHOR > HARDCODED-fallback; documented literal fallback keeps the tool standalone when the cache is absent). All values AGREE bit-exactly (910/582/437/1.22/1164×874) ⇒ zero advisory-output change. **Transitively rewires `tools/measure_screw_reach_through_R.py`** (imports NATIVE_*/`intrinsics_at` from it — no separate edit). NO-REGRESSION PROOF: constants asserted bit-identical to historical literals + `intrinsics_at(512,384)` unchanged + a cache-tracking test (constants == profile when cache present); 3 new tests + the 6 phase-1 tests pass (9 total). ruff F821 clean on both files (2 PRE-EXISTING F841/F541 at L563/L641 are outside the edit region, left untouched per scope).
+- **INVENTORIED / QUEUED to PHASE-2b (byte-coupled to the contended levelset trainer OR score-critical byte-close — NOT safe this pass):**
+  - `boundary_math/{lane_sdf_component,dash_comb,analytic_lane_render_band,road_horizon_component,road_undriv_bulk_field,hood_static_component}` — `_V_HORIZON`/`_CAM_H`/`_FX`/`_FY`/`_CX` are imported DIRECTLY into the trainer byte path (`train_levelset_witness…:3455/3789/3800`) + 2 of them DISAGREE (findings above). Needs the swept-vs-measured horizon decision + the 1.2/1.22 reconciliation + bit-identity proof.
+  - `tools/levelset_byte_close_and_eval.py` (`_XI_FX/_CX/_CY/_XI_D` = 910/582/437/1.22; `B0 = 37_545_489` = video_bytes) — SCORE byte-close path; values AGREE but a cache dependency in the score path needs a fallback design + explicit bit-identity proof.
+  - `src/tac/raft_pose.py:84` (`fx=910.0` public-API default) — score-path library default with existing tests; changing risks byte/API change.
+  - probes `tools/{freq_along_ladder,dash_comb,warp_vs_noise_flip}_probe_n600.py`, `levelset_ipm_horizon_geom_sweep_n600.py`, `build_lapose_foveation_atom_manifest.py` (foveal center 174) — import/hardcode the DISAGREE-ing horizon; switching changes probe output (the exact "don't silently switch" case).
+- **COUNTS:** inventoried ~14 consumer surfaces · rewired 1 (+1 transitive) · queued-2b ~12 · discrepancy findings 2. means != ends: pointer 0.19110 UNMOVED. #205 alive+untouched. $0 code (no GPU, no launch).
