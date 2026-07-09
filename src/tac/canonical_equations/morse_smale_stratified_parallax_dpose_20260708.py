@@ -363,6 +363,58 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_r1_dxi_shippability = EmpiricalAnchor(
+        anchor_id="r1_dxi_shippability_byteclose_20260708",
+        measurement_utc=_UTC,
+        inputs={
+            "run": "R1 checkpoint levelset_witness_ema_mlx.npz (mod-dim 26, ep1108; pose_carrier.xi_stored "
+                   "absmean 0.2296 + trained pose_carrier.dxi absmean 0.00382; __cfg_w_pose=1.0)",
+            "connector": "tools/levelset_byte_close_and_eval.py --pose-carrier-xi-from-ckpt "
+                         "[--pose-carrier-dxi-scale S]: ships ξ_eff = xi_stored + S*dxi (store-nothing v2 "
+                         "coded ξ payload) instead of the deterministic xi_from_pose_calibration recompute",
+            "authority": "realized d_pose on the INFLATED .raw (frozen CPU-torch PoseNet, through real R, "
+                         "gt_n600 cache), n24 (n STATED; archive/ξ section built for all 600 pairs)",
+            "geom": "pitch=0.0 (--pc-pitch 0.0) == trainer GroundHomographyGeom.eon(pitch=0.0); H derived "
+                    "from the SHIPPED ξ (rule-118 FREE), K/n/d bit-identical to the deriver",
+        },
+        predicted_output={
+            "question_238": "does serialized ξ_eff=xi_stored+dxi reproduce R1's trained d_pose 0.0011 "
+                            "through the REAL inflate/decode (SHIPPABLE), or degrade (GAP)?",
+        },
+        empirical_output={
+            "ship_dxi_realized_d_pose": "0.001127 (n24) vs R1 training-side 0.001012 (ep1108) => SURVIVES "
+                                        "byte-close; pose contribution sqrt(10*d_pose)=0.106 (~symposium 0.105)",
+            "matched_no_dxi": "0.02197 (SAME fitted xi_stored, dxi off via --dxi-scale 0); dxi = a 20x "
+                              "refinement on an already pose-legible co-adapted witness pair",
+            "calibration_wrong_s_t": "26.04 (default s_t=0.16, the naive no-calibration byte-close reads "
+                                     "this) -> s_t calibration matters; the matched isolate uses R1's fitted xi_stored",
+            "ceiling_real_warp_real": "2.561 (no-dxi, == custody 'cap 2.56') -> 1.958 (dxi)",
+            "counted_bytes": "ξ_eff store-nothing section 7,195 B (6,634 B coded, raw ref 7,232 B; dxi "
+                             "jitter kills delta smoothness), rate 25*7195/37.5M = 0.004791; full archive "
+                             "89,772 B; +3,433 B / +0.0023 rate over matched-no-dxi for the 20x gain",
+            "frame0_decode_caveat": "bit-exact=False max_abs 14/16/18 (calib/no-dxi/dxi) in ALL configs => "
+                                    "pre-existing store_nothing warp-reproduction (inflate-vs-oracle numerics), "
+                                    "NOT dxi-specific; d_pose is on the shipped deterministic .raw (authority)",
+            "verdict": ("SHIPPABLE: R1's trained pose ships in ~7.2KB COUNTED ξ and reproduces d_pose 0.0011 "
+                        "through the real byte-closed inflate. The custody downgrade ('shippability PENDING "
+                        "#238') is RESOLVED. verdict_scope: pose HALF on THIS checkpoint via the store-nothing "
+                        "ξ_eff carrier; does NOT touch the d_seg blocker (0.40 seg term) nor claim a frontier "
+                        "move. Advisory; upstream/evaluate.py CPU remains the promotion authority."),
+        },
+        residual=abs(0.001127 - 0.001012),  # realized-vs-training-side d_pose gap (survives byte-close)
+        source_artifact=".omx/research/r1_dxi_shippability_byteclose_20260708.md",
+        measurement_method="byte-close ξ_eff serialization + full inflate -> frozen CPU-torch PoseNet on "
+                           "inflated .raw; 3-point A/B (calibration / matched-no-dxi scale0 / ship-dxi scale1)",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/r1_dxi_shippability_byteclose_20260708.md",
+            reactivation_criteria=("n600 realized-d_pose row (in progress) + exact upstream/evaluate.py CPU; "
+                                   "a dedicated from-converged pose-finishing descent could push toward the "
+                                   "0.018-class ancestor (operator-GO, NOT launched)"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Morse-Smale stratified parallax warp: cheap task-space pose carrier floors d_pose ~1.2-1.7 "
@@ -388,7 +440,7 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
         },
         units_in={"dof": "warp_degrees_of_freedom_int"},
         units_out={"d_pose": "posenet6_mse_median"},
-        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_a1t, anchor_l2, anchor_owed, anchor_r1_custody),
+        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_a1t, anchor_l2, anchor_owed, anchor_r1_custody, anchor_r1_dxi_shippability),
         predicted_vs_empirical_residual={
             # extension predicted A2 ~0.0011; MEASURED 1.486 -> the prediction miss is the finding.
             "a2_prediction_miss_vs_0p0011": abs(DPOSE_A2_6DOF_SOLVE - 0.0011),

@@ -389,7 +389,12 @@ def build_levelset_blob(
     """
     import brotli
 
-    base_order = [k for k in params if k != "code"]
+    # `pose_carrier.*` (xi_stored / dxi) are NOT INR weights -- they are the trained ego-twist table
+    # whose ONLY legitimate home is the pose-carrier SECTION (the coded ξ payload), never the base
+    # weight blob. Older saves leaked them into `params`, so they were int8-quantized into the base
+    # blob as DEAD counted bytes (inflate never reads them from base). Exclude them here so the base
+    # blob is INR-only and the ξ rate is attributed cleanly to the pose-carrier section (#238).
+    base_order = [k for k in params if k != "code" and not k.startswith("pose_carrier.")]
     base_chunks: list[bytes] = []
     shapes: dict[str, list[int]] = {}
     scales: dict[str, float] = {}
@@ -448,7 +453,10 @@ def build_levelset_blob(
     mj = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
     out = _io_pack(mj, base_brotli, code_brotli, pose_sidecar, lane_band_bytes, pose_carrier_bytes)
     # cross-check our accounting against the canonical quantize_levelset_blob (same int8 grammar).
-    canon = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in params.items()})
+    # #238: the base blob is INR-only (pose_carrier.* live in the pose-carrier SECTION, not base), so
+    # cross-check against the canonical on the SAME INR-only param set (else the check spuriously fails).
+    canon = quantize_levelset_blob(
+        {k: np.asarray(v, np.float32) for k, v in params.items() if not k.startswith("pose_carrier.")})
     breakdown = {
         "n_params": int(sum(int(np.prod(s)) for s in shapes.values())) + int(np.prod(code.shape)),
         "manifest_bytes": len(mj),
@@ -713,6 +721,7 @@ def _downscale_keyframe(gt_f0_native: np.ndarray, store_hw: tuple[int, int]) -> 
 
 def build_pose_carrier_section(
     gt_cache: str | None, n_pairs: int, pc: dict[str, Any],
+    xi_override: np.ndarray | None = None,
 ) -> tuple[bytes, dict[str, Any], dict[str, Any]]:
     """Build the #205 pose-carrier section from the GT cache (compress-time: the ego pose
     ``gt_poses`` [+ real keyframe luma ``gt_f0`` for warp_real_luma] are fully available). Returns
@@ -765,9 +774,23 @@ def build_pose_carrier_section(
 
     # per-pair ego twist ξ (fp64 authority) -- both modes. H is DERIVED FREE at decode for
     # store_nothing (#257), STORED only for warp_real_luma (the legacy stored-keyframe path).
-    xi_stack = np.zeros((P, 6), dtype=np.float64)
-    for p in range(P):
-        xi_stack[p] = _wrl.xi_from_pose_calibration(gt_poses[p], s_t, s_r, pitch)
+    # #238 CONNECTOR: when ``xi_override`` is supplied (the TRAINED ξ_eff = xi_stored + dxi loaded
+    # from the run checkpoint), ship THAT instead of the deterministic calibration recompute -- this
+    # is what carries R1's trained d_pose descent into a shippable archive. The override is the FULL
+    # trained per-pair twist; the calibration s_t/s_r/pitch are then provenance-only (H is still
+    # derived from the SHIPPED ξ with the same ``pitch`` the trainer used).
+    xi_from_ckpt = xi_override is not None
+    if xi_from_ckpt:
+        xo = np.asarray(xi_override, dtype=np.float64)
+        if xo.ndim != 2 or xo.shape[1] != 6:
+            raise ValueError(f"xi_override must be (P,6); got {xo.shape} (NO-FAKE).")
+        if xo.shape[0] < P:
+            raise ValueError(f"xi_override has {xo.shape[0]} pairs < needed {P} (NO-FAKE).")
+        xi_stack = xo[:P].copy()
+    else:
+        xi_stack = np.zeros((P, 6), dtype=np.float64)
+        for p in range(P):
+            xi_stack[p] = _wrl.xi_from_pose_calibration(gt_poses[p], s_t, s_r, pitch)
 
     quant_report: dict[str, Any] = {}
     if store_nothing:
@@ -820,6 +843,8 @@ def build_pose_carrier_section(
     report = {
         "active": True,
         "mode": mode,
+        "xi_source": ("ckpt_xi_eff (xi_stored+dxi, #238 trained twist)" if xi_from_ckpt
+                      else "calibration (xi_from_pose_calibration recompute)"),
         "generator": ("witness_render_frame0" if store_nothing else "stored_real_keyframe"),
         "source_gt_cache": str(cp),
         "n_pairs": P,
@@ -2315,6 +2340,7 @@ def run(
     lane_res: bool = False,  # LBND4: RD grid + ξ residual entropy stage (default OFF, measurement lever)
     pose_carrier: bool = False,  # #205 warp-real-luma frame0 pose carrier
     pose_carrier_cfg: dict[str, Any] | None = None,
+    pose_carrier_xi_override: np.ndarray | None = None,  # #238: ship the TRAINED ξ_eff (xi_stored+dxi)
     verify_bit_exact: bool = False,
     bit_exact_pairs: int = 2,
     bit_exact_strict: bool = True,
@@ -2376,7 +2402,7 @@ def run(
                                       "downscale": 1, "mode": "warp_real_luma"}
         pc_mode = str(pc_cfg.get("mode", "warp_real_luma"))
         pose_carrier_bytes, pose_carrier_manifest, pose_carrier_report = build_pose_carrier_section(
-            gt_cache, n_pairs, pc_cfg)
+            gt_cache, n_pairs, pc_cfg, xi_override=pose_carrier_xi_override)
         # REUSE the canonical keyframe_payload_accounting (tools.compose_witness_archive, f7c6abdea) for
         # the rule-118 line item -- fed the MEASURED keyframe blob bytes actually stored (0 for store_nothing).
         from tools.compose_witness_archive import keyframe_payload_accounting  # noqa: PLC0415
@@ -2761,6 +2787,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pc-xi-qlevels", type=int, default=4096,
                     help="store-nothing ξ quantization levels per channel (default 4096 ~ fp16+; finer -> "
                          "more coded bytes, coarser -> looser d_pose. Both coders share it -> strict parity).")
+    # #238: ship the TRAINED per-pair ego twist ξ_eff = pose_carrier.xi_stored + pose_carrier.dxi from
+    # the run checkpoint (store_nothing mode only) INSTEAD of the deterministic calibration recompute.
+    # This is what carries a JOINT pose-descent run's trained d_pose (e.g. R1's 0.0011) into a shippable
+    # archive; the dxi is video-derived -> COUNTED in the coded ξ payload. Pure byte-close serialization
+    # mode (no trainer change). NOTE: pass --pc-pitch matching the trainer's --pose-carrier-pitch (R1=0.0).
+    ap.add_argument("--pose-carrier-xi-from-ckpt", action="store_true",
+                    help="#238 store-nothing: ship ξ_eff = pose_carrier.xi_stored + pose_carrier.dxi from "
+                         "the SAME resolved checkpoint npz (the TRAINED twist), not the calibration "
+                         "recompute. Requires --pose-carrier --pose-carrier-mode store_nothing. "
+                         "Incompatible with --select-arms (each arm has its own dxi).")
+    ap.add_argument("--pose-carrier-dxi-scale", type=float, default=None,
+                    help="#238 (with --pose-carrier-xi-from-ckpt): ξ_eff = xi_stored + scale*dxi. Default = "
+                         "the checkpoint's trained residual_scale (1.0). scale=0 = the MATCHED no-dxi "
+                         "baseline (SAME fitted xi_stored, dxi off) -> the clean dxi A/B isolate.")
     # #224 Wave E: decode-consistent analytic-lane RENDER-BAND (fork B). OFF by default -> byte-identical.
     # Fits per-pair lane manifold coords from --gt-cache (COUNTED), reproduces the coverage+composite
     # in inflate (FREE, rule 118) so the band is a REAL (non-phantom) score. Closes R5_BLOCK.
@@ -2876,6 +2916,39 @@ def main(argv: list[str] | None = None) -> int:
         video_names_file=args.video_names_file,
         eval_timeout=args.eval_timeout,
     )
+    # #238 CONNECTOR: load the TRAINED ξ_eff (xi_stored + dxi) from the SAME resolved checkpoint npz
+    # so the byte-close SHIPS the trained twist (store-nothing) instead of the calibration recompute.
+    if args.pose_carrier_xi_from_ckpt:
+        if not (args.pose_carrier and args.pose_carrier_mode == "store_nothing"):
+            raise SystemExit("--pose-carrier-xi-from-ckpt requires --pose-carrier "
+                             "--pose-carrier-mode store_nothing (NO-FAKE).")
+        if args.select_arms:
+            raise SystemExit("--pose-carrier-xi-from-ckpt is incompatible with --select-arms "
+                             "(each arm has its own trained dxi; pick one arm via --npz-name).")
+        _candidates = ([args.npz_name] if args.npz_name
+                       else ["levelset_witness_ema_mlx.npz", "levelset_witness_live_mlx.npz"])
+        _npz_path = next((args.ckpt_dir / c for c in _candidates if (args.ckpt_dir / c).exists()), None)
+        if _npz_path is None:
+            raise SystemExit(f"--pose-carrier-xi-from-ckpt: no checkpoint npz in {args.ckpt_dir} "
+                             f"(looked for {_candidates}).")
+        _z = np.load(_npz_path, allow_pickle=False)
+        if "pose_carrier.xi_stored" not in _z.files or "pose_carrier.dxi" not in _z.files:
+            raise SystemExit(f"--pose-carrier-xi-from-ckpt: {_npz_path.name} lacks "
+                             "pose_carrier.xi_stored/pose_carrier.dxi (not a trained pose-carrier run).")
+        _xi_stored = np.asarray(_z["pose_carrier.xi_stored"], dtype=np.float64)
+        _dxi = np.asarray(_z["pose_carrier.dxi"], dtype=np.float64)
+        # residual_scale defaults to 1.0 in the trainer (--pose-carrier-residual-scale); if a run saved
+        # a non-default scale in cfg, honor it (ξ_eff = xi_stored + scale*dxi).
+        _rscale = float(_z["__cfg_pose_carrier_residual_scale"].item()) \
+            if "__cfg_pose_carrier_residual_scale" in _z.files else 1.0
+        if args.pose_carrier_dxi_scale is not None:
+            _rscale = float(args.pose_carrier_dxi_scale)  # 0 = matched no-dxi baseline; 1 = trained
+        _xi_eff = _xi_stored + _rscale * _dxi
+        _run_kwargs["pose_carrier_xi_override"] = _xi_eff
+        print(f"# #238 SHIP-DXI: ξ_eff = xi_stored + {_rscale:g}*dxi from {_npz_path.name} "
+              f"(shape {_xi_eff.shape}, |dxi|_mean={float(np.abs(_dxi).mean()):.5f}); "
+              f"pc_pitch={args.pc_pitch} (must match trainer --pose-carrier-pitch).", flush=True)
+
     if args.select_arms:
         # (B1) N-way selection over the available weights arms; the winner report carries arm_selection.
         if args.npz_name:
