@@ -223,6 +223,10 @@ from tac.canonical_equations.v8_geometric_rate_decomposition_20260709 import (
     build_v8_geometric_rate_decomposition_v1,
     populate_v8_geometric_rate_decomposition_equation,
 )
+from tac.canonical_equations.lane_groundframe_xi_transport_no_collapse_20260709 import (
+    build_lane_groundframe_xi_transport_no_collapse_v1,
+    populate_lane_groundframe_xi_transport_no_collapse_equation,
+)
 from tac.canonical_equations.horizon_weighted_margin_20260709 import (
     build_horizon_weighted_margin_v1,
     populate_horizon_weighted_margin_equation,
@@ -388,6 +392,8 @@ __all__ = [
     "populate_witness_pose_grad_coeff_stability_equation",
     "build_v8_geometric_rate_decomposition_v1",
     "populate_v8_geometric_rate_decomposition_equation",
+    "build_lane_groundframe_xi_transport_no_collapse_v1",
+    "populate_lane_groundframe_xi_transport_no_collapse_equation",
     "build_horizon_weighted_margin_v1",
     "populate_horizon_weighted_margin_equation",
     "build_chroma_boundary_annulus_match_hinge_v1",

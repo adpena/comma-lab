@@ -152,8 +152,13 @@ paradigm intact — ξ remains decisive for POSE and for the image-frame horizon
 roll-up (`v8_increment1_design_draft`): **use 0.0275 S for Road↔Lane; ξ-ego-compensation does not
 improve it — do NOT project a horizon-class transfer.**
 
-## FORMALIZATION_PENDING (clean law emerged — the NEGATION of the hoped-for collapse)
-Proposed canonical equation `lane_groundframe_xi_transport_no_collapse_v1`:
+## FORMALIZATION → REGISTERED 2026-07-09 (clean law emerged — the NEGATION of the hoped-for collapse)
+**REGISTERED** as canonical equation `lane_groundframe_xi_transport_no_collapse_v1`
+(`src/tac/canonical_equations/lane_groundframe_xi_transport_no_collapse_20260709.py`; two
+accounting-mode EmpiricalAnchors, VERIFIED_VIA_EMPIRICAL_ANCHOR, advisory NON-PROMOTABLE,
+verdict_scope FORMULATION; producers `tac.boundary_math.ego_xi_trajectory` +
+`tac.boundary_math.analytic_lane_render_band`; DSL leg N/A = measurement of a negative lever).
+Original proposal preserved below:
 *For a lane centerline already parametrized in the ego-ground frame (`lateral=poly(forward)` via a
 fixed IPM), ego-advected predictive coding (LBND3) yields innovation ≥ the LBND2 identity temporal
 delta: `‖innov_ξ‖₁ ≥ ‖ΔQ‖₁` for all ξ (measured: 7.73M–9.98M vs 7.58M @ n600). Corollary: the

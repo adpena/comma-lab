@@ -11952,4 +11952,8 @@ horizon's 14.6×." RE-measured the FEED-v8-roadlane temporal stream with the pre
   roll-up: use **0.0275 S for Road↔Lane; do NOT project a horizon-class ξ transfer.**
 - Memo: `.omx/research/v8_roadlane_ego_compensated_rate_20260709.md`. Law FORMALIZATION_PENDING:
   `lane_groundframe_xi_transport_no_collapse_v1` (‖innov_ξ‖₁ ≥ ‖ΔQ‖₁ ∀ξ; anchor = gt_n600 + memo tables).
+- **EQUATIONS-LEG DONE (2026-07-09):** registered `lane_groundframe_xi_transport_no_collapse_v1`
+  (`src/tac/canonical_equations/lane_groundframe_xi_transport_no_collapse_20260709.py`; 2 accounting-mode
+  anchors, VERIFIED_VIA_EMPIRICAL_ANCHOR, advisory NON-PROMOTABLE, verdict_scope FORMULATION). DSL leg
+  N/A (measurement of a NEGATIVE lever). Triality legs now agree; `[no-triality-yet]` cleared for this FEED.
 - `[no-triality-yet]` — measurement/negative; means != ends, pointer **0.19110 UNMOVED**, #205 untouched.
