@@ -45,6 +45,7 @@ _PREDICTED = "[predicted]"
 _MEMO = ".omx/research/pose_mladder_depthwarp_measured_20260708.md"
 _MEMO_APERTURE = ".omx/research/pose_aperture_probe_measured_20260708.md"
 _MEMO_A1T = ".omx/research/pose_stratified_texture_probe_measured_20260708.md"
+_MEMO_L2 = ".omx/research/pose_l2_truedepth_probe_measured_20260708.md"
 
 # --- MEASURED constants (medians, frozen CPU-torch PoseNet through the real R; this checkpoint) ---------
 DPOSE_A0_DETERMINISTIC = 1.685    # 0-DOF global ground-H warp (store-nothing), n24 median (mean 1.734)
@@ -69,6 +70,15 @@ DPOSE_A1T_BEST_STRATIFIED_TEXTURED = 2.608  # BEST (least-bad) A1T point (P=24px
 #   away from s=1; monotone toward the flat floor as s->0 -> NO units/convention bug. Wrong-flow-observability
 #   REFUTED for the geometric stratified carrier: correct flow needs real per-clip DEPTH (Option-A), not a
 #   piecewise-geometric approximation. d_seg flips 0.8%(amp2)..9.5%(amp8) of f1 argmax (moot; d_pose refutes).
+
+DPOSE_HPLAN_REAL_SELFFIT = 0.878   # L2 probe: homography self-fit on REAL luma (n24 median, warp,src);
+#   == INVHOMOG (bit-parity validity gate). The real-luma flow reference (homography is a near-perfect flow
+#   for the median pair). 15/24 pairs < 2; heavy tail (3 catastrophic ~97/169/184) -> mean 20.2.
+DPOSE_L2_REAL_TRUEDEPTH = 1.296    # L2 probe: homography base + TRUE off-the-shelf mono-depth parallax
+#   (Depth-Anything-V2-Small-hf, ground-plane scale+shift aligned) on REAL luma (n24 median). SLIGHTLY WORSE
+#   than the plane homography (0.878) -> true dense depth does NOT help; net-neutral-to-harmful per-pair.
+DPOSE_L2_WITNESS_TRUEDEPTH = 171.77  # L2 probe: same true-depth flow on WITNESS luma (n24 median) ~ the
+#   zero-motion null (HPLAN_WITNESS 166.8) -> witness/cartoon render is pose-BLIND regardless of flow.
 
 _FLOOR_BY_DOF = {0: DPOSE_A0_DETERMINISTIC, 6: DPOSE_A2_6DOF_SOLVE, 12: DPOSE_A2PLUS_12DOF}
 
@@ -256,6 +266,54 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_l2 = EmpiricalAnchor(
+        anchor_id="l2_truedepth_falsified_crucible_run1_20260708",
+        measurement_utc=_UTC,
+        inputs={
+            "probe": "L2 = SELF-PAIR (frame1 = depth-warp of frame0 by GT ego-motion) isolating flow x "
+                     "appearance. Depth = Depth-Anything-V2-Small-hf (HF rev 5426e4f0, 24.8M, inverse-depth) "
+                     "scale+shift aligned to the calibrated ground plane on GT-Road pixels. Flow = the true "
+                     "parallax the plane homography MISSES: delta = proj(K(R Z_true ray + t)) - proj(K(R "
+                     "Z_plane ray + t)), SAME (R,t)=exp_se3(xi) as the homography -> delta=0 on-plane "
+                     "(median 3.91px off-plane). Apparatus = INVERSE homography warp + delta correction "
+                     "(hole-free; base bit-identical to warp_frame0 -> validity gate).",
+            "authority": "frozen CPU-torch PoseNet through real R (uint8); poscontrol 5.8e-12; NEVER MLX",
+            "n_pairs": "24 (n8 confirms); warp,src ordering (deployment self-fit)",
+        },
+        predicted_output={
+            "decisive_question": "is the pose wall (a) crude depth/flow MODELS (true dense depth fixes it) "
+                                 "or (b) PoseNet needs real scene content beyond correct flow?",
+        },
+        empirical_output={
+            "d_pose_HPLAN_REAL_selffit_median": DPOSE_HPLAN_REAL_SELFFIT,   # 0.878 == INVHOMOG (validity ok)
+            "d_pose_L2_REAL_truedepth_median": DPOSE_L2_REAL_TRUEDEPTH,     # 1.296 -> WORSE than plane
+            "d_pose_L2_WITNESS_truedepth_median": DPOSE_L2_WITNESS_TRUEDEPTH,  # 171.8 -> pose-blind
+            "offplane_parallax_px_median": 3.91,
+            "raft_ceiling": "INVALID (half-res raft_small backward flow degenerate ~0.49px -> ~188 null); "
+                            "not load-bearing (HPLAN_REAL 0.878 IS the real-luma flow reference)",
+            "verdict": ("TRUE-DEPTH-FLOW FALSIFIED (formulation-scoped): off-the-shelf true dense mono-depth "
+                        "does NOT beat the plane homography on real luma (1.296 vs 0.878, net-harmful per-"
+                        "pair) and does NOT rescue the pose-blind witness (171.8). The wall is PHOTOMETRIC "
+                        "APPEARANCE, not flow-model crudeness (witness cartoon = pose-blind ~167; the gap "
+                        "real-selffit 0.9 -> deployable 1.7-1.8 is appearance). Decision row 2->3: cure = "
+                        "JOINT pose-descent RUN (render co-adapts, #238), NOT paid stored-depth Option-A. "
+                        "Closes A1T's 'correct flow needs real depth' reformulation: true depth measured, "
+                        "does not help. REFUTED as levers: Option-A stored-depth, store-real-appearance."),
+        },
+        residual=0.0,
+        source_artifact=_MEMO_L2,
+        measurement_method="L2 self-pair: inverse homography warp + true-mono-depth parallax delta, "
+                           "real-vs-witness luma, frozen CPU-torch PoseNet (validity gate HPLAN==selffit)",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=_MEMO_L2,
+            reactivation_criteria=("re-measure on a JOINT pose-descent RUN where the render co-adapts "
+                                   "(R1-class, #238) -- the only open path to low pose; n600 + exact-eval; "
+                                   "a valid full-res dense-flow ceiling"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Morse-Smale stratified parallax warp: cheap task-space pose carrier floors d_pose ~1.2-1.7 "
@@ -281,7 +339,7 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
         },
         units_in={"dof": "warp_degrees_of_freedom_int"},
         units_out={"d_pose": "posenet6_mse_median"},
-        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_a1t, anchor_owed),
+        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_a1t, anchor_l2, anchor_owed),
         predicted_vs_empirical_residual={
             # extension predicted A2 ~0.0011; MEASURED 1.486 -> the prediction miss is the finding.
             "a2_prediction_miss_vs_0p0011": abs(DPOSE_A2_6DOF_SOLVE - 0.0011),
@@ -328,6 +386,9 @@ __all__ = [
     "DPOSE_A1T_BEST_STRATIFIED_TEXTURED",
     "DPOSE_A2PLUS_12DOF",
     "DPOSE_A2_6DOF_SOLVE",
+    "DPOSE_HPLAN_REAL_SELFFIT",
+    "DPOSE_L2_REAL_TRUEDEPTH",
+    "DPOSE_L2_WITNESS_TRUEDEPTH",
     "DPOSE_TARGET_CONTRIB",
     "EQUATION_ID",
     "OFFPLANE_AREA_FRAC",
