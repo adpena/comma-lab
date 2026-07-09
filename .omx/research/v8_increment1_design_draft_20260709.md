@@ -192,3 +192,30 @@ $0 prose + one already-pre-registered gated probe; the path is clear, not DEFER.
 **0.19110 UNMOVED.** Draft = MEANS. The END is a byte-closed exact row from increment-1's measured A/B —
 gated behind v7.5, behind P-C's "interiors near-free" + counted-seed-floor go/no-go, and now behind the
 6 folded REVISE items. Honest state: a **REVISED strong-seed design**, build-ready *modulo* P-C.
+
+## 3. Whole-scene rate budget + the GENERATOR principle (2026-07-09, recs ② + Voronoi)
+
+**The v8 representation law (operator "voronoi or others", MEASURED):** the SegNet argmax
+`P(x)=argmax_c(φ_c+b_c)` IS an additively-weighted Voronoi = **Laguerre / power diagram** (#284:
+Laguerre=tropical=curvelet=se3). Every carrier stores its class's **parsimonious GENERATOR**, and the
+partition falls out of the tropical argmax composition. The win is **parameter parsimony**, not the choice
+of dual — curvelet-boundary ≡ medial-axis-centerline ≡ power-diagram-sites are one structure. MEASURED
+negatives keep this honest: the **dense** medial axis (444 pts) ≈ the boundary bitmap (1.09×, NO win); the
+lever is the **few-coefficient** fit (horizon 4 coeffs = 14.6×).
+
+**Whole-scene de-shared rate budget (real-coder, n600, each inter-class edge counted once):**
+
+| edge | bitmap S (conservative) | geometric S | generator |
+|---|---|---|---|
+| Road/Lane | 0.204 | ~owed | centerline poly (Wave-F #234) — 59% of budget |
+| Road/Undriv (horizon) | 0.047 | **0.0032 (MEASURED 14.6×)** | 1 Laguerre site + boundary poly + ξ |
+| Undriv/Movable | 0.033 | ~owed | sparse object sites |
+| Road/Movable | 0.028 | ~owed | sparse object sites |
+| Road/MyCar (hood) | 0.028 | **0.0202 (MEASURED)** | static-model (frame0 + rigid ξ-shift) |
+| Lane/* (3 rows) | 0.007 | 0.007 | already tiny |
+| **TOTAL** | **0.346 (upper bound)** | **~0.02–0.05 projected** | vs 0.118 pointer rate term |
+
+**Consequence:** the rate half of sub-0.15 is measured-headroom-confirmed (geometric ≪ bitmap ≪ current
+0.118). Two edges MEASURED-geometric, three owed (each with a named generator). The d_seg half is the
+blocker (#205). Per-carrier build = the parametric generator, NOT the boundary bitmap. No b/px proxy anywhere.
+`[no-triality]` (v8 equations FORMALIZATION_PENDING per §5 until a byte-closed exact-eval anchor).
