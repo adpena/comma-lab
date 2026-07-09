@@ -382,8 +382,10 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
                             "through the REAL inflate/decode (SHIPPABLE), or degrade (GAP)?",
         },
         empirical_output={
-            "ship_dxi_realized_d_pose": "0.001127 (n24) vs R1 training-side 0.001012 (ep1108) => SURVIVES "
-                                        "byte-close; pose contribution sqrt(10*d_pose)=0.106 (~symposium 0.105)",
+            "ship_dxi_realized_d_pose": "0.001610 (n600 AUTHORITY) / 0.001127 (n24) vs R1 training-side "
+                                        "0.001012 (ep1108) => SURVIVES byte-close (same O(1e-3) band); pose "
+                                        "contribution sqrt(10*d_pose)=0.127 (n600) / 0.106 (n24) ~symposium 0.105; "
+                                        "n600 d_seg 0.004549, S_advisory 0.6416",
             "matched_no_dxi": "0.02197 (SAME fitted xi_stored, dxi off via --dxi-scale 0); dxi = a 20x "
                               "refinement on an already pose-legible co-adapted witness pair",
             "calibration_wrong_s_t": "26.04 (default s_t=0.16, the naive no-calibration byte-close reads "
@@ -401,16 +403,16 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
                         "ξ_eff carrier; does NOT touch the d_seg blocker (0.40 seg term) nor claim a frontier "
                         "move. Advisory; upstream/evaluate.py CPU remains the promotion authority."),
         },
-        residual=abs(0.001127 - 0.001012),  # realized-vs-training-side d_pose gap (survives byte-close)
+        residual=abs(0.001610 - 0.001012),  # n600 byte-close realized vs training-side d_pose (same 1e-3 band)
         source_artifact=".omx/research/r1_dxi_shippability_byteclose_20260708.md",
         measurement_method="byte-close ξ_eff serialization + full inflate -> frozen CPU-torch PoseNet on "
                            "inflated .raw; 3-point A/B (calibration / matched-no-dxi scale0 / ship-dxi scale1)",
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
         provenance=build_provenance_for_research_sidecar(
             sidecar_path=".omx/research/r1_dxi_shippability_byteclose_20260708.md",
-            reactivation_criteria=("n600 realized-d_pose row (in progress) + exact upstream/evaluate.py CPU; "
-                                   "a dedicated from-converged pose-finishing descent could push toward the "
-                                   "0.018-class ancestor (operator-GO, NOT launched)"),
+            reactivation_criteria=("n600 realized-d_pose row LANDED (0.001610); exact upstream/evaluate.py CPU "
+                                   "is the promotion authority; a dedicated from-converged pose-finishing descent "
+                                   "could push toward the 0.018-class ancestor (operator-GO, NOT launched)"),
             measurement_axis=_ADVISORY,
             hardware_substrate="apple_m5_max_cpu",
         ),

@@ -8,9 +8,9 @@ in the trained per-pair `pose_carrier.dxi` (600×6) table that the byte-close se
 d_pose? **Answer: YES — it survives byte-close.**
 
 **One-line verdict: SHIPPABLE.** The trained pose ships in ~7.2 KB of COUNTED coded ξ and the realized
-d_pose through the real byte-closed inflate = **0.001127 (n24)** — matching R1's training-side 0.001012 —
-for a pose contribution `√(10·d_pose)` = **0.106** (≈ the symposium's 0.105). Every number below is
-`[macOS-CPU advisory] NON-PROMOTABLE`. **Pointer 0.19110 UNMOVED.**
+d_pose through the real byte-closed inflate = **0.001610 (n600 authority)** / 0.001127 (n24) — same O(1e-3)
+band as R1's training-side 0.001012 — for a pose contribution `√(10·d_pose)` = **0.127 (n600)** / 0.106
+(n24). Every number below is `[macOS-CPU advisory] NON-PROMOTABLE`. **Pointer 0.19110 UNMOVED.**
 
 ---
 
@@ -103,9 +103,15 @@ authority).
 verdict_scope: this is a SHIPPABLE verdict for the pose HALF on THIS R1 checkpoint via the store-nothing
 ξ_eff carrier; it does NOT touch the d_seg blocker (0.40 seg term) or claim a frontier move.
 
-**n600 authority-scale row:** in progress at wrap (`reports/r1_dxi_238/n600_shipdxi.log`); the archive/rate
-columns are already n600-exact (section built for all 600 pairs); only the realized d_pose mean broadens
-from 24→600 pairs. [FILL: n600 realized d_pose = ____].
+**n600 authority-scale row (LANDED):** realized **d_pose = 0.001610** over all 600 inflated pairs
+(`reports/r1_dxi_238/n600_shipdxi.json`), d_seg 0.004549, archive 89,772 B (identical to n24 — the ξ
+section is built for all 600 pairs regardless of the inflate cap), S_advisory **0.6416**. Pose contribution
+`√(10·0.001610)` = **0.1269**. This CONFIRMS shippability at authority scale: the n600 mean (0.00161) sits
+in the same O(1e-3) band as the training-side 0.001012 and n24 0.001127 — ~1.6× the training-side EMA-shadow
+number (the 600-pair mean folds in the descent's tail pairs + the EMA-shadow-vs-live lag, both
+conservative-direction), and ~1000× below the matched no-dxi carrier (0.022) and ~16,000× below the
+naive-calibration byte-close (26.0). The dxi survives byte-close at n600. n600 S = 100·0.004549 (seg 0.455,
+the d_seg blocker) + 0.1269 (pose, shippable) + 0.0598 (rate) = 0.642.
 
 ## 6. Dedicated-finishing-descent implication (NOTE ONLY — operator-GO, NOT launched)
 
