@@ -45,6 +45,29 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       rel-sig non-additivity adopted, δ_R/m_safe, _signed shared, dry-start catches startup-KeyError class,
       ep257 ckpt preserved, S6 blind vindication, torch-twin NO-GO, structural wall-clock (event-exits +
       solve-replaces-train) partial. Full: `P3_redteam_verdict_20260709.md`.
+- [x] **P3b RED-TEAM-FOLDED REVISION** — `SYNTHESIS_v2_v752_20260709.md` landed (SUPERSEDES v1 5ce62314c).
+      **Dispositions: 1 FIXED · 10 APPLIED · 10 CARRIED.** **A-1 (BROKEN) FIXED:** the RELATIVE relaxation-fit
+      plateau `σ_min ≥ σ_min(∞)·(1−δ)` (scale-free, S5-N1) PROMOTED to PRIMARY firing criterion; absolute
+      σ*=√(C/(δ_seg·λ_min(F))) DEMOTED to advisory telemetry (unreachable ≥14.14); canary-fail ⇒ ship banked
+      R1 (never block-launch — resolves the A.4 contradiction); σ*-build + λ_min(F) probe OFF the
+      launch-blocking list (replaced by the cheaper plateau build). Operator conditioning-gate LAW intact —
+      only the SENSING changed. **σ_cc′ RECLASSIFIED (W-1):** it reweights the length LOSS term on the shared
+      Road↔Lane annulus ⇒ Class-B (nonzero gradient-share, confound risk) ⇒ **MOVED OUT of launch-1** to
+      ladder rung 1b (own increment A/B at the tau-boundary, BEFORE other length-touching levers — honors S1's
+      own "isolate" call; the σ≡1-byte-identity gives a clean OFF baseline, not a launch-1 license).
+      **WALL-CLOCK (operator dimension, W-9/W-10):** NEW §B `speed:` block composes {fused-R bit-exact ·
+      grouped-backward ~17× · safe-compile fingerprint · async-verdict} with per-lever neutrality receipts;
+      **micro-batch-pairs EXCLUDED-WITH-REASON** (#313 batch-dependence — bit-identity-at-speedup IMPOSSIBLE,
+      would trade score-for-speed); NEW §B `wall_clock:` per-stage budget (42s/ep × floor-epochs → **~6–16 h
+      designed floor-budget** + ~11min GPU head-solve; event-exits + solve-replaces-train shave below nominal).
+      Other WEAKENED applied: unification realization owed (annulus∩horizon wrap, lo=0.06 not 0.3); term_dom
+      runtime alarm = NEW owed build (config comments only); dry-start re-scoped to STARTUP + all-gate-
+      registration (new engage-on gate registers unconditionally); amber Muon-exemption UNBUILT (must land
+      before first joint arm); FRESH re-grounded on the MEASURED F2-resume-refuse leg + process-inversion
+      NAMED; λ_lane 683.8/λ_movable 322.6 → DERIVED-AT-CONFIG; head-solve σ_min-amplifier → INFERRED.
+      **Owed-before-launch REORDERED — new top-3:** (1) repaired pose-gate (relative-plateau + canary +
+      disengaged alarm; CHEAPER); (2) full-config dry-start = startup all-gate-registration completeness;
+      (3) amber×Muon per-group-clip exemption (UNBUILT) + instrumented arm. Full: `SYNTHESIS_v2_v752_20260709.md`.
 - [ ] **P4 EMPIRICAL RECESS** — suspend-to-measure any $0/governed probe the debate needs (NO concurrent
       heavy GPU — machine-crash P0 gate; #205 STOPPED so box free, but v7.5.2 execute-at-n600 = governed).
 - [ ] **P5 SECOND RED-TEAM → SEAL-TO-RECESS.**
@@ -117,14 +140,15 @@ B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event trigger (CE→ta
    question: is a torch-parity twin worth building for Modal A/B fan-out? (S4 owns.)
 
 ## The one-line resume state
-P0+P1(all 6 seats)+P2+P3 landed. NEXT ACTION: **P4 EMPIRICAL RECESS** — the P3 red-team surfaced ONE
-BROKEN finding with a $0 measurable core (A-1 σ* unreachable): the cheapest debate-settling probe is the
-λ_min(F) annulus probe (reuses #333/#141) + one jacobian_basin σ_min readout on the current ckpt to
-CONFIRM σ_min ≪ σ*≥14 — this is what turns A-1 from a red-team arithmetic argument into a measured
-launch-block. Then P5 (2nd red-team) re-derives the 10 WEAKENED owed-additions (each names its owed
-build/A-B/config). BROKEN A-1 must be resolved into the draft (relative-plateau PRIMARY, σ*-build OFF
-the launch-blocking path, canary-fail⇒ship-R1) BEFORE P6 seal. #205 STOPPED (box free); pointer 0.19110
-UNMOVED.
+P0+P1(all 6 seats)+P2+P3+P3b landed. **A-1 RESOLVED into SYNTHESIS_v2** (relative-plateau PRIMARY, σ*
+advisory, canary-fail⇒ship-R1, σ*-build OFF the launch-blocking path); σ_cc′ moved to Class-B ladder;
+wall-clock speed-block + budget added; micro-batch-pairs EXCLUDED. NEXT ACTION: **P4 EMPIRICAL RECESS** —
+the cheapest remaining debate-settling probe is now the RELATIVE-plateau side: one jacobian_basin σ_min
+readout on the current ckpt to fit σ_min(∞) and CONFIRM the relaxation curve is fittable (the plateau
+criterion's precondition), plus the W-8 σ_min-before/after-head-solve measurement (amplifier claim is
+INFERRED). The λ_min(F) probe is now ADVISORY-only (σ* demoted), no longer launch-blocking. Then P5 (2nd
+red-team) re-derives the owed-additions as unreviewed new code/config. Read SYNTHESIS_v2, NOT v1, for all
+launch decisions. #205 STOPPED (box free); pointer 0.19110 UNMOVED.
 
 ## OPERATOR BINDING CONSTRAINT (2026-07-09, mid-P1) — POSE ENGAGEMENT GATE
 Verbatim: "pose must not be fired for joint descent until optimal it needs dseg to be sufficiently
