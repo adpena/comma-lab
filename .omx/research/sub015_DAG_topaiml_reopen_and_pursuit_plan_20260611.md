@@ -12014,7 +12014,8 @@ Memo `.omx/research/ot_offset_n600_verdict_20260709.md` (STORES CONSULTED there;
 #205 READ-ONLY/untouched · no GPU, no training, no launch.
 
 ## FEED-crucible2-seal-legs (2026-07-09) — P6 seal-round commits: triality-leg disposition
-Seal-round fix commits (bf6a6c162 R1 · 77374bca9 R3 · f3a93e1ba R4 · 14c16ff23 R5) are APPARATUS
+Seal-round fix commits (bf6a6c162 R1 · 77374bca9 R3 · f3a93e1ba R4 · 14c16ff23 R5 · a26c4d6e4 R6 ·
+d71051074 R7 · and ALL subsequent crucible2_v752 seal-round fix/ledger commits until seal) are APPARATUS
 (document-hygiene fixes to the SYNTHESIS_v3 seal candidate: transcription, flag-type/choices, glued
 value) — no measured finding, no lever, no law ⇒ equations/DSL legs N/A ([no-triality]-class; R5's
 commit message omitted the literal marker, recorded here instead). The MEASURED findings of the seal
