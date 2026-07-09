@@ -88,3 +88,13 @@ memo's durable results directory as `snapshot_ema_BEST.npz` alongside a `CHECKPO
 note (sha verified equal post-copy). The sha-pinned evidence JSON is untouched; bit-exact
 re-runnability is restored independent of scratchpad GC. Source run:
 levelset_n600_witness_mod32cap_20260706T115554Z (snapshot 2026-07-07T02:37Z).
+
+**Correction (round-4 review F-B, 2026-07-09 — APPEND-ONLY):** the phrase "sha-pinned evidence
+JSON" above is imprecise and is corrected here to match `CHECKPOINT_CUSTODY.md`. The evidence
+JSON's `ckpt` block records NO sha (only `{dir, npz, provenance}`, and `dir` is a transient
+`/tmp` scratchpad path). The sha binding that makes re-runnability durable lives in (a) the
+canonical-equations registry anchor row's `inputs.ckpt` field ("sha256 9f123bac950af1ec") and
+(b) `ckpt_sha256.txt` in the durable results dir; the copied `snapshot_ema_BEST.npz` is
+sha-verified `9f123bac…93`. The evidence JSON is left untouched deliberately (mutating it would
+break the registry pins). Custody gap F1 is genuinely closed; only the pin-location wording was
+wrong.
