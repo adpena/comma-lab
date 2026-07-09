@@ -153,6 +153,18 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       config-as-written · fresh-math sweep) via `tac.review_counter` surface **`crucible2_v752`**; then the
       #363 self-reflection seal (assumption tags; PROVISIONAL where unmeasured). Reviewers RE-DERIVE from
       primary artifacts; structural claims get BLIND derivation (allowlist committed BEFORE memos).
+  - **P6 R1 (2026-07-09, fresh-eyes; commit bf6a6c162):** NOT_CLEAN — **1 finding**, counter reset **0/3**.
+    Angle-1 amendment-fidelity **6/6 CLEAN** (all P5 amendments folded faithfully; supersession header
+    correct; v2 preserved APPEND-ONLY; hook annotation commit f0dad3094 verified 2ins/2del content-neutral).
+    Angle-2 FINDING: §A.5 `min_stage_epochs` floor mis-transcribed the W_settle term as `⌈2.6·W_settle⌉`
+    (reads 6.76) vs §B `ceil(2.6)` + S3 source (W_settle=2.6 ep, coeff=1 → `⌈W_settle⌉`=3) — non-binding
+    (dominated by 150 floor + 3·τ_relax_fit→400) but a latent config-compile mis-transcription; FIXED
+    in-round (harmonized §A.5 to §B/S3), verdict_scope INSTANCE. exp-asymptote refs all correctly DISPROVED;
+    crush-arm correctly WATCH everywhere; σ_cc′ Class-B everywhere; owed 1–14 consistent. Angle-3 shared
+    assumption: the seal operates within "de-noised terminal-band σ_min (UNMEASURED, zero data) contains a
+    detectable rolling-slope plateau" — honestly surfaced; ship-banked-R1 fallback covers it. Angle-4 fresh
+    spot-checks PASS (R1 √(10·0.001610)=0.127 · wall-clock 42s/ep×{150,250,400}={1.75,2.9,4.67}h · 3·δ_R=0.0588 ·
+    class-order Road0/Lane1/Undriv2/Movable3/MyCar4 · W_settle=4.6·(1/(1−0.997)/600)=2.55≈2.6). $0 · no GPU · [no-triality].
 - [ ] **P7 DELIVERABLE = SPEC_v752** (successor to SPEC_v75): DSL WitnessProgram · schedule · costate ·
       curriculum · rate/pose plan · measurement + wall-clock plan — triality-consistent landing.
 - [ ] **P8-LAUNCH (operator-GO wall; NEVER autonomous):** execute-at-n600 seal-completion (F-2 owed
