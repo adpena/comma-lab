@@ -38,6 +38,7 @@ from tac.canonical_equations.equation import (
     ASSUMED_AWAITING_VERIFICATION,
     RECALIBRATE_ON_NEW_ANCHORS,
     VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    VERIFIED_VIA_SOURCE_INSPECTION,
     CanonicalEquation,
     EmpiricalAnchor,
 )
@@ -127,6 +128,48 @@ def build_step_native_activation_edge_optimality_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu_mlx",
         ),
     )
+    # (#310 fireable-lever build, 2026-07-09) the numpy REFERENCE ORACLE + shared fail-closed SAFETY
+    # predicate that make the lever properly fireable + swept: tac.boundary_math.step_native_activation
+    # proves tanh(beta*sin) -> sign(sin) STEP (a.e.) and DIFFERS from sine, the beta-anneal is the numpy
+    # twin of the trainer _hosc_beta_for_epoch, and validate_step_native_config REJECTS a constant beta
+    # (the DSL StepNativeActivation guard now consumes it — the prior beta_start<=beta_end guard PERMITTED
+    # a fixed beta, the MEASURED saturation-death). Source-verified + unit-tested ($0 numpy).
+    anchor_numpy_oracle_and_guard = EmpiricalAnchor(
+        anchor_id="step_native_numpy_oracle_and_fixed_beta_guard_20260709",
+        measurement_utc="2026-07-09T00:00:00Z",
+        inputs={
+            "mechanism": "tac.boundary_math.step_native_activation (hosc_activation/step_native_limit/"
+                         "sine_basis/beta_anneal_schedule/validate_step_native_config)",
+            "tests": "src/tac/boundary_math/tests/test_step_native_activation.py",
+            "dsl_guard": "tac.witness_dsl.curriculum_dsl.StepNativeActivation consumes validate_step_native_config",
+        },
+        predicted_output={
+            "claim": ("tanh(beta*sin) -> sign(sin) STEP (a.e., != sine); anneal twin of the trainer; "
+                      "the fireable DSL lever fails closed on a CONSTANT beta (the saturation-death)"),
+        },
+        empirical_output={
+            "step_differs_from_sine": "hosc(beta=64)~sign(sin), max|hosc-sin|>0.3 (tests)",
+            "anneal_matches_trainer": "beta(1)=start, beta(A)=end, monotone; const when end None/==start",
+            "guard_rejects_fixed_beta": ("validate_step_native_config flags beta_end==beta_start; the "
+                                         "prior StepNativeActivation guard (beta_start<=beta_end) allowed "
+                                         "it — now REJECTED; step_basis requires FINER"),
+            "default_start_lowered": "beta_start default 4.0->1.0 (start where gradients flow, anneal UP)",
+            "verdict": ("the lever is now a properly-wired, swept, fireable DSL Lever with a real "
+                        "fail-closed guard + numpy reference oracle; byte-identical when NOT composed"),
+        },
+        residual=0.0,
+        source_artifact="src/tac/boundary_math/step_native_activation.py",
+        measurement_method="source inspection + NO-FAKE unit tests ($0 numpy)",
+        empirical_verification_status=VERIFIED_VIA_SOURCE_INSPECTION,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path="src/tac/boundary_math/step_native_activation.py",
+            reactivation_criteria=("re-verify if the activation/schedule form or the fixed-beta guard "
+                                   "changes (tanh(beta*sin) must still -> sign(sin); a constant beta "
+                                   "must stay REJECTED by validate_step_native_config)"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu_mlx",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Step-native activation L-infinity-at-edge optimality: for piecewise-constant argmax "
@@ -157,7 +200,7 @@ def build_step_native_activation_edge_optimality_v1() -> CanonicalEquation:
         },
         units_in={"beta_start": "dimensionless", "beta_end": "dimensionless"},
         units_out={"ratio": "dimensionless_gt_1_for_anneal"},
-        empirical_anchors=(anchor_nonstep_bound, anchor_step_delta_owed),
+        empirical_anchors=(anchor_nonstep_bound, anchor_step_delta_owed, anchor_numpy_oracle_and_guard),
         predicted_vs_empirical_residual={
             # the non-step chart's measured gap-to-need (ep450 arm): 0.002447/0.001 - 1 = 1.447 —
             # the headroom the step-native lever is predicted to attack; #310 sweep re-anchors this.
@@ -169,6 +212,7 @@ def build_step_native_activation_edge_optimality_v1() -> CanonicalEquation:
         canonical_consumers=("tac.witness_dsl.curriculum_dsl",),
         canonical_producers=(
             "experiments/train_levelset_witness_realized_through_R_mlx.py",
+            "tac.boundary_math.step_native_activation",   # numpy reference oracle + shared safety predicate
         ),
         provenance=build_provenance_for_predicted(
             model_id="step_native_activation_edge_optimality.v1",
