@@ -57,6 +57,17 @@ from tac.witness_control.costate_estimator import (
     stage_epoch_costates,
     transition_jump_costate,
 )
+from tac.witness_control.verdict_trend_alarm import (
+    TRAIN_VERDICT_DECOUPLING,
+    verdict_trend_alarm,
+)
+
+#: overlay classification when the verdict-trend alarm fires on a scalar false-green
+#: (the operator-catch 2026-07-09 class): CONVERGING is FORBIDDEN when the advisory
+#: verdict d_seg is materially RISING — it is DRIFTING/decoupling, not converging.
+VERDICT_RISING_DECOUPLING = "verdict_rising_decoupling"
+#: scalar classes that are FALSE GREENS while the verdict is rising (must be downgraded)
+_FALSE_GREEN_CLASSES = frozenset({"converging", "plateau"})
 
 _REPO = Path(__file__).resolve().parents[3]
 
@@ -323,6 +334,21 @@ def _classify(inputs: RunInputs) -> dict | None:
         out["recommendation"] = ("BINDING-TERM STALL (task #315): " + bs.reason
                                  + " [scalar monitor said "
                                  + f"'{cv.classification}': {cv.recommendation}]")
+    # (operator-catch 2026-07-09) VERDICT-TREND / TRAIN-VERDICT-DECOUPLING OVERLAY —
+    # the scalar classifier fits a least-squares d_seg slope over a window that still
+    # spans the early CE drop, so a NET-DOWN-but-recently-RISING binding term reads as
+    # CONVERGING ("healthy descent") — the false green the operator caught. This overlay
+    # reads the recent within-stage RISE (materially above the calibrated flat gate) and
+    # FORBIDS a 'converging'/'plateau' green when the advisory verdict d_seg is rising.
+    vt = verdict_trend_alarm(inputs.verdicts)
+    out["verdict_trend_alarm"] = vt.to_dict()
+    if vt.fired() and out["classification"] in _FALSE_GREEN_CLASSES:
+        out.setdefault("scalar_classification", cv.classification)
+        out["classification"] = VERDICT_RISING_DECOUPLING          # rising is NOT converging
+        out["recommendation"] = (
+            ("TRAIN<->VERDICT DECOUPLING" if vt.classification == TRAIN_VERDICT_DECOUPLING
+             else "RISING VERDICT") + " (operator-catch 2026-07-09): " + vt.reason
+            + f" [scalar monitor said '{cv.classification}': {cv.recommendation}]")
     return out
 
 
@@ -362,7 +388,21 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
             "evidence": list(evidence), "costate": costate_name,
         })
 
-    if cls == BINDING_TERM_STALL:
+    if cls == VERDICT_RISING_DECOUPLING:
+        vt = (classification or {}).get("verdict_trend_alarm") or {}
+        pcs = vt.get("per_class_alarms") or []
+        pc_txt = (" worst-rising class(es): "
+                  + ", ".join(f"{r.get('class_name')}(+{r.get('rise_rel_value', 0) * 100:.0f}% of value)"
+                              for r in pcs)) if pcs else ""
+        _cand("INVESTIGATE_VERDICT_RISING_DECOUPLING", 0.0, None,
+              "the advisory verdict d_seg is materially RISING over >= k consecutive "
+              "verdicts while the train seg-loss descends (the operator-catch false-green): "
+              "more of the same gradient is NOT lowering the argmax verdict. Do NOT "
+              "advance/early-stop on the scalar 'converging/plateau' green; investigate the "
+              "curriculum/stage (a decoupling, not a converged plateau)." + pc_txt,
+              tuple(vt.get("evidence") or ("verdict-trend alarm (operator-catch 2026-07-09)",)),
+              "verdict_trend_alarm")
+    elif cls == BINDING_TERM_STALL:
         bs = (classification or {}).get("binding_stall") or {}
         _cand("INVESTIGATE_BINDING_TERM_DEADLOCK", 0.0, None,
               "the binding term d_seg is FLAT while a non-binding signal (implied_S / "

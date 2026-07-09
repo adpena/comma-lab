@@ -54,6 +54,8 @@ _SHADOW_STALE_S = 2 * 3600.0
 # section_ncde cache: {run_dir_str: (log_signature, line, data)} — keyed on run.log
 # (mtime_ns, size) so a re-call within the same session reuses the fit instead of re-probing.
 _NCDE_CACHE: dict[str, tuple[tuple, str | None, dict | None]] = {}
+# section_verdict_trend cache: same run.log-signature keying as _NCDE_CACHE.
+_VERDICT_TREND_CACHE: dict[str, tuple[tuple, str | None, dict | None]] = {}
 
 
 def _fmt_age(seconds: float | None) -> str:
@@ -237,6 +239,40 @@ def section_ncde(run_dir: Path | None) -> tuple[str | None, dict | None]:
         data = {"advisory": adv, "verdict_points": report.get("verdict_points"),
                 "n_fires": report.get("n_fires")}
         _NCDE_CACHE[str(run_dir)] = (sig, line, data)
+        return line, data
+    except Exception:
+        return None, None
+
+
+def section_verdict_trend(run_dir: Path | None) -> tuple[str | None, dict | None]:
+    """VERDICT-TREND / TRAIN-VERDICT-DECOUPLING alarm (operator-catch 2026-07-09): the
+    advisory verdict d_seg RISING while the train seg-loss descends — the false-green the
+    scalar classifier misses. Read-only + score-neutral -> defaults ON (CLAUDE.md "'Off' is
+    a tracked queue"). Fail-open (any error -> omit); omitted when there is no material
+    rising trend. Cheap + cached by run.log signature (like section_ncde)."""
+    if run_dir is None:
+        return None, None
+    try:
+        log = run_dir / "run.log"
+        if not log.is_file():
+            return None, None
+        st = log.stat()
+        sig = (st.st_mtime_ns, st.st_size)
+        cached = _VERDICT_TREND_CACHE.get(str(run_dir))
+        if cached is not None and cached[0] == sig:
+            return cached[1], cached[2]
+        from tac.witness_control import (
+            format_verdict_trend_line,
+            load_run_inputs,
+            verdict_trend_alarm,
+        )
+        alarm = verdict_trend_alarm(load_run_inputs(run_dir).verdicts)
+        if not alarm.fired():        # only surface when there is a real rising trend
+            _VERDICT_TREND_CACHE[str(run_dir)] = (sig, None, None)
+            return None, None
+        line = format_verdict_trend_line(alarm)
+        data = alarm.to_confound_alarm_row()
+        _VERDICT_TREND_CACHE[str(run_dir)] = (sig, line, data)
         return line, data
     except Exception:
         return None, None
@@ -513,6 +549,10 @@ def build_digest() -> tuple[list[str], dict]:
     ncde_line, data["ncde"] = section_ncde(run_dir)
     if ncde_line:
         lines.append(ncde_line)
+
+    vtrend_line, data["verdict_trend"] = section_verdict_trend(run_dir)
+    if vtrend_line:
+        lines.append(vtrend_line)
 
     duty_line, data["duty_to_measure"] = section_duty_to_measure()
     lines.append(duty_line)

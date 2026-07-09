@@ -59,8 +59,17 @@ from tac.witness_control.producer_bridge import (  # noqa: F401
     read_producer_signals,
 )
 from tac.witness_control.shadow_controller import (  # noqa: F401
+    VERDICT_RISING_DECOUPLING,
     ShadowReport,
     build_shadow_report,
     load_run_inputs,
     write_shadow_row,
+)
+from tac.witness_control.verdict_trend_alarm import (  # noqa: F401
+    NO_ALARM,
+    RISING_VERDICT,
+    TRAIN_VERDICT_DECOUPLING,
+    VerdictTrendAlarm,
+    format_verdict_trend_line,
+    verdict_trend_alarm,
 )
