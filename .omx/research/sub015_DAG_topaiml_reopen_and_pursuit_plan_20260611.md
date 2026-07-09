@@ -10857,3 +10857,21 @@ weighted margin + per-class stratified regime (sky=rotation). HONEST: 0.0016 is 
 trained realization via #360 is UNTESTED. This is a v7.5 lever, not a new invention. Undriv-gap probe I
 offered = SUPERSEDED by this recall (the answer already exists). verdict_scope: n/a (positive recall).
 Pointer 0.19110 UNMOVED.
+
+## FEED-shippable (2026-07-08) — POSE SHIPPABLE 0.106 (validated end-to-end through real inflate); d_seg is now THE ENTIRE GAME (a0d02105f)
+#238 completion: R1's trained dxi SURVIVES byte-close — realized d_pose through the REAL byte-closed
+inflate = **0.001127 (n24)** ≈ training-side 0.001012; ships ξ_eff=xi_stored+dxi in **7,195 B COUNTED**
+(rate 0.0048); pose contribution √(10·d_pose) = **0.106**. The joint-descent path (render co-adapts →
+warp becomes pose-legible → dxi ships) is VALIDATED end-to-end. Connector: build_pose_carrier_section(
+xi_override) ships trained twist; canonical anchor r1_dxi_shippability. n600 authority-scale IN PROGRESS
+(monitor armed reports/r1_dxi_238/n600_shipdxi.log; n24 0.001127, n600 owed — archive/rate columns
+already n600-exact). THE REFRAME: full advisory S on R1's ckpt = **0.566** = 100·0.004(d_seg=0.40) +
+0.106(pose) + 0.060(rate) — **d_seg DOMINATES** (R1's 0.004 gives 0.40 vs frontier's ~0.0009≈0.09).
+POSE IS BANKED; d_seg is the ENTIRE remaining fight. CONSEQUENCE for the P0 joint-descent (#366): the
+pose MECHANISM is proven — no run needed to prove pose. The FINAL submission witness still needs its OWN
+dxi (warm-start converged-d_seg witness → R1 joint-pose-descend → dxi ships), so #366 is the recipe for
+the final witness's pose, SEQUENCING AFTER a converged-d_seg witness exists (v7.5's job) — NOT a
+prove-pose run, and NOT needed concurrently NOW. The v7.5 optimal-form audit (#367, 3 agents running) is
+EXACTLY the priority: pose banked → d_seg is everything → is v7.5 the optimal-form d_seg config? Pointer
+0.19110 UNMOVED (S 0.566 > 0.19110 entirely on d_seg; no move until a converged-d_seg witness). verdict_scope:
+instance — SHIPPABLE on THIS R1 ckpt via store-nothing; the d_seg blocker is separate + open.
