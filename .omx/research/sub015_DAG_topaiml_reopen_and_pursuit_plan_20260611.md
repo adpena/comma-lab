@@ -11579,3 +11579,18 @@ Real-coder (brotli), n=200/600 full-res, DE-SHARED (each inter-class edge counte
 - **Road/Lane (0.204, 59% of the budget) → Wave-F lane poly (#234 BUILT, Hungarian slot-track + coherent multi-frame fit)** — the geometric reduction is OWED-a-measurement but the primitive EXISTS; horizon transfer (14.6×) projects Road/Lane → ~0.014 S.
 - Movable pairs (0.061 combined) → sparse object contours (owed).
 - **Verdict:** rate thesis HOLDS — geometry crushes the bitmap; the full-scene geometric budget projects to **~0.02–0.05 S** (vs current PR101-recode 0.118 S rate term). 2 edges MEASURED-geometric, 3 owed (all have a named primitive). NO b/px proxy anywhere. Pointer 0.19110 UNMOVED. `[no-triality]`.
+
+---
+## FEED-v8-voronoi (2026-07-09) — the optimal road/lane rep is the POWER DIAGRAM's parsimonious GENERATORS
+**Operator:** *"There is more optimal way to represent road/lane what about voronoi or others."* → YES, and it's
+the deepest frame: the SegNet argmax `P(x)=argmax_c(φ_c+b_c)` IS an additively-weighted Voronoi = **Laguerre /
+power diagram** (#284: Laguerre=tropical=curvelet=se3). Store the GENERATORS, not the boundary.
+- **MEASURED (n100, real coder):** naive DENSE medial axis (444 ridge pts/frame, union-of-balls) = 0.352 S ≈ the
+  road boundary-bitmap 0.384 S (**only 1.09×** — NOT a win). The important negative: the dense skeleton is not the lever.
+- **The lever is PARSIMONY** (few generators / low-order centerline), proven by the horizon's 4-coeff fit = 14.6×.
+  Curvelet-boundary ≡ medial-axis-centerline ≡ power-diagram-sites = three DUALS of ONE parsimonious structure.
+- **Per-class optimal generator:** Road → corridor CENTERLINE poly + width (= openpilot PATH, few coeffs);
+  Lane → centerline poly (Wave-F #234); Undriv/horizon → 1 Laguerre site + boundary poly (DONE 14.6×);
+  Movable → sparse object sites. In-tree substrate: `laguerre_logit_offset` + `power_diagram_argmax` already ARE this.
+- **RE-SHAPES v8 carriers:** build on PARAMETRIC GENERATORS (Laguerre sites / centerline polys), NOT boundary bitmaps.
+  Pointer 0.19110 UNMOVED. `[no-triality]` (v8 eqs FORMALIZATION_PENDING per SPEC_v8 §5 until byte-close).
