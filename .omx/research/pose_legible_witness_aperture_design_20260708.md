@@ -1,5 +1,20 @@
 # THE POSE-LEGIBLE WITNESS — aperture-problem diagnosis + ξ-consistent textured class/depth-stratified render (2026-07-08)
 
+## ⛔ 0a. MEASURED (c2adba9aa, same day): THE APERTURE HYPOTHESIS (§1) IS FALSIFIED — mechanism REFINED to WRONG-FLOW-OBSERVABILITY; the T×D cell is the surviving live bet
+A0T probe (n24, through-R, pos-control 2.1e-12): texture on the GLOBAL ground-H flow made d_pose WORSE
+(1.685 → 15.14 best-case, →118 at high amp; monotone; NO low-|t| rescue — the aperture signature is
+ABSENT). Diagnostic that pins it: warp(frame,ξ) vs itself reads d_pose 166–186 — the global H warps the
+WHOLE frame as ground-plane (sky/structure/cars given wrong motion); the flat render's 1.685 was a
+weak-residual reading BECAUSE the wrong flow was unreadable. Texture exposed it. Semantic-prior dominance
+ALSO ruled out (PoseNet responds 1.7→118 to injected flow — it reads pixels). verdict_scope: formulation —
+"texture restores pose on the GLOBAL-ground-H carrier" is the falsified claim; NOT tested/killed: the
+**T×D cell** — texture advected by the PER-CELL stratified flow (§2's D layer; every prior arm tested T
+and D SEPARATELY: A2+ = D-without-T on a flat render, A0T = T-without-D on the wrong global flow). A1T
+probe FIRED (texture × stratified_depth_warp, same harness) with the fallback scale/convention diagnostic
+(sweep s·ξ + sign-flips; the 6 scored dims' semantics are INFERRED-unconfirmed) if A1T stays ~flat-level.
+§4's prediction is retired; §5's GREEN gate is now keyed to A1T. d_seg guard also failed at A0T amps
+(3.7–13% flips) — smaller amps + interior gate owed in A1T.
+
 **Operator directive (verbatim, binding):** "dig deeper than ever into pose research and task space SDF
 level set research and v7.5 and v8 and openpilot and upstream evaluate.py and modules.py because this
 isn't intractable it is a frontier bleeding edge deep math and differentiable geometry and information

@@ -10730,3 +10730,21 @@ guard MEASURED not assumed. PREDICTION labeled: A0T ≪ 1.685 if aperture-diagno
 it → honest fallback pose-as-budget + #238. Deep dives fired (Opus): scorer-side (FastViT attention/band/
 scene-invariance; texture statistics per unit amplitude) + openpilot-depth/witness-term (Morse-Smale-native
 texture layer, v8 coupling). Build gated on probe GREEN; DSL Lever obligation on build. Pointer 0.19110 UNMOVED.
+
+## FEED-apertureprobe (2026-07-08) — MEASURED: aperture hypothesis FALSIFIED; mechanism = WRONG-FLOW-observability; the untested T×D cell is the live bet (c2adba9aa)
+A0T (n24, through-R, pos-control 2.1e-12): texture on the GLOBAL ground-H flow → d_pose WORSE everywhere
+(1.685→15.14 best, →118 high-amp; monotone; NO low-|t| rescue — aperture signature ABSENT). PINNING
+DIAGNOSTIC: warp(f,ξ)-vs-f reads 166–186 — the global H gives the WHOLE frame ground-plane motion
+(sky/structure/cars wrong); flat's 1.685 was a weak-residual reading because the wrong flow was
+UNREADABLE; texture exposed it. Semantic-prior dominance ALSO ruled out (PoseNet responds 1.7→118 to
+injected flow). Scorer-side dive (0d3dcd5fb) supplied the derived spec (isotropic 24–32px@874, amp 8–16,
+non-AA bilinear MEASURED modules.py:73, |t|-stratified reporting); openpilot-depth design (a2d8f74e9):
+~87% area = 0-byte exact per-cell flow, decode-side-first, SDF-interior hard gate, +50–170 B counted.
+verdict_scope: formulation — "texture restores pose on the GLOBAL-ground-H carrier" falsified; NOT
+tested: **T×D** (texture × PER-CELL stratified flow) — every prior arm tested T and D SEPARATELY (A2+ =
+D-no-T flat/unreadable; A0T = T-no-D legible-wrong). A1T probe FIRED (stratified_depth_warp harness swap;
+prediction: ≪1.223 if wrong-flow-observability right; fallback branch = s·ξ scale/convention diagnostic —
+6 scored dims semantics INFERRED-unconfirmed). d_seg guard failed at A0T amps (3.7–13% flips) — smaller
+amps + interior gate owed. A0T anchor appended to morse_smale_stratified_parallax_dpose_v1 (advisory,
+n600 owed). My aperture diagnosis = 2nd pose hypothesis refuted today; each refutation NARROWED the
+mechanism space (observability-alone OUT, semantic-prior OUT, flow-correctness PINNED). Pointer 0.19110 UNMOVED.
