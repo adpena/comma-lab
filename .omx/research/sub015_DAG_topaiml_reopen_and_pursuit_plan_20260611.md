@@ -11266,3 +11266,27 @@ leg is tracked not dropped):
 Also: the B.5 build-log magnitude-dismissal line corrected — now states the 43.8%-of-remaining-descent
 relative significance + the n600 A/B measurement gate (per the magnitude-dismissal detector, honored not waivered).
 Pointer 0.19110 UNMOVED.
+
+## FEED-v75seal (2026-07-09) — v7.5 STRUCTURAL-SEAL-PROCEED; fresh-eyes seal caught a LAUNCH-BLOCKING crash the build's 221 tests missed
+The recursive adversarial seal (fresh-eyes, reviewer≠author) on the fully-actuated v7.5 config: **1 CRITICAL
+round → 3 clean structural passes → STRUCTURAL-SEAL-PROCEED** (`v75_seal_20260708.md`).
+- **CRITICAL (fixed fbe39e0da) — axis-9 receipt, launch-path ≠ config-tests:** B.4's `seg_temporal_screw`
+  EventBackstopGate was registered into `build_gate_resume_registry` but its key prefix was OMITTED from
+  `GATE_KEY_PREFIXES`, which fail-closes on unknown keys ⇒ **EVERY launch (crucible_v7 AND a plain #205
+  relaunch) would crash at `run_train` startup**. The build's "221 tests green" tested CONFIG COMPILATION,
+  never the LAUNCH PATH (resume-registry construction). Caught by the fresh-eyes static-coverage test; fixed
+  additively (`"seg_temporal_screw": "__tsg_"`, byte-identical un-fired), 70/70 resume tests green. LESSON =
+  the #205-OOM "surrogate ≠ authority" class at the launcher surface: passing config tests ≠ passing startup.
+- **HONEST POSE FLAG (corrects my over-claim):** pose is **BANKED-AS-ARTIFACT** (the R1 dxi ships through
+  byte-close at n600, 0.001610→0.127, #238) but **NOT solved-for-v7.5** — whether v7.5's NEW terminal
+  pose-finish stage (D.9) actually CONVERGES to an R1-class dxi is UNVALIDATED (mechanism correct +
+  byte-identical-when-off; efficacy owed). Memory refutes cheap carriers; live #205 co-train sits ~1.75.
+- **Verified now (structural):** 397 tests green, 0 WitnessProgram violations, 0-NAKED, orphans UNCHANGED
+  120, all 6 new levers DSL factories in the activation ledger, antagonists OFF, D.9 real (--w-pose 1.0, 8
+  loss sites gated). Assumption-challenge: annulus_plateau-proxy + muon-fire-safe-for-pose + default-off
+  byte-identity all HARD-EARNED; horizon band CONTESTED but correctly registered-OFF with pre-registered A/B.
+- **Owed behind #205 (2nd heavy GPU trips machine-crash P0 gate):** (1) execute-at-n600 runnability + real
+  peak-RSS; (2) scored quantities through byte-close (per-class d_seg · **d_pose = decisive** · rate); (3)
+  B.5 horizon/sky label-noise-vs-real A/B; (4) A.3 directional −48% A/B.
+v7.5 is STRUCTURALLY launch-eligible; empirical seal-completion + launch are owed behind #205 + operator-GO.
+Pointer 0.19110 UNMOVED. The seal is a MEANS — moves nothing until a byte-closed exact row.
