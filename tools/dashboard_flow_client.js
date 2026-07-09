@@ -91,7 +91,10 @@
         : " (~14 min governed pass)";
       return "rendering the n600 video from the best checkpoint…" + prog + "; auto-appears when done";
     }
-    if (meta.status === "error") return "sequence render error — " + (meta.err || "see server log");
+    // "error" from the server is usually memory back-pressure (governor refuse), not a crash. The
+    // server sends an honest sentence in meta.err — surface it verbatim, never a raw subprocess code.
+    if (meta.status === "error") return meta.err ||
+      "the n600 video render is waiting — memory is reserved by the live training run; it builds automatically when the box frees";
     return "the n600 video renders on the next best checkpoint…";
   }
   function onFlowReady(meta) {

@@ -1668,7 +1668,15 @@ class LiveState:
             if (self._flowseq_stem and (self._flowseq_stem.with_suffix(".done")).exists()):
                 self._ingest_flowseq(self._flowseq_stem, self._flowseq_target_mtime)
             else:
-                self._flowseq_err = f"flow-seq subprocess exited rc={rc} without output"
+                # rc=5 is a safe_run governor REFUSE: the ~2.6 GB n600 render is memory-gated by the
+                # live training run holding the box. That is correct back-pressure, not a crash — say so
+                # honestly and NEVER surface the raw subprocess code to the operator.
+                if rc == 5:
+                    self._flowseq_err = ("the n600 video render is waiting — memory is reserved by the "
+                                         "live training run; it builds automatically when the box frees")
+                else:
+                    self._flowseq_err = ("the n600 video render did not finish this pass; "
+                                         "it retries automatically on the next best checkpoint")
                 print(json.dumps({"stage": "dashboard_server", "flowseq_no_output": rc}), flush=True)
                 if self._flowseq_stem is not None:  # release the lock so a retry can spawn
                     with contextlib.suppress(Exception):
@@ -2325,12 +2333,13 @@ padding:10px 10px 6px;min-width:0;overflow:hidden}
 .orcstat .ol{font-size:9.5px;color:var(--acc);letter-spacing:.5px;text-transform:uppercase;font-weight:700}
 .orcstat .ov{font-size:16px;color:var(--fg);font-weight:700;font-variant-numeric:tabular-nums}
 .orcstat .os{font-size:10.5px;color:var(--muted);line-height:1.35}
-.orcgrid{display:flex;flex-direction:column;gap:16px;margin:14px 0 6px}
+.orcgrid{display:flex;flex-direction:column;gap:16px;margin:14px 0 6px;max-width:760px}
 .orcfig{margin:0;background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:10px;overflow-x:auto}
-.orcfig img{display:block;width:100%;max-width:100%;height:auto;border-radius:8px}
+/* images render at natural size up to the container — never upscaled/stretched (natural 748x520 / 875x218) */
+.orcfig img{display:block;max-width:100%;height:auto;border-radius:8px}
 .orcfig figcaption{font-size:11px;color:var(--muted);margin-top:7px;font-variant-numeric:tabular-nums}
-.orcxi{margin-top:20px}
-.orcxi img{display:block;width:100%;max-width:100%;height:auto;border-radius:10px;border:1px solid var(--grid);background:var(--panel);margin-top:8px}
+.orcxi{margin-top:20px;max-width:900px}
+.orcxi img{display:block;max-width:100%;height:auto;border-radius:10px;border:1px solid var(--grid);background:var(--panel);margin-top:8px}
 .orccredits{margin-top:22px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .orccredits ul{padding-left:20px;margin:6px 0}.orccredits li{margin-bottom:6px;font-size:12.5px}
 .wch{font-size:10px;color:var(--acc);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin-bottom:6px}
@@ -2902,11 +2911,10 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 
 <section id="tab-oracle" class="orc hide">
   <div class="orcintro">
-    <h2>The oracle Yousfi built &mdash; and the physical structure it reads</h2>
-    <p>The <b>oracle</b> is the frozen contest scorer: Yousfi's comma10k EfficientNet-B2 SegNet,
-    whose per-pixel argmax defines <b>d_seg</b>, and the FastViT-T12 PoseNet, whose first six
-    outputs define <b>d_pose</b>. Both networks are fixed; everything on this page is computed
-    against them, on the exact frames their verdict uses.</p>
+    <h2>Frozen evaluators &mdash; SegNet argmax + PoseNet</h2>
+    <p>The frozen contest scorer: a comma10k EfficientNet-B2 SegNet, whose per-pixel argmax defines
+    <b>d_seg</b>, and a FastViT-T12 PoseNet, whose first six outputs define <b>d_pose</b>. Both networks
+    are fixed; everything on this page is computed against them, on the exact frames their verdict uses.</p>
     <ul class="witkey">
       <li><b>Lane polynomial &rarr; d_seg prior.</b> The openpilot lane fit generates the
       analytic lane band at decode time, for zero stored bytes.</li>
@@ -2930,7 +2938,7 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
     <img id="orcxichart" alt="ego-ξ screw twist across the segment" />
   </div>
   <div class="orccredits">
-    <div class="wch">The physical priors, as implemented</div>
+    <div class="wch">Priors</div>
     <ul>
       <li><b>openpilot lane band</b> (<code>analytic_lane_render_band.build_analytic_lane_band_prior</code>)
       &mdash; deg-3 centerline fit to the GT class-1 argmax + AA-SDF range-dependent dash coverage;
@@ -3717,6 +3725,40 @@ function sig(v,n){
   return (neg?"-":"")+s;
 }
 function fmtInt(v){return (v==null||!isFinite(v))?"—":Math.round(v).toLocaleString("en-US");}
+// nice-number axis ticks (1/2/5 x 10^k) — instrument-grade round labels, never raw data values
+function niceNum(range,round){
+  if(!(range>0))return 1;
+  const exp=Math.floor(Math.log10(range)), f=range/Math.pow(10,exp);
+  let nf; if(round){nf=f<1.5?1:f<3?2:f<7?5:10;}else{nf=f<=1?1:f<=2?2:f<=5?5:10;}
+  return nf*Math.pow(10,exp);
+}
+function niceLinear(lo,hi,n){
+  if(!(hi>lo)){const s=Math.abs(lo)||1;lo-=s*0.5;hi+=s*0.5;}
+  const step=niceNum((hi-lo)/Math.max(1,n-1),true);
+  const dlo=Math.floor(lo/step)*step, dhi=Math.ceil(hi/step)*step, ticks=[];
+  for(let v=dlo;v<=dhi+step*1e-6;v+=step)ticks.push(Math.abs(v)<step*1e-9?0:v);
+  return {dlo,dhi,ticks};
+}
+function niceLog(lo,hi){
+  if(!(lo>0))lo=hi>0?hi/10:1e-6; if(!(hi>lo))hi=lo*10;
+  const M=[1,2,5], cand=[];
+  for(let e=Math.floor(Math.log10(lo))-1;e<=Math.ceil(Math.log10(hi))+1;e++)
+    for(const m of M)cand.push(m*Math.pow(10,e));
+  cand.sort((a,b)=>a-b);
+  let dlo=cand[0], dhi=cand[cand.length-1];
+  for(const c of cand)if(c<=lo*(1+1e-9))dlo=c;
+  for(let i=cand.length-1;i>=0;i--)if(cand[i]>=hi*(1-1e-9))dhi=cand[i];
+  let ticks=cand.filter(c=>c>=dlo*(1-1e-9)&&c<=dhi*(1+1e-9));
+  while(ticks.length>6){ticks=ticks.filter((_,i)=>i%2===0);} // thin very wide spans
+  return {dlo,dhi,ticks};
+}
+function niceTicksWithin(lo,hi,n){ // tick values inside [lo,hi] WITHOUT expanding the domain
+  if(!(hi>lo))return [lo];
+  let step=niceNum((hi-lo)/Math.max(1,n),true); if(!(step>0))step=1;
+  const out=[]; for(let v=Math.ceil(lo/step)*step; v<=hi+step*1e-6; v+=step)
+    if(v>=lo-step*1e-6)out.push(v);
+  return out.length?out:[lo,hi];
+}
 
 // ---------- tabs ----------
 function activateTab(t){
@@ -3771,11 +3813,17 @@ function drawPanel(canvas, key, opt){
   // data
   const pts=TRAJ.map(d=>[d.epoch,d[key]]).filter(p=>p[0]!=null&&p[1]!=null&&isFinite(p[1]));
   const log=!!opt.log;
-  // x range — extend to the FULL curriculum horizon (schedule.epochs) so all 4
-  // stage bands (incl. the FUTURE Muon band) are visible up front, not just up to l7.
-  const schedEnd=(META.schedule&&META.schedule.epochs)||0;
-  const _mapStarts=(stageMap()||[]).map(stageBoundary).filter(v=>v!=null);
-  let xmin=0, xmax=Math.max((META.l7!=null?META.l7:BOOT.l7)||0, schedEnd, ..._mapStarts, ...(pts.map(p=>p[0])), 1);
+  // x range — AUTO-FIT to the data actually seen (grows with the run), not the full
+  // 3000-epoch plan. A near-empty run must not render as a spike over 99% whitespace.
+  // Stage markers/bands beyond the visible range are simply not drawn (handled below).
+  const _eps=pts.map(p=>p[0]);
+  let xmin=0, xmax=1;
+  if(_eps.length){
+    const emin=Math.min(..._eps), emax=Math.max(..._eps);
+    if(emax===emin){ xmin=Math.max(0,emin-1); xmax=emin+1; }
+    else { const span=emax-emin, pad=span*0.04;
+      xmin=Math.max(0,emin-pad); xmax=emax+Math.max(pad,span*0.02); }
+  }
   if(xmax<=xmin) xmax=xmin+1;
   // y range over data + hlines
   let yvals=pts.map(p=>p[1]);
@@ -3784,6 +3832,10 @@ function drawPanel(canvas, key, opt){
   let ymin=Math.min(...yvals), ymax=Math.max(...yvals);
   if(!isFinite(ymin)||!isFinite(ymax)){ymin=0;ymax=1;}
   if(ymin===ymax){ymin = log? ymin/2 : ymin-1; ymax = log? ymax*2 : ymax+1;}
+  // snap the y-domain to round bounds so ticks land on nice numbers, not raw data values
+  let yticks;
+  if(log){ const r=niceLog(ymin,ymax); ymin=r.dlo; ymax=r.dhi; yticks=r.ticks; }
+  else   { const r=niceLinear(ymin,ymax,5); ymin=r.dlo; ymax=r.dhi; yticks=r.ticks; }
   const L=v=>log?Math.log10(v):v;
   const Lmin=L(ymin), Lmax=L(ymax);
   const sx=e=>x0+(e-xmin)/(xmax-xmin)*(x1-x0);
@@ -3815,18 +3867,18 @@ function drawPanel(canvas, key, opt){
   spans.forEach(s=>{const a=Math.max(s[0],xmin),b=Math.min(s[1],xmax);
     if(b>a){ctx.fillStyle=s[2];ctx.fillRect(sx(a),y0,sx(b)-sx(a),y1-y0);}});
   ctx.globalAlpha=1;
-  // grid + y ticks
-  ctx.strokeStyle="#2c313b"; ctx.fillStyle="#8b93a3"; ctx.font="10px system-ui"; ctx.lineWidth=1;
-  const nT=4;
-  for(let i=0;i<=nT;i++){
-    const lv=Lmin+(Lmax-Lmin)*i/nT; const val=log?Math.pow(10,lv):lv; const yy=sy(val);
-    ctx.globalAlpha=0.5;ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();ctx.globalAlpha=1;
-    let lab = opt.fmt ? opt.fmt(val) : String(val);
-    ctx.textAlign="right";ctx.fillText(lab,x0-5,yy+3);
-  }
-  // x ticks
-  ctx.textAlign="center";ctx.fillStyle="#8b93a3";
-  for(let i=0;i<=4;i++){const e=xmin+(xmax-xmin)*i/4;ctx.fillText(Math.round(e),sx(e),y1+14);}
+  // grid + y ticks (round nice-number labels)
+  ctx.strokeStyle="#252a33"; ctx.fillStyle="#7d8595"; ctx.font="10px ui-monospace,SFMono-Regular,Menlo,monospace"; ctx.lineWidth=1;
+  yticks.forEach(val=>{
+    if((log&&val<=0)||val<ymin*(1-1e-9)||val>ymax*(1+1e-9))return;
+    const yy=sy(val);
+    ctx.globalAlpha=0.55;ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();ctx.globalAlpha=1;
+    const lab = opt.fmt ? opt.fmt(val) : String(val);
+    ctx.textAlign="right";ctx.fillText(lab,x0-6,yy+3);
+  });
+  // x ticks — nice integers within the auto-fit range
+  ctx.textAlign="center";ctx.fillStyle="#7d8595";
+  niceTicksWithin(xmin,xmax,5).forEach(e=>{ctx.fillText(fmtInt(e),sx(e),y1+14);});
   // hlines (goals / reference)
   (opt.hlines||[]).forEach(h=>{
     if(h.y==null||(log&&h.y<=0))return;
@@ -3869,8 +3921,13 @@ function drawPanel(canvas, key, opt){
     ctx.fillStyle=opt.color;
     pts.forEach(p=>{ctx.beginPath();ctx.arc(sx(p[0]),sy(p[1]),2.6,0,7);ctx.fill();});
     const last=pts[pts.length-1];
-    ctx.fillStyle="#d8dde6";ctx.textAlign="left";ctx.font="11px system-ui";
-    ctx.fillText(opt.fmt?opt.fmt(last[1]):String(last[1]),Math.min(sx(last[0])+5,x1-72),sy(last[1])-5);
+    // emphasized endpoint dot
+    ctx.beginPath();ctx.arc(sx(last[0]),sy(last[1]),3.4,0,7);ctx.fillStyle=opt.color;ctx.fill();
+    ctx.beginPath();ctx.arc(sx(last[0]),sy(last[1]),3.4,0,7);ctx.strokeStyle="#13151a";ctx.lineWidth=1.4;ctx.stroke();
+    // current value — clear of the right edge, flips below the dot when near the title
+    const lx=Math.min(sx(last[0])+7,x1-58); let ly=sy(last[1])-7; if(ly<y0+11)ly=sy(last[1])+15;
+    ctx.fillStyle="#e3e8f0";ctx.textAlign="left";ctx.font="600 11px ui-monospace,SFMono-Regular,Menlo,monospace";
+    ctx.fillText(opt.fmt?opt.fmt(last[1]):String(last[1]),lx,ly);
   }
   // best-so-far star (d_seg panel only)
   if(opt.star&&opt.star.epoch!=null&&opt.star.val!=null&&(!log||opt.star.val>0)){
