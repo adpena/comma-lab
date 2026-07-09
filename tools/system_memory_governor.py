@@ -128,6 +128,16 @@ ABS_MIN_SAFETY_FLOOR_GIB = 2.0
 DEFAULT_CP_HEADROOM_MIN_GIB = 1.0
 DEFAULT_CP_HEADROOM_FRAC = 0.05
 DEFAULT_FLOOR_CAP_FRAC = 0.5
+# SOLE-WORKLOAD burst fraction (2026-07-09, adversarial-review NIT 1). CONCURRENT reserves the FULL
+# control-plane footprint as burst headroom (measured_cp leg = cp + ch) DELIBERATELY on top of the
+# used-based baseline subtraction (the double-reservation — agents burst proportional to current
+# activity, 2026-07-02 crash). For a SOLE workload the used-based arithmetic already subtracts the
+# baseline ONCE and no concurrent heavy job is spawning bursts, so reserve only the spike headroom +
+# HALF the footprint as proportional burst room (ch + 0.5*cp): kills the double-count but — unlike a
+# flat static floor — KEEPS burst protection that SCALES with the control plane. 0.5 is the midpoint
+# between concurrent (effectively 1.0) and none (0.0); at the measured ~27 GiB baseline it reproduces
+# the operator's documented sole-workload policy (>=10 fail-safe + ~10 margin ~= 20 GiB).
+SOLE_WORKLOAD_BURST_FRAC = 0.5
 SAFETY_FLOOR_ENV = "TAC_GOV_SAFETY_FLOOR_GIB"    # env override (GiB); CLI --safety-floor-gib wins
 FLOOR_MODE_DERIVED = "derived"
 FLOOR_MODE_FIXED = "fixed"
@@ -664,6 +674,7 @@ def derive_safety_floor(
     measured_cp_rss_gib: float | None = None,
     mode: str = FLOOR_MODE_DERIVED,
     override_gib: float | None = None,
+    sole_workload: bool = False,
     abs_min_gib: float = ABS_MIN_SAFETY_FLOOR_GIB,
     cp_headroom_min_gib: float = DEFAULT_CP_HEADROOM_MIN_GIB,
     cp_headroom_frac: float = DEFAULT_CP_HEADROOM_FRAC,
@@ -680,14 +691,39 @@ def derive_safety_floor(
     Precedence: an explicit ``override_gib`` (CLI/env) WINS, clamped to the same [ABS_MIN, cap]
     range with a loud log when clamped. ``mode='fixed'`` reproduces the legacy max(8, 0.08T)
     formula — still cap-clamped, so even fixed mode can no longer eat an 8 GiB box.
-    Derivations for every constant: the tier-scaled-floor constants block above."""
+    Derivations for every constant: the tier-scaled-floor constants block above.
+
+    ``sole_workload`` (2026-07-09) drops the DYNAMICAL ``measured_cp`` leg and falls back to the
+    STATIC policy leg (0.08*T = the operator-policy >=10 GiB control-plane floor, line-119 comment).
+    WHY: the dynamical leg reserves free headroom on the ORDER OF the current control-plane RSS
+    (line-115 rationale: "agents spawn in bursts proportional to current activity") — DELIBERATELY
+    conservative ON TOP OF the used-based admission arithmetic that ALREADY counts that same RSS.
+    That double-reservation is CORRECT when concurrent heavy jobs / agent bursts are in flight (the
+    2026-07-02 crash class), but for a genuine SOLE workload it contradicts the operator's 2026-07-04
+    sole-workload policy ("no artificial ceiling; >=10 fail-safe + ~10 margin"). Under sole-workload
+    the LAUNCH-time floor relaxes to the static policy leg; the RUNTIME guard-bands (blackbox
+    WARN/CRITICAL + throttle) remain the real-time protection against any control-plane burst DURING
+    the run, so this is safe. Concurrency is measured by the caller (any other admitted HEAVY tracked
+    job, projected_peak >= HEAVY_MIN_PROJECTED_GIB) — mirrors the launcher's sole-vs-concurrent
+    safe_frac logic so the two gates agree."""
     total = float(total_gib)
     abs_min = float(abs_min_gib)
     cap = max(abs_min, float(cap_frac) * total)
     ch = cp_headroom_gib(total, min_gib=cp_headroom_min_gib, frac=cp_headroom_frac)
     static_leg = float(static_frac) * total
     cp = None if measured_cp_rss_gib is None else max(0.0, float(measured_cp_rss_gib))
-    measured_leg = None if cp is None else cp + ch
+    # DYNAMICAL leg. CONCURRENT: reserve the FULL control-plane footprint + spike headroom (cp + ch),
+    # DELIBERATELY on top of the used-based baseline subtraction (2026-07-02 crash protection). SOLE:
+    # the used-based arithmetic already subtracts the baseline once and no concurrent heavy job is
+    # bursting, so reserve only the spike headroom + a NON-DOUBLED proportional burst fraction
+    # (ch + SOLE_WORKLOAD_BURST_FRAC*cp) — kills the double-count while KEEPING control-plane-scaled
+    # burst protection (adversarial-review NIT 1, 2026-07-09). See SOLE_WORKLOAD_BURST_FRAC.
+    if cp is None:
+        measured_leg = None
+    elif sole_workload:
+        measured_leg = ch + SOLE_WORKLOAD_BURST_FRAC * cp
+    else:
+        measured_leg = cp + ch
 
     if override_gib is not None:
         raw = float(override_gib)
@@ -698,9 +734,9 @@ def derive_safety_floor(
     else:
         raw = max(abs_min, static_leg, measured_leg if measured_leg is not None else 0.0)
         if measured_leg is not None and raw == measured_leg:
-            winning = "measured_cp"
+            winning = "sole_workload_burst_reserve" if sole_workload else "measured_cp"
         elif raw == static_leg:
-            winning = "static_frac"
+            winning = "static_frac_sole_workload" if sole_workload else "static_frac"
         else:
             winning = "abs_min"
 
@@ -828,6 +864,7 @@ def compute_adaptive_ceiling(
     floor: SafetyFloorDecomposition | None = None,
     floor_override_gib: float | None = None,
     floor_mode: str = FLOOR_MODE_DERIVED,
+    sole_workload: bool = False,
 ) -> AdaptiveCeiling:
     """Compute the adaptive ceiling + training budget. PURE (env consulted only on the default
     path, for the ``TAC_GOV_SAFETY_FLOOR_GIB`` override).
@@ -852,6 +889,7 @@ def compute_adaptive_ceiling(
             override_gib=(floor_override_gib if floor_override_gib is not None
                           else safety_floor_env_override_gib()),
             mode=floor_mode,
+            sole_workload=sole_workload,
             log_fn=lambda m: print(m, file=sys.stderr),
         )
         margin = floor.floor_gib
@@ -1772,10 +1810,19 @@ def live_admission_decision(
         jobs = list_tracked_jobs()
     if exclude_pid is not None:
         jobs = [j for j in jobs if j.pid != exclude_pid]
+    # SOLE-WORKLOAD when NO OTHER admitted HEAVY tracked job is in flight (projected_peak >=
+    # HEAVY_MIN) — the new job is the only heavy workload. Sub-heavy control-plane/telemetry
+    # daemons (dashboard, blackbox) do not count as concurrency (same HEAVY_MIN the launcher's
+    # _governed_active_jobs + sum_active_growth_headroom_gib use). Relaxes the LAUNCH-time floor
+    # to the operator's sole-workload policy; the runtime guard-bands still protect bursts.
+    sole_workload = not any(
+        float(j.projected_peak_gib) >= HEAVY_MIN_PROJECTED_GIB for j in jobs
+    )
     ceiling = compute_adaptive_ceiling(
         total_gib=snapshot.total_gib, used_gib=snapshot.used_gib,
         tracked_current_gib=sum_tracked_current_gib(jobs),
         floor_override_gib=floor_override_gib, floor_mode=floor_mode,
+        sole_workload=sole_workload,
     )
     decision = admission_decision(
         projected_new_gib=projected_new_gib, system_used_gib=snapshot.used_gib,

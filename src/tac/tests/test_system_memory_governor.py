@@ -156,6 +156,66 @@ def test_adaptive_ceiling_derived_floor_at_least_10_on_128_for_any_cp():
         assert d.safety_margin_gib >= 10.0, f"cp={cp} floor={d.safety_margin_gib}"
 
 
+# ── sole-workload floor relaxation (2026-07-09; adversarial-review-hardened NIT 1 + NIT 3) ─────────
+def test_sole_workload_drops_the_double_count_but_keeps_proportional_burst_reserve():
+    """SOLE workload: floor = ch + 0.5*cp (non-doubled proportional burst reserve), NOT the concurrent
+    cp+ch. cp=16 -> 6.4 + 8 = 14.4; and it is ALWAYS strictly below the concurrent floor (kills the
+    double-count) yet ALWAYS scales with cp (keeps burst protection — NIT 1)."""
+    for cp in (8.0, 16.0, 27.0, 40.0):
+        conc = gov.derive_safety_floor(total_gib=128.0, measured_cp_rss_gib=cp)
+        sole = gov.derive_safety_floor(total_gib=128.0, measured_cp_rss_gib=cp, sole_workload=True)
+        assert sole.floor_gib <= conc.floor_gib, f"cp={cp}: sole must not exceed concurrent"
+        if cp >= 8.0:  # above where the burst leg overtakes the 10.24 static leg
+            assert sole.winning_leg == "sole_workload_burst_reserve"
+            assert abs(sole.floor_gib - (gov.cp_headroom_gib(128.0) + 0.5 * cp)) < 1e-9
+
+
+def test_sole_workload_reproduces_operator_policy_at_measured_baseline():
+    """At the ~27 GiB live control-plane baseline the sole reserve lands ~20 GiB = the operator's
+    documented >=10 fail-safe + ~10 margin policy — and the run ADMITS (budget > a 71.5 GiB run)."""
+    d = gov.compute_adaptive_ceiling(total_gib=128.0, used_gib=27.4, tracked_current_gib=0.2,
+                                     sole_workload=True)
+    assert 19.0 <= d.safety_margin_gib <= 21.0, d.safety_margin_gib
+    assert d.training_budget_gib > 71.5, d.training_budget_gib
+    assert d.floor_decomposition["winning_leg"] == "sole_workload_burst_reserve"
+
+
+def test_sole_workload_default_false_is_bit_identical_to_298():
+    """Regression lock: sole_workload defaults False and reproduces the #298 concurrent floor EXACTLY
+    (the reviewer's bit-identical-concurrent requirement)."""
+    for cp in (0.0, 8.0, 16.0, 40.0):
+        default = gov.derive_safety_floor(total_gib=128.0, measured_cp_rss_gib=cp)
+        explicit = gov.derive_safety_floor(total_gib=128.0, measured_cp_rss_gib=cp, sole_workload=False)
+        assert default.floor_gib == explicit.floor_gib
+        assert default.winning_leg == explicit.winning_leg
+
+
+def test_sole_workload_still_honors_abs_min_and_cap():
+    """Clamps still bind under sole-workload: never below abs_min, never above cap_frac*T."""
+    tiny = gov.derive_safety_floor(total_gib=8.0, measured_cp_rss_gib=0.0, sole_workload=True)
+    assert tiny.floor_gib >= gov.ABS_MIN_SAFETY_FLOOR_GIB
+    assert tiny.floor_gib <= gov.DEFAULT_FLOOR_CAP_FRAC * 8.0
+    huge = gov.derive_safety_floor(total_gib=128.0, measured_cp_rss_gib=200.0, sole_workload=True)
+    assert huge.floor_gib <= gov.DEFAULT_FLOOR_CAP_FRAC * 128.0
+
+
+def test_live_admission_sole_workload_flag_from_heavy_jobs():
+    """live_admission_decision derives sole_workload from HEAVY tracked jobs only: a sub-heavy
+    control-plane daemon (proj < 4) leaves it sole; a heavy job (proj >= 4) makes it concurrent."""
+    snap = gov.read_system_memory_snapshot()
+    dash = gov.TrackedJob(label="dash", pid=111111, pgid=111111, cmd="dashboard", priority=5,
+                          projected_peak_gib=2.44, current_rss_gib=0.2, paused=False,
+                          throttle_eligible=False, own_group_leader=True)
+    heavy = gov.TrackedJob(label="train", pid=222222, pgid=222222, cmd="train", priority=5,
+                           projected_peak_gib=50.0, current_rss_gib=20.0, paused=False,
+                           throttle_eligible=True, own_group_leader=True)
+    sole = gov.live_admission_decision(projected_new_gib=10.0, snapshot=snap, jobs=[dash])
+    conc = gov.live_admission_decision(projected_new_gib=10.0, snapshot=snap, jobs=[heavy])
+    assert sole.ceiling.floor_decomposition["winning_leg"] in (
+        "sole_workload_burst_reserve", "static_frac_sole_workload")
+    assert conc.ceiling.floor_decomposition["winning_leg"] in ("measured_cp", "static_frac", "abs_min")
+
+
 # ── admission (the crash math) ──────────────────────────────────────────────────────────────────
 def test_project_system_used_no_double_count():
     # used already includes active jobs' current RSS; we add only their REMAINING growth + the new job.
