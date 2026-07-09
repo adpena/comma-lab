@@ -697,6 +697,17 @@ def _build_resume_state_arrays(
     out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
     _hbe = getattr(args, "hosc_beta_end", None)
     out["__cfg_hosc_beta_end"] = np.asarray(-1.0 if _hbe is None else float(_hbe))
+    # (#310 step-native activation) STRUCTURAL basis lever: the periodic activation kind + beta start +
+    # anneal shape + omega define the input basis the in_proj is trained on. A resume that changes any
+    # of them would train on a DIFFERENT basis than the ckpt -> a silent deterministic-repro violation
+    # (activation adds NO new param keys the arch guard could see; hosc_beta/omega are not params).
+    # Persist the scalars so the F2 _resume_lever_divergences guard fails closed (hosc_beta_end is
+    # already persisted just above). Legacy-compatible: a pre-#310 sidecar lacks these keys and the F2
+    # guard only checks keys PRESENT in the sidecar -> NO spurious divergence. ZERO archive bytes.
+    out["__cfg_activation"] = np.asarray(str(getattr(args, "activation", "hosc")))
+    out["__cfg_hosc_beta"] = np.asarray(float(getattr(args, "hosc_beta", 4.0)))
+    out["__cfg_hosc_beta_anneal"] = np.asarray(str(getattr(args, "hosc_beta_anneal", "linear")))
+    out["__cfg_hosc_omega"] = np.asarray(float(getattr(args, "hosc_omega", 1.0)))
     # (review R2a-MED-1) ARCH flags that change the param KEYS / training geometry: persist them in the
     # resume sidecar so a crash-resume from the ckpt dir ALONE can fail-closed if the resume command
     # omits the flag the run was trained with (the silent-param-drop risk -- MLX model.update only
@@ -832,6 +843,14 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         ("__cfg_dseg_aware_taper_floor", float(getattr(args, "dseg_aware_taper_floor", 0.05)), True),
         ("__cfg_render_aa", str(getattr(args, "render_aa", "none")), False),
         ("__cfg_hosc_beta_end", cur_hbe, True),
+        # (#310 step-native activation) STRUCTURAL basis lever (activation kind + beta start + anneal
+        # shape + omega define the trained input basis; no param keys). A resume that changes any =>
+        # trains on a different basis than the ckpt => fail closed (deterministic-repro). Legacy: only
+        # checked when the key is PRESENT in the sidecar (pre-#310 sidecars lack them => no divergence).
+        ("__cfg_activation", str(getattr(args, "activation", "hosc")), False),
+        ("__cfg_hosc_beta", float(getattr(args, "hosc_beta", 4.0)), True),
+        ("__cfg_hosc_beta_anneal", str(getattr(args, "hosc_beta_anneal", "linear")), False),
+        ("__cfg_hosc_omega", float(getattr(args, "hosc_omega", 1.0)), True),
         # focal-gamma + boundary-distance seg-loss levers (council levelset-loss-geometry symposium
         # 2026-07-05; loss-only, trajectory-affecting, no param keys — same class as the #300 levers).
         ("__cfg_seg_focal_gamma", float(getattr(args, "seg_focal_gamma", 0.0)), True),
@@ -9192,6 +9211,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             and ((s // args.accum_pairs) % args.mlx_cache_clear_accum == 0)):
                         mx.clear_cache()
                     continue
+                # (#146 Cells2Pixels) per-PARAMETER grad normalization (opt-in; alternative/stronger
+                # stabilizer to the global clip). Applies to the ALREADY-clipped tree so the global
+                # spike-guard/telemetry `gnorm` above is untouched. DEFAULT 'none' => `clipped` used
+                # unchanged => BYTE-IDENTICAL. Only fires on the divergence-prone deep-unroll arm.
+                if str(getattr(args, "grad_normalize", "none")) == "per-param":
+                    from tac.witness_stability import per_param_normalize_grads
+                    clipped = per_param_normalize_grads(
+                        clipped, tree_map=tree_map,
+                        leaf_norm=lambda g: float(mx.sqrt(mx.sum(g * g))))
                 opt.update(model, clipped)
                 mx.eval(model.parameters(), opt.state)
                 _live["ep_acc"] += 1  # (C6 liveness) an ACCEPTED (weight-stepping) accum-batch
@@ -9891,6 +9919,22 @@ def main(argv: list[str] | None = None) -> int:
                     "=> byte-identical (pose from ep0). Requires --w-pose > 0 (the finish-phase weight).")
     ap.add_argument("--score-domain-loss", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--pose-eps", type=float, default=1e-2)
+    # (#146 AMBER deep-unroll stability, tac.witness_stability) bound the score-domain pose gradient
+    # COEFFICIENT 5/sqrt(10*d_pose+eps) at d_pose=0 to <= this value by RAISING the effective --pose-eps
+    # to the derived floor (5/C)^2 (5 = 10/2, the score pose const/2). Tames the batch=1 deep-unroll
+    # 5e4-coefficient blowup (loss 57->1070 FROZEN at 1070.0802). 0 (DEFAULT) => OFF => --pose-eps used
+    # UNCHANGED => BYTE-IDENTICAL incumbent. An explicit value ALWAYS wins over --stability-preset.
+    ap.add_argument("--pose-grad-coeff-max", type=float, default=0.0,
+                    help="(#146 stability) bound the score-domain pose gradient coefficient at d_pose=0 "
+                    "to <= this value by raising the effective --pose-eps to (5/C)^2. 0 (default) = OFF "
+                    "= byte-identical. Law: tac.canonical_equations.witness_pose_grad_coeff_stability.")
+    # (#146 AMBER preset) compose the collapse cures for the divergence-prone batch=1 deep-unroll arm:
+    # 'amber' = grad-clip 0.5 + pose-grad-coeff-max 25 + per-group-grad-clip (TIGHTER than the incumbent
+    # grad-clip 1.0 / coeff 50, since per-pair updates have no averaging). 'none' (DEFAULT) => no
+    # override => BYTE-IDENTICAL incumbent. Explicit --grad-clip / --pose-grad-coeff-max override it.
+    ap.add_argument("--stability-preset", type=str, default="none", choices=["none", "amber"],
+                    help="(#146 AMBER deep-unroll unblock) 'amber' composes grad-clip 0.5 + "
+                    "pose-grad-coeff-max 25 + per-group-grad-clip; 'none' (default) = byte-identical.")
     ap.add_argument("--hinge-weight", type=float, default=4.0)
     ap.add_argument("--accum-pairs", type=int, default=8)
     # (SPEED LEVER, DAG FEED 2026-07-03c) micro-batch B pairs per forward. DEFAULT 1 => the accum loop
@@ -9936,6 +9980,16 @@ def main(argv: list[str] | None = None) -> int:
                     help="(#205 OOM fix) mx.clear_cache() every N accum-batches inside the epoch loop "
                     "(GPU only; score-neutral). 0 disables the in-loop clear (pre-fix behaviour).")
     ap.add_argument("--grad-clip", type=float, default=1.0)
+    # (#146 Cells2Pixels NCA-stability lever, tac.witness_stability) per-PARAMETER gradient
+    # normalization g_p <- g_p/(||g_p||+1e-8) per tensor BEFORE the opt step — the scale-free NCA
+    # deep-unroll stabilizer (SIGGRAPH'26 Cells2Pixels; memo cells2pixels_deepdive_bridge_20260709).
+    # Stronger than a single global-norm clip; may be a better PRIMARY for the batch=1 deep-unroll arm.
+    # CAVEAT: per-param normalize ALTERS the seg-vs-pose gradient SCALE ratio => an OWED A/B, NOT proven
+    # for our objective. 'none' (DEFAULT) => `clipped` used unchanged => BYTE-IDENTICAL incumbent.
+    ap.add_argument("--grad-normalize", type=str, default="none", choices=["none", "per-param"],
+                    help="(#146 Cells2Pixels stability) 'per-param' = g_p/(||g_p||+eps) per tensor "
+                    "before the opt step (scale-free NCA deep-unroll stabilizer; alters seg-vs-pose "
+                    "scale ratio => owed A/B). 'none' (default) = byte-identical.")
     ap.add_argument("--per-group-grad-clip", action=argparse.BooleanOptionalAction, default=False,
                     help="(C4 confound fix 2026-07-05) clip the global grad-norm PER top-level "
                     "parameter GROUP (in_proj / hidden / out_sdf / out_tex / film / palette / code) "
@@ -11450,6 +11504,24 @@ def main(argv: list[str] | None = None) -> int:
                               "note": "C9: re-treatment resume auto-loads the CLEAN EMA shadow (a "
                               "crash mid-spike wrote diverging LIVE weights; the shadow is clean)"}),
                   flush=True)
+    # (#146 AMBER deep-unroll stability) resolve --pose-grad-coeff-max / --stability-preset into the
+    # effective pose_eps + grad_clip + per_group_grad_clip. DEFAULT (preset 'none', coeff-max 0) returns
+    # everything UNCHANGED => `_stab.changed` False => BYTE-IDENTICAL incumbent (#205-safe). A coeff bound
+    # only ever RAISES pose_eps (tighten), never lowers it. The pose-eps<->coeff law + the collapse
+    # anchor live in tac.canonical_equations.witness_pose_grad_coeff_stability_20260709.
+    from tac.witness_stability import resolve_stability_config as _resolve_stability_config
+    _stab = _resolve_stability_config(
+        grad_clip=float(getattr(args, "grad_clip", 1.0)),
+        pose_eps=float(getattr(args, "pose_eps", 1e-2)),
+        pose_grad_coeff_max=float(getattr(args, "pose_grad_coeff_max", 0.0)),
+        stability_preset=str(getattr(args, "stability_preset", "none")),
+        per_group_grad_clip=bool(getattr(args, "per_group_grad_clip", False)),
+    )
+    if _stab.changed:
+        args.grad_clip = _stab.grad_clip
+        args.pose_eps = _stab.effective_pose_eps
+        args.per_group_grad_clip = _stab.per_group_grad_clip
+        print(json.dumps({"stage": "witness_stability_resolved", **_stab.provenance()}), flush=True)
     # (C1) legacy spike-guard + --resume-clear-spike-guard is FAIL-CLOSED: clearing the frozen median
     # in LEGACY mode is a ONE-SHOT reset, not a cure -- it re-anchors the median once from the first
     # accepted batch, then re-enters the sustained spike and RE-FREEZES in 1-13 ep (measured). The

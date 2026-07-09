@@ -3208,38 +3208,67 @@ def AACoverageRender(ss: int = 2, grid_h: int = 384, grid_w: int = 512,  # noqa:
     )
 
 
-def StepNativeActivation(beta_start: float = 4.0, beta_end: float = 8.0,  # noqa: N802
-                         anneal: str = "linear", window: int = 100) -> Lever:
-    """FEED-07b lever #2 (#310, capstone lever #5 — in-code UNSWEPT): the step-native activation
-    chart, deep-math L∞-at-edge optimal for the piecewise-constant argmax target (error confined
-    to the flip band, O(1) params/edge, no Gibbs).
+def StepNativeActivation(beta_start: float = 1.0, beta_end: float = 8.0,  # noqa: N802
+                         anneal: str = "linear", window: int = 100,
+                         *, basis: str = "annealed_hosc", omega: float = 1.0,
+                         finer_bias_init: bool = False, finer_bias_k: float = 10.0) -> Lever:
+    """FEED-07b lever #2 (#310, capstone lever #5 — duty-to-measure #2, NEVER-FIRED): the step-native
+    activation chart, deep-math L∞-at-edge optimal for the piecewise-constant argmax target (error
+    confined to the flip band, O(1) params/edge, no Gibbs). §OPERATOR PRIORITY measured-lever #5.
 
-    REAL-FLAG ROUTE (never-invent-flags): this trainer's ``--activation`` choices are
-    ``wire|hosc|relu`` — there is NO ``step_basis`` token — so the trainer's own named step-native
-    lever is the hosc BETA-ANNEAL (FEED-fb): hosc = ``tanh(beta*sin(omega*u))`` and beta→∞ IS the
-    step limit; ``--hosc-beta-end > --hosc-beta`` step-sharpens as the SDF partition forms.
-    CAVEAT (MEASURED, DAG FEED 2026-06-25a + FEED-ly): FIXED high beta from scratch DIVERGES
-    (tanh saturation → vanishing grad) — approach the step limit by ANNEAL, never start at it.
-    A discrete ``step_basis`` activation choice remains a BUILD-NEEDED sister (no flag; do NOT
-    emit one). The FINER++ bias-init sister is now BUILT (2026-07-07, #310 build half): compose
-    :func:`FinerBiasInit` with this lever — the wide first-layer bias is the published fix for
-    the measured fixed-β saturation-death this anneal works around.
-    Equations leg: ``step_native_activation_edge_optimality_v1`` (#310 sweep = the owed anchor)."""
-    if not (0.0 < float(beta_start) <= float(beta_end)):
-        raise ValueError(
-            f"StepNativeActivation: need 0 < beta_start <= beta_end (anneal TOWARD the step "
-            f"limit), got start={beta_start!r} end={beta_end!r}")
-    if anneal not in ("linear", "cosine"):
-        raise ValueError(f"StepNativeActivation: anneal must be linear|cosine, got {anneal!r}")
+    REAL-FLAG ROUTE (never-invent-flags): this trainer's ``--activation`` choices are ``wire|hosc|relu``
+    — there is NO ``step_basis`` token — so the step-native route is the hosc BETA-ANNEAL (FEED-fb):
+    hosc = ``tanh(beta*sin(omega*u))`` and beta→∞ IS the step limit (a square-wave / partition
+    indicator); ``--hosc-beta-end > --hosc-beta`` step-sharpens as the SDF partition forms. This
+    factory maps ONLY to EXISTING trainer flags (--activation/--hosc-beta/--hosc-beta-end/
+    --hosc-beta-anneal/--hosc-omega/--finer-bias-init/--finer-bias-k), so ``WitnessProgram.validate``
+    passes.
+
+    **NEVER a FIXED beta** (fail-closed, the #1 constraint): a CONSTANT beta (``beta_end ==
+    beta_start``) is the MEASURED saturation-death — ``tanh(4*sin)`` saturates → gradient vanishes →
+    AdamW random-walks → d_seg RISES (DAG FEED 2026-06-25a + FEED-ly). The guard now routes through the
+    shared ``tac.boundary_math.step_native_activation.validate_step_native_config`` predicate, which
+    REJECTS a constant beta (the prior ``beta_start <= beta_end`` guard permitted it), an invented
+    basis/anneal, a non-positive beta, and ``basis='step_basis'`` WITHOUT FINER. The default
+    ``beta_start=1.0`` starts where ``tanh(sin)`` is near-linear (gradients flow) and anneals UP — never
+    starting in the saturating regime (the prior default 4.0 started AT the measured-divergent point).
+
+    ``basis`` ∈ {"annealed_hosc" (default), "step_basis"}: ``step_basis`` REQUIRES the FINER++
+    variable-periodic first-layer bias (``finer_bias_init=True``) — the published stability fix (arXiv
+    2407.19434) that makes the sharper step the "stable trainable-slope survivor"; ``annealed_hosc``
+    leaves FINER optional. ``omega`` = the periodic frequency; ``finer_bias_k`` = the FINER bias range
+    U(-k, k). Setting ``finer_bias_init=True`` here arms the FINER flags in the SAME lever (a
+    self-sufficient measured-safe preset — no need to separately compose :func:`FinerBiasInit`, which
+    remains available for FINER-only A/Bs). window = the epoch budget for the step-sharpen span.
+
+    means != ends: this factory ARMS the mechanism; it makes NO score claim; pointer UNMOVED. The
+    step-native d_seg effect is ASSUMED_AWAITING_VERIFICATION until a byte-close A/B lands (the #310
+    sweep is the owed anchor). Equations leg: ``step_native_activation_edge_optimality_v1``. Mechanism +
+    shared safety predicate: ``tac.boundary_math.step_native_activation``."""
+    from tac.boundary_math.step_native_activation import validate_step_native_config
+
+    problems = validate_step_native_config(
+        basis=basis, beta_start=beta_start, beta_end=beta_end, beta_anneal=anneal,
+        omega=omega, finer_bias_init=finer_bias_init)
+    if problems:
+        raise ValueError("StepNativeActivation: " + "; ".join(problems))
+    overrides = {"--activation": "hosc",
+                 "--hosc-beta": float(beta_start),
+                 "--hosc-beta-end": float(beta_end),
+                 "--hosc-beta-anneal": anneal,
+                 "--hosc-omega": float(omega)}
+    if finer_bias_init:
+        # arm the FINER++ stabilizer in the SAME lever (byte-identical when off: the flags are simply
+        # not emitted). --finer-bias-k only meaningful with --finer-bias-init on.
+        overrides["--finer-bias-init"] = True
+        overrides["--finer-bias-k"] = float(finer_bias_k)
     return Lever(
         "FEED_07b_step_native_activation",
-        overrides={"--activation": "hosc",
-                   "--hosc-beta": float(beta_start),
-                   "--hosc-beta-end": float(beta_end),
-                   "--hosc-beta-anneal": anneal},
+        overrides=overrides,
         epochs_delta=window,
-        notes=("#310 step-native chart via hosc beta-anneal (beta->inf = step limit; fixed high "
-               "beta diverges — anneal only); L-inf-at-edge optimality; #310 sweep owed"),
+        notes=(f"#310 step-native chart via hosc beta-anneal ({basis}: beta {beta_start}->{beta_end} "
+               f"@omega {omega}, FINER {finer_bias_init}; beta->inf = step limit; NEVER fixed-beta — "
+               "anneal only); L-inf-at-edge optimality; duty-to-measure #2, #310 sweep owed"),
     )
 
 
@@ -3261,6 +3290,76 @@ def MuonWarmStart(lr_final_frac: float = 0.1, window: int = 0) -> Lever:  # noqa
         epochs_delta=window,
         notes=("#270/#272 Muon warm-start momentum + lr-final-frac anneal (measured +8% "
                "cold-Muon transient; fires at the l7->Muon switch)"),
+    )
+
+
+def WitnessStability(  # noqa: N802 — #146/#211 AMBER deep-unroll collapse-fix lever
+    preset: str = "amber",
+    grad_clip: float | None = None,
+    pose_grad_coeff_max: float | None = None,
+    grad_normalize: str | None = None,
+) -> Lever:
+    """#146/#211 AMBER deep-unroll STABILITY: arm the training-collapse cures for the divergence-prone
+    per-pair (batch=1) deep-unroll / joint-descent arm. The DIAGNOSED collapse (SETTLED, DAG
+    FEED-amber-unblock; do NOT re-diagnose) is an optimizer-divergence DEAD-SATURATION LOCK — d_seg
+    drops then the loss SPIKES 57->1070 and FREEZES at EXACTLY 1070.0802 (finite, not NaN): the
+    score-domain pose term ``sqrt(10*d_pose+eps)`` has gradient coefficient ``5/sqrt(10*d_pose+eps)``
+    -> 5e4 for easy pairs, EXPOSED by batch=1 (no averaging), x w_seg=100 x no-clip.
+
+    The incumbent default already tames it (--grad-clip 1.0 + --pose-eps 1e-2 => coeff 50); this lever
+    composes the TIGHTER batch=1 cure via the trainer's REAL flags (never-invent-flags; grep-verified:
+    --grad-clip / --pose-grad-coeff-max / --stability-preset / --grad-normalize). ``preset='amber'`` =
+    grad-clip 0.5 + pose-grad-coeff-max 25 (eps floor 4e-2) + per-group-grad-clip. Explicit ``grad_clip``
+    / ``pose_grad_coeff_max`` override the preset's values (an explicit coeff bound always wins).
+    ``grad_normalize='per-param'`` arms the Cells2Pixels per-parameter grad normalization (a DISTINCT
+    A/B arm — it ALTERS the seg-vs-pose gradient scale ratio, so it is NOT in amber's default which uses
+    the global clip; memo cells2pixels_deepdive_bridge_20260709).
+
+    DEFAULT-OFF at the trainer: un-composed, the trainer runs --stability-preset none + coeff-max 0 =>
+    the incumbent pose_eps/grad_clip UNCHANGED (byte-identical; #205 resumes unperturbed). This factory
+    is what ARMS the tightening.
+
+    OPTIMIZER-CONFIG lever (window 0): changes the grad-clip budget + effective pose_eps, NOT the
+    trained basis, so it may be added on a fresh AMBER run. VERDICT SCOPE: duty-to-measure, NEVER-FIRED
+    — the un-collapse A/B that MEASURES whether AMBER un-locks the deep-unroll arm at n600 is a SEPARATE
+    operator-GO heavy launch (means != ends; this factory BUILDS the cure + PROVES it caps the
+    coefficient on a synthetic blowup; it makes NO score claim; pointer 0.19110 UNMOVED). Mechanism:
+    ``tac.witness_stability``; law: ``tac.canonical_equations.witness_pose_grad_coeff_stability_20260709``."""
+    from tac.witness_stability import PRESETS, resolve_stability_config
+
+    if str(preset) not in PRESETS:
+        raise ValueError(
+            f"WitnessStability: unknown preset {preset!r} (known: {sorted(PRESETS)})")
+    if grad_normalize is not None and str(grad_normalize) not in ("none", "per-param"):
+        raise ValueError(
+            f"WitnessStability: grad_normalize must be none|per-param, got {grad_normalize!r}")
+    # Resolve against the incumbent defaults so the emitted overrides reflect the actual applied config
+    # and the factory fail-closes on an incoherent request (e.g. non-positive coeff bound).
+    _incoming_gc = 1.0 if grad_clip is None else float(grad_clip)
+    _incoming_cm = 0.0 if pose_grad_coeff_max is None else float(pose_grad_coeff_max)
+    if pose_grad_coeff_max is not None and _incoming_cm <= 0.0:
+        raise ValueError(
+            f"WitnessStability: pose_grad_coeff_max must be > 0 when set, got {pose_grad_coeff_max!r}")
+    cfg = resolve_stability_config(
+        grad_clip=_incoming_gc, pose_eps=1e-2, pose_grad_coeff_max=_incoming_cm,
+        stability_preset=str(preset), per_group_grad_clip=False)
+    overrides: dict = {"--stability-preset": str(preset)}
+    if grad_clip is not None:
+        overrides["--grad-clip"] = float(grad_clip)
+    if pose_grad_coeff_max is not None:
+        overrides["--pose-grad-coeff-max"] = float(pose_grad_coeff_max)
+    # The Cells2Pixels per-param grad normalize is a DISTINCT A/B arm (alters the seg-vs-pose gradient
+    # SCALE ratio => owed A/B), NOT part of amber's default (amber uses the global clip). Emit it ONLY
+    # when explicitly requested so the flag is DSL-HELD (no config-orphan) while amber stays clip-based.
+    if grad_normalize is not None:
+        overrides["--grad-normalize"] = str(grad_normalize)
+    return Lever(
+        "witness_stability_amber",
+        overrides=overrides,
+        epochs_delta=0,
+        notes=(f"#146/#211 AMBER deep-unroll collapse-fix (preset={preset}: grad_clip "
+               f"{cfg.grad_clip} + pose coeff<={cfg.pose_grad_coeff_max} => eff pose_eps "
+               f"{cfg.effective_pose_eps:g}); un-collapse A/B operator-GO-owed; pointer UNMOVED"),
     )
 
 
