@@ -2068,7 +2068,15 @@ def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N
     lever's coverage; alone it is inert (``--lane-render-band`` off => no band to comb).
 
     Impl: ``tac.boundary_math.dash_comb.build_combed_lane_band_priors`` consumed by the
-    levelset trainer's ``--lane-band-dash-comb`` wire-in (the #224 lane-band path)."""
+    levelset trainer's ``--lane-band-dash-comb`` wire-in (the #224 lane-band path).
+
+    ACTIVATION STATUS (v7.5 actuation, 2026-07-08, v75_actuation_build_20260708.md item A.2):
+    COMPOSED ACTIVE in ``crucible_v7`` (``tac.witness_autoconfig._build_crucible_v7`` levers tuple +
+    ``_CRUCIBLE_V7_DSL_LEVERS``). The operator OVERRODE the spec's defensible-defer ("lane offloaded to
+    the analytic band"): under the committed ``lane_offloaded`` basis regime the band's freq_along≈6
+    cartoon scale provably CANNOT represent the ~25-cyc dash comb, so this analytic corrector is exactly
+    what supplies that sub-δ structure — its value is HIGHEST precisely under lane_offloaded, not lowest.
+    First activation-ledger fire on the v7.5 run. Advisory until byte-closed (pointer 0.19110 UNMOVED)."""
     return Lever("n287_dash_comb",
                  overrides={"--lane-band-dash-comb": True,
                             "--lane-band-comb-softness-m": comb_softness_m},
