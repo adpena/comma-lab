@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 
 import pytest
@@ -331,19 +332,73 @@ def test_uncertainty_propagation_formula():
 
 
 # ─────────────────────── STRUCTURAL no-actuation invariant ───────────────────────
+#: #330 (killpg-reclaimed verdict subprocess) legitimately introduced a process-spawning
+#: surface into the package. These two files are NOT run actuation: ``verdict_reclaim.py``
+#: spawns a CHILD (``start_new_session=True`` — its OWN process group) that computes
+#: d_seg/d_pose verdicts over already-rendered frames and EXITS so the OS reclaims its
+#: multi-GiB fp32/activation transient (the parent-RSS ratchet fix); ``killpg`` targets only
+#: that self-owned child group. ``_verdict_subprocess_worker.py`` is the child entrypoint; its
+#: sole ``os.kill`` is a signal-0 EXISTENCE PROBE of the launcher pid for parent-death
+#: self-cleanup. Neither reads/writes the trainer process, its pid, or its launch config. They
+#: carry the TIGHTER containment invariant in ``_assert_verdict_reclaim_containment`` below
+#: instead of the blanket token ban — the containment guarantee is preserved, not weakened.
+_RECLAIM_EXEMPT = {"verdict_reclaim.py", "_verdict_subprocess_worker.py"}
+
+#: Even the exempt files may NEVER contain these exec/shell surfaces — the #330 exemption is
+#: narrowly the subprocess-verdict + killpg-self-cleanup surface, nothing more.
+_RECLAIM_STILL_FORBIDDEN = ("os.system(", "os.exec", "os.spawn", "os.popen(", "pty.spawn",
+                            "shell=True")
+
+
+def _assert_verdict_reclaim_containment(path: Path, src: str) -> None:
+    """The #330 exempt files may spawn a verdict subprocess but must not ACTUATE the run.
+
+    Cheaply-checkable, containment-preserving invariant:
+      (a) no launch/config mutation — they never reference the trainer's ``launch.sh``;
+      (b) no signal to a foreign pid — real signals go via ``killpg`` on a self-owned group;
+          a bare ``os.kill`` is permitted ONLY as a signal-0 existence probe (self-cleanup);
+      (c) any spawned child is its own session leader (``start_new_session=True``) so ``killpg``
+          reclaims only the module's own child, never the training process group;
+      (d) the exec/shell family stays banned even here.
+    """
+    assert "launch.sh" not in src, f"#330 exempt {path.name} must not touch the launch config"
+    for tok in _RECLAIM_STILL_FORBIDDEN:
+        assert tok not in src, f"exec/shell surface {tok!r} in #330 exempt {path.name}"
+    for m in re.finditer(r"os\.kill\(", src):
+        seg = src[m.start():m.start() + 80]
+        assert re.match(r"os\.kill\([^)]*,\s*0\s*\)", seg), (
+            f"#330 exempt {path.name}: os.kill must be a signal-0 probe of a non-child pid, "
+            f"never deliver a signal — saw {seg!r}")
+    if "subprocess.Popen(" in src:
+        assert "start_new_session=True" in src, (
+            f"#330 exempt {path.name}: spawned child must be its own session leader so killpg "
+            f"reclaims only it, never the training group")
+
+
 def test_no_actuation_capability():
-    """CONTAINMENT is structural: no module in the package (nor the CLI) may contain
-    any process-spawning / signaling surface. Source-scan, not a config flag."""
+    """CONTAINMENT is structural: no module in the package (nor the CLI) may contain any
+    process-spawning / signaling surface. Source-scan, not a config flag. The two #330
+    verdict-reclaim files are exempt from the blanket token ban but carry the tighter
+    containment invariant above (verdict-side compute isolation, no trainer/config mutation)."""
     forbidden = ("import subprocess", "from subprocess", "os.system(", "os.exec",
                  "os.spawn", "os.popen(", "os.kill(", "import signal", "pty.spawn",
                  "Popen(")
     files = list((REPO / "src/tac/witness_control").glob("*.py"))
     files.append(REPO / "tools/costate_shadow_report.py")
     assert len(files) >= 3
+    exempt_seen: set[str] = set()
     for f in files:
         src = f.read_text()
+        if f.name in _RECLAIM_EXEMPT:
+            exempt_seen.add(f.name)
+            _assert_verdict_reclaim_containment(f, src)
+            continue
         for tok in forbidden:
             assert tok not in src, f"actuation-capable token {tok!r} in {f}"
+    # The exemption must apply to EXACTLY the two #330 files still present — if either is
+    # renamed/removed the exemption silently lapses and this forces a re-review.
+    assert exempt_seen == _RECLAIM_EXEMPT, (
+        f"#330 verdict-reclaim exemption expected exactly {_RECLAIM_EXEMPT}; saw {exempt_seen}")
 
 
 # ─────────────────────── backtest on the REAL #205 log ───────────────────────
