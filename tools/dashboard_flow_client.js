@@ -136,7 +136,7 @@
   }
   function onSequence(seq) {
     SEQ = seq; loadedEpoch = seq.epoch;
-    cache = new Array(seq.n); _pf = 0;
+    cache = new Array(seq.n); lru = [];
     PAL = (seq.classes && seq.classes.length) ? seq.classes.map(function (c) { return hexToRgb(c.hex); }) : DEFAULT_PAL.slice();
     buildLegend(seq.classes || []);
     var fr = $("flowframe");
@@ -154,7 +154,7 @@
   function decodeFrame(i) {
     if (!SEQ) return Promise.reject(new Error("no sequence"));
     var c = cache[i];
-    if (c) { return c.then ? c : Promise.resolve(c); }
+    if (c) { if (!c.then) touchLRU(i); return c.then ? c : Promise.resolve(c); }
     var f = SEQ.frames[i], w = SEQ.w, h = SEQ.h;
     // OPAQUE images (RGB class fields + L fragility) -> no alpha premultiply corrupting class indices.
     var p = Promise.all([
@@ -174,18 +174,32 @@
       for (var k2 = 0, o2 = 0; k2 < w * h; k2++, o2 += 4) frag[k2] = gd[o2];
       if (fb.close) fb.close(); if (gb.close) gb.close();
       var obj = { bmp: bmp, wit: wit, seg: seg, gt: gt, frag: frag, w: w, h: h };
-      cache[i] = obj; return obj;
+      cache[i] = obj; touchLRU(i); return obj;
     });
     cache[i] = p; return p;
   }
-  function prefetchDecode() {
-    _pf = 0;
-    (function pump() {
-      if (!SEQ) return;
-      var budget = 6;
-      while (budget-- > 0 && _pf < SEQ.n) { var i = _pf++; if (!cache[i]) decodeFrame(i).catch(function () {}); }
-      if (_pf < SEQ.n) setTimeout(pump, 24);
-    })();
+  // LRU decode-on-demand: bound resident DECODED frames (4*w*h u8 + a bitmap each) to CACHE_CAP so
+  // memory is capped at ANY resolution — full-native ds1 (512x384) would be ~472MB if all 600 were
+  // held; here it stays ~O(CACHE_CAP) regardless. Compressed source (base64 in SEQ) stays resident
+  // (one-time); only the expensive decoded arrays are evicted. Prefetch a forward WINDOW for smooth play.
+  var CACHE_CAP = 64;        // max decoded frames resident
+  var PREFETCH_AHEAD = 24;   // frames decoded ahead of curFrame
+  var lru = [];              // decoded-frame indices, most-recent-last (in-flight promises are never evicted)
+  function touchLRU(i) {
+    var p = lru.indexOf(i); if (p >= 0) lru.splice(p, 1);
+    lru.push(i);
+    while (lru.length > CACHE_CAP) {
+      var ev = lru.shift(), o = cache[ev];
+      if (o && !o.then) { if (o.bmp && o.bmp.close) { try { o.bmp.close(); } catch (e) {} } cache[ev] = null; }
+    }
+  }
+  function prefetchDecode() {  // now a forward-WINDOW prefetch around curFrame (not all 600)
+    if (!SEQ) return;
+    var n = SEQ.n, c = curFrame | 0, budget = 4;
+    for (var d = 0; d <= PREFETCH_AHEAD && budget > 0; d++) {
+      var i = (c + d) % n;
+      if (!cache[i]) { decodeFrame(i).catch(function () {}); budget--; }
+    }
   }
 
   // ---------- canvas sizing (field aspect, dpr-crisp) ----------
@@ -471,6 +485,7 @@
     setFrameUI(curFrame);
     if (!flowVisible() || !CANVAS || CANVAS.clientWidth === 0) { updateStatus(); return; }
     var i = Math.max(0, Math.min(SEQ.n - 1, curFrame | 0));
+    prefetchDecode();  // forward-window prefetch around curFrame (smooth play; LRU-bounded)
     decodeFrame(i).then(function (obj) {
       if ((curFrame | 0) !== i && !playing) { /* moved during decode (scrub) */ }
       try {

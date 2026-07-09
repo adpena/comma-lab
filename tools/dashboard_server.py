@@ -209,10 +209,11 @@ class Config:
     witness_dpi: int = 80
     flow_enable: bool = True
     flow_best_ema_name: str = "levelset_witness_ema_BEST.npz"  # the checkpoint the 600-pass renders
-    flow_seq_downsample: int = 2         # field downsample (512x384 native -> 256x192) — the max res whose
-                                         # 600-frame decoded client cache (4*w*h*600 u8 ~= 118 MB at ds2)
-                                         # stays under mobile-Safari's tab-reap ceiling. ds1 (full native
-                                         # 512x384) is ~472 MB decoded -> needs client LRU eviction first.
+    flow_seq_downsample: int = 1         # FULL NATIVE 512x384 (max res given render_h/w). Safe now that the
+                                         # client uses an LRU decode-on-demand window (dashboard_flow_client.js
+                                         # CACHE_CAP) — decoded memory is O(CACHE_CAP) not O(600), so the old
+                                         # ~472 MB all-frames-decoded blocker is gone (~96 MB decoded + ~60-80 MB
+                                         # base64 source resident). Dial DASH_FLOW_SEQ_DOWNSAMPLE=2 for lighter mobile.
     flow_seq_jpeg_q: int = 85            # JPEG quality for the per-frame witness-render layer (sharper backdrop)
     flow_seq_frag_levels: int = 32       # margin-fragility quantization (PNG-compressibility)
     flow_seq_hard_k: int = 6             # hardest/most-diverse Tab-2 pairs to select
@@ -296,7 +297,7 @@ def config_from_env() -> Config:
         witness_dpi=int(e("DASH_WITNESS_DPI", "80")),
         flow_enable=e("DASH_FLOW_ENABLE", "1") not in ("0", "false", "False"),
         flow_best_ema_name=e("DASH_FLOW_BEST_EMA_NAME", "levelset_witness_ema_BEST.npz"),
-        flow_seq_downsample=int(e("DASH_FLOW_SEQ_DOWNSAMPLE", "2")),  # ds1=full native but ~472MB decoded (mobile-unsafe)
+        flow_seq_downsample=int(e("DASH_FLOW_SEQ_DOWNSAMPLE", "1")),  # full native 512x384 (LRU client cache bounds memory)
         flow_seq_jpeg_q=int(e("DASH_FLOW_SEQ_JPEG_Q", "85")),
         flow_seq_frag_levels=int(e("DASH_FLOW_SEQ_FRAG_LEVELS", "32")),
         flow_seq_hard_k=int(e("DASH_FLOW_SEQ_HARD_K", "6")),
