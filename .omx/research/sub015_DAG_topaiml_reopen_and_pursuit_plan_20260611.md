@@ -10773,3 +10773,7 @@ the earlier "pose as budget item, sub-0.15 rides d_seg+rate" framing was WRONG a
 exceeds the whole target); pose must be SOLVED or the store-nothing witness is pose-blocked (consistent
 with SPEC_v75 §1's pose launch gate). Eq anchor a1t_stratified_texture_falsified landed in
 morse_smale_stratified_parallax_dpose_v1 (same commit, advisory, n600 owed). Pointer 0.19110 UNMOVED.
+DSL-LEG STATUS (drift-gate note, FEED-a1t commits): measurement commits — no lever built/changed (A2T-stratified
+gated RED, no trainer flag exists for any texture term; Lever factory lands WITH a build, none fired). Equation
+leg satisfied in the probe's own commit (a1t anchor in morse_smale_stratified_parallax_dpose_v1, 7d2784fc9);
+DAG FEED-a1t + MEMORY L69b updated. Same determination as the 54ad010cc addendum.
