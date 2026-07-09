@@ -68,6 +68,16 @@ GATE_KEY_PREFIXES: dict[str, str] = {
     "muon": "__mg_",
     "lane_band": "__lbg_",
     "seg_chroma_boundary": "__cbg_",
+    # (v7.5 B.4 SEAL fix, 2026-07-09) temporal-screw EventBackstopGate. The B.4 build added the gate to
+    # the trainer + passed it into build_gate_resume_registry([...]) but did NOT register its canonical
+    # key prefix here, so build_gate_resume_registry raised KeyError at run_train startup for EVERY launch
+    # (crucible_v7 AND a #205 relaunch — the gate is constructed + registered unconditionally). Additive,
+    # legacy-compatible: old sidecars without __tsg_* restore the gate to un-fired => byte-identical
+    # pre-fire (the __mg_/__bc_ sentinel pattern). The event-mode plateau re-fire rides the SHARED
+    # annulus_series persisted by chroma's history resumable (crucible_v7 co-activates chroma event-mode);
+    # this prefix persists the gate's OWN latched fire-epoch so it does not re-fire / re-clear the
+    # spike-guard on resume.
+    "seg_temporal_screw": "__tsg_",
 }
 
 # The chroma annulus-plateau detector-history prefix (a SECOND resumable registered alongside the
