@@ -11594,3 +11594,29 @@ power diagram** (#284: Laguerre=tropical=curvelet=se3). Store the GENERATORS, no
   Movable → sparse object sites. In-tree substrate: `laguerre_logit_offset` + `power_diagram_argmax` already ARE this.
 - **RE-SHAPES v8 carriers:** build on PARAMETRIC GENERATORS (Laguerre sites / centerline polys), NOT boundary bitmaps.
   Pointer 0.19110 UNMOVED. `[no-triality]` (v8 eqs FORMALIZATION_PENDING per SPEC_v8 §5 until byte-close).
+
+---
+## FEED-dsegtaper (2026-07-09) — #121 d_seg-aware Fourier-feature amplitude taper BUILT (fireable, default-OFF)
+**Duty-to-measure #1 lever (73% of remaining descent to sub-0.15) was UNBUILT-for-the-witness — now built as a triality-complete `Lever`.**
+- **Mechanism (REAL, byte-neutral, rule-118 FREE):** `tac.boundary_math.dseg_aware_fourier_taper` reweights each FIXED
+  curvelet/Fourier column's amplitude by the GT d_seg saliency (top1-top2 argmax MARGIN: small |margin| = boundary
+  annulus = where d_seg is decided). `w_k = 1 + strength·(r_k/mean_r − 1)`, `r_k = <S,f_k²>/<1,f_k²>`. Moves the
+  coord-INR's spectral prior toward the d_seg-critical band — the SPECTRAL analogue of the vendored
+  `configurable_taper_decoder.dseg_aware_taper` capacity reallocation, on the witness's OWN basis (NOT the HNeRV
+  channel schedule). Adds ZERO trainable params (archive unchanged); the taper is a deterministic GT-geometry prior,
+  recomputable at decode like the self-orient basis / lane band.
+- **BYTE-IDENTITY when OFF (VERIFIED):** the trainer compute block is gated on `--dseg-aware-taper` (default False) →
+  `curv_feats_np` untouched. Runtime degeneracies pinned by tests: `strength==0` ⇒ w==1 exactly; uniform saliency ⇒
+  w==1 exactly; `mean_k w_k==1` pre-floor (byte-neutral reallocation). Verified on the ACTUAL curvelet basis:
+  `np.array_equal(off, feats)` (strength=0) and genuinely changed feats (strength=1, min/mean/max taper 0.82/1.00/1.16).
+- **Triality (all three legs, one landing):** DSL = `curriculum_dsl.DsegAwareTaper` (`--dseg-aware-taper` /-strength
+  /-scale /-floor; AST-discovered, `--dsl-lever` composable, all 4 flags MAPPED not unmapped, no invented flags).
+  Equations = `dseg_aware_fourier_taper_reweight_v1` (registered; VERIFIED_VIA_SOURCE_INSPECTION degeneracy anchor +
+  ASSUMED_AWAITING_VERIFICATION effect anchor). DAG = this block.
+- **Resumability P0:** the taper is STRUCTURAL (basis-affecting) → the 4 cfg scalars persist in the resume sidecar and
+  the F2 `_resume_lever_divergences` guard REFUSES a resume that adds/drops/re-strengths/re-scales it (a basis change).
+  Additive + legacy-compatible (old sidecars lacking the keys yield no spurious divergence).
+- **VERDICT SCOPE (ledger #121, re-validate-at-convergence):** "+18% NO-GO RETRACTED (under-converged ge300/3000);
+  converged anchors flip sign to −8% ~0.03 est ΔS; RE-VALIDATE at convergence (cheap disk A/B)". This landing BUILDS
+  the fireable lever; it makes NO score claim. Duty-to-measure QUEUE state = built/never-fired → owed a CONVERGED
+  byte-close A/B. means != ends: pointer 0.19110 UNMOVED. #205 alive+untouched. $0 code build (no GPU, no launch).

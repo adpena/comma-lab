@@ -1911,6 +1911,42 @@ def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
                        "witness-uncertainty); FP-killed non-naive form; realized THROUGH R")
 
 
+def DsegAwareTaper(  # noqa: N802 — #121 lever, re-validate-at-convergence
+    strength: float = 1.0, scale: float = 0.0, floor: float = 0.05,
+) -> Lever:
+    """#121 d_seg-aware Fourier-feature amplitude taper: reweight each FIXED Fourier/curvelet basis
+    column's amplitude by the GT d_seg saliency (top1-top2 SegNet argmax MARGIN) field, moving the
+    coord-INR's spectral prior toward the boundary annulus where d_seg is decided — the spectral
+    analogue of the vendored ``configurable_taper_decoder`` capacity reallocation, on the witness's
+    OWN Fourier basis instead of the HNeRV channel schedule. BYTE-NEUTRAL (adds ZERO trainable
+    params → archive unchanged) + rule-118 FREE (a deterministic prior from the GT margin geometry,
+    recomputable at decode like the self-orient basis / lane band). DEFAULT-OFF: this factory is what
+    ARMS it; un-composed the trainer never applies the taper (byte-identical).
+
+    ``strength`` scales the reallocation (0 ⇒ flat taper = no-op); ``scale`` = the saliency exp-kernel
+    width in margin units (0 ⇒ AUTO = median ``|margin|``, the robust default); ``floor`` = the
+    positivity clamp on each per-column weight. Mechanism:
+    ``tac.boundary_math.dseg_aware_fourier_taper``; law:
+    ``tac.canonical_equations.dseg_aware_fourier_taper_20260709``.
+
+    NO warm-start window: the taper is STRUCTURAL (active from ep0 by construction — it changes the
+    input feats the ``in_proj`` is trained on), so an end-of-run resume that ADDS/CHANGES it is
+    REFUSED by the trainer's F2 resume-divergence guard (a basis change), not silently applied; an
+    A/B fires it from a fresh run (or a matching resume).
+
+    VERDICT SCOPE (ledger #121): "+18% NO-GO RETRACTED (under-converged ge300/3000); converged anchors
+    flip sign to -8% ~0.03; RE-VALIDATE at convergence (cheap disk A/B)" — the d_seg effect is
+    ASSUMED_AWAITING_VERIFICATION until a CONVERGED byte-close A/B measures it. means != ends: this
+    factory BUILDS the mechanism; it makes NO score claim; pointer UNMOVED."""
+    return Lever("dseg_aware_taper",
+                 overrides={"--dseg-aware-taper": True,
+                            "--dseg-aware-taper-strength": float(strength),
+                            "--dseg-aware-taper-scale": float(scale),
+                            "--dseg-aware-taper-floor": float(floor)},
+                 notes="#121 d_seg-aware Fourier-feature amplitude taper (byte-neutral spectral "
+                       "reallocation by GT margin saliency; RE-VALIDATE at convergence)")
+
+
 def LadderIslandHomotopy(  # noqa: N802 — #323 FULL LADDER island-birth lever
     amplify_weight: float = 1.0,
     movable_r0: float = 2.0, movable_birth_epochs: int = 60, movable_hold_epochs: int = 0,

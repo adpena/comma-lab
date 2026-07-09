@@ -683,6 +683,15 @@ def _build_resume_state_arrays(
     # re-warmup routing). Loss/render-only (no param keys), so the arch guard cannot see them.
     out["__cfg_eikonal_weight"] = np.asarray(float(getattr(args, "eikonal_weight", 0.0)))
     out["__cfg_eikonal_viscosity"] = np.asarray(float(getattr(args, "eikonal_viscosity", 0.0)))
+    # (#121 d_seg-aware taper) STRUCTURAL basis lever: it multiplies the curvelet feats the in_proj
+    # is trained on, so a resume that ADDS/CHANGES/DROPS it would train on a DIFFERENT basis than the
+    # ckpt -> a silent deterministic-repro violation the arch/param-key guard cannot see (the taper
+    # adds NO param keys; it only reshapes the fixed input feats). Persist the four cfg scalars so the
+    # F2 _resume_lever_divergences guard fails closed. ZERO archive bytes (resume sidecar not byte-closed).
+    out["__cfg_dseg_aware_taper"] = np.asarray(int(bool(getattr(args, "dseg_aware_taper", False))))
+    out["__cfg_dseg_aware_taper_strength"] = np.asarray(float(getattr(args, "dseg_aware_taper_strength", 1.0)))
+    out["__cfg_dseg_aware_taper_scale"] = np.asarray(float(getattr(args, "dseg_aware_taper_scale", 0.0)))
+    out["__cfg_dseg_aware_taper_floor"] = np.asarray(float(getattr(args, "dseg_aware_taper_floor", 0.05)))
     out["__cfg_seed_anneal_epochs"] = np.asarray(int(getattr(args, "seed_anneal_epochs", 0)))
     out["__cfg_seed_anneal_shape"] = np.asarray(str(getattr(args, "seed_anneal_shape", "linear")))
     out["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
@@ -814,6 +823,13 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # BUILD #300 seed-absorption levers (material, trajectory-affecting).
         ("__cfg_witness_alone_island_loss", int(bool(getattr(args, "witness_alone_island_loss", False))), False),
         ("__cfg_seed_anneal_epochs", int(getattr(args, "seed_anneal_epochs", 0)), False),
+        # (#121 d_seg-aware taper) STRUCTURAL basis lever (changes the curvelet feats the in_proj is
+        # trained on; no param keys). A resume that adds/drops/re-strengths/re-scales it would train on
+        # a different basis than the ckpt => fail closed (deterministic-repro).
+        ("__cfg_dseg_aware_taper", int(bool(getattr(args, "dseg_aware_taper", False))), False),
+        ("__cfg_dseg_aware_taper_strength", float(getattr(args, "dseg_aware_taper_strength", 1.0)), True),
+        ("__cfg_dseg_aware_taper_scale", float(getattr(args, "dseg_aware_taper_scale", 0.0)), True),
+        ("__cfg_dseg_aware_taper_floor", float(getattr(args, "dseg_aware_taper_floor", 0.05)), True),
         ("__cfg_render_aa", str(getattr(args, "render_aa", "none")), False),
         ("__cfg_hosc_beta_end", cur_hbe, True),
         # focal-gamma + boundary-distance seg-loss levers (council levelset-loss-geometry symposium
@@ -3017,6 +3033,54 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # above the SegNet-stem Nyquist (free byte/alias budget; see stem_nyquist_max_freq_*).
     B = curvelet_directional_B(bank, max_freq=args.max_bank_freq)
     curv_feats_np = curvelet_feats(coords_np, B).astype(np.float32)  # (P, 2*cols)
+    # ── #121 d_seg-AWARE FOURIER-FEATURE AMPLITUDE TAPER (default OFF => this block is a NO-OP =>
+    # curv_feats_np unchanged => BYTE-IDENTICAL). When ON: reweight each curvelet column's amplitude
+    # by the GT d_seg saliency (top1-top2 argmax MARGIN) field so the coord-INR's spectral prior is
+    # reallocated toward the boundary annulus where d_seg is decided (the spectral analogue of the
+    # configurable_taper_decoder capacity reallocation, on the witness's OWN basis). BYTE-NEUTRAL
+    # (no new params) + rule-118 FREE (deterministic prior from the GT margin geometry). Applied to
+    # the SHARED curvelet feats ONCE here so EVERY downstream consumer (coord_feats_mx L~3218,
+    # cf_mx_cache via _feats_np_for_pair, the self-orient dir feats concatenated AFTER stay untapered)
+    # sees the same tapered basis at train + verdict + byte-close. STRUCTURAL: the taper multiplies the
+    # feats the in_proj learns on -> the F2 resume-divergence guard refuses a resume that adds/changes it.
+    # SCOPE (composition): the taper reweights the BASE curvelet grid -> it composes with --render-aa
+    # {none, ipe} (ipe attenuates the same base curvelet columns AFTER, deterministic). It is NOT wired
+    # for --render-aa supersample (the fine render grid builds its OWN feats from coords_fine, NOT from
+    # curv_feats_np, so the tapered base grid would train while an UNTAPERED fine grid renders = a silent
+    # train/render mismatch). Fail-closed on that un-wired combination (NO-FAKE: never a silent wrong
+    # result) rather than shipping the mismatch; supersample is research-only/launch-excluded anyway.
+    if bool(getattr(args, "dseg_aware_taper", False)):
+        if str(getattr(args, "render_aa", "none")) == "supersample":
+            raise SystemExit(
+                "--dseg-aware-taper is not wired for --render-aa supersample: the taper reweights the "
+                "BASE curvelet grid, but supersample renders from a SEPARATE fine grid (coords_fine) "
+                "that would NOT carry the taper (silent train/render mismatch). Use --render-aa "
+                "{none,ipe} with the taper, or drop --dseg-aware-taper for a supersample run.")
+        from tac.boundary_math.dseg_aware_fourier_taper import (
+            apply_dseg_aware_fourier_taper,
+            compute_dseg_aware_fourier_taper,
+            saliency_from_margins,
+        )
+        _dat_scale = float(getattr(args, "dseg_aware_taper_scale", 0.0))
+        # NN-resize the SEG-grid GT margin onto the RENDER grid so the saliency P_px matches
+        # curv_feats_np's P_px (= render_h*render_w) for ANY render/seg ratio (the same render!=seg
+        # mismatch the directional basis fixes via _nn_resize_labels). fail-closed if it can't.
+        _dat_sal = saliency_from_margins(
+            gt.margins, scale=(None if _dat_scale <= 0.0 else _dat_scale),
+            target_hw=(int(render_h), int(render_w)))
+        _dat_taper = compute_dseg_aware_fourier_taper(
+            curv_feats_np, _dat_sal,
+            strength=float(getattr(args, "dseg_aware_taper_strength", 1.0)),
+            floor=float(getattr(args, "dseg_aware_taper_floor", 0.05)))
+        curv_feats_np = apply_dseg_aware_fourier_taper(curv_feats_np, _dat_taper).astype(np.float32)
+        print(json.dumps({"stage": "dseg_aware_taper", "n_cols": int(_dat_taper.shape[0]),
+                          "strength": float(getattr(args, "dseg_aware_taper_strength", 1.0)),
+                          "scale": ("auto" if _dat_scale <= 0.0 else round(_dat_scale, 6)),
+                          "taper_min": round(float(_dat_taper.min()), 4),
+                          "taper_max": round(float(_dat_taper.max()), 4),
+                          "taper_mean": round(float(_dat_taper.mean()), 4),
+                          "note": "#121 byte-neutral spectral reallocation by GT margin saliency; "
+                          "RE-VALIDATE at convergence (advisory; NON-PROMOTABLE)"}), flush=True)
     in_feat = curv_feats_np.shape[1]
     # SELF-ORIENTATION directional augmentation (byte-closeable; tangent from the witness's OWN
     # argmax, cos 0.89-0.91 vs GT). Recomputed every --reorient-every epochs from the live SDF
@@ -10135,6 +10199,24 @@ def main(argv: list[str] | None = None) -> int:
                     "d_seg A/B. DEFAULT OFF = the bit-faithful numpy reorient (current behavior).")
     ap.add_argument("--freq-across", type=float, default=32.0, help="self-orient: HIGH freq across the edge (normal).")
     ap.add_argument("--freq-along", type=float, default=4.0, help="self-orient: LOW freq along the edge (tangent).")
+    # ── #121 d_seg-AWARE FOURIER-FEATURE AMPLITUDE TAPER (re-validate-at-convergence lever) ──
+    # Reweight each FIXED Fourier/curvelet basis column's amplitude by the GT d_seg saliency (the
+    # top1-top2 SegNet argmax MARGIN field: small |margin| = boundary annulus = where d_seg is
+    # decided), moving the coord-INR's spectral prior toward the d_seg-critical band. BYTE-NEUTRAL
+    # (adds ZERO trainable params → archive unchanged) + rule-118 FREE (deterministic prior from GT
+    # geometry, recomputable at decode). DEFAULT OFF => the curvelet feats are untouched =>
+    # BYTE-IDENTICAL. Mechanism: tac.boundary_math.dseg_aware_fourier_taper. DSL lever:
+    # curriculum_dsl.DsegAwareTaper. STRUCTURAL (active from ep0 by construction; changes the input
+    # feats) so a resume that adds/changes it fails closed via _resume_lever_divergences.
+    ap.add_argument("--dseg-aware-taper", action=argparse.BooleanOptionalAction, default=False,
+                    help="#121: reweight the Fourier/curvelet-column amplitude taper by GT d_seg "
+                    "saliency (byte-neutral spectral reallocation; re-validate at convergence). OFF = byte-identical.")
+    ap.add_argument("--dseg-aware-taper-strength", type=float, default=1.0,
+                    help="#121 taper reallocation strength (0.0 = flat taper = no-op).")
+    ap.add_argument("--dseg-aware-taper-scale", type=float, default=0.0,
+                    help="#121 saliency exp-kernel width in margin units (0.0 = AUTO = median |margin|).")
+    ap.add_argument("--dseg-aware-taper-floor", type=float, default=0.05,
+                    help="#121 positivity clamp on each per-column taper weight.")
     # ── GROUND-FRAME CHART (#194 / council draft §17.1; tac.boundary_math.ground_frame_chart) ──
     # Define the witness field ONCE in the reference pair's chart; per-pair evaluation PRE-COMPOSES
     # the input coords with the ξ-homography (chart change on INPUT coords, NOT a pixel warp; still
