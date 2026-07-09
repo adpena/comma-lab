@@ -43,6 +43,7 @@ _UTC = "2026-07-08T00:00:00Z"
 _ADVISORY = "[macOS-CPU advisory]"
 _PREDICTED = "[predicted]"
 _MEMO = ".omx/research/pose_mladder_depthwarp_measured_20260708.md"
+_MEMO_APERTURE = ".omx/research/pose_aperture_probe_measured_20260708.md"
 
 # --- MEASURED constants (medians, frozen CPU-torch PoseNet through the real R; this checkpoint) ---------
 DPOSE_A0_DETERMINISTIC = 1.685    # 0-DOF global ground-H warp (store-nothing), n24 median (mean 1.734)
@@ -52,6 +53,11 @@ OFFPLANE_PARALLAX_MASS = 0.005    # row-weighted (1/Z) off-plane mass fraction (
 OFFPLANE_AREA_FRAC = 0.027        # off-plane finite-depth area fraction (movable + undrivable-below-horizon)
 CORR_DPOSE_VS_EGO_TRANS = -0.446  # NEGATIVE (n24); d_pose does NOT rise with ego translation
 DPOSE_TARGET_CONTRIB = 0.019      # sqrt(10*d_pose) target for pose to be a non-issue (~3.4e-5 ancestor)
+DPOSE_A0T_BEST_TEXTURED = 15.14   # BEST (least-bad) observable-texture A0T point (P=32px, peak amp=4),
+#   n24 median; the derived-spec grid ranges 15.1..117.5, ALL >> A0 1.685 -> aperture-fix FALSIFIED.
+#   Diagnostic: warp(frame,xi) vs same frame = d_pose 166.8 (f0r) / 186.1 (f1r) -> the carrier's
+#   ground-homography flow is NOT the true ego-motion; observable texture makes PoseNet read that WRONG
+#   flow -> d_pose RISES. Mechanism = wrong-flow-observability (NOT aperture, NOT semantic-prior dominance).
 
 _FLOOR_BY_DOF = {0: DPOSE_A0_DETERMINISTIC, 6: DPOSE_A2_6DOF_SOLVE, 12: DPOSE_A2PLUS_12DOF}
 
@@ -150,6 +156,47 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_aperture = EmpiricalAnchor(
+        anchor_id="aperture_probe_A0T_falsified_crucible_run1_20260708",
+        measurement_utc=_UTC,
+        inputs={
+            "probe": "A0T = A0 consistent pair + seeded ISOTROPIC band-limited texture advected by the "
+                     "SAME H(xi); derived spec (posenet_scorer_side_deepdive): period 16/24/32/48 px@874, "
+                     "peak amp 4/8/16/32 uint8, luma+chroma & DC-match toggles",
+            "authority": "frozen CPU-torch PoseNet through real R (uint8); poscontrol 2.1e-12; NEVER MLX",
+            "n_pairs": "24 (A0T grid) / 8 (A2T best-shot solve); |t|-stratified",
+        },
+        predicted_output={
+            "aperture_hypothesis": "observable xi-consistent texture DROPS d_pose (selective low-|t| rescue)",
+        },
+        empirical_output={
+            "d_pose_A0_flat_median": DPOSE_A0_DETERMINISTIC,
+            "d_pose_A0T_best_textured_median": DPOSE_A0T_BEST_TEXTURED,  # P=32/amp4, ~9x WORSE
+            "d_pose_A0T_grid_range": "15.1 .. 117.5 (ALL >> A0 1.685; monotone in amplitude)",
+            "low_t_rescue": "ABSENT (low-|t| tracks/exceeds high-|t|)",
+            "d_pose_A2T_solve_on_textured_median": 12.65,  # 6-DOF solve on textured pair (P32/amp4), n8;
+            # ~8.5x WORSE than flat-pair A2 1.486 -> texture does NOT revive the solve either,
+            "diagnostic_warp_vs_self_dpose": "166.8 (f0r) / 186.1 (f1r) -> carrier flow != true ego-motion",
+            "verdict": ("APERTURE HYPOTHESIS FALSIFIED (formulation-scoped): observable texture RAISES "
+                        "d_pose because the only flow a cheap store-nothing carrier can paint is the "
+                        "ground-homography flow, which is WRONG; making it legible amplifies the error. "
+                        "Semantic-prior dominance ALSO not indicated (PoseNet responds strongly to injected "
+                        "flow: 1.7->118). Wall = FLOW-MODEL CORRECTNESS, not observability. NOT refuted: "
+                        "joint pose-descent RUN (render co-adapts), Option-A depth-warp (correct flow)."),
+        },
+        residual=0.0,
+        source_artifact=_MEMO_APERTURE,
+        measurement_method="A0T advected-texture grid + A2T 6-DOF solve on textured pair, frozen CPU-torch PoseNet",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=_MEMO_APERTURE,
+            reactivation_criteria=("re-measure on a CORRECT-flow carrier (Option-A depth-warp, per-clip "
+                                   "stored depth) or on a joint pose-descent RUN where the render co-adapts; "
+                                   "n600 + exact-eval"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Morse-Smale stratified parallax warp: cheap task-space pose carrier floors d_pose ~1.2-1.7 "
@@ -175,7 +222,7 @@ def build_morse_smale_stratified_parallax_dpose_v1() -> CanonicalEquation:
         },
         units_in={"dof": "warp_degrees_of_freedom_int"},
         units_out={"d_pose": "posenet6_mse_median"},
-        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_owed),
+        empirical_anchors=(anchor_ladder, anchor_rootcause, anchor_aperture, anchor_owed),
         predicted_vs_empirical_residual={
             # extension predicted A2 ~0.0011; MEASURED 1.486 -> the prediction miss is the finding.
             "a2_prediction_miss_vs_0p0011": abs(DPOSE_A2_6DOF_SOLVE - 0.0011),
