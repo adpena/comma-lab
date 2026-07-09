@@ -10973,3 +10973,25 @@ residual (already ~80%: fix plateau_ok telemetry + derive min-stage-epochs 250 +
 nucleation); (D) POSE SEQUENCING — replace co-train-from-ep0 with R1 two-phase (converge d_seg → terminal
 pose-finish stage → #238 ship dxi 0.106). NOT a rebuild — a short surgical completion; d_seg base already
 optimal. Fires FEED-v75actuate. Pointer 0.19110 UNMOVED.
+
+## FEED-238resolved (2026-07-08) — POSE BANKED at n600 AUTHORITY: R1 dxi SHIPPABLE through byte-close, d_pose 0.001610 → contribution 0.127, 7.2KB counted. #238 RESOLVED. (a0d02105f + 706d33487)
+The owed authority-scale question — "is R1's 0.0011 even real, does the trained per-pair dxi survive
+byte-close at n600?" — ANSWERED **YES**. Serializing ξ_eff = xi_stored + dxi and re-measuring THROUGH the
+real byte-closed inflate → frozen CPU-torch PoseNet on the inflated .raw (n600, real gt, [macOS-CPU
+advisory] NON-PROMOTABLE):
+- ship-dxi n600 AUTHORITY: d_pose **0.001610** → pose √(10·d_pose) = **0.127**
+- matched no-dxi (same xi_stored, dxi-scale 0): 0.0220 (0.469) — the dxi buys **20×**
+- naive-calib byte-close (wrong s_t): 26.04 — dxi is **~16,000×** below the naive floor
+- training-side ep1108 reference: 0.001012 — n600 realized 1.6× (600-pair tail + EMA-lag, conservative)
+ξ_eff counted **7,195 B** → rate 25·7195/37.5M = **0.004791** (marginal +3,433B / +0.0023 rate over no-dxi
+for the 20× pose gain). Full advisory S (n600) = 100·0.004549 (**seg 0.455 = THE blocker**) + 0.127 (pose,
+BANKED) + 0.060 (rate) = **0.642**. Connector landed: `--pose-carrier-xi-from-ckpt` / `--pose-carrier-
+dxi-scale` / `build_pose_carrier_section(xi_override=)` + base-blob fix (46 byte-close tests pass, default
+byte-identical). Caveat (pre-existing, NOT dxi): frame0 decode bit-exact=False is a store_nothing warp-
+repro numeric, d_pose measured on the deterministic shipped .raw = the true shipped number.
+⇒ **POSE HALF is SOLVED + BANKED at authority scale.** verdict_scope: pose half on THIS R1 ckpt via store-
+nothing ξ_eff carrier; does NOT touch the d_seg blocker (0.455 seg term) nor claim a frontier move
+(upstream/evaluate.py CPU = the only promotion authority). The frontier gap to sub-0.19 is now ENTIRELY
+d_seg. NOTE (not launched, operator-GO): R1 still descending at ep1108 → a from-converged pose-finishing
+descent (the v7.5 terminal pose-finish stage, being wired now) could push toward the 0.018-class ancestor.
+Pointer 0.19110 UNMOVED.
