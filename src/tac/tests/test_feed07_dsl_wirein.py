@@ -125,8 +125,11 @@ def test_new_levers_composable_and_regime_law_agrees_with_equation():
     assert lv.overrides["--freq-along"] == 26.0, "DSL leg must emit the equations-leg law"
     with pytest.raises(ValueError, match="unknown regime"):
         cd.DirectionalBasisRebalance(regime="typo_regime")
-    # StepNativeActivation guards: anneal-toward-step only (fixed-high-beta diverges, measured)
-    with pytest.raises(ValueError, match="beta_start <= beta_end"):
+    # StepNativeActivation guards: anneal-toward-step only (fixed/decreasing beta diverges, measured).
+    # Regression 2026-07-09: the validate_step_native_config rewrite rejected only EQUALITY, silently
+    # accepting a DECREASING anneal (8->4 starts saturated) — this test caught it; guard now enforces
+    # beta_start < beta_end strictly.
+    with pytest.raises(ValueError, match="beta_start < beta_end"):
         cd.StepNativeActivation(beta_start=8.0, beta_end=4.0)
     with pytest.raises(ValueError, match="lr_final_frac"):
         cd.MuonWarmStart(lr_final_frac=0.0)

@@ -136,6 +136,16 @@ def test_validate_rejects_fixed_beta_the_saturation_death():
     assert prob2 and any("FIXED-beta" in p for p in prob2)
 
 
+def test_validate_rejects_decreasing_beta_starts_saturated():
+    # REGRESSION (caught 2026-07-09 by the feed07 consumer test): the rewrite rejected only
+    # EQUALITY, silently accepting a DECREASING anneal (8->4), which STARTS at the high-beta
+    # saturation — the same measured saturation-death. Guard must enforce beta_start < beta_end.
+    prob = validate_step_native_config(ANNEALED_HOSC, 8.0, 4.0, "cosine", 1.0, True)
+    assert prob and any("beta_start < beta_end" in p for p in prob)
+    # increasing anneal (the valid config) stays accepted
+    assert validate_step_native_config(ANNEALED_HOSC, 1.0, 4.0, "cosine", 1.0, True) == []
+
+
 def test_validate_rejects_step_basis_without_finer():
     prob = validate_step_native_config(STEP_BASIS, 1.0, None, "linear", 1.0, False)
     assert prob and any("finer_bias_init=True" in p for p in prob)

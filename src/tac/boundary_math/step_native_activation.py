@@ -156,8 +156,9 @@ def validate_step_native_config(
       * ``basis`` ∈ {annealed_hosc, step_basis}                      (no invented kind)
       * ``beta_anneal`` ∈ {linear, cosine}                          (no invented schedule)
       * ``beta_start > 0`` and resolved ``beta_end > 0``            (positivity — hosc undefined at 0)
-      * resolved ``beta_end != beta_start``                          (**NEVER fixed beta** — the
-        saturation-death; a constant beta is the FORBIDDEN config, DAG FEED 2026-06-25a)
+      * resolved ``beta_end > beta_start``                           (**NEVER fixed OR decreasing beta**
+        — equality is the saturation-death constant; a decreasing anneal STARTS saturated at high beta;
+        the anneal must go UPWARD smooth->step, DAG FEED 2026-06-25a)
       * ``step_basis`` requires ``finer_bias_init``                  (the FINER++ stability fix is what
         makes the sharper step the "stable trainable-slope survivor")
     """
@@ -172,11 +173,13 @@ def validate_step_native_config(
     resolved_end = resolve_beta_end(basis, beta_end)
     if resolved_end <= 0.0:
         problems.append(f"beta_end must be > 0, got {resolved_end!r}")
-    if resolved_end == float(beta_start):
+    if resolved_end <= float(beta_start):
         problems.append(
-            f"beta_end ({resolved_end}) == beta_start ({beta_start}) is a FIXED-beta config — the "
-            "MEASURED saturation-death (tanh(beta*sin) saturates, gradient vanishes, d_seg RISES; "
-            "DAG FEED 2026-06-25a). A step-native lever MUST anneal beta (beta_end != beta_start).")
+            f"beta_end ({resolved_end}) <= beta_start ({beta_start}) is forbidden: equality is the "
+            "FIXED-beta config, and a DECREASING anneal STARTS at the high-beta saturation — both are "
+            "the MEASURED saturation-death (tanh(beta*sin) saturates, gradient vanishes, d_seg RISES; "
+            "DAG FEED 2026-06-25a). A step-native lever MUST anneal beta UPWARD toward the step limit "
+            "(require beta_start < beta_end; smooth -> step).")
     if basis == STEP_BASIS and not bool(finer_bias_init):
         problems.append(
             "basis='step_basis' requires finer_bias_init=True — the FINER++ variable-periodic "
