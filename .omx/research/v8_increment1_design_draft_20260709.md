@@ -27,13 +27,24 @@ the two council-flagged equations** — while Movable / Lane / MyCar keep their 
 | MyCar (4) | static mask clamp | `hood_static_component.py` — **REUSE as-is** | ~0.1–0.5 KB | IoU 0.994 **MEASURED** #139 |
 | Lane (1) | analytic ground-frame band | `analytic_lane_render_band.py` + `lane_sdf_component.py` — **REUSE** | ~1–2 KB | d_seg 0.00087 **MEASURED** (openpilot band) |
 | Movable (3) | sparse islands + homotopy + area-Lagrange | v7.5 machinery (`--ladder-island-homotopy` + `area_constraint`) — **REUSE v7.5** | ~2–6 KB | **DERIVED** |
-| **Road (0) + Undriv (2)** | **ONE edge-centric bulk-boundary field** | **BUILT (scaffold)** `road_undriv_bulk_field.py` — composes `road_horizon_component` + `lever_b_levelset_generator` (SDF) + `laguerre_logit_offset` (b_c) | **FULL-boundary 707 B/frame → 424 KB@n600 = 0.282 S MEASURED** (scaffold `bulk_boundary_byte_cost`, brotli, n600 gt). The **20–50 KB target is the interiors-near-free REDUCTION** (§2 #308, coarse-grid+INR-annulus) — an ~8–20× cut CONJECTURED, gated on P-C. | full-boundary MEASURED; reduction = P-C |
+| **Road (0) + Undriv (2)** | **ONE edge-centric bulk-boundary field** | **BUILT (scaffold)** `road_undriv_bulk_field.py` — composes `road_horizon_component` + `lever_b_levelset_generator` (SDF) + `laguerre_logit_offset` (b_c) | **EDGE-CENTRIC ~47 KB@n600 = 0.032 S MEASURED** (Road↔Undriv edge 426 px/frame × 1.5 b/px chain-code, n600 gt) — lands IN the 20–50 KB band, now measured not conjectured. | edge-length MEASURED; coder-floor = #307-class |
 | tie bias b_c | Road↔Lane calibration offset | `laguerre_logit_offset.py` — **REUSE** | ~0 bytes | 41% of Road's oracle flips **MEASURED** (P-A) |
 
 Net stack ≈ 27–57 KB vs 114 KB incumbent ⇒ **−50..75% ≈ 0.049 S rate-headroom — CONJECTURED, DOUBLY
 conditional** (review-F: on the byte number AND on d_seg holding at equal quality; NOT derived — it
 presupposes the increment-1 result). The *only* new module is the Road+Undriv field; four of five carriers
 already exist.
+
+> **BYTE-COST SHARPENED (MEASURED n600, operator catch 2026-07-09 "707B is big enough to point to naive"):**
+> The scaffold's `bulk_boundary_byte_cost` = 707 B/frame was naive on BOTH axes. (a) **Coder:** brotli-on-bitmap
+> is ~1.9× the chain-code entropy floor (#307-class ~1.5 b/px). (b) **Scope (the bigger one):** it measured the
+> FULL Road perimeter (2228 px), but the edge-centric field pays for the **Road↔Undrivable horizon ONLY = 426 px
+> (19%)** — the other 81% (Road↔Lane 47% / Road↔MyCar 23% / Road↔Movable 5%) belongs to those classes' own
+> carriers, and paying for them here IS the risk-1 double-count. Edge-centric Road↔Undriv, chain-coded: **80
+> B/frame → 47 KB@n600 = 0.032 S MEASURED = 9× below the naive number, landing IN the conjectured band.** The
+> scaffold's `bulk_boundary_byte_cost` should be corrected to measure the Road↔Undriv SHARED EDGE (not the full
+> Road mask). This confirms the "interiors-near-free" bet was really about SCOPE (edge-centric) more than interior
+> texture — a cleaner, measured foundation for the rate thesis.
 
 ## 2. The one new build — the Road+Undriv edge-centric bulk-boundary field
 - **ONE field, not two** (risk-1 cure, edge-centric): a single SDF-gauged scalar φ_bulk over the Road/Undriv

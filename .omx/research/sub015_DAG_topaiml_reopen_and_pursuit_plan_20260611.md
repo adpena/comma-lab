@@ -11518,3 +11518,16 @@ equations = FORMALIZATION_PENDING (register only if the §5 probe runs, strength
 $0 read-only n600 probe (gt_n600.npz 'lstars' lane-mask + ONE CPU bilinear grid_sample → lane-IoU collapse test;
 memory-safe, NO SegNet forward, do NOT run concurrent with #205). Memo:
 `.omx/research/flowers_warp_mechanism_deepdive_20260709.md`. Pointer 0.19110 UNMOVED. #205 untouched.
+
+### FEED-v8-bytecost-sharpened (2026-07-09) — [no-triality] operator catch "707B is naive" → 9x correction MEASURED
+
+Operator: "707B is big enough to point to naive." CORRECT — the scaffold's `bulk_boundary_byte_cost`=707 B/frame
+was naive on BOTH axes (MEASURED n600, $0 read-only): (a) CODER — brotli-on-bitmap is ~1.9x the chain-code
+entropy floor (#307-class ~1.5 b/px). (b) SCOPE (the bigger one) — it measured the FULL Road perimeter (2228
+px/frame), but edge-centric means the bulk field pays for the **Road<->Undrivable horizon ONLY = 426 px (19%)**;
+the other 81% (Road<->Lane 47% = Lane's analytic band / Road<->MyCar 23% = hood clamp / Road<->Movable 5% =
+islands) belongs to those carriers — paying here IS the risk-1 double-count. **Edge-centric Road<->Undriv,
+chain-coded 1.5 b/px = 80 B/frame -> 47 KB@n600 = 0.032 S MEASURED = 9x below naive, landing IN the conjectured
+20-50 KB band (now measured).** Confirms "interiors-near-free" was really about SCOPE (edge-centric) > interior
+texture. OWED: correct the scaffold's byte-cost to measure the Road<->Undriv SHARED EDGE, not the full Road mask.
+equations leg FORMALIZATION_PENDING (SPEC_v8 §5). Pointer 0.19110 UNMOVED. #205 alive+untouched.
