@@ -39,7 +39,8 @@ N_CLASSES = 5  # canonical order Road0 / Lane1 / Undrivable2 / Movable3 / MyCar4
 
 PRESET_ALL_ONES = "all-ones"
 PRESET_FITTED_20260707 = "fitted-20260707"
-PRESETS = (PRESET_ALL_ONES, PRESET_FITTED_20260707)
+PRESET_FRAGILITY_20260709 = "fragility-20260709"
+PRESETS = (PRESET_ALL_ONES, PRESET_FITTED_20260707, PRESET_FRAGILITY_20260709)
 
 # MEASURED fitted sigma_ij, FULL precision from the primary artifact
 # experiments/results/solver_pack_20260707/junction_sigma/junction_sigma_fit.json
@@ -65,6 +66,123 @@ FITTED_20260707_MATRIX = (
     (_S_RM, 1.0, _S_UM, 1.0, 1.0),
     (_S_RC, _S_LC, 1.0, 1.0, 1.0),
 )
+
+# ---------------------------------------------------------------------------
+# SECOND, INDEPENDENT sigma_cc' DERIVATION (task #382, FEED-sigma-ccprime 2026-07-09).
+# The FITTED_20260707 matrix inverts junction ANGLES (Herring/Young force balance) but is fit
+# ONLY on the ~80.7% of junctions that admit a positive-tension equilibrium — it DISCARDS the
+# 19.3% arc>=180 slivers (the flux-limited / erasure-prone regime). This second law derives
+# sigma from a PAIR-FRAGILITY statistic that USES exactly the data the angle-fit drops: the
+# per-pair sliver-drop fraction f_cc' = (arc>=180 junctions)/(all junctions touching the pair),
+# aggregated over every triple containing (c,c'). sigma_cc' = exp(-k*f_cc'), geometric-mean-1
+# gauge over the OBSERVED off-diagonal pairs, unobserved pairs -> 1.0 (the all-ones null). k=1.0
+# is the natural DERIVED gauge (one nat of fragility per unit drop-fraction). Anti-erosion by
+# construction: high-drop (thin sliver) interfaces get sigma<1 => the length term penalizes their
+# perimeter LESS => less MCF shrinkage pressure on the sub-critical class.
+#
+# MEASURED from the SAME primary artifact junction_sigma_fit.json (per_triple n_junctions +
+# n_dropped_arc_ge_180; deterministic reduction; [macOS-CPU advisory] NON-PROMOTABLE, geomean-1).
+# KEY CROSS-DERIVATION FINDING (FEED-sigma-ccprime): this law and Young's-angle DISAGREE on the
+# flip-dominant Road-Lane pair — fragility sigma[Road-Lane]=1.029 (abundance high: 805 clean
+# junctions dilute the drop-fraction) vs Young's-angle 0.377 (angle far from Herring). The two
+# derivations are NOT interchangeable; the angle-based Herring derivation is LOAD-BEARING (it is
+# the principled surface-tension readout of the frozen scorer; abundance is a proxy). This law is
+# a SECOND A/B ARM (let math arbitrate, NOT an asserted improvement) + the reason the incumbent's
+# angle derivation is the default treatment. FORMALIZATION_PENDING (register when its n600 A/B lands).
+FRAGILITY_20260709_K = 1.0  # DERIVED gauge: sigma = exp(-k*f); k=1.0 = one nat per unit drop-fraction
+
+# Reproduced deterministically by derive_fragility_sigma_from_junction_fit() on the primary
+# artifact (asserted bit-consistent in the tests). Unobserved pair Undrivable-MyCar (0 junctions)
+# is the all-ones null 1.0.
+_F_RL = 1.028689074683137    # Road-Lane        f=0.312  (abundance 805 dilutes; vs Young's 0.377)
+_F_RU = 1.2031808149252625   # Road-Undrivable  f=0.155
+_F_RM = 1.2354487527901425   # Road-Movable     f=0.129
+_F_RC = 1.0722667547501363   # Road-MyCar       f=0.270
+_F_LU = 0.7101432121853161   # Lane-Undrivable  f=0.683  (thin sliver: 40 clean / 86 dropped)
+_F_LM = 0.8523577555178058   # Lane-Movable     f=0.500
+_F_LC = 1.0781652261313843   # Lane-MyCar       f=0.265
+_F_UM = 1.2424219433464703   # Undrivable-Movable f=0.123
+_F_MC = 0.7522030791384214   # Movable-MyCar    f=0.625
+
+FRAGILITY_20260709_MATRIX = (
+    # Road   Lane   Undriv  Movable MyCar
+    (1.0, _F_RL, _F_RU, _F_RM, _F_RC),
+    (_F_RL, 1.0, _F_LU, _F_LM, _F_LC),
+    (_F_RU, _F_LU, 1.0, _F_UM, 1.0),
+    (_F_RM, _F_LM, _F_UM, 1.0, _F_MC),
+    (_F_RC, _F_LC, 1.0, _F_MC, 1.0),
+)
+
+
+def derive_fragility_sigma_from_junction_fit(
+    fit: dict | str | Path, *, k: float = FRAGILITY_20260709_K
+) -> np.ndarray:
+    """Derive the pair-fragility sigma_cc' matrix from the junction fit artifact's per-triple
+    drop counts (the SECOND, independent sigma law; task #382). Deterministic reduction:
+
+      f_cc' = sum_triples(c,c'; n_dropped_arc_ge_180) / sum_triples(c,c'; n_junctions + n_dropped)
+      sigma_cc' = exp(-k * f_cc') / geomean_{observed off-diag}(exp(-k*f))   (unobserved -> 1.0)
+
+    ``fit`` is the fit dict, or a JSON path to it (top-level or under a 'fit' key holding
+    'per_triple'). Returns a validated symmetric (5,5) float64 matrix (diagonal 1.0). Fail-closed
+    (ValueError) if the per_triple structure is missing/malformed. [macOS-CPU advisory]."""
+    import itertools
+
+    obj: dict
+    if isinstance(fit, (str, Path)):
+        p = Path(fit)
+        if not p.is_file():
+            raise ValueError(
+                f"derive_fragility_sigma: {str(p)!r} is not an existing junction-fit JSON file")
+        try:
+            obj = json.loads(p.read_text())
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"derive_fragility_sigma: {p} is not valid JSON: {exc}") from exc
+    elif isinstance(fit, dict):
+        obj = fit
+    else:
+        raise ValueError(
+            f"derive_fragility_sigma: fit must be a dict or JSON path, got {type(fit).__name__}")
+
+    node = obj.get("fit", obj)
+    per_triple = node.get("per_triple") if isinstance(node, dict) else None
+    if not isinstance(per_triple, dict) or not per_triple:
+        raise ValueError(
+            "derive_fragility_sigma: junction fit has no non-empty 'fit.per_triple' mapping "
+            "(expected the tools/fit_junction_sigma_youngs_law.py artifact)")
+    if not (isinstance(k, (int, float)) and math.isfinite(k) and k > 0.0):
+        raise ValueError(f"derive_fragility_sigma: k must be a finite positive gauge, got {k!r}")
+
+    clean = np.zeros((N_CLASSES, N_CLASSES), dtype=np.float64)
+    dropped = np.zeros((N_CLASSES, N_CLASSES), dtype=np.float64)
+    for tname, t in per_triple.items():
+        ids = t.get("class_ids") if isinstance(t, dict) else None
+        if not (isinstance(ids, (list, tuple)) and len(ids) == 3):
+            raise ValueError(
+                f"derive_fragility_sigma: triple {tname!r} has no valid 3-element 'class_ids'")
+        nj = float(t.get("n_junctions", 0) or 0)
+        nd = float(t.get("n_dropped_arc_ge_180", 0) or 0)
+        for a, b in itertools.combinations((int(i) for i in ids), 2):
+            clean[a, b] += nj
+            clean[b, a] += nj
+            dropped[a, b] += nd
+            dropped[b, a] += nd
+
+    total = clean + dropped
+    observed = total > 0.0
+    with np.errstate(invalid="ignore", divide="ignore"):
+        frag = np.where(observed, dropped / total, 0.0)
+    raw = np.where(observed, np.exp(-float(k) * frag), 1.0)
+    off = ~np.eye(N_CLASSES, dtype=bool)
+    obs_off = off & observed
+    if not np.any(obs_off):
+        raise ValueError("derive_fragility_sigma: no observed off-diagonal pairs to gauge")
+    gm = math.exp(float(np.mean(np.log(raw[obs_off]))))
+    sig = np.where(observed, raw / gm, 1.0)
+    np.fill_diagonal(sig, 1.0)
+    sig = 0.5 * (sig + sig.T)  # symmetrize exactly (float round-trip safety)
+    validate_sigma_matrix(sig, source="fragility derivation")
+    return sig
 
 
 def validate_sigma_matrix(a: np.ndarray, *, source: str = "sigma matrix") -> None:
@@ -142,6 +260,10 @@ def resolve_length_sigma_matrix(spec: str) -> np.ndarray | None:
         a = np.asarray(FITTED_20260707_MATRIX, dtype=np.float64)
         validate_sigma_matrix(a, source=f"preset {PRESET_FITTED_20260707!r}")
         return a
+    if s == PRESET_FRAGILITY_20260709:
+        a = np.asarray(FRAGILITY_20260709_MATRIX, dtype=np.float64)
+        validate_sigma_matrix(a, source=f"preset {PRESET_FRAGILITY_20260709!r}")
+        return a
     return load_sigma_matrix_json(s)
 
 
@@ -152,18 +274,26 @@ def describe_length_sigma(spec: str) -> dict:
         return {"spec": PRESET_ALL_ONES, "active": False,
                 "note": "uniform length weight (Herring 120-120-120 null); byte-identical path"}
     gm = math.exp(float(np.mean(np.log(a[~np.eye(N_CLASSES, dtype=bool)]))))
+    prov = ("junction_young_angle_sigma_fit_v1 (commit 3571e5b65)"
+            if str(spec).strip() == PRESET_FITTED_20260707
+            else "fragility derivation (task #382 FEED-sigma-ccprime; FORMALIZATION_PENDING)"
+            if str(spec).strip() == PRESET_FRAGILITY_20260709
+            else "JSON path")
     return {"spec": str(spec), "active": True,
             "sigma_road_lane": float(a[0, 1]), "sigma_road_mycar": float(a[0, 4]),
-            "offdiag_geomean": gm,
-            "provenance": "junction_young_angle_sigma_fit_v1 (commit 3571e5b65)"}
+            "offdiag_geomean": gm, "provenance": prov}
 
 
 __all__ = [
     "FITTED_20260707_MATRIX",
+    "FRAGILITY_20260709_K",
+    "FRAGILITY_20260709_MATRIX",
     "N_CLASSES",
     "PRESETS",
     "PRESET_ALL_ONES",
     "PRESET_FITTED_20260707",
+    "PRESET_FRAGILITY_20260709",
+    "derive_fragility_sigma_from_junction_fit",
     "describe_length_sigma",
     "load_sigma_matrix_json",
     "resolve_length_sigma_matrix",
