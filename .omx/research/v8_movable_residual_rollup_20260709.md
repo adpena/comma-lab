@@ -130,3 +130,10 @@ the parametric generator, never the boundary bitmap.
 
 `[triality: DAG leg = FEED-v8-rollup; equation = v8_geometric_rate_decomposition_v1 FORMALIZATION_PENDING]`
 · pointer 0.19110 UNMOVED · #205 untouched.
+
+**UPDATE 2026-07-09 (triality leg-completion):** `v8_geometric_rate_decomposition_v1` is now **REGISTERED**
+(no longer FORMALIZATION_PENDING) — `src/tac/canonical_equations/v8_geometric_rate_decomposition_20260709.py`,
+2 MEASURED anchors (Road/Lane dominant + whole-scene roll-up), VERIFIED_VIA_EMPIRICAL_ANCHOR, advisory
+NON-PROMOTABLE. **DSL leg = N/A** (this is a MEASUREMENT — no trainer lever / launch / curriculum change).
+Law: `S_edge = S_gen(dominant, ~k coeffs) + S_resid(uncovered px)`; `S_rate = sum_edges S_edge`. Registry
+row appended to `.omx/state/canonical_equations_registry.jsonl`. pointer 0.19110 UNMOVED · #205 untouched.

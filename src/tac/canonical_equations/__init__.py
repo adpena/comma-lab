@@ -219,6 +219,10 @@ from tac.canonical_equations.witness_pose_grad_coeff_stability_20260709 import (
     build_witness_pose_grad_coeff_stability_v1,
     populate_witness_pose_grad_coeff_stability_equation,
 )
+from tac.canonical_equations.v8_geometric_rate_decomposition_20260709 import (
+    build_v8_geometric_rate_decomposition_v1,
+    populate_v8_geometric_rate_decomposition_equation,
+)
 from tac.canonical_equations.horizon_weighted_margin_20260709 import (
     build_horizon_weighted_margin_v1,
     populate_horizon_weighted_margin_equation,
@@ -382,6 +386,8 @@ __all__ = [
     "populate_laguerre_ot_head_offset_equation",
     "build_witness_pose_grad_coeff_stability_v1",
     "populate_witness_pose_grad_coeff_stability_equation",
+    "build_v8_geometric_rate_decomposition_v1",
+    "populate_v8_geometric_rate_decomposition_equation",
     "build_horizon_weighted_margin_v1",
     "populate_horizon_weighted_margin_equation",
     "build_chroma_boundary_annulus_match_hinge_v1",
