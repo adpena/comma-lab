@@ -203,23 +203,25 @@ of dual — curvelet-boundary ≡ medial-axis-centerline ≡ power-diagram-sites
 negatives keep this honest: the **dense** medial axis (444 pts) ≈ the boundary bitmap (1.09×, NO win); the
 lever is the **few-coefficient** fit (horizon 4 coeffs = 14.6×).
 
-**Whole-scene de-shared rate budget (real-coder, n600, each inter-class edge counted once):**
+**Whole-scene de-shared rate budget (real-coder, n600, each inter-class edge counted once).** ALL 5 edges
+now MEASURED — dominant-only (parsimonious generator, lossless coder) AND complete (+ residual sidecar).
+See `v8_movable_residual_rollup_20260709.md` (FEED-v8-rollup):
 
-| edge | bitmap S (conservative) | geometric S | generator |
-|---|---|---|---|
-| Road/Lane | 0.204 | **0.0275 (MEASURED 7.4×)** | centerline poly + ξ track (Wave-F #234) — 59% of budget; lossless, 72.5% cover, residual sidecar owed |
-| Road/Undriv (horizon) | 0.047 | **0.0032 (MEASURED 14.6×)** | 1 Laguerre site + boundary poly + ξ |
-| Undriv/Movable | 0.033 | ~owed | sparse object sites |
-| Road/Movable | 0.028 | ~owed | sparse object sites |
-| Road/MyCar (hood) | 0.028 | **0.0202 (MEASURED)** | static-model (frame0 + rigid ξ-shift) |
-| Lane/* (3 rows) | 0.007 | 0.007 | already tiny |
-| **TOTAL** | **0.346 (upper bound)** | **~0.02–0.05 projected** | vs 0.118 pointer rate term |
+| edge | bitmap S | geometric DOMINANT-only S | geometric COMPLETE (+residual) S | generator |
+|---|---|---|---|---|
+| Road/Lane | 0.204 | **0.0275 (MEASURED 7.4×)** | **0.0695** (+resid 0.0420, 26.6% unc) | centerline poly + ξ track (Wave-F #234); 59% of budget, 72.5% cover |
+| Road/Undriv (horizon) | 0.047 | **0.0032 (MEASURED 14.6×)** | **0.0221** (+resid 0.0189, 25.7% unc) | 1 Laguerre site + boundary poly + ξ |
+| Undriv/Movable + Road/Movable | **0.0532 (MEASURED region bitmap)** | **0.00344 (MEASURED, ONE carrier)** | **0.0209** (+resid 0.0174, 30% unc) | sparse object sites — bbox 3.0/frame, Hungarian ξ-track, 70% cover, bit-exact |
+| Road/MyCar (hood) | 0.028 | **0.0202 (MEASURED)** | 0.0202 (static model, complete) | static-model (frame0 + rigid ξ-shift) |
+| Lane/* (3 rows) | 0.007 | 0.007 | 0.007 | already tiny |
+| **TOTAL** | **0.339** | **0.061 (MEASURED)** | **0.140 (MEASURED)** | vs 0.118 pointer rate term |
 
-**Consequence:** the rate half of sub-0.15 is measured-headroom-confirmed (geometric ≪ bitmap ≪ current
-0.118). **Three** edges MEASURED-geometric (Road/Lane 7.4× + horizon 14.6× + hood), two owed (Movable
-pairs; named generator = sparse object sites). Road/Lane (59% of budget) is now measured, not projected:
-its 7.4× (vs the horizon's 14.6×) is the honest lane finding — lanes are genuinely dynamic (curvature
-changes as the car drives + multi-instance), so temporal ξ freezes them only weakly; the reduction is
-PRIMARILY PARSIMONY (≈5 lines × 11 coeffs vs full bitmap), not the horizon's near-free ego-warp. The d_seg half is the
+**Consequence (MEASURED, no longer projected):** geometric **DOMINANT-only = 0.061 S** is **5.5× < bitmap
+(0.339)** and **1.9× BELOW the 0.118 frontier** — the v8 rate thesis is CONFIRMED on dominant structure.
+But lossless **COMPLETE = 0.140 S** (with today's generic sparse-coord residual coder) is 2.4× < bitmap yet
+**~1.2× ABOVE the 0.118 frontier** — the whole 0.079 gap is the residual sidecar. **Two MEASURED-headroom
+levers, un-exploited, move 0.140→0.061:** (1) de-sharing double-count (horizon residual "secondary arcs" =
+Movable objects ALREADY carried); (2) curve-relative residual coder (offset-from-generator, not absolute
+coords — the generic 0.4–0.6 B/px is an UPPER BOUND; chain-code buys only −13%). The d_seg half is the true
 blocker (#205). Per-carrier build = the parametric generator, NOT the boundary bitmap. No b/px proxy anywhere.
-`[no-triality]` (v8 equations FORMALIZATION_PENDING per §5 until a byte-closed exact-eval anchor).
+`[no-triality here; roll-up carries triality: DAG FEED-v8-rollup + eq v8_geometric_rate_decomposition_v1 FORMALIZATION_PENDING]`.
