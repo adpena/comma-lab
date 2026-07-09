@@ -91,3 +91,38 @@ Item A (the operator-elevated priority-1 d_seg triad) is LANDED + reviewed + tri
 green. A.3 registered OWED (measurement, no concurrent probe). B.4/C/D are wireable-or-buildable owed
 follow-ups; B.5 is a genuine trainer-build GAP (no flag to wire). RE-SEAL required before launch.
 Pointer 0.19110 UNMOVED.
+
+## ITEMS B/C/D — LANDED (2026-07-09, follow-up build agent; commits d90962f3f · 6412f2cf8 · 13ac03e64 · a07da4378)
+Operator correction folded: B.5 BUILT to completion (NOT deferred — 0.012–0.024 ΔS is significant near
+sub-0.15; building a new trainer flag+term is legitimate, never-invent-flags forbids WIRING a nonexistent
+flag not CREATING one). Order landed: B.4 → D.9 → B.5(build) → C.6 → C.7. Each its own reviewed + triality
+commit. **Pointer 0.19110 UNMOVED** (advisory [macOS-MLX], NON-PROMOTABLE). Live #205 (pid 63069) untouched.
+
+| # | item | disposition | commit | triality |
+|---|------|-------------|--------|----------|
+| B.4 | temporal-screw #360 | **COMPOSED ON** in crucible_v7 (9th DSL lever); EVENT-governed on the annulus_plateau formed-boundary sensor (unify-τ replacement for the dissolved-l7 gate); start-epoch = FAIL_SAFE_CAP 450. Built the honest event-wire (`--seg-temporal-screw-start-event` + `_temporal_screw_gate` EBGate mirroring chroma + resume-registry, P0). | d90962f3f | DSL `TemporalScrewConsistency.start_event` + compose + sensor reg · DAG FEED-v75B4actuated · eqs = p0_forces §FORCE 1 (reg OWED byte-close) |
+| D.9 | terminal POSE-FINISH (R1 two-phase) | **COMPOSED ON** as a `pose_finish` TypedStage (sister of muon) at the muon cap; supersedes co-train-pose-from-ep0. New `--pose-finish-start-epoch` gates the effective pose weight (0 pose-blind until the muon switch, then --w-pose joint descent; frame0 seg-free ⇒ pose CANNOT disturb d_seg). CAP-governed backstopping --muon-start-event. | 6412f2cf8 | DSL `TerminalPoseFinish` factory HOLDS the flag + pose_finish TypedStage · DAG FEED-v75D9actuated · eqs = FEED-238resolved R1 anchor |
+| B.5a | horizon-weighted margin #169 | **BUILT, REGISTERED default-OFF** (`horizon_weighted_margin_169` duty-to-measure). 0-byte one-sided relu(m_target-m_wit) hinge on the SHARED _signed, STRATIFIED to horizon rows [96,288) AND GT-margin [0.3,0.5] — pushes ONLY the REDUCIBLE confident-GT band, EXCLUDES the <0.05 IRREDUCIBLE label-noise. `HorizonWeightedMargin` DSL factory. Exit-criterion n600 A/B registered. | 13ac03e64 | DSL factory + registered-off · DAG FEED-v75B5built · eqs = dseg_reducibility_gt_margin_verdict (reg OWED byte-close) |
+| B.5b | sky=rotation-only | **BUILT, REGISTERED default-OFF** (`temporal_screw_sky_rotation_only`). The sky is at infinity ⇒ warp H_rot=K·R·K⁻¹ (ξ translation ρ zeroed), spatial-blended into the temporal-screw sky rows. `TemporalScrewConsistency(sky_rotation_only=, sky_row_hi=)`. Exit-criterion A/B registered. | 13ac03e64 | DSL params + registered-off · DAG FEED-v75B5built · eqs = ground-homography design note |
+| C.6 | plateau_ok telemetry legibility | **DEFAULT-ON** (score-neutral observability; byte-identity by construction). Stamped the handoff_readiness row with stage_start/in_stage_epochs/min_stage_epochs + a plateau_slope (`_dense_plateau_slope`, scale-free). Fixes the sparse-verdict-cadence blind spot that misled the earlier plateau_ok read. | a07da4378 | trainer telemetry · DAG FEED-v75C67actuated · eqs = N/A (observability) |
+| C.7 | derive curriculum_min_stage_epochs | **HARDCODED-WITH-WAIVER** on the value-provenance ladder (250 is the draft's hand-set floor, not measured/derived; did NOT fake a derivation). Named the OWED derivation = the critical-slowing τ_relax measurement ⇒ DERIVED-AT-CONFIG when measured. Sourced from `_CRUCIBLE_MIN_STAGE_EPOCHS` + `crucible_v7_min_stage_epochs_provenance()` on `tail_constant_provenance`. Emitted value UNCHANGED 250 (byte-identical). | a07da4378 | named constant + provenance fn + artifact wire-in · DAG FEED-v75C67actuated · eqs = owed τ_relax law |
+
+**B.5 build-or-defer RECOMMENDATION (operator asked, then corrected to BUILD):** BUILT both pieces to
+completion. The horizon-margin and sky=rotation-only are BUILT + HELD + REGISTERED default-OFF (A/B arms,
+NOT composed ON — they would perturb the sealed config and carry the label-noise / clip-specific risks the
+derivations flag). Temporal-screw (B.4) captures the HIGH-VALUE horizon fix (the ~50× Undriv-jitter lever)
+and IS composed ON; horizon-margin adds the orthogonal 0-byte reducible-flip lever with a strict
+label-noise-vs-real-recovery exit criterion. The RE-SEAL/A/B decides whether to promote horizon-margin +
+sky to ON. This is the honest "off is a tracked queue with duty-to-measure" disposition.
+
+**BINDING VERIFICATION (all pass):** crucible_v7 compiles + validates 0 WitnessProgram violations · 0 NAKED
+schedule-provenance · lever_registry.completeness().unmapped UNCHANGED 120 (ZERO new orphans) · antagonists
+OFF (l7 absent · hosc-beta-end 3.177 annealed not fixed · phi1-mode paint) · 262 tests GREEN across
+crucible_v7 / p0_forces / schedule_provenance / lever_registry / witness_autoconfig / store_nothing /
+event_wirings / sealed_205 / feed07b. Resumability P0 preserved (temporal-screw gate in the resume
+registry; pose-finish re-derives from the persisted muon gate; horizon/sky default-off = no new state).
+
+## ⚠️ RE-SEAL-REQUIRED
+All of B.4/D.9/B.5/C.6/C.7 MUST pass a fresh v7.5 SEAL adversarial review (per SPEC_v75 §8 fix-ALL seal, 3
+clean passes, re-derive-don't-confirm) BEFORE any launch. This agent did NOT re-seal (out of scope; not its
+authority). Heavy/paid launch stays operator-GO. Pointer 0.19110 UNMOVED.
