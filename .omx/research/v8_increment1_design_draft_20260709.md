@@ -27,7 +27,7 @@ the two council-flagged equations** — while Movable / Lane / MyCar keep their 
 | MyCar (4) | static mask clamp | `hood_static_component.py` — **REUSE as-is** | ~0.1–0.5 KB | IoU 0.994 **MEASURED** #139 |
 | Lane (1) | analytic ground-frame band | `analytic_lane_render_band.py` + `lane_sdf_component.py` — **REUSE** | ~1–2 KB | d_seg 0.00087 **MEASURED** (openpilot band) |
 | Movable (3) | sparse islands + homotopy + area-Lagrange | v7.5 machinery (`--ladder-island-homotopy` + `area_constraint`) — **REUSE v7.5** | ~2–6 KB | **DERIVED** |
-| **Road (0) + Undriv (2)** | **ONE edge-centric bulk-boundary field** | **NEW** — composes `road_horizon_component.py` + `lever_b_levelset_generator.py` (SDF) + `laguerre_logit_offset.py` (b_c) | **20–50 KB CONJECTURED** (review-F: a GUESS, ~1 order-of-mag; NO RD curve d_bulk(B) fitted) = THE unknown to measure | P-A measured only the real-frame case, not the free case |
+| **Road (0) + Undriv (2)** | **ONE edge-centric bulk-boundary field** | **BUILT (scaffold)** `road_undriv_bulk_field.py` — composes `road_horizon_component` + `lever_b_levelset_generator` (SDF) + `laguerre_logit_offset` (b_c) | **FULL-boundary 707 B/frame → 424 KB@n600 = 0.282 S MEASURED** (scaffold `bulk_boundary_byte_cost`, brotli, n600 gt). The **20–50 KB target is the interiors-near-free REDUCTION** (§2 #308, coarse-grid+INR-annulus) — an ~8–20× cut CONJECTURED, gated on P-C. | full-boundary MEASURED; reduction = P-C |
 | tie bias b_c | Road↔Lane calibration offset | `laguerre_logit_offset.py` — **REUSE** | ~0 bytes | 41% of Road's oracle flips **MEASURED** (P-A) |
 
 Net stack ≈ 27–57 KB vs 114 KB incumbent ⇒ **−50..75% ≈ 0.049 S rate-headroom — CONJECTURED, DOUBLY

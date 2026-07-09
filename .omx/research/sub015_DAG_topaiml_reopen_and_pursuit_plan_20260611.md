@@ -11478,3 +11478,18 @@ SDF handles multi-blob Road (zero-set = multiple closed curves), lift stays vali
 multi-component-Road-aware (not one-blob) and the multi-curve boundary pushes bytes toward the HIGH end of the
 CONJECTURED 20–50 KB. Net: review-B upgraded DESIGNED-assumption → MEASURED-resolved; the interface refined
 (multi-comp-Road-aware) BEFORE any module code. Folded into draft §2. Pointer 0.19110 UNMOVED.
+
+### FEED-v8-scaffold-recover (2026-07-09) — Road+Undriv bulk field SCAFFOLD recovered + byte-cost MEASURED
+
+Scaffold-build subagent hit its weekly limit mid-build (18 tool uses); it left `road_undriv_bulk_field.py`
+(22.7 KB, 15 fns) UNCOMMITTED = signal-loss risk → RECOVERED. NO-FAKE verified before commit: ruff-clean,
+AST-valid, composes the 5 real modules (lane_sdf/laguerre/lever_b/road_horizon/hood_static), self-detects
+Road+Undriv (MEASURED road=0 undriv=2, the comma10k order — NOT hardcoded), byte-close round-trip BIT-EXACT,
+research_only=SCAFFOLD tagged. **NEW MEASUREMENT (turns draft CONJECTURE → anchored):** `bulk_boundary_byte_cost`
+= **707 B/frame full-boundary (brotli) → 424,200 B @ n600 = 0.282 S rate contribution MEASURED**. This is the
+HONEST UPPER bound; the draft's 20–50 KB target is the interiors-near-free REDUCTION (coarse-grid+INR-annulus
+#308) = an ~8–20× cut that is CONJECTURED and is exactly what P-C measures. So v8's whole rate thesis now rests,
+quantified, on P-C closing that gap. equations leg stays FORMALIZATION_PENDING (SPEC_v8 §5 — register on the
+increment-1 byte-closed anchor, not a scaffold measurement). OWED: the test file (agent died before it) — the
+functional smoke passed but formal tests are owed at the next slot. Pointer 0.19110 UNMOVED. #205 (pid 45378)
+ALIVE + untouched.
