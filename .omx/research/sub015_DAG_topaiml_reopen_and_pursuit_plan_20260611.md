@@ -10777,3 +10777,22 @@ DSL-LEG STATUS (drift-gate note, FEED-a1t commits): measurement commits — no l
 gated RED, no trainer flag exists for any texture term; Lever factory lands WITH a build, none fired). Equation
 leg satisfied in the probe's own commit (a1t anchor in morse_smale_stratified_parallax_dpose_v1, 7d2784fc9);
 DAG FEED-a1t + MEMORY L69b updated. Same determination as the 54ad010cc addendum.
+
+## FEED-l2 (2026-07-08) — MEASURED: TRUE-depth flow FALSIFIED; the wall is PHOTOMETRIC APPEARANCE; pose mechanism space now FULLY MAPPED to ONE door = joint pose-descent (#238) (c2aa76cf0)
+L2 (n24, through-R, pos-control 5.8e-12, Depth-Anything-V2-Small ground-plane-aligned, inverse-warp
+hole-free apparatus): **HPLAN_REAL 0.878** (homography on REAL luma — below flat A0 1.685!) ·
+**L2_REAL 1.296** (TRUE dense depth net-neutral-to-HARMFUL vs homography on real luma) ·
+**L2_WITNESS 171.8 ≈ HPLAN_WITNESS 166.8** (witness cartoon pose-BLIND regardless of flow). Row 2→3
+fired: depth-bytes frontier gated RED — **paid stored-depth Option-A falsified BEFORE spend**. THE
+TWO-SIDED CONTRAST: real-luma+crude-flow reads 0.9; witness-luma+ANY-flow reads ~170; deployed
+store-nothing 1.79 = the depict-nothing residual. The wall is APPEARANCE (PoseNet needs real-photometric
+content to read motion), NOT flow-model crudeness — closes A1T's reformulation chain. verdict_scope:
+formulation — true-depth-flow-on-this-carrier; the full cheap-carrier mechanism space is now MAPPED
+SHUT (post-hoc solve · store-real-f0 · texture×global-H · texture×stratified · true-depth) each with a
+pinning diagnostic. **ONE DOOR REMAINS: joint pose-descent where the RENDER CO-ADAPTS (R1-class).**
+BUDGET (corrected, do not propagate the probe's loose "budget item" phrasing): floor 1.79 → pose
+contribution √(10·1.79)≈4.2 — NO sub-0.19 for this carrier unless joint-descent works; real luma is
+rate-dead (1.4MB/kf). → #238 = THE decisive remaining measurement: locate R1's artifacts + re-validate
+its 0.0011 through byte-closed decode ($0 custody work if artifacts exist; else the door needs a NEW
+dedicated pose-descent run = operator-GO). Eq anchors l2_truedepth_falsified + 3 MEASURED constants in
+morse_smale_stratified_parallax_dpose_v1 (same commit). Pointer 0.19110 UNMOVED.
