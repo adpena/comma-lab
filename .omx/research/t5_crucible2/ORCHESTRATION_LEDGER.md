@@ -16,11 +16,15 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       questions) + this ledger opened. Serializer-committed, `[no-triality]`, DAG `FEED-crucible2-open`.
 - [ ] **P1 INDEPENDENT POSITIONS** — 6 seats (roster below), independent, NO cross-read before landing;
       each cites `docs/operating_manual_craft_handoff.md` + works from DELTA_GROUNDING only. Waves of ≤3.
-- [ ] **P2 POSITIVE SYNTHESIS DRAFT** — CHIEF-DESIGNER pass DRAFTS the optimal v7.5.2 full stack; **every
-      knob a fully-specified CONTROL LAW** (constant / ramp-with-completion-guarantee / self-deriving-
-      adaptive / event-conditioned / fractional-partial), schedule + curriculum obey the same contract;
-      output = the exact typed DSL WitnessProgram + schedule + costate + curriculum + rate/pose plan +
-      measurement plan, launchable as written. Epistemic status per knob; pre-register falsification.
+- [x] **P2 POSITIVE SYNTHESIS DRAFT** — `SYNTHESIS_DRAFT_v752_20260709.md` landed. Launch-1 ON-set =
+      {amber precond + directional self-orient + #121 taper + AA-ipe + σ_cc′ fitted-20260707 (all zero
+      loss-share) + Chan-Vese counter-force baseline + #360 temporal-screw (the ONE event-gated P0 force) +
+      terminal conditioning-gated pose}; FRESH default; repaired pose-gate (σ* floor / drop basin_frac / R1
+      canary / disengaged-alarm) LAUNCH-BLOCKING; A/B ladder evidence-graded + NON-additive; 11-item
+      owed-before-launch (top: pose-gate build+canary, full-config dry-start gate, amber×Muon non-suppress);
+      per-decision provenance table (11 rows) for P3. σ_cc′ corrected to ALREADY-BUILT (3571e5b65/caf747203);
+      the two σ-laws (Young's 0.377 vs fragility 1.029) A/B = ladder 1b. S6 blind skeleton VINDICATES the
+      incumbent spine (no QAT/c1a/sigma stage residue).
 - [ ] **P3 RED-TEAM vs THE DRAFT** + MANDATORY PROVENANCE AUDIT FIRST PASS (anchor path · review_status ·
       form-limitations; recovery-written/unreviewed → PROVISIONAL; run-config claims cite launch.sh /
       CONVENING, NEVER the activation ledger).
@@ -96,9 +100,12 @@ B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event trigger (CE→ta
    question: is a torch-parity twin worth building for Modal A/B fan-out? (S4 owns.)
 
 ## The one-line resume state
-P0 landed. NEXT ACTION: launch P1 wave-1 (S1 deep-math / S2 levers / S3 control) with DELTA_GROUNDING as
-the shared evidence pack, each seat citing the operating manual + taking independent positions on the 5
-open questions. #205 STOPPED (box free); pointer 0.19110 UNMOVED.
+P0+P1(all 6 seats)+P2 landed. NEXT ACTION: launch **P3 RED-TEAM vs the SYNTHESIS_DRAFT_v752** +
+MANDATORY PROVENANCE AUDIT FIRST PASS (every load-bearing measured claim: anchor path · review_status ·
+form-limitations; recovery-written/unreviewed → PROVISIONAL; run-config claims cite launch.sh/CONVENING,
+NEVER the activation ledger). The draft's own §D provenance table (11 rows) names what to attack; S5's
+pre-mortem N1/N3 are LAUNCH-BLOCKING (re-derive, don't trust the tagged fixes). #205 STOPPED (box free);
+pointer 0.19110 UNMOVED.
 
 ## OPERATOR BINDING CONSTRAINT (2026-07-09, mid-P1) — POSE ENGAGEMENT GATE
 Verbatim: "pose must not be fired for joint descent until optimal it needs dseg to be sufficiently
