@@ -930,6 +930,99 @@ def check_launch_config_authored_in_dsl(
     )
 
 
+# Catalog #404 — the MAGNITUDE-DISMISSAL bug class (operator recurring correction
+# 2026-07-08, "we have had this discussion before"). Landing #2 of the self-protect
+# pattern: landing #1 = the memory relative-not-absolute-significance-near-goal + the
+# live re-audit; the RUNTIME sibling = the Stop hook tools/magnitude_dismissal_detector.py
+# (fires the moment the class is INTRODUCED). This STATIC gate scans committed
+# .omx/research/*.md memos for a DEFER / DOWNGRADE / ORPHAN / KILL justified by ABSOLUTE
+# magnitude (weak/negligible/noise/small-ΔS/not-worth-it) WITHOUT either (a) a
+# relative-significance number OR (b) a measured-un-recoverability citation.
+#
+# ONE classifier SoT: the deterministic predicates live in the hook module (Claude-workflow
+# apparatus, not tac — CLAUDE.md tac-cleanliness); this gate OPPORTUNISTICALLY loads them
+# (fail-open no-op if the hook is absent). The hook adds the fmtools semantic layer on top;
+# this gate is the deterministic-only static surface (preflight stays dependency-light).
+_MAGNITUDE_DETECTOR_PATH = REPO_ROOT / "tools" / "magnitude_dismissal_detector.py"
+
+
+def _load_magnitude_detector():
+    """Import the hook module's pure classifier (the SoT). None on any failure — the
+    gate then no-ops (fail-open), never crashing preflight over apparatus tooling."""
+    try:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "_magnitude_dismissal_detector_sot", _MAGNITUDE_DETECTOR_PATH)
+        if spec is None or spec.loader is None:
+            return None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    except Exception:
+        return None
+
+
+def check_no_unjustified_magnitude_dismissal(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    max_report: int = 15,
+) -> list[str]:
+    """Catalog #404 (the MAGNITUDE-DISMISSAL class) — scan committed .omx/research/*.md
+    memos for a lever/finding dismissal (defer/downgrade/orphan/kill) justified purely by
+    ABSOLUTE magnitude, WITHOUT a relative-significance number (ΔS / remaining-gap) OR a
+    measured-un-recoverability citation (#141 label-noise WITH a measurement).
+
+    The two legitimate dismissals — "measured un-recoverable" and "structurally
+    superseded" — are EXEMPT by construction (the classifier's exemption vocabulary), as
+    are non-dismissal magnitude usages ("weak supervision", "noise floor", "noise
+    injection"). Deliberate exception: same-line ``# MAGNITUDE_DISMISSAL_OK:<rationale>``.
+
+    Deterministic-only (the fmtools semantic refinement lives in the Stop-hook sibling).
+    Reuses the hook module's classifier as the SINGLE source of truth (fail-open no-op if
+    the hook file is absent, so this gate can never crash preflight over apparatus).
+
+    STRICT-FLIP CONDITION: flip to ``strict=True`` after the historical re-audit sweep
+    (memory point 3: every prior absolute-magnitude DEFER/DOWNGRADE/ORPHAN re-opened for
+    relative-significance re-ranking) brings live-count to 0. WARN-ONLY until then — the
+    .omx/research corpus predates the discipline and will carry historical hits.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    detector = _load_magnitude_detector()
+    violations: list[str] = []
+    scanned = 0
+    if detector is not None and hasattr(detector, "deterministic_flags"):
+        research = root / ".omx" / "research"
+        for path in sorted(research.glob("*.md")) if research.exists() else []:
+            text = _read(path)
+            if text is None:
+                continue
+            scanned += 1
+            rel = path.relative_to(root).as_posix()
+            lines = text.splitlines()
+            for msg in detector.deterministic_flags(lines, source=rel):
+                # honor the per-line waiver at the confound-gate surface too (the hook's
+                # classifier already skips waived lines, but keep the belt-and-suspenders).
+                try:
+                    ln_no = int(msg.split(":", 2)[1])
+                    if _waiver_present(lines[ln_no - 1], "MAGNITUDE_DISMISSAL_OK"):
+                        continue
+                except (ValueError, IndexError):
+                    pass
+                violations.append(msg)
+    return _finish(
+        name="check_no_unjustified_magnitude_dismissal",
+        tag="no-unjustified-magnitude-dismissal",
+        violations=violations[:max_report],
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(f"{scanned} research memo(s) scanned"
+                   if detector is not None else "classifier absent (fail-open no-op)"),
+    )
+
+
 # Convenience: the gates in catalog order, for the preflight wire-in + tests.
 CONFOUND_GATES = (
     check_no_spike_guard_defaults_to_deadlock_mode,
@@ -940,4 +1033,5 @@ CONFOUND_GATES = (
     check_telemetry_verdict_rows_carry_liveness,
     check_levelset_hosc_requires_beta_end,
     check_launch_config_authored_in_dsl,
+    check_no_unjustified_magnitude_dismissal,
 )

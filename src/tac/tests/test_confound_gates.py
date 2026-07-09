@@ -718,7 +718,7 @@ class TestTelemetryLiveness:
 
 class TestModule:
     def test_all_gates_registered(self):
-        assert len(cg.CONFOUND_GATES) == 8
+        assert len(cg.CONFOUND_GATES) == 9
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -729,6 +729,7 @@ class TestModule:
             "check_telemetry_verdict_rows_carry_liveness",
             "check_levelset_hosc_requires_beta_end",
             "check_launch_config_authored_in_dsl",
+            "check_no_unjustified_magnitude_dismissal",
         }
 
     @pytest.mark.parametrize("fn", cg.CONFOUND_GATES, ids=lambda f: f.__name__)
@@ -756,6 +757,10 @@ class TestModule:
             # = the documented migration queue; crucible routes through the typed layer. Strict-flip to
             # 0 when the queue drains (req V, #353).
             "check_launch_config_authored_in_dsl": 4,
+            # #404 MAGNITUDE-DISMISSAL: warn-only, max_report-capped at 15. The
+            # .omx/research corpus predates the discipline (historical hits); strict-flip
+            # to 0 after the memory-point-3 re-audit sweep drains them.
+            "check_no_unjustified_magnitude_dismissal": 15,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"
