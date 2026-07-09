@@ -1,4 +1,10 @@
 # P1 SEAT S3 — TRAINING-DYNAMICS / CONTROL / SCHEDULE (independent position)
+STORES CONSULTED: t5_crucible2/{CONVENING,DELTA_GROUNDING,ORCHESTRATION_LEDGER incl. operator pose-gate
+constraint}_20260709.md · #315 event-triggered hand-off build · shadow_controller.py (FALSE-GREEN mode
+~L314) + costate_estimator.py · NCDE detector #344 · #270 Muon warm-start memo · run-1 + live-run verdict
+rows (run.log, read-only) · jacobian_basin telemetry · DAG FEEDs (205stop, birth-arm autopsy, crux-7dim).
+Not consulted: sibling seat positions (independence constraint).
+
 
 T5 CRUCIBLE-2 (task #379, v7.5.2 optimal single trunk). Seat charter: costate #247 / NCDE #344 /
 schedule — **OPEN Q4 (event-vs-epoch closure + train-verdict DECOUPLING as a first-class stage-exit
