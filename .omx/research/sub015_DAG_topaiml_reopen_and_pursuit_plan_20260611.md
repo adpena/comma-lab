@@ -10821,3 +10821,20 @@ budget honesty: 0.09 seg + 0.06 rate + 0.105 pose = 0.255 — sub-0.19 needs pos
 verdict_scope: (a)-with-caveat — joint-descent VALIDATED at training-side authority; shippable-through-
 inflate = the open measurement. Eq anchor r1_0011_custody_revalidation in
 morse_smale_stratified_parallax_dpose_v1 (same commit). Pointer 0.19110 UNMOVED.
+
+## FEED-jointdescentprep (2026-07-08) — P0 joint-descent: TRUE-PARALLEL is HARDWARE-IMPOSSIBLE (witness MLX-only, one box, full); SEQUENCE-only; #238 may obviate a new run (22f230370)
+Prep (#366, joint_descent_p0_launch_prep_20260708): R1's PROVEN recipe (d_pose 97→0.0011/108ep, warm-start
+converged mod-26 v2_attrclean, store-nothing carrier w_pose=1.0) is launch-READY + DSL-expressed
+(StoreNothingPoseCarrier factory added — DSL orphan CLOSED, 107 tests green). MEASURED preflight (ceiling
+89.6=0.70×128; run-1 true peak 65.2): standalone fp32 **67.6 GiB SAFE**; concurrent fp32 **132.8 > 128
+CERTAIN OOM**; concurrent fp16 111.2 REFUSE (#296 gate also unmet). TARGET TABLE: (A) bat00 3090 NO-GO +
+(B) Modal NO-GO — **witness is MLX-Metal-only (mlx.core throughout); does NOT run on CUDA**; torch_vehicle
+is a separate CUDA vehicle not this witness → a CUDA port = weeks. (C) fp16 concurrent NO-GO. (D) SEQUENCE
+on the M5 Max = the ONLY memory-safe MLX-native path (67.6 SAFE), warm-start mod-26, --eval-every 5 to cut
+~5× wall-clock (R1's 48min/ep was --eval-every 1). STRATEGIC: "P0 in parallel" is blocked by a hardware
+fact, not hesitation — one Metal GPU, already full. DECISION TREE keyed on #238: if R1's dxi SHIPS (byte-
+close, agent a7732a03) → pose 0.105 BANKED at $0, parallel-with-d_seg by construction, no new run needed
+NOW; a finishing-descent (below 0.0011) then SEQUENCES on operator-GO to yield run-1's box (ckpts
+preserved/resumable). If dxi does NOT ship → the descent-run IS the path and must sequence. CUDA port =
+the only true-parallel future, a strategic fund-decision not a tonight action. verdict_scope: instance —
+the NO-GO is hardware/this-trainer, not the joint-descent method (method is VALIDATED, R1). Pointer 0.19110 UNMOVED.
