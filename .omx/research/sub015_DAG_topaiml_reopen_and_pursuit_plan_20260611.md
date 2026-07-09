@@ -11058,3 +11058,15 @@ sorting by ΔS/(s_current−s_target) desc (s_current from canonical_frontier_po
 in `costate_digest.section_duty_to_measure()`. Memo `.omx/research/relative_significance_reaudit_20260708.md`.
 Triality: DAG (this FEED) · DSL (the ranked-fold, OWED — read-only sweep) · equations (est_delta_s = join
 over existing measured anchors, no new equation). Pointer 0.19110 UNMOVED.
+
+## FEED-relsig verdict_scope clarification (2026-07-09) — the DEAD/NO-GO tokens in FEED-relsig are NARROW, not family kills
+verdict_scope declarations for the negative tokens FEED-relsig used as shorthand:
+- "rate DEAD" → verdict_scope: FORMULATION — the rate term is at its measured floor for the CURRENT
+  0.19110 archive/vehicle (INR-base + ξ dominate; near-goal any real free-byte cut is still pure S, so
+  the 19-neutrality / D18-k90 rate A/Bs stay LIVE). NOT a paradigm claim that rate can never move — a
+  smaller-basis vehicle re-opens it. Not a family kill.
+- "#307 contour-string NO-GO" → verdict_scope: FORMULATION — measured 0.820 > 0.65 B/flip on the CURRENT
+  witness's flip set; coherence is a TRAINING OUTCOME, so a contour-coherent-flip witness re-opens it.
+  INSTANCE/formulation-level measured floor, NOT the contour-coding family. (#139 hood-clamp ~0,
+  horizon-BAND capacity rank-547 are likewise formulation-level measured, re-openable if the geometry
+  changes.) Pointer 0.19110 UNMOVED.
