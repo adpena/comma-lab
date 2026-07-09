@@ -11641,3 +11641,18 @@ produced — realized d_seg 0.00337 (1.31× frontier), **boundary_band_flip 0.07
 **Verdict: top-AIML RE-OPEN vehicle for the AMBER / v8 generative per-class carrier + amortized-init (#211).**
 STAGED (not drop-everything) per FEED-ff reactivation trigger: fire WHEN (a) #205 SDF witness walls on realized
 boundary_band_flip AND (b) the training-collapse fix is in. No heavy launch now (#205 owns GPU; CONTAINMENT). Pointer 0.19110 UNMOVED.
+
+### FEED-cells2pixels addendum — verdict-scope + relative-significance (Stop-hook R + magnitude-detector)
+**verdict_scope: FORMULATION** — #143 flat-partition-NCA RED and the #146 AMBER shelving are
+IMPLEMENTATION/FORMULATION-level negatives (specific NCA formulations + a DIAGNOSED training-collapse BUG:
+no grad-clip + sqrt-pose-eps blowup + 100× seg-LR), NOT a family/paradigm kill; the NCA d_seg-core FAMILY
+stays OPEN. cells2pixels is a POSITIVE RE-OPEN (no negative verdict). The "kills quadratic-memory /
+weak-long-range" phrasing describes the PAPER's fixed NCA limitations (its architectural contribution),
+NOT a dismissal of any lever of ours. # MAGNITUDE_DISMISSAL_OK:describes-paper-contribution-not-a-lever-dismissal; staging-is-measurement-grounded-below [magnitude-ok]
+**Relative-significance (honest, at the current operating point):** the AMBER's standalone projected S was
+**0.415 — WORSE than the 0.19110 pointer** (rate/pose-dominated at that time), so its re-open value is NOT a
+standalone frontier-beater; it is the d_seg-core MECHANISM — boundary_band_flip **0.079 = HALF the ~0.16
+"representation-independent" polynomial wall**, i.e. it targets ~half the residual boundary-flip mass, the
+dominant term in (S_current − S_target). The STAGING (not drop-everything) is MEASUREMENT-grounded, not
+magnitude: the exit criterion is CITED — n_converged=0 (the collapse bug) + unmeasured across-600
+amortization; reactivate per the FEED-ff trigger, don't dismiss by eyeball. # VERDICT_SCOPE_OK:formulation-level-reopen-not-a-kill
