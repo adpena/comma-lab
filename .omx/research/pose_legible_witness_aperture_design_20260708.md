@@ -15,6 +15,8 @@ probe FIRED (texture × stratified_depth_warp, same harness) with the fallback s
 §4's prediction is retired; §5's GREEN gate is now keyed to A1T. d_seg guard also failed at A0T amps
 (3.7–13% flips) — smaller amps + interior gate owed in A1T.
 
+## ⛔ 0b. MEASURED (7d2784fc9): A1T ALSO FALSIFIED — the T×D cell does not collapse (best 2.608 > A0 1.685 > A2+ 1.223; per-cell flow reads WORSE than global-H, self-pair 183.5 vs 165.6 — the piecewise composite is discontinuous, not rigid motion); no convention bug (s·ξ sweep monotone toward flat floor as s→0). TRIANGULATED: any cheap GEOMETRIC carrier's flow is wrong-as-read; legibility amplifies the error. verdict_scope: formulation — the geometric stratified store-nothing carrier. LIVE: (1) L2 true-depth probe (mono-depth on real_f0 → K·T(ξ)·D·K⁻¹ → PoseNet, $0, FIRED) — separates "our depth models too crude" from "PoseNet needs real scene content"; (2) joint pose-descent (#238 R1 re-validation); (3) HONEST BUDGET CORRECTION: at the measured floor ~1.7, pose contributes √(10·1.7)≈4.1 — "budget item" is NOT viable for sub-0.19; pose must be SOLVED (joint-descent or paid-depth) or this witness architecture is pose-blocked. §5's GREEN gate: RED.
+
 **Operator directive (verbatim, binding):** "dig deeper than ever into pose research and task space SDF
 level set research and v7.5 and v8 and openpilot and upstream evaluate.py and modules.py because this
 isn't intractable it is a frontier bleeding edge deep math and differentiable geometry and information

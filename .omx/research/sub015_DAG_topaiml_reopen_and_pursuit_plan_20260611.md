@@ -10753,3 +10753,23 @@ the build (and its `Lever` factory) is GATED on A1T GREEN; `emit_stub_lever` req
 (never-invent-flags), so a stub now would be the invented-flag anti-pattern. The measurement leg landed in
 `morse_smale_stratified_parallax_dpose_v1` (A0T anchor, c2adba9aa). On A1T GREEN, the build lands trainer
 flag + DSL Lever factory + activation-ledger row in the SAME commit (config-orphan discipline).
+
+## FEED-a1t (2026-07-08) — MEASURED: T×D FALSIFIED; geometric-carrier flow wrong-as-read TRIANGULATED 3 ways; live = L2 true-depth probe + #238 joint-descent; budget-item framing CORRECTED (7d2784fc9)
+A1T (n24, through-R, pos-control 2.1e-12): texture × PER-CELL stratified flow does NOT collapse — best
+2.608 (P24/amp2) > A0 flat 1.685 > A2+ 1.223; monotone-rising in amp; per-cell WORSE than global-H at
+matched settings (34.9 vs 15.1 @P32/amp4); no low-|t| rescue. PINNING: self-pair per-cell flow reads
+183.5 vs global-H 165.6 — the piecewise composite (sky-R + hood-static + ground-H) is DISCONTINUOUS, not
+a rigid motion; PoseNet reads it as worse. NO convention/units bug (s·ξ sweep 0.25→4 monotone toward the
+flat floor as s→0; tflip mild). A2T-stratified gated RED (ceiling bounded ~12.7). TRIANGULATED across
+A0T(global-H) + A1T(per-cell) + mladder A2+(oracle-depth-12DOF-flat): the flow ANY cheap geometric
+carrier paints is the WRONG scene flow; legibility AMPLIFIES the error; the flat render's 1.685 ≈ the
+depict-nothing floor. verdict_scope: formulation — the geometric stratified store-nothing carrier family
+on this ckpt; NOT killed: (1) **L2 true-depth probe** (mono-depth on real_f0 → K·T(ξ)·D·K⁻¹ warp →
+PoseNet; consistent real-luma pair with TRUE dense depth; $0; FIRED) — the last cheap discriminator
+between "our depth models too crude" vs "PoseNet needs real scene content"; (2) joint pose-descent
+(render co-adapts; #238 R1-0.0011 re-validation is the custody gate); (3) paid stored-depth Option-A if
+L2 GREEN. **HONEST BUDGET CORRECTION:** at the measured floor ~1.7, pose contributes √(10·1.7)≈4.1 —
+the earlier "pose as budget item, sub-0.15 rides d_seg+rate" framing was WRONG at this floor (4.1 alone
+exceeds the whole target); pose must be SOLVED or the store-nothing witness is pose-blocked (consistent
+with SPEC_v75 §1's pose launch gate). Eq anchor a1t_stratified_texture_falsified landed in
+morse_smale_stratified_parallax_dpose_v1 (same commit, advisory, n600 owed). Pointer 0.19110 UNMOVED.
