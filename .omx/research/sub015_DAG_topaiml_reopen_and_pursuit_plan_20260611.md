@@ -11399,3 +11399,36 @@ OWED-pending-MEASURE** (a canonical equation is registered only after a byte-clo
 law — registering one now would be a fake law). No drift: a design candidate legitimately has two owed legs.
 
 Pointer 0.19110 UNMOVED — MEANS.
+
+### FEED-mstopo VERDICT (2026-07-09) — DMTz edit-sidecar **CONFIRMED-DOMINATED** after fresh-eyes adversarial review
+
+Probe (`2c0d9a8ba`) → DOMINATED, then **adversarially re-reviewed** (fresh eyes ≠ author, operator-directed;
+memo `dmtz_adversarial_review_and_technique_search_20260709.md`, commit `6f3e1574a`). The reviewer TRIED TO
+OVERTURN and could not — the verdict STRENGTHENED. Two decisive findings:
+
+1. **The verdict never rested on the DERIVED n8 proxy.** #307 (`contour_string_flip_coding_n600_20260707.md`)
+   ALREADY IS the real-witness-through-R measurement — mod32cap witness, all 600 pairs, byte-close render +
+   frozen CPU-torch SegNet, every frame decode-verified bit-exact — with a *stronger* coder (chain-code) than
+   DMTz's LZMA-raster, landing **0.8201 B/flip**, above the 0.45–0.65 admit bar. DMTz is weaker → real-witness
+   DMTz ≥ 0.820. No heavy re-probe needed (reviewer correctly did NOT launch one).
+2. **Paradigm type-mismatch (NOT a premature #307 kill).** DMTz's `δ=ξ(1−1/2ᵐ)` magnitude tiers are a
+   **continuous-scalar-field** method — structurally INAPPLICABLE to a **categorical 5-class argmax** (no
+   magnitude to quantize). Only "code the disagreement boundary" transfers, and that IS what the probe tested
+   → dominated. The paradigm doesn't map to our frozen space.
+
+All 5 attack angles tested + refuted: rare-class lane niche = a RENDER problem not storage (analytic lane band
+restores it FREE at d_seg 0.00087); edit-COUNT model MEASURED-refuted (#307 already codes components, mean 3.1px,
+anchor 0.37 B/flip alone — no coherent topology to amortize); axis-conflation = valid but operating-point-specific.
+
+**Honest surviving door (reactivation criterion, NAMED):** the negative is CONDITIONAL on current geometry —
+reactivates iff mean component size ≈3× larger, which is a **TRAINING** outcome, not a coder change. Bar
+discrepancy flagged (σ_eff→0.65 vs canonical waterfill η_R≈0.35→0.45); dominated under BOTH.
+
+**Triality closure (consistent):** DAG = this verdict. DSL leg EMPTY (no Lever — dominated). equations leg
+EMPTY (no law — the one "equation" found was the pre-existing #157 λ*=1.2731 B/flip). Two intentionally-empty
+legs on a rigorous double-reviewed negative = consistent, not drift.
+
+**Strategic payoff > the lever:** the technique search CONVERGED onto our existing render-axis bet. #1 candidate
+= render-side d_seg coherence lever (analytic-lane-band, already in-stack) — the frozen-space wall yields on the
+RENDER axis (make the argmax error THINNER), NOT storage. All learned VCM/FCM/EGIC/ELIC codecs are rule-118
+BLOCKED (counted weights). This VALIDATES what #205 is doing. Pointer 0.19110 UNMOVED — MEANS.
