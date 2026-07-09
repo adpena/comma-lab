@@ -11493,3 +11493,28 @@ quantified, on P-C closing that gap. equations leg stays FORMALIZATION_PENDING (
 increment-1 byte-closed anchor, not a scaffold measurement). OWED: the test file (agent died before it) — the
 functional smoke passed but formal tests are owed at the next slot. Pointer 0.19110 UNMOVED. #205 (pid 45378)
 ALIVE + untouched.
+
+### FEED-flowers (2026-07-09) — "Flowers" warp mechanism deep-dive: AFFIRMATION-only (read paper+HTML+CODE)
+
+Assessed arXiv 2603.04430 "Flowers: A Warp Drive for Neural PDE Solvers" (Muser et al.) as a cheaper/sharper
+warp for our stack. Read abstract + HTML method + project page + the ACTUAL code (`flower_standalone.py` 887
+lines, `grid_samples.py`). DERIVED core: the whole "warp" = `SelfWarp` — a LEARNED 2-layer 1×1-conv `flow_head`
+predicting per-head pointwise displacements δ^(h)(x) + a LEARNED `value_head`, composed as
+`F.grid_sample(value, base_grid+δ, mode='bilinear')` = `v(x+δ)`. Nonlocality = "one source coord per head,"
+linear O(N·H); 40 heads; U-Net of FlowerBlocks; 17M–150M LEARNED params. Sharpness is RELATIVE (no global
+Fourier truncation) NOT absolute — bilinear grid_sample is a sub-grid low-pass and STACKS blur.
+**Decisive rule-118:** the warp OPERATOR = generic → FREE (we already own it: `warp_frame0_native_mlx` + fused-R,
+same bilinear-pullback class); the Flowers δ-predictor = 17M–150M VIDEO-DERIVED LEARNED weights → COUNTED and
+rate-catastrophic — opposite of the capstone thesis (store only the ~7.2KB ξ; advect by ANALYTIC homography).
+vs our 5 surfaces: same operator as #1/#3/#4/#5, so it AFFIRMS advecting by an analytic ξ (3 generic params)
+over a learned δ (N·H counted scalars). **Adversarial self-review (attacked my own "affirmation-only"):**
+steelman = warp-native decoder could beat PR95 sin-decoder Gibbs; REBUTTED — Flowers' bilinear warp is the
+SAME class our R MEASUREDLY erases sub-crossover lane dashes with (`dash_erasure_homogenization_v1`), its wins
+are on SMOOTH PDE fields not 1-px argmax lanes, and a learned backbone loses on RATE (the binding bc36 wall)
+where our 0-byte directional-basis (−48% d_seg) already wins. Only surviving sub-lever = "learned warp-head
+witness decoder," off the rate-minimal capstone path. **VERDICT: AFFIRMATION-only** — no byte-closed-exact-row
+path. Triality: DSL = NOT a lever candidate (counted backbone, not a swept knob; operator already realized);
+equations = FORMALIZATION_PENDING (register only if the §5 probe runs, strengthening dash_erasure). Designed a
+$0 read-only n600 probe (gt_n600.npz 'lstars' lane-mask + ONE CPU bilinear grid_sample → lane-IoU collapse test;
+memory-safe, NO SegNet forward, do NOT run concurrent with #205). Memo:
+`.omx/research/flowers_warp_mechanism_deepdive_20260709.md`. Pointer 0.19110 UNMOVED. #205 untouched.
