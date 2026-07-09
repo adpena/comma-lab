@@ -11359,3 +11359,43 @@ pre-exist) with the ce-baseline σ_min readout (median 0.063, cond 8203, r_eff 1
 near-rank-deficient basin-empty prediction). Memo `pose_jacobian_basin_telemetry_build_20260709.md`. Light
 re-verify (the B4 launch-path smoke on the full sealed config) is the only owed step — NO re-seal.
 Pointer 0.19110 UNMOVED — MEANS.
+
+
+---
+
+## FEED-mstopo (2026-07-09) — DMTz + Task-Aware VCM → Morse-Smale separatrix EDIT-SIDECAR rate-lever (candidate, UNMEASURED)
+
+**SIGNAL (operator, two papers during a dashboard data-format thread — "results become system intelligence"):**
+the dashboard flow-sequence compression question ("represent a segmentation-field video efficiently for a
+downstream reader") is the CONTEST problem in miniature (VCM / coding-for-machines, memory L74). It surfaced
+two directly-relevant rate papers:
+- **DMTz** (arXiv 2409.17346) — error-bounded lossy compression that PRESERVES the discrete Morse-Smale
+  complex: a lossy base + topology-restoring EDITS (C-loops fix critical simplices, S-loops fix separatrix
+  connectivity), edit-quantized `δᵢ = ξ(1−1/2ᵐ)` storing only the integer `m`. ≤6× over SZ3, CR>2.
+- **Task-Aware Encoder Control for DVC** (arXiv 2404.04848, CVPR'24) — VCM: encode FOR the frozen task net
+  (not human fidelity), one decoder + encoder-side control (mode prediction + GoP selection), ~25% bitrate.
+
+**THE CANDIDATE (both → one lever):** our d_seg lives on the SegNet argmax **separatrix** (annulus ~97% of
+d_seg; FEED-#333); the τ→0 witness IS a Morse-Smale complex (#180, #284 tropical↔MS); counted bytes ARE the
+witness payload. Synthesis = **witness base (mostly free-generated) + a Morse-Smale error-bounded EDIT
+SIDECAR that restores exactly the separatrix (= preserves d_seg), with task-aware annulus bit-allocation
+(#157 waterfill) + GoP-style temporal amortization across pairs (#148 keyframe / #241 store-nothing).**
+
+**rule-118 FREE/COUNTED split (binding):** the generic edit-DECODE algorithm + the lossy base = FREE in
+inflate.py; only the irreducible video-derived EDIT set = COUNTED in archive.zip. **Task-Aware's LEARNED DVC
+codec is rule-118-BLOCKED** (its decoder weights would be COUNTED) — we take only the PRINCIPLE (encoder-side
+task-relevant boundary allocation + temporal GoP), NOT the codec. This composes with #311 (tropical/TropNNC
+skeleton), #155 (fiber-quotient codec), #72/#307 (flip-residual / contour-string coders — the adversarial
+baseline the MS edit-sidecar must BEAT).
+
+**GATE (NO-FAKE):** pointer 0.19110 UNMOVED — this is an UNMEASURED candidate, not a claim. The $0 n600
+byte-close (`tools/levelset_byte_close_and_eval.py`) is the authority; go/no-go bar = measured
+bits/separatrix-edit vs our current ~8 b/flip and the published ~1–1.5 b/contour-px floor. Design memo +
+n8-smoke harness under way (task #369, delegated); full n600 is a governed sequenced follow-up, NOT run now.
+
+**TRIALITY legs:** DAG = this FEED (trajectory ✓). **DSL leg = OWED-pending-build** (if it survives the
+probe it lands as a `Lever` factory in `src/tac/witness_dsl/`, never orphaned). **equations leg =
+OWED-pending-MEASURE** (a canonical equation is registered only after a byte-closed n600 row confirms the
+law — registering one now would be a fake law). No drift: a design candidate legitimately has two owed legs.
+
+Pointer 0.19110 UNMOVED — MEANS.
