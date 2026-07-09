@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -50,6 +51,9 @@ _DESIGN_DOC = ".omx/research/costate_controller_design_20260705.md"
 _REVIEW_COUNTER = _REPO / ".omx" / "state" / "review_counter.jsonl"
 _DUTY_TOP_N = 6
 _SHADOW_STALE_S = 2 * 3600.0
+# section_ncde cache: {run_dir_str: (log_signature, line, data)} — keyed on run.log
+# (mtime_ns, size) so a re-call within the same session reuses the fit instead of re-probing.
+_NCDE_CACHE: dict[str, tuple[tuple, str | None, dict | None]] = {}
 
 
 def _fmt_age(seconds: float | None) -> str:
@@ -163,6 +167,79 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
     except Exception as exc:
         lines = [f"costate-shadow: unavailable ({type(exc).__name__}: {exc})"]
     return lines, row
+
+
+def format_ncde_line(row: dict) -> str:
+    """Pure formatter for one Linear-NCDE hit->solve advisory row (#344). Unit-testable
+    without touching real state. Surfaces: asymptote estimate + ETA-to-threshold +
+    BASIN/HANDOFF verdict + the instrument-invalid guard state. Advisory-only wording."""
+    ep = row.get("epoch")
+    r2 = row.get("fit_r2")
+    stable = row.get("stable")
+    reason = str(row.get("reason", ""))
+    fire = bool(row.get("fire"))
+    asym = row.get("predicted_asymptote")  # log_d_seg space
+    eta = row.get("eta_handoff_epochs")
+    rem = row.get("remaining_descent_frac")
+    invalid = (
+        "instrument-invalid" in reason
+        or stable is False
+        or (isinstance(r2, (int, float)) and r2 < 0.5)
+    )
+    ep_s = f"{ep:.0f}" if isinstance(ep, (int, float)) else "?"
+    r2_s = f"{r2:.2f}" if isinstance(r2, (int, float)) else "?"
+    if invalid:
+        tag = f"INSTRUMENT-INVALID (stable={stable}, r2={r2_s}) — no verdict"
+    elif fire and reason.startswith("BASIN"):
+        tag = "BASIN-FIRE (terminal SOLVE #341 admissible)"
+    elif fire:
+        tag = "HANDOFF-FIRE (#315 plateau-slope predicted soon)"
+    else:
+        tag = "NO-FIRE (still descending)"
+    parts = [f"ncde-trajectory: ep{ep_s} d_seg {tag}"]
+    detail: list[str] = []
+    if not invalid:
+        if isinstance(asym, (int, float)):
+            detail.append(f"plateau d_seg~{math.exp(asym):.5f}")
+        if isinstance(rem, (int, float)):
+            detail.append(f"rem {100 * rem:.1f}% of travelled")
+        if isinstance(eta, (int, float)):
+            detail.append(f"ETA-handoff {eta:.0f}ep")
+    head = " — ".join([parts[0], ", ".join(detail)]) if detail else parts[0]
+    return head + " [advisory NON-PROMOTABLE]"
+
+
+def section_ncde(run_dir: Path | None) -> tuple[str | None, dict | None]:
+    """Linear-NCDE trajectory advisory (#344): the score-relevant d_seg hit->solve verdict
+    for the live run. Read-only + score-neutral -> defaults ON (CLAUDE.md "'Off' is a
+    tracked queue": read-only telemetry is not gate-able). Reuses the probe entry point
+    (tools/ncde_trajectory_probe.run_probe) -- the math is NOT duplicated here. Fail-open
+    (any error -> omit the row); omitted when d_seg verdict telemetry is too short (<8 pts,
+    no advisory yet). Cheap (~0.01s measured) + cached by run.log signature."""
+    if run_dir is None:
+        return None, None
+    try:
+        log = run_dir / "run.log"
+        if not log.is_file():
+            return None, None
+        st = log.stat()
+        sig = (st.st_mtime_ns, st.st_size)
+        cached = _NCDE_CACHE.get(str(run_dir))
+        if cached is not None and cached[0] == sig:
+            return cached[1], cached[2]
+        import ncde_trajectory_probe as ntp
+        report = ntp.run_probe(run_dir, window=12, emit=False, do_backtest=False)
+        adv = report.get("verdict_latest_advisory")
+        if not adv:  # no d_seg advisory yet (short verdict telemetry) — omit, honestly
+            _NCDE_CACHE[str(run_dir)] = (sig, None, None)
+            return None, None
+        line = format_ncde_line(adv)
+        data = {"advisory": adv, "verdict_points": report.get("verdict_points"),
+                "n_fires": report.get("n_fires")}
+        _NCDE_CACHE[str(run_dir)] = (sig, line, data)
+        return line, data
+    except Exception:
+        return None, None
 
 
 def _duty_marker(r: dict) -> str:
@@ -432,6 +509,10 @@ def build_digest() -> tuple[list[str], dict]:
 
     shadow_lines, data["shadow"] = section_shadow(run_dir)
     lines.extend(shadow_lines)
+
+    ncde_line, data["ncde"] = section_ncde(run_dir)
+    if ncde_line:
+        lines.append(ncde_line)
 
     duty_line, data["duty_to_measure"] = section_duty_to_measure()
     lines.append(duty_line)
