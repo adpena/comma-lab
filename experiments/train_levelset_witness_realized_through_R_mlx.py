@@ -554,6 +554,7 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_freq_along"] = np.asarray(float(args.freq_along))
     flat["__cfg_reorient_every"] = np.asarray(int(args.reorient_every))
     flat["__cfg_w_pose"] = np.asarray(float(args.w_pose))
+    flat["__cfg_pose_finish_start_epoch"] = np.asarray(int(getattr(args, "pose_finish_start_epoch", 0)))
     flat["__cfg_curriculum"] = np.asarray(int(bool(args.curriculum)))
     flat["__cfg_tau_softplus_start_epoch"] = np.asarray(int(args.tau_softplus_start_epoch))
     flat["__cfg_l7_start_epoch"] = np.asarray(int(args.l7_start_epoch))
@@ -600,6 +601,7 @@ def _build_resume_state_arrays(
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
     out["__cfg_in_feat"] = np.asarray(int(in_feat))
     out["__cfg_w_pose"] = np.asarray(float(args.w_pose))
+    out["__cfg_pose_finish_start_epoch"] = np.asarray(int(getattr(args, "pose_finish_start_epoch", 0)))
     # (F2 fix) #224 render-side LEVER cfg: persist the levers whose engagement CHANGES the loss /
     # render target mid-run so a --resume-from can FAIL-CLOSED (via _resume_lever_divergences) when the
     # resume command silently drops or diverges a lever the run was trained with (a deterministic-repro
@@ -5782,6 +5784,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _resume_registry = _build_resume_registry(
         [_muon_gate, _lane_band_gate, _chroma_gate, _temporal_screw_gate], wire_sense=_wire_sense)
 
+    # (v7.5 D.9) TERMINAL POSE-FINISH state (SPEC §D.9; the R1 two-phase, FEED-238resolved). The EFFECTIVE
+    # per-epoch pose weight rides the ``_w_pose_now`` holder (read at every training + telemetry loss call
+    # in place of a static ``args.w_pose``). ``_pose_finish_start`` > 0 ARMS the gate: pose is BLIND
+    # (w_pose_ep = 0) until d_seg converges (the _muon_gate fires — powerlaw_meat / coherent-render regime)
+    # OR the backstop epoch, then the finish weight ``args.w_pose`` engages for the terminal joint
+    # pose-descent (pose is ORTHOGONAL to d_seg — frame0 is seg-free — so this NEVER disturbs d_seg).
+    # ``_pose_finish_start`` == 0 (DEFAULT / DISABLED) => _w_pose_now stays args.w_pose EVERY epoch =>
+    # BYTE-IDENTICAL incumbent (pose co-trained from ep0). Resume-safe: the engage predicate is derived
+    # from _muon_gate.fired (persisted in the resume registry) + the absolute epoch, so a mid-run resume
+    # into the finisher re-engages pose deterministically without new persisted state (the holders are
+    # re-derived each epoch; no additive checkpoint key needed).
+    _pose_finish_start = int(getattr(args, "pose_finish_start_epoch", 0))
+    _w_pose_now = {"v": float(args.w_pose)}
+    _pose_finish_on = {"on": False}
+    if _pose_finish_start > 0:
+        print(json.dumps({"stage": "pose_finish_armed", "start_backstop": _pose_finish_start,
+                          "w_pose_finish": float(args.w_pose),
+                          "note": "v7.5 D.9 R1 two-phase: pose-blind until d_seg converges (muon switch), "
+                          "then terminal joint pose-descent; SUPERSEDES co-train-pose-from-ep0"}), flush=True)
+
     # (R-7 finisher 2) the Polyak tail averager. Constructed + REGISTERED into the resume registry ONLY
     # when armed (else None => every observe/checkpoint/export/restore below is guarded off => ZERO new
     # keys => byte-identical). The scalar bookkeeping (count/start/arm) rides the registry (completeness
@@ -7116,7 +7138,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _oh, _mg = lstar_cache[_pi]
             _d: dict[str, Any] = {}
             _Lp = total_loss_fn(model, _cf_mx(_pi), 2 * _pi + 0, 2 * _pi + 1, _oh, _mg,
-                                pose_tgts[_pi], args.w_seg, args.w_pose, args.hinge_weight,
+                                pose_tgts[_pi], args.w_seg, _w_pose_now["v"], args.hinge_weight,  # (D.9) gated pose weight
                                 args.margin_target_end, seg_form, eik_w_ep, args.length_weight,
                                 terms_out=_d)
             mx.eval(_Lp, *list(_d.values()))
@@ -7148,7 +7170,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _pi0 = sample[0]
                 _oh0, _mg0 = lstar_cache[_pi0]
                 total_loss_fn(model, _cf_mx(_pi0), 2 * _pi0, 2 * _pi0 + 1, _oh0, _mg0,
-                              pose_tgts[_pi0], args.w_seg, args.w_pose, args.hinge_weight,
+                              pose_tgts[_pi0], args.w_seg, _w_pose_now["v"], args.hinge_weight,  # (D.9) gated pose weight
                               args.margin_target_end, seg_form, eik_w_ep, args.length_weight,
                               terms_out=_probe)
                 mx.eval(*list(_probe.values()))
@@ -7162,7 +7184,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         def _sel(m, _pi_=_pi, _oh_=_oh, _mg_=_mg, _tn_=_tn):
                             _d: dict[str, Any] = {}
                             total_loss_fn(m, _cf_mx(_pi_), 2 * _pi_, 2 * _pi_ + 1, _oh_, _mg_,
-                                          pose_tgts[_pi_], args.w_seg, args.w_pose,
+                                          pose_tgts[_pi_], args.w_seg, _w_pose_now["v"],  # (D.9) gated pose weight
                                           args.hinge_weight, args.margin_target_end, seg_form,
                                           eik_w_ep, args.length_weight, terms_out=_d)
                             return _d[_tn_]
@@ -7205,7 +7227,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _oh, _mg = lstar_cache[_pi]
                     _d: dict[str, Any] = {}
                     total_loss_fn(m, _cf_mx(_pi), 2 * _pi, 2 * _pi + 1, _oh, _mg, pose_tgts[_pi],
-                                  args.w_seg, args.w_pose, args.hinge_weight,
+                                  args.w_seg, _w_pose_now["v"], args.hinge_weight,  # (D.9) gated pose weight
                                   args.margin_target_end, seg_form, eik_w_ep, args.length_weight,
                                   terms_out=_d)
                     _s = _d["seg"]
@@ -7760,7 +7782,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _oh, _mg = lstar_cache[_pi]
                     _, _grads = value_and_grad(
                         model, _cf_mx(_pi), 2 * _pi + 0, 2 * _pi + 1, _oh, _mg, pose_tgts[_pi],
-                        args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end,
+                        args.w_seg, _w_pose_now["v"], args.hinge_weight, args.margin_target_end,  # (D.9) gated pose weight
                         _lp_seg_form, _lp_eik_w, args.length_weight)
                     mx.eval(_grads)
                     acc = _grads if acc is None else tree_map(lambda a, b: a + b, acc, _grads)
@@ -8099,6 +8121,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_subpix_boundary_engage", "epoch": ep, "start": subpix_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # (v7.5 D.9) TERMINAL POSE-FINISH weight resolution — the R1 two-phase (SPEC §D.9). Resolve
+            # the EFFECTIVE pose weight for THIS epoch: 0 (pose-blind, d_seg converges on a coherent render)
+            # until the MUON switch has fired (_muon_gate.fired == d_seg-converged / powerlaw_meat regime;
+            # the coherent-render precondition) OR the backstop epoch is reached, then --w-pose (the
+            # finish-phase weight) engages for the terminal joint pose-descent. _pose_finish_start == 0
+            # (DEFAULT / DISABLED) => _w_pose_now["v"] == args.w_pose EVERY epoch => BYTE-IDENTICAL incumbent
+            # (pose co-trained from ep0). Placed AFTER the muon gate resolves (_muon_fire above) so
+            # _muon_gate.fired is current. Read by every training + telemetry loss call via _w_pose_now.
+            if _pose_finish_start > 0:
+                _pf_was_on = _pose_finish_on["on"]
+                _pose_finish_on["on"] = bool(_muon_gate.fired) or (ep >= _pose_finish_start)
+                _w_pose_now["v"] = float(args.w_pose) if _pose_finish_on["on"] else 0.0
+                if _pose_finish_on["on"] and not _pf_was_on:
+                    recent_losses.clear()  # treat as an AdamW->AdamW loss-form boundary (spike-guard re-treat)
+                    print(json.dumps({"stage": "pose_finish_engage", "epoch": ep,
+                                      "start_backstop": _pose_finish_start,
+                                      "muon_fired": bool(_muon_gate.fired), "w_pose": float(args.w_pose),
+                                      "note": "R1 terminal pose-finish engaged (d_seg-converged coherent "
+                                      "render); spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # P0 FORCE 1 temporal-screw engagement gate + transition RE-TREAT (same discipline as LEVER-4b;
             # start>=l7 formed-partition). (operator 2026-07-08 v7.5 B.4) SENSOR->START WIRING: engagement
             # flips through the temporal-screw EventBackstopGate on the SAME annulus_plateau formed-boundary
@@ -8575,7 +8616,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             [2 * p + 0 for p in _sub], [2 * p + 1 for p in _sub],
                             [lstar_cache[p][0] for p in _sub], [lstar_cache[p][1] for p in _sub],
                             [pose_tgts[p] for p in _sub],
-                            args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                            args.w_seg, _w_pose_now["v"], args.hinge_weight, args.margin_target_end, seg_form,  # (D.9) gated pose weight
                             eik_w_ep, args.length_weight,
                         )
                         if _dual_vg_batch is None:
@@ -8598,7 +8639,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         if _dual_vg is None:
                             loss, grads = value_and_grad(
                                 model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
-                                args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                                args.w_seg, _w_pose_now["v"], args.hinge_weight, args.margin_target_end, seg_form,  # (D.9) gated pose weight
                                 eik_w_ep, args.length_weight,
                             )
                         else:
@@ -8607,7 +8648,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             loss, (grads, sgrads) = _dual_vg(
                                 model.trainable_parameters(), seed_mod.trainable_parameters(),
                                 _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
-                                args.w_seg, args.w_pose, args.hinge_weight, args.margin_target_end, seg_form,
+                                args.w_seg, _w_pose_now["v"], args.hinge_weight, args.margin_target_end, seg_form,  # (D.9) gated pose weight
                                 eik_w_ep, args.length_weight,
                             )
                             accum_seed = sgrads if accum_seed is None else tree_map(lambda a, b: a + b, accum_seed, sgrads)
@@ -9428,6 +9469,23 @@ def main(argv: list[str] | None = None) -> int:
     # SOLVED by the Quantizr stored-pose sidecar (3.4e-5); the witness's ONLY binding job is d_seg.
     # w_pose=0 by default -> the texture head serves SegNet realism (seg), not pose reconstruction.
     ap.add_argument("--w-pose", type=float, default=0.0)
+    # (operator 2026-07-08 v7.5 D.9) TERMINAL POSE-FINISH gate — the R1 two-phase sequence (SPEC §D.9;
+    # FEED-238resolved). Pose is ORTHOGONAL + benign to d_seg (frame0 is seg-free, upstream/modules.py:108
+    # => the carrier CANNOT disturb d_seg; R1: d_pose 97->0.0011 while d_seg HELD) so it belongs AFTER
+    # d_seg converges on a COHERENT render, NOT co-trained from ep0 on an INCOHERENT one (why v7.5's
+    # as-configured pose sits ~1.79). This gates the EFFECTIVE pose weight: 0 (pose-blind) until d_seg has
+    # converged, then --w-pose (the finish weight) engages for the terminal joint pose-descent (R1 recipe,
+    # #238-serialize the dxi at export). d_seg convergence is signaled by the MUON switch (powerlaw_meat
+    # tau-descent exhaustion — the coherent-render regime): the pose-finish co-fires with the muon gate
+    # (--muon-start-event) and --pose-finish-start-epoch is the fail-safe BACKSTOP CAP (ep >= this also
+    # engages, so pose is never starved if the muon event is slow). 0 (DEFAULT) => DISABLED => the
+    # effective pose weight == --w-pose at every epoch => BYTE-IDENTICAL incumbent (pose from ep0).
+    ap.add_argument("--pose-finish-start-epoch", type=int, default=0,
+                    help="v7.5 D.9 TERMINAL POSE-FINISH: engage the pose term only AFTER d_seg converges "
+                    "(the R1 two-phase; SUPERSEDES co-train-pose-from-ep0). Pose co-fires with the MUON "
+                    "switch (--muon-start-event, the d_seg-converged coherent-render regime); this epoch "
+                    "is the fail-safe BACKSTOP CAP (ep>=this also engages pose). 0 (default) => DISABLED "
+                    "=> byte-identical (pose from ep0). Requires --w-pose > 0 (the finish-phase weight).")
     ap.add_argument("--score-domain-loss", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--pose-eps", type=float, default=1e-2)
     ap.add_argument("--hinge-weight", type=float, default=4.0)

@@ -1817,6 +1817,7 @@ _CRUCIBLE_V7_PROGRAM_OWNED: frozenset[str] = frozenset({
     "--ckpt-every", "--stage-checkpoints",                                  # Preserve.flags
     "--softmax-temp-start", "--softmax-temp-end",                           # temp TypedAnneal
     "--muon-start-epoch",                                                   # muon TypedStage
+    "--pose-finish-start-epoch",                                            # pose_finish TypedStage (v7.5 D.9)
     "--eikonal-weight", "--length-weight",                                  # TypedRegularizers
 })
 
@@ -2019,6 +2020,19 @@ def _crucible_v7_schedule_governance() -> dict:
                 "(--seg-temporal-screw-start-event): 450 = past a formed margin boundary (== the chroma "
                 "cap; both are formed-boundary annulus levers); fires ONLY if the annulus did not plateau "
                 "by 450 (LOUD cap_fired_before_event, S5)."),
+        }),
+        # (v7.5 D.9, operator 2026-07-08) the TERMINAL POSE-FINISH stage co-fires with the MUON switch (the
+        # d_seg-converged / powerlaw_meat coherent-render regime — pose belongs AFTER d_seg converges, the
+        # R1 two-phase). The trainer engages the pose term on _muon_gate.fired OR ep>=this epoch, so this
+        # fixed epoch is a fail-safe BACKSTOP for the muon event that fires it first.
+        "--pose-finish-start-epoch": ScheduleGovernance(**{
+            "class": "cap", "role": "backstops", "sensor": "--muon-start-event",
+            "rationale": (
+                "req-B fail-safe BACKSTOP for the powerlaw_meat muon event (--muon-start-event): the "
+                "terminal pose-finish (R1 two-phase) co-fires with the muon switch (d_seg-converged / "
+                "coherent-render regime — pose belongs AFTER d_seg converges, frame0 is seg-free so pose "
+                "cannot disturb d_seg); 726 = the muon cap (aligned with the muon backstop); fires ONLY "
+                "if the muon event did not fire by 726 (LOUD, same as the muon cap S5)."),
         }),
         # ── S6-R4 self-paced τ-advance (operator 2026-07-08): the LAST clock-hardcoding (the anneal-
         #    epochs denominator that clocks τ(t)) converted to an EVENT-driven geometric octave ladder.
@@ -2526,6 +2540,19 @@ def _build_crucible_v7(
         ),
         stages=(
             TypedStage(name="muon", start_epoch_flag="--muon-start-epoch",
+                       start_epoch=_CRUCIBLE_V7_MUON_CAP),
+            # (v7.5 ACTUATION item D.9, spec §D.9 / FEED-238resolved) TERMINAL POSE-FINISH stage — the R1
+            # TWO-PHASE sequence. Pose is ORTHOGONAL + benign to d_seg (frame0 seg-free ⇒ the carrier
+            # CANNOT disturb d_seg; R1: d_pose 97→0.0011 while d_seg HELD) so it belongs AFTER d_seg
+            # converges on a COHERENT render, NOT co-trained from ep0 on an incoherent one (why v7.5's
+            # as-configured pose sits ~1.79). This stage gates the base's --w-pose 1.0 (the finish-phase
+            # weight, pose-carrier already ON): pose-BLIND until d_seg converges (the MUON switch fires —
+            # powerlaw_meat / coherent-render regime), then the terminal joint pose-descent engages →
+            # #238-serialize the dxi at export (SHIPPABLE, pose contribution 0.106, 7.2 KB). SUPERSEDES
+            # co-train-pose-from-ep0. start_epoch = the muon cap (the pose-finish co-fires with the muon
+            # gate; this is the fail-safe BACKSTOP the schedule-provenance gate classifies as a CAP
+            # backstopping --muon-start-event). Advisory until byte-closed (pointer 0.19110 UNMOVED).
+            TypedStage(name="pose_finish", start_epoch_flag="--pose-finish-start-epoch",
                        start_epoch=_CRUCIBLE_V7_MUON_CAP),
         ),
         regularizers=(

@@ -82,6 +82,11 @@ _EXPECTED_ADDED = frozenset({
     # --seg-temporal-screw-start-epoch is the fail-safe backstop cap.
     "--seg-temporal-screw-weight", "--seg-temporal-screw-start-epoch", "--seg-temporal-screw-start-event",
     "--seg-temporal-screw-xi-source", "--seg-temporal-screw-classes", "--seg-temporal-screw-band",
+    # (v7.5 ACTUATION item D.9, spec §D.9 / FEED-238resolved) TERMINAL POSE-FINISH TypedStage — the R1
+    # two-phase (pose-blind until d_seg converges at the muon switch, then terminal joint pose-descent;
+    # SUPERSEDES co-train-pose-from-ep0). --pose-finish-start-epoch (absent from v6) is CAP-governed
+    # backstopping --muon-start-event (the pose-finish co-fires with the d_seg-converged muon switch).
+    "--pose-finish-start-epoch",
 })
 _EXPECTED_REMOVED = frozenset({
     "--tau-softplus-start-epoch", "--l7-start-epoch", "--tau-hold-frac",
@@ -254,6 +259,34 @@ def test_b4_temporal_screw_start_is_event_governed_not_naked(compiled, trainer_t
     by_flag = {v.flag: v for v in verdicts}
     assert by_flag["--seg-temporal-screw-start-event"].cls == gate.CLASS_EVENT
     assert by_flag["--seg-temporal-screw-start-epoch"].cls == gate.CLASS_CAP
+
+
+# ── (d.9) v7.5 ACTUATION item D.9 — terminal pose-finish TypedStage (R1 two-phase) ──────────────
+def test_d9_pose_finish_stage_gates_pose_terminal(compiled):
+    """v7.5 D.9: the terminal POSE-FINISH TypedStage gates the pose term to AFTER d_seg converges (the R1
+    two-phase), superseding co-train-pose-from-ep0. --w-pose stays the finish weight (1.0); the new
+    --pose-finish-start-epoch (== the muon cap) makes it terminal, co-firing with the muon switch."""
+    fd = {f: v for f, v in compiled.emitted_pairs}
+    assert fd["--pose-finish-start-epoch"] == str(wac._CRUCIBLE_V7_MUON_CAP)  # co-fires with the muon switch
+    assert float(fd["--w-pose"]) == 1.0                                       # the finish-phase weight (carrier ON)
+    # the pose_finish stage is a real TypedStage on the config (sister of the muon stage)
+    stage_names = {s.name for s in compiled.typed.stages}
+    assert "pose_finish" in stage_names and "muon" in stage_names
+
+
+def test_d9_pose_finish_start_epoch_cap_governed_by_muon_event(compiled, trainer_text):
+    """THE governance: --pose-finish-start-epoch is a FAIL_SAFE_CAP backstopping the muon event (the
+    pose-finish co-fires with the d_seg-converged muon switch — NOT a naked positive epoch)."""
+    gov = compiled.schedule_governance
+    assert gov["--pose-finish-start-epoch"]["class"] == "cap"
+    assert gov["--pose-finish-start-epoch"]["role"] == "backstops"
+    assert gov["--pose-finish-start-epoch"]["sensor"] == "--muon-start-event"
+    verdicts = gate.classify_launch(
+        list(compiled.emitted_pairs), registry=gate.schedule_when_flags(trainer_text),
+        manifest_keys=set(compiled.constants_manifest.keys()),
+        governance=gov, event_registry=gate.event_start_flags(trainer_text))
+    by_flag = {v.flag: v for v in verdicts}
+    assert by_flag["--pose-finish-start-epoch"].cls == gate.CLASS_CAP
 
 
 # ── (c) the deletions: mutual exclusion + the removed flags ──────────────────────────

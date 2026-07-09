@@ -52,3 +52,24 @@ def test_residual_mode_film_allowed():
 def test_residual_mode_fail_closed():
     with pytest.raises(ValueError, match="residual_mode"):
         StoreNothingPoseCarrier(residual_mode="mlp")  # not a trainer choice
+
+
+# ── v7.5 D.9 TERMINAL POSE-FINISH (the R1 two-phase; SPEC §D.9) ────────────────────────────────
+def test_terminal_pose_finish_emits_gate_and_finish_weight():
+    """v7.5 D.9: TerminalPoseFinish holds --pose-finish-start-epoch (the terminal gate) + --w-pose (the
+    finish-phase weight) — both REAL trainer flags (never-invent-flags)."""
+    from tac.witness_dsl.curriculum_dsl import TerminalPoseFinish
+    lev = TerminalPoseFinish(start_epoch=726, w_pose=1.0)
+    assert lev.name == "terminal_pose_finish"
+    assert lev.overrides["--pose-finish-start-epoch"] == 726
+    assert lev.overrides["--w-pose"] == 1.0
+
+
+def test_terminal_pose_finish_rejects_zero_w_pose():
+    """The pose carrier trains its dxi only on the realized d_pose term => the finish weight MUST be > 0
+    (a w_pose=0 finish is a no-op; fail-closed)."""
+    from tac.witness_dsl.curriculum_dsl import TerminalPoseFinish
+    with pytest.raises(ValueError, match="w_pose must be > 0"):
+        TerminalPoseFinish(start_epoch=726, w_pose=0.0)
+    with pytest.raises(ValueError, match="start_epoch must be >= 0"):
+        TerminalPoseFinish(start_epoch=-1)

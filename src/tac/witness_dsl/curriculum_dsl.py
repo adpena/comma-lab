@@ -2244,6 +2244,45 @@ def StoreNothingPoseCarrier(  # noqa: N802 — DSL constructor
                         "dxi residual (d_pose 97->0.0011 @n600 advisory; byte-close #238; pointer 0.19110)"))
 
 
+def TerminalPoseFinish(  # noqa: N802 — v7.5 D.9 (SPEC §D.9)
+    start_epoch: int, w_pose: float = 1.0, window: int = 0,
+) -> Lever:
+    """v7.5 D.9 TERMINAL POSE-FINISH — the R1 TWO-PHASE sequence (SPEC §D.9; FEED-238resolved).
+
+    Gates the pose term to engage ONLY AFTER d_seg converges: pose-BLIND (effective w_pose 0) until the
+    MUON switch fires (``--muon-start-event``, powerlaw_meat = the d_seg-converged coherent-render regime)
+    OR ``start_epoch`` (the fail-safe BACKSTOP epoch), then ``--w-pose`` (the finish weight) engages for
+    the terminal joint pose-descent. R1 (warm-started from a CONVERGED witness): d_pose 97->0.0011 while
+    d_seg HELD; #238-serialize the dxi at export (SHIPPABLE, pose contribution 0.106, 7.2 KB). Pose is
+    ORTHOGONAL to d_seg (frame0 is seg-free, upstream/modules.py:108) so this NEVER disturbs d_seg — it
+    SUPERSEDES co-train-pose-from-ep0 (the incoherent-render pose the ~1.79 came from: pose belongs AFTER
+    d_seg converges on a COHERENT render, not co-trained from ep0 on an incoherent one).
+
+    The trainer flag ``--pose-finish-start-epoch`` is default 0 ⇒ DISABLED ⇒ byte-identical incumbent
+    (pose from ep0). Requires a pose carrier + ``--w-pose > 0`` (the finish-phase weight; the carrier
+    trains its dxi only on the realized d_pose term). ``start_epoch`` is a schedule WHEN-trigger — it MUST
+    be governed as a fail-safe CAP backstopping ``--muon-start-event`` (the pose-finish co-fires with the
+    muon switch), NEVER a naked positive epoch (the schedule-provenance gate refuses it otherwise).
+    ``window=0`` = the finish rides the existing finisher span (no extra epoch budget). Advisory until
+    byte-closed (pointer 0.19110 UNMOVED). NOTE: crucible_v7 emits this as a TypedStage (sister of the
+    muon TypedStage); this factory HOLDS the ``--pose-finish-start-epoch`` flag in the DSL (config-orphan
+    discipline — 'the DSL HOLDS every designed lever', same as the ``Muon`` factory holds
+    ``--muon-start-epoch``)."""
+    if int(start_epoch) < 0:
+        raise ValueError(f"TerminalPoseFinish: start_epoch must be >= 0, got {start_epoch!r}")
+    if not (float(w_pose) > 0.0):
+        raise ValueError(
+            f"TerminalPoseFinish: w_pose must be > 0 (the finish-phase weight; the pose carrier trains "
+            f"its dxi only on the realized d_pose term), got {w_pose!r}")
+    return Lever(
+        "terminal_pose_finish",
+        overrides={"--pose-finish-start-epoch": int(start_epoch), "--w-pose": float(w_pose)},
+        epochs_delta=window,
+        notes=("v7.5 D.9 terminal pose-finish (R1 two-phase): pose-BLIND until d_seg converges (the muon "
+               "switch), then terminal joint pose-descent at --w-pose; SUPERSEDES co-train-pose-from-ep0; "
+               "start_epoch = fail-safe CAP backstopping --muon-start-event; #238 ship-dxi; advisory"))
+
+
 def GroundFrameChart(  # noqa: N802 — DSL constructor
     ref_pair: int = 0,
     s_t: float = -0.003224707899359239,

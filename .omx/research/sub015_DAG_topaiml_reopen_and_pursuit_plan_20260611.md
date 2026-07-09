@@ -11136,3 +11136,37 @@ new orphan). **RE-SEAL REQUIRED** before any launch (not this agent's authority)
 Sibling: `tools/magnitude_dismissal_detector.py` (FEED-magdismiss) = the DETECTOR half (catches bad dismissals in commits); this = the RANKER half (prevents orphaning by surfacing relative significance). Two halves of the relative-significance immune system. Deliverable: `.omx/research/costate_relative_significance_fold_20260708.md`.
 
 **pointer 0.19110 UNMOVED (apparatus)**. Triality: DAG leg = this FEED · DSL/apparatus leg = the ranker+store in `activation_ledger` consumed by `costate_digest` · equations leg = none registered (the store CONSUMES existing measured anchors; the rel-sig metric is a definitional ratio, not a new empirical law — [no-triality] on the code commits, this FEED is the trajectory record).
+
+## FEED-v75D9actuated (2026-07-09) — v7.5 ACTUATION item D.9: terminal POSE-FINISH stage (R1 two-phase) in crucible_v7
+**CONFIG actuation, NOT a launch.** Live #205 (pid 63069) untouched. **Pointer 0.19110 UNMOVED** — advisory
+[macOS-MLX research-signal] NON-PROMOTABLE. Replaced **co-train-pose-from-ep0** with the **R1 TWO-PHASE
+sequence** (SPEC §D.9; FEED-238resolved). Pose is ORTHOGONAL + benign to d_seg (frame0 seg-free,
+upstream/modules.py:108 ⇒ the carrier CANNOT disturb d_seg; R1: d_pose 97→0.0011 while d_seg HELD; seg⊥pose
+99.95% null) so it belongs AFTER d_seg converges on a COHERENT render, NOT co-trained from ep0 on an
+incoherent one (why v7.5's as-configured pose sits ~1.79). **BUILT** the terminal pose-finish: a new
+`--pose-finish-start-epoch` trainer flag gates the EFFECTIVE pose weight — 0 (pose-BLIND) until d_seg
+converges (the MUON switch fires — `_muon_gate.fired`, powerlaw_meat / coherent-render regime) OR the
+backstop epoch, then `--w-pose` (the finish weight, carrier already ON) engages for the terminal joint
+pose-descent → #238-serialize the dxi at export (SHIPPABLE, pose 0.106, 7.2 KB). The effective weight rides
+a per-epoch `_w_pose_now` holder read at all 8 training + telemetry loss calls (was static `args.w_pose`);
+`--pose-finish-start-epoch 0` (DEFAULT / DISABLED) ⇒ `_w_pose_now == args.w_pose` every epoch ⇒
+BYTE-IDENTICAL incumbent (VERIFIED: `test_sealed_205_canonical_config` green — the sealed #205 baseline is
+untouched). Expressed in crucible_v7 as a **pose_finish TypedStage** (sister of the muon TypedStage) at
+start_epoch = the muon cap (726). **Schedule-provenance gate: 0 NAKED** — `--pose-finish-start-epoch` is a
+FAIL_SAFE_CAP backstopping `--muon-start-event` (the pose-finish co-fires with the d_seg-converged muon
+switch; the trainer genuinely engages pose on `_muon_gate.fired` OR ep>=cap, so the CAP is honest — the
+muon event fires it first). Resume-safe: the engage predicate derives from `_muon_gate.fired` (persisted in
+the resume registry) + the absolute epoch, so a mid-run resume into the finisher re-engages pose
+deterministically with NO new persisted key (P0 resumability). **Triality:** DSL = `TerminalPoseFinish`
+Lever factory HOLDS `--pose-finish-start-epoch` (config-orphan discipline, mirrors how `Muon` holds
+`--muon-start-epoch`; lever_registry unmapped UNCHANGED 120) + the pose_finish TypedStage in the crucible_v7
+WitnessProgram + `--pose-finish-start-epoch` in `_CRUCIBLE_V7_PROGRAM_OWNED` · DAG = this FEED · equations =
+the R1 recipe is the existing measured anchor (FEED-238resolved / `r1_0011_custody_revalidation_20260708.md`;
+activation ≠ a new n600 measurement → no new EmpiricalAnchor, Item-A precedent). **EXIT CRITERION
+(pre-registered, owed n600 A/B, sequenced off the live run — NO concurrent GPU probe per the machine-crash
+P0 gate):** terminal pose-finish ON (two-phase) vs co-train-from-ep0 OFF (same seed) — the two-phase must
+reach d_pose ≤ the R1 banked band (0.106–0.127 through #238 byte-close) AND hold d_seg within noise of the
+pose-blind d_seg trajectory (pose ⊥ d_seg) — else the coherent-render-first premise is falsified and the
+sequencing gets a documented terminal-finding. Tests: crucible_v7 + store_nothing_pose_carrier +
+p0_forces_phase2 + schedule_provenance + lever_registry + witness_autoconfig + sealed_205 = 194 passed.
+**RE-SEAL REQUIRED** before any launch (not this agent's authority). Pointer 0.19110 UNMOVED.
