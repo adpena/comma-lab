@@ -10800,3 +10800,24 @@ DSL-LEG STATUS (drift-gate note, FEED-l2 commits): measurement commits — no le
 frontier gated RED before any build; no trainer flag exists). Equation leg satisfied in the probe's commit
 (l2_truedepth_falsified + 3 MEASURED constants in morse_smale_stratified_parallax_dpose_v1, c2aa76cf0);
 FEED-l2 + MEMORY L69b updated. Same determination as 54ad010cc / 69887e422.
+
+## FEED-r1custody (2026-07-08) — R1's 0.0011 is REAL (exact contest d_pose, custody-verified): joint pose-descent IS the door; remaining gate = ship dxi + re-measure through inflate (666945938)
+Custody trace to the PRIMARY artifact (run levelset_n600_R1_storenothing_descent_ev1_20260703T004906Z,
+#245): R1 = JOINT descent (w_pose=1.0, ckpt __cfg_w_pose=1.0 — CORRECTS FEED-posesolve's "SOLO w_pose=0"
+claim, factually wrong), warm-started from a CONVERGED d_seg witness (v2_attrclean mod-26) at ep1001
+inside Muon; verdict rows d_pose 97.2→62.4→0.00334→0.00108→**0.001012** (ep1000→1108) with d_seg HELD
+~0.0046, live liveness. PRIME SUSPECT REFUTED: verdict = MSE(PoseNet(gen)[:6], PoseNet(real)[:6]) (gt
+cache = PoseNet outputs, verified in gt_n600.npz) — the EXACT contest d_pose, through-R, n600, EMA. NOT
+an artifact. RECONCILES ALL: A2 solved 6-DOF on a FROZEN render (1.486 floor); R1 descended dxi + THE
+RENDER TOGETHER — the L2 appearance-wall is REAL but TRAINABLE (108 epochs from a converged basin).
+run-1 1.79 vs R1 0.0011 = different checkpoints (mod-32 ep200 vs mod-26 ep1108). CAVEAT (the honest
+gate): 0.0011 lives ENTIRELY in the trained per-pair dxi (600×6, absmean 0.0038); serializer ships only
+the deterministic calibration ξ → byte-close currently reads the ~1.99 no-dxi floor; "SOLID shippable
+0.105" DOWNGRADED to "SOLID training-side advisory, shippability pending". #238 COMPLETION = serialize
+ξ_eff=ξ_stored+dxi (~7.2KB → rate ~0.0005; §5b connector — serialize_xi_payload takes per-pair ξ as
+input) + re-measure through the REAL inflate at n600. IF confirmed: pose contribution 0.105 SHIPPABLE;
+budget honesty: 0.09 seg + 0.06 rate + 0.105 pose = 0.255 — sub-0.19 needs pose pushed toward ancestor
+0.018-class (R1 was still descending at ep1108; a dedicated finishing descent measures the floor).
+verdict_scope: (a)-with-caveat — joint-descent VALIDATED at training-side authority; shippable-through-
+inflate = the open measurement. Eq anchor r1_0011_custody_revalidation in
+morse_smale_stratified_parallax_dpose_v1 (same commit). Pointer 0.19110 UNMOVED.
