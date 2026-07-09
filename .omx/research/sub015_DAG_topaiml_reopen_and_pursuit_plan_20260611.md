@@ -11569,3 +11569,13 @@ ego-rigid. TWO real-machinery measurements ($0, read-only on gt_n600.npz['lstars
   (geometry-native, not generic). Meta-lesson deepened: even a real arithmetic coder is a proxy if it ignores
   the representation's physics (ego-rigidity). Prefer the real BASIS, not just a real coder.
 - Draft updated (§1 REAL-MACHINERY RESOLUTION block). Pointer 0.19110 UNMOVED. #205 alive+untouched. `[no-triality]`.
+
+---
+## FEED-v8-ratebudget (2026-07-09) — whole-scene de-shared rate budget MEASURED (rec ② complete)
+Real-coder (brotli), n=200/600 full-res, DE-SHARED (each inter-class edge counted once, no double-count):
+- **Conservative bitmap upper bound = 0.346 S** (per-class-pair boundary bitmap, temporally brotli'd).
+- Dominant rows: Road/Lane 0.204 · Road/Undriv 0.047 · Undriv/Movable 0.033 · Road/Movable 0.028 · Road/MyCar 0.028 · Lane/* (3) 0.007.
+- **Geometric-where-worked (real, MEASURED):** Road/Undriv poly+ξ = 0.0032 S (**14.6× below** its bitmap row); Road/MyCar static-model (frame0 + rigid-shift residual) = 0.0202 S (1.4×, hood #139).
+- **Road/Lane (0.204, 59% of the budget) → Wave-F lane poly (#234 BUILT, Hungarian slot-track + coherent multi-frame fit)** — the geometric reduction is OWED-a-measurement but the primitive EXISTS; horizon transfer (14.6×) projects Road/Lane → ~0.014 S.
+- Movable pairs (0.061 combined) → sparse object contours (owed).
+- **Verdict:** rate thesis HOLDS — geometry crushes the bitmap; the full-scene geometric budget projects to **~0.02–0.05 S** (vs current PR101-recode 0.118 S rate term). 2 edges MEASURED-geometric, 3 owed (all have a named primitive). NO b/px proxy anywhere. Pointer 0.19110 UNMOVED. `[no-triality]`.
