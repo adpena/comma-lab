@@ -10916,3 +10916,20 @@ driven; pose is NOT a scheduling concern. CAVEAT: pose's full descent to 0.0011 
 d_seg is good, pose descends orthogonally (R1 proved it from the converged mod-26 basin). Eq
 `pose_seg_convergence_asymmetry_v1` COUNCIL-FLAGGED (per-epoch rate law owed to the R1 relaunch.log fit).
 Pointer 0.19110 UNMOVED.
+
+## FEED-auditC (2026-07-08) — v7.5 has the BEST d_seg base; the ONE gap = R1's two-phase pose SEQUENCING (converges with the pose/seg-dynamics insight) (8d8bdc9d6)
+Audit C (v75_r1_crossrun_best_audit): (1) v7.5 d_seg base = BEST measured — mod-32 (mod32cap 0.003366
+@ep650) BEATS mod-26 (v2_attrclean 0.004024) by ~16%; all best d_seg levers ON + net-new Chan-Vese
+counter-force; NO d_seg gap; mod-32 SEALED (Whitney clamp→26 but empirical mod-32 wins; 19-neutrality
+rate-saving A/B open, non-blocking). (2) R1's d_seg 0.0045 was INHERITED from the converged v2_attrclean
+basin — NOT an R1 win; R1's ONLY original win = pose 0.0011 via joint descent ON TOP of a converged d_seg
+witness. (3) cross-run best-per-class: probe_PA oracle FLOOR composite 0.000910 (100% residual = separatrix
+PLACEMENT); clean_canonical FLOOR Undriv 0.0016 (bulk near-free), binding = Lane+Movable+all-class
+separatrix. THE ONE GAP: R1's TWO-PHASE POSE SEQUENCING (warm-start converged basin → dedicated ~100ep
+pose-finish) — v7.5 co-trains pose from ep0 on an incoherent from-scratch render (why its as-configured
+pose sits ~1.79, SPEC §1 gate). CONVERGES with FEED-posesegdynamics: pose is orthogonal+benign → belongs
+AFTER d_seg converges, not co-trained from ep0. → v7.5 ACTUATION ADDITION (folds into FEED-v75actuate):
+replace co-train-pose-from-ep0 with the R1 two-phase sequence — full optimal d_seg curriculum → TERMINAL
+POSE-FINISH stage (w_pose emphasized, orthogonal ride-down to floor); DSL-expressible as a terminal
+curriculum stage; then #238-serialize the dxi to ship. This IS "turn on the best R1 techniques." Pointer
+0.19110 UNMOVED.
