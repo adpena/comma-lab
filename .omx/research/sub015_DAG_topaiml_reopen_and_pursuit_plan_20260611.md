@@ -11656,3 +11656,23 @@ standalone frontier-beater; it is the d_seg-core MECHANISM — boundary_band_fli
 dominant term in (S_current − S_target). The STAGING (not drop-everything) is MEASUREMENT-grounded, not
 magnitude: the exit criterion is CITED — n_converged=0 (the collapse bug) + unmeasured across-600
 amortization; reactivate per the FEED-ff trigger, don't dismiss by eyeball. # VERDICT_SCOPE_OK:formulation-level-reopen-not-a-kill
+
+---
+## FEED-amber-unblock (2026-07-09) — the AMBER re-open = collapse-fix (P0 now) × high-res-placement (#149 via LPPN)
+**Operator (two directives):** (1) *"the fragility and instability resulting in flips at low res and beautiful
+solution of flipping pixels at high full camera res"* — REINFORCED. (2) *"Pursue training collapse bug as P0
+in parallel it's totally solvable especially with everything we have in place now."*
+**The unification (why cells2pixels/AMBER is the vehicle):** the residual d_seg is a codim-1 band at 384 where
+the downsample D AVERAGES the flip away = the low-res fragility. The beautiful solution (#149) = place the flip
+at CAMERA RES 874×1164 BEFORE D averages. The LPPN's ARBITRARY-RESOLUTION decode IS the learned-generator
+machinery for that placement — the AMBER's boundary_band_flip 0.079 (half the wall) came from training THROUGH R;
+LPPN lets the placement live below R's averaging grid. So the AMBER re-open = TWO composable unblocks:
+  (A) **[P0 NOW] training-collapse fix** — diagnosed BUG (not a wall), 4 causes: (1) no grad-clip (mlx
+      `clip_grad_norm` unused); (2) sqrt-pose-eps grad blowup `5/√(10·pose+1e-8)`→5e4 for easy pairs (per-pair
+      batch=1 exposes it); (3) w_seg=100 = 100× seg-LR; (4) lr 2e-3 × 600 steps/ep. FIX = opt-in stability levers
+      (grad-clip + pose-eps-floor/pose-grad-coeff-clip + stage-boundary LR/w_seg guard), DEFAULT-PRESERVING
+      (#205 byte-identical, untouched), verified against the EXISTING immune system (gnorm_hijack alarm, spike-guard,
+      per-term loss telemetry). "Everything in place now" = those guards + the costate SENSE layer.
+  (B) **[staged] LPPN arbitrary-res decode** = the #149 camera-res placement, gated on (A) + #205 SDF-wall trigger.
+**verdict_scope: n/a (positive design/unblock, no negative verdict).** Pointer 0.19110 UNMOVED. NO heavy launch
+(the A/B that proves the fix un-collapses the AMBER is operator-GO gated; the FIX itself is $0 default-off code).
