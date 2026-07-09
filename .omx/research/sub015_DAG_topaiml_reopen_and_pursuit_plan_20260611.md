@@ -11982,3 +11982,33 @@ status=ok exit=-15, peak_rss 87,809 MiB (< 90,000 limit), elapsed 37,334s (~10.4
 levelset_resume_state.npz + ema + ema_BEST + run.log + costate_shadow.jsonl (byte-close anchors +
 alarm-backtest fixtures). Costate observer loop stopped with it. Box now FREE for the v7.5.2 launch
 chain — launch itself remains gated on crucible-2 P3-P7 + owed-before-launch + operator launch GO.
+
+## FEED-otoffset-n600 (task #381 item-2, 2026-07-09) — #288 OT head-offset subset verdict CONFIRMED at full n600 scale [equations-leg DONE; MEASURED-NEGATIVE FORMULATION]
+The OWED n600 confirmation of the #288 OT head-offset gate (FEED-otoffset) landed. **VERDICT: the
+damped-Newton semi-discrete OT mass-matching objective is a MEASURED NEGATIVE for realized d_seg,
+CONFIRMED at all 600 pairs** — the subset ordering REPRODUCES with identical order + sign.
+**MEASURED (realized-through-R, frozen CPU SegNet, mod32cap ep650 EMA-BEST, READ-ONLY snapshot-copy,
+n600):** no_offset **0.0031436** · menon **0.0033119 (+1.68e-4 WORSE)** · **ot_newton 0.0048921
+(+1.75e-3 WORSE)**. OT solver EXACT (converged, 8 Newton iters, max_mass_err 2.82e-11). Order-across-
+scales n2/n6/n24/n48/n600 all `no_offset < menon < ot_newton`. **Mechanism (per-class, MEASURED):** OT
+inflates the rare-Lane cell (offset b_Lane **+26.5**) to hit its 0.59% GT mass → Lane d_seg 0.212→0.265,
+EVERY class worse → SegNet re-read PENALISES the over-prediction. The witness's learned boundary
+placement (no-offset) is already closer to the scorer argmax than any raw-frequency mass reweight.
+Winner sweep independently agrees (best swept Δ=−3.39e-8, negligible ⇒ no-offset optimal over ±0.4 grid).
+**verdict_scope = FORMULATION** ("cell-mass-matching to GT frequencies as a d_seg surrogate" at THIS
+ckpt/tau=1.0) — NOT a solver/family/paradigm kill. **Reformulation queue STAYS OPEN:** (1) flip-weighted
+target masses (match the boundary-annulus mass the scorer re-reads, not bulk cell mass — the primary
+queued arm) · (2) other tau · (3) other checkpoints · (4) per-pair offsets.
+**MODAL HARVEST (honest):** Modal call `fc-01KX4B0A620FCQR6ZWJKRZ7XRT` (Linux x86_64 CPU) **CANCELLED
+~12 min** (cpu=2 cached only 24/600 in 426 s, ~3 h projected — impractical); predecessor pivoted LOCAL.
+Cost **~$0.15 ESTIMATE** (cpu=2+16GiB × ~12 min; no per-call cost via CLI). Ledger row
+`manually_terminated` + terminal lane claim `stopped_modal_cancelled_pivot_local`. The authoritative
+n600 result is the predecessor's detached LOCAL macOS-CPU run (pid 55972, survived session death,
+finished clean ~79 min); recovery subagent harvested it + killed a redundant re-run (same-path race).
+Task #381 item-2 spend so far: **$0 GPU + ~$0.15 Modal-CPU estimate** (envelope ≤$20).
+**Triality:** DAG=this row · equations=`laguerre_ot_head_offset_v1` n600 anchor appended
+(`laguerre_ot_head_offset_dollar0_gate_n600_mod32cap_ep650_20260709`, VERIFIED_VIA_EMPIRICAL_ANCHOR) ·
+DSL=N/A (measurement of a NEGATIVE lever; `HeadOffsetSolver` stays default-off — the gate confirms it).
+Memo `.omx/research/ot_offset_n600_verdict_20260709.md` (STORES CONSULTED there; result JSON sha256
+`55158cdf613ab105…`). `[macOS-CPU advisory · NON-PROMOTABLE]` · pointer **0.19110 UNMOVED (means)** ·
+#205 READ-ONLY/untouched · no GPU, no training, no launch.

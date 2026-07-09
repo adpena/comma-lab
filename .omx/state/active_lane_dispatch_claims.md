@@ -6,6 +6,8 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-07-09T22:20:48Z | claude-recovery-subagent | lane_ot_offset_n600_modal_cpu_20260709 | modal_cpu | fc-01KX4B0A620FCQR6ZWJKRZ7XRT |  | stopped_modal_cancelled_pivot_local | Modal call cancelled ~12min (cpu=2 cached 24/600, ~3h projected, impractical). Est cost ~0.15 USD. Pivoted to LOCAL macOS-CPU n600 re-run for 3-arm gate verdict; result in ot_offset_n600_LOCAL_result.json. |
+| 2026-07-09T20:45:12Z | opus-subagent-paid-dispatch | lane_ot_offset_n600_modal_cpu_20260709 | modal_cpu | pending_dispatch |  | dispatching | OWED #288 n600 OT head-offset 3-arm gate (no_offset/menon/ot_newton) on mod32cap ep650 EMA BEST (sha 6dd28a6e); slim lstars cache sha bf1d0e5c; realized-through-R CPU-SegNet Linux x86_64; <$1 CPU-only; earmark item2 of $20 envelope task#381 |
 | 2026-06-30T19:45:49Z | claude | levelset_n600_v2_attrclean | mlx_local | local-mlx-20260630T194549Z |  | active_training | from-scratch n600 v2 attribution-clean (script-based relaunch); certified config; operator GO; out=experiments/results/levelset_n600_v2_attrclean_20260630T194549Z |
 | 2026-06-30T19:45:49Z | claude | levelset_n600_v2_attrclean | mlx_local | local-mlx-20260630T194332Z |  | failed_safe_run_exec | safe_run got whole-cmd-as-one-arg via unquoted expansion; superseded by script-based relaunch |
 | 2026-06-30T19:43:32Z | claude | levelset_n600_v2_attrclean | mlx_local | local-mlx-20260630T194332Z |  | active_training | from-scratch n600 v2 attribution-clean; certified config; operator GO 'let it RIP'; out=experiments/results/levelset_n600_v2_attrclean_20260630T194332Z |

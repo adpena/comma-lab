@@ -78,6 +78,20 @@ GATE_OT_CONVERGED = True
 GATE_OT_ITERS = 7
 GATE_OT_MAX_MASS_ERR = 0.0
 
+# --- the FULL n600 confirmation anchor (task #381 item-2, 2026-07-09) ------------------------------
+# All 600 pairs, realized-through-R, frozen CPU SegNet, mod32cap ep650 EMA-BEST. The subset ORDER +
+# SIGN REPRODUCE at the full admissible scale: no_offset < menon < ot_newton (higher = worse). The OT
+# solver stays EXACT (converged, 8 Newton iters, max_mass_err 2.82e-11). Mass-matching remains a
+# MEASURED NEGATIVE for realized d_seg. Numbers pinned VERBATIM from the completed n600 gate JSON
+# (result sha256 55158cdf613ab105...). Local macOS-CPU (predecessor's detached run, harvested by the
+# recovery subagent after the Modal Linux-x86_64 dispatch was cancelled ~12min as impractically slow).
+GATE_N600 = 600
+GATE_N600_D_SEG_NO_OFFSET = 0.0031436
+GATE_N600_D_SEG_MENON = 0.0033119
+GATE_N600_D_SEG_OT_NEWTON = 0.0048921
+GATE_N600_OT_ITERS = 8
+GATE_N600_OT_MAX_MASS_ERR = 2.82e-11
+
 
 def build_laguerre_ot_head_offset_v1() -> CanonicalEquation:
     """Build the #288 damped-Newton semi-discrete OT head-offset law with its honest-tier anchors.
@@ -163,6 +177,54 @@ def build_laguerre_ot_head_offset_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_gate_n600 = EmpiricalAnchor(
+        anchor_id="laguerre_ot_head_offset_dollar0_gate_n600_mod32cap_ep650_20260709",
+        measurement_utc=_UTC,
+        inputs={
+            "ckpt": "levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz (ep650)",
+            "gate": "experiments/probe_laguerre_logit_offset_sweep.py (3-arm)",
+            "n_pairs": GATE_N600,
+            "authority": "realized-through-R, frozen CPU SegNet (fp32 EMA render), ALL 600 pairs",
+            "result_json_sha256": "55158cdf613ab10585f1a0b56b9a5032338b975d6780a332838e3a118cc58c8a",
+        },
+        predicted_output={
+            "hypothesis": ("does the n48/n24 subset verdict (no_offset < menon < ot_newton) HOLD at the "
+                           "full admissible n600 scale? (CLAUDE.md 'allergic to non-n600-scale')"),
+        },
+        empirical_output={
+            "d_seg_no_offset": GATE_N600_D_SEG_NO_OFFSET,
+            "d_seg_menon": GATE_N600_D_SEG_MENON,
+            "d_seg_ot_newton": GATE_N600_D_SEG_OT_NEWTON,
+            "ot_converged": GATE_OT_CONVERGED,
+            "ot_iters": GATE_N600_OT_ITERS,
+            "ot_max_mass_err": GATE_N600_OT_MAX_MASS_ERR,
+            "verdict": ("CONFIRMED at full scale: no_offset 0.0031436 < menon 0.0033119 (+1.68e-4) < "
+                        "ot_newton 0.0048921 (+1.75e-3) — identical order + sign to the n48/n24 subset. "
+                        "OT solver EXACT (8 Newton iters, max_mass_err 2.82e-11). Mass-matching inflates "
+                        "the rare-Lane cell (b_Lane +26.5) -> Lane d_seg 0.212->0.265, all classes worse "
+                        "-> SegNet re-read PENALISES the over-prediction. no-offset wins."),
+            "verdict_scope": ("FORMULATION — 'cell-mass-matching to GT frequencies as a d_seg surrogate' "
+                              "at THIS checkpoint/tau, CONFIRMED at n600. NOT the OT solver (exact). "
+                              "Flip-weighted target masses / other tau / other checkpoints / per-pair "
+                              "offsets UNTESTED = ASSUMED_AWAITING_VERIFICATION (reformulation queue)."),
+            "advisory": "[contest-CPU advisory] NON-PROMOTABLE; pointer 0.19110 UNMOVED",
+        },
+        residual=0.0,
+        source_artifact=".omx/research/ot_offset_n600_verdict_20260709.md",
+        measurement_method=("$0 offline gate: 3-arm realized-through-R d_seg (frozen CPU SegNet), FULL "
+                            "n600 (all 600 pairs); local macOS-CPU (Modal Linux-x86_64 dispatch cancelled "
+                            "~12min as impractically slow, ~$0.15 est; predecessor's detached local run "
+                            "harvested by recovery subagent). Order+sign reproduce n2/n6/n24/n48/n600."),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path="experiments/probe_laguerre_logit_offset_sweep.py",
+            reactivation_criteria=("re-run with a FLIP-WEIGHTED target-mass definition (the primary "
+                                   "queued reformulation), other tau, or other converged checkpoints "
+                                   "before any promotion"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("#288 damped-Newton semi-discrete OT per-class head-bias offset: solve the zero-sum b* "
@@ -191,12 +253,15 @@ def build_laguerre_ot_head_offset_v1() -> CanonicalEquation:
         units_in={"phi": "witness_sdf_logits", "target_masses": "gt_class_frequencies",
                   "tau": "softmax_temperature"},
         units_out={"offsets": "per_class_additive_logit_bias (folds into out_sdf.bias, byte-free)"},
-        empirical_anchors=(anchor_solver, anchor_gate),
+        empirical_anchors=(anchor_solver, anchor_gate, anchor_gate_n600),
         predicted_vs_empirical_residual={
             "solver_correctness_source_verified": 0.0,
             # the memo hypothesis (OT beats menon) is REFUTED: signed d_seg gap OT-vs-noOffset > 0 (worse).
             "gate_ot_minus_no_offset": GATE_D_SEG_OT_NEWTON - GATE_D_SEG_NO_OFFSET,
             "gate_menon_minus_no_offset": GATE_D_SEG_MENON - GATE_D_SEG_NO_OFFSET,
+            # n600 CONFIRMATION: same sign (both offset arms WORSE) at the full admissible scale.
+            "gate_n600_ot_minus_no_offset": GATE_N600_D_SEG_OT_NEWTON - GATE_N600_D_SEG_NO_OFFSET,
+            "gate_n600_menon_minus_no_offset": GATE_N600_D_SEG_MENON - GATE_N600_D_SEG_NO_OFFSET,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
@@ -244,6 +309,10 @@ __all__ = [
     "GATE_D_SEG_NO_OFFSET",
     "GATE_D_SEG_OT_NEWTON",
     "GATE_N",
+    "GATE_N600",
+    "GATE_N600_D_SEG_MENON",
+    "GATE_N600_D_SEG_NO_OFFSET",
+    "GATE_N600_D_SEG_OT_NEWTON",
     "build_laguerre_ot_head_offset_v1",
     "populate_laguerre_ot_head_offset_equation",
 ]
