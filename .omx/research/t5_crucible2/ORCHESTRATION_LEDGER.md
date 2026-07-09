@@ -68,8 +68,33 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       **Owed-before-launch REORDERED — new top-3:** (1) repaired pose-gate (relative-plateau + canary +
       disengaged alarm; CHEAPER); (2) full-config dry-start = startup all-gate-registration completeness;
       (3) amber×Muon per-group-clip exemption (UNBUILT) + instrumented arm. Full: `SYNTHESIS_v2_v752_20260709.md`.
-- [ ] **P4 EMPIRICAL RECESS** — suspend-to-measure any $0/governed probe the debate needs (NO concurrent
-      heavy GPU — machine-crash P0 gate; #205 STOPPED so box free, but v7.5.2 execute-at-n600 = governed).
+- [x] **P4 EMPIRICAL RECESS** — `P4_recess_20260709.md` landed. **4 measured on EXISTING artifacts
+      ($0, no GPU, no training, run dirs READ-ONLY): CONFIRMS 0 · FORCES-CHANGE 3 · INCONCLUSIVE 1.**
+      **(1) relaxation-plateau criterion — FORCES-CHANGE:** stopped-run σ_min (31 rows) is a NOISY
+      OSCILLATION (CV 0.21, RISING trend), NOT a relaxation curve; the exp-asymptote fit is DEGENERATE
+      (s_inf 0.210±1.87 = 891% uncert, covariance non-estimable, beats constant-model SSE by only 18.9%);
+      fires 0/31 (does NOT false-fire on the unconverged run) but by ACCIDENT (rising-noise pushes s_inf
+      above all data), not sane detection → owed: fit-quality guard + robust plateau statistic (rolling-slope
+      / smoothed-σ_min) before the owed-1 build. **(2) R1 canary — INCONCLUSIVE-needs-replay:** R1 runs
+      logged ZERO σ_min/jacobian telemetry (no `--jacobian-basin-*` in R1 `launch.sh`); R1 kept only the
+      ep1001 BEST ckpt → the σ_min TRAJECTORY the relative criterion needs cannot be reconstructed; NO banked
+      run has a clean σ_min curve → the positive-control is under-defined; needs a telemetry-ON replay
+      (NOT $0). **(3) amber×Muon double-normalize — FORCES-CHANGE:** MLX Muon Frobenius-normalizes
+      (`X=X/(‖X‖+1e-7)`) then orthogonalizes → update magnitude = `lr·max(1,d_out/d_in)^0.5`, INDEPENDENT of
+      gradient magnitude → a scalar per-group clip c≤1 CANNOT crush the Muon update (code-DISPROVEN); the
+      launch-blocking "assert magnitude not crushed" arm tests a non-existent mechanism → DEMOTE; re-scope to
+      direction-cosine + the real observability blind-spot. **(4) term_domination — FORCES-CHANGE on W-3:**
+      the alarm IS implemented (trainer L9222, reg-whitelist `eikonal/length/eik_steik/boundary_distance`,
+      >40%×3rows) — W-3/owed-12 "not implemented" is FACTUALLY WRONG (both audits grepped confound_gates.py,
+      missed the trainer loop); as-built fires 0/127 (correct); the synthesis paraphrase "any single loss
+      term >40%" would fire 100% on `seg` (the primary objective) → "regularizer" qualifier is load-bearing;
+      COVERAGE GAP: whitelist excludes the NEW Class-B levers (temporal_screw/area_constraint/island_amplify
+      [hit 28%]/chroma/margin-hinge) → re-scope owed-12 to EXTEND the whitelist. Net: 3 owed/launch-blocking
+      items mis-specified as-written; none invalidates the launch direction; all correctable in P5/P6.
+      `[no-triality]` · #205 UNTOUCHED · pointer 0.19110 UNMOVED.
+      <!-- P4 recess: no concurrent heavy GPU used; box untouched; reading+arithmetic+code-inspection only -->
+- [ ] **P4b (folded)** — reserved: NONE launched; P4 was fully $0-satisfiable on existing artifacts except
+      the M2 R1-canary telemetry-ON replay (governed, spec'd, NOT run in recess).
 - [ ] **P5 SECOND RED-TEAM → SEAL-TO-RECESS.**
 - [ ] **P6 RECURSIVE SEAL** — 3 consecutive clean rounds across BOTH lenses (finding-disposition VERIFY +
       DEEP-MATH MEAT HUNT: re-derive every law · hunt unconsumed levers vs the DELTA · bug-hunt the
