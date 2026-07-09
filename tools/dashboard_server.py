@@ -3000,6 +3000,38 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 .evdia{width:8px;height:8px;background:var(--good);transform:rotate(45deg);flex:0 0 auto}
 .evep{color:var(--muted);font-variant-numeric:tabular-nums}
 .hide{display:none}
+
+/* ================================================================= *
+ * DE-CARD OVERRIDE (2026-07-09) — extend the LIVE instrument language
+ * to EVERY tab: NO rounded bordered cards. Structure via hairline rules
+ * (#242a34 / #2e3542), tabular alignment, typographic hierarchy. These
+ * rules come LAST so they win by cascade; they touch ONLY border /
+ * border-radius / background — all padding/layout/content preserved.
+ * ================================================================= */
+/* section / collapsible / caption cards -> hairline-topped panels */
+.cfg,.costate,.flowcap,.flowstub,.flowctl,.wittrip,.witcredits,.orccredits{
+  background:transparent;border:0;border-top:1px solid #2e3542;border-radius:0}
+/* stat-tile groups -> hairline grid (masthead-terms notation) */
+.orcstats{gap:1px;background:#242a34;border:1px solid #242a34}
+.orcstat{background:#13151a;border:0;border-radius:0}
+.rinfo .grid{gap:1px;background:#242a34;border:1px solid #242a34;padding:0}
+.rinfo .card{background:#13151a;border:0;border-radius:0}
+/* image figures -> no card; a single hairline frame on the image itself */
+.orcfig,.witfig{background:transparent;border:0;border-radius:0;padding:0}
+.orcfig img,.witfig img,.orcxi img{border-radius:0;border:1px solid #242a34}
+.orcxi img{background:transparent}
+.orcfig figcaption,.witfig figcaption{margin-left:1px}
+/* render stages -> hairline frame, cool-bias surface, no radius */
+.flowstage{background:#161922;border:1px solid #242a34;border-radius:0}
+.flowload{background:rgba(19,21,26,.82);border:1px solid #2e3542;border-radius:0}
+/* code / eikonal chips -> squared notation */
+.orc code{border-radius:2px}
+.wcnote,.witcredits .wcnote,.flowcap .fcnote{border-radius:0}
+/* pills / badges / tags / chips -> squared notation (status tags, not lozenges) */
+.pill,.nbadge,.rinfo .badge,.flowlegend .lc{border-radius:0}
+.flowbadge,.curchip,.costate .cstag,.sbreak .sbtag,.flowplay,.flowrow select,.evchip{border-radius:2px}
+/* floating popovers kept minimal (not cards) */
+.tip{border-radius:2px}.nbest{border-radius:2px}
 </style></head>
 <body><div class="wrap">
 <div class="provh" role="note" aria-label="provenance">
