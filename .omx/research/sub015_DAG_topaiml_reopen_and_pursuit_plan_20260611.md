@@ -11699,3 +11699,37 @@ each octave). The training-collapse FIX (P0) is precisely what lets the JOINT de
 CONVERGE — the AMBER's win was joint through-R descent; the fix unblocks it. **All in-flight work maps here:**
 build-wave levers = the per-dim actuators; collapse-fix = the joint-descent enabler; LPPN/AMBER = the res+scale
 generative vehicle. Pointer 0.19110 UNMOVED (this is the objective, a MEANS until a byte-closed row). NO heavy launch.
+
+---
+## FEED-cells2pixels-deepdive (2026-07-09) — actual param counts + stability tricks + 6 bridge verdicts [no-triality]
+**Deep-dive of the ACTUAL paper HTML + repo source** (prior FEED-cells2pixels used the project-page abstract
+only). Memo: `.omx/research/cells2pixels_deepdive_bridge_20260709.md`. Authors incl **Mordvintsev** (Growing-NCA).
+**MEASURED architecture** (`models/nca2d.py`+`siren.py`, `configs/nca2d/growing.yaml`): NCA channels=32,
+fc_dim=256, 5 fixed depthwise kernels (ident+2 Sobel+2 Laplacian), update = Conv2d(160→256)-ReLU-Conv2d(256→32,
+no-bias, **zero-init** residual) ⇒ **≈49.4K params**. LPPN = **SIREN** (per-cell, input=cell-state+continuous
+local-coord `u(p)`, hidden 64×2, num_freq=1, omega_0=30, out RGBA) ⇒ **≈11K params (=22%, matches paper
+"20–30%")**. **TOTAL COUNTED ≈60K**. Coarse lattice 64×64, scale_factor 8 → decode 512² (paper: retrain-free 8192²).
+**MEASURED stability (the BRIDGE-#3 gold):** **per-param grad NORMALIZATION** `p.grad /= p.grad.norm()+1e-8`
+(stronger than clip) + **overflow loss wt 100** (state-clamp) + **state pool 1024 + seed re-inject / 32** +
+**random unroll [32,96]** + zero-init last conv. Joint NCA+SIREN under ONE optimizer, lr 1e-3, ~20K iters,
+LR-decay [1k,2k,3k]×0.3. Appearance = OT/relaxed-EMD on VGG16 relu1..5 in YUV (textures). Quant PSNR/SSIM
+DEFERRED on HTML (GAP; quality unverified).
+**SIX BRIDGE VERDICTS** (gap-to-target S−0.15=0.041):
+1. **res/#149: REAL but NEC-NOT-SUFF** — SIREN continuous-coord sine decode = the camera-res sub-pixel DOF, BUT
+   (self-refuted) R averages regardless of decode-res → LPPN alone ≠ recover-the-wall; the win stays owned by
+   training-THROUGH-R (AMBER's 0.079=half-wall came from through-R). HIGH as a mechanism, not standalone (AMBER S 0.415>0.191).
+2. **7-dim map: PARTIAL** — place STRONG (coord u(p)); chroma/luma present (YUV out, but texture-trained not argmax);
+   direction WEAK (isotropic Sobel, no learned orientation → bolt OUR −48% anisotropic basis); time = dynamic-tex
+   (optic_flow/motion_loss), not ego-se(3); scale native.
+3. **stability BRIDGE: MATCH+EXCEED our plan** — adopt (a) grad-normalize + (b) overflow-loss (we lack) + (c) pool
+   (our per-pair batch=1 has none → exposes the 5e4 blowup). CAVEAT (self-refuted): grad-normalize changes opt
+   geometry / kills seg-vs-pose scale → **owed A/B, not proven fix**; training-only ⇒ #205 byte-identity safe.
+4. **rate/rule-118: fits ONLY at ~4-bit** — 60K params: FP4≈30KB⇒rate≈0.0200 (top of AMBER band 0.0072–0.019);
+   FP8⇒0.040 OVER. MUST FP4-quant + MEASURE byte-closed. Rule COUNTED, iteration+decode FREE; amortizes per-video.
+5. **NO-FAKE #7: genuine composition IFF accounting** — THEIRS=coarse-NCA+SIREN+stabilizers; OURS=SegNet-argmax-
+   through-R objective (they do OT/VGG texture, NEVER a scorer)+#149 placement+chroma-lever+costate+byte-close.
+   The through-R objective IS the originality line; retraining their pipeline w/ their objective = borrowed FAKE.
+6. **VERDICT: top-AIML RE-OPEN for the AMBER — CONFIRMED, STAGED (FEED-ff trigger).** ADOPT: SIREN decoder +
+   grad-norm/overflow/pool/random-unroll. DON'T: OT/VGG objective, isotropic Sobel. GAPS owed (heavy, operator-GO,
+   CONTAINMENT): un-collapse A/B · across-600 amortization (#211) · FP4 byte-close ≤0.019 · joint 7-dim convergence.
+**verdict_scope: FORMULATION (positive re-open, no kill).** Pointer 0.19110 UNMOVED — MEANS, moves nothing until byte-closed n600.
