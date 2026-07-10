@@ -13404,3 +13404,64 @@ Memo: `.omx/research/reactivation_campaign_397_20260710.md`.
 - **CLOSED:** #299 mod-dim capacity (verdict_scope: formulation — the mod-dim-as-capacity-limit EXPLANATION was refuted by #300's measured island-gradient-starvation mechanism; do not re-open as bigger mod-dim).
 - Sibling-safe append (does not touch owed16v2 / v752 run dirs or sibling files). Pointer contest-CPU **0.19110
   UNMOVED** — this campaign is MEANS; it drains the reactivation queue into the config-input pool.
+
+## FEED-fractal-synth (2026-07-10) — #398B full-stack recursive-fractal-optimal synthesis: v7.5.3 × v8 as ONE stack
+
+**Design-authority output (operator "solve the optimal full stack recursive fractal optimal config and design too
+in parallel"; crucible-4-class, DESIGN ONLY, no launch).** Memo: `.omx/research/fullstack_fractal_optimal_synthesis_20260710.md`.
+Subagent `fractal-synth-398b`. Pointer contest-CPU **0.19110 UNMOVED** — MEANS.
+
+- **THE STACK STATEMENT:** one scored object W=(G,ξ,T) on the scorer obligation matrix; v7.5.3 (single trained
+  trunk) and v8 (explicit per-class/per-edge carriers) = the SAME stack at two points on the
+  parametrization-explicitness axis, sharing pose channel (banked R1 0.127 + #383 gate, now BUILT+canary-green
+  in-tree), texture trunk (#395), flat-fill pin (Unit A), frame_0 luma-only pose carrier (Unit C), rate
+  discipline, curriculum event grammar, and the terminal chain head-solve → MC-finisher (#396) → pose-gate →
+  byte-close. NOT two competing chains: v7.5.3 = the pointer-mover; v8 = the rate decomposition that feeds it
+  free structure NOW and subsumes if the trunk saturates.
+- **NEW REGISTERED LAW:** `fullstack_unique_home_assignment_v1`
+  (`src/tac/canonical_equations/fullstack_home_assignment_20260710.py`) — the clause-A one-home map: frame_0→ξ
+  only (seg 8.5e-9); frame_1 luma→G+T-fallback (the only doubly-priced block); frame_1 chroma-HF@384
+  (D-pre-imaged)→T pose-free; supp(T)=[4,8]px stem passband; Road/Lane fill=FLAT; ξ=6-dim banked twist.
+  Composed strictly of already-measured component anchors; the chroma-LEGIBILITY conjecture EXCLUDED (Fable E-1
+  falsifier). Normative: a byte outside its home is duplicate or over-priced — dedup FALLS OUT of the map.
+- **v7.5.3 skeleton:** typed-config delta over crucible_v752 — Δ1 trunk-basis cell carries the PRE-REGISTERED
+  owed16v2 decision rule (rebalanced-ON if along-tangent pays / OFF if wash, FIRE-1 caveat: only uncovered axis
+  = from-scratch trajectory-shaping); Δ2 TextureTrunk (3-arm matched-bytes A/B pins d_seg*(T)); Δ3 analytic lane
+  band TRAINED-IN (RANK-1 join); Δ4 ladder consumes the full #397 config-input pool incl. the 4 BUILT-never-fired
+  DSL levers (msal-sR #268 · DashComb · WeightEntropyPenalty · HeadOffsetSolver); Δ5 terminal band gains
+  MC-finisher 4a′. Launch-gating chain: owed16v2 → variant pick → T A/B → compose → dry-start → governed launch.
+- **v8 skeleton:** 1a screen (flat-fill + frame_0-pose-only enriched) → 1b (through-R + per-edge b_c +
+  384-band-designed chroma repairs) → 2 lane-generator coverage → R3 hood static → waterfill r*∈[0.061,0.135];
+  + the #397 v8 rate pool (per-pair colours · WeightEntropyPenalty MLX · code-table hyperprior probe ·
+  flip-weighted OT n600 · #307 contour re-price · TropNNC parsimony).
+- **P1–P12 conformance table at 5 scales** (constant→lever→section→config→chain) + **25 open questions**, each
+  mapped to a queued re-test (owed16v2 · #395 3-arm · Fable E-1/E-2/E-3 · seed/cond probe · 1a · R8 · RANK-1/2/3
+  · #396 · #270 · #316 · byte-close decode budget).
+- Triality: DAG=this FEED · equations=`fullstack_unique_home_assignment_v1` REGISTERED · DSL=N/A-with-rationale
+  (skeleton is design; `derive_crucible_v753_config` + 2 OWED-BUILD wire-ins land at build to avoid hot-file
+  collisions). #385 brief addendum appended. Pointer **0.19110 UNMOVED (means/design)**.
+
+## FEED-v8unlock (2026-07-10) — #398A "unlock v8": SPEC reconciled + owed-9 lateral carrier BUILT/MEASURED + control-arm gate PINNED · pointer 0.19110 UNMOVED
+- **The unlock, honestly:** v8's true gate is a **per-class-decoupled-field TRAINER that does not exist** (the live
+  witness trainer has ONE shared `--head {softmax,etf,additive-margin}`; grep-confirmed no decoupled mode). The 1a
+  A/B control is a TRAINED matched-compute shared-head arm — **no $0 surrogate admissible** (SPEC §2 +
+  `inc1a_killgate_run_20260710`); NOT a bounded warm-start (the decoupled arm is a different architecture). NOT fabricated.
+- **CLOSED at $0:** (1) SPEC reconciled to measured state (append-only §GEOCODER-CLOSE+OWED-9 addendum: flat-fill fill,
+  Movable 6289 B, texture NO-GO, curve-relative retired→coverage-not-coding, macro triple 0.0585/0.131/0.0725 WASH);
+  (2) #386 remainder — every piece BUILT+MEASURED+verdicted, nothing half-built (flip-bc SATURATED@no_offset, de-share
+  CONFIRMED 0.0044, curve-relative REFUTED, movable/texture #394A).
+- **owed-9 lateral 3-curve carrier BUILT ($0, 45 tests green, ruff F clean):** `_lateral_extents` +
+  `lateral_extent_poly_byte_cost` (R8) + `analytic_lateral_undriv_field` + `--include-lateral` A/B.
+  - **R8 MEASURED → SEAL-BOUNDARY item 2 CLOSED (byte half):** deg-2 6426 B / S 0.00428 · deg-3 8773 B / S 0.00584 →
+    CONFIRMS §I I1b DERIVED range [0.0040, 0.0083].
+  - **d_seg VERDICT — FORMULATION NEGATIVE (n600):** naive convex leftmost/rightmost envelope HURTS the analytic floor
+    **0.100403 → 0.119845** (Road 0.021→0.089; poly fit ~20 px — jagged envelope ≠ low-order poly). `--include-lateral`
+    DEFAULT OFF; canonical floor stays horizon-only. CARVES: the lateral field must be **margin-aware/learned**, not a
+    poly hull → folds into the decoupled-trainer build. # VERDICT_SCOPE_OK: FORMULATION-scoped (analytic hard hull), not the FAMILY
+- **PINNED unlock sequence:** B1 decoupled-field trainer BUILD (∂φ_c/∂θ_{c'}=0, 5 field heads) → E1 governed decoupled
+  Stage-A (→P_dec) → E2 matched-control (≥3 seeds) → E3 evaluate_kill → E4 per-edge b_c + through-R + byte-close.
+  Cost-asymmetry input to #385: v8 needs a trainer BUILD + 2 EVENTS before any ruling; v7.5.2 is directly launchable.
+- Triality: DSL N/A (decoupled `--head` Lever owed to B1) · equations `v8_lateral_extent_carrier_r8_measured_and_analytic_negative_20260710`
+  on `v8_geometric_rate_decomposition_v1` (8 anchors) · memo `.omx/research/v8_unlock_398a_20260710.md`.
+- Sibling-safe append (no touch to texture_trunk #395 / mc_finisher #396 / v752 run dirs / reactivation-397). Pointer
+  contest-CPU **0.19110 UNMOVED** — MEANS.

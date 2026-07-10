@@ -166,6 +166,10 @@ from tac.canonical_equations.focal_gradient_concentration_20260705 import (
     focal_weight_ratio,
     populate_focal_gradient_concentration_equation,
 )
+from tac.canonical_equations.fullstack_home_assignment_20260710 import (
+    build_fullstack_unique_home_assignment_v1,
+    populate_fullstack_unique_home_assignment_equation,
+)
 from tac.canonical_equations.horizon_weighted_margin_20260709 import (
     build_horizon_weighted_margin_v1,
     populate_horizon_weighted_margin_equation,
@@ -388,6 +392,7 @@ __all__ = [
     "build_fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
     "build_focal_gradient_concentration_v1",
     "build_frozen_scorer_forward_batch_dependence_v1",
+    "build_fullstack_unique_home_assignment_v1",
     "build_horizon_weighted_margin_v1",
     "build_independent_flicker_jitter_dseg_floor_smooth_optimal_v1",
     "build_laguerre_ot_head_offset_v1",
@@ -469,6 +474,7 @@ __all__ = [
     "populate_dseg_aware_fourier_taper_equation",
     "populate_focal_gradient_concentration_equation",
     "populate_frozen_scorer_forward_batch_dependence_equation",
+    "populate_fullstack_unique_home_assignment_equation",
     "populate_horizon_weighted_margin_equation",
     "populate_initial_equations",
     "populate_laguerre_ot_head_offset_equation",

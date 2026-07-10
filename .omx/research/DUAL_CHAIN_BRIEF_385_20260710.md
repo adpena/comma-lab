@@ -344,3 +344,12 @@ Pointer contest-CPU 0.19110 UNMOVED; every row above is advisory/through-R MEANS
 
 ## Canonical equations (Catalog #344)
 Measured rows in this brief are anchored in `tac.canonical_equations`: `curvelet_directional_basis_dseg_reduction_v1` (owed-16 realized-transfer anchor `owed16_realized_transfer_measured_zero_20260710`) · `segnet_stem_nyquist_alias_wall_v1` + `segnet_through_r_texture_price_list_v1` (texture price list) · `roadlane_grating_composition_refuted_v1` (Unit A) · `posenet_luma_chroma_sensitivity_asymmetry_v1` (Unit C) · `textured_power_diagram_sufficient_statistic_v1` + `flip_margin_step_law_v1` (Fable) · `texture_trunk_band_is_stem_passband_v1` (#395) · `exact_metric_mc_finisher_v1` (#396) · `rate_mdl_cosmological_constant_reverse_waterfill_v1` + `dseg_aware_fourier_taper_reweight_v1` (Unit B).
+
+**ADDENDUM (2026-07-10, FEED-fractal-synth — #398B):** the dual-chain wall now has its UNIFYING design —
+`fullstack_fractal_optimal_synthesis_20260710.md`: v7.5.3 × v8 solved as ONE stack (W=(G,ξ,T) on the obligation
+matrix; shared pose/texture/fill/curriculum/terminal-chain; v7.5.3 = pointer-mover, v8 = rate decomposition
+feeding it free structure). New registered law `fullstack_unique_home_assignment_v1` (clause-A one-home map —
+dedup falls out). v7.5.3 skeleton carries the PRE-REGISTERED owed16v2 decision rule (basis rebalanced-ON vs OFF)
++ a ladder consuming the full #397 config-input pool (incl. the 4 built-never-fired DSL levers); v8 increments
+enriched with the flat-fill pin + frame_0-pose-only carrier + the rate pool. 25 open questions each mapped to a
+queued re-test. Design-only; no launch; pointer 0.19110 UNMOVED.
