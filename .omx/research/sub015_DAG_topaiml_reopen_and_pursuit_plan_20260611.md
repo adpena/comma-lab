@@ -14450,3 +14450,18 @@ supported scope, INSTANCE<FORMULATION<FAMILY<PARADIGM):
 - **Lever-D temporal NO-GO (#280):** verdict_scope: FORMULATION — the b/flip×recovery economics at the
   measured operating point; reactivation criteria pinned in the deferral ledger.
 Pointer 0.19108282 [contest-CPU] UNMOVED (scope-declaration bookkeeping; MEANS).
+
+### FEED-409-killpgrp-sigkill (2026-07-10) — [no-triality] apparatus/safety: SIGTERM→grace→SIGKILL escalation
+Task #409 (operator-GO "clear the residual items first"; #173 clearance flagged the SIGTERM-only last-resort
+watchdog kill as a LOW defense-in-depth residual — the sanctioned path is already safe via safe_run's cascade
++ --rss-cap-mb). `memory_guard._kill_pgrp` now ESCALATES: SIGTERM the vetted custody arm's process group →
+poll a DERIVED grace window (max(3s, watch interval), not a magic constant) → SIGKILL ONLY IF still alive AND
+a FRESH-sampled control-plane re-check (`pgid_is_killable_custody_arm`) re-confirms the pgid is STILL a killable
+custody training arm. **The exempt set gates BOTH signals** — a pgid recycled onto the control plane during the
+grace window is the molt CP-kill class (#172) and is NEVER SIGKILLed; SIGKILL is group-only (no os.kill(pid)
+fallback — a dead group's leader pid can be recycled). The 8-gate predicate was extracted VERBATIM into
+`_record_passes_kill_gates` (SINGLE SOURCE OF TRUTH shared by select_kill_victim + the re-check; no gate weakened
+→ #172 invariants strengthened, not weakened). 32 new tests; 174 guard-family tests green. 3-clean-pass adversarial
+review: Round 1 MEDIUM (SIGKILL pid-fallback = recycled-pid CP-kill vector → dropped), Rounds 2-4 CLEAN. Commit
+4e3a36323. Triality: DSL/equations **N/A** (apparatus safety hardening, not a witness lever or law).
+Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS).
