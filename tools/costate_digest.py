@@ -599,6 +599,27 @@ def section_corpus_recall(conv: dict | None) -> tuple[list[str], dict | None]:
         return [f"corpus recall: unavailable ({type(exc).__name__})"], None
 
 
+def section_graph_memory() -> tuple[str | None, dict | None]:
+    """#411 RECONSTRUCT-ON-DEMAND: surface the graph-memory (the DAG-as-graph) so
+    recall-by-reconstruction is a STRUCTURAL session-start affordance, not grep-by-
+    volition (the read side of L83 / the #346 retrieval-first nexus done as a graph).
+    Read-only + fast (counts the cached graph's JSONL lines; NEVER rebuilds at session
+    start). Score-neutral, fail-open."""
+    try:
+        from tac.graph_memory import cache_paths
+        npath, epath = cache_paths()
+        if not (npath.is_file() and epath.is_file()):
+            return ("graph-memory: not yet built — reconstruct-on-demand via "
+                    "`tools/graph_memory_recall.py --rebuild` (the DAG-as-graph, #411)"), None
+        n_nodes = sum(1 for _ in npath.open(encoding="utf-8"))
+        n_edges = sum(1 for _ in epath.open(encoding="utf-8"))
+        line = (f"graph-memory: {n_nodes} nodes / {n_edges} edges — RECONSTRUCT before "
+                f"grepping: `tools/graph_memory_recall.py \"<query>\"` (#411 DAG-as-graph)")
+        return line, {"nodes": n_nodes, "edges": n_edges}
+    except Exception as exc:
+        return f"graph-memory: unavailable ({type(exc).__name__})", None
+
+
 def section_review_counter() -> tuple[str | None, dict | None]:
     """Open review-counter state (sibling ledger; soft — omit entirely if absent)."""
     row = _last_jsonl_row(_REVIEW_COUNTER) if _REVIEW_COUNTER.exists() else None
@@ -675,6 +696,10 @@ def build_digest() -> tuple[list[str], dict]:
 
     recall_lines, data["corpus_recall"] = section_corpus_recall(data["active_convening"])
     lines.extend(recall_lines)
+
+    gm_line, data["graph_memory"] = section_graph_memory()
+    if gm_line:
+        lines.append(gm_line)
 
     rc_line, data["review_counter"] = section_review_counter()
     if rc_line:
