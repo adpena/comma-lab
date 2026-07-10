@@ -20,6 +20,9 @@ Start with the files that describe the current public repository contract:
 ## Current Public Docs
 
 - [docs/paper/](paper/): technical paper sources and result methodology.
+- [docs/paper/NOTEBOOKS.md](paper/NOTEBOOKS.md): canonical published-notebook
+  URLs (molab competition entry) + the own-paper notebook forward plan. Every
+  published notebook URL is recorded here the moment it exists.
 - [docs/pr_writeups/](pr_writeups/): public challenge writeups and release
   cut material.
 - [docs/runbooks/](runbooks/): operator runbooks for exact eval, public
