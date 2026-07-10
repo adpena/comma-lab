@@ -2724,6 +2724,49 @@ def byte_close_verdict_landed(report: dict) -> bool:
     return not parity.get("skipped", True)
 
 
+# ---------------------------------------------------------------------------
+# Clause-A geometric-section derivability audit (operator no-duplicate-data binding 2026-07-09 +
+# design_philosophies_eightfold P1 "one fact, one store, one key"). SCORE-NEUTRAL, READ-ONLY ->
+# defaults ON (CLAUDE.md "'Off' is a tracked queue": observability that only reads is not gate-able).
+# Byte-identity: report-only; adds a report key, NEVER mutates archive.zip / the blob / any packet byte.
+# ---------------------------------------------------------------------------
+_DEDUP_AUDIT_MAX_FRAMES = 4  # cap frames for a $0 read-only audit (per-frame builds the analytic lane prior)
+
+
+def dedup_audit_section(gt_cache: str | None, *, max_frames: int = _DEDUP_AUDIT_MAX_FRAMES) -> dict | None:
+    """Pairwise derivability table over the archive's GEOMETRIC sections (the SegNet-argmax ledger rows
+    horizon/lane/movable/hood/separatrix — the geometric homes the structured sections code). A
+    shared-pixel pair is a byte one section could reconstruct from another (a double-count with no single
+    geometric home) — the clause-A "no duplicate data" audit surfaced per run. Sources ``lstars`` (the GT
+    SegNet argmax) from the byte-close ``--gt-cache`` npz, bounded to ``max_frames`` for a $0 read-only
+    pass. Fail-open: returns ``None`` (never raises) when no gt-cache / no ``lstars`` key / any error —
+    an audit that cannot run must never break the byte-close."""
+    if not gt_cache:
+        return None
+    try:
+        from tac.boundary_math.movable_deshare import pairwise_dedup_audit
+        cp = Path(gt_cache)
+        if not cp.is_file():
+            return None
+        with np.load(cp, allow_pickle=False) as z:
+            if "lstars" not in getattr(z, "files", []):
+                return None
+            lst = np.asarray(z["lstars"])
+        if lst.ndim == 2:
+            lst = lst[None]
+        if lst.ndim != 3 or lst.shape[0] == 0:
+            return None
+        nframes = int(min(max_frames, lst.shape[0]))
+        audit = pairwise_dedup_audit(lst[:nframes])
+        audit["source_gt_cache"] = str(cp)
+        audit["n_frames_audited"] = nframes
+        audit["note"] = (audit.get("note", "") + " [clause-A per-run derivability audit; report-only, "
+                         "score-neutral, no archive mutation — P1 one-fact-one-store-one-key]").strip()
+        return audit
+    except Exception as exc:  # noqa: BLE001 — observability must NEVER break the byte-close
+        return {"unavailable": f"{type(exc).__name__}: {exc}", "gt_cache": str(gt_cache)}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ckpt-dir", type=Path, required=True,
@@ -2969,6 +3012,10 @@ def main(argv: list[str] | None = None) -> int:
         "name": tier.name, "contest": tier.contest, "bit_exact_contract": tier.bit_exact_contract,
         "eval_device": eval_device, "inflate_env": _tier_env, "note": tier.note,
     }
+    # clause-A geometric-section derivability audit (default-ON observability; report-only, byte-identical).
+    _dedup = dedup_audit_section(args.gt_cache)
+    if _dedup is not None:
+        report["dedup_audit"] = _dedup
     out = args.out or (_REPO / "reports" / f"levelset_byte_close_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))

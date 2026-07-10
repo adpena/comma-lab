@@ -477,6 +477,9 @@ def duty_to_measure_ranked(
     path: Path | None = None,
     sig_path: Path | None = None,
     pointer_path: Path | None = None,
+    term_current: "dict[str, float] | None" = None,
+    term_floors: "dict[str, object] | None" = None,
+    floor_aware: bool = True,
 ) -> list[dict]:
     """The duty-to-measure queue RANKED by relative significance (fraction of remaining descent).
 
@@ -487,6 +490,17 @@ def duty_to_measure_ranked(
     often a *missing wire* — a duty-to-BUILD); registered owed levers with no ΔS row are surfaced as a
     duty-to-ESTIMATE queue (an un-estimated lever is itself orphaned signal). Ties / unknowns break by
     est_delta_s then name — the eyeball is removed from the loop.
+
+    **FLOOR-AWARE (P8 FLOOR-FIRST; design_philosophies_eightfold_20260709).** When ``floor_aware``
+    (default), each row consults its target TERM's MEASURED floor (``term_floors`` overrides
+    :func:`tac.witness_dsl.term_floors.resolve_term_floors`) with value-provenance: a lever whose target
+    term is AT its floor ranks ~0 (``floor_status=AT_FLOOR``, rel_sig 0); a lever whose est exceeds the
+    S-headroom to its floor is CAPPED to that headroom. This ONLY changes rel_sig when a measured
+    ``term_current`` value (axis -> current term value, e.g. the live run's d_seg) makes the at-floor
+    judgement possible — so with no ``term_current`` (the default) rel_sig + ordering are UNCHANGED and
+    every row simply gains surfaced floor metadata (``floor_status=FLOOR_UNMEASURED`` /
+    ``FLOOR_KNOWN_CURRENT_UNKNOWN``). NO-FAKE: only a clean numeric MEASURED floor caps; regime-dependent
+    / LOOSE / owed floors are surfaced but never change the ranking (never a guessed floor).
     """
     if s_current is None:
         s_current = read_pointer_s(pointer_path)
@@ -496,6 +510,17 @@ def duty_to_measure_ranked(
     # is correctly surfaced as duty-to-MEASURE (never-fired) rather than duty-to-BUILD (unregistered).
     sig = canonicalize_significance_keys(_read_significance(sig_path), known_set)
 
+    floors: dict[str, object] = {}
+    if floor_aware:
+        if term_floors is not None:
+            floors = dict(term_floors)
+        else:
+            try:
+                from tac.witness_dsl.term_floors import resolve_term_floors
+                floors = resolve_term_floors()
+            except Exception:
+                floors = {}
+
     rows: list[dict] = []
     for lever in sorted(owed | set(sig.keys())):
         srow = sig.get(lever)
@@ -504,13 +529,34 @@ def duty_to_measure_ranked(
         registered = lever in known_set
         # activation state only meaningful for registered levers; findings not-yet-a-lever = a build gap.
         state = activation_status(lever, path).state if registered else "not-registered"
-        rel = relative_significance(est, s_current, s_target)
+
+        # FLOOR-FIRST consult: cap the achievable ΔS by the term's headroom-to-floor (P8). eff_est == est
+        # whenever no measured floor + measured current value fire, so the default path is unchanged.
+        eff_est = est
+        floor_status = None
+        floor_meta: dict | None = None
+        headroom_s = None
+        if floor_aware:
+            floor = floors.get(axis) if axis else None
+            cur = term_current.get(axis) if (term_current and axis) else None
+            try:
+                from tac.witness_dsl.term_floors import apply_term_floor
+                app = apply_term_floor(axis, est, cur, floor)
+                floor_status = app.floor_status
+                headroom_s = app.headroom_s
+                eff_est = app.capped_est if app.capped_est is not None else est
+                floor_meta = app.floor.to_dict() if app.floor is not None else None
+            except Exception:  # fail-open: floor machinery must NEVER break the ranking
+                floor_status, floor_meta, headroom_s, eff_est = None, None, None, est
+
+        rel = relative_significance(eff_est, s_current, s_target)
         rel_dseg = None
-        if est is not None and axis == "d_seg":
-            rel_dseg = (float(est) / _S_PER_DSEG) / TARGET_D_SEG
+        if eff_est is not None and axis == "d_seg":
+            rel_dseg = (float(eff_est) / _S_PER_DSEG) / TARGET_D_SEG
         rows.append({
             "lever": lever,
-            "est_delta_s": est,
+            "est_delta_s": est,                 # the RAW estimate (provenance preserved)
+            "est_floor_capped": eff_est,        # est after floor cap (== est when no cap)
             "delta_s_label": (srow.get("delta_s_label") if srow else None),
             "source_anchor": (srow.get("source_anchor") if srow else None),
             "axis": axis,
@@ -521,6 +567,9 @@ def duty_to_measure_ranked(
             "in_duty_queue": lever in owed,
             "registered": registered,
             "activation_state": state,
+            "floor_status": floor_status,
+            "floor": floor_meta,
+            "floor_headroom_s": headroom_s,
             "s_current": s_current,
             "s_target": s_target,
             "gap": (None if s_current is None else float(s_current) - float(s_target)),

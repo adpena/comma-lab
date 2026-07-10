@@ -440,3 +440,81 @@ def format_verdict_trend_line(alarm: VerdictTrendAlarm | dict) -> str:
     return (f"verdict-trend: ep{ep} d_seg {a.get('d_seg_best'):.5f}→{a.get('d_seg_latest'):.5f} "
             f"{tag} +{a.get('rise_rel_gap', 0) * 100:.1f}% of remaining gap over "
             f"{a.get('best_stale_verdicts')} verdict(s){pc} [advisory NON-PROMOTABLE]")
+
+
+# --------------------------------------------------------------------------- #
+# P4 CANARY suite (design_philosophies_eightfold P4 "no meter without a canary"): a $0
+# positive + negative control that PROVES this meter can see a decoupling before its
+# readings gate anything. Pattern mirrors sigma_min_plateau.canary_suite. This meter is
+# ADVISORY-only (never a score authority), but P4 binds every measurement surface.
+# --------------------------------------------------------------------------- #
+def synthetic_decoupling_verdicts(
+    *, best_dseg: float = 0.010, n_rise: int = 6, rise_step: float = 0.002,
+    ep_step: int = 4, loss_start: float = 400.0, loss_step: float = -18.0,
+    seg_form: str = "tau_softplus",
+) -> list[dict]:
+    """The SYNTHETIC POSITIVE control: verdict d_seg descends to a best, then RISES for ``n_rise``
+    verdicts WHILE the train seg-loss (``ep_loss``) keeps DESCENDING — a textbook TRAIN<->VERDICT
+    DECOUPLING the meter MUST fire on. Two lead-in descent rows establish the best; the rise is
+    persisted + material (well above DECOUPLE_REL_GAP_FLOOR) so it is not the EMA-lag transient lane."""
+    rows: list[dict] = []
+    ep = 0
+    loss = loss_start
+    # descent to the best
+    for d in (best_dseg + 0.010, best_dseg + 0.005, best_dseg):
+        rows.append({"stage": "verdict", "seg_form": seg_form, "epoch": ep, "d_seg": d, "ep_loss": loss})
+        ep += ep_step
+        loss += loss_step
+    # persisted material rise while loss keeps descending
+    for i in range(1, n_rise + 1):
+        rows.append({"stage": "verdict", "seg_form": seg_form, "epoch": ep,
+                     "d_seg": best_dseg + i * rise_step, "ep_loss": loss})
+        ep += ep_step
+        loss += loss_step
+    return rows
+
+
+def synthetic_codescending_verdicts(
+    *, start_dseg: float = 0.020, step: float = -0.0016, n: int = 9, ep_step: int = 4,
+    loss_start: float = 400.0, loss_step: float = -18.0, seg_form: str = "tau_softplus",
+) -> list[dict]:
+    """The NEGATIVE control: verdict d_seg descends monotonically WHILE ep_loss also descends (a clean,
+    co-descending, converging run). The meter must NOT fire (nothing is rising / decoupling)."""
+    rows: list[dict] = []
+    for i in range(n):
+        rows.append({"stage": "verdict", "seg_form": seg_form, "epoch": i * ep_step,
+                     "d_seg": max(1e-4, start_dseg + i * step), "ep_loss": loss_start + i * loss_step})
+    return rows
+
+
+@dataclass(frozen=True)
+class VerdictTrendCanaryResult:
+    """Outcome of the $0 verdict-trend canary. ``passed`` iff the POSITIVE (decoupling) control fires
+    TRAIN_VERDICT_DECOUPLING AND the NEGATIVE (co-descending) control does NOT fire — the P4 proof that
+    this meter can distinguish a real decoupling from a clean converging run before it gates anything."""
+
+    passed: bool
+    positive_fired_decoupling: bool     # must be True
+    negative_fired: bool                # must be False
+    positive_classification: str
+    negative_classification: str
+    reason: str
+
+
+def canary_suite() -> VerdictTrendCanaryResult:
+    """Run the $0 positive + negative controls for the verdict-trend alarm (P4 known-effect canary)."""
+    pos = verdict_trend_alarm(synthetic_decoupling_verdicts())
+    neg = verdict_trend_alarm(synthetic_codescending_verdicts())
+    pos_ok = pos.classification == TRAIN_VERDICT_DECOUPLING
+    neg_quiet = not neg.fired()
+    passed = pos_ok and neg_quiet
+    reason = ("canary PASS: synthetic decoupling FIRES TRAIN_VERDICT_DECOUPLING and a clean "
+              "co-descending run stays quiet — meter trustworthy"
+              if passed else
+              "canary FAIL: " + ("" if pos_ok else "decoupling positive control did NOT fire; ")
+              + ("" if neg_quiet else "co-descending negative control FIRED (false positive); ")
+              + "→ meter UNTRUSTED")
+    return VerdictTrendCanaryResult(
+        passed=passed, positive_fired_decoupling=pos_ok, negative_fired=neg.fired(),
+        positive_classification=pos.classification, negative_classification=neg.classification,
+        reason=reason)

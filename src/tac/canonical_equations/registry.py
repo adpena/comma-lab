@@ -551,6 +551,9 @@ def _equation_from_dict(payload: Mapping[str, Any]) -> CanonicalEquation:
             source_artifact=a["source_artifact"],
             measurement_method=a["measurement_method"],
             provenance=_prov_from_dict(a["provenance"]),
+            # P2 noise floor (additive; absent => None for legacy rows — round-trip fidelity).
+            noise_floor=a.get("noise_floor"),
+            noise_floor_provenance=a.get("noise_floor_provenance"),
         )
         for a in payload.get("empirical_anchors", [])
     )

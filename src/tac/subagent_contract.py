@@ -30,6 +30,7 @@ __all__ = [
     "CONFIRMED_VS_PLAUSIBLE",
     "CONTRACT_CONSTANT_NAMES",
     "CONTROL_LAW_CLAUSE",
+    "EIGHTFOLD_CLAUSE",
     "EXECUTE_DONT_READ",
     "FINAL_MESSAGE_REGROUNDING",
     "FIXES_ARE_UNREVIEWED",
@@ -196,6 +197,28 @@ COMMIT_DISCIPLINE = (
     "and ignores the working tree, so no sibling hunk is absorbed)."
 )
 
+#: The eight design philosophies (operator 2026-07-09 "Encode all"; memory
+#: design_philosophies_eightfold_20260709). One compact paragraph so every composed dispatch
+#: carries them — the honesty disciplines that fall out of the geometry-first stance + clauses A/B.
+EIGHTFOLD_CLAUSE = (
+    "DESIGN PHILOSOPHIES (design_philosophies_eightfold_20260709): honor the eight — "
+    "P1 one fact, one store, one key (no parallel key-spaces); "
+    "P2 every comparison carries its noise floor (a Δ below the composed floor is INSTANCE-level, "
+    "not a verdict — and our single-seed spine leaves across-seed variance UNKNOWN); "
+    "P3 tolerance budgets (the dual waterfill — each pipeline stage proves it stays inside its "
+    "distortion allocation); P4 no meter without a canary (a new measurement surface ships with a "
+    "positive + negative control before its readings count); P5 no arm without its in-run control "
+    "(borrowed baselines forbidden; both A/B arms under identical conditions); P6 the sequence is the "
+    "object (temporal first-class, not per-frame fixes); P7 falsifier before build (name the kill "
+    "criterion + pre-registered threshold before starting); P8 floor-first (derive/measure a term's "
+    "floor, optimize only the gap-to-floor, a surface at floor is CLOSED to polish). Plus the two "
+    "clauses: A no duplicate data — every byte names ONE geometric home; B waterfill bits by marginal "
+    "distortion. Also: fmtools (our on-device FM classification primitive, #259) is available for "
+    "hard/fuzzy classification surfaces — use it as an ADVISORY classifier where regex/name heuristics "
+    "are uncertain (auto-push hook #375 is the usage exemplar), NEVER as sole authority on "
+    "score-relevant decisions."
+)
+
 #: The craft handoff binds every subagent; cite it so the subagent actually loads it.
 MANUAL_CITATION = (
     "OPERATING MANUAL: docs/operating_manual_craft_handoff.md is binding for this task — "
@@ -276,6 +299,7 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "RETRIEVAL_FIRST_CLAUSE",
     "REVIEW_STATUS_CLAUSE",
     "CITATION_CLAUSE",
+    "EIGHTFOLD_CLAUSE",
     "NEVER_REASONING_ECHO",
     "OWN_ROUND1_REVIEW",
     "TRIALITY_WIRING",
@@ -313,6 +337,7 @@ KEY_PHRASES: dict[str, str] = {
     "RETRIEVAL_FIRST_CLAUSE": "STORES CONSULTED",
     "REVIEW_STATUS_CLAUSE": "fresh-eyes-reviewed(N)",
     "CITATION_CLAUSE": "authors · year · exact title · arXiv ID or DOI",
+    "EIGHTFOLD_CLAUSE": "one fact, one store, one key",
     "NEVER_REASONING_ECHO": "refusal storms",
     "OWN_ROUND1_REVIEW": "resets the clean-pass counter",
     "TRIALITY_WIRING": "SAME commit batch",
@@ -334,8 +359,8 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
     promises, final-message re-grounding, state-the-boundaries, anti-goldplating,
     fresh-context verification), the four #346 retrieval-first clauses (recursion-default,
     control laws, retrieval-first, review-status provenance), the requirement-S citation
-    clause, the #405 commit-through-serializer discipline block, plus the operating-manual
-    citation.
+    clause, the eight design philosophies clause (P1-P8 + clauses A/B + fmtools availability),
+    the #405 commit-through-serializer discipline block, plus the operating-manual citation.
 
     Args:
         review: include the #337 own-round-1 adversarial-review block (default True;
@@ -358,6 +383,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         RETRIEVAL_FIRST_CLAUSE,
         REVIEW_STATUS_CLAUSE,
         CITATION_CLAUSE,
+        EIGHTFOLD_CLAUSE,
     ]
     if review:
         blocks.append(OWN_ROUND1_REVIEW)

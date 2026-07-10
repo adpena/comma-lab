@@ -87,6 +87,7 @@ from tac.canonical_equations.equation import (
     DomainOfValidityViolation,
     EmpiricalAnchor,
     InvalidEquationError,
+    delta_exceeds_floor,
 )
 from tac.canonical_equations.mlx_matmul_m_series_floor import (
     build_mlx_matmul_drift_m_series_canonical_floor_v1,
@@ -336,6 +337,7 @@ __all__ = [
     "EmpiricalAnchor",
     "EvaluatorError",
     "EvaluatorNotRegisteredError",
+    "delta_exceeds_floor",
     "LAWREF_BUILTIN_EVALUATORS",
     "get_evaluator",
     "has_evaluator",

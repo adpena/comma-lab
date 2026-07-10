@@ -175,6 +175,13 @@ class EmpiricalAnchor:
     measurement_method: str
     provenance: Provenance
     empirical_verification_status: str | None = None
+    # P2 (design_philosophies_eightfold_20260709 "every comparison carries its noise floor"):
+    # OPTIONAL composed noise floor for THIS anchor's Δ (residual). None = legacy/UNMEASURED (the
+    # single-seed deterministic spine leaves across-seed variance unknown until measured). When set,
+    # a residual at/below noise_floor is INSTANCE-level, not a verdict (see delta_exceeds_floor).
+    # Additive + legacy-compatible: absent => None; 327 legacy rows behave unchanged.
+    noise_floor: float | None = None
+    noise_floor_provenance: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.anchor_id, str) or not self.anchor_id.strip():
@@ -216,6 +223,17 @@ class EmpiricalAnchor:
                     "(per Catalog #363 canonical 4-value taxonomy) OR None for "
                     "backward-compat with 327 legacy rows per Catalog #110/#113 APPEND-ONLY"
                 )
+        # P2 noise-floor validation (additive; None = legacy/UNMEASURED). A set floor must be a
+        # non-negative number and MUST cite a provenance (NO-FAKE: never a guessed floor).
+        if self.noise_floor is not None:
+            if not isinstance(self.noise_floor, (int, float)) or self.noise_floor != self.noise_floor:
+                raise InvalidEquationError("noise_floor must be a non-negative number or None")
+            if self.noise_floor < 0:
+                raise InvalidEquationError("noise_floor must be >= 0 (a composed noise magnitude)")
+            if not (isinstance(self.noise_floor_provenance, str) and self.noise_floor_provenance.strip()):
+                raise InvalidEquationError(
+                    "noise_floor requires a non-empty noise_floor_provenance (NO-FAKE: every floor "
+                    "cites how it was measured/bounded — P2)")
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-safe dict (Provenance flattened via its own as_dict)."""
@@ -237,7 +255,31 @@ class EmpiricalAnchor:
         # #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE discipline.
         if self.empirical_verification_status is not None:
             payload["empirical_verification_status"] = self.empirical_verification_status
+        # P2 noise floor: only emit when set, to preserve byte-stable serialization of legacy rows.
+        if self.noise_floor is not None:
+            payload["noise_floor"] = float(self.noise_floor)
+            payload["noise_floor_provenance"] = self.noise_floor_provenance
         return payload
+
+
+def delta_exceeds_floor(anchor: "EmpiricalAnchor", delta: float | None = None) -> bool | None:
+    """P2 verdict-clearance predicate: is this anchor's Δ ABOVE its composed noise floor?
+
+    Returns:
+      * ``None`` when the anchor has no ``noise_floor`` (UNMEASURED — the comparison cannot be
+        cleared as a verdict; treat as INSTANCE-level per the verdict-scope ladder), OR
+      * ``True`` when ``|delta| > noise_floor`` (distinguishable from noise — a verdict is admissible
+        on the noise-floor axis), OR
+      * ``False`` when ``|delta| <= noise_floor`` (within the noise floor — INSTANCE-level, not a verdict).
+
+    ``delta`` defaults to the anchor's own ``residual`` (the anchor's measured Δ magnitude). Pass an
+    explicit ``delta`` to clear a DIFFERENT comparison against the same anchor's floor. NO-FAKE: a floor
+    of ``None`` is honestly ``None`` here — never silently treated as 0 (which would falsely clear every Δ).
+    """
+    if anchor.noise_floor is None:
+        return None
+    d = abs(float(anchor.residual if delta is None else delta))
+    return d > float(anchor.noise_floor)
 
 
 @dataclass(frozen=True)
@@ -445,4 +487,5 @@ __all__ = [
     "DomainOfValidityViolation",
     "EmpiricalAnchor",
     "InvalidEquationError",
+    "delta_exceeds_floor",
 ]

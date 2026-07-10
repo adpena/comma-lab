@@ -159,7 +159,20 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
         for r in recs[:2]:
             pd = r.get("predicted_dS")
             pd_s = f"{pd:+.4f}" if isinstance(pd, (int, float)) else "?"
-            lines.append(f"  rec: {r.get('action')} ΔS {pd_s}/{r.get('horizon_epochs')}ep")
+            # P2 (design_philosophies_eightfold): EVERY comparison carries its noise floor. The rec's
+            # predicted_dS_band IS the composed noise floor. No band -> cited Δ lacks a floor -> INSTANCE
+            # only (never above advisory). A band spanning 0 -> Δ within noise -> INSTANCE. Else state Δ/floor.
+            # P9 (proxies are poison, use the thing itself): the band gates predicted_dS in the SAME units
+            # (ΔS) as the Δ — never a proxy-unit floor (the R7 category-error lesson).
+            band = r.get("predicted_dS_band")
+            if not (isinstance(band, (list, tuple)) and len(band) == 2
+                    and all(isinstance(x, (int, float)) for x in band)):
+                floor_tag = " [INSTANCE — no noise floor]"
+            elif band[0] <= 0.0 <= band[1]:
+                floor_tag = f" [INSTANCE — Δ within noise floor [{band[0]:+.4f},{band[1]:+.4f}]]"
+            else:
+                floor_tag = f" (floor [{band[0]:+.4f},{band[1]:+.4f}])"
+            lines.append(f"  rec: {r.get('action')} ΔS {pd_s}/{r.get('horizon_epochs')}ep{floor_tag}")
         if not recs:
             lines.append("  rec: (none identifiable)")
         lines.insert(0, head)
@@ -305,6 +318,17 @@ def _duty_marker(r: dict) -> str:
     return "*" if r.get("activation_state") == "never-fired" else ""
 
 
+def _floor_marker(r: dict) -> str:
+    """P8 floor marker (design_philosophies_eightfold): !FLOOR=target term AT its measured floor (buys ~0)
+    · ^cap=est capped to the headroom-to-floor · ''=above floor / floor unmeasured. Score-neutral display."""
+    st = r.get("floor_status")
+    if st == "AT_FLOOR":
+        return "!FLOOR"
+    if st == "HEADROOM_CAPPED":
+        return "^cap"
+    return ""
+
+
 def format_duty_to_measure_line(ranked: list[dict], top_n: int = _DUTY_TOP_N) -> str:
     """Pure formatter for the ranked duty-to-measure queue (unit-testable without touching real state).
     Renders each lever with its % of remaining descent and orphan marker; leads with the highest
@@ -316,31 +340,56 @@ def format_duty_to_measure_line(ranked: list[dict], top_n: int = _DUTY_TOP_N) ->
     def _cell(r: dict) -> str:
         pct = r.get("rel_sig_pct")
         tag = f" {pct:g}%" if pct is not None else " ?%"
-        return f"{r['lever']}{_duty_marker(r)}{tag}"
+        return f"{r['lever']}{_duty_marker(r)}{_floor_marker(r)}{tag}"
 
     top = ranked[:top_n]
     more = len(ranked) - len(top)
     anchor = (f"pointer {s_cur:.5f}→{tgt:g}" if isinstance(s_cur, float) else "pointer unavailable")
-    return (f"duty-to-measure ({owed_n} owed; ranked by % of remaining descent, {anchor}; "
-            f"*=never-fired ~=unbuilt ?=est-owed): "
+    return (f"duty-to-measure ({owed_n} owed; ranked by % of remaining descent [P8 floor-aware], {anchor}; "
+            f"*=never-fired ~=unbuilt ?=est-owed !FLOOR=at-floor ^cap=headroom-capped): "
             + ", ".join(_cell(r) for r in top)
             + (f" (+{more} more)" if more > 0 else ""))
 
 
-def section_duty_to_measure() -> tuple[str, dict | None]:
+def _live_term_current(annulus_data: dict | None) -> dict[str, float] | None:
+    """Extract the live run's MEASURED current term value(s) for P8 floor-aware ranking. Today only
+    ``d_seg`` is cleanly available (the annulus SENSE row's ``overall_d_seg``, an advisory MEASURED
+    witness d_seg); d_pose/rate current-term stores are OWED (returned absent, honestly). Returns None
+    when there is no live run (floors then surface as FLOOR_KNOWN_CURRENT_UNKNOWN — an owed measurement)."""
+    if not annulus_data:
+        return None
+    try:
+        d_seg = (annulus_data.get("annulus") or {}).get("overall_d_seg")
+        if isinstance(d_seg, (int, float)) and d_seg == d_seg:  # not NaN
+            return {"d_seg": float(d_seg)}
+    except Exception:
+        return None
+    return None
+
+
+def section_duty_to_measure(term_current: dict[str, float] | None = None) -> tuple[str, dict | None]:
     """Top-N owed DSL levers RANKED by relative significance — the fraction of the REMAINING descent
-    to sub-0.15 each lever buys (est_delta_s / (pointer − 0.15)). This is the continual-learning fix
-    for the recurring magnitude-dismissal bug: the CONTROLLER holds the value ranking, not the eyeball
-    (CLAUDE.md "'Off' is a tracked queue" + "relative-not-absolute-significance-near-goal").
-    Markers: *=never-fired registered lever · ~=un-built finding (a missing wire) · ?=owed an estimate."""
+    to sub-0.15 each lever buys (est_delta_s / (pointer − 0.15)), **P8 floor-aware** (a lever whose
+    target term is at its measured floor ranks ~0). This is the continual-learning fix for the recurring
+    magnitude-dismissal bug: the CONTROLLER holds the value ranking, not the eyeball (CLAUDE.md "'Off' is
+    a tracked queue" + "relative-not-absolute-significance-near-goal"). Markers: *=never-fired · ~=unbuilt
+    · ?=owed-estimate · !FLOOR=at-floor · ^cap=headroom-capped.
+
+    P1 (one-fact-one-store-one-key): the significance read is routed through
+    ``duty_to_measure_ranked`` -> ``canonicalize_significance_keys`` (the ONLY significance-store reader);
+    no raw-key read exists in the digest (audited 2026-07-09)."""
     try:
         from tac.witness_dsl.activation_ledger import duty_to_measure_ranked
-        ranked = duty_to_measure_ranked()  # reads the LIVE pointer + significance store (not hardcoded)
+        # reads the LIVE pointer + significance store (not hardcoded); term_current from live telemetry.
+        ranked = duty_to_measure_ranked(term_current=term_current)
         line = format_duty_to_measure_line(ranked)
         s_cur = ranked[0].get("s_current") if ranked else None
         tgt = ranked[0].get("s_target", 0.15) if ranked else 0.15
+        n_at_floor = sum(1 for r in ranked if r.get("floor_status") == "AT_FLOOR")
+        n_capped = sum(1 for r in ranked if r.get("floor_status") == "HEADROOM_CAPPED")
         return line, {"ranked_top": ranked[:_DUTY_TOP_N],
                       "owed_registered": sum(1 for r in ranked if r.get("in_duty_queue")),
+                      "term_current": term_current, "n_at_floor": n_at_floor, "n_headroom_capped": n_capped,
                       "s_current": s_cur, "s_target": tgt}
     except Exception as exc:
         return f"duty-to-measure: unavailable ({type(exc).__name__}: {exc})", None
@@ -575,7 +624,8 @@ def build_digest() -> tuple[list[str], dict]:
     if posegate_line:
         lines.append(posegate_line)
 
-    duty_line, data["duty_to_measure"] = section_duty_to_measure()
+    # P8 floor-aware: feed the live run's MEASURED current d_seg (annulus SENSE) so at-floor levers rank ~0.
+    duty_line, data["duty_to_measure"] = section_duty_to_measure(_live_term_current(data.get("annulus")))
     lines.append(duty_line)
 
     fl_line, data["failure_ledger"] = section_failure_ledger()
