@@ -308,6 +308,26 @@ def section_pose_conditioning_gate(run_dir: Path | None) -> tuple[str | None, di
         return None, None
 
 
+def section_telemetry_binding(run_dir: Path | None) -> tuple[str | None, dict | None]:
+    """#404 P0 binding-vs-inert lever readback (tac.witness_control.telemetry_binding): amber
+    grad-clip binding rate · chroma term share · pose-gate sensor liveness (the silent-crash class)
+    · EMA-lag verdict-vs-live divergence · D27b terminal-band/solve-upon-basin trigger · TAIL
+    endpoints. Read-only + score-neutral -> defaults ON (CLAUDE.md "'Off' is a tracked queue").
+    Bounded tail read (cheap at SessionStart cadence); fail-open (any error -> omit)."""
+    if run_dir is None:
+        return None, None
+    try:
+        from tac.witness_control import telemetry_binding as _tb
+        rows = _tb.load_run_rows(run_dir, tail_bytes=1_500_000)
+        if not rows:
+            return None, None
+        audit = _tb.audit_rows(rows)
+        return _tb.format_summary(audit), {
+            k: audit.get(k) for k in ("amber", "chroma", "pose_gate", "ema_lag", "terminal_band")}
+    except Exception:
+        return None, None
+
+
 def _duty_marker(r: dict) -> str:
     """Marker per ranked row: ~=un-built finding (missing wire) · ?=registered owed an estimate ·
     *=never-fired registered lever · ''=fired-but-unmeasured registered lever."""
@@ -623,6 +643,10 @@ def build_digest() -> tuple[list[str], dict]:
     posegate_line, data["pose_conditioning_gate"] = section_pose_conditioning_gate(run_dir)
     if posegate_line:
         lines.append(posegate_line)
+
+    tbind_line, data["telemetry_binding"] = section_telemetry_binding(run_dir)
+    if tbind_line:
+        lines.append(tbind_line)
 
     # P8 floor-aware: feed the live run's MEASURED current d_seg (annulus SENSE) so at-floor levers rank ~0.
     duty_line, data["duty_to_measure"] = section_duty_to_measure(_live_term_current(data.get("annulus")))
