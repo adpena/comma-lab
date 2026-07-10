@@ -160,3 +160,30 @@ healthy-never-fired at backstop = the fail-safe engage (unchanged).
 config (expected-lever manifest green end-to-end) + confirm resume-compat from the pilot ep300
 checkpoint (the composed engage-on flag + registry key must restore additive/legacy-compatible: an
 absent-key pilot sidecar resumes to un-fired under the launch config).
+
+## 8. PILOT FIRED (2026-07-10T15:41Z) — AMENDMENT: realized as the REAL config, ep0-300 read as the pilot gate
+
+**Gate-1 CLOSED:** owed16v2 rebalanced-ON read 0.004213@ep700 vs OFF 0.004181 (0.004286 vs 0.004244
+@ep675) — marginally WORSE at every cell; allocation-independence CONFIRMED; SELF-ORIENT-OFF stands
+(verdict commit 40b2ed211; verdict_scope formulation — from-scratch is the uncovered arm THIS pilot tests).
+
+**The --epochs 300 pilot config was REFUSED by the trainer's own stage-interlock validator** (verbatim:
+`--muon-start-epoch (726) must be in [1, --epochs (300)]: outside the budget the Muon finisher would
+NEVER engage -> a silent no-op = a FALSE 'Muon does not help' verdict`). The refusal is respected —
+the sealed 3000-epoch schedule is atomic (the §2 "2-token diff" is DSL-valid but not trainer-launchable).
+**Realization (strictly closer to the §2 contract):** the pilot IS the real launch —
+`--config crucible_v752` at the SEALED epochs 3000, with **ep0-300 verdict cells read as the pilot
+gate** per §4. PASS ⇒ the run simply CONTINUES as the launch (the resume-from-pilot option realized as
+no-restart-at-all); LAG ⇒ governed stop (checkpoints preserved) + config switch per §4.
+
+**LIVE:** run dir `experiments/results/levelset_v752_pilot_20260710T154100Z` · trainer pid 44491 (durable
+daemon, safe_run rss-cap 90000 MiB) · costate shadow observer pid 45290 · dashboard :8790 auto-tracking.
+Full gate chain GREEN incl. the NEW expected-active-lever manifest (9 levers) + dsl-config (157 flags,
+P0-composed) + mem-preflight 24.48 GiB projected @ safe-frac 0.85 (sole workload) + admission ADMIT
+(headroom 66.7 GiB) + throughput 430.7 ms + wall-clock 7.95 d ≤ 8.31 d budget. Launch defect found+fixed
+in the same landing: the launcher's activation-ledger record raised PosixPath TypeError (all 9 fire
+records silently dropped) — fixed (str(out_dir)) + 9 rows BACKFILLED.
+
+**Read-out protocol unchanged (§4):** matched cells ep25..300 vs mod32cap; ep300 waiter armed
+(marker `.omx/tmp/v752_pilot_ep300.marker`). Wall-clock to ep300: UNMEASURED solo OFF cadence —
+mod32cap anchor ~116 s/ep (ON) ⇒ projection ~10 h (labeled projection, not measurement).

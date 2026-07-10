@@ -1783,7 +1783,10 @@ def main(argv: list[str] | None = None) -> int:
         try:
             from tac.witness_dsl.activation_ledger import EVENT_FIRED, record_activation
             for _lv in cfg.dsl_levers:
-                record_activation(_lv, EVENT_FIRED, run_ref=out_dir,
+                # str(out_dir): record_activation json-serializes the row; a PosixPath raised
+                # TypeError and silently dropped ALL fire records (caught live, v752 pilot launch
+                # 2026-07-10 — backfilled by tools/… backfill call in the same landing).
+                record_activation(_lv, EVENT_FIRED, run_ref=str(out_dir),
                                   reason=f"launched via tools/launch_witness_run.py (config={config})",
                                   agent="launch_witness_run")
             print(f"[launch-witness] activation-ledger: recorded 'fired' for {', '.join(cfg.dsl_levers)}")
