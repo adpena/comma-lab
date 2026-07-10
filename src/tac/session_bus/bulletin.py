@@ -166,6 +166,30 @@ def _ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
+def _needs_newline_separator(path: Path) -> bool:
+    """True iff ``path`` exists, is non-empty, and its last byte is not ``\\n``.
+
+    Such a torn tail is left when a process is killed mid-write (the row is a single
+    ``line + "\\n"`` write, so a crash can truncate before the newline). Appending the
+    next row directly would MERGE it onto the torn fragment, producing one corrupt
+    physical line that :func:`read_events`' tolerant reader silently drops — losing
+    BOTH the torn tail and the (valid) new row. Callers write a leading ``\\n`` when
+    this returns True so the torn tail becomes its own (skipped) line and the new row
+    lands clean. No-op on the normal path (file already ends in ``\\n``) -> the append
+    is byte-identical there. Called under the same fcntl lock as the append, so no
+    concurrent writer can change the tail between the check and the write.
+    """
+    try:
+        size = path.stat().st_size
+    except FileNotFoundError:
+        return False
+    if size == 0:
+        return False
+    with path.open("rb") as rf:
+        rf.seek(-1, os.SEEK_END)
+        return rf.read(1) != b"\n"
+
+
 def post_event(
     kind: str,
     subject: str,
@@ -208,8 +232,9 @@ def post_event(
     with lock.open("a") as lockfh:
         fcntl.flock(lockfh.fileno(), fcntl.LOCK_EX)
         try:
+            sep = "\n" if _needs_newline_separator(path) else ""
             with path.open("a", encoding="utf-8") as bf:
-                bf.write(line + "\n")
+                bf.write(sep + line + "\n")
         finally:
             fcntl.flock(lockfh.fileno(), fcntl.LOCK_UN)
     return record

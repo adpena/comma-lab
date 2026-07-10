@@ -192,6 +192,28 @@ def _ensure_state_dir(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
+def _needs_newline_separator(path: Path) -> bool:
+    """True iff ``path`` exists, is non-empty, and its last byte is not ``\\n``.
+
+    Sibling of :func:`tac.session_bus.bulletin._needs_newline_separator` (same
+    crash-safe-append class-fix, canon-wave #389 R5). A process killed mid-write can
+    leave a torn tail with no trailing newline; appending the next row directly would
+    MERGE it onto the fragment, producing one corrupt line the tolerant reader silently
+    drops — losing BOTH. Callers write a leading ``\\n`` when this returns True so the
+    torn tail becomes its own (skipped) line and the new row lands clean. No-op (append
+    byte-identical) on the normal path. Called under the same fcntl lock as the append.
+    """
+    try:
+        size = path.stat().st_size
+    except FileNotFoundError:
+        return False
+    if size == 0:
+        return False
+    with path.open("rb") as rf:
+        rf.seek(-1, os.SEEK_END)
+        return rf.read(1) != b"\n"
+
+
 def record_round(
     surface_id: str,
     round_n: int,
@@ -228,8 +250,9 @@ def record_round(
     with lock.open("a") as lockfh:
         fcntl.flock(lockfh.fileno(), fcntl.LOCK_EX)
         try:
+            sep = "\n" if _needs_newline_separator(ledger) else ""
             with ledger.open("a", encoding="utf-8") as lf:
-                lf.write(line + "\n")
+                lf.write(sep + line + "\n")
         finally:
             fcntl.flock(lockfh.fileno(), fcntl.LOCK_UN)
     _post_bulletin_verdict_landed(record)

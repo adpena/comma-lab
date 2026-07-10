@@ -46,6 +46,32 @@ def test_post_and_read_roundtrip(bpaths):
     assert rows[0]["schema"] == B.SCHEMA_VERSION
 
 
+def test_torn_tail_then_append_does_not_lose_new_event(bpaths):
+    """canon-wave #389 R5: a crash-mid-write torn tail (no trailing newline) must NOT
+    swallow the next appended event by concatenation. The torn fragment becomes its own
+    (skipped) line; the new event lands clean and is readable."""
+    path, lock = bpaths
+    B.post_event(B.EVENT_MEMO_LANDED, "before", {}, "a", bulletin_path=path, lock_path=lock)
+    # simulate a process killed mid-write: a partial JSON line with NO trailing newline
+    with path.open("a", encoding="utf-8") as f:
+        f.write('{"schema": "' + B.SCHEMA_VERSION + '", "kind": "memo_landed", "subje')
+    B.post_event(B.EVENT_MEMO_LANDED, "after_torn", {}, "a", bulletin_path=path, lock_path=lock)
+    subjects = [r["subject"] for r in B.read_events(bulletin_path=path)]
+    assert subjects == ["before", "after_torn"], subjects  # torn fragment skipped, new row survives
+
+
+def test_normal_append_is_byte_identical_no_spurious_separator(bpaths):
+    """The newline-guard is a no-op when the file already ends in ``\\n`` — no blank lines
+    injected, so the normal-path byte stream is unchanged."""
+    path, lock = bpaths
+    for i in range(3):
+        B.post_event(B.EVENT_MEMO_LANDED, f"n{i}", {}, "a", bulletin_path=path, lock_path=lock)
+    raw = path.read_bytes()
+    assert raw.endswith(b"\n")
+    assert b"\n\n" not in raw  # no spurious separator on the healthy path
+    assert len(B.read_events(bulletin_path=path)) == 3
+
+
 def test_post_event_rejects_bad_kind(bpaths):
     path, lock = bpaths
     with pytest.raises(B.SessionBusError):

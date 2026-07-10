@@ -56,6 +56,42 @@ def _rec(ledger: Path, round_n: int, verdict: str, findings: int, **kw):
     )
 
 
+# --- crash-safe append (canon-wave #389 R5) --------------------------------------
+
+
+def test_torn_tail_then_append_does_not_lose_new_round(ledger: Path) -> None:
+    """A crash-mid-write torn tail (no trailing newline) must NOT swallow the next
+    recorded round by concatenation — sibling of the bulletin crash-safe-append fix."""
+    _rec(ledger, 1, rc.VERDICT_CLEAN, 0)
+    # simulate a process killed mid-write: partial JSON line, NO trailing newline
+    with ledger.open("a", encoding="utf-8") as f:
+        f.write('{"surface_id": "surf", "round_n": 2, "torn')
+    _rec(ledger, 3, rc.VERDICT_CLEAN, 0)
+    valid = 0
+    for raw in ledger.read_text().splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            json.loads(raw)
+            valid += 1
+        except json.JSONDecodeError:
+            pass
+    assert valid == 2  # round 1 + round 3 both intact; torn fragment is its own skipped line
+    # current_state still resolves (round 3 is the latest CLEAN)
+    state = rc.current_state("surf", ledger_path=ledger)
+    assert state.last_verdict == rc.VERDICT_CLEAN
+
+
+def test_normal_append_no_spurious_blank_line(ledger: Path) -> None:
+    """The newline-guard is a no-op on the healthy path (file already ends in ``\\n``)."""
+    _rec(ledger, 1, rc.VERDICT_CLEAN, 0)
+    _rec(ledger, 2, rc.VERDICT_CLEAN, 0)
+    raw = ledger.read_bytes()
+    assert raw.endswith(b"\n")
+    assert b"\n\n" not in raw
+
+
 # --- transitions -----------------------------------------------------------------
 
 
