@@ -107,9 +107,11 @@ def _run_search(args, n):
     rnd = cp.Renderer(pkt, device=args.device, drop_sidecar=args.drop_sidecar)
     scorer = cp.Scorer(upstream_dir=args.upstream, device=args.device)
     lstars, poses, gtsrc = cp.load_gt_targets(args.gt_cache, n)
+    deltas = tuple(int(t) for t in str(args.sweep_deltas).split(","))
     search = cp.ClickPolishSearch(
         packet=pkt, renderer=rnd, scorer=scorer, gt_lstars=lstars, gt_poses=poses,
         out_dir=args.out_dir, axis_tag=args.axis_tag, max_rounds=args.max_rounds,
+        sweep_deltas=deltas, wall_clock_cap_s=float(args.wall_clock_cap_s),
     )
     result = search.run()
     result["gt_source"] = gtsrc
@@ -153,6 +155,8 @@ def main(argv=None):
     sp.add_argument("--out-dir", default=os.path.join(ROOT, ".omx/tmp/clickpolish_smoke"))
     sp.add_argument("--max-rounds", type=int, default=3)
     sp.add_argument("--drop-sidecar", action="store_true")
+    sp.add_argument("--sweep-deltas", default="1,-1,2,-2")
+    sp.add_argument("--wall-clock-cap-s", type=float, default=0.0)
     sp.set_defaults(func=cmd_smoke)
 
     sp = sub.add_parser("search")
@@ -161,6 +165,8 @@ def main(argv=None):
     sp.add_argument("--max-rounds", type=int, default=40)
     sp.add_argument("--axis-tag", default="[macOS-CPU advisory]")
     sp.add_argument("--drop-sidecar", action="store_true")
+    sp.add_argument("--sweep-deltas", default="1,-1,2,-2")
+    sp.add_argument("--wall-clock-cap-s", type=float, default=0.0)
     sp.set_defaults(func=cmd_search)
 
     args = ap.parse_args(argv)

@@ -568,6 +568,41 @@ def load_gt_targets(gt_cache_dir: str | Path, n_pairs: int):
 
 
 # ---------------------------------------------------------------------------
+# fused chunked render+score (MANDATORY at n600 — never batch all 600 pairs)
+# ---------------------------------------------------------------------------
+def render_and_score(
+    renderer: Renderer, scorer: Scorer, Q: np.ndarray, pair_indices,
+    gt_lstars: np.ndarray, gt_poses: np.ndarray, batch_pairs: int = 16,
+):
+    """FUSED chunked render+score: per 16-pair chunk render -> score -> discard.
+
+    MANDATORY at n600 (CLAUDE.md 'Forbidden full-P batched CPU-scorer verdict'):
+    scoring all 600 pairs in ONE batch materializes a ~14.6 GiB fp32 tensor plus
+    batch-600 EfficientNet activations (the documented OOM class). This path keeps
+    peak memory at the 16-pair chunk and is score-identical because eval-mode
+    BatchNorm uses running stats and argmax/MSE are per-pair (bit-identical per
+    chunk layout; the accept gate always uses THIS canonical 16-pair layout).
+
+    Returns (d_seg_per_pair, d_pose_per_pair) float64 arrays over pair_indices."""
+    pair_indices = [int(p) for p in pair_indices]
+    gt_lstars = np.asarray(gt_lstars)
+    gt_poses = np.asarray(gt_poses)
+    n = len(pair_indices)
+    d_seg = np.empty(n, np.float64)
+    d_pose = np.empty(n, np.float64)
+    for s in range(0, n, batch_pairs):
+        chunk = pair_indices[s : s + batch_pairs]
+        frames = renderer.render(Q, chunk, batch_pairs=batch_pairs)
+        # gt targets are indexed by ABSOLUTE pair index (targets arrays cover the
+        # full scored set in pair order 0..n-1 == absolute pairs 0..n-1)
+        ds, dp = scorer.per_pair(frames, gt_lstars[chunk], gt_poses[chunk])
+        d_seg[s : s + len(chunk)] = ds
+        d_pose[s : s + len(chunk)] = dp
+        del frames
+    return d_seg, d_pose
+
+
+# ---------------------------------------------------------------------------
 # exact score of a Q candidate (through render + scorer + real bytes)
 # ---------------------------------------------------------------------------
 def exact_components_for_Q(
@@ -576,12 +611,11 @@ def exact_components_for_Q(
 ):
     """Exact (d_seg, d_pose, archive_bytes, S) for a candidate Q over the given
     pairs (default: all N in the GT set). Distortions are MEANS over the scored
-    pairs; bytes is the real re-encoded archive size."""
+    pairs; bytes is the real re-encoded archive size. Chunked (OOM-safe at n600)."""
     if pair_indices is None:
         pair_indices = list(range(gt_lstars.shape[0]))
-    frames = renderer.render(Q, pair_indices)
-    d_seg_pp, d_pose_pp = scorer.per_pair(
-        frames, gt_lstars[pair_indices], gt_poses[pair_indices]
+    d_seg_pp, d_pose_pp = render_and_score(
+        renderer, scorer, Q, pair_indices, gt_lstars, gt_poses
     )
     d_seg = float(d_seg_pp.mean())
     d_pose = float(d_pose_pp.mean())
@@ -720,14 +754,22 @@ class ClickPolishSearch:
     axis_tag: str = "[macOS-CPU advisory]"  # phase-2 sets [contest-CPU] on Linux x86_64
     max_rounds: int = 40
     eps: float = 0.0  # strict improvement gate (S must decrease)
+    sweep_deltas: tuple = SWEEP_DELTAS  # (+1,-1) halves round cost vs (+1,-1,+2,-2)
+    wall_clock_cap_s: float = 0.0  # >0: stop cleanly (banked state) when exceeded
     log: Callable[[str], None] = print
 
     def __post_init__(self):
         self.n = int(self.gt_lstars.shape[0])
         self.pairs = list(range(self.n))
         self.Q = self.packet.Q0.copy()
+        self._t0 = __import__("time").time()
         os.makedirs(self.out_dir, exist_ok=True)
         self.ledger_path = os.path.join(self.out_dir, "accepted_clicks_ledger.jsonl")
+
+    def _over_wall_clock(self) -> bool:
+        import time
+
+        return self.wall_clock_cap_s > 0 and (time.time() - self._t0) > self.wall_clock_cap_s
 
     # ---- resume: replay ledger -> reconstruct Q ----
     def resume(self) -> int:
@@ -766,14 +808,18 @@ class ClickPolishSearch:
         best = [None] * self.n
         best_gain = np.zeros(self.n)  # positive = improvement in per-pair proxy
         for d in range(LATENT_DIM):
-            for dl in SWEEP_DELTAS:
+            for dl in self.sweep_deltas:
+                if self._over_wall_clock():
+                    self.log("[sweep] wall-clock cap hit — finishing with partial sweep")
+                    return best
                 Qc = self.Q.copy()
                 Qc[:, d] = np.clip(
                     Qc[:, d].astype(np.int16) + dl, 0, 255
                 ).astype(np.uint8)
-                frames = self.renderer.render(Qc, self.pairs)
-                dseg_c, dpose_c = self.scorer.per_pair(
-                    frames, self.gt_lstars, self.gt_poses
+                # fused chunked render+score (OOM-safe at n600)
+                dseg_c, dpose_c = render_and_score(
+                    self.renderer, self.scorer, Qc, self.pairs,
+                    self.gt_lstars, self.gt_poses,
                 )
                 # per-pair proxy improvement (distortion units; bytes second-order)
                 proxy_delta = (
@@ -802,6 +848,9 @@ class ClickPolishSearch:
             "d_pose": base["d_pose"], "archive_bytes": base["archive_bytes"],
         }
         for rnd in range(start_round, self.max_rounds):
+            if self._over_wall_clock():
+                self.log(f"[round {rnd}] wall-clock cap reached — stopping (banked state valid)")
+                break
             best = self._sweep(base)
             # build joint candidate: at most one click per pair
             clicks = []
