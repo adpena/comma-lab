@@ -13085,3 +13085,28 @@ upgrade the #318 calibrate-by-DE framework with a pseudospectral/transient-growt
 instrument the spectrum cannot supply. Routing: v8 SPEC (Chern framing = §3 covers, already structural);
 #318 successor task for the pseudospectral instrument; triality equations leg owed WITH that build.
 Pointer 0.19110 UNMOVED (lenses/means).
+
+## FEED-paper-isoperim (2026-07-10) — isoperimetric cluster: Cartan–Hadamard CONFIRMS σ_cc′; 2 arXiv IDs off-theme typos
+**Operator 3-link cluster (isoperimetric / boundary-length theme).** Ledger:
+`papers_checked_isoperimetric_cluster_20260710`. Result: **(1) arXiv 2607.06870 = "Phase
+transitions and uberholography..." (Bao/Furuya/March, hep-th holography) — OUT OF DOMAIN, ID-typo;
+the α≈0.786 fractal dim is coincidence, no method. (2) arXiv 2602.00797 = "Zero-Flow Encoders"
+(Wang/Wang/Liu/Suzuki, ICML'26 rectified-flow rep-learning) — OUT OF DOMAIN for isoperimetry,
+ID-typo; weak-WATCH only if a sufficiency-certification sub-problem opens. Both = same ID-mismatch
+failure the operator flagged for 2311.11032.** (3) **Cartan–Hadamard (Wikipedia) = the only
+on-theme source → CONFIRMS σ_cc′ (#382) is the canonical object: d_seg boundary cost = a
+Fisher-metric-weighted (per-class-pair) PERIMETER functional, not flat-pixel length** (Fisher ↔
+−margin 0.978, already our program — names the functional, builds nothing). **GRAIN → #382 length-term
+calibration (conditional):** Cartan–Hadamard is a comparison theorem — in NPC metrics perimeter for
+fixed area is ≥ flat; IF the boundary-annulus Fisher metric is (locally) nonpositively curved then
+flat-pixel length is a LOWER bound on true d_seg boundary cost ⇒ a flat-length regularizer
+UNDER-weights the thin high-curvature (small-margin = Lane) boundary — same erasure direction as MCF.
+Consumable: weight the σ_cc′/eikonal length term by local Fisher/(−margin), treat flat length as a
+floor; PRECONDITION = measure the sectional-curvature SIGN of the margin-induced metric on a boundary
+patch (untested). **NEGATIVE (a) no rate floor** (verdict_scope: this formulation) — isoperimetry
+bounds perimeter-vs-area, NOT bits-vs-length; boundary-coding rate floor stays with contour/chain
+entropy #307 (1–1.5 bits/px, ~8 bits/flip). **NEGATIVE (c)** no direct consumable for ~8-dim
+Whitney embedding or CAT(0) level-set flow. Synthesis: operator's boundary-length instinct is correct
++ ALREADY OURS (σ_cc′); lens confirms + one conditional grain; V2 untouched. Routing: #382 task note
+(Fisher-weighted length + curvature-sign precondition). No equation (theory/prior-art confirmation,
+no measured row). Pointer 0.19110 UNMOVED (means; anti-re-research + calibration grain).
