@@ -14434,3 +14434,19 @@ GPU trajectory A/B, never sold as free speedup. CONTAINMENT honored (fail-close 
 untouched). Follow-up (test-owner): widen cograd tail-group tolerance to the reduction-noise class or use abs-deviation.
 Memo `microbatch_bit_identity_smoke_n600_20260710.md`. Triality: DSL/equations **N/A** (disposition not lever/law; the
 fp-tolerance identity already pinned by the 2 test suites). Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS).
+
+### FEED-verdict-scope-declaration (2026-07-10) — scope the NO-GO tokens (req R: one formulation ≠ dead family)
+Declaring verdict_scope for the NO-GO tokens present in this DAG (hook: negatives need the NARROWEST
+supported scope, INSTANCE<FORMULATION<FAMILY<PARADIGM):
+- **micro-batch NO-GO (FEED-410-microbatch-bitid):** verdict_scope: FORMULATION — "micro-batch as a
+  bit-identical FREE speedup for the SEALED serial-validated v7.5.2 config" specifically. Measured basis:
+  (1) structural — sealed `--seg-chroma-boundary-weight 0.1` hard-raises ValueError with `--micro-batch-pairs>1`;
+  (2) numerical — batched mean is fp-equivalent not bit-identical (~1e-3 GPU pose-path drift). Does NOT
+  kill micro-batch as a lever — it stays a legit TRAJECTORY-AFFECTING A/B arm (validated by its own GPU A/B).
+- **the per-n measurement-table NO-GO rows (| 12 | / | 24 | … tables):** verdict_scope: INSTANCE — each row
+  is one measured (n, config) outcome at that operating point, not a family verdict; the surrounding FEED
+  carries the formulation/family scope. # VERDICT_SCOPE_OK: table rows are per-instance measurement
+  outcomes; the family-level verdict lives in the FEED prose, not the row.
+- **Lever-D temporal NO-GO (#280):** verdict_scope: FORMULATION — the b/flip×recovery economics at the
+  measured operating point; reactivation criteria pinned in the deferral ledger.
+Pointer 0.19108282 [contest-CPU] UNMOVED (scope-declaration bookkeeping; MEANS).

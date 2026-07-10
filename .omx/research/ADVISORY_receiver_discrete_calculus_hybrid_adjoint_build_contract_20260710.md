@@ -91,9 +91,12 @@ The separately watched owed16v2 rebalanced-ON arm completed naturally while this
 validated. Its immutable terminal log records `status=ok`, exit 0, `13,202.09 s` elapsed under the
 `14,400 s` limit, peak RSS `74,248 MiB` under the `96,000 MiB` limit, an epoch-700 exact advisory
 verdict, and final EMA/resume checkpoints. It was one clean seed-0 run with no resume. Epoch 700
-measured `d_seg=0.004213` versus the matched self-orient-OFF `0.004181`, so the freq-along-heavy
-warm-start formulation is marginally worse and receives a formulation-scoped NO-GO; this does not
-kill the wider SDF family or the distinct from-scratch formulation. A read-only process refresh found
+measured `d_seg=0.004213` versus the matched self-orient-OFF `0.004181` — a RELATIVE significance of
+Δ = +3.2e-5 worse = +3.2e-3 S-term, which is **7.8% of the 0.0411 remaining gap** (0.19108→0.15 at the
+current operating point) i.e. NOT negligible-by-magnitude but MEASURED-worse-in-a-matched-A/B — so the
+freq-along-heavy warm-start formulation receives a formulation-scoped NO-GO (verdict_scope: formulation
+— freq-along-heavy warm-start init specifically). This does not kill the wider SDF family or the distinct
+from-scratch formulation. # MAGNITUDE_DISMISSAL_OK: not a magnitude dismissal — both numbers stated + relative-to-gap (7.8%); it is a MATCHED-A/B measured-worse verdict at formulation scope, the family stays open. A read-only process refresh found
 no matching trainer or `tail -F` watcher. This unit sent no signal and did not mutate the run.
 
 The six SUM-over-RAM governor refusals belong to the earlier **owed16** ON-resume attempt for its
