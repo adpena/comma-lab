@@ -38,6 +38,7 @@ import sys
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 from tac import witness_run_artifacts as _wra  # noqa: E402  (tac is pip-install-editable; no sys.path shim needed)
+from tac.witness_dsl.curriculum_dsl import TRAINER_PATH as _TRAINER_PATH  # noqa: E402
 
 OPS = (
     "random_normal",
@@ -279,7 +280,7 @@ def probe_cell(op: str, device: str = "gpu", n: int = 10, arch: str = "") -> dic
 # child is a bounded subprocess.run, never backgrounded).
 # ─────────────────────────────────────────────────────────────────────────────
 
-_TRAINER = os.path.join(_REPO, "experiments", "train_levelset_witness_realized_through_R_mlx.py")
+_TRAINER = str(_TRAINER_PATH)  # canonical single-source: curriculum_dsl.TRAINER_PATH (str for os.path/argv)
 
 
 _SAFE_RUN = os.path.join(_REPO, "tools", "safe_run.py")

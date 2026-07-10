@@ -36,6 +36,7 @@ from pathlib import Path
 import numpy as np
 
 from tac import witness_run_artifacts as _wra
+from tac.witness_dsl.curriculum_dsl import TRAINER_REL
 
 REPO = Path(__file__).resolve().parent.parent
 JOINT_REFERENCE_DSEG = 0.00124  # mod-32 / n600 joint-trained realized d_seg at convergence (operator)
@@ -72,7 +73,7 @@ def _build_cmd(args, ckpt: Path, out_dir: Path, num_pairs: int, epochs: int,
     cmd = [
         "env", "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1",
         ".venv/bin/python", "-u",
-        "experiments/train_levelset_witness_realized_through_R_mlx.py",
+        TRAINER_REL,  # canonical single-source: curriculum_dsl.TRAINER_REL (relative argv token)
         "--out-dir", str(out_dir),
         "--freeze-decoder-fit-codes", str(ckpt),
         "--gt-cache", str(args.heldout_gt),

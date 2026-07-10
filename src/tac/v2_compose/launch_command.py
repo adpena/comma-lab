@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from tac.witness_dsl.curriculum_dsl import TRAINER_REL
+
 __all__ = [
     "LaunchCommand",
     "parse_trainer_flags",
@@ -42,7 +44,7 @@ __all__ = [
 ]
 
 _REPO = Path(__file__).resolve().parents[3]
-DEFAULT_TRAINER = "experiments/train_levelset_witness_realized_through_R_mlx.py"
+DEFAULT_TRAINER = TRAINER_REL  # canonical single-source: curriculum_dsl.TRAINER_REL
 PERF_ENV = {"TAC_MLX_CUSTOM_GROUPED_BACKWARD": "1"}
 
 _ADD_ARG_RE = re.compile(r"""add_argument\(\s*["'](--[A-Za-z0-9][A-Za-z0-9\-]*)["']""")

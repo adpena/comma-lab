@@ -45,6 +45,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from tac.witness_dsl.curriculum_dsl import TRAINER_REL
+
 # contest rate denominator (bytes); S = 100*d_seg + sqrt(10*d_pose) + 25*bytes/N
 _S_RATE_DENOM = 37_545_489
 
@@ -844,7 +846,7 @@ def head_geometry_trainer_flags(chart: HeadGeometryGauge,
 # two GAP flags were built in cba2e4375 on the BASE trainer, so the never-invent-flags validation of
 # the muon charts is against ``BASE_TRAINER_REL`` (real), NOT the levelset argparse (owed wire-in).
 # ---------------------------------------------------------------------------
-LEVELSET_TRAINER_REL = "experiments/train_levelset_witness_realized_through_R_mlx.py"
+LEVELSET_TRAINER_REL = TRAINER_REL  # canonical single-source: curriculum_dsl.TRAINER_REL
 BASE_TRAINER_REL = "experiments/train_witness_realized_through_R_mlx.py"
 
 MARGIN_SALIENCY_TRAINER_FLAGS: dict[MarginSaliencyGauge, tuple[str, ...]] = {

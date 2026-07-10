@@ -21,7 +21,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
@@ -30,13 +29,8 @@ if str(_REPO / "src") not in sys.path:
     sys.path.insert(0, str(_REPO / "src"))
 
 from tac import witness_autoconfig as wac  # noqa: E402
-
-_TRAINER = _REPO / "experiments/train_levelset_witness_realized_through_R_mlx.py"
-
-
-def real_trainer_flags() -> frozenset[str]:
-    """Parse the trainer argparse -> the SET of real --flag names (never-invent guard)."""
-    return frozenset(re.findall(r'add_argument\(\s*"(--[a-z0-9-]+)"', _TRAINER.read_text()))
+# never-invent-flags guard, single-sourced (canonical regex scanner + trainer path):
+from tac.witness_dsl.curriculum_dsl import real_trainer_flags  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"#   surgical_levers_enabled      = {cfg.surgical_levers_enabled}  "
           f"(attribution-clean FIRST launch)")
     print(f"#   dm1_enabled                  = {cfg.dm1_enabled}")
-    print(f"# --- portability split (corpus generalization) ---")
+    print("# --- portability split (corpus generalization) ---")
     for cls in (wac.Portability.SCORER_FIXED, wac.Portability.DOMAIN, wac.Portability.INSTANCE):
         knobs = sorted(k for k, v in cfg.portability.items() if v == cls)
         print(f"#   {cls:22s}: {', '.join(knobs)}")

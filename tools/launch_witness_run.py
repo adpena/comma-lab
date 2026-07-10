@@ -55,8 +55,14 @@ if str(_REPO / "tools") not in sys.path:
     sys.path.insert(0, str(_REPO / "tools"))
 
 from tac import witness_autoconfig as wac  # noqa: E402
+from tac.witness_dsl.curriculum_dsl import (  # noqa: E402
+    TRAINER_PATH,
+    real_boolean_flags as _cdsl_real_boolean_flags,
+    real_store_true_flags as _cdsl_real_store_true_flags,
+    real_trainer_flags as _cdsl_real_trainer_flags,
+)
 
-_TRAINER = _REPO / "experiments/train_levelset_witness_realized_through_R_mlx.py"
+_TRAINER = TRAINER_PATH  # canonical single-source: curriculum_dsl.TRAINER_PATH
 
 
 def _composable_lever_names() -> tuple[str, ...]:
@@ -169,11 +175,11 @@ def real_trainer_flags() -> frozenset[str]:
     invented. Only BooleanOptionalAction flags gain the negation; ``store_true`` flags do NOT
     (their ``--no-`` form would be a genuine invention — the DSL's C2 guard refuses those
     upstream, and this validator still refuses them here)."""
-    text = _TRAINER.read_text()
-    flags = set(re.findall(r'add_argument\(\s*"(--[a-z0-9-]+)"', text))
-    bool_opt = re.findall(
-        r'add_argument\(\s*"(--[a-z0-9-]+)"[^)]*action\s*=\s*argparse\.BooleanOptionalAction',
-        text)
+    # Regex-scanning is single-sourced in curriculum_dsl (never-invent-flags canonical).
+    # BooleanOptionalAction-only = boolean flags MINUS store_true flags (the negation-eligible
+    # set; store_true flags get NO ``--no-`` form per the C2 guard).
+    flags = set(_cdsl_real_trainer_flags(TRAINER_PATH))
+    bool_opt = _cdsl_real_boolean_flags(TRAINER_PATH) - _cdsl_real_store_true_flags(TRAINER_PATH)
     flags.update(f.replace("--", "--no-", 1) for f in bool_opt)
     return frozenset(flags)
 

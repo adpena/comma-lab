@@ -47,14 +47,16 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from tac.witness_dsl.curriculum_dsl import TRAINER_REL
+
 # Repo root: src/tac/confound_gates.py -> parents[2] == repo root.
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Canonical witness trainer surfaces the confound hunt covered. Both are scanned
 # by the source-level gates; only those that exist on disk are opened.
 _TRAINER_FILES = (
-    "experiments/train_levelset_witness_realized_through_R_mlx.py",
-    "experiments/train_witness_realized_through_R_mlx.py",
+    TRAINER_REL,  # canonical single-source: curriculum_dsl.TRAINER_REL (levelset entry point)
+    "experiments/train_witness_realized_through_R_mlx.py",  # base trainer (no canonical constant yet)
 )
 
 # Placeholder rationale rejection (Catalog #287 sister discipline): a waiver whose
