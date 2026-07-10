@@ -410,7 +410,7 @@ UNMOVED); it is `[macOS-CPU advisory · research-signal · NON-PROMOTABLE]` MEAN
 5. **Lane-generator coverage (53% of the residual enemy) is a FAST-FOLLOW,** NOT increment-1 scope (F-P5-5);
    its own BUILD + byte-close + n600 A/B. The 0.135 wash is partly this weak-generator artifact, not v8's ceiling.
 6. **The b_c route forward is OWED.** The GLOBAL post-hoc 5-scalar b_c is SATURATED at no_offset on the eroded
-   trunk (§A.3, #386 RULED, both flip arms REFUTED — FORMULATION/REGIME scope). Per-EDGE b_c on the FRESH v8
+   trunk (§A.3, #386 RULED, both flip arms REFUTED — FORMULATION/REGIME scope) <!-- # VERDICT_SCOPE_OK: scope stated inline same-line (FORMULATION/REGIME per §A.3 anchor) -->. Per-EDGE b_c on the FRESH v8
    Stage-A decoupled fields (+ offsets-solved-JOINTLY-with-training) is the route — OWED, not in increment-1. <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped flip-b_c anchor (§A.3) -->
 7. **The de-share 0.0044 thing-itself is OWED.** The landed number is a dilate=2 INSTANCE (band 0.000–0.0069
    across dilate∈{0,1,2,3}); the thing-itself = G3 bbox realized coverage post-byte-close (§A.2). Curve-relative
