@@ -12162,3 +12162,21 @@ flip-fraction); store-nothing MANDATE (keyframe 0.465 rate = 11.3× gap = submis
 read-only probes on gt_n600.npz (de-share magnitude · curve-relative δ(s) entropy · proxy-vs-field byte gap ·
 flip-weighted b_c target · ledger re-derive); P-C/P-B/1a-through-R = governed operator-GO, NOT recess. NEXT: P3
 red-team + provenance audit. Pointer 0.19110 UNMOVED (means).
+
+## FEED-nodup-geometry-binding (2026-07-09) — OPERATOR BINDING: no duplicate data in archive · geometry-first · designs consume all built
+**Operator verbatim:** "No du[p]licate data in archive, remember all falls out from proper geometry and
+math" + "All must be taken into consideration in design of v7.5.2 and v8 including recently built or to
+be built." Memory: `operator_no_duplicate_data_archive_geometry_first_20260709.md`. Three binding clauses:
+(1) **DEDUP AUDIT = standing design gate BOTH chains** — every archive section proves pairwise
+non-derivability from {other sections + the free rule-118 generator}; exemplars: Movable-straddle
+double-count (the MEASURED 0.0189 Road-Undriv residual that IS Movable px), derive-H #257, seed-tables-vs-
+generator-params. Routed into: #385 comparison-brief requirements + SPEC_v8.1 seal checks + any byte-close
+rate claim. (2) **Geometry-first:** duplication is a SYMPTOM of a wrong chart — in the Laguerre/level-set
+decomposition each fact has ONE natural home; a lever that cannot state its geometric home is suspect
+(this is exactly why P2's T1 horizon-over-bulk verdict was right: the bulk field re-encoded other
+generators' boundaries). (3) **Integration clause:** the final v7.5.2 + v8 designs CONSUME all
+recently-built/in-flight pieces (#383 pose-gate · #384 gates · flip-b_c · de-share · δ(s) coder ·
+FusedRKernel · duty-to-measure levers) — built-but-unconsumed = orphaned signal. Injected live into P3b
+(revision) + the residual-kit builder; P5/P6 seal rounds inherit it as a standing check. Triality legs:
+DAG=this FEED; DSL/equations follow as the audit becomes a gate/law (owed at SPEC_v8.1 seal). Pointer
+0.19110 UNMOVED (means).
