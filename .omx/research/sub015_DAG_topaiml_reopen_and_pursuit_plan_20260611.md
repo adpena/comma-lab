@@ -13876,6 +13876,102 @@ contest-CPU 0.19110 UNMOVED — MEANS.
   ⭐CURRENT line updated to 07-10 state (compressed within the 17408 cap). **Pointer contest-CPU 0.19110 UNMOVED
   — external claims are not rows; our own exact rows are in flight.**
 
+### FEED-advisory-harvest (2026-07-10) — SIX advisories folded into the triality + costate (nothing left in prose)
+Consolidated fold of the 6 advisories dated 2026-07-10 (evaluator-video-geometry · vehicle-line-synthesis ·
+pr128-hnerv-reverse-engineering · t5_crucible2/v752-fresh-eyes · t5_crucible2/v753-texture-trunk-fresh-eyes ·
+t5_crucible3/v8-fresh-eyes). Frozen custody (all advisory numbers): checkout git `991b317c41fe3aac657e0f0cb88fd831b2e4185a`,
+`evaluate.py 7da71a84…`, `modules.py 065961ba…`, `frame_utils.py d689aca7…`, `videos/0.mkv 2611f5f3…`, `gt_n600.npz cf8d8360…`.
+All six carry **launch/dispatch/pointer disposition = HOLD/NONE**; pointer contest-CPU **0.19110 UNMOVED — MEANS**.
+
+- **THE OBLIGATION MATRIX (structural, both scorers; the frame is asymmetric):** frame0 = **Pose-only** (SegNet
+  slices `x[:,-1]` → frame0 d_seg ≡ 0, MEASURED 8.48e-9 random-noise f0); frame1 = **Pose + Seg**; `archive.zip` =
+  exact rate, counted once. ⇒ do NOT render symmetric obligations (frame0 owes no seg-texture); do NOT price pose
+  linearly (sqrt term). Held by `fullstack_unique_home_assignment_v1` + `posenet_luma_chroma_sensitivity_asymmetry_v1`.
+- **EQUATIONS REGISTERED (leg-1; all ANCHOR EXTENSIONS to EXISTING equations — checked-first, no orphans):**
+  - (a) **blind-coordinate law** → new anchor `evaluator_resize_blind_coordinate_law_20260710` on
+    `resize_exploit_flip_fix_frontier_v1` (#391, the resize/footprint eq that already held the seg-cell price).
+    The exact bilinear-down kernel has step > 2 in BOTH axes (2.2760417 / 2.2734375) → disjoint 2×2 footprints →
+    **230,904 blind camera px/frame (22.70%)** / 692,712 blind RGB coords / 85.5% pair real-linear kernel share.
+    Receiver consequence: fill blind coords by a DETERMINISTIC GENERIC rule (rule-118 free; a learned value there
+    earns ZERO score), solve sampled-footprint preimages blockwise, KEEP exact 3,662,409,600-byte/1,200-frame raw
+    cardinality (short raw = NO-FAKE/compliance failure, never a rate lever). verdict_scope: DERIVED-FROM-CODE.
+  - (b) **score-economics waterlines** → new anchor `score_economics_cell_byte_waterlines_20260710` on
+    `costate_lambda_marginal_ds_v1` (the costate/score-formula eq that already held λ_bytes = 25/37_545_489).
+    seg-cell price 8.4771050347e-7 (already in resize_exploit law-2) · byte price 6.6585895312e-7 · **1 cell ≡
+    1.273108 bytes** / 1 byte needs > 0.785479 cells (absent Pose) · **waterlines from 0.19110: sub-0.19 ≡ 1,651.74 B
+    or 1,297.41 cells; sub-0.15 ≡ 61,724.52 B or 48,483.33 cells** (one-axis-held-fixed EQUIVALENCES, NOT
+    predictions — recompute Pose+interactions at the realized candidate). Pose has NO fixed per-byte rate (sqrt).
+    verdict_scope: DERIVED. Corrections logged: sqrt(10·0.018)=0.424264 (not ~0.02); 0.022/0.00161=13.66 & 0.022 is n24.
+  - (c) **exact 6-atom Pose-preprocess null kernel** → new anchor `pose_preprocess_exact_6atom_null_kernel_20260710`
+    on `posenet_luma_chroma_sensitivity_asymmetry_v1` (which already held the SUFFICIENT chroma box-average sinc
+    null; this is the EXACT/COMPLETE kernel + the v7.5.3 exact-D texture home law). Per pixel 0.299dR+0.587dG+0.114dB=0
+    AND per-2×2-block sum(dR)=sum(dB)=0 → **6-dim/block, 294,912 dof/frame**, basis = {h_x,h_y,h_xy}⊗{c_U,c_V},
+    residual < 5.6e-17. FOUR binding caveats break it (pre-sigmoid compose · soft placement/annulus · camera-grid
+    lift+resize leak · uint8/clamp piecewise) → home law = PROJECT AFTER last nonlinearity, camera-grid preimage,
+    first-6-Pose bit-stable after fresh .raw reload; "HF chroma alone is NOT an exact-null theorem." verdict_scope:
+    DERIVED-FROM-CODE (CANDIDATE home law, NOT proof the current period-[4,8] RGB bank inhabits it).
+    *(Registry note: posenet_luma_chroma + segnet_texture_perception were pre-existing __init__ ORPHANS — running
+    posenet's populate registered it for the first time (de-orphaned at registry level); the __init__-wiring orphan
+    is a residual apparatus gap flagged for a future de-orphan pass, not this fold.)*
+  - (d) **SegNet global-dependence / no-edge-local-factorization** → **`# FORMALIZATION_PENDING`** (NOT a confirmed
+    law): the source-inspected leg is REAL (EfficientNet-B2 SqueezeExcite global pooling + deep U-Net = global
+    dependency paths → per-carrier d_seg gains CANNOT be added without a decoded composite interaction check), but
+    the **quantitative receipt is MISSING** (the recovered margin-gradient tails 9.15%/3.56%/2.21% outside radii
+    64/128/192 + the block-response matrix J(edge e←region e') have NO raw tensor/command/hash). Registering a
+    confirmed anchor would be a fake; instead → costate duty-to-measure (deferral ledger, below). verdict_scope:
+    FORMULATION-pending (segnet_texture_perception is itself an __init__ orphan — not extended, to avoid compounding).
+- **PR128 COMPLIANCE HARVEST (beyond FEED-pr128-intake, NOT-yet-recorded):** exact archive grammar — 176,531 B ZIP
+  (100 B overhead, 1 STORED member `x`), 7-byte ctx header `17 50 75 02 e0 3a 00`, decoder 161,104 / latent 15,072 /
+  selector 248; member sha `8f7b808e…`, release asset `cfd941de…`. **PR112 delta = −605 B** (latent ctx +2, sidecar
+  −607; decoder+selector byte-IDENTICAL) → 86.59% of the claimed gain is d_seg (0.056023→0.053309), 12.85% rate,
+  0.56% pose. **§7.4 five corrections to our intake/design memos** (fold into #399/#400 before they become authority):
+  (1) PR112 seg = 0.00056023 not 0.00056032; (2) PR101 sidecar values are NOT native-grid multiples → "folding" is an
+  exact-gated discrete RE-OPTIMIZATION, not a value-preserving syntax rewrite (pure-fold baseline ABSENT →
+  "2,162/583" source-UNVERIFIABLE); (3) **different-pair full-score deltas do NOT add exactly** (renderer + raw
+  distortion sums factor by pair, but Pose sqrt is set-dependent AND the adaptive coder makes ΔB globally
+  set-dependent) → the real re-encode + full-S accept is the mandatory cure; (4) a witness frame1 code click is read
+  by BOTH SegNet AND PoseNet → screening receipt must return per-pair Seg AND raw Pose deltas, not d_seg alone;
+  (5) public counts/CPU score are author claims, not reproducible receipts. **Generalized exact-integer finisher**
+  J(a)=100·d_seg(R∘Decode∘Pack(a))+√(10·d_pose(…))+c_B·|Pack(a)| — 8-step resumable ratchet (accept only
+  J(a′)<J(a)−ε_authority, atomic bank, conflict-graph coloring for diagonal batches). OSS license ledger recorded
+  (constriction MIT/BSL · COIN++/HiNeRV/SIREN/WIRE MIT · C3 Apache/CC-BY · HNeRV/NeRV/VINRB DO-NOT-COPY unlicensed).
+  **PR128 unratified (open, 0 reviews, stale body vs HEAD, release-tag/source mismatch) → NO pointer move; custody-only.**
+- **SYNTHESIS DISPOSITIONS vs what was ALREADY fixed pre-launch:**
+  - **v7.5.2 — HOLD full launch; the LIVE pilot (`levelset_v752_pilot_20260710T154100Z`, FEED-v752-pilot-live) already
+    CLOSED P0-1 + P0-2 pre-launch** (expected-active-lever manifest 9/9 with `pose_finish_conditioning_gate` ACTIVE
+    engage-on sigma_min_plateau = advisory P0-1's #383-composed fix; P0-2 degenerate-backstop guard live in-trainer).
+    Still owed (advisory P0-3/4/5): R1-dxi-graft-onto-fresh-EMA UNMEASURED (P0-3; the complete-R1-artifact fallback IS
+    shippable — do not reopen #238); chroma clean-rung attribution (P0-4, inherited `--seg-chroma-boundary-*`); amber
+    realization/waiver (P0-5). verdict_scope on owed16v2: **FORMULATION (warm-start rebalanced directional, not
+    family)** — completed naturally, NO-GO (rebalanced worse than OFF at every trained cell) → self-orient-OFF stands.
+  - **v7.5.3 texture — DESIGN/BUILD-ONLY (HOLD training + scored A/B).** 3 P0s: MLX trains T while NumPy verdict +
+    inflate OMIT it (three vehicles; parity passes on the SHARED omission — a green test certifies the trunk-blind
+    decoder); a **430,878-B deterministic bank is COUNTED then IGNORED** (~0.287 S, larger than the whole frontier) →
+    regenerate generic banks in receiver code, count ONLY learned coeffs; current T is unconstrained pre-sigmoid RGB
+    on BOTH frames, violates the frame1-only exact-D home law (c). verdict_scope: FORMULATION (the generic-RGB trunk
+    is a diagnostic, not v7.5.3).
+  - **v8 — HOLD increment-1a EVENT.** 4 P0s: **kill inequality REVERSED** in sealed/config (confirms the worse arm;
+    the evaluator callable is correct — one predicate ID must own it); receipt-LESS matched-arm gate (naked d_seg
+    passes); byte closure DECLARATIVE (boolean over an in-memory GT-derived analytic construction, no payload/decoder/
+    parse-back); **E-edge vs K-class decoder UNRESOLVED** — the frozen RAG has 9 adjacencies + **6,703 triple-junction
+    2×2 blocks** → independent edge fields need g_ij+g_jk+g_ki=0 cycle-integrability after quantize/parse-back OR a
+    globally-defined K-potential decoder (Road-Lane alone = 50.25% of unlike edges; Lane 74.31% margin<1 / 59.6%
+    turnover → aggregate d_seg hides the theft v8 targets). shared trainable trunk ⇒ ∂φ_c/∂θ_c′≠0 (five heads do NOT
+    make theft impossible). verdict_scope: FORMULATION per P0.
+- **ROUTING (leg-3 DSL + tasks + costate) — NO lever changes owed by THIS fold:** blind-coordinate fill + waterlines +
+  6-atom-kernel + segnet-global-dep are **receiver / byte-close / scorer-structure facts, NOT trainer levers**
+  `[no-triality-lever]` — no DSL surface, stated explicitly. In-flight sibling ownership (NOT created here): **ChromaRung**
+  (chroma-rung agent; NOT yet a DSL `Lever` — verified absent from `curriculum_dsl`/lever ledger → its builder registers
+  the duty at landing); **amber** IS a DSL lever (`witness_stability_amber`) owned by the launch executor (P0-5). OWED
+  FUTURE DSL deltas (gated on future builds, not this task): immutable v7.5.2 program IDs (`crucible_v752_sealed_on` vs
+  `crucible_v752_launch_off`, advisory P1-4); v7.5.3 exact-D/routing modes (gated on v753 build); v8 stable verdict
+  predicate ID (gated on v8 repair). Tasks: #399 borrowed-bank click-polish · #400 witness terminal-band diagonal ·
+  #401 blind-coordinate lever/fill · #402 receiver hardening (all already created by main). Apparatus defects recorded
+  for the routing owner `[no-triality-leg]`: P0 public watcher queries `commaai/commavq` not the challenge repo (cannot
+  see PR112/PR128); `reports/latest.md` stale (0.1919853363); vehicle/owed16v2 lanes unregistered; #383 completion ≠
+  active-program integration; owed16v2 detector decision trapped in log (`actuated=false`); Jacobian headlines lack raw
+  custody. **Pointer contest-CPU 0.19110 UNMOVED — MEANS; only a byte-closed `upstream/evaluate.py` n600 exact row moves it.**
+
 ## FEED-clickpolish-build (2026-07-10) — task #399 phase-1 harness LANDED + validated (all greens); phase-2 Modal staged · pointer 0.19110 UNMOVED
 
 - **What:** exact-score-gated latent CLICK-POLISH SEARCH on OUR PR110-lineage frontier archive
