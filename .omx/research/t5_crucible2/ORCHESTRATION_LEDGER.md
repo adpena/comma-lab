@@ -208,8 +208,28 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
     buildability + P5-fold-fidelity seal (NOT empirical-readiness — detector fire-behavior on real σ_min is
     owed-1/owed-14), DECLARED honestly (pointer-is-MEANS, honest_floor=ship-banked-R1). $0 · no GPU · [no-triality].
     Full per-round records in `tac.review_counter` surface `crucible2_v752`. Pointer 0.19110 UNMOVED (MEANS).
-- [ ] **P7 DELIVERABLE = SPEC_v752**  ← **NEXT** (P6 SEALED) (successor to SPEC_v75): DSL WitnessProgram · schedule · costate ·
-      curriculum · rate/pose plan · measurement + wall-clock plan — triality-consistent landing.
+- [x] **P7 DELIVERABLE = SPEC_v752 — LANDED (2026-07-09).** Two artifacts: (1) operator-facing spec
+      `.omx/research/t5_crucible2/SPEC_v752_20260709.md` (launch-1 config · schedule/curriculum objects ·
+      repaired pose-gate · A/B ladder · pre-launch owed-gates STATUS · wall-clock budget · risk register ·
+      HONEST projected S-path [floor = ship-banked-R1 d_pose 0.127; d_seg = OPEN axis] · dual-chain brief
+      half · §OPEN-ITEMS). (2) THE TYPED PROGRAM — `witness_autoconfig.derive_crucible_v752_config` /
+      `compile_crucible_v752_config` (v7.5.2 = the SEALED crucible_v7 TypedWitnessConfig + launch-1 delta
+      [#121 taper] − σ_cc′ [W-1 removal → σ≡1]; fused-R/async-verdict inherited): **`validate_program()==[]`
+      (0 viol) · compiles 291 tokens through `build_real_trainer_parser` 0-UNKNOWN · `dsl_program_manifest`
+      (crucible_v752, dsl_program_manifest.v1) VERIFIES** — v7.5.2 is the 3rd DSL-provenance-migrated program.
+      Test `src/tac/tests/test_crucible2_v752_dsl_wirein.py` (5 PASS; FEED-07 pattern: compile-through-argparse
+      + validate + manifest-verify + delta-genuine + excluded-items-guard). **completeness() gap:** only
+      `--fused-r-kernel` unmapped (score-neutral perf lever; documented pre-DSL; fold owed AFTER #383 frees
+      curriculum_dsl.py). **§OPEN-ITEMS surfaced (NOT silently decided):** OI-5 amber realization (NEW CATCH —
+      naive `--stability-preset amber` SILENTLY DEFEATED by inherited explicit `--grad-clip 1.0`, trainer
+      L9989 "explicit wins"; EXCLUDED from the program, realization = P8-wall) · OI-4 freq_along-26 =
+      `lane_carried` regime vs crucible_v7's `lane_offloaded`-6 (regime CHOICE, P8-wall) · OI-1 per-group-clip
+      (folded into OI-5) · OI-2 λ cite · OI-3 backstops. σ_cc′ removal = sealed-unambiguous (DONE, not open).
+      **`--pose-finish-engage-on` owed-1 NOT stubbed** (being built by #383; program rides
+      `--pose-finish-start-epoch` backstop + banked-R1). Pointer 0.19110 UNMOVED (SPEC is MEANS). Triality:
+      DSL leg (typed program + test) · DAG leg (sealed SYNTHESIS_v3) · equations leg N/A (transcription).
+      **The crucible-2 MACHINE is COMPLETE** pending the launch-blocking owed-build gates (pose-gate #383 ·
+      dry-start · speed/wall-clock) enumerated in SPEC_v752 §5 — resolved at the P8 wall, NOT here.
 - [ ] **P8-LAUNCH (operator-GO wall; NEVER autonomous):** execute-at-n600 seal-completion (F-2 owed
       items) → governed `tools/launch_witness_run.py` → full-facet watch + byte-close 3-arm → exact eval
       row. THEN crucible-3 (v8, #380).
@@ -272,6 +292,17 @@ B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event trigger (CE→ta
    question: is a torch-parity twin worth building for Modal A/B fan-out? (S4 owns.)
 
 ## The one-line resume state
+**P0…P6 SEALED + P7 DELIVERABLE LANDED (2026-07-09).** SPEC_v752 = `.omx/research/t5_crucible2/SPEC_v752_20260709.md`
+(operator-facing) + the TYPED PROGRAM `witness_autoconfig.derive_crucible_v752_config`/`compile_crucible_v752_config`
+(validate 0-viol · compile 0-unknown · manifest verifies · test `test_crucible2_v752_dsl_wirein.py` 5 PASS ·
+3rd DSL-migrated program). v7.5.2 = crucible_v7 sealed trunk + #121 taper − σ_cc′ (W-1); amber EXCLUDED
+(OI-5 silent-defeat catch) + freq_along-26=lane_carried (OI-4) = P8-wall items; `--pose-finish-engage-on`
+owed-1 (built by #383, NOT stubbed). **The crucible-2 MACHINE is COMPLETE.** NEXT: crucible-3 (v8, task
+#380) runs its full machine; when BOTH chains sealed+approved → dual-chain comparison brief → **operator
+which-to-run GO (the P8 wall; NEVER autonomous)**. #205 STOPPED (box free); pointer 0.19110 UNMOVED (MEANS).
+
+---
+### (superseded resume state, pre-P7 — APPEND-ONLY historical)
 P0+P1(all 6 seats)+P2+P3+P3b+P4+P5+P5b landed. **A-1 RESOLVED + HARDENED into SYNTHESIS_v3** (v3 SUPERSEDES
 v2 90d562a5a): PRIMARY = **robust ROLLING-SLOPE ≈0 on DE-NOISED σ_min** + noise/fit-quality guard (REPLACES
 the v2 exp-asymptote fit P4 disproved); canary RE-SPEC = $0 negative+synthetic controls + governed
