@@ -13944,3 +13944,20 @@ crucible_v752 launch path + the live run dir `levelset_v752_pilot_20260710T15410
 - **NO-FAKE / means != ends:** the add-back ΔS is UNMEASURED; this unit delivers a FIREABLE registered-OFF
   arm + pre-registered rule, NOT a score. **Pointer contest-CPU 0.19110 UNMOVED; no launch, no dispatch, no
   run touched.**
+
+### FEED-legdisposition-chroma (2026-07-10) — triality leg record for the chroma-rung commit
+- **`2d5e5590d` ("chroma rung: register SegChromaBoundary as v7.5.3 ladder rung"):** DSL leg =
+  SATISFIED, split across two commits by the absorption pattern — the `SegChromaBoundary` Lever
+  factory PRE-EXISTS in `src/tac/witness_dsl/curriculum_dsl.py:3375` (REUSED, deliberately not
+  duplicated per the never-duplicate discipline), and the ladder/config registration hunks landed
+  inside the sibling amber commit `95d9f429f` (verified complete: all 4 hunks, ladder=12,
+  imports clean). No witness_dsl file needed changing in `2d5e5590d` itself — that is the reuse
+  working, not a missing leg. equations leg = ALREADY-REGISTERED for the measured content
+  (`chroma_decides_lane_and_movable_at_annulus_v1` + the hinge equation, both from #276); the
+  add-back GAIN is UNMEASURED by construction (the rung exists to measure it) → new-anchor
+  deferred-to-first-measured-row, stated not skipped.
+- **Durable finding (recorded here + memo; no MEMORY.md line — S5-N10 already encodes the class):**
+  the advisory-referenced "prior measured add-back receipt" DOES NOT EXIST; probe `a3e9f0bd` is a
+  removal-WORTH ablation, not an add-back-GAIN. WORTH ≠ GAIN (S5-N10); the rung + pre-registered
+  PAYS/WASH/WORSE rule is the missing instrument. Two independent agents converged on this
+  (`chroma_rung_design_20260710.md` + decision record §9 `04e4e6703`).
