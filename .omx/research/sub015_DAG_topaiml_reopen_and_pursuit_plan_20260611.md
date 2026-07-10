@@ -14281,3 +14281,46 @@ ahead of Tier-1 lever work; witness apply-pass batch consolidated as #406 (fires
 checkpoint). MEMORY.md line: LANDED (⭐CURRENT + hook → witness_line_priority_borrowed_polish_harvest_only_20260710).
 DSL/equations legs: N/A — priority/disposition change, no lever or measured law. Pointer 0.19108282
 [contest-CPU] UNMOVED this FEED (disposition-only; MEANS).
+
+### FEED-telemetry-p0 (2026-07-10) — #404 telemetry audit + binding-vs-inert readback for the v7.5.2/v7.5.3/v8 levers
+
+OPERATOR P0 (verbatim): "given our latest changes to v7.x and v8 should we do anything to enhance our
+telemetry ... All of that is p0 ... Update costate controller accordingly as well." Full audit memo:
+`.omx/research/telemetry_enhancement_audit_v7x_v8_20260710.md` (per-item a–h gap table, STORES
+CONSULTED, queued trainer-patch designs Q1–Q7).
+
+AUDIT VERDICT (a–h): most of the L1 alarm layer ALREADY EXISTS in the trainer's run.log rows —
+event fire/cap rows with sensor+lag provenance (event_wirings L191/L207), would-fire (lane) +
+handoff-readiness implied-ON under the sealed flags, jacobian_basin sensor default-ON,
+pose_finish_conditioning_gate rows CARRY should_ship_banked_r1 (sigma_min_plateau L573 — the
+dashboard sibling's routed gap (b) was already closed at the emit layer), 4 pose-gate confound
+alarms, tail cycle/stop rows with MEASURED marginal ΔS/ep, per-class d_seg on verdicts. The real
+gaps: (b) NO per-group clip-activation rates (amber could be silently inert per group — the
+--grad-clip 1.0 defeat class), (c) term_domination `_reg_keys` excludes chroma + no inert-floor
+alarm, (e) no explicit EMA-lag series, (f) D27b had no machine-readable basin trigger, plus the
+sibling-routed ladder_birth_complete + uniform lever_engage schema.
+
+LANDED (read-only, score-neutral, default-ON, sealed relaunch chain UNTOUCHED):
+`src/tac/witness_control/telemetry_binding.py` (+31 tests) — amber clip-binding
+BINDING/INERT_NEVER_BINDS/SATURATED from gnorm vs effective clip · chroma share
+PENDING/INERT_ZERO/BINDING/DOMINATING · pose-gate sensor liveness DETECTOR_STALLED (the
+SigmaMinPlateauDetector silent-2.5h-crash class, fixed at the READ layer with early-run grace) ·
+EMA-lag verdict-vs-live divergence (run-1 confound signature) · terminal_band_status with
+**d27b_ready** (in_basin = muon fired AND trailing d_seg rel-slope < 5e-3; terminal_band adds TAIL
+stop / Polyak arm) · TAIL per-cycle endpoint stats (SWA-soup inputs) · unified event decision table.
+CLI `tools/witness_telemetry_audit.py --run-dir <run> [--section X --json]`; costate digest gains
+`section_telemetry_binding` (bounded tail, fail-open, +5 tests) so the controller SEES
+binding-vs-inert + basin state every SessionStart. Smoked on the REAL dry-start log (read-only):
+correct UNKNOWN/PENDING/NO_SENSOR_ROWS on a 1-verdict run.
+
+QUEUED (gated on relaunch/resume boundary — NEVER hot; designs in the memo): Q1 per-group
+grad_clip_activation row · Q2 chroma+levers into term_domination keys + term_inert alarm · Q3
+--verdict-live-gap-every K (DSL Lever when it lands) · Q4 optional tail_cycle_endpoint row · Q5
+would-fire rows for powerlaw_meat/annulus_plateau · Q6 ladder_birth_complete row · Q7 uniform
+lever_engage schema. v8 (g): carrier_attribution row design lands with build wave #377.
+
+TRIALITY: apparatus/observability class [no-triality-lever] — DSL N/A (zero config levers added;
+Q3's flag will be a DSL Lever factory at landing); equations N/A (no new measured law; analyzers
+operationalize registered confound classes). Verdict-scope: all analyzer verdicts INSTANCE-scoped.
+Pointer contest-CPU **0.19108282 UNMOVED** — this is MEANS (instrumentation for the imminent
+pointer-moving run), not goal progress.
