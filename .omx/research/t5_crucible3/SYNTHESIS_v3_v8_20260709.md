@@ -53,7 +53,7 @@ confirmed) · `src/tac/inc1a_harness/decoupling_screen.py` (δ_mask default SWAP
 |---|---|---|---|
 | **F-P5-1** T1 rate/d_seg conflation → un-homed lateral undriv (97.5% MEASURED); §B ships single-valued carrier → hobbled/confounded 1a | **REVISE (near-break) → v3** | **FIXED** — §B `road_undriv_carrier` replaced with a **lateral-capable 3-curve carrier** (top arc + left/right per-row undriv-extent curves); NEW §I row **I1b** (GEOMETRIC-MINIMAL, dim + DERIVED byte-cost estimate tagged owed-measurement); T1's statement AMENDED to own the d_seg side (bulk-SDF demotion survives as RATE law; the replacement carrier must carry lateral); the un-homed-mass seam gets an OWNER (the carrier section explicitly owns lateral undriv); 1a PINNED to measure the BYTE-CLOSED composite. verdict_scope FORMULATION. | §A.1 (amended), §B `road_undriv_carrier`, §I I1b, §1 |
 | **F-P5-P9-1** `evaluate_kill` δ_R=0.0196 proxy STILL in live code (`decoupling_screen.py:160`); ~5600× too strict → screen decision-inert | **REVISE (worst proxy)** | **FIXED IN CODE (this turn)** — default swapped to R7 MEASURED `DELTA_MASK_FRAME_SAMPLING_FLOOR=3.46e-6`; `DELTA_R_PROXY` demoted to `DELTA_R_PROXY_RETIRED` (historical only, never a default); operative floor = `operative_delta_mask()`; tests rewritten (realistic Δ now returns REAL CONFIRMED/KILLED; 27/27 pass, ruff-F clean). | code + §A.4, §B `measure_1a` |
-| **F-P5-2** δ_mask operative floor = max(3.5e-6, in-run seed spread); ≥3 seed replicates/arm the 1a build does NOT specify → kill can fire on within-seed noise | **REVISE** | **FIXED** — code: `operative_delta_mask` REFUSES when `n_seed_replicates>=2` but `seed_spread` is None (the P2 seed-honesty guard) + `evaluate_kill` returns REFUSED on that under-spec. Spec: the 1a A/B gains **≥3 seed replicates per arm** (the seed-spread instrument) + the P2 floor law `operative δ_mask = max(3.5e-6, measured seed spread)`. | code + §A.4, §B `measure_1a`, §D-9 |
+| **F-P5-2** δ_mask operative floor = max(3.46e-6, in-run seed spread); ≥3 seed replicates/arm the 1a build does NOT specify → kill can fire on within-seed noise | **REVISE** | **FIXED** — code: `operative_delta_mask` RAISES `DecouplingScreenError` when `n_seed_replicates>=2` but `seed_spread` is None (the P2 seed-honesty guard), which `evaluate_kill` surfaces as `VERDICT_REFUSED` on that under-spec. Spec: the 1a A/B gains **≥3 seed replicates per arm** (the seed-spread instrument) + the P2 floor law `operative δ_mask = max(3.46e-6, measured seed spread)` (R7 MEASURED anchor). | code + §A.4, §B `measure_1a`, §D-9 |
 | **F-P5-4** NO temporal section for the 1a d_seg screen (eightfold-P6 SEAL FAIL); decoupled per-class fields may flicker independently at the tie | **REVISE** | **FIXED** — NEW **§A.8 temporal section**: the 1a mask screen measured PER-FRAME **AND** with a per-class **tie-flicker** row across consecutive pairs (Lever-D temporal machinery, #280, is the existing instrument); v8's fuller temporal story (slot-churn, GOP-keyframe, dash-phase=ego-distance) stated as the **SPEC_v8.1** section it becomes. | §A.8 (new), §B `measure_1a.temporal` |
 | **F-P5-3** shippable (pre-P-C) increment-1 rate = 0.135 = WASH; sub-frontier win rides the r\* waterfill (P-C-gated, unmeasurable in inc-1) | **CARRY-AS-RISK** | **RECORDED** — §A.2 + the P8-brief requirement: shippable rate = **0.135 (WASH)**, sub-0.118 win explicitly **P-C-gated**; carry r\* as a labeled **RANGE [0.061, 0.135]** with F8 uncertainty, NEVER a point; note the wash is partly a weak-lane-generator artifact (F-P5-5), not v8's ceiling. | §A.2, §C risk-3-rider |
 | **F-P5-5** lane-generator coverage (53% of enemy) = FAST-FOLLOW not increment-1 scope | **CARRY (recommendation)** | **RECORDED** — §A.2 roadmap rider: lane-generator coverage is a **FAST-FOLLOW** (post-1a, its own BUILD + byte-close + n600 A/B), NOT increment-1 scope (folding it BLOATS the cheapest-falsifiable row); its params ride §I clause-B. | §A.2, §D-10 |
@@ -90,8 +90,8 @@ the carrier section explicitly OWNS lateral undriv.
 the 1a kill floor to the δ_R=0.0196 through-R proxy (a ~5600× UNIT category error that made the screen
 DECISION-INERT — no realistic 0.001–0.01 decoupling improvement could clear it). The default is now the
 R7-MEASURED frame-sampling floor **3.46e-6**, and the OPERATIVE floor = `max(3.46e-6, in-run seed spread)`
-via the new `operative_delta_mask()` — which **REFUSES** (returns `VERDICT_REFUSED`) when ≥2 seed
-replicates exist but `seed_spread` was not supplied (the P2 seed-honesty guard: a kill fired on a floor # MAGNITUDE_DISMISSAL_OK: P2 noise-floor law ENFORCED (refusing an under-specified-floor verdict), not a dismissal — no lever deferred/killed
+via the new `operative_delta_mask()` — which **RAISES `DecouplingScreenError`** (which `evaluate_kill`
+catches and surfaces as `VERDICT_REFUSED`) when ≥2 seed replicates exist but `seed_spread` was not supplied (the P2 seed-honesty guard: a kill fired on a floor # MAGNITUDE_DISMISSAL_OK: P2 noise-floor law ENFORCED (refusing an under-specified-floor verdict), not a dismissal — no lever deferred/killed
 that dropped a measurable seed component would be firing on within-seed noise). Tests rewritten: a
 realistic 0.005 improvement now returns a REAL `DECOUPLING-CONFIRMED` (it was `INCONCLUSIVE` under the
 proxy); 27/27 pass, ruff-F clean.
@@ -178,9 +178,22 @@ F7 DISSOLVED-CONFIRMED (re-derived): "#226-admitted flips" and "uncovered residu
 
 ### A.3–A.7 UNCHANGED from v2
 
-- **A.3 b_c tie calibration** — UNCHANGED (M-a flip-share-MASS-OT built + M-b flip-density-MEDIAN now built
-  per P4 R4; #386 gate verdict OWED; SAFE DEFAULT no_offset 0.00272, NEVER ot_newton). P9-4 rider retained:
-  the #386 realized-through-R gate is the SOLE b_c authority; no_offset is a proxy placeholder.
+- **A.3 b_c tie calibration** — design UNCHANGED; **#386 gate now RESOLVED (was OWED in v2/P4) — P6-R1 pin.**
+  M-a flip-share-MASS-OT + M-b flip-density-MEDIAN were both built (P4 R4) and the #386 realized-through-R
+  n600 gate has now RULED (`laguerre_ot_head_offset_20260709.py`, mod32cap ep650, all 600 pairs, frozen CPU
+  SegNet fp32): **BOTH flip arms REFUTED, decisively** — no_offset **0.0031436** (n600 authority; the 0.00272
+  was the n24/n48 SUBSET) << M-a flip_weighted **0.0196734** (6.3×, +40% of the gap AS HARM) << M-b flip_median
+  **0.0215612** (6.9×, +45% AS HARM). **verdict_scope: FORMULATION/REGIME, NOT paradigm** — M-a re-inherits +
+  amplifies N-1's cell-inflation pathology (FORMULATION: "flip-share via mass-OT"); M-b is a REGIME violation
+  (the Hamming-median law is valid only for |b| SMALL on a NON-eroded φ field; the solved b_Lane ≈ +43, driven
+  by the trunk's deep φ-space Lane erosion, EXITS that validity domain — not a refutation of the median law).
+  **SAFE DEFAULT = no_offset (0.0031436), NEVER ot_newton/flip_weighted/flip_median** — the GLOBAL post-hoc
+  5-scalar b_c lever is SATURATED at no_offset on this eroded trunk (N-1's exhaustive ±0.4 sweep best Δ −3.4e-8).
+  **ROUTE FORWARD = per-EDGE b_c on the FRESH v8 Stage-A decoupled fields** (non-eroded by construction — the
+  crucible-3 v8 route; S1's original per-edge form), NOT a global offset on the frozen eroded trunk; also owed:
+  offsets solved JOINTLY-with-training. P9-4 rider UPDATED: the #386 realized-through-R gate is the SOLE b_c
+  authority and has now RULED; no_offset is the MEASURED-CONFIRMED safe default (no longer a proxy placeholder
+  awaiting the gate).
 - **A.4 staged training + 1a** — UNCHANGED except the two P5 fixes now folded: (i) the δ_mask floor (§A.4
   measure_1a) is the R7 3.46e-6 + in-run seed spread (see code + §B), retiring the δ_R borrow; (ii) 1a is
   PINNED to the byte-closed composite (F-P5-1). σ_cc′ still DROPPED from 1a (F2, v2).

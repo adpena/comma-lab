@@ -299,3 +299,22 @@ of I1b byte-cost + lateral coverage; standing checks = eightfold template + P9).
   generators render at camera-res 874×1164 then map (bilinear ↓) → argmax taken AFTER the map; 1b through-R
   same 512×384 via real R; **#149 camera-res sub-pixel PLACEMENT = the intended EXCEPTION** (placement-grid ≠
   compare-grid, never conflate). Parallel audit agent verifies code surfaces; v3 states the SPEC.
+
+## [P6-R1 NOT_CLEAN — 2026-07-09] RECURSIVE SEAL round 1 (crucible3_v8, fresh-eyes over 0f94946d8)
+Counter 0/3 (NOT_CLEAN). 3 findings, all doc-only (no .py review-gate). Standing-check results: (1) scaffold
+surfaces ALL EXIST · (2) I1b band [0.0040,0.0083] arithmetic RE-DERIVED clean · (3) eightfold/P9 PASS · (6)
+grid pin present. FINDINGS + fixes (all folded this round):
+- **F-R1-1 (PRIMARY, check-5):** §A.3 b_c section STALE vs the LANDED #386 gate (sibling committed the gate +
+  registry since the round opened). Doc said "gate verdict OWED" / "no_offset 0.00272" (that was the n24/n48
+  SUBSET) / "no_offset is a proxy placeholder" — but the n600 gate has RULED: BOTH flip arms REFUTED
+  (flip_weighted 0.0196734 = FORMULATION re-inheriting N-1 cell-inflation; flip_median 0.0215612 = REGIME
+  violation on the eroded trunk), no_offset **0.0031436** = SAFE-DEFAULT (global post-hoc b_c SATURATED),
+  route-forward = **per-EDGE b_c on FRESH v8 Stage-A decoupled fields** (non-eroded). FIXED: §A.3 rewritten to
+  the RESOLVED verdict + verdict_scope FORMULATION/REGIME + route + updated P9-4 rider.
+- **F-R1-2 (check-4):** headline mis-attributed "returns VERDICT_REFUSED" to `operative_delta_mask()` — that fn
+  RAISES `DecouplingScreenError`; `evaluate_kill` catches it and returns `VERDICT_REFUSED` (verified L159-235).
+  FIXED headline + the §0 F-P5-2 ledger row.
+- **F-R1-3 (check-2):** §0 F-P5-2 ledger cited floor 3.5e-6 (×2) vs the R7 MEASURED anchor 3.46e-6 (code +
+  everywhere else). FIXED to 3.46e-6.
+**Triality:** [no-triality] (doc-fidelity fixes; no lever/law change). Pointer 0.19110 UNMOVED — MEANS.
+NEXT ACTION: **P6-R2** — re-derive over the fixed doc; if zero findings, first CLEAN toward 3-consecutive seal.
