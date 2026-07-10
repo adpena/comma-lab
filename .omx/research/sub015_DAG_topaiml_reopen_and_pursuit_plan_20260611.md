@@ -12248,3 +12248,50 @@ derivation OR waterfill justification with measured marginal} → P3b representa
 seal checks · #385 brief min-dim-or-waterfill column (beside the dedup audit) · #336 = the waterfill
 instrument. Injected live into P3b. Triality: DAG=this FEED; DSL/equations follow as the requirement
 becomes seal-check/law. Pointer 0.19110 UNMOVED (means).
+
+---
+
+## FEED-buildwave-dtm (2026-07-09) — #377 duty-to-measure build-wave: 2 top levers were ALREADY BUILT (false `~unbuilt`), D18 stays deferred
+
+**Trigger:** #377 "build all unbuilt" over the costate duty-to-measure queue. Top-3 owed by % of
+remaining descent: `d_seg_aware_taper_121~ 73%` · `horizon_weighted_margin_169~ 43.8%` ·
+`latent_table_truncate_d18_k90~ 2.4%`. Per operating-manual §1/§4 (read the real ask · verify by
+re-deriving) the `~=unbuilt` premise was ATTACKED before building — and FALSIFIED for the top two.
+
+**Disposition (VERIFIED via source inspection + 58+24 passing tests):**
+- **#121 d_seg-aware taper — ALREADY-BUILT + ALREADY-HELD.** `DsegAwareTaper` factory
+  (`curriculum_dsl.py:1944`) compiles `--dseg-aware-taper{,-strength,-scale,-floor}`; all flags MAPPED
+  (completeness, not `.unmapped`); WIRED into the levelset trainer argparse (`:10449`) + cfg (`:691`);
+  reference twin `boundary_math/dseg_aware_fourier_taper.py`; byte-identical default-OFF. Owed a
+  MEASUREMENT, not a build. **Did NOT rebuild** (duplicate = NO-FAKE #7).
+- **#169 horizon-weighted margin — ALREADY-BUILT + ALREADY-HELD + ALREADY-COMPOSED.** `HorizonWeightedMargin`
+  factory (`curriculum_dsl.py:3192`); `--seg-horizon-margin-{weight,target,lo,hi,...}` argparse (`:10929`);
+  the one-sided hinge `L += hz_w·mean_mask relu(m_target − m_wit)` is LIVE in the trainer loss
+  (`:4988-4991`), composed onto the existing #141/#274 margin/spike machinery (reuses the same SegNet
+  forward, 0 archive bytes); reference twin `boundary_math/horizon_weighted_margin.py`; weight=0 default ⇒
+  branch never built ⇒ byte-identical. The mission's "Build it" premise was falsified by the artifact.
+  **Did NOT rebuild.**
+- **ROOT CAUSE of the false `~unbuilt`:** the relative-significance store (`lever_relative_significance.jsonl`)
+  keyed these rows by task-# names (`d_seg_aware_taper_121`, `horizon_weighted_margin_169`) recorded when
+  they were duty-to-BUILD findings, never reconciled to the now-held factory names (`DsegAwareTaper`,
+  `HorizonWeightedMargin`). `duty_to_measure_ranked` computes `registered = key ∈ factory_names` → False →
+  digest marks a built+held+wired lever `~=unbuilt`. Orphaned signal (CLAUDE.md "'Off' is a tracked
+  queue" + "Results become system intelligence").
+
+**THE BUILD (apparatus, not a lever):** read-time significance-key canonicalization in
+`activation_ledger.canonicalize_significance_keys` (+ `_SIGNIFICANCE_LEVER_ALIASES` guarded map: alias
+applied ONLY when target IS a held factory; APPEND-ONLY store NOT rewritten; explicit canonical row
+preserved). Wired into `duty_to_measure_ranked`. Result: digest now reads
+`DsegAwareTaper* 73%, HorizonWeightedMargin* 43.8%` (`*`=never-fired = duty-to-MEASURE) instead of
+`~unbuilt`. 5 new tests (pure/idempotent/no-op-when-not-a-factory/explicit-row-preserved/end-to-end).
+
+- **D18 latent-table truncate (k90) — STAYS DEFERRED, named blocker.** Blocker = NO v7 FINAL CKPT (run
+  `dry_start`, `best=NONE`). The A/B consumes the FINAL ckpt `code` table + `{stage:mod_dim_dynamics}`
+  k90 series — neither exists. NOT unbuilt: the truncation-at-export machinery exists
+  (`tools/witness_code_pca_byteclose.py` PCA-K sweep + realized-verdict byte-close) + the k90 sensor
+  (`boundary_math/mod_dim_dynamics.py`). Only-missing-wire (premature): auto-feed measured k90 → `--ks`.
+
+**Triality:** DSL leg = factories ALREADY present (no new factory owed; the two levers are held).
+DAG leg = this FEED. Equations leg = **N/A until measured** — #121/#169 carry est ΔS (0.012–0.024 oracle
+for #169) but NO byte-closed n600 row yet; the canonical-equation anchor lands only when a real
+through-R measurement exists (their duty-to-MEASURE, now correctly surfaced). Pointer 0.19110 UNMOVED (means).
