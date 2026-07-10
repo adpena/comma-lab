@@ -236,6 +236,10 @@ from tac.canonical_equations.chroma_boundary_match_20260709 import (
     build_chroma_boundary_annulus_match_hinge_v1,
     populate_chroma_boundary_annulus_match_equation,
 )
+from tac.canonical_equations.resize_exploit_flip_fix_frontier_20260709 import (
+    build_resize_exploit_flip_fix_frontier_v1,
+    populate_resize_exploit_flip_fix_frontier_equation,
+)
 from tac.canonical_equations.lane_band_res_entropy_stage_20260707 import (
     build_lane_band_res_entropy_stage_v1,
     measured_entropy_stage_delta_bytes,
@@ -400,6 +404,8 @@ __all__ = [
     "populate_horizon_weighted_margin_equation",
     "build_chroma_boundary_annulus_match_hinge_v1",
     "populate_chroma_boundary_annulus_match_equation",
+    "build_resize_exploit_flip_fix_frontier_v1",
+    "populate_resize_exploit_flip_fix_frontier_equation",
     "build_lane_band_res_entropy_stage_v1",
     "measured_entropy_stage_delta_bytes",
     "populate_lane_band_res_entropy_stage_equation",
