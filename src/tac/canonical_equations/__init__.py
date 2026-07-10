@@ -280,6 +280,10 @@ from tac.canonical_equations.resize_exploit_flip_fix_frontier_20260709 import (
     build_resize_exploit_flip_fix_frontier_v1,
     populate_resize_exploit_flip_fix_frontier_equation,
 )
+from tac.canonical_equations.roadlane_grating_composition_refuted_20260710 import (
+    build_roadlane_grating_composition_refuted_v1,
+    populate_roadlane_grating_composition_refuted_equation,
+)
 from tac.canonical_equations.safe_compile_device_bitidentity_20260708 import (
     build_safe_compile_hosc_device_bitidentity_v1,
     populate_safe_compile_device_bitidentity_equation,
@@ -408,6 +412,7 @@ __all__ = [
     "build_quadratic_head_chart_subset_solve_gap_v1",
     "build_resize_exploit_flip_fix_frontier_v1",
     "build_rewarmup_beta2_memory_window_v1",
+    "build_roadlane_grating_composition_refuted_v1",
     "build_safe_compile_hosc_device_bitidentity_v1",
     "build_scalar_top1_top2_margin_is_exact_distance_to_flip_v1",
     "build_scorer_input_cache_hash_identity_v1",
@@ -474,6 +479,7 @@ __all__ = [
     "populate_palette_realization_ceiling_equation",
     "populate_quadratic_head_chart_subset_solve_gap_equation",
     "populate_resize_exploit_flip_fix_frontier_equation",
+    "populate_roadlane_grating_composition_refuted_equation",
     "populate_safe_compile_device_bitidentity_equation",
     "populate_step_native_activation_edge_optimality_equation",
     "populate_v8_geometric_rate_decomposition_equation",
