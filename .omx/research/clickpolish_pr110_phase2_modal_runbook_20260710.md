@@ -81,3 +81,10 @@ Mechanism = PR128 click-polish [external unverified]; substrate = OURS (PR110-li
 - **DSL leg = N/A** — this is a search/polish TOOL, not a training lever (no trainer flag; nothing to fold into `witness_dsl`).
 - **Equations leg = deferred** to the first measured exact-eval row (then register the click-polish RD law + the byte/seg-cell waterline equivalents).
 - **DAG leg = FEED-clickpolish-build** (appended).
+
+## Dispatch record (phase-2 execution, 2026-07-10)
+- `fc-01KX6D6991EY3TM8WPG51MN7YN` — n8 validation, **FAILED (operator lesson)**: spawned without `--detach`; ephemeral-app stop killed the call. Ledgered.
+- `fc-01KX6D7KMB1VVQTQWDTTJR28B9` — n8 validation (detached). Search half GREEN in-container (baseline n8-mean S 0.18511673; round-0 accepted 8/8 monotone clicks → n8-mean d_seg 0.00054105→0.00052770; ledger + candidate banked to Volume). **Eval half FAILED**: eval-dir copy missed `submission_dir/encoder/` (src/fec10_hybrid_decoder.py re-exports the FECa decoder from ../encoder — single-source-of-truth pattern). Fix `69f83a865`. Ledgered.
+- `fc-01KX6DKHTXQFW5SS85HJ6GNBX5` — n8 validation re-dispatch (detached, encoder/ fix, resumes the banked round-0 ledger from the Volume). IN FLIGHT.
+
+Measured so far (in-container Linux x86_64, 8-core): the n8 round-0 clicks are worth ≈ −1.78e-7 full-set d_seg (≈21 seg-cells ≈ −1.8e-5 S). Naive one-round full-set extrapolation ≈ −0.0013 S (upper bound; PR128 banked −0.0019..−0.0027 over many rounds).
