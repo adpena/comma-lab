@@ -12527,3 +12527,68 @@ change, no new S_τ anchor owed). Memo `.omx/research/philosophies_live_surfaces
 P5b (in flight: SYNTHESIS_v3 + decoupling_screen.py delta_mask swap + the carrier's §I/§B rows; its
 commits carry the legs). [no-triality]-class marker omitted from 45769148b's message; recorded here per
 the FEED-crucible2-seal-legs pattern. -->
+
+**FEED-p5b (2026-07-09, crucible3_v8 P5b v3 revision):** SYNTHESIS_v3_v8 SUPERSEDES v2; folds P5 second
+red-team (4 FIXED · 4 CARRIED · 1 DISSOLVED). **F-P5-1 near-break FIXED:** Road↔Undriv carrier single-valued
+→ **lateral-capable 3-curve** (top arc + left/right per-row undriv-extent `x_L(y)`/`x_R(y)`); NEW §I I1b
+GEOMETRIC-MINIMAL, byte-cost DERIVED **S∈[0.0040,0.0083]** owed-measurement (recess R8: side-curve frozenness
+UNMEASURED, mirrors horizon |Δ|≈1e-7); T1 AMENDED (bulk-SDF demotion survives as RATE law; carrier must carry
+lateral); un-homed 97.5% lateral-undriv mass (R6 MEASURED) now OWNED by carrier section. **F-P5-P9-1/F-P5-2
+FIXED IN CODE:** `decoupling_screen.py` δ_mask default 0.0196→**3.46e-6** (R7 MEASURED); `operative_delta_mask`
+= max(floor, seed spread), REFUSES on ≥2-replicates-without-spread (P2 guard); 27/27 tests pass. **F-P5-4
+FIXED:** §A.8 temporal section (per-class tie-flicker, Lever-D #280). **GRID PIN (operator):** compare grid =
+512×384 scorer-authoritative (post-R SegNet argmax); generators render camera-res 874×1164 → map → argmax
+after; #149 camera-res sub-pixel placement = intended exception, never conflate placement-grid vs
+compare-grid. **CARRIED:** rate 0.135=WASH (r\* RANGE [0.061,0.135] P-C-gated) · lane-coverage=FAST-FOLLOW ·
+dilate=2 de-share proxy · 0.00277 pin. Eightfold SEAL pre-check now ALL-PASS. NEXT: P6 recursive seal. Pointer
+0.19110 UNMOVED (MEANS). Triality: DSL N/A · DAG this block · equations N/A (I1b=DERIVED owed-measurement).
+
+## FEED-flipbc (2026-07-09, BUILD #386) — flip-weighted b_c reformulations BUILT + MEASURED n600: BOTH REFUTED; the global b_c lever is SATURATED at no_offset
+
+**The N-1 open arm (flip-mass target masses) is now CLOSED at this formulation level, with a MEASURED
+3-arm n600 gate.** Built BOTH crucible-3 A.3 formulations as selectable `solve_head_offsets` modes
+(`src/tac/boundary_math/laguerre_logit_offset.py`): **`flip_weighted`** = the BUILT damped-Newton OT
+solve targeting `perclass_verdict.flip_share_by_class` (the canonical sensor, lazy-imported) instead of
+GT area; **`flip_median`** = S1's Hamming-optimal per-edge flip-margin median (`flip_median_offsets`, a
+DISTINCT closed-form path — flip-count-weighted graph-Laplacian reconciliation of per-edge deltas
+`b_i−b_j = −median(φ_i−φ_j over edge flips)`, zero-sum pinv gauge; P3 F3 was right that it is NOT a
+target-mass swap). Both identify flips via the REALIZED baseline SegNet argmax (`pred` kwarg;
+phi-argmax proxy disagrees ~50× for this witness). NO-FAKE: each mode raises without its inputs; DSL
+`HeadOffsetSolver` + trainer `--head-offset-solver` extended (commits dd5057c6c + b0b0a1a70).
+
+**The $0 n600 gate (realized-through-R, frozen CPU SegNet, mod32cap ep650 EMA-BEST, ALL 600 pairs,
+verdict-batch 32; SAME harness/protocol as the N-1 verdict — baseline reproduced BIT-IDENTICAL):**
+
+| arm | n600 d_seg | Δ vs no_offset | rel-sig ÷0.0411 | b_Lane |
+|---|---|---|---|---|
+| **no_offset** | **0.0031436** | — | — | 0 |
+| flip_weighted | 0.0196734 | **+0.01653 WORSE** | 40% of gap | +48.8 |
+| flip_median | 0.0215612 | **+0.01842 WORSE** | 45% of gap | +43.4 |
+
+(N-1 reference: menon 0.0033119, ot_newton 0.0048921 — the flip arms are ~4× worse than even the
+falsified AREA objective.) Result JSON sha256 `ad3f863e9de0e0d8…`
+(`experiments/results/flip_bc_n600_gate_20260709/flip_bc_n600_result.json`).
+
+**MECHANISM (measured):** the witness's phi-space Lane erasure is DEEP — the realized-flip pixels carry
+LARGE phi margins (per-edge flip-margin median ≈ 43 logits), so ANY global 5-scalar offset that reaches
+the flip mass must boost Lane by ~+43…+49 → over-predicts Lane everywhere (Lane per-class d_seg 0.212 →
+0.61, Road 0.0047 → 0.022). S1's median derivation neglects the COLLATERAL: the correctly-predicted
+boundary mass crossed on the way to the flip median. **With menon / ot_newton / flip_weighted /
+flip_median ALL measured worse AND N-1's exhaustive ±0.4 winner sweep best at Δ −3.4e-8, the GLOBAL
+post-hoc decode-time b_c lever is SATURATED at no_offset for this checkpoint** — the SPEC_v8 §A.3
+`safe_default_until_built: no_offset` is now the MEASURED optimum, not just the safe default.
+
+**verdict_scope: FORMULATION** — "GLOBAL zero-sum per-class decode-time offsets solved post-hoc" (four
+objectives + one sweep), at mod32cap ep650 / tau 1.0. NOT the solvers (exact/closed-form, tested).
+**untested formulations / alternatives:** (1) per-edge exact 1-D Hamming minimizer WITH the collateral
+term (the sweep's ~0 best bounds its headroom at ~nil); (2) PER-PAIR offsets; (3) spatially-varying
+b_c(x) annulus-gated; (4) train-time integration (offset inside the loss); (5) checkpoints with
+shallower phi erasure. For v8 increment-1a: **b_c ships no_offset**; the flip modes stay built +
+default-off + registered (duty-to-measure SATISFIED this unit).
+
+**Triality:** DAG = this FEED. **DSL** = `HeadOffsetSolver` modes flip_weighted/flip_median
+(dd5057c6c). **equations** = anchor `laguerre_flip_bc_reformulation_gate_n600_mod32cap_ep650_20260709`
+APPENDED to `laguerre_ot_head_offset_v1` (REFUTED, VERIFIED_VIA_EMPIRICAL_ANCHOR) + registry row.
+Memo: `.omx/research/flip_weighted_bc_build_and_gate_20260709.md`. Tests: 13 new
+(`test_flip_offsets.py`), 58 pass. [macOS-CPU advisory] NON-PROMOTABLE. Pointer **0.19110 UNMOVED** ·
+#205 untouched (means).

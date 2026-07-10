@@ -22,7 +22,7 @@ from tac.inc1a_harness.composite_assembler import (
     reconcile_partition,
 )
 from tac.inc1a_harness.decoupling_screen import (
-    DELTA_R_PROXY,
+    DELTA_MASK_FRAME_SAMPLING_FLOOR,
     VERDICT_CONFIRMED,
     VERDICT_INCONCLUSIVE,
     VERDICT_KILLED,
@@ -31,6 +31,7 @@ from tac.inc1a_harness.decoupling_screen import (
     DecouplingScreenError,
     evaluate_kill,
     matched_control_spec,
+    operative_delta_mask,
 )
 from tac.inc1a_harness.mask_dseg_meter import (
     MaskDsegMeterError,
@@ -189,19 +190,81 @@ def _arm(name: str, dseg: float, n: int = 600, toy: bool = False) -> ArmResult:
     return ArmResult(name=name, n_frames=n, agg_dseg=dseg, is_toy=toy)
 
 
-def test_kill_confirmed_when_beats_by_more_than_floor():
-    v = evaluate_kill(_arm("decoupled", 0.010), _arm("control", 0.010 + DELTA_R_PROXY + 0.01))
+def test_kill_confirmed_at_realistic_delta():
+    # F-P5-P9-1: the floor is now the R7 MEASURED 3.46e-6, so a REALISTIC decoupling
+    # improvement (0.005) clears it and returns a REAL CONFIRMED (the old 0.0196 proxy
+    # made the screen decision-inert — 0.005 would have been INCONCLUSIVE).
+    v = evaluate_kill(_arm("decoupled", 0.010), _arm("control", 0.015))
     assert v.verdict == VERDICT_CONFIRMED and v.passes_preregistered_gate
+    assert v.delta_mask == pytest.approx(DELTA_MASK_FRAME_SAMPLING_FLOOR)
+    assert "R7 MEASURED-ANCHOR" in v.delta_mask_provenance
 
 
-def test_kill_killed_when_worse_than_floor():
-    v = evaluate_kill(_arm("decoupled", 0.010 + DELTA_R_PROXY + 0.01), _arm("control", 0.010))
+def test_kill_killed_at_realistic_delta():
+    v = evaluate_kill(_arm("decoupled", 0.015), _arm("control", 0.010))
     assert v.verdict == VERDICT_KILLED and not v.passes_preregistered_gate
 
 
 def test_kill_inconclusive_within_floor():
-    v = evaluate_kill(_arm("decoupled", 0.010), _arm("control", 0.010 + DELTA_R_PROXY / 2))
+    # a difference BELOW the 3.46e-6 frame-sampling floor is indistinguishable.
+    v = evaluate_kill(
+        _arm("decoupled", 0.010), _arm("control", 0.010 + DELTA_MASK_FRAME_SAMPLING_FLOOR / 2)
+    )
     assert v.verdict == VERDICT_INCONCLUSIVE and not v.passes_preregistered_gate
+
+
+def test_kill_uses_seed_spread_when_it_dominates():
+    # F-P5-2: operative floor = max(frame-sampling, seed spread). With a measured seed spread
+    # of 0.004 (>> 3.46e-6), a 0.002 improvement is now BELOW the floor -> INCONCLUSIVE.
+    v = evaluate_kill(
+        _arm("decoupled", 0.010), _arm("control", 0.012),
+        seed_spread=0.004, n_seed_replicates=3,
+    )
+    assert v.delta_mask == pytest.approx(0.004)
+    assert v.verdict == VERDICT_INCONCLUSIVE
+    assert "seed spread" in v.delta_mask_provenance
+    # a LARGER improvement (0.01) clears even the seed-dominated floor.
+    v2 = evaluate_kill(
+        _arm("decoupled", 0.010), _arm("control", 0.020),
+        seed_spread=0.004, n_seed_replicates=3,
+    )
+    assert v2.verdict == VERDICT_CONFIRMED
+
+
+def test_kill_refuses_when_seed_replicates_exist_but_spread_unprovided():
+    # F-P5-2 / P2 seed honesty: >=2 replicates make the seed component MEASURABLE; dropping it
+    # would fire a kill on within-seed noise. The evaluator REFUSES rather than silently using
+    # the frame-sampling floor alone.
+    v = evaluate_kill(
+        _arm("decoupled", 0.010), _arm("control", 0.015),
+        seed_spread=None, n_seed_replicates=3,
+    )
+    assert v.verdict == VERDICT_REFUSED and not v.passes_preregistered_gate
+    assert "seed" in v.reason.lower()
+
+
+def test_operative_delta_mask_floor_and_refusal():
+    # single seed -> frame-sampling lower bound only.
+    assert operative_delta_mask() == pytest.approx(DELTA_MASK_FRAME_SAMPLING_FLOOR)
+    # seed spread dominates when larger.
+    assert operative_delta_mask(seed_spread=0.01, n_seed_replicates=3) == pytest.approx(0.01)
+    # frame-sampling floor dominates when seed spread is smaller.
+    assert operative_delta_mask(seed_spread=1e-8, n_seed_replicates=3) == pytest.approx(
+        DELTA_MASK_FRAME_SAMPLING_FLOOR
+    )
+    # replicates without a spread is under-specified -> REFUSE.
+    with pytest.raises(DecouplingScreenError):
+        operative_delta_mask(seed_spread=None, n_seed_replicates=3)
+    with pytest.raises(DecouplingScreenError):
+        operative_delta_mask(seed_spread=-1.0, n_seed_replicates=3)
+
+
+def test_kill_explicit_delta_mask_override():
+    # an explicit delta_mask bypasses the operative computation (e.g. a sensitivity sweep).
+    v = evaluate_kill(_arm("decoupled", 0.010), _arm("control", 0.030), delta_mask=0.05)
+    assert v.delta_mask == pytest.approx(0.05)
+    assert v.verdict == VERDICT_INCONCLUSIVE  # 0.02 improvement < 0.05 floor
+    assert "override" in v.delta_mask_provenance
 
 
 def test_kill_refuses_toy_arm():

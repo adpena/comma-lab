@@ -8,13 +8,25 @@ baseline (measured IN-RUN, never borrowed from run-1's 0.312 pre-actuation birth
 
 **Pre-registered KILL (F1):** the decoupled arm's mask d_seg must beat the control's by
 > ``delta_mask``. Both arms paint-free ⇒ the flat-paint 0.0064 confound is EXCLUDED by
-construction. ``delta_mask`` defaults to the ``delta_R`` through-R proxy (0.0196) until the
-mask-level noise floor is MEASURED (recess R7); the verdict carries that provenance so a
-proxy floor is never silently promoted to a measured one.
+construction. The OPERATIVE ``delta_mask`` = ``max(frame-sampling floor, in-run seed
+spread)`` (F-P5-P9-1 + F-P5-2): the frame-sampling component is R7-MEASURED (3.46e-6, n600);
+the DOMINANT component is training SEED variance, which is NOT $0-measurable and MUST be
+measured in-run from >=3 control-arm seed replicates. When replicates exist, ``seed_spread``
+is REQUIRED — a kill fired on a floor that dropped a measurable seed component would be
+firing on within-seed noise (the eightfold-P2 failure). The verdict carries the floor's
+provenance so a proxy floor is never silently promoted to a measured one.
+
+**RETIRED (F-P5-P9-1 / P4_recess R7):** the old default was ``delta_R`` (0.0196), the
+through-R uint8 floor borrowed as a ``delta_mask`` proxy — a ~5600x UNIT category error
+(margin-perturbation magnitude at n96 through-R, NOT a mask-level d_seg rate at n600). At
+0.0196 the screen was DECISION-INERT: no realistic decoupling improvement (0.001-0.01)
+could clear it, so it could never fire CONFIRMED or KILLED. It is retired below and must
+NOT be reintroduced as the kill floor.
 
 NO-FAKE / n600: the evaluator REFUSES to emit a verdict if EITHER arm is missing, is a toy
-(``n_frames != 600``), or was measured at a different frame count — a partition that cannot
-be measured at n600 cannot falsify anything.
+(``n_frames != 600``), was measured at a different frame count, OR the seed component is
+measurable (>=2 replicates) but ``seed_spread`` was not supplied — a partition that cannot
+be measured at n600, or a floor that dropped a measurable component, cannot falsify anything.
 """
 
 from __future__ import annotations
@@ -23,10 +35,17 @@ from dataclasses import dataclass, field
 
 from tac.inc1a_harness.mask_dseg_meter import MaskDsegResult
 
-# The through-R uint8 noise floor (reports/delta_R_noise_floor.json:delta_R, p95 over the
-# annulus). Used as a CONSERVATIVE proxy for delta_mask until R7 measures the mask-level
-# floor. NOT a measured mask-level floor — carried with that caveat welded on.
-DELTA_R_PROXY = 0.019590163230895963
+# R7 MEASURED mask-level frame-sampling noise floor (P4_recess_20260709 R7: SEM of the
+# 600-frame mean of the per-frame mask flip fraction under a small margin perturbation, n600;
+# bootstrap-agreeing). value-provenance: MEASURED-ANCHOR (this gt_n600 cache; INSTANCE-scope).
+# This is the frame-sampling LOWER BOUND on the 1a kill margin; the OPERATIVE floor ADDS the
+# in-run SEED-variance component via ``operative_delta_mask`` (P2 seed honesty).
+DELTA_MASK_FRAME_SAMPLING_FLOOR = 3.46e-6
+
+# RETIRED (F-P5-P9-1): the delta_R through-R uint8 floor, formerly the delta_mask DEFAULT.
+# Kept ONLY as a documented historical reference (a ~5600x UNIT category error vs the mask
+# floor above). NEVER a default; NEVER the kill floor. Importing this to seed a kill is a bug.
+DELTA_R_PROXY_RETIRED = 0.019590163230895963
 
 # Verdict labels (the three pre-registered outcomes; item 4).
 VERDICT_CONFIRMED = "DECOUPLING-CONFIRMED"
@@ -115,6 +134,41 @@ def matched_control_spec(
 
 
 # ---------------------------------------------------------------------------
+# the operative delta_mask floor (F-P5-P9-1 + F-P5-2): max(frame-sampling, seed spread)
+# ---------------------------------------------------------------------------
+def operative_delta_mask(
+    *,
+    seed_spread: float | None = None,
+    n_seed_replicates: int = 1,
+    frame_sampling_floor: float = DELTA_MASK_FRAME_SAMPLING_FLOOR,
+) -> float:
+    """The operative 1a kill floor = ``max(frame-sampling floor, in-run seed spread)``.
+
+    P2 SEED-VARIANCE honesty (F-P5-2): the DOMINANT floor component is the training-seed
+    variance of the trained decoupled/control fields, which is NOT $0-measurable and MUST be
+    measured in-run from the control arm's OWN seed replicates. When ``n_seed_replicates >= 2``
+    the seed component is measurable, so ``seed_spread`` is REQUIRED — a kill fired on a floor
+    that dropped a measurable seed component would be firing on within-seed noise (the
+    eightfold-P2 failure). With a single seed the seed component is UNMEASURED and the floor
+    is the R7 frame-sampling LOWER BOUND only (INSTANCE-level; a Δ near it is not a clean
+    verdict). Raises :class:`DecouplingScreenError` on the under-specified (replicates-without-
+    spread) case and on negative inputs.
+    """
+    if float(frame_sampling_floor) < 0.0:
+        raise DecouplingScreenError("frame_sampling_floor must be >= 0")
+    if int(n_seed_replicates) >= 2 and seed_spread is None:
+        raise DecouplingScreenError(
+            "seed_spread REQUIRED once >=2 seed replicates exist (F-P5-2 / P2 seed honesty): "
+            "the seed-variance floor component is measurable in-run and must not be dropped"
+        )
+    if seed_spread is None:
+        return float(frame_sampling_floor)
+    if float(seed_spread) < 0.0:
+        raise DecouplingScreenError("seed_spread must be >= 0")
+    return max(float(frame_sampling_floor), float(seed_spread))
+
+
+# ---------------------------------------------------------------------------
 # item 4 — the kill-criterion evaluator
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -157,23 +211,65 @@ def evaluate_kill(
     decoupled: ArmResult,
     control: ArmResult,
     *,
-    delta_mask: float = DELTA_R_PROXY,
-    delta_mask_provenance: str = "delta_R through-R proxy (0.0196; NOT a measured mask floor — recess R7)",
+    delta_mask: float | None = None,
+    seed_spread: float | None = None,
+    n_seed_replicates: int = 1,
+    frame_sampling_floor: float = DELTA_MASK_FRAME_SAMPLING_FLOOR,
+    delta_mask_provenance: str | None = None,
 ) -> KillVerdict:
     """Emit the pre-registered A/B verdict {CONFIRMED / KILLED / INCONCLUSIVE / REFUSED}.
 
-    ``improvement = control.agg_dseg - decoupled.agg_dseg`` (lower d_seg is better):
+    The operative kill floor (F-P5-P9-1 + F-P5-2) is ``max(frame_sampling_floor, seed_spread)``
+    (see :func:`operative_delta_mask`), computed here UNLESS ``delta_mask`` is passed explicitly
+    (an override, e.g. for a sensitivity sweep). ``improvement = control.agg_dseg -
+    decoupled.agg_dseg`` (lower d_seg is better):
       * ``improvement > delta_mask``   -> **DECOUPLING-CONFIRMED** (beats control by > floor;
         the ONLY outcome that PASSES the pre-registered gate and proceeds to 1b).
       * ``improvement < -delta_mask``  -> **KILLED-at-delta_mask** (decoupled is WORSE than a
         shared head by > floor -> the decoupling FORMULATION is falsified, NOT the paradigm).
       * ``|improvement| <= delta_mask`` -> **INCONCLUSIVE-below-floor** (indistinguishable at
-        the floor; underpowered -> measure the mask floor (R7) / more data; NOT a clean kill).
+        the floor; underpowered -> measure the seed spread / more data; NOT a clean kill).
 
     REFUSES (NO-FAKE / n600): if either arm is missing, ``is_toy``, or not measured at 600
-    frames, no verdict is emitted (``REFUSED-arm-missing-or-toy``) — a partition that cannot
-    be measured at n600 cannot falsify anything.
+    frames — a partition that cannot be measured at n600 cannot falsify anything. ALSO refuses
+    (F-P5-2) if the seed component is measurable (``n_seed_replicates >= 2``) but ``seed_spread``
+    was not supplied — a floor that silently drops a measurable component cannot ground a kill.
     """
+
+    # Compute the operative floor first (a pre-registration concern independent of the arms).
+    if delta_mask is None:
+        try:
+            dm_value = operative_delta_mask(
+                seed_spread=seed_spread,
+                n_seed_replicates=int(n_seed_replicates),
+                frame_sampling_floor=float(frame_sampling_floor),
+            )
+        except DecouplingScreenError as exc:
+            return KillVerdict(
+                verdict=VERDICT_REFUSED, passes_preregistered_gate=False,
+                improvement=float("nan"), delta_mask=float("nan"),
+                delta_mask_provenance=f"REFUSED: under-specified floor ({exc})",
+                reason=f"delta_mask floor under-specified (F-P5-2 / P2 seed honesty): {exc}",
+            )
+        if delta_mask_provenance is None:
+            if seed_spread is not None:
+                delta_mask_provenance = (
+                    f"operative = max(frame-sampling floor {float(frame_sampling_floor):.2e} "
+                    f"[R7 MEASURED-ANCHOR], seed spread {float(seed_spread):.2e} "
+                    f"[in-run, {int(n_seed_replicates)} replicates])"
+                )
+            else:
+                delta_mask_provenance = (
+                    f"frame-sampling LOWER BOUND {float(frame_sampling_floor):.2e} "
+                    f"[R7 MEASURED-ANCHOR]; seed component UNMEASURED (single seed) "
+                    f"-> INSTANCE-level floor"
+                )
+    else:
+        dm_value = float(delta_mask)
+        if delta_mask_provenance is None:
+            delta_mask_provenance = "explicit delta_mask override (caller-supplied)"
+
+    delta_mask = dm_value
 
     for arm in (decoupled, control):
         if arm is None:

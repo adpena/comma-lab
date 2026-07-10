@@ -263,3 +263,39 @@ Artifact: `P5_second_redteam_20260709.md`. **VERDICT: v3 REVISION NEEDED** (1 ne
 NEXT ACTION: **P5b/v3 revision** — fold F-P5-1 (§B carrier + §I row + 1a byte-close), F-P5-P9-1/F-P5-2 (δ_mask
 swap + seed replicates), F-P5-4 (temporal section); RE-DERIVE all from primary artifacts (this memo is
 unreviewed). Pointer 0.19110 UNMOVED — MEANS.
+
+## [P5b DONE — 2026-07-09] v3 REVISION (fix ALL P5 findings)
+Artifact: `SYNTHESIS_v3_v8_20260709.md` (SUPERSEDES v2). Surface `crucible3_v8`. **4 FIXED · 4 CARRIED ·
+1 DISSOLVED-confirmed.** $0, no GPU, run dirs read-only, #205 STOPPED, pointer 0.19110 UNMOVED (MEANS).
+- **F-P5-1 (near-break) FIXED:** §B `road_undriv_carrier` single_valued → **lateral-capable 3-curve**
+  (top arc `y(x)` + left/right per-row undriv-extent `x_L(y)`/`x_R(y)`); NEW §I row **I1b** GEOMETRIC-MINIMAL,
+  byte-cost DERIVED **carrier total S ∈ [0.0040,0.0083]** tagged owed-measurement (recess R8: side-curve
+  frozenness on gt_n600 UNMEASURED; mirrors horizon MEASURED |Δ|≈1e-7). T1 AMENDED: bulk-SDF demotion
+  survives as RATE law, replacement carrier must carry lateral (arc alone does not); un-homed 97.5% lateral
+  mass now OWNED by the carrier section (not the residual catch-all); 1a PINNED to byte-closed composite.
+- **F-P5-P9-1 + F-P5-2 FIXED IN CODE (this turn):** `decoupling_screen.py` default swapped
+  `DELTA_R_PROXY 0.0196` → `DELTA_MASK_FRAME_SAMPLING_FLOOR 3.46e-6` (R7 MEASURED-ANCHOR); old constant →
+  `DELTA_R_PROXY_RETIRED` (historical, never a default); new `operative_delta_mask()` = max(floor, seed
+  spread) that REFUSES when ≥2 seed replicates exist but seed_spread None (P2 guard); `evaluate_kill`
+  returns REFUSED on that under-spec. Tests rewritten: realistic 0.005 Δ → REAL CONFIRMED (was INCONCLUSIVE
+  under the proxy). 27/27 pass, ruff-F clean. Spec: 1a A/B gains ≥3 seed replicates/arm.
+- **F-P5-4 FIXED:** NEW §A.8 temporal section — 1a measured PER-FRAME **and** per-class **tie-flicker**
+  across consecutive pairs (Lever-D #280 = existing instrument); fuller v8 temporal story (slot-churn/GOP/
+  dash-phase) = SPEC_v8.1 section.
+- **CARRIED (recorded):** F-P5-3 shippable rate **0.135 = WASH** honesty (r\* labeled RANGE [0.061,0.135],
+  never a point; sub-0.118 P-C-gated) · F-P5-5 lane-coverage = FAST-FOLLOW (§D-10, not inc-1 scope) ·
+  F-P5-P9-2 de-share 0.0044 tagged [dilate=2 proxy; thing-itself=bbox realized coverage, owed] · F-P5-6/P9-3
+  T1 number PINNED to 0.00277 (code-emitted, not memo 0.0032). **DISSOLVED-confirmed:** F-P5-7 (#226-admitted
+  = d_seg-ranked SUBSET of uncovered px at r\*<1).
+- **SEAL PRE-CHECK now ALL-PASS** (P2 δ_mask floor+seed guard · P5 · P6 temporal added · P7 measured floor +
+  un-confounded carrier · P8): v3 is seal-CANDIDATE-ready.
+- **Triality:** DSL N/A (carrier `Lever` folds at BUILD, not here) · DAG = this block + sub015 FEED-p5b ·
+  equations N/A-with-rationale (I1b byte cost = DERIVED estimate owed-measurement, no MEASURED law to
+  register; canonical row lands when recess R8 measures the carrier rate).
+NEXT ACTION: **P6 RECURSIVE SEAL** (re-derive-don't-confirm, 3 clean passes; blind structural re-derivation
+of I1b byte-cost + lateral coverage; standing checks = eightfold template + P9). Pointer 0.19110 UNMOVED — MEANS.
+- **GRID PIN (operator directive "flipping at correct resolution"):** §A.4-grid + §B measure_1a.grid PIN the
+  compare grid = **512×384 scorer-authoritative** (gt_n600 lstars (600,384,512) = post-R SegNet argmax);
+  generators render at camera-res 874×1164 then map (bilinear ↓) → argmax taken AFTER the map; 1b through-R
+  same 512×384 via real R; **#149 camera-res sub-pixel PLACEMENT = the intended EXCEPTION** (placement-grid ≠
+  compare-grid, never conflate). Parallel audit agent verifies code surfaces; v3 states the SPEC.

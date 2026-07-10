@@ -35,17 +35,18 @@ from tac.inc1a_harness.composite_assembler import (
     reconcile_partition,
 )
 from tac.inc1a_harness.decoupling_screen import (
-    DELTA_R_PROXY,
+    DELTA_MASK_FRAME_SAMPLING_FLOOR,
     ArmResult,
     ControlArmSpec,
     KillVerdict,
     evaluate_kill,
     matched_control_spec,
+    operative_delta_mask,
 )
 from tac.inc1a_harness.mask_dseg_meter import MaskDsegResult, measure_mask_dseg
 
 __all__ = [
-    "DELTA_R_PROXY",
+    "DELTA_MASK_FRAME_SAMPLING_FLOOR",
     "ArmResult",
     "CarrierField",
     "CompositeResult",
@@ -57,5 +58,6 @@ __all__ = [
     "evaluate_kill",
     "matched_control_spec",
     "measure_mask_dseg",
+    "operative_delta_mask",
     "reconcile_partition",
 ]
