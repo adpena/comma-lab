@@ -13447,9 +13447,9 @@ Subagent `fractal-synth-398b`. Pointer contest-CPU **0.19110 UNMOVED** — MEANS
   A/B control is a TRAINED matched-compute shared-head arm — **no $0 surrogate admissible** (SPEC §2 +
   `inc1a_killgate_run_20260710`); NOT a bounded warm-start (the decoupled arm is a different architecture). NOT fabricated.
 - **CLOSED at $0:** (1) SPEC reconciled to measured state (append-only §GEOCODER-CLOSE+OWED-9 addendum: flat-fill fill,
-  Movable 6289 B, texture NO-GO, curve-relative retired→coverage-not-coding, macro triple 0.0585/0.131/0.0725 WASH);
+  Movable 6289 B, texture NO-GO, curve-relative retired→coverage-not-coding, macro triple 0.0585/0.131/0.0725 WASH); # VERDICT_SCOPE_OK: citations of already-scoped verdicts (texture=FEED-u394a formulation; curve-relative=macro-rate formulation), no new negative recorded here
   (2) #386 remainder — every piece BUILT+MEASURED+verdicted, nothing half-built (flip-bc SATURATED@no_offset, de-share
-  CONFIRMED 0.0044, curve-relative REFUTED, movable/texture #394A).
+  CONFIRMED 0.0044, curve-relative REFUTED (verdict_scope: formulation — cited from the macro-rate pass, not re-ruled here), movable/texture #394A).
 - **owed-9 lateral 3-curve carrier BUILT ($0, 45 tests green, ruff F clean):** `_lateral_extents` +
   `lateral_extent_poly_byte_cost` (R8) + `analytic_lateral_undriv_field` + `--include-lateral` A/B.
   - **R8 MEASURED → SEAL-BOUNDARY item 2 CLOSED (byte half):** deg-2 6426 B / S 0.00428 · deg-3 8773 B / S 0.00584 →
