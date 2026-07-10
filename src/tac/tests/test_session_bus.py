@@ -441,6 +441,25 @@ def test_recover_report_sort_most_stale_first(tool_tmp):
     assert [e.subagent_id for e in entries] == ["MORE", "LESS"]
 
 
+def test_recover_report_unparseable_timestamp_sorts_to_top(tool_tmp):
+    # canon-wave #389 R8 finding: an unparseable timestamp is the most suspicious
+    # crash (likely a torn write) and MUST surface FIRST, never buried below a merely
+    # very-old parseable entry — the module's "fail toward surfacing, not hiding"
+    # contract. Before the fix the sort key put None-age at the BOTTOM (comment lied).
+    tool = rm._checkpoint_tool()
+    now = datetime(2026, 7, 9, 12, 0, 0, tzinfo=UTC)
+    rows = [
+        {"subagent_id": "VERY_OLD", "status": "in_progress", "step": 1,
+         "written_at_utc": (now - timedelta(seconds=99999)).isoformat()},
+        {"subagent_id": "BADTS", "status": "in_progress", "step": 1,
+         "written_at_utc": "not-a-timestamp"},
+    ]
+    _write_progress(tool.JSONL_PATH, rows)
+    entries = rm.recover_report(stale_after_seconds=300, now=now)
+    assert [e.subagent_id for e in entries] == ["BADTS", "VERY_OLD"]
+    assert entries[0].age_seconds is None  # unparseable == top
+
+
 def test_recovery_entry_render_contains_context(tool_tmp):
     entry = rm.RecoveryEntry(
         subagent_id="AGENT-Z",

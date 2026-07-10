@@ -328,9 +328,14 @@ def recover_report(
                 notes=str(rec.get("notes", "")),
             )
         )
-    # Most-stale first; None age (unparseable) sorts to the top.
+    # Most-stale first; None age (unparseable timestamp — the most suspicious crash,
+    # a likely torn write) sorts to the TOP so it is surfaced first, never buried
+    # (the module's "fail toward surfacing, not hiding" contract). The sort key's
+    # first element is ``e.age_seconds is None`` so under ``reverse=True`` the
+    # None-age entries (True) outrank every parseable age (False); parseable ages
+    # then order largest-first among themselves.
     entries.sort(
-        key=lambda e: (e.age_seconds is not None, e.age_seconds or 0.0),
+        key=lambda e: (e.age_seconds is None, e.age_seconds or 0.0),
         reverse=True,
     )
     return entries

@@ -132,3 +132,67 @@ STORES CONSULTED: the 3 canon landing memos (`canonical_{through_r_harness,verdi
 session_bus}_landed_20260709.md`), `docs/operating_manual_craft_handoff.md`, the DAG (FEED-canon-u1/u2/u3),
 `tac.review_counter` (fail-open producer template), `tac.through_r.*`, `tac.verdicts.*`,
 `tac.session_bus.*`, `tac.inc1a_harness.mask_dseg_meter`, `tac.boundary_math.movable_deshare`.
+
+---
+
+## R8 — the SEALING round did NOT seal (fresh-eyes at HEAD `acef0300c`, counter was 2/3)
+
+**Verdict: NOT_CLEAN — 1 finding (found + fixed). Counter 2/3 → 0. No SEAL.**
+
+Round 8 was the intended 3rd consecutive CLEAN → SEAL. The highest-bar adversarial-operator
+read (angle: *"any doc claim not backed by a test? any comment that misstates the code?"*)
+surfaced a genuine finding, so the seal is correctly REFUSED. This is the sealing round doing
+its job — a comment that stated the literal opposite of runtime behavior, on a recovery-
+surfacing path, unbacked by any test, is exactly what round 8 exists to catch before it is
+certified.
+
+**FINDING (comment-vs-code mismatch on a fail-toward-surfacing path — recovery_manifest.py):**
+`recover_report`'s sort carried the inline comment *"None age (unparseable) sorts to the top."*
+The sort key was `(e.age_seconds is not None, e.age_seconds or 0.0)` under `reverse=True`, which
+ranks parseable ages (`is not None` == True) ABOVE None-age (False) — so an unparseable timestamp
+sorted to the **bottom**, the literal opposite of the comment AND of the module's stated
+*"fail toward surfacing, not hiding"* contract. Empirically confirmed:
+`recover_report([PARSE_OLD age=9000, BADTS ts='not-a-timestamp'])` → `['PARSE_OLD','BADTS']`
+(the corrupt-timestamp agent — the most suspicious crash, a likely torn write — buried last).
+No test covered the None-age ordering (`test_recover_report_sort_most_stale_first` used two
+parseable ages only), so the false comment shipped unchallenged through R4–R7.
+
+**Class-fix (code aligned to the documented + intended behavior, not the reverse):** sort key →
+`(e.age_seconds is None, e.age_seconds or 0.0)` so None-age (unparseable = most suspicious) sorts
+to the TOP; parseable ages still order largest-first among themselves. Inline comment rewritten to
+state the mechanism precisely. **+1 regression test** `test_recover_report_unparseable_timestamp_
+sorts_to_top` asserts `['BADTS','VERY_OLD']` and `entries[0].age_seconds is None` — the doc claim
+is now backed by a test. Existing `test_recover_report_sort_most_stale_first` (two parseable ages)
+still passes (largest-first unchanged).
+
+**Standing re-checks (all GREEN, re-derived):** 184 tests single-invocation (was 183; +1 new);
+GT identity canary `test_end_to_end_gt_frame_reproduces_lstars_dseg_zero` **RAN** (real gt cache +
+real SegNet, d_seg == 0, not skipped); serializer `--triality-legs` absent → `(None, None)`;
+`emit_verdict` / bulletin write paths byte-identical (untouched); `ruff check` clean on both
+touched files. review_counter round 8 recorded NOT_CLEAN via `record_round`.
+
+**Rounds 9+ restart fresh; SEAL still needs 3 consecutive CLEAN from round 9.** The fix is
+unreviewed new code (per the protocol, a fix resets the counter); a fresh reviewer must re-derive
+the recovery-sort behavior at the next HEAD.
+
+### Seal-boundary honesty — what 8 rounds did NOT cover (carry into rounds 9+)
+Even had R8 sealed, the seal would bind ONLY the canon set at HEAD. Explicitly OUT of the seal:
+- **`through_r/palette_realization.py` (+ its test) is UNCOMMITTED (untracked at HEAD)** — never
+  entered the review window; any review of it is future work on rounds 9+.
+- **The U3 bulletin PRODUCER set is still minimal** — only `verdict_landed` (via `emit_verdict` +
+  `review_counter`) and `agent_spawned`/`agent_completed` (via `recovery_manifest`) are wired.
+  `gate_ruled` / `spec_edited` / `memo_landed` / `agent_died` are declared kinds with NO canonical
+  producer — a consumer that expects them will see none.
+- **The `recovery_manifest.heartbeat` path is deliberately NOT wired to bulletin** (would spam
+  `agent_spawned` per tick) — liveness is visible only via the checkpoint store, not the bus.
+- **`MeasurementRow` has no parser-SIDE (read-back) surface** — `to_json_dict` is write-only; no
+  canonical `from_json_dict`/loader validates emitted verdict JSON on read.
+- **The review_counter multiprocessing residual (12 leaked child events)** flagged in R1 remains a
+  deeper U3 hardening item (`record_round` still has no `bulletin_path`/env thread to children) —
+  mitigated by `TAC_SESSION_BULLETIN_DISABLE`/`_PATH` env inheritance but not closed at the
+  `record_round` API.
+- **Anti-gaming boundary unchanged:** the ledger records CLAIMS a review happened; no gate proves
+  a real review occurred (module docstring boundary) — the seal trusts the reviewed_commits trail.
+
+pointer contest-CPU **0.19110 UNMOVED** — this whole wave is MEANS (measurement + coordination
+apparatus), never a lever, never an exact-eval row. `[macOS-CPU advisory · NON-PROMOTABLE]`.
