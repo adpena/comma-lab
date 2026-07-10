@@ -66,6 +66,8 @@ __all__ = [
     "derive_store_nothing_205_config",
     "derive_fresh_seeded_config",
     "derive_crucible_v6_config",
+    "Inc1aScreenConfig",
+    "derive_crucible_v8_inc1a_config",
 ]
 
 # --------------------------------------------------------------------------
@@ -2979,6 +2981,441 @@ def compile_crucible_v752_config(
         program_name="crucible_v752", emitted_flag_names=emitted_names,
         typed_config_hash=typed.typed_config_hash(), typed_validated=True)
     return typed, tuple(argv), dsl_manifest
+
+
+# ==========================================================================
+# T5 CRUCIBLE-3 v8 INCREMENT-1a — the paint-free mask-level DECOUPLING SCREEN
+# config (P7 DELIVERABLE, task #380). This is NOT a trainer launch (no argparse
+# argv, no GPU) — it is the $0 MEASUREMENT config for the increment-1a A/B: the
+# decoupled per-class-field arm vs a matched-compute shared-head CONTROL arm,
+# both measured PAINT-FREE (composite tropical-argmax MASK d_seg vs L* on
+# gt_n600). SEALED source: `.omx/research/t5_crucible3/SYNTHESIS_v3_v8_20260709.md`
+# (SEALED P6-R7, review_counter crucible3_v8 sealed=True) rendered in
+# `.omx/research/t5_crucible3/SPEC_v8.1_20260709.md`.
+#
+# It is "the 4th DSL-provenance program" in the value-provenance sense: every
+# constant is resolved on the ladder DERIVED-LIVE > DERIVED-AT-CONFIG >
+# MEASURED-ANCHOR > CONJECTURED/owed-measurement > HARDCODED-WITH-WAIVER, with
+# LawRef constant resolution where anchors exist (no_offset d_seg via the
+# `laguerre_ot_head_offset_v1` canonical anchor; the R7 δ_mask floor + the RETIRED
+# δ_R proxy via the live `decoupling_screen` harness constants — REUSE-not-rederive
+# so the config is drift-IMPOSSIBLE against the harness). fail-CLOSED at authoring.
+#
+# means != ends: a MEANS. The 1a screen is a NECESSARY-condition partition test
+# (mask-optimal != score-optimal; the SUFFICIENT through-R test is 1b). Only a
+# byte-closed upstream/evaluate.py n600 row < 0.19110 moves the pointer 0.19110.
+# GATED behind the #385 dual-chain which-to-run GO — NO launch here.
+# ==========================================================================
+
+# Sealed §B `road_undriv_carrier` — the LATERAL-CAPABLE 3-curve Road<->Undriv
+# generator (F-P5-1 near-break fix: the single-valued horizon arc STRUCTURALLY
+# cannot represent the R6-MEASURED 97.54% unsupported-column lateral undriv mass).
+# dominant_arc_S = 0.00277 (F-P5-6 PIN: code-emitted 4167 B, not the memo 0.0032).
+# carrier_total_S = DERIVED range [0.0040, 0.0083] tagged owed-measurement (recess
+# R8: the side-curve x_L(y)/x_R(y) frozenness on gt_n600 is UNMEASURED).
+_INC1A_CARRIER_DOMINANT_ARC_S = 0.00277
+_INC1A_CARRIER_TOTAL_S_RANGE = (0.0040, 0.0083)
+_INC1A_CARRIER_SPEC: dict = {
+    "module": "road_undriv_bulk_field.py",  # BUILD OWED: add left/right lateral-extent curves
+    "mode": "horizon_poly_xi + lateral_extent_curves",  # was single_valued (F-P5-1)
+    "curves": {
+        "top_arc": "_horizon_profile (deg-3 y(x), the DOMINANT ego-rigid arc)",
+        "left_lateral_extent": "x_L(y) per-ROW low-order curve",
+        "right_lateral_extent": "x_R(y) per-ROW low-order curve",
+    },
+    "owns_explicitly": "lateral_side_undrivable",  # the un-homed 97.5% mass has an OWNER
+    "dominant_arc_S": _INC1A_CARRIER_DOMINANT_ARC_S,
+    "carrier_total_S": list(_INC1A_CARRIER_TOTAL_S_RANGE),
+    "carrier_total_S_grade": "DERIVED + owed-measurement (recess R8; side-curve frozenness UNMEASURED)",
+    "bulk_sdf_field": "OFF_default (DEMOTED to P-C-gated FALLBACK, I10)",
+    "geometric_home": "GEOMETRIC-MINIMAL: 3 low-order curves << the dense bulk SDF field (I10, 20-50 KB)",
+}
+
+# Sealed §A.8 temporal section (F-P5-4, eightfold-P6 SEAL requirement).
+_INC1A_TEMPORAL_SPEC: dict = {
+    "per_frame": "composite_argmax MASK d_seg vs L* (existing)",
+    "tie_flicker": "per-class argmax-winner-change fraction across consecutive pairs (BOTH arms)",
+    "instrument": "LeverD_temporal_machinery (#280, existing; consumed duty-to-measure)",
+    "spec_v8_1_owed": ["slot_churn", "GOP_keyframe", "dash_phase_ego_distance"],
+    "finding_rule": (
+        "a decoupled arm that WINS static per-frame d_seg but LOSES temporal tie-flicker vs the "
+        "control is a REAL finding (verdict_scope FORMULATION): decoupled per-class fields flicker "
+        "INDEPENDENTLY at the argmax tie; a shared head cannot (MEMORY L67: #205 CE-residual IS "
+        "temporal flicker, 44% spikes = LANE)"),
+}
+
+# Sealed §A.2 residual-coder operating point (F-P5-3 rider): r* is a labeled RANGE,
+# NEVER a point; shippable increment-1 rate = 0.135 (WASH-with-frontier), the
+# sub-0.118 win is P-C-gated + UNMEASURABLE in increment-1.
+_INC1A_R_STAR_RANGE = (0.061, 0.135)
+
+
+@dataclass(frozen=True)
+class Inc1aScreenConfig:
+    """The T5 CRUCIBLE-3 v8 increment-1a MEASUREMENT config (P7 DELIVERABLE).
+
+    A frozen, provenance-tagged spec for the paint-free mask-level decoupling A/B
+    screen. Every field is a :class:`ProvenancedValue` on the value-provenance
+    ladder; :meth:`validate` fail-closes on any constant that silently diverges
+    from the SEALED SYNTHESIS_v3 or the live harness; :meth:`unknown_count` counts
+    fields with an UNRESOLVED value (the 0-unknown bar, mirroring the crucible-2
+    291-token-0-unknown compile smoke). :meth:`provenance_manifest` emits the
+    DSL-provenance attestation a consumer reads. NO trainer argv (this is a $0
+    measurement, not a training launch); NO GPU; pure.
+    """
+
+    program_name: str
+    gt_cache_path: str
+    num_pairs: int
+    metric: ProvenancedValue
+    scorer_grid: ProvenancedValue
+    generator_render_grid: ProvenancedValue
+    bc_mode: ProvenancedValue
+    no_offset_d_seg: ProvenancedValue
+    bc_never: ProvenancedValue
+    n_seg_classes: ProvenancedValue
+    measure_byte_closed_composite: ProvenancedValue
+    design: ProvenancedValue
+    seed_replicates_per_arm: ProvenancedValue
+    delta_mask_frame_sampling_floor: ProvenancedValue
+    delta_mask_operative_spec: ProvenancedValue
+    delta_mask_retired_proxy: ProvenancedValue
+    kill_criterion: ProvenancedValue
+    falsifier: ProvenancedValue
+    carrier: ProvenancedValue
+    temporal: ProvenancedValue
+    residual_operating_point: ProvenancedValue
+
+    # -- the provenanced-field roster (ORDER-STABLE; the manifest + unknown scan) --
+    _PROVENANCED_FIELDS = (
+        "metric", "scorer_grid", "generator_render_grid", "bc_mode", "no_offset_d_seg",
+        "bc_never", "n_seg_classes", "measure_byte_closed_composite", "design",
+        "seed_replicates_per_arm", "delta_mask_frame_sampling_floor",
+        "delta_mask_operative_spec", "delta_mask_retired_proxy", "kill_criterion",
+        "falsifier", "carrier", "temporal", "residual_operating_point",
+    )
+
+    def provenanced_values(self) -> "dict[str, ProvenancedValue]":
+        """The ordered {field -> ProvenancedValue} roster."""
+        return {k: getattr(self, k) for k in self._PROVENANCED_FIELDS}
+
+    def unknown_count(self) -> int:
+        """Number of fields whose value is UNRESOLVED (None / a TBD sentinel).
+
+        The 0-unknown bar: a resolved config leaves NO field as a placeholder. A
+        DERIVED range or an owed-measurement tag is a RESOLVED value (a refinement
+        is owed, not the value itself); only ``None`` / ``"TBD"`` / ``"<...>"`` is
+        an unknown. TBD is FORBIDDEN (sealed §B).
+        """
+        n = 0
+        for pv in self.provenanced_values().values():
+            v = pv.value
+            if v is None:
+                n += 1
+            elif isinstance(v, str) and (
+                v.strip() == "" or v.strip().upper() == "TBD"
+                or (v.startswith("<") and v.endswith(">"))
+            ):
+                n += 1
+        return n
+
+    def validate(self) -> list[str]:
+        """Fail-closed structural check against the SEALED doc + the live harness.
+
+        Returns a list of violation strings ([] = clean). Mirrors
+        :meth:`TypedWitnessConfig.validate_program` semantics: :func:`derive_...`
+        RAISES on any non-empty list, so an invalid screen config cannot reach a
+        consumer. Cross-checks the LawRef anchors + harness constants (REUSE, so a
+        drift between this config and the live surfaces is IMPOSSIBLE, not tested).
+        """
+        from tac.canonical_equations.laguerre_ot_head_offset_20260709 import (
+            GATE_N600_D_SEG_NO_OFFSET,
+        )
+        from tac.inc1a_harness.decoupling_screen import (
+            DELTA_MASK_FRAME_SAMPLING_FLOOR,
+            DELTA_R_PROXY_RETIRED,
+            DecouplingScreenError,
+            operative_delta_mask,
+        )
+        from tac.through_r.scaffold_assembler import BC_MODES, N_SEG_CLASSES
+
+        v: list[str] = []
+        refuted = ("menon", "ot_newton", "flip_weighted", "flip_median")
+
+        # (1) b_c mode: the sealed safe default, NEVER a refuted flip/OT arm (§A.3).
+        if self.bc_mode.value != "no_offset":
+            v.append(f"bc_mode must be 'no_offset' (sealed safe default), got {self.bc_mode.value!r}")
+        if self.bc_mode.value not in BC_MODES:
+            v.append(f"bc_mode {self.bc_mode.value!r} not in the live BC_MODES {BC_MODES}")
+        if self.bc_mode.value in refuted:
+            v.append(f"bc_mode {self.bc_mode.value!r} is a REFUTED arm (both flip arms + OT REFUTED, §A.3)")
+        never = tuple(self.bc_never.value or ())
+        if set(never) != set(refuted):
+            v.append(f"bc_never must be the refuted set {refuted}, got {never}")
+
+        # (2) LawRef value-identity: the no_offset d_seg MUST equal the #386 n600 gate anchor.
+        if float(self.no_offset_d_seg.value) != float(GATE_N600_D_SEG_NO_OFFSET):
+            v.append(
+                f"no_offset_d_seg {self.no_offset_d_seg.value} != LawRef anchor "
+                f"GATE_N600_D_SEG_NO_OFFSET {GATE_N600_D_SEG_NO_OFFSET} (laguerre_ot_head_offset_v1)")
+
+        # (3) δ_mask floor: the R7 harness MEASURED-ANCHOR, and NOT the retired δ_R proxy.
+        if float(self.delta_mask_frame_sampling_floor.value) != float(DELTA_MASK_FRAME_SAMPLING_FLOOR):
+            v.append(
+                f"delta_mask_frame_sampling_floor {self.delta_mask_frame_sampling_floor.value} != "
+                f"harness DELTA_MASK_FRAME_SAMPLING_FLOOR {DELTA_MASK_FRAME_SAMPLING_FLOOR} (R7)")
+        if float(self.delta_mask_frame_sampling_floor.value) == float(DELTA_R_PROXY_RETIRED):
+            v.append("delta_mask floor is the RETIRED δ_R proxy (~5600x category error, F-P5-P9-1)")
+        if float(self.delta_mask_retired_proxy.value) != float(DELTA_R_PROXY_RETIRED):
+            v.append(
+                f"delta_mask_retired_proxy must record the harness DELTA_R_PROXY_RETIRED "
+                f"{DELTA_R_PROXY_RETIRED}, got {self.delta_mask_retired_proxy.value}")
+
+        # (4) seed replicates: the sealed >=3 (F-P5-2); >=2 is the seed-honesty floor
+        #     (operative_delta_mask REFUSES on >=2 without an in-run spread).
+        if int(self.seed_replicates_per_arm.value) < 3:
+            v.append(
+                f"seed_replicates_per_arm must be >= 3 (sealed §B / F-P5-2), "
+                f"got {self.seed_replicates_per_arm.value}")
+
+        # (5) grid pin: the scorer-authoritative 512x384 (gt_n600 lstars grid), never conflated.
+        if tuple(self.scorer_grid.value) != (512, 384):
+            v.append(f"scorer_grid must be (512, 384) (gt_n600 lstars authority), got {self.scorer_grid.value}")
+
+        # (6) class count matches the live assembler.
+        if int(self.n_seg_classes.value) != int(N_SEG_CLASSES):
+            v.append(f"n_seg_classes {self.n_seg_classes.value} != live N_SEG_CLASSES {N_SEG_CLASSES}")
+
+        # (7) F-P5-1: measure the BYTE-CLOSED composite argmax, not the pre-byte-close fields.
+        if self.measure_byte_closed_composite.value is not True:
+            v.append("measure_byte_closed_composite must be True (F-P5-1: predict the SHIPPABLE d_seg)")
+
+        # (8) the carrier must be LATERAL-CAPABLE (F-P5-1: not single-valued) + own the lateral seam.
+        carrier = dict(self.carrier.value or {})
+        if carrier.get("owns_explicitly") != "lateral_side_undrivable":
+            v.append("carrier must explicitly own lateral_side_undrivable (F-P5-1: no residual catch-all)")
+        if "lateral" not in str(carrier.get("mode", "")):
+            v.append("carrier mode must be lateral-capable (F-P5-1: single-valued horizon arc is structurally blocked)")
+        if float(carrier.get("dominant_arc_S", -1)) != _INC1A_CARRIER_DOMINANT_ARC_S:
+            v.append(f"carrier dominant_arc_S must be {_INC1A_CARRIER_DOMINANT_ARC_S} (F-P5-6 PIN)")
+        tot = tuple(carrier.get("carrier_total_S") or ())
+        if len(tot) != 2 or not (tot[0] >= _INC1A_CARRIER_DOMINANT_ARC_S and tot[1] > tot[0]):
+            v.append(f"carrier_total_S must be an ascending range >= dominant_arc_S, got {tot}")
+
+        # (9) 0-unknown bar (no TBD / placeholder field).
+        uc = self.unknown_count()
+        if uc != 0:
+            v.append(f"unknown_count={uc} (a field is UNRESOLVED / TBD; the sealed 0-unknown bar fails)")
+
+        # (10) COMPILABILITY: the declared >=3 replicates make the operative floor DERIVED-LIVE
+        #      (seed-spread supplied in-run) — assert the harness REFUSE guard fires at config time
+        #      when no in-run seed_spread exists yet (so the operative value is honestly NOT a
+        #      config-resolvable number; it is computed in-run).
+        try:
+            operative_delta_mask(
+                seed_spread=None, n_seed_replicates=int(self.seed_replicates_per_arm.value))
+            v.append(
+                "operative_delta_mask did NOT refuse at config time with >=2 replicates and no "
+                "seed_spread — the P2 seed-honesty guard is not wired (F-P5-2)")
+        except DecouplingScreenError:
+            pass  # correct: the operative floor is DERIVED-LIVE, refused until the in-run spread lands
+
+        return v
+
+    def provenance_manifest(self) -> dict:
+        """The DSL-provenance attestation: schema + per-field ladder class + provenance.
+
+        The measurement-config analogue of ``build_launch_manifest`` (there is no
+        trainer argparse / launcher rc=7 gate for a $0 screen; this is the
+        self-describing provenance surface a consumer reads).
+        """
+        from tac.witness_dsl.typed_config import PROGRAM_MANIFEST_SCHEMA
+
+        fields = {}
+        for name, pv in self.provenanced_values().items():
+            fields[name] = {
+                "value": pv.value,
+                "ladder_class": pv.source,
+                "provenance": pv.provenance,
+                "portability": pv.portability,
+            }
+        return {
+            "schema": PROGRAM_MANIFEST_SCHEMA,
+            "program_name": self.program_name,
+            "kind": "measurement_screen",  # NOT a trainer launch (no argv)
+            "typed_validated": True,
+            "gt_cache_path": str(self.gt_cache_path),
+            "num_pairs": int(self.num_pairs),
+            "unknown_count": self.unknown_count(),
+            "fields": fields,
+        }
+
+
+def derive_crucible_v8_inc1a_config(
+    gt_cache_path,
+    *,
+    num_pairs: int = 600,
+    seed_replicates_per_arm: int = 3,
+):
+    """The T5 CRUCIBLE-3 v8 increment-1a decoupling-screen MEASUREMENT config (P7).
+
+    Authored AS an :class:`Inc1aScreenConfig` by RESOLVING every constant on the
+    value-provenance ladder from its authority (LawRef anchor where one exists;
+    the live ``decoupling_screen`` harness constants otherwise — REUSE-not-rederive
+    so a config<->harness drift is IMPOSSIBLE). Fail-CLOSED: RAISES if
+    ``.validate()`` returns any violation (mirrors :func:`derive_crucible_v752_config`).
+
+    SEALED source: ``.omx/research/t5_crucible3/SYNTHESIS_v3_v8_20260709.md`` (SEALED
+    P6-R7) rendered in ``SPEC_v8.1_20260709.md``. This is a $0 mask-level screen, not
+    a training launch — NO trainer argv, NO GPU. GATED behind the #385 dual-chain
+    which-to-run GO. means != ends: a MEANS; only a byte-closed n600 row < 0.19110
+    moves the pointer 0.19110.
+    """
+    from tac.canonical_equations.laguerre_ot_head_offset_20260709 import (
+        GATE_N600_D_SEG_FLIP_MEDIAN,
+        GATE_N600_D_SEG_FLIP_WEIGHTED,
+        GATE_N600_D_SEG_NO_OFFSET,
+    )
+    from tac.inc1a_harness.decoupling_screen import (
+        DELTA_MASK_FRAME_SAMPLING_FLOOR,
+        DELTA_R_PROXY_RETIRED,
+    )
+    from tac.through_r.scaffold_assembler import N_SEG_CLASSES
+
+    _domain = Portability.DOMAIN
+    _fixed = Portability.SCORER_FIXED
+    _inst = Portability.INSTANCE
+
+    cfg = Inc1aScreenConfig(
+        program_name="crucible_v8_inc1a",
+        gt_cache_path=str(gt_cache_path),
+        num_pairs=int(num_pairs),
+        metric=ProvenancedValue(
+            value="composite_argmax MASK d_seg vs L* (gt_n600.npz)",
+            source=SRC_DESIGN,
+            provenance="sealed §B measure_1a: PAINT-FREE (no RGB / no R / no paint); "
+                       "NOT through-R (the SUFFICIENT through-R row is 1b)",
+            portability=_fixed),
+        scorer_grid=ProvenancedValue(
+            value=(512, 384),
+            source=SRC_MEASURED,
+            provenance="gt_n600.npz lstars (600,384,512) -> W×H 512×384 = post-R SegNet argmax "
+                       "AUTHORITY grid (§A.4-grid pin); argmax taken AFTER the R downsample, never before",
+            portability=_fixed),
+        generator_render_grid=ProvenancedValue(
+            value=(1164, 874),
+            source=SRC_DESIGN,
+            provenance="analytic curves may render at camera-res 874×1164 (#149 PLACEMENT grid); "
+                       "MUST map render-grid -> scorer 512×384 before the argmax compare (never conflate)",
+            portability=_fixed),
+        bc_mode=ProvenancedValue(
+            value="no_offset",
+            source=SRC_MEASURED,
+            provenance="§A.3 #386 RULED (realized-through-R n600, mod32cap ep650): the MEASURED-CONFIRMED "
+                       "safe default; the GLOBAL post-hoc 5-scalar b_c is SATURATED (no_offset) on the "
+                       "eroded trunk; per-edge b_c on FRESH v8 Stage-A fields is the owed route (1b)",
+            portability=_domain),
+        no_offset_d_seg=ProvenancedValue(
+            value=GATE_N600_D_SEG_NO_OFFSET,  # 0.0031436 — LawRef value-identity
+            source=SRC_MEASURED,
+            provenance="LawRef laguerre_ot_head_offset_v1 GATE_N600_D_SEG_NO_OFFSET (n600 authority; "
+                       "the n24/n48 0.00272 was the SUBSET) — resolved-through the canonical anchor",
+            portability=_inst),
+        bc_never=ProvenancedValue(
+            value=("menon", "ot_newton", "flip_weighted", "flip_median"),
+            source=SRC_MEASURED,
+            provenance=f"§A.3 both flip arms REFUTED at n600: flip_weighted {GATE_N600_D_SEG_FLIP_WEIGHTED} "
+                       f"(6.3× WORSE) / flip_median {GATE_N600_D_SEG_FLIP_MEDIAN} (6.9× WORSE); "
+                       f"verdict_scope FORMULATION/REGIME (NOT paradigm)",
+            portability=_domain),
+        n_seg_classes=ProvenancedValue(
+            value=int(N_SEG_CLASSES),  # 5 — live assembler
+            source=SRC_MEASURED,
+            provenance="live scaffold_assembler.N_SEG_CLASSES (Road/Lane/Undriv/Movable/MyCar; canonical order)",
+            portability=_fixed),
+        measure_byte_closed_composite=ProvenancedValue(
+            value=True,
+            source=SRC_DESIGN,
+            provenance="F-P5-1: measure the BYTE-CLOSED composite argmax (not the pre-byte-close trained "
+                       "fields) so a 1a PASS predicts the SHIPPABLE d_seg (a byte-closed lateral-capable carrier)",
+            portability=_fixed),
+        design=ProvenancedValue(
+            value="A/B: decoupled per-class-field arm vs MATCHED-COMPUTE shared-head CONTROL arm (both paint-free)",
+            source=SRC_DESIGN,
+            provenance="sealed §B: the A/B isolates DECOUPLING (∂φ_c/∂θ_{c'}=0), not capacity/compute; "
+                       "baseline = the control arm mask d_seg MEASURED IN-RUN (NEVER run-1's 0.312)",
+            portability=_fixed),
+        seed_replicates_per_arm=ProvenancedValue(
+            value=int(seed_replicates_per_arm),
+            source=SRC_DERIVED,
+            provenance="F-P5-2 / sealed §B: >=3 seeds/arm = the seed-spread instrument (the operative δ_mask "
+                       "DOMINANT component); 3 = the minimum for a spread estimate. re-derivation trigger: "
+                       "a measured seed CV that needs more replicates for a stable spread",
+            portability=_fixed),
+        delta_mask_frame_sampling_floor=ProvenancedValue(
+            value=DELTA_MASK_FRAME_SAMPLING_FLOOR,  # 3.46e-6 — R7 harness constant
+            source=SRC_MEASURED,
+            provenance="R7 MEASURED-ANCHOR (P4_recess): SEM of the 600-frame mean flip fraction under a small "
+                       "margin perturbation; resolved-through the live decoupling_screen harness constant",
+            portability=_inst),
+        delta_mask_operative_spec=ProvenancedValue(
+            value="operative δ_mask = max(3.46e-6 R7 floor, in-run seed spread) — DERIVED-LIVE in-run",
+            source=SRC_DERIVED,
+            provenance="F-P5-P9-1 + F-P5-2: the operative floor's DOMINANT seed component is NOT $0-measurable; "
+                       "it is DERIVED-LIVE from the control arm's >=3 seed replicates (operative_delta_mask "
+                       "REFUSES until the in-run spread lands — the P2 seed-honesty guard)",
+            portability=_fixed),
+        delta_mask_retired_proxy=ProvenancedValue(
+            value=DELTA_R_PROXY_RETIRED,  # 0.0196 — RETIRED, NEVER a default
+            source=SRC_MEASURED,
+            provenance="RETIRED (F-P5-P9-1): the δ_R through-R uint8 floor, a ~5600× UNIT category error that "
+                       "made the screen DECISION-INERT; recorded here ONLY as the retired proxy, NEVER the floor",
+            portability=_fixed),
+        kill_criterion=ProvenancedValue(
+            value="decoupled_mask_dseg > control_mask_dseg + delta_mask (PRE-REGISTERED); "
+                  "improvement > δ -> DECOUPLING-CONFIRMED (proceed 1b); < -δ -> KILLED (FORMULATION, "
+                  "NOT paradigm); |·| <= δ -> INCONCLUSIVE; REFUSED on any toy/missing-arm/under-spec-floor",
+            source=SRC_DESIGN,
+            provenance="sealed §B measure_1a.kill_criterion; evaluator = decoupling_screen.evaluate_kill "
+                       "(REUSE — the harness owns the verdict)",
+            portability=_fixed),
+        falsifier=ProvenancedValue(
+            value={
+                "falsifies": "decoupling PARTITION quality (necessary condition). FAIL -> FORMULATION dead, NOT paradigm",
+                "cannot_falsify": "through-R survival (mask-optimal != score-optimal) -> the SUFFICIENT test is 1b",
+                "flat_paint_confound": "EXCLUDED_BY_CONSTRUCTION (both arms paint-free)",
+            },
+            source=SRC_DESIGN,
+            provenance="sealed §B falsifies / cannot_falsify / flat_paint_confound (P7 pre-registered falsifier)",
+            portability=_fixed),
+        carrier=ProvenancedValue(
+            value=dict(_INC1A_CARRIER_SPEC),
+            source=SRC_DERIVED,
+            provenance="§A.1 / §I I1b: lateral-capable 3-curve Road<->Undriv generator (F-P5-1 near-break "
+                       "fix); dominant arc S 0.00277 MEASURED (F-P5-6 PIN); carrier_total_S DERIVED range "
+                       "[0.0040,0.0083] owed-measurement (recess R8). BUILD owed (owed item 9).",
+            portability=_domain),
+        temporal=ProvenancedValue(
+            value=dict(_INC1A_TEMPORAL_SPEC),
+            source=SRC_DESIGN,
+            provenance="§A.8 (F-P5-4, eightfold-P6 SEAL requirement): per-class tie-flicker via the Lever-D "
+                       "temporal machinery (#280); the fuller temporal story is SPEC_v8.1-owed",
+            portability=_fixed),
+        residual_operating_point=ProvenancedValue(
+            value={"r_star_RANGE": list(_INC1A_R_STAR_RANGE), "shippable_rate": 0.135, "shippable_is": "WASH-with-frontier"},
+            source=SRC_DESIGN,
+            provenance="§A.2 (F-P5-3 rider): r* is a labeled RANGE [0.061,0.135], NEVER a point; the shippable "
+                       "increment-1 rate 0.135 is a WASH, the sub-0.118 win is P-C-gated + UNMEASURABLE in inc-1",
+            portability=_inst),
+    )
+    # fail-CLOSED at authoring time (mirrors derive_crucible_v752_config): refuse a screen config
+    # the ladder cannot validate BEFORE it can reach a consumer.
+    viol = cfg.validate()
+    if viol:
+        raise ValueError(
+            f"crucible_v8_inc1a screen-config gate: Inc1aScreenConfig produced "
+            f"{len(viol)} validate violation(s): {viol[:4]}")
+    return cfg
 
 
 @dataclass(frozen=True)
