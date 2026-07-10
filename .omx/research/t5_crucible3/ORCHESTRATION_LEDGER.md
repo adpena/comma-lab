@@ -26,8 +26,20 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       ladder (TBD FORBIDDEN); residual-coder decision pinned; staged-training + reconciliation loop
       specified; 6 named risks each addressed; per-carrier byte-close contract stated; config COMPILES
       against the REAL scaffold surfaces (DELTA §K). Output = `SPEC_v8.1` draft + increment-1 config.
-- [ ] **P3 RED-TEAM vs THE DRAFT** + MANDATORY PROVENANCE AUDIT (rate-ledger numbers RE-DERIVED from the
-      coder, not memo-trusted; config claims cite the real module + argparse, never an aspirational label).
+- [x] **P3 RED-TEAM vs THE DRAFT (LANDED — P3_redteam_verdict_20260709.md)** + PROVENANCE AUDIT. 9 findings:
+      WORST/REVISE 1 (F1 = increment-1a "d_seg-through-R, NO paint" is confounded — through-R d_seg needs RGB;
+      only flat-paint available, floored at 0.0064 MEASURED, reflects analytic-boundary quality not the
+      decoupling mechanism; no numeric kill criterion; missed by all 6 seats + P2), REVISE 4 (F2 σ_cc′-
+      structural mis-attached to the DEMOTED SDF field; F3 flip-weighted-MEDIAN label ≠ the wired OT-mass-to-
+      flip-share objective, no median solver exists; F4 horizon-poly demotion drops lateral/multi-valued
+      Road↔Undriv into the residual; F5 owed-item #4 stale — `--pose-finish-engage-on` flag EXISTS),
+      CARRY-AS-RISK 1 (F6 707B/426/2228px memo-sourced not in code), DISSOLVED 1 (F7 #226 waterfill IS a real
+      KKT 1.27 B/flip), HELD 2 (rate ledger + phantom-41 + δ_R + horizon 0.0032 caveat-welded all re-derived
+      clean). **Provenance-audit FAILURES: 3 (F3/F5/F6) + 1 gap (F4).** Rate provenance clean; T1/T2/phantom-41
+      survive on the numbers; NOT a dead design. NEXT ACTION: **P4 recess** ($0 R3 proxy-vs-field byte gap on
+      `gt_n600.npz` confirms 0.0032 + F6; R4 flip-share target vs area — informs F3) → P3b revision (F1 kill-
+      criterion + which-d_seg-1a-measures; drop σ_cc′ from 1a; b_c median-vs-OT reconcile; owed-#4 correction)
+      → triality legs. Serializer-committed, `[no-triality]`.
 - [ ] **P4 EMPIRICAL RECESS** — v8 rate re-measurements are $0 read-only on `gt_n600.npz` (may re-run to
       settle a residual-coder disagreement). P-C/P-B are heavy governed n600-through-R (memory-gated, NOT
       $0, NOT run in recess). No concurrent heavy GPU (box free but the memory-preflight gates P-C/P-B).
@@ -122,8 +134,11 @@ B. **HARDENED EVENT DETECTION, TESTED END-TO-END.** Every event (per-class birth
 P0 + P1 (six seats S1-S6 DONE) + P2 synthesis LANDED (SYNTHESIS_DRAFT_v8_20260709.md, owner P2). T1 adjudicated:
 Road↔Undriv carrier = horizon curve + complement seas + de-shared straddles, NOT bulk SDF field (bulk = P-C-gated
 fallback). T2 adjudicated: brief row = TRIPLE {dominant 0.061 cond-floor · complete 0.140 default · r* MEASURED} +
-counted-seed-floor; 0.061 never alone. 41-edge phantom corrected (~4-5 live Road-hub edges). DAG FEED-crucible3-P1P2
-appended; DSL/eqs legs N/A-until-built. NEXT ACTION: **launch P3 (red-team THE DRAFT + provenance audit first pass)**.
+counted-seed-floor; 0.061 never alone. 41-edge phantom corrected (~4-5 live Road-hub edges). P3 red-team LANDED:
+rate provenance CLEAN (ledger/phantom-41/δ_R/horizon-0.0032-caveat all re-derived); worst finding F1 = 1a
+"d_seg-through-R NO-paint" confound (through-R needs RGB, flat-paint floored 0.0064, no kill criterion) +
+F2/F3/F5 mis-attached supports (σ_cc′ on demoted field; median≠OT wiring; engage-on flag exists). 3 provenance
+FAILURES + 1 gap. NEXT ACTION: **P4 recess ($0 R3/R4 on gt_n600.npz) → P3b revision → P5**.
 
 [SUPERSEDED P0-line] Crucible-2 SEALED (v7.5.2 SYNTHESIS_v3 = the
 baseline v8 must beat/compose). v8 rate ledger MEASURED: dominant 0.061 (1.9× < frontier) / complete 0.140
