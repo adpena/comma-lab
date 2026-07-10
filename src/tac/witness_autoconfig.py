@@ -3095,6 +3095,266 @@ def compile_crucible_v752_launch_config(
 
 
 # ==========================================================================
+# T5 CRUCIBLE-2 v7.5.3 — the fractal-synthesis typed-delta over v7.5.2
+# (.omx/research/fullstack_fractal_optimal_synthesis_20260710.md §3). Δ1 trunk-basis
+# (the §2 pre-registered owed16v2 decision rule) · Δ2 TextureTrunk / out-tex-hidden A/B
+# arms · Δ3 lane-band TRAINED-IN · Δ4 the 10-rung duty-to-measure ladder (registered OFF)
+# · Δ5 the MC-finisher terminal TOOL option. Every arm DEFAULT-OFF; the default config is
+# byte-identical (argv) to the GO'd v7.5.2 self-orient-OFF launch (the pre-registered OFF-arm).
+# ==========================================================================
+
+# Δ1 — the §2 PRE-REGISTERED owed16v2 decision rule, ENCODED (not a hardcoded winner). The
+# ``trunk_basis`` parameter's OUTCOME domain + the rule that maps the measured Δd_seg(ON−OFF) to it.
+# DEFAULT = the OFF-arm branch (SPEC_v752 ADDENDUM v2 recommendation + owed16 v1 REFUTING; the ON-arm
+# is admitted ONLY if the along-tangent-REBALANCED owed16v2 arm PAYS at ep675/ep700). This is a
+# DESIGN authority string carried into the config purpose + queryable by the launcher/council — the
+# builder never fabricates the winner; the measured verdict picks the branch, overridable by the caller.
+_CRUCIBLE_V753_TRUNK_BASIS_DECISION_RULE: str = (
+    "owed16v2 (§2 pre-registration, binds v7.5.3, no re-litigation): "
+    "IF realized Δd_seg(ON−OFF, ep675/ep700) < −max(noise floor, 3σ seed-band)  [basis PAYS] "
+    "THEN trunk_basis='on' at the REBALANCED allocation (freq_across 32 / freq_along 26 = "
+    "lane_carried regime; persistence 'auto' + logit-adjust 'all' re-coupled; --lane-render-band kept). "
+    "ELIF |Δ| ≤ noise  [wash — v1 stands under the corrected allocation]  THEN trunk_basis='off' "
+    "(self-orient OFF, isotropic; −47 GiB RSS; along-tangent cure RELOCATES to TextureTrunk oriented "
+    "features + AnalyticLaneBandTraining). ELSE (ON materially WORSE) trunk_basis='off' + register the "
+    "antagonism (P10). DEFAULT='off' (ADDENDUM v2 + owed16 v1 REFUTING); overridable by the caller."
+)
+_CRUCIBLE_V753_TRUNK_BASIS_OUTCOMES: tuple[str, ...] = ("off", "on")
+
+# Δ1 ON-branch regime — the REBALANCED (lane_carried) allocation the §2 rule selects when basis PAYS.
+# freq_along 26 = the DERIVED along-tangent deficit correction (min(freq_across, round(8*3.2))=26; law
+# anisotropic_basis_two_regime_allocation_20260707). lane_carried keeps lane in the learned recall so
+# the persistence/logit-adjust coupling flips to 'auto'/'all' (regime coherence, SEAL v7.3 M1). MEANS.
+_CRUCIBLE_V753_ON_BRANCH_REGIME: str = "lane_carried"
+
+# Δ4 — the 10-rung duty-to-measure LADDER + the operator-GO rung, as (rung_label, DSL-factory-name,
+# note). REGISTERED-OFF: these are NOT composed into the default config (argv-inert, each stays a
+# never-fired activation-ledger row) — they are the drain-order QUEUE the §3 ladder documents, each
+# its OWN increment (P12, never composed blind). Every factory is VERIFIED to exist in curriculum_dsl
+# (test_crucible2_v753_dsl_wirein); emit_stub_lever is used ONLY for a genuinely-missing one (none are
+# missing today per #397 — all 11 are BUILT). "off is a tracked queue, never a forgotten default."
+_CRUCIBLE_V753_LADDER: tuple[tuple[str, str, str], ...] = (
+    ("msal_uni_sR_reachability", "MarginSaliencyReachability",
+     "#397-r2 / RANK-2 join: exact through-R S_R reachability weight (gt_n600_sR ready, never fired)"),
+    ("dashcomb_in_training", "DashComb",
+     "#397-r3: DashComb in-training (post-hoc +0.0038 NET-NEG was OOD; render-post-hoc-dead law)"),
+    ("lane_prior_paint_then_sdf", "LanePrior",
+     "#397-r4 (C12/C13): --mode paint + lane-thin-start 0; paint nucleates FN 0.0058->0.0019 (3x)"),
+    ("sigma_ccprime_ab", "LengthSigma",
+     "v752 rung 1b: sigma_cc' (--length-sigma-matrix) own increment at the tau boundary (W-1)"),
+    ("unified_margin_hinge", "MarginBandSatisficing",
+     "v752 rung 1a: the satisficing margin-band hinge (lo 0.06 wrap owed item 8)"),
+    ("stepnative_or_finerpp", "StepNativeActivation",
+     "#397-r7 / RANK-3: step-native / beta-anneal 1->8 / FINER++ vs hosc beta_end 4 (n600)"),
+    ("muon_warmstart_restart", "MuonWarmStart",
+     "#397-r6 / C18: #270 Muon warm-start restart — convert BORROWED +8% to a live gain"),
+    ("l235_softcosine_margin_tau_filmv2", "FiLMFix",
+     "#397-r8 (B9): the plateau-breaker (0.00247 on base_ch=20) re-run on v7.5.3 WITH FiLM-v2"),
+    ("remaining_p0_forces", "TieLocusDisplacement",
+     "tie-locus displacement (built ~L4559, default-off) + the remaining P0 forces"),
+    ("micro_batch_bounded_ab", "MicroBatch",
+     "#397-r9 (D4/D15): 1.56x throughput; bounded n600 A/B is the ONLY admission path (a SCORE decision)"),
+    ("operator_go__eikonal_viscosity_316", "EikonalViscosity",
+     "OPERATOR-GO: #316 eikonal-viscosity, first FAIR n600 from a clean ep100 under the fixed guard "
+     "(D1 era KNOWN-TAINTED, guard-freeze RETRACTED); NEVER auto-fired"),
+)
+
+# Δ5 — the MC exact-metric finisher (#396) is a TERMINAL-STAGE TOOL, NOT a Lever and NOT a trainer
+# flag: a gradient-free accept/reject ratchet on the EXACT through-R d_seg over the small head tensors,
+# run BETWEEN head-solve (4a) and pose-finish (4b) at byte-close time. Selecting it records the
+# terminal-stage intent (duty-to-measure ledger row + purpose marker) — it is ARGV-INERT by
+# construction (a post-training tool the byte-close path invokes), so it NEVER perturbs the launch argv.
+_CRUCIBLE_V753_MC_FINISHER_TOOL: str = "tac.through_r.mc_finisher.MCFinisher"
+
+
+def derive_crucible_v753_config(
+    gt_cache_path,
+    *,
+    num_pairs: int,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/__crucible_v753__",
+    code_matrix=None,
+    byte_close_result=None,
+    trunk_basis: str = "off",
+    texture_trunk: bool = False,
+    out_tex_hidden: int = 0,
+    analytic_lane_band_training: bool = False,
+    mc_finisher_terminal: bool = False,
+):
+    """T5 CRUCIBLE-2 **v7.5.3** — the fractal-synthesis typed-delta over v7.5.2, authored AS a
+    :class:`tac.witness_dsl.typed_config.TypedWitnessConfig` by INHERITING the sealed v7.5.2 config
+    and applying the §3 typed delta. Returns the ``TypedWitnessConfig``;
+    ``.to_program().compile_trainer_argv()`` is the DSL-emitted launch argv (fail-CLOSED via
+    ``validate_program`` — an invented flag is refused BEFORE any launcher). SEALED source:
+    ``.omx/research/fullstack_fractal_optimal_synthesis_20260710.md`` §2/§3.
+
+    THE TYPED DELTA (every arm DEFAULT-OFF ⇒ the default config's argv is BYTE-IDENTICAL to the GO'd
+    v7.5.2 self-orient-OFF launch — the pre-registered §2 OFF-arm):
+
+    * **Δ1 ``trunk_basis`` ∈ {"off"(default), "on"}** — the §2 owed16v2 PRE-REGISTERED decision-rule
+      OUTCOME (the rule is documented on :data:`_CRUCIBLE_V753_TRUNK_BASIS_DECISION_RULE`; the builder
+      does NOT hardcode a winner — the measured verdict picks the branch, caller-overridable).
+      ``"off"`` ⇒ inherit v7.5.2(self_orient=False) UNCHANGED. ``"on"`` ⇒ inherit
+      v7.5.2(self_orient=True) then apply the REBALANCED ``lane_carried`` allocation coherently:
+      re-emit the directional lever at ``freq_along=26`` AND flip ``--persistence-classes``→'auto' /
+      ``--logit-adjust-classes``→'all' (regime coherence, SEAL v7.3 M1) so the basis and the loss
+      target AGREE; ``--lane-render-band`` kept.
+    * **Δ2 ``texture_trunk`` / ``out_tex_hidden``** — the #395 3-arm A/B rungs (A3 texture-trunk /
+      A2 widened ReLU-MLP head). Each DEFAULT-OFF with duty-to-measure; composed as DSL Lever
+      factories (``TextureTrunk`` / ``OutTexHidden``) only when explicitly armed.
+    * **Δ3 ``analytic_lane_band_training``** — the RANK-1 lane band as a TRAINING lever
+      (``AnalyticLaneBandTraining``, start_epoch 0; reuses the LANDED ``--lane-render-band`` /
+      ``--lane-band-*`` flags — NO invented flag). DEFAULT-OFF.
+    * **Δ4** — the 10-rung + operator-GO duty-to-measure LADDER (:data:`_CRUCIBLE_V753_LADDER`):
+      registered-OFF (argv-inert; each an own increment, P12). All 11 factories VERIFIED-present.
+    * **Δ5 ``mc_finisher_terminal``** — the #396 MC exact-metric finisher as a TERMINAL-STAGE TOOL
+      (:data:`_CRUCIBLE_V753_MC_FINISHER_TOOL`), NOT a Lever/flag: selecting it records the
+      terminal-stage intent (purpose marker) and is ARGV-INERT (a byte-close-time post-training tool).
+
+    means != ends: a MEANS. Only a byte-closed n600 exact row < 0.19110 moves the pointer 0.19110;
+    ships the banked-R1 pose floor (d_pose 0.001610 → contribution 0.127); d_seg is the open axis.
+    """
+    if trunk_basis not in _CRUCIBLE_V753_TRUNK_BASIS_OUTCOMES:
+        raise ValueError(
+            f"derive_crucible_v753_config: trunk_basis must be one of "
+            f"{_CRUCIBLE_V753_TRUNK_BASIS_OUTCOMES!r} (the §2 pre-registered owed16v2 outcomes), got "
+            f"{trunk_basis!r}. The decision rule: {_CRUCIBLE_V753_TRUNK_BASIS_DECISION_RULE}")
+    if int(out_tex_hidden) < 0:
+        raise ValueError(
+            f"derive_crucible_v753_config: out_tex_hidden must be >= 0 (0 = OFF/linear head), "
+            f"got {out_tex_hidden!r}")
+
+    from tac.witness_dsl.curriculum_dsl import (
+        AnalyticLaneBandTraining,
+        DirectionalBasisRebalance,
+        OutTexHidden,
+        TextureTrunk,
+        logit_adjust_classes_for_basis_regime,
+        persistence_classes_for_basis_regime,
+    )
+    from tac.witness_dsl.typed_config import TypedLever
+
+    def _typed_lever(lev) -> "TypedLever":
+        return TypedLever(name=lev.name, overrides=dict(lev.overrides),
+                          epochs_delta=lev.epochs_delta, notes=lev.notes)
+
+    # Δ1 — the branch. self_orient ON iff trunk_basis=='on'. Inherit the matching sealed v7.5.2 config
+    # (self_orient=False is the GO'd OFF-arm; True keeps the directional front-end for the ON-arm).
+    self_orient = (trunk_basis == "on")
+    v752 = derive_crucible_v752_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result, self_orient=self_orient)
+    base = dict(v752.base)
+    levers = list(v752.levers)
+
+    active_arms: list[str] = []
+    if trunk_basis == "on":
+        # REBALANCED lane_carried allocation, COHERENTLY (regime coupling, SEAL v7.3 M1): the basis
+        # freq_along 6->26 AND the learned-recall targeting must AGREE, else a lane-CARRYING recall
+        # under a lane-OFFLOADED basis (or vice-versa) jitters the binding Road↔Lane separatrix. v752
+        # self_orient=True inherits the lane_offloaded regime (persistence '3' / logit '3' + the
+        # FEED_07a lever at freq_along 6); flip BOTH the basis lever and the two regime-coupled base
+        # flags to lane_carried. --lane-render-band is KEPT (an extra free carrier; not required here).
+        base["--persistence-classes"] = persistence_classes_for_basis_regime(_CRUCIBLE_V753_ON_BRANCH_REGIME)
+        base["--logit-adjust-classes"] = logit_adjust_classes_for_basis_regime(_CRUCIBLE_V753_ON_BRANCH_REGIME)
+        _rebal = _typed_lever(DirectionalBasisRebalance(regime=_CRUCIBLE_V753_ON_BRANCH_REGIME))
+        levers = [lv for lv in levers if lv.name != _rebal.name] + [_rebal]
+        active_arms.append(f"trunk_basis=on(rebalanced freq_along 26 / {_CRUCIBLE_V753_ON_BRANCH_REGIME})")
+    else:
+        active_arms.append("trunk_basis=off(self-orient OFF; pre-registered OFF-arm)")
+
+    # Δ2/Δ3 — the A/B arms, composed as DSL Lever factories ONLY when explicitly armed (default-OFF).
+    if bool(texture_trunk):
+        levers.append(_typed_lever(TextureTrunk()))
+        active_arms.append("texture_trunk(A3)")
+    if int(out_tex_hidden) > 0:
+        levers.append(_typed_lever(OutTexHidden(int(out_tex_hidden))))
+        active_arms.append(f"out_tex_hidden={int(out_tex_hidden)}(A2)")
+    if bool(analytic_lane_band_training):
+        levers.append(_typed_lever(AnalyticLaneBandTraining()))
+        active_arms.append("analytic_lane_band_training(Δ3)")
+
+    # Δ5 — the MC finisher is a TERMINAL-STAGE TOOL: record the intent (ARGV-INERT; no lever/flag).
+    if bool(mc_finisher_terminal):
+        active_arms.append(f"mc_finisher_terminal[TOOL:{_CRUCIBLE_V753_MC_FINISHER_TOOL}]")
+
+    purpose = (
+        "T5 CRUCIBLE-2 v7.5.3 (fractal-synthesis typed-delta over v7.5.2): "
+        f"[{' + '.join(active_arms)}]. Δ4 ladder registered-OFF (10 rungs + operator-GO, "
+        "duty-to-measure queue). Every arm default-OFF ⇒ the default config's argv is byte-identical "
+        "to the GO'd v7.5.2 self-orient-OFF launch (the §2 pre-registered OFF-arm). MEANS until a "
+        "byte-closed n600 row < 0.19110; ships banked-R1 pose floor (d_pose 0.001610 → 0.127); "
+        "d_seg the open axis.")
+
+    typed = v752.model_copy(update={
+        "name": "crucible_v753",
+        "base": base,
+        "levers": tuple(levers),
+        "purpose": purpose,
+    })
+    viol = typed.validate_program()
+    if viol:
+        raise ValueError(
+            f"crucible_v753 DSL-authored-config gate: TypedWitnessConfig produced "
+            f"{len(viol)} WitnessProgram.validate violation(s): {viol[:4]}")
+    return typed
+
+
+def crucible_v753_ladder() -> tuple[tuple[str, str, str], ...]:
+    """The v7.5.3 Δ4 duty-to-measure LADDER (rung_label, DSL-factory-name, note), registered-OFF.
+    Consumed by ``derive_named_config`` help / the council review surface / the completeness verifier
+    (``test_crucible2_v753_dsl_wirein`` asserts every factory exists). PURE."""
+    return _CRUCIBLE_V753_LADDER
+
+
+def compile_crucible_v753_launch_config(
+    gt_cache_path,
+    *,
+    num_pairs: int,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/__crucible_v753__",
+    code_matrix=None,
+    byte_close_result=None,
+    trunk_basis: str = "off",
+    texture_trunk: bool = False,
+    out_tex_hidden: int = 0,
+    analytic_lane_band_training: bool = False,
+    mc_finisher_terminal: bool = False,
+) -> "CrucibleV7LaunchConfig":
+    """The launcher-facing crucible_v753 cfg (the ONE object satisfying the whole duck-typed cfg
+    protocol ``tools/launch_witness_run.py`` consumes). Mirrors
+    :func:`compile_crucible_v752_launch_config`: v7.5.3 changes only base FLAGS + levers + purpose
+    (never the LawRef constants nor the schedule-WHEN governance tokens), so the ``constants_manifest``
+    + ``schedule_governance`` are REUSED from the compiled crucible_v7 artifact (drift-impossible), and
+    the ``dsl_program_manifest`` is v753's own emitted-flag fingerprint. ``.name`` is ``crucible_v753``.
+
+    means != ends: a MEANS (a launch config). Only a byte-closed n600 row < 0.19110 moves 0.19110."""
+    from tac.witness_dsl.typed_config import build_launch_manifest
+
+    typed = derive_crucible_v753_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result, trunk_basis=trunk_basis,
+        texture_trunk=texture_trunk, out_tex_hidden=out_tex_hidden,
+        analytic_lane_band_training=analytic_lane_band_training,
+        mc_finisher_terminal=mc_finisher_terminal)
+    argv = typed.to_program().compile_trainer_argv()
+    emitted_names = sorted({f for f, _ in _crucible_v7_argv_pairs(argv)})
+    dsl_manifest = build_launch_manifest(
+        program_name="crucible_v753", emitted_flag_names=emitted_names,
+        typed_config_hash=typed.typed_config_hash(), typed_validated=True)
+    v7_compiled = compile_crucible_v7_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    return CrucibleV7LaunchConfig(
+        typed=typed,
+        constants_manifest=dict(v7_compiled.constants_manifest),
+        dsl_program_manifest=dict(dsl_manifest),
+        schedule_governance=dict(v7_compiled.schedule_governance),
+    )
+
+
+# ==========================================================================
+# ==========================================================================
 # T5 CRUCIBLE-3 v8 INCREMENT-1a — the paint-free mask-level DECOUPLING SCREEN
 # config (P7 DELIVERABLE, task #380). This is NOT a trainer launch (no argparse
 # argv, no GPU) — it is the $0 MEASUREMENT config for the increment-1a A/B: the

@@ -734,6 +734,15 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
         # constants_manifest / schedule_governance), with the v7-identical constants+governance reused.
         return wac.compile_crucible_v752_launch_config(
             gt_cache, num_pairs=num_pairs, self_orient=False, **_ek)
+    if config == "crucible_v753":
+        # T5 CRUCIBLE-2 v7.5.3 (fractal-synthesis typed-delta over v7.5.2,
+        # fullstack_fractal_optimal_synthesis_20260710.md §3). DEFAULT branch = trunk_basis='off' (the
+        # §2 pre-registered owed16v2 OFF-arm) with every A/B arm OFF ⇒ argv byte-identical to the GO'd
+        # v7.5.2 self-orient-OFF launch; the Δ2/Δ3 arms + Δ1 'on' branch + Δ5 MC-finisher are composed
+        # by derive_crucible_v753_config kwargs (default-OFF, duty-to-measure). Same launcher-facing cfg
+        # protocol as crucible_v752 (v7-identical constants+governance reused). means != ends: a MEANS.
+        return wac.compile_crucible_v753_launch_config(
+            gt_cache, num_pairs=num_pairs, **_ek)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -746,7 +755,8 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
     raise ValueError(
         f"derive_named_config: unknown config name {config!r} — no derive branch resolves it. Known "
         f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
-        f"crucible_v7, crucible_v752. Add an explicit branch (NEVER silently fall through to proven_base).")
+        f"crucible_v7, crucible_v752, crucible_v753. Add an explicit branch (NEVER silently fall "
+        f"through to proven_base).")
 
 
 # ───────────────────────── RSS calibration smoke (BUILD #294 piece B; optional, default OFF) ────
