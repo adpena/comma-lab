@@ -14614,3 +14614,21 @@ NOT as commands to this harvest; nothing launched, no config/run touched, no poi
 (no measured law; the receiver-bijection is an apparatus/source finding, waterlines are DERIVED off the
 known score law). Pointer contest-CPU **0.19108282 UNMOVED** (MEANS). #416 external items `[external
 unratified]`.
+
+### FEED-417-receiver-bijection (2026-07-10, VERIFIED-vs-code → #417) — the advisory claim, corroborated against the primary artifact
+
+Main-agent VERIFICATION of the #416 harvest's top finding (did NOT take the doc's word — re-derived from the
+receiver code, per the operating manual). `tools/levelset_byte_close_and_eval.py` reconstructs via a HAND-WRITTEN
+NumPy `_render_pair` (~L1604) reading a FIXED param vocabulary (`in_proj`/`out_sdf`/`code`/FiLM) — **no
+`load_state_dict`, no `build_witness_module` import, ZERO refs to `tex_trunk`/`decoupled_head`** (which ARE produced
+at trainer `:728`/`:740`). CONFIRMED: any v7.5.3-texture / v8-decoupled scored archive COUNTS those bytes (rate
+paid) but DECODES as the shared-head **control** (lever inert through R) → a scored A/B would report a FAKE lever
+verdict (NO-FAKE #8, surrogate-≠-authority on the authority surface). **Scope:** FORMULATION-level, v7.5.3/v8 scored
+vehicles ONLY; the **LIVE v7.5.2 baseline is shared-head → UNAFFECTED** — a PRE-REGISTERED blocker for the FIRST
+v7.5.3/v8 scored row, not a live-run blocker. Routed #417 with the two-landing (receiver consumption for those
+groups, owner #395/#398 + a **fail-closed refusal gate**: archive counts a group the receiver can't consume ⇒
+REFUSE — the class-fix) + a one-class isolation test (flip a group on/off, assert the render CHANGES through R =
+positive-control sentinel). **Triality:** DAG = THIS FEED; DSL **N/A** (no lever built — fix is a routed task, not
+landed); equations **N/A** (structural code-fact, not a scored EmpiricalAnchor). Memory:
+[[receiver-consumption-bijection-counted-but-inert-weight-groups]]. Pointer 0.19108282 UNMOVED — this protects a
+FUTURE row from being fake.
