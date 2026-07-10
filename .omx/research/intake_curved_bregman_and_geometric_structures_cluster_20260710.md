@@ -151,6 +151,20 @@ Connection (genuinely-new hook):
   preconditioner's where-to-apply decision. Gated on a measured check; not a new build. Reinforces §5/§7 of
   `docs/paper/information_geometric_foundations.md`.
 
+## Paper #12 — The Bregman CHORD divergence (Nielsen & Nock, arXiv 1810.09113, 2018) — gradient-FREE angle
+Generalizes Bregman divergences WITHOUT gradient calculations, via two tunable scalar parameters
+(asymptotically → Bregman). New angle vs the rest of the cluster (which is gradient-BASED: curved Bregman
+#3, Hessian preconditioning #6):
+- Our **d_seg lives on a discrete argmax** — piecewise-constant, gradients vanish/ill-defined at the
+  boundary (the `.round()` zero-gradient problem). A GRADIENT-FREE divergence is the natural distortion for
+  a piecewise-constant target.
+- **Directly relevant to the #396 MC-finisher** (arXiv 2607.08406; task #400 in flight) — our gradient-free
+  terminal optimizer of the discrete argmax d_seg. The chord divergence's gradient-free + two-scalar-param
+  form is a candidate acceptance/distortion measure for the Monte-Carlo finisher (the smooth head-offset
+  uses gradient Bregman #3/#6; the argmax polish does not).
+- **GATED:** candidate distortion for the gradient-free finisher (#396/#400), two scalars tuned per-lever.
+  Gated on a measured check; exact through-R d_seg stays authority. Not a build.
+
 ## Cluster convergence note (honest)
 As of paper #11 the cluster is CONVERGING: each new reference is a more specialized/concrete version of the
 same SPD / Fisher-Rao / dually-flat / Bregman spine already captured by the foundations section. Marginal new
