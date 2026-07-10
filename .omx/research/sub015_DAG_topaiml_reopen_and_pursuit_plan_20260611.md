@@ -12578,17 +12578,50 @@ flip_median ALL measured worse AND N-1's exhaustive ±0.4 winner sweep best at �
 post-hoc decode-time b_c lever is SATURATED at no_offset for this checkpoint** — the SPEC_v8 §A.3
 `safe_default_until_built: no_offset` is now the MEASURED optimum, not just the safe default.
 
-**verdict_scope: FORMULATION** — "GLOBAL zero-sum per-class decode-time offsets solved post-hoc" (four
-objectives + one sweep), at mod32cap ep650 / tau 1.0. NOT the solvers (exact/closed-form, tested).
-**untested formulations / alternatives:** (1) per-edge exact 1-D Hamming minimizer WITH the collateral
-term (the sweep's ~0 best bounds its headroom at ~nil); (2) PER-PAIR offsets; (3) spatially-varying
-b_c(x) annulus-gated; (4) train-time integration (offset inside the loss); (5) checkpoints with
-shallower phi erasure. For v8 increment-1a: **b_c ships no_offset**; the flip modes stay built +
-default-off + registered (duty-to-measure SATISFIED this unit).
+**PER-MODE verdict scopes (the crucible discipline — one failed formulation ≠ family dead):**
+- **M-a flip_weighted — verdict_scope: FORMULATION** ("flip-share targets through the mass-OT
+  mechanism"). Crucible-3 P3 F3 empirically CONFIRMED: OT-to-flip-share re-inherits AND amplifies
+  N-1's cell-inflation pathology (worse than area-matching 0.00489).
+- **M-b flip_median — verdict_scope: FORMULATION with a REGIME qualifier.** The Hamming-median
+  derivation is VALID in the small-offset local-boundary-shift regime; the solved b₁≈+43 (driven by
+  Lane per-class d_seg 0.212 at no_offset — the trunk's phi-space Lane erasure) EXITS that validity
+  domain. A **REGIME VIOLATION on THIS eroded trunk, NOT a refutation of the median law itself**
+  (validity_domain: |b| small / non-eroded phi — recorded in the equation anchor).
+- **Shared conclusion: no GLOBAL per-class offset rescues an eroded trunk.** NOT the solvers
+  (exact/closed-form, tested).
+
+**untested formulations / alternatives (reformulation queue):** (1) **per-EDGE b_c on the fresh v8
+Stage-A decoupled fields** (S1's original per-edge form — the crucible-3 v8 route, non-eroded by
+construction); (2) offsets solved **jointly WITH training** (not post-hoc on a frozen eroded phi);
+(3) **magnitude-clamped** offsets within the derivation's validity domain (the N-1 sweep's ~0 best
+bounds this at ~nil headroom on THIS trunk); (4) per-pair / spatially-varying b_c(x). For v8
+increment-1a: **b_c ships no_offset**; the flip modes stay built + default-off + registered
+(duty-to-measure SATISFIED this unit).
 
 **Triality:** DAG = this FEED. **DSL** = `HeadOffsetSolver` modes flip_weighted/flip_median
 (dd5057c6c). **equations** = anchor `laguerre_flip_bc_reformulation_gate_n600_mod32cap_ep650_20260709`
-APPENDED to `laguerre_ot_head_offset_v1` (REFUTED, VERIFIED_VIA_EMPIRICAL_ANCHOR) + registry row.
+APPENDED to `laguerre_ot_head_offset_v1` (per-mode scopes + validity_domain,
+VERIFIED_VIA_EMPIRICAL_ANCHOR) + registry row.
 Memo: `.omx/research/flip_weighted_bc_build_and_gate_20260709.md`. Tests: 13 new
 (`test_flip_offsets.py`), 58 pass. [macOS-CPU advisory] NON-PROMOTABLE. Pointer **0.19110 UNMOVED** ·
 #205 untouched (means).
+
+<!-- P5b-commit (6b1568b0b) DSL-leg disposition: the v3 carrier change (lateral 3-curve I1b) is a DESIGN
+row whose DSL Lever factory lands AT BUILD TIME (the carrier is unbuilt; folding a Lever for an unbuilt
+carrier would be a fake lever — NO-FAKE). decoupling_screen.py is harness code, not a trainer lever.
+DSL leg = owed-at-build, recorded per the FEED-crucible2-seal-legs pattern; [no-triality] marker omitted
+from 6b1568b0b's message, dispositioned here. -->
+
+## FEED-session-limit-recovery-2 (2026-07-09) — 3 agents killed at session limit; recovered, zero signal loss
+Suspect-audit agent (8-item, incl. flip-resolution item 8) + flip-b_c FINALIZATION + crucible-3 P6 round-1
+all died at the session limit BEFORE landing their outputs. State verified: the flip-b_c GATE JSON is
+COMPLETE on disk (flip_bc_n600_result.json: no_offset 0.0031436 · flip_weighted 0.019673 · flip_median
+0.021561 — both offset arms measured HARMFUL through-R, +0.0165/+0.0184 = 40/45% of the remaining gap AS
+HARM); its triality (FEED-flipbc + equation anchor + memo) is OWED and re-dispatched. Suspect audit +
+P6-r1 re-dispatched fresh. **Operator refinement folded (verbatim): "Flip resolution must take upstream
+evaluate.py and modules.py into account and camera res and all res used"** — the flip-resolution audit
+item now verifies against the UPSTREAM sources themselves (evaluate.py batching/eval path + modules.py
+SegNet input contract x[:,-1]→resize(512,384) + PoseNet YUV6 preprocessing), enumerating EVERY resolution
+in the chain: render grid → camera 874×1164 → uint8 → SegNet 512×384 → PoseNet (512,384)-normalized —
+each flip surface pinned to its authoritative grid BY UPSTREAM SOURCE, not by our conventions. Pointer
+0.19110 UNMOVED (means).
