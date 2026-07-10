@@ -14902,3 +14902,12 @@ NOTHING reconciled (NO-FAKE: a wrong "fix" to the sealed base would be worse tha
 launch.sh is gitignored) so a REAL future drift fails a $0 unit test. 429 tests pass; schedule-provenance
 gate rc=0; live run untouched (test-only). DSL/equations **N/A** (apparatus test guard). Pointer 0.19108282
 UNMOVED. The pattern worth naming: the apparatus is catching its own false alarms instead of faking fixes.
+
+**Triality disposition (drift-detector reply):** FEED-v752cfg + the byte-identity guard test (3e249290a) are
+`[no-triality]` PURE APPARATUS — they mint NO measured law. The "byte-identity / reproduces 286/286" is a
+config-ARGV equality (a test pins argv reproduction), NOT a contest measurement: there is no d_seg / d_pose /
+S / EI EmpiricalAnchor to register or refine. The drift-detector matched the control/measurement VOCABULARY
+("byte-identity", "reproduces") but the change-type is apparatus, not a measured finding — minting a canonical
+equation here would be a NO-FAKE violation (a law that measures nothing). Equations leg correctly **N/A**;
+DAG leg = this FEED; DSL leg N/A (no lever changed). Same disposition applies to the store-paths / jsonl /
+run-artifact-contract landings this wave — all apparatus, no laws.
