@@ -91,7 +91,7 @@ the 1a kill floor to the δ_R=0.0196 through-R proxy (a ~5600× UNIT category er
 DECISION-INERT — no realistic 0.001–0.01 decoupling improvement could clear it). The default is now the
 R7-MEASURED frame-sampling floor **3.46e-6**, and the OPERATIVE floor = `max(3.46e-6, in-run seed spread)`
 via the new `operative_delta_mask()` — which **REFUSES** (returns `VERDICT_REFUSED`) when ≥2 seed
-replicates exist but `seed_spread` was not supplied (the P2 seed-honesty guard: a kill fired on a floor
+replicates exist but `seed_spread` was not supplied (the P2 seed-honesty guard: a kill fired on a floor # MAGNITUDE_DISMISSAL_OK: P2 noise-floor law ENFORCED (refusing an under-specified-floor verdict), not a dismissal — no lever deferred/killed
 that dropped a measurable seed component would be firing on within-seed noise). Tests rewritten: a
 realistic 0.005 improvement now returns a REAL `DECOUPLING-CONFIRMED` (it was `INCONCLUSIVE` under the
 proxy); 27/27 pass, ruff-F clean.
