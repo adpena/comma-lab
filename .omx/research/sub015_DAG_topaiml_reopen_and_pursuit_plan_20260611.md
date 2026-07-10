@@ -12295,3 +12295,24 @@ preserved). Wired into `duty_to_measure_ranked`. Result: digest now reads
 DAG leg = this FEED. Equations leg = **N/A until measured** — #121/#169 carry est ΔS (0.012–0.024 oracle
 for #169) but NO byte-closed n600 row yet; the canonical-equation anchor lands only when a real
 through-R measurement exists (their duty-to-MEASURE, now correctly surfaced). Pointer 0.19110 UNMOVED (means).
+
+## FEED-owed-gates-addendum (2026-07-09) — #384 COMPLETE: two measured dry-start findings (wall-clock inputs for #385)
+Addendum to FEED-owed-gates (b454d2657); memo commit b0e3a1090's finding recorded here (triality DAG leg).
+**#384 all four gates GREEN:** owed-2 dry-start BUILT+MEASURED (peak RSS **70.94 GiB** vs 71.54 projection
+— memory-preflight VALIDATED at the real n600 config) · owed-4 speed-stack 5/5 composed with neutrality
+receipts + wall-clock table **6.0/10.1/15.9 h** (+~11 min head-solve) · owed-14 observer replay 4/4 legs
+GREEN on the STOPPED run's REAL telemetry (pose-gate negative control → DEGENERATE_GUARD_TRIPPED/not-fired
+on rising σ_min, matching P4-M1; verdict-trend → TRAIN_VERDICT_DECOUPLING, reproducing the actual #205
+stop cause d_seg~0.033-plateau/d_pose 7.8→24.5 — the #383 detector is now REPLAY-TRUSTED) · owed-15 three
+argparse-validated fresh isolation arms (R8 law honored), training awaits which-to-run GO.
+**Two MEASURED findings (both feed the #385 brief):** (1) the one-time first-n600-epoch compile is
+**>13 min** (hosc + fused-R + mx.compile graph build) — a fixed wall-clock cost the budget table must
+carry and the dry-start protocol must window past (steady-state sec/ep anchor remains the confirmed 42;
+a direct re-measure needs a >15-min dry-start window); (2) crucible_v7's ATOMIC 3000-ep schedule
+validators REFUSE shrunk-epochs smokes (muon≤epochs + LADDER↔Muon stagger interlocks) — the correct
+bound is WALL-CLOCK (safe_run SIGTERM doubles as the crash-sim for the resume round-trip), a schedule-
+clamp prototype was REJECTED (would test a different schedule than ships — the no-toy law applied to
+smokes). **Join point:** all four tools ride derive_named_config; the CrucibleV752LaunchConfig adapter
+is the deliberately-deferred P8-wall item. v7.5.2 chain now FULLY GATE-GREEN except owed-14's live-run
+half + the P8 adapter. Triality: DAG=this FEED; DSL/equations N/A (gate tooling + measurements, no new
+lever/law). Pointer 0.19110 UNMOVED (means).
