@@ -74,38 +74,38 @@ def _(Path, json):
 @app.cell
 def _(math, mo, results):
     # --- Score Trajectory ---
-    mo.md("## Score Trajectory")
-
-    trajectory_rows = []
-    for r in results:
-        if "current_workflow_score" in r:
-            score = r["current_workflow_score"]
-            seg = r.get("segnet_distortion", 0)
-            pose = r.get("posenet_distortion", 0)
-            rate = r.get("rate", 0)
-            tag = r.get("run_id", r.get("config", {}).get("variant", "unknown"))
-            # Truncate tag for display
-            short_tag = tag[:40] if len(tag) > 40 else tag
-            trajectory_rows.append({
-                "run": short_tag,
-                "score": f"{score:.3f}",
-                "seg": f"{seg:.6f}",
-                "pose": f"{pose:.6f}",
-                "rate": f"{rate:.6f}",
-                "seg_term": f"{100*seg:.4f}",
-                "pose_term": f"{math.sqrt(10*pose):.4f}" if pose > 0 else "0",
-                "rate_term": f"{25*rate:.4f}",
+    # Underscore-prefixed locals stay cell-private in marimo's dataflow model
+    # (avoids the multiple-definition collision on shared loop variables).
+    _rows = []
+    for _r in results:
+        if "current_workflow_score" in _r:
+            _score = _r["current_workflow_score"]
+            _seg = _r.get("segnet_distortion", 0)
+            _pose = _r.get("posenet_distortion", 0)
+            _rate = _r.get("rate", 0)
+            _tag = _r.get("run_id", _r.get("config", {}).get("variant", "unknown"))
+            _short = _tag[:40] if len(_tag) > 40 else _tag
+            _rows.append({
+                "run": _short,
+                "score": f"{_score:.3f}",
+                "seg": f"{_seg:.6f}",
+                "pose": f"{_pose:.6f}",
+                "rate": f"{_rate:.6f}",
+                "seg_term": f"{100*_seg:.4f}",
+                "pose_term": f"{math.sqrt(10*_pose):.4f}" if _pose > 0 else "0",
+                "rate_term": f"{25*_rate:.4f}",
             })
 
-    mo.ui.table(trajectory_rows, label="Score trajectory (from results.jsonl)")
-    return trajectory_rows,
+    mo.vstack([
+        mo.md("## Score Trajectory"),
+        mo.ui.table(_rows, label="Score trajectory (from results.jsonl)"),
+    ])
+    return
 
 
 @app.cell
-def _(math, mo):
+def _(mo):
     # --- Interactive Score Decomposition ---
-    mo.md("## Interactive Score Decomposition")
-
     seg_slider = mo.ui.slider(
         0.003, 0.010, value=0.00610, step=0.0001,
         label="SegNet distortion"
@@ -119,7 +119,10 @@ def _(math, mo):
         label="Rate"
     )
 
-    mo.vstack([seg_slider, pose_slider, rate_slider])
+    mo.vstack([
+        mo.md("## Interactive Score Decomposition"),
+        seg_slider, pose_slider, rate_slider,
+    ])
     return pose_slider, rate_slider, seg_slider
 
 
@@ -162,68 +165,60 @@ def _(math, mo, pose_slider, rate_slider, seg_slider):
 @app.cell
 def _(math, mo):
     # --- Proposed Scoring Formula (Arrow + Pareto) ---
-    mo.md("## Proposed Scoring Formula (Arrow + Pareto)")
-
-    mo.md(r"""
-    The current additive formula allows axis exploitation. Our proposed multiplicative formula
-    enforces complementarity:
-
-    $$\text{SCORE}_{\text{proposed}} = \left(\frac{s}{s_0}\right)^{0.40} \cdot \left(\frac{p}{p_0}\right)^{0.35} \cdot \left(\frac{r}{r_0}\right)^{0.25}$$
-
-    where $s_0, p_0, r_0$ are baseline (unfiltered) values.
-    """)
-
-    # Compare current vs proposed
-    s0, p0, r0 = 0.00580, 0.01229, 0.02500
-    submissions = [
+    _s0, _p0, _r0 = 0.00580, 0.01229, 0.02500
+    _submissions = [
         ("Baseline (no filter)", 0.00580, 0.01229, 0.02500),
         ("Our submission (1.33)", 0.00610, 0.00218, 0.02302),
         ("Hypothetical balanced", 0.00500, 0.00400, 0.02302),
         ("KL distill (DEAD)", 0.00546, 0.08095, 0.02407),
     ]
 
-    rows = []
-    for name, s, p, r in submissions:
-        current = 100*s + math.sqrt(10*p) + 25*r
-        proposed = (s/s0)**0.40 * (p/p0)**0.35 * (r/r0)**0.25
-        rows.append({
-            "Submission": name,
-            "Current formula": f"{current:.3f}",
-            "Proposed formula": f"{proposed:.3f}",
-            "seg": f"{s:.5f}",
-            "pose": f"{p:.5f}",
+    _rows = []
+    for _name, _s, _p, _r in _submissions:
+        _current = 100*_s + math.sqrt(10*_p) + 25*_r
+        _proposed = (_s/_s0)**0.40 * (_p/_p0)**0.35 * (_r/_r0)**0.25
+        _rows.append({
+            "Submission": _name,
+            "Current formula": f"{_current:.3f}",
+            "Proposed formula": f"{_proposed:.3f}",
+            "seg": f"{_s:.5f}",
+            "pose": f"{_p:.5f}",
         })
 
-    mo.ui.table(rows, label="Current vs proposed scoring formula")
-    return rows, s0, p0, r0, submissions
+    mo.vstack([
+        mo.md("## Proposed Scoring Formula (Arrow + Pareto)"),
+        mo.md(r"""
+    The current additive formula allows axis exploitation. Our proposed multiplicative formula
+    enforces complementarity:
+
+    $$\text{SCORE}_{\text{proposed}} = \left(\frac{s}{s_0}\right)^{0.40} \cdot \left(\frac{p}{p_0}\right)^{0.35} \cdot \left(\frac{r}{r_0}\right)^{0.25}$$
+
+    where $s_0, p_0, r_0$ are baseline (unfiltered) values.
+    """),
+        mo.ui.table(_rows, label="Current vs proposed scoring formula"),
+    ])
+    return
 
 
 @app.cell
 def _(FINDINGS_PATH, mo):
     # --- Live Findings Feed ---
-    mo.md("## Research Findings (live from .omx/research/findings.md)")
-
     if FINDINGS_PATH.exists():
-        findings_text = FINDINGS_PATH.read_text()
-        mo.md(findings_text)
+        _body = FINDINGS_PATH.read_text()
     else:
-        mo.md("*findings.md not found — run experiments to populate*")
+        _body = "*findings.md not found — run experiments to populate*"
+
+    mo.vstack([
+        mo.md("## Research Findings (live from .omx/research/findings.md)"),
+        mo.md(_body),
+    ])
     return
 
 
 @app.cell
 def _(mo):
     # --- Pareto Frontier Visualization ---
-    mo.md("""
-    ## PoseNet-SegNet Pareto Frontier
-
-    The frontier shows the tradeoff between PoseNet and SegNet optimization.
-    Our submission is at the PoseNet-extreme. The true score minimum lies
-    somewhere in between.
-    """)
-
-    # Data points on the frontier
-    frontier_points = [
+    _frontier_points = [
         {"label": "Baseline (no filter)", "seg": 0.00580, "pose": 0.01229, "marker": "circle"},
         {"label": "Standard h=64", "seg": 0.00580, "pose": 0.01229, "marker": "circle"},
         {"label": "Dilated h=64 (OURS)", "seg": 0.00610, "pose": 0.00218, "marker": "star"},
@@ -231,8 +226,17 @@ def _(mo):
         {"label": "KL distill #2", "seg": 0.00546, "pose": 0.08095, "marker": "x"},
     ]
 
-    mo.ui.table(frontier_points, label="Observed Pareto frontier points")
-    return frontier_points,
+    mo.vstack([
+        mo.md("""
+    ## PoseNet-SegNet Pareto Frontier
+
+    The frontier shows the tradeoff between PoseNet and SegNet optimization.
+    Our submission is at the PoseNet-extreme. The true score minimum lies
+    somewhere in between.
+    """),
+        mo.ui.table(_frontier_points, label="Observed Pareto frontier points"),
+    ])
+    return
 
 
 @app.cell
