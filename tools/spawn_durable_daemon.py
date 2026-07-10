@@ -564,6 +564,77 @@ def _system_admission_gate(a: argparse.Namespace, cmd: list[str]) -> int | None:
     return 5
 
 
+def _launch_readiness_gate(a: argparse.Namespace, cmd: list[str]) -> int | None:
+    """CONFIG-FRESHNESS gate (operator 2026-07-10: "a gate/hook to protect
+    against naively running long-running stuff the wrong way"). Refuses a
+    WITNESS long-run whose ``launch.sh`` config skips the fire-now rungs the
+    default-off decision table (#405) ranks at the top of the remaining descent.
+
+    The memory/governor admission gate above answers "can the machine hold this
+    run?"; it does NOT answer "is this the RIGHT config?". This gate does — it
+    binds the #405 decision table to the launch, so firing the stale validated
+    config (the exact 2026-07-10 incident: HorizonWeightedMargin 43.8% +
+    StepNativeActivation 31.6% un-included) is refused with the missing rungs
+    named. Returns an exit code to ABORT with, or None to proceed.
+
+    Scope: only ``bash <…>/launch.sh`` witness-trainer commands. Escape hatch:
+    ``--skip-readiness-gate`` (infra) OR an operator-quoted
+    ``--readiness-override-rationale`` OR a per-rung
+    ``# LAUNCH_READINESS_DEFER:<rung>=<reason>`` in the launch.sh itself.
+    FAIL-OPEN on gate-own errors (import/parse) — never brick a launch on the
+    gate breaking; it only blocks on POSITIVE evidence of a naive launch."""
+    if getattr(a, "skip_readiness_gate", False) or _is_protection_infra_cmd(cmd):
+        return None
+    # Resolve the launch.sh path from a `bash <path>` command; anything else is
+    # out of scope (this gate is for the governed witness launch.sh flow).
+    launch_sh: Path | None = None
+    for i, tok in enumerate(cmd):
+        if tok.endswith("launch.sh") and Path(tok).is_file():
+            launch_sh = Path(tok)
+            break
+        if tok in ("bash", "sh", "/bin/bash") and i + 1 < len(cmd):
+            cand = Path(cmd[i + 1])
+            if cand.name.endswith(".sh") and cand.is_file():
+                launch_sh = cand
+                break
+    if launch_sh is None:
+        return None
+    try:
+        txt = launch_sh.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if "train_levelset_witness" not in txt and "train_witness" not in txt:
+        return None  # not a witness training launch — out of scope
+    try:
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location(
+            "_wlrg", Path(__file__).resolve().parent / "witness_launch_readiness_gate.py")
+        _wlrg = importlib.util.module_from_spec(_spec)
+        sys.modules["_wlrg"] = _wlrg
+        _spec.loader.exec_module(_wlrg)
+        verdict = _wlrg.assess_launch_readiness(launch_sh)
+    except Exception as exc:  # gate-own breakage ⇒ fail-open
+        print(f"[durable-daemon] WARNING: launch-readiness gate errored ({exc!r}); "
+              "proceeding (fail-open).", file=sys.stderr)
+        return None
+    if verdict.proceed:
+        if verdict.advisory_missing:
+            print("[durable-daemon] launch-readiness: PROCEED (advisory rungs not "
+                  f"included: {', '.join(verdict.advisory_missing[:6])})", file=sys.stderr)
+        return None
+    if _rationale_is_real(getattr(a, "readiness_override_rationale", None)):
+        print("[durable-daemon] launch-readiness OVERRIDE by operator rationale "
+              f"{a.readiness_override_rationale!r} — proceeding despite un-reconciled "
+              "fire-now rungs.", file=sys.stderr)
+        return None
+    print(verdict.render(), file=sys.stderr)
+    print("[durable-daemon] REFUSED (launch-readiness — config skips top decision-table "
+          "rungs). Reconcile the config (add the rung's flag), record a "
+          "`# LAUNCH_READINESS_DEFER:<rung>=<reason>` in the launch.sh, or pass "
+          "--readiness-override-rationale \"<operator verbatim>\".", file=sys.stderr)
+    return 6
+
+
 def _maybe_autostart_blackbox(a: argparse.Namespace, cmd: list[str]) -> None:
     """Auto-start the always-on memory black-box recorder before a training launch (idempotent
     singleton). Skipped for the black box itself (recursion guard) + infra + --skip-blackbox-autostart."""
@@ -663,6 +734,13 @@ def _do_start(a: argparse.Namespace) -> int:
     # near-simultaneous governed launch blocks on the lock and then SEES this reservation in its
     # own admission arithmetic (list_tracked_jobs counts fresh "admitting" rows). The reservation
     # is promoted to the real running row right after Popen, or removed on spawn failure.
+    # (2026-07-10) CONFIG-FRESHNESS gate BEFORE the admission lock: refuse a
+    # naive witness long-run whose config skips the fire-now decision-table
+    # rungs. Runs before Popen so a refused launch starts nothing.
+    _readiness_refusal = _launch_readiness_gate(a, cmd)
+    if _readiness_refusal is not None:
+        return _readiness_refusal
+
     pending_label = a.label or f"__admitting__{uuid.uuid4().hex[:10]}"
     pending_written = False
     with _registry_lock():
@@ -1000,6 +1078,12 @@ def main(argv: list[str] | None = None) -> int:
                          "in the registry so the governor's throttle can rank it")
     ap.add_argument("--skip-admission-gate", action="store_true",
                     help="skip the SYSTEM admission gate (ONLY for control-plane/watchdog/black-box infra)")
+    ap.add_argument("--skip-readiness-gate", action="store_true",
+                    help="skip the CONFIG-FRESHNESS launch-readiness gate (ONLY for infra / "
+                         "non-witness launches / deliberate stale-config replays)")
+    ap.add_argument("--readiness-override-rationale", default=None,
+                    help="operator-quoted rationale to OVERRIDE a launch-readiness REFUSAL "
+                         "(a witness config that skips top decision-table fire-now rungs)")
     ap.add_argument("--admission-override-rationale", default=None,
                     help="operator-quoted rationale to OVERRIDE a system admission REFUSAL (the only "
                          "non-infra bypass; placeholder/empty rejected)")
