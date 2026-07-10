@@ -88,3 +88,13 @@ Mechanism = PR128 click-polish [external unverified]; substrate = OURS (PR110-li
 - `fc-01KX6DKHTXQFW5SS85HJ6GNBX5` — n8 validation re-dispatch (detached, encoder/ fix, resumes the banked round-0 ledger from the Volume). IN FLIGHT.
 
 Measured so far (in-container Linux x86_64, 8-core): the n8 round-0 clicks are worth ≈ −1.78e-7 full-set d_seg (≈21 seg-cells ≈ −1.8e-5 S). Naive one-round full-set extrapolation ≈ −0.0013 S (upper bound; PR128 banked −0.0019..−0.0027 over many rounds).
+
+## n8 validation RESULT (2026-07-10, harvested) — ALL GREEN, chain proven end-to-end
+- `fc-01KX6DKHTXQFW5SS85HJ6GNBX5` HARVESTED. Container: Linux-4.19.0-gvisor-x86_64, avx2+avx512f+fma, torch 2.5.1 CPU, constriction 0.4.2.
+- In-container greens: round-trip byte-exact (sha `b46897…` reproduced) · GT build (evaluator-aligned AVVideoDataset decode) 5.1 s @n8 · Volume-ledger RESUME exercised for real (round-0 replayed, 2.8 s) · raw custody assert passed (3,662,409,600 B exactly) · full 600-sample `upstream/evaluate.py --device cpu` ran in **176.3 s** (vs the 60–120 min prior estimate — the whole cost model improves ~30×).
+- **The exact row (600 samples, exact candidate bytes sha `ad02b012…`, 177,169 B):** seg 0.00055961 · pose 0.00002942 · rate 0.00471878 → recomputed from components **S = 0.1910828** — **beats the pointer 0.19109982 by −1.7e-5 with just 8 clicked pairs** (one ±1 round on n8). Axis: Modal Linux x86_64 CPU container (gVisor) — same axis-class as the pointer row; incumbent components reconstruct to ≈0.1911003 in-container (pointer-consistent to 5e-7).
+- Custody: `experiments/results/clickpolish_pr110_20260710/n8_validation/` (candidate_archive.zip + report_cpu.txt + accepted_clicks_ledger.jsonl + harvest_result.json).
+- **Pointer handling: NOT updated by this subagent (per coordinator) — main owns pointer refresh + verification.**
+
+## n600 run (IN FLIGHT)
+- `fc-01KX6DZWCHNPQ6KN59V2MZ845J` — n600, max_rounds=2, ±1 sweep, wall-clock cap 16,200 s, Volume run-id `n600_r1`, same-container eval at the end. Projected wall-clock ~2–5 h; projected cost $0.3–2.5 (worst-case rate) — under the $5 abort. Harvest: `.venv/bin/python tools/harvest_click_polish_run.py --call-id fc-01KX6DZWCHNPQ6KN59V2MZ845J`.
