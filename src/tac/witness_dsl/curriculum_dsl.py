@@ -3690,40 +3690,55 @@ def HeadOffsetSolver(mode: str = "ot_newton", tau: float = 1.0) -> Lever:  # noq
     (Lane 0.59% / Movable 1.56%) erasure (~57% of flips are Lane↔Road). BYTE-FREE: the solved
     ``b*`` folds into the already-counted ``out_sdf.bias`` (5 floats) → zero extra archive bytes.
 
-    Two REAL mechanisms (NO-FAKE — each does its own work on real inputs):
+    Four REAL mechanisms (NO-FAKE — each does its own work on real inputs):
       * ``mode="menon"`` — the priors-only ``b_k = -tau*log(pi_k)`` heuristic
         (:func:`tac.boundary_math.laguerre_logit_offset.menon_logit_adjustment_offsets`).
       * ``mode="ot_newton"`` — the damped-Newton semi-discrete OT solve (Kitagawa-Merigot-Thibert
         2019) that finds the ``b*`` whose Laguerre-reweighted SOFT cell masses EQUAL the GT class
         frequencies, accounting for THIS witness's boundary geometry the log-freq heuristic ignores
-        (:func:`tac.boundary_math.laguerre_logit_offset.damped_newton_ot_offsets`).
+        (:func:`tac.boundary_math.laguerre_logit_offset.damped_newton_ot_offsets`). N-1 MEASURED
+        (n600) this HURTS realized d_seg — the AREA objective is wrong (d_seg is Hamming, not
+        Wasserstein); kept as the falsified baseline the #386 reformulations must beat.
+      * ``mode="flip_weighted"`` (#386) — the SAME OT solve, but targeting the per-class FLIP SHARE
+        (``flip_share_by_class``, the boundary-annulus residual mass) instead of GT area frequency.
+        UN-ANALYZED (crucible-3 P3 F3): OT still mass-MATCHES, so it may re-inherit N-1's
+        cell-inflation — the through-R n600 gate is the arbiter.
+      * ``mode="flip_median"`` (#386) — S1's Hamming-optimal per-edge MEDIAN threshold
+        (:func:`tac.boundary_math.laguerre_logit_offset.flip_median_offsets`), a DISTINCT closed-form
+        path (NOT expressible through the OT target-mass machinery). d_seg is Hamming, whose
+        L1-optimal 1-D threshold is the flip-margin median, not a mass-match.
 
-    Trainer leg: ``--head-offset-solver {off,menon,ot_newton}`` (trainer default ``off`` =
-    byte-identical) + ``--head-offset-solver-tau``. The trainer computes the WITNESS phi field at the
-    EMA verdict (the decode-time site where phi exists — NOT the pre-loop margin-field-head setup,
-    which has no phi), OT-solves ``b*`` against the GT class masses, folds it byte-free into a COPY
-    of ``out_sdf.bias`` and emits an ADVISORY realized-through-R d_seg delta row. It NEVER mutates
-    the EMA shadow / shipped / resumed weights → the live run is untouched. Mechanism +
-    canonical entry: ``laguerre_logit_offset.solve_head_offsets``; law:
+    Trainer leg: ``--head-offset-solver {off,menon,ot_newton,flip_weighted,flip_median}`` (trainer
+    default ``off`` = byte-identical) + ``--head-offset-solver-tau``. The trainer computes the WITNESS
+    phi field at the EMA verdict (the decode-time site where phi exists — NOT the pre-loop
+    margin-field-head setup, which has no phi), solves ``b*`` (area masses for ot_newton; the GT
+    argmax + phi for the flip modes), folds it byte-free into a COPY of ``out_sdf.bias`` and emits an
+    ADVISORY realized-through-R d_seg delta row. It NEVER mutates the EMA shadow / shipped / resumed
+    weights → the live run is untouched. Mechanism + canonical entry:
+    ``laguerre_logit_offset.solve_head_offsets``; law:
     ``tac.canonical_equations.laguerre_ot_head_offset_20260709``.
 
-    VERDICT SCOPE (#288 $0 gate, mod32cap ep650): MEASURED-through-R the OT mass-matching offset
+    VERDICT SCOPE (#288 $0 gate, mod32cap ep650): MEASURED-through-R the OT area-mass-matching offset
     made realized d_seg WORSE than both no-offset and the Menon prior at this operating point
     (cell-mass-matching over-inflates the rare Lane cell → over-prediction the SegNet re-read
-    penalises). ASSUMED_AWAITING_VERIFICATION at other checkpoints/tau; the geometry-native solve is
-    a RANKING PROXY that must be re-confirmed through R (which this lever does) before any promotion.
-    means != ends: BUILDS + MEASURES the mechanism; makes NO score claim; pointer 0.19110 UNMOVED."""
-    if str(mode) not in ("off", "menon", "ot_newton"):
-        raise ValueError(f"HeadOffsetSolver: mode must be off/menon/ot_newton, got {mode!r}")
+    penalises; verdict_scope FORMULATION — the OBJECTIVE, not the solver). The #386 flip-weighted /
+    flip-median reformulations target the FLIP mass instead; each is a RANKING PROXY re-confirmed
+    through R (the n600 gate) before any promotion. means != ends: BUILDS + MEASURES the mechanism;
+    makes NO score claim; pointer 0.19110 UNMOVED."""
+    if str(mode) not in ("off", "menon", "ot_newton", "flip_weighted", "flip_median"):
+        raise ValueError(
+            "HeadOffsetSolver: mode must be off/menon/ot_newton/flip_weighted/flip_median, "
+            f"got {mode!r}")
     if not (float(tau) > 0.0):
         raise ValueError(f"HeadOffsetSolver: tau must be > 0, got {tau!r}")
     return Lever(
         "head_offset_solver",
         overrides={"--head-offset-solver": str(mode),
                    "--head-offset-solver-tau": float(tau)},
-        notes="#288 selectable decode-time Laguerre head-bias offset solver (menon prior vs "
-              "ot_newton semi-discrete OT mass-matching); byte-free out_sdf.bias fold; advisory "
-              "realized-through-R verdict readout; OT MEASURED-worse at mod32cap ep650",
+        notes="#288/#386 selectable decode-time Laguerre head-bias offset solver (menon prior / "
+              "ot_newton OT area-mass / flip_weighted OT flip-share / flip_median Hamming median); "
+              "byte-free out_sdf.bias fold; advisory realized-through-R readout; OT area-match "
+              "MEASURED-worse at mod32cap ep650, flip reformulations = the n600 gate arbiter",
     )
 
 
