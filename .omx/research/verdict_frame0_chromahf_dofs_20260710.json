@@ -1,0 +1,105 @@
+{
+  "composition": {
+    "active_levers": [
+      "frame0_pose_carrier",
+      "chroma384_seg_texture"
+    ],
+    "deferred_to_ab_protocol": false,
+    "measured": true,
+    "sign": "orthogonal"
+  },
+  "constraint_carved": "frame_0 owes 0 d_seg (n600 8.5e-9) -> pure pose carrier; chroma-HF pose-null exact at yuv6/384 plane but naive camera-res dither leaks 50pct luma -> chroma seg-texture must be band-designed at 384 grid",
+  "emitted_at_utc": "2026-07-10T05:44:37Z",
+  "extra": {
+    "axis": "macOS-CPU advisory / through-R n600 NON-PROMOTABLE",
+    "sanity": {
+      "posenet_vs_cache": 2.1e-12,
+      "segnet_vs_lstars": 0.0
+    },
+    "task": "#394 UNIT C"
+  },
+  "is_negative": false,
+  "measured": true,
+  "reformulation_empty_reason": null,
+  "reformulation_queue": null,
+  "rows": [
+    {
+      "axis_tag": "[through-R]",
+      "floor_is_known": true,
+      "floor_provenance": "1px/117.96M CPU argmax-tie non-determinism",
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": null,
+      "noise_floor": 8.48e-09,
+      "provenance": {
+        "config_ref": null,
+        "git_sha": "635ab3e025de3397879cf49a925bdc6939cdd7d9",
+        "inputs_sha256": "7f42076210d69cf944b334ba80ef637c60c866cae41a40d8c36e678c47430719",
+        "seed": null,
+        "tool": "scratchpad/measure_unitc.py+n600_check.py+m2_ideal.py"
+      },
+      "quantity": "frame0_seg_freedom_dseg_n600",
+      "review_status": "provisional",
+      "units": "d_seg_fraction",
+      "value": 8.477105e-09
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": false,
+      "n_samples": 96,
+      "n_samples_reason": "n96 real GT pairs; advisory sensitivity magnitude, non-promotable (not byte-closed)",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": null,
+        "git_sha": "635ab3e025de3397879cf49a925bdc6939cdd7d9",
+        "inputs_sha256": "7f42076210d69cf944b334ba80ef637c60c866cae41a40d8c36e678c47430719",
+        "seed": null,
+        "tool": "scratchpad/measure_unitc.py+n600_check.py+m2_ideal.py"
+      },
+      "quantity": "luma_only_frame0_pose_cost (frees 67pct gzip bytes; dseg=0)",
+      "review_status": "provisional",
+      "units": "sqrt10_dpose_contribution",
+      "value": 0.1801
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": false,
+      "n_samples": 96,
+      "n_samples_reason": "n96 real frames; ideal 384-plane luma-null chroma checkerboard amp32, exactly pose-null",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": null,
+        "git_sha": "635ab3e025de3397879cf49a925bdc6939cdd7d9",
+        "inputs_sha256": "7f42076210d69cf944b334ba80ef637c60c866cae41a40d8c36e678c47430719",
+        "seed": null,
+        "tool": "scratchpad/measure_unitc.py+n600_check.py+m2_ideal.py"
+      },
+      "quantity": "ideal_384plane_chroma_posenull_seg_lever_authority",
+      "review_status": "provisional",
+      "units": "d_seg_authority_fraction",
+      "value": 0.002734449
+    }
+  ],
+  "schema_version": "verdict.v1",
+  "scope": {
+    "family_evidence": null,
+    "level": "formulation",
+    "scoped_to": "scorer-DOF pricing: frame_0 seg-freedom (RANK-1) + chroma-HF pose-null (RANK-2)"
+  },
+  "stores_consulted": [
+    "upstream_scorer_alldim_reread_20260710.md",
+    "cascade_c_posenet_null_segnet_region_waterfill_..._landed_20260526.md",
+    "posenet_luma_chroma_sensitivity_asymmetry_v1"
+  ],
+  "verdict": "CONFIRMED-RANK1 / REFINED-RANK2 (advisory; means, pointer 0.19110 UNMOVED)"
+}

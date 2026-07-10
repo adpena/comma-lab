@@ -13167,3 +13167,25 @@ consumed / N600 anchored / step_lsb honest-actuator-default) — CLEAN. Counter 
 consecutive CLEAN from R16. Review-round record is PURE APPARATUS: equations leg N/A (no measured
 relation — a stale-doc finding on a coordination artifact), DSL leg N/A (no lever), DAG leg = this
 note. Pointer 0.19110 UNMOVED (means). `[no-triality]`.
+
+**FEED-unitC (2026-07-10, task #394 UNIT C — frame_0 seg-freedom pricing + chroma-HF DOFs; MEASURED):**
+SIGNAL: parent `upstream_scorer_alldim_reread_20260710.md` named two structural pose-free seg DOFs
+(RANK-1 frame_0 seg-free, RANK-2 chroma-HF) UNPRICED in witness/v8. DIAGNOSTIC (CPU, faithful to
+upstream modules; sanity: PoseNet vs cache 2.1e-12, SegNet vs lstars 0.000): **(RANK-1 CONFIRMED)**
+frame_0 d_seg term ≡ 0 at n600 (`[through-R]` d_seg=8.48e-9 = 1px/117.96M = argmax-tie
+non-determinism, NOT f0). Priced curve (n96 real pairs): **luma-only frame_0 = the efficient point —
+−67% gzip bytes for √10·pose 0.180 (Δd_pose 3.24e-3), d_seg 0 exact**; spatial blur DOMINATED
+(blur_16/pose_minimal √10·≥13). **(RANK-2 REFINED)** the "chroma-HF exactly pose-null" derivation is
+CONFIRMED at the yuv6/384 plane (op-level luma-null chroma checkerboard: RGB Δ 11.3 seg-visible, yuv6
+chroma Δ 3.4e-6 / luma Δ 5.2e-6 ≈ 0) BUT does NOT transfer to a naive camera-res chroma dither — the
+2.28× no-AA bilinear downsample folds 50% of camera chroma-HF into luma (yuv6 luma/chroma = 1.075 for a
+"chroma" inject vs 10.8 control) → camera-res chroma Δd_pose only 1.49× cheaper than luma, tied at
+mid-freq. The IDEAL 384-plane lever IS a pose-free seg control channel (Δd_seg authority to 2.73e-3 at
+amp32, exactly pose-null). RESPONSE: v8 frame_0 → pure pose carrier (luma-only or coarser); v8 chroma
+seg-texture carrier MUST band-design at the 384 grid (not camera-res dither). P12 = ORTHOGONAL
+(A=frame_0→pose, B=frame_1 chroma-null-band→seg = disjoint scorer terms; measured via the two
+exact-null legs). Triality: equations = 2 EmpiricalAnchors on `posenet_luma_chroma_sensitivity_asymmetry_v1`
+(`frame0_segfree_n600_20260710` res 8.48e-9; `chroma_hf_posenull_transfer_384only_20260710` res 3.80e-2);
+verdicts = `.omx/research/verdict_frame0_chromahf_dofs_20260710.json`; memo
+`frame0_chromahf_dofs_20260710.md`. `[macOS-CPU advisory / through-R n600 NON-PROMOTABLE]`. Pointer
+0.19110 UNMOVED (means).

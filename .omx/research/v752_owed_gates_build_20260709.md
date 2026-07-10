@@ -128,6 +128,10 @@ the DSL join point).
   harness already exercises it as the negative control).
 - The 3 isolation arms + the real v7.5.2 launch await the operator which-to-run GO (dual-chain wall, #385).
 - P7 typed `crucible_v752` config: all four tools consume it at the documented join points once it lands.
+- **#385 build-wave input (UNIT C #394, `frame0_chromahf_dofs_20260710.md`):** frame_0 is d_seg-free
+  (n600 8.5e-9) → render it as a pure pose carrier (luma-only f0 = −67% bytes, √10·pose 0.180, seg 0);
+  chroma seg-texture is pose-free ONLY at the scorer's 384 grid (naive camera-res dither leaks 50% luma)
+  → v8 chroma carrier must band-design at 384. Both feed the v8 seed/condition + carrier program.
 
 ## Triality
 - **DSL:** launcher levers unchanged (dry-start is apparatus, not a trainer lever); the isolation arms ride
