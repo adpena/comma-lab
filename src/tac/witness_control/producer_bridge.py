@@ -150,8 +150,11 @@ def _harness_failure_signal() -> ProducerSignal:
     recommend a spawned-daemon measurement while the daemon-kill class is open). Honest when
     empty: no ledger rows => available=False, never a fabricated failure."""
     try:
-        from tac.harness_failure_ledger import sense_rows
+        from tac.harness_failure_ledger import DEFAULT_LEDGER_PATH, sense_rows
         rows = sense_rows(limit=10)
+        # Derived from the canonical constant (never re-spelled) so a future relocation
+        # (per CLAUDE.md "State JSONL archival policy") propagates here automatically.
+        ledger_repo_relative = str(DEFAULT_LEDGER_PATH.relative_to(DEFAULT_LEDGER_PATH.parents[2]))
         if not rows:
             return ProducerSignal(
                 name="harness_failure_ledger.sense_rows", available=False, signal=None,
@@ -162,7 +165,7 @@ def _harness_failure_signal() -> ProducerSignal:
             signal={"ranked_failures": rows},
             reason="ranked harness-failure classes (unresolved first, recurrence desc) — "
                    "the Weng 'recurrent, addressable patterns' preference as SENSE",
-            provenance={"ledger": ".omx/state/harness_failure_ledger.jsonl"},
+            provenance={"ledger": ledger_repo_relative},
         )
     except Exception as e:  # noqa: BLE001 — advisory bridge, never breaks the report
         return ProducerSignal(

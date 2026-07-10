@@ -32,6 +32,7 @@ if str(REPO_ROOT / "tools") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 import corpus_query  # noqa: E402
+from tac.harness_failure_ledger import DEFAULT_LEDGER_PATH  # noqa: E402
 
 _HITS_PER_SECTION = 6
 _COMPENDIUM = ".omx/research/t5_crucible/CONTEXT_COMPENDIUM_20260707.md"
@@ -219,9 +220,11 @@ def _inline_claude_md(terms: list[str]) -> list[str]:
 
 
 def _inline_durable_state(_terms: list[str]) -> list[str]:
+    # Last entry derived from the canonical constant (never re-spelled) so a future
+    # relocation (per CLAUDE.md "State JSONL archival policy") propagates here too.
     files = [".omx/state/current_focus.md", ".omx/state/next_experiments.md",
              ".omx/research/findings.md", ".ralph/run_log.md", "reports/latest.md",
-             ".omx/state/harness_failure_ledger.jsonl"]
+             str(DEFAULT_LEDGER_PATH.relative_to(REPO_ROOT))]
     out: list[str] = []
     now = time.time()
     for rel in files:

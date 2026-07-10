@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from tac.canonical_duckdb.schema import CANONICAL_TABLES, connect
+from tac.canonical_task_status.loader import LEDGER_RELATIVE_PATH as _TASK_STATUS_LEDGER_REL
 
 DEFAULT_DB_PATH = Path(".omx/state/canonical.duckdb")
 CANONICAL_LOCK_PATH = Path(".omx/state/.canonical_duckdb.lock")
@@ -228,7 +229,7 @@ def refresh_canonical_task_status(con, repo_root: Path, refreshed_at: str) -> in
 
     source_rows = load_canonical_task_status_strict(repo_root)
     rows = []
-    source_path = ".omx/state/canonical_task_status.jsonl"
+    source_path = str(_TASK_STATUS_LEDGER_REL)
     for row in source_rows:
         lo = hi = None
         if row.predicted_delta_s_band is not None:

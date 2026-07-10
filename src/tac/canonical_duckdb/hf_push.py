@@ -19,6 +19,7 @@ from typing import Any
 
 from tac.canonical_duckdb.query import audit_table_provenance
 from tac.canonical_duckdb.schema import CANONICAL_TABLES, connect
+from tac.canonical_task_status.loader import LEDGER_RELATIVE_PATH as _TASK_STATUS_LEDGER_REL
 
 DEFAULT_CANONICAL_TASK_STATUS_HF_DATASET_ID = "adpena/pact-canonical-task-status"
 
@@ -94,7 +95,7 @@ def _canonical_task_status_source_metadata(repo_root: str | Path) -> dict:
     path = ledger_path(root)
     rows = load_canonical_task_status_strict(root)
     return {
-        "source_ledger_path": ".omx/state/canonical_task_status.jsonl",
+        "source_ledger_path": str(_TASK_STATUS_LEDGER_REL),
         "source_ledger_bytes": path.stat().st_size if path.exists() else 0,
         "source_ledger_sha256": _sha256_file(path) if path.exists() else None,
         "source_ledger_rows": len(rows),
@@ -206,7 +207,7 @@ def export_canonical_task_status_hf_dataset(
         "schema_version": "canonical_task_status_hf_export_v1_20260518",
         "generated_at_utc": _utc_now(),
         "dataset_kind": "canonical_task_status_read_model",
-        "source_of_truth": ".omx/state/canonical_task_status.jsonl",
+        "source_of_truth": str(_TASK_STATUS_LEDGER_REL),
         "duckdb_is_source_of_truth": False,
         "duckdb_path": duckdb_display_path,
         "duckdb_sha256": _sha256_file(duckdb_file) if duckdb_file.exists() else None,

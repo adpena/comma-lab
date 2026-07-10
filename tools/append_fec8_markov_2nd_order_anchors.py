@@ -14,13 +14,14 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tac.canonical_equations import (  # noqa: E402
+    CANONICAL_EQUATIONS_REGISTRY_PATH,
     EmpiricalAnchor,
     update_equation_with_empirical_anchor,
 )
 from tac.provenance import build_provenance_for_macos_cpu_advisory  # noqa: E402
 
 EQUATION_ID = "markov_context_selector_stream_compression_savings_v1"
-REGISTRY_PATH = REPO_ROOT / ".omx/state/canonical_equations_registry.jsonl"
+REGISTRY_PATH = CANONICAL_EQUATIONS_REGISTRY_PATH
 MEASUREMENT_UTC = "2026-05-26T19:32:03Z"
 STAMP = "20260526T193203Z"
 SUBAGENT = (
