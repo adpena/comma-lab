@@ -2811,6 +2811,176 @@ def compile_crucible_v7_config(
     )
 
 
+# ---------------------------------------------------------------------------
+# CRUCIBLE-2 v7.5.2 — the T5 CRUCIBLE-2 launch-1 typed program (P7 DELIVERABLE, task #379).
+#
+# SOURCE OF TRUTH: `.omx/research/t5_crucible2/SYNTHESIS_v3_v752_20260709.md` (SEALED at P6-R13,
+# doc byte-identical since 77c016105; seal-of-record 9c19e497e). P7 TRANSCRIBES — it does not
+# re-design. v7.5.2 = the SEALED crucible_v7 TypedWitnessConfig (the sealed `base:`, which already
+# composes the directional basis + Chan-Vese counter-force + #360 temporal-screw + AA-ipe +
+# safe-compile + muon-event + terminal pose-finish) PLUS the launch-1 DELTA the sealed §B pins that
+# (a) EXISTS in the real argparse today (never-invent-flags), (b) COMPOSES clean through the DSL, and
+# (c) is NOT silently defeated by an inherited crucible_v7 value. Everything here is MEANS: pointer
+# contest-CPU 0.19110 UNMOVED; only a byte-closed upstream/evaluate.py n600 row < 0.19110 moves it.
+#
+# The launch-1 base surface (each flag grepped against build_real_trainer_parser; each value carries
+# its sealed §B provenance grade). NOTE (honest provenance — VERIFIED against crucible_v7.base):
+#   * GENUINELY NEW base-delta vs crucible_v7 = #121 d_seg-aware taper ONLY (sealed §1.2, ESTIMATED
+#     ~0.03 RANK-1 INSTANCE; DSL-held flags) — the reweight of the SAME directional basis; ⊥ EXCLUDES
+#     --render-aa supersample (crucible_v7 base is ipe).
+#   * fused-R kernel + async-verdict (sealed §1.5 SPEED, score-neutral) are ALREADY INHERITED from
+#     crucible_v7.base — re-asserting them here is IDEMPOTENT (a no-op merge), kept ONLY so the v7.5.2
+#     launch-1 SPEED ON-set is EXPLICIT/self-documenting in this config surface, NOT a v752 addition.
+#     grouped-backward (~17x) is the TAC_MLX_CUSTOM_GROUPED_BACKWARD ENV, emitted by the launch
+#     command prefix (PERF_ENV_PREFIX), NOT a --flag — so it is not in this base surface at all.
+#
+# EXCLUDED-WITH-REASON (documented in SPEC_v752 §OPEN-ITEMS — NOT silently decided):
+#   * OI-5 amber (--stability-preset amber): launch-blocking per sealed §1.1, but NAIVE inclusion is
+#     SILENTLY DEFEATED — crucible_v7 inherits an explicit --grad-clip 1.0 and the trainer
+#     (train_levelset...mlx.py L9989) states "An explicit value ALWAYS wins over --stability-preset",
+#     so amber's grad-clip 0.5 would NOT be realized (a decorative preset — the §8.9 silent-guard
+#     failure). Realizing amber = reconcile grad-clip (0.5 vs the inherited 1.0) + the sealed-DEFERRED
+#     per-group-clip resolution (OI-1: drop-entirely vs keep-symmetric). Both are P8-wall design
+#     decisions the sealed doc explicitly leaves to P6/P7 — P7 does NOT close them. The program ships
+#     the crucible_v7-inherited well-posed stability (--grad-clip 1.0 + --per-group-grad-clip); the
+#     amber DELTA is an OWED launch-blocking realization, NOT a decorative flag here.
+#   * OI-4 freq_along 26: sealed §B basis pins --freq-along 26 (DERIVED-AT-CONFIG, "correct the
+#     along-tangent starvation"), but crucible_v7's DirectionalBasisRebalance(lane_offloaded) regime
+#     LAW emits --freq-along 6 (lane offloaded to the FREE analytic band; the crucible_v7 comment
+#     DEFENDS 6 as deliberate). This is a genuine sealed-v3-vs-crucible_v7 conflict; P7 does NOT
+#     silently override 6→26 (that contradicts crucible_v7's defended lane_offloaded design) NOR
+#     silently accept 6 (that contradicts the sealed doc). Resolution is a launch decision for the
+#     operator/council at the P8 wall (SPEC_v752 §OPEN-ITEMS OI-4).
+#   * owed-1 --pose-finish-engage-on: the repaired pose-gate rolling-slope trigger flag does NOT
+#     exist yet (grep-confirmed; being BUILT concurrently by the #383 pose-gate agent). It is OWED
+#     item 1 (launch-blocking). The program uses the EXISTING --pose-finish-start-epoch fail-safe
+#     backstop (inherited from crucible_v7's pose_finish stage) + --jacobian-basin-telemetry
+#     (default True). Do NOT stub the engage-on flag here.
+#   * Ladder rungs (σ_cc′/--length-sigma-matrix · margin-hinge · chroma · step-native): NOT launch-1
+#     (SPEC_v752 §4 A/B ladder) — each is its own increment A/B, never composed into the first trunk.
+#
+# COMPLETENESS() GAP: of the launch-1 base surface, ONLY --fused-r-kernel is completeness().unmapped
+# (the DSL does not hold it as a Lever construct). It is a PRE-EXISTING gap (present in BOTH
+# crucible_v7.base AND here, NOT v752-introduced). Disposition: it is a SCORE-NEUTRAL always-on
+# COMPUTE lever (bit-exact; sister of the TAC_MLX_CUSTOM_GROUPED_BACKWARD env), NOT a swept-for-score
+# lever with a duty-to-measure obligation — so it is genuinely pre-DSL perf/base config (per the
+# "a generic tuning knob is a lever only WITH a swept non-default intent" rule). Folding it as a
+# FusedRKernel Lever factory is an OWED completeness-fold sequenced AFTER the #383 pose-gate agent
+# frees curriculum_dsl.py (avoiding the serializer collision the coordinator flagged). --dseg-aware-
+# taper* and --async-verdict ARE already DSL-held (completeness().mapped).
+_CRUCIBLE_V752_LAUNCH1_DELTA: dict = {
+    # GENUINELY NEW vs crucible_v7 — #121 d_seg-aware taper (sealed §1.2): reweights the directional
+    # basis toward the d_seg-salient boundary; isotropic-capacity HURTS (+6%), directional-riding
+    # taper is the ~0.03 arm. INSTANCE grade; owed-15 n600 FRESH-arm isolation converts
+    # INSTANCE→n600-MEASURED-or-rolled-back.
+    "--dseg-aware-taper": True,
+    "--dseg-aware-taper-strength": 1.0,
+    "--dseg-aware-taper-scale": 0.0,     # AUTO (median|margin)
+    "--dseg-aware-taper-floor": 0.05,    # ⊥ EXCLUDES --render-aa supersample (crucible_v7 base = ipe)
+    # RE-ASSERTED (already INHERITED from crucible_v7.base; idempotent no-op merge) — kept ONLY to make
+    # the sealed §1.5 SPEED ON-set EXPLICIT in this config surface (score-neutral, operator wall-clock).
+    "--fused-r-kernel": True,            # NEUTRAL: BIT-EXACT fixed-order VJP (L70) + ~8% faster. completeness()-unmapped (perf lever; documented above).
+    "--async-verdict": True,             # NEUTRAL BY CONSTRUCTION: verdict off the training thread (GIL-released), advisory-only.
+}
+
+# W-1 REMOVAL (sealed §A.8/§1b, UNAMBIGUOUS — NOT an open-item): σ_cc′ (--length-sigma-matrix) is
+# INHERITED from the v6→v7 base as 'fitted-20260707' (σ_cc′ ON), but the SEALED v3 is emphatic that
+# σ_cc′ is OUT of launch-1 — it reweights the per-pixel length-LOSS-term gradient on the SHARED
+# Road↔Lane annulus (nonzero gradient-share → Class-B → CONFOUNDS the attribution of the Class-A
+# cluster + the counter-force). It moves to the A/B LADDER rung 1b as its OWN increment, fired at the
+# tau-boundary BEFORE any other length-touching lever. So v7.5.2 launch-1 REVERTS --length-sigma-matrix
+# to the trainer default σ≡1 (the byte-identical 'all-ones' OFF baseline the sealed §1b names as the
+# clean rung-1b A/B baseline) by DROPPING the flag from the merged base (absent ⇒ trainer default).
+_CRUCIBLE_V752_LAUNCH1_REMOVE: tuple = ("--length-sigma-matrix",)
+
+
+def derive_crucible_v752_config(
+    gt_cache_path,
+    *,
+    num_pairs: int,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/__crucible_v752__",
+    code_matrix=None,
+    byte_close_result=None,
+):
+    """The T5 CRUCIBLE-2 v7.5.2 launch-1 config (P7 DELIVERABLE) — authored AS a
+    :class:`tac.witness_dsl.typed_config.TypedWitnessConfig` by INHERITING the sealed crucible_v7
+    typed config (the sealed `base:`) and applying the launch-1 DELTA (:data:`_CRUCIBLE_V752_LAUNCH1_DELTA`).
+
+    Returns the ``TypedWitnessConfig``; ``.to_program().compile_trainer_argv()`` is the DSL-emitted
+    launch argv (parses clean through ``build_real_trainer_parser`` — the P6 compile smoke, now the
+    committed test ``test_crucible2_v752_dsl_wirein``). Fail-CLOSED: refuses a config the DSL cannot
+    validate BEFORE it can reach a launcher (mirrors :func:`derive_crucible_v7_config`).
+
+    SEALED source: ``.omx/research/t5_crucible2/SYNTHESIS_v3_v752_20260709.md``. The EXCLUDED launch-1
+    items (amber realization OI-5, freq_along-26 OI-4, --pose-finish-engage-on owed-1) are documented
+    on :data:`_CRUCIBLE_V752_LAUNCH1_DELTA` and in SPEC_v752 §OPEN-ITEMS — they are P8-wall decisions,
+    not silent P7 transcriptions.
+
+    means != ends: a MEANS. Only a byte-closed n600 exact row < 0.19110 moves the pointer 0.19110.
+    """
+    v7 = derive_crucible_v7_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    # merge the launch-1 delta into the sealed crucible_v7 base (delta wins; pydantic frozen copy),
+    # THEN apply the W-1 REMOVAL (σ_cc′ OUT of launch-1 → drop --length-sigma-matrix → trainer default
+    # σ≡1). epochs is UNCHANGED vs the v7 derive call above, so the inherited DERIVED
+    # wall_clock_budget_days (computed for THIS epochs) stays valid — no re-derive needed.
+    merged_base = {**v7.base, **_CRUCIBLE_V752_LAUNCH1_DELTA}
+    for _rm in _CRUCIBLE_V752_LAUNCH1_REMOVE:
+        merged_base.pop(_rm, None)
+    typed = v7.model_copy(update={
+        "name": "crucible_v752",
+        "base": merged_base,
+        "purpose": (
+            "T5 CRUCIBLE-2 v7.5.2 launch-1 (SEALED SYNTHESIS_v3): the crucible_v7 sealed trunk "
+            "(directional basis + Chan-Vese counter-force + #360 temporal-screw + AA-ipe + "
+            "safe-compile + terminal pose-finish) + the launch-1 delta (#121 d_seg-aware taper + "
+            "score-neutral fused-R/async-verdict speed) MINUS σ_cc′ (--length-sigma-matrix reverted "
+            "to σ≡1, W-1: OUT of launch-1 → ladder rung 1b). amber realization (OI-5), freq_along-26 "
+            "(OI-4), and --pose-finish-engage-on (owed-1) are P8-wall items, NOT here. MEANS until "
+            "a byte-closed n600 row < 0.19110; ships banked-R1 pose floor (d_pose 0.001610 → 0.127)."),
+    })
+    # fail-CLOSED at authoring time (mirrors crucible_v7): refuse a config the DSL cannot validate.
+    viol = typed.validate_program()
+    if viol:
+        raise ValueError(
+            f"crucible_v752 DSL-authored-config gate: TypedWitnessConfig produced "
+            f"{len(viol)} WitnessProgram.validate violation(s): {viol[:4]}")
+    return typed
+
+
+def compile_crucible_v752_config(
+    gt_cache_path,
+    *,
+    num_pairs: int,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/__crucible_v752__",
+    code_matrix=None,
+    byte_close_result=None,
+) -> tuple:
+    """Compile crucible_v752: the typed config -> (typed, argv, dsl_program_manifest). Makes v7.5.2
+    the THIRD DSL-provenance-migrated program (after v6/v7): the ``dsl_program_manifest`` is the
+    :func:`tac.witness_dsl.typed_config.build_launch_manifest` attestation the launcher's rc=7 gate
+    (``tools/launch_witness_run.py`` verify_launch_manifest) reads off ``cfg.dsl_program_manifest``.
+
+    Returns ``(typed_config, argv_tuple, dsl_program_manifest)``. Fail-CLOSED via
+    :func:`derive_crucible_v752_config`'s validate. NO launcher dispatch wiring (that is a P8-wall
+    item: the dual-chain wall means NO launch fires when crucible-2 seals). Pure / $0."""
+    from tac.witness_dsl.typed_config import build_launch_manifest
+
+    typed = derive_crucible_v752_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    argv = typed.to_program().compile_trainer_argv()
+    pairs = _crucible_v7_argv_pairs(argv)  # reuse the v7 argv-pairs parser (same argv shape)
+    emitted_names = sorted({f for f, _ in pairs})
+    dsl_manifest = build_launch_manifest(
+        program_name="crucible_v752", emitted_flag_names=emitted_names,
+        typed_config_hash=typed.typed_config_hash(), typed_validated=True)
+    return typed, tuple(argv), dsl_manifest
+
+
 @dataclass(frozen=True)
 class CrucibleV7LaunchConfig:
     """The launcher-facing crucible_v7 cfg — the SINGLE object that satisfies the WHOLE duck-typed
