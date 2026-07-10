@@ -52,6 +52,23 @@ statistical manifold.** Amari's dually-flat space (statistics) IS Goldman's affi
 2. **Design #185 perspective-aware chart as an affine (G,X)-structure** (Goldman) — developing map +
    holonomy=ξ, not an ad-hoc warp. Design principle for #185/#191 when that work fires. Held.
 
+## Paper #5 — JS-symmetrization via the Information Radius (Nielsen, arXiv 2102.09728, 2021)
+Variational generalization of Jensen-Shannon divergence via Sibson's **information radius** (min average
+divergence to a centroid) → information PROJECTIONS + relative-JS divergences; explicitly aimed at
+**clustering and quantization**. Connection to us:
+- **The information-radius centroid IS the divergence-correct quantizer centroid.** If/when a VQ/codebook
+  witness is built (#78 capstone: our own small learned basis / VQ-NeRV-class), the codebook-update rule
+  must be the **JS / Bregman / information-radius centroid over the class-logit distributions, NOT Euclidean
+  k-means** — because the distortion is a divergence on the softmax simplex, not L2. This is the correct
+  centroid for the "represent a set of per-pixel argmax-distributions by one code" problem. Sister of the
+  Bregman-projection head-offset (paper #3): projection = 1 point onto the chart; information radius =
+  centroid of a set.
+- **Symmetric divergence for a symmetric target.** d_seg is a SYMMETRIC argmax-disagreement; JS
+  (symmetrized) is the natural symmetric divergence, vs the asymmetric KL/Bregman. Relevant when the
+  distortion must be symmetric (e.g. codebook assignment).
+- **GATED thread:** JS/information-radius centroid as the codebook-update rule, gated on #78 (a VQ-witness)
+  actually being built. Held — no VQ-witness in flight; do not build speculatively.
+
 ## Honest verdict + routing
 - **Bank** (this note): the cluster is the rigorous SPINE — cite Nielsen (curved Bregman = witness on a
   non-affine chart; head-offset = Bregman projection) + Goldman (dually-flat = affine (G,X)-structure;
