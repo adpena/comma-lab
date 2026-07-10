@@ -14265,3 +14265,19 @@ messages omitted the literal [no-triality] token — that omission, not a missin
 MEMORY.md line: N/A — no new durable finding beyond what 5a4550f88's FEED records; the three telemetry
 gaps it surfaced (ladder_birth_complete row · should_ship_banked_r1 emission · uniform {lever}_engage
 schema) are ROUTED to task #404 (telemetry P0 agent, in flight). Pointer 0.19108282 UNMOVED (display-only; MEANS).
+
+### FEED-witnessfirst-binding (2026-07-10) — operator priority binding + #399 wind-down (re: c34a71dc2)
+OPERATOR BINDING (verbatim): "Real prize on witness line is priority not byte nibbling on others work
+that is just more signal for us to harvest and apply to witness line." TRAJECTORY CHANGE: borrowed-vehicle
+(PR110/PR128-lineage) polish is reclassified HARVEST-ONLY — attention + the Modal envelope (#381) default
+to WITNESS-line exact rows; borrowed-vehicle spend now requires explicit operator GO. #399 becomes
+complete-and-bank: the already-paid n600 click sweep finishes within its cap, registers if pointer-beating,
+then the lane CLOSES — no round-2+, no CUDA-axis purchase for borrowed candidates (the CUDA-row proposal
+from the meat-on-the-bone assessment is DROPPED under this binding). The harvest artifact is c34a71dc2's
+10-item transferable-techniques inventory (each item names its witness landing surface; pair-local diagonal
+→ #400 mc_finisher LANDED; exact-gated ratchet → registered equation LANDED). Follow-on prioritization:
+meta-level hygiene elevated P0-first (#407 ledger re-disposition + marimo #347 status; agent in flight)
+ahead of Tier-1 lever work; witness apply-pass batch consolidated as #406 (fires on first terminal-band
+checkpoint). MEMORY.md line: LANDED (⭐CURRENT + hook → witness_line_priority_borrowed_polish_harvest_only_20260710).
+DSL/equations legs: N/A — priority/disposition change, no lever or measured law. Pointer 0.19108282
+[contest-CPU] UNMOVED this FEED (disposition-only; MEANS).
