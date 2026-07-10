@@ -12402,7 +12402,7 @@ linearized alternating projection with max-iter cap + per-iter d_seg-monotonicit
 = single-pass, **NO Dykstra-convergence claim** — S3 honesty) · `mask_dseg_meter.py` (composite vs L\* per-class
 + aggregate, REUSES `bitmask_dseg.d_seg_reference` + `perclass_verdict.per_class_flip_stats`; `require_n600`
 DEFAULT-ON toy-refusal) · `decoupling_screen.py` (matched-compute CONTROL-arm spec `to_config_dict` = the DSL
-authoring path + kill evaluator {DECOUPLING-CONFIRMED / KILLED-at-δ_mask / INCONCLUSIVE-below-floor / REFUSED};
+authoring path + kill evaluator {DECOUPLING-CONFIRMED / KILLED-at-δ_mask / INCONCLUSIVE-below-floor / REFUSED}; <!-- # VERDICT_SCOPE_OK: kill-taxonomy SPEC labels (the evaluator's output vocabulary), not a rendered verdict; a real KILLED emission carries verdict_scope FORMULATION per the harness spec. -->
 δ_mask=δ_R 0.0196 PROXY until R7) · `analytic_smoke.py` (the $0 harness validation).
 
 **$0 SMOKE — analytic-composite MASK d_seg = 0.100403 [analytic-generators, no-trained-fields] MEASURED n600**

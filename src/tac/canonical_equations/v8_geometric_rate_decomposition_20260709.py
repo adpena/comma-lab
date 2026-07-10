@@ -309,6 +309,46 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         ),
     )
 
+    # ---- BUILD-#386 inc-1a harness anchor: the analytic-composite MASK-d_seg floor (harness smoke) ----
+    anchor_inc1a_analytic = EmpiricalAnchor(
+        anchor_id="v8_inc1a_analytic_composite_mask_dseg_floor_20260709",
+        measurement_utc=_UTC,
+        inputs={
+            "probe": "inc-1a harness $0 smoke: composite argmax from ANALYTIC generators only "
+                     "(openpilot lane band + horizon poly + hood clamp; NO trained fields), n600",
+            "labels": "gt_n600.npz['lstars']",
+            "module": "tac.inc1a_harness.{composite_assembler,mask_dseg_meter,analytic_smoke}",
+            "bc_mode": "no_offset (safe default)",
+        },
+        predicted_output={
+            "role": "harness positive-control + the FLOOR row any trained v8 Stage-A arm must beat; "
+                    "NOT the 1a decoupling verdict (that needs trained arms + matched control)",
+        },
+        empirical_output={
+            "analytic_composite_mask_dseg": 0.100403,  # [analytic-generators, no-trained-fields]
+            "per_class": {
+                "undrivable": {"dseg": 0.162, "flip_share": 0.797,
+                               "note": "F4 single-valued-horizon lateral under-coverage, now MEASURED"},
+                "movable": {"dseg": 1.0, "note": "unmodeled in analytic smoke -> folds to Road (expected)"},
+                "mycar_hood": {"dseg": 0.0039, "note": "hood clamp near-perfect"},
+            },
+            "runtime_s": 29,
+        },
+        residual=0.0,
+        source_artifact=".omx/research/inc1a_harness_build_20260709.md",
+        measurement_method="n600_analytic_composite_argmax_vs_lstar_mask_dseg_deterministic",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/inc1a_harness_build_20260709.md",
+            reactivation_criteria=(
+                "the trained Stage-A decoupled arm + matched-compute control run through the same "
+                "harness (governed EVENT); delta_mask floor from recess R7 replaces the delta_R proxy"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="macos_arm64",
+        ),
+    )
+
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -349,7 +389,8 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         },
         units_in={"edge_boundary_px": "count", "generator_coeffs": "count_per_frame"},
         units_out={"s_rate_term": "contest_rate_score_25bytes_over_N"},
-        empirical_anchors=(anchor_roadlane, anchor_rollup, anchor_deshare, anchor_curve_rel_negative),
+        empirical_anchors=(anchor_roadlane, anchor_rollup, anchor_deshare, anchor_curve_rel_negative,
+                           anchor_inc1a_analytic),
         predicted_vs_empirical_residual={
             "roadlane_dominant_measured": 0.0,
             "wholescene_rollup_measured": 0.0,
