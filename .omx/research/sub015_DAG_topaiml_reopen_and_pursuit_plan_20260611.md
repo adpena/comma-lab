@@ -12075,3 +12075,20 @@ follow-up (operator GO "any necessary follow-up work... new building and wiring"
 + P7 SPEC_v752 all in flight. Triality legs: DAG=this FEED; DSL/equations owned by the build agents'
 same-commit legs (P7 typed program, #383 Lever, #384 tools) — convening docs themselves carry no lever/law.
 Pointer 0.19110 UNMOVED (means). Dual-chain wall standing: both sealed → #385 comparison brief → operator GO.
+
+## FEED-crucible2-P7 (2026-07-09) — crucible-2 MACHINE COMPLETE: SPEC_v752 + typed program landed (#379 done)
+**Deliverable:** `SPEC_v752_20260709.md` + `derive_crucible_v752_config`/`compile_crucible_v752_config`
+(witness_autoconfig — the 3rd DSL-provenance-migrated program after crucible_v6/v7) + FEED-07-pattern test
+(5 pass). MEASURED: validate_program()==[] · 291 tokens through the live build_real_trainer_parser,
+0 unknown · dsl_program_manifest.v1 verifies vs the emitted flag fingerprint. Honest delta provenance:
+sealed crucible_v7 trunk + #121 d_seg-aware taper (the only genuinely-new flag) − σ_cc′ (W-1 REMOVAL →
+ladder rung 1b; the test caught the initially-missed removal). Commits 62d04e138 (DSL+test, triality-
+legged) · 504ff9391 (spec+ledger). **Durable trainer-semantics finding (OI-5, would-have-been-confound):
+`--stability-preset amber` is SILENTLY DEFEATED by any inherited explicit `--grad-clip` (trainer L9989:
+explicit ALWAYS wins over preset) — no decorative amber in the program; preset-vs-explicit interaction is
+now a P8-wall item + candidate standing check.** completeness() gap: exactly one (`--fused-r-kernel`,
+score-neutral always-on perf lever; FusedRKernel factory fold owed after #383 frees curriculum_dsl.py —
+documented, not hand-orphaned). owed-1 `--pose-finish-engage-on` NOT stubbed (in build at #383); program
+rides --pose-finish-start-epoch backstop + banked-R1 floor (d_pose 0.127/7.2KB MEASURED; d_seg = the open
+axis, no composed-launch number). #379 COMPLETE (P0→P7). Remaining to the P8 wall: #383 + #384 gates →
+#385 dual-chain comparison brief → operator which-to-run GO. Pointer 0.19110 UNMOVED (means).
