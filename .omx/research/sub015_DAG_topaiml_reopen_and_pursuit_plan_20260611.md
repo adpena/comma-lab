@@ -13875,3 +13875,33 @@ contest-CPU 0.19110 UNMOVED — MEANS.
   deferred-to-first-measured-row (both campaigns produce their laws at their first byte-closed rows). MEMORY.md
   ⭐CURRENT line updated to 07-10 state (compressed within the 17408 cap). **Pointer contest-CPU 0.19110 UNMOVED
   — external claims are not rows; our own exact rows are in flight.**
+
+## FEED-clickpolish-build (2026-07-10) — task #399 phase-1 harness LANDED + validated (all greens); phase-2 Modal staged · pointer 0.19110 UNMOVED
+
+- **What:** exact-score-gated latent CLICK-POLISH SEARCH on OUR PR110-lineage frontier archive
+  (`lane_pr110_payload_entropy_recode_20260610`, sha `b46897267ded…`, 177169 B). Honest naming
+  (NO-FAKE #6): it IS a greedy exact-gated discrete coordinate descent (search/polish), NOT a
+  solver. Mechanism borrowed from public PR #128 [external unverified]; substrate OURS ⇒ a
+  DEFENSIVE BANK (NO-FAKE #7), not innovation. Landed `21c209150`:
+  `src/tac/click_polish.py` + `tools/click_polish_exact_search.py` + 17 tests (all green).
+- **Load-bearing greens (MEASURED, macOS-CPU):** (1) full-archive round-trip **byte-exact** (sha
+  reproduced) — no-op detector; (2) fold-sidecar custody **−607 B** exact/reversible; (3)
+  **pair-locality** — pair_b byte-identical under pair_a's click (no cross-talk), MEASURED on our
+  decoder; (4) diagonal-batch ≡ sequential (seg-argmax EXACT; d_pose batch-float jitter ~8e-9 ≪
+  click gate) with the accept gate = EXACT re-render (canonical layout); (5) n4 end-to-end smoke
+  monotone + resumable ledger. Our frontier packet = FP11→CTXR(dec 161104 / lat 15070 / sidecar
+  607)→FECa(222)→DQS1(42); search re-encodes ONLY the CTXR latent section, splices all else as
+  frozen verbatim bytes.
+- **Design finding (§4 re-derive):** the render/scorer has CPU batch-float nondeterminism; the
+  correct response is the EXACT re-render accept gate (not the additive prediction) + the advisory's
+  same-container rule (selection + eval in ONE Modal container). Folded advisory disciplines:
+  constriction 0.4.2 / torch 2.12.1 pins, 3,662,409,600-B raw-output assertion, atomic writes,
+  storage preflight, waterline (sub-0.19 ≡ −1651.74 B or −1297.41 seg cells).
+- **Cost (MEASURED upper bound):** 0.39 s/pair → ~4 min/600-eval → ~7.4 hr/round (±1/±2 sweep);
+  ±1-only ≈ 3.7 hr/round. Bounded 2–3 round n600 ≈ $0.7–$2.7 on Modal CPU. Runbook:
+  `.omx/research/clickpolish_pr110_phase2_modal_runbook_20260710.md` (same-container search+eval,
+  in-container pure-torch GT build via `extract_gt_masks`/AVVideoDataset, resumable Volume ledger,
+  validation-first sequencing).
+- **Legs:** DSL N/A (search TOOL, no trainer flag) · equations DEFERRED to first measured exact row
+  · DAG = this FEED. **Pointer contest-CPU 0.19110 UNMOVED — phase-1 is MEANS (a validated
+  actuator); the row moves only through the phase-2 same-container n600 exact eval.**
