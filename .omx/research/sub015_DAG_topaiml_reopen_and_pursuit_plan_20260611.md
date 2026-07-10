@@ -14516,3 +14516,37 @@ rate-dominance). Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS); every externa
 **Instruction-boundary:** several mattneel repos are agent-tooling by NAME (`jzs` "agent substrate", `zigger` "AI codegen build step", `frank-demo`) but NO repo content instructed an agent; no injection encountered; nothing acted on.
 
 **Triality:** DAG leg = THIS FEED. DSL **N/A** (external-signal mining, no witness lever). equations **N/A** (no measured law; a confirmed-negative + one compute adjacency). Pointer UNMOVED contest-CPU **0.19108282** (MEANS); every external claim `[external unverified]`.
+
+### FEED-pr95-110-authors-github-intake (2026-07-10) — [no-triality] #414: mine the PR95–110 frontier-winner authors' public GitHubs
+
+**WHY (operator-GO #414):** *"Also check out the pr95-110 authors."* Highest-value author cohort = the actual
+medal-setters / HNeRV-root. Sibling #413 covers #112–128 (no login overlap). HARVEST-ONLY / WITNESS-FIRST;
+pointer 0.19108282 [contest-CPU] UNMOVED (MEANS); external scores `[external unverified]`.
+
+**PR→author→login (resolved via `gh pr view`, not guessed):** 95=AaronLeslie138 (HNeRV+Muon ROOT / inner-council
+seat) · 96/103=rem2 (SILVER) · 97/99/100=BradyMeighan · 98/102=EthanYangTW (BRONZE) · **101=SajayR (GOLD)** ·
+106=valtterivalo · 110=adpena (=operator/self, SKIPPED). Quantizr/szabolcs-cs out of the 95–110 range (not swept).
+
+**FINDINGS (ranked):** **SajayR (GOLD) = crown jewel** — serious low-rank/Fisher/frequency/quant researcher (~44
+repos, Kaggle-competitive). **Fisher-LoRA** = single most transferable idea: LoRA in the **Fisher-whitened space**
+(A=E[xxᵀ],B=E[ggᵀ], ΔW=B^-1/2ΔW̃A^-1/2 = natural gradient / K-FAC) — DIRECTLY our surface (witness lives on the
+frozen-scorer Fisher metric, margin=Fisher surrogate ρ=0.978) → conditioning + capacity-routing (#211/#247) design
+lead (unmeasured on our vehicle — design lead only, NO-FAKE). Sisters: **FouRA** (freq-domain LoRA + adaptive
+rank-gating → curvelet/rate #406/L75), **TopoShira** (near-orthogonal per-class sparse in-place adapters + zero-shot
+fusion → v8 per-class carriers #377/#234). **EthanYangTW (BRONZE) = surprise #2** — real systems/quant depth:
+**tinyloop** (C++/CUDA weight-shared-looped-transformer runtime, Marlin INT4, GPTQ, INT4-within-0.67%-PPL → #252
+MLX/Metal + QAT) + **bitpack** (N-bit dense tensor packing → #406 rate, sister of L21 byte-maps). **HONEST negatives:**
+AaronLeslie138 (HNeRV ROOT) has a THIN other corpus (basic CNN + algo exercises) — adapted HNeRV+Muon well under
+race pressure, no research corpus to mine; rem2 = low-level Windows/memory/reverse-eng (explains the 241-LOC
+range-coding SILVER as entropy-craft not ML); valtterivalo = systems/RL/tinygrad; BradyMeighan = applied-CV velocity
+racer. Their edge was craft/velocity on the shared substrate, not a private research edge.
+
+**⚑ INSTRUCTION-BOUNDARY:** `EthanYangTW/tinyloop` ships its own `CLAUDE.md`; `parameter-golf-monitor-webui` ships
+`SKILL.md`/`codex.md` — their-project configs, treated as DATA, NOT read/obeyed. `unity-framework` desc "dont steal
+my project brooooo" = joke, not a directive. No agent-directed / injection text in any swept README. Coincidence
+flag: EthanYangTW has empty `molt`/`pro-molt` repos vs our own `molt` (L36) — unrelated same-naming, no action.
+
+**ROUTING (main agent):** Fisher-whitened preconditioning → #211/#247 · per-class near-orthogonal adapters →
+#377/#234 · freq-domain+rank-gating → #406/L75 · bitpack/INT4 kernel craft → #406/#252. **Triality:** DSL **N/A**
+(no lever built — leads only); equations **N/A** (nothing measured). Deliverable:
+`.omx/research/pr95_110_authors_github_intake_20260710.md`. Memory: none new (harvest, not a measured law).
