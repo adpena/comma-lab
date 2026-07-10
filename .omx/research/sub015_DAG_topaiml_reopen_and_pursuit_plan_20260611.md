@@ -13301,3 +13301,33 @@ verdict_scope FORMULATION; no kill; no score. Pointer 0.19110 UNMOVED (means).
 - **PINNED first-run commands (QUEUED — DO NOT RUN, machine READ-ONLY):** fp32 + int8 confirm-ladder on mod32cap ep650 BEST (`experiments/results/perclass_bitalloc_witness_20260710/mod32cap_ep650_BEST.npz`), guided ON + a guided-OFF control for the falsifier. Full commands in the design memo §Pinned first-run commands.
 - **DSL routing (justified vs config-orphan rule):** POST-TRAINING finisher over a FROZEN checkpoint — supplies NO trainer flag argparse can't → correctly a TOOL, not a DSL `Lever` (like #391 flip solver / #350 harness / `witness_exact_ab.py`). The activation-ledger duty-to-measure derives from DSL-AST levers; recording a `fired`/`measured` event for a never-run tool would be a FAKE wire-in (it hasn't fired). The tracked duty-to-measure home is THIS DAG FEED (surfaced by costate_digest): **never-fired high-value tool concept, queued behind owed-16/#385.**
 - **TRIALITY:** DAG = this FEED. DSL = N/A-with-rationale (tool, not Lever — above). equations = `exact_metric_mc_finisher_v1` REGISTERED (design-only crisp invariant: confirmed ratchet ⇒ S non-increasing, each accepted batch ΔS<0 BY CONSTRUCTION, ZERO surrogate↔exact gap; empirical anchor on first measured n600 row). Memo `.omx/research/mc_finisher_396_design_20260710.md` (canonical-vs-unique + observability + cargo-cult + P7 falsifier + pinned commands). **Pointer 0.19110 UNMOVED — a BUILT MEANS; moves only through the byte-closed n600 confirm-ladder exact row.**
+
+## FEED-owed16-verdict (2026-07-10) — owed-16 A/B MEASURED: realized directional contribution ≈ ZERO (P9 resolved, direction NEGATIVE) · pointer 0.19110 UNMOVED
+
+- **WHAT RAN (axis `[macOS-CPU advisory · through-R n600 · NON-PROMOTABLE]`, seed 0, FORMULATION =
+  bounded warm-start ep650→700 from mod32cap BEST):** self-orient ON vs OFF (16 directional input
+  channels sliced from `in_proj`; all 18 param tensors otherwise byte-identical at start; config diff
+  verified directional-flags-only). ON: admitted, safe_run timeout-killed ~ep687 (9000 s, peak RSS
+  81 GiB), ep650/675 verdicts clean-before-kill. OFF: 650→700 clean (10 224 s, peak 23.95 GiB, exit 0).
+  ON ep700 resume: BLOCKED — projects 93.8 GiB > idle headroom; 6× governed REFUSE, never bypassed.
+- **MEASURED Δ (OFF−ON):** ep649 −0.12% · ep650 −0.000089 (−1.39%) · ep675 −0.000015 (−0.35%) · OFF
+  ep700 0.004181 (OFF BEST) vs ON BEST ep675 0.004259. OFF marginally BETTER everywhere; per-class
+  near-identical (lane ep675 0.27789 vs 0.27860). **The −48% direct-partition advisory (predicts OFF ≈
+  +100% of ON) is NOT REALIZED — >70× separation from observed |Δ|, robust to the unmeasured
+  single-seed floor (P2 caveat).**
+- **COST (measured live):** ON RSS ~67 GiB vs OFF ~10 GiB — the directional cache's ~47–57 GiB tax buys
+  no measured realized d_seg at this formulation.
+- **VERDICT/SCOPE:** FORMULATION (fine-tune marginal from a self-orient-trained parent; from-scratch
+  NOT covered — parent trunk may carry internalized directional structure that persists in OFF).
+  Composition (P12): self-orient × warm-start = REDUNDANT (measured). C1 CLOSED-at-formulation
+  (proxy-mirage confirmed at the realized axis); P9 BLOCKING RESOLVED (negative direction); MEMORY L25
+  "basis over-credited" now MEASURED-down.
+- **REFORMULATION QUEUE:** (1) from-scratch matched pair (the only uncovered arm); (2) freq-along 3.2×
+  starvation fix BEFORE any directional re-test; (3) $0 diagnostic — where does the advisory−realized
+  gap open (through-R uint8/resize vs EMA vs training dynamics)?
+- **Triality:** verdict json `.omx/research/owed16_verdict_20260710.json` (supersedes OWED-BLOCKED) ·
+  EmpiricalAnchor `owed16_realized_transfer_measured_zero_20260710` on
+  `curvelet_directional_basis_dseg_reduction_v1` (residual 0.4835, VERIFIED_VIA_EMPIRICAL_ANCHOR) ·
+  C1 register + P9 pass appends · owed16 memo MEASURED VERDICT section. Decision context: #385 addendum
+  v2 + GO ask already out on the ep675 cell (0a550f9e2); this is the canonical-record chain.
+  **Pointer 0.19110 UNMOVED (means/apparatus).**

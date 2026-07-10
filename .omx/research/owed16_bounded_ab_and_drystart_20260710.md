@@ -172,3 +172,50 @@ scratch — no bulk, disk-hygiene clean.
 
 **Pointer 0.19110 UNMOVED (means/apparatus). No fakes: nothing was run that was not run; every number is
 MEASURED-from-artifact or a labeled projection; the owed-16 measured cell is honestly OWED.**
+
+---
+
+## MEASURED VERDICT (2026-07-10, appended — supersedes OWED-BLOCKED above)
+
+**Both arms RAN. Axis `[macOS-CPU advisory · through-R n600 · NON-PROMOTABLE]`. Pointer contest-CPU
+0.19110 UNMOVED — this is MEANS.** Execution: ON admitted ~03:29Z, safe_run TIMEOUT-KILLED at ~ep687
+(exit 124, 9000 s, peak RSS 81.0 GiB); its ep650/ep675 verdicts completed BEFORE the kill (clean cells).
+OFF admitted ~08:00Z after 1 governed REFUSE (sibling active-growth 50 GiB window), ran 650→700 + final
+verdict clean (10 224 s, peak RSS 23.95 GiB, exit 0). ON resume for the ep700 cell: **BLOCKED — the
+resume projects 93.8 GiB (TAC_MEM_PROBE), so baseline ~25 + 93.8 = ~119 GiB exceeds even the idle
+adaptive ceiling (~103); 6× governed REFUSE (attempts 10:44–11:09Z), never bypassed. The ep700 ON cell
+is structurally un-admittable without freeing ~15 GiB of baseline.**
+
+**Matched-cell Δ table (identical config except the 16 directional input channels; seed 0 both;
+config-diff verified directional-flags-only):**
+
+| cell | ON (self-orient) d_seg | OFF (ablated) d_seg | Δ(OFF−ON) | as % of ON |
+|---|---:|---:|---:|---:|
+| ep649 (pre-step, raw loaded weights) | 0.208537 | 0.208281 | −0.000256 | −0.12% |
+| ep650 (zero-shot, EMA re-init) | 0.006384 | 0.006295 | −0.000089 | −1.39% |
+| **ep675 (25 trained ep; ON BEST)** | **0.004259** | **0.004244** | **−0.000015** | **−0.35%** |
+| ep700 (final) | BLOCKED (resume refused ×6) | 0.004181 (OFF BEST) | — | — |
+
+**Realized directional contribution ≈ ZERO.** OFF is marginally BETTER at every matched cell (all
+|Δ| ≤ 1.4% of ON — INSTANCE-level, single-seed, noise floor UNMEASURED per P2). The −48%
+direct-partition advisory predicts OFF ≈ +100% of ON; observed |Δ| ≤ 1.4% — the claim-direction verdict
+is robust to any plausible noise floor (>70× separation). Per-class rows near-identical at every cell
+(lane ep675: ON 0.27789 vs OFF 0.27860; road 0.00612 vs 0.00597). Live RAM: ON RSS ~67 GiB vs OFF
+~10 GiB — the ~47–57 GiB directional-cache tax bought no measured realized d_seg.
+
+**Scope (FORMULATION — the honest boundary):** bounded warm-start fine-tune from a parent TRAINED WITH
+self-orient ON for 650 ep. This measures the MARGINAL contribution of the directional channels during
+fine-tune; the parent trunk may have internalized directional structure that persists in the OFF arm.
+From-scratch contribution NOT covered (reformulation queue row 1). ON's kill+resume asymmetry
+(fresh-seeded RNG on resume; OFF had no resume) would have applied ONLY to the ep700 ON cell (which is
+BLOCKED anyway); ep649/650/675 are clean matched, no-resume.
+
+**P9 disposition:** the BLOCKING objection ("MEASURED −48% n600-class" grade rests on a direct-partition
+proxy) is now RESOLVED-BY-MEASUREMENT — and the measurement says the realized number is ~0 at this
+formulation. C1's proxy-mirage grade CONFIRMED at the realized axis. Composition row (P12):
+self-orient × warm-start-from-self-orient-parent = REDUNDANT (measured).
+
+**Decision context:** the #385 addendum v2 + operator GO ask already went out on the ep675 cell (commit
+0a550f9e2); this landing is the completeness + canonical-record chain, not the decision trigger.
+Verdict artifact: `.omx/research/owed16_verdict_20260710.json` · anchor
+`owed16_realized_transfer_measured_zero_20260710` on `curvelet_directional_basis_dseg_reduction_v1`.

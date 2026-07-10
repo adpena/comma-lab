@@ -1,102 +1,179 @@
 {
   "composition": {
-    "active_levers": [],
-    "deferred_to_ab_protocol": true,
-    "measured": false,
-    "sign": null
+    "active_levers": [
+      "self_orient_directional_basis",
+      "warm_start_weights_only_from_selforient_parent"
+    ],
+    "deferred_to_ab_protocol": false,
+    "measured": true,
+    "sign": "redundant"
   },
-  "constraint_carved": "realized-through-R directional \u0394d_seg still OWED (3x SUM-over-RAM REFUSE under concurrency); MEASURED: self-orient RAM tax ~47 GiB (ON 71.5 vs OFF 24.5); wall-clock sec/ep >=120 (borrowed 42 was ~2.8x under). P9 remains BLOCKING.",
-  "emitted_at_utc": "2026-07-10T03:38:31Z",
+  "constraint_carved": "self-orient directional input channels contribute no measurable realized-through-R d_seg at bounded warm-start formulation (|Delta| <= 1.4% across 3 matched cells incl. zero-shot ablation) while costing ~47-57 GiB RAM; C1's proxy-mirage grade CONFIRMED at the realized axis; remaining live hypothesis is from-scratch-only benefit (basis shapes early training, not fine-tune)",
+  "emitted_at_utc": "2026-07-10T11:10:04Z",
   "extra": {
-    "governor_refuses": 3,
-    "item2_dry_start": "governor-blocked; substitute anchor 118.8/121.9 s/ep mod32cap ckpt mtimes",
-    "off_ckpt_sha": "b1c31667",
-    "queue_ready": true
+    "decision_context": "#385 addendum v2 + operator GO ask already sent on the ep675 cell (commit 0a550f9e2); this landing is the completeness + canonical-record chain, not the decision trigger",
+    "matched_cell_deltas": {
+      "ep649_pre_step": {
+        "delta_off_minus_on": -0.000256,
+        "off": 0.208281,
+        "on": 0.208537,
+        "pct_of_on": -0.12
+      },
+      "ep650_zero_shot": {
+        "delta_off_minus_on": -8.9e-05,
+        "off": 0.006295,
+        "on": 0.006384,
+        "pct_of_on": -1.39
+      },
+      "ep675_trained": {
+        "delta_off_minus_on": -1.5e-05,
+        "off": 0.004244,
+        "on": 0.004259,
+        "pct_of_on": -0.35
+      }
+    },
+    "off_wall_clock": "OFF 650->700 + final verdict in 10223s, peak RSS 23.95 GiB (SAFE_RUN ok exit 0)",
+    "on_ep700_status": "OWED-BLOCKED: resume projects 93.8 GiB; baseline 24.6 + 93.8 = 118.4 > idle ceiling ~103 -> structurally un-admittable without freeing ~15 GiB baseline; 6x governed REFUSE, never bypassed",
+    "on_kill_resume_history": "ON killed by safe_run timeout exit 124 at ~ep687 (9000s, peak RSS 81.0 GiB); ep650/ep675 cells verdicted BEFORE the kill = clean",
+    "pointer": "contest-CPU 0.19110 UNMOVED (this is MEANS; advisory axis; NON-PROMOTABLE)",
+    "ram_tax_measured_live": {
+      "off_rss_gib": 10.2,
+      "on_rss_gib": 67.3
+    },
+    "supersedes": "owed16_verdict_20260710.json OWED-BLOCKED row emitted 2026-07-10T03:38:31Z"
   },
-  "is_negative": false,
+  "is_negative": true,
   "measured": true,
   "reformulation_empty_reason": null,
-  "reformulation_queue": null,
+  "reformulation_queue": [
+    "from-scratch matched-pair self-orient ON-vs-OFF (the only formulation this verdict does not cover; expensive - 2x full runs)",
+    "freq-along starvation fix (3.2x deficit, L25/L65) BEFORE any directional re-test: the tested formulation may under-serve the along-tangent axis the lever needs",
+    "direct-partition -48% remains real on its own axis: re-derive WHERE the advisory-vs-realized gap opens (through-R uint8/resize? EMA? training dynamics?) as a $0 diagnostic"
+  ],
   "rows": [
     {
-      "axis_tag": "[macOS-MLX research-signal]",
+      "axis_tag": "[macOS-CPU advisory]",
       "floor_is_known": false,
-      "floor_provenance": null,
-      "is_authority_axis": false,
-      "is_load_bearing": false,
-      "is_n600": false,
-      "n_samples": 427,
-      "n_samples_reason": "mod32cap ep299->ep726 span; wall-clock/epoch THROUGHPUT (not a d_seg verdict); UPPER bound; v752 heavier => >=120 s/ep",
-      "noise_floor": null,
-      "provenance": {
-        "config_ref": "levelset_n600_witness_mod32cap_20260706T115554Z",
-        "git_sha": "31ea1df1a",
-        "inputs_sha256": null,
-        "seed": null,
-        "tool": "mod32cap per-stage-ckpt mtime cadence"
-      },
-      "quantity": "sec_per_epoch",
-      "review_status": "unreviewed_recovery_written",
-      "units": "s/ep",
-      "value": 118.8
-    },
-    {
-      "axis_tag": "[advisory only]",
-      "floor_is_known": false,
-      "floor_provenance": null,
+      "floor_provenance": "UNMEASURED single-seed (P2 caveat): no matched-seed replicate floor exists; the observed |Delta| <= 1.4% of ON is INSTANCE-level; the CLAIM under test (-48%) predicts OFF ~ 2x ON (=+100%), >70x the observed |Delta| - the claim-direction verdict is robust to any plausible floor",
       "is_authority_axis": false,
       "is_load_bearing": false,
       "is_n600": true,
       "n_samples": 600,
-      "n_samples_reason": null,
+      "n_samples_reason": "matched clean cell ep650 (warm-start verdict, EMA re-init)",
       "noise_floor": null,
       "provenance": {
-        "config_ref": null,
-        "git_sha": "31ea1df1a",
+        "config_ref": "experiments/results/owed16_ab_selforient_ON_20260710T032859Z/launch.sh",
+        "git_sha": "635ab3e02",
         "inputs_sha256": null,
-        "seed": null,
-        "tool": "tools/witness_memory_preflight.py"
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
       },
-      "quantity": "projected_peak_rss_selforient_ON",
-      "review_status": "unreviewed_recovery_written",
-      "units": "GiB",
-      "value": 71.5
+      "quantity": "on_dseg_ep650_zero_shot",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.006384048461914062
     },
     {
-      "axis_tag": "[advisory only]",
+      "axis_tag": "[macOS-CPU advisory]",
       "floor_is_known": false,
-      "floor_provenance": null,
+      "floor_provenance": "UNMEASURED single-seed (P2 caveat): no matched-seed replicate floor exists; the observed |Delta| <= 1.4% of ON is INSTANCE-level; the CLAIM under test (-48%) predicts OFF ~ 2x ON (=+100%), >70x the observed |Delta| - the claim-direction verdict is robust to any plausible floor",
       "is_authority_axis": false,
       "is_load_bearing": false,
       "is_n600": true,
       "n_samples": 600,
-      "n_samples_reason": null,
+      "n_samples_reason": "matched clean cell ep650 (sliced-ckpt channel-ablation zero-shot)",
       "noise_floor": null,
       "provenance": {
-        "config_ref": null,
-        "git_sha": "31ea1df1a",
+        "config_ref": "experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+        "git_sha": "635ab3e02",
         "inputs_sha256": null,
-        "seed": null,
-        "tool": "tools/witness_memory_preflight.py"
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
       },
-      "quantity": "projected_peak_rss_selforient_OFF",
-      "review_status": "unreviewed_recovery_written",
-      "units": "GiB",
-      "value": 24.5
+      "quantity": "off_dseg_ep650_zero_shot",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.006295
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": "UNMEASURED single-seed (P2 caveat): no matched-seed replicate floor exists; the observed |Delta| <= 1.4% of ON is INSTANCE-level; the CLAIM under test (-48%) predicts OFF ~ 2x ON (=+100%), >70x the observed |Delta| - the claim-direction verdict is robust to any plausible floor",
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "matched clean cell ep675 (25 fine-tune epochs; ON BEST)",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "experiments/results/owed16_ab_selforient_ON_20260710T032859Z/launch.sh",
+        "git_sha": "635ab3e02",
+        "inputs_sha256": null,
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
+      },
+      "quantity": "on_dseg_ep675_trained",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.004259058634440104
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": "UNMEASURED single-seed (P2 caveat): no matched-seed replicate floor exists; the observed |Delta| <= 1.4% of ON is INSTANCE-level; the CLAIM under test (-48%) predicts OFF ~ 2x ON (=+100%), >70x the observed |Delta| - the claim-direction verdict is robust to any plausible floor",
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "matched clean cell ep675 (25 fine-tune epochs)",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+        "git_sha": "635ab3e02",
+        "inputs_sha256": null,
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
+      },
+      "quantity": "off_dseg_ep675_trained",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.004244
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": "UNMEASURED single-seed (P2 caveat): no matched-seed replicate floor exists; the observed |Delta| <= 1.4% of ON is INSTANCE-level; the CLAIM under test (-48%) predicts OFF ~ 2x ON (=+100%), >70x the observed |Delta| - the claim-direction verdict is robust to any plausible floor",
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "OFF final cell ep700 (OFF BEST; ON counterpart BLOCKED)",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+        "git_sha": "635ab3e02",
+        "inputs_sha256": null,
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
+      },
+      "quantity": "off_dseg_ep700_final",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.004181416829427084
     }
   ],
   "schema_version": "verdict.v1",
   "scope": {
     "family_evidence": null,
     "level": "formulation",
-    "scoped_to": "owed-16 self-orient ON-vs-OFF realized-through-R n600 A/B (bounded warm-start mod32cap ep650); BUILT+preflighted+load-validated, ON arm governor-blocked"
+    "scoped_to": "bounded warm-start fine-tune (50 ep, ep650->700) from a mod32cap parent TRAINED WITH self-orient ON for 650 ep; measures the MARGINAL contribution of the directional channels during fine-tune, NOT the from-scratch contribution (parent trunk may have internalized directional structure that persists in the OFF arm) - do NOT extend to from-scratch without the matched from-scratch A/B"
   },
   "stores_consulted": [
-    ".omx/research/negaudit_retests_c1_e5_20260709.md",
-    ".omx/research/philosophy_pass_v752_20260709.md",
-    "mod32cap run dir",
-    "tools/safe_run.py",
-    "CLAUDE.md P0 machine-crash gate"
+    ".omx/research/owed16_bounded_ab_and_drystart_20260710.md",
+    ".omx/research/negaudit_retests_c1_e5_20260709.md (C1)",
+    ".omx/research/philosophy_pass_v752_20260709.md (P9/P2/P12)",
+    "docs/operating_manual_craft_handoff.md",
+    "MEMORY L25 (basis over-credited) + L65 (freq-along deficit)"
   ],
-  "verdict": "OWED-BLOCKED"
+  "verdict": "MEASURED (supersedes OWED-BLOCKED 2026-07-10T03:38Z): realized-through-R directional contribution ~ ZERO at this formulation. Matched clean cells ep650/ep675 (no resume, identical config except the 16 directional input channels): Delta(OFF-ON) = -0.000089 (-1.39% of ON) and -0.000015 (-0.35% of ON) - OFF marginally BETTER, inside single-seed noise. The -48% direct-partition advisory claim predicts OFF ~ +100% of ON; observed |Delta| <= 1.4%. Realized transfer NOT OBSERVED. Per-class rows near-identical (lane ep675: ON 0.27789 vs OFF 0.27860). P9 disposition: the BLOCKING objection to the 'MEASURED -48% n600-class' grade is RESOLVED-BY-MEASUREMENT - the realized number now exists and it is ~0, so the self-orient lever must NOT be graded a realized d_seg lever at this formulation; it carries a ~47 GiB RAM tax + ~57 GiB RSS delta (ON 67 vs OFF 10 GiB measured) for no measured realized benefit."
 }

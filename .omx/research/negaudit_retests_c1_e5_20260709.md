@@ -114,3 +114,19 @@ self-orient-ON-vs-OFF trained-through-R n600 A/B (heavy; operator-GO), not a $0 
   byte-closed A/B owed).
 
 **Pointer 0.19110 UNMOVED (means).**
+
+---
+
+## C1 UPDATE (2026-07-10, appended): the decisive re-test RAN — realized Δ MEASURED ≈ 0
+
+The self-orient-ON-vs-OFF trained-through-R n600 A/B (operator-GO, bounded warm-start formulation)
+completed. Matched clean cells: ep650 Δ(OFF−ON) −0.000089 (−1.39% of ON) · ep675 −0.000015 (−0.35%);
+OFF ep700 0.004181 (OFF BEST); ON ep700 cell BLOCKED (resume projects 93.8 GiB > idle headroom; 6×
+governed REFUSE, never bypassed). **Realized directional contribution ≈ ZERO (OFF marginally better,
+INSTANCE-noise).** C1's grade is now CLOSED-AT-THIS-FORMULATION: the −48% is direct-partition-real but
+realized-through-R transfer is NOT OBSERVED in a 50-ep warm-start fine-tune; the proxy-mirage reading
+(~170–350× off) is CONFIRMED by direct measurement. verdict_scope FORMULATION (from-scratch arm remains
+the one uncovered reformulation; freq-along starvation 3.2× is a live confound of the tested
+formulation). Verdict artifact: `.omx/research/owed16_verdict_20260710.json`. MEMORY L25 "next-run
+PRIMARY" is now measured-DOWN: the lever costs ~47–57 GiB RAM for no measured realized d_seg at this
+formulation. Pointer 0.19110 UNMOVED.

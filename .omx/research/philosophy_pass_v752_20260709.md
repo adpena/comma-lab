@@ -155,3 +155,18 @@ was modified.
 per-philosophy column and one BLOCKING optimal-form-claim gate (owed-16 / the −48% grade correction) the
 sealed-before-P9 chain could not have carried. verdict_scope of this audit: it renders NO new research kill
 — every grade is a conformance OBSERVATION (as-built vs the encoded philosophy), narrowest-supported.
+
+---
+
+## P9 RESOLVER UPDATE (2026-07-10, appended): owed-16 MEASURED — P9 BLOCKING RESOLVED, direction NEGATIVE
+
+The owed-16 gate row above ("BUILT+QUEUE-READY; verdict OWED-BLOCKED") is superseded: the A/B RAN
+(bounded warm-start, through-R n600, seed 0, `[macOS-CPU advisory]`). Realized directional Δd_seg ≈ 0
+(ep650 −1.39%, ep675 −0.35%, OFF better both cells; full table in the owed16 memo + verdict json;
+ON ep700 cell blocked — resume projects 93.8 GiB, 6× governed REFUSE). **P9 is RESOLVED-BY-MEASUREMENT
+and the resolution is that the −48% grade must be STRUCK from any optimal-form claim:** self-orient is
+NOT a realized d_seg lever at this formulation, and carries the measured ~47 GiB RAM tax (live RSS
+delta ~57 GiB). The v7.5.2 "#1 lever" row should be re-graded from "MEASURED −48% n600-class" to
+"direct-partition −48% / realized ≈ 0 (owed16 measured 2026-07-10)". The un-blocked question for #385:
+whether to carry self-orient at all (from-scratch benefit unmeasured; fine-tune benefit measured ≈ 0 at
+~3× RAM). Pointer 0.19110 UNMOVED.
