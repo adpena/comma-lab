@@ -13555,3 +13555,18 @@ Subagent `fractal-synth-398b`. Pointer contest-CPU **0.19110 UNMOVED** — MEANS
   `reports/kalman_innovation_20260710/{pose_dxi,lane_coeff,verdict}.{txt,json}`. **Pointer contest-CPU 0.19110
   UNMOVED — a foreclosed rate lever is MEANS (system intelligence: the direction is closed with receipts), not a
   scored move.**
+
+### FEED-legdisposition-kalman (2026-07-10) — triality leg record for the Kalman agent's two commits
+- **Commits:** `f6fd9d81d` (research memo + measured rows) + `48aa64a40` (DAG FEED-kalman). Detector correctly
+  flagged both as measurement-class; leg dispositions:
+- **DSL leg = N/A-by-outcome (stated, not skipped):** the innovation-coding candidate was FORECLOSED by
+  measurement BEFORE any trainer flag or `Lever` factory existed — there is no config surface to register and
+  registering a foreclosed lever would be a hollow entry. The existing carriers' coders (temporal-delta) are
+  UNCHANGED; no launch config is affected. Should the smooth-continuous regime (P10 carve-out: rednose-style ego
+  state, NOT residual/discontinuous series) ever produce a viable formulation, THAT build registers as a Lever
+  factory per the standing discipline.
+- **equations leg = deliberately-not-minted (stated, not skipped):** verbatim from FEED-kalman — a
+  lever-foreclosure verdict is not a predictive law with a callable; a hollow-callable equation would be a
+  fake-implementation smell. The durable machine row is `reports/kalman_innovation_20260710/verdict.json`
+  (verdict_scope: formulation — Kalman-CV/CA innovation coding on these two carriers; smooth-continuous regime
+  explicitly open) + the P10 constraint carved into the negative-findings register.
