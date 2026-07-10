@@ -34,12 +34,12 @@ import json
 import os
 import socket
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 __all__ = [
-    "DEFAULT_REVIEW_COUNTER_PATH",
     "DEFAULT_REVIEW_COUNTER_LOCK_PATH",
+    "DEFAULT_REVIEW_COUNTER_PATH",
     "SEAL_THRESHOLD",
     "VERDICT_CLEAN",
     "VERDICT_NOT_CLEAN",
@@ -153,7 +153,7 @@ class ReviewCounterState:
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _round_to_dict(r: ReviewRound) -> dict:
@@ -232,7 +232,35 @@ def record_round(
                 lf.write(line + "\n")
         finally:
             fcntl.flock(lockfh.fileno(), fcntl.LOCK_UN)
+    _post_bulletin_verdict_landed(record)
     return record
+
+
+def _post_bulletin_verdict_landed(record: ReviewRound) -> None:
+    """Broadcast a ``verdict_landed`` bulletin event so sibling agents see this round.
+
+    FAIL-OPEN by design: the review-counter ledger (above) is the authority; the bulletin
+    is score-neutral observability (task #388). A bulletin failure — missing package, disk
+    full, lock contention — must NEVER break the counter write, so any exception is
+    swallowed. This is an intentional silent guard on a non-authoritative notification path,
+    not on a safety/score surface (cf. operating manual §8.9); the durable record already
+    landed before this call.
+    """
+    try:
+        from tac.session_bus.bulletin import EVENT_VERDICT_LANDED, post_event
+
+        post_event(
+            kind=EVENT_VERDICT_LANDED,
+            subject=record.surface_id,
+            payload={
+                "round_n": record.round_n,
+                "verdict": record.verdict,
+                "findings_count": record.findings_count,
+            },
+            agent_label="review_counter",
+        )
+    except Exception:
+        pass
 
 
 def load_rounds(

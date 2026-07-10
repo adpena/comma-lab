@@ -76,7 +76,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
-import errno
 import fcntl
 import json
 import os
@@ -98,7 +97,7 @@ VALID_STATUSES = ("in_progress", "blocked", "complete")
 
 
 def _now_iso() -> str:
-    return _dt.datetime.now(tz=_dt.timezone.utc).isoformat()
+    return _dt.datetime.now(tz=_dt.UTC).isoformat()
 
 
 def _acquire_lock(timeout_seconds: int):
@@ -173,6 +172,8 @@ def append_checkpoint(
     notes: str = "",
     parent_id_or_session: str | None = None,
     lane_id: str | None = None,
+    respawn_context: str | None = None,
+    expected_outputs: list[str] | None = None,
 ) -> dict:
     """Append a single checkpoint record under the fcntl lock.
 
@@ -183,6 +184,14 @@ def append_checkpoint(
     enables resume-lookup via ``read_checkpoints_by_lane``. Older checkpoint
     records that pre-date this field still satisfy the lane query via
     notes-substring fallback.
+
+    ``respawn_context`` + ``expected_outputs`` (task #388, 2026-07-09) are
+    OPTIONAL, additive, legacy-compatible fields consumed by
+    ``tac.session_bus.recovery_manifest``. ``respawn_context`` is a
+    pointer-rich (<=2KB) string a successor can paste to resume a crashed
+    predecessor (task#, spec paths, protocol); ``expected_outputs`` names the
+    files/artifacts the in-flight agent was going to produce. Records written
+    before these fields still load — readers use ``.get(...)``.
     """
     # Validate BEFORE the list() coercion below so callers passing a string
     # (or other non-list) for ``files_touched`` get a clear error rather than
@@ -191,6 +200,13 @@ def append_checkpoint(
         isinstance(f, str) for f in files_touched
     ):
         raise ValueError("files_touched must be a list of strings")
+    if expected_outputs is not None and (
+        not isinstance(expected_outputs, list)
+        or not all(isinstance(f, str) for f in expected_outputs)
+    ):
+        raise ValueError("expected_outputs must be None or a list of strings")
+    if respawn_context is not None and not isinstance(respawn_context, str):
+        raise ValueError("respawn_context must be None or a string")
     record = {
         "subagent_id": subagent_id,
         "parent_id_or_session": parent_id_or_session,
@@ -200,6 +216,10 @@ def append_checkpoint(
         "files_touched": list(files_touched),
         "next_action": next_action,
         "notes": notes,
+        "respawn_context": respawn_context,
+        "expected_outputs": (
+            list(expected_outputs) if expected_outputs is not None else None
+        ),
         "written_at_utc": _now_iso(),
         "pid": os.getpid(),
         "host": socket.gethostname(),
@@ -230,7 +250,7 @@ def read_checkpoints(subagent_id: str | None = None) -> list[dict]:
     if not JSONL_PATH.exists():
         return []
     rows: list[dict] = []
-    with open(JSONL_PATH, "r") as fh:
+    with open(JSONL_PATH) as fh:
         for raw in fh:
             raw = raw.strip()
             if not raw:
@@ -474,6 +494,23 @@ def main(argv: list[str] | None = None) -> int:
             "predecessor's subagent id."
         ),
     )
+    parser.add_argument(
+        "--respawn-context",
+        default=None,
+        help=(
+            "Optional pointer-rich (<=2KB) string a successor can paste to "
+            "resume this agent after a crash (task#, spec paths, protocol). "
+            "Consumed by tac.session_bus.recovery_manifest (task #388)."
+        ),
+    )
+    parser.add_argument(
+        "--expected-outputs",
+        default="",
+        help=(
+            "Optional comma-separated files/artifacts this agent was going to "
+            "produce (consumed by tac.session_bus.recovery_manifest)."
+        ),
+    )
 
     args = parser.parse_args(argv)
 
@@ -540,6 +577,7 @@ def main(argv: list[str] | None = None) -> int:
 
     step_val = _parse_step(args.step)
     files = _parse_files_touched(args.files_touched)
+    expected_outputs = _parse_files_touched(args.expected_outputs) or None
 
     record = append_checkpoint(
         subagent_id=args.subagent_id,
@@ -550,6 +588,8 @@ def main(argv: list[str] | None = None) -> int:
         notes=args.notes,
         parent_id_or_session=args.parent_id_or_session,
         lane_id=args.lane_id,
+        respawn_context=args.respawn_context,
+        expected_outputs=expected_outputs,
     )
     print(json.dumps(record, sort_keys=True))
     return 0

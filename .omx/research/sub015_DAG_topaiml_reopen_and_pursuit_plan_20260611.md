@@ -12692,3 +12692,48 @@ UNMOVED (means).
 
 Memo: `.omx/research/proxy_suspect_audit_20260709.md`. Triality: DAG=this FEED · eq=annotations landed · DSL=N/A
 (audit). Pointer 0.19110 UNMOVED (means). #205 STOPPED. `[macOS-CPU advisory · NON-PROMOTABLE]`.
+
+---
+
+## FEED-canon-u3 (2026-07-09) — CANONICALIZATION UNIT 3: the coordination pair (session bus)
+
+SIGNAL (receipts, this campaign): (a) STALENESS — P6 seal round 1 found SYNTHESIS_v3's `b_c`
+section stale because a SIBLING landed the #386 gate MID-ROUND; long-running agents had no way to
+learn "a gate just RULED" without re-grepping. (b) RECOVERY — the session limit killed 3 agents
+mid-flight; recovery required hand-reconstructing each one's context (sister open failure-ledger
+class `sigurg_144_harness_kills_bg_bash_process_group`).
+
+RESPONSE (built, $0, no GPU): `src/tac/session_bus/` package —
+- `bulletin.py`: fcntl-locked append-only broadcast over `.omx/state/session_events.jsonl`
+  (LIVE_STATE, gitignored). `post_event(kind, subject, payload, agent_label)` (7-kind closed enum
+  {gate_ruled, verdict_landed, spec_edited, memo_landed, agent_spawned, agent_completed,
+  agent_died}); `events_since(marker, kinds)` (int-offset OR ISO-ts marker); `staleness_check(
+  subjects, since, kinds) -> StalenessReport` — THE seal-round use case ("did anything about
+  b_c/flip/#386 land since I started?"). One physical line per row (json escapes newlines) + lenient
+  reader ⇒ a process killed mid-append corrupts only the torn last line, never a valid row.
+- `recovery_manifest.py`: THIN layer OVER the canonical `.omx/state/subagent_progress.jsonl`
+  (Catalog #206) — P1 one-fact-one-store: writes via the tool's `append_checkpoint`, reads via its
+  `read_checkpoints`, NOT a parallel store. `register_inflight`/`heartbeat`/`complete` +
+  `recover_report()` renders ready-to-paste respawn blocks for in-flight agents with no recent
+  heartbeat. Carry-forward: fat context (respawn_context/expected_outputs/lane/parent) survives terse
+  heartbeats (round-1 self-review catch).
+
+Additive schema extension: `tools/subagent_checkpoint.py` gained optional `respawn_context` +
+`expected_outputs` fields (+ `--respawn-context`/`--expected-outputs` CLI), legacy-compatible.
+CLI `tools/session_recover.py` (report|register|complete). Producer wired: `tac.review_counter.
+record_round` posts a `verdict_landed` bulletin event (fail-open try/except — bulletin is
+score-neutral observability; counter ledger already landed before the call). Launch path UNTOUCHED
+(sealed). No import of `src/tac/through_r/` or `src/tac/verdicts/` (#389 wires).
+
+Tests: 32 new (`test_session_bus.py`) — locked 2-process concurrent appends (no loss) · events_since
+offset/ts/kinds · staleness hit/miss/payload-subjects/since · partial-line corruption tolerance ·
+recovery report on synthetic rows (stale/recent/complete/unparseable/supersession/sort) · fail-open
+producer · CLI smoke. ruff clean. Regression: 54 subagent_checkpoint + 14 review_counter GREEN.
+
+Triality: DAG=this FEED. DSL leg N/A-with-reason (a cross-agent coordination surface, not a witness
+lever — it emits no trainer argv). equations leg N/A-with-reason (an apparatus/IO surface with no
+S_τ law; producer/consumer contract is the invariant, not an equation). STORES CONSULTED before
+build: `tools/subagent_checkpoint.py` + `.omx/state/subagent_progress.jsonl` (Catalog #206),
+`tac.review_counter`, `tac.harness_failure_ledger`, `tac.cathedral.verdict_ledger` (locked-append
+pattern). Consumer list for #389 in landing memo. Pointer 0.19110 UNMOVED (means — coordination
+apparatus, not an exact-eval row).
