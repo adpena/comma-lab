@@ -65,6 +65,27 @@ SIG_LABEL_UNMEASURED = "UNMEASURED"  # a registered duty-to-ESTIMATE row (an un-
 VALID_SIG_LABELS = frozenset({SIG_LABEL_MEASURED, SIG_LABEL_ESTIMATED, SIG_LABEL_UNMEASURED})
 VALID_SIG_AXES = frozenset({"d_seg", "d_pose", "rate"})
 
+# ── SIGNIFICANCE-KEY CANONICALIZATION (the built-but-mislabeled-unbuilt fix; #377 build-wave) ──────
+# A significance-store row is keyed by a lever NAME. When a finding is FIRST recorded (before it becomes a
+# held DSL ``Lever`` factory) it is keyed by a human/task-# name (e.g. ``d_seg_aware_taper_121``). Once the
+# lever is BUILT + HELD, its canonical name is the ``lever_registry`` factory name (e.g. ``DsegAwareTaper``).
+# If the legacy significance key is never reconciled, ``duty_to_measure_ranked`` computes
+# ``registered = (key in factory_names)`` == False and the digest FALSELY marks a built+held+wired lever
+# ``~=unbuilt`` (a duty-to-BUILD) instead of ``*=never-fired`` (a duty-to-MEASURE) — orphaned signal per
+# CLAUDE.md "'Off' is a tracked queue" + "Results must become system intelligence". This map reconciles
+# legacy significance keys onto the canonical factory name at READ time (the APPEND-ONLY store is NOT
+# rewritten; history is preserved). An alias is applied ONLY when its TARGET is a real held factory — so if
+# the factory is later renamed/removed the row correctly reverts to a build gap. VERIFIED (source
+# inspection 2026-07-09): ``DsegAwareTaper`` (curriculum_dsl.py:1944, #121) + ``HorizonWeightedMargin``
+# (curriculum_dsl.py:3192, #169) are both held factories with all flags mapped (completeness) + wired into
+# the levelset trainer argparse + loss (byte-identical default-OFF) + 58 passing tests. They are owed a
+# MEASUREMENT, not a build. ``latent_table_truncate_d18_k90`` is intentionally NOT aliased — it is a
+# byte-close-tool lever (not a DSL factory), correctly still a finding (see deferral ledger D18).
+_SIGNIFICANCE_LEVER_ALIASES: dict[str, str] = {
+    "d_seg_aware_taper_121": "DsegAwareTaper",
+    "horizon_weighted_margin_169": "HorizonWeightedMargin",
+}
+
 # canonical event vocabulary
 EVENT_FIRED = "fired"        # a run launched with this lever (an A/B arm was actually run)
 EVENT_MEASURED = "measured"  # a byte-closed verdict landed for a run using this lever
@@ -394,6 +415,29 @@ def _read_significance(path: Path | None = None) -> dict[str, dict]:
     return out
 
 
+def canonicalize_significance_keys(
+    sig: dict[str, dict], factory_names: set[str], aliases: dict[str, str] | None = None
+) -> dict[str, dict]:
+    """Re-key legacy significance rows onto their held DSL-factory name (read-time; store unchanged).
+
+    For each ``legacy -> canonical`` in :data:`_SIGNIFICANCE_LEVER_ALIASES`: if ``legacy`` has a row, the
+    ``canonical`` name IS a real held factory, and no explicit ``canonical`` row already exists (latest-wins
+    is preserved for an explicit canonical row), move the legacy row onto ``canonical`` (stamping
+    ``_alias_from`` provenance). Idempotent; pure; returns a NEW dict (input not mutated). This is what
+    flips a built+held+wired lever from ``~=unbuilt`` (duty-to-BUILD) to ``*=never-fired`` (duty-to-MEASURE)
+    in the digest.
+    """
+    amap = _SIGNIFICANCE_LEVER_ALIASES if aliases is None else aliases
+    out = dict(sig)
+    for legacy, canonical in amap.items():
+        if legacy in out and canonical in factory_names and canonical not in out:
+            row = dict(out.pop(legacy))
+            row["lever"] = canonical
+            row["_alias_from"] = legacy
+            out[canonical] = row
+    return out
+
+
 def read_pointer_s(path: Path | None = None) -> float | None:
     """Read the LIVE exact contest-CPU frontier score from the canonical pointer (NEVER hardcoded).
 
@@ -447,8 +491,10 @@ def duty_to_measure_ranked(
     if s_current is None:
         s_current = read_pointer_s(pointer_path)
     owed = set(duty_to_measure(known, path))
-    sig = _read_significance(sig_path)
     known_set = set(known) if known is not None else set(known_levers())
+    # reconcile legacy significance keys onto their now-held factory names so a built+held+wired lever
+    # is correctly surfaced as duty-to-MEASURE (never-fired) rather than duty-to-BUILD (unregistered).
+    sig = canonicalize_significance_keys(_read_significance(sig_path), known_set)
 
     rows: list[dict] = []
     for lever in sorted(owed | set(sig.keys())):

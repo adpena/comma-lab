@@ -152,5 +152,63 @@ def test_activation_report_surfaces_never_fired_first(ledger):
     assert all(r["default"] == "off" for r in rows)
 
 
+# --- significance-key canonicalization (#377 build-wave: built-but-mislabeled-unbuilt fix) --------
+def _sig_row(lever, est=0.02, axis="d_seg", label=al.SIG_LABEL_ESTIMATED):
+    return {"lever": lever, "est_delta_s": est, "axis": axis, "delta_s_label": label}
+
+
+def test_canonicalize_moves_legacy_key_onto_held_factory():
+    sig = {"d_seg_aware_taper_121": _sig_row("d_seg_aware_taper_121")}
+    out = al.canonicalize_significance_keys(sig, {"DsegAwareTaper"})
+    assert "DsegAwareTaper" in out and "d_seg_aware_taper_121" not in out
+    assert out["DsegAwareTaper"]["lever"] == "DsegAwareTaper"
+    assert out["DsegAwareTaper"]["_alias_from"] == "d_seg_aware_taper_121"
+    assert out["DsegAwareTaper"]["est_delta_s"] == 0.02  # ΔS row carried over intact
+
+
+def test_canonicalize_noop_when_target_not_a_factory():
+    # factory absent -> the row correctly stays legacy (a real build gap, not a mislabel).
+    sig = {"d_seg_aware_taper_121": _sig_row("d_seg_aware_taper_121")}
+    out = al.canonicalize_significance_keys(sig, set())
+    assert out == sig and "DsegAwareTaper" not in out
+
+
+def test_canonicalize_preserves_explicit_canonical_row():
+    # an explicit canonical row must NOT be clobbered by the legacy alias (latest-wins preserved).
+    sig = {
+        "d_seg_aware_taper_121": _sig_row("d_seg_aware_taper_121", est=0.01),
+        "DsegAwareTaper": _sig_row("DsegAwareTaper", est=0.99),
+    }
+    out = al.canonicalize_significance_keys(sig, {"DsegAwareTaper"})
+    assert out["DsegAwareTaper"]["est_delta_s"] == 0.99  # explicit row wins
+    assert "d_seg_aware_taper_121" in out  # legacy left as-is when canonical already present
+
+
+def test_canonicalize_is_pure_and_idempotent():
+    sig = {"horizon_weighted_margin_169": _sig_row("horizon_weighted_margin_169")}
+    original = {k: dict(v) for k, v in sig.items()}
+    out1 = al.canonicalize_significance_keys(sig, {"HorizonWeightedMargin"})
+    out2 = al.canonicalize_significance_keys(out1, {"HorizonWeightedMargin"})
+    assert sig == original  # input not mutated
+    assert out2 == out1     # idempotent
+
+
+def test_ranked_marks_aliased_lever_registered_not_unbuilt(tmp_path, monkeypatch):
+    # end-to-end: a legacy-keyed significance row for a held factory ranks as REGISTERED never-fired
+    # (duty-to-MEASURE) instead of unregistered (duty-to-BUILD ~unbuilt).
+    import json
+    sig_path = tmp_path / "sig.jsonl"
+    sig_path.write_text(json.dumps(_sig_row("d_seg_aware_taper_121", est=0.02)) + "\n", encoding="utf-8")
+    ledger_path = tmp_path / "ledger.jsonl"  # empty -> never-fired
+    ranked = al.duty_to_measure_ranked(
+        s_current=0.19110, known=("DsegAwareTaper",), path=ledger_path, sig_path=sig_path
+    )
+    row = next(r for r in ranked if r["lever"] == "DsegAwareTaper")
+    assert row["registered"] is True
+    assert row["activation_state"] == "never-fired"
+    assert row["est_delta_s"] == 0.02
+    assert not any(r["lever"] == "d_seg_aware_taper_121" for r in ranked)
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
