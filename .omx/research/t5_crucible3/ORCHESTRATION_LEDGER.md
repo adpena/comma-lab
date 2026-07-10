@@ -399,3 +399,39 @@ FINDING (1, drift-detector-injected — coordinator-relayed; doc hygiene, not a 
 **Triality:** [no-triality] (doc-fidelity re-derive + one hygiene fix; no lever/law change).
 Pointer 0.19110 UNMOVED — MEANS.
 NEXT ACTION: **P6-R5** — re-derive over the R4 doc; zero findings → first CLEAN toward 3-consecutive seal.
+
+### [P6-R5 DONE] crucible3_v8 seal round 5 — CLEAN (zero findings — FIRST clean pass) — 2026-07-09
+Fresh-eyes re-derive (not confirm) over HEAD `bf1f6438f` (R4 scope-annotation landing). Counter **0/3 → 1/3**
+(consecutive_clean=1, unsealed; 2 more consecutive CLEAN rounds → seal).
+**6 STANDING CHECKS — ALL PASS:**
+- **scaffold-smoke:** `inc1a_harness` ruff-F clean + **27/27 pytest**; `operative_delta_mask`/`evaluate_kill`/
+  `DecouplingScreenError`/`DELTA_MASK_FRAME_SAMPLING_FLOOR=3.46e-6`/`DELTA_R_PROXY_RETIRED` all present.
+- **number-provenance vs primary artifacts:** no_offset **0.0031436** = 5-sig-fig of JSON `0.00314355638292100`
+  (`flip_bc_n600_result.json`) ✓ · flip_weighted **0.0196734** EXACT ✓ · flip_median **0.0215612** EXACT ✓ ·
+  4167 B → **0.00277** ✓ · δ_mask **3.46e-6** = live code default ✓.
+- **grid-pin:** scorer 512×384 authority; argmax taken AFTER the bilinear downsample; #149 placement-grid
+  (camera-res) vs compare-grid (scorer) kept disjoint; internally consistent.
+- **eightfold+P9:** P2/P5/P6/P7/P8 PASS + P11 N/A-derivation + P12 PASS; **NO new proxy introduced** —
+  carrier_total_S / I1b DERIVED+owed-measurement (labeled), δ_R proxy RETIRED, de-share dilate-proxy CARRIED
+  with band. P9 clean.
+- **review-prior-fix (R4 annotations):** VERDICT_SCOPE_OK markers on L16/20/77/195/205/327/353/380 placed as
+  trailing HTML comments → content UNCORRUPTED; each points to the FORMULATION/REGIME anchor in §A.3. Correct.
+- **P10:** each v3 negative carves a constraint (single-valued carrier structurally-blocked → lateral 3-curve;
+  both flip arms REFUTED → per-edge/joint route).
+**FRESH ANGLE — BUILDABILITY read of §B + build items 9/10/11 (as the P7 compiler will):** every knob a VALUE
+with provenance, **no TBD**; `operative_delta_mask(seed_spread=<in-run>, n_seed_replicates=3)` is
+compilable-as-written (signature verified; REFUSE guard RAISES on under-spec; returns max(3.46e-6, spread);
+`evaluate_kill` surfaces `VERDICT_REFUSED`). Falsifiers pre-registered (kill_criterion + falsifies + δ_mask
+floor; carrier build inherits the 1a A/B falsifier; recess R8 = its measurement path). `measure_byte_closed_composite:true`
+means any top-arc ↔ side-curve seam/overlap is captured in the MEASURED composite argmax (no idealized-union
+gap); per-row `x_L(y)`/`x_R(y)` is the geometrically-sound complement homing R6's unsupported-column 97.54% mass.
+**NEW EXTERNAL SURFACE — negative-findings register cross-check (auditor_A #390):** v3 does **NOT** cite
+−48% / directional-basis anywhere (grep NONE) → **auditor-A C1's realized-transfer-UNVERIFIED flag does not
+contradict any v3 claim**; de-share band [0.000,0.0069] MATCHES register B11; curve-relative REFUTED HOLDS
+matches B9; both-flip-arms-REFUTED / no_offset ~6× matches C20/C21. No v3 lean on any SUSPECT-graded number
+(de-share tagged INSTANCE band; b_c CLEAN per the landed R4 gate).
+**item-8 assumptions honest:** carrier_total_S lower-bound assumes side-curves as-frozen as the top arc
+(tagged owed-measurement, recess R8); C²-boundary DERIVED-tagged; verdict_scope on every negative.
+**Triality:** [no-triality] (doc-fidelity re-derive; no lever/law change).
+Pointer 0.19110 UNMOVED — MEANS.
+NEXT ACTION: **P6-R6** — re-derive over the unchanged R5 doc; zero findings → 2/3 toward seal.
