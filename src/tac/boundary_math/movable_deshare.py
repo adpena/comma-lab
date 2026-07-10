@@ -129,6 +129,10 @@ def separatrix_mask(lstar: np.ndarray, cls_a: int, cls_b: int) -> np.ndarray:
     return _adj(ma, mb) | _adj(mb, ma)
 
 
+# INSTANCE-of-dil2: de-share band [0.000,0.0069] measured across dilate∈{0..3}; NOT footprint-robust; thing-itself owed
+# (P9 proxy tag, philosophy_pass_v8_20260709 §3 rank-1 / §A.2; the 0.0044 de-share it generates is INSTANCE
+#  at dilate=2, not the realized Movable-carrier coverage — the thing-itself is G3 bbox realized cover @ byte-close.
+#  The measure/audit entrypoints below inherit this default; band is the same proxy caveat.)
 def movable_footprint(lstar: np.ndarray, movable_cls: int, *, dilate: int = 2) -> np.ndarray:
     """The pixels the Movable carrier (bbox sites + track) already accounts for = dilated region."""
     return _dilate(np.asarray(lstar) == int(movable_cls), dilate)

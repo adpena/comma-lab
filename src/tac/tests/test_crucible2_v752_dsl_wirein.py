@@ -123,12 +123,19 @@ def test_crucible_v752_excluded_items_are_not_silently_included():
         "σ_cc′ is ladder rung 1b (own increment), NOT launch-1")
 
 
-def test_crucible_v752_completeness_gap_is_only_fused_r_and_documented():
-    """The completeness() gap disposition: of the launch-1 base surface, ONLY --fused-r-kernel is
-    DSL-unmapped (a score-neutral perf lever, documented pre-DSL); the taper/async flags ARE held."""
+def test_crucible_v752_completeness_fused_r_folded_and_taper_held():
+    """completeness() disposition, POST-#377 fold (commit 3925001ec): --fused-r-kernel is now
+    DSL-MAPPED — the score-neutral compute gap the prior '--fused-r-kernel is the only gap'
+    disposition named is CLOSED (FusedRKernel folded as a Lever factory; SPEC §9 completeness note
+    predates the fold). The launch-1 taper/async delta flags remain DSL-held. The v752 base still
+    carries designed levers being folded incrementally under the DSL registry; this test pins the two
+    STABLE facts (fused-r closed + taper held), not the in-flight unmapped count."""
     c = LR.completeness()
     unmapped = set(c.unmapped)
-    assert "--fused-r-kernel" in unmapped, "--fused-r-kernel is the documented completeness() gap"
+    # #377 (3925001ec) folded FusedRKernel into the DSL: the prior completeness gap is CLOSED.
+    assert "--fused-r-kernel" not in unmapped, (
+        "--fused-r-kernel was folded into the DSL by #377/3925001ec; it must be completeness().mapped now")
+    # the launch-1 delta levers remain DSL-held (completeness().mapped).
     for f in ("--dseg-aware-taper", "--dseg-aware-taper-strength",
               "--dseg-aware-taper-scale", "--dseg-aware-taper-floor", "--async-verdict"):
         assert f not in unmapped, f"{f} should be DSL-held (completeness().mapped)"
