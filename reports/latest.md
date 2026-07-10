@@ -54,11 +54,11 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-06-07T01:09:12Z
+### Current best - last rechecked 2026-07-10T20:35:20Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
-| **`[contest-CPU Linux x86_64]`** | **0.1919853363** | `b7106c9bdbb8` | linux_x86_64_cpu | `fp11_source_brotli_recode_b7106c9bdbb8_cpu_exact` |
+| **`[contest-CPU Linux x86_64]`** | **0.1910828242** | `ad02b0124cbb` | linux_x86_64_cpu | `lane_clickpolish_pr110_frontier_20260710` |
 | **`[contest-CUDA T4]`** | **0.2053300290** | `9cb989cef519` | linux_x86_64_t4 | `lane_pr106_format0d_latent_score_table_20260516_contest_cuda` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh

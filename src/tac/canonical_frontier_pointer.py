@@ -475,13 +475,23 @@ def refresh_canonical_frontier_from_local_state(
 
 
 # Comma.ai contest leaderboard upstream surface. The comma video compression
-# challenge tracks PRs at https://github.com/commaai/commavq; the public
-# leaderboard surface is the merged-PR list with eval scores in PR bodies /
-# comments. We fetch the GitHub Pulls API and extract any PR title/body that
-# carries a recognisable score literal, with graceful degradation on network
-# failure per CLAUDE.md "Public frontier watch and intake" non-negotiable.
+# challenge tracks PRs at
+# https://github.com/commaai/comma_video_compression_challenge (the pinned
+# upstream snapshot cloned at ``workspace/upstream/comma_video_compression_challenge``
+# and referenced throughout ``upstream/README.md``); the public leaderboard
+# surface is the merged-PR list with eval scores in PR bodies / comments. We
+# fetch the GitHub Pulls API and extract any PR title/body that carries a
+# recognisable score literal, with graceful degradation on network failure
+# per CLAUDE.md "Public frontier watch and intake" non-negotiable.
+#
+# NOTE (fixed 2026-07-10, Catalog task #418): this previously pointed at
+# ``commaai/commavq`` — a DIFFERENT comma.ai repo (the GPT-token-prediction
+# video-sequence-modeling dataset/challenge consumed by ``tac.lossless.*``),
+# not the video-compression contest this pointer tracks. The watcher was
+# silently blind to every real contest PR (PR95/PR100/PR101/.../PR112/PR128)
+# while returning cosmetically-plausible-looking PR rows from the wrong repo.
 UPSTREAM_LEADERBOARD_GITHUB_API = (
-    "https://api.github.com/repos/commaai/commavq/pulls"
+    "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls"
     "?state=all&sort=updated&direction=desc&per_page=30"
 )
 

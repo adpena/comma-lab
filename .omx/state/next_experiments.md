@@ -96,10 +96,10 @@ June 6/7 HiNeRV/SNeRV ledgers, and the current dispatch ledger.
 ## Active Anchor
 
 - Canonical scanner-derived best CPU anchor:
-  `0.19198533626623068`
+  `0.19108282419209976`
   `[contest-CPU; Linux x86_64 1:1]`, archive
-  `b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c`,
-  lane `fp11_source_brotli_recode_b7106c9bdbb8_cpu_exact`.
+  `ad02b0124cbb3405c23d3480ac16f12b4e48cbf6f75878dd77a5e621bebd079c`,
+  lane `lane_clickpolish_pr110_frontier_20260710`.
   Refresh from `reports/latest.md` and
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.
