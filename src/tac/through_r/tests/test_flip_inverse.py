@@ -322,3 +322,72 @@ def test_resize_degraded_ledger_and_verify_end_to_end():
     assert 0.0 <= ver["prediction_vs_realized"] <= 1.0
     # the resize-footprint perturbation removes net flips (the exploit works on this candidate)
     assert ver["net_flips_removed"] >= 0
+
+
+# ----------------------------------------------------------- edge: empty flip-set / top_k<=0 (#389 R10)
+def _empty_frontier_and_ledger():
+    empty = np.zeros(0)
+    fr = fi.FlipCostFrontier(
+        n_pairs=1, n_flips=0, order=empty.astype(int), cost=empty,
+        cum_perturb=empty, cum_delta_dseg=empty, cum_delta_s=empty,
+        n_free=0, n_cheap=0, n_costed=0, n_unreachable=0,
+    )
+    led = fi.FlipLedger(
+        candidate_class="perfect", n_pairs=1, total_flips=0, total_pixels=SEG_PIXELS,
+        d_seg=0.0, pair_idx=np.zeros(0, int), y=np.zeros(0, np.int16), x=np.zeros(0, np.int16),
+        c_wrong=np.zeros(0, np.int16), c_gt=np.zeros(0, np.int16), deficit=np.zeros(0, np.float32),
+        annulus_dist=np.zeros(0, np.float32), persistence=np.zeros(0, np.int16), is_n600=False,
+        subset_reason="edge-test",
+    )
+    return fr, led
+
+
+def test_verify_targeted_fix_empty_flip_set_is_clean_noop_not_stack_crash():
+    """A perfect / zero-residual candidate (empty flip set) must verify as a clean no-op.
+
+    Regression: previously ``verify_targeted_fix`` loaded segnet then crashed on
+    ``np.stack([])`` (raw untyped ValueError) — inconsistent with ``solve_flip_costs``
+    which handles the empty frontier gracefully. It must return a zero-work result and
+    must NOT touch segnet (``segnet=None`` here would crash on load if reached)."""
+    fr, led = _empty_frontier_and_ledger()
+    frames = [np.zeros((CAMERA_H, CAMERA_W, 3), np.uint8)]
+    gt = [np.zeros((CAMERA_H, CAMERA_W, 3), np.uint8)]
+    lstars = np.zeros((1, SEG_H, SEG_W), np.int64)
+    ver = verify_targeted_fix(
+        led, fr, object(), frames, gt, lstars=lstars, top_k=256, segnet=None,
+    )
+    assert ver["predicted"] == 0
+    assert ver["realized_fixed"] == 0
+    assert ver["prediction_vs_realized"] == 0.0
+    assert ver["affected_pairs"] == 0
+    assert ver["net_flips_removed"] == 0
+    assert "no targeted flips" in ver["authority_note"]
+
+
+def test_build_targeted_perturbation_negative_top_k_yields_empty_not_tail_drop():
+    """Negative top_k must yield NO targeted flips, never ``order[:negative]`` (which
+    silently drops the LAST |top_k| flips — a silent-wrong edge)."""
+    order = np.arange(50)
+    fr = fi.FlipCostFrontier(
+        n_pairs=1, n_flips=50, order=order, cost=order.astype(float),
+        cum_perturb=order.astype(float), cum_delta_dseg=order.astype(float),
+        cum_delta_s=order.astype(float), n_free=0, n_cheap=50, n_costed=0, n_unreachable=0,
+    )
+    led = fi.FlipLedger(
+        candidate_class="c", n_pairs=1, total_flips=50, total_pixels=SEG_PIXELS, d_seg=0.0,
+        pair_idx=np.zeros(50, int), y=np.zeros(50, np.int16), x=np.zeros(50, np.int16),
+        c_wrong=np.zeros(50, np.int16), c_gt=np.zeros(50, np.int16),
+        deficit=order.astype(np.float32), annulus_dist=np.zeros(50, np.float32),
+        persistence=np.zeros(50, np.int16), is_n600=False, subset_reason="e",
+    )
+    frames = [np.zeros((CAMERA_H, CAMERA_W, 3), np.uint8)]
+    gt = [np.zeros((CAMERA_H, CAMERA_W, 3), np.uint8)]
+    comp = ResizeComposite.build()
+    _, affected, take = fi.build_targeted_perturbation(
+        led, fr, comp, frames, gt, top_k=-3,
+    )
+    assert len(take) == 0
+    assert affected == []
+    # and top_k=0 is likewise a clean empty (boundary of the clamp)
+    _, affected0, take0 = fi.build_targeted_perturbation(led, fr, comp, frames, gt, top_k=0)
+    assert len(take0) == 0 and affected0 == []

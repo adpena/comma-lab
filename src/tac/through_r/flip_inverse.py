@@ -649,7 +649,10 @@ def build_targeted_perturbation(
     targeted flip indices (into the ledger). This is the RESIZE-EXPLOIT actuator: it injects
     signal at EXACTLY the camera pixels the adjoint says control each SEG flip."""
 
-    k = int(min(top_k, frontier.n_flips))
+    # clamp to [0, n_flips]: a negative top_k must yield NO targeted flips, never
+    # ``order[:negative]`` (which silently drops the LAST |top_k| flips — a silent-wrong
+    # edge). top_k >= n_flips takes all; top_k <= 0 takes none.
+    k = max(0, int(min(top_k, frontier.n_flips)))
     take = frontier.order[:k]
     affected = sorted({int(ledger.pair_idx[i]) for i in take})
     pos = {p: j for j, p in enumerate(affected)}
@@ -692,6 +695,27 @@ def verify_targeted_fix(
         ledger, frontier, composite, camera_frames, gt_frames_camera,
         top_k=top_k, step_lsb=step_lsb,
     )
+    # EMPTY-FLIP-SET edge (a perfect / zero-residual candidate, or top_k<=0): there is
+    # NOTHING to fix. Return a clean zero-work result BEFORE loading segnet — otherwise the
+    # ``np.stack([])`` below raises a raw untyped ``ValueError`` on the OPTIMAL candidate
+    # (``solve_flip_costs`` already handles the empty frontier gracefully; this keeps the
+    # verify path consistent with it).
+    if not affected:
+        return {
+            "predicted": 0,
+            "realized_fixed": 0,
+            "prediction_vs_realized": 0.0,
+            "affected_pairs": 0,
+            "affected_flips_before": 0,
+            "affected_flips_after": 0,
+            "net_flips_removed": 0,
+            "collateral_new_flips": 0,
+            "step_lsb": float(step_lsb),
+            "affected_subset_dseg_before": 0.0,
+            "affected_subset_dseg_after": 0.0,
+            "label": FLIP_INVERSE_LABEL,
+            "authority_note": "no targeted flips (empty flip-set / top_k<=0): no-op verify",
+        }
     if segnet is None:
         from tac.through_r.harness import load_frozen_segnet
 
