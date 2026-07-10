@@ -65,6 +65,7 @@ from typing import Any
 
 import numpy as np
 
+from tac.contest_score import SEG_WEIGHT
 from tac.through_r.resolution_chain import (
     CAMERA_H,
     CAMERA_W,
@@ -75,7 +76,9 @@ from tac.through_r.resolution_chain import (
 )
 
 # d_seg is a per-pixel mean over N pairs; fixing ONE flipped pixel lowers d_seg by
-# 1/(N·SEG_H·SEG_W). ΔS = 100·Δd_seg (upstream/evaluate.py:92 seg term). DERIVED, exact.
+# 1/(N·SEG_H·SEG_W). ΔS = SEG_WEIGHT·Δd_seg (SEG_WEIGHT=100, the upstream/evaluate.py:92
+# seg term, CONSUMED from tac.contest_score — the one canonical home, not re-hardcoded).
+# DERIVED, exact.
 SEG_PIXELS = SEG_H * SEG_W
 FLIP_INVERSE_LABEL = "[macOS-CPU advisory . RESIZE-EXPLOIT through-R . NON-PROMOTABLE]"
 
@@ -526,9 +529,12 @@ def build_flip_ledger(
 # 4 + 5. PER-FLIP INVERSE SOLVE + WATERFILL FRONTIER
 # ======================================================================================
 def delta_s_per_flip(n_pairs: int) -> float:
-    """ΔS for fixing ONE flipped pixel = ``100 / (n_pairs · SEG_H · SEG_W)`` (DERIVED, exact)."""
+    """ΔS for fixing ONE flipped pixel = ``SEG_WEIGHT / (n_pairs · SEG_H · SEG_W)`` (DERIVED, exact).
 
-    return 100.0 / (int(n_pairs) * SEG_PIXELS)
+    ``SEG_WEIGHT`` (=100) is CONSUMED from :mod:`tac.contest_score` (upstream/evaluate.py:92),
+    not re-hardcoded, so the coefficient has one canonical home (P1 one-fact-one-store)."""
+
+    return SEG_WEIGHT / (int(n_pairs) * SEG_PIXELS)
 
 
 @dataclass
@@ -593,7 +599,7 @@ def solve_flip_costs(
     cum_perturb = np.cumsum(cost_sorted)
     k = np.arange(1, n + 1, dtype=np.float64)
     cum_delta_dseg = k / ledger.total_pixels
-    cum_delta_s = 100.0 * cum_delta_dseg
+    cum_delta_s = SEG_WEIGHT * cum_delta_dseg
 
     unreachable = ledger.annulus_dist > float(annulus_unreachable_px)
     free = ledger.deficit == 0.0
@@ -615,7 +621,7 @@ def solve_flip_costs(
             "footprint_l2": fp_l2,
             "delta_s_per_flip": delta_s_per_flip(ledger.n_pairs),
             "cum_delta_s_at_free_plus_cheap": float(
-                100.0 * (int(free.sum()) + int(cheap.sum())) / ledger.total_pixels
+                SEG_WEIGHT * (int(free.sum()) + int(cheap.sum())) / ledger.total_pixels
             ),
         },
     )
