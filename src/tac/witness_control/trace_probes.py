@@ -37,6 +37,7 @@ import json
 import math
 from pathlib import Path
 
+from tac import witness_run_artifacts as _wra
 from tac.witness_control.powerlaw_exit import fit_tail_models
 
 __all__ = [
@@ -55,7 +56,7 @@ def load_history(run_dir: str | Path) -> list[tuple[int, float]]:
 
     The mod32cap control run's ``history`` is the canonical "41-row trace" (epochs 0,25,...,1000).
     """
-    p = Path(run_dir) / "levelset_train_result.json"
+    p = Path(run_dir) / _wra.TRAIN_RESULT_JSON
     hist = json.loads(p.read_text(encoding="utf-8"))["history"]
     rows = sorted((int(r["epoch"]), float(r["d_seg"])) for r in hist)
     if len(rows) < 4:

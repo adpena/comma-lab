@@ -72,6 +72,10 @@ for _p in (_REPO, _REPO / "src", _REPO / "experiments", _REPO / "upstream"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+# Canonical witness run-artifact CONTRACT — single source of truth for the run's
+# emitted filenames (no hardcoding; see tac.witness_run_artifacts docstring).
+from tac import witness_run_artifacts as _wra  # noqa: E402
+
 # --- canonical constants ---------------------------------------------------
 # comma10k MEASURED order (see CLAUDE.md "SegNet sees REGIONS"). DO NOT luma-sort.
 CANONICAL_CLASS_NAMES: dict[int, str] = {
@@ -582,7 +586,7 @@ def _discover_checkpoints(args: argparse.Namespace, run_dir: Path | None,
         return []
     found = sorted(run_dir.glob(args.stage_glob))
     if not found and args.fallback_ema:
-        for c in ("levelset_witness_ema_BEST.npz", "levelset_witness_ema_mlx.npz"):
+        for c in (_wra.EMA_BEST_NPZ, _wra.EMA_NPZ):
             p = run_dir / c
             if p.exists():
                 found.append(p)

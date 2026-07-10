@@ -44,6 +44,9 @@ if str(_REPO / "src") not in sys.path:
     sys.path.insert(0, str(_REPO / "src"))
 if str(_REPO / "tools") not in sys.path:
     sys.path.insert(0, str(_REPO / "tools"))
+# Canonical witness run-artifact CONTRACT — single source of truth for the run's
+# emitted filenames (no hardcoding; see the module docstring).
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 _POINTER_JSON = _REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
 _DAG_GLOB = str(_REPO / ".omx" / "research" / "sub015_DAG_topaiml_reopen_and_pursuit_plan_*.md")
@@ -137,7 +140,7 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
     """Latest shadow-observer DECIDE state (classification + pending recommendations)."""
     if run_dir is None:
         return [], None
-    path = run_dir / "costate_shadow.jsonl"
+    path = run_dir / _wra.COSTATE_JSONL
     row = _last_jsonl_row(path)
     if row is None and (run_dir / "run.log").is_file():
         # No sidecar yet but telemetry exists: compute ONE read-only in-memory report.

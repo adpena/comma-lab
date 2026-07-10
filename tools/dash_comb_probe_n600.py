@@ -84,9 +84,10 @@ from tac.boundary_math.dash_comb import (  # noqa: E402
 from experiments.train_witness_realized_through_R_mlx import (  # noqa: E402
     _torch_R_to_camera_uint8,
 )
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 RUN_DIR = REPO / "experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z"
-SRC_CKPT = RUN_DIR / "levelset_witness_ema_BEST.npz"
+SRC_CKPT = RUN_DIR / _wra.EMA_BEST_NPZ
 CACHE = REPO / "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
 OUT_DIR = REPO / "experiments/results/dash_comb_probe_20260707"
 CKPT_NPZ = OUT_DIR / "frozen_ckpt_ema_BEST.npz"       # read-only snapshot (live run safety)

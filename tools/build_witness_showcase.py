@@ -51,6 +51,9 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "src") not in sys.path:
     sys.path.insert(0, str(REPO / "src"))
+# Canonical witness run-artifact CONTRACT — single source of truth for the run's
+# emitted filenames (no hardcoding; see the module docstring).
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 # Canonical comma10k / openpilot 5-class palette + names (our MEASURED class order = comma10k
 # order; do NOT luma-sort — see CLAUDE.md "CLASS INDEX ORDER — MEASURED 2026-06-27").
@@ -147,7 +150,10 @@ def _resize_u8(arr: np.ndarray, out_h: int, out_w: int) -> np.ndarray:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--ckpt", default="experiments/results/levelset_amort_decoder_n200_20260627T143830Z/levelset_witness_ema_mlx.npz")
+    ap.add_argument(
+        "--ckpt",
+        default=f"experiments/results/levelset_amort_decoder_n200_20260627T143830Z/{_wra.EMA_NPZ}",
+    )
     ap.add_argument("--gt-cache", default="experiments/results/mlx_fleet_gt_cache/gt_n96.npz")
     ap.add_argument("--frames", type=int, default=24, help="number of pairs (last/seg-scored frame each)")
     ap.add_argument("--start", type=int, default=0)

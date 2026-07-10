@@ -27,6 +27,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable
 
+from tac import witness_run_artifacts as _wra
 from tac.witness_dsl.curriculum_dsl import Lever, Muon, WitnessProgram
 
 
@@ -102,7 +103,7 @@ def expand_cycles(
         # window is authoritative for this cycle (overrides any lever epochs_delta)
         prog = replace(prog, epochs=new_epochs)
         programs.append(prog)
-        resume = f"{out_dir}/levelset_resume_state.npz"
+        resume = f"{out_dir}/{_wra.RESUME_NPZ}"
         epoch += cyc.window
     return programs
 
@@ -529,7 +530,7 @@ def _resolve_best_ckpt(out_dir: str | Path, best_epoch: int | None) -> str:
         return min(cands, key=lambda c: abs(c[0] - best_epoch))[1]
     if cands:
         return max(cands, key=lambda c: c[0])[1]
-    return str(d / "levelset_resume_state.npz")
+    return str(d / _wra.RESUME_NPZ)
 
 
 def plan_adaptive_step(
@@ -555,7 +556,7 @@ def plan_adaptive_step(
     Disk reads (the verdict log + the ckpt glob) are deterministic given the on-disk state;
     NOTHING is launched. The returned dict is the operator-routable, recordable step."""
     traj = stage_trajectory(log_path, seg_form=seg_form)
-    final_ckpt = str(Path(prev_out_dir) / "levelset_resume_state.npz")
+    final_ckpt = str(Path(prev_out_dir) / _wra.RESUME_NPZ)
     best_ep = min(traj, key=lambda t: t[1])[0] if traj else None
     best_ckpt = _resolve_best_ckpt(prev_out_dir, best_ep)
     decision = decide_next_stage(traj, policy=policy, final_ckpt=final_ckpt, best_ckpt=best_ckpt,
@@ -754,6 +755,6 @@ def scale_progression(
         prog = base.with_lever(Lever(sp.name, overrides=ov), resume_from=res, out_dir=out_dir)
         prog = replace(prog, epochs=new_epochs)
         programs.append(prog)
-        resume = f"{out_dir}/levelset_resume_state.npz"
+        resume = f"{out_dir}/{_wra.RESUME_NPZ}"
         epoch += sp.window
     return programs

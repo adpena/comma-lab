@@ -25,6 +25,8 @@ from pathlib import Path
 
 import numpy as np
 
+from tac import witness_run_artifacts as _wra
+
 # ── axis / actuation discipline (mirrors shadow_controller) ─────────────────
 AXIS_TAG = "[macOS advisory] NON-PROMOTABLE"
 POINTER_NOTE = "pointer 0.19110 UNMOVED — advisory synergy analysis is MEANS"
@@ -217,7 +219,7 @@ def load_series(run_dir: str | Path) -> dict[str, list[tuple[int, float]]]:
         for k in ("d_seg", "d_pose", "implied_S", "blob_bytes"):
             _push(k, ep, r.get(k))
 
-    for r in _read_jsonl_stage(run_dir / "costate_shadow.jsonl", None):
+    for r in _read_jsonl_stage(run_dir / _wra.COSTATE_JSONL, None):
         ep = (r.get("state") or {}).get("epoch")
         for c in (r.get("costates") or []):
             if c.get("name") == "lambda_d_pose" and c.get("value") is not None:

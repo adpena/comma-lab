@@ -134,6 +134,7 @@ from tac import contest_score as _cscore  # noqa: E402  (canonical S = 100*d_seg
 from tac.local_acceleration import torch_levelset_inflate as _tli  # noqa: E402  (canonical FREE-table regen)
 from tac.boundary_math import warp_real_luma_frame0 as _wrl  # noqa: E402  (#205 pose carrier: warp-real-luma frame0)
 from tac.boundary_math import xi_pose_coder as _xip  # noqa: E402  (#257 store-nothing derive-H + ξ entropy coder)
+from tac import witness_run_artifacts as _wra  # noqa: E402  (canonical run-artifact filename CONTRACT)
 
 # canonical FREE-table regen fns (rule-118 curvelet bank + self-orient dir feats) — the bit-exact
 # oracle reference reuses these so the gate compares against the SAME free tables the inflate uses.
@@ -273,9 +274,9 @@ def receiver_env_manifest() -> dict[str, Any]:
 # + scores every AVAILABLE arm and RECORDS the N-way selection (per-arm scores + winner + margins).
 # Fail-open: a missing arm npz is simply not in the set => older runs (ema-only) are unchanged.
 _ARM_NPZ: dict[str, str] = {
-    "ema": "levelset_witness_ema_mlx.npz",
-    "live": "levelset_witness_live_mlx.npz",
-    "polyak": "levelset_witness_polyak_mlx.npz",
+    "ema": _wra.EMA_NPZ,
+    "live": _wra.LIVE_NPZ,
+    "polyak": _wra.POLYAK_NPZ,
 }
 # The order the loader's default candidate search prefers (ema first) — used to label a default run.
 _ARM_DEFAULT_ORDER = ("ema", "live", "polyak")
@@ -308,7 +309,7 @@ def _load_levelset_ckpt(
     Params = every npz key NOT prefixed ``__`` (the learned weights + ``code``). cfg = the
     ``__cfg_*`` / ``__bank_*`` / ``__render_hw`` scalars (parsed; defaults + tensor-shape inference
     fill any that an older save block omitted, with a loud warning)."""
-    candidates = [npz_name] if npz_name else ["levelset_witness_ema_mlx.npz", "levelset_witness_live_mlx.npz"]
+    candidates = [npz_name] if npz_name else [_wra.EMA_NPZ, _wra.LIVE_NPZ]
     npz = None
     for c in candidates:
         p = ckpt_dir / c
@@ -3254,7 +3255,7 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("--pose-carrier-xi-from-ckpt is incompatible with --select-arms "
                              "(each arm has its own trained dxi; pick one arm via --npz-name).")
         _candidates = ([args.npz_name] if args.npz_name
-                       else ["levelset_witness_ema_mlx.npz", "levelset_witness_live_mlx.npz"])
+                       else [_wra.EMA_NPZ, _wra.LIVE_NPZ])
         _npz_path = next((args.ckpt_dir / c for c in _candidates if (args.ckpt_dir / c).exists()), None)
         if _npz_path is None:
             raise SystemExit(f"--pose-carrier-xi-from-ckpt: no checkpoint npz in {args.ckpt_dir} "

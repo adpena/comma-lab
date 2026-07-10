@@ -35,6 +35,8 @@ from pathlib import Path
 
 import numpy as np
 
+from tac import witness_run_artifacts as _wra
+
 REPO = Path(__file__).resolve().parent.parent
 JOINT_REFERENCE_DSEG = 0.00124  # mod-32 / n600 joint-trained realized d_seg at convergence (operator)
 
@@ -42,11 +44,11 @@ JOINT_REFERENCE_DSEG = 0.00124  # mod-32 / n600 joint-trained realized d_seg at 
 def _resolve_ckpt(p: Path) -> Path:
     p = Path(p)
     if p.is_dir():
-        for name in ("levelset_witness_ema_mlx.npz", "levelset_resume_state.npz"):
+        for name in (_wra.EMA_NPZ, _wra.RESUME_NPZ):
             c = p / name
             if c.exists():
                 return c
-        raise FileNotFoundError(f"decoder ckpt dir {p} has no levelset_witness_ema_mlx.npz / resume npz.")
+        raise FileNotFoundError(f"decoder ckpt dir {p} has no {_wra.EMA_NPZ} / resume npz.")
     if p.exists():
         return p
     raise FileNotFoundError(f"decoder ckpt {p} does not exist (NO-FAKE: refusing to fabricate).")
@@ -113,7 +115,7 @@ def _build_cmd(args, ckpt: Path, out_dir: Path, num_pairs: int, epochs: int,
 
 
 def _verdict_from_result(out_dir: Path) -> dict | None:
-    rp = out_dir / "levelset_train_result.json"
+    rp = out_dir / _wra.TRAIN_RESULT_JSON
     if not rp.exists():
         return None
     r = json.loads(rp.read_text())
