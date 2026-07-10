@@ -850,6 +850,224 @@ def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label:
     return 0
 
 
+# ───────────────────── FULL-CONFIG DRY-START gate (owed-2 / SYNTHESIS §C item 2) ─────────────
+def parse_dry_start_run_metrics(run_log: Path) -> dict:
+    """Parse a bounded dry-start run.log (JSONL, the trainer's own telemetry): the MAX epoch stepped
+    (``ep``/``epoch``), the gt-load overhead (``{"stage":"gt","secs":...}``), whether a resume ckpt was
+    written (a ``checkpoint`` row naming a ``resume_latest``), and — on the resume pass — the resume
+    evidence (a ``resume_model_source`` row + a ``resume_start_epoch`` field the trainer emits when it
+    restores from disk). PURE: same file -> same dict. Missing file -> all-absent verdict (never raises).
+    """
+    epochs_completed = -1
+    gt_secs: float | None = None
+    ckpt_written = False
+    resume_source = False
+    resume_start_epoch: int | None = None
+    try:
+        text = Path(run_log).read_text()
+    except OSError:
+        text = ""
+    for ln in text.splitlines():
+        ln = ln.strip()
+        if not ln.startswith("{"):
+            continue
+        try:
+            d = json.loads(ln)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        ep = d.get("ep", d.get("epoch"))
+        if isinstance(ep, (int, float)) and not isinstance(ep, bool):
+            epochs_completed = max(epochs_completed, int(ep))
+        stg = d.get("stage")
+        if stg == "gt" and isinstance(d.get("secs"), (int, float)):
+            gt_secs = float(d["secs"])
+        if stg == "checkpoint" and d.get("resume_latest"):
+            ckpt_written = True
+        if stg == "resume_model_source":
+            resume_source = True
+        rse = d.get("resume_start_epoch")
+        if isinstance(rse, (int, float)) and not isinstance(rse, bool):
+            resume_start_epoch = int(rse)
+    return {
+        "epochs_completed": epochs_completed,
+        "gt_secs": gt_secs,
+        "checkpoint_written": ckpt_written,
+        "resume_model_source": resume_source,
+        "resume_start_epoch": resume_start_epoch,
+    }
+
+
+def dry_start_sec_per_ep(wall_s: float, gt_secs: float | None,
+                         epochs_completed: int) -> tuple[float | None, float | None]:
+    """(gross, marginal) sec/ep from a bounded pass. gross = wall/epochs (amortizes the one-time boot
+    over few epochs — an UPPER bound); marginal = (wall - gt_load)/epochs (subtracts the measured
+    gt-load overhead, closer to the steady-state per-epoch cost the wall-clock budget wants). PURE."""
+    e = int(epochs_completed)
+    if e <= 0 or not (wall_s > 0.0):
+        return None, None
+    gross = wall_s / e
+    marginal = (wall_s - float(gt_secs or 0.0)) / e
+    return round(gross, 2), round(max(marginal, 0.0), 2)
+
+
+def _inject_extra_flag(extra: list[str], flag: str, value: str) -> list[str]:
+    """Return ``extra`` with ``flag value`` present (replace the value if the flag is already there,
+    else append the pair). Keeps the dry-start's --ckpt-every / --resume-from injection idempotent and
+    dup-free (the launcher's C13 duplicate-long-flag guard would otherwise refuse it)."""
+    out = list(extra)
+    if flag in out:
+        i = out.index(flag)
+        if i + 1 < len(out):
+            out[i + 1] = value
+        else:
+            out.append(value)
+        return out
+    return out + [flag, value]
+
+
+def dry_start_boot_ok(p: dict) -> bool:
+    """PASS-1 boots+steps+ckpts (regardless of the terminal rc — the pass is INTENTIONALLY wall-clock
+    bounded, so safe_run's timeout SIGTERM is the EXPECTED terminus, not a failure): >=1 epoch stepped
+    AND a resume ckpt written AND a peak measured. PURE."""
+    return bool(p.get("epochs_completed", -1) >= 1 and p.get("checkpoint_written")
+                and p.get("peak_rss_gib") is not None)
+
+
+def dry_start_resume_ok(p2: dict) -> bool:
+    """PASS-2 resumed from disk (again regardless of the terminal timeout rc): the trainer logged a
+    resume_model_source row AND a positive resume_start_epoch (it actually restored the epoch position),
+    AND stepped at least one more epoch past it (proving the resumed state trains). PURE."""
+    rse = p2.get("resume_start_epoch") or 0
+    return bool(p2.get("resume_model_source") and rse >= 1
+                and p2.get("epochs_completed", -1) >= rse)
+
+
+def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
+                   extra_flags: "list[str] | None", wmp,
+                   projected_peak_gib: "float | None" = None) -> int:
+    """FULL-CONFIG DRY-START (owed-2 / SYNTHESIS §C item 2). Reached AFTER the whole gate chain has run
+    on the REAL n600 config (flag-validate, launch.sh, perf-env, constants, schedule-provenance,
+    DSL-config, memory-preflight, safe-compile, system-admission, throughput) — so start-ability of the
+    real config is already PROVEN by the gates. This step then proves the trainer BOOTS + builds the
+    model + STEPS + writes a crash-resumable checkpoint, and that the checkpoint RELOADS (resume
+    round-trip), WITHOUT a real multi-hour run — running the EXACT REAL launch.sh (unmodified real
+    schedule / caps / levers; crucible_v7 pins an ABSOLUTE 3000-epoch schedule whose interlocking
+    stage-stagger validators a shrunk-epochs config cannot satisfy) but WALL-CLOCK BOUNDED:
+
+      PASS 1  fresh boot, REAL config + --ckpt-every 1, safe_run --timeout sized to ~N (<=3) epochs
+              (governed, FOREGROUND). safe_run SIGTERMs it at the timeout — the intended bound, which
+              DOUBLES as a crash simulation. Capture peak RSS + wall + epochs stepped + a written ckpt.
+      PASS 2  RESUME round-trip: relaunch the REAL config --resume-from the PASS-1 dir, same timeout;
+              assert the trainer logs a resume_model_source row + a positive resume_start_epoch (it
+              restored from disk) AND steps past it (the resumed state trains), not a silent fresh start.
+
+    Records peak RSS + sec/ep MEASURED to dry_start_report.json. EXITS cleanly (rc 0 on both passes
+    green; rc 6 otherwise) — NEVER proceeds to the real spawn. Route: the SAME governed launcher
+    machinery (safe_run RSS cap + timeout + admission); no raw-python bypass.
+    """
+    import subprocess
+    import time as _time
+
+    n = int(args.dry_start)
+    if not (1 <= n <= 3):
+        print(f"[launch-witness] ERROR: --dry-start must be in 1..3 (bounded scope; a longer run is a "
+              f"real launch, not a dry-start); got {n}.", file=sys.stderr)
+        return 2
+    # Size each pass's wall-clock timeout to ~n epochs: a boot budget (gt-load + model build + first-step
+    # MLX compile) + n * a conservative per-epoch upper bound. safe_run SIGTERMs at this budget → the
+    # bound is wall-clock, not epochs (the trainer has no schedule-independent epoch cap), so the actual
+    # epochs stepped are READ BACK from run.log and reported. Both knobs are CLI-tunable.
+    pass_timeout = float(args.dry_start_boot_budget_s) + n * float(args.dry_start_per_ep_budget_s)
+
+    def _pass(sub_name: str, resume_from: "Path | None") -> dict:
+        sub = out_dir / sub_name
+        cfg_b = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
+                                    epochs=None, overfit=overfit)  # REAL sealed epochs → all validators pass
+        eflags = _inject_extra_flag(list(extra_flags or []), "--ckpt-every", "1")
+        if resume_from is not None:
+            eflags = eflags + ["--resume-from", str(resume_from)]
+        launch_b = write_launch_sh(cfg_b, sub, extra_flags=eflags)  # the EXACT REAL launch.sh (unmodified)
+        cmd = [sys.executable, str(_REPO / "tools" / "safe_run.py"),
+               "--rss-mb", str(int(args.rss_cap_mb)),
+               "--timeout", str(pass_timeout),
+               "--projected-gib", (str(round(float(projected_peak_gib), 3))
+                                    if projected_peak_gib else "0"),
+               "--json", "--label", f"drystart_{label}"]
+        # Thread the launcher's admission-override rationale into the inner safe_run so its OWN
+        # system-admission gate honors the SAME operator decision the launcher already made (else a
+        # tight-but-overridden ceiling refuses the bounded smoke with rc=5, never booting the trainer).
+        if _admission_override_ok(args.admission_override_rationale):
+            cmd += ["--admission-override-rationale", args.admission_override_rationale]
+        cmd += ["--", "bash", str(launch_b)]
+        t0 = _time.perf_counter()
+        outer_timeout = False
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=pass_timeout + 300.0)
+            rc, blob = res.returncode, (res.stderr or "") + (res.stdout or "")
+        except subprocess.TimeoutExpired:
+            outer_timeout, rc, blob = True, None, ""
+        wall = _time.perf_counter() - t0
+        peak_mib = parse_safe_run_peak_mib(blob)
+        m = parse_dry_start_run_metrics(sub / "run.log")
+        gross, marginal = dry_start_sec_per_ep(wall, m["gt_secs"], m["epochs_completed"])
+        return {"dir": str(sub), "rc": rc, "outer_timeout": outer_timeout,
+                "wall_s": round(wall, 1), "pass_timeout_s": round(pass_timeout, 1),
+                "peak_rss_gib": (round(peak_mib / 1024.0, 3) if peak_mib is not None else None),
+                "sec_per_ep_gross": gross, "sec_per_ep_marginal": marginal, **m}
+
+    print(f"# dry-start PASS 1: fresh boot at REAL n={args.num_pairs} config={config!r}, wall-clock bounded "
+          f"~{n} epoch(s) (safe_run --timeout {pass_timeout:.0f}s; SIGTERM = intended bound + crash sim)")
+    p1 = _pass("dry_start", None)
+    boot_ok = dry_start_boot_ok(p1)
+    print(f"#   PASS 1: rc={p1['rc']} epochs={p1['epochs_completed']} peak={p1['peak_rss_gib']} GiB "
+          f"ckpt={p1['checkpoint_written']} sec/ep(gross~{p1['sec_per_ep_gross']}) -> boot_ok={boot_ok}")
+
+    p2: dict | None = None
+    resume_ok = False
+    if boot_ok:
+        print(f"# dry-start PASS 2: RESUME round-trip (--resume-from {p1['dir']}, wall-clock bounded)")
+        p2 = _pass("dry_start_resume", Path(p1["dir"]))
+        resume_ok = dry_start_resume_ok(p2)
+        print(f"#   PASS 2: rc={p2['rc']} resume_source={p2['resume_model_source']} "
+              f"resume_start_epoch={p2['resume_start_epoch']} epochs={p2['epochs_completed']} "
+              f"-> resume_ok={resume_ok}")
+    else:
+        print("# dry-start PASS 2 SKIPPED (PASS 1 did not boot+step+ckpt).", file=sys.stderr)
+
+    report = {
+        "gate": "full_config_dry_start",
+        "owed": "owed-2 / SYNTHESIS §C item 2",
+        "config": config, "num_pairs": args.num_pairs, "dry_start_target_epochs": n,
+        "pass_timeout_s": round(pass_timeout, 1),
+        "boot_ok": boot_ok, "resume_round_trip_ok": resume_ok,
+        "green": bool(boot_ok and resume_ok),
+        "peak_rss_gib": p1["peak_rss_gib"],
+        "sec_per_ep_gross": p1["sec_per_ep_gross"],
+        "sec_per_ep_marginal": p1["sec_per_ep_marginal"],
+        "pass1": p1, "pass2": p2,
+        "note": ("runs the EXACT REAL launch.sh (unmodified real schedule/caps/levers), wall-clock bounded "
+                 "to ~N epochs by safe_run --timeout (crucible_v7 pins an atomic 3000-epoch schedule whose "
+                 "interlocking stage-stagger validators a shrunk-epochs smoke cannot satisfy — so the bound "
+                 "is wall-clock, and safe_run's SIGTERM at the budget doubles as a crash sim for the resume "
+                 "round-trip). The full gate chain already ran on the REAL n600 config above (memory "
+                 "preflight + admission + throughput). peak_rss_gib + sec_per_ep are MEASURED; "
+                 "sec_per_ep_gross=wall/epochs is an UPPER bound (includes the one-time boot); "
+                 "sec_per_ep_marginal=(wall-gt_load)/epochs is closer to steady-state. Feeds §B.wall_clock / "
+                 "the #385 dual-chain brief. NEVER proceeds to the real launch."),
+        "ts": _utc(),
+    }
+    (out_dir / "dry_start_report.json").write_text(json.dumps(report, indent=2))
+    print(f"[launch-witness] wrote {out_dir / 'dry_start_report.json'}")
+    if report["green"]:
+        print(f"[launch-witness] DRY-START GREEN: boot+step+ckpt+resume all pass at REAL n={args.num_pairs}. "
+              f"peak={p1['peak_rss_gib']} GiB, sec/ep(gross~{p1['sec_per_ep_gross']}). "
+              f"NOT launching (dry-start exits cleanly).")
+        return 0
+    print(f"[launch-witness] DRY-START FAILED: boot_ok={boot_ok} resume_ok={resume_ok} — inspect "
+          f"{out_dir}/dry_start* run.log before a real launch.", file=sys.stderr)
+    return 6
+
+
 # ───────────────────── shadow observer auto-start (#247 agent-native) ─────────────────────
 def _observer_label(out_dir: Path) -> str:
     return f"costate_obs_{out_dir.name}"
@@ -1071,6 +1289,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-dashboard", action="store_true", help="skip the dashboard up-check")
     ap.add_argument("--dry-run", action="store_true",
                     help="emit + flag-validate + write launch.sh, but DO NOT spawn (CPU-only, safe)")
+    ap.add_argument("--dry-start", type=int, default=0, metavar="EPOCHS",
+                    help="(owed-2 / SYNTHESIS §C item 2) FULL-CONFIG DRY-START GATE. Run the ENTIRE gate "
+                    "chain on the REAL n600 config (flag-validate, launch.sh, perf-env, constants, "
+                    "schedule-provenance, DSL-config, memory-preflight, safe-compile, system-admission, "
+                    "throughput), then — INSTEAD of the unbounded durable spawn — execute a BOUNDED "
+                    "EPOCHS (<=3) trainer run at the REAL n/levers FOREGROUND via the governed safe_run "
+                    "path (proves the trainer BOOTS + builds the model + steps + writes a resume ckpt), "
+                    "then a RESUME ROUND-TRIP (relaunch --resume-from the written ckpt for +1 epoch), then "
+                    "EXIT cleanly (NEVER the real launch). Records peak RSS + sec/ep MEASURED to "
+                    "dry_start_report.json. Bounded to <=3 (a longer run is a real launch); same governed "
+                    "machinery — no raw-python bypass. 0 (default) = OFF.")
+    ap.add_argument("--dry-start-boot-budget-s", type=float, default=300.0,
+                    help="(dry-start) estimated one-time boot overhead (gt-load + model build + first-step "
+                    "MLX compile) in seconds; the per-pass safe_run timeout = boot-budget + N*per-ep-budget "
+                    "(default 300).")
+    ap.add_argument("--dry-start-per-ep-budget-s", type=float, default=90.0,
+                    help="(dry-start) conservative per-epoch upper bound (seconds) used to size the "
+                    "wall-clock timeout to ~N epochs (default 90; the real n600 anchor is ~42 s/ep).")
     args = ap.parse_args(argv)
 
     # (L5/XC-ii) POLICY-AWARE safe-frac: derive the memory-preflight fraction from the operator
@@ -1453,6 +1689,15 @@ def main(argv: list[str] | None = None) -> int:
                                        accept_wall_clock_days=args.accept_wall_clock)
         if gate_rc != 0:
             return gate_rc
+
+    # (b3) FULL-CONFIG DRY-START (owed-2 / SYNTHESIS §C item 2). When --dry-start N is set, the whole
+    # gate chain above has already validated + memory-projected + admission-checked + throughput-benched
+    # the REAL n600 config; this proves BOOT + STEP + CKPT + RESUME with a bounded <=3-epoch governed
+    # run, then EXITS (never the unbounded spawn). Placed AFTER the throughput gate (so start-ability is
+    # fully gated) and BEFORE the durable spawn (so it replaces, never precedes, a real launch).
+    if args.dry_start:
+        return _run_dry_start(args, config, overfit, out_dir, label, extra_flags or None, wmp,
+                              projected_peak_gib=projected_peak_gib)
 
     # (c) LAUNCH durably (spawn_durable_daemon auto-verifies the child survived exec + auto-starts the
     # black box + re-checks the SYSTEM admission gate as a defense-in-depth backstop). We pass the
