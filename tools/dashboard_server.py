@@ -92,6 +92,15 @@ except Exception:  # load-bearing daemon; degrade visibly, never crash
     _dsl_read_schedule = None
     _dsl_resolve_run_dir = None
 
+# ── curriculum + pose-readiness truth-rendering models (operator 2026-07-10: the
+# curriculum panel must render the DERIVED event-gated schedule, not a hardcoded
+# PR95 epoch skeleton; the pose panel must display the BANKED R1 fallback). Sibling
+# tools/ module; guarded so an import error leaves the panels on their legacy path.
+try:
+    import dashboard_curriculum_panel as _dcp
+except Exception:  # pragma: no cover - degraded-but-alive path
+    _dcp = None
+
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -1051,6 +1060,8 @@ class LiveState:
         self.trajectory: list[dict] = []
         self._epochs: set[int] = set()
         self.sensors: dict = {}  # latest jacobian_basin + loss_terms (non-verdict stages)
+        self.curriculum_panel: dict = {}  # DERIVED curriculum model (event triggers + lanes)
+        self.pose_readiness: dict = {}    # banked R1 fallback + pose-finish contract state
         self.liveness: dict = {"kind": "missing"}
         self.watched: str | None = None
         self.watched_dir: str | None = None  # live arm dir (auto-latest); shown as run_dir
@@ -1439,6 +1450,25 @@ class LiveState:
             self.sensors = _read_sensors(latest)
         except Exception:
             self.sensors = {}
+
+        # CURRICULUM POSITION + POSE-DESCENT READINESS truth models (operator 2026-07-10):
+        # the curriculum as DERIVED (event triggers + fail-safe caps + mechanism-lane state,
+        # never a hardcoded PR95 epoch skeleton) + the BANKED R1 pose fallback (numbers READ
+        # from the #238 byte-close artifact). Fail-open -> the JS panels fall back to legacy.
+        self.curriculum_panel = {}
+        self.pose_readiness = {}
+        if _dcp is not None:
+            try:
+                _flags = (self.run_config or {}).get("flags") or {}
+                _lane_ev = _dcp.read_mechanism_event_states([str(p) for p in chain])
+                if _rb is not None:
+                    self.curriculum_panel = _dcp.build_curriculum_panel_model(
+                        _rb, _flags, _lane_ev)
+                self.pose_readiness = _dcp.build_pose_readiness_model(
+                    _flags, _lane_ev, self.sensors)
+            except Exception:
+                self.curriculum_panel = {}
+                self.pose_readiness = {}
 
         # WITNESS (Tab 2) + FLOW (Tab 3): orchestrate the detached governed 600-pass subprocess
         # (spawn on new best checkpoint / ingest its output when done). NON-blocking + NO torch
@@ -1973,6 +2003,8 @@ class LiveState:
             "archive_norm_bytes": _ARCHIVE_NORM_BYTES,       # rate-term normalizer (client S breakdown)
             "run_info_html": self.run_info_html,       # #205 pre-rendered run-info strip (rld._run_info_html)
             "sensors": self.sensors or {},             # latest jacobian_basin + loss_terms (LIVE-tab panels)
+            "curriculum_panel": self.curriculum_panel or {},  # DERIVED curriculum (events/caps/lanes)
+            "pose_readiness": self.pose_readiness or {},      # banked R1 fallback + pose-finish contract
         }
 
     def snapshot(self) -> dict:
@@ -2488,6 +2520,52 @@ font-weight:600;letter-spacing:-.4px}
   border-top-color:var(--lv-acc)}
 #tab-live .lv-sticks{display:flex;justify-content:space-between;margin-top:5px;font-family:var(--lv-mono);
   font-size:9px;color:var(--lv-mut);font-variant-numeric:tabular-nums}
+/* 7b · curriculum as DERIVED — transition events, tau anneal, mechanism swim-lanes */
+#tab-live .lv-tau{position:relative;height:16px;margin:9px 0 3px;border:1px solid var(--lv-hair);
+  background:linear-gradient(90deg,#1f3b5f,#3a2a5f)}
+#tab-live .lv-tau .tl{position:absolute;top:1px;font-family:var(--lv-mono);font-size:8.5px;color:var(--lv-ink2);
+  padding:0 4px;white-space:nowrap}
+#tab-live .lv-tau .tl.r{right:0}
+#tab-live .lv-taucap{font-family:var(--lv-mono);font-size:9px;color:var(--lv-mut);margin:0 0 8px}
+#tab-live .lv-events{display:flex;flex-direction:column;gap:4px;margin:9px 0 2px}
+#tab-live .lv-evrow{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:9px;align-items:baseline;
+  font-size:11px;padding:3px 0;border-top:1px solid var(--lv-hair)}
+#tab-live .lv-evrow:first-child{border-top:0}
+#tab-live .lv-evrow .en{font-family:var(--lv-mono);font-size:11px;color:var(--lv-ink);font-weight:600}
+#tab-live .lv-evrow .et{color:var(--lv-ink2);min-width:0;line-height:1.45}
+#tab-live .lv-evrow .et .cap{color:var(--lv-mut);font-family:var(--lv-mono);font-size:9.5px}
+#tab-live .lv-pill{font-family:var(--lv-mono);font-size:9px;font-weight:600;letter-spacing:.4px;
+  text-transform:uppercase;padding:1px 7px;border-radius:9px;white-space:nowrap;
+  color:var(--lv-mut);background:var(--lv-hair)}
+#tab-live .lv-pill.fired{color:var(--lv-good);background:rgba(70,211,105,.14)}
+#tab-live .lv-pill.armed{color:var(--lv-warn);background:rgba(230,207,122,.14)}
+#tab-live .lv-pill.pending{color:var(--lv-mut);background:var(--lv-hair)}
+#tab-live .lv-lanes{display:flex;flex-direction:column;gap:1px;margin:9px 0 2px;
+  background:var(--lv-hair);border:1px solid var(--lv-hair)}
+#tab-live .lv-lane{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) auto;gap:10px;
+  align-items:baseline;background:var(--bg);padding:6px 9px}
+#tab-live .lv-lane .ln{font-family:var(--lv-mono);font-size:10.5px;color:var(--lv-ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tab-live .lv-lane .lt{font-size:10px;color:var(--lv-ink2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tab-live .lv-lane .lt .cap{color:var(--lv-mut);font-family:var(--lv-mono);font-size:9px}
+#tab-live .lv-prov{font-size:9.5px;color:var(--lv-mut);line-height:1.5;margin-top:9px;
+  border-top:1px solid var(--lv-hair);padding-top:8px;word-break:break-word}
+/* pose readiness — banked R1 fallback card + contract */
+#tab-live .lv-r1{grid-column:1/-1;background:var(--bg);border:1px solid var(--lv-hair);padding:9px 11px;margin-top:1px}
+#tab-live .lv-r1 .r1h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+#tab-live .lv-r1 .r1t{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--lv-mut)}
+#tab-live .lv-r1 .r1tag{font-family:var(--lv-mono);font-size:8.5px;color:var(--lv-warn);
+  background:rgba(230,207,122,.12);padding:1px 6px;border-radius:8px}
+#tab-live .lv-r1grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+#tab-live .lv-r1grid .rc{display:flex;flex-direction:column;gap:2px}
+#tab-live .lv-r1grid .rk{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--lv-mut);white-space:nowrap}
+#tab-live .lv-r1grid .rv{font-family:var(--lv-mono);font-size:14px;font-weight:600;color:var(--lv-ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+#tab-live .lv-r1src{font-family:var(--lv-mono);font-size:8.5px;color:var(--lv-mut);margin-top:6px;word-break:break-all}
+#tab-live .lv-contract{grid-column:1/-1;background:var(--bg);padding:8px 11px;font-size:10px;
+  color:var(--lv-mut);line-height:1.55}
+#tab-live .lv-contract .ck{color:var(--lv-ink2);font-weight:600}
+#tab-live .lv-contract .dt{font-family:var(--lv-mono);font-size:9.5px;color:var(--lv-ink2);margin-top:4px}
 
 /* status / detail — terse mono status line */
 #tab-live .lv-status{font-family:var(--lv-mono);font-size:12px;color:var(--lv-ink2);
@@ -4363,20 +4441,63 @@ function renderClasses(last){
   box.innerHTML=html;
 }
 
-// 4 · POSE-DESCENT READINESS — the jacobian_basin sensor (median σ_min, cond, basin frac).
-// Pose is pose-BLIND until the finishing stage by design; the READINESS is what matters.
+// 4 · POSE-DESCENT READINESS — the BANKED R1 fallback (sealed pose custody) + the
+// fallback contract state + the jacobian_basin readiness sensor. Pose is pose-BLIND
+// until the finishing stage by design; the BANKED R1 is the shippable floor meanwhile.
 function renderPose(){
   const box=$("lv_pose"), meta=$("lv_pose_meta");
   if(!box)return;
+  const PR=META.pose_readiness||{};
   const jb=(META.sensors&&META.sensors.jacobian_basin)||null;
-  if(!jb){box.innerHTML="<div class='lv-none'>no basin probe yet</div>";return;}
-  if(meta)meta.textContent="ep"+(jb.epoch!=null?jb.epoch:"?")+" · k="+(jb.k_pairs!=null?jb.k_pairs:"?");
+  const cell=(l,v,cls)=>"<div class='lv-pcell'><span class='pl'>"+l+"</span><span class='pvv "+(cls||"")+"'>"+v+"</span></div>";
+  let html="";
+
+  // (a) BANKED R1 artifact card + the fallback contract (from the #238 byte-close JSON).
+  if(PR.banked_r1){
+    const b=PR.banked_r1;
+    if(b.ok){
+      html+="<div class='lv-r1'><div class='r1h'><span class='r1t'>banked R1 · pose custody (fallback)</span>"+
+        "<span class='r1tag'>"+esc(b.authority||"advisory")+"</span></div>"+
+        "<div class='lv-r1grid'>"+
+          "<div class='rc'><span class='rk'>d_pose</span><span class='rv'>"+sig(b.d_pose,4)+"</span></div>"+
+          "<div class='rc'><span class='rk'>√(10·d_pose)</span><span class='rv'>"+
+            (b.contribution!=null?sig(b.contribution,4):"—")+"</span></div>"+
+          "<div class='rc'><span class='rk'>ξ_eff / dxi</span><span class='rv'>"+
+            (b.xi_bytes!=null?fmtInt(b.xi_bytes)+" B":"—")+"</span></div>"+
+        "</div><div class='lv-r1src'>src "+esc(b.source||"?")+"</div></div>";
+    }else{
+      html+="<div class='lv-r1'><div class='r1h'><span class='r1t'>banked R1 · pose custody</span></div>"+
+        "<div class='lv-r1src'>artifact unreadable ("+esc(b.reason||"?")+") — src "+esc(b.source||"?")+"</div></div>";
+    }
+  }
+  // (b) fallback contract state (detector mode / state / decision tree).
+  if(PR.contract){
+    const c=PR.contract;
+    const stCls=(c.detector_state==="fired")?"ok":(c.degenerate?"bd":(c.detector_state==="armed"?"wn":""));
+    const stLbl=c.degenerate?"DEGENERATE":String(c.detector_state||"pending");
+    const cap=(c.detector_cap!=null)?(" · fail-safe cap ep"+fmtInt(c.detector_cap)):"";
+    const ssbr=(c.should_ship_banked_r1==null)?"—":(c.should_ship_banked_r1?"yes":"no");
+    html+="<div class='lv-contract'><span class='ck'>pose-finish</span> detector <b>"+esc(c.detector_mode||"—")+"</b>"+
+      cap+" · state <span class='"+stCls+"'>"+esc(stLbl)+"</span>"+
+      (c.detector_at_epoch!=null?("@ep"+c.detector_at_epoch):"")+
+      " · ship banked R1: <b>"+ssbr+"</b>"+
+      "<div class='dt'>"+esc(c.decision_tree||"")+"</div>"+
+      (c.detector_state==="pending"?("<div style='margin-top:3px'>"+esc(c.pending_note||"")+"</div>"):"")+
+      "</div>";
+  }
+
+  // (c) jacobian_basin readiness sensor (the conditioning for the pose descent to converge).
+  if(meta)meta.textContent=(jb?("ep"+(jb.epoch!=null?jb.epoch:"?")+" · k="+(jb.k_pairs!=null?jb.k_pairs:"?")):"jacobian basin");
+  if(!jb){
+    html+="<div class='lv-pnote'>jacobian basin: <b>no probe yet</b> — "+
+      "joint pose finish is terminal; readiness rows appear once conditioning begins.</div>";
+    box.innerHTML=html||"<div class='lv-none'>no basin probe yet</div>";
+    return;
+  }
   const sm=jb.median_sigma_min, cond=jb.median_cond, bf=jb.basin_frac, fired=jb.would_have_fired;
   const floor=jb.sigma_floor;
   const smCls=(sm!=null&&floor!=null)?(sm>floor?"ok":"wn"):"";
   const condCls=(cond!=null)?(cond<1e5?"ok":(cond<1e6?"wn":"")):"";
-  const cell=(l,v,cls)=>"<div class='lv-pcell'><span class='pl'>"+l+"</span><span class='pvv "+(cls||"")+"'>"+v+"</span></div>";
-  let html="";
   html+=cell("median σ_min",(sm!=null?sig(sm,3):"—"),smCls);
   html+=cell("median cond",(cond!=null?sig(cond,3):"—"),condCls);
   html+=cell("basin frac",(bf!=null?pct(bf):"—"),(bf!=null&&bf>=0.5?"ok":"wn"));
@@ -4478,7 +4599,8 @@ function renderSchedule(last){
   if(!bounds.length){box.innerHTML="<div class='lv-none'>schedule unresolved</div>";return;}
   if(total==null){const lastB=bounds[bounds.length-1].at; total=Math.max(lastB*1.25||1, (ep||0)*1.1, lastB+1);}
   if(!(total>0))total=1;
-  if(meta)meta.textContent=(ep!=null?"ep "+ep:"—")+" / "+(cfgSched.epochs!=null?fmtInt(cfgSched.epochs):"cap "+fmtInt(total)+"?");
+  const _derived=(META.curriculum_panel&&META.curriculum_panel.ok)?" · derived":"";
+  if(meta)meta.textContent=(ep!=null?"ep "+ep:"—")+" / "+(cfgSched.epochs!=null?fmtInt(cfgSched.epochs):"cap "+fmtInt(total)+"?")+_derived;
   // segment widths from consecutive boundaries
   const BANDCOL={ce:"#1f3b5f",tau:"#3a2a5f",l7:"#5f3320",muon:"#1f4f43"};
   let segs="";
@@ -4492,8 +4614,80 @@ function renderSchedule(last){
   }
   const markPct=(ep!=null)?Math.min(100,Math.max(0,ep/total*100)):null;
   const marker=(markPct!=null)?"<div class='lv-marker' style='left:"+markPct+"%'></div>":"";
-  box.innerHTML="<div class='lv-track'>"+segs+marker+"</div>"+
+  let html="<div class='lv-track'>"+segs+marker+"</div>"+
     "<div class='lv-sticks'><span>0</span><span>"+fmtInt(total)+"</span></div>";
+  // DERIVED curriculum (operator 2026-07-10): transitions as EVENTS (epoch = fail-safe
+  // cap, never the trigger) + the tau path as ONE continuous anneal + the event-gated
+  // mechanism swim-lanes + the provenance line — all from META.curriculum_panel (the
+  // schedule read-back + parsed flags + emitted evidence; never a hardcoded skeleton).
+  const CP=META.curriculum_panel;
+  if(CP&&CP.ok){
+    html+=renderCurriculumDerived(CP);
+  }
+  box.innerHTML=html;
+}
+
+// status pill for an event/lane state (fired@ep / armed@ep / pending).
+function statePill(status,atEpoch){
+  const s=String(status||"pending");
+  const at=(atEpoch!=null)?("@ep"+atEpoch):"";
+  const lbl=(s==="fired")?("fired"+at):(s==="armed")?("armed"+at):"pending";
+  return "<span class='lv-pill "+esc(s)+"'>"+esc(lbl)+"</span>";
+}
+
+// The DERIVED curriculum sections: tau anneal ramp, transition events, mechanism
+// swim-lanes, provenance. Reads ONLY the server-built model (no hardcoded epochs).
+function renderCurriculumDerived(CP){
+  let h="";
+  // (a) tau path as ONE continuous geometric anneal — CE = the tau=1 limit.
+  const ta=CP.tau_anneal||{};
+  if(ta.temp_start!=null||ta.shape){
+    const t0=(ta.temp_start!=null)?sig(ta.temp_start,3):"1",
+          t1=(ta.temp_end!=null)?sig(ta.temp_end,3):"—";
+    h+="<div class='lv-tau'><span class='tl'>CE · τ="+esc(t0)+"</span>"+
+       "<span class='tl r'>τ="+esc(t1)+"</span></div>";
+    const capEp=ta.span_end_epoch;
+    h+="<div class='lv-taucap'>"+esc(ta.shape||"anneal")+" τ anneal · one continuous ramp"+
+       (capEp!=null?(" · CE→finish span to ep"+fmtInt(capEp)):"")+
+       " · "+esc(ta.ce_limit_note||"")+"</div>";
+  }
+  // (b) stage transitions as EVENTS (trigger primary; epoch = fail-safe cap).
+  const st=CP.stages||[];
+  if(st.length){
+    h+="<div class='lv-events'>";
+    st.forEach(s=>{
+      let trig;
+      if(s.name==="CE"){trig="anneal origin (τ=1 limit)";}
+      else if(s.trigger){trig=esc(s.trigger);}
+      else{trig="scheduled";}
+      let cap="";
+      if(s.mode==="event"&&s.cap!=null)cap=" <span class='cap'>· fail-safe cap ep"+fmtInt(s.cap)+"</span>";
+      else if(s.mode==="fixed"&&s.start!=null&&s.name!=="CE")cap=" <span class='cap'>· at ep"+fmtInt(s.start)+"</span>";
+      const status=(s.status==="fired")?"fired":(s.mode==="event"?"pending":"scheduled");
+      h+="<div class='lv-evrow'><span class='en'>"+esc(s.name)+"</span>"+
+         "<span class='et'>"+trig+cap+"</span>"+
+         statePill(status,s.fired_epoch)+"</div>";
+    });
+    h+="</div>";
+  }
+  // (c) event-gated mechanism swim-lanes.
+  const lanes=CP.lanes||[];
+  if(lanes.length){
+    h+="<div class='lv-lanes'>";
+    lanes.forEach(l=>{
+      const trig=(l.trigger!=null)?esc(String(l.trigger)):"—";
+      let cap="";
+      if(l.cap!=null)cap=" <span class='cap'>· "+esc(l.cap_kind||"cap")+" ep"+fmtInt(l.cap)+"</span>";
+      else if(l.cap_kind)cap=" <span class='cap'>· "+esc(l.cap_kind)+"</span>";
+      h+="<div class='lv-lane'><span class='ln'>"+esc(l.name)+"</span>"+
+         "<span class='lt'>@"+trig+cap+"</span>"+
+         statePill(l.status,l.at_epoch)+"</div>";
+    });
+    h+="</div>";
+  }
+  // (d) provenance line — answers the cargo-cult question on the panel itself.
+  if(CP.provenance)h+="<div class='lv-prov'>"+esc(CP.provenance)+"</div>";
+  return h;
 }
 
 // ---------- RUN-IDENTITY row (name + purpose chip + scope chip; CONDITIONAL) ----------
