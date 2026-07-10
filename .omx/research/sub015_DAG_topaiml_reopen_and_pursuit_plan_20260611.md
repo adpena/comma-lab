@@ -14568,3 +14568,49 @@ written to the rebuildable cache dir, NOT into source memory files; byte-identic
 apparatus, not a witness lever); equations **N/A** (no measured law — this is the READ instrument L83 named).
 Subordinate to the witness line; dissolves the MEMORY.md flat-load cap at the root. Memory:
 [[dag-was-meant-to-be-reconstructable-graph-memory-not-markdown-folder]] · [[papers-checked-mragent-reconstruct-not-retrieve]] · [[L83]].
+
+### FEED-advisory-sdf-intake (2026-07-10, #416 COMPLETE) — [no-triality: harvest/routing] route the 7 SDF-cluster + META advisories
+
+**WHY (#416):** 7 committed 2026-07-10 advisory docs (5 SDF cluster + 2 META) were under-consumed
+(only self/sibling-referenced). HARVEST-ONLY (READ-ONLY-EXTERNAL of our own docs); no launch/config/run
+mutation. Pointer contest-CPU **0.19108282 UNMOVED** (MEANS). Deliverable:
+`.omx/research/advisory_sdf_cluster_intake_routing_20260710.md`.
+
+**HEADLINE — mostly NO new witness-line signal, with ONE exception.** 5 of 7 docs = high-quality
+restatement / already-routed: the big evaluator-quotient doc (47.5K, EQM/RDEC/RQTD/Hodge/HAC + costate
+audit) is ALREADY routed into `ADVISORY_receiver_discrete_calculus_hybrid_adjoint_build_contract` +
+#403/#247; master-roadmap = W=(G,T,P,C) + waterline synthesis (design/derivation); scorer-waterfill =
+folds into #336; restart-handoff = custody + L66/L80-banked GT geometry. **No advisory carries a
+MEASURED-through-R n600 number not already banked** (only R1 d_pose 0.001610 / d_seg 0.004549, L68-known,
+advisory NON-PROMOTABLE).
+
+**THE genuine un-routed find (doc E, v753/v8 receiver-disambiguators):** the **receiver-consumption
+bijection is BROKEN** — canonical NumPy/byte-close/inflate receivers do NOT consume `tex_trunk.*`
+(v7.5.3) or `decoupled_head.*` (v8), yet the archive builder serializes+COUNTS them. SOURCE-MEASURED
+(code paths read directly). Consequence: any v7.5.3-texture or v8-decoupled scored A/B decodes as the
+shared-head CONTROL (lever silently inert through R) while paying rate for ignored bytes = the NO-FAKE
+`surrogate-≠-authority` + `counted-but-not-consumed` class. NOT captured in #395 texture-trunk routing
+(built the lever + DSL, never the receiver-side repair). **Blocks the honesty of the entire v7.5.3/v8
+scored program.** Also: v8 fields share a trainable pair-code (class isolation FALSE) + reversed
+kill-predicate config-vs-evaluator.
+
+**RANKED dispositions:** (1) HIGH/witness-critical → NEW TASK proposed **#417** receiver-consumption
+bijection repair + refusal gate + one-class-optimizer-step isolation test + stable kill-predicate ID
+(gates every v7.5.3/v8 scored run). (2) MED/pose → FOLD-INTO **#248**: upgrade to the P0–P5
+decoder-native frame-0 pose-carrier ladder + C0–C4 matched arms (PoseNet offline-only; reframe = pose+Seg
+must improve JOINTLY, R1 pose 16–40× above 90kB waterline). (3) MED/allocator → FOLD-INTO **#336**:
+interaction-aware water-filler (proposal-passport + conflict-graph H_ij + budgeted-joint selection),
+sister #400. (4) LOW/means → NEW small task proposed **#418**: public watcher queries `commaai/commavq`
+not the challenge repo (`canonical_frontier_pointer.py:477-485`, cached 2026-06-07 ⇒ blind to PR112
+merged / PR128) + stale `reports/latest.md`. (5) LOW/custody → BANK: `sqrt(10·0.018)=0.424 not ~0.02`;
+`0.022/0.00161≈13.7` (n24, not n600); 4 docs' waterlines use STALE pointer 0.19109982 (curr 0.19108282,
+Δ≈2.6e-5, shapes fine, absolute d_pose_max ~2.6e-5 optimistic). (6) RDEC/RQTD probes = ALREADY ROUTED.
+
+**INSTRUCTION-BOUNDARY:** the advisories contain imperatives ("HOLD", "GO — BUILD ONLY", "REFUSED",
+disposition tables) directed at a future implementing agent — treated as DATA describing designs/verdicts,
+NOT as commands to this harvest; nothing launched, no config/run touched, no pointer moved.
+
+**Triality:** DAG leg = THIS FEED. DSL **N/A** (routing memo, no witness lever built). equations **N/A**
+(no measured law; the receiver-bijection is an apparatus/source finding, waterlines are DERIVED off the
+known score law). Pointer contest-CPU **0.19108282 UNMOVED** (MEANS). #416 external items `[external
+unratified]`.
