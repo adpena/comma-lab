@@ -13700,3 +13700,24 @@ number the code has not honored (NO-FAKE). The pre-registered kill-gate (`decoup
 - **"docs: repoint stale adpena/tac URLs ..." (debt-settlement agent):** pure documentation
   hygiene (terminology-gate stale-wording fixes), [no-triality] class — no lever, no measurement,
   no law; the marker was omitted from the commit message, recorded here instead.
+
+### FEED-hygiene-0710 (2026-07-10) — debt burn-down + viz taste pass (apparatus trajectory point)
+- **Debt burn-down (`9781d91c4` + `ffccb2725`, operator "Pay all owed burn it down and don't
+  accumulate debt"):** all owed items classified 18-PAY-NOW-settled (terminology gate now PASSES) /
+  6-GATED-with-named-trigger+owner / 4-IN-FLIGHT-with-owner / 0-unclassified. NEW-DEBT DISCIPLINE
+  now standing: every new owed item paid same-turn OR ledgered in `.omx/state/deferral_ledger.md`
+  with named trigger + owner at creation; no debt lives only in a memo body. D21 owed-16 re-graded
+  MEASURED-SETTLED (realized directional Δ≈0, |Δ|≤1.4%); residual ep700-ON cell LOW-PRI gated on
+  ~15 GiB freed.
+- **Viz taste pass (`40ab0dc36`; witness-machine `5cdf168`/v1.2.1):** public notebook now
+  output-first (hide_code ×42), palettes unified to comma10k-canonical + one-hue-one-meaning,
+  separatrix headline stat (2.7% px / 99.9% sensitivity mass) surfaced in-figure from the locked
+  manifest; bundle resealed deterministically (data byte-identical, chain re-verified, export 0
+  tracebacks). DURABLE finding: the design reference ("3b1b operational grammar" + identity spec)
+  lives in `viz_taste_audit_20260710.md` — future figure work consumes it, not per-session taste.
+  Video diagnosed (macOS say Samantha; decorative checkerboard ≠ true sensitivity field);
+  abstraction→real re-make plan §P6, voice recommendation typographic-no-voice pending operator
+  listen-check.
+- **Legs:** no lever, no measured score row → DSL N/A, equations N/A (apparatus/presentation;
+  data honesty preserved — no measured number altered anywhere). This FEED is the DAG leg.
+  **Pointer contest-CPU 0.19110 UNMOVED — both passes are MEANS (hygiene + communication).**
