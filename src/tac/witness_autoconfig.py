@@ -1006,9 +1006,9 @@ class WitnessConfig:
 #
 # RELATIONSHIP TO THE DSL (audit #1, hardcode_duplication_audit_witness_stack_20260710.md;
 # operator #353 "config MUST be DSL-defined"): this dict PARALLELS the shared baseline knobs in
-# ``tac.witness_dsl.curriculum_dsl.BASELINE`` (a frozen n200 CE->tau->l7 WitnessProgram). The two are
+# ``tac.witness_dsl.curriculum_dsl.BASELINE`` (a frozen n200 curriculum WitnessProgram). The two are
 # INDEPENDENTLY-FROZEN historical configs (this = the 0.003698 muon arm; BASELINE = the completed n200
-# CE->tau->l7 run), NOT one-derives-from-the-other, so they are kept as separate encodings; but they
+# curriculum run), NOT one-derives-from-the-other, so they are kept as separate encodings; but they
 # EMPIRICALLY agree on every shared knob (render/freq/accum/ema/grad-clip/w-seg/...) except the ONE
 # intentional exception ``w_pose`` (this keeps 0; ``_sealed_205_deltas`` flips it to 1.0 -> the sealed
 # delta owns pose engagement; BASELINE bakes --w-pose 1.0 into its base directly). That empirical
