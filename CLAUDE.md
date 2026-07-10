@@ -207,6 +207,24 @@ RECONSTRUCT pose from a luma INR — NOT the stored-target sidecar.** Do not cit
 to build a chroma pose carrier. The witness composes with the already-built stored-pose sidecar; the
 witness's sole binding controllable job is **d_seg**.
 
+**CLARIFICATION (operator-directed 2026-07-10) — mechanism vs archive-shape; the 3.4e-5 is an
+ANCESTOR-VEHICLE number.** The measured facts as of 2026-07-10 (per L68 + `r1_dxi_shippability_byteclose`):
+(1) The **3.4e-5 stored-target result was measured on the ancestor RGB/HNeRV vehicle**, where the render
+CONSUMED the FiLM conditioning **during training** — i.e. even that result was JOINT-trained in the sense
+that matters. Per the L18 ancestor rule it does NOT transfer as a number to the witness; do not cite it as
+the witness's pose solution. (2) **On the witness vehicle the pure post-hoc/stored sidecar family is
+MEASURED DEAD** — the cheap-carrier space was mapped shut across 5 formulations (verdict_scope: formulation
+— post-hoc/stored corrections without pose in the training loop, on this vehicle); the wall is PHOTOMETRIC:
+frames trained on seg alone do not carry pose-legible photometric signal, and no post-hoc storage fixes
+frames never shaped for it. **Only JOINT descent crosses that wall.** (3) The live witness pose result is
+**R1: d_pose 0.001610 through byte-close, contribution 0.127, shipping a 7.2KB dxi section** — sidecar-SHAPED
+bytes whose VALUES are joint-descent-trained. When any doc (or this section's title) says "sidecar," read it
+as the ARCHIVE SHAPE (a small stored section), never as a post-hoc mechanism. (4) v7.5.2 realizes this as a
+TERMINAL joint pose-finish (the #383 conditioning gate engages pose descent only once the seg trunk is
+conditioned; banked R1 dxi is the fallback) — sidecar-priced bytes, joint-descent physics, minimal training
+tax. New DOF (Unit C, 2026-07-10): frame_0 is structurally seg-free (d_seg obligation 8.5e-9) — a cheaper
+PLACE for joint-trained pose output, not a resurrection of post-hoc.
+
 ### Chroma is a d_seg lever (operator 2026-06-25 "Chroma too")
 
 **SegNet reads RGB** — its argmax depends on chroma, so chroma is a genuine d_seg actuator. The seg-frame
@@ -350,7 +368,7 @@ Be **absolutely allergic** to naive/toy implementations, smokes, probes, and n96
 - **Representation = curvelets = rate:** the curved codim-1 singularity's optimal sparse basis (Candès-Donoho) minimizes distortion (boundary-aligned) AND rate (minimal-MDL N-term) — ONE basis.
 - **Curriculum = flow = scale = persistence = annealing:** CE→tau→l7→Muon IS coarse-to-fine curvelet scale = Morse-Smale persistence order = temperature annealing = the curvelet scaling curriculum; critical-slowing power-law near stage transitions.
 - **Dimensionality = the complex's DOF:** intrinsic dim ~8 (nonlinear) → Whitney ~17-19 = proper mod-dim (mod-16 under-embeds).
-- **Temporal/pose = the se(3) ego-screw — SOLVED, DUAL-USE, it all falls out:** the SAME ξ that warps the partition for d_seg IS the pose for d_pose (Chasles; d_pose = the twist ξ, identifiable up-to-affine). Encode ξ ONCE (canonicalize-to-ground-frame; SE(3) B-spline; engine `tac.lie`). Realized via the Quantizr/PR-style stored-target sidecar that is **FiLM-CONDITIONED** (the render CONSUMES the ~1–2KB stored twist → measured **d_pose ~3.4e-5**, √(10·d_pose)~0.018). A NAIVE bolt-on the render doesn't consume does NOT lower d_pose; the n600 baseline's `w_pose=0` high d_pose is **pose-BLIND-by-design, not "unsolved."** Anchor: `pose-solved-screw-twist-dual-use-film-conditioned-sidecar`.
+- **Temporal/pose = the se(3) ego-screw — SOLVED, DUAL-USE, it all falls out:** the SAME ξ that warps the partition for d_seg IS the pose for d_pose (Chasles; d_pose = the twist ξ, identifiable up-to-affine). Encode ξ ONCE (canonicalize-to-ground-frame; SE(3) B-spline; engine `tac.lie`). Realized via the Quantizr/PR-style stored-target sidecar that is **FiLM-CONDITIONED** (the render CONSUMES the ~1–2KB stored twist → measured **d_pose ~3.4e-5**, √(10·d_pose)~0.018 — **ANCESTOR-vehicle number; see the 2026-07-10 CLARIFICATION in §Pose is SOLVED: on the witness, post-hoc/stored is measured DEAD (5 formulations, photometric wall), only JOINT descent crosses it; the live witness result is R1 d_pose 0.001610 / 7.2KB dxi = sidecar-shaped bytes, joint-descent values**). A NAIVE bolt-on the render doesn't consume does NOT lower d_pose; the n600 baseline's `w_pose=0` high d_pose is **pose-BLIND-by-design, not "unsolved."** Anchor: `pose-solved-screw-twist-dual-use-film-conditioned-sidecar`.
 - **Compute = MLX-first + custom Metal = shortest-train:** M5 Max MLX-GPU; fused-R (bit-identical) + grouped-backward (~17×, `TAC_MLX_CUSTOM_GROUPED_BACKWARD`) + mx.compile; numpy-fp32 = deterministic authority; MPS = gradient-only, NEVER a score.
 - **SegNet sees REGIONS, not pixels** (stride-2 stem, deep conv) → the error is region/topology-level, never pixel-level (why linear "store-the-flip-pixels" sidecars NO-GO'd ×3).
 - **The measured error = the LANE long-tail = ERASURE (not shift):** the witness DROPS the lowest-persistence / finest-scale features (lane **dashes** = birth-death pairs; the **car/hood outline**) below the argmax margin (prominence failure, spectral bias, error ∝ 1/persistence), with **RINGING** (Gibbs) as the spatial dual. Fix (all ONE axis): curvelet finest-scale + step-native/hosc + persistence-preserving loss + margin/UNIWARD.
