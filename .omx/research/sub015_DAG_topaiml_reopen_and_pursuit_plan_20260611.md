@@ -14740,3 +14740,18 @@ A/B). NO group flagged owed.
 `src/tac/canonical_equations/receiver_forward_parity_v753_v8_20260710.py`. Memory:
 [[receiver-consumption-bijection-counted-but-inert-weight-groups]] updated with fix status. Pointer 0.19108282
 UNMOVED — this makes a FUTURE v7.5.3/v8 scored row REAL (no longer the fake control), it moves nothing itself.
+
+### FEED-watcher-repo-fix (2026-07-10, #418 hygiene, 3fc58a097) — public-frontier watcher was querying the WRONG repo
+
+Durable apparatus correction (record so it does not recur): the frontier-pointer watcher constant
+`src/tac/canonical_frontier_pointer.py::UPSTREAM_LEADERBOARD_GITHUB_API` was hardcoded to `commaai/commavq`
+(the GPT-token video-SEQUENCE dataset consumed by `tac.lossless.*`) — NOT the contest repo. So the public
+leaderboard fetch was silently blind to real contest PRs. Fixed → `commaai/comma_video_compression_challenge`
+(the repo every OTHER tool already used: `tools/leaderboard_poll.py`, `tools/check_leaderboard.sh`,
+`upstream/README.md`). Re-ran `--update-upstream`: watcher now surfaces real PRs incl. **PR128
+"rhnerv_latent_polish" claiming 0.187991** — BELOW our pointer 0.19108282, but `[external unratified]`
+(no exact CUDA/CPU replay), ALREADY-HARVESTED (#412), and we click-polish our OWN PR110 lineage off it (#399);
+CONTEST CLOSED ⟹ reference point, NOT a race. `reports/latest.md` + focus/next-experiments refreshed to the
+real best (were stale at 0.191985); drift-check rc=0. **Triality:** DAG = THIS FEED; DSL **N/A** (apparatus
+config fix, no lever); equations **N/A** (no measured law). The sister marimo #347 commit (6ad67d942) is
+pure-chore [no-triality] — disposition doc only, closed per operator. Pointer 0.19108282 UNMOVED.
