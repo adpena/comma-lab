@@ -13775,7 +13775,7 @@ number the code has not honored (NO-FAKE). The pre-registered kill-gate (`decoup
   0.28146 > ON 0.27789 > OFF 0.27860). All |Δ| ≤ 1.81% = INSTANCE-level (single-seed, noise floor
   UNMEASURED, P2); but the −48% direct-partition claim predicts along-heavy ≫ OFF — the disconfirmation
   direction is robust.
-- **VERDICT (NO-GO; FORMULATION scope):** the freq-along-heavy rebalance provides **NO realized d_seg
+- **VERDICT (NO-GO; FORMULATION scope):** verdict_scope: formulation — warm-start rebalanced directional allocation (freq-along 26, lane_carried) on this trunk; from-scratch directional formulation remains the only uncovered arm (the pilot tests it). The freq-along-heavy rebalance provides **NO realized d_seg
   benefit**; the owed-16 "wrong-allocation" explanation is **REFUTED** — realized directional
   contribution ≈ 0 is **ROBUST to allocation**, so the −48%→~0 direct-partition→realized gap is NOT an
   allocation problem. Only uncovered directional formulation remains **from-scratch**.
@@ -13785,3 +13785,13 @@ number the code has not honored (NO-FAKE). The pre-registered kill-gate (`decoup
   equations — new EmpiricalAnchor `owed16v2_rebalanced_allocation_measured_no_benefit_20260710` on
   `curvelet_directional_basis_dseg_reduction_v1`; DAG — this FEED + verdict `.omx/research/owed16v2_verdict_20260710.json`.
   **Pointer contest-CPU 0.19110 UNMOVED — MEANS; only a byte-closed `upstream/evaluate.py` n600 row moves it.**
+
+### FEED-legdisposition-owed16v2 (2026-07-10) — triality leg record for the watcher's verdict commit
+- **`40b2d211`-class commit ("owed16v2 REBALANCE verdict"):** DSL leg = ALREADY-SATISFIED, no new
+  surface owed — the `DirectionalBasisRebalance` lever was built by #335 as a DSL `Lever` factory and
+  this measurement CLOSED its activation-ledger duty-to-measure entry (state: fired+measured,
+  last_measured_verdict = no-benefit). No lever/flag/curriculum change occurred; the measured outcome
+  was recorded where the registry discipline holds it. equations leg = LANDED in the same commit (the
+  `owed16v2_rebalanced_allocation_measured_no_benefit_20260710` anchor on
+  `curvelet_directional_basis_dseg_reduction_v1`). DAG leg = FEED-owed16v2 (same commit). All three
+  legs accounted; this block records the DSL disposition explicitly for the per-leg detector.
