@@ -12634,9 +12634,24 @@ The elevation: verdict-scope makes negatives honest, reformulation queues keep t
 makes them CUMULATIVE** — each scoped negative is a measured constraint removing a region of design
 space; the accumulated set + positives TRIANGULATES the optimum until it is DERIVED, not searched.
 Receipts already in-tree: ξ-negative→chart-selection LAW · N-1+flipbc negatives→per-edge-b_c home
-derived · curve-relative-REFUTED→lane-generator-coverage located · dense-medial→parsimony law ·
+derived · curve-relative-REFUTED→lane-generator-coverage located <!-- # VERDICT_SCOPE_OK: P10 receipt CITATION of the already-scoped anchor (v8_curve_relative_offset_coder_NEGATIVE: FORMULATION) --> · dense-medial→parsimony law ·
 isotropic-capacity→basis-before-capacity. **Routing:** (a) every negative anchor states the design-
 space region it removes (equations-leg convention, additive); (b) crucible P2/P4 synthesis phases +
 future symposia run a CONSTRAINT-SET SYNTHESIS pass (what do all negatives jointly pin?); (c) the
 P8/#385 brief's risk register reads negatives as coverage, not losses. Triality: DAG=this FEED;
 DSL/eq legs follow as the convention lands on future anchors. Pointer 0.19110 UNMOVED (means).
+
+## FEED-p11-p12 (2026-07-09) — OPERATOR PHILOSOPHIES: P11 strategic-surgical-harm (annealing as a design right) + P12 synergies/antagonisms first-class
+**Operator verbatim:** "We can also sometimes harm strategically and surgically in order to prime the
+math and geometry for a greater more transcendental good" + "Synergies and antagonism are very important
+philosophies and principles too." Encoded in `design_philosophies_eightfold_20260709.md` (now 12).
+**P11** = chosen, bounded local harm with a pre-registered payoff, measured through recovery (receipts:
+seed-compose kill→deadlock escape · zero-seeded rare-class init #208 · τ/curriculum annealing · LADDER
+homotopy). Sister of P10: P10 reads negatives that happened; P11 licenses negatives we CHOOSE.
+**P12** = composition sign (additive/synergistic/antagonistic/orthogonal/redundant) is a REQUIRED row on
+every lever verdict, measured never assumed (receipts: basis-before-capacity +6%-alone/−64%-composed ·
+#306 audit · Dykstra non-additivity · #300 seed×island antagonism). Antagonisms REGISTER like negatives —
+they carve composition space as negatives carve design space. Routing: seal standing checks (P12
+composition row on shipped levers; P11 pre-registration for any deliberate-harm schedule element) +
+the #385 brief's lever tables. Triality: DAG=this FEED; DSL/eq legs as conventions land. Pointer 0.19110
+UNMOVED (means).
