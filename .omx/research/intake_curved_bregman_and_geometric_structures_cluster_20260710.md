@@ -69,6 +69,23 @@ divergence to a centroid) → information PROJECTIONS + relative-JS divergences;
 - **GATED thread:** JS/information-radius centroid as the codebook-update rule, gated on #78 (a VQ-witness)
   actually being built. Held — no VQ-witness in flight; do not build speculatively.
 
+## Paper #6 — Neural Legendre-Fenchel transform with Hessian Preconditioning (Plus-Gourdon & Nielsen, arXiv 2606.09077, 2026) — MOST ACTIONABLE
+The LF transform F↔F* IS the θ↔η duality of our dually-flat space (F=logsumexp on logits ↔ F*=neg-entropy
+on class probs). The paper computes it with a **Hessian preconditioner**: affine-deform around the minimizer
+so the 2nd-order Taylor coincides with the canonical paraboloid (conjugation = identity), learn/solve the
+easy residual near identity, recover via the inverse deformation. Cost: 1 eigendecomposition at init + 2
+matvecs/query. Big gains on ILL-CONDITIONED problems. Affine invariance = the Goldman affine (G,X)-structure
+(paper #4) → this is the COMPUTATIONAL realization of the cluster's framing.
+- **Directly targets OUR measured ill-conditioning.** The anisotropic annulus (#333, flat-interior +
+  sharp-along-boundary) IS an anisotropic-Hessian problem. Our head-offset (#288 damped-Newton semi-discrete
+  OT), quadratic-basin TerminalSolve (#341), and terminal MC finisher (#396) all Newton/project in the
+  dually-flat coords; Hessian preconditioning is the canonical fix for anisotropic-Hessian Newton.
+- **GATED thread (most actionable in cluster):** Hessian-preconditioned Bregman-projection for the
+  head-offset / TerminalSolve — eigendecompose the local Fisher/Hessian once, deform to the canonical
+  paraboloid, solve, undo. Gated on a **$0 measured check** it beats our current damped-Newton on the real
+  anisotropic head-offset; exact through-R measurement stays authority. Do NOT build without the check +
+  operator GO. Owner: #288/#341/#396.
+
 ## Honest verdict + routing
 - **Bank** (this note): the cluster is the rigorous SPINE — cite Nielsen (curved Bregman = witness on a
   non-affine chart; head-offset = Bregman projection) + Goldman (dually-flat = affine (G,X)-structure;
