@@ -13331,3 +13331,19 @@ verdict_scope FORMULATION; no kill; no score. Pointer 0.19110 UNMOVED (means).
   C1 register + P9 pass appends · owed16 memo MEASURED VERDICT section. Decision context: #385 addendum
   v2 + GO ask already out on the ep675 cell (0a550f9e2); this is the canonical-record chain.
   **Pointer 0.19110 UNMOVED (means/apparatus).**
+
+### FEED-v752-config (2026-07-10) — GO'd launch config compiled: v7.5.2 self-orient-OFF (HELD pending owed-16 v2 rebalance arm)
+- **Commit `3b028a374`:** `compile_crucible_v752_launch_config` (witness_autoconfig, DSL-typed WitnessProgram,
+  validate()==[]) drops the directional front-end (self-orient flags + the FEED_07a DirectionalBasisRebalance
+  lever DE-SELECTED, curvelet bank kept) + launcher `crucible_v752` wire-in (derive_named_config/config_family)
+  + tests. Provenance: owed-16 P9 RESOLVED-REFUTING (Δ≈0 both clean cells, 47 GiB tax).
+- **TRIALITY leg disposition (per-leg gate):** DSL leg = the WitnessProgram amendment itself (DSL-typed program
+  in witness_autoconfig, the established DSL-provenance-program home; witness_dsl/ package UNCHANGED because the
+  amendment de-selects existing registered levers — no new/changed Lever factory exists to add). equations leg =
+  SATISFIED ON PRIOR COMMIT `aa3f97f49` (EmpiricalAnchor `owed16_realized_transfer_measured_zero_20260710` on
+  `curvelet_directional_basis_dseg_reduction_v1` — the measured finding this amendment consumes; no new
+  measurement in the config commit itself). DAG leg = this FEED.
+- **HOLD state:** launch step-4 HELD per operator's under-our-noses catch — the owed-16 v2 REBALANCED arm
+  (freq budget flipped to along-tangent per the 3.2× deficit, #335 lever FIRING) runs first; the hold releases
+  with whichever config wins (rebalanced-ON vs OFF). Dry-start footprint triple-confirmed 22-24 GiB (OFF mode).
+- Pointer contest-CPU **0.19110 UNMOVED** — config compilation is MEANS.
