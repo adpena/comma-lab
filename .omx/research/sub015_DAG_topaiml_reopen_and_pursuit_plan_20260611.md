@@ -13029,3 +13029,37 @@ A/B (the P9-BLOCKING resolver; negaudit-C1's named decisive re-test) + the pinne
 `.omx/research/owed16_verdict_20260710.json`; memo `owed16_bounded_ab_and_drystart_20260710.md`;
 equation anchor `owed16_realized_transfer_blocked_selforient_47gib_20260710`; 3 bulletin gate_ruled.
 **Pointer 0.19110 UNMOVED (means/apparatus).**
+
+## FEED-macro-rate (2026-07-10): v8 MACRO-RATE PASS — micro→macro whole-archive re-derivation (operator "view the whole thing"). $0, no GPU, no launches; sealed docs append-only.
+
+**Thesis (operator 2026-07-09):** the §I sections are all projections of ONE macro object (scene
+geometry ~8-dim + ego-screw ξ(t) already-banked 7.2 KB + per-class charts); cross-section structure the
+MICRO sum pays repeatedly should be paid ONCE. Clause-A lifted PAIRWISE (R7 de-share sweep) → WHOLE-SET.
+
+**The decisive MEASURED NEGATIVES (proactive-recall, measurement-first — both re-coding axes DEAD):**
+- **TEMPORAL ego-warp residual coding NO-GO** (`keyframe_ego_residual_coding_n600`, n600): `intra`
+  keyframe BEATS `ego_warp_R1` at ALL resolutions (native rate_best 7.63 vs 11.22; 384×512 1.85 vs 2.41;
+  192×256 0.54 vs 0.67); mean_res_bits ego 5.19 ≥ prev 5.17. verdict_scope FORMULATION (full-frame R1).
+- **SPATIAL curve-relative REFUTED** (`residual_kit` probe2): horizon 0.988×, lane 0.896×. FORMULATION.
+- ⇒ the residual enemy (0.074) is coding-irreducible (at coordinate entropy). "Bring micro to macro"
+  does NOT shrink it by re-coding; the macro view RELOCATES bytes + REFRAMES the enemy as COVERAGE.
+
+**The macro reductions (labeled; P2 floor; verdict_scope):** R1 exhaustive whole-set dedup −0.001
+MEASURED (probe1b: 3 un-folded pairs beyond the corrected-triple's top-2+triple; band [0.0007 amort,
+0.00137 coded-alone]; INSTANCE gt_n600 dilate=2; EXCLUDES hood↔road_mycar 0.028 = validated NOT a
+double-count). R2 ego-rigid ξ-charge on horizon dominant −0.0025 DERIVED (0.00277 is ~all intercept
+stream = ego-pitch = banked pose ξ; §I I1 intends "charged once §G S1" but MEASURED number hasn't
+applied it; ego-rigid ONLY, lane ξ NO-GO). R3 hood single-static-store CANDIDATE −[0,0.017] DERIVED-owed
+(0.028→0.0202 = only 1.4× for an IoU-0.994 static mask = the tell; owed $0 measure; highest variance).
+R4 joint dominant-stream entropy coding −~0.0005 DERIVED. R5 generator-COVERAGE (increment-2) −[0.015,
+0.02] — the enemy's TRUE home (Road/Lane 0.042 = 53% of enemy, 40% off-curve = coverage gap not coder gap).
+
+**REVISED TRIPLE:** dominant 0.061 → ~0.0585 (R2); complete 0.135 → **~0.131 firm** (R1+R2+R4, no owed) →
+~0.11–0.12 IF R3+R5 land; residual enemy 0.074 → **~0.0725 firm** (barely moves — CONFIRMS
+coding-irreducible). Firm macro complete ~0.131 is STILL a WASH vs frontier 0.118; sub-frontier needs the
+owed R3 hood measure and/or the increment-2 R5 coverage BUILD — the macro view LOCATES both.
+
+Memo `v8_macro_rate_pass_20260710.md`; equations anchor
+`v8_macro_rate_pass_exhaustive_dedup_and_egocharge_measured_20260710` (on the existing
+`v8_geometric_rate_decomposition_v1`); SPEC_v8.1 §MACRO-RATE ADDENDUM (append-only); #385 brief line.
+DSL leg N/A (rate derivation, no trainer Lever). **Pointer 0.19110 UNMOVED (means).**

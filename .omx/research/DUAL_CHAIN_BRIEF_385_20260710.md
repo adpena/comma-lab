@@ -260,3 +260,12 @@ pointer-moving launch once #1 pose-gate + #2 dry-start + owed-16 clear. v8-1b bu
 
 **Pointer 0.19110 UNMOVED — this brief is MEANS.** No config edited, no launch fired, the dual-chain wall
 stands. Only a byte-closed `upstream/evaluate.py` n600 row < 0.19110 moves it.
+
+**MACRO-RATE ADDENDUM (2026-07-10, `v8_macro_rate_pass_20260710.md`):** viewing v8's rate as ONE macro
+object (scene + banked ξ(t) + charts) FIRMLY reduces complete-lossless **0.135 → ~0.131** (exhaustive
+whole-set dedup −0.001 MEASURED + ego-rigid ξ-charge −0.0025 + joint-coding −0.0005 DERIVED) — STILL a
+WASH vs frontier 0.118; the residual enemy 0.074 → ~0.0725 is CONFIRMED coding-irreducible (temporal
+ego-warp NO-GO + spatial curve-relative REFUTED, both MEASURED). Sub-frontier requires the owed **R3
+hood single-static-store** ($0, candidate −[0,0.017]) and/or **increment-2 R5 generator-coverage**
+(−[0.015,0.02], the enemy's true home). The macro view LOCATES both; it does not re-code the residual.
+v8's shippable-rate WASH row (§2) STANDS.

@@ -410,6 +410,102 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         ),
     )
 
+    # ---- MACRO-RATE PASS anchor (2026-07-10): whole-archive micro->macro re-derivation ----
+    # Operator 2026-07-09 "view the whole thing bringing micro to macro". The whole-object view
+    # (scene + banked ego-screw xi(t) + per-class charts) RELOCATES reducible bytes off the
+    # coding-irreducible residual. R1 = MEASURED (from residual_kit probe1b, already on disk); the
+    # two whole-object RESIDUAL re-coding levers are BOTH MEASURED DEAD (ego-warp + curve-relative).
+    anchor_macro_rate_pass = EmpiricalAnchor(
+        anchor_id="v8_macro_rate_pass_exhaustive_dedup_and_egocharge_measured_20260710",
+        measurement_utc="2026-07-10T00:00:00Z",
+        inputs={
+            "probe": "whole-archive micro->macro rate re-derivation (operator no-duplicate-data lifted "
+                     "pairwise->whole-set); $0 read-only on existing MEASURED artifacts, no new compute",
+            "measured_artifacts": (
+                "residual_kit_measured_20260709.json (probe1b whole-set pairwise-dedup audit; probe2 "
+                "curve-relative REFUTED) + experiments/results/keyframe_ego_residual_coding_n600/"
+                "results.json (R1 ego-warp residual coding, n600, all resolutions)"
+            ),
+            "macro_object": "scene geometry ~8-dim + ego-screw xi(t) (banked 7.2 KB pose carrier) + per-class charts",
+        },
+        predicted_output={
+            "law": "S_rate(macro) = S_rate(micro) - [dedup(whole-set) + ego-rigid xi-charge + "
+                   "hood single-static-store + joint-coding] ; residual re-coding = MEASURED DEAD",
+            "thesis": "the residual enemy is coding-irreducible; the macro view RELOCATES bytes onto "
+                      "dedup + xi-charge + hood + generator-COVERAGE, and REFRAMES the enemy as coverage",
+        },
+        empirical_output={
+            "R1_exhaustive_wholeset_dedup_MEASURED": {
+                "corrected_triple_folds": "de-share 0.00440 (horizon+lane<->Movable amortized) + triple 0.00102",
+                "unfolded_real_double_counts_coded_alone": {
+                    "lane<->road_mycar": 0.0011146, "movable<->hood": 0.0001385,
+                    "movable<->road_mycar": 0.0001132,
+                },
+                "delta_S": -0.001, "p2_floor_amortized": -0.0007, "p2_ceil_coded_alone": -0.00137,
+                "verdict_scope": "INSTANCE (gt_n600, dilate=2 footprint proxy)",
+                "excluded": "hood<->road_mycar 0.028 = VALIDATED NOT a double-count (v8 folds them; "
+                            "splitting would double-count) -> NOT subtracted",
+                "complete_0135_to": 0.134,
+            },
+            "R2_egorigid_xi_charge_horizon_dominant_DERIVED": {
+                "note": "horizon dominant 0.00277 is ~all intercept stream = ego-pitch = banked pose xi; "
+                        "SI I1 intends 'charged once SG S1' but the MEASURED number has not applied it",
+                "delta_S": -0.0025, "p2_floor": -0.0015,
+                "verdict_scope": "FORMULATION (ego-rigid carriers ONLY; lane xi-transport MEASURED NO-GO)",
+                "dominant_0061_to": 0.0585,
+            },
+            "R3_hood_single_static_store_DERIVED_CANDIDATE_OWED": {
+                "tell": "hood bitmap 0.028 -> static-model 0.0202 = only 1.4x for an IoU-0.994 static mask",
+                "delta_S_band": [-0.017, 0.0], "p2_floor": 0.0,
+                "owed_0_measure": "single-majority-silhouette (counted once) + per-frame boundary-XOR "
+                                  "brotli vs 0.0202 on gt_n600 -- highest variance, do NOT bank",
+                "verdict_scope": "INSTANCE",
+            },
+            "R4_joint_dominant_stream_coding_DERIVED": {"delta_S": -0.0005, "p2_floor": 0.0,
+                "owed_0_confirm": "concatenate the 5 emitted dominant blobs, one brotli q11 vs sum-of-separate"},
+            "R5_generator_coverage_increment2_DERIVED": {
+                "delta_S_band": [-0.02, -0.015], "scope": "increment-2 BUILD (NOT $0)",
+                "note": "the enemy's TRUE home: Road/Lane residual 0.042 = 53% of enemy = 40% off-curve = "
+                        "COVERAGE gap not coder gap; extend lane generator -> px move INTO cheap dominant",
+            },
+            "MEASURED_NEGATIVES_shaping_the_pass": {
+                "temporal_egowarp_residual_coding_NO_GO": {
+                    "artifact": "keyframe_ego_residual_coding_n600/results.json (n600, LOSSLESS residual)",
+                    "rate_best_intra_vs_egowarp": {"native": [7.63, 11.22], "384x512": [1.85, 2.41],
+                                                   "192x256": [0.54, 0.67]},
+                    "mean_res_bits": {"prev": 5.17, "ego": 5.19},
+                    "verdict": "intra keyframe BEATS ego-warp at ALL resolutions; disocclusion/new-content "
+                               "dominate the warped residual",
+                    "verdict_scope": "FORMULATION (full-frame R1 dense-ECC ego-warp; sparse boundary-coord "
+                                     "ground-frame form UNMEASURED, DISTINCT, but swims against this prior)",
+                },
+                "spatial_curve_relative_REFUTED": "residual_kit probe2 (horizon 0.988x, lane 0.896x); FORMULATION",
+                "joint": "BOTH residual re-coding axes MEASURED shut -> residual at coordinate entropy",
+            },
+            "revised_macro_triple": {
+                "dominant_only": 0.0585, "complete_lossless_firm": 0.131,
+                "complete_with_owed_R3_R5": [0.11, 0.12], "residual_enemy_firm": 0.0725,
+                "frontier": 0.118,
+                "verdict": "firm macro complete ~0.131 (from 0.135) is STILL a WASH vs 0.118; sub-frontier "
+                           "needs owed R3 hood $0-measure and/or increment-2 R5 coverage BUILD; the macro "
+                           "view LOCATES both but does not itself cross 0.118",
+            },
+        },
+        residual=0.0,
+        source_artifact=".omx/research/v8_macro_rate_pass_20260710.md",
+        measurement_method="wholeset_dedup_from_probe1b_plus_egowarp_negative_from_keyframe_ego_n600_read_only",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/v8_macro_rate_pass_20260710.md",
+            reactivation_criteria=(
+                "measure the owed R3 hood single-static-store ($0) and/or build increment-2 R5 "
+                "generator-coverage; OR byte-close a v8 archive applying whole-set dedup + xi-charge"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="macos_arm64",
+        ),
+    )
+
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -451,13 +547,14 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         units_in={"edge_boundary_px": "count", "generator_coeffs": "count_per_frame"},
         units_out={"s_rate_term": "contest_rate_score_25bytes_over_N"},
         empirical_anchors=(anchor_roadlane, anchor_rollup, anchor_deshare, anchor_curve_rel_negative,
-                           anchor_inc1a_analytic, anchor_inc1a_killgate),
+                           anchor_inc1a_analytic, anchor_inc1a_killgate, anchor_macro_rate_pass),
         predicted_vs_empirical_residual={
             "roadlane_dominant_measured": 0.0,
             "wholescene_rollup_measured": 0.0,
             "deshare_lever1_confirmed_measured": 0.0,
             "curve_relative_lever2_refuted_measured": 0.0,
             "inc1a_killgate_ruling_analytic_measured": 0.0,
+            "macro_rate_pass_wholeset_dedup_and_egocharge_measured": 0.0,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,

@@ -368,3 +368,33 @@ dirs READ-ONLY · #205 STOPPED.
 **Pointer 0.19110 UNMOVED — this SPEC is MEANS.** Only a byte-closed `upstream/evaluate.py` n600 row <
 0.19110 moves it. increment-1a is a NECESSARY-condition PARTITION screen (mask-optimal ≠ score-optimal);
 the SUFFICIENT through-R test is 1b; the authority is a byte-closed n600 row.
+
+---
+
+## MACRO-RATE ADDENDUM (append-only — 2026-07-10; operator "view the whole thing bringing micro to macro")
+
+**Scope:** this addendum re-derives the increment-1 rate from the WHOLE-ARCHIVE macro object (scene
+geometry ~8-dim + ego-screw ξ(t) already-banked 7.2 KB + per-class charts) instead of the §I MICRO
+sum. It is a rate-half DERIVATION `[macOS-CPU advisory · NON-PROMOTABLE]`; it CHANGES NO sealed §1–§12
+decision and moves NOTHING on the pointer (0.19110 UNMOVED). Full memo:
+`.omx/research/v8_macro_rate_pass_20260710.md`. Sibling of clause-A lifted pairwise→whole-set.
+
+**The measured negatives that shape it (both residual RE-CODING axes are DEAD):** TEMPORAL ego-warp
+residual coding NO-GO (`keyframe_ego_residual_coding_n600` n600: `intra` BEATS `ego_warp_R1` at all
+resolutions; verdict_scope FORMULATION full-frame) + SPATIAL curve-relative REFUTED (`residual_kit`
+probe2; FORMULATION). ⇒ the 0.074 residual enemy is coding-irreducible; the macro view RELOCATES bytes
+and REFRAMES the enemy as COVERAGE, it does not shrink the residual by re-coding.
+
+**Revised triple (labeled; P2 floor + verdict_scope on each):** dominant 0.061 → ~0.0585 (R2 ego-rigid
+ξ-charge −0.0025 DERIVED, horizon intercept = banked pose ξ, ego-rigid only); complete-lossless 0.135 →
+**~0.131 FIRM** (R1 exhaustive whole-set dedup −0.001 MEASURED [probe1b, band 0.0007–0.00137, INSTANCE
+gt_n600 dilate=2] + R2 + R4 joint-coding −0.0005 DERIVED) → ~0.11–0.12 IF the owed R3 hood
+single-static-store (candidate −[0,0.017] DERIVED-owed; the 0.028→0.0202 = 1.4×-only tell) and/or the
+increment-2 R5 generator-coverage (−[0.015,0.02], the enemy's true home = Road/Lane 0.042 = 53% of
+enemy) land; residual enemy 0.074 → **~0.0725 FIRM** (barely moves — CONFIRMS coding-irreducible).
+
+**Consequence for this SPEC:** firm macro complete ~0.131 is STILL a WASH vs the 0.118 frontier — the
+§0/§6/§SEAL-BOUNDARY-4 r\* RANGE [0.061, 0.135] and "shippable = WASH" verdict STAND. The macro pass
+does NOT itself cross 0.118; it LOCATES the sub-frontier path (owed R3 $0 hood measure + increment-2 R5
+coverage BUILD, §9). No sealed decision changes. Triality: DAG FEED-macro-rate + equations anchor
+`v8_macro_rate_pass_exhaustive_dedup_and_egocharge_measured_20260710`; DSL N/A (rate derivation).
