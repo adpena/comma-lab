@@ -4,7 +4,7 @@ Browseable summary of the strict-preflight catalog gates currently active in thi
 
 The catalog is a set of structural bug-class extinction checks: each gate is a static or repo-state check that refuses to allow a code/state pattern that empirically caused a problem in a prior session. When a check fails, the operation (commit, dispatch, smoke, deploy) is blocked until the pattern is fixed or an explicit waiver is added.
 
-Related: [`docs/asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md) Section E.1. Sister library: [`adpena/tac`](https://github.com/adpena/tac). Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
+Related: [`docs/asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md) Section E.1. Sister library: [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac). Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
 
 ---
 
@@ -68,4 +68,4 @@ The catalog is engineering rigor, not a contest-score primitive by itself. It do
 
 The cost of the discipline is real: ~300 gates means ~300 maintenance surfaces, each with its own waiver mechanism, edge cases, and false-positive risk. The META-meta gates (#118 / #159 / #176 / #185 / #186 / #299) exist precisely because the catalog's own maintenance overhead is itself a bug-class surface. The quota brake at #400 is a structural commitment to pause and consolidate before the maintenance cost crosses the value the gates provide.
 
-Sister library [`adpena/tac`](https://github.com/adpena/tac) carries a subset of the canonical helpers the preflight gates protect (the fcntl-locked JSONL helpers, the canonical Modal call_id ledger, the master-gradient extraction primitives, the substrate registry contract). The catalog gates and the sister library are co-developed: each new canonical helper lands paired with the STRICT gate that protects callers from bypassing it.
+Sister library [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac) carries a subset of the canonical helpers the preflight gates protect (the fcntl-locked JSONL helpers, the canonical Modal call_id ledger, the master-gradient extraction primitives, the substrate registry contract). The catalog gates and the sister library are co-developed: each new canonical helper lands paired with the STRICT gate that protects callers from bypassing it.

@@ -130,7 +130,7 @@ Methodology long-form: [`docs/writeup/cuda_cpu_drift_methodology.md`](docs/write
 
 The reusable codec, predictor, search, and runtime-contract primitives developed
 in this research environment are open-sourced as standalone Python package
-**[`adpena/tac`](https://github.com/adpena/tac)** (MIT licensed). This
+**[`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac)** (MIT licensed). This
 `comma-lab` repo contains the full research environment, experimental
 scaffolding, council deliberations, dispatch ledgers, and state-of-development
 artifacts; `adpena/tac` is the curated production extract suitable for OSS

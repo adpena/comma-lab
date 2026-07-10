@@ -74,7 +74,7 @@ The submission packet is intentionally narrow. The apparatus that produced it is
 
 Discipline: per-substrate adversarial-council symposium before paid dispatch above threshold (canonical 6-step contract: cargo-cult audit + 9-dim checklist + observability surface + sextet pact + reactivation criteria + post-training Tier-C validation), recursive 3-clean-pass adversarial review with per-round assumption-challenge axis, 4-tier council hierarchy with explicit quorum and tie-break (T1 unbounded / T2 ≤3/day / T3 ≤3/week / T4 ≤2/month), per-deliberation HARD-EARNED-vs-CARGO-CULTED assumption surfacing. See [`cargo_cult_unwind_methodology.md`](./cargo_cult_unwind_methodology.md) for the NSCS06 v6→v7 anchor (44% reduction in one iteration).
 
-Sister library [`adpena/tac`](https://github.com/adpena/tac) holds task-aware-compression research primitives and reusable tooling used during development; it is not required by the PR #110 submission runtime.
+Sister library [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac) holds task-aware-compression research primitives and reusable tooling used during development; it is not required by the PR #110 submission runtime.
 
 ---
 
@@ -84,7 +84,7 @@ Five lanes have paired or single-axis empirical anchors on contest hardware; the
 
 The intent is to push more candidates through the pipeline. The submission packet is the validated tip; the apparatus is ~3 orders of magnitude larger and most of it has not been paid for in GPU hours. The bug-class extinction work, canonical-helper consolidation, and meta-engineering discipline are leverageable — a collaborator stepping into one of the scaffolded paradigm classes inherits the tooling without rebuilding it.
 
-References: [PR #110 anchor](https://github.com/commaai/comma_video_compression_challenge/pull/110) · [inventory](./asymptotic_floor_candidate_inventory.md) · [full-stack source map](./full_stack_source_map.md) · [cargo-cult unwind methodology](./cargo_cult_unwind_methodology.md) · [canonical equations tour](./canonical_equations_tour.md) · [master-gradient extractor tour](./master_gradient_extractor_tour.md) · [strict preflight catalog summary](./strict_preflight_catalog_summary.md) · [META engineering vision](./meta_engineering_vision.md) · [AI-assisted inverse steganalysis + persona-council methodology](./ai_assisted_inverse_steganalysis_persona_council.md) · [sister library `adpena/tac`](https://github.com/adpena/tac).
+References: [PR #110 anchor](https://github.com/commaai/comma_video_compression_challenge/pull/110) · [inventory](./asymptotic_floor_candidate_inventory.md) · [full-stack source map](./full_stack_source_map.md) · [cargo-cult unwind methodology](./cargo_cult_unwind_methodology.md) · [canonical equations tour](./canonical_equations_tour.md) · [master-gradient extractor tour](./master_gradient_extractor_tour.md) · [strict preflight catalog summary](./strict_preflight_catalog_summary.md) · [META engineering vision](./meta_engineering_vision.md) · [AI-assisted inverse steganalysis + persona-council methodology](./ai_assisted_inverse_steganalysis_persona_council.md) · [sister library `comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac).
 
 ---
 

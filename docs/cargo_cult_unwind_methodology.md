@@ -4,7 +4,7 @@ A reusable engineering discipline for rescuing substrate paradigms that fail the
 
 Validated empirically on one substrate refactoring (NSCS06 v6 → v7): a `0.4413` reduction on the contest-CUDA T4 axis (`105.15` → `58.89`, 44% improvement) in one iteration. Promising as a general recipe; not yet universally proven.
 
-Related: [`docs/asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md) Section C.10. Sister library: [`adpena/tac`](https://github.com/adpena/tac). Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
+Related: [`docs/asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md) Section C.10. Sister library: [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac). Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
 
 ---
 

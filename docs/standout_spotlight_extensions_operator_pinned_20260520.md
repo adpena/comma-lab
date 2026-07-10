@@ -104,5 +104,5 @@ This section is the operator's specific ask: an honest acknowledgment that much 
 - **Primary spotlight memo** (sister document, 10 candidates): [`standout_undersold_candidates_spotlight.md`](standout_undersold_candidates_spotlight.md).
 - **Main inventory memo** (full class-shift inventory): [`asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md).
 - **Submission packet**: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
-- **Sister library**: [`adpena/tac`](https://github.com/adpena/tac).
+- **Sister library**: [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac).
 - **This repo**: [`adpena/comma-lab`](https://github.com/adpena/comma-lab).

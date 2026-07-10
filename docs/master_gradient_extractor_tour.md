@@ -2,7 +2,7 @@
 
 A tool for measuring per-pair / per-byte score-response sensitivities on a fixed substrate operating point. The extractor emits diagnostic tensors that downstream consumers (per-pair bit allocators, candidate rankers, cargo-cult unwind audits, asymptotic-pursuit readiness checks) ingest as side information for the substrate-design loop.
 
-Related: [`docs/asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md) Section E.1, [`canonical_equations_tour.md`](canonical_equations_tour.md) equations 4 and 5. Sister library: [`adpena/tac`](https://github.com/adpena/tac). Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
+Related: [`docs/asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md) Section E.1, [`canonical_equations_tour.md`](canonical_equations_tour.md) equations 4 and 5. Sister library: [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac). Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
 
 ---
 
@@ -127,4 +127,4 @@ The extractor is a tool, not a contest-score primitive by itself. Running it doe
 
 The canonical caveats apply: the per-byte master-gradient on entropy-coded archives carries the locality violation from equation #5 (use `M_inflated`, not `M_archive`, for cross-substrate sensitivity comparison); the per-pair Cauchy-Schwarz bound from equation #4 is an upper bound, not a closed-form prediction; the gradient is computed at one operating point and does not extrapolate to substantially different operating points without re-extraction.
 
-Sister library [`adpena/tac`](https://github.com/adpena/tac) carries the canonical master-gradient consumers (`tac.master_gradient_consumers` for the per-pair / aggregate / per-X interfaces; `tac.cathedral_consumers.per_pair_difficulty_atlas_consumer` for the per-pair difficulty atlas exploit at the cathedral-autopilot ranker surface). Reproducing the extractor's full toolchain against a fresh substrate requires both the extractor (in this repo's `tools/`) and the consumer interfaces (in the sister library) — both are MIT-licensed.
+Sister library [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac) carries the canonical master-gradient consumers (`tac.master_gradient_consumers` for the per-pair / aggregate / per-X interfaces; `tac.cathedral_consumers.per_pair_difficulty_atlas_consumer` for the per-pair difficulty atlas exploit at the cathedral-autopilot ranker surface). Reproducing the extractor's full toolchain against a fresh substrate requires both the extractor (in this repo's `tools/`) and the consumer interfaces (in the sister library) — both are MIT-licensed.

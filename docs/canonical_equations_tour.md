@@ -4,7 +4,7 @@ The canonical equations registry is a small append-only ledger of empirically-ca
 
 Six equations populate the initial registry. Each one is grounded in a first-principles reference and backed by at least one empirical anchor on contest-1:1 hardware.
 
-Related: [`docs/asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md) Section E.1. Sister library: [`adpena/tac`](https://github.com/adpena/tac). Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
+Related: [`docs/asymptotic_floor_candidate_inventory.md`](asymptotic_floor_candidate_inventory.md) Section E.1. Sister library: [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac). Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
 
 ---
 
