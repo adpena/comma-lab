@@ -1017,6 +1017,19 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
             outer_timeout, rc, blob = True, None, ""
         wall = _time.perf_counter() - t0
         peak_mib = parse_safe_run_peak_mib(blob)
+        # (dry-start FIX 2026-07-10; attempt-1/-3 epochs=-1 root-cause) PERSIST the captured child
+        # output to sub/run.log BEFORE parsing. Under this path the trainer's stdout is INHERITED by
+        # safe_run (its Popen does not redirect) and captured by THIS subprocess.run — nothing writes
+        # the run.log that real (durable-daemon) launches get from the daemon redirect, so
+        # parse_dry_start_run_metrics read a MISSING file and reported epochs=-1/ckpt=False even when
+        # the trainer had stepped + checkpointed (attempt-3 wrote levelset_resume_state.npz and would
+        # STILL have failed the gate). The persisted file is also the durable inspection artifact the
+        # FAILED-path message points at ("inspect ... run.log"). Append-mode: never clobber.
+        try:
+            with (sub / "run.log").open("a") as fh:
+                fh.write(blob)
+        except OSError as exc:
+            print(f"# dry-start WARN: could not persist captured output to {sub / 'run.log'}: {exc!r}")
         m = parse_dry_start_run_metrics(sub / "run.log")
         gross, marginal = dry_start_sec_per_ep(wall, m["gt_secs"], m["epochs_completed"])
         return {"dir": str(sub), "rc": rc, "outer_timeout": outer_timeout,
