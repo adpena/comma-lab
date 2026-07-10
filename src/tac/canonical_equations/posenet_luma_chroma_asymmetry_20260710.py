@@ -39,6 +39,7 @@ from __future__ import annotations
 from tac.canonical_equations.equation import (
     RECALIBRATE_ON_NEW_ANCHORS,
     VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    VERIFIED_VIA_SOURCE_INSPECTION,
     CanonicalEquation,
     EmpiricalAnchor,
 )
@@ -119,6 +120,75 @@ def build_posenet_luma_chroma_asymmetry_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_kernel = EmpiricalAnchor(
+        # (c) EXACT 6-ATOM POSE-PREPROCESS NULL KERNEL — advisory-fold 2026-07-10
+        # (ADVISORY_evaluator_video_geometry §Pose geometry; the v7.5.3 exact-D texture home law).
+        # This equation already holds the SUFFICIENT chroma-box-average sinc null; this anchor pins
+        # the EXACT/COMPLETE linear kernel of the Pose preprocessing map at the 384x512 scorer grid
+        # (rgb_to_yuv6 keeps all 4 luma polyphases + averages U,V per 2x2 block; frame_utils:50-78).
+        anchor_id="pose_preprocess_exact_6atom_null_kernel_20260710",
+        measurement_utc="2026-07-10T00:00:00Z",
+        inputs={
+            "map": "rgb_to_yuv6 (frame_utils:50-78): 4 luma polyphases kept per 2x2 scorer-grid block; "
+                   "U,V box-averaged over the block",
+            "frozen_checkout_git": "991b317c41fe3aac657e0f0cb88fd831b2e4185a",
+            "custody_sha256": "frame_utils.py d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437"
+                              "f0ffdab90; modules.py 065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a"
+                              "2db8ee1b3cf49aa",
+            "advisory": ".omx/research/ADVISORY_evaluator_video_geometry_20260710.md",
+        },
+        predicted_output={
+            "question": "the EXACT linear kernel (all pose-null perturbations) of the Pose preprocess",
+        },
+        empirical_output={
+            "per_pixel_luma_null": "0.299·dR + 0.587·dG + 0.114·dB = 0  (determines dG)",
+            "per_2x2_block_zero_sum": "sum(dR)=0 and sum(dB)=0  (3 dof each)",
+            "local_kernel_dim_per_block": 6,
+            "basis": (
+                "3 zero-sum Haar patterns h_x=[[1,-1],[1,-1]], h_y=[[1,1],[-1,-1]], "
+                "h_xy=[[1,-1],[-1,1]] CROSSED with c_U=(0,-0.3441362862010222,1.772) and "
+                "c_V=(1.402,-0.7141362862010221,0) -> 6 atoms h_k⊗c_U, h_k⊗c_V"
+            ),
+            "total_dof_per_frame": 294912,           # 49,152 blocks × 6
+            "basis_residual": "< 5.6e-17 (direct float64 algebra)",
+            "four_binding_caveats_that_break_the_null": (
+                "(1) texture composed PRE-sigmoid — unequal per-channel derivative destroys RGB luma-"
+                "nullness; (2) soft per-pixel class placement + annulus gates destroy the blockwise "
+                "zero-sums; (3) bicubic camera-grid lift + evaluator bilinear resize can leak out of "
+                "the scorer-grid kernel; (4) uint8 rounding + RGB/YUV clamp make the feasible kernel "
+                "piecewise"
+            ),
+            "home_law": (
+                "PROJECT AFTER the last learned RGB nonlinearity, solve a reachable camera-grid "
+                "preimage through the exact resize, guard the active set, require the first-6 Pose "
+                "outputs BIT-STABLE after fresh .raw reload. A proxy tensor equality is NOT enough; "
+                "'high-frequency chroma' alone is NOT an exact-null theorem. frame1-only (frame_0 is "
+                "seg-free -> pose-only carrier)."
+            ),
+            "verdict_scope": (
+                "DERIVED-FROM-CODE (linear scorer-grid model; the 4 caveats are the reachability "
+                "boundary). This is a CANDIDATE home law, NOT proof the current period-[4,8] RGB "
+                "texture bank inhabits it. means != ends; pointer 0.19110 UNMOVED."
+            ),
+        },
+        residual=0.0,
+        source_artifact=".omx/research/ADVISORY_evaluator_video_geometry_20260710.md",
+        measurement_method=(
+            "exact linear algebra of the rgb_to_yuv6 preprocessing map at the 384x512 scorer grid "
+            "(4 luma polyphase constraints + 2 chroma block-average constraints per 2x2 block)"
+        ),
+        empirical_verification_status=VERIFIED_VIA_SOURCE_INSPECTION,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/ADVISORY_evaluator_video_geometry_20260710.md",
+            reactivation_criteria=(
+                "when the v7.5.3 exact-D texture trunk is built (src/tac/boundary_math/texture_trunk"
+                ".py), require post-nonlinearity projection into this kernel + camera-grid preimage + "
+                "first-6-Pose bit-stability after fresh raw reload; verify the built bank inhabits it"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -150,12 +220,16 @@ def build_posenet_luma_chroma_asymmetry_v1() -> CanonicalEquation:
         },
         units_in={"yuv6_channel": "posenet_input_channel", "frame_index": "pair_position"},
         units_out={"jacobian_energy": "sum_grad_squared", "seg_delta": "dseg_fraction"},
-        empirical_anchors=(anchor,),
-        predicted_vs_empirical_residual={"luma_chroma_asymmetry_confirmed": 0.0},
+        empirical_anchors=(anchor, anchor_kernel),
+        predicted_vs_empirical_residual={
+            "luma_chroma_asymmetry_confirmed": 0.0,
+            "pose_preprocess_exact_6atom_kernel_derived": 0.0,
+        },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "experiments/train_levelset_witness_realized_through_R_mlx.py",  # frame-0 + chroma carriers
+            "src/tac/boundary_math/texture_trunk.py",  # v7.5.3 exact-D texture home (6-atom kernel)
         ),
         canonical_producers=(
             "tac.canonical_equations.posenet_luma_chroma_asymmetry_20260710",

@@ -112,6 +112,63 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu_mlx",
         ),
     )
+    anchor_waterlines = EmpiricalAnchor(
+        # (b) SCORE-ECONOMICS: cell<->byte exchange + distance-to-target waterlines — advisory-fold
+        # 2026-07-10 (ADVISORY_evaluator_video_geometry / ADVISORY_vehicle_line_synthesis). This
+        # equation already owns λ_bytes = 25/37_545_489 and λ_pose = 5/sqrt(10·d_pose); the seg-CELL
+        # price 8.4771050347e-7 (=100/117_964_800) is held by resize_exploit_flip_fix_frontier_v1
+        # law-2. This anchor pins the two DERIVED exchange rates + the single-axis waterlines from the
+        # local pointer 0.19110 — the costate integrated to the sub-0.19 / sub-0.15 targets.
+        anchor_id="score_economics_cell_byte_waterlines_20260710",
+        measurement_utc="2026-07-10T00:00:00Z",
+        inputs={
+            "score_law": "S = 100·d_seg + sqrt(10·d_pose) + 25·bytes/37_545_489",
+            "n600_seg_surface": "600·384·512 = 117,964,800 scored cells",
+            "rate_denom": "37,545,489 bytes (single-video videos/0.mkv; evaluate.py:55-69)",
+            "pointer": "0.19109982419209975 [contest-CPU] (canonical_frontier_pointer)",
+            "advisory": ".omx/research/ADVISORY_evaluator_video_geometry_20260710.md + "
+                        "ADVISORY_vehicle_line_synthesis_20260710.md",
+            "custody_sha256": "evaluate.py 7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd4"
+                              "0baa4b (frozen checkout git 991b317c41fe3aac657e0f0cb88fd831b2e4185a)",
+        },
+        predicted_output={
+            "question": "exact single-axis exchange rates + distance-to-sub-0.19 / sub-0.15 waterlines",
+        },
+        empirical_output={
+            "seg_cell_price_S": 8.4771050347e-7,       # 100/117_964_800 (held by resize_exploit law-2)
+            "archive_byte_price_S": 6.6585895312e-7,   # 25/37_545_489 (= λ_bytes above)
+            "cell_buys_bytes": 1.273108,               # 1 corrected Seg cell ≡ 1.273108 bytes (no Pose)
+            "byte_needs_cells": 0.785479,              # 1 added byte must save > 0.785479 cells (no Pose)
+            "waterline_sub019_bytes": 1651.74,         # from pointer 0.19110, one-axis-held-fixed
+            "waterline_sub019_cells": 1297.41,
+            "waterline_sub015_bytes": 61724.52,
+            "waterline_sub015_cells": 48483.33,
+            "pose_caveat": (
+                "NO fixed pose-per-byte: the sqrt(10·d_pose) marginal 5/sqrt(10·d_pose) is operating-"
+                "point dependent; use the exact sqrt DIFFERENCE for finite moves, never the tangent. "
+                "Advisory arithmetic corrections: sqrt(10·0.018)=0.424264 (NOT ~0.02); 0.022/0.00161="
+                "13.6646 and the 0.022 row is n24, not an n600 matched ratio."
+            ),
+            "verdict_scope": (
+                "DERIVED (exact score-law arithmetic). The waterlines are one-axis-held-fixed "
+                "EQUIVALENCES, NOT predictions — recompute Pose + component interactions at the "
+                "realized byte-closed candidate; means != ends, pointer 0.19110 UNMOVED."
+            ),
+        },
+        residual=0.0,
+        source_artifact=".omx/research/ADVISORY_evaluator_video_geometry_20260710.md",
+        measurement_method="exact score-law arithmetic on the frozen evaluator constants + local pointer",
+        empirical_verification_status="VERIFIED_VIA_SOURCE_INSPECTION",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/ADVISORY_evaluator_video_geometry_20260710.md",
+            reactivation_criteria=(
+                "recompute the waterlines when the canonical pointer moves; recompute the Pose "
+                "contribution at the realized candidate's measured d_pose (the sqrt term is not linear)"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Costate λ = ∂S/∂x: (100, 5/sqrt(10·d_pose), 25/37545489) + chained "
@@ -140,14 +197,18 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
         units_in={"dseg_slope": "d_seg per epoch", "dpose_slope": "d_pose per epoch",
                   "dbytes_slope": "bytes per epoch", "d_pose": "dimensionless"},
         units_out={"dS_depoch": "S per epoch (advisory implied-S units)"},
-        empirical_anchors=(anchor,),
+        empirical_anchors=(anchor, anchor_waterlines),
         predicted_vs_empirical_residual={
             "ep350_horizon_25ep_in_band_central_gap": 0.0706,
             "ep450_horizon_25ep_below_band_gap": 0.0056,
+            "score_economics_waterlines_derived": 0.0,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
-        canonical_consumers=("tac.witness_control.shadow_controller",),
+        canonical_consumers=(
+            "tac.witness_control.shadow_controller",
+            "tools/costate_digest.py",  # surfaces the score-economics waterlines at SessionStart
+        ),
         canonical_producers=(
             "tools/costate_shadow_report.py",
             "experiments/train_levelset_witness_realized_through_R_mlx.py",
