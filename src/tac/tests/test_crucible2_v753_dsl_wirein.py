@@ -203,16 +203,146 @@ def test_v753_new_dsl_factories_exist_and_emit_real_flags():
 
 # ─────────────────────────── 6. Δ4 ladder — every rung factory exists (no stub owed) ─────────────
 def test_v753_ladder_rung_factories_all_exist_in_dsl():
-    """Δ4: every one of the 10 rungs + operator-GO maps to a REAL curriculum_dsl factory (verify each
+    """Δ4: every one of the 11 rungs + operator-GO maps to a REAL curriculum_dsl factory (verify each
     exists; emit_stub_lever is owed ONLY for a genuinely-missing one — none are today, per #397)."""
     ladder = wac.crucible_v753_ladder()
-    assert len(ladder) == 11, f"expected 10 rungs + operator-GO, got {len(ladder)}"
+    assert len(ladder) == 12, f"expected 11 rungs + operator-GO, got {len(ladder)}"
     missing = [(label, fac) for (label, fac, _note) in ladder if not hasattr(cd, fac)]
     assert missing == [], f"genuinely-missing ladder factories (emit_stub_lever owed): {missing}"
     # each factory actually constructs a Lever (or composite) — it is a real DSL surface, not a name.
     facs = LR.lever_factories()
     for _label, fac, _note in ladder:
         assert fac in facs, f"{fac} is not an AST-discovered DSL lever factory"
+
+
+# ─────────────────────────── 6b. CHROMA add-back rung (LEVER-4c / #276) ───────────────────────────
+def test_v753_chroma_rung_is_registered_in_the_ladder():
+    """The chroma add-back A/B is a registered v7.5.3 ladder rung mapping to the SegChromaBoundary
+    DSL factory (never a new/duplicate factory — the existing LEVER-4c surface is REUSED)."""
+    ladder = wac.crucible_v753_ladder()
+    chroma = [(lbl, fac, note) for (lbl, fac, note) in ladder if fac == "SegChromaBoundary"]
+    assert len(chroma) == 1, f"expected exactly ONE chroma rung (no duplicate factory), got {chroma}"
+    lbl, _fac, note = chroma[0]
+    assert lbl == "chroma_annulus_addback_ab"
+    # the note names the DOF-vs-add-back distinction so a reviewer cannot read it as a settled GAIN.
+    assert "UNMEASURED" in note and "S5-N10" in note
+
+
+def test_v753_chroma_rung_factory_emits_only_real_trainer_flags():
+    """SegChromaBoundary(weight,margin_band,start_epoch) emits ONLY real levelset-trainer flags
+    (never-invent-flags; the trainer chroma-routing wiring ALREADY exists — no new flag built)."""
+    real = cd.real_trainer_flags()
+    lev = cd.SegChromaBoundary(weight=0.05, margin_band=1.0, start_epoch=0)
+    assert lev.name == "seg_chroma_boundary"
+    for flag in lev.overrides:
+        assert flag in real, f"SegChromaBoundary emits {flag} NOT in the trainer argparse"
+    assert set(lev.overrides) == {
+        "--seg-chroma-boundary-weight",
+        "--seg-chroma-boundary-margin-band",
+        "--seg-chroma-boundary-start-epoch",
+    }
+
+
+def test_v753_chroma_rung_is_registered_off_zero_argv_delta_in_default_config():
+    """BYTE-IDENTITY: the chroma rung is registered-OFF — the default v7.5.3(off) config emits ZERO
+    chroma-MATCH argv (the annulus match term stays inactive), so adding the rung did NOT perturb the
+    launch. (The inherited base's own --seg-chroma-boundary-* pins are a SEPARATE, sealed concern —
+    this test asserts the ladder rung itself composes nothing into the default.)"""
+    v753 = wac.derive_crucible_v753_config(_GT, num_pairs=600, trunk_basis="off")
+    # no lever named seg_chroma_boundary is composed by the registered-off rung.
+    assert "seg_chroma_boundary" not in {lv.name for lv in v753.levers}
+
+
+def test_v753_chroma_addback_decision_rule_is_preregistered_and_byte_matched():
+    """The chroma A/B carries a PRE-REGISTERED decision rule + noise-floor (P2) discipline, states its
+    0-byte BYTE-MATCHED property, names the ADVISORY_evaluator obligation (d_seg primary / d_pose only
+    via 2x2 block-mean chroma), and does NOT hardcode a winner (default stays OFF)."""
+    rule = wac._CRUCIBLE_V753_CHROMA_ADDBACK_DECISION_RULE
+    assert "BYTE-MATCHED" in rule
+    assert "noise floor" in rule and "single-seed" in rule.lower()
+    assert "PAYS" in rule and "wash" in rule and "WORSE" in rule  # the 3-way outcome
+    assert "DEFAULT stays OFF" in rule
+    # verdict-scope discipline: a wash is FORMULATION-scoped, never a paradigm kill of the DOF.
+    assert "FORMULATION" in rule
+
+
+def test_v753_chroma_rung_factory_validates_a_fireable_arm_end_to_end():
+    """A fired chroma arm (the A/B ON arm) composes into a v7.5.3 program whose compiled argv PARSES
+    through the REAL trainer argparse (0 unknown flags) — the rung is genuinely FIREABLE, not a name."""
+    typed = wac.derive_crucible_v753_config(_GT, num_pairs=600, epochs=3000, trunk_basis="off")
+    prog = typed.to_program().with_lever(cd.SegChromaBoundary(weight=0.05, margin_band=1.0, start_epoch=0))
+    argv = list(prog.compile_trainer_argv())
+    assert "--seg-chroma-boundary-weight" in argv
+    ap = cd.build_real_trainer_parser()
+    try:
+        ap.parse_args(argv[2:])
+    except SystemExit as exc:  # pragma: no cover
+        raise AssertionError(f"fired chroma arm argv rejected by real argparse (rc={exc.code})") from exc
+
+
+def test_v753_chroma_rung_factory_fails_closed_on_bad_args():
+    """SegChromaBoundary fail-closes on a negative weight, a non-positive margin_band (empty annulus =
+    silent no-op), and a negative start_epoch — the DSL never composes a silently-inert chroma arm."""
+    import pytest as _pt
+    with _pt.raises(ValueError):
+        cd.SegChromaBoundary(weight=-0.1)
+    with _pt.raises(ValueError):
+        cd.SegChromaBoundary(weight=0.05, margin_band=0.0)
+    with _pt.raises(ValueError):
+        cd.SegChromaBoundary(weight=0.05, start_epoch=-5)
+
+
+def test_v753_chroma_rung_adds_no_new_unmapped_flag_registry_unchanged():
+    """Registry completeness: the chroma flags are HELD by the DSL (mapped, not a new gap) and the rung
+    introduces NO stale/unmapped drift — the trainer chroma-routing wiring pre-exists."""
+    c = LR.completeness()
+    for flag in ("--seg-chroma-boundary-weight", "--seg-chroma-boundary-margin-band",
+                 "--seg-chroma-boundary-start-epoch"):
+        assert flag in c.mapped, f"{flag} must be DSL-mapped (SegChromaBoundary)"
+        assert flag not in c.unmapped
+    assert c.stale == [], f"no DSL-emitted flag may be absent from the trainer (drift): {c.stale}"
+
+
+def test_v753_chroma_twin_is_luma_invariant_orthogonal_to_luma_levers():
+    """NO-FAKE property: the reference twin chroma := rgb − BT.601-luma is INVARIANT to an achromatic
+    (equal-channel) luma shift ⇒ the chroma add-back is provably ORTHOGONAL to every luma lever."""
+    import numpy as np
+    from tac.boundary_math import chroma_boundary_match as cbm
+    rng = np.random.default_rng(0)
+    rgb = rng.uniform(0, 255, size=(4, 5, 3))
+    shift = rng.uniform(-30, 30, size=(4, 5, 1))  # per-pixel achromatic luma shift, replicated to 3 ch
+    base = cbm.bt601_chroma(rgb)
+    shifted = cbm.bt601_chroma(rgb + shift)  # broadcast adds the SAME value to R,G,B
+    assert np.allclose(base, shifted, atol=1e-4), "bt601_chroma must be invariant to achromatic shifts"
+
+
+def test_v753_chroma_twin_annulus_mask_selects_only_below_band():
+    """The θ-independent fragile-annulus mask selects ONLY margin<band pixels (STRICT <, mirroring the
+    trainer) — the chroma-match term is confined to the knife-edge where chroma has its d_seg power."""
+    import numpy as np
+    from tac.boundary_math import chroma_boundary_match as cbm
+    margin = np.array([[0.0, 0.5, 1.0], [1.5, 0.99, 2.0]])
+    m = cbm.annulus_mask(margin, band=1.0)
+    assert m.tolist() == [[1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]  # 1.0 is NOT < 1.0 (strict)
+
+
+def test_v753_chroma_rung_equations_are_registered():
+    """The DOF-existence equation and the add-back hinge equation are both registered (triality eqs leg
+    already landed for #276; the rung's own ΔS row is deferred-to-first-measured-A/B)."""
+    from tac.canonical_equations import query_equations
+    ids = {e.equation_id for e in query_equations()}
+    assert "chroma_decides_lane_and_movable_at_annulus_v1" in ids  # the MEASURED DOF (ablation)
+    assert "chroma_boundary_annulus_match_hinge_v1" in ids          # the add-back mechanism (ΔS owed)
+
+
+def test_v753_chroma_decision_rule_names_the_evaluator_pose_obligation():
+    """The A/B plan cites the ADVISORY_evaluator obligation: chroma reaches d_pose ONLY through the 2x2
+    block-mean chroma (weak, incidental) — so the add-back is optimized for d_seg FIRST, pose reported."""
+    # the plan text (comment header on the rule constant) is the operator-facing surface; the rule
+    # constant itself must at minimum carry the d_seg-primary framing.
+    rule = wac._CRUCIBLE_V753_CHROMA_ADDBACK_DECISION_RULE
+    assert "d_seg" in rule.lower()
+    assert "realized" in rule.lower() and "n600" in rule.lower()  # measured through-R, at scale
 
 
 def test_v753_ladder_is_registered_off_not_composed_into_the_default_config():

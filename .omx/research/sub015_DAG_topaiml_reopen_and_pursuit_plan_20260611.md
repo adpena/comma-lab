@@ -13905,3 +13905,42 @@ contest-CPU 0.19110 UNMOVED — MEANS.
 - **Legs:** DSL N/A (search TOOL, no trainer flag) · equations DEFERRED to first measured exact row
   · DAG = this FEED. **Pointer contest-CPU 0.19110 UNMOVED — phase-1 is MEANS (a validated
   actuator); the row moves only through the phase-2 same-container n600 exact eval.**
+
+### FEED-chroma-rung (2026-07-10): the CHROMA add-back is a REGISTERED-OFF v7.5.3 ladder rung — DOF receipt FOUND, add-back ΔS still owed (means, pointer 0.19110 UNMOVED)
+**Operator (verbatim):** *"Chroma rung and amber are important to pursue."* CHROMA-RUNG scope only (a
+sibling owns amber + the live-run inheritance verify; the launch executor owns witness_autoconfig's
+crucible_v752 launch path + the live run dir `levelset_v752_pilot_20260710T154100Z` — NOT touched here).
+- **Slotted:** the EXISTING `SegChromaBoundary` DSL factory (LEVER-4c / #276; NOT a new/duplicate factory)
+  registered as v7.5.3 ladder rung **`chroma_annulus_addback_ab`** in `_CRUCIBLE_V753_LADDER` (now **11
+  rungs + operator-GO = 12**, registered-OFF, argv-inert). Default `crucible_v753(off)` BYTE-IDENTICAL
+  (lever-name parity with v7.5.2(self_orient=False) VERIFIED; `seg_chroma_boundary` NOT composed;
+  completeness unchanged — 3 chroma flags stay mapped, 0 new unmapped/stale). Pre-registered A/B
+  decision-rule constant `_CRUCIBLE_V753_CHROMA_ADDBACK_DECISION_RULE`.
+- **The prior measured ADD-BACK RECEIPT P0-4 demanded — FOUND:** commit `7d3be7e00` / probe **`a3e9f0bd`**
+  (n96, 100% L*-match, 2026-07-03). It is the DOF-EXISTENCE ablation (removing chroma flips **7.54%
+  Lane→Road + 4.38% Movable→Undriv, 93.4% in the margin<1 annulus, LUMA-INDEPENDENT; margin-grad energy
+  78.8% luma / 21.2% chroma**) → eq `chroma_decides_lane_and_movable_at_annulus_v1`. **S5-N10: this is a
+  WORTH (removal HURTS), NOT the add-back GAIN — the MATCH-term ΔS is UNMEASURED.** ⇒ correct disposition
+  = hold chroma OUT of clean launch-1, put the add-back on its OWN registered-OFF rung w/ pre-registered
+  A/B (this rung). Does NOT touch the inherited-base `--seg-chroma-boundary-weight 0.1` pin (executor/amber
+  sealed concern).
+- **What it moves (ADVISORY_evaluator obligation):** **d_seg via frame1 RGB argmax = PRIMARY** (SegNet
+  reads frame1 RGB; chroma = per-pixel argmax actuator at the annulus; frame0 Seg-free ⇒ no Seg help
+  there). **d_pose ONLY through the 2×2 block-mean chroma = WEAK/incidental** (recovered Jacobian 95.97%
+  luma / 4.03% chroma; PoseNet keeps 4 luma polyphases + AVERAGED U/V) → optimize d_seg FIRST, report pose
+  as side effect. 0-byte / 0-param ⇒ **BYTE-MATCHED by construction** (pure-d_seg lever, zero rate cost).
+- **The A/B PLAN (fire next machine window; warm-start arms on the live run's ckpts; NO launch here):**
+  warm-start OFF (`--seg-chroma-boundary-weight 0.0`) vs ON (`0.05`/`0.10`, band 1.0, start 0) from the
+  SAME pre-chroma ckpt_C (annulus formed ~ep450/675), same seed; CELLS ckpt_C+150 / +300; verdict =
+  **byte-closed realized-through-R d_seg on frozen CPU-torch SegNet, n600 real-gt** (never proxy) + annulus
+  flip-shift diagnostic + √(10·d_pose) side-effect report. Rule: PAYS (Δd_seg < −max(noise,3σ) ∧ flips
+  shift to GT chroma → adopt) / WASH (|Δ|≤noise → OFF, `verdict_scope=FORMULATION`, NOT a paradigm kill of
+  the GREEN DOF) / WORSE (→ OFF + P10 antagonism). Noise floor = max(cell 8.477e-7, δ_R band, UNMEASURED
+  3σ); single-seed ⇒ INSTANCE until 2nd-seed bounds it.
+- **Legs:** DSL = `SegChromaBoundary` reused + ladder rung + rule constant (11 chroma tests, 33 suite
+  green, ruff-F clean) · DAG = this FEED · **equations = DEFERRED-to-first-measured-row** (DOF +
+  add-back-hinge eqs already registered from #276; the rung's own ΔS anchor lands with the first byte-closed
+  A/B row — no equation invented on a MEANS). Memo `.omx/research/chroma_rung_design_20260710.md`.
+- **NO-FAKE / means != ends:** the add-back ΔS is UNMEASURED; this unit delivers a FIREABLE registered-OFF
+  arm + pre-registered rule, NOT a score. **Pointer contest-CPU 0.19110 UNMOVED; no launch, no dispatch, no
+  run touched.**
