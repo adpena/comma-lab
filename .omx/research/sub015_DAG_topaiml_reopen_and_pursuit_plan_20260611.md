@@ -13743,3 +13743,45 @@ number the code has not honored (NO-FAKE). The pre-registered kill-gate (`decoup
   realization (OI-5) · P1-3 pose-mode restart-protection (folds into step-3 resume-compat).
 - Triality: DSL = the composed 9-lever launch program; equations = no new law (consumes the sealed
   gate design); DAG = this FEED + decision record §6/§7. **Pointer 0.19110 UNMOVED (means).**
+
+## FEED-owed16v2 (2026-07-10) — REBALANCED self-orient allocation (freq-along 8→26, #335 lane_carried): MEASURED, marginally WORSE than OFF → owed-16 "wrong-allocation" hypothesis REFUTED · gate-1 → launch OFF · pointer 0.19110 UNMOVED
+
+- **SIGNAL (operator "self orient fix right under our noses"):** owed-16's ON arm ran `--freq-across 32
+  --freq-along 8` — a **4:1 allocation AGAINST** the MEASURED 3.2× along-tangent dash-comb deficit
+  (L25/L65; dashes = along-tangent oscillation ~25 cyc/unit). Hypothesis: owed-16 refuted THAT
+  allocation, not the oriented basis; the rebalanced (along-heavy) allocation might beat OFF.
+- **DIAGNOSTIC (semantics VERIFIED, not assumed):** `src/tac/boundary_math/lever_b_generator.py:150-166`
+  — `u_t` (tangent-parallel projection, ALONG the edge where dashes oscillate) is modulated by
+  `freq_along`; `u_n` (normal, ACROSS the edge) by `freq_across`. NOT reversed. So raising `freq_along`
+  IS raising the along-tangent (dash) frequency. The #335 `anisotropic_basis_two_regime_allocation_v1`
+  `lane_carried` regime (this config carries the lane — NO `--lane-render-band`) prescribes
+  `freq_along = min(across, round(8·3.2)) = 26`. Used the DERIVED optimum (across kept 32), cited.
+- **RESPONSE (CLEAN single-run, NO resume, seed 0):** `owed16v2_rebalanced_ON_20260710T114759Z`,
+  identical to owed-16 ON EXCEPT `--freq-along 8→26`. Warm-start weights-only from mod32cap ep650 BEST.
+  `SAFE_RUN exit=0 elapsed=13202s peak_rss=74.2GiB`. Through-R n600 CPU-torch verdicts
+  `[macOS-CPU advisory · NON-PROMOTABLE]`. Fires the DirectionalBasisRebalance lever (activation-ledger
+  duty-to-measure entry closed: FIRED+MEASURED).
+- **MATCHED TABLE (rebalanced along-26 vs owed-16 ON along-8 vs OFF ablated; identical config, seed 0):**
+
+  | cell | rebal (along-26) | ON (along-8) | OFF (ablated) | Δ(rebal−OFF) |
+  |---|---:|---:|---:|---:|
+  | ep649 v0 (raw) | 0.207618 | 0.208537 | 0.208281 | −0.32% |
+  | ep650 zero-shot | 0.006409 | 0.006384 | 0.006295 | **+1.81%** |
+  | ep675 (25 trained) | 0.004286 | 0.004259 | 0.004244 | **+0.99%** |
+  | ep700 (final) | 0.004213 | BLOCKED(owed16) | 0.004181 | **+0.77%** |
+
+  Rebalanced is marginally **WORSE than OFF at every trained cell** (and worse than ON at ep675, +0.63%),
+  including on the **LANE class** the along-tangent frequency specifically targeted (ep675 lane
+  0.28146 > ON 0.27789 > OFF 0.27860). All |Δ| ≤ 1.81% = INSTANCE-level (single-seed, noise floor
+  UNMEASURED, P2); but the −48% direct-partition claim predicts along-heavy ≫ OFF — the disconfirmation
+  direction is robust.
+- **VERDICT (NO-GO; FORMULATION scope):** the freq-along-heavy rebalance provides **NO realized d_seg
+  benefit**; the owed-16 "wrong-allocation" explanation is **REFUTED** — realized directional
+  contribution ≈ 0 is **ROBUST to allocation**, so the −48%→~0 direct-partition→realized gap is NOT an
+  allocation problem. Only uncovered directional formulation remains **from-scratch**.
+- **GATE-1 (FEED-v752-launch) → recommend SELF-ORIENT-OFF** for the held v7.5.2 launch. Rebalanced-ON
+  does not beat OFF; do not adopt the directional rebalance.
+- **Triality:** DSL — DirectionalBasisRebalance lever FIRED+MEASURED (activation ledger; no new lever);
+  equations — new EmpiricalAnchor `owed16v2_rebalanced_allocation_measured_no_benefit_20260710` on
+  `curvelet_directional_basis_dseg_reduction_v1`; DAG — this FEED + verdict `.omx/research/owed16v2_verdict_20260710.json`.
+  **Pointer contest-CPU 0.19110 UNMOVED — MEANS; only a byte-closed `upstream/evaluate.py` n600 row moves it.**

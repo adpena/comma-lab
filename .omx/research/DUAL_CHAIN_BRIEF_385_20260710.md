@@ -34,6 +34,16 @@ IS consulted. Flagged, not silently substituted (operating-manual §5).
 
 ### Recommendation
 
+> **UPDATE 2026-07-10 (gate-1 RESOLVED — owed16v2 rebalance):** the directional self-orient de-risk is
+> now CLOSED against its last defense. owed-16 measured realized transfer ≈ 0 at along=8; owed16v2
+> re-ran the #335 `lane_carried` corrected allocation (**along 8→26**, covering the 3.2× dash deficit) and
+> it is **marginally WORSE than OFF at every trained cell** (ep650 +1.81% / ep675 +0.99% / ep700 +0.77%;
+> worst on the LANE class it targeted) — a CLEAN single-run n600 A/B, seed 0. **The "wrong-allocation"
+> escape is REFUTED; realized directional contribution ≈ 0 is ROBUST to allocation.** → **v7.5.2 launches
+> SELF-ORIENT-OFF** (do not adopt the directional rebalance). The only uncovered directional formulation
+> is from-scratch. Artifacts: `.omx/research/owed16v2_verdict_20260710.json` · DAG FEED-owed16v2 · anchor
+> `owed16v2_rebalanced_allocation_measured_no_benefit_20260710`. Pointer 0.19110 UNMOVED (MEANS).
+
 **Run v8 increment-1a's $0 screen as the FIRST decisive action, AND concurrently close v7.5.2's two
 launch-blockers + its one $0 optimal-form gate; THEN commit v7.5.2 as the pointer-moving launch. If the
 operator forces ONE next GPU commit, it is v7.5.2 — but ONLY after owed-16 cheaply confirms its #1 lever

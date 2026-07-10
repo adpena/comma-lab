@@ -219,3 +219,42 @@ self-orient × warm-start-from-self-orient-parent = REDUNDANT (measured).
 0a550f9e2); this landing is the completeness + canonical-record chain, not the decision trigger.
 Verdict artifact: `.omx/research/owed16_verdict_20260710.json` · anchor
 `owed16_realized_transfer_measured_zero_20260710` on `curvelet_directional_basis_dseg_reduction_v1`.
+
+---
+
+## OWED-16 v2 REBALANCE (2026-07-10, appended — the "wrong-allocation" hypothesis, MEASURED + REFUTED)
+
+**Operator: "There is a self orient fix right under our noses."** owed-16's ON arm ran `--freq-across 32
+--freq-along 8` — a **4:1 allocation AGAINST** the MEASURED 3.2× along-tangent dash deficit (L25/L65).
+The hypothesis: owed-16 refuted THAT allocation, not the oriented basis; the along-heavy allocation
+might beat OFF. **Tested it. It does not.**
+
+**Arm:** `owed16v2_rebalanced_ON_20260710T114759Z` — identical to owed-16 ON EXCEPT `--freq-along 8→26`
+(the #335 `anisotropic_basis_two_regime_allocation_v1` `lane_carried` derived optimum
+`min(across, round(8·3.2))=26`; regime = lane_carried because this config carries the lane, NO
+`--lane-render-band`). **Semantics VERIFIED** (`lever_b_generator.py:150-166`): `freq_along` modulates
+`u_t` = tangent-parallel (ALONG the edge, where dashes oscillate); `freq_across` modulates `u_n` = normal
+(ACROSS). NOT reversed. **CLEAN single-run** (NO resume — the mid-run "reap" alert was a FALSE ALARM;
+the process survived a session-shell SIGURG by reparenting to init, was never relaunched/resumed),
+seed 0, `SAFE_RUN exit=0 elapsed=13202s peak_rss=74.2GiB`. `[macOS-CPU advisory · through-R n600 · NON-PROMOTABLE]`.
+
+**Matched cells (rebal along-26 vs owed-16 ON along-8 vs OFF ablated):**
+
+| cell | rebal (along-26) | ON (along-8) | OFF (ablated) | Δ(rebal−OFF) |
+|---|---:|---:|---:|---:|
+| ep649 v0 | 0.207618 | 0.208537 | 0.208281 | −0.32% |
+| ep650 zero-shot | 0.006409 | 0.006384 | 0.006295 | +1.81% |
+| ep675 (25 trained) | 0.004286 | 0.004259 | 0.004244 | +0.99% |
+| ep700 (final) | 0.004213 | BLOCKED | 0.004181 | +0.77% |
+
+Rebalanced is marginally **WORSE than OFF at every trained cell**, and **worst on the LANE class** it
+targeted (ep675 lane 0.28146 > ON 0.27789 > OFF 0.27860). All |Δ| ≤ 1.81% = INSTANCE noise (single-seed,
+floor unmeasured, P2); disconfirmation direction robust (the −48% claim predicts along-heavy ≫ OFF).
+
+**VERDICT (NO-GO, FORMULATION scope):** the along-tangent rebalance provides NO realized d_seg benefit;
+the "wrong-allocation" explanation is **REFUTED** — realized directional contribution ≈ 0 is **ROBUST to
+allocation**; the −48%→~0 direct-partition→realized gap is NOT an allocation problem. Only uncovered
+directional formulation remains **from-scratch**. **Gate-1 → recommend the v7.5.2 launch use SELF-ORIENT-OFF.**
+Verdict artifact: `.omx/research/owed16v2_verdict_20260710.json` · anchor
+`owed16v2_rebalanced_allocation_measured_no_benefit_20260710` on `curvelet_directional_basis_dseg_reduction_v1`.
+**Pointer 0.19110 UNMOVED (MEANS).**

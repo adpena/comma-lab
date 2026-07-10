@@ -1,0 +1,176 @@
+{
+  "composition": {
+    "active_levers": [
+      "FEED_07a_directional_basis_rebalance",
+      "self_orient_directional_basis",
+      "warm_start_weights_only_from_selforient_parent"
+    ],
+    "deferred_to_ab_protocol": false,
+    "measured": true,
+    "sign": "redundant"
+  },
+  "constraint_carved": "The freq-along-heavy (#335 lane_carried along=26) directional-basis allocation does NOT beat the self-orient-OFF ablation at bounded warm-start (marginally WORSE at every trained cell incl. the lane class it targeted). REFUTES the owed-16 'wrong-allocation' hypothesis: the realized directional contribution ~= 0 is ROBUST to allocation; the direct-partition -48% gap is NOT an allocation problem. Removes 'rebalance the directional budget' from the live design space; the ONLY uncovered directional formulation remains from-scratch.",
+  "emitted_at_utc": "2026-07-10T15:31:20Z",
+  "extra": {
+    "allocation_used": "--freq-across 32 --freq-along 26 (only diff vs owed-16 ON is freq-along 8->26)",
+    "co_tenancy_caveat": "a sibling v752 dry-start co-ran for ~50 min mid-run and swap-thrashed my directional cache (RSS 62->9 GiB, swap 98%); it did NOT corrupt the measurement (verdicts are argmax/MSE, batch-size and timing independent) but slowed wall-clock. v752 exited, run recovered.",
+    "delta_rebal_minus_off": {
+      "ep650": 0.000114,
+      "ep675": 4.2e-05,
+      "ep700": 3.2e-05,
+      "pct_of_off": {
+        "ep650": 1.81,
+        "ep675": 0.99,
+        "ep700": 0.77
+      }
+    },
+    "delta_rebal_minus_on_ep675": {
+      "abs": 2.7e-05,
+      "pct_of_on": 0.63
+    },
+    "hypothesis_tested": "owed-16 ran across=32/along=8 (4:1 AGAINST the measured 3.2x along-tangent dash deficit, L65); this arm tests the #335 lane_carried derived optimum along=26 (across kept 32). Semantics VERIFIED in lever_b_generator.py: u_t(tangent-parallel, along-edge where dashes oscillate) modulated by freq_along; u_n(normal, across) by freq_across -- NOT reversed.",
+    "lane_by_class_ep675": {
+      "note": "rebalanced WORST on the very class along-tangent freq targeted",
+      "off_ablated": 0.2786,
+      "on_along8": 0.27789,
+      "rebal_along26": 0.28146
+    },
+    "launch_recommendation": "GATE-1 for v7.5.2 launch (FEED-v752-launch): rebalanced-ON does NOT beat OFF at ANY trained cell (+0.77% to +1.81% WORSE, all within the ~1.4% instance-noise band) -> recommend the launch use SELF-ORIENT-OFF. The '#335 corrected allocation' does not rescue the directional lever; the owed-16 'backwards-allocation' explanation is REFUTED.",
+    "matched_cells": {
+      "ep649_v0_raw": {
+        "off_ablated": 0.208281,
+        "on_along8": 0.208537,
+        "rebal_along26": 0.207618
+      },
+      "ep650_zeroshot": {
+        "off_ablated": 0.006295,
+        "on_along8": 0.006384,
+        "rebal_along26": 0.006409
+      },
+      "ep675_trained": {
+        "off_ablated": 0.004244,
+        "on_along8": 0.004259,
+        "rebal_along26": 0.004286
+      },
+      "ep700_final": {
+        "off_ablated": 0.004181,
+        "on_along8": "BLOCKED_owed16",
+        "rebal_along26": 0.004213
+      }
+    },
+    "noise_floor_caveat": "P2: single-seed, noise floor UNMEASURED. All |delta| <= 1.81% of OFF are INSTANCE-level; the -48% direct-partition claim predicts along-heavy >> OFF, observed marginally WORSE -> claim-direction disconfirmation robust to any plausible floor.",
+    "pointer": "contest-CPU 0.19110 UNMOVED (MEANS; advisory axis; NON-PROMOTABLE)",
+    "run_cleanliness": "CLEAN single-run start-to-finish, NO resume, seed 0, SAFE_RUN exit=0 elapsed=13202s peak_rss=74248MiB. (The mid-run 'reap' alert was a FALSE ALARM: the process survived a session-shell SIGURG by reparenting to init; never relaunched, never resumed. This arm is CLEANER than owed-16 ON which was timeout-killed at ep687.)"
+  },
+  "is_negative": true,
+  "measured": true,
+  "reformulation_empty_reason": null,
+  "reformulation_queue": [
+    "from-scratch matched-pair self-orient ON-vs-OFF-vs-rebalanced (STILL the only uncovered formulation; basis may shape EARLY partition formation, not fine-tune)",
+    "re-derive WHERE the direct-partition -48% -> realized-through-R ~0 gap opens (through-R uint8/resize? EMA shadow? oracle-vs-self orientation quality?) as a $0 diagnostic BEFORE any further directional spend"
+  ],
+  "rows": [
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "raw loaded mod32cap ep650 weights (pre EMA re-init)",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "experiments/results/owed16v2_rebalanced_ON_20260710T114759Z/launch.sh",
+        "git_sha": "857147012",
+        "inputs_sha256": null,
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
+      },
+      "quantity": "rebalanced_along26_dseg_ep649_v0",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.207618
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "zero-shot after EMA re-init (warm-start)",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "experiments/results/owed16v2_rebalanced_ON_20260710T114759Z/launch.sh",
+        "git_sha": "857147012",
+        "inputs_sha256": null,
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
+      },
+      "quantity": "rebalanced_along26_dseg_ep650_zero_shot",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.006409
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "25 trained ep (owed-16 primary matched cell)",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "experiments/results/owed16v2_rebalanced_ON_20260710T114759Z/launch.sh",
+        "git_sha": "857147012",
+        "inputs_sha256": null,
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
+      },
+      "quantity": "rebalanced_along26_dseg_ep675_trained",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.004286
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "final ep (clean single-run, NO resume)",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "experiments/results/owed16v2_rebalanced_ON_20260710T114759Z/launch.sh",
+        "git_sha": "857147012",
+        "inputs_sha256": null,
+        "seed": 0,
+        "tool": "train_levelset_witness_realized_through_R_mlx.py async through-R n600 CPU-torch verdict"
+      },
+      "quantity": "rebalanced_along26_dseg_ep700_final",
+      "review_status": "provisional",
+      "units": "d_seg_argmax_disagreement_rate",
+      "value": 0.004213
+    }
+  ],
+  "schema_version": "verdict.v1",
+  "scope": {
+    "family_evidence": null,
+    "level": "formulation",
+    "scoped_to": "freq-along-heavy (lane_carried #335: along 8->26) directional-basis allocation, bounded warm-start fine-tune ep650->700 from mod32cap ep650 BEST, seed 0"
+  },
+  "stores_consulted": [
+    ".omx/research/owed16_bounded_ab_and_drystart_20260710.md",
+    ".omx/research/v752_pilot_decision_record_20260710.md (gate-1)",
+    "tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 (#335 derived law)",
+    "src/tac/boundary_math/lever_b_generator.py (semantics verification)",
+    "MEMORY L25/L65 (along-tangent 3.2x deficit; dash erasure law)"
+  ],
+  "verdict": "NO-GO (rebalanced directional allocation does not beat OFF; recommend launch OFF)"
+}

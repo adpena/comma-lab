@@ -377,6 +377,40 @@ def build_curvelet_directional_basis_dseg_reduction_v1() -> CanonicalEquation:
                             "only uncovered reformulation = from-scratch matched pair; fix freq-along 3.2x starvation BEFORE any directional re-test"),
         empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
     )
+    # owed-16 v2 REBALANCE (2026-07-10, APPEND-ONLY): tests the "owed-16 tested the WRONG allocation"
+    # hypothesis. owed-16 ran across=32/along=8 (4:1 AGAINST the measured 3.2x along-tangent dash
+    # deficit, L65); this arm re-runs identical config EXCEPT freq-along 8->26 (the #335 lane_carried
+    # derived optimum: min(across, round(8*3.2))=26). CLEAN single-run start-to-finish (NO resume,
+    # seed 0, SAFE_RUN exit=0, 13202s, peak 74.2 GiB). Matched cells vs owed-16 ON(along8)/OFF(ablated):
+    # ep650 0.006409(vs 0.006384/0.006295); ep675 0.004286(vs 0.004259/0.004244); ep700 0.004213(vs
+    # BLOCKED/0.004181). Rebalanced is marginally WORSE than OFF at EVERY trained cell (+0.77% to
+    # +1.81%, all <= the ~1.4% instance-noise band) AND worst on the LANE class it targeted (ep675
+    # lane 0.28146 > ON 0.27789 > OFF 0.27860). => the along-tangent rebalance provides NO realized
+    # d_seg benefit; the owed-16 "wrong-allocation" explanation is REFUTED; realized transfer ~0 is
+    # ROBUST to allocation. Gate-1 for the v7.5.2 launch => recommend SELF-ORIENT-OFF.
+    anchor_owed16v2_rebalance = EmpiricalAnchor(
+        anchor_id="owed16v2_rebalanced_allocation_measured_no_benefit_20260710",
+        measurement_utc="2026-07-10T15:28:58Z",
+        inputs={"arm": "self_orient_ON_freq_along_rebalanced_26", "vs": "owed16_ON_along8_and_OFF_ablated",
+                "warm_start": "mod32cap_ep650_BEST_weights_only", "verdict": "through_R_n600_cpu_torch",
+                "n": 600, "seed": 0, "allocation": "across=32/along=26 (#335 lane_carried derived optimum)",
+                "formulation": "bounded_warm_start_fine_tune_ep650_to_700_CLEAN_no_resume"},
+        predicted_output={"hypothesis": "along-heavy allocation (26 vs 8) covers the 3.2x dash deficit -> beats OFF"},
+        empirical_output={"realized_benefit_vs_off": "NONE (marginally WORSE at every trained cell)",
+                          "matched_cells_rebal_vs_off": {"ep650": [0.006409, 0.006295], "ep675": [0.004286, 0.004244], "ep700": [0.004213, 0.004181]},
+                          "delta_rebal_minus_off_pct": {"ep650": 1.81, "ep675": 0.99, "ep700": 0.77},
+                          "lane_ep675_rebal_vs_on_vs_off": [0.28146, 0.27789, 0.27860],
+                          "verdict": ("REFUTES the owed-16 wrong-allocation hypothesis: realized directional "
+                                      "contribution ~0 is ROBUST to allocation; -48% direct-partition gap is "
+                                      "NOT an allocation problem. Recommend launch SELF-ORIENT-OFF."),
+                          "note": "all |delta| <= 1.81% of OFF = INSTANCE noise (single-seed, floor unmeasured, P2)"},
+        residual=0.48,
+        source_artifact=".omx/research/owed16v2_verdict_20260710.json",
+        measurement_method="matched_pair_allocation_rebalance_along8_vs_along26_vs_off_through_R_n600_clean_run",
+        provenance=_sidecar(".omx/research/owed16_bounded_ab_and_drystart_20260710.md",
+                            "only uncovered directional formulation remains from-scratch; diagnose the direct-partition->realized gap ($0) BEFORE any further directional spend"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
     return CanonicalEquation(
         equation_id="curvelet_directional_basis_dseg_reduction_v1",
         name="All-class directional (curvelet) basis d_seg reduction (circular-GT; realized transfer MEASURED ~0 at warm-start formulation)",
@@ -392,7 +426,7 @@ def build_curvelet_directional_basis_dseg_reduction_v1() -> CanonicalEquation:
             "measurement_axis": [_ADVISORY],
             "n": 96,
             "gt": "circular_synthetic_NOT_real_n600",
-            "self_orient": "realized_transfer_MEASURED_ZERO_at_warm_start_formulation_owed16_20260710",
+            "self_orient": "realized_transfer_MEASURED_ZERO_at_warm_start_formulation_owed16_20260710_AND_ROBUST_TO_ALLOCATION_owed16v2_along26_20260710",
             "caveat": (
                 "-48% holds ONLY on the direct-partition advisory axis (synthetic circular GT, oracle "
                 "orientation); owed-16 matched-pair A/B measured realized-through-R n600 transfer ~0 at "
@@ -403,10 +437,11 @@ def build_curvelet_directional_basis_dseg_reduction_v1() -> CanonicalEquation:
         },
         units_in={},
         units_out={"dseg_reduction_fraction": "signed_fraction_of_baseline_dseg"},
-        empirical_anchors=(anchor, anchor_owed16, anchor_owed16_measured),
+        empirical_anchors=(anchor, anchor_owed16, anchor_owed16_measured, anchor_owed16v2_rebalance),
         predicted_vs_empirical_residual={
             "n96_circular_gt_curvelet_basis_dseg_UNVERIFIED_self_orient": 0.0,
             "matched_pair_channel_ablation_warm_start_through_R_n600_verdicts": 0.4835,
+            "matched_pair_allocation_rebalance_along8_vs_along26_vs_off_through_R_n600_clean_run": 0.48,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
