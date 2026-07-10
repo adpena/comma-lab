@@ -149,3 +149,5 @@ never the link.
 
 Pointer 0.19110 UNMOVED — apparatus/verification only; no competition form touched, no
 permissions changed, no credentials entered.
+
+*Note:* the evidence `.png` screenshots are local-only (`*.png` is gitignored repo-wide); they persist on disk at `.omx/research/marimo_linkfix_evidence_20260710/` on Primary. The verification narrative above is self-contained without them.
