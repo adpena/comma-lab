@@ -44,6 +44,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 __all__ = [
+    "BULLETIN_DISABLE_ENV",
+    "BULLETIN_LOCK_ENV",
+    "BULLETIN_PATH_ENV",
     "DEFAULT_BULLETIN_LOCK_PATH",
     "DEFAULT_BULLETIN_PATH",
     "EVENT_AGENT_COMPLETED",
@@ -92,6 +95,23 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_BULLETIN_PATH = _REPO_ROOT / ".omx" / "state" / "session_events.jsonl"
 DEFAULT_BULLETIN_LOCK_PATH = _REPO_ROOT / ".omx" / "state" / ".session_events.jsonl.lock"
 
+# ─── Environment overrides (inherited by SPAWNED subprocess children) ───
+# A monkeypatch of ``DEFAULT_BULLETIN_PATH`` only isolates the CURRENT process; a
+# ``multiprocessing`` / ``subprocess`` child re-imports this module fresh and would write
+# to the real live store (the #389 round-1 residual: 12 events leaked from the review_counter
+# multiprocessing test's children). These env vars ARE inherited by children, so a parent
+# that sets them (a test fixture, or a dispatched trainer that must not emit) redirects or
+# mutes EVERY descendant process. Precedence: explicit call arg > env override > module default.
+#   * ``TAC_SESSION_BULLETIN_PATH`` / ``TAC_SESSION_BULLETIN_LOCK_PATH`` — redirect the default
+#     store/lock (used to isolate to tmp while still VERIFYING the emitted rows);
+#   * ``TAC_SESSION_BULLETIN_DISABLE`` (truthy) — hard-mute default-path writes in this process
+#     and all children (an explicit ``bulletin_path=`` call still writes — the caller chose a
+#     destination on purpose).
+BULLETIN_PATH_ENV = "TAC_SESSION_BULLETIN_PATH"
+BULLETIN_LOCK_ENV = "TAC_SESSION_BULLETIN_LOCK_PATH"
+BULLETIN_DISABLE_ENV = "TAC_SESSION_BULLETIN_DISABLE"
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
 
 class SessionBusError(ValueError):
     """A bulletin event failed validation and was refused before persistence."""
@@ -99,6 +119,27 @@ class SessionBusError(ValueError):
 
 def _utcnow_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _bulletin_disabled() -> bool:
+    """True iff ``TAC_SESSION_BULLETIN_DISABLE`` is truthy (env-inherited by children)."""
+    return os.environ.get(BULLETIN_DISABLE_ENV, "").strip().lower() in _TRUTHY
+
+
+def _resolve_bulletin_path(explicit: Path | None) -> Path:
+    """explicit arg > ``TAC_SESSION_BULLETIN_PATH`` env > module ``DEFAULT_BULLETIN_PATH``."""
+    if explicit is not None:
+        return Path(explicit)
+    env = os.environ.get(BULLETIN_PATH_ENV, "").strip()
+    return Path(env) if env else DEFAULT_BULLETIN_PATH
+
+
+def _resolve_lock_path(explicit: Path | None) -> Path:
+    """explicit arg > ``TAC_SESSION_BULLETIN_LOCK_PATH`` env > ``DEFAULT_BULLETIN_LOCK_PATH``."""
+    if explicit is not None:
+        return Path(explicit)
+    env = os.environ.get(BULLETIN_LOCK_ENV, "").strip()
+    return Path(env) if env else DEFAULT_BULLETIN_LOCK_PATH
 
 
 def _validate(kind: str, subject: str, payload: dict, agent_label: str) -> None:
@@ -153,8 +194,13 @@ def post_event(
         "written_pid": os.getpid(),
         "written_host": socket.gethostname(),
     }
-    path = bulletin_path or DEFAULT_BULLETIN_PATH
-    lock = lock_path or DEFAULT_BULLETIN_LOCK_PATH
+    # Hard-mute (env-inherited by children): validate as usual, but skip the write when
+    # falling back to the default/env path. An explicit ``bulletin_path=`` is honored even
+    # under DISABLE — the caller deliberately chose a destination.
+    if bulletin_path is None and _bulletin_disabled():
+        return record
+    path = _resolve_bulletin_path(bulletin_path)
+    lock = _resolve_lock_path(lock_path)
     _ensure_parent(path)
     _ensure_parent(lock)
     # json.dumps escapes embedded newlines, so the row is exactly one physical line.

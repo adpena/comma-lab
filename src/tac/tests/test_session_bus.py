@@ -82,6 +82,57 @@ def test_post_event_rejects_empty_agent_label(bpaths):
         B.post_event(B.EVENT_MEMO_LANDED, "s", {}, "", bulletin_path=path, lock_path=lock)
 
 
+# ─────────────────────────── bulletin: env override + disable (#389 r2) ───────────────────────────
+
+
+def test_env_path_override_used_when_no_explicit_path(tmp_path, monkeypatch):
+    """No explicit ``bulletin_path`` → the env var redirects the default (child-inheritable)."""
+    ev = tmp_path / "env_store.jsonl"
+    monkeypatch.setenv(B.BULLETIN_PATH_ENV, str(ev))
+    monkeypatch.setenv(B.BULLETIN_LOCK_ENV, str(tmp_path / ".env_store.lock"))
+    B.post_event(B.EVENT_MEMO_LANDED, "s", {}, "a")  # no explicit path
+    assert B.event_count(bulletin_path=ev) == 1
+
+
+def test_explicit_path_beats_env_override(tmp_path, monkeypatch):
+    """Explicit call arg > env override > module default."""
+    ev = tmp_path / "env_store.jsonl"
+    explicit = tmp_path / "explicit_store.jsonl"
+    monkeypatch.setenv(B.BULLETIN_PATH_ENV, str(ev))
+    B.post_event(
+        B.EVENT_MEMO_LANDED, "s", {}, "a",
+        bulletin_path=explicit, lock_path=tmp_path / ".explicit.lock",
+    )
+    assert B.event_count(bulletin_path=explicit) == 1
+    assert not ev.exists()  # env path untouched — explicit won
+
+
+def test_disable_env_mutes_default_write_but_returns_record(tmp_path, monkeypatch):
+    """DISABLE hard-mutes a default/env-path write (child-inheritable) but still validates
+    + returns the record; nothing is written to the (monkeypatched) default store."""
+    default = tmp_path / "would_be_default.jsonl"
+    monkeypatch.setattr(B, "DEFAULT_BULLETIN_PATH", default)
+    monkeypatch.setattr(B, "DEFAULT_BULLETIN_LOCK_PATH", tmp_path / ".def.lock")
+    monkeypatch.setenv(B.BULLETIN_DISABLE_ENV, "1")
+    rec = B.post_event(B.EVENT_MEMO_LANDED, "s", {"k": 1}, "a")  # no explicit path
+    assert rec["kind"] == B.EVENT_MEMO_LANDED  # record built + returned
+    assert not default.exists()  # muted: nothing written
+    # validation still fires even when muted:
+    with pytest.raises(B.SessionBusError):
+        B.post_event("not_a_kind", "s", {}, "a")
+
+
+def test_disable_env_does_not_mute_explicit_path(tmp_path, monkeypatch):
+    """An explicit destination is honored even under DISABLE — the caller chose it on purpose."""
+    explicit = tmp_path / "explicit.jsonl"
+    monkeypatch.setenv(B.BULLETIN_DISABLE_ENV, "true")
+    B.post_event(
+        B.EVENT_MEMO_LANDED, "s", {}, "a",
+        bulletin_path=explicit, lock_path=tmp_path / ".ex.lock",
+    )
+    assert B.event_count(bulletin_path=explicit) == 1
+
+
 # ─────────────────────────── bulletin: events_since ───────────────────────────
 
 

@@ -20,11 +20,21 @@ from tac import review_counter as rc
 def _isolate_bulletin(tmp_path, monkeypatch):
     """record_round posts a fail-open verdict_landed bulletin (task #388). Redirect the
     bulletin store to tmp so these tests never pollute the live
-    ``.omx/state/session_events.jsonl`` feed a concurrent seal agent reads (#389 hygiene)."""
+    ``.omx/state/session_events.jsonl`` feed a concurrent seal agent reads (#389 hygiene).
+
+    #389 round-2 fix: ALSO set the ``TAC_SESSION_BULLETIN_*`` env vars. A ``monkeypatch``
+    of the module default only isolates THIS process — a ``multiprocessing`` child (the
+    ``test_concurrent_appends_all_land_intact`` workers) re-imports ``bulletin`` fresh and
+    ignores the setattr, leaking events to the LIVE store (the documented round-1 residual).
+    The env vars are inherited by spawned children, so they redirect the children too."""
     from tac.session_bus import bulletin as _bull
 
-    monkeypatch.setattr(_bull, "DEFAULT_BULLETIN_PATH", tmp_path / "ev.jsonl")
-    monkeypatch.setattr(_bull, "DEFAULT_BULLETIN_LOCK_PATH", tmp_path / ".ev.lock")
+    ev = tmp_path / "ev.jsonl"
+    lock = tmp_path / ".ev.lock"
+    monkeypatch.setattr(_bull, "DEFAULT_BULLETIN_PATH", ev)
+    monkeypatch.setattr(_bull, "DEFAULT_BULLETIN_LOCK_PATH", lock)
+    monkeypatch.setenv(_bull.BULLETIN_PATH_ENV, str(ev))
+    monkeypatch.setenv(_bull.BULLETIN_LOCK_ENV, str(lock))
 
 
 @pytest.fixture
@@ -176,7 +186,7 @@ def _append_worker(args) -> None:
     )
 
 
-def test_concurrent_appends_all_land_intact(ledger: Path) -> None:
+def test_concurrent_appends_all_land_intact(ledger: Path, tmp_path: Path) -> None:
     rounds = list(range(1, 13))
     with multiprocessing.Pool(4) as pool:
         pool.map(_append_worker, [(str(ledger), n) for n in rounds])
@@ -187,3 +197,27 @@ def test_concurrent_appends_all_land_intact(ledger: Path) -> None:
     state = rc.current_state("concurrent", ledger_path=ledger)
     assert state.rounds_recorded == len(rounds)
     assert state.sealed
+
+
+def test_subprocess_children_honor_bulletin_env_no_live_leak(
+    ledger: Path, tmp_path: Path
+) -> None:
+    """The round-1 residual, now fixed: multiprocessing children's fail-open bulletin posts
+    must NOT reach the live store. The autouse ``_isolate_bulletin`` fixture sets the
+    ``TAC_SESSION_BULLETIN_*`` env vars (inherited by spawned children); this asserts every
+    child's ``verdict_landed`` event landed in the env-redirected tmp store (which is NOT the
+    live default), proving zero leak."""
+    from tac.session_bus import bulletin as _bull
+
+    # The env var (set by the autouse fixture) points here; a spawned child re-imports
+    # ``bulletin`` fresh, so its ``DEFAULT_BULLETIN_PATH`` is the REAL live store — the ONLY
+    # way a child's event lands in this tmp file is by honoring the inherited env var. If the
+    # fix were absent, this file would have 0 events and the live store would grow.
+    redirected = tmp_path / "ev.jsonl"
+    rounds = list(range(1, 13))
+    with multiprocessing.Pool(4) as pool:
+        pool.map(_append_worker, [(str(ledger), n) for n in rounds])
+    events = _bull.read_events(bulletin_path=redirected)
+    verdicts = [e for e in events if e["kind"] == _bull.EVENT_VERDICT_LANDED]
+    assert len(verdicts) == len(rounds)  # every child's post landed in tmp, none in live
+    assert {e["subject"] for e in verdicts} == {"concurrent"}
