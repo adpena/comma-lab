@@ -14465,3 +14465,27 @@ fallback — a dead group's leader pid can be recycled). The 8-gate predicate wa
 review: Round 1 MEDIUM (SIGKILL pid-fallback = recycled-pid CP-kill vector → dropped), Rounds 2-4 CLEAN. Commit
 4e3a36323. Triality: DSL/equations **N/A** (apparatus safety hardening, not a witness lever or law).
 Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS).
+
+### FEED-pr112-127-intake
+Harvested contest PRs #112–#127 (task #412, operator-GO, read-only; contest CLOSED). Full memo:
+`.omx/research/pr112_127_intake_20260710.md`. Verdict: **no new architecture class** — every
+frontier-adjacent PR is a PR95/110/112-lineage HNeRV reskin; classical entries (#113/115/116/117/120/122)
+are off-frontier AV1/x265 (1.2–4.0). Dedup: **#126≡#127** (same SHA 869e666b, same author ryanli0070).
+ALREADY-INTAKEN: #112 (2026-06-10 leapfrog verdict), #128 (click-polish, 2026-07-10). Top-3 harvest →
+witness-transfer: (1) **#118** InfamousBolt frontier-saturation writeup = external QUANTIFIED proof the
+RGB-HNeRV line is Pareto-saturated (62% of score=rate, 93% of archive=decoder weights; 4 measured
+dead-ends incl. per-pair scorer-oracle caps at dist 0.0739 = SegNet disagreements local/unreachable,
+echoes annulus-jitter L66; only escape = from-scratch arch-search vs frozen scorer) ⇒ CORROBORATES the
+witness/task-space capstone thesis; feeds sub-0.15 wall strategy. (2) **#127/#126** ryanli0070 exact-grid
+QAT latent polish w/ boundary seg loss `sigmoid(−margin/τ)` τ-anneal = PUBLIC INDEPENDENT REDISCOVERY of
+our level-set margin surrogate (L1/L25) + straight-through quantizer bit-matches ship grid (→#202
+byte-close grid-match audit) + fp16-select regresses CPU (external confirm of axis discipline). (3) **#114**
+pose-weight warmup (fixed-small starves pose; ramp→pose_dist 1.3→0.04) → v7.5.2/#383 pose schedule note;
+**#116** film-grain = dominant PoseNet lever (grain keys apparent motion; grain-off pose 0.40 vs on 0.11).
+METHOD FACT: near the QAT-sharp optimum **discrete exact-gated polish (#128, 0.18799) > gradient QAT
+(#125/#127 ~0.1905)** → prefer discrete for witness post-train (#400 diagonal mode). Routed tasks (all
+HARVEST-ONLY, no launches): #202 grid-match audit · #383/v7.5.2 pose-schedule note · #400 discrete-preferred
+note · #118→DAG strategy anchor (this FEED). NO borrowed-vehicle pursuit/replay/CUDA-purchase (dominated per
+[[witness_line_priority_borrowed_polish_harvest_only_20260710]]). Triality: DSL **N/A** (no new lever);
+equations **N/A** (no new measured law — #127 confirms our existing margin-surrogate eq, #118 corroborates
+rate-dominance). Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS); every external score `[external unverified]`.
