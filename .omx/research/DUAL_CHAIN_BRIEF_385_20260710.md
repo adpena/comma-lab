@@ -277,3 +277,67 @@ v8's shippable-rate WASH row (§2) STANDS.
 **ADDENDUM (2026-07-10, FEED-seedcond — `seed_condition_program_design_20260710.md`):** the price-list texture now has a SEED/CONDITION program to install it. `out_tex` (the witness texture head, render grid = 384 = price-list grid, NO D-pre-image for luminance) is the touch-point. **The $0 no-machine arbiter that does NOT contend with owed-16:** a SEED epoch-0 realized-through-R probe (fit out_tex to the period-4 grating by least-squares + 600-step Adam; win = ≥2× below the flat-paint floor 0.0416). Wins → SEED (cheap weight-init, #300-safe: weights not compose); fails → CONDITION (per-class-λ_c spectral-band loss, Chan-Vese-area-constraint sibling, costate-#303 actuated, whole-run). Both = 0 archive bytes (training-time priors). Warm-start fine-tune confirmer spec'd for AFTER owed-16. DSL stubs held-not-orphaned pending the arbiter. Pointer 0.19110 UNMOVED.
 
 **ADDENDUM (2026-07-10, FEED-textrunk — #395 P0 BUILT):** the band-designed per-class STATIONARY texture trunk (T of W=(G,ξ,T)) is BUILT — `tac.boundary_math.texture_trunk` (rule-118-free stem-Nyquist Gabor bank [4..8]px + 375 counted per-class coeffs, placed by the softmax masks) + LEVELSET trainer `--texture-trunk` (default-OFF byte-identical, bank contributes 0 counted bytes) + DSL `TextureTrunk` lever + `texture_trunk_band_is_stem_passband_v1`. It is texture-as-LEARNED-MODULATION (jointly trained, the mod32cap out_tex existence proof), NOT Unit A's refuted region-wide grating-FILL; guards = joint-loss + mask-placement + annulus. Matched-bytes 3-arm A/B (linear / widened-MLP / trunk) SPEC'd + QUEUED behind owed-16 (governor REFUSES today). Advisory; pointer 0.19110 UNMOVED.
+
+---
+
+# ADDENDUM v2 (2026-07-10 ~08:3xZ) — ALL MEASURED ROWS + THE owed-16 VERDICT → REVISED RECOMMENDATION
+
+## A. owed-16 RESOLVED — the P9 blocker measured, in the REFUTING direction
+
+Matched-arm realized-through-R n600 A/B (warm-start weights-only from mod32cap ep650 BEST, identical
+seed/config, ONLY the 16 directional input channels differ). Axis `[macOS-CPU advisory · NON-PROMOTABLE]`:
+
+| cell | ON (self-orient) | OFF (ablated) | Δ(OFF−ON) | % of ON |
+|---|---|---|---|---|
+| ep650 zero-shot (fixed weights) | 0.006384 | 0.006295 | −0.000089 | −1.4% |
+| ep675 (25 trained epochs) | 0.004259 | 0.004244 | −0.000015 | −0.35% |
+
+**The −48% direct-partition advisory does NOT transfer: realized directional contribution ≈ 0 (OFF a hair
+better, within single-seed noise — P2: floor unmeasured, so the SIGN is not claimed; the ~zero MAGNITUDE is).**
+Zero-shot near-parity additionally shows the CONVERGED trunk barely uses the directional columns at all.
+verdict_scope: formulation — bounded-warm-start fine-tune; a from-scratch transient-dynamics benefit is
+unmeasured (but would have to wash out by convergence per the zero-shot cell). ep700 + ON-resume cell
+in-flight for completeness; they cannot change the decision-relevant magnitude. Cost side measured LIVE:
+self-orient = **47 GiB RAM tax (67 vs 10.2 GiB RSS)** + the directional cache's share of the 120–185 s/ep
+wall-clock. **P9 launch-gate: RESOLVED-REFUTING — do not ship self-orient in the trunk.**
+
+## B. The other measured rows this session (each with its brief-column impact)
+
+1. **Texture price list (MEASURED, 568 tiles through real R):** SegNet stem = color+low-pass, alias wall
+   period-4; Road/Lane are TEXTURE-defined (negative flat floors); ONLY period-4 stem-Nyquist grating wins
+   as a TILE. → v8 carrier + witness curriculum input.
+2. **Unit A (MEASURED n600):** the grating does NOT transfer to region FILL (+0.228 ANTAGONISTIC) → v8
+   Road/Lane fill PINNED to flat scene color (~16 B); coverage enemy relocates to Movable+MyCar color +
+   Lane jitter. Movable sparse-site coder built (6,289 B, −31%).
+3. **Unit C (MEASURED):** frame_0 structurally seg-free (8.5e-9) → pose-only carrier DOF; chroma-HF exactly
+   pose-null AT THE 384 PLANE only (camera-res naive leaks 50% to luma) → band-design requirement.
+4. **Unit B (MEASURED):** #336 per-class waterfill DOMINATED by aggregate (contest d_seg is uniform
+   per-pixel — aggregate IS the right functional); #121 taper FLAT cross-vehicle. int8 past the RD knee.
+   Two rate instruments honestly closed.
+5. **Fable synthesis (DERIVED+MEASURED composite):** W=(G,ξ,T) textured power diagram; texture T
+   load-bearing (flat floor 0.0416 vs witness 0.0048); d_seg*(T)∈[1.6e-7,0.0048] = the floor-dominating
+   unknown; corrected flip step law (the 0.594 gap = missing inner Jacobian).
+6. **BUILT-READY instruments (all landed, measurements queued):** texture trunk #395 (375 counted params,
+   band-proof, DSL lever, matched-bytes 3-arm A/B pinned) · MC finisher #396 (exact-metric ratchet, 25
+   tests, n8 smoke green, first-run commands pinned) · seed/condition arbiter v2 · canon modules SEALED
+   (#389, 18 rounds).
+7. **Wall-clock truth:** 120–185 s/ep measured on self-orient arms; the OFF arm runs the same trainer at
+   10.2 GiB — the self-orient share of compute/memory is the dominant single-lever cost.
+
+## C. REVISED RECOMMENDATION (supersedes the brief's §recommendation; awaiting operator GO)
+
+1. **Amend v7.5.2's launch config: self-orient OFF.** This is NOT a seal violation — owed-16 was the
+   PRE-REGISTERED P9 resolver in the SPEC's launch-gate list; a measured refute amends the config by
+   design. Effect: footprint ~70 GiB → ~25 GiB class, wall-clock re-prices from 17–45h toward the
+   single-digit-hours regime, and coexistence with other work becomes feasible.
+2. **v7.5.2 (self-orient-OFF) remains the sole pointer-moving launch** — the owed-16 trajectory itself
+   (0.00629→0.00424 in 25 epochs on the ABLATED arm) shows the fine-tune path is healthy without the basis.
+3. **v8 increment-1a screen** fires when the machine frees (its kill-gate was REFUSED-not-$0-rulable;
+   analytic floor 0.100403 banked); v8-1b builds only on 1a PASS. The v8 rate calculus improved this
+   session (flat-fill pin + Movable coder + macro-rate coverage verdict) independent of the launch choice.
+4. **Post-launch queue (order per winning chain):** texture-trunk 3-arm A/B (pins d_seg*(T)) → seed/condition
+   arbiter v2 → MC finisher first run (fp32 then int8) → frame_0 pose-only carrier build.
+
+**The which-to-run GO ask: approve (1)+(2) — launch v7.5.2 with self-orient OFF — or direct otherwise.**
+Pointer contest-CPU 0.19110 UNMOVED; every row above is advisory/through-R MEANS until the byte-closed
+`upstream/evaluate.py` row lands from the GO'd launch.
