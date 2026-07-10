@@ -13371,3 +13371,36 @@ built-not-applied instrument ENCODES the correction. Table: `negative_cure_join_
   MEASURED violated fact yet).
 - Sibling-safe append (owed-16 v2 REBALANCED arm is the live launch-hold; this FEED does not touch it).
 - Pointer contest-CPU **0.19110 UNMOVED** — this sweep is MEANS; only a byte-closed n600 exact row moves it.
+
+
+---
+
+## FEED-reactivation-397 (2026-07-10) — outstanding reactivation/reformulation criteria → v7.5.3 + v8 config-input pool
+
+Task #397 (operator: "pursue those with outstanding reactivation/reformulation criteria; many possibly necessary
+for optimal v7.5.3/v8 config"). JOINed the two #390 negative registers (auditor A 51 + B 21) + owed16 verdict +
+Unit-A geocoder (6 reformulations) + deferral ledger + activation ledger via the negative-cure-adjacency principle.
+Memo: `.omx/research/reactivation_campaign_397_20260710.md`.
+
+- **28 distinct reactivation items classified:** (a) FIREABLE-$0 = 3 fired · (b) MACHINE-BOUND = 13 pinned governed
+  · (c) CONFIG-INPUT = 18 (ranked per-vehicle) · (d) TRIGGER-NOT-MET/CLOSED = 9.
+- **The sharpest JOIN:** 4 DSL `Lever` factories are BUILT + `ever_fired=never` — `margin_saliency_reachability`
+  (#268, `gt_n600_sR.npz` ready), `DashComb` (`--lane-band-dash-comb`), `WeightEntropyPenalty` (Balle rate-in-loss,
+  −19.6% bytes torch), `HeadOffsetSolver` (Laguerre-OT). Each ENCODES a standing-negative's cure, never entered a run
+  → the top duty-to-measure entries (T-397-1).
+- **FIRE 1 (DIAGNOSED-CLOSED):** owed-16 reformulation #3 — why −48% direct ≠ realized ≈0. Two measured axes:
+  (1) naive-palette realized ceiling F=0.0337 ≫ directional-direct 0.0037 (R + region-reading SegNet destroys the
+  direct gain); (2) trained trunk REDUNDANT with the basis (|Δ|≤1.4% fine-tune). MEMORY L25 "next-run PRIMARY"
+  measured-DOWN; only uncovered = from-scratch trajectory-shaping, confounded by freq-along starvation (owed16v2
+  fixing). Verdict `owed16_gap_diagnostic_why_direct48_not_realized_20260710.json`.
+- **FIRE 2 (RE-OPENED):** Lever-D flicker economics RELATIVE re-price — at 0.820 B/flip the coder net ΔS ≈ +3.0e-7
+  S/flip (favorable); recovering 10% of the 0.0411 gap needs only f≥~4% net recovery. NOT economics-dead by
+  magnitude; the open var is net-recovery f → machine-bound Stage-0 on an islands-active ckpt. Moved NO-GO→re-test.
+- **FIRE 3:** deferral-trigger liveness re-point — no trigger newly MET (D1/D2/D18 gated on a chosen-chain FINAL
+  ckpt that does not exist); D7 compile-check + D10 marimo (LAPSED 07-09) flagged; hot d_seg/rate reactivations
+  live in the METHOD registers, not the deferral ledger.
+- **OPERATOR-GO flagged, NOT fired:** #316 eikonal-viscosity FAIR test (D1 KNOWN-TAINTED era; first non-confounded
+  measurement; re-grades D1/D2/D7) · #238 joint pose-descent.
+- **CLOSED:** #299 mod-dim capacity (REFUTED = island-gradient starvation, not capacity; do not re-open as bigger mod-dim).
+- Sibling-safe append (does not touch owed16v2 / v752 run dirs or sibling files). Pointer contest-CPU **0.19110
+  UNMOVED** — this campaign is MEANS; it drains the reactivation queue into the config-input pool.
