@@ -1817,6 +1817,43 @@ def main(argv: list[str] | None = None) -> int:
               f"within {args.perf_env_timeout_s:.0f}s (run is alive; check {run_log}).",
               file=sys.stderr)
 
+    # (d2, OI-5 amber realization 2026-07-10) STARTUP-TELEMETRY assertion for a stability-composed
+    # config: the trainer's runtime-resolved stability row must hold the manifest's expected values —
+    # a preset/flag set that compiles but is runtime-defeated is the P0-1 built-not-composed class
+    # (the resolver's grad_clip explicit-wins docstring is NOT implemented; explicit composition is
+    # what this verifies actually reached the trainer). Poll run.log like verify_perf_env. NON-FATAL
+    # WARN (the launch already fired) but LOUD — the operator sees a defeated composition immediately.
+    _exp_stab = (getattr(cfg, "dsl_program_manifest", None) or {}).get("expected_stability")
+    if _exp_stab:
+        _stab_row = None
+        _deadline = time.monotonic() + float(args.perf_env_timeout_s)
+        while time.monotonic() < _deadline:
+            try:
+                for _ln in Path(run_log).read_text(errors="replace").splitlines():
+                    if '"witness_stability_resolved"' in _ln:
+                        _stab_row = json.loads(_ln.strip())
+                        break
+            except OSError:
+                pass
+            if _stab_row is not None:
+                break
+            time.sleep(2.0)
+        if _stab_row is None:
+            print(f"[launch-witness] WARNING: expected_stability declared but NO "
+                  f"witness_stability_resolved row within {args.perf_env_timeout_s:.0f}s — verify "
+                  f"the amber values reached the trainer (grep {run_log}).", file=sys.stderr)
+        else:
+            _want = float(_exp_stab.get("grad_clip", -1.0))
+            _got = float(_stab_row.get("grad_clip", _stab_row.get("out_grad_clip", -2.0)))
+            if abs(_got - _want) < 1e-9:
+                print(f"[launch-witness] stability OK: runtime-resolved grad_clip={_got} matches "
+                      f"the composed amber expectation.")
+            else:
+                print(f"[launch-witness] WARNING: STABILITY COMPOSITION DEFEATED AT RUNTIME — "
+                      f"resolved grad_clip={_got} != expected {_want} (row: {_stab_row}). The amber "
+                      f"values did NOT reach the trainer (P0-1 built-not-composed class).",
+                      file=sys.stderr)
+
     # (e) CONFIRM dashboard observability (auto-tracks this run once up).
     if not args.no_dashboard:
         ensure_dashboard(args.dashboard_port)

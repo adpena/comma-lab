@@ -210,6 +210,41 @@ def test_crucible_v752_pilot_is_two_token_diff_with_gate_composed():
         f"pilot must differ from the launch in exactly --epochs + the polyak clamp; got {diffs}")
 
 
+def test_crucible_v752_amber_composition():
+    """OI-5 amber realization (operator elevation 2026-07-10 'amber is important to pursue'):
+    amber=True composes the BUILT AMBER preset's cures as EXPLICIT values (grad-clip 0.5 +
+    pose-grad-coeff-max 25; per-group-clip already ON) — NO --stability-preset (the resolver's
+    grad_clip explicit-wins docstring is NOT implemented; explicit values sidestep it) and NO
+    --grad-normalize (spec-vs-built gap surfaced, not silently closed). The manifest carries
+    expected_stability for the launcher startup assertion; the runtime resolver realizes the values."""
+    base = wac.compile_crucible_v752_launch_config(_GT, num_pairs=600)
+    amb = wac.compile_crucible_v752_launch_config(_GT, num_pairs=600, amber=True)
+    d0 = dict(wac._crucible_v7_argv_pairs(base.typed.to_program().compile_trainer_argv()))
+    d1 = dict(wac._crucible_v7_argv_pairs(amb.typed.to_program().compile_trainer_argv()))
+    changed = {k for k in set(d0) | set(d1) if d0.get(k, "ABSENT") != d1.get(k, "ABSENT")}
+    assert changed == {"--grad-clip", "--pose-grad-coeff-max"}, (
+        f"amber must change EXACTLY grad-clip + coeff-max; got {sorted(changed)}")
+    assert d1["--grad-clip"] == "0.5" and d1["--pose-grad-coeff-max"] == "25.0"
+    assert "--stability-preset" not in d1, "explicit values, never the runtime-ambiguous preset"
+    assert "--grad-normalize" not in d1, "grad-normalize is NOT in the BUILT AMBER (spec-vs-built gap)"
+    # the manifest carries the startup-assertion expectation; incumbent does NOT.
+    es = amb.dsl_program_manifest.get("expected_stability")
+    assert es == {"grad_clip": 0.5, "pose_grad_coeff_max": 25.0, "per_group_grad_clip": True,
+                  "composed_as": "explicit-values (no preset)"}
+    assert "expected_stability" not in base.dsl_program_manifest
+    # the runtime resolver REALIZES the composed values (changed=True => the resolved row is emitted,
+    # which the launcher's startup assertion reads back).
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
+    from tac.witness_stability import resolve_stability_config
+    ns = build_real_trainer_parser().parse_args(
+        list(amb.typed.to_program().compile_trainer_argv())[2:])
+    st = resolve_stability_config(
+        grad_clip=ns.grad_clip, pose_eps=ns.pose_eps, pose_grad_coeff_max=ns.pose_grad_coeff_max,
+        stability_preset=ns.stability_preset, per_group_grad_clip=ns.per_group_grad_clip)
+    assert st.grad_clip == 0.5 and st.per_group_grad_clip is True and st.changed is True
+    assert abs(st.effective_pose_eps - 0.04) < 1e-12  # (5/25)^2 — the coeff-25 eps floor
+
+
 def test_resolve_pose_finish_engage_backstop_semantics():
     """P0-2 minimum-viable guard (fresh-eyes advisory): the epoch backstop cannot override a
     DEGENERATE / should_ship_banked_r1 classification; a real conditioning fire always engages;

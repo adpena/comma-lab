@@ -3081,11 +3081,25 @@ def compile_crucible_v752_launch_config(
     code_matrix=None,
     byte_close_result=None,
     self_orient: bool = False,
+    amber: bool = False,
 ) -> "CrucibleV7LaunchConfig":
     """The launcher-facing crucible_v752 cfg — the ONE object satisfying the whole duck-typed cfg
     protocol ``tools/launch_witness_run.py`` consumes (the deliberately-deferred P8-wall launcher
     wire-in, NOW authorized by the operator GO 2026-07-10). Mirrors
     :meth:`CrucibleV7Compiled.to_launch_config`.
+
+    ``amber`` (default False = the incumbent well-posed stability, grad-clip 1.0 + per-group-clip):
+    when True composes the OI-5 amber realization as EXPLICIT RESOLVED VALUES (operator elevation
+    2026-07-10 "amber is important to pursue") — ``--grad-clip 0.5`` + ``--pose-grad-coeff-max 25.0``
+    (+ the already-ON ``--per-group-grad-clip``), the BUILT ``tac.witness_stability.AMBER`` preset's
+    three cures. EXPLICIT values, NOT ``--stability-preset amber``: the resolver's docstring claims
+    "an explicit value ALWAYS wins over --stability-preset" but ``resolve_stability_config`` only
+    implements that override for coeff-max, NOT grad_clip (a comment/behavior mismatch, surfaced
+    2026-07-10) — explicit composition sidesteps the ambiguity entirely. NOTE the SPEC §1.1 line also
+    lists ``--grad-normalize``; the BUILT AMBER preset has NO grad-normalize field (spec-vs-built gap,
+    surfaced NOT silently closed — grad-normalize is NOT composed here). The composed values ride the
+    ``dsl_program_manifest["expected_stability"]`` key for the launcher-side startup assertion (a
+    preset that compiles but is defeated at runtime is the P0-1 built-not-composed class).
 
     ``self_orient`` defaults to ``False`` HERE (unlike derive/compile whose default is the sealed ON
     artifact) because the LAUNCH is the GO'd self-orient-OFF config (#385 ADDENDUM v2). v7.5.2's
@@ -3119,11 +3133,21 @@ def compile_crucible_v752_launch_config(
     # above stays a transcription). backstop_epoch/w_pose None => the inherited pose config's
     # --pose-finish-start-epoch 726 + --w-pose 1.0 stand (the lever adds ONLY the engage-on mode).
     _gate = PoseFinishConditioningGate()
-    typed = typed.model_copy(update={
+    _updates: dict = {
         "levers": tuple(typed.levers) + (
             TypedLever(name=_gate.name, overrides=dict(_gate.overrides),
                        epochs_delta=_gate.epochs_delta, notes=_gate.notes),),
-    })
+    }
+    if amber:
+        # (OI-5 realization, operator elevation 2026-07-10) the BUILT AMBER preset's three cures as
+        # EXPLICIT values (see docstring: sidesteps the resolver's grad_clip comment/behavior
+        # mismatch; --per-group-grad-clip is already ON in the inherited base; grad-normalize is
+        # NOT composed — spec-vs-built gap surfaced, not silently closed).
+        from tac.witness_stability import AMBER as _AMBER
+        _updates["base"] = {**typed.base,
+                            "--grad-clip": float(_AMBER.grad_clip),
+                            "--pose-grad-coeff-max": float(_AMBER.pose_grad_coeff_max)}
+    typed = typed.model_copy(update=_updates)
     viol = typed.validate_program()
     if viol:
         raise ValueError(
@@ -3148,6 +3172,24 @@ def compile_crucible_v752_launch_config(
         typed_config_hash=typed.typed_config_hash(), typed_validated=True)
     # carry the expectation in the manifest for the LAUNCHER-side re-check (dry-start/dry-run/real).
     dsl_manifest["expected_active_levers"] = list(expected)
+    if amber:
+        # (OI-5) the launcher-side STARTUP assertion input: the emitted launch.sh AND the trainer's
+        # runtime-resolved stability (run.log `witness_stability_resolved` row) must both hold these
+        # values — a compiled-but-runtime-defeated amber is the P0-1 built-not-composed class.
+        _stab_expect = {"--grad-clip": typed.base["--grad-clip"],
+                        "--pose-grad-coeff-max": typed.base["--pose-grad-coeff-max"],
+                        "--per-group-grad-clip": True}
+        for _f, _v in _stab_expect.items():
+            _got_v = typed.base.get(_f)
+            if _got_v != _v:
+                raise ValueError(
+                    f"crucible_v752 amber composition gate: {_f} composed as {_got_v!r} != expected "
+                    f"{_v!r} — the amber values were dropped/overridden after composition.")
+        dsl_manifest["expected_stability"] = {
+            "grad_clip": float(_stab_expect["--grad-clip"]),
+            "pose_grad_coeff_max": float(_stab_expect["--pose-grad-coeff-max"]),
+            "per_group_grad_clip": True, "composed_as": "explicit-values (no preset)",
+        }
     # REUSE crucible_v7's constants_manifest + governance-dict (IDENTICAL for v752 — see docstring).
     v7_compiled = compile_crucible_v7_config(
         gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
@@ -3193,12 +3235,57 @@ _CRUCIBLE_V753_TRUNK_BASIS_OUTCOMES: tuple[str, ...] = ("off", "on")
 # the persistence/logit-adjust coupling flips to 'auto'/'all' (regime coherence, SEAL v7.3 M1). MEANS.
 _CRUCIBLE_V753_ON_BRANCH_REGIME: str = "lane_carried"
 
-# Δ4 — the 10-rung duty-to-measure LADDER + the operator-GO rung, as (rung_label, DSL-factory-name,
+# CHROMA ADD-BACK A/B (rung "chroma_annulus_addback_ab", DSL factory SegChromaBoundary; LEVER-4c /
+# #276 chroma-DOF; operator 2026-06-25 "Chroma too"; CLAUDE.md "Chroma is a d_seg lever"). The rung's
+# PRE-REGISTERED decision rule + noise-floor discipline (P2), documented here so the ladder note stays
+# a one-liner and the design memo (`.omx/research/chroma_rung_design_20260710.md`) cites ONE source.
+#
+# WHAT IT CHANGES: an additive 0-byte chroma-MATCH loss on the SHARED realized-through-R render f1
+# (--seg-chroma-boundary-weight w, --seg-chroma-boundary-margin-band 1.0, --seg-chroma-boundary-start-
+# epoch N) that pulls the witness's OWN per-pixel rendered chroma (rgb - BT.601-luma; LUMA-INVARIANT)
+# toward GT chroma over the θ-independent fragile annulus 1[GT margin < band]. It adds NO archive bytes
+# and NO decoder params (it redistributes only what the existing per-pixel RGB head self.out already
+# learns) ⇒ the ON/OFF arms are BYTE-MATCHED by construction (the chroma add-back is a pure-d_seg lever
+# at zero rate cost).
+# WHICH SCORE TERMS IT CAN MOVE (ADVISORY_evaluator_video_geometry_20260710 obligation matrix):
+#   • d_seg via frame1 RGB argmax — the PRIMARY, intended axis (SegNet reads frame1 RGB; chroma is a
+#     genuine per-pixel argmax actuator at the codim-1 boundary annulus).
+#   • d_pose ONLY through the 2x2 scorer-grid block-mean chroma (PoseNet keeps four luma polyphases +
+#     AVERAGED U/V per block) — a WEAK, incidental channel (recovered Jacobian energy 4.03% chroma vs
+#     95.97% luma), and only frame1 chroma reaches Seg while both frames reach Pose. The add-back is
+#     optimized for d_seg FIRST; any d_pose motion is a side effect to be REPORTED, never the target.
+# WHY IT IS AN A/B, NOT A CLAIM (S5-N10 ablation != add-back): the a3e9f0bd probe MEASURED a chroma-
+# REMOVAL ABLATION (constant-luma flips 7.54% Lane->Road + 4.38% Movable->Undriv, 93.4% of chroma-flips
+# in the margin<1 annulus, LUMA-INDEPENDENT) — that is a WORTH (chroma already does work at the default
+# RGB render), NOT the GAIN of THIS match term. The add-back score ΔS is UNMEASURED.
+_CRUCIBLE_V753_CHROMA_ADDBACK_DECISION_RULE: str = (
+    "chroma add-back A/B (LEVER-4c / #276; pre-registered, binds v7.5.3): 0-byte BYTE-MATCHED arm. "
+    "ARMS warm-start from the SAME pre-chroma checkpoint ckpt_C (a stage boundary where the annulus is "
+    "FORMED, e.g. the annulus_plateau ~ep450 or a terminal ~ep675) → OFF: --seg-chroma-boundary-weight "
+    "0.0 (chroma render stays ON per #205 default; the annulus MATCH term inactive) ; ON: sweep w in "
+    "{0.05, 0.1} at margin_band 1.0, start_epoch 0 (engage on the warm-start). CELLS = ep-matched "
+    "checkpoints ckpt_C+150 / ckpt_C+300, both arms same seed (deterministic-repro spine). d_seg is the "
+    "REALIZED-through-R argmax on the frozen CPU-torch SegNet, n600 real-gt, byte-closed (NEVER through-R "
+    "proxy for the verdict). NOISE FLOOR (P2, SPEC §B): a single-seed Δ is INSTANCE-until-floor-bounded; "
+    "the composed floor = max(cell granularity 8.477e-7 per corrected cell, the through-R proxy δ_R band, "
+    "an UNMEASURED across-seed 3σ). "
+    "IF realized Δd_seg(ON−OFF) < −max(noise floor, 3σ seed-band) AND the SURVIVING annulus flips shift "
+    "toward higher GT-chroma agreement  [add-back PAYS]  THEN adopt at the winning w (own increment; a "
+    "2nd-seed confirm elevates INSTANCE→FORMULATION before any family verdict). "
+    "ELIF |Δd_seg| ≤ noise floor  [wash — the near-per-class constant palette ALREADY captures the "
+    "argmax-relevant chroma; per-pixel match irrelevant at this operating point]  THEN OFF, verdict_scope "
+    "FORMULATION (post-hoc match on a formed annulus, this render+curriculum) — do NOT escalate to "
+    "chroma-is-not-a-d_seg-lever (the DOF is MEASURED-GREEN; only the ADD-BACK formulation washed). "
+    "ELSE (ON materially WORSE) OFF + register the antagonism (P10; chroma-match perturbs the formed "
+    "boundary the geometry levers already placed). DEFAULT stays OFF (registered-off ladder rung)."
+)
+
+# Δ4 — the 11-rung duty-to-measure LADDER + the operator-GO rung, as (rung_label, DSL-factory-name,
 # note). REGISTERED-OFF: these are NOT composed into the default config (argv-inert, each stays a
 # never-fired activation-ledger row) — they are the drain-order QUEUE the §3 ladder documents, each
 # its OWN increment (P12, never composed blind). Every factory is VERIFIED to exist in curriculum_dsl
 # (test_crucible2_v753_dsl_wirein); emit_stub_lever is used ONLY for a genuinely-missing one (none are
-# missing today per #397 — all 11 are BUILT). "off is a tracked queue, never a forgotten default."
+# missing today per #397 — all 12 are BUILT). "off is a tracked queue, never a forgotten default."
 _CRUCIBLE_V753_LADDER: tuple[tuple[str, str, str], ...] = (
     ("msal_uni_sR_reachability", "MarginSaliencyReachability",
      "#397-r2 / RANK-2 join: exact through-R S_R reachability weight (gt_n600_sR ready, never fired)"),
@@ -3220,6 +3307,10 @@ _CRUCIBLE_V753_LADDER: tuple[tuple[str, str, str], ...] = (
      "tie-locus displacement (built ~L4559, default-off) + the remaining P0 forces"),
     ("micro_batch_bounded_ab", "MicroBatch",
      "#397-r9 (D4/D15): 1.56x throughput; bounded n600 A/B is the ONLY admission path (a SCORE decision)"),
+    ("chroma_annulus_addback_ab", "SegChromaBoundary",
+     "LEVER-4c / #276 chroma-DOF (probe a3e9f0bd GREEN): 0-byte BYTE-MATCHED annulus chroma-MATCH; "
+     "ORTHOGONAL to luma levers (chroma=rgb-BT.601-luma, LUMA-INVARIANT); add-back ΔS UNMEASURED "
+     "(removal-ablation != add-back — S5-N10); rule _CRUCIBLE_V753_CHROMA_ADDBACK_DECISION_RULE"),
     ("operator_go__eikonal_viscosity_316", "EikonalViscosity",
      "OPERATOR-GO: #316 eikonal-viscosity, first FAIR n600 from a clean ep100 under the fixed guard "
      "(D1 era KNOWN-TAINTED, guard-freeze RETRACTED); NEVER auto-fired"),
@@ -3271,8 +3362,10 @@ def derive_crucible_v753_config(
     * **Δ3 ``analytic_lane_band_training``** — the RANK-1 lane band as a TRAINING lever
       (``AnalyticLaneBandTraining``, start_epoch 0; reuses the LANDED ``--lane-render-band`` /
       ``--lane-band-*`` flags — NO invented flag). DEFAULT-OFF.
-    * **Δ4** — the 10-rung + operator-GO duty-to-measure LADDER (:data:`_CRUCIBLE_V753_LADDER`):
-      registered-OFF (argv-inert; each an own increment, P12). All 11 factories VERIFIED-present.
+    * **Δ4** — the 11-rung + operator-GO duty-to-measure LADDER (:data:`_CRUCIBLE_V753_LADDER`):
+      registered-OFF (argv-inert; each an own increment, P12). All 12 factories VERIFIED-present.
+      Includes the CHROMA add-back rung (``SegChromaBoundary``; 0-byte BYTE-MATCHED d_seg lever, A/B
+      rule :data:`_CRUCIBLE_V753_CHROMA_ADDBACK_DECISION_RULE`).
     * **Δ5 ``mc_finisher_terminal``** — the #396 MC exact-metric finisher as a TERMINAL-STAGE TOOL
       (:data:`_CRUCIBLE_V753_MC_FINISHER_TOOL`), NOT a Lever/flag: selecting it records the
       terminal-stage intent (purpose marker) and is ARGV-INERT (a byte-close-time post-training tool).
@@ -3367,9 +3460,9 @@ def derive_crucible_v753_config(
 
 
 def crucible_v753_ladder() -> tuple[tuple[str, str, str], ...]:
-    """The v7.5.3 Δ4 duty-to-measure LADDER (rung_label, DSL-factory-name, note), registered-OFF.
-    Consumed by ``derive_named_config`` help / the council review surface / the completeness verifier
-    (``test_crucible2_v753_dsl_wirein`` asserts every factory exists). PURE."""
+    """The v7.5.3 Δ4 duty-to-measure LADDER (rung_label, DSL-factory-name, note), registered-OFF —
+    11 rungs + operator-GO. Consumed by ``derive_named_config`` help / the council review surface / the
+    completeness verifier (``test_crucible2_v753_dsl_wirein`` asserts every factory exists). PURE."""
     return _CRUCIBLE_V753_LADDER
 
 
