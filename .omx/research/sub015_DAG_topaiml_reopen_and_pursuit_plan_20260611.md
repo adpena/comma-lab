@@ -14324,3 +14324,26 @@ Q3's flag will be a DSL Lever factory at landing); equations N/A (no new measure
 operationalize registered confound classes). Verdict-scope: all analyzer verdicts INSTANCE-scoped.
 Pointer contest-CPU **0.19108282 UNMOVED** — this is MEANS (instrumentation for the imminent
 pointer-moving run), not goal progress.
+
+### FEED-defaultoff-sweep (2026-07-10) — the P0 default-off DECISION TABLE lands (recovered)
+Operator P0 escalation ×2 ("All default off stuff you keep forgetting ... terrible orphan class") →
+the missing artifact is BANKED: `.omx/research/default_off_comprehensive_sweep_20260710.md` + 185-row
+machine-readable twin `default_off_decision_table_20260710.jsonl`. Every default-off surface (DSL lever
+registry + activation ledger duty rows + trainer argparse defaults the sealed v7.5.2 config does NOT set +
+tools-layer + deferral ledger) now carries a per-row DISPOSITION, not just an inventory. Distribution:
+80 keep-off-with-DERIVED-reason · 41 retire-with-reason · 40 measure-cheap($0/n600) · 14
+fire-now-rung(v7.5.3) · 8 fire-terminal-band(D27b) · 1 fire-next-vehicle(v8) · 1 BLOCKED. TOP fire-now
+rungs for the v7.5.3 ladder (by rel-sig of remaining descent): **HorizonWeightedMargin 43.8%** (converged
+n600 byte-close A/B, surviving-flip gated) · **StepNativeActivation 31.6%** (n600 adopt-verdict vs sealed
+hosc) · then AnalyticLaneBand / FinerBiasInit / MarginBandSatisficing / LanePrior / FiLMFix / EikonalViscosity
+(operator-GO). SELF-PROTECTION: `check_default_off_decision_table_consumed` (preflight, warn-only, live
+count 0, 17 tests) refuses table-rot AND any future config-finalization artifact (crucible SPEC / authored
+config dated after the table) that doesn't record consuming it — so "true final optimal" config work can
+never silently skip the queue again. Recovery note: prior agent (credit-killed pre-commit) left the
+artifacts complete on disk; main-thread verified (ruff-F clean, gate strict rc0, tests green) + committed
+(116ed489e .py, + memo/JSONL). SCHEMA REQUEST ROUTED to #403: the activation ledger's event vocab is
+DSL-lever-scoped and cannot hold stage/tool never-fired rows — #403 must widen it so the 40 measure-cheap
++ fire-* rows become tracked duty rows, not memo-only. DSL leg: 107 unmapped trainer flags carry per-flag
+N/A/fold-owed reasons in the JSONL (§A folds owned by #332). Equations leg N/A (apparatus/disposition
+class). Pointer 0.19108282 [contest-CPU] UNMOVED — apparatus/MEANS; the exact-row path this serves is the
+v7.5.3 ladder → governed EVENT launch → byte-closed n600 rows.
