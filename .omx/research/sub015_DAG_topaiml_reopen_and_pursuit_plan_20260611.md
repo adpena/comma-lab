@@ -13525,3 +13525,33 @@ Subagent `fractal-synth-398b`. Pointer contest-CPU **0.19110 UNMOVED** — MEANS
   where these numbers become anchor context. equations leg = deferred-to-first-scored-row (stated, not skipped).
 - **"launcher dry-start fix: persist captured child output":** pure apparatus (log durability), [no-triality]
   class — no lever, no measurement, no law.
+
+### FEED-kalman (2026-07-10) — Kalman innovation-coding rate lever on temporal carriers: MEASURED NEGATIVE/marginal
+- **SIGNAL (operator, via johndcook.com/blog/2016/05/24 + "openpilot uses kalman filters"):** our temporal
+  carriers ship raw per-frame data obeying smooth dynamics → store the whitened Kalman INNOVATIONS (optimal
+  predictive coding) instead of raw deltas? $0 CPU on the two banked artifacts.
+- **DIAGNOSTIC (matched-error, bit-identical recon both sides — the raw-delta and Kalman coders are BOTH lossless
+  predictive coders over the SAME quantized grid, so d_pose/lane-RMS are identical by construction; only the
+  predictor differs):**
+  - **Pose ξ carrier** (R1 `pose_carrier.xi_stored+dxi`, 600×6, q_levels=4096): raw temporal-delta **6602 B**
+    (validates vs reported byte-close 6634 B) → Kalman-CV **6504 B = 0.9852 (−1.5%)**, Kalman-CA 6506 B. Marginal;
+    the trained dxi is near-white refinement PoseNet reads (α floored at lowest velocity gain → signal ≈ random
+    walk). Confirms the #238 memo's "dxi jitter kills temporal-delta smoothness" quantitatively.
+  - **Lane coeff carrier** (#234 coherent-slot 600×66 K=6, regenerated n600): raw temporal-delta **40934 B**
+    (validates vs prior coherent_slot_none 41303 B) → Kalman-CV **46566 B = 1.1376 (+14% WORSE)**. The velocity
+    state overshoots at carry-forward holds + births → reproduces the survey's CORRESPONDENCE-FIRST swap-theorem /
+    the measured LBND3-ego-DPCM negative at the innovation-coding layer.
+- **RESPONSE (FORECLOSE the lever):** temporal-delta already IS the optimal order-1 random-walk innovation coder
+  for both carriers; a higher-order Kalman process model does not help (pose) / hurts (lane). Innovation coding
+  wins only in the smooth-continuous regime (openpilot-rednose ego state), NOT on residual-jitter or
+  discontinuous-label series. Lane rate lever stays correspondence-first + edge-preserving batch denoise.
+  Detector note (design-only): NIS/χ² is a whiteness test (model self-consistency), the #383 rolling-slope is a
+  trend test — different questions; no adoption, current detector already right for the trend. One future
+  DIAGNOSTIC probe: χ² whiteness on verdict-d_pose vs EMA-shadow forecast to formalize EMA-lag-vs-true-rise.
+- **Triality:** DAG — this FEED; verdict — `reports/kalman_innovation_20260710/verdict.json` (FORMULATION-scope,
+  is_negative, REDUNDANT composition, 3 measured rows); equations — NO equation minted (a lever-FORECLOSURE
+  verdict is not a predictive law with a callable; a hollow-callable equation would be a fake-implementation smell
+  — stated, not skipped). Memo `kalman_innovation_coding_20260710.md`; results
+  `reports/kalman_innovation_20260710/{pose_dxi,lane_coeff,verdict}.{txt,json}`. **Pointer contest-CPU 0.19110
+  UNMOVED — a foreclosed rate lever is MEANS (system intelligence: the direction is closed with receipts), not a
+  scored move.**
