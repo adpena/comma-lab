@@ -349,6 +349,67 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         ),
     )
 
+    # ---- inc-1a KILL-GATE RULING anchor (the pre-#385 $0 decoupling screen, RUN 2026-07-10) ----
+    # The gate was RUN. Its honest ruling: the A/B is NOT $0-rulable — the matched-compute
+    # shared-head CONTROL arm is a TRAINED artifact (governed EVENT + owed-9 lateral carrier
+    # BUILD), so evaluate_kill REFUSES rather than fabricate one (NO-FAKE). What DID land at $0:
+    # the analytic decoupled-arm floor reproduced EXACTLY (0.100403, n600), harness end-to-end
+    # validation, and a 3-replicate determinism confirmation (spread=0 -> operative floor = R7).
+    anchor_inc1a_killgate = EmpiricalAnchor(
+        anchor_id="v8_inc1a_killgate_ruling_analytic_20260710",
+        measurement_utc="2026-07-10T00:00:00Z",
+        inputs={
+            "probe": "inc-1a KILL-GATE RUN (pre-#385): attempt the decoupled-vs-matched-control A/B "
+                     "at the analytic-generator level, n600, deterministic, $0/no-GPU",
+            "labels": "gt_n600.npz['lstars'] (600x384x512 int64 argmax)",
+            "config": "witness_autoconfig.derive_crucible_v8_inc1a_config (validate==[], unknown_count==0, 18 fields)",
+            "evaluator": "tac.inc1a_harness.decoupling_screen.evaluate_kill (the harness OWNS the verdict)",
+            "n_replicates": 3,
+            "bc_mode": "no_offset",
+        },
+        predicted_output={
+            "sealed_design": "A/B decoupled per-class fields vs MATCHED-COMPUTE shared-head control; "
+                             "improvement > delta_mask -> CONFIRMED (proceed 1b)",
+            "contingency": "SPEC_v8.1 §11 owed-9 + operator clause: run at the analytic level if the "
+                           "trained arms / lateral carrier do not exist; do NOT fake a trained arm",
+        },
+        empirical_output={
+            "verdict": "REFUSED-arm-missing-or-toy",
+            "why_refused": "the matched-compute shared-head CONTROL arm is a TRAINED artifact (governed "
+                           "EVENT + owed-9 lateral 3-curve carrier BUILD); NOT fabricated (NO-FAKE) -> the "
+                           "decoupling A/B is structurally NOT $0-rulable",
+            "decoupled_arm_analytic_mask_dseg_n600": 0.10040343390570747,  # reproduces the 0.100403 precedent EXACTLY
+            "control_arm": "NOT RUN (does not exist)",
+            "seed_spread_3rep": 0.0,
+            "seed_spread_note": "deterministic generators -> spread=0 is a DETERMINISM confirmation, NOT a "
+                                "measured training-seed variance (that instrument is N/A at the analytic level)",
+            "operative_delta_mask": 3.46e-06,  # = R7 frame-sampling floor (seed component N/A)
+            "per_class_mask_dseg": {"Road": 0.0212, "Lane": 0.3617, "Undrivable": 0.1616,
+                                    "Movable": 1.0, "MyCar": 0.0039},
+            "per_frame_std": 0.03991,
+            "constraint_carved": (
+                "the v8 kill-gate is NOT a $0 pre-training screen: no CONFIRMED/KILLED ruling is reachable "
+                "at $0; choosing v8 at #385 commits to owed-9 (lateral 3-curve carrier BUILD) + a governed "
+                "decoupled/control training EVENT before any A/B ruling exists. Banked at $0: the analytic "
+                "decoupled FLOOR 0.100403 (any trained Stage-A arm must beat it) + harness validation"
+            ),
+        },
+        residual=0.0,
+        source_artifact=".omx/research/inc1a_killgate_run_20260710.md",
+        measurement_method="n600_analytic_composite_argmax_vs_lstar_deterministic_evaluate_kill_refused",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/inc1a_killgate_run_20260710.md",
+            reactivation_criteria=(
+                "the governed EVENT lands the trained decoupled Stage-A arm + matched-compute shared-head "
+                "control through the SAME harness; evaluate_kill then rules CONFIRMED/KILLED/INCONCLUSIVE "
+                "with the operative delta_mask = max(R7 3.46e-6, in-run >=3-seed spread)"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="macos_arm64",
+        ),
+    )
+
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -390,12 +451,13 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         units_in={"edge_boundary_px": "count", "generator_coeffs": "count_per_frame"},
         units_out={"s_rate_term": "contest_rate_score_25bytes_over_N"},
         empirical_anchors=(anchor_roadlane, anchor_rollup, anchor_deshare, anchor_curve_rel_negative,
-                           anchor_inc1a_analytic),
+                           anchor_inc1a_analytic, anchor_inc1a_killgate),
         predicted_vs_empirical_residual={
             "roadlane_dominant_measured": 0.0,
             "wholescene_rollup_measured": 0.0,
             "deshare_lever1_confirmed_measured": 0.0,
             "curve_relative_lever2_refuted_measured": 0.0,
+            "inc1a_killgate_ruling_analytic_measured": 0.0,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
