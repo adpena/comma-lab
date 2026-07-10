@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tac.jsonl_store import append_locked_jsonl
 from tac.witness_dsl.lever_registry import lever_factories
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -331,23 +332,9 @@ def activation_report(known: tuple[str, ...] | None = None, path: Path | None = 
 
 
 # ── RELATIVE-SIGNIFICANCE: store + metric + value-ranked duty-to-measure ─────────────────────────
-def _append_locked_jsonl(p: Path, row: dict) -> None:
-    """fcntl-locked APPEND of ONE json row (canonical .omx/state pattern; best-effort off-POSIX)."""
-    p.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps(row, sort_keys=True) + "\n"
-    try:
-        import fcntl
-        with open(p, "a", encoding="utf-8") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            try:
-                f.write(line)
-                f.flush()
-                os.fsync(f.fileno())
-            finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-    except ImportError:  # pragma: no cover - non-POSIX fallback
-        with open(p, "a", encoding="utf-8") as f:
-            f.write(line)
+# _append_locked_jsonl canonicalized to tac.jsonl_store.append_locked_jsonl (audit finding #4,
+# .omx/research/hardcode_duplication_audit_witness_stack_20260710.md) — was byte-identical to the
+# copy in curriculum_candidate_pool.py; now a single shared helper.
 
 
 def record_relative_significance(
@@ -392,7 +379,7 @@ def record_relative_significance(
         "agent": agent,
         "ts": _utc(),
     }
-    _append_locked_jsonl(Path(path) if path is not None else SIGNIFICANCE_PATH, row)
+    append_locked_jsonl(Path(path) if path is not None else SIGNIFICANCE_PATH, row)
     return row
 
 

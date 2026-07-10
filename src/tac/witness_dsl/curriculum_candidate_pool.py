@@ -35,10 +35,11 @@ curriculum candidates into its DECIDE queue beside the lever duty-to-measure lin
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+
+from tac.jsonl_store import append_locked_jsonl
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 POOL_PATH = _REPO_ROOT / ".omx" / "state" / "curriculum_candidate_pool.jsonl"
@@ -81,23 +82,9 @@ def _utc() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _append_locked_jsonl(p: Path, row: dict) -> None:
-    """fcntl-locked APPEND of ONE json row (canonical .omx/state pattern; best-effort off-POSIX)."""
-    p.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps(row, sort_keys=True) + "\n"
-    try:
-        import fcntl
-        with open(p, "a", encoding="utf-8") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            try:
-                f.write(line)
-                f.flush()
-                os.fsync(f.fileno())
-            finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-    except ImportError:  # pragma: no cover - non-POSIX fallback
-        with open(p, "a", encoding="utf-8") as f:
-            f.write(line)
+# _append_locked_jsonl canonicalized to tac.jsonl_store.append_locked_jsonl (audit finding #4,
+# .omx/research/hardcode_duplication_audit_witness_stack_20260710.md) — was byte-identical to the
+# copy in activation_ledger.py; now a single shared helper.
 
 
 def record_candidate(
@@ -173,7 +160,7 @@ def record_candidate(
         "agent": agent,
         "ts": _utc(),
     }
-    _append_locked_jsonl(Path(path) if path is not None else POOL_PATH, row)
+    append_locked_jsonl(Path(path) if path is not None else POOL_PATH, row)
     return row
 
 
