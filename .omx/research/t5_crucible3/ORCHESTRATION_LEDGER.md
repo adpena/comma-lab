@@ -318,3 +318,34 @@ grid pin present. FINDINGS + fixes (all folded this round):
   everywhere else). FIXED to 3.46e-6.
 **Triality:** [no-triality] (doc-fidelity fixes; no lever/law change). Pointer 0.19110 UNMOVED — MEANS.
 NEXT ACTION: **P6-R2** — re-derive over the fixed doc; if zero findings, first CLEAN toward 3-consecutive seal.
+
+## [P6-R2 NOT_CLEAN — 2026-07-09] RECURSIVE SEAL round 2 (crucible3_v8, fresh-eyes over 45d713a1e)
+Counter 0/3 (NOT_CLEAN; R1's fixes re-reviewed clean, but ONE new finding). Standing-check results: (1)
+scaffold smoke ALL EXIST — inc1a_harness 27/27 pass, ruff-F clean · (2) number-provenance: ALL R1-fixed
+numbers RE-DERIVED vs primaries — gate JSON no_offset **0.0031436** (n600 authority), flip_weighted 0.0196734
+(6.3×), flip_median 0.0215612 (6.9×), Δ +40%/+45% AS HARM, 0.00272 = n48 SUBSET (ot_offset_n600_verdict
+L27), b_Lane +43.4 = flip_median class-1 offset, ±0.4 sweep best Δ −3.4e-8 (flip_weighted_bc_build_and_gate
+L69) — ALL MATCH; floor pin propagated (0 remaining 3.5e-6, 9× 3.46e-6) · (3) eightfold+P9 PASS (δ_R proxy
+RETIRED, dilate=2 de-share tagged, no NEW proxy) · (6) grid pin present (512×384) · review-prior-fix (crucible-2
+discipline): §A.3 rewrite is code/gate/memo-faithful; VERDICT_REFUSED attribution correct (`operative_delta_mask`
+RAISES → `evaluate_kill` catches → `VERDICT_REFUSED`, verified L157-252).
+FINDING + fix (folded this round):
+- **F-R2-1 (review-prior-fix miss + P10 first-enforcement, PRIMARY):** R1's §A.3 correction (the #386 gate
+  RULED — no_offset **0.0031436** n600 authority, 0.00272 was the SUBSET, both flip arms REFUTED, per-EDGE
+  route on fresh non-eroded fields) did **NOT propagate to §B `bc_calibration`**, which v3 declared "UNCHANGED
+  from v2 §B" — and v2's block carries the now-STALE `no_offset (0.00272 MEASURED) default until #386 [in
+  flight]`. A reader compiling the launchable increment-1 config from §B would inherit the stale subset value
+  + the stale "in-flight/OWED" gate status, contradicting the R1-corrected §A.3 within the same doc. This is
+  also the P10 gap: the b_c saturation negative's DERIVED optimum (per-edge on fresh Stage-A fields) was named
+  in §A.3 prose but unregistered in the config block. FIXED: §B carves `bc_calibration` OUT of the
+  UNCHANGED-from-v2 pointer and gives it an explicit override block — `gate_386: RULED`, `no_offset_d_seg:
+  0.0031436` (n600 MEASURED-ANCHOR, "v2's 0.00272 was the n24/n48 SUBSET — do NOT compile from it"), `never:
+  [ot_newton, flip_weighted, flip_median]`, `route_forward: per_edge_bc_on_fresh_v8_stageA_decoupled_fields`,
+  MEASURED-ANCHOR provenance.
+P10 constraint-set synthesis check (first enforcement): lateral-undriv negative → 3-curve carrier (§A.1/B/I1b/
+§D-9/R8) CONSUMED · curve-relative negative → lane-generator coverage the real lever (§A.2 F-P5-5 fast-follow)
+CONSUMED · b_c saturation negative → per-edge route now CONSUMED-IN-CONFIG (this fix). Risk register reads
+negatives as COVERAGE not dead loss (risk-1 CLOSED by side-curves; risk-3 routed to honesty + fast-follow).
+**Triality:** [no-triality] (doc-fidelity + config-propagation fix; no lever/law change). Pointer 0.19110
+UNMOVED — MEANS.
+NEXT ACTION: **P6-R3** — re-derive over the fixed doc; if zero findings, first CLEAN toward 3-consecutive seal.

@@ -292,8 +292,17 @@ road_undriv_carrier:
   bulk_sdf_field: OFF_default                # DEMOTED to P-C-gated FALLBACK (I10, unchanged)
   STANDING_SEAL_CHECK: "grep rate-claim path for bulk_boundary_byte_cost -> FAIL (L385 diagnostic; 707/426/2228 = MEMO-SOURCED)"
 
-# ==== all other blocks (bc_calibration, stage_A, GATE P-C, stage_B/1b, residual_coder, pose_finish) ====
-# ==== UNCHANGED from v2 §B — with the F-P5-3 rider on residual_coder.operating_point: ====
+# ==== other blocks (stage_A, GATE P-C, stage_B/1b, pose_finish) UNCHANGED from v2 §B ====
+# ==== bc_calibration SUPERSEDED by §A.3 (P6-R2 fix F-R2-1): v2's block is STALE — it carries ====
+# ==== no_offset "0.00272 MEASURED default until #386 [in flight]"; the #386 gate has now RULED. ====
+bc_calibration:
+  gate_386: RULED                          # P6-R1/R2: was "in flight / OWED" in v2 §B; realized-through-R n600 (mod32cap ep650, frozen CPU SegNet fp32) has RULED
+  safe_default: no_offset                   # both flip arms REFUTED: flip_weighted 0.0196734 (6.3× WORSE), flip_median 0.0215612 (6.9× WORSE)
+  no_offset_d_seg: 0.0031436                # n600 MEASURED-ANCHOR authority; v2's 0.00272 was the n24/n48 SUBSET — do NOT compile from it
+  never: [ot_newton, flip_weighted, flip_median]   # global post-hoc 5-scalar b_c SATURATED on the eroded trunk (N-1 exhaustive ±0.4 sweep best Δ −3.4e-8)
+  route_forward: per_edge_bc_on_fresh_v8_stageA_decoupled_fields   # §A.3: non-eroded by construction (S1 per-edge form); global offset on the frozen eroded trunk IS the saturated regime; also owed: offsets solved JOINTLY-with-training
+  provenance: "MEASURED-ANCHOR laguerre_flip_bc_reformulation_gate_n600_mod32cap_ep650_20260709; NOT a proxy placeholder"
+# ==== residual_coder carries the F-P5-3 rider on operating_point: ====
 residual_coder:
   operating_point: r_star_RANGE              # F-P5-3: labeled RANGE [0.061, 0.135], NEVER a point; P-C-gated; shippable = 0.135 WASH
   binding_uncertainty: "Road/Lane 0.042 (53% enemy) far-from-generator AND d_seg-valuable -> r* near 0.135 = wash; partly weak-lane-gen artifact (fast-follow)"
