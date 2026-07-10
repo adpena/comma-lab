@@ -12317,7 +12317,7 @@ is the deliberately-deferred P8-wall item. v7.5.2 chain now FULLY GATE-GREEN exc
 half + the P8 adapter. Triality: DAG=this FEED; DSL/equations N/A (gate tooling + measurements, no new
 lever/law). Pointer 0.19110 UNMOVED (means).
 
-## FEED-residualkit (2026-07-09, BUILD #386) — the two v8 residual-coder levers BUILT + MEASURED n600: de-share CONFIRMED (S≈0.0044), curve-relative REFUTED (does NOT pay)
+## FEED-residualkit (2026-07-09, BUILD #386) — the two v8 residual-coder levers BUILT + MEASURED n600: de-share CONFIRMED (S≈0.0044), curve-relative REFUTED <!-- # VERDICT_SCOPE_OK: scoped in-block below (verdict_scope: FORMULATION — curve-relative δ(s) offset coder on eroded-trunk fields) --> (does NOT pay)
 Attacks the 0.079 named enemy (= 192% of the remaining sub-0.15 gap). Two default-OFF sibling modules in
 `src/tac/boundary_math/` + a $0 driver, both bit-exact, both measured on ALL 600 frames of `gt_n600.npz`.
 **Modules:** `movable_deshare.py` (Lever-1 Movable-first attribution + general pairwise archive-dedup
@@ -12363,7 +12363,7 @@ empirical answer S5(adversary)/S1 flagged — the residual-coder-optimism trap i
 
 **Triality:** DAG = this FEED. **Equations** = 2 anchors APPENDED to `v8_geometric_rate_decomposition_v1`
 (`v8_residual_deshare_dedup_measured_20260709` CONFIRMED + `v8_curve_relative_offset_coder_NEGATIVE_20260709`
-REFUTED, both VERIFIED_VIA_EMPIRICAL_ANCHOR). **DSL** = N/A (measurement + default-OFF coders; no trainer/
+REFUTED (verdict_scope: FORMULATION per their anchors), both VERIFIED_VIA_EMPIRICAL_ANCHOR). **DSL** = N/A (measurement + default-OFF coders; no trainer/
 byte-close flag exists yet — grep of `witness_dsl/` confirms no deshare/curve-relative surface; a `Lever`
 factory is owed ONLY when byte-close integration lands behind a flag). Memo:
 `.omx/research/residual_kit_deshare_curverel_build_20260709.md`. Report JSON:
@@ -12543,7 +12543,7 @@ compare-grid. **CARRIED:** rate 0.135=WASH (r\* RANGE [0.061,0.135] P-C-gated) �
 dilate=2 de-share proxy · 0.00277 pin. Eightfold SEAL pre-check now ALL-PASS. NEXT: P6 recursive seal. Pointer
 0.19110 UNMOVED (MEANS). Triality: DSL N/A · DAG this block · equations N/A (I1b=DERIVED owed-measurement).
 
-## FEED-flipbc (2026-07-09, BUILD #386) — flip-weighted b_c reformulations BUILT + MEASURED n600: BOTH REFUTED; the global b_c lever is SATURATED at no_offset
+## FEED-flipbc (2026-07-09, BUILD #386) — flip-weighted b_c reformulations BUILT + MEASURED n600: BOTH REFUTED (verdict_scope: FORMULATION — flip_weighted OT-cell-inflation + flip_median regime-violation on eroded trunk; per-edge/joint reformulations OPEN); the global b_c lever is SATURATED at no_offset
 
 **The N-1 open arm (flip-mass target masses) is now CLOSED at this formulation level, with a MEASURED
 3-arm n600 gate.** Built BOTH crucible-3 A.3 formulations as selectable `solve_head_offsets` modes
@@ -12668,7 +12668,7 @@ UNMOVED (means).
   owed to the 1a governed EVENT.
 - **de-share footprint sweep (Item 2, $0 MAIN EVENT):** MEASURED n600 dilate∈{0,1,2,3} → totS **[0.000, 0.001945,
   0.004399(=landed@dil2, EXACT reproduce), 0.006898]**. **NOT footprint-robust** (band [0.000,0.0069] ≠ [0.0044,
-  0.0104]); 0.0044 = INSTANCE-of-dil2 proxy; real bbox footprint NOT exposed. Curve-relative REFUTED verdict HOLDS
+  0.0104]); 0.0044 = INSTANCE-of-dil2 proxy; real bbox footprint NOT exposed. Curve-relative REFUTED verdict HOLDS <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped anchor, robustness-band re-check -->
   across the band (lane 0.90× worse, horizon ~1.0× wash, both dil0..dil3). CORRECTS the P8 de-share row.
 - **42 s/ep (Item 3):** PROVENANCE = v7.5.2/crucible-2 MLX-M5-Max steady-state anchor (DAG:12215 + crucible2
   SYNTHESIS_v752:90/536, §B.wall_clock 6-16h budget). NOT the v8-inc1a (paint-free) config → a v8-inc1a dry-start
