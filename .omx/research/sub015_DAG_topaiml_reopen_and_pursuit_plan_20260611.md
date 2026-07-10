@@ -14489,3 +14489,30 @@ note · #118→DAG strategy anchor (this FEED). NO borrowed-vehicle pursuit/repl
 [[witness_line_priority_borrowed_polish_harvest_only_20260710]]). Triality: DSL **N/A** (no new lever);
 equations **N/A** (no new measured law — #127 confirms our existing margin-surrogate eq, #118 corroborates
 rate-dominance). Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS); every external score `[external unverified]`.
+
+### FEED-graph-memory (2026-07-10) — #411 P0: the DAG BECOMES a reconstructable graph memory (MRAgent "reconstruct-not-retrieve")
+
+**WHY (operator P0 correction, verbatim):** *"Pursue it now as p0, that was my original intent for the DAG which you turned into just a folder of markdown files."* The DAG was always meant to be a RECONSTRUCTABLE GRAPH MEMORY (MRAgent thesis, [[papers_checked_mragent_reconstruct_not_retrieve_20260710]]); I degraded it into an append-only FEED log I could only grep/tail — the concrete mechanism of the goldfish root cause [[L83]] (*"apparatus WRITES better than it READS"*). Steer: LEAN ON the `[[wikilink]]` markdown as the shared Obsidian substrate; do NOT build a bespoke DB.
+
+**WHAT (increment 1, REAL/NO-FAKE — pointer 0.19108282 [contest-CPU] UNMOVED, this is recall APPARATUS = MEANS):** built `tac.graph_memory` ({model, build, recall, __init__}.py) + `tools/graph_memory_recall.py` + 18 tests. It PARSES the real corpus into a node/edge graph (the wikilink markdown remains the source of truth; the graph INDEXES it + synthesizes cross-store edges — it does NOT rewrite any FEED). MEASURED build: **8556 nodes / 29971 edges** in 0.4s, byte-deterministic rebuild. 9 node types {memory 2180, finding 410, decision 116, equation 280, entity 5493, task 24, deferral 29, person 19, topic 5} · 8 edge types {references 26425, links 1150, tagged 1128, consumes 643, produces 588, sister 37}. RECALL = reconstruct-on-demand: token-scored seeds → depth-2 BFS over both edge directions (backlinks) → assemble connected context + edge paths (MRAgent-style, NOT flat chunk retrieval = the complement to [[L83]]/#346 `tools/corpus_query.py`).
+
+**PROVEN on 2 real queries:** (Q1) "lane d_seg" → seeds feed:auditA + `eq:analytic_lane_band_dseg_recon_floor_v1` + Yousfi-lever FEEDs → traverses to `person:Yousfi` + `decision:FEED-poseladder` via a SHARED `#238`. (Q2) "2026-07-02 naive launch OOM" → cross-links the incident memories (review-seals / orphaned-win / machine-crash-P0) + `feed:oom` + `eq:oom_verdict_batch_spike_peak_rss_v1` via the `#205` entity — the incident RECONSTRUCTED from the connected subgraph WITHOUT loading MEMORY.md wholesale (the read-side fix for L83).
+
+**WIRE-IN:** `tools/costate_digest.py` (SessionStart hook + #346 SENSE surface) gains `section_graph_memory()` — read-only, fast (JSONL line-count, never rebuilds), score-neutral: surfaces "graph-memory: N nodes / M edges — RECONSTRUCT before grepping" every session so recall is STRUCTURAL not grep-by-volition. costate_digest still ~1s rc=0.
+
+**Triality:** DAG leg = THIS FEED (the leg being repaired). DSL **N/A** (recall apparatus, no witness lever). equations **N/A** (nothing measured about the contest score; if a future increment measures a recall-quality law, register it then). **OWED (increment 2+):** edge-weighting (down-weight incidental refs) · Obsidian round-trip export of synthesized edges (so the operator SEES the full graph in the GUI, not just memory-file wikilinks) · auto-build cache on first session-start · MRAgent's 7 typed query-tools (I ship one reconstruct()). Full design + demos: `.omx/research/graph_memory_dag_reconstruction_20260710.md`. Memory: [[dag_was_meant_to_be_reconstructable_graph_memory_not_markdown_folder_20260710]].
+
+
+---
+
+### FEED-pr-authors-github-intake
+
+**Task #413** (operator-GO 2026-07-10, follow-on to #412) — mined all 15 contest PR #112-128 authors' PUBLIC GitHub profiles (read-only `gh api`, contest CLOSED, HARVEST-ONLY per witness-priority). Memo: `.omx/research/pr_authors_github_intake_20260710.md`.
+
+**Verdict:** 14 of 15 authors = one-off contest entrants — genuine technique already banked in #412/#128; other repos are coursework / mobile / web-app / data-lab / unrelated-forks with ZERO transferable compression/witness signal (stated plainly per NO-FAKE). The two whose PR sophistication predicted depth — **InfamousBolt** (#118 saturation analysis) + **ryanli0070** (#127 `sigmoid(-margin/tau)` margin surrogate, our level-set surrogate in the wild) — are strong students with NO other domain repos; signal fully banked by #412.
+
+**One surprise — `mattneel` (Matthew Neel, #112 `rhnerv_comma` base) = genuine PL/systems/native-runtime domain expert** (133 repos; deep Zig portfolio: `three.zig`+`three-native` native Three.js **WebGPU** runtime on QuickJS-NG+Dawn · `wasmbind` Zig<->WASM<->TS bindgen · `fpz` fixed-point kernels · `gkz` deterministic forkable sim kernel · `tenzor` compile-time tensors · `ggufx` GGUF weight parser · `ex_lancedb` vector DB). **Adjacency = COMPUTE/NATIVE, not the witness math**: external reference prior-art for **molt** (Python->WASM+WebGPU, MEMORY L36) + the **Native eval-time runtime discipline** (deterministic integer decode). Route = molt/native **watch-item only**, subordinate to witness — NOT a chase.
+
+**Instruction-boundary:** several mattneel repos are agent-tooling by NAME (`jzs` "agent substrate", `zigger` "AI codegen build step", `frank-demo`) but NO repo content instructed an agent; no injection encountered; nothing acted on.
+
+**Triality:** DAG leg = THIS FEED. DSL **N/A** (external-signal mining, no witness lever). equations **N/A** (no measured law; a confirmed-negative + one compute adjacency). Pointer UNMOVED contest-CPU **0.19108282** (MEANS); every external claim `[external unverified]`.
