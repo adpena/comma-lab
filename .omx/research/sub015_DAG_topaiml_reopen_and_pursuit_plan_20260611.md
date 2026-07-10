@@ -14103,3 +14103,19 @@ crucible_v752 launch path + the live run dir `levelset_v752_pilot_20260710T15410
   hours away); that row registers the click-polish anchor with full custody. DSL leg = N/A (TOOL,
   standing disposition). DAG leg = this record + FEED-clickpolish-build. verdict_scope: n/a
   (positive machinery validation; no negative asserted).
+
+### FEED-n600-baseline-repro (2026-07-10) — cross-host determinism DEMONSTRATED at full scale
+- **`ce3cc03c2` ("click-polish #399: n600 baseline healthy in-container"):** the Modal Linux x86_64
+  container's n600 baseline eval reproduced our local pointer to **3.7e-7** (in-container
+  S=0.19109945 vs pointer 0.19109982) on the exact baseline archive bytes — the strongest cross-host
+  reproduction of the frontier row to date, and the OOM-critical fused chunked render+score path
+  passed its FIRST full-n600 exercise. DURABLE finding: our archive+decode+eval chain is
+  cross-host-stable at the 4e-7 band (residual = CPU batch-float nondeterminism class, well below
+  every decision threshold). Round-0 ±1 n600 sweep now running (~1.5–3 h) with same-container exact
+  eval to follow.
+- **Legs:** measurement is a REPRODUCTION of the existing pointer row, not a new finding — the
+  equations anchor for the click-polish line mints at the n600 candidate row (in flight; the
+  pointer-registration sibling is minting the n8-row anchor in parallel). DSL N/A (TOOL, standing).
+  No MEMORY.md line (the memo + this FEED are the durable stores; the reproduction band will ride
+  the pointer-move record). **Pointer 0.19110-class — n8-row registration in flight; this baseline
+  repro is the custody floor under it.**
