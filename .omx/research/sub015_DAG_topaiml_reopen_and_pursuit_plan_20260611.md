@@ -14214,3 +14214,44 @@ fires post-launch at the terminal band per D27b). Legs: DSL = N/A-TOOL (stated);
 DEFERRED-to-first-measured-row (candidate `pair_local_diagonal_click_polish_{dseg,dpose}_v1`, mints when
 a byte-closed n600 diagonal-polish row lands — every ΔS band in the design memo is ESTIMATED, none
 measured). Pointer contest-CPU 0.19108282 UNMOVED (build-only; MEANS).
+
+### FEED-curriculum-panel-truth — dashboard truth-rendering fix (display/apparatus; [no-triality-lever])
+OPERATOR CATCH (verbatim 2026-07-10): "I thought we devised a more optimal curriculum including new
+stages from our online research that were never in PR95, this still looks cargo culted, except for the
+hardcoded epochs and how we have added some levers and tweaked weights and config and such." + sister
+catch "It also doesn't display the R1." The dashboard LIVE-tab CURRICULUM POSITION panel
+(`tools/dashboard_server.py::renderSchedule`) rendered a 3-segment CE|tau|Muon epoch bar off hardcoded
+boundary flags (`tau-softplus-start-epoch`/`muon-start-epoch`) — HIDING the event-gated DERIVED schedule
+actually running (`--curriculum-event-triggered` + `--tau-advance-mode event` + `--muon-start-event
+powerlaw_meat` + 8 event-gated mechanism levers), so our derived curriculum read as PR95's skeleton. The
+POSE-DESCENT READINESS panel showed only the jacobian_basin sensor ("no basin probe yet"), never the
+BANKED R1 pose custody.
+
+FIX (readback/artifact-driven, value-provenance, identity palette, honest-pending): new sibling model
+module `tools/dashboard_curriculum_panel.py` (pure, fail-open) builds two JSON models the JS renders:
+(1) CURRICULUM — stages from `witness_dsl.schedule_readback.read_schedule` (CE fixed · tau event cap300 ·
+Muon augmented to event `powerlaw_meat` cap726) with the epoch labeled EXPLICITLY "fail-safe cap" never
+the trigger; the tau-path as ONE continuous geometric anneal (CE = tau=1 limit, params from flags); 8
+event-gated mechanism swim-lanes (lane-band@lane_nucleus · chroma-boundary@annulus_plateau ·
+temporal-screw@annulus_plateau · birth-completion · LADDER · TAIL · Polyak@2546 · terminal-solve
+[sigma_min_plateau]) each {trigger, cap, state pending/armed/FIRED@ep} read from the trainer's emitted
+`*_engage`/`*_armed`/`*_switch` rows (bounded run.log tail); a provenance line "schedule: derived
+(#302/#315/#286; PR95 residue retained-by-measurement tau_softplus/Muon; removed-by-measurement
+l7/smooth/QAT/c1a/lambda/sigma)". (2) POSE — banked R1 card d_pose/xi_bytes READ from the #238
+byte-close artifact `reports/r1_dxi_238/n600_shipdxi.json` (contribution DERIVED sqrt(10*d_pose)=0.1269,
+[macOS-CPU advisory NON-PROMOTABLE]) + fallback contract (detector sigma_min_plateau · state
+pending/armed/fired/DEGENERATE · should_ship_banked_r1 from telemetry-when-present · decision-tree
+one-liner). NO hardcoded epoch literals in panel code (AST-guarded test); honest "pending (no event row
+yet)" when a lane emits no row. 10 new tests green; JS node-checked; end-to-end refresh→meta confirmed on
+live v7.5.2 run.
+
+HONEST TELEMETRY GAPS (→ next telemetry asks): (a) LADDER's `ladder_rung` is a per-refresh PROGRESS row
+(fires ~ep1), not a discrete birth-boundary event → LADDER reads "fired@ep1" early; a distinct
+`ladder_birth_complete` row would sharpen it. (b) No `should_ship_banked_r1` field on any emitted row yet
+(pose-finish is terminal) → contract shows "—" honestly until the trainer emits the decision. (c)
+birth-completion/tail/polyak arm-vs-fire distinction relies on setup-vs-ramp/begin rows; a uniform
+`{lever}_engage {status}` row schema across all levers would remove per-lever stage-name coupling.
+
+TRIALITY: display/apparatus class [no-triality-lever] — DSL = N/A (renders the DSL-derived schedule, adds
+no lever/flag); equations = N/A (observability, score-neutral). Pointer contest-CPU 0.19108282 UNMOVED
+(display-only; MEANS).
