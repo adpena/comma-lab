@@ -445,4 +445,387 @@ def test_safe_run_no_longer_in_extra_protected_denylist():
     assert mg._matches_extra_protected("python tools/safe_run.py -- python train_witness.py") is False
     # but memory_guard.py + spawn_durable_daemon.py stay protected.
     assert mg._matches_extra_protected("python tools/memory_guard.py --watch") is True
+
+
+# ---------------------------------------------------------------------------
+# 14. SIGTERM → grace → SIGKILL escalation cascade (task #409).
+#     The escalation is the last-resort shed of a VETTED custody training arm.
+#     Its #1 invariant is UNCHANGED control-plane safety: the exempt-set re-check
+#     (pgid_is_killable_custody_arm) must gate the SIGKILL exactly as the selector
+#     gated the SIGTERM — a pgid recycled onto the control plane during the grace
+#     window is the molt CP-kill class and must NEVER be SIGKILLed.
+# ---------------------------------------------------------------------------
+class _FakeSignals:
+    """Records os.killpg / os.kill calls and models per-pgid liveness.
+
+    ``sig == 0`` is the existence probe (POSIX): raises ProcessLookupError when
+    the group is gone, PermissionError when in ``perm_pgids``. A real SIGKILL (or
+    a pgid in ``term_kills``) removes the group from ``alive``.
+    """
+
+    def __init__(self, *, alive_pgids=(), term_kills=(), missing_pgids=(),
+                 perm_pgids=(), missing_pids=()):
+        self.calls: list[tuple[str, int, int]] = []
+        self.alive = set(alive_pgids)
+        self.term_kills = set(term_kills)
+        self.missing_pgids = set(missing_pgids)
+        self.perm_pgids = set(perm_pgids)
+        self.missing_pids = set(missing_pids)
+
+    def killpg(self, pgid, sig):
+        self.calls.append(("killpg", pgid, sig))
+        if sig == 0:  # existence probe
+            if pgid in self.perm_pgids:
+                raise PermissionError
+            if pgid in self.alive:
+                return None
+            raise ProcessLookupError
+        if pgid in self.perm_pgids:
+            raise PermissionError
+        if pgid in self.missing_pgids or pgid not in self.alive:
+            raise ProcessLookupError
+        import signal as _sig
+        if sig == _sig.SIGKILL or pgid in self.term_kills:
+            self.alive.discard(pgid)
+        return None
+
+    def kill(self, pid, sig):
+        self.calls.append(("kill", pid, sig))
+        if pid in self.missing_pids:
+            raise ProcessLookupError
+        return None
+
+    def signals_to(self, target):
+        import signal as _sig
+        names = {_sig.SIGTERM: "TERM", _sig.SIGKILL: "KILL", 0: "PROBE"}
+        return [names.get(s, s) for (_k, t, s) in self.calls if t == target]
+
+
+class _Clock:
+    """Deterministic monotonic clock; ``sleep`` advances it (no real waiting)."""
+
+    def __init__(self, start=0.0):
+        self.t = start
+
+    def monotonic(self):
+        return self.t
+
+    def sleep(self, s):
+        self.t += max(0.0, s)
+
+
+def _install(monkeypatch, fake, clock=None):
+    monkeypatch.setattr(mg.os, "killpg", fake.killpg)
+    monkeypatch.setattr(mg.os, "kill", fake.kill)
+    if clock is not None:
+        monkeypatch.setattr(mg, "time", clock)
+
+
+import signal  # noqa: E402  (used by the escalation tests below)
+
+
+# --- _signal_pgrp ----------------------------------------------------------
+def test_signal_pgrp_delivers_to_group(monkeypatch):
+    fake = _FakeSignals(alive_pgids={500})
+    _install(monkeypatch, fake)
+    assert mg._signal_pgrp(500, 500, signal.SIGTERM) is True
+    assert fake.calls == [("killpg", 500, signal.SIGTERM)]  # no pid fallback
+
+
+def test_signal_pgrp_falls_back_to_pid_when_group_gone(monkeypatch):
+    fake = _FakeSignals(alive_pgids=set(), missing_pgids={500})
+    _install(monkeypatch, fake)
+    assert mg._signal_pgrp(500, 501, signal.SIGTERM) is True
+    assert ("kill", 501, signal.SIGTERM) in fake.calls
+
+
+def test_signal_pgrp_falls_back_on_permission_error(monkeypatch):
+    fake = _FakeSignals(alive_pgids={500}, perm_pgids={500})
+    _install(monkeypatch, fake)
+    assert mg._signal_pgrp(500, 501, signal.SIGTERM) is True
+    assert ("kill", 501, signal.SIGTERM) in fake.calls
+
+
+def test_signal_pgrp_noop_when_both_gone(monkeypatch):
+    fake = _FakeSignals(missing_pgids={500}, missing_pids={501})
+    _install(monkeypatch, fake)
+    assert mg._signal_pgrp(500, 501, signal.SIGTERM) is False
+
+
+def test_signal_pgrp_nonpositive_pgid_never_broadcasts(monkeypatch):
+    # pgid<=0 must NOT call killpg (killpg(0,...) broadcasts to the caller group!).
+    fake = _FakeSignals(missing_pids=set())
+    _install(monkeypatch, fake)
+    assert mg._signal_pgrp(0, 777, signal.SIGKILL) is True
+    assert all(kind != "killpg" for (kind, _t, _s) in fake.calls)
+    assert ("kill", 777, signal.SIGKILL) in fake.calls
+
+
+def test_signal_pgrp_no_pid_fallback_when_disabled(monkeypatch):
+    # SIGKILL escalation is group-only: a gone group must NOT fall back to
+    # os.kill(pid) (the pid may be RECYCLED onto a control-plane process).
+    fake = _FakeSignals(missing_pgids={500})  # group already gone (killpg ESRCH)
+    _install(monkeypatch, fake)
+    assert mg._signal_pgrp(500, 500, signal.SIGKILL, pid_fallback=False) is False
+    assert all(kind != "kill" for (kind, _t, _s) in fake.calls), "no os.kill(pid) fallback"
+
+
+# --- _pgrp_alive -----------------------------------------------------------
+def test_pgrp_alive_true(monkeypatch):
+    fake = _FakeSignals(alive_pgids={500})
+    _install(monkeypatch, fake)
+    assert mg._pgrp_alive(500) is True
+    assert fake.calls == [("killpg", 500, 0)]  # probes with signal 0
+
+
+def test_pgrp_alive_false_when_gone(monkeypatch):
+    fake = _FakeSignals(alive_pgids=set())
+    _install(monkeypatch, fake)
+    assert mg._pgrp_alive(500) is False
+
+
+def test_pgrp_alive_permission_means_alive(monkeypatch):
+    fake = _FakeSignals(perm_pgids={500})
+    _install(monkeypatch, fake)
+    assert mg._pgrp_alive(500) is True
+
+
+def test_pgrp_alive_nonpositive_never_probes(monkeypatch):
+    fake = _FakeSignals()
+    _install(monkeypatch, fake)
+    assert mg._pgrp_alive(0) is False
+    assert fake.calls == []  # never broadcast-probe pgid 0
+
+
+# --- _kill_pgrp escalation cascade -----------------------------------------
+def test_kill_pgrp_sigterm_first_then_sigkill_when_survives(monkeypatch):
+    # (a) SIGTERM tried first; (b) SIGKILL only after grace + still alive.
+    fake = _FakeSignals(alive_pgids={500})  # SIGTERM does NOT kill it
+    clock = _Clock()
+    _install(monkeypatch, fake, clock)
+    mg._kill_pgrp(500, 500, grace_sec=1.0, poll_sec=0.2, still_killable=lambda pg, pi: True)
+    seq = fake.signals_to(500)
+    assert seq[0] == "TERM", "SIGTERM must be sent FIRST"
+    assert "KILL" in seq, "must escalate to SIGKILL after grace"
+    assert seq.index("TERM") < seq.index("KILL")
+    assert clock.t >= 1.0, "SIGKILL only after the full grace window elapsed"
+
+
+def test_kill_pgrp_no_sigkill_when_exits_on_sigterm(monkeypatch):
+    # Clean path: arm dies on SIGTERM during grace → NO SIGKILL.
+    fake = _FakeSignals(alive_pgids={500}, term_kills={500})
+    clock = _Clock()
+    _install(monkeypatch, fake, clock)
+    called = {"recheck": 0}
+
+    def _recheck(pg, pi):
+        called["recheck"] += 1
+        return True
+
+    mg._kill_pgrp(500, 500, grace_sec=1.0, poll_sec=0.2, still_killable=_recheck)
+    assert "KILL" not in fake.signals_to(500)
+    assert called["recheck"] == 0, "re-check only runs on the escalation path"
+
+
+def test_kill_pgrp_no_sigkill_when_recheck_fails(monkeypatch):
+    # THE molt CP-kill defense: arm survives grace but the exempt-set re-check
+    # says the pgid is no longer a safe custody arm (recycled / now protected) →
+    # SIGKILL is ABORTED. SIGTERM was the only signal.
+    fake = _FakeSignals(alive_pgids={500})
+    clock = _Clock()
+    _install(monkeypatch, fake, clock)
+    mg._kill_pgrp(500, 500, grace_sec=1.0, poll_sec=0.2, still_killable=lambda pg, pi: False)
+    seq = fake.signals_to(500)
+    assert seq[0] == "TERM"
+    assert "KILL" not in seq  # SIGKILL aborted by the exempt-set re-check
+    assert set(seq) <= {"TERM", "PROBE"}  # only SIGTERM + grace probes, never SIGKILL
+
+
+def test_kill_pgrp_no_sigkill_without_recheck(monkeypatch):
+    # Fail-safe default: no safety re-check supplied → SIGTERM-only (no SIGKILL).
+    fake = _FakeSignals(alive_pgids={500})
+    clock = _Clock()
+    _install(monkeypatch, fake, clock)
+    mg._kill_pgrp(500, 500, grace_sec=1.0, poll_sec=0.2, still_killable=None)
+    assert "KILL" not in fake.signals_to(500)
+    assert fake.signals_to(500)[0] == "TERM"
+
+
+def test_kill_pgrp_already_dead_is_noop(monkeypatch):
+    # (e) already-dead pgrp → SIGTERM no-op → returns, no SIGKILL, no ESRCH crash.
+    fake = _FakeSignals(missing_pgids={500}, missing_pids={500})
+    clock = _Clock()
+    _install(monkeypatch, fake, clock)
+    mg._kill_pgrp(500, 500, grace_sec=1.0, poll_sec=0.2, still_killable=lambda pg, pi: True)
+    assert all(s != signal.SIGKILL for (_k, _t, s) in fake.calls)
+
+
+def test_kill_pgrp_no_sigkill_when_dies_at_deadline(monkeypatch):
+    # Grace-window edge: group survives the poll loop but is gone at the final
+    # post-grace liveness check → NO SIGKILL, even though still_killable is True.
+    fake = _FakeSignals(alive_pgids={500})
+    clock = _Clock()
+    _install(monkeypatch, fake, clock)
+    # Alive throughout the grace poll loop (clock.t < grace), gone exactly at the
+    # post-grace liveness check (clock.t == grace after the loop advances it).
+    monkeypatch.setattr(mg, "_pgrp_alive", lambda pgid: clock.t < 1.0)
+    mg._kill_pgrp(500, 500, grace_sec=1.0, poll_sec=0.2, still_killable=lambda pg, pi: True)
+    assert "KILL" not in fake.signals_to(500)
+
+
+def test_kill_pgrp_no_escalation_when_sigterm_noop(monkeypatch):
+    # SIGTERM was a pure no-op (nothing to signal) → never enters grace/escalation.
+    fake = _FakeSignals(missing_pgids={500}, missing_pids={500})
+    clock = _Clock()
+    _install(monkeypatch, fake, clock)
+    mg._kill_pgrp(500, 500, grace_sec=1.0, poll_sec=0.2, still_killable=lambda pg, pi: True)
+    # only the single SIGTERM attempt (killpg TERM + pid TERM fallback); no probes.
+    assert all(s != 0 for (_k, _t, s) in fake.calls), "no grace probes after a no-op SIGTERM"
+
+
+# --- pgid_is_killable_custody_arm (the SIGKILL exempt-set re-check) ---------
+def test_recheck_true_for_live_custody_arm():
+    cmd = TRAIN_CMD
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(700, 1, 2_500_000, cmd, pgid=700),
+    )
+    custody = _custody(("witness", 700, 700, cmd))
+    assert mg.pgid_is_killable_custody_arm(
+        700, samples=samples, custody_records=custody, self_pid=400, self_pgid=400
+    ) is True
+
+
+def test_recheck_false_when_pgid_recycled_to_control_plane():
+    # THE molt class: the training pid/pgid was recycled onto a codex process
+    # during the grace window. The re-check MUST reject it (→ no SIGKILL).
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(700, 1, 90_000_000, "codex app-server", pgid=700),  # pid 700 recycled → codex
+    )
+    custody = _custody(("witness", 700, 700, TRAIN_CMD))
+    assert mg.pgid_is_killable_custody_arm(
+        700, samples=samples, custody_records=custody, self_pid=400, self_pgid=400
+    ) is False
+
+
+def test_recheck_false_when_control_plane_shares_pgid():
+    # A different control-plane pid now lives in pgid 700 (arm exited); the custody
+    # pid 700 is gone. No custody arm remains in the group → not killable.
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(900, 1, 90_000_000, "codex app-server", pgid=700),
+    )
+    custody = _custody(("witness", 700, 700, TRAIN_CMD))
+    assert mg.pgid_is_killable_custody_arm(
+        700, samples=samples, custody_records=custody, self_pid=400, self_pgid=400
+    ) is False
+
+
+def test_recheck_false_when_arm_exited():
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+    )  # pid 700 gone
+    custody = _custody(("witness", 700, 700, TRAIN_CMD))
+    assert mg.pgid_is_killable_custody_arm(
+        700, samples=samples, custody_records=custody, self_pid=400, self_pgid=400
+    ) is False
+
+
+def test_recheck_false_for_nonpositive_pgid():
+    assert mg.pgid_is_killable_custody_arm(0, samples={}, custody_records=[]) is False
+    assert mg.pgid_is_killable_custody_arm(-1, samples={}, custody_records=[]) is False
+
+
+def test_recheck_false_when_samples_empty():
+    # Cannot verify the live table → fail safe (never SIGKILL blind).
+    custody = _custody(("witness", 700, 700, TRAIN_CMD))
+    assert mg.pgid_is_killable_custody_arm(
+        700, samples={}, custody_records=custody, self_pid=400, self_pgid=400
+    ) is False
+
+
+def test_recheck_false_when_not_in_custody():
+    # A training arm in pgid 700 that is NOT under custody → not killable.
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(700, 1, 2_500_000, TRAIN_CMD, pgid=700),
+    )
+    assert mg.pgid_is_killable_custody_arm(
+        700, samples=samples, custody_records=[], self_pid=400, self_pgid=400
+    ) is False
+
+
+def test_recheck_wrong_pgid_returns_false():
+    # The custody arm lives in pgid 700; asking about a different pgid → False.
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(700, 1, 2_500_000, TRAIN_CMD, pgid=700),
+    )
+    custody = _custody(("witness", 700, 700, TRAIN_CMD))
+    assert mg.pgid_is_killable_custody_arm(
+        999, samples=samples, custody_records=custody, self_pid=400, self_pgid=400
+    ) is False
+
+
+def test_recheck_samples_fresh_by_default(monkeypatch):
+    # samples=None → the re-check samples the LIVE table itself (recycling defense
+    # relies on a FRESH read, not the stale sample from the shed decision).
+    cmd = TRAIN_CMD
+    live = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(700, 1, 2_500_000, cmd, pgid=700),
+    )
+    monkeypatch.setattr(mg, "sample_processes", lambda: live)
+    monkeypatch.setattr(mg, "load_custody_records", lambda: _custody(("witness", 700, 700, cmd)))
+    assert mg.pgid_is_killable_custody_arm(700, self_pid=400, self_pgid=400) is True
+
+
+# --- refactor regression: shared gate parity with the selector -------------
+def test_shared_gate_parity_selector_and_recheck():
+    # A clean custody arm: selector picks it AND the re-check confirms it.
+    cmd = TRAIN_CMD
+    samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(700, 1, 2_500_000, cmd, pgid=700),
+    )
+    custody = _custody(("witness", 700, 700, cmd))
+    victim = mg.select_kill_victim(samples, custody_records=custody, self_pid=400, self_pgid=400)
+    assert victim is not None and victim.pgid == 700
+    assert mg.pgid_is_killable_custody_arm(
+        victim.pgid, samples=samples, custody_records=custody, self_pid=400, self_pgid=400
+    ) is True
+    # A control-plane custody arm: selector refuses (None) AND the re-check rejects.
+    cp_samples = _table(
+        _sample(1, 0, 5000, "/sbin/launchd"),
+        _sample(400, 1, 2000, "python tools/memory_guard.py --watch", pgid=400),
+        _sample(700, 1, 90_000_000, "codex app-server", pgid=700),
+    )
+    cp_custody = _custody(("rogue", 700, 700, "codex app-server"))
+    assert mg.select_kill_victim(cp_samples, custody_records=cp_custody, self_pid=400, self_pgid=400) is None
+    assert mg.pgid_is_killable_custody_arm(
+        700, samples=cp_samples, custody_records=cp_custody, self_pid=400, self_pgid=400
+    ) is False
+
+
+def test_watch_loop_default_grace_derived_from_interval(monkeypatch):
+    # DERIVED, not magic: default grace = max(GRACE_MIN, interval). Assert via a
+    # one-shot watch loop that never sheds (avail high) — it must not raise and the
+    # derivation constant is exposed.
+    assert mg.DEFAULT_SIGKILL_GRACE_MIN_SEC == 3.0
+    monkeypatch.setattr(mg, "available_gb", lambda: 999.0)
+    monkeypatch.setattr(mg.time, "sleep", lambda s: None)
+    rc = mg.watch_loop(
+        min_free_gb=30.0, kill_pattern=mg.DEFAULT_TRAINING_KILL_PATTERN,
+        interval=7.0, warn_margin=8.0, max_iterations=1,
+    )
+    assert rc == 0
     assert mg._matches_extra_protected("python tools/spawn_durable_daemon.py --status") is True

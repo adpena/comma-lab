@@ -87,10 +87,10 @@ import signal
 import subprocess
 import sys
 import time
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Mapping, Sequence
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _LOG = _REPO_ROOT / ".omx" / "state" / "memory_guard.log"
@@ -750,6 +750,56 @@ def matches_training_allowlist(command: str, pattern: str) -> bool:
         return False
 
 
+def _record_passes_kill_gates(
+    sample: ProcessSample,
+    record: CustodyRecord,
+    *,
+    samples: Mapping[int, ProcessSample],
+    protected_pgids: set[int] | frozenset[int],
+    guard_ancestors: set[int] | frozenset[int],
+    owned_pids: set[int] | frozenset[int] | tuple[int, ...],
+    self_pid: int,
+    kill_pattern: str,
+) -> bool:
+    """The 8-gate control-plane-safety predicate (SINGLE SOURCE OF TRUTH).
+
+    True iff ``sample`` (the LIVE process at ``record.pid``) is a killable
+    training arm UNDER CUSTODY — passing ALL of gates (0)-(7) documented on
+    ``select_kill_victim``. Extracted verbatim so BOTH the selector AND the
+    SIGKILL-escalation re-check (``pgid_is_killable_custody_arm``) apply the
+    EXACT same gates — a recycled control-plane group can never pass one path and
+    fail the other. Weakening any gate here weakens BOTH, which is exactly the
+    molt CP-kill class this guard exists to prevent.
+    """
+    # (0) identity gate (PID-recycling defense)
+    if not _identity_matches(sample, record):
+        return False
+    cmd = sample.command
+    # (1) never the guard or its ancestors
+    if sample.pid == self_pid or sample.pid in guard_ancestors:
+        return False
+    # (2) never a control-plane app
+    if is_host_control_plane_process(sample):
+        return False
+    # (3) never external control-plane lineage (custody-aware)
+    if has_external_host_control_plane_lineage(
+        samples, sample.pid, current_pid=self_pid, owned_pids=owned_pids
+    ):
+        return False
+    # (4) broad direct-kill denylist
+    if _matches_extra_protected(cmd):
+        return False
+    # (5) process-group protection
+    pgid = _sample_pgid(sample)
+    if pgid in protected_pgids:
+        return False
+    # (6) must be its own group leader (detached daemon)
+    if pgid != sample.pid:
+        return False
+    # (7) positive training allowlist
+    return matches_training_allowlist(cmd, kill_pattern)
+
+
 def select_kill_victim(
     samples: Mapping[int, ProcessSample],
     *,
@@ -797,42 +847,93 @@ def select_kill_victim(
         sample = samples.get(record.pid)
         if sample is None:  # daemon already dead
             continue
-        # (0) identity gate (PID-recycling defense)
-        if not _identity_matches(sample, record):
-            continue
-        cmd = sample.command
-        # (1) never the guard or its ancestors
-        if sample.pid == self_pid or sample.pid in guard_ancestors:
-            continue
-        # (2) never a control-plane app
-        if is_host_control_plane_process(sample):
-            continue
-        # (3) never external control-plane lineage (custody-aware)
-        if has_external_host_control_plane_lineage(
-            samples, sample.pid, current_pid=self_pid, owned_pids=owned_pids
+        if not _record_passes_kill_gates(
+            sample,
+            record,
+            samples=samples,
+            protected_pgids=protected_pgids,
+            guard_ancestors=guard_ancestors,
+            owned_pids=owned_pids,
+            self_pid=self_pid,
+            kill_pattern=kill_pattern,
         ):
             continue
-        # (4) broad direct-kill denylist
-        if _matches_extra_protected(cmd):
-            continue
-        # (5) process-group protection
         pgid = _sample_pgid(sample)
-        if pgid in protected_pgids:
-            continue
-        # (6) must be its own group leader (detached daemon)
-        if pgid != sample.pid:
-            continue
-        # (7) positive training allowlist
-        if not matches_training_allowlist(cmd, kill_pattern):
-            continue
         # REAL footprint = the arm's whole process group/descendants (HIGH-1
         # corollary: under safe_run wrapping sample.rss_kb is the ~10MB wrapper).
         rss_gb = group_rss_gb(samples, sample.pid)
         if best is None or rss_gb > best.rss_gb:
             best = KillVictim(
-                pid=sample.pid, pgid=pgid, rss_gb=rss_gb, command=cmd, label=record.label
+                pid=sample.pid, pgid=pgid, rss_gb=rss_gb, command=sample.command, label=record.label
             )
     return best
+
+
+def pgid_is_killable_custody_arm(
+    pgid: int,
+    *,
+    samples: Mapping[int, ProcessSample] | None = None,
+    custody_records: Sequence[CustodyRecord] | None = None,
+    kill_pattern: str = DEFAULT_TRAINING_KILL_PATTERN,
+    self_pid: int | None = None,
+    self_pgid: int | None = None,
+) -> bool:
+    """FRESH re-verification that ``pgid`` STILL identifies a control-plane-safe
+    custody training arm — the SIGKILL-escalation guard against PID/PGID recycling
+    during the SIGTERM grace window.
+
+    The escalation cascade SIGTERMs a vetted victim, waits a grace window, and (if
+    the group is still alive) SIGKILLs. But a process group is a REUSABLE kernel
+    id: if the training arm exits during the grace window and the kernel recycles
+    its pgid onto a control-plane group, a blind SIGKILL(pgid) would kill the
+    control plane — the EXACT molt CP-kill class. This predicate re-samples the
+    LIVE process table and re-runs the SAME 8-gate suite as ``select_kill_victim``
+    (``_record_passes_kill_gates`` — single source of truth) restricted to
+    ``pgid``. It returns True ONLY if the group STILL contains a custody arm that
+    passes every gate.
+
+    Fails SAFE (returns False → NO SIGKILL) when: the pgid is non-positive; the
+    process table cannot be sampled; the arm exited (pid gone); the pgid was
+    recycled onto a control-plane / protected / non-custody group; or nothing
+    under custody still lives in the group.
+    """
+    if pgid <= 0:
+        return False
+    if self_pid is None:
+        self_pid = os.getpid()
+    if self_pgid is None:
+        self_pgid = _safe_getpgrp()
+    if samples is None:
+        samples = sample_processes()
+    if not samples:  # cannot verify the live table → fail safe (no SIGKILL)
+        return False
+    if custody_records is None:
+        custody_records = load_custody_records()
+
+    protected_pgids = protected_process_group_ids(
+        samples, self_pid=self_pid, self_pgid=self_pgid
+    )
+    guard_ancestors = _ancestor_pids(samples, self_pid)
+    owned_pids = frozenset(r.pid for r in custody_records)
+
+    for record in custody_records:
+        sample = samples.get(record.pid)
+        if sample is None:
+            continue
+        if _sample_pgid(sample) != pgid:
+            continue
+        if _record_passes_kill_gates(
+            sample,
+            record,
+            samples=samples,
+            protected_pgids=protected_pgids,
+            guard_ancestors=guard_ancestors,
+            owned_pids=owned_pids,
+            self_pid=self_pid,
+            kill_pattern=kill_pattern,
+        ):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -892,15 +993,136 @@ def _log(msg: str) -> None:
     print(line, flush=True)
 
 
-def _kill_pgrp(pgid: int, pid: int) -> None:
-    """SIGTERM the process group (no orphan); fall back to the pid."""
-    try:
-        os.killpg(pgid, signal.SIGTERM)
-    except (ProcessLookupError, PermissionError):
+# SIGKILL escalation defaults. The grace window is DERIVED from the watch
+# interval (one full poll cadence, floored) so a well-behaved arm's SIGTERM
+# handler (safe_run checkpoints + exits) has time to finish before we escalate;
+# it is NOT a magic constant. ``watch_loop`` passes ``max(GRACE_MIN, interval)``.
+DEFAULT_SIGKILL_GRACE_MIN_SEC = 3.0
+DEFAULT_SIGKILL_GRACE_SEC = 5.0
+_SIGKILL_POLL_SEC = 0.2
+
+
+def _signal_pgrp(pgid: int, pid: int, sig: int, *, pid_fallback: bool = True) -> bool:
+    """Deliver ``sig`` to the process GROUP (optionally fall back to the ``pid``).
+
+    Returns True iff the signal reached SOMETHING, False if the target(s) were
+    already gone / not permitted (a pure no-op — an already-dead group never
+    raises out of here; no ESRCH escapes). ``pgid`` must be positive: ``killpg``
+    with a non-positive pgid has dangerous broadcast semantics, so we route
+    straight to the pid instead.
+
+    ``pid_fallback`` (default True, preserving the original SIGTERM behavior): if
+    the group is gone/not-permitted, try ``os.kill(pid, sig)``. The SIGKILL
+    escalation passes ``pid_fallback=False`` DELIBERATELY: victim.pid == pgid
+    (group leader), so a dead group means the leader is gone too — the only thing
+    ``os.kill(pid)`` could still hit is a RECYCLED pid (a fresh, possibly
+    control-plane, process reusing that pid number). For an unstoppable SIGKILL
+    that CP-kill vector is unacceptable and valueless (a dead group is a dead
+    arm), so the SIGKILL path is group-only.
+    """
+    if pgid > 0:
         try:
-            os.kill(pid, signal.SIGTERM)
+            os.killpg(pgid, sig)
+            return True
+        except ProcessLookupError:
+            pass  # group gone → try the single pid below (if allowed)
+        except PermissionError:
+            pass  # not permitted to signal the group → try the single pid below
+    if pid_fallback and pid > 0:
+        try:
+            os.kill(pid, sig)
+            return True
         except (ProcessLookupError, PermissionError):
-            pass
+            return False
+    return False
+
+
+def _pgrp_alive(pgid: int) -> bool:
+    """True iff at least one process remains in the group ``pgid``.
+
+    ``os.killpg(pgid, 0)`` is the POSIX existence probe (signal 0 delivers
+    nothing, only performs the existence + permission check). A PermissionError
+    means the group EXISTS but we may not signal it — treat as alive (we could
+    not have SIGKILLed it anyway, and 'alive' is the fail-safe direction here).
+    A non-positive pgid is treated as not-alive (never broadcast-probe).
+    """
+    if pgid <= 0:
+        return False
+    try:
+        os.killpg(pgid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def _kill_pgrp(
+    pgid: int,
+    pid: int,
+    *,
+    grace_sec: float = DEFAULT_SIGKILL_GRACE_SEC,
+    poll_sec: float = _SIGKILL_POLL_SEC,
+    still_killable: Callable[[int, int], bool] | None = None,
+) -> None:
+    """Escalating shed of a VETTED custody training arm: SIGTERM → grace → SIGKILL.
+
+    This is the whole-machine watchdog's LAST-RESORT kill. Its caller
+    (``select_kill_victim``) has already proven the ``(pgid, pid)`` is a
+    control-plane-safe custody training arm through the full 8-gate suite. The
+    escalation adds defense-in-depth for the rare arm that ignores SIGTERM:
+
+      (1) SIGTERM the process GROUP first — let the arm (and safe_run's SIGTERM
+          handler) checkpoint and exit cleanly. If the SIGTERM was a pure no-op
+          (group + pid already gone), there is nothing to escalate → return.
+      (2) GRACE WINDOW — poll for the group to exit. As soon as it is gone,
+          return (no SIGKILL needed — the common, clean case).
+      (3) SIGKILL ONLY IF the group is STILL alive after the grace window AND
+          ``still_killable(pgid, pid)`` re-confirms the group is STILL a
+          control-plane-safe custody arm. A process group id is a REUSABLE kernel
+          resource: if the arm exited mid-grace and the pgid was recycled onto a
+          control-plane group, a blind SIGKILL would be the molt CP-kill class.
+          The re-check (``pgid_is_killable_custody_arm``, fresh-sampled) gates the
+          SIGKILL exactly as the selector gated the SIGTERM — the exempt set gates
+          BOTH signals.
+
+    Fail-safe by construction: if ``still_killable`` is None (no re-verifier
+    supplied — e.g. an unexpected direct caller), the SIGKILL is SKIPPED and the
+    function is SIGTERM-only, exactly as before. You cannot reach SIGKILL without
+    a passing safety re-check. An already-dead group is a no-op at every step.
+    """
+    # (1) SIGTERM first.
+    if not _signal_pgrp(pgid, pid, signal.SIGTERM):
+        return  # already gone / not permitted → nothing to escalate
+
+    # (2) grace window — poll for a clean exit on SIGTERM.
+    deadline = time.monotonic() + max(0.0, grace_sec)
+    while time.monotonic() < deadline:
+        if not _pgrp_alive(pgid):
+            return  # exited on SIGTERM — no SIGKILL needed (the clean path)
+        time.sleep(max(0.0, poll_sec))
+
+    # (3) still alive after grace → SIGKILL, but ONLY after re-verifying safety.
+    if not _pgrp_alive(pgid):
+        return  # exited right at the deadline
+    if still_killable is None:
+        _log(
+            f"ESCALATE-SKIP pgid={pgid} pid={pid} survived SIGTERM+{grace_sec}s "
+            "grace but NO safety re-check supplied → SIGTERM-only (no SIGKILL)"
+        )
+        return
+    if not still_killable(pgid, pid):
+        _log(
+            f"ESCALATE-ABORT pgid={pgid} pid={pid} still alive after {grace_sec}s "
+            "grace but FAILED the control-plane-safety re-check (pgid recycled or "
+            "now protected/non-custody) → NOT sending SIGKILL"
+        )
+        return
+    _log(f"ESCALATE pgid={pgid} pid={pid} survived SIGTERM+{grace_sec}s grace → SIGKILL")
+    # Group-only SIGKILL (no pid fallback): a dead group means the leader pid is
+    # gone; os.kill(pid) could then only hit a RECYCLED pid (possible CP). See
+    # _signal_pgrp's ``pid_fallback`` rationale.
+    _signal_pgrp(pgid, pid, signal.SIGKILL, pid_fallback=False)
 
 
 DEFAULT_SHED_CONSECUTIVE = 3
@@ -975,6 +1197,7 @@ def watch_loop(
     warn_margin: float,
     shed_consecutive: int = DEFAULT_SHED_CONSECUTIVE,
     shed_margin_gb: float = DEFAULT_SHED_MARGIN_GB,
+    sigkill_grace_sec: float | None = None,
     max_iterations: int | None = None,
 ) -> int:
     """Whole-machine watchdog. Loops forever (or ``max_iterations`` for tests).
@@ -987,11 +1210,14 @@ def watch_loop(
     """
     self_pid = os.getpid()
     self_pgid = _safe_getpgrp()
+    # DERIVED grace: one full poll cadence, floored — NOT a magic number.
+    if sigkill_grace_sec is None:
+        sigkill_grace_sec = max(DEFAULT_SIGKILL_GRACE_MIN_SEC, interval)
     _log(
         f"WATCH start min_free={min_free_gb}GB warn_margin={warn_margin}GB "
         f"interval={interval}s shed_consecutive={shed_consecutive} "
-        f"shed_margin={shed_margin_gb}GB pattern={kill_pattern!r} "
-        f"self_pid={self_pid} self_pgid={self_pgid}"
+        f"shed_margin={shed_margin_gb}GB sigkill_grace={sigkill_grace_sec}s "
+        f"pattern={kill_pattern!r} self_pid={self_pid} self_pgid={self_pgid}"
     )
     # LOW-4 startup WARN: surface any custody training arm that would (mis)classify
     # as control-plane — it would be protected/un-sheddable (OOM-adjacent).
@@ -1033,7 +1259,20 @@ def watch_loop(
                         f"label={victim.label!r} pid={victim.pid} pgid={victim.pgid} "
                         f"group_rss={victim.rss_gb:.1f}GB cmd={victim.command[:140]}"
                     )
-                    _kill_pgrp(victim.pgid, victim.pid)
+                    # SIGTERM → grace → SIGKILL, with a FRESH-sampled control-plane
+                    # re-check gating the SIGKILL (pgid-recycling defense — the
+                    # exempt set gates BOTH signals, never just the SIGTERM).
+                    _kill_pgrp(
+                        victim.pgid,
+                        victim.pid,
+                        grace_sec=sigkill_grace_sec,
+                        still_killable=lambda pg, pi: pgid_is_killable_custody_arm(
+                            pg,
+                            kill_pattern=kill_pattern,
+                            self_pid=self_pid,
+                            self_pgid=self_pgid,
+                        ),
+                    )
                     consecutive_subfloor = 0  # reset after acting; re-evaluate next poll
                 else:
                     _log(
@@ -1085,6 +1324,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     help="consecutive sub-floor polls required before the watchdog sheds (debounce)")
     ap.add_argument("--shed-margin-gb", type=float, default=DEFAULT_SHED_MARGIN_GB,
                     help="only shed when conservative-available < (min_free - this); else ALERT (near-boundary)")
+    ap.add_argument("--sigkill-grace-sec", type=float, default=None,
+                    help="grace window after SIGTERM before escalating to SIGKILL a still-alive "
+                         "shed arm (default: max(3s, interval)); SIGKILL is re-gated by the "
+                         "control-plane-safety check so a recycled pgid is never killed")
     args = ap.parse_args(argv)
 
     if args.free:
@@ -1129,6 +1372,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             warn_margin=args.warn_margin,
             shed_consecutive=args.shed_consecutive,
             shed_margin_gb=args.shed_margin_gb,
+            sigkill_grace_sec=args.sigkill_grace_sec,
         )
 
     ap.print_help()
