@@ -13063,3 +13063,25 @@ Memo `v8_macro_rate_pass_20260710.md`; equations anchor
 `v8_macro_rate_pass_exhaustive_dedup_and_egocharge_measured_20260710` (on the existing
 `v8_geometric_rate_decomposition_v1`); SPEC_v8.1 §MACRO-RATE ADDENDUM (append-only); #385 brief line.
 DSL leg N/A (rate derivation, no trainer Lever). **Pointer 0.19110 UNMOVED (means).**
+
+## FEED-chern-nonnormal (2026-07-10) — OPERATOR LENSES ("Understand"): Chern stacked-manifold covers ↔ v8; non-normal operator decomposition ↔ training transients
+**Operator supplied two figures + "Understand."** (1) **Chern/NMM stacked piecewise manifold covers** —
+global structure from consistency across overlapping local patches — IS the v8 architecture stated as
+mathematics: per-class carriers = mathematical covers (horizon poly, lane band, hood static, movable
+slots); the reconciliation/power-diagram composition = the consistency condition; the chart-selection
+law = Chern's patch choice. v7.5.2-vs-v8 = the two historical answers to Chern's question (one global
+neural manifold vs stacked local covers). COROLLARY: the macro-rate finding "residual enemy = COVERAGE
+gap (53% Road/Lane), not coder gap" is the NMM answer — add PATCHES (R5 generator-coverage,
+increment-2), don't re-code the residual. The two chains are the two branches of one geometric instinct.
+(2) **Non-normal operator decomposition H_N(ε)=A+D₀+εE** (transport + landscape-obstruction +
+non-normal generator → pseudospectra/transient growth): our coupled witness training operator
+decomposes the same way — A=level-set/ego-screw transport, D₀=energy-landscape terms
+(eikonal/viscosity/curvature, symmetric Hessians), εE=the NON-NORMAL coupling (seg↔pose↔eikonal
+cross-terms, non-symmetric Jacobian of the coupled flow). EXPLAINS a measured mystery: #318's
+von-Neumann (SPECTRUM) analysis predicted stability yet ep110 re-entry + spike transients occurred —
+those are PSEUDOSPECTRAL transient-growth phenomena invisible to eigenvalues. LEVER (queued, not built):
+upgrade the #318 calibrate-by-DE framework with a pseudospectral/transient-growth bound (Kreiss-constant
+/ ε-pseudospectrum of the linearized coupled operator at stage boundaries) → a canary-predicting
+instrument the spectrum cannot supply. Routing: v8 SPEC (Chern framing = §3 covers, already structural);
+#318 successor task for the pseudospectral instrument; triality equations leg owed WITH that build.
+Pointer 0.19110 UNMOVED (lenses/means).
