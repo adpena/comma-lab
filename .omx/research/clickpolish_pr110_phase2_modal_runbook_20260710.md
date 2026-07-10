@@ -98,3 +98,6 @@ Measured so far (in-container Linux x86_64, 8-core): the n8 round-0 clicks are w
 
 ## n600 run (IN FLIGHT)
 - `fc-01KX6DZWCHNPQ6KN59V2MZ845J` — n600, max_rounds=2, ±1 sweep, wall-clock cap 16,200 s, Volume run-id `n600_r1`, same-container eval at the end. Projected wall-clock ~2–5 h; projected cost $0.3–2.5 (worst-case rate) — under the $5 abort. Harvest: `.venv/bin/python tools/harvest_click_polish_run.py --call-id fc-01KX6DZWCHNPQ6KN59V2MZ845J`.
+
+### n600 health (mid-run)
+- Baseline at full n600 in-container: **S=0.19109945, d_seg 0.00055979, d_pose 0.00002942, 177,169 B** — reproduces the canonical pointer row (0.19109982) to **3.7e-7** on the selection surface; the chunked fused render+score survived its first full-scale exercise (no OOM). Round-0 ±1 sweep in progress.
