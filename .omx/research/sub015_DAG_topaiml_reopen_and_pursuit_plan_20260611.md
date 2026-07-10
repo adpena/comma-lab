@@ -14119,3 +14119,98 @@ crucible_v752 launch path + the live run dir `levelset_v752_pilot_20260710T15410
   No MEMORY.md line (the memo + this FEED are the durable stores; the reproduction band will ride
   the pointer-move record). **Pointer 0.19110-class — n8-row registration in flight; this baseline
   repro is the custody floor under it.**
+
+### FEED-pointer-move-n8click (2026-07-10) — POINTER MOVED: contest-CPU 0.19109982 -> 0.19108282 (FIRST pointer-beating exact row since 2026-06-10)
+- **OLD -> NEW:** contest-CPU frontier **0.19109982419209975 (sha `b46897267ded…`) -> 0.19108282419209976
+  (sha `ad02b0124cbb…`, 177,169 B)**, Δ = **−1.70e-5** `[contest-CPU]`. `.omx/state/canonical_frontier_pointer.json`
+  refreshed via `tools/refresh_canonical_frontier.py --update-local --strict` (rc=0); CUDA axis UNMOVED
+  (0.20533, different archive — see known gap). This is the first pointer move since the 2026-06-10 lineage.
+- **The row (MEASURED, authority):** `upstream/evaluate.py --device cpu`, 600 samples, exact bytes, Modal
+  Linux x86_64 gVisor container (torch 2.5.1+cpu, avx2/avx512, num_threads=2; selection+eval SAME container).
+  SegNet 0.00055961 · PoseNet 0.00002942 · rate 0.00471878 → S = 0.19108282419209976 (independently
+  recomputed via canonical `tac.contest_score.compute_contest_score`, matches to 1e-15). Local archive
+  sha re-hashed = `ad02b012…b079c` (177,169 B) — matches harvest. Incumbent lineage confirmed: harvest
+  `incumbent_archive_sha256 = b46897267ded…` == the prior pointer's `archive_sha256`.
+- **Mechanism (DEFENSIVE BANK, NO-FAKE #7):** 8 exact-score-gated ±1 latent clicks (ONE round on 8 pairs)
+  over our PR110-lineage frontier; byte-exact splice-repack (|archive| invariant → rate term drops out →
+  ΔS = 100·Δd_seg). Mechanism BORROWED (PR128 exact-score-gated discrete latent click-polish,
+  external-unverified); substrate OURS (`lane_pr110_payload_entropy_recode_20260610`). Reuse ledger in
+  `harvest_result.json:search.borrowed_substrate_accounting`. NOT innovation — a defensive bank of a lower
+  exact score.
+- **Honest caveats:** (1) CUDA axis **UNMEASURED** for this candidate (same gap class as the prior CPU
+  pointer lineage) — recorded on the anchor + equation `domain_of_validity.excluded`. (2) The click
+  SELECTION used n8 in-container; the pointer-moving SCORE is the full n600 exact eval (so this is NOT an
+  in-domain anchor of the witness-scoped `exact_metric_mc_finisher_v1` — different vehicle + weaker accept
+  instrument). (3) The in-flight n600-selection click-polish run (`fc-01KX6DZWCHNPQ6KN59V2MZ845J`) is
+  expected to SUPERSEDE this row within hours.
+- **Legs (triality):** DAG = this FEED (+ FEED-clickpolish-n8row / -n8val / -build). Equations = NEW law
+  `clickpolish_exact_gated_discrete_latent_ratchet_v1` minted + registered to the tracked
+  `canonical_equations_registry.jsonl` (module
+  `src/tac/canonical_equations/clickpolish_exact_gated_ratchet_20260710.py`), anchored on THIS row with
+  full custody (contest-CPU PROMOTABLE_EXACT provenance on archive member `x`) — this discharges the
+  "equations OWED on the n600 row" leg from FEED-clickpolish-n8row/-n8val. DSL = N/A-with-rationale (a
+  search TOOL, not a launch-config lever). Pointer store = `continual_learning_posterior.json` anchor
+  written via canonical fcntl-locked `posterior_update_locked` (accepted; n=176); custody carries
+  `n_samples=600`, `pact_commit=ce3cc03c…`, `upstream_snapshot_sha256=d46d8915…`.
+
+### FEED-receiver-harden (2026-07-10, task #402) — [no-triality-lever] apparatus/gate class
+
+RECEIVER FAIL-CLOSED HARDENING of OUR OWN witness byte-close/inflate surfaces
+(`tools/levelset_byte_close_and_eval.py`), applying the PR128 §8.2 defect list
+(`.omx/research/ADVISORY_pr128_hnerv_reverse_engineering_sdf_transfer_v753_v8_20260710.md`).
+Six axes, each verify-or-fix + regression-tested (24 new tests in
+`src/tac/tests/test_levelset_receiver_harden.py`; +1 existing test updated):
+(1) EXACT stream consumption — every LVLS1 section reader (`_read_blob`, `_read_blob_bytes`,
+`_dequant`×2, `_pcar_parse`, `parse_pose_carrier`, `_xip_parse`, `_lane_parse`) now fails CLOSED on
+trailing/short bytes (found + fixed a latent defect: inflate `_pcar_parse` v2 IGNORED the trailing
+`n_kf=0` word — now consumed + validated). (2) FINAL RAW ASSERTION — inflate `main()` asserts
+`getsize == 2·n_pairs·framebytes` before promoting output; `run_inflate` now RAISES (not a silent
+bool) on a short `.raw`. (3) ATOMIC WRITES — inflate writes `dst.partial` → `os.replace` onto `dst`
+only after size-verify (a crash leaves `.partial`, never a scoreable-looking truncated `dst`).
+(4) STORAGE PREFLIGHT — new `_raw_storage_preflight` fails closed if the output volume can't hold
+the ~3.66 GB raw (+5% margin); wired into `run_inflate`. (5) DEP PINNING — new `receiver_env_manifest()`
+records numpy/torch/brotli/scipy/python versions (constriction = N/A: level-set ξ coder is
+pure-stdlib) into every report. (6) CROSS-MICROARCH — authority is the numpy-fp32 forward
+(`levelset_rgb_forward_numpy`); the only torch op is `_R` bicubic (LSBs vary across CPU microarch);
+verified NO portable `expected_output.sha256` claim is emitted (per-host `--verify-bit-exact` gate is
+the authority + a note recorded in provenance). Legs: DSL/equations = N/A (apparatus/gate class, no
+score-lever). Pointer 0.19110 UNMOVED (hardening only). Not-in-scope + verified-not-edited:
+`src/tac/click_polish.py` `dispatch_discipline()` already DECLARES all six as dispatch rules + its
+CTXR parser enforces exact-consumption (`click_polish.py:184`); its runtime enforcement of
+atomic/final-raw/storage lives in the byte-close/inflate path now hardened here.
+
+### FEED-400-diagonal-build (2026-07-10, task #400) — BUILD-ONLY: pair-local DIAGONAL mode added to the #396 MC-finisher
+The witness realization of PR128's click-polish exploit landed as a MODE (not a fork) in
+`src/tac/through_r/mc_finisher.py`, per the unify recommendation of
+`.omx/research/clickpolish_to_witness_design_20260710.md` §3.2. NEW surfaces:
+`PairLocalDiagonalFinisher` (deterministic column/δ diagonal sweep: ONE P-pair render scores P
+independent per-pair candidates → per-pair-independent accept), `DiagonalProblem`/`DiagonalObjective`
+(the injected render_measure/probe/byte-cost seam, mirroring #396's `FinisherProblem` decoupling),
+`LocalityGuardError` + `require_locality` (the FAIL-CLOSED 2-pair cross-talk probe — perturb pair a,
+assert pair b byte-identical AND a non-vacuously changed — run before any batch is trusted),
+`make_through_r_code_measure` (d_seg/code axis → `tac.through_r.harness.measure_through_r`, whose
+`per_pair_dseg` IS the vector, so NO harness edit was needed — build-item 2 of the design memo was
+already satisfied), and the **4c′ ξ-terminal entry point** `make_byte_close_xi_pose_measure` +
+`load_byte_close_pose_surfaces` (READ-ONLY import of the committed-HEAD
+`tools/levelset_byte_close_and_eval.py::{parse_pose_carrier,serialize_pose_carrier,pose_carrier_confirm}`
+— that file was NOT edited). Discipline realized: (a) locality guard fail-closed; (b) accept on EXACT
+per-axis S via canonical CONFIRM re-render (never a per-move sum — the JOINT candidate is re-verified
+exactly, the no-local-gains-additivity law); (c) rate-aware via injected `byte_cost_fn` = REAL
+re-encoded bytes; (d) monotone ratchet + `_floor_ok` rollback vs the pinned banked d_pose floor
+(value-provenance: `BANKED_R1_DXI_DPOSE_FLOOR=0.001610`, MEASURED-ANCHOR cross-checked against the
+r1_dxi byte-close memo by `load_banked_r1_dxi_dpose_floor`, drift-guarded — NOT a bare literal); (e)
+resumable accepted-moves JSONL (`resume_from_ledger` replay) + atomic table npz snapshot. CPU-axis
+locked by construction (§5: harness `SUPPORTED_BACKENDS=('cpu-torch',)` + byte-close CPU-torch PoseNet;
+NEVER an MLX/GPU screen). WATERFILL FOLD (Codex SDF-waterfill advisory 2026-07-10): #400 implements the
+PAIR-LOCAL tier (steps 1-3,6) of the hierarchical interaction-aware water-filler; the accepted-moves
+ledger records SEPARATE per-component deltas (axis distortion / rate / bytes) so a future
+interaction-aware selector (steps 4-5) can consume it. 28 fixture tests green (n4 CPU, seconds) +
+existing 25 #396 tests still green. Registration = TOOL (not a Lever — no swept trainer flag the argparse
+can't supply; the DSL holds no leg to drift); the activation ledger's event vocab
+(fired/measured/retired) + DSL-lever-scoped `known_levers()` do NOT support a never-fired TOOL duty row,
+so the tracked duty-to-measure queue is **D27b (ARMED)**, whose owner line now points at the built entry
+point. **BUILD-ONLY: no launch, no measurement** (a dry-start owns the machine; the n600 measurement
+fires post-launch at the terminal band per D27b). Legs: DSL = N/A-TOOL (stated); equations =
+DEFERRED-to-first-measured-row (candidate `pair_local_diagonal_click_polish_{dseg,dpose}_v1`, mints when
+a byte-closed n600 diagonal-polish row lands — every ΔS band in the design memo is ESTIMATED, none
+measured). Pointer contest-CPU 0.19108282 UNMOVED (build-only; MEANS).
