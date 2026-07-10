@@ -12743,3 +12743,101 @@ APPARATUS (bulletin + recovery manifest; no measured finding, no verdict content
 law) — equations leg N/A; commit message omitted `[no-triality]` (should have carried it; the
 "verdict_landed" event-kind token tripped the measurement vocabulary). DAG leg = FEED-canon-u3
 (landed in-commit); DSL leg N/A (no lever/trainer surface). No equation owed.
+
+---
+
+### FEED-canon-u1 (2026-07-09) — CANONICALIZATION UNIT 1 (#388): the through-R harness + scaffold assembler
+
+**WHAT.** Landed `src/tac/through_r/` — the canonical home for the two most-rebuilt patterns in
+the campaign: (1) the through-R d_seg MEASUREMENT (candidate frames → R → frozen CPU-torch SegNet
+argmax → per-class d_seg vs cached `lstars`), and (2) the composite-argmax SCAFFOLD ASSEMBLER
+(Laguerre/tropical argmax composition, pluggable b_c, bounded reconciliation). Three modules:
+`resolution_chain.py` (THE authoritative pinned R chain), `harness.py`
+(`measure_through_r`), `scaffold_assembler.py` (promoted from `inc1a_harness/composite_assembler.py`).
+
+**WHY.** Subagents kept re-implementing the load-gt → compose/render → R → SegNet-argmax → d_seg
+loop (inc1a_harness, `probe_flip_bc_n600_gate.py`, `probe_laguerre_logit_offset_sweep.py`,
+`movable_deshare` measurement path, OT verdict scripts) — each re-derivation re-risking the
+flip-resolution bug class (operator binding: *"Flip resolution must take upstream evaluate.py and
+modules.py into account and camera res and all res used"*). `resolution_chain.py` pins ONE chain,
+source-VERIFIED against upstream (not trusted from memory): camera 874×1164, SegNet 384×512,
+seq_len 2 — with an explicit WH-vs-HW transposition guard (upstream constant NAMES are (W,H);
+resize targets are (H,W); crossing them is the bug class). The R SECOND half (bilinear↓ to 384×512)
+is DELEGATED to the real `SegNet.preprocess_input` — deliberately NOT re-implemented, removing the
+second place a transpose could enter (exactly ONE resize we own: the bicubic↑). #149 camera-res
+PLACEMENT documented as an intended exception (legal field placement ≠ compare grid).
+
+**ROUTING / REUSE (NO-FAKE, reuse-not-rederive).** Pins IMPORTED from `tac.contest_eval_contract`
+(`CAMERA_SIZE_WH`/`SCORER_INPUT_SIZE_WH`/`SEQ_LEN`, themselves source-verified); R first-half mirrors
+`train_witness_realized_through_R_mlx._torch_R_to_camera_uint8` op-for-op; SegNet forward mirrors
+`cpu_verdict_d_seg_argmax_batch` (chunked per the n600-verdict-OOM law, default 32); scorer loaded
+via `tac.boundary_math.seg_core.load_real_segnet('cpu')`; aggregate d_seg = `bitmask_dseg.d_seg_reference`
+(authority functional); per-class = `perclass_verdict.per_class_flip_stats`/`per_class_dseg_fields`
+(sum identity). P9: `backend='cpu-torch'` is the ONLY authority — MPS/MLX RAISE (no proxy branch).
+n600 discipline: refuses N≠600 without explicit `allow_subset_reason`. MIGRATION: inc1a
+`composite_assembler.py` is now a thin delegation shim; its 27 tests stay green (`Inc1aAssemblerError`
+preserved as an alias of the canonical `ScaffoldAssemblerError`, same class object).
+
+**MEASURED (apparatus validation, not a lever).** 30 new tests + 27 inc1a regression = 57 green,
+0 skips. The strongest correctness check RAN through the real frozen SegNet: feeding cached `gt_f1`
+back through the harness reproduces `lstars` EXACTLY → agg d_seg == 0.0 by construction; and the
+chunked (verdict_batch=1) vs single-batch (verdict_batch=0) SegNet forward is BIT-IDENTICAL.
+
+**TRIALITY leg-disposition.** DAG leg = this FEED-canon-u1 (landed in-commit). DSL leg N/A-with-reason
+(apparatus — a measurement harness + assembler, no witness lever / trainer flag / curriculum surface;
+nothing for `witness_dsl` to hold). Equations leg N/A-with-reason (the harness reuses the ALREADY-
+registered `d_seg` authority functional + score law; no NEW measured relation — the producer/consumer
+apparatus contract is the invariant, not an equation). STORES CONSULTED before build: the DAG
+(FEED-08 flip-resolution grid audit — confirmed camera_size (1164,874) / segnet_model_input_size
+(512,384) / SegNet x[:,-1]→bilinear(384,512)→argmax), `experiments/probe_flip_bc_n600_gate.py`,
+`train_witness_realized_through_R_mlx` (R + cpu_verdict), `tac.boundary_math.seg_core`,
+`tac.contest_eval_contract`, `tac.local_acceleration.metal_fused_r_operator` (numpy R oracle),
+`inc1a_harness/composite_assembler.py`. Consumer list for the #389 sweep in the landing memo (a
+`# TODO(#389): emit MeasurementRow` marker sits at the per-pair row site in `harness.py`; verdicts/
+NOT imported, per the parallel-build fence). Pointer 0.19110 UNMOVED (means — measurement apparatus,
+not an exact-eval row). `[macOS-CPU advisory · NON-PROMOTABLE]`.
+
+---
+
+## FEED-canon-u2 (2026-07-09) — CANONICALIZATION UNIT 2: emission-side hygiene pair (verdict schema + serializer triality-legs)
+
+**MEANS (apparatus, not a lever).** Built the emission-side canonicalization so hand-rolled
+verdict/measurement JSONs stop tripping the same hooks. THREE surfaces, all $0/no-GPU:
+
+1. **`src/tac/verdicts/measurement_row.py`** — frozen `MeasurementRow` (value · units · `AxisTag`
+   enum incl. `[contest-CPU/CUDA]`/`[macOS-CPU advisory]`/`[macOS-MLX research-signal]`/`[mask-level]`/
+   `[through-R]` · `Provenance{git_sha,tool,seed,config_ref,inputs_sha256}` · `noise_floor`+`floor_provenance`
+   · `n_samples`(+reason) · `ReviewStatus`). Validated in `__post_init__`. The load-bearing invariants:
+   **P2** — a non-None floor MUST carry provenance ⇒ a silent-zero floor is IMPOSSIBLE to construct;
+   **n600** — a subset REQUIRES a reason; **axis authority** — only contest-CPU/CUDA are authority (L81/MPS
+   discipline). `to_json_dict()` stable-ordered.
+2. **`src/tac/verdicts/emit.py`** — `emit_verdict()` REFUSES missing `verdict_scope` (ladder
+   INSTANCE<FORMULATION<FAMILY<PARADIGM + scoped_to; FAMILY needs citation/≥2-formulations), ≥1
+   `MeasurementRow` for a measured claim, `composition` (P12 interaction sign + active set, or explicit
+   `deferred_to_ab_protocol`), and `constraint_carved` (P10). Negatives additionally require a
+   `reformulation_queue` (may be explicitly empty-with-reason). Atomic write (tmp+os.replace).
+3. **`tools/subagent_commit_serializer.py`** — OPTIONAL `--triality-legs {dag,dsl,equations,none}`
+   (+`--triality-reason`, required for `none`), recorded in the JSONL log. **PURELY ADDITIVE: 85
+   insertions, 0 deletions/modifications** ⇒ flag-absent behavior is byte-identical (proven by test +
+   all 58 existing serializer tests green). `tools/triality_drift_detector.py` now reads the latest
+   committed serializer row for the window; a structured disposition SOFTENS the core `classify()` drift
+   to info (the independent consumer/recall/scope/schedule/dsl-config legs keep their own disciplines).
+
+**MEASURED (apparatus validation).** 62 new tests green (24 schema · 17 emit · 21 serializer+softening,
+incl. 3 live-hook end-to-end control-blocks-vs-disposition-softens). All new code fully ruff-clean;
+tools F-clean (pre-existing UP017/SIM115/I001/RUF100/C420 debt untouched, per "touch nothing else").
+
+**#389 CONSUMER LIST** (in the landing memo): `session_bus` (verdict fan-in) + `through_r` (measurement
+authority cross-check) will import `tac.verdicts`. A `# TODO(#389)` fence marks each expected consumption
+site; NEITHER sibling package is imported here (parallel-build fence).
+
+**TRIALITY leg-disposition.** DAG leg = this FEED-canon-u2 (landed in-commit). DSL leg N/A-with-reason
+(apparatus — a schema + emission helper + a serializer flag; no witness lever / trainer flag / curriculum
+surface for `witness_dsl` to hold). Equations leg N/A-with-reason (no NEW measured witness relation — the
+schema ENCODES the standing verdict-scope/noise-floor/authority disciplines as a typed contract, it does
+not register a physics law). STORES CONSULTED before build: `docs/operating_manual_craft_handoff.md`
+(§5 label-by-how-obtained), `design_philosophies_eightfold_20260709.md` (P2/P10/P12), MEMORY L81
+(review-status), `tools/subagent_commit_serializer.py` (+ its base-sha/postcommit tests for the harness
+pattern), `tools/triality_drift_detector.py`, `src/tac/witness_dsl/typed_config.py` (Provenanced/enum
+style), `tac.council_continual_learning.EmpiricalVerificationStatus` (review-status vocab sister).
+Pointer 0.19110 UNMOVED (means — emission apparatus, not an exact-eval row). `[apparatus · NON-PROMOTABLE]`.
