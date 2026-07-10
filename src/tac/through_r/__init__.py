@@ -24,6 +24,10 @@ NON-PROMOTABLE]`` — the pointer (contest-CPU 0.19110) moves ONLY through a byt
 
 from __future__ import annotations
 
+from tac.through_r.compare import (
+    LabelStackCompare,
+    compare_label_stack_to_lstars,
+)
 from tac.through_r.harness import (
     DEFAULT_GT_CACHE,
     DEFAULT_VERDICT_BATCH,
@@ -85,11 +89,13 @@ __all__ = [
     "CarrierField",
     "CompositeResult",
     "Inc1aAssemblerError",
+    "LabelStackCompare",
     "ResolutionChainError",
     "ScaffoldAssemblerError",
     "ThroughRHarnessError",
     "ThroughRResult",
     "assemble_fields",
+    "compare_label_stack_to_lstars",
     "compose_partition",
     "contest_faithful_R_numpy",
     "describe",

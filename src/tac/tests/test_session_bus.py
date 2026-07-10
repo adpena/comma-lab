@@ -267,11 +267,18 @@ def test_concurrent_appends_two_procs(bpaths):
 
 @pytest.fixture()
 def tool_tmp(tmp_path, monkeypatch):
-    """Redirect the checkpoint tool's store to a temp file so tests never touch the real one."""
+    """Redirect the checkpoint tool's store to a temp file so tests never touch the real one.
+
+    #389: register_inflight / complete also post fail-open lifecycle bulletin events, so
+    redirect the bulletin store too — otherwise these tests would pollute the live
+    ``.omx/state/session_events.jsonl`` feed that a concurrent seal agent reads.
+    """
     tool = rm._checkpoint_tool()
     monkeypatch.setattr(tool, "STATE_DIR", tmp_path)
     monkeypatch.setattr(tool, "JSONL_PATH", tmp_path / "subagent_progress.jsonl")
     monkeypatch.setattr(tool, "LOCK_PATH", tmp_path / ".subagent_progress.lock")
+    monkeypatch.setattr(B, "DEFAULT_BULLETIN_PATH", tmp_path / "session_events.jsonl")
+    monkeypatch.setattr(B, "DEFAULT_BULLETIN_LOCK_PATH", tmp_path / ".session_events.lock")
     return tmp_path
 
 
@@ -435,6 +442,10 @@ def test_session_recover_cli(tmp_path, monkeypatch):
     monkeypatch.setattr(tool, "STATE_DIR", tmp_path)
     monkeypatch.setattr(tool, "JSONL_PATH", tmp_path / "subagent_progress.jsonl")
     monkeypatch.setattr(tool, "LOCK_PATH", tmp_path / ".subagent_progress.lock")
+    # #389: register/complete post fail-open lifecycle bulletin events — isolate that
+    # store too so the CLI test never pollutes the live feed.
+    monkeypatch.setattr(B, "DEFAULT_BULLETIN_PATH", tmp_path / "session_events.jsonl")
+    monkeypatch.setattr(B, "DEFAULT_BULLETIN_LOCK_PATH", tmp_path / ".session_events.lock")
 
     assert cli.main(["register", "--subagent-id", "CLI-A",
                      "--respawn-context", "task #388 resume", "--step", "1"]) == 0

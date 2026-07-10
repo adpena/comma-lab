@@ -24,13 +24,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from tac.boundary_math.bitmask_dseg import d_seg_reference
-from tac.witness_control.perclass_verdict import (
-    CLASS_NAMES,
-    N_CLASSES,
-    per_class_dseg_fields,
-    per_class_flip_stats,
-)
+from tac.through_r.compare import compare_label_stack_to_lstars
+from tac.witness_control.perclass_verdict import N_CLASSES
 
 N600 = 600
 
@@ -89,8 +84,11 @@ def measure_mask_dseg(
             f"Pass require_n600=False ONLY for an explicitly-labeled non-authority subset."
         )
 
-    # Aggregate = mean over frames of the exact authority functional (cand != gt).mean().
-    per_frame = np.empty(n, dtype=np.float64)
+    # Front-half validation (KEEP the mask meter's own error type + shape check); then
+    # delegate the compare BACK-half to the canonical through_r helper (P1 one-fact-one-
+    # place). Numeric-identity-preserving: the helper runs the SAME d_seg_reference /
+    # per_class_flip_stats / per_class_dseg_fields calls this meter ran inline (agg mean +
+    # per_frame_std reproduce exactly under float64 ddof=0).
     preds: list[np.ndarray] = []
     for i, (p, g) in enumerate(zip(partitions, gt_list, strict=True)):
         pa = np.asarray(p)
@@ -98,28 +96,19 @@ def measure_mask_dseg(
             raise MaskDsegMeterError(
                 f"frame {i}: partition shape {pa.shape} != L* shape {g.shape}"
             )
-        per_frame[i] = d_seg_reference(pa, g)
         preds.append(pa)
-    agg = float(per_frame.mean())
 
-    # Per-class via the canonical sensor (flips attributed to GT class; sum identity holds).
-    flips, pixels = per_class_flip_stats(preds, gt_list, n_classes=int(n_classes))
-    fields = per_class_dseg_fields(flips, pixels)
-    names = CLASS_NAMES if int(n_classes) == N_CLASSES else tuple(
-        f"class_{c}" for c in range(int(n_classes))
-    )
-    per_class = {names[c]: float(fields["d_seg_by_class"][c]) for c in range(int(n_classes))}
-    share = {names[c]: float(fields["flip_share_by_class"][c]) for c in range(int(n_classes))}
+    cmp = compare_label_stack_to_lstars(preds, gt_list, n_classes=int(n_classes))
 
     return MaskDsegResult(
-        agg_dseg=agg,
-        per_class_dseg=per_class,
-        flip_share_by_class=share,
+        agg_dseg=cmp.agg_dseg,
+        per_class_dseg=cmp.per_class_dseg,
+        flip_share_by_class=cmp.flip_share_by_class,
         n_frames=n,
         n_classes=int(n_classes),
         is_n600=is_n600,
-        total_flips=int(flips.sum()),
-        total_pixels=int(pixels.sum()),
+        total_flips=cmp.total_flips,
+        total_pixels=cmp.total_pixels,
         label=str(label),
-        extra={"per_frame_std": float(per_frame.std())},
+        extra={"per_frame_std": cmp.per_pair_std},
     )

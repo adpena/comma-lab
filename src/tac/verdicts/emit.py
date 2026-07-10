@@ -24,10 +24,12 @@ fire for a hand-rolled JSON again:
 Write is atomic (tmp + ``os.replace``) so a crash mid-write never leaves a
 truncated verdict JSON.
 
-# TODO(#389): emitted verdict JSONs are the fan-in surface for the session_bus and
-# are cross-checked against the through_r measurement authority. This module
-# deliberately imports NEITHER sibling package (they build in parallel; #389 wires
-# the consumption). Keep this module's imports to stdlib + tac.verdicts only.
+#389 WIRED: on a successful atomic write, :func:`emit_verdict` posts a
+``verdict_landed`` bulletin event to the session_bus (fail-open, like
+``tac.review_counter.record_round``) so sibling agents learn a verdict LANDED
+without re-grepping the repo. The session_bus import is LAZY (inside the
+fail-open helper), so this module's IMPORT-TIME dependencies stay stdlib +
+tac.verdicts only — the emitted JSON write is unchanged and byte-identical.
 """
 from __future__ import annotations
 
@@ -358,4 +360,45 @@ def emit_verdict(
             tmp.unlink()
         except FileNotFoundError:
             pass
+    # #389: broadcast the landing AFTER the durable write (fail-open).
+    _post_bulletin_verdict_landed(out, verdict, scope, comp, is_negative, len(rows))
     return out
+
+
+def _post_bulletin_verdict_landed(
+    out: Path,
+    verdict: str,
+    scope: VerdictScope,
+    comp: Composition,
+    is_negative: bool,
+    n_rows: int,
+) -> None:
+    """Broadcast a ``verdict_landed`` bulletin event so sibling agents see this verdict.
+
+    FAIL-OPEN by design (mirrors ``tac.review_counter._post_bulletin_verdict_landed``):
+    the verdict JSON on disk is the authority; the bulletin is score-neutral
+    observability. A bulletin failure — missing package, disk full, lock contention —
+    must NEVER break the (already-completed) verdict write, so any exception is
+    swallowed. This is an intentional silent guard on a non-authoritative notification
+    path AFTER the durable write, not on a safety/score surface (operating manual §8.9).
+    The ``subject`` is ``scope.scoped_to`` — the thing the verdict binds to — so a
+    seal-round ``staleness_check`` on that surface picks the landing up.
+    """
+    try:
+        from tac.session_bus.bulletin import EVENT_VERDICT_LANDED, post_event
+
+        post_event(
+            kind=EVENT_VERDICT_LANDED,
+            subject=scope.scoped_to,
+            payload={
+                "verdict": verdict,
+                "scope_level": scope.level.value,
+                "is_negative": bool(is_negative),
+                "n_rows": int(n_rows),
+                "composition_sign": comp.sign.value if comp.sign is not None else None,
+                "path": str(out),
+            },
+            agent_label="emit_verdict",
+        )
+    except Exception:
+        pass

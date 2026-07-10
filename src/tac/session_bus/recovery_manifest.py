@@ -87,7 +87,7 @@ def register_inflight(
     """
     if not isinstance(respawn_context, str) or not respawn_context.strip():
         raise ValueError("respawn_context must be a non-empty string")
-    return _checkpoint_tool().append_checkpoint(
+    rec = _checkpoint_tool().append_checkpoint(
         subagent_id=subagent_id,
         step=step,
         status="in_progress",
@@ -99,6 +99,11 @@ def register_inflight(
         respawn_context=respawn_context,
         expected_outputs=expected_outputs,
     )
+    # #389: broadcast the spawn (fail-open). The heartbeat path is deliberately NOT wired
+    # (it would spam agent_spawned each tick); only the semantic register/complete
+    # transitions post lifecycle events.
+    _post_lifecycle("agent_spawned", subagent_id, lane_id, parent_id_or_session)
+    return rec
 
 
 def heartbeat(
@@ -135,7 +140,7 @@ def complete(
     notes: str = "",
 ) -> dict:
     """Mark an agent complete so it drops out of the recovery report."""
-    return _checkpoint_tool().append_checkpoint(
+    rec = _checkpoint_tool().append_checkpoint(
         subagent_id=subagent_id,
         step="complete",
         status="complete",
@@ -143,6 +148,43 @@ def complete(
         next_action="",
         notes=notes,
     )
+    # #389: broadcast the completion (fail-open) AFTER the durable checkpoint write.
+    _post_lifecycle("agent_completed", subagent_id, None, None)
+    return rec
+
+
+def _post_lifecycle(
+    kind: str,
+    subagent_id: str,
+    lane_id: str | None,
+    parent_id_or_session: str | None,
+) -> None:
+    """Post an agent-lifecycle bulletin event (fail-open).
+
+    FAIL-OPEN by design (mirrors ``tac.review_counter._post_bulletin_verdict_landed``):
+    the ``subagent_progress.jsonl`` checkpoint is the durable authority; the bulletin is
+    score-neutral observability. A bulletin failure must NEVER break the (already
+    written) checkpoint, so any exception is swallowed — an intentional silent guard on
+    a non-authoritative notification path AFTER the durable write (operating manual
+    §8.9). The ``subject`` is the ``subagent_id`` so a recovery/activity reader can match
+    on it.
+    """
+    try:
+        from tac.session_bus.bulletin import post_event
+
+        payload: dict = {}
+        if lane_id:
+            payload["lane_id"] = lane_id
+        if parent_id_or_session:
+            payload["parent_id_or_session"] = parent_id_or_session
+        post_event(
+            kind=kind,
+            subject=subagent_id,
+            payload=payload,
+            agent_label="recovery_manifest",
+        )
+    except Exception:
+        pass
 
 
 def _parse_iso(ts: str | None) -> datetime | None:

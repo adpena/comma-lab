@@ -30,13 +30,14 @@ n600 discipline (allergic to non-n600 / toys): ``pairs='n600'`` refuses a subset
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from tac.boundary_math.bitmask_dseg import d_seg_reference
+from tac.through_r.compare import compare_label_stack_to_lstars
 from tac.through_r.resolution_chain import (
     CAMERA_H,
     CAMERA_W,
@@ -44,12 +45,7 @@ from tac.through_r.resolution_chain import (
     SEG_W,
     render_grid_to_camera_uint8,
 )
-from tac.witness_control.perclass_verdict import (
-    CLASS_NAMES,
-    N_CLASSES,
-    per_class_dseg_fields,
-    per_class_flip_stats,
-)
+from tac.witness_control.perclass_verdict import N_CLASSES
 
 N600 = 600
 DEFAULT_GT_CACHE = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
@@ -80,7 +76,73 @@ class ThroughRResult:
     label: str = THROUGH_R_LABEL
     subset_reason: str | None = None
     realized: np.ndarray | None = None  # (N, SEG_H, SEG_W) int64, only when return_realized
+    inputs_sha256: str | None = None  # sha256(lstars.tobytes() + realized.tobytes())
     extra: dict[str, float] = field(default_factory=dict)
+
+    def to_measurement_rows(
+        self,
+        *,
+        git_sha: str,
+        review_status: str,
+        tool: str = "tac.through_r.measure_through_r",
+        config_ref: str | None = None,
+        seed: int | None = None,
+        include_per_class: bool = True,
+    ) -> list[Any]:
+        """Build canonical :class:`tac.verdicts.MeasurementRow` rows for this result.
+
+        Resolves the ``# TODO(#389)`` fence: through-R d_seg becomes typed measurement
+        rows the sibling :func:`tac.verdicts.emit_verdict` consumes. Emitted OPT-IN (a
+        method, not in the hot loop) so :func:`measure_through_r` stays byte-identical by
+        default; ``tac.verdicts`` is imported LAZILY here so the harness module remains
+        leaf-clean at import time.
+
+        Granularity: ONE aggregate row (``quantity='d_seg'``, the load-bearing value the
+        verdict is ABOUT) plus (default) one per-class row. Per-pair scalars remain in
+        :attr:`per_pair_dseg` — a caller wanting 600 per-pair rows builds them from that
+        list. ``axis_tag`` is the non-authority ``[through-R]`` tag (a realized-through-R
+        CPU-SegNet measurement is NEVER a score authority — CLAUDE.md). ``review_status``
+        is REQUIRED (no default): the harness cannot know whether a fresh reviewer saw
+        the number, so the caller must declare it (operating manual §5).
+        """
+        from tac.verdicts import AxisTag, MeasurementRow, Provenance, ReviewStatus
+
+        prov = Provenance(
+            git_sha=git_sha,
+            tool=tool,
+            seed=seed,
+            config_ref=config_ref,
+            inputs_sha256=self.inputs_sha256,
+        )
+        rs = ReviewStatus.coerce(review_status)
+        n_reason = self.subset_reason if not self.is_n600 else None
+        rows: list[Any] = [
+            MeasurementRow(
+                value=self.agg_dseg,
+                units="fraction",
+                axis_tag=AxisTag.THROUGH_R,
+                provenance=prov,
+                n_samples=self.n_frames,
+                review_status=rs,
+                n_samples_reason=n_reason,
+                quantity="d_seg",
+            )
+        ]
+        if include_per_class:
+            for cls_name, val in self.per_class_dseg.items():
+                rows.append(
+                    MeasurementRow(
+                        value=val,
+                        units="fraction",
+                        axis_tag=AxisTag.THROUGH_R,
+                        provenance=prov,
+                        n_samples=self.n_frames,
+                        review_status=rs,
+                        n_samples_reason=n_reason,
+                        quantity=f"d_seg::{cls_name}",
+                    )
+                )
+        return rows
 
 
 def load_frozen_segnet(backend: str = "cpu-torch"):
@@ -269,37 +331,36 @@ def measure_through_r(
         segnet = load_frozen_segnet(backend)
     realized = _segnet_argmax_chunked(segnet, camera_frames, int(verdict_batch))
 
-    # Aggregate = mean over pairs of the authority functional (realized != L*).mean().
+    # Aggregate + per-class = the CANONICAL shared compare back-half (P1 one-fact-one-
+    # place): candidate-through-R argmax vs L*. Numeric-identity-preserving vs the prior
+    # inline computation (same d_seg_reference / per_class_flip_stats calls, same order).
     gt_list = [lstars[i] for i in range(n)]
     pred_list = [realized[i] for i in range(n)]
-    per_pair = [float(d_seg_reference(pred_list[i], gt_list[i])) for i in range(n)]
-    # TODO(#389): emit a MeasurementRow per pair (through_r verdict rows) once the sibling
-    # tac.verdicts.MeasurementRow schema is wired by the #389 sweep. Do NOT import it here.
-    agg = float(np.mean(per_pair))
+    cmp = compare_label_stack_to_lstars(pred_list, gt_list, n_classes=int(n_classes))
 
-    flips, pixels = per_class_flip_stats(pred_list, gt_list, n_classes=int(n_classes))
-    fields = per_class_dseg_fields(flips, pixels)
-    names = CLASS_NAMES if int(n_classes) == N_CLASSES else tuple(
-        f"class_{c}" for c in range(int(n_classes))
-    )
-    per_class = {names[c]: float(fields["d_seg_by_class"][c]) for c in range(int(n_classes))}
-    share = {names[c]: float(fields["flip_share_by_class"][c]) for c in range(int(n_classes))}
+    # inputs_sha256: a deterministic re-derivation key = GT cache + candidate-through-R
+    # realized argmax (both together uniquely pin the compared pair). Emitted onto the
+    # MeasurementRow provenance via ThroughRResult.to_measurement_rows (#389).
+    inputs_sha256 = hashlib.sha256(
+        np.ascontiguousarray(lstars).tobytes() + np.ascontiguousarray(realized).tobytes()
+    ).hexdigest()
 
     return ThroughRResult(
-        agg_dseg=agg,
-        per_class_dseg=per_class,
-        flip_share_by_class=share,
-        per_pair_dseg=per_pair,
+        agg_dseg=cmp.agg_dseg,
+        per_class_dseg=cmp.per_class_dseg,
+        flip_share_by_class=cmp.flip_share_by_class,
+        per_pair_dseg=cmp.per_pair_dseg,
         n_frames=n,
         n_classes=int(n_classes),
         is_n600=n == N600,
         backend=backend,
         input_space=resolved_space,
-        total_flips=int(flips.sum()),
-        total_pixels=int(pixels.sum()),
+        total_flips=cmp.total_flips,
+        total_pixels=cmp.total_pixels,
         subset_reason=subset_reason,
         realized=realized if return_realized else None,
-        extra={"per_pair_std": float(np.std(per_pair))},
+        inputs_sha256=inputs_sha256,
+        extra={"per_pair_std": cmp.per_pair_std},
     )
 
 

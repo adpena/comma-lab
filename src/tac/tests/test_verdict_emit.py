@@ -25,6 +25,17 @@ from tac.verdicts import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_bulletin(tmp_path, monkeypatch):
+    """#389: emit_verdict now posts a fail-open verdict_landed bulletin. Redirect the
+    bulletin store to a tmp path so these unit tests never pollute the live
+    ``.omx/state/session_events.jsonl`` feed (a concurrent seal agent reads it)."""
+    from tac.session_bus import bulletin as _bull
+
+    monkeypatch.setattr(_bull, "DEFAULT_BULLETIN_PATH", tmp_path / "ev.jsonl")
+    monkeypatch.setattr(_bull, "DEFAULT_BULLETIN_LOCK_PATH", tmp_path / ".ev.lock")
+
+
 def _row() -> MeasurementRow:
     return MeasurementRow(
         value=0.0031,

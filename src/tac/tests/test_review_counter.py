@@ -16,6 +16,17 @@ import pytest
 from tac import review_counter as rc
 
 
+@pytest.fixture(autouse=True)
+def _isolate_bulletin(tmp_path, monkeypatch):
+    """record_round posts a fail-open verdict_landed bulletin (task #388). Redirect the
+    bulletin store to tmp so these tests never pollute the live
+    ``.omx/state/session_events.jsonl`` feed a concurrent seal agent reads (#389 hygiene)."""
+    from tac.session_bus import bulletin as _bull
+
+    monkeypatch.setattr(_bull, "DEFAULT_BULLETIN_PATH", tmp_path / "ev.jsonl")
+    monkeypatch.setattr(_bull, "DEFAULT_BULLETIN_LOCK_PATH", tmp_path / ".ev.lock")
+
+
 @pytest.fixture
 def ledger(tmp_path: Path) -> Path:
     return tmp_path / "review_counter.jsonl"
