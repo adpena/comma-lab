@@ -105,6 +105,36 @@ matvecs/query. Big gains on ILL-CONDITIONED problems. Affine invariance = the Go
   check it beats the plain margin. Same disposition as the Cramér-Rao flip-risk thread
   ([[intake_fisher_is_loglik_curvature_at_argmax_20260710]]). Do NOT build speculatively.
 
+## Paper #9 (Amari, "Information Geometry and Its Applications", Thm 6.12) — the PARENT theorem
+The **generalized Pythagorean theorem**: `D[P:Q] = D[P:R_PQ] + D[R_PQ:Q]` when the legs meet dual-orthogonally
+(e-geodesic ⊥ m-geodesic) at R_PQ = the Bregman projection. This is the PARENT of the whole cluster's
+projection machinery:
+- **Waterfilling additivity** (#157 reverse-waterfill) is EXACT iff components are dual-orthogonal; the
+  cross-term when they are NOT = the meta-Lagrangian interaction/Volterra term. A measurable check on the
+  existing bit-allocation (are the independent-component d_seg allocations dual-orthogonal?).
+- **Dykstra alternating-projection** (#73) converges by iterated Bregman projections (Pythagorean monotone
+  descent); the semi-discrete-OT head-offset (#288) is well-posed for the same reason.
+- Nielsen's curved-Bregman projection (paper #3) = Thm 6.12 restricted to a non-affine submanifold = witness.
+- **GATED diagnostic:** measure whether our per-component d_seg allocations are dual-orthogonal; the additive
+  waterfill's systematic error = the cross-term. Not a build — a check on existing #157. Folded into
+  `docs/paper/information_geometric_foundations.md` §5.
+
+## Paper #10 (Nielsen, "Non-Euclidean Computational Geometry for ML") — the ALGORITHMIC side
+Slide deck (WebFetch could not OCR; content known from Nielsen's corpus): **Bregman Voronoi diagrams,
+Bregman POWER diagrams (= Laguerre diagrams), Bregman balls, smallest-enclosing-balls, k-means under Bregman
+divergences.** Direct connection: **the SegNet argmax partition IS a Bregman power/Laguerre diagram** (#284:
+"argmax = Laguerre power-diagram"; v8 stores the GENERATORS not the boundaries). Nielsen's non-Euclidean CG
+gives the algorithms for computing + coding these diagrams → the v8 rate-half (store power-diagram generators,
+AR-code them). GATED: informs v8 (#377 build-wave / #380 crucible-3); no new build — reinforces the existing
+v8 Laguerre-generator design.
+
+## Already-covered / low-signal (honest, no re-bank)
+- `entropy-22-01100-v2.pdf` = Nielsen 2020 Entropy "Elementary Introduction to Information Geometry" = the
+  SOURCE of paper #1 / the Fisher slide — ALREADY banked
+  ([[intake_fisher_is_loglik_curvature_at_argmax_20260710]]). No new content.
+- `HPC4DS/index.html` = Nielsen's "High-Performance Computing for Data Science" course — compute-facet
+  adjacent (our MLX/Metal program #252) but a pedagogical course, not new witness math. Noted, not banked.
+
 ## Honest verdict + routing
 - **Bank** (this note): the cluster is the rigorous SPINE — cite Nielsen (curved Bregman = witness on a
   non-affine chart; head-offset = Bregman projection) + Goldman (dually-flat = affine (G,X)-structure;

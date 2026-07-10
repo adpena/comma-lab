@@ -72,6 +72,19 @@ precise form of "spend bytes on the scorer-relevant manifold, not on RGB."
 
 ## 5. The solvers are projections
 
+The load-bearing theorem is Amari's **generalized Pythagorean theorem** (Thm 6.12): in a dually-flat space
+the canonical (Bregman) divergence decomposes as `D[P:Q] = D[P:R] + D[R:Q]` whenever R is reached from P and
+Q by dual-orthogonal geodesics (an e-geodesic meeting an m-geodesic at a right angle). Two consequences we
+rely on: (i) **projection** — R is the Bregman projection of P onto the flat submanifold through Q, so
+placing the witness optimally at a boundary pixel IS a Bregman projection; (ii) **additive decomposition** —
+the total distortion splits with *no cross-term* exactly when the components are dual-orthogonal. Our
+reverse-waterfill bit allocation assumes this additivity; the Pythagorean theorem certifies it where
+components are dual-orthogonal and *names the error* (the cross-term) where they are not — which is precisely
+the interaction / Volterra term carried in the meta-Lagrangian. It is also why the Dykstra
+alternating-projection feasibility solve converges (iterated Bregman projections descend monotonically by
+the Pythagorean structure). Nielsen's curved-Bregman projection (below) is this theorem restricted to a
+non-affine submanifold — i.e. our witness.
+
 Placing the witness optimally at a boundary pixel is a projection onto the non-affine chart, and three
 classical results name the three solves we use:
 
