@@ -42,6 +42,7 @@ Catalog map:
 from __future__ import annotations
 
 import ast
+import json
 import re
 from collections import Counter
 from pathlib import Path
@@ -1021,6 +1022,370 @@ def check_no_unjustified_magnitude_dismissal(
         ok_detail=(f"{scanned} research memo(s) scanned"
                    if detector is not None else "classifier absent (fail-open no-op)"),
     )
+
+
+# ===========================================================================
+# EIGHTFOLD DESIGN-PHILOSOPHY GATES (2026-07-09 operator "Encode all")
+# Source: `.omx/research/design_philosophies_eightfold_20260709.md` +
+# DAG FEED-eightfold-philosophies. The eight brushed-against design philosophies
+# (siblings of the same-day geometry-first bindings) get STRUCTURAL apparatus
+# where automatable: P1 significance-key canonicalization + P4 meter-canary
+# presence are warn-only preflight gates; P2/P5/P6/P7/P8 are fuzzy-by-nature and
+# live as crucible SEAL standing checks (see
+# `.omx/research/crucible_standing_checks_eightfold_20260709.md`), not static
+# gates. Landing memo: `.omx/research/eightfold_apparatus_build_20260709.md`.
+# ===========================================================================
+
+# P1 store: the relative-significance JSONL (the ΔS value axis of the DSL).
+_SIGNIFICANCE_STORE_REL = ".omx/state/lever_relative_significance.jsonl"
+
+
+def check_significance_keys_canonical(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """P1 (ONE FACT, ONE STORE, ONE KEY) — every key in the relative-significance
+    store must resolve, THROUGH ``tac.witness_dsl.activation_ledger.
+    canonicalize_significance_keys``, to a HELD DSL ``Lever`` factory name
+    (``lever_registry``).
+
+    Confound class (the duty-to-measure ORPHAN bug): a significance row keyed by a
+    human/task-# name (e.g. ``d_seg_aware_taper_121``) that never reconciles onto
+    its canonical factory name (``DsegAwareTaper``) makes ``duty_to_measure_ranked``
+    compute ``registered = (key in factory_names) == False`` and FALSELY report a
+    built+held+wired lever as ``~=unbuilt`` (duty-to-BUILD) instead of
+    ``*=never-fired`` (duty-to-MEASURE). RECEIPT 2026-07-09: exactly this — the
+    ``canonicalize_significance_keys`` alias map was the point fix; THIS gate is the
+    class fix (it refuses a NEW task-#-keyed row that lacks an alias / a build / a
+    waiver from silently re-orphaning). Clause A of the same-day geometry-first
+    binding, pointed at our own apparatus.
+
+    An unresolved key is a genuine finding UNLESS it is a legitimate not-yet-a-lever
+    finding (e.g. a byte-close-tool lever like ``latent_table_truncate_d18_k90``,
+    or an A/B finding), in which case the ROW carries an in-notes, JSONL-safe waiver
+    ``# SIGNIFICANCE_KEY_OK:<rationale>`` (embedded in the row's ``notes`` string —
+    a bare ``<rationale>`` placeholder does not self-waive, Catalog #287 sister).
+
+    Warn-only (Strict-flip atomicity rule). STRICT-FLIP CONDITION: flip once every
+    store key resolves to a held factory OR carries the waiver (live-count 0) — this
+    requires sibling ``activation_ledger`` alias/build work + the two intentional
+    non-factory findings gaining their waiver, so it cannot be guaranteed here.
+
+    Same-line/in-row waiver: ``# SIGNIFICANCE_KEY_OK:<rationale>``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    store = root / _SIGNIFICANCE_STORE_REL
+    violations: list[str] = []
+    if not store.is_file():
+        return _finish(
+            name="check_significance_keys_canonical",
+            tag="significance-keys-canonical",
+            violations=violations,
+            strict=strict,
+            verbose=verbose,
+            ok_detail="no significance store on disk",
+        )
+    # Resolve THROUGH the canonical functions the philosophy names (DRY + NO-FAKE:
+    # the gate uses the very reconciliation the apparatus uses, never a re-impl).
+    try:
+        from tac.witness_dsl.activation_ledger import (
+            _read_significance,
+            canonicalize_significance_keys,
+        )
+        from tac.witness_dsl.lever_registry import lever_factories
+    except Exception as exc:  # pragma: no cover - import-environment guard
+        return _finish(
+            name="check_significance_keys_canonical",
+            tag="significance-keys-canonical",
+            violations=violations,
+            strict=strict,
+            verbose=verbose,
+            ok_detail=f"activation_ledger/lever_registry unavailable ({exc!r}) — fail-open",
+        )
+    factory_names = set(lever_factories().keys())
+    sig = _read_significance(store)
+    canon = canonicalize_significance_keys(sig, factory_names)
+    resolved = 0
+    for key, row in canon.items():
+        if key in factory_names:
+            resolved += 1
+            continue
+        # Waiver lives in the row's parsed ``notes`` string (JSONL has no comments;
+        # scanning the raw JSON line would let trailing JSON syntax masquerade as a
+        # real rationale — the placeholder-rejection must see the clean field).
+        notes = str(row.get("notes", "")) if isinstance(row, dict) else ""
+        if _waiver_present(notes, "SIGNIFICANCE_KEY_OK"):
+            continue
+        hint = (
+            "notes name a held factory — add its alias to "
+            "activation_ledger._SIGNIFICANCE_LEVER_ALIASES"
+            if isinstance(row, dict)
+            and any(fn in str(row.get("notes", "")) for fn in factory_names)
+            else "build the lever, or (if it is intentionally not a DSL factory) "
+            "add a `# SIGNIFICANCE_KEY_OK:<rationale>` marker inside the row notes"
+        )
+        violations.append(
+            f"{_SIGNIFICANCE_STORE_REL}: significance key {key!r} does not resolve "
+            f"to a held DSL Lever factory (P1 orphan duty-to-measure signal — a "
+            f"task-#-keyed row that never reconciled onto its factory name would be "
+            f"FALSELY reported unbuilt). {hint}."
+        )
+    return _finish(
+        name="check_significance_keys_canonical",
+        tag="significance-keys-canonical",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"{resolved}/{len(canon)} store key(s) resolve to a held factory",
+    )
+
+
+# ── P4 meter-canary gate ─────────────────────────────────────────────────────
+_WITNESS_CONTROL_REL = "src/tac/witness_control"
+# A CERTAIN measurement surface by NAME. Deliberately EXCLUDES bare ``*Gate``:
+# in this codebase ``Gate`` is an ACTUATOR (EventBackstopGate fires treatments;
+# GateStep is a frozen value object) — neither is a measurement meter, and P4 is
+# about METERS ("every new MEASUREMENT surface ships with a positive control").
+# The two named exemplars pass via this set (SigmaMinPlateauDetector -> Detector$,
+# VerdictTrendAlarm -> Alarm$). A ``*Gate`` that IS a meter still gets caught by
+# the observe/detect/classify method signal below.
+_METER_NAME_RE = re.compile(r".*(Detector|Alarm|Trend|Plateau|Monitor|Observer|Meter)$")
+# Unambiguous MEASUREMENT verbs (an actuator uses fire/step/update; a meter reads).
+_METER_VERB_METHODS = ("observe", "detect", "classify")
+# Canary/positive-control presence tokens (module text OR its test-file text).
+_CANARY_TOKENS = (
+    "canary",
+    "positive_control",
+    "negative_control",
+    "synthetic_control",
+    "known_effect",
+    "known-effect",
+)
+_CANARY_SYNTH_RE = re.compile(r"synthetic_\w*control")
+
+
+def _fm_meter_advisory(class_name: str, class_source: str, timeout: float = 12.0) -> dict | None:
+    """ADVISORY on-device FM second opinion for a heuristic-UNCERTAIN class: is it a
+    measurement/detector surface (a reading a decision is drawn from) vs an
+    actuator/controller/value-object? Mirrors the ``tools/auto_push_main`` fmtools
+    firewall (memory ``reference-apple-ondevice-fm-fmtools-classifier-capability``,
+    #259): the FM runs in the SEPARATE fmtools venv via SUBPROCESS (the pact venv
+    gains ZERO deps); fail-open (absent venv / error / timeout ⇒ ``None``). NEVER a
+    sole authority — the caller records the advisory in the finding rationale only,
+    and the deterministic heuristic remains the floor. Opt-in (``use_fmtools``) so
+    the per-session ``preflight_all`` path pays ZERO cost by default.
+    """
+    import os
+    import subprocess
+
+    fm_py = None
+    for cand in (
+        os.environ.get("EIGHTFOLD_FM_PYTHON"),
+        os.environ.get("DASH_FM_PYTHON"),
+        os.path.expanduser("~/Projects/fmtools/.venv/bin/python"),
+    ):
+        if cand and os.path.exists(cand):
+            fm_py = cand
+            break
+    if not fm_py:
+        return None
+    script = r'''
+import asyncio, json, sys
+try:
+    import apple_fm_sdk as fm
+    from fmtools import local_extract
+except Exception:
+    print("{}"); raise SystemExit(0)
+
+@fm.generable()
+class MeterCheck:
+    verdict: str = fm.guide(anyOf=["meter", "not_meter"],
+        description="'meter' if the class is a MEASUREMENT/detector surface that produces a reading, classification or verdict a downstream decision is drawn from; 'not_meter' for an actuator/controller/value-object/config.")
+    reason: str = fm.guide(description="A short phrase naming why.")
+
+@local_extract(MeterCheck, retries=1, instructions=(
+    "You inspect a Python class from a witness-training CONTROL package and decide if it is a MEASUREMENT "
+    "surface (a 'meter': it OBSERVES state and emits a reading/classification/verdict that a decision is "
+    "drawn from — e.g. a plateau detector, a trend alarm) versus NOT a meter (an actuator that fires a "
+    "treatment, a controller, a plain value/config dataclass, an averager). Return 'meter' ONLY when the "
+    "class's job is to MEASURE and REPORT. When uncertain, return 'not_meter' (the deterministic name/method "
+    "heuristic is the floor; you are a precision second opinion)."))
+async def _check(src: str) -> MeterCheck:
+    """(instructions above)"""
+
+async def _main():
+    try:
+        text = sys.stdin.read()[:6000]
+    except Exception:
+        print("{}"); return
+    if not text.strip():
+        print("{}"); return
+    try:
+        r = await _check(text)
+        print(json.dumps({
+            "is_meter": (str(getattr(r, "verdict", "") or "").lower() == "meter"),
+            "reason": str(getattr(r, "reason", "") or ""),
+        }))
+    except Exception:
+        print("{}")
+
+asyncio.run(_main())
+'''
+    # class_source already includes the ``class <name>:`` header (from _span_source);
+    # pass it verbatim (capped for the FM window) — no double-prefix.
+    payload = (class_source or f"class {class_name}: ...")[:6000]
+    try:
+        proc = subprocess.run(
+            [fm_py, "-c", script], input=payload,
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if proc.returncode != 0:
+            return None
+        out = json.loads(proc.stdout.strip() or "{}")
+        return out if isinstance(out, dict) and out else None
+    except Exception:
+        return None
+
+
+def check_witness_control_meters_have_canaries(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    use_fmtools: bool = False,
+) -> list[str]:
+    """P4 (NO METER WITHOUT A CANARY) — every MEASUREMENT/detector class in
+    ``src/tac/witness_control/*.py`` must ship a canary / positive-control surface
+    (a known-effect signal it MUST register + a negative control it must NOT fire
+    on) before its readings gate anything — confound-L3 lifted from verdicts to
+    build-time law.
+
+    Detection (deterministic floor):
+      * CERTAIN meter = class NAME matches ``*(Detector|Alarm|Trend|Plateau|Monitor|
+        Observer|Meter)``. A certain meter with no canary token in its module OR its
+        ``tests/test_<module>.py`` = a VIOLATION.
+      * UNCERTAIN = class defines an ``observe`` / ``detect`` / ``classify`` method
+        but the name does not signal a meter (an actuator/controller may also
+        observe). These are NOT counted as violations by the heuristic; they are
+        listed, and — ONLY when ``use_fmtools=True`` — an on-device FM ADVISORY
+        (``_fm_meter_advisory``, #259 firewall: separate venv, subprocess,
+        fail-open, NEVER sole authority) is recorded in the finding rationale. Per
+        the operator nudge 2026-07-09: heuristic-certain cases decide directly;
+        heuristic-uncertain cases get an fmtools advisory recorded in rationale,
+        never authority (warn-only gate + advisory classifier = honest composition).
+        Default ``use_fmtools=False`` keeps the per-session preflight path at ZERO
+        FM cost (documented heuristic-only disposition, the nudge's accepted
+        fallback).
+
+    Passing exemplar VERIFIED (source inspection 2026-07-09): ``SigmaMinPlateauDetector``
+    (sigma_min_plateau.py ``canary_suite`` = synthetic positive + rising negative).
+    NOTE (re-derived, §4): ``VerdictTrendAlarm`` (verdict_trend_alarm.py) carries NO
+    canary token in-module or in a test — it is a CURRENT VIOLATOR, not a passing
+    exemplar as the build brief supposed; disposition = sibling adds a
+    canary_suite-style control OR a ``# METER_CANARY_OK:<rationale>`` waiver.
+
+    Warn-only (Strict-flip atomicity rule). STRICT-FLIP CONDITION: flip once every
+    certain meter carries a canary or a waiver (live-count 0).
+
+    Same-line/near-class waiver: ``# METER_CANARY_OK:<rationale>``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    ctrl = root / _WITNESS_CONTROL_REL
+    violations: list[str] = []
+    uncertain: list[str] = []
+    scanned = 0
+    if not ctrl.is_dir():
+        return _finish(
+            name="check_witness_control_meters_have_canaries",
+            tag="meter-canary",
+            violations=violations,
+            strict=strict,
+            verbose=verbose,
+            ok_detail="witness_control dir absent",
+        )
+    for path in sorted(ctrl.glob("*.py")):
+        if path.name == "__init__.py":
+            continue
+        text = _read(path)
+        if not text:
+            continue
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        scanned += 1
+        rel = path.relative_to(root).as_posix()
+        test_text = _read(ctrl / "tests" / f"test_{path.stem}.py") or ""
+        haystack = text + "\n" + test_text
+        has_canary = any(tok in haystack for tok in _CANARY_TOKENS) or bool(
+            _CANARY_SYNTH_RE.search(haystack)
+        )
+        module_waived = _waiver_present(haystack, "METER_CANARY_OK")
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            methods = {
+                b.name
+                for b in node.body
+                if isinstance(b, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+            name_meter = bool(_METER_NAME_RE.match(node.name))
+            verb_meter = bool(methods.intersection(_METER_VERB_METHODS))
+            if not (name_meter or verb_meter):
+                continue
+            if has_canary:
+                continue
+            span = _span_source(lines, node)
+            if module_waived or _waiver_present(span, "METER_CANARY_OK"):
+                continue
+            if name_meter:
+                violations.append(
+                    f"{rel}:{node.lineno}: meter class {node.name!r} has no canary / "
+                    f"positive-control (P4) in its module or tests/test_{path.stem}.py "
+                    f"— a meter must register a known-effect (positive) + not-fire on a "
+                    f"negative control before its readings gate anything. Add a "
+                    f"canary_suite-style control (see sigma_min_plateau.canary_suite) "
+                    f"or a `# METER_CANARY_OK:<rationale>` waiver."
+                )
+            else:
+                advisory = _fm_meter_advisory(node.name, span) if use_fmtools else None
+                if advisory and advisory.get("is_meter"):
+                    violations.append(
+                        f"{rel}:{node.lineno}: class {node.name!r} classified a "
+                        f"MEASUREMENT surface by fmtools ADVISORY "
+                        f"([{advisory.get('reason', '')}] — advisory only, NOT sole "
+                        f"authority) and has no canary (P4). Add a canary or a "
+                        f"`# METER_CANARY_OK:<rationale>` waiver."
+                    )
+                else:
+                    uncertain.append(
+                        f"{rel}:{node.lineno}: {node.name} "
+                        f"(observe/detect/classify; name ambiguous — fmtools advisory "
+                        f"available via use_fmtools=True)"
+                    )
+    if verbose and uncertain:
+        print(
+            f"  [meter-canary] {len(uncertain)} heuristic-uncertain class(es) "
+            f"(advisory-only, not counted): " + "; ".join(uncertain[:5])
+        )
+    return _finish(
+        name="check_witness_control_meters_have_canaries",
+        tag="meter-canary",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"{scanned} witness_control module(s) scanned",
+    )
+
+
+# The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
+EIGHTFOLD_GATES = (
+    check_significance_keys_canonical,
+    check_witness_control_meters_have_canaries,
+)
 
 
 # Convenience: the gates in catalog order, for the preflight wire-in + tests.

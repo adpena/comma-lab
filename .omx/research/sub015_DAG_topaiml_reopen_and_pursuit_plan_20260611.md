@@ -12426,3 +12426,32 @@ emits the matched shared-head config; P7 compiles the typed `WitnessProgram` —
 by-δ_mask — is FORMALIZATION_PENDING until trained arms produce a measured row; the analytic floor is a
 harness-validation instance, not a law). Memo: `.omx/research/inc1a_harness_build_20260709.md`. Pointer
 0.19110 UNMOVED · #205 untouched (means).
+
+## FEED-eightfold-apparatus (2026-07-09, #387) — the 8 philosophies made STRUCTURAL: 2 warn-only gates + 5 SEAL standing checks
+**Operator GO "Encode all... configure any hooks or gates as necessary".** Sibling of FEED-eightfold-
+philosophies (the encoding of the 8; this is the apparatus that enforces them). Split: automatable → gates;
+fuzzy-by-nature → SEAL standing checks.
+**P1 gate `check_significance_keys_canonical` (warn-only, `tac.confound_gates.EIGHTFOLD_GATES`)** — every
+relative-significance store key must resolve THROUGH the real `canonicalize_significance_keys` to a HELD DSL
+factory; unresolvable = the duty-to-measure ORPHAN class. **LIVE COUNT 4**: `seg_chroma_boundary_276` (notes
+name held `SegChromaBoundary` → add alias), `seg_down_weight_274` (build/waiver), `latent_table_truncate_
+d18_k90` + `mod32_neutrality_19_ab` (intentional non-factory findings → waiver-on-append). In-row waiver
+`# SIGNIFICANCE_KEY_OK:<rationale>` in notes (JSONL-safe; placeholder rejected).
+**P4 gate `check_witness_control_meters_have_canaries` (warn-only)** — every witness_control
+measurement/detector class ships a canary/positive-control. Name-floor `*(Detector|Alarm|Trend|Plateau|
+Monitor|Observer|Meter)`; `*Gate` DELIBERATELY EXCLUDED (actuator/value-object in this codebase — verified
+not false-flagged). UNCERTAIN (observe/detect/classify + ambiguous name) → opt-in fmtools ADVISORY (#259
+firewall: separate venv/subprocess/fail-open/NEVER-authority; default OFF ⇒ zero per-session cost). **LIVE
+COUNT 1**: `VerdictTrendAlarm` — §4 re-derivation CORRECTED the brief's "passing exemplar" claim: it carries
+NO canary in-module or in tests (sigma_min_plateau DOES: `canary_suite`); disposition = sibling adds control
+or waiver. fmtools live-evidence: `BirthCompletionController→not_meter`, `PolyakTailAverager→meter`
+(debatable ⇒ why advisory-only, heuristic stays floor).
+**P2/P5/P6/P7/P8 → SEAL standing checks** (ORCHESTRATION_LEDGER.md + reusable template
+`.omx/research/crucible_standing_checks_eightfold_20260709.md`): P2 noise-floor-on-every-Δ (routed to #385
+brief spec) · P5 matched-control-on-every-A/B · P6 temporal-section-present · P7 pre-registered-falsifier-
+per-build-item · P8 floor-stated-per-optimized-term. A SEAL is INVALID if any fails.
+**Verification:** 29 tests (`test_eightfold_gates.py`, incl. NO-FAKE synthetic-violator-caught + actuator-
+not-false-flagged); 86 existing confound tests green; ruff F clean; both wired into `preflight_all` warn-only.
+**Triality:** DAG = this FEED. **DSL = N/A** (no new lever — apparatus gates on existing stores/code).
+**Equations = N/A** (PROCESS law, not an S_τ/score law). Memo: `.omx/research/eightfold_apparatus_build_
+20260709.md`. Pointer 0.19110 UNMOVED · #205 untouched (apparatus/means — makes the campaign harder to fool).

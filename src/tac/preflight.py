@@ -6388,6 +6388,22 @@ def preflight_all(
                 strict=(_confound_gate.__name__ in _CONFOUND_STRICT), verbose=verbose
             )
 
+        # 2026-07-09 EIGHTFOLD design-philosophy gates (operator "Encode all"):
+        # P1 (check_significance_keys_canonical) — every relative-significance store
+        # key resolves through canonicalize_significance_keys to a HELD DSL factory
+        # (unresolvable = duty-to-measure orphan); P4
+        # (check_witness_control_meters_have_canaries) — every witness_control
+        # measurement/detector class ships a canary/positive-control before its
+        # readings gate anything. Both WARN-ONLY per the "Strict-flip atomicity
+        # rule" (each has live violations owned by sibling activation_ledger /
+        # witness_control code; each docstring names its strict-flip condition).
+        # Source: .omx/research/design_philosophies_eightfold_20260709.md +
+        # .omx/research/eightfold_apparatus_build_20260709.md.
+        from tac.confound_gates import EIGHTFOLD_GATES as _EIGHTFOLD_GATES
+
+        for _eightfold_gate in _EIGHTFOLD_GATES:
+            _eightfold_gate(strict=False, verbose=verbose)
+
         # #254 self-protect: every heavy witness trainer main() must call the P0 admission
         # guard (a raw >128 GB launch CRASHED the box). WARN-ONLY per the "Strict-flip
         # atomicity rule" (a sibling witness trainer may not yet be wired).
@@ -86660,6 +86676,10 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     # HEAD verification rc=7 + --patch-file intent-manifest for shared hot files).
     # Hardcoded here per the same anti-self-waive design.
     "COMMIT_DISCIPLINE",
+    # Eight design philosophies clause (operator 2026-07-09 "Encode all"; memory
+    # design_philosophies_eightfold_20260709 — P1-P8 + clauses A/B + fmtools #259
+    # availability). Hardcoded here per the same anti-self-waive design.
+    "EIGHTFOLD_CLAUSE",
 )
 _SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
     "Before reporting progress, audit each claim against a tool result"
