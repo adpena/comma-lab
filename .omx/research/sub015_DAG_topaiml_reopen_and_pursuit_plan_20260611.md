@@ -13795,3 +13795,41 @@ number the code has not honored (NO-FAKE). The pre-registered kill-gate (`decoup
   `owed16v2_rebalanced_allocation_measured_no_benefit_20260710` anchor on
   `curvelet_directional_basis_dseg_reduction_v1`). DAG leg = FEED-owed16v2 (same commit). All three
   legs accounted; this block records the DSL disposition explicitly for the per-leg detector.
+
+### FEED-clickpolish-witness-design
+
+**PR128 click-polish → witness (v7.5.2 · v7.5.3/two-trunk · v8) design synthesis**
+(`clickpolish_to_witness_design_20260710.md`, DESIGN-ONLY, `clickpolish-witness-design`). Pointer
+contest-CPU 0.19110 UNMOVED — MEANS.
+
+- **LOCALITY (PROVEN from the forward `levelset_rgb_forward_numpy:748`):** the witness is pair-local on
+  (a) FiLM `code` (2P,32) per-FRAME — `film = code_row @ film.weight.T` touches only that frame's φ→argmax
+  → d_seg (the 600 frame1 rows); (b) ξ `dxi`/`xi_stored` (P,6) per-pair → d_pose. NON-local (weight-click
+  class, matches PR128's rejected weight search): INR trunk weights, T head, palette, MyCar static, b_c
+  global. v8 per-class fields = pair-local WITH a second (class) axis (cross-pair independent; within-pair
+  cross-class competes at argmax → diagonal stays per-pair, sweep (class,dim,δ) across renders).
+- **UNIFY VERDICT (Q3):** #396 `mc_finisher.py` IS the exact-gated accept/reject finisher already (int8
+  mode + SCREEN→CONFIRM-through-R→monotone ratchet + rate-aware ΔS + resume + P9). It does NOT exploit
+  locality (targets SHARED head tensors → 1 candidate/render). Click-polish = #396 + per-pair code target +
+  diagonal measure (per-pair d_seg VECTOR) + per-pair accept (~600× throughput). **RECOMMENDATION: add a
+  pair-local DIAGONAL MODE to #396, do NOT fork `tools/latent_click_polish.py` for the witness** (that stays
+  a SEPARATE borrowed-PR110 bank). One surface, one authority path, one ledger row.
+- **CPU-AXIS (Q5): CLEAN — no violating surface.** byte-close render=numpy fp32 CPU, R=frozen CPU-torch,
+  eval `--device cpu`; harness `SUPPORTED_BACKENDS=("cpu-torch",)`; #396 CONFIRM=cpu-torch, SCREEN=CPU
+  subset. MLX confined to trainer gradient device (never authority). Constraint carried to build: screen on
+  CPU, never MLX.
+- **SIDECAR-FOLD (Q4): LIMITED** — witness carries no PR101-style redundant sidecar; ξ is already ONE folded
+  table (dxi's +3,433 B is genuine high-freq info, not overhead). Deliverable = "born-folded" discipline: any
+  polish output re-encodes into the EXISTING section/grid, never a new section (post-polish section-count ==
+  pre; subsumed by the #385 non-derivability byte-close gate).
+- **EV (Q6, all ESTIMATED; floor unit 8.48e-7 ΔS/flip DERIVED):** TOP = **ξ (dxi) terminal diagonal polish
+  −0.005..−0.017 ΔS** on the banked 0.127 pose floor, rollback-guarded (gradient-free sibling of the #383
+  pose finish); code d_seg polish −0.0003..−0.0015 (witness lane-erasure residual is larger but harder to
+  click than PR128's smooth latents, #141 label-noise floor); v8 per-class −0.0005..−0.002 (gated-on v8
+  byte-close). ALL post-launch terminal-band (4a′ seg / 4c′ pose) — **never blocks pilot/launch**.
+- **BUILD:** (1)[needs-build] #396 pair-local diagonal mode over `code`; (2)[needs-build] harness per-pair
+  d_seg VECTOR; (3)[needs-build] 4c′ ξ diagonal via injected byte-close d_pose measure + rollback vs 0.001610;
+  (4)[READY] register as TOOL + P7 falsifiers + no-new-section gate; (5)[gated-on v8] per-class-per-pair.
+- **equations leg: DEFERRED-to-first-measured-row** (every band ESTIMATED); DSL leg N/A (TOOL not Lever).
+
+**Pointer contest-CPU 0.19110 UNMOVED — MEANS; only a byte-closed `upstream/evaluate.py` n600 row moves it.**
