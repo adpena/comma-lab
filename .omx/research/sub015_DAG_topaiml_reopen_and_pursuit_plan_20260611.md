@@ -14632,3 +14632,56 @@ positive-control sentinel). **Triality:** DAG = THIS FEED; DSL **N/A** (no lever
 landed); equations **N/A** (structural code-fact, not a scored EmpiricalAnchor). Memory:
 [[receiver-consumption-bijection-counted-but-inert-weight-groups]]. Pointer 0.19108282 UNMOVED — this protects a
 FUTURE row from being fake.
+
+
+---
+
+
+### FEED-v752-baseline-launch (2026-07-10) — #205 v7.5.2 BASELINE relaunch LAUNCHED (operator GO), aims to move pointer 0.19108282 [contest-CPU]
+
+**WHY:** operator GO 2026-07-10 — residuals cleared (#409 kill_pgrp sealed, #410 micro-batch verdict NO-GO),
+path GO. T2 council `.omx/research/council_v752_relaunch_shape_concurrent_vs_single_20260710.md` set the shape:
+**CLEAN BASELINE arm** (NOT folded rungs, NOT concurrent A/B — #173 blockers un-cleared so concurrency is
+INFEASIBLE-NOW). The 2 top fire-now rungs (HorizonWeightedMargin 43.8%, StepNativeActivation 31.6%) are
+TERMINAL-BAND A/B forks per their OWN converged-n600 fire criteria, DEFERRED not folded.
+
+**THE CONFIG (sealed v7.5.2 SELF-ORIENT-OFF, the GO'd pointer config):** `experiments/results/__v752_drystart_final__/dry_start_resume/launch.sh`
+AS-SEALED — serial `--accum-pairs 8` (micro-batch REFUSED per #410: structural ValueError under
+`--seg-chroma-boundary-weight` + ~1e-3 GPU drift), `--mod-dim 32 --hidden-dim 96 --n-hidden 4 --activation hosc`
+(β 1.0→3.177), chroma + palette-anchor, lane-render-band, temporal-screw #360, AA-ipe, #121 dseg-aware-taper,
+banked-R1 pose floor (d_pose 0.001610 → contribution 0.127; d_seg the OPEN axis). No speedups the sealed config
+lacked were added.
+
+**RUN-DIR HYGIENE (dry-start artifacts left READ-ONLY):** FRESH well-named dir
+`experiments/results/levelset_v752_baseline_20260710T185913Z/` warm-starts `--resume-from` the HEALTHY
+`dry_start_resume` ep2 checkpoint (`resumed_epoch=2, start_epoch=3, restored_opt=true`). Dropped the dry-start
+`--ckpt-every 1` execution tail → falls back to canonical `--ckpt-every 25` + `--stage-checkpoints` (per-stage +
+periodic intra-stage saves). Neither dry-start validation artifact mutated.
+
+**READINESS GATE passes HONESTLY via the defer hatch** (not `--skip-readiness-gate`): two inline
+`# LAUNCH_READINESS_DEFER:HorizonWeightedMargin=…` / `…StepNativeActivation=…` comments discharge the 2
+blocking rungs (rel_sig ≥ 10%) → `[witness-launch-readiness] PROCEED` (advisory low-EV rungs WARN-only).
+
+**THE 7-LINE VERIFICATION OATH (each checked + result):**
+1. Run-dir hygiene — FRESH dir, resume-from ep2, dry-start left read-only. ✓
+2. Readiness gate — PROCEED (defer-hatch discharges the 2 rungs; not skipped). ✓
+3. Memory preflight — SAFE, projected peak **24.48 GiB** ≤ 89.6 ceiling, self_orient=False. ✓
+4. Governor admission — ADMIT (projected system-used 50.7 GiB ≤ 108.5; OOM preflight headroom 84.3 GiB). ✓
+5. Throughput ACTIVE not flags-only — `custom_grouped_backward active=true` (~17×) AND
+   `fused_r_kernel active=true, forward_bit_identical=true, grad_bit_identical=true` (per-chip parity gate
+   PASSED). Both levers of the ~17× path CONFIRMED active, not silently off. ✓
+6. Durable daemon — spawned via `spawn_durable_daemon.py` (killpg-safe), **pid=88029 pgid=88029 ppid=1**
+   (detached session, survives parent death); registry `actual=LIVE`; resumable + `--ckpt-every 25` +
+   `--stage-checkpoints`. Governed launch auto-started the `memory_blackbox` score-neutral shadow observer. ✓
+7. Liveness by REAL process-tree walk — bash leader 88029 → python trainer 88030 alive; passed the
+   synchronous n600 v0 baseline verdict (**d_seg 0.041123, d_pose 6.50011, implied_S 12.2355** at resumed
+   ep2 — `[macOS-CPU advisory] NON-PROMOTABLE`; per-class d_seg `[.092,.826,.004,1.00,.002]`, movable/lane
+   UNBORN as expected at baseline); then **entered the training loop and is DESCENDING** — seg loss
+   ep3=6.75 → ep4=6.11 → ep5=5.50 → ep8=4.88 (real non-zero, descending; pose=0.0 until pose-finish ep726;
+   eik ~0.03 active) — unambiguously TRAINING, NOT a frozen ep_loss:0.0 spike-guard deadlock. First through-R
+   verdict (d_seg) lands at `--eval-every 25` (ep25). ✓
+
+**Means:** pointer 0.19108282 [contest-CPU] UNMOVED — this is the LAUNCH, not a row; it moves only through a
+byte-closed n600 exact row < 0.19108. Triality: DSL **N/A** (sealed DSL-compiled config, no new lever);
+equations **N/A** (no new measured law — a launch, not a measurement). DAG leg = THIS FEED.
+Memory: [[launch_readiness_gate_config_freshness_naive_launch_20260710]] · council `council_v752_relaunch_shape_concurrent_vs_single_20260710`.
