@@ -58,10 +58,23 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       triply supported: cheaper + dedup-correct + min-dim); §I = P5/P6 standing check + SPEC_v8.1 seal check.
       Recess list 5→7 (R6 lateral-scope, R7 mask-level δ_noise). Serializer-committed, `[no-triality]`.
       NEXT ACTION: **P4 recess (R1–R7 $0 on `gt_n600.npz`) → P5 second red-team.**
-- [ ] **P4 EMPIRICAL RECESS** — v8 rate re-measurements are $0 read-only on `gt_n600.npz` (may re-run to
-      settle a residual-coder disagreement). P-C/P-B are heavy governed n600-through-R (memory-gated, NOT
-      $0, NOT run in recess). No concurrent heavy GPU (box free but the memory-preflight gates P-C/P-B).
-- [ ] **P5 SECOND RED-TEAM → SEAL-TO-RECESS.**
+- [x] **P4 EMPIRICAL RECESS LANDED** (`P4_recess_20260709.md`) — R3/R6/R7 MEASURED n600; R1/R2/R5 consumed
+      from the #386 builder; **R4 STAYS OWED** (`flip_weighted_bc_build_and_gate` not landed → no_offset
+      default binds). Verdicts: **R3** 707/426/2228 confirmed MEMO-SOURCED (F6 closed; provenance nit: code
+      emits horizon S 0.00277 vs ledger 0.0032). **R6 (two layers, harness-consumed):** RATE — F4 resolved,
+      complete 0.0221 INCLUSIVE (residual = full separatrix − poly-cover, lateral boundary risk 0.00023 S =
+      0.6% gap, DROP the under-count open item). d_seg — F4 SHARPENED: reproduced the inc1a-harness
+      generator-only Undriv d_seg 0.1616≈0.162; of its flip mass **97.5% is UNSUPPORTED-COLUMN lateral/side
+      undrivable, 1.1% multi-valued, 1.3% poly-residual** → single-valued horizon is a WEAK d_seg generator;
+      the 1a decoupled Undriv field must NOT be single-valued (else inherits the 0.162 floor). **R7** δ_mask
+      (frame-sampling floor, n600) = **3.5e-6 S** — RETIRES the δ_R=0.0196 borrow (unit category error, ~5600×
+      too conservative); operative floor = max(3.5e-6, in-run control-seed spread). **LOAD-BEARING P5 UPDATE:**
+      corrected rate triple **{dominant 0.061 / COMPLETE-with-corrections 0.135 / residual enemy 0.074}**
+      (de-share −0.00440 + triple-point −0.00102 applied); curve-relative REFUTED ⇒ the 0.074 enemy's SOLE
+      remaining closure = flip-weighted #226 waterfill (r\* uncleanly bounded until 1b/P-C) + lane-generator
+      coverage design item; complete stays 1.14× ABOVE the 0.118 frontier (wash) → v8 rate WIN = DOMINANT-only.
+- [ ] **P5 SECOND RED-TEAM → SEAL-TO-RECESS.** Owed in: consume #386 b_c gate (R4); the corrected triple
+      {0.061/0.135/0.074}; δ_mask replaces δ_R in measure_1a; DROP the F4 under-count open item (R6).
 - [ ] **P6 RECURSIVE SEAL** — 3 consecutive clean rounds, BOTH lenses (finding-disposition VERIFY +
       DEEP-MATH MEAT HUNT: re-derive every law · hunt unconsumed carrier/coder levers · bug-hunt the
       increment-1 config against the real scaffold · fresh-math sweep) via `tac.review_counter` surface
@@ -145,6 +158,23 @@ edge vs 5-per-class-field label tension is the specific residue to test).
 - **argparse-crash values / launch-path≠config-tests** — the increment-1 config MUST compile against the
   REAL scaffold surfaces (DELTA §K, all 8 boundary_math modules on-disk + the DSL Lever factory /
   `lever_registry.completeness()`); config-compilation tests are NOT the launch path (F-1 lesson).
+
+### EIGHTFOLD SEAL standing checks (2026-07-09 operator "Encode all" — run BEFORE every SEAL)
+Template + rationale: `.omx/research/crucible_standing_checks_eightfold_20260709.md`. P1+P4 are warn-only
+preflight gates (`tac.confound_gates.EIGHTFOLD_GATES`); P2/P5/P6/P7/P8 are fuzzy-by-nature → these five
+SEAL checks (this crucible + all future). A SEAL is INVALID if any fails.
+- **P2 noise-floor-on-every-Δ** — every load-bearing measured Δ states its composed noise floor OR is
+  INSTANCE-scoped (single-seed spine ⇒ across-seed variance UNKNOWN). Routed into the #385 brief spec: a
+  noise-floor column beside dedup + min-dim. Absence receipts: OT 0.00314-vs-0.00331 floor-unmeasured, δ_R.
+- **P5 matched-control-on-every-A/B** — both arms named + in-run/matched-compute; borrowed/ancestor
+  baselines REFUSED (a prior-vehicle number is a HYPOTHESIS, not a control). Generalizes L18 + R8 + P3b-F1.
+  (Sister of §I's existing P5/P6 standing-check line.)
+- **P6 temporal-section-present** — the design has a temporal section OR an explicit temporal-N/A
+  derivation (crucible-3 P3 blind-spot: all six seats designed per-frame). First owed: v8 temporal section.
+- **P7 pre-registered-falsifier-per-build-item** — every build item names its kill criterion + threshold vs
+  a MEASURED baseline BEFORE build. Absence receipts: increment-1a falsifier only after red-team.
+- **P8 floor-stated-per-optimized-term** — every optimized term states floor + gap-to-floor; at-floor terms
+  are CLOSED to polish. Receipts: S_floor 0.118, label-noise floor, counted-seed floor.
 
 ## SYNTHESIS HARD REQUIREMENTS (inherited from crucible-1/2 VERBATIM — the stack fails synthesis without these)
 A. **SOLVE-WHERE-SOLVABLE.** b_c tie-calibration SOLVED closed-form (flip-weighted OT/Menon, OUT of the
