@@ -12860,3 +12860,22 @@ DSL trigger matched harness/config vocabulary in the message). DSL leg N/A; equa
 relation — the R chain constants are REUSED from `tac.contest_eval_contract`, already the registered
 authority); DAG leg = FEED-canon-u1 (landed in-commit). Commit omitted `[no-triality]` (should have
 carried it). No DSL/equation owed.
+
+## FEED-negaudit-A (2026-07-09, task #390 NEGATIVE-FINDINGS AUDITOR A — DAG + `.omx/research/*.md`) [$0, register-only, no corpus fix-in-place; pointer 0.19110 UNMOVED — MEANS]
+
+**STORES CONSULTED:** operating_manual §4/§5/§8.4/§8.5 · design_philosophies P9/P10/P11/P12 · verdict_scope_ladder · proxy_suspect_audit_20260709 · adversarial_review_all_negative_findings_20260707 · FEED-fp (in-DAG negatives audit) · confound_hunt_synthesis_20260705. Read all 569 DAG negative-token lines end-to-end + the 188 negative-named research memos (grep-clustered).
+
+**REGISTER LANDED:** `.omx/research/negative_findings_register_20260709/auditor_A_dag_research.md` — 51 distinct negative findings (deduped across ~900 token hits), each with {as-written scope · re-graded scope (ladder) · P9 proxy-tag · P10 constraint-carved · reformulation queue · reactivation flag} + TOP-10 ranked reactivation candidates + counts.
+
+**COUNTS:** 51 distinct findings · **10 MIS-SCOPED** (written broader than measured: rate-DEAD-broad B1, directional-−48%-proxy-as-realized C1, #341-only-full-P C11, analytic-lane-band-post-hoc C14, bit-depth-dead C19, τ-crossover-FLAT-H D6, the guard-confounded eikonal-era D1/D7, taper-#121-instance) · **11+2-class PROXY-SUSPECT** (C1 direct-partition mirage 170–350× off realized · E5 texprox-at-chance · C18 Muon-+8%-borrowed · D1/D2/D3/D7 frozen-guard-instrument + disproven-n24-eikonal-proxy · C20/C21 single-ckpt-τ=1.0 · C6 wrong-lr/n24 activation · CLASS-1 all pre-witness DIRECT-partition d_seg · CLASS-2 the 188 macOS/MPS-era codex substrate rows) · **11 HIGH-reactivation**.
+
+**TOP-3 REACTIVATION (mis-scoped OR proxy-suspect AND on a live v7.5.2/v8/frontier-is-now-d_seg path):**
+1. **C1 directional −48% basis — realized-through-R transfer UNVERIFIED** (a direct-partition PROXY number cited next-run PRIMARY; freq-along STARVED 3.2×). Cheapest decisive re-test: the "$0 directional-axis-reality check" FEED-bk named but never ran clean → single-frame directional-vs-isotropic through the CORRECTED R → n600 lever A/B.
+2. **D1 the EP103-114 viscosity/eikonal NO-GO era KNOWN-TAINTED** (guard-confounded, RETRACTED FEED-06h/06j — measured the legacy spike-guard median-freeze, not the eikonal). Cheapest: the v7 rollback-mode fair test from clean ep100 under the fixed guard + 3-layer immune system (first non-confounded eikonal measurement; re-grades D2/D7).
+3. **B1 "rate DEAD" MIS-SCOPED→FORMULATION** (current-vehicle floor; a smaller-basis vehicle re-opens it — v8 IS that vehicle). Cheapest: the v8 counted-seed byte-close (P-C-owed, build-wave #377) confirming a real archive.zip entropy-coded seed stream < the current rate floor.
+
+**Also HIGH:** C14 analytic-lane-band (mis-read post-hoc-neutral; it's a TRAINING lever, 0.00087) · E5 sR #268 (BUILT, gt_n600_sR.npz ready, NEVER fired at n600) · C11 #341 full-P terminal solve (subset-NO-GO doesn't kill it) · B2 Lever-D (training-outcome reactivation) · D4 micro-batch bounded-n600 A/B (1.56× may be free) · C6 β-anneal/FINER++ n600 · C18 warm-start Muon #270.
+
+**The CLEAN negatives already carved live laws (P10, LOW-reactivation by design):** pose→#238 joint-descent (A) · curve-relative→lane-generator-coverage (B9) · ξ-transport→chart-selection law (B10) · split→joint-witness (C3) · capacity→island-gradient-starvation (C10). Constraint value banked.
+
+**verdict_scope (self):** this audit renders NO new research verdict — every re-grade is a scope OBSERVATION (as-written vs measurement-supported), narrowest-supported per the ladder. `# VERDICT_SCOPE_OK: an audit of scopes issues no rendered kill.` **DSL leg N/A** (no lever/launch/curriculum surface — a read-only register). **equations leg N/A** (no new relation — audits existing anchors' scopes, mutates nothing per Catalog #110/#113). **DAG leg = this FEED.** `[no-triality]`. Pointer 0.19110 UNMOVED — the register is MEANS; it drives re-tests, moves nothing.
