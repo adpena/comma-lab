@@ -14071,3 +14071,25 @@ crucible_v752 launch path + the live run dir `levelset_v752_pilot_20260710T15410
   (the lever's DSL surface is unchanged and correct; the defect was interface plumbing). equations
   leg N/A (no measured law; a crash repaired). verdict_scope: instance — one composed-code interface
   crash, fixed with a both-modes test; not a verdict on any method.
+
+## FEED-clickpolish-n8row (2026-07-10) — FIRST MEASURED exact-eval row BELOW the pointer: 0.1910828 (n8-click candidate, in-container Linux x86_64 CPU, 600 samples) · n600 in flight · pointer 0.19110 NOT YET MOVED (main owns refresh)
+
+- **The row (MEASURED, `upstream/evaluate.py --device cpu`, 600 samples, exact bytes):** candidate sha
+  `ad02b012…` (177,169 B; our frontier + 8 exact-gated ±1 latent clicks) → seg 0.00055961 · pose
+  0.00002942 · rate 0.00471878 → **S = 0.1910828**, i.e. **−1.7e-5 vs the pointer 0.19109982** from ONE
+  ±1 round on 8 pairs. Incumbent components reconstruct in-container to ≈0.1911003 (pointer-consistent
+  to 5e-7 → axis-class equivalence validated). Container: Modal gVisor Linux x86_64, avx512, torch 2.5.1
+  CPU, constriction 0.4.2; same-container selection+eval per the determinism mandate.
+- **Chain greens in-container:** byte-exact round-trip (sha `b46897…`) · evaluator-aligned GT build ·
+  Volume-ledger resume exercised for real · raw custody 3,662,409,600 B exact · full 600-sample eval in
+  **176.3 s** (~30× cheaper than the prior 60–120 min estimate → the whole exact-eval cost model improves).
+- **Validation catches (cheap information, both ledgered + fixed):** `--detach` mandatory for
+  spawn-from-`modal run` (ephemeral-app stop kills the call) · eval runtime tree requires
+  `submission_dir/encoder/` (FECa fec10 decoder re-export) · plus the pre-launch self-catch: full-P
+  batched scorer = the documented n600-verdict-OOM class → fused chunked render+score landed `10a548858`.
+- **n600 in flight:** `fc-01KX6DZWCHNPQ6KN59V2MZ845J` (600 pairs · 2 rounds ±1 · wall-clock cap 4.5 h ·
+  Volume-resumable `n600_r1` · same-container eval). Expected ≈ −0.001 to −0.003 class (PR128 analog).
+  Custody: `experiments/results/clickpolish_pr110_20260710/` + runbook dispatch record.
+- Legs: DSL N/A (search tool) · equations OWED on the n600 row (click-polish RD law + waterline
+  equivalents) · DAG = this FEED. **Pointer 0.19110 UNMOVED in the canonical file — the n8 row + custody
+  are handed to main for pointer refresh + verification (coordinator binding).**
