@@ -123,6 +123,45 @@ _POINTER_JSON = _REPO_ROOT / ".omx" / "state" / "canonical_frontier_pointer.json
 _PTR_STATE: dict = {"checked": 0.0, "sig": None,
                     "data": {"ok": False, "reason": "not yet read"}}
 
+# ── server start-time + code-mtime snapshot (for tools/dashboard_ctl.py auto-reload) ──
+# The WebSocket auto-updates DATA in place, but NEW SERVER CODE (or a front-end asset
+# edit) needs a process RELOAD to take effect. dashboard_ctl.py's ensure-up compares the
+# CURRENT on-disk source mtime against this snapshot (exposed via /healthz `code_mtime`)
+# and does a zero-downtime durable reload when the code has changed since this process
+# started. The snapshot is frozen AT IMPORT so it reflects the code THIS process is
+# actually running.
+_SERVER_START_TS = time.time()
+_SERVER_START_UTC = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(_SERVER_START_TS))
+# Source files whose content is baked into THIS process (the server module + the
+# front-end JS assets it inlines into the served page). A change to any of these
+# requires a process reload to reach the browser — that is exactly what the auto-reload
+# staleness check watches. Kept explicit (not a broad glob) so unrelated edits in tools/
+# never spuriously trigger a dashboard reload.
+_CODE_SOURCE_FILES: tuple[str, ...] = (
+    "dashboard_server.py",
+    "dashboard_flow_client.js",
+    "dashboard_whyhow_client.js",
+)
+
+
+def _code_mtime_now() -> float:
+    """Max mtime over the server's own baked-in source files (0.0 if none resolve).
+
+    Used both to freeze the at-start snapshot and, from dashboard_ctl.py, to detect a
+    code edit since the running server started. Best-effort: a missing sibling asset is
+    skipped, never an error (the server must never crash on a stat)."""
+    here = Path(__file__).resolve().parent
+    newest = 0.0
+    for name in _CODE_SOURCE_FILES:
+        try:
+            newest = max(newest, (here / name).stat().st_mtime)
+        except OSError:
+            continue
+    return newest
+
+
+_CODE_MTIME_AT_START = _code_mtime_now()
+
 
 def frontier_pointer() -> dict:
     """Current contest-CPU frontier from the canonical pointer file (fail-open).
@@ -2183,10 +2222,33 @@ def create_app(cfg: Config) -> Starlette:
         return JSONResponse(data, headers={"Cache-Control": "no-store"})
 
     async def healthz(request):
-        # ungated, reveals nothing sensitive (used by the supervisor + tunnel health)
-        return JSONResponse({"ok": True, "watched": state.watched,
-                             "n_points": len(state.trajectory),
-                             "kind": state.liveness.get("kind")})
+        # ungated, reveals nothing sensitive (used by the supervisor + tunnel health +
+        # tools/dashboard_ctl.py for its status one-liner + auto-reload staleness check).
+        lv = state.liveness or {}
+        return JSONResponse({
+            "ok": True,
+            "watched": state.watched,
+            "watched_dir": state.watched_dir,
+            "n_points": len(state.trajectory),
+            "kind": lv.get("kind"),
+            # process identity + uptime (status one-liner)
+            "pid": os.getpid(),
+            "port": cfg.port,
+            "started_utc": _SERVER_START_UTC,
+            "started_ts": _SERVER_START_TS,
+            "auto_latest": cfg.auto_latest,
+            # code-freshness snapshot: the mtime of the source THIS process is running.
+            # dashboard_ctl compares it to the CURRENT on-disk mtime to trigger a reload.
+            "code_mtime": _CODE_MTIME_AT_START,
+            # last-update age (verdict recency, then log recency) — the "is it moving?"
+            # signal for the status one-liner; None while calibrating / no run.
+            "last_update_age_s": (lv.get("verdict_age_s")
+                                  if lv.get("verdict_age_s") is not None
+                                  else lv.get("log_age_s")),
+            "last_epoch": lv.get("last_epoch"),
+            "next_epoch": lv.get("next_epoch"),
+            "next_eta_s": lv.get("next_eta_s"),
+        })
 
     async def ws_endpoint(ws: WebSocket):
         qk = ws.query_params.get("k")
@@ -4058,6 +4120,26 @@ function nearestPoint(ep){if(!TRAJ.length||ep==null)return null;
   let best=TRAJ[0],bd=Math.abs(TRAJ[0].epoch-ep);
   for(let i=1;i<TRAJ.length;i++){const dd=Math.abs(TRAJ[i].epoch-ep);if(dd<bd){bd=dd;best=TRAJ[i];}}return best;}
 function fmtAge(s){if(s==null)return "?";s=Math.max(0,s|0);if(s<90)return s+"s";let m=s/60;if(m<90)return m.toFixed(1)+"m";return (m/60).toFixed(1)+"h";}
+// #343 verdict-cadence honesty helpers. The verdict-derived panels update on the
+// --eval-every cadence (~25 ep), NOT every WS tick, so a panel showing an OLDER epoch
+// than another is EXPECTED (each source has its own cadence), not frozen/broken. These
+// make that explicit: evalEvery() = the run's verdict cadence in epochs; nextVerdictHint()
+// = "next verdict @ epN (~Tm)"; waitLbl() = the pre-first-verdict empty state, so a
+// warming-up panel says WHY it is blank instead of a bare "no X yet".
+function evalEvery(){var s=(META.schedule||(META.config&&META.config.schedule)||{});
+  return (s&&s.eval_every!=null)?s.eval_every:null;}
+function nextVerdictHint(){if(!LIVE)return "";
+  var ep=(LIVE.next_epoch!=null)?("@ ep"+LIVE.next_epoch):"";
+  var eta=(LIVE.next_eta_s!=null)?("~"+fmtAge(LIVE.next_eta_s)):"";
+  if(!ep&&!eta)return "";
+  return ("next verdict "+ep+(ep&&eta?" (":"")+eta+(ep&&eta?")":"")).trim();}
+function waitLbl(fallback){
+  // A live/warming run with no verdict yet: say we are WAITING (with the epoch it lands),
+  // never a bare "no data" that reads as broken. A missing/stale run keeps the fallback.
+  var warming=!!(META&&META.warming_up), live=LIVE&&(LIVE.kind==="live"||LIVE.kind==="warming");
+  if(warming||live){var ev=evalEvery();
+    return "waiting for first verdict"+(ev!=null?(" @ ep"+ev):"")+"…";}
+  return fallback;}
 // raw-number formatters — NO scientific notation, ever
 function sig(v,n){
   if(v==null||!isFinite(v))return "—";
@@ -4317,6 +4399,10 @@ function drawAll(){
     const gsrc=goalSrcTag(META.goal_src&&META.goal_src.dseg);
     if(g!=null)s.push("goal "+sig(g,4)+(gsrc?" ("+gsrc+")":""));
     else s.push("goal: "+((META.goal_src&&META.goal_src.dseg)||"pending source"));
+    // #343: the verdict cadence — makes clear the sparse panels are WAITING for the next
+    // eval tick (not frozen). Shown here on the primary verdict panel + in the header status.
+    if(!last){const w=waitLbl(""); if(w)s.unshift(w);}
+    const nvh=nextVerdictHint(); if(nvh)s.push(nvh);
     dm.textContent=s.join(" · ")||"log y · auto-fit x";
   }
   updateAria();
@@ -4444,7 +4530,7 @@ function renderMasthead(last){
 function renderClasses(last){
   const box=$("lv_classes"); if(!box)return;
   const ds=last&&last.d_seg_by_class, fl=last&&last.flip_share_by_class;
-  if(!Array.isArray(ds)||ds.length<5){box.innerHTML="<div class='lv-none'>no per-class verdict yet</div>";return;}
+  if(!Array.isArray(ds)||ds.length<5){box.innerHTML="<div class='lv-none'>"+esc(waitLbl("no per-class verdict yet"))+"</div>";return;}
   const dmax=Math.max.apply(null,ds.map(v=>isFinite(v)?v:0),0.0001)||0.0001;
   const fmax=Math.max.apply(null,(fl||[]).map(v=>isFinite(v)?v:0),0.0001)||0.0001;
   let html="<div class='lv-clab'><span><i style='background:var(--lv-seg)'></i>d_seg</span>"+
@@ -4514,7 +4600,7 @@ function renderPose(){
   if(!jb){
     html+="<div class='lv-pnote'>jacobian basin: <b>no probe yet</b> — "+
       "joint pose finish is terminal; readiness rows appear once conditioning begins.</div>";
-    box.innerHTML=html||"<div class='lv-none'>no basin probe yet</div>";
+    box.innerHTML=html||"<div class='lv-none'>"+esc(waitLbl("no basin probe yet"))+"</div>";
     return;
   }
   const sm=jb.median_sigma_min, cond=jb.median_cond, bf=jb.basin_frac, fired=jb.would_have_fired;
@@ -4535,7 +4621,7 @@ function renderHealth(){
   const box=$("lv_health"), meta=$("lv_health_meta");
   if(!box)return;
   const lt=(META.sensors&&META.sensors.loss_terms)||null;
-  if(!lt){box.innerHTML="<div class='lv-none'>no loss row yet</div>";return;}
+  if(!lt){box.innerHTML="<div class='lv-none'>"+esc(waitLbl("no loss row yet"))+"</div>";return;}
   if(meta)meta.textContent="ep"+(lt.ep!=null?lt.ep:"?")+" · batch "+(lt.accum_batch!=null?lt.accum_batch:"?");
   const af=lt.accepted_frac, gn=lt.gnorm, sk=lt.spike_skipped, ws=lt.weights_stepped;
   const hb=lt.hosc_beta, sx=lt.softmax_temp, tot=lt.total;
@@ -4576,7 +4662,7 @@ function renderSys(last){
   // memory rows live on the verdict point (rss/mlx_active/mlx_peak/sys_avail)
   const rss=last&&last.rss_gib, act=last&&last.mlx_active_gib, pk=last&&last.mlx_peak_gib,
         av=last&&last.sys_avail_gib, ca=last&&last.mlx_cache_gib;
-  if(rss==null&&act==null){box.innerHTML="<div class='lv-none'>no memory row yet</div>";return;}
+  if(rss==null&&act==null){box.innerHTML="<div class='lv-none'>"+esc(waitLbl("no memory row yet"))+"</div>";return;}
   // gauge domain: available + peak headroom so bars are comparable
   const dom=Math.max(av||0, pk||0, act||0, rss||0, 1);
   const gauge=(k,v,vpeak,extra)=>{
@@ -4899,7 +4985,7 @@ function render(){
         st.push(s.name+(s.kind&&s.kind!==s.name?" ["+s.kind+"]":"")+(extra?" ("+extra+")":""));
       }});
     if(k==="stale")st.push("no verdict in "+fmtAge(LIVE.verdict_age_s)+" — likely stopped");
-    else if(LIVE.next_eta_s!=null)st.push("next verdict ~"+fmtAge(LIVE.next_eta_s));}
+    else{const nvh=nextVerdictHint(); if(nvh)st.push(nvh);}}
   setTxt("status",st.join(" · "));
   // detail
   let d=[];

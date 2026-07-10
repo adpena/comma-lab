@@ -14755,3 +14755,48 @@ CONTEST CLOSED ⟹ reference point, NOT a race. `reports/latest.md` + focus/next
 real best (were stale at 0.191985); drift-check rc=0. **Triality:** DAG = THIS FEED; DSL **N/A** (apparatus
 config fix, no lever); equations **N/A** (no measured law). The sister marimo #347 commit (6ad67d942) is
 pure-chore [no-triality] — disposition doc only, closed per operator. Pointer 0.19108282 UNMOVED.
+
+### FEED-dash-ctl (2026-07-10, #419 apparatus, dashboard never-go-dead + auto-reload) — hardened + automated the live witness dashboard
+
+MEANS, not the pointer (a viz moves no score) — but robust means: the operator runs it live at
+comma-lab.adpena.com. ROOT CAUSE of the incident it closes: a manual dashboard restart launched from a
+harness Bash tool DIED (SIGURG / sandbox process-group teardown of the detached child) and left the
+dashboard DOWN with nothing watching it — the canonical durable path (`spawn_durable_daemon.py -- .venv/bin/python
+tools/dashboard_server.py --port 8790 --reuse-port`, killpg-safe + start_new_session + VERIFIED-alive) is what
+SURVIVED. Made that path idempotent + automatable so the dashboard can never-go-dead unattended and
+auto-picks-up code edits.
+
+**HARDEN** — new `tools/dashboard_ctl.py ensure-up`: health-first + IDEMPOTENT (healthy+fresh ⟹ NO-OP, never
+disrupts a working server) via the DURABLE path only. Decision (pure, unit-tested): healthy+code-fresh→noop ·
+healthy+code-STALE→zero-downtime `dashboard_reload.py` (SO_REUSEPORT overlap, keeps the tunnel origin) ·
+down/duplicate/unhealthy→durable `spawn_durable_daemon.py` restart (control-plane-exempt admission per
+"guard NEVER kills the control-plane" L42/L43, per-arm `--rss-cap-mb 2500` real safety kept) · ALWAYS verifies
+:8790 answers 200 after acting (LOUD rc≠0 on failure, never a silent down). Defers to a running
+`dashboard_supervisor.py` monitor (self-heal grace before intervening). Preserves the app-layer access key
+across restarts (disclosure hygiene). NEVER touches `train_levelset_witness`.
+
+**AUTOMATE** — (1) self-heal SessionStart hook (`.claude/settings.json`, reuses the existing hook surface, no
+new orchestration layer) runs `dashboard_ctl.py ensure-up --quiet` so a dead/stale dashboard auto-recovers
+with no human (cheap no-op when healthy). (2) AUTO CODE-RELOAD: `tools/dashboard_server.py` now stamps its
+start-time + the mtime of the source THIS process runs (`_CODE_MTIME_AT_START` over server + inlined JS assets)
+into `/healthz`; ensure-up compares it to the on-disk mtime and zero-downtime-reloads when code changed since
+start (a missing field = old server ⟹ one-time adoption reload). No more fragile manual kill.
+
+**POLISH (#343 verdict-cadence honesty)** — the panels read at DIFFERENT epochs (d_seg verdict-cadence vs
+pose-readiness vs training-health) because each source has its OWN cadence, NOT because they are frozen. Added
+JS `nextVerdictHint()` ("next verdict @ epN (~Tm)") to the header status + d_seg panel meta, and `waitLbl()` so
+pre-first-verdict panels say "waiting for first verdict @ ep{eval_every}…" instead of a bare "no X yet".
+
+**SMARTER** — `dashboard_ctl.py status` one-liner (UP/DOWN · which run@dir · ep · last-update age · next-verdict
+ep · pts · code fresh/STALE · proc count · supervisor · tunnel · up-since). Auto-repoint to the newest live run
+is ALREADY built-in (server `auto_latest` spans all arms, newest-mtime wins) — surfaced in status, not rebuilt.
+
+**VERIFY (success proven, not claimed):** ran ensure-up live → detected the running old-code server as stale →
+zero-downtime reload → new server pid 17970 serving `curl :8790/healthz` **HTTP 200** with the new fields
+(code_mtime/started_utc/next_epoch present), single instance, served page carries the #343 helpers; second
+ensure-up = clean NO-OP (idempotent). 20/20 unit tests pass (`tools/tests/test_dashboard_ctl.py`: idempotent-
+when-healthy · restart-when-down · code-staleness · supervisor-defer · status), ruff -F clean, review-gated.
+
+**Triality:** DAG = THIS FEED. DSL **N/A** (dashboard apparatus — no witness lever, not a config-generating
+program). Equations **N/A** (no measured law — an observability tool). Pointer **0.19108282 UNMOVED** (a viz
+moves no score; this is robust MEANS).
