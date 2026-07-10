@@ -14550,3 +14550,21 @@ flag: EthanYangTW has empty `molt`/`pro-molt` repos vs our own `molt` (L36) — 
 #377/#234 · freq-domain+rank-gating → #406/L75 · bitpack/INT4 kernel craft → #406/#252. **Triality:** DSL **N/A**
 (no lever built — leads only); equations **N/A** (nothing measured). Deliverable:
 `.omx/research/pr95_110_authors_github_intake_20260710.md`. Memory: none new (harvest, not a measured law).
+
+### FEED-graphmem-inc2 (2026-07-10, #415 COMPLETE) — graph-memory increment-2: the READ-SIDE goldfish fix, finished
+
+Extends `tac.graph_memory` (#411, the DAG-as-reconstructable-graph) with the three MRAgent-completing pieces the
+operator QUEUED. Committed `f4530ce63` (7 files, +794, 52 tests green, ruff clean). **(1) Auto-build cache
+staleness** — `corpus_sources()`/`corpus_mtime()` in build.py; `load_or_build` now REBUILDS when any corpus source
+(memory files, DAG, ledgers) is newer than the cached graph (was: load-if-exists, could serve a stale graph). Proven
+live: rebuild picked up 8556→8570 nodes as new memory landed. **(2) Seven typed MRAgent query-tools**
+(`query_tools.py`): by_time · by_keywords · by_entity · by_topic · by_decision · neighbors · supersession_chain —
+each a narrow deterministic traversal answering ONE question (the tool-calling QA loop), returning typed QueryHit
+lists not prose. **(3) Obsidian round-trip export** (`obsidian_export.py`): materializes the SYNTHESIZED edges
+(references/supersedes/sister/produces/consumes/blocks/tagged — the ones NOT already `[[wikilinks]]`) back as a
+generated Obsidian-navigable index (memory targets → real `[[wikilinks]]`, so the graph view + backlinks light up);
+written to the rebuildable cache dir, NOT into source memory files; byte-identical idempotent re-export. CLI:
+`--tool <name>`, `--export-obsidian [path]` on `tools/graph_memory_recall.py`. **Triality:** DSL **N/A** (recall
+apparatus, not a witness lever); equations **N/A** (no measured law — this is the READ instrument L83 named).
+Subordinate to the witness line; dissolves the MEMORY.md flat-load cap at the root. Memory:
+[[dag-was-meant-to-be-reconstructable-graph-memory-not-markdown-folder]] · [[papers-checked-mragent-reconstruct-not-retrieve]] · [[L83]].
