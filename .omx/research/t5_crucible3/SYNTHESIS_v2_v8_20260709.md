@@ -32,13 +32,22 @@ reading + arithmetic + grep only. Remaining gap to sub-0.15 = **0.0411 S**; magn
 **verdict_scope discipline:** every negative/dismissal carries `verdict_scope: INSTANCE|FORMULATION|FAMILY`
 (default narrowest — a failed FORMULATION never kills a FAMILY) + a relative-significance note (ΔS/remaining-gap).
 
-**OPERATOR BINDING FOLDED (2026-07-09, `operator_no_duplicate_data_archive_geometry_first_20260709.md`, DAG
-FEED-nodup-geometry-binding):** verbatim *"No duplicate data in archive, remember all falls out from proper
-geometry and math"* + *"All must be taken into consideration in design of v7.5.2 and v8 including recently
-built or to be built."* Folded as a FIRST-CLASS design invariant — (1) the DEDUP AUDIT standing gate (§G);
-(2) geometry-first STRENGTHENS T1 (§A.1 rider — the demoted bulk field WAS duplicate data one layer up); (3)
-the CONSUMED-SURFACES integration clause (§H — reinforces F5). Routed into the SPEC_v8.1 seal checks + the P8
-brief requirements (§G).
+**OPERATOR BINDING FOLDED (2026-07-09, `operator_no_duplicate_data_archive_geometry_first_20260709.md` —
+TWO clauses, DAG FEED-nodup-geometry-binding + FEED-mindim-waterfill-binding):**
+- **Clause A** verbatim *"No duplicate data in archive, remember all falls out from proper geometry and
+  math"* + *"All must be taken into consideration in design of v7.5.2 and v8 including recently built or to
+  be built."* Folded as a FIRST-CLASS design invariant — (1) the DEDUP AUDIT standing gate (§G); (2)
+  geometry-first STRENGTHENS T1 (§A.1 rider — the demoted bulk field WAS duplicate data one layer up); (3)
+  the CONSUMED-SURFACES integration clause (§H — reinforces F5). Routed into the SPEC_v8.1 seal checks + the
+  P8 brief requirements (§G).
+- **Clause B** verbatim *"Lowest param lowest dim representation everywhere always / Or optimal for
+  distortion with reverse waterfill or waterfill."* Folded as the **REPRESENTATION TABLE (§I)** — EVERY
+  carrier/section/lever in the v8 design carries exactly ONE of TWO admissible capacity modes:
+  **GEOMETRIC-MINIMAL** (a derivation or measured instance of why its dim/param count is the minimum) or
+  **KKT-WATERFILLED** (#157/#226 machinery, per-class/margin-aware, with the measured marginal). **An
+  unjustified capacity choice is a FINDING against the design** — §I is P5/P6's standing check. Clause B
+  ALSO strengthens T1 a SECOND time: the bulk SDF field was the HIGHER-DIM representation where the 4-coeff
+  curve sufficed.
 
 ---
 
@@ -153,6 +162,11 @@ field would pay twice for boundaries already carried. Every carrier in the stack
 geometric home (§G dedup audit): G1 = ego-rigid horizon arc; G2 = ground-frame lane centerline; G3 = object
 silhouettes (2 edges, ONE generator — already the de-share design); G4 = static frame0 hood; Road/Undriv
 interiors = COMPLEMENT (no positive generator). A carrier that cannot name its unique home is suspect.
+**Clause-B rider (min-dim, the SECOND independent strengthening of T1):** the bulk SDF field was not only
+duplicate data — it was the HIGHER-DIM representation (a dense field over Road∪Undriv, CONJECTURED 20–50 KB)
+where the GEOMETRIC-MINIMAL 4-coeff deg-3 curve SUFFICES (MEASURED: cubic/quadratic coeffs FROZEN
+|Δ|≈1e-7/6e-5 across 599/600 frames; only the ξ intercept moves). T1 is now triply supported: cheaper
+(MEASURED 0.0032), dedup-correct (clause A), and min-dim (clause B).
 
 The Movable de-share hub (§A.1 v1) is UNCHANGED — and is now recognized as the CURE INSTANCE of the general
 DEDUP AUDIT (§G): the 0.0189 horizon residual that IS Movable px is the exemplar double-count; Movable-first
@@ -498,6 +512,34 @@ built or to be built."* A built-but-unconsumed piece is orphaned signal
 **Any surface NOT consumed above is either N/A (state why) or an orphan (a bug).** The v8 increment-1 design
 consumes all six; the two #386 in-flight builders are the only surfaces whose consumption is
 LANDING-CONDITIONAL (v2 references their landing memos and defaults safe until they land).
+
+## I. THE REPRESENTATION TABLE — min-dim OR waterfilled, nothing else (operator binding clause B; P5/P6 standing check)
+
+**Binding (verbatim):** *"Lowest param lowest dim representation everywhere always / Or optimal for
+distortion with reverse waterfill or waterfill."* Exactly TWO admissible capacity modes for every
+carrier/section/lever: **GEOMETRIC-MINIMAL** (derivation or measured instance that the dim/param count is
+the minimum the geometry demands) or **KKT-WATERFILLED** (#157/#226 machinery, per-class/margin-aware, with
+the measured marginal). **An unjustified capacity choice is a FINDING against the design.** This table is
+the auditable statement; P5/P6 attack any row whose justification is thin.
+
+| # | carrier / section / lever | dim / param count | mode | justification (derivation or measured instance / waterfill marginal) |
+|---|---|---|---|---|
+| I1 | **G1 horizon curve** | **4 coeffs** (deg-3 poly) + ξ intercept (referenced from pose, charged once — §G S1) | GEOMETRIC-MINIMAL | **MEASURED instance:** cubic/quadratic coeffs FROZEN across 599/600 frames (\|Δ\|≈1e-7/6e-5); only the intercept moves ~1.2 px/frame = ego pitch. The horizon IS a low-order curve (single-scale curvelet atom = the codim-1 sparse basis). Deg-4+ adds params with frozen deltas = pure waste; deg-2 loses the measured cubic term. 14.6× MEASURED. |
+| I2 | **G2 lane centerline** | openpilot poly coeffs/lane, GROUND-frame (IPM-quotiented) | GEOMETRIC-MINIMAL | **DERIVED + MEASURED:** the IPM chart absorbs the ego DOF at fit time (N-2 LAW — ξ transport provably non-collapsing, ‖innov_ξ‖₁ ≥ ‖ΔQ‖₁), so the ground-frame coeffs are the residual irreducible curvature evolution — no lower-dim chart exists that retains the lane geometry. d_seg 0.00087 MEASURED at this dim. |
+| I3 | **G3 Movable sites** | **bbox 3.0/frame** sparse sites + Hungarian ξ-track slot IDs | GEOMETRIC-MINIMAL (dominant) | **MEASURED instance:** sparse sites 0.00344 vs region bitmap 0.0532 (15×) at 70% cover — the silhouette's few-parameter generator. The per-frame site COUNT is scene-determined (measured 3.0/frame), not a capacity knob. Uncovered 30% is NOT given more sites — it routes to the waterfilled residual (I7). |
+| I4 | **G4 hood** | 1 static frame0 silhouette + rigid ξ shift (referenced) | GEOMETRIC-MINIMAL | **MEASURED instance:** IoU 0.994 static (#139) — the hood is ego-rigid, so ONE mask + a rigid shift is the exact minimal representation; any per-frame re-encode duplicates a static fact (clause-A violation too). |
+| I5 | **b_c tie bias** | **5 scalars** global; M-b = **1 param/edge** (the flip-density median threshold) | GEOMETRIC-MINIMAL | **DERIVED (S1):** the Laguerre additive weight is the exact 1-D DOF of an argmax tie shift per class-pair; the Hamming-optimal placement of that 1 param is the flip-density MEDIAN. D3's open attack (is a 1-D reduction of a 2-D annulus placement enough?) is EXACTLY a min-dim-vs-need question — #386 measures it. no_offset default = 0 params until measured. |
+| I6 | **pose ξ** | **6-dim** se(3) screw/pair, store-nothing ~1 KB, `delta_ar` coder | GEOMETRIC-MINIMAL | **DERIVED:** d_pose is MSE on the first 6 PoseNet dims — 6 is the scorer-defined intrinsic dim (Chasles: ONE screw is the whole ego motion). delta_ar recode 6.8→2.3 KB is entropy-coding the SAME 6-dim object (MEASURED, d_pose-neutral) — a coder change, not a dim change. Keyframe (884k-dim raw frame0) was the max-dim representation of the same fact = the 0.465-rate submission-killer (NO-GO). |
+| I7 | **residual sidecar at r\*** | admitted-flip set, size = r\*·(complete−dominant) | **KKT-WATERFILLED** | **THE waterfill row (#226):** marginal = `WATERLINE_BYTES_PER_FLIP == 1.27 B/flip` (closed-form KKT break-even, code-verified F7); admits flips by descending net_value/cost until the water level, per-class/margin-aware. DATA (per-flip through-R value) = P-C-owed; until then the DEFAULT complete-lossless is the r=1 endpoint of the SAME waterfill, not a third mode. |
+| I8 | **Lever-2 δ(s) chart** | 2-D (row,col) → **1-D** signed normal offset along arc-length | GEOMETRIC-MINIMAL (CONJECTURED) | **DERIVED dimensional reduction:** residual px live in a thin band around the generator ⇒ the normal offset is a bounded C² 1-D signal (cartoon N-term bound). CONJECTURED ~2–5× until recess R2 measures the δ(s) entropy; the chart degrades where Σ is multi-valued (junctions) — R2 gates the build. |
+| I9 | **counted-seed floor (P-C)** | UNMEASURED (video-derived class-typical paint statistics) | **MUST-BE-WATERFILLED (owed)** | Flat paint (0-param) FAILS at 0.0064 MEASURED ⇒ some seed dim > 0 is needed. The seed's dim/bytes MUST enter via a measured d_seg(seed_bytes) marginal from P-C — a hand-picked texture size would be exactly the unjustified capacity choice clause B forbids. |
+| I10 | **bulk SDF fallback** (`lever_b_levelset_generator`) | dense field over Road∪Undriv (CONJECTURED 20–50 KB) | **NEITHER — which is WHY it is demoted** | The higher-dim representation where I1's 4 coeffs suffice (clause-B rider, §A.1). If P-C fires the fallback, its FIRST deliverable is the d_bulk(B) RD curve = the waterfill justification it currently lacks; it ships ONLY with that curve (never as an unjustified dense field). |
+| I11 | **Stage-A trained fields** (training-time, not archive) | per-carrier field capacity | GEOMETRIC-MINIMAL (targets) / N-A (archive) | Training-time capacity does not ship bytes; the ARCHIVE representation is the generator params (I1–I4). The exact-SDF targets pin each field to reproduce its analytic generator — capacity beyond that is regularization, not rate. Flag for P5: confirm no trained-field bytes leak into the archive (clause-A/§G S-audit). |
+
+**Standing check (routed to P5/P6 + SPEC_v8.1 seal):** any NEW section/lever entering the design must add a
+row here in ONE of the two modes before it can ship; a row with neither a derivation/measured-instance nor a
+measured waterfill marginal is a FINDING. The design already largely embodied clause B (I1 4-coeff horizon ·
+I6 6-dim ξ · I5 1-param/edge median · I8 1-D chart) — this table makes it AUDITABLE.
 
 ## STORES CONSULTED (line)
 

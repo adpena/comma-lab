@@ -48,12 +48,16 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       lateral/multi-valued residual-scope → recess R6. F5 FIXED = owed-#4 corrected (engage-on flag EXISTS
       #383/b617cef52; per-class d_seg-basin conjunct + f_basin + owed-14 is what's owed). F6 FIXED(labeled) =
       707/426/2228 tagged memo-sourced → recess R3. F7 RECORDED (DISSOLVED). F8/F9 CARRIED (HELD). **OPERATOR
-      BINDING FOLDED** (no-duplicate-data + geometry-first + consume-all-built): §G DEDUP AUDIT (7-section
-      pairwise non-derivability gate, Movable-0.0189 + derive-H #257 exemplars, de-share = cure, routed to
-      SPEC_v8.1 seal + P8 brief) + §A.1 geometry-first rider (STRENGTHENS T1: bulk field = duplicate data one
-      layer up) + §H CONSUMED-SURFACES (#383/#386/FusedRKernel/#247/#384). Recess list 5→7 (R6 lateral-scope,
-      R7 mask-level δ_noise). Serializer-committed, `[no-triality]`. NEXT ACTION: **P4 recess (R1–R7 $0 on
-      `gt_n600.npz`) → P5 second red-team.**
+      BINDING FOLDED — BOTH clauses:** CLAUSE A (no-duplicate-data + geometry-first + consume-all-built): §G
+      DEDUP AUDIT (7-section pairwise non-derivability gate, Movable-0.0189 + derive-H #257 exemplars,
+      de-share = cure, routed to SPEC_v8.1 seal + P8 brief) + §A.1 geometry-first rider (STRENGTHENS T1: bulk
+      field = duplicate data one layer up) + §H CONSUMED-SURFACES (#383/#386/FusedRKernel/#247/#384). CLAUSE B
+      (lowest-param/lowest-dim OR waterfilled): §I REPRESENTATION TABLE — 11 rows, each {dim/params ·
+      GEOMETRIC-MINIMAL-with-derivation/measured-instance OR KKT-WATERFILLED-with-measured-marginal};
+      unjustified capacity = a FINDING; bulk-SDF fallback = NEITHER mode (T1 strengthened a SECOND time —
+      triply supported: cheaper + dedup-correct + min-dim); §I = P5/P6 standing check + SPEC_v8.1 seal check.
+      Recess list 5→7 (R6 lateral-scope, R7 mask-level δ_noise). Serializer-committed, `[no-triality]`.
+      NEXT ACTION: **P4 recess (R1–R7 $0 on `gt_n600.npz`) → P5 second red-team.**
 - [ ] **P4 EMPIRICAL RECESS** — v8 rate re-measurements are $0 read-only on `gt_n600.npz` (may re-run to
       settle a residual-coder disagreement). P-C/P-B are heavy governed n600-through-R (memory-gated, NOT
       $0, NOT run in recess). No concurrent heavy GPU (box free but the memory-preflight gates P-C/P-B).
@@ -104,11 +108,11 @@ edge vs 5-per-class-field label tension is the specific residue to test).
    nothing (~1 KB); any keyframe lineage MUST charge the counted-keyframe rate (P-7 lineage tag).
 6. **MODAL ≤$20 HARD CAP (#381, 2026-07-09):** exact-eval rows (paired CPU+CUDA on byte-closed candidates)
    + owed CPU-torch n600 verdict queue. Witness training is MLX-local, NOT Modal. Spend to BUY exact rows.
-7. **NO DUPLICATE DATA + GEOMETRY-FIRST + CONSUME-ALL-BUILT (2026-07-09, `operator_no_duplicate_data_
-   archive_geometry_first_20260709.md`, DAG FEED-nodup-geometry-binding):** *"No duplicate data in archive,
-   remember all falls out from proper geometry and math"* + *"All must be taken into consideration in design
-   of v7.5.2 and v8 including recently built or to be built."* FOLDED into P3b `SYNTHESIS_v2_v8` as a
-   FIRST-CLASS invariant: (a) §G DEDUP AUDIT standing gate — enumerate every archive section, prove pairwise
+7. **CLAUSE A — NO DUPLICATE DATA + GEOMETRY-FIRST + CONSUME-ALL-BUILT (2026-07-09, `operator_no_duplicate_
+   data_archive_geometry_first_20260709.md`, DAG FEED-nodup-geometry-binding):** *"No duplicate data in
+   archive, remember all falls out from proper geometry and math"* + *"All must be taken into consideration
+   in design of v7.5.2 and v8 including recently built or to be built."* FOLDED into P3b `SYNTHESIS_v2_v8` as
+   a FIRST-CLASS invariant: (a) §G DEDUP AUDIT standing gate — enumerate every archive section, prove pairwise
    non-derivability (no byte reconstructible from {other sections + free rule-118 generator}); Movable-straddle
    0.0189 + derive-H #257 are the exemplars, de-share = cure instance, audit = general gate; routed into
    SPEC_v8.1 seal checks + the P8 brief (#385) + any v7.5.2 byte-close claim. (b) geometry-first STRENGTHENS
@@ -116,6 +120,19 @@ edge vs 5-per-class-field label tension is the specific residue to test).
    state its UNIQUE geometric home). (c) §H CONSUMED-SURFACES integration clause — #383 pose-gate (BUILT,
    reinforces F5), #386 flip-b_c/de-share/curve-relative (in flight), FusedRKernel #348, #247 duty-to-measure,
    #384 dry-start; built-but-unconsumed = orphaned signal.
+8. **CLAUSE B — LOWEST-PARAM/LOWEST-DIM OR WATERFILLED (2026-07-09, same memory file, DAG
+   FEED-mindim-waterfill-binding):** *"Lowest param lowest dim representation everywhere always / Or optimal
+   for distortion with reverse waterfill or waterfill."* FOLDED into P3b `SYNTHESIS_v2_v8` §I —
+   **REPRESENTATION TABLE**: every carrier/section/lever carries exactly ONE of TWO admissible capacity
+   modes, {GEOMETRIC-MINIMAL (derivation or measured instance of the dim minimum) · KKT-WATERFILLED
+   (#157/#226, per-class/margin-aware, measured marginal)}; **an unjustified capacity choice is a FINDING**.
+   11 rows: G1 horizon 4-coeff (frozen-coeff MEASURED) · G2 lane ground-frame (N-2 LAW) · G3 sparse sites ·
+   G4 static hood · b_c 1-param/edge median · pose 6-dim se(3) screw · residual-at-r\* = THE waterfill row
+   (1.27 B/flip) · δ(s) 1-D chart (R2-gated) · counted-seed MUST-be-waterfilled (P-C) · bulk-SDF fallback =
+   NEITHER (why it is demoted; d_bulk RD curve = its only admission path) · Stage-A fields N/A-archive.
+   STRENGTHENS T1 a SECOND time (bulk field = higher-dim where 4 coeffs suffice ⇒ T1 triply supported:
+   cheaper + dedup-correct + min-dim). §I is a P5/P6 STANDING CHECK + a SPEC_v8.1 seal check (new
+   sections/levers must add a justified row before shipping).
 
 ## STANDING FAILURE-MODE CHECKS FOR THIS CRUCIBLE (crucible-2 known failure modes, carried)
 - **numbered-cross-ref drift** — SPEC_v8 §1 "one field per adjacency EDGE" (41 edges) vs per-CLASS table
@@ -168,9 +185,10 @@ FAILURES + 1 gap. **P3b LANDED** (`SYNTHESIS_v2_v8_20260709.md`, SUPERSEDES the 
 · 2 CARRIED. F1 = 1a REDEFINED (paint-free MASK partition screen + matched CONTROL + pre-registered kill;
 through-R moves to 1b). F2 σ_cc′ dropped from 1a; F3 b_c split M-a/M-b (#386 gates both, no_offset default);
 F4 single-valued horizon → recess R6; F5 engage-on flag EXISTS (#383); F6 memo-tag → recess R3. OPERATOR
-BINDING (no-dup-data + geometry-first + consume-all-built) folded as §G DEDUP AUDIT + §A.1 rider + §H
-CONSUMED-SURFACES + ledger binding #7. Recess 5→7. NEXT ACTION: **P4 recess (R1–R7 $0 on gt_n600.npz) → P5
-second red-team.**
+BINDING folded BOTH clauses: A (no-dup-data + geometry-first + consume-all-built) = §G DEDUP AUDIT + §A.1
+rider + §H CONSUMED-SURFACES (ledger #7); B (lowest-param/lowest-dim OR waterfilled) = §I REPRESENTATION
+TABLE, 11 rows, two admissible modes only, unjustified capacity = FINDING, T1 triply supported (ledger #8).
+Recess 5→7. NEXT ACTION: **P4 recess (R1–R7 $0 on gt_n600.npz) → P5 second red-team.**
 
 [SUPERSEDED P0-line] Crucible-2 SEALED (v7.5.2 SYNTHESIS_v3 = the
 baseline v8 must beat/compose). v8 rate ledger MEASURED: dominant 0.061 (1.9× < frontier) / complete 0.140
