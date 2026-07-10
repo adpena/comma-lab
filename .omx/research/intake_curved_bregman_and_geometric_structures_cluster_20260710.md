@@ -86,6 +86,25 @@ matvecs/query. Big gains on ILL-CONDITIONED problems. Affine invariance = the Go
   anisotropic head-offset; exact through-R measurement stays authority. Do NOT build without the check +
   operator GO. Owner: #288/#341/#396.
 
+## Papers #7 + #8 — Fisher-Rao distance bounds + Bregman MATRIX divergences (metrics on the Fisher/Hessian)
+- **#7 Nielsen, "Approximation and bounding techniques for the Fisher-Rao distances" (arXiv 2403.10089, 2024).**
+  The Fisher-Rao distance = geodesic length in the Fisher metric = the INTRINSIC distance-to-boundary of
+  which our first-order **margin** is the linearization. Key for us: the paper gives **tight computable
+  upper bounds WHEN the Fisher is a Hessian metric** — ours IS (logsumexp), so a principled distance-to-flip
+  is actually calculable. Also introduces the **Birkhoff/Hilbert projective-cone distance** (a metric on the
+  positive cone).
+- **#8 (ResearchGate, 403'd — topic-only) "Bregman MATRIX divergences" (LogDet/von Neumann/Burg on PSD
+  matrices).** The divergence geometry ON the space of Fisher/Hessian matrices (all PSD). Same object as
+  #7's Hilbert-cone metric.
+- **Connection:** both are metric geometry ON the Fisher/Hessian matrices themselves — relevant to (a) the
+  anisotropic-Hessian preconditioning (paper #6, the build in flight), (b) the low-rank pose-section codec
+  (#140, a matrix), (c) a refined distance-to-boundary. Reinforce §5/§7 of
+  `docs/paper/information_geometric_foundations.md` WITHOUT changing the thesis.
+- **GATED thread:** Fisher-Rao geodesic distance-to-flip (via the Hessian-metric tight bounds) as a
+  refinement of the first-order margin in margin-saliency (#141) / S_R (#268). Held, gated on a $0 measured
+  check it beats the plain margin. Same disposition as the Cramér-Rao flip-risk thread
+  ([[intake_fisher_is_loglik_curvature_at_argmax_20260710]]). Do NOT build speculatively.
+
 ## Honest verdict + routing
 - **Bank** (this note): the cluster is the rigorous SPINE — cite Nielsen (curved Bregman = witness on a
   non-affine chart; head-offset = Bregman projection) + Goldman (dually-flat = affine (G,X)-structure;
