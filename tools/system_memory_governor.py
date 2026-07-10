@@ -69,6 +69,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from tac.jsonl_store import append_locked_jsonl
+
 _TOOLS = Path(__file__).resolve().parent
 _REPO_ROOT = _TOOLS.parent
 if str(_TOOLS) not in sys.path:
@@ -1700,21 +1702,16 @@ def select_band_run(jobs: Sequence[TrackedJob]) -> TrackedJob | None:
 
 
 def append_band_row(row: dict, ledger_path: Path = _BAND_LEDGER) -> None:
-    """fcntl-locked JSONL telemetry append (canonical .omx/state store pattern)."""
+    """fcntl-locked JSONL telemetry append via the canonical .omx/state helper
+    (tac.jsonl_store.append_locked_jsonl; see
+    .omx/research/fcntl_lock_canonicalization_plan_20260710.md Batch 1). The
+    ``OSError`` guard is preserved verbatim — telemetry must never take down the governor."""
     import datetime as _dt
-    import fcntl
 
     row = dict(row)
     row.setdefault("ts", _dt.datetime.now(_dt.UTC).isoformat())
-    ledger_path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with open(ledger_path, "a", encoding="utf-8") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            try:
-                f.write(json.dumps(row, sort_keys=True) + "\n")
-                f.flush()
-            finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        append_locked_jsonl(ledger_path, row)
     except OSError as exc:  # telemetry must never take down the governor
         print(f"[system-governor] WARNING: band telemetry append failed: {exc}", file=sys.stderr)
 

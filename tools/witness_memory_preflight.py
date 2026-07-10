@@ -43,6 +43,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from tac.jsonl_store import append_locked_jsonl
+
 # ── MEASURED constants (2026-07-02 ledger) ─────────────────────────────────────────────────────
 CF_PER_PAIR_GIB_REF = 0.072          # cf_mx_cache active per pair @ REF_PIXELS, REF_IN_FEAT, self-orient
 REF_PIXELS = 384 * 512
@@ -365,21 +367,15 @@ def config_hash_from_launch_sh(path: Path) -> str:
 
 
 def append_ledger_row(row: dict, ledger_path: Path | None = None) -> dict:
-    """fcntl-LOCK_EX append of one JSON line (canonical .omx/state JSONL store pattern)."""
+    """fcntl-LOCK_EX append of one JSON line via the canonical .omx/state helper
+    (tac.jsonl_store.append_locked_jsonl; see
+    .omx/research/fcntl_lock_canonicalization_plan_20260710.md Batch 1)."""
     import datetime as _dt
-    import fcntl
 
     row = dict(row)
     row.setdefault("ts", _dt.datetime.now(_dt.UTC).isoformat())
     ledger_path = Path(ledger_path if ledger_path is not None else LEDGER_PATH)
-    ledger_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(ledger_path, "a", encoding="utf-8") as f:
-        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-        try:
-            f.write(json.dumps(row, sort_keys=True) + "\n")
-            f.flush()
-        finally:
-            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    append_locked_jsonl(ledger_path, row)
     return row
 
 
