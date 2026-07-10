@@ -1723,6 +1723,35 @@ def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,  # noqa: N802
                  notes="all-class directional tangent basis (was OFF: weight 0)")
 
 
+def TextureTrunk(band_hi: float = 8.0, annulus_power: float = 0.0,  # noqa: N802 — #395 P0 arch lever
+                 coeff_scale: float = 0.02, window: int = 0) -> Lever:
+    """#395 P0 — the band-designed per-class STATIONARY texture trunk (T of W=(G, ξ, T)).
+
+    Turns ON a SEPARATE tiny texture trunk whose BASIS is texture-native: a fixed rule-118 Gabor bank
+    pinned to the MEASURED SegNet stem pass-band ([period-4 Nyquist .. ``band_hi`` render-px];
+    ``tac.through_r.stem_perception`` / ``.omx/research/segnet_texture_perception_20260710.md``), per-
+    class fitted coefficients (F·K·3+K·3 = 375 counted at the default band; rate ~2.5e-4 S uncoded),
+    PLACED through the partition softmax masks, trained JOINTLY through the seg loss (the #300 gradient-
+    through invariant). DECOUPLES texture from the partition trunk G (P12 antagonism: G wants smooth
+    off-boundary, T wants in-region oscillation) — G's ``out_sdf``/``out_tex`` are untouched.
+
+    ``annulus_power`` >0 attenuates texture near the decision boundary (a prior; the joint loss is the
+    primary guard). ``window`` = optional warm-start epochs when this rides a ``--resume-from`` of a
+    converged partition trunk (the grokking-timing deployment: a fresh trunk beside a converged G risks
+    delayed generalization — see ``.omx/research/texture_trunk_p0_design_20260710.md`` §training-
+    dynamics). Default ``window=0`` = a full-run-from-scratch arch config (NOT a warm-start isolation
+    arm). Module: ``tac.boundary_math.texture_trunk``. The BYTE-designed sister of ``out_tex`` for the
+    matched-bytes A/B (linear head vs widened MLP head vs texture trunk)."""
+    return Lever("texture_trunk",
+                 overrides={"--texture-trunk": True,
+                            "--texture-trunk-band-hi": float(band_hi),
+                            "--texture-trunk-annulus-power": float(annulus_power),
+                            "--texture-trunk-coeff-scale": float(coeff_scale)},
+                 epochs_delta=int(window),
+                 notes="band-designed per-class stationary texture trunk (stem-Nyquist band); "
+                       "decouples T from the partition trunk; counted coeffs only (bank rule-118 free)")
+
+
 def TauFrozen(value: float = 0.05, window: int = 100) -> Lever:  # noqa: N802 — A1b isolation
     """A1b: freeze tau (start==end) to isolate an l7 effect from the tau anneal.
 

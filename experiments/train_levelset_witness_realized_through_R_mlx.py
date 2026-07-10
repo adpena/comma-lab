@@ -725,6 +725,13 @@ def _build_resume_state_arrays(
     out["__cfg_film_per_layer"] = np.asarray(int(bool(getattr(args, "film_per_layer", False))))
     out["__cfg_film_concat_code"] = np.asarray(int(bool(getattr(args, "film_concat_code", False))))
     out["__cfg_film_stiefel"] = np.asarray(int(bool(getattr(args, "film_stiefel", False))))
+    # TEXTURE TRUNK (#395): texture_trunk adds params (tex_trunk.w_tex/bias); band_hi changes the FIXED
+    # bank shape (F) => the resume MUST rebuild with the same band or model.update silently drops/
+    # mis-shapes the trained coeffs. These provenance scalars cost ZERO archive bytes (resume sidecar).
+    out["__cfg_texture_trunk"] = np.asarray(int(bool(getattr(args, "texture_trunk", False))))
+    out["__cfg_texture_trunk_band_hi"] = np.asarray(float(getattr(args, "texture_trunk_band_hi", 8.0)))
+    out["__cfg_texture_trunk_annulus_power"] = np.asarray(float(getattr(args, "texture_trunk_annulus_power", 0.0)))
+    out["__cfg_texture_trunk_coeff_scale"] = np.asarray(float(getattr(args, "texture_trunk_coeff_scale", 0.02)))
     # SPIKE-GUARD running-median window (the last <=50 batch losses). It GATES step-skipping
     # (loss > spike_factor * median => the optimizer.update is skipped), so it is part of the
     # weight trajectory: a resume with an EMPTY window (median None => never skips) would diverge
@@ -1231,6 +1238,12 @@ def build_levelset_rgb_witness(
     palette_init_logit: np.ndarray | None = None,
     film_per_layer: bool = False,
     film_concat_code: bool = False,
+    texture_trunk: bool = False,
+    texture_trunk_band_hi: float = 8.0,
+    texture_trunk_annulus_power: float = 0.0,
+    texture_trunk_coeff_scale: float = 0.02,
+    render_h: int = 384,
+    render_w: int = 512,
 ):
     import mlx.core as mx
     import mlx.nn as nn
@@ -1303,6 +1316,20 @@ def build_levelset_rgb_witness(
                     t = (k / max(n_classes - 1, 1)) * 2.0 - 1.0
                     pal[k] = np.array([t, -t, 0.5 * t], np.float32) * 2.0
             self.palette = mx.array(pal)
+            # TEXTURE TRUNK (#395, P0): a SEPARATE band-designed per-class stationary texture trunk T.
+            # DEFAULT-OFF => attribute not set => model.parameters()/EMA/ckpt/byte-close BYTE-IDENTICAL
+            # (getattr(...,'tex_trunk',None) is None in _compose_rgb => the branch is skipped). ON =>
+            # a FIXED rule-118 Gabor bank (frozen buffer, not counted) + tiny fitted W_tex/bias
+            # (counted), added to the SAME pre-sigmoid term as out_tex, PLACED by the softmax masks,
+            # trained JOINTLY through the seg loss (the #300 gradient-through invariant). The bank band
+            # is pinned to the MEASURED stem pass-band (tac.through_r.stem_perception).
+            if bool(texture_trunk):
+                from tac.boundary_math.texture_trunk import TextureBandSpec, make_texture_trunk_mlx
+                _spec = TextureBandSpec(band_hi=float(texture_trunk_band_hi))
+                self.tex_trunk = make_texture_trunk_mlx(
+                    int(render_h), int(render_w), _spec, n_classes=int(n_classes),
+                    annulus_power=float(texture_trunk_annulus_power),
+                    coeff_scale=float(texture_trunk_coeff_scale), seed=0)
 
         def _act(self, u):
             if self.activation == "wire":
@@ -1344,6 +1371,11 @@ def build_levelset_rgb_witness(
             phi = self.out_sdf(h)                                   # (..., K)
             tex = self.out_tex(h)                                   # (..., 3)
             soft = mx.softmax(phi / self.softmax_temp, axis=-1)     # (..., K)
+            # TEXTURE TRUNK (#395): ADD the band-designed per-class texture, PLACED by the SAME masks.
+            # DEFAULT-OFF (attr absent) => None => byte-identical skip. ON => a gradient-through addend.
+            _tt = getattr(self, "tex_trunk", None)
+            if _tt is not None:
+                tex = tex + _tt(soft)                              # (..., 3) additive pre-sigmoid
             base = soft @ self.palette                             # (..., 3) class color (SDF-pinned)
             rgb = mx.sigmoid(base + tex) * 255.0                   # POSE-LEGAL (texture carries pose)
             if not self.chroma:
@@ -3368,6 +3400,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         chroma=args.chroma, palette_init_logit=palette_init,
         film_per_layer=bool(getattr(args, "film_per_layer", False)),
         film_concat_code=bool(getattr(args, "film_concat_code", False)),
+        texture_trunk=bool(getattr(args, "texture_trunk", False)),
+        texture_trunk_band_hi=float(getattr(args, "texture_trunk_band_hi", 8.0)),
+        texture_trunk_annulus_power=float(getattr(args, "texture_trunk_annulus_power", 0.0)),
+        texture_trunk_coeff_scale=float(getattr(args, "texture_trunk_coeff_scale", 0.02)),
+        render_h=int(args.render_h), render_w=int(args.render_w),
     )
     mx.eval(model.parameters())
     # #218 facet-1a — fixed simplex-ETF head (Yang et al. 2022, neural-collapse optimal). Replaces the
@@ -7275,6 +7312,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _hint.append("add --film-per-layer")
             if _ckpt_concat and not bool(getattr(args, "film_concat_code", False)):
                 _hint.append("add --film-concat-code")
+            if bool(int(resume_cfg.get("__cfg_texture_trunk", 0) or 0)) and not bool(
+                    getattr(args, "texture_trunk", False)):
+                _bh = float(resume_cfg.get("__cfg_texture_trunk_band_hi", 8.0) or 8.0)
+                _hint.append(f"add --texture-trunk --texture-trunk-band-hi {_bh}")
             raise ValueError(
                 f"--resume-from {rp}: the checkpoint carries {len(_missing_in_model)} trained param(s) the "
                 f"rebuilt model has NO slot for (first few: {_missing_in_model[:6]}) -> model.update would "
@@ -10680,6 +10721,28 @@ def main(argv: list[str] | None = None) -> int:
                     "code-injection route (folded concat; identity at init). +~12k params. Same mod_dim "
                     "rank ceiling as A1 (cannot raise PR(M) above rank(codes)); use --film-stiefel for "
                     "the byte-free rank fix. Default OFF.")
+    # TEXTURE TRUNK (#395, P0) — a band-designed per-class STATIONARY texture trunk T of W=(G,ξ,T).
+    # Default OFF => the submodule is NOT created => model.parameters()/EMA/ckpt/byte-close are
+    # BYTE-IDENTICAL to the pre-trunk witness (the film_per_layer idiom). ON => adds a tiny
+    # (F·K·3 + K·3 = 375 default) fitted coefficient set on a FIXED rule-118 Gabor bank pinned to the
+    # MEASURED stem pass-band [period-4 Nyquist .. band-hi], PLACED through the partition softmax masks,
+    # trained JOINTLY through the seg loss (the #300 gradient-through invariant; NOT an injected addend).
+    # Module: tac.boundary_math.texture_trunk. See .omx/research/texture_trunk_p0_design_20260710.md.
+    ap.add_argument("--texture-trunk", action="store_true",
+                    help="#395 P0: ADD the band-designed per-class stationary texture trunk (T). Its "
+                    "coeffs W_tex feed the SAME pre-sigmoid term as out_tex, blended by the partition "
+                    "softmax masks. Default OFF = byte-identical to the pre-trunk witness.")
+    ap.add_argument("--texture-trunk-band-hi", type=float, default=8.0,
+                    help="#395: the texture-trunk pass-band CEILING in render-px (default 8.0 ≈ 2× the "
+                    "stem Nyquist period-4; period>ceiling reads flat = palette's DC job). Clause-B: the "
+                    "bank support is the MEASURED stem transfer pass-band, never a guess.")
+    ap.add_argument("--texture-trunk-annulus-power", type=float, default=0.0,
+                    help="#395: margin-aware annulus attenuation power (0.0=OFF/no attenuation). >0 "
+                    "attenuates texture near the decision boundary (softmax peak → 1/K) where injecting "
+                    "texture flips argmax (Unit A). A prior; the joint seg-loss is the primary guard.")
+    ap.add_argument("--texture-trunk-coeff-scale", type=float, default=0.02,
+                    help="#395: deterministic init scale of the trunk coefficients (~‖out_tex‖). Texture "
+                    "starts as a faint perturbation and grows under the joint seg gradient.")
     ap.add_argument("--film-rank-floor-weight", type=float, default=0.0,
                     help="LEVER-A3 [DOMINATED by --film-stiefel; NOT recommended -- review FEED-ht/M1]: "
                     "weight of a SOFT participation-ratio FLOOR penalty relu(target-PR) on M=film(code). "
