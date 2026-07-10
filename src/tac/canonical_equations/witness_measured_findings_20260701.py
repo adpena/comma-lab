@@ -348,14 +348,43 @@ def build_curvelet_directional_basis_dseg_reduction_v1() -> CanonicalEquation:
                             "run the queued ON-vs-OFF A/B when the machine is single-workload; Δ(OFF-ON) through-R n600 = realized directional contribution"),
         empirical_verification_status="ASSUMED_AWAITING_VERIFICATION",
     )
+    # owed-16 MEASURED (2026-07-10, supersedes the blocked anchor above, APPEND-ONLY): the A/B RAN.
+    # Bounded warm-start ep650->700 from mod32cap BEST, identical config except the 16 directional
+    # input channels, seed 0, through-R n600 CPU-torch verdicts [macOS-CPU advisory, NON-PROMOTABLE].
+    # Matched clean cells (no resume either arm): ep650 delta(OFF-ON) = -0.000089 (-1.39% of ON),
+    # ep675 delta = -0.000015 (-0.35%); OFF ep700 0.004181 (ON ep700 resume governor-blocked, 6x REFUSE).
+    # OFF marginally BETTER at every cell => realized directional contribution ~ ZERO at this
+    # formulation; the -48% direct-partition advisory (predicts OFF ~ +100% of ON) is NOT REALIZED
+    # (>70x separation from observed |delta|). Measured live RAM: ON RSS ~67 GiB vs OFF ~10 GiB.
+    # Scope FORMULATION: fine-tune marginal from a self-orient-trained parent; from-scratch NOT covered.
+    anchor_owed16_measured = EmpiricalAnchor(
+        anchor_id="owed16_realized_transfer_measured_zero_20260710",
+        measurement_utc="2026-07-10T09:58:11Z",
+        inputs={"ab": "self_orient_ON_vs_OFF", "warm_start": "mod32cap_ep650_BEST_weights_only",
+                "verdict": "through_R_n600_cpu_torch", "n": 600, "seed": 0,
+                "formulation": "bounded_warm_start_fine_tune_ep650_to_700"},
+        predicted_output={"dseg_reduction_fraction": -0.48, "axis": "direct_partition_advisory"},
+        empirical_output={"realized_dseg_reduction_fraction_ep675": 0.0035,
+                          "note": "sign POSITIVE = ON slightly WORSE; |delta| <= 1.4% across cells = INSTANCE noise",
+                          "matched_cells_delta_off_minus_on": {"ep649": -0.000256, "ep650": -0.000089, "ep675": -0.000015},
+                          "on_best": {"epoch": 675, "d_seg": 0.004259}, "off_best": {"epoch": 700, "d_seg": 0.004181},
+                          "live_rss_gib": {"on": 67.3, "off": 10.2},
+                          "on_ep700_cell": "BLOCKED (resume projects 93.8 GiB > idle headroom; 6x governed REFUSE)"},
+        residual=0.4835,
+        source_artifact=".omx/research/owed16_verdict_20260710.json",
+        measurement_method="matched_pair_channel_ablation_warm_start_through_R_n600_verdicts",
+        provenance=_sidecar(".omx/research/owed16_bounded_ab_and_drystart_20260710.md",
+                            "only uncovered reformulation = from-scratch matched pair; fix freq-along 3.2x starvation BEFORE any directional re-test"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
     return CanonicalEquation(
         equation_id="curvelet_directional_basis_dseg_reduction_v1",
-        name="All-class directional (curvelet) basis d_seg reduction (circular-GT, self-orient UNVERIFIED)",
+        name="All-class directional (curvelet) basis d_seg reduction (circular-GT; realized transfer MEASURED ~0 at warm-start formulation)",
         one_line_summary=(
-            "Curvelet all-class directional basis: -48% d_seg vs isotropic (basis-match PRIOR to capacity); "
-            "⚠ n96 circular-GT, realized self-orient UNVERIFIED."
+            "Directional basis -48% d_seg is DIRECT-PARTITION only; owed-16 A/B measured realized-through-R "
+            "transfer ~0 at warm-start formulation (|delta|<=1.4%) at ~47 GiB RAM; from-scratch uncovered."
         ),
-        latex_form=r"\Delta d_{seg}^{curvelet} / d_{seg}^{iso} = -0.48\ \ (\text{n96 circular-GT; self-orient UNVERIFIED})",
+        latex_form=r"\Delta d_{seg}^{curvelet} / d_{seg}^{iso} = -0.48\ (\text{direct-partition});\ \approx 0\ (\text{realized-through-R warm-start, owed-16})",
         python_callable_module_path=(
             "tac.canonical_equations.witness_measured_findings_20260701:predict_curvelet_dseg_reduction"
         ),
@@ -363,13 +392,22 @@ def build_curvelet_directional_basis_dseg_reduction_v1() -> CanonicalEquation:
             "measurement_axis": [_ADVISORY],
             "n": 96,
             "gt": "circular_synthetic_NOT_real_n600",
-            "self_orient": "UNVERIFIED",
-            "caveat": "NOT an n600 realized-through-R self-orienting number; -48% is on synthetic circular GT with an oracle orientation; do NOT consume as a realized lever until re-measured (#185 ladder A/B)",
+            "self_orient": "realized_transfer_MEASURED_ZERO_at_warm_start_formulation_owed16_20260710",
+            "caveat": (
+                "-48% holds ONLY on the direct-partition advisory axis (synthetic circular GT, oracle "
+                "orientation); owed-16 matched-pair A/B measured realized-through-R n600 transfer ~0 at "
+                "bounded warm-start formulation (|delta| <= 1.4% of ON, OFF marginally better, ~47-57 GiB "
+                "RAM tax). Do NOT consume as a realized d_seg lever at fine-tune formulations; from-scratch "
+                "contribution remains the one unmeasured arm."
+            ),
         },
         units_in={},
         units_out={"dseg_reduction_fraction": "signed_fraction_of_baseline_dseg"},
-        empirical_anchors=(anchor, anchor_owed16),
-        predicted_vs_empirical_residual={"n96_circular_gt_curvelet_basis_dseg_UNVERIFIED_self_orient": 0.0},
+        empirical_anchors=(anchor, anchor_owed16, anchor_owed16_measured),
+        predicted_vs_empirical_residual={
+            "n96_circular_gt_curvelet_basis_dseg_UNVERIFIED_self_orient": 0.0,
+            "matched_pair_channel_ablation_warm_start_through_R_n600_verdicts": 0.4835,
+        },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=("tac.witness_dsl.curriculum_dsl",),
