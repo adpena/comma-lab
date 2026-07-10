@@ -13197,7 +13197,7 @@ object is **W = (G, ξ, T)** — power-diagram generators G (~8-dim ego-transpor
 banked ego-screw ξ + per-class STATIONARY SegNet-legible texture measures T={t_c} — carried on the
 scorer's **obligation matrix** (frames × bands): f0 = pose-only (n600 8.5e-9), f1⊗chromaHF-at-384 =
 seg-only (exact pose-null; naive camera-res dither leaks 50% luma — band-design through the exact D
-kernel), f1⊗luma = the only doubly-priced block (11.1×), f0⊗chromaHF = DEAD (unscored). **Corrected
+kernel), f1⊗luma = the only doubly-priced block (11.1×), f0⊗chromaHF = DEAD (unscored) # VERDICT_SCOPE_OK: not an experimental negative — structurally-unscored subspace derived from upstream source (SegNet reads x[:,-1] ⇒ f0 seg-free, n600 8.5e-9) + exact 384-plane pose-null (Unit C); nothing was tried-and-failed. **Corrected
 indirect-RD floor:** + R(T)∈[0.003,0.013] S (PS-class statistics, amortized once/video; decode-side
 synthesis rule-118 FREE, scorer-free/seeded) + **100·d_seg*(T)** with MEASURED bracket **[1.6e-7
 (GT canary), 0.0048 (witness)]** — the texture-legibility gap is now THE floor-dominating unknown of
