@@ -1752,6 +1752,65 @@ def TextureTrunk(band_hi: float = 8.0, annulus_power: float = 0.0,  # noqa: N802
                        "decouples T from the partition trunk; counted coeffs only (bank rule-118 free)")
 
 
+def OutTexHidden(hidden: int = 16, window: int = 0) -> Lever:  # noqa: N802 — #395 A2 arm (v7.5.3 Δ2)
+    """#395 A2 arm — widen the ``out_tex`` texture head from a linear map (hidden→3) to a
+    1-hidden-layer ReLU MLP (hidden→``hidden``→3), giving the texture/pose channel NONLINEAR
+    capacity WITHOUT the fixed Gabor bank. The matched-bytes MIDDLE rung of the #395 3-arm A/B
+    (A1 linear head / **A2 +out-tex-hidden** / A3 texture trunk): it pins whether ``d_seg*(T)``
+    is capacity-bound (A2≈A3 ⇒ the widened head is enough) or basis-bound (A3<A2 ⇒ the stem-band
+    Gabor basis is doing the work) — the P7 falsifier the trunk-composes-ON decision reads.
+
+    Emits the REAL trainer flag ``--out-tex-hidden`` (``type=int``; DEFAULT 0 = OFF =
+    byte-identical linear head; the trainer builds ``out_tex_h`` + reshapes ``out_tex`` only when
+    >0 — a PARAM-SHAPE lever, resume-guarded via ``__cfg_out_tex_hidden``). Adds
+    ``hidden*(H+3)+hidden+3`` counted params. Module wire-in:
+    ``build_levelset_rgb_witness(out_tex_hidden=...)`` / ``LevelSetRGBWitness._tex``.
+
+    DEFAULT-OFF: this factory is what ARMS the A2 rung; un-composed the trainer never widens the
+    head (byte-identical). ``window`` = optional warm-start epochs for a ``--resume-from`` arm
+    (0 = a full-run-from-scratch arch config). means != ends: builds the mechanism, makes NO score
+    claim — the head width's d_seg effect is ASSUMED_AWAITING_VERIFICATION until the 3-arm A/B
+    measures it byte-closed at n600."""
+    if int(hidden) <= 0:
+        raise ValueError(f"OutTexHidden: hidden must be > 0 (0 is the OFF/linear-head default the "
+                         f"lever is not needed for), got {hidden!r}")
+    return Lever("out_tex_hidden",
+                 overrides={"--out-tex-hidden": int(hidden)},
+                 epochs_delta=int(window),
+                 notes="#395 A2 arm: widened ReLU-MLP texture head (hidden->N->3); nonlinear texture "
+                       "capacity without the Gabor bank; the matched-bytes middle rung of the 3-arm A/B")
+
+
+def DecoupledField(field_hidden: int = 32, field_layers: int = 2,  # noqa: N802 — v8 B1 arch lever
+                   window: int = 0) -> Lever:
+    """v8 B1 (#398) — the per-class DECOUPLED-FIELD partition head (G of W=(G, ξ, T)).
+
+    Replaces the shared ``out_sdf`` linear readout with K INDEPENDENT per-class coordinate-INR fields:
+    ``P(x) = argmax_c ( phi_c(x) + b_c )`` with ``∂phi_c/∂θ_{c'} = 0`` by construction (block-diagonal
+    parameters over the class axis). This makes the measured cross-class THEFT (run-1: Lane 13.8× /
+    Movable 4.6× stealing Road) IMPOSSIBLE for its gradient mechanism — the v8 architecture
+    (``SPEC_v8_perclass_decomposition_20260708`` §1). The paint-free MASK partition ``argmax_c phi_c``
+    (what the 1a decoupling screen ``tac.inc1a_harness.decoupling_screen`` measures against a
+    MATCHED-COMPUTE shared-head control) is fully decoupled; ``out_tex`` stays on the shared trunk
+    (texture/pose channel, SPEC §3 luma-reserved-for-pose).
+
+    Increment-1 scope (``v8_unlock_398a_20260710`` B1): the TRAINING MODE + composition forward ONLY —
+    NOT the residual coder, NOT the paint/reconciliation-vs-frozen-scorer stage (SPEC §3), NOT a
+    byte-close carrier (that is E4/1b). Module: ``tac.boundary_math.decoupled_field``. ``field_hidden``
+    (H) / ``field_layers`` (L) are the clause-B minimal per-class field dims (each field carries ONE
+    class's separatrix, a fraction of the shared trunk's K-way job). ``window`` = optional warm-start
+    epochs when this rides a ``--resume-from`` of a converged shared trunk (else default 0 = a
+    full-run-from-scratch arch config). ALL params COUNTED (no rule-118-free table); the param count is
+    the number E1 measures to build ``matched_control_spec(P_dec)`` for the fair 1a A/B."""
+    return Lever("decoupled_field",
+                 overrides={"--decoupled-field": True,
+                            "--decoupled-field-hidden": int(field_hidden),
+                            "--decoupled-field-layers": int(field_layers)},
+                 epochs_delta=int(window),
+                 notes="v8 per-class decoupled partition fields (∂phi_c/∂θ_{c'}=0); the mask partition "
+                       "argmax_c phi_c is decoupled; increment-1 = training mode + composition forward")
+
+
 def TauFrozen(value: float = 0.05, window: int = 100) -> Lever:  # noqa: N802 — A1b isolation
     """A1b: freeze tau (start==end) to isolate an l7 effect from the tau anneal.
 
@@ -1968,6 +2027,44 @@ def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
                  epochs_delta=window,
                  notes="analytic-lane render-band compose (AA-SDF x range-dash-gate x "
                        "witness-uncertainty); FP-killed non-naive form; realized THROUGH R")
+
+
+def AnalyticLaneBandTraining(  # noqa: N802 — v7.5.3 Δ3 lane-band TRAINED-IN mode (RANK-1 join)
+    softness: float = 1.0, dash_forward_max_m: float = 55.0,
+    uncertainty_source: str = "witness", tau: float = 0.85, eps: float = 0.35,
+    weight: float = 1.0, window: int = 0,
+) -> Lever:
+    """v7.5.3 Δ3 — the analytic openpilot lane band as a **TRAINING lever** (RANK-1 negcure join):
+    the band participates in the TRAINED render FROM EPOCH 0 (``start_epoch=0``) so the witness
+    RE-ADAPTS its boundaries with the band active — NOT a post-hoc carrier composited only at
+    byte-close. This is the distinction the ``render-post-hoc-dead`` law forces: the post-hoc
+    (start-late / carrier-only) verdict was NET-NEUTRAL because the frozen witness never trained
+    WITH the band; trained-in predicts ``fn_recovered ≳ 2e-4`` (the pre-registered P7 falsifier —
+    < 2e-4 at n600 ⇒ refuted at FORMULATION scope, band stays carrier-only).
+
+    NO NEW TRAINER FLAG (never-invent-flags): the trained-in mode is EXACTLY the existing
+    :func:`AnalyticLaneRenderBand` machinery (``--lane-render-band`` + the 6 ``--lane-band-*``
+    flags, LANDED and consumed by the #224 Option-B compose wire-in) pinned to
+    ``--lane-band-start-epoch 0`` — the epoch that makes the band active in the TRAINING loss from
+    the start rather than a late-engaged carrier. A DISTINCT NAMED lever (its own activation-ledger
+    row) expressing the trained-in intent, reusing the render-band flags rather than duplicating them.
+
+    DEFAULT-OFF: composing this lever is what turns the band trained-in; un-composed the trainer
+    renders the byte-identical default (no band). ``window`` = optional warm-start epochs (0 = a
+    full-run-from-scratch arm). means != ends: builds the mechanism, makes NO score claim — the
+    fn-recovery is ASSUMED_AWAITING_VERIFICATION until the RANK-1 trainer A/B measures it at n600."""
+    return Lever("analytic_lane_band_training",
+                 overrides={"--lane-render-band": True,
+                            "--lane-band-softness": softness,
+                            "--lane-band-dash-forward-max-m": dash_forward_max_m,
+                            "--lane-band-uncertainty-source": uncertainty_source,
+                            "--lane-band-tau": tau,
+                            "--lane-band-eps": eps,
+                            "--lane-band-weight": weight,
+                            "--lane-band-start-epoch": 0},
+                 epochs_delta=window,
+                 notes="v7.5.3 Δ3: analytic lane band TRAINED-IN from ep0 (RANK-1 join; the witness "
+                       "re-adapts its boundaries with the band active; render-post-hoc-dead law)")
 
 
 def DsegAwareTaper(  # noqa: N802 — #121 lever, re-validate-at-convergence

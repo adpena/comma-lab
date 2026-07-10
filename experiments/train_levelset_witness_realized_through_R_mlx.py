@@ -732,6 +732,19 @@ def _build_resume_state_arrays(
     out["__cfg_texture_trunk_band_hi"] = np.asarray(float(getattr(args, "texture_trunk_band_hi", 8.0)))
     out["__cfg_texture_trunk_annulus_power"] = np.asarray(float(getattr(args, "texture_trunk_annulus_power", 0.0)))
     out["__cfg_texture_trunk_coeff_scale"] = np.asarray(float(getattr(args, "texture_trunk_coeff_scale", 0.02)))
+    # OUT-TEX-HIDDEN (#395 A2 arm): out_tex_hidden>0 widens the texture head from Linear(hidden,3) to a
+    # 1-hidden-layer ReLU MLP (hidden->N->3) => ADDS the out_tex_h.{weight,bias} param keys AND reshapes
+    # out_tex.weight (hidden->3 becomes N->3). A resume MUST rebuild with the SAME N or model.update
+    # silently drops/mis-shapes the trained head. Zero archive bytes (resume-sidecar provenance scalar).
+    out["__cfg_out_tex_hidden"] = np.asarray(int(getattr(args, "out_tex_hidden", 0)))
+    # DECOUPLED PARTITION FIELDS (v8 B1, #398): decoupled_field adds params (decoupled_head.w_in/b_in/
+    # w_film/w_hid/b_hid/w_out/b_out); field_hidden/field_layers change their SHAPES => the resume MUST
+    # rebuild with the SAME arch or model.update silently drops/mis-shapes the trained field tensors
+    # (the generic missing-key arch guard below catches a dropped decoupled_head.*, and these provenance
+    # scalars name the exact fix). ZERO archive bytes (resume sidecar). Per resumability + det-repro.
+    out["__cfg_decoupled_field"] = np.asarray(int(bool(getattr(args, "decoupled_field", False))))
+    out["__cfg_decoupled_field_hidden"] = np.asarray(int(getattr(args, "decoupled_field_hidden", 32)))
+    out["__cfg_decoupled_field_layers"] = np.asarray(int(getattr(args, "decoupled_field_layers", 2)))
     # SPIKE-GUARD running-median window (the last <=50 batch losses). It GATES step-skipping
     # (loss > spike_factor * median => the optimizer.update is skipped), so it is part of the
     # weight trajectory: a resume with an EMPTY window (median None => never skips) would diverge
@@ -824,6 +837,24 @@ def _resolve_weights_only_warm_start(
             "start_epoch": _ep, "ckpt_had_opt": ckpt_had_opt}
 
 
+def _decoupled_field_incompatibilities(args: Any) -> list[str]:
+    """(v8 B1 fail-closed) Levers that assume/mutate the SHARED ``out_sdf`` head and therefore cannot
+    compose with ``--decoupled-field`` (which REPLACES out_sdf as the partition provider). Returns the
+    human-readable incompatibility list (empty when ``--decoupled-field`` is OFF or no conflict). Pure /
+    MLX-free -> unit-tested. Increment-1 keeps these mutually exclusive; a decoupled-aware version of
+    each shared-head lever is future work."""
+    if not bool(getattr(args, "decoupled_field", False)):
+        return []
+    incompat: list[str] = []
+    if str(getattr(args, "head", "softmax")) != "softmax":
+        incompat.append(f"--head {getattr(args, 'head', 'softmax')} (sets/reads the shared out_sdf head)")
+    if float(getattr(args, "margin_field_head_weight", 0.0)) > 0.0:
+        incompat.append("--margin-field-head-weight>0 (margin-field head rides the shared out_sdf)")
+    if str(getattr(args, "head_offset_solver", "off")) != "off":
+        incompat.append("--head-offset-solver!=off (folds into out_sdf.bias)")
+    return incompat
+
+
 def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str]:
     """(F2) List render-side LEVER cfg keys that DIVERGE between the resume sidecar (what the run was
     trained with) and the current argv (what this resume would run). A non-empty list means a
@@ -839,6 +870,10 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
     # (key, current value, is_float) — non-float compared as string (int/bool/str all normalize).
     checks: list[tuple[str, object, bool]] = [
         ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
+        # (#395 A2 arm) out_tex_hidden is a PARAM-SHAPE lever (adds out_tex_h + reshapes out_tex): a
+        # resume that changes it trains an incompatible head vs the ckpt => fail closed (determinism).
+        # Legacy: only checked when PRESENT in the sidecar (pre-A2 sidecars lack the key => no divergence).
+        ("__cfg_out_tex_hidden", int(getattr(args, "out_tex_hidden", 0)), False),
         ("__cfg_lane_render_band", cur_band, False),
         # #287 dash comb (render-only, trajectory-affecting when the band is on, no param keys).
         ("__cfg_lane_band_dash_comb", int(bool(getattr(args, "lane_band_dash_comb", False))), False),
@@ -1242,6 +1277,10 @@ def build_levelset_rgb_witness(
     texture_trunk_band_hi: float = 8.0,
     texture_trunk_annulus_power: float = 0.0,
     texture_trunk_coeff_scale: float = 0.02,
+    out_tex_hidden: int = 0,
+    decoupled_field: bool = False,
+    decoupled_field_hidden: int = 32,
+    decoupled_field_layers: int = 2,
     render_h: int = 384,
     render_w: int = 512,
 ):
@@ -1302,7 +1341,18 @@ def build_levelset_rgb_witness(
                     _lin.weight = mx.zeros_like(_lin.weight)
                     _lin.bias = mx.zeros_like(_lin.bias)
             self.out_sdf = nn.Linear(hidden_dim, n_classes)     # K SDF fields (LINEAR)
-            self.out_tex = nn.Linear(hidden_dim, 3)             # pose-carrying RGB texture
+            # OUT-TEX-HIDDEN (#395 A2 arm): the matched-bytes MIDDLE rung between A1 (linear head) and A3
+            # (texture trunk). out_tex_hidden==0 (DEFAULT) => the head stays Linear(hidden,3) => attr
+            # out_tex_h absent => model.parameters()/EMA/ckpt/byte-close BYTE-IDENTICAL to the pre-A2
+            # witness (self._tex(h) == self.out_tex(h)). >0 => a 1-hidden-layer ReLU MLP hidden->N->3
+            # (adds N*(hidden+3)+N+3 counted params) giving the texture channel a NONLINEAR capacity bump
+            # WITHOUT the fixed Gabor bank — the A2 leg of the #395 3-arm A/B (A1 linear / A2 +hidden / A3 trunk).
+            self.out_tex_hidden = int(out_tex_hidden)
+            if self.out_tex_hidden > 0:
+                self.out_tex_h = nn.Linear(hidden_dim, self.out_tex_hidden)
+                self.out_tex = nn.Linear(self.out_tex_hidden, 3)  # pose-carrying RGB texture (widened head)
+            else:
+                self.out_tex = nn.Linear(hidden_dim, 3)         # pose-carrying RGB texture (linear head)
             # (DIAGNOSED FIX) learned per-class palette (K,3), in LOGIT space (sigmoid(palette)*255
             # = the class color). DEFAULT: anchor to the NATURAL per-class mean GT RGB (logit) —
             # the transfer probe hit realized d_seg 0.0049 with this palette; a generic luma-ramp
@@ -1330,6 +1380,26 @@ def build_levelset_rgb_witness(
                     int(render_h), int(render_w), _spec, n_classes=int(n_classes),
                     annulus_power=float(texture_trunk_annulus_power),
                     coeff_scale=float(texture_trunk_coeff_scale), seed=0)
+            # DECOUPLED PARTITION FIELDS (v8 B1, #398): K independent per-class fields G_c replace the
+            # shared out_sdf as the PARTITION-field provider (∂phi_c/∂θ_{c'}=0 by construction => the
+            # measured cross-class theft is impossible for its gradient mechanism). DEFAULT-OFF => attr
+            # NOT set => getattr(...,'decoupled_head',None) is None in _sdf_phi/_compose_rgb/call_batch/
+            # call_margin => model.parameters()/EMA/ckpt/byte-close BYTE-IDENTICAL to the shared-head
+            # witness. ON => a SEPARATE per-class field module (tac.boundary_math.decoupled_field): the
+            # paint-free MASK partition (argmax_c phi_c, what the 1a decoupling screen measures) is fully
+            # decoupled; out_sdf/out_tex stay on the shared trunk (out_tex = texture/pose channel, SPEC
+            # §3 luma-reserved-for-pose; out_sdf survives as a warm-start donor but is unused for the
+            # partition when the decoupled head is on). Increment-1 = the TRAINING MODE + composition
+            # forward ONLY (SPEC §6); NOT the residual coder / paint-reconciliation (those are 1b/2).
+            if bool(decoupled_field):
+                from tac.boundary_math.decoupled_field import (
+                    DecoupledFieldSpec, make_decoupled_field_head_mlx,
+                )
+                _dspec = DecoupledFieldSpec(
+                    in_feat=int(in_feat), mod_dim=int(mod_dim), n_classes=int(n_classes),
+                    field_hidden=int(decoupled_field_hidden), field_layers=int(decoupled_field_layers),
+                    activation="relu")
+                self.decoupled_head = make_decoupled_field_head_mlx(_dspec, seed=0, scale=0.1)
 
         def _act(self, u):
             if self.activation == "wire":
@@ -1364,12 +1434,30 @@ def build_levelset_rgb_witness(
                 h = self._act(pre)
             return h  # (P, hidden)
 
-        def sdf(self, coord_feats, code_idx):
-            return self.out_sdf(self._trunk(coord_feats, code_idx))  # (P, K)
+        def _sdf_phi(self, coord_feats, code_idx):
+            """The PARTITION fields phi (P, K). Decoupled head (v8 B1) when ON, else the shared
+            out_sdf(trunk). code_idx is a scalar pair index (single-pair path)."""
+            _dh = getattr(self, "decoupled_head", None)
+            if _dh is not None:
+                return _dh.phi_single(coord_feats, self.code[code_idx])  # (P, K) decoupled
+            return self.out_sdf(self._trunk(coord_feats, code_idx))  # (P, K) shared
 
-        def _compose_rgb(self, h):
-            phi = self.out_sdf(h)                                   # (..., K)
-            tex = self.out_tex(h)                                   # (..., 3)
+        def sdf(self, coord_feats, code_idx):
+            return self._sdf_phi(coord_feats, code_idx)              # (P, K)
+
+        def _tex(self, h):
+            # OUT-TEX-HIDDEN (#395 A2 arm): route the texture head. DEFAULT (out_tex_h absent) =>
+            # self.out_tex(h) => BYTE-IDENTICAL linear head. ON => ReLU-MLP hidden->N->3. The SINGLE
+            # tex-head site both _compose_rgb and render_lane_appearance call (no direct out_tex(h)).
+            if getattr(self, "out_tex_h", None) is not None:
+                h = nn.relu(self.out_tex_h(h))
+            return self.out_tex(h)
+
+        def _compose_rgb(self, h, phi=None):
+            # phi provided (decoupled head) => use it; else the shared out_sdf(h) => BYTE-IDENTICAL
+            # default. tex/palette/texture-trunk are UNCHANGED (shared trunk = texture/pose channel).
+            phi = self.out_sdf(h) if phi is None else phi          # (..., K)
+            tex = self._tex(h)                                      # (..., 3)
             soft = mx.softmax(phi / self.softmax_temp, axis=-1)     # (..., K)
             # TEXTURE TRUNK (#395): ADD the band-designed per-class texture, PLACED by the SAME masks.
             # DEFAULT-OFF (attr absent) => None => byte-identical skip. ON => a gradient-through addend.
@@ -1384,7 +1472,12 @@ def build_levelset_rgb_witness(
             return rgb
 
         def __call__(self, coord_feats, code_idx):
-            return self._compose_rgb(self._trunk(coord_feats, code_idx))  # (P, 3)
+            h = self._trunk(coord_feats, code_idx)                 # (P, hidden) — texture/pose channel
+            _dh = getattr(self, "decoupled_head", None)
+            # DEFAULT-OFF => phi None => _compose_rgb uses out_sdf(h) => BYTE-IDENTICAL. ON => the
+            # decoupled per-class fields provide the partition phi.
+            _phi = _dh.phi_single(coord_feats, self.code[code_idx]) if _dh is not None else None
+            return self._compose_rgb(h, phi=_phi)                  # (P, 3)
 
         def call_batch(self, coord_feats, code_indices):
             h0 = self._act(self.in_proj(coord_feats))               # (P, hidden) shared
@@ -1403,7 +1496,11 @@ def build_levelset_rgb_witness(
                 if self.film_concat_code:
                     pre = pre + self.concat_pl[li](codes)[:, None, :]
                 h = self._act(pre)
-            return self._compose_rgb(h)                            # (K, P, 3)
+            _dh = getattr(self, "decoupled_head", None)
+            # DEFAULT-OFF => phi None => _compose_rgb uses out_sdf(h) => BYTE-IDENTICAL batched forward.
+            # ON => the decoupled per-class fields provide the batched partition phi (B, P, K).
+            _phi = _dh.phi_batch(coord_feats, codes) if _dh is not None else None
+            return self._compose_rgb(h, phi=_phi)                  # (K, P, 3)
 
         # ---- #224 accessors for the analytic-lane render-band (ADDITIVE; only called when
         # --lane-render-band is ON => the default render is byte-identical). ----
@@ -1411,7 +1508,9 @@ def build_levelset_rgb_witness(
             """top1-top2 softmax decision margin (PROB scale) of the witness partition — the
             #141 quantity the analytic-lane uncertainty gate rides. Returns (P,); reshape to
             (H,W) at the call site."""
-            soft = mx.softmax(self.out_sdf(self._trunk(coord_feats, code_idx)) / self.softmax_temp, axis=-1)
+            # route through _sdf_phi so the margin reflects the DECOUPLED partition when it is ON
+            # (byte-identical shared out_sdf path when OFF).
+            soft = mx.softmax(self._sdf_phi(coord_feats, code_idx) / self.softmax_temp, axis=-1)
             s = mx.sort(soft, axis=-1)                              # ascending
             return s[..., -1] - s[..., -2]                          # (P,) top1 - top2
 
@@ -1419,7 +1518,7 @@ def build_levelset_rgb_witness(
             """The witness's OWN per-pixel lane color = sigmoid(palette[lane_cls] + tex)*255
             (self-consistent, byte-free; gradient flows through tex/palette per the band spec).
             luma-collapsed when not chroma (matches _compose_rgb)."""
-            tex = self.out_tex(self._trunk(coord_feats, code_idx))  # (P,3)
+            tex = self._tex(self._trunk(coord_feats, code_idx))    # (P,3) — A2-aware texture head
             rgb = mx.sigmoid(self.palette[lane_cls] + tex) * 255.0  # (P,3)
             if not self.chroma:
                 luma = 0.299 * rgb[..., 0:1] + 0.587 * rgb[..., 1:2] + 0.114 * rgb[..., 2:3]
@@ -3393,6 +3492,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "applied": _init_applied,
                           **({} if _init_applied else {"reason": "overwritten_by_resume"})}), flush=True)
 
+    # (v8 B1 fail-closed) --decoupled-field REPLACES the shared out_sdf as the PARTITION provider, so
+    # levers that assume/mutate the shared out_sdf head are INCOMPATIBLE with it (they would silently
+    # mix a shared head with the decoupled partition = a NO-FAKE inconsistency the arch guard cannot
+    # see). Increment-1 keeps them mutually exclusive; a decoupled-aware version of each is future work.
+    _incompat = _decoupled_field_incompatibilities(args)
+    if _incompat:
+        raise ValueError(
+            "--decoupled-field is INCOMPATIBLE with shared-out_sdf-head levers (v8 B1 increment-1 "
+            "keeps them mutually exclusive; the decoupled fields ARE the partition head): "
+            + "; ".join(_incompat) + ". Drop those levers or drop --decoupled-field.")
+
     model = build_levelset_rgb_witness(
         num_pairs=P, in_feat=in_feat, hidden_dim=args.hidden_dim, n_hidden=args.n_hidden,
         mod_dim=args.mod_dim, n_classes=5, activation=args.activation, softmax_temp=args.softmax_temp_start,
@@ -3404,6 +3514,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         texture_trunk_band_hi=float(getattr(args, "texture_trunk_band_hi", 8.0)),
         texture_trunk_annulus_power=float(getattr(args, "texture_trunk_annulus_power", 0.0)),
         texture_trunk_coeff_scale=float(getattr(args, "texture_trunk_coeff_scale", 0.02)),
+        out_tex_hidden=int(getattr(args, "out_tex_hidden", 0)),
+        decoupled_field=bool(getattr(args, "decoupled_field", False)),
+        decoupled_field_hidden=int(getattr(args, "decoupled_field_hidden", 32)),
+        decoupled_field_layers=int(getattr(args, "decoupled_field_layers", 2)),
         render_h=int(args.render_h), render_w=int(args.render_w),
     )
     mx.eval(model.parameters())
@@ -7316,6 +7430,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     getattr(args, "texture_trunk", False)):
                 _bh = float(resume_cfg.get("__cfg_texture_trunk_band_hi", 8.0) or 8.0)
                 _hint.append(f"add --texture-trunk --texture-trunk-band-hi {_bh}")
+            if bool(int(resume_cfg.get("__cfg_decoupled_field", 0) or 0)) and not bool(
+                    getattr(args, "decoupled_field", False)):
+                _dfh = int(resume_cfg.get("__cfg_decoupled_field_hidden", 32) or 32)
+                _dfl = int(resume_cfg.get("__cfg_decoupled_field_layers", 2) or 2)
+                _hint.append(
+                    f"add --decoupled-field --decoupled-field-hidden {_dfh} --decoupled-field-layers {_dfl}")
             raise ValueError(
                 f"--resume-from {rp}: the checkpoint carries {len(_missing_in_model)} trained param(s) the "
                 f"rebuilt model has NO slot for (first few: {_missing_in_model[:6]}) -> model.update would "
@@ -8721,17 +8841,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _pf_was_on = _pose_finish_on["on"]
                 # (owed-1) engage SIGNAL: 'sigma_min_plateau' (the SEALED A-1 conditioning gate) replaces
                 # the 'muon' proxy when requested + trusted. Either mode keeps the --pose-finish-start-epoch
-                # as the fail-safe BACKSTOP. An untrusted/degenerate/absent gate engages ONLY via the
-                # backstop (ships banked R1 DISENGAGED) — NEVER via muon (the operator chose the σ_min gate).
+                # as the fail-safe BACKSTOP for a HEALTHY-but-never-fired detector. (P0-2 FIX, fresh-eyes
+                # advisory 2026-07-10) the backstop may NOT override a DEGENERATE (should_ship_banked_r1)
+                # classification: degenerate at the backstop epoch ⇒ pose stays DISENGAGED + the banked R1
+                # dxi path is selected with a LOUD typed row (once) — the sealed fallback contract
+                # (SPEC_v752 §183-187). Decision logic is the PURE unit-tested
+                # tac.witness_control.sigma_min_plateau.resolve_pose_finish_engage.
                 _cond_fired = False
                 if _pose_gate_mode == "sigma_min_plateau":
+                    _pg_det = _pose_gate["det"]
                     if (_pose_gate["actuating"] and _pose_gate["trusted"]
-                            and _pose_gate["det"] is not None):
-                        _pose_gate["det"].latch_if_fired(ep)   # monotone; only latches on a real plateau
-                        _cond_fired = _pose_gate["det"].fired()
+                            and _pg_det is not None):
+                        _pg_det.latch_if_fired(ep)   # monotone; only latches on a real plateau
+                        _cond_fired = _pg_det.fired()
                         if _cond_fired and _pose_gate["engaged_epoch"] < 0:
                             _pose_gate["engaged_epoch"] = ep
-                    _pose_finish_on["on"] = _cond_fired or (ep >= _pose_finish_start)
+                    from tac.witness_control import sigma_min_plateau as _smp_r  # noqa: PLC0415
+                    _degenerate = bool(_pg_det is not None and _pg_det.should_ship_banked_r1())
+                    _engage, _banked_sel = _smp_r.resolve_pose_finish_engage(
+                        cond_fired=_cond_fired, backstop_hit=(ep >= _pose_finish_start),
+                        degenerate=_degenerate)
+                    _pose_finish_on["on"] = _engage
+                    if _banked_sel and not _pose_gate.get("banked_row_emitted"):
+                        _pose_gate["banked_row_emitted"] = True
+                        print(json.dumps(_smp_r.backstop_banked_r1_row(
+                            ep, backstop_epoch=_pose_finish_start,
+                            classification=(getattr(_pg_det, "classification", None)
+                                            if _pg_det is not None else None),
+                            n_points=(_pg_det.n_points if _pg_det is not None else 0))), flush=True)
                 else:  # 'muon' incumbent — BYTE-IDENTICAL
                     _pose_finish_on["on"] = bool(_muon_gate.fired) or (ep >= _pose_finish_start)
                 _w_pose_now["v"] = float(args.w_pose) if _pose_finish_on["on"] else 0.0
@@ -10743,6 +10880,28 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--texture-trunk-coeff-scale", type=float, default=0.02,
                     help="#395: deterministic init scale of the trunk coefficients (~‖out_tex‖). Texture "
                     "starts as a faint perturbation and grows under the joint seg gradient.")
+    ap.add_argument("--out-tex-hidden", type=int, default=0,
+                    help="#395 A2 arm: widen the out_tex texture head from a linear map (hidden->3) to a "
+                    "1-hidden-layer ReLU MLP (hidden->N->3). 0=OFF=byte-identical linear head. The "
+                    "matched-bytes MIDDLE rung of the 3-arm A/B (A1 linear / A2 +out-tex-hidden / A3 "
+                    "texture-trunk); gives the texture channel nonlinear capacity WITHOUT the fixed "
+                    "Gabor bank. Adds N*(hidden+3)+N+3 counted params; PARAM-SHAPE lever (resume-guarded).")
+    # DECOUPLED PARTITION FIELDS (v8 B1, #398). ALL DEFAULT-OFF => byte-identical to the shared-head
+    # witness. ON => K independent per-class fields provide the partition phi (∂phi_c/∂θ_{c'}=0), the
+    # v8 architecture that makes the measured cross-class theft impossible for its gradient mechanism.
+    # Module: tac.boundary_math.decoupled_field. DSL lever: DecoupledField(). SPEC_v8 §1/§6; increment-1
+    # = the TRAINING MODE + composition forward ONLY (NOT the residual coder / paint reconciliation).
+    ap.add_argument("--decoupled-field", action="store_true",
+                    help="v8 B1: use K INDEPENDENT per-class partition fields (decoupled G_c) instead of "
+                    "the shared out_sdf readout. The paint-free MASK partition argmax_c phi_c (what the "
+                    "1a decoupling screen measures) is fully decoupled; out_tex stays on the shared "
+                    "trunk (texture/pose). Default OFF = byte-identical shared-head witness.")
+    ap.add_argument("--decoupled-field-hidden", type=int, default=32,
+                    help="v8 B1: per-class field hidden width H (clause-B minimal; each field carries ONE "
+                    "class's separatrix, a fraction of the shared trunk's K-way job). Only used with "
+                    "--decoupled-field.")
+    ap.add_argument("--decoupled-field-layers", type=int, default=2,
+                    help="v8 B1: per-class field hidden depth L. Only used with --decoupled-field.")
     ap.add_argument("--film-rank-floor-weight", type=float, default=0.0,
                     help="LEVER-A3 [DOMINATED by --film-stiefel; NOT recommended -- review FEED-ht/M1]: "
                     "weight of a SOFT participation-ratio FLOOR penalty relu(target-PR) on M=film(code). "
