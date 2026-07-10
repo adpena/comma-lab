@@ -269,3 +269,5 @@ ego-warp NO-GO + spatial curve-relative REFUTED, both MEASURED). Sub-frontier re
 hood single-static-store** ($0, candidate −[0,0.017]) and/or **increment-2 R5 generator-coverage**
 (−[0.015,0.02], the enemy's true home). The macro view LOCATES both; it does not re-code the residual.
 v8's shippable-rate WASH row (§2) STANDS.
+
+**ADDENDUM (2026-07-10, FEED-fable-synthesis):** the build-wave's texture/carrier design now has a unified derivation — W=(G,ξ,T) on the scorer obligation matrix (`fable_synthesis_texture_partition_20260710.md`): f0 = luma-only pose carrier; f1 chroma seg-texture MUST be 384-band-designed (pre-imaged through the exact D kernel, NOT camera-res dither); the texture-legibility gap d_seg*(T)∈[1.6e-7, 0.0048] is the floor-dominating unknown — rows E-1/E-2 there are the $0 gates before any v8 texture-carrier build.

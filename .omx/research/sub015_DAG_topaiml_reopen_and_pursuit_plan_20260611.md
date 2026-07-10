@@ -13189,3 +13189,36 @@ exact-null legs). Triality: equations = 2 EmpiricalAnchors on `posenet_luma_chro
 verdicts = `.omx/research/verdict_frame0_chromahf_dofs_20260710.json`; memo
 `frame0_chromahf_dofs_20260710.md`. `[macOS-CPU advisory / through-R n600 NON-PROMOTABLE]`. Pointer
 0.19110 UNMOVED (means).
+
+## FEED-fable-synthesis (2026-07-10) — THE TEXTURED POWER DIAGRAM ON THE SCORER'S OBLIGATION MATRIX (Fable synthesis over 5 convergent findings)
+**Respawn synthesis (predecessor lost to session limit; no partial artifact — fresh derivation).**
+Memo `.omx/research/fable_synthesis_texture_partition_20260710.md`. **THE ONE STRUCTURE:** the scored
+object is **W = (G, ξ, T)** — power-diagram generators G (~8-dim ego-transported scene manifold) +
+banked ego-screw ξ + per-class STATIONARY SegNet-legible texture measures T={t_c} — carried on the
+scorer's **obligation matrix** (frames × bands): f0 = pose-only (n600 8.5e-9), f1⊗chromaHF-at-384 =
+seg-only (exact pose-null; naive camera-res dither leaks 50% luma — band-design through the exact D
+kernel), f1⊗luma = the only doubly-priced block (11.1×), f0⊗chromaHF = DEAD (unscored). **Corrected
+indirect-RD floor:** + R(T)∈[0.003,0.013] S (PS-class statistics, amortized once/video; decode-side
+synthesis rule-118 FREE, scorer-free/seeded) + **100·d_seg*(T)** with MEASURED bracket **[1.6e-7
+(GT canary), 0.0048 (witness)]** — the texture-legibility gap is now THE floor-dominating unknown of
+the campaign (partition-only realization floors at 0.0416 ALL-palette; texture is load-bearing, not
+decoration). **Charge B (flip-solve):** the 0.594 verify gap = the missing INNER Jacobian; corrected
+step law d*=Dᵀ∇m|_fp, α*=μ/‖P_R∇m‖ + secant + cluster-QP (margin-saliency pulled through the exact
+adjoint — one kernel serves BOTH flip-fixing and 384-band chroma pre-imaging). **Charge C
+(pseudospectral instrument, buildable):** four-number stage-boundary readout {α spectral, ω numerical
+abscissa (the ep110 signature = ω>0∧α<0), K Kreiss via rectangular-Arnoldi certified-inner
+pseudospectrum, σ_B(ω) batch dispersion (the FEED-06h stochastic axis)}; k≈100–200 HVPs ≈10–25 min
+M5 Max; retro-validate on ep300-bump + ep108-114 checkpoints. **OSS pulls (verified):** plenoptic
+(PS+metamer vs frozen models, encode-side) · TetsuyaOdaka numpy-PS (decode-side) · pseudopy/mpseudo ·
+geogram/pysdot + Bourne Laguerre-inversion arXiv 2406.00871 (fit G by semi-discrete OT) · VCM sweep
+(SMR/2505.24015/2405.09152/2509.05925 — none makes frozen-scorer metamer statistics the counted
+payload → V2 originality intact) · Geirhos texture-bias lineage (external confirmation of
+context-domination). **RANKED rows (P7 falsifiers pre-registered):** E-1 384-band-designed chroma
+texture-legibility probe on the flat-paint floor ($0, decides placement + v8 carrier) · E-2
+PS-metamer per-class texture arm (pins d_seg*(T)) · E-3 nonlinear flip-solve v2 (verify ≥0.85 or
+Jacobian attribution refuted) · E-4 pseudospectral retro-validation · E-5 semi-discrete OT generator
+fit (bounds R5 coverage). Equations: `textured_power_diagram_sufficient_statistic_v1` +
+`scorer_obligation_matrix_factorization_v1` + `flip_margin_step_law_v1` (registered; conjectures NOT
+registered; §C law owed WITH the instrument build). UNIT C (`frame0_chromahf_dofs_20260710`) landed
+mid-synthesis and is FOLDED IN (§A2′). DSL leg N/A (derivation; routes #385 build-wave).
+verdict_scope FORMULATION; no kill; no score. Pointer 0.19110 UNMOVED (means).
