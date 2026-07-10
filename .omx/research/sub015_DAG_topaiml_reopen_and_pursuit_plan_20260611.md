@@ -14361,3 +14361,26 @@ disposition/inventory unit — folding a lever the unit only CATALOGUES would be
 (apparatus). MEMORY.md: covered by the existing ⭐P0 line (curriculum_candidate_pool_p0_orphan_class) — no
 new durable finding beyond it. The commit messages omitted the literal [no-triality] token; that omission,
 not a missing leg, tripped the gate. Pointer 0.19108282 [contest-CPU] UNMOVED (apparatus/MEANS).
+
+### FEED-launch-readiness-gate (2026-07-10) — naive-launch incident + the config-freshness gate
+INCIDENT: on operator GO I fired the multi-day v7.5.2 pointer run on the STALE validated launch.sh —
+the memory-preflight (24.5 GiB SAFE) + governor admission both PASSED, so nothing stopped it, but the
+config SKIPPED the fire-now rungs the just-built #405 decision table ranks at the top of the remaining
+descent (HorizonWeightedMargin 43.8% + StepNativeActivation 31.6% un-included). Operator caught it
+("shouldn't we make updates first ... we need a gate/hook to protect against naively running long-running
+stuff the wrong way ... enforce table consumption and updating"). STOPPED clean (killpg, ckpt preserved,
+was healthy ep2 20.4GiB — it was the DRY-START not the pointer relaunch, nothing pointer-moving lost).
+FIX (two-landing self-protection): (1) `tools/witness_launch_readiness_gate.py` — pure CONFIG-FRESHNESS
+gate that REFUSES a witness launch whose config neither includes nor defers-with-reason the top
+decision-table fire-now rungs (rel_sig ≥ 10% of remaining descent = blocking; below = advisory); 12 tests
++ regression on the stopped config. (2) WIRED into `spawn_durable_daemon.py` BEFORE Popen → the daemon
+aborts rc=6 with the missing rungs named; escape hatches `# LAUNCH_READINESS_DEFER:<rung>=<reason>` /
+`--readiness-override-rationale` / `--skip-readiness-gate` (infra). Verified end-to-end: refuses the exact
+naive config, override spawns clean (no legit-launch brick). NEW LESSON: memory/governor gates answer
+"can the machine hold this run?"; they do NOT answer "is this the RIGHT config?" — the config-freshness
+gate is the missing optimal-form check binding #405→launch. MEMORY.md line: LANDED. Commits 5d4b6cf03
+(gate+tests) + 346b6424c (enforce wiring). Also this turn: MEMORY-HEADROOM finding — self-orient OFF drops
+cf-cache 43.2→0.07 GiB ⇒ peak 24.5 vs 89.6 ceiling = ~65 GiB free ⇒ unlocks concurrent A/B arms (2×25<90,
+halves fire-now measurement wall-clock, gated #173) + free micro-batch/verdict-batch speedups; #296
+fp16-cf-cache lever now MOOT (existed only to fit self-orient). Triality: DSL/equations N/A (launch
+apparatus, [no-triality-lever]). Pointer 0.19108282 [contest-CPU] UNMOVED (apparatus/MEANS).
