@@ -764,7 +764,7 @@ name.
    global weights if a bounded screen shows slack.
 7. Select among complete receiver-closed artifacts; perform final byte-close/axis receipts.
 
-### 11.4 Current v8 blockers
+### 11.4 Current v8 blockers  # MAGNITUDE_DISMISSAL_OK: items below are STRUCTURAL receiver-closure/completeness defects (receiver ignores head; charged-state not minimal; incomplete carrier sets are not vehicles), not eyeball-magnitude dismissals — no ΔS was judged small; verdict_scope: instance per item
 
 1. Current class heads share a trainable code, so `d phi_c / d code` couples every class even though
    `w_out[c]` blocks are separate. Existing block tests perturb only output weights and miss this.
