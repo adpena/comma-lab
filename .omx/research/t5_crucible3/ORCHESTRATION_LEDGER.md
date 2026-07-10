@@ -237,3 +237,29 @@ ACTION: **launch P1 wave-1 (S1 DEEP-MATH / S2 CARRIERS / S3 RECONCILIATION)**, e
 - `ORCHESTRATION_LEDGER.md` — this file (phases, seats, operator bindings, failure-mode checks, resume).
 - (forthcoming) `position_S1..S6_*.md` → `SPEC_v8.1_DRAFT` → `P3_redteam` → `P4_recess` → `P5_second_
   redteam` → seal → `SPEC_v8.1` + increment-1 config.
+
+---
+
+## [P5 DONE — 2026-07-09] SECOND RED-TEAM (attack the post-recess design)
+Artifact: `P5_second_redteam_20260709.md`. **VERDICT: v3 REVISION NEEDED** (1 near-break forces §B carrier +
+§I row + 1a byte-close pinning; 2 REVISE edit-grade; 3 CARRY; 1 DISSOLVED). **8 findings + 3 P9-proxy findings.**
+- **WORST (F-P5-1, near-break):** T1's three supports are ALL rate-side (cheaper 0.0032 · dedup · min-dim); P4 R6
+  MEASURED a d_seg hole T1 never owned — single-valued horizon carrier floors Undriv at 0.162 with 97.5%
+  UNSUPPORTED-COLUMN lateral undriv; the demoted bulk SDF was the only §I rep that carried it ⇒ lateral undriv
+  UN-HOMED (I1=top-arc, I10=demoted). §B ships exactly this single-valued carrier ⇒ 1a decoupled arm hobbled
+  (confounded kill, P7) or measured pre-byte-close (overstates shipped d_seg). Unowned v2↔P4 seam. Fix is
+  LOW-DIM-achievable (per-column undriv-extent = GEOMETRIC-MINIMAL). verdict_scope FORMULATION.
+- **WORST PROXY (F-P5-P9-1):** `decoupling_screen.py:160` STILL defaults `delta_mask=DELTA_R_PROXY=0.0196`,
+  ~5600× > R7's measured 3.5e-6 → kill machinery DECISION-INERT (all realistic Δ → INCONCLUSIVE); measured
+  replacement un-swapped. Merges with F-P5-2 (seed-replicate build-spec gap; ≥3 seeds/arm not specified).
+- **F-P5-4 (REVISE):** NO temporal section for the 1a d_seg screen = eightfold-P6 SEAL FAIL.
+- **CARRY:** F-P5-3 shippable rate 0.135=WASH, sub-frontier win P-C-gated (r\* unmeasurable in inc-1);
+  F-P5-5 lane-coverage (53% enemy)=FAST-FOLLOW not inc-1 scope; F-P5-P9-2 dilate=2 de-share proxy; F-P5-6/P9-3
+  pin 0.00277-vs-0.0032. **DISSOLVED:** F7 (#226-admitted = d_seg-ranked SUBSET of uncovered px at r*<1).
+- **P9 pass (coordinator maxim):** 3 findings (P9-1 severe · P9-2/P9-3 minor) + P9-4 dissolved-mostly (rank
+  #386 through-R as SOLE b_c authority) + P9-5 dissolved-generic-but-F-P5-1-sharpened (single-valued carrier =
+  proxy with STRUCTURALLY BLOCKED thing-itself path).
+- SEAL PRE-CHECK: P6 FAIL + P2/P7 partial-fail + P5/P8 PASS ⇒ NOT seal-ready.
+NEXT ACTION: **P5b/v3 revision** — fold F-P5-1 (§B carrier + §I row + 1a byte-close), F-P5-P9-1/F-P5-2 (δ_mask
+swap + seed replicates), F-P5-4 (temporal section); RE-DERIVE all from primary artifacts (this memo is
+unreviewed). Pointer 0.19110 UNMOVED — MEANS.
