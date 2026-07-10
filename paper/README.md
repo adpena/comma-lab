@@ -3,6 +3,21 @@
 `notebook.py` is a live, reactive [marimo](https://marimo.io) companion to the paper
 **"Task-Aware Compression via Differentiable Scorer Optimization"** (`docs/writeup_draft.md`).
 
+## Published molab entry (marimo Notebook Competition, task #347)
+
+The published competition-entry notebook is **"The Witness Machine"** — a standalone,
+self-bootstrapping marimo notebook that lives in its own public repo and is served by molab's
+GitHub proxy at this canonical URL (do NOT change it; molab renders whatever is at that exact
+path+branch, so content fixes are pushed to the repo, never by minting a new notebook):
+
+- **Link:** <https://molab.marimo.io/github/adpena/witness-machine/blob/main/notebooks/witness_machine_v12.py>
+- **Home repo:** <https://github.com/adpena/witness-machine> (`notebooks/witness_machine_v12.py`)
+- **Sealed runtime bundle:** GitHub release `v1.2.0-rc2` asset (3,704,001 bytes,
+  sha256 `baf3e1e5…d439`), downloaded + verified + cached by the notebook when no repo
+  checkout is present (the molab case).
+
+Verification record: `.omx/research/marimo_linkfix_20260710.md` (+ `marimo_linkfix_evidence_20260710/`).
+
 ## What it implements
 
 A 45 KB CNN post-filter trained by backpropagating through the frozen PoseNet and SegNet
