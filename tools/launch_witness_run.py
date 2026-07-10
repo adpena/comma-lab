@@ -732,8 +732,13 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
         # 47 GiB RAM tax removed). compile_crucible_v752_launch_config returns the SAME launcher-facing
         # cfg protocol as crucible_v7 (.to_command / .to_trainer_flags / .name / dsl_program_manifest /
         # constants_manifest / schedule_governance), with the v7-identical constants+governance reused.
+        # amber=True (OI-5 realization; operator elevation 2026-07-10 "amber is important to pursue" +
+        # coordinator crash-recovery directive "FOLD AMBER INTO THE SAME RELAUNCH"): the SPEC §1.1
+        # 4-value stability set composed as EXPLICIT flags (grad-clip 0.5 / pose-grad-coeff-max 25 /
+        # grad-normalize per-param / per-group-grad-clip); the expected_stability manifest + the (d2)
+        # startup-telemetry assertion verify the RESOLVED values actually reached the trainer.
         return wac.compile_crucible_v752_launch_config(
-            gt_cache, num_pairs=num_pairs, self_orient=False, **_ek)
+            gt_cache, num_pairs=num_pairs, self_orient=False, amber=True, **_ek)
     if config == "crucible_v753":
         # T5 CRUCIBLE-2 v7.5.3 (fractal-synthesis typed-delta over v7.5.2,
         # fullstack_fractal_optimal_synthesis_20260710.md §3). DEFAULT branch = trunk_basis='off' (the

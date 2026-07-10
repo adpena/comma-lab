@@ -8857,7 +8857,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         if _cond_fired and _pose_gate["engaged_epoch"] < 0:
                             _pose_gate["engaged_epoch"] = ep
                     from tac.witness_control import sigma_min_plateau as _smp_r  # noqa: PLC0415
-                    _degenerate = bool(_pg_det is not None and _pg_det.should_ship_banked_r1())
+                    # (P0-2 INTERFACE FIX 2026-07-10 — the ep1 crash of run levelset_v752_pilot_
+                    # 20260710T154100Z) should_ship_banked_r1/classification live on the VERDICT
+                    # (detector.verdict()), not the detector; compute the verdict ONCE per epoch and
+                    # read the decision surface off it. The detector now ALSO delegates these
+                    # accessors (interface hardening), but the verdict route is the canonical one.
+                    _pg_v = _pg_det.verdict() if _pg_det is not None else None
+                    _degenerate = bool(_pg_v is not None and _pg_v.should_ship_banked_r1())
                     _engage, _banked_sel = _smp_r.resolve_pose_finish_engage(
                         cond_fired=_cond_fired, backstop_hit=(ep >= _pose_finish_start),
                         degenerate=_degenerate)
@@ -8866,8 +8872,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         _pose_gate["banked_row_emitted"] = True
                         print(json.dumps(_smp_r.backstop_banked_r1_row(
                             ep, backstop_epoch=_pose_finish_start,
-                            classification=(getattr(_pg_det, "classification", None)
-                                            if _pg_det is not None else None),
+                            classification=(_pg_v.classification if _pg_v is not None else None),
                             n_points=(_pg_det.n_points if _pg_det is not None else 0))), flush=True)
                 else:  # 'muon' incumbent — BYTE-IDENTICAL
                     _pose_finish_on["on"] = bool(_muon_gate.fired) or (ep >= _pose_finish_start)

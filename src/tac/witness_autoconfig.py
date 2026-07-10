@@ -3139,14 +3139,17 @@ def compile_crucible_v752_launch_config(
                        epochs_delta=_gate.epochs_delta, notes=_gate.notes),),
     }
     if amber:
-        # (OI-5 realization, operator elevation 2026-07-10) the BUILT AMBER preset's three cures as
-        # EXPLICIT values (see docstring: sidesteps the resolver's grad_clip comment/behavior
-        # mismatch; --per-group-grad-clip is already ON in the inherited base; grad-normalize is
-        # NOT composed — spec-vs-built gap surfaced, not silently closed).
+        # (OI-5 realization, operator elevation 2026-07-10; coordinator directive: compose the SPEC
+        # §1.1 values) amber as EXPLICIT values (sidesteps the resolver's grad_clip comment/behavior
+        # mismatch; --per-group-grad-clip is already ON in the inherited base). grad-clip 0.5 +
+        # coeff-max 25 come from the BUILT tac.witness_stability.AMBER; --grad-normalize per-param is
+        # the SPEC §1.1 4th value the BUILT preset under-implements (spec-vs-built gap SURFACED in the
+        # decision record §9b-2; the SEALED SPEC is the composition authority per the directive).
         from tac.witness_stability import AMBER as _AMBER
         _updates["base"] = {**typed.base,
                             "--grad-clip": float(_AMBER.grad_clip),
-                            "--pose-grad-coeff-max": float(_AMBER.pose_grad_coeff_max)}
+                            "--pose-grad-coeff-max": float(_AMBER.pose_grad_coeff_max),
+                            "--grad-normalize": "per-param"}
     typed = typed.model_copy(update=_updates)
     viol = typed.validate_program()
     if viol:
@@ -3178,6 +3181,7 @@ def compile_crucible_v752_launch_config(
         # values — a compiled-but-runtime-defeated amber is the P0-1 built-not-composed class.
         _stab_expect = {"--grad-clip": typed.base["--grad-clip"],
                         "--pose-grad-coeff-max": typed.base["--pose-grad-coeff-max"],
+                        "--grad-normalize": typed.base["--grad-normalize"],
                         "--per-group-grad-clip": True}
         for _f, _v in _stab_expect.items():
             _got_v = typed.base.get(_f)
@@ -3188,7 +3192,8 @@ def compile_crucible_v752_launch_config(
         dsl_manifest["expected_stability"] = {
             "grad_clip": float(_stab_expect["--grad-clip"]),
             "pose_grad_coeff_max": float(_stab_expect["--pose-grad-coeff-max"]),
-            "per_group_grad_clip": True, "composed_as": "explicit-values (no preset)",
+            "grad_normalize": str(_stab_expect["--grad-normalize"]),
+            "per_group_grad_clip": True, "composed_as": "explicit-values (no preset; SPEC §1.1 4-value set)",
         }
     # REUSE crucible_v7's constants_manifest + governance-dict (IDENTICAL for v752 — see docstring).
     v7_compiled = compile_crucible_v7_config(

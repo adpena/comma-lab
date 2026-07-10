@@ -382,6 +382,19 @@ class SigmaMinPlateauDetector:
     def fired(self) -> bool:
         return self._fired_epoch >= 0
 
+    def should_ship_banked_r1(self) -> bool:
+        """DEGENERATE fall-back, DELEGATED to the current verdict (P0-2 interface fix 2026-07-10:
+        the trainer's backstop guard called this on the DETECTOR but it existed only on
+        :class:`SigmaMinPlateauVerdict` — an AttributeError that KILLED the first v752 launch at ep1,
+        run ``levelset_v752_pilot_20260710T154100Z``. The detector now mirrors the verdict's decision
+        surface so either object satisfies the guard's contract)."""
+        return self.verdict().should_ship_banked_r1()
+
+    @property
+    def classification(self) -> str:
+        """The current verdict's classification (delegated; see :meth:`should_ship_banked_r1`)."""
+        return self.verdict().classification
+
     @property
     def fired_epoch(self) -> int:
         return self._fired_epoch

@@ -222,15 +222,18 @@ def test_crucible_v752_amber_composition():
     d0 = dict(wac._crucible_v7_argv_pairs(base.typed.to_program().compile_trainer_argv()))
     d1 = dict(wac._crucible_v7_argv_pairs(amb.typed.to_program().compile_trainer_argv()))
     changed = {k for k in set(d0) | set(d1) if d0.get(k, "ABSENT") != d1.get(k, "ABSENT")}
-    assert changed == {"--grad-clip", "--pose-grad-coeff-max"}, (
-        f"amber must change EXACTLY grad-clip + coeff-max; got {sorted(changed)}")
+    assert changed == {"--grad-clip", "--pose-grad-coeff-max", "--grad-normalize"}, (
+        f"amber must change EXACTLY the SPEC §1.1 value set; got {sorted(changed)}")
     assert d1["--grad-clip"] == "0.5" and d1["--pose-grad-coeff-max"] == "25.0"
+    assert d1["--grad-normalize"] == "per-param", (
+        "SPEC §1.1 lists grad-normalize (the BUILT preset under-implements it — surfaced gap; the "
+        "SEALED SPEC is the composition authority per the operator elevation)")
     assert "--stability-preset" not in d1, "explicit values, never the runtime-ambiguous preset"
-    assert "--grad-normalize" not in d1, "grad-normalize is NOT in the BUILT AMBER (spec-vs-built gap)"
     # the manifest carries the startup-assertion expectation; incumbent does NOT.
     es = amb.dsl_program_manifest.get("expected_stability")
-    assert es == {"grad_clip": 0.5, "pose_grad_coeff_max": 25.0, "per_group_grad_clip": True,
-                  "composed_as": "explicit-values (no preset)"}
+    assert es == {"grad_clip": 0.5, "pose_grad_coeff_max": 25.0, "grad_normalize": "per-param",
+                  "per_group_grad_clip": True,
+                  "composed_as": "explicit-values (no preset; SPEC §1.1 4-value set)"}
     assert "expected_stability" not in base.dsl_program_manifest
     # the runtime resolver REALIZES the composed values (changed=True => the resolved row is emitted,
     # which the launcher's startup assertion reads back).
@@ -243,6 +246,51 @@ def test_crucible_v752_amber_composition():
         stability_preset=ns.stability_preset, per_group_grad_clip=ns.per_group_grad_clip)
     assert st.grad_clip == 0.5 and st.per_group_grad_clip is True and st.changed is True
     assert abs(st.effective_pose_eps - 0.04) < 1e-12  # (5/25)^2 — the coeff-25 eps floor
+
+
+def test_trainer_pose_gate_guard_call_path_against_real_detector():
+    """REGRESSION for the ep1 crash of run levelset_v752_pilot_20260710T154100Z (2026-07-10):
+    the P0-2 guard called should_ship_banked_r1/classification on the DETECTOR, but they lived only
+    on the VERDICT — AttributeError at the first engage-block epoch, which no boot-only check reaches.
+    This test replays the trainer's EXACT per-epoch attribute sequence (L8851-8871) against REAL
+    SigmaMinPlateauDetector instances in both signal regimes, so any interface drift on this surface
+    fails a $0 unit test instead of a live launch."""
+    from tac.witness_control.sigma_min_plateau import (
+        SigmaMinPlateauConfig,
+        SigmaMinPlateauDetector,
+        backstop_banked_r1_row,
+        resolve_pose_finish_engage,
+    )
+
+    def _trainer_guard_epoch(det, ep, backstop):
+        # the trainer's engage-block sequence, verbatim attribute-for-attribute:
+        det.latch_if_fired(ep)
+        cond_fired = det.fired()
+        pg_v = det.verdict()                              # the canonical route (one verdict/epoch)
+        degenerate = bool(pg_v.should_ship_banked_r1())
+        engage, banked = resolve_pose_finish_engage(
+            cond_fired=cond_fired, backstop_hit=(ep >= backstop), degenerate=degenerate)
+        if banked:
+            row = backstop_banked_r1_row(ep, backstop_epoch=backstop,
+                                         classification=pg_v.classification, n_points=det.n_points)
+            assert row["should_ship_banked_r1"] is True
+        # the detector ALSO delegates the verdict surface (interface hardening — either object works):
+        assert det.should_ship_banked_r1() == degenerate
+        assert isinstance(det.classification, str)
+        return engage, banked
+
+    # regime 1: EMPTY/young series (the ep1 crash state — verdict INSUFFICIENT, not degenerate).
+    det = SigmaMinPlateauDetector(SigmaMinPlateauConfig())
+    engage, banked = _trainer_guard_epoch(det, ep=1, backstop=726)
+    assert (engage, banked) == (False, False), "ep1, nothing fired, pre-backstop: pose stays blind"
+    # regime 2: a few noisy points (still healthy-not-fired) + the backstop epoch.
+    for e, v in [(0, 1.0), (100, 2.0), (200, 1.5), (300, 2.5), (400, 1.8)]:
+        det.observe(e, v)
+    engage_pre, banked_pre = _trainer_guard_epoch(det, ep=500, backstop=726)
+    assert banked_pre is False, "pre-backstop: no banked decision regardless of signal state"
+    engage_bs, banked_bs = _trainer_guard_epoch(det, ep=726, backstop=726)
+    # at the backstop the decision is engage XOR banked (never neither, never both):
+    assert engage_bs != banked_bs, "backstop must force exactly one of engage/banked"
 
 
 def test_resolve_pose_finish_engage_backstop_semantics():
