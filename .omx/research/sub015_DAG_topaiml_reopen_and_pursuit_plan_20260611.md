@@ -13395,12 +13395,12 @@ Memo: `.omx/research/reactivation_campaign_397_20260710.md`.
   fixing). Verdict `owed16_gap_diagnostic_why_direct48_not_realized_20260710.json`.
 - **FIRE 2 (RE-OPENED):** Lever-D flicker economics RELATIVE re-price — at 0.820 B/flip the coder net ΔS ≈ +3.0e-7
   S/flip (favorable); recovering 10% of the 0.0411 gap needs only f≥~4% net recovery. NOT economics-dead by
-  magnitude; the open var is net-recovery f → machine-bound Stage-0 on an islands-active ckpt. Moved NO-GO→re-test.
+  magnitude; the open var is net-recovery f → machine-bound Stage-0 on an islands-active ckpt. Moved NO-GO→re-test. # VERDICT_SCOPE_OK: this line RE-OPENS a prior NO-GO (positive action), records no new negative
 - **FIRE 3:** deferral-trigger liveness re-point — no trigger newly MET (D1/D2/D18 gated on a chosen-chain FINAL
   ckpt that does not exist); D7 compile-check + D10 marimo (LAPSED 07-09) flagged; hot d_seg/rate reactivations
   live in the METHOD registers, not the deferral ledger.
 - **OPERATOR-GO flagged, NOT fired:** #316 eikonal-viscosity FAIR test (D1 KNOWN-TAINTED era; first non-confounded
   measurement; re-grades D1/D2/D7) · #238 joint pose-descent.
-- **CLOSED:** #299 mod-dim capacity (REFUTED = island-gradient starvation, not capacity; do not re-open as bigger mod-dim).
+- **CLOSED:** #299 mod-dim capacity (verdict_scope: formulation — the mod-dim-as-capacity-limit EXPLANATION was refuted by #300's measured island-gradient-starvation mechanism; do not re-open as bigger mod-dim).
 - Sibling-safe append (does not touch owed16v2 / v752 run dirs or sibling files). Pointer contest-CPU **0.19110
   UNMOVED** — this campaign is MEANS; it drains the reactivation queue into the config-input pool.
