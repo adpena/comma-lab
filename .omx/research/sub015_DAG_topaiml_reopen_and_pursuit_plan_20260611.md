@@ -13347,3 +13347,27 @@ verdict_scope FORMULATION; no kill; no score. Pointer 0.19110 UNMOVED (means).
   (freq budget flipped to along-tangent per the 3.2× deficit, #335 lever FIRING) runs first; the hold releases
   with whichever config wins (rebalanced-ON vs OFF). Dry-start footprint triple-confirmed 22-24 GiB (OFF mode).
 - Pointer contest-CPU **0.19110 UNMOVED** — config compilation is MEANS.
+
+## FEED-negcure-join (2026-07-10) — NEGATIVE↔CURE ADJACENCY JOIN SWEEP (operator "answers right under our noses")
+Applied the self-orient exemplar template (`negative_cure_adjacency_answers_under_our_noses_20260710.md`)
+across the standing negatives register (auditor A 51 + B 21) + fresh session verdicts. A negative is a
+JOIN FAILURE when its failed formulation VIOLATED a MEASURED fact AND/OR a built-never-fired/pending-SWEEP/
+built-not-applied instrument ENCODES the correction. Table: `negative_cure_join_table_20260710.md`.
+- **13 fireable joins · 7 no-joins** (honest: per-class-focal contradicted by C17 γ*=0; int8 a WASH-axis
+  defer; dense-medial→v8 already carves; pose #238 already the live door; DMTz/F1 paradigm-superseded).
+- **TOP-5 → post-launch queue:** (1) **E5/msal_uni sR #268 A/B** — zero build, `gt_n600_sR.npz` READY,
+  never fired, on the fragile annulus band = second-exemplar-grade (dead texture proxy carves; live exact
+  reachability weight orphaned). (2) **C14 analytic-lane band as a TRAINING lever** (paint-mode C13 ~10 LOC;
+  lane=53% enemy; mis-credited by a post-hoc surface — violates B4 render-post-hoc-dead law). (3) **MC
+  finisher #396** built+tested this session, attacks terminal residual flips where gradient bottoms out.
+  (4) **hosc-death → β-anneal/FINER++** built-never-fired, verdict's own queue named it (second-exemplar
+  candidate). (5) **Lever-D economics RE-PRICE** (relative-significance, $0 now) + #307 arithmetic on an
+  islands-active ckpt.
+- **Second-exemplar-grade joins surfaced: 2** — msal_uni→sR (RANK 2) and hosc-death→β-anneal/FINER++
+  (RANK 3), both with all three ledger legs (measured violated fact + built-never-fired cure + verdict's own
+  reformulation naming it).
+- **HELD (not forced):** IGA-NTK along-tangent cure WEAKENED (owed-16 v1 basis ≈0 even zero-shot → wait for
+  the v2 rebalanced arm before re-testing a possibly-dead axis); grids-for-bulk + TropNNC held (no matched
+  MEASURED violated fact yet).
+- Sibling-safe append (owed-16 v2 REBALANCED arm is the live launch-hold; this FEED does not touch it).
+- Pointer contest-CPU **0.19110 UNMOVED** — this sweep is MEANS; only a byte-closed n600 exact row moves it.
