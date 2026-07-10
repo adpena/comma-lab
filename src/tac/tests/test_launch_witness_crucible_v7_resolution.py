@@ -107,11 +107,13 @@ def test_adapter_exposes_full_cfg_protocol(v7_cfg):
     assert all(isinstance(v, dict) for v in v7_cfg.schedule_governance.values())
     # emit metadata
     assert v7_cfg.purpose and "crucible v7" in v7_cfg.purpose.lower()
-    # 5-lever set as of the v7.3 compile (Polyak finisher joined the basis-integration four).
+    # the v7.5 lever set (counter-force + ACTUATION items joined the v7.3 basis-integration five):
+    # + v75_area_constraint_birth + v75_birth_completion_event + n287_dash_comb + temporal_screw_consistency.
     assert v7_cfg.dsl_levers == (
         "seg_form_unify_tau", "tail_k_warm_restart", "n323_ladder_island_homotopy",
         "FEED_07a_directional_basis_rebalance", "R7_polyak_finisher",
-        "v75_area_constraint_birth", "v75_birth_completion_event")
+        "v75_area_constraint_birth", "v75_birth_completion_event",
+        "n287_dash_comb", "temporal_screw_consistency")
 
 
 def test_b06_manifest_verifies_for_real(v7_cfg):
@@ -186,6 +188,64 @@ def test_full_dry_run_gate_chain_passes(tmp_path, capsys):
     assert "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1" in launch_sh
     assert "TAC_MLX_CUSTOM_PERSISTENCE_POOL=1" in launch_sh  # v7.3 delta 1 (D16 dispatch ON)
     assert "--safe-compile-regions hosc_activation" in launch_sh  # v7.3 delta 3
+
+
+# ── (e) crucible_v752 SELF-ORIENT-OFF launch-path resolution (owed-16 GO'd amendment, 2026-07-10) ──
+@pytest.fixture(scope="module")
+def v752_cfg():
+    return L.derive_named_config("crucible_v752", _GT, num_pairs=8, epochs=3000, overfit=True)
+
+
+def test_derive_named_config_resolves_crucible_v752(v752_cfg):
+    """The P8-wall launcher wire-in (operator GO 2026-07-10): --config crucible_v752 resolves to the
+    v752 launch adapter (NOT proven_base, NOT crucible_v7), self-orient OFF."""
+    assert isinstance(v752_cfg, CrucibleV7LaunchConfig)
+    assert v752_cfg.name == "crucible_v752"
+    assert L.config_family(v752_cfg) == "crucible_v752"
+
+
+def test_crucible_v752_launch_is_self_orient_off(v752_cfg):
+    """The GO'd amendment: the launch config drops the self-orient directional front-end + the FEED_07a
+    lever, keeping the rest of the sealed crucible_v7 trunk (owed-16 P9 RESOLVED-REFUTING)."""
+    cmd = v752_cfg.to_command("OUT", perf_env=True)
+    assert "--self-orient" not in cmd
+    assert "FEED_07a_directional_basis_rebalance" not in v752_cfg.dsl_levers
+    # the perf-env fast path is still armed (score-neutral compute, unchanged by the amendment).
+    assert cmd.count("TAC_MLX_CUSTOM_GROUPED_BACKWARD") == 1
+
+
+def test_crucible_v752_adapter_manifests_verify(v752_cfg):
+    """b0.6: the v752 DSL-provenance manifest VERIFIES against its emitted argv (rc=7 gate input),
+    and it reuses v7's constants + schedule-governance manifests (identical LawRefs / WHEN tokens)."""
+    emitted = list(L._emitted_flag_names(v752_cfg, "OUT"))
+    ok, detail = verify_launch_manifest(v752_cfg.dsl_program_manifest, emitted)
+    assert ok, detail
+    assert v752_cfg.dsl_program_manifest["program_name"] == "crucible_v752"
+    assert v752_cfg.constants_manifest and v752_cfg.schedule_governance
+    # every governance KEY is still an emitted flag (the amendment removed only directional flags).
+    emitted_set = {f for f, _ in v752_cfg.to_trainer_flags("OUT")}
+    for key in v752_cfg.schedule_governance:
+        assert key in emitted_set, f"governance declares {key} but v752 launch.sh never emits it"
+
+
+@pytest.mark.skipif(not _SC_FRESH, reason="safe-compile fingerprint mismatch (b2 host-conditional)")
+def test_crucible_v752_full_dry_run_gate_chain_passes(tmp_path, capsys):
+    """The full launcher dry-run gate chain PASSES on the GO'd self-orient-OFF v752 config, and
+    launch.sh carries the crucible_v752 identity WITHOUT --self-orient."""
+    rc = L.main([
+        "--gt-cache", _GT, "--num-pairs", "8", "--epochs", "3000",
+        "--config", "crucible_v752", "--out-dir", str(tmp_path),
+        "--dry-run", "--skip-mem-preflight",
+    ])
+    out = capsys.readouterr()
+    combined = out.out + out.err
+    assert rc == 0, combined
+    assert "dsl-config gate: OK" in combined and "crucible_v752" in combined
+    assert "REFUSING to launch" not in combined
+    launch_sh = (tmp_path / "launch.sh").read_text()
+    assert "# tac-config-family: crucible_v752" in launch_sh
+    assert "--self-orient" not in launch_sh, "GO'd launch config must be self-orient-OFF"
+    assert "TAC_MLX_CUSTOM_GROUPED_BACKWARD=1" in launch_sh
 
 
 @pytest.mark.skipif(not _SC_FRESH, reason="safe-compile fingerprint mismatch (b2 host-conditional)")

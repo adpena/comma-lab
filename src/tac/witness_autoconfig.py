@@ -2895,6 +2895,36 @@ _CRUCIBLE_V752_LAUNCH1_DELTA: dict = {
 # clean rung-1b A/B baseline) by DROPPING the flag from the merged base (absent ⇒ trainer default).
 _CRUCIBLE_V752_LAUNCH1_REMOVE: tuple = ("--length-sigma-matrix",)
 
+# SELF-ORIENT-OFF AMENDMENT (owed-16 P9 RESOLVED-REFUTING, 2026-07-10; operator GO on the #385
+# ADDENDUM v2 revised recommendation "launch v7.5.2 with self-orient OFF"). owed-16 was the
+# PRE-REGISTERED P9 launch-gate resolver in SPEC_v752 §5 — a measured refute AMENDS the config by
+# design (NOT a seal violation). The matched-arm realized-through-R n600 A/B (verdict `1352982ba`,
+# EmpiricalAnchor `owed16_realized_transfer_measured_zero_20260710`, canonical equation
+# `curvelet_directional_basis_dseg_reduction_v1`) measured the −48% DIRECT-PARTITION advisory does
+# NOT transfer realized: ep650 zero-shot Δ(OFF−ON) −0.000089 (−1.4%), ep675 Δ −0.000015 (−0.35%) —
+# realized directional contribution ≈ 0 (within single-seed noise; P2: SIGN not claimed, ~zero
+# MAGNITUDE is). Cost side measured LIVE: self-orient = 47 GiB RAM tax (67 vs 10.2 GiB RSS) + the
+# directional cache's share of the wall-clock. ⇒ do NOT ship self-orient in the launch trunk.
+#
+# The amendment (through the DSL, self_orient=False): DROP the self-orient front-end. Mechanism
+# (trainer L3155-3159: use_self_orient=bool(args.self_orient); dir_w=4*n_dir_freqs; in_feat+=dir_w
+# ONLY when use_self_orient) — --self-orient is BooleanOptionalAction default=False, so ABSENCE ⇒
+# OFF, and --n-dir-freqs/--freq-across/--freq-along/--reorient-every become INERT (self-orient-only
+# params). Removing them keeps the argv HONEST (no orphan flags). --max-bank-freq is KEPT: it feeds
+# the ALWAYS-ON curvelet bank B (trainer L3095, unconditional, BEFORE the use_self_orient block) —
+# the owed-16 ablation confirmed "ONLY the 16 directional input channels differ" (16 = 4*n_dir_freqs=4,
+# the self-orient dir_w), the curvelet bank unchanged. The FEED_07a_directional_basis_rebalance lever
+# (which re-emits --n-dir-freqs/--freq-across/--freq-along + reaffirms --self-orient) is also removed
+# from the composition (else it re-adds the dropped flags). Everything else (lane_offloaded regime,
+# --persistence-classes/--logit-adjust-classes movable-only, --lane-render-band, dash-comb,
+# counter-force, temporal-screw, AA-ipe, pose-finish) is UNCHANGED — this matches the owed-16 arm
+# (whole trunk minus the directional channels). OI-4 (freq_along 6-vs-26) becomes MOOT (inert when
+# self-orient off). means != ends: pointer 0.19110 UNMOVED until a byte-closed n600 row < 0.19110.
+_CRUCIBLE_V752_SELF_ORIENT_OFF_REMOVE: tuple = (
+    "--self-orient", "--n-dir-freqs", "--freq-across", "--freq-along", "--reorient-every",
+)
+_CRUCIBLE_V752_DIRECTIONAL_LEVER_NAME: str = "FEED_07a_directional_basis_rebalance"
+
 
 def derive_crucible_v752_config(
     gt_cache_path,
@@ -2904,6 +2934,7 @@ def derive_crucible_v752_config(
     out_dir: str = "experiments/results/__crucible_v752__",
     code_matrix=None,
     byte_close_result=None,
+    self_orient: bool = True,
 ):
     """The T5 CRUCIBLE-2 v7.5.2 launch-1 config (P7 DELIVERABLE) — authored AS a
     :class:`tac.witness_dsl.typed_config.TypedWitnessConfig` by INHERITING the sealed crucible_v7
@@ -2913,6 +2944,13 @@ def derive_crucible_v752_config(
     launch argv (parses clean through ``build_real_trainer_parser`` — the P6 compile smoke, now the
     committed test ``test_crucible2_v752_dsl_wirein``). Fail-CLOSED: refuses a config the DSL cannot
     validate BEFORE it can reach a launcher (mirrors :func:`derive_crucible_v7_config`).
+
+    ``self_orient`` (default ``True`` = the SEALED P7 artifact, byte-identical, tested): when
+    ``False`` applies the owed-16 P9 RESOLVED-REFUTING amendment (operator GO 2026-07-10, #385
+    ADDENDUM v2) — DROPS the self-orient directional front-end (:data:`_CRUCIBLE_V752_SELF_ORIENT_OFF_REMOVE`
+    + the :data:`_CRUCIBLE_V752_DIRECTIONAL_LEVER_NAME` lever). This is the GO'd launch config;
+    everything else (lane_offloaded regime, counter-force, temporal-screw, AA-ipe, pose-finish, the
+    always-on curvelet bank ``--max-bank-freq``) is UNCHANGED, matching the owed-16 ablation arm.
 
     SEALED source: ``.omx/research/t5_crucible2/SYNTHESIS_v3_v752_20260709.md``. The EXCLUDED launch-1
     items (amber realization OI-5, freq_along-26 OI-4, --pose-finish-engage-on owed-1) are documented
@@ -2927,21 +2965,42 @@ def derive_crucible_v752_config(
     # merge the launch-1 delta into the sealed crucible_v7 base (delta wins; pydantic frozen copy),
     # THEN apply the W-1 REMOVAL (σ_cc′ OUT of launch-1 → drop --length-sigma-matrix → trainer default
     # σ≡1). epochs is UNCHANGED vs the v7 derive call above, so the inherited DERIVED
-    # wall_clock_budget_days (computed for THIS epochs) stays valid — no re-derive needed.
+    # wall_clock_budget_days (computed for THIS epochs) stays valid — no re-derive needed (the
+    # self-orient-OFF cadence is FASTER/SMALLER, so the inherited ON-derived budget is a conservative
+    # ceiling; the dry-start MEASURES the real sec/ep and the launcher rc=8 gate re-validates).
     merged_base = {**v7.base, **_CRUCIBLE_V752_LAUNCH1_DELTA}
     for _rm in _CRUCIBLE_V752_LAUNCH1_REMOVE:
         merged_base.pop(_rm, None)
+    levers = tuple(v7.levers)
+    purpose = (
+        "T5 CRUCIBLE-2 v7.5.2 launch-1 (SEALED SYNTHESIS_v3): the crucible_v7 sealed trunk "
+        "(directional basis + Chan-Vese counter-force + #360 temporal-screw + AA-ipe + "
+        "safe-compile + terminal pose-finish) + the launch-1 delta (#121 d_seg-aware taper + "
+        "score-neutral fused-R/async-verdict speed) MINUS σ_cc′ (--length-sigma-matrix reverted "
+        "to σ≡1, W-1: OUT of launch-1 → ladder rung 1b). amber realization (OI-5), freq_along-26 "
+        "(OI-4), and --pose-finish-engage-on (owed-1) are P8-wall items, NOT here. MEANS until "
+        "a byte-closed n600 row < 0.19110; ships banked-R1 pose floor (d_pose 0.001610 → 0.127).")
+    if not self_orient:
+        # owed-16 P9 RESOLVED-REFUTING amendment (operator GO 2026-07-10; docstring + module constants
+        # above carry the full provenance). Drop the self-orient directional front-end: the flags AND
+        # the FEED_07a lever (else the lever re-emits the dropped directional flags + reaffirms
+        # --self-orient). --max-bank-freq stays (always-on curvelet bank). OI-4 becomes moot (inert).
+        for _rm in _CRUCIBLE_V752_SELF_ORIENT_OFF_REMOVE:
+            merged_base.pop(_rm, None)
+        levers = tuple(lv for lv in levers if lv.name != _CRUCIBLE_V752_DIRECTIONAL_LEVER_NAME)
+        purpose = (
+            "T5 CRUCIBLE-2 v7.5.2 launch-1 SELF-ORIENT-OFF (owed-16 P9 RESOLVED-REFUTING, operator "
+            "GO 2026-07-10): the crucible_v7 sealed trunk MINUS the self-orient directional basis "
+            "(realized-through-R transfer measured ≈0, anchor owed16_realized_transfer_measured_zero_"
+            "20260710; 47 GiB RAM tax removed) MINUS σ_cc′ (W-1). Keeps lane_offloaded regime, "
+            "counter-force, #360 temporal-screw, AA-ipe, pose-finish, #121 taper, curvelet bank. "
+            "This IS the GO'd pointer-moving launch config. MEANS until a byte-closed n600 row "
+            "< 0.19110; ships banked-R1 pose floor (d_pose 0.001610 → 0.127); d_seg the open axis.")
     typed = v7.model_copy(update={
         "name": "crucible_v752",
         "base": merged_base,
-        "purpose": (
-            "T5 CRUCIBLE-2 v7.5.2 launch-1 (SEALED SYNTHESIS_v3): the crucible_v7 sealed trunk "
-            "(directional basis + Chan-Vese counter-force + #360 temporal-screw + AA-ipe + "
-            "safe-compile + terminal pose-finish) + the launch-1 delta (#121 d_seg-aware taper + "
-            "score-neutral fused-R/async-verdict speed) MINUS σ_cc′ (--length-sigma-matrix reverted "
-            "to σ≡1, W-1: OUT of launch-1 → ladder rung 1b). amber realization (OI-5), freq_along-26 "
-            "(OI-4), and --pose-finish-engage-on (owed-1) are P8-wall items, NOT here. MEANS until "
-            "a byte-closed n600 row < 0.19110; ships banked-R1 pose floor (d_pose 0.001610 → 0.127)."),
+        "levers": levers,
+        "purpose": purpose,
     })
     # fail-CLOSED at authoring time (mirrors crucible_v7): refuse a config the DSL cannot validate.
     viol = typed.validate_program()
@@ -2960,20 +3019,24 @@ def compile_crucible_v752_config(
     out_dir: str = "experiments/results/__crucible_v752__",
     code_matrix=None,
     byte_close_result=None,
+    self_orient: bool = True,
 ) -> tuple:
     """Compile crucible_v752: the typed config -> (typed, argv, dsl_program_manifest). Makes v7.5.2
     the THIRD DSL-provenance-migrated program (after v6/v7): the ``dsl_program_manifest`` is the
     :func:`tac.witness_dsl.typed_config.build_launch_manifest` attestation the launcher's rc=7 gate
     (``tools/launch_witness_run.py`` verify_launch_manifest) reads off ``cfg.dsl_program_manifest``.
 
+    ``self_orient`` (default ``True`` = sealed artifact) forwards to :func:`derive_crucible_v752_config`
+    — ``False`` is the owed-16 GO'd self-orient-OFF launch config.
+
     Returns ``(typed_config, argv_tuple, dsl_program_manifest)``. Fail-CLOSED via
-    :func:`derive_crucible_v752_config`'s validate. NO launcher dispatch wiring (that is a P8-wall
-    item: the dual-chain wall means NO launch fires when crucible-2 seals). Pure / $0."""
+    :func:`derive_crucible_v752_config`'s validate. Pure / $0 (no launcher dispatch — see
+    :func:`compile_crucible_v752_launch_config` for the launch-config wrapper)."""
     from tac.witness_dsl.typed_config import build_launch_manifest
 
     typed = derive_crucible_v752_config(
         gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
-        code_matrix=code_matrix, byte_close_result=byte_close_result)
+        code_matrix=code_matrix, byte_close_result=byte_close_result, self_orient=self_orient)
     argv = typed.to_program().compile_trainer_argv()
     pairs = _crucible_v7_argv_pairs(argv)  # reuse the v7 argv-pairs parser (same argv shape)
     emitted_names = sorted({f for f, _ in pairs})
@@ -2981,6 +3044,54 @@ def compile_crucible_v752_config(
         program_name="crucible_v752", emitted_flag_names=emitted_names,
         typed_config_hash=typed.typed_config_hash(), typed_validated=True)
     return typed, tuple(argv), dsl_manifest
+
+
+def compile_crucible_v752_launch_config(
+    gt_cache_path,
+    *,
+    num_pairs: int,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/__crucible_v752__",
+    code_matrix=None,
+    byte_close_result=None,
+    self_orient: bool = False,
+) -> "CrucibleV7LaunchConfig":
+    """The launcher-facing crucible_v752 cfg — the ONE object satisfying the whole duck-typed cfg
+    protocol ``tools/launch_witness_run.py`` consumes (the deliberately-deferred P8-wall launcher
+    wire-in, NOW authorized by the operator GO 2026-07-10). Mirrors
+    :meth:`CrucibleV7Compiled.to_launch_config`.
+
+    ``self_orient`` defaults to ``False`` HERE (unlike derive/compile whose default is the sealed ON
+    artifact) because the LAUNCH is the GO'd self-orient-OFF config (#385 ADDENDUM v2). v7.5.2's
+    constants_manifest + schedule_governance are IDENTICAL to crucible_v7 (v752 only changes base
+    FLAGS + removes the directional lever; neither touches the LawRef constants nor the schedule-WHEN
+    governance tokens) — so those two provenance manifests are REUSED from the compiled crucible_v7
+    artifact (drift-impossible), and the ``dsl_program_manifest`` is v752's own (its emitted-flag
+    fingerprint). Returns a :class:`CrucibleV7LaunchConfig` whose ``.name`` is ``crucible_v752``.
+
+    means != ends: a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110 moves the
+    pointer 0.19110."""
+    from tac.witness_dsl.typed_config import build_launch_manifest
+
+    # the v752 typed config (self-orient per the arg) + its OWN dsl_program_manifest fingerprint.
+    typed = derive_crucible_v752_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result, self_orient=self_orient)
+    argv = typed.to_program().compile_trainer_argv()
+    emitted_names = sorted({f for f, _ in _crucible_v7_argv_pairs(argv)})
+    dsl_manifest = build_launch_manifest(
+        program_name="crucible_v752", emitted_flag_names=emitted_names,
+        typed_config_hash=typed.typed_config_hash(), typed_validated=True)
+    # REUSE crucible_v7's constants_manifest + governance-dict (IDENTICAL for v752 — see docstring).
+    v7_compiled = compile_crucible_v7_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        code_matrix=code_matrix, byte_close_result=byte_close_result)
+    return CrucibleV7LaunchConfig(
+        typed=typed,
+        constants_manifest=dict(v7_compiled.constants_manifest),
+        dsl_program_manifest=dict(dsl_manifest),
+        schedule_governance=dict(v7_compiled.schedule_governance),
+    )
 
 
 # ==========================================================================

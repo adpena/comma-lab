@@ -123,6 +123,59 @@ def test_crucible_v752_excluded_items_are_not_silently_included():
         "σ_cc′ is ladder rung 1b (own increment), NOT launch-1")
 
 
+def test_crucible_v752_self_orient_off_drops_directional_frontend():
+    """owed-16 P9 RESOLVED-REFUTING amendment (operator GO 2026-07-10): self_orient=False DROPS the
+    self-orient directional basis (flags + the FEED_07a lever), keeping the always-on curvelet bank
+    (--max-bank-freq) and everything else. This is the GO'd pointer-moving launch config."""
+    on = wac.derive_crucible_v752_config(_GT, num_pairs=600, epochs=3000)                    # sealed ON
+    off = wac.derive_crucible_v752_config(_GT, num_pairs=600, epochs=3000, self_orient=False)  # GO'd OFF
+    argv_off = off.to_program().compile_trainer_argv()
+    # OFF still validates + parses through the REAL argparse.
+    assert off.validate_program() == [], "self-orient-OFF v752 must be DSL-valid"
+    ap = cd.build_real_trainer_parser()
+    ns = ap.parse_args(list(argv_off)[2:])
+    assert ns.self_orient is False, "OFF config: --self-orient absent ⇒ trainer default False"
+    # the 5 self-orient-only flags are DROPPED; --max-bank-freq (always-on curvelet bank) is KEPT.
+    for f in ("--self-orient", "--n-dir-freqs", "--freq-across", "--freq-along", "--reorient-every"):
+        assert _argv_flag_value(argv_off, f) == "__ABSENT__", f"{f} must be dropped when self-orient OFF"
+    assert _argv_flag_value(argv_off, "--max-bank-freq") != "__ABSENT__", (
+        "--max-bank-freq feeds the ALWAYS-ON curvelet bank (not self-orient) — must be KEPT")
+    # the FEED_07a directional lever is removed from the composition (else it re-emits the flags).
+    assert "FEED_07a_directional_basis_rebalance" in {lv.name for lv in on.levers}
+    assert "FEED_07a_directional_basis_rebalance" not in {lv.name for lv in off.levers}
+    # the rest of the trunk is UNCHANGED (spot-check the load-bearing non-directional flags survive).
+    assert _argv_flag_value(argv_off, "--render-aa") == "ipe"
+    assert _argv_flag_value(argv_off, "--lane-render-band") == "__BARE__"        # lane_offloaded band kept
+    assert _argv_flag_value(argv_off, "--safe-compile-regions") == "hosc_activation"
+    assert _argv_flag_value(argv_off, "--dseg-aware-taper") == "__BARE__"        # #121 taper kept
+    assert _argv_flag_value(argv_off, "--pose-finish-start-epoch") != "__ABSENT__"
+    # ON and OFF are DISTINCT typed configs (different hash) — the amendment is real, not a no-op.
+    assert on.typed_config_hash() != off.typed_config_hash()
+
+
+def test_crucible_v752_launch_config_wiring():
+    """The P8-wall launcher wire-in (operator GO 2026-07-10): compile_crucible_v752_launch_config
+    returns the full launcher-facing cfg protocol with self-orient OFF by default, reusing v7's
+    constants + schedule-governance manifests and carrying its own DSL-provenance fingerprint."""
+    lc = wac.compile_crucible_v752_launch_config(_GT, num_pairs=600, epochs=3000)  # default self_orient=False
+    assert lc.name == "crucible_v752"
+    # launch config is self-orient-OFF by construction (the GO'd amendment).
+    cmd = lc.to_command("experiments/results/__probe__", perf_env=True)
+    assert "--self-orient" not in cmd, "launch config must be self-orient-OFF (owed-16 GO'd amendment)"
+    assert "FEED_07a_directional_basis_rebalance" not in lc.dsl_levers
+    # the three provenance manifests the launcher gate chain consumes are present + coherent.
+    assert lc.dsl_program_manifest["program_name"] == "crucible_v752"
+    assert lc.constants_manifest, "constants_manifest reused from crucible_v7 (identical LawRefs)"
+    assert lc.schedule_governance, "schedule_governance reused from crucible_v7 (identical WHEN tokens)"
+    # the DSL-provenance manifest verifies against the emitted argv flag fingerprint (rc=7 gate input).
+    argv = lc.typed.to_program().compile_trainer_argv()
+    emitted = sorted({f for f, _ in wac._crucible_v7_argv_pairs(argv)})
+    ok, detail = verify_launch_manifest(lc.dsl_program_manifest, emitted)
+    assert ok, f"launch-config dsl_program_manifest must verify: {detail}"
+    # wall-clock budget inherited from crucible_v7 (conservative ceiling for the smaller OFF footprint).
+    assert lc.epochs == 3000
+
+
 def test_crucible_v752_completeness_fused_r_folded_and_taper_held():
     """completeness() disposition, POST-#377 fold (commit 3925001ec): --fused-r-kernel is now
     DSL-MAPPED — the score-neutral compute gap the prior '--fused-r-kernel is the only gap'

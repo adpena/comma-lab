@@ -366,8 +366,8 @@ def config_family(cfg) -> str:
     header so run-identity consumers (dashboard) can cite it as evidence."""
     # crucible_v7 is a DSL TypedWitnessConfig (name field), not a witness_autoconfig dataclass —
     # detect it by its declared name so the run-identity header does not MISLABEL it proven_base.
-    if getattr(cfg, "name", "") == "crucible_v7":
-        return "crucible_v7"
+    if getattr(cfg, "name", "") in ("crucible_v7", "crucible_v752"):
+        return getattr(cfg, "name")
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
     if getattr(cfg, "fresh_seeded", False):
@@ -725,6 +725,15 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
         # overfit is N/A (v7 fixes its own knobs, inherited from the sealed v6 substrate).
         return wac.compile_crucible_v7_config(
             gt_cache, num_pairs=num_pairs, **_ek).to_launch_config()
+    if config == "crucible_v752":
+        # T5 CRUCIBLE-2 v7.5.2 launch-1 SELF-ORIENT-OFF (owed-16 P9 RESOLVED-REFUTING; operator GO
+        # 2026-07-10 #385 ADDENDUM v2). The deliberately-deferred P8-wall launcher wire-in, NOW
+        # authorized. self_orient=False is the GO'd amendment (the realized −48% transfer measured ≈0,
+        # 47 GiB RAM tax removed). compile_crucible_v752_launch_config returns the SAME launcher-facing
+        # cfg protocol as crucible_v7 (.to_command / .to_trainer_flags / .name / dsl_program_manifest /
+        # constants_manifest / schedule_governance), with the v7-identical constants+governance reused.
+        return wac.compile_crucible_v752_launch_config(
+            gt_cache, num_pairs=num_pairs, self_orient=False, **_ek)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -737,7 +746,7 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
     raise ValueError(
         f"derive_named_config: unknown config name {config!r} — no derive branch resolves it. Known "
         f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
-        f"crucible_v7. Add an explicit branch (NEVER silently fall through to proven_base).")
+        f"crucible_v7, crucible_v752. Add an explicit branch (NEVER silently fall through to proven_base).")
 
 
 # ───────────────────────── RSS calibration smoke (BUILD #294 piece B; optional, default OFF) ────
@@ -1145,7 +1154,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
     ap.add_argument("--config", default=None,
                     choices=["proven_base", "all_levers", "sealed_205", "store_nothing_205",
-                             "fresh_seeded", "crucible_v6", "crucible_v7"],
+                             "fresh_seeded", "crucible_v6", "crucible_v7", "crucible_v752"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
@@ -1172,7 +1181,12 @@ def main(argv: list[str] | None = None) -> int:
                     "warm-restart + LADDER island-birth homotopy; the three transitions FIRE on wired "
                     "sensors [powerlaw_meat / lane_nucleus / annulus_plateau] with tagged fail-safe "
                     "backstop caps [0 naked epochs]; ships a DSL-provenance manifest [b0.6 VERIFIES] + "
-                    "the v6-inherited LawRef constants manifest; pose block verbatim from v6).")
+                    "the v6-inherited LawRef constants manifest; pose block verbatim from v6), or "
+                    "crucible_v752 (the T5 CRUCIBLE-2 v7.5.2 launch-1 SELF-ORIENT-OFF config = the "
+                    "sealed crucible_v7 trunk + #121 d_seg-aware taper MINUS σ_cc′ MINUS the self-orient "
+                    "directional basis [owed-16 P9 RESOLVED-REFUTING: realized −48% transfer measured "
+                    "≈0, 47 GiB RAM tax removed; operator GO 2026-07-10]; reuses v7's constants + "
+                    "schedule-governance manifests with its own DSL-provenance fingerprint).")
     ap.add_argument("--extra-trainer-flags", default=None,
                     help="(C5 passthrough) EXTRA trainer flags appended verbatim to the emitted "
                     "launch.sh command (shell-split; e.g. \"--eikonal-weight 0.07 --seed-islands\"). "
