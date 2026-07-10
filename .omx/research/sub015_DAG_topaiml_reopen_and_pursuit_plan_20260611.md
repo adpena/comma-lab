@@ -13833,3 +13833,26 @@ contest-CPU 0.19110 UNMOVED — MEANS.
 - **equations leg: DEFERRED-to-first-measured-row** (every band ESTIMATED); DSL leg N/A (TOOL not Lever).
 
 **Pointer contest-CPU 0.19110 UNMOVED — MEANS; only a byte-closed `upstream/evaluate.py` n600 row moves it.**
+
+## FEED-v752-pilot-live (2026-07-10T15:41Z) — THE GO'D RUN IS LIVE: v7.5.2 self-orient-OFF fired (real sealed-3000 config; ep0-300 = the pilot gate) · pointer 0.19110 UNMOVED
+
+- **Gate-1 CLOSED:** owed16v2 rebalanced-ON 0.004213@ep700 vs OFF 0.004181 (worse at every cell;
+  allocation-independence CONFIRMED; 40b2ed211) ⇒ SELF-ORIENT-OFF stands. Machine freed cleanly.
+- **The --epochs 300 pilot variant was trainer-REFUSED** (stage-interlock: muon-start 726 ∉ [1,300] —
+  the sealed 3000-ep schedule is ATOMIC; the refusal respected, verbatim in decision record §8) ⇒
+  pilot REALIZED as the REAL launch: `--config crucible_v752` sealed epochs 3000, **ep0-300 verdicts
+  = the pilot gate** (PASS ⇒ the run CONTINUES as the launch, no restart; LAG ⇒ governed stop + config
+  switch per the §4 pre-registered band vs mod32cap cells ep25-300).
+- **LIVE:** `experiments/results/levelset_v752_pilot_20260710T154100Z` · trainer pid 44491 (durable, safe_run
+  cap 90000 MiB / 14 d) · shadow observer pid 45290 · dashboard :8790. Gates ALL GREEN: 157 flags ·
+  expected-active-lever manifest 9/9 (P0-composed: pose_finish_conditioning_gate ACTIVE, engage-on
+  sigma_min_plateau; P0-2 degenerate-backstop guard live in-trainer) · mem-preflight 24.48 GiB @
+  safe-frac 0.85 · admission ADMIT (66.7 GiB headroom) · throughput 430.7 ms · wall-clock 7.95≤8.31 d.
+- Launch-defect fixed same landing: launcher activation-ledger PosixPath TypeError dropped all 9
+  fire records → str(out_dir) fix + 9 rows backfilled (fbeb20ae5→f3976fcf4 chain).
+- **WATCH:** per-25-ep through-R verdicts in run.log/levelset_best.json; ep300 waiter armed; facets
+  per SPEC_v75 §5 (Road PRIMARY ≈0.018 target · island-birth vs Chan-Vese 1.25×GT equilibrium ·
+  d_pose watch-only ≤ep300 (pose-blind verified structurally, both modes) · rate). Projection to
+  ep300 ~10 h (mod32cap ON-anchor 116 s/ep; solo OFF cadence will be MEASURED by the run itself).
+- **Pointer contest-CPU 0.19110 UNMOVED** — this launch is the pointer-mover CANDIDATE; only its
+  byte-closed `upstream/evaluate.py` n600 exact row can move it.
