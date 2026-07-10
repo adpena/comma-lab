@@ -191,3 +191,98 @@ No measured number, claim, axis tag, evidence manifest value, or locked artifact
 surfaces numbers already present in the locked manifest. Bundle data members are byte-identical to v1.2.0-rc2;
 only the three renderer/copy modules and their manifest rows changed. The paper-reconstruction spine (cells,
 claims, tables, TOY/ADVISORY/EMPIRICAL labels) is untouched.
+
+---
+
+## TRANCHE 2 — first-viewport, real-frame bundle port, video re-make (2026-07-10, subagent viz-tranche2)
+
+STORES CONSULTED: this memo (tranche-1 design system + P6 beat plan + reseal recipe) · CLAUDE.md
+(NO-FAKE, data honesty, MPS/axis discipline, serializer, disclosure hygiene) ·
+docs/operating_manual_craft_handoff.md · MEMORY.md CURRENT-STATE (L2/L3 mod32cap context, L71 lane
+render-time analytic band, pose/axis facts) · `experiments/results/levelset_n600_v2_attrclean_20260630T194549Z`
+run ledger (launch.sh, run.log, train_result, best) · `tools/build_witness_showcase.py` (witness decode) ·
+`experiments/train_witness_realized_through_R_mlx.py` (`_torch_R_to_camera_uint8`,
+`cpu_verdict_d_seg_argmax_batch`) · `tac.analysis.score_exact_saliency` (canonical pair decode) ·
+witness-machine v1.2.1 bundle manifests.
+
+### P1 — first-viewport reorder (LANDED; witness-machine `27d5c19` + `2163f26`)
+- Visible order now: **hero → recognition figure → route → real-evidence fields → controls → …**; ALL
+  16 no-output cells (bootstrap/pickers/computes) and both style cells moved below the fold (CSS applies
+  document-wide regardless of DOM position; base→override relative order preserved for the cascade).
+- Hero gained an abstract-style headline-result strip: **2.7% / 99.9%** read from the locked display
+  manifest (`observation_summary_from_parent`), bilingual labels, advisory axis inline. No new measurement.
+- Route stops reordered to match the page (real evidence first). Bootstrap test now finds the bundle cell
+  by content (BUNDLE_URL assignment), not file position.
+- Live anonymous verification (npx agent-browser): `t2_visitor_final_top.png` — the page opens directly
+  on the hero card. (Molab caches per-commit; the first re-check showed the prior commit for ~30 min.)
+
+### P2 — real-frame demonstrations in the bundle (LANDED; `84ce198`, release **v1.3.0**)
+- **New locked artifacts** (built by `scripts/build_v12_real_frames.py`, committed to witness-machine;
+  reads pact READ-ONLY; challenge-video sha pinned 2611f5f3…):
+  - `v12_real_frame_display.npz` (751,065 B) — frames 392/393 via the canonical
+    `frame_utils.yuv420_to_rgb` decode, bilinear-resized to the scorer grid → pixel-co-registered with
+    the sealed sensitivity/argmax fields. claim_class DISPLAY.
+  - `v12_boundary_evolution.npz` (1,786,457 B) — per-stage EMA checkpoints of
+    `levelset_n600_v2_attrclean` (CE ep299 / Tau ep599 / MuonStart ep726 / L7_muon ep1000):
+    witness RGB render + REALIZED partition (render → `_torch_R_to_camera_uint8` → frozen CPU-torch
+    SegNet argmax) + internal phi chart + sealed argmax reference. Realized pair-196 disagreement
+    0.65%→0.45%→0.40%→0.45%, consistent with the run's own advisory d_seg telemetry (0.0056→0.0041→
+    0.0041→0.0043 at nearest verdict epochs, copied with provenance). Axis
+    `[macOS-MLX training-gradient]/[macOS-CPU advisory]`, score_claim=false, promotion_eligible=false.
+  - **Decode-fidelity note (measured this session):** the witness's INTERNAL phi argmax disagrees ~25–33%
+    with GT while the REALIZED partition disagrees ~0.4–0.7% — the score-domain-trained witness constrains
+    only what SegNet reads, not its internal chart. Both are shipped and labeled. `--structured-init` /
+    `--lane-prior-phi1` are INIT-time levers (verified in trainer source), so the plain neural decode is
+    render-faithful for these runs.
+- **New module `v12_real_frames.py`**: validated loaders + `real_road_partition_svg` (the road / the
+  partition / the sensitivity annulus glowing coral→gold on the road; stat strip; honest "widened for
+  display", log-scale notes) + `witness_evolution_svg` (what the witness paints vs what the frozen scorer
+  reads, closing on the real frame + sealed partition; tabular-nums captions; 2.2× display-gain noted).
+- Notebook: two new sections ("Where a frozen machine actually looks" after the hero; "The texture is
+  alien; the reading is right" after the real-evidence fields), bilingual copy in `v12_copy.py`.
+- Reseal per the proven recipe: deterministic zip from the v1.2.1 bytes (same member order/timestamps;
+  1 swap + 5 adds; RELEASE_MANIFEST rows updated), pins → v1.3.0 (**6,251,044 B,
+  sha256 f9ed9721…35c8**; growth +2.5 MB, within the "few MB" bound). Download chain verified end-to-end
+  (fresh cache → download → bytes+sha → extraction → required files → new sections render; 0 tracebacks
+  in the isolated molab-faithful export). Session snapshot refreshed; 7/7 tests (extended to new
+  module+assets). Evidence: `t2_fig_recognition.png`, `t2_fig_evolution.png`,
+  `t2_overlay_coregistration_check.png`.
+
+### P6 — video re-make (BUILT; versioned alongside the old cut, v12 untouched)
+- Builder: `~/Downloads/molab_witness_machine_v75_v8/video/v13/build_v13.py` (PIL+ffmpeg, 960×540 design
+  grid, deterministic). PRIMARY = **typographic cut, no voice**.
+- As-built beat list (115 s total):
+  1. `title` (6 s) — question card.
+  2. `cells` (17 s) — two weighted power cells, the cut moves with the weights → the REAL pair-196
+     partition ("That abstract cut IS this road.").
+  3. `levelset` (16 s) — 1-D φ crossing zero, crossings slide → the sealed boundary drawn on the dim road.
+  4. `margin` (17 s) — two class scores tie, sensitivity ~ 1/margin spikes → the TRUE margin-proxy
+     annulus glowing on the road + the 2.7%/99.9% stat.
+  5. `screw` (15 s) — one twist ξ transporting a ring → the sealed dense transport field, frames 392→393.
+  6. `waterfill` (16 s) — budget covers the tallest |g| bars first → the implemented STAC allocator run
+     on the TRUE sensitivity field (block means) over the real road — **the decorative-checkerboard fix**.
+  7. `close` (20 s) — score law term by term (each term lighting its object) → witness evolution strip
+     closing on the sealed target + witness-render-vs-real-frame ("The texture is alien; the reading is
+     right."). On-screen scope: advisory axes, single-pair fractions, no score claim.
+  8. `credits` (8 s) — sealed-artifact provenance statement + repo link.
+- Craft: #333-family ground, gold as the single emphasis, cyan/mint/coral semantic, comma10k classes,
+  motion only when the math moves, long holds, one text thought at a time (lower third), beat chrome
+  top-right, scope line bottom-left. Two self-critique rounds on rendered stills fixed: tofu math glyphs
+  (𝔰𝔢/ξ̂/subscripts → plain), swapped margin labels, waterfill fill order (tallest-first), levelset
+  crossing detection, flow-arrow scale, and a close-beat label collision (the old cut's bug class).
+- Outputs (in `~/Downloads/molab_witness_machine_v75_v8/artifacts/video/v13/`, alongside untouched v12):
+  `witness_machine_v13_typographic_1920x1080p30.mp4` (final), `…_960x540p15.mp4` (draft),
+  `still_01..08_*.png` + `probe_abs_*.png` (stills), plus evidence copies in the evidence dir.
+- **Voice sample for the operator's listen-check (NOT married to the cut):**
+  `artifacts/video/v13/voice_sample_kokoro82m_af_heart.mp3` (30.45 s, Kokoro-82M `af_heart` via
+  mlx-audio, local HF download, no account; text in `voice_sample_kokoro82m_text.txt`). Honest limit:
+  I cannot judge voice aesthetics by ear; the sample is a candidate only. (Setup note: espeak-ng data
+  path needed a symlinked home dir + `en_core_web_sm` installed into the venv.)
+
+### Honest limits (tranche 2)
+- Molab preview iframe is cross-origin: only the top viewport is screenshot-verifiable live; deep-page
+  live figures verified via the isolated export + committed session snapshot instead.
+- The evolution artifact's realized decode is torch fp32 (TLI), not the numpy fp32 byte-close reference
+  (measured family gap ~1 ULP / 0–3 px; stated in the artifact's limitations).
+- The Kokoro sample's quality is unverifiable by me; operator listen required before any voiced cut.
+- P4/P5/P7/P8 remain owed as ledgered in §9 (untouched this tranche per operator deprioritization).
