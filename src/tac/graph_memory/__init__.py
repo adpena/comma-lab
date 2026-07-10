@@ -23,19 +23,41 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .build import REPO_ROOT, build_graph
+from .build import REPO_ROOT, build_graph, corpus_mtime
 from .model import Edge, Graph, Node
+from .obsidian_export import export_obsidian
+from .query_tools import (
+    QueryHit,
+    QueryResult,
+    query_by_decision,
+    query_by_entity,
+    query_by_keywords,
+    query_by_time,
+    query_by_topic,
+    query_neighbors,
+    query_supersession_chain,
+)
 from .recall import Reconstruction, format_human, reconstruct
 
 __all__ = [
     "Edge",
     "Graph",
     "Node",
+    "QueryHit",
+    "QueryResult",
     "Reconstruction",
     "build_graph",
     "cache_paths",
+    "export_obsidian",
     "format_human",
     "load_or_build",
+    "query_by_decision",
+    "query_by_entity",
+    "query_by_keywords",
+    "query_by_time",
+    "query_by_topic",
+    "query_neighbors",
+    "query_supersession_chain",
     "recall",
     "reconstruct",
     "save_graph",
@@ -54,10 +76,29 @@ def save_graph(graph: Graph) -> tuple[Path, Path]:
     return nodes_path, edges_path
 
 
+def _cache_is_stale(nodes_path: Path) -> bool:
+    """True if any corpus source is newer than the cached graph (auto-rebuild)."""
+    try:
+        cache_mtime = nodes_path.stat().st_mtime
+    except OSError:
+        return True
+    return corpus_mtime() > cache_mtime
+
+
 def load_or_build(*, rebuild: bool = False) -> Graph:
-    """Load the cached graph; (re)build + cache it if missing or `rebuild`."""
+    """Load the cached graph; auto-(re)build if missing, stale, or `rebuild`.
+
+    The cache is stale the moment the corpus (memory files, DAG, ledgers) is
+    newer than the saved graph — increment-2 auto-invalidation, so recall never
+    serves a graph that has fallen behind the markdown source of truth.
+    """
     nodes_path, edges_path = cache_paths()
-    if not rebuild and nodes_path.is_file() and edges_path.is_file():
+    if (
+        not rebuild
+        and nodes_path.is_file()
+        and edges_path.is_file()
+        and not _cache_is_stale(nodes_path)
+    ):
         try:
             return Graph.load(nodes_path, edges_path)
         except (OSError, ValueError):

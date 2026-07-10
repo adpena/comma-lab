@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-from .model import Graph, Node
+if TYPE_CHECKING:
+    from .model import Graph, Node
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+(?:[._-][a-z0-9]+)*")
 _HASHREF_RE = re.compile(r"#(\d{2,4})\b")
@@ -136,7 +138,7 @@ def reconstruct(
                 if other in seen_local:
                     continue
                 arrow = f"--{edge.etype}-->" if direction == "out" else f"<--{edge.etype}--"
-                frontier.append((other, dist + 1, path + [arrow, _label(graph, other)]))
+                frontier.append((other, dist + 1, [*path, arrow, _label(graph, other)]))
 
     # 3) rank the reconstructed subgraph; seeds first, then by accumulated weight
     seed_ids = {s for _, s in seeds}

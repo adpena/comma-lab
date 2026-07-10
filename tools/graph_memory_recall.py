@@ -30,11 +30,31 @@ if str(_ROOT / "src") not in sys.path:
 
 from tac.graph_memory import (  # noqa: E402
     cache_paths,
+    export_obsidian,
     format_human,
     load_or_build,
+    query_by_decision,
+    query_by_entity,
+    query_by_keywords,
+    query_by_time,
+    query_by_topic,
+    query_neighbors,
+    query_supersession_chain,
     reconstruct,
     save_graph,
 )
+
+# The 7 typed MRAgent query-tools, keyed by their CLI name (increment-2).
+_TOOLS = {
+    "time": lambda g, q: query_by_time(g, date=q) if "-" in q and ".." not in q
+    else query_by_time(g, since=q.split("..")[0], until=q.split("..")[-1]),
+    "keywords": lambda g, q: query_by_keywords(g, q),
+    "entity": lambda g, q: query_by_entity(g, q),
+    "topic": lambda g, q: query_by_topic(g, q),
+    "decision": lambda g, q: query_by_decision(g, verdict=q),
+    "neighbors": lambda g, q: query_neighbors(g, q),
+    "supersedes": lambda g, q: query_supersession_chain(g, q),
+}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -43,6 +63,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--rebuild", action="store_true", help="rebuild the graph cache from source")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--stats", action="store_true", help="print graph node/edge counts and exit")
+    ap.add_argument("--tool", choices=sorted(_TOOLS), default=None,
+                    help="run a typed query-tool over the positional query (increment-2)")
+    ap.add_argument("--export-obsidian", nargs="?", const="", default=None, metavar="PATH",
+                    help="write the synthesized-edge Obsidian index (default cache path) and exit")
     ap.add_argument("--max-seeds", type=int, default=4)
     ap.add_argument("--max-nodes", type=int, default=18)
     ap.add_argument("--max-depth", type=int, default=2)
@@ -51,6 +75,23 @@ def main(argv: list[str] | None = None) -> int:
     graph = load_or_build(rebuild=args.rebuild)
     if args.rebuild:
         save_graph(graph)
+
+    if args.export_obsidian is not None:
+        out = Path(args.export_obsidian) if args.export_obsidian else None
+        path = export_obsidian(graph, out)
+        print(json.dumps({"exported": str(path)}) if args.json else f"exported: {path}")
+        return 0
+
+    if args.tool is not None:
+        q = " ".join(args.query)
+        result = _TOOLS[args.tool](graph, q)
+        if args.json:
+            print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+        else:
+            print(f"[{result.kind}] {result.query!r} -> {len(result.hits)} hits")
+            for h in result.hits:
+                print(f"  ── [{h.ntype}] {h.title[:78]}  ({h.why})")
+        return 0
 
     if args.stats or not args.query:
         stats = {

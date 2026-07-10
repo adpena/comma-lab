@@ -347,6 +347,46 @@ def parse_deferrals(graph: Graph, ledger_path: Path) -> int:
     return count
 
 
+# ----------------------------------------------------- corpus source mtimes --
+def corpus_sources(
+    *,
+    memory_dir: Path | None = None,
+    dag_path: Path | None = None,
+    equations_path: Path | None = None,
+    tasks_path: Path | None = None,
+    deferral_path: Path | None = None,
+) -> list[Path]:
+    """The concrete corpus files the graph indexes (existing ones only).
+
+    Used by the auto-build cache (increment-2): the cached graph is stale the
+    moment ANY of these is newer than the cache, so recall never serves a graph
+    that has fallen behind the markdown source of truth.
+    """
+    srcs: list[Path] = []
+    mdir = memory_dir or _memory_dir()
+    if mdir.is_dir():
+        srcs.extend(sorted(mdir.glob("*.md")))
+    if dag_path is None:
+        dag_files = sorted(_RESEARCH_DIR.glob(_DAG_GLOB))
+        dag_path = dag_files[-1] if dag_files else None
+    for p in (dag_path, equations_path or _EQUATIONS_JSONL,
+              tasks_path or _TASKS_JSONL, deferral_path or _DEFERRAL_MD):
+        if p is not None and Path(p).is_file():
+            srcs.append(Path(p))
+    return srcs
+
+
+def corpus_mtime(**kwargs) -> float:
+    """Max mtime across all corpus sources (0.0 if there are none)."""
+    mt = 0.0
+    for p in corpus_sources(**kwargs):
+        try:
+            mt = max(mt, p.stat().st_mtime)
+        except OSError:
+            continue
+    return mt
+
+
 # ------------------------------------------------------------------- driver --
 def build_graph(
     *,
