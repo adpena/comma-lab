@@ -47,7 +47,7 @@ field was justified on rate (cheaper 0.0032 · dedup-correct · min-dim) — all
 field was the ONLY §I representation that could carry lateral undriv, and it is DEMOTED. **⇒ lateral undriv
 (97.5% of the Undriv d_seg under-coverage) is now UN-HOMED in §I** (I1 = top-arc only; I10 = demoted). v2 §B
 `road_undriv_carrier: mode: horizon_poly_xi, horizon_profile_scope: single_valued` ships precisely this. So the
-increment-1a decoupled arm is either **hobbled** (byte-closed to single-valued → 0.162 Undriv floor → a KILL
+increment-1a decoupled arm is either **hobbled** (byte-closed to single-valued → 0.162 Undriv floor → a KILL <!-- # VERDICT_SCOPE_OK: hypothetical confounded-kill SCENARIO the finding prevents, not a rendered verdict; untested formulations / alternatives: per-column undriv-extent curves (the P5b fix) · multi-branch horizon profile · retained bulk-field fallback (P-C-gated). -->
 verdict is a CARRIER artifact, not a decoupling verdict → confounded falsifier, eightfold-P7 violation) or
 **measured pre-byte-close** (overstates the shippable d_seg — the horizon poly cannot reproduce the trained
 field's lateral undriv). P4 flagged "carrier must not be single-valued" but did NOT revise §B or §I; v2 predates
@@ -60,7 +60,7 @@ DOMINANT d_seg term of the whole increment-1a screen — this is not a nit, it i
 `delta_mask = DELTA_R_PROXY = 0.0196` (`decoupling_screen.py:160`), ~5600× LARGER than R7's measured 3.5e-6.**
 With a 0.0196 kill margin, DECOUPLING-CONFIRMED requires a >0.0196 improvement (≈20% of the 0.100 agg d_seg —
 enormous); realistic decoupling improvements (0.001–0.01) return **INCONCLUSIVE-below-floor**. **The kill
-machinery is DECISION-INERT as-shipped** — it cannot fire CONFIRMED or KILLED for any realistic result. R7
+machinery is DECISION-INERT as-shipped** — it cannot fire CONFIRMED or KILLED for any realistic result. R7 <!-- # VERDICT_SCOPE_OK: evaluator output-vocabulary (CONFIRMED/KILLED are the harness's labels); the finding is the inert-proxy default, fixed by P5b's delta_mask swap. -->
 measured the replacement; it is not swapped in. This is the P9 "proxy jams the verdict" failure in live code.
 
 | # | finding | verdict | scope |
@@ -106,7 +106,7 @@ read AND the data-dependent component is measured from the control arm's OWN rep
 data-dependent noise floor). **BUT** — the load-bearing gap: v2 §A.4/§B does NOT specify that 1a runs ≥3 SEED
 REPLICATES PER ARM. v2 §B says "matched compute, same seed budget" (singular seed). With ONE seed per arm there
 are NO replicates → the seed-variance component (P4's DOMINANT floor component) is UNMEASURED → δ_mask collapses
-to 3.5e-6 (frame-sampling only) → the kill can fire DECOUPLING-CONFIRMED on a difference that is entirely
+to 3.5e-6 (frame-sampling only) → the kill can fire DECOUPLING-CONFIRMED on a difference that is entirely # MAGNITUDE_DISMISSAL_OK: this passage DEMANDS the missing measurement (seed-variance replicates) rather than dismissing by magnitude — it is the P2 noise-floor law applied, the opposite of a magnitude dismissal;
 within-seed noise. **⇒ the kill is pre-registrable but currently under-specified: it needs (i) ≥3 seed replicates
 per arm added to the 1a build, and (ii) the δ_mask formula wired as max(3.5e-6, measured seed spread), never a
 fixed constant.** This is exactly the eightfold-P2 "SEED-VARIANCE honesty: single-seed Δ is INSTANCE-level until
@@ -182,7 +182,7 @@ Using `crucible_standing_checks_eightfold_20260709.md` P2/P5/P6/P7/P8:
   section or an explicit temporal-N/A derivation.**
 - **P7 (falsifier before build, threshold vs MEASURED baseline):** PARTIAL. 1a has a pre-registered kill ✓ but
   (i) its live threshold is the δ_R PROXY not a measured baseline (F-P5-P9-1), and (ii) the seed component is
-  unmeasured (F-P5-2), and (iii) F-P5-1 makes the kill CONFOUNDED (a KILL could be the carrier hobble, not the
+  unmeasured (F-P5-2), and (iii) F-P5-1 makes the kill CONFOUNDED (a KILL could be the carrier hobble, not the <!-- # VERDICT_SCOPE_OK: confound warning about a FUTURE kill's validity preconditions, not a verdict; the reformulation queue is the P5b fix-set (carrier re-home + delta_mask swap + seed replicates). -->
   decoupling). → **P7 partial-fail, closed by F-P5-1/F-P5-2/F-P5-P9-1.**
 - **P8 (floor-first):** PASS. rate floor 0.118 / complete 0.135 / dominant 0.061 ✓; d_seg analytic floor 0.162
   Undriv / 0.100 agg stated ✓; gaps stated ✓.

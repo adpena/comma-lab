@@ -12480,3 +12480,50 @@ tokens in them cite PRE-REGISTERED anchors (delta_R-category-error → P4_recess
 authority ladder · proxy-auth 350× → LANE-B · LEVER-4 at-chance → s_r_reachability lineage · gate live
 counts = gate states, not S_τ measurements) — no NEW EmpiricalAnchor is owed; registering one would
 duplicate existing anchors (clause A applied to the registry itself). # VERDICT_SCOPE_OK: disposition note, no verdict. -->
+
+## FEED-philosophies-live (2026-07-09, #387 extension) — the 8 philosophies wired into the LIVE surfaces (costate controller + byte-close + subagent contract + equations schema)
+**Operator GO "Any other surfaces our design philosophies should be encoded to? Costate controller?"**
+Sibling of FEED-eightfold-apparatus (the sibling landed the P1/P4 GATES; this landed the LIVE wirings the
+gates guard). Four wirings, each MEASURED / tested:
+**(1) COSTATE CONTROLLER (the operator-named surface).** (1a) `duty_to_measure_ranked` is now **P8
+floor-aware**: a new `tac.witness_dsl.term_floors` resolver returns per-axis MEASURED floors with
+value-provenance (d_seg 0.00087 MEASURED `anisotropic_basis_two_regime_allocation_v1` conservative bound ·
+rate 0.11797 LOOSE `information_theoretic_floor` surface-only · d_pose OWED None); a lever whose target
+term is AT its floor ranks ~0 (`AT_FLOOR`), est CAPPED to the S-headroom-to-floor. **MEASURED BEFORE/AFTER
+top-10 diff** (real live store): with NO live-run d_seg the ORDER IS UNCHANGED (DsegAwareTaper 73% ·
+HorizonWeightedMargin 43.8% · StepNativeActivation 31.6% · rate levers 2.4/1.2%) — every d_seg row now
+carries `FLOOR_KNOWN_CURRENT_UNKNOWN` (floor 0.00087 surfaced, current d_seg is an OWED measurement — the
+honest P8 outcome), rate rows `FLOOR_UNMEASURED` (LOOSE never caps). The demo control (`term_current
+d_seg=0.00087`) FIRES: all d_seg levers → `AT_FLOOR` rel_sig 0, rate levers rise to top (order CHANGES) —
+machinery proven, activates the moment a measured witness d_seg reaches the floor (the digest feeds the
+live annulus `overall_d_seg`). (1b) shadow/DECIDE recs tagged `[INSTANCE — no noise floor]` when the rec's
+`predicted_dS_band` is absent, `[INSTANCE — Δ within noise floor]` when the band spans 0, else `(floor
+[lo,hi])` — P2 in the SAME ΔS units as the Δ (P9). (1c) canonical-key audit: the digest's ONLY
+significance read routes through `canonicalize_significance_keys` (verified — no raw-key read).
+**(2) BYTE-CLOSE AUTO-DEDUP (clause A live):** `dedup_audit_section` wires `pairwise_dedup_audit` into the
+byte-close report as an automatic per-run geometric-section derivability table (score-neutral, read-only,
+fail-open, byte-identical — adds a report key, NEVER mutates the archive).
+**(3) SUBAGENT CONTRACT:** `EIGHTFOLD_CLAUSE` (P1-P8 + clauses A/B + fmtools #259 advisory-availability per
+operator addendum) composed into `standard_contract()`; contract-integrity gate key-phrases extended so
+the clause is protected.
+**(4) EQUATIONS SCHEMA (P2 structural):** `EmpiricalAnchor` gains optional `noise_floor` +
+`noise_floor_provenance` (additive/legacy-None; validated non-negative + requires provenance; round-trips
+through the registry) + `delta_exceeds_floor(anchor)` verdict-clearance helper (None when floor UNMEASURED
+— never silently clears a Δ). The two residual-kit anchors landed today keep noise_floor=None: their memos
+state oracle-ceiling RANGES / qualitative label-noise, NOT a single-axis noise floor (honest — the floor is
+an OWED measurement, exactly the P2/P8 point).
+**Sibling addendum resolved:** added the P4 `canary_suite` to `verdict_trend_alarm.py` (synthetic
+decoupling MUST fire TRAIN_VERDICT_DECOUPLING; clean co-descending MUST NOT) → the #387 P4 gate live count
+**1 → 0**.
+**Verification:** 41 new tests + 238-test regression green across every touched surface; ruff F clean;
+contract-integrity + meter-canary strict PASS. **Triality:** DAG = this FEED. **DSL = N/A** (apparatus:
+`term_floors`/`activation_ledger` are the costate SENSE layer, not a trainer Lever or curriculum object).
+**Equations = the schema extension itself** (P2 noise_floor on EmpiricalAnchor — a structural law-carrier
+change, no new S_τ anchor owed). Memo `.omx/research/philosophies_live_surfaces_20260709.md`. Pointer
+0.19110 UNMOVED · #205 untouched (apparatus/means — makes the campaign harder to fool).
+
+<!-- P5-commit (45769148b) DSL-leg disposition: the red-team VERDICT doc names a carrier/config change
+(per-column undriv-extent curves) but changes NO lever itself — the DSL leg for that carrier is OWNED BY
+P5b (in flight: SYNTHESIS_v3 + decoupling_screen.py delta_mask swap + the carrier's §I/§B rows; its
+commits carry the legs). [no-triality]-class marker omitted from 45769148b's message; recorded here per
+the FEED-crucible2-seal-legs pattern. -->
