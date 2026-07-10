@@ -247,14 +247,152 @@ def damped_newton_ot_offsets(
 
 
 # ---------------------------------------------------------------------------
-# The SELECTABLE head-offset solver (#288) — the canonical dispatcher the trainer /
-# probe / export path call to pick the per-class offset MECHANISM. Both arms do REAL
-# work on REAL inputs (NO-FAKE): "menon" is the -tau*log(pi) prior heuristic (priors
-# only), "ot_newton" is the damped-Newton semi-discrete OT solve (needs the witness
-# phi geometry + target masses). ot_newton RAISES if phi/masses are absent — it never
-# silently degenerates to the heuristic (that would be a fake "ot_newton").
+# Facet 3c — FLIP-WEIGHTED head offsets (crucible-3 N-1 reformulation, task #386). N-1
+# MEASURED (n600) that OT AREA-mass-matching to GT class FREQUENCIES HURTS realized d_seg
+# (no_offset 0.0031436 < menon 0.0033119 < ot_newton 0.0048921; verdict_scope FORMULATION —
+# the SOLVER is exact, the OBJECTIVE was wrong). The reformulation targets the FLIP mass the
+# scorer actually re-reads (the codim-1 boundary annulus, #333), NOT the bulk cell area, in
+# two independent formulations that the $0 n600 3-arm gate arbitrates:
+#
+#   * ``flip_weighted`` — the SAME damped-Newton OT solve, but the target masses are the
+#     per-class FLIP SHARE (``flips_c / total_flips``, the canonical ``perclass_verdict.
+#     flip_share_by_class`` sensor) instead of GT area frequency. This is an UN-ANALYZED
+#     objective (crucible-3 P3 F3): OT still mass-MATCHES cells, so it may re-inherit N-1's
+#     cell-inflation pathology; the through-R gate is the decisive arbiter.
+#   * ``flip_median`` — S1's Hamming-OPTIMAL per-edge threshold. d_seg is HAMMING (0-1), whose
+#     L1-optimal 1-D threshold is the flip-density MEDIAN, NOT a Wasserstein mass-match. This is
+#     a DISTINCT closed-form solve path (NOT expressible through the OT target-mass machinery —
+#     no median/quantile solver existed; P3 F3 confirmed). See ``flip_median_offsets``.
+#
+# Both do REAL work on REAL inputs (NO-FAKE); both fold BYTE-FREE into ``out_sdf.bias``.
 # ---------------------------------------------------------------------------
-HEAD_OFFSET_SOLVERS: tuple[str, ...] = ("menon", "ot_newton")
+def _flip_share_by_class(pred: np.ndarray, gt: np.ndarray, num_classes: int) -> np.ndarray:
+    """Per-class FLIP SHARE ``flips_c / total_flips`` (which GT class CARRIES the residual).
+
+    Delegates to the canonical sensor ``tac.witness_control.perclass_verdict.per_class_flip_stats``
+    (the SAME ``flip_share_by_class`` the #315 per-class λ costate reads) — lazy-imported so
+    ``boundary_math`` stays import-cycle-free. Returns ``(K,)`` summing to 1. RAISES (never returns a
+    silent all-zero target the OT solve would choke on) when the witness argmax has ZERO flips vs GT.
+    """
+    from tac.witness_control.perclass_verdict import per_class_flip_stats
+
+    p = np.asarray(pred).reshape(-1)
+    g = np.asarray(gt).reshape(-1)
+    flips, _pixels = per_class_flip_stats([p], [g], n_classes=int(num_classes))
+    total = float(flips.sum())
+    if total <= 0:
+        raise LaguerreLogitOffsetError(
+            "flip_share undefined: the witness argmax has ZERO flips vs GT (no residual to target)")
+    return flips.astype(np.float64) / total
+
+
+def flip_median_offsets(
+    phi: np.ndarray, gt: np.ndarray, *, pred: np.ndarray | None = None,
+    num_classes: int | None = None, edge_min_flips: int = 1,
+) -> tuple[np.ndarray, dict[str, float]]:
+    """S1's HAMMING-optimal per-edge threshold: ``b_c - b_{c'} = -MEDIAN`` over the edge's FLIP
+    pixels of the margin ``m = phi_c - phi_{c'}`` (crucible-3 N-1 reformulation, task #386).
+
+    d_seg is a HAMMING (0-1) loss, whose L1-optimal 1-D threshold along a margin is the MEDIAN of
+    the boundary-margin distribution — NOT the Wasserstein area-match N-1 MEASURED as a NEGATIVE
+    (no_offset 0.00314 < ot_newton 0.00489 n600). This is a DISTINCT closed-form solve path, NOT a
+    target-mass choice fed to the OT machinery (which has no median/quantile solver — crucible-3 P3
+    F3). Per unordered edge ``{i,j}`` the FLIP pixels are those whose ``{gt, pred}`` is exactly
+    ``{i,j}`` with ``gt != pred`` (GT=i wrongly predicted j, or GT=j wrongly predicted i); the offset
+    difference that moves the decode threshold to the flip-margin median is
+    ``delta_ij = b_i - b_j = -median(m over those flips)``.
+
+    ``pred`` is the flip-identifying prediction. Pass the **REALIZED** argmax (the frozen-SegNet
+    argmax on the rendered frame — the actual d_seg residual we minimise); if omitted it falls back
+    to ``argmax(phi)`` (the un-rendered phi-space proxy, which for this witness disagrees with the
+    realized SegNet argmax by ~50x, so the realized ``pred`` is strongly preferred). The margins are
+    always the phi-space ``phi_i - phi_j`` (the offset lives in phi-space); only the flip SET is
+    ``pred``-defined.
+
+    The per-edge deltas over-determine the K-vector (up to ``C(K,2)`` edges, ``K-1`` free DOF), so
+    they are reconciled by a flip-count-WEIGHTED least squares on the edge-difference graph with the
+    zero-sum gauge: solve ``L b = r`` where ``L`` is the flip-count-weighted graph Laplacian and
+    ``r_i = sum_j w_ij * (+/-)delta_ij`` (``+`` for the lower edge index). ``L`` is rank ``K-1``
+    (all-ones nullspace) => pseudo-inverse gives the min-norm (zero-sum) solution. Byte-free: fold
+    ``b*`` into ``out_sdf.bias`` via :func:`apply_offset_to_sdf_bias`.
+
+    ``phi``: ``(..., K)`` witness SDF/logit field. ``gt``: ``(...)`` GT argmax labels. With NO flips
+    (perfect witness) returns ``b == 0`` (the correct no-op). Returns ``(b*, info)`` with ``info`` =
+    ``{converged, iters, max_mass_err (NaN — mass is NOT the objective), n_edges_used, total_flips,
+    pred_is_realized}``.
+    """
+    z = np.asarray(phi, dtype=np.float64)
+    z = z.reshape(-1, z.shape[-1])
+    n, k = z.shape
+    if num_classes is not None and int(num_classes) != k:
+        raise LaguerreLogitOffsetError(f"num_classes {num_classes} != phi K {k}")
+    if k < 2:
+        raise LaguerreLogitOffsetError("phi must have K>=2 classes")
+    g = np.asarray(gt).reshape(-1).astype(np.int64)
+    if g.shape[0] != n:
+        raise LaguerreLogitOffsetError(f"gt size {g.shape[0]} != phi rows {n}")
+    if g.size and (int(g.min()) < 0 or int(g.max()) >= k):
+        raise LaguerreLogitOffsetError("gt labels out of range [0,K)")
+
+    if pred is None:
+        pred0 = np.argmax(z, axis=1)      # phi-space fallback decode
+        pred_is_realized = 0.0
+    else:
+        pred0 = np.asarray(pred).reshape(-1).astype(np.int64)
+        if pred0.shape[0] != n:
+            raise LaguerreLogitOffsetError(f"pred size {pred0.shape[0]} != phi rows {n}")
+        if pred0.size and (int(pred0.min()) < 0 or int(pred0.max()) >= k):
+            raise LaguerreLogitOffsetError("pred labels out of range [0,K)")
+        pred_is_realized = 1.0
+    flip = pred0 != g
+    total_flips = int(flip.sum())
+
+    # per-edge target delta_ij = b_i - b_j = -median(m over edge-{i,j} flips), m = phi_i - phi_j
+    edges: list[tuple[int, int, float, float]] = []  # (i, j, delta_ij, weight = flip count)
+    for i in range(k):
+        gi, pi_ = (g == i), (pred0 == i)
+        for j in range(i + 1, k):
+            sel = flip & ((gi & (pred0 == j)) | ((g == j) & pi_))
+            cnt = int(sel.sum())
+            if cnt < int(edge_min_flips):
+                continue
+            m = z[sel, i] - z[sel, j]
+            edges.append((i, j, -float(np.median(m)), float(cnt)))
+
+    b = np.zeros(k, dtype=np.float64)
+    if edges:
+        lap = np.zeros((k, k), dtype=np.float64)
+        rhs = np.zeros(k, dtype=np.float64)
+        for i, j, d, w in edges:
+            lap[i, i] += w
+            lap[j, j] += w
+            lap[i, j] -= w
+            lap[j, i] -= w
+            rhs[i] += w * d
+            rhs[j] -= w * d
+        b = np.linalg.pinv(lap, rcond=1e-10) @ rhs
+        b = b - b.mean()                  # zero-sum gauge (pinv already min-norm; explicit for safety)
+    info = {
+        "converged": 1.0,                 # closed-form: always solves (b==0 when there are no flips)
+        "iters": 1.0,
+        "max_mass_err": float("nan"),     # mass is NOT the objective (Hamming median, not OT mass)
+        "n_edges_used": float(len(edges)),
+        "total_flips": float(total_flips),
+        "pred_is_realized": pred_is_realized,
+    }
+    return b.astype(np.float64), info
+
+
+# ---------------------------------------------------------------------------
+# The SELECTABLE head-offset solver (#288 + #386) — the canonical dispatcher the trainer
+# / probe / export path call to pick the per-class offset MECHANISM. Every arm does REAL
+# work on REAL inputs (NO-FAKE): "menon" is the -tau*log(pi) prior heuristic (priors only),
+# "ot_newton" is the damped-Newton OT area-mass solve (N-1-falsified for d_seg), "flip_weighted"
+# is the SAME OT solve but targeting per-class FLIP SHARE, "flip_median" is the Hamming-optimal
+# per-edge median (a distinct closed-form path). Each RAISES if its required inputs are absent —
+# none silently degenerates to another (that would be a fake).
+# ---------------------------------------------------------------------------
+HEAD_OFFSET_SOLVERS: tuple[str, ...] = ("menon", "ot_newton", "flip_weighted", "flip_median")
 
 
 def solve_head_offsets(
@@ -263,6 +401,8 @@ def solve_head_offsets(
     priors: np.ndarray | None = None,
     phi: np.ndarray | None = None,
     target_masses: np.ndarray | None = None,
+    gt: np.ndarray | None = None,
+    pred: np.ndarray | None = None,
     tau: float = 1.0,
 ) -> tuple[np.ndarray, dict[str, float]]:
     """Return the zero-sum per-class Laguerre offset ``b*`` (K,) for ``mode`` + an ``info`` dict.
@@ -276,13 +416,26 @@ def solve_head_offsets(
       field) AND ``target_masses`` (``(K,)`` GT class frequencies); solves the ``b*`` whose soft
       Laguerre cell masses EQUAL ``target_masses``, accounting for THIS witness's boundary geometry
       the log-freq heuristic ignores. ``info`` carries the solver's ``{converged, iters,
-      max_mass_err, dual}`` plus ``solver: 1.0``.
+      max_mass_err, dual}`` plus ``solver: 1.0``. (N-1 MEASURED this HURTS realized d_seg — the area
+      objective is wrong; kept as the falsified baseline the reformulations must beat.)
+    * ``mode == "flip_weighted"`` — the SAME OT solve, but the target masses are the per-class FLIP
+      SHARE (``flips_c/total_flips``, the canonical ``perclass_verdict.flip_share_by_class`` sensor)
+      instead of GT area frequency. Needs BOTH ``phi`` AND ``gt`` (the flip share is DERIVED
+      internally — it NEVER accepts a raw ``target_masses`` that could smuggle GT area counts back in
+      and re-inherit N-1's failure). Flips are identified by the REALIZED argmax ``pred`` if given
+      (the actual d_seg residual), else ``argmax(phi)`` (the phi-space proxy). ``info`` = the OT
+      solver dict plus ``solver: 2.0, target_is_flip_share: 1.0, pred_is_realized``. UN-ANALYZED
+      objective (crucible-3 P3 F3): OT still mass-MATCHES, so this may re-inherit cell-inflation —
+      the through-R gate is the arbiter.
+    * ``mode == "flip_median"`` — S1's Hamming-optimal per-edge median (:func:`flip_median_offsets`).
+      Needs BOTH ``phi`` AND ``gt``; a DISTINCT closed-form path, NOT the OT target-mass machinery.
+      ``info`` = the median-solver dict plus ``solver: 3.0``.
 
-    Both offsets fold BYTE-FREE into ``out_sdf.bias`` via :func:`apply_offset_to_sdf_bias`. NO-FAKE:
-    ``ot_newton`` with ``phi is None`` or ``target_masses is None`` RAISES — it is never quietly
-    replaced by the Menon prior (a silent-fake "ot_newton" that ignored the geometry it claims to
-    use). Use this ONE entry point everywhere a head-offset source is selected so the DSL flag, the
-    trainer, the probe, and the export path stay consistent.
+    All offsets fold BYTE-FREE into ``out_sdf.bias`` via :func:`apply_offset_to_sdf_bias`. NO-FAKE:
+    every mode RAISES when its required inputs are absent — none is quietly replaced by another
+    (``ot_newton`` never degenerates to the Menon prior; ``flip_weighted``/``flip_median`` never
+    silently area-match). Use this ONE entry point everywhere a head-offset source is selected so the
+    DSL flag, the trainer, the probe, and the export path stay consistent.
     """
     m = str(mode)
     if m == "menon":
@@ -300,6 +453,34 @@ def solve_head_offsets(
             )
         b, info = damped_newton_ot_offsets(phi, target_masses, tau=tau)
         out = {"solver": 1.0}
+        out.update({k: float(v) for k, v in info.items()})
+        return b, out
+    if m == "flip_weighted":
+        if phi is None or gt is None:
+            raise LaguerreLogitOffsetError(
+                "solve_head_offsets(mode='flip_weighted') requires BOTH phi AND gt — the target "
+                "masses are the per-class FLIP SHARE derived from argmax(phi) vs gt, NEVER GT area "
+                "frequency (passing area counts would re-inherit N-1's area-match failure)."
+            )
+        zz = np.asarray(phi, dtype=np.float64)
+        zz = zz.reshape(-1, zz.shape[-1])
+        # flips identified by the REALIZED argmax (pred) if given, else the phi-space argmax proxy.
+        pred_lab = np.asarray(pred).reshape(-1) if pred is not None else np.argmax(zz, axis=1)
+        fshare = _flip_share_by_class(pred_lab, gt, zz.shape[-1])
+        b, info = damped_newton_ot_offsets(zz, fshare, tau=tau)
+        out = {"solver": 2.0, "target_is_flip_share": 1.0,
+               "pred_is_realized": 1.0 if pred is not None else 0.0}
+        out.update({k: float(v) for k, v in info.items()})
+        return b, out
+    if m == "flip_median":
+        if phi is None or gt is None:
+            raise LaguerreLogitOffsetError(
+                "solve_head_offsets(mode='flip_median') requires BOTH phi AND gt — the per-edge "
+                "flip-weighted median needs the witness logits and the GT argmax; it is NOT "
+                "expressible through the OT target-mass machinery (crucible-3 P3 F3)."
+            )
+        b, info = flip_median_offsets(phi, gt, pred=pred)
+        out = {"solver": 3.0}
         out.update({k: float(v) for k, v in info.items()})
         return b, out
     raise LaguerreLogitOffsetError(

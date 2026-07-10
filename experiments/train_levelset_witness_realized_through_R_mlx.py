@@ -6230,9 +6230,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _hos_phi = np.concatenate(
                     [np.asarray(_fwd_numpy(deploy, _feats_np_for_pair(pi), deploy["code"][2 * pi + 1])[1],
                                 np.float64).reshape(-1, 5) for pi in vpairs], axis=0)
+                # #386: the flip reformulations need the GT argmax (per-pixel) to derive the flip
+                # share / per-edge flip medians — pass it flattened; ignored by menon/ot_newton.
+                _hos_gt = np.concatenate([m.reshape(-1) for m in _hos_lst])
                 _hos_b, _hos_info = solve_head_offsets(
                     _hos_mode, priors=_hos_masses, phi=_hos_phi, target_masses=_hos_masses,
-                    tau=float(getattr(args, "head_offset_solver_tau", 1.0)))
+                    gt=_hos_gt, tau=float(getattr(args, "head_offset_solver_tau", 1.0)))
                 _hos_deploy = apply_offset_to_sdf_bias(deploy, _hos_b.astype(np.float32))
                 _hos_f1s = [_render_numpy_deploy(_hos_deploy, pi, 1) for pi in vpairs]
 
@@ -10647,10 +10650,12 @@ def main(argv: list[str] | None = None) -> int:
     # an advisory realized-d_seg delta. 'menon' = priors-only -tau*log(pi) heuristic; 'ot_newton' =
     # damped-Newton semi-discrete OT mass-matching (Kitagawa-Merigot-Thibert 2019, needs the phi
     # geometry + GT masses). Mechanism: tac.boundary_math.laguerre_logit_offset.solve_head_offsets.
-    ap.add_argument("--head-offset-solver", choices=["off", "menon", "ot_newton"], default="off",
-                    help="#288: advisory decode-time per-class head-bias offset solver folded byte-free "
+    ap.add_argument("--head-offset-solver",
+                    choices=["off", "menon", "ot_newton", "flip_weighted", "flip_median"], default="off",
+                    help="#288/#386: advisory decode-time per-class head-bias offset solver folded byte-free "
                     "into out_sdf.bias at the EMA verdict (advisory realized-through-R d_seg delta; NEVER "
-                    "mutates shipped/EMA/resumed weights). 'off'=byte-identical (default).")
+                    "mutates shipped/EMA/resumed weights). 'off'=byte-identical (default). ot_newton = OT "
+                    "AREA-mass (N-1-falsified); flip_weighted/flip_median = #386 FLIP-mass reformulations.")
     ap.add_argument("--head-offset-solver-tau", type=float, default=1.0,
                     help="#288 OT/Menon solve softmax temperature (soft Laguerre cell masses; hard tau->0 "
                     "limit is the power-diagram cell-mass fraction).")

@@ -123,7 +123,7 @@ def test_dispatcher_ot_newton_requires_target_masses_no_fake():
 def test_dispatcher_unknown_mode_raises():
     with pytest.raises(LaguerreLogitOffsetError):
         solve_head_offsets("laguerre_magic", priors=np.full(5, 0.2))
-    assert set(HEAD_OFFSET_SOLVERS) == {"menon", "ot_newton"}
+    assert set(HEAD_OFFSET_SOLVERS) == {"menon", "ot_newton", "flip_weighted", "flip_median"}
 
 
 def test_ot_differs_from_menon_on_real_geometry():
