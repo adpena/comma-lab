@@ -196,3 +196,73 @@ Even had R8 sealed, the seal would bind ONLY the canon set at HEAD. Explicitly O
 
 pointer contest-CPU **0.19110 UNMOVED** — this whole wave is MEANS (measurement + coordination
 apparatus), never a lever, never an exact-eval row. `[macOS-CPU advisory · NON-PROMOTABLE]`.
+
+---
+
+## R15 — seal-boundary REFRESH (fresh-eyes at HEAD `549eeb447`, counter was 1/3)
+
+**Verdict: NOT_CLEAN — 1 finding (found + fixed; APPEND-ONLY, the R8 section above is preserved
+verbatim). Counter 1/3 → 0. No SEAL.**
+
+Round 15's fresh angle was a re-verification of the R8 "Seal-boundary honesty — what 8 rounds did
+NOT cover (carry into rounds 9+)" carry-forward list against current HEAD truth (task-3: *stale
+boundary claims = findings*). The list is a LIVE instrument — its whole purpose is "carry into
+rounds 9+", and rounds 9–15 are exactly its readers. One item is now materially stale.
+
+**FINDING (stale forward-claim on a live carry-forward coordination artifact — the same
+doc-misstates-reality class R8 itself caught):** the R8 list's FIRST bullet asserts
+`through_r/palette_realization.py` (+ its test) is *"UNCOMMITTED (untracked at HEAD) … any review of
+it is future work on rounds 9+."* At HEAD that FORWARD claim is FALSE: the file and its test were
+**COMMITTED at R11 (`7310b5506`)** and **REVIEWED across rounds 11–14** (they are in the r11/r12/r13/
+r14 review scope). A rounds-9+ reviewer relying on the list would wrongly exclude a committed,
+reviewed file from the seal — exactly the misdirection the sealing round exists to catch. Verified:
+`git ls-files --error-unmatch src/tac/through_r/palette_realization.py` (tracked);
+`git log -1 -- …palette_realization.py` → `7310b5506` (R11).
+
+**Class-fix (append-only per Catalog #110/#113 — R8 preserved; this section supersedes its boundary
+list as the CURRENT truth):** the boundary list refreshed to HEAD:
+
+- **The currently-untracked scope-adjacent file is now `through_r/stem_perception.py`** (`git status`
+  `?? …stem_perception.py`; `git ls-files --error-unmatch` errors = untracked). It is explicitly OUT
+  of scope for this review wave by directive. `palette_realization.py` is no longer the untracked one.
+- **`palette_realization.py` (+ test): COMMITTED (`7310b5506`, R11) + REVIEWED rounds 11–14** — IN the
+  review window, NOT future work. (Supersedes the stale R8 bullet.)
+- **U3 bulletin PRODUCER set: STILL minimal — UNCHANGED since R8.** Producers wired: `verdict_landed`
+  (via `emit_verdict` + `review_counter._post_bulletin_verdict_landed`) and `agent_spawned` /
+  `agent_completed` (via `recovery_manifest`). `gate_ruled` / `spec_edited` / `memo_landed` /
+  `agent_died` are declared kinds with **NO canonical producer** (verified: the only non-test
+  `post_event` callsites are review_counter, emit, recovery_manifest). A consumer expecting them sees
+  none.
+- **`MeasurementRow` parser-SIDE (read-back): STILL unbuilt — UNCHANGED since R8.** `to_json_dict` is
+  write-only; there is no `from_json_dict` / loader in `tac.verdicts` (verified: grep finds none).
+- **review_counter multiprocessing residual: CLOSED-via-ENV since R8 (PARTIALLY resolved).** The
+  round-2 fix set `TAC_SESSION_BULLETIN_*` (env-inherited by spawned children) via an autouse fixture,
+  and `test_subprocess_children_honor_bulletin_env_no_live_leak` proves **zero** child leak into the
+  live store; R13 further made `read_events` env-symmetric. The `record_round` API still has no
+  `bulletin_path` param — closure is via env inheritance, not an API param (the deeper hardening item
+  remains open, but the leak itself is closed + tested).
+- **Anti-gaming boundary unchanged:** the ledger records CLAIMS a review happened; no gate proves a
+  real review occurred (module docstring boundary) — the seal trusts the `reviewed_commits` trail.
+
+**Standing re-checks (all GREEN, re-derived — not recognised):** 178 affected tests single-invocation
+(through_r 32/…, session_bus 34, verdict_emit 17, verdict_measurement_row 24, review_counter 14, …);
+GT identity canary `test_end_to_end_gt_frame_reproduces_lstars_dseg_zero` **RAN** (real gt cache +
+real SegNet, d_seg == 0, 4.0s — not skipped); serializer `--triality-legs` absent → `(None, None)`
+(byte-identical no-op); torn-tail append tests green (bulletin + review_counter). **Findings-history
+meta-audit — all 7 prior fixes intact at HEAD, each re-run + code-site read:** r4 `SEG_WEIGHT`
+consumed from `tac.contest_score` (flip_inverse:68/537/602/624); r5 `_needs_newline_separator`
+(bulletin:169 + review_counter:195); r8 recovery sort key `(age_seconds is None, …)` reverse=True
+(recovery_manifest:338) + `test_recover_report_unparseable_timestamp_sorts_to_top`; r10 `top_k`
+clamp `max(0, min(top_k, n_flips))` (flip_inverse:655) + empty-verify early-return before `np.stack`
+(flip_inverse:703); r11 zero-pixel BOTH-denominator guard (palette_realization:483–486); r13
+`read_events` env-symmetry (bulletin:258). **Constants sampled (provenance ladder):** `SEG_WEIGHT=100`
+= MEASURED-ANCHOR (upstream/evaluate.py:92) consumed not re-hardcoded; `N600_EXPECTED=600` = anchored
+to the n600 authority scale; `step_lsb=12.0` = honest actuator DEFAULT (effect MEASURED
+prediction-vs-realized through real SegNet, not asserted-as-derived) — all CLEAN, no bare-literal
+physics constant masquerading as derived.
+
+**Rounds 16+ restart fresh; SEAL needs 3 consecutive CLEAN from round 16.** The fix is a
+documentation edit; a fresh reviewer must re-verify the refreshed boundary list against the next HEAD.
+
+pointer contest-CPU **0.19110 UNMOVED** — the boundary refresh is MEANS (coordination hygiene), never
+a lever, never an exact-eval row. `[macOS-CPU advisory · NON-PROMOTABLE]`.

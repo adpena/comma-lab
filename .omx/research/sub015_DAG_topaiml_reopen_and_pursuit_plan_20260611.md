@@ -13149,3 +13149,21 @@ APPARATUS (fresh-eyes verdict over the canonical measurement modules; the detect
 verified existing guards + proved record_round replay-idempotence, a code property covered by tests,
 not a measured law); DSL leg N/A; DAG leg = this note (the canon-wave trajectory lives in the
 review_counter ledger + sweep memo). Commit omitted `[no-triality]` (should have carried it).
+
+**FEED-389-R15 (2026-07-10, canon-wave recursive review R15, fresh-eyes at HEAD `549eeb447`):**
+NOT_CLEAN — 1 finding (found + fixed, APPEND-ONLY). Fresh angle = re-verify the R8 seal-boundary
+carry-forward list vs current HEAD. FINDING: the R8 list's forward claim that
+`through_r/palette_realization.py` is "UNCOMMITTED … review is future work on rounds 9+" is STALE —
+the file + test were committed at R11 (`7310b5506`) and reviewed rounds 11–14; a rounds-9+ reviewer
+would wrongly exclude a committed, reviewed file from the seal (same doc-misstates-reality class R8
+caught). FIX: appended an "R15 — seal-boundary refresh" section to the sweep memo (R8 preserved
+verbatim per Catalog #110/#113) giving current truth — untracked scope-adjacent file is now
+`stem_perception.py` (out of scope); producer set still minimal + MeasurementRow parser-side still
+unbuilt (both UNCHANGED since R8); multiproc residual CLOSED-via-env (round-2 fixture + subprocess
+test, R13 read-symmetry). Standing re-checks GREEN (178 tests single-invocation; GT canary RAN
+real-SegNet d_seg==0; serializer flag-absent `(None,None)`; torn-tail). All 7 prior fixes (r4/r5/r8/
+r10/r11/r13) intact — re-run + code-site read. 3 constants sampled on the provenance ladder (SEG_WEIGHT
+consumed / N600 anchored / step_lsb honest-actuator-default) — CLEAN. Counter 1/3 → 0; SEAL needs 3
+consecutive CLEAN from R16. Review-round record is PURE APPARATUS: equations leg N/A (no measured
+relation — a stale-doc finding on a coordination artifact), DSL leg N/A (no lever), DAG leg = this
+note. Pointer 0.19110 UNMOVED (means). `[no-triality]`.
