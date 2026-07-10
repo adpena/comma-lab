@@ -25,6 +25,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tac.jsonl_store import append_locked_jsonl
+
 _DEFAULT_STORE = Path(__file__).resolve().parents[3] / ".omx" / "state" / "witness_decode_cache.jsonl"
 
 
@@ -77,19 +79,16 @@ def get(payload_sha: str, config_sha: str, *, store: str | Path | None = None) -
 
 def put(payload_sha: str, config_sha: str, verdict: dict, *,
         store: str | Path | None = None) -> str:
-    """Append a decoded verdict under its content-address key (fcntl-locked atomic append)."""
+    """Append a decoded verdict under its content-address key (fcntl-locked atomic append).
+
+    Uses the canonical .omx/state helper (tac.jsonl_store.append_locked_jsonl); see
+    .omx/research/fcntl_lock_canonicalization_plan_20260710.md Batch 1. ``get()`` above keeps
+    its own ``LOCK_SH`` read-lock (untouched — a distinct, read-only operation).
+    """
     path = _resolve(store)
-    path.parent.mkdir(parents=True, exist_ok=True)
     key = cache_key(payload_sha, config_sha)
     row = {"key": key, "payload_sha": payload_sha, "config_sha": config_sha, "verdict": verdict}
-    line = json.dumps(row) + "\n"
-    with open(path, "a") as fh:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
-        try:
-            fh.write(line)
-            fh.flush()
-        finally:
-            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    append_locked_jsonl(path, row)
     return key
 
 

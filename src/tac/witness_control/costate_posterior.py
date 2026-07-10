@@ -28,10 +28,11 @@ from __future__ import annotations
 
 import json
 import math
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+
+from tac.jsonl_store import append_locked_jsonl
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 POSTERIOR_PATH = _REPO_ROOT / ".omx" / "state" / "costate_posterior.jsonl"
@@ -74,21 +75,9 @@ def record_costate_observation(
         "run_ref": run_ref, "epoch": epoch, "evidence": evidence, "ts": _utc(),
     }
     p = Path(path) if path is not None else POSTERIOR_PATH
-    p.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps(row, sort_keys=True) + "\n"
-    try:
-        import fcntl
-        with open(p, "a", encoding="utf-8") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            try:
-                f.write(line)
-                f.flush()
-                os.fsync(f.fileno())
-            finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-    except ImportError:  # pragma: no cover - non-POSIX fallback
-        with open(p, "a", encoding="utf-8") as f:
-            f.write(line)
+    # fcntl-locked append via the canonical .omx/state helper (tac.jsonl_store); see
+    # .omx/research/fcntl_lock_canonicalization_plan_20260710.md Batch 1.
+    append_locked_jsonl(p, row)
     return row
 
 

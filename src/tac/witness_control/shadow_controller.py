@@ -37,13 +37,13 @@ from __future__ import annotations
 
 import importlib
 import itertools
-import json
 import math
 import sys
 from dataclasses import dataclass, field as _dc_field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tac.jsonl_store import append_locked_jsonl
 from tac.witness_control.costate_estimator import (
     BINDING_TERM_STALL,
     MEASURED,
@@ -609,20 +609,13 @@ def build_shadow_report(inputs: RunInputs,
 
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:
     """Append the report row to ``<run_dir>/costate_shadow.jsonl`` (the ONLY write this
-    package performs — an advisory sidecar in the run dir, never a mutation of the run)."""
+    package performs — an advisory sidecar in the run dir, never a mutation of the run).
+
+    fcntl-locked append via the canonical .omx/state helper (tac.jsonl_store); aligns with
+    the sibling stores (costate_posterior.py). See
+    .omx/research/fcntl_lock_canonicalization_plan_20260710.md Batch 1.
+    """
     from tac import witness_run_artifacts as _wra
     out = Path(run_dir) / _wra.COSTATE_JSONL
-    line = json.dumps(report.to_row(), sort_keys=True) + "\n"
-    try:  # align with the sibling stores (costate_posterior.py) — single-writer today,
-        import fcntl  # but flock keeps the append atomic if that ever changes.
-        with out.open("a", encoding="utf-8") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            try:
-                f.write(line)
-                f.flush()
-            finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-    except ImportError:  # pragma: no cover - non-POSIX fallback
-        with out.open("a", encoding="utf-8") as f:
-            f.write(line)
+    append_locked_jsonl(out, report.to_row())
     return out

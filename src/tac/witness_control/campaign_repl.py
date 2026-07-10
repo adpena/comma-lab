@@ -26,6 +26,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from tac.jsonl_store import append_locked_jsonl
 from tac.witness_control.shadow_controller import (
     build_shadow_report,
     load_run_inputs,
@@ -155,19 +156,14 @@ def action_efficiency(frontier_history: list[float]) -> dict:
 
 def write_world_model_row(run_dir: str | Path, wm: CampaignWorldModel) -> Path:
     """Append the world-model as a trace row (Duck ``traces.py`` machine-readable episode)
-    to the run dir, closing the DAG→DSL→run→rows→equations cycle. Never mutates state."""
+    to the run dir, closing the DAG→DSL→run→rows→equations cycle. Never mutates state.
+
+    fcntl-locked append via the canonical .omx/state helper (tac.jsonl_store); aligns with
+    the sibling stores (costate_posterior.py). NOTE: the prior inline write serialized
+    without ``sort_keys`` — the canonical helper defaults to ``sort_keys=True`` (cosmetic
+    key-order change only; the row's data/semantics are unchanged). See
+    .omx/research/fcntl_lock_canonicalization_plan_20260710.md Batch 1.
+    """
     out = Path(run_dir) / "campaign_world_model.jsonl"
-    line = json.dumps(wm.to_row()) + "\n"
-    try:  # align with the sibling stores (costate_posterior.py) — single-writer today,
-        import fcntl  # but flock keeps the append atomic if that ever changes.
-        with out.open("a") as fh:
-            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
-            try:
-                fh.write(line)
-                fh.flush()
-            finally:
-                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
-    except ImportError:  # pragma: no cover - non-POSIX fallback
-        with out.open("a") as fh:
-            fh.write(line)
+    append_locked_jsonl(out, wm.to_row())
     return out

@@ -134,22 +134,9 @@ def record_activation(
         "ts": _utc(),
     }
     p = Path(path) if path is not None else LEDGER_PATH
-    p.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps(row, sort_keys=True) + "\n"
-    # fcntl-locked append (canonical .omx/state pattern). Best-effort on platforms without fcntl.
-    try:
-        import fcntl
-        with open(p, "a", encoding="utf-8") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            try:
-                f.write(line)
-                f.flush()
-                os.fsync(f.fileno())
-            finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-    except ImportError:  # pragma: no cover - non-POSIX fallback
-        with open(p, "a", encoding="utf-8") as f:
-            f.write(line)
+    # fcntl-locked append via the canonical .omx/state helper (tac.jsonl_store); see
+    # .omx/research/fcntl_lock_canonicalization_plan_20260710.md Batch 1.
+    append_locked_jsonl(p, row)
     return row
 
 
