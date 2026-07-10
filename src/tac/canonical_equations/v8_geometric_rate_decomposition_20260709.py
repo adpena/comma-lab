@@ -156,7 +156,7 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         empirical_output={
             "per_edge_bitmap_dominant_complete": {
                 "Road/Lane": [0.204, 0.0275, 0.0695],
-                "Road/Undriv_horizon": [0.047, 0.0032, 0.0221],   # horizon deg-3 poly + xi = 14.6x
+                "Road/Undriv_horizon": [0.047, 0.0032, 0.0221],   # horizon deg-3 poly + xi = 14.6x; P4-R3 PIN: the code-emitted dominant = 0.00277 (4167 B, horizon_poly_xi_byte_cost); 0.0032 here is an amortization-method delta (+14%, 1.1% of the 0.0411 gap, IMMATERIAL — 0.00277 is even cheaper -> the rate argument is STRONGER); anchor value preserved append-only (Catalog #110/#113), pin annotated not mutated
                 "Movable_Road+Undriv": [0.0532, 0.00344, 0.0209],  # bbox 70% cover, 15.4x vs bitmap
                 "Road/MyCar_hood": [0.028, 0.0202, 0.0202],        # static model, complete (no residual)
                 "Lane/*_3rows": [0.007, 0.007, 0.007],             # already tiny, untouched
@@ -164,7 +164,7 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
             "whole_scene": {
                 "bitmap": _S_BITMAP,
                 "geometric_dominant_only": _S_DOMINANT,   # 5.5x < bitmap, 1.9x < frontier
-                "geometric_complete_lossless": _S_COMPLETE,  # 2.4x < bitmap, ~1.2x > frontier
+                "geometric_complete_lossless": _S_COMPLETE,  # 2.4x < bitmap, ~1.2x > frontier; P4/P5b CORRECTED-triple: 0.140 - de-share 0.00440 (anchor v8_residual_deshare_dedup_measured_20260709, dilate=2 footprint proxy; footprint-sweep MEASURED band [0.000@dil0, 0.0069@dil3] -> NOT footprint-robust) - triple-point 0.00102 = COMPLETE 0.135 (residual enemy 0.074); shippable = WASH-with-frontier, sub-0.118 win P-C-gated (r* RANGE [0.061,0.135])
                 "frontier_rate_term": _S_FRONTIER_RATE,
             },
             "verdict": (

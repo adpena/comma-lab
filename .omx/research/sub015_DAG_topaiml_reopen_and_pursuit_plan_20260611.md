@@ -12655,3 +12655,40 @@ they carve composition space as negatives carve design space. Routing: seal stan
 composition row on shipped levers; P11 pre-registration for any deliberate-harm schedule element) +
 the #385 brief's lever tables. Triality: DAG=this FEED; DSL/eq legs as conventions land. Pointer 0.19110
 UNMOVED (means).
+
+---
+
+## FEED-proxy-audit (2026-07-09) — RECOVERY agent · PROXY-SUSPECT AUDIT (operator GO "Audit all suspect" · P9)
+
+**7 of 8 items DISPOSED $0; Item-3 dry-start PINNED-owed.** SIGNAL → DISPOSITION:
+- **δ_mask swap (Item 1):** VERIFIED landed (`6b1568b0b`, `decoupling_screen.py` default 3.46e-6, DELTA_R_PROXY
+  RETIRED never-default, operative_delta_mask REFUSE guard). Clean grep: NO other surface uses 0.0196/DELTA_R as a
+  kill floor (517 broad hits all unrelated: delta_mask_bytes=archive deltas · 0.0196=numeric coincidences). 3.46e-6
+  vs 3.5e-6 = precise-vs-2sigfig, NO discrepancy. Seed-variance PIN: ≥3 replicates/arm → operative_delta_mask,
+  owed to the 1a governed EVENT.
+- **de-share footprint sweep (Item 2, $0 MAIN EVENT):** MEASURED n600 dilate∈{0,1,2,3} → totS **[0.000, 0.001945,
+  0.004399(=landed@dil2, EXACT reproduce), 0.006898]**. **NOT footprint-robust** (band [0.000,0.0069] ≠ [0.0044,
+  0.0104]); 0.0044 = INSTANCE-of-dil2 proxy; real bbox footprint NOT exposed. Curve-relative REFUTED verdict HOLDS
+  across the band (lane 0.90× worse, horizon ~1.0× wash, both dil0..dil3). CORRECTS the P8 de-share row.
+- **42 s/ep (Item 3):** PROVENANCE = v7.5.2/crucible-2 MLX-M5-Max steady-state anchor (DAG:12215 + crucible2
+  SYNTHESIS_v752:90/536, §B.wall_clock 6-16h budget). NOT the v8-inc1a (paint-free) config → a v8-inc1a dry-start
+  would NOT re-validate it. Dry-start PINNED-owed {instrument: governed launch of the v7.5.2 sealed config +
+  safe_run 25-min SIGTERM, ≥5 steady epochs post >13-min compile, ~71GiB; trigger: dedicated exec session; owner:
+  v7.5/crucible_v7 relaunch}. NOT run (recovery-budget; durable-handoff > half-run).
+- **counted-seed floor (Item 4):** $0 upper bound = DOMINANT-only 0.061 (deterministic byte-cost-function sum); no
+  archive seed-section surface → byte-closed floor P-C-owed.
+- **0.00277 pin (Item 5):** PROPAGATED to `v8_geometric_rate_decomposition_20260709.py` (comment-only, append-
+  preserving: L159 R3 code-emitted 0.00277 + amortization delta; complete-triple 0.135 + de-share footprint band).
+  ruff-F clean.
+- **0.100403 (Item 6):** single citation, ALREADY `[analytic-generators]` labeled. Clean.
+- **flip-b_c R4 gate (Item 7/P9-4):** the gate LANDED (`flip_bc_n600_gate_20260709/`, 2670s, mod32cap ep650,
+  render_hw[384,512]): **no_offset 0.003144 WINS**; flip_weighted +0.016530 / flip_median +0.018418 (~6× worse,
+  ÷0.0411 = +40%/+45%). R4 no-longer-owed — no_offset (SAFE DEFAULT) CONFIRMED WINNER through-R. Memo owed (DAG/consume gap).
+- **flip-resolution (Item 8):** grid-audit PASS by UPSTREAM SOURCE. `frame_utils`: camera_size (1164,874), seq_len 2,
+  segnet_model_input_size (512,384). `modules.py`: SegNet x[:,-1]→bilinear(384,512)→argmax; PoseNet both→(384,512)
+  →yuv6. Authority grid = (H=384,W=512), argmax AFTER resize. Every flip surface (a-f) grid-correct: mask_dseg_meter
+  shape-equality guard, movable_deshare lstars (384,512), R6/R7 gt_n600 (384,512), flip_bc gate through-R matches
+  evaluate.py, #149 = intended camera-res PLACEMENT (≠ compare grid). No 512×384/384×512 transposition.
+
+Memo: `.omx/research/proxy_suspect_audit_20260709.md`. Triality: DAG=this FEED · eq=annotations landed · DSL=N/A
+(audit). Pointer 0.19110 UNMOVED (means). #205 STOPPED. `[macOS-CPU advisory · NON-PROMOTABLE]`.
