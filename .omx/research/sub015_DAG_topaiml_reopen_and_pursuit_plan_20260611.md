@@ -12455,3 +12455,20 @@ not-false-flagged); 86 existing confound tests green; ruff F clean; both wired i
 **Triality:** DAG = this FEED. **DSL = N/A** (no new lever — apparatus gates on existing stores/code).
 **Equations = N/A** (PROCESS law, not an S_τ/score law). Memo: `.omx/research/eightfold_apparatus_build_
 20260709.md`. Pointer 0.19110 UNMOVED · #205 untouched (apparatus/means — makes the campaign harder to fool).
+
+## FEED-p9-no-proxy (2026-07-09) — OPERATOR CAPSTONE MAXIM: "Proxies are poison use the thing itself" (P9)
+Appended as P9 to `design_philosophies_eightfold_20260709.md` — the sharpened statement of the whole
+measurement-honesty family (P2/P4/P5/P8 + NO-FAKE #8). **Measured proxy-vs-thing receipts:** δ_R-as-δ_mask
+~5600× (R7 category error) · MPS-authority 23× · proxy-loss-vs-auth 350× · LEVER-4 texture proxy AT
+CHANCE · PyAV-rgb24 ~100× phantom pose · in-proxy-phi b_c smoke vs the through-R gate. **The thing
+itself per quantity:** d_seg=frozen-scorer argmax through R on exact decoded bytes · d_pose=official
+PoseNet YUV6 · rate=archive.zip stat · S=upstream/evaluate.py n600 · floors measured in the SAME
+units/protocol as the Δ they gate · baselines=in-run matched arms. A proxy is admissible ONLY as
+gradient/prior with its authority-gap MEASURED and carried; every proxy in a design doc is a FINDING
+until it names its thing-itself replacement path. **Live application:** the flip-b_c n600 gate (running,
+cache 450/600) IS the thing itself (realized through-R d_seg) arbitrating over its own in-proxy smoke;
+routed to P5 (attack remaining proxies in v2+P4: harness δ_R default pending R7 swap · dilate=2 de-share
+footprint · memo-sourced numbers) + the seal standing checks. Sister same-turn: #387 gates landed
+(fd1ebf4c3 — P1 live 4, P4 live 1 incl. the VerdictTrendAlarm violator my own brief mislabeled passing;
+the gate re-derived, honest). Triality: DAG=this FEED; DSL/equations N/A (maxim/process law). Pointer
+0.19110 UNMOVED (means).
