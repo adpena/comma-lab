@@ -12180,3 +12180,71 @@ FusedRKernel · duty-to-measure levers) — built-but-unconsumed = orphaned sign
 (revision) + the residual-kit builder; P5/P6 seal rounds inherit it as a standing check. Triality legs:
 DAG=this FEED; DSL/equations follow as the audit becomes a gate/law (owed at SPEC_v8.1 seal). Pointer
 0.19110 UNMOVED (means).
+
+## FEED-buildwave-dsl (2026-07-09): #377 DSL-completeness leg — FusedRKernel gap + 3 flagship #332 designed levers folded; 107 remaining flags dispositioned ZERO-leftover
+Under #377 ("Build all unbuilt"). Closed the ONE completeness gap P7 flagged (SPEC_v75 open-items /
+L70): **FusedRKernel** (`--fused-r-kernel`) — score-NEUTRAL always-on compute lever (MEASURED
+bit-identical fwd + ~1 ULP VJP + ~8% faster + localizes GPU non-determinism 0/28 cross-proc N=10,
+#348), sister of GROUPED_BACKWARD. Plus the unambiguous BOOLEAN-activation designed levers from
+SPEC_v75 §10's "26 genuine designed levers" (#332 signal-loss surface): **ClosedLoopEikonalControl**
+(all 6 `--closed-loop-*` at the trainer's OWN designed defaults — costate controller #292 build-3),
+**CurriculumReanchorLevers** (#302 M1), **MarginSaliencyReachability** (LEVER-4 through-R S_R #268/L76).
+`completeness().unmapped` **116→107** (−9 flags), `stale==[]`. All 4 auto-derive into the activation
+ledger duty-to-measure queue for the #247 costate SENSE layer (VERIFIED vs empty ledger). Scope
+discipline (operating-manual §8 anti-goldplating + NO-FAKE): the OTHER ~17 SPEC-§10 designed clusters
+are VALUE-configured (active magnitude not a trainer default) — folding with an invented magnitude =
+fake lever, so they are documented FOLD-OWED-#332 (68 flags / 17 clusters) rather than fake-folded.
+Full disposition of ALL 107 remaining unmapped flags (68 FOLD-OWED + 38 BASE-CONFIG + 1
+MEASURED-EXCLUDED `--mx-compile`; union == unmapped, programmatically verified) in
+`.omx/research/buildwave_dsl_completeness_20260709.md`. Triality legs: DAG=this FEED · DSL=the 4
+factories in curriculum_dsl.py + test_buildwave_dsl_completeness.py (8 tests) · equations=N/A
+(transcription/compute levers, no new S_tau law). Pointer 0.19110 UNMOVED (means — DSL plumbing).
+
+## FEED-owed-gates (2026-07-09, task #384) — v7.5.2 launch-blocking + non-blocking owed-gates BUILT [DSL leg: apparatus, no lever; equations N/A-apparatus]
+
+Built 4 of the SYNTHESIS_v3_v752 §C owed gates (owed-1 pose-gate is the sibling #383, already landed +
+exercised here as the negative control). `[macOS-MLX/CPU advisory]` NON-PROMOTABLE; pointer 0.19110 UNMOVED.
+
+- **owed-2 (item 2) FULL-CONFIG DRY-START** — `tools/launch_witness_run.py --dry-start N` (<=3): runs the WHOLE
+  gate chain on the REAL n600 config then a WALL-CLOCK-BOUNDED governed run of the EXACT real launch.sh
+  (boot+model-build+step+ckpt) + a RESUME round-trip, then exits (never the real launch). MEASURED **peak RSS
+  70.94 GiB** (matches the 71.54 GiB memory-preflight projection → memory start-ability VALIDATED). KEY FINDING:
+  crucible_v7 pins an ATOMIC 3000-epoch schedule whose interlocking validators (muon<=epochs; LADDER↔Muon
+  stage-stagger max(arm window) < muon_start) REFUSE a shrunk-epochs smoke — so the bound is WALL-CLOCK (safe_run
+  SIGTERM = intended bound + crash sim), NOT epochs (a schedule-clamp was prototyped + REJECTED as a rabbit
+  hole). sec/ep measurement long-running (n600 first-epoch compile > 9.5 min; steady-state ~42 s/ep anchor).
+- **owed-4 (item 3) SPEED-STACK + WALL-CLOCK** — `tools/witness_speed_stack_audit.py`: 5 speed levers all
+  composed OK (fused-R bit-exact · grouped-backward ~17× · safe-compile fingerprint-certified · async-verdict
+  neutral-by-construction · micro-batch-pairs EXCLUDED-WITH-REASON #313) each with a neutrality receipt; wall-clock
+  budget **6.0 / 10.1 / 15.9 h** (matches "~6-16 h") + ~11 min GPU head-solve = the v7.5.2 half of the #385
+  dual-chain brief.
+- **owed-14 (item 14) GOVERNED TELEMETRY REPLAY** — `tools/witness_observer_replay.py` vs the #205 stopped run
+  (READ-ONLY): all 4 legs GREEN. pose-gate rolling-slope detector returns DEGENERATE_GUARD_TRIPPED / fired=False
+  on the rising σ_min (0.0844→0.1061) = the SYNTHESIS §A.4 v3-AMENDMENT-2 $0 negative control, matching P4-M1;
+  verdict-trend fires TRAIN_VERDICT_DECOUPLING (matches why #205 stopped: d_seg plateaued ~0.033, d_pose blew up
+  7.8→24.5); costate-shadow + disengaged-alarm parse.
+- **owed-15 (item 15) CLASS-A ISOLATION LADDER (configs only)** — `tools/build_v752_isolation_arms.py` + manifest
+  + runbook: 3 argparse-validated fresh-arm configs (basis-only / +taper / +AA-ipe), NOT trained (await operator
+  which-to-run GO). R8 law honored (FRESH training arms, never inference-toggle a trained-WITH render lever);
+  ROLLBACK sign-test on isolated n600 through-R d_seg.
+
+Commit: v7.5.2 owed-gates (#384). Triality: DAG=this FEED; DSL=apparatus (no lever); equations N/A (gates cite
+sigma_min_plateau + MEMORY anchors). Landing memo `.omx/research/v752_owed_gates_build_20260709.md`.
+
+## FEED-mindim-waterfill-binding (2026-07-09) — OPERATOR BINDING clause B: lowest-param/lowest-dim ALWAYS, or waterfill-optimal
+**Operator verbatim:** "Lowest param lowest dim representation everywhere always / Or optimal for
+distortion with reverse waterfill or waterfill." Memory: clause B of
+`operator_no_duplicate_data_archive_geometry_first_20260709.md`. **Exactly TWO admissible representation
+modes, no third:** (1) DEFAULT = the minimal sufficient statistic the geometry admits — measured
+instances already in-tree: 6-dim se(3) ξ (not dense flow) · deg-3 horizon poly (14.6×→0.0032) · ~8-dim
+lane manifold · S1's 2-D→1-D δ(s) chart · flip-median b_c (1 param/edge) · Whitney/mod-dim bounds #223
+(minimal ≠ under-capacity — the bound is the geometry's). (2) ESCAPE = when distortion demands more,
+the allocation is SOLVED by waterfill/reverse-waterfill (KKT equal-marginal, #157/#226, per-class/
+margin-aware per the SPARC grain on #336) — never ad-hoc "make it bigger"/hand-picked dims. **Closes
+the historical third mode:** the capacity-sweep reflex / "bigger bc20" / mod-dim guessing. Twin of
+clause A: duplication = one fact in two homes; over-parameterization = one fact in a too-big home.
+**Routing:** every carrier/section/lever in v7.5.2+v8 states {dim/param count · geometric-minimum
+derivation OR waterfill justification with measured marginal} → P3b representation table · SPEC_v8.1
+seal checks · #385 brief min-dim-or-waterfill column (beside the dedup audit) · #336 = the waterfill
+instrument. Injected live into P3b. Triality: DAG=this FEED; DSL/equations follow as the requirement
+becomes seal-check/law. Pointer 0.19110 UNMOVED (means).
