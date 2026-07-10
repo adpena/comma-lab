@@ -92,6 +92,17 @@ GATE_N600_D_SEG_OT_NEWTON = 0.0048921
 GATE_N600_OT_ITERS = 8
 GATE_N600_OT_MAX_MASS_ERR = 2.82e-11
 
+# --- the #386 FLIP-mass REFORMULATION anchors (crucible-3 N-1 open arm, 2026-07-09) -----------------
+# The two flip-mass reformulations of the N-1-falsified area objective, MEASURED at full n600 through R
+# on the SAME harness/ckpt/protocol (baseline reproduced BIT-IDENTICAL to the N-1 verdict, d_seg
+# 0.003143556382921007). BOTH are MEASURED NEGATIVES — dramatically worse than even the falsified area
+# objective. Numbers pinned VERBATIM from the completed gate JSON (sha256 ad3f863e9de0e0d8...). Flips
+# identified by the REALIZED baseline SegNet argmax (pred_is_realized=1), total_flips 370,829 / 600 pairs.
+GATE_N600_D_SEG_FLIP_WEIGHTED = 0.0196734   # OT solve, target = flip_share_by_class (b_Lane +48.8)
+GATE_N600_D_SEG_FLIP_MEDIAN = 0.0215612     # S1 Hamming per-edge flip-margin median (b_Lane +43.4)
+GATE_N600_FLIP_LANE_PERCLASS_BASE = 0.21182     # Lane per-class d_seg, no_offset
+GATE_N600_FLIP_LANE_PERCLASS_MEDIAN = 0.61290   # Lane per-class d_seg, flip_median (~3x WORSE)
+
 
 def build_laguerre_ot_head_offset_v1() -> CanonicalEquation:
     """Build the #288 damped-Newton semi-discrete OT head-offset law with its honest-tier anchors.
@@ -225,6 +236,82 @@ def build_laguerre_ot_head_offset_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_flip_reform = EmpiricalAnchor(
+        anchor_id="laguerre_flip_bc_reformulation_gate_n600_mod32cap_ep650_20260709",
+        measurement_utc=_UTC,
+        inputs={
+            "ckpt": "levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz (ep650)",
+            "gate": "experiments/probe_flip_bc_n600_gate.py (3-arm, reuses the N-1 harness verbatim)",
+            "n_pairs": GATE_N600,
+            "authority": "realized-through-R, frozen CPU SegNet (fp32 EMA render), ALL 600 pairs",
+            "result_json_sha256": "ad3f863e9de0e0d8bc14df8ee16f8e2564fa01938f2bd7cf8a9511fb2b86fb8f",
+            "modes": ("flip_weighted (OT to flip_share_by_class) + flip_median (S1 Hamming per-edge "
+                      "flip-margin median, distinct closed-form path per crucible-3 P3 F3); flips "
+                      "identified by the REALIZED baseline argmax (pred_is_realized=1)"),
+        },
+        predicted_output={
+            "hypothesis": ("crucible-3 A.3/S1-S3: targeting the FLIP mass (the boundary-annulus "
+                           "residual the scorer re-reads) instead of GT AREA frequency fixes the N-1 "
+                           "negative; S1 derived flip-median as the Hamming-optimal 1-D threshold"),
+        },
+        empirical_output={
+            "d_seg_no_offset": GATE_N600_D_SEG_NO_OFFSET,
+            "d_seg_flip_weighted": GATE_N600_D_SEG_FLIP_WEIGHTED,
+            "d_seg_flip_median": GATE_N600_D_SEG_FLIP_MEDIAN,
+            "baseline_bit_identical_to_n1": True,
+            "lane_perclass_no_offset": GATE_N600_FLIP_LANE_PERCLASS_BASE,
+            "lane_perclass_flip_median": GATE_N600_FLIP_LANE_PERCLASS_MEDIAN,
+            "verdict": ("BOTH arms LOSE, decisively: no_offset 0.0031436 << flip_weighted 0.0196734 "
+                        "(6.3x; +0.01653 = 40% of the 0.0411 gap, AS HARM) << flip_median 0.0215612 "
+                        "(6.9x; +0.01842 = 45% of gap, AS HARM) — both ~4x worse than even the "
+                        "N-1-falsified area objective (0.0048921). MECHANISM: the trunk's phi-space "
+                        "Lane erasure is DEEP (Lane per-class d_seg 0.212 at no_offset; realized-flip "
+                        "pixels carry LARGE phi margins, median ~43), so any global 5-scalar offset "
+                        "reaching the flip mass must boost Lane by ~+43..+49, over-predicting Lane "
+                        "everywhere (Lane per-class 0.212 -> 0.61). SHARED CONCLUSION: no GLOBAL "
+                        "per-class offset rescues an eroded trunk (menon/ot_newton/flip_weighted/"
+                        "flip_median all worse; N-1's exhaustive +-0.4 sweep best delta -3.4e-8 => "
+                        "the global post-hoc b_c lever is SATURATED at no_offset here)."),
+            "verdict_scope_flip_weighted": ("M-a FORMULATION — 'flip-share targets through the "
+                                            "mass-OT mechanism'. Crucible-3 P3 F3 empirically "
+                                            "CONFIRMED: OT-to-flip-share re-inherits AND amplifies "
+                                            "N-1's cell-inflation pathology (worse than area-matching)."),
+            "verdict_scope_flip_median": ("M-b FORMULATION with a REGIME qualifier — the Hamming-"
+                                          "median derivation is VALID in the small-offset local-"
+                                          "boundary-shift regime; the solved b_Lane +43 (driven by the "
+                                          "trunk's phi-space Lane erasure) EXITS that validity domain. "
+                                          "A REGIME VIOLATION on THIS eroded trunk, NOT a refutation "
+                                          "of the median law itself."),
+            "validity_domain": ("the per-edge flip-margin-median placement is derived for |b| SMALL "
+                                "(local boundary shift; collateral correct-pixel mass ~negligible) on "
+                                "a NON-ERODED phi field; |b|~43 on an eroded trunk is outside it."),
+            "untested_formulations_alternatives": ("(1) per-EDGE b_c on the FRESH v8 Stage-A decoupled "
+                                                   "fields (S1's original per-edge form — the "
+                                                   "crucible-3 v8 route, non-eroded by construction); "
+                                                   "(2) offsets solved JOINTLY WITH training (not "
+                                                   "post-hoc on a frozen eroded phi); (3) magnitude-"
+                                                   "CLAMPED offsets within the derivation's validity "
+                                                   "domain (the N-1 sweep's ~0 best bounds this at "
+                                                   "~nil headroom on THIS trunk); (4) per-pair / "
+                                                   "spatially-varying b_c(x)."),
+            "advisory": "[contest-CPU advisory] NON-PROMOTABLE; pointer 0.19110 UNMOVED",
+        },
+        residual=0.0,
+        source_artifact=".omx/research/flip_weighted_bc_build_and_gate_20260709.md",
+        measurement_method=("$0 offline gate: 3-arm realized-through-R d_seg (frozen CPU SegNet, "
+                            "verdict-batch 32 chunked), FULL n600, local macOS-CPU, 44.5 min; baseline "
+                            "arm reproduced the N-1 verdict bit-identically (same harness/protocol)"),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path="experiments/probe_flip_bc_n600_gate.py",
+            reactivation_criteria=("re-open ONLY via the untested formulations above (per-EDGE b_c on "
+                                   "fresh v8 Stage-A fields / joint-with-training / magnitude-clamped "
+                                   "within validity domain / per-pair or spatial b_c(x)) — NOT another "
+                                   "global post-hoc target-mass variant on an eroded trunk"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("#288 damped-Newton semi-discrete OT per-class head-bias offset: solve the zero-sum b* "
@@ -253,7 +340,7 @@ def build_laguerre_ot_head_offset_v1() -> CanonicalEquation:
         units_in={"phi": "witness_sdf_logits", "target_masses": "gt_class_frequencies",
                   "tau": "softmax_temperature"},
         units_out={"offsets": "per_class_additive_logit_bias (folds into out_sdf.bias, byte-free)"},
-        empirical_anchors=(anchor_solver, anchor_gate, anchor_gate_n600),
+        empirical_anchors=(anchor_solver, anchor_gate, anchor_gate_n600, anchor_flip_reform),
         predicted_vs_empirical_residual={
             "solver_correctness_source_verified": 0.0,
             # the memo hypothesis (OT beats menon) is REFUTED: signed d_seg gap OT-vs-noOffset > 0 (worse).
@@ -262,6 +349,9 @@ def build_laguerre_ot_head_offset_v1() -> CanonicalEquation:
             # n600 CONFIRMATION: same sign (both offset arms WORSE) at the full admissible scale.
             "gate_n600_ot_minus_no_offset": GATE_N600_D_SEG_OT_NEWTON - GATE_N600_D_SEG_NO_OFFSET,
             "gate_n600_menon_minus_no_offset": GATE_N600_D_SEG_MENON - GATE_N600_D_SEG_NO_OFFSET,
+            # #386 flip-mass REFORMULATIONS: BOTH worse (the global b_c lever is saturated at no_offset).
+            "gate_n600_flip_weighted_minus_no_offset": GATE_N600_D_SEG_FLIP_WEIGHTED - GATE_N600_D_SEG_NO_OFFSET,
+            "gate_n600_flip_median_minus_no_offset": GATE_N600_D_SEG_FLIP_MEDIAN - GATE_N600_D_SEG_NO_OFFSET,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
@@ -310,6 +400,8 @@ __all__ = [
     "GATE_D_SEG_OT_NEWTON",
     "GATE_N",
     "GATE_N600",
+    "GATE_N600_D_SEG_FLIP_MEDIAN",
+    "GATE_N600_D_SEG_FLIP_WEIGHTED",
     "GATE_N600_D_SEG_MENON",
     "GATE_N600_D_SEG_NO_OFFSET",
     "GATE_N600_D_SEG_OT_NEWTON",
