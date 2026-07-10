@@ -2142,6 +2142,106 @@ def SafeCompileRegions(regions: str = "all-certified",
                        "--safe-compile-manifest (per-chip fingerprint/device-scoped evidence)")
 
 
+def FusedRKernel(window: int = 0) -> Lever:  # noqa: N802 — #252/#348 score-neutral compute lever
+    """FUSED-R KERNEL (#252/#348, memory L70): swap the pure-MLX R roundtrip for the fused Metal
+    kernel (``metal_fused_r_operator``) — a SPEED-only, score-NEUTRAL compute lever, sister of
+    ``GROUPED_BACKWARD`` (~17x) and ``SafeCompileRegions``. This is the ONE completeness gap P7
+    flagged (SPEC_v75 open-items / L70): a score-neutral always-on compute lever that was built in
+    the trainer but never held by the DSL.
+
+    MEASURED VERDICT (memory L70 / #348, 2026-07-07): bit-IDENTICAL fwd to the numpy-fp32 authority
+    (~1 ULP VJP) AND ~8% faster; the fixed-order VJP LOCALIZES the one MLX-GPU non-determinism op
+    class (dup-index atomic scatter in reference-R UP-backward), so the FULL witness goes 0/28
+    cross-process wall (N=10) with fused-R ON => bit-exact proofs are reproducible on
+    GPU-with-fused-R (per-config parity check owed at n600). A startup per-chip parity gate
+    (``assert_metal_matches_cpu_oracle``) fails CLOSED if the kernel is not bit-identical on this
+    GPU. NO-FAKE: buys SPEED, never a score.
+
+    ``--fused-r-kernel`` (BooleanOptionalAction, default OFF => byte-identical when unfired) is the
+    swept intent; it REQUIRES ``--mlx-device gpu`` (a Metal kernel — compose only onto a gpu
+    program). ``window=0`` = a compute-config change with no epoch budget of its own. Score-neutral,
+    so held OFF here only because it is device-gated, not because it perturbs the score."""
+    return Lever(
+        "n252_fused_r_kernel",
+        overrides={"--fused-r-kernel": True},
+        epochs_delta=int(window),
+        notes=("#252/#348 fused Metal R roundtrip (metal_fused_r_operator); bit-identical fwd + "
+               "~1 ULP VJP + ~8% faster + localizes GPU non-determinism (0/28 cross-proc N=10); "
+               "score-NEUTRAL SPEED lever (sister of GROUPED_BACKWARD); requires --mlx-device gpu"),
+    )
+
+
+def ClosedLoopEikonalControl(  # noqa: N802 — #292 build-3 costate closed-loop controller
+    eikonal_bump: float = 0.05, eikonal_max: float = 0.20, max_bumps: int = 2,
+    stop_after_windows: int = 3, min_sustained_windows: int = 3, window: int = 0,
+) -> Lever:
+    """CLOSED-LOOP EIKONAL CONTROL (#292 build-3, memory L15/L56): activate the in-run costate
+    controller that JOINs the async d_seg verdict at each eval point, classifies the within-stage
+    trend with the sustained-erosion-vs-transient math (``tools/witness_control_monitor``), and on
+    SUSTAINED DIVERGING_ERASING takes BOUNDED action — step the effective eikonal weight up (capped
+    at ``eikonal_max``, at most ``max_bumps`` times) then EARLY-STOP cleanly after
+    ``stop_after_windows`` post-budget windows (best EMA-shadow ckpt already preserved).
+
+    The activation flag ``--closed-loop-control`` (BooleanOptionalAction, default OFF =>
+    byte-identical) IS the swept intent; the schedule params default to the trainer's OWN designed
+    defaults (bump 0.05 / max 0.20 / 2 bumps / 3+3 windows) so composing the lever activates the
+    mechanism AT its designed operating point (values are the trainer defaults, not invented) while
+    staying tunable. CONTAINMENT: the loop only mutates the in-run eikonal + arms a clean stop — it
+    never launches anything. ``window=0`` = a control-config change, no epoch budget of its own.
+    This is the flagship #332-owed designed lever (SPEC_v75 §10 --closed-loop-* cluster); folding it
+    maps all 6 --closed-loop-* flags into the DSL so the #247 duty-to-measure queue surfaces it."""
+    return Lever(
+        "n292_closed_loop_eikonal_control",
+        overrides={
+            "--closed-loop-control": True,
+            "--closed-loop-eikonal-bump": float(eikonal_bump),
+            "--closed-loop-eikonal-max": float(eikonal_max),
+            "--closed-loop-max-bumps": int(max_bumps),
+            "--closed-loop-stop-after-windows": int(stop_after_windows),
+            "--closed-loop-min-sustained-windows": int(min_sustained_windows),
+        },
+        epochs_delta=int(window),
+        notes=("#292 build-3 costate closed-loop d_seg-trend controller: bounded eikonal bump on "
+               "sustained erosion + clean early-stop after budget; default-off byte-identical; "
+               "schedule params = trainer designed defaults (not invented)"),
+    )
+
+
+def CurriculumReanchorLevers(window: int = 0) -> Lever:  # noqa: N802 — #302 M1
+    """#302 (M1): under event-triggering, RE-ANCHOR the TAU-RELATIVE wall-clock levers
+    (persistence-warmup completion, seed-anneal withdrawal, analytic-band engage) to the FIRED tau
+    boundary instead of their calibrated ep300-relative epochs (a shift, not a rescale). Requires
+    ``--curriculum-event-triggered``. Activation flag ``--curriculum-reanchor-levers``
+    (BooleanOptionalAction, default OFF); unfired / fired-at-cap / OFF => epochs unchanged =>
+    byte-identical. hosc-beta is NOT re-anchored (its beta=4 freeze is Muon-anchored). ``window=0``
+    = a schedule-anchoring change, no epoch budget of its own. SPEC_v75 §10 designed lever."""
+    return Lever(
+        "n302_curriculum_reanchor_levers",
+        overrides={"--curriculum-reanchor-levers": True},
+        epochs_delta=int(window),
+        notes=("#302 M1 re-anchor tau-relative curriculum levers to the fired tau boundary "
+               "(requires --curriculum-event-triggered); default-off byte-identical"),
+    )
+
+
+def MarginSaliencyReachability(window: int = 0) -> Lever:  # noqa: N802 — LEVER-4 through-R reachability
+    """LEVER-4 REACHABILITY (memory L76, #268): REPLACE the UNIWARD texture saliency path with the
+    cached THROUGH-R fragility-weighted margin-Jacobian S_R (reachability of the CORRECT answer at
+    the GT target frame). The texture proxy was MEASURED inert (Pearson -0.033 vs S_R, top-5%
+    Jaccard 0.024 = statistical chance, mildly misdirects); S_R lives on the fragile margin band
+    where the d_seg debt is. Activation flag ``--margin-saliency-reachability`` (store_true, default
+    OFF => byte-identical). Requires an 'sR' key in --gt-cache (tools/precompute_sR_reachability.py).
+    ``window=0`` = a saliency-source change, no epoch budget of its own. SPEC_v75 §10 designed
+    lever (``--margin-saliency-reachability``)."""
+    return Lever(
+        "lever4_margin_saliency_reachability",
+        overrides={"--margin-saliency-reachability": True},
+        epochs_delta=int(window),
+        notes=("LEVER-4 through-R reachability saliency (S_R) replacing the measured-inert UNIWARD "
+               "texture proxy; requires sR in --gt-cache; default-off byte-identical"),
+    )
+
+
 def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N802 — #287
     """#287 EGO-PHASE DASH COMB — the cell-problem corrector of the dash-erasure
     homogenization law (``tac.canonical_equations.dash_erasure_homogenization_20260707``):
