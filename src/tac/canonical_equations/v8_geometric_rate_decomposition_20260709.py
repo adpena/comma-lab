@@ -68,6 +68,7 @@ _ADVISORY = "[macOS-CPU advisory]"
 _DAG = ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"
 _MEMO_ROLLUP = ".omx/research/v8_movable_residual_rollup_20260709.md"
 _MEMO_ROADLANE = ".omx/research/v8_roadlane_geometric_rate_20260709.md"
+_MEMO_KIT = ".omx/research/residual_kit_deshare_curverel_build_20260709.md"
 
 # Whole-scene MEASURED S numbers (n600 GT argmax, real coders, bit-exact).
 _S_BITMAP = 0.339
@@ -197,6 +198,117 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         ),
     )
 
+    # ---- BUILD-#386 residual-kit anchors: de-share CONFIRMED (quantified) + curve-relative REFUTED ----
+    anchor_deshare = EmpiricalAnchor(
+        anchor_id="v8_residual_deshare_dedup_measured_20260709",
+        measurement_utc=_UTC,
+        inputs={
+            "probe": "Lever-1 Movable-first de-share + general pairwise archive-dedup audit (n600)",
+            "labels": "gt_n600.npz['lstars'] (self-detected Road0/Lane1/Undriv2/Movable3/MyCar4)",
+            "module": "tac.boundary_math.movable_deshare.{measure_deshare_magnitude,pairwise_dedup_audit}",
+            "coder": "tac.boundary_math.curve_relative_offset_coder.encode_absolute_2d (bit-exact)",
+            "footprint": "Movable region dilate=2 (proxy for what the Movable bbox carrier holds)",
+        },
+        predicted_output={
+            "law": "S_edge_deshared = S_edge - S_movable_overlap (EXACT set-partition, monotone, FREE)",
+            "principle": "no archive byte reconstructible from another section + free generator "
+                         "(operator no-duplicate-data binding 2026-07-09)",
+        },
+        empirical_output={
+            "deshare_per_edge_amortized": {
+                "horizon_Road_Undriv": {"attributed_px": 12592, "frac": 0.096, "bytes": 3917, "S": 0.00261},
+                "lane_Road_Lane": {"attributed_px": 7009, "frac": 0.008, "bytes": 2689, "S": 0.00179},
+            },
+            "deshare_total_S": 0.00440,  # amortized-conservative; ~10.7% of the 0.0411 gap to sub-0.15
+            "deshare_range_note": (
+                "amortized (edge avg B/px) = CONSERVATIVE lower est; the overlap coded ALONE (secondary "
+                "arcs are scattered) = horizon 9143 B / lane 6375 B -> honest range S 0.0044-0.0104"
+            ),
+            "pairwise_dedup_audit_top": {
+                "hood<->road_mycar_sep": {"shared_px": 303229, "S": 0.02801, "verdict": (
+                    "NOT a live double-count: the Road<->MyCar separatrix IS the hood silhouette -> its "
+                    "UNIQUE geometric home is the hood carrier G4. v8's fold (Road/MyCar into hood, no "
+                    "separate edge row) is VALIDATED; SPLITTING them would double-count 0.028")},
+                "horizon_resid<->lane_resid": {"shared_px": 1430, "S": 0.00102, "verdict": (
+                    "NEW small double-count at Road/Undriv/Lane triple-points -> assign each px to ONE "
+                    "edge (free deflation ~0.001); found by the operator's general dedup sweep")},
+            },
+            "geometric_homes": (
+                "horizon secondary arcs -> Movable silhouette G3; lane-near-car fragments -> Movable G3; "
+                "Road<->MyCar boundary -> hood G4; horizon∩lane triple-points -> priority-assign one edge"
+            ),
+        },
+        residual=0.0,
+        source_artifact=_MEMO_KIT,
+        measurement_method="n600_argmax_movable_first_deshare_plus_pairwise_dedup_bit_exact_coder",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=_MEMO_KIT,
+            reactivation_criteria=(
+                "byte-closed exact-eval on a v8 archive that applies the Movable-first attribution + "
+                "triple-point priority partition before coding residual sidecars"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="macos_arm64",
+        ),
+    )
+
+    anchor_curve_rel_negative = EmpiricalAnchor(
+        anchor_id="v8_curve_relative_offset_coder_NEGATIVE_20260709",
+        measurement_utc=_UTC,
+        inputs={
+            "probe": "Lever-2 curve-relative signed-offset (s,n) coder vs absolute-2-D baseline (n600)",
+            "labels": "gt_n600.npz['lstars']; residual measured on the DE-SHARED set (levers compose)",
+            "module": "tac.boundary_math.curve_relative_offset_coder.measure_curve_relative (bit-exact both)",
+        },
+        predicted_output={
+            "conjecture_S1": "2-D->1-D dim reduction: code n(s) (small signed offset) not absolute coords "
+                             "-> ~4-5x residual shrink -> complete 0.140 toward ~0.077-0.083",
+        },
+        empirical_output={
+            "horizon_deshared": {"on_curve": 0.99, "abs_msmax": 4.0, "H_n_bits": 2.73,
+                                 "bytes_abs": 37753, "bytes_curve_rel": 38222, "ratio": 0.988},
+            "lane_deshared": {"on_curve": 0.60, "n_mean_px": 96.4, "H_n_bits": 7.47,
+                              "bytes_abs": 315790, "bytes_curve_rel": 352260, "ratio": 0.896},
+            "verdict": (
+                "REFUTED for this coder: curve-relative does NOT beat the absolute-2-D baseline on either "
+                "edge. HORIZON: the offset IS small (|n|mean 4.0, H 2.73b confirming S1's geometry) but the "
+                "absolute flat-index delta is ALREADY ~1/px for a near-horizontal arc -> no dimensional "
+                "reduction available (0.988x). LANE: 40% of residual is OFF-curve and |n|mean=96px -> the "
+                "Road/Lane residual is GENUINELY far-from-generator (S1's binding uncertainty RESOLVED on "
+                "the FAR side) -> curve-relative cannot help (0.896x). The conjectured ~5x does NOT occur."
+            ),
+            "verdict_scope": "FORMULATION (this axis-aligned (s,n) offset coder on this residual set); "
+                             "NOT PARADIGM (the shearlet dimensional-reduction idea is not tested to floor)",
+            "reformulation_queue": [
+                "improve the LANE GENERATOR to cut the 40% off-curve residual (the lever is the "
+                "generator's coverage, not the residual coder) — the residual is far because the analytic "
+                "band misses whole lane lines",
+                "true Euclidean-normal offset (not axis-aligned) — unlikely to help horizon (already "
+                "optimal), may tighten lane if generator improves",
+                "joint 2-D (s,n) context model / learned entropy over the offset field",
+            ],
+            "consequence_for_P8_rate_row": (
+                "Lever-2 does NOT close the 0.079 enemy. P8 residual stays ~complete-lossless: "
+                "0.140 - de-share ~0.004 - triple-point ~0.001 ~= 0.135 (still ~1.15x the 0.118 frontier). "
+                "v8's rate WIN is the DOMINANT-only 0.061 (thesis-confirmed); COMPLETE is a wash-with-frontier."
+            ),
+        },
+        residual=0.0,
+        source_artifact=_MEMO_KIT,
+        measurement_method="n600_argmax_curve_relative_vs_absolute_2d_bit_exact_both",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=_MEMO_KIT,
+            reactivation_criteria=(
+                "re-measure curve-relative AFTER improving the lane generator's coverage (reduce the 40% "
+                "off-curve residual); OR a true-normal / learned-entropy reformulation lands"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="macos_arm64",
+        ),
+    )
+
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -237,10 +349,12 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         },
         units_in={"edge_boundary_px": "count", "generator_coeffs": "count_per_frame"},
         units_out={"s_rate_term": "contest_rate_score_25bytes_over_N"},
-        empirical_anchors=(anchor_roadlane, anchor_rollup),
+        empirical_anchors=(anchor_roadlane, anchor_rollup, anchor_deshare, anchor_curve_rel_negative),
         predicted_vs_empirical_residual={
             "roadlane_dominant_measured": 0.0,
             "wholescene_rollup_measured": 0.0,
+            "deshare_lever1_confirmed_measured": 0.0,
+            "curve_relative_lever2_refuted_measured": 0.0,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,

@@ -1,0 +1,244 @@
+{
+  "n_frames": 600,
+  "roles": {
+    "road": 0,
+    "lane": 1,
+    "undriv": 2,
+    "movable": 3,
+    "mycar": 4
+  },
+  "elapsed_sec": 178.2,
+  "axis_label": "[macOS-CPU advisory \u00b7 NON-PROMOTABLE]",
+  "pointer": "0.19110 UNMOVED",
+  "probe1_deshare": {
+    "n_frames": 600,
+    "roles": {
+      "road": 0,
+      "lane": 1,
+      "undriv": 2,
+      "movable": 3,
+      "mycar": 4
+    },
+    "dilate": 2,
+    "tol": 2,
+    "edges": {
+      "horizon": {
+        "residual_px_total": 131803,
+        "attributed_movable_px": 12592,
+        "frac_px_double_counted": 0.09553652041304067,
+        "bytes_per_px": 0.31109307071917935,
+        "bytes_double_counted": 3917,
+        "S_double_counted": 0.002608169519379545,
+        "bytes_before_deshare_coded": 41003,
+        "bytes_after_deshare_coded": 37753,
+        "coded_diff_bytes": 3250,
+        "S_before": 0.02730221465486839
+      },
+      "lane": {
+        "residual_px_total": 828048,
+        "attributed_movable_px": 7009,
+        "frac_px_double_counted": 0.008464485150619289,
+        "bytes_per_px": 0.38371809363708387,
+        "bytes_double_counted": 2689,
+        "S_double_counted": 0.0017904947249455187,
+        "bytes_before_deshare_coded": 317737,
+        "bytes_after_deshare_coded": 315790,
+        "coded_diff_bytes": 1947,
+        "S_before": 0.21156802618817935
+      }
+    },
+    "total_bytes_double_counted": 6606,
+    "total_S_deflation": 0.004398664244325064,
+    "magnitude_note": "bytes_double_counted = attributed_px * edge B/px (amortized, monotone); the attributed px are FREE (held by the Movable carrier). coded_diff_bytes is a diagnostic and may go slightly negative at small n (delta-gap effect).",
+    "axis_label": "[macOS-CPU advisory \u00b7 NON-PROMOTABLE]"
+  },
+  "probe1b_pairwise_dedup_audit": {
+    "n_frames": 600,
+    "roles": {
+      "road": 0,
+      "lane": 1,
+      "undriv": 2,
+      "movable": 3,
+      "mycar": 4
+    },
+    "ledger_rows": [
+      "horizon_resid",
+      "lane_resid",
+      "movable_fp",
+      "hood_region",
+      "road_mycar_sep"
+    ],
+    "pairs": [
+      {
+        "row_a": "hood_region",
+        "row_b": "road_mycar_sep",
+        "shared_px_total": 303229,
+        "overlap_bytes_double_counted": 42071,
+        "S_double_counted": 0.02801335201680287
+      },
+      {
+        "row_a": "horizon_resid",
+        "row_b": "movable_fp",
+        "shared_px_total": 12592,
+        "overlap_bytes_double_counted": 9143,
+        "S_double_counted": 0.0060879484083960125
+      },
+      {
+        "row_a": "lane_resid",
+        "row_b": "movable_fp",
+        "shared_px_total": 7009,
+        "overlap_bytes_double_counted": 6375,
+        "S_double_counted": 0.004244850826153842
+      },
+      {
+        "row_a": "lane_resid",
+        "row_b": "road_mycar_sep",
+        "shared_px_total": 954,
+        "overlap_bytes_double_counted": 1674,
+        "S_double_counted": 0.0011146478875265148
+      },
+      {
+        "row_a": "horizon_resid",
+        "row_b": "lane_resid",
+        "shared_px_total": 1430,
+        "overlap_bytes_double_counted": 1529,
+        "S_double_counted": 0.0010180983393238
+      },
+      {
+        "row_a": "movable_fp",
+        "row_b": "hood_region",
+        "shared_px_total": 385,
+        "overlap_bytes_double_counted": 208,
+        "S_double_counted": 0.00013849866224941164
+      },
+      {
+        "row_a": "movable_fp",
+        "row_b": "road_mycar_sep",
+        "shared_px_total": 129,
+        "overlap_bytes_double_counted": 170,
+        "S_double_counted": 0.00011319602203076913
+      },
+      {
+        "row_a": "horizon_resid",
+        "row_b": "hood_region",
+        "shared_px_total": 0,
+        "overlap_bytes_double_counted": 0,
+        "S_double_counted": 0.0
+      },
+      {
+        "row_a": "horizon_resid",
+        "row_b": "road_mycar_sep",
+        "shared_px_total": 0,
+        "overlap_bytes_double_counted": 0,
+        "S_double_counted": 0.0
+      },
+      {
+        "row_a": "lane_resid",
+        "row_b": "hood_region",
+        "shared_px_total": 0,
+        "overlap_bytes_double_counted": 0,
+        "S_double_counted": 0.0
+      }
+    ],
+    "axis_label": "[macOS-CPU advisory \u00b7 NON-PROMOTABLE]",
+    "note": "shared px = pixels held by BOTH rows -> reconstructible from either -> a byte that cannot name ONE geometric home (operator no-duplicate-data binding 2026-07-09)."
+  },
+  "probe2_curve_relative": {
+    "deshared": {
+      "horizon": {
+        "edge": "horizon_Road_Undriv",
+        "n_residual_px": 119211,
+        "n_exceptions_off_support": 715,
+        "frac_on_curve": 0.9940022313377121,
+        "bytes_absolute_2d_baseline": 37753,
+        "bytes_curve_relative": 38222,
+        "savings_ratio": 0.9877295798231385,
+        "S_absolute_2d": 0.025138173057221335,
+        "S_curve_relative": 0.025450460906235633,
+        "bytes_per_px_absolute": 0.31669057385643945,
+        "bytes_per_px_curve_relative": 0.3206247745593947,
+        "delta_s_spectrum": {
+          "offset_alphabet_entropy_bits": 2.7305243161036667,
+          "offset_abs_max_px": 18,
+          "offset_abs_mean_px": 3.9813073859033214,
+          "haar_nterm_frac_mean": 0.3211626838235294,
+          "n_segments_measured": 595
+        },
+        "curve_relative_bit_exact": true,
+        "absolute_bit_exact": true,
+        "axis_label": "[macOS-CPU advisory \u00b7 NON-PROMOTABLE]"
+      },
+      "lane": {
+        "edge": "lane_Road_Lane",
+        "n_residual_px": 821039,
+        "n_exceptions_off_support": 329951,
+        "frac_on_curve": 0.5981299304905126,
+        "bytes_absolute_2d_baseline": 315790,
+        "bytes_curve_relative": 352260,
+        "savings_ratio": 0.8964685175722478,
+        "S_absolute_2d": 0.2102715988064505,
+        "S_curve_relative": 0.23455547482681607,
+        "bytes_per_px_absolute": 0.3846224113592655,
+        "bytes_per_px_curve_relative": 0.4290417385775828,
+        "delta_s_spectrum": {
+          "offset_alphabet_entropy_bits": 7.474701403078755,
+          "offset_abs_max_px": 511,
+          "offset_abs_mean_px": 96.35945492457563,
+          "haar_nterm_frac_mean": 0.3747239834477003,
+          "n_segments_measured": 2696
+        },
+        "curve_relative_bit_exact": true,
+        "absolute_bit_exact": true,
+        "axis_label": "[macOS-CPU advisory \u00b7 NON-PROMOTABLE]"
+      }
+    },
+    "raw": {
+      "horizon": {
+        "edge": "horizon_Road_Undriv",
+        "n_residual_px": 131803,
+        "n_exceptions_off_support": 962,
+        "frac_on_curve": 0.9927012283483684,
+        "bytes_absolute_2d_baseline": 41003,
+        "bytes_curve_relative": 40753,
+        "savings_ratio": 1.006134517704218,
+        "S_absolute_2d": 0.02730221465486839,
+        "S_curve_relative": 0.027135749916587848,
+        "bytes_per_px_absolute": 0.31109307071917935,
+        "bytes_per_px_curve_relative": 0.3091963005394414,
+        "delta_s_spectrum": {
+          "offset_alphabet_entropy_bits": 2.867545910405322,
+          "offset_abs_max_px": 20,
+          "offset_abs_mean_px": 4.181617382930427,
+          "haar_nterm_frac_mean": 0.3461726575542571,
+          "n_segments_measured": 599
+        },
+        "curve_relative_bit_exact": true,
+        "absolute_bit_exact": true,
+        "axis_label": "[macOS-CPU advisory \u00b7 NON-PROMOTABLE]"
+      },
+      "lane": {
+        "edge": "lane_Road_Lane",
+        "n_residual_px": 828048,
+        "n_exceptions_off_support": 335268,
+        "frac_on_curve": 0.5951104283809634,
+        "bytes_absolute_2d_baseline": 317737,
+        "bytes_curve_relative": 354906,
+        "savings_ratio": 0.8952708604531904,
+        "S_absolute_2d": 0.21156802618817935,
+        "S_curve_relative": 0.23631733761677734,
+        "bytes_per_px_absolute": 0.38371809363708387,
+        "bytes_per_px_curve_relative": 0.42860558808185034,
+        "delta_s_spectrum": {
+          "offset_alphabet_entropy_bits": 7.4732257727096725,
+          "offset_abs_max_px": 511,
+          "offset_abs_mean_px": 96.24746337107837,
+          "haar_nterm_frac_mean": 0.37469246974684717,
+          "n_segments_measured": 2696
+        },
+        "curve_relative_bit_exact": true,
+        "absolute_bit_exact": true,
+        "axis_label": "[macOS-CPU advisory \u00b7 NON-PROMOTABLE]"
+      }
+    }
+  }
+}
