@@ -2005,6 +2005,18 @@ class LiveState:
             "sensors": self.sensors or {},             # latest jacobian_basin + loss_terms (LIVE-tab panels)
             "curriculum_panel": self.curriculum_panel or {},  # DERIVED curriculum (events/caps/lanes)
             "pose_readiness": self.pose_readiness or {},      # banked R1 fallback + pose-finish contract
+            # POSE-DEFERRED (masthead honesty): the run has w_pose>0 (NOT pose_blind) but pose descent
+            # has NOT engaged yet -- pose is HELD OUT until the pose-finish stage by design, so its loss
+            # term is EXACTLY 0.0 in loss_terms and the MEASURED d_pose stays high-by-design. Without
+            # this flag the masthead folds the deferred √(10·d_pose) into implied_S and a healthy
+            # seg-phase run reads as a huge regression (implied_S ~12 vs pointer ~0.19). True ONLY when
+            # pose loss is explicitly 0 (evidence of deferral); unknown/absent -> False (no false claim).
+            "pose_deferred": bool(
+                self.pose_blind is False
+                and isinstance((self.sensors or {}).get("loss_terms"), dict)
+                and ((self.sensors["loss_terms"].get("terms") or {}).get("pose") is not None)
+                and float((self.sensors["loss_terms"]["terms"]).get("pose")) == 0.0
+            ),
         }
 
     def snapshot(self) -> dict:
@@ -4386,20 +4398,31 @@ function renderMasthead(last){
   }
   const ds=last.d_seg, dp=last.d_pose, by=last.blob_bytes;
   const t1=100*ds, t2=Math.sqrt(10*dp), t3=25*by/N, S=t1+t2+t3;
-  svalEl.textContent=sig(S,4);
+  // POSE-DEFERRED phase: w_pose>0 but pose descent has NOT engaged (pose held out until pose-finish).
+  // The √(10·d_pose) term is real-but-expected-high-by-design, so folding it into the headline makes a
+  // healthy seg-phase run read as a ~60x regression. Headline = the SEG-PHASE S (seg+rate, what is
+  // actually being optimized now); the full composite stays visible in the sub-line + the term cells.
+  const deferred=!!META.pose_deferred, Sseg=t1+t3;
+  svalEl.textContent=sig(deferred?Sseg:S,4);
   // reference vs the frontier pointer (advisory delta)
   const pv=ptrVal();
   if(srefEl){
     let h="";
-    if(pv!=null){const d=S-pv; h="pointer <b>"+sig(pv,5)+"</b> &middot; Δ "+(d>=0?"+":"")+sig(d,3)+" (advisory)";}
-    else h="pointer unavailable";
-    if(META.pose_blind)h+=" &middot; pose UNHELD (w_pose=0)";
+    if(deferred){
+      h="seg-phase &middot; pose deferred &rarr; pose-finish";
+      if(pv!=null){const dseg=Sseg-pv; h+=" &middot; Δ "+(dseg>=0?"+":"")+sig(dseg,3)+" vs pointer <b>"+sig(pv,5)+"</b>";}
+      h+=" &middot; <span class='lv-adv'>full S "+sig(S,3)+" incl. deferred pose</span>";
+    }else{
+      if(pv!=null){const d=S-pv; h="pointer <b>"+sig(pv,5)+"</b> &middot; Δ "+(d>=0?"+":"")+sig(d,3)+" (advisory)";}
+      else h="pointer unavailable";
+      if(META.pose_blind)h+=" &middot; pose UNHELD (w_pose=0)";
+    }
     srefEl.innerHTML=h;
   }
   // three term cells, share of S as a bar; dominant term flagged
   const terms=[
     {k:"100&middot;d_seg",in:"d_seg = "+fDs(ds),con:t1,c:"var(--lv-seg)"},
-    {k:"&radic;(10&middot;d_pose)",in:"d_pose = "+sig(dp,4),con:t2,c:"var(--lv-pose)"},
+    {k:"&radic;(10&middot;d_pose)",in:"d_pose = "+sig(dp,4)+(deferred?" &middot; deferred":""),con:t2,c:"var(--lv-pose)"},
     {k:"25&middot;bytes / N",in:fmtInt(by)+" B",con:t3,c:"var(--lv-byte)"}
   ];
   const maxCon=Math.max(t1,t2,t3,1e-12);
