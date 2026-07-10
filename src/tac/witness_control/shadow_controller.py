@@ -610,7 +610,8 @@ def build_shadow_report(inputs: RunInputs,
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:
     """Append the report row to ``<run_dir>/costate_shadow.jsonl`` (the ONLY write this
     package performs — an advisory sidecar in the run dir, never a mutation of the run)."""
-    out = Path(run_dir) / "costate_shadow.jsonl"
+    from tac import witness_run_artifacts as _wra
+    out = Path(run_dir) / _wra.COSTATE_JSONL
     line = json.dumps(report.to_row(), sort_keys=True) + "\n"
     try:  # align with the sibling stores (costate_posterior.py) — single-writer today,
         import fcntl  # but flock keeps the append atomic if that ever changes.

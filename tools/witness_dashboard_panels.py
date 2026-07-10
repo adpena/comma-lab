@@ -60,7 +60,9 @@ for _p in (REPO, REPO / "src", REPO / "upstream"):
 # trained forward faithfully (our_dseg through R matches the run's verdict d_seg).
 _SO_OVERRIDES = {"freq_across": 32.0, "freq_along": 4.0, "tau": 4.0, "iters": 4}
 
-_DEFAULT_EMA = "levelset_witness_ema_mlx.npz"
+from tac import witness_run_artifacts as _wra  # noqa: E402  (after sys.path setup)
+
+_DEFAULT_EMA = _wra.EMA_NPZ
 
 
 def _png_data_uri(fig, dpi: int) -> str:

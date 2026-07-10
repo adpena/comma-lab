@@ -64,8 +64,9 @@ for _p in (REPO, REPO / "src", REPO / "upstream"):
 # freq_along 4). detect_self_orient does NOT persist these; the defaults reproduce the
 # trained forward faithfully (our d_seg through R matches the run verdict).
 _SO_OVERRIDES = {"freq_across": 32.0, "freq_along": 4.0, "tau": 4.0, "iters": 4}
-_DEFAULT_BEST = "levelset_witness_ema_BEST.npz"
-_FALLBACK_EMA = "levelset_witness_ema_mlx.npz"
+from tac import witness_run_artifacts as _wra  # noqa: E402  (after sys.path setup)
+_DEFAULT_BEST = _wra.EMA_BEST_NPZ
+_FALLBACK_EMA = _wra.EMA_NPZ
 _FLOW_FPS = 12  # temporal-timeline playback rate (~real-ish, loops)
 
 

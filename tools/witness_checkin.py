@@ -30,15 +30,21 @@ import time
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[1]
+if str(_REPO / "src") not in sys.path:
+    sys.path.insert(0, str(_REPO / "src"))
+# Canonical witness run-artifact CONTRACT — single source of truth for the run's
+# emitted filenames + liveness signals (no hardcoding; see the module docstring).
+from tac import witness_run_artifacts as _wra  # noqa: E402
+
 RESULTS_DEFAULT = _REPO / "experiments" / "results"
-RUN_GLOB = "levelset_n600_witness_*"
+RUN_GLOB = _wra.RUN_DIR_GLOB
 TRAINER_TOKEN = "train_levelset_witness_realized_through_R_mlx"
 STALE_AFTER_S_DEFAULT = 30 * 60.0
 
-# Signal files inside a run dir, in reporting order.
-BEST_JSON = "levelset_best.json"
-RESUME_NPZ = "levelset_resume_state.npz"
-COSTATE_JSONL = "costate_shadow.jsonl"
+# Named signal files (from the contract) — used for the per-file freshness readout.
+BEST_JSON = _wra.BEST_JSON
+RESUME_NPZ = _wra.RESUME_NPZ
+COSTATE_JSONL = _wra.COSTATE_JSONL
 
 
 def find_trainer_procs() -> list[dict]:
@@ -72,23 +78,19 @@ def find_trainer_procs() -> list[dict]:
 
 
 def _signal_mtime(run_dir: Path) -> float:
-    """Newest mtime among the run dir's signal files (fallback: dir mtime)."""
-    mtimes = []
-    for name in (BEST_JSON, RESUME_NPZ, COSTATE_JSONL):
-        p = run_dir / name
-        if p.exists():
-            mtimes.append(p.stat().st_mtime)
-    if not mtimes:
-        mtimes.append(run_dir.stat().st_mtime)
-    return max(mtimes)
+    """Newest liveness-file mtime (contract: named signals + streaming log).
+
+    Falls back to the dir's own mtime so a just-created run still ranks.
+    """
+    paths = [p for p in _wra.liveness_paths(run_dir) if p.exists()]
+    if not paths:
+        return run_dir.stat().st_mtime
+    return max(p.stat().st_mtime for p in paths)
 
 
 def newest_run_dir(results_dir: Path) -> Path | None:
-    """Newest run dir matching RUN_GLOB by signal-file mtime; None if none exist."""
-    candidates = [d for d in results_dir.glob(RUN_GLOB) if d.is_dir()]
-    if not candidates:
-        return None
-    return max(candidates, key=_signal_mtime)
+    """Newest witness-run dir by freshest-signal mtime; None if none exist."""
+    return _wra.newest_run_dir(results_dir)
 
 
 def pick_run_dir(procs: list[dict], results_dir: Path) -> tuple[Path | None, dict | None, str]:
@@ -160,8 +162,14 @@ def collect_status(run_dir: Path, proc: dict | None, stale_after_s: float) -> di
     row = _last_jsonl_row(costate_path) if costate_path.exists() else None
     status["telemetry_epoch"] = row.get("epoch") if isinstance(row, dict) else None
 
-    ages = [a for a in (status["best_age_s"], status["resume_age_s"], status["telemetry_age_s"]) if a is not None]
-    status["freshest_signal_age_s"] = min(ages) if ages else None
+    # Liveness is the CONTRACT set (named signals + streaming trainer log), NOT just
+    # best/resume/telemetry — else a live run streaming a loss row every epoch but
+    # BEFORE its first checkpoint is false-flagged STALE (the 2026-07-10 false-RED bug).
+    status["freshest_signal_age_s"] = _wra.freshest_signal_age_s(run_dir, now)
+    log_paths = _wra.progress_log_paths(run_dir)
+    status["progress_log_age_s"] = (
+        min(_age_s(p, now) or 0.0 for p in log_paths) if log_paths else None
+    )
 
     try:
         import psutil

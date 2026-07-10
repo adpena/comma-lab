@@ -35,6 +35,8 @@ import shutil
 from pathlib import Path
 from typing import Any, Callable
 
+from tac import witness_run_artifacts as _wra
+
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 _SSD_TIERS = ("/Volumes/VertigoDataTier/pact", "/Volumes/APDataStore/pact")
 
@@ -141,9 +143,9 @@ class CheckpointArchiver:
              best_npz: str | Path | None = None, latest_npz: str | Path | None = None,
              snapshot_latest: bool = True) -> dict:
         run_dir = Path(run_dir)
-        best_json = Path(best_json) if best_json else run_dir / "levelset_best.json"
-        best_npz = Path(best_npz) if best_npz else run_dir / "levelset_witness_ema_BEST.npz"
-        latest_npz = Path(latest_npz) if latest_npz else run_dir / "levelset_witness_ema_mlx.npz"
+        best_json = Path(best_json) if best_json else run_dir / _wra.BEST_JSON
+        best_npz = Path(best_npz) if best_npz else run_dir / _wra.EMA_BEST_NPZ
+        latest_npz = Path(latest_npz) if latest_npz else run_dir / _wra.EMA_NPZ
         added = {"best": 0, "latest": 0}
         if best_json.exists() and best_npz.exists():
             try:

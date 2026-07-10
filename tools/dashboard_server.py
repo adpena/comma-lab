@@ -77,6 +77,14 @@ try:
 except Exception:  # load-bearing daemon; degrade to no introspection panels, never crash
     wri = None
 
+# Canonical witness run-artifact CONTRACT (single source of truth for run filenames).
+# Fail-open with literal fallbacks so a broken tac install never kills the daemon.
+try:
+    from tac import witness_run_artifacts as _wra
+    _COSTATE_JSONL = _wra.COSTATE_JSONL
+except Exception:
+    _COSTATE_JSONL = "costate_shadow.jsonl"
+
 # ── canonical DSL schedule read-back (operator 2026-07-07: observability consumers
 # DERIVE the stage map from the run's own config via the DSL — never hand-fed
 # constants). Fail-open: a missing/broken tac install must never kill the daemon;
@@ -466,7 +474,7 @@ def _read_costate(run_dir: str | None) -> dict | None:
     (CONTAINMENT). No shadow file -> None -> the panel is absent (conditional)."""
     if not run_dir:
         return None
-    path = Path(run_dir) / "costate_shadow.jsonl"
+    path = Path(run_dir) / _COSTATE_JSONL
     if not path.is_file():
         return None
     row = _last_jsonl_row_tail(path)
@@ -1407,7 +1415,7 @@ class LiveState:
                 _wd = Path(self.watched_dir)
                 _sig = (self.watched_dir,) + tuple(
                     (_p.stat().st_mtime if _p.is_file() else None)
-                    for _p in (_wd / "run.log", _wd / "costate_shadow.jsonl",
+                    for _p in (_wd / "run.log", _wd / _COSTATE_JSONL,
                                _wd / "constants_manifest.json", _wd / "launch.sh"))
                 if _sig != self._introspect_sig:
                     self.introspect = wri.introspect_run(
