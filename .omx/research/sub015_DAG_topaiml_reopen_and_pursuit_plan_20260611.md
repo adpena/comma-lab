@@ -14639,7 +14639,7 @@ FUTURE row from being fake.
 
 ### FEED-v752-baseline-launch (2026-07-10) — #205 v7.5.2 BASELINE relaunch LAUNCHED (operator GO), aims to move pointer 0.19108282 [contest-CPU]
 
-**WHY:** operator GO 2026-07-10 — residuals cleared (#409 kill_pgrp sealed, #410 micro-batch verdict NO-GO),
+**WHY:** operator GO 2026-07-10 — residuals cleared (#409 kill_pgrp sealed, #410 micro-batch verdict NO-GO <!-- verdict_scope: formulation — #410 --micro-batch-pairs>1 batched path on the sealed v7.5.2 config (serial-accum IS bit-identical; the batched twin is not; NOT a dead family — micro-batch may work on a different config) -->),
 path GO. T2 council `.omx/research/council_v752_relaunch_shape_concurrent_vs_single_20260710.md` set the shape:
 **CLEAN BASELINE arm** (NOT folded rungs, NOT concurrent A/B — #173 blockers un-cleared so concurrency is
 INFEASIBLE-NOW). The 2 top fire-now rungs (HorizonWeightedMargin 43.8%, StepNativeActivation 31.6%) are
