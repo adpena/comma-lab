@@ -1,5 +1,7 @@
 # T5 CRUCIBLE-3 — CONVENING (2026-07-09, operator-convened, task #380)
 
+**STATUS 2026-07-09: P6 RECURSIVE SEAL — SEALED at R7 (3/3 consecutive clean: R5·R6·R7; `tac.review_counter` crucible3_v8 sealed=True).** SYNTHESIS_v3_v8 is the SEALED v8-increment-1 launch surface (+ its R7 §SEAL-BOUNDARY consolidation). **P7 is UNBLOCKED** = SPEC_v8.1 + increment-1 build config, gated behind the P8 dual-chain (v7.5.2 vs v8) which-to-run operator GO — NO heavy launch before that gate. Pointer contest-CPU **0.19110 UNMOVED**; the seal is of a DESIGN (MEANS), not a measured row.
+
 STORES CONSULTED: crucible-2 trio (CONVENING / DELTA_GROUNDING / ORCHESTRATION_LEDGER `t5_crucible2/`,
 full) · SPEC_v8_perclass_decomposition_20260708.md (the incumbent v8 spec) · v8_increment1_design_draft_
 20260709.md · v8_roadlane_geometric_rate_20260709.md · v8_roadlane_ego_compensated_rate_20260709.md ·

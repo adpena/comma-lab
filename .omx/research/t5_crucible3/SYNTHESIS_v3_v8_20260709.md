@@ -386,6 +386,48 @@ choice (clause B honored).
 
 ---
 
+## SEAL-BOUNDARY (P6-R7 — what this SEAL does NOT cover; the honest-boundary consolidation)
+
+**Added at the sealing round (P6-R7, completion not finding — every item below is already acknowledged
+scattered in §A–§I; this section consolidates them so a reader inherits the boundary, not just the design).**
+The v8-increment-1 design is SEALED as a *design* — a cheapest-falsifiable decoupling screen with a
+lateral-capable carrier — NOT as a measured result. This seal makes ZERO claim on the pointer (0.19110
+UNMOVED); it is `[macOS-CPU advisory · research-signal · NON-PROMOTABLE]` MEANS. Explicit non-coverage:
+
+1. **Through-R survival (the SUFFICIENT test) is OUT.** 1a is a NECESSARY-condition partition screen on the
+   composite-argmax MASK d_seg; mask-optimal ≠ score-optimal. The through-R row is **1b** (`cannot_falsify`
+   in §B). A 1a PASS does not predict the byte-closed n600 exact score.
+2. **The I1b carrier byte cost is DERIVED, not MEASURED.** `carrier_total_S ∈ [0.0040, 0.0083]` is a derived
+   range; the side-curve `x_L(y)`/`x_R(y)` frozenness on gt_n600 is UNMEASURED (owed **recess R8**). The
+   lower bound ASSUMES the side curves are as ego-rigid as the top arc (owed, not asserted).
+3. **The "3-curve homes 97.54% lateral" coverage is DERIVED (the weakest link).** The 3-curve carrier can
+   STRUCTURALLY represent lateral undriv (vs the single-valued arc which cannot); the actual Undriv-d_seg
+   reduction from the 0.162 analytic floor is measured INDIRECTLY by the byte-closed 1a composite (§A.1 pin),
+   NOT as a standalone measured coverage fraction. Adequately labeled + gated by 1a, but not yet a number.
+4. **r\* (the sub-frontier win) is UNMEASURABLE in increment-1.** Carried as a labeled RANGE **[0.061, 0.135]**,
+   P-C-gated (F-P5-3). The SHIPPABLE increment-1 rate is **0.135 = WASH-with-frontier**, never presented as a
+   rate win. The P8 brief carries the range, never a point.
+5. **Lane-generator coverage (53% of the residual enemy) is a FAST-FOLLOW,** NOT increment-1 scope (F-P5-5);
+   its own BUILD + byte-close + n600 A/B. The 0.135 wash is partly this weak-generator artifact, not v8's ceiling.
+6. **The b_c route forward is OWED.** The GLOBAL post-hoc 5-scalar b_c is SATURATED at no_offset on the eroded
+   trunk (§A.3, #386 RULED, both flip arms REFUTED — FORMULATION/REGIME scope). Per-EDGE b_c on the FRESH v8
+   Stage-A decoupled fields (+ offsets-solved-JOINTLY-with-training) is the route — OWED, not in increment-1. <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped flip-b_c anchor (§A.3) -->
+7. **The de-share 0.0044 thing-itself is OWED.** The landed number is a dilate=2 INSTANCE (band 0.000–0.0069
+   across dilate∈{0,1,2,3}); the thing-itself = G3 bbox realized coverage post-byte-close (§A.2). Curve-relative
+   REFUTED verdict HOLDS across the whole footprint band. <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped curve-relative δ(s)-coder anchor -->
+8. **Pose is BANKED-as-artifact, NOT solved-for-v8.** owed-14 RESOLVED (#384) + engage-on BUILT (#383) +
+   banked R1 dxi fallback (0.127 / 7.2 KB); STILL owed = **per_class_dseg_basin_conjunct + f_basin_0.9_tuning**
+   (v8-specific); v7.5.2 terminal pose-finish efficacy is owed-#205 (not this seal).
+9. **The δ_mask DOMINANT floor component is $0-UNMEASURABLE.** The R7 frame-sampling floor (3.46e-6) is a LOWER
+   BOUND; the operative floor's seed-variance component is measured IN-RUN from ≥3 control-arm seed replicates
+   (F-P5-2, code-guarded). A single-seed Δ near the floor is INSTANCE-level, not a clean verdict.
+10. **The auditor-A C1 directional-basis (−48%) flag is IRRELEVANT to this seal.** v3 makes NO −48% /
+    directional-basis claim anywhere (grep NONE); the C1 UNVERIFIED-transfer flag cannot undermine any v3 claim.
+    This seal neither depends on nor asserts the directional-basis lever (that is v7.5.2/basis-match scope).
+11. **Two triality legs are OWED to the BUILD.** This synthesis is `[no-triality]` (apparatus/derivation +
+    a δ_mask code fix). The DSL `Lever` fold (at the carrier BUILD) and the equations-leg canonical row (once
+    R8 MEASURES the carrier rate) land with the build, not here.
+
 ## SEAL-READINESS STATEMENT (P6 recursive seal is NEXT)
 
 The eightfold SEAL pre-check (`crucible_standing_checks_eightfold_20260709`) flips after P5b; **P6-R3 adds
