@@ -14911,3 +14911,32 @@ S / EI EmpiricalAnchor to register or refine. The drift-detector matched the con
 equation here would be a NO-FAKE violation (a law that measures nothing). Equations leg correctly **N/A**;
 DAG leg = this FEED; DSL leg N/A (no lever changed). Same disposition applies to the store-paths / jsonl /
 run-artifact-contract landings this wave — all apparatus, no laws.
+
+**FEED-403safety (2026-07-10, commit c9b19c2af):** closed the THREE P0 candidate-on safety gaps the #403
+curriculum-pool landing left (advisory `ADVISORY_sdf_postclosure_delta_watcher_ep25_curriculum_costate_20260710`
+§0.4/§6.1) — each RE-DERIVED from the trainer code (not assumed), all three REAL:
+**(gap-1 hardness)** `--hardness-oversample/weighted/source/power/band` were absent from the F2
+resume config-divergence guard (`_resume_lever_divergences` + `_build_resume_state_arrays`) → a resume that
+silently flips source margin↔realized / weighted on↔off / power/band re-allocates the oversample extras
+(order + optimizer-step count) undetected. FIX: persist `__cfg_hardness_*` + fail-closed on divergence
+(sub-fields engaged-gated on oversample>0, mirroring `lane_band_start_epoch`); additive + legacy (guard only
+checks keys PRESENT). **(gap-1b, deeper)** the `realized`-source `hardness_prob` baseline is computed ONCE
+from `ema.shadow` at loop start → on resume that shadow is the RESUMED (mid-run) EMA, not the ep0 baseline a
+continuous run used → non-bit-faithful. FIX: persist `__hardness_prob` (armed-only, zero archive bytes) +
+restore on matched resume (skipped under warm-start/lever-drift). **(gap-2 head)** `--head etf` REPLACES +
+FREEZES `out_sdf.weight` (trainability change, NO new param keys → invisible to the arch/param-key guard, same
+class as `film_stiefel`) → a resume dropping `--head etf` silently resumes the frozen ETF as a TRAINABLE
+softmax head. FIX: persist `__cfg_head` + `__cfg_additive_margin` in the F2 guard. **(gap-3 additive-margin
+inert = #404 binding-vs-inert CONFOUND, operator-elevated to full 3-layer)** `--head additive-margin` /
+`--additive-margin` is a SILENT NO-OP unless `--margin-field-head-weight>0` (the trainer builds `mfh_target_mx`
+only then; the AM base is non-zero only when head==additive-margin) → reads ON, shapes no loss → any verdict
+from such a run is corrupted. FIX (ONE classifier SoT `tac.confound_gates.additive_margin_engagement`):
+**L1** trainer runtime `lever_engage` stamp + LOUD `confound_alarm` at head/AM setup; **L2** DSL `.validate()`
+FAIL-CLOSED refusal of the inert composition (never-invent-flags; do NOT auto-arm) + Catalog #405 warn-only
+preflight gate `check_no_inert_additive_margin_composition` (launch.sh live-count 0, strict-flip-eligible);
+**L3** positive-control tests (canary FIRES on inert, QUIET on active + clean-ETF). 12 trainer resume tests +
+1 DSL positive-control + 13 confound tests, 280 in the broader suite green; ruff-F clean. **Triality:** DSL
+leg = the `.validate()` inert-AM guard (composition rule, not a lever-factory change — HardnessOversample /
+HeadGeometry compile the SAME flags); DAG leg = this FEED; equations **N/A** (pure apparatus — no measured
+law; the resume guards protect deterministic-repro, they measure no d_seg/d_pose/S). Pointer 0.19108282
+UNMOVED — safety hardening for a FUTURE relaunch of the built-never-fired pool candidates, moves no score.
