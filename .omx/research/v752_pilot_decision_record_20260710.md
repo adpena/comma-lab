@@ -110,3 +110,53 @@ item 1 if this pilot is ambiguous.
 
 **Pointer 0.19110 UNMOVED — this record is MEANS.** Only a byte-closed `upstream/evaluate.py` n600 row
 < 0.19110 moves it.
+
+## 6. P0 FIXES FOLDED (operator directive 2026-07-10; fresh-eyes advisory `ADVISORY_v752_fresh_eyes_20260710.md`) — landed `fbeb20ae5` (+ trainer hunks absorbed into sibling co-land `acc98f2a4`, content-verified)
+
+**Zero-effect-pre-pose_finish VERIFICATION (the directive's step-1 precondition, SOURCE-VERIFIED):**
+the pilot's 300 epochs are pose-blind under BOTH gate modes, structurally:
+* muon mode (pilot): `pose_finish_on = muon_fired OR ep≥726`; `muon_meat_event.fired` requires
+  `nucleation_complete = ladder_arms_complete(ep, [lane 80+0+260=340, movable 60+0+200=260])` ⇒ true
+  only at **ep ≥ 340** (trainer L8719-8721 + `event_wirings.ladder_arms_complete`); backstop 726.
+* sigma mode (fixed launch): `cond_fired` needs the σ_min plateau detector with
+  `min_points = settle(3)+hysteresis(3)−1 = 5`; σ_min points arrive at the jacobian-basin cadence
+  (every 4th verdict = every 100 ep: ep0/100/200/300/400) ⇒ **earliest possible fire ~ep400**
+  (`sigma_min_plateau.SigmaMinPlateauConfig` + trainer L6668 observe site); backstop 726.
+⇒ pose weight = 0 through ep300 in BOTH configs; the ONLY checkpoint-content delta is the additive
+`pose_finish_conditioning_gate` resume-registry key (absent-in-sidecar restores to un-fired — the
+__bc_* additive pattern), which is exactly what the §7 resume-compat check confirms empirically.
+CONSEQUENCE: the pilot may fire with the P0-composed config (argv ≡ launch argv modulo the 2 epoch
+tokens — strictly cleaner for resume-from-pilot); the checkpoint at ep300 is behaviorally identical
+either way.
+
+**P0-1 landed:** `compile_crucible_v752_launch_config` composes `PoseFinishConditioningGate`
+(`--pose-finish-engage-on sigma_min_plateau`; backstop 726 + w_pose 1.0 from the inherited pose
+config); the stale absence-assertion test now asserts PRESENCE; the owed-1 "does NOT exist yet"
+comment block corrected (#383 landed). **Expected-active-lever manifest** (advisory P0-1 required
+gate): pinned `CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS` (9 levers) enforced fail-closed at COMPILE and
+re-checked at the LAUNCHER (rc=10; runs for dry-run/dry-start/real) — built-but-not-composed extinct.
+**P0-2 landed (minimum-viable):** `resolve_pose_finish_engage` (pure, unit-tested,
+`tac.witness_control.sigma_min_plateau`) — the epoch backstop engages ONLY when the detector state is
+NOT degenerate; DEGENERATE at the backstop ⇒ NO engage + banked-R1 selected + the loud typed row
+`pose_finish_backstop_overridden_banked_r1` (once). A real conditioning fire always engages;
+healthy-never-fired at backstop = the fail-safe engage (unchanged).
+
+**OWED (ledgered, NOT launch gates per the pre-registered no-further-gates decision):**
+* P0-2 full state machine ARMED→ENGAGED→ACCEPTED/REGRESSED_ROLLBACK/BANKED_COMPLETE_ARTIFACT
+  (the minimum-viable guard covers the degenerate-override; rollback/accept custody is the owed end
+  state). Untrusted-(canary-fail)-at-backstop currently engages via backstop — covered by the state
+  machine, owed.
+* advisory #3 (P0-3): banked-R1 = complete checkpoint/archive fallback (measured); an R1-dxi GRAFT
+  onto an arbitrary v7.5.2 EMA is unmeasured/unimplemented — bank descriptors need the full
+  compatibility-key binding.
+* advisory #4 (P0-4): chroma (--seg-chroma-boundary-*) is INHERITED into launch-1 though sealed as a
+  later add-back rung — a Class-B attribution confound to resolve at the ladder, not a new gate.
+* advisory #5 (P0-5): amber realization (OI-5) remains open — inherited --grad-clip 1.0 defeats a
+  naive preset; realize-or-waive at the P8 wall.
+* advisory P1-3: pose engage mode not restart-protected (`__cfg` lacks pose_finish_engage_on;
+  `_resume_lever_divergences` has no pose-mode check) — fold into the §7 resume-compat verification.
+
+## 7. STEP-3 (pre-FULL-launch, updated per the directive): re-run the dry-start with the CORRECTED
+config (expected-lever manifest green end-to-end) + confirm resume-compat from the pilot ep300
+checkpoint (the composed engage-on flag + registry key must restore additive/legacy-compatible: an
+absent-key pilot sidecar resumes to un-fired under the launch config).
