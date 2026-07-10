@@ -271,7 +271,11 @@ Two firewalls of DIFFERENT strength; the composite's pose safety rides the STRON
   and cannot interact through the scorer. v8 inherits the v7.5.2 pose composition VERBATIM.
 - **Store-nothing MANDATORY at the fresh arm** (~1 KB; MEASURED 1,049 B floor → 7,195 B at R1 ξ_eff). Keyframe
   = 697,941 B = 0.465 rate = **11.3× the goal gap** = submission-killer (verdict_scope FORMULATION: the
-  keyframe carrier as a rate lever is a NO-GO; diagnostic ceiling only). **Warm-start lineage guard
+  RAW-uint8 keyframe carrier as a rate lever is a NO-GO; diagnostic ceiling only. untested formulations /
+  alternatives: compressed-keyframe residual [AV1/brotli-coded frame0 vs generated], low-rank keyframe
+  factorization [#140-style SVD], hybrid keyframe-patch sidecar [store only pose-Jacobian-salient crops] —
+  none pursued because store-nothing at ~1 KB already DOMINATES every keyframe variant's floor by ≥2
+  orders; re-open only if store-nothing's generated frame0 fails the pose tube on a real run). **Warm-start lineage guard
   (config-pinned):** `--pose-carrier-source generated`; byte-close ASSERTS `pcar_store_nothing_v == 2`; a
   warm-start from a `real_keyframe` lineage is verified `generated` before launch (NEVER launder the 0.465 rate).
 - **The conditioning gate — per-class, NOT aggregate (S3∩S4∩S5-V8 reconciled):** on the decoupled trunk the
