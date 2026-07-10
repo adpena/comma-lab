@@ -439,6 +439,23 @@ def build_levelset_blob(
     # blob as DEAD counted bytes (inflate never reads them from base). Exclude them here so the base
     # blob is INR-only and the ξ rate is attributed cleanly to the pose-carrier section (#238).
     base_order = [k for k in params if k != "code" and not k.startswith("pose_carrier.")]
+
+    # #417 FAIL-CLOSED receiver-consumption bijection gate (NO-FAKE #8). Every COUNTED base
+    # param MUST be consumed by the receiver -- the _INFLATE_PY forward -- else it pays rate
+    # but is INERT through R, so a scored A/B on that lever silently renders the shared-head
+    # CONTROL and reports a FAKE verdict. Sister of the pose_carrier.* hand-exclusion above;
+    # this makes the fix STRUCTURAL for every future group (v7.5.3 tex_trunk / v8 decoupled_head).
+    # Escape hatch (loud, explicit): TAC_ALLOW_UNCONSUMED_ARCHIVE_GROUPS=<prefix,...>.
+    import os as _os
+
+    from levelset_receiver_bijection_gate import assert_receiver_bijection
+    _allow = frozenset(
+        g.strip() for g in _os.environ.get("TAC_ALLOW_UNCONSUMED_ARCHIVE_GROUPS", "").split(",") if g.strip()
+    )
+    assert_receiver_bijection(
+        base_order, _INFLATE_PY, context="build_levelset_blob base blob", allow_unconsumed=_allow,
+    )
+
     base_chunks: list[bytes] = []
     shapes: dict[str, list[int]] = {}
     scales: dict[str, float] = {}
