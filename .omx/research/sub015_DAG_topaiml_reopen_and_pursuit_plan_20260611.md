@@ -12841,3 +12841,15 @@ not register a physics law). STORES CONSULTED before build: `docs/operating_manu
 pattern), `tools/triality_drift_detector.py`, `src/tac/witness_dsl/typed_config.py` (Provenanced/enum
 style), `tac.council_continual_learning.EmpiricalVerificationStatus` (review-status vocab sister).
 Pointer 0.19110 UNMOVED (means — emission apparatus, not an exact-eval row). `[apparatus · NON-PROMOTABLE]`.
+
+---
+
+## FEED-negaudit-B (task #390, 2026-07-09) — negative-findings register: memories + ledgers + eq-negatives
+
+SIGNAL: operator "audit all negative findings." Auditor B swept memory dir + canonical_equations_registry + lane_registry (1788 lanes/414 neg-tagged) + deferral_ledger (D1-D20) + lever_activation_ledger. Auditor A owns DAG/research verdict memos; no overlap. REGISTER ONLY (HISTORICAL_PROVENANCE append-only) → `.omx/research/negative_findings_register_20260709/auditor_B_memories_ledgers.md`.
+
+DIAGNOSTIC: 21 method negatives registered (B1-B21) on INSTANCE<FORMULATION<FAMILY<PARADIGM ladder + P9 proxy-suspicion + P10 constraint-carved. Bucket-A (live witness/level-set/v8): 10, four HIGH-reactivation. Bucket-B (ancestor HNeRV/PR95): 11, PARADIGM-superseded per L18 — but B12 (Balle rate-in-loss) is a live-sister mis-scope: WeightEntropyPenalty ALREADY reactivated + MEASURED −19.6% bytes. 414 lane-registry neg lanes = abandoned-substrate bulk (no witness lanes among them). ~34 process files excluded (discipline≠method). No MPS-derived kills in this slice.
+
+RESPONSE (TOP-3 reactivation): (1) **B1 Laguerre-OT head-offset** — verdict is n24-ONLY (n96/n600 killed by 5-min bg limit) → SUSPECT; FORMULATION-scoped; flip-weighted target masses already queued → resumable-chunked n600 re-test. (2) **B6 depth-warp pose → JOINT pose-descent RUN #238** — every stratified/true-depth REFUTAL names #238 as the not-refuted cure; pose = THE v7.5 blocker (4.35 of S 17.4). (3) **B2 msal_uni → exact S_R** — verdict is a REDIRECT not a kill; build θ-independent cacheable S_R as #205 arm (OWED, unbuilt). Also flagged: **D10 marimo #347 DEADLINE TONIGHT** (operator go/no-go never given → lapsing) + 7 run-1-stop-gated deferrals whose gating-run may need re-pointing to the live v7.5.2 run (dry_start produced NO final ckpt).
+
+Pointer 0.19110 UNMOVED (means — audit register, not an exact-eval row). `[macOS-CPU advisory · NON-PROMOTABLE]`.

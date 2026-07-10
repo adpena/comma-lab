@@ -798,6 +798,57 @@ def _git_commit(message: str, env: dict, allow_empty: bool = False) -> tuple[int
     return proc.returncode, proc.stdout, proc.stderr
 
 
+# Triality-legs disposition (CANONICALIZATION UNIT 2, task #388). A STRUCTURED
+# alternative to the ad-hoc ``[no-triality]`` commit-message token: the caller
+# declares which triality legs this commit touched (dag / dsl / equations), or
+# ``none`` + a reason for a deliberate chore/apparatus commit. Purely additive —
+# absent flag == today's behavior. Recorded into the JSONL log so the
+# triality_drift_detector Stop hook can soften a core-drift block when a
+# disposition was structurally declared (vs firing on an ad-hoc opt-out token).
+_VALID_TRIALITY_LEGS = ("dag", "dsl", "equations", "none")
+
+
+def _parse_triality_legs(
+    raw: str | None, reason: str | None
+) -> tuple[list[str] | None, str | None]:
+    """Parse ``--triality-legs <csv>`` (+ ``--triality-reason``).
+
+    Returns ``(legs, reason)``. ``raw is None`` (flag absent) ⇒ ``(None, None)``,
+    the backward-compatible no-op. Values must be a subset of
+    ``dag,dsl,equations,none``; ``none`` REQUIRES a non-empty ``reason`` and cannot
+    be combined with other legs. Raises ``ValueError`` on malformed input.
+    """
+    if raw is None:
+        return None, None
+    legs = [x.strip().lower() for x in raw.split(",") if x.strip()]
+    if not legs:
+        raise ValueError(
+            "--triality-legs was empty — omit the flag entirely, or pass a "
+            f"comma-separated subset of {list(_VALID_TRIALITY_LEGS)}"
+        )
+    bad = [x for x in legs if x not in _VALID_TRIALITY_LEGS]
+    if bad:
+        raise ValueError(
+            f"--triality-legs values must be from {list(_VALID_TRIALITY_LEGS)}; "
+            f"got unknown {bad!r}"
+        )
+    # Dedupe, preserving first-seen order.
+    seen: set[str] = set()
+    uniq = [x for x in legs if not (x in seen or seen.add(x))]
+    if "none" in uniq:
+        if len(uniq) > 1:
+            raise ValueError(
+                "--triality-legs 'none' is a deliberate opt-out and cannot combine "
+                f"with other legs; got {uniq!r}"
+            )
+        if not (reason and reason.strip()):
+            raise ValueError(
+                "--triality-legs none REQUIRES --triality-reason <str> "
+                "(a deliberate chore/apparatus opt-out must state why)"
+            )
+    return uniq, (reason.strip() if reason and reason.strip() else None)
+
+
 def _git_head_sha() -> str | None:
     """Best-effort: return the current HEAD SHA short form."""
     try:
@@ -943,6 +994,29 @@ def main() -> int:
             "preferred over this CLI flag because it leaves an audit trail."
         ),
     )
+    parser.add_argument(
+        "--triality-legs",
+        default=None,
+        help=(
+            "CANONICALIZATION UNIT 2 (task #388): OPTIONAL structured triality "
+            "disposition — a comma-separated subset of "
+            f"{list(_VALID_TRIALITY_LEGS)!r} declaring which triality legs this "
+            "commit touched (dag=trajectory / dsl=control / equations=law), OR "
+            "'none' (a deliberate chore/apparatus commit; REQUIRES "
+            "--triality-reason). Recorded into the serializer JSONL log so the "
+            "triality drift-detector Stop hook softens a core-drift block when a "
+            "disposition was structurally declared. Absent flag == today's "
+            "behavior (fully backward-compatible)."
+        ),
+    )
+    parser.add_argument(
+        "--triality-reason",
+        default=None,
+        help=(
+            "Rationale required when '--triality-legs none' is used (the reason "
+            "the commit legitimately touches no triality leg)."
+        ),
+    )
     args = parser.parse_args()
 
     # FIX-CLOBBER (2026-07-08 Catalog #405): patch-file (intent-manifest) mode.
@@ -1034,9 +1108,20 @@ def main() -> int:
         expected_diff_lines = _parse_expected_diff_lines(
             args.expected_diff_lines or []
         )
+        # CANONICALIZATION UNIT 2 (task #388): structured triality disposition.
+        # Absent flag → (None, None) → no base_record change (backward-compatible).
+        triality_legs, triality_reason = _parse_triality_legs(
+            args.triality_legs, args.triality_reason
+        )
     except ValueError as exc:
         print(f"[subagent-commit-serializer] FATAL: {exc!s}", file=sys.stderr)
         return 2
+
+    # Only stamp triality keys when the caller actually declared a disposition, so
+    # log rows for existing (flag-absent) callers stay byte-identical.
+    if triality_legs is not None:
+        base_record["triality_legs"] = triality_legs
+        base_record["triality_reason"] = triality_reason
 
     # FIX-ABSORPTION (2026-07-07) pre-lock check: declared edit BASE vs the
     # file's content at HEAD. See _base_content_check docstring — this is the

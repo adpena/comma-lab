@@ -43,6 +43,13 @@ import sys
 # --- state files (both gitignored under .omx/state/*) ---
 MARKER = ".omx/state/triality_drift_marker.json"
 LOG = ".omx/state/triality_drift_detector.log"
+# The subagent-commit-serializer append-only JSONL log. Its committed rows may now
+# carry a STRUCTURED triality disposition (``--triality-legs`` / ``--triality-reason``,
+# CANONICALIZATION UNIT 2 task #388) — a typed alternative to the ad-hoc
+# ``[no-triality]`` commit-message token. When a committed row for this window
+# declares a disposition, the core drift block SOFTENS to info (see
+# ``triality_disposition_from_rows`` + ``main``).
+SERIALIZER_LOG = ".omx/state/commit-serializer.log"
 
 # Commit-subject signatures of a score/trajectory/build event that WARRANTS a
 # triality touch. Inclusive-but-focused; the [no-triality] escape valve + the
@@ -172,6 +179,48 @@ def has_triality_touch(files: list[str]) -> bool:
 def touched_dsl(files: list[str]) -> bool:
     """True if the DSL leg (the config-generator) was updated this window."""
     return any((f or "").startswith("src/tac/witness_dsl/") for f in files)
+
+
+def triality_disposition_from_rows(
+    rows: list[dict], window_shas: set[str]
+) -> dict | None:
+    """The latest COMMITTED serializer-log row that declared a structured triality
+    disposition (``--triality-legs``) for a commit in THIS window.
+
+    Returns ``{"legs": [...], "reason": str | None, "head": <short sha>}`` for the
+    most recent (file-order-last) qualifying row, else ``None``. A row qualifies
+    iff (a) its ``outcome`` is ``"committed"``, (b) it carries a non-empty
+    ``triality_legs`` list, and (c) its ``head_after`` short sha matches a commit
+    in ``window_shas`` (prefix match either direction, to tolerate short/long sha
+    length differences) — OR ``window_shas`` is empty (the window could not be
+    resolved), in which case a declared row still counts (fail toward softening,
+    consistent with the hook's fail-open philosophy). Defensive throughout: a
+    malformed row is skipped, never raised.
+    """
+    best: dict | None = None
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if row.get("outcome") != "committed":
+            continue
+        legs = row.get("triality_legs")
+        if not legs:
+            continue
+        head = str(row.get("head_after") or "").strip()
+        if window_shas and (
+            not head
+            or not any(
+                s == head or s.startswith(head) or head.startswith(s)
+                for s in window_shas
+            )
+        ):
+            continue
+        best = {
+            "legs": list(legs) if isinstance(legs, list) else [str(legs)],
+            "reason": row.get("triality_reason"),
+            "head": head,
+        }
+    return best
 
 
 def touched_equations(files: list[str]) -> bool:
@@ -751,6 +800,38 @@ def _read_marker(root: str) -> dict:
         return {}
 
 
+def _read_serializer_rows(root: str, tail: int = 800) -> list[dict]:
+    """Parse the tail of the subagent-commit-serializer JSONL log. Fail-open:
+    missing/unreadable log ⇒ [] (the softening simply does not apply)."""
+    path = os.path.join(root, SERIALIZER_LOG)
+    try:
+        with open(path, errors="replace") as f:
+            lines = f.readlines()
+    except Exception:
+        return []
+    rows: list[dict] = []
+    for ln in lines[-tail:]:
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            obj = json.loads(ln)
+        except Exception:
+            continue
+        if isinstance(obj, dict):
+            rows.append(obj)
+    return rows
+
+
+def _window_commit_shas(root: str, last_head: str, head: str) -> set[str]:
+    """The full commit shas in the ``last_head..head`` window. Fail-open ⇒ set()."""
+    try:
+        out = _git(root, "rev-list", f"{last_head}..{head}").stdout
+        return {s.strip() for s in out.splitlines() if s.strip()}
+    except Exception:
+        return set()
+
+
 def _write_marker(root: str, data: dict) -> None:
     try:
         p = os.path.join(root, MARKER)
@@ -1050,7 +1131,31 @@ def main() -> None:
     except Exception:
         consumer_missing = False
 
-    if (classify(subjects, files) == "drift" or consumer_missing or recall_missing
+    # --- CANONICALIZATION UNIT 2 (task #388): structured triality-legs softening.
+    # A serializer ``--triality-legs`` declaration (recorded in the commit log) is a
+    # STRUCTURED alternative to the ad-hoc [no-triality] token: when a committed row
+    # for THIS window declared legs (or none+reason), the author consciously
+    # dispositioned the triality, so SOFTEN the core classify() drift to info (log +
+    # do not block). This softens ONLY the core DAG/DSL/equations drift; the
+    # independent legs (consumer/recall/scope/schedule/dsl-config) keep their own
+    # disciplines + waivers. Fail-open: any error ⇒ no disposition (block as before).
+    core_drift = classify(subjects, files) == "drift"
+    triality_disposition: dict | None = None
+    try:
+        triality_disposition = triality_disposition_from_rows(
+            _read_serializer_rows(root), _window_commit_shas(root, last_head, head)
+        )
+    except Exception:
+        triality_disposition = None
+    if core_drift and triality_disposition is not None:
+        _log(
+            root,
+            f"soften(triality-legs disposition legs={triality_disposition.get('legs')} "
+            f"reason={triality_disposition.get('reason')!r}) head={head[:9]}",
+        )
+        core_drift = False
+
+    if (core_drift or consumer_missing or recall_missing
             or scope_violations or schedule_violations or dsl_config_violations):
         # Persist last_block_head (do NOT advance last_head — so the fix/DAG-FEED commit lands
         # inside the next window's UNION and clears the drift on re-check; the last_block_head
@@ -1065,7 +1170,7 @@ def main() -> None:
             f" schedule_violations={len(schedule_violations)}"
             f" dsl_config_violations={len(dsl_config_violations)}",
         )
-        if classify(subjects, files) == "drift":
+        if core_drift:
             reason = build_reason(subjects, files)
             if consumer_missing:
                 reason = reason + " ALSO — " + CONSUMER_NUDGE
