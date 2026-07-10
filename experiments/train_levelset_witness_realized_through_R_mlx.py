@@ -6324,6 +6324,69 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                   flush=True)
             _jbasin_on = False
 
+    # (owed-1 REPAIRED POSE-GATE; SYNTHESIS_v3_v752 §A.4, A-1 FIX) the pose-finish CONDITIONING gate:
+    # a rolling-slope plateau on the DE-NOISED σ_min(J_ξ) series (fed from the jacobian_basin T1 emit
+    # below). ``--pose-finish-engage-on sigma_min_plateau`` (default 'muon') + an armed two-phase
+    # (--pose-finish-start-epoch > 0) ACTUATES pose-finish engagement on the conditioning EVENT instead
+    # of the muon proxy. Score-neutral OBSERVER whenever σ_min telemetry is on (would-have-fired rows);
+    # REGISTERED in the resume registry ONLY when actuating (else zero new keys => incumbent checkpoint
+    # byte-identical). Degenerate/canary-fail/never-fired => ship banked R1 (DISENGAGED + LOUD alarm,
+    # NEVER blocks — SYNTHESIS §A.4 Repair 2b/4).
+    _pose_gate_mode = str(getattr(args, "pose_finish_engage_on", "muon"))
+    _pose_gate: dict = {"det": None, "actuating": False, "trusted": True, "engaged_epoch": -1,
+                        "armed": _pose_finish_start > 0}
+    _pose_gate_requested = (_pose_gate_mode == "sigma_min_plateau") and (_pose_finish_start > 0)
+    if _pose_gate_requested and not _jbasin_on:
+        # engage-on σ_min but NO σ_min source (telemetry off / setup-failed) => gate can never fire =>
+        # DISENGAGED (ship banked R1). LOUD (SYNTHESIS §A.4 Repair 5: MUST NOT pass --no-jacobian-...).
+        print(json.dumps({"stage": "confound_alarm", "alarm": "pose_finish_gate_no_sigma_source",
+                          "note": "--pose-finish-engage-on sigma_min_plateau but jacobian-basin telemetry "
+                          "is OFF => NO σ_min source => the conditioning gate can never fire => DISENGAGED "
+                          "(ships banked R1; pose engages only via the --pose-finish-start-epoch backstop)",
+                          "axis": "[macOS-MLX advisory] NON-PROMOTABLE"}), flush=True)
+    elif _jbasin_on and _jbasin_cfg is not None:
+        try:
+            from tac.witness_control import sigma_min_plateau as _smp  # noqa: PLC0415
+            _smp_cfg = _smp.SigmaMinPlateauConfig()
+            _smp_probs = _smp_cfg.validate()
+            if _smp_probs:
+                raise ValueError("; ".join(_smp_probs))
+            _pg_det = _smp.SigmaMinPlateauDetector(
+                _smp_cfg, c_pose_grad_cap=float(getattr(args, "pose_grad_coeff_max", 25.0)),
+                delta_seg=0.5, lambda_min_f=None)  # δ_seg=0.5 amber MEASURED-ANCHOR; λ_min(F) probe OFF launch path (σ* advisory)
+            _pose_gate["det"] = _pg_det
+            _pose_gate["actuating"] = _pose_gate_requested
+            # $0 CANARY controls (SYNTHESIS §A.4 Repair 2): NEGATIVE (rising σ_min must-not-fire) +
+            # SYNTHETIC-positive (clean plateau must-fire). Fail => gate UNTRUSTED => ship banked R1.
+            _pg_canary = _smp.canary_suite(_smp_cfg)
+            _pose_gate["trusted"] = bool(_pg_canary.passed)
+            if _pose_gate["actuating"]:
+                _resume_registry.register("pose_finish_conditioning_gate", _smp.RESUME_PREFIX, _pg_det)
+            print(json.dumps({
+                "stage": "pose_finish_gate_setup", "engage_mode": _pose_gate_mode,
+                "actuating": bool(_pose_gate["actuating"]), "armed": bool(_pose_gate["armed"]),
+                "canary_passed": bool(_pg_canary.passed),
+                "canary_negative_fired": bool(_pg_canary.negative_fired),
+                "canary_positive_fired": bool(_pg_canary.positive_fired),
+                "flat_rel_band": float(_smp_cfg.flat_rel_band), "settle_window": int(_smp_cfg.settle_window),
+                "hysteresis": int(_smp_cfg.hysteresis), "ema_span": int(_smp_cfg.ema_span),
+                "note": "owed-1 A-1 FIX: rolling-slope plateau on de-noised σ_min; σ* ADVISORY-only "
+                "(≥14.14 unreachable); canary-fail/degenerate/never-fired => ship banked R1 (DISENGAGED, "
+                "never blocks). NON-PROMOTABLE (MLX advisory)."}), flush=True)
+            if _pose_gate["actuating"] and not _pose_gate["trusted"]:
+                print(json.dumps({"stage": "confound_alarm", "alarm": "pose_finish_gate_canary_failed",
+                                  "reason": _pg_canary.reason,
+                                  "note": "conditioning gate UNTRUSTED at setup => DISENGAGED (ship banked "
+                                  "R1; pose engages only via the backstop)",
+                                  "axis": "[macOS-MLX advisory] NON-PROMOTABLE"}), flush=True)
+        except Exception as exc:  # gate setup failure => OBSERVER/actuation OFF (fail-open).
+            print(json.dumps({"stage": "pose_finish_gate_skip", "error": f"{type(exc).__name__}: {exc}",
+                              "note": "pose-gate setup failed => detector OFF (fail-open; if actuation was "
+                              "requested, pose engages via the --pose-finish-start-epoch backstop only)"}),
+                  flush=True)
+            _pose_gate["det"] = None
+            _pose_gate["actuating"] = False
+
     def _jbasin_active() -> bool:
         return bool(_jbasin_on and not _jbasin_state["disabled"] and _jbasin_cfg is not None)
 
@@ -6441,6 +6504,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "would_have_fired is PROVISIONAL (running-max plateau; finalized offline vs the actual "
                 "terminal). Pose-finish stays TERMINAL on run-1; the basin TRIGGER is a run-2 lever."}),
                 flush=True)
+            # (owed-1 REPAIRED POSE-GATE) feed the DE-NOISED σ_min rolling-slope plateau detector with
+            # this T1 median σ_min, and emit its OBSERVER verdict (score-neutral would-have-fired). The
+            # ACTUATION (feeding det.fired() into the pose-finish engage) rides the engage block; here we
+            # only OBSERVE + emit (byte-identical: pure read of agg, no weight/loss/optimizer write).
+            _pg = _pose_gate.get("det") if isinstance(_pose_gate, dict) else None
+            if _pg is not None:
+                from tac.witness_control import sigma_min_plateau as _smp  # noqa: PLC0415
+                _pg.observe(int(ep), float(agg["median_sigma_min"]))
+                _pg_v = _pg.verdict()
+                print(json.dumps(_smp.gate_observer_row(
+                    _pg_v, int(ep), str(seg_form), engage_mode=_pose_gate_mode,
+                    actuated=bool(_pose_gate["actuating"] and _pose_gate["trusted"]))), flush=True)
             _jbasin_state["fails"] = 0
         except Exception as exc:
             _jbasin_note_fail(exc, ep, "t1")
@@ -8600,15 +8675,47 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # _muon_gate.fired is current. Read by every training + telemetry loss call via _w_pose_now.
             if _pose_finish_start > 0:
                 _pf_was_on = _pose_finish_on["on"]
-                _pose_finish_on["on"] = bool(_muon_gate.fired) or (ep >= _pose_finish_start)
+                # (owed-1) engage SIGNAL: 'sigma_min_plateau' (the SEALED A-1 conditioning gate) replaces
+                # the 'muon' proxy when requested + trusted. Either mode keeps the --pose-finish-start-epoch
+                # as the fail-safe BACKSTOP. An untrusted/degenerate/absent gate engages ONLY via the
+                # backstop (ships banked R1 DISENGAGED) — NEVER via muon (the operator chose the σ_min gate).
+                _cond_fired = False
+                if _pose_gate_mode == "sigma_min_plateau":
+                    if (_pose_gate["actuating"] and _pose_gate["trusted"]
+                            and _pose_gate["det"] is not None):
+                        _pose_gate["det"].latch_if_fired(ep)   # monotone; only latches on a real plateau
+                        _cond_fired = _pose_gate["det"].fired()
+                        if _cond_fired and _pose_gate["engaged_epoch"] < 0:
+                            _pose_gate["engaged_epoch"] = ep
+                    _pose_finish_on["on"] = _cond_fired or (ep >= _pose_finish_start)
+                else:  # 'muon' incumbent — BYTE-IDENTICAL
+                    _pose_finish_on["on"] = bool(_muon_gate.fired) or (ep >= _pose_finish_start)
                 _w_pose_now["v"] = float(args.w_pose) if _pose_finish_on["on"] else 0.0
                 if _pose_finish_on["on"] and not _pf_was_on:
                     recent_losses.clear()  # treat as an AdamW->AdamW loss-form boundary (spike-guard re-treat)
+                    if _pose_gate_mode == "sigma_min_plateau":
+                        _engage_via = "sigma_min_plateau" if _cond_fired else "backstop_fail_safe"
+                    else:
+                        _engage_via = "muon" if bool(_muon_gate.fired) else "backstop_fail_safe"
                     print(json.dumps({"stage": "pose_finish_engage", "epoch": ep,
-                                      "start_backstop": _pose_finish_start,
+                                      "start_backstop": _pose_finish_start, "engage_via": _engage_via,
+                                      "engage_mode": _pose_gate_mode,
                                       "muon_fired": bool(_muon_gate.fired), "w_pose": float(args.w_pose),
                                       "note": "R1 terminal pose-finish engaged (d_seg-converged coherent "
                                       "render); spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                # (owed-1 DISENGAGED alarm, SYNTHESIS §A.4 Repair 4) at the FINAL epoch: if the conditioning
+                # gate was requested but pose never engaged, fire the LOUD pose-DISENGAGED alarm (shipped
+                # banked R1). Never silent.
+                if (_pose_gate_mode == "sigma_min_plateau" and ep >= int(args.epochs)
+                        and not _pose_finish_on["on"]):
+                    from tac.witness_control import sigma_min_plateau as _smp  # noqa: PLC0415
+                    _pg = _pose_gate.get("det")
+                    print(json.dumps(_smp.disengaged_alarm_row(
+                        ep,
+                        reason=("conditioning gate never fired (σ_min never plateaued)"
+                                if _pose_gate["trusted"] else "gate untrusted (canary/setup) — disengaged"),
+                        canary_passed=bool(_pose_gate["trusted"]),
+                        n_points=(_pg.n_points if _pg is not None else 0))), flush=True)
             # P0 FORCE 1 temporal-screw engagement gate + transition RE-TREAT (same discipline as LEVER-4b;
             # start>=l7 formed-partition). (operator 2026-07-08 v7.5 B.4) SENSOR->START WIRING: engagement
             # flips through the temporal-screw EventBackstopGate on the SAME annulus_plateau formed-boundary
@@ -9980,6 +10087,20 @@ def main(argv: list[str] | None = None) -> int:
                     "switch (--muon-start-event, the d_seg-converged coherent-render regime); this epoch "
                     "is the fail-safe BACKSTOP CAP (ep>=this also engages pose). 0 (default) => DISABLED "
                     "=> byte-identical (pose from ep0). Requires --w-pose > 0 (the finish-phase weight).")
+    # (owed-1 REPAIRED POSE-GATE; SYNTHESIS_v3_v752 §A.4) WHICH conditioning EVENT engages the pose-finish.
+    # 'muon' (DEFAULT) = the incumbent: pose co-fires with the MUON switch (d_seg-converged coherent-render
+    # regime) — BYTE-IDENTICAL. 'sigma_min_plateau' = the SEALED A-1 fix: a scale-free ROLLING-SLOPE ≈0 on
+    # the DE-NOISED σ_min(J_ξ) series (the jacobian_basin sensor) — pose engages only once the trunk's
+    # ξ→PoseNet conditioning has STOPPED IMPROVING (sufficiently conditioned). A degenerate/never-fired gate
+    # ships the banked R1 dxi (DISENGAGED, LOUD alarm) — NEVER blocks. Score-affecting lever => DEFAULT-OFF
+    # (='muon'); registered in the DSL as PoseFinishConditioningGate. Requires --pose-finish-start-epoch>0
+    # (the two-phase arm) + --jacobian-basin-telemetry ON (the σ_min source).
+    ap.add_argument("--pose-finish-engage-on", type=str, default="muon",
+                    choices=["muon", "sigma_min_plateau"],
+                    help="owed-1 (SYNTHESIS §A.4): the pose-finish ENGAGE event. 'muon' (default, "
+                    "byte-identical incumbent) co-fires with the muon switch; 'sigma_min_plateau' fires on "
+                    "a rolling-slope plateau of the de-noised σ_min(J_ξ) conditioning series (ships banked "
+                    "R1 + LOUD disengaged alarm if it never fires — never blocks).")
     ap.add_argument("--score-domain-loss", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--pose-eps", type=float, default=1e-2)
     # (#146 AMBER deep-unroll stability, tac.witness_stability) bound the score-domain pose gradient

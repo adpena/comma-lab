@@ -12092,3 +12092,34 @@ documented, not hand-orphaned). owed-1 `--pose-finish-engage-on` NOT stubbed (in
 rides --pose-finish-start-epoch backstop + banked-R1 floor (d_pose 0.127/7.2KB MEASURED; d_seg = the open
 axis, no composed-launch number). #379 COMPLETE (P0→P7). Remaining to the P8 wall: #383 + #384 gates →
 #385 dual-chain comparison brief → operator which-to-run GO. Pointer 0.19110 UNMOVED (means).
+
+## FEED-owed1-posegate (2026-07-09, task #383) — REPAIRED POSE-ENGAGEMENT GATE built (rolling-slope σ_min plateau; A-1 FIX) [DSL leg DONE; equations leg N/A-owed-14]
+**Deliverable (SYNTHESIS_v3_v752 §A.4, the load-bearing owed-1 item):** the pose-finish CONDITIONING gate —
+pose engages on a d_seg-CONDITIONING EVENT, never an epoch (operator binding "pose must not be fired for
+joint descent until dseg is sufficiently conditioned first"). Detector `tac.witness_control.sigma_min_plateau`
+(sibling of verdict_trend/jacobian_basin): PRIMARY = scale-free ROLLING-MEAN-SLOPE ≈ 0 over a settle window on
+the **DE-NOISED** σ_min(J_ξ) series (EMA span ⌈W_settle⌉=3, α=0.5) — NOT the exp-asymptote fit (P4-M1
+DEGENERATE), NOT the absolute σ* floor (A-1 UNREACHABLE ≥14.14; DEMOTED to advisory sideband only). NOISE/
+FIT-QUALITY GUARD (rel-stderr ≤ flat-band, reuses the constant) → degenerate signal FALLS BACK to ship-banked-R1.
+Hysteresis 3 consecutive flat+NON-RISING windows (⌈W_settle⌉, R1-seal). Monotone fire latch (resume-faithful).
+**Constants value-provenance:** flat-band = costate_estimator.DEFAULT_STALL_REL_EPS 3e-4 (MEASURED-ANCHOR,
+reused-for-coherence exactly as verdict_trend_alarm); ema_span/settle_window/hysteresis all = ⌈W_settle=4.6·τ_EMA=2.6⌉=3
+(DERIVED-AT-CONFIG, S3 §A.5). No bare literals.
+**$0 CANARIES (confound L3 positive-control) — MEASURED:** NEGATIVE control (rising-drift+CV-0.21 series
+reproducing the P4-M1 stopped-run signature) does NOT fire ✓; SYNTHETIC-positive (clean relaxation→flat) DOES
+fire ✓ → `canary_suite().passed`. Canary-fail/degenerate/never-fired ⇒ DISENGAGED (ship banked R1 dxi
+0.001610/7.2KB + LOUD `confound_alarm` row, digest-surfaced) — NEVER blocks launch (§A.4 Repair 2b/4).
+**Wiring:** trainer flag `--pose-finish-engage-on {muon(default,byte-identical)|sigma_min_plateau}`; detector
+OBSERVES whenever jacobian_basin telemetry is on (score-neutral would-have-fired rows, default-ON anti-orphan);
+ACTUATES the engage only when sigma_min_plateau + armed two-phase + canary-trusted; muon default = incumbent
+else-branch, unchanged. Registered in resume_registry (DIRECT_CONTROLLER_NAMES) ONLY when actuating → incumbent
+checkpoint byte-identical. σ_min source = jacobian_basin T1 median (fed at each cadenced emit).
+**DSL leg (triality):** `curriculum_dsl.PoseFinishConditioningGate` Lever factory (composable, zero-required-arg)
+holds `--pose-finish-engage-on` → completeness() gap CLOSED (was unmapped) + activation-ledger duty-to-measure
+(never-fired) for the #247 costate SENSE. **Equations leg:** N/A-NOW — the gate is a CONTROL LAW whose constants
+are DERIVED but whose real-σ_min FIRE BEHAVIOR is UNMEASURED (owed-14 governed telemetry-ON replay, explicitly
+non-blocking). REACTIVATION: register `sigma_min_rolling_slope_plateau_gate_v1` when owed-14 supplies the real-
+σ_min empirical anchor. **Tests:** 20 detector (fire/no-fire/guard/hysteresis/latch/canary/σ*-advisory/resume
+round-trip incl. through the real ResumeRegistry) + 5 DSL wire-in (composable/completeness/argparse/ledger) — 25 pass.
+Commits: <serializer>. **Launch-readiness:** the DETECTOR + WIRING are ready; what remains before the gate is
+TRUSTED on a real run = owed-14 (governed replay backtest on real σ_min). Pointer 0.19110 UNMOVED (means).

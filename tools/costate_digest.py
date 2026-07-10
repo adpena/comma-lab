@@ -278,6 +278,23 @@ def section_verdict_trend(run_dir: Path | None) -> tuple[str | None, dict | None
         return None, None
 
 
+def section_pose_conditioning_gate(run_dir: Path | None) -> tuple[str | None, dict | None]:
+    """owed-1 POSE-FINISH CONDITIONING gate (SYNTHESIS_v3_v752 §A.4): surface the LOUD pose-DISENGAGED
+    alarm (shipped banked R1 because the rolling-slope σ_min plateau never engaged) if present, else the
+    latest conditioning-gate observer row. Read-only + score-neutral -> defaults ON. Fail-open (any
+    error -> omit); omitted when the run has no pose-gate telemetry."""
+    if run_dir is None:
+        return None, None
+    try:
+        from tac.witness_control.sigma_min_plateau import format_gate_line, scan_run_for_pose_gate
+        row = scan_run_for_pose_gate(run_dir)
+        if not row:
+            return None, None
+        return format_gate_line(row), row
+    except Exception:
+        return None, None
+
+
 def _duty_marker(r: dict) -> str:
     """Marker per ranked row: ~=un-built finding (missing wire) · ?=registered owed an estimate ·
     *=never-fired registered lever · ''=fired-but-unmeasured registered lever."""
@@ -553,6 +570,10 @@ def build_digest() -> tuple[list[str], dict]:
     vtrend_line, data["verdict_trend"] = section_verdict_trend(run_dir)
     if vtrend_line:
         lines.append(vtrend_line)
+
+    posegate_line, data["pose_conditioning_gate"] = section_pose_conditioning_gate(run_dir)
+    if posegate_line:
+        lines.append(posegate_line)
 
     duty_line, data["duty_to_measure"] = section_duty_to_measure()
     lines.append(duty_line)

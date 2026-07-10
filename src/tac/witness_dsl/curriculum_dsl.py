@@ -1659,6 +1659,36 @@ def PoseDecouple(window: int = 100) -> Lever:  # noqa: N802 (DSL keyword) — A5
                  notes="drop pose-loss to free d_seg capacity (trades d_pose up)")
 
 
+def PoseFinishConditioningGate(  # noqa: N802 — owed-1 REPAIRED POSE-GATE (SYNTHESIS_v3_v752 §A.4, A-1 FIX)
+    backstop_epoch: "int | None" = None, w_pose: "float | None" = None,
+) -> Lever:
+    """owed-1 (SYNTHESIS_v3_v752 §A.4, A-1 FIX): engage the TERMINAL pose-finish on the SEALED d_seg-
+    CONDITIONING event — a scale-free ROLLING-SLOPE plateau of the DE-NOISED σ_min(J_ξ) conditioning
+    series — INSTEAD of the muon proxy. Realizes the operator binding "pose must not be fired for joint
+    descent until dseg is sufficiently conditioned first."
+
+    Sets ``--pose-finish-engage-on sigma_min_plateau`` (the score-affecting engage lever; DEFAULT-OFF =
+    'muon'). Optionally arms the two-phase ``--pose-finish-start-epoch`` (the fail-safe BACKSTOP cap) +
+    the finish weight ``--w-pose`` (else the program's pose config supplies them). The σ_min sensor
+    ``--jacobian-basin-telemetry`` (default ON) is the gate's ONLY σ_min source and MUST stay ON. A
+    degenerate/canary-fail/never-fired gate ships the banked R1 dxi (DISENGAGED, LOUD alarm) — NEVER
+    blocks (SYNTHESIS §A.4 Repair 2b/4). Detector: ``tac.witness_control.sigma_min_plateau``."""
+    ov: dict = {"--pose-finish-engage-on": "sigma_min_plateau"}
+    if backstop_epoch is not None:
+        if int(backstop_epoch) <= 0:
+            raise ValueError(
+                "PoseFinishConditioningGate: backstop_epoch must be > 0 (the two-phase arm / fail-safe "
+                "cap); pass None to let the program's pose config set --pose-finish-start-epoch")
+        ov["--pose-finish-start-epoch"] = int(backstop_epoch)
+    if w_pose is not None:
+        if not (float(w_pose) > 0.0):
+            raise ValueError("PoseFinishConditioningGate: w_pose must be > 0 (the finish-phase weight)")
+        ov["--w-pose"] = float(w_pose)
+    return Lever("pose_finish_conditioning_gate", overrides=ov,
+                 notes="owed-1: pose-finish engages on the rolling-slope de-noised σ_min plateau (A-1 "
+                 "fix); ships banked R1 if never/degenerate/untrusted (never blocks)")
+
+
 def Muon(start_epoch: int, window: int = 100) -> Lever:  # noqa: N802 — A4
     """A4: Muon finisher from ``start_epoch`` for ``window`` epochs, with moments
     reset at the optimizer-stage transition and tau FROZEN at 0.05 (the run's

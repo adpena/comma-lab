@@ -102,6 +102,11 @@ DIRECT_CONTROLLER_NAMES: frozenset[str] = frozenset({
     "tau_advance",
     "evt_curriculum",
     "birth_completion",
+    # owed-1 REPAIRED POSE-GATE (SYNTHESIS_v3_v752 §A.4): the rolling-slope de-noised σ_min plateau
+    # detector — persists the σ_min series + the monotone fire latch so a crash-resume re-derives the
+    # IDENTICAL conditioning-gate decision. Registered ONLY when actuating (--pose-finish-engage-on
+    # sigma_min_plateau + armed two-phase); the OBSERVER path does not register (byte-identical sidecar).
+    "pose_finish_conditioning_gate",
 })
 
 
