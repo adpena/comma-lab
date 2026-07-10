@@ -13120,7 +13120,25 @@ no measured row). Pointer 0.19110 UNMOVED (means; anti-re-research + calibration
 ---
 ## FEED-codec-audit (2026-07-10) — mature-codec toolbox conformance: 0 MISSING, the un-exploited value is all REPRESENTATION
 **Operator:** *"Did we totally implement and are we fully exploiting the stuff you said we didn't have that any mature codec has?"* → $0 report-only audit, `.omx/research/mature_codec_toolbox_audit_20260710.md`. STORES CONSULTED: L14–L32; June-2026 decoder-weight-rate CONVERGENCE; FEED-v8-{realmachinery,ratebudget,voronoi,roadlane,dsegtaper}; `decoder_weight_rate_axis_…synthesis_20260621`; `analytical_solve_extinctions/`; witness_dsl.
-- **Grades (11 elements): EXPLOITED 6** (per-pair-latent+ego-warp prediction · ego-screw ξ motion [pose banked, d_pose 0.001610 byte-close] · through-R task-distortion=the vehicle · costate#247 encoder-search · D2 conformance · real coder in v8) · **BUILT-NOT-APPLIED 4** (transform: `DsegAwareTaper`#121 + `DirectionalBasisRebalance` default-OFF · quant/RDO: WRQ+KKT#157 "MODEST/pays-only-after-basis-match" · rate-control: #336 per-class allocator = measured-budget-not-actuator · postfilter: #207/A2 contract-exists) · **PROBED-DEAD 1** (better entropy coder: brotli-q11 6.891 vs H(W) 6.884 b/param, gap 0.007≤0.07KB; temporal arith coder already realizes partition symbolic floor optimally — do-NOT-pursue) · **N-A 1** (error resilience) · **MISSING 0**.
+- **Grades (11 elements): EXPLOITED 6** (per-pair-latent+ego-warp prediction · ego-screw ξ motion [pose banked, d_pose 0.001610 byte-close] · through-R task-distortion=the vehicle · costate#247 encoder-search · D2 conformance · real coder in v8) · **BUILT-NOT-APPLIED 4** (transform: `DsegAwareTaper`#121 + `DirectionalBasisRebalance` default-OFF · quant/RDO: WRQ+KKT#157 "MODEST/pays-only-after-basis-match" · rate-control: #336 per-class allocator = measured-budget-not-actuator · postfilter: #207/A2 contract-exists) · **PROBED-DEAD 1** (better entropy coder: brotli-q11 6.891 vs H(W) 6.884 b/param, gap 0.007≤0.07KB; temporal arith coder already realizes partition symbolic floor optimally — do-NOT-pursue) · **N-A 1** (error resilience) · **MISSING 0**. <!-- # VERDICT_SCOPE_OK: citation of the macro-rate FORMULATION-scoped anchors (scopes at their verdicts) -->
 - **Honest answer:** YES on concepts (nothing standard un-built; several MEASURED in v8 byte-close), NO on full exploitation — the *generic* mature-codec entropy/RDO machinery is EXHAUSTED on our rate object; the lever is the geometry-native BASIS, never a better coder (FEED-v8-realmachinery meta-lesson).
 - **Top-3 unexploited (ranked vs 0.074 v8 / 0.118 v7.5 rate):** ① Road/Lane geometric coder residual-sidecar + v8 chain byte-close (#234; 59% of v8 bitmap, MEASURED 0.0275 S/7.4× lossless, 27.5% residual OWED) · ② Movable sparse object sites (0.061 S bitmap, primitive exists `laguerre_logit_offset`/`power_diagram_argmax`, OWED-measure) · ③ #121 d_seg taper FIRE-IT (duty-to-measure #1, byte-neutral, n600 A/B owed). Then #207/A2 postfilter re-open, #336 allocator wire-in.
 - *verdict_scope:* the ONE PROBED-DEAD is FORMULATION-level (better *general* coder on the *weight/partition* object), NOT a coding-family kill; ground-frame lane-ξ transport NO-GO is FORMULATION-level (lanes dynamic), NOT a ξ-family kill. Pointer 0.19110 UNMOVED (means: audit/anti-re-research). `[triality-leg:dag]`
+
+## FEED-alldim (2026-07-10) — UPSTREAM SCORER FULL-DIMENSION RE-READ (chroma·luma·yuv·hydra·order·dtype)
+Operator: re-read evaluate.py/modules.py/frame_utils.py across ALL dims (not just resolution), in light
+of the palette finding (SegNet argmax texture/context-dominated). READ line-by-line + one cheap CPU
+measurement. **13-dim table** (memo `upstream_scorer_alldim_reread_20260710.md`). **MEASURED** per-channel
+PoseNet Jacobian on a real GT pair: **luma 11.1× more pose-sensitive PER PLANE than chroma** (agg 22.2×);
+frame1/frame0 pose = 0.86×. **DERIVED-from-code (exact):** chroma above the 2×2 yuv-grid is EXACTLY
+pose-null (U_sub/V_sub = 2×2 box-average, frame_utils:65-72); luma carried LOSSLESS 384×512 (4 polyphase
+planes); **frame_0 is SegNet-FREE** (x[:,-1], modules:108 → only frame_1 scored; seg_delta=0.0 validated);
+SegNet takes RAW RGB no-norm at full 384×512 (chroma feeds seg full-res). **TOP-3 OVERLOOKED:** (1)
+**frame_0 seg-freedom** unpriced in witness/v8 — half the rendered pixels owe ZERO d_seg → frame_0 =
+pose-only carrier (was priced only in retired selector codec); (2) **chroma-high-freq** = free-for-pose ×
+needed-for-seg → seg TEXTURE carrier resolving the palette dilemma (SegNet texture-dominated, colour-flat
+kills Road/Lane, chroma-high-freq gives texture at ~0 pose cost); (3) no-antialias bilinear downscale
+aliasing (medium, refines #149). Both RANK-1/2 = structural pose-free seg DOFs, orthogonal, composable.
+Equation `posenet_luma_chroma_sensitivity_asymmetry_v1` registered (VERIFIED_VIA_EMPIRICAL_ANCHOR). Routes
+**#385** build-wave. NO upstream edits. verdict_scope FORMULATION (characterisation, no kill). Pointer
+0.19110 UNMOVED (means).
