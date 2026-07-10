@@ -93,6 +93,13 @@ v752 byte-close, cannot be closed by a doc edit · **PARTIAL** · **N/A-derived*
   NOT a proven authority"; (b) add **owed-16** — extend owed-15's FRESH-arm isolation to include a
   basis-ON-vs-isotropic-OFF arm scored n600 through the CORRECTED R (the "$0 directional-axis-reality check"
   FEED-bk named but never ran clean), so −48% converts to n600-realized-or-rolled-back exactly as taper/AA-ipe do.
+  **STATUS 2026-07-10 (owed16_bounded_ab_and_drystart_20260710.md):** owed-16 is now **BUILT · preflighted ·
+  load-path-validated · QUEUE-READY** (warm-start weights-only from mod32cap ep650; OFF arm = sliced
+  in_proj (96,80) channel-ablation, sha b1c31667) — but its **verdict is OWED-BLOCKED**: the ON arm was
+  governor-REFUSED 3× (SUM-over-RAM P0 crash-guard, sustained concurrent-agent load; override FORBIDDEN).
+  **P9 STAYS BLOCKING** (realized Δd_seg unmeasured). NEW: self-orient carries a **~47 GiB RAM tax** (ON proj
+  71.5 vs OFF 24.5 GiB) — the cost the −48% upside must be weighed against, and the reason the A/B can't be
+  admitted under coexistence. Also MEASURED: v752 sec/ep **≳120** (mod32cap ckpt cadence), not the borrowed 42.
 
 ### IMPORTANT — launch-gate GAPs (owed at/before byte-close; not doc-closable)
 - **F-A-1 (clause A):** run the archive **dedup / pairwise-non-derivability audit** at the v752 byte-close (seg blob vs ξ carrier vs free rule-118 generator). Currently unaddressed.
@@ -118,7 +125,8 @@ v752 byte-close, cannot be closed by a doc edit · **PARTIAL** · **N/A-derived*
 
 | gate | philosophy | blocks | disposition |
 |---|---|---|---|
-| **owed-16** basis-reality n600 A/B (basis-ON vs isotropic, corrected-R) + grade correction | P9 | optimal-form CLAIM (not the run) | **NEW — BLOCKING the claim** |
+| **owed-16** basis-reality n600 A/B (basis-ON vs isotropic, corrected-R) + grade correction | P9 | optimal-form CLAIM (not the run) | **BUILT+QUEUE-READY; verdict OWED-BLOCKED (governor-refused ×3); STILL BLOCKING the claim** |
+| **self-orient ~47 GiB RAM tax** (ON 71.5 vs OFF 24.5 proj) + v752 sec/ep ≳120 (not 42) | P8/cost | #385 wall-clock & coexistence-scheduling | **NEW — MEASURED 2026-07-10 (owed16 bundle)** |
 | archive dedup / pairwise-non-derivability audit @ byte-close | clause A | byte-close rate claim | NEW launch-gate |
 | end-to-end tolerance-budget ledger @ byte-close | P3 | byte-close | NEW launch-gate |
 | seg-side temporal section (or measured per-frame waiver) | P6 | trunk design completeness | NEW launch-gate |

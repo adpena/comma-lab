@@ -13001,3 +13001,31 @@ Operator GO 2026-07-09 ("Anything we should run prior to deciding on 385? … GO
 - **scope INSTANCE** (this $0 analytic attempt; NOT a decoupling FORMULATION kill). `cannot_falsify` through-R (mask≠score-optimal, = 1b). config `derive_crucible_v8_inc1a_config` re-confirmed validate()==[] · unknown_count()==0 · 18 fields; 16 config tests PASS.
 - **Triality:** DAG=this FEED · **equations**=EmpiricalAnchor `v8_inc1a_killgate_ruling_analytic_20260710` appended to `v8_geometric_rate_decomposition_v1` (registered, 6 anchors, ruff-clean) · DSL=N/A (measurement). Bulletin `gate_ruled` subject #385 posted. Artifacts under `experiments/results/inc1a_killgate_20260710/` (result+verdict+3 replicate ckpts+runner); memo `.omx/research/inc1a_killgate_run_20260710.md`.
 pointer 0.19110 UNMOVED (means) — only a byte-closed `upstream/evaluate.py` n600 row < 0.19110 moves it. #205 STOPPED.
+
+
+## FEED-owed16 (2026-07-10): owed-16 bounded self-orient ON-vs-OFF A/B + v752 dry-start — BUILT+VALIDATED, governor-BLOCKED, sec/ep corrected
+
+**SIGNAL** (operator GO 2026-07-09, pre-#385 de-risk): run the owed-16 realized-through-R directional
+A/B (the P9-BLOCKING resolver; negaudit-C1's named decisive re-test) + the pinned v752 dry-start.
+
+**DIAGNOSTIC/RESPONSE (this landing):**
+- **Both heavy self-orient n600 launches governor-BLOCKED** — `safe_run` SUM-over-RAM P0 crash-guard
+  REFUSED **3×** under sustained concurrent operator-agent load (sibling `palette_probe_driver.py`
+  cycling ~22-25 GiB). Ceiling adapts 103.3→93.1→64.0-floor as it detects active-growth. Override
+  FORBIDDEN (P0). Baseline ~36 GiB alone leaves <72 GiB under the ceiling ⇒ self-orient n600 (≥72 GiB)
+  is structurally un-admittable under coexistence.
+- **item 2 (sec/ep):** BLOCKED, but MEASURED-from-artifact anchor recovered — mod32cap per-stage-ckpt
+  mtimes ⇒ **118.8 & 121.9 s/ep** (across-stage UPPER bound; v752 heavier ⇒ **≳120 s/ep**). The
+  borrowed **42 s/ep** #385 wall-clock provenance is a **~2.8× UNDER-estimate**; adopt ≳120.
+- **item 1 (owed-16 A/B):** BUILT + preflighted + **load-path validated** (OFF ckpt `in_proj`
+  (96,96)→(96,80) slice, sha b1c31667, 18-tensor param-parity; ON/OFF resume-load guards pass by
+  inspection). ON arm proj **71.5 GiB**, OFF **24.5 GiB**. Verdict cell = **OWED-BLOCKED** (realized Δd_seg
+  unmeasured). Queue-ready with exact commands.
+- **NEW #385 cost-facet (MEASURED):** self-orient's directional cf_mx_cache = **~47 GiB RAM** — nearly
+  TRIPLES the footprint (24.5→71.5) and is *why* the A/B can't be admitted. Weigh the −48%
+  direct-partition upside against a 47 GiB coexistence-blocking tax.
+
+**P9 remains BLOCKING** (realized directional transfer still unverified). Verdict
+`.omx/research/owed16_verdict_20260710.json`; memo `owed16_bounded_ab_and_drystart_20260710.md`;
+equation anchor `owed16_realized_transfer_blocked_selforient_47gib_20260710`; 3 bulletin gate_ruled.
+**Pointer 0.19110 UNMOVED (means/apparatus).**

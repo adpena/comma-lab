@@ -326,6 +326,28 @@ def build_curvelet_directional_basis_dseg_reduction_v1() -> CanonicalEquation:
         measurement_method="n96_circular_gt_curvelet_basis_dseg_UNVERIFIED_self_orient",
         provenance=_sidecar(report, "re-measure -48% on n600 real GT with REALIZED self-orient (not circular synthetic)"),
     )
+    # owed-16 (2026-07-10): the FRESH-matched-arm self-orient ON-vs-OFF realized-through-R n600 A/B
+    # (the P9-BLOCKING resolver) was BUILT + preflighted + load-path-validated but its measured Δd_seg
+    # remains OWED — the ON arm is governor-BLOCKED (SUM-over-RAM crash guard, 3× REFUSE) under
+    # sustained concurrent-agent load. Realized transfer STILL UNVERIFIED. NEW measured facet: the
+    # self-orient directional cf_mx_cache costs ~47 GiB RAM at n600 (ON proj 71.5 vs OFF 24.5 GiB) —
+    # a cost the -48% upside must be weighed against, and the reason the A/B could not be admitted.
+    anchor_owed16 = EmpiricalAnchor(
+        anchor_id="owed16_realized_transfer_blocked_selforient_47gib_20260710",
+        measurement_utc="2026-07-10T03:30:00Z",
+        inputs={"ab": "self_orient_ON_vs_OFF", "warm_start": "mod32cap_ep650_BEST_weights_only",
+                "verdict": "through_R_n600_cpu_torch", "n": 600, "status": "governor_blocked"},
+        predicted_output={"dseg_reduction_fraction": -0.48, "axis": "direct_partition_advisory"},
+        empirical_output={"realized_dseg_reduction_fraction": "OWED_BLOCKED_not_measured",
+                          "self_orient_ram_cost_gib": 47.1, "on_arm_peak_gib": 71.5, "off_arm_peak_gib": 24.5,
+                          "governor_refuses": 3, "caveat": "ON arm un-admittable under concurrency; A/B queue-ready"},
+        residual=0.0,
+        source_artifact=".omx/research/owed16_bounded_ab_and_drystart_20260710.md",
+        measurement_method="built_preflighted_load_validated_governor_blocked_realized_transfer_still_owed",
+        provenance=_sidecar(".omx/research/owed16_bounded_ab_and_drystart_20260710.md",
+                            "run the queued ON-vs-OFF A/B when the machine is single-workload; Δ(OFF-ON) through-R n600 = realized directional contribution"),
+        empirical_verification_status="ASSUMED_AWAITING_VERIFICATION",
+    )
     return CanonicalEquation(
         equation_id="curvelet_directional_basis_dseg_reduction_v1",
         name="All-class directional (curvelet) basis d_seg reduction (circular-GT, self-orient UNVERIFIED)",
@@ -346,7 +368,7 @@ def build_curvelet_directional_basis_dseg_reduction_v1() -> CanonicalEquation:
         },
         units_in={},
         units_out={"dseg_reduction_fraction": "signed_fraction_of_baseline_dseg"},
-        empirical_anchors=(anchor,),
+        empirical_anchors=(anchor, anchor_owed16),
         predicted_vs_empirical_residual={"n96_circular_gt_curvelet_basis_dseg_UNVERIFIED_self_orient": 0.0},
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,

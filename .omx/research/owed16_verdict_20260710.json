@@ -1,0 +1,102 @@
+{
+  "composition": {
+    "active_levers": [],
+    "deferred_to_ab_protocol": true,
+    "measured": false,
+    "sign": null
+  },
+  "constraint_carved": "realized-through-R directional \u0394d_seg still OWED (3x SUM-over-RAM REFUSE under concurrency); MEASURED: self-orient RAM tax ~47 GiB (ON 71.5 vs OFF 24.5); wall-clock sec/ep >=120 (borrowed 42 was ~2.8x under). P9 remains BLOCKING.",
+  "emitted_at_utc": "2026-07-10T03:38:31Z",
+  "extra": {
+    "governor_refuses": 3,
+    "item2_dry_start": "governor-blocked; substitute anchor 118.8/121.9 s/ep mod32cap ckpt mtimes",
+    "off_ckpt_sha": "b1c31667",
+    "queue_ready": true
+  },
+  "is_negative": false,
+  "measured": true,
+  "reformulation_empty_reason": null,
+  "reformulation_queue": null,
+  "rows": [
+    {
+      "axis_tag": "[macOS-MLX research-signal]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": false,
+      "n_samples": 427,
+      "n_samples_reason": "mod32cap ep299->ep726 span; wall-clock/epoch THROUGHPUT (not a d_seg verdict); UPPER bound; v752 heavier => >=120 s/ep",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "levelset_n600_witness_mod32cap_20260706T115554Z",
+        "git_sha": "31ea1df1a",
+        "inputs_sha256": null,
+        "seed": null,
+        "tool": "mod32cap per-stage-ckpt mtime cadence"
+      },
+      "quantity": "sec_per_epoch",
+      "review_status": "unreviewed_recovery_written",
+      "units": "s/ep",
+      "value": 118.8
+    },
+    {
+      "axis_tag": "[advisory only]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": null,
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": null,
+        "git_sha": "31ea1df1a",
+        "inputs_sha256": null,
+        "seed": null,
+        "tool": "tools/witness_memory_preflight.py"
+      },
+      "quantity": "projected_peak_rss_selforient_ON",
+      "review_status": "unreviewed_recovery_written",
+      "units": "GiB",
+      "value": 71.5
+    },
+    {
+      "axis_tag": "[advisory only]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": false,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": null,
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": null,
+        "git_sha": "31ea1df1a",
+        "inputs_sha256": null,
+        "seed": null,
+        "tool": "tools/witness_memory_preflight.py"
+      },
+      "quantity": "projected_peak_rss_selforient_OFF",
+      "review_status": "unreviewed_recovery_written",
+      "units": "GiB",
+      "value": 24.5
+    }
+  ],
+  "schema_version": "verdict.v1",
+  "scope": {
+    "family_evidence": null,
+    "level": "formulation",
+    "scoped_to": "owed-16 self-orient ON-vs-OFF realized-through-R n600 A/B (bounded warm-start mod32cap ep650); BUILT+preflighted+load-validated, ON arm governor-blocked"
+  },
+  "stores_consulted": [
+    ".omx/research/negaudit_retests_c1_e5_20260709.md",
+    ".omx/research/philosophy_pass_v752_20260709.md",
+    "mod32cap run dir",
+    "tools/safe_run.py",
+    "CLAUDE.md P0 machine-crash gate"
+  ],
+  "verdict": "OWED-BLOCKED"
+}
