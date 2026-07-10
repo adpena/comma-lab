@@ -135,6 +135,30 @@ v8 Laguerre-generator design.
 - `HPC4DS/index.html` = Nielsen's "High-Performance Computing for Data Science" course — compute-facet
   adjacent (our MLX/Metal program #252) but a pedagogical course, not new witness math. Noted, not banked.
 
+## Paper #11 — Fisher-Rao + pullback SPD-cone distances between Gaussians (Nielsen, arXiv 2307.10644, 2023)
+Concrete SPD-matrix version of #7/#8: Fisher-Rao distance between multivariate normals (no closed form; fast
+approx) + a **pullback Hilbert projective-cone distance** on the SPD cone computable from **only the extreme
+(min/max) eigenvalues**. Motivating domain: **structure-tensor computer vision** + diffusion-tensor imaging.
+Connection (genuinely-new hook):
+- Multivariate normals ↔ SPD covariances; the Fisher metric on them IS the SPD-cone geometry. Our
+  Fisher/Hessian matrices are SPD; the pose section (#140) is a matrix.
+- **The boundary annulus anisotropy IS a structure-tensor field** (local gradient covariance elongated along
+  the boundary tangent) — the paper's exact object. The condition number λ_max/λ_min = the anisotropy = what
+  the Hessian preconditioner (paper #6, build in flight `a8fb1e5b`) already eigendecomposes. So the
+  Hilbert-cone anisotropy measure is NEAR-FREE on top of that build.
+- **GATED hook:** min/max-eigenvalue Hilbert-cone distance as a cheap anisotropy/conditioning diagnostic for
+  the boundary Hessian — composes with the preconditioner build; could feed S_R/margin refinement or the
+  preconditioner's where-to-apply decision. Gated on a measured check; not a new build. Reinforces §5/§7 of
+  `docs/paper/information_geometric_foundations.md`.
+
+## Cluster convergence note (honest)
+As of paper #11 the cluster is CONVERGING: each new reference is a more specialized/concrete version of the
+same SPD / Fisher-Rao / dually-flat / Bregman spine already captured by the foundations section. Marginal new
+signal per paper is diminishing; the thesis (witness = curved submanifold of a dually-flat affine
+(G,X)-structure) is stable. The buildable threads surfaced (Hessian preconditioning — in flight; VQ centroid;
+Bregman-power-diagram v8 generator; dual-orthogonality waterfilling diagnostic; distance-to-flip) are the
+extractable value; further papers in this vein reinforce rather than redirect.
+
 ## Honest verdict + routing
 - **Bank** (this note): the cluster is the rigorous SPINE — cite Nielsen (curved Bregman = witness on a
   non-affine chart; head-offset = Bregman projection) + Goldman (dually-flat = affine (G,X)-structure;
