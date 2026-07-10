@@ -14384,3 +14384,27 @@ cf-cache 43.2→0.07 GiB ⇒ peak 24.5 vs 89.6 ceiling = ~65 GiB free ⇒ unlock
 halves fire-now measurement wall-clock, gated #173) + free micro-batch/verdict-batch speedups; #296
 fp16-cf-cache lever now MOOT (existed only to fit self-orient). Triality: DSL/equations N/A (launch
 apparatus, [no-triality-lever]). Pointer 0.19108282 [contest-CPU] UNMOVED (apparatus/MEANS).
+
+### FEED-173-cleared (2026-07-10) — fleet-scaling HARD-BLOCKERS all RESOLVED by intervening work; concurrent 2-arm A/B is GO (proven by an ENFORCE-mode admission smoke) [no-triality]
+
+**Task #173 CLEARED.** The council (`council_v752_relaunch…`) deferred concurrency on "#173's 2 HIGH + 4 MED
+blockers UN-cleared." AUDIT verdict: **all 6 are RESOLVED by intervening work** (5 fully; H2 for the sanctioned
+path w/ a LOW documented control-plane-safe residual). Memo:
+`fleet_scaling_173_blocker_clearance_20260710.md`. **H1** (no committed-reservation ledger → N arms read same
+live-free → OOM, the literal 06-25 root cause) → the **SUM-over-RAM admission gate** (governor 07-03; registry
+records `projected_peak_gib`, admission sums Σ active-growth + new-peak ≤ adaptive ceiling) + **fcntl PENDING
+reservation** closing the launch-TOCTOU (commit `4ed373e96`, 07-06); **ENFORCE armed** (`admission_enforce.flag`
+after `governor_independent_review` → SAFE-TO-ENFORCE, reviewer≠author). **H2** (`_kill_pgrp` SIGTERM-only →
+bare arm un-sheddable) → safe_run SIGTERM→SIGKILL cascade + spawn_durable `--stop` escalation + fleet launcher
+MANDATES every arm wrapped `--rss-cap-mb` ⇒ no bare arm through the sanctioned path. **4 MED** (recon from the
+DAG residual line + review F1–F5): M1 throttle-efficacy→#246 full-tree SIGSTOP; M2 sub-floor `--min-free-gb 18`
+→advisory-only; M3 no `--rss-cap-mb`→mandated cap; M4 admission↔registration TOCTOU (F5)→fcntl reservation — all
+`4ed373e96`+#246. 102 tests pass. **Memory blocker DISSOLVED** by self-orient-OFF: real preflight = 24.5 GiB/arm
+⇒ 2×24.5=49 < 89.6 (preflight ceiling) < 117.76 (governor). **DECISIVE SMOKE (ENFORCE):** 2 governed sentinel
+launches @ real peak 24.5 → ADMIT/ADMIT (projected 75.9, headroom 18.8 under the DYNAMICAL #298 ceiling), 3rd @
+peak 45 → REFUSED rc=5 ("would push SYSTEM over ceiling"); rc 0/0/5 ✓, no orphan. **CONCURRENT A/B is GO.**
+RESIDUAL (op): memory_guard._kill_pgrp still SIGTERM-only (LOW, sanctioned-path-covered, NOT patched — vendored
+control-plane guard needs the 3-clean-pass gauntlet, don't risk the molt CP-kill class); + Contrarian's
+micro-batch-twin bit-identity n600 smoke before the A/B rides a pointer run (config-correctness, orthogonal).
+Triality: DSL/equations N/A ([no-triality-lever]; `adaptive_ceiling_admission_control_v1` already registered).
+Pointer 0.19108282 [contest-CPU] UNMOVED (apparatus/MEANS).
