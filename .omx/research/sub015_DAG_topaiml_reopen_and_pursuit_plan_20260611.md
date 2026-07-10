@@ -14408,3 +14408,29 @@ control-plane guard needs the 3-clean-pass gauntlet, don't risk the molt CP-kill
 micro-batch-twin bit-identity n600 smoke before the A/B rides a pointer run (config-correctness, orthogonal).
 Triality: DSL/equations N/A ([no-triality-lever]; `adaptive_ceiling_admission_control_v1` already registered).
 Pointer 0.19108282 [contest-CPU] UNMOVED (apparatus/MEANS).
+
+### FEED-410-microbatch-bitid (2026-07-10) — [no-triality-lever] Contrarian residual CLOSED: micro-batch twin bit-identity smoke → NO-GO for v7.5.2 pointer relaunch
+**Task #410** (operator-GO + T2 Contrarian revision): verify the `--micro-batch-pairs` batched twin is bit-identical to
+the sealed serial `--accum-pairs 8` path **before** the free speed lever rides the baseline pointer relaunch.
+**VERDICT: NOT bit-identical → micro-batch speedup NO-GO for the sealed v7.5.2 pointer relaunch.** Two independent
+MEASURED reasons, either decisive: **(1) STRUCTURAL** — sealed config sets `--seg-chroma-boundary-weight 0.1`, an
+UNROUTED leg; trainer L5892-5897 **hard-raises** `ValueError: --seg-chroma-boundary-weight>0 is not supported with
+--micro-batch-pairs>1`. MEASURED: ran sealed flag-set + `--micro-batch-pairs 2` + `--fused-r-kernel` → raised before any
+training. Pure config guard (`chroma>0 AND mb>1`) ⇒ **n-independent** (identical verdict n6/n600; no toy gap). Sealed
+config is **un-runnable** with micro-batch. **(2) NUMERICAL** — batched twin is fp-*equivalent* NOT bit-*identical*
+(reduction re-order: serial accumulate-then-divide vs one batched `mx.mean`; float add non-associative). Code says so:
+trainer L5388 "NOT bit-identical … trajectory-affecting"; module L16-19 "within fp tolerance"; test headers — MLX-CPU
+bit-exact (batch-independent reductions) but **MLX-GPU ~1e-3 pose-path matmul-tiling noise = the acknowledged
+non-bit-identity**. The pointer run trains on **GPU**. `--fused-r-kernel` (L70/#348) fixes the RENDER VJP scatter, NOT
+the batched-scorer pose reduction ⇒ does not rescue this drift. **MEASURED live (real frozen MLX scorer, this machine):**
+`test_levelset_micro_batch_loss` 70 passed (tol `<1e-4`, not exact); cograd real-path loss rel **1.015e-07**, grad rel
+group(0-3) 2.2e-05/4.3e-05, **tail group(4,5) 1.32e-04/5.85e-04** (tail exceeded its own `2e-4` headroom = pre-existing
+denominator-cancellation flakiness, NOT introduced here, reinforces non-bit-identity). Drift = EXPECTED reduction-order,
+NOT a bug ⇒ micro-batch is a legit **trajectory-affecting opt-in** (descends correctly) but NOT a drop-in bit-identical
+accelerator for a serial-validated config. **CONSEQUENCE:** pointer relaunch runs the sealed serial `--accum-pairs 8`
+path (micro-batch unset). Micro-batch stays a non-baseline A/B arm (avoid the 4 unrouted levers), validated by its own
+GPU trajectory A/B, never sold as free speedup. CONTAINMENT honored (fail-close demo setup-only via sanctioned
+`TAC_LAUNCH_GUARD_OK`/`TAC_ADMISSION_BYPASS_OK`, gt_n6 <5GB, scratch deleted; live run-dirs + sibling #409 surface
+untouched). Follow-up (test-owner): widen cograd tail-group tolerance to the reduction-noise class or use abs-deviation.
+Memo `microbatch_bit_identity_smoke_n600_20260710.md`. Triality: DSL/equations **N/A** (disposition not lever/law; the
+fp-tolerance identity already pinned by the 2 test suites). Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS).
