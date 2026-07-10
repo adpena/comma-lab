@@ -1,5 +1,7 @@
 # Eightfold SEAL standing checks — reusable crucible template (2026-07-09)
 
+STORES CONSULTED: design_philosophies_eightfold_20260709 memory (P1-P9 incl. the P9 no-proxy capstone) · operator_no_duplicate_data_archive_geometry_first_20260709 (clauses A/B) · verdict_scope_ladder memory · crucible-2 P6 seal-round history (tac.review_counter crucible2_v752, the 9-finding class record these checks generalize) · DAG FEED-eightfold-philosophies + FEED-p9-no-proxy · t5_crucible3 ORCHESTRATION_LEDGER standing failure-mode checks.
+
 **Operator GO 2026-07-09 "Encode all".** The eight design philosophies
 (`~/.claude/.../design_philosophies_eightfold_20260709.md`) become STRUCTURAL:
 P1 + P4 are automatable → warn-only preflight gates (`tac.confound_gates`,

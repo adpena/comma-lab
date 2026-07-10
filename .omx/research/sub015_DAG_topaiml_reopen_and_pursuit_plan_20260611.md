@@ -12472,3 +12472,11 @@ footprint · memo-sourced numbers) + the seal standing checks. Sister same-turn:
 (fd1ebf4c3 — P1 live 4, P4 live 1 incl. the VerdictTrendAlarm violator my own brief mislabeled passing;
 the gate re-derived, honest). Triality: DAG=this FEED; DSL/equations N/A (maxim/process law). Pointer
 0.19110 UNMOVED (means).
+
+<!-- FEED-p9/eightfold leg disposition: the FEED-p9-no-proxy commit (4497d52b8) + the #387 gates commit
+(fd1ebf4c3) are [no-triality]-class APPARATUS (maxim encoding + warn-only gates) whose commit messages
+omitted the literal marker — recorded here per the FEED-crucible2-seal-legs pattern. The "measured"
+tokens in them cite PRE-REGISTERED anchors (delta_R-category-error → P4_recess/R7 · MPS 23× → CLAUDE.md
+authority ladder · proxy-auth 350× → LANE-B · LEVER-4 at-chance → s_r_reachability lineage · gate live
+counts = gate states, not S_τ measurements) — no NEW EmpiricalAnchor is owed; registering one would
+duplicate existing anchors (clause A applied to the registry itself). # VERDICT_SCOPE_OK: disposition note, no verdict. -->
