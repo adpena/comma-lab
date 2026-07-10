@@ -1,0 +1,79 @@
+{
+  "axis": "[macOS-CPU advisory . NON-PROMOTABLE] . subset(16 strided pairs, non-authority)",
+  "pointer": "0.19110 UNMOVED (MEANS)",
+  "idx_stride": 37,
+  "idx": [
+    0,
+    37,
+    74,
+    111,
+    148,
+    185,
+    222,
+    259,
+    296,
+    333,
+    370,
+    407,
+    444,
+    481,
+    518,
+    555
+  ],
+  "alignment_maps_gtmargin_vs_cached": {
+    "ok": false,
+    "maxdiff": 11.810077667236328
+  },
+  "E5_fire_sR": {
+    "checkpoint": "mod32cap BEST_ep300 (self-orient ON, chroma, w_pose=0), realized verdict argmax",
+    "subset_realized_d_seg": 0.004785,
+    "n_flips": 15051,
+    "total_px": 3145728,
+    "sR_vs_flip": {
+      "pearson": 0.0761,
+      "auc": 0.7672,
+      "top5pct_jaccard": 0.0197,
+      "flipmass_captured_top5pct": 0.2214,
+      "flipmass_captured_top10pct": 0.3553
+    },
+    "w_fragility_vs_flip": {
+      "pearson": 0.4745,
+      "auc": 0.9909,
+      "top5pct_jaccard": 0.0928,
+      "flipmass_captured_top5pct": 0.9728
+    },
+    "neg_margin_vs_flip": {
+      "auc": 0.9909,
+      "flipmass_captured_top5pct": 0.9728
+    },
+    "sR_geometry": {
+      "sR_vs_margin_pearson": -0.3476,
+      "sR_vs_gradmargin_pearson": 0.3017,
+      "sR_vs_w_pearson": 0.2173
+    },
+    "texprox_anchor_baseline": {
+      "pearson_vs_sR": -0.033,
+      "top5pct_jaccard_vs_sR": 0.024,
+      "chance_jaccard": 0.026
+    },
+    "verdict_scope": "INSTANCE (16 strided pairs, ONE checkpoint) \u2014 first characterization row, NOT an n600 verdict"
+  },
+  "C1_transfer_ceiling": {
+    "realize": "GT L* palette-painted (per-class mean RGB @render-grid) -> R(bicubic-up->uint8->down) -> frozen CPU-torch SegNet",
+    "perfect_direct_partition_d_seg": 0.0,
+    "realized_d_seg_ceiling_F": 0.033683,
+    "per_class_realized": {
+      "Road": 0.018367,
+      "Lane": 0.151569,
+      "Undrivable": 0.002392,
+      "Movable": 0.395787,
+      "MyCar": 0.089998
+    },
+    "direct_partition_n600_iso_control": 0.007476,
+    "direct_partition_n600_directional": 0.003679,
+    "direct_partition_delta_pct": -50.8,
+    "interpretation": "F is the realized-axis floor of a PERFECT (d_seg=0) direct partition. If F >= the directional direct number, the -48% direct improvement lives BELOW the realized floor -> the direct-partition axis is a mirage under naive realization.",
+    "caveat": "palette=per-class-mean-RGB naive realization; a TRAINED-through-R RGB witness may beat it (chroma-slack). This is a CEILING on the naive realization, not a hard floor for the capstone.",
+    "verdict_scope": "INSTANCE (16 strided pairs); reproduces FEED-ah's ~0.005-0.008 with the canonical harness"
+  }
+}
