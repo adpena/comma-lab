@@ -136,26 +136,40 @@ def test_assert_dynamic_degrades_to_advisory():
 
 # ------------------------------------------- real-source integration ---------
 def test_real_receiver_source_consumed_set():
-    """The ACTUAL shipped _INFLATE_PY consumes exactly the known witness param set."""
+    """The ACTUAL shipped _INFLATE_PY consumes exactly the known witness param set.
+
+    #417 FIX LANDED: the receiver now ALSO consumes tex_trunk / out_tex_h / decoupled_head (the
+    forward mirrors the trainer MLX submodules, parity-gated in
+    tools/tests/test_receiver_bijection_v753_v8_parity.py). Pre-fix this test asserted those groups
+    were NOT consumed (the bug); it now asserts they ARE (the fix)."""
     bc = pytest.importorskip("levelset_byte_close_and_eval")
     v = gate.extract_consumed_vocabulary(bc._INFLATE_PY)
     assert not v.dynamic_access, "real receiver must be statically analyzable (full-strength gate)"
     for k in ("in_proj.weight", "film.weight", "out_sdf.weight", "out_tex.weight", "palette"):
         assert k in v.exact
     assert ("hidden.", ".weight") in v.patterns
-    # the #417 offenders are genuinely NOT consumed by the real receiver
-    assert not v.consumes("tex_trunk.w_tex")
-    assert not v.consumes("decoupled_head.w_in")
+    # #417: the formerly-orphaned groups are NOW consumed (fix half landed).
+    for k in ("tex_trunk.w_tex", "tex_trunk.bias", "out_tex_h.weight", "out_tex_h.bias",
+              "decoupled_head.w_in", "decoupled_head.w_film", "decoupled_head.w_out", "decoupled_head.b_out"):
+        assert v.consumes(k), f"receiver must now consume {k} (#417 fix)"
 
 
-def test_real_source_refuses_synthetic_tex_trunk_archive():
-    """The load-bearing proof: a base_order carrying tex_trunk is REFUSED by the real gate."""
+def test_real_source_consumes_tex_trunk_archive_after_417_fix():
+    """#417 fix half: a base_order carrying tex_trunk / decoupled_head now PASSES (consumed, not
+    orphaned). The gate still REFUSES a genuinely-unknown group (drift protection preserved)."""
     bc = pytest.importorskip("levelset_byte_close_and_eval")
     valid = ["in_proj.weight", "in_proj.bias", "film.weight", "film.bias",
              "hidden.0.weight", "hidden.0.bias", "out_sdf.weight", "out_sdf.bias",
              "out_tex.weight", "out_tex.bias", "palette"]
     # valid witness passes
     gate.assert_receiver_bijection(valid, bc._INFLATE_PY, context="real-clean")
-    # add the v7.5.3 texture-trunk group -> REFUSE
+    # #417: the tex_trunk + decoupled_head groups are now CONSUMED -> no longer refused.
+    gate.assert_receiver_bijection(
+        [*valid, "tex_trunk.w_tex", "tex_trunk.bias", "out_tex_h.weight", "out_tex_h.bias",
+         "decoupled_head.w_in", "decoupled_head.b_in", "decoupled_head.w_film", "decoupled_head.w_hid",
+         "decoupled_head.b_hid", "decoupled_head.w_out", "decoupled_head.b_out"],
+        bc._INFLATE_PY, context="real-v753-v8-consumed")
+    # drift protection intact: a genuinely-unknown counted group is STILL refused.
     with pytest.raises(gate.ReceiverBijectionError):
-        gate.assert_receiver_bijection([*valid, "tex_trunk.w_tex"], bc._INFLATE_PY, context="real-orphan")
+        gate.assert_receiver_bijection([*valid, "some_future_unmirror.weight"], bc._INFLATE_PY,
+                                       context="real-orphan")

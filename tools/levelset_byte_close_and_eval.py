@@ -365,6 +365,11 @@ def _load_levelset_ckpt(
     else:
         cfg["render_h"], cfg["render_w"] = int(rh[0]), int(rh[1])
     cfg["lane_edge_weight"] = float(raw_cfg.get("__cfg_lane_edge_weight", 0.0))  # provenance only
+    # #417 texture trunk (#395): the boundary-annulus attenuation power the receiver forward needs
+    # (default 0.0 => no attenuation; matches the trainer default). Shapes for tex_trunk/out_tex_h/
+    # decoupled_head come from the param arrays; only annulus_power is a non-shape scalar the receiver
+    # must know. Absent (pre-#395 ckpt / shared head) => 0.0 => no manifest key emitted (byte-identical).
+    cfg["texture_trunk_annulus_power"] = float(raw_cfg.get("__cfg_texture_trunk_annulus_power", 0.0))
     missing = [k for k in ("__cfg_activation", "__bank_n_scales", "__render_hw") if k not in raw_cfg]
     if missing:
         print(f"[WARN] npz omitted cfg keys {missing} (older save block) -> using inferred/defaults; "
@@ -438,7 +443,12 @@ def build_levelset_blob(
     # weight blob. Older saves leaked them into `params`, so they were int8-quantized into the base
     # blob as DEAD counted bytes (inflate never reads them from base). Exclude them here so the base
     # blob is INR-only and the ξ rate is attributed cleanly to the pose-carrier section (#238).
-    base_order = [k for k in params if k != "code" and not k.startswith("pose_carrier.")]
+    # #417: exclude the rule-118 FREE tables (``B`` / ``*_B`` -- e.g. the tex_trunk ``bank_B`` Gabor
+    # bank) from the COUNTED base blob, EXACTLY as the canonical quantize_levelset_blob does (they are
+    # regenerated free at decode from cfg, never stored -> a 4.7M-value bank would else be counted as
+    # dead int8 rate). Shared-head witnesses carry no ``_B`` key => this is a no-op => byte-identical.
+    base_order = [k for k in params if k != "code" and not k.startswith("pose_carrier.")
+                  and not (k == "B" or k.endswith("_B"))]
 
     # #417 FAIL-CLOSED receiver-consumption bijection gate (NO-FAKE #8). Every COUNTED base
     # param MUST be consumed by the receiver -- the _INFLATE_PY forward -- else it pays rate
@@ -507,6 +517,11 @@ def build_levelset_blob(
     # inflate reproduces the coverage raster + composite decode-consistently (rule 118 FREE rasterizer).
     if lane_band_bytes is not None and lane_manifest is not None:
         manifest["lane_render_band"] = lane_manifest
+    # #417 texture trunk (#395): the ONLY non-shape config its receiver forward needs is the annulus
+    # power (default 0.0 => no boundary attenuation). Emitted ONLY when tex_trunk params are counted, so
+    # a shared-head witness's manifest JSON is BYTE-IDENTICAL (the receiver defaults absent -> 0.0).
+    if any(k.startswith("tex_trunk.") for k in base_order):
+        manifest["texture_trunk_annulus_power"] = float(cfg.get("texture_trunk_annulus_power", 0.0))
     # #205 warp-real-luma pose carrier (6th block). Manifest flag gates the READ (so the reader
     # knows to expect the trailing block); default-off -> byte-identical to the pre-#205 grammar.
     if pose_carrier_bytes is not None and pose_carrier_manifest is not None:
@@ -1195,7 +1210,72 @@ def _in_proj_h0(P, feats, m):
         return _act(np.asarray(feats, np.float64) @ P["in_proj.weight"].T + P["in_proj.bias"], *kw)
 
 
-def _outputs_from_h0(P, h0, code_row, m, want_rgb, want_lane=False):
+# --- #417 receiver-consumption bijection: v7.5.3 tex_trunk / out_tex_h + v8 decoupled_head. --------
+# AUTO-DETECTED OPTIONAL branches (the film_pl/concat_pl idiom): each fires ONLY when the group's param
+# keys are present in P. A shared-head witness (none present) => the forward is BYTE-IDENTICAL (the new
+# branches are skipped). Each mirrors the trainer's MLX submodule OP-FOR-OP (parity-gated in
+# tools/tests/test_receiver_bijection_v753_v8_parity.py): out_tex_h = the #395 A2 widened texture head
+# (hidden->N->3 ReLU MLP); tex_trunk = the #395 band-designed Gabor texture trunk (bank REGENERATED
+# free at decode, rule 118; only w_tex/bias are counted); decoupled_head = the v8 B1 K independent
+# per-class DECOUPLED partition fields (replace the shared out_sdf phi). Without these branches those
+# COUNTED groups paid rate but were INERT through R (a FAKE lever verdict, NO-FAKE #8) -- #417 fix half.
+_TEX_BANK = {}  # cache the FREE Gabor bank per (render_h, render_w) -- regenerated, never stored.
+
+
+def _tex_trunk_bank(rh, rw):
+    # op-for-op mirror of tac.boundary_math.texture_trunk.build_gabor_bank_numpy with the DEFAULT
+    # TextureBandSpec: periods {4,6,8} render-px x orientations {0,45,90,135}deg x cos/sin quadrature
+    # => F=24. band_hi does NOT change bank content (periods are the fixed dataclass default), so ONLY
+    # (H,W) parametrize the bank -> regenerable free (rule 118). Pixel coords row-major (x fastest),
+    # matching _coords -> the same per-pixel ordering the softmax masks use.
+    periods = (4.0, 6.0, 8.0); orients = (0.0, 45.0, 90.0, 135.0); phases = (0.0, 0.5 * np.pi)
+    yy, xx = np.mgrid[0:int(rh), 0:int(rw)]
+    xf = xx.astype(np.float64).ravel(); yf = yy.astype(np.float64).ravel()
+    cols = []
+    for p in periods:
+        for o in orients:
+            th = np.radians(o); proj = xf * np.cos(th) + yf * np.sin(th)
+            base = 2.0 * np.pi * proj / p
+            for ph in phases:
+                cols.append(np.cos(base - ph))
+    return np.stack(cols, axis=-1).astype(np.float32)  # (P, F=24)
+
+
+def _tex_trunk_forward(bank, w_tex, bias, soft, n_classes, annulus_power):
+    # op-for-op mirror of texture_trunk_numpy_forward: per-class band texture PLACED by the softmax
+    # masks. bank (P,F); w_tex (F,K,3); bias (K,3); soft (P,K) -> (P,3) additive PRE-sigmoid term.
+    bank = np.asarray(bank, np.float64); w_tex = np.asarray(w_tex, np.float64)
+    soft64 = np.asarray(soft, np.float64)
+    class_tex = np.einsum("pf,fkc->pkc", bank, w_tex) + np.asarray(bias, np.float64)[None]  # (P,K,3)
+    tex = np.einsum("pk,pkc->pc", soft64, class_tex)  # (P,3) placement-aware by construction
+    if annulus_power > 0.0:
+        peak = soft64.max(axis=-1); frac = 1.0 / float(n_classes)
+        g = np.clip((peak - frac) / (1.0 - frac), 0.0, 1.0) ** float(annulus_power)
+        tex = tex * g[..., None]
+    return tex
+
+
+def _decoupled_phi(P, feats, code_row):
+    # op-for-op mirror of tac.boundary_math.decoupled_field.decoupled_field_numpy_forward (single-pair)
+    # = the v8 B1 K INDEPENDENT per-class fields (relu; the trainer hardcodes activation="relu").
+    # Replaces the shared out_sdf(h) partition phi; reads the SAME coord feats the trunk in_proj reads
+    # (spec in_feat == in_proj in-dim). Shapes (K,I,H / K,M,2LH / K,L,H,H / ...) come from the loaded P.
+    w_in = P["decoupled_head.w_in"]; b_in = P["decoupled_head.b_in"]          # (K,I,H),(K,H)
+    w_film = P["decoupled_head.w_film"]; w_hid = P["decoupled_head.w_hid"]    # (K,M,2LH),(K,L,H,H)
+    b_hid = P["decoupled_head.b_hid"]; w_out = P["decoupled_head.w_out"]; b_out = P["decoupled_head.b_out"]
+    kk = int(w_hid.shape[0]); _ell = int(w_hid.shape[1]); hh = int(w_hid.shape[2])
+    coord = np.asarray(feats, np.float64); code = np.asarray(code_row, np.float64)
+    h0 = np.maximum(np.einsum("pi,kih->pkh", coord, w_in) + b_in[None], 0.0)  # (P,K,H) relu
+    film = np.einsum("m,kmf->kf", code, np.asarray(w_film, np.float64)).reshape(kk, _ell, 2, hh)
+    hcur = h0  # (P,K,H)
+    for li in range(_ell):
+        pre = np.einsum("pkh,khj->pkj", hcur, w_hid[:, li]) + b_hid[:, li][None]
+        scale = 1.0 + film[None, :, li, 0, :]; shift = film[None, :, li, 1, :]
+        hcur = np.maximum(pre * scale + shift, 0.0)  # relu
+    return np.einsum("pkh,kh->pk", hcur, w_out) + b_out[None]  # (P,K)
+
+
+def _outputs_from_h0(P, h0, code_row, m, want_rgb, want_lane=False, feats=None):
     # op-for-op mirror of levelset_rgb_forward_numpy AFTER in_proj. h0 = the float32 in_proj act.
     # want_rgb=False -> return (phi, None) skipping the rgb head (out_tex/palette/softmax/sigmoid do
     # NOT feed phi, so argmax(phi) is identical) -- used by the self-orient fixed point.
@@ -1213,6 +1293,12 @@ def _outputs_from_h0(P, h0, code_row, m, want_rgb, want_lane=False):
         # witness) => both branches skipped => BYTE-IDENTICAL to the pre-LEVER-A byte-close forward.
         _has_film_pl = any(str(k).startswith("film_pl.") for k in P)
         _has_concat = any(str(k).startswith("concat_pl.") for k in P)
+        # #417 AUTO-DETECT (absent => shared-head byte-identical): the widened texture head, the band
+        # texture trunk, the v8 decoupled partition fields. Each key is a LITERAL P[...] read below, so
+        # the receiver-consumption bijection gate sees them as CONSUMED (zero orphans for those groups).
+        _has_out_tex_h = "out_tex_h.weight" in P
+        _has_tex_trunk = "tex_trunk.w_tex" in P
+        _has_decoupled = ("decoupled_head.w_in" in P) and feats is not None
         h = h0
         for li in range(m["n_hidden"]):
             scale = 1.0 + film[li, 0]
@@ -1225,13 +1311,36 @@ def _outputs_from_h0(P, h0, code_row, m, want_rgb, want_lane=False):
             if _has_concat:
                 pre = pre + (cr @ P["concat_pl.%d.weight" % li].T + P["concat_pl.%d.bias" % li])
             h = _act(pre, *kw)
-        phi = h @ P["out_sdf.weight"].T + P["out_sdf.bias"]
+        # PARTITION phi: v8 decoupled per-class fields when present (+ feats supplied), else the shared
+        # out_sdf(h). The shared trunk h is STILL computed above (out_tex reads it) -- only phi changes.
+        if _has_decoupled:
+            phi = _decoupled_phi(P, feats, code_row)
+        else:
+            phi = h @ P["out_sdf.weight"].T + P["out_sdf.bias"]
         if not want_rgb:
             return phi.astype(np.float32), None
-        tex = h @ P["out_tex.weight"].T + P["out_tex.bias"]
+        # TEXTURE head: #395 A2 widened (hidden->N->3 ReLU MLP) when out_tex_h present, else the linear
+        # out_tex. Mirror of the trainer's single _tex(h) site (both rgb + lane color route through it).
+        if _has_out_tex_h:
+            _th = np.maximum(h @ P["out_tex_h.weight"].T + P["out_tex_h.bias"], 0.0)  # relu
+            tex = _th @ P["out_tex.weight"].T + P["out_tex.bias"]
+        else:
+            tex = h @ P["out_tex.weight"].T + P["out_tex.bias"]
         z = phi / float(m["softmax_temp"]); z = z - z.max(-1, keepdims=True)
         soft = np.exp(z); soft = soft / soft.sum(-1, keepdims=True)
-        rgb = (1.0 / (1.0 + np.exp(-(soft @ P["palette"] + tex)))) * 255.0
+        # TEXTURE TRUNK (#395): ADD the band texture PLACED by the SAME softmax masks, into the SAME
+        # pre-sigmoid term as out_tex (trainer _compose_rgb). Bank regenerated FREE (rule 118). Guarded
+        # so the shared-head pre-sigmoid stays EXACTLY `soft@palette + tex` (no `+0.0`) => byte-identical.
+        _pre = soft @ P["palette"] + tex
+        if _has_tex_trunk:
+            _rh, _rw = int(m["render_h"]), int(m["render_w"])
+            _bank = _TEX_BANK.get((_rh, _rw))
+            if _bank is None:
+                _bank = _tex_trunk_bank(_rh, _rw); _TEX_BANK[(_rh, _rw)] = _bank
+            _pre = _pre + _tex_trunk_forward(
+                _bank, P["tex_trunk.w_tex"], P["tex_trunk.bias"], soft, int(soft.shape[-1]),
+                float(m.get("texture_trunk_annulus_power", 0.0)))
+        rgb = (1.0 / (1.0 + np.exp(-_pre))) * 255.0
         lane_rgb = margin = None
         if want_lane:
             lc = int(m.get("lane_render_band", {}).get("lane_cls", 1))
@@ -1630,7 +1739,7 @@ def _render_pair(pi):
         for _ in range(int(m["so_iters"])):
             feats = np.concatenate([curv, dirf], axis=-1)
             _h0_it = _in_proj_h0(P, feats, m)
-            phi, _ = _outputs_from_h0(P, _h0_it, code[2 * pi + 1], m, False)
+            phi, _ = _outputs_from_h0(P, _h0_it, code[2 * pi + 1], m, False, feats=feats)
             am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
             if prev_am is not None and np.array_equal(am, prev_am):
                 _h0_conv = _h0_it  # converged: feats frozen from here -> this h0 IS the final h0 (bit-exact reuse)
@@ -1660,17 +1769,17 @@ def _render_pair(pi):
         #                    -- NO stored keyframe (rule-118: the render is FREE, only xi/H COUNTED).
         if fk == 0 and pcar is not None and pi < int(pcar["hdr"]["n_pairs"]):
             if pcar["hdr"].get("pose_carrier_mode") == "store_nothing":
-                _phi0, rgb0 = _outputs_from_h0(P, h0, code[2 * pi + 0], m, True)
+                _phi0, rgb0 = _outputs_from_h0(P, h0, code[2 * pi + 0], m, True, feats=feats)
                 src0 = _R(rgb0, rh, rw, ch, cw).astype(np.float64)  # witness frame0 render, camera-native
                 frames.append(_pcar_warp_f0(src0, pcar["H"][pi], ch, cw).tobytes())
             else:
                 frames.append(_pcar_frame0(pcar, pi, ch, cw).tobytes())
             continue
         if band:
-            _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True)
+            _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True, feats=feats)
             rgb = _lane_composite(rgb, lane_rgb, cov_flat, margin, lane_hdr)
         else:
-            _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True)
+            _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, feats=feats)
         frames.append(_R(rgb, rh, rw, ch, cw).tobytes())
     fb = _G["framebytes"]
     with open(_G["dst"], "r+b") as f:

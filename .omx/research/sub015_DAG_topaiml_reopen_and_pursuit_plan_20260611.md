@@ -14704,3 +14704,39 @@ to read tex_trunk/decoupled_head) stays owned by #395/#398 — until then the ga
 scored A/B. **Triality:** DAG = THIS FEED; DSL **N/A** (apparatus gate, no witness lever); equations **N/A**
 (structural code-fact). Memory: [[receiver-consumption-bijection-counted-but-inert-weight-groups]]. Pointer
 0.19108282 UNMOVED — protects a FUTURE row from being fake.
+
+---
+
+### FEED-417-receiver-bijection-FIX (2026-07-10) — the #417 two-landing's FIX HALF landed; v7.5.3/v8 scored A/B UNBLOCKED
+
+**SIGNAL.** The #417 SELF-PROTECT gate (`tools/levelset_receiver_bijection_gate.py`) was fail-closing every future
+v7.5.3/v8 byte-close because the receiver (`_INFLATE_PY` in `tools/levelset_byte_close_and_eval.py`) COUNTED but
+never CONSUMED `tex_trunk.*` (#395), `out_tex_h.*` (#395 A2), `decoupled_head.*` (#398 v8) — a FAKE lever verdict
+(NO-FAKE #8: rate paid, control rendered through R). Operator P0: land the FIX half.
+
+**DIAGNOSTIC (fix, parity-proven, not asserted).** Taught the receiver numpy forward to consume all three groups
+as AUTO-DETECTED optional branches (the film_pl/concat_pl idiom): `_tex_trunk_forward` + `_tex_trunk_bank`
+(regenerates the FREE Gabor bank, rule 118 — `base_order` now excludes `B`/`*_B` like `quantize_levelset_blob`, so
+`tex_trunk.bank_B` is not a 4.7M-value dead counted byte), the `out_tex_h` widened-head branch (relu MLP hidden→N→3),
+and `_decoupled_phi` (v8 B1 block-diagonal per-class fields — `feats` threaded into all 4 `_outputs_from_h0` call
+sites; replaces the shared out_sdf phi). Each mirrors the trainer MLX submodule OP-FOR-OP.
+
+**RESPONSE (MEASURED, macOS advisory · NON-PROMOTABLE).** `tools/tests/test_receiver_bijection_v753_v8_parity.py`
+(8 tests, all green): isolated relmax vs the ACTUAL `make_texture_trunk_mlx` / `make_decoupled_field_head_mlx` =
+**7.0e-4 (tex_trunk), 7.5e-4 (decoupled)**; regenerated bank vs `bank_B` < 1e-6; end-to-end compose (through
+softmax→palette→sigmoid*255) = 1.2e-3 / 1.4e-3 / **3.2e-3** (float32-level, <~1 uint8/255 — NOT bit-exact, per the
+numpy-fp32-authority discipline). **SHARED-HEAD byte-close BYTE-IDENTICAL** (real witness blob sha 693a76912d9d…
+unchanged vs HEAD; default-off branches provably inert). Gate now sees all 11 keys CONSUMED (zero orphans) and
+stays clean on 78 real shared-head witnesses; the 2 stale gate tests (encoding the OLD unconsumed=bug behavior)
+were updated to the fixed reality + a drift-protection assert kept (an unknown group is STILL refused).
+
+**Scope honesty (verdict ladder).** All 3 groups FULLY mirrored + parity-proven for the COMPOSITION forward — which
+IS what the byte-close receiver renders, so this completely unblocks the scored A/B. v8's residual coder / paint
+reconciliation (1b/2) is a SEPARATE future byte-close carrier, not covered (nor needed for the composition-forward
+A/B). NO group flagged owed.
+
+**Triality:** DAG = THIS FEED. DSL **N/A** (receiver-forward apparatus, not a witness lever). Equations LANDED:
+`receiver_forward_parity_v753_v8_v1` (3 MEASURED anchors) in
+`src/tac/canonical_equations/receiver_forward_parity_v753_v8_20260710.py`. Memory:
+[[receiver-consumption-bijection-counted-but-inert-weight-groups]] updated with fix status. Pointer 0.19108282
+UNMOVED — this makes a FUTURE v7.5.3/v8 scored row REAL (no longer the fake control), it moves nothing itself.
