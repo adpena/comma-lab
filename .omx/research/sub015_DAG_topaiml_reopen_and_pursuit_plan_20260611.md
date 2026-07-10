@@ -13775,7 +13775,7 @@ number the code has not honored (NO-FAKE). The pre-registered kill-gate (`decoup
   0.28146 > ON 0.27789 > OFF 0.27860). All |Δ| ≤ 1.81% = INSTANCE-level (single-seed, noise floor
   UNMEASURED, P2); but the −48% direct-partition claim predicts along-heavy ≫ OFF — the disconfirmation
   direction is robust.
-- **VERDICT (NO-GO; FORMULATION scope):** verdict_scope: formulation — warm-start rebalanced directional allocation (freq-along 26, lane_carried) on this trunk; from-scratch directional formulation remains the only uncovered arm (the pilot tests it). The freq-along-heavy rebalance provides **NO realized d_seg
+- **VERDICT (NO-GO; FORMULATION scope):** verdict_scope: formulation — warm-start rebalanced directional allocation (freq-along 26, lane_carried) on this trunk; from-scratch directional formulation remains the only uncovered arm (the pilot tests it). untested formulations / alternatives: from-scratch self-orient (live pilot lineage) · FINER++/step-native activation arms (#310) · IGA boundary-tangent NTK targeting (#309) · v8 per-class directional carriers (E-events) · curvelet-basis-at-from-scratch. The freq-along-heavy rebalance provides **NO realized d_seg
   benefit**; the owed-16 "wrong-allocation" explanation is **REFUTED** — realized directional
   contribution ≈ 0 is **ROBUST to allocation**, so the −48%→~0 direct-partition→realized gap is NOT an
   allocation problem. Only uncovered directional formulation remains **from-scratch**.
@@ -14057,3 +14057,17 @@ crucible_v752 launch path + the live run dir `levelset_v752_pilot_20260710T15410
   removal-WORTH ablation, not an add-back-GAIN. WORTH ≠ GAIN (S5-N10); the rung + pre-registered
   PAYS/WASH/WORSE rule is the missing instrument. Two independent agents converged on this
   (`chroma_rung_design_20260710.md` + decision record §9 `04e4e6703`).
+
+### FEED-legdisposition-0710c (2026-07-10) — triality leg record for three flagged commits
+- **click-polish #399 phase-2 (OOM-safe fused chunked render+score):** TOOL/search apparatus, not a
+  lever — DSL leg N/A (no trainer flag, no config surface; stated). equations leg =
+  deferred-to-first-measured-row (the Modal n600 exact row mints the anchor; nothing measured yet).
+- **DAG FEED-advisory-harvest commit:** this commit IS the DAG leg; its sibling commit `74815c790`
+  LANDED the equations leg (3 anchor extensions on existing homes + 1 honest FORMALIZATION_PENDING),
+  and the DSL disposition (no lever owed; receiver/scorer-structure facts) is stated inside the FEED.
+  All three legs accounted across the pair.
+- **CRASH FIX (should_ship_banked_r1 interface, run 154100Z died ep1):** bug fix on the EXISTING
+  PoseFinishConditioningGate lever's runtime path — no lever/flag/curriculum change → DSL leg N/A
+  (the lever's DSL surface is unchanged and correct; the defect was interface plumbing). equations
+  leg N/A (no measured law; a crash repaired). verdict_scope: instance — one composed-code interface
+  crash, fixed with a both-modes test; not a verdict on any method.
