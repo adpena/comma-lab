@@ -14255,3 +14255,13 @@ birth-completion/tail/polyak arm-vs-fire distinction relies on setup-vs-ramp/beg
 TRIALITY: display/apparatus class [no-triality-lever] — DSL = N/A (renders the DSL-derived schedule, adds
 no lever/flag); equations = N/A (observability, score-neutral). Pointer contest-CPU 0.19108282 UNMOVED
 (display-only; MEANS).
+
+### FEED-legdisposition-dashpanel (2026-07-10) — drift-detector closure for 8874f3c1b + 5a4550f88
+Hook flagged both commits as DSL-leg-requiring; DISPOSITION: display/apparatus class, [no-triality-lever].
+DSL = N/A-with-rationale: `tools/dashboard_curriculum_panel.py` READS the DSL (`witness_dsl.schedule_readback.read_schedule`)
++ launch.sh flags + emitted event rows and RENDERS them — it defines no lever/flag/curriculum semantics
+(AST-guarded: no hardcoded epoch literals). Equations = N/A (score-neutral observability). The commit
+messages omitted the literal [no-triality] token — that omission, not a missing leg, tripped the gate.
+MEMORY.md line: N/A — no new durable finding beyond what 5a4550f88's FEED records; the three telemetry
+gaps it surfaced (ladder_birth_complete row · should_ship_banked_r1 emission · uniform {lever}_engage
+schema) are ROUTED to task #404 (telemetry P0 agent, in flight). Pointer 0.19108282 UNMOVED (display-only; MEANS).
