@@ -12919,3 +12919,12 @@ carried it). No DSL/equation owed.
 **LAUNCH-GATE ADDITIONS (→ #385 brief philosophy column):** owed-16 basis-reality A/B **[BLOCKING the claim]** · dedup audit @ byte-close (clause A) · end-to-end tolerance ledger (P3) · seg temporal section (P6) · seg-carrier/basis min-dim-or-waterfill (clause B, folds OI-4, uses #336) · 5-lever composition-sign matrix (P12) · noise-floor+seed caveat (P2) · P11 harm-tagging.
 
 **verdict_scope (self):** an AUDIT of conformance issues NO rendered research kill — every grade is an as-built-vs-encoded-philosophy OBSERVATION, narrowest-supported. `# VERDICT_SCOPE_OK: conformance audit, no kill.` **DSL leg N/A** (no lever/curriculum surface touched — read-only pass; findings route to launch-gates). **equations leg N/A** (no new measured relation — a conformance read). **DAG leg = this FEED.** `[no-triality]`. Pointer 0.19110 UNMOVED — MEANS; it hands the dual-chain brief an honest per-philosophy column + one BLOCKING optimal-form-claim gate the sealed-before-P9 chain could not carry.
+
+**Leg-disposition note (2026-07-09, 8fb0ad70a negaudit re-tests):** equations leg SATISFIED
+substantively — 2 EmpiricalAnchors appended to `.omx/state/canonical_equations_registry.jsonl`
+(`margin_saliency_reachability_replaces_texture_proxy_v1` + `curvelet_directional_basis_dseg_reduction_v1`);
+the detector greps `src/tac/canonical_equations/` module files only, hence the false-negative. DSL leg
+N/A — no lever added/changed (`--margin-saliency-reachability` already a registered DSL lever; this was
+$0 field-analysis CHARACTERIZATION, ever_fired still False for the training path). DAG leg =
+FEED-negaudit-retests (in-commit). MEMORY durable line updated (L25 revision: −48% = proxy-axis,
+realized transfer unverified w/ crash receipt, over-credited).
