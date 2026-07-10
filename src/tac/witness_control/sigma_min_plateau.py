@@ -579,6 +579,51 @@ def disengaged_alarm_row(epoch: int, *, reason: str, canary_passed: bool | None,
     }
 
 
+def resolve_pose_finish_engage(*, cond_fired: bool, backstop_hit: bool,
+                               degenerate: bool) -> tuple[bool, bool]:
+    """P0-2 MINIMUM-VIABLE backstop repair (fresh-eyes advisory 2026-07-10; operator-directed): the
+    ``--pose-finish-start-epoch`` epoch backstop must NOT override a DEGENERATE
+    (``should_ship_banked_r1``) classification — the sealed fallback contract (SPEC_v752 §183-187)
+    says a degenerate conditioning signal ships the banked R1 artifact DISENGAGED; the prior
+    ``cond_fired OR ep >= backstop`` boolean silently reinterpreted "banked fallback" as "start joint
+    descent anyway" (observed live: owed16v2 arm, 8 DEGENERATE_GUARD_TRIPPED rows with
+    should_ship_banked_r1=true at the same epochs the backstop would have engaged).
+
+    Returns ``(engage, banked_r1_selected)``:
+      * a REAL conditioning fire always engages (the latch is monotone and only latches on a real
+        plateau — a fired detector is by definition non-degenerate at the latch);
+      * the backstop engages ONLY when the detector state is NOT degenerate (healthy-but-never-fired
+        at the backstop epoch = the fail-safe engage, unchanged);
+      * degenerate at the backstop epoch ⇒ NO engage + ``banked_r1_selected=True`` (the caller emits
+        the loud typed row ONCE and ships the banked R1 dxi path).
+    The FULL ARMED→ENGAGED→ACCEPTED/REGRESSED_ROLLBACK/BANKED_COMPLETE_ARTIFACT state machine is the
+    owed end state (advisory P0-2); this is the minimum-viable guard. PURE / unit-tested."""
+    if cond_fired:
+        return True, False
+    if backstop_hit and degenerate:
+        return False, True
+    return bool(backstop_hit), False
+
+
+def backstop_banked_r1_row(epoch: int, *, backstop_epoch: int, classification: str | None,
+                           n_points: int) -> dict:
+    """The LOUD typed row for the P0-2 banked-R1 backstop decision: the epoch backstop was reached
+    while the conditioning signal is DEGENERATE ⇒ pose-finish stays DISENGAGED and the banked R1 dxi
+    path is selected (never a silent reinterpretation). Emitted ONCE at the decision epoch."""
+    return {
+        "stage": "confound_alarm", "alarm": "pose_finish_backstop_overridden_banked_r1",
+        "epoch": int(epoch), "backstop_epoch": int(backstop_epoch),
+        "classification": classification, "should_ship_banked_r1": True,
+        "n_sigma_min_points": int(n_points),
+        "note": ("--pose-finish-start-epoch backstop reached while the σ_min conditioning signal is "
+                 "DEGENERATE (guard tripped: plateau indistinguishable from oscillation) → per the "
+                 "sealed fallback contract (SPEC_v752 §183-187) pose-finish stays DISENGAGED and the "
+                 "banked R1 dxi (0.001610, 7.2KB) ships on the seg-converged EMA. The backstop may "
+                 "force a DECISION; it may not reinterpret 'banked fallback' as 'engage anyway'."),
+        "axis": "[macOS-MLX advisory] NON-PROMOTABLE",
+    }
+
+
 def format_gate_line(row: dict) -> str:
     """One-line digest formatter for a pose-gate observer / disengaged-alarm row."""
     if row.get("alarm") == "pose_finish_disengaged_shipped_banked_r1":

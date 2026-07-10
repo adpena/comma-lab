@@ -2853,11 +2853,17 @@ def compile_crucible_v7_config(
 #     silently override 6→26 (that contradicts crucible_v7's defended lane_offloaded design) NOR
 #     silently accept 6 (that contradicts the sealed doc). Resolution is a launch decision for the
 #     operator/council at the P8 wall (SPEC_v752 §OPEN-ITEMS OI-4).
-#   * owed-1 --pose-finish-engage-on: the repaired pose-gate rolling-slope trigger flag does NOT
-#     exist yet (grep-confirmed; being BUILT concurrently by the #383 pose-gate agent). It is OWED
-#     item 1 (launch-blocking). The program uses the EXISTING --pose-finish-start-epoch fail-safe
-#     backstop (inherited from crucible_v7's pose_finish stage) + --jacobian-basin-telemetry
-#     (default True). Do NOT stub the engage-on flag here.
+#   * owed-1 --pose-finish-engage-on: #383 BUILT it AFTER the seal (the flag exists in the trainer
+#     argparse; the DSL PoseFinishConditioningGate lever exists in curriculum_dsl — the stale
+#     "does NOT exist yet" state of this comment was fresh-eyes advisory P0-1). Disposition
+#     (operator-directed 2026-07-10): the SEALED derive/compile artifacts stay TRANSCRIPTIONS
+#     (engage-on NOT composed here — the seal predates the build), and the LAUNCHER-FACING program
+#     (compile_crucible_v752_launch_config) COMPOSES PoseFinishConditioningGate (emits
+#     --pose-finish-engage-on sigma_min_plateau; the expected-active-lever manifest enforces it at
+#     compile + launcher gates). --pose-finish-start-epoch stays the fail-safe backstop;
+#     --jacobian-basin-telemetry (default True) is the σ_min source. P0-2 sister: the backstop
+#     cannot override a DEGENERATE classification (resolve_pose_finish_engage in
+#     tac.witness_control.sigma_min_plateau).
 #   * Ladder rungs (σ_cc′/--length-sigma-matrix · margin-hinge · chroma · step-native): NOT launch-1
 #     (SPEC_v752 §4 A/B ladder) — each is its own increment A/B, never composed into the first trunk.
 #
@@ -2924,6 +2930,26 @@ _CRUCIBLE_V752_SELF_ORIENT_OFF_REMOVE: tuple = (
     "--self-orient", "--n-dir-freqs", "--freq-across", "--freq-along", "--reorient-every",
 )
 _CRUCIBLE_V752_DIRECTIONAL_LEVER_NAME: str = "FEED_07a_directional_basis_rebalance"
+
+# (fresh-eyes advisory P0-1 required gate, operator-directed 2026-07-10) the EXPECTED-ACTIVE-LEVER
+# manifest for the launcher-facing crucible_v752 program: the composed lever set MUST equal this pinned
+# tuple — checked fail-closed at COMPILE (compile_crucible_v752_launch_config) AND at the LAUNCHER
+# (tools/launch_witness_run.py reads it back off dsl_program_manifest["expected_active_levers"]) so a
+# lever that exists in the tree but is not composed (the #383 near-miss) can NEVER silently satisfy a
+# launch. Amend ONLY via a reviewed config amendment — never to make a drifted composition pass.
+CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS: tuple[str, ...] = (
+    # the crucible_v7 trunk levers that survive the self-orient-OFF amendment (FEED_07a dropped):
+    "seg_form_unify_tau", "tail_k_warm_restart", "n323_ladder_island_homotopy",
+    "R7_polyak_finisher", "v75_area_constraint_birth", "v75_birth_completion_event",
+    "n287_dash_comb", "temporal_screw_consistency",
+    # P0-1: the #383 conditioning gate, composed at the launch wrapper (owed-1 realized).
+    "pose_finish_conditioning_gate",
+)
+# the sealed-ON variant keeps the directional lever (the P7 transcription lever set) + the gate.
+CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS_SELF_ORIENT_ON: tuple[str, ...] = (
+    CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS[:3] + (_CRUCIBLE_V752_DIRECTIONAL_LEVER_NAME,)
+    + CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS[3:]
+)
 
 
 def derive_crucible_v752_config(
@@ -3064,24 +3090,64 @@ def compile_crucible_v752_launch_config(
     ``self_orient`` defaults to ``False`` HERE (unlike derive/compile whose default is the sealed ON
     artifact) because the LAUNCH is the GO'd self-orient-OFF config (#385 ADDENDUM v2). v7.5.2's
     constants_manifest + schedule_governance are IDENTICAL to crucible_v7 (v752 only changes base
-    FLAGS + removes the directional lever; neither touches the LawRef constants nor the schedule-WHEN
+    FLAGS + adjusts the lever composition; neither touches the LawRef constants nor the schedule-WHEN
     governance tokens) — so those two provenance manifests are REUSED from the compiled crucible_v7
     artifact (drift-impossible), and the ``dsl_program_manifest`` is v752's own (its emitted-flag
     fingerprint). Returns a :class:`CrucibleV7LaunchConfig` whose ``.name`` is ``crucible_v752``.
 
+    P0-1 (fresh-eyes advisory 2026-07-10, operator-directed): this launcher-facing program COMPOSES
+    the #383 :func:`~tac.witness_dsl.curriculum_dsl.PoseFinishConditioningGate` lever (emits
+    ``--pose-finish-engage-on sigma_min_plateau``; backstop/w-pose supplied by the inherited pose
+    config) — the seal's owed-1 realized. The pre-ep726 training behavior is UNCHANGED (verified
+    structurally: the σ detector needs 5 σ_min points at the every-4th-verdict cadence ⇒ earliest
+    possible fire ~ep400; the backstop is 726 — recorded in
+    ``.omx/research/v752_pilot_decision_record_20260710.md``). The EXPECTED-ACTIVE-LEVER manifest
+    (:data:`CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS`) is enforced HERE at compile (fail-closed) and
+    carried in the ``dsl_program_manifest`` (``expected_active_levers``) for the launcher-side
+    re-check — built-but-not-composed can never recur silently (advisory P0-1 required gate).
+
     means != ends: a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110 moves the
     pointer 0.19110."""
-    from tac.witness_dsl.typed_config import build_launch_manifest
+    from tac.witness_dsl.curriculum_dsl import PoseFinishConditioningGate
+    from tac.witness_dsl.typed_config import TypedLever, build_launch_manifest
 
     # the v752 typed config (self-orient per the arg) + its OWN dsl_program_manifest fingerprint.
     typed = derive_crucible_v752_config(
         gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
         code_matrix=code_matrix, byte_close_result=byte_close_result, self_orient=self_orient)
+    # (P0-1) compose the #383 conditioning gate into the LAUNCHER-facing program (the sealed derive
+    # above stays a transcription). backstop_epoch/w_pose None => the inherited pose config's
+    # --pose-finish-start-epoch 726 + --w-pose 1.0 stand (the lever adds ONLY the engage-on mode).
+    _gate = PoseFinishConditioningGate()
+    typed = typed.model_copy(update={
+        "levers": tuple(typed.levers) + (
+            TypedLever(name=_gate.name, overrides=dict(_gate.overrides),
+                       epochs_delta=_gate.epochs_delta, notes=_gate.notes),),
+    })
+    viol = typed.validate_program()
+    if viol:
+        raise ValueError(
+            f"crucible_v752 launch-config gate: pose-gate composition produced "
+            f"{len(viol)} WitnessProgram.validate violation(s): {viol[:4]}")
+    # (advisory P0-1 required gate) EXPECTED-ACTIVE-LEVER manifest, enforced at COMPILE: the composed
+    # program's lever set must equal the pinned expectation for the launch variant — a lever existing
+    # in the tree can never silently satisfy the launch (built-but-not-composed extinction).
+    expected = (CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS if not self_orient
+                else CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS_SELF_ORIENT_ON)
+    got = tuple(lv.name for lv in typed.levers)
+    if sorted(got) != sorted(expected):
+        raise ValueError(
+            "crucible_v752 launch-config expected-active-lever gate: composed lever set "
+            f"{sorted(got)} != expected {sorted(expected)} (built-but-not-composed / silently-"
+            "dropped lever — advisory P0-1). Update CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS ONLY via a "
+            "reviewed amendment, never to make a drifted composition pass.")
     argv = typed.to_program().compile_trainer_argv()
     emitted_names = sorted({f for f, _ in _crucible_v7_argv_pairs(argv)})
     dsl_manifest = build_launch_manifest(
         program_name="crucible_v752", emitted_flag_names=emitted_names,
         typed_config_hash=typed.typed_config_hash(), typed_validated=True)
+    # carry the expectation in the manifest for the LAUNCHER-side re-check (dry-start/dry-run/real).
+    dsl_manifest["expected_active_levers"] = list(expected)
     # REUSE crucible_v7's constants_manifest + governance-dict (IDENTICAL for v752 — see docstring).
     v7_compiled = compile_crucible_v7_config(
         gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
@@ -3353,7 +3419,6 @@ def compile_crucible_v753_launch_config(
     )
 
 
-# ==========================================================================
 # ==========================================================================
 # T5 CRUCIBLE-3 v8 INCREMENT-1a — the paint-free mask-level DECOUPLING SCREEN
 # config (P7 DELIVERABLE, task #380). This is NOT a trainer launch (no argparse

@@ -1368,6 +1368,21 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
                               epochs=args.epochs, overfit=overfit)
+    # (fresh-eyes advisory P0-1 required gate, 2026-07-10) EXPECTED-ACTIVE-LEVER manifest re-check at
+    # the LAUNCHER (compile already enforced it fail-closed; this catches a cfg object mutated/patched
+    # between compile and launch, and runs for dry-run, dry-start, AND real spawns). Applies to any
+    # config whose dsl_program_manifest carries "expected_active_levers"; others are unaffected.
+    _exp_levers = (getattr(cfg, "dsl_program_manifest", None) or {}).get("expected_active_levers")
+    if _exp_levers is not None:
+        _got_levers = list(getattr(cfg, "dsl_levers", ()) or ())
+        if sorted(_got_levers) != sorted(_exp_levers):
+            print(f"[launch-witness] ERROR: expected-active-lever manifest MISMATCH for {config!r}: "
+                  f"composed={sorted(_got_levers)} != expected={sorted(_exp_levers)} — a lever was "
+                  f"dropped/added after typed authoring (built-but-not-composed class, advisory P0-1). "
+                  f"REFUSING (rc=10).", file=sys.stderr)
+            return 10
+        print(f"# expected-active-lever manifest: OK ({len(_exp_levers)} levers match the pinned "
+              f"expectation for {config!r})")
     # NEW-1 (seal v7 round-2 docket): epochs provenance. When --epochs is OMITTED the config
     # family's SEALED default just applied (read it back from cfg for the header/telemetry);
     # when EXPLICIT, stamp a LOUD note — the wall-clock gate DERIVES its budget from whatever
