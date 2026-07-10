@@ -163,6 +163,19 @@ def test_decompose_flips_zero_on_match():
     assert d.third_class_share == 0.0
 
 
+def test_decompose_flips_empty_stack_no_zerodiv():
+    # EMPTY (0,H,W) stack passes ndim==3 + shape-equal guards; total_pixels==0 must NOT raise a
+    # raw ZeroDivisionError (int 0/0) — it is a clean all-zero decomposition (r11 F1; sister of the
+    # r10 flip_inverse empty-flip-set no-op).
+    empty = np.zeros((0, 4, 4), np.int64)
+    d = decompose_flips(empty, empty)
+    assert d.total_pixels == 0
+    assert d.total_flips == 0
+    assert d.third_class_frac_of_pixels == 0.0
+    assert d.boundary_frac_of_pixels == 0.0
+    assert d.third_class_share == 0.0
+
+
 def test_mixing_robust_palette_abstract_maps_correctly(dg):
     pal = mixing_robust_palette(dg)
     assert pal.shape == (5, 3)

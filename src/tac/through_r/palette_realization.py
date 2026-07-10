@@ -470,6 +470,11 @@ def decompose_flips(
         names[c]: (float(per_class_third[c] / per_class_flip[c]) if per_class_flip[c] else 0.0)
         for c in range(int(n_classes))
     }
+    # Guard BOTH denominators symmetrically. ``total_flips`` was already guarded; an EMPTY /
+    # zero-pixel stack (N=0, or H/W=0 — passes the ndim==3 + shape-equal checks above) has
+    # ``total_pixels == 0`` and would make ``third / total_pixels`` a raw ``ZeroDivisionError``
+    # (int 0/0). A frame-less decomposition is a clean all-zero result, consistent with the
+    # empty-flip-set no-op the sister flip_inverse verify path returns.
     return FlipDecomposition(
         total_flips=total_flips,
         total_pixels=total_pixels,
@@ -477,8 +482,8 @@ def decompose_flips(
         boundary_flips=boundary,
         third_class_share=(third / total_flips) if total_flips else 0.0,
         boundary_share=(boundary / total_flips) if total_flips else 0.0,
-        third_class_frac_of_pixels=third / total_pixels,
-        boundary_frac_of_pixels=boundary / total_pixels,
+        third_class_frac_of_pixels=(third / total_pixels) if total_pixels else 0.0,
+        boundary_frac_of_pixels=(boundary / total_pixels) if total_pixels else 0.0,
         radius=int(radius),
         per_class_third_share=per_class_third_share,
     )
