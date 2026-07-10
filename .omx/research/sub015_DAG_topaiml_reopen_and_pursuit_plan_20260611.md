@@ -12123,3 +12123,42 @@ non-blocking). REACTIVATION: register `sigma_min_rolling_slope_plateau_gate_v1` 
 round-trip incl. through the real ResumeRegistry) + 5 DSL wire-in (composable/completeness/argparse/ledger) — 25 pass.
 Commits: <serializer>. **Launch-readiness:** the DETECTOR + WIRING are ready; what remains before the gate is
 TRUSTED on a real run = owed-14 (governed replay backtest on real σ_min). Pointer 0.19110 UNMOVED (means).
+
+## FEED-crucible3-P1P2 (2026-07-09) — v8 final form (#380): six-seat wave + P2 synthesis (SPEC_v8.1 candidate)
+Six P1 seats landed (S1 deep-math/tropical · S2 carriers/rate-EV · S3 reconciliation-control · S4 byteclose/pose
+· S5 adversary · S6 STRUCTURE-BLIND), then P2 POSITIVE SYNTHESIS (owner, this landing):
+`.omx/research/t5_crucible3/SYNTHESIS_DRAFT_v8_20260709.md`. Pointer 0.19110 UNMOVED (MEANS); remaining gap to
+sub-0.15 = 0.0411 S. The seats deferred triality-leg propagation to P2; DSL/equations legs = N/A-UNTIL-BUILT
+(the two council-flagged v8 laws stay FORMALIZATION_PENDING until P-B/P-C/increment-1 anchors land).
+**CONVERGENCES (5–6/6, adopted):** flip-weighted objectives EVERYWHERE (b_c median · residual selection · #226
+waterfill) — the N-1 lesson generalized; Movable-first de-share attribution (S6 adds MEASURED corroboration —
+the 0.0189 Road/Undriv residual IS Movable px); curve-relative (arc-length s, signed normal offset n) residual
+chart (S1 derived + S6 blind-derived independently = structural, not lucky). **BLIND VINDICATIONS:** S6-blind
+reached the flip-weighted b_c, the curve-relative residual chart, AND the de-share partition from FIRST
+PRINCIPLES (energy + adjacency graph + annulus), matching S1/S2/S4 — high-confidence adopt.
+**T1 ADJUDICATION (carrier axis, the structural decision):** the Road↔Undriv carrier = HORIZON CURVE + two
+complement seas + de-shared Movable straddles, NOT a bulk SDF field over Road∪Undriv. S6-blind (4 generator
+families + tie-bias, Road=hub-COMPLEMENT-no-positive-generator) + S1-energy (generator = deg-3 horizon poly) +
+S5-V2 (NO on-disk function measures the SDF-field cost; the 20–50 KB d_bulk(B) band is a code-labeled GUESS)
+CONVERGE. VERDICT: build `road_undriv_bulk_field.py` in mode=`horizon_poly_xi` (real byte-close 0.0032, 14.6×);
+the full bulk-SDF field DEMOTED to a P-C-gated FALLBACK (built IFF interiors NOT near-free). Resolves S5-V2 (the
+dominant number is MEASURED, not conjectured) + S6's catch + S2's byte-cost-scope bug (ban `bulk_boundary_byte_cost`
+L385 from rate-claim paths) at once. verdict_scope: FORMULATION on the bulk-field WRAPPER (not a kill —
+`road_horizon_component` IS the lever). **T2 ADJUDICATION (the 0.079 enemy):** the rate policy is a JOINT
+d_seg↔rate SCORE trade (S2 waterfill ≡ S4 flip-weighted #226), NOT a 3-way pick. S5's indictment BINDING: the
+archive ships the COMPLETE partition, so the brief row = a TRIPLE {dominant 0.061 CONDITIONAL-floor · complete
+0.140 DEFAULT-ceiling · r\* MEASURED-operating-point} + a P-C counted-seed-floor THIRD term; default if r\*
+unmeasured = complete-with-{de-share+curve-relative}, 0.061 NEVER quoted alone (NO-FAKE). Binding uncertainty:
+the Road/Lane 0.042 residual (53% of the enemy) may resist all levers → r\* near 0.140 = rate WASH; increment-1
+measures it. **PROVENANCE-AUDIT CATCH (S5-V4, grep-CONFIRMED against SPEC_v8):** the "41 edges" cited in
+CONVENING §7 / DELTA §G is a PHANTOM — SPEC_v8 has no such count (only "41% of Road's oracle flips"); the real
+graph is ~4–5 live Road-hub edges (C(5,2)=10 possible). The edge-centric-vs-class-naive tension localizes to
+ONE place: Road↔Undriv (= T1). **FOLDED:** S3 two-layer theft firewall + increment-1a/1b split (1a = decoupling
+BET, cheapest falsifiable v8 row, NO paint/NO P-C; 1b = paint GATED behind P-C) + linearized-projection honesty
+(NOT globally-convex Dykstra: max-iter cap + monotonicity reject + regression guard); pose UNCHANGED from v7.5.2
+(disjoint-frame ∂d_seg/∂ξ≡0), gate per-class {Road,Undriv} + Lane-flip-share WATCH, fallback banked R1 (0.127/7.2
+KB); S4 P-C 3-number precondition (procedural floor + counted-seed-floor charging the rate + residual
+flip-fraction); store-nothing MANDATE (keyframe 0.465 rate = 11.3× gap = submission-killer). RECESS LIST = 5 $0
+read-only probes on gt_n600.npz (de-share magnitude · curve-relative δ(s) entropy · proxy-vs-field byte gap ·
+flip-weighted b_c target · ledger re-derive); P-C/P-B/1a-through-R = governed operator-GO, NOT recess. NEXT: P3
+red-team + provenance audit. Pointer 0.19110 UNMOVED (means).
