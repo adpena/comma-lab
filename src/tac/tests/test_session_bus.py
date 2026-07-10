@@ -120,6 +120,30 @@ def test_env_path_override_used_when_no_explicit_path(tmp_path, monkeypatch):
     assert B.event_count(bulletin_path=ev) == 1
 
 
+def test_env_path_override_honored_on_READ_symmetric_with_write(tmp_path, monkeypatch):
+    """#389 R13: the read APIs honor ``TAC_SESSION_BULLETIN_PATH`` too (write/read symmetry).
+
+    Without the fix, a write goes to the env-redirected store but ``read_events()`` /
+    ``event_count()`` / ``staleness_check()`` with NO explicit path silently read the module
+    DEFAULT store — the documented "isolate to tmp while VERIFYING" use would read the wrong
+    (real) store. The DEFAULT is monkeypatched to a DISTINCT empty file to prove the read
+    followed the ENV, not the default.
+    """
+    ev = tmp_path / "env_store.jsonl"
+    default = tmp_path / "would_be_default.jsonl"
+    monkeypatch.setattr(B, "DEFAULT_BULLETIN_PATH", default)
+    monkeypatch.setattr(B, "DEFAULT_BULLETIN_LOCK_PATH", tmp_path / ".def.lock")
+    monkeypatch.setenv(B.BULLETIN_PATH_ENV, str(ev))
+    monkeypatch.setenv(B.BULLETIN_LOCK_ENV, str(tmp_path / ".env_store.lock"))
+    B.post_event(B.EVENT_GATE_RULED, "#386", {"verdict": "RULED"}, "a")  # -> env store
+    # ALL read APIs, with NO explicit path, must see the env store (not the empty default):
+    assert B.event_count() == 1
+    assert len(B.read_events()) == 1
+    assert len(B.events_since(0)) == 1
+    assert B.staleness_check(["#386"], since=0).stale is True
+    assert not default.exists()  # default store never touched
+
+
 def test_explicit_path_beats_env_override(tmp_path, monkeypatch):
     """Explicit call arg > env override > module default."""
     ev = tmp_path / "env_store.jsonl"

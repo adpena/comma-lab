@@ -246,8 +246,16 @@ def read_events(*, bulletin_path: Path | None = None) -> list[dict]:
     Lenient by construction (mirrors ``tac.review_counter.load_rounds``): a process killed
     mid-append leaves a partial last line whose ``json.loads`` fails and is skipped, so a
     reader never crashes on a torn write and never returns a corrupt row.
+
+    Path resolution is SYMMETRIC with :func:`post_event`: explicit ``bulletin_path`` arg >
+    ``TAC_SESSION_BULLETIN_PATH`` env > module default. Without this, an env-redirected
+    writer (the documented "isolate to tmp while VERIFYING the emitted rows" use, inherited
+    by children) would post to the tmp store but a same-process ``read_events()`` /
+    ``event_count()`` / ``staleness_check()`` with no explicit path would silently read the
+    REAL default store — a write/read asymmetry (canon-wave #389 R13). The DISABLE env is a
+    WRITE-only mute and is deliberately NOT consulted here (reading a store is never muted).
     """
-    path = bulletin_path or DEFAULT_BULLETIN_PATH
+    path = _resolve_bulletin_path(bulletin_path)
     if not path.exists():
         return []
     out: list[dict] = []
