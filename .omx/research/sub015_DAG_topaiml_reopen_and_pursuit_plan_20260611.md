@@ -13465,3 +13465,55 @@ Subagent `fractal-synth-398b`. Pointer contest-CPU **0.19110 UNMOVED** — MEANS
   on `v8_geometric_rate_decomposition_v1` (8 anchors) · memo `.omx/research/v8_unlock_398a_20260710.md`.
 - Sibling-safe append (no touch to texture_trunk #395 / mc_finisher #396 / v752 run dirs / reactivation-397). Pointer
   contest-CPU **0.19110 UNMOVED** — MEANS.
+
+## FEED-v752-launch (2026-07-10) — v7.5.2 SELF-ORIENT-OFF wired + LAUNCH-READY-HELD: two pre-registered hold gates (rebalance verdict + from-scratch pilot), then the launch fires · pointer 0.19110 UNMOVED
+
+- **OPERATOR GO (2026-07-10 "Go" on #385 ADDENDUM v2) + HOLD EXTENSION (operator: "We don't want to
+  launch v7.5.2 if we know its confounded or not optimal"):** the launch config is BUILT + WIRED +
+  gate-verified; the launch itself is HELD behind two pre-registered gates, then fires with no further
+  gates: **gate-1** = the owed16v2 freq-along-rebalanced warm-start arm verdict (in flight,
+  `owed16v2_rebalanced_ON_20260710T114759Z`); **gate-2** = the FROM-SCRATCH PILOT (closes the owed-16
+  formulation-scope gap: the OFF decision rests on warm-start evidence only). Full pre-registered
+  protocol + PASS/LAG/AMBIGUOUS band: `.omx/research/v752_pilot_decision_record_20260710.md` (`70131e0f5`).
+- **LANDED (commit `3b028a374`):** the owed-16 P9 RESOLVED-REFUTING amendment through the typed DSL —
+  `derive/compile_crucible_v752_config(self_orient=...)` + `compile_crucible_v752_launch_config`
+  (launch default OFF) + launcher `--config crucible_v752` branch (`derive_named_config`/`config_family`/
+  argparse choices). OFF drops the 5 self-orient flags + the `FEED_07a_directional_basis_rebalance`
+  lever (else it re-emits them); `--max-bank-freq` KEPT (always-on curvelet bank, trainer L3095 —
+  unconditional; owed-16 confirmed only the 16 directional channels differ). Everything else unchanged
+  (lane_offloaded regime + band, counter-force, #360 temporal-screw, AA-ipe, pose-finish backstop, #121
+  taper, σ_cc′-out W-1). Config `typed_config_hash=f39dd9ea1ef5…`, flag_fingerprint `adcfe0768a…`, 156
+  flags, `.validate()==[]`, parses the real argparse (`self_orient=False` confirmed). v7-identical
+  constants+schedule-governance manifests REUSED (drift-impossible); own DSL-provenance fingerprint.
+  Tests: OFF-amendment + launch-path resolution + full dry-run chain (56 launcher tests green).
+- **PILOT CONFIG VERIFIED (the gate-2 vehicle):** `compile_crucible_v752_launch_config(epochs=300)` =
+  **exactly 2 argv tokens** off the launch config (`--epochs 300` + polyak degenerate clamp 301,
+  both inert ≤ep300) ⇒ the pilot IS the launch's first 300 epochs; a PASS lets the real launch
+  `--resume-from` the pilot ep300 ckpt (pilot ≈ free). Reference cells = mod32cap from-scratch n600
+  (MEASURED, ep25 0.009288 → ep300 0.004571; cadence ~116 s/ep); honesty caveat: reference-anchor,
+  NOT a controlled basis A/B (mod32cap lacks the whole v7.5 lever stack).
+- **DRY-START (owed-2) SAGA — honest state: NOT yet green; 4 attempts, 1 real bug found+fixed:**
+  attempt-1 rc=124 (1260s bound < contended boot+ep1; peak **26.08 GiB MEASURED** = the OFF footprint;
+  mem-preflight projects **24.48 GiB**, cf_mx_cache 0.07 vs ~41 GiB ON — the 47 GiB tax GONE).
+  attempt-2 rc=5 (transient SUM-over-RAM admission — cleared). attempt-3: trainer BOOTED + STEPPED +
+  CHECKPOINTED (resume_state+EMA npz at ~31 min contended boot+ep1) but the gate would STILL have
+  false-FAILED → root-cause: the dry-start parsed a `run.log` NOTHING on that path writes (trainer
+  stdout is safe_run-inherited + launcher-captured; real runs get run.log from the daemon redirect) →
+  **launcher fix `efb9513a3`** (persist the captured blob to run.log pre-parse; append-mode). attempt-4
+  REFUSED by system-admission (rebalance arm's registered growth: 74+66+24.5=164.5 > adaptive ceiling
+  64) — the REFUSE is respected, not bypassed. **Dry-start rerun fires when gate-1's arm frees the
+  machine (also = the honest SOLO cadence measurement), then the pilot.** All gate-chain surfaces green
+  on every attempt (flag-validate 156/156, perf-env, schedule-provenance, dsl-config rc=7 input OK,
+  safe-compile fingerprint, throughput 435.5 ms ≤ 700; wall-clock projection 7.95 d ≤ budget 8.31 d).
+- **WALL-CLOCK honesty:** no steady-state OFF sec/ep is measured yet (contended attempts only; the
+  ~116 s/ep mod32cap anchor is ON-config). The launcher's L45 projection (3.82 min/ep × 3000 = 7.95 d)
+  is the current conservative ceiling; the solo dry-start rerun replaces it with a measured number.
+- **Sequencing (pinned):** gate-1 arm exits → dry-start rerun (solo, fixed launcher) → PILOT
+  (`--config crucible_v752 --epochs 300`, governed; ~22 GiB admits easily solo) → §4 verdict of the
+  decision record → the launch (config per verdict; PASS ⇒ optionally resume-from-pilot-ep300).
+- **Triality:** DSL — `self_orient` param + the OFF 8-lever composition (this IS the DSL leg; no
+  new Lever needed — an ABLATION of a held lever); equations — no new law (CONSUMES
+  `owed16_realized_transfer_measured_zero_20260710`); DAG — this FEED + the decision record.
+  Durable: commits `3b028a374` + `70131e0f5` + `efb9513a3`. **Pointer contest-CPU 0.19110 UNMOVED —
+  everything here is MEANS; only the byte-closed `upstream/evaluate.py` n600 row from the eventual
+  launch can move it.**
