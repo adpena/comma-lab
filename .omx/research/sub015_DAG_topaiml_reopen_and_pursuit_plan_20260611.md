@@ -13232,3 +13232,23 @@ verdict_scope FORMULATION; no kill; no score. Pointer 0.19110 UNMOVED (means).
 - **DIAGNOSTIC 3 (witness link, checkpoint read only):** mod32cap EMA-BEST has an **active-but-modest `out_tex` head (‖W‖ mean 0.06)** over a per-class palette base ⇒ consistent with d_seg 0.0048 = 8.7× below flat floor 0.0416. Direct render-spectrum comparison DEFERRED (decode contends with live witness pid 55609) → #385 follow-up.
 - **RESPONSE (route):** v8 Road/Lane carrier = **period-4 grating primitive** (structure free/rule-118, only fitted colours+phase+orient counted ~dozens of bits/region), NOT a colour region; witness loss should bias Road/Lane to the period-4 band (smooth-stage prior is exactly wrong for them; sub-period-4 detail is wasted/aliased). Undrivable/MyCar/Movable stay flat carriers. Sisters: FEED-v8-roadlane, L71 analytic lane band.
 - **TRIALITY:** equations leg = the 2 laws above (REGISTERED, VERIFIED_VIA_EMPIRICAL_ANCHOR); DAG leg = this FEED; DSL leg N/A (no new trainer lever yet — the period-4-band loss prior is the next DSL fold when built). verdict_scope FORMULATION (characterization, no kill). Verdict + 7 MeasurementRows emitted via `tac.verdicts` → `experiments/results/stem_perception_20260710/verdict_texture_price_list.json`. Memo `.omx/research/segnet_texture_perception_20260710.md`. `stem_perception.py` + 15 tests committed (closes the R15 seal-boundary untracked-file note).
+
+### FEED-canon-seal (#389 SEALED — 2026-07-10)
+- **#389 canon wave SEALED** at HEAD `b15f3b46d` — `review_counter.current_state('canon_wave')` =
+  `3/3 sealed=True` (R16/R17/R18 three consecutive CLEAN). Binds the canon set: `tac.through_r`
+  (harness/compare/flip_inverse/palette_realization/scaffold_assembler/resolution_chain) +
+  `tac.verdicts` (measurement_row/emit) + `tac.session_bus` (bulletin/recovery_manifest) + serializer
+  `--triality-legs` + detector softening. 8 substantive findings fixed rounds 1–15 (bulletin live-store
+  leak · SEG_WEIGHT re-hardcode · torn-tail newline · recover_report sort-comment inversion · top_k
+  clamp+empty-stack · zero-pixel guard · read_events env-symmetry · stale boundary-claim), each now
+  test-guarded by a standing suite (220 tests · GT identity canary RUNS d_seg==0 · ruff -F · serializer
+  flag no-op · live-store byte-identity · torn-tail/DISABLE env-symmetry · 10 emit refusal tests).
+- **R18 fresh angle:** production-consumer contract sweep — every non-test consumer of the 7 canon
+  modules honors its producer contract; `emit_verdict`/`post_event`/`measure_through_r` docstring==behavior.
+- **HANDOFF (not a canon defect):** `textured_power_diagram_20260710.py:119` (Fable/#394) points
+  `python_callable_module_path` at `palette_realization:realize_partition_through_r` (nonexistent; module
+  has `run_arm`/`realize_argmax_no_R`) — dormant metadata, wrong name in the consumer file; fix belongs
+  in the sibling equation. Flagged for #394.
+- **TRIALITY:** DAG leg = this FEED; DSL/equations N/A (apparatus wiring, no new witness lever or measured
+  physics — same as FEED-389). pointer contest-CPU **0.19110 UNMOVED** — MEANS, `[macOS-CPU advisory ·
+  NON-PROMOTABLE]`.

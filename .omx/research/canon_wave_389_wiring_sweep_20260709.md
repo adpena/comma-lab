@@ -266,3 +266,74 @@ documentation edit; a fresh reviewer must re-verify the refreshed boundary list 
 
 pointer contest-CPU **0.19110 UNMOVED** — the boundary refresh is MEANS (coordination hygiene), never
 a lever, never an exact-eval row. `[macOS-CPU advisory · NON-PROMOTABLE]`.
+
+---
+
+## SEALED (2026-07-10, rounds 1–18, 3 consecutive CLEAN r16–r18)
+
+**#389 canon wave SEALED.** `review_counter.current_state('canon_wave')` → `consecutive_clean=3/3,
+sealed=True` after R18 recorded CLEAN (findings=0). The seal binds the canon set at HEAD
+`b15f3b46d`: `tac.through_r` (`harness`/`compare`/`flip_inverse`/`palette_realization`/
+`scaffold_assembler`/`resolution_chain`), `tac.verdicts` (`measurement_row`/`emit`), `tac.session_bus`
+(`bulletin`/`recovery_manifest`), the serializer `--triality-legs` flag, and the detector softening.
+
+### The 8 substantive findings fixed across rounds 1–15 (each a real defect, each now test-guarded)
+1. **R1** — fail-open bulletin producers leaked real events into the LIVE_STATE store during tests;
+   class-fix = bulletin-store isolation on every emitting test surface (autouse fixtures + `tool_tmp`).
+2. **R4** — `SEG_WEIGHT` re-hardcoded; consumed from `tac.contest_score` (flip_inverse:68/537/602/624).
+3. **R5** — missing newline separator on torn-tail append (`_needs_newline_separator`, bulletin:169 +
+   review_counter:195).
+4. **R8** — `recover_report` sort comment stated the OPPOSITE of behavior; unparseable (most-suspicious)
+   age sorted to the BOTTOM. Fix: key `(age_seconds is None, …)` reverse=True → None-age sorts TOP;
+   `test_recover_report_unparseable_timestamp_sorts_to_top`.
+5. **R10** — `top_k` unclamped + empty-verify `np.stack` on empty; `max(0, min(top_k, n_flips))` +
+   early-return (flip_inverse:655/703).
+6. **R11** — zero-pixel BOTH-denominator guard (palette_realization:483–486).
+7. **R13** — `read_events` env-symmetry so spawned children honor `TAC_SESSION_BULLETIN_*` (bulletin:258)
+   → zero child leak into the live store.
+8. **R15** — stale forward-claim on the live carry-forward boundary list (`palette_realization.py`
+   asserted UNCOMMITTED after it was committed at R11); boundary list refreshed to HEAD truth.
+
+### The standing-check suite that now guards them (re-derived GREEN at every fresh HEAD)
+- Full affected suite single-invocation (220 tests @HEAD b15f3b46d).
+- **GT identity canary** `test_end_to_end_gt_frame_reproduces_lstars_dseg_zero` **RUNS** (real gt cache +
+  real CPU-torch SegNet → agg d_seg == 0, total_flips == 0) — the strongest through-R identity proof.
+- `ruff check --select F` clean on all 7 canon files.
+- serializer `--triality-legs` absent → `(None, None)` (byte-identical no-op); malformed refuses before
+  any git action.
+- **live-store byte-identity**: emitting tests do not append to `.omx/state/session_events.jsonl`
+  (before == after bytes) — the R1 leak class stays closed.
+- torn-tail append + `TAC_SESSION_BULLETIN_DISABLE`/`_PATH` env-symmetry green.
+- emit_verdict REFUSAL contract (missing scope/rows/composition-P12/constraint-carved-P10/
+  negative-reformulation-queue) fully enforced + 10 refusal tests.
+
+### R16–R18 fresh angles (the 3 sealing rounds)
+- **R16** — HISTORICAL-vs-LIVE distinction on the boundary list; CLEAN.
+- **R17** — CLEAN.
+- **R18 (this seal)** — **production-consumer contract sweep**: every NON-TEST consumer of the 7 canon
+  modules honors its producer's contract (delegation shim `composite_assembler`; `mask_dseg_meter →
+  compare`; lazy fail-open `review_counter`/`recovery_manifest → post_event`; `harness → verdicts`
+  opt-in). Docstring-vs-behavior on the 3 load-bearing publics (`emit_verdict`, `post_event`,
+  `measure_through_r`) HELD + test-backed.
+
+### Explicitly OUT of the seal (carry-forward — the seal does NOT certify these)
+- **HANDOFF (cross-agent, not a canon defect):** tracked equation
+  `canonical_equations/textured_power_diagram_20260710.py:119` (Fable/#394) sets
+  `python_callable_module_path="tac.through_r.palette_realization:realize_partition_through_r"` — a name
+  that does NOT exist (`palette_realization` exports `run_arm` / `realize_argmax_no_R`). It is dormant
+  metadata (regex-only field validation, no test resolves the attribute; module-part-only import in the
+  callable-resolution test), and `palette_realization` is correct/complete — so this is a **wrong name
+  in the consumer's file**, not a producer defect. Fix belongs in the sibling equation file (out of this
+  wave's mutation scope). Flagged for #394/Fable.
+- **U3 bulletin PRODUCER set still minimal** — only `verdict_landed` + `agent_spawned`/`agent_completed`
+  wired; `gate_ruled` / `spec_edited` / `memo_landed` / `agent_died` are declared kinds with no producer.
+- **`MeasurementRow` parser-SIDE (read-back) still unbuilt** — `to_json_dict` write-only; no loader.
+- **`recovery_manifest.heartbeat` deliberately NOT wired to the bus** (tick-spam avoidance).
+- **Anti-gaming boundary unchanged** — the ledger records CLAIMS a review happened; the seal trusts the
+  `reviewed_commits` trail (module docstring boundary).
+- The untracked scope-adjacent `through_r/stem_perception.py` (R15 note) was COMMITTED by a sibling
+  (DAG FEED stem-perception) between R15 and R18 — it entered the review window via that sibling, not
+  this wave; its own review is the sibling's.
+
+pointer contest-CPU **0.19110 UNMOVED** — the entire #389 wave is MEANS (measurement + coordination
+apparatus), never a lever, never an exact-eval row. `[macOS-CPU advisory · NON-PROMOTABLE]`.
