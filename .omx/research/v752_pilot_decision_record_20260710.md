@@ -187,3 +187,77 @@ records silently dropped) — fixed (str(out_dir)) + 9 rows BACKFILLED.
 **Read-out protocol unchanged (§4):** matched cells ep25..300 vs mod32cap; ep300 waiter armed
 (marker `.omx/tmp/v752_pilot_ep300.marker`). Wall-clock to ep300: UNMEASURED solo OFF cadence —
 mod32cap anchor ~116 s/ep (ON) ⇒ projection ~10 h (labeled projection, not measurement).
+
+## 9. AMBER + CHROMA DECISION PACKAGE (operator elevation 2026-07-10 "Chroma rung and amber are important to pursue")
+
+### 9a. SOURCE-VERIFIED live state (run `levelset_v752_pilot_20260710T154100Z`, ~ep0)
+`--grad-clip 1.0` (explicit) · `--per-group-grad-clip` ON · NO `--stability-preset` · NO
+`--pose-grad-coeff-max` (default 0 = OFF) · NO `--grad-normalize` (default none). Chroma INHERITED:
+`--seg-chroma-boundary-weight 0.1 / margin-band 1.0 / start-epoch 450 / start-event annulus_plateau`.
+
+### 9b. Mechanism findings (three defects surfaced, none blocking)
+1. **The advisory's "explicit --grad-clip defeats the preset" is a DOCSTRING, not code:**
+   `resolve_stability_config` implements explicit-wins ONLY for coeff-max; `preset=amber`
+   unconditionally sets grad_clip 0.5. Comment/behavior mismatch (trainer L10291 + module docstring)
+   — surfaced; our composition uses EXPLICIT values (no preset) and is immune either way.
+2. **SPEC §1.1 lists `--grad-normalize` in amber; the BUILT `tac.witness_stability.AMBER` has NO
+   grad-normalize field.** Spec-vs-built gap — NOT silently closed (we compose the 3 BUILT cures;
+   grad-normalize needs its own derivation/decision if wanted).
+3. **The annulus_plateau sensor is structurally DEAD at eval-every=25:** trailing dwell_windows=4
+   verdict points span 75 ep < min_epochs 150 ⇒ `dwell_ok` never true ⇒ chroma AND temporal-screw
+   engage ONLY at their ep450 caps (the "event-wired" claim is decorative at this cadence). Fix =
+   dwell_windows 4→7 (or derive from eval_every) — OWED, not launch-blocking (caps are the designed
+   fail-safe). CONSEQUENCE: the pilot window ep0-300 is structurally CLEAN of chroma + temporal-screw.
+
+### 9c. Amber materiality (MEASURED both sides)
+* **Binding side:** mod32cap gnorm > 1.0 at **998/1001 steps** (raw 18–1500+) ⇒ the clip binds at
+  essentially EVERY step ⇒ grad-clip 0.5 HALVES the effective step size run-wide — amber is a
+  material dynamics change wherever active, NOT a rare-event guard.
+* **Inert side (ep0-300):** coeff-max 25 acts on the POSE gradient coefficient — structurally inert
+  while w_pose=0 (pose-blind ≤ep300, §6 verified); per-group clip already ON. So amber's ONLY active
+  component ≤ep300 is the clip halving — which would put the pilot on a different effective-LR
+  trajectory than EVERY banked reference (mod32cap, owed16 arms: all clip 1.0), invalidating the §4
+  pre-registered band and making a LAG unattributable (basis-matters vs clip-slower — the exact
+  misattribution the pilot exists to prevent).
+* **The spec's own derivation:** amber's collapse anchor is the batch=1 deep-unroll POSE-coefficient
+  blowup (5/√(10·d_pose) at d_pose→0) — binding at JOINT POSE DESCENT (≥ep726) + the Muon boundary;
+  AMENDMENT-4 demoted the amber×Muon crush arm to WATCH. Amber's protective value ≤ep300 ≈ nil
+  (two prior clip-1.0 runs through this exact window are the measured-healthy evidence).
+
+### 9d. THE OPTIONS
+* **Option A — stop + relaunch NOW, amber composed from ep0.** Cost: ~20 min (run is at ~ep0; ZERO
+  trained epochs lost — the "1.5h" is boot+ep0-verdict wall-clock). Gain: the TRUE sealed §1.1
+  program for the whole run. **Risk (decisive): the ep300 pilot gate loses its comparison validity**
+  (clip-0.5 trajectory vs clip-1.0-calibrated band; 998/1001-step materiality) ⇒ a LAG cannot be
+  attributed ⇒ the launch-config decision the pilot feeds becomes a guess. Also clip-0.5-through-CE
+  is UNMEASURED on any witness run (first-arm risk taken at the least-informative moment).
+* **Option B (RECOMMENDED) — amber engages at ep300 = the CE→tau stage boundary, via stop+resume.**
+  Mechanics: at the ep300 read-out (already the pilot decision point), stop cleanly + relaunch
+  `--config crucible_v752` amber-composed with `--resume-from <run>` — grad_clip is an optimizer
+  hyper (NOT resume-divergence-guarded; applies from the resumed epoch; VERIFIED), ep300 is a genuine
+  stage boundary (tau@300 pin) so the loss/optimizer-changes-at-stage-boundaries discipline is
+  satisfied exactly; the launcher's new startup-telemetry assertion verifies the runtime-resolved
+  values. Cost: ONE extra boot (~15-20 min) at ep300; ZERO epochs lost. Gain: pilot comparison stays
+  valid; amber active for tau/l7/Muon/pose-finish = BOTH binding moments; the amber WATCH sensor set
+  (per-class d_seg slope · effective-step norm · direction-cosine) rides the first amber arm as the
+  spec intended. Deviation: amber not active ep0-300 — the §9c inert-side evidence is the
+  authority-bearing rationale.
+* **Option C — full-run waiver.** Weakest; the spec calls amber launch-blocking; NOT recommended
+  (and unnecessary — B realizes it at the binding moments for free).
+
+**BUILD READY (either A or B): `compile_crucible_v752_launch_config(amber=True)` — landed
+`95d9f429f`, 2 semantic flag diffs (grad-clip 0.5 + coeff-max 25), expected_stability manifest +
+launcher startup assertion, 66 tests green.** Not wired to any launch — awaiting the operator pick.
+
+### 9e. CHROMA VERIFICATION (P0-4; finding only — the rung build is the sibling's)
+The live config INHERITS the 4 chroma flags (9a) while the SEALED program HOLDS chroma at LADDER
+rung 3 with its add-back **UNMEASURED** — SPEC_v752 rung-3 verbatim: *"UNMEASURED add-back (ablation
+≠ add-back — S5-N10) … MUST MEASURE add-back ΔS (constant-luma ablation FLIPS 7.54% is a WORTH, not
+a GAIN)"*. **NO prior measured add-back receipt exists** (the 7.54% constant-luma figure is the
+worth-indicator the advisory alludes to; it is not a receipt). ⇒ the inherited state DEVIATES from
+the sealed intent. Materiality: chroma engages ONLY at the ep450 cap (9b-3: the event sensor is
+dead at this cadence) ⇒ the pilot window is clean; the deviation becomes ACTIVE at ep450 — i.e. the
+same ep300 stop+resume that realizes amber (Option B) can ALSO drop the 4 chroma flags to restore
+the sealed hold-out (chroma weight is a loss-form key — check `__cfg` divergence handling at the
+resume; if guarded, the sidecar records the drop LOUDLY, which is the correct custody). Rung-3
+add-back measurement = the sibling chroma-rung builder's job; this record feeds it.
