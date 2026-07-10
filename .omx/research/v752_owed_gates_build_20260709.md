@@ -41,7 +41,18 @@ DOUBLES as a crash simulation, making PASS-2's resume round-trip a genuine crash
 monotone-clamp was prototyped and REJECTED — the interlocking stagger constraints cascade; schedule surgery is a
 rabbit hole and would no longer be "the real config".)
 
-**MEASURED (first attempt, PASS-1):** **peak RSS = 70.94 GiB** — matches the memory-preflight projection
+**MEASURED FINDING — the ONE-TIME first-epoch compile is HEAVY (~13+ min at n600):** two governed PASS-1
+runs (safe_run timeouts 570s then 1260s) show the FIRST n600 epoch does not clear its one-time compile within
+9.5–13+ min (safe-compile `hosc_activation` + the `--fused-r-kernel` VJP + `mx.compile` of the render/R/scorer
+graph across 75 accum batches all compile on the first accum batch). This is a REAL wall-clock input the #385
+brief should carry: the real run pays a ~13–15 min ONE-TIME boot/compile BEFORE steady-state ~42 s/ep — it does
+NOT change the total budget materially (~0.2–0.25 h added once) but it does mean a bounded ≤3-epoch smoke at
+n600 is dominated by the compile, so the STEADY-STATE sec/ep re-measurement needs a >15-min window (a
+longer-budget PASS-1 is completing detached; its `dry_start_report.json` will carry the measured steady sec/ep +
+the resume round-trip). The wall-clock table (Gate 3) therefore uses the SYNTHESIS 42 s/ep steady-state anchor,
+which the dry-start confirms is the right regime (boot-through-compile reached, RSS at the projected peak).
+
+**MEASURED (PASS-1):** **peak RSS = 70.94 GiB** — matches the memory-preflight projection
 **71.54 GiB** (fixed 15 + cf_mx_cache 47.13 + gt 3.41 + verdict 6.0) within ~0.8%; the memory dimension of
 start-ability is VALIDATED at the real n600 config. system-admission ADMITTED on the re-run (used ~31 / available
 ~97 / ceiling ~106 GiB). The first n600 epoch's one-time compile (safe-compile hosc_activation + fused-R + the
