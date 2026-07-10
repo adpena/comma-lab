@@ -320,6 +320,135 @@ def test_resolve_pose_finish_engage_backstop_semantics():
     assert row["should_ship_banked_r1"] is True and row["epoch"] == 726
 
 
+# ── Live-sealed byte-identity guard (generator-vs-live drift; #405/#410 relaunch protection) ──────
+#
+# WHY THIS EXISTS (fresh-eyes finding 2026-07-10, re-derived + RESOLVED-as-misdiagnosis):
+# A prior scan flagged that ``derive_crucible_v752_config`` LAGS the live run's launch.sh (emits
+# ``--grad-clip 1.0`` and LACKS ``--grad-normalize`` / ``--pose-finish-engage-on`` /
+# ``--pose-grad-coeff-max``). That comparison used the WRONG function. The live v752 launch path is
+# ``tools/launch_witness_run.py:740`` → ``compile_crucible_v752_launch_config(self_orient=False,
+# amber=True)`` — NOT the sealed ``derive_`` base transcription. The four "missing" flags are BY-DESIGN
+# launch-time COMPOSITIONS in the launcher-facing wrapper (amber OI-5 realization + the #383 P0-1
+# PoseFinishConditioningGate), which the sealed ``derive_`` base intentionally excludes (pinned by
+# ``test_crucible_v752_excluded_items_are_not_silently_included``). The launcher-facing generator
+# reproduces the live sealed argv EXACTLY (286 tokens, exact order) — verified below. No generator
+# reconciliation was needed; this guard pins WHICH function is authoritative so the drift-perception
+# cannot recur AND a REAL future generator drift from the sealed live config fails a $0 unit test.
+#
+# The golden is EMBEDDED (not read from disk): the live launch.sh
+# (``experiments/results/levelset_v752_baseline_20260710T185913Z/launch.sh``) is GITIGNORED, so a
+# fresh checkout / CI cannot read it. This tuple is that file's exact trainer argv MINUS the two
+# launcher-injected run-specific tokens ``--resume-from <ckpt>`` (appended by the launcher's
+# warm-start path, ``launch_witness_run.py:1011`` — NOT a config-generator concern). It reads clean
+# against the live launch.sh via ``shlex`` (exact-order match asserted at authoring time).
+_LIVE_V752_SEALED_OUT_DIR = "experiments/results/levelset_v752_baseline_20260710T185913Z"
+_LIVE_V752_SEALED_ARGV = (
+    '--seed', '0', '--eval-every', '25', '--verdict-pairs', '0', '--async-verdict',
+    '--verdict-batch', '32', '--curriculum', '--tau-softplus-tau', '0.3', '--muon-lr', '0.002',
+    '--muon-momentum', '0.95', '--muon-ns-steps', '5', '--stage-transition-rewarmup-epochs', '8',
+    '--stage-transition-rewarmup-floor', '0.1', '--stage-transition-rewarmup-shape', 'linear',
+    '--stage-transition-reset-moments', '--w-seg', '100', '--w-pose', '1.0', '--score-domain-loss',
+    '--pose-carrier', '--pose-carrier-residual-mode', 'table', '--pose-carrier-source', 'generated',
+    '--mod-dim', '32', '--hidden-dim', '96', '--n-hidden', '4', '--activation', 'hosc',
+    '--hosc-beta', '1.0', '--hosc-beta-end', '3.177', '--hosc-beta-anneal', 'linear',
+    '--hosc-omega', '1.0', '--siren-init', '--tau-anneal-shape', 'geometric', '--max-bank-freq', '64',
+    '--chroma', '--palette-anchor', '--render-h', '384', '--render-w', '512', '--render-aa', 'ipe',
+    '--lane-render-band', '--lane-band-start-epoch', '500', '--lane-band-uncertainty-source', 'witness',
+    '--lane-band-tau', '0.85', '--lane-band-eps', '0.35', '--lane-band-softness', '1.0',
+    '--lane-band-dash-forward-max-m', '55.0', '--lane-band-weight', '1.0',
+    '--persistence-loss-weight', '1.0', '--persistence-recall-weight', '1.0', '--cldice-iters', '5',
+    '--persistence-warmup-epochs', '275', '--persistence-classes', '3', '--amplify-weight', '1.0',
+    '--amplify-form', 'hinge', '--amplify-margin-target', '1.0', '--amplify-persist',
+    'inverse_thickness', '--island-dilate-px', '1', '--structured-init', '--lane-prior-phi1',
+    '--lane-prior-phi1-mode', 'paint', '--lane-prior-phi1-dash-gate', '--accum-pairs', '8',
+    '--grad-clip', '0.5', '--ema-decay', '0.997', '--lr', '1e-3', '--lr-end', '1e-4',
+    '--weight-decay', '1e-4', '--adam-beta2', '0.999', '--anneal-epochs', '3000',
+    '--lr-anneal-epochs', '1000', '--lr-hold-frac', '1.0', '--fused-r-kernel',
+    '--curriculum-reanchor-levers', '--curriculum-min-stage-epochs', '250',
+    '--seg-chroma-boundary-weight', '0.1', '--seg-chroma-boundary-margin-band', '1.0',
+    '--seg-chroma-boundary-start-epoch', '450', '--seed-islands', '--witness-alone-island-loss',
+    '--seed-island-eased', '--curriculum-event-triggered', '--curriculum-nucleus-guard',
+    '--logit-adjust-loss-tau', '1.0', '--cache-gt-skeleton', '--muon-warm-start-momentum',
+    '--muon-lr-final-frac', '0.1', '--weight-entropy-penalty-lambda', '15.0', '--muon-start-event',
+    'powerlaw_meat', '--lane-band-start-event', 'lane_nucleus', '--seg-chroma-boundary-start-event',
+    'annulus_plateau', '--tau-advance-mode', 'event', '--logit-adjust-classes', '3',
+    '--per-group-grad-clip', '--safe-compile-regions', 'hosc_activation', '--dseg-aware-taper',
+    '--dseg-aware-taper-strength', '1.0', '--dseg-aware-taper-scale', '0.0',
+    '--dseg-aware-taper-floor', '0.05', '--pose-grad-coeff-max', '25.0', '--grad-normalize',
+    'per-param', '--verdict-device', 'cpu', '--verdict-anchor-every', '0', '--num-pairs', '600',
+    '--epochs', '3000', '--gt-cache', 'experiments/results/mlx_fleet_gt_cache/gt_n600.npz',
+    '--out-dir', 'experiments/results/levelset_v752_baseline_20260710T185913Z', '--mlx-device', 'gpu',
+    '--softmax-temp-start', '1.0', '--softmax-temp-end', '0.31', '--muon-start-epoch', '726',
+    '--pose-finish-start-epoch', '726', '--eikonal-weight', '0.01', '--length-weight', '0.001',
+    '--ckpt-every', '25', '--stage-checkpoints', '--seg-form-unify-tau', '--tail-cycles-max', '2',
+    '--tail-start-epoch', '0', '--tail-cycle-floor-epochs', '387.09', '--tail-dwell-min', '237',
+    '--tail-tau-halving', '0.5', '--tail-lr-prop-tau', '1.0', '--tail-stop-marginal-s', '0.0001',
+    '--ladder-island-homotopy', '--ladder-movable-r0', '2.0', '--ladder-movable-birth-epochs', '60',
+    '--ladder-movable-hold-epochs', '0', '--ladder-movable-anneal-epochs', '200',
+    '--ladder-movable-lambda-gate', '0.0', '--ladder-lane-r0', '2.0', '--ladder-lane-birth-epochs',
+    '80', '--ladder-lane-hold-epochs', '0', '--ladder-lane-anneal-epochs', '260',
+    '--ladder-lane-lambda-gate', '0.0', '--ladder-gate-softness', '0.5', '--ladder-release-coeff',
+    '0.95', '--ladder-sigma-eff', '1.5', '--ladder-lane-dash-gate', '--ladder-max-step-px', '1.0',
+    '--ladder-refresh-every', '25', '--polyak-finisher-arm', '--polyak-finisher-start-epoch', '2546',
+    '--area-constraint-birth', '--area-constraint-birth-force', '1.0', '--area-constraint-tolerance',
+    '0.25', '--area-constraint-classes', '1,3', '--birth-completion-event',
+    '--birth-completion-tau-persist', '0.8', '--birth-completion-area-band', '0.25',
+    '--birth-completion-ramp-epochs', '50', '--birth-completion-post-level', '0.2',
+    '--birth-completion-classes', '1,3', '--birth-completion-ramp', '--lane-band-dash-comb',
+    '--lane-band-comb-softness-m', '0.3', '--seg-temporal-screw-weight', '0.1',
+    '--seg-temporal-screw-start-epoch', '450', '--seg-temporal-screw-xi-source', 'ground_gt',
+    '--seg-temporal-screw-classes', '0,1,2', '--seg-temporal-screw-band', '2.0',
+    '--seg-temporal-screw-start-event', 'annulus_plateau', '--pose-finish-engage-on',
+    'sigma_min_plateau',
+)
+
+
+def test_crucible_v752_launcher_facing_reproduces_live_sealed_argv():
+    """BYTE-IDENTITY GUARD: the ACTUAL live v752 launch path — ``compile_crucible_v752_launch_config(
+    self_orient=False, amber=True)`` (``launch_witness_run.py:740``) — reproduces the running
+    launch.sh trainer argv EXACTLY (exact order, minus the launcher-injected ``--resume-from``).
+
+    This pins that the LAUNCHER-FACING generator (not the sealed ``derive_`` base) is authoritative and
+    is NOT stale vs the live sealed config, and would fail a $0 unit test if a future generator edit
+    silently drifted the config that a #270/relaunch A/B would reproduce. See the module-level
+    provenance block on ``_LIVE_V752_SEALED_ARGV``."""
+    lc = wac.compile_crucible_v752_launch_config(
+        _GT, num_pairs=600, epochs=3000, self_orient=False, amber=True,
+        out_dir=_LIVE_V752_SEALED_OUT_DIR)
+    argv = tuple(lc.typed.to_program().compile_trainer_argv())[2:]  # drop [python, trainer_path]
+    assert argv == _LIVE_V752_SEALED_ARGV, (
+        "compile_crucible_v752_launch_config(self_orient=False, amber=True) must byte-reproduce the "
+        "live sealed launch.sh trainer argv (minus launcher-injected --resume-from). A mismatch means "
+        "the launcher-facing generator has DRIFTED from the running v7.5.2 sealed config — a stale-"
+        "relaunch hazard. If the live config INTENTIONALLY changed, update _LIVE_V752_SEALED_ARGV via "
+        "a reviewed amendment citing the new run dir; never silently to make a drifted config pass.")
+
+
+def test_crucible_v752_finding_flags_are_launch_compositions_not_generator_staleness():
+    """The four flags a prior scan called 'missing from the generator' (--grad-clip 0.5 /
+    --grad-normalize / --pose-finish-engage-on / --pose-grad-coeff-max) are BY-DESIGN launch-time
+    compositions PRESENT in the launcher-facing program and INTENTIONALLY ABSENT from the sealed
+    ``derive_`` base transcription — a function-level misdiagnosis, not a stale generator. This pins
+    both facts so the resolution cannot be re-litigated into a wrong 'fix' to the sealed base."""
+    d = dict(wac._crucible_v7_argv_pairs(
+        wac.derive_crucible_v752_config(_GT, num_pairs=600, epochs=3000, self_orient=False)
+        .to_program().compile_trainer_argv()))
+    lc = dict(wac._crucible_v7_argv_pairs(
+        wac.compile_crucible_v752_launch_config(
+            _GT, num_pairs=600, epochs=3000, self_orient=False, amber=True)
+        .typed.to_program().compile_trainer_argv()))
+    # launcher-facing (authoritative, matches live) carries the amber + pose-gate compositions:
+    assert lc["--grad-clip"] == "0.5"
+    assert lc["--pose-grad-coeff-max"] == "25.0"
+    assert lc["--grad-normalize"] == "per-param"
+    assert lc["--pose-finish-engage-on"] == "sigma_min_plateau"
+    # sealed derive base INTENTIONALLY lacks the compositions (grad-clip is the inherited 1.0):
+    assert d["--grad-clip"] == "1.0"
+    assert "--grad-normalize" not in d
+    assert "--pose-grad-coeff-max" not in d
+    assert "--pose-finish-engage-on" not in d
+
+
 def test_crucible_v752_completeness_fused_r_folded_and_taper_held():
     """completeness() disposition, POST-#377 fold (commit 3925001ec): --fused-r-kernel is now
     DSL-MAPPED — the score-neutral compute gap the prior '--fused-r-kernel is the only gap'
