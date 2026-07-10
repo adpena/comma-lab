@@ -116,7 +116,7 @@ def build_textured_power_diagram_sufficient_statistic_v1() -> CanonicalEquation:
         latex_form=(r"W=(G,\xi,T);\;S_{\mathrm{floor}}(W)=R(G)+R(\xi)+R(T)"
                     r"+100\,d^*_{\mathrm{seg}}(T)+\sqrt{10\,d^*_{\mathrm{pose}}},\;"
                     r"d^*_{\mathrm{seg}}(T)\in[1.6\mathrm{e}{-7},\,4.8\mathrm{e}{-3}]"),
-        python_callable_module_path="tac.through_r.palette_realization:realize_partition_through_r",
+        python_callable_module_path="tac.through_r.palette_realization:run_arm",
         domain_of_validity={
             "vehicle": ["task_space_witness", "v8_perclass_carriers"],
             "scope": ("frame_1 frozen CPU-torch SegNet argmax through the pinned R; "
