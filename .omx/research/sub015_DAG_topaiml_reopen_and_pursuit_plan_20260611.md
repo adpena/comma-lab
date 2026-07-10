@@ -13570,3 +13570,133 @@ Subagent `fractal-synth-398b`. Pointer contest-CPU **0.19110 UNMOVED** — MEANS
   fake-implementation smell. The durable machine row is `reports/kalman_innovation_20260710/verdict.json`
   (verdict_scope: formulation — Kalman-CV/CA innovation coding on these two carriers; smooth-continuous regime
   explicitly open) + the P10 constraint carved into the negative-findings register.
+
+### FEED-v753-builder (2026-07-10) — the v7.5.3 typed-config builder + 2 OWED wire-ins LANDED (BUILD-only)
+- **What landed (subagent `v753-builder`, task #398 thread B):** the `derive_crucible_v753_config` DSL-typed
+  builder (`src/tac/witness_autoconfig.py`) + `crucible_v753` launcher branch (`tools/launch_witness_run.py`
+  `derive_named_config`) realizing the fractal-synthesis typed delta over v7.5.2
+  (`fullstack_fractal_optimal_synthesis_20260710.md` §2/§3). It is v7.5.2 + the typed delta, authored AS a
+  `TypedWitnessConfig` (`.compile_trainer_argv()` + `.validate_program()` fail-closed on invented flags).
+- **The typed delta, MEASURED byte-diff per branch (n600, argv flag_dict):**
+  * **Δ1 `trunk_basis` ∈ {"off"(default), "on"}** — the §2 owed16v2 PRE-REGISTERED decision-rule OUTCOME as an
+    explicit typed param (rule documented on `_CRUCIBLE_V753_TRUNK_BASIS_DECISION_RULE`; the builder does NOT
+    hardcode a winner — DEFAULT is the OFF-arm per the pre-registration, caller-overridable). **OFF-branch argv
+    == v7.5.2(self_orient=False) EXACTLY (empty delta)** — the registered levers are metadata, never argv.
+    **ON-branch delta vs v7.5.2(self_orient=True) = EXACTLY {`--freq-along` 6→26, `--persistence-classes`
+    3→auto, `--logit-adjust-classes` 3→all}** — the coherent rebalanced lane_carried allocation (regime
+    coupling flipped WITH the basis, SEAL v7.3 M1; not just the freq).
+  * **Δ2** — `texture_trunk` (A3) composes the `TextureTrunk` lever; `out_tex_hidden=N` (A2) composes the NEW
+    `OutTexHidden` lever emitting the OWED `--out-tex-hidden` flag. Both default-OFF, duty-to-measure.
+  * **Δ3** — `analytic_lane_band_training` composes the NEW `AnalyticLaneBandTraining` lever (trained-in from
+    ep0; reuses the LANDED `--lane-render-band`/`--lane-band-*` flags — NO invented/duplicated flag; the only
+    delta over the default is `--lane-band-start-epoch` 500→0).
+  * **Δ4** — the 10-rung + operator-GO duty-to-measure LADDER (`crucible_v753_ladder()`), registered-OFF
+    (argv-inert queue; each an own increment, P12). All 11 factories VERIFIED-present in `curriculum_dsl`
+    (MarginSaliencyReachability, DashComb, LanePrior, LengthSigma, MarginBandSatisficing, StepNativeActivation,
+    MuonWarmStart, FiLMFix, TieLocusDisplacement, MicroBatch, EikonalViscosity) — **0 genuinely-missing ⇒ NO
+    `emit_stub_lever` owed** (per #397 all BUILT).
+  * **Δ5** — `mc_finisher_terminal` (#396 `MCFinisher`) as a TERMINAL-STAGE TOOL, NOT a Lever/flag:
+    ARGV-INERT (records terminal-stage intent in `purpose` only; a byte-close-time post-training ratchet).
+- **The 2 OWED wire-ins (grep-argparse-first; never-invent-flags):**
+  * **`--out-tex-hidden` = NEW** (absent from the trainer argparse) → genuinely wired into the LEVELSET trainer
+    (`experiments/train_levelset_witness_realized_through_R_mlx.py`, 8 sites: argparse + ctor param + conditional
+    head build + `_tex` helper routing BOTH tex sites + instantiation + `__cfg_out_tex_hidden` persistence +
+    resume-divergence guard). DEFAULT 0 = OFF = **byte-identical** (MEASURED: off=18 param keys, no `out_tex_h`;
+    on(8)=20 keys adds `out_tex_h.{weight,bias}`, no dropped keys; both forward paths run). NOT fake: `out_tex_h`
+    contains the `out_tex` Muon-exclude token ⇒ routed to AdamW ⇒ genuinely trained. Held by the NEW DSL
+    `OutTexHidden` factory ⇒ MAPPED (completeness unmapped stays 107 baseline, no new gap; stale 0).
+  * **lane-band training-mode = ALREADY-PRESENT at the trainer surface** (`--lane-render-band` +
+    `--lane-band-start-epoch` already make the band participate in the trained render) → NO new/duplicate
+    trainer flag invented; realized as the NEW DSL `AnalyticLaneBandTraining` Lever factory (start_epoch 0 =
+    trained-in) reusing the landed flags.
+- **Tests:** `src/tac/tests/test_crucible2_v753_dsl_wirein.py` — **22 tests PASS** (v753 compiles+validates both
+  branches; byte-diff==typed-delta per branch; each A/B arm's exact flag delta; mc-finisher argv-inert;
+  decision-rule branches both compile + default is the OFF-arm + invalid trunk_basis refused; DSL validate
+  fail-closes on an invented flag; completeness has no new unmapped + `--out-tex-hidden` mapped; ladder 11
+  factories all exist; launcher resolves + manifest verifies; **ADVERSARIAL round-1 dead-flag regression:
+  emitted argv ⊆ real argparse surface across all arm combos**). Regression: v752 wire-in + lever_registry +
+  epochs-sealed suites all green (29). ruff F clean.
+- **Triality:** DAG — this FEED. **DSL leg = the builder + `OutTexHidden`/`AnalyticLaneBandTraining` Lever
+  factories + the ladder registry ARE leg 1 (LANDED, not deferred).** **equations leg = deliberately-not-minted
+  → deferred-to-first-measured-row (stated, not skipped):** v7.5.3 is a BUILD (config plumbing); it makes NO
+  score/law claim — the trunk-basis decision, d_seg*(T), fn-recovery, and the ladder rungs are all
+  ASSUMED_AWAITING_VERIFICATION with pre-registered P7 falsifiers. A law with a callable is minted only when a
+  byte-closed n600 row measures one (a hollow-callable equation now would be a fake-implementation smell). The
+  §2 pre-registered decision rule + the P7 falsifiers ARE the standing predictions; they become an
+  `EmpiricalAnchor`/law at first measured row.
+- **Pointer contest-CPU 0.19110 UNMOVED — v7.5.3 is MEANS (a launchable config, NO launch fired; the live arm
+  holds the machine). It moves the pointer only through the §3 gating chain ending in a byte-closed
+  `upstream/evaluate.py` n600 row < 0.19110.**
+
+### FEED-v8-b1 (2026-07-10)
+
+**Unit:** v8 B1 BUILD — the per-class DECOUPLED-FIELD training mode + composition forward (the single
+real blocker to the v8 chain per `v8_unlock_398a_20260710.md`; the pinned sequence is B1→E1→E2→E3→E4).
+`$0 · no GPU · no launch · pointer contest-CPU 0.19110 UNMOVED (MEANS).` Subagent `v8-b1-decoupled-field`.
+
+**What was BLOCKING (v8_unlock Blocker 1):** the live witness had ONE shared `--head` (softmax/etf/
+additive-margin) = ONE shared out_sdf readout of ONE shared trunk, so `∂phi_c/∂θ_{c'} ≠ 0` (the measured
+cross-class THEFT channel: run-1 Lane 13.8× / Movable 4.6× stealing Road). No decoupled-per-class-field
+mode existed ⇒ the 1a kill-gate's decoupled arm could not be built. **B1 builds that arm.**
+
+**What LANDED (build only; all MEASURED green at $0):**
+- **`src/tac/boundary_math/decoupled_field.py`** — K INDEPENDENT per-class coordinate-INR fields
+  (block-diagonal params over the class axis; each class `k` reads ONLY `w[k]`). numpy fp32 portable
+  authority + MLX mirror (float32 parity: relu ≤5e-3, tanh ≤1e-3) + pure composition fns
+  (`compose_argmax_partition` = tropical `argmax_c(phi_c+b_c)`, `compose_softmax`) + param/byte
+  accounting (E1's `matched_control_spec(P_dec)` input) + `cross_class_jacobian_is_block_diagonal`
+  (the NO-FAKE proof that `∂phi_c/∂θ_{c'}=0` — VERIFIED numerically, perturbing class kp moves ONLY
+  phi[:,kp], others invariant <1e-9).
+- **Trainer wiring (levelset entry point):** `--decoupled-field` (+ `--decoupled-field-hidden/-layers`),
+  attached as `self.decoupled_head` (texture_trunk idiom); the PARTITION providers `sdf`/`__call__`/
+  `call_batch`/`call_margin` route through `_sdf_phi` (decoupled ON) or the shared `out_sdf` (OFF).
+  The paint-free MASK partition `argmax_c phi_c` (what the 1a screen `decoupling_screen` measures) is
+  fully decoupled; `out_tex` stays on the shared trunk (texture/pose, SPEC §3 luma-reserved-for-pose).
+  **DEFAULT-OFF = byte-identical** (verified: identical param KEYS, no attr, identical compose path) ⇒
+  the LIVE run's crash-resume onto merged code is safe. **Fail-closed guard**
+  (`_decoupled_field_incompatibilities`): `--decoupled-field` REFUSES the shared-out_sdf-head levers
+  (`--head etf/additive-margin`, `--margin-field-head-weight>0`, `--head-offset-solver!=off`) — they
+  would silently mix a shared head with the decoupled partition (NO-FAKE).
+- **Resumability P0:** decoupled params flow through the standard param tree (byte-close-loadable
+  round-trip TESTED via tree_flatten→numpy→model.update); `__cfg_decoupled_field*` provenance scalars
+  round-trip; the generic missing-key arch-guard catches a mismatched resume + a `--decoupled-field …`
+  hint (mirrors `__cfg_texture_trunk`).
+- **Tests:** 42 dedicated (24 module + 18 trainer/DSL/guard), all green; ruff F clean; sister byte-
+  identity + lever-registry + inc1a + v8-inc1a-config suites unaffected.
+
+**SCOPE (honest):** increment-1 = the TRAINING MODE + composition forward ONLY (SPEC_v8 §6) — NOT the
+residual coder, NOT the paint/reconciliation-vs-frozen-scorer stage (§3), NOT a byte-close carrier (E4).
+
+**SMOKE:** NOT run. The P0 memory admission governor is ARMED and a live rebalance arm owns the machine
+(train_levelset at ~52.5 GiB RSS); a governed n8 launch is deferred to the **E1 EVENT** (operator-GO,
+machine free) — exactly the v8_unlock design (B1 = $0 BUILD; E1–E4 = governed EVENTS). The build is
+validated in-process: the REAL witness module's `sdf`/`__call__`/`call_batch`/`call_margin` all run
+through MLX with the decoupled head.
+
+**Triality — DSL leg:** `DecoupledField(field_hidden, field_layers, window)` Lever
+(`tac.witness_dsl.curriculum_dsl` + exported); compiles to the 3 real trainer flags; lever_registry
+maps them (0 unmapped / 0 stale — no orphaned flag). **equations leg: DEFERRED-to-first-measured-row
+(stated, not skipped).** B1 is a BUILD — it produces NO measured law. The candidate equations (SPEC_v8
+§5: the tropical-reconciliation law + the per-class carrier-allocation law) stay COUNCIL-FLAGGED per the
+triality discipline until their anchors land — that anchor is the **E3 `evaluate_kill(decoupled,
+control)`** n600 mask-d_seg row (CONFIRMED/KILLED/INCONCLUSIVE). Registering an equation now would be a
+number the code has not honored (NO-FAKE). The pre-registered kill-gate (`decoupling_screen`,
+δ_mask = max(3.46e-6, in-run ≥3-seed spread)) IS the standing prediction.
+
+**NEXT (pinned, unchanged):** E1 governed decoupled Stage-A → MEASURE P_dec → E2
+`matched_control_spec(P_dec)` shared-head control (≥3 seeds) → E3 `evaluate_kill` → E4 1b per-EDGE b_c
++ through-R byte-close → `upstream/evaluate.py` n600. **Pointer 0.19110 UNMOVED — B1 is MEANS.**
+
+### FEED-legdisposition-b1-and-docs (2026-07-10) — triality leg record for two flagged commits
+- **"v8 B1 (1/2): tac.boundary_math.decoupled_field ..." (`c09719b0c`):** DSL leg is BUILT and
+  TESTED (the `DecoupledField` Lever in `src/tac/witness_dsl/curriculum_dsl.py`, compiling to the
+  3 real trainer flags, lever_registry 0-unmapped) but its COMMIT is sequenced behind the
+  coordinated v753-builder co-land of the two shared hot files (interleaved hunks, --patch-file
+  separation failed there; sequencing agreed via main). DSL leg = pending-commit-by-sequencing,
+  stated not skipped; lands as B1 part 2/2 plus the FEED-v8-b1 block above this one in the file
+  history. equations leg = DEFERRED-to-first-measured-row (B1 is a build; SPEC_v8 §5 candidate
+  laws stay council-flagged until the E3 n600 kill-gate anchor lands — registering earlier would
+  be a number the code has not honored).
+- **"docs: repoint stale adpena/tac URLs ..." (debt-settlement agent):** pure documentation
+  hygiene (terminology-gate stale-wording fixes), [no-triality] class — no lever, no measurement,
+  no law; the marker was omitted from the commit message, recorded here instead.
