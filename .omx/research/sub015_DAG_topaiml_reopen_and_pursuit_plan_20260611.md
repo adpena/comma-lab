@@ -14093,3 +14093,13 @@ crucible_v752 launch path + the live run dir `levelset_v752_pilot_20260710T15410
 - Legs: DSL N/A (search tool) · equations OWED on the n600 row (click-polish RD law + waterline
   equivalents) · DAG = this FEED. **Pointer 0.19110 UNMOVED in the canonical file — the n8 row + custody
   are handed to main for pointer refresh + verification (coordinator binding).**
+
+### FEED-legdisposition-n8val (2026-07-10) — triality leg record for the #399 n8-validation commit
+- **"click-polish #399: n8 validation ALL GREEN — in-container 600-sample e…":** the n8 run is
+  MACHINERY VALIDATION, not a scored finding — an 8-pair subset in-container proving the full chain
+  executes (image · in-container GT · search · evaluate.py · custody). Per the allergic-to-non-n600
+  discipline, n8 numbers are NOT evidence of score and mint NO anchor. equations leg =
+  deferred-to-the-n600-same-container exact row (the bounded n600 launch this validation unblocks —
+  hours away); that row registers the click-polish anchor with full custody. DSL leg = N/A (TOOL,
+  standing disposition). DAG leg = this record + FEED-clickpolish-build. verdict_scope: n/a
+  (positive machinery validation; no negative asserted).
