@@ -12,12 +12,25 @@ council_assumption_adversary_verdict:
   - assumption: "the two top decision-table rungs (HorizonWeightedMargin 43.8%, StepNativeActivation 31.6%) HELP d_seg"
     classification: CARGO-CULTED
     rationale: "rel_sig is a floor-aware ESTIMATE (proxy), both rungs are NEVER-FIRED; the 'fold them in' framing inherits the table's proxy ranking as if measured. Their OWN fire criteria demand an A/B."
-  - assumption: "DsegAwareTaper (ranked #1, 73%) is a fire-now win"
+  - assumption: "DsegAwareTaper's EV is SETTLED (either the table's 73% OR #121's WEAK)"
     classification: CARGO-CULTED
-    rationale: "live contradiction: #121 historically DOWNGRADED taper to WEAK (frontier saliency 5.5x FLAT). The #405 table ranks it 73% without reconciling — a table-freshness bug that must be resolved before trusting the ranking."
+    # MAGNITUDE_DISMISSAL_OK: NOT a dismissal — the OPPOSITE. The taper is ranked #1
+    # (73% of the remaining 0.19108->0.15 descent, i.e. rel_sig already IS the relative-
+    # significance number, ~0.030 S if realized). The Assumption-Adversary is flagging an
+    # UNRECONCILED CONTRADICTION (table 73% vs #121 WEAK), not concluding it's small.
+    # Neither verdict is trusted-until-MEASURED; the resolution is op-routable #4 (measure
+    # the taper A/B), which is measure-don't-dismiss, not magnitude-based orphaning.
+    rationale: "UNRECONCILED: table rel_sig 73% (~0.030 S of the 0.0411 remaining gap) CONTRADICTS #121's WEAK downgrade (frontier saliency 5.5x FLAT — a PROXY-saliency read, never a byte-closed n600 A/B). Neither is a measured through-R verdict → resolve by MEASUREMENT (op-routable #4), do not trust either estimate."
 ---
 
 # T2 — v7.5.2 relaunch shape: concurrent A/B arms vs single updated arm
+
+**STORES CONSULTED:** `.omx/research/default_off_decision_table_20260710.jsonl` (the #405 table — fire-now
+rungs + rel_sig + each rung's own fire criterion) · `.omx/research/n205_full_run_risk_register_watchlist_20260702.md`
+(D9 concurrent-arm memory/scheduling risk) · `tools/witness_memory_preflight.py` (self-orient ON vs OFF
+peak: 67.6 vs 24.5 GiB) · task #173 (fleet-scaling blockers) · #121 (taper WEAK downgrade) · #313/#261/#293
+(micro-batch twin) · CLAUDE.md §Council conduct + §Council hierarchy T2 + the confound self-protection
+non-negotiable · memory `curriculum_candidate_pool_p0_orphan_class_20260710` + `launch_readiness_gate_config_freshness_naive_launch_20260710`.
 
 **Decision:** given the readiness gate now forces the relaunch config to consume the #405 table, and
 self-orient OFF freed ~65 GiB, what shape is the relaunch? Options as posed: (A) single updated arm
