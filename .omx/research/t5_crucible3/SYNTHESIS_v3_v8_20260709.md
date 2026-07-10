@@ -13,11 +13,12 @@ ONE stale field (§B `bc_calibration`) out of the "UNCHANGED-from-v2" pointers; 
 sweep found the REST of that class. **TWO facts landed AFTER v2 was written and SUPERSEDE every v2 pointer
 that predates them** — every "UNCHANGED from v2 / see v2 / hold" reference in v3 is read THROUGH these:
 1. **#386 RULED** (gate `laguerre_ot_head_offset_20260709`, realized-through-R n600 mod32cap ep650, commit
-   1cd890c17; both flip arms REFUTED, `no_offset` **0.0031436** = MEASURED-CONFIRMED safe default). Authority
+   1cd890c17; both flip arms REFUTED (verdict_scope: FORMULATION — flip_weighted OT-cell-inflation / flip_median
+   regime-violation on eroded trunk; per-edge + joint reformulations OPEN), `no_offset` **0.0031436** = MEASURED-CONFIRMED safe default). Authority
    = **§A.3**. SUPERSEDES every v2 "#386 in flight / no_offset default until #386 / #386 measures it / #386
    builders IN FLIGHT" marker reachable via a v3 UNCHANGED pointer — specifically **v2 §A.4 L225, §D item-1,
    §H consumed-surfaces L506-507/513, §I5 L531** (R1/R2 carved only §A.3 + §B `bc_calibration`; these are the
-   rest). Read them as #386-RULED, no_offset the confirmed default, both flip arms REFUTED — NOT pending.
+   rest). Read them as #386-RULED, no_offset the confirmed default, both flip arms REFUTED — NOT pending. <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped flip-b_c anchor (§A.3) -->
 2. **owed-14 DONE** (task **#384** governed telemetry / observer-stack trust replay —
    `v752_owed_gates_build_20260709` Gate 4: BUILT+GREEN all 4 legs, incl. the load-bearing pose-gate
    negative-control DEGENERATE_GUARD on #205's real σ_min). SUPERSEDES every v2 "owed-14 equations-leg trust
@@ -74,7 +75,7 @@ confirmed) · `src/tac/inc1a_harness/decoupling_screen.py` (δ_mask default SWAP
 | **F-P5-4** NO temporal section for the 1a d_seg screen (eightfold-P6 SEAL FAIL); decoupled per-class fields may flicker independently at the tie | **REVISE** | **FIXED** — NEW **§A.8 temporal section**: the 1a mask screen measured PER-FRAME **AND** with a per-class **tie-flicker** row across consecutive pairs (Lever-D temporal machinery, #280, is the existing instrument); v8's fuller temporal story (slot-churn, GOP-keyframe, dash-phase=ego-distance) stated as the **SPEC_v8.1** section it becomes. | §A.8 (new), §B `measure_1a.temporal` |
 | **F-P5-3** shippable (pre-P-C) increment-1 rate = 0.135 = WASH; sub-frontier win rides the r\* waterfill (P-C-gated, unmeasurable in inc-1) | **CARRY-AS-RISK** | **RECORDED** — §A.2 + the P8-brief requirement: shippable rate = **0.135 (WASH)**, sub-0.118 win explicitly **P-C-gated**; carry r\* as a labeled **RANGE [0.061, 0.135]** with F8 uncertainty, NEVER a point; note the wash is partly a weak-lane-generator artifact (F-P5-5), not v8's ceiling. | §A.2, §C risk-3-rider |
 | **F-P5-5** lane-generator coverage (53% of enemy) = FAST-FOLLOW not increment-1 scope | **CARRY (recommendation)** | **RECORDED** — §A.2 roadmap rider: lane-generator coverage is a **FAST-FOLLOW** (post-1a, its own BUILD + byte-close + n600 A/B), NOT increment-1 scope (folding it BLOATS the cheapest-falsifiable row); its params ride §I clause-B. | §A.2, §D-10 |
-| **F-P5-P9-2** de-share 0.0044 rides a dilate=2 Movable-footprint PROXY for the bbox carrier's realized coverage | **CARRY-AS-RISK (minor)** | **RECORDED + P6-R3 BAND CORRECTED** (sibling `proxy_suspect_audit_20260709` item 2, MEASURED on gt_n600 all 600) — de-share 0.0044 tagged **`[dilate-proxy band 0.000–0.0069 across dilate∈{0,1,2,3}; landed 0.0044 = dil2 INSTANCE (reproduces dil2 EXACTLY, NOT footprint-robust; dil0/dil1 fall BELOW 0.0044); thing-itself = G3 bbox realized coverage post-byte-close, owed]`**. The v2/P5 **[0.0044,0.0104] was a DIFFERENT (amortized-vs-realized) uncertainty, NOT the footprint band** — do NOT quote it as the de-share robustness band. Curve-relative REFUTED verdict HOLDS across the whole band (footprint-robust). | §A.2, §A.5 |
+| **F-P5-P9-2** de-share 0.0044 rides a dilate=2 Movable-footprint PROXY for the bbox carrier's realized coverage | **CARRY-AS-RISK (minor)** | **RECORDED + P6-R3 BAND CORRECTED** (sibling `proxy_suspect_audit_20260709` item 2, MEASURED on gt_n600 all 600) — de-share 0.0044 tagged **`[dilate-proxy band 0.000–0.0069 across dilate∈{0,1,2,3}; landed 0.0044 = dil2 INSTANCE (reproduces dil2 EXACTLY, NOT footprint-robust; dil0/dil1 fall BELOW 0.0044); thing-itself = G3 bbox realized coverage post-byte-close, owed]`**. The v2/P5 **[0.0044,0.0104] was a DIFFERENT (amortized-vs-realized) uncertainty, NOT the footprint band** — do NOT quote it as the de-share robustness band. Curve-relative REFUTED verdict HOLDS across the whole band (footprint-robust). <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped curve-relative δ(s)-coder anchor --> | §A.2, §A.5 |
 | **F-P5-6 / P9-3** T1 headline **0.0032** vs code-emitted **0.00277** (memo-vs-code nit) | **CARRY (minor)** | **RECORDED** — T1's dominant-arc number PINNED to the code-emitted **0.00277** (R3 MEASURED, 4167 B); 0.0032 annotated as the amortization-method delta (~0.0004 S = 1.1% of the gap, IMMATERIAL; 0.00277 is even cheaper → T1's rate argument is STRONGER). | §A.1, §I I1 |
 | **F-P5-7** "#226-admitted flips" vs "uncovered residual px": SAME pool, #226 admits a d_seg-ranked SUBSET at r\*<1 (equal only at r=1) | **DISSOLVED-with-clarification** | **DISSOLVED-CONFIRMED** — re-derived: the two ARE the same pool; #226 `waterfill_select` admits the d_seg-ranked subset until the water level (equal to the full uncovered set only at r=1, the complete-lossless endpoint). No design change. | §A.2 (nuance retained) |
 
@@ -192,7 +193,7 @@ The residual decision + waterfill (#226 real KKT) + the TRIPLE-brief-row VERDICT
   thing-itself = G3 bbox realized coverage post-byte-close, owed]`**. The prior v2/P5 **[0.0044,0.0104] was
   a DIFFERENT (amortized-vs-realized) uncertainty, NOT the footprint band** — retired here. The thing-itself
   path is NAMED (rasterize the actual G3 bbox realized coverage post-byte-close and attribute the true
-  intersection). Curve-relative REFUTED verdict HOLDS across the whole footprint band.
+  intersection). Curve-relative REFUTED verdict HOLDS across the whole footprint band. <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped curve-relative δ(s)-coder anchor -->
 
 F7 DISSOLVED-CONFIRMED (re-derived): "#226-admitted flips" and "uncovered residual px" are the SAME pool;
 #226 admits the d_seg-ranked SUBSET until the water level (equal to the full uncovered set only at r=1).
@@ -202,7 +203,7 @@ F7 DISSOLVED-CONFIRMED (re-derived): "#226-admitted flips" and "uncovered residu
 - **A.3 b_c tie calibration** — design UNCHANGED; **#386 gate now RESOLVED (was OWED in v2/P4) — P6-R1 pin.**
   M-a flip-share-MASS-OT + M-b flip-density-MEDIAN were both built (P4 R4) and the #386 realized-through-R
   n600 gate has now RULED (`laguerre_ot_head_offset_20260709.py`, mod32cap ep650, all 600 pairs, frozen CPU
-  SegNet fp32): **BOTH flip arms REFUTED, decisively** — no_offset **0.0031436** (n600 authority; the 0.00272
+  SegNet fp32): **BOTH flip arms REFUTED, decisively** <!-- # VERDICT_SCOPE_OK: FORMULATION/REGIME scope stated in this same §A.3 bullet below --> — no_offset **0.0031436** (n600 authority; the 0.00272
   was the n24/n48 SUBSET) << M-a flip_weighted **0.0196734** (6.3×, +40% of the gap AS HARM) << M-b flip_median
   **0.0215612** (6.9×, +45% AS HARM). **verdict_scope: FORMULATION/REGIME, NOT paradigm** — M-a re-inherits +
   amplifies N-1's cell-inflation pathology (FORMULATION: "flip-share via mass-OT"); M-b is a REGIME violation
@@ -324,7 +325,7 @@ road_undriv_carrier:
 # ==== no_offset "0.00272 MEASURED default until #386 [in flight]"; the #386 gate has now RULED. ====
 bc_calibration:
   gate_386: RULED                          # P6-R1/R2: was "in flight / OWED" in v2 §B; realized-through-R n600 (mod32cap ep650, frozen CPU SegNet fp32) has RULED
-  safe_default: no_offset                   # both flip arms REFUTED: flip_weighted 0.0196734 (6.3× WORSE), flip_median 0.0215612 (6.9× WORSE)
+  safe_default: no_offset                   # both flip arms REFUTED: flip_weighted 0.0196734 (6.3× WORSE), flip_median 0.0215612 (6.9× WORSE)  # VERDICT_SCOPE_OK: citation of FORMULATION-scoped flip-b_c anchor (§A.3)
   no_offset_d_seg: 0.0031436                # n600 MEASURED-ANCHOR authority; v2's 0.00272 was the n24/n48 SUBSET — do NOT compile from it
   never: [ot_newton, flip_weighted, flip_median]   # global post-hoc 5-scalar b_c SATURATED on the eroded trunk (N-1 exhaustive ±0.4 sweep best Δ −3.4e-8)
   route_forward: per_edge_bc_on_fresh_v8_stageA_decoupled_fields   # §A.3: non-eroded by construction (S1 per-edge form); global offset on the frozen eroded trunk IS the saturated regime; also owed: offsets solved JOINTLY-with-training
@@ -350,7 +351,7 @@ residual_coder:
 
 **P6-R3 supersession (read v2 §D THROUGH the POST-V2 SUPERSESSION LEDGER):** v2 **§D item-1** ("consume #386's
 n600 gating … until #386 lands ship no_offset + queue both arms") is RESOLVED — #386 has RULED, both flip arms
-REFUTED, no_offset is the MEASURED-CONFIRMED default (§A.3); no queuing remains. v2 **§D item-4**'s
+REFUTED, no_offset is the MEASURED-CONFIRMED default (§A.3); no queuing remains. <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped flip-b_c anchor (§A.3) --> v2 **§D item-4**'s
 `owed-14 equations-leg trust replay` is RESOLVED (#384 GREEN); its remaining owed = per-class d_seg-basin
 conjunct + f_basin only.
 
@@ -377,7 +378,7 @@ conjunct + f_basin only.
 |---|---|---|---|---|
 | **I1** (pin) | **G1 horizon top arc** | 4 coeffs (deg-3) + ξ intercept (charged once, §G S1) | GEOMETRIC-MINIMAL | MEASURED: cubic/quadratic coeffs FROZEN 599/600 frames (\|Δ\|≈1e-7/6e-5); only intercept moves. **F-P5-6 PIN: dominant S 0.00277 (code-emitted 4167 B), not memo 0.0032.** 14.6× MEASURED. |
 | **I1b** *(NEW, F-P5-1)* | **G1 lateral undriv extent curves** `x_L(y)`, `x_R(y)` | **2 per-row low-order curves** (deg-3 → ~4 coeffs each = ~8 coeffs) + per-frame intercepts | GEOMETRIC-MINIMAL | **DERIVED + owed-measurement:** the side undrivable↔drivable boundary is a smooth low-order curve (off-road region boundary is C²), the multi-branch complement of the single-valued top arc that R6 MEASURED homes 97.54% of the Undriv d_seg mass. **Byte-cost DERIVED estimate: carrier total S ∈ [0.0040, 0.0083]** (LOWER = side curves as ego-rigid as the top arc, only intercepts move, coeff headers amortized ⇒ +[0.0012] over 0.00277; UPPER = side curves fully independent per-frame ⇒ 3× the single-curve 4167 B). **tagged owed-measurement** — the side-curve frozenness on gt_n600 is UNMEASURED (recess R8, mirrors the horizon's MEASURED |Δ|≈1e-7). Still GEOMETRIC-MINIMAL: 3 low-order curves ≪ the dense bulk SDF field (I10, 20–50 KB = S 0.13–0.33) ⇒ T1's demotion RATE law survives. ÷0.0411: the added [+0.0012,+0.0055] = [2.9%,13.4%] of the gap, but BUYS the removal of the 0.162 Undriv analytic floor (97.5% lateral) — a d_seg-side justification for the byte cost. |
-| I2–I11 | UNCHANGED from v2 §I | — | — | UNCHANGED **EXCEPT I5** (P6-R3): v2 I5's "no_offset default = 0 params until measured … #386 measures it" is SUPERSEDED — #386 has RULED (§A.3), no_offset (0 params) is the MEASURED-CONFIRMED safe default, both flip arms REFUTED. |
+| I2–I11 | UNCHANGED from v2 §I | — | — | UNCHANGED **EXCEPT I5** (P6-R3): v2 I5's "no_offset default = 0 params until measured … #386 measures it" is SUPERSEDED — #386 has RULED (§A.3), no_offset (0 params) is the MEASURED-CONFIRMED safe default, both flip arms REFUTED <!-- # VERDICT_SCOPE_OK: citation of the FORMULATION-scoped flip-b_c anchor (§A.3) -->. |
 
 **Standing check (P6 + SPEC_v8.1 seal):** I1b enters in GEOMETRIC-MINIMAL mode with a derivation + a
 DERIVED byte-cost range tagged owed-measurement; recess R8 is its measurement path. No unjustified capacity

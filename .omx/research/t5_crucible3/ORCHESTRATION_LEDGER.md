@@ -380,3 +380,22 @@ Grid-pin standing check cites sibling item 8 (independent confirmation); 42 s/ep
 **Triality:** [no-triality] (doc-fidelity + supersession/pointer + sibling-fold; no lever/law change).
 Pointer 0.19110 UNMOVED — MEANS.
 NEXT ACTION: **P6-R4** — re-derive over the R3-fixed doc; if zero findings, first CLEAN toward 3-consecutive seal.
+
+### [P6-R4 DONE] crucible3_v8 seal round 4 — NOT_CLEAN (1 finding, drift-detector-injected doc hygiene) — 2026-07-09
+Fresh-eyes re-derive (not confirm) over HEAD `ce6f9afca`. Counter holds **0/3** (consecutive_clean=0, unsealed).
+**6 STANDING CHECKS: scaffold-smoke · number-provenance · grid-pin · eightfold+P9 · review-prior-fix · P10-synthesis — ALL PASS.**
+**R3 fixes RE-DERIVED SOUND vs primary artifacts (item-2, don't-trust-transcription):**
+- **POST-V2 SUPERSESSION LEDGER complete + correct.** Enumerated every post-v2 landing (git log since v2 @ `9810ab5db` 19:50) touching v8 claims: #386 ruling (`1cd890c17`), #384/owed-14 (`v752_owed_gates_build`), P5→v3 (`6b1568b0b`), de-share (proxy-audit `7d777c363`), P11/P12 (FEED-p11-p12), grid (§A.4-grid). Two SUPERSEDING facts (#386 RULED, owed-14 DONE) correctly captured; all others folded in-body or apparatus. Blanket clause ("every UNCHANGED/see-v2 ref read THROUGH these") + enumerated specifics jointly cover D3/D6/§E-R4 residues.
+- **Ledger VALUES verified vs `flip_bc_n600_gate_20260709/flip_bc_n600_result.json`:** no_offset 0.003143556→**0.0031436** ✓ · flip_weighted **0.0196734** (Δ0.0165, 6.3×) ✓ · flip_median **0.0215612** (Δ0.0184, 6.9×) ✓ · gate script `laguerre_ot_head_offset_20260709.py` (commit `1cd890c17`) confirmed.
+- **Owed-set reduction TRUE (item-2c):** v2 §B set was `[per_class_dseg_basin_conjunct, f_basin_0.9_tuning, owed_14_equations_leg_trust_replay]`; v3 removes ONLY the resolved third → `[per_class_dseg_basin_conjunct, f_basin]`. Correct.
+- **de-share band [0.000,0.0069]** matches proxy-audit MEASURED gt_n600 sweep (dil0=0.000, dil1=0.00195, dil2=0.004399, dil3=0.0069). Consistent.
+- **INTERNAL cross-section consistency (item-3):** every ≥2×-appearing number agrees (0.00277 arc · 0.0031436 b_c · 0.135 wash [=0.140−0.00440−0.00102] · [0.0040,0.0083] carrier [+0.0012/+0.0055 → 2.9%/13.4% of 0.0411] · 0.162 Undriv floor · 0.074 enemy=180% · 97.54% lateral). No edit-scar contradiction across 4 rounds / 8 fixes. Three distinct 0.00xx (0.00277 rate / 0.0031436 b_c / 0.00272 old-n24) NOT conflated.
+- **P11 N/A-derivation HOLDS (item-4):** trunk φ-space Lane erosion is a **v7.5.2 mod32cap-trunk pathology** (the frozen ckpt the flip-b_c gate ran on), NOT a v8 Stage-A deliberate-harm element — v8 Stage-A fields are "non-eroded by construction" (§A.3 route_forward). 1a screen ships no anneal schedule. P11 satisfied.
+- **P12 signs defensible (item-4):** lateral-carrier anti-redundant w/ residual (owner assigned) · decoupled-fields antagonistic w/ temporal-coherence (§A.8 tie-flicker, measured-BY-1a per trailing clause) · fast-follow antagonistic-if-early · b_c(no_offset)=identity→orthogonal.
+- **P10 correctly NOT a seal-row:** FEED-p10 routes P10 to synthesis-phase constraint-set-synthesis + #385 brief risk-register, not a per-seal check (only P11/P12 routed to seal standing checks). §A.3 route_forward + F-P5-5 honor P10 implicitly.
+- **item-8 assumption(1) RESOLVED:** v2 token `owed_14_equations_leg_trust_replay` ≡ #384 memo "owed-14 / item 14 Governed telemetry replay (observer stack)" — same referent, resolution legitimate.
+FINDING (1, drift-detector-injected — coordinator-relayed; doc hygiene, not a new class):
+- **F-R4-1 (unscoped REFUTED tokens):** 8 `REFUTED` tokens (L16/20/77/195/205/327/353/380) lacked line-level verdict_scope. All are flip-b_c arms or curve-relative, both FORMULATION-scoped per their anchors. FIXED in-round: first-occurrence parenthetical scope (L16) + `VERDICT_SCOPE_OK` markers (citations); post-fix grep = ALL SCOPED, no scars.
+**Triality:** [no-triality] (doc-fidelity re-derive + one hygiene fix; no lever/law change).
+Pointer 0.19110 UNMOVED — MEANS.
+NEXT ACTION: **P6-R5** — re-derive over the R4 doc; zero findings → first CLEAN toward 3-consecutive seal.
