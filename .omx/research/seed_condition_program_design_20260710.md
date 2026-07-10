@@ -335,3 +335,30 @@ Chan-Vese-area-constraint/costate-λ (verbatim L1343, L3433, L2001, L5066/L4544)
 `lever_b_levelset_generator.stem_nyquist_max_freq_cycles_per_unit` · MEMORY L12/L17/L71 · CLAUDE.md §WITNESS
 CAPSTONE + §DEFAULT-OFF-orphan + §config-orphan-lever-registry · P2/P7/P11/P12 (`design_philosophies_eightfold_20260709`).
 **Pointer 0.19110 UNMOVED (means).**
+
+---
+
+## CROSS-FINDING UPDATE (2026-07-10, appended by main — Unit A composition refutation lands ON the arbiter)
+
+**#394 Unit A MEASURED (n600 through-R, matched arms, confound-free):** the period-4 grating as a
+Road/Lane REGION FILL is ANTAGONISTIC in composition — Δd_seg **+0.228** vs scene-flat (Road 0.0165→0.9985,
+Lane→1.0). Mechanism: SegNet is context-dominated; the price-list tile win is context-free; in-scene the
+flat scene-mean colour already wins Road, and injected period-4 edges flip the argmax wholesale. Equation
+`roadlane_grating_composition_refuted_v1`; memo `v8_geocoder_close_20260710.md`.
+
+**Consequence for THIS program (P10/P12 applied):**
+1. **The SEED arm's grating TARGET is pre-refuted at the region level.** The epoch-0 arbiter as spec'd
+   (fit `out_tex` to the period-4 grating target → realized d_seg vs the 0.0416 floor) is now PREDICTED to
+   fail by a stronger measurement than the probe itself — running it as spec'd would re-measure Unit A's
+   row. Do NOT run the fit-to-grating form.
+2. **What survives (the honest re-target):** the witness's own LEARNED texture (mod32cap `out_tex` ‖W‖~0.06)
+   beats the flat floor 8.7× — so texture-as-learned-modulation works; texture-as-hard-grating-fill does not.
+   The SEED arm re-targets to the WITNESS-LEARNED spectrum family (seed `out_tex` from a converged sibling's
+   texture head — a transfer-seed, not a synthesized target); CONDITION (soft band bias on a TRAINED system,
+   witness free to place/attenuate) becomes the PRIMARY arm, carrying Unit A's antagonism row as its P12
+   composition entry: the bias must be scene-placement-aware, never a region-wide spectral push.
+3. **Arbiter v2:** (a) transfer-seed epoch-0 probe (same $0 shape, target = donor witness out_tex) vs
+   (b) CONDITION-only fine-tune probe — both still gated behind owed-16 freeing the machine. The flat-fill
+   result also STRENGTHENS the null arm: scene-flat + geometry may be the Road carrier entire (v8 side).
+verdict_scope of this update: FORMULATION (grating-fill formulation refuted; texture family alive via the
+witness-learned existence proof).
