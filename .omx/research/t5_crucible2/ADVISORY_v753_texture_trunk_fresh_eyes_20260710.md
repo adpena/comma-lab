@@ -2,6 +2,8 @@
 
 `research_only=true`
 
+STORES CONSULTED: .omx/research (texture_trunk_p0_design_20260710 · fullstack_fractal_optimal_synthesis_20260710 · fable_synthesis_texture_partition_20260710 · ADVISORY_evaluator_video_geometry_20260710) · canonical equations (src/tac/canonical_equations/fullstack_home_assignment_20260710.py) · DSL (src/tac/witness_dsl/curriculum_dsl.py). Not consulted: memories index, DAG directly, task list.
+
 **Disposition:** v7.5.3/A3 is **DESIGN/BUILD-ONLY; HOLD any launch or scored A/B**. v7.5.2 is
 unaffected while `--texture-trunk` stays OFF. The current “BUILT” label is too strong because the
 training, verdict, archive, and shipped receiver do not implement one texture-enabled vehicle.

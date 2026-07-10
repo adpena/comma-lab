@@ -2,6 +2,8 @@
 
 `research_only=true`
 
+STORES CONSULTED: .omx/research (SPEC_v8_perclass_decomposition_20260708 · t5_crucible3/SPEC_v8.1_20260709 · t5_crucible3/SYNTHESIS_v3_v8_20260709 · v8_unlock_398a_20260710 · v8_geocoder_close_20260710 · ADVISORY_evaluator_video_geometry_20260710) · canonical equations (src/tac/canonical_equations/v8_geometric_rate_decomposition_20260709.py) · run-artifacts (experiments/results/inc1a_killgate_20260710/). Not consulted: memories index, task list.
+
 **Disposition:** **HOLD any v8 increment-1a training EVENT.** Permit only blocker-closing builds,
 receipt hardening, and read-only measurements. v8 contains useful L1 components and a serious design
 hypothesis; it is not yet a launchable vehicle.

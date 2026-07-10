@@ -2,6 +2,8 @@
 
 `research_only=true`
 
+STORES CONSULTED: .omx/research (SPEC_v75_optimal_single_trunk_20260708 · t5_crucible2/SPEC_v752_20260709 · t5_crucible2/SYNTHESIS_v3_v752_20260709 · DUAL_CHAIN_BRIEF_385_20260710 · r1_dxi_shippability_byteclose_20260708 · ADVISORY_evaluator_video_geometry_20260710) · DSL (src/tac/witness_dsl/curriculum_dsl.py) · run-artifacts (experiments/results/owed16v2_rebalanced_ON_20260710T114759Z/safe_run.out). Not consulted: memories index, canonical equations, task list.
+
 **Disposition:** **HOLD the full v7.5.2 launch.** The current pilot is also not a faithful
 test of the sealed v7.5.2 program unless the config/spec differences below are explicitly
 accepted, relabeled, and protected by an exact compiled-argv contract. This is an advisory
