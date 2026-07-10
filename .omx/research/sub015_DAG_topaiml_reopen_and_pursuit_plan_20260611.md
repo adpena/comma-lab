@@ -13856,3 +13856,22 @@ contest-CPU 0.19110 UNMOVED — MEANS.
   ep300 ~10 h (mod32cap ON-anchor 116 s/ep; solo OFF cadence will be MEASURED by the run itself).
 - **Pointer contest-CPU 0.19110 UNMOVED** — this launch is the pointer-mover CANDIDATE; only its
   byte-closed `upstream/evaluate.py` n600 exact row can move it.
+
+### FEED-pr128-intake (2026-07-10) — PR128 reverse-engineered → two campaigns spawned (triality/task sync)
+- **SIGNAL (operator):** review PR 128 + reverse-engineer; is it HNeRV family, how does it beat the frontier.
+- **INTAKE (ledger `pr128_intake_reverse_engineering_20260710.md`, commit 857147012; custody VertigoDataTier):**
+  `rhnerv_latent_polish` = OUR lineage (PR95 decoder verbatim + our PR110 codec, credited "@adpena, MIT"),
+  ZERO training. Claimed 0.187992 [contest-CPU external, Windows-report, unverified]. Mechanism: exact-score-gated
+  ±1/±2 latent clicks · pair-locality→diagonal batching (600 candidates/render; 67,200 in 112 renders) ·
+  PR101-sidecar fold (−605 B) · native-CPU-axis selection (GPU-selected clicks lose ~0.0009 on CPU). Its published
+  negatives CONFIRM our laws: QAT surrogate improved while TRUE seg doubled (surrogate≠authority); weight clicks
+  all rejected (decoder at strict discrete local optimum).
+- **RESPONSE (tasks + GO):** #399 borrowed-bank click-polish on OUR PR110-lineage frontier payload (harness
+  building; operator Modal GO within #381 ≤$20; search+exact-eval in one dispatch; expected ≈0.188 [contest-CPU],
+  borrowed_substrate_accounting, defensive bank per NO-FAKE #7) · #400 witness terminal-band = #396 MC-finisher
+  pair-local DIAGONAL mode per `clickpolish_to_witness_design_20260710.md` (code d_seg + ξ pose polish;
+  post-launch, never blocks the chain).
+- **Legs:** DAG = this FEED + FEED-clickpolish-witness-design; DSL = N/A (TOOLs not Levers, stated); equations =
+  deferred-to-first-measured-row (both campaigns produce their laws at their first byte-closed rows). MEMORY.md
+  ⭐CURRENT line updated to 07-10 state (compressed within the 17408 cap). **Pointer contest-CPU 0.19110 UNMOVED
+  — external claims are not rows; our own exact rows are in flight.**
