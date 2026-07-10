@@ -12625,3 +12625,18 @@ SegNet input contract x[:,-1]→resize(512,384) + PoseNet YUV6 preprocessing), e
 in the chain: render grid → camera 874×1164 → uint8 → SegNet 512×384 → PoseNet (512,384)-normalized —
 each flip surface pinned to its authoritative grid BY UPSTREAM SOURCE, not by our conventions. Pointer
 0.19110 UNMOVED (means).
+
+## FEED-p10-negatives-carve-optimum (2026-07-09) — OPERATOR PHILOSOPHY P10: negatives are constraint surfaces that jointly derive the optimum
+**Operator verbatim:** "All kill and negative results raise signal that together with all other
+information gives shape to understanding of and realization of and ultimately derivation and
+measurement of truly optimal." Encoded as P10 in `design_philosophies_eightfold_20260709.md`.
+The elevation: verdict-scope makes negatives honest, reformulation queues keep them alive, **P10
+makes them CUMULATIVE** — each scoped negative is a measured constraint removing a region of design
+space; the accumulated set + positives TRIANGULATES the optimum until it is DERIVED, not searched.
+Receipts already in-tree: ξ-negative→chart-selection LAW · N-1+flipbc negatives→per-edge-b_c home
+derived · curve-relative-REFUTED→lane-generator-coverage located · dense-medial→parsimony law ·
+isotropic-capacity→basis-before-capacity. **Routing:** (a) every negative anchor states the design-
+space region it removes (equations-leg convention, additive); (b) crucible P2/P4 synthesis phases +
+future symposia run a CONSTRAINT-SET SYNTHESIS pass (what do all negatives jointly pin?); (c) the
+P8/#385 brief's risk register reads negatives as coverage, not losses. Triality: DAG=this FEED;
+DSL/eq legs follow as the convention lands on future anchors. Pointer 0.19110 UNMOVED (means).
