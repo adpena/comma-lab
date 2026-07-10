@@ -14883,3 +14883,22 @@ trusted) — the premise is a MISIDENTIFICATION of two config LINEAGES:**
   byte-identical). Equations = **N/A** (apparatus; measures nothing, mints no law). Pointer **0.19108282
   [contest-CPU] UNMOVED** — a correctness fix to the launch APPARATUS: it protects the pointer-mover from
   ever launching a stale/divergent sealed config, but moves no score itself.
+
+### FEED-v752cfg (2026-07-10, #422, 3e249290a) — v752 generator-vs-live "drift" RESOLVED as a function-level MISDIAGNOSIS
+
+Third audit-finding this wave that careful re-derivation proved FALSE (after `_proven_base` non-drift #421
+and store-paths 38→5). The finding compared `derive_crucible_v752_config` (the sealed transcription base)
+to the live `launch.sh`; that is the WRONG function. The live launch path
+(`tools/launch_witness_run.py:740`) dispatches through **`compile_crucible_v752_launch_config(self_orient=False,
+amber=True)`** — the launcher-facing wrapper — which byte-reproduces the live launch.sh trainer argv **286/286
+tokens, exact order, zero mismatches** (only `--resume-from` differs = launcher-injected warm-start, not a
+generator concern). The four "missing" flags (`--grad-clip 0.5`, `--pose-grad-coeff-max 25.0`,
+`--grad-normalize per-param` = the amber OI-5 realization; `--pose-finish-engage-on sigma_min_plateau` = the
+#383 P0-1 pose-gate) are BY-DESIGN launch-time compositions the wrapper adds atop the sealed base; the base's
+exclusion is already pinned by `test_crucible_v752_excluded_items_are_not_silently_included` (P8-wall /
+launcher-composition items). So each diff = generator-DESIGN, not staleness — proven per-flag, not assumed;
+NOTHING reconciled (NO-FAKE: a wrong "fix" to the sealed base would be worse than the smell). Self-protect:
+`test_crucible2_v752_dsl_wirein.py` byte-identity guard (embedded `_LIVE_V752_SEALED_ARGV` golden, since
+launch.sh is gitignored) so a REAL future drift fails a $0 unit test. 429 tests pass; schedule-provenance
+gate rc=0; live run untouched (test-only). DSL/equations **N/A** (apparatus test guard). Pointer 0.19108282
+UNMOVED. The pattern worth naming: the apparatus is catching its own false alarms instead of faking fixes.
