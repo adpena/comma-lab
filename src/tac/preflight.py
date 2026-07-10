@@ -6423,6 +6423,15 @@ def preflight_all(
         # SPEC_POINTER_INTEGRITY_OK waiver).
         check_spec_v75_v8_pointer_integrity(strict=False, verbose=verbose)
 
+        # 2026-07-10 default-off decision-table consume gate (#405; operator P0:
+        # "All default off stuff you keep forgetting ... terrible orphan class").
+        # The decision table (.omx/research/default_off_comprehensive_sweep_20260710.md
+        # + JSONL twin) dispositions EVERY default-off surface; this gate refuses
+        # table rot AND any newer config-finalization artifact (crucible SPEC /
+        # authored config) that does not record consuming it. WARN-ONLY per the
+        # "Strict-flip atomicity rule" (live count 0 at landing; future-facing).
+        check_default_off_decision_table_consumed(strict=False, verbose=verbose)
+
         # 2026-07-07 harvest-engineered prompting gates (operator: "Save and
         # engineer all those patterns as standard behaviors and gates").
         # (1) reasoning-echo refusal-storm prevention across prompt surfaces
@@ -86488,6 +86497,172 @@ def check_spec_v75_v8_pointer_integrity(
         raise PreflightError(
             "check_spec_v75_v8_pointer_integrity found "
             f"{len(violations)} violation(s) (v7.5/v8 SPEC anti-rot):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Default-off decision-table consume gate (#405, 2026-07-10).
+#
+# Operator P0 escalation 2026-07-10: "All default off stuff you keep forgetting
+# despite me asking for comprehensive sweep and analysis for true final optimal,
+# that is terrible orphan class as well." The duty-to-measure queue existed but
+# was never DRAINED: prior sweeps produced inventories, not per-row DISPOSITIONS
+# that config finalization is forced to consume. The decision table
+# (.omx/research/default_off_comprehensive_sweep_20260710.md + its JSONL twin)
+# is the missing artifact; THIS gate is the consume-side self-protection
+# (CLAUDE.md "Bugs must be permanently fixed AND self-protected against"):
+#   1. the table memo + machine-readable twin must exist; the twin must parse
+#      and every data row must carry name/surface/disposition with disposition
+#      in the registered enum (a rotted/truncated table is orphaned again);
+#   2. any NEW config-finalization artifact (a crucible SPEC_*.md or a
+#      crucible_*_authored_*.md, filename-dated AFTER the table) must reference
+#      the decision table by name or carry a `DEFAULT_OFF_TABLE_CONSUMED:` line
+#      recording the table version it consumed — so "true final optimal" config
+#      work can never again silently skip the default-off queue.
+# WARN-ONLY by design (anti-rot/consume gates surface loudly, never block an
+# unrelated pipeline; pattern: check_operating_manual_pointer_integrity + the
+# #362 SPEC-pointer gate). Waiver: a `# DEFAULT_OFF_TABLE_OK:<rationale>` token
+# inside the finalization artifact (placeholder rationale rejected per the
+# Catalog #287 sister discipline).
+_DEFAULT_OFF_TABLE_MEMO_REL = ".omx/research/default_off_comprehensive_sweep_20260710.md"
+_DEFAULT_OFF_TABLE_JSONL_REL = ".omx/research/default_off_decision_table_20260710.jsonl"
+_DEFAULT_OFF_TABLE_DATE = 20260710
+_DEFAULT_OFF_CONSUME_TOKENS = (
+    "default_off_decision_table",
+    "default_off_comprehensive_sweep",
+    "DEFAULT_OFF_TABLE_CONSUMED:",
+)
+_DEFAULT_OFF_WAIVER_TOKEN = "# DEFAULT_OFF_TABLE_OK:"
+_DEFAULT_OFF_WAIVER_PLACEHOLDERS = frozenset(
+    {"<rationale>", "<reason>", "tbd", "placeholder", "pending", ""})
+_DEFAULT_OFF_DISPOSITION_ENUM = frozenset({
+    "fire-now-rung(v7.5.3)",
+    "fire-terminal-band(D27b)",
+    "fire-next-vehicle(v8)",
+    "measure-cheap($0/n600)",
+    "keep-off-with-DERIVED-reason",
+    "retire-with-reason",
+    "BLOCKED",
+})
+# Config-finalization artifact classes (the surfaces that seal a launch config):
+# crucible SPECs + DSL-authored crucible configs. Date-gated so pre-existing
+# artifacts are exempt (live count 0 at landing; the gate is future-facing).
+_DEFAULT_OFF_FINALIZATION_GLOBS = (
+    ".omx/research/t5_crucible*/SPEC_*.md",
+    ".omx/research/t5_crucible*/crucible_*_authored_*.md",
+    ".omx/research/crucible_*_authored_*.md",
+)
+_DEFAULT_OFF_DATE_RE = re.compile(r"(20\d{6})")
+
+
+def _default_off_filename_date(name: str) -> int | None:
+    """Extract the first YYYYMMDD date token from a filename (None if absent)."""
+    m = _DEFAULT_OFF_DATE_RE.search(name)
+    return int(m.group(1)) if m else None
+
+
+def _default_off_waived(text: str) -> bool:
+    """True iff the artifact carries a DEFAULT_OFF_TABLE_OK waiver with a
+    non-placeholder rationale."""
+    idx = text.find(_DEFAULT_OFF_WAIVER_TOKEN)
+    if idx < 0:
+        return False
+    rationale = text[idx + len(_DEFAULT_OFF_WAIVER_TOKEN):]
+    rationale = rationale.splitlines()[0].strip() if rationale.strip() else ""
+    return rationale.lower() not in _DEFAULT_OFF_WAIVER_PLACEHOLDERS
+
+
+def check_default_off_decision_table_consumed(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """WARN-ONLY consume gate for the default-off decision table (#405).
+
+    Refuses (a) rot of the decision table itself (missing memo/twin, unparseable
+    twin, rows missing name/surface/disposition, dispositions outside the enum)
+    and (b) a NEW config-finalization artifact (crucible SPEC / authored config,
+    filename-dated after the table) that neither references the table nor
+    records a `DEFAULT_OFF_TABLE_CONSUMED:` version nor carries a
+    `# DEFAULT_OFF_TABLE_OK:<rationale>` waiver."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    memo = root / _DEFAULT_OFF_TABLE_MEMO_REL
+    if not memo.is_file():
+        violations.append(
+            f"{_DEFAULT_OFF_TABLE_MEMO_REL}: MISSING — the default-off decision table memo "
+            "(task #405) is the disposition artifact config finalization must consume. "
+            "Restore it (git) or update this gate deliberately in the same commit.")
+
+    twin = root / _DEFAULT_OFF_TABLE_JSONL_REL
+    if not twin.is_file():
+        violations.append(
+            f"{_DEFAULT_OFF_TABLE_JSONL_REL}: MISSING — the machine-readable twin of the "
+            "default-off decision table. Restore it (git) or update this gate deliberately.")
+    else:
+        try:
+            lines = [
+                ln for ln in twin.read_text(encoding="utf-8").splitlines() if ln.strip()]
+            saw_meta = False
+            for i, ln in enumerate(lines):
+                row = json.loads(ln)
+                if "_meta" in row:
+                    saw_meta = True
+                    continue
+                missing = [k for k in ("name", "surface", "disposition") if k not in row]
+                if missing:
+                    violations.append(
+                        f"{_DEFAULT_OFF_TABLE_JSONL_REL}:{i + 1}: row missing required "
+                        f"field(s) {missing} — every decision-table row carries "
+                        "name/surface/disposition.")
+                elif row["disposition"] not in _DEFAULT_OFF_DISPOSITION_ENUM:
+                    violations.append(
+                        f"{_DEFAULT_OFF_TABLE_JSONL_REL}:{i + 1}: disposition "
+                        f"{row['disposition']!r} not in the registered enum "
+                        f"{sorted(_DEFAULT_OFF_DISPOSITION_ENUM)} (row {row.get('name')!r}).")
+            if not saw_meta:
+                violations.append(
+                    f"{_DEFAULT_OFF_TABLE_JSONL_REL}: no _meta header row — the twin must "
+                    "carry its provenance header (sources + row counts + enum).")
+        except (OSError, json.JSONDecodeError) as exc:
+            violations.append(
+                f"{_DEFAULT_OFF_TABLE_JSONL_REL}: unreadable/unparseable ({exc}) — a rotted "
+                "twin re-orphans the default-off queue.")
+
+    # (b) consumption by NEW config-finalization artifacts.
+    for pattern in _DEFAULT_OFF_FINALIZATION_GLOBS:
+        for art in sorted(root.glob(pattern)):
+            fdate = _default_off_filename_date(art.name)
+            if fdate is None or fdate <= _DEFAULT_OFF_TABLE_DATE:
+                continue  # pre-existing artifacts exempt (future-facing gate)
+            try:
+                text = art.read_text(encoding="utf-8", errors="replace")
+            except OSError as exc:
+                violations.append(f"{art.relative_to(root)}: unreadable ({exc}).")
+                continue
+            if _default_off_waived(text):
+                continue
+            if not any(tok in text for tok in _DEFAULT_OFF_CONSUME_TOKENS):
+                violations.append(
+                    f"{art.relative_to(root)}: config-finalization artifact dated after the "
+                    f"default-off decision table ({_DEFAULT_OFF_TABLE_DATE}) does not "
+                    "reference it — add a `DEFAULT_OFF_TABLE_CONSUMED: "
+                    "default_off_decision_table_20260710` line recording per-row "
+                    "consumption (or the table version consumed), or a "
+                    "`# DEFAULT_OFF_TABLE_OK:<rationale>` waiver. The default-off queue "
+                    "must be drained-or-dispositioned at every config finalization "
+                    "(operator P0 2026-07-10).")
+
+    if verbose:
+        print(
+            f"  [default-off-table] check_default_off_decision_table_consumed: "
+            f"{len(violations)} violation(s)"
+            if violations else
+            "  [default-off-table] check_default_off_decision_table_consumed: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_default_off_decision_table_consumed found "
+            f"{len(violations)} violation(s) (default-off decision-table consume gate):\n  "
             + "\n  ".join(violations))
     return violations
 
