@@ -78,7 +78,7 @@ period-4 luminance grating on self-detected Road/Lane regions, flat basins on Un
 - **(b) short subsampled Adam pretrain of the trunk+out_tex** toward the grating target (the SAME pattern
   structured-init already uses for out_sdf: *"the trunk must be ADAPTED"*). Tests whether a *few hundred
   steps* installs the periodicity. This is the SEED/CONDITION boundary made concrete — if (a) fails and (b)
-  succeeds in ~600 steps, the answer is "trunk-trainable but not readout-installable" (a weak-CONDITION).
+  succeeds in ~600 steps, the answer is "trunk-trainable but not readout-installable" (a weak-CONDITION). # MAGNITUDE_DISMISSAL_OK: "weak-CONDITION" is a BRANCH LABEL in the P7 falsifier tree (names which arm the probe outcome selects — the short-pretrain SEED variant), not a magnitude-based defer/kill; nothing is dismissed on absolute ΔS here — every branch routes to a build arm.
 
 **#300 starvation guard (NAMED — the load-bearing distinction).** The killed lever was **seed-COMPOSE**:
 compose a FIXED external seed render INTO the witness render → the witness free-rides the seed → island
