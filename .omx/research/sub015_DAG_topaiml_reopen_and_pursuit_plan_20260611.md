@@ -14347,3 +14347,17 @@ DSL-lever-scoped and cannot hold stage/tool never-fired rows — #403 must widen
 N/A/fold-owed reasons in the JSONL (§A folds owned by #332). Equations leg N/A (apparatus/disposition
 class). Pointer 0.19108282 [contest-CPU] UNMOVED — apparatus/MEANS; the exact-row path this serves is the
 v7.5.3 ladder → governed EVENT launch → byte-closed n600 rows.
+
+### FEED-legdisposition-recovery (2026-07-10) — leg closure for the 4 recovery commits [no-triality]
+Hook flagged 4 commits (116ed489e #405 gate · 12d5d0379 #405 table · 5515b9aeb #405 FEED · 22418c342 #403
+memo) as DSL-leg-requiring. DISPOSITION: apparatus/disposition/inventory class, DSL=N/A-with-rationale.
+NEITHER commit adds or changes a Lever/WitnessProgram — they DISPOSE and INVENTORY default-off levers +
+curriculum candidates. The genuine DSL folds are EXPLICITLY OWED, not silently dropped: (a) the #405 JSONL
+carries per-flag N/A/fold-owed reasons for all 107 unmapped trainer flags with §A folds owned by task #332
+(the "DSL = complete auto-generated SoT" task); (b) the #403 memo's honest-status banner marks its
+`tac.witness_dsl.curriculum_candidate_pool` module + DSL stubs as design-NOT-YET-BUILT, owned by the #403
+finish. So the DSL leg is TRACKED-as-owed on named tasks, which is the correct state for a
+disposition/inventory unit — folding a lever the unit only CATALOGUES would be premature. Equations leg N/A
+(apparatus). MEMORY.md: covered by the existing ⭐P0 line (curriculum_candidate_pool_p0_orphan_class) — no
+new durable finding beyond it. The commit messages omitted the literal [no-triality] token; that omission,
+not a missing leg, tripped the gate. Pointer 0.19108282 [contest-CPU] UNMOVED (apparatus/MEANS).
