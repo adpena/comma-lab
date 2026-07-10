@@ -13517,3 +13517,11 @@ Subagent `fractal-synth-398b`. Pointer contest-CPU **0.19110 UNMOVED** — MEANS
   Durable: commits `3b028a374` + `70131e0f5` + `efb9513a3`. **Pointer contest-CPU 0.19110 UNMOVED —
   everything here is MEANS; only the byte-closed `upstream/evaluate.py` n600 row from the eventual
   launch can move it.**
+
+### FEED-legdisposition-v752launch (2026-07-10) — triality leg record for the launch executor's two commits
+- **"DAG FEED-v752-launch … LAUNCH-READY-HELD":** coordination/launch-record commit. Its measured content
+  (dry-start sec/ep + RSS at the self-orient-OFF config) is PROVISIONING measurement for guard-sizing, not a
+  scored finding — the equations leg lands with the FIRST SCORED ROW of the pilot/launch (through-R verdicts),
+  where these numbers become anchor context. equations leg = deferred-to-first-scored-row (stated, not skipped).
+- **"launcher dry-start fix: persist captured child output":** pure apparatus (log durability), [no-triality]
+  class — no lever, no measurement, no law.
