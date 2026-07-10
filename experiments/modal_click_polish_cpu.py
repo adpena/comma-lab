@@ -163,10 +163,16 @@ def _run_exact_eval(candidate_archive: bytes, out_dir: Path) -> dict:
     if eval_dir.exists():
         shutil.rmtree(eval_dir)
     eval_dir.mkdir(parents=True)
-    # runtime tree = OUR frontier inflate surfaces, verbatim
+    # runtime tree = OUR frontier inflate surfaces, verbatim. encoder/ is REQUIRED:
+    # src/fec10_hybrid_decoder.py re-exports the FECa selector decoder from
+    # ../encoder/build_pr101_frame_exploit_selector_packet_fec10_hybrid.py
+    # (single-source-of-truth pattern) — omitting it broke the first n8 validation.
     shutil.copy2(sub_src / "inflate.py", eval_dir / "inflate.py")
     shutil.copy2(sub_src / "inflate.sh", eval_dir / "inflate.sh")
-    shutil.copytree(sub_src / "src", eval_dir / "src")
+    shutil.copytree(sub_src / "src", eval_dir / "src",
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(sub_src / "encoder", eval_dir / "encoder",
+                    ignore=shutil.ignore_patterns("__pycache__"))
     # atomic archive write
     tmp = eval_dir / "archive.zip.tmp"
     tmp.write_bytes(candidate_archive)
