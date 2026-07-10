@@ -12316,3 +12316,75 @@ smokes). **Join point:** all four tools ride derive_named_config; the CrucibleV7
 is the deliberately-deferred P8-wall item. v7.5.2 chain now FULLY GATE-GREEN except owed-14's live-run
 half + the P8 adapter. Triality: DAG=this FEED; DSL/equations N/A (gate tooling + measurements, no new
 lever/law). Pointer 0.19110 UNMOVED (means).
+
+## FEED-residualkit (2026-07-09, BUILD #386) — the two v8 residual-coder levers BUILT + MEASURED n600: de-share CONFIRMED (S≈0.0044), curve-relative REFUTED (does NOT pay)
+Attacks the 0.079 named enemy (= 192% of the remaining sub-0.15 gap). Two default-OFF sibling modules in
+`src/tac/boundary_math/` + a $0 driver, both bit-exact, both measured on ALL 600 frames of `gt_n600.npz`.
+**Modules:** `movable_deshare.py` (Lever-1 Movable-first attribution + general pairwise archive-dedup
+audit — the operator no-duplicate-data binding) · `curve_relative_offset_coder.py` (Lever-2 signed-offset
+δ(s) chart coder + the absolute-2-D baseline). Tests: 16/16 (partition guarantee, roundtrip bit-exactness,
+junction multi-segment, off-support exceptions, role self-detect, determinism).
+
+**PROBE 1 — de-share magnitude (MEASURED n600, amortized-conservative):**
+| edge | residual px | attributed→Movable | frac | bytes double-ct | S |
+|---|---|---|---|---|---|
+| horizon Road↔Undriv | 131,803 | 12,592 | 9.6% | 3,917 B | 0.00261 |
+| lane Road↔Lane | 828,048 | 7,009 | 0.8% | 2,689 B | 0.00179 |
+| **TOTAL de-share** | — | — | — | **6,606 B** | **0.00440** |
+Range S 0.0044–0.0104 (amortized floor → overlap-coded-alone ceiling). ≈10.7% of the 0.0411 gap. The
+attributed px are FREE (already held by the Movable bbox carrier; footprint = Movable region dilate=2).
+
+**PROBE 1b — general pairwise dedup audit (operator binding; the additional double-counts found):**
+- `hood ↔ Road/MyCar-separatrix` 303,229 px / **S 0.028** = NOT a live double-count: the Road↔MyCar
+  boundary IS the hood silhouette → its UNIQUE geometric home is the **hood carrier G4**. v8's fold
+  (no separate Road/MyCar edge row) is **VALIDATED**; splitting them would double-count 0.028.
+- `horizon-resid ↔ lane-resid` 1,430 px / **S 0.001** = NEW small triple-point (Road/Undriv/Lane meet)
+  double-count → priority-assign each px to ONE edge (free ~0.001 deflation).
+- geometric homes: horizon secondary-arcs→G3 Movable · lane-near-car frags→G3 · Road↔MyCar→G4 hood ·
+  triple-points→priority edge. (Every byte names ONE home — operator's suspect-byte test passes.)
+
+**PROBE 2 — curve-relative δ(s) coder vs absolute-2-D baseline (MEASURED n600, de-shared residual; HONEST NEGATIVE):**
+| edge | on-curve | \|n\|mean | H(n) | abs B | curve-rel B | ratio |
+|---|---|---|---|---|---|---|
+| horizon Road↔Undriv | 0.99 | 4.0 px | 2.73 b | 37,753 | 38,222 | **0.99×** |
+| lane Road↔Lane | 0.60 | 96.4 px | 7.47 b | 315,790 | 352,260 | **0.90×** |
+Curve-relative does **NOT** beat absolute on either edge. HORIZON: the offset IS small (confirming S1's
+geometry) but the absolute flat-index delta is already ~1/px for a near-horizontal arc → no dimensional
+reduction available. LANE: 40% off-curve + \|n\|mean 96px → the Road/Lane residual is **genuinely
+far-from-generator** (S1's binding uncertainty RESOLVED on the FAR side). The conjectured ~5× does not occur.
+**verdict_scope: FORMULATION** (this axis-aligned (s,n) coder on this residual set), NOT PARADIGM.
+**Reformulation queue:** (1) improve the LANE GENERATOR to cut the 40% off-curve residual — the lever is
+the generator's coverage, not the coder; (2) true Euclidean-normal offset; (3) joint 2-D/learned entropy.
+
+**CONSEQUENCE for the P8 rate row:** Lever-2 does not close the enemy. P8 residual stays ~complete-lossless:
+**0.140 − de-share ~0.004 − triple-point ~0.001 ≈ 0.135** (still ~1.15× the 0.118 frontier). v8's rate WIN
+remains the DOMINANT-only 0.061 (thesis-confirmed); COMPLETE is a wash-with-frontier. This is the decisive
+empirical answer S5(adversary)/S1 flagged — the residual-coder-optimism trap is de-risked with a MEASURED no.
+
+**Triality:** DAG = this FEED. **Equations** = 2 anchors APPENDED to `v8_geometric_rate_decomposition_v1`
+(`v8_residual_deshare_dedup_measured_20260709` CONFIRMED + `v8_curve_relative_offset_coder_NEGATIVE_20260709`
+REFUTED, both VERIFIED_VIA_EMPIRICAL_ANCHOR). **DSL** = N/A (measurement + default-OFF coders; no trainer/
+byte-close flag exists yet — grep of `witness_dsl/` confirms no deshare/curve-relative surface; a `Lever`
+factory is owed ONLY when byte-close integration lands behind a flag). Memo:
+`.omx/research/residual_kit_deshare_curverel_build_20260709.md`. Report JSON:
+`.omx/research/residual_kit_measured_20260709.json`. Pointer 0.19110 UNMOVED · #205 untouched (means).
+
+## FEED-eightfold-philosophies (2026-07-09) — OPERATOR "Encode all": the 8 brushed-against design philosophies encoded
+**Operator GO on the brushed-against inventory.** Memory `design_philosophies_eightfold_20260709.md`
+(full receipts per philosophy). The eight, each with its live receipt class:
+**P1 one-fact-one-store-one-key** (clause A on our own apparatus; receipt: today's duty-to-measure
+key-mismatch) · **P2 every-comparison-carries-its-noise-floor** (incl. seed-variance honesty: single-seed
+Δ below unknown variance = INSTANCE-level; receipts: OT n600 deltas, ad-hoc R7 δ_mask, label-noise floor)
+· **P3 tolerance budgets = clause B's DUAL waterfill** (allocate distortion tolerance across
+fit→quantize→R→uint8→parity, per-stage compliance, composed sums) · **P4 no-meter-without-a-canary**
+(confound-L3 lifted to build-time law; #383/#384 replay is the done-right exemplar) · **P5
+no-arm-without-in-run-control** (borrowed baselines forbidden; generalizes L18+R8+P3b-F1) · **P6 the
+sequence is the object** (temporal first-class; receipt: crucible-3 P3 blind-spot — six seats per-frame)
+· **P7 falsifier-before-build** (kill criterion pre-registered vs measured baseline before any build) ·
+**P8 floor-first** (state the floor before optimizing; at-floor surfaces closed to polish).
+**Apparatus routing (dispatched):** warn-only preflight gates for P1 (significance-key canonicalization)
++ P4 (meter-canary presence); P2/P5/P6/P7/P8 as crucible SEAL standing checks (crucible3_v8 onward) +
+#385 brief noise-floor column + verdict-clearance discipline. Twins map: P1↔clause-A · P3↔clause-B ·
+P2/P8=measurement honesty · P4/P5=instrument honesty · P6/P7=design honesty. Triality: DAG=this FEED;
+DSL/equations legs follow as the gates/laws land (the apparatus agent owns same-commit legs). Pointer
+0.19110 UNMOVED (means).
