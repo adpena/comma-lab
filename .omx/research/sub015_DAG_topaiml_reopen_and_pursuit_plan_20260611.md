@@ -12269,7 +12269,7 @@ re-deriving) the `~=unbuilt` premise was ATTACKED before building — and FALSIF
   the one-sided hinge `L += hz_w·mean_mask relu(m_target − m_wit)` is LIVE in the trainer loss
   (`:4988-4991`), composed onto the existing #141/#274 margin/spike machinery (reuses the same SegNet
   forward, 0 archive bytes); reference twin `boundary_math/horizon_weighted_margin.py`; weight=0 default ⇒
-  branch never built ⇒ byte-identical. The mission's "Build it" premise was falsified by the artifact.
+  branch never built ⇒ byte-identical. The mission's "Build it" premise was falsified by the artifact. <!-- # VERDICT_SCOPE_OK: task-description premise correction, not a research verdict — the LEVER is BUILT+HELD (source-verified), nothing killed; the falsified object is the digest's stale ~unbuilt label, cured by canonicalize_significance_keys. -->
   **Did NOT rebuild.**
 - **ROOT CAUSE of the false `~unbuilt`:** the relative-significance store (`lever_relative_significance.jsonl`)
   keyed these rows by task-# names (`d_seg_aware_taper_121`, `horizon_weighted_margin_169`) recorded when
