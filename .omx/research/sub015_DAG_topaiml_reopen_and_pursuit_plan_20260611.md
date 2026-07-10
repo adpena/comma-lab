@@ -13142,3 +13142,10 @@ aliasing (medium, refines #149). Both RANK-1/2 = structural pose-free seg DOFs, 
 Equation `posenet_luma_chroma_sensitivity_asymmetry_v1` registered (VERIFIED_VIA_EMPIRICAL_ANCHOR). Routes
 **#385** build-wave. NO upstream edits. verdict_scope FORMULATION (characterisation, no kill). Pointer
 0.19110 UNMOVED (means).
+
+**Leg-disposition note (2026-07-10, 67f69a929 canon r12):** review-round ledger record is PURE
+APPARATUS (fresh-eyes verdict over the canonical measurement modules; the detector matched
+"verdict/measured" vocabulary in the commit message). Equations leg N/A (no new relation — the round
+verified existing guards + proved record_round replay-idempotence, a code property covered by tests,
+not a measured law); DSL leg N/A; DAG leg = this note (the canon-wave trajectory lives in the
+review_counter ledger + sweep memo). Commit omitted `[no-triality]` (should have carried it).
