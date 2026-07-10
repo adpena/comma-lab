@@ -13721,3 +13721,25 @@ number the code has not honored (NO-FAKE). The pre-registered kill-gate (`decoup
 - **Legs:** no lever, no measured score row → DSL N/A, equations N/A (apparatus/presentation;
   data honesty preserved — no measured number altered anywhere). This FEED is the DAG leg.
   **Pointer contest-CPU 0.19110 UNMOVED — both passes are MEANS (hygiene + communication).**
+
+## FEED-v752-p0 (2026-07-10) — fresh-eyes P0s folded pre-pilot: #383 gate COMPOSED + expected-lever manifest + degenerate-backstop guard · pointer 0.19110 UNMOVED
+
+- Operator-directed fold of `ADVISORY_v752_fresh_eyes_20260710.md` P0-1/P0-2 into the staged sequence
+  (timing unchanged; nothing new blocks the pilot). **Zero-effect-pre-pose_finish SOURCE-VERIFIED**
+  (decision record §6): muon-mode fire ≥ ep340 (ladder nucleation gate) · sigma-mode fire ≥ ~ep400
+  (5-point σ_min minimum at every-100-ep cadence) ⇒ the pilot's ep0-300 is pose-blind under BOTH
+  modes ⇒ the pilot fires with the P0-composed config (argv ≡ launch modulo the 2 epoch tokens).
+- **Landed `fbeb20ae5` + `1afff474e`** (trainer hunks content-verified, absorbed into sibling co-land
+  `acc98f2a4` — the staging-absorption class, reconciled here APPEND-ONLY): P0-1
+  `PoseFinishConditioningGate` composed into `compile_crucible_v752_launch_config`
+  (`--pose-finish-engage-on sigma_min_plateau`, 9-lever set) + stale absence-test → PRESENCE +
+  `CRUCIBLE_V752_LAUNCH_EXPECTED_LEVERS` enforced at compile (fail-closed) AND launcher (rc=10);
+  P0-2 `resolve_pose_finish_engage` (pure, tested): backstop cannot override DEGENERATE/
+  should_ship_banked_r1 → banked-R1 selected + loud `pose_finish_backstop_overridden_banked_r1` row.
+  E2E dry-run green: lever-manifest OK · dsl-config 157 flags · mem-preflight 24.48 GiB unchanged.
+- **OWED (ledgered, not gates):** P0-2 full ARMED→ENGAGED→ACCEPTED/REGRESSED_ROLLBACK/
+  BANKED_COMPLETE_ARTIFACT state machine · advisory #3 R1-dxi graftability (complete-artifact
+  fallback measured; graft unmeasured) · #4 chroma inheritance (Class-B ladder item) · #5 amber
+  realization (OI-5) · P1-3 pose-mode restart-protection (folds into step-3 resume-compat).
+- Triality: DSL = the composed 9-lever launch program; equations = no new law (consumes the sealed
+  gate design); DAG = this FEED + decision record §6/§7. **Pointer 0.19110 UNMOVED (means).**
