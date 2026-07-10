@@ -146,21 +146,26 @@ def _default_flags():
     return dict(cfg.to_trainer_flags("out"))
 
 
-def test_all_levers_base_dict_is_supersample_full():
+def test_all_levers_base_dict_disqualifies_supersample():
+    # Brute --render-aa supersample was DISQUALIFIED on two measured grounds (train/decode
+    # budget + train/decode observation mismatch); AACoverageRender(mode="ipe") is the
+    # documented alt. The all-levers base therefore carries render_aa="none" and drops the
+    # supersample-only fields (witness_autoconfig._all_levers_base comment block).
     from tac import witness_autoconfig as wac
     base = wac._all_levers_base(300)
-    assert base["render_aa"] == "supersample"
-    assert base["aa_supersample"] == 2
-    assert base["aa_self_orient_fine_mode"] == "full"
-    assert "aa_ipe_footprint" not in base  # ipe-only field dropped
+    assert base["render_aa"] == "none"
+    assert base.get("aa_supersample") is None
+    assert base.get("aa_self_orient_fine_mode") is None
+    assert "aa_ipe_footprint" not in base
 
 
-def test_all_levers_emits_supersample_full_coexisting_with_structured_init():
+def test_all_levers_emits_no_supersample_coexisting_with_structured_init():
     flags, _wac = _all_levers_flags()
-    assert flags["--render-aa"] == "supersample"
-    assert flags["--aa-supersample"] == 2
-    assert flags["--aa-self-orient-fine-mode"] == "full"
-    # coexistence: structured-init + supersample both present (the relaxed-guard payoff)
+    # supersample disqualified -> --render-aa none, no --aa-supersample / fine-mode emitted:
+    assert flags["--render-aa"] == "none"
+    assert "--aa-supersample" not in flags
+    assert "--aa-self-orient-fine-mode" not in flags
+    # coexistence: structured-init + self-orient both present (the relaxed-guard payoff)
     assert "--structured-init" in flags
     assert "--self-orient" in flags
     # FIX-1: the high-beta2 is emitted on the all-levers path

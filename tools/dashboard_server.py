@@ -377,8 +377,18 @@ def config_from_env() -> Config:
     )
 
 
-_TRAJ_KEYS = ("epoch", "d_seg", "d_pose", "blob_bytes", "implied_S",
-              "implied_S_monitoring", "ts")
+# The trajectory-point schema: the ONLY keys refresh() ships (no full-verdict leak).
+# _slim() builds EXACTLY these — single source of truth, so the declared schema and
+# the actual output can never drift (test_refresh_slims_to_traj_keys_only enforces ==).
+_TRAJ_KEYS = (
+    "epoch", "d_seg", "d_pose", "blob_bytes", "ts",
+    "implied_S", "implied_S_monitoring",
+    # LIVE-tab per-point diagnostics (2026-07-09 rebuild) ride the slimmed trajectory:
+    "d_seg_by_class", "flip_share_by_class", "seg_form",
+    "rss_gib", "sys_avail_gib", "mlx_active_gib", "mlx_peak_gib",
+    "mlx_cache_gib", "accepted_frac", "weights_stepped",
+    "accepted_batches", "skipped_batches",
+)
 
 
 def _last_measured_dpose(rows):
@@ -792,15 +802,10 @@ def _slim(row: dict) -> dict:
     the slimmed trajectory too (5-float arrays + a handful of scalars per point —
     a few KB across the whole run; still no leak of the full verdict dict). All
     score-neutral: the dashboard only READS the log."""
-    out = {k: row.get(k) for k in ("epoch", "d_seg", "d_pose", "blob_bytes", "ts")}
-    out["implied_S"] = row.get("implied_S")
+    out = {k: row.get(k) for k in _TRAJ_KEYS}
+    # implied_S_monitoring is an ALIAS of the measured implied_S (so the client's
+    # honest-vs-displayed sanity check trivially agrees); both read the same field.
     out["implied_S_monitoring"] = row.get("implied_S")
-    # LIVE-tab diagnostics (per-point; panels read the newest point):
-    for k in ("d_seg_by_class", "flip_share_by_class", "seg_form",
-              "rss_gib", "sys_avail_gib", "mlx_active_gib", "mlx_peak_gib",
-              "mlx_cache_gib", "accepted_frac", "weights_stepped",
-              "accepted_batches", "skipped_batches"):
-        out[k] = row.get(k)
     return out
 
 

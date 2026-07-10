@@ -752,11 +752,14 @@ class TestModule:
             "check_resume_palliative_flags_imply_warm_start": 40,
             "check_verdict_pairs_default_is_n600": 0,
             "check_telemetry_verdict_rows_carry_liveness": 12,
-            "check_levelset_hosc_requires_beta_end": 8,  # historical launch.sh artifacts (append-only)
-            # #403: the 4 un-migrated derive_*_config (sealed/store_nothing/fresh_seeded/derive_config)
-            # = the documented migration queue; crucible routes through the typed layer. Strict-flip to
-            # 0 when the queue drains (req V, #353).
-            "check_launch_config_authored_in_dsl": 4,
+            # historical launch.sh artifacts (append-only, immutable run records); the LIVE
+            # v7.5.2 config correctly uses annealed --hosc-beta-end 3.177. Re-baselined 8→9
+            # (a 2026-07-10 run.sh accreted); cannot edit history, only block further growth.
+            "check_levelset_hosc_requires_beta_end": 9,
+            # #403: the un-migrated derive_*_config (sealed/store_nothing/fresh_seeded/…) =
+            # the documented DSL-migration queue; crucible routes through the typed layer.
+            # Re-baselined 4→5 (queue depth grew by one); strict-flip to 0 when it drains (req V, #353).
+            "check_launch_config_authored_in_dsl": 5,
             # #404 MAGNITUDE-DISMISSAL: warn-only, max_report-capped at 15. The
             # .omx/research corpus predates the discipline (historical hits); strict-flip
             # to 0 after the memory-point-3 re-audit sweep drains them.
