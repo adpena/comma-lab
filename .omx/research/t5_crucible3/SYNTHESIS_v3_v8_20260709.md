@@ -8,6 +8,23 @@ increment-1 DECISIONS are now taken from THIS v3. **Delta vs v2 = the P5 second-
 folded** (`P5_second_redteam_20260709.md`: 8 findings + 3 P9-proxy findings — 1 near-break, 3 REVISE,
 3 CARRY-AS-RISK, 1 DISSOLVED).
 
+**POST-V2 SUPERSESSION LEDGER (P6-R3 fix F-R3-1/2 — the R2 finding's CLASS, swept in full).** R2 carved
+ONE stale field (§B `bc_calibration`) out of the "UNCHANGED-from-v2" pointers; R3's full UNCHANGED-pointer
+sweep found the REST of that class. **TWO facts landed AFTER v2 was written and SUPERSEDE every v2 pointer
+that predates them** — every "UNCHANGED from v2 / see v2 / hold" reference in v3 is read THROUGH these:
+1. **#386 RULED** (gate `laguerre_ot_head_offset_20260709`, realized-through-R n600 mod32cap ep650, commit
+   1cd890c17; both flip arms REFUTED, `no_offset` **0.0031436** = MEASURED-CONFIRMED safe default). Authority
+   = **§A.3**. SUPERSEDES every v2 "#386 in flight / no_offset default until #386 / #386 measures it / #386
+   builders IN FLIGHT" marker reachable via a v3 UNCHANGED pointer — specifically **v2 §A.4 L225, §D item-1,
+   §H consumed-surfaces L506-507/513, §I5 L531** (R1/R2 carved only §A.3 + §B `bc_calibration`; these are the
+   rest). Read them as #386-RULED, no_offset the confirmed default, both flip arms REFUTED — NOT pending.
+2. **owed-14 DONE** (task **#384** governed telemetry / observer-stack trust replay —
+   `v752_owed_gates_build_20260709` Gate 4: BUILT+GREEN all 4 legs, incl. the load-bearing pose-gate
+   negative-control DEGENERATE_GUARD on #205's real σ_min). SUPERSEDES every v2 "owed-14 equations-leg trust
+   replay [owed]" marker — **v2 §A.7 L299-300, §B `pose_finish.owed`, §D item-4**. The pose_finish owed set is
+   now **[per_class_dseg_basin_conjunct, f_basin_0.9_tuning]** (v8-specific, STILL owed); owed-14 is REMOVED
+   (resolved). verdict_scope: the resolutions are MEASURED-ANCHOR; the still-owed v8 items are INSTANCE.
+
 **Phase:** P5b (SECOND-RED-TEAM-FOLDED REVISED SYNTHESIS → P6 recursive seal next). **Author:** P5b
 revision agent (Opus). **Surface:** `crucible3_v8` (`tac.review_counter`). Triality: **DSL leg N/A**
 (this is apparatus/derivation + a δ_mask code fix, NOT a new DSL `Lever` — the carrier BUILD folds a
@@ -57,7 +74,7 @@ confirmed) · `src/tac/inc1a_harness/decoupling_screen.py` (δ_mask default SWAP
 | **F-P5-4** NO temporal section for the 1a d_seg screen (eightfold-P6 SEAL FAIL); decoupled per-class fields may flicker independently at the tie | **REVISE** | **FIXED** — NEW **§A.8 temporal section**: the 1a mask screen measured PER-FRAME **AND** with a per-class **tie-flicker** row across consecutive pairs (Lever-D temporal machinery, #280, is the existing instrument); v8's fuller temporal story (slot-churn, GOP-keyframe, dash-phase=ego-distance) stated as the **SPEC_v8.1** section it becomes. | §A.8 (new), §B `measure_1a.temporal` |
 | **F-P5-3** shippable (pre-P-C) increment-1 rate = 0.135 = WASH; sub-frontier win rides the r\* waterfill (P-C-gated, unmeasurable in inc-1) | **CARRY-AS-RISK** | **RECORDED** — §A.2 + the P8-brief requirement: shippable rate = **0.135 (WASH)**, sub-0.118 win explicitly **P-C-gated**; carry r\* as a labeled **RANGE [0.061, 0.135]** with F8 uncertainty, NEVER a point; note the wash is partly a weak-lane-generator artifact (F-P5-5), not v8's ceiling. | §A.2, §C risk-3-rider |
 | **F-P5-5** lane-generator coverage (53% of enemy) = FAST-FOLLOW not increment-1 scope | **CARRY (recommendation)** | **RECORDED** — §A.2 roadmap rider: lane-generator coverage is a **FAST-FOLLOW** (post-1a, its own BUILD + byte-close + n600 A/B), NOT increment-1 scope (folding it BLOATS the cheapest-falsifiable row); its params ride §I clause-B. | §A.2, §D-10 |
-| **F-P5-P9-2** de-share 0.0044 rides a dilate=2 Movable-footprint PROXY for the bbox carrier's realized coverage | **CARRY-AS-RISK (minor)** | **RECORDED** — de-share 0.0044 tagged **`[dilate=2 Movable-footprint proxy; thing-itself = bbox realized coverage post-byte-close, owed]`**; bounded by the 0.0044–0.0104 range; the thing-itself path is NAMED (rasterize the actual G3 bbox realized coverage post-byte-close). | §A.2, §A.5 |
+| **F-P5-P9-2** de-share 0.0044 rides a dilate=2 Movable-footprint PROXY for the bbox carrier's realized coverage | **CARRY-AS-RISK (minor)** | **RECORDED + P6-R3 BAND CORRECTED** (sibling `proxy_suspect_audit_20260709` item 2, MEASURED on gt_n600 all 600) — de-share 0.0044 tagged **`[dilate-proxy band 0.000–0.0069 across dilate∈{0,1,2,3}; landed 0.0044 = dil2 INSTANCE (reproduces dil2 EXACTLY, NOT footprint-robust; dil0/dil1 fall BELOW 0.0044); thing-itself = G3 bbox realized coverage post-byte-close, owed]`**. The v2/P5 **[0.0044,0.0104] was a DIFFERENT (amortized-vs-realized) uncertainty, NOT the footprint band** — do NOT quote it as the de-share robustness band. Curve-relative REFUTED verdict HOLDS across the whole band (footprint-robust). | §A.2, §A.5 |
 | **F-P5-6 / P9-3** T1 headline **0.0032** vs code-emitted **0.00277** (memo-vs-code nit) | **CARRY (minor)** | **RECORDED** — T1's dominant-arc number PINNED to the code-emitted **0.00277** (R3 MEASURED, 4167 B); 0.0032 annotated as the amortization-method delta (~0.0004 S = 1.1% of the gap, IMMATERIAL; 0.00277 is even cheaper → T1's rate argument is STRONGER). | §A.1, §I I1 |
 | **F-P5-7** "#226-admitted flips" vs "uncovered residual px": SAME pool, #226 admits a d_seg-ranked SUBSET at r\*<1 (equal only at r=1) | **DISSOLVED-with-clarification** | **DISSOLVED-CONFIRMED** — re-derived: the two ARE the same pool; #226 `waterfill_select` admits the d_seg-ranked subset until the water level (equal to the full uncovered set only at r=1, the complete-lossless endpoint). No design change. | §A.2 (nuance retained) |
 
@@ -102,8 +119,9 @@ per-class fields can flicker INDEPENDENTLY at the argmax tie (a shared head cann
 could WIN static per-frame d_seg while LOSING temporal flicker (MEMORY L67: #205 CE-residual = temporal
 flicker, 44% spikes = LANE). Lever-D (#280) is the existing instrument.
 
-**T2 / pose / everything else — UNCHANGED from v2** (§A.2/A.3/A.5/A.6/A.7 hold; the CARRY dispositions
-below add honesty riders, not design changes).
+**T2 / pose / everything else — UNCHANGED from v2** (§A.2/A.3/A.5/A.6/A.7 hold — read THROUGH the POST-V2
+SUPERSESSION LEDGER above: #386 RULED, owed-14 DONE; the CARRY dispositions below add honesty riders, not
+design changes).
 
 ---
 
@@ -168,10 +186,13 @@ The residual decision + waterfill (#226 real KKT) + the TRIPLE-brief-row VERDICT
   byte-close + n600 A/B), NOT increment-1 scope — folding it in BLOATS the cheapest-falsifiable row and
   DEFERS the decoupling screen (§8.2 capacity-sweep reflex). The wash is PARTLY this weak-generator
   artifact, not v8's ceiling. Its params ride §I clause-B (GEOMETRIC-MINIMAL or KKT-waterfilled).
-- **F-P5-P9-2 (dilate=2 de-share proxy):** de-share 0.00440 is tagged **`[dilate=2 Movable-footprint
-  proxy; thing-itself = bbox realized coverage post-byte-close, owed]`** — bounded by the 0.0044–0.0104
-  range; the thing-itself path is NAMED (rasterize the actual G3 bbox realized coverage post-byte-close and
-  attribute the true intersection).
+- **F-P5-P9-2 (dilate=2 de-share proxy) — P6-R3 BAND CORRECTED (sibling `proxy_suspect_audit_20260709`
+  item 2, MEASURED):** de-share 0.00440 is tagged **`[dilate-proxy band 0.000–0.0069 across
+  dilate∈{0,1,2,3}; landed 0.0044 = dil2 INSTANCE (reproduces dil2 EXACTLY, NOT footprint-robust);
+  thing-itself = G3 bbox realized coverage post-byte-close, owed]`**. The prior v2/P5 **[0.0044,0.0104] was
+  a DIFFERENT (amortized-vs-realized) uncertainty, NOT the footprint band** — retired here. The thing-itself
+  path is NAMED (rasterize the actual G3 bbox realized coverage post-byte-close and attribute the true
+  intersection). Curve-relative REFUTED verdict HOLDS across the whole footprint band.
 
 F7 DISSOLVED-CONFIRMED (re-derived): "#226-admitted flips" and "uncovered residual px" are the SAME pool;
 #226 admits the d_seg-ranked SUBSET until the water level (equal to the full uncovered set only at r=1).
@@ -199,8 +220,9 @@ F7 DISSOLVED-CONFIRMED (re-derived): "#226-admitted flips" and "uncovered residu
   PINNED to the byte-closed composite (F-P5-1). σ_cc′ still DROPPED from 1a (F2, v2).
 - **A.5 bulk-SDF fallback + scaffold byte-cost fix** — UNCHANGED (I10 fallback; 707/426/2228 memo-sourced).
 - **A.6 scorer-rule routing** — UNCHANGED.
-- **A.7 pose composition** — UNCHANGED (store-nothing MANDATORY; engage-on BUILT #383; per-class d_seg-basin
-  conjunct + f_basin owed; banked R1 dxi fallback 0.127/7.2 KB).
+- **A.7 pose composition** — UNCHANGED (store-nothing MANDATORY; engage-on BUILT #383; **owed-14 RESOLVED
+  #384** observer-replay GREEN, POST-V2 SUPERSESSION; per-class d_seg-basin conjunct + f_basin the ONLY
+  remaining owed; banked R1 dxi fallback 0.127/7.2 KB).
 
 ### A.4-grid THE MEASUREMENT-GRID PIN (NEW — operator directive "flipping at correct resolution")
 
@@ -217,6 +239,9 @@ sub-pixel curve/lane PLACEMENT is authored at camera-res 874×1164 (pre-downsamp
 PLACEMENT-grid convention, distinct from the COMPARE-grid; the scorer compare is ALWAYS 512×384. The two
 conventions (placement-grid camera-res #149 vs compare-grid scorer 512×384) must NEVER be conflated. (A
 parallel audit agent verifies the actual code surfaces; this section's job is the unambiguous SPEC.)
+**P6-R3: that audit LANDED — sibling `proxy_suspect_audit_20260709` item 8 CONFIRMS the code surfaces are
+grid-correct** (authority grid H=384/W=512, argmax taken AFTER the bilinear downsample, no transposition on
+any flip surface) — independent confirmation of this SPEC.
 
 ### A.8 THE 1a TEMPORAL SECTION (NEW — F-P5-4, eightfold-P6 SEAL requirement)
 
@@ -293,6 +318,8 @@ road_undriv_carrier:
   STANDING_SEAL_CHECK: "grep rate-claim path for bulk_boundary_byte_cost -> FAIL (L385 diagnostic; 707/426/2228 = MEMO-SOURCED)"
 
 # ==== other blocks (stage_A, GATE P-C, stage_B/1b, pose_finish) UNCHANGED from v2 §B ====
+# ==== EXCEPT pose_finish.owed: owed-14 REMOVED (RESOLVED #384, POST-V2 SUPERSESSION); ====
+# ====        owed = [per_class_dseg_basin_conjunct, f_basin_0.9_tuning] (v8-specific, still owed). ====
 # ==== bc_calibration SUPERSEDED by §A.3 (P6-R2 fix F-R2-1): v2's block is STALE — it carries ====
 # ==== no_offset "0.00272 MEASURED default until #386 [in flight]"; the #386 gate has now RULED. ====
 bc_calibration:
@@ -321,6 +348,12 @@ residual_coder:
 
 ## D. OWED-BEFORE-LAUNCH — v2 §D items 1–8 UNCHANGED; TWO NEW (F-P5-1, F-P5-2/5)
 
+**P6-R3 supersession (read v2 §D THROUGH the POST-V2 SUPERSESSION LEDGER):** v2 **§D item-1** ("consume #386's
+n600 gating … until #386 lands ship no_offset + queue both arms") is RESOLVED — #386 has RULED, both flip arms
+REFUTED, no_offset is the MEASURED-CONFIRMED default (§A.3); no queuing remains. v2 **§D item-4**'s
+`owed-14 equations-leg trust replay` is RESOLVED (#384 GREEN); its remaining owed = per-class d_seg-basin
+conjunct + f_basin only.
+
 9. **[BUILD, F-P5-1] The lateral-capable 3-curve Road↔Undriv carrier** — extend `road_undriv_bulk_field.py`
    with left/right per-row undrivable-extent curves (`x_L(y)`, `x_R(y)`); ADD its §I I1b row; MEASURE the
    side-curve byte cost + frozenness on gt_n600 (the owed-measurement that turns I1b's DERIVED range into a
@@ -344,7 +377,7 @@ residual_coder:
 |---|---|---|---|---|
 | **I1** (pin) | **G1 horizon top arc** | 4 coeffs (deg-3) + ξ intercept (charged once, §G S1) | GEOMETRIC-MINIMAL | MEASURED: cubic/quadratic coeffs FROZEN 599/600 frames (\|Δ\|≈1e-7/6e-5); only intercept moves. **F-P5-6 PIN: dominant S 0.00277 (code-emitted 4167 B), not memo 0.0032.** 14.6× MEASURED. |
 | **I1b** *(NEW, F-P5-1)* | **G1 lateral undriv extent curves** `x_L(y)`, `x_R(y)` | **2 per-row low-order curves** (deg-3 → ~4 coeffs each = ~8 coeffs) + per-frame intercepts | GEOMETRIC-MINIMAL | **DERIVED + owed-measurement:** the side undrivable↔drivable boundary is a smooth low-order curve (off-road region boundary is C²), the multi-branch complement of the single-valued top arc that R6 MEASURED homes 97.54% of the Undriv d_seg mass. **Byte-cost DERIVED estimate: carrier total S ∈ [0.0040, 0.0083]** (LOWER = side curves as ego-rigid as the top arc, only intercepts move, coeff headers amortized ⇒ +[0.0012] over 0.00277; UPPER = side curves fully independent per-frame ⇒ 3× the single-curve 4167 B). **tagged owed-measurement** — the side-curve frozenness on gt_n600 is UNMEASURED (recess R8, mirrors the horizon's MEASURED |Δ|≈1e-7). Still GEOMETRIC-MINIMAL: 3 low-order curves ≪ the dense bulk SDF field (I10, 20–50 KB = S 0.13–0.33) ⇒ T1's demotion RATE law survives. ÷0.0411: the added [+0.0012,+0.0055] = [2.9%,13.4%] of the gap, but BUYS the removal of the 0.162 Undriv analytic floor (97.5% lateral) — a d_seg-side justification for the byte cost. |
-| I2–I11 | UNCHANGED from v2 §I | — | — | — |
+| I2–I11 | UNCHANGED from v2 §I | — | — | UNCHANGED **EXCEPT I5** (P6-R3): v2 I5's "no_offset default = 0 params until measured … #386 measures it" is SUPERSEDED — #386 has RULED (§A.3), no_offset (0 params) is the MEASURED-CONFIRMED safe default, both flip arms REFUTED. |
 
 **Standing check (P6 + SPEC_v8.1 seal):** I1b enters in GEOMETRIC-MINIMAL mode with a derivation + a
 DERIVED byte-cost range tagged owed-measurement; recess R8 is its measurement path. No unjustified capacity
@@ -354,7 +387,9 @@ choice (clause B honored).
 
 ## SEAL-READINESS STATEMENT (P6 recursive seal is NEXT)
 
-The eightfold SEAL pre-check (`crucible_standing_checks_eightfold_20260709`) flips after P5b:
+The eightfold SEAL pre-check (`crucible_standing_checks_eightfold_20260709`) flips after P5b; **P6-R3 adds
+the P11/P12 first-enforcement rows + folds the POST-V2 SUPERSESSION LEDGER (#386 RULED, owed-14 DONE) and the
+de-share footprint-band correction (sibling `proxy_suspect_audit`):**
 
 | check | v2+P4 state (P5 pre-check) | v3 state (P5b) |
 |---|---|---|
@@ -363,8 +398,11 @@ The eightfold SEAL pre-check (`crucible_standing_checks_eightfold_20260709`) fli
 | **P6** temporal section OR explicit N/A | **FAIL** (silent) | **PASS** — §A.8 per-class tie-flicker + Lever-D; SPEC_v8.1 fuller story owned |
 | **P7** pre-registered falsifier + measured-baseline threshold | PARTIAL-FAIL (δ_R proxy; confounded by single-valued carrier) | **PASS** — measured floor swapped in (code); carrier now lateral-capable so the kill is un-confounded |
 | **P8** floor-first | PASS | **PASS** — rate floors 0.118/0.135; Undriv analytic floor 0.162 now HOMED by the lateral carrier |
+| **P11** strategic-surgical-harm payoff+recovery | (not enforced pre-R3) | **N/A-with-derivation** (P6-R3 first enforcement) — increment-1 ships NO deliberate-harm schedule element (erosion / homotopy island-birth / τ-anneal are v7.5.2/#205 curriculum scope, carried THERE with their payoffs); Stage-A field DECOUPLING is a partition CHANGE, not an accepted local worsening — its payoff (better argmax partition) + recovery (the 1a decoupled-vs-control A/B + §A.8 tie-flicker) are pre-registered (P7) |
+| **P12** composition/interaction sign per shipped lever | (not enforced pre-R3) | **PASS** (P6-R3 first enforcement) — lateral carrier ANTI-REDUNDANT w/ residual coder (§A.1 `owns_explicitly: lateral_side_undrivable`); decoupled per-class fields ANTAGONISTIC w/ temporal coherence at the tie (§A.8 tie-flicker, MEASURED both arms); lane-gen fast-follow ANTAGONISTIC-if-folded-early (F-P5-5); b_c(no_offset) ORTHOGONAL (closed-form, out of the scorer grad loop, risk-2 structural). Composition claims MEASURED by the 1a A/B (in-run), never assumed additive |
 
-**All five SEAL checks PASS after P5b.** Remaining for P6 (recursive seal, re-derive-don't-confirm, 3
+**All seven SEAL checks PASS after P6-R3** (P2/P5/P6/P7/P8 held from P5b; P11 N/A-with-derivation + P12 PASS
+added at P6-R3 first-enforcement). Remaining for P6 (recursive seal, re-derive-don't-confirm, 3
 clean passes): (a) blind structural re-derivation of the I1b byte-cost range + the carrier's lateral
 coverage claim (do NOT trust this memo); (b) triality-leg propagation (P6 seal owns DSL `Lever` fold at the
 carrier BUILD + the equations-leg canonical row once R8 MEASURES the carrier rate); (c) the standing checks
@@ -380,7 +418,10 @@ P6 is the seal, not this synthesis.**
 `road_undriv_bulk_field.py::_horizon_profile` L448 (single-valued, confirmed) ·
 `src/tac/inc1a_harness/decoupling_screen.py` (δ_mask default SWAPPED 0.0196→3.46e-6 + operative floor +
 seed-spread REFUSE guard) · `src/tac/inc1a_harness/__init__.py` (exports) ·
-`src/tac/inc1a_harness/tests/test_inc1a_harness.py` (rewritten; 27 pass, ruff-F clean).
+`src/tac/inc1a_harness/tests/test_inc1a_harness.py` (rewritten; 27 pass, ruff-F clean). **P6-R3 ADDED:**
+`v752_owed_gates_build_20260709` (owed-14 #384 BUILT+GREEN — the pose-gate trust replay) · commit 1cd890c17
+(#386 n600 gate RULED, no_offset 0.0031436) · sibling `proxy_suspect_audit_20260709` (item 2 de-share
+footprint band 0.000–0.0069 dil-proxy; item 8 grid-correct confirmation).
 
 **Pointer 0.19110 UNMOVED — this synthesis is MEANS. Only a byte-closed `upstream/evaluate.py` n600 row <
 0.19110 moves it.** P5b folded the P5 second red-team (4 FIXED — one near-break carrier fix + a live-code

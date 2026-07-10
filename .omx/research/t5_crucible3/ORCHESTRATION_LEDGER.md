@@ -349,3 +349,34 @@ negatives as COVERAGE not dead loss (risk-1 CLOSED by side-curves; risk-3 routed
 **Triality:** [no-triality] (doc-fidelity + config-propagation fix; no lever/law change). Pointer 0.19110
 UNMOVED — MEANS.
 NEXT ACTION: **P6-R3** — re-derive over the fixed doc; if zero findings, first CLEAN toward 3-consecutive seal.
+
+## [P6-R3 NOT_CLEAN — 2026-07-09] RECURSIVE SEAL round 3 (crucible3_v8, fresh-eyes over 6c5d0ee35 + sibling 7d777c363)
+Counter 0/3 (NOT_CLEAN; R1/R2 fixes re-reviewed clean; 4 NEW findings, all fixed in-round). Standing checks:
+(1) scaffold smoke — inc1a_harness 27/27 pass, ruff-F clean; decoupling_screen default = 3.46e-6, DELTA_R_PROXY
+RETIRED · (2) number-provenance — no_offset 0.0031436 (gate commit 1cd890c17), flip arms 0.0196734/0.0215612,
+3.46e-6 (R7), 0.00277 (R3 4167B) all tagged/RE-DERIVED · (3) grid pin PRESENT (512×384) + sibling item 8
+CONFIRMS code grid-correct · (4) eightfold+P9 PASS · (5) review-prior-fix (R2's §B override): internally
+consistent AND the FULL v2-§B/UNCHANGED-pointer sweep run → found the REST of the R2 class.
+FINDINGS (4, all fixed):
+- **F-R3-1 (owed-marker-now-resolved, R2 class):** owed-14 RESOLVED via #384 (observer-stack trust replay
+  BUILT+GREEN all 4 legs, `v752_owed_gates_build_20260709` Gate 4) but v3 re-imported it as OWED through the
+  "pose_finish UNCHANGED from v2 §B" + §A.7 + §D-4 pointers (v3 §A.7 summary silently dropped it without
+  stating why). FIXED: POST-V2 SUPERSESSION LEDGER + §A.7/§B/§D carve-outs; pose_finish owed set now
+  [per_class_dseg_basin_conjunct, f_basin_0.9_tuning] only.
+- **F-R3-2 (#386-in-flight residue, THE R2 class swept in full):** R1/R2 carved only §A.3 + §B bc_calibration;
+  the UNCHANGED pointers to v2 §A.4 L225, §D item-1, §H consumed L506-507/513, §I5 L531 still re-imported
+  "#386 in flight / no_offset until #386 / #386 measures it". FIXED: the POST-V2 SUPERSESSION LEDGER names +
+  overrides all of them (#386 RULED, no_offset 0.0031436 confirmed default); §D + §I5 pointer tags added.
+- **F-R3-3 (sibling proxy-audit fold, de-share band):** v3 stated the de-share band as [0.0044,0.0104]
+  (§0 F-P5-P9-2 row + §A.2 rider); sibling `proxy_suspect_audit_20260709` item 2 MEASURED the footprint band
+  across dilate∈{0,1,2,3} = [0.000,0.0069], 0.0044 = dil2 INSTANCE (reproduces dil2 EXACTLY, NOT
+  footprint-robust; dil0/dil1 below 0.0044). FIXED: band corrected + dil2-instance label; [0.0044,0.0104]
+  flagged as a DIFFERENT (amortized-vs-realized) uncertainty, retired. Curve-relative REFUTED verdict HOLDS.
+- **F-R3-4 (P11/P12 first-enforcement gap):** the seal had no P11/P12 treatment. FIXED: seal table gains
+  P11 (N/A-with-derivation — increment-1 ships no deliberate-harm schedule element; Stage-A decoupling is a
+  partition change with pre-registered payoff+recovery) + P12 (PASS — carrier anti-redundant w/ residual,
+  decoupled fields antagonistic w/ temporal coherence §A.8, fast-follow antagonistic-if-early, b_c orthogonal).
+Grid-pin standing check cites sibling item 8 (independent confirmation); 42 s/ep NOT borrowed in v3 (clean).
+**Triality:** [no-triality] (doc-fidelity + supersession/pointer + sibling-fold; no lever/law change).
+Pointer 0.19110 UNMOVED — MEANS.
+NEXT ACTION: **P6-R4** — re-derive over the R3-fixed doc; if zero findings, first CLEAN toward 3-consecutive seal.
