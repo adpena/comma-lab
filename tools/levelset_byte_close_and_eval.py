@@ -215,6 +215,50 @@ def _refuse_tmp(path: Path, field: str) -> None:
         raise ValueError(f"{field}={path!r} is a /tmp-class path; use the SSD/repo tier per CLAUDE.md.")
 
 
+def receiver_env_manifest() -> dict[str, Any]:
+    """#402 DEPENDENCY PINNING + CROSS-MICROARCH NOTE (advisory PR128 §8.2).
+
+    Record the EXACT versions of every decode-path dependency the shipped inflate.py imports, so a
+    byte-close row's provenance names the environment that produced it (a fresh unfrozen sync can
+    resolve a different numpy/torch/brotli and the deterministic-reproducibility contract needs the
+    versions on record). ``constriction`` is deliberately N/A: unlike PR128, the level-set receiver's
+    ξ payload uses a pure-stdlib arithmetic coder (``_ar_decode``), so it carries no constriction
+    dependency to pin.
+
+    Cross-host bit-identity note: the AUTHORITY forward is the numpy-fp32 reference
+    (``levelset_rgb_forward_numpy``, fp64 by default -- the deterministic verdict), NOT torch. The
+    ONLY torch op on the decode path is ``_R`` = ``torch.nn.functional.interpolate(mode='bicubic')``
+    whose last-bit rounding CAN differ across CPU microarchitectures/BLAS. Therefore this tool makes
+    NO portable sha256-of-.raw claim (grep confirms none is emitted); the .raw is verified PER HOST
+    via the bit-exact round-trip gate (``--verify-bit-exact``) on the host that produced it, and
+    CPU/CUDA are separate evidence axes never inferred from each other."""
+    import importlib
+    import platform
+
+    versions: dict[str, str] = {"python": platform.python_version()}
+    for mod in ("numpy", "torch", "brotli", "scipy"):
+        try:
+            versions[mod] = str(getattr(importlib.import_module(mod), "__version__", "unknown"))
+        except Exception as exc:  # noqa: BLE001 — absent optional dep is provenance, not fatal
+            versions[mod] = f"absent ({type(exc).__name__})"
+    versions["constriction"] = ("N/A (level-set receiver uses a pure-stdlib arithmetic ξ coder "
+                                "(_ar_decode), not constriction)")
+    return {
+        "decode_path_versions": versions,
+        "host": {"platform": platform.platform(), "machine": platform.machine(),
+                 "processor": platform.processor() or "unknown",
+                 "is_contest_linux_x86_64": _is_linux_x86_64()},
+        "authority_forward": ("numpy-fp32 reference (tac.boundary_math.lever_b_levelset_generator."
+                              "levelset_rgb_forward_numpy; fp64 default) -- the deterministic verdict; "
+                              "torch is NOT the authority."),
+        "cross_host_bit_identity": (
+            "The only torch op on the decode path is _R = torch.nn.functional.interpolate(mode="
+            "'bicubic'), whose LSBs can vary across CPU microarch/BLAS (advisory PR128 §8.2). This "
+            "tool emits NO portable sha256-of-.raw authority claim; the .raw is verified PER HOST via "
+            "the --verify-bit-exact round-trip gate. CPU and CUDA are separate evidence axes."),
+    }
+
+
 # ---------------------------------------------------------------------------
 # checkpoint loading -- separate LEARNED params from the __cfg/__bank/__render scalars.
 # ---------------------------------------------------------------------------
@@ -650,6 +694,8 @@ def parse_pose_carrier(blob: bytes) -> dict[str, Any]:
         if n_kf != 0:
             raise ValueError(f"store-nothing v2 must have n_kf=0; got {n_kf} (NO-FAKE)")
         H = _xip.homographies_from_xi(xi_dq, float(hdr["pitch"]))
+        if off != len(blob):  # #402 EXACT CONSUMPTION (mirrors inflate._pcar_parse v2).
+            raise ValueError(f"PCAR v2 block has {len(blob) - off} unconsumed trailing byte(s)")
         return {"hdr": hdr, "H": H, "xi": xi_dq, "keyframes": [], "kf_of_pair": [0] * P}
     # legacy: stored fp64 H block (warp_real_luma; and any pre-#257 store-nothing archive).
     H = np.frombuffer(blob[off:off + P * 9 * 8], dtype=np.float64).reshape(P, 3, 3).copy(); off += P * 9 * 8
@@ -661,6 +707,8 @@ def parse_pose_carrier(blob: bytes) -> dict[str, Any]:
         (blen,) = struct.unpack_from("<I", blob, off); off += 4
         raw = brotli.decompress(blob[off:off + blen]); off += blen
         keyframes.append(np.frombuffer(raw, dtype=np.uint8).reshape(kh, kw, 3).copy())
+    if off != len(blob):  # #402 EXACT CONSUMPTION (mirrors inflate._pcar_parse legacy).
+        raise ValueError(f"PCAR legacy block has {len(blob) - off} unconsumed trailing byte(s)")
     return {"hdr": hdr, "H": H, "xi": xi, "keyframes": keyframes, "kf_of_pair": hdr["kf_of_pair"]}
 
 
@@ -1027,23 +1075,38 @@ PCAR_MAGIC = b"PCAR1\x00"  # #205 warp-real-luma pose carrier (stored keyframe l
 XIP_MAGIC = b"XIP2"        # #257 store-nothing ξ payload (quantized + coded ego twist)
 
 
+def _take(raw, off, n):
+    # #402 fail-closed exact slice: a short buffer RAISES (never silently returns fewer bytes than
+    # declared -> a downstream reshape can't quietly consume a truncated stream). advisory PR128 §8.2.
+    end = off + n
+    if n < 0 or end > len(raw):
+        raise ValueError("LVLS1 truncated: section needs %d B at off=%d but blob is %d B" % (n, off, len(raw)))
+    return raw[off:end], end
+
+
 def _read_blob(path):
     raw = open(path, "rb").read()
     assert raw[:len(MAGIC)] == MAGIC, "bad level-set magic"
     off = len(MAGIC); out = []
     for _ in range(4):
         (n,) = struct.unpack_from("<I", raw, off); off += 4
-        out.append(raw[off:off + n]); off += n
+        blk, off = _take(raw, off, n); out.append(blk)
     m = json.loads(out[0].decode("utf-8"))
     # Optional trailing blocks are gated by the MANIFEST flags (NOT bare off<len): 5th = lane band
     # (#224 Wave E), 6th = pose carrier (#205). A lone pose-carrier block must NOT be misread as lane.
     lane_b = pcar_b = None
     if m.get("lane_render_band") is not None:
         (n,) = struct.unpack_from("<I", raw, off); off += 4
-        lane_b = raw[off:off + n]; off += n
+        lane_b, off = _take(raw, off, n)
     if m.get("pose_carrier") is not None:
         (n,) = struct.unpack_from("<I", raw, off); off += 4
-        pcar_b = raw[off:off + n]; off += n
+        pcar_b, off = _take(raw, off, n)
+    # #402 EXACT CONSUMPTION: the LVLS1 grammar must consume the WHOLE blob. Trailing bytes are a
+    # truncation/format-mismatch/tamper signal -- fail closed, never silently ignore (advisory PR128
+    # §8.2: "Section range streams are not required to be consumed exactly. Trailing words can be ignored.").
+    if off != len(raw):
+        raise ValueError("LVLS1 blob has %d unconsumed trailing byte(s) (off=%d len=%d) -- refusing to "
+                         "decode a non-exact stream (NO-FAKE fail-closed)." % (len(raw) - off, off, len(raw)))
     return m, out[1], out[2], out[3], lane_b, pcar_b
 
 
@@ -1052,7 +1115,13 @@ def _dequant(blob, order, shapes, scales):
     flat = np.frombuffer(blob, dtype=np.int8)
     for name in order:
         shp = tuple(shapes[name]); n = int(np.prod(shp))
-        out[name] = (flat[off:off + n].astype(np.float32) * float(scales[name])).reshape(shp); off += n
+        chunk = flat[off:off + n]
+        if chunk.size != n:  # #402: base blob short for this tensor -> fail closed, never partial-decode.
+            raise ValueError("LVLS1 base blob short for %r: need %d int8 got %d" % (name, n, int(chunk.size)))
+        out[name] = (chunk.astype(np.float32) * float(scales[name])).reshape(shp); off += n
+    if off != flat.size:  # #402 EXACT CONSUMPTION: trailing int8 in the base blob = format mismatch.
+        raise ValueError("LVLS1 base blob has %d unconsumed int8 byte(s) (off=%d size=%d) -- fail closed."
+                         % (int(flat.size) - off, off, int(flat.size)))
     return out
 
 
@@ -1215,6 +1284,8 @@ def _lane_parse(blob):
             fr0 = float(vals[vi]); fr1 = float(vals[vi + 1]); vi += 2
             lines.append((cc, hc, dp, dph, dd, fr0, fr1))
         pairs.append(lines)
+    if vi != len(vals):  # #402 EXACT CONSUMPTION: trailing lane-coeff float64 words = format mismatch.
+        raise ValueError("LBND1 lane block has %d unconsumed float64 word(s)" % (len(vals) - vi))
     return pairs, hdr
 
 
@@ -1387,7 +1458,10 @@ def _xip_parse(blob):
         counts = np.frombuffer(brotli.decompress(blob[off:off + mlen]), dtype=np.uint32) if mlen else None
         off += mlen
         (slen,) = struct.unpack_from("<I", blob, off); off += 4
-        stream = blob[off:off + slen]; off += slen
+        stream = blob[off:off + slen]
+        if len(stream) != slen:  # #402: xi arithmetic stream short -> fail closed.
+            raise ValueError("XIP2 stream short: need %d B got %d" % (slen, len(stream)))
+        off += slen
         col = np.empty(P, dtype=np.int64)
         if P:
             col[0] = seed
@@ -1398,6 +1472,8 @@ def _xip_parse(blob):
                 d = np.full(P - 1, lo, dtype=np.int64)
             col[1:] = seed + np.cumsum(d)
         cols.append(col)
+    if off != len(blob):  # #402 EXACT CONSUMPTION of the xi payload block.
+        raise ValueError("XIP2 payload has %d unconsumed trailing byte(s)" % (len(blob) - off))
     return np.stack(cols, axis=1).astype(np.int16), scales
 
 
@@ -1434,8 +1510,15 @@ def _pcar_parse(blob):
         # #257 store-nothing v2: decode ξ -> DERIVE H FREE (rule-118). No stored H, no kf_of_pair.
         (xlen,) = struct.unpack_from("<I", blob, off); off += 4
         q, scales = _xip_parse(blob[off:off + xlen]); off += xlen
+        # #402: the v2 serializer writes a trailing u32 n_kf(=0). CONSUME + validate it (the tool-side
+        # parse_pose_carrier already did; the shipped inflate previously ignored these 4 trailing bytes).
+        (n_kf,) = struct.unpack_from("<I", blob, off); off += 4
+        if n_kf != 0:
+            raise ValueError("PCAR store-nothing v2 must have n_kf=0; got %d (NO-FAKE)" % n_kf)
         xi = q.astype(np.float64) * scales.astype(np.float64)
         H = _xip_H_from_xi(xi, float(hdr["pitch"]))
+        if off != len(blob):  # #402 EXACT CONSUMPTION of the pose-carrier block.
+            raise ValueError("PCAR v2 block has %d unconsumed trailing byte(s)" % (len(blob) - off))
         return {"hdr": hdr, "H": H, "keyframes": [], "kf_of_pair": [0] * P}
     H = np.frombuffer(blob[off:off + P * 9 * 8], dtype=np.float64).reshape(P, 3, 3).copy(); off += P * 9 * 8
     off += P * 6 * 2  # xi (fp16, provenance-only; the legacy decode uses the stored H)
@@ -1446,6 +1529,8 @@ def _pcar_parse(blob):
         (blen,) = struct.unpack_from("<I", blob, off); off += 4
         raw = brotli.decompress(blob[off:off + blen]); off += blen
         kfs.append(np.frombuffer(raw, dtype=np.uint8).reshape(kh, kw, 3).copy())
+    if off != len(blob):  # #402 EXACT CONSUMPTION of the legacy warp-real-luma pose-carrier block.
+        raise ValueError("PCAR legacy block has %d unconsumed trailing byte(s)" % (len(blob) - off))
     return {"hdr": hdr, "H": H, "keyframes": kfs, "kf_of_pair": hdr["kf_of_pair"]}
 
 
@@ -1587,19 +1672,37 @@ def main():
     _cap = int(os.environ.get("INFLATE_MAX_PAIRS", "0"))  # 0 => all pairs (contest default); >0 = debug/CI bounded inflate
     if _cap > 0:
         n_pairs = min(n_pairs, _cap)
-    with open(dst, "wb") as f:  # preallocate the full .raw so workers write disjoint offsets
-        f.truncate(2 * n_pairs * _G["framebytes"])
+    # #402 ATOMIC WRITE: workers write to a ``.partial`` sibling; only after the FULL expected byte
+    # count is verified do we os.replace() it onto ``dst``. A crash/OOM before the rename leaves the
+    # ``.partial`` (never a full-size, scoreable-LOOKING ``dst``) -> the evaluator cannot score a
+    # truncated output (advisory PR128 §8.2: "output writes are non-atomic and non-resumable").
+    tmp = dst + ".partial"
+    expected_raw = 2 * n_pairs * _G["framebytes"]
+    with open(tmp, "wb") as f:  # preallocate the full .raw so workers write disjoint offsets
+        f.truncate(expected_raw)
     nworkers = max(1, min(n_pairs, int(os.environ.get("INFLATE_WORKERS", "0")) or (os.cpu_count() or 1)))
     if nworkers == 1:  # serial fallback (bit-identical) -- e.g. INFLATE_WORKERS=1 for debugging
-        _G["dst"] = dst
+        _G["dst"] = tmp
         for pi in range(n_pairs):
             _render_pair(pi)
     else:
         methods = mp.get_all_start_methods()
         ctx = mp.get_context("fork" if "fork" in methods else "spawn")  # Linux fork / macOS spawn
-        with ctx.Pool(nworkers, initializer=_init_worker, initargs=(src, dst)) as pool:
+        with ctx.Pool(nworkers, initializer=_init_worker, initargs=(src, tmp)) as pool:
             for _ in pool.imap_unordered(_render_pair, range(n_pairs), chunksize=1):
                 pass
+    # #402 FINAL RAW ASSERTION: the output MUST be exactly the expected byte count BEFORE it is
+    # promoted to ``dst`` (== before scoring). A short raw = evaluator truncation = NO-FAKE failure.
+    actual_raw = os.path.getsize(tmp)
+    if actual_raw != expected_raw:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise SystemExit("inflate output SHORT: %d B != expected %d B (%d frames @ %dx%dx3) -- refusing "
+                         "to promote a truncated .raw to a scoreable path (NO-FAKE)."
+                         % (actual_raw, expected_raw, 2 * n_pairs, ch, cw))
+    os.replace(tmp, dst)  # atomic rename onto the scoreable path (POSIX same-filesystem guarantee).
     print("inflated %d frames (%d pairs) -> %s [%dx%dx%dx3 uint8] (%d workers)" % (2 * n_pairs, n_pairs, dst, 2 * n_pairs, ch, cw, nworkers), flush=True)
 
 
@@ -1651,6 +1754,31 @@ def assemble_packet(blob: bytes, packet_dir: Path) -> tuple[Path, int]:
 # ---------------------------------------------------------------------------
 # run inflate (subprocess, exactly as the contest evaluate.sh does)
 # ---------------------------------------------------------------------------
+def _raw_storage_preflight(out_dir: Path, expected_bytes: int, *, safety: float = 1.05) -> dict[str, Any]:
+    """#402 STORAGE PREFLIGHT: refuse to start a ~3.66 GB inflate that would fill the output volume.
+
+    Contest 1,200-frame output = 1,200*874*1164*3 = 3,662,409,600 B (~3.41 GiB). Per CLAUDE.md's
+    storage-waterfall non-negotiable, a large-artifact producer MUST fail CLOSED when no tier has
+    room -- silently filling the disk mid-inflate corrupts the run AND every sibling job on the
+    volume. ``shutil.disk_usage`` on the actual output directory's filesystem is the ground truth."""
+    import shutil
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    free = int(shutil.disk_usage(out_dir).free)
+    required = int(expected_bytes * float(safety))
+    info = {
+        "path": str(out_dir), "free_bytes": free, "expected_raw_bytes": int(expected_bytes),
+        "required_bytes": required, "safety_margin": float(safety), "ok": bool(free >= required),
+    }
+    if free < required:
+        raise RuntimeError(
+            f"storage preflight FAILED: {out_dir} has {free} B free < {required} B required "
+            f"({expected_bytes / 1e9:.2f} GB raw output + {(safety - 1) * 100:.0f}% margin) -- refusing "
+            f"to start the inflate (CLAUDE.md storage waterfall / NO-FAKE fail-closed).")
+    return info
+
+
 def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> dict[str, Any]:
     """Unzip archive.zip -> 0.bin, run inflate.py -> 0.raw, validate the FULL output shape.
 
@@ -1695,13 +1823,22 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
         src_bin.write_bytes(capped)
 
     dst_raw = inflated_dir / "0.raw"
+    n_frames_expected = 2 * eval_pairs
+    expected_bytes = n_frames_expected * CAMERA_H * CAMERA_W * 3
+    # #402 STORAGE PREFLIGHT: fail closed if the output volume cannot hold the ~3.66 GB .raw.
+    storage = _raw_storage_preflight(inflated_dir, expected_bytes)
     cmd = [sys.executable, str(packet_dir / "inflate.py"), str(src_bin), str(dst_raw)]
     proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(packet_dir))
     if proc.returncode != 0:
         raise RuntimeError(f"inflate.py FAILED rc={proc.returncode}\nSTDOUT:{proc.stdout}\nSTDERR:{proc.stderr}")
-    n_frames_expected = 2 * eval_pairs
-    expected_bytes = n_frames_expected * CAMERA_H * CAMERA_W * 3
     actual_bytes = dst_raw.stat().st_size
+    # #402 FINAL RAW ASSERTION (fail closed): a short .raw is evaluator truncation -- RAISE, do not
+    # merely record a bool that a downstream caller might ignore and score anyway.
+    if actual_bytes != expected_bytes:
+        raise RuntimeError(
+            f"run_inflate: .raw is {actual_bytes} B != expected {expected_bytes} B "
+            f"({n_frames_expected} frames @ {CAMERA_H}x{CAMERA_W}x3) -- a short raw is evaluator "
+            f"truncation; refusing to hand a truncated output to scoring (NO-FAKE).")
     return {
         "inflate_stdout": proc.stdout.strip(),
         "eval_pairs": eval_pairs,
@@ -1710,6 +1847,7 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
         "raw_bytes": actual_bytes,
         "expected_bytes": expected_bytes,
         "full_output_shape_ok": bool(actual_bytes == expected_bytes),
+        "storage_preflight": storage,
         "frame_layout": f"({n_frames_expected}, {CAMERA_H}, {CAMERA_W}, 3) uint8 [f0,f1 per pair]",
     }
 
@@ -1756,8 +1894,13 @@ def _dequant_blob(blob: bytes) -> tuple[dict[str, Any], dict[str, np.ndarray], n
     for name in order:
         shp = tuple(m["base_shapes"][name])
         n = int(np.prod(shp))
-        params[name] = (flat[off:off + n].astype(np.float32) * float(m["base_scales"][name])).reshape(shp)
+        chunk = flat[off:off + n]
+        if chunk.size != n:  # #402: base blob short for this tensor -> fail closed.
+            raise ValueError(f"LVLS1 base blob short for {name!r}: need {n} int8 got {int(chunk.size)}")
+        params[name] = (chunk.astype(np.float32) * float(m["base_scales"][name])).reshape(shp)
         off += n
+    if off != flat.size:  # #402 EXACT CONSUMPTION (mirrors the shipped inflate._dequant).
+        raise ValueError(f"LVLS1 base blob has {int(flat.size) - off} unconsumed int8 byte(s) -- fail closed.")
     code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32)
             * float(m["code_scale"])).reshape(m["code_shape"])
     lane_pairs: list[list[Any]] | None = None
@@ -1987,8 +2130,13 @@ def bit_exact_roundtrip_gate(
     for name in order:
         shp = tuple(m["base_shapes"][name])
         n = int(np.prod(shp))
-        params[name] = (flat[off:off + n].astype(np.float32) * float(m["base_scales"][name])).reshape(shp)
+        chunk = flat[off:off + n]
+        if chunk.size != n:  # #402: base blob short for this tensor -> fail closed.
+            raise ValueError(f"LVLS1 base blob short for {name!r}: need {n} int8 got {int(chunk.size)}")
+        params[name] = (chunk.astype(np.float32) * float(m["base_scales"][name])).reshape(shp)
         off += n
+    if off != flat.size:  # #402 EXACT CONSUMPTION (mirrors the shipped inflate._dequant).
+        raise ValueError(f"LVLS1 base blob has {int(flat.size) - off} unconsumed int8 byte(s) -- fail closed.")
     code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32)
             * float(m["code_scale"])).reshape(m["code_shape"])
     n_pairs_total = int(m["n_pairs"])
@@ -2087,22 +2235,33 @@ def _read_blob_bytes(
     gated by the MANIFEST flags (lane_render_band / pose_carrier), NOT a bare off<len -- so a lone
     pose_carrier block is not misread as lane. Default-off -> both trailing are None."""
     assert blob[: len(_MAGIC)] == _MAGIC, "bad level-set magic"
+
+    def _take(o: int, n: int) -> tuple[bytes, int]:  # #402 fail-closed exact slice (short => raise)
+        end = o + n
+        if n < 0 or end > len(blob):
+            raise ValueError(f"LVLS1 truncated: section needs {n} B at off={o} but blob is {len(blob)} B")
+        return blob[o:end], end
+
     off = len(_MAGIC)
     out: list[bytes] = []
     for _ in range(4):
         (n,) = struct.unpack_from("<I", blob, off)
         off += 4
-        out.append(blob[off:off + n])
-        off += n
+        blk, off = _take(off, n)
+        out.append(blk)
     manifest = json.loads(out[0].decode("utf-8"))
     lane_band: bytes | None = None
     pose_carrier: bytes | None = None
     if manifest.get("lane_render_band") is not None:
         (n,) = struct.unpack_from("<I", blob, off); off += 4
-        lane_band = blob[off:off + n]; off += n
+        lane_band, off = _take(off, n)
     if manifest.get("pose_carrier") is not None:
         (n,) = struct.unpack_from("<I", blob, off); off += 4
-        pose_carrier = blob[off:off + n]; off += n
+        pose_carrier, off = _take(off, n)
+    # #402 EXACT CONSUMPTION (mirrors the shipped inflate._read_blob): trailing bytes fail closed.
+    if off != len(blob):
+        raise ValueError(f"LVLS1 blob has {len(blob) - off} unconsumed trailing byte(s) "
+                         f"(off={off} len={len(blob)}) -- refusing a non-exact stream (NO-FAKE).")
     return manifest, out[1], out[2], out[3], lane_band, pose_carrier
 
 
@@ -3012,6 +3171,8 @@ def main(argv: list[str] | None = None) -> int:
         "name": tier.name, "contest": tier.contest, "bit_exact_contract": tier.bit_exact_contract,
         "eval_device": eval_device, "inflate_env": _tier_env, "note": tier.note,
     }
+    # #402 receiver env manifest: pin decode-path dep versions + the cross-microarch bit-identity note.
+    report["receiver_env"] = receiver_env_manifest()
     # clause-A geometric-section derivability audit (default-ON observability; report-only, byte-identical).
     _dedup = dedup_audit_section(args.gt_cache)
     if _dedup is not None:

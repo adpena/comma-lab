@@ -131,8 +131,12 @@ def test_template_has_multiprocess_pool_and_serial_fallback() -> None:
 def test_template_preallocates_raw_and_writes_disjoint_offsets() -> None:
     src = _byte_close_src()
     # workers write disjoint offsets into a preallocated .raw -> POSIX-safe concurrent write -> bit-exact.
-    assert "f.truncate(2 * n_pairs * _G[\"framebytes\"])" in src
+    # (#402: preallocation now targets the atomic ``.partial`` sibling via ``expected_raw``, renamed
+    # onto ``dst`` only after the full byte count is verified -- still a single preallocated file.)
+    assert "expected_raw = 2 * n_pairs * _G[\"framebytes\"]" in src
+    assert "f.truncate(expected_raw)" in src
     assert "f.seek(pi * 2 * fb)" in src
+    assert "os.replace(tmp, dst)" in src, "#402 atomic tmp->dst rename must exist"
 
 
 def test_template_default_forward_dtype_is_float64_bit_exact() -> None:
