@@ -14685,3 +14685,22 @@ blocking rungs (rel_sig ≥ 10%) → `[witness-launch-readiness] PROCEED` (advis
 byte-closed n600 exact row < 0.19108. Triality: DSL **N/A** (sealed DSL-compiled config, no new lever);
 equations **N/A** (no new measured law — a launch, not a measurement). DAG leg = THIS FEED.
 Memory: [[launch_readiness_gate_config_freshness_naive_launch_20260710]] · council `council_v752_relaunch_shape_concurrent_vs_single_20260710`.
+
+### FEED-417-gate-landed (2026-07-10, #417 self-protect DONE, c3697bbf1) — the fail-closed receiver-bijection gate
+
+Operator "Build the fail closed refusal gate now." Built `tools/levelset_receiver_bijection_gate.py` — the
+DRIFT-PROOF class-fix for the #417 counted-but-inert bug (NO-FAKE #8). KEY design pivot discovered during
+build: the receiver forward is NOT an importable module — it lives as the `_INFLATE_PY` SOURCE STRING (the
+generated inflate.py). So the gate AST-parses THAT shipped string for its exact `P["..."]` consumption set
+(9 exact + 3 indexed-`%d` patterns; ZERO dynamic accesses = fully analyzable) and REFUSES `build_levelset_blob`
+if any COUNTED base-blob group is unconsumed. Drift-proof: reads the real source every call (a hand allowlist
+would already have missed `out_tex_hidden`/`out_tex_h`). Degrades-to-ADVISORY if the source ever adds a
+dynamic `P[name]` (honest fail-open for an un-analyzable receiver). Escape hatch
+`TAC_ALLOW_UNCONSUMED_ARCHIVE_GROUPS`. VALIDATED: zero orphans on 8 real witnesses (no false-refuse on the
+live baseline); REFUSES a synthetic tex_trunk archive. 11 tests, wired into the byte-close authority path.
+**The preflight F821 gate caught my own wire-in bug** (aliased import, un-aliased call) before commit — the
+apparatus working. **Two-landing status:** SELF-PROTECT done; the receiver-consumption FIX (teach the forward
+to read tex_trunk/decoupled_head) stays owned by #395/#398 — until then the gate correctly BLOCKS any v7.5.3/v8
+scored A/B. **Triality:** DAG = THIS FEED; DSL **N/A** (apparatus gate, no witness lever); equations **N/A**
+(structural code-fact). Memory: [[receiver-consumption-bijection-counted-but-inert-weight-groups]]. Pointer
+0.19108282 UNMOVED — protects a FUTURE row from being fake.
