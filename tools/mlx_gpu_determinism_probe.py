@@ -37,6 +37,8 @@ import sys
 
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+from tac import witness_run_artifacts as _wra  # noqa: E402  (tac is pip-install-editable; no sys.path shim needed)
+
 OPS = (
     "random_normal",
     "elementwise",
@@ -396,7 +398,7 @@ def probe_composite_cell(*, num_pairs: int, epochs: int, gt_cache: str, device: 
                 fh.write(json.dumps(row) + "\n")
             done[i] = row
             continue
-        ema = os.path.join(out_dir, "levelset_witness_ema_mlx.npz")
+        ema = os.path.join(out_dir, _wra.EMA_NPZ)
         if p.returncode != 0 or not os.path.exists(ema):
             row = {"idx": i, "num_pairs": num_pairs, "fused_r": fused_r,
                    "error": (p.stderr or "no-ema")[-500:]}

@@ -99,6 +99,18 @@ try:
 except Exception:  # pragma: no cover - degraded-but-alive path
     _resolve_run_dir_canonical = None
 
+# Canonical witness run-artifact CONTRACT (single source of truth for run filenames).
+# Fail-open with literal fallbacks so a broken tac install never kills the daemon.
+try:
+    from tac import witness_run_artifacts as _wra  # noqa: E402
+except Exception:  # pragma: no cover - degraded-but-alive path
+    class _wra:  # type: ignore[no-redef]
+        BEST_JSON = "levelset_best.json"
+        RESUME_NPZ = "levelset_resume_state.npz"
+        EMA_NPZ = "levelset_witness_ema_mlx.npz"
+        EMA_BEST_NPZ = "levelset_witness_ema_BEST.npz"
+        COSTATE_JSONL = "costate_shadow.jsonl"
+
 # ── self-calibration: ALL time-telemetry DERIVED FROM THE RUN'S OWN DATA ──
 # (operator "Telemetry accuracy vital" 2026-06-30: confident-wrong is the worst failure.)
 # There is deliberately NO hardcoded cadence/ETA TIME constant here. Cadence is the run's
@@ -506,7 +518,7 @@ def _read_best_json(run_dir: Path | None) -> dict | None:
     deploy artifact the byte-close / next-arm warm-start consumes. None when absent."""
     if run_dir is None:
         return None
-    p = Path(run_dir) / "levelset_best.json"
+    p = Path(run_dir) / _wra.BEST_JSON
     try:
         if not p.is_file():
             return None
@@ -605,9 +617,9 @@ def _resume_status(run_dir: Path | None, checkpoints: dict, now: float | None = 
             pass
         return False, None
 
-    out["resume_npz"], out["resume_age_s"] = _age("levelset_resume_state.npz")
-    out["deploy_npz"], out["deploy_age_s"] = _age("levelset_witness_ema_mlx.npz")
-    out["best_npz"], _ = _age("levelset_witness_ema_BEST.npz")
+    out["resume_npz"], out["resume_age_s"] = _age(_wra.RESUME_NPZ)
+    out["deploy_npz"], out["deploy_age_s"] = _age(_wra.EMA_NPZ)
+    out["best_npz"], _ = _age(_wra.EMA_BEST_NPZ)
     last = checkpoints.get("last") or checkpoints.get("last_intra")
     if isinstance(last, dict):
         out["resume_epoch"] = last.get("epoch")
@@ -1120,7 +1132,7 @@ def _latest_costate_shadow(run_dir) -> dict | None:
     if run_dir is None:
         return None
     try:
-        p = Path(run_dir) / "costate_shadow.jsonl"
+        p = Path(run_dir) / _wra.COSTATE_JSONL
         if not p.is_file():
             return None
         last = None

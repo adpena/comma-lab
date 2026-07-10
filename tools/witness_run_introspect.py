@@ -24,8 +24,9 @@ Classification (DESIGN LAW #1): each schedule element is one of
   DERIVED          (a LawRef ``equation_id`` + resolved value from the constants manifest)
   FIXED/CAP        (an epoch literal, tagged).
 
-Dependency-light BY CONTRACT: stdlib + ``tac.witness_dsl.schedule_readback`` only (no
-numpy/mlx/torch) — imported every dashboard refresh tick. Curve math (τ/β/LR) is a
+Dependency-light BY CONTRACT: stdlib + ``tac.witness_dsl.schedule_readback`` +
+``tac.witness_run_artifacts`` only (no numpy/mlx/torch; both are pure-stdlib themselves)
+— imported every dashboard refresh tick. Curve math (τ/β/LR) is a
 FAITHFUL pure-python port of the trainer's own ``_softmax_temp_for_epoch`` /
 ``_hosc_beta_for_epoch`` / ``_lr_scheduled_for_epoch`` (BIT-shape identical), so a
 "planned" curve is a real derivation, not a decorative sketch.
@@ -58,6 +59,14 @@ except Exception:  # pragma: no cover - import guard
     build_real_trainer_parser = None  # type: ignore
     read_schedule = None  # type: ignore
     trainer_argv_from_launch_sh = None  # type: ignore
+
+# Canonical witness run-artifact CONTRACT (single source of truth for run filenames).
+# Fail-open with a literal fallback so a broken tac install never kills the daemon.
+try:
+    from tac import witness_run_artifacts as _wra
+except Exception:  # pragma: no cover - import guard
+    class _wra:  # type: ignore[no-redef]
+        COSTATE_JSONL = "costate_shadow.jsonl"
 
 __all__ = [
     "introspect_run",
@@ -338,7 +347,7 @@ def read_controller(run_dir: Path) -> dict | None:
     per-λ costate traces (value/band/status/method/units), classification, top recommendation,
     duty-to-measure queue counts, probe queue, per-axis EV producer signals, pointer, ts.
     READ-ONLY / advisory (CONTAINMENT — the dashboard never actuates). None when absent."""
-    path = run_dir / "costate_shadow.jsonl"
+    path = run_dir / _wra.COSTATE_JSONL
     if not path.is_file():
         return None
     row = _last_jsonl_row(path)

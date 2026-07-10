@@ -47,6 +47,7 @@ from tac.boundary_math.dash_comb import (  # noqa: E402
 from experiments.train_witness_realized_through_R_mlx import (  # noqa: E402
     _torch_R_to_camera_uint8,
 )
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 RUN_DIR = REPO / "experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z"
 OUT_DIR = REPO / "experiments/results/tau_crossover_trainflow_20260707"
@@ -58,9 +59,9 @@ OUT = OUT_DIR / "tau_crossover_trainflow_n600_20260707.json"
 # so a budget cut still leaves complete n600 rows for the max-contrast comparison.
 DEFAULT_CKPTS = [
     ("ep299_CEend", "levelset_ckpt_stageCE_ep299.npz"),
-    ("ep925_liveEMA", "levelset_witness_ema_mlx.npz"),
+    ("ep925_liveEMA", _wra.EMA_NPZ),
     ("ep726_MuonStart", "levelset_ckpt_stageMuonStart_ep726.npz"),
-    ("ep650_tauBest", "levelset_witness_ema_BEST.npz"),
+    ("ep650_tauBest", _wra.EMA_BEST_NPZ),
 ]
 # NOTE: there is no literal "stageFinal"/"ema_FINAL" checkpoint — the trainer
 # preserves the FINAL checkpoint under its final *stage* name (e.g.
@@ -86,7 +87,7 @@ def _resolve_final_ckpt(run_dir: Path) -> Path | None:
                          key=_final_ckpt_epoch)
     if stage_ckpts:
         return stage_ckpts[-1]
-    ema = run_dir / "levelset_witness_ema_mlx.npz"
+    ema = run_dir / _wra.EMA_NPZ
     return ema if ema.exists() else None
 
 VBATCH = int(dcp.os.environ.get("TAUXOVER_VBATCH", "6"))

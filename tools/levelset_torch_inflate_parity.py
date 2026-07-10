@@ -52,6 +52,7 @@ for _p in (_REPO, _REPO / "src", _REPO / "experiments", _REPO / "tools", _REPO /
 
 import levelset_byte_close_and_eval as lbc  # noqa: E402  (canonical byte-close + numpy inflate authority)
 from tac.local_acceleration import torch_levelset_inflate as tli  # noqa: E402
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 CAMERA_H, CAMERA_W = 874, 1164
 _FRAME_BYTES = CAMERA_H * CAMERA_W * 3
@@ -60,7 +61,7 @@ _FRAME_BYTES = CAMERA_H * CAMERA_W * 3
 def _pick_npz(ckpt_dir: Path) -> Path:
     """Prefer *_ema_mlx.npz then *_live_mlx.npz (same precedence as levelset_byte_close_and_eval)."""
     ckpt_dir = Path(ckpt_dir)
-    for name in ("levelset_witness_ema_mlx.npz", "levelset_witness_live_mlx.npz"):
+    for name in (_wra.EMA_NPZ, _wra.LIVE_NPZ):
         p = ckpt_dir / name
         if p.exists():
             return p
@@ -120,7 +121,7 @@ def build_synthetic_ckpt(ckpt_dir: Path, *, n_pairs: int, seed: int = 0) -> Path
     flat["__cfg_max_bank_freq"] = np.asarray(-1.0)  # None
     flat["__render_hw"] = np.asarray([384, 512])
     ckpt_dir.mkdir(parents=True, exist_ok=True)
-    out = ckpt_dir / "levelset_witness_ema_mlx.npz"
+    out = ckpt_dir / _wra.EMA_NPZ
     np.savez(out, **flat)
     return out
 

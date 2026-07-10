@@ -56,6 +56,7 @@ for _p in (REPO, REPO / "src", REPO / "tools"):
         sys.path.insert(0, str(_p))
 
 from tac.witness_annulus_metrics import ADVISORY, CLASS_NAMES  # noqa: E402
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # NARRATION THRESHOLDS (documented; overridable in the pure functions for tests).
@@ -411,7 +412,7 @@ def snapshot_checkpoints(run_dir: Path, snap_dir: Path, log) -> list[tuple[str, 
     """
     snap_dir.mkdir(parents=True, exist_ok=True)
     best_json = None
-    bj = run_dir / "levelset_best.json"
+    bj = run_dir / _wra.BEST_JSON
     if bj.exists():
         try:
             best_json = json.loads(bj.read_text(encoding="utf-8"))
@@ -419,7 +420,7 @@ def snapshot_checkpoints(run_dir: Path, snap_dir: Path, log) -> list[tuple[str, 
             best_json = None
 
     srcs: list[Path] = []
-    for pat in ("levelset_ckpt_stage*.npz", "levelset_ema_stage*.npz", "levelset_witness_ema_BEST.npz"):
+    for pat in ("levelset_ckpt_stage*.npz", "levelset_ema_stage*.npz", _wra.EMA_BEST_NPZ):
         srcs.extend(sorted(run_dir.glob(pat)))
     # de-dup preserving order.
     seen: dict[Path, None] = {}

@@ -93,37 +93,29 @@ def test_named_signal_paths_and_newest_run_dir(tmp_path):
 # canonical_equations/*.py are EXEMPT (historical-provenance docstrings, not live
 # path couplings). Remove a file here when it is migrated.
 _MIGRATION_BASELINE = frozenset({
-    # migrated (live couplings on the contract); remain only for doc-string mentions:
-    "src/tac/witness_control/shadow_controller.py",
-    "tools/dashboard_flow_sequence.py",
-    "tools/dashboard_server.py",
-    # not yet migrated:
+    # migrated (live couplings on the contract); remain only for doc-string /
+    # comment / log-message mentions of the filename (never a path construction):
     "src/tac/witness_control/__init__.py",
     "src/tac/witness_control/dynamics_analyzer.py",
+    "src/tac/witness_control/shadow_controller.py",
     "src/tac/witness_control/trace_probes.py",
     "src/tac/witness_dsl/campaign.py",
     "tools/build_witness_showcase.py",
     "tools/costate_digest.py",
     "tools/costate_observer_loop.py",
     "tools/costate_shadow_report.py",
-    "tools/dash_comb_probe_n600.py",
-    "tools/erasure_timing_attribution.py",
+    "tools/dashboard_flow_sequence.py",
+    "tools/dashboard_server.py",
     "tools/launch_witness_run.py",
-    "tools/levelset_analytic_lane_band_dseg_n600.py",
     "tools/levelset_byte_close_and_eval.py",
-    "tools/levelset_heldout_codefit_gate.py",
-    "tools/levelset_pose_gate.py",
-    "tools/levelset_render_side_sizing_l7best_n600.py",
     "tools/levelset_torch_inflate_parity.py",
     "tools/mlx_gpu_determinism_probe.py",
-    "tools/pose_frame0_inverse_solve_probe.py",
     "tools/render_levelset_dashboard.py",
     "tools/render_witness_morse_smale_viz.py",
     "tools/tau_crossover_trainflow_probe_n600.py",
     "tools/witness_annulus_convergence.py",
     "tools/witness_annulus_live_monitor.py",
     "tools/witness_dynamics_analyzer.py",
-    "tools/witness_exact_ab.py",
     "tools/witness_observer_replay.py",
     "tools/witness_per_stage_annulus_attribution.py",
     "tools/witness_run_introspect.py",

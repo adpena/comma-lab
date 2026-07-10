@@ -60,6 +60,7 @@ from tac.witness_annulus_metrics import (  # noqa: E402
     checkpoint_metrics,
     convergence_series,
 )
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 _EP_RE = re.compile(r"ep(\d+)")
 
@@ -87,7 +88,7 @@ def _short_name(path: Path, epoch: int) -> str:
 
 def discover_checkpoints(run_dir: Path, log) -> list[tuple[str, Path, int]]:
     """Find stage checkpoints + BEST in a run dir; return (name, path, epoch) sorted by epoch."""
-    patterns = ["levelset_ckpt_stage*.npz", "levelset_ema_stage*.npz", "levelset_witness_ema_BEST.npz"]
+    patterns = ["levelset_ckpt_stage*.npz", "levelset_ema_stage*.npz", _wra.EMA_BEST_NPZ]
     seen: dict[Path, None] = {}
     for pat in patterns:
         for p in sorted(run_dir.glob(pat)):

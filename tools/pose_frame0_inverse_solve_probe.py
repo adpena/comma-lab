@@ -68,6 +68,8 @@ for _p in (_REPO, _REPO / "src", _REPO / "experiments", _REPO / "upstream"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+from tac import witness_run_artifacts as _wra  # noqa: E402
+
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 
 
@@ -1037,7 +1039,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ckpt-dir", type=Path,
                     default=_REPO / "experiments/results/levelset_n600_R1_storenothing_descent_ev1_20260703T004906Z")
-    ap.add_argument("--npz-name", type=str, default="levelset_witness_ema_BEST.npz")
+    ap.add_argument("--npz-name", type=str, default=_wra.EMA_BEST_NPZ)
     ap.add_argument("--gt-cache", type=str,
                     default=str(_REPO / "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"))
     ap.add_argument("--n-pairs", type=int, default=600)

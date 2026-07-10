@@ -46,6 +46,7 @@ from mlx_gpu_determinism_probe import (  # noqa: E402
     _composite_trainer_argv,
     _hash_npz,
 )
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 
 def _run_arm(scratch: Path, label: str, *, pairs: int, epochs: int, gt_cache: str,
@@ -62,7 +63,7 @@ def _run_arm(scratch: Path, label: str, *, pairs: int, epochs: int, gt_cache: st
         [str(_REPO / "src"), str(_REPO / "experiments"), str(_REPO / "upstream")]
         + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else []))
     env["TAC_MLX_CUSTOM_GROUPED_BACKWARD"] = "1"
-    ema = out_dir / "levelset_witness_ema_mlx.npz"
+    ema = out_dir / _wra.EMA_NPZ
     # The back-to-back second arm can transiently trip the system memory-governor's accounting
     # fail-safe (psutil-vs-conservative disagreement) — NOT a real OOM. Settle + retry a couple of
     # times so a transient system condition does not masquerade as a divergence result.
@@ -84,7 +85,7 @@ def _run_arm(scratch: Path, label: str, *, pairs: int, epochs: int, gt_cache: st
             if not k.startswith("__") and z[k].dtype.kind in "fiu":
                 per_tensor[k] = np.ascontiguousarray(np.asarray(z[k], np.float32))
     history = []
-    tr = out_dir / "levelset_train_result.json"
+    tr = out_dir / _wra.TRAIN_RESULT_JSON
     if tr.exists():
         d = json.loads(tr.read_text())
         history = [(int(h.get("epoch", -1)), float(h.get("d_seg", float("nan"))))

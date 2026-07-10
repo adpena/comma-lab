@@ -63,9 +63,10 @@ from tac.boundary_math.lane_sdf_component import build_structured_lane_sdf  # no
 from experiments.train_witness_realized_through_R_mlx import (  # noqa: E402
     _torch_R_to_camera_uint8,
 )
+from tac import witness_run_artifacts as _wra  # noqa: E402
 
 CKPT_DIR = REPO / "experiments/results/levelset_n600_v2_attrclean_20260630T194549Z"
-CKPT_NPZ = CKPT_DIR / "levelset_witness_ema_BEST.npz"
+CKPT_NPZ = CKPT_DIR / _wra.EMA_BEST_NPZ
 CACHE = REPO / "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
 STATE = REPO / "reports/levelset_render_side_sizing_l7best_n600.ckpt.npz"
 OUT = REPO / "reports/levelset_render_side_sizing_l7best_n600_20260701.json"

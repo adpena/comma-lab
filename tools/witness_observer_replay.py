@@ -29,6 +29,8 @@ _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO / "src") not in sys.path:
     sys.path.insert(0, str(_REPO / "src"))
 
+from tac import witness_run_artifacts as _wra  # noqa: E402
+
 _DEFAULT_RUN = "experiments/results/levelset_n600_witness_20260709T105312Z"
 
 
@@ -175,7 +177,7 @@ def replay_run(run_dir: Path) -> dict:
     """Replay all observer legs against a run dir's REAL telemetry (READ-ONLY). Returns a report dict."""
     run_dir = Path(run_dir)
     rows = load_jsonl_rows(run_dir / "run.log")
-    cs_rows = load_jsonl_rows(run_dir / "costate_shadow.jsonl")
+    cs_rows = load_jsonl_rows(run_dir / _wra.COSTATE_JSONL)
     eps, smins = sigma_min_series(rows)
     vrows = verdict_rows(rows)
 
