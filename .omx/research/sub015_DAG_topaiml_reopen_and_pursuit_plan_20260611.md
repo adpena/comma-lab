@@ -12388,3 +12388,41 @@ sequence is the object** (temporal first-class; receipt: crucible-3 P3 blind-spo
 P2/P8=measurement honesty · P4/P5=instrument honesty · P6/P7=design honesty. Triality: DAG=this FEED;
 DSL/equations legs follow as the gates/laws land (the apparatus agent owns same-commit legs). Pointer
 0.19110 UNMOVED (means).
+
+## FEED-inc1a-harness (2026-07-09, BUILD #386 increment-1a) — the paint-free MASK-level DECOUPLING PARTITION SCREEN harness BUILT + $0 smoke MEASURED n600
+The apparatus that runs increment-1a EXACTLY as v2 defines it (P3b F1 redefinition — paint-free MASK
+partition + matched-compute CONTROL arm + pre-registered δ_mask kill; NOT the through-R v1 form). NEW package
+`src/tac/inc1a_harness/` (5 modules, 23 tests, ZERO edits to sibling boundary_math/DSL — CONSUMES their
+built primitives). Pointer 0.19110 UNMOVED — this is HARNESS (MEANS); the arms are a later governed EVENT.
+
+**Modules:** `composite_assembler.py` (per-class fields → ONE argmax via the BUILT
+`laguerre_logit_offset.power_diagram_argmax`; b_c pluggable over the #386 `solve_head_offsets` dispatcher
+{no_offset DEFAULT · flip_weighted · flip_median · menon · ot_newton}; `reconcile_partition` = bounded
+linearized alternating projection with max-iter cap + per-iter d_seg-monotonicity REJECT, DEFAULT max_iter=0
+= single-pass, **NO Dykstra-convergence claim** — S3 honesty) · `mask_dseg_meter.py` (composite vs L\* per-class
++ aggregate, REUSES `bitmask_dseg.d_seg_reference` + `perclass_verdict.per_class_flip_stats`; `require_n600`
+DEFAULT-ON toy-refusal) · `decoupling_screen.py` (matched-compute CONTROL-arm spec `to_config_dict` = the DSL
+authoring path + kill evaluator {DECOUPLING-CONFIRMED / KILLED-at-δ_mask / INCONCLUSIVE-below-floor / REFUSED};
+δ_mask=δ_R 0.0196 PROXY until R7) · `analytic_smoke.py` (the $0 harness validation).
+
+**$0 SMOKE — analytic-composite MASK d_seg = 0.100403 [analytic-generators, no-trained-fields] MEASURED n600**
+(is_n600=True; 29 s; deterministic). Composes the 3 named analytic generators {deg-3 horizon poly Road↔Undriv,
+structured lane band, static hood} + Road complement; Movable + fine/lateral Undriv UNMODELED (fold to Road).
+Per-class mask d_seg: Road 0.0212 · Lane 0.362 · Undrivable 0.162 · Movable **1.0 (unmodeled)** · MyCar(hood)
+0.0039. Flip share: **Undrivable 79.7%** (= the F4 single-valued-horizon lateral/multi-valued under-coverage,
+EMPIRICALLY VISIBLE) · Movable 12.3% · Road 4.9% · Lane 2.1% · MyCar 1.0%. This is a HARNESS VALIDATION +
+first honest floor row for the P8 brief — **NOT the 1a verdict** (which needs TRAINED decoupled fields + a
+matched CONTROL arm, both measured in-run). Confound EXCLUDED by construction: no paint anywhere (mask-level).
+
+**Clauses honored:** A (geometry/dedup) — every CarrierField states its UNIQUE geometric home (G1 horizon /
+G2 lane / G4 hood); the assembler stores NOTHING derivable (deterministic code = rule-118 FREE; only carrier
+params carry bytes). B (min-dim/§I) — each carrier tagged GEOMETRIC-MINIMAL. NO-FAKE — the assembler ACTUALLY
+composes (power-diagram argmax on real stacked fields) and the meter ACTUALLY measures argmax disagreement
+(the exact evaluate.py functional); the smoke number is MEASURED n600, never borrowed.
+
+**Triality:** DAG = this FEED. **DSL** = the CONTROL-arm config authoring path (`ControlArmSpec.to_config_dict`
+emits the matched shared-head config; P7 compiles the typed `WitnessProgram` — this harness NEVER edits
+`witness_dsl/`). **Equations** = **N/A-until-the-A/B-measures** (the decoupling law — decoupled-beats-control-
+by-δ_mask — is FORMALIZATION_PENDING until trained arms produce a measured row; the analytic floor is a
+harness-validation instance, not a law). Memo: `.omx/research/inc1a_harness_build_20260709.md`. Pointer
+0.19110 UNMOVED · #205 untouched (means).
