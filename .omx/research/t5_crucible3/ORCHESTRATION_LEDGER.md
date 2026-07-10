@@ -36,10 +36,24 @@ Pointer contest-CPU **0.19110 UNMOVED** — every artifact here is MEANS; the EN
       CARRY-AS-RISK 1 (F6 707B/426/2228px memo-sourced not in code), DISSOLVED 1 (F7 #226 waterfill IS a real
       KKT 1.27 B/flip), HELD 2 (rate ledger + phantom-41 + δ_R + horizon 0.0032 caveat-welded all re-derived
       clean). **Provenance-audit FAILURES: 3 (F3/F5/F6) + 1 gap (F4).** Rate provenance clean; T1/T2/phantom-41
-      survive on the numbers; NOT a dead design. NEXT ACTION: **P4 recess** ($0 R3 proxy-vs-field byte gap on
-      `gt_n600.npz` confirms 0.0032 + F6; R4 flip-share target vs area — informs F3) → P3b revision (F1 kill-
-      criterion + which-d_seg-1a-measures; drop σ_cc′ from 1a; b_c median-vs-OT reconcile; owed-#4 correction)
-      → triality legs. Serializer-committed, `[no-triality]`.
+      survive on the numbers; NOT a dead design.
+- [x] **P3b — RED-TEAM-FOLDED REVISION (`SYNTHESIS_v2_v8_20260709.md`, SUPERSEDES the draft).** Outcome
+      **6 FIXED · 1 RECORDED · 2 CARRIED.** F1 FIXED = 1a REDEFINED as the paint-free MASK-level DECOUPLING
+      PARTITION SCREEN (composite-argmax vs L*, NOT through-R) + matched-compute shared-head CONTROL arm (the
+      MEASURED baseline) + pre-registered kill (decoupled > control + δ_mask; flat-paint 0.0064 confound
+      EXCLUDED by construction); through-R SUFFICIENT test + "falsifiable" label MOVE to 1b. F2 FIXED = σ_cc′
+      DROPPED from 1a (attaches only to demoted SDF fallback); risk-4 = annulus-precision only. F3 FIXED = b_c
+      split into M-a flip-share-MASS-OT (built, un-analyzed) vs M-b flip-density-MEDIAN (unbuilt, no solver);
+      #386 gates both; no_offset default. F4 FIXED = single-valued `_horizon_profile` limitation stated +
+      lateral/multi-valued residual-scope → recess R6. F5 FIXED = owed-#4 corrected (engage-on flag EXISTS
+      #383/b617cef52; per-class d_seg-basin conjunct + f_basin + owed-14 is what's owed). F6 FIXED(labeled) =
+      707/426/2228 tagged memo-sourced → recess R3. F7 RECORDED (DISSOLVED). F8/F9 CARRIED (HELD). **OPERATOR
+      BINDING FOLDED** (no-duplicate-data + geometry-first + consume-all-built): §G DEDUP AUDIT (7-section
+      pairwise non-derivability gate, Movable-0.0189 + derive-H #257 exemplars, de-share = cure, routed to
+      SPEC_v8.1 seal + P8 brief) + §A.1 geometry-first rider (STRENGTHENS T1: bulk field = duplicate data one
+      layer up) + §H CONSUMED-SURFACES (#383/#386/FusedRKernel/#247/#384). Recess list 5→7 (R6 lateral-scope,
+      R7 mask-level δ_noise). Serializer-committed, `[no-triality]`. NEXT ACTION: **P4 recess (R1–R7 $0 on
+      `gt_n600.npz`) → P5 second red-team.**
 - [ ] **P4 EMPIRICAL RECESS** — v8 rate re-measurements are $0 read-only on `gt_n600.npz` (may re-run to
       settle a residual-coder disagreement). P-C/P-B are heavy governed n600-through-R (memory-gated, NOT
       $0, NOT run in recess). No concurrent heavy GPU (box free but the memory-preflight gates P-C/P-B).
@@ -90,6 +104,18 @@ edge vs 5-per-class-field label tension is the specific residue to test).
    nothing (~1 KB); any keyframe lineage MUST charge the counted-keyframe rate (P-7 lineage tag).
 6. **MODAL ≤$20 HARD CAP (#381, 2026-07-09):** exact-eval rows (paired CPU+CUDA on byte-closed candidates)
    + owed CPU-torch n600 verdict queue. Witness training is MLX-local, NOT Modal. Spend to BUY exact rows.
+7. **NO DUPLICATE DATA + GEOMETRY-FIRST + CONSUME-ALL-BUILT (2026-07-09, `operator_no_duplicate_data_
+   archive_geometry_first_20260709.md`, DAG FEED-nodup-geometry-binding):** *"No duplicate data in archive,
+   remember all falls out from proper geometry and math"* + *"All must be taken into consideration in design
+   of v7.5.2 and v8 including recently built or to be built."* FOLDED into P3b `SYNTHESIS_v2_v8` as a
+   FIRST-CLASS invariant: (a) §G DEDUP AUDIT standing gate — enumerate every archive section, prove pairwise
+   non-derivability (no byte reconstructible from {other sections + free rule-118 generator}); Movable-straddle
+   0.0189 + derive-H #257 are the exemplars, de-share = cure instance, audit = general gate; routed into
+   SPEC_v8.1 seal checks + the P8 brief (#385) + any v7.5.2 byte-close claim. (b) geometry-first STRENGTHENS
+   T1 (bulk-SDF field re-encoded other generators' boundaries = duplicate one layer up; each carrier must
+   state its UNIQUE geometric home). (c) §H CONSUMED-SURFACES integration clause — #383 pose-gate (BUILT,
+   reinforces F5), #386 flip-b_c/de-share/curve-relative (in flight), FusedRKernel #348, #247 duty-to-measure,
+   #384 dry-start; built-but-unconsumed = orphaned signal.
 
 ## STANDING FAILURE-MODE CHECKS FOR THIS CRUCIBLE (crucible-2 known failure modes, carried)
 - **numbered-cross-ref drift** — SPEC_v8 §1 "one field per adjacency EDGE" (41 edges) vs per-CLASS table
@@ -138,7 +164,13 @@ counted-seed-floor; 0.061 never alone. 41-edge phantom corrected (~4-5 live Road
 rate provenance CLEAN (ledger/phantom-41/δ_R/horizon-0.0032-caveat all re-derived); worst finding F1 = 1a
 "d_seg-through-R NO-paint" confound (through-R needs RGB, flat-paint floored 0.0064, no kill criterion) +
 F2/F3/F5 mis-attached supports (σ_cc′ on demoted field; median≠OT wiring; engage-on flag exists). 3 provenance
-FAILURES + 1 gap. NEXT ACTION: **P4 recess ($0 R3/R4 on gt_n600.npz) → P3b revision → P5**.
+FAILURES + 1 gap. **P3b LANDED** (`SYNTHESIS_v2_v8_20260709.md`, SUPERSEDES the draft): 6 FIXED · 1 RECORDED
+· 2 CARRIED. F1 = 1a REDEFINED (paint-free MASK partition screen + matched CONTROL + pre-registered kill;
+through-R moves to 1b). F2 σ_cc′ dropped from 1a; F3 b_c split M-a/M-b (#386 gates both, no_offset default);
+F4 single-valued horizon → recess R6; F5 engage-on flag EXISTS (#383); F6 memo-tag → recess R3. OPERATOR
+BINDING (no-dup-data + geometry-first + consume-all-built) folded as §G DEDUP AUDIT + §A.1 rider + §H
+CONSUMED-SURFACES + ledger binding #7. Recess 5→7. NEXT ACTION: **P4 recess (R1–R7 $0 on gt_n600.npz) → P5
+second red-team.**
 
 [SUPERSEDED P0-line] Crucible-2 SEALED (v7.5.2 SYNTHESIS_v3 = the
 baseline v8 must beat/compose). v8 rate ledger MEASURED: dominant 0.061 (1.9× < frontier) / complete 0.140
