@@ -14800,3 +14800,55 @@ when-healthy · restart-when-down · code-staleness · supervisor-defer · statu
 **Triality:** DAG = THIS FEED. DSL **N/A** (dashboard apparatus — no witness lever, not a config-generating
 program). Equations **N/A** (no measured law — an observability tool). Pointer **0.19108282 UNMOVED** (a viz
 moves no score; this is robust MEANS).
+
+## FEED-403pool (2026-07-10): CURRICULUM-CANDIDATE POOL wired as a tracked costate class (task #403 P0)
+
+**Trigger:** operator P0 binding 2026-07-10 (memory `curriculum_candidate_pool_p0_orphan_class_20260710`):
+a curriculum candidate in ANY form (stage/loss/init/precond/data-order/averaging/solve-interleave/state-
+evolution) that is designed-or-built-but-never-fired is the SAME orphaned-signal class the lever activation
+ledger tracks — "a bad bad bad class of orphaned work necessary for true final optimal." The #403 design memo
+(`.omx/research/curriculum_candidate_pool_p0_20260710.md`) had landed the (re-derived) INVENTORY but its own
+STATUS block honestly flagged the WIRING as DESIGN-NOT-YET-BUILT (authoring agent killed by credit exhaustion
+before creating the module/store/digest reader). THIS feed lands that owed wiring.
+
+**BUILT (apparatus-only, $0, additive, resume-compatible):**
+- **Module** `src/tac/witness_dsl/curriculum_candidate_pool.py` — sibling of `activation_ledger` (does NOT
+  overload the lever-scoped event vocabulary — the #400 agent's finding). Canonical APPEND-ONLY fcntl-locked
+  store `.omx/state/curriculum_candidate_pool.jsonl` (gitignored, matching the sibling ledgers); latest-row-wins.
+  NO-FAKE contract enforced at write: status ∈ {armed·built-never-fired·needs-build·reformulation-queue·
+  measured·retired-with-reason}, form_class enum, source_anchor REQUIRED, EXACTLY-ONE-OF {dsl_lever,
+  dsl_na_reason} (per-row DSL-leg discipline), `measured` REQUIRES a verdict_ref (no surrogate-as-authority),
+  est_delta_s needs axis. The committed `_SEED` inventory (36 rows, re-derived from the memo) is the READ
+  BASELINE on the default path → a fresh checkout is never empty WITHOUT tracking runtime state; real recorded
+  events (fire/measure/retire) OVERLAY the baseline latest-wins.
+- **Two DSL completeness()-gap folds** in `curriculum_dsl.py`: `HardnessOversample` (LEVER-5 `--hardness-*`, 5
+  flags) + `HeadGeometry` (#218 facet-1 `--head`/`--additive-margin`, 2 flags). completeness().unmapped
+  107→100; both composable via `--dsl-lever NAME`; emit only REAL trainer flags (never-invent-flags verified).
+- **Costate digest §curriculum-pool** in `tools/costate_digest.py` — read-only, score-neutral, defaults ON,
+  fail-open; surfaces the next-fireable rows (built-never-fired first) beside the lever duty-to-measure line.
+  The controller remembers and surfaces the queue; the operator never has to. session-start rc=0 preserved.
+
+**POOL STATE (36 tracked; 28 owed a fire):** 14 built-never-fired · 12 needs-build · 2 reformulation-queue ·
+5 armed · 3 retired-with-reason · 0 measured (NO-FAKE: nothing byte-closed yet). TOP-5 fireable: hard-pair
+oversample (§2.1, DSL-held) · step-native/FINER++ (§2.2) · #268 msal_uni→sR reachability (§2.6) · #218 ETF
+head (§2.4, DSL-held) · #301 boundary-distance+focal (§2.3). 6 follow-up TaskCreate rows enumerated in memo §8.
+
+**DSL-held vs stub vs never-fired:** of the 36 seed candidates, the DSL-leg discipline holds — every row is
+EITHER a held `curriculum_dsl` factory (dsl_lever; 14 rows incl. the 2 THIS landing folded) OR carries a
+dsl_na_reason (tool-side / vehicle-level / not-yet-built; 22 rows). Folding the na-reason rows as stub levers
+would violate never-half-wire (they are not single-flag levers), so they are honestly recorded na, not stubbed.
+
+**VERIFY (success measured, not claimed):** 27 new tests pass (store round-trip · latest-wins · lenient read ·
+every NO-FAKE validation branch · ranking · duty queue · idempotent seed · seed-has-no-measured · folds
+completeness+composability · digest formatter+section); 40 sibling regressions (test_lever_registry +
+test_activation_ledger) green; ruff -F clean; the 4 pre-existing failures in the broad run (test_wire_in_224
+supersample, confound_gates launch-config live-count, cool_chic) FAIL IDENTICALLY with my edits stashed — NOT
+mine. Proved the `_SEED` code-baseline renders the digest standalone with NO `.jsonl` on disk + a real
+`measured` event overlays the seed row (built-never-fired → measured).
+
+**Triality:** DAG = THIS FEED. DSL = the 2 folds (HardnessOversample, HeadGeometry) + the pool's per-row
+dsl_lever/dsl_na_reason leg. Equations **N/A-with-rationale** (this landing MEASURES nothing + mints no law —
+apparatus; the seed rows CITE existing registered equations `quadratic_head_chart_subset_solve_gap_v1`,
+`dash_erasure_homogenization_v1`, `dseg_aware_fourier_taper_20260709` rather than duplicating them). Pointer
+**0.19108282 [contest-CPU] UNMOVED** — apparatus (means) that makes the costate controller smarter so no
+curriculum candidate is orphaned; only a byte-closed n600 `upstream/evaluate.py` row moves it.

@@ -415,6 +415,62 @@ def section_duty_to_measure(term_current: dict[str, float] | None = None) -> tup
         return f"duty-to-measure: unavailable ({type(exc).__name__}: {exc})", None
 
 
+def _pool_marker(r: dict) -> str:
+    """DSL-leg marker per pool row: '' = held by a DSL Lever factory · ~ = NOT a single-flag lever
+    (tool-side / vehicle-level / unbuilt, carries dsl_na_reason). Mirrors the duty-line vocabulary."""
+    return "" if r.get("dsl_lever") else "~"
+
+
+def format_curriculum_pool_line(summary: dict, top_n: int = _DUTY_TOP_N) -> str:
+    """Pure formatter for the curriculum-candidate pool (unit-testable without touching real state).
+    Leads with the counts, then the top next-fireable rows (built-never-fired first). ~ = not-a-DSL-
+    lever (tool/vehicle/unbuilt)."""
+    counts = summary.get("counts", {})
+    owed = summary.get("owed", 0)
+    total = summary.get("total", 0)
+    top = summary.get("top_fireable", [])[:top_n]
+    more = summary.get("owed", 0) - len(top)
+
+    def _cell(r: dict) -> str:
+        leg = r.get("dsl_lever") or "N/A"
+        return f"{r['candidate']}{_pool_marker(r)}[{r.get('status', '?')[:5]}·{leg}]"
+
+    return (
+        f"curriculum-pool ({total} tracked; {owed} owed a fire; "
+        f"{counts.get('built-never-fired', 0)} built-never-fired · "
+        f"{counts.get('needs-build', 0)} needs-build · "
+        f"{counts.get('reformulation-queue', 0)} reformulation-queue · "
+        f"{counts.get('armed', 0)} armed; ~=not-a-DSL-lever): "
+        + ", ".join(_cell(r) for r in top)
+        + (f" (+{more} more owed)" if more > 0 else ""))
+
+
+def section_curriculum_pool() -> tuple[str | None, dict | None]:
+    """The CURRICULUM-CANDIDATE POOL as a tracked costate class (task #403; P0 orphan-class binding
+    2026-07-10). A curriculum candidate in ANY form (stage / loss / init / preconditioning / data-order
+    / averaging / solve-interleave / state-evolution) that is designed-or-built-but-never-fired is the
+    SAME orphaned-signal class the lever ledger tracks — but is often a TOOL / stage / vehicle DOF, not a
+    single-flag DSL lever, so it lives in the sibling ``curriculum_candidate_pool`` store. This SENSE row
+    surfaces the next-fireable rows (built-never-fired first) beside the lever duty-to-measure line, so
+    NO curriculum candidate is orphaned and the operator never has to remember it. Read-only, score-
+    neutral, fail-open (omit on any error)."""
+    try:
+        from tac.witness_dsl.curriculum_candidate_pool import pool_summary
+        summary = pool_summary()
+        if not summary.get("total"):
+            return None, None
+        line = format_curriculum_pool_line(summary)
+        return line, {"total": summary["total"], "owed": summary["owed"],
+                      "counts": summary["counts"],
+                      "top_fireable": [
+                          {"candidate": r.get("candidate"), "status": r.get("status"),
+                           "dsl_lever": r.get("dsl_lever"), "dsl_na_reason": r.get("dsl_na_reason"),
+                           "form_class": r.get("form_class"), "owner": r.get("owner")}
+                          for r in summary.get("top_fireable", [])]}
+    except Exception as exc:
+        return f"curriculum-pool: unavailable ({type(exc).__name__}: {exc})", None
+
+
 def section_deferral_ledger() -> tuple[str | None, dict | None]:
     """Operator-binding 2026-07-08 ("you deferred too much and now it's orphaned"): every
     deferral lives in .omx/state/deferral_ledger.md with a named trigger; this line makes
@@ -672,6 +728,11 @@ def build_digest() -> tuple[list[str], dict]:
     # P8 floor-aware: feed the live run's MEASURED current d_seg (annulus SENSE) so at-floor levers rank ~0.
     duty_line, data["duty_to_measure"] = section_duty_to_measure(_live_term_current(data.get("annulus")))
     lines.append(duty_line)
+
+    # #403 P0: the curriculum-candidate pool (ANY form) as a tracked costate class, beside the lever queue.
+    cpool_line, data["curriculum_pool"] = section_curriculum_pool()
+    if cpool_line:
+        lines.append(cpool_line)
 
     fl_line, data["failure_ledger"] = section_failure_ledger()
     lines.append(fl_line or "failure-ledger: none yet (sibling SENSE input pending)")

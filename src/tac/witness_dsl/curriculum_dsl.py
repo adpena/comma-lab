@@ -2103,6 +2103,69 @@ def DsegAwareTaper(  # noqa: N802 — #121 lever, re-validate-at-convergence
                        "reallocation by GT margin saliency; RE-VALIDATE at convergence)")
 
 
+def HardnessOversample(  # noqa: N802 — LEVER-5 hard-pair data curriculum (#403 completeness fold)
+    oversample: float = 0.5, weighted: bool = True, source: str = "realized",
+    power: float = 1.0, band: float = 0.5,
+) -> Lever:
+    """LEVER-5 hard-pair emphasis DATA curriculum — the built-in-the-trainer, DSL-orphaned-until-this-
+    landing candidate (curriculum-candidate pool §2.1, task #403). Each epoch keeps the FULL
+    ``permutation(P)`` (every pair ≥1 step, never starved) PLUS ``round(P*oversample)`` EXTRA per-pair
+    code-fit steps drawn ~ per-pair hardness^power — giving a hard pair MORE update STEPS (not a bigger
+    loss scale, which Adam normalizes to ~no-op). The fair A/B at fixed ``oversample`` is
+    ``weighted`` on (extras ~ hardness) vs off (extras uniform): SAME total steps, different allocation.
+
+    ``source`` ∈ {margin, realized}: ``margin`` = $0 cached-GT small-margin pixel fraction (MEASURED
+    weak 1.31× spread, trainer L11306); ``realized`` = one-time per-pair baseline realized d_seg (the
+    SHARPER signal the trainer recommends for the code-fit). DEFAULT-OFF in the trainer
+    (``--hardness-oversample 0.0``) ⇒ byte-identical when this lever is not composed; this factory is
+    what ARMS it (oversample>0 + weighted + realized source).
+
+    MEASURED anchors: 44%-of-CE-residual-spikes-are-LANE (#205 CE-floor, L67) + margin-saliency #141.
+    means != ends: this factory ARMS the mechanism; it makes NO score claim; the pointer is UNMOVED
+    until a byte-closed n600 A/B measures it (curriculum-pool duty-to-measure row)."""
+    if source not in ("margin", "realized"):
+        raise ValueError(f"--hardness-source must be 'margin' or 'realized', got {source!r}")
+    return Lever("hardness_oversample_lever5",
+                 overrides={"--hardness-oversample": float(oversample),
+                            "--hardness-weighted": bool(weighted),
+                            "--hardness-source": str(source),
+                            "--hardness-power": float(power),
+                            "--hardness-band": float(band)},
+                 notes="LEVER-5 hard-pair emphasis data curriculum (extra code-fit steps ~ per-pair "
+                       "hardness; fair A/B = weighted on/off at fixed oversample; advisory until byte-closed)")
+
+
+def HeadGeometry(  # noqa: N802 — #218 facet-1 out_sdf head geometry (#403 completeness fold)
+    head: str = "etf", additive_margin: float = 0.0,
+) -> Lever:
+    """#218 facet-1 out_sdf HEAD GEOMETRY — the BYTE-FREE rare-class lane-margin fix (curriculum-
+    candidate pool §2.4, task #403). Selects the classifier-head geometry:
+
+      * ``etf`` (the composable default) — fixed simplex-ETF weight (frozen): byte-free + rate-win +
+        the neural-collapse minority-norm fix (raises the Lane/Movable minority-class norm the softmax
+        head under-allocates). FIRE FIRST (byte-free).
+      * ``additive-margin`` — use the AM realized-margin hinge target from ``additive_margin`` (the
+        target realized SegNet decision margin). NOTE the AM-hinge additionally needs
+        ``--margin-field-head-weight>0`` — compose ``MarginFieldHead`` alongside this lever to arm it.
+      * ``softmax`` — the default head (byte-identical; a no-op arm for the A/B).
+
+    DEFAULT (in the trainer) is ``--head softmax`` + weight 0 ⇒ byte-identical; this factory ARMS the
+    ETF geometry. The already-held sisters ``MarginFieldHead`` (facets 1b/3 loss weight) +
+    ``PersistenceTopology`` (soft-clDice) compose with it on the shared ``_signed`` field. Mechanism +
+    probe: ``src/tac/boundary_math/laguerre_logit_offset.py`` +
+    ``experiments/probe_laguerre_logit_offset_sweep.py``.
+
+    means != ends: byte-free head geometry; NO score claim; the ETF rate-win + minority-norm fix are
+    the DERIVED #218 rationale, advisory until a byte-closed n600 A/B measures d_seg (pool duty row)."""
+    if head not in ("softmax", "etf", "additive-margin"):
+        raise ValueError(f"--head must be one of softmax/etf/additive-margin, got {head!r}")
+    return Lever("head_geometry_218",
+                 overrides={"--head": str(head),
+                            "--additive-margin": float(additive_margin)},
+                 notes="#218 facet-1 out_sdf head geometry (ETF frozen simplex-weight = byte-free "
+                       "rate-win + neural-collapse minority-norm fix; AM needs MarginFieldHead composed)")
+
+
 def LadderIslandHomotopy(  # noqa: N802 — #323 FULL LADDER island-birth lever
     amplify_weight: float = 1.0,
     movable_r0: float = 2.0, movable_birth_epochs: int = 60, movable_hold_epochs: int = 0,
