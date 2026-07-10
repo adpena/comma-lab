@@ -434,3 +434,112 @@ def test_fix3_freeze_decoder_guard_still_hard_raises(tmp_path):
     with pytest.raises(ValueError, match="incompatible with --freeze-decoder-fit-codes"):
         T.main(_muon_argv(tmp_path, muon="7",
                           extra=["--freeze-decoder-fit-codes", str(tmp_path / "dec.npz")]))
+
+
+# --------------------------------------------------------------------------- #403 P0 hardness/head resume
+def _cfg_from_arrays(arrays: dict) -> dict:
+    """Mirror _load_resume_state's cfg extraction: __-keys become python scalars/lists."""
+    cfg = {}
+    for k, v in arrays.items():
+        if k.startswith("__"):
+            a = np.asarray(v)
+            cfg[k] = a.item() if a.size == 1 else a.tolist()
+    return cfg
+
+
+def test_hardness_head_cfg_persisted_when_armed():
+    a = _fake_args(hardness_oversample=0.5, hardness_weighted=True, hardness_source="realized",
+                   hardness_power=1.0, hardness_band=0.5, head="etf", additive_margin=0.0)
+    live = {"code": np.zeros((6, 32), np.float32)}
+    hp = np.arange(1, 601, dtype=np.float64)
+    arrays = T._build_resume_state_arrays(live, live, None, args=a, epoch=25, in_feat=40,
+                                          hardness_prob=hp)
+    for k in ("__cfg_hardness_oversample", "__cfg_hardness_weighted", "__cfg_hardness_source",
+              "__cfg_hardness_power", "__cfg_hardness_band", "__cfg_head", "__cfg_additive_margin",
+              "__hardness_prob"):
+        assert k in arrays, f"missing persisted key {k}"
+    assert np.asarray(arrays["__hardness_prob"]).shape == (600,)
+
+
+def test_hardness_prob_absent_when_lever_off():
+    # hardness_prob=None (lever off / margin source) => the baseline key is NOT written (byte-identical).
+    arrays = T._build_resume_state_arrays({"code": np.zeros((2, 4), np.float32)},
+                                          {"code": np.zeros((2, 4), np.float32)}, None,
+                                          args=_fake_args(), epoch=5, in_feat=40, hardness_prob=None)
+    assert "__hardness_prob" not in arrays
+    # but the cfg-guard keys are always present (default-off, legacy-safe values).
+    assert "__cfg_hardness_oversample" in arrays and "__cfg_head" in arrays
+
+
+def test_hardness_prob_roundtrips_through_savez(tmp_path):
+    hp = (np.arange(1, 601, dtype=np.float64))
+    hp = hp / hp.sum()
+    a = _fake_args(hardness_oversample=0.5, hardness_weighted=True, hardness_source="realized")
+    arrays = T._build_resume_state_arrays({"code": np.zeros((6, 32), np.float32)},
+                                          {"code": np.zeros((6, 32), np.float32)}, None,
+                                          args=a, epoch=25, in_feat=40, hardness_prob=hp)
+    out = T._atomic_savez(tmp_path / "resume.npz", arrays)
+    rs = T._load_resume_state(out)
+    saved = np.asarray(rs["cfg"]["__hardness_prob"], np.float64)
+    assert saved.shape == (600,)
+    assert np.allclose(saved, hp)
+
+
+def test_resume_guard_matched_hardness_head_no_divergence():
+    a = _fake_args(hardness_oversample=0.5, hardness_weighted=True, hardness_source="realized",
+                   hardness_power=1.0, hardness_band=0.5, head="etf", additive_margin=0.0)
+    arrays = T._build_resume_state_arrays({"code": np.zeros((6, 32), np.float32)},
+                                          {"code": np.zeros((6, 32), np.float32)}, None,
+                                          args=a, epoch=25, in_feat=40,
+                                          hardness_prob=np.ones(600))
+    cfg = _cfg_from_arrays(arrays)
+    assert T._resume_lever_divergences(cfg, a) == []
+
+
+def test_resume_guard_flags_hardness_source_flip():
+    a = _fake_args(hardness_oversample=0.5, hardness_weighted=True, hardness_source="realized",
+                   head="etf")
+    cfg = _cfg_from_arrays(T._build_resume_state_arrays(
+        {"code": np.zeros((6, 32), np.float32)}, {"code": np.zeros((6, 32), np.float32)}, None,
+        args=a, epoch=25, in_feat=40, hardness_prob=np.ones(600)))
+    a2 = _fake_args(hardness_oversample=0.5, hardness_weighted=True, hardness_source="margin",
+                    head="etf")
+    div = T._resume_lever_divergences(cfg, a2)
+    assert any("hardness_source" in d for d in div)
+
+
+def test_resume_guard_flags_head_etf_dropped_to_softmax():
+    # the exact gap-2 hazard: resume drops --head etf -> frozen ETF resumes as trainable softmax.
+    a = _fake_args(hardness_oversample=0.0, head="etf")
+    cfg = _cfg_from_arrays(T._build_resume_state_arrays(
+        {"code": np.zeros((6, 32), np.float32)}, {"code": np.zeros((6, 32), np.float32)}, None,
+        args=a, epoch=25, in_feat=40))
+    a2 = _fake_args(hardness_oversample=0.0, head="softmax")
+    div = T._resume_lever_divergences(cfg, a2)
+    assert any(d.startswith("head:") for d in div)
+
+
+def test_resume_guard_flags_additive_margin_change_when_engaged():
+    a = _fake_args(head="additive-margin", additive_margin=0.3)
+    cfg = _cfg_from_arrays(T._build_resume_state_arrays(
+        {"code": np.zeros((6, 32), np.float32)}, {"code": np.zeros((6, 32), np.float32)}, None,
+        args=a, epoch=25, in_feat=40))
+    a2 = _fake_args(head="additive-margin", additive_margin=0.5)
+    assert any("additive_margin" in d for d in T._resume_lever_divergences(cfg, a2))
+
+
+def test_resume_guard_legacy_sidecar_no_spurious_divergence():
+    # a pre-#403 sidecar lacks all hardness/head keys -> the guard only checks present keys.
+    a = _fake_args(hardness_oversample=0.5, hardness_source="realized", head="etf")
+    assert T._resume_lever_divergences({}, a) == []
+
+
+def test_resume_guard_hardness_subfields_inert_when_off_both():
+    # oversample==0 in both -> weighted/source/power/band are inert (not flagged).
+    a = _fake_args(hardness_oversample=0.0, hardness_source="realized", head="etf")
+    cfg = _cfg_from_arrays(T._build_resume_state_arrays(
+        {"code": np.zeros((6, 32), np.float32)}, {"code": np.zeros((6, 32), np.float32)}, None,
+        args=a, epoch=25, in_feat=40))
+    a2 = _fake_args(hardness_oversample=0.0, hardness_source="margin", head="etf")
+    div = T._resume_lever_divergences(cfg, a2)
+    assert not any("hardness_source" in d for d in div)

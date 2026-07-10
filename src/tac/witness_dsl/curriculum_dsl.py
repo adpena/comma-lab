@@ -1534,6 +1534,32 @@ class WitnessProgram(ScheduleDisplay):
                         f"DOUBLE EMITTER: {k} set in base={self.base[k]!r} AND by the "
                         f"curriculum object={v!r} — the curriculum object is the schedule "
                         "SoT; remove it from base (or make the values agree)")
+        # #218 ADDITIVE-MARGIN INERT COMPOSITION (fail-closed; #404 binding-vs-inert, operator
+        # elevation 2026-07-10). The HeadGeometry additive-margin arm (--head additive-margin, or a
+        # non-zero --additive-margin) is a SILENT NO-OP unless a sibling lever (MarginFieldHead) sets
+        # --margin-field-head-weight>0 — the trainer builds the margin-field target ONLY then. An inert
+        # arm reads as ON but shapes no loss => any verdict from that run is corrupted (surrogate !=
+        # authority). REFUSE the composition here (never-invent-flags; do NOT auto-arm it). ONE classifier
+        # SoT (tac.confound_gates.additive_margin_engagement) shared with the trainer L1 alarm + the L2
+        # preflight gate. Lazy import (parallel to the gauge/ladder_homotopy lazy imports) so curriculum_dsl
+        # keeps no confound_gates import at module load.
+        _head = fd.get("--head")
+        _am = fd.get("--additive-margin")
+        if _head is not None or _am is not None:
+            from tac.confound_gates import additive_margin_engagement
+            try:
+                _eng = additive_margin_engagement(
+                    str(_head or "softmax"), float(_am or 0.0),
+                    float(fd.get("--margin-field-head-weight", 0.0) or 0.0))
+            except (TypeError, ValueError):
+                _eng = None
+            if _eng is not None and _eng["inert"]:
+                problems.append(
+                    "INERT ADDITIVE-MARGIN COMPOSITION (#404 binding-vs-inert): "
+                    f"{_eng['reason']}. The #218 additive-margin arm reads as ON but shapes no loss "
+                    "(the trainer builds the margin-field target only when --margin-field-head-weight>0). "
+                    "Compose MarginFieldHead(weight>0) alongside HeadGeometry (and a non-zero "
+                    "additive_margin), or drop the additive-margin arm — never ship an inert lever.")
         return problems
 
     def support_gaps(self) -> tuple["TrainerSupportGap", ...]:

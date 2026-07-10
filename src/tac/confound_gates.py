@@ -1381,6 +1381,158 @@ def check_witness_control_meters_have_canaries(
     )
 
 
+# ===========================================================================
+# Catalog #405 — the #218 ADDITIVE-MARGIN INERT-COMPOSITION confound (the
+# binding-vs-inert class, #404). Operator elevation 2026-07-10: HeadGeometry's
+# --additive-margin / --head additive-margin arm is a SILENT NO-OP unless
+# --margin-field-head-weight>0 (the trainer's margin-field-head target is only
+# consumed when mfh_w>0, and the AM base is only non-zero when head==additive-
+# margin). An inert arm reads as ON but does NOTHING -> any verdict drawn from a
+# run where it was reported-on-but-inert is corrupted (surrogate != authority).
+# ONE classifier SoT (:func:`additive_margin_engagement`) is shared by the trainer
+# L1 runtime alarm, the DSL `.validate()` L2 fail-closed, and this L2 preflight gate.
+# ===========================================================================
+
+
+def additive_margin_engagement(
+    head: str, additive_margin: float, margin_field_head_weight: float,
+) -> dict:
+    """Pure classifier (the SINGLE SoT) for the #218 additive-margin composition.
+
+    Mirrors the trainer's ACTUAL consumption
+    (``train_levelset_witness_realized_through_R_mlx.py``): the per-class margin
+    TARGET base ``_mfh_base = additive_margin if head=="additive-margin" else 0.0``
+    is applied ONLY when ``margin_field_head_weight > 0`` (the whole
+    ``mfh_target_mx`` branch is skipped otherwise). So the AM arm is EFFECTIVE iff
+    ``head=="additive-margin" AND mfh_w>0 AND additive_margin!=0``.
+
+    Returns ``{"nominally_set","engaged","inert","reason"}``:
+      * ``nominally_set`` — the arm was ASKED for (head is additive-margin OR a
+        non-zero additive_margin was passed) — the surface a reader would call "on".
+      * ``engaged`` — it will ACTUALLY shape the loss.
+      * ``inert`` — ``nominally_set and not engaged`` (the #404 silent no-op).
+      * ``reason`` — the precise cause string (for the alarm / violation message).
+    """
+    head = str(head or "softmax")
+    am = float(additive_margin or 0.0)
+    mfh = float(margin_field_head_weight or 0.0)
+    head_is_am = head == "additive-margin"
+    nominally_set = head_is_am or abs(am) > 1e-12
+    engaged = head_is_am and mfh > 0.0 and abs(am) > 1e-12
+    if engaged:
+        reason = "engaged (head=additive-margin, margin-field-head-weight>0, additive-margin!=0)"
+    elif not nominally_set:
+        reason = "not set (softmax/etf head, additive-margin==0) — no AM arm requested"
+    elif head_is_am and mfh <= 0.0:
+        reason = ("head=additive-margin but --margin-field-head-weight<=0 -> the margin-field "
+                  "target is never built (INERT no-op)")
+    elif head_is_am and abs(am) <= 1e-12:
+        reason = ("head=additive-margin with additive-margin==0 -> zero hinge base "
+                  "(on-but-inert; compose a non-zero --additive-margin)")
+    else:  # additive_margin != 0 but head != additive-margin
+        reason = (f"--additive-margin={am} set but --head={head!r} (not additive-margin) -> the AM "
+                  "base stays 0 (value IGNORED / INERT)")
+    return {
+        "nominally_set": bool(nominally_set),
+        "engaged": bool(engaged),
+        "inert": bool(nominally_set and not engaged),
+        "reason": reason,
+    }
+
+
+# Real trainer flags (never-invent-flags): the AM composition triple.
+_AM_HEAD_FLAG = "--head"
+_AM_MARGIN_FLAG = "--additive-margin"
+_AM_MFH_FLAG = "--margin-field-head-weight"
+
+
+def _scalar_flag_value(code: str, flag: str) -> str | None:
+    """The last value token following ``flag`` in a launch.sh code body (argparse
+    last-wins), or None if absent. Handles ``--flag value`` and ``--flag=value``."""
+    val = None
+    # --flag=value
+    for m in re.finditer(re.escape(flag) + r"=(\S+)", code):
+        val = m.group(1)
+    # --flag value  (value = next whitespace-delimited token that is not another --flag)
+    for m in re.finditer(re.escape(flag) + r"[ \t]+([^\s\\]+)", code):
+        tok = m.group(1)
+        if not tok.startswith("--"):
+            val = tok
+    return val
+
+
+def check_no_inert_additive_margin_composition(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #405 (#404 binding-vs-inert) — an emitted witness ``launch.sh`` must
+    not ask for the #218 additive-margin arm (``--head additive-margin`` or a
+    non-zero ``--additive-margin``) while it is INERT (``--margin-field-head-weight``
+    absent/<=0, or ``--additive-margin 0`` under ``--head additive-margin``).
+
+    An inert AM arm reads as ON in the launch header but shapes NOTHING in the loss
+    (the trainer's margin-field target is built only when ``mfh_w>0``, and the AM
+    base is non-zero only when ``head==additive-margin``). A verdict drawn from such
+    a run attributes its d_seg to a lever that never engaged — a corrupted
+    measurement (surrogate != authority, the #404 confound). REFUSE the inert combo;
+    do NOT auto-repair it into activity.
+
+    Signature refused: a ``launch.sh`` whose AM composition
+    (:func:`additive_margin_engagement`) is ``inert``.
+
+    Per-file waiver: ``# ADDITIVE_MARGIN_INERT_OK:<rationale>`` (e.g. an intentional
+    byte-identical A/B baseline arm that is deliberately off).
+
+    STRICT-FLIP CONDITION: flip to ``strict=True`` once the DSL `.validate()`
+    fail-closed (the primary locus) + the trainer L1 alarm land and existing
+    launch.sh reach live-count 0. Warn-only until then (historical launch.sh are
+    append-only provenance this builder does not rewrite).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for path in _launch_files(root):
+        text = _read(path)
+        if text is None:
+            continue
+        scanned += 1
+        if _waiver_present(text, "ADDITIVE_MARGIN_INERT_OK"):
+            continue
+        code = "\n".join(
+            ln for ln in text.splitlines() if not ln.lstrip().startswith("#")
+        )
+        # The AM arm is only relevant if the launch mentions head/additive-margin at all.
+        if _AM_HEAD_FLAG not in code and _AM_MARGIN_FLAG not in code:
+            continue
+        head = _scalar_flag_value(code, _AM_HEAD_FLAG) or "softmax"
+        am = _scalar_flag_value(code, _AM_MARGIN_FLAG) or "0.0"
+        mfh = _scalar_flag_value(code, _AM_MFH_FLAG) or "0.0"
+        try:
+            eng = additive_margin_engagement(head, float(am), float(mfh))
+        except (TypeError, ValueError):
+            continue
+        if not eng["inert"]:
+            continue
+        rel = path.relative_to(root).as_posix()
+        violations.append(
+            f"{rel}: #218 additive-margin arm is INERT (#404 binding-vs-inert): "
+            f"{eng['reason']}. It reads as ON but shapes no loss -> any verdict from "
+            f"this run is corrupted. Compose {_AM_MFH_FLAG}>0 (+ a non-zero "
+            f"{_AM_MARGIN_FLAG}) to arm it, drop the AM flags, or add a "
+            f"`# ADDITIVE_MARGIN_INERT_OK:<rationale>` waiver."
+        )
+    return _finish(
+        name="check_no_inert_additive_margin_composition",
+        tag="additive-margin-inert-composition",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"{scanned} launch.sh scanned",
+    )
+
+
 # The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
 EIGHTFOLD_GATES = (
     check_significance_keys_canonical,
@@ -1399,4 +1551,5 @@ CONFOUND_GATES = (
     check_levelset_hosc_requires_beta_end,
     check_launch_config_authored_in_dsl,
     check_no_unjustified_magnitude_dismissal,
+    check_no_inert_additive_margin_composition,
 )

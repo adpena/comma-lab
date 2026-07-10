@@ -718,7 +718,7 @@ class TestTelemetryLiveness:
 
 class TestModule:
     def test_all_gates_registered(self):
-        assert len(cg.CONFOUND_GATES) == 9
+        assert len(cg.CONFOUND_GATES) == 10
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -730,6 +730,7 @@ class TestModule:
             "check_levelset_hosc_requires_beta_end",
             "check_launch_config_authored_in_dsl",
             "check_no_unjustified_magnitude_dismissal",
+            "check_no_inert_additive_margin_composition",
         }
 
     @pytest.mark.parametrize("fn", cg.CONFOUND_GATES, ids=lambda f: f.__name__)
@@ -764,6 +765,101 @@ class TestModule:
             # .omx/research corpus predates the discipline (historical hits); strict-flip
             # to 0 after the memory-point-3 re-audit sweep drains them.
             "check_no_unjustified_magnitude_dismissal": 15,
+            # #405 additive-margin inert composition: live-count 0 (no launch.sh ships an
+            # inert AM arm); strict-flip-eligible once the DSL fail-closed + trainer L1 land.
+            "check_no_inert_additive_margin_composition": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"
+
+
+# ===========================================================================
+# Catalog #405 — additive-margin inert composition (#404 binding-vs-inert).
+# ===========================================================================
+
+# Minimal launch.sh bodies — the gate scans the --head/--additive-margin/
+# --margin-field-head-weight flag tokens (trainer path is irrelevant to the scan).
+_AM_INERT_NO_MFH = "#!/bin/bash\nrun --head additive-margin --additive-margin 0.3 --epochs 10\n"
+_AM_INERT_WRONG_HEAD = (
+    "#!/bin/bash\nrun --head softmax --additive-margin 0.3 "
+    "--margin-field-head-weight 1.0 --epochs 10\n")
+_AM_ACTIVE = (
+    "#!/bin/bash\nrun --head additive-margin --additive-margin 0.3 "
+    "--margin-field-head-weight 1.0 --epochs 10\n")
+_AM_ETF_CLEAN = "#!/bin/bash\nrun --head etf --epochs 10\n"
+
+
+class TestAdditiveMarginEngagementClassifier:
+    """The pure classifier SoT (#404) — the canary must be VISIBLE (fires on inert)
+    and QUIET on a genuinely-active / clean composition (positive control)."""
+
+    def test_inert_head_am_no_mfh(self):
+        e = cg.additive_margin_engagement("additive-margin", 0.3, 0.0)
+        assert e["nominally_set"] and e["inert"] and not e["engaged"]
+
+    def test_inert_am_value_set_wrong_head(self):
+        e = cg.additive_margin_engagement("softmax", 0.3, 1.0)
+        assert e["nominally_set"] and e["inert"] and not e["engaged"]
+
+    def test_inert_head_am_zero_margin(self):
+        # head=additive-margin but the AM value is 0 -> zero hinge base -> inert.
+        e = cg.additive_margin_engagement("additive-margin", 0.0, 1.0)
+        assert e["inert"] and not e["engaged"]
+
+    def test_engaged_full_triple(self):
+        e = cg.additive_margin_engagement("additive-margin", 0.3, 1.0)
+        assert e["engaged"] and not e["inert"] and e["nominally_set"]
+
+    def test_clean_etf_not_nominally_set(self):
+        e = cg.additive_margin_engagement("etf", 0.0, 0.0)
+        assert not e["nominally_set"] and not e["inert"] and not e["engaged"]
+
+    def test_clean_softmax_default(self):
+        e = cg.additive_margin_engagement("softmax", 0.0, 0.0)
+        assert not e["nominally_set"] and not e["inert"]
+
+
+class TestNoInertAdditiveMarginComposition:
+    def test_positive_inert_no_mfh(self, tmp_path):
+        _launch(tmp_path, "am_inert", _AM_INERT_NO_MFH)
+        v = cg.check_no_inert_additive_margin_composition(
+            repo_root=tmp_path, strict=False, verbose=False)
+        assert len(v) == 1 and "INERT" in v[0]
+
+    def test_positive_inert_wrong_head(self, tmp_path):
+        _launch(tmp_path, "am_wrong_head", _AM_INERT_WRONG_HEAD)
+        v = cg.check_no_inert_additive_margin_composition(
+            repo_root=tmp_path, strict=False, verbose=False)
+        assert len(v) == 1 and "IGNORED" in v[0]
+
+    def test_negative_active_composition(self, tmp_path):
+        _launch(tmp_path, "am_active", _AM_ACTIVE)
+        v = cg.check_no_inert_additive_margin_composition(
+            repo_root=tmp_path, strict=False, verbose=False)
+        assert v == []
+
+    def test_negative_etf_clean(self, tmp_path):
+        _launch(tmp_path, "am_etf", _AM_ETF_CLEAN)
+        v = cg.check_no_inert_additive_margin_composition(
+            repo_root=tmp_path, strict=False, verbose=False)
+        assert v == []
+
+    def test_waiver_respected(self, tmp_path):
+        body = _AM_INERT_NO_MFH + "# ADDITIVE_MARGIN_INERT_OK: intentional off A/B baseline arm\n"
+        _launch(tmp_path, "am_waived", body)
+        v = cg.check_no_inert_additive_margin_composition(
+            repo_root=tmp_path, strict=False, verbose=False)
+        assert v == []
+
+    def test_placeholder_waiver_rejected(self, tmp_path):
+        body = _AM_INERT_NO_MFH + "# ADDITIVE_MARGIN_INERT_OK:<rationale>\n"
+        _launch(tmp_path, "am_ph", body)
+        v = cg.check_no_inert_additive_margin_composition(
+            repo_root=tmp_path, strict=False, verbose=False)
+        assert len(v) == 1
+
+    def test_strict_raises(self, tmp_path):
+        _launch(tmp_path, "am_inert2", _AM_INERT_NO_MFH)
+        with pytest.raises(PreflightError):
+            cg.check_no_inert_additive_margin_composition(
+                repo_root=tmp_path, strict=True, verbose=False)

@@ -292,6 +292,38 @@ def test_dsl_levers_parse_through_real_argparse_composed():
     assert ns.logit_adjust_loss_tau == 1.0
 
 
+def test_dsl_refuses_inert_additive_margin_composition():
+    """#403 P0 gap-3 / #404 binding-vs-inert — WitnessProgram.validate() fail-closes on a
+    HeadGeometry additive-margin arm that omits the required --margin-field-head-weight>0
+    (a silent no-op arm), and stays QUIET on a genuinely-active + a clean-ETF composition
+    (the positive control: canary VISIBLE on inert, INVISIBLE on active)."""
+    from tac.witness_dsl import curriculum_dsl as cd
+
+    def _inert_hits(prog):
+        return [p for p in prog.validate() if "INERT ADDITIVE-MARGIN" in p]
+
+    # INERT: additive-margin arm with NO MarginFieldHead -> refused (canary fires).
+    inert = cd.BASELINE.with_lever(cd.HeadGeometry(head="additive-margin", additive_margin=0.3))
+    assert len(_inert_hits(inert)) == 1
+
+    # INERT: additive-margin arm default am=0 even WITH MarginFieldHead -> still inert (zero base).
+    inert0 = cd.BASELINE.with_lever(
+        cd.HeadGeometry(head="additive-margin"), cd.MarginFieldHead(weight=1.0))
+    assert len(_inert_hits(inert0)) == 1
+
+    # ACTIVE: head=additive-margin + non-zero margin + margin-field-head-weight>0 -> no inert violation.
+    active = cd.BASELINE.with_lever(
+        cd.HeadGeometry(head="additive-margin", additive_margin=0.3), cd.MarginFieldHead(weight=1.0))
+    assert _inert_hits(active) == []
+
+    # CLEAN: the ETF default (byte-free rate-win) is not an AM arm -> no inert violation.
+    etf = cd.BASELINE.with_lever(cd.HeadGeometry(head="etf"))
+    assert _inert_hits(etf) == []
+
+    # CLEAN: no head lever at all -> no inert violation.
+    assert _inert_hits(cd.BASELINE) == []
+
+
 # ==========================================================================
 # #220 AA compose-after-downsample (MLX)
 # ==========================================================================

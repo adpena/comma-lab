@@ -580,7 +580,7 @@ def _build_resume_state_arrays(
     live_np: dict[str, np.ndarray], ema_np: dict[str, np.ndarray],
     opt_np: dict[str, np.ndarray] | None, *, args: Any, epoch: int, in_feat: int,
     recent_losses: "list[float] | None" = None, provenance: dict[str, Any] | None = None,
-    resume_registry: "Any" = None,
+    resume_registry: "Any" = None, hardness_prob: "np.ndarray | None" = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -745,6 +745,38 @@ def _build_resume_state_arrays(
     out["__cfg_decoupled_field"] = np.asarray(int(bool(getattr(args, "decoupled_field", False))))
     out["__cfg_decoupled_field_hidden"] = np.asarray(int(getattr(args, "decoupled_field_hidden", 32)))
     out["__cfg_decoupled_field_layers"] = np.asarray(int(getattr(args, "decoupled_field_layers", 2)))
+    # (#403 P0 gap-1) LEVER-5 HARDNESS-OVERSAMPLE data curriculum is loss/DATA-order-only + trajectory-
+    # affecting (it changes the per-epoch pair-iteration ORDER + the extra-code-fit STEP COUNT drawn ~
+    # per-pair hardness; it adds NO param KEYS -> the arch/param-key guard cannot see it). Persist the
+    # five semantic fields so a --resume-from that silently drops/changes any of them (on->off, weighted
+    # on->off, source margin<->realized, power/band) fails closed via _resume_lever_divergences
+    # (deterministic-repro). The extra-step DRAW RNG (hardness_rng PCG64) already rides __rng_hardness_json
+    # (the rng_streams resumable); THIS is the CONFIG-intent guard. Legacy-compatible: a pre-#403 sidecar
+    # lacks these keys and the F2 guard only checks keys PRESENT -> NO spurious divergence. ZERO archive
+    # bytes (resume sidecar not byte-closed).
+    out["__cfg_hardness_oversample"] = np.asarray(float(getattr(args, "hardness_oversample", 0.0)))
+    out["__cfg_hardness_weighted"] = np.asarray(int(bool(getattr(args, "hardness_weighted", False))))
+    out["__cfg_hardness_source"] = np.asarray(str(getattr(args, "hardness_source", "margin")))
+    out["__cfg_hardness_power"] = np.asarray(float(getattr(args, "hardness_power", 1.0)))
+    out["__cfg_hardness_band"] = np.asarray(float(getattr(args, "hardness_band", 0.5)))
+    # (#403 P0 gap-1b) the REALIZED-source per-pair hardness BASELINE (hardness_prob) is computed ONCE at
+    # loop start from the EMA shadow; on a --resume-from the shadow is the RESUMED (mid-run) EMA, not the
+    # ep0 init EMA, so a recompute would use a DIFFERENT probability vector than a CONTINUOUS run -> the
+    # oversample allocation would silently diverge (non-bit-faithful). Persist the actual vector so the
+    # resume RESTORES it (see the restore hook after the hardness precompute). None (lever off / margin
+    # source is GT-deterministic and would recompute identically) => key absent => byte-identical +
+    # legacy-compatible (a pre-#403 sidecar lacks it => recompute, the prior behavior). ZERO archive bytes.
+    if hardness_prob is not None:
+        out["__hardness_prob"] = np.asarray(hardness_prob, np.float64).reshape(-1)
+    # (#403 P0 gap-2) #218 facet-1 HEAD GEOMETRY: --head etf REPLACES + FREEZES out_sdf.weight (a fixed
+    # simplex-ETF; trainability change, NO new param KEYS -> the arch/param-key guard cannot see it, same
+    # class as film_stiefel), and --additive-margin sets the AM realized-margin hinge TARGET (loss-only,
+    # consumed only when --margin-field-head-weight>0). A --resume-from that silently drops --head etf
+    # would resume the FROZEN ETF weight into a TRAINABLE softmax head (it drifts under descent) -> a
+    # deterministic-repro violation; persist so _resume_lever_divergences fails closed. Legacy-compatible
+    # (pre-#403 sidecars lack these keys => no spurious divergence). ZERO archive bytes (resume sidecar).
+    out["__cfg_head"] = np.asarray(str(getattr(args, "head", "softmax")))
+    out["__cfg_additive_margin"] = np.asarray(float(getattr(args, "additive_margin", 0.0)))
     # SPIKE-GUARD running-median window (the last <=50 batch losses). It GATES step-skipping
     # (loss > spike_factor * median => the optimizer.update is skipped), so it is part of the
     # weight trajectory: a resume with an EMPTY window (median None => never skips) would diverge
@@ -962,6 +994,18 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # __cfg_film_stiefel [R2a-MED-1 note there] precisely so THIS guard can fail-closed on a
         # resume that silently drops/adds the Stiefel constraint).
         ("__cfg_film_stiefel", int(bool(getattr(args, "film_stiefel", False))), False),
+        # (#403 P0 gap-1) LEVER-5 hardness-oversample data curriculum: the oversample FRACTION is
+        # always material (0->0.5 adds extra code-fit steps => changes the trajectory + optimizer-step
+        # count). The four sub-fields (weighted/source/power/band) are inert while oversample==0 in both
+        # -> guarded below with an engaged-gate (mirrors lane_band_start_epoch). Loss/data-order-only,
+        # no param keys -> the arch guard cannot see it.
+        ("__cfg_hardness_oversample", float(getattr(args, "hardness_oversample", 0.0)), True),
+        # (#403 P0 gap-2) #218 facet-1 head geometry: --head selects the classifier-head topology
+        # (etf FREEZES out_sdf.weight; additive-margin sets the AM hinge base). A resume that changes it
+        # trains an incompatible/mis-trainable head vs the ckpt (frozen ETF -> trainable softmax) =>
+        # fail closed. Trainability-only for etf, loss-only for additive-margin; no new param keys ->
+        # the arch guard cannot see it (same class as film_stiefel).
+        ("__cfg_head", str(getattr(args, "head", "softmax")), False),
     ]
     for key, cur, is_float in checks:
         if key not in resume_cfg:
@@ -994,6 +1038,47 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
             cur_shape = str(getattr(args, "seed_anneal_shape", "linear"))
             if ckpt_shape != cur_shape:
                 div.append(f"seed_anneal_shape: ckpt={ckpt_shape!r} != resume-argv={cur_shape!r}")
+    # (#403 P0 gap-1) hardness sub-fields (weighted/source/power/band) are INERT while oversample==0 in
+    # BOTH -> only flag when the lever is ENGAGED in either config (mirrors lane_band_start_epoch). A
+    # source margin<->realized flip, a weighted on<->off, or a power/band change silently re-allocates
+    # the oversample extras => a deterministic-repro divergence when armed.
+    if "__cfg_hardness_oversample" in resume_cfg:
+        ckpt_os = float(resume_cfg.get("__cfg_hardness_oversample", 0.0) or 0.0)
+        cur_os = float(getattr(args, "hardness_oversample", 0.0))
+        if ckpt_os > 0.0 or cur_os > 0.0:
+            _hchecks: list[tuple[str, object, object]] = [
+                ("hardness_weighted",
+                 int(resume_cfg.get("__cfg_hardness_weighted", 0) or 0) if "__cfg_hardness_weighted" in resume_cfg else None,
+                 int(bool(getattr(args, "hardness_weighted", False)))),
+                ("hardness_source",
+                 str(resume_cfg["__cfg_hardness_source"]) if "__cfg_hardness_source" in resume_cfg else None,
+                 str(getattr(args, "hardness_source", "margin"))),
+                ("hardness_power",
+                 float(resume_cfg["__cfg_hardness_power"]) if "__cfg_hardness_power" in resume_cfg else None,
+                 float(getattr(args, "hardness_power", 1.0))),
+                ("hardness_band",
+                 float(resume_cfg["__cfg_hardness_band"]) if "__cfg_hardness_band" in resume_cfg else None,
+                 float(getattr(args, "hardness_band", 0.5))),
+            ]
+            for _nm, _ck, _cur in _hchecks:
+                if _ck is None:
+                    continue
+                if isinstance(_cur, float):
+                    _div = abs(float(_ck) - float(_cur)) > 1e-6
+                else:
+                    _div = str(_ck) != str(_cur)
+                if _div:
+                    div.append(f"{_nm}: ckpt={_ck!r} != resume-argv={_cur!r}")
+    # (#403 P0 gap-2) --additive-margin is inert unless the head is additive-margin in either config ->
+    # only flag the value when engaged (the head-type divergence itself is always flagged above).
+    if "__cfg_additive_margin" in resume_cfg:
+        ckpt_head = str(resume_cfg.get("__cfg_head", "softmax"))
+        cur_head = str(getattr(args, "head", "softmax"))
+        if ckpt_head == "additive-margin" or cur_head == "additive-margin":
+            ckpt_am = float(resume_cfg["__cfg_additive_margin"])
+            cur_am = float(getattr(args, "additive_margin", 0.0))
+            if abs(ckpt_am - cur_am) > 1e-6:
+                div.append(f"additive_margin: ckpt={ckpt_am!r} != resume-argv={cur_am!r}")
     return div
 
 
@@ -4531,6 +4616,34 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "margin_field_head", "weight": mfh_w,
                           "per_class_margin_target": [round(float(v), 4) for v in _mfh_tgt]}), flush=True)
 
+    # (#403 P0 gap-3 / #404 binding-vs-inert L1 RUNTIME ALARM) STAMP whether the #218 additive-margin
+    # arm ACTUALLY engaged, LOUD + once, at setup. The AM base (_mfh_base above) is non-zero only when
+    # --head additive-margin, and it is CONSUMED only when mfh_w>0 -> a run with --head additive-margin
+    # (or a non-zero --additive-margin) but mfh_w<=0 shapes NO loss yet reads as ON in the header. The
+    # ONE classifier SoT (tac.confound_gates.additive_margin_engagement) is shared with the DSL
+    # .validate() fail-closed + the L2 preflight gate. When nominally-set: emit a lever_engage stamp so
+    # no reader/controller can mistake inert-reported-on for active; when INERT: also emit a LOUD
+    # confound_alarm (advisory — the L2 DSL/preflight gates are the fail-closed refusal; this run-time
+    # row makes an already-launched inert arm impossible to miss in the log).
+    from tac.confound_gates import additive_margin_engagement as _am_engagement
+    _am_eng = _am_engagement(
+        str(getattr(args, "head", "softmax")), float(getattr(args, "additive_margin", 0.0)), mfh_w)
+    if _am_eng["nominally_set"]:
+        print(json.dumps({"stage": "lever_engage", "lever": "additive_margin",
+                          "engaged": bool(_am_eng["engaged"]), "inert": bool(_am_eng["inert"]),
+                          "head": str(getattr(args, "head", "softmax")),
+                          "additive_margin": float(getattr(args, "additive_margin", 0.0)),
+                          "margin_field_head_weight": float(mfh_w),
+                          "reason": _am_eng["reason"]}), flush=True)
+        if _am_eng["inert"]:
+            print(json.dumps({"stage": "confound_alarm", "kind": "additive_margin_inert",
+                              "lever": "additive_margin", "engaged": False,
+                              "reason": _am_eng["reason"],
+                              "note": "#404 binding-vs-inert: the additive-margin arm is ON but shapes "
+                              "no loss; any d_seg verdict from this run is NOT attributable to it. "
+                              "Compose --margin-field-head-weight>0 (+ a non-zero --additive-margin) "
+                              "to arm it."}), flush=True)
+
     # #224 (4) PERSISTENCE/TOPOLOGY loss setup (persistence_topology_loss; #218/TopologyLossGauge).
     # persist_w=0 (default) => persist_classes=() + persist_gate["w"]=0 => branch inert => byte-identical.
     persist_w = float(getattr(args, "persistence_loss_weight", 0.0))
@@ -7329,7 +7442,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # below). Each writes byte-identical keys via its FunctionResumable; a cap-only run emits
             # NO manifest => byte-identical. The cl controller snapshots under _verdict_lock inside its
             # adapter (M2 pending-verdict-consistent), the rng adapter always writes __rng_*.
-            resume_registry=_resume_registry)
+            resume_registry=_resume_registry,
+            # (#403 P0 gap-1b) persist the realized-source hardness baseline so a resume restores the
+            # SAME per-pair oversample allocation a continuous run used (None when the lever is off ->
+            # key absent -> byte-identical). Closure-captures the loop-scope hardness_prob (bound at the
+            # loop-start precompute, always before any checkpoint fires).
+            hardness_prob=hardness_prob)
         # (R-7 finisher 2) merge the Polyak running-mean (heavy fp64) into the SAME atomic resume savez
         # as its scalar sentinel (registry) => no cross-file desync. {} unless armed+observed => the
         # sidecar is byte-identical for an un-armed run.
@@ -7805,6 +7923,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "source": hsrc, "power": float(args.hardness_power),
                           "hard_easy_spread": round(float(hardness_prob.max() / max(hardness_prob.min(), 1e-12)), 3),
                           "top_pairs": [int(i) for i in np.argsort(-hardness_prob)[:6]]}), flush=True)
+        # (#403 P0 gap-1b) RESTORE the persisted realized-source hardness BASELINE so a --resume-from
+        # reproduces the SAME oversample allocation a CONTINUOUS run used. The baseline above was just
+        # recomputed from the CURRENT (resumed, mid-run) EMA shadow, which differs from the ep0 baseline
+        # a continuous run computed once -> non-bit-faithful for --hardness-source realized. Restoring the
+        # persisted vector makes it exact. Additive + legacy: a pre-#403 sidecar (or the margin source,
+        # which is GT-deterministic and never persisted) lacks the key => recompute stands (byte-identical
+        # to prior behavior). SKIPPED under warm-start / allow-lever-drift (an INTENTIONAL fresh
+        # re-treatment recomputes from the resumed state, matching the F2 divergence-guard bypass). The
+        # config-divergence guard (above, at resume) already fail-closes if the hardness config differs,
+        # so a length mismatch here is defence-in-depth only.
+        if (resume_cfg is not None and "__hardness_prob" in resume_cfg
+                and not (bool(getattr(args, "resume_allow_lever_drift", False))
+                         or bool(getattr(args, "warm_start_weights_only", False)))):
+            _hp_saved = np.asarray(resume_cfg["__hardness_prob"], np.float64).reshape(-1)
+            if _hp_saved.size == P and float(_hp_saved.sum()) > 0.0:
+                hardness_prob = _hp_saved / _hp_saved.sum()
+                print(json.dumps({"stage": "hardness_baseline_resumed", "n_pairs": int(P),
+                                  "note": "restored persisted realized-source baseline "
+                                  "(bit-faithful oversample allocation on resume)"}), flush=True)
+            else:
+                print(json.dumps({"stage": "hardness_baseline_resume_skipped",
+                                  "saved_size": int(_hp_saved.size), "expected": int(P),
+                                  "note": "persisted baseline size mismatch -> recompute stands "
+                                  "(defence-in-depth; config guard already checks hardness cfg)"}), flush=True)
     if args.max_bank_freq is not None:
         from tac.boundary_math.lever_b_levelset_generator import stem_nyquist_max_freq_cycles_per_unit
         nyq = stem_nyquist_max_freq_cycles_per_unit(scorer_w=SEG_W)
