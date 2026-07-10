@@ -92,3 +92,6 @@ a telemetry-ON R1-equivalent replay that LOGS real σ_min(ep), backtested via `l
 `run_detector_on_series`, asserting the detector fires on a known-conditioned basin. Until then, launch-1 ships
 **banked-R1** (0.001610/7.2KB) with the LOUD disengaged alarm — pose-DISENGAGED is a valid terminal state, never a
 launch dependency. Pointer 0.19110 UNMOVED (means).
+
+## Canonical equations (Catalog #344)
+# FORMALIZATION_PENDING: pose-gate detector build memo — the rolling-slope conditioning-detector law registers on its first real-run firing (run-1 observer rows were INSUFFICIENT_DATA/DEGENERATE_GUARD; no measured law yet).

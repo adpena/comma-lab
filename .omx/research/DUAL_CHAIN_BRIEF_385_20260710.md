@@ -341,3 +341,6 @@ wall-clock. **P9 launch-gate: RESOLVED-REFUTING — do not ship self-orient in t
 **The which-to-run GO ask: approve (1)+(2) — launch v7.5.2 with self-orient OFF — or direct otherwise.**
 Pointer contest-CPU 0.19110 UNMOVED; every row above is advisory/through-R MEANS until the byte-closed
 `upstream/evaluate.py` row lands from the GO'd launch.
+
+## Canonical equations (Catalog #344)
+Measured rows in this brief are anchored in `tac.canonical_equations`: `curvelet_directional_basis_dseg_reduction_v1` (owed-16 realized-transfer anchor `owed16_realized_transfer_measured_zero_20260710`) · `segnet_stem_nyquist_alias_wall_v1` + `segnet_through_r_texture_price_list_v1` (texture price list) · `roadlane_grating_composition_refuted_v1` (Unit A) · `posenet_luma_chroma_sensitivity_asymmetry_v1` (Unit C) · `textured_power_diagram_sufficient_statistic_v1` + `flip_margin_step_law_v1` (Fable) · `texture_trunk_band_is_stem_passband_v1` (#395) · `exact_metric_mc_finisher_v1` (#396) · `rate_mdl_cosmological_constant_reverse_waterfill_v1` + `dseg_aware_fourier_taper_reweight_v1` (Unit B).

@@ -91,3 +91,6 @@ flip_median HELPS (−0.025, b₁=+0.23 — test-pinned direction); the real tru
 
 means ≠ ends: this unit BUILDS + MEASURES the mechanism at authoritative advisory scale; it makes NO score
 claim. Pointer **0.19110 UNMOVED**.
+
+## Canonical equations (Catalog #344)
+Consumes `flip_margin_step_law_v1` + the v8 geometric-rate decomposition equations in `tac.canonical_equations`; the b_c gate's own law # FORMALIZATION_PENDING: registers on the first through-R measured gate row.

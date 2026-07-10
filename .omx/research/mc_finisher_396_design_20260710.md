@@ -145,3 +145,6 @@ anti-orphan home, the DSL is not.
   there is NO surrogate↔exact gap at the finish). Empirical anchor on the first measured row.
 ```
 ```
+
+## Canonical equations (Catalog #344)
+Registered: `exact_metric_mc_finisher_v1` in `tac.canonical_equations` (design-only invariant; EmpiricalAnchor lands with the first measured confirm-ladder row).

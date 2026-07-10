@@ -113,3 +113,6 @@ mask). This is a HARNESS VALIDATION + a first honest floor row; **NOT the 1a ver
 Pointer 0.19110 UNMOVED. #205 untouched. This is MEANS — the END is a byte-closed `upstream/evaluate.py` n600
 row < 0.19110, which arrives only after the arms are trained (governed EVENT) and the kill criterion fires
 DECOUPLING-CONFIRMED → 1b through-R → byte-close.
+
+## Canonical equations (Catalog #344)
+# FORMALIZATION_PENDING: harness build memo — no measured rows; the increment-1a kill-gate law registers with the gate's first measured arm (control arm currently REFUSED-not-$0-rulable).

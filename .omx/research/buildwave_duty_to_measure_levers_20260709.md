@@ -91,3 +91,6 @@ Adding a NEW canonical-named sig row while a legacy row still exists would re-or
 - **Equations leg:** N/A until measured — the two levers carry est ΔS (#169: 0.012–0.024 oracle) but no
   byte-closed n600 row; the canonical-equation anchor lands only when a real through-R measurement exists
   (their duty-to-MEASURE, now correctly surfaced by this fix).
+
+## Canonical equations (Catalog #344)
+# FORMALIZATION_PENDING: duty-to-measure ledger memo — no measured rows; each lever registers its equation on its first measured firing per the activation-ledger discipline.
