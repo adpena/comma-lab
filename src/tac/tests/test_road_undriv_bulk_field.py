@@ -132,3 +132,65 @@ def test_real_byte_close_roundtrip_slice_bit_exact():
     for i in range(L.shape[0]):
         road = L[i] == ROAD
         assert np.array_equal(R._road_row_span_decode(R._road_row_span_encode(road)), road)
+
+
+# ------------------------------- owed-9 lateral extents (F-P5-1 / §3 I1b) ------
+def _synthetic_lateral_frame(h=48, w=100):
+    """Road band [xL(y), xR(y)] widening with y; OUTSIDE the band is Undrivable (side)."""
+    lab = np.full((h, w), UNDRIV, dtype=np.int64)
+    for y in range(h):
+        xl = 40 - y // 3
+        xr = 60 + y // 3
+        lab[y, xl:xr] = ROAD
+    return lab, np.array([40 - y // 3 for y in range(h)]), np.array([60 + y // 3 - 1 for y in range(h)])
+
+
+def test_lateral_extents_leftmost_rightmost():
+    lab, xl_true, xr_true = _synthetic_lateral_frame()
+    xl, xr = R._lateral_extents(lab, ROAD)
+    assert np.array_equal(xl, xl_true.astype(np.int32))
+    assert np.array_equal(xr, xr_true.astype(np.int32))
+
+
+def test_lateral_extents_no_road_rows_are_minus_one():
+    lab = np.full((10, 20), UNDRIV, dtype=np.int64)
+    lab[4:6, 8:12] = ROAD  # only rows 4,5 have road
+    xl, xr = R._lateral_extents(lab, ROAD)
+    assert xl[0] == -1 and xr[0] == -1
+    assert xl[4] == 8 and xr[4] == 11
+
+
+def test_lateral_extents_multicomponent_collapses_to_hull():
+    # Two road blobs in the same row -> leftmost/rightmost spans BOTH (lateral convex hull).
+    lab = np.full((6, 30), UNDRIV, dtype=np.int64)
+    lab[2, 4:8] = ROAD
+    lab[2, 20:24] = ROAD
+    xl, xr = R._lateral_extents(lab, ROAD)
+    assert xl[2] == 4 and xr[2] == 23  # hull spans the median gap
+
+
+def test_lateral_byte_cost_no_overflow_and_flags_sidecar():
+    import warnings
+
+    lab, _, _ = _synthetic_lateral_frame()
+    stack = np.stack([lab, lab, lab, lab, lab])  # 5 identical frames
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # any fp overflow now RAISES (the bug this fix closed)
+        out = R.lateral_extent_poly_byte_cost(stack, road_cls=ROAD, degree=2, n_frames=600)
+    assert out["n_frames_fitted"] == 5
+    assert out["best_measured_bytes"] > 0
+    assert out["residual_sidecar_owed"] is True
+    # identical frames -> the delta stream is ~all-zero -> delta beats raw
+    assert out["delta_coeff_bytes"] <= out["raw_coeff_bytes"]
+
+
+@pytest.mark.skipif(not _CACHE.exists(), reason="n600 gt cache absent (portable skip)")
+def test_real_lateral_byte_cost_lands_in_derived_I1b_range():
+    # Recess R8: the SPEC_v8.1 §I I1b DERIVED carrier_total_S range is [0.0040, 0.0083].
+    # MEASURED here confirms the range; the ~20px fit residual is the honest tell (jagged
+    # leftmost/rightmost envelope does NOT fit a smooth low-order poly -> the analytic form hurts).
+    L = np.asarray(np.load(_CACHE)["lstars"])
+    out = R.lateral_extent_poly_byte_cost(L, road_cls=ROAD, degree=2, n_frames=600)
+    assert 0.003 < out["score_rate_contribution_MEASURED"] < 0.010
+    assert out["median_fit_residual_px"] > 5.0  # the poor-fit tell (NOT the smooth horizon's ~1.5px)
+    assert out["n_frames_fitted"] == 600

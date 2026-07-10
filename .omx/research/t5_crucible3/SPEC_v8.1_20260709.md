@@ -398,3 +398,71 @@ enemy) land; residual enemy 0.074 → **~0.0725 FIRM** (barely moves — CONFIRM
 does NOT itself cross 0.118; it LOCATES the sub-frontier path (owed R3 $0 hood measure + increment-2 R5
 coverage BUILD, §9). No sealed decision changes. Triality: DAG FEED-macro-rate + equations anchor
 `v8_macro_rate_pass_exhaustive_dedup_and_egocharge_measured_20260710`; DSL N/A (rate derivation).
+
+---
+
+## GEOCODER-CLOSE + OWED-9 RECONCILIATION ADDENDUM (append-only — 2026-07-10; #398A "unlock v8")
+
+**Scope:** this addendum RECONCILES the §1/§3 carrier table + §5/§8/§9 to the measured revisions
+that landed AFTER the P7 transcription: the #394A geocoder-close (Road/Lane texture REFUTED → FLAT
+fill; Movable sparse-site coder MEASURED), the macro-rate pass (both residual RE-CODING axes DEAD),
+the #386 flip-bc gate (global b_c SATURATED at no_offset), and this unit's owed-9 lateral-carrier
+BUILD (MEASURED FORMULATION NEGATIVE at the analytic level). It CHANGES NO sealed §1–§12 decision
+and moves NOTHING on the pointer (**0.19110 UNMOVED**); it corrects the byte table + retires the
+refuted pieces so the #385 brief is honest. `[macOS-CPU advisory · research-signal · NON-PROMOTABLE]`.
+
+### Revised per-class byte table (provenance per entry; supersedes the §1/§3 pre-measurement view)
+
+| edge / carrier | dominant S | complete S | FILL / carrier | provenance |
+|---|---|---|---|---|
+| Road/Lane | 0.0275 | 0.0695 (res 0.042) | **FLAT scene colour** (~15.6 B texture, rule-118) + geometry placement (horizon 4167 B + lane LBND2). **Texture grating REFUTED** | MEASURED n600 through-R `roadlane_grating_composition_refuted_v1` (#394A: grating +0.228 vs matched flat; Road wins flat 0.017). res 0.042 = **coverage gap → increment-2 R5**, NOT a coder gap |
+| Road/Undriv (horizon top arc, I1) | **0.00277** (4167 B) | 0.0221 (res 0.0189) | deg-3 horizon poly + ξ intercept (ego-rigid) | MEASURED `horizon_poly_xi_byte_cost` (§I I1 PIN). Macro R2: dominant → ~0.0003 if intercept charged to banked pose ξ |
+| Road/Undriv lateral extents (I1b, owed-9) | — | — | x_L(y), x_R(y) 2 low-order curves | **MEASURED R8 (this unit): deg-2 6426 B / S 0.00428 · deg-3 8773 B / S 0.00584** — lands in the §I I1b DERIVED range [0.0040, 0.0083] (**range CONFIRMED**). BUT the analytic convex-envelope form is a **d_seg NEGATIVE** (+0.019; fit residual ~20 px) — see the owed-9 verdict below |
+| Movable (Road/Mov + Undriv/Mov) | 0.00344 | 0.0209 (res 0.0175) | **sparse-site coder MEASURED 6289 B** (2145 sites, K=9, tracked temporal-delta, 31% vs raw; box-IoU 0.743) | MEASURED n600 `movable_site_coder` (#394A). The 53% "Road/Lane coverage enemy" RELOCATES here (per-frame Movable/MyCar colour) + Lane boundary jitter — **not a texture gap** |
+| Road/MyCar (hood, I4) | 0.0202 | 0.0202 (res 0) | one static silhouette (majority-vote) | MEASURED. Macro R3 CANDIDATE −[0, 0.017] owed $0 hood single-static-store measure (the 1.4×-only-vs-bitmap tell) |
+| Lane/* (3 rows) | 0.007 | 0.007 | already tiny | MEASURED |
+| **T-half texture trunk (#395)** | — | — | 375-param texture trunk (BUILT) | sibling build (READ-only here) |
+| **Pose** | — | — | frame_0 carrier (Unit C DOF) + banked R1 dxi | d_pose contribution **0.127 / ξ_eff 7.2 KB** BANKED-as-artifact (MEMORY L68); NOT solved-for-v8 |
+
+**Macro triple (from the macro-rate addendum, unchanged): dominant ~0.0585 · complete-lossless ~0.131
+FIRM · residual enemy ~0.0725 FIRM** → **WASH vs 0.118 frontier**. Sub-frontier requires the owed R3
+hood $0 measure and/or the increment-2 R5 generator-coverage BUILD. **The r\* RANGE [0.061, 0.135]
+and "shippable = WASH" verdict STAND** (§0/§6/§SEAL-BOUNDARY-4 unchanged).
+
+### owed-9 lateral 3-curve carrier — BUILT + MEASURED (this unit, #398A)
+
+- **BUILT ($0, real, tested):** `road_undriv_bulk_field._lateral_extents` (per-row leftmost/rightmost
+  Road column = the ego-rigid drivable envelope, blob-count-agnostic) + `lateral_extent_poly_byte_cost`
+  (the R8 anchor) + `analytic_smoke.analytic_lateral_undriv_field` + the `--include-lateral` A/B flag.
+  45 tests green, ruff F clean.
+- **R8 MEASURED (turns §I I1b DERIVED → MEASURED anchor):** deg-2 6426 B (S 0.00428) · deg-3 8773 B
+  (S 0.00584) — CONFIRMS the DERIVED [0.0040, 0.0083] range. **SEAL-BOUNDARY item 2 (I1b byte cost
+  DERIVED-not-MEASURED) is now CLOSED for the byte-cost half.**
+- **d_seg VERDICT — FORMULATION NEGATIVE (MEASURED n600):** the naive convex leftmost/rightmost
+  envelope, as an ANALYTIC field, HURTS the decoupled floor: **horizon-only 0.100403 → +lateral(deg-2)
+  0.119845 / (deg-3) 0.119060** (Road error 0.021 → 0.089 as the smooth low-order poly band cuts into
+  true road; fit residual ~20 px — the jagged envelope is NOT a low-order poly, unlike the smooth
+  ~1.5 px horizon). **verdict_scope: FORMULATION** (the hard analytic convex-hull envelope), NOT the
+  lateral-carrier FAMILY. `--include-lateral` DEFAULT OFF; the canonical floor stays horizon-only 0.100403.
+- **What this CARVES:** the lateral undriv field must be **margin-aware / learned** (the trained
+  decoupled arm's per-class field), NOT a hard geometric poly hull. SEAL-BOUNDARY item 3 (the "3-curve
+  homes 97.54% lateral" coverage) is **DERIVED-then-REFUTED-for-the-analytic-form**: the trained-field
+  form is the open route (increment-1b). The lateral REPRESENTATION exists; the analytic INSTANTIATION
+  is a measured no.
+
+### #386 remainder reconciliation (retired-honestly / stands)
+
+| #386 piece | status | verdict_scope |
+|---|---|---|
+| flip-weighted / flip-median b_c | BUILT + MEASURED n600; both **REFUTED** (6.3× / 6.9× worse); global b_c **SATURATED at no_offset** | FORMULATION (per-EDGE b_c on FRESH v8 Stage-A fields = the open 1b route) |
+| de-share (Lever-1) | BUILT + MEASURED; **CONFIRMED S ≈ 0.0044** (folded into the 0.135→0.131 macro complete) | — (stands) |
+| curve-relative δ(s) coder (Lever-2) | BUILT + MEASURED; **REFUTED** (0.99× / 0.90×) | FORMULATION. **REPLACEMENT per the flat-fill pin: NONE-as-a-coder** — the residual is coding-irreducible (macro: temporal ego-warp NO-GO + spatial curve-relative REFUTED). The reframe is **COVERAGE not coding** (increment-2 R5 lane generator) + de-share (CONFIRMED) + flat-fill placement |
+| inc1a harness (5 deliverables) | BUILT; $0 analytic floor 0.100403 MEASURED | — (stands; owed-9 lateral extends it) |
+| Movable sparse-site coder + roadlane texture generator (#394A) | BUILT + MEASURED; texture NO-GO, Movable 6289 B | FORMULATION (texture whole-region grating) |
+
+**Nothing in #386 is left half-built.** Every piece is BUILT + MEASURED + verdicted; the refuted
+formulations carry their reformulation queues (per-edge b_c, coverage-not-coding, margin-aware lateral).
+
+Triality: DAG FEED-v8unlock · equations anchor `v8_lateral_extent_carrier_r8_measured_and_analytic_negative_20260710`
+(appended to `v8_geometric_rate_decomposition_v1`) · DSL N/A (measurement + geometry primitive; no trainer
+Lever — the trained decoupled-field lever is owed to the arm BUILD). Pointer 0.19110 UNMOVED.

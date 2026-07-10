@@ -556,6 +556,139 @@ def horizon_poly_xi_byte_cost(
 
 
 # ---------------------------------------------------------------------------
+# owed-9 (F-P5-1 / SPEC_v8.1 §3 I1b): the LATERAL-CAPABLE complement of the
+# single-valued top horizon arc — x_L(y), x_R(y) drivable-extent curves.
+# ---------------------------------------------------------------------------
+def _lateral_extents(lab: np.ndarray, road_cls: int) -> tuple[np.ndarray, np.ndarray]:
+    """Per-row drivable lateral extents ``x_L(y)``, ``x_R(y)``: leftmost / rightmost Road column.
+
+    Returns two ``int32`` arrays of length H; ``-1`` marks rows with no Road pixel. OUTSIDE the
+    band ``[x_L(y), x_R(y)]`` (and not claimed by hood/movable) is SIDE Undrivable — the
+    multi-branch complement of the single-valued top horizon arc ``_horizon_profile`` (which is a
+    per-COLUMN ``y(x)`` and STRUCTURALLY cannot represent lateral/side undrivable in columns that
+    have no Road/Undriv horizon point; F-P5-1, R6-MEASURED 97.54% of GT-Undriv flip mass). The
+    leftmost/rightmost over the whole row collapses multi-component Road to its lateral convex hull
+    (the drivable band), so the envelope is blob-count-agnostic. Vectorized (argmax on the boolean
+    row is the first/last True).
+    """
+
+    road = np.asarray(lab) == int(road_cls)
+    h, w = road.shape
+    has = road.any(axis=1)
+    xl = np.where(has, road.argmax(axis=1), -1).astype(np.int32)
+    xr = np.where(has, (w - 1) - road[:, ::-1].argmax(axis=1), -1).astype(np.int32)
+    return xl, xr
+
+
+def lateral_extent_poly_byte_cost(
+    lstars: np.ndarray,
+    *,
+    road_cls: int,
+    degree: int = 2,
+    n_frames: int = 600,
+) -> dict:
+    """MEASURE the byte cost of the lateral drivable-extent curves ``x_L(y)``, ``x_R(y)`` (owed-9 / recess R8).
+
+    The multi-branch complement of the single-valued top horizon arc: two per-ROW low-order
+    polynomials ``x(y)`` whose ego-rigid high-order coefficients are frozen frame-to-frame while a
+    per-frame intercept drifts (ego lateral/yaw). This turns the SPEC_v8.1 §I I1b **DERIVED** range
+    ``carrier_total_S ∈ [0.0040, 0.0083]`` into a **MEASURED** anchor — the side-curve byte cost +
+    frozenness on gt_n600 (recess R8), by the SAME real-coder + ego-amortized machinery as
+    :func:`horizon_poly_xi_byte_cost` (raw vs delta-coded coeff stream, zlib, amortized over
+    ``n_frames``). ``[macOS-CPU advisory · NON-PROMOTABLE]``.
+
+    HONEST SCOPE (NO-FAKE): this is the lateral-envelope coeff-stream cost only (2 curves). The
+    poly-fit residual (off-envelope side detail) is a small sidecar NOT counted here —
+    ``residual_sidecar_owed=True``. Report is the SUM of both curves (one concatenated blob so the
+    zlib dictionary is shared, matching the joint-coding R4 convention).
+    """
+
+    import zlib
+
+    a = np.asarray(lstars)
+    if a.ndim == 2:
+        a = a[None]
+    n = a.shape[0]
+    coeffs_l: list[np.ndarray] = []
+    coeffs_r: list[np.ndarray] = []
+    residuals: list[float] = []
+    coverage: list[int] = []
+    for i in range(n):
+        xl, xr = _lateral_extents(a[i], road_cls)
+        valid = (xl >= 0) & (xr >= 0)
+        ys = np.where(valid)[0]
+        if ys.size < (degree + 5):
+            coeffs_l.append(np.full(degree + 1, np.nan))
+            coeffs_r.append(np.full(degree + 1, np.nan))
+            continue
+        yy = ys.astype(np.float64)
+        cl = np.polyfit(yy, xl[valid].astype(np.float64), degree)
+        cr = np.polyfit(yy, xr[valid].astype(np.float64), degree)
+        coeffs_l.append(cl)
+        coeffs_r.append(cr)
+        res_l = float(np.median(np.abs(np.polyval(cl, yy) - xl[valid].astype(np.float64))))
+        res_r = float(np.median(np.abs(np.polyval(cr, yy) - xr[valid].astype(np.float64))))
+        residuals.append(0.5 * (res_l + res_r))
+        coverage.append(int(ys.size))
+    Cl = np.array(coeffs_l, dtype=np.float64)
+    Cr = np.array(coeffs_r, dtype=np.float64)
+    fitted = ~np.isnan(Cl[:, 0])
+    n_fit = int(fitted.sum())
+    if n_fit == 0:
+        return {
+            "n_frames_measured": int(n),
+            "n_frames_fitted": 0,
+            "degree": int(degree),
+            "coder": "zlib",
+            "best_measured_bytes": 0,
+            "full_bytes_at_n_frames_MEASURED": 0,
+            "score_rate_contribution_MEASURED": 0.0,
+            "residual_sidecar_owed": True,
+            "scope_note": "no fittable frames (no Road support)",
+        }
+    # Per-COLUMN int16 quantization (robust — NO fp16 overflow: unlike the frozen horizon,
+    # the leftmost/rightmost-Road coeffs are NOT tiny/frozen, so a fixed per-power fp16 scale
+    # overflows). Each of the 2*(degree+1) coeff columns is scaled to fill int16 by its own
+    # max-abs; the (tiny) per-column scales are stored too. Delta-coded across frames + zlib.
+    Cf = np.concatenate([Cl[fitted], Cr[fitted]], axis=1)  # (n_fit, 2*(degree+1))
+    col_absmax = np.maximum(np.max(np.abs(Cf), axis=0), 1e-12)
+    col_scale = 32000.0 / col_absmax
+    q = np.rint(Cf * col_scale[None, :]).astype(np.int16)
+    scale_blob = col_scale.astype(np.float32).tobytes()  # store the decode scales (tiny)
+    raw_blob = scale_blob + q.tobytes()
+    delta_blob = (
+        scale_blob + np.diff(q, axis=0).astype(np.int16).tobytes() if n_fit > 1 else raw_blob
+    )
+    raw_bytes = len(zlib.compress(raw_blob, 9))
+    delta_bytes = len(zlib.compress(delta_blob, 9))
+    best = int(min(raw_bytes, delta_bytes))
+    per_fit_frame = float(best) / float(max(1, n_fit))
+    full = int(round(per_fit_frame * n_frames))
+    return {
+        "n_frames_measured": int(n),
+        "n_frames_fitted": n_fit,
+        "degree": int(degree),
+        "coder": "zlib",
+        "median_fit_residual_px": (float(np.median(residuals)) if residuals else float("nan")),
+        "mean_rows_covered": (float(np.mean(coverage)) if coverage else 0.0),
+        "raw_coeff_bytes": int(raw_bytes),
+        "delta_coeff_bytes": int(delta_bytes),
+        "best_measured_bytes": best,
+        "measured_bytes_per_frame": per_fit_frame,
+        "full_bytes_at_n_frames_MEASURED": full,
+        "score_rate_contribution_MEASURED": 25.0 * float(full) / 37_545_489.0,
+        "n_frames_amortized": int(n_frames),
+        "residual_sidecar_owed": True,
+        "scope_note": (
+            "LATERAL-ENVELOPE coeff-stream (2 curves x_L(y),x_R(y)) only. Real-coder + ego-amortized. "
+            "Off-envelope side detail is a small sidecar NOT counted here. Recess R8: turns the "
+            "SPEC_v8.1 §I I1b DERIVED carrier_total_S range into a MEASURED anchor. "
+            "See DAG FEED-v8unlock."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Full-frame Laguerre-reweighted argmax (thin reuse; observability).
 # ---------------------------------------------------------------------------
 def bulk_argmax_with_bias(phi_hwk: np.ndarray, offsets: np.ndarray) -> np.ndarray:

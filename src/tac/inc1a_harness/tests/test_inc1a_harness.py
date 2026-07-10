@@ -295,3 +295,43 @@ def test_analytic_smoke_end_to_end_subset():
     assert res.n_frames == 3 and not res.is_n600
     assert res.label == "[analytic-generators, no-trained-fields]"
     assert set(res.per_class_dseg) == {"Road", "Lane", "Undrivable", "Movable", "MyCar"}
+
+
+# --------------------------------------------------------------------- owed-9 lateral field (F-P5-1)
+def test_analytic_lateral_undriv_field_positive_outside_band():
+    from tac.inc1a_harness.analytic_smoke import analytic_lateral_undriv_field
+
+    # Road band [30,70) for all rows; outside is the side-Undriv region.
+    h, w = 48, 100
+    lab = np.full((h, w), 2, dtype=np.int64)  # UNDRIV
+    lab[:, 30:70] = 0  # ROAD
+    phi = analytic_lateral_undriv_field(lab, road_cls=0, undriv_cls=2, degree=2)
+    assert phi.shape == (h, w)
+    # far-left / far-right columns are OUTSIDE the band -> positive (Undriv side)
+    assert phi[24, 2] > 0 and phi[24, 97] > 0
+    # center is INSIDE the band -> negative (folds to Road/horizon via argmax)
+    assert phi[24, 50] < 0
+
+
+def test_analytic_lateral_field_no_road_is_deep_negative():
+    from tac.inc1a_harness.analytic_smoke import analytic_lateral_undriv_field
+
+    lab = np.full((20, 30), 2, dtype=np.int64)  # no Road anywhere
+    phi = analytic_lateral_undriv_field(lab, road_cls=0, undriv_cls=2)
+    assert np.all(phi < 0)  # deep-neg default -> folds to Road complement
+
+
+def test_include_lateral_flag_changes_result_and_default_unchanged():
+    import os
+
+    from tac.inc1a_harness.analytic_smoke import DEFAULT_NPZ, run_analytic_smoke
+
+    if not os.path.exists(DEFAULT_NPZ):
+        pytest.skip("gt_n600 cache not present")
+    base = run_analytic_smoke(DEFAULT_NPZ, n_frames=6, require_n600=False)
+    lat = run_analytic_smoke(DEFAULT_NPZ, n_frames=6, require_n600=False, include_lateral=True)
+    # MEASURED negative: the naive convex envelope raises Road error -> agg d_seg WORSENS.
+    assert lat.agg_dseg != base.agg_dseg
+    # determinism: same flags -> same number
+    lat2 = run_analytic_smoke(DEFAULT_NPZ, n_frames=6, require_n600=False, include_lateral=True)
+    assert lat.agg_dseg == lat2.agg_dseg

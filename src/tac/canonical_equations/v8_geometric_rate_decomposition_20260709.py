@@ -410,6 +410,71 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         ),
     )
 
+    # ---- owed-9 LATERAL-EXTENT CARRIER anchor (2026-07-10, #398A): R8 byte cost MEASURED +
+    # the analytic convex-envelope form is a d_seg FORMULATION NEGATIVE ----
+    # SPEC_v8.1 §3 I1b / §11 owed-9. The lateral 3-curve carrier x_L(y), x_R(y) was BUILT
+    # ($0, tested) and MEASURED: the byte cost lands in the §I I1b DERIVED range [0.0040, 0.0083]
+    # (recess R8 CLOSED for the byte half), but the naive convex leftmost/rightmost envelope, as an
+    # ANALYTIC field, HURTS the decoupled floor (+0.019; poly fit residual ~20 px cuts into true
+    # road). verdict_scope FORMULATION (the analytic hard hull), NOT the lateral FAMILY -> the
+    # trained margin-aware decoupled field is the open route (1b).
+    anchor_lateral_carrier = EmpiricalAnchor(
+        anchor_id="v8_lateral_extent_carrier_r8_measured_and_analytic_negative_20260710",
+        measurement_utc="2026-07-10T00:00:00Z",
+        inputs={
+            "probe": "owed-9 lateral 3-curve carrier x_L(y),x_R(y): byte cost (recess R8) + the "
+                     "analytic Undriv side-envelope A/B vs the horizon-only floor, n600, $0/no-GPU",
+            "labels": "gt_n600.npz['lstars']",
+            "module": "tac.boundary_math.road_undriv_bulk_field.{_lateral_extents,"
+                      "lateral_extent_poly_byte_cost} + tac.inc1a_harness.analytic_smoke."
+                      "analytic_lateral_undriv_field (--include-lateral)",
+        },
+        predicted_output={
+            "spec_I1b_derived_carrier_total_S_range": [0.0040, 0.0083],
+            "spec_seal_boundary_2_3": "the I1b byte cost was DERIVED-not-MEASURED (item 2); the "
+                                      "'3-curve homes 97.54% lateral' coverage was DERIVED (item 3, weakest link)",
+        },
+        empirical_output={
+            "r8_byte_cost_MEASURED": {
+                "deg2_bytes": 6426, "deg2_S": 0.004279,
+                "deg3_bytes": 8773, "deg3_S": 0.005842,
+                "verdict": "CONFIRMS the DERIVED [0.0040,0.0083] range -> SEAL-BOUNDARY item 2 CLOSED "
+                           "(byte-cost half)",
+                "median_fit_residual_px": 21.68,  # deg-2; the poor-fit tell (horizon is ~1.5 px)
+            },
+            "analytic_dseg_AB_MEASURED": {
+                "horizon_only_floor": 0.100403,
+                "plus_lateral_deg2": 0.119845,
+                "plus_lateral_deg3": 0.119060,
+                "delta_worse": 0.019442,  # deg-2
+                "road_error_shift": [0.0212, 0.0893],  # Road d_seg: horizon-only -> +lateral(deg-2)
+                "mechanism": "the smooth low-order poly envelope cuts into true road (jagged "
+                             "leftmost/rightmost column is NOT a low-order poly, unlike the smooth horizon)",
+            },
+            "verdict_scope": "FORMULATION (the analytic hard convex-hull envelope), NOT the "
+                             "lateral-carrier FAMILY",
+            "constraint_carved": (
+                "the lateral undriv field must be margin-aware / learned (the trained decoupled arm's "
+                "per-class field), NOT a hard geometric poly hull; --include-lateral DEFAULT OFF; the "
+                "canonical analytic floor stays horizon-only 0.100403"
+            ),
+        },
+        residual=0.0,
+        source_artifact=".omx/research/v8_unlock_398a_20260710.md",
+        measurement_method="n600_lateral_poly_byte_cost_and_analytic_composite_AB_deterministic",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/v8_unlock_398a_20260710.md",
+            reactivation_criteria=(
+                "the trained decoupled Stage-A arm instantiates the lateral field as a margin-aware "
+                "per-class field (not a poly hull); re-measure the analytic-vs-trained lateral coverage "
+                "through the 1a A/B once the arm trains"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="macos_arm64",
+        ),
+    )
+
     # ---- MACRO-RATE PASS anchor (2026-07-10): whole-archive micro->macro re-derivation ----
     # Operator 2026-07-09 "view the whole thing bringing micro to macro". The whole-object view
     # (scene + banked ego-screw xi(t) + per-class charts) RELOCATES reducible bytes off the
@@ -547,6 +612,7 @@ def build_v8_geometric_rate_decomposition_v1() -> CanonicalEquation:
         units_in={"edge_boundary_px": "count", "generator_coeffs": "count_per_frame"},
         units_out={"s_rate_term": "contest_rate_score_25bytes_over_N"},
         empirical_anchors=(anchor_roadlane, anchor_rollup, anchor_deshare, anchor_curve_rel_negative,
+                           anchor_lateral_carrier,
                            anchor_inc1a_analytic, anchor_inc1a_killgate, anchor_macro_rate_pass),
         predicted_vs_empirical_residual={
             "roadlane_dominant_measured": 0.0,

@@ -71,23 +71,83 @@ def analytic_horizon_undriv_field(
     return phi
 
 
+def analytic_lateral_undriv_field(
+    lstar: np.ndarray, *, road_cls: int, undriv_cls: int, degree: int = 2,
+) -> np.ndarray:
+    """The ANALYTIC lateral-extent Undrivable field (H,W) — the multi-branch side complement (owed-9).
+
+    Fits ``x_L(y)``, ``x_R(y)`` (leftmost/rightmost Road column per row, via
+    ``road_undriv_bulk_field._lateral_extents``) as deg-``degree`` polynomials and lifts them to an
+    Undrivable channel POSITIVE OUTSIDE the drivable band: ``phi = max(x_L(row) - col, col -
+    x_R(row))`` (positive to the LEFT of x_L or RIGHT of x_R = side Undriv), NEGATIVE inside the
+    band (folds to Road/horizon via argmax). Homes the R6-MEASURED 97.54% lateral/side Undrivable
+    mass the single-valued top arc (``analytic_horizon_undriv_field``) structurally cannot reach
+    (F-P5-1). Rows without Road support stay deep-negative (fold to the Road complement).
+    GEOMETRIC-MINIMAL (2 low-order curves). ``undriv_cls`` is accepted for signature symmetry with
+    the horizon field (the lateral envelope is defined by the Road extent, not the Undriv mask).
+    """
+
+    from tac.boundary_math.road_undriv_bulk_field import _lateral_extents
+
+    a = np.asarray(lstar)
+    h, w = a.shape
+    xl, xr = _lateral_extents(a, int(road_cls))
+    phi = np.full((h, w), -float(max(h, w)), dtype=np.float32)  # deep-neg default (-> Road)
+    valid = (xl >= 0) & (xr >= 0)
+    ys = np.where(valid)[0]
+    if ys.size < int(degree) + 5:
+        return phi
+    yy = ys.astype(np.float64)
+    cl = np.polyfit(yy, xl[valid].astype(np.float64), int(degree))
+    cr = np.polyfit(yy, xr[valid].astype(np.float64), int(degree))
+    rows = np.arange(h, dtype=np.float64)
+    xL = np.polyval(cl, rows)[:, None]  # (H,1)
+    xR = np.polyval(cr, rows)[:, None]
+    cols = np.arange(w, dtype=np.float64)[None, :]  # (1,W)
+    side = np.maximum(xL - cols, cols - xR).astype(np.float32)  # (H,W) positive OUTSIDE the band
+    phi[valid] = side[valid]  # only rows with Road support; others stay deep-neg
+    return phi
+
+
 def build_analytic_carriers(
     lstar: np.ndarray, roles, hood_sdf: np.ndarray,
+    *, include_lateral: bool = False, lateral_degree: int = 2,
 ) -> list[CarrierField]:
-    """Build the {Undriv-horizon-poly, Lane-band, Hood} analytic carriers for one frame.
+    """Build the {Undriv-horizon(+lateral), Lane-band, Hood} analytic carriers for one frame.
 
     Road is the COMPLEMENT sea (no positive field); Movable is UNMODELED (no analytic SDF
     generator — folds into the Road complement, F4-honest high floor).
+
+    ``include_lateral`` (owed-9, DEFAULT OFF — the horizon-only floor 0.100403 is canonical):
+    when True, the Undrivable channel is the ELEMENTWISE MAX of the single-valued top horizon arc
+    (G1) and the lateral-extent envelope (G1b), merged into ONE carrier per class (clause-A: the
+    assembler forbids two carriers for the same class). MEASURED n600: the naive convex
+    leftmost/rightmost envelope HURTS (+0.0194: Road 0.021->0.089 as the smooth poly band cuts into
+    true road) — a FORMULATION negative carved into the design space (see DAG FEED-v8unlock). The
+    flag exists so the A/B is reproducible + the trained decoupled arm's lateral field (margin-aware,
+    not a hard poly hull) has a measured baseline to beat.
     """
 
     undriv_phi = analytic_horizon_undriv_field(
         lstar, road_cls=roles.road, undriv_cls=roles.undriv,
     )
+    home = "G1 ego-rigid Road<->Undriv horizon arc (deg-3 poly, single-valued)"
+    name = "undriv_horizon_poly"
+    if include_lateral:
+        undriv_lateral = analytic_lateral_undriv_field(
+            lstar, road_cls=roles.road, undriv_cls=roles.undriv, degree=int(lateral_degree),
+        )
+        undriv_phi = np.maximum(undriv_phi, undriv_lateral)  # G1 arc OR G1b side envelope
+        home = (
+            "G1 ego-rigid Road<->Undriv horizon arc (deg-3) + G1b lateral extents "
+            "x_L(y),x_R(y) (multi-branch side Undriv, owed-9)"
+        )
+        name = "undriv_horizon_plus_lateral"
     lane_phi, _meta = build_structured_lane_sdf(np.asarray(lstar), lane_cls=roles.lane)
     return [
         CarrierField(
-            class_id=int(roles.undriv), phi_hw=undriv_phi, name="undriv_horizon_poly",
-            geometric_home="G1 ego-rigid Road<->Undriv horizon arc (deg-3 poly, single-valued)",
+            class_id=int(roles.undriv), phi_hw=undriv_phi, name=name,
+            geometric_home=home,
             representation_mode="GEOMETRIC-MINIMAL",
         ),
         CarrierField(
@@ -109,6 +169,8 @@ def run_analytic_smoke(
     n_frames: int | None = None,
     require_n600: bool | None = None,
     hood_agg: str = "majority",
+    include_lateral: bool = False,
+    lateral_degree: int = 2,
 ) -> MaskDsegResult:
     """Run the analytic-composite smoke: assemble → argmax → measure MASK d_seg vs L\\*.
 
@@ -133,7 +195,10 @@ def run_analytic_smoke(
 
     partitions: list[np.ndarray] = []
     for i in range(n):
-        carriers = build_analytic_carriers(lstars[i], roles, hood_sdf)
+        carriers = build_analytic_carriers(
+            lstars[i], roles, hood_sdf,
+            include_lateral=bool(include_lateral), lateral_degree=int(lateral_degree),
+        )
         res = compose_partition(
             carriers, shape=(lstars.shape[1], lstars.shape[2]),
             complement_class=int(roles.road), bc_mode="no_offset",
@@ -153,6 +218,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n-frames", type=int, default=None, help="subset for a dev check (default ALL = n600)")
     ap.add_argument("--allow-subset", action="store_true", help="permit a non-authority subset measurement")
     ap.add_argument("--hood-agg", default="majority", choices=["majority", "intersection", "union"])
+    ap.add_argument("--include-lateral", action="store_true",
+                    help="owed-9: add the G1b lateral-extent Undriv envelope (MEASURED WORSE at "
+                    "n600 as a naive convex hull; default OFF = the canonical horizon-only floor)")
+    ap.add_argument("--lateral-degree", type=int, default=2, help="owed-9 x_L/x_R poly degree")
     ap.add_argument("--json", action="store_true", help="emit the result as JSON")
     args = ap.parse_args(argv)
 
@@ -161,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
         require = False
     res = run_analytic_smoke(
         args.npz, n_frames=args.n_frames, require_n600=require, hood_agg=args.hood_agg,
+        include_lateral=bool(args.include_lateral), lateral_degree=int(args.lateral_degree),
     )
     out = {
         "label": res.label,
