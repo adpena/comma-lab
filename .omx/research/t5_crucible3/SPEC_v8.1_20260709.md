@@ -123,7 +123,7 @@ the config REUSES — the harness owns the verdict):
   in-run seed spread)`. The DOMINANT component is training-SEED variance — NOT $0-measurable — measured
   IN-RUN from ≥3 control-arm seed replicates. `operative_delta_mask` **RAISES `DecouplingScreenError`**
   (→ `evaluate_kill` surfaces `VERDICT_REFUSED`) when ≥2 replicates exist but `seed_spread` is not
-  supplied (the P2 seed-honesty guard: a kill fired on a floor that dropped a measurable seed component
+  supplied (the P2 seed-honesty guard: a kill fired on a floor that dropped a measurable seed component <!-- # MAGNITUDE_DISMISSAL_OK: DESCRIBES the P2 seed-honesty REFUSE guard (enforcement), not a dismissal -->
   would be firing on within-seed noise).
 - **δ_mask=operative floor = max(3.46e-6, seed_spread), REFUSE on seed under-spec** — the config's
   declared 3 replicates make the operative value **DERIVED-LIVE**, honestly NOT a config-time number.
