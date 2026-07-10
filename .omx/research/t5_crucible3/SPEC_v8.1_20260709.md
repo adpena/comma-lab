@@ -52,7 +52,7 @@ METRIC        : composite_argmax MASK d_seg vs L* (gt_n600.npz)   [PAINT-FREE; t
 GRID          : scorer-authoritative 512×384 (gt_n600 lstars); argmax AFTER the R downsample
 DESIGN        : A/B — decoupled per-class fields vs MATCHED-COMPUTE shared-head CONTROL (both paint-free)
 BASELINE      : the control arm mask d_seg, MEASURED IN-RUN (NEVER run-1's 0.312)
-b_c MODE      : no_offset (SATURATED safe default; both flip arms + OT REFUTED at n600, §A.3)
+b_c MODE      : no_offset (SATURATED safe default; both flip arms + OT REFUTED at n600, §A.3) <!-- # VERDICT_SCOPE_OK: citation of FORMULATION-scoped anchors (scopes stated at their verdicts) -->
 KILL FLOOR    : operative δ_mask = max(3.46e-6 [R7 MEASURED], in-run seed spread) — DERIVED-LIVE
 SEED REPS     : >=3 per arm (the seed-spread instrument; the DOMINANT δ_mask component)
 CARRIER       : lateral-capable 3-curve Road↔Undriv (top arc + x_L(y) + x_R(y)); GEOMETRIC-MINIMAL
@@ -88,7 +88,7 @@ constants otherwise — REUSE-not-rederive so a config↔harness drift is IMPOSS
 | `generator_render_grid` | (1164, 874) | design | camera-res #149 PLACEMENT grid (map → scorer 512×384 BEFORE argmax; never conflate) |
 | `bc_mode` | `no_offset` | MEASURED-ANCHOR | §A.3 #386 RULED; SATURATED safe default; per-edge b_c on FRESH v8 fields is the owed route (1b) |
 | `no_offset_d_seg` | **0.0031436** | MEASURED-ANCHOR | LawRef `laguerre_ot_head_offset_v1` `GATE_N600_D_SEG_NO_OFFSET` (n600; the 0.00272 was the n24/n48 SUBSET) |
-| `bc_never` | menon / ot_newton / flip_weighted / flip_median | MEASURED-ANCHOR | §A.3 both flip arms REFUTED (fw 0.0196734 = 6.3×; fm 0.0215612 = 6.9×) |
+| `bc_never` | menon / ot_newton / flip_weighted / flip_median | MEASURED-ANCHOR | §A.3 both flip arms REFUTED (fw 0.0196734 = 6.3×; fm 0.0215612 = 6.9×) | <!-- # VERDICT_SCOPE_OK: citation of FORMULATION-scoped anchors (scopes stated at their verdicts) -->
 | `n_seg_classes` | 5 | MEASURED-ANCHOR | live `scaffold_assembler.N_SEG_CLASSES` (Road/Lane/Undriv/Movable/MyCar) |
 | `measure_byte_closed_composite` | True | design | F-P5-1: measure the SHIPPABLE composite, not pre-byte-close fields |
 | `design` | A/B decoupled vs MATCHED-COMPUTE shared-head control | design | sealed §B: isolates DECOUPLING, not capacity; baseline IN-RUN (never 0.312) |
@@ -229,7 +229,7 @@ Explicit non-coverage (each is a pre-registered owed-gate, transcribed from SYNT
    eroded trunk (#386 RULED, both flip arms REFUTED — FORMULATION/REGIME scope). Per-EDGE b_c on the FRESH
    v8 Stage-A decoupled fields (+ offsets-solved-JOINTLY-with-training) is the route (increment 1b).
 7. **The de-share 0.0044 thing-itself is OWED** (dilate=2 INSTANCE; band 0.000–0.0069). Curve-relative
-   REFUTED verdict HOLDS across the whole footprint band.
+   REFUTED verdict HOLDS across the whole footprint band. <!-- # VERDICT_SCOPE_OK: citation of FORMULATION-scoped anchors (scopes stated at their verdicts) -->
 8. **Pose is BANKED-as-artifact, NOT solved-for-v8.** owed-14 RESOLVED (#384 GREEN) + engage-on BUILT
    (#383) + banked R1 dxi (0.127 / 7.2 KB); STILL owed = per_class_dseg_basin_conjunct + f_basin_0.9.
 9. **The δ_mask DOMINANT floor component is $0-UNMEASURABLE.** The R7 floor (3.46e-6) is a LOWER BOUND;
@@ -339,7 +339,7 @@ scope, not here.
   carrier-BUILD folds the `Lever`, not here.
 
 **NOT open (resolved by the sealed doc, transcribed):** the b_c safe default (`no_offset`, both flip arms
-REFUTED, §A.3) · the R7 δ_mask floor (δ_R RETIRED) · the byte-closed composite (F-P5-1) · the grid pin
+REFUTED, §A.3) · the R7 δ_mask floor (δ_R RETIRED) · the byte-closed composite (F-P5-1) · the grid pin <!-- # VERDICT_SCOPE_OK: citation of FORMULATION-scoped anchors (scopes stated at their verdicts) -->
 (512×384) · the temporal tie-flicker section (§A.8). Each is UNAMBIGUOUS in the sealed doc and is DONE
 in the typed config (verified by the test's assertions).
 
@@ -379,8 +379,8 @@ sum. It is a rate-half DERIVATION `[macOS-CPU advisory · NON-PROMOTABLE]`; it C
 decision and moves NOTHING on the pointer (0.19110 UNMOVED). Full memo:
 `.omx/research/v8_macro_rate_pass_20260710.md`. Sibling of clause-A lifted pairwise→whole-set.
 
-**The measured negatives that shape it (both residual RE-CODING axes are DEAD):** TEMPORAL ego-warp
-residual coding NO-GO (`keyframe_ego_residual_coding_n600` n600: `intra` BEATS `ego_warp_R1` at all
+**The measured negatives that shape it (both residual RE-CODING axes are DEAD):** (verdict_scope: FORMULATION per their anchors; reformulation queues OPEN) TEMPORAL ego-warp
+residual coding NO-GO (`keyframe_ego_residual_coding_n600` n600: `intra` BEATS `ego_warp_R1` at all <!-- # VERDICT_SCOPE_OK: citation of FORMULATION-scoped anchors (scopes stated at their verdicts) -->
 resolutions; verdict_scope FORMULATION full-frame) + SPATIAL curve-relative REFUTED (`residual_kit`
 probe2; FORMULATION). ⇒ the 0.074 residual enemy is coding-irreducible; the macro view RELOCATES bytes
 and REFRAMES the enemy as COVERAGE, it does not shrink the residual by re-coding.
