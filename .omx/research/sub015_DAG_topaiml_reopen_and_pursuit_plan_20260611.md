@@ -12737,3 +12737,9 @@ build: `tools/subagent_checkpoint.py` + `.omx/state/subagent_progress.jsonl` (Ca
 `tac.review_counter`, `tac.harness_failure_ledger`, `tac.cathedral.verdict_ledger` (locked-append
 pattern). Consumer list for #389 in landing memo. Pointer 0.19110 UNMOVED (means — coordination
 apparatus, not an exact-eval row).
+
+**Leg-disposition note (2026-07-09, c44da2c7a canon-u3):** session-bus coordination pair is PURE
+APPARATUS (bulletin + recovery manifest; no measured finding, no verdict content, no byte-close, no
+law) — equations leg N/A; commit message omitted `[no-triality]` (should have carried it; the
+"verdict_landed" event-kind token tripped the measurement vocabulary). DAG leg = FEED-canon-u3
+(landed in-commit); DSL leg N/A (no lever/trainer surface). No equation owed.
