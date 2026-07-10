@@ -1,0 +1,103 @@
+{
+  "composition": {
+    "active_levers": [
+      "kalman_innovation_coding",
+      "temporal_delta_backend"
+    ],
+    "deferred_to_ab_protocol": false,
+    "measured": true,
+    "sign": "redundant"
+  },
+  "constraint_carved": "temporal carriers modeled as order-1 random walks; higher-order Kalman (CV/CA) does not reduce rate (pose 0.985x) and hurts on birth/hold-discontinuous carriers (lane 1.14x). Matched error rigorous (bit-identical lossless recon; d_pose=shipped 0.001127/0.001610; lane induced RMS=0 both). FORECLOSES the kalman-innovation rate lever for v7.5.x + v8 temporal sections.",
+  "emitted_at_utc": "2026-07-10T12:58:43Z",
+  "extra": {},
+  "is_negative": true,
+  "measured": true,
+  "reformulation_empty_reason": null,
+  "reformulation_queue": [
+    "correspondence-first + edge-preserving batch denoise for lanes (survey optimum; not innovation coding)",
+    "NIS/chi2 whiteness test on verdict-d_pose vs EMA-shadow forecast as a DIAGNOSTIC (not a rate lever)",
+    "innovation coding IF a future carrier stores a genuinely smooth-continuous ego state (openpilot-rednose regime)"
+  ],
+  "rows": [
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": true,
+      "floor_provenance": "quantization granularity q_levels=4096; ~1% arith/brotli backend noise",
+      "is_authority_axis": false,
+      "is_load_bearing": true,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "600 pairs x 6 se(3) channels",
+      "noise_floor": 0.01,
+      "provenance": {
+        "config_ref": "q_levels=4096; coherent_slot_pack K=6; inputs=R1 pose_carrier.{xi_stored,dxi}+gt_n600.lstars",
+        "git_sha": "cc1279ab7",
+        "inputs_sha256": null,
+        "seed": null,
+        "tool": "scratchpad kalman_dxi.py+kalman_lane.py"
+      },
+      "quantity": "pose_dxi_kalman_cv_vs_delta",
+      "review_status": "reviewed",
+      "units": "ratio bytes(kalman_cv)/bytes(raw_delta)",
+      "value": 0.9852
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": true,
+      "floor_provenance": "brotli-q11 backend noise; identical quantized coherent-slot matrix both sides",
+      "is_authority_axis": false,
+      "is_load_bearing": true,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "600 pairs, 66-dim K=6 matrix",
+      "noise_floor": 0.01,
+      "provenance": {
+        "config_ref": "q_levels=4096; coherent_slot_pack K=6; inputs=R1 pose_carrier.{xi_stored,dxi}+gt_n600.lstars",
+        "git_sha": "cc1279ab7",
+        "inputs_sha256": null,
+        "seed": null,
+        "tool": "scratchpad kalman_dxi.py+kalman_lane.py"
+      },
+      "quantity": "lane_coeff_kalman_cv_vs_delta",
+      "review_status": "reviewed",
+      "units": "ratio bytes(kalman_cv)/bytes(raw_delta)",
+      "value": 1.1376
+    },
+    {
+      "axis_tag": "[macOS-CPU advisory]",
+      "floor_is_known": false,
+      "floor_provenance": null,
+      "is_authority_axis": false,
+      "is_load_bearing": true,
+      "is_n600": true,
+      "n_samples": 600,
+      "n_samples_reason": "validates structure vs reported byte-close 6634B",
+      "noise_floor": null,
+      "provenance": {
+        "config_ref": "q_levels=4096; coherent_slot_pack K=6; inputs=R1 pose_carrier.{xi_stored,dxi}+gt_n600.lstars",
+        "git_sha": "cc1279ab7",
+        "inputs_sha256": null,
+        "seed": null,
+        "tool": "scratchpad kalman_dxi.py+kalman_lane.py"
+      },
+      "quantity": "pose_raw_delta_bytes_validates_vs_6634",
+      "review_status": "reviewed",
+      "units": "bytes raw temporal-delta 6ch x 600 xi",
+      "value": 6602.0
+    }
+  ],
+  "schema_version": "verdict.v1",
+  "scope": {
+    "family_evidence": "predictive/DPCM rate-coding of temporal carriers; delta==random-walk innovation optimum",
+    "level": "formulation",
+    "scoped_to": "kalman_innovation_coding_temporal_carriers_xi_and_lanecoeff"
+  },
+  "stores_consulted": [
+    "r1_dxi_shippability_byteclose_20260708.md",
+    "wave_f_lane_tracking_rate_n600_RESULT.json",
+    "lane_coeff_tracking_denoising_optimal_survey_20260702.md",
+    "johndcook.com/blog/2016/05/24"
+  ],
+  "verdict": "NEGATIVE_LEVER: Kalman innovation coding does not beat temporal-delta on either temporal carrier (pose -1.5% marginal, lane +14% worse); temporal-delta already IS the optimal random-walk innovation coder."
+}

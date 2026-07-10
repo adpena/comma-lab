@@ -1,0 +1,8 @@
+pack done 23.4s  M shape (600, 66)  K=6  presence (600, 6)
+
+=== coherent-slot matched-error (K=6, D=66, P=600) ===
+  raw_delta     brotli= 40934 B  order0=  32995 B  |res|mean=190.75
+  kalman_cv     brotli= 46566 B  order0=  36432 B  |res|mean=226.29  ratio=1.1376
+
+Prior measured coherent_slot_none brotli = 41303 B (validates raw_delta structure).
+Both LOSSLESS over identical Q => induced_lateral_rms = 0 for BOTH (vs lossy RTS 9.5m). Matched error rigorous.

@@ -1,0 +1,19 @@
+xi_eff (600, 6)  xi_stored absmean 0.2296  dxi absmean 0.00382
+q_levels=4096 scales=[5.3976410e-06 7.5287685e-06 3.8741087e-04 1.9326649e-06 1.5616506e-06
+ 3.0353863e-06]
+
+per-channel  |Δ|mean  |innov_cv|mean  |innov_ca|mean  (q-units)
+  ch0   1194.44    965.78   1031.15   alpha=0.30
+  ch1    889.88    725.57    771.11   alpha=0.30
+  ch2    116.03     93.98    100.67   alpha=0.30
+  ch3   1047.05    885.14    926.90   alpha=0.30
+  ch4   1198.28   1010.36   1070.24   alpha=0.30
+  ch5   1397.23   1108.88   1189.12   alpha=0.30
+
+=== TOTAL over 6 channels (600 pairs) ===
+  raw_delta     arith_bytes=  6602  order0_bits=  32294.3 (4037 B)  ratio_vs_raw=1.0000
+  kalman_cv     arith_bytes=  6504  order0_bits=  32104.2 (4013 B)  ratio_vs_raw=0.9852
+  kalman_ca     arith_bytes=  6506  order0_bits=  32121.1 (4015 B)  ratio_vs_raw=0.9855
+
+Reported byte-close raw- xi coded = 6634 B (section 7195). My raw_delta replicate = 6602 B (structure match check).
+Reconstruction bit-identical across predictors => d_pose IDENTICAL = shipped 0.001127 (n24)/0.001610 (n600). Matched error rigorous.
