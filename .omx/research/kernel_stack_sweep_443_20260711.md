@@ -162,3 +162,18 @@ sensitivity-map: N/A (timing, not score axes) · Pareto: ACTIVE (row 1/13 feed t
 waterfill notes) · bit-allocator: N/A · cathedral autopilot: N/A (advisory) · continual-learning: this
 memo + DAG FEED-443 · probe-disambiguator: §2's live-run A/A + the #306 P8/P9 queue ARE the
 disambiguators for the two unresolved attributions.
+
+---
+
+## Relative-significance annotation (magnitude-dismissal rule; appended by main post-land)
+
+Every REJECT/DOWNGRADE in this ledger is a SPEED candidate ⇒ **ΔS = 0 by construction**
+(training-time is lexicographically SECONDARY, never traded vs score — L59), so on the score axis
+ΔS/remaining-gap = 0/0.041 = **0** for every row; the dismissal currency is WALL-CLOCK, and the
+relative numbers on that axis are: row 3 soft-skeleton kernel = 2.8 s/ep ÷ ~170–217 s/ep step =
+**≤1.6% of step time** (MEASURED bound at V9 shapes); row 2 co-load = **≤2% GPU-step delta under
+SATURATING torch+numpy co-load (407→409–414 ms, MEASURED)**, which is within the A/A repeat spread —
+i.e. the noise floor is a MEASURED exit criterion (the #141 pattern), not an eyeball; rows 4–8
+graph-build = **0.6% of build+eval (MEASURED)**. verdict_scope: INSTANCE-per-row (each rejection
+binds the specific candidate at V9 shapes/config; re-open criteria named per row in §1 — e.g. row 3
+re-opens at persistence-classes ≥3–4, rows 2/13 at a live-run A/A).

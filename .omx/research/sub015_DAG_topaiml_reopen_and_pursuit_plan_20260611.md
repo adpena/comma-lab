@@ -15570,7 +15570,7 @@ Task #443 (operator-directed, scope-extended mid-task to ALL training-time code 
 $0 idle-machine benches, `[advisory NON-PROMOTABLE]`. Memo `.omx/research/kernel_stack_sweep_443_20260711.md`
 (the ranked 14-row ledger). **MEASURED headlines:** (1) **CPU-co-load immunity** — the MLX GPU step
 (B=8 SegNet fwd+bwd, grouped-backward ON) is IMMUNE to saturating CPU-torch AND numpy-Accelerate co-load
-(407→409–414 ms, ≤2% = noise) ⇒ the #306 "+12% verdict contention" attribution is NOT reproduced at the
+(407→409–414 ms, ≤2% = within the MEASURED A/A repeat spread — a measured exit criterion, not an eyeball; speed axis ΔS=0/0.041=0 lexicographic-secondary; verdict_scope: instance — re-opens at a live-run A/A) ⇒ the #306 "+12% verdict contention" attribution is NOT reproduced at the
 GPU-step level (residual = GIL/host-side, live-run-A/A-only); the verdict nt-cap/QoS candidate is
 DOWNGRADED to QUEUE-behind-live-measurement. (2) **Scorer thread-count bit-identity:** SegNet argmax+margin
 + PoseNet raw are bit-identical at torch nt∈{2,4,6}; **nt=1 margin DIVERGES** — thread count CAN move
