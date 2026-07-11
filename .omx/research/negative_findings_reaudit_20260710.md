@@ -269,7 +269,7 @@ replicating the EXACT ships-quantizer `_int8_symmetric`.
 **Is there exploitable 2D/temporal locality? NO (measured):**
 - **lag-1 autocorrelation** of the int8 code: axis-0 (temporal) = **−0.037 (R1) / −0.199 (07-05)**; axis-1
   (dim) = **−0.120 / +0.019** — near-zero-to-weakly-**negative**. No temporal smoothness, no cross-dim locality.
-- **temporal-delta (PR95-L25) makes it WORSE** — H(Δ) 7.99 > H 7.35; brotli(delta) 30663 > brotli(raw) 25682 B.
+- **temporal-delta (PR95-L25) makes it WORSE** — H(Δ) 7.99 > H 7.35; brotli(delta) 30663 > brotli(raw) 25682 B. <!-- # MAGNITUDE_DISMISSAL_OK: NOT an absolute-magnitude eyeball call — this is MEASURED un-recoverability (exit criterion cited immediately below, lines 275-284): under a proper train/test split every context model is −12% to −21% WORSE than brotli on HELD-OUT cross-entropy, and brotli already sits below the order-0 held-out CE. Relative-significance ΔS is moot because there is NO positive ΔS to weigh — it is a confirming-NEGATIVE (the achievable rate is at/below the current coder), not a small-win being dismissed. verdict_scope: instance — the fixed near-iid witness code table only; the training-time WeightEntropyPenalty (−19.6%) stays ALIVE. -->
 - **Achievable-rate discipline (train/test split — kills the in-sample conditional-entropy overfit, NO-FAKE):**
   the naive in-sample H(x_{t,d} | up, left) = 1.14 b/sym "79% win" is a **small-sample artifact** — only
   **1.9 samples per distinct (up,left) context** (15903 contexts vs 29975 symbols). Fitting the conditional
