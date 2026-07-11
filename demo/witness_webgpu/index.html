@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Witness · WebGPU + WebNN</title>
+<style>
+  :root {
+    --bg: #080b0e; --panel: #10161b; --panel2: #0b1014; --line: #1d262d;
+    --ink: #cdd8e0; --dim: #6c7b87; --faint: #47535d;
+    --live: #00e676;           /* the witness/Movable green, used with restraint */
+    --warn: #ff5a52; --amber: #ffb020;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: "Inter", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  body { max-width: 1180px; margin: 0 auto; padding: 28px 22px 60px; line-height: 1.5; }
+  a { color: var(--live); }
+  h1 { font-family: var(--mono); font-weight: 600; font-size: 20px; letter-spacing: .02em; margin: 0; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+             color: var(--faint); margin: 0 0 6px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 22px; }
+  header .sub { color: var(--dim); font-size: 13.5px; margin: 8px 0 0; max-width: 74ch; }
+  .authority { display: inline-block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+    color: var(--amber); border: 1px solid #3a2f12; background: #171106; padding: 3px 8px; border-radius: 4px; margin-top: 12px; }
+  .grid { display: grid; grid-template-columns: 512px 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .stage { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  canvas { width: 100%; image-rendering: pixelated; border-radius: 4px; display: block; background: #05070a; }
+  .caption { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 10px; display: flex; justify-content: space-between; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 16px 18px; margin-bottom: 16px; }
+  .panel h2 { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); margin: 0 0 12px; font-weight: 600; }
+  .row { display: flex; align-items: center; gap: 10px; margin: 10px 0; font-size: 13px; }
+  .row label { color: var(--dim); min-width: 78px; font-family: var(--mono); font-size: 11.5px; }
+  input[type=range] { flex: 1; accent-color: var(--live); }
+  select, button { font-family: var(--mono); font-size: 12px; background: var(--panel2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 5px; padding: 6px 9px; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--live); }
+  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .kpi { background: var(--panel2); padding: 11px 13px; }
+  .kpi .k { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .kpi .v { font-family: var(--mono); font-size: 19px; margin-top: 3px; }
+  .v.good { color: var(--live); } .v.warn { color: var(--warn); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 4px; font-family: var(--mono); font-size: 11px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); }
+  .sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; border: 1px solid #0006; }
+  .status { font-family: var(--mono); font-size: 11.5px; color: var(--dim); }
+  .status b { color: var(--ink); font-weight: 600; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .dot.on { background: var(--live); } .dot.off { background: var(--faint); } .dot.err { background: var(--warn); }
+  .note { color: var(--faint); font-size: 12px; line-height: 1.55; }
+  .note code { font-family: var(--mono); color: var(--dim); }
+  footer { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--faint); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow">pact · level-set witness · V9·CGauge</p>
+  <h1>The witness, decoding in your browser</h1>
+  <p class="sub">A real forward pass of a trained level-set witness — the covariant class partition
+    <code>argmax_k φ_k</code> over the frozen-scorer field — ported to a WebGPU compute shader, with an
+    optional WebNN trunk. Curvelet + self-orient directional features → FiLM-modulated hidden stack → 5-class
+    argmax. Scrub the drive; the partition re-solves live on the GPU.</p>
+  <span class="authority">[WebGPU/WebNN demo — NON-AUTHORITY] · a partition is a visualization, never a contest score · pointer 0.19108282 UNMOVED</span>
+</header>
+
+<div class="grid">
+  <div>
+    <div class="stage">
+      <canvas id="cv" width="128" height="96"></canvas>
+      <div class="caption"><span id="capLayer">partition</span><span id="capDims">—</span></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>Controls</h2>
+      <div class="row"><label for="frame">frame</label>
+        <input type="range" id="frame" min="0" max="0" value="0" step="1" />
+        <span class="status" id="frameVal">—</span></div>
+      <div class="row"><label for="layer">layer</label>
+        <select id="layer">
+          <option value="part">witness partition</option>
+          <option value="ref">numpy-fp32 reference</option>
+          <option value="diff">disagreement vs reference</option>
+        </select>
+        <button id="playBtn">▶ play</button></div>
+    </div>
+
+    <div class="panel">
+      <h2>Live readout</h2>
+      <div class="kpis">
+        <div class="kpi"><div class="k">GPU parity vs numpy</div><div class="v good" id="kParity">—</div></div>
+        <div class="kpi"><div class="k">pixels / frame</div><div class="v" id="kPix">—</div></div>
+        <div class="kpi"><div class="k">forward dispatch</div><div class="v" id="kMs">—</div></div>
+        <div class="kpi"><div class="k">epoch (θ*)</div><div class="v" id="kEpoch">—</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Compute substrates</h2>
+      <div class="row status"><span class="dot" id="dotGpu"></span><span id="stGpu">WebGPU — checking…</span></div>
+      <div class="row status"><span class="dot" id="dotNn"></span><span id="stNn">WebNN — checking…</span></div>
+      <p class="note" style="margin-top:10px">WebGPU runs the full witness forward (features → FiLM MLP → argmax).
+      WebNN, when present, runs the <b>trunk projection</b> <code>feats @ Wᵢₙᵀ + b</code> and is checked for
+      agreement with the CPU reference — the neural substrate showcased alongside the geometry. The costate organ
+      (the campaign's marginal-ΔS controller) is what would steer these levers; here it is named, not driven.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>Kernel B (witness forward) as WGSL · fixture exported from a live n600 EMA-best checkpoint · parity target =
+  the numpy-fp32 authority (<code>reference.bin</code>). Serve locally: <code>python -m http.server</code> in this
+  directory, then open <code>/index.html</code> in a WebGPU browser. No network, no CDN, no contest score.</p>
+</footer>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const PAL_FALLBACK = [[64,32,32],[255,0,0],[128,128,96],[0,255,102],[204,0,255]];
+const CLASS_LABELS = ["Road","Lane","Undrivable","Movable","MyCar"];
+
+async function fetchBin(p){ const r = await fetch(p); if(!r.ok) throw new Error(p+" "+r.status); return r.arrayBuffer(); }
+
+async function main(){
+  let fixture, feats, reference, wgsl;
+  try {
+    [fixture, feats, reference, wgsl] = await Promise.all([
+      fetch("fixture.json").then(r=>r.json()),
+      fetchBin("feats.bin").then(b=>new Float32Array(b)),
+      fetchBin("reference.bin").then(b=>new Uint8Array(b)),
+      fetch("witness_forward.wgsl").then(r=>r.text()),
+    ]);
+  } catch(e){ $("stGpu").innerHTML = "Load failed: "+e.message+" — serve with <code>python -m http.server</code>"; $("dotGpu").className="dot err"; return; }
+
+  const M = fixture.meta;
+  const {P, in_feat:INF, hidden_dim:H, n_hidden:NH, n_classes:NC, mod_dim:MOD, grid_w:GW, grid_h:GH, n_frames:NF} = M;
+  const palette = fixture.palette || PAL_FALLBACK;
+  const ACT_KIND = ({hosc:0, wire:1, relu:2})[M.activation];
+  const A0 = ACT_KIND===0 ? M.akw.beta : (ACT_KIND===1 ? M.akw.w0 : 0.0);
+  const A1 = ACT_KIND===0 ? M.akw.omega : (ACT_KIND===1 ? M.akw.s0 : 0.0);
+
+  $("kEpoch").textContent = M.epoch >= 0 ? M.epoch : "—";
+  $("kPix").textContent = P.toLocaleString();
+  $("capDims").textContent = `${GW}×${GH} · in_feat ${INF} · ${NH}×${H} · ${M.activation}`;
+  const cv = $("cv"); cv.width = GW; cv.height = GH;
+  const ctx = cv.getContext("2d"); const img = ctx.createImageData(GW, GH);
+  // legend
+  $("legend").innerHTML = CLASS_LABELS.map((n,i)=>{
+    const c = palette[i].map(v=> v<=1.0001 ? Math.round(v*255) : Math.round(v));
+    return `<span><i class="sw" style="background:rgb(${c[0]},${c[1]},${c[2]})"></i>${i} ${n}</span>`;
+  }).join("");
+
+  // frame slider
+  const fr = $("frame"); fr.max = NF-1; fr.value = 0;
+
+  // ---- WebGPU setup ----
+  if(!navigator.gpu){ $("dotGpu").className="dot err"; $("stGpu").innerHTML="WebGPU not available in this browser."; return; }
+  let device;
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    device = await adapter.requestDevice();
+  } catch(e){ $("dotGpu").className="dot err"; $("stGpu").textContent="WebGPU device error: "+e.message; return; }
+  $("dotGpu").className="dot on"; $("stGpu").innerHTML="<b>WebGPU</b> — device ready · running the full witness forward";
+
+  const W = fixture.weights;
+  const f32 = (a)=>new Float32Array(a);
+  const mkBuf = (arr, usage)=>{ const b=device.createBuffer({size: Math.max(16, arr.byteLength), usage, mappedAtCreation:true});
+    new (arr.constructor)(b.getMappedRange()).set(arr); b.unmap(); return b; };
+  const S = GPUBufferUsage.STORAGE, C = GPUBufferUsage.COPY_DST;
+
+  // static weight buffers
+  const inW = mkBuf(f32(W["in_proj.weight"]), S);
+  const inB = mkBuf(f32(W["in_proj.bias"]), S);
+  const hidW = mkBuf(f32([].concat(...Array.from({length:NH},(_,li)=>W[`hidden.${li}.weight`]))), S);
+  const hidB = mkBuf(f32([].concat(...Array.from({length:NH},(_,li)=>W[`hidden.${li}.bias`]))), S);
+  const outW = mkBuf(f32(W["out_sdf.weight"]), S);
+  const outB = mkBuf(f32(W["out_sdf.bias"]), S);
+  // dynamic buffers (per frame)
+  const featBuf = device.createBuffer({size: P*INF*4, usage: S|C});
+  const filmBuf = device.createBuffer({size: NH*2*H*4, usage: S|C});
+  const outBuf  = device.createBuffer({size: P*4, usage: S|GPUBufferUsage.COPY_SRC});
+  const dimsBuf = mkBuf(new Uint32Array([P,0,0,0]), GPUBufferUsage.UNIFORM|C);
+  const readBuf = device.createBuffer({size: P*4, usage: GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ});
+
+  // pipeline
+  const src = wgsl
+    .replaceAll("{{IN_FEAT}}", INF).replaceAll("{{HIDDEN}}", H).replaceAll("{{N_HIDDEN}}", NH)
+    .replaceAll("{{N_CLASSES}}", NC).replaceAll("{{ACT_KIND}}", ACT_KIND)
+    .replaceAll("{{A0}}", A0.toString().includes(".")?A0:A0+".0")
+    .replaceAll("{{A1}}", A1.toString().includes(".")?A1:A1+".0");
+  const mod = device.createShaderModule({code: src});
+  const pipe = device.createComputePipeline({layout:"auto", compute:{module:mod, entryPoint:"main"}});
+  const bind = device.createBindGroup({layout: pipe.getBindGroupLayout(0), entries:[
+    {binding:0,resource:{buffer:featBuf}},{binding:1,resource:{buffer:inW}},{binding:2,resource:{buffer:inB}},
+    {binding:3,resource:{buffer:hidW}},{binding:4,resource:{buffer:hidB}},{binding:5,resource:{buffer:filmBuf}},
+    {binding:6,resource:{buffer:outW}},{binding:7,resource:{buffer:outB}},{binding:8,resource:{buffer:outBuf}},
+    {binding:9,resource:{buffer:dimsBuf}},
+  ]});
+
+  // FiLM precompute on host: film[j] = film_b[j] + sum_i code[i]*film_w[j*MOD+i]
+  const filmW = W["film.weight"], filmB = W["film.bias"];
+  function computeFilm(code){
+    const out = new Float32Array(NH*2*H);
+    for(let j=0;j<out.length;j++){ let acc=filmB[j]; const base=j*MOD; for(let i=0;i<MOD;i++) acc+=code[i]*filmW[base+i]; out[j]=acc; }
+    return out;
+  }
+
+  let curPartition = new Uint8Array(P);
+  async function runFrame(fi){
+    const code = fixture.codes[fi];
+    const featSlice = feats.subarray(fi*P*INF, (fi+1)*P*INF);
+    device.queue.writeBuffer(featBuf, 0, featSlice);
+    device.queue.writeBuffer(filmBuf, 0, computeFilm(code));
+    const t0 = performance.now();
+    const enc = device.createCommandEncoder();
+    const pass = enc.beginComputePass();
+    pass.setPipeline(pipe); pass.setBindGroup(0, bind);
+    pass.dispatchWorkgroups(Math.ceil(P/64)); pass.end();
+    enc.copyBufferToBuffer(outBuf,0,readBuf,0,P*4);
+    device.queue.submit([enc.finish()]);
+    await readBuf.mapAsync(GPUMapMode.READ);
+    const u32 = new Uint32Array(readBuf.getMappedRange().slice(0));
+    readBuf.unmap();
+    const ms = performance.now()-t0;
+    curPartition = Uint8Array.from(u32);
+    // parity vs numpy-fp32 reference for this frame
+    const ref = reference.subarray(fi*P, (fi+1)*P);
+    let match=0; for(let i=0;i<P;i++) if(curPartition[i]===ref[i]) match++;
+    const frac = match/P;
+    $("kParity").textContent = (frac*100).toFixed(3)+"%";
+    $("kParity").className = "v " + (frac>=0.999?"good":(frac>=0.99?"":"warn"));
+    $("kMs").textContent = ms.toFixed(1)+" ms";
+    draw(fi);
+  }
+
+  function colorFor(cls){ const c=palette[cls]||PAL_FALLBACK[cls]; return c.map(v=> v<=1.0001?Math.round(v*255):Math.round(v)); }
+  function draw(fi){
+    const layer = $("layer").value; $("capLayer").textContent = ({part:"witness partition",ref:"numpy-fp32 reference",diff:"disagreement vs reference"})[layer];
+    const ref = reference.subarray(fi*P, (fi+1)*P);
+    const d = img.data;
+    for(let i=0;i<P;i++){
+      let r,g,b;
+      if(layer==="diff"){ const dis = curPartition[i]!==ref[i]; r=dis?255:12; g=dis?90:16; b=dis?82:20; }
+      else { const cls = layer==="ref"?ref[i]:curPartition[i]; const c=colorFor(cls); r=c[0];g=c[1];b=c[2]; }
+      const o=i*4; d[o]=r; d[o+1]=g; d[o+2]=b; d[o+3]=255;
+    }
+    ctx.putImageData(img,0,0);
+    $("frameVal").textContent = `#${M.frames[fi]}  (${fi+1}/${NF})`;
+  }
+
+  // ---- WebNN optional trunk path ----
+  (async function webnn(){
+    if(!("ml" in navigator)){ $("dotNn").className="dot off"; $("stNn").innerHTML="<b>WebNN</b> — not present · full forward runs on WebGPU"; return; }
+    try {
+      const mlctx = await navigator.ml.createContext();
+      const builder = new MLGraphBuilder(mlctx);
+      // trunk projection: Y = feats @ Wᵀ + b  (feats: P×INF, W: H×INF -> Wᵀ: INF×H)
+      const wt = new Float32Array(INF*H); const Win=W["in_proj.weight"];
+      for(let o=0;o<H;o++) for(let i=0;i<INF;i++) wt[i*H+o]=Win[o*INF+i];
+      const a = builder.input("feats", {dataType:"float32", shape:[P, INF]});
+      const wc = builder.constant({dataType:"float32", shape:[INF, H]}, wt);
+      const bc = builder.constant({dataType:"float32", shape:[H]}, new Float32Array(W["in_proj.bias"]));
+      const y = builder.add(builder.matmul(a, wc), bc);
+      const graph = await builder.build({y});
+      const fi=0; const featSlice = new Float32Array(feats.subarray(fi*P*INF, (fi+1)*P*INF));
+      // CPU reference for pixel 0, output 0
+      let cpu0=W["in_proj.bias"][0]; for(let i=0;i<INF;i++) cpu0+=featSlice[i]*Win[0*INF+i];
+      // API-variant tolerant compute: older MLContext.compute(graph, inputs, outputs)
+      if(typeof mlctx.compute === "function"){
+        const outT = new Float32Array(P*H);
+        await mlctx.compute(graph, {feats: featSlice}, {y: outT});
+        const d = Math.abs(cpu0 - outT[0]);
+        $("dotNn").className = d<1e-2 ? "dot on":"dot err";
+        $("stNn").innerHTML = `<b>WebNN</b> — trunk matmul ran · pixel[0] Δ=${d.toExponential(1)} ${d<1e-2?"✓ agrees with CPU":"⚠"}`;
+      } else {
+        // Newer MLTensor-based dispatch not wired in this static demo.
+        $("dotNn").className="dot on";
+        $("stNn").innerHTML = "<b>WebNN</b> — graph built (MLTensor dispatch API not wired here) · WebGPU runs the forward";
+      }
+    } catch(e){ $("dotNn").className="dot off"; $("stNn").innerHTML="<b>WebNN</b> — present but trunk build unsupported ("+e.message.slice(0,48)+") · WebGPU covers it"; }
+  })();
+
+  // wiring
+  fr.addEventListener("input", ()=> runFrame(+fr.value));
+  $("layer").addEventListener("change", ()=> draw(+fr.value));
+  let playing=false, timer=null;
+  $("playBtn").addEventListener("click", ()=>{
+    playing=!playing; $("playBtn").textContent = playing?"⏸ pause":"▶ play";
+    if(playing){ timer=setInterval(()=>{ let n=(+fr.value+1)%NF; fr.value=n; runFrame(n); }, 700); }
+    else clearInterval(timer);
+  });
+
+  await runFrame(0);
+}
+main();
+</script>
+</body>
+</html>
