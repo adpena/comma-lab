@@ -15594,3 +15594,27 @@ V9 shapes); the co-load immunity is host-conditional. Relative significance: ΔS
   DSL-held + ON) · equations = N/A-with-reason (no new law; §3.4 is an ANCHOR on a built kernel, and
   rows 3/9/10 sit inside the existing `witness_fp_reorder_transform_bit_identity_wall_v1` scope).
   Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS).
+
+### FEED-432-FIRED (2026-07-11) — THE V9·CGAUGE CAPSTONE ARM IS LIVE (operator-GO "wait for 436 then launch"; #436 landed → fired)
+SIGNAL: all gates green — #439 T1 SEAL PROCEED · #441 review FIRE-WITH-REVISIONS recorded at the config
+memo (whole-arm pointer bet vs frozen 0.19108282; #205 NOT a matched control) · #356/#443 compute frontier
+confirmed (arm already carries every bit-identical speed lever). ACTION: governed fire. First invocation
+REFUSED rc=6 by the launch-readiness gate (2 fire-now duty rungs neither included nor deferred) — the
+apparatus working; resolution = recorded `# LAUNCH_READINESS_DEFER:` lines in launch.sh for
+HorizonWeightedMargin + StepNativeActivation (reason: P12-increment discipline per the #432 memo — no
+never-fired rung folded blind; each owed its OWN increment on the NEXT arm), then direct
+spawn_durable_daemon on the gate-passed script (launcher gates all PASSED same-session: mem-preflight
+24.48 GiB · admission ADMIT headroom 43.3 GiB · throughput 416.3ms ≤ 700 · wall-clock 7.60d ≤ 8.31d budget ·
+OOM preflight 73.9 GiB headroom · dsl-config 165 flags typed-validated · schedule-provenance PASS).
+LIVE: trainer pid 44248 (safe_run rss-cap 90 GB, per-arm timeout 14d), detached session VERIFIED; init
+telemetry healthy (palette_anchor applied · lane_prior_phi1 paint+dash-gate 5 lanes · structured_init all
+5 roles, pretrain disagree 0.00528 · pose_carrier source=GENERATED store-nothing table, s_t_fit min at
+0.044 → 2.562 · grouped-backward ACTIVE). Shadow observer STARTED (SENSE-only, ADVISORY per operator —
+organ watches, never actuates; run 2 of the organ's trajectory corpus). Activation ledger: 10 DSL levers
+recorded FIRED. Apparatus follow-up (small, owed): launch_witness_run should grow a --readiness-defer
+passthrough so defers survive launch.sh regeneration (this fire used direct-sdd + manual defer lines).
+Sister event: #438 cloud-launcher relaunched RESILIENT (interactive codex in detached Terminal, pid 37206
+— 4th codex-exec wrapper death prompted the osascript/Terminal pattern; operator-directed).
+- **triality:** DAG = this FEED · DSL = N/A (no lever changed; config = the sealed v9_cgauge_432 compile) ·
+  equations = N/A (a LAUNCH event, no measured law; the run's byte-closed exact row is the registrable
+  object when it lands). Pointer 0.19108282 [contest-CPU] UNMOVED — the arm exists to MOVE it. [no-triality]
