@@ -15164,7 +15164,9 @@ fidelity vs cached argmax, NOT through R):
 (1) **The argmax IS power-diagram-shaped (#284 structure CONFIRMED):** Laguerre weights decisively beat weight-blind
 Voronoi (K=1024 bulk 0.9048 -> 0.9927 with tau-relaxed CE refinement; synthetic control 0.917->0.996). BUT the pure
 global diagram FLATTENS at ~7e-3 residual (K=1024 = 3.7KB/frame, band agreement stalls 0.886) — "few generators for
-everything" is REFUTED as a sufficient carrier at d_seg-relevant fidelity.
+everything" is REFUTED (verdict_scope: formulation — the SINGLE GLOBAL few-generator Laguerre-diagram-for-all-classes
+formulation only; the per-class geometry-matched HYBRID family is MEASURED-FEASIBLE below, and the store-generators
+PARADIGM is CONFIRMED) as a sufficient carrier at d_seg-relevant fidelity.
 (2) **The per-class geometry-matched HYBRID dominates:** MyCar static mask 125 B TOTAL (IoU 0.993) + Movable moment
 ellipses 10.5 B/f (IoU 0.82) + Lane poly-curve band 97 B/f (recall 0.835, THE weak class) + Road/Undriv ONE small-K
 power diagram 116 B/f (recall 0.981/0.998; ru_k knee shallow above 16) => UNION bulk 0.9921 / band 0.877 at
