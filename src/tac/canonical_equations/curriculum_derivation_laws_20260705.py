@@ -62,6 +62,14 @@ EMA_LAG_FACTOR_EARLY_MEASURED = 78.0  # cert C3: measured early-stage shadow lag
 MUON_DSEG_GAIN_VS_ADAMW = -0.32     # fork A/B 20260622: -32% d_seg, gap widening
 MUON_COLD_SWITCH_TRANSIENT = 0.08   # cert B5: +8% d_seg at the cold ep726 switch, ~75 ep recovery
 
+# --- Law 5 (phase-tail hand-off, 2026-07-10 flicker reframe) -------------------------------------
+LABEL_FLOOR_DSEG = 0.005318         # GT stride-2 spike rate = temporal-majority persistence floor
+LABEL_FLOOR_BAND = (0.00496, 0.00700)  # converged-residual band (witness popout 0.00496 -> +margin)
+PHASE_NEED_BAND = (0.00077, 0.00118)   # sub-0.15 d_seg need (openpilot lane-band) = 4.5-7x below floor
+PHASE_EXISTENCE_DSEG = 0.00086     # real-frame content through R (FEED-ma) — below the floor
+BLINK_BACK_FRACTION = 0.418        # single-frame revert share => the PREDICTABLE-phase gradient share
+PHASE_WEIGHT_FRACTION_OF_SUBPIX = 0.4  # w_p = 0.4*w_subpix (derived from the blink-back fraction)
+
 
 def handoff_ready(rel_slope: float, epochs_in_stage: int,
                   per_class_nucleus_ok: list[bool] | tuple[bool, ...],
@@ -101,6 +109,20 @@ def min_rewarmup_epochs(beta2: float, steps_per_epoch: int) -> int:
     if int(steps_per_epoch) <= 0:
         raise ValueError(f"steps_per_epoch={steps_per_epoch} must be > 0")
     return math.ceil((1.0 / (1.0 - float(beta2))) / float(steps_per_epoch))
+
+
+def phase_tail_ready(rel_slope: float, d_seg_latest: float, stage_is_label_smooth: bool,
+                     *, floor_band: tuple[float, float] = LABEL_FLOOR_BAND,
+                     flat_eps: float = HANDOFF_PLATEAU_REL_EPS) -> bool:
+    """Law 5 callable: the label->phase hand-off fires iff the LABEL-SMOOTH flow has settled
+    at the temporal-majority persistence floor (analogue of Law 1's CE->tau nucleus trigger,
+    on the TEMPORAL/finest-persistence axis). Fire <=> label-smooth stage AND d_seg within the
+    converged-residual band AND flat (|rel slope| <= plateau eps). Below the floor is the
+    APPEARANCE-PHASE regime (T1 + #360), the ONLY descent to the sub-0.15 need band."""
+    lo, hi = float(floor_band[0]), float(floor_band[1])
+    at_floor = lo <= float(d_seg_latest) <= hi
+    flat = abs(float(rel_slope)) <= float(flat_eps)
+    return bool(stage_is_label_smooth) and at_floor and flat
 
 
 def _sidecar_prov(reactivation: str):
@@ -421,11 +443,102 @@ def build_rewarmup_beta2_memory_window_v1() -> CanonicalEquation:
     )
 
 
+def build_label_floor_to_phase_tail_handoff_v1() -> CanonicalEquation:
+    """Law 5: the label-smooth flow has a FINEST-PERSISTENCE floor (the temporal-majority
+    oracle), and reaching it is the DERIVED transition into the appearance-phase tail — the
+    curriculum is a co-equal dimension of the one level-set flow, not a bolt-on stage."""
+    anchor = EmpiricalAnchor(
+        anchor_id="label_floor_equals_gt_spike_rate_phase_tail_20260710",
+        measurement_utc="2026-07-10T00:00:00Z",
+        inputs={
+            "gt_spike_rate": "n600 cached lstars stride-2 single-frame spike rate (flicker memo Part D)",
+            "witness_residual": "#205 popout floor d_seg 0.00496-0.0052 (L67/FEED-03u)",
+            "existence_proof": "real-frame content through R d_seg 0.00086 (FEED-ma SIGNAL A)",
+            "blink_back": "n600 single-frame revert fraction (flicker memo §2.2)",
+        },
+        predicted_output={
+            "naive_default": "a flat d_seg at ~0.0053 == 'converged, advance/early-stop' "
+                             "(the scalar plateau green)",
+        },
+        empirical_output={
+            "floor_is_spike_rate": f"witness converged residual ~0.005 == GT spike rate "
+                                   f"{LABEL_FLOOR_DSEG} (temporal-majority oracle) — a Morse-Smale "
+                                   f"persistence threshold at one resolution/temporal cell, NOT a "
+                                   f"converged minimum",
+            "need_below_floor": f"sub-0.15 need band {PHASE_NEED_BAND} is 4.5-7x BELOW the floor; "
+                                f"no smooth-label witness reaches it (eq independent_flicker_"
+                                f"jitter_dseg_floor_smooth_optimal_v1)",
+            "pierceable_by_phase": f"appearance-phase channel reaches d_seg {PHASE_EXISTENCE_DSEG} "
+                                   f"< floor (FEED-ma) — the phase is deterministic, per-pair-"
+                                   f"storable, low-dim (advected by ξ)",
+            "weight_derivation": f"predictable-phase gradient share = blink-back fraction "
+                                 f"{BLINK_BACK_FRACTION} => w_p = {PHASE_WEIGHT_FRACTION_OF_SUBPIX}"
+                                 f"*w_subpix (NOT tuned)",
+            "engage_at_l7": "the forces engage at the l7/sharpening boundary = the flow's FINEST "
+                            "curvelet/persistence scale, where the sub-pixel phase lives (the "
+                            "energy's scale structure places the phase there, not a hand-set epoch)",
+        },
+        residual=0.0,
+        source_artifact=".omx/research/flicker_transform_geometry_term_design_20260710.md",
+        measurement_method="$0 n600 cached-argmax analysis + exact R ops (no scorer forward; "
+                           "flicker deep-dive 2026-07-10)",
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        provenance=_sidecar_prov(
+            "the floor value + need band are n600-measured; the phase-tail's net-S is a run-time "
+            "A/B (T1 + #360 build owed) — re-mine the floor if the vehicle/scorer changes"),
+    )
+    return CanonicalEquation(
+        equation_id="label_floor_to_phase_tail_handoff_v1",
+        name=("label->phase hand-off: fire <=> label-smooth stage AND d_seg in "
+              "[0.00496,0.00700] around the GT spike rate 0.005318 AND flat; below the floor "
+              "is the appearance-phase regime (T1 + #360), the only sub-0.15 descent"),
+        one_line_summary=(
+            "the label-smooth flow's finest-persistence floor = GT spike rate 0.0053; reaching it "
+            "is the DERIVED switch to the appearance-phase tail, not a converged stop."
+        ),
+        latex_form=(
+            r"\mathrm{fire} \iff \mathrm{label\text{-}smooth} \wedge d_{seg}\in[0.00496,0.00700]"
+            r" \wedge |\dot d_{seg}/d_{seg}|\le 10^{-4};\quad d_{seg}^{floor}=0.005318"
+            r"=\mathrm{spike\ rate};\ w_p=0.4\,w_{subpix}"
+        ),
+        python_callable_module_path=f"{_MODULE}:phase_tail_ready",
+        domain_of_validity={
+            "vehicle": ["softmax_of_sdf_levelset_witness"],
+            "lever": "phase_advection_consistency (T1) + p0_forces (#360) + --seg-spike-downweight "
+                     "(T2/#274); the SENSE detector = tac.witness_control.label_floor_detector",
+            "measurement_axis": ["macOS-CPU advisory"],
+            "note": "the floor is n600-measured on THIS video/scorer (FAMILY-level for smooth-label "
+                    "witnesses); the phase-tail forces are BUILD-owed (T1 + #360); w_p derivation "
+                    "assumes #360's per-term gnorm telemetry for the 0.4*subpix target",
+        },
+        units_in={"rel_slope": "per_epoch_fraction", "d_seg_latest": "argmax_disagreement_rate",
+                  "stage_is_label_smooth": "bool"},
+        units_out={"fire": "bool"},
+        empirical_anchors=(anchor,),
+        predicted_vs_empirical_residual={
+            # naive plateau early-stop vs the 4.5-7x sub-floor descent it abandons
+            "sub_floor_descent_ratio_abandoned_by_early_stop": 5.7,
+        },
+        last_calibration_utc="2026-07-10T00:00:00Z",
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
+        canonical_consumers=(
+            "tac.witness_control.label_floor_detector",
+            "tac.witness_control.shadow_controller",
+            "tac.witness_dsl.schedule_readback",
+        ),
+        canonical_producers=(
+            "experiments/train_levelset_witness_realized_through_R_mlx.py",
+        ),
+        provenance=_pred_prov("label_floor_to_phase_tail_handoff.v1"),
+    )
+
+
 ALL_CURRICULUM_DERIVATION_BUILDERS = (
     build_curriculum_handoff_critical_nucleus_v1,
     build_ema_window_pi_group_v1,
     build_muon_switch_conditioning_criterion_v1,
     build_rewarmup_beta2_memory_window_v1,
+    build_label_floor_to_phase_tail_handoff_v1,
 )
 
 
@@ -466,14 +579,19 @@ __all__ = [
     "MUON_COLD_SWITCH_TRANSIENT",
     "MUON_DSEG_GAIN_VS_ADAMW",
     "NUCLEUS_PI1_KNEE",
+    "LABEL_FLOOR_DSEG",
+    "PHASE_NEED_BAND",
+    "PHASE_WEIGHT_FRACTION_OF_SUBPIX",
     "build_curriculum_handoff_critical_nucleus_v1",
     "build_ema_window_pi_group_v1",
+    "build_label_floor_to_phase_tail_handoff_v1",
     "build_muon_switch_conditioning_criterion_v1",
     "build_rewarmup_beta2_memory_window_v1",
     "ema_window_steps",
     "handoff_ready",
     "min_rewarmup_epochs",
     "muon_switch_ready",
+    "phase_tail_ready",
     "pi_ema",
     "populate_curriculum_derivation_laws_equations",
 ]

@@ -299,3 +299,36 @@ is pre-registered so the live run resolves it mechanically.
 
 **HARD GATE: pointer 0.19110 UNMOVED. Everything here is MEANS; the first milestone after run-2
 converges remains a byte-closed `upstream/evaluate.py` n600 exact row.**
+
+---
+
+## ADDENDUM (2026-07-10) — Law 5: the PHASE TAIL is the flow's finest-persistence level (the appearance-phase reframe fold)
+
+**Source:** flicker deep-dive `.omx/research/flicker_transform_geometry_term_design_20260710.md` (DAG FEED-flicker-term) + coordinator directive "curriculum is a CO-EQUAL DIMENSION of the one level-set flow… DERIVE it from the same energy". This addendum folds the appearance-phase reframe into the #302 curriculum as a DERIVED law, not a bolt-on stage. Advisory/design; pointer 0.19108282 UNMOVED.
+
+### The derived fact
+The label-smooth stages (CE→tau→l7 = coarse→fine curvelet scale = Morse-Smale persistence order, MEMORY L3) CONVERGE to the **temporal-majority oracle floor d_seg = 0.005318** (the GT stride-2 single-frame SPIKE rate, n600; flicker memo §2.4/§2.5, eq candidate `gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1`). This floor is a **Morse-Smale persistence threshold at one resolution/temporal cell** — the spikes are the space-time margin field's birth-death pairs below one cell (spatial p50 0.56 < annulus 0.897; temporal persistence = 1 scored frame). Label-smooth objectives (CE/margin/soft-cosine) CANNOT descend below it. The sub-0.15 need band (0.00077–0.00118) is **4.5–7× below** the floor; it is pierceable ONLY by the deterministic **appearance-phase** channel (existence proof: real-frame content through R d_seg 0.00086, FEED-ma).
+
+### Law 5 — `label_floor_to_phase_tail_handoff_v1` (registered; `tac.canonical_equations.curriculum_derivation_laws_20260705`)
+The phase tail is **NOT a new appendage** — it is the FINEST persistence level of the SAME flow, where the sub-pixel phase lives (lowest-persistence critical points). That is WHY the phase forces engage at the l7 boundary: the energy's scale structure places the phase there. The label→phase hand-off (analogue of Law 1's CE→tau critical-nucleus trigger, on the temporal/finest-persistence axis) fires iff:
+- the latest stage is **label-smooth** (CE/tau/l7/smooth/c1a), AND
+- d_seg sits in the **persistence-floor band [0.00496, 0.00700]** (converged-residual band around the oracle 0.005318), AND
+- d_seg is **flat** (|rel slope| ≤ the calibrated plateau gate 1e-4).
+Callable: `phase_tail_ready(rel_slope, d_seg_latest, stage_is_label_smooth)`.
+
+### The two-move late stage (opposite signs, both on the annulus tie-field)
+1. **T1 phase_advection_consistency + #360's four within-pair forces** — DESCEND the ξ-coherent deterministic phase (the predictable channel). Derived weight **w_p = 0.4·w_subpix** (blink-back fraction 0.418 = the predictable-phase gradient share, §2.2 — NOT tuned). Engage at l7; ramp at stage boundaries only; cap ≤10% total loss (under the 40% domination alarm).
+2. **T2 `--seg-spike-downweight` (#274, BUILT)** — DOWNWEIGHT the aleatoric residue (~30% of annulus jitter is the 2.66-LSB sensor floor); don't chase AA-irremovable single-frame spikes. Derived value ∈ {0.0, 0.25} (CE mass removed ≤0.53% of px). Do NOT `--seg-coherent-upweight` (owned by T1/#360 — no double-weight, #360 §5.2).
+
+### The floor is a curriculum TRANSITION EVENT (SENSE-triggered hand-off)
+When the label-smooth d_seg slope flattens at ~0.005 (detected by `tac.witness_control.label_floor_detector.label_floor_reached`), that is the DERIVED signal to engage the phase tail — an event-triggered hand-off exactly like the C1/C2 CE→tau nucleus gate (#315), on the finest-persistence axis. Pre-registered fire criterion = Law 5's three-clause predicate.
+
+### Coupling (co-equal dimension, per the coordinator)
+- **To the FORCES:** the schedule anneals TOWARD T1's ξ-coherent phase and must NOT re-open #360's satisficing hinge (margin-chasing cap). Cross-check against the T1 (a267f6564f144fbf0) + #360 (a6706528c54b4a4ff) build agents' landed Lever factories.
+- **To the CARRIER:** the terminal Morse-Smale skeleton the label-smooth stages build IS what the phase-carrier stores; the phase tail refines the phase the carrier stores the residual of. Reach-floor-then-phase-tail is not just compute economy (#306: over-training label-smooth past the floor is wasted compute) — it is the skeleton→phase→carrier order.
+- **To the COSTATE:** the controller's DECIDE ranks the phase levers by λ per DIMENSION, coupled (λ_seg=100 is the phase dimension; λ_pose is the non-rising guard; λ_rate=25/37545489 is the carrier dimension via the #336 sensitivity waterfill), not per-lever-independent.
+
+### Owed constants (flagged honestly)
+- w_p = 0.4·w_subpix assumes #360's per-term gnorm telemetry to hit the 0.4·subpix target (owed to #360 phase-2).
+- the exact l7 onset epoch is the finest-curvelet-scale onset — traced to the energy's scale structure but its epoch value is the run's l7_start (inherited); a fully-derived onset is owed.
+- net-S of the phase tail is a run-time A/B (T1 + #360 build owed); this addendum is the DERIVATION + wiring, not a score.

@@ -61,6 +61,11 @@ from tac.witness_control.verdict_trend_alarm import (
     TRAIN_VERDICT_DECOUPLING,
     verdict_trend_alarm,
 )
+from tac.witness_control.label_floor_detector import (
+    LABEL_FLOOR_REACHED,
+    _is_phase_tail_lever,
+    label_floor_reached,
+)
 
 #: overlay classification when the verdict-trend alarm fires on a scalar false-green
 #: (the operator-catch 2026-07-09 class): CONVERGING is FORBIDDEN when the advisory
@@ -349,6 +354,17 @@ def _classify(inputs: RunInputs) -> dict | None:
             ("TRAIN<->VERDICT DECOUPLING" if vt.classification == TRAIN_VERDICT_DECOUPLING
              else "RISING VERDICT") + " (operator-catch 2026-07-09): " + vt.reason
             + f" [scalar monitor said '{cv.classification}': {cv.recommendation}]")
+    # (task #247/#303 phase-reframe fold, 2026-07-10) LABEL-FLOOR / PHASE-REGIME SENSE.
+    # ORTHOGONAL to the false-green overlays above (a healthy transition, not a confound):
+    # when a label-smooth witness has settled at the temporal-majority persistence floor
+    # (d_seg ~0.0053, |slope|~0), label descent is EXHAUSTED — the remaining 4.5-7x descent
+    # is APPEARANCE-PHASE (flicker memo §2.5). This is a REGIME TAG the DECIDE layer keys on
+    # to recommend the phase-tail hand-off (T1 + #360 + T2); it does NOT override the
+    # false-green classes (which win when a real decoupling/stall is also present). It DOES
+    # suppress a naive plateau early-stop at the floor (that would abandon the sub-floor path).
+    lf = label_floor_reached(inputs.verdicts)
+    out["label_floor"] = lf.to_dict()
+    out["phase_regime"] = lf.phase_regime   # LABEL_FLOOR_REACHED or None
     return out
 
 
@@ -378,6 +394,7 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
     ds_dep = by_name.get(f"dS_depoch[stage={stage}]")
     rollback = by_name.get("dS_rollback_to_best")
     cls = (classification or {}).get("classification")
+    phase_regime = (classification or {}).get("phase_regime")   # LABEL_FLOOR_REACHED or None
     candidates: list[dict] = []
 
     def _cand(action: str, delta: float, band: list[float] | None, rationale: str,
@@ -387,6 +404,64 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
             "horizon_epochs": horizon_epochs, "rationale": rationale,
             "evidence": list(evidence), "costate": costate_name,
         })
+
+    # (task #247/#303 phase-reframe fold, 2026-07-10) THE TWO-MOVE PHASE HAND-OFF.
+    # When SENSE reports the label-floor regime, the DECIDE layer recommends the
+    # curriculum's phase-tail (the flow's FINEST persistence level, where the
+    # deterministic sub-pixel phase lives): DESCEND the ξ-coherent deterministic phase
+    # (T1 + #360's four within-pair forces) WHILE DOWNWEIGHTING the aleatoric residue
+    # (T2 = #274 spike-downweight — don't chase AA-irremovable GT-side noise). The two
+    # moves have OPPOSITE signs on the same annulus tie-field (flicker memo §4). This is
+    # ADVISORY only (CONTAINMENT): predicted ΔS is 0.0 (a never-fired lever has NO measured
+    # costate — NO-FAKE), so the rows carry the DERIVED rationale + the coupled per-dimension
+    # costate reading, NOT a fabricated drop. The two moves are ranked so T2 (BUILT, one
+    # flag flip) precedes T1 (next crucible increment), per the memo sequencing.
+    if phase_regime == LABEL_FLOOR_REACHED:
+        lf = (classification or {}).get("label_floor") or {}
+        # COUPLED per-dimension costate reading (coordinator 2026-07-10: λ = the flow's
+        # Pontryagin costate; read per DIMENSION, not per-lever-independent). The phase
+        # levers act on the d_seg dimension (λ_seg = 100, the largest term); λ_pose is the
+        # NON-RISING guard (the moves must not raise d_pose); λ_rate = 25/37545489 is the
+        # carrier dimension (#336 sets the phase-carrier's rate by sensitivity waterfill).
+        lam_pose_c = by_name.get("lambda_d_pose")
+        lam_pose_txt = (f"; coupled λ_pose={lam_pose_c.value:.3g} (non-rising guard)"
+                        if lam_pose_c is not None and lam_pose_c.value is not None else
+                        "; λ_pose non-rising guard (unidentified until d_pose series lands)")
+        floor_txt = (f"d_seg {lf.get('d_seg_latest')} at the oracle floor "
+                     f"{lf.get('oracle_floor')} (stage {lf.get('stage')})")
+        _cand("FIRE_T2_SPIKE_DOWNWEIGHT_ALEATORIC", 0.0, None,
+              "PHASE HAND-OFF move 1 of 2 (aleatoric branch, BUILT lever #274 --seg-spike-"
+              "downweight, one flag flip): STOP chasing the sensor-driven single-frame spikes "
+              "(~30% of annulus jitter is the 2.66-LSB sensor floor) — hard-CE to a spiked label "
+              "injects a wrong-target gradient at the highest-loss pixels (44% of CE-residual = "
+              "Lane spikes, L67). Derived value --seg-spike-downweight in {0.0, 0.25} (CE mass "
+              "removed <= 0.53% of px, domination-safe). COUPLING: do NOT --seg-coherent-upweight "
+              "(the coherent branch is owned by T1/#360 — no double-weight, #360 §5.2). Acts on "
+              "the d_seg dimension (λ_seg=100)" + lam_pose_txt + ". Caps the witness at the "
+              "0.0053 floor if run alone — mid-game noise-hygiene, NOT the sub-floor descent.",
+              ("flicker memo §4 T2 + §2.5; " + floor_txt,
+               "eq gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1 (owed-registration)",
+               "duty: seg_spike_downweight (activation ledger; BUILT never-fired, L31)"),
+              "phase_regime[aleatoric]")
+        _cand("ENGAGE_T1_PHASE_ADVECTION_PLUS_360_FORCES", 0.0, None,
+              "PHASE HAND-OFF move 2 of 2 (predictable-phase branch, the sub-floor descent path): "
+              "DESCEND the deterministic ξ-coherent appearance phase — engage T1 "
+              "(phase_advection_consistency: cross-pair ξ-advected sub-pixel tie-phase on the "
+              "stride-2 scored sequence) + #360's four within-pair forces at the l7/sharpening "
+              "boundary (the flow's FINEST curvelet/persistence scale, where the sub-pixel phase "
+              "lives — that is WHY the forces engage at l7, not a hand-set boundary). This is the "
+              "ONLY path below the 0.0053 label floor (existence proof: real-frame content through "
+              "R d_seg 0.00086, FEED-ma; need band 0.00077-0.00118). Derived weight w_p = "
+              "0.4*w_subpix (flicker fraction 0.42-0.44, blink-back 41.8%); ramp at stage "
+              "boundaries only, cap <=10% total loss (under the 40% domination alarm). COUPLING: "
+              "the schedule anneals TOWARD T1's ξ-coherent phase and must NOT re-open #360's "
+              "satisficing hinge (margin-chasing cap); the terminal Morse-Smale skeleton IS what "
+              "the phase-carrier stores. Acts on the d_seg dimension (λ_seg=100)" + lam_pose_txt +
+              "; carrier rate set by #336 sensitivity waterfill (λ_rate=25/37545489).",
+              ("flicker memo §4 T1 + §3 (Morse-Smale/eikonal) + §2.5",
+               "coordinator 2026-07-10: curriculum = co-equal dimension of the one level-set flow",
+               "duty: phase_advection_consistency + p0_force* (activation ledger, ranked HIGH)"),
+              "phase_regime[predictable_phase]")
 
     if cls == VERDICT_RISING_DECOUPLING:
         vt = (classification or {}).get("verdict_trend_alarm") or {}
@@ -432,13 +507,24 @@ def _recommendations(inputs: RunInputs, costates: list[CostateEstimate],
               "risks fighting a transient (the #205 transition-analysis rule)",
               tuple((classification or {}).get("recommendation", "").splitlines()) or
               ("canonical monitor persistence rule",), None)
-    elif cls == "plateau":
+    elif cls == "plateau" and not phase_regime:
         _cand("ADVANCE_STAGE_OR_EARLY_STOP", 0.0,
               (_band_from(ds_dep, float(horizon_epochs))[1] if ds_dep and ds_dep.stderr
                else None),
               "|dS/dep| ≈ 0 within stage — the Lyapunov certificate has flattened; the "
               "marginal value of more epochs here is ~0, so advance or stop",
               (ds_dep.evidence if ds_dep else ()), (ds_dep.name if ds_dep else None))
+    elif cls == "plateau" and phase_regime == LABEL_FLOOR_REACHED:
+        # a plateau AT the label floor is NOT an early-stop signal — the flat d_seg is the
+        # persistence floor, and the sub-floor descent is the phase tail (emitted above).
+        _cand("PHASE_HANDOFF_NOT_EARLY_STOP", 0.0, None,
+              "|dS/dep| ≈ 0 here is the LABEL-SMOOTH PERSISTENCE FLOOR, not a converged stop: "
+              "advancing/early-stopping abandons the 4.5-7x sub-floor descent that only the "
+              "phase tail (T1 + #360, above) reaches. Continue into the phase regime, do NOT "
+              "early-stop.",
+              ("flicker memo §2.5 (floor != convergence)",
+               "the phase-tail hand-off supersedes the naive plateau early-stop"),
+              None)
     elif cls == "converging" and ds_dep is not None and ds_dep.status == MEASURED:
         central, band = _band_from(ds_dep, float(horizon_epochs))
         _cand("CONTINUE_STAGE", central, band,
@@ -502,7 +588,7 @@ def _probe_queue(costates: list[CostateEstimate]) -> list[dict]:
             for c in costates if c.status == UNIDENTIFIABLE]
 
 
-def _duty_to_measure() -> list[dict]:
+def _duty_to_measure(phase_active: bool = False) -> list[dict]:
     """The #247 SENSE→DECIDE queue: DSL levers the activation ledger records as OWED a measurement
     (never-fired OR fired-but-unmeasured, not retired). Fail-safe: the ledger must NEVER break a
     shadow report, so any import/read error yields an empty queue (the report degrades to legacy).
@@ -510,6 +596,13 @@ def _duty_to_measure() -> list[dict]:
     NO-FAKE: each row carries the ledger's activation state ONLY — no predicted ΔS (a never-fired
     lever has no measured costate). The controller surfaces these so "off" is a tracked queue the
     operator never has to remember; they enter the ΔS-per-cost DECIDE ranking after they fire+measure.
+
+    (#247/#303 phase-reframe fold) when ``phase_active`` (SENSE reports the label-floor regime),
+    the phase-tail levers (T1 + #360's forces + T2 + phase-carrier) are the sub-floor descent path,
+    so they are marked ``phase_regime_high`` and floated to the FRONT of the queue (duty-to-measure
+    ranking); a synthetic #336 sensitivity-bit-alloc duty row is appended (the COMPRESS half of
+    train-big-compress-small: the phase-carrier's rate is set by the sensitivity waterfill, tied to
+    the first witness checkpoint). All advisory — CONTAINMENT unchanged.
     """
     try:
         from tac.witness_dsl import activation_ledger as _al
@@ -518,6 +611,21 @@ def _duty_to_measure() -> list[dict]:
         for r in rows:
             r["why"] = ("registered DSL lever OWED a measurement (default-off is a tracked queue, "
                         "not a forgotten default); NO predicted ΔS until fired+measured")
+            r["phase_regime_high"] = bool(phase_active and _is_phase_tail_lever(r.get("lever", "")))
+        if phase_active:
+            # #336 fold: the sensitivity bit-allocation is a TRAINING-TIME lever (the compress half
+            # of the phase channel); tie it to the first witness checkpoint. Surfaced as a duty row
+            # (NOT a fabricated ledger lever — it is a producer, not a Lever factory) with no ΔS.
+            rows.append({
+                "lever": "sensitivity_bit_alloc_phase_carrier (#336/#157)",
+                "status": "duty_to_measure_producer", "ever_fired": False,
+                "phase_regime_high": True,
+                "why": ("#336 sensitivity waterfill sets the phase-carrier's rate (train-big-"
+                        "compress-small); MEASURE at the first witness checkpoint — the carrier "
+                        "stores the terminal Morse-Smale skeleton residual, rate not a fixed budget"),
+            })
+            # float phase-high rows to the front (stable: preserve intra-group order)
+            rows.sort(key=lambda r: 0 if r.get("phase_regime_high") else 1)
         return rows
     except Exception:  # noqa: BLE001 — advisory sidecar must never break the report
         return []
@@ -597,13 +705,14 @@ def build_shadow_report(inputs: RunInputs,
             costate_prior=_costate_prior(), duty_ranked=_duty_ranked())
 
     recs, refused = _recommendations(inputs, costates, classification, horizon_epochs)
+    phase_active = (classification or {}).get("phase_regime") == LABEL_FLOOR_REACHED
     return ShadowReport(
         run_dir=str(inputs.run_dir), as_of_epoch=inputs.as_of_epoch,
         epoch_latest=(int(rows[-1]["epoch"]) if rows and
                       isinstance(rows[-1].get("epoch"), (int, float)) else None),
         state=state, costates=costates, classification=classification,
         recommendations=recs, refused=refused, probe_queue=_probe_queue(costates),
-        duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs),
+        duty_to_measure=_duty_to_measure(phase_active), producer_signals=_producer_signals(inputs),
         costate_prior=_costate_prior(), duty_ranked=_duty_ranked())
 
 

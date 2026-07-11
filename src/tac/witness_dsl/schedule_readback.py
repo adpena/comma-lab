@@ -52,9 +52,12 @@ __all__ = [
     "STAGE_ORDER",
     "ScheduleReadback",
     "StageEntry",
+    "describe_phase_tail",
     "describe_primitive",
     "display_entry",
     "event_trigger_description",
+    "phase_tail_stage_entry",
+    "phase_tail_trigger_description",
     "read_schedule",
     "resolve_run_dir_for_log",
     "stage_map_from_curriculum",
@@ -65,6 +68,10 @@ __all__ = [
 #: ``_seg_form_for_epoch`` / ``dashboard_trajectory_model.stage_at_epoch`` order.
 STAGE_ORDER: tuple[str, ...] = ("CE", "tau", "l7", "Muon")
 _ORDER_IDX = {n: i for i, n in enumerate(STAGE_ORDER)}
+# the phase tail (#247/#302 fold) is the flow's TERMINAL finest-persistence level: it
+# outranks Muon in stage_at precedence WITHOUT joining STAGE_ORDER (whose iteration +
+# transition-index logic must stay 4-stage). It is appended to the stage map separately.
+_ORDER_IDX["phase"] = len(STAGE_ORDER)
 
 #: trainer ``_STAGE_TAGS`` filename tags -> canonical stage names (checkpoint evidence).
 _CKPT_TAG_TO_STAGE = {"stageCE": "CE", "stageTau": "tau", "stageL7": "l7",
@@ -277,6 +284,81 @@ def event_trigger_description(nucleus_guard: bool = True) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Phase-tail: the FINEST-persistence level of the one level-set flow (2026-07-10
+# flicker reframe, #247/#302 fold). NOT a bolt-on stage — DERIVED from the same
+# energy: the label-smooth stages (CE->tau->l7 = coarse->fine curvelet scale =
+# Morse-Smale persistence order) resolve every critical point ABOVE one resolution/
+# temporal cell; the phase tail is where the flow descends to the sub-cell sub-pixel
+# PHASE (lowest-persistence spikes). The forces (T1 phase_advection_consistency +
+# #360's four within-pair forces) engage at l7 because the energy's scale structure
+# puts the phase there; the floor-transition (label-floor reached) is the SENSE
+# trigger. Canonical law: label_floor_to_phase_tail_handoff_v1.
+# ---------------------------------------------------------------------------
+#: the flags the T1 (#377/#386) + #274 build agents add; detected here so the phase
+#: tail renders as a first-class schedule element (never-invent: these are the memo's
+#: DSL spec — the stage renders only when the DSL actually declares them).
+_PHASE_TAIL_FLAG_ATTRS = (
+    "seg_phase_advect_weight",   # T1 --seg-phase-advect-weight
+    "seg_spike_downweight",      # T2 --seg-spike-downweight (#274, BUILT)
+    "seg_spike_reweight",
+)
+
+
+def phase_tail_trigger_description() -> str:
+    """The DERIVED floor-transition trigger for the phase tail (analogue of
+    :func:`event_trigger_description` on the finest-persistence/temporal axis)."""
+    return ("label-floor reached (SENSE: tac.witness_control.label_floor_detector): "
+            "label-smooth d_seg settled in [0.00496,0.00700] around the temporal-majority "
+            "oracle 0.005318 AND flat => label descent exhausted; engage at the l7 boundary "
+            "(the flow's finest curvelet/persistence scale). Law "
+            "label_floor_to_phase_tail_handoff_v1")
+
+
+def describe_phase_tail(ns=None) -> dict:
+    """The phase tail as a first-class derived schedule object (dict form, so a
+    dashboard/controller renders it with zero code change). ``active`` reflects whether
+    the DSL actually declares the phase-tail flags on this run (the build is owed —
+    T1 #377/#386 + #274); when inactive it still renders as the DERIVED spec so the
+    schedule is honest about the owed hand-off."""
+    active = False
+    if ns is not None:
+        for attr in _PHASE_TAIL_FLAG_ATTRS:
+            v = getattr(ns, attr, None)
+            if isinstance(v, (int, float)) and float(v) not in (0.0, 1.0):
+                active = True
+                break
+    return {
+        "name": "phase", "mode": "event", "level": "finest-persistence (sub-pixel phase)",
+        "trigger": phase_tail_trigger_description(),
+        "engage_at": "l7 boundary (energy's finest scale)",
+        "forces": ["T1:phase_advection_consistency (cross-pair ξ-advected tie-phase)",
+                   "#360:four within-pair forces (area-Lagrange / screw-consistency / subpix / "
+                   "satisficing-hinge)",
+                   "T2:--seg-spike-downweight (aleatoric don't-chase, #274 BUILT)"],
+        "derived_weight": "w_p = 0.4*w_subpix (blink-back fraction 0.418)",
+        "coupling": ("anneals TOWARD T1's ξ-coherent phase; must NOT re-open #360's satisficing "
+                     "hinge (margin-chasing cap); terminal Morse-Smale skeleton = the phase-carrier "
+                     "store; carrier rate set by #336 sensitivity waterfill"),
+        "active": active,
+        "law": "label_floor_to_phase_tail_handoff_v1",
+        "source_memo": ".omx/research/flicker_transform_geometry_term_design_20260710.md",
+    }
+
+
+def phase_tail_stage_entry(ns, l7_start: int | None) -> StageEntry | None:
+    """A phase-tail :class:`StageEntry` (event-gated, cap = the l7 start) IFF the run's
+    DSL declares the phase-tail flags. Returns None otherwise (build owed) — additive,
+    never fabricated."""
+    spec = describe_phase_tail(ns)
+    if not spec["active"]:
+        return None
+    return StageEntry(
+        "phase", None, mode="event", status="pending",
+        cap=(int(l7_start) if isinstance(l7_start, int) else None),
+        trigger=phase_tail_trigger_description())
+
+
+# ---------------------------------------------------------------------------
 # run-dir resolution: a training log often lives OUTSIDE the run dir
 # ---------------------------------------------------------------------------
 _LAUNCH_PATH_RE = re.compile(r"(/[^\s'\"]+/launch\.sh)\b")
@@ -424,6 +506,12 @@ def _planned_stages(ns) -> tuple[list[StageEntry], bool, int | None, int | None]
                 trigger=event_trigger_description(nucleus)))
         else:
             stages.append(StageEntry(name, start))
+    # (#247/#302 phase-reframe fold) the phase tail = the flow's finest-persistence level,
+    # event-gated on the label-floor (engage at l7). Rendered ONLY when the DSL declares the
+    # phase-tail flags (T1 #377/#386 + #274 build owed); additive, never fabricated.
+    _phase = phase_tail_stage_entry(ns, bounds.get("l7"))
+    if _phase is not None:
+        stages.append(_phase)
     return stages, evt, epochs, eval_every
 
 
