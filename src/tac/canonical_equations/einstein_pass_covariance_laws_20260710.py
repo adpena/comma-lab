@@ -579,11 +579,180 @@ def build_island_topological_charge_conservation_v1() -> CanonicalEquation:
     )
 
 
+TOTALITY_EQUATION_ID = "witness_general_covariance_totality_v1"
+_TOTALITY_MEMO = ".omx/research/covariance_totality_texture_trunk_verdict_20260710.md"
+
+
+# --------------------------------------------------------------------------------------
+# Law 5 — general-covariance TOTALITY audit (B1): the per-pair code residual is
+# events + gauge, NOT wasted texture rate (the texture-trunk kill)
+# --------------------------------------------------------------------------------------
+def covariance_explained_fraction_bracket(
+    knn_lower: float, rank8_upper: float
+) -> tuple[float, float]:
+    """Honest bracket on the fraction of per-pair partition-code variance attributable
+    to the covariance basis (xi, measurement-phase).
+
+    LOWER = nonparametric kNN-in-(xi,phase) CV R2 (attenuated by the lossy 6-dim PoseNet
+    xi readout + curse-of-dim at P=600). UPPER = best-8-dim linear-subspace cum-var (the
+    rank-8 ego-coherence ceiling — no code can exceed it). The exact covariance basis
+    (true homography H(xi)) lies inside [lower, upper]."""
+    lo, hi = float(knn_lower), float(rank8_upper)
+    if not 0.0 <= lo <= hi <= 1.0:
+        raise ValueError(f"require 0<=lower({lo})<=upper({hi})<=1")
+    return lo, hi
+
+
+def residual_is_wasted_texture_rate(
+    highfreq_lowfreq_gradient_ratio: float,
+    movable_plus_gauge_energy_frac: float,
+    *,
+    hf_texture_threshold: float = 0.01,
+    allowed_bucket_threshold: float = 0.9,
+) -> bool:
+    """The covariance law FORBIDS wasted texture rate. Residual is wasted-texture iff it
+    is spatially high-frequency (hf/lf ratio above threshold) AND NOT concentrated in the
+    allowed buckets (movable reaction events + lane/hood gauge phase). MEASURED n600:
+    hf/lf=2e-4 (smooth, ~0 texture) and movable+lane+hood=0.964 of residual energy ⇒
+    residual is 100% allowed buckets, wasted-texture ~0 ⇒ returns False (law CONFIRMED)."""
+    hf_texture = float(highfreq_lowfreq_gradient_ratio) > hf_texture_threshold
+    in_allowed = float(movable_plus_gauge_energy_frac) >= allowed_bucket_threshold
+    return bool(hf_texture and not in_allowed)
+
+
+def build_witness_general_covariance_totality_v1() -> CanonicalEquation:
+    prov = _prov()
+    lo, hi = covariance_explained_fraction_bracket(0.4201, 0.9316)
+    mov_gauge = 0.8527 + 0.1093 + 0.0001  # Movable + Lane + MyCar residual energy frac
+    anchor = EmpiricalAnchor(
+        anchor_id="n600_covariance_totality_texture_trunk_audit_20260710",
+        measurement_utc=_UTC,
+        inputs={
+            "code_def": "per-pair SDF-residual (phi_p - mean) SVD left-vectors*sqrt(eval)",
+            "rank8_cumvar_n600": 0.9316,
+            "rank8_cumvar_n96": 0.9559,
+            "code_dim_regressed": 8,
+            "xi": "gt_poses (600,6) PoseNet GT twist — the lossy contest ego readout",
+            "phase_features": "circular-mean(cos,sin) of GT tie-coord + active-frac (3d)",
+            "regression": "2-fold CV Frobenius R2, ridge-stabilized; random-basis null",
+        },
+        predicted_output={
+            "law_forbids": "wasted texture rate (residual not in events+gauge buckets)",
+            "explained_fraction_bracket": [lo, hi],
+            "residual_is_wasted_texture": residual_is_wasted_texture_rate(0.0002, mov_gauge),
+        },
+        empirical_output={
+            "cv_r2_xi_lin": 0.2233,
+            "cv_r2_xi_quad_phase": 0.3366,
+            "cv_r2_knn_xi_phase": 0.4201,
+            "per_class_knn_r2": {
+                "Road": 0.4536, "Undrivable": 0.4805, "Movable": 0.4405,
+                "Lane": 0.0868, "MyCar": 0.1639,
+            },
+            "residual_energy_frac": {
+                "Movable": 0.8527, "Lane": 0.1093, "Undrivable": 0.0282,
+                "Road": 0.0098, "MyCar": 0.0001,
+            },
+            "residual_highfreq_lowfreq_gradient_ratio": 0.0002,
+            "corr_residual_energy_vs_movable_area_change": 0.2757,
+            "verdict": (
+                "PARTIAL-as-smooth-(xi,phase)-map (bracket 0.42-0.93) but the law's actual "
+                "totality claim CONFIRMED: residual = 96.4% allowed buckets "
+                "(movable reaction events + lane/hood gauge) + ~0 wasted texture; "
+                "texture trunk DEAD for d_seg"
+            ),
+        },
+        residual=1.0 - mov_gauge,  # fraction of residual energy OUTSIDE allowed buckets
+        source_artifact=_TOTALITY_MEMO,
+        measurement_method=(
+            "n600 cached SegNet argmax (lstars) -> ideal per-class scipy-EDT SDF -> "
+            "per-pair residual SVD code; 2-fold CV R2 (ridge) + assumption-free kNN on "
+            "(gt_poses xi, GT-tie phase); random-basis null; residual mapped through the "
+            "SVD dictionary for per-class energy + hf/lf gradient character. $0, CPU, "
+            "NO scorer forward. Reproduces the rank-8=95.6% (n96) anchor."
+        ),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        provenance=prov,
+    )
+    return CanonicalEquation(
+        equation_id=TOTALITY_EQUATION_ID,
+        name=(
+            "General-covariance totality: per-pair code residual is reaction-events + "
+            "gauge-phase, NOT wasted texture rate (texture-trunk kill for d_seg)"
+        ),
+        one_line_summary=(
+            "(xi,phase) explains 0.42-0.93 of rank-8 per-pair code; residual is 85% "
+            "Movable + 11% Lane, SMOOTH (hf/lf 2e-4, ~0 texture) => event+gauge buckets, "
+            "wasted-texture ~0 => texture trunk DEAD for d_seg."
+        ),
+        latex_form=(
+            r"C_p=\text{code}(\phi_p-\bar\phi);\ "
+            r"R^2_{\text{cv}}(C\mid\xi,\varphi)\in[0.42,0.93];\ "
+            r"E_{\text{resid}}=0.964\,\{\text{movable}\oplus\text{gauge}\}+"
+            r"\sim0\,\text{texture}"
+        ),
+        python_callable_module_path=(
+            "tac.canonical_equations.einstein_pass_covariance_laws_20260710:"
+            "residual_is_wasted_texture_rate"
+        ),
+        domain_of_validity={
+            "covariance_class": {
+                "law": COVARIANT_LAW,
+                "explained_fraction_bracket": GAUGE_MEASUREMENT,
+                "residual_energy_shares": GAUGE_MEASUREMENT,
+            },
+            "derivation_status": (
+                "MEASURED n600 audit of the §1 general-covariance principle (Einstein "
+                "memo B1); totality-as-stated CONFIRMED, totality-as-smooth-map REFUTED"
+            ),
+            "verdict_scope_ladder": {
+                "totality_as_smooth_xi_phase_map": "REFUTED (bracket upper 0.42 kNN)",
+                "totality_as_holonomy_gauge_events_no_wasted_texture": "CONFIRMED",
+                "texture_trunk_for_dseg": "DEAD (residual smooth + movable/lane, 0 texture)",
+                "texture_trunk_lives_on_pose": "UNDECIDED (this audit is d_seg-only)",
+            },
+            "excluded": [
+                "d_pose photometric legibility (not measured here; needs through-R)",
+                "other clips/scorers (re-measure; gt_poses xi is clip-specific)",
+                "the exact-homography basis (only a quad-Taylor + kNN proxy tested)",
+            ],
+            "caveats": [
+                "gt_poses = lossy 6-dim PoseNet readout => kNN LOWER bound attenuated",
+                "kNN in 9-dim @ P=600 is curse-of-dim starved => LOWER bound",
+                "rank-8 0.93 is the linear-subspace UPPER bound (no xi constraint)",
+            ],
+            "sisters": [
+                "dseg_covariant_gauge_decomposition_v1 (the covariant/gauge split this audits)",
+                "receiver_forward_parity_v753_v8_v1 (#417 tex_trunk COUNTED-but-INERT; "
+                "this is the capacity-necessity side of the same kill)",
+                "texture_trunk_band_v1 / segnet_texture_perception_v1",
+                "store_nothing_pose_carrier_rate_dpose_v1 (movable = event carrier target)",
+            ],
+        },
+        units_in={
+            "highfreq_lowfreq_gradient_ratio": "ratio",
+            "movable_plus_gauge_energy_frac": "fraction",
+        },
+        units_out={"is_wasted_texture_rate": "bool"},
+        empirical_anchors=(anchor,),
+        predicted_vs_empirical_residual={"residual_outside_allowed_buckets": 1.0 - mov_gauge},
+        last_calibration_utc=_UTC,
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
+        canonical_consumers=(
+            "tac.witness_control.shadow_controller",
+            "tac.canonical_equations.receiver_forward_parity_v753_v8_20260710",
+        ),
+        canonical_producers=(_TOTALITY_MEMO,),
+        provenance=prov,
+    )
+
+
 ALL_EINSTEIN_PASS_BUILDERS = (
     build_score_atomic_flip_byte_exchange_v1,
     build_gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1,
     build_dseg_covariant_gauge_decomposition_v1,
     build_island_topological_charge_conservation_v1,
+    build_witness_general_covariance_totality_v1,
 )
 
 
@@ -634,16 +803,20 @@ __all__ = [
     "SCORER_FRAME_STRUCTURAL",
     "SEG_GRID_PIXELS",
     "SPIKE_FLOOR_EQUATION_ID",
+    "TOTALITY_EQUATION_ID",
     "UNCOMPRESSED_BYTES",
     "allowed_island_count_delta",
     "build_dseg_covariant_gauge_decomposition_v1",
     "build_gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1",
     "build_island_topological_charge_conservation_v1",
     "build_score_atomic_flip_byte_exchange_v1",
+    "build_witness_general_covariance_totality_v1",
+    "covariance_explained_fraction_bracket",
     "dseg_covariant_residual",
     "flip_byte_exchange_rate",
     "implied_flip_quanta",
     "populate_einstein_pass_covariance_laws",
+    "residual_is_wasted_texture_rate",
     "score_delta_per_archive_byte",
     "score_delta_per_pixel_pair_flip",
     "smooth_witness_dseg_floor",

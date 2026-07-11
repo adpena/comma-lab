@@ -13,9 +13,11 @@ from tac.canonical_equations.einstein_pass_covariance_laws_20260710 import (
     GAUGE_MEASUREMENT,
     SCORER_FRAME_STRUCTURAL,
     allowed_island_count_delta,
+    covariance_explained_fraction_bracket,
     dseg_covariant_residual,
     flip_byte_exchange_rate,
     implied_flip_quanta,
+    residual_is_wasted_texture_rate,
     score_delta_per_archive_byte,
     score_delta_per_pixel_pair_flip,
     smooth_witness_dseg_floor,
@@ -24,12 +26,23 @@ from tac.canonical_equations.einstein_pass_covariance_laws_20260710 import (
 )
 
 
-def test_all_four_equations_build_and_validate() -> None:
+def test_all_five_equations_build_and_validate() -> None:
     eqs = [b() for b in ALL_EINSTEIN_PASS_BUILDERS]
-    assert len({e.equation_id for e in eqs}) == 4
+    assert len({e.equation_id for e in eqs}) == 5
     for e in eqs:
         assert e.empirical_anchors, e.equation_id
         assert e.canonical_producers and e.canonical_consumers, e.equation_id
+
+
+def test_covariance_totality_bracket_and_texture_kill() -> None:
+    lo, hi = covariance_explained_fraction_bracket(0.4201, 0.9316)
+    assert lo == pytest.approx(0.4201) and hi == pytest.approx(0.9316)
+    with pytest.raises(ValueError):
+        covariance_explained_fraction_bracket(0.9, 0.4)  # lower must be <= upper
+    # MEASURED n600 residual: smooth (hf/lf 2e-4) + 96.4% allowed buckets => NOT wasted texture
+    assert residual_is_wasted_texture_rate(0.0002, 0.8527 + 0.1093 + 0.0001) is False
+    # counterfactual: high-frequency AND outside allowed buckets => wasted texture (law violated)
+    assert residual_is_wasted_texture_rate(0.5, 0.2) is True
 
 
 def test_every_equation_carries_covariance_class_metadata() -> None:
