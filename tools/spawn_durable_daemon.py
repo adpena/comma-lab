@@ -501,7 +501,7 @@ def _is_protection_infra_cmd(cmd: list[str]) -> bool:
       2. the score-neutral #247 costate observability SENSE organs (costate_observer_loop /
          costate_shadow_report). Per CLAUDE.md "'Off' is a tracked queue" ("observability DEFAULTS ON …
          gate ONLY on genuine compute cost"): these are tiny (0.1 GiB), strictly READ-ONLY w.r.t. the
-         trainer (they only append the advisory ``costate_shadow.jsonl`` sidecar), and their whole
+         trainer (they only append the canonical advisory costate sidecar), and their whole
          purpose is to observe a large run — so the SUM gate (which refuses everything once the trainer
          fills the box) must NOT orphan them. The per-arm RSS cap + free-floor preflight keep them safe.
     """

@@ -55,6 +55,11 @@ from typing import Any
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
+if str(REPO / "src") not in sys.path:
+    sys.path.insert(0, str(REPO / "src"))
+
+from tac.witness_run_artifacts import BEST_JSON, COSTATE_JSONL, EMA_BEST_NPZ, EMA_NPZ  # noqa: E402
+
 DEFAULT_RUN = REPO / "experiments/results/levelset_v752_baseline_20260710T185913Z"
 POINTER = "0.19108282 [contest-CPU] UNMOVED"
 AXIS = "[macOS-CPU/numpy advisory] NON-PROMOTABLE"
@@ -423,11 +428,11 @@ def inspect_checkpoint(path: Path, expected_epoch: int | None = None) -> dict[st
 
 
 def byte_close_readiness(run_dir: Path, rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
-    best_meta_path = run_dir / "levelset_best.json"
+    best_meta_path = run_dir / BEST_JSON
     best_meta = json.loads(best_meta_path.read_text()) if best_meta_path.is_file() else {}
-    best_name = best_meta.get("path", "levelset_witness_ema_BEST.npz")
+    best_name = best_meta.get("path", EMA_BEST_NPZ)
     checkpoints = [inspect_checkpoint(run_dir / best_name, best_meta.get("epoch"))]
-    latest = run_dir / "levelset_witness_ema_mlx.npz"
+    latest = run_dir / EMA_NPZ
     if latest != run_dir / best_name:
         checkpoints.append(inspect_checkpoint(latest))
     byte_tool = REPO / "tools/levelset_byte_close_and_eval.py"
@@ -486,7 +491,7 @@ def live_summary(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
 
 def build_report(run_dir: Path, parsed: ParsedLog) -> dict[str, Any]:
     daemon = run_dir / "daemon.log"
-    shadow = run_dir / "costate_shadow.jsonl"
+    shadow = run_dir / COSTATE_JSONL
     return {
         "schema": "pact.n205_full_run_diagnostics.v1",
         "generated_at": utc_now(),

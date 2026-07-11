@@ -72,6 +72,9 @@ TRAINER_ARTIFACTS: tuple[str, ...] = (
     LIVE_NPZ,
     POLYAK_NPZ,
     TRAIN_RESULT_JSON,
+)
+
+TORCH_TRAINER_ARTIFACTS: tuple[str, ...] = (
     TORCH_RESUME_PT,
     TORCH_EMA_PT,
     TORCH_TRAIN_RESULT_JSON,
@@ -83,7 +86,7 @@ TRAINER_ARTIFACTS: tuple[str, ...] = (
 COSTATE_JSONL = "costate_shadow.jsonl"
 
 #: All NAMED signal files a consumer may look for (produced + observer telemetry).
-SIGNAL_FILES: tuple[str, ...] = (*TRAINER_ARTIFACTS, COSTATE_JSONL)
+SIGNAL_FILES: tuple[str, ...] = (*TRAINER_ARTIFACTS, *TORCH_TRAINER_ARTIFACTS, COSTATE_JSONL)
 
 # ---- streaming progress logs (the pre-first-checkpoint liveness signal) -------
 PROGRESS_LOG_GLOB = "*.log"

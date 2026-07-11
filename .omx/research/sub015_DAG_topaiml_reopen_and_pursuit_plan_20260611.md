@@ -15618,3 +15618,24 @@ Sister event: #438 cloud-launcher relaunched RESILIENT (interactive codex in det
 - **triality:** DAG = this FEED · DSL = N/A (no lever changed; config = the sealed v9_cgauge_432 compile) ·
   equations = N/A (a LAUNCH event, no measured law; the run's byte-closed exact row is the registrable
   object when it lands). Pointer 0.19108282 [contest-CPU] UNMOVED — the arm exists to MOVE it. [no-triality]
+
+### FEED-438-cloud-cuda-port (2026-07-11) — provider apparatus built; active V9 semantic parity BLOCKED fail-closed
+SIGNAL: Task 438 requested a provider-neutral cloud lifecycle and a 1:1 Torch/CUDA twin of the active
+V9 CGauge path. ACTION: built deterministic Torch level-set/R/loss primitives with an independent
+NumPy-fp32 oracle, canonical loss telemetry, atomic RNG+optimizer+EMA resume, per-stage checkpoints,
+and a plan-first Modal lifecycle (detached `.spawn()` call-ID custody, harvest loop, Catalog #244 NVML
+environment, Catalog #326 explicit driver mode, storage/asset SHA preflight); AWS/GCP are honest
+scaffolds. **MEASURED local CPU:** NumPy-vs-Torch argmax exact, phi cosine 1.0, RGB max delta
+3.0517578125e-05, phi max delta 4.172325134277344e-07; CPU `torch.compile` loss delta 0.0 but grad
+delta 0.0029296875 => exact identity wall failed, eager retained; 16 focused tests passed. **CUDA is
+UNMEASURED** by containment; no provider contacted, no paid dispatch, live arm untouched.
+NO-FAKE AUDIT: active score losses are ported, but generated pose carrier, structured init,
+accum-pairs=8, event latches, LADDER/birth-completion, Muon/pose-finish, Polyak, taper/per-group clip,
+and tail controller are not yet semantic twins. `cuda_v9_port_coverage.v1` therefore refuses full
+training and makes cloud plans non-executable. verdict_scope: FORMULATION (this Torch implementation),
+not CUDA/family. Memo `cloud_launcher_cuda_port_438_20260711.md`. Pointer 0.19108282 [contest-CPU]
+UNMOVED.
+- **triality:** DAG = this FEED · DSL = sealed `compile_v9_cgauge_432_launch_config` plus the
+  machine-readable active-surface coverage receipt · equations = existing level-set/Chan-Vese,
+  persistence/phase/warp laws + `witness_fp_reorder_transform_bit_identity_wall_v1`; no CUDA anchor
+  registered because CUDA was not measured.
