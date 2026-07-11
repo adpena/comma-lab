@@ -1,10 +1,19 @@
-"""tac.witness_control — the θ* COSTATE shadow controller (task #303, Phase A).
+"""tac.witness_control — the θ* COSTATE shadow controller (task #303, Phase A) +
+the learned Pontryagin adjoint organ (task #426).
 
 The Hamiltonian/optimal-control meta-layer made concrete: the campaign triality
 (DAG=state x(t) · DSL=control u(t) · equations=law S) is completed by its missing
 fourth object — the COSTATE λ = ∂S/∂x, the measured marginal-ΔS shadow-price field
 that flows measurement → decision (memory
 ``project_meta_layer_above_triality_hamiltonian_control_costate_20260703``).
+
+THE LOOP THIS PACKAGE SITS AT THE CENTER OF (2026-07-11, the Amortized-Operator
+Pontryagin Loop — memo ``.omx/research/amortized_operator_pontryagin_loop_cluster_20260711.md``):
+#211 FORWARD operator (clip→witness params) → **#426 ADJOINT operator** (state→λ field;
+``lambda_net`` + ``costate_panel``) → **#247 CONTROLLER** (u*=argmin H; ``control_alphabet``
++ the CostateAgent DSL ``tac.witness_dsl.costate_agent_dsl``) → #396 TERMINAL solver
+(gradient-free exact-argmax finisher) → measured rows → retrain the operators. The
+analytic law is ``cgauge_master_action_v1``; λ IS ``costate_lambda_marginal_ds_v1``.
 
 Phase A is SHADOW MODE ONLY: observe → estimate → recommend (JSONL rows) → STOP.
 
@@ -64,6 +73,33 @@ from tac.witness_control.shadow_controller import (  # noqa: F401
     build_shadow_report,
     load_run_inputs,
     write_shadow_row,
+)
+from tac.witness_control.control_alphabet import (  # noqa: F401
+    HEAVY_ACTIONS,
+    SAFE_ACTIONS,
+    ControlDecision,
+    OperatorGoTicket,
+    SpawnTicket,
+    compose_spawn_ticket,
+    feasibility_projection,
+    hamiltonian_decide,
+)
+from tac.witness_control.costate_panel import (  # noqa: F401
+    LENSES,
+    ROUTING_MODES,
+    PanelVerdict,
+    routing_benchmark,
+    run_panel,
+)
+from tac.witness_control.lambda_net import (  # noqa: F401
+    BacktestReport,
+    CampaignTrajectory,
+    LambdaField,
+    RashomonLambdaSet,
+    backtest,
+    benchmark_all,
+    rashomon_lambda_set,
+    read_trajectory,
 )
 from tac.witness_control.verdict_trend_alarm import (  # noqa: F401
     NO_ALARM,
