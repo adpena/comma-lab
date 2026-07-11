@@ -384,3 +384,224 @@ organ trajectory record: 8 intervals; walk-forward winner E_prototype_bregman; r
 }
 ```
 
+## FEED-426-organ-20260711T135448Z run=levelset_v752_baseline_20260710T185913Z
+organ trajectory record: 9 intervals; walk-forward winner E_prototype_bregman; regimes lane-erosion, mixed-Lane-Road, movable-island-unborn. Every number [macOS advisory] NON-PROMOTABLE; the organ is MEANS (#426; graph-memory indexes this block into regime nodes).
+
+```json
+{
+ "arch_reports": {
+  "A_ridge_solve": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00329594,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.02326342,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00390238
+  },
+  "E_prototype": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.0030817,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.01232309,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00296673
+  },
+  "E_prototype_bregman": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00294668,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.01171614,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00283865
+  },
+  "F_bsf": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00297393,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.01184519,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00284364
+  },
+  "G_ridge_scorerprior": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00329576,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.0232651,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00390246
+  },
+  "H_smoothed_argmax": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00329667,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.02326437,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00390283
+  },
+  "I_comma10k_regime": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00329533,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.02327842,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00390212
+  },
+  "J_adv_boundary": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00329525,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.02328488,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00390194
+  },
+  "K_perclass_v8": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00329562,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.02326344,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00390257
+  },
+  "L_priormean_comma10k": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.0033368,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.02532994,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00911989
+  },
+  "M_priormean_advb": {
+   "loo_heur": 0.00369778,
+   "loo_mae": 0.00335114,
+   "passed": false,
+   "passed_walkforward": false,
+   "perclass_loo": 0.02486126,
+   "wf_heur": 0.00279193,
+   "wf_mae": 0.00536841
+  }
+ },
+ "axis_tag": "[macOS advisory] NON-PROMOTABLE",
+ "duty_queue_top": [],
+ "epoch_span": [
+  2.0,
+  225.0
+ ],
+ "generated_at": "20260711T135448Z",
+ "n_intervals": 9,
+ "n_verdicts": 10,
+ "prototypes": [
+  {
+   "block_dim": 0,
+   "center": [
+    0.10551972,
+    0.34542431,
+    0.01140143,
+    0.01235769,
+    0.00041469,
+    11.32973319
+   ],
+   "index": 0,
+   "name": "lane-erosion",
+   "neighborhood_epochs": [
+    25.0,
+    50.0,
+    75.0,
+    100.0,
+    125.0,
+    150.0,
+    175.0,
+    200.0
+   ],
+   "scale": "coarse"
+  },
+  {
+   "block_dim": 0,
+   "center": [
+    0.09157875,
+    0.82599737,
+    0.00447099,
+    0.99980347,
+    0.00165109,
+    11.42296793
+   ],
+   "index": 1,
+   "name": "movable-island-unborn",
+   "neighborhood_epochs": [
+    2.0
+   ],
+   "scale": "coarse"
+  },
+  {
+   "block_dim": 0,
+   "center": [
+    0.09157875,
+    0.82599737,
+    0.00447099,
+    0.99980347,
+    0.00165109,
+    11.42296793
+   ],
+   "index": 2,
+   "name": "movable-island-unborn",
+   "neighborhood_epochs": [
+    2.0
+   ],
+   "scale": "fine"
+  },
+  {
+   "block_dim": 0,
+   "center": [
+    0.12641516,
+    0.25651028,
+    0.01235954,
+    0.01885402,
+    0.00045042,
+    11.35100621
+   ],
+   "index": 3,
+   "name": "mixed-Lane-Road",
+   "neighborhood_epochs": [
+    25.0,
+    200.0
+   ],
+   "scale": "fine"
+  },
+  {
+   "block_dim": 0,
+   "center": [
+    0.09855458,
+    0.37506232,
+    0.01108206,
+    0.01019225,
+    0.00040278,
+    11.32264218
+   ],
+   "index": 4,
+   "name": "lane-erosion",
+   "neighborhood_epochs": [
+    50.0,
+    75.0,
+    100.0,
+    125.0,
+    150.0,
+    175.0
+   ],
+   "scale": "fine"
+  }
+ ],
+ "run_ref": "levelset_v752_baseline_20260710T185913Z",
+ "score_claim": false,
+ "winner_walkforward": "E_prototype_bregman"
+}
+```
+

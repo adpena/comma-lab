@@ -199,18 +199,59 @@ DEFAULT_TRAINING_PIPELINE: tuple[TrainingStageSpec, ...] = (
                  "tournament arm rides G with prior= swap"),
     TrainingStageSpec(
         name="scorer_adversarial_boundary", stage="pretrain",
-        corpus=("frozen SegNet/PoseNet min-flip probing", "margin-saliency #141",
-                "evaluator null-space #47"),
-        status="BLOCKED",
-        blocker="needs bounded scorer forwards; the live #205 run (pid-held slot) owns "
-                "scorer compute — queued on the duty-to-measure ledger"),
+        corpus=("cached margin field + argmax partition (advection-ball minimal-flip "
+                "geometry)", "fitted Young σ_cc′ #382", "margin-polytope free-budget "
+                "(the #47 first-order flip system)"),
+        status="EXECUTED_$0",
+        measured="J_adv_boundary arm (scorer_model_arms, P0 2026-07-11): Lane "
+                 "susceptibility 2.67 = the flip-hot class recovered independently; "
+                 "ball-agreement faithfulness audit IoU 0.732 prec/rec 0.844 PASS "
+                 "(2306.04431 protocol); forecast gate NEUTRAL (≡ ridge — the "
+                 "φ-rescale formulation; binding AUROC 1.0). The scorer-forward "
+                 "Jacobian-atlas variant stays duty-queued (live run owns the slot)"),
     TrainingStageSpec(
-        name="scorer_distilled_surrogate", stage="pretrain",
-        corpus=("frozen SegNet/PoseNet distillation (Hinton)", "comma10k (SegNet's "
-                "actual training distribution; 0 contest frames per L80)"),
+        name="scorer_metric_relaxation", stage="pretrain",
+        corpus=("cached SegNet margin field (gt_n96)", "perturbed-optimizer/Gumbel "
+                "smoothing 2002.08676/1912.02175 (the #428 survey #1)"),
+        status="EXECUTED_$0",
+        measured="H_smoothed_argmax arm: EXACT per-class gradient of the ε-smoothed "
+                 "d_seg through the real frozen SegNet's cached margins (finite-diff "
+                 "verified, rel gap 5.6e-7; ε=τ median margin per L75); forecast gate "
+                 "NEUTRAL (≡ ridge), binding AUROC 1.0 — the zero-model-error λ the "
+                 "learned surrogate must beat to be justified"),
+    TrainingStageSpec(
+        name="comma10k_regime_prior", stage="pretrain",
+        corpus=("192 REAL comma10k masks (SegNet's actual training distribution; "
+                "0 contest frames per L80; durable artifact "
+                "experiments/results/comma10k_regime_prior)",),
+        status="EXECUTED_$0",
+        measured="I_comma10k_regime + L_priormean_comma10k arms: rarity prior Lane "
+                 "3.5x converges with the measured flip crux; HONEST NEGATIVE — "
+                 "neither formulation (φ-rescale: INERT ≡ ridge; shrink-to-prior: "
+                 "WORSE at early folds, κ-scale variance) reduced the n=1 fragility "
+                 "on #205 (verdict_scope: formulation ×2, family open); binding "
+                 "AUROC 1.0 retained"),
+    TrainingStageSpec(
+        name="scorer_learned_surrogate", stage="pretrain",
+        corpus=("frozen SegNet/PoseNet Jacobian/Sobolev-matching KD (1803.00443; "
+                "survey #2)", "comma10k boundary-weighted queries"),
         status="BLOCKED",
-        blocker="multi-hour training job; operator-GO ticket for compute; never "
-                "modifies the pinned scorers, never ships"),
+        blocker="multi-hour training job (operator-GO ticket) AND it must first beat "
+                "the zero-model-error smoothed-argmax baseline (survey order: metric "
+                "relaxation before any learned surrogate); never modifies the pinned "
+                "scorers, never ships"),
+    TrainingStageSpec(
+        name="perclass_lambda_v8_schedule", stage="posttrain_sft",
+        corpus=("K_perclass_v8 arm (boundary-pair adjacency ⊙ 1/σ_cc′ #382 coupling)",
+                "#430 schedule replay (schedule_backtest; 2607.08716 selective-"
+                "intervention shape)"),
+        status="EXECUTED_$0",
+        measured="#430 MODEL-BASED backtest on #205 (9 intervals): organ's state-gated "
+                 "cascade beats the hand schedule on ALL 3 replay models (∫d_seg·dep "
+                 "6.283 vs 8.649 on the walk-forward-winning prototype model, −27%; "
+                 "self-replay MAE 0.0054, final gap 1.6e-4); selective ≈ always-on "
+                 "in-model (Δ0.4% — gate value not resolvable on a transient-only "
+                 "prefix); LIVE A/B stays in the ticket's gates_owed"),
     TrainingStageSpec(
         name="trajectory_sft", stage="posttrain_sft",
         corpus=("#205 trajectory intervals (the measured campaign data)",),
@@ -549,6 +590,10 @@ def derive_costate_agent_arbitrated(run_dir: str) -> CostateAgentProgram:
         # arbitration silently fell back — now it routes to the prototype head)
         arch_to_lens.setdefault("E_prototype_bregman", arch_to_lens.get("E_prototype"))
         arch_to_lens.setdefault("G_ridge_scorerprior", arch_to_lens.get("A_ridge_solve"))
+        # scorer-model arms (P0 2026-07-11) are ridge-family variants → the flow lens
+        for _arm in ("H_smoothed_argmax", "I_comma10k_regime", "J_adv_boundary",
+                     "K_perclass_v8", "L_priormean_comma10k", "M_priormean_advb"):
+            arch_to_lens.setdefault(_arm, arch_to_lens.get("A_ridge_solve"))
         lens = arch_to_lens.get(arb.recommended)
         if lens is None:
             return prog

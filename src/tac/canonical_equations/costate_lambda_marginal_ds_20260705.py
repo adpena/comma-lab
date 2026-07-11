@@ -223,6 +223,72 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu_mlx",
         ),
     )
+    anchor_scorer_arms_430 = EmpiricalAnchor(
+        # (d) SCORER-MODEL ARMS + #430 coherent schedule (P0 build 2026-07-11). The λ
+        # law gains trajectory-INDEPENDENT scorer-side instruments (the n=1-fragility
+        # cure attempts) + the first MEASURED schedule-level consumption of λ.
+        anchor_id="scorer_model_arms_430_backtest_20260711",
+        measurement_utc="2026-07-11T13:50:00Z",
+        inputs={
+            "arms": "tac.witness_control.scorer_model_arms (H/I/J/K/L/M) + "
+                    "schedule_backtest (#430)",
+            "trajectory": "#205 levelset_v752_baseline (10 verdicts / 9 intervals at "
+                          "measurement — grew during the build, free out-of-sample)",
+            "caches": "gt_n96.npz margins/lstars + 192 REAL comma10k masks "
+                      "(experiments/results/comma10k_regime_prior) + σ_cc′ #382",
+            "tool": "tools/schedule_bundle_backtest.py (durable JSON artifact)",
+        },
+        predicted_output={
+            "survey_order": "#428 survey: metric relaxation (#1) before learned "
+                            "surrogate; scorer priors should cure the n=1 fragility",
+            "430": "state-gated coordinated bundles beat independently-clocked floors "
+                   "(2607.08716 selective-intervention, MEASURED-elsewhere +8.3pp)",
+        },
+        empirical_output={
+            "smoothed_argmax_exact": "per-class ∂(smoothed d_seg)/∂δ_c through the real "
+                                     "frozen SegNet's cached margins: finite-diff rel "
+                                     "gap 5.6e-7 (ZERO model error; ε=τ median margin)",
+            "ball_agreement": "margin-surrogate flip set vs advection-ball label-change "
+                              "set: IoU 0.732, prec/rec 0.844 — faithful (2306.04431)",
+            "comma10k_prior": "rarity reweight Lane 3.51x / Movable 1.22x from SegNet's "
+                              "real training distribution — converges with the measured "
+                              "flip crux WITHOUT any trajectory or scorer forward",
+            "forecast_gate_honest_negative": "ALL scorer-prior formulations are forecast-"
+                                             "NEUTRAL-or-worse: φ-rescale INERT (≡ ridge, "
+                                             "the solve refits it away); shrink-to-prior "
+                                             "WORSE at early folds (κ-scale variance at "
+                                             "n=2). verdict_scope: formulation ×2. The "
+                                             "arms' measured wins: binding AUROC 1.0 + "
+                                             "the audited sensors + per-class λ for #430",
+            "430_replay": "organ's state-gated cascade beats the hand-scheduled #205 "
+                          "curriculum on all 3 replay models: ∫d_seg·dep 6.283 vs 8.649 "
+                          "(−27%) on the walk-forward-winning prototype model; self-"
+                          "replay MAE 0.0054 / final gap 1.6e-4; selective ≈ always-on "
+                          "in-model (Δ0.4%: transient-only prefix, a gate always active "
+                          "— the gate question is NOT in-model-resolvable; live A/B owed)",
+            "plateau_onset": "at 9 intervals the WHOLE model family loses walk-forward "
+                             "to persistence (E_bregman 0.002839 vs 0.002792) — the "
+                             "envelope's plateau-regime prediction confirmed out-of-"
+                             "sample; meta-λ prefer_persistence is the correct posture",
+            "verdict_scope": "INSTANCE (1 trajectory) for the replay; the smoothed-"
+                             "argmax exactness + comma10k shares are trajectory-free. "
+                             "MEANS; pointer 0.19108282 UNMOVED.",
+        },
+        residual=0.000047,  # E_bregman WF deficit vs persistence at 9 intervals (plateau onset)
+        source_artifact=".omx/research/scorer_model_arms_430_schedule_20260711.md",
+        measurement_method="tournament backtest (LOO∧WF∧binding) + early-fold walk-forward "
+                           "+ ball-agreement audit + 4-policy model-based schedule replay",
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/scorer_model_arms_430_schedule_20260711.md",
+            reactivation_criteria=("re-arbitrate per organ-ledger accrual; the learned "
+                                   "surrogate (survey #2) unblocks only by beating the "
+                                   "zero-model-error smoothed-argmax baseline; the #430 "
+                                   "LIVE A/B is the ticket's standing gates_owed"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Costate λ = ∂S/∂x: (100, 5/sqrt(10·d_pose), 25/37545489) + chained "
@@ -251,12 +317,14 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
         units_in={"dseg_slope": "d_seg per epoch", "dpose_slope": "d_pose per epoch",
                   "dbytes_slope": "bytes per epoch", "d_pose": "dimensionless"},
         units_out={"dS_depoch": "S per epoch (advisory implied-S units)"},
-        empirical_anchors=(anchor, anchor_waterlines, anchor_organ_seal),
+        empirical_anchors=(anchor, anchor_waterlines, anchor_organ_seal,
+                           anchor_scorer_arms_430),
         predicted_vs_empirical_residual={
             "ep350_horizon_25ep_in_band_central_gap": 0.0706,
             "ep450_horizon_25ep_below_band_gap": 0.0056,
             "score_economics_waterlines_derived": 0.0,
             "organ_426_amortization_ridge_walkforward_deficit": 0.000639,
+            "scorer_arms_430_plateau_onset_wf_deficit": 0.000047,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
