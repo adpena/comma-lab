@@ -1,0 +1,130 @@
+{
+  "W_e": [
+    [
+      0.0,
+      4.411444,
+      1.628671,
+      0.548654,
+      1.750568
+    ],
+    [
+      4.411444,
+      0.0,
+      0.00906,
+      0.007702,
+      0.02396
+    ],
+    [
+      1.628671,
+      0.00906,
+      0.0,
+      0.619012,
+      0.05
+    ],
+    [
+      0.548654,
+      0.007702,
+      0.619012,
+      0.0,
+      0.00093
+    ],
+    [
+      1.750568,
+      0.02396,
+      0.05,
+      0.00093,
+      0.0
+    ]
+  ],
+  "class_order": [
+    "Road",
+    "Lane",
+    "Undrivable",
+    "Movable",
+    "MyCar"
+  ],
+  "class_order_note": "argmax index order (CLAUDE.md canonical comma10k 2026-06-27); the trainer looks up W_e[lstar[p], lstar[neighbour]] by index.",
+  "feed_pa_crosscheck": {
+    "built_class_share": {
+      "Lane": 0.2473,
+      "Movable": 0.0653,
+      "MyCar": 0.0986,
+      "Road": 0.4633,
+      "Undrivable": 0.1254
+    },
+    "feed_pa_class_flip_share": {
+      "Lane": 0.163,
+      "Movable": 0.104,
+      "MyCar": 0.114,
+      "Road": 0.437,
+      "Undrivable": 0.182
+    },
+    "pearson_r_built_vs_feed_pa": 0.9434,
+    "ranking_agrees": true,
+    "road_is_hub_built": true,
+    "road_is_hub_feed_pa": true
+  },
+  "provenance": {
+    "axis": "[macOS-CPU/numpy advisory \u00b7 NON-PROMOTABLE]",
+    "built_utc": "2026-07-11T02:43:45.645955+00:00",
+    "dag_anchor": "FEED-PA (bf1ee1fa8, n600)",
+    "derivation": ".omx/research/p0_forces_derivation_20260708.md \u00a7FORCE 3.2",
+    "floor": 0.05,
+    "git_hash": "2c3044e10",
+    "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "measured_quantity": "genuine-V inter-class straddle fragility density (1 - min(Mp,Mq)/band), symmetric, mean-over-populated-edges normalized to 1.0; theta-independent, GT-only, NO scorer forward",
+    "pointer": "0.19108282 UNMOVED (means)",
+    "task": "#360 FORCE 3 tie_locus_displacement pa_flipmass",
+    "tool": "tools/build_pa_edge_weights.py",
+    "v_band": 1.0
+  },
+  "stats": {
+    "mean_over_populated_edges_pre_norm": 142426.8865620825,
+    "n_pairs": 600,
+    "per_class_share_measured": {
+      "Lane": 0.24734252307221838,
+      "Movable": 0.06534987737366596,
+      "MyCar": 0.09863651678383979,
+      "Road": 0.4632964848736584,
+      "Undrivable": 0.1253745978966175
+    },
+    "raw_edge_count": [
+      [
+        0,
+        814066,
+        290167,
+        90322,
+        317679
+      ],
+      [
+        814066,
+        0,
+        1586,
+        1297,
+        5085
+      ],
+      [
+        290167,
+        1586,
+        0,
+        99530,
+        0
+      ],
+      [
+        90322,
+        1297,
+        99530,
+        0,
+        157
+      ],
+      [
+        317679,
+        5085,
+        0,
+        157,
+        0
+      ]
+    ],
+    "total_genuine_v_straddles": 1619889
+  }
+}
