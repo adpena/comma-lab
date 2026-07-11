@@ -15497,3 +15497,22 @@ Full memo: `.omx/research/negatives_naive_interpretation_audit_20260711.md`. **H
 ### FEED-441-prefire-review (2026-07-11) — T1 SEAL sound; #432 fire-plan FIRE-WITH-REVISIONS [no new law]
 Re-derived the #441 fresh-eyes pre-fire review from primary artifacts (codex-rescue wrapper truncated the original verdict; no memo committed by it). SIGNAL: #432 (V9·CGauge capstone arm) HELD on #356 megakernel + operator-GO. DIAGNOSTIC: #439 T1 SEAL is SOUND — 3 clean passes, T1 stable / byte-identical-when-OFF / premise-valid on n600 (ξ-advected tie −6.8% vs no-warp, 71% pair-win) → CANNOT destabilize; that axis is cleared, no code defect. Two FIRE-PLAN gaps (attribution, NOT correctness): (1) phase-OFF control described two ways — #439 SEAL = `#432 w=0.0` twin (clean single-lever T1, mod-19 held both) vs #432 config-memo = `#205` (confounds T1 + mod-dim 32→19, and #205 is DEAD); (2) mod-19's #299 safety-net revert-rule ("revert to 32 if d_seg > +2% vs mod-32 control") references #205 = DEAD → no live comparator; eff_rank 16.4 RISING → mod-19 may clip needed capacity. RESPONSE: **FIRE-WITH-REVISIONS** — fire #432 as a whole-arm pointer bet vs the frozen 0.19108 (the pointer IS the control; no twin needed for THE GOAL); own the bundled T1+mod-19 bet (a MISS won't attribute which delta failed); T1-attribution science needs a matched phase-OFF twin as a 2nd run (budget explicitly). Recorded at the fire-time artifact `v9_cgauge_432_coherent_arm_config` (commit 741b910642).
 - **triality:** DAG = this FEED · DSL = N/A (no lever changed — `PhaseAdvectionConsistency` already exists + composed) · equations = **N/A-with-rationale** (a review verdict re-deriving an existing SEAL produces NO new MEASURED law; #439 itself ruled equations N/A; the registrable law would be a byte-closed d_seg A/B row, which this is not). Pointer 0.19108282 UNMOVED (MEANS).
+
+### FEED-356 (2026-07-11) — whole-step MEGAKERNEL: MEASURED NO-GO on both legs → the fp-reorder wall is a LAW
+Main-thread take-over (operator-directed) after 3 codex-rescue wrapper deaths. SIGNAL: #432 held on the
+megakernel; is a bit-identical whole-step fusion achievable? DIAGNOSTIC (MEASURED, $0,
+`experiments/megakernel_compile_bit_identity_smoke_356.py`, eager-vs-mx.compile exact deltas fwd+bwd fp32,
+device×P grid): NOT bit-identical anywhere (grad max|Δ| 2.3e-7…2.3e-5; compiled re-run 0.0 =
+deterministic-but-DIFFERENT = fp reorder/contraction, the #410 class) AND the prize is marginal (GPU
+1.12–1.21× on the closure ≈ ~5% end-to-end per #306 compute-bound step; CPU 0.79–0.83× SLOWER). Two
+independent kill shots. RESPONSE: NO lever ships (a numerics-changing "speedup" flag = NO-FAKE);
+registered `witness_fp_reorder_transform_bit_identity_wall_v1` (3 anchors: R-compile 4.8e-3 argmax-flip
+2026-07-03 · micro-batch ≤5.9e-5/~1e-3 2026-07-10 · closure smoke 2026-07-11; ONE mechanism) — surviving
+speed family = explicit-order kernels + gradient-free caches, VERIFIED already ON in the #432 argv
+(--fused-r-kernel + --cache-gt-skeleton + grouped-backward). Scope: FORMULATION (MLX fp32); #252
+per-chain kernels + #348 fixed-order reductions + #438 CUDA-backend re-measure remain OPEN. #432's
+megakernel block resolves BY VERDICT; remaining hold = #441 revisions + operator-GO. #435 MOOT. Memo
+`whole_step_megakernel_356_20260711.md`; recovered orphan: `mlx_compile_step` (built-never-wired) now has
+its measured verdict.
+- **triality:** DAG = this FEED · DSL = N/A-with-reason (no lever ships; survivors already DSL-held) ·
+  equations = `witness_fp_reorder_transform_bit_identity_wall_v1` REGISTERED. Pointer 0.19108282 UNMOVED (MEANS).
