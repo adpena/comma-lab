@@ -148,6 +148,13 @@ _SERVER_START_UTC = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(_SERVER_STAR
 # never spuriously trigger a dashboard reload.
 _CODE_SOURCE_FILES: tuple[str, ...] = (
     "dashboard_server.py",
+    # render_levelset_dashboard is IMPORTED by this server (verdict parsing + the
+    # run-selection logic _resolve_watched_log/_resolve_run_log/_launch_ts) — its
+    # behavior is baked into the running process, so an edit there is exactly as
+    # reload-requiring as an edit here. Omitting it made dashboard_ctl report
+    # "code fresh — no-op" after a run-selection fix (2026-07-11), silently
+    # keeping the stale selection live.
+    "render_levelset_dashboard.py",
     "dashboard_flow_client.js",
     "dashboard_whyhow_client.js",
 )
