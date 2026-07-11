@@ -51,6 +51,7 @@ from tac import witness_run_artifacts as _wra  # noqa: E402
 _POINTER_JSON = _REPO / ".omx" / "state" / "canonical_frontier_pointer.json"
 _DAG_GLOB = str(_REPO / ".omx" / "research" / "sub015_DAG_topaiml_reopen_and_pursuit_plan_*.md")
 _DESIGN_DOC = ".omx/research/costate_controller_design_20260705.md"
+_DISPATCH_DOC = ".omx/research/organ_regime_conditional_dispatch_436_20260711.md"
 _REVIEW_COUNTER = _REPO / ".omx" / "state" / "review_counter.jsonl"
 _DUTY_TOP_N = 6
 _SHADOW_STALE_S = 2 * 3600.0
@@ -747,6 +748,20 @@ def section_costate_organ(run_dir: Path | None) -> tuple[list[str], dict | None]
             lines.append(
                 "λ-organ acquisition (PowerPlay top-3): " + " · ".join(
                     f"{r.lever}({r.kind.split('-')[0]},{r.acquisition:.2f})" for r in acq))
+            # (c) #436 regime-conditional SELF-DISPATCH — the per-state arbiter decision
+            #     (advisory, past-only, NON-PROMOTABLE): current regime + which tool it
+            #     dispatches (or PERSISTENCE), provenance-labeled to the measured verdict.
+            from tac.witness_control.regime_dispatch import dispatch_for_trajectory
+            dd = dispatch_for_trajectory(traj)
+            data["dispatch"] = {
+                "regime": dd.classification.regime, "tool": dd.tool,
+                "deciding_signal": dd.classification.deciding_signal,
+                "explain": dd.explain(), "artifact": _DISPATCH_DOC,
+                "axis_tag": dd.axis_tag, "actuation": dd.actuation}
+            lines.append(
+                f"organ-dispatch (#436, {dd.axis_tag}): regime={dd.classification.regime} "
+                f"→ TOOL={dd.tool} [{dd.classification.deciding_signal}] "
+                f"· actuation={dd.actuation} · {_DISPATCH_DOC}")
     except Exception as exc:
         lines.append(f"λ-organ observatory: unavailable ({type(exc).__name__})")
     return lines, data

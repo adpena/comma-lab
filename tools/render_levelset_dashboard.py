@@ -1613,6 +1613,16 @@ def _run_info_html(info: dict | None) -> str:
                 f"pairs {_g('num-pairs')}"]
     cards.append(_card("config", cfg_src, " · ".join(cfg_bits)))
 
+    # 8) #436 ORGAN REGIME-DISPATCH (advisory · NON-PROMOTABLE) — the per-state
+    #    self-dispatch decision BESIDE the config it chose: current regime → which
+    #    tool the organ would use (or PERSISTENCE), with the deciding past-only signal.
+    rd = info.get("regime_dispatch") or {}
+    if rd:
+        disp_body = f"{rd.get('regime', '?')} → {rd.get('tool', '?')}"
+        disp_sub = (f"{rd.get('deciding_signal', '')} · actuation={rd.get('actuation', 'NONE')} "
+                    f"· {rd.get('axis_tag', '[macOS advisory] NON-PROMOTABLE')} · #436")
+        cards.append(_card("organ-dispatch (#436)", disp_body, disp_sub))
+
     out_html = '<div class="grid">' + "".join(cards) + "</div>"
     # ── DASHBOARD PASS 2026-07-04: run-role line + control-system telemetry panel +
     # lever status board + the primary-lever CONFIG table. All inline-styled pure HTML
@@ -1714,6 +1724,35 @@ def _write_html(out: Path, png: bytes, rows: list[dict], refresh: int,
     os.replace(tmp, out)
 
 
+_DISPATCH_DOC = ".omx/research/organ_regime_conditional_dispatch_436_20260711.md"
+
+
+def _regime_dispatch_status(run_dir: Path | None) -> dict:
+    """#436 costate-organ regime-conditional SELF-DISPATCH decision for the CURRENT
+    (latest) live state — advisory, past-only, NON-PROMOTABLE. Reads the run's OWN
+    verdict trajectory and asks the organ which tool it would dispatch (or PERSISTENCE)
+    given the current regime. Crash-safe: returns {} on any failure / <3 verdicts (no
+    live trajectory yet). Surfaced BESIDE the config it chose (SENSE display only —
+    the organ actuation boundary is unchanged: heavy/config = operator-GO)."""
+    if run_dir is None:
+        return {}
+    try:
+        from tac.witness_control.lambda_net import read_trajectory
+        from tac.witness_control.regime_dispatch import dispatch_for_trajectory
+        traj = read_trajectory(run_dir)
+        if traj.n_verdicts < 3:
+            return {}
+        dd = dispatch_for_trajectory(traj)
+        return {"regime": dd.classification.regime, "tool": dd.tool,
+                "deciding_signal": dd.classification.deciding_signal,
+                "prototype_regime": dd.classification.prototype_regime,
+                "n_intervals": dd.classification.n_past_intervals,
+                "explain": dd.explain(), "artifact": _DISPATCH_DOC,
+                "axis_tag": dd.axis_tag, "actuation": dd.actuation}
+    except Exception:
+        return {}
+
+
 def _collect_run_info(watched: Path | None, log_glob: str | None, run_dir_arg: str | None,
                       rows: list[dict], live: dict, now: float) -> dict:
     """Compose the #205 run-info dict from the REAL run artifacts (launch.sh schedule +
@@ -1744,7 +1783,8 @@ def _collect_run_info(watched: Path | None, log_glob: str | None, run_dir_arg: s
     info = {"run_dir": (str(run_dir) if run_dir is not None else None),
             "config": config, "schedule": schedule, "stage_prog": stage_prog,
             "best": best, "checkpoints": checkpoints, "resume": resume,
-            "perf": perf, "disk": disk, "throughput": throughput}
+            "perf": perf, "disk": disk, "throughput": throughput,
+            "regime_dispatch": _regime_dispatch_status(run_dir)}
     # ── 2026-07-04: control-system telemetry (fired transitions / closed-loop rows /
     # ep0 nucleation gate / per-stage slopes / eikonal effective-weight series) + the
     # run's CONFIG ROLE (#205 diagnosed-erosion vs fresh seeded successor). All from

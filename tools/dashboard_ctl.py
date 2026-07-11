@@ -58,7 +58,8 @@ _SUPERVISOR_SIG = "dashboard_supervisor.py"
 _ACCESS_KEY_FILE = _REPO_ROOT / ".omx" / "tmp" / "dash_levelset_deploy" / ".access_key"
 # Source files whose content is baked into the running server (mirror of
 # dashboard_server._CODE_SOURCE_FILES — kept in lockstep; a change to any needs a reload).
-_CODE_SOURCE_FILES = ("dashboard_server.py", "dashboard_flow_client.js", "dashboard_whyhow_client.js")
+_CODE_SOURCE_FILES = ("dashboard_server.py", "render_levelset_dashboard.py",
+                      "dashboard_flow_client.js", "dashboard_whyhow_client.js")
 
 
 # ───────────────────────── probes (patchable for tests) ─────────────────────────
