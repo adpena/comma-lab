@@ -14179,6 +14179,24 @@ score-lever). Pointer 0.19110 UNMOVED (hardening only). Not-in-scope + verified-
 CTXR parser enforces exact-consumption (`click_polish.py:184`); its runtime enforcement of
 atomic/final-raw/storage lives in the byte-close/inflate path now hardened here.
 
+### FEED-402-verify (2026-07-11, task #402) — [no-triality-lever] BIT-IDENTITY ACCEPTANCE PROOF closes the gate
+Verification pass on the FEED-receiver-harden landing (above). CONFIRMED all 4 mission properties in
+the SHIPPED `inflate.py` (contest-run surface, not just tool-side): exact-consumption raises
+(`inflate.py:96/109/111/370/546/558/603/615`), FINAL-RAW assertion + `SystemExit` on short `.raw`
+(`:777–787`), atomic `.partial`→`os.replace` after size-verify (`:758–788`), storage preflight in
+`run_inflate` (`:1955`). Tests RE-RUN GREEN: **35 passed** (24 `test_levelset_receiver_harden` + 11
+`test_levelset_receiver_bijection_gate`) — positive/trailing/truncation/wrong-magic/atomic/short-raw/
+storage-ok/storage-fail-closed/dep-pin/cross-host. **ACCEPTANCE GATE (the piece the landing had not
+recorded): bit-identity before/after.** Byte-closed 6 pairs of finished shared-head ckpt
+`levelset_v752_baseline_20260710T185913Z` at HEAD vs pre-#402 (`e2c1b2aeb2^`=`acd1f03e01`, tool
+materialized read-only, run then deleted): `archive.zip` sha `242d453e…664a` IDENTICAL both;
+`inflated/0.raw` (36,624,096 B) sha `e290f19d…264f` IDENTICAL both; `cmp` byte-for-byte identical.
+⇒ hardening is DEFINITIVELY score-neutral on the valid shared-head path (every intervening commit is
+default-off). Scratch packets auto-cleaned (rebuildable). Memo:
+`.omx/research/receiver_hardening_402_20260711T212832Z.md`. Legs: DSL/equations N/A (apparatus/gate;
+equations sister `receiver_forward_parity_v753_v8_v1` already registered #417). Pointer 0.19108282
+UNMOVED — protects FUTURE exact rows from truncated/corrupt/inert-group decode, moves nothing itself.
+
 ### FEED-400-diagonal-build (2026-07-10, task #400) — BUILD-ONLY: pair-local DIAGONAL mode added to the #396 MC-finisher
 The witness realization of PR128's click-polish exploit landed as a MODE (not a fork) in
 `src/tac/through_r/mc_finisher.py`, per the unify recommendation of
