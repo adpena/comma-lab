@@ -189,6 +189,58 @@ def build_lane_groundframe_xi_transport_no_collapse_v1() -> CanonicalEquation:
         ),
     )
 
+    # T1 phase-advection tie-coordinate anchor (#439 SEAL n600 A/B, 2026-07-11) -- the POSITIVE
+    # counterpart that CONFIRMS the chart-SELECTION corollary: xi-transport DOES pay (modestly) on the
+    # UN-canonicalized tie-coordinate chart (boundary sub-pixel tie-point in RENDER space, ego DOF NOT
+    # pre-absorbed), unlike the ground-canonicalized lane rate chart above where it LOSES to identity.
+    anchor_t1_tie_coord = EmpiricalAnchor(
+        anchor_id="t1_tie_coord_xi_transport_positive_modest_measured_20260711",
+        measurement_utc="2026-07-11T00:00:00Z",
+        inputs={
+            "chart": (
+                "tie-coordinate (boundary sub-pixel tie-point, RENDER frame -- UN-canonicalized, "
+                "ego DOF NOT pre-absorbed) -- CONTRAST to the ground-canonicalized lane chart above"
+            ),
+            "term": (
+                "T1 phase-advection-consistency (#424); target = xi-advected GT_tie[p-1] predicting "
+                "pair p's tie; measures the PREMISE of the training-time gradient prior"
+            ),
+            "labels": "gt_n600.npz argmax; 599 scored transitions; xi = real gt_poses frozen-PoseNet readout",
+            "measurement": "$0 through-R target-validity (a training-time gradient prior has no pure d_seg-delta -- that needs a training A/B)",
+        },
+        predicted_output={
+            "corollary": "xi-transport pays on an UN-canonicalized chart (the tie-coord is NOT ground-canonicalized)",
+            "predicted_band_px_rms": "0.09-0.43 (memo flicker_transform_geometry_term_design_20260710)",
+        },
+        empirical_output={
+            "tie_pred_wMSE_xi_advected": 0.10864,        # RMS 0.330 px, inside the predicted band
+            "tie_pred_wMSE_no_warp_persist": 0.11659,
+            "xi_warp_improvement_frac": -0.068,          # -6.8% residual: xi-warp beats no-warp
+            "xi_warp_win_fraction": 0.706,               # wins 70.6% of 599 pairs
+            "variance_explained_frac": "~0.06-0.07 of cross-frame tie variance (REAL but MODEST)",
+            "verdict": (
+                "REAL and better-than-trivial (not noise-chasing) but MODEST; CONFIRMS the chart-"
+                "selection corollary (xi pays on the un-canonicalized tie chart); whether the "
+                "placement gain crosses SegNet argmax thresholds to LOWER d_seg is nonlinear and "
+                "needs a phase-ON vs matched phase-OFF n600 training A/B"
+            ),
+        },
+        residual=0.0,
+        source_artifact=".omx/research/t1_phase_advection_seal_439_20260711.md",
+        measurement_method="n600_through_R_tie_coord_xi_advection_target_validity_599_transitions",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/t1_phase_advection_seal_439_20260711.md",
+            reactivation_criteria=(
+                "the phase-ON vs matched phase-OFF n600 training A/B measuring whether the tie-placement "
+                "gain crosses SegNet argmax to LOWER d_seg through byte-close (operator-GO); a byte-closed "
+                "exact-eval row converts this advisory premise to contest authority"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="macos_arm64",
+        ),
+    )
+
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -232,10 +284,11 @@ def build_lane_groundframe_xi_transport_no_collapse_v1() -> CanonicalEquation:
         },
         units_in={"lane_coeff_stream": "quantized_int_delta", "xi": "se2_ds_dy_dpsi_per_pair"},
         units_out={"innovation_l1": "sum_abs_quantized_delta", "s_rate_term": "contest_rate_score"},
-        empirical_anchors=(anchor_lane_payload, anchor_full_blob),
+        empirical_anchors=(anchor_lane_payload, anchor_full_blob, anchor_t1_tie_coord),
         predicted_vs_empirical_residual={
             "isolated_payload_measured": 0.0,
             "full_blob_measured": 0.0,
+            "t1_tie_coord_measured": 0.0,  # #439: xi-transport pays modestly on the un-canonicalized tie chart
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
