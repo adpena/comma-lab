@@ -15019,3 +15019,38 @@ would be the equations leg IF/WHEN a real oracle measurement lands (not this tas
 duplicate): `pairset_component_marginal_score_decomposition_v1` (additive marginal decomposition — this tool
 measures the DEVIATION from that additivity). **Pointer 0.19108282 UNMOVED** — rate-axis apparatus sharpening
 #157/#406 additivity trust; it moves NO score itself.
+
+
+### DAG FEED 2026-07-10obs (observer-gap ROOT-CAUSE — score-neutral #247 shadow observer was silently orphaned on the v752_baseline live run; two facets fixed + guards)
+
+**Signal.** The live `levelset_v752_baseline_20260710T185913Z` run (pid 88030) had NO costate observer
+process and NO `costate_shadow.jsonl`; the check-in surfaced costate telemetry as "missing". Score-neutral
+observability that "defaults ON" (CLAUDE.md "'Off' is a tracked queue") had been silently lost.
+
+**Root cause (two facets of one disease + a discovered third).** (1) The observer auto-start
+(`ensure_shadow_observer`) lives ONLY in `tools/launch_witness_run.main()`. This run was RELAUNCHED via
+`bash launch.sh` wrapped directly in `spawn_durable_daemon` (a governed relaunch path — admission-guard
+passed) which NEVER calls `main()`, so auto-start never fired (the earlier `v752_pilot_154100Z`, launched
+through `launch_witness_run`, DID get its observer). (2) A canonical manual start was then REFUSED by the
+`spawn_durable_daemon`/`safe_run` SUM-over-RAM admission gate: with the trainer at ~80 GiB the adaptive
+ceiling (clamped 64) is below current-used, so the gate refuses EVERYTHING — including a 0.1 GiB read-only
+SENSE organ — even with 47-54 GiB genuinely free. Observability-defaults-ON was crash-guard-refused exactly
+when it is most needed. (3) DISCOVERED while starting it: `costate_observer_loop.ensure_run_log` self-matched
+the observer's OWN registry row (its cmd carries `--run-dir <abs>`; the trainer's row uses a RELATIVE path so
+`str(run_dir)` isn't a substring), symlinking `run.log -> observer.log` (no `loss_terms`) => empirical
+costates degenerate to n=0.
+
+**Response (apparatus, two-landing per facet).** Facet-2 FIX: `_is_protection_infra_cmd` now also exempts
+the costate observability SENSE organs (`costate_observer_loop.py`/`costate_shadow_report.py`) from the SUM
+gate — they still honor the per-arm RSS cap + free-floor preflight, so a genuine OOM stays impossible; a
+read-only observer must be launchable to watch a run that by definition fills the box. Facet-3 FIX:
+`ensure_run_log` skips observer self-rows, matches on run-dir basename (relative-path trainer rows), and never
+symlinks onto observer.log. Guard tests: `test_spawn_durable_daemon_memguard` (+4, incl. trainer NOT exempt)
+and new `test_costate_observer_run_log_fallback` (+3). Facet-1 (auto-start coupled to `launch_witness_run.main`,
+bypassed by the `bash launch.sh` relaunch) is REPORTED as the remaining wiring gap: the durable observability
+belongs at the governed-spawn layer for every witness relaunch, not only in `main()`. Commit 13de28bae.
+
+**Verified.** Observer STARTED via the canonical `ensure_shadow_observer` (durable detached session, killpg-safe,
+own pgid); `costate_digest` now shows `costate-shadow: ep50 class=CONVERGING`, and `run.log -> daemon.log`.
+Live run (pid 88030) untouched throughout. **Triality:** `[no-triality]` — apparatus, no measured law.
+**Pointer 0.19108282 UNMOVED.**
