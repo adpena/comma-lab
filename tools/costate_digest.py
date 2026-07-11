@@ -679,6 +679,79 @@ def section_graph_memory() -> tuple[str | None, dict | None]:
         return f"graph-memory: unavailable ({type(exc).__name__})", None
 
 
+def section_costate_organ(run_dir: Path | None) -> tuple[list[str], dict | None]:
+    """#426 λ-organ OBSERVATORY (Rudin/max-observability): which prototype regimes
+    fired with what weights + uncertainty; the compounding organ-ledger summary
+    (records/regimes/recommended architecture); the top PowerPlay acquisition rows.
+    Read-only, numpy-only lenses (spread-gate discipline: no torch fits here),
+    fail-open, bounded (<1s on verdict-cadence data)."""
+    lines: list[str] = []
+    data: dict = {}
+    # (a) the compounding memory summary (triality ledger — cheap parse)
+    try:
+        from tac.witness_control.continual_costate import organ_summary
+        s = organ_summary()
+        data["memory"] = s
+        if s["n_records"]:
+            lines.append(
+                f"λ-organ memory: {s['n_records']} trajectory record(s) / "
+                f"{s['total_intervals']} intervals; {s['n_regimes']} regime(s) "
+                f"[{', '.join(s['regimes'][:4])}{'…' if s['n_regimes'] > 4 else ''}]; "
+                f"recommended arch {s['recommended_architecture']}")
+    except Exception as exc:
+        lines.append(f"λ-organ memory: unavailable ({type(exc).__name__})")
+    # (b) the live observatory + acquisition queue (needs a run dir with verdicts)
+    if run_dir is None:
+        return lines, data
+    try:
+        import numpy as np
+
+        from tac.witness_control.control_alphabet import powerplay_acquisition
+        from tac.witness_control.lambda_net import (
+            RidgeSolveAdjoint, build_intervals, evaluate_lambda_field,
+            fit_score_composition, lever_features, read_trajectory)
+        from tac.witness_control.prototype_router import PrototypeRouterLens
+        traj = read_trajectory(run_dir)
+        if traj.n_verdicts >= 3:
+            comp = fit_score_composition(traj.verdicts)
+            intervals = build_intervals(traj)
+            phis = np.stack([lever_features(n) for n in traj.lever_names])
+            lens = PrototypeRouterLens()
+            lens.fit(intervals, phis)
+            last = traj.verdicts[-1]
+            x = np.concatenate([np.asarray(last["d_seg_by_class"], dtype=float),
+                                [math.log(max(float(last.get("blob_bytes", 1.0)), 1.0))]])
+            att = lens.attribute(x, float(last["epoch"]), comp.grad_s_wrt_state())
+            data["observatory"] = {
+                "explain": att.explain(), "fired": list(att.fired),
+                "mixture_entropy": att.mixture_entropy}
+            lines.append("λ-organ observatory: " + att.explain())
+            faith = lens.faithfulness_audit(x, intervals[-1].ctx,
+                                            comp.grad_s_wrt_state(),
+                                            lever_features("seg"))
+            data["faithfulness"] = {k: faith[k] for k in
+                                    ("faithful", "max_rel_gap", "rel_tol")}
+            lines.append(
+                f"λ-organ faithfulness: {'OK' if faith['faithful'] else 'DIVERGENT'} "
+                f"(max_rel_gap {faith['max_rel_gap']:.3f} ≤ tol {faith['rel_tol']}; "
+                "stated-vs-counterfactual, 2607.08046)")
+            m = RidgeSolveAdjoint()
+            m.fit(intervals, phis)
+            fld = evaluate_lambda_field(m, traj, comp, intervals,
+                                        status="SPECULATIVE-UNTIL-BACKTESTED")
+            ever = {n: fld.identified.get(n, False) for n in fld.per_lever}
+            acq = powerplay_acquisition(fld.per_lever, ever_fired=ever)[:3]
+            data["acquisition_top"] = [
+                {"lever": r.lever, "acquisition": r.acquisition, "kind": r.kind}
+                for r in acq]
+            lines.append(
+                "λ-organ acquisition (PowerPlay top-3): " + " · ".join(
+                    f"{r.lever}({r.kind.split('-')[0]},{r.acquisition:.2f})" for r in acq))
+    except Exception as exc:
+        lines.append(f"λ-organ observatory: unavailable ({type(exc).__name__})")
+    return lines, data
+
+
 def section_review_counter() -> tuple[str | None, dict | None]:
     """Open review-counter state (sibling ledger; soft — omit entirely if absent)."""
     row = _last_jsonl_row(_REVIEW_COUNTER) if _REVIEW_COUNTER.exists() else None
@@ -764,6 +837,9 @@ def build_digest() -> tuple[list[str], dict]:
     gm_line, data["graph_memory"] = section_graph_memory()
     if gm_line:
         lines.append(gm_line)
+
+    organ_lines, data["costate_organ"] = section_costate_organ(run_dir)
+    lines.extend(organ_lines)
 
     rc_line, data["review_counter"] = section_review_counter()
     if rc_line:

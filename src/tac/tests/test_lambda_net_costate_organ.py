@@ -261,6 +261,10 @@ def test_new_modules_have_no_actuation_tokens():
                 "src/tac/witness_control/control_alphabet.py",
                 "src/tac/witness_control/costate_panel.py",
                 "src/tac/witness_control/prototype_router.py",
+                "src/tac/witness_control/continual_costate.py",
+                "src/tac/witness_control/scorer_geometry.py",
+                "src/tac/witness_control/self_monitor.py",
+                "src/tac/witness_control/gepa_reflection.py",
                 "src/tac/witness_dsl/costate_agent_dsl.py"):
         src = (REPO / rel).read_text()
         for tok in forbidden:

@@ -33,6 +33,7 @@ NODE_TYPES: tuple[str, ...] = (
     "task",      # a canonical_task_status entry
     "deferral",  # a deferral-ledger row
     "decision",  # a finding/memory carrying a verdict (CONFIRMED/NO-GO/VERDICT/...)
+    "regime",    # a #426 costate-organ prototype regime (costate_organ_trajectory_ledger)
 )
 
 # Canonical edge types (directed src -> dst).

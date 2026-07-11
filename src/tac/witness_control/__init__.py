@@ -15,6 +15,27 @@ Pontryagin Loop — memo ``.omx/research/amortized_operator_pontryagin_loop_clus
 (gradient-free exact-argmax finisher) → measured rows → retrain the operators. The
 analytic law is ``cgauge_master_action_v1``; λ IS ``costate_lambda_marginal_ds_v1``.
 
+THE COHERENT ORGAN (the named architecture, 2026-07-11 adversarial-review pass —
+one spine, every head wired, compiled by ``costate_agent_dsl.CostateAgentProgram``):
+
+    SENSE   read_trajectory (run telemetry) + graph/ledger precedent + scorer-geometry
+            priors (``scorer_geometry``: cached margin/Fisher field + UNIWARD cost)
+    COMPOSE fit_score_composition — the ANALYTIC ∂S/∂x half (exact score law)
+    ADJOINT the λ-field panel (``lambda_net`` arms A/B/C/D + interpretable heads
+            ``prototype_router`` E/E-Bregman/F-BSF + G scorer-prior; routed per the
+            measured routing benchmark; Rashomon set = the uncertainty object)
+    SELF-MONITOR the meta-λ (``self_monitor``): the organ probes its OWN activations
+            (self-forecast error · Rashomon agreement · routing entropy · faithfulness
+            gap · plateau flag) → trust + typed corrections (it knows when it doesn't know)
+    DECIDE  hamiltonian_decide (closed-form u* on the share simplex)
+    ACT     feasibility_projection — SAFE advisory artifacts | HEAVY ⇒ OperatorGoTicket
+            (containment; no execute path) + SpawnTicket System-2 (clause-typed)
+    REFLECT one GEPA cycle (``gepa_reflection``): grounded reflection proposes
+            candidates → measured walk-forward disposes → Pareto frontier
+    COMPOUND the triality ledger (``continual_costate``): FEED-426-organ blocks →
+            graph-memory regime nodes → next session reconstructs a smarter organ;
+            architecture graduation is MEASURED (``arbitrate_architecture``)
+
 Phase A is SHADOW MODE ONLY: observe → estimate → recommend (JSONL rows) → STOP.
 
 CONTAINMENT (structural, not a config flag): no module in this package imports
@@ -100,6 +121,26 @@ from tac.witness_control.lambda_net import (  # noqa: F401
     benchmark_all,
     rashomon_lambda_set,
     read_trajectory,
+)
+from tac.witness_control.continual_costate import (  # noqa: F401
+    ORGAN_LEDGER,
+    ArchitectureArbitration,
+    OrganMemory,
+    append_trajectory_record,
+    arbitrate_architecture,
+    compose_trajectory_record,
+    load_organ_memory,
+    organ_summary,
+)
+from tac.witness_control.gepa_reflection import (  # noqa: F401
+    GepaCycleReport,
+    ReflectionCandidate,
+    pareto_frontier,
+    run_gepa_cycle,
+)
+from tac.witness_control.self_monitor import (  # noqa: F401
+    SelfAwarenessReport,
+    self_activation_probe,
 )
 from tac.witness_control.verdict_trend_alarm import (  # noqa: F401
     NO_ALARM,

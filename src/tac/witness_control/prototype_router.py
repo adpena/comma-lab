@@ -66,12 +66,23 @@ class Prototype:
     neighborhood_epochs: tuple[float, ...]   # the past states this prototype speaks for
     local_response: np.ndarray      # (STATE_DIM, PHI_DIM) — the prototype's λ-response operator
     local_base: np.ndarray          # (STATE_DIM,) — its base drift
+    basis: np.ndarray | None = None  # (r, STATE_DIM) BSF block chart (None = point prototype)
 
     def signature(self) -> str:
         c = self.center[:N_CLASSES]
         worst = int(np.argmax(c))
-        return f"{self.name} [{self.scale}] worst-class={CLASS_NAMES[worst]} " \
+        dim = f" dim={self.basis.shape[0]}" if self.basis is not None else ""
+        return f"{self.name} [{self.scale}{dim}] worst-class={CLASS_NAMES[worst]} " \
                f"(d_seg_by_class≈{np.round(c, 4).tolist()})"
+
+    def to_jsonable(self) -> dict:
+        """Triality-ledger serialization (the regime node's durable payload)."""
+        return {
+            "index": self.index, "scale": self.scale, "name": self.name,
+            "center": [round(float(v), 8) for v in self.center],
+            "neighborhood_epochs": list(self.neighborhood_epochs),
+            "block_dim": (int(self.basis.shape[0]) if self.basis is not None else 0),
+        }
 
 
 def _name_from_center(center: np.ndarray, log_bytes_ref: float) -> str:
@@ -125,24 +136,61 @@ class PrototypeRouterLens:
 
     def __init__(self, n_coarse: int = DEFAULT_N_COARSE, n_fine: int = DEFAULT_N_FINE,
                  topm: int = DEFAULT_TOPM, bandwidth_frac: float = DEFAULT_BANDWIDTH_FRAC,
-                 ridge: float = 1e-2):
+                 ridge: float = 1e-2, distance: str = "euclidean"):
+        if distance not in ("euclidean", "bregman_kl"):
+            raise ValueError(f"distance {distance!r} not in ('euclidean', 'bregman_kl')")
         self.n_coarse, self.n_fine = int(n_coarse), int(n_fine)
         self.topm, self.bandwidth_frac = int(topm), float(bandwidth_frac)
         self.ridge = float(ridge)
+        self.distance = distance
         self.prototypes: list[Prototype] = []
         self._bw: float = 1.0
         self._log_bytes_ref: float = math.log(85_000.0)
 
+    # ---- divergence (the assignment geometry; Nielsen "Six short stories" #4/#6:
+    # per-class d_seg are RATES living in exponential-family geometry — the natural
+    # divergence is the binary-KL Bregman divergence, not squared-Euclid. Banerjee
+    # Bregman clustering keeps the MEAN as the (right-)centroid; only the ASSIGNMENT
+    # divergence changes. Arbitrated by the backtest, never asserted.) ----
+    def _div_rows(self, X: np.ndarray, c: np.ndarray) -> np.ndarray:
+        """Divergence of each row of X to center c (squared-Euclid or Bregman-KL)."""
+        if self.distance == "euclidean":
+            return np.sum((X - c[None, :]) ** 2, axis=1)
+        eps = 1e-6
+        p = np.clip(X[:, :N_CLASSES], eps, 1 - eps)
+        q = np.clip(c[:N_CLASSES], eps, 1 - eps)[None, :]
+        kl = np.sum(p * np.log(p / q) + (1 - p) * np.log((1 - p) / (1 - q)), axis=1)
+        rest = np.sum((X[:, N_CLASSES:] - c[None, N_CLASSES:]) ** 2, axis=1)
+        return kl + 0.5 * rest
+
+    def _proto_div(self, x: np.ndarray, p: Prototype) -> float:
+        """Divergence of a query state to one prototype (BSF blocks override to
+        distance-to-SUBSPACE; point prototypes use the assignment divergence)."""
+        if p.basis is not None and p.basis.size:
+            r = x - p.center
+            along = p.basis @ r
+            resid = r - p.basis.T @ along
+            # off-chart residual dominates; a weak in-plane term keeps LOCALITY so a
+            # chart that happens to span the whole trajectory line cannot claim every
+            # state (BSF blocks are regions, not infinite planes).
+            return float(resid @ resid) + 0.25 * float(along @ along)
+        return float(self._div_rows(x[None, :], p.center)[0])
+
+    def _make_basis(self, members: np.ndarray) -> np.ndarray | None:
+        """Point prototypes carry no chart (the BSF subclass fits one)."""
+        return None
+
     # ---- fitting (interpretable-by-construction) ----
     def _kmeans(self, X: np.ndarray, k: int, seed: int) -> tuple[np.ndarray, np.ndarray]:
-        """Tiny deterministic k-means (few points, few clusters — exact enough, seeded)."""
+        """Tiny deterministic Bregman k-means (few points, few clusters; assignment by
+        ``_div_rows``, centroid = mean — the Banerjee right-centroid — seeded)."""
         k = min(k, len(X))
         rng = np.random.default_rng(seed)
         idx = rng.permutation(len(X))[:k]
         C = X[idx].copy()
         labels = np.zeros(len(X), dtype=int)
         for _ in range(25):
-            d = np.linalg.norm(X[:, None, :] - C[None, :, :], axis=2)
+            d = np.stack([self._div_rows(X, C[j]) for j in range(k)], axis=1)
             labels = np.argmin(d, axis=1)
             newC = np.stack([X[labels == j].mean(axis=0) if np.any(labels == j) else C[j]
                              for j in range(k)])
@@ -166,9 +214,16 @@ class PrototypeRouterLens:
             return np.zeros(STATE_DIM), np.zeros((STATE_DIM, phis.shape[0]))
         Phi = np.stack(rows); Y = np.stack(ys); W = np.diag(ws)
         p = Phi.shape[1]
-        gram = Phi.T @ W @ Phi
-        scale = float(np.mean(np.diag(gram))) or 1.0
-        coef = np.linalg.solve(gram + self.ridge * scale * np.eye(p), Phi.T @ W @ Y)  # (p,S)
+        # np.errstate: Apple Accelerate BLAS raises SPURIOUS fp-status flags on these
+        # small matmuls (diagnosed 2026-07-11: inputs/outputs verified finite — ws≈0.6,
+        # gram∈[0,5.2]; instrumented reproduction in the adversarial-review round 2).
+        # Outputs are asserted finite below — a real failure still fails loudly.
+        with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+            gram = Phi.T @ W @ Phi
+            scale = float(np.mean(np.diag(gram))) or 1.0
+            coef = np.linalg.solve(gram + self.ridge * scale * np.eye(p), Phi.T @ W @ Y)
+        if not np.isfinite(coef).all():                # fail-loud: the guard the errstate owes
+            raise FloatingPointError("prototype local ridge produced non-finite coefficients")
         base = coef[0].copy()
         resp = coef[1:].T.copy()                       # (STATE_DIM, PHI_DIM)
         return base, resp
@@ -183,25 +238,26 @@ class PrototypeRouterLens:
             for j in range(len(C)):
                 mask = labels == j
                 nbhd = tuple(float(e) for e in eps[mask])
-                # soft membership weights for the local fit (gaussian around the center)
-                d = np.linalg.norm(X - C[j], axis=1)
-                bw = np.median(d[d > 0]) if np.any(d > 0) else 1.0
-                w = np.exp(-(d ** 2) / (2 * (bw ** 2) + 1e-12))
+                # soft membership weights for the local fit (kernel in the divergence)
+                dv = self._div_rows(X, C[j])
+                bw = np.median(dv[dv > 0]) if np.any(dv > 0) else 1.0
+                w = np.exp(-dv / (2 * bw + 1e-12))
                 base, resp = self._fit_local(intervals, phis, w)
                 protos.append(Prototype(
                     index=len(protos), scale=scale, center=C[j].copy(),
                     name=_name_from_center(C[j], self._log_bytes_ref),
-                    neighborhood_epochs=nbhd, local_response=resp, local_base=base))
+                    neighborhood_epochs=nbhd, local_response=resp, local_base=base,
+                    basis=self._make_basis(X[mask]) if np.any(mask) else None))
         self.prototypes = protos
         centers = np.stack([p.center for p in protos])
-        dd = np.linalg.norm(centers[:, None, :] - centers[None, :, :], axis=2)
+        dd = np.stack([self._div_rows(centers, centers[j]) for j in range(len(protos))])
         self._bw = self.bandwidth_frac * (np.median(dd[dd > 0]) if np.any(dd > 0) else 1.0)
 
     # ---- sparse non-negative routing (the interpretable gate) ----
     def _mixture(self, x: np.ndarray, suppress: tuple[str, ...] = ()) -> np.ndarray:
         sims = np.asarray([
             0.0 if p.name in suppress else
-            math.exp(-float(np.dot(x - p.center, x - p.center)) / (2 * self._bw ** 2 + 1e-12))
+            math.exp(-self._proto_div(x, p) / (2 * self._bw + 1e-12))
             for p in self.prototypes])
         if self.topm < len(sims):                      # PRISM sparsity: keep top-m
             cut = np.argsort(-sims)[self.topm:]
@@ -244,3 +300,68 @@ class PrototypeRouterLens:
         return PrototypeAttribution(epoch=epoch, fired=fired, mixture_entropy=ent,
                                     lambda_by_prototype=lam_by, neighborhoods=nbhd,
                                     suppressed=tuple(suppress))
+
+    # ---- FAITHFULNESS AUDIT (Goodfire/Eternis arXiv 2607.08046: verbalized
+    # explanations are only partly faithful (ρ=0.22) while activation probes track the
+    # real behavioral shift (ρ=0.57). PRISM's mixture is faithful-BY-CONSTRUCTION —
+    # the weights ARE the computation — but that claim is itself AUDITED, not asserted:
+    # for each fired prototype, compare its STATED λ-contribution against the REALIZED
+    # counterfactual (suppress it, re-route, measure the actual λ shift). A divergence
+    # means the renormalization is doing work the stated attribution conceals.) ----
+    def faithfulness_audit(self, x: np.ndarray, ctx: np.ndarray, grad_s: np.ndarray,
+                           phi: np.ndarray, *, rel_tol: float = 0.35) -> dict:
+        """Counterfactual check: stated per-prototype λ vs realized suppress-and-remeasure.
+
+        Returns {"rows": [...], "max_rel_gap": float, "faithful": bool}. Advisory."""
+        w = self._mixture(x)
+        lam_full = float(grad_s @ self.response(x, ctx, phi))
+        rows: list[dict] = []
+        scale = max(abs(lam_full), 1e-12)
+        for i, p in enumerate(self.prototypes):
+            if w[i] <= 1e-6:
+                continue
+            stated = float(grad_s @ (w[i] * (p.local_response @ phi)))
+            lam_without = float(grad_s @ self.response(x, ctx, phi, suppress=(p.name,)))
+            realized = lam_full - lam_without      # the prototype's ACTUAL causal share
+            gap = abs(stated - realized)
+            rows.append({"prototype": p.name, "weight": float(w[i]),
+                         "stated_lambda": stated, "realized_counterfactual": realized,
+                         "gap": gap, "rel_gap": gap / scale})
+        max_rel = max((r["rel_gap"] for r in rows), default=0.0)
+        return {"rows": rows, "max_rel_gap": float(max_rel),
+                "faithful": bool(max_rel <= rel_tol), "rel_tol": rel_tol,
+                "note": "stated=w_k·Λ_k·φ vs realized=suppression counterfactual; the gap "
+                        "is the renormalization's hidden work (2607.08046 probe-vs-story)"}
+
+
+class BlockSubspaceRouterLens(PrototypeRouterLens):
+    """Candidate F — the BSF growth-spine head (Goodfire Block-Sparse Featurizers):
+    each regime prototype is a MULTIDIMENSIONAL block-subspace (a local affine chart
+    fitted by PCA over the regime's neighborhood states), not a 1D point/direction —
+    the curved-manifold inductive bias (the level-set boundary manifold is curved +
+    multidim; a point prototype flattens it). Routing = distance-to-SUBSPACE with the
+    same PRISM top-m block-sparsity (few blocks fire at a time = the Morse-Smale
+    sparse-active-strata structure). Interpretable: a block is a named REGION with an
+    explicit chart + neighborhood — richer than a point, still a contract.
+
+    Unconstrained-size liberation (operator 2026-07-11): the organ is never rate-scored,
+    so block growth costs nothing in bytes; capacity is admitted by BACKTEST only."""
+
+    name = "F_bsf"
+
+    def __init__(self, *args, block_dim: int = 2, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.block_dim = int(block_dim)
+
+    def _make_basis(self, members: np.ndarray) -> np.ndarray | None:
+        n = len(members)
+        r = min(self.block_dim, n - 1, members.shape[1])
+        if r < 1:
+            return None                       # singleton neighborhood → point prototype
+        centered = members - members.mean(axis=0, keepdims=True)
+        # deterministic PCA chart via SVD (numpy, seeded-free — SVD is deterministic)
+        _, s, vt = np.linalg.svd(centered, full_matrices=False)
+        keep = min(r, int(np.sum(s > 1e-12)))
+        if keep < 1:
+            return None
+        return vt[:keep].copy()               # (r, STATE_DIM) orthonormal rows

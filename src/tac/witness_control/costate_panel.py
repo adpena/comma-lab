@@ -80,6 +80,10 @@ LENSES: tuple[LensSpec, ...] = (
     LensSpec("prototype", "E_prototype",
              "which recognizable REGIME is this, and WHY (interpretable-by-design)?",
              ("prototype-neighborhoods", "observatory-attribution"), True),
+    LensSpec("block_subspace", "F_bsf",
+             "which curved multidim regime CHART is this state on (BSF block-sparse "
+             "featurizer geometry)?",
+             ("block-subspace-charts", "observatory-attribution"), True),
     LensSpec("graph_precedent", "graph_precedent",
              "what does campaign history/structure imply?",
              ("lever-activation-ledger", "graph-memory-recall"), False),
@@ -101,7 +105,11 @@ ROUTING_MODES = ("SINGLE_BEST", "QUESTION_ROUTER", "SELF_ACTIVATION", "COMPONENT
 #: pooled posterior over lens competence (Yao-Pirš-Vehtari-Gelman arXiv 2101.08954),
 #: NOT a trained router and NOT raw train-confidence; the prior favors low complexity).
 LENS_COMPLEXITY = {"flow": 102.0, "pointwise": 332.0, "sequence": 1100.0,
-                   "operator_field": 700.0, "prototype": 220.0}
+                   "operator_field": 700.0, "prototype": 220.0, "block_subspace": 280.0}
+#: torch-training lenses (expensive; the spread-gate may skip them — 2607.08046
+#: finding 3: route by the PRE-SET answer-distribution spread; low spread → commit
+#: cheap with no accuracy loss, high spread → pay for the full panel)
+_EXPENSIVE_LENSES = frozenset({"pointwise", "sequence", "operator_field"})
 #: prior strength (pseudo-fold count) for the partial pooling — at n_folds ≈ α the
 #: evidence and the prior share weight equally; evidence dominates as folds accrue.
 STACKING_PRIOR_STRENGTH = 3.0
@@ -257,12 +265,22 @@ def run_panel(traj: CampaignTrajectory, *, routing_mode: str = "COMPONENT_FUSION
               seed: int = 0, status: str = "SPECULATIVE-UNTIL-BACKTESTED",
               inner_skill: dict[str, np.ndarray] | None = None,
               ledger_path: str | Path = ".omx/state/lever_activation_ledger.jsonl",
+              single_best_lens: str = "flow",
+              spread_gate: bool = False,
               ) -> PanelVerdict:
     """Fit every predictive lens on ALL intervals and fuse per ``routing_mode``.
 
     ``inner_skill`` (lens → per-channel MAE from held-out folds) feeds QUESTION_ROUTER
     and COMPONENT_FUSION; when absent those modes fall back to self-confidence weights
-    with an explicit note in the insight line (never silently)."""
+    with an explicit note in the insight line (never silently).
+
+    ``single_best_lens`` — the a-priori lens SINGLE_BEST commits to (arbitrated by the
+    routing benchmark + the organ ledger, no longer hardwired to "flow").
+    ``spread_gate`` — pre-decision spread routing (2607.08046 finding 3): compute the
+    cheap Rashomon spread FIRST; when the near-optimal set already AGREES (no unstable
+    levers) skip fitting the expensive torch lenses (they are skipped LOUDLY via the
+    insight line). Default False so benchmarks stay full-panel comparable; the digest
+    runs with the gate ON (compute policy, recorded — not orphaned signal)."""
     if routing_mode not in ROUTING_MODES:
         raise ValueError(f"routing_mode {routing_mode!r} not in {ROUTING_MODES}")
     comp = fit_score_composition(traj.verdicts)
@@ -273,12 +291,26 @@ def run_panel(traj: CampaignTrajectory, *, routing_mode: str = "COMPONENT_FUSION
     last = intervals[-1]
     dx_scale = np.mean(np.abs(np.stack([iv.dxdt() for iv in intervals])), axis=0)
 
+    # pre-decision spread (cheap, numpy-only) — decides whether the expensive lenses
+    # are worth their compute THIS call.
+    skipped_expensive: tuple[str, ...] = ()
+    rset = rashomon_lambda_set(traj, comp, intervals)
+    if spread_gate and not rset.unstable_levers:
+        skipped_expensive = tuple(sorted(_EXPENSIVE_LENSES))
+
     reports: list[LensReport] = []
     predictions: dict[str, np.ndarray] = {}
     fields: dict[str, dict[str, float]] = {}
     confidences: dict[str, float] = {}
     for spec in LENSES:
         if not spec.predictive:
+            continue
+        if spec.name in skipped_expensive:
+            reports.append(LensReport(
+                spec=spec, activation=0.0, self_confidence=0.0, forecast_dxdt=None,
+                lambda_field=None,
+                insight="SKIPPED by the pre-decision spread gate (Rashomon set agrees; "
+                        "commit-cheap per 2607.08046 §pre-set-spread routing)"))
             continue
         model = _fit_lens(spec.architecture, intervals, phis, seed)
         pred = _lens_predict(model, spec.architecture, last, traj.lever_names)
@@ -300,7 +332,8 @@ def run_panel(traj: CampaignTrajectory, *, routing_mode: str = "COMPONENT_FUSION
     lens_names = list(predictions)
     P = np.stack([predictions[n] for n in lens_names])          # (K, STATE_DIM)
     if routing_mode == "SINGLE_BEST":
-        weights = {n: (1.0 if n == "flow" else 0.0) for n in lens_names}
+        pick_sb = single_best_lens if single_best_lens in lens_names else lens_names[0]
+        weights = {n: (1.0 if n == pick_sb else 0.0) for n in lens_names}
         W = np.asarray([[weights[n]] * STATE_DIM for n in lens_names])
     elif routing_mode == "SELF_ACTIVATION":
         weights = _load_balance({n: confidences[n] for n in lens_names})
@@ -361,7 +394,6 @@ def run_panel(traj: CampaignTrajectory, *, routing_mode: str = "COMPONENT_FUSION
     #     response models disagree about WHAT TO DO — no System-1 fusion is honest);
     # (b) gross cross-lens forecast dispersion (a lens's regime assumption is violated).
     tickets: list[SpawnTicket] = []
-    rset = rashomon_lambda_set(traj, comp, intervals)
     if rset.unstable_levers:
         tickets.append(compose_spawn_ticket(
             question=(f"The Rashomon set of near-optimal response models (jackknife "
@@ -429,7 +461,8 @@ class RoutingBenchmark:
 
 
 def routing_benchmark(traj: CampaignTrajectory, *, seed: int = 0,
-                      folds: tuple[int, ...] | None = None) -> RoutingBenchmark:
+                      folds: tuple[int, ...] | None = None,
+                      single_best_lens: str = "flow") -> RoutingBenchmark:
     """Nested LOO: outer folds score the fused forecast; inner folds supply the skill
     weights (so no mode ever sees its own held-out interval — no leakage).
 
@@ -480,7 +513,8 @@ def routing_benchmark(traj: CampaignTrajectory, *, seed: int = 0,
         P = np.stack([preds[n] for n in names])
         for mode in ROUTING_MODES:
             if mode == "SINGLE_BEST":
-                W = np.asarray([[1.0 if n == "flow" else 0.0] * STATE_DIM for n in names])
+                sb = single_best_lens if single_best_lens in names else names[0]
+                W = np.asarray([[1.0 if n == sb else 0.0] * STATE_DIM for n in names])
             elif mode == "SELF_ACTIVATION":
                 w = _load_balance({n: confs[n] for n in names})
                 W = np.asarray([[w[n]] * STATE_DIM for n in names])

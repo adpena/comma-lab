@@ -408,4 +408,58 @@ def build_graph(
     parse_memory_files(g, memory_dir, eq_ids)
     parse_tasks(g, tasks_path or _TASKS_JSONL)
     parse_deferrals(g, deferral_path or _DEFERRAL_MD)
+    parse_costate_organ_ledger(g)
     return g
+
+# ---------------------------------------------------------- costate organ ----
+_ORGAN_LEDGER = _RESEARCH_DIR / "costate_organ_trajectory_ledger.md"
+
+
+def parse_costate_organ_ledger(graph: Graph, ledger_path: Path | None = None) -> int:
+    """Index the #426 costate-organ trajectory ledger (triality-native memory): each
+    FEED-426-organ block becomes a `finding` node; each named prototype regime becomes
+    a typed `regime` node with edges to the run entity + the organ block. The ledger
+    markdown REMAINS the source of truth (reconstruct-not-retrieve)."""
+    p = ledger_path or _ORGAN_LEDGER
+    if not p.exists():
+        return 0
+    try:
+        from tac.witness_control.continual_costate import load_organ_memory
+    except Exception:
+        return 0
+    mem = load_organ_memory(p)
+    n = 0
+    for rec in mem.records:
+        stamp = str(rec.get("generated_at", "?"))
+        block_id = f"finding:FEED-426-organ-{stamp}"
+        run_ref = str(rec.get("run_ref", "?"))
+        graph.add_node(Node(
+            id=block_id, ntype="finding",
+            title=f"FEED-426-organ-{stamp}",
+            summary=(f"organ trajectory record run={run_ref}; "
+                     f"{rec.get('n_intervals')} intervals; walk-forward winner "
+                     f"{rec.get('winner_walkforward')}"),
+            source=str(p), attrs={"run_ref": run_ref}))
+        graph.ensure_stub(f"entity:{run_ref}", "entity", run_ref)
+        graph.add_edge(Edge(block_id, f"entity:{run_ref}", "references", str(p)))
+        graph.ensure_stub("entity:#426", "entity", "#426")
+        graph.add_edge(Edge(block_id, "entity:#426", "references", str(p)))
+        n += 1
+    for proto in mem.prototype_library:
+        rid = f"regime:{proto['name']}"
+        graph.add_node(Node(
+            id=rid, ntype="regime", title=proto["name"],
+            summary=(f"costate regime prototype ({proto.get('scale')}, "
+                     f"block_dim={proto.get('block_dim', 0)}, "
+                     f"{proto.get('n_observations', 1)} obs; "
+                     f"first {proto.get('first_run')}, last {proto.get('last_run')})"),
+            source=str(p),
+            attrs={"center": proto.get("center"),
+                   "n_observations": proto.get("n_observations", 1)}))
+        graph.add_edge(Edge(rid, "entity:#426", "references", str(p)))
+        lr = proto.get("last_run")
+        if lr:
+            graph.ensure_stub(f"entity:{lr}", "entity", str(lr))
+            graph.add_edge(Edge(rid, f"entity:{lr}", "references", str(p)))
+        n += 1
+    return n

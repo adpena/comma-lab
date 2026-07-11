@@ -92,6 +92,17 @@ class SpawnTicket:
     requires_harness: bool = True     # structural: nothing in-process can execute this
     created_utc: str = _dc_field(default_factory=lambda: datetime.now(UTC).isoformat())
 
+    def __post_init__(self) -> None:
+        # containment is TYPE-ENFORCED, not composer-enforced: a directly-constructed
+        # ticket whose prompt lacks the inherited-containment clause is refused
+        # (adversarial-review hardening 2026-07-11 — the composer embedded the clause
+        # but the type did not require it; that was a bypass).
+        if INHERITED_CONTAINMENT_CLAUSE not in self.prompt:
+            raise ValueError("SpawnTicket.prompt MUST embed INHERITED_CONTAINMENT_CLAUSE "
+                             "verbatim (compose via compose_spawn_ticket)")
+        if self.requires_harness is not True:
+            raise ValueError("SpawnTicket.requires_harness is structurally True")
+
 
 #: the containment clause every spawned agent inherits VERBATIM (prompt-embedded)
 INHERITED_CONTAINMENT_CLAUSE = (
@@ -293,6 +304,95 @@ class GodelProofGate:
         return GodelProofGate(change=change, backtest_passed=backtest_passed,
                               predicted_delta_s=predicted_delta_s, admissible=admissible,
                               reason=reason)
+
+    @staticmethod
+    def evaluate_from_report(change: str, report, predicted_delta_s: float | None,
+                             *, law_ref: str = "cgauge_master_action_v1",
+                             require_law: bool = True) -> "GodelProofGate":
+        """Provenance-typed proof path (adversarial-review hardening 2026-07-11): the
+        backtest verdict is READ from a ``BacktestReport`` (LOO ∧ walk-forward when the
+        walk-forward gate was computable), never caller-asserted; and the proof must
+        REFERENCE a registered law (triality-native: proofs cite equations, not inline
+        heuristics — fail-closed if the law is absent from the canonical registry)."""
+        if require_law:
+            from tac.canonical_equations import query_equations
+            ids = {getattr(r, "equation_id", None) for r in query_equations()}
+            if law_ref not in ids:
+                return GodelProofGate(
+                    change=change, backtest_passed=False, predicted_delta_s=predicted_delta_s,
+                    admissible=False,
+                    reason=f"REFUSED: law_ref {law_ref!r} not in the canonical equations "
+                           "registry (a proof must reference a registered law)")
+        passed = bool(getattr(report, "passed", False))
+        return GodelProofGate.evaluate(change, passed, predicted_delta_s)
+
+
+@dataclass(frozen=True)
+class ScheduleBundleRec:
+    """A COHERENT curriculum-schedule recommendation (task #430): coordinated lever
+    BUNDLES in a state-gated cascade — not independent per-lever recommendations.
+
+    Operator binding 2026-07-11: the hand-built curriculum's independently-clocked
+    levers DESYNCHRONIZE (τ frozen while the boundary erodes); the organ's control
+    output is the joint schedule. Advisory: the bundle is emitted INSIDE an
+    OperatorGoTicket (mutate_live_config is HEAVY) — the organ recommends the whole,
+    the operator launches. SPECULATIVE-UNTIL-BACKTESTED until the #205-replay A/B
+    (hand-schedule vs organ-schedule) is measured — stated on the artifact."""
+
+    stages: tuple[dict, ...]        # ordered [{gate: <state condition>, bundle: [levers], why}]
+    joint_objective: str            # what the cascade jointly minimizes
+    tier: str
+    status: str = "SPECULATIVE-UNTIL-BACKTESTED (replay A/B owed)"
+    actuation: str = "NONE"
+    axis_tag: str = "[macOS advisory] NON-PROMOTABLE"
+
+
+def compose_schedule_bundle_ticket(marginal_ds: dict[str, float],
+                                   state_flags: dict[str, bool], *,
+                                   tier: str = "SPECULATIVE-UNTIL-BACKTESTED",
+                                   ) -> OperatorGoTicket:
+    """Compose the coherent state-gated cascade rec + wrap it in the HEAVY ticket.
+
+    The cascade template is the measured #205 flow (island-birth → boundary-form →
+    τ-sharpen⊕repair → finish); the λ-field ORDERS the bundles (most-negative
+    marginal-ΔS levers lead their stage) and the state flags gate the stages."""
+    lam_sorted = sorted(marginal_ds, key=lambda k: marginal_ds[k])
+    repair = [n for n in lam_sorted if n in
+              ("chroma_boundary", "lane_edge", "thin_lane", "subpix", "margin_saliency")]
+    birth = [n for n in lam_sorted if n in
+             ("island_amplify", "area_constraint", "persistence")]
+    stages = (
+        {"gate": "per-class islands unborn (Movable/Lane d_seg near init)",
+         "bundle": birth or ["island_amplify"],
+         "why": "nucleate before any boundary work (measured island-birth precedence)"},
+        {"gate": "islands born ∧ boundary forming (annulus share rising)",
+         "bundle": ["seg", "eikonal"],
+         "why": "form the level-set boundary before sharpening it"},
+        {"gate": "boundary formed ∧ NOT eroding (no TRAIN_VERDICT_DECOUPLING)",
+         "bundle": ["tau_advance", *(repair[:2] or ["chroma_boundary"])],
+         "why": "advance τ TOGETHER WITH matched repair — the desynchronization the "
+                "hand-schedule's independent clocks caused (operator diagnosis)"},
+        {"gate": "plateau-slope < threshold ∧ verdict/train coupled",
+         "bundle": ["muon_finish"],
+         "why": "finishing optimizer only on a coherent boundary"},
+    )
+    rec = ScheduleBundleRec(
+        stages=stages,
+        joint_objective="min d_seg × train-time over the WHOLE cascade "
+                        "(joint synergy, not per-lever EV)", tier=tier)
+    active = [s for s in stages
+              if not state_flags.get(f"stage_done:{s['bundle'][0]}", False)]
+    return OperatorGoTicket(
+        action="mutate_live_config",
+        justification=(f"#430 coherent schedule bundle ({len(active)} stage(s) "
+                       f"pending; tier {tier}): " +
+                       " → ".join("+".join(s["bundle"]) for s in rec.stages) +
+                       f" | objective: {rec.joint_objective} | status: {rec.status}"),
+        predicted_delta_s=None,
+        governed_command="tools/launch_witness_run.py --resume-from <ckpt> "
+                         "(operator-GO; schedule via the witness DSL compile)",
+        gates_owed=("#205-replay A/B: organ-schedule vs hand-schedule (backtest gate)",
+                    "witness DSL compile of the bundle (never-invent-flags)"))
 
 
 def rank_duty_to_measure(lam_field: dict[str, float], identified: dict[str, bool],
