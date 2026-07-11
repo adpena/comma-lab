@@ -248,3 +248,62 @@ measurement queue and supplies the Chentsov/dually-flat/SPD-cone WHY to the queu
 re-tests; it moves nothing itself. Only a byte-closed `upstream/evaluate.py` n600 exact row < 0.19108282
 moves the pointer. Sisters: `negative_findings_register_20260709/` (#390 register) · `negative_cure_join_table_20260710.md`
 (morning join) · FEED-oa (originality/info-geo corpus) · FEED-sp (SPD-cone lens win).
+
+---
+
+## PART 5 — EXECUTION PASS (2026-07-10, $0 · READ-ONLY · CONTAINMENT: no paid/GPU/2nd-n600-probe/training launch)
+
+Executed the shortlist: **FIRED** reactivation #5 (hyperprior on the structured witness `code` table — the
+one memory-safe $0 arm) and **PREPPED** the remaining four ready-to-fire (config + $0 gate + trigger).
+Live trainer pid 88030 (`levelset_v752_baseline_20260710T185913Z`) and the sister probe UNTOUCHED — this
+pass read only STABLE completed checkpoints.
+
+### 5A · FIRED — #5 hyperprior / 2D-context on the witness `code` table ⇒ **CLEAN CONFIRMING-NEGATIVE (near-iid)**
+
+**What ships (measured):** the `code` table is `(1200, D)` per-(pair,frame) FiLM latent (1200 = 600 pairs ×
+2 frames; D=19 or 26), int8-symmetric-quantized then **brotli quality=11** (`quantize_levelset_blob`,
+`lever_b_levelset_generator.py`; already MAX brotli — no free "bump-quality" win). Measured on TWO stable
+completed n600 witnesses (R1 26-d pose-trained `…R1_storenothing…BEST.npz`; 07-05 19-d `…20260705…BEST.npz`),
+replicating the EXACT ships-quantizer `_int8_symmetric`.
+
+**Is there exploitable 2D/temporal locality? NO (measured):**
+- **lag-1 autocorrelation** of the int8 code: axis-0 (temporal) = **−0.037 (R1) / −0.199 (07-05)**; axis-1
+  (dim) = **−0.120 / +0.019** — near-zero-to-weakly-**negative**. No temporal smoothness, no cross-dim locality.
+- **temporal-delta (PR95-L25) makes it WORSE** — H(Δ) 7.99 > H 7.35; brotli(delta) 30663 > brotli(raw) 25682 B.
+- **Achievable-rate discipline (train/test split — kills the in-sample conditional-entropy overfit, NO-FAKE):**
+  the naive in-sample H(x_{t,d} | up, left) = 1.14 b/sym "79% win" is a **small-sample artifact** — only
+  **1.9 samples per distinct (up,left) context** (15903 contexts vs 29975 symbols). Fitting the conditional
+  model on the TRAIN half and measuring cross-entropy on the HELD-OUT half: **every context model is WORSE
+  than the current brotli coder** — order-0 −11.7%, temporal-ctx −17.2%, 2D(up,left) −15.2% (R1; 07-05
+  materially identical: −11.3 / −13.8 / −21.1%). Current brotli(raw int8) 25682 B already sits BELOW the
+  order-0 held-out cross-entropy (28697 B) — brotli's LZ/context modeling already extracts more than any
+  hand-built context model achieves out-of-sample.
+
+**Verdict:** the Ballé/hyperprior falsification EXTENDS to this structured `code` table — it is effectively
+**near-iid for coding purposes**; a hyperprior / 2D-context arithmetic coder yields **NO achievable byte
+savings** on the fixed table (best held-out estimate is −12% to −21%, i.e. worse). The original scope
+(hyperprior-dead-on-near-iid) holds; the "structured 2D code table" carve-out does NOT reopen it. `[advisory]`
+(entropy-model estimates; a byte win is confirmed only byte-closed through `upstream/evaluate.py`) —
+but the direction is unambiguous (worse on held-out). **`[no-triality]`** (a confirming-negative / apparatus
+result; no new equation). **Scope-ladder:** FORMULATION — the fixed-table POST-HOC coder question. Distinct
+and STILL-ALIVE axis: the live **WeightEntropyPenalty** (−19.6% bytes) is a **training-time representation**
+change (pushes the learned code toward lower-entropy values), NOT a post-hoc coder — orthogonal, unaffected
+by this negative, remains a live rate lever. Probe: `/private/tmp/claude-501/.../scratchpad` (inline, no artifact).
+
+### 5B · READY-TO-FIRE PREP TABLE (do NOT launch — trigger-gated; ranked by EV, memory-free before launch-GO)
+
+Gap to sub-0.15 is now ENTIRELY d_seg (0.0411 S; pose banked L68; the one RATE reactivation = 5A, now a
+confirming-negative). So the remaining four are all **d_seg**, ranked by EV × how-soon-it-can-fire.
+
+| # | reactivation | EXACT config (never-invent-flags — verified in-tree) | $0 / cheap gate | TRIGGER (what it waits on) |
+|---|---|---|---|---|
+| **P1** | **#169 HorizonWeightedMargin** (taper→LOCAL saliency; BUILT+HELD, never-fired, byte-identical when off) | DSL `Lever` `HorizonWeightedMargin(weight=w, target=t, margin_lo=0.3, margin_hi=0.5, row_lo≈96, row_hi≈288, start_epoch=…)` → sets `--seg-horizon-margin-weight` (default **0.0** = byte-identical), `--seg-horizon-margin-{target,lo,hi}`, `--seg-horizon-row-{lo,hi}`, `--seg-horizon-margin-start-epoch` (`curriculum_dsl.py:3448`; activation-ledger `horizon_weighted_margin_169`) | n600 A/B ON-vs-OFF from a loaded ckpt; **exit criterion** `tools/measure_dseg_reducibility_gt_margin.py --n-pairs 600` on ON vs OFF — REQUIRE surviving flips shift to HIGHER GT margin (else terminal, = chasing `<lo` label-noise) | **MEMORY-FREE** — resumable n600 A/B; fires when a probe/RAM frees (no build, no operator-GO; it is a default-off loss-config lever → still a training arm, so respect the launch-GO gate for the *run*, but the config is complete) |
+| **P2** | **OT-Newton → flip-weighted (Fisher) target masses** (Chentsov reframe; solver already exact) | `damped_newton_ot_offsets(phi, target_masses=…, tau=…)` (`laguerre_logit_offset.py:245`) — swap `target_masses` from GT-area frequency to the **flip-share** sensor `perclass_verdict.flip_share_by_class` (the `flip_weighted` formulation, crucible-3 N-1 task #386, comment `laguerre_logit_offset.py:339`). Matrix-only, resumable-chunked | **$0 n600 3-arm A/B**: `no_offset` (0.0031436) vs `ot_newton`-area (0.0048921, the measured HURT) vs `flip_weighted` — through-R d_seg; win iff `flip_weighted < no_offset` | **MEMORY-FREE** — the P9 blocker to remove is the **n24-only** measurement (n96/n600 killed by 5-min bg limit); needs a resumable n600 offset-solve, not a new launch |
+| **P3** | **N1 Hessian-precond → iterative #341/#396** (NEW today; averaged-solve is proven-null, per-pixel anisotropic annulus is untested) | `_newton_step_from_cov(cov, g, taus, precondition=True, …)` opt-in (`laguerre_logit_offset.py:207`; legacy `precondition=False` = byte-identical). Enable inside **ONE #396 MC-finisher iteration** (built+tested this session, commit `aab422c5c`/#423), NOT the dense/averaged b\* solve (already null, cond 7.66) | per-iterate condition-number + exact-through-R step-quality (Δd_seg on terminal band) vs unpreconditioned, at a loaded ckpt | **MEMORY-FREE-ish** — pair-local #396 iterate is memory-light (fireable when the per-class probe frees); the #341 full-P GN/CG variant (~11 min/CG-iter @17×) needs n600. Composes directly with P4-C11 (price precond + full-P together) |
+| **P4** | **C14 analytic-lane band as TRAINING lever (paint-mode)** (join RANK 1; lane 0.00087 = 53% of enemy) | **flag ALREADY EXISTS** (memo's "~10-LOC wire-in" is STALE): `--lane-prior-phi1 --lane-prior-phi1-mode paint` (`train_levelset_…mlx.py:11742`, choices `replace|bias|paint`; `--lane-prior-phi1-source-pair`, `--lane-prior-phi1-dash-gate`). Fold as a DSL `Lever` for provenance | training-arm A/B from a stage boundary vs the byte-identical baseline; through-R d_seg | **OPERATOR LAUNCH-GO** — a NEW training arm = heavy launch → needs operator GO + governor admission (#254). Config is complete; only the *run* is gated |
+
+**Sequencing note:** P1+P2 are the memory-free arms that drain the moment the sister n600 probe frees a slot
+(no operator-GO for the *config*, but the *run* still passes the launch-safety + governor gate). P3 composes
+with P4/C11 for a single full-P-solve-with-precond price. P4 is the highest underlying-EV single lever
+(analytic lane band) but is the only one requiring an operator-GO training arm. None of the four is a claim;
+each is a candidate until byte-closed < 0.19108282.

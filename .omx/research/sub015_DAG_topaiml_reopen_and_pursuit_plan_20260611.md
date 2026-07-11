@@ -15184,3 +15184,52 @@ Laguerre; Lane's 97->~3 B/f gap = the ground-frame factorization (L-v8), annulus
 **Triality:** equations leg deferred — this is a pre-anchor for the SPEC §5 council-flagged per-class carrier
 allocation law (stays flagged until P-B/P-C/increment-1 n600-through-R anchors); DSL leg N/A (analysis probe).
 **Pointer 0.19108282 UNMOVED** (feasibility estimate/bound, not a byte-closed score).
+
+---
+
+## FEED-nrb (2026-07-10): NEGATIVES-AUDIT EXECUTION PASS — FIRED #5 hyperprior (CLEAN near-iid negative) + PREPPED the 4 remaining ready-to-fire ($0 · READ-ONLY · live pid 88030 untouched)
+
+Executed the FEED-nra reactivation shortlist (`negative_findings_reaudit_20260710.md` PART 5). CONTAINMENT
+honored: no paid/GPU launch, no 2nd n600 SegNet probe (sister owns pid), no autonomous training arm; read
+only STABLE completed ckpts (NOT the live `levelset_v752_baseline_20260710T185913Z`).
+
+**FIRED — #5 hyperprior / 2D-context on the STRUCTURED witness `code` table ⇒ CLEAN CONFIRMING-NEGATIVE.**
+The `code` table is `(1200, D)` per-(pair,frame) FiLM latent (D=19/26), int8-sym + **brotli q11** (already
+MAX). Measured on two stable n600 witnesses (R1 26-d, 07-05 19-d), replicating the exact ships-quantizer:
+- lag-1 autocorr near-zero-to-**negative** (axis-0 temporal −0.037/−0.199; axis-1 dim −0.120/+0.019); temporal-
+  delta makes it WORSE (brotli(Δ) 30663 > brotli(raw) 25682 B).
+- **Achievable-rate train/test split (kills the in-sample overfit, NO-FAKE):** the naive in-sample 2D-context
+  H=1.14 b/sym "79% win" is a small-sample artifact (1.9 samples per distinct (up,left) context). On HELD-OUT
+  data **every context model is WORSE than the current brotli** (order-0 −11.7%, temporal −17.2%, 2D −15.2%;
+  07-05 −11.3/−13.8/−21.1%). Current brotli already sits below the order-0 held-out cross-entropy.
+- **Verdict:** the Ballé/hyperprior falsification EXTENDS to this structured table — near-iid for coding; a
+  hyperprior/2D-context arithmetic coder yields NO achievable byte savings on the fixed table. Original scope
+  holds; the "structured code table" carve-out does NOT reopen it. `[advisory]` (model estimate; direction
+  unambiguous). Distinct still-ALIVE axis: the live WeightEntropyPenalty (−19.6%) is a TRAINING-TIME
+  representation change (not a post-hoc coder) — orthogonal, unaffected. `[no-triality]` (confirming-negative).
+
+**PREPPED (do NOT launch) — 4 ready-to-fire, all d_seg (the entire 0.0411 gap), never-invent-flags verified:**
+- **P1 #169 HorizonWeightedMargin** (BUILT+HELD, never-fired, byte-identical off) — DSL `HorizonWeightedMargin`
+  Lever → `--seg-horizon-margin-weight` (def 0.0) etc.; gate `tools/measure_dseg_reducibility_gt_margin.py
+  --n-pairs 600` ON-vs-OFF (flips must shift to higher GT margin). TRIGGER: **memory-free** n600 A/B.
+- **P2 OT-Newton → flip-weighted target masses** (Chentsov reframe; solver exact) — `damped_newton_ot_offsets(
+  target_masses=perclass_verdict.flip_share_by_class)` (`laguerre_logit_offset.py:245/339`, task #386
+  `flip_weighted`); gate $0 n600 3-arm (win iff flip_weighted < no_offset 0.0031436). TRIGGER: **memory-free**
+  (remove the n24-only P9 caveat via resumable n600).
+- **P3 N1 Hessian-precond → iterative #341/#396** (NEW; averaged proven-null cond 7.66, per-pixel annulus
+  untested) — `_newton_step_from_cov(…, precondition=True)` inside ONE #396 MC-finisher iterate (built #423
+  `aab422c5c`); gate per-iterate cond# + through-R step quality. TRIGGER: **memory-free-ish** (#396 pair-local
+  light; #341 full-P needs n600). Composes with P4/C11.
+- **P4 C14 analytic-lane band paint-mode** (join RANK 1; lane 0.00087 = 53% of enemy) — flag **ALREADY EXISTS**
+  (memo's "~10-LOC" is STALE): `--lane-prior-phi1 --lane-prior-phi1-mode paint` (`train_levelset_…:11742`).
+  TRIGGER: **operator LAUNCH-GO** (new training arm = heavy → governor #254). Config complete; only the run gated.
+
+Sequencing: P1+P2 drain the moment the sister n600 probe frees a slot (config complete; the *run* still
+passes launch-safety + governor). P3 composes with P4/C11 for one full-P-precond price. P4 highest underlying
+EV but the only operator-GO arm.
+
+**Triality:** `[no-triality]` — the fired arm is a confirming-negative / apparatus result (no new equation;
+the near-iid coding fact is an observation, not a law worth a canonical eqn). The prep table is a measurement
+queue (DSL levers P1/P2/P4 already hold their factories; P3 is a solver opt-in param). **Pointer 0.19108282
+UNMOVED** — a rate estimate is a candidate until byte-closed through `upstream/evaluate.py`; P1–P4 await
+memory-free or operator-GO. Sister: `negative_findings_reaudit_20260710.md` PART 5.
