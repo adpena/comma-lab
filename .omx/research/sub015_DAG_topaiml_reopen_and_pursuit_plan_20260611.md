@@ -15153,3 +15153,32 @@ joins. The conditional-gradient rows survived adversarial overturn; nothing padd
 **Triality:** `[no-triality]` — analysis/apparatus, no measured law minted (N1's own eqs N/A per its commit).
 **Pointer 0.19108282 UNMOVED** — this refresh is MEANS (anti-signal-loss apparatus that FEEDS future exact rows);
 it moves no score itself.
+
+## FEED-lag (2026-07-10) v8 RATE-HALF FEASIBILITY MEASURED — per-class HYBRID dominates the pure Laguerre diagram 16x; thin-Lane + annulus jitter = the irreducible tail
+Deep-insight probe on the REAL cached argmax (`gt_n600.npz` lstars; numpy load, no scorer forward; class order
+verified by spatial/static signature). Apparatus `src/tac/boundary_math/partition_collapse.py` +
+`tools/probe_partition_collapse_feasibility.py` (18 tests incl. synthetic known-power-diagram recovery control);
+artifact `experiments/results/partition_collapse_probe_20260710/probe.json`; memo
+`v8_laguerre_generator_feasibility_and_perclass_hybrid_20260710`. MEASURED (`[macOS-MLX advisory]`, geometric
+fidelity vs cached argmax, NOT through R):
+(1) **The argmax IS power-diagram-shaped (#284 structure CONFIRMED):** Laguerre weights decisively beat weight-blind
+Voronoi (K=1024 bulk 0.9048 -> 0.9927 with tau-relaxed CE refinement; synthetic control 0.917->0.996). BUT the pure
+global diagram FLATTENS at ~7e-3 residual (K=1024 = 3.7KB/frame, band agreement stalls 0.886) — "few generators for
+everything" is REFUTED as a sufficient carrier at d_seg-relevant fidelity.
+(2) **The per-class geometry-matched HYBRID dominates:** MyCar static mask 125 B TOTAL (IoU 0.993) + Movable moment
+ellipses 10.5 B/f (IoU 0.82) + Lane poly-curve band 97 B/f (recall 0.835, THE weak class) + Road/Undriv ONE small-K
+power diagram 116 B/f (recall 0.981/0.998; ru_k knee shallow above 16) => UNION bulk 0.9921 / band 0.877 at
+**229 B/frame raw (137KB/600, rate 0.092)** = the K=1024 diagram's fidelity at 16x fewer bytes, 1.8x UNDER the #307
+contour floor (419 B/f), 4.3x under zlib (994 B/f). v8 SPEC §2 carrier table: MyCar + Movable measured INSIDE its
+ranges; RU 70KB/600 raw just above the 20-50KB unknown.
+(3) **Dash phase = ego-distance MEASURED:** periodic-in-u=1/(row-horizon) 0.937 vs periodic-in-image 0.911 (#215
+confirmed); per-run endpoints only ~8.3 B/curve so the periodic win is temporal (xi transport), not per-frame bytes.
+(4) **The honest tail:** hybrid residual 7.9e-3 > current realized witness d_seg (~4.4e-3) — the hybrid is a RATE
+SKELETON, not a standalone carrier; residual = boundary-annulus jitter (Road-Lane = 60% of all crack px). Naive
+pixel-delta temporal coding is 0.69x (WORSE than solo) despite only 1.07% px changing/frame — the jitter is
+high-spatial-entropy; temporal compression must be PARAMETRIC (ground-frame lane + xi, generator tracking).
+**Verdict: FEASIBLE for the per-class hybrid skeleton (v8 SPEC §2 supported), BOUNDED for literal few-generator
+Laguerre; Lane's 97->~3 B/f gap = the ground-frame factorization (L-v8), annulus precision stays trainer/INR-owned.**
+**Triality:** equations leg deferred — this is a pre-anchor for the SPEC §5 council-flagged per-class carrier
+allocation law (stays flagged until P-B/P-C/increment-1 n600-through-R anchors); DSL leg N/A (analysis probe).
+**Pointer 0.19108282 UNMOVED** (feasibility estimate/bound, not a byte-closed score).
