@@ -125,10 +125,19 @@ def cleanup(port: int, exclude_pgids: set[int], kinds: set[str]) -> list[tuple[i
 # ───────────────────────── daemon spawn / stop via canonical helper ─────────────────────────
 def _spawn_daemon(label: str, log: str, cmd: list[str], env: dict | None = None,
                   projected_gb: float = 1.5, rss_mb: int = 2000) -> int:
+    # CONTROL-PLANE EXEMPTION (#370 extension, 2026-07-11): the dashboard server/tunnel
+    # are observability control-plane, hard-capped (rss_mb) and tiny next to any training
+    # arm. The SUM-over-RAM admission gate exists to protect TRAINING launches; counting
+    # the live arm's growth reservation against a 1.5 GB dashboard REFUSED it (rc=5)
+    # whenever a big run was live -> supervisor kill-restart flap -> comma-lab.adpena.com
+    # 502 while training was HEALTHY (the exact wrong outcome: guard killed the
+    # control-plane view of the run it was protecting; L42). safe_run's per-daemon RSS
+    # cap + the OOM preflight (min-free floor) still bound these daemons.
     argv = [sys.executable, os.path.join(HERE, "spawn_durable_daemon.py"),
             "--label", label, "--log", log,
             "--projected-gb", str(projected_gb), "--min-free-gb", "10",
-            "--rss-cap-mb", str(rss_mb), "--walltime-cap-s", "288000", "--"] + cmd
+            "--rss-cap-mb", str(rss_mb), "--walltime-cap-s", "288000",
+            "--skip-admission-gate", "--"] + cmd
     full_env = dict(os.environ)
     if env:
         full_env.update(env)
