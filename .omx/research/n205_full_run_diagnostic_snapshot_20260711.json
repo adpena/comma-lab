@@ -1,0 +1,331 @@
+{
+  "authority": "[macOS-CPU/numpy advisory] NON-PROMOTABLE",
+  "byte_close_readiness": {
+    "archive_built": false,
+    "best_metadata": {
+      "d_seg": 0.029269358317057292,
+      "epoch": 150,
+      "path": "levelset_witness_ema_BEST.npz",
+      "ts": "2026-07-11T07:34:37Z"
+    },
+    "canonical_byte_close_tool": {
+      "error": null,
+      "path": "/Users/adpena/Projects/pact/tools/levelset_byte_close_and_eval.py",
+      "syntax_ok": true
+    },
+    "checkpoints": [
+      {
+        "all_learned_arrays_finite": true,
+        "bytes": 482112,
+        "code_shape": [
+          1200,
+          32
+        ],
+        "ema_custody": true,
+        "epoch": 150,
+        "exists": true,
+        "expected_epoch_matches": true,
+        "missing_required_cfg": [],
+        "missing_required_params": [],
+        "mod_dim": 32,
+        "n_pairs": 600,
+        "path": "/Users/adpena/Projects/pact/experiments/results/levelset_v752_baseline_20260710T185913Z/levelset_witness_ema_BEST.npz",
+        "ready": true,
+        "sha256": "bbd0567439298c7c6eac236aa7215e39d5190703540eeaf4a71fc4839af931b0"
+      },
+      {
+        "all_learned_arrays_finite": true,
+        "bytes": 482472,
+        "code_shape": [
+          1200,
+          32
+        ],
+        "ema_custody": true,
+        "epoch": 225,
+        "exists": true,
+        "expected_epoch_matches": true,
+        "missing_required_cfg": [],
+        "missing_required_params": [],
+        "mod_dim": 32,
+        "n_pairs": 600,
+        "path": "/Users/adpena/Projects/pact/experiments/results/levelset_v752_baseline_20260710T185913Z/levelset_witness_ema_mlx.npz",
+        "ready": true,
+        "sha256": "d06925bd38e10b5b82dbc89825b01808b99dc7d95eb10a3c0eb9e11b7333e6e3"
+      }
+    ],
+    "d18": {
+      "code_bytes_full": 32009,
+      "epoch": 225,
+      "estimate_only": true,
+      "estimated_bytes_saved": 6002,
+      "k90": 26,
+      "k90_truncate_bytes_estimate": 26007,
+      "mod_dim": 32,
+      "status": "READY_FOR_MILESTONE_A_B"
+    },
+    "d18_tool": {
+      "error": null,
+      "path": "/Users/adpena/Projects/pact/tools/witness_code_pca_byteclose.py",
+      "syntax_ok": true
+    },
+    "exact_eval_launched": false,
+    "readiness_only": true,
+    "status": "READY"
+  },
+  "continual_learning": {
+    "ledger": ".omx/research/costate_organ_trajectory_ledger.md",
+    "re_run_at": [
+      "ep450+post-window",
+      "ep726+post-window",
+      "terminal ep3000"
+    ],
+    "selected_stages": [
+      "annulus_convergence",
+      "birth_completion",
+      "birth_completion_ramp",
+      "checkpoint",
+      "handoff_readiness",
+      "jacobian_basin",
+      "loss_terms",
+      "mod_dim_ablation",
+      "mod_dim_dynamics",
+      "muon_start",
+      "pose_finish_conditioning_gate",
+      "pose_finish_engaged",
+      "stage_transition",
+      "tau_octave_advance",
+      "verdict"
+    ],
+    "trajectory_path": ".omx/research/n205_full_run_trajectory_20260711.jsonl",
+    "trajectory_rows": 579
+  },
+  "ep450_reversal": {
+    "metrics": {
+      "Road": {
+        "annulus_flip_frac": {
+          "gating": true,
+          "post": [],
+          "pre": []
+        },
+        "flip_mass_share": {
+          "gating": false,
+          "post": [],
+          "pre": []
+        },
+        "within_flip": {
+          "gating": true,
+          "post": [],
+          "pre": []
+        }
+      },
+      "Undrivable": {
+        "annulus_flip_frac": {
+          "gating": true,
+          "post": [],
+          "pre": []
+        },
+        "flip_mass_share": {
+          "gating": false,
+          "post": [],
+          "pre": []
+        },
+        "within_flip": {
+          "gating": true,
+          "post": [],
+          "pre": []
+        }
+      }
+    },
+    "missing_epochs": [
+      375,
+      400,
+      425,
+      475,
+      500,
+      525
+    ],
+    "post_epochs": [
+      475,
+      500,
+      525
+    ],
+    "pre_epochs": [
+      375,
+      400,
+      425
+    ],
+    "status": "PRE_REGISTERED_PENDING",
+    "thresholds": {
+      "all_gates_required": true,
+      "gated_classes": [
+        "Road",
+        "Undrivable"
+      ],
+      "gated_metrics": [
+        "within_flip",
+        "annulus_flip_frac"
+      ],
+      "post_mean_le_pre_mean_times": 0.95,
+      "post_ols_slope_le_fraction_per_epoch": -1e-05
+    },
+    "transition_epoch": 450,
+    "verdict_scope_on_fail": "INSTANCE/FORMULATION: #205 v7.5.2 deferred-repair curriculum implementation; NOT family/paradigm"
+  },
+  "generated_at": "2026-07-11T14:42:52Z",
+  "live": {
+    "best_verdict": {
+      "accepted_batches": 75,
+      "accepted_frac": 1.0,
+      "async": true,
+      "blob_bytes": 83199,
+      "d_pose": 30.743313,
+      "d_seg": 0.029269,
+      "d_seg_by_class": [
+        0.09237212,
+        0.3748181,
+        0.01093181,
+        0.0080304,
+        0.00039852
+      ],
+      "ep_loss": 419.969,
+      "epoch": 150,
+      "flip_share_by_class": [
+        0.733225,
+        0.074973,
+        0.184943,
+        0.003396,
+        0.003462
+      ],
+      "frozen_epoch": false,
+      "implied_S": 20.5161,
+      "mlx_active_gib": 26.778,
+      "mlx_cache_gib": 5.309,
+      "mlx_peak_gib": 29.026,
+      "rss_gib": 6.211,
+      "seg_form": "unify_tau",
+      "skipped_batches": 0,
+      "stage": "verdict",
+      "sys_avail_gib": 68.65,
+      "ts": "2026-07-11T07:34:37Z",
+      "verdict_device": "cpu",
+      "weights_stepped": true
+    },
+    "curriculum_stage": "unify_tau",
+    "latest_training_epoch": 243,
+    "latest_verdict": {
+      "accepted_batches": 75,
+      "accepted_frac": 1.0,
+      "async": true,
+      "blob_bytes": 83479,
+      "d_pose": 36.047066,
+      "d_seg": 0.037041,
+      "d_seg_by_class": [
+        0.11836321,
+        0.25148594,
+        0.01601377,
+        0.00375807,
+        0.00036341
+      ],
+      "ep_loss": 390.026,
+      "epoch": 225,
+      "flip_share_by_class": [
+        0.74242,
+        0.03975,
+        0.21408,
+        0.001256,
+        0.002495
+      ],
+      "frozen_epoch": false,
+      "implied_S": 22.7457,
+      "mlx_active_gib": 27.027,
+      "mlx_cache_gib": 5.069,
+      "mlx_peak_gib": 29.026,
+      "rss_gib": 7.078,
+      "seg_form": "unify_tau",
+      "skipped_batches": 0,
+      "stage": "verdict",
+      "sys_avail_gib": 63.5,
+      "ts": "2026-07-11T13:45:39Z",
+      "verdict_device": "cpu",
+      "weights_stepped": true
+    },
+    "verdict_count": 10
+  },
+  "pointer": "0.19108282 [contest-CPU] UNMOVED",
+  "pose_finish_ep726": {
+    "boundary_epoch": 726,
+    "degenerate_guards": {
+      "last4_over_prior4_lt": 0.75,
+      "median_condition_number_gt": 150000.0,
+      "median_p10_sigma_min_lt": 0.015,
+      "median_sigma_min_lt": 0.08,
+      "nonfinite_or_nonpositive": true
+    },
+    "post_switch": {
+      "status": "PRE_REGISTERED_PENDING"
+    },
+    "post_switch_criteria": {
+      "d_pose_relative_reduction_ge": 0.1,
+      "d_seg_absolute_rise_le": 0.001,
+      "first_verdict_epoch_ge": 825
+    },
+    "sample_epochs": [
+      214,
+      218,
+      222,
+      226,
+      230,
+      234,
+      238,
+      242
+    ],
+    "status": "PRE_REGISTERED_PENDING",
+    "success_criteria": {
+      "count_sigma_min_ge_0p080_ge": 6,
+      "median_condition_number_le": 125000.0,
+      "median_p10_sigma_min_ge": 0.025,
+      "median_sigma_min_ge": 0.1,
+      "window_rows": 8
+    }
+  },
+  "read_only": true,
+  "run_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_v752_baseline_20260710T185913Z",
+  "schema": "pact.n205_full_run_diagnostics.v1",
+  "score_claim": false,
+  "source": {
+    "costate_shadow_sha256": "01b325038d157129468352ca1bdd26a614681f9e592af813a357fdef0a6e7345",
+    "daemon_log_bytes": 364414,
+    "daemon_log_sha256": "d87b925bb368b622b619b20aefbfff15ff94a39d9a559bbeb985b139935f07a0",
+    "json_rows": 579,
+    "malformed_json_lines": 0,
+    "total_log_lines": 581
+  },
+  "stage_attribution": {
+    "attribution_scope": "before/after telemetry association; causal isolation requires a matched A/B",
+    "authority": "[macOS-CPU/numpy advisory] NON-PROMOTABLE",
+    "boundaries": [
+      {
+        "after_epoch": null,
+        "before_epoch": 225,
+        "boundary_epoch": 450,
+        "lever_or_stage": "chroma_boundary + temporal_screw repair",
+        "status": "PENDING"
+      },
+      {
+        "after_epoch": null,
+        "before_epoch": 225,
+        "boundary_epoch": 500,
+        "lever_or_stage": "lane_render_band joins repair stack",
+        "status": "PENDING"
+      },
+      {
+        "after_epoch": null,
+        "before_epoch": 225,
+        "boundary_epoch": 726,
+        "lever_or_stage": "Muon optimizer + terminal pose-finish",
+        "status": "PENDING"
+      }
+    ],
+    "existing_deep_tool": "tools/witness_per_stage_annulus_attribution.py"
+  }
+}
