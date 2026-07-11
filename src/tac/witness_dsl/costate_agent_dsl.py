@@ -284,6 +284,21 @@ DEFAULT_TRAINING_PIPELINE: tuple[TrainingStageSpec, ...] = (
                  "distinct organ win; openpilot stays witness-side-only as held "
                  "(verdict_scope: formulation ×2 on this trajectory)"),
     TrainingStageSpec(
+        name="transient_forge_synthetic_trajectories", stage="pretrain",
+        corpus=("synthetic (regime→λ) witness-training trajectories of 0.mkv — "
+                "3-tier fidelity ladder (tier-0 #430 schedule_backtest replay · "
+                "tier-1 multi-class CGauge simulator · tier-2 real micro-runs), "
+                "UED-regret-taught transient-rich windows, BIRD/QD diversity-gated, "
+                "PDR×RQGM loop (#434 design: "
+                "synthetic_data_nvidia_sota_organ_434_20260711.md)",),
+        status="PROPOSED",
+        blocker="Forge v0 not built (design-only, research_only); adoption requires "
+                "the real chronological walk-forward gate (beat persistence AND the "
+                "incumbent AND the real-prefix-only ablation on real #205 folds via "
+                "tools/lambda_net_backtest.py); synthetic-fold wins are NEVER "
+                "adoption evidence (NO-FAKE #3); tier-2 micro-runs are operator-GO "
+                "and are the only records counting toward the ≥3-record graduation"),
+    TrainingStageSpec(
         name="trajectory_sft", stage="posttrain_sft",
         corpus=("#205 trajectory intervals (the measured campaign data)",),
         status="EXECUTED_$0",
