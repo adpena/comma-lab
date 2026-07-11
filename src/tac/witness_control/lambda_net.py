@@ -487,7 +487,8 @@ class DeepONetLambdaField(_TorchFieldBase):
         return self.f_base(xc)
 
 
-ARCHITECTURES = ("A_ridge_solve", "B_mlp", "C_gru_path", "D_deeponet", "E_prototype")
+ARCHITECTURES = ("A_ridge_solve", "B_mlp", "C_gru_path", "D_deeponet", "E_prototype",
+                 "E_prototype_bregman", "F_bsf", "G_ridge_scorerprior")
 
 
 def make_model(name: str):
@@ -503,6 +504,19 @@ def make_model(name: str):
         # interpretable-by-design router (PRISM 2607.00510); lazy import avoids a cycle
         from tac.witness_control.prototype_router import PrototypeRouterLens
         return PrototypeRouterLens()
+    if name == "E_prototype_bregman":
+        # Nielsen Bregman-geometry arm: binary-KL assignment divergence (rates live in
+        # exponential-family geometry); centroid stays the mean (Banerjee right-centroid)
+        from tac.witness_control.prototype_router import PrototypeRouterLens
+        return PrototypeRouterLens(distance="bregman_kl")
+    if name == "F_bsf":
+        # Goodfire BSF growth-spine: regime prototypes as multidim block-subspaces
+        from tac.witness_control.prototype_router import BlockSubspaceRouterLens
+        return BlockSubspaceRouterLens()
+    if name == "G_ridge_scorerprior":
+        # trajectory-INDEPENDENT scorer-geometry arm (cached margin field; $0)
+        from tac.witness_control.scorer_geometry import ScorerPriorRidgeAdjoint
+        return ScorerPriorRidgeAdjoint()
     raise ValueError(f"unknown architecture {name!r}; choose from {ARCHITECTURES}")
 
 
@@ -592,6 +606,15 @@ class BacktestReport:
     binding_auroc_magnitude_heuristic: float | None
     passed: bool
     notes: tuple[str, ...]
+    # walk-forward gate (deployment-faithful: train on PAST intervals only — the LOO gate
+    # above trains on future intervals too, a look-ahead advantage the persistence
+    # heuristic does not get; adversarial review 2026-07-11 measured that advantage as
+    # decisive for A_ridge_solve on the #205 trajectory: LOO-pass but walk-forward-LOSS).
+    walkforward_mae_model: float = float("nan")
+    walkforward_mae_heuristic: float = float("nan")
+    walkforward_perclass_mae_model: float = float("nan")
+    walkforward_perclass_mae_heuristic: float = float("nan")
+    passed_walkforward: bool = False
     axis_tag: str = "[macOS advisory] NON-PROMOTABLE"
     score_claim: bool = False
     promotable: bool = False
@@ -609,15 +632,33 @@ def _persistence_forecast(intervals: list[Interval], hold: int) -> np.ndarray:
     return prev.dxdt()
 
 
+def _predict_interval(model, architecture: str, iv: Interval,
+                      lever_names: tuple[str, ...]) -> np.ndarray:
+    pred = model.base(iv.x0, iv.ctx) if architecture == "A_ridge_solve" else \
+        model.base(iv.x0, iv.ctx, iv.path)
+    resp = np.stack([model.response(iv.x0, iv.ctx, lever_features(n), iv.path)
+                     for n in lever_names])
+    return pred + resp.T @ iv.u_mean
+
+
 def backtest(traj: CampaignTrajectory, architecture: str = "D_deeponet",
              seed: int = 0) -> tuple[BacktestReport, LambdaField]:
-    """Leave-one-interval-out backtest + binding-alignment gate. Returns (report, field)
-    where the field is fit on ALL intervals and stamped with the gate outcome."""
+    """Leave-one-interval-out backtest + WALK-FORWARD backtest + binding-alignment gate.
+
+    Two forecast gates, both against the persistence heuristic:
+      * LOO   — train on all-but-held-out (INCLUDES future intervals: a look-ahead
+                advantage; kept for sample efficiency + comparability, labeled as such);
+      * WALK-FORWARD — train on PAST intervals only, predict the next (the deployment-
+                faithful protocol; the heuristic is walk-forward by construction, so this
+                is the apples-to-apples gate). ``BACKTESTED-PASS`` requires BOTH when the
+                walk-forward gate is computable (≥4 intervals).
+    Returns (report, field) where the field is fit on ALL intervals and stamped."""
     comp = fit_score_composition(traj.verdicts)
     intervals = build_intervals(traj)
     if len(intervals) < 3:
         raise ValueError(f"need ≥3 intervals to backtest; have {len(intervals)}")
     phis = np.stack([lever_features(n) for n in traj.lever_names])
+    wcls = comp.class_weights
 
     errs_m, errs_h, perr_m, perr_h = [], [], [], []
     for hold in range(1, len(intervals)):        # hold-out needs a predecessor for the heuristic
@@ -625,19 +666,28 @@ def backtest(traj: CampaignTrajectory, architecture: str = "D_deeponet",
         model = make_model(architecture)
         model.fit(train, phis, seed=seed)
         iv = intervals[hold]
-        pred = model.base(iv.x0, iv.ctx) if architecture == "A_ridge_solve" else \
-            model.base(iv.x0, iv.ctx, iv.path)
-        resp = np.stack([model.response(iv.x0, iv.ctx, lever_features(n), iv.path)
-                         for n in traj.lever_names])
-        pred = pred + resp.T @ iv.u_mean
+        pred = _predict_interval(model, architecture, iv, traj.lever_names)
         meas = iv.dxdt()
         heur = _persistence_forecast(intervals, hold)
         # scalar d_seg delta = class-weighted; per-class = mean abs over the 5 channels
-        wcls = comp.class_weights
         errs_m.append(abs(float(wcls @ (pred[:N_CLASSES] - meas[:N_CLASSES]))) * iv.dep)
         errs_h.append(abs(float(wcls @ (heur[:N_CLASSES] - meas[:N_CLASSES]))) * iv.dep)
         perr_m.append(float(np.mean(np.abs(pred[:N_CLASSES] - meas[:N_CLASSES]))) * iv.dep)
         perr_h.append(float(np.mean(np.abs(heur[:N_CLASSES] - meas[:N_CLASSES]))) * iv.dep)
+
+    # walk-forward: past-only training (needs ≥2 train intervals → folds start at 2)
+    wf_m, wf_h, wf_pm, wf_ph = [], [], [], []
+    for hold in range(2, len(intervals)):
+        model = make_model(architecture)
+        model.fit(intervals[:hold], phis, seed=seed)
+        iv = intervals[hold]
+        pred = _predict_interval(model, architecture, iv, traj.lever_names)
+        meas = iv.dxdt()
+        heur = intervals[hold - 1].dxdt()
+        wf_m.append(abs(float(wcls @ (pred[:N_CLASSES] - meas[:N_CLASSES]))) * iv.dep)
+        wf_h.append(abs(float(wcls @ (heur[:N_CLASSES] - meas[:N_CLASSES]))) * iv.dep)
+        wf_pm.append(float(np.mean(np.abs(pred[:N_CLASSES] - meas[:N_CLASSES]))) * iv.dep)
+        wf_ph.append(float(np.mean(np.abs(heur[:N_CLASSES] - meas[:N_CLASSES]))) * iv.dep)
 
     # binding gate on the full fit. REALIZED binding = |marginal-ΔS field| × mean
     # occupancy share (a pending lever with u=0 has zero REALIZED binding, whatever its
@@ -658,11 +708,30 @@ def backtest(traj: CampaignTrajectory, architecture: str = "D_deeponet",
 
     fm, fh = float(np.mean(errs_m)), float(np.mean(errs_h))
     pm, ph = float(np.mean(perr_m)), float(np.mean(perr_h))
-    passed = (fm <= fh) and (auroc_m is not None) and (auroc_h is None or auroc_m >= auroc_h)
+    wfm = float(np.mean(wf_m)) if wf_m else float("nan")
+    wfh = float(np.mean(wf_h)) if wf_h else float("nan")
+    wfpm = float(np.mean(wf_pm)) if wf_pm else float("nan")
+    wfph = float(np.mean(wf_ph)) if wf_ph else float("nan")
+    # Binding gate = a CONSISTENCY FLOOR (AUROC ≥ 0.8), not "≥ the magnitude
+    # heuristic": the harvest labels mix units — a binding RATE lever (e.g.
+    # weight_entropy) has a legitimately tiny |marginal-ΔS| in score units because
+    # the rate term is ~0.057/log-byte vs 23–50/d_seg-unit, so demanding the λ-field
+    # out-rank a share-magnitude heuristic on those labels is a category error
+    # (found + fixed in the 2026-07-11 adversarial review; the heuristic comparison
+    # stays REPORTED in the notes + report fields, it just no longer gates).
+    passed_loo = (fm <= fh) and (auroc_m is not None) and (auroc_m >= 0.8)
+    passed_wf = bool(wf_m) and (wfm <= wfh)
+    # BACKTESTED-PASS requires BOTH gates when walk-forward is computable (honesty:
+    # the LOO-only pass was measured to be look-ahead-flattered on the #205 trajectory).
+    passed = passed_loo and (passed_wf if wf_m else True)
     notes = (
-        f"forecast gate: model MAE {fm:.6f} vs persistence-heuristic {fh:.6f} "
-        f"(Δd_seg units over held-out intervals; {'BEATS' if fm <= fh else 'LOSES-TO'} heuristic)",
-        f"per-class MAE {pm:.6f} vs {ph:.6f}",
+        f"LOO forecast gate: model MAE {fm:.6f} vs persistence-heuristic {fh:.6f} "
+        f"(Δd_seg units over held-out intervals; {'BEATS' if fm <= fh else 'LOSES-TO'} heuristic; "
+        "LOO trains on future intervals — look-ahead-advantaged, kept for comparability)",
+        f"LOO per-class MAE {pm:.6f} vs {ph:.6f}",
+        f"WALK-FORWARD gate (deployment-faithful, past-only training, {len(wf_m)} folds): "
+        f"model MAE {wfm:.6f} vs heuristic {wfh:.6f} "
+        f"({'BEATS' if passed_wf else 'LOSES-TO'} heuristic); per-class {wfpm:.6f} vs {wfph:.6f}",
         f"binding gate: λ-field AUROC {auroc_m} vs magnitude-heuristic {auroc_h} on "
         f"{len(HARVEST_BINDING_LABELS)} harvest-labeled levers",
         "labels source: n205_live_telemetry_harvest_for_v9cgauge_20260711.md §4 (MEASURED)",
@@ -675,7 +744,10 @@ def backtest(traj: CampaignTrajectory, architecture: str = "D_deeponet",
         forecast_mae_model=fm, forecast_mae_heuristic=fh,
         forecast_perclass_mae_model=pm, forecast_perclass_mae_heuristic=ph,
         binding_auroc_model=auroc_m, binding_auroc_magnitude_heuristic=auroc_h,
-        passed=passed, notes=notes)
+        passed=passed, notes=notes,
+        walkforward_mae_model=wfm, walkforward_mae_heuristic=wfh,
+        walkforward_perclass_mae_model=wfpm, walkforward_perclass_mae_heuristic=wfph,
+        passed_walkforward=passed_wf)
     field = LambdaField(epoch=field.epoch, per_lever=field.per_lever,
                         identified=field.identified, grad_s=field.grad_s,
                         status="BACKTESTED-PASS" if passed else "BACKTESTED-FAIL")
