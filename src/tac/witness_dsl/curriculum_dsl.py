@@ -2756,6 +2756,11 @@ def GroundFrameChart(  # noqa: N802 — DSL constructor
 
 # ---------------------------------------------------------------------------
 # COMPUTE/SPEED levers (the gauge's non-curriculum config that compiles to trainer argv).
+# SPEED-LEVER WALL (#356 MEASURED 2026-07-11, witness_fp_reorder_transform_bit_identity_wall_v1):
+# NO compile-fusion/batched-reduction speed lever may ship — fp-reorder transforms are
+# deterministic-but-DIFFERENT (grad delta 1e-7..1e-3, 3 anchors) = trajectory-forking; the ONLY
+# admissible speed levers are explicit-order kernels + gradient-free caches (the two below +
+# fused-R). verdict_scope: formulation (MLX fp32); CUDA backend re-measures under #438.
 # These move WALL-CLOCK, not the witness math/bytes/verdict: CacheGtSkeleton is BIT-IDENTICAL (a
 # constant-recompute elision, PROVEN by the #260 n=8 CPU A/B: EMA-shadow max_abs=0); MicroBatch is
 # trajectory-affecting (batched fp reduction) but its accum-step grad == the serial mean-over-chunk

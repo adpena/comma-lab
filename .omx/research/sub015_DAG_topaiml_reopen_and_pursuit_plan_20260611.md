@@ -15516,3 +15516,16 @@ megakernel block resolves BY VERDICT; remaining hold = #441 revisions + operator
 its measured verdict.
 - **triality:** DAG = this FEED · DSL = N/A-with-reason (no lever ships; survivors already DSL-held) ·
   equations = `witness_fp_reorder_transform_bit_identity_wall_v1` REGISTERED. Pointer 0.19108282 UNMOVED (MEANS).
+
+### FEED-356-scope-annotation (2026-07-11) — verdict_scope + relative-significance for FEED-356
+verdict_scope: **formulation — mx.compile whole-step fusion of the witness trunk+loss closure at MLX fp32**
+(NOT family: per-chain explicit-order Metal kernels #252, fixed-order batched reductions #348, and the
+CUDA-backend compile policy #438 all remain OPEN; instance→formulation lift justified by the real-graph
+R-op anchor + the op-kind-superset direction of the representative closure).
+Relative significance of the SPEED leg (per the magnitude-dismissal rule): a speed lever is
+**ΔS = 0 by construction** (training-time is lexicographically SECONDARY, never traded vs score — L59), so
+ΔS/remaining-gap = 0/0.041 = **0**; the wall-clock magnitude (1.21× on the closure ≈ ~5% end-to-end,
+#306 compute-bound step) is reported for completeness, NOT as the dismissal ground. The DISPOSITIVE leg is
+the **measured bit-identity failure** (grad Δ 2.3e-7…2.3e-5 ≠ 0.0 = the #410 exit criterion, a MEASURED
+un-recoverability of trajectory-faithfulness under this transform class), which kills the formulation
+independently of any magnitude judgment.
