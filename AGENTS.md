@@ -161,6 +161,31 @@ Every specific score / lane id / substrate name / Catalog # / date / Slot ID / s
 - Claude NEVER bypasses commit serializer + canonical sha protection — Codex enforces.
 - Both honor CLAUDE.md non-negotiables; both re-read every session.
 
+### Sol/Codex Model + Reasoning Routing (quota discipline) — operator 2026-07-11
+
+**Config defaults** (`~/.codex/config.toml`, operator-set 2026-07-11): `model = "gpt-5.6-sol"`,
+`model_reasoning_effort = "high"` (default), `[features.multi_agent_v2] enabled = true`,
+`model_context_window = 250000` (auto-compact 225000). Sol gathers a lot of context and spawns
+subagents on its own, choosing a model per subagent — but it does NOT always route efficiently.
+So ROUTE EXPLICITLY per task-class; do NOT let the main thread burn quota running Sol Max / `ultra`
+on routine work ("you don't need reasoning higher than `high` 99% of the time"):
+
+- **Routine / boilerplate / mechanical** (formatting, refactors, test scaffolds, doc edits, config
+  plumbing, canonical-helper wiring, serializer commits): default model at `medium`/`high`. **NEVER
+  Sol Max / `ultra`.** This is the quota-saving default and covers most work.
+- **Execution** (implementing an already-specified design, bug fixes with a known root cause, wiring
+  a lever the design already settled): `high` (the config default). No escalation.
+- **Planning / architecture / crux math / adversarial deep review / hard root-cause debugging**:
+  Sol Max and/or `ultra` — **RESERVED, requested per-invocation, never the default.** This is the
+  Codex analog of Claude's Fable-reserved-for-crux routing.
+- **Per-subagent model**: match the model to the task's complexity — a subagent doing boilerplate
+  uses a cheaper model than one doing crux derivation. Do NOT spawn Sol-Max subagents for routine
+  work.
+
+Rationale: the expensive tier buys no quality on routine tasks; reserve it for the ~1% of genuinely
+hard work. Sister of CLAUDE.md's Claude-side routing (Sonnet=mechanical · Opus=default ·
+Fable=reserved-crux) and the Operator-Attention Budget below.
+
 ### Continual Learning Feedback Loop (canonical memo patterns)
 
 Codex → Claude direction (Codex finds bugs / falsifies premises / surfaces gaps):
