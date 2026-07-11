@@ -15531,6 +15531,7 @@ un-recoverability of trajectory-faithfulness under this transform class), which 
 independently of any magnitude judgment.
 
 ## FEED-442-ww-pgd (2026-07-11) — WeightWatcher / WW-PGD Phase-1 $0 diagnostic gate: LEVER **NO-GO**, diagnostic re-motivates #242/#140
+verdict_scope: formulation — the WW-PGD spectral-projection LEVER on the width-96 witness trunk (single #205 mod32cap lineage, n=4–5 checkpoints; H1/H3 instance-level, lifted to formulation only for THIS width/vehicle; the HTSR/WW-PGD paradigm is NOT falsified — a much wider net could differ).
 WW-PGD (spectral-projection optimizer wrapper: ESD tail via `k_mid=floor((detX_num+num_pl_spikes)/2)` →
 rank-ordered PL template targeting **α→2** → Cayley update in log-eigenvalue space → ERG retract
 `Σ log λ_tail=0 ⇔ detX=1` → blend `η=0.5`). WW's own page: "Experimental", "roughly accuracy-neutral" —
