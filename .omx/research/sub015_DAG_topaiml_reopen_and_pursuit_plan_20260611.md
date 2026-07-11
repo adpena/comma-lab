@@ -15729,3 +15729,12 @@ MEANS (apparatus + staged banks that protect/enable future exact rows).
 **TRIALITY.** DAG leg = this block. DSL leg = N/A (receiver/byte-close rate lever, not a trainer/curriculum change; wired into #406 apply-pass stage 6 + proof tool). Equations leg = `blind_coordinate_rate_lever_v1` (DERIVED geometry + MEASURED-PROVEN n600 anchors) REGISTERED. Consistent with the sister `evaluator_resize_blind_coordinate_law_20260710` anchor on `resize_exploit_flip_fix_frontier_v1` (same 230,904; this feed MEASURES+PROVES+BUILDS it).
 
 **OWED.** Wire the retained-sub-grid store + generic fill into a camera-res-storing byte-close chain → exact-eval (advisory → contest authority; the only pointer-mover); re-measure byte delta on that chain's real codec.
+
+### FEED-blindcoord-401-triality-disposition (2026-07-11 addendum)
+DSL-leg disposition for the #401 lever (per the per-leg drift gate): **N/A-with-reason** — blind-
+coordinate is a STORE/DECODE-side apply-pass lever, not a trainer-config lever; the DSL compiles
+trainer argv only. Registration legs: canonical equation `blind_coordinate_rate_lever_v1`
+(DERIVED+MEASURED anchors) + apply-pass stage 6 contract (`tools/witness_apply_pass.py::_blind_coord`)
++ durable memory `blind_coordinate_rate_lever_conditional_20260711` (+ MEMORY.md index line). The
+conditional-value clause (pays ONLY on camera-res-storing sections; 0 today on the pure-generator
+witness) is recorded in all three so no future session inherits it as an unconditional win.
