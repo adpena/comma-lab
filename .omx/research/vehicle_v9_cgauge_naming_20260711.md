@@ -35,28 +35,51 @@ The bare number would inherit the muddled 7.5.2 / 7.5.3 / 8 ambiguity; the name 
 - v8 carriers as gauge-zero-mode stores: Movable reaction-event sidecar (85%) + Lane/hood
   gauge-phase zero-mode.
 
-## OPEN sub-clause (honesty; gated on the running d_pose audit)
-The "single trunk" half is currently **d_seg-scoped**. The running Fable d_pose covariance
-mirror audit (`dpose_covariance_mirror_audit_20260711.md`, in flight) resolves how many
-**sectors** the trunk carries:
-- joint intrinsic dim ≈ 8 (ξ saturates pose) → V9 = **clean single covariant trunk**, both axes.
-- a real photometric pose sector beyond ξ → V9 = **single trunk + one pose-photometric gauge
-  sector** (still covariant, still V9 — pose is just another gauge sector; #395 reactivates
-  scoped).
+## Sub-clause — CLOSED (d_pose mirror audit landed 2026-07-11, `dpose_covariance_mirror_audit_20260711.md`, commit 40cf964f6)
+**V9 · CGauge = DEFINITIVELY a single covariant trunk on BOTH axes (v7.5.2).** The texture trunk
+is **dead-for-pose by DOMINANCE** (asymmetric mirror: d_seg killed it by *absence* — residual has
+zero texture, hf/lf 2e-4; d_pose kills it by *dominance* — the HF band IS pose-legible, but 63–76%
+is a constant ~24-byte-correctable bias, and the pair-specific ceiling after linear-ξ calibration
+is ~1.3e-3 ≈ R1's already-banked 0.001610 at 7.2KB, 10–40× above the S2 target at ≥100–1000× the
+bytes). **#395 fully dispositioned: DROP** (reactivation only if the S1/S2 output-space solve rungs
+fail ≤0.0011 at n600 byte-close — and even then this trunk's ceiling barely matches R1, so a *new*
+mechanism, not this one, would be required).
 
-Either outcome is V9 · CGauge; the audit only fills in the sector count.
+**Sector count = the trunk carries ONE covariant sector; pose rides a SEPARATE dxi channel.** The
+mirror measured pose adds **+2.1–2.4 local DOF** beyond the rank-8 partition code (TwoNN, both
+codebook widths) → joint *global* dim ≈ 10 — BUT those +2 DOF are **partition-INVISIBLE** (pose
+dims 3/4 kNN R² 0.03/0.02; pose-residual↔luma-HF Spearman −0.089 ≈ 0). So they do **not** widen the
+trunk's mod vector; they route through the dedicated **dxi/steering channel (6+k)** — exactly the
+S2 output shape and the already-banked R1 dxi archive shape.
 
-## Propagation plan (deferred to ONE coherent pass, on pose-audit landing)
-To avoid colliding with the running audit's DAG appends and to avoid a half-propagated rename,
-the full canonicalization lands in ONE pass when the pose leg returns:
-1. DAG FEED-v9-cgauge naming block + the joint-dim/mod/hidden-dim corollary.
-2. `canonical_equations`: joint-dim / mod-17 / hidden-sizing corollary (feeds #223 Whitney
-   derivation + #299 mod-dim/boundary-capacity A/B — rank-8 is the 2nd independent anchor).
-3. SPEC_v9_cgauge (author from SPEC_v75 §8 contract + the covariance verdict + the pose sector
-   count).
-4. DSL: designation label only (no lever change — CGauge is the vehicle identity, the levers are
-   already the v7.5.2 + phase-advect + carrier set).
-5. #395 disposition finalized on both axes.
+### The V9 · CGauge parametrization spec (MEASURED — the operator's mod/hidden-dim answer)
+- **mod-dim: 17–19, UNCHANGED** (Whitney 2·8+1 on the doubly-measured rank-8 d_seg manifold; #223/#299
+  target UNCHANGED by the pose leg — pose adds no trunk-mod DOF). Bandwidth anisotropic along the
+  ξ-covariant + along-tangent boundary directions, not isotropic mod-N.
+- **hidden-dim: sized to rank-8 + gauge margin** — NO texture-trunk hidden budget on EITHER axis
+  (capacity is wasted where d_cov≈0).
+- **pose: +2 DOF through the dxi/steering channel (6+k)**, NOT the trunk — confirms the v7.5.2
+  conditioning-gate + banked-dxi design.
+
+All advisory `[macOS-CPU / CPU-torch research-signal]`, NON-PROMOTABLE; owed-through-byte-close =
+the S1/S2 output-space solve n600 rows (the sole reactivation gate). Pointer 0.19108282 UNMOVED.
+
+## Propagation status (this pass, on pose-audit landing 2026-07-11)
+- [DONE] Sub-clause CLOSED (this memo, above) — single covariant trunk BOTH axes + dxi channel.
+- [DONE] DAG **FEED-v9-cgauge** naming block + the mod/hidden-dim corollary (references the agent's
+  FEED-dpose-mirror + the registered `dpose_photometric_band_mirror_audit_20260711` anchor).
+- [DONE — measurement leg] `canonical_equations`: the +2-DOF / partition-invisible / route-via-dxi
+  corollary is registered as the mirror anchor on `posenet_luma_chroma_sensitivity_asymmetry_v1`
+  (agent, commit 40cf964f6). The SIZING conclusion (mod-17-19 unchanged + hidden rank-8+gauge) is
+  routed to **#223** (its in-progress Whitney/Nyquist parametrization derivation is the proper
+  home — a separate partial equation here would fragment #223) + **#299** (mod-dim/boundary-capacity
+  A/B: the pose leg leaves the mod target UNCHANGED).
+- [DONE] **#395** disposition finalized: **DROP** on both axes (reactivation = S1/S2 output-space
+  solve fails ≤0.0011 at n600 byte-close).
+- [OWED — next launch config] `SPEC_v9_cgauge` (author from SPEC_v75 §8 contract + the covariance
+  verdict + this parametrization spec) + the DSL designation label — deferred to the actual
+  V9·CGauge config build for the next witness launch (no lever change; CGauge is the identity, the
+  levers are the v7.5.2 + phase-advect + carrier set).
 
 ## Triality legs (this record)
 - **equations** = N/A here (naming; the covariance law is already `witness_general_covariance_totality_v1`).
