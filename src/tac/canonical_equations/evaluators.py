@@ -258,6 +258,53 @@ def eval_adaptive_eps_saturation_alarm(inputs: Mapping[str, Any]) -> Any:
     return inputs["alarm_threshold"]
 
 
+def eval_cgauge_whitney_moddim(inputs: Mapping[str, Any]) -> int:
+    """mod-dim* = 2d+1 (+gauge_margin) on the rank-d separatrix manifold (#223 Law 1).
+
+    inputs: {"intrinsic_dim": d (measured; 8 doubly-measured n600),
+             "gauge_margin": zero-mode slack (default-usage 2)}.
+    LawRef-executable form of ``cgauge_whitney_moddim_v1`` (2026-07-11).
+    """
+    from tac.canonical_equations.cgauge_parametrization_optima_20260711 import (
+        whitney_mod_dim,
+    )
+
+    return whitney_mod_dim(
+        int(inputs["intrinsic_dim"]), gauge_margin=int(inputs.get("gauge_margin", 2))
+    )
+
+
+def eval_cgauge_parabolic_along_tangent(inputs: Mapping[str, Any]) -> float:
+    """nu_along* = sqrt(nu_across) — parabolic-scaling wedge law (#223 Law 3).
+
+    inputs: {"nu_across": the bank's across-edge max frequency (live 64)}.
+    LawRef-executable form of ``cgauge_curvelet_parabolic_bank_v1`` (2026-07-11).
+    """
+    from tac.canonical_equations.cgauge_parametrization_optima_20260711 import (
+        parabolic_along_tangent_allocation,
+    )
+
+    return parabolic_along_tangent_allocation(float(inputs["nu_across"]))
+
+
+def eval_cgauge_beta2_window(inputs: Mapping[str, Any]) -> tuple[float, float]:
+    """Adam beta2 admissible window [1-1/S, 1-3/(T_c S)] (#223 Law 4).
+
+    inputs: {"steps_per_epoch": S (n600/accum-8 => 75),
+             "curvature_timescale_epochs": T_c (assumed 100 from the anneal scale)}.
+    LawRef-executable form of ``cgauge_beta2_window_v1`` (2026-07-11). Returns the
+    WINDOW; the point value inside it stays a measured anchor (#222 A/B arbiter).
+    """
+    from tac.canonical_equations.cgauge_parametrization_optima_20260711 import (
+        beta2_window,
+    )
+
+    return beta2_window(
+        int(inputs["steps_per_epoch"]),
+        curvature_timescale_epochs=float(inputs.get("curvature_timescale_epochs", 100.0)),
+    )
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
@@ -273,6 +320,10 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "tail_cycle_floor_v1": eval_tail_cycle_floor,
     "conley_absolute_bar_v1": eval_conley_absolute_bar,
     "adaptive_eps_saturation_alarm_v1": eval_adaptive_eps_saturation_alarm,
+    # V9·CGauge #223 parametrization optima (2026-07-11) — LawRef-executable sizing laws:
+    "cgauge_whitney_moddim_v1": eval_cgauge_whitney_moddim,
+    "cgauge_curvelet_parabolic_bank_v1": eval_cgauge_parabolic_along_tangent,
+    "cgauge_beta2_window_v1": eval_cgauge_beta2_window,
 }
 
 
@@ -292,6 +343,9 @@ __all__ = [
     "EvaluatorError",
     "EvaluatorNotRegisteredError",
     "eval_adaptive_eps_saturation_alarm",
+    "eval_cgauge_beta2_window",
+    "eval_cgauge_parabolic_along_tangent",
+    "eval_cgauge_whitney_moddim",
     "eval_conley_absolute_bar",
     "eval_critical_nucleus_release_r_star",
     "eval_forfeit_matched_exit_s_star",
