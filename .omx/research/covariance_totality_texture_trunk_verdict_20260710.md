@@ -17,6 +17,12 @@ duty: (A) confirm/refute the covariance law's totality; (B/C) DECIDE the texture
 
 ## ANSWER FIRST (the three verdicts)
 
+**verdict_scope: formulation** (narrowest level the measurement supports, per verdict-scope ladder) —
+- **REFUTED** applies ONLY to the naive formulation *"(ξ,phase) explains ≈everything as a smooth map"*; the law AS-STATED (holonomy ⊕ gauge ⊕ events) is CONFIRMED.
+- **DEAD** applies ONLY to the *texture-trunk-as-d_seg-reconstructor* formulation — this is a d_seg-only cached-argmax audit; the trunk's LIVES-ON-POSE (photometric d_pose) role is UNDECIDED, so this is NOT a family/paradigm kill of #395.
+- **INERT** (below/#417) is the *v7.5.3 tex_trunk build-consumption* instance; it is an instance-level receiver-bijection finding, not a claim about the texture-trunk idea in general.
+- Reactivation of the DROP: a d_pose-side mirror audit that shows the trunk carries photometric pose signal beyond R1's ξ sidecar.
+
 - **A — COVARIANCE TOTALITY: two-level, scope-laddered.**
   - *As "(ξ,phase) explains ≈everything as a smooth map"*: **REFUTED.** Even a fully nonparametric
     kNN-in-(ξ,phase) explains only **0.42** of the per-pair code variance (CV, n600). The honest
