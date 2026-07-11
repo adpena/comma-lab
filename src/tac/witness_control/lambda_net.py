@@ -488,7 +488,9 @@ class DeepONetLambdaField(_TorchFieldBase):
 
 
 ARCHITECTURES = ("A_ridge_solve", "B_mlp", "C_gru_path", "D_deeponet", "E_prototype",
-                 "E_prototype_bregman", "F_bsf", "G_ridge_scorerprior")
+                 "E_prototype_bregman", "F_bsf", "G_ridge_scorerprior",
+                 "H_smoothed_argmax", "I_comma10k_regime", "J_adv_boundary",
+                 "K_perclass_v8", "L_priormean_comma10k", "M_priormean_advb")
 
 
 def make_model(name: str):
@@ -517,6 +519,35 @@ def make_model(name: str):
         # trajectory-INDEPENDENT scorer-geometry arm (cached margin field; $0)
         from tac.witness_control.scorer_geometry import ScorerPriorRidgeAdjoint
         return ScorerPriorRidgeAdjoint()
+    if name == "H_smoothed_argmax":
+        # SCORER-MODEL ARM (P0 2026-07-11): smoothed-argmax metric relaxation — the
+        # #428 survey's #1 (perturbed-optimizer/Gumbel through the REAL frozen SegNet's
+        # cached margins; exact gradient, zero model error; ε = τ = ħ per L75)
+        from tac.witness_control.scorer_model_arms import SmoothedArgmaxRidgeAdjoint
+        return SmoothedArgmaxRidgeAdjoint()
+    if name == "I_comma10k_regime":
+        # SCORER-MODEL ARM: trajectory-INDEPENDENT comma10k regime prior (SegNet's
+        # real training distribution; rarity ⇒ under-trained ⇒ λ-hot; artifact-gated)
+        from tac.witness_control.scorer_model_arms import Comma10kRegimeRidgeAdjoint
+        return Comma10kRegimeRidgeAdjoint()
+    if name == "J_adv_boundary":
+        # SCORER-MODEL ARM: adversarial-boundary (advection-ball minimal-flip) geometry
+        # pair-weighted by the fitted Young σ_cc′ (#382); ball-agreement audited
+        from tac.witness_control.scorer_model_arms import AdversarialBoundaryRidgeAdjoint
+        return AdversarialBoundaryRidgeAdjoint()
+    if name == "K_perclass_v8":
+        # SCORER-MODEL ARM: per-class λ-heads reconciled through the v8 boundary-pair
+        # coupling (measured adjacency ⊙ 1/σ_cc′) — feeds the #430 schedule composer
+        from tac.witness_control.scorer_model_arms import PerClassCoupledRidgeAdjoint
+        return PerClassCoupledRidgeAdjoint()
+    if name == "L_priormean_comma10k":
+        # SHRINK-TO-PRIOR cure formulation (measured: φ-rescale is INERT; the prior
+        # must be the ridge TARGET, not a feature rescale — see scorer_model_arms)
+        from tac.witness_control.scorer_model_arms import Comma10kPriorMeanAdjoint
+        return Comma10kPriorMeanAdjoint()
+    if name == "M_priormean_advb":
+        from tac.witness_control.scorer_model_arms import AdvBoundaryPriorMeanAdjoint
+        return AdvBoundaryPriorMeanAdjoint()
     raise ValueError(f"unknown architecture {name!r}; choose from {ARCHITECTURES}")
 
 
