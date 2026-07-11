@@ -15134,8 +15134,9 @@ anisotropic-boundary, #333) → precond is null-on-average, real-on-per-pixel. *
 THE INFO-GEOMETRY LENS (grounded in FEED-oa's Amari-dually-flat / Chentsov-uniqueness / Nielsen-SPD-cone corpus;
 Fisher≡margin 0.978): a class of negatives were measured in the WRONG geometry — same structural error each time.
 (1) OT-Newton area-match HURTS d_seg = **Wasserstein-vs-Fisher** mismatch → flip-weighted (Chentsov-invariant) masses,
-NOT raw GT area. (2) msal_uni texture INERT = **Euclidean-image-space ⊥ Fisher** → the exact through-R S_R weight
-(#268, BUILT, cache-ready, ALREADY FIRING). (3) #121 taper FLAT = **dually-flat GLOBAL e-coordinate scaling** vs the
+NOT raw GT area. (2) msal_uni texture INERT (verdict_scope: formulation — the msal_uni Euclidean-image-space
+TEXTURE-PROXY formulation only; the margin-saliency-REACHABILITY paradigm is ALIVE) = **Euclidean-image-space ⊥ Fisher**
+→ the exact through-R S_R weight (#268, BUILT, cache-ready, ALREADY FIRING). (3) #121 taper FLAT = **dually-flat GLOBAL e-coordinate scaling** vs the
 **LOCAL m-coordinate annulus** → local saliency reweight #169/#141 (BUILT+HELD, never fired). (4) FEED-sp SPD-cone pose
 codec (−27.1% bytes, win scales with Hilbert d_H) = the POSITIVE control proving the isotropy/anisotropy axis is real.
 PER-CLASS-HYBRID nuance: cells/generators compress REGIONS (Road/Undrivable/MyCar), the LANE is a CURVE (openpilot band
