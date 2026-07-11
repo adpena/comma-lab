@@ -15682,3 +15682,32 @@ pointer 0.19108282 UNMOVED (MEANS — compress-half readiness, not a score).
 - **triality:** DAG = this FEED · DSL = the apply-pass stage registry in `witness_apply_pass.py`
   (canonical-tool argv per lever) · equations = existing #336 KKT reverse-waterfill + #140 low-rank
   pose-codec laws (no new equation; low_rank recon-floor is a MEASURED anchor, not a new law).
+
+## FEED-432wave-parallel (2026-07-11) — while-v9-burns parallel wave: #402 sealed · #437 landed · #399/#406 harnesses committed (agents still measuring)
+
+**Context.** v9_cgauge_432 LIVE (ep~20+, first verdict @ ep25); operator GO "go on all, feed the queue,
+HOLD Modal until explicit GO". Four containment-bound agents fanned out (no paid dispatch, live run dir
+read-only, live trainer files frozen). Pointer 0.19110→0.19108282 lineage UNMOVED — everything here is
+MEANS (apparatus + staged banks that protect/enable future exact rows).
+
+- **#402 receiver fail-closed — SEALED.** Hardening was already shipped (e2c1b2aeb2, 35 tests green:
+  exact-consumption · final-byte assert · atomic tmp+rename · storage preflight); the owed acceptance
+  gate is now RECORDED: HEAD vs pre-#402 decode of levelset_v752_baseline → byte-identical archive.zip
+  (242d453e…664a) + 0.raw (e290f19d…264f), cmp-confirmed ⇒ hardening score-neutral on the valid path.
+  Memo+FEED commit 37b2bc834b. Forward-owed: the contest-SUBMISSION inflate.py shares the hand-written
+  forward → same audit at submission time.
+- **#437 consumer leg — LANDED (4f970250a4).** #436 organ-dispatch decision now SENSE-visible:
+  costate_digest `organ-dispatch (#436)` line (+ --json) and dashboard run-info card 8 (regime→tool +
+  deciding signal, NON-PROMOTABLE tag). Verified vs the sealed v752 10-verdict trajectory (reproduces
+  #436 memo §5 example); on live v9 the card is honestly ABSENT until verdict ≥3. Bonus drift fix:
+  dashboard_ctl._CODE_SOURCE_FILES was missing render_levelset_dashboard.py (ctl mirror drift of the
+  2026-07-11 reload-watch lesson) → restored. Memo consumer_leg_437_20260711T213600Z.md.
+- **#399 click-polish + #406 apply-pass — harness commits landed mid-flight** (tools/click_polish_local.py;
+  the one-command per-lever ΔS apply-pass). Both are MEASUREMENT APPARATUS, not trainer levers; their
+  measured rows (advisory, [macOS-CPU advisory] NON-PROMOTABLE) land with the agents' final reports and
+  will be FEED'd + equation-registered THEN if a durable law emerges. Exact-eval queue entries staged
+  MODAL-HOLD.
+- **Triality leg disposition (explicit, per the drift gate):** DSL leg N/A — no trainer/curriculum lever
+  changed (apply-pass and click-polish act on FROZEN checkpoints/archives post-training; #437 is SENSE
+  display). Equations leg N/A this turn — no new measured law; #402's proof verifies existing decode
+  behavior (bit-identity), it does not create an anchor-worthy equation. This block is the DAG leg.
