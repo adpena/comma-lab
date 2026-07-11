@@ -14940,3 +14940,39 @@ leg = the `.validate()` inert-AM guard (composition rule, not a lever-factory ch
 HeadGeometry compile the SAME flags); DAG leg = this FEED; equations **N/A** (pure apparatus — no measured
 law; the resume guards protect deterministic-repro, they measure no d_seg/d_pose/S). Pointer 0.19108282
 UNMOVED — safety hardening for a FUTURE relaunch of the built-never-fired pool candidates, moves no score.
+
+## FEED-hesspre — Hessian-preconditioned head-offset solver A/B (Plus-Gourdon & Nielsen 2606.09077) → MEASURED CLEAN NEGATIVE on the real n600 problem (07-10, $0 local, operator P0 GO "Build it")
+
+**Built (opt-in apparatus on the #288 solver, OFF by default = legacy byte-identical):**
+`damped_newton_ot_offsets(..., precondition=False, precond_eps_rel=1e-9, precond_cond_gate=None)` +
+`softmax_cov_condition_number` (structure-tensor λ_max/λ_min range sensor, Nielsen 2307.10644, drops the
+1-dim all-ones gauge nullspace; λ_min→0 ⇒ +inf) + `_newton_step_from_cov` (precond=True: eigh-whiten the
+softmax-cov Hessian to the canonical paraboloid, gauge-explicit relative floor, map back). Threaded through
+`solve_head_offsets(ot_newton/flip_weighted, precondition=…)`. `src/tac/boundary_math/laguerre_logit_offset.py`;
+A/B `experiments/probe_hessian_precond_ot_ab.py`; tests `tests/test_hessian_precond_ot.py` (6, incl. legacy
+step byte-identical to `pinv`, ill-conditioned positive control, cond-gate fallthrough). ruff-F clean.
+
+**MEASURED n600 (SAME ckpt/protocol as the N-1 ot_newton verdict — mod32cap ep650; realized-through-R frozen
+CPU SegNet; `experiments/results/hessian_precond_ot_ab_n600_20260710/result.json`):** the real averaged
+head-offset Hessian range **cond = 7.66** (WELL-conditioned); legacy & precond BOTH converge in **8 iters**
+to the **IDENTICAL b*** `{0:-9.639,1:26.472,2:-7.543,3:-5.778,4:-3.513}` (‖Δb*‖=5.8e-9, same_fixed_point;
+these EXACTLY reproduce N-1's ot_newton offsets); through-R **d_seg BIT-IDENTICAL** legacy=precond=
+0.0048921034071180555 (delta 0.0, per-class too; no_offset 0.003143556382921 — all three exact-match N-1).
+Per-step microbench: eigh **8.5µs** vs pinv **13.2µs** (precond 35% CHEAPER — "eigendecomp cost dominates"
+is FALSE for 5×5) but the full solve is PIXEL-dominated (~250s, identical work) so it's moot; iters_delta 0.
+
+**VERDICT (NO-FAKE clean negative):** for a single DENSE 5×5 solve `np.linalg.pinv(cov,rcond)` is ALREADY an
+eigenvalue-floored inverse = the SAME Newton step (test-proven ≡ to ~1e-10 rel even at cond 1e6); and the
+head-offset Hessian is a MEAN over ~10⁸ pixels, so the pixel-mean REGULARIZES the per-pixel annulus anisotropy
+(#333) → cond ~8 → damped-Newton already nails b* in 8 iters. Preconditioning reaches the identical fixed
+point → identical d_seg → **NO WIN on this global/averaged solve.** Its payoff is confined to (a) genuinely
+ill-conditioned solves and (b) ITERATIVE / NON-averaged terminal solves — specifically the **#341
+`tools/quadratic_basin_finisher_probe.py` Newton-CG/LM on the full MLX HVP** (CG on a large non-averaged
+Hessian, where conditioning genuinely matters) and #396 MC-finisher. The cond sensor + `precond_cond_gate`
+make it self-selecting there (no-op fallthrough on well-conditioned). Independent of this, the ot_newton
+AREA-objective is N-1-falsified (0.00489 > 0.00314 no_offset) — this arm is not the pointer path regardless.
+**Triality:** DAG FEED (this) + **[no-triality]** — apparatus/negative (off-by-default solver robustness + a
+sensor, NOT a d_seg lever → no DSL `Lever` factory); **equations N/A** (no measured score-law; cond 7.66 is an
+apparatus number). **Pointer 0.19108282 UNMOVED** — a solver-conditioning change moves NO score until a
+byte-closed `upstream/evaluate.py` row (owner #341/#396); a candidate, not a score. Routing: wire the sensor+
+precond into #341/#396 iterative terminal solves (non-averaged Hessian) where the anisotropy is real.

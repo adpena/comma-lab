@@ -174,9 +174,79 @@ def hard_cell_masses(phi: np.ndarray, offsets: np.ndarray) -> np.ndarray:
     return np.bincount(lab.reshape(-1), minlength=k).astype(np.float64) / float(lab.size)
 
 
+def softmax_cov_condition_number(
+    cov: np.ndarray, *, gauge_dim: int = 1, eps_rel: float = 1e-12,
+) -> float:
+    """Range condition number ``lambda_max / lambda_min`` of the softmax-covariance
+    Hessian ``cov = diag(m) - mean_p s_p s_p^T``, EXCLUDING the ``gauge_dim``-dim
+    all-ones gauge nullspace (the smallest ``gauge_dim`` eigenvalues, ``~0`` by
+    construction). A near-free anisotropy sensor (Nielsen structure-tensor 2307.10644):
+    the boundary-annulus Hessian is anisotropic (flat-interior + sharp-along-boundary,
+    #333); a HIGH range-condition-number means the Newton solve is genuinely
+    ill-conditioned (preconditioning pays); ``~1`` means it is already well-conditioned
+    (the eigendecomposition would only add cost). Eigenvalues below ``eps_rel*lambda_max``
+    are treated as numerical-zero (part of the effective nullspace). Returns ``+inf`` if
+    the effective range is empty (rank <= gauge_dim). ``cov`` must be symmetric PSD.
+    """
+    w = np.linalg.eigvalsh(np.asarray(cov, dtype=np.float64))  # ascending, real
+    w = np.clip(w, 0.0, None)
+    rng = w[int(gauge_dim):]  # the K-gauge_dim eigenvalues that a full-rank solve expects positive
+    if rng.size == 0:
+        return float("inf")
+    lam_max, lam_min = float(rng[-1]), float(rng[0])
+    if lam_max <= 0.0 or lam_min <= eps_rel * lam_max:
+        # rank-deficient IN the expected range (a class-absent / saturated direction) =>
+        # the Newton solve is degenerate there => maximally ill-conditioned. Do NOT filter
+        # the small eigenvalue out: lambda_min -> 0 IS the ill-conditioning we are sensing.
+        return float("inf")
+    return float(lam_max / lam_min)
+
+
+def _newton_step_from_cov(
+    cov: np.ndarray, g: np.ndarray, taus: float, *,
+    precondition: bool, rcond: float, eps_rel: float, cond_gate: float | None,
+) -> tuple[np.ndarray, float]:
+    """The dual-ascent Newton direction ``taus * H^+ @ g`` (``H = -cov/taus``), returned
+    with the range condition number of ``cov``.
+
+    ``precondition=False`` -> the EXACT legacy path ``taus * pinv(cov, rcond) @ g``
+    (byte-identical to the pre-2026-07-10 solver; the preconditioner is opt-in only).
+
+    ``precondition=True`` -> Hessian-preconditioned conjugation (Plus-Gourdon & Nielsen
+    2606.09077): eigendecompose ``cov = Q diag(evals) Q^T``, deform to the canonical
+    paraboloid (whiten: the well-conditioned residual is solved in ``Q``-coordinates where
+    the Hessian is diagonal), invert only the eigenvalues above the relative floor
+    ``eps_rel*lambda_max`` (explicitly dropping the all-ones gauge nullspace — its eigenvalue
+    is ``~0`` << the floor), then map back: ``step = taus * Q (evals^+ (Q^T g))``. NOTE: for a
+    single DENSE solve this is algebraically the same Newton step as ``np.linalg.pinv``
+    (whose ``rcond`` is ALSO a floor relative to the largest singular value); the differences
+    are (a) the explicit eigenbasis exposes the range condition number as a near-free
+    by-product and (b) the floor is gauge-explicit. The paper's convergence speedup targets
+    ITERATIVE inner solves (CG / learned conjugation), NOT a dense pinv — so on this 5x5
+    solve preconditioning buys robustness + the sensor, not iterations (MEASURED: see the A/B
+    probe ``experiments/probe_hessian_precond_ot_ab.py``).
+
+    ``cond_gate`` (structure-tensor gate): when not ``None`` and the range condition number
+    is BELOW it, fall through to the fast legacy ``pinv`` even if ``precondition=True`` — the
+    eigendecomposition does not pay on an already-well-conditioned Hessian. This answers
+    "WHERE does preconditioning pay" with the ``lambda_max/lambda_min`` the eigendecomp
+    already exposes.
+    """
+    cond = softmax_cov_condition_number(cov, eps_rel=eps_rel)
+    if (not precondition) or (cond_gate is not None and cond < float(cond_gate)):
+        return taus * (np.linalg.pinv(cov, rcond=rcond) @ g), cond
+    evals, q = np.linalg.eigh(np.asarray(cov, dtype=np.float64))  # ascending, real (PSD)
+    lam_max = max(float(evals[-1]), 1e-300)
+    inv = np.where(evals > eps_rel * lam_max, 1.0 / np.maximum(evals, 1e-300), 0.0)
+    step = taus * (q @ (inv * (q.T @ np.asarray(g, dtype=np.float64))))
+    return step, cond
+
+
 def damped_newton_ot_offsets(
     phi: np.ndarray, target_masses: np.ndarray, *, tau: float = 1.0,
     max_iter: int = 64, tol: float = 1e-10, rcond: float = 1e-10,
+    precondition: bool = False, precond_eps_rel: float = 1e-9,
+    precond_cond_gate: float | None = None,
 ) -> tuple[np.ndarray, dict[str, float]]:
     """Damped-Newton semi-discrete OT solve for the zero-sum per-class offset ``b*``
     with ``soft_cell_masses(phi, b*, tau) == target_masses`` (Kitagawa-Merigot-Thibert
@@ -192,8 +262,20 @@ def damped_newton_ot_offsets(
     (``rcond``); ``t`` is backtracked (halved) until the dual increases (Armijo), which
     guarantees global convergence; the terminal rate is quadratic. ``phi``: ``(...,K)``
     witness SDF/logit field; ``target_masses``: ``(K,)`` non-negative (renormalized).
-    Returns ``(b*, info)`` with ``info`` = {converged, iters, max_mass_err, dual}.
+    Returns ``(b*, info)`` with ``info`` = {converged, iters, max_mass_err, dual,
+    cond_number (range lambda_max/lambda_min at the final iterate), preconditioned}.
     Byte-free: fold ``b*`` into the bias via :func:`apply_offset_to_sdf_bias`.
+
+    ``precondition`` (opt-in; default ``False`` == byte-identical legacy pinv path):
+    compute each Newton step via Hessian-preconditioned conjugation (Plus-Gourdon &
+    Nielsen 2606.09077) through :func:`_newton_step_from_cov` — eigendecompose the
+    softmax-covariance Hessian, whiten to the canonical paraboloid, invert eigenvalues
+    above the RELATIVE floor ``precond_eps_rel*lambda_max`` (gauge-explicit), map back.
+    ``precond_cond_gate`` (structure-tensor gate): when set, use the preconditioner only
+    where the range condition number exceeds it (else the fast legacy pinv). Both paths
+    solve the SAME concave dual to the SAME fixed point ``b*``; preconditioning changes
+    only the per-step numerics/robustness, never the objective (NO-FAKE: the through-R
+    d_seg is identical when ``b*`` is identical, which the A/B measures).
     """
     z0 = np.asarray(phi, dtype=np.float64)
     z0 = z0.reshape(-1, z0.shape[-1])
@@ -216,7 +298,8 @@ def damped_newton_ot_offsets(
         lse = mm[:, 0] + np.log(np.exp(zz - mm).sum(axis=1))
         return float(np.dot(pi, bb) - taus * lse.mean())
 
-    info = {"converged": 0.0, "iters": 0.0, "max_mass_err": 1.0, "dual": _dual(b)}
+    info = {"converged": 0.0, "iters": 0.0, "max_mass_err": 1.0, "dual": _dual(b),
+            "cond_number": float("nan"), "preconditioned": float(bool(precondition))}
     for it in range(1, int(max_iter) + 1):
         zz = phi_c + (b / taus)
         zz = zz - zz.max(axis=1, keepdims=True)
@@ -230,7 +313,10 @@ def damped_newton_ot_offsets(
             info["converged"] = 1.0
             break
         cov = np.diag(m) - (s.T @ s) / float(n)                    # (K,K) softmax covariance (PSD, rank K-1)
-        step = taus * (np.linalg.pinv(cov, rcond=rcond) @ g)       # Newton direction (dual ascent)
+        step, cond = _newton_step_from_cov(                        # Newton direction (dual ascent)
+            cov, g, taus, precondition=precondition, rcond=rcond,
+            eps_rel=precond_eps_rel, cond_gate=precond_cond_gate)
+        info["cond_number"] = cond                                 # range lambda_max/lambda_min at this iterate
         step = step - step.mean()                                  # stay zero-sum (gauge)
         # Backtracking on the concave dual: accept the largest t in {1,1/2,...} whose
         # step does NOT DECREASE Phi. Near the optimum the ascent direction's full
@@ -404,6 +490,9 @@ def solve_head_offsets(
     gt: np.ndarray | None = None,
     pred: np.ndarray | None = None,
     tau: float = 1.0,
+    precondition: bool = False,
+    precond_eps_rel: float = 1e-9,
+    precond_cond_gate: float | None = None,
 ) -> tuple[np.ndarray, dict[str, float]]:
     """Return the zero-sum per-class Laguerre offset ``b*`` (K,) for ``mode`` + an ``info`` dict.
 
@@ -451,7 +540,9 @@ def solve_head_offsets(
                 "target_masses (GT class frequencies) — it NEVER silently falls back to the Menon "
                 "prior (that would be a fake 'ot_newton' ignoring the geometry it claims to solve)."
             )
-        b, info = damped_newton_ot_offsets(phi, target_masses, tau=tau)
+        b, info = damped_newton_ot_offsets(
+            phi, target_masses, tau=tau, precondition=precondition,
+            precond_eps_rel=precond_eps_rel, precond_cond_gate=precond_cond_gate)
         out = {"solver": 1.0}
         out.update({k: float(v) for k, v in info.items()})
         return b, out
@@ -467,7 +558,9 @@ def solve_head_offsets(
         # flips identified by the REALIZED argmax (pred) if given, else the phi-space argmax proxy.
         pred_lab = np.asarray(pred).reshape(-1) if pred is not None else np.argmax(zz, axis=1)
         fshare = _flip_share_by_class(pred_lab, gt, zz.shape[-1])
-        b, info = damped_newton_ot_offsets(zz, fshare, tau=tau)
+        b, info = damped_newton_ot_offsets(
+            zz, fshare, tau=tau, precondition=precondition,
+            precond_eps_rel=precond_eps_rel, precond_cond_gate=precond_cond_gate)
         out = {"solver": 2.0, "target_is_flip_share": 1.0,
                "pred_is_realized": 1.0 if pred is not None else 0.0}
         out.update({k: float(v) for k, v in info.items()})
