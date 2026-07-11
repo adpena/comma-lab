@@ -1094,6 +1094,36 @@ def triality_snapshot() -> dict:
 
 
 # ───────────────────────── access gate (pure, testable) ─────────────────────────
+# Live gate TOGGLE (operator 2026-07-11 "make this gating toggleable and turn it
+# off for now"): a tiny state file next to the supervisor's .access_key. Content
+# "off"/"0"/"false"/"disabled" disables key enforcement WITHOUT a restart (read
+# per-request behind a 2s cache); a missing file or any other content leaves the
+# gate ON (fail-closed default). gate_decision itself stays PURE — the toggle
+# works by feeding it an EMPTY effective key, which its existing "no key
+# configured -> allow" semantics already treat as open.
+#   toggle off: echo off > .omx/tmp/dash_levelset_deploy/.access_gate
+#   toggle on:  echo on  > .omx/tmp/dash_levelset_deploy/.access_gate  (or rm it)
+_ACCESS_GATE_FILE = _REPO_ROOT / ".omx" / "tmp" / "dash_levelset_deploy" / ".access_gate"
+_ACCESS_GATE_CACHE = {"ts": 0.0, "on": True}
+
+
+def access_gate_enabled() -> bool:
+    now = time.time()
+    if now - _ACCESS_GATE_CACHE["ts"] > 2.0:
+        try:
+            on = _ACCESS_GATE_FILE.read_text().strip().lower() not in (
+                "off", "0", "false", "disabled")
+        except OSError:
+            on = True  # missing/unreadable -> gate ON (fail-closed)
+        _ACCESS_GATE_CACHE.update(ts=now, on=on)
+    return bool(_ACCESS_GATE_CACHE["on"])
+
+
+def _effective_access_key(cfg) -> str:
+    """cfg.access_key when the gate toggle is ON, else "" (= allow everyone)."""
+    return cfg.access_key if access_gate_enabled() else ""
+
+
 def gate_decision(headers: dict, query_key: str | None, cookie_key: str | None,
                   access_key: str, strict_local: bool = False) -> str:
     """Return "allow" or "deny".
@@ -2174,7 +2204,8 @@ def create_app(cfg: Config) -> Starlette:
         app.state.live = state
         print(json.dumps({"stage": "dashboard_server", "started": True,
                           "port": cfg.port, "watched": state.watched,
-                          "access_gated": bool(cfg.access_key)}), flush=True)
+                          "access_gated": bool(cfg.access_key) and access_gate_enabled()}),
+              flush=True)
         try:
             yield
         finally:
@@ -2185,7 +2216,7 @@ def create_app(cfg: Config) -> Starlette:
 
     async def index(request):
         qk, ck = _req_keys(request)
-        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+        if gate_decision(dict(request.headers), qk, ck, _effective_access_key(cfg)) == "deny":
             return HTMLResponse(_login_html(), status_code=401)
         resp = HTMLResponse(_page_html(cfg))
         # Any client that passed the page gate (local bypass OR valid key) gets the
@@ -2205,7 +2236,7 @@ def create_app(cfg: Config) -> Starlette:
 
     async def api_state(request):
         qk, ck = _req_keys(request)
-        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+        if gate_decision(dict(request.headers), qk, ck, _effective_access_key(cfg)) == "deny":
             return JSONResponse({"error": "access key required"}, status_code=401)
         return JSONResponse(state.snapshot())
 
@@ -2213,7 +2244,7 @@ def create_app(cfg: Config) -> Starlette:
         # The Tab-3 n600 VIDEO payload (fetched ONCE per new sequence; the client then scrubs +
         # plays locally). Served as pre-built bytes so the ~7 MB dict is never re-serialized.
         qk, ck = _req_keys(request)
-        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+        if gate_decision(dict(request.headers), qk, ck, _effective_access_key(cfg)) == "deny":
             return JSONResponse({"error": "access key required"}, status_code=401)
         if state._flow_seq_bytes is not None:
             from starlette.responses import Response
@@ -2225,7 +2256,7 @@ def create_app(cfg: Config) -> Starlette:
         # The Tab-1 ORACLE physical-prior atlas (fetched ONCE; static — depends only on the GT
         # cache). Served as pre-built bytes when ready, else a 202 readiness ping.
         qk, ck = _req_keys(request)
-        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+        if gate_decision(dict(request.headers), qk, ck, _effective_access_key(cfg)) == "deny":
             return JSONResponse({"error": "access key required"}, status_code=401)
         if state._oracle_bytes is not None:
             from starlette.responses import Response
@@ -2237,7 +2268,7 @@ def create_app(cfg: Config) -> Starlette:
         # The Tab-4 WHY/HOW deep-math field bundle (fetched ONCE; static — depends only on the GT
         # cache). Served as pre-built bytes when ready, else a 202 readiness ping.
         qk, ck = _req_keys(request)
-        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+        if gate_decision(dict(request.headers), qk, ck, _effective_access_key(cfg)) == "deny":
             return JSONResponse({"error": "access key required"}, status_code=401)
         if state._whyhow_bytes is not None:
             from starlette.responses import Response
@@ -2249,7 +2280,7 @@ def create_app(cfg: Config) -> Starlette:
         # The Tab-6 TRIALITY payload — DATA-DRIVEN, self-updating from the LIVE artifacts
         # (DAG FEEDs + witness_dsl + canonical_equations registry). Computed off-loop (cached).
         qk, ck = _req_keys(request)
-        if gate_decision(dict(request.headers), qk, ck, cfg.access_key) == "deny":
+        if gate_decision(dict(request.headers), qk, ck, _effective_access_key(cfg)) == "deny":
             return JSONResponse({"error": "access key required"}, status_code=401)
         try:
             data = await asyncio.get_event_loop().run_in_executor(None, triality_snapshot)
@@ -2291,7 +2322,7 @@ def create_app(cfg: Config) -> Starlette:
         ck = ws.cookies.get("dash_key")
         # strict_local=True: WS ALWAYS requires the key when configured (no cf-header
         # local bypass — cloudflared omits Cf-Ray on the WS upgrade).
-        if gate_decision(dict(ws.headers), qk, ck, cfg.access_key, strict_local=True) == "deny":
+        if gate_decision(dict(ws.headers), qk, ck, _effective_access_key(cfg), strict_local=True) == "deny":
             await ws.close(code=1008)  # policy violation
             return
         await ws.accept()

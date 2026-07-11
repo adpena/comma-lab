@@ -1234,7 +1234,7 @@ def main(argv: list[str] | None = None) -> int:
                     "the v6-inherited LawRef constants manifest; pose block verbatim from v6), or "
                     "crucible_v752 (the T5 CRUCIBLE-2 v7.5.2 launch-1 SELF-ORIENT-OFF config = the "
                     "sealed crucible_v7 trunk + #121 d_seg-aware taper MINUS σ_cc′ MINUS the self-orient "
-                    "directional basis [owed-16 P9 RESOLVED-REFUTING: realized −48% transfer measured "
+                    "directional basis [owed-16 P9 RESOLVED-REFUTING: realized −48%% transfer measured "
                     "≈0, 47 GiB RAM tax removed; operator GO 2026-07-10]; reuses v7's constants + "
                     "schedule-governance manifests with its own DSL-provenance fingerprint), or "
                     "crucible_v753 (the fractal-synthesis typed-delta over v7.5.2; DEFAULT branch = "
