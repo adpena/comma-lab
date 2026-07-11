@@ -53,6 +53,15 @@ LIVE_NPZ = "levelset_witness_live_mlx.npz"             # live (non-EMA) weights
 POLYAK_NPZ = "levelset_witness_polyak_mlx.npz"         # Polyak-finisher deploy npz
 TRAIN_RESULT_JSON = "levelset_train_result.json"       # end-of-run summary
 
+# Torch/CUDA backend siblings.  They intentionally do not reuse the ``.npz``
+# names: Torch optimizer/RNG state is required for bit-faithful resume and is
+# represented by an atomic ``.pt`` payload.  Observers consume both families.
+TORCH_RESUME_PT = "levelset_resume_state_torch.pt"
+TORCH_EMA_PT = "levelset_witness_ema_torch.pt"
+TORCH_TRAIN_RESULT_JSON = "levelset_train_result_torch.json"
+TORCH_TRAJECTORY_JSONL = "levelset_cuda_trajectory.jsonl"
+TORCH_RUN_MANIFEST_JSON = "v9_cgauge_cuda_run_manifest.json"
+
 #: Every filename the trainer / checkpoint-retention writes. The drift test asserts
 #: the producer sources emit no ``levelset_*.{npz,json}`` literal outside this set.
 TRAINER_ARTIFACTS: tuple[str, ...] = (
@@ -63,6 +72,11 @@ TRAINER_ARTIFACTS: tuple[str, ...] = (
     LIVE_NPZ,
     POLYAK_NPZ,
     TRAIN_RESULT_JSON,
+    TORCH_RESUME_PT,
+    TORCH_EMA_PT,
+    TORCH_TRAIN_RESULT_JSON,
+    TORCH_TRAJECTORY_JSONL,
+    TORCH_RUN_MANIFEST_JSON,
 )
 
 # ---- observer-written telemetry (optional; not produced by the trainer) ------
@@ -79,9 +93,24 @@ _NON_TRAINER_LOG_SUFFIXES: tuple[str, ...] = ("observer.log",)
 
 
 def is_run_dir(path: Path | str) -> bool:
-    """True if ``path`` is a directory matching the witness-run family glob."""
+    """True if ``path`` is a witness run dir — by family glob OR structural marker.
+
+    STRUCTURAL marker (name-agnostic, the durable test): the governed launcher
+    writes ``launch.sh`` and the durable daemon writes ``run.log`` into every
+    spawned run dir — the pair is a precise witness-run fingerprint (census
+    2026-07-11: exactly the 25 real runs match; no false positives in
+    experiments/results). The name glob is kept as a fast-path for historical
+    ``levelset_*`` dirs. DRIFT LESSON (2026-07-11): the prefix-only test
+    silently orphaned the first non-``levelset_``-named arm
+    (``v9_cgauge_432_coherent_arm_*``) AND the ``owed16_ab_*`` A/B arms from
+    every consumer (dashboard, witness-checkin, costate digest) — a run-dir
+    NAME is a run property and must never be a discovery contract."""
     p = Path(path)
-    return p.is_dir() and p.match(RUN_DIR_GLOB)
+    if not p.is_dir():
+        return False
+    if p.match(RUN_DIR_GLOB):
+        return True
+    return (p / "launch.sh").is_file() and (p / "run.log").is_file()
 
 
 def signal_paths(run_dir: Path | str) -> list[Path]:
@@ -133,10 +162,11 @@ def newest_run_dir(results_dir: Path | str) -> Path | None:
     """Newest witness-run dir under ``results_dir`` by freshest-signal mtime.
 
     Falls back to the dir's own mtime when a run dir has no signal files yet, so a
-    just-created run still ranks. ``None`` if no run dir matches the family glob.
+    just-created run still ranks. ``None`` if no dir passes ``is_run_dir`` (family
+    glob OR the structural launch.sh+run.log marker — never name-prefix-only).
     """
     rd = Path(results_dir)
-    candidates = [d for d in rd.glob(RUN_DIR_GLOB) if d.is_dir()]
+    candidates = [d for d in rd.iterdir() if is_run_dir(d)] if rd.is_dir() else []
     if not candidates:
         return None
 

@@ -83,6 +83,7 @@ try:
     from tac import witness_run_artifacts as _wra
     _COSTATE_JSONL = _wra.COSTATE_JSONL
 except Exception:
+    _wra = None  # resolved_glob's contract-derived discovery falls back to the base glob
     _COSTATE_JSONL = "costate_shadow.jsonl"
 
 # ── canonical DSL schedule read-back (operator 2026-07-07: observability consumers
@@ -306,6 +307,21 @@ class Config:
         if self.log_glob:               # explicit --log-glob is a hard override
             return self.log_glob
         if self.auto_latest:            # DEFAULT: follow the freshest arm across all dirs
+            # (#420 contract) span EVERY contract-recognized run dir, re-derived at each
+            # resolution so a NEW arm is auto-tracked regardless of its NAME. DRIFT LESSON
+            # (2026-07-11): the levelset_-prefix base glob silently hid the first
+            # v9_cgauge_* arm (and the owed16_ab_* arms) from the dashboard — a run-dir
+            # name is never a discovery contract. The base glob stays as the union
+            # fallback (covers .omx/tmp logs + survives a contract import failure).
+            if _wra is not None:
+                try:
+                    results = Path("experiments/results")
+                    dirs = sorted(d for d in results.iterdir() if _wra.is_run_dir(d))
+                    if dirs:
+                        pats = ",".join(f"{d}/*.log" for d in dirs)
+                        return f"{pats},{self.auto_base_glob}"
+                except Exception:
+                    pass  # fall through to the static base glob (fail-open observability)
             return self.auto_base_glob
         if self.run_dir:                # pinned mode (--no-auto-latest --run-dir X)
             return os.path.join(self.run_dir, "*.log")
