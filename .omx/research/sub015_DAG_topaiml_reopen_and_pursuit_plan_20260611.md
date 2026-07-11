@@ -15738,3 +15738,27 @@ trainer argv only. Registration legs: canonical equation `blind_coordinate_rate_
 + durable memory `blind_coordinate_rate_lever_conditional_20260711` (+ MEMORY.md index line). The
 conditional-value clause (pays ONLY on camera-res-storing sections; 0 today on the pure-generator
 witness) is recorded in all three so no future session inherits it as an unconditional win.
+
+### FEED-399-clickpolish-local (2026-07-11) — exact-gated latent polish extended locally; advisory −7.9e-5 banked; exact row STAGED (MODAL-HOLD)
+SIGNAL: the current frontier archive ad02b012… is itself the n8_validation click-polish candidate
+(pairs 0–7 only); the full-n600 Modal polish (fc-01KX6DZWCHNPQ6KN59V2MZ845J) is dispatched-unharvested
+and Modal is on operator HOLD → 592 pairs of un-swept headroom. ACTION (#399, containment-safe): built
+tools/click_polish_local.py (commit 08322f68f1; delegates ALL mechanism to src/tac/click_polish.py) and
+ran K=48-scope round-0 polish with BOTH full-n600 authority advisory passes. MEASURED greens: pair-
+locality byte-identical · diagonal==sequential seg EXACT (pose jitter 1.3e-8) · NEW byte-invariance
+40/40 single ±1 clicks → 177,169 B (so K-scope S-gate is sound for full-n600 S). MEASURED rows
+[macOS-CPU advisory, NON-PROMOTABLE, same harness both rows]: incumbent S 0.19109312 (d_seg 0.00055972,
+matches the contest-CPU report to ~1e-5) → candidate S 0.19101380 after 37 accepted clicks
+(ΔS −7.93e-05, seg-carried, bytes IDENTICAL). Candidate byte-closed: sha 0872086672e7a0ff98e9e41e77e4c84d415b756eac3ba24db5ffec0d83e52969,
+177,169 B, experiments/results/click_polish_399_run1/ (+ resumable accepted_clicks_ledger.jsonl; the
+round-0 sweep hit its 3600 s cap at ~2/3 dim coverage — K=48 not exhausted, pairs 48–599 untouched).
+Scale fact: one n600 pass ≈ 486–540 s under live-run contention → full n600 sweep round ≈ 6.5–8 h,
+infeasible under containment; K-scope + direct n600 authority is the honest shape. STAGED (never fired):
+staged_exact_eval_queue_MODAL_HOLD.json with the verified inflate.sh + upstream/evaluate.py --device cpu
+command. NO-FAKE #7: defensive bank — PR128 mechanism (MIT, external) on our PR110-lineage payload;
+borrowed_substrate_accounting embedded in search_result_local.json. Memo
+click_polish_399_20260711T2200Z.md. Pointer 0.19108282 [contest-CPU] UNMOVED.
+- **triality:** DAG = this FEED · DSL = N/A (no witness lever; frozen-payload polish outside the
+  trainer surface — tool committed, not a curriculum change) · equations = N/A (no new law; the
+  mechanism's soundness rests on measured greens recorded in the memo; the registrable object is the
+  exact row when the MODAL-HOLD entry fires). [no-triality]
