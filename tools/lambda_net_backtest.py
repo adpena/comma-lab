@@ -39,6 +39,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="skip the (slow) nested-LOO routing benchmark")
     ap.add_argument("--routing-folds", type=str, default=None,
                     help="comma-separated outer fold ids (chunked-resumable execution)")
+    ap.add_argument("--archs", type=str, default=None,
+                    help="comma-separated architecture subset (chunked-resumable "
+                         "execution — the full 8-arm tournament exceeds a single "
+                         "harness window; run numpy arms + torch arms separately)")
     ap.add_argument("--no-record", action="store_true",
                     help="do NOT append the organ-ledger compounding record "
                          "(benchmark-only run; recording is the default so every "
@@ -62,7 +66,13 @@ def main(argv: list[str] | None = None) -> int:
           f"{len(traj.lever_names)} levers  [{traj.run_dir}]")
 
     print("\n== λ-net architecture tournament (LOO + WALK-FORWARD vs persistence) ==")
-    arch_reports = benchmark_all(traj, seed=args.seed)
+    if args.archs:
+        from tac.witness_control.lambda_net import backtest
+        arch_reports = {}
+        for arch in args.archs.split(","):
+            arch_reports[arch] = backtest(traj, architecture=arch, seed=args.seed)[0]
+    else:
+        arch_reports = benchmark_all(traj, seed=args.seed)
     for arch, r in sorted(arch_reports.items(), key=lambda kv: kv[1].forecast_mae_model):
         print(f"  {arch:20s} LOO {r.forecast_mae_model:.6f} (heur {r.forecast_mae_heuristic:.6f})"
               f" | WF {r.walkforward_mae_model:.6f} (heur {r.walkforward_mae_heuristic:.6f})"

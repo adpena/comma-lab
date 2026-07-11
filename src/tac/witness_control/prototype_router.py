@@ -14,8 +14,13 @@ verdict states, and **the mixture weights ARE the explanation** — every λ is 
 regimes + the past states that drove it (the 500× training-data attribution PRISM measures; here
 it is EXACT and cheap because the mixture is sparse and the neighborhood is explicit).
 
-Composes with what is already built (NOT a replacement): the ridge SOLVE stays the incumbent
-predictor (backtest winner at n=5); this lens is the INTERPRETABLE router head + the OBSERVATORY.
+Composes with what is already built (NOT a replacement). HISTORY: at n=5 intervals the
+ridge SOLVE won the tournament and this lens was the interpretable head with a measured
++8% scalar cost; at n=8 (2026-07-11 adversarial-review re-arbitration) the PROTOTYPE
+FAMILY is the measured winner outright (LOO 0.002716 vs ridge 0.003057; walk-forward
+0.002513 vs ridge 0.003535, which LOSES to persistence) — interpretability now costs
+nothing. Re-arbitrated per record accrual via ``continual_costate``; this docstring
+states the mechanism, the organ ledger holds the live verdict.
 Its per-prototype local λ-responses are fitted (a SLIM-style linear controller over prototypes —
 Rudin's falling-rule discipline: the DECIDE stays a readable linear rule). Daubechies enters as a
 **multi-scale cascade**: coarse prototypes (few, broad kernel) carry the bulk regime, fine

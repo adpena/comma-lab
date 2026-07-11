@@ -38,8 +38,13 @@ one spine, every head wired, compiled by ``costate_agent_dsl.CostateAgentProgram
 
 Phase A is SHADOW MODE ONLY: observe → estimate → recommend (JSONL rows) → STOP.
 
-CONTAINMENT (structural, not a config flag): no module in this package imports
-``subprocess``, ``os.system``-style exec surfaces, or any trainer entry point.
+CONTAINMENT (structural, not a config flag): no DECISION/ACT module in this package
+imports ``subprocess``, ``os.system``-style exec surfaces, or any trainer entry point
+(enforced by source-scan tests over the #426 organ modules). PRECISE EXCEPTION
+(2026-07-11 review): ``verdict_reclaim`` + ``_verdict_subprocess_worker`` use
+``subprocess``/``killpg`` ONLY to run the chunked CPU-torch verdict in a child
+process THEY spawn and reclaim (RSS hygiene; bit-identical verdict) — a
+compute-isolation utility with no path to any trainer/launcher/foreign process.
 The controller CANNOT actuate anything — it emits advisory rows to
 ``<run_dir>/costate_shadow.jsonl`` with ``actuation="NONE"`` and every number
 axis-tagged ``[macOS advisory] NON-PROMOTABLE``. Actuation (Phase B) is DESIGN-ONLY

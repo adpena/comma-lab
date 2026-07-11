@@ -544,6 +544,11 @@ def derive_costate_agent_arbitrated(run_dir: str) -> CostateAgentProgram:
         if arb.n_records == 0:
             return prog
         arch_to_lens = {e.architecture: e.name for e in prog.experts}
+        # tournament VARIANTS map to their base panel lens (found in the 2026-07-11
+        # round-2 clean-pass attack: E_prototype_bregman had no lens name and the
+        # arbitration silently fell back — now it routes to the prototype head)
+        arch_to_lens.setdefault("E_prototype_bregman", arch_to_lens.get("E_prototype"))
+        arch_to_lens.setdefault("G_ridge_scorerprior", arch_to_lens.get("A_ridge_solve"))
         lens = arch_to_lens.get(arb.recommended)
         if lens is None:
             return prog

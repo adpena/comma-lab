@@ -286,6 +286,28 @@ def test_dsl_describe_and_render():
     assert any("routing" in ln for ln in lines)
 
 
+def test_dsl_arbitrated_variant_maps_to_base_lens(tmp_path, monkeypatch):
+    """Tournament VARIANTS (E_prototype_bregman / G_ridge_scorerprior) must route to
+    their base panel lens — the silent-fallback gap found in the round-2 attack."""
+    import tac.witness_control.continual_costate as cc
+    from tac.witness_dsl.costate_agent_dsl import derive_costate_agent_arbitrated
+    traj, _ = _synthetic_traj()
+    ledger = tmp_path / "ledger.md"
+    reports = _fake_reports(traj)
+    # make the Bregman variant the winner
+    from tac.witness_control.lambda_net import BacktestReport
+    d = reports["A_ridge_solve"].to_dict(); d["notes"] = tuple(d["notes"])
+    d.update(architecture="E_prototype_bregman", walkforward_mae_model=0.001,
+             passed=True, passed_walkforward=True)
+    reports["E_prototype_bregman"] = BacktestReport(**d)
+    rec = cc.compose_trajectory_record(traj, reports, [])
+    cc.append_trajectory_record(rec, ledger)
+    monkeypatch.setattr(cc, "ORGAN_LEDGER", ledger)
+    p = derive_costate_agent_arbitrated(".")
+    assert p.routing.single_best_lens == "prototype"
+    assert "organ-ledger arbitration" in p.routing.provenance
+
+
 def test_dsl_arbitrated_derivation_fail_open():
     from tac.witness_dsl.costate_agent_dsl import (
         derive_costate_agent_arbitrated, derive_costate_agent_v1)
