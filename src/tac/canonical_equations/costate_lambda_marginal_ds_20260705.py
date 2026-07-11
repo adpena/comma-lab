@@ -289,6 +289,81 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_aniso_perclass_433 = EmpiricalAnchor(
+        # (e) ANISOTROPIC-COUPLED PER-CLASS λ (P0 #433, 2026-07-11). The λ law's
+        # per-class half gains its V9·CGauge physics model: the two Fisher regimes
+        # (bulk interior / anisotropic boundary) at the MEASURED flip temperature,
+        # σ_cc′ pair tension, power-diagram pair coupling, along/across-tangent
+        # anisotropy — composed into C_phys and a score-law-pinned prior-mean solve.
+        anchor_id="aniso_perclass_lambda_433_backtest_20260711",
+        measurement_utc="2026-07-11T14:43:00Z",
+        inputs={
+            "arms": "tac.witness_control.aniso_perclass_lambda (N/O/P/Q/R/S) over "
+                    "lambda_net make_model",
+            "trajectory": "#205 levelset_v752_baseline (10 verdicts / 9 intervals)",
+            "caches": "gt_n96.npz margins/lstars + σ_cc′ #382 + comma10k prior + "
+                      "registered along-tangent deficit (25/8)",
+            "tool": "tools/aniso_perclass_lambda_backtest.py (durable JSON artifact "
+                    "aniso_perclass_lambda_backtest_20260711T144317Z.json)",
+        },
+        predicted_output={
+            "p0_directive": "bulk × sensitivity × impact = ONE interacting per-class "
+                            "anisotropic system (operator 2026-07-11); the aniso-"
+                            "coupled prior-mean arm should beat the isotropic-"
+                            "independent baseline walk-forward",
+        },
+        empirical_output={
+            "flip_temperature": "ε_flip 1.048 (advection-ball rank-matched, L85); at "
+                                "the global-median ε the sensitivity field degenerates "
+                                "to AREA shares (classes-as-area-knobs) — measured",
+            "fisher_two_regimes": "annulus susceptibility 0.577 in 5.6% area — "
+                                  "re-derives the #333 annulus concentration from "
+                                  "cache; per-class profiles differ sharply (Lane "
+                                  "~100% boundary; Road 33/67; Undriv 72/28)",
+            "coupling_convergence": "C_phys Lane→Road 0.494 ≡ the K-arm's independent "
+                                    "adjacency⊙1/σ measurement 0.499",
+            "p0_forecast_verdict": "prior-mean formulation P WF 0.003182 / early-fold "
+                                   "0.004265 beats ridge (0.003902/0.005201) AND is "
+                                   "the FIRST ridge-family arm to beat persistence at "
+                                   "early folds (0.004715); BUT the isotropic ablation "
+                                   "Q (M0=I, same 1-dof-κ machinery) is equal-or-"
+                                   "better (0.003067/0.004024) ⇒ the measured win is "
+                                   "the SCORE-LAW-PINNED-SCALE FORMULATION; the "
+                                   "aniso-coupled DIRECTION is forecast-neutral at "
+                                   "n=9 (verdict_scope: instance). C_phys remains the "
+                                   "#430 per-class λ physics readout (structure, not "
+                                   "forecast)",
+            "comma10k_family": "R (rarity direction + score-law scale + coupling) WF "
+                               "0.003895 ≈ ridge; the scale cure works (early-fold "
+                               "0.00527 vs L's 0.0222, 4.2× better) but the rarity "
+                               "DIRECTION adds nothing over Q ⇒ family CLOSED for "
+                               "forecast at this n on this vehicle (direction retained "
+                               "as sensor; reopen at ≥3 ledger records)",
+            "openpilot_isolated": "O ≡ ridge (absorption); S WF 0.003777 > Q 0.003067 "
+                                  "⇒ NO distinct organ win; witness-side-only stands",
+            "rl_posttraining": "GEPA cycle 2: 11/11 candidates REFUSED vs incumbent "
+                               "E_bregman 0.002839; SAO trust region INERT at "
+                               "pre-registered radii (positive control binds) ⇒ WF "
+                               "error is model bias; RL/SFT needs ledger accrual "
+                               "(synthetic-data survey is the named unblock)",
+            "verdict_scope": "INSTANCE (1 trajectory, 9 intervals, plateau-dominated). "
+                             "MEANS; pointer 0.19108282 UNMOVED.",
+        },
+        residual=0.000115,  # P vs Q walk-forward gap (the aniso-direction neutrality margin)
+        source_artifact=".omx/research/aniso_perclass_lambda_433_20260711.md",
+        measurement_method="tournament backtest (LOO∧WF∧binding) + early-fold walk-forward "
+                           "+ isotropic-ablation A/B + SAO positive control + GEPA cycle 2",
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/aniso_perclass_lambda_433_20260711.md",
+            reactivation_criteria=("re-run P-vs-Q per organ-ledger accrual (the aniso "
+                                   "direction resolves out-of-noise only with regime-"
+                                   "rich intervals); the comma10k family reopens at "
+                                   "≥3 trajectory records"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Costate λ = ∂S/∂x: (100, 5/sqrt(10·d_pose), 25/37545489) + chained "
@@ -318,13 +393,14 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
                   "dbytes_slope": "bytes per epoch", "d_pose": "dimensionless"},
         units_out={"dS_depoch": "S per epoch (advisory implied-S units)"},
         empirical_anchors=(anchor, anchor_waterlines, anchor_organ_seal,
-                           anchor_scorer_arms_430),
+                           anchor_scorer_arms_430, anchor_aniso_perclass_433),
         predicted_vs_empirical_residual={
             "ep350_horizon_25ep_in_band_central_gap": 0.0706,
             "ep450_horizon_25ep_below_band_gap": 0.0056,
             "score_economics_waterlines_derived": 0.0,
             "organ_426_amortization_ridge_walkforward_deficit": 0.000639,
             "scorer_arms_430_plateau_onset_wf_deficit": 0.000047,
+            "aniso_perclass_433_p_vs_q_wf_gap": 0.000115,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
