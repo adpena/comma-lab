@@ -491,11 +491,24 @@ def _mem_preflight(a: argparse.Namespace) -> int | None:
 
 
 def _is_protection_infra_cmd(cmd: list[str]) -> bool:
-    """True iff cmd is control-plane / protection infra (black-box / memory guard / governor) that MUST
-    launch even under memory pressure and is never admission-gated (else it could not protect us)."""
+    """True iff cmd is control-plane / protection infra OR a read-only observability SENSE organ that
+    MUST launch even under memory pressure and is never SUM-over-RAM admission-gated (else it could not
+    do its job — protect us, or OBSERVE a run that by definition already fills the box).
+
+    Two exempt classes (both still honor the per-arm safe_run RSS cap + the free-floor OOM preflight —
+    only the aggregate SUM-over-RAM admission gate is bypassed, so a genuine OOM is still impossible):
+      1. control-plane / protection infra (black-box / memory guard / system governor); and
+      2. the score-neutral #247 costate observability SENSE organs (costate_observer_loop /
+         costate_shadow_report). Per CLAUDE.md "'Off' is a tracked queue" ("observability DEFAULTS ON …
+         gate ONLY on genuine compute cost"): these are tiny (0.1 GiB), strictly READ-ONLY w.r.t. the
+         trainer (they only append the advisory ``costate_shadow.jsonl`` sidecar), and their whole
+         purpose is to observe a large run — so the SUM gate (which refuses everything once the trainer
+         fills the box) must NOT orphan them. The per-arm RSS cap + free-floor preflight keep them safe.
+    """
     joined = " ".join(str(t) for t in cmd)
     return any(tok in joined for tok in
-               ("memory_blackbox.py", "memory_guard.py", "system_memory_governor.py"))
+               ("memory_blackbox.py", "memory_guard.py", "system_memory_governor.py",
+                "costate_observer_loop.py", "costate_shadow_report.py"))
 
 
 def _rationale_is_real(text: str | None) -> bool:

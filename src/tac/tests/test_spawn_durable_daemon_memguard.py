@@ -12,8 +12,6 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
-
 _SD_PATH = Path(__file__).resolve().parents[3] / "tools" / "spawn_durable_daemon.py"
 _spec = importlib.util.spec_from_file_location("tac_spawn_durable_daemon_under_test", _SD_PATH)
 sd = importlib.util.module_from_spec(_spec)
@@ -164,6 +162,36 @@ def test_killpg_custody_pgid_cascades_to_wrapped_inner_arm(tmp_path, monkeypatch
             if p:
                 with __import__("contextlib").suppress(ProcessLookupError, PermissionError):
                     os.kill(p, signal.SIGKILL)
+
+
+# --- observability SENSE-organ admission exemption (facet-2 observer-gap fix) -----
+# The score-neutral #247 costate observer must be admission-exempt from the SUM-over-RAM
+# gate: once a large trainer fills the box, the aggregate gate refuses EVERYTHING, which
+# would silently orphan read-only observability that "defaults ON". Per-arm RSS cap +
+# free-floor preflight still apply, so a genuine OOM is still impossible.
+def test_protection_infra_exempts_costate_observer_loop():
+    cmd = [sys.executable, "tools/costate_observer_loop.py", "--run-dir", "experiments/results/x"]
+    assert sd._is_protection_infra_cmd(cmd) is True
+
+
+def test_protection_infra_exempts_costate_shadow_report():
+    cmd = [sys.executable, "tools/costate_shadow_report.py", "--run-dir", "experiments/results/x", "--write"]
+    assert sd._is_protection_infra_cmd(cmd) is True
+
+
+def test_protection_infra_still_exempts_memory_guard():
+    assert sd._is_protection_infra_cmd([sys.executable, "tools/memory_guard.py"]) is True
+    assert sd._is_protection_infra_cmd([sys.executable, "tools/system_memory_governor.py"]) is True
+
+
+def test_protection_infra_does_NOT_exempt_the_trainer():
+    # The witness trainer + its bash launch.sh wrapper must remain FULLY admission-gated —
+    # over-exempting the heavy trainer would defeat the SUM-over-RAM crash guard.
+    trainer = [".venv/bin/python", "experiments/train_levelset_witness_realized_through_R_mlx.py",
+               "--num-pairs", "600", "--out-dir", "experiments/results/levelset_v752_baseline"]
+    assert sd._is_protection_infra_cmd(trainer) is False
+    launch_sh = ["bash", "experiments/results/levelset_v752_baseline/launch.sh"]
+    assert sd._is_protection_infra_cmd(launch_sh) is False
 
 
 def test_reconcile_noop_when_clean(tmp_path, monkeypatch, capsys):

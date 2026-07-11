@@ -64,9 +64,18 @@ def trainer_alive_for(run_dir: Path) -> bool:
 
 
 def ensure_run_log(run_dir: Path) -> str | None:
-    """If <run_dir>/run.log is missing, symlink it to the daemon registry's log for
-    the job that launched this run dir (score-neutral: only the OBSERVER reads it).
-    Returns a note string when a symlink was created, else None."""
+    """If <run_dir>/run.log is missing, symlink it to the TRAINER's daemon registry log
+    for the job that launched this run dir (score-neutral: only the OBSERVER reads it).
+    Returns a note string when a symlink was created, else None.
+
+    Two correctness guards (the 2026-07-10 observer-gap self-match bug): (1) SKIP the
+    observer's OWN registry row — its cmd carries ``--run-dir <abs>`` and its log is
+    observer.log, so an un-guarded scan self-matches and points run.log at observer.log
+    (no ``loss_terms`` telemetry -> empirical costates degenerate to n=0). (2) Match on
+    the run-dir BASENAME too, not only ``str(run_dir)`` — the trainer's row often stores
+    a RELATIVE cmd path (e.g. ``bash experiments/results/<run>/launch.sh``) that an
+    absolute-path substring test misses, leaving ONLY the observer row as a (wrong) match.
+    """
     run_log = run_dir / "run.log"
     if run_log.exists() or run_log.is_symlink():
         return None
@@ -74,18 +83,26 @@ def ensure_run_log(run_dir: Path) -> str | None:
         reg = json.loads(_REGISTRY.read_text())
         rows = reg if isinstance(reg, list) else list(reg.values()) if isinstance(reg, dict) else []
         for r in rows:
-            if not isinstance(r, dict):
+            if not isinstance(r, dict) or r.get("status") != "running":
                 continue
             cmd = r.get("cmd")
             cmd_str = " ".join(str(t) for t in cmd) if isinstance(cmd, list) else str(cmd or "")
-            if str(run_dir) not in cmd_str or r.get("status") != "running":
+            label = str(r.get("label") or "")
+            # (1) never self-match the observer (would point run.log at observer.log).
+            if label.startswith("costate_obs") or "costate_observer_loop.py" in cmd_str \
+                    or "costate_shadow_report.py" in cmd_str:
+                continue
+            # (2) match on absolute path OR run-dir basename (relative-path trainer rows).
+            if str(run_dir) not in cmd_str and run_dir.name not in cmd_str:
                 continue
             log_path = Path(str(r.get("log") or ""))
             if not log_path.is_absolute():
                 log_path = _REPO / log_path
-            if log_path.is_file():
-                run_log.symlink_to(log_path.resolve())
-                return f"symlinked run.log -> {log_path} (registry log; run.log was missing)"
+            # defensive: never symlink run.log onto the observer's own log.
+            if log_path.name == "observer.log" or not log_path.is_file():
+                continue
+            run_log.symlink_to(log_path.resolve())
+            return f"symlinked run.log -> {log_path} (trainer registry log; run.log was missing)"
     except Exception:
         return None
     return None
