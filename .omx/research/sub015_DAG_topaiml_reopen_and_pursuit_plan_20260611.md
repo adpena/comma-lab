@@ -15111,3 +15111,44 @@ only by a byte-closed `upstream/evaluate.py`. Candidate RATE refinement for the 
 **Triality:** DSL leg N/A (build-time pose-SECTION codec, not a trainer lever — wired into `build_archive_with_pose`
 like #140 `lowrank`, no DSL `Lever`); equations leg = canonical `pose_spd_cone_waterfill_rate_v1`
 (`pose_spd_cone_waterfill_rate_20260710.py`, +test). **Pointer 0.19108282 UNMOVED.**
+
+
+## FEED-nra (2026-07-10) NEGATIVE-FINDINGS RE-AUDIT — refresh of #390 + today's new negatives + the info-geometry lens
+`$0 · READ-ONLY · no launch · live trainer pid 88030 + both sister agents (per-class probe · v8 geometry) untouched.`
+Deliverable `.omx/research/negative_findings_reaudit_20260710.md` — the DELTA layer on top of the #390 register
+(`negative_findings_register_20260709/`, A:51 + B:21) and the 07-10-morning join table (`negative_cure_join_table_20260710.md`,
+13 joins). NOT a fork; append-only respect.
+HEADLINE COUNTS: ~72 register findings refreshed + **1 NEW today** (N1 Hessian-precond #423, `aab422c5c`) + 3 new
+07-10 verdict-JSONs (taper-flat / SPARC-perclass / owed16-gap, already folded by the morning join). **6 genuine
+reactivation candidates** (1 NEW + 5 info-geometry sharpenings, 3 of them already IN-FLIGHT). **7 paradigm-door-CLOSED
+rows stated as CONDITIONAL GRADIENTS** (not "dead" bits) + **4 toy-born UN-VERIFIED-AT-SCALE re-grades** (OT-Newton
+n24-only · hosc/gauss n24+relu-lr · EP103-114 eikonal guard-confound · l235 abandoned-basin — each falsifies the toy,
+not the paradigm).
+THE NEW NEGATIVE (N1): Hessian-precond on the #288 damped-Newton head-offset = CLEAN NEGATIVE on the AVERAGED solve
+(real averaged Hessian cond 7.66 well-conditioned → precond reaches IDENTICAL b* → BIT-IDENTICAL through-R d_seg
+0.0048921034). Its own commit scopes it: "payoff confined to iterative #341/#396 non-averaged solves." = the textbook
+conditioning-negative-that-reactivates-for-iterative. Info-geometry read: averaged Hessian ≈ one near-isotropic SPD
+matrix (cond 7.66, no-op); the per-pixel Hessians on the codim-1 annulus are ANISOTROPIC (Fisher flat-dark-interior +
+anisotropic-boundary, #333) → precond is null-on-average, real-on-per-pixel. **REACTIVATION: enable precond inside ONE
+#396 MC-finisher iteration (BUILT this session) — near-$0 gate.**
+THE INFO-GEOMETRY LENS (grounded in FEED-oa's Amari-dually-flat / Chentsov-uniqueness / Nielsen-SPD-cone corpus;
+Fisher≡margin 0.978): a class of negatives were measured in the WRONG geometry — same structural error each time.
+(1) OT-Newton area-match HURTS d_seg = **Wasserstein-vs-Fisher** mismatch → flip-weighted (Chentsov-invariant) masses,
+NOT raw GT area. (2) msal_uni texture INERT = **Euclidean-image-space ⊥ Fisher** → the exact through-R S_R weight
+(#268, BUILT, cache-ready, ALREADY FIRING). (3) #121 taper FLAT = **dually-flat GLOBAL e-coordinate scaling** vs the
+**LOCAL m-coordinate annulus** → local saliency reweight #169/#141 (BUILT+HELD, never fired). (4) FEED-sp SPD-cone pose
+codec (−27.1% bytes, win scales with Hilbert d_H) = the POSITIVE control proving the isotropy/anisotropy axis is real.
+PER-CLASS-HYBRID nuance: cells/generators compress REGIONS (Road/Undrivable/MyCar), the LANE is a CURVE (openpilot band
+0.00087) — so "generators don't compress the lane" is wrong-technique-for-that-class, not a rate kill; and per-class
+LOSS-tilt is Chentsov-dead (uniform argmax-mean ⇒ aggregate is invariant) while per-class REPRESENTATION (v8) is alive.
+TOP-6 SHORTLIST (÷0.0411, d_seg = entire gap; excludes what's already firing): 1. **N1 Hessian→iterative #341/#396**
+(NEW; $0, #396 built). 2. **OT-Newton→flip-weighted Fisher masses** (lens-sharpened; solver exact, needs resumable n600).
+3. **taper→LOCAL #169 saliency** (built+held, byte-identical A/B). 4. **C14 analytic-lane band as TRAINING lever**
+(paint-mode, ~10 LOC). 5. **hyperprior on structured witness `code` table** ($0 2D-locality probe). 6. **C11 full-P
+head solve** (composes with N1 precond). Honorable/highest-blast-radius: D1 eikonal family re-open (guard-confound FIXED;
+gated on a clean ckpt).
+NO-FAKE: exactly ONE genuinely-new reactivation (N1); the rest are Chentsov/SPD-grounded sharpenings of already-known
+joins. The conditional-gradient rows survived adversarial overturn; nothing padded.
+**Triality:** `[no-triality]` — analysis/apparatus, no measured law minted (N1's own eqs N/A per its commit).
+**Pointer 0.19108282 UNMOVED** — this refresh is MEANS (anti-signal-loss apparatus that FEEDS future exact rows);
+it moves no score itself.
