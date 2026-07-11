@@ -15711,3 +15711,21 @@ MEANS (apparatus + staged banks that protect/enable future exact rows).
   changed (apply-pass and click-polish act on FROZEN checkpoints/archives post-training; #437 is SENSE
   display). Equations leg N/A this turn — no new measured law; #402's proof verifies existing decode
   behavior (bit-identity), it does not create an anchor-worthy equation. This block is the DAG leg.
+
+## FEED-blindcoord-401 (2026-07-11): BLIND-COORDINATE rate lever BUILT + n600 bit-identity PROVEN — 230,904 blind px/frame VERIFIED from the kernel, arbitrary blind fill is bit-identical through R (max|Δpose|=max|Δseg|=0.0, 0/600), real byte delta 20.55%. Advisory D21 → BUILT. `[macOS-CPU advisory / derivation]` NON-PROMOTABLE. Pointer 0.19108 UNMOVED (rate MEANS).
+
+**SIGNAL.** D21 / `ADVISORY_evaluator_video_geometry_20260710` asserted 230,904 camera px/frame are read by NO scorer resize (a video-derived value there earns ZERO score → fill generically, rule-118 free). It sat as an explicit OWED stub in the #406 apply-pass (stage 6) — no proof, no fill, no byte number.
+
+**DIAGNOSTIC (DERIVED, verified against the primary artifact).** Both scorers put every frame through the SAME preprocess resize `(874,1164)→(384,512)` bilinear `align_corners=False antialias=False` (`upstream/modules.py`:73 PoseNet + :109 SegNet); `rgb_to_yuv6` runs AFTER on the 384×512 grid, reads every resized pixel, adds no blindness. Downsample ~2.28× WITHOUT antialias ⇒ disjoint 2-tap supports ⇒ input rows/cols get weight EXACTLY 0.0 (bilinear; min nonzero 2.60e-3, clean 0-separation). Blind iff row OR col all-zero in the impulse-probed operator (reuses the #391 `flip_inverse.resize_matrix_1d`): **106/874 rows + 140/1164 cols blind ⇒ 230,904 px/frame = 22.6969% (= advisory EXACTLY)**; retained = a regular **768×1024** sub-grid (786,432 px); edges NOT blind.
+
+**RESPONSE (BUILT).** (a) `src/tac/through_r/blind_coordinate.py` — mask (`build_blind_mask`, cached), retained-subgrid extract, rule-118 generic decode-time fill (`generic_inpaint_fill`: separable linear interp over known retained coords — data-INDEPENDENT), bit-identity proof driver, byte-delta meter. (b) `tools/blind_coordinate_proof.py` → artifact `experiments/results/blind_coord_401_20260711T221447Z/blind_coordinate_proof.json`. (c) `tools/witness_apply_pass.py` stage 6 stub → REAL `_blind_coord()` (keeps MeasurementRow/staged-vs-fired contract; smoke status=MEASURED, 4 real rows). (d) 24 tests. (e) memo `.omx/research/blind_coordinate_401_20260711T221447Z.md`.
+
+**THE PROOF (n600, real torch preprocess).** Filling the blind set of BOTH frames with ARBITRARY random uint8 and recomputing the real `posenet_in` + `segnet_in` over ALL 600 pairs: **all_bit_identical=True, max|Δpose|=0.0, max|Δseg|=0.0, 0/600 failures** ⇒ d_seg + d_pose UNCHANGED by construction (no scorer forward needed). Control: perturbing a NON-blind edge pixel DOES change the SegNet input (mask not vacuous).
+
+**BYTE DELTA (real brotli-q11, 32 gt frames).** full 1,438,886 B → retained 768×1024 1,142,811 B ⇒ **296,075 B/frame = 20.55%** (< 22.70% blind fraction: brotli already exploits some redundancy). Byte-closed archive context: `levelset_packet_20260710T165204Z/archive.zip` = 69,984 B.
+
+**SCOPE (honest).** Byte delta = the saving available to ANY camera-res-storing representation (raw/residual/HF sidecar). A pure-GENERATOR witness archive stores no camera pixels ⇒ DIRECT saving 0 until it carries such a section; then the lever drops 22.7% of that section's spatial content. bit-identity + blind-mask are UNIVERSAL/EXACT; 20.55% is INSTANCE (brotli on gt frames).
+
+**TRIALITY.** DAG leg = this block. DSL leg = N/A (receiver/byte-close rate lever, not a trainer/curriculum change; wired into #406 apply-pass stage 6 + proof tool). Equations leg = `blind_coordinate_rate_lever_v1` (DERIVED geometry + MEASURED-PROVEN n600 anchors) REGISTERED. Consistent with the sister `evaluator_resize_blind_coordinate_law_20260710` anchor on `resize_exploit_flip_fix_frontier_v1` (same 230,904; this feed MEASURES+PROVES+BUILDS it).
+
+**OWED.** Wire the retained-sub-grid store + generic fill into a camera-res-storing byte-close chain → exact-eval (advisory → contest authority; the only pointer-mover); re-measure byte delta on that chain's real codec.

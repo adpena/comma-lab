@@ -75,6 +75,10 @@ from tac.canonical_equations.bayesian_posterior_update import (
     compute_predicted_band_from_posterior,
     update_equation_with_anchor_via_conjugate_prior,
 )
+from tac.canonical_equations.blind_coordinate_rate_lever_20260711 import (
+    build_blind_coordinate_rate_lever_v1,
+    populate_blind_coordinate_rate_lever_equation,
+)
 from tac.canonical_equations.boundary_distance_calibration_20260705 import (
     bd_weight_for_ratio,
     build_boundary_distance_weight_calibration_v1,
@@ -379,6 +383,7 @@ __all__ = [
     "build_anisotropic_basis_along_tangent_frequency_deficit_v1",
     "build_anisotropic_basis_two_regime_allocation_v1",
     "build_annulus_anisotropy_magnitude_disputed_v1",
+    "build_blind_coordinate_rate_lever_v1",
     "build_boundary_distance_weight_calibration_v1",
     "build_ce_softmax_mirror_descent_natural_gradient_v1",
     "build_chan_vese_area_constraint_birth_balance_v1",
@@ -396,6 +401,7 @@ __all__ = [
     "build_fullstack_unique_home_assignment_v1",
     "build_horizon_weighted_margin_v1",
     "build_independent_flicker_jitter_dseg_floor_smooth_optimal_v1",
+    "build_label_floor_to_phase_tail_handoff_v1",
     "build_laguerre_ot_head_offset_v1",
     "build_lane_band_res_entropy_stage_v1",
     "build_lane_groundframe_xi_transport_no_collapse_v1",
@@ -407,7 +413,6 @@ __all__ = [
     "build_mlx_matmul_drift_m_series_canonical_floor_v1",
     "build_mlx_pytorch_drift_equation_from_result_json",
     "build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1",
-    "build_label_floor_to_phase_tail_handoff_v1",
     "build_multiphase_modica_mortola_perimeter_gamma_limit_v1",
     "build_muon_finisher_schedule_warmstart_and_lr_anneal_v1",
     "build_muon_switch_conditioning_criterion_v1",
@@ -467,6 +472,7 @@ __all__ = [
     "pairset_component_marginal_score_delta",
     "populate_adaptive_eps_cfl_edge_tracking_equation",
     "populate_anisotropic_basis_two_regime_allocation_equation",
+    "populate_blind_coordinate_rate_lever_equation",
     "populate_boundary_distance_weight_calibration_equation",
     "populate_chan_vese_area_constraint_birth_balance_equation",
     "populate_chroma_boundary_annulus_match_equation",

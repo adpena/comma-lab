@@ -29,7 +29,12 @@ THE STAGES (ordered; rate then pose):
   4. sidecar_fold         — fold the stored-pose sidecar section into the packet and
                             re-measure the archive rate term (byte-neutral recode orbit).
   5. STUB #311 TropNNC        — NOT built. Loud NotImplementedError if --run-stub.
-  6. STUB #401 blind_coord    — NOT built. Loud NotImplementedError if --run-stub.
+  6. blind_coord (#401)       — BUILT. Blind-coordinate rate lever: camera px invisible to
+                            BOTH scorers (230,904/frame = 22.7%) filled by a rule-118 generic
+                            decode-time rule -> encoder stores only the retained sub-grid.
+                            Emits EXACT blind-fraction + in-pass bit-identity-through-R proof
+                            + a REAL brotli byte delta on real gt camera frames; stages the
+                            n600 proof (tools/blind_coordinate_proof.py).
 
 CONTAINMENT (this harness runs while the live v9 run owns the GPU):
   * CPU-light + SERIAL. Each stage is a separate subprocess that exits (frees memory).
@@ -517,7 +522,112 @@ class ApplyPass:
         return res
 
     # ======================================================================
-    # STUB STAGES: #311 TropNNC, #401 blind-coordinate (NOT built)
+    # STAGE 6: #401 blind-coordinate rate lever (BUILT)
+    # ======================================================================
+    def _blind_coord(self) -> StageResult:
+        """Blind-coordinate rate lever: camera px invisible to BOTH scorers -> generic fill.
+
+        CPU-LIGHT (containment): the EXACT blind fraction is a deterministic kernel property
+        (0 cost); the in-pass bit-identity is the real torch PREPROCESS on a few pairs (NO
+        scorer forward); the byte delta is brotli on real gt frames. The full n600 proof is
+        STAGED (tools/blind_coordinate_proof.py) — cheap but run explicitly.
+        """
+
+        import numpy as np
+
+        from tac.through_r.blind_coordinate import (
+            bit_identity_report,
+            blind_fraction,
+            build_blind_mask,
+            measure_byte_delta,
+        )
+
+        lever = "blind_coord_401"
+        res = StageResult(lever=lever, kind="byte_measured")
+        tool = "tac.through_r.blind_coordinate"
+        bm = build_blind_mask()
+        frac = blind_fraction()
+
+        # (1) EXACT blind fraction — deterministic kernel property, noise floor 0.
+        res.rows.append(MeasurementRow(
+            value=float(frac["n_blind_px"]), units="pixels_per_frame",
+            axis_tag=AxisTag.MACOS_CPU_ADVISORY, provenance=self._prov(tool),
+            n_samples=1, n_samples_reason="deterministic geometry (same every frame)",
+            review_status=ReviewStatus.PROVISIONAL, noise_floor=0.0,
+            floor_provenance="blind mask is an exact bilinear-resize zero-weight set",
+            quantity="blind_px_per_frame[camera_874x1164]"))
+        res.rows.append(MeasurementRow(
+            value=float(frac["blind_fraction"]), units="fraction",
+            axis_tag=AxisTag.MACOS_CPU_ADVISORY, provenance=self._prov(tool),
+            n_samples=1, n_samples_reason="deterministic geometry",
+            review_status=ReviewStatus.PROVISIONAL, noise_floor=0.0,
+            floor_provenance="exact: n_blind/n_total",
+            quantity="blind_fraction[camera]"))
+
+        # (2) in-pass BIT-IDENTITY-THROUGH-R proof (small sample; n600 staged).
+        gt_path = Path(self.args.gt_cache)
+        bit_sample = max(2, min(4, int(self.args.max_pairs) if self.args.max_pairs else 4))
+        bd_frames = max(2, min(8, int(self.args.max_pairs) if self.args.max_pairs else 8))
+        if gt_path.exists():
+            try:
+                gt = np.load(gt_path)
+                f0, f1 = gt["gt_f0"], gt["gt_f1"]
+                bit = bit_identity_report(f0[:bit_sample], f1[:bit_sample], seed=self.args.seed,
+                                          bm=bm, fill_mode="random")
+                bd = measure_byte_delta(f1[:bd_frames], bm=bm)
+                res.status = "measured"
+                res.rows.append(self._bytes_row(
+                    tool, round(bd.byte_delta_mean),
+                    "byte_delta_per_frame[full_vs_retained_subgrid]"))
+                res.rows.append(MeasurementRow(
+                    value=float(bd.delta_fraction_mean), units="fraction",
+                    axis_tag=AxisTag.MACOS_CPU_ADVISORY, provenance=self._prov(tool),
+                    n_samples=bd.n_frames,
+                    n_samples_reason=f"byte-delta over {bd.n_frames} real gt frames (sample; n600 staged)",
+                    review_status=ReviewStatus.PROVISIONAL, noise_floor=None,
+                    floor_provenance=None,
+                    quantity=f"byte_delta_fraction[{bd.codec}]"))
+                res.raw = {
+                    "blind_fraction": frac,
+                    "bit_identity_sample": bit.to_json_dict(),
+                    "byte_delta": bd.to_json_dict(),
+                    "scope_caveat": (
+                        "byte_delta is the saving on a camera-res-storing representation "
+                        "(real gt frames); a pure-generator witness archive stores no camera "
+                        "pixels so its DIRECT saving is 0 until it carries a camera-res "
+                        "residual/sidecar section."),
+                }
+                if not bit.all_bit_identical:
+                    res.status = "error"
+                    res.note = (f"BIT-IDENTITY FAILED on {bit.n_failures} of {bit.n_pairs} pairs "
+                                "— blind mask NOT proven; investigate before any claim.")
+            except Exception as e:
+                res.status = "error"
+                res.note = f"blind-coord in-pass measure failed: {e}"
+        else:
+            res.status = "staged"
+            res.note = (f"gt cache {gt_path} absent — blind fraction is exact regardless; "
+                        "byte-delta + bit-identity need the gt frames. Staged.")
+
+        # (3) STAGE the full n600 proof (cheap CPU; run explicitly).
+        res.staged_commands.append({
+            "lever": lever,
+            "measures": ("n600 bit-identity-through-R proof (all 600 pairs) + real byte delta "
+                         "+ archive-integration byte-close of the chosen chain with the retained "
+                         "sub-grid stored"),
+            "authority": "[macOS-CPU advisory / derivation] -> stage byte term to the chosen chain",
+            "argv": [
+                _PY, str(_REPO / "tools" / "blind_coordinate_proof.py"),
+                "--gt-cache", self.args.gt_cache,
+                "--out-dir", str(self.out_dir / "blind_coord_n600_proof"),
+                "--byte-delta-frames", "32", "--fill-mode", "random",
+            ],
+            "fire_when": "any time (CPU-light, no scorer, no paid dispatch); before adopting the lever",
+        })
+        return res
+
+    # ======================================================================
+    # STUB STAGES: #311 TropNNC (NOT built)
     # ======================================================================
     def _stub(self, lever: str, human: str, what: str) -> StageResult:
         res = StageResult(lever=lever, kind="stub", status="owed")
@@ -545,10 +655,7 @@ class ApplyPass:
         stages.append(self._stub(
             "tropnnc_311", "#311 TropNNC (tropical-geometry NN compression)",
             "tropical-argmax-aware structured pruning of the witness trunk before byte-close."))
-        stages.append(self._stub(
-            "blind_coord_401", "#401 blind-coordinate transform",
-            "a blind (data-independent) coordinate rotation of the code/latent to flatten "
-            "the symbol distribution before int8+brotli."))
+        stages.append(self._blind_coord())
 
         summary = {
             "task": "#406 apply-pass readiness",
