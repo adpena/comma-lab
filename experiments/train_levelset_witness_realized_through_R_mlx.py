@@ -4428,6 +4428,63 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _ts_rot_mask: Any = None       # (v7.5 B.5) mx.array (6,) = [0,0,0,1,1,1] zeroing the ξ translation (ρ)
     _ts_sky_rowmask: Any = None    # (v7.5 B.5) mx.array (H,W,1) 1 in sky rows (<sky_row_hi), 0 in ground
 
+    # T1 CROSS-PAIR PHASE-ADVECTION CONSISTENCY (flicker deep-dive design memo
+    # .omx/research/flicker_transform_geometry_term_design_20260710.md §4 T1; DSL
+    # PhaseAdvectionConsistency). The witness has converged to the temporal-majority ORACLE floor
+    # (GT stride-2 spike rate 0.005318 ≈ residual ~0.005); sub-0.15 d_seg (0.0008-0.0012) is 4.5-7×
+    # BELOW it => NO label-smooth witness reaches it — pierceable ONLY by appearance-PHASE
+    # correlation (spikes are DETERMINISTIC per-pair functions). T1 makes the witness carry the
+    # boundary's sub-pixel PHASE across the SCORED (stride-2 f1) sequence instead of smoothing it
+    # away: it composes Force-1's se(3) ξ-transport A_ξ (the ego-screw ground homography) with
+    # Force-3's sub-pixel tie coordinate t_wit on the support NEITHER covers (CROSS-PAIR × scored
+    # frames). Force-3 supervises t_wit(p) -> the RAW per-pair GT tie (noisy, σ~0.09-0.43 px);
+    # T1 supervises t_wit(p) -> the ξ-ADVECTED GT tie of the PREVIOUS scored pair p-1. Composed,
+    # the two terms implement the optimal SHRINKAGE of the noisy per-pair phase targets toward the
+    # ξ-advected (predictable) trajectory. The cross-pair coupling lives ENTIRELY in a
+    # θ-INDEPENDENT precomputed target (warp_Aξ(GT_tie[p-1])) => the in-loss term is per-pair-LOCAL
+    # => it fits the incumbent random-permutation per-pair value_and_grad with ZERO batching change
+    # (respects #240 verdict-batch chunking + the launcher memory-preflight; no OOM class). pa_w=0.0
+    # (DEFAULT) => branch skipped + providers None + NO extra forward => BYTE-IDENTICAL. start>=l7
+    # (needs a formed partition + tie field). GROUND classes {0,1,2} only (homography wrong on
+    # Movable/MyCar). Reuses the SHARED realized ``_signed`` (NO 2nd SegNet forward, _seg_levers_on
+    # gated). Shared primitives: tac.boundary_math.phase_primitives (t_wit + A_ξ + GT tie targets +
+    # residual). Advisory until byte-closed; pointer 0.19108282 UNMOVED.
+    from tac.boundary_math.phase_primitives import (
+        phase_advection_weighted_mse_mlx as _pp_phase_mse,
+        witness_tie_coordinate_mlx as _pp_tie_coord,
+    )
+    pa_w = float(getattr(args, "seg_phase_advect_weight", 0.0))
+    pa_start = int(getattr(args, "seg_phase_advect_start_epoch", 0))
+    pa_classes = str(getattr(args, "seg_phase_advect_classes", "0,1,2"))
+    pa_band = float(getattr(args, "seg_phase_advect_band", 2.0))
+    pa_gap_xi = str(getattr(args, "seg_phase_advect_gap_xi", "interp"))
+    pa_ref_mode = str(getattr(args, "seg_phase_advect_ref", "gt_advected"))
+    pa_eps = 1e-6
+    pa_gate = {"on": pa_start <= 1}
+    _pa_ref_prov: Any = None       # list[mx.array (1,H,W)] f32 ξ-advected GT tie of pair pi-1 (-1 sentinel)
+    _pa_dir_prov: Any = None       # list[mx.array (1,H,W)] f32 pair pi's OWN dominant-straddle dir {0,1}
+    _pa_wmask_prov: Any = None     # list[mx.array (1,H,W)] f32 annulus∩active-warped-ref weight {0,1}
+    if pa_w > 0.0 and pa_ref_mode not in ("gt_advected", "witness_cached"):
+        raise ValueError(
+            f"--seg-phase-advect-ref must be 'gt_advected' or 'witness_cached', got {pa_ref_mode!r}")
+    if pa_w > 0.0 and pa_ref_mode == "witness_cached":
+        # SPECIFIED but OWED (do LESS but REAL): the fully-differentiable witness-self-consistency mode
+        # needs either a per-pair stop-grad tie-field cache refreshed once/epoch OR a sequential-pair
+        # batching change. Fail-loud rather than ship a half-wired path (memo §4 T1; next increment).
+        raise NotImplementedError(
+            "--seg-phase-advect-ref witness_cached is SPECIFIED but not built in this landing (needs a "
+            "per-pair stop-grad tie cache OR sequential-pair batching; owed next increment). Use the "
+            "ready 'gt_advected' mode (θ-independent advected-GT-neighbour target, fits the incumbent "
+            "batching with zero change).")
+    if pa_w > 0.0 and pa_gap_xi not in ("interp", "offline_homography"):
+        raise ValueError(
+            f"--seg-phase-advect-gap-xi must be 'interp' or 'offline_homography', got {pa_gap_xi!r}")
+    if pa_w > 0.0 and pa_gap_xi == "offline_homography":
+        raise NotImplementedError(
+            "--seg-phase-advect-gap-xi offline_homography is SPECIFIED but not built (owed; estimate the "
+            "odd->even gap homography offline from cached frames). Use 'interp' (se(3)-composed "
+            "ξ_gap≈½(ξ_pi+ξ_pi+1); memo §4 T1).")
+
     # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). ms_w=0.0 (DEFAULT) =>
     # branch skipped + provider None => byte-identical. m_safe stamped with delta_R provenance; fails
     # loud if m_safe < delta_R (hinge inside the noise floor). MASK-BY-STAGE at l7 (start>=l7).
@@ -5057,7 +5114,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             (ts_w > 0.0 and ts_gate["on"] and                         # P0 FORCE 1 temporal
                              _ts_ann_prov is not None) or
                             (ms_w > 0.0 and ms_gate["on"] and                         # P0 FORCE 2 satisfice
-                             _ms_ann_prov is not None))
+                             _ms_ann_prov is not None) or
+                            (pa_w > 0.0 and pa_gate["on"] and                          # T1 cross-pair phase
+                             _pa_ref_prov is not None))
         # island-FORMATION levers (#224 amplify + persistence): read the WITNESS-ALONE margin when the
         # BUILD #300 (a) routing is active, else the seed-composed margin (== the pre-#300 path).
         _island_levers_on = ((amplify_w > 0.0 and island_weight_mx is not None) or  # #224 island amplify
@@ -5294,6 +5353,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             L = L + ts_w * ts_term
             if terms_out is not None:
                 terms_out["temporal_screw"] = ts_w * ts_term
+        # T1 CROSS-PAIR PHASE-ADVECTION CONSISTENCY (memo §4 T1; DSL PhaseAdvectionConsistency).
+        # Pull the witness's OWN sub-pixel tie coordinate t_wit(p) toward the ξ-ADVECTED GT tie of
+        # the PREVIOUS scored pair p-1 (a θ-independent precomputed target => per-pair-LOCAL loss,
+        # zero batching change). Composed with Force-3 (subpix, which pulls t_wit(p) -> the RAW
+        # per-pair GT tie), the two terms = the optimal shrinkage toward the ξ-advected trajectory
+        # (the predictable flicker channel; blink-back 0.42 / L67 0.44). Reuses the SHARED realized
+        # ``_signed`` (NO 2nd SegNet forward) + the shared phase primitives (t_wit + residual).
+        # pa_w=0 (DEFAULT) => skipped => byte-identical. c1=2*pi+1 => pi=c1//2. Pair 0 (no prior) has
+        # an all-zero weight provider => the term is a no-op there.
+        if pa_w > 0.0 and pa_gate["on"] and _pa_ref_prov is not None and _signed is not None:
+            _pi_pa = int(c1) // 2
+            _pa_ref = _pa_ref_prov[_pi_pa]                             # (1,H,W) ξ-advected GT tie of p-1
+            _pa_dir = _pa_dir_prov[_pi_pa]                             # (1,H,W) pair p's own dominant dir
+            _pa_wm = _pa_wmask_prov[_pi_pa]                            # (1,H,W) annulus∩active-warped weight
+            _t_wit_pa = _pp_tie_coord(_signed, _pa_dir, pa_eps)       # (1,H,W) witness tie coord at p
+            pa_term = _pp_phase_mse(_t_wit_pa, _pa_ref, _pa_wm)       # weighted-mean phase residual
+            L = L + pa_w * pa_term
+            if terms_out is not None:
+                terms_out["phase_advect"] = pa_w * pa_term
         # CONSUMER B (SPEC ONLY, NOT built here -- for the lane-band render integration): the SAME
         # precomputed theta-independent (_subpix_t_prov, _subpix_dir_prov) maps are a decode-time
         # RENDER-PLACEMENT target. The AA-SDF / analytic-lane-band render (--lane-render-band /
@@ -5988,6 +6066,86 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "kills the 44% lane-dominated flicker; xi_source=" + ts_xi_source
                           + " (ground_gt=pure seg regularizer, ZERO pose coupling); ramp w_t at stage "
                           "boundaries only; A/B owed; pointer 0.19110 UNMOVED"}), flush=True)
+
+    # T1 CROSS-PAIR PHASE-ADVECTION CONSISTENCY (memo §4 T1) PRECOMPUTE. theta-INDEPENDENT: the entire
+    # cross-pair coupling is baked into a per-pair TARGET = the ξ-advected GT tie of the PREVIOUS scored
+    # pair p-1, warped INTO pair p's frame by the se(3)-composed cross-scored-frame screw ξ_cross(p-1->p)
+    # (Force-1's GROUND homography, gap_xi=interp). Built ONLY when pa_w>0; else providers stay None =>
+    # branch skipped + NO extra forward => byte-identical. Uses the SHARED phase primitives (GT tie
+    # targets + A_ξ advect) so Force-3 and T1 select/warp the tie field from ONE implementation. Pair 0
+    # (no prior scored frame) gets an all-zero weight => the term is a no-op there.
+    if pa_w > 0.0:
+        if _use_micro_batch:
+            raise ValueError(
+                "--seg-phase-advect-weight>0 is not supported with --micro-batch-pairs>1 (the batched "
+                "twin does not consume the cross-pair phase term yet); run this arm at "
+                "--micro-batch-pairs 1 (same serial-path constraint as the subpix/#274 levers).")
+        from tac.boundary_math.phase_primitives import (
+            advect_tie_field_numpy as _pp_advect_np,
+            cross_scored_frame_xi_interp as _pp_cross_xi,
+            gt_tie_targets_numpy as _pp_gt_tie,
+        )
+        from tac.boundary_math.warp_real_luma_frame0 import (
+            GroundHomographyGeom as _PAGeom,
+            xi_from_pose_calibration as _pa_xi_calib,
+        )
+        _pa_H, _pa_W = np.asarray(gt.lstars[0]).shape
+        _pa_geom = _PAGeom.eon(native_hw=(_pa_H, _pa_W), pitch=float(getattr(args, "gfc_pitch", -0.01)))
+        _pa_st = float(getattr(args, "gfc_s_t", -0.003224707899359239))
+        _pa_sr = float(getattr(args, "gfc_s_r", 0.0))
+        _pa_pitch = float(getattr(args, "gfc_pitch", -0.01))
+        _pa_sel = {int(c.strip()) for c in pa_classes.split(",") if c.strip() != ""}
+        # per-pair within-pair screw ξ_pair[pi] (f0->f1 of pair pi), the SAME calibration Force-1 uses.
+        _pa_xi_pair = [np.asarray(_pa_xi_calib(np.asarray(gt.gt_poses[pi]), _pa_st, _pa_sr, _pa_pitch),
+                                  np.float64) for pi in range(P)]
+        # per-pair GT tie target (value + active mask) via the SHARED selection.
+        _pa_gt_t = []
+        _pa_gt_act = []
+        for pi in range(P):
+            _t_g, _d_g, _a_g = _pp_gt_tie(np.asarray(gt.lstars[pi]), np.asarray(gt.margins[pi]),
+                                          band=pa_band, eps=pa_eps)
+            _pa_gt_t.append((_t_g, _d_g, _a_g))
+            _pa_gt_act.append(_a_g)
+        _pa_ref_prov = []
+        _pa_dir_prov = []
+        _pa_wmask_prov = []
+        _pa_n_active = 0
+        for pi in range(P):
+            _t_p, _d_p, _a_p = _pa_gt_t[pi]                              # pair pi's OWN tie + dir + active
+            _ann_p = (np.asarray(gt.margins[pi], np.float32) < pa_band)  # pair pi's annulus
+            _ground_p = np.isin(np.asarray(gt.lstars[pi]), list(_pa_sel))  # pair pi ground-class pixels
+            if pi == 0:
+                # no previous scored frame => no reference => all-zero weight (no-op for pair 0).
+                _ref = np.full((_pa_H, _pa_W), -1.0, np.float32)
+                _wm = np.zeros((_pa_H, _pa_W), np.float32)
+            else:
+                # cross screw f1(pi-1) -> f1(pi) (se(3) interp gap).
+                _xi_cross = _pp_cross_xi(_pa_xi_pair[pi - 1], _pa_xi_pair[pi])
+                _t_prev, _d_prev, _a_prev = _pa_gt_t[pi - 1]
+                # warp the PREV GT tie VALUE (sentinel -> 0) and its ACTIVE mask (0/1) into pi's frame.
+                _val_prev = np.where(_t_prev >= 0.0, _t_prev, 0.0).astype(np.float32)
+                _ref_w = _pp_advect_np(_val_prev, _xi_cross, _pa_geom)          # (H,W) advected value
+                _act_w = _pp_advect_np(_a_prev.astype(np.float32), _xi_cross, _pa_geom)  # (H,W) advected mask
+                _ref_active = _act_w >= 0.5                                        # post-warp active
+                _ref = np.where(_ref_active, _ref_w, -1.0).astype(np.float32)
+                # weight = pi annulus AND ground AND a valid warped reference exists.
+                _wm = (_ann_p & _ground_p & _ref_active).astype(np.float32)
+            _pa_n_active += int(_wm.sum())
+            _pa_ref_prov.append(mx.array(_ref[None]))                             # (1,H,W)
+            _pa_dir_prov.append(mx.array(_d_p[None]))                             # (1,H,W) pair pi's own dir
+            _pa_wmask_prov.append(mx.array(_wm[None]))                            # (1,H,W)
+        # cache memory (fp32, 3 maps/pair): ~3*P*H*W*4 ~= 1.4 GB at n600 (trivial vs the 128 GB envelope;
+        # noted for the launcher memory-preflight — owed preflight-projection addition, gated default-off).
+        print(json.dumps({"stage": "seg_phase_advect", "active": True, "n_pairs": int(P),
+                          "weight": pa_w, "classes": pa_classes, "band": pa_band,
+                          "start_epoch": int(pa_start), "gap_xi": pa_gap_xi, "ref_mode": pa_ref_mode,
+                          "active_px_total": int(_pa_n_active),
+                          "active_px_per_frame": round(_pa_n_active / max(P, 1), 1),
+                          "note": "T1 cross-pair phase-advection: t_wit(p) -> ξ-advected GT tie of p-1 "
+                          "(θ-independent target; per-pair-local; ZERO batching change); composes with "
+                          "Force-3 subpix as the shrinkage toward the ξ-advected trajectory; kills the "
+                          "predictable flicker channel (blink-back 0.42/L67 0.44); GROUND classes only; "
+                          "advisory until byte-closed; pointer 0.19108282 UNMOVED"}), flush=True)
 
     # LEVER-4c (ANNULUS-DIRECTED CHROMA-SHARPENING) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy +
     # the numpy-portable bilinear ``_resize_map`` -- NO SegNet forward, NO torch autograd), so it is
@@ -8809,6 +8967,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # Default ts_w/ms_w=0.0 => never fires => bit-identical.
             _bnd_temporal_screw = (ts_w > 0.0 and (ep >= ts_start) and not ts_gate["on"])
             _bnd_margin_satisfice = (ms_w > 0.0 and (ep >= ms_start) and not ms_gate["on"])
+            # T1 cross-pair phase-advection engagement is ALSO an AdamW->AdamW treatment boundary
+            # (mirrors _bnd_subpix). Default pa_w=0.0 => never fires => bit-identical.
+            _bnd_phase_advect = (pa_w > 0.0 and (ep >= pa_start) and not pa_gate["on"])
             # (F3 fix) #224 analytic-lane render-band engagement is ALSO an AdamW->AdamW treatment
             # boundary (the band's render-target CHANGES at --lane-band-start-epoch): its sibling levers
             # (lane/margin/thin) already OR into _stage_boundary_now, but the band did NOT, so the
@@ -8821,7 +8982,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _bnd_band = (_band_active and (_lever_epoch(ep) >= _band_start) and not band_gate["on"])
             _stage_boundary_now = (_bnd_curriculum or _bnd_lane or _bnd_msal or _bnd_lane_thin
                                    or _bnd_band or _bnd_subpix or _bnd_chroma
-                                   or _bnd_temporal_screw or _bnd_margin_satisfice)
+                                   or _bnd_temporal_screw or _bnd_margin_satisfice
+                                   or _bnd_phase_advect)
             # CURRICULUM stage-transition RE-TREAT (operator 2026-06-26 "transitions must re-treat";
             # PR95-8-stage generalized). The seg LOSS FORM change (ce -> tau_softplus -> l7_softplus)
             # is a per-stage treatment boundary; clear the spike-guard running median so the new
@@ -8970,6 +9132,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if subpix_gate["on"] and not _subpix_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_subpix_boundary_engage", "epoch": ep, "start": subpix_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+            # T1 cross-pair phase-advection engagement gate + transition RE-TREAT (same discipline as
+            # LEVER-4b). REQUIRED: without this the setup-time pa_gate["on"] (= pa_start<=1) never flips,
+            # so a start_epoch>1 (l7) lever would NEVER fire. The engage epoch clears recent_losses so the
+            # spike-guard does not trip on the term's engagement step.
+            if pa_w > 0.0:
+                _pa_was = pa_gate["on"]
+                pa_gate["on"] = lever_gate_on_at_epoch(pa_w, pa_start, ep)
+                if pa_gate["on"] and not _pa_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "seg_phase_advect_engage", "epoch": ep, "start": pa_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
             # (v7.5 D.9) TERMINAL POSE-FINISH weight resolution — the R1 two-phase (SPEC §D.9). Resolve
             # the EFFECTIVE pose weight for THIS epoch: 0 (pose-blind, d_seg converges on a coherent render)
@@ -11259,6 +11432,41 @@ def main(argv: list[str] | None = None) -> int:
                     "is sky (rotation-only). Default 96 (the horizon-band top; rows 0-96 = clear sky above "
                     "the horizon transition). Clamped to [1, H). Only used with "
                     "--seg-temporal-screw-sky-rotation-only.")
+    # T1 CROSS-PAIR PHASE-ADVECTION CONSISTENCY (flicker deep-dive
+    # .omx/research/flicker_transform_geometry_term_design_20260710.md §4 T1; DSL
+    # PhaseAdvectionConsistency). Pull the witness sub-pixel tie coordinate t_wit(p) toward the
+    # ξ-advected GT tie of the PREVIOUS scored pair p-1 (a θ-independent precomputed target => the
+    # cross-pair coupling never enters value_and_grad => fits the incumbent random-permutation
+    # per-pair batching with ZERO change). Composes with Force-3 (subpix) as the shrinkage toward the
+    # ξ-advected (predictable) flicker channel. pa_w=0.0 (DEFAULT) => branch skipped + providers None
+    # + NO extra forward => BYTE-IDENTICAL. GROUND classes only; start>=l7 (needs a formed partition).
+    ap.add_argument("--seg-phase-advect-weight", type=float, default=0.0,
+                    help="T1: weight w_p on the cross-pair phase-advection consistency term (0=off). "
+                    "Derived at gradient-share ~0.4× the subpix term (blink-back 0.42/L67 0.44), cap "
+                    "<=10%% of total loss (term-domination guard). w_p=0 => byte-identical (branch "
+                    "skipped, providers None, no extra forward).")
+    ap.add_argument("--seg-phase-advect-start-epoch", type=int, default=0,
+                    help="T1: engage only at ep>=this (0=from ep1). MUST be >= l7 (needs a formed "
+                    "partition + tie field to advect); the engage epoch re-treats the spike-guard.")
+    ap.add_argument("--seg-phase-advect-classes", type=str, default="0,1,2",
+                    help="T1: the GROUND classes the phase-consistency is enforced on (subset of "
+                    "{0=Road,1=Lane,2=Undrivable}; the plane homography is wrong for Movable/MyCar).")
+    ap.add_argument("--seg-phase-advect-band", type=float, default=2.0,
+                    help="T1: the #333 annulus GT-margin band (|GT margin| < band) the term is "
+                    "restricted to (the flip-prone tie-field locus).")
+    ap.add_argument("--seg-phase-advect-gap-xi", type=str, default="interp",
+                    choices=["interp", "offline_homography"],
+                    help="T1: how to estimate the odd->even inter-pair GAP screw for the cross-scored-"
+                    "frame ξ. 'interp' (DEFAULT) = se(3)-composed ξ_gap≈½(ξ_pi+ξ_pi+1) (memo §4 T1; a "
+                    "train-time regularizer target, gap approximation tolerated). 'offline_homography' "
+                    "= SPECIFIED but not built (owed next increment; fail-loud).")
+    ap.add_argument("--seg-phase-advect-ref", type=str, default="gt_advected",
+                    choices=["gt_advected", "witness_cached"],
+                    help="T1 reference mode. 'gt_advected' (DEFAULT, READY) = the ξ-advected GT tie of "
+                    "the previous scored pair (θ-independent target; fits the incumbent batching with "
+                    "zero change). 'witness_cached' = the fully-differentiable witness-self-consistency "
+                    "mode (memo formula t_wit(p) vs advected t_wit(p-1)); SPECIFIED but OWED (needs a "
+                    "per-pair stop-grad tie cache OR sequential-pair batching; fail-loud).")
     # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). One-sided hinge
     # L_sat = w_s * mean_annulus relu(m_safe - m_wit), m_wit = the witness GT-class signed margin
     # (_signed, #141). Frees the interior gradient budget onto the fragile band BY CONSTRUCTION.
