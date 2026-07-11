@@ -169,6 +169,60 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_organ_seal = EmpiricalAnchor(
+        # (c) AMORTIZABILITY of this costate λ by a LEARNED predictor — the #426 costate-organ
+        # adversarial-review SEAL (2026-07-11). This equation gives λ EXACTLY (partials above);
+        # #426 amortizes it (predict λ from state without recomputing). This anchor pins HOW WELL
+        # it amortizes + WHICH predictor is faithful, so the look-ahead-bias correction is never
+        # re-derived. Fresh-Fable reviewer OVERTURNED the author's n=5 headline.
+        anchor_id="costate_organ_426_seal_walkforward_20260711",
+        measurement_utc="2026-07-11T12:00:00Z",
+        inputs={
+            "organ": "tac.witness_control.{lambda_net,costate_panel,control_alphabet,"
+                     "prototype_router} + tac.witness_dsl.costate_agent_dsl",
+            "trajectory": "#205 (levelset_v752_baseline_20260710T185913Z) advisory verdicts, "
+                          "grew 5->8 same-stage intervals during review (free out-of-sample)",
+            "tool": "tools/lambda_net_backtest.py --archs (chunked)",
+            "gate": "tri-gate = LOO ∧ WALK-FORWARD (deployment-faithful) ∧ binding-floor 0.8",
+        },
+        predicted_output={
+            "memo_era_claim_n5": "ridge-SOLVE fMAE 0.003379 vs persistence 0.005632 = 4.2x/"
+                                 "per-class — the ORIGINAL (Einstein) headline",
+        },
+        empirical_output={
+            "look_ahead_artifact": "the n=5 LOO 4.2x was a LOOK-AHEAD artifact; under "
+                                   "walk-forward ridge LOSES to persistence (0.003535 vs 0.002896)",
+            "winner_family": "prototype/Bregman/BSF: E_prototype WF 0.002513, E_bregman 0.002501, "
+                             "F_bsf 0.002513 (tri-gate PASS, ~14% better than persistence at n=8) "
+                             "— the Rudin/Nielsen/Goodfire arms are the MEASURED winners",
+            "interpretability_tax_gone": "the +8% interpretable-head cost is ELIMINATED — the "
+                                         "interpretable prototype head is ALSO the best predictor",
+            "analytic_partials_exact": "λ_seg partials exact-linear (lstsq residual 5.1e-7; fitted "
+                                       "class weights recover canonical GT areas) — DERIVED",
+            "plateau_regime_loss": "amortized λ LOSES to persistence in PLATEAU regimes (0.0007 vs "
+                                   "0.0017-0.0030); the meta-λ self-monitor flags it live (trust 0.72)",
+            "self_activation": "rehabilitated-NOT-decisive (flips best at n=8 but 5/8 folds, p≈0.36)",
+            "shipped_mode": "SINGLE_BEST=prototype (parsimony + Rudin); re-arbitrated per accrual",
+            "verdict_scope": "INSTANCE — n=1 trajectory / 1 vehicle / 8 intervals, fold variance ~30x; "
+                             "GEPA/Bregman adoption margins ~0.5% WITHIN NOISE = provisional-until-"
+                             "accrual (the triality-native compounding ledger is the cure). MEANS "
+                             "(the organ never ships); pointer 0.19108282 UNMOVED.",
+        },
+        residual=0.000639,  # ridge WF deficit vs persistence (0.003535−0.002896) = the look-ahead-bias magnitude
+        source_artifact=".omx/research/costate_organ_capabilities_limits_envelope_20260711.md",
+        measurement_method="walk-forward tri-gate backtest over the #205 trajectory (n=8 same-stage "
+                           "intervals); LOO look-ahead bias measured + extincted",
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/costate_organ_capabilities_limits_envelope_20260711.md",
+            reactivation_criteria=("re-arbitrate the winning architecture as the trajectory ledger "
+                                   "accrues (>=3 trajectory records; the VAPO crossover is DETECTED "
+                                   "not scheduled); the ~0.5% Bregman/GEPA margins resolve only "
+                                   "out-of-noise with more out-of-sample intervals"),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu_mlx",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("Costate λ = ∂S/∂x: (100, 5/sqrt(10·d_pose), 25/37545489) + chained "
@@ -197,11 +251,12 @@ def build_costate_lambda_marginal_ds_v1() -> CanonicalEquation:
         units_in={"dseg_slope": "d_seg per epoch", "dpose_slope": "d_pose per epoch",
                   "dbytes_slope": "bytes per epoch", "d_pose": "dimensionless"},
         units_out={"dS_depoch": "S per epoch (advisory implied-S units)"},
-        empirical_anchors=(anchor, anchor_waterlines),
+        empirical_anchors=(anchor, anchor_waterlines, anchor_organ_seal),
         predicted_vs_empirical_residual={
             "ep350_horizon_25ep_in_band_central_gap": 0.0706,
             "ep450_horizon_25ep_below_band_gap": 0.0056,
             "score_economics_waterlines_derived": 0.0,
+            "organ_426_amortization_ridge_walkforward_deficit": 0.000639,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
