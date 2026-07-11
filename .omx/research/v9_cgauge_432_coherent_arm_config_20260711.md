@@ -199,3 +199,14 @@ capacity-reopen reconciliation on the row).
   the texture-trunk kills, the flicker floor, the #430 backtest were consumed, not re-measured).
 - **Pointer 0.19108282 [contest-CPU] UNMOVED.** A launch-ready config is MEANS; only a
   byte-closed `upstream/evaluate.py` n600 exact row moves it.
+
+---
+
+## PRE-FIRE REVIEW (#441, re-derived by main — codex wrapper truncated the original verdict)
+
+**Verdict: FIRE-WITH-REVISIONS** (revise the READING/plan, not the code). The #439 SEAL is sound — T1 is stable/byte-identical-OFF/premise-valid and CANNOT destabilize; that axis is cleared. Two FIRE-PLAN gaps (attribution, not correctness); #432 is held on #356+operator-GO so there is time:
+
+- **GAP 1 — phase-OFF control described two incompatible ways.** #439 SEAL: control = `#432 w=0.0` twin (clean single-lever T1, mod-19 held both). THIS memo: control = `#205` (confounds T1 + mod-19; and #205 is DEAD). The clean twin is a 2nd multi-day run, not in the fire command/budget.
+- **GAP 2 — mod-19 safety net references a dead control.** #299 revert rule ("revert to 32 if d_seg > +2% vs mod-32 control") needs a LIVE mod-32 comparator; #205 (the mod-32 control) is DEAD → net has no comparator at fire time. eff_rank 16.4 is RISING → mod-19 may clip needed capacity.
+
+**Resolution (decisions, $0):** (1) For THE GOAL, fire #432 as a **whole-arm pointer bet vs the frozen 0.19108** — the pointer IS the control; no twin needed. Only T1-*attribution* science needs the phase-OFF twin (budget explicitly as a 2nd run). Stop calling #205 the "matched control." (2) Own the bundled T1+mod-19 bet — a MISS won't say which delta failed; split or ensure a live mod-32 comparator if attribution matters. Neither gap blocks the SEAL. Pointer 0.19108282 UNMOVED (MEANS).
