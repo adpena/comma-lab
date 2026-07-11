@@ -99,6 +99,38 @@ action-disagreement** (sign/rank of λ), not a confidence scalar → `rashomon_l
 (3) the **identifiability ledger is a first-class output** (UNIDENTIFIED masks + duty-to-measure
 as active learning) → `identified` flags + `rank_duty_to_measure`.
 
+## 3a. INTERPRETABLE-BY-DESIGN + SELF-IMPROVING (Rudin + Schmidhuber; BUILT + BACKTESTED, 2026-07-11)
+
+Binding directive: the organ must EXPLAIN every λ (Rudin: explanations are CONTRACTS not
+retrofits) and INVENT its own next measurement + PROVE each self-change (Schmidhuber). Both BUILT,
+both earn their place by measurement. Papers:
+`papers_checked_prism_powerplay_godel_fno_costate_organ_20260711.md`.
+
+- **PRISM prototype router (2607.00510) — the interpretable head (`prototype_router.py`,
+  E_prototype lens).** λ = a SPARSE non-negative mixture of learned PROTOTYPES = named trajectory
+  REGIMES (names DERIVED from the measured per-class d_seg signature — NO-FAKE), each anchored to a
+  neighborhood of actual #205 states; the mixture weights ARE the explanation (identifiability
+  ledger becomes cheap + exact — PRISM's 500× attribution). Daubechies multi-scale (coarse regime →
+  fine correction) cascade. SLIM-style linear controller head (DECIDE stays readable). Prototype
+  SUPPRESSION = traceable behavior removal. `PrototypeAttribution` = the OBSERVATORY row (fired
+  regimes, weights, mixture-entropy uncertainty, neighborhood epochs). **MEASURED cost of
+  interpretability (routing_benchmark_v2, 5-fold nested LOO): +8% scalar (0.003109 vs flow
+  0.002881) but 2.3× BETTER per-class (0.0105 vs ridge 0.0237); it independently NAMED the live
+  regime "lane-erosion" = the harvest §3b warning.** Interpretability is a HARD requirement (typed:
+  `RoutingSpec.interpretable_head` fail-closes) and here it is also per-class-dominant.
+- **Schmidhuber self-improvement (the self-improving half of the loop).** (i) **PowerPlay
+  1112.5309** = the self-inventing curriculum: `powerplay_acquisition` ranks the duty-to-measure
+  queue by curiosity × blast-radius / cost, where **curiosity = the innovation signal
+  (derived-λ − measured-binding = compression progress / surprise)** and PowerPlay prefers the
+  SIMPLEST (cheapest) not-yet-solved probe; the "does-not-break-what-works" invariant = the
+  never-regress guard. (ii) **Gödel machine cs/0309048** = `GodelProofGate`: a self-change is
+  admissible ONLY with a proof-of-improvement = backtest-passed AND predicted-ΔS<0 AND containment
+  — the correspondence named + enforced (our backtest-IS-the-gate was always the Gödel discipline).
+  (iii) **Curiosity/compression-progress** = the innovation signal IS the acquisition function.
+  (iv) **LADDER ⊂ costate REAFFIRMED** (L56): LADDER = 1-channel/const-λ; island-birth = per-class
+  λ homotopy (rode Movable 0.9998→0.0073 LIVE); PRISM prototypes = the compressed attributable
+  trajectory memory where compression-as-intelligence meets the costate.
+
 ## 3b. THE LAB-FRONTIER SWEEP (DeepSeek/ByteDance/Qwen/Z.ai/Tencent/GDM/Meta — live, 2026-07-11)
 
 Full rows: `papers_checked_lab_frontier_sweep_moe_agentic_rl_20260711.md`. **VERDICT: the 2026

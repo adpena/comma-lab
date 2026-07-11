@@ -194,6 +194,107 @@ def feasibility_projection(action: str, *, justification: str = "",
                      f"(SAFE={SAFE_ACTIONS}, HEAVY={HEAVY_ACTIONS}); never-invent-tools")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SCHMIDHUBERIAN SELF-IMPROVEMENT (the self-improving half of the loop, 2026-07-11).
+# The costate organ is a Schmidhuberian self-improver; three principles encoded:
+#   * PowerPlay (arXiv 1112.5309): the duty-to-measure queue is a SELF-INVENTING
+#     curriculum — generate the SIMPLEST not-yet-solved probe that provably extends
+#     competence without breaking what works. Rank by curiosity × blast-radius / cost.
+#   * Gödel machine (arXiv cs/0309048): self-modify/actuate ONLY with a proof-of-
+#     improvement = our backtest-IS-the-gate + the containment governor (already built).
+#     `godel_proof_gate` names the correspondence and enforces it structurally.
+#   * Artificial curiosity / compression progress: novelty = where the current λ-model
+#     is SURPRISED = the innovation signal (derived-λ − measured-binding). That signal
+#     IS the acquisition function — high-innovation regions rank UP.
+# ─────────────────────────────────────────────────────────────────────────────
+@dataclass(frozen=True)
+class AcquisitionRow:
+    """One PowerPlay-ranked probe candidate with its full curiosity decomposition."""
+
+    lever: str
+    curiosity: float               # innovation |derived-λ − measured-binding| (surprise)
+    blast_radius: float            # |λ-field| (marginal-ΔS magnitude = how much it could move S)
+    cost: float                    # measurement cost (cheaper = simpler = PowerPlay-preferred)
+    acquisition: float             # curiosity × blast_radius / cost (the rank key)
+    ever_fired: bool
+    kind: str                      # "exploit-surprise" | "explore-unknown"
+    tier: str
+    axis_tag: str = "[macOS advisory] NON-PROMOTABLE"
+
+
+def powerplay_acquisition(lam_field: dict[str, float],
+                          measured_binding: dict[str, float] | None = None,
+                          ever_fired: dict[str, bool] | None = None,
+                          costs: dict[str, float] | None = None,
+                          *, default_cost: float = 1.0) -> list[AcquisitionRow]:
+    """The self-inventing curriculum: rank probes by curiosity × blast-radius / cost.
+
+    Curiosity = the INNOVATION SIGNAL (Schmidhuber's compression-progress / surprise):
+    for a fired lever, |predicted λ-field − measured realized binding| (the model was
+    WRONG by this much = it will LEARN this much). For a never-fired lever there is no
+    measured binding → curiosity is the field magnitude itself (pure exploration; the
+    unknown is maximally surprising by construction, PowerPlay's frontier). Blast-radius
+    = |λ-field| (how much S it could move). Cost = measurement cost (PowerPlay prefers the
+    SIMPLEST — cheapest — not-yet-solved probe). NO actuation — a ranked ADVISORY queue."""
+    ever_fired = ever_fired or {}
+    costs = costs or {}
+    measured = measured_binding or {}
+    rows: list[AcquisitionRow] = []
+    for lever, lam in lam_field.items():
+        blast = abs(float(lam))
+        cost = float(costs.get(lever, default_cost))
+        fired = bool(ever_fired.get(lever, False))
+        if fired and lever in measured:
+            curiosity = abs(float(lam) - float(measured[lever]))
+            kind = "exploit-surprise"
+            tier = "MEASURED innovation (predicted-vs-realized gap = compression progress)"
+        else:
+            curiosity = blast
+            kind = "explore-unknown"
+            tier = "PARTIAL frontier (never-fired/unmeasured — pure exploration; the " \
+                   "unknown is maximally surprising by PowerPlay construction)"
+        acq = curiosity * blast / max(cost, 1e-9)
+        rows.append(AcquisitionRow(lever=lever, curiosity=curiosity, blast_radius=blast,
+                                   cost=cost, acquisition=acq, ever_fired=fired,
+                                   kind=kind, tier=tier))
+    rows.sort(key=lambda r: -r.acquisition)
+    return rows
+
+
+@dataclass(frozen=True)
+class GodelProofGate:
+    """Gödel-machine correspondence: a self-change is admissible ONLY with a proof of
+    improvement. Our 'proof' = the backtest verdict (held-out forecast beats the incumbent)
+    AND the never-regress guard (predicted ΔS < 0) AND containment (HEAVY ⇒ operator-GO).
+    This gate NAMES and enforces the correspondence; it authorizes nothing on its own —
+    a True verdict still only unlocks emitting an advisory rec / OperatorGoTicket."""
+
+    change: str
+    backtest_passed: bool          # the held-out forecast gate (lambda_net.backtest)
+    predicted_delta_s: float | None  # never-regress: must be < 0 to be an improvement
+    admissible: bool
+    reason: str
+    actuation: str = "NONE"
+
+    @staticmethod
+    def evaluate(change: str, backtest_passed: bool,
+                 predicted_delta_s: float | None) -> "GodelProofGate":
+        improves = (predicted_delta_s is not None and predicted_delta_s < 0.0)
+        admissible = bool(backtest_passed and improves)
+        if admissible:
+            reason = (f"proof-of-improvement HOLDS: backtest passed AND predicted ΔS "
+                      f"{predicted_delta_s:+.5f} < 0. Advisory rec / OperatorGoTicket "
+                      "may be emitted (still operator-GO for HEAVY).")
+        elif not backtest_passed:
+            reason = "REFUSED: no backtest proof (held-out forecast did not beat incumbent)."
+        else:
+            reason = (f"REFUSED: predicted ΔS {predicted_delta_s} is not an improvement "
+                      "(never-regress guard).")
+        return GodelProofGate(change=change, backtest_passed=backtest_passed,
+                              predicted_delta_s=predicted_delta_s, admissible=admissible,
+                              reason=reason)
+
+
 def rank_duty_to_measure(lam_field: dict[str, float], identified: dict[str, bool],
                          ever_fired: dict[str, bool]) -> list[dict]:
     """SAFE actuator: order never-fired levers by |λ-field| (the what-if shadow price).

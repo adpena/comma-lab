@@ -126,13 +126,32 @@ class RoutingSpec(BaseModel):
     stacking_prior_strength: float = Field(default=3.0, ge=0.0)
     self_activation_cap: float = Field(default=0.5, gt=0.0, le=1.0)
     escalation: Literal["rashomon_action_disagreement", "dispersion", "both"] = "both"
+    interpretable_head: bool = True   # HARD requirement (Rudin): PRISM prototype router head
+    interpretable_provenance: str = ""
     provenance: str = ""   # the benchmark row that justified the mode choice
 
     @model_validator(mode="after")
     def _known_mode(self) -> "RoutingSpec":
         if self.mode not in ROUTING_MODES:
             raise ValueError(f"routing mode {self.mode!r} not in {ROUTING_MODES}")
+        if not self.interpretable_head:
+            raise ValueError("interpretable_head=False violates the interpretable-by-design "
+                             "non-negotiable (Rudin co-lead): the router head MUST be the "
+                             "PRISM prototype router (explanations are contracts, not retrofits)")
         return self
+
+
+class AcquisitionSpec(BaseModel):
+    """The self-inventing curriculum (Schmidhuber PowerPlay/curiosity) as a typed policy.
+
+    curiosity = innovation signal (derived-λ − measured-binding = compression progress);
+    the Gödel-machine proof-gate = backtest-passed AND predicted-ΔS<0 AND containment."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    policy: Literal["powerplay_curiosity"] = "powerplay_curiosity"
+    rank_key: Literal["curiosity_x_blast_over_cost"] = "curiosity_x_blast_over_cost"
+    proof_gate: Literal["godel_backtest_and_never_regress"] = "godel_backtest_and_never_regress"
+    provenance: str = ""
 
 
 class EquationBinding(BaseModel):
@@ -171,6 +190,7 @@ class CostateAgentProgram(BaseModel):
     actuators: tuple[ActuatorSpec, ...]
     experts: tuple[ExpertSpec, ...]
     routing: RoutingSpec
+    acquisition: AcquisitionSpec = AcquisitionSpec()
     equations: EquationBinding = EquationBinding()
     containment: ContainmentSpec = ContainmentSpec()
 
@@ -185,6 +205,10 @@ class CostateAgentProgram(BaseModel):
         preds = [e for e in self.experts if e.predictive]
         if not preds:
             problems.append("no predictive expert — the adjoint has no λ source")
+        if self.routing.interpretable_head and not any(
+                e.architecture == "E_prototype" for e in self.experts):
+            problems.append("interpretable_head=True requires the E_prototype (PRISM) expert "
+                            "in the panel — the interpretable router head is a hard requirement")
         try:
             self.equations.resolve()
         except Exception as exc:  # registry-missing is a validation failure, not a crash
@@ -243,6 +267,37 @@ class CompiledCostateOrgan:
         return compose_spawn_ticket(question, trigger, agent_kind=agent_kind,
                                     context_lines=context_lines)
 
+    # OBSERVE — the OBSERVATORY: which prototype regimes fired, weights, uncertainty,
+    # traceable to the trajectory neighborhood (the interpretable-by-design telemetry).
+    def observe(self, *, seed: int = 0):
+        from tac.witness_control.lambda_net import (
+            build_intervals, fit_score_composition, lever_features)
+        from tac.witness_control.prototype_router import PrototypeRouterLens
+        import numpy as np
+        traj = self.sense()
+        comp = fit_score_composition(traj.verdicts)
+        intervals = build_intervals(traj)
+        phis = np.stack([lever_features(n) for n in traj.lever_names])
+        lens = PrototypeRouterLens()
+        lens.fit(intervals, phis, seed=seed)
+        last = traj.verdicts[-1]
+        x = np.concatenate([np.asarray(last["d_seg_by_class"]),
+                            [np.log(max(float(last["blob_bytes"]), 1.0))]])
+        return lens.attribute(x, float(last["epoch"]), comp.grad_s_wrt_state())
+
+    # CURIOSITY — the self-inventing curriculum (PowerPlay) + the Gödel proof-gate
+    def acquire(self, lam_field: dict[str, float],
+                measured_binding: dict[str, float] | None = None,
+                ever_fired: dict[str, bool] | None = None,
+                costs: dict[str, float] | None = None):
+        from tac.witness_control.control_alphabet import powerplay_acquisition
+        return powerplay_acquisition(lam_field, measured_binding, ever_fired, costs)
+
+    def prove_improvement(self, change: str, backtest_passed: bool,
+                          predicted_delta_s: float | None):
+        from tac.witness_control.control_alphabet import GodelProofGate
+        return GodelProofGate.evaluate(change, backtest_passed, predicted_delta_s)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # The canonical #426 program — the organ AS SHIPPED (mirrors the measured verdicts:
@@ -285,9 +340,25 @@ def derive_costate_agent_v1(run_dir: str) -> CostateAgentProgram:
                        activation_note=("prior-favored (low complexity)" if s.name == "flow"
                                         else "prior-weighted until measured skill accrues"))
             for s in LENSES),
+        acquisition=AcquisitionSpec(
+            provenance="Schmidhuber self-improvement lineage (2026-07-11): PowerPlay "
+                       "1112.5309 self-inventing curriculum · curiosity=innovation "
+                       "signal (derived-λ − measured-binding = compression progress) · "
+                       "Gödel-machine cs/0309048 proof-of-improvement = backtest-passed "
+                       "AND predicted-ΔS<0 AND containment · LADDER ⊂ costate (L56)"),
         routing=RoutingSpec(
             mode="SINGLE_BEST",
             escalation="both",
+            interpretable_head=True,
+            interpretable_provenance="PRISM 2607.00510 prototype router (E_prototype "
+                       "lens): interpretable-by-design HARD requirement (Rudin co-lead). "
+                       "MEASURED cost 2026-07-11 (routing_benchmark_v2): interpretability "
+                       "costs +8% scalar MAE (prototype solo 0.003109 vs flow 0.002881) "
+                       "but WINS per-class (QUESTION_ROUTER-with-prototype 0.0744 vs "
+                       "flow-only 0.0859; prototype standalone per-class 0.0105 vs ridge "
+                       "0.0237 = 2.3×) AND every λ is traceable to a named regime + "
+                       "trajectory neighborhood. Daubechies multi-scale (coarse regime → "
+                       "fine correction) cascade in the prototype set.",
             provenance="routing benchmark 2026-07-11 FINAL (nested LOO, 5 folds, "
                        "#205 trajectory, routing_benchmark_final_20260711.json): "
                        "SINGLE_BEST=flow 0.002881 WINNER (=QUESTION_ROUTER) · "

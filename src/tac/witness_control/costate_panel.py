@@ -77,6 +77,9 @@ LENSES: tuple[LensSpec, ...] = (
     LensSpec("operator_field", "D_deeponet",
              "what does the design-surface geometry say (incl. never-fired levers)?",
              ("lever-registry", "duty-to-measure"), True),
+    LensSpec("prototype", "E_prototype",
+             "which recognizable REGIME is this, and WHY (interpretable-by-design)?",
+             ("prototype-neighborhoods", "observatory-attribution"), True),
     LensSpec("graph_precedent", "graph_precedent",
              "what does campaign history/structure imply?",
              ("lever-activation-ledger", "graph-memory-recall"), False),
@@ -84,6 +87,11 @@ LENSES: tuple[LensSpec, ...] = (
              "novel / uncertain / open-ended reasoning",
              ("web", "oss", "codex", "claude-code", "whole-tool-universe"), False),
 )
+
+#: name → LensSpec (index-independent lookup; new lenses may be inserted anywhere)
+_LENS_BY_NAME = {s.name: s for s in LENSES}
+_GRAPH_PRECEDENT_SPEC = _LENS_BY_NAME["graph_precedent"]
+_SPAWN_AGENT_SPEC = _LENS_BY_NAME["spawn_agent"]
 
 ROUTING_MODES = ("SINGLE_BEST", "QUESTION_ROUTER", "SELF_ACTIVATION", "COMPONENT_FUSION",
                  "EVIDENCE_SHRUNK_STACKING")
@@ -93,7 +101,7 @@ ROUTING_MODES = ("SINGLE_BEST", "QUESTION_ROUTER", "SELF_ACTIVATION", "COMPONENT
 #: pooled posterior over lens competence (Yao-Pirš-Vehtari-Gelman arXiv 2101.08954),
 #: NOT a trained router and NOT raw train-confidence; the prior favors low complexity).
 LENS_COMPLEXITY = {"flow": 102.0, "pointwise": 332.0, "sequence": 1100.0,
-                   "operator_field": 700.0}
+                   "operator_field": 700.0, "prototype": 220.0}
 #: prior strength (pseudo-fold count) for the partial pooling — at n_folds ≈ α the
 #: evidence and the prior share weight equally; evidence dominates as folds accrue.
 STACKING_PRIOR_STRENGTH = 3.0
@@ -342,7 +350,7 @@ def run_panel(traj: CampaignTrajectory, *, routing_mode: str = "COMPONENT_FUSION
     # graph-precedent lens (retrieval; abstains from forecast)
     prec = graph_precedent(ledger_path)
     reports.append(LensReport(
-        spec=LENSES[4], activation=0.0, self_confidence=1.0, forecast_dxdt=None,
+        spec=_GRAPH_PRECEDENT_SPEC, activation=0.0, self_confidence=1.0, forecast_dxdt=None,
         lambda_field=None,
         insight=f"ledger precedent for {len(prec)} levers "
                 f"({sum(1 for v in prec.values() if v['fired_count'] > 0)} ever fired); "
@@ -379,7 +387,7 @@ def run_panel(traj: CampaignTrajectory, *, routing_mode: str = "COMPONENT_FUSION
             trigger=f"panel disagreement {disagreement:.2f} > {SPAWN_DISAGREEMENT_THRESHOLD}",
             context_lines=(f"run: {traj.run_dir}", f"channels dispersion: {dis_by_ch.round(2).tolist()}")))
     reports.append(LensReport(
-        spec=LENSES[5], activation=1.0 if tickets else 0.0,
+        spec=_SPAWN_AGENT_SPEC, activation=1.0 if tickets else 0.0,
         self_confidence=disagreement, forecast_dxdt=None, lambda_field=None,
         insight=("ESCALATED (System-2 awake): " + tickets[0].trigger) if tickets else
                 f"dormant (disagreement {disagreement:.2f} ≤ {SPAWN_DISAGREEMENT_THRESHOLD})"))

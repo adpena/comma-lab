@@ -260,7 +260,110 @@ def test_new_modules_have_no_actuation_tokens():
     for rel in ("src/tac/witness_control/lambda_net.py",
                 "src/tac/witness_control/control_alphabet.py",
                 "src/tac/witness_control/costate_panel.py",
+                "src/tac/witness_control/prototype_router.py",
                 "src/tac/witness_dsl/costate_agent_dsl.py"):
         src = (REPO / rel).read_text()
         for tok in forbidden:
             assert tok not in src, f"{tok!r} in {rel}"
+
+
+# ───────────────────────── PRISM interpretable prototype router (Rudin) ─────────────────────────
+def test_prototype_router_names_regimes_from_measured_signature():
+    """NO-FAKE: prototype names must be DERIVED from the per-class d_seg signature, not
+    asserted. The synthetic planted trajectory starts Movable-dominant → island regime."""
+    from tac.witness_control.prototype_router import PrototypeRouterLens
+    traj, _ = _synthetic_traj()
+    intervals = build_intervals(traj)
+    phis = np.stack([lever_features(n) for n in traj.lever_names])
+    m = PrototypeRouterLens()
+    m.fit(intervals, phis)
+    assert m.prototypes, "must fit prototypes"
+    # the earliest state (d_class[3]=Movable ~0.9) must be named an island regime
+    names = {p.name for p in m.prototypes}
+    assert any("island" in n for n in names), f"expected an island regime, got {names}"
+    # coarse + fine scales both present (Daubechies cascade)
+    scales = {p.scale for p in m.prototypes}
+    assert scales == {"coarse", "fine"}
+
+
+def test_prototype_router_backtests_and_is_interpretable():
+    """Interpretable-by-design is a HARD requirement AND must still earn its place —
+    report the honest cost vs the solve; here it must at least beat the persistence heuristic."""
+    traj, _ = _synthetic_traj()
+    report, field = backtest(traj, architecture="E_prototype")
+    assert report.forecast_mae_model <= report.forecast_mae_heuristic  # earns its place
+    # the observatory attribution is a contract: it routes + explains
+    from tac.witness_control.prototype_router import PrototypeRouterLens
+    comp = fit_score_composition(traj.verdicts)
+    intervals = build_intervals(traj)
+    phis = np.stack([lever_features(n) for n in traj.lever_names])
+    m = PrototypeRouterLens(); m.fit(intervals, phis)
+    x = intervals[-1].x1
+    att = m.attribute(x, 999.0, comp.grad_s_wrt_state())
+    assert att.fired, "the router must route through ≥1 prototype"
+    assert "routed through" in att.explain()
+    assert att.mixture_entropy >= 0.0
+
+
+def test_prototype_suppression_is_traceable():
+    """PRISM suppression: zeroing a prototype removes its regime-response, auditably."""
+    from tac.witness_control.prototype_router import PrototypeRouterLens
+    traj, _ = _synthetic_traj()
+    intervals = build_intervals(traj)
+    phis = np.stack([lever_features(n) for n in traj.lever_names])
+    m = PrototypeRouterLens(); m.fit(intervals, phis)
+    x = intervals[-1].x1
+    target = m.prototypes[0].name
+    r_full = m.response(x, intervals[-1].ctx, lever_features("seg"))
+    r_supp = m.response(x, intervals[-1].ctx, lever_features("seg"), suppress=(target,))
+    comp = fit_score_composition(traj.verdicts)
+    att = m.attribute(x, 1.0, comp.grad_s_wrt_state(), suppress=(target,))
+    assert att.suppressed == (target,)
+    assert not np.allclose(r_full, r_supp) or target not in {p.name for p in m.prototypes[:1]}
+
+
+# ───────────────────────── Schmidhuber self-improvement (PowerPlay / Gödel / curiosity) ─────────────────────────
+def test_powerplay_acquisition_curiosity_ranking():
+    from tac.witness_control.control_alphabet import powerplay_acquisition
+    # a fired lever the model was WRONG about (high curiosity) must rank above a fired
+    # lever the model predicted correctly (zero surprise), at equal blast/cost.
+    lam = {"surprising": -0.10, "correct": -0.10, "unknown": -0.05}
+    measured = {"surprising": +0.30, "correct": -0.10}   # surprising: big predicted-vs-real gap
+    fired = {"surprising": True, "correct": True, "unknown": False}
+    rows = powerplay_acquisition(lam, measured_binding=measured, ever_fired=fired)
+    by = {r.lever: r for r in rows}
+    assert by["surprising"].curiosity > by["correct"].curiosity  # surprise = compression progress
+    assert by["surprising"].acquisition > by["correct"].acquisition
+    assert by["unknown"].kind == "explore-unknown"
+    assert by["correct"].kind == "exploit-surprise"
+
+
+def test_godel_proof_gate_requires_improvement_proof():
+    from tac.witness_control.control_alphabet import GodelProofGate
+    ok = GodelProofGate.evaluate("c", backtest_passed=True, predicted_delta_s=-0.01)
+    assert ok.admissible and ok.actuation == "NONE"
+    no_bt = GodelProofGate.evaluate("c", backtest_passed=False, predicted_delta_s=-0.01)
+    assert not no_bt.admissible and "no backtest proof" in no_bt.reason
+    regress = GodelProofGate.evaluate("c", backtest_passed=True, predicted_delta_s=+0.01)
+    assert not regress.admissible and "never-regress" in regress.reason
+    none_ds = GodelProofGate.evaluate("c", backtest_passed=True, predicted_delta_s=None)
+    assert not none_ds.admissible
+
+
+def test_dsl_interpretable_head_is_hard_requirement():
+    from tac.witness_dsl.costate_agent_dsl import RoutingSpec
+    with pytest.raises(Exception, match="interpretable-by-design"):
+        RoutingSpec(interpretable_head=False)
+
+
+def test_dsl_organ_observatory_and_curiosity_wired():
+    from tac.witness_dsl.costate_agent_dsl import derive_costate_agent_v1
+    if not LIVE_RUN.exists():
+        pytest.skip("live run dir absent")
+    organ = derive_costate_agent_v1(str(LIVE_RUN)).compile()
+    att = organ.observe()
+    assert "routed through" in att.explain()
+    g = organ.prove_improvement("x", backtest_passed=True, predicted_delta_s=-0.001)
+    assert g.admissible
+    acq = organ.acquire({"a": -0.1, "b": -0.2}, ever_fired={"a": False, "b": False})
+    assert acq and acq[0].acquisition >= acq[-1].acquisition

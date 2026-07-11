@@ -487,7 +487,7 @@ class DeepONetLambdaField(_TorchFieldBase):
         return self.f_base(xc)
 
 
-ARCHITECTURES = ("A_ridge_solve", "B_mlp", "C_gru_path", "D_deeponet")
+ARCHITECTURES = ("A_ridge_solve", "B_mlp", "C_gru_path", "D_deeponet", "E_prototype")
 
 
 def make_model(name: str):
@@ -499,6 +499,10 @@ def make_model(name: str):
         return GRULambdaNet()
     if name == "D_deeponet":
         return DeepONetLambdaField()
+    if name == "E_prototype":
+        # interpretable-by-design router (PRISM 2607.00510); lazy import avoids a cycle
+        from tac.witness_control.prototype_router import PrototypeRouterLens
+        return PrototypeRouterLens()
     raise ValueError(f"unknown architecture {name!r}; choose from {ARCHITECTURES}")
 
 
