@@ -253,6 +253,37 @@ DEFAULT_TRAINING_PIPELINE: tuple[TrainingStageSpec, ...] = (
                  "in-model (Δ0.4% — gate value not resolvable on a transient-only "
                  "prefix); LIVE A/B stays in the ticket's gates_owed"),
     TrainingStageSpec(
+        name="aniso_perclass_physics", stage="pretrain",
+        corpus=("gt_n96 margins/lstars at the MEASURED flip temperature ε_flip=1.048 "
+                "(advection-ball rank-matched; L85)", "σ_cc′ #382 (Young/Herring)",
+                "power-diagram pair adjacency #284", "along/across-tangent margin "
+                "anisotropy (cgauge_curvelet_parabolic_bank_v1 lineage)"),
+        status="EXECUTED_$0",
+        measured="#433 P0 (aniso_perclass_lambda): bulk/boundary Fisher-regime split "
+                 "per class (annulus susceptibility 0.577 in 5.6% area — re-derives "
+                 "#333 from cache; Lane 100% boundary, Road 33/67) + C_phys coupling "
+                 "(Lane→Road 0.494 ≡ the K-arm's independent 0.499). Forecast: the "
+                 "PRIOR-MEAN formulation P_priormean_aniso WF 0.003182 / early-fold "
+                 "0.004265 BEATS ridge (0.003902/0.005201) AND persistence at early "
+                 "folds (0.004715) — the first ridge-family arm to do so — but the "
+                 "ISOTROPIC ablation Q (M0=I, same 1-dof-κ machinery) is equal-or-"
+                 "better (0.003067/0.004024): the measured win is the SCORE-LAW-"
+                 "PINNED-SCALE FORMULATION, the aniso-coupled DIRECTION is forecast-"
+                 "neutral at n=9 (verdict_scope: instance); C_phys stays the #430 "
+                 "per-class λ physics readout"),
+    TrainingStageSpec(
+        name="openpilot_isolated_prior", stage="pretrain",
+        corpus=("cached partition geometry ONLY (horizon row 186 / hood row 286, "
+                "measured)", "ego-model scope: static-scene classes; Movable "
+                "excluded by model semantics (L83)"),
+        status="EXECUTED_$0",
+        measured="#433 thread 2 — the ISOLATED openpilot verdict (never again "
+                 "bundled): reweight arm O ≡ ridge (absorption, expected); prior-"
+                 "mean arm S WF 0.003777/early 0.005112 — better than ridge but "
+                 "WORSE than the no-openpilot ablation Q (0.003067/0.004024) ⇒ NO "
+                 "distinct organ win; openpilot stays witness-side-only as held "
+                 "(verdict_scope: formulation ×2 on this trajectory)"),
+    TrainingStageSpec(
         name="trajectory_sft", stage="posttrain_sft",
         corpus=("#205 trajectory intervals (the measured campaign data)",),
         status="EXECUTED_$0",
@@ -274,7 +305,16 @@ DEFAULT_TRAINING_PIPELINE: tuple[TrainingStageSpec, ...] = (
         status="EXECUTED_$0",
         measured="first GEPA cycle 2026-07-11: plateau-fallback candidate PROPOSED "
                  "from the walk-forward reflection and REFUSED by measurement "
-                 "(hybrid 0.002609 vs pure E_prototype 0.002513) — the gate works"),
+                 "(hybrid 0.002609 vs pure E_prototype 0.002513) — the gate works. "
+                 "CYCLE 2 (#433, extended 9-arm tournament): all 11 candidates "
+                 "REFUSED vs incumbent E_prototype_bregman WF 0.002839 — incumbent "
+                 "stands, meta-λ prefer_persistence posture unchanged. SAO trust "
+                 "region on Λ between walk-forward refits: INERT at pre-registered "
+                 "radii 0.25/0.5/1.0 (≡ plain ridge 0.003902 — fold-to-fold coef "
+                 "drift <25% of norm); positive control at r=0.001-0.05 BINDS and "
+                 "worsens (clamp is live) ⇒ the WF error is model BIAS not update "
+                 "variance. RL/SFT verdict: no help NOW at n=1; needs ledger accrual "
+                 "(≥3 records) — SOL's synthetic-data survey is the named unblock"),
 )
 
 
@@ -592,7 +632,11 @@ def derive_costate_agent_arbitrated(run_dir: str) -> CostateAgentProgram:
         arch_to_lens.setdefault("G_ridge_scorerprior", arch_to_lens.get("A_ridge_solve"))
         # scorer-model arms (P0 2026-07-11) are ridge-family variants → the flow lens
         for _arm in ("H_smoothed_argmax", "I_comma10k_regime", "J_adv_boundary",
-                     "K_perclass_v8", "L_priormean_comma10k", "M_priormean_advb"):
+                     "K_perclass_v8", "L_priormean_comma10k", "M_priormean_advb",
+                     # #433 anisotropic-coupled per-class-λ arms (ridge-family)
+                     "N_aniso_coupled", "O_openpilot_geom", "P_priormean_aniso",
+                     "Q_priormean_iso", "R_priormean_c10k_scorelaw",
+                     "S_priormean_openpilot"):
             arch_to_lens.setdefault(_arm, arch_to_lens.get("A_ridge_solve"))
         lens = arch_to_lens.get(arb.recommended)
         if lens is None:

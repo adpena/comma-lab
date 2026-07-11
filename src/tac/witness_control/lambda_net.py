@@ -490,7 +490,10 @@ class DeepONetLambdaField(_TorchFieldBase):
 ARCHITECTURES = ("A_ridge_solve", "B_mlp", "C_gru_path", "D_deeponet", "E_prototype",
                  "E_prototype_bregman", "F_bsf", "G_ridge_scorerprior",
                  "H_smoothed_argmax", "I_comma10k_regime", "J_adv_boundary",
-                 "K_perclass_v8", "L_priormean_comma10k", "M_priormean_advb")
+                 "K_perclass_v8", "L_priormean_comma10k", "M_priormean_advb",
+                 "N_aniso_coupled", "O_openpilot_geom", "P_priormean_aniso",
+                 "Q_priormean_iso", "R_priormean_c10k_scorelaw",
+                 "S_priormean_openpilot")
 
 
 def make_model(name: str):
@@ -548,6 +551,38 @@ def make_model(name: str):
     if name == "M_priormean_advb":
         from tac.witness_control.scorer_model_arms import AdvBoundaryPriorMeanAdjoint
         return AdvBoundaryPriorMeanAdjoint()
+    if name == "N_aniso_coupled":
+        # ANISOTROPIC-COUPLED PER-CLASS λ (P0 #433): coupling-reweight formulation of
+        # the V9·CGauge physics (bulk/boundary Fisher regimes + σ_cc′ pair tension +
+        # power-diagram adjacency + along/across-tangent anisotropy). Expected-near-
+        # neutral (φ-recalibration absorption, measured); the prior-mean sibling P is
+        # the physics-consuming formulation.
+        from tac.witness_control.aniso_perclass_lambda import AnisoCoupledRidgeAdjoint
+        return AnisoCoupledRidgeAdjoint()
+    if name == "O_openpilot_geom":
+        # openpilot ISOLATED arm (thread 2), reweight formulation
+        from tac.witness_control.aniso_perclass_lambda import OpenpilotGeomRidgeAdjoint
+        return OpenpilotGeomRidgeAdjoint()
+    if name == "P_priormean_aniso":
+        # THE P0 ARM (#433): shrink-to-prior ridge, anisotropic-coupled score-law-
+        # pinned prior mean (C_phys ∘ exact smoothed-argmax gradient; 1-dof κ)
+        from tac.witness_control.aniso_perclass_lambda import AnisoPriorMeanAdjoint
+        return AnisoPriorMeanAdjoint()
+    if name == "Q_priormean_iso":
+        # the ISOTROPIC-INDEPENDENT ablation of P (same formulation, M0 = I)
+        from tac.witness_control.aniso_perclass_lambda import IsoPriorMeanAdjoint
+        return IsoPriorMeanAdjoint()
+    if name == "R_priormean_c10k_scorelaw":
+        # the OPEN comma10k-family member: rarity direction, score-law-pinned scale +
+        # σ_cc′/Fisher anisotropic coupling (the cure for the measured κ failure)
+        from tac.witness_control.aniso_perclass_lambda import (
+            C10kScoreLawPriorMeanAdjoint,
+        )
+        return C10kScoreLawPriorMeanAdjoint()
+    if name == "S_priormean_openpilot":
+        # openpilot ISOLATED arm, prior-mean (non-absorbable) formulation
+        from tac.witness_control.aniso_perclass_lambda import OpenpilotPriorMeanAdjoint
+        return OpenpilotPriorMeanAdjoint()
     raise ValueError(f"unknown architecture {name!r}; choose from {ARCHITECTURES}")
 
 
