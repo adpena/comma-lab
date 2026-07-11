@@ -15657,3 +15657,28 @@ UNMOVED.
   machine-readable active-surface coverage receipt · equations = existing level-set/Chan-Vese,
   persistence/phase/warp laws + `witness_fp_reorder_transform_bit_identity_wall_v1`; no CUDA anchor
   registered because CUDA was not measured.
+
+## FEED-applypass-406 (2026-07-11) — one-command rate/pose APPLY-PASS harness DRY-RUN LANDED
+
+**SIGNAL.** The compress-half levers (#336 sensitivity bit-alloc, #140 low-rank pose, sidecar-fold)
+were each built in ISOLATION and never composed into ONE pass that fires on v9's first good
+checkpoint → per-lever ΔS never attributed in one shot.
+
+**DIAGNOSTIC.** Built `tools/witness_apply_pass.py` (#406): pure ORCHESTRATOR over the canonical
+tools (`levelset_byte_close_and_eval`, `apply_sensitivity_bitalloc_witness`) emitting one
+`tac.verdicts.MeasurementRow` (#388 canonical row) per measured scalar. Stages =
+[baseline, bit_alloc#336, low_rank_pose#140, sidecar_fold, STUB#311 TropNNC, STUB#401 blind-coord].
+
+**RESPONSE (dry-run, frozen `levelset_v752_baseline` EMA_BEST, `[macOS-CPU advisory]` NON-PROMOTABLE):**
+- baseline archive `83905 B` (rate≈0.0559) — MEASURED.
+- #140 rank-2 SVD pose codec: `6763 B → 1125 B` = **6.01×**, recon-floor d_pose `0.000243` (√10·=`0.0493`, below banked R1 0.127) — MEASURED `[prediction]` for the through-render d_pose.
+- #336 bit-alloc + sidecar-fold — STAGED (scorer-heavy / fail-closed NO-FAKE); exact n600 argv emitted.
+- #311/#401 — OWED, explicit fail-loud stubs (verified raise NotImplementedError).
+- Containment: CPU-light/serial, scorer stages default-STAGED, NO paid dispatch, frozen ckpt copied,
+  live trainer files + `witness_run_artifacts.py` (codex in-flight) untouched. 0 errors.
+
+**Fires on v9 first good checkpoint** via the one-command in `apply_pass_readiness_406_20260711T213329Z.md`.
+pointer 0.19108282 UNMOVED (MEANS — compress-half readiness, not a score).
+- **triality:** DAG = this FEED · DSL = the apply-pass stage registry in `witness_apply_pass.py`
+  (canonical-tool argv per lever) · equations = existing #336 KKT reverse-waterfill + #140 low-rank
+  pose-codec laws (no new equation; low_rank recon-floor is a MEASURED anchor, not a new law).
