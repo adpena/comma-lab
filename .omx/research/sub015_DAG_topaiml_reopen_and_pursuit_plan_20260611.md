@@ -15769,3 +15769,10 @@ Equations leg for FEED-399 registered: `pr110_lineage_click_polish_byte_neutral_
 MODAL-HOLD; INSTANCE scope — pairs 48-599 magnitude UNMEASURED, rounds 2+ running). DSL leg
 N/A-with-reason (frozen-archive polish tool, not a trainer lever). MEMORY.md CURRENT line
 updated with the n8-polish/592-pair headroom fact.
+
+### FEED-399-round2-apparatus (2026-07-11 note)
+`tools/click_polish_block_loop.py` landed — the resumable all-600-pair K-block loop driver for
+#399 rounds 2+ (search → full-n600 authority pass → bank ledger → refresh candidate + MODAL-HOLD
+queue entry, per block). APPARATUS only; no new measured row yet — cumulative ΔS/coverage rows
+append to the FEED-399 chain + refresh `pr110_lineage_click_polish_byte_neutral_slack_v1` as
+blocks clear their authority passes.
