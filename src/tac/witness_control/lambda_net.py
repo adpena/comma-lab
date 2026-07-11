@@ -487,13 +487,146 @@ class DeepONetLambdaField(_TorchFieldBase):
         return self.f_base(xc)
 
 
+class GPCostatePosteriorAdjoint:
+    """Candidate T — the CLOSED-FORM GP costate posterior (Warnick 2025, §3.3–3.4).
+
+    Maps the organ's costate to the paper's source-term recovery ``Ly = Q`` with the
+    first-order operator ``L = d/dep`` (a 1st-order ODE, a_1=1, a_0=0), so the "source"
+    Q(ep) = dx/dep IS the per-class d_seg / log-bytes RATE the harness forecasts. Per
+    channel c we place a zero-mean GP prior on the CENTERED state trajectory
+    ``x_c(ep) ~ GP(0, k)`` with an RBF kernel, observe the verdict rows as noisy point
+    values ``z = H[x] + ε`` (H = point-evaluation; ε ~ N(0, σ_n²)), and read off the
+    Bayes action under squared-error loss = the posterior mean of ``L x = x'`` in CLOSED
+    FORM via differentiated-kernel linear-Gaussian conditioning:
+
+        K   = σ_f² K_rbf(EP, EP) + σ_n² I                       (m×m)
+        k_d = ∂_{u*} k(u*, ep_j) = σ_f²·(-(u*-ep_j)/ℓ²)·e^{-(u*-ep_j)²/2ℓ²}   (m,)
+        μ'(u*) = k_d^T K^{-1} (z − z̄)          (Bayes action = posterior mean of x')
+        σ'²(u*) = σ_f²/ℓ² − k_d^T K^{-1} k_d    (closed-form posterior variance)
+
+    This is the paper's ``Q̂ = L_* μ_*`` / ``Cov(Q) = L_* Σ_* L_*ᵀ`` with the derivative
+    kernel blocks (§3.3). By THEOREM 2 the same μ' is the Bayes action under the 0-1
+    small-ball loss (loss choice is free on the Gaussian posterior) — the arm's forecast
+    is loss-invariant by construction. Hyperparameters (ℓ, σ_n) are fit by type-II
+    marginal likelihood on PAST-ONLY observations at each walk-forward fold (no
+    look-ahead); σ_f² = training variance of the channel.
+
+    HONEST SCOPE (stated, not hidden): this arm forecasts the TOTAL forcing Q = dx/dep
+    directly from trajectory smoothness — it does NOT decompose Q into per-lever
+    responses Λ_i (that is the ridge/prototype arms' job; the paper's separatrix/Theorem-3
+    view is where the two-posterior decision boundary would live). So ``response`` is the
+    zero field and ``base`` carries the whole forecast; the binding-AUROC gate is
+    therefore N/A for this arm (no lever field) and the DISCRIMINATING test is the
+    walk-forward forecast MAE vs persistence. numpy-only, deterministic, $0. Every number
+    [macOS advisory] NON-PROMOTABLE, score_claim=false."""
+
+    name = "T_gp_costate_posterior"
+
+    def __init__(self, ridge_jitter: float = 1e-10):
+        self.jitter = float(ridge_jitter)
+        self._eps: np.ndarray | None = None                 # (m,) training epochs
+        self._z: np.ndarray | None = None                   # (m, STATE_DIM) states
+        self._zbar: np.ndarray | None = None                # (STATE_DIM,) per-channel mean
+        self._hyp: list[tuple[float, float, float]] = []    # per-channel (ell, sf2, sn2)
+        self._Kinv: list[np.ndarray] = []                   # per-channel K^{-1}
+
+    @staticmethod
+    def _obs_from_intervals(intervals: list[Interval]) -> tuple[np.ndarray, np.ndarray]:
+        """Reconstruct the verdict-row observations (contiguous intervals share endpoints)."""
+        eps = [iv.ep0 for iv in intervals] + [intervals[-1].ep1]
+        xs = [iv.x0 for iv in intervals] + [intervals[-1].x1]
+        # dedup epochs (defensive), keep first
+        seen: dict[float, np.ndarray] = {}
+        for e, x in zip(eps, xs, strict=False):
+            if e not in seen:
+                seen[e] = x
+        e_arr = np.asarray(sorted(seen), dtype=np.float64)
+        x_arr = np.stack([seen[e] for e in e_arr])
+        return e_arr, x_arr
+
+    @staticmethod
+    def _rbf(ep: np.ndarray, sf2: float, ell: float) -> np.ndarray:
+        d = ep[:, None] - ep[None, :]
+        return sf2 * np.exp(-(d ** 2) / (2.0 * ell ** 2))
+
+    def _mll(self, ep: np.ndarray, z: np.ndarray, sf2: float, ell: float, sn2: float) -> float:
+        n = ep.shape[0]
+        K = self._rbf(ep, sf2, ell) + (sn2 + self.jitter) * np.eye(n)
+        try:
+            L = np.linalg.cholesky(K)
+        except np.linalg.LinAlgError:
+            return -np.inf
+        alpha = np.linalg.solve(L.T, np.linalg.solve(L, z))
+        logdet = 2.0 * float(np.sum(np.log(np.diag(L))))
+        return float(-0.5 * z @ alpha - 0.5 * logdet - 0.5 * n * math.log(2.0 * math.pi))
+
+    def fit(self, intervals: list[Interval], phis: np.ndarray, seed: int = 0) -> None:
+        eps, xs = self._obs_from_intervals(intervals)
+        self._eps, self._z = eps, xs
+        self._zbar = xs.mean(axis=0)
+        n = eps.shape[0]
+        span = float(eps[-1] - eps[0]) if n > 1 else 1.0
+        diffs = np.diff(eps)
+        med_sp = float(np.median(diffs)) if diffs.size else 1.0
+        # bounded, deterministic hyperparameter grid (type-II ML, past-only → no leakage)
+        ell_grid = np.geomspace(max(0.5 * med_sp, 1e-3), max(4.0 * span, med_sp), 7)
+        ratio_grid = np.asarray([1e-4, 1e-3, 1e-2, 1e-1, 3e-1])  # σ_n²/σ_f²
+        self._hyp, self._Kinv = [], []
+        for c in range(xs.shape[1]):
+            z = xs[:, c] - self._zbar[c]
+            sf2 = float(np.var(z))
+            if sf2 <= 0.0 or not np.isfinite(sf2):
+                sf2 = 1e-18
+            best = (-np.inf, ell_grid[len(ell_grid) // 2], sf2, 1e-2 * sf2)
+            for ell in ell_grid:
+                for ratio in ratio_grid:
+                    sn2 = float(ratio) * sf2
+                    mll = self._mll(eps, z, sf2, float(ell), sn2)
+                    if mll > best[0]:
+                        best = (mll, float(ell), sf2, sn2)
+            _, ell, sf2, sn2 = best
+            K = self._rbf(eps, sf2, ell) + (sn2 + self.jitter) * np.eye(n)
+            self._hyp.append((ell, sf2, sn2))
+            self._Kinv.append(np.linalg.inv(K))
+
+    def _deriv_posterior(self, u_star: float, c: int) -> tuple[float, float]:
+        """Closed-form (mean', var') of x_c'(u_star) — the paper's Q̂ and its covariance."""
+        ell, sf2, _ = self._hyp[c]
+        ep = self._eps
+        z = self._z[:, c] - self._zbar[c]
+        d = u_star - ep
+        kexp = np.exp(-(d ** 2) / (2.0 * ell ** 2))
+        k_d = sf2 * (-(d) / ell ** 2) * kexp                # cov(x'(u*), x(ep_j))
+        Kinv = self._Kinv[c]
+        mean = float(k_d @ (Kinv @ z))
+        prior_var = sf2 / ell ** 2                          # ∂²k/∂u∂v at zero lag
+        var = float(prior_var - k_d @ (Kinv @ k_d))
+        return mean, max(var, 0.0)
+
+    def base(self, x: np.ndarray, ctx: np.ndarray,
+             path: np.ndarray | None = None) -> np.ndarray:
+        """Bayes action = posterior-mean derivative at the query epoch (ctx[0]·3000)."""
+        assert self._eps is not None, "fit first"
+        u_star = float(ctx[0]) * 3000.0
+        out = np.empty(STATE_DIM, dtype=np.float64)
+        for c in range(STATE_DIM):
+            out[c], _ = self._deriv_posterior(u_star, c)
+        return out
+
+    def response(self, x: np.ndarray, ctx: np.ndarray, phi: np.ndarray,
+                 path: np.ndarray | None = None) -> np.ndarray:
+        # forecast-only arm: the total forcing Q=dx/dep is carried by `base`; no per-lever
+        # decomposition (Theorem-3 separatrix view, not built). Honest zero field.
+        return np.zeros(STATE_DIM, dtype=np.float64)
+
+
 ARCHITECTURES = ("A_ridge_solve", "B_mlp", "C_gru_path", "D_deeponet", "E_prototype",
                  "E_prototype_bregman", "F_bsf", "G_ridge_scorerprior",
                  "H_smoothed_argmax", "I_comma10k_regime", "J_adv_boundary",
                  "K_perclass_v8", "L_priormean_comma10k", "M_priormean_advb",
                  "N_aniso_coupled", "O_openpilot_geom", "P_priormean_aniso",
                  "Q_priormean_iso", "R_priormean_c10k_scorelaw",
-                 "S_priormean_openpilot")
+                 "S_priormean_openpilot", "T_gp_costate_posterior")
 
 
 def make_model(name: str):
@@ -583,6 +716,10 @@ def make_model(name: str):
         # openpilot ISOLATED arm, prior-mean (non-absorbable) formulation
         from tac.witness_control.aniso_perclass_lambda import OpenpilotPriorMeanAdjoint
         return OpenpilotPriorMeanAdjoint()
+    if name == "T_gp_costate_posterior":
+        # CLOSED-FORM GP costate posterior (Warnick 2025 §3.3–3.4): differentiated-RBF
+        # derivative posterior mean+cov; Ly=Q with L=d/dep; the solve-don't-train candidate
+        return GPCostatePosteriorAdjoint()
     raise ValueError(f"unknown architecture {name!r}; choose from {ARCHITECTURES}")
 
 
