@@ -92,6 +92,30 @@ def main(argv: list[str] | None = None) -> int:
                           sorted(routing.per_lens_solo_mae.items(), key=lambda kv: kv[1])})
         print("  winner:", routing.winner)
 
+    # regime-conditional self-dispatch backtest (#436): does per-STATE dispatch beat the
+    # global-single-best arm walk-forward? (past-only, no look-ahead; the honest arbiter)
+    dispatch = None
+    print("\n== regime-conditional dispatch backtest (#436; walk-forward vs global-single-best) ==")
+    try:
+        from tac.witness_control.regime_dispatch import (
+            backtest_dispatch, dispatch_for_trajectory)
+        dispatch = backtest_dispatch(traj, seed=args.seed)
+        print(f"  dispatcher WF {dispatch.dispatcher_wf_mae:.6f} "
+              f"(no-meta-guard {dispatch.dispatcher_wf_mae_no_meta_guard:.6f}) | "
+              f"global-single-best {dispatch.global_single_best_arm} "
+              f"{dispatch.global_single_best_wf_mae:.6f} | persistence "
+              f"{dispatch.persistence_wf_mae:.6f}")
+        print(f"  beats_persistence={dispatch.beats_persistence} "
+              f"beats_global_single_best={dispatch.beats_global_single_best}")
+        for r in dispatch.fold_rows:
+            print(f"    ep{r['epoch']:.0f} {r['regime']:9s}→{r['tool']:24s} "
+                  f"err {r['dispatcher_err']:.5f} (oracle {r['oracle_arm']}"
+                  f"{' ✓' if r['route_matches_oracle'] else ''})")
+        print(f"  VERDICT: {dispatch.verdict}")
+        print(f"  LIVE: {dispatch_for_trajectory(traj, seed=args.seed).explain()}")
+    except Exception as exc:
+        print(f"  dispatch backtest unavailable ({type(exc).__name__}: {exc})")
+
     print("\n== panel verdict (EVIDENCE_SHRUNK_STACKING) ==")
     verdict = run_panel(traj, routing_mode="EVIDENCE_SHRUNK_STACKING", seed=args.seed)
     for r in verdict.reports:
@@ -136,6 +160,7 @@ def main(argv: list[str] | None = None) -> int:
             "spawn_triggers": [t.trigger for t in verdict.spawn_tickets],
         },
         "faithfulness_audit": faith,
+        "regime_dispatch_backtest": dispatch.to_dict() if dispatch else None,
     }
     out.write_text(json.dumps(payload, indent=1, default=str))
     print(f"\nwrote {out}")

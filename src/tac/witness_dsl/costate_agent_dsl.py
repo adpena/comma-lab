@@ -143,6 +143,53 @@ class RoutingSpec(BaseModel):
         return self
 
 
+#: the tools the regime-conditional dispatcher may route to (dispatch-reachable): every
+#: lambda_net arm name PLUS the persistence incumbent (which is NOT a lambda_net arm).
+_DISPATCH_TOOLS: frozenset[str] = frozenset(
+    {"persistence", "T_gp_costate_posterior", "E_prototype", "E_prototype_bregman",
+     "F_bsf", "A_ridge_solve", "G_ridge_scorerprior"})
+#: the regime alphabet the dispatcher classifies into (past-only)
+_DISPATCH_REGIMES: frozenset[str] = frozenset({"transient", "plateau", "uncertain"})
+
+
+class DispatchPolicySpec(BaseModel):
+    """Regime-conditional SELF-DISPATCH (task #436) — the organ 'knowing what to use and when'.
+
+    The arbitration layer (``RoutingSpec`` SINGLE_BEST / ``arbitrate_architecture``) picks ONE
+    globally-best arm; this spec expresses the MEASURED fact (GP-costate memo §4 + envelope §3)
+    that the optimal tool is REGIME-CONDITIONAL. Per current PAST-ONLY state the organ
+    classifies its regime (transient / plateau / uncertain) and routes to the arm with the best
+    measured walk-forward skill for that regime, deferring to persistence when uncertain (the
+    meta-λ self-monitor governs the defer — 'knowing when to use nothing'). Compiles to
+    ``tac.witness_control.regime_dispatch``. The backtest is the arbiter; adoption is provisional
+    at n=1 (verdict_scope: instance)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    enabled: bool = True
+    regime_tool: tuple[tuple[str, str], ...] = (
+        ("transient", "T_gp_costate_posterior"),
+        ("plateau", "persistence"),
+        ("uncertain", "persistence"),
+    )
+    meta_lambda_guard: bool = True     # the self-monitor surprise defer governor (past-only)
+    provenance: str = ""
+
+    @model_validator(mode="after")
+    def _known_policy(self) -> "DispatchPolicySpec":
+        regimes = {r for r, _ in self.regime_tool}
+        if regimes != _DISPATCH_REGIMES:
+            raise ValueError(f"dispatch regime_tool must cover exactly {_DISPATCH_REGIMES}; "
+                             f"got {regimes}")
+        for regime, tool in self.regime_tool:
+            if tool not in _DISPATCH_TOOLS:
+                raise ValueError(f"dispatch tool {tool!r} for regime {regime!r} not in the "
+                                 f"dispatch-reachable set {sorted(_DISPATCH_TOOLS)}; never-invent")
+        return self
+
+    def policy_dict(self) -> dict[str, str]:
+        return dict(self.regime_tool)
+
+
 class AcquisitionSpec(BaseModel):
     """The self-inventing curriculum (Schmidhuber PowerPlay/curiosity) as a typed policy.
 
@@ -369,6 +416,7 @@ class CostateAgentProgram(BaseModel):
     actuators: tuple[ActuatorSpec, ...]
     experts: tuple[ExpertSpec, ...]
     routing: RoutingSpec
+    dispatch_policy: DispatchPolicySpec = DispatchPolicySpec()
     acquisition: AcquisitionSpec = AcquisitionSpec()
     equations: EquationBinding = EquationBinding()
     containment: ContainmentSpec = ContainmentSpec()
@@ -417,6 +465,9 @@ class CostateAgentProgram(BaseModel):
             "expert_architectures": sorted({e.architecture for e in self.experts}),
             "routing_mode": self.routing.mode,
             "single_best_lens": self.routing.single_best_lens,
+            "dispatch_enabled": self.dispatch_policy.enabled,
+            "dispatch_policy": self.dispatch_policy.policy_dict(),
+            "dispatch_meta_lambda_guard": self.dispatch_policy.meta_lambda_guard,
             "containment_envelope": self.containment.autonomous_envelope,
             "training_stages": {s.name: s.status for s in self.training_pipeline},
         }
@@ -437,6 +488,9 @@ class CostateAgentProgram(BaseModel):
             f"  routing: {self.routing.mode} (single_best={self.routing.single_best_lens}; "
             f"spread_gate={'on' if self.routing.spread_gate else 'off'}; "
             f"interpretable_head={'on' if self.routing.interpretable_head else 'OFF'})",
+            f"  dispatch: {'ON' if self.dispatch_policy.enabled else 'off'} regime→tool "
+            f"{self.dispatch_policy.policy_dict()} "
+            f"(meta-λ guard {'on' if self.dispatch_policy.meta_lambda_guard else 'off'})",
             f"  acquisition: {self.acquisition.policy} / {self.acquisition.proof_gate}",
             f"  laws: {self.equations.master_action_id} + {self.equations.costate_law_id}",
             f"  containment: {self.containment.autonomous_envelope}; heavy⇒operator-GO; "
@@ -529,6 +583,23 @@ class CompiledCostateOrgan:
         from tac.witness_control.self_monitor import self_activation_probe
         return self_activation_probe(self.sense(), seed=seed)
 
+    # DISPATCH — the regime-conditional self-dispatch (#436): classify the CURRENT regime
+    # past-only and route to the measured-best arm for it (defer to persistence when the
+    # meta-λ self-monitor distrusts the model). The organ 'knowing what to use and when'.
+    def dispatch(self, *, seed: int = 0):
+        from tac.witness_control.regime_dispatch import dispatch_for_trajectory
+        return dispatch_for_trajectory(
+            self.sense(), seed=seed,
+            meta_lambda_guard=self.program.dispatch_policy.meta_lambda_guard)
+
+    # DISPATCH BACKTEST — the arbiter (does per-state dispatch beat the global-single-best
+    # arm walk-forward? the honest gate, past-only, no look-ahead)
+    def dispatch_backtest(self, *, seed: int = 0):
+        from tac.witness_control.regime_dispatch import backtest_dispatch
+        return backtest_dispatch(
+            self.sense(), seed=seed,
+            meta_lambda_guard=self.program.dispatch_policy.meta_lambda_guard)
+
     # REFLECT — one GEPA cycle (reflection proposes, backtest disposes; Pareto
     # frontier over measured candidates; adoption only through the Gödel gate)
     def reflect(self, arch_reports: dict, *, incumbent: str = "E_prototype",
@@ -594,6 +665,17 @@ def derive_costate_agent_v1(run_dir: str) -> CostateAgentProgram:
                        activation_note=("prior-favored (low complexity)" if s.name == "flow"
                                         else "prior-weighted until measured skill accrues"))
             for s in LENSES),
+        dispatch_policy=DispatchPolicySpec(
+            enabled=True, meta_lambda_guard=True,
+            provenance="task #436 (2026-07-11): regime-conditional self-dispatch closes the "
+                       "global-single-best gap. MEASURED on the sealed #205 trajectory "
+                       "(regime_dispatch.backtest_dispatch, 7 walk-forward folds, past-only): "
+                       "dispatcher WF 0.001596 (meta-λ guard ON) BEATS both global-single-best "
+                       "T_gp_costate_posterior 0.001852 AND persistence 0.002792, routing 5/7 "
+                       "folds to the oracle arm. PROVISIONAL: n=1 trajectory, margin within "
+                       "fold-noise; the transient→GP / plateau→persistence policy is "
+                       "in-sample-derived (GP-costate memo §4 + envelope §3) — out-of-sample "
+                       "generalization owed at ≥2 trajectories. verdict_scope: instance."),
         acquisition=AcquisitionSpec(
             provenance="Schmidhuber self-improvement lineage (2026-07-11): PowerPlay "
                        "1112.5309 self-inventing curriculum · curiosity=innovation "

@@ -147,6 +147,17 @@ from tac.witness_control.self_monitor import (  # noqa: F401
     SelfAwarenessReport,
     self_activation_probe,
 )
+from tac.witness_control.regime_dispatch import (  # noqa: F401
+    DEFAULT_ARM_POOL,
+    DISPATCH_POLICY,
+    DispatchBacktest,
+    DispatchDecision,
+    RegimeClassification,
+    backtest_dispatch,
+    classify_regime,
+    dispatch_decision,
+    dispatch_for_trajectory,
+)
 from tac.witness_control.verdict_trend_alarm import (  # noqa: F401
     NO_ALARM,
     RISING_VERDICT,
