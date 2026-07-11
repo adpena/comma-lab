@@ -14903,6 +14903,19 @@ launch.sh is gitignored) so a REAL future drift fails a $0 unit test. 429 tests 
 gate rc=0; live run untouched (test-only). DSL/equations **N/A** (apparatus test guard). Pointer 0.19108282
 UNMOVED. The pattern worth naming: the apparatus is catching its own false alarms instead of faking fixes.
 
+### FEED-obsgap (2026-07-10, observer-gap root cause) — [no-triality] APPARATUS
+
+The live #205 run's "telemetry missing" (no `costate_shadow.jsonl`, no observer process) ROOT-CAUSED: the
+governor's **SUM-over-RAM training-admission gate was BLOCKING the score-neutral costate observer from
+starting** — it counted a read-only SENSE-organ against the training RAM budget and refused it, so the
+observer silently never launched (an ORPHANED-OBSERVABILITY failure, the operator's "default-off / silently-
+gated observability = orphaned signal" class). FIX: exempt costate observability SENSE-organs from the
+SUM-over-RAM admission gate — observability is score-neutral (reads only; cannot change bytes/d_seg/pose), so
+per "observability DEFAULTS ON, never gate score-neutral telemetry" it must not be blocked by the
+training-memory admission. Same class as #370 (exempt control-plane dashboard reload from the same gate).
+Apparatus (governor exemption) — DAG leg only; DSL/equations **N/A** (no lever, no measured law). Pointer
+0.19108282 UNMOVED. (Full observer report + n600 per-class table relayed separately when acfee11c finishes.)
+
 **Triality disposition (drift-detector reply):** FEED-v752cfg + the byte-identity guard test (3e249290a) are
 `[no-triality]` PURE APPARATUS — they mint NO measured law. The "byte-identity / reproduces 286/286" is a
 config-ARGV equality (a test pins argv reproduction), NOT a contest measurement: there is no d_seg / d_pose /
