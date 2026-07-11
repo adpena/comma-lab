@@ -15265,3 +15265,40 @@ Morse-Smale complex of `m = φ_top − φ_runnerup`. Apparatus `src/tac/boundary
 byte-closed carrier to confirm the win scales with d_H like pose SPD-cone did). Authority `[macOS-MLX advisory]`.
 **Pointer 0.19108282 UNMOVED** — an anisotropy map routes future carriers; it moves no score. Memo
 `.omx/research/partition_anisotropy_map_20260710.md`. Sister afa9d885 owns the lane carrier (disjoint).
+
+### FEED-lanefact (2026-07-10) — v8 LANE rate crux: ground-frame anisotropic factorization MEASURED — image-space baseline DOMINATED (−25% bytes at ≈parity), SPEC 1-2KB target REFUTED-as-jitter-bound
+
+**What ran ($0, n600-full, memory-light):** the FEED-lag follow-up — the lane carrier rebuilt as the
+3-factor anisotropy construction: (1) GEOMETRY: IPM ground chart (v_h=174 #327), per-line LATERAL-KNOT
+re-parametrization (lateral@{8,14,24,40}m ↔ deg-3 poly, bijective); (2) FACTORIZATION: lateral tracking
+(29 tracks, obs coverage 0.994) + world-static occupancy factored as paint(world) × shared ego travel
+S(t) (estimated from lane pixels: 1022.4 m/600 pair-frames = 1.71 m/frame; standalone 142 B, ξ-amortized
+0); (3) SPD-CONE water-filled coding of the per-track knot matrices (the −27% pose codec 348ac229f,
+reused) + a LOSSLESS world-aligned XOR+brotli occupancy codec (wrong shift ⇒ bytes not fidelity).
+Apparatus `src/tac/boundary_math/lane_ground_factorization.py` + `tools/probe_v8_lane_anisotropic_factorization.py`
+(11 tests: aniso-vs-iso SPD control, known-ego-travel dash recovery, wrong-shift losslessness). Artifact
+`experiments/results/v8_lane_factorization_probe_20260710/probe.json`. Authority `[macOS-MLX advisory]`
+(cached argmax, NO scorer forward, NOT byte-closed). **Pointer 0.19108282 UNMOVED.**
+
+- **WIN vs image space (the FEED-lag 97 B/frame baseline, reproduced 98.0 at r .824/IoU .590):** best
+  factorized point **73.7 B/frame (44.2 KB/600) at r .871 / p .634 / IoU .580** — 25% fewer bytes,
+  +0.047 recall, −0.010 IoU. Anisotropy exploited: pooled knot d_H **6.69** (n600). Cheaper points:
+  61.5 B/f @ IoU .516, 54.9 @ .476. Hybrid arithmetic: union 229 → ~206 B/f (rate 0.092 → ~0.082).
+- **NEGATIVE — the SPEC 1-2 KB lane band is a SKELETON price, not a carrier price (measured):** the
+  smooth-geometry skeleton (smoothed knots + static paint × visibility window) costs 10-14 KB but
+  collapses to IoU 0.24-0.27. Attribution matrix (n96): dropping knot-trajectory jitter costs 0.12 IoU;
+  dropping occupancy flicker costs 0.22 IoU — **both per-frame jitter channels are load-bearing**. The
+  residual factor is the SegNet argmax flicker (~8 B/obs knot jitter survives near-lossless SPD+delta+
+  brotli; ~7 B/obs occupancy churn survives world-aligned XOR): NOT transported by any static-world/ξ
+  factorization because it is not world-static — the parametric-domain twin of FEED-lag §4's pixel-delta
+  negative, consistent with L66 (annulus jitter) + L67 (CE-spikes=LANE). Per-frame PERIODIC dash model:
+  measured NEGATIVE (recall 0.64 — speed non-constant; verdict_scope: formulation).
+- **Consequence for v8:** the lane line-item splits: skeleton ~10-14 KB (tighter smoothing → maybe
+  2-4 KB) as the rate-skeleton/prior; the annulus jitter is the INR/trainer budget (SPEC §3 separatrix
+  precision) OR pay ~44 KB for a jitter-faithful parametric lane. Path to a real row: compose the 73.7
+  B/f S3 carrier into the per-class hybrid → byte-close → `upstream/evaluate.py` (v7.5-first unchanged).
+
+**Triality:** DAG=this FEED; DSL N/A (codec probe, no trainer lever); equations = NO registration — the
+jitter-dominance bound is a pre-anchor for the council-flagged SPEC §5 carrier-allocation law (needs
+n600-through-R). Memo `.omx/research/v8_lane_anisotropic_geometric_factorization_20260710.md`. Sister
+FEED (partition anisotropy map) routed d_H×share×(1−static); this FEED is the lane-carrier leg it named.
