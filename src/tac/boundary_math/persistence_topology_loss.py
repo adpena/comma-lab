@@ -656,7 +656,14 @@ def make_persistence_topology_loss_mlx_compiled(
     Closes over the (static) target classes + hyperparameters so ``mx.compile`` can fuse the
     soft-skeleton pool launches. ``enabled=False`` returns the un-compiled fn (ablation / debug).
     ``shapeless=True`` reuses one graph across changing (H,W) (per ``mlx_compile_step`` guidance).
-    The math + numpy-authority parity are unchanged by compilation (fusion ≠ new numerics).
+    NUMERICS CAVEAT (#356 law, witness_fp_reorder_transform_bit_identity_wall_v1,
+    MEASURED 2026-07-11): mx.compile fusion CAN change fp numerics (fma contraction /
+    reassociation — deterministic-but-DIFFERENT, Δ 1e-7..1e-3 on witness graphs). Compiled
+    output is NOT assumed bit-identical to the eager path: any use on a score-faithful
+    lineage requires a per-config bit-identity certificate vs the numpy authority
+    (tac.mlx_safe_compile certify-then-compile / mlx_compile_step.assert_compile_bit_identical),
+    or it enters as a LEVER, never a neutral speedup. This factory is currently
+    verify-script-only exposure (not on the launch path).
     """
     import mlx.core as mx
 

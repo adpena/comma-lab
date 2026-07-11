@@ -1279,6 +1279,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-dir", default=None,
                     help="run out-dir (default: experiments/results/levelset_n<N>_witness_<utc>)")
     ap.add_argument("--label", default=None, help="daemon label (default: derived from out-dir)")
+    ap.add_argument("--readiness-defer", action="append", default=None, metavar="RUNG=REASON",
+                    help="(repeatable) record a launch-readiness DEFER for a fire-now duty rung "
+                         "the config deliberately excludes: writes a canonical "
+                         "'# LAUNCH_READINESS_DEFER:<rung>=<reason>' line into the emitted "
+                         "launch.sh so the daemon's readiness gate honors it. Reason must be "
+                         "substantive (the gate rejects placeholders). Added 2026-07-11 after the "
+                         "#432 fire required hand-editing launch.sh + a direct sdd spawn because "
+                         "the launcher regenerates launch.sh and had no defer passthrough.")
     ap.add_argument("--purpose", default=None,
                     help="DECLARED one-line intent of THIS run (e.g. 'clean baseline / control', "
                          "'A/B arm: eikonal 0.07 vs mod32cap parent', 'frontier candidate'). "
@@ -1524,6 +1532,27 @@ def main(argv: list[str] | None = None) -> int:
 
     # (b) WRITE launch.sh (script-based command — no word-split fragility).
     launch_sh = write_launch_sh(cfg, out_dir, extra_flags=extra_flags or None)
+    if getattr(args, "readiness_defer", None):
+        # Persist operator-recorded readiness DEFERs into the emitted launch.sh (the
+        # surface the readiness gate reads). Atomic rewrite (tmp+os.replace) per the
+        # same live-bash-fd rule write_launch_sh honors.
+        _body = launch_sh.read_text()
+        _defer_lines = []
+        for _d in args.readiness_defer:
+            _rung, _sep, _reason = str(_d).partition("=")
+            if not _sep or len(_reason.strip()) < 8:
+                print(f"[launch-witness] ERROR: --readiness-defer needs RUNG=<substantive reason>: {_d!r}",
+                      file=sys.stderr)
+                return 2
+            _defer_lines.append(f"# LAUNCH_READINESS_DEFER:{_rung.strip()}={_reason.strip()}\n")
+        _lines = _body.splitlines(keepends=True)
+        _idx = next((i for i, _ln in enumerate(_lines) if not _ln.startswith("#") and _ln.strip()), 0)
+        _tmp = out_dir / f".launch.sh.tmp.defer.{os.getpid()}"
+        _tmp.write_text("".join(_lines[:_idx]) + "".join(_defer_lines) + "".join(_lines[_idx:]))
+        _tmp.chmod(0o755)
+        os.replace(_tmp, launch_sh)
+        print(f"[launch-witness] readiness-defer recorded in launch.sh: "
+              f"{', '.join(d.split('=')[0] for d in args.readiness_defer)}")
     run_log = out_dir / "run.log"
     print(f"# wrote {launch_sh}")
 

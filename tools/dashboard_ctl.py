@@ -109,8 +109,16 @@ def server_procs(port: int) -> list[tuple[int, int, str]]:
 
 def supervisor_alive() -> bool:
     """True iff a dashboard_supervisor.py monitor daemon is running (its self-heal loop
-    owns the server+tunnel, so ensure-up defers to it rather than fighting it)."""
-    return any(_SUPERVISOR_SIG in cmd and "--run" in cmd and _TRAINING_SIG not in cmd
+    owns the server+tunnel, so ensure-up defers to it rather than fighting it).
+
+    BUG FIXED 2026-07-11: the old ``_TRAINING_SIG not in cmd`` exclusion (meant to
+    skip the trainer) excluded the SUPERVISOR ITSELF, because the supervisor's own
+    argv carries ``--training-sig train_levelset_witness`` as a parameter value —
+    so status permanently reported "supervisor gone" while it ran (false-negative).
+    A row containing the supervisor script + ``--run`` IS the supervisor; the
+    trainer's cmdline never contains dashboard_supervisor.py, so no exclusion is
+    needed for aliveness."""
+    return any(_SUPERVISOR_SIG in cmd and "--run" in cmd
                for _, _, cmd in _ps_rows())
 
 

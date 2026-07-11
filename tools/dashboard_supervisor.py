@@ -457,7 +457,13 @@ class DashboardSession:
 
 # ───────────────────────── modes ─────────────────────────
 def _add_common_args(ap: argparse.ArgumentParser) -> None:
-    ap.add_argument("--run-dir", default="experiments/results/levelset_openpilot_seeded_n200_DEPLOY")
+    # DEFAULT IS DYNAMIC (2026-07-11): the old baked run-dir default went stale with
+    # every new arm (the status line lied about a long-dead run). "" resolves at
+    # parse time to the CONTRACT's newest run dir (tac.witness_run_artifacts.
+    # newest_run_dir — name-agnostic, launch.sh+run.log structural marker), so a
+    # bare `dashboard_supervisor.py` always supervises the LIVE arm. Explicit
+    # --run-dir still pins (A/B fleets).
+    ap.add_argument("--run-dir", default="")
     ap.add_argument("--dash-dir", default=".omx/tmp/dash_levelset_deploy")
     ap.add_argument("--hostname", default="comma-lab.adpena.com")
     ap.add_argument("--tunnel-name", default="comma-lab")
@@ -472,8 +478,9 @@ def _add_common_args(ap: argparse.ArgumentParser) -> None:
                     help="OVERRIDE only; default = server derives from the run's own config")
     ap.add_argument("--goal-dseg", type=float, default=0.00092)
     ap.add_argument("--goal-dseg-15", type=float, default=0.00032)
-    ap.add_argument("--training-pid", type=int, default=26124,
-                    help="hint pid; liveness also checks --training-sig (pid may go stale)")
+    ap.add_argument("--training-pid", type=int, default=0,
+                    help="hint pid (0 = sig-only); liveness checks --training-sig, which "
+                         "survives relaunch — a baked pid default is always stale (was 26124)")
     ap.add_argument("--training-sig", default="train_levelset_witness",
                     help="cmdline signature for robust training-liveness (survives relaunch)")
     ap.add_argument("--inactivity-min", type=float, default=30.0)
@@ -569,6 +576,19 @@ def main() -> int:
     g.add_argument("--down", action="store_true", help="tear everything down")
     _add_common_args(ap)
     a = ap.parse_args()
+    if not a.run_dir:
+        # dynamic default (see _add_common_args): supervise the CONTRACT's newest run
+        # dir, so a bare invocation always follows the live arm — never a baked name.
+        try:
+            import sys as _sys
+            from pathlib import Path as _P
+            _sys.path.insert(0, str(_P(__file__).resolve().parent.parent / "src"))
+            from tac.witness_run_artifacts import newest_run_dir as _nrd
+            _n = _nrd("experiments/results")
+            a.run_dir = str(_n) if _n else "experiments/results"
+        except Exception:
+            a.run_dir = "experiments/results"
+        print(json.dumps({"stage": "supervisor_run_dir_resolved", "run_dir": a.run_dir}), flush=True)
     if a.status:
         return cmd_status(a)
     if a.down:
