@@ -372,7 +372,8 @@ def config_family(cfg) -> str:
     header so run-identity consumers (dashboard) can cite it as evidence."""
     # crucible_v7 is a DSL TypedWitnessConfig (name field), not a witness_autoconfig dataclass —
     # detect it by its declared name so the run-identity header does not MISLABEL it proven_base.
-    if getattr(cfg, "name", "") in ("crucible_v7", "crucible_v752"):
+    if getattr(cfg, "name", "") in ("crucible_v7", "crucible_v752", "crucible_v753",
+                                    "v9_cgauge", "v9_cgauge_432"):
         return getattr(cfg, "name")
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
@@ -754,6 +755,20 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
         # protocol as crucible_v752 (v7-identical constants+governance reused). means != ends: a MEANS.
         return wac.compile_crucible_v753_launch_config(
             gt_cache, num_pairs=num_pairs, **_ek)
+    if config == "v9_cgauge_432":
+        # Task #432 — the V9·CGauge COHERENT STATE-GATED-SCHEDULE ARM (the #430 bundle's
+        # witness-DSL compile on the V9·CGauge base; vehicle_v9_cgauge_naming_20260711 the design
+        # spec). = crucible_v752(self_orient=False, amber-equivalent explicit stability) + the V9
+        # T1 phase-advection LEVER (0.4 @ ep726 static approx; label_floor event N7 BUILD-OWED) +
+        # mod-dim 19 (cgauge_whitney_moddim_v1; the arm doubles as #299 Arm-A on the SPEC_v9 base).
+        # Cascade gates ride the wired trainer sensors (lane_nucleus / annulus_plateau /
+        # powerlaw_meat / sigma_min_plateau / tau-event / birth-completion); per-class-λ budget
+        # shifts remain ORGAN-ADVISORY. FRESH start (mod-19 cannot warm-start mod-32 checkpoints).
+        # Same launcher-facing cfg protocol as crucible_v752 (v7 constants+governance reused).
+        # CONTROL = the #205 banked mod-32 baseline. means != ends: a MEANS.
+        from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_432_launch_config
+        return compile_v9_cgauge_432_launch_config(
+            gt_cache, num_pairs=num_pairs, **_ek)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -766,8 +781,8 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
     raise ValueError(
         f"derive_named_config: unknown config name {config!r} — no derive branch resolves it. Known "
         f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
-        f"crucible_v7, crucible_v752, crucible_v753. Add an explicit branch (NEVER silently fall "
-        f"through to proven_base).")
+        f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432. Add an explicit branch (NEVER "
+        f"silently fall through to proven_base).")
 
 
 # ───────────────────────── RSS calibration smoke (BUILD #294 piece B; optional, default OFF) ────
@@ -1188,7 +1203,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="overfit=False: aggressive Whitney-floor mod-dim (rate-saving)")
     ap.add_argument("--config", default=None,
                     choices=["proven_base", "all_levers", "sealed_205", "store_nothing_205",
-                             "fresh_seeded", "crucible_v6", "crucible_v7", "crucible_v752"],
+                             "fresh_seeded", "crucible_v6", "crucible_v7", "crucible_v752",
+                             "crucible_v753", "v9_cgauge_432"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
@@ -1220,7 +1236,15 @@ def main(argv: list[str] | None = None) -> int:
                     "sealed crucible_v7 trunk + #121 d_seg-aware taper MINUS σ_cc′ MINUS the self-orient "
                     "directional basis [owed-16 P9 RESOLVED-REFUTING: realized −48% transfer measured "
                     "≈0, 47 GiB RAM tax removed; operator GO 2026-07-10]; reuses v7's constants + "
-                    "schedule-governance manifests with its own DSL-provenance fingerprint).")
+                    "schedule-governance manifests with its own DSL-provenance fingerprint), or "
+                    "crucible_v753 (the fractal-synthesis typed-delta over v7.5.2; DEFAULT branch = "
+                    "argv byte-identical to the GO'd v7.5.2 launch, A/B arms composed via kwargs), or "
+                    "v9_cgauge_432 (task #432: the V9·CGauge COHERENT STATE-GATED-SCHEDULE ARM = "
+                    "crucible_v752 self-orient-OFF + explicit amber stability + the T1 phase-advection "
+                    "LEVER 0.4@726 + mod-dim 19 [cgauge_whitney_moddim_v1; doubles as #299 Arm-A on "
+                    "the SPEC_v9 base]; the #430 cascade rides the wired trainer sensors; FRESH start "
+                    "— mod-19 cannot warm-start mod-32 checkpoints; CONTROL = the #205 banked "
+                    "mod-32 baseline).")
     ap.add_argument("--extra-trainer-flags", default=None,
                     help="(C5 passthrough) EXTRA trainer flags appended verbatim to the emitted "
                     "launch.sh command (shell-split; e.g. \"--eikonal-weight 0.07 --seed-islands\"). "
