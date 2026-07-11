@@ -15529,3 +15529,37 @@ Relative significance of the SPEED leg (per the magnitude-dismissal rule): a spe
 the **measured bit-identity failure** (grad Δ 2.3e-7…2.3e-5 ≠ 0.0 = the #410 exit criterion, a MEASURED
 un-recoverability of trajectory-faithfulness under this transform class), which kills the formulation
 independently of any magnitude judgment.
+
+## FEED-442-ww-pgd (2026-07-11) — WeightWatcher / WW-PGD Phase-1 $0 diagnostic gate: LEVER **NO-GO**, diagnostic re-motivates #242/#140
+WW-PGD (spectral-projection optimizer wrapper: ESD tail via `k_mid=floor((detX_num+num_pl_spikes)/2)` →
+rank-ordered PL template targeting **α→2** → Cayley update in log-eigenvalue space → ERG retract
+`Σ log λ_tail=0 ⇔ detX=1` → blend `η=0.5`). WW's own page: "Experimental", "roughly accuracy-neutral" —
+value = diagnostics, not the projection. Estimators implemented directly (no pip weightwatcher/powerlaw):
+CSN power-law MLE + KS-xmin; operational ERG detX; Martin-Mahoney HTSR. Data = #205 mod32cap
+`tau_crossover` frozen ckpts at KNOWN events (CE-end 299, τ-best 650, **Muon 726**, 925, final 1000);
+trunk = 5×(96×96). Script `experiments/ww_pgd_442_spectral_gate.py`; metrics
+`experiments/reports/ww_pgd_442_phase1_metrics.json`. **MEASURED (advisory NON-PROMOTABLE):**
+- **Fit quality:** trunk median KS D **0.053** (n_eig 96) — decent fit; trunk **α 2.18–2.81 mean ≈2.5**
+  = already in HTSR well-trained band, **near the α→2 target** ⟹ WW-PGD projection has **near-zero headroom**.
+- **H1 regime/sense = NO-GO:** α range/noise **0.35**, detX 0.18 — HTSR metrics FLAT across every event.
+  Only log-spectral-norm moves (range/noise 2.56, drops after Muon 726) = trivial weight-shrink, not WW-specific.
+- **H2 rate/codability = PARTIAL GREEN, wrong predictor:** homogeneous trunk (n=25, bits/param 6.24–7.20 =
+  real 16% range) — **spectral_entropy** Pearson **+0.891** (Spearman 0.59) predicts codability; α only
+  Pearson 0.856 / **Spearman 0.52** (range-driven). Codability IS spectral, but the clean predictor is
+  **effective-rank/entropy, not α** — duplicates MDL/#242. Bonus: `code` payload (1200×32, ~20KB counted)
+  is **near-rank-1 (stable_rank 1.02, spec-ent 0.17)** ⟹ low-rank code codec #140 motivated.
+- **H3 quality = NO-GO:** mean-α vs d_seg Pearson −0.82 but **Spearman −0.40, n=4, non-monotone** (ep925
+  highest α yet d_seg rises); α movement within fit noise.
+**GATE: Phase-2 WW-PGD lever NOT built** — H1/H3 noise, H2 signal carried by spectral-entropy (not α) +
+duplicates #242, trunk already near-critical (α→2 headroom ≈0), and the projection is a weight-modifying
+physics lever (full A/B for ~nil gain) = **dominated**. No lever, no stub. Diagnostic re-motivates
+effective-rank/MDL weight regularizer #242 + low-rank code codec #140 with fresh MEASURED evidence.
+- **verdict_scope:** H1/H3 = **INSTANCE/FORMULATION** (single #205 mod32cap lineage, n=4–5 ckpts, width-96
+  α sampling noise) — the WW-PGD *paradigm* is NOT falsified, only its value ON THIS witness at THIS width
+  is measured near-nil; a much wider net (>>96) or a different vehicle could differ. H2 relation = INSTANCE
+  (n=25, one lineage, advisory). Relative significance: lever ΔS≈0 (H1/H3 no signal; H2 dominated by #242) →
+  ΔS/gap ≈ 0/0.041 = **0**; DISPOSITIVE = the near-zero α→2 headroom + predictor-is-entropy-not-α, not magnitude.
+- **triality:** DAG = this FEED · DSL = N/A-with-reason (gate NO-GO; no `Lever` factory — a default-off
+  stub with no measured value = orphan/stub theater) · equations = N/A-with-reason (H2 relation INSTANCE-scope
+  advisory, duplicates MDL #242; a canonical LAW implies FAMILY+ scope). Memo
+  `weightwatcher_ww_pgd_442_20260711.md`. Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS).

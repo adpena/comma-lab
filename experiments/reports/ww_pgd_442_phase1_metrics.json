@@ -1,0 +1,965 @@
+{
+ "task": "#442 WW-PGD Phase-1 spectral diagnostic gate",
+ "axis_tag": "[macOS-CPU advisory] NON-PROMOTABLE",
+ "pointer": "0.19108282 [contest-CPU] UNMOVED (this is MEANS)",
+ "lineage": "levelset_n600_witness_mod32cap_20260706T115554Z (#205 mod32cap)",
+ "known_events": "CE-end ep299, tau-best ep650, Muon-start ep726, ep925, final ep1000",
+ "estimators": "CSN power-law MLE + KS xmin; ERG detX operational; Martin-Mahoney HTSR",
+ "fit_quality": {
+  "square_trunk_median_ks_D": 0.05349215678585961,
+  "square_trunk_max_ks_D": 0.06286191396278962,
+  "n_eig_square_trunk": 96,
+  "interpretation": "KS D >~0.10 at width-96 => alpha is NOISE-dominated; verdict scope INSTANCE/FORMULATION not FAMILY."
+ },
+ "H1_regime_sense": {
+  "alpha": {
+   "trajectory": {
+    "ep299_CEend": [
+     2.5028690808366263,
+     0.15161623428788212
+    ],
+    "ep650_tauBest": [
+     2.5436745163638523,
+     0.193748845419115
+    ],
+    "ep726_MuonStart": [
+     2.5453253126872166,
+     0.20790451057333617
+    ],
+    "ep925_liveEMA": [
+     2.5479006197699845,
+     0.17954584159026252
+    ],
+    "final_ep1000": [
+     2.4845195881967532,
+     0.13089009542010513
+    ]
+   },
+   "across_ckpt_range": 0.06338103157323127,
+   "within_ckpt_layer_spread_median": 0.17954584159026252,
+   "range_over_noise": 0.35300751614104037
+  },
+  "stable_rank": {
+   "trajectory": {
+    "ep299_CEend": [
+     8.917199223675558,
+     0.7512032407913447
+    ],
+    "ep650_tauBest": [
+     9.311879729748702,
+     0.7529514507997592
+    ],
+    "ep726_MuonStart": [
+     9.336629903742764,
+     0.7551201340683866
+    ],
+    "ep925_liveEMA": [
+     8.877826568053504,
+     0.7596225891250246
+    ],
+    "final_ep1000": [
+     8.830114172527434,
+     0.7681849968282972
+    ]
+   },
+   "across_ckpt_range": 0.5065157312153303,
+   "within_ckpt_layer_spread_median": 0.7551201340683866,
+   "range_over_noise": 0.6707750308369586
+  },
+  "detX_num": {
+   "trajectory": {
+    "ep299_CEend": [
+     93.8,
+     4.4
+    ],
+    "ep650_tauBest": [
+     93.8,
+     4.4
+    ],
+    "ep726_MuonStart": [
+     93.6,
+     4.800000000000001
+    ],
+    "ep925_liveEMA": [
+     93.2,
+     3.762977544445356
+    ],
+    "final_ep1000": [
+     93.0,
+     3.794733192202055
+    ]
+   },
+   "across_ckpt_range": 0.7999999999999972,
+   "within_ckpt_layer_spread_median": 4.4,
+   "range_over_noise": 0.18181818181818116
+  },
+  "log_spectral_norm": {
+   "trajectory": {
+    "ep299_CEend": [
+     1.6635890547347856,
+     0.031790126297667635
+    ],
+    "ep650_tauBest": [
+     1.6593748286570058,
+     0.03170056899382455
+    ],
+    "ep726_MuonStart": [
+     1.6577178334636316,
+     0.03152378816204827
+    ],
+    "ep925_liveEMA": [
+     1.5965030788544414,
+     0.03815790191107366
+    ],
+    "final_ep1000": [
+     1.5822457812607282,
+     0.0395441697281095
+    ]
+   },
+   "across_ckpt_range": 0.08134327347405734,
+   "within_ckpt_layer_spread_median": 0.031790126297667635,
+   "range_over_noise": 2.5587590534368307
+  },
+  "spectral_entropy": {
+   "trajectory": {
+    "ep299_CEend": [
+     3.723681645412485,
+     0.09840554381312562
+    ],
+    "ep650_tauBest": [
+     3.7456645422955552,
+     0.0997502216538119
+    ],
+    "ep726_MuonStart": [
+     3.746280012344557,
+     0.10028216311341526
+    ],
+    "ep925_liveEMA": [
+     3.731095834888449,
+     0.08605105221558124
+    ],
+    "final_ep1000": [
+     3.72976091134903,
+     0.08442563362660137
+    ]
+   },
+   "across_ckpt_range": 0.022598366932072178,
+   "within_ckpt_layer_spread_median": 0.09840554381312562,
+   "range_over_noise": 0.22964526241516428
+  }
+ },
+ "H2_rate_codability": {
+  "pooled_all_layers": {
+   "alpha_vs_bits_per_param": {
+    "pearson": 0.36848827219481595,
+    "spearman": 0.48655462184873954,
+    "n": 35
+   },
+   "stable_rank_vs_bits_per_param": {
+    "pearson": 0.7877388945837368,
+    "spearman": 0.35406162464986,
+    "n": 35
+   },
+   "spectral_norm_vs_bits_per_param": {
+    "pearson": -0.9621268345775812,
+    "spearman": -0.4596638655462185,
+    "n": 35
+   },
+   "log_spectral_norm_vs_bits_per_param": {
+    "pearson": -0.9625772530701386,
+    "spearman": -0.4596638655462185,
+    "n": 35
+   },
+   "spectral_entropy_vs_bits_per_param": {
+    "pearson": 0.9748592154730885,
+    "spearman": 0.7792717086834735,
+    "n": 35
+   },
+   "detX_num_vs_bits_per_param": {
+    "pearson": 0.6881546595652854,
+    "spearman": 0.623249299719888,
+    "n": 35
+   },
+   "alpha_weighted_vs_bits_per_param": {
+    "pearson": -0.7388265542681384,
+    "spearman": -0.2635854341736695,
+    "n": 35
+   }
+  },
+  "square_trunk_only": {
+   "alpha_vs_bits_per_param": {
+    "pearson": 0.8556652690975055,
+    "spearman": 0.5207692307692308,
+    "n": 25
+   },
+   "stable_rank_vs_bits_per_param": {
+    "pearson": 0.3412001168758132,
+    "spearman": 0.21846153846153843,
+    "n": 25
+   },
+   "spectral_norm_vs_bits_per_param": {
+    "pearson": -0.002654544145827115,
+    "spearman": -0.08846153846153845,
+    "n": 25
+   },
+   "log_spectral_norm_vs_bits_per_param": {
+    "pearson": -0.019355527068933287,
+    "spearman": -0.08846153846153845,
+    "n": 25
+   },
+   "spectral_entropy_vs_bits_per_param": {
+    "pearson": 0.8909359078806777,
+    "spearman": 0.5915384615384616,
+    "n": 25
+   },
+   "detX_num_vs_bits_per_param": {
+    "pearson": 0.8869181072318977,
+    "spearman": 0.36,
+    "n": 25
+   },
+   "alpha_weighted_vs_bits_per_param": {
+    "pearson": 0.773771823253691,
+    "spearman": 0.43538461538461537,
+    "n": 25
+   }
+  },
+  "note": "bits_per_param = 8*brotli_int8_bytes/n_params (codability proxy; lower=more compressible=cheaper counted bytes)"
+ },
+ "H3_quality_dseg": {
+  "mean_trunk_alpha_vs_d_seg": {
+   "pearson": -0.8213191389975065,
+   "spearman": -0.39999999999999997,
+   "n": 4
+  },
+  "checkpoints_used": [
+   "ep299_CEend",
+   "ep650_tauBest",
+   "ep726_MuonStart",
+   "ep925_liveEMA"
+  ],
+  "pairs": [
+   [
+    "ep299_CEend",
+    2.5029,
+    0.004594
+   ],
+   [
+    "ep650_tauBest",
+    2.5437,
+    0.003146
+   ],
+   [
+    "ep726_MuonStart",
+    2.5453,
+    0.003033
+   ],
+   [
+    "ep925_liveEMA",
+    2.5479,
+    0.003867
+   ]
+  ]
+ },
+ "per_layer_rows": [
+  {
+   "ckpt": "ep299_CEend",
+   "epoch": 299,
+   "layer": "in_proj.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.2402305068147372,
+   "ks_D": 0.06286191396278962,
+   "xmin": 4.0407076983973855,
+   "num_pl_spikes": 25,
+   "alpha_weighted": 3.6298893121276135,
+   "log_spectral_norm": 1.620319561351192,
+   "spectral_norm": 6.458918144814752,
+   "stable_rank": 8.297086592660122,
+   "detX_num": 85,
+   "spectral_entropy": 3.550985505605955,
+   "n_params": 9216,
+   "brotli_int8_bytes": 7362,
+   "bits_per_param": 6.390625
+  },
+  {
+   "ckpt": "ep299_CEend",
+   "epoch": 299,
+   "layer": "hidden.0.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.657934423626333,
+   "ks_D": 0.05927447819848197,
+   "xmin": 7.63316716587173,
+   "num_pl_spikes": 19,
+   "alpha_weighted": 4.416343210649303,
+   "log_spectral_norm": 1.6615696652981744,
+   "spectral_norm": 6.773058592870762,
+   "stable_rank": 10.060339844555461,
+   "detX_num": 96,
+   "spectral_entropy": 3.801115576417032,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8036,
+   "bits_per_param": 6.975694444444445
+  },
+  {
+   "ckpt": "ep299_CEend",
+   "epoch": 299,
+   "layer": "hidden.1.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.4752999668529077,
+   "ks_D": 0.04381148600195833,
+   "xmin": 5.648175283363751,
+   "num_pl_spikes": 25,
+   "alpha_weighted": 4.237689960047935,
+   "log_spectral_norm": 1.7119904725873394,
+   "spectral_norm": 7.1778641794439455,
+   "stable_rank": 8.959470547292861,
+   "detX_num": 96,
+   "spectral_entropy": 3.759255700200117,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8214,
+   "bits_per_param": 7.130208333333333
+  },
+  {
+   "ckpt": "ep299_CEend",
+   "epoch": 299,
+   "layer": "hidden.2.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.647968792120264,
+   "ks_D": 0.0599718658671039,
+   "xmin": 5.0907973269327735,
+   "num_pl_spikes": 27,
+   "alpha_weighted": 4.347093974367731,
+   "log_spectral_norm": 1.6416711508472706,
+   "spectral_norm": 6.619658349429669,
+   "stable_rank": 9.330485220897984,
+   "detX_num": 96,
+   "spectral_entropy": 3.822632283801477,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8242,
+   "bits_per_param": 7.154513888888889
+  },
+  {
+   "ckpt": "ep299_CEend",
+   "epoch": 299,
+   "layer": "hidden.3.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.4929117147688906,
+   "ks_D": 0.048300412145702576,
+   "xmin": 4.350946716996325,
+   "num_pl_spikes": 27,
+   "alpha_weighted": 4.1940607674292485,
+   "log_spectral_norm": 1.6823944235899528,
+   "spectral_norm": 6.9374076005711665,
+   "stable_rank": 7.9386139129713635,
+   "detX_num": 96,
+   "spectral_entropy": 3.6844191610378436,
+   "n_params": 9216,
+   "brotli_int8_bytes": 7866,
+   "bits_per_param": 6.828125
+  },
+  {
+   "ckpt": "ep299_CEend",
+   "epoch": 299,
+   "layer": "film.weight",
+   "shape": "768x32",
+   "n_eig": 32,
+   "alpha": 4.241561159452569,
+   "ks_D": 0.0663181264379683,
+   "xmin": 20.76884349153636,
+   "num_pl_spikes": 17,
+   "alpha_weighted": 7.129771244947222,
+   "log_spectral_norm": 1.6809309065503173,
+   "spectral_norm": 6.925728353115586,
+   "stable_rank": 15.384616624273884,
+   "detX_num": 32,
+   "spectral_entropy": 3.4004979303214595,
+   "n_params": 24576,
+   "brotli_int8_bytes": 20495,
+   "bits_per_param": 6.671549479166667
+  },
+  {
+   "ckpt": "ep299_CEend",
+   "epoch": 299,
+   "layer": "code",
+   "shape": "1200x32",
+   "n_eig": 32,
+   "alpha": 1.9429993766206817,
+   "ks_D": 0.10931984023722774,
+   "xmin": 2.2285933902227337,
+   "num_pl_spikes": 32,
+   "alpha_weighted": 7.90504649278414,
+   "log_spectral_norm": 4.068476082855372,
+   "spectral_norm": 108.20268592309735,
+   "stable_rank": 1.0180524695972848,
+   "detX_num": 32,
+   "spectral_entropy": 0.14407851339869926,
+   "n_params": 38400,
+   "brotli_int8_bytes": 18943,
+   "bits_per_param": 3.946458333333333
+  },
+  {
+   "ckpt": "ep650_tauBest",
+   "epoch": 650,
+   "layer": "in_proj.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.1807342068176383,
+   "ks_D": 0.058905789837441325,
+   "xmin": 3.8040334389703334,
+   "num_pl_spikes": 26,
+   "alpha_weighted": 3.536791575753141,
+   "log_spectral_norm": 1.6218352354432077,
+   "spectral_norm": 6.470198694804738,
+   "stable_rank": 8.38360889918456,
+   "detX_num": 85,
+   "spectral_entropy": 3.558348954034937,
+   "n_params": 9216,
+   "brotli_int8_bytes": 7224,
+   "bits_per_param": 6.270833333333333
+  },
+  {
+   "ckpt": "ep650_tauBest",
+   "epoch": 650,
+   "layer": "hidden.0.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.6791505127244024,
+   "ks_D": 0.05349215678585961,
+   "xmin": 7.948531977998548,
+   "num_pl_spikes": 19,
+   "alpha_weighted": 4.470757797053601,
+   "log_spectral_norm": 1.668722147494181,
+   "spectral_norm": 6.829062284899707,
+   "stable_rank": 10.206200293767058,
+   "detX_num": 96,
+   "spectral_entropy": 3.8073309098023795,
+   "n_params": 9216,
+   "brotli_int8_bytes": 7923,
+   "bits_per_param": 6.877604166666667
+  },
+  {
+   "ckpt": "ep650_tauBest",
+   "epoch": 650,
+   "layer": "hidden.1.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.5522904661369457,
+   "ks_D": 0.041666666666666664,
+   "xmin": 6.142794900908743,
+   "num_pl_spikes": 24,
+   "alpha_weighted": 4.358776746320131,
+   "log_spectral_norm": 1.7077902394539823,
+   "spectral_norm": 7.143237990802107,
+   "stable_rank": 9.225607018072736,
+   "detX_num": 96,
+   "spectral_entropy": 3.7728023949129343,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8148,
+   "bits_per_param": 7.072916666666667
+  },
+  {
+   "ckpt": "ep650_tauBest",
+   "epoch": 650,
+   "layer": "hidden.2.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.735536929334953,
+   "ks_D": 0.0542661530424553,
+   "xmin": 5.843507699786323,
+   "num_pl_spikes": 25,
+   "alpha_weighted": 4.451082396110223,
+   "log_spectral_norm": 1.627132994761779,
+   "spectral_norm": 6.509782783204953,
+   "stable_rank": 10.133080460400535,
+   "detX_num": 96,
+   "spectral_entropy": 3.8462619990361104,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8264,
+   "bits_per_param": 7.173611111111111
+  },
+  {
+   "ckpt": "ep650_tauBest",
+   "epoch": 650,
+   "layer": "hidden.3.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.5706604668053217,
+   "ks_D": 0.05781240646567748,
+   "xmin": 5.010448958905674,
+   "num_pl_spikes": 26,
+   "alpha_weighted": 4.296585262101568,
+   "log_spectral_norm": 1.6713935261318789,
+   "spectral_norm": 6.8500976585765345,
+   "stable_rank": 8.610901977318619,
+   "detX_num": 96,
+   "spectral_entropy": 3.7435784536914136,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8126,
+   "bits_per_param": 7.053819444444445
+  },
+  {
+   "ckpt": "ep650_tauBest",
+   "epoch": 650,
+   "layer": "film.weight",
+   "shape": "768x32",
+   "n_eig": 32,
+   "alpha": 4.8880037611738905,
+   "ks_D": 0.0625,
+   "xmin": 24.487701993319277,
+   "num_pl_spikes": 16,
+   "alpha_weighted": 8.4043594241589,
+   "log_spectral_norm": 1.719384811222103,
+   "spectral_norm": 7.239230510870144,
+   "stable_rank": 15.587566209229378,
+   "detX_num": 32,
+   "spectral_entropy": 3.409034680861237,
+   "n_params": 24576,
+   "brotli_int8_bytes": 20285,
+   "bits_per_param": 6.603190104166667
+  },
+  {
+   "ckpt": "ep650_tauBest",
+   "epoch": 650,
+   "layer": "code",
+   "shape": "1200x32",
+   "n_eig": 32,
+   "alpha": 2.035458263623282,
+   "ks_D": 0.11291554976674523,
+   "xmin": 3.1577264364894897,
+   "num_pl_spikes": 32,
+   "alpha_weighted": 8.294861678756176,
+   "log_spectral_norm": 4.075181410986361,
+   "spectral_norm": 109.04122089538909,
+   "stable_rank": 1.0215695125269344,
+   "detX_num": 32,
+   "spectral_entropy": 0.16935806357855798,
+   "n_params": 38400,
+   "brotli_int8_bytes": 20355,
+   "bits_per_param": 4.240625
+  },
+  {
+   "ckpt": "ep726_MuonStart",
+   "epoch": 726,
+   "layer": "in_proj.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.175234471838083,
+   "ks_D": 0.05938706923985493,
+   "xmin": 3.7854188702966187,
+   "num_pl_spikes": 26,
+   "alpha_weighted": 3.527299734770065,
+   "log_spectral_norm": 1.6215721939113446,
+   "spectral_norm": 6.468239571020551,
+   "stable_rank": 8.377807958169509,
+   "detX_num": 84,
+   "spectral_entropy": 3.557222034393661,
+   "n_params": 9216,
+   "brotli_int8_bytes": 7183,
+   "bits_per_param": 6.235243055555555
+  },
+  {
+   "ckpt": "ep726_MuonStart",
+   "epoch": 726,
+   "layer": "hidden.0.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.6525564269923745,
+   "ks_D": 0.05021719683103176,
+   "xmin": 7.615740584142893,
+   "num_pl_spikes": 20,
+   "alpha_weighted": 4.424082872660299,
+   "log_spectral_norm": 1.667856271648323,
+   "spectral_norm": 6.822257945928337,
+   "stable_rank": 10.213196590094377,
+   "detX_num": 96,
+   "spectral_entropy": 3.8069476731423526,
+   "n_params": 9216,
+   "brotli_int8_bytes": 7915,
+   "bits_per_param": 6.870659722222222
+  },
+  {
+   "ckpt": "ep726_MuonStart",
+   "epoch": 726,
+   "layer": "hidden.1.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.5442681826791955,
+   "ks_D": 0.041666666666666664,
+   "xmin": 6.113784091996938,
+   "num_pl_spikes": 24,
+   "alpha_weighted": 4.340442438060714,
+   "log_spectral_norm": 1.7059689177459625,
+   "spectral_norm": 7.128275213030611,
+   "stable_rank": 9.238288144062011,
+   "detX_num": 96,
+   "spectral_entropy": 3.7705561135867196,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8151,
+   "bits_per_param": 7.075520833333333
+  },
+  {
+   "ckpt": "ep726_MuonStart",
+   "epoch": 726,
+   "layer": "hidden.2.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.805401878083121,
+   "ks_D": 0.0519380092978447,
+   "xmin": 5.968101551853518,
+   "num_pl_spikes": 25,
+   "alpha_weighted": 4.557139906008743,
+   "log_spectral_norm": 1.6244160744351364,
+   "spectral_norm": 6.489452190481535,
+   "stable_rank": 10.181032073882475,
+   "detX_num": 96,
+   "spectral_entropy": 3.8475807139497378,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8260,
+   "bits_per_param": 7.170138888888889
+  },
+  {
+   "ckpt": "ep726_MuonStart",
+   "epoch": 726,
+   "layer": "hidden.3.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.54916560384331,
+   "ks_D": 0.05057953743085086,
+   "xmin": 4.737713700549496,
+   "num_pl_spikes": 28,
+   "alpha_weighted": 4.253985639383897,
+   "log_spectral_norm": 1.6687757095773907,
+   "spectral_norm": 6.8294834162930504,
+   "stable_rank": 8.672824752505445,
+   "detX_num": 96,
+   "spectral_entropy": 3.7490935266503134,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8137,
+   "bits_per_param": 7.063368055555555
+  },
+  {
+   "ckpt": "ep726_MuonStart",
+   "epoch": 726,
+   "layer": "film.weight",
+   "shape": "768x32",
+   "n_eig": 32,
+   "alpha": 4.81635995722826,
+   "ks_D": 0.0625,
+   "xmin": 24.34344670499533,
+   "num_pl_spikes": 16,
+   "alpha_weighted": 8.274278860301912,
+   "log_spectral_norm": 1.7179527555626533,
+   "spectral_norm": 7.227304916543084,
+   "stable_rank": 15.630132698692375,
+   "detX_num": 32,
+   "spectral_entropy": 3.409234874951106,
+   "n_params": 24576,
+   "brotli_int8_bytes": 20135,
+   "bits_per_param": 6.554361979166667
+  },
+  {
+   "ckpt": "ep726_MuonStart",
+   "epoch": 726,
+   "layer": "code",
+   "shape": "1200x32",
+   "n_eig": 32,
+   "alpha": 2.0350234427657443,
+   "ks_D": 0.11151757298555498,
+   "xmin": 3.153384769766917,
+   "num_pl_spikes": 32,
+   "alpha_weighted": 8.294314886561216,
+   "log_spectral_norm": 4.075783458930891,
+   "spectral_norm": 109.11682719747874,
+   "stable_rank": 1.0214789425143258,
+   "detX_num": 32,
+   "spectral_entropy": 0.16880319423795678,
+   "n_params": 38400,
+   "brotli_int8_bytes": 20711,
+   "bits_per_param": 4.314791666666666
+  },
+  {
+   "ckpt": "ep925_liveEMA",
+   "epoch": 925,
+   "layer": "in_proj.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.2423898534712396,
+   "ks_D": 0.058547180701090995,
+   "xmin": 4.1628663416959455,
+   "num_pl_spikes": 24,
+   "alpha_weighted": 3.6134482317281114,
+   "log_spectral_norm": 1.6114273020520766,
+   "spectral_norm": 6.3931316990090306,
+   "stable_rank": 8.438502685902048,
+   "detX_num": 86,
+   "spectral_entropy": 3.5733496854538656,
+   "n_params": 9216,
+   "brotli_int8_bytes": 7383,
+   "bits_per_param": 6.408854166666667
+  },
+  {
+   "ckpt": "ep925_liveEMA",
+   "epoch": 925,
+   "layer": "hidden.0.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.602884791566793,
+   "ks_D": 0.04588329712397643,
+   "xmin": 6.115106352204817,
+   "num_pl_spikes": 22,
+   "alpha_weighted": 4.220224865569634,
+   "log_spectral_norm": 1.6213644488772365,
+   "spectral_norm": 6.466692712812784,
+   "stable_rank": 9.887595437167862,
+   "detX_num": 96,
+   "spectral_entropy": 3.7903140325667852,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8017,
+   "bits_per_param": 6.959201388888889
+  },
+  {
+   "ckpt": "ep925_liveEMA",
+   "epoch": 925,
+   "layer": "hidden.1.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.5715465685584906,
+   "ks_D": 0.041666666666666664,
+   "xmin": 5.126912588944072,
+   "num_pl_spikes": 24,
+   "alpha_weighted": 4.225955393158456,
+   "log_spectral_norm": 1.643351687590617,
+   "spectral_norm": 6.632478392455328,
+   "stable_rank": 8.8811934281051,
+   "detX_num": 96,
+   "spectral_entropy": 3.7542163384468417,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8060,
+   "bits_per_param": 6.996527777777778
+  },
+  {
+   "ckpt": "ep925_liveEMA",
+   "epoch": 925,
+   "layer": "hidden.2.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.800133799242901,
+   "ks_D": 0.05582226899560949,
+   "xmin": 4.9431414161455365,
+   "num_pl_spikes": 21,
+   "alpha_weighted": 4.305220320363509,
+   "log_spectral_norm": 1.537505215474901,
+   "spectral_norm": 5.871547893748125,
+   "stable_rank": 9.459209880184416,
+   "detX_num": 95,
+   "spectral_entropy": 3.8200615138500487,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8300,
+   "bits_per_param": 7.204861111111111
+  },
+  {
+   "ckpt": "ep925_liveEMA",
+   "epoch": 925,
+   "layer": "hidden.3.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.5225480860104996,
+   "ks_D": 0.052190070721047754,
+   "xmin": 3.1371365341110424,
+   "num_pl_spikes": 29,
+   "alpha_weighted": 3.957541792892224,
+   "log_spectral_norm": 1.568866740277375,
+   "spectral_norm": 6.087421448135574,
+   "stable_rank": 7.72263140890809,
+   "detX_num": 93,
+   "spectral_entropy": 3.717537604124705,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8270,
+   "bits_per_param": 7.178819444444445
+  },
+  {
+   "ckpt": "ep925_liveEMA",
+   "epoch": 925,
+   "layer": "film.weight",
+   "shape": "768x32",
+   "n_eig": 32,
+   "alpha": 3.3417863406646924,
+   "ks_D": 0.04977840782968701,
+   "xmin": 10.256969936926556,
+   "num_pl_spikes": 21,
+   "alpha_weighted": 5.237964095154501,
+   "log_spectral_norm": 1.5674144188741441,
+   "spectral_norm": 6.077251499227115,
+   "stable_rank": 12.073786963947247,
+   "detX_num": 32,
+   "spectral_entropy": 3.3583065837609185,
+   "n_params": 24576,
+   "brotli_int8_bytes": 21354,
+   "bits_per_param": 6.951171875
+  },
+  {
+   "ckpt": "ep925_liveEMA",
+   "epoch": 925,
+   "layer": "code",
+   "shape": "1200x32",
+   "n_eig": 32,
+   "alpha": 1.9910148427498173,
+   "ks_D": 0.10041845219005019,
+   "xmin": 2.925883817511614,
+   "num_pl_spikes": 32,
+   "alpha_weighted": 8.157616557771734,
+   "log_spectral_norm": 4.097215340949011,
+   "spectral_norm": 111.84270711351553,
+   "stable_rank": 1.019871473322114,
+   "detX_num": 32,
+   "spectral_entropy": 0.15782352151214962,
+   "n_params": 38400,
+   "brotli_int8_bytes": 19580,
+   "bits_per_param": 4.079166666666667
+  },
+  {
+   "ckpt": "final_ep1000",
+   "epoch": 1000,
+   "layer": "in_proj.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.2516627832904783,
+   "ks_D": 0.05773384926104119,
+   "xmin": 4.177420406254657,
+   "num_pl_spikes": 24,
+   "alpha_weighted": 3.6261846128604365,
+   "log_spectral_norm": 1.610447461214105,
+   "spectral_norm": 6.3859237792551555,
+   "stable_rank": 8.439632472350706,
+   "detX_num": 86,
+   "spectral_entropy": 3.574821579199659,
+   "n_params": 9216,
+   "brotli_int8_bytes": 7368,
+   "bits_per_param": 6.395833333333333
+  },
+  {
+   "ckpt": "final_ep1000",
+   "epoch": 1000,
+   "layer": "hidden.0.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.561703154928776,
+   "ks_D": 0.05869500878042566,
+   "xmin": 5.474342919081134,
+   "num_pl_spikes": 24,
+   "alpha_weighted": 4.112262984845546,
+   "log_spectral_norm": 1.605284740713793,
+   "spectral_norm": 6.34807969535557,
+   "stable_rank": 9.869658045448954,
+   "detX_num": 96,
+   "spectral_entropy": 3.7878492028182027,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8048,
+   "bits_per_param": 6.986111111111111
+  },
+  {
+   "ckpt": "final_ep1000",
+   "epoch": 1000,
+   "layer": "hidden.1.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.4929465932902923,
+   "ks_D": 0.045187369802906246,
+   "xmin": 4.741029151696322,
+   "num_pl_spikes": 24,
+   "alpha_weighted": 4.047659631753811,
+   "log_spectral_norm": 1.6236447433924148,
+   "spectral_norm": 6.483691935317525,
+   "stable_rank": 8.912660199375201,
+   "detX_num": 96,
+   "spectral_entropy": 3.7542053192986495,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8118,
+   "bits_per_param": 7.046875
+  },
+  {
+   "ckpt": "final_ep1000",
+   "epoch": 1000,
+   "layer": "hidden.2.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.643494183452212,
+   "ks_D": 0.05290532012590288,
+   "xmin": 3.7816961309971524,
+   "num_pl_spikes": 27,
+   "alpha_weighted": 4.0189332343744315,
+   "log_spectral_norm": 1.5203109806453199,
+   "spectral_norm": 5.756459988106123,
+   "stable_rank": 9.313714098932758,
+   "detX_num": 95,
+   "spectral_entropy": 3.8161593594596743,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8244,
+   "bits_per_param": 7.15625
+  },
+  {
+   "ckpt": "final_ep1000",
+   "epoch": 1000,
+   "layer": "hidden.3.weight",
+   "shape": "96x96",
+   "n_eig": 96,
+   "alpha": 2.4727912260220077,
+   "ks_D": 0.0548080786450702,
+   "xmin": 2.9025481231663997,
+   "num_pl_spikes": 29,
+   "alpha_weighted": 3.836636922993414,
+   "log_spectral_norm": 1.5515409803380094,
+   "spectral_norm": 5.967198571386957,
+   "stable_rank": 7.614906046529551,
+   "detX_num": 92,
+   "spectral_entropy": 3.715769095968966,
+   "n_params": 9216,
+   "brotli_int8_bytes": 8262,
+   "bits_per_param": 7.171875
+  },
+  {
+   "ckpt": "final_ep1000",
+   "epoch": 1000,
+   "layer": "film.weight",
+   "shape": "768x32",
+   "n_eig": 32,
+   "alpha": 3.3328601548411236,
+   "ks_D": 0.05521221559532505,
+   "xmin": 8.921867860374268,
+   "num_pl_spikes": 24,
+   "alpha_weighted": 5.123844561075,
+   "log_spectral_norm": 1.537371603675718,
+   "spectral_norm": 5.870644764909422,
+   "stable_rank": 12.019830142216826,
+   "detX_num": 32,
+   "spectral_entropy": 3.3605402171932823,
+   "n_params": 24576,
+   "brotli_int8_bytes": 21338,
+   "bits_per_param": 6.945963541666667
+  },
+  {
+   "ckpt": "final_ep1000",
+   "epoch": 1000,
+   "layer": "code",
+   "shape": "1200x32",
+   "n_eig": 32,
+   "alpha": 1.981208536760179,
+   "ks_D": 0.098150162972099,
+   "xmin": 2.891659091943976,
+   "num_pl_spikes": 32,
+   "alpha_weighted": 8.129651661717874,
+   "log_spectral_norm": 4.103380088908809,
+   "spectral_norm": 112.63932634669771,
+   "stable_rank": 1.0195594743597356,
+   "detX_num": 32,
+   "spectral_entropy": 0.1556925471966632,
+   "n_params": 38400,
+   "brotli_int8_bytes": 18954,
+   "bits_per_param": 3.94875
+  }
+ ]
+}
