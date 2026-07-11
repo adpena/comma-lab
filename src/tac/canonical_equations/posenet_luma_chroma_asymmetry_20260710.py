@@ -189,6 +189,77 @@ def build_posenet_luma_chroma_asymmetry_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu",
         ),
     )
+    anchor_mirror = EmpiricalAnchor(
+        # (d) d_pose-side MIRROR of the covariance-totality audit — 2026-07-11 (Fable crux audit).
+        # Closes the "texture-trunk-lives-on-POSE" UNDECIDED edge left by
+        # covariance_totality_texture_trunk_verdict_20260710: WHICH luma band carries pose, and is
+        # the trunk's pose job real or dominated?
+        anchor_id="dpose_photometric_band_mirror_audit_20260711",
+        measurement_utc="2026-07-11T00:00:00Z",
+        inputs={
+            "harness": (
+                "n48-strided frozen CPU-torch PoseNet band-limit ladder (Gaussian sigma_cam on BOTH "
+                "GT frames, uint8 re-quantized, exact cpu_verdict_d_pose) + n600 cached-code mirror "
+                "regression (xi <- rank-8 partition code, same code definition as the d_seg audit)"
+            ),
+            "data": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz (cached; baseline parity 2.6e-12)",
+            "tools": ".omx/tmp/dpose_mirror_audit/{mirror_partA,mirror_partB_posefreq,mirror_partB2_biasvar}.py",
+        },
+        predicted_output={
+            "question": (
+                "does per-pair high-freq photometric texture carry pose-legible signal BEYOND the "
+                "se(3) xi channel — i.e. does the texture trunk have a POSE job?"
+            ),
+        },
+        empirical_output={
+            "pose_legibility_band_spectrum_dpose_n48": {
+                "sigma_cam_1": 4.197e-3, "sigma_cam_2": 5.726e-2,
+                "sigma_cam_4": 5.582e-1, "sigma_cam_8": 1.676,
+            },
+            "blur_shift_bias_fraction": {"sigma1": 0.627, "sigma2": 0.764},
+            "sigma1_pair_specific_ceiling_after_linear_xi_calibration": 1.303e-3,
+            "f0_vs_f1_sigma4_attribution": {"f0_only": 8.141e-2, "f1_only": 8.887e-2},
+            "xi_from_code8_knn_cv_r2_n600": 0.329,
+            "xi_from_code16_knn_cv_r2_n600": 0.387,
+            "cca_code8_vs_xi6_n600": (0.79, 0.65, 0.36, 0.31, 0.27, 0.05),
+            "twonn_joint_minus_code_local_dof": "+2.1 to +2.4 (pose adds ~2 DOF beyond the partition code)",
+            "pose_residual_vs_luma_hf_spearman_n600": -0.089,
+            "verdict": (
+                "ASYMMETRIC MIRROR: unlike d_seg (residual has ZERO texture -> dead by ABSENCE), the "
+                "pose readout IS broadband/HF-legible (top camera octave alone = d_pose 4.2e-3) — but "
+                "63-76% of the band's effect is a CONSTANT bias (6-scalar-correctable) and the pair-"
+                "specific ceiling after a linear-xi calibration is ~1.3e-3, the same order as R1's "
+                "already-banked 1.61e-3 and 10-40x ABOVE the S2 output-space-steering target at "
+                ">=100-1000x the bytes (image-space stores measured RATE-PROHIBITIVE, #249). Texture "
+                "trunk DEAD-for-pose by DOMINANCE. Capstone = single covariant trunk on BOTH axes; "
+                "pose's +2 DOF route through the dedicated dxi/steering channel (6+k), NOT the trunk "
+                "mod vector. means != ends: pointer 0.19108282 UNMOVED."
+            ),
+            "verdict_scope": (
+                "FORMULATION (texture-trunk-as-pose-carrier under measured byte economics; "
+                "reactivation: S1/S2 output-space solve fails <=0.0011 at n600 byte-close)"
+            ),
+        },
+        residual=0.0,
+        source_artifact=".omx/research/dpose_covariance_mirror_audit_20260711.md",
+        measurement_method=(
+            "frozen CPU-torch PoseNet on Gaussian-band-limited GT pairs (n48 strided, NO-FAKE baseline "
+            "parity 2.6e-12) + bias/variance/linear-xi decomposition of the readout shift + n600 "
+            "cached-code kNN/CCA/TwoNN mirror regression (rank-8 parity 0.9321 vs d_seg audit 0.9316)"
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=".omx/research/dpose_covariance_mirror_audit_20260711.md",
+            reactivation_criteria=(
+                "re-price the photometric pose path ONLY IF the S1/S2 output-space per-pair solve "
+                "(FEED-posesolve rungs A2/A2+) fails to reach <=0.0011 at n600 through byte-close; "
+                "even then the calibrated HF ceiling ~1.3e-3 barely matches R1 -> a NEW mechanism, "
+                "not this one, would be required"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -220,12 +291,13 @@ def build_posenet_luma_chroma_asymmetry_v1() -> CanonicalEquation:
         },
         units_in={"yuv6_channel": "posenet_input_channel", "frame_index": "pair_position"},
         units_out={"jacobian_energy": "sum_grad_squared", "seg_delta": "dseg_fraction"},
-        empirical_anchors=(anchor, anchor_kernel),
+        empirical_anchors=(anchor, anchor_kernel, anchor_mirror),
         predicted_vs_empirical_residual={
             "luma_chroma_asymmetry_confirmed": 0.0,
             "pose_preprocess_exact_6atom_kernel_derived": 0.0,
+            "dpose_photometric_band_mirror_measured": 0.0,
         },
-        last_calibration_utc=_UTC,
+        last_calibration_utc="2026-07-11T00:00:00Z",  # dpose_photometric_band_mirror anchor added
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "experiments/train_levelset_witness_realized_through_R_mlx.py",  # frame-0 + chroma carriers
