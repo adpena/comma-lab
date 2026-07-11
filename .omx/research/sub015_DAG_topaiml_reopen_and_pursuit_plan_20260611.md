@@ -15762,3 +15762,10 @@ click_polish_399_20260711T2200Z.md. Pointer 0.19108282 [contest-CPU] UNMOVED.
   trainer surface — tool committed, not a curriculum change) · equations = N/A (no new law; the
   mechanism's soundness rests on measured greens recorded in the memo; the registrable object is the
   exact row when the MODAL-HOLD entry fires). [no-triality]
+
+### FEED-399-equations-leg (2026-07-11 addendum)
+Equations leg for FEED-399 registered: `pr110_lineage_click_polish_byte_neutral_slack_v1`
+(round-1 anchor: ΔS_adv −7.93e-05 byte-neutral, pairs 0-47, candidate 0872086672e7 staged
+MODAL-HOLD; INSTANCE scope — pairs 48-599 magnitude UNMEASURED, rounds 2+ running). DSL leg
+N/A-with-reason (frozen-archive polish tool, not a trainer lever). MEMORY.md CURRENT line
+updated with the n8-polish/592-pair headroom fact.
