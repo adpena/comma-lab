@@ -14976,3 +14976,46 @@ sensor, NOT a d_seg lever → no DSL `Lever` factory); **equations N/A** (no mea
 apparatus number). **Pointer 0.19108282 UNMOVED** — a solver-conditioning change moves NO score until a
 byte-closed `upstream/evaluate.py` row (owner #341/#396); a candidate, not a score. Routing: wire the sensor+
 precond into #341/#396 iterative terminal solves (non-averaged Hessian) where the anisotropy is real.
+
+---
+## FEED-pythag-crossterm (2026-07-10) — Amari generalized-Pythagorean cross-term DIAGNOSTIC for #157 waterfill additivity `[no-triality]`
+
+**SIGNAL (apparatus gap).** The #157 reverse-waterfill (`tac.losses.variable_level_waterfill_allocator.
+solve_waterfill_allocation`) composes `total_dist_cost` ADDITIVELY (sum of per-tensor marginal `dist_cost`).
+That additive sum is EXACT iff the allocation components are dual-orthogonal in Amari's generalized-Pythagorean
+sense (`docs/paper/information_geometric_foundations.md` §5, Thm 6.12: `D[P:Q]=D[P:R]+D[R:Q]` with NO cross-term
+⟺ dual-orthogonal legs). Where they are NOT, the theorem NAMES the error — the cross-term = the interaction /
+Volterra term the meta-Lagrangian already carries. Nothing MEASURED that deviation on our real waterfill.
+
+**DIAGNOSTIC (built, $0, memory-safe — NO n600 run; sister n600 probe pid 17181 + trainer pid 88030 untouched).**
+`tac.optimization.pythagorean_crossterm` — oracle-AGNOSTIC. `measure_pairwise_crossterms(components, oracle)`
+computes `cross(A,B)=ΔS(A∪B)−ΔS(A)−ΔS(B)` (baseline-subtracted, results cached by frozenset so an expensive
+oracle is called once/set) → `AdditivityReport{singles, pairs (CrossTermPair), total_abs_cross, total_abs_single,
+additivity_error_fraction, worst_pairs, n_interacting_pairs}`. Sign regime: cross>0 SUPERadditive (waterfill
+UNDER-estimates joint cost), cross<0 SUBadditive (OVER-estimates), |cross|≤tol orthogonal (additive exact).
+`additivity_canary(report, rel_tol)` FIRES when additivity is not trustworthy. `diagnose_waterfill_additivity(
+rd_table, levels, joint_oracle)` = the #157/#406 validation surface — compares the solver's additive
+`total_dist_cost` vs the true joint ΔS + localises the residual to worst pairs (ADDITIVE/diagnostic; does NOT
+change the solve). Reusable score-neutral oracle builders: `rd_table_additive_oracle` (the waterfill's own
+additive NULL, cross≈0 by construction), `bilinear_synthetic_oracle` (cross==known coupling exactly),
+`quadratic_support_oracle` (cross==2·⟨v_a,v_b⟩ — inner product IS the cross-term).
+
+**RESPONSE (synthetic positive control — NOT n600).** 10 tests pass; ruff clean. Canary QUIET on orthogonal
+(cross 0.000e+00, frac 0.000e+00, fired=False) and on the rd_table additive NULL; FIRES on interacting
+(bilinear coupling 0.07 → cross +7.000e-02, superadditive, frac 1.400e-01, fired=True) and geometric aligned
+support (cross +4.000e+00 = 2·⟨(1,1),(2,0)⟩). Positive control proves the tool measures what it claims.
+Commit `271b6e703`.
+
+**DEFERRED (the real row — memory containment; run when the sister n600 probe is done OR on operator GO):**
+build the through-R n600 d_seg(+d_pose) JOINT oracle `joint_oracle(active: frozenset[tensor]) -> S` (coarsen the
+`active` subset to their #157-allocated levels, byte-close, score on the frozen CPU-torch SegNet/PoseNet at
+n600 — NEVER MPS), then
+`diagnose_waterfill_additivity(rd_table, alloc.levels, joint_oracle)` → the residual = Σ cross-terms that
+validates/corrects #406's additive `total_dist_cost`, and `report.worst_pairs` = which coarsened tensor pairs
+interact most. That is the row that moves trust in the waterfill; a candidate, not a score.
+
+**Triality:** `[no-triality]` — TOOL is apparatus, no measured law yet (DAG leg only). A real interaction LAW
+would be the equations leg IF/WHEN a real oracle measurement lands (not this task). Related prior (do NOT
+duplicate): `pairset_component_marginal_score_decomposition_v1` (additive marginal decomposition — this tool
+measures the DEVIATION from that additivity). **Pointer 0.19108282 UNMOVED** — rate-axis apparatus sharpening
+#157/#406 additivity trust; it moves NO score itself.
