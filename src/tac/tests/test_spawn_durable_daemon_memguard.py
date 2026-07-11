@@ -27,6 +27,24 @@ def _args(**kw):
     return SimpleNamespace(**base)
 
 
+def _start_args(**kw):
+    """Full namespace for _do_start (start-mode)."""
+    base = dict(
+        cmd=["--", "sleep", "1"], log=None, label="test_job",
+        skip_mem_preflight=True, min_free_gb=0.0, projected_gb=25.0,
+        rss_cap_mb=None, walltime_cap_s=None,
+        skip_admission_gate=False, projected_peak_gib=25.0, priority=None,
+        admission_override_rationale=None, skip_readiness_gate=True,
+        readiness_override_rationale=None, skip_blackbox_autostart=True, verify_s=0.0,
+    )
+    base.update(kw)
+    return SimpleNamespace(**base)
+
+
+def _admitting_rows(reg):
+    return [r for r in json.loads(reg.read_text()) if r.get("status") == "admitting"]
+
+
 # --- launch preflight -------------------------------------------------------
 def test_preflight_refuses_impossible_projection():
     # 999 GB projected exceeds any real machine's free memory → REFUSE (rc 3).
@@ -60,6 +78,68 @@ def test_reconcile_marks_dead_running_rows_stopped(tmp_path, monkeypatch):
     assert by_label["dead_arm"]["status"] == "stopped"
     assert by_label["dead_arm"]["stopped_reason"] == "reconcile_dead_process"
     assert by_label["already_stopped"]["status"] == "stopped"
+
+
+# --- 2026-07-11 phantom-reservation fix: reconcile converges the pending store, idempotently -------
+def _point_registry(monkeypatch, tmp_path):
+    reg = tmp_path / "durable_daemons.json"
+    lock = tmp_path / ".durable_daemons.lock"
+    monkeypatch.setattr(sd, "_REGISTRY_PATH", reg)
+    monkeypatch.setattr(sd, "_REGISTRY_LOCK", lock)
+    return reg
+
+
+def test_reconcile_drops_stale_pending_reservation(tmp_path, monkeypatch):
+    """A crashed launcher leaves a STALE 'admitting' row (no pid, old reserved_ts). The admission
+    gate counts FRESH pending rows as growth headroom, so a stale one is phantom growth. reconcile
+    (which the admission path now calls) must DROP it — previously reconcile ignored pending rows,
+    the exact reason active_jobs stayed high after --reconcile marked dead running rows."""
+    now = time.time()
+    reg = _point_registry(monkeypatch, tmp_path)
+    reg.write_text(json.dumps([
+        {"label": "crashed", "pid": None, "status": "admitting",
+         "projected_peak_gib": 60.0, "reserved_ts": now - 9999.0},
+        {"label": "fresh", "pid": None, "status": "admitting",
+         "projected_peak_gib": 60.0, "reserved_ts": now - 1.0},
+    ]))
+    n = sd.reconcile_dead_daemons(verbose=False, now_ts=now)
+    assert n == 1  # only the stale one
+    labels = {r["label"]: r for r in json.loads(reg.read_text())}
+    assert "crashed" not in labels          # stale pending DROPPED
+    assert labels["fresh"]["status"] == "admitting"  # fresh in-flight reservation PRESERVED
+
+
+def test_reconcile_is_idempotent(tmp_path, monkeypatch):
+    """Running reconcile twice reconciles nothing the second time (ground-truth convergence)."""
+    now = time.time()
+    reg = _point_registry(monkeypatch, tmp_path)
+    reg.write_text(json.dumps([
+        {"label": "dead", "pid": 999999, "pgid": 999999, "cmd": ["python", "x.py"], "status": "running"},
+        {"label": "stale_pending", "pid": None, "status": "admitting",
+         "projected_peak_gib": 60.0, "reserved_ts": now - 9999.0},
+    ]))
+    first = sd.reconcile_dead_daemons(verbose=False, now_ts=now)
+    second = sd.reconcile_dead_daemons(verbose=False, now_ts=now)
+    assert first == 2 and second == 0
+
+
+# --- 2026-07-11: a REFUSED admission leaves ZERO net reservation (no accumulation on retry) --------
+def test_refused_admission_leaves_zero_net_reservation(tmp_path, monkeypatch):
+    """The invariant the phantom-accumulation bug violated: when the admission gate REFUSES, the
+    launcher must return before writing any pending reservation — so a refused (and re-refused)
+    launch never leaves an 'admitting' row that would inflate the NEXT admission projection."""
+    reg = _point_registry(monkeypatch, tmp_path)
+    reg.write_text(json.dumps([]))
+    # Gate refuses (rc=5) — the enforce-mode REFUSE path.
+    monkeypatch.setattr(sd, "_system_admission_gate", lambda a, cmd: 5)
+    log = tmp_path / "d.log"
+    rc1 = sd._do_start(_start_args(log=str(log), label="witness_resume"))
+    assert rc1 == 5
+    assert _admitting_rows(reg) == []            # refused -> ZERO net reservation
+    # retry: still zero (each refused retry must NOT make it worse).
+    rc2 = sd._do_start(_start_args(log=str(log), label="witness_resume"))
+    assert rc2 == 5
+    assert _admitting_rows(reg) == []
 
 
 # --- D3: per-arm safe_run cap wrapping (layer 3) -----------------------------

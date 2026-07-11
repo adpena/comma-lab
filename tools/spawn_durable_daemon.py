@@ -757,9 +757,15 @@ def _do_start(a: argparse.Namespace) -> int:
     pending_label = a.label or f"__admitting__{uuid.uuid4().hex[:10]}"
     pending_written = False
     with _registry_lock():
-        # A crashed launcher's stale pending row (> _PENDING_MAX_AGE_S, no pid) must not leak a
-        # phantom reservation into this (or any future) admission decision.
-        _update_registry_locked(_sweep_stale_pending_rows)
+        # GROUND-TRUTH reconcile BEFORE the admission projection (2026-07-11 phantom-reservation fix):
+        # converge the registry the gate counts to kernel truth — mark DEAD recorded=running daemons
+        # stopped (out-of-band death can never write recorded=stopped) AND drop STALE pending
+        # reservations (crashed launcher: no pid, old reserved_ts). The gate previously projected off
+        # phantom running/pending rows on a nearly-idle machine; the admission path never actually
+        # auto-reconciled despite the docstring. Runs under the held lock; reconcile's own
+        # _update_registry_locked is re-entrant. Fail-open: a hiccup here must never block an admit.
+        with contextlib.suppress(Exception):
+            reconcile_dead_daemons(verbose=False)
         refusal = _system_admission_gate(a, cmd)
         if refusal is not None:
             return refusal
@@ -976,54 +982,90 @@ def _do_stop(label: str, *, term_grace_s: float = 3.0) -> int:
     return rc
 
 
-def reconcile_dead_daemons(*, verbose: bool = True) -> int:
-    """Mark every recorded=running daemon whose process is DEAD as stopped; return the count reconciled.
+def _stale_pending_labels(rows: list[dict], *, now_ts: float | None = None) -> set:
+    """Labels of STALE pending reservations (status "admitting", no pid, missing/old ``reserved_ts``).
 
-    Recovery primitive for the OOM incident (2026-06-25): a machine crash /
-    blind fleet-launch leaves the registry asserting daemons are ``running``
-    when their processes are gone (recorded=running / actual=DEAD). The OOM
-    memory guard's custody gate reads this registry; stale running rows would
-    waste custody checks and mislead status. This reconciles the registry to
-    kernel truth WITHOUT signalling anything (the processes are already dead).
+    The complement of ``_sweep_stale_pending_rows``'s KEEP set restricted to pending rows: a pending
+    row that the sweep would DROP is stale. Kept in sync by reusing the sweep as the single source of
+    truth for the freshness predicate (no duplicated timestamp logic)."""
+    kept = _sweep_stale_pending_rows(rows, now_ts=now_ts)
+    kept_ids = {id(r) for r in kept}
+    return {
+        r.get("label")
+        for r in rows
+        if isinstance(r, dict)
+        and r.get("status") == _PENDING_STATUS
+        and not r.get("pid")
+        and id(r) not in kept_ids
+    }
 
-    Importable + quiet-able so the admission path can auto-reconcile before EVERY
-    governed launch decision (out-of-band death — SIGKILL/OOM/jetsam/machine-sleep/
-    SIGURG-144 — can never write ``recorded=stopped``, so a phantom running row would
-    otherwise poison the growth-projection accounting until someone REMEMBERS to run
-    ``--reconcile``; the apparatus must hold that memory, not the operator — the
-    "off is a tracked queue, never a forgotten default" discipline). Fail-open by
-    construction: a no-op when the registry is already accurate.
+
+def reconcile_dead_daemons(*, verbose: bool = True, now_ts: float | None = None) -> int:
+    """Converge the registry to GROUND TRUTH — the SINGLE store the admission gate counts — and return
+    the number of rows reconciled. TWO reconciliations, in ONE fcntl-locked transaction (idempotent):
+
+      1. mark every recorded=``running`` daemon whose process is DEAD as ``stopped``; and
+      2. DROP every STALE pending ``admitting`` reservation (crashed launcher: no pid, missing/old
+         ``reserved_ts``) — the launchers count FRESH pending rows as growth headroom, so a stale one
+         is a phantom reservation that would otherwise inflate the projection until swept at the next
+         launch. Reconcile now converges it directly (2026-07-11 fix: the gate observed reconcile mark
+         dead running rows yet ``active_jobs`` stayed high because reconcile ignored the pending store).
+
+    Recovery primitive for the OOM incident (2026-06-25) + the phantom-reservation false-refuse
+    (2026-07-11): a machine crash / blind fleet-launch / refused-retry storm leaves the registry
+    asserting daemons ``running`` when their processes are gone, or leaves stale ``admitting`` rows.
+    The OOM memory guard's custody gate + the admission projection read this registry; stale rows
+    mislead both. This reconciles to kernel truth WITHOUT signalling anything (dead processes stay
+    dead; stale reservations reserved nothing). Importable + quiet-able so the admission path
+    auto-reconciles before EVERY governed launch decision (out-of-band death — SIGKILL/OOM/jetsam/
+    machine-sleep/SIGURG-144 — can never write ``recorded=stopped``; the apparatus holds that memory,
+    not the operator — the "off is a tracked queue, never a forgotten default" discipline). Fail-open
+    + IDEMPOTENT by construction: a no-op that returns 0 when the registry is already accurate, and
+    running it twice reconciles nothing the second time.
     """
     rows = _load_registry()
-    stale = [
+    stale_running = [
         r for r in rows
         if r.get("status") == "running"
         and not (_pid_alive(int(r.get("pid", 0))) and _pgid_alive(int(r.get("pgid", 0)) or int(r.get("pid", 0))))
     ]
-    if not stale:
+    stale_pending_labels = _stale_pending_labels(rows, now_ts=now_ts)
+    if not stale_running and not stale_pending_labels:
         if verbose:
-            print("[durable-daemon] reconcile: no stale running rows; registry already accurate.")
+            print("[durable-daemon] reconcile: no stale running/pending rows; registry already accurate.")
         return 0
 
-    stale_labels = {r.get("label") for r in stale}
+    stale_running_labels = {r.get("label") for r in stale_running}
 
-    def _mark_dead(rows_in: list[dict]) -> list[dict]:
+    def _reconcile(rows_in: list[dict]) -> list[dict]:
+        out: list[dict] = []
         for r in rows_in:
-            if r.get("label") in stale_labels and r.get("status") == "running":
+            # 2. drop STALE pending reservations (phantom growth headroom otherwise).
+            if (isinstance(r, dict) and r.get("status") == _PENDING_STATUS and not r.get("pid")
+                    and r.get("label") in stale_pending_labels):
+                continue
+            # 1. mark DEAD running daemons stopped (re-check liveness under the lock).
+            if r.get("label") in stale_running_labels and r.get("status") == "running":
                 pid = int(r.get("pid", 0))
                 pgid = int(r.get("pgid", 0)) or pid
                 if not (_pid_alive(pid) and _pgid_alive(pgid)):
                     r["status"] = "stopped"
                     r["stopped_utc"] = _utc_now_iso()
                     r["stopped_reason"] = "reconcile_dead_process"
-        return rows_in
+            out.append(r)
+        return out
 
-    _update_registry_locked(_mark_dead)
+    _update_registry_locked(_reconcile)
+    total = len(stale_running) + len(stale_pending_labels)
     if verbose:
-        print(f"[durable-daemon] reconcile: marked {len(stale)} dead daemon(s) as stopped:")
-        for r in stale:
+        print(f"[durable-daemon] reconcile: converged {total} stale row(s) to ground truth "
+              f"({len(stale_running)} dead running -> stopped, {len(stale_pending_labels)} stale "
+              f"pending reservation(s) dropped):")
+        for r in stale_running:
             print(f"  - {r.get('label')} pid={r.get('pid')} (was running, process DEAD)")
-    return len(stale)
+        for lbl in stale_pending_labels:
+            print(f"  - {lbl} (stale pending reservation, no pid -> dropped)")
+    return total
 
 
 def _do_reconcile() -> int:

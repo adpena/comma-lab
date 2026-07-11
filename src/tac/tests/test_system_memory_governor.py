@@ -453,6 +453,84 @@ def test_unknown_growth_headroom_matches_launch_path_default():
     assert gov.UNKNOWN_GROWTH_HEADROOM_GIB == 25.0
 
 
+# ── 2026-07-11 phantom-reservation fix: unregistered ps-only sub-floor match => ZERO growth ────────
+def test_resolve_unregistered_ps_only_below_floor_zero_growth():
+    """An UNREGISTERED ps-only token match (a grep/editor/launcher/short probe whose argv merely
+    CONTAINS a pattern token) below the material RSS floor is charged ZERO growth — its RSS is
+    already in the vm_stat `used` baseline. This is the phantom-refusal fix (2026-07-11)."""
+    assert gov.MATERIAL_UNREGISTERED_RSS_FLOOR_GIB == 2.0
+    # tiny incidental match -> current (zero growth), NOT current+25.
+    assert gov.resolve_projected_peak_gib(None, 0.0002, unregistered_ps_only=True) == 0.0002
+    assert gov.resolve_projected_peak_gib(None, 1.99, unregistered_ps_only=True) == 1.99
+
+
+def test_resolve_unregistered_ps_only_at_or_above_floor_still_charged():
+    """SAFETY PRESERVED: a materially-resident unregistered match (>= floor) STILL gets current+25 —
+    the SUM-over-RAM crash is driven by multi-GiB resident jobs, which stay fully counted."""
+    assert gov.resolve_projected_peak_gib(None, 2.0, unregistered_ps_only=True) == 27.0
+    assert gov.resolve_projected_peak_gib(None, 30.0, unregistered_ps_only=True) == 55.0
+
+
+def test_resolve_default_and_registered_paths_unchanged_by_fix():
+    """The relaxation is SCOPED to unregistered_ps_only=True. Default False (registered row without a
+    projection) is bit-identical to the pre-fix behavior; a recorded projection always wins."""
+    assert gov.resolve_projected_peak_gib(None, 0.0002) == 0.0002 + 25.0   # default False unchanged
+    assert gov.resolve_projected_peak_gib(None, 0.0) == 25.0
+    # a recorded projection wins even for a ps-only candidate (registered heavy job at low RSS).
+    assert gov.resolve_projected_peak_gib(60.0, 0.0002, unregistered_ps_only=True) == 60.0
+
+
+def _ps(pid, command, *, rss_kb=200, ppid=1, pgid=None):
+    return gov._mg.ProcessSample(pid=pid, ppid=ppid, rss_kb=rss_kb, command=command,
+                                 pgid=pgid if pgid is not None else pid)
+
+
+@pytest.mark.skipif(gov._mg is None, reason="memory_guard unavailable (fail-safe: no tracked jobs)")
+def test_incidental_ps_token_match_charges_zero_phantom_growth():
+    """THE reproduced false-positive: a nearly-idle machine, ZERO registered jobs, but ~8 incidental
+    processes whose argv contains a pattern token (grep/editor/launcher/probe). Pre-fix each was
+    charged +25 GiB => ~200 GiB phantom projected growth that FALSE-REFUSED a legit launch. Post-fix
+    each sub-floor unregistered match contributes ZERO growth."""
+    incidental = {
+        901: _ps(901, "ugrep -R byte_close src/", rss_kb=192),
+        902: _ps(902, "python -c 'import inflate.py'", rss_kb=8000),
+        903: _ps(903, "vim experiments/train_witness_realized_through_R_mlx.py", rss_kb=40000),
+        904: _ps(904, "bash launch_split_by_head_basin.sh", rss_kb=3000),
+        905: _ps(905, "tail -f logs/descent_probe.log", rss_kb=1500),
+    }
+    jobs = gov.list_tracked_jobs(samples=incidental, registry_rows=[], self_pid=1)
+    # every incidental match is tracked (throttle-discoverable) but charged ZERO heavy growth.
+    assert len(jobs) == len(incidental)
+    assert gov.sum_active_growth_headroom_gib(jobs) == 0.0
+    for j in jobs:
+        assert j.growth_headroom_gib == 0.0
+
+
+@pytest.mark.skipif(gov._mg is None, reason="memory_guard unavailable (fail-safe: no tracked jobs)")
+def test_materially_resident_unregistered_job_still_charged():
+    """SAFETY: an unregistered ps-match that IS materially resident (~30 GiB) still reserves
+    current+25 growth headroom — the crash-relevant case is never relaxed."""
+    big = {700: _ps(700, "python levelset_byte_close_and_eval.py", rss_kb=31_457_280)}  # ~30 GiB
+    jobs = gov.list_tracked_jobs(samples=big, registry_rows=[], self_pid=1)
+    assert len(jobs) == 1
+    assert jobs[0].current_rss_gib > 25.0
+    assert gov.sum_active_growth_headroom_gib(jobs) == gov.UNKNOWN_GROWTH_HEADROOM_GIB  # +25 charged
+
+
+@pytest.mark.skipif(gov._mg is None, reason="memory_guard unavailable (fail-safe: no tracked jobs)")
+def test_registered_heavy_job_low_rss_still_fully_charged():
+    """The fix must NOT relax a REGISTERED heavy job: a running row with projected_peak=60 at low
+    current RSS still reserves its full remaining growth (recorded projection wins)."""
+    reg = [{"label": "n600", "pid": 800, "pgid": 800, "status": "running",
+            "cmd": ["python", "train_levelset_witness_realized_through_R_mlx.py"],
+            "projected_peak_gib": 60.0}]
+    samples = {800: _ps(800, "python train_levelset_witness_realized_through_R_mlx.py", rss_kb=1_000_000)}
+    jobs = gov.list_tracked_jobs(samples=samples, registry_rows=reg, self_pid=1)
+    j = next(x for x in jobs if x.pid == 800)
+    assert j.projected_peak_gib == 60.0
+    assert gov.sum_active_growth_headroom_gib(jobs) > 55.0  # full remaining growth reserved
+
+
 # ── PENDING admission reservations (review-fix CRITICAL C, read side) ────────────────────────────
 def _pending_row(label="pending_a", proj=50.0, age_s=1.0, now=1_000_000.0, pid=None):
     return {"label": label, "pid": pid, "status": gov.PENDING_RESERVATION_STATUS,

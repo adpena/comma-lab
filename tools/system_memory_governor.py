@@ -255,6 +255,28 @@ UNKNOWN_GROWTH_HEADROOM_GIB = 25.0
 HEAVY_MIN_PROJECTED_GIB = 4.0
 _PROTECTION_INFRA_TOKENS = ("memory_blackbox.py", "memory_guard.py", "system_memory_governor.py")
 
+# ── material-workload RSS floor for UNREGISTERED ps-only matches (2026-07-11 phantom-reservation fix) ──
+# WHY (the MEASURED false-positive this extincts): ``OUR_JOBS_PATTERN`` is a BROAD substring regex used
+# primarily for THROTTLE candidate discovery. Applied to the ADMISSION growth projection it over-matches:
+# ANY process whose argv merely CONTAINS a token (a ``grep``/``ugrep``/``rg`` over the source, an editor
+# with the file open, a ``python -c`` mentioning the script, the launch pipeline itself, a short-lived
+# byte-close/inflate probe, a sibling build/measurement agent) is counted as a heavy tracked job and
+# charged ``current + UNKNOWN_GROWTH_HEADROOM_GIB`` (+25 GiB) of phantom growth. On a nearly-idle machine
+# (2026-07-11: 30.7 GiB used / ~97 GiB free / ZERO live training procs) ~8 such incidental matches summed
+# to a phantom ~200 GiB projected growth and FALSE-REFUSED an operator-GO'd witness resume; ``--reconcile``
+# could not clear it because these are live ps processes, not registry rows. GROUND-TRUTH FIX: an
+# UNREGISTERED ps-only match whose CURRENT RSS is below this material floor is charged ZERO growth (its RSS
+# is already inside the vm_stat ``used`` baseline the gate anchors on), exactly like the protection-infra /
+# governed-descendant exemptions. SAFETY PRESERVED: (1) every genuine heavy launch goes through the
+# governed path and REGISTERS (running row with a projected_peak, or a pending reservation) -> recorded
+# projection wins -> fully charged, untouched; (2) an unregistered match that IS materially resident
+# (>= floor) still gets the full current+25 charge — the SUM-over-RAM crash is driven by multi-GiB resident
+# jobs, which stay fully counted; (3) a sub-floor process by construction cannot itself drive a 128 GiB
+# crash. Value 2.0 GiB == ABS_MIN_SAFETY_FLOOR_GIB (the jetsam-avoidance minimum): below it a lone process
+# is never the crash driver. This ONLY relaxes the unknown-peak default for the unregistered-ps case; the
+# registered / reservation / infra / descendant paths are bit-identical.
+MATERIAL_UNREGISTERED_RSS_FLOOR_GIB = 2.0
+
 # ── PENDING admission reservations (review-fix CRITICAL C: launch TOCTOU) ────────────────────────
 # Two near-simultaneous governed launches could BOTH pass the admission gate before either wrote
 # its registry row (decision read -> Popen -> reservation write). The launchers now write a PENDING
@@ -280,6 +302,8 @@ def resolve_projected_peak_gib(
     *,
     cmd: str = "",
     governed_descendant: bool = False,
+    unregistered_ps_only: bool = False,
+    material_rss_floor_gib: float = MATERIAL_UNREGISTERED_RSS_FLOOR_GIB,
     unknown_growth_headroom_gib: float = UNKNOWN_GROWTH_HEADROOM_GIB,
 ) -> float:
     """CONSERVATIVE projected-peak resolution for one tracked job (review-fix CRITICAL B). PURE.
@@ -287,6 +311,13 @@ def resolve_projected_peak_gib(
     * A valid recorded projection wins (floored at current RSS — a job can never "un-use" memory).
     * Protection infra + governed descendants: zero-growth default (current RSS) — see the
       exemption rationale on the constants block above.
+    * ``unregistered_ps_only`` match below the material RSS floor: zero-growth (current RSS). An
+      unregistered ps-pattern match whose argv merely CONTAINS a token but is not materially resident
+      (a grep/editor/``python -c``/launch pipeline/short probe) is NOT a heavy job; its RSS is already
+      in the vm_stat ``used`` baseline. Charging it +25 GiB manufactures the phantom refusal fixed
+      2026-07-11 (see the MATERIAL_UNREGISTERED_RSS_FLOOR_GIB constants block). A genuine heavy job
+      registers (recorded projection wins above) OR is materially resident (>= floor -> full charge
+      below), so safety is preserved.
     * Everything else with an unknown peak: ``current_rss + UNKNOWN_GROWTH_HEADROOM_GIB`` — an
       unknown-peak job is assumed to still be able to grow by the same 25 GiB the launch paths
       project by default, NEVER by zero (the old backwards fallback).
@@ -299,6 +330,8 @@ def resolve_projected_peak_gib(
             pass  # malformed recorded value -> treat as unknown (conservative path below)
     if governed_descendant or is_protection_infra_cmd(cmd):
         return current
+    if unregistered_ps_only and current < float(material_rss_floor_gib):
+        return current  # incidental/transient ps-token match -> zero phantom growth (ground truth)
     return current + float(unknown_growth_headroom_gib)
 
 
@@ -1191,6 +1224,10 @@ def list_tracked_jobs(
         proj_peak = resolve_projected_peak_gib(
             rec.get("projected_peak_gib"), current_rss, cmd=cmd,
             governed_descendant=governed_desc,
+            # An UNREGISTERED (ps-only) candidate below the material RSS floor is an incidental token
+            # match (grep/editor/launcher/short probe), NOT a heavy job — charge it zero phantom growth
+            # (2026-07-11 phantom-reservation fix). A registered row (rec present) is never relaxed.
+            unregistered_ps_only=(not rec),
         )
         prio_field = rec.get("priority")
         try:
