@@ -188,9 +188,29 @@ def _launch_ts(path: Path) -> str | None:
     CRITICAL: searching only ``path.name`` was a bug — a ``run.log`` (no stamp in
     the name) then sorted as ``""`` and LOST to any timestamped-filename ``.log``,
     even a much older one, surfacing an ancient run. Full-path fixes that.
-    Returns ``None`` when no token is present (caller falls back to mtime)."""
+
+    SECOND instance of the SAME class (2026-07-11): a run dir with NO token
+    anywhere in its path (``v9_cgauge_432_coherent_arm_20260711`` — date only, no
+    THHMMSSZ) again sorted as ``""`` and the LIVE capstone arm lost to the dead
+    stamped v752 run — the "or ''" in the callers' sort keys means the ts field
+    DOMINATES and mtime never arbitrates across mixed populations. Root fix:
+    when the path carries no token, SYNTHESIZE it from the sibling ``launch.sh``
+    mtime — written ONCE by the governed launcher at fire time and never touched
+    by the run, so it is the true launch instant and immune to the swap-instant
+    mtime race. A run's ORDERING must never depend on its NAME.
+    Returns ``None`` only when no token exists AND there is no launch.sh (true
+    non-run logs, e.g. legacy .omx/tmp logs — those may lose to stamped runs)."""
     matches = _LAUNCH_TS_RE.findall(str(path))
-    return max(matches) if matches else None
+    if matches:
+        return max(matches)
+    try:
+        launch_sh = Path(path).parent / "launch.sh"
+        if launch_sh.is_file():
+            import time as _time
+            return _time.strftime("%Y%m%dT%H%M%SZ", _time.gmtime(launch_sh.stat().st_mtime))
+    except Exception:
+        pass
+    return None
 
 
 def _has_verdict(path: Path) -> bool:
