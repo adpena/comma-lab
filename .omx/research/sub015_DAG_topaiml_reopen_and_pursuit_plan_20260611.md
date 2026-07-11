@@ -15302,3 +15302,38 @@ Apparatus `src/tac/boundary_math/lane_ground_factorization.py` + `tools/probe_v8
 jitter-dominance bound is a pre-anchor for the council-flagged SPEC §5 carrier-allocation law (needs
 n600-through-R). Memo `.omx/research/v8_lane_anisotropic_geometric_factorization_20260710.md`. Sister
 FEED (partition anisotropy map) routed d_H×share×(1−static); this FEED is the lane-carrier leg it named.
+
+## FEED-movable-ellipse (2026-07-10): v8 Movable (class-3) carrier — moment-ellipse MEASURED, DOMINATED by lossless contour `[macOS-CPU advisory · NON-PROMOTABLE]`
+
+**{READY: y | EV: med | STATUS: DONE (design+measurement); recommends contour not ellipse}** Third leg of
+the v8 per-class routing (hood=#139 store-once, ground-classes=ξ chart, Movable=this). The anisotropy map
+(`814fb1aac`) routed Movable→moment-ellipse (LOW d_H 2.55/2.86 = isotropic blobs, factorization no
+leverage). MEASURED on cached n600 `lstars` (all 600 pairs; n96 agrees), $0, NO scorer forward, git
+`fcfc02309`. Reuses `movable_site_coder` (scipy CC + box baseline).
+
+**Blob stats (n600):** 3.58 blobs/frame (max 9), area median 107px / mean 681 / p90 2241, aspect median
+1.82 (mildly elongated, NOT curves), 1.24% frame area. Flip-prone Movable pixels: **72% on blob EDGE**.
+
+**Carrier design:** per blob store (cx,cy,a,b,θ) = 5 params (equal-area second-moment ellipse; +1 over the
+box's 4, buys orientation+aspect). Quantize + zigzag-delta + zlib-9.
+
+**Measured tradeoff (n600; TOTAL movable cost = 25·B/37.5M + 100·d_seg):**
+- box (existing site_coder): 11798 B, d_seg 0.00423 → **0.431**
+- moment-ellipse ONLY: 14558 B (24.3/frm), d_seg 0.00219 → **0.229** (IoU 0.852 vs box 0.742 — halves box distortion at +23% B)
+- ellipse + 24-angle radial residual: 37684 B, d_seg 0.00140 → **0.165** (still lossy AND pricier than contour)
+- **lossless boundary contour (chain 1.5 b/px): 28227 B (47/frm), d_seg 0 → 0.019 ← WINNER**
+
+**VERDICT (scope FORMULATION):** moment-ellipse does NOT beat boundary-contour for Movable. It Pareto-beats
+the axis-aligned box on shape (IoU 0.85 vs 0.74, HALVES intrinsic d_seg) so it's the better *descriptor*,
+but (a) score charges 100×d_seg ⟹ any lossy Movable carrier is crushed (0.00219 residual = 0.219 seg-score
+> whole pointer gap; Movable=1.2% area but ~12% d_seg mass, must be near-lossless), and (b) car silhouettes
+are compact but **NON-star-convex** (occlusion/overlap) ⟹ radial residual can't reach lossless at
+competitive rate and the ellipse doesn't cheapen the already-near-floor chain-code. **RECOMMEND: code
+Movable as lossless per-frame contour (`contour_codec`), NOT ellipse.** Ellipse's real value = TEMPORAL
+predictor state (μ̇,Σ̇,ξ-warp of prev contour) — the next Movable unit — + low-rate fallback over the box.
+
+**Triality:** DAG=this FEED; DSL N/A (codec probe, no trainer lever); equations = candidate
+`movable_moment_ellipse_bytes_vs_dseg_v1` MEASURED but NOT registered (needs byte-closed contour-vs-ellipse
++ through-R n600, same gate as SPD pose codec — intrinsic distortion is an UPPER bound on realized d_seg).
+Memo `.omx/research/movable_moment_ellipse_carrier_20260710.md`. Sister to the partition anisotropy map
+(the routing input this leg closes) + `movable_deshare` (de-share owner-of-record) + #139 hood store-once.
