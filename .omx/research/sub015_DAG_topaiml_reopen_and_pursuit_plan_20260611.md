@@ -15067,3 +15067,21 @@ belongs at the governed-spawn layer for every witness relaunch, not only in `mai
 own pgid); `costate_digest` now shows `costate-shadow: ep50 class=CONVERGING`, and `run.log -> daemon.log`.
 Live run (pid 88030) untouched throughout. **Triality:** `[no-triality]` — apparatus, no measured law.
 **Pointer 0.19108282 UNMOVED.**
+
+## FEED-oa (2026-07-10) ORIGINALITY ACCOUNTING landed (docs/paper) — NO-FAKE #7 for the info-geometry foundations + witness architecture
+Deliverable: `docs/paper/novel_contributions_and_originality_accounting.md` — the itemized borrowed-substrate
+accounting the publication needs. THREE ledgers: (1) CLASSICAL/APPLIED (NOT ours) = the info-geometry corpus
+(Amari dually-flat + Pythagorean Thm 6.12; Chentsov uniqueness; Nielsen curved-Bregman/Fisher-Rao/LF-Hessian-
+precond/info-radius/SPD-cone/chord; Goldman (G,X)-structures) + PR95/HNeRV lineage + openpilot priors +
+Quantizr PR55 + UNIWARD/inverse-steg (on-ramp only) + the v2 codec borrowed primitives (INVC 2112.11312 =
+literal skeleton); (2) OURS-ORIGINAL, each MEASURED/DERIVED/BUILT = the task-space witness codec [BUILT], the
+indirect-RD task-floor framing [DERIVED], the measured correspondence trail [MEASURED: Fisher=margin 0.978 /
+quadratic head ρ≈0.85 / annulus ~97%@~4.7% / ID≈8-9 / dual-use ξ / OT-hurts-d_seg], the levers+kernels+triality+
+costate apparatus [BUILT], MDL-gauge-for-rate [DERIVED, appears new]; (3) the CONTRIBUTION STATEMENT (verbatim,
+2 paras): the *application* of classical dually-flat geometry to a frozen-scorer indirect-RD codec, positioned
+vs closest prior INVC 2112.11312 + VCM/coding-for-machines. HONEST DOWNGRADES section: gated info-geo solvers
+(Hessian-precond / JS-centroid / distance-to-flip / Bregman-power-diagram) are applications-of-others, NOT ours
+until built+measured; the info-geo recognition is JUSTIFICATION not result; the whole composition is UNVALIDATED
+design-originality until a byte-closed exact row < 0.19108282. $0 docs-only; live run untouched.
+**Triality:** `[no-triality]` — docs artifact, no measured law. **Pointer 0.19108282 UNMOVED** (publication
+deliverable, not a score-mover).
