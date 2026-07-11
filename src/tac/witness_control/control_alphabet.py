@@ -350,12 +350,16 @@ class ScheduleBundleRec:
 def compose_schedule_bundle_ticket(marginal_ds: dict[str, float],
                                    state_flags: dict[str, bool], *,
                                    tier: str = "SPECULATIVE-UNTIL-BACKTESTED",
+                                   backtest_row: str = "",
+                                   status: str | None = None,
                                    ) -> OperatorGoTicket:
     """Compose the coherent state-gated cascade rec + wrap it in the HEAVY ticket.
 
     The cascade template is the measured #205 flow (island-birth → boundary-form →
     τ-sharpen⊕repair → finish); the λ-field ORDERS the bundles (most-negative
-    marginal-ΔS levers lead their stage) and the state flags gate the stages."""
+    marginal-ΔS levers lead their stage) and the state flags gate the stages.
+    ``backtest_row`` carries the MEASURED replay rows once the #430 backtest ran
+    (``schedule_backtest``); ``status`` overrides the SPECULATIVE default then."""
     lam_sorted = sorted(marginal_ds, key=lambda k: marginal_ds[k])
     repair = [n for n in lam_sorted if n in
               ("chroma_boundary", "lane_edge", "thin_lane", "subpix", "margin_saliency")]
@@ -376,10 +380,14 @@ def compose_schedule_bundle_ticket(marginal_ds: dict[str, float],
          "bundle": ["muon_finish"],
          "why": "finishing optimizer only on a coherent boundary"},
     )
-    rec = ScheduleBundleRec(
+    rec = (ScheduleBundleRec(
         stages=stages,
         joint_objective="min d_seg × train-time over the WHOLE cascade "
                         "(joint synergy, not per-lever EV)", tier=tier)
+        if status is None else ScheduleBundleRec(
+        stages=stages,
+        joint_objective="min d_seg × train-time over the WHOLE cascade "
+                        "(joint synergy, not per-lever EV)", tier=tier, status=status))
     active = [s for s in stages
               if not state_flags.get(f"stage_done:{s['bundle'][0]}", False)]
     return OperatorGoTicket(
@@ -387,7 +395,8 @@ def compose_schedule_bundle_ticket(marginal_ds: dict[str, float],
         justification=(f"#430 coherent schedule bundle ({len(active)} stage(s) "
                        f"pending; tier {tier}): " +
                        " → ".join("+".join(s["bundle"]) for s in rec.stages) +
-                       f" | objective: {rec.joint_objective} | status: {rec.status}"),
+                       f" | objective: {rec.joint_objective} | status: {rec.status}" +
+                       (f" | {backtest_row}" if backtest_row else "")),
         predicted_delta_s=None,
         governed_command="tools/launch_witness_run.py --resume-from <ckpt> "
                          "(operator-GO; schedule via the witness DSL compile)",
