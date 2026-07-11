@@ -15233,3 +15233,35 @@ the near-iid coding fact is an observation, not a law worth a canonical eqn). Th
 queue (DSL levers P1/P2/P4 already hold their factories; P3 is a solver opt-in param). **Pointer 0.19108282
 UNMOVED** — a rate estimate is a candidate until byte-closed through `upstream/evaluate.py`; P1–P4 await
 memory-free or operator-GO. Sister: `negative_findings_reaudit_20260710.md` PART 5.
+
+---
+
+## FEED-anisomap (2026-07-10) — the ANISOTROPY MAP of the argmax partition (per-edge / per-saddle / temporal)
+
+**SIGNAL:** where does the geometry+factorization+SPD-cone treatment (proven on pose, d_H≈10.5 → ~27% bytes;
+tested on lane by sister afa9d885) generalize BEYOND the lane? **DIAGNOSTIC:** measured d_H = log(λmax/λmin)
+of the local margin structure tensor on cached argmax (`gt_n96` + `gt_n600`, NO scorer forward) — the
+Morse-Smale complex of `m = φ_top − φ_runnerup`. Apparatus `src/tac/boundary_math/partition_anisotropy_map.py`
++ `tools/probe_partition_anisotropy_map.py`, 11 tests + synthetic controls. Artifacts
+`experiments/results/partition_anisotropy_map_20260710/probe{,_n600}.json`. **RESPONSE (ranked map):**
+- EDGES d_H: Road-MyCar/hood **6.73** (STATIC → store-once #139, d_H is a trap) · Road-Lane 3.74 (share 0.50,
+  SISTER) · **Road-Undriv/HORIZON 4.45** (share 0.18) · Movable 2.5-2.9 (LOW = isotropic blobs → moment-ellipse).
+  Routing = `d_H × share × (1−static)`, NOT d_H alone.
+- **HORIZON = the lane's high-d_H sibling, VERDICT YES:** fitted line v_center=188.8 within 3.2 rows of
+  intrinsics cy=192.0, slope −0.075 → sits on the ground-plane vanishing line; shares the SAME ground-plane
+  calibration + ξ dynamics ⟹ ONE vanishing-point ground-frame ξ chart covers Road+Lane+Undriv (scene above
+  hood). Caveat: horizon = plane's line-at-infinity (IPM→∞), not a finite ground CURVE; it shares the
+  calibration, not the rasterization.
+- **SADDLES (11.2/frame, 17× hard-mass concentration REAL) — FULL eigenstructure CORRECTS the naive read:**
+  AT junction Hessian median (λ1,λ2)=(0.150,0.007), only **37% mixed-sign**, |λmin|/|λmax| median 0.082
+  (quasi-rank-1) ⟹ **~98% directionally-codeable (the #1 lever WORKS), only ~2% genuine-2D-hyperbolic** needing
+  saddle-aware code. Saddles are a PRECISION residual, not a chart change. (Neighborhood-dilated "100%" is a
+  weak test; AT-junction eigenstructure is honest.)
+- **TEMPORAL:** d_H_st=2.20, near-null 3rd eig (0.0089) ⟹ boundary motion is 1-parameter coherent = ξ-factorable;
+  radial/tangential 0.137 is an edge-orientation artifact (lanes aperture-blind), not "motion tangential."
+
+**Triality:** DAG=this FEED; DSL N/A (routing map, no lever); equations = candidate
+`factorization_leverage_ranks_dH_times_share_not_static` (MEASURED heuristic, NOT registered — needs a
+byte-closed carrier to confirm the win scales with d_H like pose SPD-cone did). Authority `[macOS-MLX advisory]`.
+**Pointer 0.19108282 UNMOVED** — an anisotropy map routes future carriers; it moves no score. Memo
+`.omx/research/partition_anisotropy_map_20260710.md`. Sister afa9d885 owns the lane carrier (disjoint).
