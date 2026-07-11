@@ -99,6 +99,22 @@ action-disagreement** (sign/rank of λ), not a confidence scalar → `rashomon_l
 (3) the **identifiability ledger is a first-class output** (UNIDENTIFIED masks + duty-to-measure
 as active learning) → `identified` flags + `rank_duty_to_measure`.
 
+## 3b. THE LAB-FRONTIER SWEEP (DeepSeek/ByteDance/Qwen/Z.ai/Tencent/GDM/Meta — live, 2026-07-11)
+
+Full rows: `papers_checked_lab_frontier_sweep_moe_agentic_rl_20260711.md`. **VERDICT: the 2026
+frontier CONFIRMS all four measured conclusions** — (1) closed-form solve at small n (every
+frontier stability move REMOVES learned machinery when signal is scarce: DeepSeek aux-loss-free
+bias controller 2408.15664 = balance-by-CONTROLLER; GDM expert-choice 2202.09368 = balance BY
+CONSTRUCTION; SAO deletes the group baseline); (2) raw self-activation fails (nobody ships it
+ungated; routing-free MoE 2604.00801 itself needs bolted-on balancing); (3) evidence-shrunk
+stacking = the industrial default (DeepSeek-V4's >10 specialist teachers → reverse-KL On-Policy
+Distillation IS evidence-weighted panel consolidation); (4) Rashomon-gated System-2 = AlphaEvolve
+in production (LLM proposes, hard evaluator gates every act). The one counter-signal — VAPO
+2504.05118 (learned critic beats value-free at 5k steps × large batches) — marks the CROSSOVER
+regime for a future learned λ-critic, 3+ orders beyond one trajectory. Growth ladder adopted into
+the duty queue: per-lens bias starvation-guard (now, $0) → SAO-async+GSPO-sequence-clip λ updates
+(n_traj≳tens) → VAPO-regime critic A/B → Engram-style telemetry→prior lookup memory.
+
 ## 4. THE BACKTEST (the NO-FAKE gate; #205 trajectory, ep2→125, 5 intervals; all advisory)
 
 **Gate 1 — held-out forecast (LOO) vs the persistence heuristic** (what
