@@ -2606,6 +2606,87 @@ def build_lane_band_section(
 
 
 # ---------------------------------------------------------------------------
+# #359 PHASE-RESIDUAL CARRIER (store-half of the appearance-phase d_seg reframe).
+#   The witness converges to the temporal-majority oracle floor (d_seg ~= 0.005318 = the GT stride-2
+#   spike rate); sub-0.15 needs 0.0008-0.0012 = 4.5-7x BELOW it, pierceable ONLY by APPEARANCE-PHASE
+#   faithfulness. The train-side (T1/#360) descends the xi-COHERENT phase; the PHASE CARRIER STORES
+#   the per-pair RESIDUAL r = t_wit_actual - t_wit_xi_predicted the witness cannot predict
+#   (xi-transport amortized), entropy-coded. rule-118: COUNTED = the residual (video-derived); FREE =
+#   the xi-transport warp + tie-coordinate extraction + the DECODER-DERIVABLE straddle mask.
+#
+#   SELECTABLE CARRIER MODE (build-time codec parallel to the pose codec, #140 disposition): the
+#   through-R n600 d_seg this recovers is OWED-gated (needs a scorer forward the live #205 run
+#   forbids concurrently), so this mode BUILDS + MEASURES the section (real counted bytes -> a
+#   per-lever ΔS/byte candidate ROW for the #406 apply-pass) WITHOUT yet mutating the shipped
+#   _io_pack/inflate grammar -- the byte-identical-when-off guarantee is absolute (no grammar change
+#   at all) and the inflate-consumption wire lands with the through-R A/B that proves the d_seg
+#   (the same NO-FAKE staging every carrier goes through before its first exact row).
+# ---------------------------------------------------------------------------
+def build_phase_carrier_section(
+    gt_cache: str | None, n_pairs: int, cfg: dict[str, Any],
+) -> tuple[bytes, dict[str, Any]]:
+    """Build the phase-residual carrier section from the GT cache (lstars/margins/gt_poses).
+
+    Returns ``(section_bytes, report)``. NO-FAKE: a missing cache/keys raises. ``cfg`` keys:
+    ``q_step`` (default 1/64), ``classes`` (GROUND {0,1,2}), ``residual_scheme`` ("auto"),
+    ``annulus_band`` (1.0), ``gap_xi`` ("interp"), ``pitch`` (0.0)."""
+    from tac.boundary_math.phase_residual_carrier import PhaseCarrierConfig, phase_carrier_report
+
+    if not gt_cache:
+        raise ValueError("--phase-carrier requires --gt-cache (lstars/margins/gt_poses). NO-FAKE: "
+                         "refusing to fabricate the phase payload.")
+    cp = Path(gt_cache)
+    if not cp.exists():
+        raise FileNotFoundError(f"--gt-cache {cp} not found (phase-carrier needs lstars/margins/gt_poses).")
+    z = np.load(cp, allow_pickle=False)
+    for req in ("lstars", "margins", "gt_poses"):
+        if req not in z.files:
+            raise ValueError(f"gt cache {cp} lacks {req!r} (phase-carrier needs cached argmax+margins+poses).")
+    P = int(min(int(n_pairs), int(z["lstars"].shape[0])))
+    pcfg = PhaseCarrierConfig(
+        q_step=float(cfg.get("q_step", 1.0 / 64.0)),
+        residual_scheme=str(cfg.get("residual_scheme", "auto")),
+        classes=tuple(int(c) for c in cfg.get("classes", (0, 1, 2))),
+        annulus_band=float(cfg.get("annulus_band", 1.0)),
+        gap_xi=str(cfg.get("gap_xi", "interp")),
+        pitch=float(cfg.get("pitch", 0.0)),
+    )
+    section, rep = phase_carrier_report(
+        np.asarray(z["lstars"])[:P], np.asarray(z["margins"])[:P], np.asarray(z["gt_poses"])[:P], pcfg
+    )
+    rate_term_contribution = _cscore.rate_term(len(section))
+    report = {
+        "active": True,
+        "n_frames": rep.n_frames,
+        "classes": list(rep.classes),
+        "q_step": rep.q_step,
+        "residual_scheme": rep.residual_scheme,
+        "total_residual_count": rep.total_residual_count,
+        "per_frame_class_counts": rep.per_frame_class_counts,
+        "section_bytes": rep.section_bytes,
+        "xi_amortized_residual_bytes": rep.xi_amortized_residual_bytes,
+        "raw_tie_residual_bytes": rep.raw_tie_residual_bytes,
+        "amortization_ratio": rep.amortization_ratio,
+        "mean_abs_residual_q": rep.mean_abs_residual_q,
+        "max_abs_residual_q": rep.max_abs_residual_q,
+        "tie_recon_rmse_px": rep.tie_recon_rmse_px,
+        "reconstruction_bit_identical": rep.reconstruction_bit_identical,
+        "counted_rate_term_contribution": rate_term_contribution,
+        "recovered_d_seg": None,  # OWED-gated: needs a through-R n600 scorer forward (memory-blocked by live #205)
+        "recovered_d_seg_status": "OWED_through_R_n600_AB (intrinsic bytes MEASURED; d_seg NOT claimed, NO-FAKE)",
+        "source_gt_cache": str(cp),
+        "rule_118_boundary": {
+            "COUNTED (archive.zip)": "the quantized per-pair phase RESIDUAL (video-derived; the part "
+                                     "xi-transport cannot predict)",
+            "FREE (inflate.py)": "the xi-transport warp A_xi + tie-coordinate extraction (generic algorithm) "
+                                 "+ the DECODER-DERIVABLE straddle mask (the witness's own rendered partition)",
+            "no_gt_no_scorer_shipped": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship",
+        },
+    }
+    return section, report
+
+
+# ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
 def run(
@@ -2627,6 +2708,8 @@ def run(
     pose_carrier: bool = False,  # #205 warp-real-luma frame0 pose carrier
     pose_carrier_cfg: dict[str, Any] | None = None,
     pose_carrier_xi_override: np.ndarray | None = None,  # #238: ship the TRAINED ξ_eff (xi_stored+dxi)
+    phase_carrier: bool = False,  # #359 phase-residual carrier (store-half of the flicker reframe)
+    phase_carrier_cfg: dict[str, Any] | None = None,
     verify_bit_exact: bool = False,
     bit_exact_pairs: int = 2,
     bit_exact_strict: bool = True,
@@ -2714,6 +2797,25 @@ def run(
                   f"stride={pose_carrier_report['stride']} store_hw={pose_carrier_report['keyframe_store_hw']} "
                   f"keyframe_bytes={kf_measured} section={_pc_section} B "
                   f"(rate += {keyframe_accounting['keyframe_blob_rate']:.5f})  {_AUTHORITY}", flush=True)
+
+    # #359 PHASE-RESIDUAL CARRIER (store-half of the flicker reframe). SELECTABLE MODE: BUILD + MEASURE
+    # the section (real counted bytes -> per-lever ΔS/byte candidate row for the #406 apply-pass) WITHOUT
+    # mutating the shipped _io_pack/inflate grammar (byte-identical when off; inflate-consumption OWED with
+    # the through-R A/B that proves the d_seg -- NO-FAKE staging). The through-R n600 d_seg is memory-gated
+    # by the live #205 run, so d_seg is reported OWED, never claimed.
+    phase_carrier_report_out: dict[str, Any] = {"active": False}
+    if phase_carrier:
+        _phase_section, phase_carrier_report_out = build_phase_carrier_section(
+            gt_cache, n_pairs, phase_carrier_cfg or {})
+        print(f"[phase-carrier] ACTIVE (GROUND classes {phase_carrier_report_out['classes']}): "
+              f"section={phase_carrier_report_out['section_bytes']} B "
+              f"({phase_carrier_report_out['total_residual_count']} residuals, "
+              f"scheme={phase_carrier_report_out['residual_scheme']}, "
+              f"rate_term += {phase_carrier_report_out['counted_rate_term_contribution']:.6f}); "
+              f"xi_amort={phase_carrier_report_out['amortization_ratio']:.3f} "
+              f"rmse_px={phase_carrier_report_out['tie_recon_rmse_px']:.5f} "
+              f"bit_identical={phase_carrier_report_out['reconstruction_bit_identical']}; "
+              f"recovered_d_seg={phase_carrier_report_out['recovered_d_seg_status']}  {_AUTHORITY}", flush=True)
 
     blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest,
                                           pose_carrier_bytes, pose_carrier_manifest)
@@ -2837,9 +2939,11 @@ def run(
             "pose_sidecar": pose_note,
             "lane_render_band": lane_report,
             "pose_carrier": pose_carrier_report,
+            "phase_carrier": phase_carrier_report_out,
         },
         "lane_render_band": lane_report,
         "pose_carrier": pose_carrier_report,
+        "phase_carrier": phase_carrier_report_out,
         "pose_carrier_keyframe_accounting": (
             None if keyframe_accounting is None else {
                 **keyframe_accounting,
@@ -3130,6 +3234,27 @@ def main(argv: list[str] | None = None) -> int:
                     help="#238 (with --pose-carrier-xi-from-ckpt): ξ_eff = xi_stored + scale*dxi. Default = "
                          "the checkpoint's trained residual_scale (1.0). scale=0 = the MATCHED no-dxi "
                          "baseline (SAME fitted xi_stored, dxi off) -> the clean dxi A/B isolate.")
+    # #359 PHASE-RESIDUAL CARRIER (store-half of the appearance-phase d_seg reframe). OFF by default
+    # -> byte-identical (no _io_pack/inflate grammar change). Needs --gt-cache (lstars/margins/gt_poses).
+    # BUILDS + MEASURES the section (real counted bytes -> a per-lever ΔS/byte candidate row for the #406
+    # apply-pass); the through-R n600 d_seg it recovers is OWED-gated (memory-blocked by the live #205 run),
+    # so d_seg is reported OWED, never claimed (NO-FAKE). Inflate-consumption wire lands with the A/B.
+    ap.add_argument("--phase-carrier", action="store_true",
+                    help="#359 phase-residual carrier: STORE the per-pair sub-pixel boundary-phase RESIDUAL "
+                         "r = t_wit_actual - t_wit_xi_predicted (xi-transport amortized), entropy-coded. Needs "
+                         "--gt-cache. Selectable build-time codec mode; OFF by default (byte-identical when off).")
+    ap.add_argument("--phase-carrier-q-step", type=float, default=1.0 / 64.0,
+                    help="phase-carrier sub-pixel tie quantization step in [0,1] (default 1/64).")
+    ap.add_argument("--phase-carrier-classes", type=str, default="0,1,2",
+                    help="phase-carrier GROUND class channels (default 0,1,2 = Road,Lane,Undrivable; the "
+                         "homography is valid on the ground plane, WRONG on Movable/MyCar -> DEFERRED).")
+    ap.add_argument("--phase-carrier-scheme", type=str, default="auto",
+                    choices=["auto", "varint", "zlib9", "rice"],
+                    help="phase-carrier residual entropy scheme (auto = best-of the three).")
+    ap.add_argument("--phase-carrier-band", type=float, default=1.0,
+                    help="phase-carrier annulus band |margin| < band (the flip-prone straddle set).")
+    ap.add_argument("--phase-carrier-pitch", type=float, default=0.0,
+                    help="phase-carrier ground-plane pitch for the xi-transport warp (rad).")
     # #224 Wave E: decode-consistent analytic-lane RENDER-BAND (fork B). OFF by default -> byte-identical.
     # Fits per-pair lane manifold coords from --gt-cache (COUNTED), reproduces the coverage+composite
     # in inflate (FREE, rule 118) so the band is a REAL (non-phantom) score. Closes R5_BLOCK.
@@ -3235,6 +3360,14 @@ def main(argv: list[str] | None = None) -> int:
             "mode": args.pose_carrier_mode,
             "xi_coder": ("none" if args.no_xi_coder else args.pc_xi_coder),  # #257
             "xi_q_levels": args.pc_xi_qlevels,
+        },
+        phase_carrier=args.phase_carrier,  # #359
+        phase_carrier_cfg={
+            "q_step": args.phase_carrier_q_step,
+            "classes": tuple(int(c) for c in str(args.phase_carrier_classes).split(",") if c.strip() != ""),
+            "residual_scheme": args.phase_carrier_scheme,
+            "annulus_band": args.phase_carrier_band,
+            "pitch": args.phase_carrier_pitch,
         },
         verify_bit_exact=args.verify_bit_exact,
         bit_exact_pairs=args.bit_exact_pairs,
