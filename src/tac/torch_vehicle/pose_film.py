@@ -49,6 +49,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# SPD-cone / Hilbert-projective water-filled pose-section codec (sister of the #140
+# low-rank codec; measured to Pareto-dominate it on the real pose section — see
+# ``pose_spd_codec`` module docstring + ``.omx/research/spd_cone_pose_codec_ab_measured.json``).
+from tac.torch_vehicle.pose_spd_codec import (
+    _POSE_SECTION_MAGIC_SPD,
+    decode_pose_section_spd,
+    encode_pose_section_spd,
+    spd_fit_to_mse,
+)
+
 _POSE_DIM = 6  # contest PoseNet pose (first 6 dims; upstream/modules.py)
 # Magic for the additive pose section so a parser can detect its presence/absence
 # (a vendored-only archive simply has no trailing bytes after the 3 sections).
@@ -601,6 +611,7 @@ def build_archive_with_pose(
     pose_codec: str = "iid",
     lowrank_rank: int = _LOWRANK_DEFAULT_RANK,
     lowrank_levels: int = _LOWRANK_DEFAULT_LEVELS,
+    spd_water_level: float | None = None,
 ) -> bytes:
     """Build the vendored archive, then APPEND the additive pose section.
 
@@ -621,10 +632,21 @@ def build_archive_with_pose(
       a modest Pareto-dominant byte win (smaller AND lower-MSE than iid) — see the
       codec's module-level comment for the net-score caveat (a more aggressive cut is
       net-negative).
+    * ``"spd"`` — SPD-cone / Hilbert-projective water-filled codec
+      (:func:`encode_pose_section_spd`; sister module ``pose_spd_codec``). Same SVD
+      basis as ``lowrank`` but an equal-distortion (constant quantization-STEP) +
+      soft-water-filling per-mode bit allocation instead of ``lowrank``'s constant-
+      LEVELS + hard-rank-truncation. MEASURED to Pareto-dominate ``lowrank`` on the
+      real pose section (~27% fewer bytes at the ``lowrank`` default's fidelity; the
+      advantage scales with the covariance's Hilbert distance ``d_H`` — see the artifact
+      ``.omx/research/spd_cone_pose_codec_ab_measured.json``). ``spd_water_level`` (θ)
+      selects the operating point; when ``None`` (default) it is auto-fit so the section
+      MSE is ≤ the legacy iid codec's own MSE — a Pareto rate cut that CANNOT worsen
+      ``d_pose`` vs the legacy default (advisory until a byte-closed exact eval).
 
     The choice is INVISIBLE to the reader: :func:`parse_pose_section` /
     :func:`decode_pose_section` auto-dispatch on the section magic, so an archive
-    built with either codec decodes through the SAME inflate path.
+    built with any codec decodes through the SAME inflate path.
     """
     base = vendored_build_archive(decoder_state_dict, latents, meta_dict)
     if pose_codec == "iid":
@@ -633,7 +655,22 @@ def build_archive_with_pose(
         return base + encode_pose_section_lowrank(
             stored_pose, rank=lowrank_rank, levels=lowrank_levels
         )
-    raise ValueError(f"unknown pose_codec {pose_codec!r} (expected 'iid' or 'lowrank')")
+    if pose_codec == "spd":
+        wl = spd_water_level
+        if wl is None:
+            # Pareto default: fit θ so the SPD section MSE ≤ the legacy iid codec's
+            # own round-trip MSE (fewer bytes, no worse fidelity → d_pose safe).
+            iid_mse = float(
+                (
+                    (decode_pose_section(encode_pose_section(stored_pose)) - stored_pose.detach().cpu().float())
+                    ** 2
+                ).mean().item()
+            )
+            wl, _b, _m = spd_fit_to_mse(stored_pose, iid_mse)
+        return base + encode_pose_section_spd(stored_pose, water_level=wl)
+    raise ValueError(
+        f"unknown pose_codec {pose_codec!r} (expected 'iid', 'lowrank', or 'spd')"
+    )
 
 
 def parse_pose_section(archive_bytes: bytes, vendored_parse_archive) -> torch.Tensor | None:
@@ -648,9 +685,10 @@ def parse_pose_section(archive_bytes: bytes, vendored_parse_archive) -> torch.Te
 
     Auto-dispatches on the section magic: ``PFLM`` → legacy iid codec
     (:func:`decode_pose_section`); ``PFL2`` → low-rank SVD codec
-    (:func:`decode_pose_section_lowrank`). Any other trailing bytes → ``None``
+    (:func:`decode_pose_section_lowrank`); ``PSPD`` → SPD-cone water-filled codec
+    (:func:`decode_pose_section_spd`). Any other trailing bytes → ``None``
     (no recognized pose section). This makes the codec choice INVISIBLE to the
-    inflate path — a legacy archive and a low-rank archive both decode here."""
+    inflate path — a legacy, low-rank, or SPD archive all decode here."""
     buf = io.BytesIO(archive_bytes)
     # Walk the 3 vendored length-prefixed sections to find the trailing offset.
     for _ in range(3):
@@ -669,6 +707,8 @@ def parse_pose_section(archive_bytes: bytes, vendored_parse_archive) -> torch.Te
         return decode_pose_section(trailing)
     if magic == _POSE_SECTION_MAGIC_LOWRANK:
         return decode_pose_section_lowrank(trailing)
+    if magic == _POSE_SECTION_MAGIC_SPD:
+        return decode_pose_section_spd(trailing)
     return None  # unrecognized trailing bytes → no pose section
 
 
@@ -773,8 +813,10 @@ __all__ = [
     "build_archive_with_pose",
     "decode_pose_section",
     "decode_pose_section_lowrank",
+    "decode_pose_section_spd",
     "encode_pose_section",
     "encode_pose_section_lowrank",
+    "encode_pose_section_spd",
     "inflate_film_decoder",
     "lowrank_pose_section_fidelity",
     "parse_pose_section",

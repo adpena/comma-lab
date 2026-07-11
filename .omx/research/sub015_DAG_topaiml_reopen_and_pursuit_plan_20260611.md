@@ -15085,3 +15085,29 @@ until built+measured; the info-geo recognition is JUSTIFICATION not result; the 
 design-originality until a byte-closed exact row < 0.19108282. $0 docs-only; live run untouched.
 **Triality:** `[no-triality]` — docs artifact, no measured law. **Pointer 0.19108282 UNMOVED** (publication
 deliverable, not a score-mover).
+
+## FEED-sp (2026-07-10) SPD-CONE WATER-FILLED POSE-SECTION CODEC — MEASURED WIN over the #140 low-rank codec (RATE, advisory)
+Built the SPD-cone / Hilbert-projective variant of the #140 low-rank (rank-2 SVD) stored-pose-section codec, from the
+info-geometry cluster's SPD thread (Nielsen 2307.10644 Fisher-Rao + pullback Hilbert-cone from min/max eigenvalues;
+`intake_curved_bregman_and_geometric_structures_cluster_20260710`). `src/tac/torch_vehicle/pose_spd_codec.py`
+(`encode/decode_pose_section_spd`, `hilbert_projective_distance`, `spd_fit_to_{mse,bytes}`). SAME SVD basis as #140
+(the SPD covariance eigenbasis) but the RD-OPTIMAL allocation for a Gaussian-MSE source — reverse WATER-FILLING:
+constant quantization STEP (equal per-mode distortion θ) + soft mode-dropping, vs #140's constant per-mode LEVELS +
+HARD rank-truncation. **MEASURED (memory-light, $0, matrix-only on the real 600×6 `gt_targets_n600.pt`):** at the #140
+shipped default's point (rank-4/lvl-511 = 2563 B @ MSE 2.70e-5) SPD reaches ≤ that MSE in **1869 B = -27.1% (-694 B)**,
+or **9.3× lower MSE at matched bytes** — a PARETO rate cut (fewer bytes at no-worse fidelity ⇒ d_pose CANNOT worsen).
+Frontier-vs-frontier (both codecs tuned to best RD curve, rules out operating-point-selection confound): SPD frontier
+dominates across the near-lossless regime (+1024 B at the 2.7e-5 reference), converging to tie only at coarse 1e-3.
+MECHANISM confirmed by controls: byte-gap scales with the covariance Hilbert distance d_H=log(λmax/λmin) — anisotropic
+synth (d_H≈8) gap +1373 B, near-isotropic synth (d_H≈0.26) frontiers nearly coincide (+40 B). So the win IS the
+SPD-cone water-filling geometry, not a codec artifact. Wired non-orphaned: `build_archive_with_pose(pose_codec="spd")`
+(auto-fit θ ≤ legacy-iid MSE = Pareto default) + `parse_pose_section` PSPD magic auto-dispatch → invisible to inflate.
+Tests: `test_pose_spd_codec.py` (10, incl. round-trip determinism, real-pose Pareto, anisotropic positive control +
+isotropic parity control, archive round-trip); existing 23 low-rank tests still green; ruff-F clean; review-gate 2-pass.
+Artifact `.omx/research/spd_cone_pose_codec_ab_measured.json`. Live run (pid 88030) untouched; no n600/through-R.
+**HONEST SCOPE (NO-FAKE #8):** section-MSE→contest-d_pose maps only through the byte-closed decode; NET-score confirmed
+only by a byte-closed `upstream/evaluate.py`. Candidate RATE refinement for the stored-pose-sidecar path (25·694/37.5M
+≈ 4.6e-4 rate points at matched fidelity IF it composes into the shipped archive), NOT a pointer move.
+**Triality:** DSL leg N/A (build-time pose-SECTION codec, not a trainer lever — wired into `build_archive_with_pose`
+like #140 `lowrank`, no DSL `Lever`); equations leg = canonical `pose_spd_cone_waterfill_rate_v1`
+(`pose_spd_cone_waterfill_rate_20260710.py`, +test). **Pointer 0.19108282 UNMOVED.**

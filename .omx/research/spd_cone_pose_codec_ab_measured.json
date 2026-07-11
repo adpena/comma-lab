@@ -1,0 +1,200 @@
+{
+  "utc": "2026-07-11T00:38:57.203664+00:00",
+  "cases": [
+    {
+      "name": "REAL contest pose",
+      "d_H": 10.524145934848748,
+      "cond": 37203.046875,
+      "iid_bytes": 3088,
+      "shipped_default": {
+        "bytes": 2563,
+        "mse": 2.704831786104478e-05
+      },
+      "spd_matched_mse": {
+        "bytes": 1869,
+        "mse": 2.679873250599485e-05,
+        "delta": 694,
+        "pct": 27.1
+      },
+      "spd_matched_bytes": {
+        "bytes": 2547,
+        "mse": 2.908482201746665e-06,
+        "mse_ratio": 9.3
+      },
+      "frontier_vs_frontier": [
+        {
+          "mse_budget": 3e-06,
+          "base_bytes": 4353,
+          "spd_bytes": 2534,
+          "delta": 1819
+        },
+        {
+          "mse_budget": 1e-05,
+          "base_bytes": 3630,
+          "spd_bytes": 2222,
+          "delta": 1408
+        },
+        {
+          "mse_budget": 2.7e-05,
+          "base_bytes": 2950,
+          "spd_bytes": 1926,
+          "delta": 1024
+        },
+        {
+          "mse_budget": 5e-05,
+          "base_bytes": 2255,
+          "spd_bytes": 1655,
+          "delta": 600
+        },
+        {
+          "mse_budget": 0.0001,
+          "base_bytes": 1937,
+          "spd_bytes": 1531,
+          "delta": 406
+        },
+        {
+          "mse_budget": 0.0003,
+          "base_bytes": 1166,
+          "spd_bytes": 1082,
+          "delta": 84
+        },
+        {
+          "mse_budget": 0.001,
+          "base_bytes": 488,
+          "spd_bytes": 489,
+          "delta": -1
+        }
+      ]
+    },
+    {
+      "name": "synthetic isotropic (d_H~0)",
+      "d_H": 0.25604469106014216,
+      "cond": 1.2918105125427246,
+      "iid_bytes": 1117,
+      "shipped_default": {
+        "bytes": 1141,
+        "mse": 0.30467239022254944
+      },
+      "spd_matched_mse": {
+        "bytes": 410,
+        "mse": 0.2948630750179291,
+        "delta": 731,
+        "pct": 64.1
+      },
+      "spd_matched_bytes": {
+        "bytes": 1123,
+        "mse": 5.376333137974143e-05,
+        "mse_ratio": 5666.92
+      },
+      "frontier_vs_frontier": [
+        {
+          "mse_budget": 3e-06,
+          "base_bytes": 2235,
+          "spd_bytes": 1888,
+          "delta": 347
+        },
+        {
+          "mse_budget": 1e-05,
+          "base_bytes": 1699,
+          "spd_bytes": 1554,
+          "delta": 145
+        },
+        {
+          "mse_budget": 2.7e-05,
+          "base_bytes": 1318,
+          "spd_bytes": 1278,
+          "delta": 40
+        },
+        {
+          "mse_budget": 5e-05,
+          "base_bytes": 1318,
+          "spd_bytes": 1181,
+          "delta": 137
+        },
+        {
+          "mse_budget": 0.0001,
+          "base_bytes": 1112,
+          "spd_bytes": 1077,
+          "delta": 35
+        },
+        {
+          "mse_budget": 0.0003,
+          "base_bytes": 1112,
+          "spd_bytes": 1048,
+          "delta": 64
+        },
+        {
+          "mse_budget": 0.001,
+          "base_bytes": 981,
+          "spd_bytes": 1007,
+          "delta": -26
+        }
+      ]
+    },
+    {
+      "name": "synthetic anisotropic (cond~64)",
+      "d_H": 8.328789500260948,
+      "cond": 4141.4013671875,
+      "iid_bytes": 809,
+      "shipped_default": {
+        "bytes": 1032,
+        "mse": 1.0446046590805054
+      },
+      "spd_matched_mse": {
+        "bytes": 584,
+        "mse": 0.9863177537918091,
+        "delta": 448,
+        "pct": 43.4
+      },
+      "spd_matched_bytes": {
+        "bytes": 1007,
+        "mse": 0.006190827116370201,
+        "mse_ratio": 168.73
+      },
+      "frontier_vs_frontier": [
+        {
+          "mse_budget": 3e-06,
+          "base_bytes": 4085,
+          "spd_bytes": 3575,
+          "delta": 510
+        },
+        {
+          "mse_budget": 1e-05,
+          "base_bytes": 3889,
+          "spd_bytes": 3030,
+          "delta": 859
+        },
+        {
+          "mse_budget": 2.7e-05,
+          "base_bytes": 3889,
+          "spd_bytes": 2516,
+          "delta": 1373
+        },
+        {
+          "mse_budget": 5e-05,
+          "base_bytes": 3510,
+          "spd_bytes": 2167,
+          "delta": 1343
+        },
+        {
+          "mse_budget": 0.0001,
+          "base_bytes": 3510,
+          "spd_bytes": 1868,
+          "delta": 1642
+        },
+        {
+          "mse_budget": 0.0003,
+          "base_bytes": 2950,
+          "spd_bytes": 1474,
+          "delta": 1476
+        },
+        {
+          "mse_budget": 0.001,
+          "base_bytes": 2303,
+          "spd_bytes": 1232,
+          "delta": 1071
+        }
+      ]
+    }
+  ]
+}
