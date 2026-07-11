@@ -336,15 +336,24 @@ DEFAULT_TRAINING_PIPELINE: tuple[TrainingStageSpec, ...] = (
                 "3-tier fidelity ladder (tier-0 #430 schedule_backtest replay · "
                 "tier-1 multi-class CGauge simulator · tier-2 real micro-runs), "
                 "UED-regret-taught transient-rich windows, BIRD/QD diversity-gated, "
-                "PDR×RQGM loop (#434 design: "
+                "PDR×RQGM loop (#434: tac.witness_control.transient_forge; design "
                 "synthetic_data_nvidia_sota_organ_434_20260711.md)",),
-        status="PROPOSED",
-        blocker="Forge v0 not built (design-only, research_only); adoption requires "
-                "the real chronological walk-forward gate (beat persistence AND the "
-                "incumbent AND the real-prefix-only ablation on real #205 folds via "
-                "tools/lambda_net_backtest.py); synthetic-fold wins are NEVER "
-                "adoption evidence (NO-FAKE #3); tier-2 micro-runs are operator-GO "
-                "and are the only records counting toward the ≥3-record graduation"),
+        status="EXECUTED_$0",
+        measured="Forge v0 BUILT ($0, deterministic, numpy) + the §3 real "
+                 "chronological walk-forward adoption gate MEASURED "
+                 "(tools/transient_forge_backtest.py on #205; artifact "
+                 "transient_forge_backtest_20260711T171116Z.json). HONEST NEGATIVE: "
+                 "the optimal-form prior-mean forge arm (synthetic as PRIOR MEAN, λ "
+                 "past-only prefix-LOO selected) WF 0.003882 marginally beats "
+                 "real-only ridge 0.003902 but still LOSES to persistence 0.002792 "
+                 "AND incumbent E_prototype_bregman 0.002839 ⇒ NOT ADOPTED; 6/7 folds "
+                 "select λ=0 (weight synthetic zero), 1 transient fold λ=0.03. #433 "
+                 "aniso acid P–Q separation +2.3e-5 within noise (coupling absent OR "
+                 "simulator can't express it — tier-2 disambiguates, 0 fired). "
+                 "verdict_scope: instance (n=1 plateau trajectory); synthetic-fold "
+                 "wins NEVER adoption evidence (NO-FAKE #3); tier-2 micro-runs "
+                 "(operator-GO, not fired) are the only ≥3-record-graduation-"
+                 "counting data. Memo transient_forge_434_build_20260711.md"),
     TrainingStageSpec(
         name="trajectory_sft", stage="posttrain_sft",
         corpus=("#205 trajectory intervals (the measured campaign data)",),
