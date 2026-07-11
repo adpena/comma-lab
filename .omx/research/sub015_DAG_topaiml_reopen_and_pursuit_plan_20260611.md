@@ -15564,3 +15564,33 @@ effective-rank/MDL weight regularizer #242 + low-rank code codec #140 with fresh
   stub with no measured value = orphan/stub theater) · equations = N/A-with-reason (H2 relation INSTANCE-scope
   advisory, duplicates MDL #242; a canonical LAW implies FAMILY+ scope). Memo
   `weightwatcher_ww_pgd_442_20260711.md`. Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS).
+
+## FEED-443-kernel-hotpath-sweep (2026-07-11) — full MLX/Metal + training-hot-path optimization sweep: stack is AT its measured bit-identical frontier; every BUILD-NOW candidate died under measurement
+Task #443 (operator-directed, scope-extended mid-task to ALL training-time code + Agner Fog discipline).
+$0 idle-machine benches, `[advisory NON-PROMOTABLE]`. Memo `.omx/research/kernel_stack_sweep_443_20260711.md`
+(the ranked 14-row ledger). **MEASURED headlines:** (1) **CPU-co-load immunity** — the MLX GPU step
+(B=8 SegNet fwd+bwd, grouped-backward ON) is IMMUNE to saturating CPU-torch AND numpy-Accelerate co-load
+(407→409–414 ms, ≤2% = noise) ⇒ the #306 "+12% verdict contention" attribution is NOT reproduced at the
+GPU-step level (residual = GIL/host-side, live-run-A/A-only); the verdict nt-cap/QoS candidate is
+DOWNGRADED to QUEUE-behind-live-measurement. (2) **Scorer thread-count bit-identity:** SegNet argmax+margin
++ PoseNet raw are bit-identical at torch nt∈{2,4,6}; **nt=1 margin DIVERGES** — thread count CAN move
+numerics ⇒ any future cap needs a per-count startup parity gate. (3) **Persistence sizing at V9 shapes**
+(K=1, sg cached): fwd+bwd **4.72 ms/pair ≈ 2.8 s/ep** ⇒ the pred-side fused-skeleton-VJP kernel candidate
+is REJECTED (<1% win; tie-parity risk) and the ep300 "+47 s/ep tau-group" is now known to be mostly
+tau-form+band, NOT clDice (P8/P9 probes stay the disambiguator). (4) **Persistence-pool Metal kernel
+(BUILT post-#355, ON in the V9 env prefix): NEW parity anchor — metal mean pool == numpy authority
+EXACTLY (0.0) while the pure-MLX fallback differs by 2.4e-7** ⇒ the kernel is the MORE authority-faithful
+path; keep ON. (5) **Python orchestration exonerated:** lazy-graph construction = 0.6% of build+eval on
+the representative closure ⇒ per-pair Python glue bounded ~1–4 s/ep; no micro-opt target (Fog
+measure-first veto). (6) V9 micro-batch compat: seed-islands + wa-island now ROUTED; **binding blocker =
+`--logit-adjust-loss-tau 1.0`** (named build item for the #313-family owner; the 2–4× lever stays
+QUEUE/A/B-owed). (7) Muon Newton-Schulz fused kernel DERIVED dead (96²–256² × 75 steps/ep ⇒ sub-ms/ep);
+BN-folding REJECTED inside the #356 wall's scope. arXiv 2606.29636 (Lie-group diffusion): assessed,
+nothing transfers (memo §5). **NOTHING BUILT — deliberately** (all candidates measured below noise or
+unproven; a stub lever = config-orphan theater). verdict_scope: timing rows INSTANCE (this host, idle,
+V9 shapes); the co-load immunity is host-conditional. Relative significance: ΔS = 0 by construction
+(speed is MEANS); wall-clock frontier unchanged pending the micro-batch A/B.
+- **triality:** DAG = this FEED · DSL = N/A-with-reason (no lever ships; surviving levers already
+  DSL-held + ON) · equations = N/A-with-reason (no new law; §3.4 is an ANCHOR on a built kernel, and
+  rows 3/9/10 sit inside the existing `witness_fp_reorder_transform_bit_identity_wall_v1` scope).
+  Pointer 0.19108282 [contest-CPU] UNMOVED (MEANS).
