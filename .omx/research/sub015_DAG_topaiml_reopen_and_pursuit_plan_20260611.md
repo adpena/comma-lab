@@ -15962,7 +15962,7 @@ launch under concurrent memory pressure; respected. Historical isolated scorer a
 1.75x CPU at K8, not a full-V9 speed claim. Faithful B1/B2 full-step median and n600 validation are owed
 to the operator-fired arm; no heavy run launched here. **Triality:** DSL=`MicroBatch` + real V9 inventory
 test; equations=`micro_batch_functional_parity_training_admission_v1` plus reconciled chroma/logit/
-batch-drift laws; DAG=this FEED. **Pointer 0.1880443979880752 [contest-CPU] UNMOVED; no score authority.**
+batch-drift laws; DAG=this FEED. **Canonical `reports/latest.md` [contest-CPU] pointer UNMOVED; no score authority.**
 
 ### FEED-frozen-segnet-cluster-nielsen (2026-07-12) — the 95% attack, sharpened + one framing corrected
 Operator P0: attack the frozen-SegNet fwd+bwd (~95% of witness per-epoch wall-clock). Two agents ran.
@@ -15985,3 +15985,19 @@ ops on T, each REUSING existing surfaces (topology=Morse #180 + margin #141, gra
 inc-3 = composition + retrieval-first (#346) + dashboard/costate wire-in. Build agent dispatched. MEANS
 (apparatus: makes corpus as navigable as writable = P0 anti-forgetting; turns witness geometry queryable).
 Pointer UNMOVED.
+
+### FEED-motive-nvidia (2026-07-12) — partial hit, one technique routed to #449
+NVIDIA MOTIVE (ICML'26 oral, "Motion Attribution for Video Generation"): gradient-based DATA ATTRIBUTION
+for video-gen (which training data drives motion). Core problem is n=1-MISMATCHED for us (ONE contest clip,
+not dataset-attribution). Transfer assessment (honest, ranked):
+1. **Fastfood random-projection gradient compression + identity-preconditioned inverse-Hessian approx**
+   (genuinely NEW-to-us) → ROUTE to #449 frozen-SegNet gradient-compression/amortization cluster. Structured
+   Hadamard-diagonal JL projection = cheap way to compress the per-pixel scorer gradient; the inverse-Hessian
+   approx pairs with our #423 Hessian-precond head-offset. THE real transfer — one technique for the cluster
+   already running.
+2. Motion/saliency-weighted gradients (optical-flow masks emphasize dynamic regions) → ALREADY-HAVE
+   (margin-saliency #141, spike-aware reweight #274); optical-flow variant is the pose/temporal analog, pose
+   largely solved (R1) ⇒ marginal.
+3. Within-clip influence attribution (which pairs/pixels matter most for d_seg) → curriculum + meta-init
+   corpus (#211) + lens-engine relational/stats lenses. Coherent stretch, not urgent.
+No new agent (partial hit); Fastfood folds into #449's successor build. Pointer UNMOVED (MEANS).
