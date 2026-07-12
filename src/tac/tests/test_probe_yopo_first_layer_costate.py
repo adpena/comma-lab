@@ -294,6 +294,42 @@ def test_run_enforces_label_floor_on_every_comparison_and_successful_arm():
     assert "a rejected provider uses one operational exact-teacher label path" in source
 
 
+def test_terminal_non_descent_receipt_keeps_fresh_metrics_and_teacher_work():
+    source = inspect.getsource(probe.run)
+    terminal = source.split("if target_norm is None or candidate_theta is None:", maxsplit=1)[1]
+    terminal = terminal.split("selected_candidate = next", maxsplit=1)[0]
+    for required in (
+        '"costate_metrics_global"',
+        '"costate_metrics_gt_boundary_annulus_bottom_k_0p05"',
+        '"renderer_gradient_cosine"',
+        '"teacher_work_counts"',
+        '"operational_teacher_forward_backward_including_labels"',
+        '"operational_validation_forwards_including_labels"',
+        '"algebraic_speed_ceiling_derived"',
+        '"regret_status": "UNKNOWN_NO_ADMISSIBLE_DESCENDING_CANDIDATE"',
+        '"teacher_label_path_agreement"',
+        '"terminal_stop_requires_no_parameter_update": True',
+        '"full_teacher_fallbacks": int(provider_fallback)',
+        '"candidate_ce": None',
+        '"candidate_dseg": None',
+        '"exact_reference_ce": None',
+        '"exact_reference_dseg": None',
+        '"ce_regret_vs_exact_reference": None',
+        '"dseg_regret_vs_exact_reference": None',
+        '"actual_probe_teacher_forward_backward_including_labels"',
+        '"measurement_only_teacher_forward_backward_including_labels"',
+        '"measurement_only_control_forwards_including_labels": 0',
+        '"actual_probe_teacher_forwards_total_including_labels"',
+    ):
+        assert required in terminal
+    assert "_metrics(exact_costate, candidate_costate)" in terminal
+    assert "_cosine(\n                                exact_grad.detach().numpy(), candidate_grad.detach().numpy()" in terminal
+    assert "1 + int(refresh)" not in source
+    assert source.count("operational_teacher_forward_backward_count += 1") == 4
+    assert source.count("measurement_only_teacher_forward_backward_count += 1") == 3
+    assert source.count('"actual_probe_teacher_forward_backward_including_labels": (') == 2
+
+
 @pytest.mark.parametrize("terminal_status", ["NO_GO_NON_DESCENT", "NO_GO_PROVIDER_FALLBACK"])
 def test_last_step_terminal_arm_cannot_enter_success_finalizer(terminal_status):
     arm = _regime(ks=(4,))["arms"][0]
@@ -471,6 +507,36 @@ def test_candidate_recess_is_event_conditioned_and_has_completion_rule(monkeypat
         }
     ]
     assert forwards == 1
+    assert elapsed >= 0.0
+
+
+def test_candidate_recess_counts_only_executed_teacher_validations(monkeypatch):
+    import torch
+
+    calls = 0
+
+    def evaluate(_segnet, _frame, _labels):
+        nonlocal calls
+        calls += 1
+        return 1.0, 0.0
+
+    theta = torch.zeros(1, dtype=torch.float32)
+    monkeypatch.setattr(probe, "_render_chart", lambda _renderer, candidate: candidate)
+    monkeypatch.setattr(probe, "_evaluate_teacher", evaluate)
+    candidate, norm, trials, forwards, elapsed = probe._select_candidate_recess(
+        renderer=object(),
+        theta=theta,
+        candidate_grad=torch.ones_like(theta),
+        segnet=object(),
+        labels=object(),
+        current_loss=1.0,
+        current_dseg=0.0,
+    )
+    assert candidate is None
+    assert norm is None
+    assert trials[-1]["status"] == "BIT_IDENTICAL_TERMINATION"
+    assert forwards == calls
+    assert forwards == len(trials) - 1
     assert elapsed >= 0.0
 
 

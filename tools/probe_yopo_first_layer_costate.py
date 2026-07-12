@@ -1192,6 +1192,7 @@ def _select_candidate_recess(
     # The fp32 bit-identical predicate guarantees completion.
     fraction, anneal = 1e-2, 0.5
     trials: list[dict[str, Any]] = []
+    validation_forwards = 0
     if not np.isfinite(grad_norm) or grad_norm == 0.0:
         return (
             None,
@@ -1213,9 +1214,10 @@ def _select_candidate_recess(
                     "accepted": False,
                 }
             )
-            return None, None, trials, len(trials), time.perf_counter() - validation_started
+            return None, None, trials, validation_forwards, time.perf_counter() - validation_started
         with torch.inference_mode():
             loss, dseg = _evaluate_teacher(segnet, _render_chart(renderer, candidate), labels)
+        validation_forwards += 1
         accepted = bool(loss < current_loss and dseg <= current_dseg)
         trials.append(
             {
@@ -1229,7 +1231,7 @@ def _select_candidate_recess(
             }
         )
         if accepted:
-            return candidate, step_norm, trials, len(trials), time.perf_counter() - validation_started
+            return candidate, step_norm, trials, validation_forwards, time.perf_counter() - validation_started
         fraction *= anneal
 
 
@@ -1459,6 +1461,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     measurement_only_renderer_rerender_seconds = 0.0
                     current_baseline_validation_seconds = 0.0
                     current_baseline_validation_forwards = 0
+                    operational_teacher_forward_backward_count = 0
+                    measurement_only_teacher_forward_backward_count = 0
                     exact_costate = None
                     exact_grad = None
                     label_path_agreement = {
@@ -1496,6 +1500,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         exact_costate, holder, exact_baseline_seconds = _capture_exact_teacher_costate(
                             segnet=segnet, frame_nchw=frame_nchw, labels=labels
                         )
+                        operational_teacher_forward_backward_count += 1
                         exact_grad_started = time.perf_counter()
                         exact_grad = torch.autograd.grad((frame_nchw * exact_costate).sum(), theta)[0]
                         exact_renderer_vjp_seconds = time.perf_counter() - exact_grad_started
@@ -1518,6 +1523,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             scorer_fingerprint=scorer_fingerprint,
                             step_index=step_index,
                         )
+                        operational_teacher_forward_backward_count += 1
                         bank_write_started = time.perf_counter()
                         bank_sha256 = write_yopo_first_layer_bank(scratch_path, _fresh_bank)
                         bank_write_seconds = time.perf_counter() - bank_write_started
@@ -1563,6 +1569,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             exact_costate, holder, exact_baseline_seconds = _capture_exact_teacher_costate(
                                 segnet=segnet, frame_nchw=frame_nchw, labels=labels
                             )
+                            operational_teacher_forward_backward_count += 1
                             exact_grad_started = time.perf_counter()
                             exact_grad = torch.autograd.grad((frame_nchw * exact_costate).sum(), theta)[0]
                             exact_renderer_vjp_seconds = time.perf_counter() - exact_grad_started
@@ -1580,6 +1587,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             exact_costate, holder, exact_baseline_seconds = _capture_exact_teacher_costate(
                                 segnet=segnet, frame_nchw=frame_nchw, labels=labels
                             )
+                            operational_teacher_forward_backward_count += 1
                             fallback_rerender_started = time.perf_counter()
                             fallback_frame = _render_chart(renderer, theta)
                             fallback_frame_nchw = fallback_frame.permute(0, 3, 1, 2).contiguous()
@@ -1672,6 +1680,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                                 step_index=step_index,
                             )
                         )
+                        measurement_only_teacher_forward_backward_count += 1
                         bank_write_started = time.perf_counter()
                         bank_sha256 = write_yopo_first_layer_bank(scratch_path, _fresh_bank)
                         bank_write_seconds = time.perf_counter() - bank_write_started
@@ -1690,6 +1699,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         diagnostic_costate, diagnostic_holder, exact_baseline_seconds = _capture_exact_teacher_costate(
                             segnet=segnet, frame_nchw=frame_nchw, labels=labels
                         )
+                        measurement_only_teacher_forward_backward_count += 1
                         diagnostic_rerender_started = time.perf_counter()
                         diagnostic_frame = _render_chart(renderer, theta)
                         diagnostic_frame_nchw = diagnostic_frame.permute(0, 3, 1, 2).contiguous()
@@ -1713,6 +1723,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         exact_costate, exact_holder, exact_baseline_seconds = _capture_exact_teacher_costate(
                             segnet=segnet, frame_nchw=frame_nchw, labels=labels
                         )
+                        measurement_only_teacher_forward_backward_count += 1
                         diagnostic_rerender_started = time.perf_counter()
                         diagnostic_frame = _render_chart(renderer, theta)
                         diagnostic_frame_nchw = diagnostic_frame.permute(0, 3, 1, 2).contiguous()
@@ -1726,6 +1737,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     exact_norm = float(torch.linalg.vector_norm(exact_grad).item())
                     if exact_norm == 0.0 or not np.isfinite(exact_norm):
                         raise RuntimeError("exact-teacher renderer gradient is zero/nonfinite")
+                    t_exact = exact_baseline_seconds + exact_renderer_vjp_seconds
+                    t_approx = provider_seconds + candidate_renderer_vjp_seconds
+                    ceiling = k_value * t_exact / (t_exact + (k_value - 1) * t_approx) if t_approx > 0.0 else None
+                    exact_candidate_max_abs = float((exact_costate - candidate_costate).abs().max().item())
+                    if refresh and exact_candidate_max_abs != 0.0:
+                        raise RuntimeError("exact-refresh provider canary differs from fresh teacher costate")
                     if target_norm is None or candidate_theta is None:
                         step_row = {
                             "step": step_index,
@@ -1733,18 +1750,105 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "status": "MEASURED",
                             "candidate_non_descent": True,
                             "provider_fallback": provider_fallback,
-                            "fallback_to_full_teacher": True,
+                            "fallback_to_full_teacher": provider_fallback,
+                            "terminal_stop_requires_no_parameter_update": True,
                             "blocker": "candidate anneal reached fp32 completion without CE+d_seg descent",
                             "exact_teacher_ce": holder["ce"],
                             "exact_teacher_dseg": holder["dseg"],
+                            "candidate_ce": None,
+                            "candidate_dseg": None,
+                            "exact_reference_ce": None,
+                            "exact_reference_dseg": None,
+                            "ce_regret_vs_exact_reference": None,
+                            "dseg_regret_vs_exact_reference": None,
+                            "regret_status": "UNKNOWN_NO_ADMISSIBLE_DESCENDING_CANDIDATE",
+                            "costate_metrics_global": _metrics(exact_costate, candidate_costate),
+                            "costate_metrics_gt_boundary_annulus_bottom_k_0p05": _metrics(
+                                exact_costate, candidate_costate, mask=annulus
+                            ),
+                            "renderer_gradient_cosine": _cosine(
+                                exact_grad.detach().numpy(), candidate_grad.detach().numpy()
+                            ),
+                            "parameter_step_norm": None,
+                            "exact_teacher_gradient_norm": exact_norm,
+                            "yopo_gradient_norm": candidate_norm,
                             "recess_trials": recess_trials,
                             "bank_age_steps": bank_age_steps,
-                            "teacher_label_path_agreement": label_path_agreement,
+                            "provider_metadata": provider_metadata,
+                            "operational_path": operational_path,
                             "operational_timing": operational_timing,
                             "timing_order_canary": timing_order_canary,
+                            "controls": {
+                                "teacher_label_path_agreement": label_path_agreement,
+                                "refresh_exact_positive_canary": (
+                                    {
+                                        "status": "MEASURED",
+                                        "costate_max_abs": exact_candidate_max_abs,
+                                        "candidate_is_same_refresh_provider_vjp": True,
+                                    }
+                                    if refresh
+                                    else None
+                                ),
+                                "K1_exact_refresh_positive_canary": (
+                                    {
+                                        "status": "MEASURED",
+                                        "costate_max_abs": exact_candidate_max_abs,
+                                        "candidate_is_same_refresh_provider_vjp": True,
+                                    }
+                                    if k_value == 1
+                                    else None
+                                ),
+                                "sign_reversed_behavioral_negative": {
+                                    "status": "NOT_APPLICABLE_NO_ADMISSIBLE_DESCENDING_CANDIDATE",
+                                },
+                            },
                             "timing_measured_seconds": {
+                                "operational_shared_renderer_and_live_custody": operational_shared_seconds,
+                                "refresh_bank_write": bank_write_seconds,
+                                "ordinary_exact_teacher_forward_backward": exact_baseline_seconds,
+                                "refresh_yopo_bank_capture_forward_backward": refresh_bank_capture_seconds,
+                                "exact_renderer_vjp": exact_renderer_vjp_seconds,
+                                "yopo_provider": provider_seconds,
+                                "candidate_renderer_vjp": candidate_renderer_vjp_seconds,
+                                "operational_fallback_renderer_rerender": fallback_renderer_rerender_seconds,
+                                "current_baseline_validation_including_labels": current_baseline_validation_seconds,
+                                "candidate_validation_including_labels": candidate_validation_seconds,
+                                "measurement_only_exact_renderer_rerender": measurement_only_renderer_rerender_seconds,
+                                "measurement_only_exact_reference_validation": 0.0,
+                                "measurement_only_reverse_control_validation": 0.0,
                                 "validation_harness_whole_step": time.perf_counter() - step_started,
                                 "operational_cycle": operational_seconds,
+                            },
+                            "teacher_work_counts": {
+                                "actual_probe_teacher_forward_backward_including_labels": (
+                                    operational_teacher_forward_backward_count
+                                    + measurement_only_teacher_forward_backward_count
+                                ),
+                                "operational_teacher_forward_backward_including_labels": (
+                                    operational_teacher_forward_backward_count
+                                ),
+                                "measurement_only_teacher_forward_backward_including_labels": (
+                                    measurement_only_teacher_forward_backward_count
+                                ),
+                                "operational_validation_forwards_including_labels": (
+                                    current_baseline_validation_forwards + recess_validation_forwards
+                                ),
+                                "measurement_only_control_forwards_including_labels": 0,
+                                "actual_probe_teacher_forwards_total_including_labels": (
+                                    operational_teacher_forward_backward_count
+                                    + measurement_only_teacher_forward_backward_count
+                                    + current_baseline_validation_forwards
+                                    + recess_validation_forwards
+                                ),
+                                "full_teacher_fallbacks": int(provider_fallback),
+                            },
+                            "algebraic_speed_ceiling_derived": {
+                                "formula": "K*t_exact/(t_exact+(K-1)*t_approx)",
+                                "K": k_value,
+                                "t_exact_measured_seconds": t_exact,
+                                "t_approx_measured_seconds": t_approx,
+                                "ceiling": ceiling,
+                                "assumptions": "idealized refresh/VJP-only model; excludes labels, recession trials, candidate/reference/reverse validation, receipt IO, and renderer chart work",
                             },
                         }
                         _stage_step_state(
@@ -1785,12 +1889,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             segnet, _render_chart(renderer, reverse_theta), labels
                         )
                     reverse_validation_seconds = time.perf_counter() - reverse_started
-                    t_exact = exact_baseline_seconds + exact_renderer_vjp_seconds
-                    t_approx = provider_seconds + candidate_renderer_vjp_seconds
-                    ceiling = k_value * t_exact / (t_exact + (k_value - 1) * t_approx) if t_approx > 0.0 else None
-                    exact_candidate_max_abs = float((exact_costate - candidate_costate).abs().max().item())
-                    if refresh and exact_candidate_max_abs != 0.0:
-                        raise RuntimeError("exact-refresh provider canary differs from fresh teacher costate")
                     candidate_non_descent = bool(candidate_ce >= holder["ce"] or candidate_dseg > holder["dseg"])
                     reverse_non_descent = bool(reverse_ce >= holder["ce"] or reverse_dseg > holder["dseg"])
                     step_row = {
@@ -1871,17 +1969,26 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "validation_harness_whole_step": time.perf_counter() - step_started,
                         },
                         "teacher_work_counts": {
-                            "actual_probe_teacher_forward_backward_including_labels": 1 + int(refresh),
-                            "operational_teacher_forward_backward_including_labels": int(refresh or provider_fallback),
+                            "actual_probe_teacher_forward_backward_including_labels": (
+                                operational_teacher_forward_backward_count
+                                + measurement_only_teacher_forward_backward_count
+                            ),
+                            "operational_teacher_forward_backward_including_labels": (
+                                operational_teacher_forward_backward_count
+                            ),
                             "measurement_only_teacher_forward_backward_including_labels": (
-                                1 + int(refresh) - int(refresh or provider_fallback)
+                                measurement_only_teacher_forward_backward_count
                             ),
                             "operational_validation_forwards_including_labels": (
                                 current_baseline_validation_forwards + recess_validation_forwards
                             ),
                             "measurement_only_control_forwards_including_labels": 2,
                             "actual_probe_teacher_forwards_total_including_labels": (
-                                1 + int(refresh) + current_baseline_validation_forwards + recess_validation_forwards + 2
+                                operational_teacher_forward_backward_count
+                                + measurement_only_teacher_forward_backward_count
+                                + current_baseline_validation_forwards
+                                + recess_validation_forwards
+                                + 2
                             ),
                             "full_teacher_fallbacks": int(provider_fallback or candidate_non_descent),
                         },
