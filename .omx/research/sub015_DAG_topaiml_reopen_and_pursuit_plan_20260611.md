@@ -16158,3 +16158,14 @@ to import, black-box forward. Mild signal only: market confirmation that cheap t
 routing is a commoditized/correct cost regime → reassurance our distilled-surrogate + #436 arms are on the
 right path, NOT a new lever. NO build, NO route. Pointer 0.18804 UNMOVED. [no-triality — negative eval, no
 measured finding]
+
+### FEED-lens-retrieval-346-leg-disposition (2026-07-12) — DSL-leg N/A (not a witness training lever)
+Triality per-leg drift-detector flagged commit 9f3533c865 (lens_retrieval_346 memo) as requiring the
+witness_dsl leg — FALSE POSITIVE (vocabulary match on "curriculum/launch" in the memo's query examples).
+reconstruct_lensed (src/tac/graph_memory/recall.py) is CORPUS-RECALL analysis apparatus (the #346/#411
+retrieval-first consumer), NOT a witness training lever/launch/curriculum knob → there is NO
+src/tac/witness_dsl/ Lever to add; a WitnessProgram change would be wrong here. The correct leg IS
+recorded: the retrieval-first CONSUMER leg (DAG FEED-lens-retrieval-346 + landing memo
+lens_retrieval_346_wirein_landed_20260712.md). Equations leg N/A (no measured witness-geometry/score
+finding — it's a graph-recall augmentation, superset-verified but not a d_seg/d_pose/rate row). Disposition:
+DSL=N/A · DAG=recorded · equations=N/A. Pointer 0.18804 UNMOVED. [no-triality — leg-disposition note]
