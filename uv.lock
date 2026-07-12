@@ -4032,6 +4032,7 @@ dependencies = [
 analysis = [
     { name = "dask", extra = ["array"] },
     { name = "polars" },
+    { name = "scipy" },
 ]
 cloud = [
     { name = "kaggle" },
@@ -4116,6 +4117,7 @@ requires-dist = [
     { name = "pywavelets", marker = "extra == 'dev'", specifier = ">=1.6,<2.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
     { name = "safetensors", marker = "extra == 'runtime'", specifier = ">=0.4,<1.0" },
+    { name = "scipy", marker = "extra == 'analysis'", specifier = ">=1.10,<2.0" },
     { name = "scipy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "segmentation-models-pytorch", marker = "extra == 'runtime'", specifier = ">=0.3" },
     { name = "timm", marker = "extra == 'runtime'", specifier = ">=0.9" },

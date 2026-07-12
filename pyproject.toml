@@ -135,6 +135,10 @@ analysis = [
     # not contest runtime dependencies.
     "dask[array]>=2024.1",
     "polars>=0.20",
+    # Lens Engine statistics + witness RAG/anisotropy adapters. Kept out of
+    # the contest runtime; tac.lens_engine imports cleanly without the extra
+    # and fails with an install hint only when one of these operations runs.
+    "scipy>=1.10,<2.0",
 ]
 notebooks = ["marimo>=0.3"]
 dashboard = [
