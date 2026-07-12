@@ -14,7 +14,9 @@ from tac.witness_training_contract import cuda_v9_port_receipt
 LANE_ID = "lane_cloud_launcher_v9_cgauge_cuda_438_20260711"
 REMOTE_DRIVER = "scripts/remote_v9_cgauge_cuda.sh"
 TRAINER = "experiments/train_levelset_witness_realized_through_R_torch.py"
-RESULTS_VOLUME = "pact-training-results"
+# MUST match modal_train_lane.py RESULTS_VOL (mounted at /modal_results); the asset-stage
+# writes the GT cache into this volume and the remote trainer reads it from that mount.
+RESULTS_VOLUME = "comma-train-lane-results"
 CUDA_ENV = {
     "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
     "DALI_DISABLE_NVML": "1",
