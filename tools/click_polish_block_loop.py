@@ -114,11 +114,20 @@ class Campaign:
         self.state_path = self.out / "campaign_state.json"
         self.auth_npz = self.out / "authority_perpair.npz"
         self.packet = cp.FrozenPacket.parse(args.archive, args.submission_dir)
-        rt = self.packet.verify_roundtrip()
-        if not rt["archive_byte_exact"]:
-            raise SystemExit("FATAL: incumbent roundtrip not byte-exact")
-        _log(f"incumbent sha={rt['archive_sha256'][:16]} bytes={rt['archive_bytes']}")
-        self.renderer = cp.Renderer(self.packet, device="cpu")
+        if args.drop_sidecar:
+            # folded-table mode: base must roundtrip byte-exact under sidecar-less repack
+            b = self.packet.repack_archive_bytes(self.packet.Q0, drop_sidecar=True)
+            orig = Path(args.archive).read_bytes()
+            if b != orig:
+                raise SystemExit("FATAL: folded base does not roundtrip byte-exact")
+            _log(f"folded base sha={cp.sha256_hex(orig)[:16]} bytes={len(orig)} (roundtrip OK)")
+        else:
+            rt = self.packet.verify_roundtrip()
+            if not rt["archive_byte_exact"]:
+                raise SystemExit("FATAL: incumbent roundtrip not byte-exact")
+            _log(f"incumbent sha={rt['archive_sha256'][:16]} bytes={rt['archive_bytes']}")
+        self.renderer = cp.Renderer(self.packet, device="cpu",
+                                    drop_sidecar=bool(args.drop_sidecar))
         self.scorer = cp.Scorer(device="cpu")
         loc = cp.verify_pair_locality(self.packet, self.renderer)
         if not loc["locality_holds"]:
@@ -132,6 +141,20 @@ class Campaign:
         self.blocks = [(0, 48)] + [(lo, min(lo + BLOCK, N)) for lo in range(48, N, BLOCK)]
         self.next_block = self._load_next_block()
         self.accepted_since_verify = 0
+        # warm-start clicks from a prior campaign's ledger (e.g. the unfolded line):
+        # per block we TRY the prior line's NET clicks first (exact gate) before
+        # sweeping. Net = sum of deltas per (pair, dim) across all ledger rows.
+        self.warm_net: dict[tuple[int, int], int] = {}
+        if args.warm_ledger and Path(args.warm_ledger).exists():
+            for line in Path(args.warm_ledger).read_text().splitlines():
+                if not line.strip():
+                    continue
+                for p, d, dl in json.loads(line)["clicks"]:
+                    k = (int(p), int(d))
+                    self.warm_net[k] = self.warm_net.get(k, 0) + int(dl)
+            self.warm_net = {k: v for k, v in self.warm_net.items() if v != 0}
+            _log(f"warm-start ledger: {len(self.warm_net)} net (pair,dim) clicks "
+                 f"from {args.warm_ledger}")
 
     # ---- state ----
     def _seed_and_replay(self) -> int:
@@ -236,30 +259,62 @@ class Campaign:
         return cp.render_and_score(self.renderer, self.scorer, Q, W, self.gls, self.gps)
 
     def _sweep_block(self, W, cap_s):
+        """Diagonal sweep with per-pass resumable state (sweep_state.json) — any
+        crash/kill loses at most ONE W-pass (the sibling ops-note insurance)."""
         t0 = time.time()
         dseg0 = self.dseg_pp[W]
         dpose0 = self.dpose_pp[W]
         wpose = 5.0 / np.sqrt(10.0 * max(float(self.dpose_pp.mean()), 1e-9))
+        deltas = [(d, dl) for d in range(cp.LATENT_DIM) for dl in self.args_sweep]
         best = {p: None for p in W}
         best_gain = {p: 0.0 for p in W}
+        sw_path = self.out / "sweep_state.json"
+        start_i = 0
+        if sw_path.exists():
+            try:
+                st = json.loads(sw_path.read_text())
+                if (st.get("block") == self.next_block
+                        and st.get("deltas") == [list(x) for x in deltas]
+                        and st.get("ledger_rows") == self._ledger_rows()):
+                    start_i = int(st["next_i"])
+                    for k, v in st["best"].items():
+                        p = int(k)
+                        if p in best and v is not None:
+                            best[p] = (int(v[0]), int(v[1]))
+                            best_gain[p] = float(v[2])
+                    _log(f"  [sweep] resumed at pass {start_i}/{len(deltas)}")
+            except Exception:
+                start_i = 0
         n_pass = 0
-        for d in range(cp.LATENT_DIM):
-            for dl in self.args_sweep:
-                if cap_s > 0 and time.time() - t0 > cap_s:
-                    _log(f"  [sweep] cap {cap_s}s hit after {n_pass} passes — partial")
-                    return best
-                Qc = self.Q.copy()
-                Qc[W, d] = np.clip(Qc[W, d].astype(np.int16) + dl, 0, 255).astype(np.uint8)
-                ds, dp = self._score_W(Qc, W)
-                n_pass += 1
-                proxy = 100.0 * (ds - dseg0) + wpose * (dp - dpose0)
-                for i, p in enumerate(W):
-                    if Qc[p, d] == self.Q[p, d]:
-                        continue
-                    gain = -float(proxy[i])
-                    if gain > best_gain[p] + 1e-12:
-                        best_gain[p] = gain
-                        best[p] = (d, int(dl))
+        for i in range(start_i, len(deltas)):
+            d, dl = deltas[i]
+            if cap_s > 0 and time.time() - t0 > cap_s:
+                _log(f"  [sweep] cap {cap_s}s hit after {n_pass} passes — partial "
+                     f"(resumable at pass {i})")
+                return best
+            Qc = self.Q.copy()
+            Qc[W, d] = np.clip(Qc[W, d].astype(np.int16) + dl, 0, 255).astype(np.uint8)
+            ds, dp = self._score_W(Qc, W)
+            n_pass += 1
+            proxy = 100.0 * (ds - dseg0) + wpose * (dp - dpose0)
+            for j, p in enumerate(W):
+                if Qc[p, d] == self.Q[p, d]:
+                    continue
+                gain = -float(proxy[j])
+                if gain > best_gain[p] + 1e-12:
+                    best_gain[p] = gain
+                    best[p] = (d, int(dl))
+            tmp = sw_path.with_suffix(".tmp")
+            tmp.write_text(json.dumps({
+                "block": self.next_block, "next_i": i + 1,
+                "deltas": [list(x) for x in deltas],
+                "ledger_rows": self._ledger_rows(),
+                "best": {str(p): (None if best[p] is None else
+                                  [best[p][0], best[p][1], best_gain[p]])
+                         for p in W},
+            }))
+            tmp.rename(sw_path)
+        sw_path.unlink(missing_ok=True)
         _log(f"  [sweep] complete: {n_pass} passes ({time.time()-t0:.0f}s)")
         return best
 
@@ -293,7 +348,12 @@ class Campaign:
         sha = cp.sha256_hex(archive)
         _stage(self.out, cand, sha, len(archive), Path(self.args.submission_dir))
         self._save_state({"candidate_sha256": sha, "candidate_bytes": len(archive)})
-        _log(f"  BANKED block {blk_idx}: sha={sha[:16]} S={S:.8f}")
+        xover = ""
+        if self.args.ref_frontier_s:
+            xover += f" vsFrontierAdv={S - self.args.ref_frontier_s:+.2e}"
+        if self.args.ref_unfolded_s:
+            xover += f" vsUnfoldedBest={S - self.args.ref_unfolded_s:+.2e}"
+        _log(f"  BANKED block {blk_idx}: sha={sha[:16]} S={S:.8f}{xover}")
         return sha
 
     def run(self):
@@ -311,6 +371,19 @@ class Campaign:
             lo, hi = self.blocks[blk]
             W = list(range(lo, hi))
             _log(f"[block {blk}] pairs {lo}..{hi-1}")
+            # warm-start: try the prior-campaign clicks for this block first (exact gate)
+            warm = [(p, d, dl) for (p, d), dl in sorted(self.warm_net.items())
+                    if lo <= p < hi]
+            if warm:
+                got_w = self._try_accept(W, warm)
+                if got_w is not None:
+                    Qw, ds_w, dp_w, S_w, dsm_w, dpm_w, b_w = got_w
+                    self.Q, self.dseg_pp, self.dpose_pp, self.S_auth = Qw, ds_w, dp_w, S_w
+                    _log(f"[block {blk}] warm-start accepted {len(warm)} clicks -> "
+                         f"full-n600 S={S_w:.8f}")
+                    self._bank(blk, lo, hi, warm, S_w, dsm_w, dpm_w, b_w, "splice-warm")
+                else:
+                    _log(f"[block {blk}] warm-start clicks did not improve — sweeping")
             best = self._sweep_block(W, self.args.block_sweep_cap_s)
             clicks = [(p, *best[p]) for p in W if best[p] is not None]
             if not clicks:
@@ -380,6 +453,14 @@ def main() -> int:
     ap.add_argument("--seed-ledger", default=str(
         REPO / "experiments/results/click_polish_399_run1/accepted_clicks_ledger.jsonl"))
     ap.add_argument("--sweep-deltas", default="1,-1")
+    ap.add_argument("--drop-sidecar", action="store_true",
+                    help="folded-table mode: sidecar-less renderer + repack")
+    ap.add_argument("--warm-ledger", default="",
+                    help="prior campaign clicks_ledger.jsonl to TRY per block before sweeping")
+    ap.add_argument("--ref-frontier-s", type=float, default=0.0,
+                    help="frontier advisory S for crossover logging")
+    ap.add_argument("--ref-unfolded-s", type=float, default=0.0,
+                    help="unfolded best advisory S for crossover logging")
     ap.add_argument("--block-sweep-cap-s", type=float, default=3300.0)
     ap.add_argument("--verify-every", type=int, default=4,
                     help="full n600 verification pass every N accepted blocks")
