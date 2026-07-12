@@ -223,6 +223,24 @@ def test_receipt_path_refuses_protected_live_run(tool: ModuleType) -> None:
         tool.refuse_transient_evidence_path(tool.PROTECTED_LIVE_RUN / "jrd_probe")
 
 
+def test_parent_command_capture_records_permission_denial_without_fabrication(
+    tool: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def deny(*_args, **_kwargs):
+        raise PermissionError(1, "Operation not permitted", "ps")
+
+    monkeypatch.setattr(tool.subprocess, "run", deny)
+    receipt = tool.process_command(123)
+    assert receipt == {
+        "pid_at_capture": 123,
+        "command": None,
+        "capture_status": "unavailable",
+        "capture_error_class": "PermissionError",
+        "capture_errno": 1,
+        "review_status": "UNKNOWN_command_capture_denied",
+    }
+
+
 def test_receiver_failure_retains_scratch_for_certify_or_block(
     tool: ModuleType, tmp_path: Path
 ) -> None:

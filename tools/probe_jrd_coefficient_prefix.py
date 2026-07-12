@@ -242,16 +242,27 @@ def local_cpu_axis() -> dict[str, str]:
 def process_command(pid: int) -> dict[str, Any]:
     """Capture a durable best-effort argv receipt for the governed parent."""
 
-    completed = subprocess.run(
-        ["ps", "-ww", "-p", str(pid), "-o", "command="],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(
+            ["ps", "-ww", "-p", str(pid), "-o", "command="],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        return {
+            "pid_at_capture": pid,
+            "command": None,
+            "capture_status": "unavailable",
+            "capture_error_class": type(exc).__name__,
+            "capture_errno": exc.errno,
+            "review_status": "UNKNOWN_command_capture_denied",
+        }
     command = completed.stdout.strip()
     return {
         "pid_at_capture": pid,
-        "command": command or "UNKNOWN",
+        "command": command or None,
+        "capture_status": "measured" if command else "unavailable",
         "capture_returncode": completed.returncode,
         "review_status": "MEASURED_current_process_table" if command else "UNKNOWN",
     }
