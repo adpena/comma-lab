@@ -88,6 +88,21 @@ def test_pose_carrier_matches_canonical_numpy_warp_and_dxi_receives_gradient():
     assert torch.equal(clone.dxi, carrier.dxi)
 
 
+def test_pose_carrier_zero_twist_has_finite_identity_forward_and_gradient():
+    from tac.boundary_math.warp_real_luma_frame0 import GroundHomographyGeom
+
+    geom = GroundHomographyGeom.eon(native_hw=(8, 10), pitch=0.0)
+    carrier = TorchPoseCarrier.build(np.zeros((1, 6), np.float32), geom)
+    src = torch.linspace(0.0, 255.0, 8 * 10 * 3).reshape(1, 8, 10, 3)
+    actual = carrier(src, torch.tensor([0]))
+    assert torch.isfinite(actual).all()
+    assert torch.allclose(actual, src, atol=2e-4)
+    actual.square().mean().backward()
+    assert carrier.dxi.grad is not None
+    assert torch.isfinite(carrier.dxi.grad).all()
+    assert float(carrier.dxi.grad.abs().sum()) > 0.0
+
+
 def test_structured_prefit_changes_shared_sdf_trunk_reduces_loss_and_freezes_code():
     cfg = CudaLevelSetConfig(n_pairs=2, in_feat=7, hidden_dim=12, n_hidden=2, mod_dim=5)
     model = TorchLevelSetWitness.build(cfg, seed=3)

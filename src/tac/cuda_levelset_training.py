@@ -130,17 +130,19 @@ class TorchPoseCarrier:
             theta2 = (omega * omega).sum(-1, keepdim=True)[..., None]
             theta = torch.sqrt(theta2.clamp_min(1e-16))
             small = theta2 < 1e-8
+            theta2_safe = theta2.clamp_min(1e-16)
+            theta_safe = theta.clamp_min(1e-8)
             A = torch.where(
                 small, 1.0 - theta2 / 6.0 + theta2.square() / 120.0,
-                torch.sin(theta) / theta,
+                torch.sin(theta) / theta_safe,
             )
             B = torch.where(
                 small, 0.5 - theta2 / 24.0 + theta2.square() / 720.0,
-                (1.0 - torch.cos(theta)) / theta2,
+                (1.0 - torch.cos(theta)) / theta2_safe,
             )
             C = torch.where(
                 small, 1.0 / 6.0 - theta2 / 120.0 + theta2.square() / 5040.0,
-                (theta - torch.sin(theta)) / (theta2 * theta),
+                (theta - torch.sin(theta)) / (theta2_safe * theta_safe),
             )
             eye = torch.eye(3, device=xi.device, dtype=xi.dtype).expand(*xi.shape[:-1], 3, 3)
             R = eye + A * W + B * W2
