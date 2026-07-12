@@ -3,13 +3,16 @@
 
 This module deliberately owns *math*, not launch policy.  The cloud launcher feeds it
 the typed ``spec_v9_cgauge`` argv and the experiment entry point owns persistence and
-telemetry.  NumPy remains the portable reference; Torch is accepted only through the
-explicit parity probes below.
+telemetry.  NumPy remains the portable forward reference; the operator-authorized
+fast training path is accepted through functional argmax/cosine parity, not
+training-loop bit identity.
 
 The linear/FiLM/activation/render ordering mirrors
 ``levelset_rgb_forward_numpy`` exactly.  ``round_ste`` and ``contest_r`` implement
-the differentiable camera-uint8 round trip used by the MLX trainer.  No compile or
-fusion is enabled implicitly: CUDA has to re-measure the fp-reorder wall locally.
+the differentiable camera-uint8 round trip used by the MLX trainer.  Compile,
+autocast, TF32, and CUDA-graph policy are selected explicitly by the trainer from
+backend capabilities.  Their throughput remains unmeasured until an authorized
+CUDA dispatch.
 """
 from __future__ import annotations
 

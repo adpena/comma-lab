@@ -121,3 +121,19 @@ landing yet.
 Pointer delta: **none**.  Durable delta: provider/custody apparatus, portable
 Torch/NumPy mathematical core, canonical telemetry/checkpoint surfaces, and a
 strict blocker that prevents a partial port from masquerading as 1:1.
+
+## 2026-07-12 operator-override supersession (append-only)
+
+The blocker verdict above is the truthful historical state of the 2026-07-11
+landing, but it is no longer the current state. The follow-on receipt is
+`.omx/research/cuda_v9_throughput_optimization_438_20260712.md`.
+
+All eleven missing score-affecting surfaces now have real Torch twins and
+`cuda_v9_port_coverage.v1` reports `COMPLETE_1_TO_1` with no blockers. Under the
+operator's 2026-07-12 training-only override, backend fp bit identity is advisory;
+compiled/fused training adoption requires functional oracle parity
+(`argmax_equal=true`, `cosine_phi>=0.9997`). Score authority is unchanged and
+still requires a byte-closed archive through `upstream/evaluate.py`.
+
+No provider was contacted. CUDA throughput remains
+**UNMEASURED-pending-CUDA-dispatch**. Pointer delta remains **none**.
