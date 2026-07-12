@@ -23,6 +23,8 @@ from tac.deploy.witness_cloud_launcher import (  # noqa: E402
     POSENET_WEIGHTS,
     RESULTS_VOLUME,
     SEGNET_WEIGHTS,
+    TASK438_GT_CACHE_BYTES,
+    TASK438_GT_CACHE_SHA256,
     build_plan,
     render_command,
 )
@@ -45,6 +47,59 @@ def _required_file_sha256(path: Path, *, custody_name: str) -> str:
     if not path.is_file():
         raise SystemExit(f"REFUSED: required {custody_name} custody file is missing: {path}")
     return _sha256_file(path)
+
+
+def _verify_local_asset_stage_contract(
+    plan, *, actual_sha256: str | None = None
+) -> dict[str, object]:
+    """Prove local GT custody maps to one exact Volume destination.
+
+    This check is local-only: it never imports Modal, contacts the provider,
+    or executes the advisory ``asset_stage_argv``.
+    """
+    if plan.gt_cache_sha256 is None:
+        raise SystemExit("REFUSED: plan lacks an exact GT digest")
+    local_cache = REPO / plan.local_gt_cache
+    if not local_cache.is_file():
+        raise SystemExit(f"REFUSED: required GT cache custody file is missing: {local_cache}")
+    local_bytes = local_cache.stat().st_size
+    if local_bytes != plan.gt_cache_bytes:
+        raise SystemExit(
+            "REFUSED: GT cache byte-size mismatch: "
+            f"{local_bytes} != {plan.gt_cache_bytes}"
+        )
+    actual = actual_sha256 or _sha256_file(local_cache)
+    if actual != plan.gt_cache_sha256:
+        raise SystemExit(
+            f"REFUSED: GT cache SHA-256 mismatch: {actual} != {plan.gt_cache_sha256}"
+        )
+    remote_relative = f"assets/v9_cgauge/gt_{plan.gt_cache_sha256}.npz"
+    expected_stage_argv = (
+        ".venv/bin/modal",
+        "volume",
+        "put",
+        RESULTS_VOLUME,
+        plan.local_gt_cache,
+        remote_relative,
+    )
+    if tuple(plan.asset_stage_argv) != expected_stage_argv:
+        raise SystemExit("REFUSED: asset_stage_argv drifted from exact SHA-addressed custody")
+    expected_remote = f"/modal_results/{remote_relative}"
+    if plan.remote_gt_cache != expected_remote:
+        raise SystemExit("REFUSED: mounted GT path drifted from the staged Volume path")
+    return {
+        "schema": "witness_asset_stage_readiness.v1",
+        "status": "passed",
+        "provider_contacted": False,
+        "staging_executed": False,
+        "volume": RESULTS_VOLUME,
+        "local_path": plan.local_gt_cache,
+        "bytes": local_bytes,
+        "sha256": actual,
+        "volume_relative_path": remote_relative,
+        "mounted_path": expected_remote,
+        "asset_stage_argv": list(expected_stage_argv),
+    }
 
 
 def _main_git_head() -> str:
@@ -646,6 +701,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--operator-go-token")
     args = ap.parse_args(argv)
 
+    if (
+        args.gt_cache_sha256 is not None
+        and args.gt_cache_sha256.lower() != TASK438_GT_CACHE_SHA256
+    ):
+        raise SystemExit(
+            "REFUSED: --gt-cache-sha256 must equal the canonical Task438 n600 digest"
+        )
+
     source_git_head = _main_git_head()
     segnet_sha256 = _required_file_sha256(
         REPO / SEGNET_WEIGHTS, custody_name="SegNet"
@@ -659,9 +722,13 @@ def main(argv: list[str] | None = None) -> int:
         epochs=args.epochs, num_pairs=args.num_pairs, resume_from=args.resume_from,
         resume_sha256=args.resume_sha256,
         gt_cache_sha256=args.gt_cache_sha256,
+        gt_cache_bytes=TASK438_GT_CACHE_BYTES,
         segnet_sha256=segnet_sha256,
         posenet_sha256=posenet_sha256,
     )
+    stage_readiness = None
+    if not args.execute and plan.execution_allowed:
+        stage_readiness = _verify_local_asset_stage_contract(plan)
     payload = plan.to_dict()
     if args.output:
         target = Path(args.output)
@@ -671,6 +738,8 @@ def main(argv: list[str] | None = None) -> int:
     print("asset_stage:", render_command(plan.asset_stage_argv))
     print("dispatch:", render_command(plan.dispatch_argv))
     print("harvest:", render_command(plan.harvest_argv))
+    if stage_readiness is not None:
+        print(json.dumps(stage_readiness, sort_keys=True))
     if not args.execute:
         print("PLAN ONLY: no provider contacted and no paid resource dispatched.")
         return 0
@@ -690,6 +759,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             f"REFUSED: GT cache SHA-256 mismatch: {actual_sha256} != {plan.gt_cache_sha256}"
         )
+    print(
+        json.dumps(
+            _verify_local_asset_stage_contract(plan, actual_sha256=actual_sha256),
+            sort_keys=True,
+        )
+    )
     if _required_file_sha256(REPO / SEGNET_WEIGHTS, custody_name="SegNet") != plan.segnet_sha256:
         raise SystemExit("REFUSED: SegNet SHA-256 changed after plan review")
     if _required_file_sha256(REPO / POSENET_WEIGHTS, custody_name="PoseNet") != plan.posenet_sha256:

@@ -39,6 +39,10 @@ REVIEWED_SENTINELS = (
 )
 # MUST match modal_train_lane.py RESULTS_VOL (mounted at /modal_results).
 RESULTS_VOLUME = "comma-train-lane-results"
+TASK438_GT_CACHE_SHA256 = (
+    "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+)
+TASK438_GT_CACHE_BYTES = 5_078_017_610
 TYPED_EPOCH_HORIZON = 3000
 DEFAULT_STOP_AFTER_EPOCHS = 3
 CHILD_TIMEOUT_SECONDS = 1500
@@ -85,6 +89,7 @@ class WitnessCloudPlan:
     gpu: str
     local_gt_cache: str
     gt_cache_sha256: str | None
+    gt_cache_bytes: int
     segnet_sha256: str | None
     posenet_sha256: str | None
     remote_gt_cache: str | None
@@ -161,6 +166,7 @@ def build_plan(
     resume_from: str | None = None,
     resume_sha256: str | None = None,
     gt_cache_sha256: str | None = None,
+    gt_cache_bytes: int = TASK438_GT_CACHE_BYTES,
     segnet_sha256: str | None = None,
     posenet_sha256: str | None = None,
     stop_after_epochs: int = DEFAULT_STOP_AFTER_EPOCHS,
@@ -192,6 +198,8 @@ def build_plan(
         raise ValueError(f"epochs must preserve the typed horizon of {TYPED_EPOCH_HORIZON}")
     if num_pairs != 600:
         raise ValueError("num_pairs must equal the fixed 600-pair Task438 smoke custody")
+    if not isinstance(gt_cache_bytes, int) or gt_cache_bytes <= 0:
+        raise ValueError("gt_cache_bytes must be a positive integer")
     if not 1 <= stop_after_epochs <= DEFAULT_STOP_AFTER_EPOCHS:
         raise ValueError("stop_after_epochs must be within 1..3")
     for name, value in (
@@ -306,11 +314,18 @@ def build_plan(
         )
         if not supplied
     )
-    blockers = tuple(contract.setup_blockers) + tuple(
-        f"CUDA port: {item}" for item in port_receipt["blockers"]
-    ) + custody_blockers
+    port_blockers = port_receipt["blockers"]
+    if not isinstance(port_blockers, list) or not all(
+        isinstance(item, str) for item in port_blockers
+    ):
+        raise ValueError("CUDA port receipt blockers must be a list of strings")
+    blockers = (
+        tuple(contract.setup_blockers)
+        + tuple(f"CUDA port: {item}" for item in port_blockers)
+        + custody_blockers
+    )
     base: dict[str, object] = {
-        "schema": "witness_cloud_plan.v6",
+        "schema": "witness_cloud_plan.v7",
         "provider": provider,
         "status": contract.status,
         "lane_id": LANE_ID,
@@ -319,6 +334,7 @@ def build_plan(
         "gpu": gpu,
         "local_gt_cache": str(Path(gt_cache)),
         "gt_cache_sha256": digest,
+        "gt_cache_bytes": gt_cache_bytes,
         "segnet_sha256": segnet_digest,
         "posenet_sha256": posenet_digest,
         "remote_gt_cache": remote_gt,
@@ -378,6 +394,8 @@ __all__ = [
     "POSENET_WEIGHTS",
     "REVIEWED_SENTINELS",
     "SEGNET_WEIGHTS",
+    "TASK438_GT_CACHE_BYTES",
+    "TASK438_GT_CACHE_SHA256",
     "TYPED_EPOCH_HORIZON",
     "WitnessCloudPlan",
     "build_plan", "render_command",

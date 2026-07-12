@@ -10,7 +10,6 @@ import sys
 import time
 from pathlib import Path
 
-
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
@@ -19,10 +18,9 @@ if str(HERE) not in sys.path:
 _REPO_ROOT_PROBE = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT_PROBE / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT_PROBE / "src"))
+from kaggle_kernel_builder import KaggleKernelSpec, write_bundle  # noqa: E402
+
 from tac.deploy.deploy_config import ALL_VARIANTS  # noqa: E402
-
-from kaggle_kernel_builder import KaggleKernelSpec, write_bundle
-
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 KAGGLE_ROOT = REPO_ROOT / "experiments" / "kaggle_kernels"
@@ -42,8 +40,9 @@ def kaggle_dataset_ref() -> str:
 def load_tac_bootstrap_renderer():
     module_path = REPO_ROOT / "src" / "tac" / "bootstrap_codegen.py"
     spec = importlib.util.spec_from_file_location("tac_bootstrap_codegen", module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load bootstrap renderer from {module_path}")
     module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
     spec.loader.exec_module(module)
     return module.render_bootstrap
 
@@ -78,13 +77,13 @@ def _asym_warp_variant_preamble(variant: str, resume_from: str | None = None) ->
         resume_from: optional path to a .pt checkpoint inside the Kaggle dataset
                      mount, e.g. /kaggle/input/comma-lab-private-assets/renderer_best_v3.pt
     """
-    resume_line = f"_RESUME_FROM = {repr(resume_from)}"
+    resume_line = f"_RESUME_FROM = {resume_from!r}"
     return f"""\
 # --- Kaggle bootstrap (injected by build_kaggle_kernels.py — do not edit) ---
 import os as _os, sys as _sys, shutil as _shutil, subprocess as _subprocess
 from pathlib import Path as _Path
 
-_ASYM_VARIANT = {repr(variant)}
+_ASYM_VARIANT = {variant!r}
 {resume_line}
 
 
@@ -354,7 +353,7 @@ REQUIRED_DATASET_ASSETS: dict[str, int] = {
     "renderer_best_v3.pt": 3_527_290,
     "posenet_targets.bin": 6_794,
     "0.mkv": 37_545_489,
-    "tac-1.0.5-py3-none-any.whl": 0,  # size varies; 0 = existence check only
+    "tac-0.2.0rc2-py3-none-any.whl": 0,  # size varies; 0 = existence check only
 }
 
 

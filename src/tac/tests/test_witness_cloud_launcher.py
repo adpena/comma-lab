@@ -22,6 +22,8 @@ from tac.deploy.witness_cloud_launcher import (
     INVOCATION_TIMEOUT_SECONDS,
     LANE_ID,
     REVIEWED_SENTINELS,
+    TASK438_GT_CACHE_BYTES,
+    TASK438_GT_CACHE_SHA256,
     build_plan,
 )
 
@@ -31,7 +33,8 @@ def _kwargs(**overrides: object) -> dict[str, object]:
         "provider": "modal",
         "source_git_head": "a" * 40,
         "gt_cache": "cache.npz",
-        "gt_cache_sha256": "a" * 64,
+        "gt_cache_sha256": TASK438_GT_CACHE_SHA256,
+        "gt_cache_bytes": TASK438_GT_CACHE_BYTES,
         "segnet_sha256": "b" * 64,
         "posenet_sha256": "c" * 64,
         "label": "unit-cuda",
@@ -46,6 +49,7 @@ def _kwargs(**overrides: object) -> dict[str, object]:
 def test_modal_plan_is_deterministic_sha_bound_and_cost_conservative():
     a = build_plan(**_kwargs())
     b = build_plan(**_kwargs())
+    assert a.schema == "witness_cloud_plan.v7"
     assert a.plan_sha256 == b.plan_sha256
     assert a.lane_id == LANE_ID
     assert a.source_git_head == "a" * 40
@@ -75,7 +79,10 @@ def test_modal_plan_is_deterministic_sha_bound_and_cost_conservative():
     assert "upstream/models/posenet.safetensors" in a.reviewed_sentinels
     assert a.environment["WITNESS_TRAINER_MODE"] == "full"
     assert a.environment["DALI_DISABLE_NVML"] == CUDA_ENV["DALI_DISABLE_NVML"]
-    assert a.remote_gt_cache == f"/modal_results/assets/v9_cgauge/gt_{'a' * 64}.npz"
+    assert a.gt_cache_bytes == TASK438_GT_CACHE_BYTES
+    assert a.remote_gt_cache == (
+        f"/modal_results/assets/v9_cgauge/gt_{TASK438_GT_CACHE_SHA256}.npz"
+    )
     assert a.environment["WITNESS_SEGNET_SHA256"] == "b" * 64
     assert a.environment["WITNESS_POSENET_SHA256"] == "c" * 64
     assert a.resume_from is None
@@ -188,11 +195,16 @@ def test_cli_parser_threads_resume_sha256_into_plan(monkeypatch, capsys):
         "_required_file_sha256",
         lambda _path, *, custody_name: "b" * 64 if custody_name == "SegNet" else "c" * 64,
     )
+    monkeypatch.setattr(
+        tool,
+        "_verify_local_asset_stage_contract",
+        lambda _plan: {"schema": "witness_asset_stage_readiness.v1", "status": "passed"},
+    )
     monkeypatch.setattr(tool, "build_plan", capture_build_plan)
     assert tool.main(
         [
             "--gt-cache-sha256",
-            "a" * 64,
+            TASK438_GT_CACHE_SHA256,
             "--resume-from",
             "/modal_results/unit-cuda/output/checkpoint.pt",
             "--resume-sha256",
@@ -203,6 +215,56 @@ def test_cli_parser_threads_resume_sha256_into_plan(monkeypatch, capsys):
     assert captured["resume_from"] == "/modal_results/unit-cuda/output/checkpoint.pt"
     assert captured["resume_sha256"] == "D" * 64
     assert captured["gpu"] == EXACT_H100_GPU
+    assert captured["gt_cache_bytes"] == TASK438_GT_CACHE_BYTES
+
+
+def test_cli_refuses_noncanonical_task438_gt_digest_before_plan_build(monkeypatch):
+    tool = _load_launcher_tool()
+    monkeypatch.setattr(
+        tool,
+        "build_plan",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("plan build reached")),
+    )
+    with pytest.raises(SystemExit, match="canonical Task438 n600 digest"):
+        tool.main(["--gt-cache-sha256", "a" * 64])
+
+
+def test_local_asset_stage_readiness_binds_bytes_sha_volume_and_mount(
+    monkeypatch, tmp_path
+):
+    tool = _load_launcher_tool()
+    cache = tmp_path / "cache.npz"
+    cache.write_bytes(b"exact-gt-cache")
+    digest = hashlib.sha256(cache.read_bytes()).hexdigest()
+    plan = build_plan(
+        **_kwargs(
+            gt_cache="cache.npz",
+            gt_cache_sha256=digest,
+            gt_cache_bytes=cache.stat().st_size,
+        )
+    )
+    monkeypatch.setattr(tool, "REPO", tmp_path)
+    receipt = tool._verify_local_asset_stage_contract(plan)
+    assert receipt == {
+        "schema": "witness_asset_stage_readiness.v1",
+        "status": "passed",
+        "provider_contacted": False,
+        "staging_executed": False,
+        "volume": "comma-train-lane-results",
+        "local_path": "cache.npz",
+        "bytes": cache.stat().st_size,
+        "sha256": digest,
+        "volume_relative_path": f"assets/v9_cgauge/gt_{digest}.npz",
+        "mounted_path": f"/modal_results/assets/v9_cgauge/gt_{digest}.npz",
+        "asset_stage_argv": [
+            ".venv/bin/modal",
+            "volume",
+            "put",
+            "comma-train-lane-results",
+            "cache.npz",
+            f"assets/v9_cgauge/gt_{digest}.npz",
+        ],
+    }
 
 
 def _load_launcher_tool():
@@ -228,6 +290,7 @@ def _execution_fixture(tmp_path, *, resume_from=None):
             **_kwargs(
                 gt_cache="cache.npz",
                 gt_cache_sha256=hashlib.sha256(cache.read_bytes()).hexdigest(),
+                gt_cache_bytes=cache.stat().st_size,
                 segnet_sha256=hashlib.sha256(segnet.read_bytes()).hexdigest(),
                 posenet_sha256=hashlib.sha256(posenet.read_bytes()).hexdigest(),
                 resume_from=resume_from,
@@ -311,6 +374,7 @@ def test_scorer_drift_refuses_before_any_provider_mutation(monkeypatch, tmp_path
             **_kwargs(
                 gt_cache="cache.npz",
                 gt_cache_sha256=hashlib.sha256(cache.read_bytes()).hexdigest(),
+                gt_cache_bytes=cache.stat().st_size,
                 segnet_sha256="0" * 64,
                 posenet_sha256=hashlib.sha256(posenet.read_bytes()).hexdigest(),
             )
@@ -362,6 +426,7 @@ def test_image_cache_bypass_refuses_before_any_provider_mutation(
             **_kwargs(
                 gt_cache="cache.npz",
                 gt_cache_sha256=hashlib.sha256(cache.read_bytes()).hexdigest(),
+                gt_cache_bytes=cache.stat().st_size,
                 segnet_sha256=hashlib.sha256(segnet.read_bytes()).hexdigest(),
                 posenet_sha256=hashlib.sha256(posenet.read_bytes()).hexdigest(),
             )
@@ -714,7 +779,7 @@ def test_modal_asset_reuse_requires_exact_sha_name_and_byte_size(
     monkeypatch, remote_size: int, expected: bool
 ):
     tool = _load_launcher_tool()
-    digest = "a" * 64
+    digest = TASK438_GT_CACHE_SHA256
     remote_path = f"assets/v9_cgauge/gt_{digest}.npz"
     plan = SimpleNamespace(
         gt_cache_sha256=digest,
@@ -769,7 +834,7 @@ def test_modal_resume_presence_gate_refuses_invalid_remote_custody(
     monkeypatch, resume_entries, match
 ):
     tool = _load_launcher_tool()
-    digest = "a" * 64
+    digest = TASK438_GT_CACHE_SHA256
     remote_asset = f"assets/v9_cgauge/gt_{digest}.npz"
     plan = SimpleNamespace(
         gt_cache_sha256=digest,
@@ -803,7 +868,7 @@ def test_modal_valid_resume_presence_reaches_asset_and_provider_preflight_path(
     monkeypatch, capsys
 ):
     tool = _load_launcher_tool()
-    digest = "a" * 64
+    digest = TASK438_GT_CACHE_SHA256
     resume_sha256 = "d" * 64
     remote_asset = f"assets/v9_cgauge/gt_{digest}.npz"
     resume_path = "unit-cuda/output/checkpoint.pt"
@@ -844,7 +909,7 @@ def test_modal_cross_label_resume_requires_fresh_destination(
     monkeypatch, destination_exists
 ):
     tool = _load_launcher_tool()
-    digest = "a" * 64
+    digest = TASK438_GT_CACHE_SHA256
     remote_asset = f"assets/v9_cgauge/gt_{digest}.npz"
     resume_path = "source-label/output/checkpoint.pt"
     plan = build_plan(
@@ -947,6 +1012,7 @@ def test_execute_requires_reusable_asset_and_never_implicitly_stages(
             **_kwargs(
                 gt_cache="cache.npz",
                 gt_cache_sha256=hashlib.sha256(cache.read_bytes()).hexdigest(),
+                gt_cache_bytes=cache.stat().st_size,
                 segnet_sha256=hashlib.sha256(segnet.read_bytes()).hexdigest(),
                 posenet_sha256=hashlib.sha256(posenet.read_bytes()).hexdigest(),
             )

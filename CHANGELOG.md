@@ -3,6 +3,20 @@
 All notable changes to the `tac` library are documented here.
 Dates are approximate milestones from the research sprint.
 
+## [0.2.0-rc2] - 2026-07-12
+
+Deployment-custody release candidate. This bump seals the package version after
+post-rc1 `src/tac` changes and gives wheel-backed deployment surfaces an exact,
+non-stale artifact name. Modal's V9 CGauge lane continues to mount reviewed
+source directly; no provider dispatch or public release is implied by this local
+wheel receipt.
+
+### Changed
+- Bind the Task438 V9 CGauge plan to the canonical GT cache byte count and add a
+  zero-provider staging-readiness receipt for its SHA-addressed Modal Volume path.
+- Refresh the required deployment-wheel filename to
+  `tac-0.2.0rc2-py3-none-any.whl`.
+
 ## [0.2.0-rc1] - 2026-05-14
 
 OSS posture-alignment release candidate. Aligns the project's open-source
