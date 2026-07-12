@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Adversarial tests for the frozen-scorer gradient replacement contract."""
+
 from __future__ import annotations
 
 import hashlib
@@ -71,12 +72,19 @@ def _policy(tmp_path: Path, *, mode: str = "periodic_costate", **overrides):
         "min_costate_norm_ratio": 0.95,
         "max_costate_norm_ratio": 1.05,
         "max_teacher_loss_regret": 0.11,
-        "provider_custody": _custody(
-            tmp_path, kind="cache" if mode == "trusted_jacobian_cache" else "checkpoint"
-        ),
+        "provider_custody": _custody(tmp_path, kind="cache" if mode == "trusted_jacobian_cache" else "checkpoint"),
     }
     if mode == "trusted_jacobian_cache":
         values["max_frame_relative_l2"] = 0.02
+    if mode == "yopo_first_layer_costate":
+        for name in (
+            "min_costate_cosine",
+            "max_costate_relative_l2",
+            "min_costate_norm_ratio",
+            "max_costate_norm_ratio",
+            "max_teacher_loss_regret",
+        ):
+            values.pop(name)
     values.update(overrides)
     return ScorerGradientPolicy(**values)
 
@@ -116,25 +124,11 @@ def _evidence(
     policy = compiled.source
     assert policy.provider_custody is not None
     assert policy.objective_context_fingerprint is not None
-    anchor = (
-        np.ones((2, 2), dtype=np.float64)
-        if anchor_frame is None
-        else np.asarray(anchor_frame)
-    )
+    anchor = np.ones((2, 2), dtype=np.float64) if anchor_frame is None else np.asarray(anchor_frame)
     current = anchor * 1.01 if current_frame is None else np.asarray(current_frame)
-    teacher = (
-        np.array([[1.0, -2.0], [0.5, 3.0]])
-        if teacher_costate is None
-        else np.asarray(teacher_costate)
-    )
-    provider_anchor = (
-        teacher.copy()
-        if provider_anchor_costate is None
-        else np.asarray(provider_anchor_costate)
-    )
-    current_value = (
-        teacher.copy() if current_costate is None else np.asarray(current_costate)
-    )
+    teacher = np.array([[1.0, -2.0], [0.5, 3.0]]) if teacher_costate is None else np.asarray(teacher_costate)
+    provider_anchor = teacher.copy() if provider_anchor_costate is None else np.asarray(provider_anchor_costate)
+    current_value = teacher.copy() if current_costate is None else np.asarray(current_costate)
     anchor_sha = array_content_sha256(anchor)
     current_sha = array_content_sha256(current)
     anchor_evaluation = ProviderCostateEvaluation(
@@ -244,25 +238,18 @@ def test_refresh_refuses_current_costate_not_validated_at_teacher_anchor(
         )
     )
     assert decision.fallback_to_full_teacher
-    assert any(
-        "refresh current provider costate content differs" in reason
-        for reason in decision.reasons
-    )
+    assert any("refresh current provider costate content differs" in reason for reason in decision.reasons)
 
 
 def test_refresh_refuses_anchor_current_cross_frame_evidence(tmp_path: Path) -> None:
     compiled = _policy(tmp_path).compile()
-    decision = compiled.decide(
-        **_evidence(compiled, measured_at_step=2, current_step=2)
-    )
+    decision = compiled.decide(**_evidence(compiled, measured_at_step=2, current_step=2))
     assert decision.fallback_to_full_teacher
     assert any("refresh anchor frame" in reason for reason in decision.reasons)
 
 
 @pytest.mark.parametrize("parameter_field", ["loss_parameters", "stage_parameters"])
-def test_objective_parameter_mutation_after_compile_is_refused(
-    tmp_path: Path, parameter_field: str
-) -> None:
+def test_objective_parameter_mutation_after_compile_is_refused(tmp_path: Path, parameter_field: str) -> None:
     policy = _policy(tmp_path)
     compiled = policy.compile()
     assert policy.objective_context is not None
@@ -291,9 +278,7 @@ def test_exact_global_candidate_is_admitted_and_wrong_costate_falls_back(tmp_pat
     assert admitted.global_costate_metrics is not None
     assert admitted.global_costate_metrics.cosine_similarity == pytest.approx(1.0)
 
-    wrong = compiled.decide(
-        **_evidence(compiled, provider_anchor_costate=np.array([[-1.0, 2.0], [-0.5, -3.0]]))
-    )
+    wrong = compiled.decide(**_evidence(compiled, provider_anchor_costate=np.array([[-1.0, 2.0], [-0.5, -3.0]])))
     assert wrong.fallback_to_full_teacher
     assert any("global costate cosine" in reason for reason in wrong.reasons)
 
@@ -339,9 +324,7 @@ def test_cross_frame_current_costate_is_refused(tmp_path: Path) -> None:
     compiled = _policy(tmp_path).compile()
     evidence = _evidence(compiled)
     anchor_hash = evidence["teacher_observation"].anchor_frame_sha256
-    evidence["current_provider_evaluation"] = replace(
-        evidence["current_provider_evaluation"], frame_sha256=anchor_hash
-    )
+    evidence["current_provider_evaluation"] = replace(evidence["current_provider_evaluation"], frame_sha256=anchor_hash)
     decision = compiled.decide(**evidence)
     assert decision.fallback_to_full_teacher
     assert any("current provider evaluation frame hash" in reason for reason in decision.reasons)
@@ -350,9 +333,7 @@ def test_cross_frame_current_costate_is_refused(tmp_path: Path) -> None:
 def test_replayed_provider_or_teacher_check_is_refused(tmp_path: Path) -> None:
     compiled = _policy(tmp_path).compile()
     evidence = _evidence(compiled)
-    evidence["current_provider_evaluation"] = replace(
-        evidence["current_provider_evaluation"], evaluated_at_step=0
-    )
+    evidence["current_provider_evaluation"] = replace(evidence["current_provider_evaluation"], evaluated_at_step=0)
     replayed_provider = compiled.decide(**evidence)
     assert replayed_provider.fallback_to_full_teacher
     assert any("replayed step" in reason for reason in replayed_provider.reasons)
@@ -361,16 +342,11 @@ def test_replayed_provider_or_teacher_check_is_refused(tmp_path: Path) -> None:
     observation = evidence["teacher_observation"]
     evidence["teacher_observation"] = replace(
         observation,
-        provider_costate_at_anchor=replace(
-            observation.provider_costate_at_anchor, evaluated_at_step=99
-        ),
+        provider_costate_at_anchor=replace(observation.provider_costate_at_anchor, evaluated_at_step=99),
     )
     replayed_anchor_provider = compiled.decide(**evidence)
     assert replayed_anchor_provider.fallback_to_full_teacher
-    assert any(
-        "provider anchor evaluation replayed step" in reason
-        for reason in replayed_anchor_provider.reasons
-    )
+    assert any("provider anchor evaluation replayed step" in reason for reason in replayed_anchor_provider.reasons)
 
     evidence = _evidence(compiled)
     observation = evidence["teacher_observation"]
@@ -405,14 +381,10 @@ def test_cross_bound_teacher_step_check_is_refused(tmp_path: Path, binding: str)
 
 def test_nonfinite_or_shape_mismatched_current_costate_is_refused(tmp_path: Path) -> None:
     compiled = _policy(tmp_path).compile()
-    nonfinite = compiled.decide(
-        **_evidence(compiled, current_costate=np.full((2, 2), np.nan))
-    )
+    nonfinite = compiled.decide(**_evidence(compiled, current_costate=np.full((2, 2), np.nan)))
     assert nonfinite.fallback_to_full_teacher
     assert any("nonfinite" in reason for reason in nonfinite.reasons)
-    wrong_shape = compiled.decide(
-        **_evidence(compiled, current_costate=np.ones((4,)))
-    )
+    wrong_shape = compiled.decide(**_evidence(compiled, current_costate=np.ones((4,))))
     assert wrong_shape.fallback_to_full_teacher
     assert any("shape mismatch" in reason for reason in wrong_shape.reasons)
 
@@ -424,9 +396,7 @@ def test_stale_or_changed_teacher_anchor_is_refused(tmp_path: Path) -> None:
     assert any("refresh is due" in reason for reason in stale.reasons)
     evidence = _evidence(compiled)
     observation = evidence["teacher_observation"]
-    evidence["teacher_observation"] = replace(
-        observation, scorer_fingerprint="e" * 64
-    )
+    evidence["teacher_observation"] = replace(observation, scorer_fingerprint="e" * 64)
     changed = compiled.decide(**evidence)
     assert changed.fallback_to_full_teacher
     assert any("scorer fingerprint" in reason for reason in changed.reasons)
@@ -455,9 +425,7 @@ def test_teacher_step_regret_gate_is_required(tmp_path: Path) -> None:
 def test_trusted_cache_additionally_requires_frame_trust_radius(tmp_path: Path) -> None:
     compiled = _policy(tmp_path, mode="trusted_jacobian_cache").compile()
     assert compiled.decide(**_evidence(compiled)).admitted
-    outside = compiled.decide(
-        **_evidence(compiled, current_frame=np.ones((2, 2)) * 1.03)
-    )
+    outside = compiled.decide(**_evidence(compiled, current_frame=np.ones((2, 2)) * 1.03))
     assert outside.fallback_to_full_teacher
     assert any("left cache trust radius" in reason for reason in outside.reasons)
 
@@ -467,3 +435,96 @@ def test_mapping_compile_rejects_invented_fields(tmp_path: Path) -> None:
     payload["invented_trainer_flag"] = True
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         compile_scorer_gradient_policy(payload)
+
+
+def test_yopo_mode_requires_cache_custody_and_exact_split_identity(tmp_path: Path) -> None:
+    values = _policy(
+        tmp_path,
+        mode="yopo_first_layer_costate",
+        provider_custody=_custody(tmp_path, kind="cache"),
+        split_module_path="encoder.model.blocks[0]",
+        split_identity_sha256="f" * 64,
+    ).model_dump()
+    assert ScorerGradientPolicy(**values).mode == "yopo_first_layer_costate"
+    values["split_module_path"] = "encoder.model.conv_stem"
+    with pytest.raises(ValidationError, match="split_module_path"):
+        ScorerGradientPolicy(**values)
+    values["split_module_path"] = "encoder.model.blocks[0]"
+    values["split_identity_sha256"] = None
+    with pytest.raises(ValidationError, match="split_identity_sha256"):
+        ScorerGradientPolicy(**values)
+    values["split_identity_sha256"] = "f" * 64
+    values["provider_custody"] = _custody(tmp_path, kind="checkpoint").model_dump()
+    with pytest.raises(ValidationError, match=r"provider_custody\.kind"):
+        ScorerGradientPolicy(**values)
+    values["provider_custody"] = _custody(tmp_path, kind="cache").model_dump()
+    values["min_costate_cosine"] = 0.9
+    with pytest.raises(ValidationError, match="rejects universal"):
+        ScorerGradientPolicy(**values)
+    values.pop("min_costate_cosine")
+    values["max_staleness_steps"] = 2
+    with pytest.raises(ValidationError, match="refresh_interval_steps - 1"):
+        ScorerGradientPolicy(**values)
+
+
+def test_yopo_evaluation_requires_split_and_bank_source_step(tmp_path: Path) -> None:
+    compiled = _policy(
+        tmp_path,
+        mode="yopo_first_layer_costate",
+        provider_custody=_custody(tmp_path, kind="cache"),
+        split_module_path="encoder.model.blocks[0]",
+        split_identity_sha256="f" * 64,
+    ).compile()
+    evidence = _evidence(compiled)
+    observation = evidence["teacher_observation"]
+    assert observation is not None
+    evidence["teacher_observation"] = replace(
+        observation,
+        provider_costate_at_anchor=replace(
+            observation.provider_costate_at_anchor,
+            split_module_path="encoder.model.blocks[0]",
+            split_identity_sha256="f" * 64,
+            bank_source_step=0,
+        ),
+    )
+    evidence["current_provider_evaluation"] = replace(
+        evidence["current_provider_evaluation"],
+        split_module_path="encoder.model.blocks[0]",
+        split_identity_sha256="f" * 64,
+        bank_source_step=9,
+    )
+    decision = compiled.decide(**evidence)
+    assert decision.fallback_to_full_teacher
+    assert any("bank source step" in reason for reason in decision.reasons)
+
+
+def test_yopo_refresh_rejects_content_valid_wrong_p1_costate(tmp_path: Path) -> None:
+    compiled = _policy(
+        tmp_path,
+        mode="yopo_first_layer_costate",
+        provider_custody=_custody(tmp_path, kind="cache"),
+        split_module_path="encoder.model.blocks[0]",
+        split_identity_sha256="f" * 64,
+    ).compile()
+    evidence = _evidence(compiled, provider_anchor_costate=-np.array([[1.0, -2.0], [0.5, 3.0]]))
+    observation = evidence["teacher_observation"]
+    assert observation is not None
+    wrong_anchor = replace(
+        observation.provider_costate_at_anchor,
+        split_module_path="encoder.model.blocks[0]",
+        split_identity_sha256="f" * 64,
+        bank_source_step=0,
+    )
+    evidence["teacher_observation"] = replace(observation, provider_costate_at_anchor=wrong_anchor)
+    evidence["current_provider_evaluation"] = replace(
+        evidence["current_provider_evaluation"],
+        costate=wrong_anchor.costate,
+        split_module_path="encoder.model.blocks[0]",
+        split_identity_sha256="f" * 64,
+        bank_source_step=0,
+    )
+    decision = compiled.decide(**evidence)
+    assert decision.fallback_to_full_teacher
+    assert decision.global_costate_metrics is not None
+    assert decision.global_costate_metrics.cosine_similarity == -1.0
+    assert any("byte-identical" in reason for reason in decision.reasons)
