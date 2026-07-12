@@ -38,6 +38,19 @@ _V9_CGAUGE_DELTA: dict[str, Any] = {
     # ep726 placement provenance as muon/pose-finish — the trunk must be formed first).
     "--seg-phase-advect-weight": 0.4,
     "--seg-phase-advect-start-epoch": 726,
+    # Active structured-core prefit and generated/table pose-carrier companion
+    # values. These must travel through the typed DSL with the active switches;
+    # trainer-side argparse defaults are not a scientific configuration owner.
+    "--structured-init-include-lane": True,
+    "--structured-init-thresh": 0.5,
+    "--structured-init-steps": 600,
+    "--structured-init-lr": 5e-3,
+    "--structured-init-subsample": 8192,
+    "--structured-init-sdf-clip": 20.0,
+    "--pose-carrier-residual-scale": 1.0,
+    "--pose-carrier-s-t": 0.044,
+    "--pose-carrier-s-r": 0.0,
+    "--pose-carrier-pitch": 0.0,
 }
 
 _V9_CGAUGE_REMOVE: tuple[str, ...] = ()
@@ -51,6 +64,60 @@ _V9_CGAUGE_REMOVE: tuple[str, ...] = ()
 # (SPEC_v75 / SYNTHESIS_v3 — already ladder-placed at sealing).
 # ---------------------------------------------------------------------------
 V9_CGAUGE_PROVENANCE: dict[str, dict[str, str]] = {
+    "--structured-init-steps": {
+        "value": "600", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "short structured-core prefit anchor from the wired MLX authority; "
+                "now emitted with the active switch so Torch cannot inherit a parser default.",
+    },
+    "--structured-init-lr": {
+        "value": "0.005", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "wired structured-core AdamW prefit anchor; scientific ownership is the V9 DSL.",
+    },
+    "--structured-init-subsample": {
+        "value": "8192", "rung": "hardcoded_waiver", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "bounded-memory prefit sample count carried from the wired authority; no score claim.",
+    },
+    "--structured-init-sdf-clip": {
+        "value": "20", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "structured signed-distance target clip used by the validated prefit path.",
+    },
+    "--structured-init-thresh": {
+        "value": "0.5", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "majority threshold defining the shared static-core partition.",
+    },
+    "--structured-init-include-lane": {
+        "value": "True", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "explicit structured-core role selection; emitted to prevent parser-default drift.",
+    },
+    "--pose-carrier-residual-scale": {
+        "value": "1", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "store_nothing_pose_carrier_rate_collapse_vs_dpose_v1",
+        "note": "identity scaling for the table dxi residual; the trainable coordinate is unwarped.",
+    },
+    "--pose-carrier-s-t": {
+        "value": "0.044", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "store_nothing_pose_carrier_rate_collapse_vs_dpose_v1",
+        "note": "n600 first-24 self-fit selected 0.044 (stepping_instability_diagnostic_"
+                "20260705); matches the canonical generated/store-nothing xi source in "
+                "store_nothing_pose_carrier_rate_dpose_20260702.py. The broader 0.16 "
+                "full-ground pre-residual optimum is a different authority surface.",
+    },
+    "--pose-carrier-s-r": {
+        "value": "0", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "store_nothing_pose_carrier_rate_collapse_vs_dpose_v1",
+        "note": "generated/store-nothing carrier rotation calibration anchor.",
+    },
+    "--pose-carrier-pitch": {
+        "value": "0", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "store_nothing_pose_carrier_rate_collapse_vs_dpose_v1",
+        "note": "EON generated-carrier pitch anchor.",
+    },
     "--mod-dim": {
         "value": "32", "rung": "measured_anchor", "form": "SCALAR",
         "law": "cgauge_whitney_moddim_v1",

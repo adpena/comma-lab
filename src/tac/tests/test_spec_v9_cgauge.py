@@ -31,6 +31,25 @@ def test_t1_phase_term_is_on_at_derived_values(compiled) -> None:
     assert a[a.index("--seg-phase-advect-start-epoch") + 1] == "726"
 
 
+def test_active_structured_and_pose_companions_are_typed_not_parser_defaults(compiled) -> None:
+    _, argv = compiled
+    a = list(argv)
+    expected = {
+        "--structured-init-thresh": "0.5",
+        "--structured-init-steps": "600",
+        "--structured-init-lr": "0.005",
+        "--structured-init-subsample": "8192",
+        "--structured-init-sdf-clip": "20.0",
+        "--pose-carrier-residual-scale": "1.0",
+        "--pose-carrier-s-t": "0.044",
+        "--pose-carrier-s-r": "0.0",
+        "--pose-carrier-pitch": "0.0",
+    }
+    assert "--structured-init-include-lane" in a
+    for flag, value in expected.items():
+        assert a[a.index(flag) + 1] == value
+
+
 def test_argv_parses_on_real_trainer_parser(compiled) -> None:
     from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
 
