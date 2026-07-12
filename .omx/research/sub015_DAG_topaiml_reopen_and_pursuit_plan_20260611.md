@@ -16159,6 +16159,32 @@ routing is a commoditized/correct cost regime → reassurance our distilled-surr
 right path, NOT a new lever. NO build, NO route. Pointer 0.18804 UNMOVED. [no-triality — negative eval, no
 measured finding]
 
+### FEED-policygrad-part2-research (2026-07-12) — variance reduction changes Surface A's estimator, not Surface B's verdict
+
+Operator-directed internet + OSS survey completed in
+`.omx/research/policy_gradient_variance_reduction_survey_20260712.md`. Every claim there is tagged
+MEASURED / DERIVED / FROM-LITERATURE / INFERRED and cited to primary papers or official repositories.
+**ROUTING:** (1) **#396/#400 ACTIONABLE:** replace the seed row's generic REINFORCE-with-baseline candidate
+with **UGC (unbiased gradient variance clipping)** on a direction-pinned Bernoulli edit mask: DisARM's
+two-evaluation antithetic exact-objective estimator in the probability interior, `bitflip-1` near the
+deterministic boundary where DisARM variance can explode. Exact conditional enumeration/Rao-Blackwellization
+preempts sampling on any locally enumerable support; existing `(1+1)`-ES remains the registered baseline and
+the small continuous `dxi` arm. Every sampled mask and every accepted edit uses the exact through-R n600
+contest objective; biased Gumbel/ST/PPO-style objectives are search heuristics only. Draw from Storchastic
+out-of-tree (copyleft/license metadata conflict; do NOT import), Apache-2.0 Google Research DisARM, and
+Apache-2.0 EvoTorch. Promotion requires a same-exact-eval-budget receipt versus `(1+1)`-ES, RLOO, and DisARM.
+(2) **#426/#319/#433 WATCH; #434 prerequisite:** stay adjoint/costate. For a single terminal reward,
+reward-to-go equals that same terminal scalar at every preterminal step, so the causality trick removes no
+return variance. Baselines/GAE/actor-critic/RUDDER/hindsight critics/PPO/TRPO do not create the independent
+counterfactual trajectories absent at n=1; ES removes temporal credit but replaces it with a population of
+multi-hour runs. Reopen policy gradient only after #434 yields independent real trajectories and a critic or
+return-decomposition model wins leakage-free held-out walk-forward checks with measurable gradient SNR and
+better governed compute economics than the adjoint. Means/apparatus only; pointer 0.18804 UNMOVED.
+`[no-triality]` — pure reference/routing, no measured witness finding, DSL lever, training, dispatch, or live-run
+mutation. MEMORY hook intentionally not appended: the operator memory file is already 17,543 bytes, above the
+requested <17KB cap; this FEED row is the terse hook and the memo holds detail.
+
+
 ### FEED-lens-retrieval-346-leg-disposition (2026-07-12) — DSL-leg N/A (not a witness training lever)
 Triality per-leg drift-detector flagged commit 9f3533c865 (lens_retrieval_346 memo) as requiring the
 witness_dsl leg — FALSE POSITIVE (vocabulary match on "curriculum/launch" in the memo's query examples).
