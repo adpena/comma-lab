@@ -113,7 +113,8 @@ def build_tropnnc_dense_trunk_exact_reduction_empty_v1() -> CanonicalEquation:
                 "n96_k2_argmax_equal": _N96_K2_EQUAL,     # 0/96
                 "n96_pairs": _N96_PAIRS,
                 "mean_argmax_flip_frac_k1": _MEAN_FLIP_K1,
-                "n600_status": "STAGED (blocked by CPU/memory contention with the live run + 2 sibling loops)",
+                "n600_status": "0/150 argmax-equal (confirmed through pair 150 then stalled under CPU/mem "
+                               "contention; remaining 450 staged) -> 0/270 across n24+n96+n150",
             },
             "bytes_saved_at_exact_dseg0": _BYTES_SAVED_AT_EXACT_DSEG0,   # 0
             "raw_structural_byte_potentials_NON_admissible": {
