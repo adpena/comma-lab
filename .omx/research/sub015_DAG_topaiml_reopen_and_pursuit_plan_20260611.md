@@ -16225,3 +16225,15 @@ micro-batch (#447), a CONVOLUTIONAL cost, not RNN-state memory; SDM accelerates 
 over ~epochs) → not state-memory-bound → SDM's win doesn't materialize. CAVEAT: relevant ONLY if we ever put
 the costate organ / a temporal witness on a large linear-RNN/SSM backbone — NOT a live path (policy-grad survey
 says keep the controller adjoint-led at n=1). NO build, NO route. Pointer 0.18804 UNMOVED. [no-triality — negative eval]
+
+### FEED-sparda-2606.04511 (2026-07-12) — evaluated, NOT-USEFUL (LLM attention-inference efficiency; wrong modality/bottleneck)
+Operator shared "SparDA: Sparse Decoupled Attention for Efficient Long-Context LLM Inference" (arXiv 2606.04511;
+Fu/Xiao/Dong/Han/Villa). Method: a "Forecast" projection predicts next-layer KV blocks → overlaps CPU→GPU
+prefetch with execution (≤1.7× decode). VERDICT: no transfer. We have NO LLM/attention/KV-cache in the pointer
+path (witness=coordinate-INR; frozen scorers=CNNs EfficientNet-B2/FastViT). Our throughput wall is CNN-BACKWARD
+compute (~95%, #449) + Metal + micro-batch (#447) — a compute bound, not KV-prefetch/transfer; #443 already found
+the Metal stack at its bit-identical frontier (no idle transfer to overlap). META-PATTERN (2 in a row, w/
+FEED-sparse-delta-memory): sequence-model/transformer efficiency papers (RNN-state sparsity, KV-cache forecasting)
+bounce off our INR+CNN graph for the same reason — they target a recurrent/attention bottleneck we don't have.
+Fast-triage rule: on-target genres = coding-for-machines · neural-field · CNN-acceleration · gradient-estimation;
+off-target = LLM/SSM inference efficiency. NO build, NO route. Pointer 0.18804 UNMOVED. [no-triality — negative eval]
