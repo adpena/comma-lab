@@ -32,13 +32,16 @@ def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins()
     receipt = cuda_v9_port_receipt()
     assert receipt["status"] == "BLOCKED_NOT_1_TO_1"
     assert receipt["blockers"] == list(CUDA_V9_PORT_BLOCKERS)
-    assert len(receipt["blockers"]) == 7
+    assert len(receipt["blockers"]) == 4
     closed = (
         "--pose-carrier",
         "--structured-init",
         "--accum-pairs",
         "--dseg-aware-taper",
         "--per-group-grad-clip",
+        "--curriculum-event-triggered",
+        "--pose-finish-engage-on",
+        "--polyak-finisher-arm",
     )
     assert all(not any(blocker.startswith(flag) for blocker in receipt["blockers"]) for flag in closed)
     assert {
@@ -46,4 +49,7 @@ def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins()
         "structured_scorer_sdf_prefit_with_resume_suppression",
         "accum_pairs_8_chunk_atomic_updates_and_accepted_fraction",
         "dseg_aware_feature_taper_and_per_group_gradient_clipping",
+        "scorer_derived_curriculum_latches_with_atomic_resume_state",
+        "sigma_min_plateau_pose_finish_gate_with_degenerate_banked_r1",
+        "polyak_finisher_resumable_additional_candidate_export",
     }.issubset(receipt["score_bearing_primitives_ported"])
