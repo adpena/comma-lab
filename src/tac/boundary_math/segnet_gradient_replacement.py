@@ -22,13 +22,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 _METRIC_EPS = 1.0e-12
 
+
+YOPO_FIRST_LAYER_SPLIT_PATH = "encoder.model.blocks[0]"
+_YOPO_BANK_SCHEMA = "yopo_first_layer_costate_bank_v1"
 
 @dataclass(frozen=True)
 class CostateAgreementMetrics:
@@ -376,6 +382,471 @@ def relative_frame_displacement(anchor_frame: Any, current_frame: Any) -> float:
     return float(np.linalg.norm((current64 - anchor64).reshape(-1)) / denom)
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_stat_fingerprint(path: Path) -> tuple[int, int, int, int, int]:
+    """Mutation-relevant stat fields; deliberately excludes read-updated atime."""
+
+    stat = path.stat()
+    return (
+        int(stat.st_dev),
+        int(stat.st_ino),
+        int(stat.st_size),
+        int(stat.st_mtime_ns),
+        int(stat.st_ctime_ns),
+    )
+
+
+def _module_state_sha256(module: Any) -> str:
+    """Hash live state bytes, names, dtypes, and shapes without disk custody."""
+
+    try:
+        state = module.state_dict()
+    except AttributeError as exc:
+        raise ValueError("YOPO scorer must expose state_dict for live-state binding") from exc
+    digest = hashlib.sha256()
+    for name in sorted(state):
+        value = _as_numpy_array(state[name])
+        if value.dtype.hasobject or not bool(np.isfinite(value).all()):
+            raise ValueError(f"YOPO live scorer state {name!r} is nonfinite or unsupported")
+        digest.update(name.encode("utf-8"))
+        digest.update(array_content_sha256(value).encode("ascii"))
+    return digest.hexdigest()
+
+
+def _require_yopo_frozen_eval_scorer(segnet: Any) -> None:
+    """Refuse a YOPO scorer that can learn or mutate normalization state.
+
+    A stored first-layer adjoint is meaningful only for one frozen scorer.  A
+    top-level ``eval()`` flag is insufficient because a child BatchNorm module
+    can be put back into train mode independently, so inspect every module.
+    """
+
+    try:
+        modules = tuple(segnet.modules())
+        parameters = tuple(segnet.parameters())
+    except AttributeError as exc:
+        raise ValueError("YOPO scorer must expose modules() and parameters()") from exc
+    if not modules:
+        raise ValueError("YOPO scorer has no modules to validate")
+    if any(bool(module.training) for module in modules):
+        raise ValueError("YOPO scorer must be in eval mode for every module")
+    if any(bool(parameter.requires_grad) for parameter in parameters):
+        raise ValueError("YOPO scorer parameters must all be frozen")
+
+
+def _require_yopo_state_unchanged(*, before: str, after: str, phase: str) -> None:
+    """Fail closed if a supposedly frozen scorer changed during a provider phase."""
+
+    if after != before:
+        raise ValueError(f"YOPO scorer state changed during {phase}")
+
+
+def _require_sha256(name: str, value: str) -> None:
+    if not _is_sha256(value):
+        raise ValueError(f"{name} must be a lowercase 64-character SHA-256")
+
+
+def _yopo_topology_payload(segnet: Any) -> dict[str, Any]:
+    """Validate the frozen EfficientNet-B2 cut and return its identity payload.
+
+    The cut is after ``blocks[0]``, not after the stem: the upstream encoder
+    exposes that tensor as its first feature.  The concrete stage map prevents
+    a seemingly compatible timm/SMP upgrade from silently changing the cut.
+    """
+
+    try:
+        encoder = segnet.encoder.model
+        blocks = encoder.blocks
+        stage_out_idx = dict(encoder._stage_out_idx)
+        feature_info = list(encoder.feature_info.info)
+        conv_stem = encoder.conv_stem
+        bn1 = encoder.bn1
+        block0 = blocks[0]
+    except (AttributeError, IndexError, TypeError, ValueError) as exc:
+        raise ValueError("YOPO first-layer cut topology is unavailable") from exc
+    if not callable(conv_stem) or not callable(bn1) or not callable(block0):
+        raise ValueError("YOPO prefix modules must be callable")
+    expected_stage_out_idx = {1: 0, 2: 1, 3: 2, 5: 3, 7: 4}
+    if stage_out_idx != expected_stage_out_idx:
+        raise ValueError(
+            "YOPO first-layer cut topology mismatch: expected canonical "
+            f"_stage_out_idx={expected_stage_out_idx}, got {stage_out_idx}"
+        )
+    expected_modules = ["blocks.0", "blocks.1", "blocks.2", "blocks.4", "blocks.6"]
+    modules = [str(row.get("module")) for row in feature_info]
+    if modules != expected_modules:
+        raise ValueError(f"YOPO first-layer feature topology mismatch: expected {expected_modules}, got {modules}")
+    return {
+        "split_module_path": YOPO_FIRST_LAYER_SPLIT_PATH,
+        "prefix_module_paths": [
+            "encoder.model.conv_stem",
+            "encoder.model.bn1",
+            YOPO_FIRST_LAYER_SPLIT_PATH,
+        ],
+        "stage_out_idx": expected_stage_out_idx,
+        "feature_modules": expected_modules,
+        "cut_output_is_single_tensor": True,
+        "decoder_drops_only_raw_input": True,
+    }
+
+
+def yopo_first_layer_split_identity(segnet: Any) -> str:
+    """Return the content identity of the exact frozen-SegNet YOPO cut."""
+
+    payload = _yopo_topology_payload(segnet)
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _yopo_first_layer_prefix_torch(segnet: Any, frame: Any) -> Any:
+    """Evaluate exactly conv-stem -> bn1 -> blocks[0], never a bypassed stem."""
+
+    _yopo_topology_payload(segnet)
+    encoder = segnet.encoder.model
+    return encoder.blocks[0](encoder.bn1(encoder.conv_stem(frame)))
+
+
+@dataclass(frozen=True)
+class YopoFirstLayerBank:
+    """Content-bound detached first-layer adjoint from a teacher refresh."""
+
+    p1: np.ndarray
+    objective_context_fingerprint: str
+    scorer_fingerprint: str
+    anchor_frame_sha256: str
+    split_identity_sha256: str
+    live_segnet_state_sha256: str
+    source_step: int
+
+    def metadata(self) -> dict[str, Any]:
+        p1 = np.asarray(self.p1)
+        if p1.dtype.hasobject or not bool(np.isfinite(p1).all()):
+            raise ValueError("YOPO p1 must be a finite non-object array")
+        for name, value in (
+            ("objective_context_fingerprint", self.objective_context_fingerprint),
+            ("scorer_fingerprint", self.scorer_fingerprint),
+            ("anchor_frame_sha256", self.anchor_frame_sha256),
+            ("split_identity_sha256", self.split_identity_sha256),
+            ("live_segnet_state_sha256", self.live_segnet_state_sha256),
+        ):
+            _require_sha256(name, value)
+        if not isinstance(self.source_step, int) or isinstance(self.source_step, bool) or self.source_step < 0:
+            raise ValueError("YOPO source_step must be an integer >= 0")
+        return {
+            "schema": _YOPO_BANK_SCHEMA,
+            "objective_context_fingerprint": self.objective_context_fingerprint,
+            "scorer_fingerprint": self.scorer_fingerprint,
+            "anchor_frame_sha256": self.anchor_frame_sha256,
+            "split_module_path": YOPO_FIRST_LAYER_SPLIT_PATH,
+            "split_identity_sha256": self.split_identity_sha256,
+            "live_segnet_state_sha256": self.live_segnet_state_sha256,
+            "source_step": self.source_step,
+            "p1_sha256": array_content_sha256(p1),
+            "p1_shape": list(p1.shape),
+            "p1_dtype": p1.dtype.str,
+            "units": "teacher_loss_per_split_activation_unit",
+        }
+
+
+def capture_yopo_first_layer_bank(
+    *,
+    segnet: Any,
+    anchor_frame: Any,
+    teacher_loss_fn: Any,
+    objective_context_fingerprint: str,
+    scorer_fingerprint: str,
+    evaluated_at_step: int,
+) -> tuple[YopoFirstLayerBank, Any]:
+    """Run one full teacher refresh and bank both exact input and first-layer costates."""
+
+    import torch
+
+    for name, value in (
+        ("objective_context_fingerprint", objective_context_fingerprint),
+        ("scorer_fingerprint", scorer_fingerprint),
+    ):
+        _require_sha256(name, value)
+    if not isinstance(evaluated_at_step, int) or isinstance(evaluated_at_step, bool) or evaluated_at_step < 0:
+        raise ValueError("YOPO evaluated_at_step must be an integer >= 0")
+    if not isinstance(anchor_frame, torch.Tensor):
+        raise TypeError("YOPO anchor_frame must be a torch.Tensor")
+    if not bool(torch.isfinite(anchor_frame).all()):
+        raise ValueError("YOPO anchor_frame must be finite")
+    _require_yopo_frozen_eval_scorer(segnet)
+    state_before_teacher = _module_state_sha256(segnet)
+    frame = anchor_frame.detach().requires_grad_(True)
+    captured: list[Any] = []
+
+    def capture(_module: Any, _args: Any, output: Any) -> None:
+        if not isinstance(output, torch.Tensor):
+            raise ValueError("YOPO blocks[0] output must be a single tensor")
+        captured.append(output)
+
+    _yopo_topology_payload(segnet)
+    handle = segnet.encoder.model.blocks[0].register_forward_hook(capture)
+    try:
+        teacher_loss = teacher_loss_fn(segnet(frame))
+    finally:
+        handle.remove()
+    if not isinstance(teacher_loss, torch.Tensor) or teacher_loss.ndim != 0:
+        raise ValueError("YOPO teacher_loss_fn must return one scalar torch.Tensor")
+    if not bool(torch.isfinite(teacher_loss)) or len(captured) != 1:
+        raise ValueError("YOPO teacher refresh did not produce one finite cut activation")
+    try:
+        exact_input_costate, p1 = torch.autograd.grad(teacher_loss, (frame, captured[0]))
+    except RuntimeError:
+        # BatchNorm-like state mutation can make autograd fail before the
+        # ordinary post-refresh comparison.  Reclassify that as custody loss
+        # when the frozen scorer state changed, never as a recoverable torch
+        # implementation detail.
+        _require_yopo_state_unchanged(
+            before=state_before_teacher,
+            after=_module_state_sha256(segnet),
+            phase="teacher forward/backward",
+        )
+        raise
+    _require_yopo_state_unchanged(
+        before=state_before_teacher,
+        after=_module_state_sha256(segnet),
+        phase="teacher forward/backward",
+    )
+    if not bool(torch.isfinite(exact_input_costate).all()) or not bool(torch.isfinite(p1).all()):
+        raise ValueError("YOPO teacher refresh produced a nonfinite costate")
+    # This is the non-negotiable refresh canary.  A matching module path is not
+    # enough: the cut must actually lie on the teacher's differentiable route.
+    state_before_canary = _module_state_sha256(segnet)
+    canary_frame = anchor_frame.detach().requires_grad_(True)
+    canary_z1 = _yopo_first_layer_prefix_torch(segnet, canary_frame)
+    canary_input_costate = torch.autograd.grad(canary_z1, canary_frame, grad_outputs=p1)[0]
+    _require_yopo_state_unchanged(
+        before=state_before_canary,
+        after=_module_state_sha256(segnet),
+        phase="refresh prefix canary",
+    )
+    if not torch.equal(canary_input_costate, exact_input_costate) or (
+        array_content_sha256(canary_input_costate) != array_content_sha256(exact_input_costate)
+    ):
+        raise ValueError(
+            "YOPO refresh cut canary failed: J_prefix(anchor)^T p1 does not equal the full-teacher input costate"
+        )
+    bank = YopoFirstLayerBank(
+        p1=p1.detach().cpu().contiguous().numpy(),
+        objective_context_fingerprint=objective_context_fingerprint,
+        scorer_fingerprint=scorer_fingerprint,
+        anchor_frame_sha256=array_content_sha256(frame),
+        split_identity_sha256=yopo_first_layer_split_identity(segnet),
+        live_segnet_state_sha256=_module_state_sha256(segnet),
+        source_step=evaluated_at_step,
+    )
+    bank.metadata()
+    return bank, exact_input_costate.detach()
+
+
+def write_yopo_first_layer_bank(path: str | Path, bank: YopoFirstLayerBank) -> str:
+    """Atomically persist a content-addressed NPZ bank and return its SHA-256."""
+
+    destination = Path(path)
+    metadata = bank.metadata()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{destination.name}.", suffix=".npz", dir=destination.parent)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            np.savez_compressed(
+                handle,
+                p1=np.ascontiguousarray(bank.p1),
+                metadata_json=np.asarray(json.dumps(metadata, sort_keys=True, separators=(",", ":"))),
+            )
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_name, destination)
+        directory_fd = os.open(destination.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        try:
+            os.unlink(tmp_name)
+        except FileNotFoundError:
+            pass
+    return _sha256_file(destination)
+
+
+def load_yopo_first_layer_bank(
+    path: str | Path,
+    *,
+    expected_bank_sha256: str,
+    objective_context_fingerprint: str,
+    scorer_fingerprint: str,
+    expected_split_identity_sha256: str,
+    expected_anchor_frame_sha256: str | None = None,
+    expected_source_step: int | None = None,
+) -> YopoFirstLayerBank:
+    """Re-hash and validate a YOPO bank on every provider evaluation."""
+
+    for name, value in (
+        ("expected_bank_sha256", expected_bank_sha256),
+        ("objective_context_fingerprint", objective_context_fingerprint),
+        ("scorer_fingerprint", scorer_fingerprint),
+        ("expected_split_identity_sha256", expected_split_identity_sha256),
+    ):
+        _require_sha256(name, value)
+    if expected_anchor_frame_sha256 is not None:
+        _require_sha256("expected_anchor_frame_sha256", expected_anchor_frame_sha256)
+    bank_path = Path(path)
+    if not bank_path.is_file():
+        raise ValueError(f"YOPO bank is missing: {bank_path}")
+    before = _file_stat_fingerprint(bank_path)
+    actual_bank_sha256 = _sha256_file(bank_path)
+    if actual_bank_sha256 != expected_bank_sha256:
+        raise ValueError("YOPO bank SHA-256 changed")
+    try:
+        with np.load(bank_path, allow_pickle=False) as archive:
+            if set(archive.files) != {"p1", "metadata_json"}:
+                raise ValueError("YOPO bank members are invalid")
+            p1 = np.asarray(archive["p1"])
+            metadata_raw = archive["metadata_json"]
+            metadata = json.loads(str(metadata_raw.item()))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError(f"YOPO bank cannot be parsed safely: {exc}") from exc
+    after = _file_stat_fingerprint(bank_path)
+    if before != after or _sha256_file(bank_path) != actual_bank_sha256:
+        raise ValueError("YOPO bank changed while it was verified and parsed")
+    required = {
+        "schema",
+        "objective_context_fingerprint",
+        "scorer_fingerprint",
+        "anchor_frame_sha256",
+        "split_module_path",
+        "split_identity_sha256",
+        "live_segnet_state_sha256",
+        "source_step",
+        "p1_sha256",
+        "p1_shape",
+        "p1_dtype",
+        "units",
+    }
+    if set(metadata) != required or metadata.get("schema") != _YOPO_BANK_SCHEMA:
+        raise ValueError("YOPO bank metadata schema is invalid")
+    if metadata["split_module_path"] != YOPO_FIRST_LAYER_SPLIT_PATH:
+        raise ValueError("YOPO bank split module path changed")
+    if metadata["objective_context_fingerprint"] != objective_context_fingerprint:
+        raise ValueError("YOPO bank objective/context fingerprint mismatch")
+    if metadata["scorer_fingerprint"] != scorer_fingerprint:
+        raise ValueError("YOPO bank scorer fingerprint mismatch")
+    if expected_anchor_frame_sha256 is not None and metadata["anchor_frame_sha256"] != expected_anchor_frame_sha256:
+        raise ValueError("YOPO bank anchor frame fingerprint mismatch")
+    if metadata["split_identity_sha256"] != expected_split_identity_sha256:
+        raise ValueError("YOPO bank split identity mismatch")
+    if expected_source_step is not None and metadata["source_step"] != expected_source_step:
+        raise ValueError("YOPO bank source step mismatch")
+    bank = YopoFirstLayerBank(
+        p1=p1,
+        objective_context_fingerprint=str(metadata["objective_context_fingerprint"]),
+        scorer_fingerprint=str(metadata["scorer_fingerprint"]),
+        anchor_frame_sha256=str(metadata["anchor_frame_sha256"]),
+        split_identity_sha256=str(metadata["split_identity_sha256"]),
+        live_segnet_state_sha256=str(metadata["live_segnet_state_sha256"]),
+        source_step=metadata["source_step"],
+    )
+    if bank.metadata() != metadata:
+        raise ValueError("YOPO bank p1 metadata does not match its bytes")
+    return bank
+
+
+def yopo_first_layer_costate_torch(
+    *,
+    segnet: Any,
+    current_frame: Any,
+    bank_path: str | Path,
+    expected_bank_sha256: str,
+    objective_context_fingerprint: str,
+    scorer_fingerprint: str,
+    current_step: int,
+    expected_split_identity_sha256: str,
+    expected_anchor_frame_sha256: str,
+    expected_source_step: int,
+    max_staleness_steps: int,
+) -> tuple[Any, dict[str, Any]]:
+    """Compute ``J_prefix(current_x)^T p1`` with a freshly verified bank."""
+
+    import torch
+
+    if not isinstance(current_step, int) or isinstance(current_step, bool) or current_step < 0:
+        raise ValueError("YOPO current_step must be an integer >= 0")
+    if not isinstance(expected_source_step, int) or isinstance(expected_source_step, bool) or expected_source_step < 0:
+        raise ValueError("YOPO expected_source_step must be an integer >= 0")
+    if not isinstance(max_staleness_steps, int) or isinstance(max_staleness_steps, bool) or max_staleness_steps < 0:
+        raise ValueError("YOPO max_staleness_steps must be an integer >= 0")
+    if current_step < expected_source_step:
+        raise ValueError("YOPO bank source step is in the future")
+    if current_step - expected_source_step > max_staleness_steps:
+        raise ValueError("YOPO bank is stale for the declared max_staleness_steps")
+    if not isinstance(current_frame, torch.Tensor):
+        raise TypeError("YOPO current_frame must be a torch.Tensor")
+    if not bool(torch.isfinite(current_frame).all()):
+        raise ValueError("YOPO current_frame must be finite")
+    _require_yopo_frozen_eval_scorer(segnet)
+    if current_step == expected_source_step and array_content_sha256(current_frame) != expected_anchor_frame_sha256:
+        raise ValueError("YOPO same-step current frame must match the bank anchor frame")
+    current_split_identity = yopo_first_layer_split_identity(segnet)
+    if current_split_identity != expected_split_identity_sha256:
+        raise ValueError("YOPO current scorer split identity mismatch")
+    bank = load_yopo_first_layer_bank(
+        bank_path,
+        expected_bank_sha256=expected_bank_sha256,
+        objective_context_fingerprint=objective_context_fingerprint,
+        scorer_fingerprint=scorer_fingerprint,
+        expected_split_identity_sha256=expected_split_identity_sha256,
+        expected_anchor_frame_sha256=expected_anchor_frame_sha256,
+        expected_source_step=expected_source_step,
+    )
+    state_before_prefix_vjp = _module_state_sha256(segnet)
+    if state_before_prefix_vjp != bank.live_segnet_state_sha256:
+        raise ValueError("YOPO live SegNet state changed since the bank refresh")
+    frame = current_frame.detach().requires_grad_(True)
+    z1 = _yopo_first_layer_prefix_torch(segnet, frame)
+    p1 = torch.as_tensor(bank.p1, device=z1.device, dtype=z1.dtype)
+    if tuple(p1.shape) != tuple(z1.shape):
+        raise ValueError("YOPO bank p1 shape does not match current split activation")
+    if not bool(torch.isfinite(p1).all()):
+        raise ValueError("YOPO bank p1 is nonfinite")
+    try:
+        costate = torch.autograd.grad(z1, frame, grad_outputs=p1)[0].detach()
+    except RuntimeError:
+        _require_yopo_state_unchanged(
+            before=state_before_prefix_vjp,
+            after=_module_state_sha256(segnet),
+            phase="current prefix VJP",
+        )
+        raise
+    _require_yopo_state_unchanged(
+        before=state_before_prefix_vjp,
+        after=_module_state_sha256(segnet),
+        phase="current prefix VJP",
+    )
+    if tuple(costate.shape) != tuple(frame.shape) or not bool(torch.isfinite(costate).all()):
+        raise ValueError("YOPO first-layer VJP is nonfinite or frame-shape mismatched")
+    metadata = bank.metadata()
+    metadata.update(
+        {
+            "bank_sha256": expected_bank_sha256,
+            "current_frame_sha256": array_content_sha256(frame),
+            "current_step": current_step,
+            "pixel_costate_sha256": array_content_sha256(costate),
+            "pixel_costate_units": "teacher_loss_per_rendered_frame_unit",
+        }
+    )
+    return costate, metadata
+
+
 def costate_injection_loss_numpy(frame: Any, costate: Any) -> np.floating[Any]:
     """NumPy value of the canonical injection functional (no autograd implied)."""
 
@@ -420,13 +891,20 @@ def costate_injection_loss_mlx(frame: Any, costate: Any) -> Any:
 
 
 __all__ = [
+    "YOPO_FIRST_LAYER_SPLIT_PATH",
     "CostateAgreementMetrics",
     "TeacherStepCheck",
+    "YopoFirstLayerBank",
     "array_content_sha256",
+    "capture_yopo_first_layer_bank",
     "costate_injection_loss_mlx",
     "costate_injection_loss_numpy",
     "costate_injection_loss_torch",
     "evaluate_teacher_step",
+    "load_yopo_first_layer_bank",
     "measure_costate_agreement",
     "relative_frame_displacement",
+    "write_yopo_first_layer_bank",
+    "yopo_first_layer_costate_torch",
+    "yopo_first_layer_split_identity",
 ]
