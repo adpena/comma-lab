@@ -15852,3 +15852,12 @@ dead/dominated units and the Laguerre-boundary-invariance argument becomes tight
 (`witness_apply_pass.py --fire-scorer-stages --eval-pairs 600 --tropnnc-ks ...`). Triality: DSL =
 apply-pass stage; DAG = this FEED; eqs = the registered negative law. All rows [macOS-CPU advisory]
 NON-PROMOTABLE.
+
+**FEED-tropnnc311 CLOSURE (2026-07-12):** the n600 authority pass COMPLETED — **0/600 pairs
+SegNet-argmax-equal at k=1** (mean per-pair flip 1.249e-2, max 5.218e-2; 1839s GT-free
+reduced-vs-baseline screen; artifact `experiments/results/tropnnc_311_work/n600_final.out`).
+The negative is now fully n600-verified: **bytes_saved_at_exact_Δd_seg=0 = 0** on the dense
+β=1/τ=1 v752 trunk, no longer a sub-scale extrapolation. Eq
+`tropnnc_dense_trunk_exact_dseg_reduction_empty_v1` re-registered with the n600 anchor
+(append-only, latest-wins). Nothing owed on the measurement; the only live follow-up is the
+low-τ-checkpoint reactivation. Pointer 0.19108282 UNMOVED.

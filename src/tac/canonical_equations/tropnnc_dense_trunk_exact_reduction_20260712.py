@@ -15,8 +15,8 @@ MEASURED (VERIFIED_VIA_EMPIRICAL_ANCHOR):
     |corr| 0.959 (0 pairs > 0.99 -> no merge redundancy). The 96-wide trunk is fully utilised.
   * EXACT-PRESERVATION screen (render baseline + each mean-compensated reduced witness -> torch R ->
     frozen CPU-torch SegNet argmax; ACCEPT k iff ALL pairs' argmax BIT-IDENTICAL to baseline):
-    n24 -> 0/24 (k=1, k=2); n96 -> 0/96 (k=1, k=2). Mean per-pair argmax-flip ~1% at k=1. n600
-    confirmation staged. bytes_saved_at_exact_Δd_seg=0 = 0.
+    n24 -> 0/24 (k=1, k=2); n96 -> 0/96 (k=1, k=2); n600 -> 0/600 COMPLETE (k=1; mean flip 1.249e-2,
+    max 5.218e-2, 1839s). bytes_saved_at_exact_Δd_seg=0 = 0.
   * Raw structural byte potentials (exact int8+brotli, NON-admissible): baseline trunk blob 82,706 B;
     k1 -> 81,905 (-801), k2 -> 81,139 (-1,567), k4 -> 79,654 (-3,052) — the bytes the lever WOULD cut
     IF any k preserved the partition; none does.
@@ -113,8 +113,12 @@ def build_tropnnc_dense_trunk_exact_reduction_empty_v1() -> CanonicalEquation:
                 "n96_k2_argmax_equal": _N96_K2_EQUAL,     # 0/96
                 "n96_pairs": _N96_PAIRS,
                 "mean_argmax_flip_frac_k1": _MEAN_FLIP_K1,
-                "n600_status": "0/150 argmax-equal (confirmed through pair 150 then stalled under CPU/mem "
-                               "contention; remaining 450 staged) -> 0/270 across n24+n96+n150",
+                "n600_k1_argmax_equal": 0,               # 0/600 COMPLETE (the n-scale authority)
+                "n600_pairs": 600,
+                "n600_mean_argmax_flip_frac_k1": 1.249e-2,
+                "n600_max_argmax_flip_frac_k1": 5.218e-2,
+                "n600_artifact": "experiments/results/tropnnc_311_work/n600_final.out "
+                                 "(1839s GT-free reduced-vs-baseline SegNet-argmax equality)",
             },
             "bytes_saved_at_exact_dseg0": _BYTES_SAVED_AT_EXACT_DSEG0,   # 0
             "raw_structural_byte_potentials_NON_admissible": {
@@ -126,7 +130,7 @@ def build_tropnnc_dense_trunk_exact_reduction_empty_v1() -> CanonicalEquation:
             "verdict": (
                 "the fully-soft (tau=1) DENSE 96-wide v752 trunk admits ZERO exactly-d_seg-invariant "
                 "structured reduction: even the single least-influential unit per layer (mean-folded) "
-                "flips the SegNet argmax on 100% of screened pairs (0/24, 0/96). The tropical "
+                "flips the SegNet argmax on 100% of screened pairs (0/24, 0/96, 0/600). The tropical "
                 "certificate over-predicts removability because tau=1 is far from the max-plus limit "
                 "and the trunk carries no dead/dominated/duplicate unit surviving the uint8+argmax "
                 "tolerance. bytes_saved_at_exact_Δd_seg=0 = 0."
@@ -157,11 +161,11 @@ def build_tropnnc_dense_trunk_exact_reduction_empty_v1() -> CanonicalEquation:
         name=(
             "TropNNC dense-trunk exact-Δd_seg reduction is EMPTY: the fully-soft (β=1/τ=1) 96-wide v752 "
             "witness trunk admits NO exactly-d_seg-invariant structured neuron prune — every k≥1 flips "
-            "the SegNet argmax on 100% of screened pairs (0/24, 0/96); bytes_saved_at_exact_Δd_seg=0 = 0"
+            "the SegNet argmax on 100% of screened pairs (0/24, 0/96, 0/600 n600-COMPLETE); bytes_saved_at_exact_Δd_seg=0 = 0"
         ),
         one_line_summary=(
-            "dense τ=1 witness trunk has no dead/dominated/duplicate unit surviving the argmax tolerance "
-            "-> 0 bytes at exact Δd_seg=0 (0/24, 0/96). FORMULATION-scoped; reactivate on low-τ. Pointer UNMOVED."
+            "dense τ=1 witness trunk: 0 bytes at exact Δd_seg=0 (0/24, 0/96, 0/600 argmax-equal). "
+            "FORMULATION-scoped; reactivate on low-τ. Pointer UNMOVED."
         ),
         latex_form=(
             r"\tau=1,\ \min_j \mathrm{std}(h_j)\approx0.026,\ \#\{\mathrm{dead}\}=0 \Rightarrow "
@@ -171,7 +175,7 @@ def build_tropnnc_dense_trunk_exact_reduction_empty_v1() -> CanonicalEquation:
         domain_of_validity={
             "vehicle": ["level_set_witness"],
             "checkpoint": "levelset_v752_baseline (hosc beta=1, omega=1, softmax tau=1; dense 96-wide trunk)",
-            "labels": "n24 + n96 real gt SegNet argmax (reduced-vs-baseline equality); n600 staged",
+            "labels": "n24 + n96 + n600 SegNet argmax (reduced-vs-baseline equality; n600 COMPLETE 0/600)",
             "verdict_scope": (
                 "FORMULATION — the empty exact-reduction set is a property of the fully-soft operating "
                 "point + dense trunk, NOT of the tropical-skeleton paradigm; reactivate on low-tau"
