@@ -575,8 +575,27 @@ def _modal_asset_is_reusable(plan, *, local_size: int) -> bool:
         import modal
 
         volume = modal.Volume.from_name(RESULTS_VOLUME, create_if_missing=False)
+
+        def _listdir_or_empty(path: str) -> list:
+            # A modal NotFoundError means the path does not exist on the volume
+            # yet. For a fresh (non-resume) label this is the NORMAL no-collision
+            # state and for an unstaged SHA-asset it means "stage it" -- both are
+            # the empty-listing semantics the callers below already handle.
+            # Re-raising here mislabels a missing fresh-label dir as the
+            # "refusing blind upload" money-safety refusal (2026-07-12 bug).
+            # Match by class name (no modal.exception import) so this stays
+            # robust across modal versions AND monkeypatched test fakes; any
+            # OTHER failure (auth/offline/etc.) still re-raises to the real
+            # fail-closed refusal below.
+            try:
+                return list(volume.listdir(path))
+            except Exception as exc:
+                if type(exc).__name__ == "NotFoundError":
+                    return []
+                raise
+
         output_path = f"{plan.label}/output"
-        output_entries = volume.listdir(plan.label)
+        output_entries = _listdir_or_empty(plan.label)
         if any(
             str(getattr(entry, "path", "")).lstrip("/").rstrip("/")
             == plan.label
@@ -604,7 +623,7 @@ def _modal_asset_is_reusable(plan, *, local_size: int) -> bool:
                     "REFUSED: populated resume destination requires checkpoint under "
                     f"the same output lineage /modal_results/{output_path}/"
                 )
-            resume_entries = volume.listdir(remote_resume)
+            resume_entries = _listdir_or_empty(remote_resume)
             exact_resume_entries = [
                 entry
                 for entry in resume_entries
@@ -652,7 +671,7 @@ def _modal_asset_is_reusable(plan, *, local_size: int) -> bool:
                     sort_keys=True,
                 )
             )
-        entries = volume.listdir(remote_asset)
+        entries = _listdir_or_empty(remote_asset)
     except SystemExit:
         raise
     except Exception as exc:

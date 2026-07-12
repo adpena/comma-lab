@@ -995,6 +995,41 @@ def test_modal_asset_reuse_lookup_error_refuses_blind_upload(monkeypatch):
         tool._modal_asset_is_reusable(plan, local_size=17)
 
 
+def test_modal_asset_reuse_fresh_label_notfound_is_not_refused(monkeypatch):
+    # Regression (2026-07-12): a fresh (non-resume) label has no output dir yet,
+    # so volume.listdir(label) raises modal NotFoundError. That is the NORMAL
+    # no-collision state and must NOT be mislabeled as the "refusing blind
+    # upload" money-safety refusal. The staged SHA-asset is present + size-match
+    # => reusable True (skip staging), not a SystemExit.
+    tool = _load_launcher_tool()
+    digest = "a" * 64
+    remote_path = f"assets/v9_cgauge/gt_{digest}.npz"
+    plan = SimpleNamespace(
+        gt_cache_sha256=digest,
+        label="fresh-label",
+        resume_from=None,
+        asset_stage_argv=(".venv/bin/modal", "volume", "put", "volume", "local", remote_path),
+    )
+
+    class NotFoundError(Exception):
+        pass
+
+    class FreshVolume:
+        @staticmethod
+        def from_name(_name, *, create_if_missing):
+            assert create_if_missing is False
+
+            def listdir(path):
+                if path == "fresh-label":
+                    raise NotFoundError("No such file or directory")
+                return [SimpleNamespace(path=remote_path, type=1, size=17)]
+
+            return SimpleNamespace(listdir=listdir)
+
+    monkeypatch.setitem(sys.modules, "modal", SimpleNamespace(Volume=FreshVolume))
+    assert tool._modal_asset_is_reusable(plan, local_size=17) is True
+
+
 @pytest.mark.parametrize("asset_reusable", (True, False))
 def test_execute_requires_reusable_asset_and_never_implicitly_stages(
     monkeypatch, tmp_path, asset_reusable: bool
