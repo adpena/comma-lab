@@ -175,3 +175,9 @@ def test_main_loop_structurally_consumes_controller_lifecycle_and_dynamic_gates(
     assert "protected_seed.contain_grad_" in source
     assert "island_birth_perclass_from_signed_torch" in source
     assert "birth_scaled_logit_offsets" in source
+    assert "build_torch_muon_adamw" in source
+    assert "optimizer.set_epoch(epoch)" in source
+    assert "resumed/fired Muon controller" in source
+    assert "tail_controller.step" in source
+    assert "tail_stop_after_epoch" in source
+    assert "tail_controller=tail_controller" in source

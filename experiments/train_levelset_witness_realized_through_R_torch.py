@@ -74,6 +74,8 @@ from tac.cuda_v9_island_runtime import (
     birth_scaled_logit_offsets,
     seed_compose_weight_at_epoch,
 )
+from tac.cuda_v9_optimizers import TorchMuonAdamW, build_torch_muon_adamw
+from tac.witness_control.tail_cycles import TailController, TailCycleConfig
 from tac.witness_run_artifacts import (
     TORCH_EMA_PT,
     TORCH_RESUME_PT,
@@ -162,6 +164,7 @@ def _checkpoint_blob(
     controller_state: Mapping[str, Any] | None = None,
     protected_seed=None,
     seed_optimizer=None,
+    tail_controller: TailController | None = None,
 ) -> dict:
     import torch
 
@@ -185,6 +188,9 @@ def _checkpoint_blob(
         "seed_optimizer": (
             seed_optimizer.state_dict() if seed_optimizer is not None else None
         ),
+        "tail_controller": (
+            tail_controller.state_dict() if tail_controller is not None else None
+        ),
     }
 
 
@@ -199,6 +205,7 @@ def _restore(
     controller_state: dict[str, Any] | None = None,
     protected_seed=None,
     seed_optimizer=None,
+    tail_controller: TailController | None = None,
 ) -> int:
     import torch
 
@@ -231,7 +238,48 @@ def _restore(
         seed_optimizer.load_state_dict(seed_opt_blob)
     elif seed_opt_blob is not None:
         raise ValueError("resume checkpoint contains a seed optimizer but typed config disabled it")
+    tail_blob = blob.get("tail_controller")
+    if tail_controller is not None:
+        if tail_blob is None:
+            # Legacy pre-tail checkpoint is valid only before the first cycle.
+            if int(blob["epoch"]) >= int(tail_controller.cycle_start_ep or 10**18):
+                raise ValueError("active tail cycle is missing from resume checkpoint")
+        else:
+            tail_controller.load_state_dict(tail_blob)
+    elif tail_blob is not None:
+        raise ValueError("resume checkpoint contains tail state but typed config disabled it")
     return int(blob["epoch"])
+
+
+def _softmax_temp_at_epoch(epoch: int, total_epochs: int, flags: Mapping[str, Any]) -> float:
+    """Exact pure twin of the MLX temperature continuation schedule."""
+    anneal = int(flags.get("--anneal-epochs", 0) or total_epochs)
+    progress = (int(epoch) - 1) / max(anneal - 1, 1)
+    start = float(flags["--softmax-temp-start"])
+    end = float(flags["--softmax-temp-end"])
+    shape = str(flags.get("--tau-anneal-shape", "cosine"))
+    if shape == "geometric":
+        return float(start * (end / start) ** progress)
+    if shape == "cosine_hold":
+        hold = float(flags.get("--tau-hold-frac", 1.0))
+        if hold < 1.0:
+            if progress >= hold:
+                return end
+            progress /= hold
+    return float(end + 0.5 * (start - end) * (1.0 + np.cos(np.pi * progress)))
+
+
+def _hosc_beta_at_epoch(epoch: int, total_epochs: int, flags: Mapping[str, Any]) -> float:
+    """Exact pure twin of the MLX HOSC sharpening schedule."""
+    start = float(flags["--hosc-beta"])
+    end = float(flags.get("--hosc-beta-end", start))
+    if end == start:
+        return start
+    anneal = int(flags.get("--anneal-epochs", 0) or total_epochs)
+    progress = (int(epoch) - 1) / max(anneal - 1, 1)
+    if str(flags.get("--hosc-beta-anneal", "linear")) == "cosine":
+        return float(end + 0.5 * (start - end) * (1.0 + np.cos(np.pi * progress)))
+    return float(start + (end - start) * progress)
 
 
 def _ema_update(ema, model, decay: float) -> None:
@@ -701,6 +749,11 @@ def main(argv: list[str] | None = None) -> int:
     if resume_path.is_dir():
         resume_path = resume_path / TORCH_RESUME_PT
     resume_will_load = bool(args.resume_from or resume_path.exists())
+    resume_blob = (
+        torch.load(resume_path, map_location=device, weights_only=False)
+        if resume_will_load
+        else None
+    )
     if flags.get("--palette-anchor", False) and not resume_will_load:
         import torch.nn.functional as F
 
@@ -899,6 +952,17 @@ def main(argv: list[str] | None = None) -> int:
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(flags["--lr"]),
                                   betas=(0.9, float(flags["--adam-beta2"])),
                                   weight_decay=float(flags["--weight-decay"]))
+    if (
+        resume_blob is not None
+        and resume_blob.get("optimizer", {}).get("schema") == TorchMuonAdamW.SCHEMA
+    ):
+        muon_config = resume_blob["optimizer"].get("config", {})
+        optimizer, _resume_muon_row = build_torch_muon_adamw(
+            model,
+            flags,
+            total_epochs=args.epochs,
+            start_epoch=int(muon_config["start_epoch"]),
+        )
     seed_optimizer = (
         torch.optim.AdamW(
             protected_seed.parameters(),
@@ -915,15 +979,50 @@ def main(argv: list[str] | None = None) -> int:
         lane_cls=island_detection.lane_cls,
         movable_cls=island_detection.movable_cls,
     )
+    tail_controller = None
+    tail_start_epoch = 0
+    if int(flags.get("--tail-cycles-max", 0)) > 0:
+        if bool(flags.get("--tail-live-mq", False)):
+            raise ValueError("typed live-mq tail is not available; V9 selects the halving fallback")
+        tail_start_epoch = (
+            int(flags["--tail-start-epoch"])
+            if int(flags.get("--tail-start-epoch", 0)) > 0
+            else int(flags["--muon-start-epoch"]) + int(flags["--tail-dwell-min"])
+        )
+        tail_tau0 = _softmax_temp_at_epoch(
+            int(flags["--muon-start-epoch"]), args.epochs, flags
+        )
+        tail_controller = TailController(
+            TailCycleConfig(
+                k_max=int(flags["--tail-cycles-max"]),
+                cycle_floor_epochs=float(flags["--tail-cycle-floor-epochs"]),
+                dwell_min=int(flags["--tail-dwell-min"]),
+                tau_halving=float(flags["--tail-tau-halving"]),
+                tau_end=float(flags["--softmax-temp-end"]),
+                lr_prop_coeff=float(flags["--tail-lr-prop-tau"]),
+                stop_marginal_s=float(flags["--tail-stop-marginal-s"]),
+            ),
+            tau_ref=tail_tau0,
+            lr_ref=float(flags["--muon-lr"]),
+            tau0=tail_tau0,
+        )
     controller_state: dict[str, Any] = {}
     start = 0
     if resume_will_load:
+        assert resume_blob is not None
         start = _restore(
-            torch.load(resume_path, map_location=device, weights_only=False),
+            resume_blob,
             model, ema, optimizer, cfg_hash,
             pair_cursor=pair_cursor, controller_state=controller_state,
             protected_seed=protected_seed, seed_optimizer=seed_optimizer,
+            tail_controller=tail_controller,
         )
+        if (
+            tail_controller is not None
+            and start >= tail_start_epoch
+            and resume_blob.get("tail_controller") is None
+        ):
+            raise ValueError("post-tail resume checkpoint lacks governed tail-cycle state")
     if controller_state:
         controller.load_state_dict(controller_state)
     controller_state = controller.state_dict()
@@ -959,6 +1058,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     prev_stage = curriculum_stage(start, flags)
     t0 = time.time()
+    last_completed_epoch = start
     for epoch in range(start + 1, args.epochs + 1):
         stage = curriculum_stage(epoch, flags)
         if stage != prev_stage:
@@ -969,6 +1069,7 @@ def main(argv: list[str] | None = None) -> int:
                 model, ema, optimizer, epoch - 1, cfg_hash, dsl_argv,
                 pair_cursor=pair_cursor, controller_state=controller_state,
                 protected_seed=protected_seed, seed_optimizer=seed_optimizer,
+                tail_controller=tail_controller,
             )
             _atomic_torch_save(
                 boundary_blob,
@@ -985,20 +1086,111 @@ def main(argv: list[str] | None = None) -> int:
                 )
             prev_stage = stage
         model.train()
-        progress = epoch / max(args.epochs, 1)
         with torch.no_grad():
-            model.softmax_temp.fill_(
-                float(flags["--softmax-temp-start"])
-                + progress
-                * (float(flags["--softmax-temp-end"]) - float(flags["--softmax-temp-start"]))
-            )
-            model.hosc_beta.fill_(
-                float(flags["--hosc-beta"])
-                + progress * (float(flags["--hosc-beta-end"]) - float(flags["--hosc-beta"]))
-            )
+            model.softmax_temp.fill_(_softmax_temp_at_epoch(epoch, args.epochs, flags))
+            model.hosc_beta.fill_(_hosc_beta_at_epoch(epoch, args.epochs, flags))
         if pose_carrier is None:
             raise RuntimeError("active V9 generated pose carrier was not attached")
         controller_step = controller.begin_epoch(epoch)
+        if controller_step.muon_start:
+            if isinstance(optimizer, TorchMuonAdamW):
+                raise RuntimeError("Muon event fired twice against an already-split optimizer")
+            optimizer, muon_transition = build_torch_muon_adamw(
+                model,
+                flags,
+                total_epochs=args.epochs,
+                start_epoch=epoch,
+                outgoing_adamw=optimizer,
+            )
+            _emit_trajectory_row(
+                out,
+                {
+                    "stage": "muon_transition",
+                    "epoch": epoch,
+                    **muon_transition,
+                    **optimizer.set_epoch(epoch),
+                    "state_policy": "warm-start Muon first moment; reset remaining state",
+                    "backend": "torch_cuda",
+                    "authority": "[contest-CUDA training-advisory]",
+                    "promotion_eligible": False,
+                },
+            )
+        elif controller_step.muon_on and not isinstance(optimizer, TorchMuonAdamW):
+            raise RuntimeError(
+                "resumed/fired Muon controller lacks the matching split optimizer state"
+            )
+        if isinstance(optimizer, TorchMuonAdamW):
+            optimizer.set_epoch(epoch)
+        tail_step = None
+        tail_stop_after_epoch = False
+        if (
+            tail_controller is not None
+            and controller_step.muon_on
+            and epoch >= tail_start_epoch
+        ):
+            tail_step = tail_controller.step(
+                epoch,
+                list(controller.dseg_history),
+                live_mq=None,
+                byte_rows=None,
+            )
+            with torch.no_grad():
+                model.softmax_temp.fill_(float(tail_step.tau))
+            for group in optimizer.param_groups:
+                group["lr"] = float(tail_step.lr)
+            if tail_step.begin_cycle:
+                tail_blob = _checkpoint_blob(
+                    model,
+                    ema,
+                    optimizer,
+                    epoch - 1,
+                    cfg_hash,
+                    dsl_argv,
+                    pair_cursor=pair_cursor,
+                    controller_state=controller.state_dict(),
+                    protected_seed=protected_seed,
+                    seed_optimizer=seed_optimizer,
+                    tail_controller=tail_controller,
+                )
+                _atomic_torch_save(
+                    tail_blob,
+                    out / "stage_checkpoints"
+                    / f"ep{epoch - 1:05d}_{tail_step.stage_tag}_muon.pt",
+                )
+                _emit_trajectory_row(
+                    out,
+                    {
+                        "stage": "tail_cycle_begin",
+                        "epoch": epoch,
+                        "cycle": tail_step.cycle_k,
+                        "tau": tail_step.tau,
+                        "lr": tail_step.lr,
+                        "reason": tail_step.reason,
+                        "rate_aware": False,
+                        "backend": "torch_cuda",
+                        "authority": "[contest-CUDA training-advisory]",
+                        "promotion_eligible": False,
+                    },
+                )
+            if tail_step.stop:
+                tail_stop_after_epoch = True
+                _emit_trajectory_row(
+                    out,
+                    {
+                        "stage": "tail_powerplay_stop",
+                        "epoch": epoch,
+                        "cycle": tail_step.cycle_k,
+                        "reason": tail_step.reason,
+                        "net_marginal_s_per_ep": (
+                            None if tail_step.marginal != tail_step.marginal
+                            else float(tail_step.marginal)
+                        ),
+                        "rate_aware": False,
+                        "backend": "torch_cuda",
+                        "authority": "[contest-CUDA training-advisory]",
+                        "promotion_eligible": False,
+                    },
+                )
         if bool(flags.get("--ladder-island-homotopy", False)):
             from tac.witness_curriculum.ladder_homotopy import ARM_LANE, ARM_MOVABLE
 
@@ -1367,11 +1559,13 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         blob = None
-        if epoch % ckpt_every == 0 or epoch == args.epochs:
+        last_completed_epoch = epoch
+        if epoch % ckpt_every == 0 or epoch == args.epochs or tail_stop_after_epoch:
             blob = _checkpoint_blob(
                 model, ema, optimizer, epoch, cfg_hash, dsl_argv,
                 pair_cursor=pair_cursor, controller_state=controller_state,
                 protected_seed=protected_seed, seed_optimizer=seed_optimizer,
+                tail_controller=tail_controller,
             )
             _atomic_torch_save(blob, out / TORCH_RESUME_PT)
             _atomic_torch_save({"schema": "v9_cgauge_torch_ema_v1", "epoch": epoch,
@@ -1382,31 +1576,34 @@ def main(argv: list[str] | None = None) -> int:
             )
             if latest_polyak is not None:
                 _atomic_torch_save(latest_polyak, out / _TORCH_POLYAK_PT)
+        if tail_stop_after_epoch:
+            break
     final_blob = _checkpoint_blob(
-        model, ema, optimizer, args.epochs, cfg_hash, dsl_argv,
+        model, ema, optimizer, last_completed_epoch, cfg_hash, dsl_argv,
         pair_cursor=pair_cursor, controller_state=controller_state,
         protected_seed=protected_seed, seed_optimizer=seed_optimizer,
+        tail_controller=tail_controller,
     )
     _atomic_torch_save(
         final_blob,
-        out / "stage_checkpoints" / f"ep{args.epochs:05d}_{prev_stage}.pt",
+        out / "stage_checkpoints" / f"ep{last_completed_epoch:05d}_{prev_stage}.pt",
     )
     final_polyak = _polyak_checkpoint_blob(
-        controller, args.epochs, cfg_hash, dsl_argv
+        controller, last_completed_epoch, cfg_hash, dsl_argv
     )
     if final_polyak is not None:
         _atomic_torch_save(final_polyak, out / _TORCH_POLYAK_PT)
         _atomic_torch_save(
             final_polyak,
             out / "stage_checkpoints"
-            / f"ep{args.epochs:05d}_{prev_stage}_polyak.pt",
+            / f"ep{last_completed_epoch:05d}_{prev_stage}_polyak.pt",
         )
     _atomic_json(
         {
             "schema": "v9_cgauge_torch_train_result_v1",
             "status": "completed",
             "backend": "torch_cuda",
-            "epochs_completed": args.epochs,
+            "epochs_completed": last_completed_epoch,
             "config_hash": cfg_hash,
             "seed": int(flags["--seed"]),
             "polyak_candidate": (

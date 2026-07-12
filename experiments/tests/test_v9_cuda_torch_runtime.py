@@ -11,8 +11,10 @@ from experiments.train_levelset_witness_realized_through_R_torch import (
     _attach_generated_pose_carrier,
     _checkpoint_blob,
     _generated_pose_pair_dispatch,
+    _hosc_beta_at_epoch,
     _restore,
     _run_structured_prefit,
+    _softmax_temp_at_epoch,
 )
 from tac.boundary_math.warp_real_luma_frame0 import GroundHomographyGeom
 from tac.cuda_levelset_training import (
@@ -22,6 +24,7 @@ from tac.cuda_levelset_training import (
     TorchPoseCarrier,
 )
 from tac.cuda_v9_controller_runtime import TorchProtectedIslandSeed
+from tac.witness_control.tail_cycles import TailController, TailCycleConfig
 
 
 def _pose_flags():
@@ -127,26 +130,60 @@ def test_checkpoint_roundtrip_restores_pair_cursor_and_controller_state():
         damp=0.1,
     )
     seed_opt = torch.optim.AdamW(seed.parameters(), lr=0.02, weight_decay=0.0)
+    tail = TailController(
+        TailCycleConfig(k_max=2, cycle_floor_epochs=20, dwell_min=5),
+        tau_ref=0.8,
+        lr_ref=1e-3,
+        tau0=0.8,
+    )
+    tail.step(3, [(2, 0.1)])
     blob = copy.deepcopy(_checkpoint_blob(
         model, ema, opt, 3, "cfg", ("python", "trainer"),
         pair_cursor=cursor, controller_state=controllers,
         protected_seed=seed, seed_optimizer=seed_opt,
+        tail_controller=tail,
     ))
     with torch.no_grad():
         seed.residual.zero_()
     restored_cursor = DeterministicPairCursor(7, seed=0)
     restored_controllers = {"stale": True}
+    restored_tail = TailController(
+        TailCycleConfig(k_max=2, cycle_floor_epochs=20, dwell_min=5),
+        tau_ref=0.8,
+        lr_ref=1e-3,
+        tau0=0.8,
+    )
     epoch = _restore(
         blob, model, ema, opt, "cfg",
         pair_cursor=restored_cursor, controller_state=restored_controllers,
         protected_seed=seed, seed_optimizer=seed_opt,
+        tail_controller=restored_tail,
     )
     assert epoch == 3 and restored_controllers == controllers
     assert torch.all(seed.residual == 1.0)
+    assert restored_tail.state_dict() == tail.state_dict()
     rest = []
     while not restored_cursor.epoch_complete():
         rest.extend(restored_cursor.next_epoch_indices(3))
     assert sorted(first + rest) == list(range(7))
+
+
+def test_torch_schedule_helpers_match_mlx_authority_endpoints_and_shapes():
+    flags = {
+        "--softmax-temp-start": 1.0,
+        "--softmax-temp-end": 0.25,
+        "--tau-anneal-shape": "geometric",
+        "--anneal-epochs": 9,
+        "--hosc-beta": 1.0,
+        "--hosc-beta-end": 5.0,
+        "--hosc-beta-anneal": "cosine",
+    }
+    assert _softmax_temp_at_epoch(1, 9, flags) == 1.0
+    assert _softmax_temp_at_epoch(9, 9, flags) == 0.25
+    assert _softmax_temp_at_epoch(5, 9, flags) == pytest.approx(0.5)
+    assert _hosc_beta_at_epoch(1, 9, flags) == 1.0
+    assert _hosc_beta_at_epoch(9, 9, flags) == 5.0
+    assert _hosc_beta_at_epoch(5, 9, flags) == pytest.approx(3.0)
 
 
 def test_accumulated_pair_step_matches_one_step_on_mean_accepted_loss():
