@@ -115,6 +115,30 @@ from tac.optimization.md_decoupling import (  # noqa: E402
 # (no reimplementation). Only the low-level pure fns are used (flip split + per-class + GT-margin
 # percentiles); the full-margin/gibbs series lives in tools/witness_annulus_convergence.py.
 from tac import witness_annulus_metrics as _wam  # noqa: E402
+from tac.witness_init.fresh_frequency_shift import (  # noqa: E402
+    deterministic_first_layer_bias_candidates,
+    inclusive_bias_width_grid,
+    tangent_frequency_candidates,
+)
+from tac.witness_init.fresh_runtime import (  # noqa: E402
+    fresh_init_scorer_accounting,
+    run_fresh_initialization_sweep,
+    score_fresh_committed_state,
+    write_fresh_committed_state_receipt,
+    write_fresh_receipt,
+)
+from tac.witness_init.fresh_trainer_contract import (  # noqa: E402
+    FRESH_RESUME_PREFIX,
+    FreShInitState,
+    fresh_checkpoint_cfg_arrays,
+    fresh_state_arrays,
+    fresh_training_target_sha256,
+    load_checkpoint_cfg,
+    matched_fresh_arm_config,
+    restore_fresh_checkpoint_before_features,
+    restore_fresh_state_from_cfg,
+    validate_fresh_init_args,
+)
 
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 
@@ -516,6 +540,7 @@ def _build_ema_checkpoint_arrays(
     shadow_np: dict[str, np.ndarray], *, args: Any, softmax_temp: float,
     render_h: int, render_w: int, epoch: int, in_feat: int,
     hosc_beta: float | None = None, provenance: dict[str, Any] | None = None,
+    fresh_state: FreShInitState | None = None,
 ) -> dict[str, np.ndarray]:
     """The deploy (byte-close) npz contents: EMA SHADOW params + cfg scalars. MLX-free.
 
@@ -573,6 +598,8 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_render_aa"] = np.asarray(str(getattr(args, "render_aa", "none")))
     flat["__cfg_aa_supersample"] = np.asarray(int(getattr(args, "aa_supersample", 1)))
     flat["__cfg_aa_ipe_footprint"] = np.asarray(float(getattr(args, "aa_ipe_footprint", 1.0)))
+    if fresh_state is not None and fresh_state.enabled:
+        flat.update(fresh_checkpoint_cfg_arrays(fresh_state, args=args))
     return flat
 
 
@@ -581,6 +608,7 @@ def _build_resume_state_arrays(
     opt_np: dict[str, np.ndarray] | None, *, args: Any, epoch: int, in_feat: int,
     recent_losses: "list[float] | None" = None, provenance: dict[str, Any] | None = None,
     resume_registry: "Any" = None, hardness_prob: "np.ndarray | None" = None,
+    fresh_state: FreShInitState | None = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -600,6 +628,10 @@ def _build_resume_state_arrays(
     out["__cfg_mod_dim"] = np.asarray(args.mod_dim)
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
     out["__cfg_in_feat"] = np.asarray(int(in_feat))
+    out["__cfg_n_dir_freqs"] = np.asarray(int(args.n_dir_freqs))
+    out["__cfg_freq_across"] = np.asarray(float(args.freq_across))
+    out["__cfg_freq_along"] = np.asarray(float(args.freq_along))
+    out["__cfg_reorient_every"] = np.asarray(int(args.reorient_every))
     out["__cfg_w_pose"] = np.asarray(float(args.w_pose))
     out["__cfg_pose_finish_start_epoch"] = np.asarray(int(getattr(args, "pose_finish_start_epoch", 0)))
     # (F2 fix) #224 render-side LEVER cfg: persist the levers whose engagement CHANGES the loss /
@@ -799,6 +831,8 @@ def _build_resume_state_arrays(
     # cap-fallback / cl pending-reconcile -- remains at its correctly-ordered inline site.)
     if resume_registry is not None:
         out.update(resume_registry.state_arrays())
+    if fresh_state is not None and fresh_state.enabled:
+        out.update(fresh_checkpoint_cfg_arrays(fresh_state, args=args))
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
     # is not byte-closed; makes a --resume-from traceable to the exact code + frozen scorer). ----
     _prov = provenance or {}
@@ -902,6 +936,11 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
     # (key, current value, is_float) — non-float compared as string (int/bool/str all normalize).
     checks: list[tuple[str, object, bool]] = [
         ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
+        ("__cfg_self_orient", int(bool(getattr(args, "self_orient", False))), False),
+        ("__cfg_n_dir_freqs", int(getattr(args, "n_dir_freqs", 0)), False),
+        ("__cfg_freq_across", float(getattr(args, "freq_across", 0.0)), True),
+        ("__cfg_freq_along", float(getattr(args, "freq_along", 0.0)), True),
+        ("__cfg_reorient_every", int(getattr(args, "reorient_every", 0)), False),
         # (#395 A2 arm) out_tex_hidden is a PARAM-SHAPE lever (adds out_tex_h + reshapes out_tex): a
         # resume that changes it trains an incompatible head vs the ckpt => fail closed (determinism).
         # Legacy: only checked when PRESENT in the sidecar (pre-A2 sidecars lack the key => no divergence).
@@ -1020,6 +1059,44 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
             diverged = str(ckpt) != str(cur)
         if diverged:
             div.append(f"{key[len('__cfg_'):]}: ckpt={ckpt!r} != resume-argv={cur!r}")
+    # FreSh selection changes the epoch-zero basis but adds no parameter keys.
+    # Only an actually-applied FreSh checkpoint is binding; a requested lever
+    # overwritten by a non-FreSh warm start persists __cfg_fresh_init=0 and is
+    # intentionally allowed to remain explicitly non-FreSh across two hops.
+    if int(resume_cfg.get("__cfg_fresh_init", 0) or 0) == 1:
+        _cur_fresh = bool(
+            getattr(args, "fresh_init", False)
+            or getattr(args, "fresh_init_control", False)
+        )
+        if not _cur_fresh:
+            div.append("fresh_init: ckpt=applied != resume-argv=off")
+        _fresh_checks: list[tuple[str, object, object, bool]] = [
+            ("fresh_control", int(resume_cfg.get("__cfg_fresh_control", 0) or 0),
+             int(bool(getattr(args, "fresh_init_control", False))), False),
+            ("fresh_spectrum_size", resume_cfg.get("__cfg_fresh_spectrum_size"),
+             int(getattr(args, "fresh_spectrum_size", 64)), False),
+            ("fresh_sample_pairs", resume_cfg.get("__cfg_fresh_sample_pairs"),
+             int(getattr(args, "fresh_sample_pairs", 10)), False),
+            ("fresh_reference_freq_along", resume_cfg.get("__cfg_fresh_reference_freq_along"),
+             float(getattr(args, "fresh_reference_freq_along", 8.0)), True),
+            ("fresh_tangent_deficit", resume_cfg.get("__cfg_fresh_tangent_deficit"),
+             float(getattr(args, "fresh_tangent_deficit", 3.2)), True),
+            ("fresh_bias_k_min", resume_cfg.get("__cfg_fresh_bias_k_min"),
+             float(getattr(args, "fresh_bias_k_min", 0.0)), True),
+            ("fresh_bias_k_max", resume_cfg.get("__cfg_fresh_bias_k_max"),
+             float(getattr(args, "fresh_bias_k_max", 3.0)), True),
+            ("fresh_bias_k_step", resume_cfg.get("__cfg_fresh_bias_k_step"),
+             float(getattr(args, "fresh_bias_k_step", 0.1)), True),
+        ]
+        for _name, _ckpt, _current, _float in _fresh_checks:
+            if _ckpt is None:
+                continue
+            _different = (
+                abs(float(_ckpt) - float(_current)) > 1e-6
+                if _float else str(_ckpt) != str(_current)
+            )
+            if _different:
+                div.append(f"{_name}: ckpt={_ckpt!r} != resume-argv={_current!r}")
     # lane_band_start_epoch: inert while the band is OFF in BOTH -> only flag when engaged in either.
     if "__cfg_lane_band_start_epoch" in resume_cfg:
         ckpt_band = int(resume_cfg.get("__cfg_lane_render_band", cur_band) or 0)
@@ -1117,15 +1194,17 @@ def _finer_bias_init_values(seed: int, k: float, n: int) -> np.ndarray:
     FEED-ly: with all first-layer biases ~0 every neuron sits at the SAME point of tanh(beta*sin)
     and saturates TOGETHER as beta rises; the wide bias spreads the ensemble across the period so
     some neurons always live on a high-gradient stretch). DEDICATED
-    ``np.random.default_rng(seed + _FINER_RNG_SALT)`` stream: NEVER the shared ``np.random`` /
-    ``mx.random`` streams (byte-identity discipline — the OFF path draws nothing; the ON path
-    shifts no other seeded draw). Deterministic in (seed, k, n). Fail-closed on k<=0 / n<=0."""
+    The shared FreSh/FINER deterministic bias helper owns the dedicated
+    ``seed + _FINER_RNG_SALT`` stream: NEVER the shared ``np.random`` / ``mx.random`` streams
+    (byte-identity discipline — the OFF path draws nothing; the ON path shifts no other seeded
+    draw). Deterministic in (seed, k, n). Fail-closed on k<=0 / n<=0."""
     if not (float(k) > 0.0):
         raise ValueError(f"--finer-bias-k must be > 0, got {k!r}")
     if int(n) <= 0:
         raise ValueError(f"finer bias init needs n > 0 neurons, got {n!r}")
-    rng = np.random.default_rng(int(seed) + _FINER_RNG_SALT)
-    return rng.uniform(-float(k), float(k), size=int(n)).astype(np.float32)
+    return deterministic_first_layer_bias_candidates(
+        (float(k),), int(n), seed=int(seed), salt=_FINER_RNG_SALT
+    )[0]
 
 
 # ---------------------------------------------------------------------------
@@ -1192,15 +1271,16 @@ def _logit_adjust_offsets_np(
 
 def _validate_logit_adjust_compat(tau: float, micro_batch_pairs: int) -> None:
     """(#218 → #D15 ROUTED) --logit-adjust-loss-tau is NOW routed into the --micro-batch-pairs>1
-    batched twin: the twin's ``LeverConfig.logit_adjust_offset`` carries the (5,) per-class offset
+    batched twin: the twin's ``LeverConfig.logit_adjust_offset`` carries the static (5,) per-class offset
     ``tau*log(prior)``, added to the BASE seg-form logits ONLY (the surgical seg levers + the
     witness-alone forward keep the RAW adapter — EXACTLY the serial split where ``base_loss`` reads
     the wrapped ``_LogitAdjustSegAdapter`` and ``total_loss_fn``'s levers read the raw ``adapter``).
-    The add is a per-class constant broadcast over (K,H,W,5), batch-/pixel-independent, so it is
-    BIT-EXACT per pair (equivalence pinned by test_levelset_micro_batch_loss). This validation is
+    When birth-completion ramping is active, ``LeverConfig.logit_adjust_state`` instead supplies the
+    live per-epoch offset from the trainer's mutable cell. The add is a per-class constant broadcast
+    over (K,H,W,5), batch-/pixel-independent. This validation is
     therefore a NO-OP kept as the documented compatibility home: the combination no longer fails
     closed. The genuinely-unrouted levers (--margin-saliency-reachability / --seg-spike-reweight /
-    --seg-subpix-boundary-weight / --seg-chroma-boundary-weight) still fail-close at their own
+    --seg-subpix-boundary-weight / --eikonal-steik-normalized) still fail-close at their own
     precompute blocks. Pure / MLX-free -> unit-tested. tau == 0.0 (OFF) is always compatible."""
     return None
 
@@ -3217,6 +3297,35 @@ def _running_accepted_frac(ep_acc: int, ep_tot: int,
 
 
 def run_train(args: argparse.Namespace) -> dict[str, Any]:
+    # A non-positive B previously fell through to the serial path because engagement is ``B > 1``.
+    # Refuse that silent typo before importing MLX, allocating the run directory, or loading scorers.
+    # Training-loop bit identity is operator-waived; this is a shape/domain guard, not a drift gate.
+    if int(getattr(args, "micro_batch_pairs", 1)) < 1:
+        raise ValueError(
+            f"--micro-batch-pairs ({getattr(args, 'micro_batch_pairs', None)}) must be >= 1 "
+            "(1 = serial; >1 = batched functional-parity path).")
+    _fresh_candidate_count = validate_fresh_init_args(args)
+    _fresh_state = FreShInitState(
+        enabled=bool(
+            getattr(args, "fresh_init", False)
+            or getattr(args, "fresh_init_control", False)
+        ),
+        control=bool(getattr(args, "fresh_init_control", False)),
+    )
+    _fresh_matched_config = None
+    _fresh_matched_config_sha256 = None
+    if _fresh_state.enabled:
+        _fresh_matched_config, _fresh_matched_config_sha256 = matched_fresh_arm_config(args)
+    # The selected tangent frequency changes the model's input basis.  Restore
+    # it before the directional feature width/state is allocated; the normal
+    # resume block below still owns the model/EMA/optimizer tensors.
+    if _fresh_state.enabled and args.resume_from:
+        _fresh_resume_path = _resolve_resume_path(Path(args.resume_from))
+        restore_fresh_checkpoint_before_features(
+            args,
+            _fresh_state,
+            load_checkpoint_cfg(_fresh_resume_path),
+        )
     import mlx.core as mx
     import mlx.nn as nn
     import mlx.optimizers as optim
@@ -3264,6 +3373,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     else:
         gt, seg_cpu, posenet_cpu = precompute_gt(args.num_pairs)
     P = gt.n_pairs
+    _fresh_target_authority_sha256 = None
+    if _fresh_state.enabled and not args.resume_from:
+        _fresh_target_authority_sha256 = fresh_training_target_sha256({
+            "gt_f0": gt.gt_f0,
+            "gt_f1": gt.gt_f1,
+            "lstars": gt.lstars,
+            "margins": gt.margins,
+            "gt_poses": gt.gt_poses,
+        })
     print(json.dumps({"stage": "gt", "n_pairs": P, "secs": round(time.time() - t0, 1)}), flush=True)
 
     render_h, render_w = args.render_h, args.render_w
@@ -3654,6 +3772,193 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "FINER++ 2407.19434 wide first-layer bias (fix for fixed-beta "
                                   "hosc saturation-death); OFF => zero RNG draws => byte-identical"}),
               flush=True)
+    # P0 2026-07-12 FreSh INIT-TIME spectral alignment.  This is deliberately
+    # between SIREN/first-layer bias initialization and the optional structured
+    # prefit: each candidate changes only the directional Fourier frequency and
+    # aligned first-layer bias draw, renders once through the real R + frozen
+    # MLX SegNet surface, and is reduced immediately to a bounded boundary
+    # spectrum.  The epoch loop and its scorer-call count are untouched.
+    _fresh_selection_result = None
+    _fresh_spectral_weights = None
+    if _fresh_state.enabled and not args.resume_from:
+        _fresh_started = time.perf_counter()
+        try:
+            if _fresh_state.control:
+                # Exact matched control: same one-pass fixed-point/re-render
+                # path, but only the incumbent (freq_along, zero bias).
+                _fresh_bias_grid = (0.0,)
+                _fresh_frequency_grid = (float(args.freq_along),)
+            else:
+                _fresh_bias_grid = inclusive_bias_width_grid(
+                    float(args.fresh_bias_k_min),
+                    float(args.fresh_bias_k_max),
+                    float(args.fresh_bias_k_step),
+                )
+                _fresh_frequency_grid = tangent_frequency_candidates(
+                    float(args.freq_along),
+                    reference_frequency=float(args.fresh_reference_freq_along),
+                    tangent_deficit=float(args.fresh_tangent_deficit),
+                )
+            _fresh_bias_rows = deterministic_first_layer_bias_candidates(
+                _fresh_bias_grid,
+                int(model.in_proj.bias.shape[0]),
+                seed=int(args.seed),
+                salt=_FINER_RNG_SALT,
+            )
+            _fresh_bias_by_k = {
+                float(k): row for k, row in zip(_fresh_bias_grid, _fresh_bias_rows, strict=True)
+            }
+            _fresh_zero_dirs = np.zeros(
+                (curv_feats_np.shape[0], dir_w), dtype=np.float32
+            )
+            _fresh_zero_feats = np.concatenate(
+                [curv_feats_np, _fresh_zero_dirs], axis=-1
+            ).astype(np.float32, copy=False)
+            _fresh_base_argmax_by_bias: dict[float, np.ndarray] = {}
+
+            def _fresh_base_argmax(bias_k: float) -> np.ndarray:
+                """Candidate-specific zero-direction fixed-point source."""
+
+                key = float(bias_k)
+                if key not in _fresh_base_argmax_by_bias:
+                    model.in_proj.bias = mx.array(_fresh_bias_by_k[key])
+                    with temporary_mlx_device(args.mlx_device):
+                        _phi0 = model.sdf(mx.array(_fresh_zero_feats), 0)
+                        _arg0 = mx.argmax(_phi0, axis=-1)
+                        mx.eval(_arg0)
+                    _fresh_base_argmax_by_bias[key] = (
+                        np.asarray(_arg0).reshape(render_h, render_w).astype(np.int64)
+                    )
+                    del _phi0, _arg0
+                return _fresh_base_argmax_by_bias[key]
+
+            def _fresh_render_candidate(candidate) -> np.ndarray:
+                """Return one cold realized-through-R SegNet argmax map."""
+
+                model.in_proj.bias = mx.array(_fresh_bias_by_k[float(candidate.bias_k)])
+                _base_partition = _fresh_base_argmax(float(candidate.bias_k))
+                _candidate_dirs = self_orientation_directional_feats(
+                    coords_np,
+                    _base_partition,
+                    n_freqs=n_dir_freqs,
+                    freq_across=float(args.freq_across),
+                    freq_along=float(candidate.freq_along),
+                ).astype(np.float32)
+                _candidate_feats = np.concatenate(
+                    [curv_feats_np, _candidate_dirs], axis=-1
+                ).astype(np.float32, copy=False)
+                with temporary_mlx_device(args.mlx_device):
+                    _candidate_f1 = render_through_R_mlx(
+                        model,
+                        mx.array(_candidate_feats),
+                        1,
+                        render_h,
+                        render_w,
+                    )
+                    _candidate_logits = adapter.segnet(_candidate_f1)
+                    _candidate_labels = mx.argmax(_candidate_logits, axis=-1)
+                    mx.eval(_candidate_labels)
+                _labels_np = np.asarray(_candidate_labels)[0].astype(np.int64, copy=True)
+                del _candidate_f1, _candidate_logits, _candidate_labels, _candidate_feats
+                mx.clear_cache()
+                return _labels_np
+
+            _fresh_spectral_weights = tuple(
+                lane_thin_weight_map(np.asarray(labels, np.int64), lane_class=1)
+                for labels in gt.lstars
+            )
+            _fresh_selection_result = run_fresh_initialization_sweep(
+                target_label_maps=tuple(np.asarray(labels, np.int64) for labels in gt.lstars),
+                # The measured 3.2x deficit is the thin/dashed class-1
+                # along-tangent residual, not the dominant all-class normal
+                # edge mass.  Target-derived weights are fixed for both arms;
+                # runtime receipts also retain global W1 as a diagnostic.
+                spectral_weight_maps=_fresh_spectral_weights,
+                requested_sample_count=int(args.fresh_sample_pairs),
+                spectrum_size=int(args.fresh_spectrum_size),
+                frequency_candidates=_fresh_frequency_grid,
+                bias_candidates=_fresh_bias_grid,
+                baseline_frequency=float(args.freq_along),
+                baseline_bias=0.0,
+                render_candidate=_fresh_render_candidate,
+            )
+            _fresh_selected = _fresh_selection_result.selection
+            model.in_proj.bias = mx.array(
+                _fresh_bias_by_k[float(_fresh_selected.candidate.bias_k)]
+            )
+            mx.eval(model.parameters())
+            args.freq_along = float(_fresh_selected.candidate.freq_along)
+            _fresh_selected_dirs = self_orientation_directional_feats(
+                coords_np,
+                _fresh_base_argmax(float(_fresh_selected.candidate.bias_k)),
+                n_freqs=n_dir_freqs,
+                freq_across=float(args.freq_across),
+                freq_along=float(args.freq_along),
+            ).astype(np.float32)
+            assert dir_feats_per_pair is not None  # validated --fresh-init requires --self-orient
+            for _fresh_pi in range(P):
+                # Later reorientation rebinds each list entry; sharing this
+                # immutable cold array avoids P copies at init.
+                dir_feats_per_pair[_fresh_pi] = _fresh_selected_dirs
+            _fresh_state.applied = True
+            _fresh_state.candidate_index = int(_fresh_selected.candidate_index)
+            _fresh_state.selected_freq_along = float(_fresh_selected.candidate.freq_along)
+            _fresh_state.selected_bias_k = float(_fresh_selected.candidate.bias_k)
+            _fresh_state.selected_mean_distance = float(_fresh_selected.mean_distance)
+            _fresh_selection_seconds = float(time.perf_counter() - _fresh_started)
+            _fresh_state.reason = (
+                "matched_control_before_structured_init"
+                if _fresh_state.control
+                else "selected_before_structured_init"
+            )
+            _fresh_receipt_provenance = {
+                **_run_provenance,
+                "seed": int(args.seed),
+                "axis": "macOS-MLX training-gradient init telemetry",
+                "mlx_device": str(args.mlx_device),
+                "candidate_count": int(_fresh_candidate_count),
+                "mode": "control" if _fresh_state.control else "select",
+                "selection_surface": "thin_lane_boundary_residual",
+                "matched_config": _fresh_matched_config,
+                "matched_config_sha256": _fresh_matched_config_sha256,
+                "target_authority_sha256": _fresh_target_authority_sha256,
+                "config": {
+                    "freq_across": float(args.freq_across),
+                    "n_dir_freqs": int(args.n_dir_freqs),
+                    "reference_freq_along": float(args.fresh_reference_freq_along),
+                    "tangent_deficit": float(args.fresh_tangent_deficit),
+                    "bias_grid": [float(v) for v in _fresh_bias_grid],
+                    "render_aa": str(args.render_aa),
+                },
+                "selection_seconds": _fresh_selection_seconds,
+            }
+            _fresh_state.selection_receipt_sha256 = write_fresh_receipt(
+                out_dir / "fresh_init_receipt.json",
+                _fresh_selection_result,
+                provenance=_fresh_receipt_provenance,
+            )
+            print(json.dumps({
+                "stage": "fresh_init",
+                **_fresh_state.result_dict(),
+                "candidate_count": int(_fresh_candidate_count),
+                "claim_scope": "init_time_spectral_selection_not_contest_score",
+            }), flush=True)
+        except Exception as exc:
+            _fresh_state.reason = f"blocked:{type(exc).__name__}"
+            _atomic_write_json(
+                out_dir / "fresh_init_blocker.json",
+                {
+                    "schema": "tac.witness_init.fresh_blocker.v1",
+                    "written_at_utc": _utc(),
+                    "claim_scope": "init_blocker_not_contest_score",
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                    "seed": int(args.seed),
+                    "candidate_count": int(_fresh_candidate_count),
+                    "provenance": _run_provenance,
+                },
+            )
+            raise
     # STRUCTURED-PRIOR phi INIT (FEED-ef, ADDITIVE, default-off). PRETRAIN phi so argmax(phi) ~= the
     # validated self-detected static-core partition (hood+sky+road[+lane] deep SDFs; FEED-dm/du/dw/dx).
     # The one-shot linear-readout init is broken (the random INR trunk's linear span ~= majority class,
@@ -3775,6 +4080,72 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "msg": "pretrain did NOT structure the partition (disagree>0.30); init ~ random "
                               "(hosc/SIREN trainability fragility). Try --structured-init-lr/-steps or another --seed.",
                               "disagree": round(sc_disagree, 5)}), flush=True)
+    # Measure the actual raw witness state handed to epoch zero after any
+    # structured prefit. Pair-dependent epoch-0 composers are fail-closed (or
+    # DSL-disabled) by validate_fresh_init_args, so this bare witness ->
+    # IPE/none -> R -> frozen MLX SegNet path is exact for the matched slice.
+    if _fresh_selection_result is not None:
+        assert _fresh_spectral_weights is not None
+        with temporary_mlx_device(args.mlx_device):
+            _fresh_committed_f1 = render_through_R_mlx(
+                model, mx.array(_feats_np_for_pair(0)), 1, render_h, render_w
+            )
+            _fresh_committed_logits = adapter.segnet(_fresh_committed_f1)
+            _fresh_committed_labels_mx = mx.argmax(_fresh_committed_logits, axis=-1)
+            mx.eval(_fresh_committed_labels_mx)
+        _fresh_committed_labels = np.asarray(_fresh_committed_labels_mx)[0].astype(
+            np.int64, copy=True
+        )
+        _fresh_committed = score_fresh_committed_state(
+            _fresh_committed_labels,
+            _fresh_selection_result,
+            spectral_weight_maps=_fresh_spectral_weights,
+        )
+        _fresh_state.post_structured_mean_distance = float(_fresh_committed.mean_distance)
+        _fresh_scorer_accounting = fresh_init_scorer_accounting(
+            _fresh_selection_result
+        )
+        _fresh_state.init_seconds = float(time.perf_counter() - _fresh_started)
+        _fresh_state.reason = (
+            "matched_control_committed_to_epoch0"
+            if _fresh_state.control
+            else "selected_and_committed_to_epoch0"
+        )
+        _fresh_committed_sha = write_fresh_committed_state_receipt(
+            out_dir / "fresh_init_post_structured_receipt.json",
+            _fresh_committed,
+            selection_receipt_sha256=str(_fresh_state.selection_receipt_sha256),
+            scorer_accounting=_fresh_scorer_accounting,
+            provenance={
+                **_run_provenance,
+                "seed": int(args.seed),
+                "mode": "control" if _fresh_state.control else "select",
+                "matched_config": _fresh_matched_config,
+                "matched_config_sha256": _fresh_matched_config_sha256,
+                "target_authority_sha256": _fresh_target_authority_sha256,
+                "total_init_seconds_to_epoch0": _fresh_state.init_seconds,
+                "accounting_boundary": (
+                    "fresh_sweep_start_through_committed_epoch0_state; "
+                    "excludes common pre-sweep trainer setup"
+                ),
+                "render_chain": "bare_witness_ipe_or_none_R_frozen_mlx_segnet",
+                "pair_dependent_epoch0_composers": "disabled_or_inactive_fail_closed",
+            },
+        )
+        print(json.dumps({
+            "stage": "fresh_init_post_structured",
+            "mean_distance": _fresh_state.post_structured_mean_distance,
+            "receipt_sha256": _fresh_committed_sha,
+            "total_init_seconds_to_epoch0": _fresh_state.init_seconds,
+            "total_init_scorer_forward_calls": (
+                _fresh_scorer_accounting.total_init_scorer_forward_calls
+            ),
+            "total_init_scorer_pair_equivalents": (
+                _fresh_scorer_accounting.total_init_scorer_pair_equivalents
+            ),
+            "claim_scope": "post_init_spectral_telemetry_not_contest_score",
+        }), flush=True)
+        del _fresh_committed_f1, _fresh_committed_logits, _fresh_committed_labels_mx
     # AMORTIZATION (FEED-eo, --freeze-decoder-fit-codes, ADDITIVE, default-off). The witness factors
     # into a SHARED decoder (in_proj/film/hidden/out_sdf/out_tex/palette) + per-(pair,frame) latent
     # codes (1200 x mod_dim). A full from-scratch n600 row co-fits BOTH (days). This mode LOADS a
@@ -4254,8 +4625,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # the DEPLOYED/rendered argmax path is UNCHANGED — no offset at the verdict CPU-torch SegNet,
     # the byte-close decode, or inflate; the adjustment lives ONLY inside the wrapped loss adapter.
     # tau == 0.0 (DEFAULT) => ``_loss_adapter is adapter`` (the SAME object) => the make_loss_fn
-    # closure + graph are BYTE-IDENTICAL. Fails closed with --micro-batch-pairs>1 (not routed into
-    # the batched twin — same class as --seg-spike-reweight / --margin-saliency-reachability).
+    # closure + graph are BYTE-IDENTICAL. The batched twin reads the same static offset, or the live
+    # birth-completion cell when the per-class hand-off ramp is enabled.
     # Equations leg: ``logit_adjustment_class_prior_law_v1``; DSL leg: ``LogitAdjust``.
     la_tau = float(getattr(args, "logit_adjust_loss_tau", 0.0))
     _validate_logit_adjust_compat(la_tau, int(getattr(args, "micro_batch_pairs", 1)))
@@ -4390,7 +4761,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # seg-frame's texture chroma is FREE for d_seg (seg (+) pose, orphan #227). chroma_bnd_w=0.0 (DEFAULT)
     # => the branch is skipped => byte-identical (fully additive). Providers declared None here (closure
     # binds the cells) so the OFF path never references them; POPULATED after lstar_cache is built
-    # (spike-map / subpix style, inline -- theta-independent + cheap). Fails CLOSED with micro-batch.
+    # (spike-map / subpix style, inline -- theta-independent + cheap). The twin consumes the same maps.
     chroma_bnd_w = float(getattr(args, "seg_chroma_boundary_weight", 0.0))
     chroma_bnd_start = int(getattr(args, "seg_chroma_boundary_start_epoch", 0))
     chroma_bnd_band = float(getattr(args, "seg_chroma_boundary_margin_band", 1.0))
@@ -4531,7 +4902,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # per-pair GT-boundary band map (distance transform of the GT inter-class edge set, computed ONCE
     # per pair — cacheable/theta-independent) is POPULATED after lstar_cache is built (spike-map
     # style); the term reads the SDF head DIRECTLY (model.sdf(cf, c1), frame1 = the SegNet-scored
-    # frame) so the contour is moved on the DOF the witness owns. Fails CLOSED with micro-batch.
+    # frame) so the contour is moved on the DOF the witness owns. Routed into the micro-batch twin.
     bd_w = float(getattr(args, "boundary_distance_weight", 0.0))
     _bd_band_prov: Any = None   # list[mx.array (1,H,W)] f32 band weights, keyed by pi == int(c1)//2
 
@@ -5332,7 +5703,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # regularizer); carrier_live = the pose carrier's LIVE co-adapted twist (grad flows to dxi:
             # the dual-use arm; the d_pose tripwire is telemetry-owed at verdicts).
             if ts_xi_source == "carrier_live":
-                _xi_ts = model.pose_carrier.xi_effective(_pi_ts)       # (6,) LIVE twist (grad -> dxi)
+                # FiLM residual carriers require the pair's frame-0 code vector; table carriers
+                # ignore it. Passing it unconditionally keeps both accepted carrier modes valid.
+                _xi_ts = model.pose_carrier.xi_effective(              # (6,) LIVE twist (grad -> dxi)
+                    _pi_ts, model.code[2 * _pi_ts])
             else:
                 _xi_ts = _ts_xi_prov[_pi_ts]                           # (6,) stored GT screw (stop-grad)
             # warp the 3 GROUND softmax channels (0,1,2) as an (H,W,3) field forward by xi into f1.
@@ -5566,15 +5940,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # the measured bottleneck (single-pair EfficientNet-B2 under-utilizes the GPU). EVERY per-pair loss
     # reduction (base seg-form; the score-domain pose ``sqrt(10*d_pose)`` which is NONLINEAR so
     # sqrt(mean)!=mean(sqrt); and every weighted-mean lever ``sum(x*w)/sum(w)``) is computed PER PAIR on
-    # the batched scorer outputs and MEAN-ed over B, so
-    #     total_loss_fn_batch(B pairs) == mean_b total_loss_fn(pair_b)
-    # WITHIN fp tolerance (batched conv/BN is batch-independent in SegNet/PoseNet eval mode -> per-frame
-    # logits are unchanged by batching; the mean-over-B is the only reduction re-order). That EXACT
-    # per-pair-mean identity makes the accum-loop grad match the serial mean-over-chunk EXACTLY (the
-    # accum loop weights each group's mean-grad by its pair count) and lets the numerical-equivalence
-    # test pin batched-grad == mean-of-per-pair-grad. The realized segnet(f1) forward is computed ONCE
-    # and SHARED by the base seg-form AND the lever ``_signed`` — bit-identical to total_loss_fn's two
-    # deterministic-render forwards ((f'+g')·dS == f'·dS + g'·dS). The once-per-step per-MODEL code
+    # the batched scorer outputs and MEAN-ed over B. This preserves the intended per-pair objective
+    # rather than introducing a global denominator. Batched scorer rows can still drift from serial
+    # rows because floating-point kernels/reductions differ, so admission is FUNCTIONAL parity of loss
+    # and gradients within measured tolerances plus measured speedup, under the training-only operator
+    # waiver. Pair-count weighting preserves the intended mean-over-chunk objective within that
+    # functional-parity contract. The realized segnet(f1) forward is computed ONCE and SHARED by the
+    # base seg-form AND the lever ``_signed``; this is the same mathematical surface as
+    # total_loss_fn's two deterministic-render forwards, not a bit-identity claim. The once-per-step per-MODEL code
     # penalties (rankfloor / code-spec / code-nuc) are added ONCE (matching the serial mean-over-chunk
     # of an identical-per-pair term). NOT bit-identical to the serial path (batched fp reduction order):
     # a trajectory-affecting opt-in validated by a short A/B. Mirrors total_loss_fn op-for-op.
@@ -5629,12 +6002,35 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         eik_stab=_eik_stab, eikonal_visco=_eikonal_visco_mlx, eikonal_steik=_eikonal_steik_mlx,
         wa_island=wa_island,
         # (#D15) newly-ROUTED legs (were fail-closed vs micro-batch): --logit-adjust-loss-tau routes
-        # as the per-class constant offset applied to the BASE seg-form logits ONLY (bit-exact per
-        # pair; the surgical levers + wa forward keep the raw adapter — the serial split); and
+        # as the per-class constant offset applied to the BASE seg-form logits ONLY. The offset
+        # operation is row-local and introduces no additional cross-pair reduction; it does not make
+        # the upstream batched scorer rows bit-exact. The surgical levers + wa forward keep the raw
+        # adapter (the serial split); and
         # --seg-form-unify-tau routes as the twin's ``unify_tau`` seg-form branch. _la_offset_mx is
         # None when la_tau==0 (byte-identical). _unify_tau_state is passed BY REFERENCE so the twin
         # reads the per-epoch render-coupled τ live, exactly like total_loss_fn's call-site read.
         logit_adjust_offset=_la_offset_mx,
+        # Canonical V9 live/provider surfaces. Mutable controller cells and mask dictionaries are
+        # passed by reference; providers built below are refreshed onto this config after precompute.
+        logit_adjust_state=_bc_la_cell,
+        amplify_ramp_state=_bc_ramp,
+        amplify_lane_masks=_bc_isl_lane, amplify_movable_masks=_bc_isl_mov,
+        persistence_sg_cache=_sg_cache,
+        area_lambda=_area_lambda,
+        chroma_w=chroma_bnd_w, chroma_gate=chroma_bnd_gate,
+        chroma_gt_prov=_chroma_gt_prov, chroma_ann_prov=_chroma_w_prov,
+        phase_w=pa_w, phase_gate=pa_gate, phase_ref_prov=_pa_ref_prov,
+        phase_dir_prov=_pa_dir_prov, phase_weight_prov=_pa_wmask_prov, phase_eps=pa_eps,
+        temporal_w=ts_w, temporal_gate=ts_gate, temporal_ann_prov=_ts_ann_prov,
+        temporal_xi_prov=_ts_xi_prov, temporal_xi_source=ts_xi_source,
+        # Temporal screw is defined on the raw witness surface, matching the serial path's
+        # ``_render_R(model, cf, c0, ...)`` frame 0. Keep this callable separate from the outer
+        # ``render_fn`` used above for the base PoseNet pair: under pose-carrier composition those
+        # surfaces intentionally differ, so temporal performs its own raw-witness f0 batched render
+        # and SegNet call rather than reusing the carrier-composed base-pose frame.
+        temporal_render_f0_fn=_render_R,
+        temporal_geom_mlx=_ts_geom_mlx, temporal_class_mask=_ts_class_mask,
+        temporal_rot_mask=_ts_rot_mask, temporal_sky_rowmask=_ts_sky_rowmask,
         unify_tau_state=_unify_tau_state, seg_unify_tau_perpixel=_seg_unify_tau_perpixel,
     )
 
@@ -5663,8 +6059,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # which batched_realized_loss invokes PER pair before stacking -> the batched loss already
     # contains the seed term; the dual grad just adds the second argnum. Equivalence (the NO-FAKE
     # gate, executed by experiments/test_batched_seed_cograd.py on real gt_n6 + the real frozen MLX
-    # scorer): dual-batched(B) loss == mean_b dual-serial(pair_b) loss AND both grad legs match the
-    # mean-of-per-pair-grads within fp32 tolerance (MLX CPU: matmul/reductions batch-independent).
+    # scorer): dual-batched(B) loss and both gradient legs must match their mean-of-per-pair serial
+    # references within the registered functional-parity tolerances. Batched kernels may reorder
+    # floating-point work; this is deliberately not a batch-independence or bit-identity claim.
     # DEFAULT (1) => _use_micro_batch False => value_and_grad_batch/_dual_vg_batch None => the accum
     # loop takes the UNCHANGED serial path (BYTE-IDENTICAL; the serial _dual_vg dispatch is untouched).
     _micro_batch_pairs = int(getattr(args, "micro_batch_pairs", 1))
@@ -5677,11 +6074,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # amplify/persistence read the seed-excluded margin exactly as the serial _wa_route does. The
     # equivalence (batched grad == mean-of-per-pair grad within fp tol) is pinned per-leg by
     # src/tac/tests/test_levelset_micro_batch_loss.py. The prior four NotImplementedError
-    # fail-closes are removed. (#D15) --logit-adjust-loss-tau (per-class offset on the BASE seg-form
-    # logits, bit-exact) and --seg-form-unify-tau (the twin's unify_tau seg-form branch, live τ) are
-    # now ALSO ROUTED. STILL fail-closed below (genuinely not yet routed): --margin-saliency-
-    # reachability / --seg-spike-reweight / --seg-subpix-boundary-weight / --seg-chroma-boundary-
-    # weight. --seed-anneal-epochs composes via _compose_chain (batched render).
+    # fail-closes are removed. (#D15) --logit-adjust-loss-tau (row-local per-class offset on the BASE
+    # seg-form logits, with no extra cross-pair reduction) and --seg-form-unify-tau (the twin's
+    # unify_tau seg-form branch, live τ) are
+    # now ALSO ROUTED, including the live birth-completion offset cell. Canonical V9 chroma,
+    # phase-advection, temporal screw, area, and birth-completion amplify/persistence ramps are routed
+    # through the provider/live-state fields above. STILL fail-closed below (genuinely not yet routed):
+    # --margin-saliency-reachability / --seg-spike-reweight / --seg-subpix-boundary-weight /
+    # --eikonal-steik-normalized. --seed-anneal-epochs composes via _compose_chain (batched render).
     value_and_grad_batch = None
     _dual_vg_batch = None
     if _use_micro_batch:
@@ -5705,9 +6105,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "accum_pairs": int(args.accum_pairs),
                           "seed_cograd": bool(seed_mod is not None),
                           "note": "OPT-IN batched scorer forward (B pairs/forward); trajectory-affecting "
-                          "(batched fp reduction) but grad == serial mean-over-chunk within fp tol; "
+                          "(batched fp reduction); loss/grad must match the serial mean within the "
+                          "registered functional tolerances; "
                           "seed_cograd=dual value_and_grad (BUILD #293) when --seed-islands; "
-                          "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+                          "training-only, no score authority; canonical reports/latest.md pointer UNMOVED"}), flush=True)
 
     # one-hot L* + margin per pair at the SegNet OUTPUT res (gt.lstars/gt.margins are 384x512,
     # matching the realized seg_logits = adapter.segnet(R(rgb))). NOT render res.
@@ -5847,7 +6248,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # f32 = the GT ratio M_GT[p]/(M_GT[p]+M_GT[q]) in [0,1] where active, -1.0 sentinel elsewhere (encodes
     # the active mask); dir_map (1,H,W) f32 in {0,1} = the dominant direction (0=right,1=down) the loss
     # shifts Mw by to gather Mw[q]. Providers stay None unless subpix_w>0 => the OFF path is byte-identical.
-    # Fails CLOSED with micro-batch (the batched twin's LeverConfig does not carry this lever yet). Memory
+    # Fails CLOSED with micro-batch (the batched twin does not consume this dormant lever yet). Memory
     # ~ 2x the down-weight map (t + dir float maps): P*H*W*4*2 ~= 940 MB at n600 (trivial vs RAM; noted for
     # the launcher preflight). A/B owed (needs GO); pointer 0.19110 UNMOVED.
     if subpix_w > 0.0:
@@ -6075,11 +6476,6 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # targets + A_ξ advect) so Force-3 and T1 select/warp the tie field from ONE implementation. Pair 0
     # (no prior scored frame) gets an all-zero weight => the term is a no-op there.
     if pa_w > 0.0:
-        if _use_micro_batch:
-            raise ValueError(
-                "--seg-phase-advect-weight>0 is not supported with --micro-batch-pairs>1 (the batched "
-                "twin does not consume the cross-pair phase term yet); run this arm at "
-                "--micro-batch-pairs 1 (same serial-path constraint as the subpix/#274 levers).")
         from tac.boundary_math.phase_primitives import (
             advect_tie_field_numpy as _pp_advect_np,
             cross_scored_frame_xi_interp as _pp_cross_xi,
@@ -6156,16 +6552,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # rgb - BT.601-luma (the SAME BT.601 the witness _apply_chroma uses) -> the per-pixel GT chroma target
     # (LUMA-INVARIANT); (3) annulus weight = (GT margin < band) as {0,1} (MEASURED gt_n96: band 1.0 =>
     # 93.4% of chroma-flips inside it). Stored per pair: chroma_gt (1,H,W,3) f32 + annulus_w (1,H,W) f32.
-    # Providers stay None unless chroma_bnd_w>0 => the OFF path is byte-identical. Fails CLOSED with
-    # micro-batch (the batched twin's LeverConfig does not carry this lever yet). Memory ~ P*H*W*4*4 (3
+    # Providers stay None unless chroma_bnd_w>0 => the OFF path is byte-identical. The batched twin
+    # consumes these same theta-independent providers. Memory ~ P*H*W*4*4 (3
     # chroma channels + 1 mask) ~= 1.9 GB at n600 (trivial vs RAM; noted for the launcher preflight).
     # A/B owed (needs GO); pointer 0.19110 UNMOVED.
     if chroma_bnd_w > 0.0:
-        if _use_micro_batch:
-            raise ValueError(
-                "--seg-chroma-boundary-weight>0 is not supported with --micro-batch-pairs>1 (the batched "
-                "twin does not consume the chroma-sharpening lever yet); run this arm at "
-                "--micro-batch-pairs 1.")
         from tac.optimization.frame1_seg_safe_pose_atoms import _resize_map as _chroma_resize_map
         _ch_H, _ch_W = np.asarray(gt.lstars[0]).shape                  # (384, 512) SegNet output == input
         _chroma_gt_prov = []
@@ -6194,14 +6585,31 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "orthogonal to the geometry levers; A/B owed (needs GO); pointer 0.19110 "
                           "UNMOVED"}), flush=True)
 
+    # These providers are rebound from None to newly-built lists/geometry after LeverConfig was
+    # constructed. Refresh them exactly once before the first value_and_grad invocation; gate/ramp dicts and
+    # island-mask dicts remain live by-reference. Temporal performs a separate raw-witness f0 batched
+    # render + SegNet call through ``temporal_render_f0_fn``; it must not reuse the outer pose-carrier
+    # f0 surface used by the base PoseNet pair. It still avoids Python per-pair scorer calls.
+    _micro_batch_lc.chroma_gt_prov = _chroma_gt_prov
+    _micro_batch_lc.chroma_ann_prov = _chroma_w_prov
+    _micro_batch_lc.phase_ref_prov = _pa_ref_prov
+    _micro_batch_lc.phase_dir_prov = _pa_dir_prov
+    _micro_batch_lc.phase_weight_prov = _pa_wmask_prov
+    _micro_batch_lc.temporal_ann_prov = _ts_ann_prov
+    _micro_batch_lc.temporal_xi_prov = _ts_xi_prov
+    _micro_batch_lc.temporal_geom_mlx = _ts_geom_mlx
+    _micro_batch_lc.temporal_class_mask = _ts_class_mask
+    _micro_batch_lc.temporal_rot_mask = _ts_rot_mask
+    _micro_batch_lc.temporal_sky_rowmask = _ts_sky_rowmask
+
     # (--cache-gt-skeleton, #260 SPEED) BUILD the per-pair GT soft-skeleton cache ONCE (each sg is
     # mx.eval'd to a concrete constant, detached from any lazy graph, OUTSIDE any value_and_grad
     # transform -> safe + bit-identical to the inline recompute). Keyed by pair index pi (== c0//2 ==
-    # c1//2, the SAME key thin_maps_mx / island_weight_mx use). Gated on persist-on AND not
-    # micro-batch (the serial total_loss_fn is the only consumer; the batched twin recomputes). The
+    # c1//2, the SAME key thin_maps_mx / island_weight_mx use). Both the serial and batched twins
+    # consume the cache; no loss path recomputes this constant when the speed flag is active. The
     # per-pair sg built here matches persistence_topology_loss_mlx's inline `g` construction op-for-op
     # (precompute_sg_mlx uses the identical stack->reshape->soft_skeleton), so sg_precomputed== inline.
-    if cache_gt_skeleton and persist_w > 0.0 and persist_classes and not _use_micro_batch:
+    if cache_gt_skeleton and persist_w > 0.0 and persist_classes:
         from tac.boundary_math.persistence_topology_loss import precompute_sg_mlx as _precompute_sg_mlx
         _sg_cache = {}
         for _pi in range(P):
@@ -6213,6 +6621,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "precomputed CONSTANT GT soft-skeleton per pair (bit-identical "
                           "speed-only; skips ~half the clDice recompute); pointer 0.19110 UNMOVED"}),
               flush=True)
+        _micro_batch_lc.persistence_sg_cache = _sg_cache
 
     # ---- realized CPU-torch verdict over a subset (the AUTHORITY trajectory) ----
     vpairs = list(range(0, P, max(1, P // max(args.verdict_pairs, 1)))) if args.verdict_pairs < P else list(range(P))
@@ -6433,6 +6842,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     from tac.witness_control.resume_registry import build_gate_resume_registry as _build_resume_registry
     _resume_registry = _build_resume_registry(
         [_muon_gate, _lane_band_gate, _chroma_gate, _temporal_screw_gate], wire_sense=_wire_sense)
+    # FreSh is immutable after epoch zero, but its selected frequency/bias,
+    # spectral receipt, and init overhead are part of the initial condition.
+    # Register at the same run-scoped resume surface as every controller so a
+    # crash cannot silently revert to the cold basis.
+    from tac.witness_control.resume_registry import FunctionResumable as _FreshFnResumable
+    _resume_registry.register("fresh_init", FRESH_RESUME_PREFIX, _FreshFnResumable(
+        write=lambda prefix: fresh_state_arrays(_fresh_state, prefix=prefix),
+        restore=lambda prefix, cfg: restore_fresh_state_from_cfg(
+            _fresh_state, cfg, prefix=prefix),
+    ))
 
     # (v7.5 D.9) TERMINAL POSE-FINISH state (SPEC §D.9; the R1 two-phase, FEED-238resolved). The EFFECTIVE
     # per-epoch pose weight rides the ``_w_pose_now`` holder (read at every training + telemetry loss call
@@ -7331,7 +7750,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             ema_arrays = _build_ema_checkpoint_arrays(
                 shadow_np_proj, args=args, softmax_temp=float(softmax_temp),
                 render_h=render_h, render_w=render_w, epoch=int(ep), in_feat=in_feat,
-                hosc_beta=float(hosc_beta))
+                hosc_beta=float(hosc_beta), fresh_state=_fresh_state)
             _atomic_savez(out_dir / "levelset_witness_ema_BEST.npz", ema_arrays)
             _atomic_write_json(out_dir / "levelset_best.json", {
                 "d_seg": float(d_seg), "epoch": int(ep),
@@ -7588,7 +8007,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             deploy_shadow_np, args=args, softmax_temp=float(model.softmax_temp),
             render_h=render_h, render_w=render_w, epoch=epoch, in_feat=in_feat,
             hosc_beta=float(model.hosc_beta),  # FEED-fb: persist CURRENT annealed beta in deploy cfg
-            provenance=_run_provenance)        # #205: git sha + upstream snapshot sha in EVERY deploy ckpt
+            provenance=_run_provenance,
+            fresh_state=_fresh_state)          # #205: git sha + upstream snapshot sha in EVERY deploy ckpt
         resume_arrays = _build_resume_state_arrays(
             live_np, shadow_np, opt_np, args=args, epoch=epoch, in_feat=in_feat,
             # #205: persist the spike-guard window (bit-faithful step-skip on resume) + git provenance.
@@ -7601,6 +8021,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # NO manifest => byte-identical. The cl controller snapshots under _verdict_lock inside its
             # adapter (M2 pending-verdict-consistent), the rng adapter always writes __rng_*.
             resume_registry=_resume_registry,
+            fresh_state=_fresh_state,
             # (#403 P0 gap-1b) persist the realized-source hardness baseline so a resume restores the
             # SAME per-pair oversample allocation a continuous run used (None when the lever is off ->
             # key absent -> byte-identical). Closure-captures the loop-scope hardness_prob (bound at the
@@ -7626,7 +8047,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _project_shadow_film_np(_polyak_mean), args=args,
                 softmax_temp=float(model.softmax_temp), render_h=render_h, render_w=render_w,
                 epoch=epoch, in_feat=in_feat, hosc_beta=float(model.hosc_beta),
-                provenance=_run_provenance)
+                provenance=_run_provenance, fresh_state=_fresh_state)
             _atomic_savez(out_dir / "levelset_witness_polyak_mlx.npz", polyak_arrays)
             written["polyak_latest"] = "levelset_witness_polyak_mlx.npz"
             written["polyak_count"] = int(_polyak.count)
@@ -10318,6 +10739,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "render_hw": [render_h, render_w],
         "front_end": "curvelet" + ("+self_orient" if use_self_orient else ""),
         "activation": args.activation, "in_feat": int(in_feat),
+        "fresh_init": _fresh_state.result_dict(),
         "history": history, "checkpoint": str(ck), "stage_checkpoints": stage_ckpts,
         # HARDENING: the BEST realized-d_seg EMA-shadow ckpt (None if no finite verdict landed).
         # The harvester / next-arm warm-start reads this (or levelset_best.json) instead of the
@@ -10625,32 +11047,34 @@ def main(argv: list[str] | None = None) -> int:
     # (SPEED LEVER, DAG FEED 2026-07-03c) micro-batch B pairs per forward. DEFAULT 1 => the accum loop
     # takes the UNCHANGED serial per-pair value_and_grad path (BYTE-IDENTICAL). B>1 renders + scores B
     # pairs in ONE batched frozen-scorer forward (EfficientNet-B2 SegNet / FastViT PoseNet saturate the
-    # GPU far better than single-pair batches) -> the measured ~2-4x speed lever. NOT bit-identical
-    # (batched fp reduction order) => a trajectory-affecting opt-in, validated by a short trajectory A/B.
+    # GPU far better than single-pair batches). Historical scorer-forward microbenchmarks and the
+    # operator's target place the expected class around 2-4x; the full V9 B=2 end-to-end receipt is
+    # still owed. Training-loop drift is operator-waived; admission is functional loss/gradient parity
+    # plus a faithful full-step wall-clock receipt.
     # The per-pair loss reductions (base seg-form, score-domain pose sqrt, weighted-mean levers) are
     # computed PER PAIR on the batched scorer outputs and MEAN-ed over B, so total_loss_fn_batch(B) ==
-    # mean_b total_loss_fn(pair_b) within fp tolerance -> the accum-loop grad matches the serial
-    # mean-over-chunk EXACTLY (see the accum loop's per-group `* _bn` weighting). (BUILD #293)
+    # mean_b total_loss_fn(pair_b) within functional fp tolerance; per-group `* _bn` weighting preserves
+    # the intended mean-over-chunk objective without asserting exact gradients. (BUILD #293)
     # COMPOSES with --seed-islands via the batched DUAL co-grad (_dual_vg_batch; equivalence executed
     # by experiments/test_batched_seed_cograd.py). Score-neutral verdict authority is unaffected.
     ap.add_argument("--micro-batch-pairs", type=int, default=1,
-                    help="(speed lever) pairs per batched value_and_grad forward (1 = serial "
-                    "byte-identical per-pair path; >1 = opt-in batched scorer forward, trajectory-"
-                    "affecting, ~2-4x). Sub-batches each --accum-pairs chunk; grads weighted by pair "
-                    "count so the accum-step grad == the serial mean-over-chunk. Composes with "
-                    "--seed-islands (BUILD #293 dual co-grad).")
+                    help="(speed lever) pairs per batched value_and_grad forward; must be >=1 "
+                    "(1 = serial; >1 = batched functional-parity path, with training drift explicitly "
+                    "waived). Sub-batches each --accum-pairs chunk; group losses/grads are weighted by "
+                    "pair count to preserve the mean-over-chunk objective. Composes with --seed-islands "
+                    "(BUILD #293 dual co-grad) and the canonical V9 lever stack.")
     # (--cache-gt-skeleton, #260 SPEED, BIT-IDENTICAL) opt-in per-pair cache of the CONSTANT GT
     # soft-skeleton the persistence loss recomputes every step. sg=soft_skeleton(gt) is a function of
     # the FROZEN GT argmax one-hot ONLY (constant across epochs) + carries NO gradient (it multiplies
     # pred in tsens), so precomputing it once per pair + reusing via sg_precomputed= is BIT-IDENTICAL
     # (a materialized concrete constant == the inline recompute) while skipping ~half the clDice cost.
     # Default OFF => total_loss_fn passes sg_precomputed=None => byte-identical to the pre-flag path.
-    # No-op unless --persistence-loss-weight>0 (the only consumer); skipped under --micro-batch-pairs>1.
+    # No-op unless --persistence-loss-weight>0; both serial and batched twins consume the cache.
     ap.add_argument("--cache-gt-skeleton", action="store_true",
                     help="(speed, bit-identical) cache the CONSTANT per-pair GT soft-skeleton for the "
                     "persistence loss (sg=soft_skeleton(gt) is epoch-invariant + gradient-free). "
-                    "Default OFF = byte-identical. No-op unless --persistence-loss-weight>0; "
-                    "skipped under --micro-batch-pairs>1 (serial total_loss_fn is the only consumer).")
+                    "Default OFF = byte-identical. No-op unless --persistence-loss-weight>0; shared by "
+                    "the serial and micro-batch persistence paths.")
     # (#205 OOM FIX) MLX Metal caching-allocator hygiene. The lazy graph is already materialized
     # per-pair (mx.eval(loss, grads) + mx.eval(accum)); the leak is the Metal buffer POOL (freed
     # render/backward buffers stay CACHED, not returned to the OS) growing across an epoch's ~P/8
@@ -11012,6 +11436,31 @@ def main(argv: list[str] | None = None) -> int:
                     help="#310: FINER++ first-layer bias range k (bias ~ U(-k, k)); wide k spreads "
                     "the neuron ensemble across the activation period (paper-range default 10.0). "
                     "Only read when --finer-bias-init is on; must be > 0.")
+    # P0 2026-07-12 FreSh: backprop-free INIT-TIME alignment of the initialized witness's
+    # realized-through-R SegNet boundary spectrum to the cached L* target spectrum.  Every
+    # companion is typed here but the mechanism is DEFAULT-OFF and is enabled only through
+    # curriculum_dsl.FreshFrequencyShift (never an invented launcher flag).
+    ap.add_argument("--fresh-init", action=argparse.BooleanOptionalAction, default=False,
+                    help="FreSh init-only frequency/bias spectral alignment; default OFF. The sweep "
+                    "uses frozen MLX SegNet argmax through R and does not change the epoch loop.")
+    ap.add_argument("--fresh-init-control", action=argparse.BooleanOptionalAction, default=False,
+                    help="Matched FreSh control: run the identical one-pass self-orientation/init "
+                    "path while forcing the incumbent frequency and zero bias. Mutually exclusive "
+                    "with --fresh-init; emitted by DSL FreShInitControl.")
+    ap.add_argument("--fresh-spectrum-size", type=int, default=64,
+                    help="FreSh non-DC boundary-spectrum bins (anti-diagonals 1..N).")
+    ap.add_argument("--fresh-sample-pairs", type=int, default=10,
+                    help="FreSh deterministic evenly-spaced target-pair sample count.")
+    ap.add_argument("--fresh-reference-freq-along", type=float, default=8.0,
+                    help="FreSh measured-residual reference along-tangent frequency.")
+    ap.add_argument("--fresh-tangent-deficit", type=float, default=3.2,
+                    help="Measured along-tangent spectral deficit; sweep uses 1,sqrt(d),d multipliers.")
+    ap.add_argument("--fresh-bias-k-min", type=float, default=0.0,
+                    help="FreSh inclusive first-layer bias-width minimum; must be 0 for cold control.")
+    ap.add_argument("--fresh-bias-k-max", type=float, default=3.0,
+                    help="FreSh inclusive first-layer bias-width maximum.")
+    ap.add_argument("--fresh-bias-k-step", type=float, default=0.1,
+                    help="FreSh bias-width step; must divide max-min exactly.")
     # SEG LOSS / CURRICULUM
     ap.add_argument("--seg-loss", choices=["ce", "tau_softplus", "l7_softplus", "margin_hinge"], default="ce")
     ap.add_argument("--curriculum", action=argparse.BooleanOptionalAction, default=False)
@@ -11548,8 +11997,8 @@ def main(argv: list[str] | None = None) -> int:
                     "so ORTHOGONAL to every luma lever; NOT a full-RGB reconstruction). GT chroma target is "
                     "the camera GT bilinear-resized to SegNet-input res (what SegNet reads). Reuses the "
                     "SHARED realized-through-R render _f1. Chroma is a PROVEN independent d_seg BOUNDARY "
-                    "SHARPENER (probe a3e9f0bd: 93.4%% of chroma-flips in the margin<1 annulus). NOT "
-                    "supported with --micro-batch-pairs>1 (fails closed).")
+                    "SHARPENER (probe a3e9f0bd: 93.4%% of chroma-flips in the margin<1 annulus). The "
+                    "micro-batch twin consumes the same GT-chroma and annulus providers.")
     ap.add_argument("--seg-chroma-boundary-margin-band", type=float, default=1.0,
                     help="LEVER-4c: fragile-annulus band. A pixel is supervised only where the GT top1-top2 "
                     "margin is < this (chroma's d_seg power is at the knife-edge). MEASURED gt_n96: band 1.0 "
@@ -11612,8 +12061,8 @@ def main(argv: list[str] | None = None) -> int:
                     "render_fn-composed frame). STOP-GRAD + mean-1 renormalized (gradient-BUDGET "
                     "reallocation; Rudin readback: weight ratio p=0.5 vs p=0.9 is exactly 5^gamma). "
                     "0.0 (DEFAULT) => branch never built => byte-identical. Emits a per-epoch "
-                    "{'stage':'focal','island_grad_share':...} observability row when >0. "
-                    "NOT supported with --micro-batch-pairs>1 (fails closed).")
+                    "{'stage':'focal','island_grad_share':...} observability row when >0. Routed into "
+                    "the micro-batch twin through the shared focal callable.")
     # (#218 BUILD, FEED-07b lever #3) class-prior LOGIT ADJUSTMENT (Menon et al. 2021).
     ap.add_argument("--logit-adjust-loss-tau", type=float, default=0.0,
                     help="#218/FEED-07b: class-prior logit adjustment (Menon et al. 2021, arXiv "
@@ -11624,7 +12073,8 @@ def main(argv: list[str] | None = None) -> int:
                     "ONLY: the deployed/rendered argmax path (verdict CPU-torch SegNet, byte-close "
                     "decode, inflate) is UNCHANGED (raw logits). 0.0 (DEFAULT) => the loss adapter "
                     "is the SAME object => byte-identical. tau=1.0 is the canonical Menon setting. "
-                    "NOT supported with --micro-batch-pairs>1 (fails closed). SISTER of (do not "
+                    "The micro-batch twin reads the live offset cell so birth-completion ramps are "
+                    "preserved. SISTER of (do not "
                     "confuse with) the #218 facet-3 pair --logit-adjust-per-class + "
                     "--logit-adjust-tau, which boost the MARGIN-FIELD-HEAD per-class TARGET "
                     "(fires only with --margin-field-head-weight>0); THIS flag adjusts the BASE "
@@ -11643,8 +12093,7 @@ def main(argv: list[str] | None = None) -> int:
                     "per pair, computed ONCE from the cached GT argmax; band ramp = 2 px, the "
                     "measured 1-2 px flip band). Read off model.sdf on frame1 directly (the contour "
                     "DOF the witness owns; Mallat's move-the-contour). 0.0 (DEFAULT) => provider not "
-                    "built, branch skipped => byte-identical. NOT supported with "
-                    "--micro-batch-pairs>1 (fails closed).")
+                    "built, branch skipped => byte-identical. Routed into the micro-batch twin.")
     # LEVER-5 (per-pair HARDNESS-weighted code-fit / training, DAG FEED-eq, ADDITIVE, DEFAULT-OFF).
     # WATERFILL the per-epoch pair-iteration budget toward HARD pairs (high d_seg debt). The frozen-
     # decoder code-fit fits independent per-pair codes, so giving a hard pair MORE update STEPS (not a
@@ -12188,8 +12637,9 @@ def main(argv: list[str] | None = None) -> int:
                     "+ --persistence-loss-weight island-recall) on the WITNESS-ALONE render (island seed "
                     "EXCLUDED from the compose chain) so the witness gets the absorption gradient the seed "
                     "was starving. The seed still composes for the OTHER levers (base CE etc.) + nucleation. "
-                    "REQUIRES --seed-islands (else there is no seed to exclude => fail closed). SERIAL-only "
-                    "(not wired into --micro-batch-pairs; fails closed there). DEFAULT OFF => byte-identical.")
+                    "REQUIRES --seed-islands (else there is no seed to exclude => fail closed). The "
+                    "micro-batch twin uses one seed-excluded batched SegNet forward for this surface. "
+                    "DEFAULT OFF => byte-identical.")
     ap.add_argument("--seed-anneal-epochs", type=int, default=0,
                     help="BUILD #300 (b): ramp the island-seed COMPOSE WEIGHT full(1.0)->0.0 over epochs "
                     "[1, seed-anneal-epochs] (transfer schedule: nucleation early, deploy-surface "

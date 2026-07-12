@@ -8,10 +8,10 @@ floating-point reorder/contraction — ``mx.compile`` graph fusion (mul+add -> f
 reassociated reductions) or batched-axis reductions (``--micro-batch-pairs``) — produces
 numerics that are DETERMINISTIC-BUT-DIFFERENT from the untransformed path (re-run of the
 transformed graph is byte-stable at 0.0, but transformed-vs-untransformed deltas run
-1e-7 .. 1e-3).  Such a transform is therefore NON-ADOPTABLE as an in-lineage or
-A/B-neutral speed lever: switching it on forks the training trajectory (the #410
-micro-batch NO-GO class) and, at the R-op uint8-STE knife-edge, flips d_seg argmax
-pixels outright.
+1e-7 .. 1e-3). Such a transform is not an A/B-neutral or bit-identical speed lever. The
+historical #410 bit-identity NO-GO remains true, but operator 2026-07-12 WAIVES bit identity
+for TRAINING ONLY: a micro-batch transform may be adopted for training after functional
+per-pair loss/gradient parity and measured speedup. Score/byte-close authority is untouched.
 
 The SURVIVING speed family is exactly the complement: transforms with EXPLICIT op order
 or gradient-free constant caching — the fused-R Metal kernel (fixed-order VJP; L70
@@ -134,7 +134,11 @@ def build_witness_fp_reorder_transform_bit_identity_wall_v1() -> CanonicalEquati
             "cpu_per_group_grad_rel_max": 5.9e-05,
             "gpu_batched_fp_noise": "~1e-3 (GPU matmul kernel tiling, pose path)",
             "batched_rerun_delta": 0.0,
-            "verdict": "NO-GO for the pointer relaunch (#410); ALSO fail-closes vs the chroma-boundary lever",
+            "verdict": "HISTORICAL #410 NO-GO for a bit-identical pointer relaunch",
+            "current_training_policy": (
+                "operator 2026-07-12 training-only waiver: functional per-pair parity plus measured "
+                "speedup admits micro-batching; chroma is now routed"
+            ),
         },
         residual=0.0,
         source_artifact=_MICROBATCH_MEMO,
@@ -187,15 +191,13 @@ def build_witness_fp_reorder_transform_bit_identity_wall_v1() -> CanonicalEquati
         equation_id=EQUATION_ID,
         name=(
             "fp-reorder-transform bit-identity wall: framework transforms that permit fp "
-            "reorder/contraction (mx.compile fusion, batched reductions) are deterministic-but-"
-            "DIFFERENT (delta 1e-7..1e-3) on the witness graph -> non-adoptable as in-lineage "
-            "speed levers; explicit-order custom kernels + gradient-free caches are the "
-            "surviving family (fused-R, grouped-backward, cache-gt-skeleton)"
+            "reorder/contraction remain deterministic-but-DIFFERENT (delta 1e-7..1e-3). "
+            "Bit-identical authority still requires explicit order; training-only micro-batching "
+            "may instead pass the functional-parity and measured-speed admission gate"
         ),
         one_line_summary=(
-            "Speed levers must preserve fp op order EXACTLY: compile-fusion/batching fail "
-            "(3 anchors), explicit-order kernels + const caches pass; whole-step megakernel "
-            "NO-GO on both legs."
+            "Three anchors preserve the fp-reorder wall; a training-only operator waiver now "
+            "admits micro-batching by functional parity plus measured speed, never by score authority."
         ),
         latex_form=(
             r"T \in \{\text{compile-fuse},\ \text{batch-reduce}\} \Rightarrow"
@@ -220,6 +222,10 @@ def build_witness_fp_reorder_transform_bit_identity_wall_v1() -> CanonicalEquati
             ),
             "measurement_axis": ["macOS-CPU advisory", "macOS-GPU advisory"],
             "promotion_eligible": False,
+            "training_only_override_20260712": (
+                "bit identity waived; require per-pair functional loss/gradient parity and measured speedup"
+            ),
+            "score_authority": "none; exact byte-closed n600 validation remains owed",
             "note": (
                 "means != ends: a speed-lever boundary law. Positive guidance: to make the witness "
                 "faster, write explicit-order kernels for measured-hot chains or cache gradient-free "

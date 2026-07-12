@@ -3991,9 +3991,9 @@ class CrucibleV7LaunchConfig:
 
     NOT exposed (by design): ``crucible_v6`` / ``fresh_seeded`` / ``sealed_205`` / ``all_levers``
     selector bools — ``config_family`` keys off ``name == 'crucible_v7'`` FIRST, and getattr-with-
-    default handles the rest. ``--dsl-lever`` / ``--purpose`` CLI overrides are NOT wired for the
-    typed path (v7 AUTHORS its lever set + purpose); passing them refuses at the dataclasses.replace
-    seam rather than silently emitting an un-composed lever.
+    default handles the rest. CLI ``--dsl-lever`` composition remains inside the typed DSL via
+    :meth:`with_dsl_lever_factories`; it never mutates emitted argv by hand. ``--purpose`` is
+    metadata-only but still rebinds the typed config so its provenance hash stays truthful.
     """
 
     typed: object             # TypedWitnessConfig — the emit SoT (argv + perf-env prefix)
@@ -4024,8 +4024,82 @@ class CrucibleV7LaunchConfig:
     @property
     def dsl_levers(self) -> tuple[str, ...]:
         """The lever NAMES this config fires — the activation-ledger surface on a real launch
-        (launcher step c.1). v7 pre-composes its lever set; the CLI cannot append to it."""
+        (launcher step c.1)."""
         return tuple(lv.name for lv in self.typed.levers)
+
+    def _rebind_typed(self, typed, *, cli_factories: tuple[str, ...] = ()):
+        """Return a validated adapter with manifests regenerated from ``typed``.
+
+        A typed config's manifest fingerprints both its model and emitted flags.  Reusing the
+        old manifest after composing a lever would make the DSL-provenance gate either lie or
+        refuse the launch.  Preserve only extension metadata, then rebuild every authority field
+        from the new typed program.
+        """
+
+        from tac.witness_dsl.typed_config import build_launch_manifest
+
+        violations = typed.validate_program()
+        if violations:
+            raise ValueError(
+                "typed CLI composition produced "
+                f"{len(violations)} WitnessProgram.validate violation(s): {violations[:4]}"
+            )
+        argv = typed.to_program().compile_trainer_argv()
+        emitted_names = sorted({flag for flag, _ in _crucible_v7_argv_pairs(argv)})
+        manifest = build_launch_manifest(
+            program_name=str(typed.name),
+            emitted_flag_names=emitted_names,
+            typed_config_hash=typed.typed_config_hash(),
+            typed_validated=True,
+        )
+        core_keys = frozenset(manifest) | {"expected_active_levers"}
+        manifest.update(
+            {
+                key: value
+                for key, value in self.dsl_program_manifest.items()
+                if key not in core_keys
+            }
+        )
+        manifest["expected_active_levers"] = [lever.name for lever in typed.levers]
+        if cli_factories:
+            prior = tuple(
+                str(name)
+                for name in self.dsl_program_manifest.get(
+                    "cli_appended_lever_factories", ()
+                )
+            )
+            manifest["cli_appended_lever_factories"] = list(prior + cli_factories)
+        return replace(self, typed=typed, dsl_program_manifest=manifest)
+
+    def with_dsl_lever_factories(self, *factory_names: str):
+        """Compose zero-argument Lever factories through the typed DSL surface."""
+
+        from tac.witness_dsl.lever_registry import resolve_composable_lever
+        from tac.witness_dsl.typed_config import TypedLever
+
+        resolved = tuple(resolve_composable_lever(name) for name in factory_names)
+        typed_levers = tuple(
+            TypedLever(
+                name=lever.name,
+                overrides=dict(lever.overrides),
+                epochs_delta=lever.epochs_delta,
+                notes=lever.notes,
+            )
+            for lever in resolved
+        )
+        typed = self.typed.model_copy(
+            update={"levers": tuple(self.typed.levers) + typed_levers}
+        )
+        return self._rebind_typed(
+            typed,
+            cli_factories=tuple(str(name) for name in factory_names),
+        )
+
+    def with_purpose(self, purpose: str):
+        """Rebind metadata-only purpose while keeping the typed manifest honest."""
+
+        typed = self.typed.model_copy(update={"purpose": str(purpose)})
+        return self._rebind_typed(typed)
 
     def to_command(self, out_dir=None, *, perf_env: bool = True) -> str:
         """The GO-ready launch command (delegates to the typed config; carries the ~17x perf-env

@@ -38,7 +38,7 @@ est ΔS = UNMEASURED (ASSUMED_AWAITING_VERIFICATION). The 7.54% / 4.38% / 93.4% 
 ABLATION (the DOF EXISTENCE proof), NOT the ADD-BACK score ΔS of THIS chroma-MATCH loss term through the
 witness. The OWED exit criterion is a CONVERGED n600 byte-close A/B (ON vs OFF ckpts; the surviving annulus
 flips must shift toward the GT chroma, else terminal-finding). means != ends: this is a train-time prior
-(advisory, NON-PROMOTABLE); pointer 0.19110 UNMOVED.
+(advisory, NON-PROMOTABLE); the canonical ``reports/latest.md`` pointer is unchanged by this law.
 
 DSL leg: ``tac.witness_dsl.curriculum_dsl.SegChromaBoundary`` (--seg-chroma-boundary-weight/-margin-band/
 -start-epoch). Mechanism / reference twin: ``tac.boundary_math.chroma_boundary_match``. Source DOF equation:
@@ -149,7 +149,7 @@ def build_chroma_boundary_annulus_match_hinge_v1() -> CanonicalEquation:
                        "The exit criterion is a CONVERGED n600 byte-close A/B (ON vs OFF ckpts; the surviving "
                        "annulus flips must shift toward the GT chroma, else terminal-finding). This landing "
                        "COMPLETES the fireable-lever triality (default-OFF, byte-identical); it makes NO "
-                       "score claim. means != ends: pointer 0.19110 UNMOVED."),
+                       "score claim. means != ends: canonical reports/latest.md pointer UNMOVED."),
         },
         residual=0.0,
         source_artifact=_DAG,
@@ -186,8 +186,9 @@ def build_chroma_boundary_annulus_match_hinge_v1() -> CanonicalEquation:
             "measurement_axis": ["macOS-MLX research-signal", "predicted"],
             "note": ("0-byte train-time chroma-match loss on the fragile annulus; the d_seg SIGN/MAGNITUDE "
                      "of the ADD-BACK is ASSUMED_AWAITING_VERIFICATION until a CONVERGED n600 byte-close A/B "
-                     "measures it (the 7.54%/4.38%/93.4% are a REMOVAL ABLATION, not an achieved move). NOT "
-                     "supported with --micro-batch-pairs>1 (fails closed)."),
+                     "measures it (the 7.54%/4.38%/93.4% are a REMOVAL ABLATION, not an achieved move). "
+                     "The loss is now routed through the micro-batch twin with per-pair annulus normalization; "
+                     "training drift is waived, but score authority remains owed."),
         },
         units_in={"f1_rgb": "witness_rendered_rgb_through_R", "gt_rgb": "gt_frame_rgb_at_segnet_res",
                   "gt_margin": "segnet_top1_top2_logit_gap", "weight": "loss_weight", "band": "segnet_logit_margin"},

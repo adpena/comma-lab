@@ -16,12 +16,13 @@ batched backward reorders ~1e-3..4e-3 AND is itself run-to-run nondeterministic 
 boundaries, so it cannot be fixed-order matched either.
 
 CONSEQUENCE: bit-identity <=> per-pair (batch-1) scorer forward <=> the serial path; surviving
-speedup AT bit-identity = 1.0x. The micro-batch 2-4x lever stays A/B-gated (bounded n600 d_seg
-A/B; GPU flips only 0.006% px so plausibly d_seg-neutral — MEASURE, never assume) unless
-batch-invariant scorer Metal kernels are built (#252/#356 program).
+speedup AT bit-identity = 1.0x. That historical measurement remains true. Operator 2026-07-12
+explicitly WAIVES bit identity for the TRAINING loop: micro-batching is training-admissible when
+the per-pair functional loss/gradient contract passes and wall-clock speedup is measured. The waiver
+does not authorize a score claim; byte-closed exact evaluation and n600 validation remain owed.
 
 verdict_scope: formulation — the MLX frozen-scorer forward on this fingerprint; NOT the
-micro-batch paradigm (the A/B path remains open). means != ends; pointer 0.19110 UNMOVED;
+micro-batch paradigm. means != ends; the canonical ``reports/latest.md`` pointer is unchanged by this law;
 all numbers [macOS-MLX research-signal]/[macOS-CPU advisory] NON-PROMOTABLE.
 """
 from __future__ import annotations
@@ -53,7 +54,8 @@ def build_frozen_scorer_forward_batch_dependence_v1() -> CanonicalEquation:
         predicted_output={"batch_invariant": True},
         empirical_output={"max_logit_drift": GPU_LOGIT_DRIFT, "argmax_px_flipped": GPU_ARGMAX_FLIPS,
                           "argmax_px_total": 196608, "pose_drift": GPU_POSE_DRIFT,
-                          "verdict": "NOT batch-invariant -> bit-identity-at-speedup impossible"},
+                          "verdict": "NOT batch-invariant -> bit-identity-at-speedup impossible",
+                          "current_training_policy": "bit identity waived for training only; functional parity + measured speedup admit"},
         residual=GPU_LOGIT_DRIFT,
         source_artifact=_MEMO,
         measurement_method="micro_batch_bit_identity_probe_decomposition",
@@ -86,8 +88,8 @@ def build_frozen_scorer_forward_batch_dependence_v1() -> CanonicalEquation:
         equation_id=SCORER_BATCH_DEPENDENCE_EQUATION_ID,
         name="Frozen-scorer forward batch-dependence (micro-batch bit-identity wall)",
         one_line_summary=(
-            "segnet(batch)[k] != segnet(batch[k:k+1])[0]: GPU logit drift 2.26e-2 (11/196608 argmax "
-            "flips), CPU argmax-INVARIANT — bit-identity-at-speedup impossible; A/B-gate stands"
+            "Frozen scorers are batch-dependent (GPU drift 2.26e-2); drift remains measured, while "
+            "the training-only waiver admits micro-batching after functional parity and measured speedup."
         ),
         latex_form=(
             r"\max_k \| S(x_{1:K})_k - S(x_k) \|_\infty = 2.26\cdot 10^{-2}\ (\mathrm{gpu});"
@@ -101,6 +103,8 @@ def build_frozen_scorer_forward_batch_dependence_v1() -> CanonicalEquation:
             "scope": "verdict_scope: formulation — this scorer path on this fingerprint; the "
                      "micro-batch PARADIGM stays open via the bounded n600 d_seg A/B",
             "measurement_axis": [_MLX_SIGNAL, _ADVISORY],
+            "training_admission": "functional per-pair loss/gradient parity AND measured speedup",
+            "score_authority": "NONE; exact byte-closed n600 evaluation remains owed",
         },
         units_in={"batch": "pairs", "device": "gpu|cpu"},
         units_out={"max_logit_drift": "dimensionless", "argmax_px_flipped": "pixels"},

@@ -21,3 +21,5 @@ Anti-re-research rows (each: what it is → what we did with it → verdict). Al
 | **Deep-analysis sensor layer** (operator: pixels/classes/frames/pairs/hardness/sensitivity) | PARTIAL (cached v1) | margins+lstars+frames ingested ($0); atlas (#36)/hardness (#273)/annulus (#333) ingestion = duty items, cached-only rail |
 
 **Pointer 0.19108282 [contest-CPU] UNMOVED.**
+
+| **Task #434 synthetic-costate SOTA survey** — Information Matching 2411.02740; MCT 2406.19827; ATT 2407.14245; LQM 2406.09860; TabDiff 2410.20626; Time Weaver 2403.02682; adaptive sequential diffusion 2606.06007; Policy-Guided Diffusion 2404.06356; TabSyn 2310.09656/ICLR24; Improved Consistency Training 2310.14189/ICLR24; DD audits 2604.18811/2606.18209; Quiet-STaR 2403.09629; STeP 2505.20023; PSVAE 2407.13016 | **RANKED / DESIGN-ONLY** | Highest fit = Fisher-optimal multi-class CGauge simulation + trajectory distillation; generative models reserved for later physics-residual modeling; all synthetic results `research_only=true` until a real #205 walk-forward win vs ridge+persistence. Memo: `synthetic_data_for_costate_organ_supercharge_20260711.md`. |

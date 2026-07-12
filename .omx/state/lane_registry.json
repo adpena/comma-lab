@@ -74044,6 +74044,546 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_witness_molab_release_rc_20260710",
+      "name": "Witness Machine Molab arXiv OSS release RC verification",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Report and release-pack verification lane; no score claim, training dispatch, upstream mutation, or public action."
+    },
+    {
+      "id": "lane_advisory_codex_v752_v753_v8_fresh_eyes_20260710",
+      "name": "Codex fresh-eyes advisory: v7.5.2 v7.5.3 v8",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; read-only audit of Claude/Fable pre-launch vehicles; writes limited to new ADVISORY_*.md; no dispatch or launch authority"
+    },
+    {
+      "id": "lane_advisory_codex_pr128_reverse_engineering_v753_v8_recursive_20260710",
+      "name": "Codex PR128 reverse engineering and v7.5.3/v8 recursive advisory",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; PR128 classified HNeRV-family payload-polish child; exact archive/member/payload/lineage/OSS-license/SDF-transfer and corrected v7.5.3-v8 design captured in ADVISORY_pr128_hnerv_reverse_engineering_sdf_transfer_v753_v8_20260710.md; 17-file/hash and 176531-byte archive validation green; public 0.187991 remains unratified; no launch/eval/pointer/signal; concurrent clickpolish source remains sister-owned"
+    },
+    {
+      "id": "whole_step_megakernel_356",
+      "name": "Task 356 whole-step level-set megakernel",
+      "phase": 7.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_cloud_launcher_v9_cgauge_cuda_438_20260711",
+      "name": "Task 438 cloud launcher V9 CGauge CUDA parity",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Operator-directed; local implementation and parity only; paid dispatch forbidden without separate operator-GO."
+    },
+    {
+      "id": "lane_mlx_metal_max_throughput_canuma_20260712",
+      "name": "MLX + Metal maximum-throughput witness training deep-dive",
+      "phase": 7.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Training-throughput MEANS only; functional-parity under operator drift waiver; no score or pointer authority.",
+      "research_only": true,
+      "lane_class": "substrate_engineering"
+    },
+    {
+      "id": "lane_micro_batch_v9_unlock_mlx_20260712",
+      "name": "V9 CGauge MLX micro-batch functional-parity unlock",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Operator-directed training-throughput build; functional parity under drift waiver; live V9 run read-only; no score authority."
+    },
+    {
+      "id": "lane_frozen_segnet_gradient_replacement_elm_headsolve_20260712",
+      "name": "Frozen SegNet gradient replacement + ELM closed-form head seed",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "P0 scorer-gradient/head-solve surface only; consumes #341/#342/#426/#428/#247/#36/#141; no live V9 arm, trainer/DSL/CUDA/microbatch edits, paid dispatch, or n600 launch; build faithful full-P ELM LS head seed plus periodic-teacher gradient replacement recommendation.",
+      "lane_class": "canonical_helper",
+      "research_only": true
+    },
+    {
+      "id": "lane_witness_init_fresh_metainit_20260712",
+      "name": "FreSh plus corpus-gated meta-learned witness initialization",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Operator-directed init-only P0; FreSh first then meta-init; functional-parity training signal only; no live V9 arm, Torch/CUDA, micro-batch implementation, paid dispatch, or n600 launch."
+    },
+    {
+      "id": "lane_lens_engine_inc1_20260712",
+      "name": "Lens Engine increment 1",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/lens_engine/__init__.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Operator-directed reusable analysis apparatus; src/tac/lens_engine + focused tests + dated landing memo only; live V9 run read-only; no score claim.",
+      "research_only": true
+    },
+    {
+      "id": "lane_policygrad_part2_research_20260712",
+      "name": "Policy Gradients Part 2 variance-reduction survey and routing",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only survey landed at commit ad7bcb7c99. Route #396/#400 to an exact-gated UGC-vs-(1+1)-ES/RLOO/DisARM comparison; keep #426/#319/#433 adjoint-led until #434 supplies held-out independent trajectories. No training, paid dispatch, or live-V9 mutation.",
+      "research_only": true
+    },
+    {
+      "id": "lane_ugc_terminal_polish_ab_396_400_20260712",
+      "name": "UGC terminal exact-argmax polish same-budget A/B",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/through_r/mc_finisher.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/ugc_terminal_polish_ab_20260712/measurement_receipt.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/state/review_counter.jsonl"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only no-paid-dispatch measurement; extends #396/#400; exact frozen CPU-torch cells and monotone n600 splice authority; no live-run mutation."
+    },
+    {
+      "id": "lane_goldmine_hunt_20260712",
+      "name": "Goldmine hunt research routing 2026-07-12",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only literature and OSS routing; no training, paid dispatch, or live-run mutation.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -74053,5 +74593,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-03T15:51:02Z"
+  "updated_at": "2026-07-12T18:57:06Z"
 }

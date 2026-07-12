@@ -1456,17 +1456,26 @@ def main(argv: list[str] | None = None) -> int:
         except LeverCompositionError as exc:
             print(f"[launch-witness] ERROR: {exc}", file=sys.stderr)
             return 2
-        # APPEND to (never clobber) any levers the named config pre-composes (crucible_v6 carries
-        # the v6 §1.1 lever set in cfg.dsl_levers; every pre-v6 config has an empty tuple, for
-        # which append == the old replace, byte-identically).
-        cfg = _dc.replace(cfg, dsl_levers=(*cfg.dsl_levers, *args.dsl_lever))
+        # APPEND to (never clobber) any levers the named config pre-composes. Requirement-V
+        # configs expose a typed adapter rather than a dataclass ``dsl_levers`` field; compose
+        # into that typed DSL and regenerate its manifest instead of hand-mutating argv.
+        if hasattr(cfg, "with_dsl_lever_factories"):
+            cfg = cfg.with_dsl_lever_factories(*args.dsl_lever)
+        else:
+            cfg = _dc.replace(cfg, dsl_levers=(*cfg.dsl_levers, *args.dsl_lever))
         print(f"[launch-witness] DSL levers composed: {', '.join(cfg.dsl_levers)}")
 
     # RUN-IDENTITY: thread the DECLARED purpose into the config (metadata only; the
     # identity header in launch.sh renders it; the argv is untouched by construction).
     if args.purpose:
         import dataclasses as _dcp
-        cfg = _dcp.replace(cfg, purpose=" ".join(str(args.purpose).split()))
+
+        _purpose = " ".join(str(args.purpose).split())
+        cfg = (
+            cfg.with_purpose(_purpose)
+            if hasattr(cfg, "with_purpose")
+            else _dcp.replace(cfg, purpose=_purpose)
+        )
         print(f"# declared run purpose: {cfg.purpose}")
 
     out_dir = Path(args.out_dir) if args.out_dir else (

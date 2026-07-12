@@ -31,7 +31,7 @@ DSL leg: ``tac.witness_dsl.curriculum_dsl.LogitAdjust`` (emits the real trainer 
 train_levelset_witness_realized_through_R_mlx.py`` (``_logit_adjust_offsets_np`` delegates to
 :func:`logit_adjust_offsets` below — the equations leg IS the callable).
 
-means != ends: advisory anchors, NON-PROMOTABLE; pointer 0.19110 UNMOVED.
+means != ends: advisory anchors, NON-PROMOTABLE; the canonical ``reports/latest.md`` pointer is unchanged.
 """
 from __future__ import annotations
 
@@ -128,8 +128,8 @@ def build_logit_adjustment_class_prior_law_v1() -> CanonicalEquation:
         inputs={
             "literature": "Menon et al. 2021 (arXiv 2007.07314) logit-adjusted CE, Fisher-consistent "
                           "for balanced error; zero-byte loss-shape",
-            "trainer_route": "--logit-adjust-loss-tau (serial base_loss adapter wrap; "
-                             "micro-batch>1 fails closed)",
+            "trainer_route": ("--logit-adjust-loss-tau on serial base_loss adapter and the routed "
+                              "micro-batch twin; birth-completion reads the live offset cell"),
             "boundary": "training-LOSS surface only; deployed argmax/verdict/byte-close read RAW logits",
         },
         predicted_output={
@@ -175,8 +175,9 @@ def build_logit_adjustment_class_prior_law_v1() -> CanonicalEquation:
                       "different surface, the two compose"),
             "measurement_axis": ["macOS-MLX research-signal", "predicted"],
             "note": ("priors are PER-PAIR-SET (recompute from the loaded gt cache at run time; the "
-                     "n600 constants above are the measured anchor); micro-batch>1 not routed "
-                     "(fails closed at the trainer)"),
+                     "n600 constants above are the measured anchor); micro-batch routing preserves "
+                     "the same per-class offset and live birth-completion ramp. Training drift is "
+                     "waived; no score authority is implied."),
         },
         units_in={"class_priors": "fraction_of_pixels", "tau": "dimensionless"},
         units_out={"offsets": "logits"},
