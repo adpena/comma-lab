@@ -10,6 +10,7 @@ training-only parameter and is exported only through its dedicated checkpoint.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any, Mapping
 
 import numpy as np
@@ -186,8 +187,23 @@ def birth_scaled_logit_offsets(
     return base_offsets * multipliers
 
 
+def seed_compose_weight_at_epoch(anneal_epochs: int, shape: str, epoch: int) -> float:
+    """Pure MLX-authority seed transfer schedule, full weight to zero."""
+    anneal = int(anneal_epochs)
+    epoch = int(epoch)
+    if anneal <= 0 or epoch <= 1:
+        return 1.0
+    if epoch >= anneal:
+        return 0.0
+    fraction = min(max((float(epoch) - 1.0) / (float(anneal) - 1.0), 0.0), 1.0)
+    if str(shape) == "cosine":
+        return 0.5 * (1.0 + math.cos(math.pi * fraction))
+    return 1.0 - fraction
+
+
 __all__ = [
     "TorchIslandClassGeometry",
     "TorchIslandTargetRuntime",
     "birth_scaled_logit_offsets",
+    "seed_compose_weight_at_epoch",
 ]

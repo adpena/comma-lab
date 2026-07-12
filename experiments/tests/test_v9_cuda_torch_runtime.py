@@ -21,6 +21,7 @@ from tac.cuda_levelset_training import (
     TorchLevelSetWitness,
     TorchPoseCarrier,
 )
+from tac.cuda_v9_controller_runtime import TorchProtectedIslandSeed
 
 
 def _pose_flags():
@@ -119,17 +120,29 @@ def test_checkpoint_roundtrip_restores_pair_cursor_and_controller_state():
     cursor.begin_epoch(3)
     first = cursor.next_epoch_indices(3)
     controllers = {"event": {"engaged": True}, "ladder": {"rung": 2}}
+    seed = TorchProtectedIslandSeed(
+        torch.ones(7, 2, 3, 3),
+        torch.ones(7, 2, 3, dtype=torch.bool),
+        mode="shield",
+        damp=0.1,
+    )
+    seed_opt = torch.optim.AdamW(seed.parameters(), lr=0.02, weight_decay=0.0)
     blob = copy.deepcopy(_checkpoint_blob(
         model, ema, opt, 3, "cfg", ("python", "trainer"),
         pair_cursor=cursor, controller_state=controllers,
+        protected_seed=seed, seed_optimizer=seed_opt,
     ))
+    with torch.no_grad():
+        seed.residual.zero_()
     restored_cursor = DeterministicPairCursor(7, seed=0)
     restored_controllers = {"stale": True}
     epoch = _restore(
         blob, model, ema, opt, "cfg",
         pair_cursor=restored_cursor, controller_state=restored_controllers,
+        protected_seed=seed, seed_optimizer=seed_opt,
     )
     assert epoch == 3 and restored_controllers == controllers
+    assert torch.all(seed.residual == 1.0)
     rest = []
     while not restored_cursor.epoch_complete():
         rest.extend(restored_cursor.next_epoch_indices(3))

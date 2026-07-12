@@ -6,6 +6,7 @@ torch = pytest.importorskip("torch")
 from tac.cuda_v9_island_runtime import (
     TorchIslandTargetRuntime,
     birth_scaled_logit_offsets,
+    seed_compose_weight_at_epoch,
 )
 
 
@@ -71,3 +72,12 @@ def test_logit_offsets_scale_only_watched_classes():
     base = torch.tensor([0.0, 1.0, 2.0, 3.0, 4.0])
     actual = birth_scaled_logit_offsets(base, {1: 0.25, 3: 0.5})
     assert torch.equal(actual, torch.tensor([0.0, 0.25, 2.0, 1.5, 4.0]))
+
+
+@pytest.mark.parametrize("shape", ["linear", "cosine"])
+def test_seed_transfer_schedule_has_exact_endpoints(shape):
+    assert seed_compose_weight_at_epoch(0, shape, 99) == 1.0
+    assert seed_compose_weight_at_epoch(10, shape, 1) == 1.0
+    assert seed_compose_weight_at_epoch(10, shape, 10) == 0.0
+    midpoint = seed_compose_weight_at_epoch(9, shape, 5)
+    assert midpoint == pytest.approx(0.5)

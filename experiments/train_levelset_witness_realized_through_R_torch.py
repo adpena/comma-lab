@@ -52,6 +52,7 @@ from tac.cuda_levelset_training import (
     forward_parity_against_numpy,
     homography_grid_from_xi,
     island_birth_from_signed_torch,
+    island_birth_perclass_from_signed_torch,
     persistence_topology_loss_torch,
     clip_grad_groups,
     realized_signed_margin,
@@ -67,6 +68,11 @@ from tac.cuda_levelset_training import (
 from tac.cuda_v9_controller_runtime import (
     TorchV9ControllerRuntime,
     torch_pose_jacobian_conditioning,
+)
+from tac.cuda_v9_island_runtime import (
+    TorchIslandTargetRuntime,
+    birth_scaled_logit_offsets,
+    seed_compose_weight_at_epoch,
 )
 from tac.witness_run_artifacts import (
     TORCH_EMA_PT,
@@ -154,6 +160,8 @@ def _checkpoint_blob(
     *,
     pair_cursor: DeterministicPairCursor | None = None,
     controller_state: Mapping[str, Any] | None = None,
+    protected_seed=None,
+    seed_optimizer=None,
 ) -> dict:
     import torch
 
@@ -171,6 +179,12 @@ def _checkpoint_blob(
         "dsl_argv": list(argv),
         "pair_cursor": pair_cursor.state_dict() if pair_cursor is not None else None,
         "controller_state": copy.deepcopy(dict(controller_state or {})),
+        "protected_seed": (
+            protected_seed.state_dict() if protected_seed is not None else None
+        ),
+        "seed_optimizer": (
+            seed_optimizer.state_dict() if seed_optimizer is not None else None
+        ),
     }
 
 
@@ -183,6 +197,8 @@ def _restore(
     *,
     pair_cursor: DeterministicPairCursor | None = None,
     controller_state: dict[str, Any] | None = None,
+    protected_seed=None,
+    seed_optimizer=None,
 ) -> int:
     import torch
 
@@ -201,6 +217,20 @@ def _restore(
     if controller_state is not None:
         controller_state.clear()
         controller_state.update(copy.deepcopy(blob.get("controller_state", {})))
+    seed_blob = blob.get("protected_seed")
+    if protected_seed is not None:
+        if seed_blob is None:
+            raise ValueError("active typed protected seed is missing from resume checkpoint")
+        protected_seed.load_state_dict(seed_blob)
+    elif seed_blob is not None:
+        raise ValueError("resume checkpoint contains a protected seed but typed config disabled it")
+    seed_opt_blob = blob.get("seed_optimizer")
+    if seed_optimizer is not None:
+        if seed_opt_blob is None:
+            raise ValueError("active typed seed optimizer is missing from resume checkpoint")
+        seed_optimizer.load_state_dict(seed_opt_blob)
+    elif seed_opt_blob is not None:
+        raise ValueError("resume checkpoint contains a seed optimizer but typed config disabled it")
     return int(blob["epoch"])
 
 
@@ -350,7 +380,10 @@ def _generated_pose_pair_dispatch(
     cfg,
     *,
     lane_band=None,
+    protected_seed=None,
+    seed_weight: float = 1.0,
     return_probe_inputs: bool = False,
+    return_witness_alone: bool = False,
 ):
     """MLX-authority generated/table dispatch: plain f0 up->warp->R-down, f1 witness R.
 
@@ -393,6 +426,9 @@ def _generated_pose_pair_dispatch(
     n = pair_indices.numel()
     raw0 = raw0.reshape(n, cfg.render_h, cfg.render_w, 3)
     raw1 = raw1.reshape(n, cfg.render_h, cfg.render_w, 3)
+    witness_alone_raw1 = raw1
+    if protected_seed is not None:
+        raw1 = protected_seed.compose(raw1, pair_indices, weight=float(seed_weight))
     native0 = F.interpolate(
         raw0.permute(0, 3, 1, 2),
         size=(cfg.camera_h, cfg.camera_w),
@@ -410,11 +446,20 @@ def _generated_pose_pair_dispatch(
     scored1 = contest_r(raw1, output_hw=(cfg.render_h, cfg.render_w))
     frames = torch.stack((scored0, scored1), dim=1)
     phi = phi1.reshape(n, cfg.render_h, cfg.render_w, cfg.n_classes)
+    witness_alone = None
+    if return_witness_alone:
+        witness_alone1 = contest_r(
+            witness_alone_raw1, output_hw=(cfg.render_h, cfg.render_w)
+        )
+        witness_alone = torch.stack((scored0, witness_alone1), dim=1)
     if return_probe_inputs:
-        return frames, phi, {
+        result = (frames, phi, {
             "native0": native0.detach(),
             "scored1": scored1.detach(),
-        }
+        })
+        return (*result, witness_alone) if return_witness_alone else result
+    if return_witness_alone:
+        return frames, phi, witness_alone
     return frames, phi
 
 
@@ -703,13 +748,20 @@ def main(argv: list[str] | None = None) -> int:
         int(x) for x in str(flags.get("--persistence-classes", "3")).split(",")
         if x.strip() and x.strip().lower() != "auto"
     )
-    from tac.boundary_math.island_protection import (
-        build_island_masks,
-        identify_island_classes,
-        island_persistence_weight,
-    )
+    from tac.boundary_math.island_protection import identify_island_classes
     island_detection = identify_island_classes(lstars, n_classes=cfg.n_classes)
-    island_weight_cache: dict[int, np.ndarray] = {}
+    island_targets = TorchIslandTargetRuntime(
+        lstars,
+        lane_cls=island_detection.lane_cls,
+        movable_cls=island_detection.movable_cls,
+        flags=flags,
+        device=device,
+    )
+    protected_seed = (
+        island_targets.build_protected_seed(gt_f1)
+        if bool(flags.get("--seed-islands", False))
+        else None
+    )
     from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
         area_constraint_lambda,
     )
@@ -847,6 +899,15 @@ def main(argv: list[str] | None = None) -> int:
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(flags["--lr"]),
                                   betas=(0.9, float(flags["--adam-beta2"])),
                                   weight_decay=float(flags["--weight-decay"]))
+    seed_optimizer = (
+        torch.optim.AdamW(
+            protected_seed.parameters(),
+            lr=float(flags["--seed-lr"]),
+            weight_decay=0.0,
+        )
+        if protected_seed is not None
+        else None
+    )
     pair_cursor = DeterministicPairCursor(args.num_pairs, seed=int(flags["--seed"]))
     controller = TorchV9ControllerRuntime(
         flags,
@@ -861,6 +922,7 @@ def main(argv: list[str] | None = None) -> int:
             torch.load(resume_path, map_location=device, weights_only=False),
             model, ema, optimizer, cfg_hash,
             pair_cursor=pair_cursor, controller_state=controller_state,
+            protected_seed=protected_seed, seed_optimizer=seed_optimizer,
         )
     if controller_state:
         controller.load_state_dict(controller_state)
@@ -876,6 +938,11 @@ def main(argv: list[str] | None = None) -> int:
                       "lane_cls": int(island_detection.lane_cls),
                       "movable_cls": int(island_detection.movable_cls),
                   },
+                  "protected_seed": {
+                      "active": protected_seed is not None,
+                      "training_only": True,
+                      "excluded_from_ema_and_deploy": True,
+                  },
                   "compile_policy": "auto_adopt_after_functional_argmax_cosine_probe",
                   "fp_reorder_probe": compile_probe_result or {
                       "backend": str(device), "status": "UNMEASURED",
@@ -884,6 +951,12 @@ def main(argv: list[str] | None = None) -> int:
 
     ckpt_every = int(flags["--ckpt-every"])
     ema_decay = float(flags["--ema-decay"])
+    base_logit_offsets = torch.as_tensor(logit_offsets_np, device=device)
+    witness_alone_island = bool(flags.get("--witness-alone-island-loss", False))
+    if witness_alone_island and protected_seed is None:
+        raise ValueError(
+            "typed witness-alone island loss requires the protected seed it excludes"
+        )
     prev_stage = curriculum_stage(start, flags)
     t0 = time.time()
     for epoch in range(start + 1, args.epochs + 1):
@@ -895,6 +968,7 @@ def main(argv: list[str] | None = None) -> int:
             boundary_blob = _checkpoint_blob(
                 model, ema, optimizer, epoch - 1, cfg_hash, dsl_argv,
                 pair_cursor=pair_cursor, controller_state=controller_state,
+                protected_seed=protected_seed, seed_optimizer=seed_optimizer,
             )
             _atomic_torch_save(
                 boundary_blob,
@@ -925,6 +999,22 @@ def main(argv: list[str] | None = None) -> int:
         if pose_carrier is None:
             raise RuntimeError("active V9 generated pose carrier was not attached")
         controller_step = controller.begin_epoch(epoch)
+        if bool(flags.get("--ladder-island-homotopy", False)):
+            from tac.witness_curriculum.ladder_homotopy import ARM_LANE, ARM_MOVABLE
+
+            island_targets.refresh_amplify_(
+                lane_px=int(controller_step.ladder_rungs[ARM_LANE]),
+                movable_px=int(controller_step.ladder_rungs[ARM_MOVABLE]),
+            )
+        birth_active = bool(controller.birth.fired)
+        effective_logit_offsets = birth_scaled_logit_offsets(
+            base_logit_offsets, controller_step.birth_multipliers
+        )
+        seed_weight = seed_compose_weight_at_epoch(
+            int(flags["--seed-anneal-epochs"]),
+            str(flags["--seed-anneal-shape"]),
+            epoch,
+        )
         for controller_row in controller_step.telemetry:
             # Birth rows are emitted with the completed epoch below. The runtime
             # also carries them into begin_epoch so a crash cannot lose them.
@@ -947,18 +1037,34 @@ def main(argv: list[str] | None = None) -> int:
             chunk_np = np.asarray(chunk, dtype=np.int64)
             # MAX-throughput steady state: exactly one batched witness/carrier
             # dispatch and one batch through each frozen scorer per accum chunk.
-            frames, phi = _generated_pose_pair_dispatch(
+            dispatch = _generated_pose_pair_dispatch(
                 model,
                 feats,
                 chunk,
                 pose_carrier,
                 cfg,
                 lane_band=(lane_band if controller_step.lane_band_on else None),
+                protected_seed=protected_seed,
+                seed_weight=seed_weight,
+                return_witness_alone=witness_alone_island,
             )
-            seg_in = seg.preprocess_input(frames.permute(0, 1, 4, 2, 3).contiguous())
-            logits = seg(seg_in)
+            if witness_alone_island:
+                frames, phi, witness_alone_frames = dispatch
+                scorer_frames = torch.cat((frames, witness_alone_frames), dim=0)
+            else:
+                frames, phi = dispatch
+                witness_alone_frames = None
+                scorer_frames = frames
+            seg_in = seg.preprocess_input(
+                scorer_frames.permute(0, 1, 4, 2, 3).contiguous()
+            )
+            scorer_logits = seg(seg_in)
+            if witness_alone_island:
+                logits, formation_logits = scorer_logits.split(len(chunk), dim=0)
+            else:
+                logits = formation_logits = scorer_logits
             target = torch.as_tensor(lstars[chunk_np], device=device).long()
-            offsets = torch.as_tensor(logit_offsets_np, device=device, dtype=logits.dtype)
+            offsets = effective_logit_offsets.to(dtype=logits.dtype)
             adjusted_logits = logits + offsets[None, :, None, None]
             tau = max(0.31, 0.31 ** (epoch / max(args.epochs, 1)))
             seg_per_pixel = (
@@ -969,7 +1075,7 @@ def main(argv: list[str] | None = None) -> int:
                 margins[chunk_np], device=device, dtype=seg_per_pixel.dtype
             )
             controller.observe_scorer_chunk(
-                logits.argmax(dim=1), target, gt_margin
+                formation_logits.argmax(dim=1), target, gt_margin
             )
             seg_weight = 1.0 + 4.0 * torch.exp(-gt_margin.clamp_min(0.0))
             seg_loss = (seg_per_pixel * seg_weight).mean()
@@ -986,32 +1092,50 @@ def main(argv: list[str] | None = None) -> int:
             pose_contrib = pose_weight * pose_loss
             eik_contrib = float(flags["--eikonal-weight"]) * eik
             length_contrib = float(flags["--length-weight"]) * length
-            raw_logits_nhwc = logits.permute(0, 2, 3, 1).contiguous()
+            raw_logits_nhwc = formation_logits.permute(0, 2, 3, 1).contiguous()
             signed = realized_signed_margin(raw_logits_nhwc, target)
-            for pi in chunk:
-                if pi not in island_weight_cache:
-                    masks = build_island_masks(
-                        lstars[pi], island_detection.lane_cls,
-                        island_detection.movable_cls, dilate_px=1,
-                    )
-                    island_weight_cache[pi] = island_persistence_weight(
-                        masks.any_mask,
-                        kind=str(flags.get("--amplify-persist", "inverse_thickness")),
-                    )
-            island_weight = torch.as_tensor(
-                np.stack([island_weight_cache[pi] for pi in chunk]),
-                device=device, dtype=signed.dtype,
-            )
-            amplify = float(flags.get("--amplify-weight", 0.0)) * island_birth_from_signed_torch(
-                signed, island_weight, float(flags.get("--amplify-margin-target", 1.0)),
-                form=str(flags.get("--amplify-form", "hinge")),
-            )
+            chunk_index_tensor = torch.as_tensor(chunk, device=device, dtype=torch.long)
+            island_weight = island_targets.weight.index_select(0, chunk_index_tensor).to(signed.dtype)
+            if birth_active:
+                lane_mask = island_targets.lane_mask.index_select(0, chunk_index_tensor)
+                movable_mask = island_targets.movable_mask.index_select(0, chunk_index_tensor)
+                amplify_loss = island_birth_perclass_from_signed_torch(
+                    signed,
+                    island_weight,
+                    lane_mask,
+                    movable_mask,
+                    float(flags.get("--amplify-margin-target", 1.0)),
+                    float(controller_step.birth_multipliers.get(island_detection.lane_cls, 1.0)),
+                    float(controller_step.birth_multipliers.get(island_detection.movable_cls, 1.0)),
+                    form=str(flags.get("--amplify-form", "hinge")),
+                )
+            else:
+                amplify_loss = island_birth_from_signed_torch(
+                    signed,
+                    island_weight,
+                    float(flags.get("--amplify-margin-target", 1.0)),
+                    form=str(flags.get("--amplify-form", "hinge")),
+                )
+            amplify = float(flags.get("--amplify-weight", 0.0)) * amplify_loss
             persist_scale = min(
                 1.0, epoch / max(1, int(flags.get("--persistence-warmup-epochs", 0)))
             )
             persistence = (
                 float(flags.get("--persistence-loss-weight", 0.0)) * persist_scale
-                * persistence_topology_loss_torch(raw_logits_nhwc, target, persist_classes)
+                * persistence_topology_loss_torch(
+                    raw_logits_nhwc,
+                    target,
+                    persist_classes,
+                    recall_weight=float(flags.get("--persistence-recall-weight", 1.0)),
+                    recall_class_scale=(
+                        tuple(
+                            float(controller_step.birth_multipliers.get(cls, 1.0))
+                            for cls in persist_classes
+                        )
+                        if birth_active
+                        else None
+                    ),
+                )
             )
             area = area_constraint_torch(raw_logits_nhwc, target, area_lambdas)
             _entropy_bits, entropy_rate = weight_entropy_rate_term_torch(
@@ -1081,11 +1205,20 @@ def main(argv: list[str] | None = None) -> int:
                 + temporal_screw + chroma_contrib
             )
             optimizer.zero_grad(set_to_none=True)
+            if seed_optimizer is not None:
+                seed_optimizer.zero_grad(set_to_none=True)
             ep_tot += 1
             weights_stepped = bool(torch.isfinite(total.detach()))
             group_norms = {}
             if weights_stepped:
                 total.backward()
+                if protected_seed is not None:
+                    protected_seed.contain_grad_()
+                    if (
+                        protected_seed.residual.grad is not None
+                        and not bool(torch.isfinite(protected_seed.residual.grad).all())
+                    ):
+                        weights_stepped = False
                 try:
                     group_norms = clip_grad_groups(
                         parameter_groups(model), float(flags["--grad-clip"])
@@ -1094,11 +1227,15 @@ def main(argv: list[str] | None = None) -> int:
                     weights_stepped = False
             if weights_stepped:
                 optimizer.step()
+                if seed_optimizer is not None:
+                    seed_optimizer.step()
                 _ema_update(ema, model, ema_decay)
                 ep_acc += 1
                 pair_cursor.record_accepted(1)
             else:
                 optimizer.zero_grad(set_to_none=True)
+                if seed_optimizer is not None:
+                    seed_optimizer.zero_grad(set_to_none=True)
             finite_norms = [v for v in group_norms.values() if v is not None]
             gnorm = max((float(v) for v in finite_norms), default=0.0)
             terms = {
@@ -1158,6 +1295,8 @@ def main(argv: list[str] | None = None) -> int:
                     pose_carrier,
                     cfg,
                     lane_band=(lane_band if controller_step.lane_band_on else None),
+                    protected_seed=protected_seed,
+                    seed_weight=seed_weight,
                     return_probe_inputs=True,
                 )
 
@@ -1232,6 +1371,7 @@ def main(argv: list[str] | None = None) -> int:
             blob = _checkpoint_blob(
                 model, ema, optimizer, epoch, cfg_hash, dsl_argv,
                 pair_cursor=pair_cursor, controller_state=controller_state,
+                protected_seed=protected_seed, seed_optimizer=seed_optimizer,
             )
             _atomic_torch_save(blob, out / TORCH_RESUME_PT)
             _atomic_torch_save({"schema": "v9_cgauge_torch_ema_v1", "epoch": epoch,
@@ -1245,6 +1385,7 @@ def main(argv: list[str] | None = None) -> int:
     final_blob = _checkpoint_blob(
         model, ema, optimizer, args.epochs, cfg_hash, dsl_argv,
         pair_cursor=pair_cursor, controller_state=controller_state,
+        protected_seed=protected_seed, seed_optimizer=seed_optimizer,
     )
     _atomic_torch_save(
         final_blob,

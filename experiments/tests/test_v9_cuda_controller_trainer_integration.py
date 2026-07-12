@@ -21,6 +21,7 @@ from tac.cuda_levelset_training import (
     TorchLevelSetWitness,
     TorchPoseCarrier,
 )
+from tac.cuda_v9_controller_runtime import TorchProtectedIslandSeed
 
 
 def test_dynamic_lane_gate_composes_detected_class_pre_r_only_on_frame1() -> None:
@@ -72,6 +73,41 @@ def test_dynamic_lane_gate_composes_detected_class_pre_r_only_on_frame1() -> Non
     torch.testing.assert_close(plain_phi, banded_phi)
     assert probe["native0"].shape == (2, cfg.camera_h, cfg.camera_w, 3)
     assert probe["scored1"].shape == (2, cfg.render_h, cfg.render_w, 3)
+
+
+def test_protected_seed_is_scored_but_witness_alone_excludes_it() -> None:
+    cfg = CudaLevelSetConfig(
+        n_pairs=2,
+        in_feat=5,
+        hidden_dim=8,
+        n_hidden=1,
+        mod_dim=4,
+        n_classes=5,
+        render_h=6,
+        render_w=8,
+        camera_h=10,
+        camera_w=12,
+    )
+    model = TorchLevelSetWitness.build(cfg, seed=31)
+    geom = GroundHomographyGeom.eon(native_hw=(cfg.camera_h, cfg.camera_w), pitch=0.0)
+    carrier = TorchPoseCarrier.build(np.zeros((2, 6), np.float32), geom)
+    feats = torch.randn(cfg.render_h * cfg.render_w, cfg.in_feat)
+    plain, _ = _generated_pose_pair_dispatch(model, feats, [0, 1], carrier, cfg)
+    residual = torch.full((2, cfg.render_h, cfg.render_w, 3), 7.0)
+    mask = torch.ones((2, cfg.render_h, cfg.render_w), dtype=torch.bool)
+    seed = TorchProtectedIslandSeed(residual, mask, mode="shield", damp=0.1)
+    composed, _, witness_alone = _generated_pose_pair_dispatch(
+        model,
+        feats,
+        [0, 1],
+        carrier,
+        cfg,
+        protected_seed=seed,
+        return_witness_alone=True,
+    )
+    torch.testing.assert_close(witness_alone, plain)
+    assert not torch.equal(composed[:, 1], plain[:, 1])
+    torch.testing.assert_close(composed[:, 0], plain[:, 0])
 
 
 def test_jacobian_probe_uses_product_cadence_and_motion_stratified_tails() -> None:
@@ -135,3 +171,7 @@ def test_main_loop_structurally_consumes_controller_lifecycle_and_dynamic_gates(
     assert "controller_step.lane_band_on" in source
     assert "controller_step.chroma_on" in source
     assert "controller_step.pose_finish_on" in source
+    assert "island_targets.refresh_amplify_" in source
+    assert "protected_seed.contain_grad_" in source
+    assert "island_birth_perclass_from_signed_torch" in source
+    assert "birth_scaled_logit_offsets" in source
