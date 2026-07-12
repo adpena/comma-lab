@@ -16001,3 +16001,23 @@ not dataset-attribution). Transfer assessment (honest, ranked):
 3. Within-clip influence attribution (which pairs/pixels matter most for d_seg) → curriculum + meta-init
    corpus (#211) + lens-engine relational/stats lenses. Coherent stretch, not urgent.
 No new agent (partial hit); Fastfood folds into #449's successor build. Pointer UNMOVED (MEANS).
+
+### FEED-codistillation-1804.03235 (2026-07-12) — STRONG hit, de-risks the #449 distilled-surrogate attack
+Hinton et al. 2018 codistillation (arXiv 1804.03235, "Large scale distributed NN training through online
+distillation"). NOT a drop-in (it's PEER codistillation — networks distilling from EACH OTHER on disjoint
+data; we have a FIXED frozen teacher = SegNet, asymmetric). But TWO findings transfer strongly to the P0
+frozen-SegNet-95% cluster (#449/#428/#426):
+1. **THE STALE-WEIGHTS FINDING (the gold):** codistillation's core empirical result = you do NOT need the
+   teacher's CURRENT predictions; STALE teacher signal works, cutting compute/communication, ~2× faster
+   training. This is DIRECT empirical de-risking of our cached/stale-teacher attack on the 95%: it answers
+   the make-or-break question from FEED-frozen-segnet-cluster-nielsen ("how stale can the cached SegNet
+   signal be before it breaks") with a measured YES-stale-works (in the codistillation regime). Backs the
+   distilled-surrogate + cached-gradient direction over the naive-Jacobian one.
+2. **ONLINE distillation (no separate teacher phase):** co-train the cheap SegNet-surrogate DURING witness
+   training on the renders as produced — the method template for the #449 distilled-surrogate; once faithful,
+   its cheap gradient replaces the frozen-SegNet backward.
+HONEST nuance: our teacher is FIXED not co-trained, so the mutual-agreement mechanism doesn't map; it's
+asymmetric online distillation of a frozen teacher. Proactive-recall: #428 (SOTA distillation survey) may
+already hold this — the NEW angle the operator's link sharpens is the stale-weights finding as backing for
+the cached-gradient viability (the separatrix-staleness worry gets a measured counter-datapoint). Hinton is
+council (KD lineage). ROUTE to #449 build phase. Pointer UNMOVED (MEANS).
