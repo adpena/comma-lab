@@ -64,6 +64,10 @@ from tac.cuda_levelset_training import (
     weight_entropy_rate_term_torch,
     witness_tie_coordinate_torch,
 )
+from tac.cuda_v9_controller_runtime import (
+    TorchV9ControllerRuntime,
+    torch_pose_jacobian_conditioning,
+)
 from tac.witness_run_artifacts import (
     TORCH_EMA_PT,
     TORCH_RESUME_PT,
@@ -78,6 +82,7 @@ from tac.witness_training_contract import (
 )
 
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
+_TORCH_POLYAK_PT = "levelset_witness_polyak_torch.pt"
 
 
 def _utc() -> str:
@@ -127,6 +132,16 @@ def _atomic_json(obj, path: Path) -> None:
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(json.dumps(obj, indent=2, sort_keys=True))
     os.replace(tmp, path)
+
+
+def _emit_trajectory_row(out: Path, row: Mapping[str, Any]) -> None:
+    """Durably append one JSON telemetry row and mirror it to stdout."""
+    payload = dict(row)
+    with open(out / TORCH_TRAJECTORY_JSONL, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(payload, sort_keys=True) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+    print(json.dumps(payload), flush=True)
 
 
 def _checkpoint_blob(
@@ -327,7 +342,16 @@ def _run_structured_prefit(model, flags, lstars, feats, *, seed: int, is_resume:
     }
 
 
-def _generated_pose_pair_dispatch(model, feats, pair_indices, pose_carrier, cfg):
+def _generated_pose_pair_dispatch(
+    model,
+    feats,
+    pair_indices,
+    pose_carrier,
+    cfg,
+    *,
+    lane_band=None,
+    return_probe_inputs: bool = False,
+):
     """MLX-authority generated/table dispatch: plain f0 up->warp->R-down, f1 witness R.
 
     ``pair_indices`` indexes pairs, not frame codes. The attached carrier is the only
@@ -337,11 +361,35 @@ def _generated_pose_pair_dispatch(model, feats, pair_indices, pose_carrier, cfg)
     import torch
     import torch.nn.functional as F
 
-    pair_indices = torch.as_tensor(pair_indices, device=feats.device, dtype=torch.long)
+    pair_index_list = [int(index) for index in pair_indices]
+    pair_indices = torch.as_tensor(
+        pair_index_list, device=feats.device, dtype=torch.long
+    )
     code0 = 2 * pair_indices
     code1 = code0 + 1
     raw0, _phi0 = model(feats, code0)
-    raw1, phi1 = model(feats, code1)
+    if lane_band is None:
+        raw1, phi1 = model(feats, code1)
+    else:
+        raw1, phi1, witness_margin, lane_rgb = model.lane_band_fields(
+            feats, code1, lane_cls=int(lane_band["lane_cls"])
+        )
+        composed = []
+        for offset, pair_index in enumerate(pair_index_list):
+            prior = lane_band["priors"][pair_index]
+            coverage = torch.as_tensor(
+                prior.coverage, device=raw1.device, dtype=raw1.dtype
+            ).reshape(-1)
+            uncertainty = (
+                (float(lane_band["tau"]) - witness_margin[offset])
+                / max(float(lane_band["eps"]), 1e-6)
+                + 0.5
+            ).clamp(0.0, 1.0).detach()
+            alpha = (
+                coverage * float(lane_band["weight"]) * uncertainty
+            )[..., None]
+            composed.append(raw1[offset] * (1.0 - alpha) + lane_rgb[offset] * alpha)
+        raw1 = torch.stack(composed, dim=0)
     n = pair_indices.numel()
     raw0 = raw0.reshape(n, cfg.render_h, cfg.render_w, 3)
     raw1 = raw1.reshape(n, cfg.render_h, cfg.render_w, 3)
@@ -361,7 +409,62 @@ def _generated_pose_pair_dispatch(model, feats, pair_indices, pose_carrier, cfg)
     ).permute(0, 2, 3, 1).contiguous()
     scored1 = contest_r(raw1, output_hw=(cfg.render_h, cfg.render_w))
     frames = torch.stack((scored0, scored1), dim=1)
-    return frames, phi1.reshape(n, cfg.render_h, cfg.render_w, cfg.n_classes)
+    phi = phi1.reshape(n, cfg.render_h, cfg.render_w, cfg.n_classes)
+    if return_probe_inputs:
+        return frames, phi, {
+            "native0": native0.detach(),
+            "scored1": scored1.detach(),
+        }
+    return frames, phi
+
+
+def _jacobian_probe_pair_indices(
+    flags: Mapping[str, Any], gt_poses: np.ndarray, epoch: int
+) -> list[int]:
+    """Typed cadence plus deterministic |ego-t|-stratified probe selection."""
+    if not bool(flags.get("--jacobian-basin-telemetry", False)):
+        return []
+    eval_every = max(1, int(flags["--eval-every"]))
+    basin_every = max(1, int(flags["--jacobian-basin-every"]))
+    if int(epoch) % (eval_every * basin_every) != 0:
+        return []
+    if not bool(flags["--jacobian-basin-stratify-t"]):
+        raise ValueError("active V9 Torch J_xi probe requires typed motion stratification")
+    from tac.witness_control.jacobian_basin import (
+        motion_magnitude,
+        stratified_indices_by_motion,
+    )
+
+    motions = [motion_magnitude(pose6) for pose6 in np.asarray(gt_poses)]
+    return stratified_indices_by_motion(
+        motions, int(flags["--jacobian-basin-k-pairs"])
+    )
+
+
+def _polyak_checkpoint_blob(
+    controller: TorchV9ControllerRuntime,
+    epoch: int,
+    config_hash: str,
+    argv: tuple[str, ...],
+) -> dict[str, Any] | None:
+    """Materialize the additional Polyak candidate without replacing EMA."""
+    import torch
+
+    candidate = controller.polyak_candidate()
+    if candidate is None:
+        return None
+    return {
+        "schema": "v9_cgauge_torch_polyak_v1",
+        "epoch": int(epoch),
+        "polyak": {
+            key: torch.as_tensor(value).detach().cpu().clone()
+            for key, value in candidate.items()
+        },
+        "count": int(controller.polyak.count),
+        "config_hash": config_hash,
+        "dsl_argv": list(argv),
+        "authority": "[contest-CUDA training-advisory] NON-PROMOTABLE",
+    }
 
 
 def _accumulated_pair_step(
@@ -628,13 +731,14 @@ def main(argv: list[str] | None = None) -> int:
         lane_priors, lane_comb_fit = build_combed_lane_band_priors(
             lstars,
             gt_poses,
-            lane_cls=1,
+            lane_cls=island_detection.lane_cls,
             softness=float(flags.get("--lane-band-softness", 1.0)),
             dash_forward_max_m=float(flags.get("--lane-band-dash-forward-max-m", 55.0)),
             comb_softness_m=float(flags.get("--lane-band-comb-softness-m", 0.3)),
         )
         lane_band = {
             "priors": lane_priors,
+            "lane_cls": int(island_detection.lane_cls),
             "tau": float(flags.get("--lane-band-tau", 0.85)),
             "eps": float(flags.get("--lane-band-eps", 0.35)),
             "weight": float(flags.get("--lane-band-weight", 1.0)),
@@ -744,6 +848,12 @@ def main(argv: list[str] | None = None) -> int:
                                   betas=(0.9, float(flags["--adam-beta2"])),
                                   weight_decay=float(flags["--weight-decay"]))
     pair_cursor = DeterministicPairCursor(args.num_pairs, seed=int(flags["--seed"]))
+    controller = TorchV9ControllerRuntime(
+        flags,
+        n_classes=cfg.n_classes,
+        lane_cls=island_detection.lane_cls,
+        movable_cls=island_detection.movable_cls,
+    )
     controller_state: dict[str, Any] = {}
     start = 0
     if resume_will_load:
@@ -752,11 +862,20 @@ def main(argv: list[str] | None = None) -> int:
             model, ema, optimizer, cfg_hash,
             pair_cursor=pair_cursor, controller_state=controller_state,
         )
+    if controller_state:
+        controller.load_state_dict(controller_state)
+    controller_state = controller.state_dict()
     out.mkdir(parents=True, exist_ok=True)
     _atomic_json({"schema": "v9_cgauge_cuda_run_manifest_v1", "dsl_argv": list(dsl_argv),
                   "config_hash": cfg_hash, "device": str(device), "seed": int(flags["--seed"]),
                   "authority": "[contest-CUDA training-advisory] NON-PROMOTABLE",
                   "execution_policy": execution_policy.__dict__,
+                  "controller": {
+                      "schema": controller.SCHEMA,
+                      "version": controller.VERSION,
+                      "lane_cls": int(island_detection.lane_cls),
+                      "movable_cls": int(island_detection.movable_cls),
+                  },
                   "compile_policy": "auto_adopt_after_functional_argmax_cosine_probe",
                   "fp_reorder_probe": compile_probe_result or {
                       "backend": str(device), "status": "UNMEASURED",
@@ -781,6 +900,15 @@ def main(argv: list[str] | None = None) -> int:
                 boundary_blob,
                 out / "stage_checkpoints" / f"ep{epoch - 1:05d}_{prev_stage}.pt",
             )
+            boundary_polyak = _polyak_checkpoint_blob(
+                controller, epoch - 1, cfg_hash, dsl_argv
+            )
+            if boundary_polyak is not None:
+                _atomic_torch_save(
+                    boundary_polyak,
+                    out / "stage_checkpoints"
+                    / f"ep{epoch - 1:05d}_{prev_stage}_polyak.pt",
+                )
             prev_stage = stage
         model.train()
         progress = epoch / max(args.epochs, 1)
@@ -796,6 +924,21 @@ def main(argv: list[str] | None = None) -> int:
             )
         if pose_carrier is None:
             raise RuntimeError("active V9 generated pose carrier was not attached")
+        controller_step = controller.begin_epoch(epoch)
+        for controller_row in controller_step.telemetry:
+            # Birth rows are emitted with the completed epoch below. The runtime
+            # also carries them into begin_epoch so a crash cannot lose them.
+            if controller_row.get("stage") == "birth_completion":
+                continue
+            _emit_trajectory_row(
+                out,
+                {
+                    **controller_row,
+                    "backend": "torch_cuda",
+                    "authority": "[contest-CUDA training-advisory]",
+                    "promotion_eligible": False,
+                },
+            )
         pair_cursor.begin_epoch(epoch)
         ep_acc = ep_tot = 0
         chunk_index = 0
@@ -805,7 +948,12 @@ def main(argv: list[str] | None = None) -> int:
             # MAX-throughput steady state: exactly one batched witness/carrier
             # dispatch and one batch through each frozen scorer per accum chunk.
             frames, phi = _generated_pose_pair_dispatch(
-                model, feats, chunk, pose_carrier, cfg
+                model,
+                feats,
+                chunk,
+                pose_carrier,
+                cfg,
+                lane_band=(lane_band if controller_step.lane_band_on else None),
             )
             seg_in = seg.preprocess_input(frames.permute(0, 1, 4, 2, 3).contiguous())
             logits = seg(seg_in)
@@ -820,6 +968,9 @@ def main(argv: list[str] | None = None) -> int:
             gt_margin = torch.as_tensor(
                 margins[chunk_np], device=device, dtype=seg_per_pixel.dtype
             )
+            controller.observe_scorer_chunk(
+                logits.argmax(dim=1), target, gt_margin
+            )
             seg_weight = 1.0 + 4.0 * torch.exp(-gt_margin.clamp_min(0.0))
             seg_loss = (seg_per_pixel * seg_weight).mean()
             pose6 = _pose6(pose, frames)
@@ -829,7 +980,10 @@ def main(argv: list[str] | None = None) -> int:
             pose_loss = pose_objective_torch(pose6, pose_target)
             eik, length = eikonal_and_length(phi)
             seg_contrib = float(flags["--w-seg"]) * seg_loss
-            pose_contrib = float(flags["--w-pose"]) * pose_loss
+            pose_weight = (
+                float(flags["--w-pose"]) if controller_step.pose_finish_on else 0.0
+            )
+            pose_contrib = pose_weight * pose_loss
             eik_contrib = float(flags["--eikonal-weight"]) * eik
             length_contrib = float(flags["--length-weight"]) * length
             raw_logits_nhwc = logits.permute(0, 2, 3, 1).contiguous()
@@ -908,7 +1062,7 @@ def main(argv: list[str] | None = None) -> int:
                 temporal_den = annulus.sum(dim=(-2, -1)) + 1e-6
                 temporal_screw = temporal_weight * (temporal_num / temporal_den).mean()
             chroma = torch.zeros((), device=device)
-            if epoch >= int(flags["--seg-chroma-boundary-start-epoch"]):
+            if controller_step.chroma_on:
                 gt = torch.as_tensor(
                     gt_f1[chunk_np], device=device, dtype=frames.dtype
                 ).permute(0, 3, 1, 2)
@@ -971,12 +1125,107 @@ def main(argv: list[str] | None = None) -> int:
                 authority="[contest-CUDA training-advisory]", promotion_eligible=False,
                 wall_clock_s=time.time() - t0,
             )
-            with open(out / TORCH_TRAJECTORY_JSONL, "a", encoding="utf-8") as fh:
-                fh.write(json.dumps(telemetry, sort_keys=True) + "\n")
-                fh.flush()
-                os.fsync(fh.fileno())
-            print(json.dumps(telemetry), flush=True)
+            telemetry["controller"] = {
+                "muon_on": controller_step.muon_on,
+                "lane_band_on": controller_step.lane_band_on,
+                "chroma_on": controller_step.chroma_on,
+                "pose_finish_on": controller_step.pose_finish_on,
+                "pose_banked_r1": controller_step.pose_banked_r1,
+                "effective_pose_weight": pose_weight,
+            }
+            _emit_trajectory_row(out, telemetry)
             chunk_index += 1
+
+        controller_epoch = controller.end_epoch(epoch)
+        for birth_row in controller_epoch["birth_telemetry"]:
+            _emit_trajectory_row(
+                out,
+                {
+                    **birth_row,
+                    "backend": "torch_cuda",
+                    "authority": "[contest-CUDA training-advisory]",
+                    "promotion_eligible": False,
+                },
+            )
+
+        probe_indices = _jacobian_probe_pair_indices(flags, gt_poses, epoch)
+        if probe_indices:
+            with torch.no_grad():
+                _probe_frames, _probe_phi, probe_inputs = _generated_pose_pair_dispatch(
+                    model,
+                    feats,
+                    probe_indices,
+                    pose_carrier,
+                    cfg,
+                    lane_band=(lane_band if controller_step.lane_band_on else None),
+                    return_probe_inputs=True,
+                )
+
+            def pose_from_native_frames(native_frame0, scored_frame1):
+                scored_frame0 = torch.nn.functional.interpolate(
+                    native_frame0.permute(0, 3, 1, 2),
+                    size=(cfg.render_h, cfg.render_w),
+                    mode="bilinear",
+                    align_corners=False,
+                ).permute(0, 2, 3, 1).contiguous()
+                return _pose6(
+                    pose, torch.stack((scored_frame0, scored_frame1), dim=1)
+                )
+
+            conditioning = torch_pose_jacobian_conditioning(
+                pose_from_native_frames,
+                pose_carrier,
+                probe_inputs["native0"],
+                probe_inputs["scored1"],
+                probe_indices,
+                sigma_floor=float(flags["--jacobian-basin-sigma-floor"]),
+            )
+            pose_verdict = controller.observe_sigma_min(
+                epoch, float(conditioning["median_sigma_min"])
+            )
+            _emit_trajectory_row(
+                out,
+                {
+                    "stage": "jacobian_basin_t1",
+                    "epoch": epoch,
+                    **conditioning,
+                    "pose_gate": pose_verdict,
+                    "cadence_epochs": max(1, int(flags["--eval-every"]))
+                    * max(1, int(flags["--jacobian-basin-every"])),
+                    "backend": "torch_cuda",
+                    "authority": "[contest-CUDA training-advisory]",
+                    "promotion_eligible": False,
+                },
+            )
+
+        polyak_observed = controller.observe_polyak(epoch, model)
+        if polyak_observed:
+            _emit_trajectory_row(
+                out,
+                {
+                    "stage": "polyak_finisher_observe",
+                    "epoch": epoch,
+                    "count": int(controller.polyak.count),
+                    "start_epoch": int(controller.polyak.start_epoch),
+                    "backend": "torch_cuda",
+                    "authority": "[contest-CUDA training-advisory]",
+                    "promotion_eligible": False,
+                },
+            )
+        controller_state = controller.state_dict()
+        _emit_trajectory_row(
+            out,
+            {
+                "stage": "v9_controller_epoch",
+                **{key: value for key, value in controller_epoch.items()
+                   if key != "birth_telemetry"},
+                "muon_on": controller.muon_on,
+                "pose_banked_r1": controller.pose_banked_r1,
+                "backend": "torch_cuda",
+                "authority": "[contest-CUDA training-advisory]",
+                "promotion_eligible": False,
+            },
+        )
 
         blob = None
         if epoch % ckpt_every == 0 or epoch == args.epochs:
@@ -988,6 +1237,11 @@ def main(argv: list[str] | None = None) -> int:
             _atomic_torch_save({"schema": "v9_cgauge_torch_ema_v1", "epoch": epoch,
                                 "ema": ema.state_dict(), "config_hash": cfg_hash,
                                 "dsl_argv": list(dsl_argv)}, out / TORCH_EMA_PT)
+            latest_polyak = _polyak_checkpoint_blob(
+                controller, epoch, cfg_hash, dsl_argv
+            )
+            if latest_polyak is not None:
+                _atomic_torch_save(latest_polyak, out / _TORCH_POLYAK_PT)
     final_blob = _checkpoint_blob(
         model, ema, optimizer, args.epochs, cfg_hash, dsl_argv,
         pair_cursor=pair_cursor, controller_state=controller_state,
@@ -996,6 +1250,16 @@ def main(argv: list[str] | None = None) -> int:
         final_blob,
         out / "stage_checkpoints" / f"ep{args.epochs:05d}_{prev_stage}.pt",
     )
+    final_polyak = _polyak_checkpoint_blob(
+        controller, args.epochs, cfg_hash, dsl_argv
+    )
+    if final_polyak is not None:
+        _atomic_torch_save(final_polyak, out / _TORCH_POLYAK_PT)
+        _atomic_torch_save(
+            final_polyak,
+            out / "stage_checkpoints"
+            / f"ep{args.epochs:05d}_{prev_stage}_polyak.pt",
+        )
     _atomic_json(
         {
             "schema": "v9_cgauge_torch_train_result_v1",
@@ -1004,6 +1268,9 @@ def main(argv: list[str] | None = None) -> int:
             "epochs_completed": args.epochs,
             "config_hash": cfg_hash,
             "seed": int(flags["--seed"]),
+            "polyak_candidate": (
+                _TORCH_POLYAK_PT if final_polyak is not None else None
+            ),
             "authority": "[contest-CUDA training-advisory] NON-PROMOTABLE",
             "pointer": {"score": 0.19108282, "axis": "contest-CPU", "moved": False},
             "completed_at_utc": _utc(),
