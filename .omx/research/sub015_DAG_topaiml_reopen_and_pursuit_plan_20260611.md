@@ -16257,3 +16257,24 @@ is), (b) CUDA raw-throughput (the paid H100 smoke — orthogonal question, fire-
 (c) the goldmine-hunter's CNN-acceleration finds. Pointer 0.18804 UNMOVED (MEANS). MicroBatch DSL lever
 renders through the generic lever_registry/describe() surface consumed by costate_digest + dashboard +
 schedule_readback — no per-lever consumer code needed. [consumers-generic]
+
+## FEED-vpretraining-cmu-blog (2026-07-12) — operator-handed, ON-TARGET → costate organ (backtest-gated)
+
+Source: CMU MLBlog "Pre-Training Isn't Bitter Enough" (2026-06-17). Genre = gradient-estimation/meta-learning
+(one of the 4 on-target genres). Core = **V-Pretraining**: a lightweight *task-designer* learns which
+self-supervised task to construct by aligning the pretrain gradient with the downstream gradient via the
+one-step estimate `L_down(θ−η·g_pre) ≈ L_down(θ) − η·g_down^T·g_pre`. FROM-LITERATURE, no measured number.
+**On-target WHY (2 surfaces):**
+- COSTATE ORGAN (#426/#430/#433/#436): `g_down^T·g_pre` is a CHEAP first-order costate/task-selection score —
+  an un-learned twin of the organ's learned λ=∂S/∂x adjoint. Candidate ARM: score curriculum/loss/init moves
+  by alignment of the move's gradient with the final-S (d_seg+d_pose) gradient; a robust backtest BASELINE vs
+  the learned-NN adjoint, and a first-order meta-gradient the "curriculum-as-coherent-whole" flow can consume.
+- n=1 DATA-STARVATION (#434): the designer is steered by only 1,024 feedback examples over a large unlabeled
+  corpus — the "small feedback steers the whole run" template = our ONE video's frozen-scorer gradient
+  steering the witness. Direct analogue for the n=1 regime.
+**Honest caveats:** it is a PRE-TRAINING method (big unlabeled corpus + tiny feedback); our witness is
+single-video overfit, so the "unlabeled corpus" analogue is thin — the transferable core is the meta-gradient
+task-designer as a curriculum-SELECTION signal, not the pretraining framing. First-order alignment is a known
+meta-gradient family (we have #426 costate-NN, #430 curriculum-whole); NEW value = the cheap g_down^T·g_pre
+alignment as a baseline/arm, NOT a paradigm shift. Route: costate-organ arm + #434 feedback-steering template,
+backtest-gated (like #431/#433 arms). Pointer 0.18804 UNMOVED (MEANS). [no-triality]
