@@ -16213,3 +16213,15 @@ exact enumeration remains preferred on enumerable support. Equation leg:
 `ugc_terminal_polish_variance_cost_progress_separation_v1`. DSL leg: N/A because UGC did not become
 the default estimator. Axis `[macOS-CPU advisory . frozen CPU-torch exact cells . NON-PROMOTABLE]`;
 score claim false; pointer UNMOVED; no paid dispatch or live-run mutation.
+
+### FEED-sparse-delta-memory-2607.07386 (2026-07-12) — evaluated, NOT-USEFUL (wrong architecture + wrong bottleneck)
+Operator shared "Sparse Delta Memory: Scaling the State of Linear RNNs through Sparsity" (arXiv 2607.07386;
+Cabannes/Mazaré/Douze/Jégou et al, FAIR). Method: track sparse state DELTAS not dense state → memory-efficient
+linear-RNN / SSM training. VERDICT: no transfer to any live thread. (1) WRONG ARCHITECTURE — witness is a
+coordinate-INR/level-set, NO linear RNN/recurrent state in the pointer path; SDM has no object to attach to.
+(2) WRONG THROUGHPUT BOTTLENECK — our wall is the frozen-SegNet CNN fwd+bwd (~95%, #449) + Metal kernels +
+micro-batch (#447), a CONVOLUTIONAL cost, not RNN-state memory; SDM accelerates a bottleneck we don't have.
+(3) our only SSM-ish models (linear-NCDE trajectory #344, costate NN #426) are TINY (scalar d_seg trajectory
+over ~epochs) → not state-memory-bound → SDM's win doesn't materialize. CAVEAT: relevant ONLY if we ever put
+the costate organ / a temporal witness on a large linear-RNN/SSM backbone — NOT a live path (policy-grad survey
+says keep the controller adjoint-led at n=1). NO build, NO route. Pointer 0.18804 UNMOVED. [no-triality — negative eval]
