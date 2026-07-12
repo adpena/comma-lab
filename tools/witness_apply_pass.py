@@ -14,9 +14,9 @@ sidecar-fold in the byte-close orbit) but never composed into ONE pass that fire
 moment the live v9 run produces its first good checkpoint. This is that pass. It is a
 pure ORCHESTRATOR: every stage delegates to the canonical existing tool (no re-derived
 codec math), and every number it emits is a REAL measurement of a REAL byte-closed
-blob — NO-FAKE. A lever that is NOT built (#311 TropNNC, #401 blind-coordinate) is
-registered as an EXPLICIT stub stage that FAILS LOUDLY if invoked and otherwise reports
-itself OWED — it never pretend-applies.
+blob — NO-FAKE. #311 TropNNC and #401 blind-coordinate are now BUILT stages (each measures a
+REAL byte-closed / decode-verified quantity); any remaining NOT-built lever is registered as an
+EXPLICIT stub stage that FAILS LOUDLY if invoked and never pretend-applies.
 
 THE STAGES (ordered; rate then pose):
   1. baseline_byte_close  — the reference archive.zip rate term (levelset_byte_close).
@@ -28,7 +28,9 @@ THE STAGES (ordered; rate then pose):
                             reconstruction MSE == the advisory d_pose floor it ADDS.
   4. sidecar_fold         — fold the stored-pose sidecar section into the packet and
                             re-measure the archive rate term (byte-neutral recode orbit).
-  5. STUB #311 TropNNC        — NOT built. Loud NotImplementedError if --run-stub.
+  5. #311 TropNNC            — BUILT. Laguerre-cell-aware structured trunk reduction: mean-
+                            compensated neuron prune ranked by tropical dominance; EXACT trunk-byte
+                            savings + STAGED n600 SegNet-argmax-equality accept (exact Δd_seg=0).
   6. blind_coord (#401)       — BUILT. Blind-coordinate rate lever: camera px invisible to
                             BOTH scorers (230,904/frame = 22.7%) filled by a rule-118 generic
                             decode-time rule -> encoder stores only the retained sub-grid.
@@ -627,7 +629,134 @@ class ApplyPass:
         return res
 
     # ======================================================================
-    # STUB STAGES: #311 TropNNC (NOT built)
+    # STAGE 5: #311 TropNNC (BUILT) — Laguerre-cell-aware structured trunk reduction
+    # ======================================================================
+    def _tropnnc(self) -> StageResult:
+        """#311 tropical-skeleton rate lever: mean-compensated structured neuron prune ranked by
+        tropical dominance, ACCEPTED only when the REAL decode leaves SegNet argmax EXACTLY equal.
+
+        CPU-light default: rank (no scorer) + EXACT trunk-byte accounting per k + STAGE the n600
+        argmax-equality accept. With --fire-scorer-stages: run the render->R->SegNet argmax-equality
+        screen over --eval-pairs (the admissibility authority; n600 for a promotable verdict)."""
+        import numpy as np
+
+        from tac.boundary_math import tropnnc_witness_reduction as tr
+
+        lever = "tropnnc_311"
+        tool = "tac.boundary_math.tropnnc_witness_reduction"
+        res = StageResult(lever=lever, kind="scorer")
+        npz_path = self.frozen_dir / self.npz_name
+        ck = tr.load_witness(npz_path)
+        # curvelet bank feats (rule-118 free table) at the checkpoint render res
+        from tac.local_acceleration import torch_levelset_inflate as tli
+        rh, rw = (int(x) for x in ck.aux["__render_hw"])
+        coords = tli.coords_grid(rh, rw)
+        B = tli.curvelet_B(int(ck.aux["__bank_n_scales"]), int(ck.aux["__bank_n_orient0"]),
+                           float(ck.aux["__bank_f0"]), float(ck.aux["__bank_base"]),
+                           int(ck.aux["__bank_n_iso"]), float(ck.aux["__cfg_max_bank_freq"]))
+        feats = tli.curvelet_feats(coords, B)
+        probe_idx = [2 * p + 1 for p in
+                     np.linspace(0, ck.cfg["n_pairs"] - 1, self.args.tropnnc_probe_pairs).astype(int)]
+        stats = tr.probe_layer_stats(ck, feats, probe_idx)
+        plans: dict[int, tr.ReductionPlan] = {}
+        reduced_params: dict[int, dict] = {}
+        base_blob = tr.trunk_blob_bytes(ck.params)
+        res.rows.append(self._bytes_row(tool, base_blob, "tropnnc_trunk_blob_bytes[baseline]"))
+        for k in self.args.tropnnc_ks:
+            plan, reduced = tr.build_reduction_plan(ck, stats, k)
+            plans[k] = plan
+            reduced_params[k] = reduced
+            # EXACT structural byte savings (deterministic count) — the POTENTIAL, not yet accepted.
+            res.rows.append(self._bytes_row(
+                tool, plan.reduced_blob_bytes, f"tropnnc_trunk_blob_bytes[k{k}_w{plan.new_width}]"))
+        res.raw = {
+            "operating_point": {"softmax_temp": ck.cfg["softmax_temp"], "hosc_beta": ck.cfg["hosc_beta"],
+                                "hosc_omega": ck.cfg["hosc_omega"], "activation": ck.cfg["activation"],
+                                "hidden_dim": ck.hidden_dim, "n_hidden": ck.n_hidden},
+            "plans": {k: p.to_json_dict() for k, p in plans.items()},
+            "note": ("tropical influence RANKS; the n600 SegNet-argmax equality ACCEPTS. Trunk-byte "
+                     "savings are exact; exact-Δd_seg=0 admissibility is measured by the screen."),
+        }
+        # stage the n600 argmax-equality accept (the authority)
+        res.staged_commands.append({
+            "lever": lever,
+            "measures": ("n600 exact-Δd_seg=0 admissibility: render baseline + each reduced witness -> "
+                         "R -> frozen CPU-torch SegNet argmax; ACCEPT a k iff ALL 600 pairs' argmax are "
+                         "BIT-IDENTICAL to baseline (Δd_seg exactly 0), then archive-bytes saved is real"),
+            "authority": "[macOS-CPU advisory] -> stage the accepted reduced npz to full byte-close + exact eval",
+            "argv": [_PY, "tools/witness_apply_pass.py", "--ckpt-dir", str(self.args.ckpt_dir),
+                     "--npz-name", self.npz_name, "--out-dir", "<n600_out>",
+                     "--fire-scorer-stages", "--eval-pairs", "600", "--gt-cache",
+                     "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+                     "--tropnnc-ks", *[str(k) for k in self.args.tropnnc_ks]],
+            "fire_when": "machine free; serial (CPU shared with the live run) — ~9+ min per n600 pass",
+        })
+        if not self.args.fire_scorer_stages:
+            res.status = "staged"
+            res.note = ("RANKED + byte-accounted (exact). Exact-Δd_seg=0 admissibility STAGED (needs "
+                        "the SegNet screen). Fire with --fire-scorer-stages --eval-pairs N when free.")
+            return res
+        # FIRE the exact-preservation screen (render + R + SegNet argmax equality).
+        verdicts = self._tropnnc_screen(ck, feats, rh, rw, stats, plans, reduced_params)
+        res.status = "measured"
+        res.raw["screen"] = verdicts
+        for k, v in verdicts.items():
+            accepted = bool(v["all_pairs_argmax_equal"])
+            saved = plans[k].bytes_saved if accepted else 0
+            res.rows.append(self._scalar_row(
+                tool, float(v["n_pairs_argmax_equal"]),
+                f"tropnnc_pairs_argmax_equal[k{k}]", "pairs", AxisTag.THROUGH_R,
+                v["pairs_scored"], (None if v["pairs_scored"] == 600
+                                    else f"exact-preservation screen over {v['pairs_scored']} pairs (n600 for promotable)")))
+            res.rows.append(self._bytes_row(
+                tool, saved, f"tropnnc_bytes_saved_at_exact_dseg0[k{k}]"))
+        return res
+
+    def _tropnnc_screen(self, ck, feats, rh, rw, stats, plans, reduced_params) -> dict:
+        """Render baseline + each reduced witness's frame1 -> R -> SegNet argmax; per-pair equality."""
+        import numpy as np
+
+        import train_witness_realized_through_R_mlx as twr
+        from tac.boundary_math.lever_b_levelset_generator import levelset_rgb_forward_numpy
+
+        gt, seg_cpu, _pose = twr.load_gt_from_cache(Path(self.args.gt_cache), self.args.eval_pairs)
+        P = gt.n_pairs
+
+        def _render(params, hd):
+            kw = dict(n_hidden=ck.n_hidden, hidden_dim=hd, n_classes=ck.cfg["n_classes"],
+                      activation="hosc", softmax_temp=ck.cfg["softmax_temp"], wire_w0=ck.cfg["wire_w0"],
+                      wire_s0=ck.cfg["wire_s0"], hosc_beta=ck.cfg["hosc_beta"],
+                      hosc_omega=ck.cfg["hosc_omega"], chroma=ck.cfg["chroma"])
+            pf32 = {k: np.asarray(v, np.float32) for k, v in params.items()}
+            frames = []
+            for pi in range(P):
+                with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+                    rgb, _phi = levelset_rgb_forward_numpy(pf32, feats, ck.params["code"][2 * pi + 1], **kw)
+                frames.append(twr._torch_R_to_camera_uint8(rgb.reshape(rh, rw, 3)))
+            return frames
+
+        def _argmax(frames):
+            import torch
+            arr = np.stack([f[None] for f in frames], axis=0)
+            xp = torch.from_numpy(arr).permute(0, 1, 4, 2, 3).contiguous().float()
+            with torch.inference_mode():
+                return seg_cpu(seg_cpu.preprocess_input(xp)).argmax(dim=1).cpu().numpy().astype(np.int64)
+
+        base_arg = _argmax(_render(ck.params, ck.hidden_dim))
+        out = {}
+        for k, plan in plans.items():
+            red_arg = _argmax(_render(reduced_params[k], plan.new_width))
+            eq = [bool(np.array_equal(red_arg[i], base_arg[i])) for i in range(P)]
+            flip = [float(np.count_nonzero(red_arg[i] != base_arg[i])) / base_arg[i].size for i in range(P)]
+            out[k] = {
+                "pairs_scored": P, "n_pairs_argmax_equal": int(sum(eq)),
+                "all_pairs_argmax_equal": bool(sum(eq) == P),
+                "mean_argmax_flip_frac": float(np.mean(flip)), "max_argmax_flip_frac": float(np.max(flip)),
+            }
+        return out
+
+    # ======================================================================
+    # STUB STAGES (reserved for NOT-built levers)
     # ======================================================================
     def _stub(self, lever: str, human: str, what: str) -> StageResult:
         res = StageResult(lever=lever, kind="stub", status="owed")
@@ -651,10 +780,9 @@ class ApplyPass:
         stages.append(self._low_rank_pose())
         # 4. sidecar fold (byte-neutral recode orbit)
         stages.append(self._sidecar_fold())
-        # 5 + 6. stubs
-        stages.append(self._stub(
-            "tropnnc_311", "#311 TropNNC (tropical-geometry NN compression)",
-            "tropical-argmax-aware structured pruning of the witness trunk before byte-close."))
+        # 5. #311 TropNNC (BUILT)
+        stages.append(self._tropnnc())
+        # 6. #401 blind-coordinate (BUILT)
         stages.append(self._blind_coord())
 
         summary = {
@@ -736,9 +864,15 @@ def build_parser() -> argparse.ArgumentParser:
     # #140 low-rank pose knobs
     ap.add_argument("--pose-rank", type=int, default=2)
     ap.add_argument("--pose-qbits", type=int, default=10)
+    # #311 TropNNC knobs (BUILT). ks = units dropped PER LAYER (uniform width H-k).
+    ap.add_argument("--tropnnc-ks", type=int, nargs="+", default=[1, 2, 4],
+                    help="#311 TropNNC: units dropped per layer (uniform width). Trunk-byte savings "
+                         "are exact regardless; exact-Δd_seg=0 admissibility needs the SegNet screen.")
+    ap.add_argument("--tropnnc-probe-pairs", type=int, default=8,
+                    help="#311 spread of pairs for the (cheap, no-scorer) tropical influence ranking")
     # stubs
     ap.add_argument("--run-stub", nargs="*", default=None,
-                    help="fail LOUDLY on the named stub lever(s) (tropnnc_311 / blind_coord_401)")
+                    help="fail LOUDLY on the named stub lever(s) — reserved for NOT-built levers")
     return ap
 
 

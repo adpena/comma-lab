@@ -79,6 +79,10 @@ from tac.canonical_equations.blind_coordinate_rate_lever_20260711 import (
     build_blind_coordinate_rate_lever_v1,
     populate_blind_coordinate_rate_lever_equation,
 )
+from tac.canonical_equations.tropnnc_dense_trunk_exact_reduction_20260712 import (
+    build_tropnnc_dense_trunk_exact_reduction_empty_v1,
+    populate_tropnnc_dense_trunk_exact_reduction_equation,
+)
 from tac.canonical_equations.boundary_distance_calibration_20260705 import (
     bd_weight_for_ratio,
     build_boundary_distance_weight_calibration_v1,
@@ -473,6 +477,8 @@ __all__ = [
     "populate_adaptive_eps_cfl_edge_tracking_equation",
     "populate_anisotropic_basis_two_regime_allocation_equation",
     "populate_blind_coordinate_rate_lever_equation",
+    "build_tropnnc_dense_trunk_exact_reduction_empty_v1",
+    "populate_tropnnc_dense_trunk_exact_reduction_equation",
     "populate_boundary_distance_weight_calibration_equation",
     "populate_chan_vese_area_constraint_birth_balance_equation",
     "populate_chroma_boundary_annulus_match_equation",

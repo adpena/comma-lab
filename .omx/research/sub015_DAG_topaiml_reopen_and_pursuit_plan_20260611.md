@@ -15818,3 +15818,37 @@ Registration legs: equation `pr110_lineage_sidecar_fold_integer_grid_boundary_v1
 overhead SHUT at optimal form; fold pays only inside the click search). Composition prescription
 relayed to the #399 click agent: rounds 2+ on the folded table (fold-opt sha 3c43cd26…), recovery
 threshold +2.75e-5 banks −607 B.
+
+## FEED-tropnnc311 (2026-07-12) — #311 TropNNC Laguerre-cell-aware trunk reduction: MEASURED NEGATIVE (0 bytes at exact Δd_seg=0), FORMULATION-scoped
+
+**WHAT (means — pointer 0.19108282 UNMOVED).** Built the #311 tropical-skeleton rate lever and MEASURED
+whether the frozen v752 witness trunk admits any EXACTLY-d_seg-invariant structured reduction (the #284
+Laguerre-power-diagram argument: a weight change leaving every argmax cell boundary unchanged is a byte
+cut at zero Δd_seg). **Verdict: the exact-preserving set is EMPTY on this checkpoint.**
+
+**Deliverables:** `src/tac/boundary_math/tropnnc_witness_reduction.py` (mean-compensated uniform-width
+structured neuron prune ranked by tropical influence `std·‖downstream‖`, reusing the canonical
+`levelset_rgb_forward_numpy` + `quantize_levelset_blob` + rule-118 bank regen; npz round-trip) +
+`tools/witness_apply_pass.py` #311 stub→REAL stage `_tropnnc` (ranks + exact trunk-byte accounting +
+STAGES the n600 SegNet-argmax-equality accept; `--fire-scorer-stages` runs the render→R→SegNet screen) +
+17 tests (all green). Memo `.omx/research/tropnnc_311_20260712T010936Z.md`; eq
+`tropnnc_dense_trunk_exact_dseg_reduction_empty_v1` (registered).
+
+**The crux (honest operating-point).** v752 DEPLOYS at hosc β=1.0/ω=1.0, softmax τ=1.0 — **fully soft,
+NOT the low-τ max-plus limit** the prompt's "β→3.177/τ→0.31" note describes. The trunk is **DENSE**: min
+per-unit activation std ~0.026, every out_sdf col-norm > 0.8, ZERO dead units, max final-layer pairwise
+|corr| 0.959 (0 pairs >0.99 → no merge redundancy). So the tropical certificate over-predicts
+removability and the SegNet-argmax equality is the sole authority.
+
+**MEASURED (accept iff ALL pairs' SegNet argmax bit-identical to baseline):** n24 → 0/24 (k=1,k=2);
+n96 → 0/96 (k=1,k=2); mean per-pair argmax-flip ~1% at k=1. n600 confirming (chunk-30: 0/30). Even the
+single least-influential unit per layer (mean-folded) flips the argmax on 100% of pairs.
+**bytes_saved_at_exact_Δd_seg=0 = 0.** Raw structural potentials (NON-admissible): baseline trunk blob
+82,706 B; k1 −801, k2 −1,567, k4 −3,052. d_pose delta = N/A (0 admissible reductions).
+
+**verdict_scope = FORMULATION** (fully-soft β=1/τ=1 dense trunk), NOT FAMILY. REACTIVATION: re-fire the
+built apparatus on a low-τ/high-β annealed (saturated) checkpoint where hosc saturation manufactures
+dead/dominated units and the Laguerre-boundary-invariance argument becomes tight
+(`witness_apply_pass.py --fire-scorer-stages --eval-pairs 600 --tropnnc-ks ...`). Triality: DSL =
+apply-pass stage; DAG = this FEED; eqs = the registered negative law. All rows [macOS-CPU advisory]
+NON-PROMOTABLE.
