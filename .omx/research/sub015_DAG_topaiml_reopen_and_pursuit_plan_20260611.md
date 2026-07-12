@@ -16305,3 +16305,27 @@ fail-closed costate/provider or receiver gate, and does **not** edit the live tr
 receipt with zero scorer calls. Memory hook intentionally omitted: operator MEMORY is already 17,543 bytes,
 above the requested `<17KB`; this FEED is the terse hook. Triality: `[no-triality]` pure reference/routing — no
 measured witness law, DSL lever, archive, or score claim. **Pointer 0.18804 `[contest-CPU]` UNMOVED (MEANS).**
+
+### FEED-jrd-coeff-prefix-pair0 (2026-07-12) — fixture GO; V9/v8 NEEDS-MORE
+
+**STORES CONSULTED:** retrieval-first corpus query over research/equations/memory/DAG/council/tasks/docs;
+sealed fixture; canonical receiver/R/scorer contracts; local and connected-SSD payload inventories; canonical
+task/probe ledgers. Deliberately not loaded: protected live V9 run and full 5 GB GT cache.
+
+`[MEASURED] [macOS-CPU advisory] [recovery-written-UNREVIEWED]` Complete pair-0 enumeration covered 18
+coefficient sections × 2 families × 8 nonzero planes = 288 exact rows. Zero-tolerance Seg/Pose guards came
+from the exact positive-repeat noise floor. The exact combined replay accepted five sections and reduced the
+sealed v7.5.2 apply-pass fixture from 83,905 B to 81,154 B: **2,751 exact ZIP bytes saved**. Baseline→selected
+components were `d_seg 0.023157755533854168→0.0218505859375` and
+`d_pose 116.59830629690003→92.42743674059255`. Fixture verdict = **GO**.
+
+`[DERIVED] [recovery-written-UNREVIEWED]` V9/v8 task verdict = **NEEDS-MORE** and canonical probe verdict =
+`DEFER`: inventory found zero typed, hash-bound, sealed, non-live V9/v8 LVLS1 payloads. Pair 0 does not
+establish full-600 or early/boundary/late saved-regime survival. Contest CPU, contest CUDA, cross-seed transfer,
+and V9/v8 transfer remain `[UNKNOWN]`. `upstream/evaluate.py` was not run; `score_claim=false`;
+`promotion_eligible=false`; pointer unchanged. No paid/cloud dispatch or live-run access occurred.
+
+Triality: DAG = this FEED; equations = `jrd_exact_coefficient_prefix_selection_v1`; DSL = N/A-with-reason
+(offline frozen-payload receiver/byte-allocator oracle, not a trainer/curriculum/launch/actuator change).
+Memo: `.omx/research/codex_findings_jrd_coeff_prefix_20260712T224139Z_codex.md`. Receipt:
+`experiments/results/jrd_coeff_prefix_probe_20260712T221747Z/measurement_receipt.json`. Task blocker:
