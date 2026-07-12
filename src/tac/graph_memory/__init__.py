@@ -37,11 +37,19 @@ from .query_tools import (
     query_neighbors,
     query_supersession_chain,
 )
-from .recall import Reconstruction, format_human, reconstruct
+from .recall import (
+    LensedReconstruction,
+    Reconstruction,
+    format_human,
+    format_human_lensed,
+    reconstruct,
+    reconstruct_lensed,
+)
 
 __all__ = [
     "Edge",
     "Graph",
+    "LensedReconstruction",
     "Node",
     "QueryHit",
     "QueryResult",
@@ -50,6 +58,7 @@ __all__ = [
     "cache_paths",
     "export_obsidian",
     "format_human",
+    "format_human_lensed",
     "load_or_build",
     "query_by_decision",
     "query_by_entity",
@@ -60,6 +69,7 @@ __all__ = [
     "query_supersession_chain",
     "recall",
     "reconstruct",
+    "reconstruct_lensed",
     "save_graph",
 ]
 

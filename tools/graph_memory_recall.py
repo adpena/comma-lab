@@ -15,6 +15,11 @@ Usage:
   .venv/bin/python tools/graph_memory_recall.py "2026-07-10 naive-launch incident" --json
   .venv/bin/python tools/graph_memory_recall.py --rebuild "muon warm start"
   .venv/bin/python tools/graph_memory_recall.py --stats   # graph node/edge counts
+
+  # opt-in lensed recall (task #346): the SAME base reconstruction above, plus
+  # tac.lens_engine GRAPH (bridge/hub) + TOPOLOGY (saddle/crux) augmentation.
+  .venv/bin/python tools/graph_memory_recall.py --lens "lane d_seg"
+  .venv/bin/python tools/graph_memory_recall.py --lens --lens-centrality closeness "muon warm start"
 """
 from __future__ import annotations
 
@@ -32,6 +37,7 @@ from tac.graph_memory import (  # noqa: E402
     cache_paths,
     export_obsidian,
     format_human,
+    format_human_lensed,
     load_or_build,
     query_by_decision,
     query_by_entity,
@@ -41,6 +47,7 @@ from tac.graph_memory import (  # noqa: E402
     query_neighbors,
     query_supersession_chain,
     reconstruct,
+    reconstruct_lensed,
     save_graph,
 )
 
@@ -70,6 +77,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-seeds", type=int, default=4)
     ap.add_argument("--max-nodes", type=int, default=18)
     ap.add_argument("--max-depth", type=int, default=2)
+    ap.add_argument(
+        "--lens", action="store_true",
+        help="opt-in: augment the reconstruction with tac.lens_engine GRAPH "
+             "(bridge/hub) + TOPOLOGY (saddle/crux) findings on top of the "
+             "unchanged base reconstruction (task #346 retrieval-first wire-in)",
+    )
+    ap.add_argument(
+        "--lens-phi", default="degree",
+        help="tac.lens_engine.CorpusAdapter Phi mode for --lens (default: "
+             "'degree', the only custody-safe default; see CorpusAdapter for "
+             "other modes and their custody requirements)",
+    )
+    ap.add_argument(
+        "--lens-centrality", default="betweenness", choices=("betweenness", "closeness", "degree"),
+        help="GRAPH lens centrality method used to rank hub nodes for --lens",
+    )
     args = ap.parse_args(argv)
 
     graph = load_or_build(rebuild=args.rebuild)
@@ -113,6 +136,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     query = " ".join(args.query)
+    if args.lens:
+        lensed = reconstruct_lensed(
+            graph, query,
+            max_seeds=args.max_seeds, max_nodes=args.max_nodes, max_depth=args.max_depth,
+            phi=args.lens_phi, centrality_method=args.lens_centrality,
+        )
+        if args.json:
+            print(json.dumps(lensed.to_dict(graph), indent=2, ensure_ascii=False))
+        else:
+            print(format_human_lensed(lensed, graph))
+        return 0
+
     recon = reconstruct(
         graph, query,
         max_seeds=args.max_seeds, max_nodes=args.max_nodes, max_depth=args.max_depth,
