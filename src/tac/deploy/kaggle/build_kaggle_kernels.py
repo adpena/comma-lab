@@ -353,7 +353,7 @@ REQUIRED_DATASET_ASSETS: dict[str, int] = {
     "renderer_best_v3.pt": 3_527_290,
     "posenet_targets.bin": 6_794,
     "0.mkv": 37_545_489,
-    "tac-0.2.0rc2-py3-none-any.whl": 0,  # size varies; 0 = existence check only
+    "tac-0.2.0rc2-py3-none-any.whl": 27_631_663,
 }
 
 
