@@ -166,3 +166,15 @@ metadata.
 Deliberately not loaded or invoked: the live trainer; the protected V9 run; scorer weights;
 source-video frames; Torch/MLX execution; renderer/repacker code during replay; cloud or Modal state;
 paid dispatch; `upstream/evaluate.py`.
+
+## Consumer-leg disposition (triality drift-detector, 2026-07-12)
+`src/tac/witness_dsl/sfess_cached_replay_policy.py` lives in the DSL package but is a RESEARCH-PROBE
+policy, NOT a campaign `Lever`. VERIFIED: (a) not exported from `witness_dsl/__init__.py`; (b) it is
+pydantic custody/fingerprint/objective-context models (`SFESSCacheCustody`, `SFESSObjectiveContext`,
+`SFESSCachedReplayPolicy`), not a `Lever` factory; (c) `lever_registry.completeness()` returns NONE for
+`sfess` — it is not in the campaign lever registry. Therefore the campaign consumer surfaces
+(`tools/dashboard_server.py`, `tools/costate_digest.py`, `src/tac/witness_dsl/schedule_readback.py`,
+`src/tac/witness_control/producer_bridge.py`) render campaign levers via the registry and correctly do
+NOT render this — NO consumer update is needed. Sole consumers: `tools/probe_sfess_cached_replay.py` +
+the sfess provider mode in `segnet_gradient_replacement.py`. Disposition = research-probe-scoped /
+out-of-campaign-render. `[consumers-generic]`
