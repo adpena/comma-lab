@@ -188,3 +188,5 @@ def test_main_loop_structurally_consumes_controller_lifecycle_and_dynamic_gates(
     assert 'telemetry_scope="epoch_final_chunk"' in source
     assert "lstars_device.index_select" in source
     assert "gt_f1_render_device.index_select" in source
+    assert '"stage": "training_throughput_epoch"' in source
+    assert '"score_claim": False' in source

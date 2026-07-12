@@ -1310,6 +1310,10 @@ def main(argv: list[str] | None = None) -> int:
                     "promotion_eligible": False,
                 },
             )
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+            torch.cuda.reset_peak_memory_stats(device)
+        epoch_train_t0 = time.perf_counter()
         pair_cursor.begin_epoch(epoch)
         ep_acc = ep_tot = 0
         chunk_index = 0
@@ -1563,6 +1567,35 @@ def main(argv: list[str] | None = None) -> int:
                 }
                 _emit_trajectory_row(out, telemetry)
             chunk_index += 1
+
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        epoch_train_seconds = time.perf_counter() - epoch_train_t0
+        _emit_trajectory_row(
+            out,
+            {
+                "stage": "training_throughput_epoch",
+                "epoch": epoch,
+                "pairs": args.num_pairs,
+                "optimizer_updates": ep_tot,
+                "seconds": round(epoch_train_seconds, 6),
+                "pairs_per_second": round(args.num_pairs / max(epoch_train_seconds, 1e-12), 6),
+                "updates_per_second": round(ep_tot / max(epoch_train_seconds, 1e-12), 6),
+                "peak_allocated_bytes": (
+                    int(torch.cuda.max_memory_allocated(device)) if device.type == "cuda" else None
+                ),
+                "amp_dtype": execution_policy.amp_dtype,
+                "compiled_regions": bool(compile_receipts),
+                "cuda_graph_trees_requested": bool(
+                    compile_receipts and execution_policy.cuda_graphs
+                ),
+                "compile_warmup_epoch": epoch == start + 1,
+                "authority": "[contest-CUDA training-throughput]"
+                if device.type == "cuda" else "[macOS-CPU/Torch advisory]",
+                "promotion_eligible": False,
+                "score_claim": False,
+            },
+        )
 
         controller_epoch = controller.end_epoch(epoch)
         for birth_row in controller_epoch["birth_telemetry"]:
