@@ -32,15 +32,18 @@ def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins()
     receipt = cuda_v9_port_receipt()
     assert receipt["status"] == "BLOCKED_NOT_1_TO_1"
     assert receipt["blockers"] == list(CUDA_V9_PORT_BLOCKERS)
-    assert len(receipt["blockers"]) == 8
+    assert len(receipt["blockers"]) == 7
     closed = (
         "--pose-carrier",
         "--structured-init",
         "--accum-pairs",
+        "--dseg-aware-taper",
+        "--per-group-grad-clip",
     )
     assert all(not any(blocker.startswith(flag) for blocker in receipt["blockers"]) for flag in closed)
     assert {
         "generated_table_pose_carrier_frame0_dispatch_and_learnable_dxi",
         "structured_scorer_sdf_prefit_with_resume_suppression",
         "accum_pairs_8_chunk_atomic_updates_and_accepted_fraction",
+        "dseg_aware_feature_taper_and_per_group_gradient_clipping",
     }.issubset(receipt["score_bearing_primitives_ported"])

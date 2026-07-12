@@ -28,7 +28,6 @@ CUDA_V9_PORT_BLOCKERS: tuple[str, ...] = (
     "--muon-start-event AdamW-to-Muon transition with rewarmup and state persistence",
     "--pose-finish-engage-on sigma_min_plateau conditioning gate",
     "--polyak-finisher-arm resumable tail-average candidate export",
-    "--dseg-aware-taper and --per-group-grad-clip update geometry",
     "--tail-cycles-max governed tail-cycle stop controller",
 )
 
@@ -51,6 +50,7 @@ def cuda_v9_port_receipt() -> dict[str, object]:
             "generated_table_pose_carrier_frame0_dispatch_and_learnable_dxi",
             "structured_scorer_sdf_prefit_with_resume_suppression",
             "accum_pairs_8_chunk_atomic_updates_and_accepted_fraction",
+            "dseg_aware_feature_taper_and_per_group_gradient_clipping",
         ],
     }
 
