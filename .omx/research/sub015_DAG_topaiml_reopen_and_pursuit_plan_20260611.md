@@ -15948,14 +15948,20 @@ skeleton cache. Analytic lane band `1.0` remains correctly inside the common ren
 
 The highest-risk authority split is pinned at B=1 and B=2: PoseNet keeps carrier-composed frame 0,
 while temporal screw separately renders/scores raw witness frame 0, matching the serial equation.
-Chroma/phase/temporal map math is fused over `(B,H,W)`; area and every weighted denominator remain
-pair-local before the batch mean. Admission is fail-closed and provenance-bearing: chroma/phase/
-temporal/area/full-V9 receipts, real frozen scorer, faithful scale, actual Metal/MLX backend, artifact
-and scorer SHA-256, K>=2, plus measured end-to-end speed >1. Scorer-only or mock receipts cannot say GO.
+Chroma/phase/temporal forward and theta-bearing VJP math is fused over `(B,H,W)`; temporal uses the
+compiled batch warp; area and every weighted denominator remain pair-local before the batch mean.
+Backend custody is lazy-execution honest (`metal_planned` -> evaluated forward+VJP -> verified `metal`).
+Persisted functional/timing JSON is schema-validated reported telemetry only: even canonical hashes,
+scorer bytes, durable custody, and within-tolerance rows cannot attest execution or establish
+authoritative parity/GO. A real in-process full-V9 Metal/scorer/warp receipt and equal-step timing
+measurement remain the admission authority; caller booleans/scalars and handwritten rows hard-refuse.
 
 **Local evidence:** typed compile/parse validation empty; launcher dry-run 199/199 flags, ten active
-levers, exactly one `--micro-batch-pairs 2`, rc0, no spawn; 101 DSL/equation tests and 118 runtime-independent
-classification tests green; syntax/critical Ruff/diff clean. **Honest blocked evidence:** the managed
+levers, exactly one `--micro-batch-pairs 2`, rc0, no spawn; 102 DSL/equation tests plus 52
+runtime-independent probe/admission tests green; six Metal forward/VJP kernel objects construct;
+syntax/critical Ruff/diff clean. Durable launch/JUnit/fail-closed probe receipts live under
+`experiments/results/v9_cgauge_micro_batch_dryrun_20260712/`.
+**Honest blocked evidence:** the managed
 sandbox has no initializable Metal device, so the installed K2/K4 loss/gradient and mandatory real
 Metal-forward/VJP tests cannot be runtime-certified here. Current system admission also refused a real
 launch under concurrent memory pressure; respected. Historical isolated scorer anchors are 1.56x GPU /
@@ -16021,3 +16027,48 @@ asymmetric online distillation of a frozen teacher. Proactive-recall: #428 (SOTA
 already hold this — the NEW angle the operator's link sharpens is the stale-weights finding as backing for
 the cached-gradient viability (the separatrix-staleness worry gets a measured counter-datapoint). Hinton is
 council (KD lineage). ROUTE to #449 build phase. Pointer UNMOVED (MEANS).
+
+### FEED-fresh-init-20260712 — residual-conditioned FreSh init built; native Metal slice BLOCKED before launch
+
+Operator P0: reduce frozen-SegNet calls by reducing epochs-to-fixed realized `d_seg`. The still-open
+formulation is **from-scratch init-time** spectral selection; the bounded warm-start `along=26` arm remains
+SETTLED/REFUTED and is not reopened. Build: default-off `FreShInitControl` + `FreshFrequencyShift` +
+`FreShFixedQualitySlice` typed DSL Levers; portable DC-omitted anti-diagonal FFT/W1 law; deterministic
+`{8,8*sqrt(3.2),25.6} x {0.0,...,3.0}` candidate grid; exact through-R frozen-MLX-SegNet selection;
+resume registry/checkpoint state; receipts; fixed-quality parser; typed V9 launcher composition.
+
+The selector uses the thin/dashed class-1 residual `omega_lane * boundary`, while global all-class W1 is
+diagnostic only. The matched control executes the same one-pass self-orientation/re-render and disables the
+same pair-dependent seed composer. Default init cost is explicit: control `N_init=1`, treatment `N_init=93`;
+the registered equation `fresh_frequency_shift_init_v1` now uses `N_total=N_init+P*E`, so an apparent
+one-epoch n8 win can still lose total scorer calls.
+
+Governed dry compile: control 204/204 and treatment 211/211 real flags; DSL manifest, schedule, per-run
+memory preflight, and safe-compile are green. System admission correctly REFUSES at current load (100.0 GiB
+projected versus the 82.4 GiB adaptive ceiling) while the live V9 arm remains in scope. **Measurement verdict
+= BLOCKED-ENVIRONMENT/ADMISSION, no family verdict:** this managed session has no Metal device;
+computer-use safety refused Terminal/Codex; canonical
+native-Terminal delegation returned `launched:false` with the macOS HiServices XPC connection invalid before
+any process spawned. Live `v9_cgauge_432_coherent_arm_20260711` untouched. Durable blocker:
+`experiments/results/fresh_init_n8_fixed_quality_20260712/measurement_blocker.json`. Therefore epochs and
+wall reductions are UNMEASURED; no number inferred from FreSh/MetaSDF papers or spectral W1. Reactivate by
+running the already-dry-gated n8 control then treatment on a native Metal shell, feed their run dirs to
+`tools/measure_witness_fixed_quality.py`, then do n64 multi-seed and operator-fired governed n600. Meta-init
+#211 remains sequence-gated and NOT STARTED. Full memo:
+`.omx/research/init_levers_fresh_metainit_20260712.md`. Pointer UNMOVED (MEANS).
+
+### FEED-cuda-smoke-moneysafety-hold (2026-07-12) — CUDA timing-smoke fire attempt → untested-remote bug → money-safety review HELD
+Attempted the V9·CGauge CUDA timing smoke (H100/3ep/600pairs, tools/launch_witness_cloud.py, operator GO)
+to MEASURE throughput vs the slow local MLX. First fire FAILED at asset-stage: the launcher
+(src/tac/deploy/witness_cloud_launcher.py) hardcoded a NONEXISTENT modal volume `pact-training-results`;
+modal_train_lane.py mounts `comma-train-lane-results` at /modal_results. FIXED to match (commit b601e1a749)
+— an untested-remote-path bug, invisible on macOS (the "UNMEASURED-pending-CUDA-dispatch" class made real).
+Operator then directed a money-safety recursive adversarial review BEFORE re-firing ("don't waste money").
+$0 GPU spent (never past the cheap ~2GB asset upload; app list shows no new H100 dispatch). Pre-flagged
+money risks for the review: (1) launcher passes `--timeout-hours 10` → hung H100 = ~$40-50 = 2-2.5× over
+the ≤$20 envelope; (2) UNVERIFIED whether WITNESS_EPOCHS=3 actually caps the curriculum at 3 epochs or runs
+the full ~3000 (envelope-blowing); (3) fail-fast-vs-fail-late (does bad config crash before paid GPU compile
+or after). Delegated codex modal_moneysafety_review (via the new codex_delegate auto-notify harness) →
+.omx/research/modal_moneysafety_review_20260712.md; re-fire HELD (FIRE_ON_GO.txt stamped HELD) until verdict
+= PROCEED + timeout/epoch fixes land. Apparatus/means; pointer 0.18804 UNMOVED. Lens→#346 retrieval wire-in
+running in parallel (Claude subagent). [no-triality — apparatus trajectory row, no DSL/equation leg]
