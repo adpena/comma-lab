@@ -13,8 +13,9 @@ fusion is enabled implicitly: CUDA has to re-measure the fp-reorder wall locally
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping
+from dataclasses import asdict, dataclass, field
+from contextlib import nullcontext
 from typing import Any
 
 import numpy as np
@@ -37,6 +38,305 @@ class CudaLevelSetConfig:
     render_w: int = 512
     camera_h: int = 874
     camera_w: int = 1164
+
+
+@dataclass(frozen=True)
+class TorchExecutionPolicy:
+    """Backend-derived throughput policy; never owns scientific values."""
+
+    device_type: str
+    amp_dtype: str | None
+    grad_scaler: bool
+    tf32: bool
+    cudnn_benchmark: bool
+    compile_mode: str | None
+    cuda_graphs: bool
+    execution_label: str
+
+
+def select_torch_execution_policy(device: Any, *, enable_compile: bool = True) -> TorchExecutionPolicy:
+    """Select the fastest safe policy from the actual Torch/device capabilities.
+
+    CUDA measurements remain owed: this function reports capabilities and configures no
+    scientific parameter. CPU intentionally returns eager fp32 fallbacks.
+    """
+    import torch
+
+    dev = torch.device(device)
+    if dev.type != "cuda" or not torch.cuda.is_available():
+        return TorchExecutionPolicy(
+            device_type=dev.type, amp_dtype=None, grad_scaler=False, tf32=False,
+            cudnn_benchmark=False, compile_mode=None, cuda_graphs=False,
+            execution_label="eager_fallback",
+        )
+    bf16 = bool(getattr(torch.cuda, "is_bf16_supported", lambda: False)())
+    return TorchExecutionPolicy(
+        device_type="cuda", amp_dtype="bfloat16" if bf16 else "float16",
+        grad_scaler=not bf16, tf32=True, cudnn_benchmark=True,
+        compile_mode="max-autotune" if enable_compile and hasattr(torch, "compile") else None,
+        cuda_graphs=bool(hasattr(torch.cuda, "CUDAGraph")),
+        execution_label="megakernel_candidate" if enable_compile else "eager_fallback",
+    )
+
+
+def apply_torch_execution_policy(policy: TorchExecutionPolicy) -> None:
+    """Apply backend-only fast-math choices authorized for the training loop."""
+    import torch
+
+    if policy.device_type != "cuda":
+        return
+    torch.backends.cuda.matmul.allow_tf32 = bool(policy.tf32)
+    torch.backends.cudnn.allow_tf32 = bool(policy.tf32)
+    torch.backends.cudnn.benchmark = bool(policy.cudnn_benchmark)
+    torch.backends.cudnn.deterministic = False
+    torch.set_float32_matmul_precision("high")
+
+
+def autocast_context(policy: TorchExecutionPolicy):
+    """Return the selected autocast context without forcing CUDA in CPU tests."""
+    import torch
+
+    if policy.amp_dtype is None:
+        return nullcontext()
+    dtype = torch.bfloat16 if policy.amp_dtype == "bfloat16" else torch.float16
+    return torch.autocast(device_type="cuda", dtype=dtype)
+
+
+class TorchPoseCarrier:
+    """Canonical EON ground-homography frame0 carrier with trainable table dxi."""
+
+    @staticmethod
+    def build(xi_stored: np.ndarray, geom: Any, *, residual_scale: float = 1.0):
+        import torch
+        import torch.nn as nn
+        import torch.nn.functional as F
+
+        xi_np = np.asarray(xi_stored, np.float32)
+        if xi_np.ndim != 2 or xi_np.shape[1] != 6:
+            raise ValueError(f"xi_stored must be (P,6), got {xi_np.shape}")
+
+        def skew(v):
+            z = torch.zeros_like(v[..., 0])
+            return torch.stack((
+                z, -v[..., 2], v[..., 1],
+                v[..., 2], z, -v[..., 0],
+                -v[..., 1], v[..., 0], z,
+            ), dim=-1).reshape(*v.shape[:-1], 3, 3)
+
+        def exp_se3(xi):
+            rho, omega = xi[..., :3], xi[..., 3:]
+            W = skew(omega)
+            W2 = W @ W
+            theta2 = (omega * omega).sum(-1, keepdim=True)[..., None]
+            theta = torch.sqrt(theta2.clamp_min(1e-16))
+            small = theta2 < 1e-8
+            A = torch.where(
+                small, 1.0 - theta2 / 6.0 + theta2.square() / 120.0,
+                torch.sin(theta) / theta,
+            )
+            B = torch.where(
+                small, 0.5 - theta2 / 24.0 + theta2.square() / 720.0,
+                (1.0 - torch.cos(theta)) / theta2,
+            )
+            C = torch.where(
+                small, 1.0 / 6.0 - theta2 / 120.0 + theta2.square() / 5040.0,
+                (theta - torch.sin(theta)) / (theta2 * theta),
+            )
+            eye = torch.eye(3, device=xi.device, dtype=xi.dtype).expand(*xi.shape[:-1], 3, 3)
+            R = eye + A * W + B * W2
+            V = eye + B * W + C * W2
+            t = (V @ rho[..., None]).squeeze(-1)
+            return R, t
+
+        class _Carrier(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.register_buffer("xi_stored", torch.from_numpy(xi_np.copy()))
+                self.register_buffer("K", torch.as_tensor(geom.K, dtype=torch.float32))
+                self.register_buffer("Kinv", torch.as_tensor(geom.Kinv, dtype=torch.float32))
+                self.register_buffer("plane_n", torch.as_tensor(geom.n, dtype=torch.float32))
+                self.register_buffer("target_grid", torch.as_tensor(geom.grid, dtype=torch.float32))
+                self.native_hw = tuple(int(x) for x in geom.native_hw)
+                self.plane_d = float(geom.d)
+                self.dxi = nn.Parameter(torch.zeros_like(self.xi_stored))
+                self.residual_scale = float(residual_scale)
+
+            def xi_effective(self, pair_indices):
+                return self.xi_stored[pair_indices] + self.residual_scale * self.dxi[pair_indices]
+
+            def forward(self, source_nhwc, pair_indices):
+                xi = self.xi_effective(pair_indices)
+                if tuple(source_nhwc.shape[1:3]) != self.native_hw:
+                    raise ValueError(
+                        f"pose source HW {tuple(source_nhwc.shape[1:3])} != geom {self.native_hw}"
+                    )
+                R, t = exp_se3(xi)
+                tn = t[..., :, None] * self.plane_n[None, None, :]
+                H = self.K[None] @ (R - tn / self.plane_d) @ self.Kinv[None]
+                src_h = torch.linalg.inv(H) @ self.target_grid[None]
+                z = src_h[:, 2]
+                z_safe = torch.where(z.abs() < 1e-8, torch.ones_like(z), z)
+                u, v = src_h[:, 0] / z_safe, src_h[:, 1] / z_safe
+                h, w = self.native_hw
+                valid = (z > 0) & (u >= 0) & (u <= w - 1) & (v >= 0) & (v <= h - 1)
+                grid = torch.stack((
+                    2.0 * u / max(w - 1, 1) - 1.0,
+                    2.0 * v / max(h - 1, 1) - 1.0,
+                ), dim=-1).reshape(-1, h, w, 2)
+                x = source_nhwc.permute(0, 3, 1, 2).contiguous()
+                warped = F.grid_sample(
+                    x, grid, mode="bilinear", padding_mode="border", align_corners=True
+                ).permute(0, 2, 3, 1).contiguous()
+                return torch.where(valid.reshape(-1, h, w, 1), warped, source_nhwc)
+
+        return _Carrier()
+
+
+def structured_sdf_prefit(
+    model,
+    feats,
+    target_phi,
+    *,
+    steps: int,
+    lr: float,
+    subsample: int,
+    seed: int,
+) -> dict[str, float | int]:
+    """Actually optimize the SDF-producing trunk before main training.
+
+    Callers must skip this function on resume. Only SDF/trunk parameters are routed;
+    texture/palette and any attached pose carrier stay untouched.
+    """
+    import torch
+
+    params = [
+        p for name, p in model.named_parameters()
+        if p.requires_grad and (
+            name.startswith("in_proj") or name.startswith("hidden")
+            or name.startswith("film") or name.startswith("out_sdf") or name == "code"
+        )
+    ]
+    if not params:
+        raise ValueError("structured SDF prefit found no trainable SDF parameters")
+    opt = torch.optim.AdamW(params, lr=float(lr))
+    gen = torch.Generator(device=feats.device).manual_seed(int(seed))
+    n = int(feats.shape[-2])
+    take = min(max(1, int(subsample)), n)
+    if feats.ndim != 2 or target_phi.ndim != 2 or feats.shape[0] != target_phi.shape[0]:
+        raise ValueError(
+            "structured prefit expects pair-0/shared feats (P,F) and static-core target (P,K); "
+            f"got feats={tuple(feats.shape)} target={tuple(target_phi.shape)}"
+        )
+    target = target_phi
+    first = last = float("nan")
+    model.train()
+    for _ in range(int(steps)):
+        idx = torch.randperm(n, generator=gen, device=feats.device)[:take]
+        opt.zero_grad(set_to_none=True)
+        _rgb, phi = model(feats[idx], torch.zeros(1, dtype=torch.long, device=feats.device))
+        loss = (phi[0] - target[idx]).square().mean()
+        if not torch.isfinite(loss):
+            raise FloatingPointError("structured SDF prefit produced a nonfinite loss")
+        if first != first:
+            first = float(loss.detach())
+        loss.backward()
+        # MLX authority freezes the per-frame code: this is a shared-trunk prior,
+        # not a code[0]-only fit.
+        if getattr(model, "code", None) is not None and model.code.grad is not None:
+            model.code.grad.zero_()
+        opt.step()
+        last = float(loss.detach())
+    return {"steps": int(steps), "loss_initial": first, "loss_final": last}
+
+
+@dataclass
+class DeterministicPairCursor:
+    """Crash-resumable exhaustive pair order for true accum-pairs updates."""
+
+    n_pairs: int
+    cursor: int = 0
+    accepted_total: int = 0
+    attempted_total: int = 0
+
+    def next_indices(self, count: int) -> list[int]:
+        if self.n_pairs <= 0:
+            raise ValueError("n_pairs must be positive")
+        out = [int((self.cursor + i) % self.n_pairs) for i in range(int(count))]
+        self.cursor = int((self.cursor + int(count)) % self.n_pairs)
+        self.attempted_total += len(out)
+        return out
+
+    def record_accepted(self, count: int) -> None:
+        self.accepted_total += int(count)
+
+    def state_dict(self) -> dict[str, int]:
+        return asdict(self)
+
+    def load_state_dict(self, state: Mapping[str, Any]) -> None:
+        self.cursor = int(state.get("cursor", 0)) % self.n_pairs
+        self.accepted_total = int(state.get("accepted_total", 0))
+        self.attempted_total = int(state.get("attempted_total", 0))
+
+
+def parameter_groups(model) -> dict[str, list[Any]]:
+    """Distinct Muon/Adam/pose/code groups used by clipping and optimizer routing."""
+    groups: dict[str, list[Any]] = {"muon": [], "adam": [], "pose": [], "code": []}
+    for name, p in model.named_parameters():
+        if not p.requires_grad:
+            continue
+        if "pose_carrier" in name or name.endswith("dxi"):
+            groups["pose"].append(p)
+        elif name == "code" or name.endswith(".code"):
+            groups["code"].append(p)
+        elif p.ndim >= 2 and not any(x in name for x in ("out_sdf", "out_tex", "palette", "in_proj")):
+            groups["muon"].append(p)
+        else:
+            groups["adam"].append(p)
+    return groups
+
+
+def clip_grad_groups(groups: Mapping[str, Iterable[Any]], max_norm: float) -> dict[str, Any]:
+    """Clip each functional group independently after gradient normalization."""
+    import torch
+
+    norms: dict[str, Any] = {}
+    for name, params_it in groups.items():
+        params = [p for p in params_it if p.grad is not None]
+        if not params:
+            norms[str(name)] = None
+            continue
+        norm = torch.nn.utils.clip_grad_norm_(params, float(max_norm), error_if_nonfinite=True)
+        norms[str(name)] = norm.detach()
+    return norms
+
+
+@dataclass
+class CudaGraphRecaptureGuard:
+    """Guard replay across shape/pointer/control/stage changes, not weight updates.
+
+    Parameters and optimizer buffers are mutated *inside* the captured graph. Ordinary
+    steps therefore do not invalidate capture; only control-flow or storage topology does.
+    """
+
+    generation: int = 0
+    captured_generation: int | None = None
+    capture_count: int = 0
+    replay_count: int = 0
+
+    def invalidate_control_layout(self) -> None:
+        self.generation += 1
+
+    def mark_captured(self) -> None:
+        self.captured_generation = self.generation
+        self.capture_count += 1
+
+    def may_replay(self) -> bool:
+        return self.captured_generation == self.generation
+
+    def mark_replayed(self) -> None:
+        if not self.may_replay():
+            raise RuntimeError("refusing stale CUDA graph replay; recapture required")
+        self.replay_count += 1
 
 
 def round_ste(x):
@@ -422,7 +722,13 @@ def forward_parity_against_numpy(model, feats: np.ndarray, code_index: int = 0) 
 
 
 def compile_identity_probe(model, feats, code_indices, loss_fn) -> dict[str, Any]:
-    """Re-measure eager-vs-torch.compile fwd/grad identity; never assumes MLX's verdict."""
+    """Functional compile-adoption probe with advisory loss/gradient deltas.
+
+    Training-loop bit identity is operator-waived. Adoption is therefore based on
+    the unchanged score-relevant functional gate: NumPy-fp32 argmax equality and
+    ``cosine_phi >= 0.9997``. Loss/gradient deltas remain visible telemetry and are
+    never rewritten as exact.
+    """
     import torch
 
     if not hasattr(torch, "compile"):
@@ -441,8 +747,11 @@ def compile_identity_probe(model, feats, code_indices, loss_fn) -> dict[str, Any
 
     eager_loss, eager_grad = run(closure)
     try:
-        compiled = torch.compile(closure, fullgraph=True)
+        compiled = torch.compile(closure, mode="max-autotune", fullgraph=False)
         comp_loss, comp_grad = run(compiled)
+        compiled_forward = torch.compile(model, mode="max-autotune", fullgraph=False)
+        with torch.no_grad():
+            comp_rgb, comp_phi = compiled_forward(feats, code_indices)
     except Exception as exc:  # compiler support is substrate-specific
         return {"available": True, "adoptable": False, "error": f"{type(exc).__name__}: {exc}"}
     gdelta = max(
@@ -453,20 +762,61 @@ def compile_identity_probe(model, feats, code_indices, loss_fn) -> dict[str, Any
         default=0.0,
     )
     ldelta = float((eager_loss - comp_loss).abs())
+    if feats.ndim == 2 and code_indices.numel() == 1:
+        from tac.boundary_math.lever_b_levelset_generator import levelset_rgb_forward_numpy
+
+        p = numpy_parameter_dict(model)
+        ci = int(code_indices.reshape(-1)[0])
+        rgb_np, phi_np = levelset_rgb_forward_numpy(
+            p, feats.detach().float().cpu().numpy(), p["code"][ci],
+            n_hidden=model.cfg.n_hidden, hidden_dim=model.cfg.hidden_dim,
+            n_classes=model.cfg.n_classes, activation=model.cfg.activation,
+            softmax_temp=float(model.softmax_temp), wire_w0=20.0, wire_s0=10.0,
+            hosc_beta=float(model.hosc_beta), hosc_omega=model.cfg.hosc_omega,
+            chroma=model.cfg.chroma,
+        )
+        cphi = comp_phi[0].detach().float().cpu().numpy()
+        crgb = comp_rgb[0].detach().float().cpu().numpy()
+        argmax_equal = bool(np.array_equal(cphi.argmax(-1), phi_np.argmax(-1)))
+        cosine_phi = float(np.dot(cphi.ravel(), phi_np.ravel()) / (
+            np.linalg.norm(cphi.ravel()) * np.linalg.norm(phi_np.ravel()) + 1e-30
+        ))
+        rgb_max_abs_delta = float(np.max(np.abs(crgb - rgb_np)))
+    else:
+        with torch.no_grad():
+            eager_rgb, eager_phi = model(feats, code_indices)
+        argmax_equal = bool(torch.equal(comp_phi.argmax(-1), eager_phi.argmax(-1)))
+        cosine_phi = float(torch.nn.functional.cosine_similarity(
+            comp_phi.float().reshape(1, -1), eager_phi.float().reshape(1, -1)
+        ))
+        rgb_max_abs_delta = float((comp_rgb.float() - eager_rgb.float()).abs().max())
+    adoptable = bool(argmax_equal and cosine_phi >= 0.9997)
     return {
         "available": True,
         "loss_max_abs_delta": ldelta,
         "grad_max_abs_delta": gdelta,
-        "adoptable": bool(ldelta == 0.0 and gdelta == 0.0),
+        "argmax_equal": argmax_equal,
+        "cosine_phi": cosine_phi,
+        "rgb_max_abs_delta": rgb_max_abs_delta,
+        "adoptable": adoptable,
+        "adoption_rule": "argmax_equal && cosine_phi>=0.9997",
+        "training_loop_bit_identity_waiver": True,
         "law": "witness_fp_reorder_transform_bit_identity_wall_v1",
     }
 
 
 __all__ = [
+    "CudaGraphRecaptureGuard",
     "CudaLevelSetConfig",
+    "DeterministicPairCursor",
+    "TorchExecutionPolicy",
     "TorchLevelSetWitness",
+    "TorchPoseCarrier",
+    "apply_torch_execution_policy",
     "area_constraint_torch",
+    "autocast_context",
     "chroma_boundary_loss",
+    "clip_grad_groups",
     "compile_identity_probe",
     "contest_r",
     "eikonal_and_length",
@@ -474,9 +824,12 @@ __all__ = [
     "homography_grid_from_xi",
     "island_birth_from_signed_torch",
     "numpy_parameter_dict",
+    "parameter_groups",
     "persistence_topology_loss_torch",
     "realized_signed_margin",
     "round_ste",
+    "select_torch_execution_policy",
+    "structured_sdf_prefit",
     "unified_tau_loss",
     "warp_field_persist_torch",
     "weight_entropy_rate_term_torch",
