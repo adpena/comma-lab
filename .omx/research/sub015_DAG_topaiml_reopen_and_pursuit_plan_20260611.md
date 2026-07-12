@@ -15872,3 +15872,18 @@ low-τ-checkpoint reactivation. Pointer 0.19108282 UNMOVED.
 - **v1→final trajectory:** kept 1 905 / revised 49 / dropped 77 / **added 702** — monotone greedy accumulation over many rounds.
 
 Deliverables: memo `.omx/research/pr128_click_forensics_20260712T021554Z.md` · priors `experiments/results/pr128_click_import_forensics_20260712/click_search_priors_pr128.json` (full-dim sweep, extend to ±3, many rounds, no temporal prior — for #399) · import candidate + `n600_advisory_result.json` (#399 files UNTOUCHED) · eq `pr128_latent_click_structure_isotropic_geometric_v1` (2 anchors). Triality: DSL = N/A-with-reason (forensic diff of a frozen public archive, not a trainer lever); DAG = this FEED; eqs = registered. All rows [macOS-CPU advisory] NON-PROMOTABLE; NO-FAKE #7 defensive bank. Pointer **0.19108282 UNMOVED** (exact contest-CPU row on the import candidate is MODAL-HOLD, operator GO).
+
+---
+
+## FEED-modaleval (2026-07-12): PR128-click IMPORT CANDIDATE — exact contest-CPU landed, POINTER MOVED (NON-SUBMISSION defensive bank)
+
+The MODAL-HOLD exact row from FEED-pr128 LANDED. Modal CPU (Linux x86_64) contest-CPU auth eval on the import candidate `import_candidate_archive.zip` (sha `196acd18…`, 176,564 B) under the PR110-lineage runtime (`pr110_payload_entropy_recode_20260610/submission_dir`):
+
+- **S [contest-CPU] = 0.1880443979880752** (recomputed from components 100·d_seg + √(10·d_pose) + 25·bytes/N; == tool == canonical; rounded field ignored). d_seg 0.0005334 · d_pose 2.937e-05 · 176,564 B · n=600. Custody: archive sha 196acd18 + 176,564 B both MATCH.
+- **DELTA vs incumbent 0.19108282419209976 = −0.003038426204024558. Pointer MOVED** → `our_local_frontier_contest_cpu` = 0.1880443980, sha 196acd18, architecture_class `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712`. `submitted_pr_number_for_current_frontier` = null (unchanged).
+- Advisory→exact gap: exact 0.18804440 vs macOS-CPU advisory 0.18806993 = within 2.6e-5 (macOS↔contest-CPU drift; exact marginally lower). No CPU-axis drift concern — the click search's CPU-selected structure held on real contest-CPU.
+- call_id `fc-01KXAGAT8JQA4BNH64FJ1SDC5N`; Modal spend ≈ ≤$0.10 (CPU-only single axis; CUDA NOT run — separate axis, not needed for a non-submission CPU bank); within #381 ≤$20.
+
+**NON-SUBMISSION (binding, operator 2026-07-12):** contest PRs are reserved exclusively for our own V9·CGauge witness (v9 or iterated). This is a BORROWED-substrate defensive bank (NO-FAKE #7: PR128 rhnerv_latent_polish click *values* from a12dongithub/MIT, applied to OUR PR110 base; PR110 substrate ours, clicks borrowed — search accelerator, not innovation). NO PR was or will be opened for this archive. The 0.18804440 defensive frontier buys margin while the witness matures.
+
+Triality: DSL = N/A-with-reason (exact eval of a frozen borrowed archive, not a trainer lever); DAG = this FEED; eqs = existing `pr128_latent_click_structure_isotropic_geometric_v1` anchor (structure). Memo `.omx/research/modal_import_candidate_exact_eval_20260712.md`.
