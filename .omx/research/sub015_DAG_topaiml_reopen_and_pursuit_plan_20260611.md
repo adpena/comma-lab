@@ -15808,3 +15808,13 @@ PR128 METHOD; harness/grammar OURS). Triality: DAG=this FEED · equations=the re
 N/A-with-reason (frozen-archive packet transform, not a trainer lever). Ops note: detached bg evals
 killed ~5min (SIGURG-144) even with start_new_session; chunked-resumable-FOREGROUND (≤235s/invocation,
 npz state) landed 6,000+ pair-renders lossless — per memory L47. **Pointer 0.19108282 UNMOVED (means).**
+
+### FEED-overhead-stack-triality-disposition (2026-07-11 addendum)
+DSL-leg disposition for the overhead-stack sweep (per the per-leg drift gate): **N/A-with-reason**
+— all four levers are frozen-archive APPLY-side measurements (fold/deletion/bit-alloc/recode on the
+PR110-lineage payload), not trainer/curriculum levers; the DSL compiles trainer argv only.
+Registration legs: equation `pr110_lineage_sidecar_fold_integer_grid_boundary_v1` (agent-landed,
+2 clean review passes) + apply-pass/harness contracts + MEMORY.md CURRENT-line clause (non-click
+overhead SHUT at optimal form; fold pays only inside the click search). Composition prescription
+relayed to the #399 click agent: rounds 2+ on the folded table (fold-opt sha 3c43cd26…), recovery
+threshold +2.75e-5 banks −607 B.
