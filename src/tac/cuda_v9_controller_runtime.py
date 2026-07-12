@@ -255,6 +255,7 @@ class TorchV9ControllerRuntime:
             start_epoch=int(self.flags["--polyak-finisher-start-epoch"]),
             arm=bool(self.flags.get("--polyak-finisher-arm", False)),
         )
+        self._polyak_device_mean: dict[str, Any] | None = None
         self.dseg_history: list[tuple[int, float]] = []
         self.annulus_history: list[tuple[int, float]] = []
         self.latest_stats: dict[int, dict[str, float | int]] = {}
@@ -501,13 +502,37 @@ class TorchV9ControllerRuntime:
         return self.pose_detector.verdict().to_dict()
 
     def observe_polyak(self, epoch: int, model: Any) -> bool:
-        """Copy live state only after the typed start; canonical class enforces it."""
-        return self.polyak.observe(
-            epoch,
-            {key: value.detach().cpu().numpy() for key, value in model.state_dict().items()},
-        )
+        """Update the uniform mean on device; checkpoints are the only D2H copy."""
+        import torch
+
+        if not self.polyak.arm or int(epoch) < int(self.polyak.start_epoch):
+            return False
+        values = model.state_dict()
+        with torch.no_grad():
+            if self._polyak_device_mean is None:
+                self._polyak_device_mean = {
+                    key: value.detach().to(dtype=torch.float32).clone()
+                    for key, value in values.items()
+                }
+                self.polyak._count = 1
+                return True
+            self.polyak._count += 1
+            inv = 1.0 / float(self.polyak._count)
+            for key, value in values.items():
+                current = value.detach().to(dtype=torch.float32)
+                mean = self._polyak_device_mean.get(key)
+                if mean is None or tuple(mean.shape) != tuple(current.shape):
+                    self._polyak_device_mean[key] = current.clone()
+                    continue
+                if mean.device != current.device:
+                    mean = mean.to(current.device)
+                    self._polyak_device_mean[key] = mean
+                mean.add_(current - mean, alpha=inv)
+        return True
 
     def polyak_candidate(self) -> dict[str, Any] | None:
+        if self._polyak_device_mean is not None and self.polyak.count > 0:
+            return {key: value.detach() for key, value in self._polyak_device_mean.items()}
         return self.polyak.mean_fp32()
 
     @staticmethod
@@ -545,7 +570,14 @@ class TorchV9ControllerRuntime:
                 "birth": birth_completion_state_arrays(self.birth),
                 "polyak": {
                     "scalar": self.polyak.state_arrays(self._POLYAK_PREFIX),
-                    "heavy": self.polyak.heavy_state_arrays(self._POLYAK_PREFIX),
+                    "heavy": (
+                        {
+                            self._POLYAK_PREFIX + key: value.detach().cpu().clone()
+                            for key, value in self._polyak_device_mean.items()
+                        }
+                        if self._polyak_device_mean is not None and self.polyak.count > 0
+                        else self.polyak.heavy_state_arrays(self._POLYAK_PREFIX)
+                    ),
                 },
             },
             "latches": {
@@ -651,7 +683,15 @@ class TorchV9ControllerRuntime:
             for key, value in heavy.items()
             if key.startswith(self._POLYAK_PREFIX)
         }
-        self.polyak.restore_heavy(stripped_heavy)
+        if stripped_heavy and self.polyak.count > 0:
+            import torch
+
+            self._polyak_device_mean = {
+                key: torch.as_tensor(value, dtype=torch.float32).detach().clone()
+                for key, value in stripped_heavy.items()
+            }
+        else:
+            self.polyak.restore_heavy(stripped_heavy)
 
         self.dseg_history = [(int(e), float(v)) for e, v in state.get("dseg_history", [])]
         self.annulus_history = [(int(e), float(v)) for e, v in state.get("annulus_history", [])]

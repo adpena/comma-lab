@@ -39,6 +39,14 @@ def test_cpu_compile_receipt_is_honest_eager_fallback():
     assert receipt.throughput == "UNMEASURED-pending-CUDA-dispatch"
 
 
+def test_source_requests_inductor_cuda_graph_trees_for_compiled_regions():
+    import inspect
+
+    source = inspect.getsource(adopt_compiled_training_region)
+    assert '"triton.cudagraphs": bool(policy.cuda_graphs)' in source
+    assert '"triton.cudagraph_trees": bool(policy.cuda_graphs)' in source
+
+
 def test_cuda_graph_runner_cpu_fallback_executes_every_real_step():
     calls = []
 

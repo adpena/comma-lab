@@ -75,6 +75,7 @@ from tac.cuda_v9_island_runtime import (
     seed_compose_weight_at_epoch,
 )
 from tac.cuda_v9_optimizers import TorchMuonAdamW, build_torch_muon_adamw
+from tac.cuda_v9_throughput import adopt_compiled_training_region
 from tac.witness_control.tail_cycles import TailController, TailCycleConfig
 from tac.witness_run_artifacts import (
     TORCH_EMA_PT,
@@ -432,6 +433,7 @@ def _generated_pose_pair_dispatch(
     seed_weight: float = 1.0,
     return_probe_inputs: bool = False,
     return_witness_alone: bool = False,
+    r_operator=contest_r,
 ):
     """MLX-authority generated/table dispatch: plain f0 up->warp->R-down, f1 witness R.
 
@@ -442,10 +444,7 @@ def _generated_pose_pair_dispatch(
     import torch
     import torch.nn.functional as F
 
-    pair_index_list = [int(index) for index in pair_indices]
-    pair_indices = torch.as_tensor(
-        pair_index_list, device=feats.device, dtype=torch.long
-    )
+    pair_indices = torch.as_tensor(pair_indices, device=feats.device, dtype=torch.long)
     code0 = 2 * pair_indices
     code1 = code0 + 1
     raw0, _phi0 = model(feats, code0)
@@ -455,22 +454,26 @@ def _generated_pose_pair_dispatch(
         raw1, phi1, witness_margin, lane_rgb = model.lane_band_fields(
             feats, code1, lane_cls=int(lane_band["lane_cls"])
         )
-        composed = []
-        for offset, pair_index in enumerate(pair_index_list):
-            prior = lane_band["priors"][pair_index]
-            coverage = torch.as_tensor(
-                prior.coverage, device=raw1.device, dtype=raw1.dtype
-            ).reshape(-1)
-            uncertainty = (
-                (float(lane_band["tau"]) - witness_margin[offset])
-                / max(float(lane_band["eps"]), 1e-6)
-                + 0.5
-            ).clamp(0.0, 1.0).detach()
-            alpha = (
-                coverage * float(lane_band["weight"]) * uncertainty
-            )[..., None]
-            composed.append(raw1[offset] * (1.0 - alpha) + lane_rgb[offset] * alpha)
-        raw1 = torch.stack(composed, dim=0)
+        if "coverage" in lane_band:
+            coverage = lane_band["coverage"].index_select(0, pair_indices).to(raw1.dtype)
+        else:
+            coverage = torch.stack(
+                [
+                    torch.as_tensor(
+                        lane_band["priors"][int(index)].coverage,
+                        device=raw1.device,
+                        dtype=raw1.dtype,
+                    ).reshape(-1)
+                    for index in pair_indices.detach().cpu().tolist()
+                ]
+            )
+        uncertainty = (
+            (float(lane_band["tau"]) - witness_margin)
+            / max(float(lane_band["eps"]), 1e-6)
+            + 0.5
+        ).clamp(0.0, 1.0).detach()
+        alpha = (coverage * float(lane_band["weight"]) * uncertainty)[..., None]
+        raw1 = raw1 * (1.0 - alpha) + lane_rgb * alpha
     n = pair_indices.numel()
     raw0 = raw0.reshape(n, cfg.render_h, cfg.render_w, 3)
     raw1 = raw1.reshape(n, cfg.render_h, cfg.render_w, 3)
@@ -491,12 +494,12 @@ def _generated_pose_pair_dispatch(
         mode="bilinear",
         align_corners=False,
     ).permute(0, 2, 3, 1).contiguous()
-    scored1 = contest_r(raw1, output_hw=(cfg.render_h, cfg.render_w))
+    scored1 = r_operator(raw1, output_hw=(cfg.render_h, cfg.render_w))
     frames = torch.stack((scored0, scored1), dim=1)
     phi = phi1.reshape(n, cfg.render_h, cfg.render_w, cfg.n_classes)
     witness_alone = None
     if return_witness_alone:
-        witness_alone1 = contest_r(
+        witness_alone1 = r_operator(
             witness_alone_raw1, output_hw=(cfg.render_h, cfg.render_w)
         )
         witness_alone = torch.stack((scored0, witness_alone1), dim=1)
@@ -667,7 +670,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps({"stage": "cuda_v9_port_coverage", **coverage}), flush=True)
 
     compile_probe_result: dict[str, Any] | None = None
-    if args.compile_probe:
+    if args.compile_probe or device.type == "cuda":
         f = torch.as_tensor(feats_np[:64], device=device)
         ci = torch.tensor([0], device=device)
         compile_probe_result = compile_identity_probe(
@@ -741,6 +744,9 @@ def main(argv: list[str] | None = None) -> int:
             f"GT camera geometry {native_hw} differs from Torch receiver {(cfg.camera_h, cfg.camera_w)}"
         )
     feats = torch.as_tensor(feats_np, device=device)
+    lstars_device = torch.as_tensor(lstars, device=device, dtype=torch.long)
+    margins_device = torch.as_tensor(margins, device=device, dtype=torch.float32)
+    gt_poses_device = torch.as_tensor(gt_poses, device=device, dtype=torch.float32)
     pose_carrier, pose_carrier_row = _attach_generated_pose_carrier(
         model, flags, gt_poses, native_hw, device
     )
@@ -843,6 +849,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         lane_band = {
             "priors": lane_priors,
+            "coverage": torch.as_tensor(
+                np.stack([lane_priors[index].coverage.reshape(-1) for index in range(args.num_pairs)]),
+                device=device,
+            ),
             "lane_cls": int(island_detection.lane_cls),
             "tau": float(flags.get("--lane-band-tau", 0.85)),
             "eps": float(flags.get("--lane-band-eps", 0.35)),
@@ -947,6 +957,29 @@ def main(argv: list[str] | None = None) -> int:
             )
             for pair_index in range(args.num_pairs)
         ]
+    gt_f1_render_device = None
+    if float(flags.get("--seg-chroma-boundary-weight", 0.0)) > 0.0:
+        chroma_storage_dtype = (
+            torch.bfloat16
+            if device.type == "cuda" and execution_policy.amp_dtype == "bfloat16"
+            else torch.float16 if device.type == "cuda" else torch.float32
+        )
+        resized_gt_chunks = []
+        for chunk_start in range(0, args.num_pairs, int(flags["--accum-pairs"])):
+            source = torch.from_numpy(
+                np.asarray(
+                    gt_f1[chunk_start : chunk_start + int(flags["--accum-pairs"])],
+                    np.float32,
+                )
+            ).permute(0, 3, 1, 2)
+            resized = torch.nn.functional.interpolate(
+                source,
+                size=(cfg.render_h, cfg.render_w),
+                mode="bilinear",
+                align_corners=False,
+            ).permute(0, 2, 3, 1)
+            resized_gt_chunks.append(resized.to(device=device, dtype=chroma_storage_dtype))
+        gt_f1_render_device = torch.cat(resized_gt_chunks, dim=0)
     seg, pose = _load_scorers(device)
     ema = copy.deepcopy(model).eval()
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(flags["--lr"]),
@@ -1026,6 +1059,61 @@ def main(argv: list[str] | None = None) -> int:
     if controller_state:
         controller.load_state_dict(controller_state)
     controller_state = controller.state_dict()
+    compiled_r_operator = contest_r
+    loss_ops = {
+        "pose": pose_objective_torch,
+        "eikonal_length": eikonal_and_length,
+        "realized_margin": realized_signed_margin,
+        "island_birth": island_birth_from_signed_torch,
+        "island_birth_perclass": island_birth_perclass_from_signed_torch,
+        "persistence": persistence_topology_loss_torch,
+        "area": area_constraint_torch,
+        "weight_entropy": weight_entropy_rate_term_torch,
+        "chroma": chroma_boundary_loss,
+    }
+    compile_receipts: dict[str, Any] = {}
+    if device.type == "cuda":
+        if compile_probe_result is None:
+            raise RuntimeError("CUDA training requires the functional compile adoption probe")
+        model._fields, model_compile_receipt = adopt_compiled_training_region(
+            model._fields, execution_policy, compile_probe_result
+        )
+        seg.forward, seg_compile_receipt = adopt_compiled_training_region(
+            seg.forward, execution_policy, compile_probe_result
+        )
+        pose.forward, pose_compile_receipt = adopt_compiled_training_region(
+            pose.forward, execution_policy, compile_probe_result
+        )
+        compiled_r_operator, r_compile_receipt = adopt_compiled_training_region(
+            contest_r, execution_policy, compile_probe_result
+        )
+        loss_compile_receipts = {}
+        for loss_name, loss_fn in tuple(loss_ops.items()):
+            loss_ops[loss_name], loss_receipt = adopt_compiled_training_region(
+                loss_fn, execution_policy, compile_probe_result
+            )
+            loss_compile_receipts[loss_name] = loss_receipt.__dict__
+        compile_receipts = {
+            "film_hosc_inr": model_compile_receipt.__dict__,
+            "frozen_segnet": seg_compile_receipt.__dict__,
+            "frozen_posenet": pose_compile_receipt.__dict__,
+            "contest_R": r_compile_receipt.__dict__,
+            "loss_and_backward_regions": loss_compile_receipts,
+            "cuda_graphs": "Inductor CUDA Graph Trees on fixed-shape compiled regions",
+            "throughput": "UNMEASURED-pending-CUDA-dispatch",
+        }
+        amp_dtype = (
+            torch.bfloat16
+            if execution_policy.amp_dtype == "bfloat16"
+            else torch.float16
+        )
+        torch.set_autocast_dtype("cuda", amp_dtype)
+        torch.set_autocast_enabled("cuda", True)
+    scaler = (
+        torch.amp.GradScaler("cuda", enabled=bool(execution_policy.grad_scaler))
+        if device.type == "cuda"
+        else None
+    )
     out.mkdir(parents=True, exist_ok=True)
     _atomic_json({"schema": "v9_cgauge_cuda_run_manifest_v1", "dsl_argv": list(dsl_argv),
                   "config_hash": cfg_hash, "device": str(device), "seed": int(flags["--seed"]),
@@ -1043,6 +1131,7 @@ def main(argv: list[str] | None = None) -> int:
                       "excluded_from_ema_and_deploy": True,
                   },
                   "compile_policy": "auto_adopt_after_functional_argmax_cosine_probe",
+                  "compiled_training_regions": compile_receipts,
                   "fp_reorder_probe": compile_probe_result or {
                       "backend": str(device), "status": "UNMEASURED",
                   },
@@ -1067,7 +1156,7 @@ def main(argv: list[str] | None = None) -> int:
             # close surface; the filename encodes the last completed epoch.
             boundary_blob = _checkpoint_blob(
                 model, ema, optimizer, epoch - 1, cfg_hash, dsl_argv,
-                pair_cursor=pair_cursor, controller_state=controller_state,
+                pair_cursor=pair_cursor, controller_state=controller.state_dict(),
                 protected_seed=protected_seed, seed_optimizer=seed_optimizer,
                 tail_controller=tail_controller,
             )
@@ -1227,6 +1316,9 @@ def main(argv: list[str] | None = None) -> int:
         while not pair_cursor.epoch_complete():
             chunk = pair_cursor.next_epoch_indices(int(flags["--accum-pairs"]))
             chunk_np = np.asarray(chunk, dtype=np.int64)
+            chunk_index_tensor = torch.as_tensor(chunk, device=device, dtype=torch.long)
+            if compile_receipts and hasattr(torch.compiler, "cudagraph_mark_step_begin"):
+                torch.compiler.cudagraph_mark_step_begin()
             # MAX-throughput steady state: exactly one batched witness/carrier
             # dispatch and one batch through each frozen scorer per accum chunk.
             dispatch = _generated_pose_pair_dispatch(
@@ -1239,6 +1331,7 @@ def main(argv: list[str] | None = None) -> int:
                 protected_seed=protected_seed,
                 seed_weight=seed_weight,
                 return_witness_alone=witness_alone_island,
+                r_operator=compiled_r_operator,
             )
             if witness_alone_island:
                 frames, phi, witness_alone_frames = dispatch
@@ -1255,7 +1348,7 @@ def main(argv: list[str] | None = None) -> int:
                 logits, formation_logits = scorer_logits.split(len(chunk), dim=0)
             else:
                 logits = formation_logits = scorer_logits
-            target = torch.as_tensor(lstars[chunk_np], device=device).long()
+            target = lstars_device.index_select(0, chunk_index_tensor)
             offsets = effective_logit_offsets.to(dtype=logits.dtype)
             adjusted_logits = logits + offsets[None, :, None, None]
             tau = max(0.31, 0.31 ** (epoch / max(args.epochs, 1)))
@@ -1263,20 +1356,16 @@ def main(argv: list[str] | None = None) -> int:
                 tau * torch.logsumexp(adjusted_logits / tau, dim=1)
                 - adjusted_logits.gather(1, target[:, None]).squeeze(1)
             )
-            gt_margin = torch.as_tensor(
-                margins[chunk_np], device=device, dtype=seg_per_pixel.dtype
-            )
+            gt_margin = margins_device.index_select(0, chunk_index_tensor).to(seg_per_pixel.dtype)
             controller.observe_scorer_chunk(
                 formation_logits.argmax(dim=1), target, gt_margin
             )
             seg_weight = 1.0 + 4.0 * torch.exp(-gt_margin.clamp_min(0.0))
             seg_loss = (seg_per_pixel * seg_weight).mean()
             pose6 = _pose6(pose, frames)
-            pose_target = torch.as_tensor(
-                gt_poses[chunk_np], device=device, dtype=pose6.dtype
-            )
-            pose_loss = pose_objective_torch(pose6, pose_target)
-            eik, length = eikonal_and_length(phi)
+            pose_target = gt_poses_device.index_select(0, chunk_index_tensor).to(pose6.dtype)
+            pose_loss = loss_ops["pose"](pose6, pose_target)
+            eik, length = loss_ops["eikonal_length"](phi)
             seg_contrib = float(flags["--w-seg"]) * seg_loss
             pose_weight = (
                 float(flags["--w-pose"]) if controller_step.pose_finish_on else 0.0
@@ -1285,13 +1374,12 @@ def main(argv: list[str] | None = None) -> int:
             eik_contrib = float(flags["--eikonal-weight"]) * eik
             length_contrib = float(flags["--length-weight"]) * length
             raw_logits_nhwc = formation_logits.permute(0, 2, 3, 1).contiguous()
-            signed = realized_signed_margin(raw_logits_nhwc, target)
-            chunk_index_tensor = torch.as_tensor(chunk, device=device, dtype=torch.long)
+            signed = loss_ops["realized_margin"](raw_logits_nhwc, target)
             island_weight = island_targets.weight.index_select(0, chunk_index_tensor).to(signed.dtype)
             if birth_active:
                 lane_mask = island_targets.lane_mask.index_select(0, chunk_index_tensor)
                 movable_mask = island_targets.movable_mask.index_select(0, chunk_index_tensor)
-                amplify_loss = island_birth_perclass_from_signed_torch(
+                amplify_loss = loss_ops["island_birth_perclass"](
                     signed,
                     island_weight,
                     lane_mask,
@@ -1302,7 +1390,7 @@ def main(argv: list[str] | None = None) -> int:
                     form=str(flags.get("--amplify-form", "hinge")),
                 )
             else:
-                amplify_loss = island_birth_from_signed_torch(
+                amplify_loss = loss_ops["island_birth"](
                     signed,
                     island_weight,
                     float(flags.get("--amplify-margin-target", 1.0)),
@@ -1314,7 +1402,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             persistence = (
                 float(flags.get("--persistence-loss-weight", 0.0)) * persist_scale
-                * persistence_topology_loss_torch(
+                * loss_ops["persistence"](
                     raw_logits_nhwc,
                     target,
                     persist_classes,
@@ -1329,8 +1417,8 @@ def main(argv: list[str] | None = None) -> int:
                     ),
                 )
             )
-            area = area_constraint_torch(raw_logits_nhwc, target, area_lambdas)
-            _entropy_bits, entropy_rate = weight_entropy_rate_term_torch(
+            area = loss_ops["area"](raw_logits_nhwc, target, area_lambdas)
+            _entropy_bits, entropy_rate = loss_ops["weight_entropy"](
                 model, sigma=float(flags.get("--weight-entropy-penalty-sigma", 0.2))
             )
             weight_entropy = (
@@ -1379,17 +1467,12 @@ def main(argv: list[str] | None = None) -> int:
                 temporal_screw = temporal_weight * (temporal_num / temporal_den).mean()
             chroma = torch.zeros((), device=device)
             if controller_step.chroma_on:
-                gt = torch.as_tensor(
-                    gt_f1[chunk_np], device=device, dtype=frames.dtype
-                ).permute(0, 3, 1, 2)
-                gt = torch.nn.functional.interpolate(
-                    gt, size=(cfg.render_h, cfg.render_w), mode="bilinear", align_corners=False
-                ).permute(0, 2, 3, 1)
-                ann = torch.as_tensor(
-                    margins[chunk_np] < float(flags["--seg-chroma-boundary-margin-band"]),
-                    device=device,
+                assert gt_f1_render_device is not None
+                gt = gt_f1_render_device.index_select(0, chunk_index_tensor).to(frames.dtype)
+                ann = margins_device.index_select(0, chunk_index_tensor) < float(
+                    flags["--seg-chroma-boundary-margin-band"]
                 )
-                chroma = chroma_boundary_loss(frames[:, 1], gt, ann)
+                chroma = loss_ops["chroma"](frames[:, 1], gt, ann)
             chroma_contrib = float(flags["--seg-chroma-boundary-weight"]) * chroma
             total = (
                 seg_contrib + pose_contrib + eik_contrib + length_contrib
@@ -1403,7 +1486,13 @@ def main(argv: list[str] | None = None) -> int:
             weights_stepped = bool(torch.isfinite(total.detach()))
             group_norms = {}
             if weights_stepped:
-                total.backward()
+                if scaler is not None and scaler.is_enabled():
+                    scaler.scale(total).backward()
+                    scaler.unscale_(optimizer)
+                    if seed_optimizer is not None:
+                        scaler.unscale_(seed_optimizer)
+                else:
+                    total.backward()
                 if protected_seed is not None:
                     protected_seed.contain_grad_()
                     if (
@@ -1418,9 +1507,15 @@ def main(argv: list[str] | None = None) -> int:
                 except RuntimeError:
                     weights_stepped = False
             if weights_stepped:
-                optimizer.step()
-                if seed_optimizer is not None:
-                    seed_optimizer.step()
+                if scaler is not None and scaler.is_enabled():
+                    scaler.step(optimizer)
+                    if seed_optimizer is not None:
+                        scaler.step(seed_optimizer)
+                    scaler.update()
+                else:
+                    optimizer.step()
+                    if seed_optimizer is not None:
+                        seed_optimizer.step()
                 _ema_update(ema, model, ema_decay)
                 ep_acc += 1
                 pair_cursor.record_accepted(1)
@@ -1428,41 +1523,45 @@ def main(argv: list[str] | None = None) -> int:
                 optimizer.zero_grad(set_to_none=True)
                 if seed_optimizer is not None:
                     seed_optimizer.zero_grad(set_to_none=True)
-            finite_norms = [v for v in group_norms.values() if v is not None]
-            gnorm = max((float(v) for v in finite_norms), default=0.0)
-            terms = {
-                "seg": float(seg_contrib.detach()),
-                "pose": float(pose_contrib.detach()),
-                "eikonal": float(eik_contrib.detach()),
-                "length": float(length_contrib.detach()),
-                "chroma_boundary": float(chroma_contrib.detach()),
-                "island_amplify": float(amplify.detach()),
-                "area_constraint": float(area.detach()),
-                "persistence": float(persistence.detach()),
-                "weight_entropy": float(weight_entropy.detach()),
-                "phase_advect": float(phase_advect.detach()),
-                "temporal_screw": float(temporal_screw.detach()),
-            }
-            telemetry = loss_terms_row(
-                epoch=epoch, accum_batch=chunk_index, terms=terms,
-                total=float(total.detach()), gnorm=round(gnorm, 4),
-                accepted_frac=ep_acc / ep_tot, weights_stepped=weights_stepped,
-                hosc_beta=round(float(model.hosc_beta), 4),
-                softmax_temp=round(float(model.softmax_temp), 4), backend="torch_cuda",
-                curriculum_stage=stage, lr=optimizer.param_groups[0]["lr"],
-                pairs=chunk, pair_count=len(chunk), vectorized_chunk=True,
-                authority="[contest-CUDA training-advisory]", promotion_eligible=False,
-                wall_clock_s=time.time() - t0,
-            )
-            telemetry["controller"] = {
-                "muon_on": controller_step.muon_on,
-                "lane_band_on": controller_step.lane_band_on,
-                "chroma_on": controller_step.chroma_on,
-                "pose_finish_on": controller_step.pose_finish_on,
-                "pose_banked_r1": controller_step.pose_banked_r1,
-                "effective_pose_weight": pose_weight,
-            }
-            _emit_trajectory_row(out, telemetry)
+            # One telemetry synchronization per exhaustive epoch, never per
+            # accum-pair chunk. Controller counters remain on device too.
+            if pair_cursor.epoch_complete():
+                finite_norms = [v for v in group_norms.values() if v is not None]
+                gnorm = max((float(v) for v in finite_norms), default=0.0)
+                terms = {
+                    "seg": float(seg_contrib.detach()),
+                    "pose": float(pose_contrib.detach()),
+                    "eikonal": float(eik_contrib.detach()),
+                    "length": float(length_contrib.detach()),
+                    "chroma_boundary": float(chroma_contrib.detach()),
+                    "island_amplify": float(amplify.detach()),
+                    "area_constraint": float(area.detach()),
+                    "persistence": float(persistence.detach()),
+                    "weight_entropy": float(weight_entropy.detach()),
+                    "phase_advect": float(phase_advect.detach()),
+                    "temporal_screw": float(temporal_screw.detach()),
+                }
+                telemetry = loss_terms_row(
+                    epoch=epoch, accum_batch=chunk_index, terms=terms,
+                    total=float(total.detach()), gnorm=round(gnorm, 4),
+                    accepted_frac=ep_acc / ep_tot, weights_stepped=weights_stepped,
+                    hosc_beta=round(float(model.hosc_beta), 4),
+                    softmax_temp=round(float(model.softmax_temp), 4), backend="torch_cuda",
+                    curriculum_stage=stage, lr=optimizer.param_groups[0]["lr"],
+                    pairs=chunk, pair_count=len(chunk), vectorized_chunk=True,
+                    telemetry_scope="epoch_final_chunk",
+                    authority="[contest-CUDA training-advisory]", promotion_eligible=False,
+                    wall_clock_s=time.time() - t0,
+                )
+                telemetry["controller"] = {
+                    "muon_on": controller_step.muon_on,
+                    "lane_band_on": controller_step.lane_band_on,
+                    "chroma_on": controller_step.chroma_on,
+                    "pose_finish_on": controller_step.pose_finish_on,
+                    "pose_banked_r1": controller_step.pose_banked_r1,
+                    "effective_pose_weight": pose_weight,
+                }
+                _emit_trajectory_row(out, telemetry)
             chunk_index += 1
 
         controller_epoch = controller.end_epoch(epoch)
@@ -1490,6 +1589,7 @@ def main(argv: list[str] | None = None) -> int:
                     protected_seed=protected_seed,
                     seed_weight=seed_weight,
                     return_probe_inputs=True,
+                    r_operator=compiled_r_operator,
                 )
 
             def pose_from_native_frames(native_frame0, scored_frame1):
@@ -1543,7 +1643,6 @@ def main(argv: list[str] | None = None) -> int:
                     "promotion_eligible": False,
                 },
             )
-        controller_state = controller.state_dict()
         _emit_trajectory_row(
             out,
             {
@@ -1561,6 +1660,7 @@ def main(argv: list[str] | None = None) -> int:
         blob = None
         last_completed_epoch = epoch
         if epoch % ckpt_every == 0 or epoch == args.epochs or tail_stop_after_epoch:
+            controller_state = controller.state_dict()
             blob = _checkpoint_blob(
                 model, ema, optimizer, epoch, cfg_hash, dsl_argv,
                 pair_cursor=pair_cursor, controller_state=controller_state,
@@ -1578,6 +1678,7 @@ def main(argv: list[str] | None = None) -> int:
                 _atomic_torch_save(latest_polyak, out / _TORCH_POLYAK_PT)
         if tail_stop_after_epoch:
             break
+    controller_state = controller.state_dict()
     final_blob = _checkpoint_blob(
         model, ema, optimizer, last_completed_epoch, cfg_hash, dsl_argv,
         pair_cursor=pair_cursor, controller_state=controller_state,

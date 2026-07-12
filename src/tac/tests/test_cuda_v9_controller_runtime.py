@@ -318,6 +318,8 @@ def test_polyak_start_candidate_and_controller_resume(typed_flags) -> None:
     with torch.no_grad():
         model.weight.fill_(3.0)
     assert ctrl.observe_polyak(3, model)
+    assert ctrl._polyak_device_mean is not None
+    assert ctrl._polyak_device_mean["weight"].dtype == torch.float32
     np.testing.assert_allclose(
         ctrl.polyak_candidate()["weight"], np.array([[2.0, 2.0]], np.float32)
     )

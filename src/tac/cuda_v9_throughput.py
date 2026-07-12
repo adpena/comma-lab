@@ -59,6 +59,10 @@ def adopt_compiled_training_region(
         mode=str(policy.compile_mode),
         fullgraph=False,
         dynamic=False,
+        options={
+            "triton.cudagraphs": bool(policy.cuda_graphs),
+            "triton.cudagraph_trees": bool(policy.cuda_graphs),
+        },
     )
     return compiled, CompiledRegionReceipt(
         adopted=True,
