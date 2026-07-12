@@ -15887,3 +15887,12 @@ The MODAL-HOLD exact row from FEED-pr128 LANDED. Modal CPU (Linux x86_64) contes
 **NON-SUBMISSION (binding, operator 2026-07-12):** contest PRs are reserved exclusively for our own V9·CGauge witness (v9 or iterated). This is a BORROWED-substrate defensive bank (NO-FAKE #7: PR128 rhnerv_latent_polish click *values* from a12dongithub/MIT, applied to OUR PR110 base; PR110 substrate ours, clicks borrowed — search accelerator, not innovation). NO PR was or will be opened for this archive. The 0.18804440 defensive frontier buys margin while the witness matures.
 
 Triality: DSL = N/A-with-reason (exact eval of a frozen borrowed archive, not a trainer lever); DAG = this FEED; eqs = existing `pr128_latent_click_structure_isotropic_geometric_v1` anchor (structure). Memo `.omx/research/modal_import_candidate_exact_eval_20260712.md`.
+
+### FEED-modaleval-equations-leg (2026-07-12 addendum)
+Equations leg for the Modal exact-row (df6b2f42a0): the finding refines
+`pr110_lineage_click_polish_byte_neutral_slack_v1` with a SECOND EmpiricalAnchor
+`click_polish_import_full_extraction_contest_cpu_exact_20260712` — the fully-realized version of this
+equation's slack (PR128's 2,656-click extraction on our byte-identical PR110 base) measured on the REAL
+contest-CPU axis: S 0.1880443980 (−0.00304 vs incumbent), advisory→exact gap 2.6e-5 (no drift), it
+resolves anchor-1's reactivation criterion. NON-SUBMISSION defensive bank (submitted_pr=null; PRs
+reserved for cgauge). Registered + 2-anchor equation verified building. MEMORY.md 🏦 bank line added.

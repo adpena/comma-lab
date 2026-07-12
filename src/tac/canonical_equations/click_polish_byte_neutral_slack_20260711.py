@@ -43,6 +43,13 @@ _ADVISORY = "[macOS-CPU advisory]"
 _MEMO = ".omx/research/click_polish_399_20260711T2200Z.md"
 _CANDIDATE_SHA = "0872086672e7a0ff98e9e41e77e4c84d415b756eac3ba24db5ffec0d83e52969"
 
+# The EXACT-ROW confirmation (2026-07-12): the fully-realized version of this same slack — PR128's
+# full 2,656-click extraction spliced verbatim onto our byte-identical PR110 base — measured on the
+# REAL contest-CPU axis via Modal. This is the reactivation criterion of anchor_round1, resolved.
+_EXACT_MEMO = ".omx/research/modal_import_candidate_exact_eval_20260712.md"
+_IMPORT_SHA = "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5"
+_CONTEST_CPU = "[contest-CPU]"
+
 
 def build_pr110_lineage_click_polish_byte_neutral_slack_v1() -> CanonicalEquation:
     """Build the byte-neutral click-slack fact with its round-1 MEASURED anchor."""
@@ -93,6 +100,54 @@ def build_pr110_lineage_click_polish_byte_neutral_slack_v1() -> CanonicalEquatio
         ),
     )
 
+    anchor_import_exact = EmpiricalAnchor(
+        anchor_id="click_polish_import_full_extraction_contest_cpu_exact_20260712",
+        measurement_utc="2026-07-12T06:35:14Z",
+        inputs={
+            "mechanism": (
+                "PR128's FULL 2,656-click extraction (a12dongithub rhnerv_latent_polish, MIT) spliced "
+                "VERBATIM onto our PR110 base — base-equality TRUE (0/16,800 latent cells differ; "
+                "PR112 = lossless recode of our PR110, code-verified). Borrowed clicks, OUR substrate."
+            ),
+            "axis": "Modal contest-CPU (linux_x86_64), upstream/evaluate.py --device cpu, n=600",
+            "call_id": "fc-01KXAGAT8JQA4BNH64FJ1SDC5N",
+            "archive_sha256": _IMPORT_SHA,
+        },
+        predicted_output={
+            "advisory": "macOS-CPU advisory 0.18806993 (this equation's slack, fully realized)",
+            "hypothesis": "advisory transfers to real contest-CPU (CPU-selected clicks, no axis drift)",
+        },
+        empirical_output={
+            "contest_cpu_S_n600": 0.1880443980,
+            "d_seg": 0.0005334,
+            "d_pose": 2.937e-05,
+            "archive_bytes": 176564,
+            "delta_vs_incumbent": -0.0030384262,
+            "incumbent_contest_cpu": 0.19108282419209976,
+            "advisory_to_exact_gap": "2.6e-5 (exact MARGINALLY LOWER; no CPU-axis drift — click structure held)",
+            "pointer_moved": (
+                "our_local_frontier_contest_cpu -> 0.1880443980; submitted_pr_number = null; "
+                "NON-SUBMISSION borrowed-substrate defensive bank per operator 2026-07-12 "
+                "(PRs reserved for the cgauge witness, never the borrowed import)"
+            ),
+            "modal_spend_usd": "~0.10 (CPU-only single axis)",
+        },
+        residual=2.6e-05,  # advisory-to-exact gap on this lineage's CPU axis
+        source_artifact=_EXACT_MEMO,
+        measurement_method="modal_contest_cpu_upstream_evaluate_recomputed_from_components_custody_verified",
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=_EXACT_MEMO,
+            reactivation_criteria=(
+                "rounds 2+ click search ON the import base (>0 further accepted clicks) or a CUDA-axis "
+                "cross-check would refresh this anchor; the SUBMITTABLE frontier is the cgauge witness, "
+                "measured separately (this bank never becomes a PR)"
+            ),
+            measurement_axis=_CONTEST_CPU,
+            hardware_substrate="linux_x86_64_cpu",
+        ),
+    )
+
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -124,8 +179,8 @@ def build_pr110_lineage_click_polish_byte_neutral_slack_v1() -> CanonicalEquatio
         },
         units_in={"clicks": "latent_table_plus_minus_1_steps", "accept_gate": "full_n600_advisory_S"},
         units_out={"delta_S": "advisory_score_units", "delta_bytes": "archive_bytes (0 by construction)"},
-        empirical_anchors=(anchor_round1,),
-        predicted_vs_empirical_residual={"round1_measured": 0.0},
+        empirical_anchors=(anchor_round1, anchor_import_exact),
+        predicted_vs_empirical_residual={"round1_measured": 0.0, "import_exact_contest_cpu_gap": 2.6e-05},
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
