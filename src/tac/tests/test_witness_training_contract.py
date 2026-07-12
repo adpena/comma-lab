@@ -30,9 +30,9 @@ def test_curriculum_stage_uses_typed_fail_safe_caps():
 
 def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins():
     receipt = cuda_v9_port_receipt()
-    assert receipt["status"] == "BLOCKED_NOT_1_TO_1"
+    assert receipt["status"] == "COMPLETE_1_TO_1"
     assert receipt["blockers"] == list(CUDA_V9_PORT_BLOCKERS)
-    assert len(receipt["blockers"]) == 2
+    assert len(receipt["blockers"]) == 0
     closed = (
         "--pose-carrier",
         "--structured-init",
@@ -44,6 +44,8 @@ def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins()
         "--polyak-finisher-arm",
         "--ladder-island-homotopy",
         "--seed-islands",
+        "--muon-start-event",
+        "--tail-cycles-max",
     )
     assert all(not any(blocker.startswith(flag) for blocker in receipt["blockers"]) for flag in closed)
     assert {
@@ -56,4 +58,6 @@ def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins()
         "polyak_finisher_resumable_additional_candidate_export",
         "ladder_eased_targets_with_scorer_refreshed_perclass_lambda",
         "protected_island_seed_and_classwise_birth_completion_ramp",
+        "event_driven_adamw_to_muon_transition_with_rewarmup_and_resume",
+        "governed_resumable_tail_cycles_with_powerplay_stop",
     }.issubset(receipt["score_bearing_primitives_ported"])

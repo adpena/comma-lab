@@ -21,10 +21,7 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
 
 # NO-FAKE execution wall: each entry is an emitted, score-affecting typed-DSL
 # surface whose stateful MLX semantics do not yet have a 1:1 Torch twin.
-CUDA_V9_PORT_BLOCKERS: tuple[str, ...] = (
-    "--muon-start-event AdamW-to-Muon transition with rewarmup and state persistence",
-    "--tail-cycles-max governed tail-cycle stop controller",
-)
+CUDA_V9_PORT_BLOCKERS: tuple[str, ...] = ()
 
 
 def cuda_v9_port_receipt() -> dict[str, object]:
@@ -51,6 +48,8 @@ def cuda_v9_port_receipt() -> dict[str, object]:
             "polyak_finisher_resumable_additional_candidate_export",
             "ladder_eased_targets_with_scorer_refreshed_perclass_lambda",
             "protected_island_seed_and_classwise_birth_completion_ramp",
+            "event_driven_adamw_to_muon_transition_with_rewarmup_and_resume",
+            "governed_resumable_tail_cycles_with_powerplay_stop",
         ],
     }
 
