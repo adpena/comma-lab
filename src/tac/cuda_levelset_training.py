@@ -85,6 +85,9 @@ def apply_torch_execution_policy(policy: TorchExecutionPolicy) -> None:
 
     if policy.device_type != "cuda":
         return
+    # Operator-authorized throughput mode: reproducibility is checkpoint/config
+    # exact, while training-loop floating-point bit identity is explicitly waived.
+    torch.use_deterministic_algorithms(False)
     torch.backends.cuda.matmul.allow_tf32 = bool(policy.tf32)
     torch.backends.cudnn.allow_tf32 = bool(policy.tf32)
     torch.backends.cudnn.benchmark = bool(policy.cudnn_benchmark)

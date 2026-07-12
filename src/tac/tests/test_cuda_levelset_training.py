@@ -11,8 +11,10 @@ from tac.cuda_levelset_training import (
     CudaGraphRecaptureGuard,
     CudaLevelSetConfig,
     DeterministicPairCursor,
+    TorchExecutionPolicy,
     TorchPoseCarrier,
     TorchLevelSetWitness,
+    apply_torch_execution_policy,
     clip_grad_groups,
     compile_identity_probe,
     forward_parity_against_numpy,
@@ -162,6 +164,22 @@ def test_cpu_policy_and_cuda_graph_guard_fallbacks_are_truthful():
         guard.mark_replayed()
     guard.mark_captured()
     guard.mark_replayed()
+
+
+def test_cuda_policy_explicitly_disables_deterministic_algorithms(monkeypatch):
+    calls = []
+    monkeypatch.setattr(torch, "use_deterministic_algorithms", calls.append)
+    policy = TorchExecutionPolicy(
+        device_type="cuda", amp_dtype="bfloat16", grad_scaler=False,
+        tf32=True, cudnn_benchmark=True, compile_mode="max-autotune",
+        cuda_graphs=True, execution_label="megakernel_candidate",
+    )
+    apply_torch_execution_policy(policy)
+    assert calls == [False]
+    assert torch.backends.cuda.matmul.allow_tf32
+    assert torch.backends.cudnn.allow_tf32
+    assert torch.backends.cudnn.benchmark
+    assert not torch.backends.cudnn.deterministic
 
 
 def test_compile_adoption_uses_functional_gate_not_gradient_identity(monkeypatch):

@@ -39,16 +39,25 @@ from tac.boundary_math.lever_b_levelset_generator import (
 )
 from tac.cuda_levelset_training import (
     CudaLevelSetConfig,
+    DeterministicPairCursor,
+    TorchPoseCarrier,
     TorchLevelSetWitness,
+    apply_torch_execution_policy,
     area_constraint_torch,
     chroma_boundary_loss,
     compile_identity_probe,
+    contest_r,
     eikonal_and_length,
     forward_parity_against_numpy,
     homography_grid_from_xi,
     island_birth_from_signed_torch,
     persistence_topology_loss_torch,
+    clip_grad_groups,
     realized_signed_margin,
+    round_ste,
+    select_torch_execution_policy,
+    parameter_groups,
+    structured_sdf_prefit,
     warp_field_persist_torch,
     weight_entropy_rate_term_torch,
     witness_tie_coordinate_torch,
@@ -184,6 +193,98 @@ def _pose6(pose_net, frames_nhwc):
     return pose[:, :half]
 
 
+def _generated_pose_pair_dispatch(model, feats, pair_indices, pose_carrier, cfg):
+    """MLX-authority generated/table dispatch: plain f0 up->warp->R-down, f1 witness R.
+
+    ``pair_indices`` indexes pairs, not frame codes. The attached carrier is the only
+    consumer of its trainable dxi. Frame1 never reads dxi, preserving the SegNet-free
+    frame0 / scorer-visible frame1 separation.
+    """
+    import torch
+    import torch.nn.functional as F
+
+    pair_indices = torch.as_tensor(pair_indices, device=feats.device, dtype=torch.long)
+    code0 = 2 * pair_indices
+    code1 = code0 + 1
+    raw0, _phi0 = model(feats, code0)
+    raw1, phi1 = model(feats, code1)
+    n = pair_indices.numel()
+    raw0 = raw0.reshape(n, cfg.render_h, cfg.render_w, 3)
+    raw1 = raw1.reshape(n, cfg.render_h, cfg.render_w, 3)
+    native0 = F.interpolate(
+        raw0.permute(0, 3, 1, 2),
+        size=(cfg.camera_h, cfg.camera_w),
+        mode="bicubic",
+        align_corners=False,
+    ).permute(0, 2, 3, 1)
+    native0 = torch.clamp(round_ste(native0), 0.0, 255.0)
+    warped0 = pose_carrier(native0, pair_indices)
+    scored0 = F.interpolate(
+        warped0.permute(0, 3, 1, 2),
+        size=(cfg.render_h, cfg.render_w),
+        mode="bilinear",
+        align_corners=False,
+    ).permute(0, 2, 3, 1).contiguous()
+    scored1 = contest_r(raw1, output_hw=(cfg.render_h, cfg.render_w))
+    frames = torch.stack((scored0, scored1), dim=1)
+    return frames, phi1.reshape(n, cfg.render_h, cfg.render_w, cfg.n_classes)
+
+
+def _accumulated_pair_step(
+    model,
+    optimizer,
+    pair_indices,
+    loss_builder,
+    *,
+    grad_clip: float,
+):
+    """Mean a complete pair chunk, then atomically accept or reject one update.
+
+    This mirrors the MLX authority: every pair in the chunk is evaluated exactly
+    once, the mean loss is formed before backward, and the finite/spike guard is
+    applied to the chunk as a whole.  Telemetry therefore counts accepted chunks,
+    not accepted members within a partially retained chunk.
+    """
+    import torch
+
+    optimizer.zero_grad(set_to_none=True)
+    losses = []
+    for pair_index in pair_indices:
+        loss = loss_builder(int(pair_index))
+        if loss is None:
+            optimizer.zero_grad(set_to_none=True)
+            return {
+                "weights_stepped": False, "accepted": 0, "attempted": 1,
+                "accepted_frac": 0.0, "loss_mean": None, "group_norms": {},
+                "pair_count": len(pair_indices),
+            }
+        losses.append(loss)
+    if not losses:
+        optimizer.zero_grad(set_to_none=True)
+        return {
+            "weights_stepped": False, "accepted": 0, "attempted": 0,
+            "accepted_frac": 0.0, "loss_mean": None, "group_norms": {},
+            "pair_count": 0,
+        }
+    differentiable_mean = torch.stack(losses).mean()
+    loss_mean = differentiable_mean.detach()
+    if not bool(torch.isfinite(loss_mean)):
+        optimizer.zero_grad(set_to_none=True)
+        return {
+            "weights_stepped": False, "accepted": 0, "attempted": 1,
+            "accepted_frac": 0.0, "loss_mean": loss_mean, "group_norms": {},
+            "pair_count": len(losses),
+        }
+    differentiable_mean.backward()
+    group_norms = clip_grad_groups(parameter_groups(model), float(grad_clip))
+    optimizer.step()
+    return {
+        "weights_stepped": True, "accepted": 1, "attempted": 1,
+        "accepted_frac": 1.0, "loss_mean": loss_mean, "group_norms": group_norms,
+        "pair_count": len(losses),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--gt-cache", default="experiments/results/mlx_fleet_gt_cache/gt_n600.npz")
@@ -217,7 +318,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.device == "cuda" and not torch.cuda.is_available() and not args.verify_only:
         raise RuntimeError("CUDA requested but unavailable (fail closed; use --verify-only for $0 local proof)")
     device = torch.device("cpu" if args.verify_only else args.device)
-    torch.use_deterministic_algorithms(True)
+    execution_policy = select_torch_execution_policy(device)
+    if device.type == "cuda":
+        apply_torch_execution_policy(execution_policy)
+    else:
+        torch.use_deterministic_algorithms(True)
     torch.manual_seed(int(flags["--seed"]))
     np.random.seed(int(flags["--seed"]))
     random.seed(int(flags["--seed"]))
@@ -242,7 +347,7 @@ def main(argv: list[str] | None = None) -> int:
                           **compile_probe_result}), flush=True)
         if not compile_probe_result.get("adoptable", False):
             print(json.dumps({"stage": "cuda_compile_policy", "compiled_training": False,
-                              "reason": "backend-local bit identity gate did not pass"}), flush=True)
+                              "reason": "functional argmax/cosine parity gate did not pass"}), flush=True)
 
     if args.verify_only:
         return 0 if parity["argmax_equal"] and parity["cosine_phi"] >= 0.9997 else 2
@@ -453,7 +558,8 @@ def main(argv: list[str] | None = None) -> int:
     _atomic_json({"schema": "v9_cgauge_cuda_run_manifest_v1", "dsl_argv": list(dsl_argv),
                   "config_hash": cfg_hash, "device": str(device), "seed": int(flags["--seed"]),
                   "authority": "[contest-CUDA training-advisory] NON-PROMOTABLE",
-                  "compile_policy": "eager_until_backend_local_bit_identity_probe_passes",
+                  "execution_policy": execution_policy.__dict__,
+                  "compile_policy": "auto_adopt_after_functional_argmax_cosine_probe",
                   "fp_reorder_probe": compile_probe_result or {
                       "backend": str(device), "status": "UNMEASURED",
                   },
