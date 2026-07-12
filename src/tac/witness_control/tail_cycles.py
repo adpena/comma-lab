@@ -58,7 +58,7 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING
 
 from tac.witness_control.powerlaw_exit import powerlaw_meat_exit
@@ -286,6 +286,46 @@ class TailController:
         # dead knobs for a live descending ladder (the default-off-orphan / dead-knob-visibility rule).
         self.is_turnpike = abs(float(tau0) - float(cfg.tau_end)) <= _TURNPIKE_EPS
         self._turnpike_note_emitted = False
+
+    def state_dict(self) -> dict:
+        """Persist the complete cycle latch so a crash never restarts a tail."""
+        return {
+            "schema": "tail_controller.v1",
+            "config": asdict(self.cfg),
+            "tau_ref": self.tau_ref,
+            "lr_ref": self.lr_ref,
+            "tau_k": self.tau_k,
+            "lr_k": self.lr_k,
+            "k": self.k,
+            "cycle_start_ep": self.cycle_start_ep,
+            "cycle_start_dseg": self._cycle_start_dseg,
+            "cycle_start_bytes": self._cycle_start_bytes,
+            "stopped": self.stopped,
+            "is_turnpike": self.is_turnpike,
+            "turnpike_note_emitted": self._turnpike_note_emitted,
+        }
+
+    def load_state_dict(self, state: dict) -> None:
+        """Restore only when the persisted scientific configuration is identical."""
+        if state.get("schema") != "tail_controller.v1":
+            raise ValueError("unsupported TailController checkpoint schema")
+        if dict(state.get("config", {})) != asdict(self.cfg):
+            raise ValueError("TailController checkpoint differs from typed configuration")
+        if float(state.get("tau_ref")) != self.tau_ref or float(state.get("lr_ref")) != self.lr_ref:
+            raise ValueError("TailController checkpoint reference values differ")
+        self.tau_k = float(state["tau_k"])
+        self.lr_k = float(state["lr_k"])
+        self.k = int(state["k"])
+        start = state.get("cycle_start_ep")
+        self.cycle_start_ep = None if start is None else int(start)
+        dseg = state.get("cycle_start_dseg")
+        self._cycle_start_dseg = None if dseg is None else float(dseg)
+        byte_count = state.get("cycle_start_bytes")
+        self._cycle_start_bytes = None if byte_count is None else float(byte_count)
+        self.stopped = bool(state["stopped"])
+        if bool(state["is_turnpike"]) != self.is_turnpike:
+            raise ValueError("TailController checkpoint turnpike classification differs")
+        self._turnpike_note_emitted = bool(state["turnpike_note_emitted"])
 
     def _tag(self) -> str:
         return f"stageTail{self.k}"

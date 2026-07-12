@@ -180,6 +180,33 @@ def test_determinism_same_inputs_same_decisions():
     assert a == b
 
 
+def test_controller_checkpoint_resume_preserves_cycle_and_next_decision():
+    cfg = TailCycleConfig(k_max=4, cycle_floor_epochs=40, dwell_min=15,
+                          tau_halving=0.5, tau_end=0.0,
+                          stop_marginal_s=-1.0, min_points=8)
+    first = TailController(cfg, tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
+    rows = [(1000, 0.02), (1005, 0.019)]
+    first.step(1000, rows[:1])
+    state = first.state_dict()
+    resumed = TailController(cfg, tau_ref=0.8, lr_ref=1e-3, tau0=0.8)
+    resumed.load_state_dict(state)
+    assert resumed.state_dict() == state
+    resumed_step = resumed.step(1006, rows)
+    first_step = first.step(1006, rows)
+    assert resumed_step.__dict__ | {"marginal": None} == (
+        first_step.__dict__ | {"marginal": None}
+    )
+    assert math.isnan(resumed_step.marginal) and math.isnan(first_step.marginal)
+    drifted = TailController(
+        TailCycleConfig(k_max=3, cycle_floor_epochs=40, dwell_min=15,
+                        tau_halving=0.5, tau_end=0.0,
+                        stop_marginal_s=-1.0, min_points=8),
+        tau_ref=0.8, lr_ref=1e-3, tau0=0.8,
+    )
+    with pytest.raises(ValueError, match="typed configuration"):
+        drifted.load_state_dict(state)
+
+
 # ----------------------------------------------------------------------------- S1-R1 rate-aware stop
 def _run_rate(ctrl, epochs, dseg_of, bytes_of, *, seed):
     """Feed the controller a verdict trace WITH a coded-bytes trace (S1-R1). ``seed`` = (ep, dseg,
