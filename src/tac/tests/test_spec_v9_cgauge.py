@@ -50,6 +50,38 @@ def test_active_structured_and_pose_companions_are_typed_not_parser_defaults(com
         assert a[a.index(flag) + 1] == value
 
 
+def test_active_controller_sensor_companions_are_typed_not_parser_defaults(compiled) -> None:
+    _, argv = compiled
+    a = list(argv)
+    expected = {
+        "--annulus-band": "2.0",
+        "--annulus-bottom-k": "0.05",
+        "--annulus-plateau-rel-eps": "0.0001",
+        "--annulus-plateau-dwell-windows": "4",
+        "--annulus-plateau-min-epochs": "150",
+        "--curriculum-nucleus-within-flip": "0.5",
+        "--curriculum-nucleus-min-part-frac": "0.0",
+        "--jacobian-basin-k-pairs": "32",
+        "--jacobian-basin-every": "4",
+        "--jacobian-basin-sigma-floor": "0.0001",
+        "--jacobian-basin-f-basin": "1.0",
+        "--jacobian-basin-quorum-q": "0.8",
+        "--seed-anneal-epochs": "0",
+        "--seed-anneal-shape": "linear",
+        "--muon-adamw-lr": "0.0001",
+    }
+    affirmative = {
+        "--annulus-telemetry",
+        "--jacobian-basin-telemetry",
+        "--jacobian-basin-t0",
+        "--jacobian-basin-stratify-t",
+    }
+    assert affirmative.issubset(a)
+    assert "--no-tail-live-mq" in a
+    for flag, value in expected.items():
+        assert a[a.index(flag) + 1] == value
+
+
 def test_argv_parses_on_real_trainer_parser(compiled) -> None:
     from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
 
@@ -58,6 +90,11 @@ def test_argv_parses_on_real_trainer_parser(compiled) -> None:
     assert ns.seg_phase_advect_weight == pytest.approx(0.4)
     assert ns.mod_dim == 32  # SAFE anchor; derived-19 gated on #299/harvest
     assert ns.adam_beta2 == pytest.approx(0.999)
+    assert ns.annulus_telemetry is True
+    assert ns.jacobian_basin_telemetry is True
+    assert ns.jacobian_basin_k_pairs == 32
+    assert ns.jacobian_basin_every == 4
+    assert ns.tail_live_mq is False
 
 
 def test_inherits_v752_self_orient_off_trunk(compiled) -> None:

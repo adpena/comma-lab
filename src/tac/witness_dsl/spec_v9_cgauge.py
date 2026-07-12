@@ -51,6 +51,31 @@ _V9_CGAUGE_DELTA: dict[str, Any] = {
     "--pose-carrier-s-t": 0.044,
     "--pose-carrier-s-r": 0.0,
     "--pose-carrier-pitch": 0.0,
+    # State-gate sensor companions. The MLX trainer parser historically supplied
+    # these defaults, but V9 is a typed program: the compiled argv must carry the
+    # actual sensor geometry/cadence so every backend consumes one authority.
+    "--annulus-telemetry": True,
+    "--annulus-band": 2.0,
+    "--annulus-bottom-k": 0.05,
+    "--annulus-plateau-rel-eps": 1e-4,
+    "--annulus-plateau-dwell-windows": 4,
+    "--annulus-plateau-min-epochs": 150,
+    "--curriculum-nucleus-within-flip": 0.5,
+    "--curriculum-nucleus-min-part-frac": 0.0,
+    "--jacobian-basin-telemetry": True,
+    "--jacobian-basin-t0": True,
+    "--jacobian-basin-k-pairs": 32,
+    "--jacobian-basin-every": 4,
+    "--jacobian-basin-stratify-t": True,
+    "--jacobian-basin-sigma-floor": 1e-4,
+    "--jacobian-basin-f-basin": 1.0,
+    "--jacobian-basin-quorum-q": 0.8,
+    # Explicit inactive/derived companions are still configuration: omission
+    # would silently re-delegate scientific ownership to an argparse default.
+    "--seed-anneal-epochs": 0,
+    "--seed-anneal-shape": "linear",
+    "--muon-adamw-lr": 1e-4,
+    "--tail-live-mq": False,
 }
 
 _V9_CGAUGE_REMOVE: tuple[str, ...] = ()
@@ -64,6 +89,106 @@ _V9_CGAUGE_REMOVE: tuple[str, ...] = ()
 # (SPEC_v75 / SYNTHESIS_v3 — already ladder-placed at sealing).
 # ---------------------------------------------------------------------------
 V9_CGAUGE_PROVENANCE: dict[str, dict[str, str]] = {
+    "--annulus-telemetry": {
+        "value": "True", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "required measured source for the wired annulus_plateau event; explicit rather than inherited from the MLX parser.",
+    },
+    "--annulus-band": {
+        "value": "2", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "#333 GT-margin annulus used by the realized through-R boundary sensor and temporal screw.",
+    },
+    "--annulus-bottom-k": {
+        "value": "0.05", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "bottom-five-percent GT-margin companion definition retained for sensor telemetry parity.",
+    },
+    "--annulus-plateau-rel-eps": {
+        "value": "0.0001", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "event_wirings ANNULUS_PLATEAU_REL_EPS; calibrated sister of the curriculum plateau band.",
+    },
+    "--annulus-plateau-dwell-windows": {
+        "value": "4", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "event_wirings ANNULUS_PLATEAU_DWELL_WINDOWS; four verdict points must hold the plateau.",
+    },
+    "--annulus-plateau-min-epochs": {
+        "value": "150", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "event_wirings ANNULUS_PLATEAU_MIN_EPOCHS dwell anchor for a formed boundary.",
+    },
+    "--curriculum-nucleus-within-flip": {
+        "value": "0.5", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "critical-nucleus formed-partition threshold consumed by lane_nucleus and birth handoff sensors.",
+    },
+    "--curriculum-nucleus-min-part-frac": {
+        "value": "0", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "strict positive-mass critical-nucleus boundary; zero is the comparison floor, not a guessed class area.",
+    },
+    "--jacobian-basin-telemetry": {
+        "value": "True", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "pose_jacobian_basin_conditioning_v1",
+        "note": "required real sigma_min source for pose-finish conditioning; explicit in the typed program.",
+    },
+    "--jacobian-basin-t0": {
+        "value": "True", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "pose_jacobian_basin_conditioning_v1",
+        "note": "near-free render-gradient companion observer remains enabled beside the authoritative T1 probe.",
+    },
+    "--jacobian-basin-k-pairs": {
+        "value": "32", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "pose_jacobian_basin_conditioning_v1",
+        "note": "canonical deterministic motion-stratified T1 subsample size.",
+    },
+    "--jacobian-basin-every": {
+        "value": "4", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "pose_jacobian_basin_conditioning_v1",
+        "note": "canonical cadence of one T1 conditioning probe per four sensor verdicts.",
+    },
+    "--jacobian-basin-stratify-t": {
+        "value": "True", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "pose_jacobian_basin_conditioning_v1",
+        "note": "motion stratification retains the low-motion conditioning tail in the real 6x6 probe.",
+    },
+    "--jacobian-basin-sigma-floor": {
+        "value": "0.0001", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "pose_jacobian_basin_conditioning_v1",
+        "note": "canonical basin quorum floor for per-pair sigma_min.",
+    },
+    "--jacobian-basin-f-basin": {
+        "value": "1", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "pose_jacobian_basin_conditioning_v1",
+        "note": "terminal-policy conditioning fraction; the rolling sigma plateau remains the firing authority.",
+    },
+    "--jacobian-basin-quorum-q": {
+        "value": "0.8", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "pose_jacobian_basin_conditioning_v1",
+        "note": "canonical fraction of sampled pairs required above the conditioning floor.",
+    },
+    "--seed-anneal-epochs": {
+        "value": "0", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "V9 keeps the seed compose weight constant while witness-alone formation and birth-completion provide the absorption handoff.",
+    },
+    "--seed-anneal-shape": {
+        "value": "linear", "rung": "derived_at_config", "form": "LINEAR",
+        "law": "cgauge_master_action_v1",
+        "note": "explicit dormant shape companion; it becomes active only if seed-anneal-epochs is amended above zero.",
+    },
+    "--muon-adamw-lr": {
+        "value": "0.0001", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "derived fallback-group rate 0.1 times the typed base lr 0.001 during the Muon stage.",
+    },
+    "--tail-live-mq": {
+        "value": "False", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "explicitly selects the sealed tau-halving fallback; compile emits the existing parser's negative BooleanOptionalAction form.",
+    },
     "--structured-init-steps": {
         "value": "600", "rung": "measured_anchor", "form": "SCALAR",
         "law": "cgauge_master_action_v1",
