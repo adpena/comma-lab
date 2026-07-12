@@ -56,6 +56,17 @@ def test_seed_is_training_only_gt_appearance_residual():
     assert torch.count_nonzero(seed.residual.detach()[~support]) == 0
 
 
+def test_seed_resizes_native_rgb_to_scorer_grid_before_masking():
+    labels, flags = _fixture()
+    runtime = TorchIslandTargetRuntime(
+        labels, lane_cls=1, movable_cls=3, flags=flags, device="cpu"
+    )
+    gt = np.ones((2, 18, 22, 3), dtype=np.float32) * 8.0
+    seed = runtime.build_protected_seed(gt)
+    assert seed.residual.shape == (2, 9, 11, 3)
+    assert torch.all(seed.residual.detach()[seed.mask] == 6.0)
+
+
 def test_logit_offsets_scale_only_watched_classes():
     base = torch.tensor([0.0, 1.0, 2.0, 3.0, 4.0])
     actual = birth_scaled_logit_offsets(base, {1: 0.25, 3: 0.5})

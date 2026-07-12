@@ -125,14 +125,31 @@ class TorchIslandTargetRuntime:
 
     def build_protected_seed(self, gt_frame1_phwc: np.ndarray) -> TorchProtectedIslandSeed:
         """Build the MLX-authority training-only GT-appearance residual seed."""
+        import torch
+        import torch.nn.functional as F
+
         gt = np.asarray(gt_frame1_phwc, dtype=np.float32)
-        expected = (*self.labels.shape, 3)
-        if tuple(gt.shape) != expected:
-            raise ValueError(f"GT seed frames must be {expected}, got {gt.shape}")
+        if gt.ndim != 4 or gt.shape[0] != self.labels.shape[0] or gt.shape[-1] != 3:
+            raise ValueError(
+                "GT seed frames must be (P,H,W,3) with the same pair count as labels, "
+                f"got {gt.shape} for labels {self.labels.shape}"
+            )
+        target_hw = tuple(int(x) for x in self.labels.shape[1:])
         residuals: list[np.ndarray] = []
         masks_out: list[np.ndarray] = []
         seed_eased = bool(self.flags.get("--seed-island-eased", False))
         for labels, frame in zip(self.labels, gt, strict=True):
+            if tuple(frame.shape[:2]) != target_hw:
+                frame = (
+                    F.interpolate(
+                        torch.from_numpy(frame).permute(2, 0, 1)[None],
+                        size=target_hw,
+                        mode="bilinear",
+                        align_corners=False,
+                    )[0]
+                    .permute(1, 2, 0)
+                    .numpy()
+                )
             builder = eased_island_masks if seed_eased else build_island_masks
             masks = builder(
                 labels,
