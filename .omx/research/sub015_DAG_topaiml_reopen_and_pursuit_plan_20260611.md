@@ -16329,3 +16329,4 @@ Triality: DAG = this FEED; equations = `jrd_exact_coefficient_prefix_selection_v
 (offline frozen-payload receiver/byte-allocator oracle, not a trainer/curriculum/launch/actuator change).
 Memo: `.omx/research/codex_findings_jrd_coeff_prefix_20260712T224139Z_codex.md`. Receipt:
 `experiments/results/jrd_coeff_prefix_probe_20260712T221747Z/measurement_receipt.json`. Task blocker:
+`eligible_nonlive_v9_v8_payload_missing_or_unresolved`.
