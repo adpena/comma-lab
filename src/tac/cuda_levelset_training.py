@@ -169,8 +169,7 @@ class TorchPoseCarrier:
             def xi_effective(self, pair_indices):
                 return self.xi_stored[pair_indices] + self.residual_scale * self.dxi[pair_indices]
 
-            def forward(self, source_nhwc, pair_indices):
-                xi = self.xi_effective(pair_indices)
+            def forward_with_xi(self, source_nhwc, xi):
                 if tuple(source_nhwc.shape[1:3]) != self.native_hw:
                     raise ValueError(
                         f"pose source HW {tuple(source_nhwc.shape[1:3])} != geom {self.native_hw}"
@@ -193,6 +192,9 @@ class TorchPoseCarrier:
                     x, grid, mode="bilinear", padding_mode="border", align_corners=True
                 ).permute(0, 2, 3, 1).contiguous()
                 return torch.where(valid.reshape(-1, h, w, 1), warped, source_nhwc)
+
+            def forward(self, source_nhwc, pair_indices):
+                return self.forward_with_xi(source_nhwc, self.xi_effective(pair_indices))
 
         return _Carrier()
 
