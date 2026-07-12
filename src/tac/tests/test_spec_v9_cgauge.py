@@ -68,6 +68,10 @@ def test_active_controller_sensor_companions_are_typed_not_parser_defaults(compi
         "--jacobian-basin-quorum-q": "0.8",
         "--seed-anneal-epochs": "0",
         "--seed-anneal-shape": "linear",
+        "--seed-blend": "1.0",
+        "--seed-lr": "0.02",
+        "--containment-mode": "shield",
+        "--containment-damp": "0.1",
         "--muon-adamw-lr": "0.0001",
     }
     affirmative = {

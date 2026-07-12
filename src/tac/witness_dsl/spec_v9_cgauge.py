@@ -74,6 +74,10 @@ _V9_CGAUGE_DELTA: dict[str, Any] = {
     # would silently re-delegate scientific ownership to an argparse default.
     "--seed-anneal-epochs": 0,
     "--seed-anneal-shape": "linear",
+    "--seed-blend": 1.0,
+    "--seed-lr": 0.02,
+    "--containment-mode": "shield",
+    "--containment-damp": 0.1,
     "--muon-adamw-lr": 1e-4,
     "--tail-live-mq": False,
 }
@@ -178,6 +182,26 @@ V9_CGAUGE_PROVENANCE: dict[str, dict[str, str]] = {
         "value": "linear", "rung": "derived_at_config", "form": "LINEAR",
         "law": "cgauge_master_action_v1",
         "note": "explicit dormant shape companion; it becomes active only if seed-anneal-epochs is amended above zero.",
+    },
+    "--seed-blend": {
+        "value": "1", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "full GT-island appearance initialization for the training-only protected residual seed.",
+    },
+    "--seed-lr": {
+        "value": "0.02", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "dedicated protected-seed AdamW learning-rate anchor; separate from witness optimizer geometry.",
+    },
+    "--containment-mode": {
+        "value": "shield", "rung": "derived_at_config", "form": "POLYTOPE_KKT",
+        "law": "cgauge_master_action_v1",
+        "note": "canonical protected-gradient projection that prevents the bulk gradient from washing out the island seed.",
+    },
+    "--containment-damp": {
+        "value": "0.1", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "explicit dormant damp-mode companion; shield mode is active in V9.",
     },
     "--muon-adamw-lr": {
         "value": "0.0001", "rung": "derived_at_config", "form": "SCALAR",
