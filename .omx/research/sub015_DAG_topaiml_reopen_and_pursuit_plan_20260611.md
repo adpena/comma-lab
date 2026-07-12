@@ -15935,6 +15935,35 @@ functional-parity-gated (drift WAIVED for training). Unlocks the ~2-4× a warm-r
 downgraded to advisory for training per max_throughput_over_bit_identity_operator_override_20260712; SCORE
 authority (upstream/evaluate.py) untouched. Pointer 0.19108282 submittable UNMOVED (MEANS).
 
+### FEED-microbatch-v9-unlock-landing (2026-07-12) — compiled V9 B=2 config-cleared; real Metal admission receipt still owed
+
+Full receipt: `.omx/research/micro_batch_v9_unlock_20260712.md`. The typed
+`compile_v9_cgauge_432_launch_config` argv, not launch-script eyeballing, proved there were six real
+trainer refusals: margin-reachability, spike-reweight, subpixel, phase, chroma, normalized StEik. V9
+activates exactly phase `0.4` and chroma `0.1`; both now have vectorized batched twins and real
+`mx.fast.metal_kernel` pixel-map forwards, so only those two guards were removed. The four retained
+guards are compiler-inactive. The deeper active-semantic audit also routed previously silent temporal
+screw `0.1`, Chan-Vese area, live birth-completion logit/amplify/persistence state, and the shared GT
+skeleton cache. Analytic lane band `1.0` remains correctly inside the common render composition.
+
+The highest-risk authority split is pinned at B=1 and B=2: PoseNet keeps carrier-composed frame 0,
+while temporal screw separately renders/scores raw witness frame 0, matching the serial equation.
+Chroma/phase/temporal map math is fused over `(B,H,W)`; area and every weighted denominator remain
+pair-local before the batch mean. Admission is fail-closed and provenance-bearing: chroma/phase/
+temporal/area/full-V9 receipts, real frozen scorer, faithful scale, actual Metal/MLX backend, artifact
+and scorer SHA-256, K>=2, plus measured end-to-end speed >1. Scorer-only or mock receipts cannot say GO.
+
+**Local evidence:** typed compile/parse validation empty; launcher dry-run 199/199 flags, ten active
+levers, exactly one `--micro-batch-pairs 2`, rc0, no spawn; 101 DSL/equation tests and 118 runtime-independent
+classification tests green; syntax/critical Ruff/diff clean. **Honest blocked evidence:** the managed
+sandbox has no initializable Metal device, so the installed K2/K4 loss/gradient and mandatory real
+Metal-forward/VJP tests cannot be runtime-certified here. Current system admission also refused a real
+launch under concurrent memory pressure; respected. Historical isolated scorer anchors are 1.56x GPU /
+1.75x CPU at K8, not a full-V9 speed claim. Faithful B1/B2 full-step median and n600 validation are owed
+to the operator-fired arm; no heavy run launched here. **Triality:** DSL=`MicroBatch` + real V9 inventory
+test; equations=`micro_batch_functional_parity_training_admission_v1` plus reconciled chroma/logit/
+batch-drift laws; DAG=this FEED. **Pointer 0.1880443979880752 [contest-CPU] UNMOVED; no score authority.**
+
 ### FEED-frozen-segnet-cluster-nielsen (2026-07-12) — the 95% attack, sharpened + one framing corrected
 Operator P0: attack the frozen-SegNet fwd+bwd (~95% of witness per-epoch wall-clock). Two agents ran.
 - **HONEST CORRECTION (my synthesis was half-wrong).** Gradient factors: ∂d_seg/∂θ = (witness fwd)·[J=∂logits/∂pixels = the deep CNN BACKWARD = the 95%]·(∂d_seg/∂logits = output-space geometry). Nielsen/Bregman closed forms (dual geodesics, ∇F=softmax, ∇F*=centered-log) buy ONLY the last factor — O(pixels)-cheap, already ≈ our margin field (MEASURED Pearson 0.978 vs Fisher). They do NOT buy J. verdict_scope: FORMULATION — "replace per-step backprop with closed-form Bregman geodesics" is on the WRONG side of the wall (the closed form is on the cheap side); NOT a paradigm verdict on info-geometry, and NOT a verdict on the distilled/costate attack.
@@ -15943,3 +15972,16 @@ Operator P0: attack the frozen-SegNet fwd+bwd (~95% of witness per-epoch wall-cl
 - **The one genuinely-new cheap win = Bregman entropic centroid as a $0 closed-form SEED for v8 per-class carriers (#380/#386):** ∇F*(Σ w_i ∇F(θ_i)) = centered-log of weighted-mean softmax; ~5 lines MLX; data in gt_n600.npz. Modest (carrier init, not backprop) but real + non-redundant.
 - **Anti-forgetting (two adjacent ideas ALREADY MEASURED-CLOSED in our own artifacts — do NOT re-research):** (1) Chernoff for boundary placement = degenerate-or-worse (chernoff_vs_margin_probe_20260706: Spearman 0.82 but 8.3× enriched on junctions / 2.7× DEPLETED on lane pixels where residual lives; flip-AUC 0.730 vs margin 0.777). (2) solve-don't-train transfer wall MEASURED (compress_time_seed_and_solve_dseg_verdict_20260617 latent +0.75% no-op; basin_finisher_head_solve_probe_measured_20260707 head-solve subset-overfits). Feeds the papers-checked ledger [[L55]].
 - Reports: .omx/research/nielsen_information_geometry_harvest_20260712.md + fast_witness_training_oss_survey_20260712.md. Pointer 0.19108282 submittable UNMOVED (all MEANS). pyBregMan library-port = engineering-DX call (adopt ~10-line formulas, capability KEPT not orphaned; NOT a score-ΔS lever).
+
+### FEED-lens-engine (2026-07-12) — the 8-lens unified engine (operator directive, "both — one engine")
+Operator gave the 8-lens framework (vector/topology/graph/set/spatial/temporal/statistics/relational) +
+chose "both — one unified engine": ONE analyzer over the campaign's DOUBLE ONE-OBJECT (research corpus
+knowledge-graph AND witness Morse-Smale geometry). Design: `.omx/research/lens_engine_design_20260712.md`.
+The unification = a TYPED ATTRIBUTED COMPLEX T=(E,G,Φ,S,L,R,X); corpus + witness are the SAME T under two
+adapters (CorpusAdapter over #411 graph-memory, WitnessAdapter over the level-set field); 8 lenses = typed
+ops on T, each REUSING existing surfaces (topology=Morse #180 + margin #141, graph=#411, spatial=Laguerre
+#284, stats=anisotropy #277/persistence, vector=embeddings #415). Module `tac.lens_engine`. inc-1 = core T
++ Lens protocol + 2 adapters + {topology,graph,spatial,stats}; inc-2 = {vector,set,temporal,relational};
+inc-3 = composition + retrieval-first (#346) + dashboard/costate wire-in. Build agent dispatched. MEANS
+(apparatus: makes corpus as navigable as writable = P0 anti-forgetting; turns witness geometry queryable).
+Pointer UNMOVED.
