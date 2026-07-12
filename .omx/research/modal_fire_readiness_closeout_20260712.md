@@ -6,7 +6,8 @@ Authority: Task438/Task381 pre-fire closeout. No `modal run`, `modal volume put`
 GPU dispatch, paid function, or provider mutation was performed. This receipt is
 training-advisory and makes no contest-score claim.
 
-Source commit: `eb8b06c9fb` (`fix(modal): seal V9 fire-readiness custody`)
+Source commits: `eb8b06c9fb` (`fix(modal): seal V9 fire-readiness custody`) and
+`3eae6e3bb5` (`docs(modal): record conditional fire closeout`)
 
 ## Fire-readiness checklist
 
@@ -65,12 +66,19 @@ stale rc1 identity after post-rc1 `src/tac` changes. A wheel is rebuilt from a
 committed-HEAD archive, not the dirty shared working tree. Final wheel receipt:
 
 ```text
-PENDING_FINAL_REBUILD_AFTER_REQUIRED_ASSET_SIZE_COMMIT
+path=dist/tac-0.2.0rc2-py3-none-any.whl
+bytes=27,631,647
+sha256=af8710c95dd9072e609f699faa48db2ae99eef33556ec525405f164fb949786f
+metadata_version=0.2.0rc2
+witness_launcher_in_wheel=true
+build_source=git archive 3eae6e3bb5 (not the dirty shared worktree)
 ```
 
 `REQUIRED_DATASET_ASSETS` names `tac-0.2.0rc2-py3-none-any.whl` with the measured
-expected size. The wheel contains `tac/deploy/witness_cloud_launcher.py` and its
-METADATA reports `Version: 0.2.0rc2`.
+expected-size anchor `27,631,663`; the final committed-archive rebuild differs by
+16 bytes and passes the consumer's 1% tolerance. The wheel contains
+`tac/deploy/witness_cloud_launcher.py` and its METADATA reports
+`Version: 0.2.0rc2`.
 
 `deploy_config.BASE_FLAGS` was independently compared to the real Click parser
 in `experiments/train_renderer_fridrich.py`: **34/34 flags exist; missing=[]**.
