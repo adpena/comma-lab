@@ -16278,3 +16278,30 @@ task-designer as a curriculum-SELECTION signal, not the pretraining framing. Fir
 meta-gradient family (we have #426 costate-NN, #430 curriculum-whole); NEW value = the cheap g_down^T·g_pre
 alignment as a baseline/arm, NOT a paradigm shift. Route: costate-organ arm + #434 feedback-steering template,
 backtest-gated (like #431/#433 arms). Pointer 0.18804 UNMOVED (MEANS). [no-triality]
+
+## FEED-goldmine-hunt (2026-07-12) — YOPO/INSTANT adjoints + exact JRD prefix route; supplied 2607.05247 is off-target as delivered
+
+Full research/routing memo: `.omx/research/goldmine_hunt_20260712.md`. `[FROM-LITERATURE]` The operator-supplied
+arXiv:2607.05247 is **boundary-centric self-supervised ViT pretraining** (masked boundary tokens + categorical
+line fields), not coding-for-machines, INR, frozen-CNN acceleration, or a gradient estimator. `[DERIVED]` It is
+OFF-TARGET as a drop-in on all three Pact surfaces because it changes/pretrains an encoder rather than encoding
+archive bytes, accelerating the frozen EfficientNet/FastViT scorer, or estimating either pixel/campaign costate.
+Only its validated-boundary support idea is a low-EV #449 support-mask WATCH; do not import/run the ViT.
+
+`[MEASURED-LOCAL]` Canonical-state correction: #447's owed native Metal receipt now supersedes the prompt's old
+`~2-4x` projection — 1.07x Metal scorer-forward with 80 argmax flips, bit-identical surviving speedup 1.0x
+(instance/formulation scoped). Throughput therefore routes harder to #449. `[DERIVED]` Ranked gold: **(1) YOPO**
+first-layer costate refresh — bank deep `p1=dL/dz1`, recompute only current-frame first-block `J_f0(x)^T p1`
+between anchors, then exact renderer pullback; **(2) INSTANT** input-adjoint-only low-rank conv backward; **(3)
+JRD + analytic dead-zone prefixes** — exact through-R “last safe coefficient plane” on existing payloads; **(4)
+LosslessINR** digital class-bit output algebra; **(5) SFESS** unbiased exact k-subset estimator for non-enumerable
+terminal edit sets. No literature runtime number is projected onto Pact.
+
+`[DERIVED]` Three pending `$0` routes are mirrored as
+`449_yopo_first_layer_costate_probe_20260712`, `449_instant_projected_adjoint_probe_20260712`, and
+`v9_jrd_coeff_prefix_probe_20260712`. Each starts in isolated/read-only instrumentation, uses the existing
+fail-closed costate/provider or receiver gate, and does **not** edit the live trainer, train, dispatch, or touch
+`experiments/results/v9_cgauge_432_coherent_arm_20260711`. SFESS first replays the already-measured 64-state UGC
+receipt with zero scorer calls. Memory hook intentionally omitted: operator MEMORY is already 17,543 bytes,
+above the requested `<17KB`; this FEED is the terse hook. Triality: `[no-triality]` pure reference/routing — no
+measured witness law, DSL lever, archive, or score claim. **Pointer 0.18804 `[contest-CPU]` UNMOVED (MEANS).**
