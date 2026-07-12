@@ -499,6 +499,44 @@ def main(argv: list[str] | None = None) -> int:
     margins = z["margins"][: args.num_pairs]
     gt_f1 = z["gt_f1"][: args.num_pairs]
     gt_poses = z["gt_poses"][: args.num_pairs]
+    if bool(flags.get("--dseg-aware-taper", False)):
+        from tac.boundary_math.dseg_aware_fourier_taper import (
+            apply_dseg_aware_fourier_taper,
+            compute_dseg_aware_fourier_taper,
+            saliency_from_margins,
+        )
+
+        taper_scale = float(flags["--dseg-aware-taper-scale"])
+        taper_saliency = saliency_from_margins(
+            margins,
+            scale=None if taper_scale <= 0.0 else taper_scale,
+            target_hw=(cfg.render_h, cfg.render_w),
+        )
+        taper = compute_dseg_aware_fourier_taper(
+            feats_np,
+            taper_saliency,
+            strength=float(flags["--dseg-aware-taper-strength"]),
+            floor=float(flags["--dseg-aware-taper-floor"]),
+        )
+        feats_np = apply_dseg_aware_fourier_taper(feats_np, taper).astype(np.float32)
+        print(
+            json.dumps(
+                {
+                    "stage": "dseg_aware_taper",
+                    "n_cols": int(taper.shape[0]),
+                    "strength": float(flags["--dseg-aware-taper-strength"]),
+                    "scale": "auto" if taper_scale <= 0.0 else round(taper_scale, 6),
+                    "taper_min": round(float(taper.min()), 4),
+                    "taper_max": round(float(taper.max()), 4),
+                    "taper_mean": round(float(taper.mean()), 4),
+                    "note": (
+                        "#121 byte-neutral spectral reallocation by GT margin saliency; "
+                        "RE-VALIDATE at convergence; training-advisory NON-PROMOTABLE"
+                    ),
+                }
+            ),
+            flush=True,
+        )
     # Generated source never reads/materializes gt_f0. Camera geometry is shared
     # by the already-required gt_f1 array and the canonical receiver dimensions.
     native_hw = tuple(int(x) for x in gt_f1.shape[1:3])
