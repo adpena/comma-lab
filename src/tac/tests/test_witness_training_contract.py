@@ -32,7 +32,7 @@ def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins()
     receipt = cuda_v9_port_receipt()
     assert receipt["status"] == "BLOCKED_NOT_1_TO_1"
     assert receipt["blockers"] == list(CUDA_V9_PORT_BLOCKERS)
-    assert len(receipt["blockers"]) == 4
+    assert len(receipt["blockers"]) == 2
     closed = (
         "--pose-carrier",
         "--structured-init",
@@ -42,6 +42,8 @@ def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins()
         "--curriculum-event-triggered",
         "--pose-finish-engage-on",
         "--polyak-finisher-arm",
+        "--ladder-island-homotopy",
+        "--seed-islands",
     )
     assert all(not any(blocker.startswith(flag) for blocker in receipt["blockers"]) for flag in closed)
     assert {
@@ -52,4 +54,6 @@ def test_cuda_coverage_receipt_fails_closed_until_active_controllers_are_twins()
         "scorer_derived_curriculum_latches_with_atomic_resume_state",
         "sigma_min_plateau_pose_finish_gate_with_degenerate_banked_r1",
         "polyak_finisher_resumable_additional_candidate_export",
+        "ladder_eased_targets_with_scorer_refreshed_perclass_lambda",
+        "protected_island_seed_and_classwise_birth_completion_ramp",
     }.issubset(receipt["score_bearing_primitives_ported"])
