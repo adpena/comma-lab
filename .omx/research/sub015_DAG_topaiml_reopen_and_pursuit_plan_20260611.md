@@ -15917,3 +15917,17 @@ drift observation. Memory: max_throughput_over_bit_identity_operator_override_20
   UNTOUCHED (can't change a running launch).
 - HARD BOUNDARY preserved: SCORE claims still require upstream/evaluate.py on byte-closed archive (NO-FAKE);
   throughput override applies to the TRAINING loop only. Pointer 0.19108282 submittable / 0.18804 bank UNMOVED.
+
+### FEED-microbatch-v9-unlock (2026-07-12) — the real remaining local throughput lever
+Operator caught that #443 already did the MLX/Metal throughput sweep yesterday (measured: local stack AT
+its bit-identity frontier; megakernel #356 NO-GO 1.12-1.21×; surviving levers fused-R/grouped-backward/
+persistence-pool/safe-compile ALREADY ON in #432). Killed the redundant Canuma re-sweep agent. The ONE
+genuinely-new local lever: micro-batch-pairs (~2-4×). #443 flagged its V9 blocker as logit-adjust — but
+that was ROUTED in #D15. The REAL remaining blockers: V9 SETS 4 fail-close levers verified against launch.sh:
+seg-chroma-boundary 0.1 · seg-temporal-screw 0.1 · seg-phase-advect 0.4 (T1) · lane-band 1.0 (~12 fail-close
+guard sites total in the trainer). All 4 are per-pair/intra-pair → batch cleanly. Operator: "all fixable,
+using new metal." Spawned codex sol ultra (window 4771, task #447) to route every V9-active blocker into the
+batched twin (levelset_micro_batch_loss.py, #D15 pattern) with new mx.fast.metal_kernel fused paths,
+functional-parity-gated (drift WAIVED for training). Unlocks the ~2-4× a warm-restart rides. Bit-identity
+downgraded to advisory for training per max_throughput_over_bit_identity_operator_override_20260712; SCORE
+authority (upstream/evaluate.py) untouched. Pointer 0.19108282 submittable UNMOVED (MEANS).
