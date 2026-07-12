@@ -16039,7 +16039,8 @@ resume registry/checkpoint state; receipts; fixed-quality parser; typed V9 launc
 
 The selector uses the thin/dashed class-1 residual `omega_lane * boundary`, while global all-class W1 is
 diagnostic only. The matched control executes the same one-pass self-orientation/re-render and disables the
-same pair-dependent seed composer. Default init cost is explicit: control `N_init=1`, treatment `N_init=93`;
+same pair-dependent seed composer. Default end-to-end init cost is explicit: control `N_init=2`, treatment
+`N_init=94` (the 1/93 selection sweep plus one mandatory committed epoch-zero scorer forward);
 the registered equation `fresh_frequency_shift_init_v1` now uses `N_total=N_init+P*E`, so an apparent
 one-epoch n8 win can still lose total scorer calls.
 
@@ -16092,3 +16093,68 @@ compute the SAME gradient two ways → RULE: adjoint where the rollout is differ
 score-function+baseline where it hits the exact non-diff argmax (terminal polish). GUARD: this "score" (∇log π =
 policy Fisher) is NOT our "margin ≈ Fisher-of-scorer" object — different Fishers, do not conflate (fake-connection
 risk). Apparatus/reference; pointer 0.18804 UNMOVED. [no-triality — reference-routing, no measured finding]
+
+### FEED-lens-retrieval-346 (2026-07-12) — Lens Engine (inc-1) wired into #346 retrieval-first corpus recall: `reconstruct_lensed` (additive, opt-in)
+
+Operator-directed build: make the just-landed LENS ENGINE (`tac.lens_engine`, inc-1 commit eb3a4fa494)
+pay rent by wiring it into the #346/#411 corpus recall path — the DAG-as-reconstructable-graph-memory
+(memory L83: "apparatus WRITES better than it READS"; #411 built the graph, this landing sharpens the
+RECALL half). Scope: corpus retrieval wire-in ONLY (inc-3's dashboard/SENSE consumer + unified query
+language + cross-lens composition remain owed).
+
+**Build (additive, default-preserving):** `src/tac/graph_memory/recall.py` gains `reconstruct_lensed()` —
+same base keyword-BFS reconstruction as `reconstruct()` (refactored to share `_select_seeds`/
+`_bfs_reconstruct`, byte-for-byte unchanged output, pinned by a regression test), augmented with 3
+`tac.lens_engine` findings keyword-BFS structurally cannot see: (1) **BRIDGE** — GRAPH `shortest_path`
+between every seed pair on the FULL corpus graph (not depth-limited; rescues nodes reachable but ranked
+below the naive weight cutoff, or beyond `max_depth` entirely); (2) **HUB** — GRAPH `centrality`
+(betweenness default) over the query-LOCAL BFS-reached pool only (full-corpus betweenness measured
+~91s over 8,842 nodes — too slow for interactive recall; the local pool is bounded + capped, honestly
+disclosed via `local_pool_size`/`local_pool_capped`); (3) **CRUX** — TOPOLOGY `saddles` on the same local
+pool. `nodes` is `base.nodes` PLUS additions — a strict superset, order-preserving prefix, never a
+replacement. `phi` defaults to `"degree"` (CorpusAdapter's custody-safe mode; other modes fail closed on
+missing custody, never fabricated). New `LensedReconstruction` + `format_human_lensed`; CLI opt-in
+`--lens`/`--lens-phi`/`--lens-centrality` on `tools/graph_memory_recall.py` (naive path untouched,
+strictly opt-in).
+
+**MEASURED (real queries, real corpus, 2026-07-12):** on "lane d_seg" the bridge step surfaces
+`feed:phase-advect-build` — ranked #20 by naive keyword-BFS weight (one past the default
+`max_nodes=18` cutoff) yet sitting on the ACTUAL shortest path linking 3 of 4 seeds through
+`person:Yousfi` — plus hub nodes `ref:#205`/`ref:#346`(!)/`eq:dash_erasure_homogenization_v1`/
+`feed:relsig` and crux nodes (memory:memos-must-be-acted-upon.../slot-l-slot-h.../
+tools/costate_digest.py). On "muon warm start" (local pool 948→capped 800) hub/crux surface
+`memory:deepmath-amortizing-argmax-maslov-caustic-tau-eps-hbar`, `memory:pose-solved-screw-twist-...`,
+`ref:#157`/`#206`/`#220`/`#229`. On "naive-launch incident" hub/crux surface
+`memory:assumptions-classification-hard-earned-vs-cargo-culted...`,
+`memory:save-memories-not-apologies-anti-forgetfulness`, etc. — genuinely new node titles beyond the
+naive top-18 on all 3 probe queries, superset property verified programmatically (never a drop).
+Tests added (positive/negative/edge/regression-guard/real-corpus superset/CLI-subprocess); a real
+off-by-one bug caught+fixed in review (`max_hub_nodes=0` was adding 1 node, not 0 — the cap check now
+runs before append) and a real reporting bug caught+fixed (`local_pool_size` was reporting the PRE-cap
+size even when `local_pool_capped=True`; now reads the actual built local graph's node count).
+
+**Triality:** this landing IS the retrieval-first CONSUMER leg (not [no-triality]) — `reconstruct_lensed`
+is a new SENSE-layer input a future costate/dashboard consumer (#247/#219, inc-3-owed) can query for
+bridge/crux nodes near a live decision; this FEED row is its DAG/trajectory leg. No new canonical
+equation (pure retrieval apparatus, no measured score-law), no DSL lever (no training actuation). Means;
+pointer UNMOVED 0.18804 (analysis/retrieval apparatus, no archive, no score claim). Memo:
+`.omx/research/lens_retrieval_346_wirein_landed_20260712.md`.
+
+**Still owed (inc-3, do NOT infer as started):** dashboard/SENSE governed consumer of
+`reconstruct_lensed`'s bridge/hub/crux findings; the small unified query language / cross-lens
+composition; a durable registration path for measured query facts into probes/DAG/equations should a
+future query surface a load-bearing finding.
+
+### FEED-inference-autotune-tweet (2026-07-12) — evaluated, NOT-USEFUL (already-built on both axes)
+Operator shared "Inference AutoTune" launch tweet: managed distillation-as-a-service — teacher LLM
+(z-ai/glm-5.2) + zod output schema → auto-generate ~10k teacher-labeled samples → train a 1-30B task-
+specific text SLM (~2h, <$250, own weights) + autoRoute inference to the small model. VERDICT: not useful
+for us. (1) WRONG MODALITY + DATA REGIME — it's for TEXT tasks with 10k collectable samples; our
+distillation is a VISION-CNN scorer surrogate (frozen SegNet/PoseNet margin/Jacobian, #449/#428) at n=1
+(#434). It doesn't touch the what-synthetic-inputs problem for a vision scorer (the actual hard part).
+(2) BOTH ideas already in-stack — cheap teacher→student distill = #428/#431 (built); autoRoute confidence-
+routing = #436 regime-conditional self-dispatch (built). (3) private-beta SaaS, not OSS/paper → no method
+to import, black-box forward. Mild signal only: market confirmation that cheap task-distill + confidence-
+routing is a commoditized/correct cost regime → reassurance our distilled-surrogate + #436 arms are on the
+right path, NOT a new lever. NO build, NO route. Pointer 0.18804 UNMOVED. [no-triality — negative eval, no
+measured finding]
