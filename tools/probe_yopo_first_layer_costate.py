@@ -50,7 +50,18 @@ VIDEO = REPO / "upstream/videos/0.mkv"
 VIDEO_SHA256 = "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
 VIDEO_BYTES = 37_545_489
 K_VALUES = (1, 2, 4)
-SCHEMA = "yopo_first_layer_costate_probe.v1"
+SCHEMA = "yopo_first_layer_costate_probe.v2"
+SAME_FRAME_TEACHER_CE_PATH_MAX_FLOAT32_ULP = 4
+SAME_FRAME_TEACHER_CE_PATH_FLOOR_ANCHOR = {
+    "status": "MEASURED",
+    "artifact": ".omx/research/yopo_same_frame_teacher_label_path_floor_measurement_20260712.json",
+    "artifact_sha256": "f9cd10e263736319270f3d76387ffe78f17fc66f74bb1c322ab94f76a17d456d",
+    "measurement": (
+        "complete non-refresh CPU path replay: CE paths differed by 4 float32 ULP "
+        "(3.725290298461914e-09 absolute); d_seg was exactly equal"
+    ),
+    "scope": "same-frame labeled SegNet inference path versus input-gradient path; not a costate admission threshold",
+}
 
 
 def _sha256(path: Path) -> str:
@@ -59,6 +70,115 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _float32_ulp_distance(left: float, right: float) -> int | None:
+    """Return the ordered float32 ULP distance, or None for nonfinite inputs."""
+    left32 = np.float32(left)
+    right32 = np.float32(right)
+    if not np.isfinite(left32) or not np.isfinite(right32):
+        return None
+    if left32 == right32:
+        return 0
+
+    def ordered(value: np.float32) -> int:
+        bits = int(np.asarray(value, dtype=np.float32).view(np.uint32))
+        return ((~bits) & 0xFFFFFFFF) if bits & 0x80000000 else bits | 0x80000000
+
+    return abs(ordered(left32) - ordered(right32))
+
+
+def _teacher_label_path_agreement(reference: dict[str, float], observed: dict[str, float]) -> dict[str, Any]:
+    """Compare same-frame label paths against the registered numerical floor."""
+    schema_ok = set(reference) == {"ce", "dseg"} and set(observed) == {"ce", "dseg"}
+    ce_ulp_distance = _float32_ulp_distance(reference["ce"], observed["ce"]) if schema_ok else None
+    dseg_finite = bool(
+        schema_ok and np.isfinite(reference["dseg"]) and np.isfinite(observed["dseg"])
+    )
+    dseg_exact = bool(dseg_finite and reference["dseg"] == observed["dseg"])
+    passed = bool(
+        schema_ok
+        and ce_ulp_distance is not None
+        and ce_ulp_distance <= SAME_FRAME_TEACHER_CE_PATH_MAX_FLOAT32_ULP
+        and dseg_exact
+    )
+    return {
+        "status": "PASS" if passed else "FAIL",
+        "reference": reference,
+        "observed": observed,
+        "ce_float32_ulp_distance": ce_ulp_distance,
+        "ce_max_registered_float32_ulp_floor": SAME_FRAME_TEACHER_CE_PATH_MAX_FLOAT32_ULP,
+        "dseg_finite": dseg_finite,
+        "dseg_exact_match": dseg_exact,
+        "floor_anchor": SAME_FRAME_TEACHER_CE_PATH_FLOOR_ANCHOR,
+    }
+
+
+def _require_teacher_label_path_agreement(
+    reference: dict[str, float], observed: dict[str, float]
+) -> dict[str, Any]:
+    record = _teacher_label_path_agreement(reference, observed)
+    if record["status"] != "PASS":
+        raise RuntimeError(f"same-frame teacher label paths exceed registered numerical floor: {record}")
+    return record
+
+
+def _teacher_label_path_floor_canary() -> dict[str, Any]:
+    """Prove the meter admits its measured floor and rejects the next ULP."""
+    start = np.float32(1.0)
+    within = start
+    outside = start
+    for _ in range(SAME_FRAME_TEACHER_CE_PATH_MAX_FLOAT32_ULP):
+        within = np.nextafter(within, np.float32(np.inf), dtype=np.float32)
+        outside = np.nextafter(outside, np.float32(np.inf), dtype=np.float32)
+    outside = np.nextafter(outside, np.float32(np.inf), dtype=np.float32)
+    positive = _teacher_label_path_agreement(
+        {"ce": float(start), "dseg": 0.25}, {"ce": float(within), "dseg": 0.25}
+    )
+    ce_negative = _teacher_label_path_agreement(
+        {"ce": float(start), "dseg": 0.25}, {"ce": float(outside), "dseg": 0.25}
+    )
+    dseg_negative = _teacher_label_path_agreement(
+        {"ce": float(start), "dseg": 0.25}, {"ce": float(start), "dseg": 0.5}
+    )
+    anchor_path = REPO / SAME_FRAME_TEACHER_CE_PATH_FLOOR_ANCHOR["artifact"]
+    anchor_payload = None
+    anchor_error = None
+    try:
+        anchor_payload = json.loads(anchor_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        anchor_error = f"{type(exc).__name__}: {exc}"
+    anchor_sha256 = _sha256(anchor_path) if anchor_path.is_file() else None
+    anchor_passed = bool(
+        anchor_payload
+        and anchor_sha256 == SAME_FRAME_TEACHER_CE_PATH_FLOOR_ANCHOR["artifact_sha256"]
+        and anchor_payload.get("status") == "MEASURED"
+        and anchor_payload.get("comparison", {}).get("ce_float32_ulp_distance")
+        == SAME_FRAME_TEACHER_CE_PATH_MAX_FLOAT32_ULP
+        and anchor_payload.get("comparison", {}).get("dseg_exact_match") is True
+        and anchor_payload.get("inputs", {}).get("source_video_sha256") == VIDEO_SHA256
+        and anchor_payload.get("inputs", {}).get("source_video_bytes") == VIDEO_BYTES
+    )
+    passed = (
+        positive["status"] == "PASS"
+        and positive["ce_float32_ulp_distance"] == SAME_FRAME_TEACHER_CE_PATH_MAX_FLOAT32_ULP
+        and ce_negative["status"] == "FAIL"
+        and ce_negative["ce_float32_ulp_distance"] == SAME_FRAME_TEACHER_CE_PATH_MAX_FLOAT32_ULP + 1
+        and dseg_negative["status"] == "FAIL"
+        and anchor_passed
+    )
+    return {
+        "status": "PASS" if passed else "FAIL",
+        "positive_control_at_registered_floor": positive,
+        "negative_control_one_ulp_beyond_floor": ce_negative,
+        "negative_control_dseg_mismatch": dseg_negative,
+        "measured_anchor": {
+            "status": "PASS" if anchor_passed else "FAIL",
+            "path": str(anchor_path),
+            "sha256": anchor_sha256,
+            "error": anchor_error,
+        },
+    }
 
 
 def _source_custody() -> dict[str, dict[str, Any]]:
@@ -724,6 +844,9 @@ def _base_receipt(args: argparse.Namespace) -> dict[str, Any]:
             "provider": "tac.boundary_math.segnet_gradient_replacement.YopoFirstLayerBank",
         },
         "objective": "common frozen SegNet CE against gt_n6 lstars[0]; checkpoint stage/tau bound per regime",
+        "measurement_canaries": {
+            "same_frame_teacher_label_path_float32_floor": _teacher_label_path_floor_canary(),
+        },
         "regimes": {},
         "admission": {"status": "PENDING"},
     }
@@ -1119,7 +1242,16 @@ def _load_existing(path: Path) -> dict[str, Any] | None:
 
 def _validate_resume_custody(receipt: dict[str, Any], template: dict[str, Any]) -> None:
     """Reject changed artifacts or source code before any resume mutation."""
-    for key in ("schema", "authority", "config", "inputs", "source_custody", "split", "objective"):
+    for key in (
+        "schema",
+        "authority",
+        "config",
+        "inputs",
+        "source_custody",
+        "split",
+        "objective",
+        "measurement_canaries",
+    ):
         if receipt.get(key) != template.get(key):
             raise RuntimeError(f"resume immutable field {key!r} differs from the current probe")
     stable_runtime_keys = (
@@ -1180,6 +1312,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         raise RuntimeError("output receipt already exists; choose a fresh content-bound output directory")
     receipt = _load_existing(receipt_path) if args.resume else None
     template = _base_receipt(args)
+    if template["measurement_canaries"]["same_frame_teacher_label_path_float32_floor"]["status"] != "PASS":
+        _release_output_lock(lock_fd)
+        raise RuntimeError("same-frame teacher label-path floor canary failed before measurement")
     template["runtime_provenance"].update(
         {
             "numpy": np.__version__,
@@ -1326,6 +1461,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     current_baseline_validation_forwards = 0
                     exact_costate = None
                     exact_grad = None
+                    label_path_agreement = {
+                        "status": "NOT_APPLICABLE_PROVIDER_FALLBACK",
+                        "reason": "a rejected provider uses one operational exact-teacher label path and terminates NO-GO",
+                    }
                     active = arm.get("active_bank")
                     provider_preflight_failure = None
                     provider_kwargs = None
@@ -1544,10 +1683,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "rebuild": "fresh exact teacher CE + blocks[0] adjoint at recorded code-row state",
                         }
                         active = arm["active_bank"]
-                        if (
-                            array_content_sha256(refresh_exact_costate) != array_content_sha256(exact_costate)
-                            or refresh_holder != holder
-                        ):
+                        label_path_agreement = _require_teacher_label_path_agreement(holder, refresh_holder)
+                        if array_content_sha256(refresh_exact_costate) != array_content_sha256(exact_costate):
                             raise RuntimeError("YOPO refresh capture differs from the ordinary exact-teacher baseline")
                     elif refresh and provider_preflight_failure is None:
                         diagnostic_costate, diagnostic_holder, exact_baseline_seconds = _capture_exact_teacher_costate(
@@ -1564,10 +1701,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             (diagnostic_frame_nchw * diagnostic_costate).sum(), theta
                         )[0]
                         exact_renderer_vjp_seconds = time.perf_counter() - diagnostic_grad_started
-                        if (
-                            array_content_sha256(diagnostic_costate) != array_content_sha256(exact_costate)
-                            or diagnostic_holder != holder
-                        ):
+                        label_path_agreement = _require_teacher_label_path_agreement(holder, diagnostic_holder)
+                        if array_content_sha256(diagnostic_costate) != array_content_sha256(exact_costate):
                             raise RuntimeError("YOPO refresh capture differs from the ordinary exact-teacher baseline")
                         exact_costate = diagnostic_costate
                         exact_grad = diagnostic_grad
@@ -1587,10 +1722,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         exact_grad_started = time.perf_counter()
                         exact_grad = torch.autograd.grad((diagnostic_frame_nchw * exact_costate).sum(), theta)[0]
                         exact_renderer_vjp_seconds = time.perf_counter() - exact_grad_started
-                        if exact_holder != holder:
-                            raise RuntimeError(
-                                "fresh exact teacher labels differ from operational current-frame labels"
-                            )
+                        label_path_agreement = _require_teacher_label_path_agreement(holder, exact_holder)
                     exact_norm = float(torch.linalg.vector_norm(exact_grad).item())
                     if exact_norm == 0.0 or not np.isfinite(exact_norm):
                         raise RuntimeError("exact-teacher renderer gradient is zero/nonfinite")
@@ -1607,6 +1739,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "exact_teacher_dseg": holder["dseg"],
                             "recess_trials": recess_trials,
                             "bank_age_steps": bank_age_steps,
+                            "teacher_label_path_agreement": label_path_agreement,
                             "operational_timing": operational_timing,
                             "timing_order_canary": timing_order_canary,
                             "timing_measured_seconds": {
@@ -1692,6 +1825,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         "operational_timing": operational_timing,
                         "timing_order_canary": timing_order_canary,
                         "controls": {
+                            "teacher_label_path_agreement": label_path_agreement,
                             "refresh_exact_positive_canary": (
                                 {
                                     "status": "MEASURED",
@@ -1814,10 +1948,20 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     )
                     full_horizon_pass = max(int(step["bank_age_steps"]) for step in arm["steps"]) >= k_value - 1
                     timing_order_pass = all(step["timing_order_canary"]["status"] == "PASS" for step in arm["steps"])
+                    label_path_floor_pass = all(
+                        step["controls"]["teacher_label_path_agreement"]["status"] == "PASS"
+                        for step in arm["steps"]
+                    )
                     arm["controls"] = {
                         "status": (
                             "PASS"
-                            if positive_pass and negative_pass and full_horizon_pass and timing_order_pass
+                            if (
+                                positive_pass
+                                and negative_pass
+                                and full_horizon_pass
+                                and timing_order_pass
+                                and label_path_floor_pass
+                            )
                             else "FAIL"
                         ),
                         "refresh_exact_positive_all_refreshes": positive_pass,
@@ -1825,6 +1969,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         "sign_reversed_negative_all_steps": negative_pass,
                         "full_age_horizon_exercised": full_horizon_pass,
                         "operational_before_measurement_controls": timing_order_pass,
+                        "same_frame_teacher_label_path_floor_all_steps": label_path_floor_pass,
                         "required_max_bank_age_steps": k_value - 1,
                         "observed_max_bank_age_steps": max(int(step["bank_age_steps"]) for step in arm["steps"]),
                     }

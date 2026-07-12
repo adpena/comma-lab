@@ -280,6 +280,20 @@ def test_run_frees_operational_vjp_graph_and_rerenders_for_diagnostics():
     assert "operational_timing = _operational_timing_record(" in source
 
 
+def test_run_enforces_label_floor_on_every_comparison_and_successful_arm():
+    source = inspect.getsource(probe.run)
+    assert source.count("_require_teacher_label_path_agreement(") == 3
+    assert source.count('step["controls"]["teacher_label_path_agreement"]["status"] == "PASS"') == 1
+    assert "and label_path_floor_pass" in source
+    assert (
+        'template["measurement_canaries"]["same_frame_teacher_label_path_float32_floor"]["status"] != "PASS"'
+        in source
+    )
+    assert "same-frame teacher label-path floor canary failed before measurement" in source
+    assert '"status": "NOT_APPLICABLE_PROVIDER_FALLBACK"' in source
+    assert "a rejected provider uses one operational exact-teacher label path" in source
+
+
 @pytest.mark.parametrize("terminal_status", ["NO_GO_NON_DESCENT", "NO_GO_PROVIDER_FALLBACK"])
 def test_last_step_terminal_arm_cannot_enter_success_finalizer(terminal_status):
     arm = _regime(ks=(4,))["arms"][0]
@@ -365,6 +379,66 @@ def test_ordinary_exact_teacher_baseline_excludes_yopo_bank_capture():
     assert holder["ce"] > 0.0
     assert holder["dseg"] == 0.0
     assert elapsed >= 0.0
+
+
+def test_teacher_label_path_floor_accepts_measured_four_ulp_and_rejects_five():
+    import numpy as np
+
+    start = np.float32(1.0)
+    values = [start]
+    for _ in range(5):
+        values.append(np.nextafter(values[-1], np.float32(np.inf), dtype=np.float32))
+    within = probe._teacher_label_path_agreement(
+        {"ce": float(start), "dseg": 0.25}, {"ce": float(values[4]), "dseg": 0.25}
+    )
+    outside = probe._teacher_label_path_agreement(
+        {"ce": float(start), "dseg": 0.25}, {"ce": float(values[5]), "dseg": 0.25}
+    )
+    assert within["status"] == "PASS"
+    assert within["ce_float32_ulp_distance"] == 4
+    assert outside["status"] == "FAIL"
+    assert outside["ce_float32_ulp_distance"] == 5
+    assert probe._require_teacher_label_path_agreement(
+        {"ce": float(start), "dseg": 0.25}, {"ce": float(values[4]), "dseg": 0.25}
+    )["status"] == "PASS"
+    with pytest.raises(RuntimeError, match="exceed registered numerical floor"):
+        probe._require_teacher_label_path_agreement(
+            {"ce": float(start), "dseg": 0.25}, {"ce": float(values[5]), "dseg": 0.25}
+        )
+
+
+def test_teacher_label_path_floor_never_relaxes_dseg_or_nonfinite_ce():
+    dseg_mismatch = probe._teacher_label_path_agreement(
+        {"ce": 1.0, "dseg": 0.25}, {"ce": 1.0, "dseg": 0.5}
+    )
+    nonfinite = probe._teacher_label_path_agreement(
+        {"ce": 1.0, "dseg": 0.25}, {"ce": float("nan"), "dseg": 0.25}
+    )
+    nonfinite_dseg = probe._teacher_label_path_agreement(
+        {"ce": 1.0, "dseg": float("inf")}, {"ce": 1.0, "dseg": float("inf")}
+    )
+    assert dseg_mismatch["status"] == "FAIL"
+    assert dseg_mismatch["dseg_exact_match"] is False
+    assert nonfinite["status"] == "FAIL"
+    assert nonfinite["ce_float32_ulp_distance"] is None
+    assert nonfinite_dseg["status"] == "FAIL"
+    assert nonfinite_dseg["dseg_finite"] is False
+
+
+def test_teacher_label_path_floor_meter_has_positive_and_negative_canaries():
+    canary = probe._teacher_label_path_floor_canary()
+    assert canary["status"] == "PASS"
+    assert canary["positive_control_at_registered_floor"]["status"] == "PASS"
+    assert canary["negative_control_one_ulp_beyond_floor"]["status"] == "FAIL"
+    assert canary["negative_control_dseg_mismatch"]["status"] == "FAIL"
+    assert canary["measured_anchor"]["status"] == "PASS"
+
+
+def test_teacher_label_path_floor_canary_rejects_anchor_hash_drift(monkeypatch):
+    monkeypatch.setitem(probe.SAME_FRAME_TEACHER_CE_PATH_FLOOR_ANCHOR, "artifact_sha256", "0" * 64)
+    canary = probe._teacher_label_path_floor_canary()
+    assert canary["status"] == "FAIL"
+    assert canary["measured_anchor"]["status"] == "FAIL"
 
 
 def test_candidate_recess_is_event_conditioned_and_has_completion_rule(monkeypatch):
@@ -687,11 +761,21 @@ def test_resume_custody_rejects_changed_source_and_terminal_receipt():
         "source_custody": {"probe": {"sha256": "b"}},
         "split": {"name": "block0"},
         "objective": "frozen SegNet CE",
+        "measurement_canaries": {"same_frame_teacher_label_path_float32_floor": {"status": "PASS"}},
     }
     receipt = deepcopy(template)
     receipt["runtime_provenance"]["argv"] = ["original"]
     probe._validate_resume_custody(receipt, template)
-    for key in ("schema", "authority", "config", "inputs", "source_custody", "split", "objective"):
+    for key in (
+        "schema",
+        "authority",
+        "config",
+        "inputs",
+        "source_custody",
+        "split",
+        "objective",
+        "measurement_canaries",
+    ):
         changed = deepcopy(receipt)
         changed[key] = "changed"
         with pytest.raises(RuntimeError, match="immutable field"):

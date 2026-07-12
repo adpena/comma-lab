@@ -1,0 +1,75 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory; local-only; torch-fp32]",
+    "promotion_eligible": false,
+    "review_status": "recovery-written-UNREVIEWED",
+    "score_claim": false,
+    "verdict_scope": "same-frame labeled SegNet inference path versus input-gradient path at early/K=2/step=1"
+  },
+  "captured_at_utc": "2026-07-12T22:23:53Z",
+  "comparison": {
+    "absolute_ce_delta": 3.725290298461914e-09,
+    "ce_float32_ulp_distance": 4,
+    "diagnostic_ce": 0.01442368607968092,
+    "diagnostic_dseg": 0.0045827231369912624,
+    "dseg_exact_match": true,
+    "operational_ce": 0.014423682354390621,
+    "operational_dseg": 0.0045827231369912624,
+    "status": "MEASURED"
+  },
+  "inputs": {
+    "bank_path": "experiments/results/yopo_first_layer_costate_probe_20260712T220531Z/scratch/early_K2_active_bank.npz",
+    "bank_sha256": "f9a3beb3b315e0f89342b7ef4e2bcced48fd817b2b38af3456469e0fd9e460be",
+    "checkpoint_path": "experiments/results/tau_crossover_trainflow_20260707/frozen_ep299_CEend.npz",
+    "checkpoint_sha256": "d92f844a82ebff44b2f68a039e74c338b8eece957fdcc594b6de097cb99c8ca8",
+    "gt_cache_sha256": "e3f5ce8e79374ed0b9a3f007167dd7488862b51420f0b25b7bcec7ee6865f63e",
+    "provider_source_sha256": "a54320bc38667b0478495f8b177c342c97526d08e94c81f386e20a2fe764d410",
+    "scorer_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "source_video_bytes": 37545489,
+    "source_video_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "state_path": "experiments/results/yopo_first_layer_costate_probe_20260712T220531Z/state/early_K2.npz",
+    "state_sha256": "4601f11fde1bb44afc87d2ec96e59fea6dd11b96619dd20aa1e24d9fc8d7cdea",
+    "tool_source_sha256": "d707cf7a43f8d0835fe550f56e2da9c225a45baf122c553a5495bf8940083e97"
+  },
+  "method": {
+    "K": 2,
+    "regime": "early",
+    "sequence": [
+      "restore early_K2 state after completed refresh step 0",
+      "render the current step-1 frame",
+      "apply the banked block-0 YOPO prefix VJP",
+      "apply the renderer pullback",
+      "measure current CE and d_seg through labeled inference",
+      "run the event-conditioned candidate recession to completion",
+      "capture a fresh exact teacher input costate and its CE and d_seg",
+      "compare the two same-frame label paths in ordered float32 ULP"
+    ],
+    "step": 1
+  },
+  "provider_custody": {
+    "anchor_frame_sha256": "e79850633f4a10c5f0a65427c190ac19444953fa93aa74e26d51d9d4e97d18b3",
+    "current_frame_sha256": "4b9034ca75137c46f656063c8ff6a2fcdefa3b5aa3df20097cc147520736ce3d",
+    "objective_context_fingerprint": "e12c6ecc315e9eb374c2cba51ab507ffe5200310009a6a164f9246e4be29b469",
+    "p1_sha256": "6df773cae907e696c46e0ca0a1485b0a419edcfba6753281b4bac1f3a7c1c272",
+    "pixel_costate_sha256": "774a2d04099717e42a5354199e9079c64b0ad28a2f6e1c32ad7c195eabc401df",
+    "split_identity_sha256": "3104cc7219aa3d8866bfce7ed9db56e0803c806b4843dc5628ed85e285c29b60"
+  },
+  "schema": "yopo_same_frame_teacher_label_path_floor_measurement.v1",
+  "status": "MEASURED",
+  "stores_consulted": {
+    "loaded": [
+      "saved early K=2 state",
+      "banked YOPO p1 artifact",
+      "frozen SegNet weights",
+      "pair-0 ground-truth labels",
+      "early saved-regime checkpoint",
+      "source-video custody"
+    ],
+    "not_loaded": [
+      "live trainer",
+      "live V9 run",
+      "frontier archive",
+      "cloud or paid provider"
+    ]
+  }
+}
