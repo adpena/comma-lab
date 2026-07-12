@@ -22,9 +22,6 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
 # NO-FAKE execution wall: each entry is an emitted, score-affecting typed-DSL
 # surface whose stateful MLX semantics do not yet have a 1:1 Torch twin.
 CUDA_V9_PORT_BLOCKERS: tuple[str, ...] = (
-    "--pose-carrier generated/table frame0 dispatch and learnable dxi",
-    "--structured-init scorer-SDF prefit",
-    "--accum-pairs=8 gradient accumulation and accepted-fraction semantics",
     "--curriculum-event-triggered sensor latches and resume state",
     "--ladder-island-homotopy eased targets and per-class lambda refresh",
     "--seed-islands / --birth-completion-event ramped classwise birth stack",
@@ -51,6 +48,9 @@ def cuda_v9_port_receipt() -> dict[str, object]:
             "numpy_fp32_forward_parity_and_backend_compile_probe",
             "atomic_resume_ema_and_per_stage_checkpoint_contract",
             "canonical_loss_terms_jsonl_contract",
+            "generated_table_pose_carrier_frame0_dispatch_and_learnable_dxi",
+            "structured_scorer_sdf_prefit_with_resume_suppression",
+            "accum_pairs_8_chunk_atomic_updates_and_accepted_fraction",
         ],
     }
 
