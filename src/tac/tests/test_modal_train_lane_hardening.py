@@ -496,7 +496,7 @@ def test_named_provider_endpoint_is_cpu_bounded_and_gpu_is_post_gate_dynamic() -
         ("T4", "T4"),
         ("A10G", "A10G"),
         ("A100-80GB", "A100"),
-        ("H100!", "H100!"),
+        ("H100", "H100"),
     ):
         assert validate_gpu(gpu, preflight_first=True) == expected
         try:
@@ -505,7 +505,7 @@ def test_named_provider_endpoint_is_cpu_bounded_and_gpu_is_post_gate_dynamic() -
             pass
         else:
             raise AssertionError(f"paid GPU bypassed CPU preflight: {gpu}")
-    for unsafe_h100 in ("H100", "H100-80GB"):
+    for unsafe_h100 in ("H100!", "H100-80GB"):
         with pytest.raises(ValueError):
             validate_gpu(unsafe_h100, preflight_first=True)
 
@@ -571,7 +571,7 @@ def test_remote_dispatch_stage_requires_preflight_receipt_before_source_copy() -
         dispatch_stage="gpu_dispatch",
         dispatch_nonce=nonce,
         cpu_preflight_receipt=receipt,
-        requested_gpu="H100!",
+        requested_gpu="H100",
         lane_script=lane_script,
         label=label,
         mounted_code_git_head=head,
@@ -677,8 +677,8 @@ def test_v9_direct_dispatch_policy_refuses_ten_hour_bypass(tmp_path: Path) -> No
         {"lane_script": f"scripts/../{cloud.REMOTE_DRIVER}"},
         {"max_seconds": 10 * 3600 - 300, "hard_timeout_seconds": 10 * 3600},
         {"gpu": "A100"},
-        {"gpu": "H100"},
-        {"requested_gpu": "H100"},
+        {"gpu": "H100!"},
+        {"requested_gpu": "H100!"},
         {"mounted_code_git_branch": "feature"},
         {"preflight_first": False},
         {"require_clean_head": False},
@@ -906,7 +906,7 @@ def test_remote_h100_v9_guard_refuses_direct_fourteen_hour_call() -> None:
         {"lane_script": "scripts/generic_wrapper.sh"},
         {"max_seconds": 14 * 3600},
         {"requested_gpu": "A100"},
-        {"requested_gpu": "H100"},
+        {"requested_gpu": "H100!"},
         {"billing_deadline_unix_s": now + 14 * 3600},
         {"billing_deadline_unix_s": None},
         {"env_overrides": {**overrides, "WITNESS_EPOCHS": "10"}},

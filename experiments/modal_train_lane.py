@@ -224,7 +224,7 @@ def _validated_modal_gpu_request(
     }.get(gpu)
     if normalized is None:
         raise ValueError(
-            f"unsupported gpu {gpu!r}; use CPU, T4, A10G, A100, or H100!"
+            f"unsupported gpu {gpu!r}; use CPU, T4, A10G, A100, or H100"
         )
     if not preflight_first:
         raise ValueError(
@@ -531,7 +531,7 @@ def _validate_v9_remote_h100_invocation(
             )
         return
     if requested_gpu != V9_EXACT_H100_GPU:
-        raise ValueError("remote V9 dynamic GPU must be exactly H100!")
+        raise ValueError("remote V9 dynamic GPU must be exactly H100")
     if max_seconds != V9_CHILD_TIMEOUT_SECONDS:
         raise ValueError(
             f"remote V9 child timeout must be exactly {V9_CHILD_TIMEOUT_SECONDS}s"
@@ -665,7 +665,7 @@ def _validate_v9_direct_dispatch_policy(
     if trainer_module_path != V9_TRAINER:
         raise ValueError("V9 trainer_module_path must be the exact canonical Torch trainer")
     if gpu != V9_EXACT_H100_GPU or requested_gpu != V9_EXACT_H100_GPU:
-        raise ValueError("V9 Modal dispatch requires raw and dynamic gpu exactly H100!")
+        raise ValueError("V9 Modal dispatch requires raw and dynamic gpu exactly H100")
     if mounted_code_git_branch != "main":
         raise ValueError("V9 Modal dispatch requires mounted git branch exactly main")
     if not preflight_first:
@@ -2389,7 +2389,7 @@ def main(
     Args:
         lane_script: relative path like 'scripts/remote_lane_omega_hessian_qat.sh'
         label: short label used for output dir naming
-        gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100!'
+        gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100'
         timeout_hours: max runtime (Modal hard kills at this)
         env_overrides: 'KEY1=val1,KEY2=val2' optional env to pass to lane
         trainer_module_path: explicit trainer metadata module from recipe

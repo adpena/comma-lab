@@ -47,7 +47,14 @@ TYPED_EPOCH_HORIZON = 3000
 DEFAULT_STOP_AFTER_EPOCHS = 3
 CHILD_TIMEOUT_SECONDS = 1500
 INVOCATION_TIMEOUT_SECONDS = 1800
-EXACT_H100_GPU = "H100!"
+# Canonical Modal GPU string (per https://modal.com/docs/guide/gpu). We use the
+# plain "H100" — NOT the "H100!" strict-suffix — because (1) Modal's docs state
+# the automatic H100->H200 upgrade "does not change the cost", so the strict `!`
+# (which only suppresses that free upgrade) buys no money-safety, and (2) the
+# `!` variant empirically failed to attach a GPU through .with_options(gpu=...)
+# on modal 1.5.1 (2026-07-12: GPU dispatch stage ran GPU-less -> rc=13). Money
+# safety is enforced by the cost ceiling + timeout guards, not the GPU string.
+EXACT_H100_GPU = "H100"
 H100_GPU_USD_PER_HOUR = 5.00
 CPU_CORES = 4
 CPU_USD_PER_CORE_SECOND = 0.0000131
@@ -188,7 +195,7 @@ def build_plan(
         raise ValueError("source_git_head must be an exact lowercase 40-character git SHA")
     if gpu != EXACT_H100_GPU:
         raise ValueError(
-            "V9 CGauge timing smoke requires exact H100! with auto-upgrade disabled"
+            "V9 CGauge timing smoke requires the canonical H100 GPU string"
         )
     if not LABEL_RE.fullmatch(label):
         raise ValueError("label must be a lowercase hyphenated slug")

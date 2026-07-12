@@ -186,7 +186,7 @@ def test_modal_train_lane_main_supports_cpu_tool_dispatch() -> None:
     text = SOURCE.read_text()
     main_src = text[text.index("@app.local_entrypoint()"):]
     assert "def run_lane_training_cpu(" in text
-    assert "gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100!'" in main_src
+    assert "gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100'" in main_src
     assert 'if gpu in ("CPU", "cpu", "Cpu")' in text
     normalize = main_src.index("requested_modal_gpu = _validated_modal_gpu_request(")
     assert "fn = run_lane_training_cpu" in main_src
@@ -195,7 +195,7 @@ def test_modal_train_lane_main_supports_cpu_tool_dispatch() -> None:
     dynamic_gpu = main_src.index('invocation_options["gpu"] = requested_modal_gpu')
     spawn = main_src.index("fn_call = fn.with_options(", dynamic_gpu)
     assert normalize < preflight < claim < dynamic_gpu < spawn
-    assert "use CPU, T4, A10G, A100, or H100!" in text
+    assert "use CPU, T4, A10G, A100, or H100" in text
 
 
 def test_modal_train_lane_keeps_module_load_image_build_for_caching() -> None:

@@ -59,7 +59,7 @@ def test_modal_plan_is_deterministic_sha_bound_and_cost_conservative():
     assert a.child_timeout_seconds == CHILD_TIMEOUT_SECONDS == 1500
     assert a.invocation_timeout_seconds == INVOCATION_TIMEOUT_SECONDS == 1800
     assert a.gpu_usd_per_hour_ceiling == H100_GPU_USD_PER_HOUR == 5.0
-    assert a.gpu == EXACT_H100_GPU == "H100!"
+    assert a.gpu == EXACT_H100_GPU == "H100"
     assert a.planned_total_cost_usd == pytest.approx(3.296256)
     assert a.planned_total_cost_usd <= a.max_plan_cost_usd == 5.0
     assert a.budgeted_image_staging_allowance_usd == 0.50
@@ -114,7 +114,7 @@ def test_missing_sha_blocks_execution_and_never_stages_unaddressed_asset(missing
         ("label", "unsafe/path"),
         ("label", "a" * 64),
         ("gpu", "T4"),
-        ("gpu", "H100"),
+        ("gpu", "H100!"),
         ("gpu", "H100-80GB"),
         ("epochs", 3),
         ("num_pairs", 2),
