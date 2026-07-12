@@ -3,10 +3,12 @@
 The batched loss (``tac.boundary_math.levelset_micro_batch_loss``) is the OPT-IN speed lever
 for the LEVELSET witness trainer (the pointer-mover). The #1 correctness gate: the batched
 grad over K pairs MUST equal the mean of the K per-pair grads within fp tolerance — a wrong
-gradient corrupts training (NO-FAKE). These tests pin that with a real tiny witness + a
-batch-independent mock frozen scorer (EfficientNet-B2/FastViT are batch-independent in eval
-mode, which is the property the batching relies on), plus a check that the extracted per-pair
-base math matches the canonical importable ``make_loss_fn`` op-for-op.
+gradient corrupts training (NO-FAKE). Real EfficientNet-B2/FastViT scorer kernels are MEASURED
+batch-dependent, so bit identity is not the training gate. These tests use a deliberately
+batch-independent mock scorer to isolate the required functional loss/gradient parity; operator
+policy admits the training-only lever only when that parity and measured end-to-end speedup both
+pass. Exact byte-closed scoring authority is unchanged. The suite also checks that the extracted
+per-pair base math matches the canonical importable ``make_loss_fn`` op-for-op.
 """
 
 from __future__ import annotations
@@ -19,11 +21,9 @@ import numpy as np
 import pytest
 
 mx = pytest.importorskip("mlx.core")
-# Run on MLX CPU: matmul/reductions are bit-identical batch-vs-single there, so the batched
-# loss and the mean-of-per-pair reference agree to fp32 machine precision -> this isolates the
-# MATH equivalence (exact). The GPU batched-fp-reduction noise (~1e-3, from GPU matmul kernel
-# tiling on the pose path) is the acknowledged non-bit-identity of the --micro-batch-pairs opt-in
-# and is validated END-TO-END on GPU by the trajectory A/B smoke, not here.
+# Run the functional-parity matrix on MLX CPU with a batch-independent mock scorer, isolating the
+# routed loss math from the real scorer's measured batch-dependent kernels. The dedicated fused-map
+# test below explicitly enters a GPU context and verifies the actual Metal forwards and VJPs.
 mx.set_default_device(mx.cpu)
 import mlx.nn as nn  # noqa: E402
 from mlx.utils import tree_flatten  # noqa: E402
@@ -114,7 +114,7 @@ def _build(K, seed=0):
     c0_list = [2 * p + 0 for p in range(K)]
     c1_list = [2 * p + 1 for p in range(K)]
     oh_list, mg_list, pt_list = [], [], []
-    for k in range(K):
+    for _k in range(K):
         arg = rng.integers(0, 5, size=(rh, rw))
         oh = np.eye(5, dtype=np.float32)[arg].reshape(1, rh, rw, 5)
         mg = (rng.random((1, rh, rw)).astype(np.float32) * 0.5)
@@ -122,8 +122,18 @@ def _build(K, seed=0):
         mg_list.append(mx.array(mg))
         pt_list.append(mx.array(rng.standard_normal(6).astype(np.float32) * 0.01))
     mx.eval(model.parameters(), cf, *oh_list, *mg_list, *pt_list)
-    return dict(model=model, adapter=adapter, rh=rh, rw=rw, cf_list=cf_list,
-                c0_list=c0_list, c1_list=c1_list, oh_list=oh_list, mg_list=mg_list, pt_list=pt_list)
+    return {
+        "model": model,
+        "adapter": adapter,
+        "rh": rh,
+        "rw": rw,
+        "cf_list": cf_list,
+        "c0_list": c0_list,
+        "c1_list": c1_list,
+        "oh_list": oh_list,
+        "mg_list": mg_list,
+        "pt_list": pt_list,
+    }
 
 
 def _base_lc(**over):
@@ -151,7 +161,8 @@ def _max_rel_grad_err(g_batched, g_mean):
 
 
 def _batched_and_meanpairs(env, lc, *, w_seg=100.0, w_pose=1.0, hinge=4.0, mtgt=0.5,
-                           seg_form=None, eik_w=0.0, len_w=0.0, render_fn_wa=None):
+                           seg_form=None, eik_w=0.0, len_w=0.0, render_fn_wa=None,
+                           render_fn=_render_fn):
     """Return (loss_batched, grad_batched, mean_loss_pairs, mean_grad_pairs). ``render_fn_wa``
     routes the island levers (amplify/persistence) through a distinct (seed-excluded) forward in
     BOTH the batched and the mean-of-per-pair paths — the equivalence gate for the wa leg."""
@@ -159,7 +170,7 @@ def _batched_and_meanpairs(env, lc, *, w_seg=100.0, w_pose=1.0, hinge=4.0, mtgt=
 
     def _bfn(m):
         return batched_realized_loss(
-            m, env["adapter"], _render_fn, env["rh"], env["rw"],
+            m, env["adapter"], render_fn, env["rh"], env["rw"],
             env["cf_list"], env["c0_list"], env["c1_list"],
             env["oh_list"], env["mg_list"], env["pt_list"],
             w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, render_fn_wa=render_fn_wa)
@@ -174,7 +185,7 @@ def _batched_and_meanpairs(env, lc, *, w_seg=100.0, w_pose=1.0, hinge=4.0, mtgt=
 
     def _sfn(m, k):
         return single_realized_loss(
-            m, env["adapter"], _render_fn, env["rh"], env["rw"],
+            m, env["adapter"], render_fn, env["rh"], env["rw"],
             env["cf_list"][k], env["c0_list"][k], env["c1_list"][k],
             env["oh_list"][k], env["mg_list"][k], env["pt_list"][k],
             w_seg, w_pose, hinge, mtgt, seg_form, eik_w, len_w, lc, render_fn_wa=render_fn_wa)
@@ -699,6 +710,681 @@ def test_waterfill_still_pins_micro_batch_unmeasured_at_n600():
     _tools = os.path.join(_REPO, "tools")
     if _tools not in _sys.path:
         _sys.path.insert(0, _tools)
-    import memory_waterfill_config as mwc  # noqa: E402
+    import memory_waterfill_config as mwc
     st = mwc.assess_micro_batch(mwc.DEFAULT_MICRO_BATCH_POINTS, target_n_pairs=600)
     assert not st.measured and st.grid == (1,), (st.measured, st.grid)
+
+
+# ===========================================================================
+# V9 unlock — every active production leg must have a functional batched twin.
+# These providers deliberately vary by pair, preventing an accidentally reused row from passing.
+# ===========================================================================
+def _v9_providers(env):
+    chroma_gt, ann, phase_ref, phase_dir, phase_weight, xi = {}, {}, {}, {}, {}, {}
+    for k, c1 in enumerate(env["c1_list"]):
+        pi = int(c1) // 2
+        shape = (1, env["rh"], env["rw"])
+        chroma_gt[pi] = mx.array(np.full((*shape, 3), 0.03 * (k + 1), np.float32))
+        ann[pi] = mx.array(np.full(shape, 0.5 + 0.1 * k, np.float32))
+        phase_ref[pi] = mx.array(np.full(shape, 0.2 + 0.05 * k, np.float32))
+        direction = np.zeros(shape, np.float32)
+        direction[:, ::2, :] = 1.0
+        phase_dir[pi] = mx.array(direction)
+        phase_weight[pi] = mx.array(np.full(shape, 0.7 + 0.03 * k, np.float32))
+        xi[pi] = mx.zeros((6,), dtype=mx.float32)
+    return {"chroma_gt": chroma_gt, "ann": ann, "phase_ref": phase_ref,
+            "phase_dir": phase_dir, "phase_weight": phase_weight, "xi": xi}
+
+
+def _assert_parity(env, lc, *, receipt_lever=None, backend_receipt="mlx_reference", **kwargs):
+    lb, gb, lm, gm = _batched_and_meanpairs(env, lc, **kwargs)
+    grad_rel = _max_rel_grad_err(gb, gm)
+    assert abs(lb - lm) / (abs(lm) + 1e-6) < 1e-4, (lb, lm)
+    assert grad_rel < 1e-4
+    if receipt_lever is not None:
+        from tac.boundary_math.micro_batch_bit_identity_probe import make_functional_parity_receipt
+
+        fb, fm = dict(tree_flatten(gb)), dict(tree_flatten(gm))
+        grad_maxabs = max(float(np.max(np.abs(np.asarray(fb[k]) - np.asarray(fm[k])))) for k in fb)
+        receipt = make_functional_parity_receipt(
+            lever=receipt_lever, K=len(env["c1_list"]), batched_loss=lb,
+            serial_mean_loss=lm, grad_rel_l2=grad_rel, grad_maxabs=grad_maxabs,
+            backend_receipt=backend_receipt)
+        assert receipt.passed, receipt.as_dict()
+    return lb
+
+
+@pytest.mark.parametrize("K", [2, 4])
+@pytest.mark.parametrize("lever", ["chroma", "phase", "area"])
+def test_v9_routed_lever_batched_loss_and_grad_parity(K, lever):
+    env = _build(K, seed=1100 + K)
+    p = _v9_providers(env)
+    if lever == "chroma":
+        lc = _base_lc(chroma_w=0.4, chroma_gt_prov=p["chroma_gt"],
+                      chroma_ann_prov=p["ann"], use_metal_v9_levers=False)
+    elif lever == "phase":
+        lc = _base_lc(phase_w=0.6, phase_ref_prov=p["phase_ref"],
+                      phase_dir_prov=p["phase_dir"], phase_weight_prov=p["phase_weight"],
+                      use_metal_v9_levers=False)
+    else:
+        lc = _base_lc(area_lambda={0: 2.0, 3: 0.7})
+    _assert_parity(env, lc, receipt_lever=lever, seg_form="ce", eik_w=1e-2, len_w=1e-3)
+
+
+@pytest.mark.parametrize("K", [2, 4])
+def test_v9_temporal_screw_batched_loss_and_grad_parity(K, monkeypatch):
+    """A deterministic identity warp isolates the temporal loss batching contract."""
+    import tac.boundary_math.warp_real_luma_frame0 as warp_mod
+
+    observed_batch_sizes = []
+
+    def compiled_identity(geom):
+        def warp(g0, xi):
+            observed_batch_sizes.append((int(g0.shape[0]), int(xi.shape[0])))
+            return g0
+
+        return warp
+
+    monkeypatch.setattr(warp_mod, "compiled_batch_native_warp", compiled_identity)
+    env = _build(K, seed=1200 + K)
+    p = _v9_providers(env)
+    lc = _base_lc(temporal_w=0.8, temporal_ann_prov=p["ann"],
+                  temporal_xi_prov=p["xi"], temporal_geom_mlx=object(),
+                  temporal_class_mask=mx.array([1.0, 0.5, 0.25]),
+                  use_metal_v9_levers=False)
+    _assert_parity(env, lc, receipt_lever="temporal", seg_form="ce", eik_w=1e-2, len_w=1e-3)
+    # The batched leg must reach the compiled factory as one K-row warp; serial B=1 reference
+    # calls can coexist but may not replace it with a Python pair loop.
+    assert (K, K) in observed_batch_sizes
+
+
+def test_v9_temporal_carrier_live_passes_frame0_code_for_film_mode(monkeypatch):
+    """The accepted FiLM carrier mode needs a code vector for every live-xi row at K=2."""
+    import tac.boundary_math.warp_real_luma_frame0 as warp_mod
+
+    monkeypatch.setattr(warp_mod, "compiled_batch_native_warp",
+                        lambda geom: (lambda g0, xi: g0))
+    env = _build(2, seed=1250)
+    p = _v9_providers(env)
+
+    class _FilmLikeCarrier:
+        def __init__(self):
+            self.calls = []
+
+        def xi_effective(self, pair_index, code_vec=None):
+            if code_vec is None:
+                raise ValueError("film carrier requires code_vec")
+            self.calls.append((int(pair_index), code_vec))
+            # Retain a differentiable code dependency while making the identity-warp oracle simple.
+            return mx.zeros((6,), dtype=code_vec.dtype) + 0.0 * mx.sum(code_vec)
+
+    carrier = _FilmLikeCarrier()
+    env["model"].pose_carrier = carrier
+    lc = _base_lc(
+        temporal_w=0.8, temporal_ann_prov=p["ann"], temporal_xi_source="carrier_live",
+        temporal_geom_mlx=object(), temporal_class_mask=mx.array([1.0, 0.5, 0.25]),
+        use_metal_v9_levers=False,
+    )
+    _assert_parity(env, lc, seg_form="ce")
+    assert {pair_index for pair_index, _ in carrier.calls} == {
+        int(c1) // 2 for c1 in env["c1_list"]
+    }
+    assert all(np.array_equal(np.asarray(code_vec), np.asarray(env["model"].code[2 * pair_index]))
+               for pair_index, code_vec in carrier.calls)
+
+
+@pytest.mark.parametrize("lever", ["chroma", "phase", "temporal"])
+def test_v9_active_levers_fail_closed_on_missing_provider(lever, monkeypatch):
+    env = _build(2, seed=1300)
+    p = _v9_providers(env)
+    if lever == "chroma":
+        lc = _base_lc(chroma_w=1.0, chroma_gt_prov=None, chroma_ann_prov=p["ann"])
+        match = "chroma_gt_prov"
+    elif lever == "phase":
+        lc = _base_lc(phase_w=1.0, phase_ref_prov=p["phase_ref"],
+                      phase_dir_prov=None, phase_weight_prov=p["phase_weight"])
+        match = "phase_dir_prov"
+    else:
+        import tac.boundary_math.warp_real_luma_frame0 as warp_mod
+        monkeypatch.setattr(warp_mod, "compiled_batch_native_warp",
+                            lambda geom: (lambda g0, xi: g0))
+        lc = _base_lc(temporal_w=1.0, temporal_ann_prov=p["ann"], temporal_xi_prov=None,
+                      temporal_geom_mlx=object(), temporal_class_mask=mx.ones((3,)))
+        match = "temporal_xi_prov"
+    with pytest.raises(ValueError, match=match):
+        _batched_and_meanpairs(env, lc)
+
+
+@pytest.mark.parametrize("lever", ["chroma", "phase", "temporal"])
+def test_v9_gate_off_and_zero_mask_are_exact_noops(lever, monkeypatch):
+    env = _build(2, seed=1400)
+    p = _v9_providers(env)
+    base = _batched_and_meanpairs(env, _base_lc())[0]
+    if lever == "chroma":
+        common = {"chroma_w": 0.9, "chroma_gt_prov": p["chroma_gt"],
+                  "chroma_ann_prov": p["ann"], "use_metal_v9_levers": False}
+        off = _base_lc(**common, chroma_gate={"on": False})
+        zero = _base_lc(**{**common, "chroma_ann_prov": {
+            i: mx.zeros_like(v) for i, v in p["ann"].items()}})
+    elif lever == "phase":
+        common = {"phase_w": 0.9, "phase_ref_prov": p["phase_ref"],
+                  "phase_dir_prov": p["phase_dir"], "phase_weight_prov": p["phase_weight"],
+                  "use_metal_v9_levers": False}
+        off = _base_lc(**common, phase_gate={"on": False})
+        zero = _base_lc(**{**common, "phase_weight_prov": {
+            i: mx.zeros_like(v) for i, v in p["phase_weight"].items()}})
+    else:
+        import tac.boundary_math.warp_real_luma_frame0 as warp_mod
+        monkeypatch.setattr(warp_mod, "compiled_batch_native_warp",
+                            lambda geom: (lambda g0, xi: g0))
+        common = {"temporal_w": 0.9, "temporal_ann_prov": p["ann"],
+                  "temporal_xi_prov": p["xi"], "temporal_geom_mlx": object(),
+                  "temporal_class_mask": mx.ones((3,)), "use_metal_v9_levers": False}
+        off = _base_lc(**common, temporal_gate={"on": False})
+        zero = _base_lc(**{**common, "temporal_ann_prov": {
+            i: mx.zeros_like(v) for i, v in p["ann"].items()}})
+    assert abs(_batched_and_meanpairs(env, off)[0] - base) < 1e-9
+    assert abs(_batched_and_meanpairs(env, zero)[0] - base) < 1e-9
+
+
+def test_v9_active_legs_change_loss_and_area_gate_is_empty_mapping():
+    env = _build(2, seed=1500)
+    p = _v9_providers(env)
+    base = _batched_and_meanpairs(env, _base_lc())[0]
+    configs = [
+        _base_lc(chroma_w=0.5, chroma_gt_prov=p["chroma_gt"], chroma_ann_prov=p["ann"],
+                 use_metal_v9_levers=False),
+        _base_lc(phase_w=0.5, phase_ref_prov=p["phase_ref"], phase_dir_prov=p["phase_dir"],
+                 phase_weight_prov=p["phase_weight"], use_metal_v9_levers=False),
+        _base_lc(area_lambda={0: 500.0, 1: 500.0, 2: 500.0, 3: 500.0, 4: 500.0}),
+    ]
+    for lc in configs:
+        assert abs(_batched_and_meanpairs(env, lc)[0] - base) > 1e-6
+    assert abs(_batched_and_meanpairs(env, _base_lc(area_lambda={}))[0] - base) < 1e-9
+
+
+@pytest.mark.parametrize("lever", ["chroma", "phase", "temporal", "area"])
+def test_v9_single_routed_term_matches_independent_serial_formula_oracle(lever, monkeypatch):
+    """B=1 oracle is independent of _batched_v9_map_terms and its fused helper functions."""
+    if lever == "temporal":
+        import tac.boundary_math.warp_real_luma_frame0 as warp_mod
+        monkeypatch.setattr(warp_mod, "compiled_batch_native_warp",
+                            lambda geom: (lambda g0, xi: g0))
+    env = _build(1, seed=1550)
+    p = _v9_providers(env)
+    pi = int(env["c1_list"][0]) // 2
+    if lever == "chroma":
+        weight = 0.4
+        lc = _base_lc(chroma_w=weight, chroma_gt_prov=p["chroma_gt"],
+                      chroma_ann_prov=p["ann"], use_metal_v9_levers=False)
+    elif lever == "phase":
+        weight = 0.6
+        lc = _base_lc(phase_w=weight, phase_ref_prov=p["phase_ref"],
+                      phase_dir_prov=p["phase_dir"], phase_weight_prov=p["phase_weight"],
+                      use_metal_v9_levers=False)
+    elif lever == "temporal":
+        weight = 0.8
+        lc = _base_lc(temporal_w=weight, temporal_ann_prov=p["ann"],
+                      temporal_xi_prov=p["xi"], temporal_geom_mlx=object(),
+                      temporal_class_mask=mx.array([1.0, 0.5, 0.25]),
+                      use_metal_v9_levers=False)
+    else:
+        weight = None
+        lc = _base_lc(area_lambda={0: 2.0, 3: 0.7})
+
+    def routed(m):
+        return single_realized_loss(
+            m, env["adapter"], _render_fn, env["rh"], env["rw"],
+            env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+            env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+            0.0, 0.0, 4.0, 0.5, "ce", 0.0, 0.0, lc)
+
+    def oracle(m):
+        f1 = _render_fn(m, env["cf_list"][0], env["c1_list"][0], env["rh"], env["rw"])
+        sl1 = env["adapter"].segnet(f1)
+        if lever == "chroma":
+            luma = (0.299 * f1[..., 0:1] + 0.587 * f1[..., 1:2]
+                    + 0.114 * f1[..., 2:3])
+            chroma = f1 - luma
+            sq = mx.sum(mx.square(chroma - p["chroma_gt"][pi]), axis=-1)
+            ann = p["ann"][pi]
+            return weight * mx.sum(sq * ann) / (mx.sum(ann) + 1e-6)
+        if lever == "phase":
+            oh = env["oh_list"][0]
+            gt = mx.sum(sl1 * oh, axis=-1)
+            runner = mx.max(sl1 + oh * (-1e9), axis=-1)
+            margin = mx.maximum(gt - runner, 0.0)
+            right = mx.pad(margin[:, :, 1:], [(0, 0), (0, 0), (0, 1)])
+            down = mx.pad(margin[:, 1:, :], [(0, 0), (0, 1), (0, 0)])
+            partner = mx.where(p["phase_dir"][pi] < 0.5, right, down)
+            tie = margin / (margin + partner + lc.phase_eps)
+            sq = mx.square(tie - p["phase_ref"][pi])
+            phase_weight = p["phase_weight"][pi]
+            return weight * mx.sum(sq * phase_weight) / (mx.sum(phase_weight) + 1e-6)
+        if lever == "temporal":
+            f0 = _render_fn(m, env["cf_list"][0], env["c0_list"][0], env["rh"], env["rw"])
+            sl0 = env["adapter"].segnet(f0)
+            g1 = mx.softmax(sl1, axis=-1)[..., 0:3]
+            g0_identity_warp = mx.softmax(sl0, axis=-1)[..., 0:3]
+            sq = mx.sum(mx.square(g1 - g0_identity_warp) * lc.temporal_class_mask, axis=-1)
+            ann = p["ann"][pi]
+            return weight * mx.sum(sq * ann) / (mx.sum(ann) + 1e-6)
+        soft = mx.softmax(sl1, axis=-1)
+        area = mx.zeros(())
+        for cls, lam in lc.area_lambda.items():
+            over = mx.maximum(
+                mx.mean(soft[..., int(cls)]) - mx.mean(env["oh_list"][0][..., int(cls)]),
+                0.0)
+            area = area + 0.5 * float(lam) * over * over
+        return area
+
+    routed_value, routed_grad = nn.value_and_grad(env["model"], routed)(env["model"])
+    oracle_value, oracle_grad = nn.value_and_grad(env["model"], oracle)(env["model"])
+    mx.eval(routed_value, routed_grad, oracle_value, oracle_grad)
+    rv, ov = float(routed_value), float(oracle_value)
+    assert abs(rv - ov) / (abs(ov) + 1e-6) < 1e-4, (lever, rv, ov)
+    assert _max_rel_grad_err(routed_grad, oracle_grad) < 1e-4
+    routed_flat, oracle_flat = dict(tree_flatten(routed_grad)), dict(tree_flatten(oracle_grad))
+    grad_maxabs = max(float(np.max(np.abs(
+        np.asarray(routed_flat[key]) - np.asarray(oracle_flat[key])))) for key in routed_flat)
+    assert grad_maxabs < 1e-2, (lever, grad_maxabs)
+
+
+def test_temporal_uses_raw_f0_provider_while_pose_keeps_general_carrier_render(monkeypatch):
+    """Both B=1 and B>1 keep raw temporal f0 separate from the carrier PoseNet f0."""
+    import tac.boundary_math.warp_real_luma_frame0 as warp_mod
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    monkeypatch.setattr(warp_mod, "compiled_batch_native_warp",
+                        lambda geom: (lambda g0, xi: g0))
+    env = _build(2, seed=1575)
+    p = _v9_providers(env)
+    pi = int(env["c1_list"][0]) // 2
+
+    def raw_render(model, cf, code_idx, rh, rw):
+        return _render_fn(model, cf, code_idx, rh, rw)
+
+    def carrier_render(model, cf, code_idx, rh, rw):
+        raw = raw_render(model, cf, code_idx, rh, rw)
+        if int(code_idx) % 2:
+            return raw
+        carrier_delta = mx.array([35.0, -18.0, 9.0], dtype=mx.float32)
+        return raw * 0.65 + carrier_delta
+
+    lc = _base_lc(
+        temporal_w=0.8, temporal_ann_prov=p["ann"], temporal_xi_prov=p["xi"],
+        temporal_geom_mlx=object(), temporal_class_mask=mx.array([1.0, 0.5, 0.25]),
+        temporal_render_f0_fn=raw_render, use_metal_v9_levers=False)
+
+    def temporal_routed(m, cfg=lc):
+        return single_realized_loss(
+            m, env["adapter"], carrier_render, env["rh"], env["rw"],
+            env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+            env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+            0.0, 0.0, 4.0, 0.5, "ce", 0.0, 0.0, cfg)
+
+    def temporal_raw_oracle(m):
+        f1 = carrier_render(
+            m, env["cf_list"][0], env["c1_list"][0], env["rh"], env["rw"])
+        f0_raw = raw_render(
+            m, env["cf_list"][0], env["c0_list"][0], env["rh"], env["rw"])
+        g1 = mx.softmax(env["adapter"].segnet(f1), axis=-1)[..., 0:3]
+        g0 = mx.softmax(env["adapter"].segnet(f0_raw), axis=-1)[..., 0:3]
+        sq = mx.sum(mx.square(g1 - g0) * lc.temporal_class_mask, axis=-1)
+        ann = p["ann"][pi]
+        return lc.temporal_w * mx.sum(sq * ann) / (mx.sum(ann) + 1e-6)
+
+    routed_value, routed_grad = nn.value_and_grad(env["model"], temporal_routed)(env["model"])
+    oracle_value, oracle_grad = nn.value_and_grad(env["model"], temporal_raw_oracle)(env["model"])
+    mx.eval(routed_value, routed_grad, oracle_value, oracle_grad)
+    assert abs(float(routed_value) - float(oracle_value)) / (abs(float(oracle_value)) + 1e-6) < 1e-4
+    assert _max_rel_grad_err(routed_grad, oracle_grad) < 1e-4
+
+    wrong_lc = _base_lc(
+        temporal_w=lc.temporal_w, temporal_ann_prov=p["ann"], temporal_xi_prov=p["xi"],
+        temporal_geom_mlx=object(), temporal_class_mask=lc.temporal_class_mask,
+        temporal_render_f0_fn=None, use_metal_v9_levers=False)
+    wrong_value = temporal_routed(env["model"], wrong_lc)
+    mx.eval(wrong_value)
+    assert abs(float(wrong_value) - float(oracle_value)) > 1e-6
+
+    def pose_routed(m, render=carrier_render):
+        return single_realized_loss(
+            m, env["adapter"], render, env["rh"], env["rw"],
+            env["cf_list"][0], env["c0_list"][0], env["c1_list"][0],
+            env["oh_list"][0], env["mg_list"][0], env["pt_list"][0],
+            0.0, 1.0, 4.0, 0.5, "ce", 0.0, 0.0, _base_lc())
+
+    def pose_general_oracle(m):
+        f0 = carrier_render(
+            m, env["cf_list"][0], env["c0_list"][0], env["rh"], env["rw"])
+        f1 = carrier_render(
+            m, env["cf_list"][0], env["c1_list"][0], env["rh"], env["rw"])
+        pair = mx.stack([f0[0], f1[0]], axis=0)[None]
+        yuv = rgb_to_yuv6_mlx(pair)
+        b, t, h2, w2, c6 = yuv.shape
+        yuv_nhwc = mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
+        pose = env["adapter"].posenet(yuv_nhwc)["pose"][0, :env["pt_list"][0].shape[-1]]
+        return mx.sqrt(10.0 * mx.mean(mx.square(pose - env["pt_list"][0]))
+                       + _base_lc().pose_eps)
+
+    pose_value, pose_grad = nn.value_and_grad(env["model"], pose_routed)(env["model"])
+    pose_oracle, pose_oracle_grad = nn.value_and_grad(
+        env["model"], pose_general_oracle)(env["model"])
+    mx.eval(pose_value, pose_grad, pose_oracle, pose_oracle_grad)
+    assert abs(float(pose_value) - float(pose_oracle)) / (abs(float(pose_oracle)) + 1e-6) < 1e-4
+    assert _max_rel_grad_err(pose_grad, pose_oracle_grad) < 1e-4
+    raw_pose_value = pose_routed(env["model"], raw_render)
+    mx.eval(raw_pose_value)
+    assert abs(float(raw_pose_value) - float(pose_oracle)) > 1e-6
+
+    # The exact integration risk is the batched path: temporal must use raw f0 while the base
+    # PoseNet pair continues to use carrier-composed f0 for every row. Compare B=2 against its
+    # correctly routed serial mean, then prove the two tempting wrong aliases change the value.
+    temporal_b, _, temporal_serial, _ = _batched_and_meanpairs(
+        env, lc, w_seg=0.0, w_pose=0.0, render_fn=carrier_render)
+    assert abs(temporal_b - temporal_serial) / (abs(temporal_serial) + 1e-6) < 1e-4
+    wrong_b = _batched_and_meanpairs(
+        env, wrong_lc, w_seg=0.0, w_pose=0.0, render_fn=carrier_render)[0]
+    assert abs(wrong_b - temporal_b) > 1e-6
+
+    pose_b, _, pose_serial, _ = _batched_and_meanpairs(
+        env, _base_lc(), w_seg=0.0, w_pose=1.0, render_fn=carrier_render)
+    assert abs(pose_b - pose_serial) / (abs(pose_serial) + 1e-6) < 1e-4
+    raw_pose_b = _batched_and_meanpairs(
+        env, _base_lc(), w_seg=0.0, w_pose=1.0, render_fn=raw_render)[0]
+    assert abs(raw_pose_b - pose_b) > 1e-6
+
+
+def test_v9_live_logit_and_birth_ramp_state_are_reread_without_rebuild():
+    env = _build(2, seed=1600)
+    offset_state = {"offset": mx.zeros((5,))}
+    lc = _base_lc(logit_adjust_state=offset_state,
+                  logit_adjust_offset=mx.array(_LA_OFFSET_NP))
+    before = _assert_parity(env, lc)
+    offset_state["offset"] = mx.array(_LA_OFFSET_NP)
+    after = _assert_parity(env, lc)
+    assert abs(after - before) > 1e-6
+
+    ramp = {"amp_active": True, "amp_lane": 0.2, "amp_mov": 0.4, "persist_scale": None}
+    masks = _island_weight_prov(env, 0.0)
+    movable = _island_weight_prov(env, 0.0)
+    for pi in masks:
+        lane_np = np.zeros((1, env["rh"], env["rw"]), np.float32)
+        lane_np[:, :, :env["rw"] // 2] = 1.0
+        masks[pi] = mx.array(lane_np)
+        movable[pi] = 1.0 - masks[pi]
+    lc = _base_lc(amplify_w=0.8, island_weight_mx=_island_weight_prov(env),
+                  amplify_ramp_state=ramp, amplify_lane_masks=masks,
+                  amplify_movable_masks=movable)
+    before = _assert_parity(env, lc)
+    ramp["amp_lane"], ramp["amp_mov"] = 1.7, 2.1
+    after = _assert_parity(env, lc)
+    assert abs(after - before) > 1e-6
+
+    ramp = {"amp_active": False, "amp_lane": 1.0, "amp_mov": 1.0,
+            "persist_scale": [0.0, 0.0]}
+    lc = _base_lc(persist_gate={"w": 0.5}, persist_classes=(1, 3),
+                  persist_cldice_iters=3, persist_recall_w=1.0,
+                  amplify_ramp_state=ramp)
+    before = _assert_parity(env, lc)
+    ramp["persist_scale"] = [2.0, 3.0]
+    after = _assert_parity(env, lc)
+    assert abs(after - before) > 1e-6
+
+
+@pytest.mark.parametrize("K", [2, 4])
+def test_v9_lane_band_render_composition_is_preserved(K):
+    env = _build(K, seed=1700 + K)
+
+    def composed_render(model, cf, code_idx, rh, rw):
+        bare = _render_fn(model, cf, code_idx, rh, rw)
+        lane = mx.array(np.linspace(0.0, 7.0, rw, dtype=np.float32)[None, None, :, None])
+        return mx.clip(bare + lane, 0.0, 255.0)
+
+    composed = _assert_parity(env, _base_lc(), render_fn=composed_render)
+    bare = _batched_and_meanpairs(env, _base_lc())[0]
+    assert abs(composed - bare) > 1e-6
+
+
+def test_v9_combined_stack_batched_loss_and_grad_parity(monkeypatch):
+    import tac.boundary_math.warp_real_luma_frame0 as warp_mod
+    monkeypatch.setattr(warp_mod, "compiled_batch_native_warp",
+                        lambda geom: (lambda g0, xi: g0))
+    env = _build(4, seed=1800)
+    p = _v9_providers(env)
+    lc = _base_lc(
+        logit_adjust_state={"offset": mx.array(_LA_OFFSET_NP)},
+        unify_tau_state={"tau": 0.6}, seg_unify_tau_perpixel=_SEG_UNIFY,
+        chroma_w=0.2, chroma_gt_prov=p["chroma_gt"], chroma_ann_prov=p["ann"],
+        phase_w=0.3, phase_ref_prov=p["phase_ref"], phase_dir_prov=p["phase_dir"],
+        phase_weight_prov=p["phase_weight"],
+        temporal_w=0.4, temporal_ann_prov=p["ann"], temporal_xi_prov=p["xi"],
+        temporal_geom_mlx=object(), temporal_class_mask=mx.array([1.0, 0.5, 0.25]),
+        area_lambda={0: 1.0, 3: 0.5}, use_metal_v9_levers=False,
+    )
+    _assert_parity(env, lc, seg_form="unify_tau", eik_w=1e-2, len_w=1e-3)
+
+
+@pytest.mark.parametrize("K", [2, 4])
+@pytest.mark.parametrize("kind", ["chroma", "phase", "temporal"])
+def test_v9_map_helper_output_and_all_primal_vjps_match_reference(K, kind):
+    from tac.local_acceleration import metal_micro_batch_v9_levers as kernels
+
+    rng = np.random.default_rng(1900 + K)
+    x = mx.array(rng.standard_normal((K, 5, 7, 3)).astype(np.float32))
+    y = mx.array(rng.standard_normal((K, 5, 7, 3)).astype(np.float32))
+    if kind == "chroma":
+        fast, ref = kernels.chroma_squared_map, kernels.chroma_squared_map_reference
+        args = (x, y)
+    elif kind == "phase":
+        d = mx.array(rng.integers(0, 2, (K, 5, 7)).astype(np.float32))
+        r = mx.array(rng.random((K, 5, 7)).astype(np.float32))
+        fast, ref, args = kernels.phase_squared_map, kernels.phase_squared_map_reference, (x[..., 0], d, r)
+    else:
+        mask = mx.array([1.0, 0.5, 0.0])
+        fast, ref, args = kernels.temporal_squared_map, kernels.temporal_squared_map_reference, (x, y, mask)
+
+    cotangent = mx.array(rng.standard_normal(tuple(ref(*args).shape)).astype(np.float32))
+
+    def fused_all(*primals):
+        return fast(*primals, use_metal=True)
+
+    vf, gf = mx.vjp(fused_all, list(args), [cotangent])
+    vr, gr = mx.vjp(ref, list(args), [cotangent])
+    mx.eval(vf, vr, *gf, *gr)
+    assert np.allclose(np.asarray(vf), np.asarray(vr), rtol=1e-5, atol=1e-5)
+    assert len(gf) == len(gr) == len(args)
+    for fused_grad, reference_grad in zip(gf, gr, strict=True):
+        assert np.allclose(
+            np.asarray(fused_grad), np.asarray(reference_grad), rtol=1e-4, atol=1e-4
+        )
+
+
+@pytest.mark.parametrize("kind", ["chroma", "phase", "temporal"])
+def test_v9_map_helpers_fail_closed_on_malformed_shapes(kind):
+    from tac.local_acceleration import metal_micro_batch_v9_levers as kernels
+
+    rgb = mx.zeros((2, 5, 7, 3), dtype=mx.float32)
+    maps = mx.zeros((2, 5, 7), dtype=mx.float32)
+    with pytest.raises(ValueError, match=r"shape|identical"):
+        if kind == "chroma":
+            kernels.chroma_squared_map(rgb, mx.zeros((2, 5, 7, 2)), use_metal=True)
+        elif kind == "phase":
+            kernels.phase_squared_map(maps, maps[:, :, :-1], maps, use_metal=True)
+        else:
+            kernels.temporal_squared_map(rgb, rgb, mx.ones((2,)), use_metal=True)
+
+
+def test_v9_gpu_surface_emits_real_metal_backend_receipts():
+    from tac.local_acceleration import metal_micro_batch_v9_levers as kernels
+    from tac.local_acceleration.mlx_scorer_adapters import temporary_mlx_device
+
+    with temporary_mlx_device("gpu"):
+        if not kernels.metal_micro_batch_v9_available():
+            pytest.skip("requires an initialized MLX Metal device")
+        rng = np.random.default_rng(1950)
+        x = mx.array(rng.standard_normal((2, 5, 7, 3)).astype(np.float32))
+        y = mx.array(rng.standard_normal((2, 5, 7, 3)).astype(np.float32))
+        direction = mx.array(rng.integers(0, 2, (2, 5, 7)).astype(np.float32))
+        reference = mx.array(rng.random((2, 5, 7)).astype(np.float32))
+        class_mask = mx.array([1.0, 0.5, 0.25], dtype=mx.float32)
+        cases = (
+            ("chroma", kernels.chroma_squared_map, kernels.chroma_squared_map_reference,
+             (x, y)),
+            ("phase", kernels.phase_squared_map, kernels.phase_squared_map_reference,
+             (x[..., 0], direction, reference)),
+            ("temporal", kernels.temporal_squared_map, kernels.temporal_squared_map_reference,
+             (x, y, class_mask)),
+        )
+        for kind, fused, ref, args in cases:
+            cotangent = mx.ones(tuple(ref(*args).shape), dtype=mx.float32)
+            fast_value, fast_grads = mx.vjp(
+                lambda *xs, _fused=fused: _fused(*xs, use_metal=True),
+                list(args),
+                [cotangent],
+            )
+            ref_value, ref_grads = mx.vjp(ref, list(args), [cotangent])
+            # Graph construction selected the kernel but has not proven a dispatch.
+            assert kernels.v9_lever_backend_receipt()[kind] == "metal_planned"
+            planned = kernels.v9_lever_backend_details()[kind]
+            assert planned["forward_status"] == "planned"
+            assert planned["backward_status"] == "planned"
+            assert planned["verified_backend"] is None
+            verified = kernels.verify_v9_lever_backend_execution(kind)
+            assert verified["forward_status"] == "evaluated"
+            assert verified["backward_status"] == "evaluated"
+            assert verified["verified_backend"] == "metal"
+            assert kernels.v9_lever_backend_receipt()[kind] == "metal"
+            mx.eval(fast_value, ref_value, *fast_grads, *ref_grads)
+            assert np.allclose(
+                np.asarray(fast_value), np.asarray(ref_value), rtol=1e-5, atol=1e-5)
+            for fast_grad, ref_grad in zip(fast_grads, ref_grads, strict=True):
+                assert np.allclose(
+                    np.asarray(fast_grad), np.asarray(ref_grad), rtol=1e-4, atol=1e-4)
+    assert mx.default_device().type == mx.cpu
+
+
+def test_v9_faithful_384x512_metal_maps_and_area_value_vjp():
+    """Faithful SegNet-grid gate: B=2 fused maps + vectorized area versus serial formulas.
+
+    The tiny matrix above is the fast regression surface. This bounded test keeps the production
+    ``(384,512)`` spatial geometry and therefore catches grid-size/indexing/dispatch defects before
+    the operator fires the full V9 arm. It is deliberately a Metal-only runtime gate: a headless
+    run must skip/refuse rather than certify the fused backend from the MLX fallback.
+    """
+    from tac.boundary_math.levelset_micro_batch_loss import _batched_v9_map_terms
+    from tac.local_acceleration import metal_micro_batch_v9_levers as kernels
+    from tac.local_acceleration.mlx_scorer_adapters import temporary_mlx_device
+
+    with temporary_mlx_device("gpu"):
+        if not kernels.metal_micro_batch_v9_available():
+            pytest.skip("requires an initialized MLX Metal device")
+        B, H, W = 2, 384, 512
+        rng = np.random.default_rng(1975)
+        rgb = mx.array(rng.uniform(0.0, 255.0, (B, H, W, 3)).astype(np.float32))
+        target = mx.array(rng.uniform(-80.0, 80.0, (B, H, W, 3)).astype(np.float32))
+        signed = mx.array(rng.standard_normal((B, H, W)).astype(np.float32))
+        direction = mx.array(rng.integers(0, 2, (B, H, W)).astype(np.float32))
+        reference = mx.array(rng.random((B, H, W)).astype(np.float32))
+        g0 = mx.array(rng.random((B, H, W, 3)).astype(np.float32))
+        # Canonical V9 TemporalScrewConsistency selects all ground classes {0,1,2}.
+        class_mask = mx.array([1.0, 1.0, 1.0], dtype=mx.float32)
+        cases = (
+            ("chroma", kernels.chroma_squared_map, kernels.chroma_squared_map_reference,
+             (rgb, target)),
+            ("phase", kernels.phase_squared_map, kernels.phase_squared_map_reference,
+             (signed, direction, reference)),
+            ("temporal", kernels.temporal_squared_map, kernels.temporal_squared_map_reference,
+             (rgb / 255.0, g0, class_mask)),
+        )
+        for kind, fused, ref, args in cases:
+            # Non-uniform cotangents cover every primal VJP, including target/reference and the
+            # temporal three-class mask reduction, at the production SegNet grid.
+            cotangent = mx.array(rng.standard_normal((B, H, W)).astype(np.float32))
+            fused_value, fused_grads = mx.vjp(
+                lambda *xs, _fused=fused: _fused(*xs, use_metal=True),
+                list(args),
+                [cotangent],
+            )
+            ref_value, ref_grads = mx.vjp(ref, list(args), [cotangent])
+            assert kernels.v9_lever_backend_receipt()[kind] == "metal_planned"
+            kernels.verify_v9_lever_backend_execution(kind)
+            assert kernels.v9_lever_backend_receipt()[kind] == "metal"
+            mx.eval(fused_value, ref_value, *fused_grads, *ref_grads)
+            assert np.allclose(np.asarray(fused_value), np.asarray(ref_value), rtol=1e-5, atol=1e-5)
+            for fused_grad, ref_grad in zip(fused_grads, ref_grads, strict=True):
+                assert np.allclose(
+                    np.asarray(fused_grad), np.asarray(ref_grad), rtol=1e-4, atol=1e-5)
+
+        logits = mx.array(rng.standard_normal((B, H, W, 5)).astype(np.float32))
+        labels = rng.integers(0, 5, (B, H, W))
+        oh = mx.array(np.eye(5, dtype=np.float32)[labels])
+        lc = _base_lc(area_lambda={1: 2.0, 3: 0.7})
+        dummy_rgb = mx.zeros((B, H, W, 3), dtype=mx.float32)
+
+        def area_batch(z):
+            return _batched_v9_map_terms(
+                None, z, z, dummy_rgb, None, oh, [0, 1], lc, include_area=True)
+
+        def area_serial(z):
+            rows = []
+            for k in range(B):
+                soft = mx.softmax(z[k:k + 1], axis=-1)
+                row = mx.zeros(())
+                for cls, lam in lc.area_lambda.items():
+                    over = mx.maximum(
+                        mx.mean(soft[..., int(cls)]) - mx.mean(oh[k:k + 1, ..., int(cls)]), 0.0)
+                    row = row + 0.5 * float(lam) * over * over
+                rows.append(row)
+            return mx.mean(mx.stack(rows))
+
+        area_b, grad_b = mx.value_and_grad(area_batch)(logits)
+        area_s, grad_s = mx.value_and_grad(area_serial)(logits)
+        mx.eval(area_b, grad_b, area_s, grad_s)
+        assert np.allclose(np.asarray(area_b), np.asarray(area_s), rtol=1e-5, atol=1e-6)
+        assert np.allclose(np.asarray(grad_b), np.asarray(grad_s), rtol=1e-4, atol=1e-6)
+    assert mx.default_device().type == mx.cpu
+
+
+@pytest.mark.parametrize("lever", ["chroma", "phase", "temporal", "area"])
+def test_v9_probe_functional_parity_receipt_is_explicit(lever):
+    from tac.boundary_math.micro_batch_bit_identity_probe import make_functional_parity_receipt
+
+    receipt = make_functional_parity_receipt(
+        lever=lever, K=4, batched_loss=10.000001, serial_mean_loss=10.0,
+        grad_rel_l2=2e-6, grad_maxabs=3e-4, backend_receipt="mlx_reference",
+    )
+    payload = receipt.as_dict()
+    assert payload["passed"] is True
+    assert payload["loss_abs"] > 0.0 and payload["loss_rel"] > 0.0
+    assert payload["grad_rel_l2"] == 2e-6 and payload["grad_maxabs"] == 3e-4
+    assert payload["loss_rel_tolerance"] == 1e-4
+    assert payload["backend_receipt"] == "mlx_reference"
+
+
+def test_v9_probe_combined_training_admission_rejects_unchecked_receipts_and_bare_speedup():
+    from tac.boundary_math.micro_batch_bit_identity_probe import (
+        classify_training_admission,
+        make_functional_parity_receipt,
+    )
+
+    receipts = [make_functional_parity_receipt(
+        lever=lever, K=4, batched_loss=1.0, serial_mean_loss=1.0,
+        grad_rel_l2=0.0, grad_maxabs=0.0,
+        backend_receipt={
+            "chroma": "metal", "phase": "metal", "temporal": "metal",
+            "area": "mlx_vectorized", "full_v9": "metal+mlx",
+        }[lever],
+        config_id="v9_cgauge_432", device="gpu", scorer_surface="real_frozen_v9",
+        faithful_scale=True, measurement_artifact="receipt.json",
+        measurement_artifact_sha256="a" * 64, scorer_fingerprint_sha256="b" * 64,
+    ) for lever in ("chroma", "phase", "temporal", "area", "full_v9")]
+    # Diagnostic dataclasses and caller-reported speed telemetry are intentionally non-admitting.
+    # Persisted JSON can validate schema/custody only; no disk-authored row can attest that Metal,
+    # the frozen scorer, or the full V9 step actually executed.
+    refused = classify_training_admission(receipts, reported_end_to_end_speedup=1.25)
+    assert refused.functional_parity_passed is False
+    assert refused.training_throughput_admitted is False
+    assert refused.no_score_authority is True
+    assert refused.missing_levers == ("chroma", "phase", "temporal", "area", "full_v9")

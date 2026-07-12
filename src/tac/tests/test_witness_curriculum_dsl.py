@@ -8,36 +8,40 @@ from dataclasses import replace
 import pytest
 
 from tac.witness_dsl import (
+    BASELINE,
     Anneal,
     Authority,
-    Contain,
-    Freeze,
-    Preserve,
-    real_trainer_flags,
-    real_store_true_flags,
-    BASELINE,
-    PoseDecouple,
-    Muon,
-    DirectionalBasis,
-    TauFrozen,
-    SoftBoundary,
-    FiLMFix,
-    LanePrior,
-    StiefelW,
-    CodeSpectralEntropy,
-    DM1Minimal,
     CacheGtSkeleton,
+    CodeSpectralEntropy,
+    Contain,
+    DirectionalBasis,
+    DM1Minimal,
+    FiLMFix,
+    Freeze,
+    LanePrior,
     MicroBatch,
+    Muon,
+    PoseDecouple,
+    Preserve,
+    SoftBoundary,
+    StiefelW,
+    TauFrozen,
+    real_store_true_flags,
+    real_trainer_flags,
 )
 
 # the exact flags the completed CE->tau->l7 run was launched with (grounded from the log)
-_LAUNCHED = set("""--resume-from --out-dir --gt-cache --num-pairs --epochs --render-h --render-w
---hidden-dim --mod-dim --activation --siren-init --softmax-temp-start --softmax-temp-end
---curriculum --tau-softplus-start-epoch --l7-start-epoch --palette-anchor --self-orient
---reorient-every --freq-across --n-dir-freqs --freq-along --max-bank-freq --chroma
---lane-edge-weight --lane-edge-class --lane-margin-target --lane-edge-start-epoch --w-seg
---w-pose --eikonal-weight --length-weight --ema-decay --accum-pairs --grad-clip
---verdict-pairs --eval-every --ckpt-every --async-verdict --mlx-device""".split())
+_LAUNCHED = {
+    "--resume-from", "--out-dir", "--gt-cache", "--num-pairs", "--epochs", "--render-h",
+    "--render-w", "--hidden-dim", "--mod-dim", "--activation", "--siren-init",
+    "--softmax-temp-start", "--softmax-temp-end", "--curriculum",
+    "--tau-softplus-start-epoch", "--l7-start-epoch", "--palette-anchor", "--self-orient",
+    "--reorient-every", "--freq-across", "--n-dir-freqs", "--freq-along", "--max-bank-freq",
+    "--chroma", "--lane-edge-weight", "--lane-edge-class", "--lane-margin-target",
+    "--lane-edge-start-epoch", "--w-seg", "--w-pose", "--eikonal-weight", "--length-weight",
+    "--ema-decay", "--accum-pairs", "--grad-clip", "--verdict-pairs", "--eval-every",
+    "--ckpt-every", "--async-verdict", "--mlx-device",
+}
 
 
 def test_real_trainer_flags_nonempty_and_known():
@@ -337,12 +341,12 @@ def test_dm1_levers_default_off_in_baseline_byte_identity_guard():
 # OPENPILOT-SEEDED OPENING + ADAPTIVE STACKING (DAG FEED-ln, 2026-06-29)
 # ===========================================================================
 from tac.witness_dsl import (  # noqa: E402
-    openpilot_seeded_opening,
     StagePolicy,
     advance_to_l7,
     advance_to_muon,
     decide_next_stage,
     extend_stage,
+    openpilot_seeded_opening,
     plan_adaptive_step,
     stack_next_program,
     stage_trajectory,
@@ -414,6 +418,7 @@ def test_curriculum_ordering_violation_is_refused():
     # a doomed config (tau stage never runs: tau_start >= l7_start) is refused at DSL-validate
     # time (the trainer's REAL assert surfaced: 0 < tau_start < l7_start).
     from dataclasses import replace
+
     from tac.witness_dsl import Stage
     bad = replace(_opening(), stages=(
         _opening().stages[0],
@@ -429,6 +434,7 @@ def test_l7_start_beyond_epochs_is_the_legitimate_parked_form():
     # from the default curriculum; fresh_seeded parks l7 at epochs+1). The prior WitnessProgram
     # "<= epochs" clause was stale and refused this form — it must validate CLEAN now.
     from dataclasses import replace
+
     from tac.witness_dsl import Stage
     parked = replace(_opening(), stages=(
         _opening().stages[0],
@@ -585,12 +591,12 @@ def test_plan_adaptive_step_rollback_resumes_from_best_preserved_ckpt(tmp_path):
 # SEARCH ENRICHMENT (stage × config × pass × scale) — operator 2026-06-29 (FEED-lo)
 # ===========================================================================
 from tac.witness_dsl import (  # noqa: E402
-    MarginSaliency,
-    UniWARD,
+    ArmResult,
     Cycle,
+    MarginSaliency,
     PrimingContext,
     ScalePass,
-    ArmResult,
+    UniWARD,
     curvelet_scale_passes,
     expand_cycles,
     measure_synergy,
@@ -709,7 +715,7 @@ def test_priming_chain_extracts_warm_start_edges():
     op = _opening()
     progs = expand_cycles(op, [Cycle("c0", 200), Cycle("c1", 200)],
                           start_resume_from="seed.npz", start_epoch=600, out_dir_prefix="OUT")
-    chain = priming_chain([op] + progs)
+    chain = priming_chain([op, *progs])
     assert chain[0]["from_scratch"] is True            # the opening is from-scratch (seeded)
     assert chain[1]["primed_by_ckpt"] == "seed.npz"    # c0 primed by the seed
     assert chain[2]["primed_by_ckpt"].endswith("levelset_resume_state.npz")  # c1 primed by c0
@@ -839,6 +845,110 @@ def test_micro_batch_one_emits_serial_baseline_explicitly():
 def test_micro_batch_is_global_config_not_an_epoch_extension():
     arm = BASELINE.with_lever(MicroBatch(4))
     assert arm.epochs == BASELINE.epochs
+
+
+@pytest.mark.parametrize("pairs", [0, -1, -8])
+def test_micro_batch_rejects_nonpositive_pair_count(pairs):
+    with pytest.raises(ValueError, match=r"pairs must be >= 1"):
+        MicroBatch(pairs)
+
+
+def test_micro_batch_composes_with_seed_islands_after_training_override():
+    """The canonical V9 arm uses seed islands; dual batched co-grad is a supported composition."""
+    from tac.witness_dsl.curriculum_dsl import SeedIslandBirth
+
+    combo = BASELINE.with_lever(SeedIslandBirth(), MicroBatch(2))
+    fd = combo.flag_dict()
+    assert fd["--seed-islands"] is True
+    assert fd["--micro-batch-pairs"] == 2
+    assert combo.validate() == []
+
+
+def test_micro_batch_notes_stamp_training_only_override_and_no_score_authority():
+    lever = MicroBatch(2)
+    note = lever.notes.lower()
+    assert "training-only" in note
+    assert "operator-waived" in note
+    assert "no score authority" in note
+
+
+def test_real_v9_program_with_micro_batch_two_compiles_and_parses_all_routed_legs():
+    """Typed DSL -> WitnessProgram -> real trainer parser, not a hand-built argv surrogate."""
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
+    from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_432_launch_config
+
+    compiled = compile_v9_cgauge_432_launch_config(
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        num_pairs=600, epochs=3000, out_dir="experiments/results/__v9_mb2_parse_test__")
+    program = compiled.typed.to_program().with_lever(MicroBatch(2))
+    assert program.validate() == []
+    argv = program.compile_trainer_argv()
+    ns = build_real_trainer_parser().parse_args(argv[2:])
+    assert ns.micro_batch_pairs == 2
+    # Complete inventory of the trainer's six real micro-batch refusal predicates as they
+    # existed before this landing. The typed V9 argv activates exactly phase + chroma; the
+    # four still-unrouted predicates remain dormant. Pinning both sides prevents a future V9
+    # DSL edit from silently activating a scattered guard.
+    assert ns.margin_saliency_reachability is False
+    assert ns.seg_spike_reweight is False
+    assert ns.seg_subpix_boundary_weight == 0.0
+    assert ns.seg_chroma_boundary_weight > 0.0
+    assert ns.seg_phase_advect_weight > 0.0
+    assert ns.eikonal_steik_normalized is False
+    # V9-active semantics that had no explicit refusal but were previously omitted or share
+    # the render composition must also remain in the compatibility receipt.
+    assert ns.seg_temporal_screw_weight > 0.0
+    assert ns.seg_temporal_screw_xi_source == "ground_gt"
+    assert ns.seg_temporal_screw_sky_rotation_only is False
+    assert ns.lane_band_weight > 0.0 and ns.lane_render_band is True
+    assert ns.area_constraint_birth is True
+    assert ns.birth_completion_event is True and ns.birth_completion_ramp is True
+    assert ns.logit_adjust_loss_tau > 0.0
+    assert ns.amplify_weight > 0.0 and ns.persistence_loss_weight > 0.0
+    assert ns.cache_gt_skeleton is True
+    assert ns.seed_islands is True and ns.witness_alone_island_loss is True
+    # Live loss/render semantics omitted by the first inventory pass.  Keep these parser-backed:
+    # pose-carrier changes the realized pair scored by the batched loss, unify-tau selects its base
+    # seg form, and the entropy term is added once per model by the batched twin.  The carrier would
+    # be semantically inert without the compiled terminal pose weight, so pin that coupling too.
+    assert ns.pose_carrier is True and ns.pose_carrier_source == "generated"
+    assert ns.w_pose == 1.0
+    assert ns.seg_form_unify_tau is True
+    assert ns.logit_adjust_classes == "3"
+    assert ns.weight_entropy_penalty_lambda == 15.0
+    # The two phase alternatives are intentionally fail-loud/spec-only. Canonical V9 must remain on
+    # the fully implemented pair-local provider mode or the dry-start could still fail after parsing.
+    assert ns.seg_phase_advect_gap_xi == "interp"
+    assert ns.seg_phase_advect_ref == "gt_advected"
+
+
+def test_v9_micro_batch_triality_notes_name_each_routed_or_shared_surface():
+    """Each lever's DSL authority records its batched disposition; no stale fail-close prose."""
+    from tac.witness_dsl.curriculum_dsl import (
+        AnalyticLaneRenderBand,
+        AreaConstraintBirth,
+        BirthCompletionEvent,
+        LogitAdjust,
+        PhaseAdvectionConsistency,
+        SegChromaBoundary,
+        TemporalScrewConsistency,
+    )
+
+    notes = {
+        "lane": AnalyticLaneRenderBand().notes.lower(),
+        "area": AreaConstraintBirth().notes.lower(),
+        "birth": BirthCompletionEvent(ramp_apply=True).notes.lower(),
+        "logit": LogitAdjust(window=0).notes.lower(),
+        "phase": PhaseAdvectionConsistency().notes.lower(),
+        "chroma": SegChromaBoundary().notes.lower(),
+        "temporal": TemporalScrewConsistency().notes.lower(),
+    }
+    assert "microbatch" in notes["lane"] or "micro-batch" in notes["lane"]
+    for lever in ("area", "birth", "logit", "phase", "chroma", "temporal"):
+        assert "micro-batch" in notes[lever], (lever, notes[lever])
+    assert "fused metal" in notes["phase"]
+    assert "fused metal" in notes["chroma"]
+    assert "fused metal" in notes["temporal"]
 
 
 def test_speed_levers_compose_and_validate_clean():

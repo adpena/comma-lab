@@ -30,8 +30,10 @@ read-back + costate digest read the DSL live instead of drifting behind it.
 """
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass, field, replace
+from numbers import Integral
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -100,10 +102,8 @@ def build_real_trainer_parser(trainer_path: Path | None = None):
         raise LookupError(f"build_real_trainer_parser: no main() found in {path}")
     stmts: list[_ast.stmt] = []
     for node in _ast.walk(main_fn):
-        if isinstance(node, _ast.Assign) and any(
-                isinstance(t, _ast.Name) and t.id == "ap" for t in node.targets):
-            stmts.append(node)
-        elif (isinstance(node, _ast.Expr) and isinstance(node.value, _ast.Call)
+        if (isinstance(node, _ast.Assign) and any(
+                isinstance(t, _ast.Name) and t.id == "ap" for t in node.targets)) or (isinstance(node, _ast.Expr) and isinstance(node.value, _ast.Call)
               and isinstance(node.value.func, _ast.Attribute)
               and node.value.func.attr == "add_argument"
               and isinstance(node.value.func.value, _ast.Name)
@@ -111,7 +111,7 @@ def build_real_trainer_parser(trainer_path: Path | None = None):
             stmts.append(node)
     stmts.sort(key=lambda n: n.lineno)  # ast.walk order is not source order
     ns: dict = {"argparse": _argparse, "Path": Path}
-    exec(compile(_ast.Module(body=stmts, type_ignores=[]), str(path), "exec"), ns)  # noqa: S102
+    exec(compile(_ast.Module(body=stmts, type_ignores=[]), str(path), "exec"), ns)
     ap = ns.get("ap")
     if not isinstance(ap, _argparse.ArgumentParser):
         raise LookupError(
@@ -141,7 +141,8 @@ _INHERIT = object()
 # ---------------------------------------------------------------------------
 def _display_plain(v):
     """Recursively convert a primitive's field value to plain JSON-able data."""
-    from dataclasses import fields as _fields, is_dataclass as _is_dc
+    from dataclasses import fields as _fields
+    from dataclasses import is_dataclass as _is_dc
     if _is_dc(v) and not isinstance(v, type):
         td = getattr(v, "to_display_dict", None)
         if callable(td):
@@ -169,7 +170,7 @@ class ScheduleDisplay:
         import inspect as _inspect
         from dataclasses import fields as _fields
         d: dict = {"kind": type(self).__name__}
-        for fld in _fields(self):  # type: ignore[arg-type]
+        for fld in _fields(self):  # ty: ignore[invalid-argument-type]
             d[fld.name] = _display_plain(getattr(self, fld.name))
         for meth, key in (("flags", "flags"), ("support_gaps", "gaps")):
             fn = getattr(self, meth, None)
@@ -186,7 +187,7 @@ class ScheduleDisplay:
                 continue  # e.g. Anneal.flags(start_flag, end_flag) — fields already shown
             try:
                 d[key] = _display_plain(fn())
-            except Exception as exc:  # noqa: BLE001 — display is FAIL-OPEN by contract:
+            except Exception as exc:
                 # the consumer is a load-bearing multi-day dashboard/costate daemon
                 # (mirrors schedule_readback); an invalid in-flight object must render
                 # its error, never crash the tick. validate() is the fail-CLOSED gate.
@@ -239,7 +240,7 @@ class Anneal(ScheduleDisplay):
         return {start_flag: self.start, end_flag: self.end}
 
 
-def Freeze(value: float) -> Anneal:  # noqa: N802 (DSL keyword)
+def Freeze(value: float) -> Anneal:
     """Freeze a schedule at a constant value (Anneal with start==end)."""
     return Anneal(value, value)
 
@@ -636,7 +637,7 @@ class ExitEvent(ScheduleDisplay):
       ``cap_epoch``) + a TrainerSupportGap naming the build. ``min_points`` /
       ``per_class`` mirror the callable's contract (per-class fits need the
       per-class d_seg verdict-row telemetry, itself a recorded gap).
-    
+
     FRAME CONTRACT (seal v7.4 r3 F-1): gate fire telemetry records ``sensor_data_epoch``
     in the SAME epoch frame as the persisted ``_fired_epoch`` (the lever frame under
     re-anchor); since the re-anchor shift is additive it cancels in
@@ -673,12 +674,15 @@ class ExitEvent(ScheduleDisplay):
                 problems.append(
                     f"ExitEvent[powerlaw_meat]: min_points must be >= 4 (two 3-parameter tail "
                     f"models cannot fit fewer points), got {self.min_points}")
-        if self.criterion in ("plateau", "nucleus_guarded_plateau"):
-            if self.min_stage_epochs <= 0 or self.windows <= 0 or self.rel_eps <= 0:
-                problems.append(
-                    f"ExitEvent[{self.criterion}]: plateau params must be positive "
-                    f"(min_stage_epochs={self.min_stage_epochs}, windows={self.windows}, "
-                    f"rel_eps={self.rel_eps})")
+        if (
+            self.criterion in ("plateau", "nucleus_guarded_plateau")
+            and (self.min_stage_epochs <= 0 or self.windows <= 0 or self.rel_eps <= 0)
+        ):
+            problems.append(
+                f"ExitEvent[{self.criterion}]: plateau params must be positive "
+                f"(min_stage_epochs={self.min_stage_epochs}, windows={self.windows}, "
+                f"rel_eps={self.rel_eps})"
+            )
         return problems
 
     def flags(self) -> dict:
@@ -1324,7 +1328,7 @@ class WitnessProgram(ScheduleDisplay):
     # hand-off); flag_dict() sources them from it and SKIPS the legacy temp/stages/regularizers
     # emission (no double-emit). None (default) => the legacy path => byte-identical for every
     # existing program (BASELINE / sealed_205 / openpilot_seeded_opening are unchanged).
-    curriculum: "Curriculum | None" = None
+    curriculum: Curriculum | None = None
     # DECLARED RUN INTENT (operator 2026-07-07: "clean baseline or frontier score lowering?
     # a/b probe?"). One human line stating WHY this program's run exists. Metadata ONLY —
     # never emitted into flag_dict()/trainer argv (argv-inert by construction); the launch
@@ -1336,7 +1340,7 @@ class WitnessProgram(ScheduleDisplay):
 
     # --- composition ---------------------------------------------------------
     def with_lever(self, *levers: Lever, resume_from=_INHERIT,
-                   out_dir: str | None = None) -> "WitnessProgram":
+                   out_dir: str | None = None) -> WitnessProgram:
         """Return a new program with levers appended (theta* composition step).
 
         Epochs are extended by the sum of the levers' ``epochs_delta`` (e.g. a
@@ -1357,7 +1361,7 @@ class WitnessProgram(ScheduleDisplay):
     def with_gauge(self, gauge_choice=None, *, table=None,
                    warp=None, carrier=None, residual=None, pose=None,
                    movables=None, generation=None,
-                   render_aa=None, lane_band=None, head_geometry=None) -> "WitnessProgram":
+                   render_aa=None, lane_band=None, head_geometry=None) -> WitnessProgram:
         """Fix the gauge for this program (the gauge-FIXING step of the 4-layer stack,
         FEED-ji). Returns a NEW program with a validated ``GaugeChoice`` attached; this one
         is UNMUTATED (pure composition, parallel to ``with_lever``). Composes:
@@ -1373,14 +1377,24 @@ class WitnessProgram(ScheduleDisplay):
         Imported lazily so ``curriculum_dsl`` never imports ``gauge`` at module-load time
         (the gauge module imports THIS module — lazy import breaks the cycle).
         """
-        from tac.witness_dsl.gauge import GaugeChoice, CANONICAL_GAUGE
+        from tac.witness_dsl.gauge import CANONICAL_GAUGE, GaugeChoice
         if gauge_choice is None:
             base_gauge = self.gauge if isinstance(self.gauge, GaugeChoice) else CANONICAL_GAUGE
-            overrides = {k: v for k, v in dict(
-                warp=warp, carrier=carrier, residual=residual,
-                pose=pose, movables=movables, generation=generation,
-                render_aa=render_aa, lane_band=lane_band, head_geometry=head_geometry).items()
-                if v is not None}
+            overrides = {
+                k: v
+                for k, v in {
+                    "warp": warp,
+                    "carrier": carrier,
+                    "residual": residual,
+                    "pose": pose,
+                    "movables": movables,
+                    "generation": generation,
+                    "render_aa": render_aa,
+                    "lane_band": lane_band,
+                    "head_geometry": head_geometry,
+                }.items()
+                if v is not None
+            }
             gauge_choice = replace(base_gauge, **overrides)
         elif not isinstance(gauge_choice, GaugeChoice):
             raise TypeError("with_gauge expects a GaugeChoice (or per-component keyword charts)")
@@ -1462,7 +1476,8 @@ class WitnessProgram(ScheduleDisplay):
                     _ep = None
                     for _k in ("epoch", "__epoch", "__resume_epoch"):
                         if _k in _z.files:
-                            _ep = int(_z[_k]); break
+                            _ep = int(_z[_k])
+                            break
                     if _ep is not None and self.epochs <= _ep:
                         problems.append(
                             f"DEAD ARM: epochs={self.epochs} <= resume epoch {_ep} → "
@@ -1481,7 +1496,11 @@ class WitnessProgram(ScheduleDisplay):
         if _curr is True or _curr == 1:
             _tau_s = fd.get("--tau-softplus-start-epoch")
             _l7_s = fd.get("--l7-start-epoch")
-            if None not in (_tau_s, _l7_s) and not (0 < _tau_s < _l7_s):
+            if (
+                _tau_s is not None
+                and _l7_s is not None
+                and not (0 < _tau_s < _l7_s)
+            ):
                 problems.append(
                     f"CURRICULUM ORDERING: need 0 < tau_start ({_tau_s}) < l7_start ({_l7_s}) "
                     "(the tau stage forms the partition before l7 sharpens it; trainer asserts "
@@ -1562,7 +1581,7 @@ class WitnessProgram(ScheduleDisplay):
                     "additive_margin), or drop the additive-margin arm — never ship an inert lever.")
         return problems
 
-    def support_gaps(self) -> tuple["TrainerSupportGap", ...]:
+    def support_gaps(self) -> tuple[TrainerSupportGap, ...]:
         """The program's typed TrainerSupportGaps (§14): delegated to the first-class
         curriculum object; () when the legacy (curriculum=None) path is in use."""
         if self.curriculum is None:
@@ -1677,7 +1696,7 @@ BASELINE = WitnessProgram(
 # ---------------------------------------------------------------------------
 # Lever library (the A/B campaign, as composable DSL fragments)
 # ---------------------------------------------------------------------------
-def PoseDecouple(window: int = 100) -> Lever:  # noqa: N802 (DSL keyword) — A5
+def PoseDecouple(window: int = 100) -> Lever:
     """A5: drop pose from the loss (w-pose=0) to free decoder capacity for d_seg —
     a TRADE (d_pose worsens; pose is carried in-frame, NOT sidecar-able, per the
     byte-close finding). Carries a warm-start window (else dead-arm, review C1)."""
@@ -1685,8 +1704,8 @@ def PoseDecouple(window: int = 100) -> Lever:  # noqa: N802 (DSL keyword) — A5
                  notes="drop pose-loss to free d_seg capacity (trades d_pose up)")
 
 
-def PoseFinishConditioningGate(  # noqa: N802 — owed-1 REPAIRED POSE-GATE (SYNTHESIS_v3_v752 §A.4, A-1 FIX)
-    backstop_epoch: "int | None" = None, w_pose: "float | None" = None,
+def PoseFinishConditioningGate(
+    backstop_epoch: int | None = None, w_pose: float | None = None,
 ) -> Lever:
     """owed-1 (SYNTHESIS_v3_v752 §A.4, A-1 FIX): engage the TERMINAL pose-finish on the SEALED d_seg-
     CONDITIONING event — a scale-free ROLLING-SLOPE plateau of the DE-NOISED σ_min(J_ξ) conditioning
@@ -1715,7 +1734,7 @@ def PoseFinishConditioningGate(  # noqa: N802 — owed-1 REPAIRED POSE-GATE (SYN
                  "fix); ships banked R1 if never/degenerate/untrusted (never blocks)")
 
 
-def Muon(start_epoch: int, window: int = 100) -> Lever:  # noqa: N802 — A4
+def Muon(start_epoch: int, window: int = 100) -> Lever:
     """A4: Muon finisher from ``start_epoch`` for ``window`` epochs, with moments
     reset at the optimizer-stage transition and tau FROZEN at 0.05 (the run's
     final hard temperature) for apples-to-apples. muon-lr auto-derives 0.1*lr."""
@@ -1732,7 +1751,7 @@ def Muon(start_epoch: int, window: int = 100) -> Lever:  # noqa: N802 — A4
     )
 
 
-def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,  # noqa: N802
+def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,
                      window: int = 100) -> Lever:
     """Turn the lane-edge directional term ON (the completed run had weight 0).
     The all-class directional/tangent basis measured -48% d_seg earlier.
@@ -1749,7 +1768,7 @@ def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,  # noqa: N802
                  notes="all-class directional tangent basis (was OFF: weight 0)")
 
 
-def TextureTrunk(band_hi: float = 8.0, annulus_power: float = 0.0,  # noqa: N802 — #395 P0 arch lever
+def TextureTrunk(band_hi: float = 8.0, annulus_power: float = 0.0,
                  coeff_scale: float = 0.02, window: int = 0) -> Lever:
     """#395 P0 — the band-designed per-class STATIONARY texture trunk (T of W=(G, ξ, T)).
 
@@ -1778,7 +1797,7 @@ def TextureTrunk(band_hi: float = 8.0, annulus_power: float = 0.0,  # noqa: N802
                        "decouples T from the partition trunk; counted coeffs only (bank rule-118 free)")
 
 
-def OutTexHidden(hidden: int = 16, window: int = 0) -> Lever:  # noqa: N802 — #395 A2 arm (v7.5.3 Δ2)
+def OutTexHidden(hidden: int = 16, window: int = 0) -> Lever:
     """#395 A2 arm — widen the ``out_tex`` texture head from a linear map (hidden→3) to a
     1-hidden-layer ReLU MLP (hidden→``hidden``→3), giving the texture/pose channel NONLINEAR
     capacity WITHOUT the fixed Gabor bank. The matched-bytes MIDDLE rung of the #395 3-arm A/B
@@ -1807,7 +1826,7 @@ def OutTexHidden(hidden: int = 16, window: int = 0) -> Lever:  # noqa: N802 — 
                        "capacity without the Gabor bank; the matched-bytes middle rung of the 3-arm A/B")
 
 
-def DecoupledField(field_hidden: int = 32, field_layers: int = 2,  # noqa: N802 — v8 B1 arch lever
+def DecoupledField(field_hidden: int = 32, field_layers: int = 2,
                    window: int = 0) -> Lever:
     """v8 B1 (#398) — the per-class DECOUPLED-FIELD partition head (G of W=(G, ξ, T)).
 
@@ -1837,7 +1856,7 @@ def DecoupledField(field_hidden: int = 32, field_layers: int = 2,  # noqa: N802 
                        "argmax_c phi_c is decoupled; increment-1 = training mode + composition forward")
 
 
-def TauFrozen(value: float = 0.05, window: int = 100) -> Lever:  # noqa: N802 — A1b isolation
+def TauFrozen(value: float = 0.05, window: int = 100) -> Lever:
     """A1b: freeze tau (start==end) to isolate an l7 effect from the tau anneal.
 
     MUST carry an ``epochs_delta`` (the warm-start window) or the arm runs ZERO
@@ -1849,7 +1868,7 @@ def TauFrozen(value: float = 0.05, window: int = 100) -> Lever:  # noqa: N802 �
                  notes="freeze tau to isolate l7-loss vs tau-anneal (diff refutation)")
 
 
-def LrAnnealPin(anneal_epochs: int = 1000, hold_frac: float = 1.0) -> Lever:  # noqa: N802 — C2 sibling
+def LrAnnealPin(anneal_epochs: int = 1000, hold_frac: float = 1.0) -> Lever:
     """Pin the LR cosine to its OWN denominator (+ optional hold), decoupling it from the SHARED
     ``--anneal-epochs`` that also drives τ + hosc-β. The trainer couples all three schedules on one
     denominator (no per-schedule den); a shallow shared-den cosine CANNOT reproduce a DEEPER LR
@@ -1869,7 +1888,7 @@ def LrAnnealPin(anneal_epochs: int = 1000, hold_frac: float = 1.0) -> Lever:  # 
                  notes="LR-specific cosine denominator + hold (decouple from shared --anneal-epochs)")
 
 
-def TailCycles(cycles_max: int = 5, start_epoch: int = 0,  # noqa: N802 — crucible req L / v6 §2.2e
+def TailCycles(cycles_max: int = 5, start_epoch: int = 0,
                cycle_floor_epochs: float = 387.09, dwell_min: int = 237,
                tau_halving: float = 0.5, lr_prop_tau: float = 1.0,
                stop_marginal_s: float = 1e-4) -> Lever:
@@ -1903,7 +1922,7 @@ def TailCycles(cycles_max: int = 5, start_epoch: int = 0,  # noqa: N802 — cruc
                        "per-cycle powerlaw_meat exit; PowerPlay stop; k_max fail-safe)")
 
 
-def SoftBoundary(beta: float = 2.0, window: int = 100) -> Lever:  # noqa: N802
+def SoftBoundary(beta: float = 2.0, window: int = 100) -> Lever:
     """Anti-aliased SOFT boundary (lower HOSC beta) — tests Signal's hypothesis that
     a soft edge carries sub-pixel boundary position through R better than a hard
     step (β→∞). Replaces the confounded constant-β≈16 'beta_steplim' arm (review H2)."""
@@ -1913,7 +1932,7 @@ def SoftBoundary(beta: float = 2.0, window: int = 100) -> Lever:  # noqa: N802
                  notes="soft anti-aliased edge (low beta) for sub-pixel R-survival")
 
 
-def Beta2WindowRewarmup(beta2: float = 0.999, steps_per_epoch: int = 75,  # noqa: N802 — R-7 finisher 1
+def Beta2WindowRewarmup(beta2: float = 0.999, steps_per_epoch: int = 75,
                         floor: float = 0.1, shape: str = "cosine") -> Lever:
     """R-7 finisher 1 (T5 crucible seal-round-1 structure lens): DERIVE the stage-transition LR
     re-warmup window from the Adam β2 second-moment MEMORY horizon 1/(1-β2) steps, so the LR ramp
@@ -1948,7 +1967,7 @@ def Beta2WindowRewarmup(beta2: float = 0.999, steps_per_epoch: int = 75,  # noqa
                "floor/shape = the law's PROVISIONAL profile; pairs with reset-moments"))
 
 
-def PolyakFinisher(start_epoch: int = 0) -> Lever:  # noqa: N802 — R-7 finisher 2
+def PolyakFinisher(start_epoch: int = 0) -> Lever:
     """R-7 finisher 2: uniform Polyak/Ruppert TAIL average of the live iterates over the finishing
     window, exported as an ADDITIONAL checkpoint candidate ALONGSIDE the EMA shadow (NEVER replaces it
     — the EMA non-negotiable stands). At the SEALED constant-τ* TURNPIKE the iterates orbit a basin
@@ -1972,7 +1991,7 @@ def PolyakFinisher(start_epoch: int = 0) -> Lever:  # noqa: N802 — R-7 finishe
                "muon_finisher_schedule_warmstart_and_lr_anneal_v1 (finisher-EMA=Polyak)"))
 
 
-def FiLMFix(per_layer: bool = True, concat_code: bool = True,  # noqa: N802 — LEVER-A
+def FiLMFix(per_layer: bool = True, concat_code: bool = True,
             rank_floor_weight: float = 0.0, rank_floor_target: float = 4.0,
             window: int = 100) -> Lever:
     """LEVER-A (FiLM-rank-fix): attack the MEASURED per-pair FiLM modulation participation-ratio
@@ -2000,7 +2019,7 @@ def FiLMFix(per_layer: bool = True, concat_code: bool = True,  # noqa: N802 — 
                  notes="FiLM rank-fix: per-layer + concat-code + rank-floor (attacks PR collapse)")
 
 
-def LanePrior(weight: float = 1.0, start_epoch: int = 300,  # noqa: N802 — LEVER-B
+def LanePrior(weight: float = 1.0, start_epoch: int = 300,
               lane_class: int = 1, radius: int = 4, target: float = 0.5,
               window: int = 100) -> Lever:
     """LEVER-B (thin-lane dropped-dash prior): up-weight the realized through-R seg margin hinge on
@@ -2021,7 +2040,7 @@ def LanePrior(weight: float = 1.0, start_epoch: int = 300,  # noqa: N802 — LEV
                  notes="thin-lane dropped-dash prior (realized margin hinge weighted by thinness)")
 
 
-def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
+def AnalyticLaneRenderBand(
     softness: float = 1.0, dash_forward_max_m: float = 55.0,
     uncertainty_source: str = "witness", tau: float = 0.85, eps: float = 0.35,
     weight: float = 1.0, start_epoch: int = 300, window: int = 200,
@@ -2040,7 +2059,10 @@ def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
 
     PAIRED WITH the trainer wire-in (docs/analytic_lane_render_band_wire_in_spec.md): the
     8 ``--lane-band-*`` / ``--lane-render-band`` flags are LANDED in the trainer argparse
-    and consumed by the compose wire-in (the #224 Option-B lane-band path)."""
+    and consumed by the compose wire-in (the #224 Option-B lane-band path). Because composition
+    happens inside the shared ``render_fn`` before frames are stacked, ``MicroBatch(B>1)`` consumes
+    the same analytic band without a duplicate loss term; the B=2/B=4 render-composition parity gate
+    is the authority for that shared-path claim."""
     return Lever("FEED_dv_analytic_lane_render_band",
                  overrides={"--lane-render-band": True,
                             "--lane-band-softness": softness,
@@ -2052,10 +2074,11 @@ def AnalyticLaneRenderBand(  # noqa: N802 — FEED-dv render-band lever
                             "--lane-band-start-epoch": start_epoch},
                  epochs_delta=window,
                  notes="analytic-lane render-band compose (AA-SDF x range-dash-gate x "
-                       "witness-uncertainty); FP-killed non-naive form; realized THROUGH R")
+                       "witness-uncertainty); shared render_fn composes before MicroBatch stacking; "
+                       "FP-killed non-naive form; realized THROUGH R")
 
 
-def AnalyticLaneBandTraining(  # noqa: N802 — v7.5.3 Δ3 lane-band TRAINED-IN mode (RANK-1 join)
+def AnalyticLaneBandTraining(
     softness: float = 1.0, dash_forward_max_m: float = 55.0,
     uncertainty_source: str = "witness", tau: float = 0.85, eps: float = 0.35,
     weight: float = 1.0, window: int = 0,
@@ -2093,7 +2116,7 @@ def AnalyticLaneBandTraining(  # noqa: N802 — v7.5.3 Δ3 lane-band TRAINED-IN 
                        "re-adapts its boundaries with the band active; render-post-hoc-dead law)")
 
 
-def DsegAwareTaper(  # noqa: N802 — #121 lever, re-validate-at-convergence
+def DsegAwareTaper(
     strength: float = 1.0, scale: float = 0.0, floor: float = 0.05,
 ) -> Lever:
     """#121 d_seg-aware Fourier-feature amplitude taper: reweight each FIXED Fourier/curvelet basis
@@ -2129,7 +2152,7 @@ def DsegAwareTaper(  # noqa: N802 — #121 lever, re-validate-at-convergence
                        "reallocation by GT margin saliency; RE-VALIDATE at convergence)")
 
 
-def HardnessOversample(  # noqa: N802 — LEVER-5 hard-pair data curriculum (#403 completeness fold)
+def HardnessOversample(
     oversample: float = 0.5, weighted: bool = True, source: str = "realized",
     power: float = 1.0, band: float = 0.5,
 ) -> Lever:
@@ -2161,7 +2184,7 @@ def HardnessOversample(  # noqa: N802 — LEVER-5 hard-pair data curriculum (#40
                        "hardness; fair A/B = weighted on/off at fixed oversample; advisory until byte-closed)")
 
 
-def HeadGeometry(  # noqa: N802 — #218 facet-1 out_sdf head geometry (#403 completeness fold)
+def HeadGeometry(
     head: str = "etf", additive_margin: float = 0.0,
 ) -> Lever:
     """#218 facet-1 out_sdf HEAD GEOMETRY — the BYTE-FREE rare-class lane-margin fix (curriculum-
@@ -2192,7 +2215,7 @@ def HeadGeometry(  # noqa: N802 — #218 facet-1 out_sdf head geometry (#403 com
                        "rate-win + neural-collapse minority-norm fix; AM needs MarginFieldHead composed)")
 
 
-def LadderIslandHomotopy(  # noqa: N802 — #323 FULL LADDER island-birth lever
+def LadderIslandHomotopy(
     amplify_weight: float = 1.0,
     movable_r0: float = 2.0, movable_birth_epochs: int = 60, movable_hold_epochs: int = 0,
     movable_anneal_epochs: int = 200, movable_lambda_gate: float = 0.0,
@@ -2260,7 +2283,7 @@ def LadderIslandHomotopy(  # noqa: N802 — #323 FULL LADDER island-birth lever
                        "never uniform amplification; realized THROUGH R; advisory until byte-closed")
 
 
-def SegFormUnifyTau() -> Lever:  # noqa: N802 — witness-native schedule derivation 20260709
+def SegFormUnifyTau() -> Lever:
     """DISSOLVE the discrete CE→tau_softplus loss-form switch into the ONE continuous τ-homotopy
     (witness-native schedule derivation ``.omx/research/witness_native_schedule_derivation_20260709.md``
     §1.2): the seg loss becomes the ONE family ``L_τ = τ·logsumexp(φ/τ) − φ_y`` with loss-τ COUPLED to
@@ -2284,8 +2307,8 @@ def SegFormUnifyTau() -> Lever:  # noqa: N802 — witness-native schedule deriva
                        "(loss-τ = render softmax-temp, floored at τ*); removes the last PR95 stage bone")
 
 
-def TauAdvanceEvent(octaves: "int | None" = None,  # noqa: N802 — S6-R4 self-paced τ-advance
-                    min_dwell: "int | None" = None, max_dwell: "int | None" = None) -> Lever:
+def TauAdvanceEvent(octaves: int | None = None,
+                    min_dwell: int | None = None, max_dwell: int | None = None) -> Lever:
     """S6-R4 SELF-PACED τ-ADVANCE: convert the τ-anneal from an epoch-clock to an EVENT-driven
     GEOMETRIC OCTAVE LADDER (operator 2026-07-08: *"Why is there a fixed number of epochs if our
     schedule and curriculum are no longer supposed to be hardcoded like pr95"* — the anneal-epochs
@@ -2325,7 +2348,7 @@ def TauAdvanceEvent(octaves: "int | None" = None,  # noqa: N802 — S6-R4 self-p
 
 
 def SafeCompileRegions(regions: str = "all-certified",
-                       manifest: str | None = None) -> Lever:  # noqa: N802 — #252 v7.1
+                       manifest: str | None = None) -> Lever:
     """SAFE-COMPILE (#252): activate the determinism-first ``mx.compile`` layer for the
     manifest-CERTIFIED elementwise hot-loop regions (``tac.mlx_safe_compile``).
 
@@ -2357,7 +2380,7 @@ def SafeCompileRegions(regions: str = "all-certified",
                        "--safe-compile-manifest (per-chip fingerprint/device-scoped evidence)")
 
 
-def FusedRKernel(window: int = 0) -> Lever:  # noqa: N802 — #252/#348 score-neutral compute lever
+def FusedRKernel(window: int = 0) -> Lever:
     """FUSED-R KERNEL (#252/#348, memory L70): swap the pure-MLX R roundtrip for the fused Metal
     kernel (``metal_fused_r_operator``) — a SPEED-only, score-NEUTRAL compute lever, sister of
     ``GROUPED_BACKWARD`` (~17x) and ``SafeCompileRegions``. This is the ONE completeness gap P7
@@ -2386,7 +2409,7 @@ def FusedRKernel(window: int = 0) -> Lever:  # noqa: N802 — #252/#348 score-ne
     )
 
 
-def ClosedLoopEikonalControl(  # noqa: N802 — #292 build-3 costate closed-loop controller
+def ClosedLoopEikonalControl(
     eikonal_bump: float = 0.05, eikonal_max: float = 0.20, max_bumps: int = 2,
     stop_after_windows: int = 3, min_sustained_windows: int = 3, window: int = 0,
 ) -> Lever:
@@ -2422,7 +2445,7 @@ def ClosedLoopEikonalControl(  # noqa: N802 — #292 build-3 costate closed-loop
     )
 
 
-def CurriculumReanchorLevers(window: int = 0) -> Lever:  # noqa: N802 — #302 M1
+def CurriculumReanchorLevers(window: int = 0) -> Lever:
     """#302 (M1): under event-triggering, RE-ANCHOR the TAU-RELATIVE wall-clock levers
     (persistence-warmup completion, seed-anneal withdrawal, analytic-band engage) to the FIRED tau
     boundary instead of their calibrated ep300-relative epochs (a shift, not a rescale). Requires
@@ -2439,7 +2462,7 @@ def CurriculumReanchorLevers(window: int = 0) -> Lever:  # noqa: N802 — #302 M
     )
 
 
-def MarginSaliencyReachability(window: int = 0) -> Lever:  # noqa: N802 — LEVER-4 through-R reachability
+def MarginSaliencyReachability(window: int = 0) -> Lever:
     """LEVER-4 REACHABILITY (memory L76, #268): REPLACE the UNIWARD texture saliency path with the
     cached THROUGH-R fragility-weighted margin-Jacobian S_R (reachability of the CORRECT answer at
     the GT target frame). The texture proxy was MEASURED inert (Pearson -0.033 vs S_R, top-5%
@@ -2457,7 +2480,7 @@ def MarginSaliencyReachability(window: int = 0) -> Lever:  # noqa: N802 — LEVE
     )
 
 
-def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N802 — #287
+def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:
     """#287 EGO-PHASE DASH COMB — the cell-problem corrector of the dash-erasure
     homogenization law (``tac.canonical_equations.dash_erasure_homogenization_20260707``):
     replace the band's per-pair FITTED dash phase with a world-static max-plus comb —
@@ -2494,7 +2517,7 @@ def DashComb(comb_softness_m: float = 0.3, window: int = 0) -> Lever:  # noqa: N
                        "AnalyticLaneRenderBand)")
 
 
-def VerdictDevice(anchor_every: int = 25) -> Lever:  # noqa: N802 — operator 2026-07-08 GPU-verdict
+def VerdictDevice(anchor_every: int = 25) -> Lever:
     """GPU (MLX) verdict device + CPU-torch positive-control ANCHOR (the HYBRID A/B activation
     surface for the duty-to-measure queue). Runs the ADVISORY d_seg/d_pose scalars through the
     MLX scorer ports (deterministic w/ fused-R, ~faster) as a FAST trajectory monitor, and runs
@@ -2510,7 +2533,7 @@ def VerdictDevice(anchor_every: int = 25) -> Lever:  # noqa: N802 — operator 2
                        "anchor every N (was OFF: --verdict-device cpu)")
 
 
-def StiefelW(window: int = 100) -> Lever:  # noqa: N802 — DM1a
+def StiefelW(window: int = 100) -> Lever:
     """DM1a (Stiefel-W): per-step project film.weight onto orthonormal columns (WᵀW=I) so W is an
     ISOMETRY => PR(M)=PR(cov(code)) to the projection's ~1e-2 residual (the byte-free root half-1 of the
     FiLM rank-collapse cure; design memo per_stage_fractal_optimizer §0/§4). store_true => emitted ONLY
@@ -2523,7 +2546,7 @@ def StiefelW(window: int = 100) -> Lever:  # noqa: N802 — DM1a
                        "global-magnitude WD on W neutralized)")
 
 
-def CodeSpectralEntropy(beta: float = 0.01, window: int = 100) -> Lever:  # noqa: N802 — DM1b
+def CodeSpectralEntropy(beta: float = 0.01, window: int = 100) -> Lever:
     """DM1b (code spectral-entropy): add the CAPACITY penalty -beta*log(PR(cov(code))) keeping all
     code directions live (the byte-free root half-2; design memo §0/§4). A value flag (not store_true);
     omitted when beta<=0 (off). Carries a warm-start ``window`` (else dead-arm when resumed, C1)."""
@@ -2536,7 +2559,7 @@ def CodeSpectralEntropy(beta: float = 0.01, window: int = 100) -> Lever:  # noqa
                  notes="spectral-entropy CAPACITY penalty on cov(code) (raises PR(cov code) => PR(M))")
 
 
-def DM1Minimal(beta: float = 0.01, window: int = 100) -> tuple[Lever, Lever]:  # noqa: N802 — A3
+def DM1Minimal(beta: float = 0.01, window: int = 100) -> tuple[Lever, Lever]:
     """DM1 minimal cure = Stiefel-W + code-spectral-entropy (design memo §4 the 80/20). Returns the
     two composable levers (use ``BASELINE.with_lever(*DM1Minimal())``); both halves target DIFFERENT
     params (W via projection, code via penalty) so they compose without double-counting (§3 routing).
@@ -2548,7 +2571,7 @@ def DM1Minimal(beta: float = 0.01, window: int = 100) -> tuple[Lever, Lever]:  #
     return StiefelW(window=window), CodeSpectralEntropy(beta=beta, window=0)
 
 
-def MarginSaliency(weight: float = 1.0, start_epoch: int = 900,  # noqa: N802 — LEVER (KKT waterfill)
+def MarginSaliency(weight: float = 1.0, start_epoch: int = 900,
                    tau: float = 0.5, target: float = 0.5, window: int = 100) -> Lever:
     """Margin-saliency hinge (KKT waterfill on margin-saliency, `boundary_routing.py`) engaged
     LATE (l7/Muon finetune; from-scratch margin starves the interior). Composes with ``UniWARD``
@@ -2563,7 +2586,7 @@ def MarginSaliency(weight: float = 1.0, start_epoch: int = 900,  # noqa: N802 �
                  notes="KKT-waterfill margin-saliency hinge (late finetune)")
 
 
-def UniWARD(weight: float = 1.0, start_epoch: int = 900, beta: float = 4.0,  # noqa: N802 — LEVER-4
+def UniWARD(weight: float = 1.0, start_epoch: int = 900, beta: float = 4.0,
             tau: float = 0.5, target: float = 0.5, window: int = 100) -> Lever:
     """LEVER-4 (UniWARD inverse-steganalysis, Fridrich; BUILT + smoke-verified, `uniward_texture.py`
     `compute_texture_probability` + `uniward_delta.py`): margin-saliency with the UNIWARD texture
@@ -2584,7 +2607,7 @@ def UniWARD(weight: float = 1.0, start_epoch: int = 900, beta: float = 4.0,  # n
                  notes="UniWARD texture-masked margin-saliency (Fridrich; concentrate on smooth boundary)")
 
 
-def WarpRealLumaFrame0(  # noqa: N802 — DSL constructor
+def WarpRealLumaFrame0(
     w_pose: float = 1.0, start_epoch: int = 0, window: int = 0,
 ) -> Lever:
     """POSE CARRIER B — warp-real-luma FRAME0 (``tac.boundary_math.warp_real_luma_frame0``).
@@ -2611,7 +2634,7 @@ def WarpRealLumaFrame0(  # noqa: N802 — DSL constructor
                         "rank-6 twist residual to d_pose~3.4e-5 (FEED-lj/W7; advisory pointer 0.19110)"))
 
 
-def StoreNothingPoseCarrier(  # noqa: N802 — DSL constructor
+def StoreNothingPoseCarrier(
     w_pose: float = 1.0, residual_mode: str = "table", start_epoch: int = 0, window: int = 0,
 ) -> Lever:
     """POSE CARRIER A — STORE-NOTHING joint pose-descent (R1's PROVEN recipe, #245/#238).
@@ -2651,9 +2674,9 @@ def StoreNothingPoseCarrier(  # noqa: N802 — DSL constructor
                         "dxi residual (d_pose 97->0.0011 @n600 advisory; byte-close #238; pointer 0.19110)"))
 
 
-def TerminalPoseFinish(  # noqa: N802 — v7.5 D.9 (SPEC §D.9)
+def TerminalPoseFinish(
     start_epoch: int, w_pose: float = 1.0, window: int = 0, *,
-    start_event: "str | None" = None, f_basin: float = 1.0,
+    start_event: str | None = None, f_basin: float = 1.0,
 ) -> Lever:
     """v7.5 D.9 TERMINAL POSE-FINISH — the R1 TWO-PHASE sequence (SPEC §D.9; FEED-238resolved).
 
@@ -2685,7 +2708,7 @@ def TerminalPoseFinish(  # noqa: N802 — v7.5 D.9 (SPEC §D.9)
     # the σ_min(epoch) curve + the would-have-fired epoch as an OBSERVER). The trainer does NOT yet consume
     # an event-triggered pose-finish start (TrainerSupportGap), so referencing it fail-loud here (never an
     # invented flag): the DSL HOLDS the designed lever, and the run-2 resume-A/B on f_basin<1 builds it.
-    from tac.witness_control.jacobian_basin import JACOBIAN_BASIN_ENTRY_TRIGGER  # noqa: PLC0415
+    from tac.witness_control.jacobian_basin import JACOBIAN_BASIN_ENTRY_TRIGGER
     if start_event is not None:
         if str(start_event) != JACOBIAN_BASIN_ENTRY_TRIGGER:
             raise ValueError(
@@ -2715,7 +2738,7 @@ def TerminalPoseFinish(  # noqa: N802 — v7.5 D.9 (SPEC §D.9)
                "start_epoch = fail-safe CAP backstopping --muon-start-event; #238 ship-dxi; advisory"))
 
 
-def GroundFrameChart(  # noqa: N802 — DSL constructor
+def GroundFrameChart(
     ref_pair: int = 0,
     s_t: float = -0.003224707899359239,
     s_r: float = 0.0,
@@ -2756,43 +2779,52 @@ def GroundFrameChart(  # noqa: N802 — DSL constructor
 
 # ---------------------------------------------------------------------------
 # COMPUTE/SPEED levers (the gauge's non-curriculum config that compiles to trainer argv).
-# SPEED-LEVER WALL (#356 MEASURED 2026-07-11, witness_fp_reorder_transform_bit_identity_wall_v1):
-# NO compile-fusion/batched-reduction speed lever may ship — fp-reorder transforms are
-# deterministic-but-DIFFERENT (grad delta 1e-7..1e-3, 3 anchors) = trajectory-forking; the ONLY
-# admissible speed levers are explicit-order kernels + gradient-free caches (the two below +
-# fused-R). verdict_scope: formulation (MLX fp32); CUDA backend re-measures under #438.
+# SPEED-LEVER POLICY (#356 measurement + operator override 2026-07-12): fp-reorder transforms are
+# deterministic-but-DIFFERENT (grad delta 1e-7..1e-3, 3 anchors), but bit identity is explicitly
+# WAIVED for the TRAINING trajectory when functional parity holds and wall-clock improves. Exact
+# byte-closed scoring authority is unchanged. The drift measurements remain telemetry, never a
+# reason to silently omit an active loss term.
 # These move WALL-CLOCK, not the witness math/bytes/verdict: CacheGtSkeleton is BIT-IDENTICAL (a
 # constant-recompute elision, PROVEN by the #260 n=8 CPU A/B: EMA-shadow max_abs=0); MicroBatch is
-# trajectory-affecting (batched fp reduction) but its accum-step grad == the serial mean-over-chunk
-# within fp tol. Both compose with any curriculum lever; neither carries an epochs_delta (they are
+# trajectory-affecting (batched fp reduction); its accum-step loss/grad must remain within the
+# registered functional tolerances of the serial mean-over-chunk. Both compose with any curriculum
+# lever; neither carries an epochs_delta (they are
 # GLOBAL config, not a warm-start A/B stage). means != ends: SPEED buys nothing on S — only a
-# byte-closed n600 exact row moves the 0.19110 pointer.
+# byte-closed n600 exact row can move the canonical reports/latest.md contest-CPU pointer.
 # ---------------------------------------------------------------------------
-def CacheGtSkeleton() -> Lever:  # noqa: N802 — SPEED lever (#260, bit-identical)
+def CacheGtSkeleton() -> Lever:
     """SPEED (BIT-IDENTICAL): cache the CONSTANT per-pair GT soft-skeleton for the persistence loss
     (``--cache-gt-skeleton``). ``sg = soft_skeleton(gt)`` is epoch-invariant + gradient-free (it
     multiplies ``pred`` in the clDice ``tsens`` term), so precomputing it once per pair + reusing it
     every step is bit-identical (a materialized concrete constant == the inline recompute) while
     skipping ~half the clDice cost. No-op unless ``--persistence-loss-weight>0`` (the only consumer);
-    skipped under ``--micro-batch-pairs>1`` (the serial ``total_loss_fn`` is the sole consumer).
+    both serial and micro-batched twins consume the same cached constant.
     ``--cache-gt-skeleton`` is store_true -> emitted True ONLY (never False, review C2)."""
     return Lever("cache_gt_skeleton",
                  overrides={"--cache-gt-skeleton": True},
                  notes="speed (bit-identical): cache the constant GT soft-skeleton for the persistence loss")
 
 
-def MicroBatch(pairs: int = 4) -> Lever:  # noqa: N802 — SPEED lever
-    """SPEED (trajectory-affecting): batch ``pairs`` per frozen-scorer forward (``--micro-batch-pairs``).
+def MicroBatch(pairs: int = 4) -> Lever:
+    """SPEED (training-only, trajectory-affecting): batch ``pairs`` per scorer forward.
 
     The single-pair EfficientNet-B2 SegNet / FastViT PoseNet forward under-utilizes the GPU; B>1
-    renders + scores B pairs in ONE batched forward (~2-4x). Grads are weighted by pair count so the
-    accum-step grad == the serial mean-over-chunk (NOT bit-identical: batched fp reduction order -> a
-    short trajectory A/B validates it). Incompatible with ``--seed-islands`` (fail-closed at the
-    trainer build). B=1 (the default) is the byte-identical serial path -> ``MicroBatch(1)`` emits it
-    explicitly for an apples-to-apples A/B baseline. A value flag (never store_true)."""
+    renders + scores B pairs in one batched forward. The operator targets the historical ~2-4x
+    speed class, but the faithful full-V9 end-to-end receipt remains required. Grads are weighted by pair count so the
+    accum-step loss/gradient is functionally equivalent to the serial mean-over-chunk. It is NOT bit
+    identical because scorer kernels and reductions change order; the operator explicitly waived that
+    for training on 2026-07-12. It composes with ``--seed-islands`` through the trainer's dual batched
+    co-gradient path and with every canonical V9 loss leg through their batched twins. B=1 is the
+    serial baseline. This lever has no score authority; exact rows still require byte-closed evaluator
+    replay. A value flag (never store_true). ``pairs`` must be positive so an invalid batch cannot
+    survive typed compile and fail later inside the trainer loop."""
+    pairs = int(pairs)
+    if pairs < 1:
+        raise ValueError(f"MicroBatch pairs must be >= 1, got {pairs}")
     return Lever("micro_batch_pairs",
-                 overrides={"--micro-batch-pairs": int(pairs)},
-                 notes="speed lever: B pairs per batched scorer forward (trajectory-affecting, ~2-4x)")
+                 overrides={"--micro-batch-pairs": pairs},
+                 notes=("training-only speed lever: B pairs per batched scorer forward; functional "
+                        "parity required, bit drift operator-waived, no score authority"))
 
 
 # ---------------------------------------------------------------------------
@@ -2803,7 +2835,7 @@ def MicroBatch(pairs: int = 4) -> Lever:  # noqa: N802 — SPEED lever
 # seed), FEED-fz/-bu (reheat), anneal-memo (tau=0.3 == reachability floor), FEED-fi
 # (Muon = spectral conditioner -> stacked, not fixed). DAG FEED-ln.
 # ---------------------------------------------------------------------------
-def openpilot_seeded_opening(  # noqa: N802 — DSL constructor
+def openpilot_seeded_opening(
     out_dir: str,
     gt_cache: str,
     num_pairs: int = 200,
@@ -2906,7 +2938,7 @@ def openpilot_seeded_opening(  # noqa: N802 — DSL constructor
 # intent (the "on" value argparse cannot supply). Flag names are REAL (validate() fail-closes on
 # any invented flag). Generic tuning knobs (--adam-beta2 etc.) are levers WITH a swept param.
 # ---------------------------------------------------------------------------------------------
-def SeedIslandEased(window: int = 100) -> Lever:  # noqa: N802 — #323 LADDER island-birth
+def SeedIslandEased(window: int = 100) -> Lever:
     """#323 LADDER island-birth: use the EASED per-class island targets at the seed/amplify
     sites — movable via SDF forward-Euler DILATION (proven 1-Lipschitz transfer) + lane via
     openpilot VP-TANGENT along-tangent widening (manifold-preserving; isotropic-of-a-curve is
@@ -2919,7 +2951,7 @@ def SeedIslandEased(window: int = 100) -> Lever:  # noqa: N802 — #323 LADDER i
                  notes="#323 eased island targets: movable SDF-dilation + lane VP-tangent")
 
 
-def SeedIslandBirth(window: int = 100) -> Lever:  # noqa: N802 — #224/#300 island-birth seed PAIR
+def SeedIslandBirth(window: int = 100) -> Lever:
     """#224 island seed + the #300 seed-absorption FIX, emitted as a PAIR (the trainer fail-closes
     ``--witness-alone-island-loss`` without ``--seed-islands``, so the DSL holds them together):
     early-seed the self-detected lane+movable islands into the SegNet-scored frame1 (accelerant,
@@ -2937,7 +2969,7 @@ def SeedIslandBirth(window: int = 100) -> Lever:  # noqa: N802 — #224/#300 isl
                  notes="#224 island seed + #300 witness-alone island loss (the anti-starvation PAIR)")
 
 
-def Mod32SegOnlyControlBase(window: int = 0) -> Lever:  # noqa: N802 — mod32cap control-base reproduction
+def Mod32SegOnlyControlBase(window: int = 0) -> Lever:
     """The mod32cap CLEAN-BASELINE control config (run
     ``levelset_n600_witness_mod32cap_20260706T115554Z``, FEED-06u: the confound-fixed seg-only
     mod-32 council baseline) expressed as the DELTA over the launcher's ``proven_base`` — so a
@@ -2972,7 +3004,7 @@ def Mod32SegOnlyControlBase(window: int = 0) -> Lever:  # noqa: N802 — mod32ca
     )
 
 
-def EventTriggeredCurriculum(window: int = 0) -> Lever:  # noqa: N802 — #315 derived-schedule flagship
+def EventTriggeredCurriculum(window: int = 0) -> Lever:
     """#315 event-triggered CE→tau hand-off + per-class critical-nucleus guard: hold tau until
     every scored class consolidates (boundary re-anchor C1/C2 gate + nucleus predicate π₁≳5 +
     plateau), so a born-but-nascent island is not taxed by a fixed-epoch tau onset. Byte-identical
@@ -2986,7 +3018,7 @@ def EventTriggeredCurriculum(window: int = 0) -> Lever:  # noqa: N802 — #315 d
                  notes="#315 nucleus-guarded CE→tau hand-off; protects born islands at 0 d_seg cost")
 
 
-def EikonalViscosity(eps: float = 0.05, adaptive: bool = True, window: int = 0) -> Lever:  # noqa: N802 — #316/#320 DE cure
+def EikonalViscosity(eps: float = 0.05, adaptive: bool = True, window: int = 0) -> Lever:
     """#316/#320 viscous eikonal stabilization: the DE-derived adaptive-ε cure ε(t)=clamp(
     |c_a(t)|·√(ηλ_eik/8)(1+margin), floor, upper) that floors ε above the rising lower-CFL edge
     (the measured v5 ep110 re-entry cause). ``adaptive`` toggles the ε(t) law vs a fixed viscous
@@ -3006,7 +3038,7 @@ def EikonalViscosity(eps: float = 0.05, adaptive: bool = True, window: int = 0) 
                  notes="#316/#320 DE-derived viscous/adaptive-ε eikonal stabilization")
 
 
-def AmplifyIsland(weight: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 — island-amplify loss
+def AmplifyIsland(weight: float = 1.0, window: int = 100) -> Lever:
     """Island-amplify loss: raise the rare-class island logit on the COSTATE/margin-GATED support
     (amplify only where the big-3 margin is preserved ⇒ n_big3→0 ⇒ net-positive by construction;
     UNIFORM amplification is the measured net-negative). ``--amplify-form``/``--amplify-margin-
@@ -3017,7 +3049,7 @@ def AmplifyIsland(weight: float = 1.0, window: int = 100) -> Lever:  # noqa: N80
                  notes="rare-class island-amplify on margin-gated support (net-positive by construction)")
 
 
-def BoundaryDistance(weight: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 — #301 loss-geometry
+def BoundaryDistance(weight: float = 1.0, window: int = 100) -> Lever:
     """#301 loss-geometry: boundary-distance-weighted seg loss (concentrate pressure on the
     codim-1 separatrix annulus). Default-OFF (weight 0) in the baseline; a nonzero weight engages."""
     return Lever("boundary_distance",
@@ -3026,7 +3058,7 @@ def BoundaryDistance(weight: float = 1.0, window: int = 100) -> Lever:  # noqa: 
                  notes="#301 boundary-distance-weighted seg loss (separatrix-annulus concentration)")
 
 
-def SegFocalGamma(gamma: float = 2.0, window: int = 100) -> Lever:  # noqa: N802 — #301 focal calibration
+def SegFocalGamma(gamma: float = 2.0, window: int = 100) -> Lever:
     """#301 focal-γ seg loss: down-weight easy (high-margin) pixels, focus on the flip-prone
     boundary. γ calibrated $0-measured (#301); default 2.0 is the canonical focal exponent."""
     return Lever("seg_focal_gamma",
@@ -3035,7 +3067,7 @@ def SegFocalGamma(gamma: float = 2.0, window: int = 100) -> Lever:  # noqa: N802
                  notes="#301 focal-γ seg loss (down-weight easy pixels toward the flip boundary)")
 
 
-def AdamBeta2(beta2: float = 0.99, window: int = 0) -> Lever:  # noqa: N802 — #222 β₂ optimizer lever
+def AdamBeta2(beta2: float = 0.99, window: int = 0) -> Lever:
     """#222 Adam β₂ lever (arXiv 2603.02092): sweep β₂ (second-moment decay). The launch-gate
     guard requires β₁<√β₂; window=0 = optimizer-config change, no epoch budget of its own."""
     return Lever("adam_beta2",
@@ -3044,7 +3076,7 @@ def AdamBeta2(beta2: float = 0.99, window: int = 0) -> Lever:  # noqa: N802 — 
                  notes="#222 Adam β₂ second-moment decay sweep (β₁<√β₂ guard)")
 
 
-def DirectionalBasisRebalance(freq_across: int = 32, regime: str = "lane_offloaded",  # noqa: N802
+def DirectionalBasisRebalance(freq_across: int = 32, regime: str = "lane_offloaded",
                               window: int = 0) -> Lever:
     """FEED-07a arm-(A): DERIVED two-regime along-tangent frequency rebalance of the directional
     (anisotropic/curvelet) self-orient basis — a derivation, not a sweep (equations leg:
@@ -3107,7 +3139,7 @@ def DirectionalBasisRebalance(freq_across: int = 32, regime: str = "lane_offload
     )
 
 
-def persistence_classes_for_basis_regime(regime: str, *, lane_class: int = 1,  # noqa: N802 stays snake
+def persistence_classes_for_basis_regime(regime: str, *, lane_class: int = 1,
                                          movable_class: int = 3) -> str:
     """FEED-07a two-regime COHERENCE coupling (SEAL v7.3 round-2 M1 fix): the persistence-RECALL class
     targeting DERIVED from the active :func:`DirectionalBasisRebalance` regime, so the learned recall
@@ -3134,7 +3166,7 @@ def persistence_classes_for_basis_regime(regime: str, *, lane_class: int = 1,  #
         "(expected 'lane_offloaded' or 'lane_carried')")
 
 
-def logit_adjust_classes_for_basis_regime(regime: str, *, lane_class: int = 1,  # noqa: N802 stays snake
+def logit_adjust_classes_for_basis_regime(regime: str, *, lane_class: int = 1,
                                           movable_class: int = 3) -> str:
     """v7.5 Lever-3 REGIME COHERENCE (sister of :func:`persistence_classes_for_basis_regime`): the
     --logit-adjust-classes value DERIVED from the active :func:`DirectionalBasisRebalance` regime, so
@@ -3158,7 +3190,7 @@ def logit_adjust_classes_for_basis_regime(regime: str, *, lane_class: int = 1,  
         "(expected 'lane_offloaded' or 'lane_carried')")
 
 
-def AreaConstraintBirth(birth_force: float = 1.0, tolerance: float = 0.25,  # noqa: N802 — v7.5 Lever-1
+def AreaConstraintBirth(birth_force: float = 1.0, tolerance: float = 0.25,
                         classes: str = "1,3", window: int = 0) -> Lever:
     """v7.5 birth-counter-force Lever-1 — the CHAN-VESE AREA-CONSTRAINT precision counter-force
     (equations leg ``tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708``, the
@@ -3185,8 +3217,10 @@ def AreaConstraintBirth(birth_force: float = 1.0, tolerance: float = 0.25,  # no
     equilibrium 1.25x GT), ``classes`` (comma list of birthed classes, 'auto' = the amplify/persistence
     island classes). Consumes the SHARED realized through-R seg forward (NO extra SegNet forward). The
     trainer flag ``--area-constraint-birth`` is a store_true default-OFF => byte-identical when this
-    lever is not composed. The lambda SCALE is ASSUMED_AWAITING_VERIFICATION (owed to the v7.5 A/B);
-    the FORM + balance are DERIVED. window=0 = loss-config lever, no epoch budget of its own."""
+    lever is not composed. ``MicroBatch(B>1)`` evaluates the same soft-mass hinge independently for
+    each pair and only then averages across B; a global batch-area hinge is forbidden. The lambda
+    SCALE is ASSUMED_AWAITING_VERIFICATION (owed to the v7.5 A/B); the FORM + balance are DERIVED.
+    window=0 = loss-config lever, no epoch budget of its own."""
     if not (float(tolerance) > 0.0):
         raise ValueError(f"AreaConstraintBirth: tolerance must be > 0, got {tolerance!r}")
     if not (float(birth_force) >= 0.0):
@@ -3200,10 +3234,11 @@ def AreaConstraintBirth(birth_force: float = 1.0, tolerance: float = 0.25,  # no
         epochs_delta=window,
         notes=("v7.5 Lever-1 Chan-Vese area constraint (precision counter-force vs recall-only birth "
                "over-paint); lambda_c=birth_force/(tolerance*A_GT_c) DERIVED LIVE; equilibrium "
-               f"(1+{tolerance})*A_GT; reuses the realized seg forward; advisory until byte-closed"))
+               f"(1+{tolerance})*A_GT; micro-batch twin preserves per-pair area before batch mean; "
+               "reuses the realized seg forward; advisory until byte-closed"))
 
 
-def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,  # noqa: N802 — v7.5 Lever-2
+def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,
                          ramp_epochs: int = 50, post_level: float = 0.0,
                          classes: str = "1,3", window: int = 0,
                          ramp_apply: bool = False) -> Lever:
@@ -3228,7 +3263,9 @@ def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,  # n
     persistence-recall / logit-adjust offset), each PER-CLASS INDEPENDENTLY. Default False =
     DETECTOR-ONLY (byte-neutral observability; the LOUD hand-off telemetry + resume state still fire)
     so the ramp landing preserves the calibration-only mode. ``--birth-completion-ramp`` requires
-    ``--birth-completion-event`` (the trainer fails closed otherwise). With ``ramp_apply=True`` the
+    ``--birth-completion-event`` (the trainer fails closed otherwise). Serial and micro-batched loss
+    paths both re-read the live per-class offset/amplify/persistence cells at every loss call. With
+    ``ramp_apply=True`` the
     loss surfaces are byte-identical UNTIL a class actually fires (multiplier == 1.0 pre-fire); the
     OFF path (no ``--birth-completion-ramp``) is byte-identical always."""
     if not (0.0 <= float(tau_persist) <= 1.0):
@@ -3253,16 +3290,16 @@ def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,  # n
         epochs_delta=window,
         notes=("v7.5 Lever-2 Morse-Smale birth-completion event (persistence>=tau AND area in band => "
                "ramp birth stack -> post_level; hand off birth->boundary regime); defense-in-depth with "
-               "AreaConstraintBirth; resume-safe; "
+               "AreaConstraintBirth; resume-safe; live cells routed into serial and micro-batch twins; "
                + ("RAMP APPLIED to loss surfaces (per-class)" if bool(ramp_apply)
                   else "DETECTOR-ONLY (byte-neutral; ramp not applied)")
                + "; advisory until byte-closed"))
 
 
-def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
+def TemporalScrewConsistency(
     weight: float = 0.1, start_epoch: int = 0, xi_source: str = "ground_gt",
     classes: str = "0,1,2", band: float = 2.0, window: int = 0,
-    start_event: "str | None" = None,
+    start_event: str | None = None,
     sky_rotation_only: bool = False, sky_row_hi: int = 96,
 ) -> Lever:
     """P0 FORCE 1 — TEMPORAL SCREW-CONSISTENCY (derivation
@@ -3294,8 +3331,10 @@ def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
     ``term_domination`` alarm); ramp at STAGE BOUNDARIES ONLY toward the gradient-share≈0.44 target using
     the per-term gnorm telemetry (NEVER per-step — the GradNorm-would-mute-the-canary warning). The
     trainer flag ``--seg-temporal-screw-weight`` is default 0.0 ⇒ byte-identical when this lever is not
-    composed. ``window=0`` = loss-config lever, no epoch budget. Advisory until byte-closed (pointer
-    0.19110 UNMOVED).
+    composed. The micro-batch twin performs one raw-witness frame-0 SegNet call for B pairs, a
+    batch-native homography warp, and one fused Metal residual-map dispatch; it never borrows the
+    pose carrier's frame-0 render. ``window=0`` = loss-config lever, no epoch budget. Advisory until
+    byte-closed; this training lever cannot move the canonical ``reports/latest.md`` pointer.
 
     ``start_event`` (v7.5 B.4 SENSOR->START WIRING, operator 2026-07-08): when set to ``'annulus_plateau'``
     the lever co-emits ``--seg-temporal-screw-start-event`` so engagement FIRES on the #333 annulus_frac
@@ -3351,10 +3390,11 @@ def TemporalScrewConsistency(  # noqa: N802 — P0 FORCE 1 (task #360)
                + ("start_event=" + str(start_event) + " (fires on annulus_plateau formed boundary; "
                   "start_epoch is the backstop cap)" if start_event is not None
                   else "start=start_epoch (fixed gate; pass start_event=annulus_plateau to event-govern)")
+               + "; micro-batch routed via raw-f0 batched scorer + batch-native warp + fused Metal map"
                + "; ramp w_t at stage boundaries only; advisory until byte-closed"))
 
 
-def MarginBandSatisficing(  # noqa: N802 — P0 FORCE 2 (task #360)
+def MarginBandSatisficing(
     weight: float = 0.2, msafe: float = 0.06, delta_r: float = 0.0196,
     headroom: float = 2.0, start_epoch: int = 0, band: float = 2.0, window: int = 0,
 ) -> Lever:
@@ -3409,7 +3449,7 @@ def MarginBandSatisficing(  # noqa: N802 — P0 FORCE 2 (task #360)
                "MASK-BY-STAGE at l7 preserves the tau-anneal; default-OFF; advisory until byte-closed"))
 
 
-def HorizonWeightedMargin(  # noqa: N802 — v7.5 B.5 (#169)
+def HorizonWeightedMargin(
     weight: float = 0.0, target: float = 0.5, margin_lo: float = 0.3, margin_hi: float = 0.5,
     row_lo: int = 96, row_hi: int = 288, start_epoch: int = 0, window: int = 0,
 ) -> Lever:
@@ -3459,14 +3499,18 @@ def HorizonWeightedMargin(  # noqa: N802 — v7.5 B.5 (#169)
                    "--seg-horizon-row-hi": int(row_hi),
                    "--seg-horizon-margin-start-epoch": int(start_epoch)},
         epochs_delta=window,
-        notes=("v7.5 B.5 #169 horizon-weighted margin (one-sided relu(m_target - m_wit) on the SHARED "
-               "_signed, STRATIFIED to horizon rows [%d,%d) AND GT-margin [%.2f,%.2f]); pushes ONLY the "
-               "reducible confident-GT band, EXCLUDES the <lo irreducible label-noise; 0-byte "
-               "SHARED-structure; A/B arm NOT a claim (oracle ceiling dS~0.024); advisory until byte-close"
-               % (int(row_lo), int(row_hi), float(margin_lo), float(margin_hi))))
+        notes=(
+            "v7.5 B.5 #169 horizon-weighted margin (one-sided relu(m_target - m_wit) on the "
+            f"SHARED _signed, STRATIFIED to horizon rows [{int(row_lo)},{int(row_hi)}) AND "
+            f"GT-margin [{float(margin_lo):.2f},{float(margin_hi):.2f}]); pushes ONLY the "
+            "reducible confident-GT band, EXCLUDES the <lo irreducible label-noise; 0-byte "
+            "SHARED-structure; A/B arm NOT a claim (oracle ceiling dS~0.024); advisory until "
+            "byte-close"
+        ),
+    )
 
 
-def SegChromaBoundary(  # noqa: N802 — LEVER-4c (chroma DOF probe a3e9f0bd; operator "Chroma too" 2026-06-25)
+def SegChromaBoundary(
     weight: float = 0.0, margin_band: float = 1.0, start_epoch: int = 0, window: int = 0,
 ) -> Lever:
     """LEVER-4c — ANNULUS-DIRECTED CHROMA-BOUNDARY MATCH (chroma DOF probe a3e9f0bd GREEN 2026-07-03; #276
@@ -3490,7 +3534,8 @@ def SegChromaBoundary(  # noqa: N802 — LEVER-4c (chroma DOF probe a3e9f0bd; op
     The trainer flag ``--seg-chroma-boundary-weight`` is default 0.0 ⇒ byte-identical when not composed (the
     branch is gated on ``chroma_bnd_w > 0`` AND the GT-chroma/annulus providers stay None). ``window=0`` =
     loss-config lever; ``start_epoch`` is the stage-boundary engage (re-treats the spike-guard; NEVER
-    per-step). NOT supported with ``--micro-batch-pairs>1`` (fails closed in the trainer). Sister of
+    per-step). ``MicroBatch(B>1)`` consumes the same GT-chroma and annulus providers in a fused Metal
+    map, preserving each pair's own weighted denominator before the batch mean. Sister of
     :func:`HorizonWeightedMargin` (both 0-byte SHARED-structure annulus levers on the SAME render;
     DIFFERENT quantity — chroma appearance-match vs the ``_signed`` margin hinge).
 
@@ -3498,7 +3543,8 @@ def SegChromaBoundary(  # noqa: N802 — LEVER-4c (chroma DOF probe a3e9f0bd; op
     EXISTENCE proof, eq ``chroma_decides_lane_and_movable_at_annulus_v1``), NOT the ADD-BACK score ΔS of THIS
     chroma-match term through the witness. That ΔS is UNMEASURED; the exit criterion is a CONVERGED n600
     byte-close A/B (the surviving annulus flips must shift toward the GT chroma, else terminal-finding).
-    Advisory until byte-closed (pointer 0.19110 UNMOVED)."""
+    Advisory until byte-closed; this training lever cannot move the canonical ``reports/latest.md``
+    pointer."""
     if not (float(weight) >= 0.0):
         raise ValueError(f"SegChromaBoundary: weight must be >= 0, got {weight!r}")
     if not (float(margin_band) > 0.0):
@@ -3513,15 +3559,20 @@ def SegChromaBoundary(  # noqa: N802 — LEVER-4c (chroma DOF probe a3e9f0bd; op
                    "--seg-chroma-boundary-margin-band": float(margin_band),
                    "--seg-chroma-boundary-start-epoch": int(start_epoch)},
         epochs_delta=window,
-        notes=("LEVER-4c annulus-directed chroma-boundary match (additive w*mean_ann ||chroma(f1)-chroma("
-               "GT)||^2 on the SHARED realized-through-R render, annulus |GT margin|<%.2f); chroma=rgb-"
-               "BT.601-luma = LUMA-INVARIANT => ORTHOGONAL to luma levers; PROVEN independent d_seg boundary "
-               "SHARPENER (probe a3e9f0bd: 93.4%% of chroma-flips in margin<1); 0-byte SHARED-structure; "
-               "start_epoch stage-gate; A/B arm NOT a claim (removal-ablation != add-back dS); advisory "
-               "until byte-close" % float(margin_band)))
+        notes=(
+            "LEVER-4c annulus-directed chroma-boundary match (additive w*mean_ann "
+            "||chroma(f1)-chroma(GT)||^2 on the SHARED realized-through-R render, annulus "
+            f"|GT margin|<{float(margin_band):.2f}); chroma=rgb-BT.601-luma = LUMA-INVARIANT "
+            "=> ORTHOGONAL to luma levers; PROVEN independent d_seg boundary SHARPENER "
+            "(probe a3e9f0bd: 93.4% of chroma-flips in margin<1); micro-batch routed with "
+            "per-pair normalization + one fused Metal map; 0-byte SHARED-structure; "
+            "start_epoch stage-gate; A/B arm NOT a claim (removal-ablation != add-back dS); "
+            "advisory until byte-close"
+        ),
+    )
 
 
-def TieLocusDisplacement(  # noqa: N802 — P0 FORCE 3 (task #360; WRAPS the existing subpix term)
+def TieLocusDisplacement(
     weight: float = 0.3, start_epoch: int = 0, v_band: float = 1.0,
     edge_weight_source: str = "pa_flipmass",
     edge_weight_path: str = "reports/pa_edge_weights.json",
@@ -3627,8 +3678,11 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
     be ≥ l7 (needs a formed partition + tie field to advect). ``gap_xi='interp'`` (DEFAULT) estimates
     the odd→even inter-pair gap screw as the se(3)-composed ``ξ_gap≈½(ξ_pi+ξ_pi+1)`` (a train-time
     regularizer target; gap approximation tolerated per memo). The trainer flag
-    ``--seg-phase-advect-weight`` is default 0.0 ⇒ byte-identical when not composed. ``window=0`` =
-    loss-config lever, no epoch budget. Advisory until byte-closed (pointer 0.19108282 UNMOVED)."""
+    ``--seg-phase-advect-weight`` is default 0.0 ⇒ byte-identical when not composed. Because the
+    cross-pair context is already baked into theta-independent per-pair providers, the micro-batch
+    twin stacks those rows and evaluates the phase residual in one fused Metal dispatch across B.
+    ``window=0`` = loss-config lever, no epoch budget. Advisory until byte-closed; this training lever
+    cannot move the canonical ``reports/latest.md`` pointer."""
     if not (float(weight) >= 0.0):
         raise ValueError(f"PhaseAdvectionConsistency: weight must be >= 0, got {weight!r}")
     if not (float(band) > 0.0):
@@ -3658,11 +3712,11 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
                "support); THE d_seg endgame lever (pierces the 0.0053 temporal-majority floor via "
                "appearance-phase correlation); shrinkage toward the ξ-advected predictable channel; "
                "gap_xi=" + str(gap_xi) + " ref=" + str(ref) + " (gt_advected=READY θ-indep target, "
-               "zero batching change; witness_cached=OWED); GROUND classes only; f0 untouched; "
-               "default-OFF; advisory until byte-closed; pointer 0.19108282 UNMOVED"))
+               "micro-batch routed via stacked providers + fused Metal map; witness_cached=OWED); "
+               "GROUND classes only; f0 untouched; default-OFF; advisory until byte-closed"))
 
 
-def AACoverageRender(mode: str = "supersample", ss: int = 2,  # noqa: N802
+def AACoverageRender(mode: str = "supersample", ss: int = 2,
                      grid_h: int = 384, grid_w: int = 512,
                      ipe_footprint: float = 1.0, window: int = 100) -> Lever:
     """FEED-07b lever #1 (#220): AA COVERAGE-INTEGRATED render + grid≥384 — the gate's "#1 MEASURED
@@ -3739,7 +3793,7 @@ def AACoverageRender(mode: str = "supersample", ss: int = 2,  # noqa: N802
     )
 
 
-def StepNativeActivation(beta_start: float = 1.0, beta_end: float = 8.0,  # noqa: N802
+def StepNativeActivation(beta_start: float = 1.0, beta_end: float = 8.0,
                          anneal: str = "linear", window: int = 100,
                          *, basis: str = "annealed_hosc", omega: float = 1.0,
                          finer_bias_init: bool = False, finer_bias_k: float = 10.0) -> Lever:
@@ -3803,7 +3857,7 @@ def StepNativeActivation(beta_start: float = 1.0, beta_end: float = 8.0,  # noqa
     )
 
 
-def MuonWarmStart(lr_final_frac: float = 0.1, window: int = 0) -> Lever:  # noqa: N802
+def MuonWarmStart(lr_final_frac: float = 0.1, window: int = 0) -> Lever:
     """FEED-07b lever #7 (#270/#272): Muon finisher warm-start + LR anneal — kills the MEASURED
     +8% cold-Muon transition spike. ``--muon-warm-start-momentum`` seeds the fresh Muon momentum
     from the outgoing AdamW first moment (direction transfer; Newton–Schulz re-normalizes);
@@ -3824,7 +3878,7 @@ def MuonWarmStart(lr_final_frac: float = 0.1, window: int = 0) -> Lever:  # noqa
     )
 
 
-def WitnessStability(  # noqa: N802 — #146/#211 AMBER deep-unroll collapse-fix lever
+def WitnessStability(
     preset: str = "amber",
     grad_clip: float | None = None,
     pose_grad_coeff_max: float | None = None,
@@ -3894,7 +3948,7 @@ def WitnessStability(  # noqa: N802 — #146/#211 AMBER deep-unroll collapse-fix
     )
 
 
-def LengthSigma(spec: str = "fitted-20260707", window: int = 0) -> Lever:  # noqa: N802 — sigma_ij
+def LengthSigma(spec: str = "fitted-20260707", window: int = 0) -> Lever:
     """Per-class-PAIR sigma_ij weighting of the Chan-Vese length term — the consumption path for
     the MEASURED Young's-law junction fit (``junction_young_angle_sigma_fit_v1``; fit JSON
     ``experiments/results/solver_pack_20260707/junction_sigma/junction_sigma_fit.json``, commit
@@ -3937,7 +3991,7 @@ def LengthSigma(spec: str = "fitted-20260707", window: int = 0) -> Lever:  # noq
     )
 
 
-def PersistenceTopology(weight: float = 1.0, warmup_epochs: int = 0,  # noqa: N802
+def PersistenceTopology(weight: float = 1.0, warmup_epochs: int = 0,
                         window: int = 100) -> Lever:
     """FEED-07b lever #3 (partial, #218/#224 byte-free head): soft-clDice + persistence-weighted
     island-RECALL term on the SHARED realized-through-R seg forward — births the finest-scale
@@ -3957,7 +4011,7 @@ def PersistenceTopology(weight: float = 1.0, warmup_epochs: int = 0,  # noqa: N8
     )
 
 
-def MarginFieldHead(weight: float = 1.0, window: int = 100,  # noqa: N802
+def MarginFieldHead(weight: float = 1.0, window: int = 100,
                     logit_adjust_per_class: bool = False,
                     logit_adjust_tau: float = 1.0) -> Lever:
     """FEED-07b lever #3 (partial, #218 facets 1b/3): realized through-R per-class margin-hinge
@@ -3983,7 +4037,7 @@ def MarginFieldHead(weight: float = 1.0, window: int = 100,  # noqa: N802
     )
 
 
-def HeadOffsetSolver(mode: str = "ot_newton", tau: float = 1.0) -> Lever:  # noqa: N802 — #288 solve-don't-train
+def HeadOffsetSolver(mode: str = "ot_newton", tau: float = 1.0) -> Lever:
     """#288 (solve-don't-train inventory row 2): SELECTABLE per-class head-bias offset SOLVER — the
     decode-time Laguerre / power-diagram reweight of the argmax cells that attacks minority-class
     (Lane 0.59% / Movable 1.56%) erasure (~57% of flips are Lane↔Road). BYTE-FREE: the solved
@@ -4041,7 +4095,7 @@ def HeadOffsetSolver(mode: str = "ot_newton", tau: float = 1.0) -> Lever:  # noq
     )
 
 
-def FinerBiasInit(k: float = 10.0, window: int = 0) -> Lever:  # noqa: N802 — #310 build half
+def FinerBiasInit(k: float = 10.0, window: int = 0) -> Lever:
     """FEED-07b lever #2's BUILD half (#310, 2026-07-07): FINER++ variable-periodic FIRST-LAYER
     bias init (FINER arXiv 2312.02434 / FINER++ arXiv 2407.19434) — ``in_proj.bias ~ U(-k, k)``
     over a WIDE range so each first-layer neuron selects its OWN frequency/phase of the periodic
@@ -4071,7 +4125,196 @@ def FinerBiasInit(k: float = 10.0, window: int = 0) -> Lever:  # noqa: N802 — 
     )
 
 
-def LogitAdjust(tau: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 — #218 build half
+def FreShInitControl(
+    n_dir_freqs: int = 4,
+    freq_across: float = 32.0,
+    freq_along: float = 8.0,
+) -> Lever:
+    """Matched cold-init control for :func:`FreshFrequencyShift`.
+
+    This factory intentionally changes only the directional/SIREN basis shared
+    by both arms.  It does *not* enable FreSh, so the control retains the exact
+    cold zero first-layer bias and configured along-tangent frequency.
+    """
+
+    if (
+        isinstance(n_dir_freqs, bool)
+        or not isinstance(n_dir_freqs, Integral)
+        or int(n_dir_freqs) <= 0
+    ):
+        raise ValueError(
+            "FreShInitControl: n_dir_freqs must be a positive integer, "
+            f"got {n_dir_freqs!r}"
+        )
+    across = float(freq_across)
+    along = float(freq_along)
+    if not math.isfinite(across) or across <= 0.0:
+        raise ValueError(f"FreShInitControl: freq_across must be finite and > 0, got {freq_across!r}")
+    if not math.isfinite(along) or along <= 0.0:
+        raise ValueError(f"FreShInitControl: freq_along must be finite and > 0, got {freq_along!r}")
+    return Lever(
+        "fresh_init_control",
+        overrides={
+            "--activation": "hosc",
+            "--siren-init": True,
+            "--self-orient": True,
+            "--n-dir-freqs": int(n_dir_freqs),
+            "--freq-across": across,
+            "--freq-along": along,
+            # The live V9 seed is pair-dependent and is built after the init
+            # seam.  Both matched arms disable it so the candidate callback is
+            # the exact epoch-0 bare-witness through-R surface; validation
+            # fails closed if a caller re-enables an unrouted composer.
+            "--seed-islands": False,
+            "--seed-island-eased": False,
+            "--witness-alone-island-loss": False,
+            "--fresh-init-control": True,
+        },
+        notes=("P0 FreSh matched control: identical periodic directional basis, cold frequency/bias; "
+               "no spectral selection"),
+    )
+
+
+def FreShFixedQualitySlice(
+    eval_every: int = 1,
+    ckpt_every: int = 1,
+) -> Lever:
+    """Matched fixed-quality measurement cadence for the FreSh n8/n64 slice.
+
+    This lever owns only observability and checkpoint cadence.  It is composed
+    identically onto the control and treatment; it never changes the model,
+    loss, optimizer, or FreSh candidate law.  Production arms leave it OFF.
+    """
+
+    if (
+        isinstance(eval_every, bool)
+        or not isinstance(eval_every, Integral)
+        or int(eval_every) != 1
+    ):
+        raise ValueError(
+            "FreShFixedQualitySlice: eval_every must be exactly 1 so the first "
+            f"fixed-quality crossing is observed, got {eval_every!r}"
+        )
+    if (
+        isinstance(ckpt_every, bool)
+        or not isinstance(ckpt_every, Integral)
+        or int(ckpt_every) != 1
+    ):
+        raise ValueError(
+            "FreShFixedQualitySlice: ckpt_every must be exactly 1 so every "
+            f"measured epoch is resumable and preserved, got {ckpt_every!r}"
+        )
+    return Lever(
+        "fresh_fixed_quality_slice",
+        overrides={
+            "--eval-every": int(eval_every),
+            "--ckpt-every": int(ckpt_every),
+            "--stage-checkpoints": True,
+        },
+        notes=(
+            "FreSh fixed-quality slice protocol: per-epoch realized d_seg plus preserved "
+            "per-epoch resume checkpoints; compose identically on control/treatment"
+        ),
+    )
+
+
+def FreshFrequencyShift(
+    spectrum_size: int = 64,
+    sample_pairs: int = 10,
+    reference_freq_along: float = 8.0,
+    tangent_deficit: float = 3.2,
+    bias_k_min: float = 0.0,
+    bias_k_max: float = 3.0,
+    bias_k_step: float = 0.1,
+    n_dir_freqs: int = 4,
+    freq_across: float = 32.0,
+    freq_along: float = 8.0,
+) -> Lever:
+    """FreSh init-only spectral alignment over tangent frequency and bias width.
+
+    The sweep is backprop-free and default-OFF.  It scores the exact seeded
+    initialized witness through R and the frozen MLX SegNet, selects by FreSh's
+    boundary-spectrum Wasserstein distance, then hands that state to the
+    otherwise unchanged training loop.  Exact score authority remains
+    ``upstream/evaluate.py`` on archive bytes.
+    """
+
+    if (
+        isinstance(spectrum_size, bool)
+        or not isinstance(spectrum_size, Integral)
+        or int(spectrum_size) <= 0
+    ):
+        raise ValueError(
+            "FreshFrequencyShift: spectrum_size must be a positive integer, "
+            f"got {spectrum_size!r}"
+        )
+    if (
+        isinstance(sample_pairs, bool)
+        or not isinstance(sample_pairs, Integral)
+        or int(sample_pairs) <= 0
+    ):
+        raise ValueError(
+            "FreshFrequencyShift: sample_pairs must be a positive integer, "
+            f"got {sample_pairs!r}"
+        )
+    reference = float(reference_freq_along)
+    deficit = float(tangent_deficit)
+    if not math.isfinite(reference) or reference <= 0.0:
+        raise ValueError(
+            "FreshFrequencyShift: reference_freq_along must be finite and > 0, "
+            f"got {reference_freq_along!r}")
+    if not math.isfinite(deficit) or deficit <= 1.0:
+        raise ValueError(
+            f"FreshFrequencyShift: tangent_deficit must be finite and > 1, got {tangent_deficit!r}")
+    # Reuse the runtime's decimal-stable validation so the factory and trainer
+    # cannot disagree about inclusivity or divisibility of the bias grid.
+    from tac.witness_init.fresh_frequency_shift import (
+        inclusive_bias_width_grid,
+        tangent_frequency_candidates,
+    )
+    from tac.witness_init.fresh_trainer_contract import MAX_FRESH_CANDIDATES
+
+    bias_grid = inclusive_bias_width_grid(bias_k_min, bias_k_max, bias_k_step)
+    if bias_grid[0] != 0.0:
+        raise ValueError("FreshFrequencyShift: bias_k_min must be 0 for the exact cold control")
+    control = FreShInitControl(
+        n_dir_freqs=n_dir_freqs,
+        freq_across=freq_across,
+        freq_along=freq_along,
+    )
+    treatment_basis = dict(control.overrides)
+    treatment_basis.pop("--fresh-init-control")
+    frequencies = tangent_frequency_candidates(
+        treatment_basis["--freq-along"],
+        reference_frequency=reference,
+        tangent_deficit=deficit,
+    )
+    candidate_count = len(frequencies) * len(bias_grid)
+    if candidate_count > MAX_FRESH_CANDIDATES:
+        raise ValueError(
+            "FreshFrequencyShift: candidate grid has "
+            f"{candidate_count} candidates; maximum is {MAX_FRESH_CANDIDATES}"
+        )
+    return Lever(
+        "fresh_frequency_shift_init",
+        overrides={
+            **treatment_basis,
+            "--fresh-init": True,
+            "--fresh-spectrum-size": int(spectrum_size),
+            "--fresh-sample-pairs": int(sample_pairs),
+            "--fresh-reference-freq-along": reference,
+            "--fresh-tangent-deficit": deficit,
+            "--fresh-bias-k-min": float(bias_k_min),
+            "--fresh-bias-k-max": float(bias_k_max),
+            "--fresh-bias-k-step": float(bias_k_step),
+        },
+        notes=("P0 FreSh init-only boundary-spectrum Wasserstein selection over the measured "
+               "along-tangent residual and first-layer bias; fixed-quality slice A/B required; "
+               "n600 governed validation owed"),
+    )
+
+
+def LogitAdjust(tau: float = 1.0, window: int = 100) -> Lever:
     """FEED-07b lever #3's BUILD half (#218, 2026-07-07): class-prior LOGIT ADJUSTMENT on the
     TRAINING seg loss (Menon et al. 2021, arXiv 2007.07314 — the textbook ZERO-BYTE rare-class
     cure): the frozen-SegNet logits ``base_loss`` reads get ``logits_c += tau*log(prior_c)`` with
@@ -4085,8 +4328,9 @@ def LogitAdjust(tau: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 —
     (verdict CPU-torch SegNet, byte-close decode, inflate) reads RAW logits and is UNCHANGED; the
     witness WEIGHTS absorb the pressure. Trainer leg: ``--logit-adjust-loss-tau`` (default 0.0 =
     the loss adapter is the SAME object = byte-identical); ROUTED into the ``--micro-batch-pairs>1``
-    batched twin (#D15: the offset is added to the BASE seg-form logits only, bit-exact per pair —
-    no longer fails closed). SISTER (do not confuse): the
+    batched twin (#D15: the offset is added to the BASE seg-form logits only and the live
+    birth-completion cell is re-read on every call; row-local math is functionally equivalent but the
+    upstream batched scorer need not be bit-exact). SISTER (do not confuse): the
     #218 facet-3 pair ``--logit-adjust-per-class`` + ``--logit-adjust-tau`` boost the
     MARGIN-FIELD-HEAD per-class TARGET (see :func:`MarginFieldHead`); the two compose. Composes
     with :func:`SegFocalGamma` (logit-adjusted-focal) + :func:`PersistenceTopology`. Carries a
@@ -4100,11 +4344,12 @@ def LogitAdjust(tau: float = 1.0, window: int = 100) -> Lever:  # noqa: N802 —
         overrides={"--logit-adjust-loss-tau": float(tau)},
         epochs_delta=window,
         notes=("#218 Menon loss-time logit adjustment (zero-byte rare-class cure; training-loss "
-               "surface only, deployed argmax unchanged); #218 A/B owed"),
+               "surface only, deployed argmax unchanged); static/live offsets routed into the "
+               "micro-batch twin under functional parity; #218 A/B owed"),
     )
 
 
-def WeightEntropyPenaltyMLX(lam: float = 15.0, window: int = 0) -> Lever:  # noqa: N802 — §22(2) fold
+def WeightEntropyPenaltyMLX(lam: float = 15.0, window: int = 0) -> Lever:
     """Ballé rate-in-the-loss WEIGHT-ENTROPY penalty — the council-draft-20260707 §22(2) fold:
     the torch vehicle's ``--weight-entropy-penalty-lambda`` PORTED to the levelset trainer as a
     DETERMINISTIC soft-histogram symbol-entropy surrogate over the COUNTED witness weights
@@ -4266,7 +4511,7 @@ def verify_schedule_consistency(cfg, *, handoff: str = "fixed") -> list[str]:
     return problems
 
 
-def sealed_205_program(  # noqa: N802 — DSL constructor
+def sealed_205_program(
     out_dir: str,
     gt_cache: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
     num_pairs: int = 600,

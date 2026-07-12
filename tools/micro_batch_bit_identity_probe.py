@@ -11,9 +11,14 @@ serial accumulation path, and the surviving speedup at bit-identity:
      batched twin grad vs the serial left-fold mean-of-per-pair grad.
   SPEEDUP: ONE batched scorer forward over K frames vs K per-pair forwards.
 
-Emits a JSON verdict per device (see tac.boundary_math.micro_batch_bit_identity_probe.
-BitIdentityVerdict). MEANS: pointer contest-CPU 0.19110 UNMOVED; only a byte-closed n600
-evaluate.py row moves it.
+Emits a JSON bit-identity diagnostic per device while preserving the historical measurements.
+The optional synthetic-map mode executes chroma/phase/temporal fused Metal forward plus every
+theta-relevant VJP against their references and area batched-vs-per-pair at 384x512. It does not
+run the frozen scorer or temporal warp and therefore does not establish full-V9 functional parity.
+Persisted functional/timing JSON remains reported telemetry: it cannot attest execution, establish
+authoritative parity, or authorize training. Neither surface has
+score authority. MEANS: canonical ``reports/latest.md`` contest-CPU pointer UNMOVED; only a
+byte-closed n600 evaluate.py row moves it.
 
     .venv/bin/python tools/micro_batch_bit_identity_probe.py --devices cpu gpu --K 8
 """
@@ -121,17 +126,73 @@ def main() -> int:
     ap.add_argument("--iters", type=int, default=6)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--json-out", type=str, default="")
+    ap.add_argument(
+        "--synthetic-map-parity",
+        action="store_true",
+        help=("run the spatially faithful 384x512 synthetic chroma/phase/temporal "
+              "Metal-vs-reference VJPs and area diagnostic; no scorer/warp/full-V9 authority"),
+    )
+    ap.add_argument("--functional-telemetry", type=str, default="",
+                    help=("schema-validated reported-metrics bundle; byte/config/scorer checks "
+                          "do not attest Metal execution or establish functional parity"))
+    ap.add_argument("--end-to-end-timing-telemetry", type=str, default="",
+                    help=("schema-validated timing telemetry; disk JSON can never attest "
+                          "execution or authorize training"))
+    ap.add_argument("--end-to-end-speedup", type=float, default=0.0,
+                    help="legacy telemetry only; bare speed values always REFUSE admission")
     args = ap.parse_args()
+
+    if args.synthetic_map_parity:
+        from tac.boundary_math.micro_batch_bit_identity_probe import (
+            measure_v9_synthetic_map_parity,
+        )
+
+        try:
+            functional = measure_v9_synthetic_map_parity(
+                K=int(args.K), seed=int(args.seed))
+            return_code = 0 if functional["reported_map_metrics_within_tolerance"] else 2
+        except RuntimeError as exc:
+            functional = {
+                "schema": "micro_batch_v9_synthetic_map_measurement.v1",
+                "K": int(args.K),
+                "height": 384,
+                "width": 512,
+                "seed": int(args.seed),
+                "status": "REFUSE",
+                "blocker": str(exc),
+                "reported_map_metrics_within_tolerance": False,
+                "authoritative_functional_parity_established": False,
+                "training_throughput_admitted": False,
+                "timing_authority": "none; persisted JSON cannot attest execution",
+                "no_score_authority": True,
+            }
+            return_code = 2
+        encoded = json.dumps(functional, indent=2, sort_keys=True) + "\n"
+        print(encoded, end="")
+        if args.json_out:
+            Path(args.json_out).write_text(encoded)
+        return return_code
 
     import mlx.core as mx
 
     from tac.boundary_math.micro_batch_bit_identity_probe import (
         classify_micro_batch_bit_identity,
+        classify_training_admission,
+        load_functional_parity_telemetry,
+        load_timing_telemetry,
         measure_reduction_order_drift,
     )
 
+    receipts = (load_functional_parity_telemetry(args.functional_telemetry)
+                if args.functional_telemetry else ())
+    timing = (load_timing_telemetry(args.end_to_end_timing_telemetry)
+              if args.end_to_end_timing_telemetry else None)
+    training = classify_training_admission(
+        receipts, timing_receipt=timing,
+        reported_end_to_end_speedup=float(args.end_to_end_speedup))
+
     # Source B (device-independent MATH; measure on CPU for determinism).
-    mx.set_default_device(mx.cpu)
+    mx.set_default_device(mx.Device(mx.cpu))
     red = measure_reduction_order_drift(K=min(args.K, 4), seg_form="ce")
     reductions = {sf: measure_reduction_order_drift(K=min(args.K, 4), seg_form=sf).grad_maxabs
                   for sf in ("ce", "tau_softplus", "margin_hinge")}
@@ -143,19 +204,24 @@ def main() -> int:
         verdict = classify_micro_batch_bit_identity(
             device=dev, scorer_fwd_seg_maxabs=seg, scorer_fwd_argmax_flips=flips,
             scorer_fwd_pose_maxabs=pose, reduction_order_grad_maxabs=red.grad_maxabs,
-            scorer_fwd_speedup=speedup)
+            scorer_fwd_speedup=speedup, reported_functional_parity_supplied=False)
         results.append(verdict.as_dict())
 
     out = {
-        "schema": "micro_batch_bit_identity_probe.v1",
+        "schema": "micro_batch_bit_identity_probe.v3",
         "K": int(args.K),
         "reduction_order_grad_maxabs_by_segform": reductions,
         "reduction_order_grad_rel_l2_ce": red.grad_rel_l2,
         "reduction_order_loss_abs_ce": red.loss_abs,
         "per_device": results,
-        "note": ("scorer forward is the irreducible root of the micro-batch trajectory gate; "
-                 "reduction-order is secondary. Full bit-identity at speedup>1x is impossible "
-                 "on the real MLX scorer. MEANS: pointer 0.19110 UNMOVED."),
+        "reported_functional_telemetry": [receipt.as_dict() for receipt in receipts],
+        "reported_end_to_end_timing_telemetry": timing.as_dict() if timing is not None else None,
+        "training_admission": training.as_dict(),
+        "note": ("historical scorer-forward and reduction-order rows plus reported functional/"
+                 "timing telemetry remain diagnostics. Persisted JSON cannot attest runtime "
+                 "execution or establish functional parity; training admission remains REFUSE; "
+                 "no score authority. MEANS: canonical "
+                 "reports/latest.md contest-CPU pointer UNMOVED."),
     }
     print(json.dumps(out, indent=2, sort_keys=True))
     if args.json_out:
