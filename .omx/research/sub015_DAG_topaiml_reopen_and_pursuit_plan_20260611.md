@@ -15776,3 +15776,35 @@ updated with the n8-polish/592-pair headroom fact.
 queue entry, per block). APPARATUS only; no new measured row yet — cumulative ΔS/coverage rows
 append to the FEED-399 chain + refresh `pr110_lineage_click_polish_byte_neutral_slack_v1` as
 blocks clear their authority passes.
+
+### FEED-overhead-stack (2026-07-11) — NON-click rare-lever sweep on the frontier payload: ALL FOUR levers RED-or-DONE at measured optimal form; sidecar break-even LAW registered
+
+**What fired:** operator "pursue the rest of that overhead aggressively" — the non-click levers on the
+PR110-lineage frontier (pointer 0.19108282 [contest-CPU]). Proactive recall FIRST settled 3 of 4 levers
+from existing artifacts (no re-measurement): **L2 deletion RED** (#153 P-SUFF: 0/28 tensors, 0/28 latent
+dims deletable on THIS vehicle); **L3 bit-alloc/re-quant RED** (`frontier_exact_bitalloc_solve` full KKT
+reverse-waterfill RD sweep: best point S=0.313 ≫ 0.191; int5-LSQ 0.486; #153 bit-floor=8 on 90% of the
+decoder; PR128 concurs — strict discrete optimum); **L4 lossless recode DONE** (frontier IS the PR112 ctx
+recode; ~8 bits/B ceiling everywhere; the 607-B sidecar already minimal enum-rank form).
+
+**L1 SIDECAR-FOLD — MEASURED to optimal form, RED by +2.75e-5 (the new law):** our frontier still ships
+PR101's 607-B latent sidecar (597/600 pairs, (dim, δ/100) corrections, median 1.26 grid steps). Fold
+attempts, n600 advisory, same #399 harness (base reproduced 0.19110945 ≈ #399's 0.19109312 within
+1.6e-5): naive round-to-nearest **+3.37e-4**; per-pair EXACT 3-option selection **+3.91e-5**; 4-option
+optimal form (439 near/20 zero/121 other/17 far; 2,388 option-renders; selection exact by pair-locality)
+**+2.75e-5**. LAW `pr110_lineage_sidecar_fold_integer_grid_boundary_v1` (REGISTERED): the sidecar's
+sub-grid precision is worth 4.16e-4 S of d_seg vs 4.04e-4 S of rate — a break-even-efficient section;
+deterministic fold cannot win (verdict_scope FORMULATION, this vehicle). **The prescribed composition:
+run #399 click rounds 2+ ON THE FOLDED TABLE** (drop_sidecar renderer + repack) — any recovery > 2.75e-5
+banks the −607 B free (round-1 got 7.9e-5 on 48 pairs alone). Byte fact: AR latent-coder length invariant
+to all fold variants (every candidate exactly base−607).
+
+**Composed best-stack deliverable = the sibling #399 click candidate UNCHANGED** (advisory 0.19101380;
+naive fold composition 0.19138 LOSES). NO new MODAL-HOLD entry (nothing beats the staged one).
+Artifacts: `experiments/results/frontier_overhead_stack_run1/` (rows_final/rows_repair/rows_repair2 +
+per-pair npz states + 3 byte-closed candidates + sibling COPY). Memo
+`.omx/research/frontier_overhead_stack_20260711T232000Z.md`. NO-FAKE #7 defensive bank (fold idea =
+PR128 METHOD; harness/grammar OURS). Triality: DAG=this FEED · equations=the registered law · DSL=
+N/A-with-reason (frozen-archive packet transform, not a trainer lever). Ops note: detached bg evals
+killed ~5min (SIGURG-144) even with start_new_session; chunked-resumable-FOREGROUND (≤235s/invocation,
+npz state) landed 6,000+ pair-renders lossless — per memory L47. **Pointer 0.19108282 UNMOVED (means).**
