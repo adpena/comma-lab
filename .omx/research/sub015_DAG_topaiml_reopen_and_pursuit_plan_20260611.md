@@ -16072,3 +16072,23 @@ or after). Delegated codex modal_moneysafety_review (via the new codex_delegate 
 .omx/research/modal_moneysafety_review_20260712.md; re-fire HELD (FIRE_ON_GO.txt stamped HELD) until verdict
 = PROCEED + timeout/epoch fixes land. Apparatus/means; pointer 0.18804 UNMOVED. Lens→#346 retrieval wire-in
 running in parallel (Claude subagent). [no-triality — apparatus trajectory row, no DSL/equation leg]
+
+### FEED-policy-gradient-pedregosa (2026-07-12) — REINFORCE frame → terminal argmax polish; O(T³)/n=1 caveat for the controller
+Operator shared Fabian Pedregosa "Policy Gradients Part 1: The REINFORCE Estimator" (fa.bianp.net/blog/2026/
+policy-gradient/). Content: log-derivative trick → unbiased score-function estimator ĝ(τ)=(Σₜ∇log π(aₜ|sₜ))·R(τ);
+main result = O(T³) variance (2× horizon → 8× variance). Part 1 of a series; variance reduction (baselines/
+control variates) DEFERRED to Part 2. ROUTING (honest, two surfaces):
+(1) **#396/#400 terminal exact-argmax d_seg/dxi polish = REINFORCE's home turf** — d_seg is a non-diff argmax;
+parameterize a stochastic dist over discrete flips/dxi, sample the FROZEN scorer (cheap n600), get an UNBIASED
+exact-metric gradient without differentiating the argmax. If the #396 MC-finisher is naive zeroth-order/random
+search, REINFORCE-with-baseline is a principled lower-variance upgrade. Variance benign here: small T, cheap env,
+many samples affordable. ACTIONABLE now.
+(2) **#426 costate-controller-as-policy + #319 MC-return credit + #433 RL-deepen = real fit but bare REINFORCE
+DOOMED** — our T = hundreds-thousands of curriculum/epoch steps, each trajectory = a multi-hour run, env is n=1
+(#434 starvation). O(T³) × ~1 sample = prohibitive. WATCH for Part 2 (variance reduction) before wiring. Do NOT
+naively put bare REINFORCE in the controller.
+UNIFYING FRAME (from the post, honest): adjoint/Pontryagin (our costate λ=∂S/∂x) and REINFORCE (likelihood-ratio)
+compute the SAME gradient two ways → RULE: adjoint where the rollout is differentiable (level-set training flow),
+score-function+baseline where it hits the exact non-diff argmax (terminal polish). GUARD: this "score" (∇log π =
+policy Fisher) is NOT our "margin ≈ Fisher-of-scorer" object — different Fishers, do not conflate (fake-connection
+risk). Apparatus/reference; pointer 0.18804 UNMOVED. [no-triality — reference-routing, no measured finding]
