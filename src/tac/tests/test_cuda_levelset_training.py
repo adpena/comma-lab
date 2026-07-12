@@ -15,12 +15,16 @@ from tac.cuda_levelset_training import (
     TorchPoseCarrier,
     TorchLevelSetWitness,
     apply_torch_execution_policy,
+    area_constraint_torch,
+    chroma_boundary_loss,
     clip_grad_groups,
     compile_identity_probe,
+    eikonal_and_length,
     forward_parity_against_numpy,
     island_birth_from_signed_torch,
     parameter_groups,
     persistence_topology_loss_torch,
+    pose_objective_torch,
     select_torch_execution_policy,
     structured_sdf_prefit,
     weight_entropy_rate_term_torch,
@@ -58,6 +62,35 @@ def test_persistence_topology_matches_numpy_reference():
         torch.from_numpy(logits), torch.from_numpy(labels), (3,), iters=2
     )
     assert float(actual) == pytest.approx(expected, abs=2e-5)
+
+
+def test_batched_nonlinear_losses_equal_exact_mean_of_serial_pair_losses():
+    gen = torch.Generator().manual_seed(41)
+    logits = torch.randn(2, 9, 11, 5, generator=gen)
+    labels = torch.randint(0, 5, (2, 9, 11), generator=gen)
+    signed = torch.randn(2, 9, 11, generator=gen)
+    weight = torch.rand(2, 9, 11, generator=gen)
+    weight[1, :6] = 0.0  # unequal denominators expose an accidental global reduction
+    rgb = torch.rand(2, 9, 11, 3, generator=gen)
+    gt = torch.rand(2, 9, 11, 3, generator=gen)
+    ann = torch.rand(2, 9, 11, generator=gen) > 0.35
+    phi = torch.randn(2, 9, 11, 5, generator=gen)
+    pose = torch.randn(2, 6, generator=gen)
+    pose_target = torch.randn(2, 6, generator=gen)
+
+    checks = (
+        lambda sl: island_birth_from_signed_torch(signed[sl], weight[sl], 1.0),
+        lambda sl: area_constraint_torch(logits[sl], labels[sl], {1: 0.7, 3: 1.2}),
+        lambda sl: persistence_topology_loss_torch(logits[sl], labels[sl], (1, 3)),
+        lambda sl: chroma_boundary_loss(rgb[sl], gt[sl], ann[sl]),
+        lambda sl: eikonal_and_length(phi[sl])[0],
+        lambda sl: eikonal_and_length(phi[sl])[1],
+        lambda sl: pose_objective_torch(pose[sl], pose_target[sl]),
+    )
+    for fn in checks:
+        batched = fn(slice(None))
+        serial_mean = torch.stack([fn(slice(i, i + 1)) for i in range(2)]).mean()
+        assert torch.allclose(batched, serial_mean, atol=2e-6, rtol=2e-6)
 
 
 def test_weight_entropy_torch_matches_numpy_per_tensor():
@@ -134,6 +167,25 @@ def test_accum_pair_cursor_roundtrip_preserves_exact_coverage_order():
     assert restored.next_indices(4) == [3, 4, 0, 1]
     assert restored.accepted_total == 2
     assert restored.attempted_total == 7
+
+
+def test_epoch_pair_cursor_is_permuted_exhaustive_and_resumes_mid_epoch():
+    cur = DeterministicPairCursor(n_pairs=11, seed=73)
+    cur.begin_epoch(4)
+    first = cur.next_epoch_indices(4)
+    state = cur.state_dict()
+    restored = DeterministicPairCursor(n_pairs=11, seed=999)
+    restored.load_state_dict(state)
+    rest = []
+    while not restored.epoch_complete():
+        rest.extend(restored.next_epoch_indices(4))
+    assert len(first + rest) == 11
+    assert sorted(first + rest) == list(range(11))
+    assert restored.epoch == 4 and restored.epoch_complete()
+    restored.begin_epoch(5)
+    next_order = restored.next_epoch_indices(11)
+    assert sorted(next_order) == list(range(11))
+    assert next_order != first + rest
 
 
 def test_per_group_clip_is_distinct_and_returns_device_tensors():

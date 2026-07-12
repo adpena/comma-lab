@@ -22,7 +22,7 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 
@@ -34,6 +34,7 @@ for p in (REPO, REPO / "src", REPO / "experiments", REPO / "upstream"):
 from tac.boundary_math.lever_b_levelset_generator import (
     CurveletBankConfig,
     build_coords,
+    build_static_core_phi_target,
     curvelet_directional_B,
     curvelet_feats,
 )
@@ -57,6 +58,7 @@ from tac.cuda_levelset_training import (
     round_ste,
     select_torch_execution_policy,
     parameter_groups,
+    pose_objective_torch,
     structured_sdf_prefit,
     warp_field_persist_torch,
     weight_entropy_rate_term_torch,
@@ -127,11 +129,21 @@ def _atomic_json(obj, path: Path) -> None:
     os.replace(tmp, path)
 
 
-def _checkpoint_blob(model, ema, optimizer, epoch: int, config_hash: str, argv: tuple[str, ...]) -> dict:
+def _checkpoint_blob(
+    model,
+    ema,
+    optimizer,
+    epoch: int,
+    config_hash: str,
+    argv: tuple[str, ...],
+    *,
+    pair_cursor: DeterministicPairCursor | None = None,
+    controller_state: Mapping[str, Any] | None = None,
+) -> dict:
     import torch
 
     return {
-        "schema": "v9_cgauge_torch_resume_v1",
+        "schema": "v9_cgauge_torch_resume_v2",
         "epoch": int(epoch),
         "model": model.state_dict(),
         "ema": ema.state_dict(),  # inference/deploy authority is the EMA shadow
@@ -142,10 +154,21 @@ def _checkpoint_blob(model, ema, optimizer, epoch: int, config_hash: str, argv: 
         "python_rng": random.getstate(),
         "config_hash": config_hash,
         "dsl_argv": list(argv),
+        "pair_cursor": pair_cursor.state_dict() if pair_cursor is not None else None,
+        "controller_state": copy.deepcopy(dict(controller_state or {})),
     }
 
 
-def _restore(blob, model, ema, optimizer, expected_hash: str) -> int:
+def _restore(
+    blob,
+    model,
+    ema,
+    optimizer,
+    expected_hash: str,
+    *,
+    pair_cursor: DeterministicPairCursor | None = None,
+    controller_state: dict[str, Any] | None = None,
+) -> int:
     import torch
 
     if blob.get("config_hash") != expected_hash:
@@ -158,6 +181,11 @@ def _restore(blob, model, ema, optimizer, expected_hash: str) -> int:
         torch.cuda.set_rng_state_all(blob["cuda_rng"])
     np.random.set_state(blob["numpy_rng"])
     random.setstate(blob["python_rng"])
+    if pair_cursor is not None and blob.get("pair_cursor") is not None:
+        pair_cursor.load_state_dict(blob["pair_cursor"])
+    if controller_state is not None:
+        controller_state.clear()
+        controller_state.update(copy.deepcopy(blob.get("controller_state", {})))
     return int(blob["epoch"])
 
 
@@ -191,6 +219,112 @@ def _pose6(pose_net, frames_nhwc):
     pose = out["pose"] if isinstance(out, dict) else out
     half = next((h.out // 2 for h in pose_net.hydra.heads if h.name == "pose"), pose.shape[-1] // 2)
     return pose[:, :half]
+
+
+def _required_typed_flags(flags: Mapping[str, Any], names: tuple[str, ...]) -> None:
+    missing = [name for name in names if name not in flags]
+    if missing:
+        raise ValueError(
+            "active V9 mechanism lacks typed DSL companion values: " + ", ".join(missing)
+        )
+
+
+def _attach_generated_pose_carrier(model, flags, gt_poses, native_hw, device):
+    """Attach the typed generated/table pose carrier before EMA and optimizer creation."""
+    if not bool(flags.get("--pose-carrier", False)):
+        return None, {"active": False}
+    needed = (
+        "--pose-carrier-source", "--pose-carrier-residual-mode",
+        "--pose-carrier-residual-scale", "--pose-carrier-s-t",
+        "--pose-carrier-s-r", "--pose-carrier-pitch",
+    )
+    _required_typed_flags(flags, needed)
+    if flags["--pose-carrier-source"] != "generated":
+        raise ValueError("Torch V9 carrier currently requires typed source=generated")
+    if flags["--pose-carrier-residual-mode"] != "table":
+        raise ValueError("Torch V9 carrier currently requires typed residual-mode=table")
+    from tac.boundary_math.warp_real_luma_frame0 import (
+        GroundHomographyGeom,
+        xi_from_pose_calibration,
+    )
+
+    native_hw = tuple(int(x) for x in native_hw)
+    geom = GroundHomographyGeom.eon(
+        native_hw=native_hw, pitch=float(flags["--pose-carrier-pitch"])
+    )
+    xi_stored = np.stack([
+        xi_from_pose_calibration(
+            np.asarray(pose),
+            float(flags["--pose-carrier-s-t"]),
+            float(flags["--pose-carrier-s-r"]),
+            float(flags["--pose-carrier-pitch"]),
+        )
+        for pose in np.asarray(gt_poses)
+    ]).astype(np.float32)
+    carrier = TorchPoseCarrier.build(
+        xi_stored,
+        geom,
+        residual_scale=float(flags["--pose-carrier-residual-scale"]),
+    ).to(device)
+    model.pose_carrier = carrier
+    return carrier, {
+        "active": True,
+        "source": "generated",
+        "residual_mode": "table",
+        "native_hw": list(native_hw),
+        "s_t": float(flags["--pose-carrier-s-t"]),
+        "s_r": float(flags["--pose-carrier-s-r"]),
+        "pitch": float(flags["--pose-carrier-pitch"]),
+        "n_pairs": int(len(gt_poses)),
+    }
+
+
+def _run_structured_prefit(model, flags, lstars, feats, *, seed: int, is_resume: bool):
+    """Run the active typed structured-core prefit only on a fresh model."""
+    if not bool(flags.get("--structured-init", False)):
+        return {"active": False, "applied": False}
+    needed = (
+        "--structured-init-include-lane", "--structured-init-thresh",
+        "--structured-init-steps", "--structured-init-lr",
+        "--structured-init-subsample", "--structured-init-sdf-clip",
+    )
+    _required_typed_flags(flags, needed)
+    if is_resume:
+        return {"active": True, "applied": False, "reason": "resume_preserves_checkpoint"}
+    cfg = model.cfg
+    if tuple(np.asarray(lstars).shape[1:]) != (cfg.render_h, cfg.render_w):
+        raise ValueError("structured-init L* shape differs from the typed render geometry")
+    phi_hwk, roles, meta = build_static_core_phi_target(
+        np.asarray(lstars),
+        n_classes=cfg.n_classes,
+        include_lane=bool(flags["--structured-init-include-lane"]),
+        static_thresh=float(flags["--structured-init-thresh"]),
+    )
+    clip = float(flags["--structured-init-sdf-clip"])
+    target = np.clip(phi_hwk.reshape(-1, cfg.n_classes), -clip, clip).astype(np.float32)
+    import torch
+
+    target_t = torch.as_tensor(target, device=feats.device)
+    row = structured_sdf_prefit(
+        model,
+        feats,
+        target_t,
+        steps=int(flags["--structured-init-steps"]),
+        lr=float(flags["--structured-init-lr"]),
+        subsample=int(flags["--structured-init-subsample"]),
+        seed=int(seed),
+    )
+    with torch.no_grad():
+        _rgb, pred = model(feats, torch.zeros(1, dtype=torch.long, device=feats.device))
+    disagree = float(np.mean(
+        pred[0].argmax(-1).detach().cpu().numpy() != target.argmax(-1)
+    ))
+    return {
+        "active": True, "applied": True, **row,
+        "direct_argmax_disagree": disagree,
+        "roles": roles.as_dict(),
+        **{k: v for k, v in meta.items() if k != "roles"},
+    }
 
 
 def _generated_pose_pair_dispatch(model, feats, pair_indices, pose_carrier, cfg):
@@ -365,7 +499,23 @@ def main(argv: list[str] | None = None) -> int:
     margins = z["margins"][: args.num_pairs]
     gt_f1 = z["gt_f1"][: args.num_pairs]
     gt_poses = z["gt_poses"][: args.num_pairs]
-    if flags.get("--palette-anchor", False) and not args.resume_from:
+    # Generated source never reads/materializes gt_f0. Camera geometry is shared
+    # by the already-required gt_f1 array and the canonical receiver dimensions.
+    native_hw = tuple(int(x) for x in gt_f1.shape[1:3])
+    if native_hw != (cfg.camera_h, cfg.camera_w):
+        raise ValueError(
+            f"GT camera geometry {native_hw} differs from Torch receiver {(cfg.camera_h, cfg.camera_w)}"
+        )
+    feats = torch.as_tensor(feats_np, device=device)
+    pose_carrier, pose_carrier_row = _attach_generated_pose_carrier(
+        model, flags, gt_poses, native_hw, device
+    )
+    print(json.dumps({"stage": "pose_carrier", **pose_carrier_row}), flush=True)
+    resume_path = Path(args.resume_from) if args.resume_from else out / TORCH_RESUME_PT
+    if resume_path.is_dir():
+        resume_path = resume_path / TORCH_RESUME_PT
+    resume_will_load = bool(args.resume_from or resume_path.exists())
+    if flags.get("--palette-anchor", False) and not resume_will_load:
         import torch.nn.functional as F
 
         sums = np.zeros((cfg.n_classes, 3), np.float64)
@@ -385,6 +535,15 @@ def main(argv: list[str] | None = None) -> int:
         palette = np.log(clipped / (1.0 - clipped)).astype(np.float32)
         with torch.no_grad():
             model.palette.copy_(torch.as_tensor(palette, device=device))
+    structured_row = _run_structured_prefit(
+        model,
+        flags,
+        lstars,
+        feats,
+        seed=int(flags["--seed"]),
+        is_resume=resume_will_load,
+    )
+    print(json.dumps({"stage": "structured_init", **structured_row}), flush=True)
     counts = np.bincount(lstars.reshape(-1), minlength=cfg.n_classes).astype(np.float64)
     priors = counts / counts.sum()
     la_tau = float(flags.get("--logit-adjust-loss-tau", 0.0))
@@ -542,18 +701,19 @@ def main(argv: list[str] | None = None) -> int:
             for pair_index in range(args.num_pairs)
         ]
     seg, pose = _load_scorers(device)
-    feats = torch.as_tensor(feats_np, device=device)
     ema = copy.deepcopy(model).eval()
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(flags["--lr"]),
                                   betas=(0.9, float(flags["--adam-beta2"])),
                                   weight_decay=float(flags["--weight-decay"]))
+    pair_cursor = DeterministicPairCursor(args.num_pairs, seed=int(flags["--seed"]))
+    controller_state: dict[str, Any] = {}
     start = 0
-    resume_path = Path(args.resume_from) if args.resume_from else out / TORCH_RESUME_PT
-    if resume_path.is_dir():
-        resume_path = resume_path / TORCH_RESUME_PT
-    if args.resume_from or resume_path.exists():
-        start = _restore(torch.load(resume_path, map_location=device, weights_only=False),
-                         model, ema, optimizer, cfg_hash)
+    if resume_will_load:
+        start = _restore(
+            torch.load(resume_path, map_location=device, weights_only=False),
+            model, ema, optimizer, cfg_hash,
+            pair_cursor=pair_cursor, controller_state=controller_state,
+        )
     out.mkdir(parents=True, exist_ok=True)
     _atomic_json({"schema": "v9_cgauge_cuda_run_manifest_v1", "dsl_argv": list(dsl_argv),
                   "config_hash": cfg_hash, "device": str(device), "seed": int(flags["--seed"]),
@@ -576,7 +736,8 @@ def main(argv: list[str] | None = None) -> int:
             # stage.  This is both crash insurance and an independent A/B byte-
             # close surface; the filename encodes the last completed epoch.
             boundary_blob = _checkpoint_blob(
-                model, ema, optimizer, epoch - 1, cfg_hash, dsl_argv
+                model, ema, optimizer, epoch - 1, cfg_hash, dsl_argv,
+                pair_cursor=pair_cursor, controller_state=controller_state,
             )
             _atomic_torch_save(
                 boundary_blob,
@@ -595,166 +756,204 @@ def main(argv: list[str] | None = None) -> int:
                 float(flags["--hosc-beta"])
                 + progress * (float(flags["--hosc-beta-end"]) - float(flags["--hosc-beta"]))
             )
-        pi = (epoch - 1) % args.num_pairs  # deterministic exhaustive cyclic order
-        ids = torch.tensor([2 * pi, 2 * pi + 1], device=device)
-        active_lane_band = (
-            lane_band if lane_band is not None and epoch >= lane_band["start_epoch"] else None
-        )
-        rendered, phi = model.render_through_r(feats, ids, lane_band=active_lane_band)
-        frames = rendered.unsqueeze(0)
-        seg_in = seg.preprocess_input(frames.permute(0, 1, 4, 2, 3).contiguous())
-        logits = seg(seg_in)
-        target = torch.as_tensor(lstars[pi], device=device).long().unsqueeze(0)
-        offsets = torch.as_tensor(logit_offsets_np, device=device, dtype=logits.dtype)
-        adjusted_logits = logits + offsets[None, :, None, None]
-        tau = max(0.31, 1.0 * ((0.31 / 1.0) ** (epoch / max(args.epochs, 1))))
-        seg_per_pixel = (
-            tau * torch.logsumexp(adjusted_logits / tau, dim=1)
-            - adjusted_logits.gather(1, target[:, None]).squeeze(1)
-        )
-        gt_margin = torch.as_tensor(margins[pi], device=device, dtype=seg_per_pixel.dtype)
-        seg_weight = 1.0 + 4.0 * torch.exp(-gt_margin.clamp_min(0.0))
-        seg_loss = (seg_per_pixel * seg_weight[None]).mean()
-        pose6 = _pose6(pose, frames)
-        pose_target = torch.as_tensor(gt_poses[pi], device=device, dtype=pose6.dtype).unsqueeze(0)
-        pose_mse = (pose6 - pose_target).square().mean()
-        pose_loss = torch.sqrt(10.0 * pose_mse + 1e-2)
-        eik, length = eikonal_and_length(phi[1:2])
-        seg_contrib = float(flags["--w-seg"]) * seg_loss
-        pose_contrib = float(flags["--w-pose"]) * pose_loss
-        eik_contrib = float(flags["--eikonal-weight"]) * eik
-        length_contrib = float(flags["--length-weight"]) * length
-        total = seg_contrib + pose_contrib + eik_contrib + length_contrib
-        raw_logits_nhwc = logits.permute(0, 2, 3, 1).contiguous()
-        signed = realized_signed_margin(raw_logits_nhwc, target)
-        if pi not in island_weight_cache:
-            masks = build_island_masks(
-                lstars[pi], island_detection.lane_cls, island_detection.movable_cls,
-                dilate_px=1,
+        if pose_carrier is None:
+            raise RuntimeError("active V9 generated pose carrier was not attached")
+        pair_cursor.begin_epoch(epoch)
+        ep_acc = ep_tot = 0
+        chunk_index = 0
+        while not pair_cursor.epoch_complete():
+            chunk = pair_cursor.next_epoch_indices(int(flags["--accum-pairs"]))
+            chunk_np = np.asarray(chunk, dtype=np.int64)
+            # MAX-throughput steady state: exactly one batched witness/carrier
+            # dispatch and one batch through each frozen scorer per accum chunk.
+            frames, phi = _generated_pose_pair_dispatch(
+                model, feats, chunk, pose_carrier, cfg
             )
-            island_weight_cache[pi] = island_persistence_weight(
-                masks.any_mask, kind=str(flags.get("--amplify-persist", "inverse_thickness"))
+            seg_in = seg.preprocess_input(frames.permute(0, 1, 4, 2, 3).contiguous())
+            logits = seg(seg_in)
+            target = torch.as_tensor(lstars[chunk_np], device=device).long()
+            offsets = torch.as_tensor(logit_offsets_np, device=device, dtype=logits.dtype)
+            adjusted_logits = logits + offsets[None, :, None, None]
+            tau = max(0.31, 0.31 ** (epoch / max(args.epochs, 1)))
+            seg_per_pixel = (
+                tau * torch.logsumexp(adjusted_logits / tau, dim=1)
+                - adjusted_logits.gather(1, target[:, None]).squeeze(1)
             )
-        island_weight = torch.as_tensor(
-            island_weight_cache[pi], device=device, dtype=signed.dtype
-        )[None]
-        amplify = float(flags.get("--amplify-weight", 0.0)) * island_birth_from_signed_torch(
-            signed,
-            island_weight,
-            float(flags.get("--amplify-margin-target", 1.0)),
-            form=str(flags.get("--amplify-form", "hinge")),
-        )
-        persist_scale = min(
-            1.0,
-            epoch / max(1, int(flags.get("--persistence-warmup-epochs", 0))),
-        )
-        persistence = (
-            float(flags.get("--persistence-loss-weight", 0.0))
-            * persist_scale
-            * persistence_topology_loss_torch(raw_logits_nhwc, target, persist_classes)
-        )
-        area = area_constraint_torch(raw_logits_nhwc, target, area_lambdas)
-        _entropy_bits, entropy_rate = weight_entropy_rate_term_torch(
-            model, sigma=float(flags.get("--weight-entropy-penalty-sigma", 0.2))
-        )
-        weight_entropy = float(flags.get("--weight-entropy-penalty-lambda", 0.0)) * entropy_rate
-        phase_advect = torch.zeros((), device=device)
-        if phase_weight > 0.0 and epoch >= phase_start:
-            phase_ref, phase_dir, phase_w = phase_provider(pi)
-            direction = torch.as_tensor(phase_dir, device=device, dtype=signed.dtype)[None]
-            tie = witness_tie_coordinate_torch(signed, direction)
-            ref = torch.as_tensor(phase_ref, device=device, dtype=signed.dtype)[None]
-            pw = torch.as_tensor(phase_w, device=device, dtype=signed.dtype)[None]
-            phase_advect = phase_weight * ((tie - ref).square() * pw).sum() / (pw.sum() + 1e-6)
-        temporal_screw = torch.zeros((), device=device)
-        if temporal_weight > 0.0 and epoch >= temporal_start:
-            frame0 = rendered[0:1].unsqueeze(0)
-            seg0_in = seg.preprocess_input(frame0.permute(0, 1, 4, 2, 3).contiguous())
-            logits0 = seg(seg0_in).permute(0, 2, 3, 1).contiguous()
-            prob0 = torch.softmax(logits0, dim=-1)[..., list(temporal_classes)]
-            prob1 = torch.softmax(raw_logits_nhwc, dim=-1)[..., list(temporal_classes)]
-            if pi not in temporal_grid_cache:
-                assert temporal_geom is not None
-                temporal_grid_cache[pi] = homography_grid_from_xi(
-                    temporal_xi[pi], temporal_geom, device=device, dtype=prob0.dtype
+            gt_margin = torch.as_tensor(
+                margins[chunk_np], device=device, dtype=seg_per_pixel.dtype
+            )
+            seg_weight = 1.0 + 4.0 * torch.exp(-gt_margin.clamp_min(0.0))
+            seg_loss = (seg_per_pixel * seg_weight).mean()
+            pose6 = _pose6(pose, frames)
+            pose_target = torch.as_tensor(
+                gt_poses[chunk_np], device=device, dtype=pose6.dtype
+            )
+            pose_loss = pose_objective_torch(pose6, pose_target)
+            eik, length = eikonal_and_length(phi)
+            seg_contrib = float(flags["--w-seg"]) * seg_loss
+            pose_contrib = float(flags["--w-pose"]) * pose_loss
+            eik_contrib = float(flags["--eikonal-weight"]) * eik
+            length_contrib = float(flags["--length-weight"]) * length
+            raw_logits_nhwc = logits.permute(0, 2, 3, 1).contiguous()
+            signed = realized_signed_margin(raw_logits_nhwc, target)
+            for pi in chunk:
+                if pi not in island_weight_cache:
+                    masks = build_island_masks(
+                        lstars[pi], island_detection.lane_cls,
+                        island_detection.movable_cls, dilate_px=1,
+                    )
+                    island_weight_cache[pi] = island_persistence_weight(
+                        masks.any_mask,
+                        kind=str(flags.get("--amplify-persist", "inverse_thickness")),
+                    )
+            island_weight = torch.as_tensor(
+                np.stack([island_weight_cache[pi] for pi in chunk]),
+                device=device, dtype=signed.dtype,
+            )
+            amplify = float(flags.get("--amplify-weight", 0.0)) * island_birth_from_signed_torch(
+                signed, island_weight, float(flags.get("--amplify-margin-target", 1.0)),
+                form=str(flags.get("--amplify-form", "hinge")),
+            )
+            persist_scale = min(
+                1.0, epoch / max(1, int(flags.get("--persistence-warmup-epochs", 0)))
+            )
+            persistence = (
+                float(flags.get("--persistence-loss-weight", 0.0)) * persist_scale
+                * persistence_topology_loss_torch(raw_logits_nhwc, target, persist_classes)
+            )
+            area = area_constraint_torch(raw_logits_nhwc, target, area_lambdas)
+            _entropy_bits, entropy_rate = weight_entropy_rate_term_torch(
+                model, sigma=float(flags.get("--weight-entropy-penalty-sigma", 0.2))
+            )
+            weight_entropy = (
+                float(flags.get("--weight-entropy-penalty-lambda", 0.0)) * entropy_rate
+            )
+            phase_advect = torch.zeros((), device=device)
+            if phase_weight > 0.0 and epoch >= phase_start:
+                phase_rows = [phase_provider(pi) for pi in chunk]
+                ref = torch.as_tensor(
+                    np.stack([r[0] for r in phase_rows]), device=device, dtype=signed.dtype
                 )
-            grid, valid = temporal_grid_cache[pi]
-            warped0 = warp_field_persist_torch(prob0, grid, valid)
-            annulus = torch.as_tensor(
-                margins[pi] < float(flags.get("--seg-temporal-screw-band", 2.0)),
-                device=device,
-                dtype=prob0.dtype,
-            )[None]
-            temporal_screw = temporal_weight * (
-                (prob1 - warped0).square().sum(-1) * annulus
-            ).sum() / (annulus.sum() + 1e-6)
-        total = (
-            total + amplify + persistence + area + weight_entropy
-            + phase_advect + temporal_screw
-        )
-        chroma = torch.zeros((), device=device)
-        if epoch >= int(flags["--seg-chroma-boundary-start-epoch"]):
-            gt = torch.as_tensor(gt_f1[pi], device=device, dtype=rendered.dtype).permute(2, 0, 1)[None]
-            gt = torch.nn.functional.interpolate(gt, size=(cfg.render_h, cfg.render_w), mode="bilinear",
-                                                  align_corners=False).permute(0, 2, 3, 1)
-            ann = torch.as_tensor(margins[pi] < float(flags["--seg-chroma-boundary-margin-band"]), device=device)
-            chroma = chroma_boundary_loss(rendered[1:2], gt, ann[None])
-            total = total + float(flags["--seg-chroma-boundary-weight"]) * chroma
-        optimizer.zero_grad(set_to_none=True)
-        total.backward()
-        gnorm = torch.nn.utils.clip_grad_norm_(
-            model.parameters(), float(flags["--grad-clip"]), error_if_nonfinite=True
-        )
-        optimizer.step()
-        _ema_update(ema, model, ema_decay)
-
-        terms = {
-            "seg": float(seg_contrib.detach()),
-            "pose": float(pose_contrib.detach()),
-            "eikonal": float(eik_contrib.detach()),
-            "length": float(length_contrib.detach()),
-            "chroma_boundary": float(
-                (float(flags["--seg-chroma-boundary-weight"]) * chroma).detach()
-            ),
-            "island_amplify": float(amplify.detach()),
-            "area_constraint": float(area.detach()),
-            "persistence": float(persistence.detach()),
-            "weight_entropy": float(weight_entropy.detach()),
-            "phase_advect": float(phase_advect.detach()),
-            "temporal_screw": float(temporal_screw.detach()),
-        }
-        telemetry = loss_terms_row(
-            epoch=epoch,
-            accum_batch=pi,
-            terms=terms,
-            total=float(total.detach()),
-            gnorm=round(float(gnorm), 4),
-            accepted_frac=1.0,
-            weights_stepped=True,
-            hosc_beta=round(float(model.hosc_beta), 4),
-            softmax_temp=round(float(model.softmax_temp), 4),
-            backend="torch_cuda",
-            curriculum_stage=stage,
-            lr=optimizer.param_groups[0]["lr"],
-            pair=pi,
-            authority="[contest-CUDA training-advisory]",
-            promotion_eligible=False,
-            wall_clock_s=time.time() - t0,
-        )
-        with open(out / TORCH_TRAJECTORY_JSONL, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(telemetry, sort_keys=True) + "\n")
-            fh.flush()
-            os.fsync(fh.fileno())
-        print(json.dumps(telemetry), flush=True)
+                direction = torch.as_tensor(
+                    np.stack([r[1] for r in phase_rows]), device=device, dtype=signed.dtype
+                )
+                pw = torch.as_tensor(
+                    np.stack([r[2] for r in phase_rows]), device=device, dtype=signed.dtype
+                )
+                tie = witness_tie_coordinate_torch(signed, direction)
+                phase_num = ((tie - ref).square() * pw).sum(dim=(-2, -1))
+                phase_den = pw.sum(dim=(-2, -1)) + 1e-6
+                phase_advect = phase_weight * (phase_num / phase_den).mean()
+            temporal_screw = torch.zeros((), device=device)
+            if temporal_weight > 0.0 and epoch >= temporal_start:
+                frame0 = frames[:, 0:1]
+                seg0_in = seg.preprocess_input(frame0.permute(0, 1, 4, 2, 3).contiguous())
+                logits0 = seg(seg0_in).permute(0, 2, 3, 1).contiguous()
+                prob0 = torch.softmax(logits0, dim=-1)[..., list(temporal_classes)]
+                prob1 = torch.softmax(raw_logits_nhwc, dim=-1)[..., list(temporal_classes)]
+                for pi in chunk:
+                    if pi not in temporal_grid_cache:
+                        assert temporal_geom is not None
+                        temporal_grid_cache[pi] = homography_grid_from_xi(
+                            temporal_xi[pi], temporal_geom, device=device, dtype=prob0.dtype
+                        )
+                grid = torch.cat([temporal_grid_cache[pi][0] for pi in chunk], dim=0)
+                valid = torch.cat([temporal_grid_cache[pi][1] for pi in chunk], dim=0)
+                warped0 = warp_field_persist_torch(prob0, grid, valid)
+                annulus = torch.as_tensor(
+                    margins[chunk_np] < float(flags.get("--seg-temporal-screw-band", 2.0)),
+                    device=device, dtype=prob0.dtype,
+                )
+                temporal_num = (
+                    (prob1 - warped0).square().sum(-1) * annulus
+                ).sum(dim=(-2, -1))
+                temporal_den = annulus.sum(dim=(-2, -1)) + 1e-6
+                temporal_screw = temporal_weight * (temporal_num / temporal_den).mean()
+            chroma = torch.zeros((), device=device)
+            if epoch >= int(flags["--seg-chroma-boundary-start-epoch"]):
+                gt = torch.as_tensor(
+                    gt_f1[chunk_np], device=device, dtype=frames.dtype
+                ).permute(0, 3, 1, 2)
+                gt = torch.nn.functional.interpolate(
+                    gt, size=(cfg.render_h, cfg.render_w), mode="bilinear", align_corners=False
+                ).permute(0, 2, 3, 1)
+                ann = torch.as_tensor(
+                    margins[chunk_np] < float(flags["--seg-chroma-boundary-margin-band"]),
+                    device=device,
+                )
+                chroma = chroma_boundary_loss(frames[:, 1], gt, ann)
+            chroma_contrib = float(flags["--seg-chroma-boundary-weight"]) * chroma
+            total = (
+                seg_contrib + pose_contrib + eik_contrib + length_contrib
+                + amplify + persistence + area + weight_entropy + phase_advect
+                + temporal_screw + chroma_contrib
+            )
+            optimizer.zero_grad(set_to_none=True)
+            ep_tot += 1
+            weights_stepped = bool(torch.isfinite(total.detach()))
+            group_norms = {}
+            if weights_stepped:
+                total.backward()
+                try:
+                    group_norms = clip_grad_groups(
+                        parameter_groups(model), float(flags["--grad-clip"])
+                    )
+                except RuntimeError:
+                    weights_stepped = False
+            if weights_stepped:
+                optimizer.step()
+                _ema_update(ema, model, ema_decay)
+                ep_acc += 1
+                pair_cursor.record_accepted(1)
+            else:
+                optimizer.zero_grad(set_to_none=True)
+            finite_norms = [v for v in group_norms.values() if v is not None]
+            gnorm = max((float(v) for v in finite_norms), default=0.0)
+            terms = {
+                "seg": float(seg_contrib.detach()),
+                "pose": float(pose_contrib.detach()),
+                "eikonal": float(eik_contrib.detach()),
+                "length": float(length_contrib.detach()),
+                "chroma_boundary": float(chroma_contrib.detach()),
+                "island_amplify": float(amplify.detach()),
+                "area_constraint": float(area.detach()),
+                "persistence": float(persistence.detach()),
+                "weight_entropy": float(weight_entropy.detach()),
+                "phase_advect": float(phase_advect.detach()),
+                "temporal_screw": float(temporal_screw.detach()),
+            }
+            telemetry = loss_terms_row(
+                epoch=epoch, accum_batch=chunk_index, terms=terms,
+                total=float(total.detach()), gnorm=round(gnorm, 4),
+                accepted_frac=ep_acc / ep_tot, weights_stepped=weights_stepped,
+                hosc_beta=round(float(model.hosc_beta), 4),
+                softmax_temp=round(float(model.softmax_temp), 4), backend="torch_cuda",
+                curriculum_stage=stage, lr=optimizer.param_groups[0]["lr"],
+                pairs=chunk, pair_count=len(chunk), vectorized_chunk=True,
+                authority="[contest-CUDA training-advisory]", promotion_eligible=False,
+                wall_clock_s=time.time() - t0,
+            )
+            with open(out / TORCH_TRAJECTORY_JSONL, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(telemetry, sort_keys=True) + "\n")
+                fh.flush()
+                os.fsync(fh.fileno())
+            print(json.dumps(telemetry), flush=True)
+            chunk_index += 1
 
         blob = None
         if epoch % ckpt_every == 0 or epoch == args.epochs:
-            blob = _checkpoint_blob(model, ema, optimizer, epoch, cfg_hash, dsl_argv)
+            blob = _checkpoint_blob(
+                model, ema, optimizer, epoch, cfg_hash, dsl_argv,
+                pair_cursor=pair_cursor, controller_state=controller_state,
+            )
             _atomic_torch_save(blob, out / TORCH_RESUME_PT)
             _atomic_torch_save({"schema": "v9_cgauge_torch_ema_v1", "epoch": epoch,
                                 "ema": ema.state_dict(), "config_hash": cfg_hash,
                                 "dsl_argv": list(dsl_argv)}, out / TORCH_EMA_PT)
-    final_blob = _checkpoint_blob(model, ema, optimizer, args.epochs, cfg_hash, dsl_argv)
+    final_blob = _checkpoint_blob(
+        model, ema, optimizer, args.epochs, cfg_hash, dsl_argv,
+        pair_cursor=pair_cursor, controller_state=controller_state,
+    )
     _atomic_torch_save(
         final_blob,
         out / "stage_checkpoints" / f"ep{args.epochs:05d}_{prev_stage}.pt",

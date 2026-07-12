@@ -259,9 +259,37 @@ class DeterministicPairCursor:
     """Crash-resumable exhaustive pair order for true accum-pairs updates."""
 
     n_pairs: int
+    seed: int = 0
     cursor: int = 0
     accepted_total: int = 0
     attempted_total: int = 0
+    epoch: int = 0
+    epoch_offset: int = 0
+    epoch_order: list[int] = field(default_factory=list)
+
+    def begin_epoch(self, epoch: int) -> None:
+        """Install one seeded permutation, preserving an in-progress resumed epoch."""
+        epoch = int(epoch)
+        if self.epoch == epoch and self.epoch_order and self.epoch_offset < self.n_pairs:
+            return
+        rng = np.random.default_rng(np.random.SeedSequence([int(self.seed), epoch]))
+        self.epoch = epoch
+        self.epoch_order = [int(x) for x in rng.permutation(self.n_pairs)]
+        self.epoch_offset = 0
+
+    def next_epoch_indices(self, count: int) -> list[int]:
+        """Return the next non-wrapping chunk from the current epoch permutation."""
+        if not self.epoch_order:
+            raise RuntimeError("begin_epoch must be called before next_epoch_indices")
+        stop = min(self.epoch_offset + max(0, int(count)), self.n_pairs)
+        out = self.epoch_order[self.epoch_offset:stop]
+        self.epoch_offset = stop
+        self.cursor = stop % self.n_pairs
+        self.attempted_total += len(out)
+        return list(out)
+
+    def epoch_complete(self) -> bool:
+        return bool(self.epoch_order) and self.epoch_offset >= self.n_pairs
 
     def next_indices(self, count: int) -> list[int]:
         if self.n_pairs <= 0:
@@ -278,9 +306,16 @@ class DeterministicPairCursor:
         return asdict(self)
 
     def load_state_dict(self, state: Mapping[str, Any]) -> None:
+        self.seed = int(state.get("seed", self.seed))
         self.cursor = int(state.get("cursor", 0)) % self.n_pairs
         self.accepted_total = int(state.get("accepted_total", 0))
         self.attempted_total = int(state.get("attempted_total", 0))
+        self.epoch = int(state.get("epoch", 0))
+        self.epoch_offset = min(max(0, int(state.get("epoch_offset", 0))), self.n_pairs)
+        order = [int(x) for x in state.get("epoch_order", [])]
+        if order and sorted(order) != list(range(self.n_pairs)):
+            raise ValueError("resume pair order is not a permutation of the configured pairs")
+        self.epoch_order = order
 
 
 def parameter_groups(model) -> dict[str, list[Any]]:
@@ -390,6 +425,14 @@ def eikonal_and_length(phi_nhwk):
     return eik, length
 
 
+def pose_objective_torch(pose6, target6):
+    """Exact mean of the nonlinear per-pair contest pose objectives."""
+    import torch
+
+    mse_per_pair = (pose6 - target6).square().mean(dim=-1)
+    return torch.sqrt(10.0 * mse_per_pair + 1e-2).mean()
+
+
 def chroma_boundary_loss(rgb_nhwc, gt_rgb_nhwc, annulus_mask):
     """Luma-invariant BT.601 chroma match on the frozen GT annulus."""
     import torch
@@ -399,7 +442,8 @@ def chroma_boundary_loss(rgb_nhwc, gt_rgb_nhwc, annulus_mask):
     gt_lum = (gt_rgb_nhwc * coeff).sum(-1, keepdim=True)
     err = ((rgb_nhwc - lum) - (gt_rgb_nhwc - gt_lum)).square().sum(-1)
     w = annulus_mask.to(err.dtype)
-    return (err * w).sum() / w.sum().clamp_min(1.0)
+    per_pair = (err * w).sum(dim=(-2, -1)) / w.sum(dim=(-2, -1)).clamp_min(1.0)
+    return per_pair.mean()
 
 
 def realized_signed_margin(seg_logits_nhwc, labels_nhw):
@@ -422,7 +466,8 @@ def island_birth_from_signed_torch(signed, weight, margin_target: float, *, form
     deficit = float(margin_target) - signed
     birth = F.softplus(deficit) if form == "softplus" else deficit.clamp_min(0.0)
     w = weight.to(birth.dtype)
-    return (birth * w).sum() / (w.sum() + 1e-8)
+    per_pair = (birth * w).sum(dim=(-2, -1)) / (w.sum(dim=(-2, -1)) + 1e-8)
+    return per_pair.mean()
 
 
 def area_constraint_torch(seg_logits_nhwc, labels_nhw, lambdas: Mapping[int, float]):
@@ -430,12 +475,12 @@ def area_constraint_torch(seg_logits_nhwc, labels_nhw, lambdas: Mapping[int, flo
     import torch
 
     soft = torch.softmax(seg_logits_nhwc, dim=-1)
-    total = soft.new_zeros(())
+    total = soft.new_zeros((soft.shape[0],))
     for cls, lam in sorted(lambdas.items()):
-        mass = soft[..., int(cls)].mean()
-        target = (labels_nhw == int(cls)).to(soft.dtype).mean()
+        mass = soft[..., int(cls)].mean(dim=(-2, -1))
+        target = (labels_nhw == int(cls)).to(soft.dtype).mean(dim=(-2, -1))
         total = total + 0.5 * float(lam) * (mass - target).clamp_min(0.0).square()
-    return total
+    return total.mean()
 
 
 def _pool3x3_torch(x, kind: str):
@@ -474,9 +519,10 @@ def persistence_topology_loss_torch(
     import torch
 
     probs = torch.softmax(seg_logits_nhwc, dim=-1)
-    losses = []
+    sample_losses = []
     eps = 1e-6
     for n in range(probs.shape[0]):
+        losses = []
         for cls in target_classes:
             gt = (labels_nhw[n] == int(cls)).to(probs.dtype)
             if not bool(gt.any()):
@@ -493,7 +539,8 @@ def persistence_topology_loss_torch(
             w = gt * (1.0 - density).clamp(0.0, 1.0)
             recall = (w * -torch.log(pred.clamp_min(eps))).sum() / (w.sum() + eps)
             losses.append(cldice + recall)
-    return torch.stack(losses).mean() if losses else probs.new_zeros(())
+        sample_losses.append(torch.stack(losses).mean() if losses else probs.new_zeros(()))
+    return torch.stack(sample_losses).mean() if sample_losses else probs.new_zeros(())
 
 
 def weight_entropy_rate_term_torch(model, *, sigma: float = 0.2):
@@ -830,6 +877,7 @@ __all__ = [
     "island_birth_from_signed_torch",
     "numpy_parameter_dict",
     "parameter_groups",
+    "pose_objective_torch",
     "persistence_topology_loss_torch",
     "realized_signed_margin",
     "round_ste",
