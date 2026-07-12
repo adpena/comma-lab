@@ -22,6 +22,7 @@ from tac.cuda_levelset_training import (
     eikonal_and_length,
     forward_parity_against_numpy,
     island_birth_from_signed_torch,
+    island_birth_perclass_from_signed_torch,
     parameter_groups,
     persistence_topology_loss_torch,
     pose_objective_torch,
@@ -50,6 +51,35 @@ def test_island_birth_matches_numpy_reference():
         torch.from_numpy(signed), torch.from_numpy(weight), 1.0, form="hinge"
     )
     assert float(actual) == pytest.approx(expected, abs=2e-6)
+
+
+@pytest.mark.parametrize("form", ["hinge", "softplus"])
+def test_perclass_island_birth_unit_multipliers_recover_combined_term(form):
+    gen = torch.Generator().manual_seed(23)
+    signed = torch.randn(2, 7, 9, generator=gen)
+    support = torch.rand(2, 7, 9, generator=gen) > 0.35
+    partition = torch.rand(2, 7, 9, generator=gen) > 0.5
+    mask_a = support & partition
+    mask_b = support & ~partition
+    weight = support.to(torch.float32) * (0.2 + torch.rand(2, 7, 9, generator=gen))
+    combined = island_birth_from_signed_torch(signed, weight, 0.8, form=form)
+    perclass = island_birth_perclass_from_signed_torch(
+        signed, weight, mask_a, mask_b, 0.8, 1.0, 1.0, form=form
+    )
+    assert torch.allclose(perclass, combined, atol=2e-6, rtol=2e-6)
+
+
+def test_birth_completion_scales_only_persistence_recall_not_cldice():
+    gen = torch.Generator().manual_seed(29)
+    logits = torch.randn(1, 12, 13, 5, generator=gen)
+    labels = torch.randint(0, 5, (1, 12, 13), generator=gen)
+    no_recall = persistence_topology_loss_torch(
+        logits, labels, (1, 3), iters=2, recall_weight=0.0
+    )
+    zero_scaled = persistence_topology_loss_torch(
+        logits, labels, (1, 3), iters=2, recall_class_scale=(0.0, 0.0)
+    )
+    assert torch.allclose(zero_scaled, no_recall, atol=2e-6, rtol=2e-6)
 
 
 def test_persistence_topology_matches_numpy_reference():

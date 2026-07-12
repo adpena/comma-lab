@@ -461,15 +461,62 @@ def realized_signed_margin(seg_logits_nhwc, labels_nhw):
     return gt - runner
 
 
-def island_birth_from_signed_torch(signed, weight, margin_target: float, *, form: str = "hinge"):
+def island_birth_from_signed_torch(
+    signed, weight, margin_target: float, *, form: str = "hinge", tau: float = 0.3
+):
     """Torch twin of ``island_birth_from_signed_np`` on a frozen GT weight map."""
     import torch.nn.functional as F
 
     deficit = float(margin_target) - signed
-    birth = F.softplus(deficit) if form == "softplus" else deficit.clamp_min(0.0)
+    if form == "softplus":
+        t = max(float(tau), 1e-6)
+        birth = t * F.softplus(deficit / t)
+    else:
+        birth = deficit.clamp_min(0.0)
     w = weight.to(birth.dtype)
     per_pair = (birth * w).sum(dim=(-2, -1)) / (w.sum(dim=(-2, -1)) + 1e-8)
     return per_pair.mean()
+
+
+def island_birth_perclass_from_signed_torch(
+    signed,
+    weight,
+    mask_a,
+    mask_b,
+    margin_target: float,
+    mult_a: float,
+    mult_b: float,
+    *,
+    form: str = "hinge",
+    tau: float = 0.3,
+):
+    """Per-class birth-completion twin of the MLX weighted partition law.
+
+    ``mask_a`` and ``mask_b`` are disjoint and partition the non-zero support of
+    ``weight``.  Each class term is normalized on its own support, scaled by its
+    completion multiplier, and recombined by its share of the total weighted
+    support.  Unit multipliers therefore recover the combined birth term up to
+    floating-point reduction ordering.
+    """
+    import torch.nn.functional as F
+
+    deficit = float(margin_target) - signed
+    if form == "softplus":
+        t = max(float(tau), 1e-6)
+        birth = t * F.softplus(deficit / t)
+    else:
+        birth = deficit.clamp_min(0.0)
+    w = weight.to(birth.dtype)
+    wa = w * mask_a.to(birth.dtype)
+    wb = w * mask_b.to(birth.dtype)
+    reduce_dims = (-2, -1)
+    sw = w.sum(dim=reduce_dims) + 1e-8
+    sa = wa.sum(dim=reduce_dims)
+    sb = wb.sum(dim=reduce_dims)
+    term_a = (birth * wa).sum(dim=reduce_dims) / (sa + 1e-8)
+    term_b = (birth * wb).sum(dim=reduce_dims) / (sb + 1e-8)
+    combined = float(mult_a) * (sa / sw) * term_a + float(mult_b) * (sb / sw) * term_b
+    return combined.mean()
 
 
 def area_constraint_torch(seg_logits_nhwc, labels_nhw, lambdas: Mapping[int, float]):
@@ -515,17 +562,28 @@ def _soft_skeleton_torch(x, iters: int):
 
 
 def persistence_topology_loss_torch(
-    seg_logits_nhwc, labels_nhw, target_classes: tuple[int, ...], *, iters: int = 5
+    seg_logits_nhwc,
+    labels_nhw,
+    target_classes: tuple[int, ...],
+    *,
+    iters: int = 5,
+    recall_weight: float = 1.0,
+    recall_class_scale: tuple[float, ...] | list[float] | None = None,
 ):
     """Differentiable Torch twin of soft-clDice plus island-recall topology loss."""
     import torch
 
+    if recall_class_scale is not None and len(recall_class_scale) != len(target_classes):
+        raise ValueError(
+            "recall_class_scale length must match target_classes: "
+            f"{len(recall_class_scale)} != {len(target_classes)}"
+        )
     probs = torch.softmax(seg_logits_nhwc, dim=-1)
     sample_losses = []
     eps = 1e-6
     for n in range(probs.shape[0]):
         losses = []
-        for cls in target_classes:
+        for class_index, cls in enumerate(target_classes):
             gt = (labels_nhw[n] == int(cls)).to(probs.dtype)
             if not bool(gt.any()):
                 continue
@@ -540,7 +598,10 @@ def persistence_topology_loss_torch(
                 density = _pool3x3_torch(density, "mean")
             w = gt * (1.0 - density).clamp(0.0, 1.0)
             recall = (w * -torch.log(pred.clamp_min(eps))).sum() / (w.sum() + eps)
-            losses.append(cldice + recall)
+            recall_scale = (
+                1.0 if recall_class_scale is None else float(recall_class_scale[class_index])
+            )
+            losses.append(cldice + float(recall_weight) * recall_scale * recall)
         sample_losses.append(torch.stack(losses).mean() if losses else probs.new_zeros(()))
     return torch.stack(sample_losses).mean() if sample_losses else probs.new_zeros(())
 
@@ -876,6 +937,7 @@ __all__ = [
     "eikonal_and_length",
     "forward_parity_against_numpy",
     "homography_grid_from_xi",
+    "island_birth_perclass_from_signed_torch",
     "island_birth_from_signed_torch",
     "numpy_parameter_dict",
     "parameter_groups",
