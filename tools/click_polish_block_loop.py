@@ -141,6 +141,15 @@ class Campaign:
         self.blocks = [(0, 48)] + [(lo, min(lo + BLOCK, N)) for lo in range(48, N, BLOCK)]
         self.next_block = self._load_next_block()
         self.accepted_since_verify = 0
+        self.round_no = 0
+        self.accepted_this_round = False
+        if self.state_path.exists():
+            try:
+                st = json.loads(self.state_path.read_text())
+                self.round_no = int(st.get("round", 0))
+                self.accepted_this_round = bool(st.get("accepted_this_round", False))
+            except Exception:
+                pass
         # warm-start clicks from a prior campaign's ledger (e.g. the unfolded line):
         # per block we TRY the prior line's NET clicks first (exact gate) before
         # sweeping. Net = sum of deltas per (pair, dim) across all ledger rows.
@@ -196,6 +205,8 @@ class Campaign:
     def _save_state(self, extra=None):
         st = {
             "next_block": self.next_block,
+            "round": self.round_no,
+            "accepted_this_round": self.accepted_this_round,
             "S_authority": self.S_auth,
             "ledger_rows": self._ledger_rows(),
             "axis": AXIS, "score_claim": False, "promotable": False,
@@ -333,7 +344,7 @@ class Campaign:
 
     def _bank(self, blk_idx, lo, hi, clicks, S, dsm, dpm, b, authority):
         row = {
-            "block": blk_idx, "pairs": [lo, hi], "clicks": clicks,
+            "block": blk_idx, "round": self.round_no, "pairs": [lo, hi], "clicks": clicks,
             "n_clicks": len(clicks), "S_after_n600": S, "d_seg": dsm,
             "d_pose": dpm, "archive_bytes": b, "authority": authority,
             "axis_tag": AXIS,
@@ -358,15 +369,39 @@ class Campaign:
 
     def run(self):
         self.args_sweep = tuple(int(x) for x in self.args.sweep_deltas.split(","))
-        _log(f"campaign: blocks {self.next_block}..{len(self.blocks)-1} of "
-             f"{len(self.blocks)}; S_auth={self.S_auth:.8f}; axis={AXIS}")
+        _log(f"campaign: round {self.round_no} blocks {self.next_block}.."
+             f"{len(self.blocks)-1} of {len(self.blocks)}; "
+             f"S_auth={self.S_auth:.8f}; deltas={self.args_sweep}; axis={AXIS}")
+        # bank the BASE as the initial candidate so an operator GO at any moment
+        # (even before the first accepted block) has the best-so-far staged.
+        if not (self.out / "candidate_archive.zip").exists():
+            archive = self.packet.repack_archive_bytes(
+                self.Q, drop_sidecar=self.renderer.drop_sidecar)
+            cand = self.out / "candidate_archive.zip"
+            cand.write_bytes(archive)
+            sha = cp.sha256_hex(archive)
+            _stage(self.out, cand, sha, len(archive), Path(self.args.submission_dir))
+            self._save_state({"candidate_sha256": sha, "candidate_bytes": len(archive)})
+            _log(f"banked BASE as initial candidate: sha={sha[:16]} bytes={len(archive)}")
         stop = self.out / "STOP"
         last_sha = None
         blocks_done_this_run = 0
-        while self.next_block < len(self.blocks):
+        while True:
             if stop.exists():
                 _log("STOP sentinel — exiting cleanly (state banked)")
                 break
+            if self.next_block >= len(self.blocks):
+                if not self.accepted_this_round:
+                    _log(f"[round {self.round_no}] PLATEAU — full round, zero "
+                         f"acceptances; campaign COMPLETE (author's stopping rule)")
+                    break
+                _log(f"[round {self.round_no}] complete with acceptances — "
+                     f"starting round {self.round_no + 1}")
+                self.round_no += 1
+                self.accepted_this_round = False
+                self.next_block = 0
+                self._save_state()
+                continue
             blk = self.next_block
             lo, hi = self.blocks[blk]
             W = list(range(lo, hi))
@@ -379,6 +414,7 @@ class Campaign:
                 if got_w is not None:
                     Qw, ds_w, dp_w, S_w, dsm_w, dpm_w, b_w = got_w
                     self.Q, self.dseg_pp, self.dpose_pp, self.S_auth = Qw, ds_w, dp_w, S_w
+                    self.accepted_this_round = True
                     _log(f"[block {blk}] warm-start accepted {len(warm)} clicks -> "
                          f"full-n600 S={S_w:.8f}")
                     self._bank(blk, lo, hi, warm, S_w, dsm_w, dpm_w, b_w, "splice-warm")
@@ -417,6 +453,7 @@ class Campaign:
             Qn, ds_n, dp_n, S_new, dsm, dpm, b = got
             self.Q = Qn
             self.dseg_pp, self.dpose_pp, self.S_auth = ds_n, dp_n, S_new
+            self.accepted_this_round = True
             _log(f"[block {blk}] accepted {len(clicks)} clicks -> "
                  f"full-n600 S={S_new:.8f} d_seg={dsm:.8f} d_pose={dpm:.3e}")
             self.next_block += 1
