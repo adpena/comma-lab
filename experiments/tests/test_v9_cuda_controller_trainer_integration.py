@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import ast
 import inspect
+import re
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -13,6 +15,7 @@ from experiments.train_levelset_witness_realized_through_R_torch import (
     _generated_pose_pair_dispatch,
     _jacobian_probe_pair_indices,
     _polyak_checkpoint_blob,
+    build_parser,
     main,
 )
 from tac.boundary_math.warp_real_luma_frame0 import GroundHomographyGeom
@@ -190,3 +193,72 @@ def test_main_loop_structurally_consumes_controller_lifecycle_and_dynamic_gates(
     assert "gt_f1_render_device.index_select" in source
     assert '"stage": "training_throughput_epoch"' in source
     assert '"score_claim": False' in source
+
+
+def test_money_safety_fail_fast_order_and_runtime_receipts_are_structural() -> None:
+    source = inspect.getsource(main)
+    model_at = source.index("TorchLevelSetWitness.build")
+    assert source.index("_resolve_resume_intent") < model_at
+    assert source.index("_load_validated_gt_cache") < model_at
+    assert source.index("_load_validated_resume") < model_at
+    preflight_return_at = source.index("if args.preflight_only:")
+    assert source.index("_validate_scorer_custody") < preflight_return_at
+    assert source.index("cuda_v9_port_receipt") < preflight_return_at
+    assert preflight_return_at < source.index("CurveletBankConfig")
+    assert preflight_return_at < model_at
+    assert preflight_return_at < source.index("torch.cuda.is_available")
+    assert preflight_return_at < source.index("compile_identity_probe")
+    assert preflight_return_at < source.index("_run_structured_prefit")
+    assert preflight_return_at < source.index("_load_scorers")
+    parity_refuse_at = source.index("CUDA/NumPy forward parity gate failed")
+    compile_probe_at = source.index("compile_identity_probe")
+    assert parity_refuse_at < compile_probe_at
+    compile_refuse_at = source.index("compile probe is non-adoptable")
+    runtime_scorer_load_at = source.index("_load_scorers", compile_refuse_at)
+    assert compile_refuse_at < source.index("_run_structured_prefit")
+    assert compile_refuse_at < runtime_scorer_load_at
+    assert runtime_scorer_load_at < source.index("_run_structured_prefit")
+    assert "run_end_epoch=run_end_epoch" in source
+    assert "_canonical_checkpoint_due(" in source
+    assert "runtime_stop_after_epochs=args.stop_after_epochs" in source
+    throughput_at = source.index('"stage": "training_throughput_epoch"')
+    canonical_save_at = source.index(
+        "_atomic_torch_save(blob, out / TORCH_RESUME_PT)", throughput_at
+    )
+    ema_save_at = source.index("out / TORCH_EMA_PT", canonical_save_at)
+    flush_at = source.index("_flush_trajectory_rows(out, pending_epoch_rows)", ema_save_at)
+    assert throughput_at < canonical_save_at < ema_save_at < flush_at
+    assert "_emit_trajectory_row(" not in source[throughput_at:canonical_save_at]
+    assert '"runtime_epoch_budget_reached"' in source
+    assert '"optimizer_updates_attempted"' in source
+    assert '"optimizer_updates_successful"' in source
+    assert '"productive_updates_per_second"' in source
+    assert '"pointer_delta": "none"' in source
+    assert '"pointer":' not in source
+    assert "0.19108282" not in source
+    assert '"scorer_custody": scorer_custody' in source
+    assert '"scorer_sha256": scorer_sha256' in source
+    assert "scorer_sha256=scorer_sha256" in source
+    assert '"scorer_constructor_load"' in source
+    assert '_load_scorers(torch.device("cpu"))' in source
+
+
+def test_trainer_parser_covers_remote_shell_flags() -> None:
+    parser_flags = {
+        option
+        for action in build_parser()._actions
+        for option in action.option_strings
+        if option.startswith("--")
+    }
+    remote_source = (
+        Path(__file__).resolve().parents[2] / "scripts" / "remote_v9_cgauge_cuda.sh"
+    ).read_text()
+    invocation = remote_source[
+        remote_source.index("ARGS=(") : remote_source.index("if ! command -v timeout")
+    ]
+    remote_flags = set(re.findall(r"--[a-z][a-z0-9-]*", invocation))
+    assert remote_flags <= parser_flags
+    assert "--stop-after-epochs" in parser_flags
+    assert "--preflight-only" in parser_flags
+    assert "--expected-segnet-sha256" in parser_flags
+    assert "--expected-posenet-sha256" in parser_flags

@@ -20,9 +20,10 @@ import os
 import random
 import sys
 import time
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -41,11 +42,12 @@ from tac.boundary_math.lever_b_levelset_generator import (
 from tac.cuda_levelset_training import (
     CudaLevelSetConfig,
     DeterministicPairCursor,
-    TorchPoseCarrier,
     TorchLevelSetWitness,
+    TorchPoseCarrier,
     apply_torch_execution_policy,
     area_constraint_torch,
     chroma_boundary_loss,
+    clip_grad_groups,
     compile_identity_probe,
     contest_r,
     eikonal_and_length,
@@ -53,13 +55,12 @@ from tac.cuda_levelset_training import (
     homography_grid_from_xi,
     island_birth_from_signed_torch,
     island_birth_perclass_from_signed_torch,
+    parameter_groups,
     persistence_topology_loss_torch,
-    clip_grad_groups,
+    pose_objective_torch,
     realized_signed_margin,
     round_ste,
     select_torch_execution_policy,
-    parameter_groups,
-    pose_objective_torch,
     structured_sdf_prefit,
     warp_field_persist_torch,
     weight_entropy_rate_term_torch,
@@ -127,6 +128,266 @@ def derive_config(args) -> tuple[dict[str, Any], str, tuple[str, ...]]:
     return flags, hashlib.sha256(payload.encode()).hexdigest(), argv
 
 
+def build_parser() -> argparse.ArgumentParser:
+    """Build the runtime parser; runtime controls never enter the typed DSL hash."""
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--gt-cache", default="experiments/results/mlx_fleet_gt_cache/gt_n600.npz")
+    ap.add_argument("--num-pairs", type=int, default=600)
+    ap.add_argument("--epochs", type=int, default=3000)
+    ap.add_argument("--out-dir", default="experiments/results/v9_cgauge_cuda")
+    ap.add_argument("--device", default="cuda")
+    ap.add_argument("--resume-from")
+    ap.add_argument("--stop-after-epochs", type=int)
+    ap.add_argument("--no-implicit-resume", action="store_true")
+    ap.add_argument("--preflight-only", action="store_true")
+    ap.add_argument("--expected-segnet-sha256")
+    ap.add_argument("--expected-posenet-sha256")
+    ap.add_argument("--verify-only", action="store_true")
+    ap.add_argument("--compile-probe", action="store_true")
+    return ap
+
+
+def _runtime_epoch_window(
+    completed_epoch: int, typed_total_epochs: int, stop_after_epochs: int | None
+) -> tuple[int, int]:
+    """Return the inclusive next/end epochs without changing the typed horizon."""
+    completed_epoch = int(completed_epoch)
+    typed_total_epochs = int(typed_total_epochs)
+    if typed_total_epochs <= 0:
+        raise ValueError("epochs must be positive")
+    if completed_epoch < 0 or completed_epoch > typed_total_epochs:
+        raise ValueError("checkpoint epoch is outside the typed training horizon")
+    if completed_epoch == typed_total_epochs:
+        raise ValueError("checkpoint already completed the typed horizon; refusing zero-work run")
+    if stop_after_epochs is not None and not 1 <= int(stop_after_epochs) <= 3:
+        raise ValueError("stop-after-epochs must be in 1..3")
+    additional = (
+        typed_total_epochs - completed_epoch
+        if stop_after_epochs is None
+        else int(stop_after_epochs)
+    )
+    return completed_epoch + 1, min(typed_total_epochs, completed_epoch + additional)
+
+
+def _canonical_checkpoint_due(
+    epoch: int,
+    *,
+    ckpt_every: int,
+    run_end_epoch: int,
+    runtime_stop_after_epochs: int | None,
+    tail_stop_after_epoch: bool,
+) -> bool:
+    """Return whether the completed epoch must refresh the full resume state."""
+    return bool(
+        runtime_stop_after_epochs is not None
+        or int(epoch) % int(ckpt_every) == 0
+        or int(epoch) == int(run_end_epoch)
+        or tail_stop_after_epoch
+    )
+
+
+def _resolve_resume_intent(
+    out: Path, resume_from: str | None, *, no_implicit_resume: bool
+) -> Path | None:
+    """Resolve strict remote intent or the legacy canonical auto-resume path."""
+    if resume_from:
+        path = Path(resume_from)
+        if path.is_dir():
+            path = path / TORCH_RESUME_PT
+        if not path.is_file():
+            raise ValueError(f"explicit resume checkpoint does not exist: {path}")
+        return path
+    if not no_implicit_resume:
+        legacy_path = out / TORCH_RESUME_PT
+        return legacy_path if legacy_path.is_file() else None
+    allowed_preflight_files = {"remote_asset_custody.json"}
+    unexpected = (
+        sorted(
+            path.name
+            for path in out.iterdir()
+            if path.name not in allowed_preflight_files
+            or not path.is_file()
+            or path.is_symlink()
+        )
+        if out.exists()
+        else []
+    )
+    if unexpected:
+        raise ValueError(
+            "out-dir is not fresh and --resume-from was not supplied; "
+            "implicit resume/overwrite is forbidden; unexpected entries: "
+            + ", ".join(unexpected)
+        )
+    return None
+
+
+def _load_validated_gt_cache(path: str, num_pairs: int) -> dict[str, np.ndarray]:
+    """Load and validate all scorer-authority cache surfaces before CUDA setup."""
+    cache_path = Path(path)
+    if not cache_path.is_file():
+        raise ValueError(f"GT cache does not exist: {cache_path}")
+    required = ("n_pairs", "lstars", "margins", "gt_f1", "gt_poses")
+    with np.load(cache_path, allow_pickle=False) as z:
+        missing = [key for key in required if key not in z.files]
+        if missing:
+            raise ValueError("GT cache is missing required keys: " + ", ".join(missing))
+        declared = int(np.asarray(z["n_pairs"]).reshape(()))
+        arrays = {key: np.asarray(z[key]) for key in required if key != "n_pairs"}
+    if declared < num_pairs:
+        raise ValueError("GT cache contains fewer pairs than requested")
+    lstars = arrays["lstars"]
+    margins = arrays["margins"]
+    gt_f1 = arrays["gt_f1"]
+    gt_poses = arrays["gt_poses"]
+    if lstars.ndim != 3 or margins.shape != lstars.shape:
+        raise ValueError("GT lstars/margins must have identical (pairs,H,W) geometry")
+    if gt_f1.ndim != 4 or gt_f1.shape[-1] != 3:
+        raise ValueError("GT gt_f1 must have (pairs,H,W,3) geometry")
+    if gt_poses.ndim != 2 or gt_poses.shape[1] != 6:
+        raise ValueError("GT gt_poses must have (pairs,6) geometry")
+    for key, value in arrays.items():
+        if value.shape[0] < num_pairs:
+            raise ValueError(f"GT cache {key} contains fewer pairs than requested")
+    return {key: value[:num_pairs] for key, value in arrays.items()}
+
+
+def _validate_gt_geometry(
+    gt: Mapping[str, np.ndarray], flags: Mapping[str, Any]
+) -> dict[str, list[int]]:
+    """Validate GT arrays against the exact typed scorer and receiver geometry."""
+    render_hw = (int(flags["--render-h"]), int(flags["--render-w"]))
+    camera_hw = (CudaLevelSetConfig.camera_h, CudaLevelSetConfig.camera_w)
+    if tuple(gt["lstars"].shape[1:]) != render_hw:
+        raise ValueError(
+            f"GT scorer geometry {tuple(gt['lstars'].shape[1:])} differs from "
+            f"typed render geometry {render_hw}"
+        )
+    if tuple(gt["gt_f1"].shape[1:3]) != camera_hw:
+        raise ValueError(
+            f"GT camera geometry {tuple(gt['gt_f1'].shape[1:3])} differs from "
+            f"Torch receiver {camera_hw}"
+        )
+    return {"render_hw": list(render_hw), "camera_hw": list(camera_hw)}
+
+
+def _validate_scorer_custody(
+    paths: Mapping[str, Path] | None = None,
+    expected_sha256: Mapping[str, str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Validate frozen scorer bytes without constructing either scorer network."""
+    from safetensors import safe_open
+
+    scorer_paths = dict(
+        paths
+        or {
+            "segnet": REPO / "upstream" / "models" / "segnet.safetensors",
+            "posenet": REPO / "upstream" / "models" / "posenet.safetensors",
+        }
+    )
+    if set(scorer_paths) != {"segnet", "posenet"}:
+        raise ValueError("scorer custody requires exactly segnet and posenet paths")
+    expected = dict(expected_sha256 or {})
+    if expected and set(expected) != {"segnet", "posenet"}:
+        raise ValueError("expected scorer SHA custody requires both segnet and posenet")
+    receipt: dict[str, dict[str, Any]] = {}
+    for name, raw_path in scorer_paths.items():
+        path = Path(raw_path)
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(
+                f"canonical {name} safetensors must be a regular non-symlink file: {path}"
+            )
+        digest = hashlib.sha256()
+        with path.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(8 * 1024 * 1024), b""):
+                digest.update(chunk)
+        actual_sha256 = digest.hexdigest()
+        expected_digest = expected.get(name)
+        if expected_digest is not None and actual_sha256 != expected_digest.lower():
+            raise ValueError(
+                f"canonical {name} safetensors SHA-256 mismatch: "
+                f"{actual_sha256} != {expected_digest.lower()}"
+            )
+        try:
+            with safe_open(str(path), framework="pt", device="cpu") as handle:
+                keys = list(handle.keys())
+        except Exception as exc:
+            raise ValueError(f"canonical {name} safetensors is not parseable: {path}") from exc
+        if not keys:
+            raise ValueError(f"canonical {name} safetensors contains no tensors: {path}")
+        receipt[name] = {
+            "path": str(path),
+            "bytes": path.stat().st_size,
+            "sha256": actual_sha256,
+            "tensor_count": len(keys),
+            "expected_sha256": expected_digest,
+            "sha_authority": (
+                "PLAN_EXPECTED_MATCH"
+                if expected_digest is not None
+                else "MEASURED_ONLY_legacy_non_strict"
+            ),
+        }
+    return receipt
+
+
+def _load_validated_resume(
+    path: Path,
+    expected_hash: str,
+    total_epochs: int,
+    *,
+    expected_scorer_sha256: Mapping[str, str] | None = None,
+    require_scorer_custody: bool = False,
+) -> dict[str, Any]:
+    """Validate resume custody/config on CPU before any CUDA model construction."""
+    import torch
+
+    blob = torch.load(path, map_location="cpu", weights_only=False)
+    if not isinstance(blob, dict):
+        raise ValueError("resume checkpoint must contain a mapping")
+    required = {
+        "schema",
+        "epoch",
+        "model",
+        "ema",
+        "optimizer",
+        "torch_rng",
+        "numpy_rng",
+        "python_rng",
+        "config_hash",
+        "dsl_argv",
+    }
+    missing = sorted(required - blob.keys())
+    if missing:
+        raise ValueError("resume checkpoint is missing required state: " + ", ".join(missing))
+    if blob["schema"] != "v9_cgauge_torch_resume_v2":
+        raise ValueError(f"unsupported resume checkpoint schema: {blob['schema']!r}")
+    if blob.get("config_hash") != expected_hash:
+        raise ValueError("resume config hash differs from the typed V9 CGauge program; refusing drift")
+    expected_scorers = {
+        name: value.lower() for name, value in dict(expected_scorer_sha256 or {}).items()
+    }
+    checkpoint_scorers = blob.get("scorer_sha256")
+    if checkpoint_scorers is None:
+        if require_scorer_custody:
+            raise ValueError("strict resume checkpoint is missing scorer SHA-256 custody")
+    else:
+        if not isinstance(checkpoint_scorers, Mapping) or set(checkpoint_scorers) != {
+            "segnet",
+            "posenet",
+        }:
+            raise ValueError("resume scorer SHA-256 custody must contain segnet and posenet")
+        normalized_checkpoint_scorers = {
+            name: str(value).lower() for name, value in checkpoint_scorers.items()
+        }
+        if expected_scorers and normalized_checkpoint_scorers != expected_scorers:
+            raise ValueError(
+                "resume scorer SHA-256 custody differs from the strict execution plan"
+            )
+    epoch = int(blob.get("epoch", -1))
+    if epoch < 0 or epoch > int(total_epochs):
+        raise ValueError("resume checkpoint epoch is outside the typed training horizon")
+    return blob
+
+
 def _atomic_torch_save(obj, path: Path) -> None:
     import torch
 
@@ -153,6 +414,13 @@ def _emit_trajectory_row(out: Path, row: Mapping[str, Any]) -> None:
     print(json.dumps(payload), flush=True)
 
 
+def _flush_trajectory_rows(out: Path, rows: list[dict[str, Any]]) -> None:
+    """Durably emit rows whose matching canonical checkpoint already landed."""
+    for row in rows:
+        _emit_trajectory_row(out, row)
+    rows.clear()
+
+
 def _checkpoint_blob(
     model,
     ema,
@@ -166,6 +434,7 @@ def _checkpoint_blob(
     protected_seed=None,
     seed_optimizer=None,
     tail_controller: TailController | None = None,
+    scorer_sha256: Mapping[str, str] | None = None,
 ) -> dict:
     import torch
 
@@ -181,6 +450,11 @@ def _checkpoint_blob(
         "python_rng": random.getstate(),
         "config_hash": config_hash,
         "dsl_argv": list(argv),
+        "scorer_sha256": (
+            None
+            if scorer_sha256 is None
+            else {name: value.lower() for name, value in scorer_sha256.items()}
+        ),
         "pair_cursor": pair_cursor.state_dict() if pair_cursor is not None else None,
         "controller_state": copy.deepcopy(dict(controller_state or {})),
         "protected_seed": (
@@ -369,7 +643,7 @@ def _attach_generated_pose_carrier(model, flags, gt_poses, native_hw, device):
         "s_t": float(flags["--pose-carrier-s-t"]),
         "s_r": float(flags["--pose-carrier-s-r"]),
         "pitch": float(flags["--pose-carrier-pitch"]),
-        "n_pairs": int(len(gt_poses)),
+        "n_pairs": len(gt_poses),
     }
 
 
@@ -542,6 +816,7 @@ def _polyak_checkpoint_blob(
     epoch: int,
     config_hash: str,
     argv: tuple[str, ...],
+    scorer_sha256: Mapping[str, str] | None = None,
 ) -> dict[str, Any] | None:
     """Materialize the additional Polyak candidate without replacing EMA."""
     import torch
@@ -559,6 +834,11 @@ def _polyak_checkpoint_blob(
         "count": int(controller.polyak.count),
         "config_hash": config_hash,
         "dsl_argv": list(argv),
+        "scorer_sha256": (
+            None
+            if scorer_sha256 is None
+            else {name: value.lower() for name, value in scorer_sha256.items()}
+        ),
         "authority": "[contest-CUDA training-advisory] NON-PROMOTABLE",
     }
 
@@ -619,21 +899,134 @@ def _accumulated_pair_step(
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--gt-cache", default="experiments/results/mlx_fleet_gt_cache/gt_n600.npz")
-    ap.add_argument("--num-pairs", type=int, default=600)
-    ap.add_argument("--epochs", type=int, default=3000)
-    ap.add_argument("--out-dir", default="experiments/results/v9_cgauge_cuda")
-    ap.add_argument("--device", default="cuda")
-    ap.add_argument("--resume-from")
-    ap.add_argument("--verify-only", action="store_true")
-    ap.add_argument("--compile-probe", action="store_true")
-    args = ap.parse_args(argv)
+    args = build_parser().parse_args(argv)
+    if args.num_pairs <= 0:
+        raise ValueError("num-pairs must be positive")
+    if args.epochs <= 0:
+        raise ValueError("epochs must be positive")
+    if args.stop_after_epochs is not None and not 1 <= args.stop_after_epochs <= 3:
+        raise ValueError("stop-after-epochs must be in 1..3")
+    if args.device not in {"cuda", "cpu"}:
+        raise ValueError("device must be exactly 'cuda' or 'cpu'")
+    if args.preflight_only and args.verify_only:
+        raise ValueError("preflight-only and verify-only are mutually exclusive")
+    scorer_expected_values = {
+        "segnet": args.expected_segnet_sha256,
+        "posenet": args.expected_posenet_sha256,
+    }
+    supplied_scorer_expected = {
+        name: value for name, value in scorer_expected_values.items() if value is not None
+    }
+    if supplied_scorer_expected and len(supplied_scorer_expected) != 2:
+        raise ValueError("expected scorer SHA custody requires both segnet and posenet")
+    for name, value in supplied_scorer_expected.items():
+        if len(value) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in value):
+            raise ValueError(f"expected {name} SHA-256 must be exactly 64 hex characters")
+    if (args.preflight_only or args.no_implicit_resume) and not supplied_scorer_expected:
+        raise ValueError(
+            "strict/preflight execution requires expected SegNet and PoseNet SHA-256 custody"
+        )
     out = Path(args.out_dir)
     if any(str(out.resolve()).startswith(x) for x in _FORBIDDEN_TMP):
         raise ValueError("out-dir is a tmp-class path; use the SSD/repo tier")
 
     flags, cfg_hash, dsl_argv = derive_config(args)
+    resume_path = (
+        None
+        if args.verify_only
+        else _resolve_resume_intent(
+            out,
+            args.resume_from,
+            no_implicit_resume=args.no_implicit_resume,
+        )
+    )
+    gt = None if args.verify_only else _load_validated_gt_cache(args.gt_cache, args.num_pairs)
+    resume_blob = (
+        _load_validated_resume(
+            resume_path,
+            cfg_hash,
+            args.epochs,
+            expected_scorer_sha256=supplied_scorer_expected,
+            require_scorer_custody=(args.preflight_only or args.no_implicit_resume),
+        )
+        if resume_path is not None
+        else None
+    )
+    planned_start = int(resume_blob["epoch"]) if resume_blob is not None else 0
+    run_first_epoch, run_end_epoch = _runtime_epoch_window(
+        planned_start, args.epochs, args.stop_after_epochs
+    )
+    gt_geometry = None if gt is None else _validate_gt_geometry(gt, flags)
+    scorer_custody = (
+        None
+        if args.verify_only
+        else _validate_scorer_custody(expected_sha256=supplied_scorer_expected)
+    )
+    scorer_sha256 = (
+        None
+        if scorer_custody is None
+        else {name: row["sha256"] for name, row in scorer_custody.items()}
+    )
+    coverage = cuda_v9_port_receipt()
+    if args.preflight_only and coverage["status"] != "COMPLETE_1_TO_1":
+        raise RuntimeError(
+            "NO-FAKE REFUSAL: CPU preflight found incomplete V9 CUDA control semantics; "
+            f"unclosed surfaces: {coverage['blockers']}"
+        )
+    if args.preflight_only:
+        assert gt is not None and gt_geometry is not None and scorer_custody is not None
+        import torch
+
+        preflight_seg, preflight_pose = _load_scorers(torch.device("cpu"))
+        preflight_scorers = {"segnet": preflight_seg, "posenet": preflight_pose}
+        scorer_load_receipt = {
+            name: {
+                "class": type(network).__name__,
+                "eval": not bool(network.training),
+                "frozen": not any(parameter.requires_grad for parameter in network.parameters()),
+            }
+            for name, network in preflight_scorers.items()
+        }
+        if not all(
+            row["eval"] and row["frozen"] for row in scorer_load_receipt.values()
+        ):
+            raise RuntimeError("CPU scorer constructor/load did not yield eval frozen networks")
+        del preflight_seg, preflight_pose, preflight_scorers
+        print(
+            json.dumps(
+                {
+                    "schema": "v9_cgauge_torch_preflight.v1",
+                    "status": "passed",
+                    "config_hash": cfg_hash,
+                    "typed_total_epochs": args.epochs,
+                    "runtime_stop_after_epochs": args.stop_after_epochs,
+                    "runtime_epoch_window": [run_first_epoch, run_end_epoch],
+                    "num_pairs": args.num_pairs,
+                    "gt_cache": str(Path(args.gt_cache)),
+                    "gt_geometry": gt_geometry,
+                    "scorer_custody": scorer_custody,
+                    "scorer_constructor_load": {
+                        "status": "passed",
+                        "device": "cpu",
+                        "networks": scorer_load_receipt,
+                    },
+                    "cuda_v9_port_coverage": {
+                        "status": coverage["status"],
+                        "blockers": coverage["blockers"],
+                    },
+                    "resume_checkpoint": (
+                        None if resume_path is None else str(resume_path)
+                    ),
+                    "resume_epoch": planned_start,
+                    "no_implicit_resume": bool(args.no_implicit_resume),
+                    "output_created": False,
+                    "authority": "runtime-input-validation-only",
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        return 0
     bank = CurveletBankConfig()
     B = curvelet_directional_B(bank, max_freq=float(flags["--max-bank-freq"]))
     coords = build_coords(int(flags["--render-h"]), int(flags["--render-w"]))
@@ -646,6 +1039,11 @@ def main(argv: list[str] | None = None) -> int:
         chroma=bool(flags.get("--chroma", False)), render_h=int(flags["--render-h"]),
         render_w=int(flags["--render-w"]),
     )
+    if gt is not None and gt_geometry != {
+        "render_hw": [cfg.render_h, cfg.render_w],
+        "camera_hw": [cfg.camera_h, cfg.camera_w],
+    }:
+        raise RuntimeError("validated GT geometry drifted during CUDA config construction")
 
     import torch
     if args.device == "cuda" and not torch.cuda.is_available() and not args.verify_only:
@@ -666,8 +1064,10 @@ def main(argv: list[str] | None = None) -> int:
     row = {"stage": "cuda_numpy_forward_parity", "backend": str(device), **parity,
            "measured": True, "promotion_eligible": False}
     print(json.dumps(row), flush=True)
-    coverage = cuda_v9_port_receipt()
     print(json.dumps({"stage": "cuda_v9_port_coverage", **coverage}), flush=True)
+    parity_passed = bool(parity["argmax_equal"] and parity["cosine_phi"] >= 0.9997)
+    if not parity_passed and not args.verify_only:
+        raise RuntimeError("CUDA/NumPy forward parity gate failed; refusing before compile or scorers")
 
     compile_probe_result: dict[str, Any] | None = None
     if args.compile_probe or device.type == "cuda":
@@ -679,25 +1079,25 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"stage": "backend_fp_reorder_probe", "backend": str(device),
                           **compile_probe_result}), flush=True)
         if not compile_probe_result.get("adoptable", False):
-            print(json.dumps({"stage": "cuda_compile_policy", "compiled_training": False,
-                              "reason": "functional argmax/cosine parity gate did not pass"}), flush=True)
+            raise RuntimeError(
+                "compile probe is non-adoptable; refusing before structured prefit/scorers"
+            )
 
     if args.verify_only:
-        return 0 if parity["argmax_equal"] and parity["cosine_phi"] >= 0.9997 else 2
+        return 0 if parity_passed else 2
 
     if coverage["status"] != "COMPLETE_1_TO_1":
         raise RuntimeError(
             "NO-FAKE REFUSAL: active V9 CUDA control semantics are not 1:1; "
             f"unclosed surfaces: {coverage['blockers']}"
         )
+    seg, pose = _load_scorers(device)
 
-    z = np.load(args.gt_cache, allow_pickle=False)
-    if int(z["n_pairs"]) < args.num_pairs:
-        raise ValueError("GT cache contains fewer pairs than requested")
-    lstars = z["lstars"][: args.num_pairs]
-    margins = z["margins"][: args.num_pairs]
-    gt_f1 = z["gt_f1"][: args.num_pairs]
-    gt_poses = z["gt_poses"][: args.num_pairs]
+    assert gt is not None
+    lstars = gt["lstars"]
+    margins = gt["margins"]
+    gt_f1 = gt["gt_f1"]
+    gt_poses = gt["gt_poses"]
     if bool(flags.get("--dseg-aware-taper", False)):
         from tac.boundary_math.dseg_aware_fourier_taper import (
             apply_dseg_aware_fourier_taper,
@@ -751,15 +1151,7 @@ def main(argv: list[str] | None = None) -> int:
         model, flags, gt_poses, native_hw, device
     )
     print(json.dumps({"stage": "pose_carrier", **pose_carrier_row}), flush=True)
-    resume_path = Path(args.resume_from) if args.resume_from else out / TORCH_RESUME_PT
-    if resume_path.is_dir():
-        resume_path = resume_path / TORCH_RESUME_PT
-    resume_will_load = bool(args.resume_from or resume_path.exists())
-    resume_blob = (
-        torch.load(resume_path, map_location=device, weights_only=False)
-        if resume_will_load
-        else None
-    )
+    resume_will_load = resume_blob is not None
     if flags.get("--palette-anchor", False) and not resume_will_load:
         import torch.nn.functional as F
 
@@ -980,7 +1372,6 @@ def main(argv: list[str] | None = None) -> int:
             ).permute(0, 2, 3, 1)
             resized_gt_chunks.append(resized.to(device=device, dtype=chroma_storage_dtype))
         gt_f1_render_device = torch.cat(resized_gt_chunks, dim=0)
-    seg, pose = _load_scorers(device)
     ema = copy.deepcopy(model).eval()
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(flags["--lr"]),
                                   betas=(0.9, float(flags["--adam-beta2"])),
@@ -1056,6 +1447,10 @@ def main(argv: list[str] | None = None) -> int:
             and resume_blob.get("tail_controller") is None
         ):
             raise ValueError("post-tail resume checkpoint lacks governed tail-cycle state")
+    if start != planned_start:
+        raise RuntimeError("restored epoch differs from the pre-CUDA resume custody check")
+    if run_first_epoch != start + 1:
+        raise RuntimeError("runtime epoch window drifted after checkpoint restore")
     if controller_state:
         controller.load_state_dict(controller_state)
     controller_state = controller.state_dict()
@@ -1118,6 +1513,8 @@ def main(argv: list[str] | None = None) -> int:
     _atomic_json({"schema": "v9_cgauge_cuda_run_manifest_v1", "dsl_argv": list(dsl_argv),
                   "config_hash": cfg_hash, "device": str(device), "seed": int(flags["--seed"]),
                   "authority": "[contest-CUDA training-advisory] NON-PROMOTABLE",
+                  "scorer_custody": scorer_custody,
+                  "scorer_sha256": scorer_sha256,
                   "execution_policy": execution_policy.__dict__,
                   "controller": {
                       "schema": controller.SCHEMA,
@@ -1135,6 +1532,12 @@ def main(argv: list[str] | None = None) -> int:
                   "fp_reorder_probe": compile_probe_result or {
                       "backend": str(device), "status": "UNMEASURED",
                   },
+                  "runtime_epoch_plan": {
+                      "start_exclusive": start,
+                      "end_inclusive": run_end_epoch,
+                      "stop_after_epochs": args.stop_after_epochs,
+                      "typed_total_epochs": args.epochs,
+                  },
                   "created_at_utc": _utc()}, out / TORCH_RUN_MANIFEST_JSON)
 
     ckpt_every = int(flags["--ckpt-every"])
@@ -1148,7 +1551,9 @@ def main(argv: list[str] | None = None) -> int:
     prev_stage = curriculum_stage(start, flags)
     t0 = time.time()
     last_completed_epoch = start
-    for epoch in range(start + 1, args.epochs + 1):
+    tail_terminated = False
+    pending_epoch_rows: list[dict[str, Any]] = []
+    for epoch in range(run_first_epoch, run_end_epoch + 1):
         stage = curriculum_stage(epoch, flags)
         if stage != prev_stage:
             # Seal the COMPLETED prior stage before the first update of the new
@@ -1158,14 +1563,14 @@ def main(argv: list[str] | None = None) -> int:
                 model, ema, optimizer, epoch - 1, cfg_hash, dsl_argv,
                 pair_cursor=pair_cursor, controller_state=controller.state_dict(),
                 protected_seed=protected_seed, seed_optimizer=seed_optimizer,
-                tail_controller=tail_controller,
+                tail_controller=tail_controller, scorer_sha256=scorer_sha256,
             )
             _atomic_torch_save(
                 boundary_blob,
                 out / "stage_checkpoints" / f"ep{epoch - 1:05d}_{prev_stage}.pt",
             )
             boundary_polyak = _polyak_checkpoint_blob(
-                controller, epoch - 1, cfg_hash, dsl_argv
+                controller, epoch - 1, cfg_hash, dsl_argv, scorer_sha256
             )
             if boundary_polyak is not None:
                 _atomic_torch_save(
@@ -1240,6 +1645,7 @@ def main(argv: list[str] | None = None) -> int:
                     protected_seed=protected_seed,
                     seed_optimizer=seed_optimizer,
                     tail_controller=tail_controller,
+                    scorer_sha256=scorer_sha256,
                 )
                 _atomic_torch_save(
                     tail_blob,
@@ -1565,22 +1971,26 @@ def main(argv: list[str] | None = None) -> int:
                     "pose_banked_r1": controller_step.pose_banked_r1,
                     "effective_pose_weight": pose_weight,
                 }
-                _emit_trajectory_row(out, telemetry)
+                pending_epoch_rows.append(telemetry)
             chunk_index += 1
 
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         epoch_train_seconds = time.perf_counter() - epoch_train_t0
-        _emit_trajectory_row(
-            out,
+        pending_epoch_rows.append(
             {
                 "stage": "training_throughput_epoch",
                 "epoch": epoch,
                 "pairs": args.num_pairs,
-                "optimizer_updates": ep_tot,
+                "optimizer_updates": ep_acc,
+                "optimizer_updates_attempted": ep_tot,
+                "optimizer_updates_successful": ep_acc,
                 "seconds": round(epoch_train_seconds, 6),
                 "pairs_per_second": round(args.num_pairs / max(epoch_train_seconds, 1e-12), 6),
-                "updates_per_second": round(ep_tot / max(epoch_train_seconds, 1e-12), 6),
+                "updates_per_second": round(ep_acc / max(epoch_train_seconds, 1e-12), 6),
+                "productive_updates_per_second": round(
+                    ep_acc / max(epoch_train_seconds, 1e-12), 6
+                ),
                 "peak_allocated_bytes": (
                     int(torch.cuda.max_memory_allocated(device)) if device.type == "cuda" else None
                 ),
@@ -1594,19 +2004,18 @@ def main(argv: list[str] | None = None) -> int:
                 if device.type == "cuda" else "[macOS-CPU/Torch advisory]",
                 "promotion_eligible": False,
                 "score_claim": False,
-            },
+            }
         )
 
         controller_epoch = controller.end_epoch(epoch)
         for birth_row in controller_epoch["birth_telemetry"]:
-            _emit_trajectory_row(
-                out,
+            pending_epoch_rows.append(
                 {
                     **birth_row,
                     "backend": "torch_cuda",
                     "authority": "[contest-CUDA training-advisory]",
                     "promotion_eligible": False,
-                },
+                }
             )
 
         probe_indices = _jacobian_probe_pair_indices(flags, gt_poses, epoch)
@@ -1647,8 +2056,7 @@ def main(argv: list[str] | None = None) -> int:
             pose_verdict = controller.observe_sigma_min(
                 epoch, float(conditioning["median_sigma_min"])
             )
-            _emit_trajectory_row(
-                out,
+            pending_epoch_rows.append(
                 {
                     "stage": "jacobian_basin_t1",
                     "epoch": epoch,
@@ -1659,13 +2067,12 @@ def main(argv: list[str] | None = None) -> int:
                     "backend": "torch_cuda",
                     "authority": "[contest-CUDA training-advisory]",
                     "promotion_eligible": False,
-                },
+                }
             )
 
         polyak_observed = controller.observe_polyak(epoch, model)
         if polyak_observed:
-            _emit_trajectory_row(
-                out,
+            pending_epoch_rows.append(
                 {
                     "stage": "polyak_finisher_observe",
                     "epoch": epoch,
@@ -1674,10 +2081,9 @@ def main(argv: list[str] | None = None) -> int:
                     "backend": "torch_cuda",
                     "authority": "[contest-CUDA training-advisory]",
                     "promotion_eligible": False,
-                },
+                }
             )
-        _emit_trajectory_row(
-            out,
+        pending_epoch_rows.append(
             {
                 "stage": "v9_controller_epoch",
                 **{key: value for key, value in controller_epoch.items()
@@ -1687,43 +2093,52 @@ def main(argv: list[str] | None = None) -> int:
                 "backend": "torch_cuda",
                 "authority": "[contest-CUDA training-advisory]",
                 "promotion_eligible": False,
-            },
+            }
         )
 
         blob = None
         last_completed_epoch = epoch
-        if epoch % ckpt_every == 0 or epoch == args.epochs or tail_stop_after_epoch:
+        if _canonical_checkpoint_due(
+            epoch,
+            ckpt_every=ckpt_every,
+            run_end_epoch=run_end_epoch,
+            runtime_stop_after_epochs=args.stop_after_epochs,
+            tail_stop_after_epoch=tail_stop_after_epoch,
+        ):
             controller_state = controller.state_dict()
             blob = _checkpoint_blob(
                 model, ema, optimizer, epoch, cfg_hash, dsl_argv,
                 pair_cursor=pair_cursor, controller_state=controller_state,
                 protected_seed=protected_seed, seed_optimizer=seed_optimizer,
-                tail_controller=tail_controller,
+                tail_controller=tail_controller, scorer_sha256=scorer_sha256,
             )
             _atomic_torch_save(blob, out / TORCH_RESUME_PT)
             _atomic_torch_save({"schema": "v9_cgauge_torch_ema_v1", "epoch": epoch,
                                 "ema": ema.state_dict(), "config_hash": cfg_hash,
+                                "scorer_sha256": scorer_sha256,
                                 "dsl_argv": list(dsl_argv)}, out / TORCH_EMA_PT)
             latest_polyak = _polyak_checkpoint_blob(
-                controller, epoch, cfg_hash, dsl_argv
+                controller, epoch, cfg_hash, dsl_argv, scorer_sha256
             )
             if latest_polyak is not None:
                 _atomic_torch_save(latest_polyak, out / _TORCH_POLYAK_PT)
+            _flush_trajectory_rows(out, pending_epoch_rows)
         if tail_stop_after_epoch:
+            tail_terminated = True
             break
     controller_state = controller.state_dict()
     final_blob = _checkpoint_blob(
         model, ema, optimizer, last_completed_epoch, cfg_hash, dsl_argv,
         pair_cursor=pair_cursor, controller_state=controller_state,
         protected_seed=protected_seed, seed_optimizer=seed_optimizer,
-        tail_controller=tail_controller,
+        tail_controller=tail_controller, scorer_sha256=scorer_sha256,
     )
     _atomic_torch_save(
         final_blob,
         out / "stage_checkpoints" / f"ep{last_completed_epoch:05d}_{prev_stage}.pt",
     )
     final_polyak = _polyak_checkpoint_blob(
-        controller, last_completed_epoch, cfg_hash, dsl_argv
+        controller, last_completed_epoch, cfg_hash, dsl_argv, scorer_sha256
     )
     if final_polyak is not None:
         _atomic_torch_save(final_polyak, out / _TORCH_POLYAK_PT)
@@ -1735,16 +2150,26 @@ def main(argv: list[str] | None = None) -> int:
     _atomic_json(
         {
             "schema": "v9_cgauge_torch_train_result_v1",
-            "status": "completed",
+            "status": (
+                "completed"
+                if last_completed_epoch >= args.epochs
+                else "governed_tail_stop"
+                if tail_terminated
+                else "runtime_epoch_budget_reached"
+            ),
             "backend": "torch_cuda",
             "epochs_completed": last_completed_epoch,
+            "runtime_epochs_completed": last_completed_epoch - start,
+            "runtime_stop_after_epochs": args.stop_after_epochs,
+            "typed_total_epochs": args.epochs,
             "config_hash": cfg_hash,
+            "scorer_sha256": scorer_sha256,
             "seed": int(flags["--seed"]),
             "polyak_candidate": (
                 _TORCH_POLYAK_PT if final_polyak is not None else None
             ),
             "authority": "[contest-CUDA training-advisory] NON-PROMOTABLE",
-            "pointer": {"score": 0.19108282, "axis": "contest-CPU", "moved": False},
+            "pointer_delta": "none",
             "completed_at_utc": _utc(),
         },
         out / TORCH_TRAIN_RESULT_JSON,

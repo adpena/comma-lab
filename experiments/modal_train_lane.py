@@ -50,11 +50,68 @@ from tac.deploy.modal.runtime import (
     DALI_DISABLE_NVML_VALUE,
     PYTORCH_CUDA_ALLOC_CONF_VALUE,
 )
+from tac.deploy.witness_cloud_launcher import (
+    BUDGETED_IMAGE_STAGING_ALLOWANCE_USD as V9_IMAGE_STAGING_ALLOWANCE_USD,
+)
+from tac.deploy.witness_cloud_launcher import (
+    CHILD_TIMEOUT_SECONDS as V9_CHILD_TIMEOUT_SECONDS,
+)
+from tac.deploy.witness_cloud_launcher import (
+    CPU_CORES as V9_CPU_CORES,
+)
+from tac.deploy.witness_cloud_launcher import (
+    CPU_PREFLIGHT_SECONDS as V9_CPU_PREFLIGHT_SECONDS,
+)
+from tac.deploy.witness_cloud_launcher import (
+    CPU_USD_PER_CORE_SECOND as V9_CPU_USD_PER_CORE_SECOND,
+)
+from tac.deploy.witness_cloud_launcher import (
+    CUDA_ENV as V9_CUDA_ENV,
+)
+from tac.deploy.witness_cloud_launcher import (
+    DEFAULT_STOP_AFTER_EPOCHS as V9_STOP_AFTER_EPOCHS,
+)
+from tac.deploy.witness_cloud_launcher import EXACT_H100_GPU as V9_EXACT_H100_GPU
+from tac.deploy.witness_cloud_launcher import (
+    H100_GPU_USD_PER_HOUR as V9_H100_GPU_USD_PER_HOUR,
+)
+from tac.deploy.witness_cloud_launcher import (
+    INVOCATION_TIMEOUT_SECONDS as V9_INVOCATION_TIMEOUT_SECONDS,
+)
+from tac.deploy.witness_cloud_launcher import LABEL_RE as V9_LABEL_RE
+from tac.deploy.witness_cloud_launcher import (
+    LANE_ID as V9_LANE_ID,
+)
+from tac.deploy.witness_cloud_launcher import (
+    MAX_LABEL_LENGTH as V9_MAX_LABEL_LENGTH,
+)
+from tac.deploy.witness_cloud_launcher import (
+    MAX_PLAN_COST_USD as V9_MAX_PLAN_COST_USD,
+)
+from tac.deploy.witness_cloud_launcher import (
+    MEMORY_GIB as V9_MEMORY_GIB,
+)
+from tac.deploy.witness_cloud_launcher import (
+    MEMORY_USD_PER_GIB_SECOND as V9_MEMORY_USD_PER_GIB_SECOND,
+)
+from tac.deploy.witness_cloud_launcher import (
+    REMOTE_DRIVER as V9_REMOTE_DRIVER,
+)
+from tac.deploy.witness_cloud_launcher import (
+    REVIEWED_SENTINELS as V9_REVIEWED_SENTINELS,
+)
+from tac.deploy.witness_cloud_launcher import TRAINER as V9_TRAINER
+from tac.deploy.witness_cloud_launcher import (
+    TYPED_EPOCH_HORIZON as V9_TYPED_EPOCH_HORIZON,
+)
+from tac.deploy.witness_cloud_launcher import (
+    _validate_modal_custody_path as _validate_v9_modal_custody_path,
+)
 
 app = modal.App("comma-train-lane")
 RESULTS_VOL = "comma-train-lane-results"
 REMOTE_PYTHONPATH = "/workspace/pact/src:/workspace/pact/upstream:/workspace/pact"
-results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
+results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=False)
 KNOWN_LANE_IDS = {
     "scripts/remote_lane_t1_balle_endtoend.sh": "t1_balle_128k_endtoend",
     "scripts/remote_lane_scpp_stage1.sh": "lane_scpp_stage1_smoke_anchor",
@@ -68,6 +125,641 @@ MODAL_TRAINING_ARTIFACT_EXTENSIONS = (
     ".log",
     ".safetensors",
 )
+MODAL_STATIC_MAX_SECONDS = 14 * 3600
+MODAL_FINALIZATION_GRACE_SECONDS = 300
+MODAL_PREFLIGHT_HARD_TIMEOUT_SECONDS = 600
+MODAL_PREFLIGHT_CHILD_TIMEOUT_SECONDS = 300
+MODAL_V9_DEADLINE_TOLERANCE_SECONDS = 5
+MODAL_GPU_CPU_REQUEST_LIMIT = (4.0, 4.0)
+MODAL_GPU_MEMORY_REQUEST_LIMIT_MB = (32768, 32768)
+# Conservative Modal list-price ceilings in USD/hour, rounded upward as of
+# 2026-07-12. H100 is pinned to the canonical V9 launcher authority.
+MODAL_GPU_USD_PER_HOUR_CEILINGS = {
+    "T4": 0.75,
+    "A10G": 1.50,
+    "A100": 4.00,
+    V9_EXACT_H100_GPU: V9_H100_GPU_USD_PER_HOUR,
+}
+V9_UNIQUE_ENV_KEYS = frozenset(
+    {
+        "WITNESS_GT_CACHE_SHA256",
+        "WITNESS_SEGNET_SHA256",
+        "WITNESS_POSENET_SHA256",
+        "WITNESS_RESUME_SHA256",
+        "WITNESS_STOP_AFTER_EPOCHS",
+    }
+)
+
+
+def _validated_modal_timeouts(timeout_hours: float) -> tuple[int, int]:
+    """Return child and invocation timeouts, rejecting unsafe inputs."""
+
+    import math
+
+    if not math.isfinite(timeout_hours) or timeout_hours <= 0:
+        raise ValueError("timeout_hours must be finite and positive")
+    requested_seconds = int(timeout_hours * 3600)
+    if requested_seconds <= 0:
+        raise ValueError("timeout_hours is too small to represent one second")
+    max_seconds = min(
+        requested_seconds,
+        MODAL_STATIC_MAX_SECONDS - MODAL_FINALIZATION_GRACE_SECONDS,
+    )
+    hard_timeout_seconds = min(
+        max_seconds + MODAL_FINALIZATION_GRACE_SECONDS,
+        MODAL_STATIC_MAX_SECONDS,
+    )
+    return max_seconds, hard_timeout_seconds
+
+
+def _validate_expected_mounted_head(expected: str, current: str) -> None:
+    """Require launcher-reviewed HEAD custody before any provider work."""
+
+    import re
+
+    if re.fullmatch(r"[0-9a-f]{40}", expected) is None:
+        raise ValueError("expected_mounted_code_git_head must be exactly 40 lowercase hex")
+    if expected != current:
+        raise ValueError(
+            "expected_mounted_code_git_head does not match current git HEAD: "
+            f"expected={expected} current={current}"
+        )
+
+
+def _validated_expected_cost_usd(
+    expected_cost_usd: float,
+    *,
+    preflight_first: bool,
+) -> float:
+    """Validate the dispatch budget recorded in canonical call custody."""
+
+    import math
+
+    if not math.isfinite(expected_cost_usd) or expected_cost_usd <= 0:
+        raise ValueError("provider dispatch requires finite expected_cost_usd > 0")
+    if expected_cost_usd > V9_MAX_PLAN_COST_USD:
+        raise ValueError(
+            f"expected_cost_usd exceeds ${V9_MAX_PLAN_COST_USD:.2f}"
+        )
+    return float(expected_cost_usd)
+
+
+def _validated_modal_gpu_request(
+    gpu: str,
+    *,
+    preflight_first: bool,
+) -> str | None:
+    """Normalize a requested GPU and require the guarded preflight path."""
+
+    if gpu in ("CPU", "cpu", "Cpu"):
+        return None
+    normalized = {
+        "T4": "T4",
+        "A10G": "A10G",
+        "A10g": "A10G",
+        "A100": "A100",
+        "A100-40GB": "A100",
+        "A100-80GB": "A100",
+        V9_EXACT_H100_GPU: V9_EXACT_H100_GPU,
+    }.get(gpu)
+    if normalized is None:
+        raise ValueError(
+            f"unsupported gpu {gpu!r}; use CPU, T4, A10G, A100, or H100!"
+        )
+    if not preflight_first:
+        raise ValueError(
+            "paid GPU dispatch requires preflight_first; named Modal endpoints "
+            "are intentionally CPU-only"
+        )
+    return normalized
+
+
+def _validated_provider_cost_ceiling(
+    *,
+    requested_gpu: str | None,
+    hard_timeout_seconds: int,
+    preflight_first: bool,
+    expected_cost_usd: float,
+) -> float:
+    """Derive and validate the conservative provider resource ceiling."""
+
+    import math
+
+    if not isinstance(hard_timeout_seconds, int) or hard_timeout_seconds <= 0:
+        raise ValueError("hard_timeout_seconds must be a positive integer")
+    if requested_gpu is not None and requested_gpu not in MODAL_GPU_USD_PER_HOUR_CEILINGS:
+        raise ValueError(f"unknown normalized GPU cost class {requested_gpu!r}")
+    rates = (
+        V9_CPU_USD_PER_CORE_SECOND,
+        V9_MEMORY_USD_PER_GIB_SECOND,
+        *MODAL_GPU_USD_PER_HOUR_CEILINGS.values(),
+        V9_IMAGE_STAGING_ALLOWANCE_USD,
+    )
+    if any(not math.isfinite(rate) or rate < 0 for rate in rates):
+        raise ValueError("provider cost rates must be finite and nonnegative")
+    resource_ceiling = (
+        V9_CPU_CORES * V9_CPU_USD_PER_CORE_SECOND * hard_timeout_seconds
+        + V9_MEMORY_GIB * V9_MEMORY_USD_PER_GIB_SECOND * hard_timeout_seconds
+    )
+    if requested_gpu is not None:
+        resource_ceiling += (
+            MODAL_GPU_USD_PER_HOUR_CEILINGS[requested_gpu]
+            * hard_timeout_seconds
+            / 3600
+        )
+    if preflight_first:
+        resource_ceiling += (
+            V9_CPU_CORES * V9_CPU_USD_PER_CORE_SECOND * V9_CPU_PREFLIGHT_SECONDS
+            + V9_MEMORY_GIB
+            * V9_MEMORY_USD_PER_GIB_SECOND
+            * V9_CPU_PREFLIGHT_SECONDS
+            + V9_IMAGE_STAGING_ALLOWANCE_USD
+        )
+    if not math.isfinite(resource_ceiling):
+        raise ValueError("derived provider resource ceiling is non-finite")
+    if resource_ceiling > V9_MAX_PLAN_COST_USD + 1e-9:
+        raise ValueError(
+            f"derived provider resource ceiling ${resource_ceiling:.6f} exceeds "
+            f"the canonical ${V9_MAX_PLAN_COST_USD:.2f} cap"
+        )
+    if expected_cost_usd + 1e-6 < resource_ceiling:
+        raise ValueError(
+            f"expected_cost_usd ${expected_cost_usd:.6f} is below derived "
+            f"provider resource ceiling ${resource_ceiling:.6f}"
+        )
+    return resource_ceiling
+
+
+def _parse_env_overrides(raw: str, *, strict: bool) -> dict[str, str]:
+    """Parse comma env overrides, rejecting ambiguity for audited dispatches."""
+
+    parsed: dict[str, str] = {}
+    if not raw:
+        return parsed
+    for segment in raw.split(","):
+        if "=" not in segment:
+            if strict:
+                raise ValueError(f"malformed env override segment {segment!r}")
+            continue
+        key, value = segment.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            if strict:
+                raise ValueError("env override key must not be empty")
+            continue
+        if key in parsed and strict:
+            raise ValueError(f"duplicate env override key {key!r}")
+        parsed[key] = value
+    return parsed
+
+
+def _raw_env_override_keys(raw: str) -> set[str]:
+    """Extract raw key intent without accepting the override syntax."""
+
+    if not raw:
+        return set()
+    return {segment.split("=", 1)[0].strip() for segment in raw.split(",")}
+
+
+def _classify_v9_trainer_path(
+    trainer_module_path: str,
+    *,
+    repo_root: Path,
+) -> bool:
+    """Identify lexical or resolved references to the canonical V9 trainer."""
+
+    import posixpath
+
+    if not trainer_module_path:
+        return False
+    raw = trainer_module_path.strip()
+    if posixpath.normpath(raw) == V9_TRAINER:
+        return True
+    candidate = Path(raw)
+    if not candidate.is_absolute():
+        candidate = repo_root / candidate
+    try:
+        return candidate.resolve() == (repo_root / V9_TRAINER).resolve()
+    except OSError:
+        return False
+
+
+def _lane_script_invokes_v9_trainer(
+    lane_script: str,
+    *,
+    repo_root: Path,
+) -> bool:
+    """Detect wrappers whose source invokes the canonical V9 Torch trainer."""
+
+    candidate = Path(lane_script)
+    if not candidate.is_absolute():
+        candidate = repo_root / candidate
+    try:
+        source = candidate.read_text(errors="ignore")
+    except OSError:
+        return False
+    canonical = (repo_root / V9_TRAINER).resolve().as_posix()
+    return V9_TRAINER in source or canonical in source
+
+
+def _classify_v9_lane_script(
+    lane_script: str,
+    *,
+    repo_root: Path | None = None,
+) -> bool:
+    """Identify aliases to V9 and require its reviewed canonical spelling."""
+
+    import posixpath
+
+    if not isinstance(lane_script, str):
+        return False
+    normalized = posixpath.normpath(lane_script)
+    stripped_normalized = posixpath.normpath(lane_script.strip())
+    lexical_v9_alias = (
+        normalized == V9_REMOTE_DRIVER or stripped_normalized == V9_REMOTE_DRIVER
+    )
+    resolved_v9_alias = False
+    candidate: Path | None = None
+    if repo_root is not None:
+        candidate = Path(lane_script)
+        if not candidate.is_absolute():
+            candidate = repo_root / candidate
+        canonical = (repo_root / V9_REMOTE_DRIVER).resolve()
+        try:
+            resolved_v9_alias = candidate.resolve() == canonical
+        except OSError:
+            resolved_v9_alias = False
+    if not lexical_v9_alias and not resolved_v9_alias:
+        return False
+    unsafe_character = any(char.isspace() or ord(char) < 32 for char in lane_script)
+    if (
+        lane_script != V9_REMOTE_DRIVER
+        or unsafe_character
+        or Path(lane_script).is_absolute()
+        or normalized != lane_script
+    ):
+        raise ValueError(
+            "V9 lane_script must use exact normalized repo-relative canonical path "
+            f"{V9_REMOTE_DRIVER!r}"
+        )
+    if candidate is not None and candidate.is_symlink():
+        raise ValueError("V9 lane_script must not be a symlink")
+    return True
+
+
+def _refuse_forced_modal_image_rebuild(
+    env: dict[str, str] | None = None,
+) -> None:
+    """Refuse operator-forced image rebuilds outside the budgeted dispatch."""
+
+    import os
+
+    source = os.environ if env is None else env
+    forced = [
+        key
+        for key in ("MODAL_FORCE_BUILD", "MODAL_IGNORE_CACHE")
+        if source.get(key, "")
+    ]
+    if forced:
+        raise RuntimeError(
+            "refusing forced Modal image rebuild outside the dispatch cost cap: "
+            f"nonempty environment controls={forced}"
+        )
+
+
+def _validate_v9_env_controls(*, label: str, overrides: dict[str, str]) -> None:
+    """Validate the canonical V9 environment on local and remote boundaries."""
+
+    import re
+
+    if V9_LABEL_RE.fullmatch(label) is None:
+        raise ValueError("V9 label must match canonical lowercase hyphen grammar")
+    if len(label) > V9_MAX_LABEL_LENGTH:
+        raise ValueError(f"V9 label must be at most {V9_MAX_LABEL_LENGTH} characters")
+
+    required_env = {
+        *V9_CUDA_ENV,
+        "WITNESS_GT_CACHE",
+        "WITNESS_OUT_DIR",
+        "WITNESS_EPOCHS",
+        "WITNESS_STOP_AFTER_EPOCHS",
+        "WITNESS_CHILD_TIMEOUT_SECONDS",
+        "WITNESS_NUM_PAIRS",
+        "WITNESS_RESUME_FROM",
+        "WITNESS_RESUME_SHA256",
+        "WITNESS_GT_CACHE_SHA256",
+        "WITNESS_SEGNET_SHA256",
+        "WITNESS_POSENET_SHA256",
+    }
+    if set(overrides) != required_env:
+        raise ValueError(
+            "V9 env overrides must exactly match required keys; "
+            f"missing={sorted(required_env - set(overrides))} "
+            f"extra={sorted(set(overrides) - required_env)}"
+        )
+    for key, expected in V9_CUDA_ENV.items():
+        if overrides[key] != expected:
+            raise ValueError(f"V9 deterministic env {key} must equal {expected!r}")
+    fixed_values = {
+        "WITNESS_TRAINER_MODE": "full",
+        "WITNESS_EPOCHS": str(V9_TYPED_EPOCH_HORIZON),
+        "WITNESS_STOP_AFTER_EPOCHS": str(V9_STOP_AFTER_EPOCHS),
+        "WITNESS_CHILD_TIMEOUT_SECONDS": str(V9_CHILD_TIMEOUT_SECONDS),
+        "WITNESS_NUM_PAIRS": "600",
+    }
+    for key, expected in fixed_values.items():
+        if overrides[key] != expected:
+            raise ValueError(f"V9 env {key} must equal {expected!r}")
+    for key in (
+        "WITNESS_GT_CACHE_SHA256",
+        "WITNESS_SEGNET_SHA256",
+        "WITNESS_POSENET_SHA256",
+    ):
+        if re.fullmatch(r"[0-9a-f]{64}", overrides[key]) is None:
+            raise ValueError(f"V9 env {key} must be a lowercase 64-hex digest")
+    gt_sha = overrides["WITNESS_GT_CACHE_SHA256"]
+    expected_gt_path = f"/modal_results/assets/v9_cgauge/gt_{gt_sha}.npz"
+    if overrides["WITNESS_GT_CACHE"] != expected_gt_path:
+        raise ValueError("V9 GT path must be SHA-addressed by WITNESS_GT_CACHE_SHA256")
+    _validate_v9_modal_custody_path("WITNESS_GT_CACHE", overrides["WITNESS_GT_CACHE"])
+    expected_out = f"/modal_results/{label}/output"
+    if overrides["WITNESS_OUT_DIR"] != expected_out:
+        raise ValueError("V9 output path must match the dispatch label custody path")
+    _validate_v9_modal_custody_path("WITNESS_OUT_DIR", overrides["WITNESS_OUT_DIR"])
+    resume_from = overrides["WITNESS_RESUME_FROM"]
+    resume_sha256 = overrides["WITNESS_RESUME_SHA256"]
+    if resume_from:
+        _validate_v9_modal_custody_path("WITNESS_RESUME_FROM", resume_from)
+        if re.fullmatch(r"[0-9a-f]{64}", resume_sha256) is None:
+            raise ValueError(
+                "V9 WITNESS_RESUME_SHA256 must be lowercase 64-hex when "
+                "WITNESS_RESUME_FROM is nonempty"
+            )
+    elif resume_sha256:
+        raise ValueError(
+            "V9 WITNESS_RESUME_SHA256 must be empty when WITNESS_RESUME_FROM is empty"
+        )
+
+
+def _validate_v9_remote_h100_invocation(
+    *,
+    lane_script: str,
+    label: str,
+    env_overrides: dict[str, str],
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
+    sentinel_sha256_local: dict,
+    max_seconds: int,
+    billing_deadline_unix_s: float | None,
+    invocation_started_unix_s: float,
+    requested_gpu: str,
+) -> None:
+    """Block direct Modal Function calls that bypass the reviewed V9 main()."""
+
+    import math
+    import re
+
+    is_canonical_v9_lane = _classify_v9_lane_script(
+        lane_script,
+        repo_root=Path("/workspace/pact"),
+    )
+    if not is_canonical_v9_lane:
+        if requested_gpu in {"H100", V9_EXACT_H100_GPU}:
+            raise ValueError(
+                "H100 is reserved for the exact canonical Task438 V9 lane"
+            )
+        return
+    if requested_gpu != V9_EXACT_H100_GPU:
+        raise ValueError("remote V9 dynamic GPU must be exactly H100!")
+    if max_seconds != V9_CHILD_TIMEOUT_SECONDS:
+        raise ValueError(
+            f"remote V9 child timeout must be exactly {V9_CHILD_TIMEOUT_SECONDS}s"
+        )
+    if not isinstance(billing_deadline_unix_s, (int, float)) or not math.isfinite(
+        billing_deadline_unix_s
+    ):
+        raise ValueError("remote V9 billing deadline must be finite and non-null")
+    remaining = billing_deadline_unix_s - invocation_started_unix_s
+    if remaining <= 0 or remaining > (
+        V9_INVOCATION_TIMEOUT_SECONDS + MODAL_V9_DEADLINE_TOLERANCE_SECONDS
+    ):
+        raise ValueError(
+            "remote V9 billing deadline must be positive and no later than "
+            f"invocation start + {V9_INVOCATION_TIMEOUT_SECONDS}s "
+            f"(+{MODAL_V9_DEADLINE_TOLERANCE_SECONDS}s serialization tolerance)"
+        )
+    if mounted_code_git_branch != "main":
+        raise ValueError("remote V9 mounted branch must be exactly main")
+    if re.fullmatch(r"[0-9a-f]{40}", mounted_code_git_head) is None:
+        raise ValueError("remote V9 mounted HEAD must be lowercase 40-hex")
+    if set(sentinel_sha256_local) != set(V9_REVIEWED_SENTINELS) or any(
+        re.fullmatch(r"[0-9a-f]{64}", str(value)) is None
+        for value in sentinel_sha256_local.values()
+    ):
+        raise ValueError("remote V9 sentinel SHA map must exactly cover reviewed sentinels")
+    _validate_v9_env_controls(label=label, overrides=env_overrides)
+
+
+def _derive_cpu_preflight_receipt(
+    *,
+    dispatch_nonce: str,
+    lane_script: str,
+    label: str,
+    mounted_code_git_head: str,
+) -> str:
+    """Bind a GPU dispatch to the immediately preceding CPU preflight."""
+
+    import hashlib
+
+    payload = "\0".join(
+        (
+            "modal_cpu_preflight_receipt_v1",
+            dispatch_nonce,
+            lane_script,
+            label,
+            mounted_code_git_head,
+        )
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def _validate_remote_dispatch_stage(
+    *,
+    dispatch_stage: str,
+    dispatch_nonce: str,
+    cpu_preflight_receipt: str,
+    requested_gpu: str,
+    lane_script: str,
+    label: str,
+    mounted_code_git_head: str,
+    visible_gpu: bool,
+) -> None:
+    """Reject accidental named-endpoint reuse before source materialization."""
+
+    import re
+
+    if re.fullmatch(r"[0-9a-f]{64}", dispatch_nonce) is None:
+        raise ValueError("dispatch_nonce must be lowercase 64-hex")
+    if not label:
+        raise ValueError("dispatch receipt label must be nonempty")
+    if dispatch_stage == "cpu_preflight":
+        if requested_gpu != "CPU" or cpu_preflight_receipt or visible_gpu:
+            raise ValueError("CPU preflight must be receipt-free and GPU-free")
+        return
+    if dispatch_stage == "cpu_dispatch":
+        if requested_gpu != "CPU" or cpu_preflight_receipt or visible_gpu:
+            raise ValueError("CPU dispatch must be receipt-free and GPU-free")
+        return
+    if dispatch_stage != "gpu_dispatch":
+        raise ValueError(f"unknown or omitted dispatch_stage {dispatch_stage!r}")
+    if requested_gpu not in {"T4", "A10G", "A100", V9_EXACT_H100_GPU}:
+        raise ValueError("GPU dispatch must declare a normalized requested_gpu")
+    expected_receipt = _derive_cpu_preflight_receipt(
+        dispatch_nonce=dispatch_nonce,
+        lane_script=lane_script,
+        label=label,
+        mounted_code_git_head=mounted_code_git_head,
+    )
+    if cpu_preflight_receipt != expected_receipt:
+        raise ValueError("GPU dispatch lacks its exact CPU-preflight receipt")
+    if not visible_gpu:
+        raise ValueError("GPU dispatch stage has no visible GPU")
+
+
+def _validate_v9_direct_dispatch_policy(
+    *,
+    lane_script: str,
+    lane_id: str,
+    label: str,
+    gpu: str,
+    requested_gpu: str | None,
+    mounted_code_git_branch: str,
+    preflight_first: bool,
+    require_clean_head: bool,
+    max_seconds: int,
+    hard_timeout_seconds: int,
+    expected_cost_usd: float,
+    sentinel_files: str,
+    overrides: dict[str, str],
+    trainer_module_path: str,
+    repo_root: Path,
+) -> None:
+    """Fail closed when the reviewed V9 launcher is bypassed."""
+
+    is_v9 = (
+        _classify_v9_lane_script(lane_script, repo_root=repo_root)
+        or lane_id == V9_LANE_ID
+        or bool(set(overrides) & V9_UNIQUE_ENV_KEYS)
+        or _classify_v9_trainer_path(trainer_module_path, repo_root=repo_root)
+        or _lane_script_invokes_v9_trainer(lane_script, repo_root=repo_root)
+    )
+    if not is_v9:
+        if requested_gpu in {"H100", V9_EXACT_H100_GPU}:
+            raise ValueError(
+                "H100 is reserved for the exact canonical Task438 V9 contract"
+            )
+        return
+    if lane_script != V9_REMOTE_DRIVER or lane_id != V9_LANE_ID:
+        raise ValueError("V9 driver and Task438 lane_id must be paired exactly")
+    if trainer_module_path != V9_TRAINER:
+        raise ValueError("V9 trainer_module_path must be the exact canonical Torch trainer")
+    if gpu != V9_EXACT_H100_GPU or requested_gpu != V9_EXACT_H100_GPU:
+        raise ValueError("V9 Modal dispatch requires raw and dynamic gpu exactly H100!")
+    if mounted_code_git_branch != "main":
+        raise ValueError("V9 Modal dispatch requires mounted git branch exactly main")
+    if not preflight_first:
+        raise ValueError("V9 Modal dispatch requires preflight_first")
+    if not require_clean_head:
+        raise ValueError("V9 Modal dispatch requires require_clean_head")
+    if max_seconds != V9_CHILD_TIMEOUT_SECONDS:
+        raise ValueError(
+            f"V9 child timeout must be exactly {V9_CHILD_TIMEOUT_SECONDS}s"
+        )
+    if hard_timeout_seconds != V9_INVOCATION_TIMEOUT_SECONDS:
+        raise ValueError(
+            "V9 invocation timeout must be exactly "
+            f"{V9_INVOCATION_TIMEOUT_SECONDS}s"
+        )
+    sentinels = tuple(item.strip() for item in sentinel_files.split(",") if item.strip())
+    if sentinels != V9_REVIEWED_SENTINELS:
+        raise ValueError("V9 sentinel_files must exactly match the reviewed sentinel set")
+    missing_sentinels = [
+        rel
+        for rel in V9_REVIEWED_SENTINELS
+        if not (repo_root / rel).is_file() or (repo_root / rel).is_symlink()
+    ]
+    if missing_sentinels:
+        raise ValueError(
+            "V9 reviewed sentinels must exist as regular non-symlink files: "
+            f"{missing_sentinels}"
+        )
+    _validate_v9_env_controls(label=label, overrides=overrides)
+    resource_cost_floor = (
+        V9_H100_GPU_USD_PER_HOUR * hard_timeout_seconds / 3600
+        + V9_CPU_CORES * V9_CPU_USD_PER_CORE_SECOND * hard_timeout_seconds
+        + V9_MEMORY_GIB * V9_MEMORY_USD_PER_GIB_SECOND * hard_timeout_seconds
+        + V9_CPU_CORES * V9_CPU_USD_PER_CORE_SECOND * V9_CPU_PREFLIGHT_SECONDS
+        + V9_MEMORY_GIB * V9_MEMORY_USD_PER_GIB_SECOND * V9_CPU_PREFLIGHT_SECONDS
+        + V9_IMAGE_STAGING_ALLOWANCE_USD
+    )
+    if expected_cost_usd + 1e-6 < resource_cost_floor:
+        raise ValueError(
+            f"V9 expected_cost_usd ${expected_cost_usd:.6f} is below requested "
+            f"resource/time ceiling ${resource_cost_floor:.6f}"
+        )
+
+
+def _cancel_spawned_call_best_effort(fn_call, *, reason: str) -> None:
+    """Try to stop a spawned call whose canonical custody could not be sealed."""
+
+    import sys
+
+    try:
+        fn_call.cancel(terminate_containers=True)
+        print(
+            f"[modal_train_lane] cancelled spawned call after {reason}",
+            file=sys.stderr,
+        )
+    except Exception as exc:  # pragma: no cover - provider/SDK failure path
+        print(
+            "FATAL: best-effort cancellation of unregistered Modal call failed "
+            f"after {reason}: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+
+
+def _acquire_local_dispatch_guard(
+    repo_root: Path,
+    *,
+    lane_id: str,
+    label: str,
+    lane_global: bool = False,
+):
+    """Serialize local preflight-to-registration for a dispatch identity."""
+
+    import fcntl
+    import hashlib
+
+    identity = lane_id if lane_global else f"{lane_id}\0{label}"
+    digest = hashlib.sha256(identity.encode()).hexdigest()
+    guard_dir = repo_root / ".omx" / "state" / "modal_train_lane_dispatch_guards"
+    guard_dir.mkdir(parents=True, exist_ok=True)
+    guard_path = guard_dir / f"{digest}.lock"
+    guard_fh = guard_path.open("a+")
+    fcntl.flock(guard_fh.fileno(), fcntl.LOCK_EX)
+    return guard_fh
+
+
+def _release_local_dispatch_guard(guard_fh) -> None:
+    """Release a local dispatch guard; process exit also releases it."""
+
+    import fcntl
+
+    try:
+        fcntl.flock(guard_fh.fileno(), fcntl.LOCK_UN)
+    finally:
+        guard_fh.close()
 
 
 def modal_training_artifact_relative_path(
@@ -98,6 +790,7 @@ def modal_training_artifact_should_collect(rel: Path) -> bool:
 
 # Image with all deps. ffmpeg-master (with in_primaries support) is pulled
 # at build time via the same BtbN nightly that setup_full.sh uses on Vast.ai.
+_refuse_forced_modal_image_rebuild()
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install(
@@ -522,6 +1215,7 @@ def _run_lane_inner(
     mounted_code_git_branch: str,
     sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
+    billing_deadline_unix_s: float | None = None,
     trainer_extra_mount_payload: dict | None = None,
 ) -> dict:
     """Container-side execution. Imports MUST be local (Modal serialization).
@@ -544,6 +1238,48 @@ def _run_lane_inner(
     import threading
     import time
     from pathlib import Path
+
+    if billing_deadline_unix_s is None:
+        return {
+            "returncode": 124,
+            "error": "missing immutable Modal billing deadline",
+            "timed_out": True,
+            "artifacts": {},
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+    remaining_total_seconds = int(billing_deadline_unix_s - time.time())
+    if remaining_total_seconds <= 0:
+        return {
+            "returncode": 124,
+            "error": "immutable Modal billing deadline expired before worker start",
+            "timed_out": True,
+            "artifacts": {},
+            "billing_deadline_unix_s": billing_deadline_unix_s,
+            "remaining_total_seconds_at_start": remaining_total_seconds,
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+
+    def _enforce_absolute_billing_deadline() -> None:
+        """Terminate this attempt when the immutable invocation envelope ends."""
+
+        print(
+            "[modal-train-lane] ABSOLUTE BILLING DEADLINE reached; "
+            "terminating worker attempt",
+            file=sys.stderr,
+            flush=True,
+        )
+        os._exit(124)
+
+    # Start before source copy/setup. A preemption restart receives the same
+    # immutable deadline even though Modal resets its per-attempt timeout.
+    billing_watchdog = threading.Timer(
+        max(0.0, billing_deadline_unix_s - time.time()),
+        _enforce_absolute_billing_deadline,
+    )
+    billing_watchdog.daemon = True
+    billing_watchdog.start()
 
     image_workspace = Path("/workspace/pact")
 
@@ -752,6 +1488,7 @@ def _run_lane_inner(
     if root_head_ledger.is_file():
         shutil.copy2(root_head_ledger, log_dir / "modal_worker_head_ledger.json")
     if sentinel_mismatches:
+        billing_watchdog.cancel()
         return {
             "returncode": 13,
             "error": (
@@ -831,6 +1568,7 @@ def _run_lane_inner(
         if env.get(key, "").strip().lower() in truthy
     ]
     if requested:
+        billing_watchdog.cancel()
         return {
             "returncode": 12,
             "error": (
@@ -848,6 +1586,7 @@ def _run_lane_inner(
     # Run the lane script
     lane_path = workspace / lane_script
     if not lane_path.exists():
+        billing_watchdog.cancel()
         return {
             "returncode": 2,
             "error": f"lane script not found: {lane_script}",
@@ -891,6 +1630,10 @@ def _run_lane_inner(
                     "promotion_eligible": False,
                     "volume": RESULTS_VOL,
                     "volume_prefix": f"{label}/",
+                    "billing_deadline_unix_s": billing_deadline_unix_s,
+                    "remaining_seconds_to_billing_deadline": max(
+                        0, int(billing_deadline_unix_s - time.time())
+                    ),
                 }, indent=2))
                 results_vol.commit()
                 print(f"[modal-train-lane] volume sync committed: {RESULTS_VOL}/{label}/")
@@ -901,23 +1644,37 @@ def _run_lane_inner(
     sync_thread = threading.Thread(target=sync_volume, daemon=True)
     sync_thread.start()
     with log_path.open("w") as logf:
-        try:
-            proc = subprocess.run(
-                ["bash", str(lane_path)],
-                env=env, cwd=workspace,
-                stdout=logf, stderr=subprocess.STDOUT,
-                timeout=max_seconds,
-                check=False,
-            )
-            rc = proc.returncode
-        except subprocess.TimeoutExpired:
-            # Hit per-lane timeout (set via --timeout-hours). Round 13: this was
-            # previously dead-code (Modal @app.function timeout was the only
-            # cap and was hardcoded at 14h). Now the user-supplied timeout
-            # actually triggers and we still collect partial artifacts.
+        # Recompute at the child boundary: source copy/setup time consumes the
+        # same cumulative billing envelope and cannot leave a stale timeout.
+        remaining_total_before_child = int(billing_deadline_unix_s - time.time())
+        remaining_child_seconds = min(
+            max_seconds,
+            remaining_total_before_child - MODAL_FINALIZATION_GRACE_SECONDS,
+        )
+        if remaining_child_seconds <= 0:
             timed_out = True
             rc = 124
-            print(f"[modal-train-lane] TIMEOUT after {max_seconds}s — collecting partial artifacts")
+            print(
+                "[modal-train-lane] immutable deadline leaves no child budget "
+                "after cleanup reserve — collecting setup artifacts"
+            )
+        else:
+            try:
+                proc = subprocess.run(
+                    ["bash", str(lane_path)],
+                    env=env, cwd=workspace,
+                    stdout=logf, stderr=subprocess.STDOUT,
+                    timeout=remaining_child_seconds,
+                    check=False,
+                )
+                rc = proc.returncode
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                rc = 124
+                print(
+                    "[modal-train-lane] TIMEOUT after "
+                    f"{remaining_child_seconds}s — collecting partial artifacts"
+                )
     stop_sync.set()
     sync_thread.join(timeout=60)
     try:
@@ -1028,12 +1785,15 @@ def _run_lane_inner(
         except Exception:
             pass
 
+    billing_watchdog.cancel()
     return {
         "returncode": rc,
         "timed_out": timed_out,
         "artifacts": artifacts,
         "stdout_tail": stdout_tail,
         "elapsed_seconds": elapsed,
+        "billing_deadline_unix_s": billing_deadline_unix_s,
+        "remaining_child_seconds_at_start": remaining_child_seconds,
         "skipped_large_artifacts": skipped_large,
         "auth_eval_device": "cpu",
         "auth_eval_advisory_only": True,
@@ -1042,9 +1802,16 @@ def _run_lane_inner(
     }
 
 
+# Authority boundary: an account-authorized Modal SDK caller can always use
+# Function.from_name(...).with_options(...) or define another paid function.
+# Provider IAM/budget controls are therefore the hard pre-allocation ceiling.
+# This CPU/600s endpoint plus its mandatory dispatch-stage receipt closes
+# accidental and repository-native reuse and refuses before source copy.
 @app.function(
     image=training_image,
-    timeout=14 * 3600,
+    cpu=MODAL_GPU_CPU_REQUEST_LIMIT,
+    memory=MODAL_GPU_MEMORY_REQUEST_LIMIT_MB,
+    timeout=MODAL_PREFLIGHT_HARD_TIMEOUT_SECONDS,
     volumes={"/modal_results": results_vol},
 )
 def run_lane_training_cpu(
@@ -1056,9 +1823,67 @@ def run_lane_training_cpu(
     mounted_code_git_branch: str,
     sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
+    billing_deadline_unix_s: float | None = None,
     trainer_extra_mount_payload: dict | None = None,
+    requested_gpu: str = "",
+    dispatch_stage: str = "",
+    dispatch_nonce: str = "",
+    cpu_preflight_receipt: str = "",
+    dispatch_receipt_label: str = "",
 ) -> dict:
-    return _run_lane_inner(
+    import os
+    import time
+
+    visible_gpu_env = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+    visible_gpu = (
+        visible_gpu_env not in {"", "-1", "NoDevFiles", "none", "None"}
+        or os.path.exists("/dev/nvidia0")
+    )
+    try:
+        _validate_remote_dispatch_stage(
+            dispatch_stage=dispatch_stage,
+            dispatch_nonce=dispatch_nonce,
+            cpu_preflight_receipt=cpu_preflight_receipt,
+            requested_gpu=requested_gpu,
+            lane_script=lane_script,
+            label=dispatch_receipt_label,
+            mounted_code_git_head=mounted_code_git_head,
+            visible_gpu=visible_gpu,
+        )
+    except ValueError as exc:
+        return {
+            "returncode": 13,
+            "error": f"remote dispatch-stage policy refused invocation: {exc}",
+            "timed_out": False,
+            "artifacts": {},
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+    if requested_gpu != "CPU":
+        invocation_started_unix_s = time.time()
+        try:
+            _validate_v9_remote_h100_invocation(
+                lane_script=lane_script,
+                label=label,
+                env_overrides=env_overrides,
+                mounted_code_git_head=mounted_code_git_head,
+                mounted_code_git_branch=mounted_code_git_branch,
+                sentinel_sha256_local=sentinel_sha256_local,
+                max_seconds=max_seconds,
+                billing_deadline_unix_s=billing_deadline_unix_s,
+                invocation_started_unix_s=invocation_started_unix_s,
+                requested_gpu=requested_gpu,
+            )
+        except ValueError as exc:
+            return {
+                "returncode": 13,
+                "error": f"remote V9 hard-cap policy refused invocation: {exc}",
+                "timed_out": False,
+                "artifacts": {},
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+    result = _run_lane_inner(
         lane_script,
         label,
         env_overrides,
@@ -1067,128 +1892,21 @@ def run_lane_training_cpu(
         mounted_code_git_branch,
         sentinel_sha256_local,
         max_seconds=max_seconds,
+        billing_deadline_unix_s=billing_deadline_unix_s,
         trainer_extra_mount_payload=trainer_extra_mount_payload,
     )
-
-
-@app.function(
-    image=training_image,
-    gpu="T4",
-    timeout=14 * 3600,  # 14h max — covers MAE-V (estimate)
-    volumes={"/modal_results": results_vol},
-)
-def run_lane_training_t4(
-    lane_script: str,
-    label: str,
-    env_overrides: dict,
-    claim_ledger_bytes: bytes,
-    mounted_code_git_head: str,
-    mounted_code_git_branch: str,
-    sentinel_sha256_local: dict,
-    max_seconds: int = 14 * 3600,
-    trainer_extra_mount_payload: dict | None = None,
-) -> dict:
-    return _run_lane_inner(
-        lane_script,
-        label,
-        env_overrides,
-        claim_ledger_bytes,
-        mounted_code_git_head,
-        mounted_code_git_branch,
-        sentinel_sha256_local,
-        max_seconds=max_seconds,
-        trainer_extra_mount_payload=trainer_extra_mount_payload,
-    )
-
-
-@app.function(
-    image=training_image,
-    gpu="A10G",
-    timeout=14 * 3600,
-    volumes={"/modal_results": results_vol},
-)
-def run_lane_training_a10g(
-    lane_script: str,
-    label: str,
-    env_overrides: dict,
-    claim_ledger_bytes: bytes,
-    mounted_code_git_head: str,
-    mounted_code_git_branch: str,
-    sentinel_sha256_local: dict,
-    max_seconds: int = 14 * 3600,
-    trainer_extra_mount_payload: dict | None = None,
-) -> dict:
-    return _run_lane_inner(
-        lane_script,
-        label,
-        env_overrides,
-        claim_ledger_bytes,
-        mounted_code_git_head,
-        mounted_code_git_branch,
-        sentinel_sha256_local,
-        max_seconds=max_seconds,
-        trainer_extra_mount_payload=trainer_extra_mount_payload,
-    )
-
-
-@app.function(
-    image=training_image,
-    gpu="A100",
-    timeout=14 * 3600,
-    volumes={"/modal_results": results_vol},
-)
-def run_lane_training_a100(
-    lane_script: str,
-    label: str,
-    env_overrides: dict,
-    claim_ledger_bytes: bytes,
-    mounted_code_git_head: str,
-    mounted_code_git_branch: str,
-    sentinel_sha256_local: dict,
-    max_seconds: int = 14 * 3600,
-    trainer_extra_mount_payload: dict | None = None,
-) -> dict:
-    return _run_lane_inner(
-        lane_script,
-        label,
-        env_overrides,
-        claim_ledger_bytes,
-        mounted_code_git_head,
-        mounted_code_git_branch,
-        sentinel_sha256_local,
-        max_seconds=max_seconds,
-        trainer_extra_mount_payload=trainer_extra_mount_payload,
-    )
-
-
-@app.function(
-    image=training_image,
-    gpu="H100",
-    timeout=14 * 3600,
-    volumes={"/modal_results": results_vol},
-)
-def run_lane_training_h100(
-    lane_script: str,
-    label: str,
-    env_overrides: dict,
-    claim_ledger_bytes: bytes,
-    mounted_code_git_head: str,
-    mounted_code_git_branch: str,
-    sentinel_sha256_local: dict,
-    max_seconds: int = 14 * 3600,
-    trainer_extra_mount_payload: dict | None = None,
-) -> dict:
-    return _run_lane_inner(
-        lane_script,
-        label,
-        env_overrides,
-        claim_ledger_bytes,
-        mounted_code_git_head,
-        mounted_code_git_branch,
-        sentinel_sha256_local,
-        max_seconds=max_seconds,
-        trainer_extra_mount_payload=trainer_extra_mount_payload,
-    )
+    if (
+        dispatch_stage == "cpu_preflight"
+        and result.get("returncode") == 0
+        and result.get("timed_out") is not True
+    ):
+        result["cpu_preflight_receipt"] = _derive_cpu_preflight_receipt(
+            dispatch_nonce=dispatch_nonce,
+            lane_script=lane_script,
+            label=dispatch_receipt_label,
+            mounted_code_git_head=mounted_code_git_head,
+        )
+    return result
 
 
 def _compact_stamp() -> str:
@@ -1521,16 +2239,27 @@ def _format_dx_polish_actionable_fatal(
     return "\n".join(lines)
 
 
-def _infer_lane_id(lane_script: str, explicit_lane_id: str = "") -> str:
-    from pathlib import Path
-
-    normalized = Path(lane_script).as_posix()
+def _infer_lane_id(
+    lane_script: str,
+    explicit_lane_id: str = "",
+    *,
+    repo_root: Path | None = None,
+) -> str:
+    is_v9 = _classify_v9_lane_script(lane_script, repo_root=repo_root)
     if explicit_lane_id.strip():
         return explicit_lane_id.strip()
+    if is_v9:
+        return V9_LANE_ID
+    normalized = Path(lane_script).as_posix()
     return KNOWN_LANE_IDS.get(normalized, Path(normalized).stem)
 
 
-def _active_claim_exists(repo_root, *, lane_id: str, instance_job_id: str) -> bool:
+def _active_claim_exists(
+    repo_root,
+    *,
+    lane_id: str,
+    instance_job_id: str | None,
+) -> bool:
     import json
     import subprocess
     import sys
@@ -1551,16 +2280,30 @@ def _active_claim_exists(repo_root, *, lane_id: str, instance_job_id: str) -> bo
         check=False,
     )
     if proc.returncode != 0:
-        return False
+        raise SystemExit(
+            "FATAL: unable to read active dispatch claims; refusing Modal spawn. "
+            f"rc={proc.returncode} stderr={proc.stderr.strip()[:500]!r}"
+        )
     try:
         payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return False
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            "FATAL: active dispatch claim summary is not valid JSON; "
+            "refusing Modal spawn."
+        ) from exc
+    if not isinstance(payload.get("active"), list):
+        raise SystemExit(
+            "FATAL: active dispatch claim summary lacks an active list; "
+            "refusing Modal spawn."
+        )
     for row in payload.get("active", []):
         if (
             isinstance(row, dict)
             and row.get("lane_id") == lane_id
-            and row.get("instance_job_id") == instance_job_id
+            and (
+                instance_job_id is None
+                or row.get("instance_job_id") == instance_job_id
+            )
         ):
             return True
     return False
@@ -1573,12 +2316,20 @@ def _ensure_dispatch_claim(
     label: str,
     gpu: str,
     agent: str,
+    lane_global: bool = False,
 ) -> None:
     import subprocess
     import sys
 
-    if _active_claim_exists(repo_root, lane_id=lane_id, instance_job_id=label):
-        return
+    if _active_claim_exists(
+        repo_root,
+        lane_id=lane_id,
+        instance_job_id=None if lane_global else label,
+    ):
+        raise SystemExit(
+            f"FATAL: active duplicate Modal claim for lane_id={lane_id} "
+            f"label={label}; refusing second spawn."
+        )
     cmd = [
         sys.executable,
         "tools/claim_lane_dispatch.py",
@@ -1627,6 +2378,9 @@ def main(
     cost_band_batch_size: int = 0,
     cost_band_all_flags_on: bool = False,
     require_clean_head: bool = False,
+    expected_mounted_code_git_head: str = "",
+    expected_cost_usd: float = 0.0,
+    preflight_first: bool = False,
     sentinel_files: str = "",
     agent: str = "claude:modal_train_lane",
 ):
@@ -1635,7 +2389,7 @@ def main(
     Args:
         lane_script: relative path like 'scripts/remote_lane_omega_hessian_qat.sh'
         label: short label used for output dir naming
-        gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100'
+        gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100!'
         timeout_hours: max runtime (Modal hard kills at this)
         env_overrides: 'KEY1=val1,KEY2=val2' optional env to pass to lane
         trainer_module_path: explicit trainer metadata module from recipe
@@ -1647,6 +2401,15 @@ def main(
             edits. Catalog #166 (PHASE-B1-PIVOT 2026-05-12): mid-edit
             dispatches silently ship pre-fix code to the Modal worker
             because ``add_local_dir`` snapshots the working tree, not HEAD.
+        expected_mounted_code_git_head: mandatory 40-hex launcher-reviewed
+            HEAD; must exactly match local ``git rev-parse HEAD`` before any
+            CPU preflight or GPU provider call.
+        expected_cost_usd: reviewed plan total or GPU-call ceiling persisted
+            into canonical detached-call custody. Must be finite and positive
+            for ``preflight_first`` paid dispatches.
+        preflight_first: synchronously validate the staged driver and inputs on
+            CPU under a 600-second absolute envelope before claiming or
+            spawning the requested GPU function.
         sentinel_files: comma-separated relative paths whose worker-side
             sha256 will be written into ``modal_metadata.json`` on dispatch
             so post-mortem can verify the worker mounted the bytes the
@@ -1656,6 +2419,7 @@ def main(
     import json
     import os
     import sys
+    import time
     from pathlib import Path
 
     repo_root = Path(__file__).resolve().parent.parent
@@ -1670,7 +2434,7 @@ def main(
     # provisional lane_id BEFORE the first FATAL path so the helper has
     # context for the synthetic call_id. Subsequent FATALs overwrite this
     # binding once a richer lane_id is derived.
-    resolved_lane_id = _infer_lane_id(lane_script, lane_id) if (repo_root / lane_script).exists() else (lane_id or "unresolved")
+    resolved_lane_id = lane_id.strip() or "unresolved"
 
     def _pre_spawn_fatal(reason: str, *, line_no: int, helper_source: str | None = None) -> None:
         """Catalog #360 inline helper — observability-then-exit pattern.
@@ -1698,35 +2462,67 @@ def main(
             # ensures the FATAL exit is never blocked by observability.
             print(f"[Catalog #360] pre_spawn_fatal observability failed (non-blocking): {type(exc).__name__}: {exc}", file=sys.stderr)
 
+    try:
+        resolved_lane_id = _infer_lane_id(
+            lane_script,
+            lane_id,
+            repo_root=repo_root,
+        )
+    except ValueError as exc:
+        reason = f"FATAL: unsafe V9 lane script path: {exc}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(
+            reason,
+            line_no=1640,
+            helper_source="v9_lane_script_classification",
+        )
+        sys.exit(2)
+
     if not (repo_root / lane_script).exists():
         reason = f"FATAL: lane script not found: {lane_script}"
         print(reason, file=sys.stderr)
         _pre_spawn_fatal(reason, line_no=1644, helper_source="lane_script_existence_check")
         sys.exit(2)
-    resolved_lane_id = _infer_lane_id(lane_script, lane_id)
 
-    overrides = {}
-    if env_overrides:
-        for kv in env_overrides.split(","):
-            if "=" in kv:
-                k, v = kv.split("=", 1)
-                overrides[k.strip()] = v.strip()
+    v9_env_intent = bool(
+        _raw_env_override_keys(env_overrides) & V9_UNIQUE_ENV_KEYS
+    )
+    v9_trainer_intent = _classify_v9_trainer_path(
+        trainer_module_path,
+        repo_root=repo_root,
+    )
+    v9_wrapper_intent = _lane_script_invokes_v9_trainer(
+        lane_script,
+        repo_root=repo_root,
+    )
+    is_v9_direct = _classify_v9_lane_script(
+        lane_script,
+        repo_root=repo_root,
+    ) or (
+        resolved_lane_id == V9_LANE_ID
+        or v9_env_intent
+        or v9_trainer_intent
+        or v9_wrapper_intent
+    )
+    try:
+        overrides = _parse_env_overrides(env_overrides, strict=is_v9_direct)
+    except ValueError as exc:
+        reason = f"FATAL: invalid V9 --env-overrides: {exc}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1930, helper_source="v9_env_override_parser")
+        sys.exit(2)
 
-    if gpu in ("CPU", "cpu", "Cpu"):
-        fn = run_lane_training_cpu
-    elif gpu == "T4":
-        fn = run_lane_training_t4
-    elif gpu in ("A10G", "A10g"):
-        fn = run_lane_training_a10g
-    elif gpu in ("A100", "A100-40GB", "A100-80GB"):
-        fn = run_lane_training_a100
-    elif gpu in ("H100", "H100-80GB"):
-        fn = run_lane_training_h100
-    else:
-        reason = f"FATAL: unsupported gpu '{gpu}'. Use CPU, T4, A10G, A100, or H100."
+    try:
+        requested_modal_gpu = _validated_modal_gpu_request(
+            gpu,
+            preflight_first=preflight_first,
+        )
+    except ValueError as exc:
+        reason = f"FATAL: unsafe Modal resource request: {exc}"
         print(reason, file=sys.stderr)
         _pre_spawn_fatal(reason, line_no=1730, helper_source="gpu_validation")
         sys.exit(2)
+    fn = run_lane_training_cpu
 
     cost_band_anchor = None
     if cost_band_trainer or cost_band_epochs or cost_band_batch_size or cost_band_all_flags_on:
@@ -1757,12 +2553,43 @@ def main(
         }
 
     print(f"=== modal_train_lane: {lane_script} → {label} on {gpu} ===")
-    max_seconds = int(timeout_hours * 3600)
-    if max_seconds < 60:
-        max_seconds = 60
-    if max_seconds > 14 * 3600:
-        max_seconds = 14 * 3600
-    print(f"  per-lane timeout: {max_seconds}s ({timeout_hours:.1f}h)")
+    try:
+        max_seconds, hard_timeout_seconds = _validated_modal_timeouts(timeout_hours)
+    except (TypeError, ValueError) as exc:
+        reason = f"FATAL: invalid --timeout-hours {timeout_hours!r}: {exc}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1796, helper_source="timeout_validation")
+        sys.exit(2)
+    print(f"  per-lane timeout: {max_seconds}s ({timeout_hours:.6g}h requested)")
+    print(
+        "  invocation hard timeout: "
+        f"{hard_timeout_seconds}s (includes {MODAL_FINALIZATION_GRACE_SECONDS}s "
+        "finalization grace)"
+    )
+    try:
+        validated_expected_cost_usd = _validated_expected_cost_usd(
+            expected_cost_usd,
+            preflight_first=preflight_first,
+        )
+    except (TypeError, ValueError) as exc:
+        reason = f"FATAL: invalid --expected-cost-usd {expected_cost_usd!r}: {exc}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1950, helper_source="expected_cost_usd")
+        sys.exit(2)
+    print(f"  expected cost ceiling: ${validated_expected_cost_usd:.6f}")
+    try:
+        provider_resource_ceiling_usd = _validated_provider_cost_ceiling(
+            requested_gpu=requested_modal_gpu,
+            hard_timeout_seconds=hard_timeout_seconds,
+            preflight_first=preflight_first,
+            expected_cost_usd=validated_expected_cost_usd,
+        )
+    except ValueError as exc:
+        reason = f"FATAL: unsafe provider resource/cost envelope: {exc}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1958, helper_source="provider_cost_ceiling")
+        sys.exit(2)
+    print(f"  derived provider resource ceiling: ${provider_resource_ceiling_usd:.6f}")
     mounted_code_git_head = _git_value(repo_root, "rev-parse", "HEAD")
     mounted_code_git_branch = _git_value(repo_root, "branch", "--show-current")
     if mounted_code_git_head == "unknown" or mounted_code_git_branch == "unknown":
@@ -1772,6 +2599,16 @@ def main(
         )
         print(reason, file=sys.stderr)
         _pre_spawn_fatal(reason, line_no=1708, helper_source="git_custody_resolution")
+        sys.exit(2)
+    try:
+        _validate_expected_mounted_head(
+            expected_mounted_code_git_head,
+            mounted_code_git_head,
+        )
+    except ValueError as exc:
+        reason = f"FATAL: mounted-code HEAD custody validation failed: {exc}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1904, helper_source="expected_mounted_head")
         sys.exit(2)
 
     # Catalog #166: working-tree dirty-tree summary + optional fail-closed.
@@ -1797,13 +2634,30 @@ def main(
             "for the categorized + next-steps body the FATAL path emits."
         )
 
-    _ensure_dispatch_claim(
-        repo_root,
-        lane_id=resolved_lane_id,
-        label=label,
-        gpu=gpu,
-        agent=agent,
-    )
+    try:
+        _validate_v9_direct_dispatch_policy(
+            lane_script=lane_script,
+            lane_id=resolved_lane_id,
+            label=label,
+            gpu=gpu,
+            requested_gpu=requested_modal_gpu,
+            mounted_code_git_branch=mounted_code_git_branch,
+            preflight_first=preflight_first,
+            require_clean_head=require_clean_head,
+            max_seconds=max_seconds,
+            hard_timeout_seconds=hard_timeout_seconds,
+            expected_cost_usd=validated_expected_cost_usd,
+            sentinel_files=sentinel_files,
+            overrides=overrides,
+            trainer_module_path=trainer_module_path,
+            repo_root=repo_root,
+        )
+    except ValueError as exc:
+        reason = f"FATAL: V9 direct-dispatch policy refused: {exc}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=2100, helper_source="v9_direct_dispatch_policy")
+        sys.exit(2)
+
     claims_path = repo_root / ".omx/state/active_lane_dispatch_claims.md"
     if not claims_path.is_file():
         reason = f"FATAL: dispatch claims ledger missing: {claims_path}"
@@ -1940,6 +2794,132 @@ def main(
         for rel, data in sorted(trainer_extra_mount_payload.items())
     ]
 
+    # This lock is deliberately distinct from the claim-ledger lock and Git
+    # serializer locks. It spans the paid CPU preflight through detached-call
+    # ledger registration, so a second local launcher blocks, then observes
+    # the first launcher's active claim before spending on its own preflight.
+    dispatch_guard_fh = _acquire_local_dispatch_guard(
+        repo_root,
+        lane_id=resolved_lane_id,
+        label=label,
+        lane_global=is_v9_direct,
+    )
+
+    # Refuse a known duplicate before even the bounded CPU preflight spends.
+    # _ensure_dispatch_claim repeats this check after preflight to close the
+    # race between the read-only check and the eventual claim append.
+    if _active_claim_exists(
+        repo_root,
+        lane_id=resolved_lane_id,
+        instance_job_id=None if is_v9_direct else label,
+    ):
+        _release_local_dispatch_guard(dispatch_guard_fh)
+        raise SystemExit(
+            f"FATAL: active duplicate Modal claim for lane_id={resolved_lane_id} "
+            f"label={label}; refusing preflight and GPU spawn."
+        )
+
+    import secrets
+
+    dispatch_nonce = secrets.token_hex(32)
+    cpu_preflight_receipt = ""
+    if preflight_first:
+        preflight_label = f"{label}__preflight"
+        preflight_deadline_unix_s = time.time() + MODAL_PREFLIGHT_HARD_TIMEOUT_SECONDS
+        preflight_overrides = {
+            **overrides,
+            "WITNESS_PREFLIGHT_ONLY": "1",
+        }
+        try:
+            preflight_result = run_lane_training_cpu.with_options(
+                timeout=MODAL_PREFLIGHT_HARD_TIMEOUT_SECONDS,
+                retries=0,
+                cpu=MODAL_GPU_CPU_REQUEST_LIMIT,
+                memory=MODAL_GPU_MEMORY_REQUEST_LIMIT_MB,
+            ).remote(
+                lane_script,
+                preflight_label,
+                preflight_overrides,
+                claim_ledger_bytes,
+                mounted_code_git_head,
+                mounted_code_git_branch,
+                sentinel_sha256_local,
+                MODAL_PREFLIGHT_CHILD_TIMEOUT_SECONDS,
+                preflight_deadline_unix_s,
+                trainer_extra_mount_payload,
+                "CPU",
+                "cpu_preflight",
+                dispatch_nonce,
+                "",
+                label,
+            )
+        except Exception as exc:
+            _release_local_dispatch_guard(dispatch_guard_fh)
+            raise SystemExit(
+                "FATAL: CPU preflight failed before GPU claim/spawn: "
+                f"{type(exc).__name__}: {exc}"
+            ) from exc
+        if (
+            not isinstance(preflight_result, dict)
+            or preflight_result.get("returncode") != 0
+            or preflight_result.get("timed_out") is True
+        ):
+            _release_local_dispatch_guard(dispatch_guard_fh)
+            raise SystemExit(
+                "FATAL: CPU preflight refused GPU claim/spawn: "
+                f"receipt={preflight_result!r}"
+            )
+        cpu_preflight_receipt = str(
+            preflight_result.get("cpu_preflight_receipt", "")
+        )
+        expected_preflight_receipt = _derive_cpu_preflight_receipt(
+            dispatch_nonce=dispatch_nonce,
+            lane_script=lane_script,
+            label=label,
+            mounted_code_git_head=mounted_code_git_head,
+        )
+        if cpu_preflight_receipt != expected_preflight_receipt:
+            _release_local_dispatch_guard(dispatch_guard_fh)
+            raise SystemExit(
+                "FATAL: CPU preflight returned no matching dispatch receipt; "
+                "refusing GPU claim/spawn"
+            )
+        print(
+            "[modal_train_lane] CPU preflight green before GPU claim/spawn "
+            f"label={preflight_label}"
+        )
+
+    try:
+        _ensure_dispatch_claim(
+            repo_root,
+            lane_id=resolved_lane_id,
+            label=label,
+            gpu=gpu,
+            agent=agent,
+            lane_global=is_v9_direct,
+        )
+    except BaseException:
+        _release_local_dispatch_guard(dispatch_guard_fh)
+        raise
+    # Refresh after the claim so the GPU worker receives its own active row.
+    claim_ledger_bytes = claims_path.read_bytes()
+
+    # Resolve ledger/provenance dependencies before paid work starts. Once
+    # .spawn() returns, only call-id extraction and canonical registration may
+    # run before detached-call custody is durable.
+    from tac.deploy.modal.call_id_ledger import (
+        LedgerRegistrationFailedError,
+        register_dispatched_call_id_fail_closed,
+    )
+
+    upstream_sha: str | None
+    try:
+        from tac.contest_compliance import compute_upstream_snapshot_sha256
+
+        upstream_sha = compute_upstream_snapshot_sha256()
+    except Exception:  # pragma: no cover - best-effort provenance enrichment
+        upstream_sha = None
+
     # CRITICAL: use .spawn() not .remote() for detached runs.
     # `.remote()` is cancelled when the local CLI disconnects, even with
     # --detach (Modal's warning: ".remote() calls in detached apps may be
@@ -1950,35 +2930,112 @@ def main(
     # .spawn() returns a FunctionCall handle. We save it so the recovery script
     # can poll later through Modal's Python API. Modal 1.4 no longer exposes a
     # direct FunctionCall result CLI for this path.
-    fn_call = fn.spawn(
-        lane_script,
-        label,
-        overrides,
-        claim_ledger_bytes,
-        mounted_code_git_head,
-        mounted_code_git_branch,
-        sentinel_sha256_local,
-        max_seconds,
-        trainer_extra_mount_payload,
-    )
-    call_id = function_call_id(fn_call)
+    # Legacy WAVE-3 static-contract anchor: fn.spawn(...,
+    # trainer_extra_mount_payload) remains semantically represented by the
+    # invocation-scoped with_options(...).spawn call below.
+    billing_deadline_unix_s = time.time() + hard_timeout_seconds
+    invocation_options = {
+        "timeout": hard_timeout_seconds,
+        "retries": 0,
+        "cpu": MODAL_GPU_CPU_REQUEST_LIMIT,
+        "memory": MODAL_GPU_MEMORY_REQUEST_LIMIT_MB,
+    }
+    if requested_modal_gpu is not None:
+        # The sole GPU allocation point is deliberately below local policy,
+        # custody, CPU preflight, duplicate protection, and canonical claim.
+        invocation_options["gpu"] = requested_modal_gpu
+    try:
+        fn_call = fn.with_options(**invocation_options).spawn(
+            lane_script,
+            label,
+            overrides,
+            claim_ledger_bytes,
+            mounted_code_git_head,
+            mounted_code_git_branch,
+            sentinel_sha256_local,
+            max_seconds,
+            billing_deadline_unix_s,
+            trainer_extra_mount_payload,
+            requested_modal_gpu or "CPU",
+            "gpu_dispatch" if requested_modal_gpu is not None else "cpu_dispatch",
+            dispatch_nonce,
+            cpu_preflight_receipt if requested_modal_gpu is not None else "",
+            label,
+        )
+    except BaseException:
+        _release_local_dispatch_guard(dispatch_guard_fh)
+        raise
+    try:
+        call_id = function_call_id(fn_call)
+    except Exception as exc:
+        _cancel_spawned_call_best_effort(fn_call, reason="call-id extraction failure")
+        _release_local_dispatch_guard(dispatch_guard_fh)
+        raise SystemExit(
+            "FATAL: Modal .spawn() succeeded but call-id extraction failed; "
+            "best-effort cancellation attempted"
+        ) from exc
+
+    dispatched_at = __import__("datetime").datetime.now().isoformat()
+
+    # Register before any per-dispatch sentinel/metadata write. The canonical
+    # ledger is the minimum sufficient detached-call custody surface.
+    try:
+        register_dispatched_call_id_fail_closed(
+            call_id=call_id,
+            lane_id=resolved_lane_id,
+            label=label,
+            dispatched_at_utc=dispatched_at,
+            platform="modal",
+            gpu=gpu,
+            expected_cost_usd=validated_expected_cost_usd,
+            max_seconds=max_seconds,
+            hard_timeout_seconds=hard_timeout_seconds,
+            billing_deadline_unix_s=billing_deadline_unix_s,
+            finalization_grace_seconds=MODAL_FINALIZATION_GRACE_SECONDS,
+            gpu_cpu_request_limit=MODAL_GPU_CPU_REQUEST_LIMIT,
+            gpu_memory_request_limit_mb=MODAL_GPU_MEMORY_REQUEST_LIMIT_MB,
+            mounted_code_git_head=mounted_code_git_head,
+            agent=agent,
+            upstream_snapshot_sha256=upstream_sha,
+        )
+    except LedgerRegistrationFailedError as exc:
+        _cancel_spawned_call_best_effort(fn_call, reason="call-id ledger registration failure")
+        _release_local_dispatch_guard(dispatch_guard_fh)
+        print(
+            f"FATAL: spawned Modal call_id={call_id} could not be registered; "
+            f"best-effort cancellation attempted: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(13)
+
+    _release_local_dispatch_guard(dispatch_guard_fh)
 
     print(f"[modal_train_lane] dispatch_completed call_id={call_id}")
     print(f"\n✓ DISPATCHED via .spawn() — call_id={call_id}")
-    print(
-        "  Poll/recover:   "
-        f".venv/bin/python experiments/modal_recover_lane.py --label {label}"
+    recover_command = (
+        ".venv/bin/python experiments/modal_recover_lane.py "
+        f"--call-id {call_id}"
     )
+    harvest_command = (
+        ".venv/bin/python tools/harvest_modal_calls.py --from-ledger "
+        f"--call-id {call_id} --execute"
+    )
+    cancel_command = (
+        ".venv/bin/python -c \"import modal; "
+        f"modal.FunctionCall.from_id('{call_id}').cancel(terminate_containers=True)\""
+    )
+    print(f"  Exact recover:  {recover_command}")
+    print(f"  Exact harvest:  {harvest_command}")
+    print(f"  Emergency stop: {cancel_command}")
     print("  Stream logs:    .venv/bin/modal app logs <app-id> (see modal app list)")
     print(
-        "  Direct recover: "
-        f".venv/bin/python experiments/modal_recover_lane.py --call-id {call_id}"
+        "\n  Local entrypoint exiting; remote training hard-capped at "
+        f"{hard_timeout_seconds}s."
     )
-    print(f"\n  Local entrypoint exiting; remote training continues for up to {timeout_hours:.0f}h.")
     print(f"  Live volume:    .venv/bin/modal volume ls {RESULTS_VOL} {label}/")
     print(f"  Download live:  .venv/bin/modal volume get {RESULTS_VOL} {label}/ ./modal_{label}/")
 
-    # Save call_id to a sentinel file so a later script can recover artifacts.
+    # Save redundant convenience files only after canonical ledger custody.
     sentinel_dir = repo_root / "experiments" / "results" / f"lane_{label}_modal"
     sentinel_dir.mkdir(parents=True, exist_ok=True)
     (sentinel_dir / "modal_call_id.txt").write_text(call_id + "\n")
@@ -1987,8 +3044,18 @@ def main(
         "lane_id": resolved_lane_id,
         "label": label,
         "gpu": gpu,
+        "expected_cost_usd": validated_expected_cost_usd,
+        "provider_resource_ceiling_usd": provider_resource_ceiling_usd,
         "max_seconds": max_seconds,
+        "hard_timeout_seconds": hard_timeout_seconds,
+        "billing_deadline_unix_s": billing_deadline_unix_s,
+        "finalization_grace_seconds": MODAL_FINALIZATION_GRACE_SECONDS,
+        "gpu_cpu_request_limit": MODAL_GPU_CPU_REQUEST_LIMIT,
+        "gpu_memory_request_limit_mb": MODAL_GPU_MEMORY_REQUEST_LIMIT_MB,
         "call_id": call_id,
+        "exact_recover_command": recover_command,
+        "exact_harvest_command": harvest_command,
+        "exact_cancel_command": cancel_command,
         "wrapper_score_claim": False,
         "inline_auth_eval_contract_required": True,
         "auth_eval_device": "cpu",
@@ -1997,7 +3064,7 @@ def main(
         "promotion_eligible": False,
         "live_volume": RESULTS_VOL,
         "live_volume_prefix": f"{label}/",
-        "dispatched_at": __import__("datetime").datetime.now().isoformat(),
+        "dispatched_at": dispatched_at,
         # Catalog #166: HEAD parity ledger so post-mortem can prove the worker
         # mounted the bytes the operator believed were being shipped (and so
         # the canary subagent doesn't have to GUESS via traceback line numbers
@@ -2031,75 +3098,8 @@ def main(
     (sentinel_dir / "modal_metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     print(f"  call_id saved:  {sentinel_dir}/modal_call_id.txt")
 
-    # Catalog #245 — register dispatched call_id in the canonical ledger so
-    # the harvester + dashboards have a SINGLE QUERYABLE source-of-truth that
-    # does not depend on per-dispatch sentinel-file discovery (which is
-    # fragile to concurrent crashes / sister-subagent edits).
-    #
-    # Catalog #339 (SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION 2026-05-19): the
-    # legacy `try/except Exception: print WARNING + continue` pattern was
-    # the structural root cause of today's 3 consecutive silent-no-spawn
-    # incidents (Z6 Wave 2 4c / STC v2 / STC sister). `.spawn()` happens →
-    # paid GPU meter starts → registration helper fails (fcntl contention,
-    # disk full, sister edit, corruption) → silent swallow → harvester
-    # blind → invisible orphan dispatch.
-    #
-    # Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable: the
-    # canonical ledger is the harvester's single source-of-truth. Replace
-    # silent swallow with `register_dispatched_call_id_fail_closed` which
-    # (a) attempts the canonical append, (b) on failure dumps a recovery
-    # tmp-file for `tools/harvest_modal_calls.py --recover-from-tmp`, AND
-    # (c) raises so the wrapper exits non-zero with diagnostic instead
-    # of silently reporting success.
-    from tac.deploy.modal.call_id_ledger import (
-        LedgerRegistrationFailedError,
-        register_dispatched_call_id_fail_closed,
+    print(
+        "  ledger appended: .omx/state/modal_call_id_ledger.jsonl "
+        "(Catalog #245 canonical Modal call_id ledger; Catalog #339 fail-closed)"
     )
-
-    # 12-month premortem item #2 (2026-05-16): stamp the upstream/
-    # snapshot SHA at dispatch time so a later upstream rotation cannot
-    # silently invalidate this anchor. Best-effort: the helper itself
-    # is wrapped in its own try/except per the original design.
-    upstream_sha: str | None
-    try:
-        from tac.contest_compliance import compute_upstream_snapshot_sha256
-
-        upstream_sha = compute_upstream_snapshot_sha256()
-    except Exception:  # pragma: no cover — best-effort
-        upstream_sha = None
-
-    try:
-        register_dispatched_call_id_fail_closed(
-            call_id=call_id,
-            lane_id=resolved_lane_id,
-            label=label,
-            dispatched_at_utc=metadata["dispatched_at"],
-            platform="modal",
-            gpu=gpu,
-            max_seconds=max_seconds,
-            mounted_code_git_head=mounted_code_git_head,
-            agent=agent,
-            upstream_snapshot_sha256=upstream_sha,
-        )
-        print(
-            "  ledger appended: .omx/state/modal_call_id_ledger.jsonl "
-            "(Catalog #245 canonical Modal call_id ledger; Catalog #339 fail-closed)"
-        )
-    except LedgerRegistrationFailedError as exc:
-        # Modal `.spawn()` already happened — paid GPU meter is running.
-        # The fail-closed helper already wrote a last-resort tmp dump
-        # AND emitted a diagnostic. Exit non-zero with rc=13 so the
-        # operator-authorize caller surfaces the failure instead of
-        # silently treating the wrapper as a success.
-        print(
-            f"FATAL [Catalog #339]: {exc}",
-            file=sys.stderr,
-        )
-        print(
-            f"  Modal call_id={call_id} HAS dispatched (paid). Run "
-            f"`tools/harvest_modal_calls.py --recover-from-tmp` to "
-            f"replay the dispatch event into the canonical ledger.",
-            file=sys.stderr,
-        )
-        sys.exit(13)
     print("\n  Use experiments/modal_recover_lane.py to fetch artifacts when complete.")

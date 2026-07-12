@@ -12,11 +12,43 @@ PYBIN="${PYBIN:-python3}"
 MODE="${WITNESS_TRAINER_MODE:-}"
 GT_CACHE="${WITNESS_GT_CACHE:-}"
 GT_CACHE_SHA256="${WITNESS_GT_CACHE_SHA256:-}"
+SEGNET_SHA256="${WITNESS_SEGNET_SHA256:-}"
+POSENET_SHA256="${WITNESS_POSENET_SHA256:-}"
 OUT_DIR="${WITNESS_OUT_DIR:-}"
 EPOCHS="${WITNESS_EPOCHS:-3000}"
+STOP_AFTER_EPOCHS="${WITNESS_STOP_AFTER_EPOCHS:-}"
+CHILD_TIMEOUT_SECONDS="${WITNESS_CHILD_TIMEOUT_SECONDS:-}"
 NUM_PAIRS="${WITNESS_NUM_PAIRS:-600}"
 RESUME_FROM="${WITNESS_RESUME_FROM:-}"
-MIN_FREE_GB="${WITNESS_MIN_FREE_GB:-20}"
+RESUME_SHA256="${WITNESS_RESUME_SHA256:-}"
+MIN_FREE_GIB=20
+PREFLIGHT_ONLY="${WITNESS_PREFLIGHT_ONLY:-0}"
+OUT_DIR_WAS_PRESENT=0
+
+require_positive_integer() {
+  local name="$1" value="$2"
+  if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+    echo "REFUSED: $name must be a positive integer; got '$value'" >&2
+    exit 64
+  fi
+}
+
+normalize_modal_results_path() {
+  "$PYBIN" - "$1" "$2" <<'PY'
+import pathlib, sys
+name, raw = sys.argv[1], sys.argv[2]
+if not raw:
+    raise SystemExit(f"REFUSED: {name} is required")
+if raw != raw.strip() or any(char.isspace() or ord(char) < 32 for char in raw):
+    raise SystemExit(f"REFUSED: {name} contains whitespace or control characters")
+if any(char in raw for char in ",="):
+    raise SystemExit(f"REFUSED: {name} contains env-override delimiters")
+path = pathlib.PurePosixPath(raw)
+if not raw.startswith("/modal_results/") or ".." in path.parts or str(path) != raw:
+    raise SystemExit(f"REFUSED: {name} must be normalized /modal_results/** custody")
+print(raw)
+PY
+}
 
 if [ "$MODE" != "full" ]; then
   echo "REFUSED: WITNESS_TRAINER_MODE must explicitly equal full" >&2
@@ -30,21 +62,170 @@ if [[ ! "$GT_CACHE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
   echo "REFUSED: WITNESS_GT_CACHE_SHA256 must carry exact source-byte custody" >&2
   exit 69
 fi
-if [ -z "$OUT_DIR" ] || [[ "$OUT_DIR" != /modal_results/* ]]; then
-  echo "REFUSED: WITNESS_OUT_DIR must be durable /modal_results custody" >&2
+require_positive_integer WITNESS_EPOCHS "$EPOCHS"
+require_positive_integer WITNESS_STOP_AFTER_EPOCHS "$STOP_AFTER_EPOCHS"
+require_positive_integer WITNESS_NUM_PAIRS "$NUM_PAIRS"
+require_positive_integer WITNESS_CHILD_TIMEOUT_SECONDS "$CHILD_TIMEOUT_SECONDS"
+if [ "$EPOCHS" -ne 3000 ]; then
+  echo "REFUSED: WITNESS_EPOCHS must retain the 3000-epoch typed horizon" >&2
+  exit 66
+fi
+if [ "$STOP_AFTER_EPOCHS" -gt 3 ]; then
+  echo "REFUSED: WITNESS_STOP_AFTER_EPOCHS must be within 1..3" >&2
+  exit 66
+fi
+if [ "$CHILD_TIMEOUT_SECONDS" -ne 1500 ]; then
+  echo "REFUSED: WITNESS_CHILD_TIMEOUT_SECONDS must equal the conservative 1500-second backstop" >&2
+  exit 66
+fi
+if [ "$CHILD_TIMEOUT_SECONDS" -le 90 ]; then
+  echo "REFUSED: child timeout must preserve TERM/KILL reserve" >&2
+  exit 66
+fi
+TRAINER_TERM_SECONDS=$((CHILD_TIMEOUT_SECONDS - 60))
+TRAINER_KILL_AFTER_SECONDS=30
+if [ "$NUM_PAIRS" -ne 600 ]; then
+  echo "REFUSED: WITNESS_NUM_PAIRS must equal the fixed 600-pair Task438 smoke" >&2
+  exit 66
+fi
+GT_CACHE="$(normalize_modal_results_path WITNESS_GT_CACHE "$GT_CACHE")"
+OUT_DIR="$(normalize_modal_results_path WITNESS_OUT_DIR "$OUT_DIR")"
+if [ -n "$RESUME_FROM" ]; then
+  if [[ ! "$RESUME_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "REFUSED: WITNESS_RESUME_SHA256 must be lowercase exact SHA-256 when resuming" >&2
+    exit 69
+  fi
+  RESUME_FROM="$(normalize_modal_results_path WITNESS_RESUME_FROM "$RESUME_FROM")"
+  if [ ! -f "$RESUME_FROM" ] || [ ! -s "$RESUME_FROM" ]; then
+    echo "REFUSED: explicit WITNESS_RESUME_FROM must be a nonzero regular file: $RESUME_FROM" >&2
+    exit 66
+  fi
+  if [ -e "$OUT_DIR" ]; then
+    if [ ! -d "$OUT_DIR" ]; then
+      echo "REFUSED: populated WITNESS_OUT_DIR must be a directory" >&2
+      exit 66
+    fi
+    if [[ "$RESUME_FROM" != "$OUT_DIR/"* ]]; then
+      echo "REFUSED: populated WITNESS_OUT_DIR requires resume checkpoint under the same output lineage" >&2
+      exit 66
+    fi
+    OUT_DIR_WAS_PRESENT=1
+  fi
+elif [ -n "$RESUME_SHA256" ]; then
+  echo "REFUSED: WITNESS_RESUME_SHA256 is forbidden without WITNESS_RESUME_FROM" >&2
+  exit 69
+elif [ -e "$OUT_DIR" ]; then
+  echo "REFUSED: fresh timing smoke requires a fresh WITNESS_OUT_DIR; supply explicit resume" >&2
+  exit 66
+fi
+if [[ "$GT_CACHE" != "/modal_results/assets/v9_cgauge/gt_${GT_CACHE_SHA256,,}.npz" ]]; then
+  echo "REFUSED: WITNESS_GT_CACHE must be SHA-addressed and match WITNESS_GT_CACHE_SHA256" >&2
   exit 66
 fi
 
-cd "$WORKSPACE"
-mkdir -p "$OUT_DIR"
-"$PYBIN" - "$OUT_DIR" "$MIN_FREE_GB" <<'PY'
-import shutil, sys
-out, minimum = sys.argv[1], float(sys.argv[2])
-free = shutil.disk_usage(out).free / 2**30
-print(f"storage_preflight free_gib={free:.3f} required_gib={minimum:.3f}")
+validate_file_sha256() {
+  "$PYBIN" - "$1" "$2" "$3" <<'PY'
+import hashlib, json, pathlib, sys
+
+source = pathlib.Path(sys.argv[1])
+expected = sys.argv[2].lower()
+label = sys.argv[3]
+h = hashlib.sha256()
+with source.open("rb") as fh:
+    for chunk in iter(lambda: fh.read(8 * 1024 * 1024), b""):
+        h.update(chunk)
+actual = h.hexdigest()
+if actual != expected:
+    raise SystemExit(f"REFUSED: {label} SHA-256 mismatch {actual} != {expected}")
+print(json.dumps({
+    "schema": "witness_remote_file_custody.v1",
+    "bytes": source.stat().st_size,
+    "label": label,
+    "path": str(source),
+    "sha256": actual,
+    "verdict": "SHA256_VALID",
+}, sort_keys=True))
+PY
+}
+
+validate_gt_cache() {
+  validate_file_sha256 "$GT_CACHE" "$GT_CACHE_SHA256" "staged GT cache"
+}
+
+validate_scorer_custody() {
+  if [[ ! "$SEGNET_SHA256" =~ ^[0-9a-fA-F]{64}$ ]] || [[ ! "$POSENET_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+    echo "REFUSED: scorer SHA-256 custody values are required" >&2
+    exit 69
+  fi
+  validate_file_sha256 "$WORKSPACE/upstream/models/segnet.safetensors" "$SEGNET_SHA256" "SegNet"
+  validate_file_sha256 "$WORKSPACE/upstream/models/posenet.safetensors" "$POSENET_SHA256" "PoseNet"
+}
+
+validate_resume_custody() {
+  if [ -n "$RESUME_FROM" ]; then
+    validate_file_sha256 "$RESUME_FROM" "$RESUME_SHA256" "resume checkpoint"
+  fi
+}
+
+storage_preflight() {
+  "$PYBIN" - "$OUT_DIR" "$MIN_FREE_GIB" <<'PY'
+import pathlib, shutil, sys
+out, minimum = pathlib.Path(sys.argv[1]), float(sys.argv[2])
+probe = out
+while not probe.exists() and probe != probe.parent:
+    probe = probe.parent
+free = shutil.disk_usage(probe).free / 2**30
+print(f"storage_preflight probe={probe} free_gib={free:.3f} required_gib={minimum:.3f}")
 if free < minimum:
     raise SystemExit(67)
 PY
+}
+
+TRAINER_ARGS=(
+  --gt-cache "$GT_CACHE"
+  --num-pairs "$NUM_PAIRS"
+  --epochs "$EPOCHS"
+  --out-dir "$OUT_DIR"
+  --device cuda
+  --compile-probe
+  --stop-after-epochs "$STOP_AFTER_EPOCHS"
+  --no-implicit-resume
+  --expected-segnet-sha256 "$SEGNET_SHA256"
+  --expected-posenet-sha256 "$POSENET_SHA256"
+)
+if [ -n "$RESUME_FROM" ]; then
+  TRAINER_ARGS+=(--resume-from "$RESUME_FROM")
+fi
+printf '{"schema":"witness_remote_timeout_contract.v1","wrapper_child_timeout_seconds":%s,"trainer_term_seconds":%s,"trainer_kill_after_seconds":%s}\n' \
+  "$CHILD_TIMEOUT_SECONDS" "$TRAINER_TERM_SECONDS" "$TRAINER_KILL_AFTER_SECONDS"
+
+if [ "$PREFLIGHT_ONLY" = "1" ]; then
+  cd "$WORKSPACE"
+  storage_preflight
+  validate_gt_cache
+  validate_scorer_custody
+  validate_resume_custody
+  "$PYBIN" experiments/train_levelset_witness_realized_through_R_torch.py \
+    "${TRAINER_ARGS[@]}" --preflight-only
+  exit 0
+fi
+if [ "$PREFLIGHT_ONLY" != "0" ]; then
+  echo "REFUSED: WITNESS_PREFLIGHT_ONLY must be 0 or 1" >&2
+  exit 66
+fi
+
+# The CPU preflight normally caught this before H100 allocation; repeat the
+# source/geometry gate in the GPU child so a direct invocation is still safe.
+storage_preflight
+GT_CUSTODY_RECEIPT="$(validate_gt_cache)"
+printf '%s\n' "$GT_CUSTODY_RECEIPT"
+validate_scorer_custody
+validate_resume_custody
+cd "$WORKSPACE"
+if ! command -v timeout >/dev/null 2>&1; then
+  echo "REFUSED: GNU timeout is required for the 1500-second child spending backstop" >&2
+  exit 70
+fi
 "$PYBIN" - <<'PY'
 import torch
 print("torch", torch.__version__, "cuda", torch.cuda.is_available())
@@ -52,21 +233,36 @@ if not torch.cuda.is_available():
     raise SystemExit(68)
 print("device", torch.cuda.get_device_name(0), "capability", torch.cuda.get_device_capability(0))
 PY
-"$PYBIN" - "$GT_CACHE" "$GT_CACHE_SHA256" "$OUT_DIR" <<'PY'
-import hashlib, json, os, pathlib, sys
-source, expected, out = pathlib.Path(sys.argv[1]), sys.argv[2].lower(), pathlib.Path(sys.argv[3])
-h = hashlib.sha256()
-with source.open("rb") as fh:
-    for chunk in iter(lambda: fh.read(8 * 1024 * 1024), b""):
-        h.update(chunk)
-actual = h.hexdigest()
-if actual != expected:
-    raise SystemExit(f"REFUSED: staged GT cache SHA-256 mismatch {actual} != {expected}")
+if [ "$OUT_DIR_WAS_PRESENT" = "1" ]; then
+  if [ ! -d "$OUT_DIR" ]; then
+    echo "REFUSED: resume output directory disappeared after validation" >&2
+    exit 66
+  fi
+else
+  mkdir -p "$(dirname "$OUT_DIR")"
+  if ! mkdir "$OUT_DIR"; then
+    echo "REFUSED: fresh WITNESS_OUT_DIR collided after validation: $OUT_DIR" >&2
+    exit 66
+  fi
+fi
+"$PYBIN" - "$GT_CUSTODY_RECEIPT" "$GT_CACHE" "$GT_CACHE_SHA256" "$OUT_DIR" <<'PY'
+import json, os, pathlib, sys
+receipt = json.loads(sys.argv[1])
+source, expected, out = pathlib.Path(sys.argv[2]), sys.argv[3].lower(), pathlib.Path(sys.argv[4])
+if (
+    receipt.get("schema") != "witness_remote_file_custody.v1"
+    or receipt.get("verdict") != "SHA256_VALID"
+    or receipt.get("label") != "staged GT cache"
+    or receipt.get("path") != str(source)
+    or receipt.get("sha256") != expected
+):
+    raise SystemExit("REFUSED: captured staged GT custody receipt is inconsistent")
 payload = {
     "schema": "witness_remote_asset_custody.v1",
     "path": str(source),
-    "bytes": source.stat().st_size,
-    "sha256": actual,
+    "bytes": int(receipt["bytes"]),
+    "sha256": receipt["sha256"],
+    "source_validation_schema": receipt["schema"],
     "driver_mode": os.environ.get("WITNESS_TRAINER_MODE"),
     "nvml_disabled": os.environ.get("DALI_DISABLE_NVML"),
 }
@@ -76,16 +272,6 @@ tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 os.replace(tmp, target)
 print(json.dumps(payload, sort_keys=True))
 PY
-
-ARGS=(
-  --gt-cache "$GT_CACHE"
-  --num-pairs "$NUM_PAIRS"
-  --epochs "$EPOCHS"
-  --out-dir "$OUT_DIR"
-  --device cuda
-  --compile-probe
-)
-if [ -n "$RESUME_FROM" ]; then
-  ARGS+=(--resume-from "$RESUME_FROM")
-fi
-exec "$PYBIN" experiments/train_levelset_witness_realized_through_R_torch.py "${ARGS[@]}"
+exec timeout --foreground --signal=TERM --kill-after="${TRAINER_KILL_AFTER_SECONDS}s" \
+  "${TRAINER_TERM_SECONDS}s" "$PYBIN" \
+  experiments/train_levelset_witness_realized_through_R_torch.py "${TRAINER_ARGS[@]}"

@@ -1,5 +1,6 @@
-# ruff: noqa: E402
 import copy
+import hashlib
+import json
 
 import numpy as np
 import pytest
@@ -9,12 +10,21 @@ torch = pytest.importorskip("torch")
 from experiments.train_levelset_witness_realized_through_R_torch import (
     _accumulated_pair_step,
     _attach_generated_pose_carrier,
+    _canonical_checkpoint_due,
     _checkpoint_blob,
     _generated_pose_pair_dispatch,
     _hosc_beta_at_epoch,
+    _load_validated_gt_cache,
+    _load_validated_resume,
+    _resolve_resume_intent,
     _restore,
     _run_structured_prefit,
+    _runtime_epoch_window,
     _softmax_temp_at_epoch,
+    _validate_scorer_custody,
+    build_parser,
+    derive_config,
+    main,
 )
 from tac.boundary_math.warp_real_luma_frame0 import GroundHomographyGeom
 from tac.cuda_levelset_training import (
@@ -25,6 +35,64 @@ from tac.cuda_levelset_training import (
 )
 from tac.cuda_v9_controller_runtime import TorchProtectedIslandSeed
 from tac.witness_control.tail_cycles import TailController, TailCycleConfig
+from tac.witness_run_artifacts import TORCH_RESUME_PT
+
+_SEG_SHA = "1" * 64
+_POSE_SHA = "2" * 64
+
+
+def _patch_preflight_scorers(monkeypatch, *, coverage_status="COMPLETE_1_TO_1"):
+    load_calls = []
+
+    def fake_custody(paths=None, expected_sha256=None):
+        assert paths is None
+        assert expected_sha256 == {"segnet": _SEG_SHA, "posenet": _POSE_SHA}
+        return {
+            name: {
+                "path": f"upstream/models/{name}.safetensors",
+                "bytes": 1,
+                "sha256": digest,
+                "tensor_count": 1,
+                "expected_sha256": digest,
+                "sha_authority": "PLAN_EXPECTED_MATCH",
+            }
+            for name, digest in (("segnet", _SEG_SHA), ("posenet", _POSE_SHA))
+        }
+
+    def fake_load_scorers(device):
+        load_calls.append(str(device))
+        networks = (torch.nn.Linear(2, 2), torch.nn.Linear(2, 2))
+        for network in networks:
+            network.eval()
+            for parameter in network.parameters():
+                parameter.requires_grad_(False)
+        return networks
+
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch._validate_scorer_custody",
+        fake_custody,
+    )
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch.cuda_v9_port_receipt",
+        lambda: {
+            "status": coverage_status,
+            "blockers": [] if coverage_status == "COMPLETE_1_TO_1" else ["missing_surface"],
+        },
+    )
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch._load_scorers",
+        fake_load_scorers,
+    )
+    return load_calls
+
+
+def _scorer_sha_args():
+    return [
+        "--expected-segnet-sha256",
+        _SEG_SHA,
+        "--expected-posenet-sha256",
+        _POSE_SHA,
+    ]
 
 
 def _pose_flags():
@@ -142,7 +210,9 @@ def test_checkpoint_roundtrip_restores_pair_cursor_and_controller_state():
         pair_cursor=cursor, controller_state=controllers,
         protected_seed=seed, seed_optimizer=seed_opt,
         tail_controller=tail,
+        scorer_sha256={"segnet": _SEG_SHA, "posenet": _POSE_SHA},
     ))
+    assert blob["scorer_sha256"] == {"segnet": _SEG_SHA, "posenet": _POSE_SHA}
     with torch.no_grad():
         seed.residual.zero_()
     restored_cursor = DeterministicPairCursor(7, seed=0)
@@ -240,3 +310,465 @@ def test_accumulated_pair_step_visits_each_pair_once():
     )
     assert visited == [3, 1, 2, 0]
     assert row["pair_count"] == 4 and row["weights_stepped"]
+
+
+def test_runtime_stop_is_additional_bounded_and_outside_typed_hash():
+    assert _runtime_epoch_window(0, 3000, 3) == (1, 3)
+    assert _runtime_epoch_window(219, 3000, 3) == (220, 222)
+    assert _runtime_epoch_window(2999, 3000, 3) == (3000, 3000)
+    with pytest.raises(ValueError, match="zero-work"):
+        _runtime_epoch_window(3000, 3000, 3)
+    for invalid in (0, 4):
+        with pytest.raises(ValueError, match=r"1\.\.3"):
+            _runtime_epoch_window(10, 3000, invalid)
+
+    parser = build_parser()
+    base = [
+        "--epochs", "3000", "--num-pairs", "1",
+        "--gt-cache", "unused.npz", "--out-dir", "experiments/results/money_test",
+    ]
+    one = parser.parse_args(
+        [*base, "--stop-after-epochs", "1", *_scorer_sha_args()]
+    )
+    three = parser.parse_args([*base, "--stop-after-epochs", "3"])
+    assert derive_config(one)[1] == derive_config(three)[1]
+
+
+def test_runtime_stop_refreshes_full_resume_after_every_completed_epoch():
+    assert [
+        _canonical_checkpoint_due(
+            epoch,
+            ckpt_every=50,
+            run_end_epoch=3,
+            runtime_stop_after_epochs=3,
+            tail_stop_after_epoch=False,
+        )
+        for epoch in (1, 2, 3)
+    ] == [True, True, True]
+    assert [
+        _canonical_checkpoint_due(
+            epoch,
+            ckpt_every=2,
+            run_end_epoch=5,
+            runtime_stop_after_epochs=None,
+            tail_stop_after_epoch=False,
+        )
+        for epoch in (1, 2, 3, 4, 5)
+    ] == [False, True, False, True, True]
+    assert _canonical_checkpoint_due(
+        3,
+        ckpt_every=50,
+        run_end_epoch=5,
+        runtime_stop_after_epochs=None,
+        tail_stop_after_epoch=True,
+    )
+
+
+def test_strict_resume_binds_scorer_custody_and_legacy_non_strict_survives(tmp_path):
+    model = torch.nn.Linear(2, 1)
+    ema = copy.deepcopy(model)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    blob = _checkpoint_blob(
+        model,
+        ema,
+        optimizer,
+        11,
+        "cfg",
+        ("python", "trainer"),
+        scorer_sha256={"segnet": _SEG_SHA, "posenet": _POSE_SHA},
+    )
+    path = tmp_path / TORCH_RESUME_PT
+    torch.save(blob, path)
+    loaded = _load_validated_resume(
+        path,
+        "cfg",
+        3000,
+        expected_scorer_sha256={"segnet": _SEG_SHA, "posenet": _POSE_SHA},
+        require_scorer_custody=True,
+    )
+    assert loaded["epoch"] == 11
+    with pytest.raises(ValueError, match="differs from the strict execution plan"):
+        _load_validated_resume(
+            path,
+            "cfg",
+            3000,
+            expected_scorer_sha256={"segnet": "3" * 64, "posenet": _POSE_SHA},
+            require_scorer_custody=True,
+        )
+
+    legacy = dict(blob)
+    legacy.pop("scorer_sha256")
+    torch.save(legacy, path)
+    with pytest.raises(ValueError, match="missing scorer SHA-256 custody"):
+        _load_validated_resume(
+            path,
+            "cfg",
+            3000,
+            expected_scorer_sha256={"segnet": _SEG_SHA, "posenet": _POSE_SHA},
+            require_scorer_custody=True,
+        )
+    assert _load_validated_resume(path, "cfg", 3000)["epoch"] == 11
+
+
+def test_resume_is_explicit_and_gt_cache_geometry_fails_closed(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    assert _resolve_resume_intent(out, None, no_implicit_resume=True) is None
+    (out / "remote_asset_custody.json").write_text("{}")
+    assert _resolve_resume_intent(out, None, no_implicit_resume=True) is None
+    (out / "receipt.json").write_text("{}")
+    with pytest.raises(ValueError, match="implicit resume/overwrite"):
+        _resolve_resume_intent(out, None, no_implicit_resume=True)
+    with pytest.raises(ValueError, match="does not exist"):
+        _resolve_resume_intent(
+            tmp_path / "fresh",
+            str(tmp_path / "missing.pt"),
+            no_implicit_resume=True,
+        )
+
+    legacy_out = tmp_path / "legacy"
+    legacy_out.mkdir()
+    legacy_checkpoint = legacy_out / TORCH_RESUME_PT
+    legacy_checkpoint.write_bytes(b"checkpoint fixture")
+    assert (
+        _resolve_resume_intent(legacy_out, None, no_implicit_resume=False)
+        == legacy_checkpoint
+    )
+    assert (
+        _resolve_resume_intent(tmp_path / "legacy_fresh", None, no_implicit_resume=False)
+        is None
+    )
+
+    cache = tmp_path / "gt.npz"
+    np.savez(
+        cache,
+        n_pairs=np.asarray(2),
+        lstars=np.zeros((2, 4, 5), np.int64),
+        margins=np.zeros((2, 4, 5), np.float32),
+        gt_f1=np.zeros((2, 8, 9, 3), np.uint8),
+        gt_poses=np.zeros((2, 6), np.float32),
+    )
+    loaded = _load_validated_gt_cache(str(cache), 1)
+    assert loaded["lstars"].shape == (1, 4, 5)
+    bad = tmp_path / "bad.npz"
+    np.savez(
+        bad,
+        n_pairs=np.asarray(2),
+        lstars=np.zeros((2, 4, 5), np.int64),
+        margins=np.zeros((2, 4, 6), np.float32),
+        gt_f1=np.zeros((2, 8, 9, 3), np.uint8),
+        gt_poses=np.zeros((2, 6), np.float32),
+    )
+    with pytest.raises(ValueError, match="identical"):
+        _load_validated_gt_cache(str(bad), 1)
+
+
+def test_preflight_only_validates_exact_inputs_without_output_or_cuda(
+    tmp_path, monkeypatch, capsys
+):
+    cache = tmp_path / "gt_exact.npz"
+    np.savez(
+        cache,
+        n_pairs=np.asarray(1),
+        lstars=np.zeros((1, 384, 512), np.uint8),
+        margins=np.zeros((1, 384, 512), np.float32),
+        gt_f1=np.zeros((1, 874, 1164, 3), np.uint8),
+        gt_poses=np.zeros((1, 6), np.float32),
+    )
+    out = tmp_path / "preflight_must_not_exist"
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch._FORBIDDEN_TMP",
+        (),
+    )
+    load_calls = _patch_preflight_scorers(monkeypatch)
+    rc = main(
+        [
+            "--preflight-only",
+            "--no-implicit-resume",
+            "--gt-cache",
+            str(cache),
+            "--num-pairs",
+            "1",
+            "--epochs",
+            "3000",
+            "--stop-after-epochs",
+            "3",
+            "--out-dir",
+            str(out),
+            "--device",
+            "cuda",
+            *_scorer_sha_args(),
+        ]
+    )
+    receipt = json.loads(capsys.readouterr().out)
+    assert rc == 0 and receipt["schema"] == "v9_cgauge_torch_preflight.v1"
+    assert receipt["status"] == "passed"
+    assert receipt["gt_geometry"] == {
+        "render_hw": [384, 512],
+        "camera_hw": [874, 1164],
+    }
+    assert receipt["runtime_epoch_window"] == [1, 3]
+    assert receipt["no_implicit_resume"] is True
+    assert load_calls == ["cpu"]
+    assert receipt["scorer_constructor_load"]["status"] == "passed"
+    assert receipt["scorer_constructor_load"]["device"] == "cpu"
+    assert all(
+        row == {"class": "Linear", "eval": True, "frozen": True}
+        for row in receipt["scorer_constructor_load"]["networks"].values()
+    )
+    assert receipt["output_created"] is False and not out.exists()
+
+
+def test_preflight_only_refuses_exact_geometry_mismatch_before_output(
+    tmp_path, monkeypatch
+):
+    cache = tmp_path / "gt_bad_geometry.npz"
+    np.savez(
+        cache,
+        n_pairs=np.asarray(1),
+        lstars=np.zeros((1, 383, 512), np.uint8),
+        margins=np.zeros((1, 383, 512), np.float32),
+        gt_f1=np.zeros((1, 874, 1164, 3), np.uint8),
+        gt_poses=np.zeros((1, 6), np.float32),
+    )
+    out = tmp_path / "preflight_must_not_exist"
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch._FORBIDDEN_TMP",
+        (),
+    )
+    _patch_preflight_scorers(monkeypatch)
+    with pytest.raises(ValueError, match="typed render geometry"):
+        main(
+            [
+                "--preflight-only",
+                "--no-implicit-resume",
+                "--gt-cache",
+                str(cache),
+                "--num-pairs",
+                "1",
+                "--epochs",
+                "3000",
+                "--stop-after-epochs",
+                "3",
+                "--out-dir",
+                str(out),
+                *_scorer_sha_args(),
+            ]
+        )
+    assert not out.exists()
+
+
+def test_preflight_only_refuses_resume_hash_mismatch_before_output(
+    tmp_path, monkeypatch
+):
+    cache = tmp_path / "gt_exact.npz"
+    np.savez(
+        cache,
+        n_pairs=np.asarray(1),
+        lstars=np.zeros((1, 384, 512), np.uint8),
+        margins=np.zeros((1, 384, 512), np.float32),
+        gt_f1=np.zeros((1, 874, 1164, 3), np.uint8),
+        gt_poses=np.zeros((1, 6), np.float32),
+    )
+    resume = tmp_path / TORCH_RESUME_PT
+    torch.save(
+        {
+            "schema": "v9_cgauge_torch_resume_v2",
+            "epoch": 17,
+            "model": {},
+            "ema": {},
+            "optimizer": {},
+            "torch_rng": None,
+            "numpy_rng": None,
+            "python_rng": None,
+            "config_hash": "0" * 64,
+            "dsl_argv": [],
+        },
+        resume,
+    )
+    out = tmp_path / "preflight_must_not_exist"
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch._FORBIDDEN_TMP",
+        (),
+    )
+    _patch_preflight_scorers(monkeypatch)
+    with pytest.raises(ValueError, match="config hash differs"):
+        main(
+            [
+                "--preflight-only",
+                "--no-implicit-resume",
+                "--resume-from",
+                str(resume),
+                "--gt-cache",
+                str(cache),
+                "--num-pairs",
+                "1",
+                "--epochs",
+                "3000",
+                "--stop-after-epochs",
+                "3",
+                "--out-dir",
+                str(out),
+                *_scorer_sha_args(),
+            ]
+        )
+    assert not out.exists()
+
+
+def test_scorer_custody_validates_expected_hash_headers_missing_and_symlink(tmp_path):
+    from safetensors.numpy import save_file
+
+    seg = tmp_path / "segnet.safetensors"
+    pose = tmp_path / "posenet.safetensors"
+    save_file({"weight": np.ones((2, 3), np.float32)}, seg)
+    save_file({"weight": np.zeros((3, 2), np.float32)}, pose)
+    expected = {
+        "segnet": hashlib.sha256(seg.read_bytes()).hexdigest(),
+        "posenet": hashlib.sha256(pose.read_bytes()).hexdigest(),
+    }
+    receipt = _validate_scorer_custody(
+        {"segnet": seg, "posenet": pose}, expected_sha256=expected
+    )
+    assert receipt["segnet"]["sha_authority"] == "PLAN_EXPECTED_MATCH"
+    assert receipt["posenet"]["tensor_count"] == 1
+
+    corrupt = tmp_path / "corrupt.safetensors"
+    corrupt.write_bytes(b"not a safetensors file")
+    with pytest.raises(ValueError, match="not parseable"):
+        _validate_scorer_custody(
+            {"segnet": corrupt, "posenet": pose},
+            expected_sha256={
+                "segnet": hashlib.sha256(corrupt.read_bytes()).hexdigest(),
+                "posenet": expected["posenet"],
+            },
+        )
+    with pytest.raises(ValueError, match="regular non-symlink"):
+        _validate_scorer_custody(
+            {"segnet": tmp_path / "missing.safetensors", "posenet": pose}
+        )
+    link = tmp_path / "segnet-link.safetensors"
+    link.symlink_to(seg)
+    with pytest.raises(ValueError, match="regular non-symlink"):
+        _validate_scorer_custody({"segnet": link, "posenet": pose})
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        _validate_scorer_custody(
+            {"segnet": seg, "posenet": pose},
+            expected_sha256={"segnet": "0" * 64, "posenet": expected["posenet"]},
+        )
+
+
+def test_strict_preflight_requires_both_valid_expected_scorer_hashes():
+    with pytest.raises(ValueError, match="requires expected SegNet and PoseNet"):
+        main(["--preflight-only", "--no-implicit-resume"])
+    with pytest.raises(ValueError, match="requires both"):
+        main(
+            [
+                "--preflight-only",
+                "--no-implicit-resume",
+                "--expected-segnet-sha256",
+                _SEG_SHA,
+            ]
+        )
+    with pytest.raises(ValueError, match="64 hex"):
+        main(
+            [
+                "--preflight-only",
+                "--no-implicit-resume",
+                "--expected-segnet-sha256",
+                "not-a-hash",
+                "--expected-posenet-sha256",
+                _POSE_SHA,
+            ]
+        )
+
+
+def test_preflight_only_refuses_incomplete_cuda_port_before_output(
+    tmp_path, monkeypatch
+):
+    cache = tmp_path / "gt_exact.npz"
+    np.savez(
+        cache,
+        n_pairs=np.asarray(1),
+        lstars=np.zeros((1, 384, 512), np.uint8),
+        margins=np.zeros((1, 384, 512), np.float32),
+        gt_f1=np.zeros((1, 874, 1164, 3), np.uint8),
+        gt_poses=np.zeros((1, 6), np.float32),
+    )
+    out = tmp_path / "preflight_must_not_exist"
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch._FORBIDDEN_TMP",
+        (),
+    )
+    load_calls = _patch_preflight_scorers(monkeypatch, coverage_status="BLOCKED")
+    with pytest.raises(RuntimeError, match="incomplete V9 CUDA control semantics"):
+        main(
+            [
+                "--preflight-only",
+                "--no-implicit-resume",
+                "--gt-cache",
+                str(cache),
+                "--num-pairs",
+                "1",
+                "--epochs",
+                "3000",
+                "--stop-after-epochs",
+                "3",
+                "--out-dir",
+                str(out),
+                *_scorer_sha_args(),
+            ]
+        )
+    assert not out.exists()
+    assert load_calls == []
+
+
+def test_preflight_only_scorer_architecture_load_failure_precedes_output_and_cuda(
+    tmp_path, monkeypatch
+):
+    cache = tmp_path / "gt_exact.npz"
+    np.savez(
+        cache,
+        n_pairs=np.asarray(1),
+        lstars=np.zeros((1, 384, 512), np.uint8),
+        margins=np.zeros((1, 384, 512), np.float32),
+        gt_f1=np.zeros((1, 874, 1164, 3), np.uint8),
+        gt_poses=np.zeros((1, 6), np.float32),
+    )
+    out = tmp_path / "preflight_must_not_exist"
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch._FORBIDDEN_TMP",
+        (),
+    )
+    _patch_preflight_scorers(monkeypatch)
+    load_devices = []
+
+    def fail_load(device):
+        load_devices.append(str(device))
+        raise RuntimeError("state-dict architecture mismatch")
+
+    monkeypatch.setattr(
+        "experiments.train_levelset_witness_realized_through_R_torch._load_scorers",
+        fail_load,
+    )
+    with pytest.raises(RuntimeError, match="state-dict architecture mismatch"):
+        main(
+            [
+                "--preflight-only",
+                "--no-implicit-resume",
+                "--gt-cache",
+                str(cache),
+                "--num-pairs",
+                "1",
+                "--epochs",
+                "3000",
+                "--stop-after-epochs",
+                "3",
+                "--out-dir",
+                str(out),
+                "--device",
+                "cuda",
+                *_scorer_sha_args(),
+            ]
+        )
+    assert load_devices == ["cpu"]
+    assert not out.exists()

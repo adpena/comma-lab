@@ -21,8 +21,8 @@ Test coverage:
   + None trainer + empty-extras-trainer
 - ``_run_lane_inner``: payload materialization under workspace (static
   source check + assertion on the source body)
-- 4 wrapper functions thread ``trainer_extra_mount_payload`` kwarg + default
-  to None
+- the sole bounded CPU provider function threads
+  ``trainer_extra_mount_payload`` into ``_run_lane_inner``
 - main() entrypoint derives + computes + spawns with payload
 - backward compat: lane scripts without substrate convention dispatch with
   empty payload (no regression for legacy lanes)
@@ -116,28 +116,29 @@ def test_modal_train_lane_run_lane_inner_accepts_payload_kwarg() -> None:
     assert "target.write_bytes(data)" in text
 
 
-def test_modal_train_lane_all_5_wrappers_thread_payload_kwarg() -> None:
-    """All 5 ``@app.function`` wrappers thread the payload kwarg through."""
+def test_modal_train_lane_sole_cpu_wrapper_threads_payload_kwarg() -> None:
+    """The sole bounded provider wrapper threads the Wave-3 payload."""
     text = SOURCE.read_text()
-    # 5 wrappers: CPU / T4 / A10G / A100 / H100
-    for gpu_fn in (
-        "run_lane_training_cpu",
+    wrapper_def_idx = text.index("def run_lane_training_cpu(")
+    wrapper_body = text[wrapper_def_idx : text.index("def _compact_stamp(")]
+    assert "trainer_extra_mount_payload: dict | None = None" in wrapper_body
+    assert (
+        "trainer_extra_mount_payload=trainer_extra_mount_payload" in wrapper_body
+    )
+
+    # Paid GPU resources are attached dynamically only after local policy,
+    # preflight, and claim. No reusable static GPU endpoint may regress in.
+    for removed_gpu_fn in (
         "run_lane_training_t4",
         "run_lane_training_a10g",
         "run_lane_training_a100",
         "run_lane_training_h100",
     ):
-        # Each wrapper must declare the new kwarg
-        wrapper_def_idx = text.find(f"def {gpu_fn}(")
-        assert wrapper_def_idx > 0, f"wrapper {gpu_fn} missing"
-        # Inspect the next ~600 chars for the kwarg + propagation
-        wrapper_body = text[wrapper_def_idx : wrapper_def_idx + 800]
-        assert (
-            "trainer_extra_mount_payload: dict | None = None" in wrapper_body
-        ), f"{gpu_fn} missing kwarg declaration"
-        assert (
-            "trainer_extra_mount_payload=trainer_extra_mount_payload" in wrapper_body
-        ), f"{gpu_fn} not threading kwarg to _run_lane_inner"
+        assert f"def {removed_gpu_fn}(" not in text
+
+    decorator = text[text.rfind("@app.function(", 0, wrapper_def_idx) : wrapper_def_idx]
+    assert "gpu=" not in decorator
+    assert "timeout=MODAL_PREFLIGHT_HARD_TIMEOUT_SECONDS" in decorator
 
 
 def test_modal_train_lane_main_derives_and_spawns_with_payload() -> None:
@@ -185,10 +186,16 @@ def test_modal_train_lane_main_supports_cpu_tool_dispatch() -> None:
     text = SOURCE.read_text()
     main_src = text[text.index("@app.local_entrypoint()"):]
     assert "def run_lane_training_cpu(" in text
-    assert "gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100'" in main_src
-    assert 'gpu in ("CPU", "cpu", "Cpu")' in main_src
+    assert "gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100!'" in main_src
+    assert 'if gpu in ("CPU", "cpu", "Cpu")' in text
+    normalize = main_src.index("requested_modal_gpu = _validated_modal_gpu_request(")
     assert "fn = run_lane_training_cpu" in main_src
-    assert "Use CPU, T4, A10G, A100, or H100" in main_src
+    preflight = main_src.index("preflight_result = run_lane_training_cpu.with_options(")
+    claim = main_src.index("_ensure_dispatch_claim(", preflight)
+    dynamic_gpu = main_src.index('invocation_options["gpu"] = requested_modal_gpu')
+    spawn = main_src.index("fn_call = fn.with_options(", dynamic_gpu)
+    assert normalize < preflight < claim < dynamic_gpu < spawn
+    assert "use CPU, T4, A10G, A100, or H100!" in text
 
 
 def test_modal_train_lane_keeps_module_load_image_build_for_caching() -> None:
