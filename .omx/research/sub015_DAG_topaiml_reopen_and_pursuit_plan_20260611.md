@@ -15896,3 +15896,24 @@ equation's slack (PR128's 2,656-click extraction on our byte-identical PR110 bas
 contest-CPU axis: S 0.1880443980 (−0.00304 vs incumbent), advisory→exact gap 2.6e-5 (no drift), it
 resolves anchor-1's reactivation criterion. NON-SUBMISSION defensive bank (submitted_pr=null; PRs
 reserved for cgauge). Registered + 2-anchor equation verified building. MEMORY.md 🏦 bank line added.
+
+### FEED-438-cuda-throughput (2026-07-12) — operator MAX-THROUGHPUT override + codex sol xhigh launch
+Operator directive 2026-07-12: MAX training throughput is the objective; bit-identity / determinism
+WAIVED for the training loop ("even if there is drift I don't care I want maximum throughput"). Stop
+re-suggesting "speedup negligible" (falsified) and stop asserting micro-batch bit-identity against his
+drift observation. Memory: max_throughput_over_bit_identity_operator_override_20260712.
+- **#438 parity check FINISHED (functional): GREEN.** `--verify-only --compile-probe --num-pairs 8`:
+  rgb_max_abs_delta 3.05e-5, phi 4.17e-7, **argmax_equal true, cosine_phi 1.0, rc=0**. The core math twin
+  is correct. Coverage receipt still BLOCKED_NOT_1_TO_1 (11 unclosed active-V9 surfaces); fp-reorder probe
+  grad_delta 0.0029 adoptable:false. Under the override those bit-identity gates DOWNGRADE to advisory:
+  acceptance is now FUNCTIONAL parity (argmax-equal + phi cosine ≥ 0.9997), not bit-identity.
+- **Codex sol xhigh (gpt-5.6-sol, xhigh, workspace-write) LAUNCHED** via osascript Terminal (pid 10931,
+  window 4700; durable, own pgroup). Mission: (A) close the 11 coverage surfaces as FUNCTIONAL twins so the
+  port trains the REAL V9 arm; (B) max throughput — torch.compile(max-autotune) + CUDA graphs + AMP + fused
+  Triton/CUDA megakernel, relax compile gate to functional-parity. Local = CPU functional-parity only (no
+  CUDA on mac); CUDA throughput numbers marked UNMEASURED-pending-dispatch (no fabricated speedups). Landing
+  memo owed: .omx/research/cuda_v9_throughput_optimization_438_20260712.md.
+- **micro-batch-pairs**: queued ON for the NEXT MLX arm (drift accepted per override); live #205/#432 arm
+  UNTOUCHED (can't change a running launch).
+- HARD BOUNDARY preserved: SCORE claims still require upstream/evaluate.py on byte-closed archive (NO-FAKE);
+  throughput override applies to the TRAINING loop only. Pointer 0.19108282 submittable / 0.18804 bank UNMOVED.
