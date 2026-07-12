@@ -36,6 +36,7 @@ GradientMode = Literal[
     "periodic_student",
     "periodic_costate",
     "trusted_jacobian_cache",
+    "yopo_first_layer_costate",
 ]
 JsonScalar = str | int | float | bool | None
 
@@ -222,6 +223,9 @@ class ProviderCostateEvaluation:
     objective_context_fingerprint: str
     provider_custody_sha256: str
     evaluated_at_step: int
+    split_module_path: str | None = None
+    split_identity_sha256: str | None = None
+    bank_source_step: int | None = None
 
 
 @dataclass(frozen=True)
@@ -299,6 +303,8 @@ class ScorerGradientPolicy(BaseModel):
     max_teacher_loss_regret: float | None = Field(default=None, ge=0.0)
     provider_custody: ProviderCustody | None = None
     max_frame_relative_l2: float | None = Field(default=None, gt=0.0)
+    split_module_path: str | None = None
+    split_identity_sha256: str | None = None
 
     @model_validator(mode="after")
     def _mode_contract(self) -> ScorerGradientPolicy:
@@ -319,13 +325,41 @@ class ScorerGradientPolicy(BaseModel):
             supplied = [name for name in replacement_fields if getattr(self, name) is not None]
             if self.max_frame_relative_l2 is not None:
                 supplied.append("max_frame_relative_l2")
+            if self.split_module_path is not None:
+                supplied.append("split_module_path")
+            if self.split_identity_sha256 is not None:
+                supplied.append("split_identity_sha256")
             if supplied:
                 raise ValueError(
                     "full_teacher must not carry dormant replacement fields: " + ", ".join(supplied)
                 )
             return self
 
-        missing = [name for name in replacement_fields if getattr(self, name) is None]
+        if self.mode == "yopo_first_layer_costate":
+            yopo_base_fields = (
+                "refresh_interval_steps",
+                "max_staleness_steps",
+                "scorer_fingerprint",
+                "objective_context",
+                "objective_context_fingerprint",
+                "provider_custody",
+            )
+            missing = [name for name in yopo_base_fields if getattr(self, name) is None]
+            forbidden_thresholds = (
+                "min_costate_cosine",
+                "max_costate_relative_l2",
+                "min_costate_norm_ratio",
+                "max_costate_norm_ratio",
+                "max_teacher_loss_regret",
+            )
+            supplied_thresholds = [name for name in forbidden_thresholds if getattr(self, name) is not None]
+            if supplied_thresholds:
+                raise ValueError(
+                    "yopo_first_layer_costate rejects universal agreement/regret thresholds: "
+                    + ", ".join(supplied_thresholds)
+                )
+        else:
+            missing = [name for name in replacement_fields if getattr(self, name) is None]
         if missing:
             raise ValueError(
                 f"replacement mode {self.mode!r} requires explicit fields: {', '.join(missing)}"
@@ -346,13 +380,14 @@ class ScorerGradientPolicy(BaseModel):
             raise ValueError(
                 "objective_context_fingerprint does not match the canonical context payload"
             )
-        assert self.min_costate_norm_ratio is not None
-        assert self.max_costate_norm_ratio is not None
-        if self.min_costate_norm_ratio > self.max_costate_norm_ratio:
-            raise ValueError("costate norm-ratio lower bound exceeds upper bound")
+        if self.mode != "yopo_first_layer_costate":
+            assert self.min_costate_norm_ratio is not None
+            assert self.max_costate_norm_ratio is not None
+            if self.min_costate_norm_ratio > self.max_costate_norm_ratio:
+                raise ValueError("costate norm-ratio lower bound exceeds upper bound")
 
         assert self.provider_custody is not None
-        expected_kind = "cache" if self.mode == "trusted_jacobian_cache" else "checkpoint"
+        expected_kind = "cache" if self.mode in {"trusted_jacobian_cache", "yopo_first_layer_costate"} else "checkpoint"
         if self.provider_custody.kind != expected_kind:
             raise ValueError(
                 f"{self.mode} requires provider_custody.kind={expected_kind!r}, got "
@@ -363,6 +398,17 @@ class ScorerGradientPolicy(BaseModel):
                 raise ValueError("trusted_jacobian_cache requires max_frame_relative_l2")
         elif self.max_frame_relative_l2 is not None:
             raise ValueError("max_frame_relative_l2 is cache-specific")
+        if self.mode == "yopo_first_layer_costate":
+            if self.split_module_path != "encoder.model.blocks[0]":
+                raise ValueError("yopo_first_layer_costate requires split_module_path='encoder.model.blocks[0]'")
+            if not _is_sha256(self.split_identity_sha256):
+                raise ValueError("yopo_first_layer_costate requires a lowercase split_identity_sha256")
+            assert self.refresh_interval_steps is not None
+            assert self.max_staleness_steps is not None
+            if self.max_staleness_steps != self.refresh_interval_steps - 1:
+                raise ValueError("yopo_first_layer_costate requires max_staleness_steps=refresh_interval_steps - 1")
+        elif self.split_module_path is not None or self.split_identity_sha256 is not None:
+            raise ValueError("split identity fields are exclusive to yopo_first_layer_costate")
         return self
 
     def compile(self) -> CompiledScorerGradientPolicy:
@@ -404,7 +450,7 @@ class CompiledScorerGradientPolicy:
         custody = self.source.provider_custody
         if custody is None:
             return True, "full teacher has no replacement provider custody"
-        if refresh:
+        if refresh or self.source.mode == "yopo_first_layer_costate":
             ok, reason, stat = custody.verify_full()
             if ok:
                 self._provider_stat = stat
@@ -418,6 +464,8 @@ class CompiledScorerGradientPolicy:
         policy = self.source
         if not metrics.valid:
             return [f"{label}: {reason}" for reason in (metrics.reasons or ("invalid metrics",))]
+        if self.source.mode == "yopo_first_layer_costate":
+            return []
         assert metrics.cosine_similarity is not None
         assert metrics.relative_l2_error is not None
         assert metrics.norm_ratio is not None
@@ -475,6 +523,17 @@ class CompiledScorerGradientPolicy:
             reasons.append(f"{label} objective/context fingerprint mismatch")
         if evaluation.provider_custody_sha256 != policy.provider_custody.sha256:
             reasons.append(f"{label} provider custody SHA-256 mismatch")
+        if policy.mode == "yopo_first_layer_costate":
+            if evaluation.split_module_path != policy.split_module_path:
+                reasons.append(f"{label} YOPO split module path mismatch")
+            if evaluation.split_identity_sha256 != policy.split_identity_sha256:
+                reasons.append(f"{label} YOPO split identity SHA-256 mismatch")
+            if (
+                not isinstance(evaluation.bank_source_step, int)
+                or isinstance(evaluation.bank_source_step, bool)
+                or evaluation.bank_source_step < 0
+            ):
+                reasons.append(f"{label} YOPO bank source step must be an integer >= 0")
         if not isinstance(evaluation.evaluated_at_step, int) or isinstance(
             evaluation.evaluated_at_step, bool
         ):
@@ -655,6 +714,13 @@ class CompiledScorerGradientPolicy:
                         provider_anchor.costate,
                     )
                     reasons.extend(self._metric_reasons(global_metrics, label="global costate"))
+                    if policy.mode == "yopo_first_layer_costate" and (
+                        array_content_sha256(observation.teacher_costate_at_anchor)
+                        != array_content_sha256(provider_anchor.costate)
+                    ):
+                        reasons.append(
+                            "YOPO refresh provider costate must be byte-identical to the exact teacher costate"
+                        )
                     if annulus_mask is not None:
                         annulus_metrics = measure_costate_agreement(
                             observation.teacher_costate_at_anchor,
@@ -718,14 +784,25 @@ class CompiledScorerGradientPolicy:
                         )
                     if not candidate_finite or not reference_finite:
                         reasons.append("teacher step check candidate/reference frame is nonfinite")
-            assert policy.max_teacher_loss_regret is not None
-            if isinstance(step_check, TeacherStepCheck) and not step_check.passes(
-                max_regret=policy.max_teacher_loss_regret
-            ):
-                reasons.append(
-                    "real-teacher one-step check failed: candidate must decrease teacher loss "
-                    "with bounded regret"
-                )
+            if isinstance(step_check, TeacherStepCheck):
+                if policy.mode == "yopo_first_layer_costate":
+                    if not (
+                        step_check.finite
+                        and step_check.decreases_teacher_loss
+                        and step_check.regret is not None
+                        and math.isfinite(step_check.regret)
+                    ):
+                        reasons.append(
+                            "YOPO real-teacher one-step check must be finite, decreasing, "
+                            "and carry finite measured regret"
+                        )
+                else:
+                    assert policy.max_teacher_loss_regret is not None
+                    if not step_check.passes(max_regret=policy.max_teacher_loss_regret):
+                        reasons.append(
+                            "real-teacher one-step check failed: candidate must decrease teacher loss "
+                            "with bounded regret"
+                        )
 
         if current_provider_evaluation is None:
             reasons.append("replacement provider did not supply a current-frame costate evaluation")
@@ -765,6 +842,17 @@ class CompiledScorerGradientPolicy:
                             "refresh current provider costate content differs from the "
                             "teacher-validated anchor provider costate"
                         )
+
+        if policy.mode == "yopo_first_layer_costate" and observation is not None:
+            if isinstance(current_provider_evaluation, ProviderCostateEvaluation) and (
+                current_provider_evaluation.bank_source_step != observation.measured_at_step
+            ):
+                reasons.append("current YOPO bank source step does not match teacher anchor step")
+            provider_anchor = observation.provider_costate_at_anchor
+            if isinstance(provider_anchor, ProviderCostateEvaluation) and (
+                provider_anchor.bank_source_step != observation.measured_at_step
+            ):
+                reasons.append("anchor YOPO bank source step does not match teacher anchor step")
 
         if policy.mode == "trusted_jacobian_cache" and observation is not None:
             if current_frame is None:
