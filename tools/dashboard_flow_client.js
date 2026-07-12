@@ -117,26 +117,82 @@
       fetchSequence(null);
     }, 20000);
   }
+  var fetchTries = 0;
   function fetchSequence(meta) {
-    if (fetching) return;
+    if (fetching || SEQ) return;
     fetching = true;
-    if (inited && meta && meta.ok) showMsg("fetching the n600 video sequence… (one-time)");
+    if (inited && meta && meta.ok) showMsg("downloading the n600 video sequence… (one-time, ~56 MB)");
     fetch("/api/flow_sequence" + (location.search || ""), { credentials: "same-origin" })
-      .then(function (r) { if (!r.ok && r.status !== 202) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (r) {
+        if (!r.ok && r.status !== 202) throw new Error("HTTP " + r.status);
+        // 202 readiness meta (small) or no-stream fallback -> plain json().
+        if (r.status === 202 || !r.body || typeof r.body.getReader !== "function") return r.json();
+        // STREAM the big payload so the existing determinate progress bar (showMsg frac)
+        // carries the download — a silent 56 MB fetch on 5G looked identical to "stuck"
+        // (operator report 2026-07-11: "I still see this instead of the progress bar").
+        var total = parseInt(r.headers.get("content-length") || "0", 10) || 0;
+        var reader = r.body.getReader(), chunks = [], got = 0, lastUi = 0;
+        function pump() {
+          return reader.read().then(function (res) {
+            if (res.done) {
+              var buf = new Uint8Array(got), off = 0;
+              for (var i = 0; i < chunks.length; i++) { buf.set(chunks[i], off); off += chunks[i].length; }
+              chunks = null;
+              if (inited && !SEQ) showMsg("decoding the n600 sequence…");
+              return JSON.parse(new TextDecoder().decode(buf));
+            }
+            chunks.push(res.value); got += res.value.length;
+            var now = Date.now();
+            if (inited && !SEQ && now - lastUi > 200) {
+              lastUi = now;
+              var mb = (got / 1048576).toFixed(1);
+              if (total) {
+                var frac = got / total;
+                showMsg("downloading the n600 sequence… " + mb + " / " + (total / 1048576).toFixed(1) +
+                        " MB (" + Math.round(frac * 100) + "%)", frac);
+              } else {
+                showMsg("downloading the n600 sequence… " + mb + " MB");
+              }
+            }
+            return pump();
+          });
+        }
+        return pump();
+      })
       .then(function (seq) {
         if (seq && seq.ok === false) {
-          // 202 readiness meta (idle / rendering-with-progress / error) — informative, not a failure.
+          // readiness meta (idle / rendering-with-progress / error) — informative, not a failure.
           window.__flow = window.__flow || {}; window.__flow.ready = seq;
           if (!SEQ && inited) { showMsg(statusMsg(seq), flowFrac(seq)); updateStatus(); }
           if (seq.status === "rendering") pollWhileRendering();
           return;
         }
         if (!seq || !seq.ok || !Array.isArray(seq.frames) || !seq.frames.length) throw new Error("empty sequence");
+        fetchTries = 0;
         onSequence(seq);
       })
-      .catch(function (e) { if (!SEQ && inited) showMsg("sequence fetch failed: " + (e && e.message || e)); })
+      .catch(function (e) {
+        // RETRY with backoff — a one-shot fetch left the tab on "waiting…" forever when
+        // mobile Safari killed the download (backgrounding / network blip).
+        fetchTries += 1;
+        var delay = Math.min(60000, 5000 * fetchTries);
+        if (!SEQ && inited) showMsg("sequence download failed (" + (e && e.message || e) +
+                                    ") — retrying in " + Math.round(delay / 1000) + "s…");
+        if (!SEQ && fetchTries <= 30) {
+          setTimeout(function () {
+            if (!SEQ && !fetching) fetchSequence((window.__flow || {}).ready);
+          }, delay);
+        }
+      })
       .then(function () { fetching = false; });
   }
+  // Resume the download when the tab/page comes back (mobile Safari aborts background fetches).
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && !SEQ && !fetching) {
+      var rdy = (window.__flow || {}).ready;
+      if (rdy && rdy.ok) fetchSequence(rdy);
+    }
+  });
   function onSequence(seq) {
     SEQ = seq; loadedEpoch = seq.epoch;
     cache = new Array(seq.n); lru = [];
@@ -555,7 +611,11 @@
 
   // ---------- public hooks ----------
   function activate() {
-    if (inited) { renderNow(); return; }
+    if (inited) {
+      // Re-opening the tab after a failed/killed download must retry, not sit on "waiting…".
+      if (!SEQ && !fetching) { var rdy = (window.__flow || {}).ready; if (rdy && rdy.ok) fetchSequence(rdy); }
+      renderNow(); return;
+    }
     inited = true;
     wireControls();
     var force2d = /[?&]flow2d=1/.test(location.search || "");
