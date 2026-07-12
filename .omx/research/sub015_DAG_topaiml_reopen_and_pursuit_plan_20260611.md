@@ -16330,3 +16330,29 @@ Triality: DAG = this FEED; equations = `jrd_exact_coefficient_prefix_selection_v
 Memo: `.omx/research/codex_findings_jrd_coeff_prefix_20260712T224139Z_codex.md`. Receipt:
 `experiments/results/jrd_coeff_prefix_probe_20260712T221747Z/measurement_receipt.json`. Task blocker:
 `eligible_nonlive_v9_v8_payload_missing_or_unresolved`.
+
+### FEED-task452-defect-network-rate-code (2026-07-12) — exact component recode saves bytes; receiver gate remains open
+
+**REVIEW STATUS:** `fresh-eyes-reviewed(3)` after three consecutive independent CLEAN passes on
+the current post-fix bytes; the measurement receipt retains its at-measurement
+`recovery-written-UNREVIEWED` tag. **STORES
+CONSULTED:** unified research/equations/memory/DAG/council/tasks/docs corpus, phase/covariance/flicker
+ledgers, canonical state, real n600 cache, incumbent codecs, and Benjamin, Lam, and Luo (2026),
+*Chiral Tube Algebras I: Topological Defect Lines, Twisted Modules, and Finite Gauging*,
+arXiv:2607.07786, Sections 1.1 and 1.3. Paid/live actuation stores were deliberately excluded.
+
+**MEASURED:** the exact standalone candidate section is 1,003,855 bytes versus 1,010,237 bytes for
+real n600 `PHAS1`, saving 6,382 section bytes with bit-identical residual and phase-field decode
+under shared authenticated GT-cache geometry. Receiver derivability of that geometry is UNKNOWN.
+Its component
+streams are 996,246 bytes versus 993,897 incumbent residual bytes: the defect transform is NO-GO by
+2,349 bytes, and the section saving is generic header deduplication. The finite-`Z2` quotient is
+larger again after its 18,897 label bytes are counted. **VERDICT: NEEDS-MORE,
+instance/formulation scoped.** Whole-container rate-code subverdict = GO; defect mechanism =
+NO-GO; equal
+`d_seg`/`d_pose` through R remains UNKNOWN because the current receiver does not consume either
+phase section. Equation = `defect_network_component_delta_rate_v1`; DSL = N/A because this is an
+isolated `research_only=true` codec, not a Lever/policy/curriculum/export; DAG = this FEED. Receipt =
+`experiments/results/defect_network_tube_rate_code_20260712T225958Z/measurement_receipt.json`.
+`score_claim=false`; `promotion_eligible=false`; submittable `[contest-CPU]` pointer 0.19108282
+UNMOVED; defensive bank 0.18804440 remains separate and UNMOVED.

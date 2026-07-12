@@ -141,6 +141,10 @@ from tac.canonical_equations.deepmath_amortizing_argmax_laws_20260704 import (
     shearlet_nterm_error,
     tau_interface_halfwidth,
 )
+from tac.canonical_equations.defect_network_rate_code_20260712 import (
+    build_defect_network_component_delta_rate_v1,
+    populate_defect_network_component_delta_rate_v1,
+)
 from tac.canonical_equations.dseg_aware_fourier_taper_20260709 import (
     build_dseg_aware_fourier_taper_v1,
     populate_dseg_aware_fourier_taper_equation,
@@ -397,6 +401,7 @@ __all__ = [
     "build_costate_lambda_marginal_ds_v1",
     "build_curriculum_handoff_critical_nucleus_v1",
     "build_dash_erasure_homogenization_v1",
+    "build_defect_network_component_delta_rate_v1",
     "build_dseg_aware_fourier_taper_v1",
     "build_ema_window_pi_group_v1",
     "build_fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
@@ -485,6 +490,7 @@ __all__ = [
     "populate_costate_lambda_marginal_ds_equation",
     "populate_curriculum_derivation_laws_equations",
     "populate_dash_erasure_homogenization_equation",
+    "populate_defect_network_component_delta_rate_v1",
     "populate_dseg_aware_fourier_taper_equation",
     "populate_focal_gradient_concentration_equation",
     "populate_frozen_scorer_forward_batch_dependence_equation",
