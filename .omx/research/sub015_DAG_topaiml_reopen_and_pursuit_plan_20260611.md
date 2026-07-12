@@ -16237,3 +16237,23 @@ FEED-sparse-delta-memory): sequence-model/transformer efficiency papers (RNN-sta
 bounce off our INR+CNN graph for the same reason — they target a recurrent/attention bottleneck we don't have.
 Fast-triage rule: on-target genres = coding-for-machines · neural-field · CNN-acceleration · gradient-estimation;
 off-target = LLM/SSM inference efficiency. NO build, NO route. Pointer 0.18804 UNMOVED. [no-triality — negative eval]
+
+## FEED-micro-batch-metal-verdict (2026-07-12) — the owed FREE-lever number, MEASURED
+
+**#447 micro-batch-pairs is DOMINATED as a throughput lever — INSTANCE/FORMULATION scope** (batched-scorer-
+forward, this M5-Max, MLX-fp32 GPU + CPU-torch authority). Probe `tools/micro_batch_bit_identity_probe.py`
+K=32 iters=3 → `experiments/results/micro_batch_bitid_438/probe_K32.json`:
+- **CPU (authority):** scorer-fwd speedup **1.83×**, argmax flips **0** (argmax-INVARIANT), seg-logit maxabs
+  1.88e-4, pose maxabs 4.29e-6 — argmax-stable but NOT bit-identical in logits.
+- **GPU/Metal (the training device):** speedup **1.07×**, argmax flips **80** (argmax-BREAKING), seg maxabs
+  6.65e-2, pose maxabs 9.42e-3 — a genuine d_seg perturbation, not fp noise (the L70 atomic-scatter reorder).
+- reduction-order grad rel_l2 **7.79e-8** → the accumulation ORDER is fine; the ROOT is the scorer-forward
+  batch-dependence. `surviving_speedup_at_bit_identity = 1.0` (no speedup survives bit-identity).
+**Why:** the frozen SegNet/PoseNet forward is ~95% of wall-clock (#449) and it barely batches — EfficientNet-B2
+is already near-utilized per-frame at 512×384 on CPU (1.83×) and memory-bound on Metal (1.07×). Batching the
+one thing that dominates buys almost nothing, and on GPU it changes the objective. **Micro-batch is NOT the
+warm-restart unlock.** Throughput P0 routes to: (a) #449 cheaper costate-λ scorer surrogate (where the 95%
+is), (b) CUDA raw-throughput (the paid H100 smoke — orthogonal question, fire-ready $3.30, operator-GO),
+(c) the goldmine-hunter's CNN-acceleration finds. Pointer 0.18804 UNMOVED (MEANS). MicroBatch DSL lever
+renders through the generic lever_registry/describe() surface consumed by costate_digest + dashboard +
+schedule_readback — no per-lever consumer code needed. [consumers-generic]
