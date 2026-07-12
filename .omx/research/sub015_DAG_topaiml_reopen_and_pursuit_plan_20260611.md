@@ -15920,8 +15920,11 @@ drift observation. Memory: max_throughput_over_bit_identity_operator_override_20
 
 ### FEED-microbatch-v9-unlock (2026-07-12) — the real remaining local throughput lever
 Operator caught that #443 already did the MLX/Metal throughput sweep yesterday (measured: local stack AT
-its bit-identity frontier; megakernel #356 NO-GO 1.12-1.21×; surviving levers fused-R/grouped-backward/
-persistence-pool/safe-compile ALREADY ON in #432). Killed the redundant Canuma re-sweep agent. The ONE
+its bit-identity frontier; megakernel #356 NO-GO 1.12-1.21× [verdict_scope: formulation — whole-step
+megakernel fusion under the bit-identity constraint (fp-reorder wall witness_fp_reorder_transform_bit_identity_wall_v1);
+weak GPU speed 1.12-1.21×/CPU-slower is the DISPOSITIVE leg and holds even under the drift-waiver, so the
+megakernel stays dominated — the bit-identity leg reopens but does not rescue it; NOT a paradigm verdict on
+MLX fusion]; surviving levers fused-R/grouped-backward/persistence-pool/safe-compile ALREADY ON in #432). Killed the redundant Canuma re-sweep agent. The ONE
 genuinely-new local lever: micro-batch-pairs (~2-4×). #443 flagged its V9 blocker as logit-adjust — but
 that was ROUTED in #D15. The REAL remaining blockers: V9 SETS 4 fail-close levers verified against launch.sh:
 seg-chroma-boundary 0.1 · seg-temporal-screw 0.1 · seg-phase-advect 0.4 (T1) · lane-band 1.0 (~12 fail-close
