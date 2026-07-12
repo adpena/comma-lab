@@ -15861,3 +15861,14 @@ The negative is now fully n600-verified: **bytes_saved_at_exact_Δd_seg=0 = 0** 
 `tropnnc_dense_trunk_exact_dseg_reduction_empty_v1` re-registered with the n600 anchor
 (append-only, latest-wins). Nothing owed on the measurement; the only live follow-up is the
 low-τ-checkpoint reactivation. Pointer 0.19108282 UNMOVED.
+
+---
+
+**FEED-pr128forensics (2026-07-12) — differential byte-level forensics of PR128's latent click set (operator ask: "find what specifically clicks he found, there's likely a pattern"):** decoded 6 archives to the 600×28 uint8 latent q-grid (physical click coordinate) and diffed against the shared base.
+
+- **BASE-EQUALITY = TRUE (decisive):** PR112 base q-grid ≡ our PR110 base q-grid, **0/16 800 cells differ** (latent_raw both sha c760cab8; PR112 = lossless recode of PR110). ⟹ the author's clicks live in OUR coordinate system and apply VERBATIM. Decode self-validated: our decoded PR128 latent_raw hashes a7eba972 = the author's git-LFS oid.
+- **THE PATTERN — ISOTROPIC, not concentrated (few-dim shortcut FALSIFIED):** PR128 final = **2 656 clicks**; near-uniform over all 28 dims (CoV 0.238, hottest 5.6% / coldest 2.1%, **21/28 dims for 80%**, 99.7% of pairs touched). |δ| geometric: **86% ±1 / 11% ±2 / 3% ±3 / 0.3% ±4 / 0.08% ±5**. **Temporal coherence ABSENT** (adjacent-same-dim 464 vs 440 expected = 1.05×; same-sign 51% = chance) ⟹ per-pair-INDEPENDENT slack, not an ego-motion trajectory; only pair-locality exploitable.
+- **TRANSFERABILITY — measured high:** where our #399 round-1 and PR128 touched the same cell (14/37 = **2.4× above chance**), sign agreement **93%** (13/14). IMPORT candidate (PR128 table spliced onto our base, sidecar dropped, byte-closed): **advisory S 0.188070** vs base **0.191110** (**ΔS −0.00304**; d_seg −2.6e-5, bytes −605), reproducing PR128's published 0.187992 to within 8e-5. The d_seg gain transfers ~fully; **DEPTH is our gap** (PR128 accepted 215 clicks in pairs 0-47 where our 1 round found 37 = **5.8×**).
+- **v1→final trajectory:** kept 1 905 / revised 49 / dropped 77 / **added 702** — monotone greedy accumulation over many rounds.
+
+Deliverables: memo `.omx/research/pr128_click_forensics_20260712T021554Z.md` · priors `experiments/results/pr128_click_import_forensics_20260712/click_search_priors_pr128.json` (full-dim sweep, extend to ±3, many rounds, no temporal prior — for #399) · import candidate + `n600_advisory_result.json` (#399 files UNTOUCHED) · eq `pr128_latent_click_structure_isotropic_geometric_v1` (2 anchors). Triality: DSL = N/A-with-reason (forensic diff of a frozen public archive, not a trainer lever); DAG = this FEED; eqs = registered. All rows [macOS-CPU advisory] NON-PROMOTABLE; NO-FAKE #7 defensive bank. Pointer **0.19108282 UNMOVED** (exact contest-CPU row on the import candidate is MODAL-HOLD, operator GO).
