@@ -16195,3 +16195,21 @@ recorded: the retrieval-first CONSUMER leg (DAG FEED-lens-retrieval-346 + landin
 lens_retrieval_346_wirein_landed_20260712.md). Equations leg N/A (no measured witness-geometry/score
 finding — it's a graph-recall augmentation, superset-verified but not a d_seg/d_pose/rate row). Disposition:
 DSL=N/A · DAG=recorded · equations=N/A. Pointer 0.18804 UNMOVED. [no-triality — leg-disposition note]
+
+### FEED-ugc-terminal-polish-ab-396-400 (2026-07-12) — UGC exact variance win, fixed-call search loss
+
+The operator-directed #396/#400 same-budget terminal-polish measurement is landed in
+`.omx/research/ugc_terminal_polish_ab_20260712.md`, with the machine receipt at
+`experiments/results/ugc_terminal_polish_ab_20260712/measurement_receipt.json`. On the n600-composed
+exact objective with six pair-local direction-pinned bits and 64 exact calls per arm, `(1+1)-ES`
+reached the exact-enumeration optimum (`Delta S=-8.229284904293088e-6`,
+`1.285825766295795e-7/eval`). UGC reached `Delta S=-7.524000882441762e-6`
+(`1.175625137881525e-7/eval`), tied DisARM/RLOO, and missed one bit: 8.5704% less exact progress per
+call than the control. Exhaustive moments over the measured 64-state objective nevertheless show
+UGC trace variance `1.236434309147681e-12` versus DisARM `1.812328308876038e-12` (31.7765% lower),
+so the boundary variance mechanism holds but does not repay UGC's extra exact-call cost at this
+budget. Verdict `UGC_LOSES_INSTANCE_FORMULATION_SCOPED`; `(1+1)-ES` stays the #396/#400 default;
+exact enumeration remains preferred on enumerable support. Equation leg:
+`ugc_terminal_polish_variance_cost_progress_separation_v1`. DSL leg: N/A because UGC did not become
+the default estimator. Axis `[macOS-CPU advisory . frozen CPU-torch exact cells . NON-PROMOTABLE]`;
+score claim false; pointer UNMOVED; no paid dispatch or live-run mutation.

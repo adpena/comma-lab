@@ -49,6 +49,7 @@ import os
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from itertools import product
 from pathlib import Path
 from typing import Any
 
@@ -59,6 +60,7 @@ from tac.contest_score import (
     RATE_WEIGHT,
     SEG_WEIGHT,
     UNCOMPRESSED_SIZE_BYTES,
+    compute_contest_score,
     pose_term,
     rate_term,
     seg_term,
@@ -317,6 +319,7 @@ class ProposalEngine:
         t = self._pick_tensor()
         idx = self._pick_indices(t)
         b = idx.size
+        deltas: np.ndarray
         if self.mode == "int8":
             base = self.rng.choice(self.int8_step_choices, size=b)
             deltas = base.astype(np.int64)
@@ -687,6 +690,826 @@ class MCFinisher:
 
 
 # ======================================================================================
+# DIRECTION-PINNED BERNOULLI MASK FINISHER (#396/#400 UGC measurement)
+# ======================================================================================
+#
+# This is a selectable estimator MODE inside the existing finisher module, not a parallel
+# harness.  The proposal apparatus supplies K finite, direction-pinned edits; bit b_i says
+# apply/do-not-apply edit i.  The injected objective MUST be the exact frozen-scorer S for
+# the resulting mask.  In the #400 pair-local realization, each base/edit cell is measured
+# through the frozen CPU-torch scorer and arbitrary masks compose exactly at n600 before the
+# nonlinear pose term is applied.  The optimizer only proposes a mask; strict exact-S
+# monotonicity remains the authority.
+#
+# Estimator formulas follow Kunes et al., arXiv:2208.06124 (UGC / bitflip-1), and Dong,
+# Mnih & Tucker, arXiv:2006.10680 (DisARM).  They are written here against a generic exact
+# black-box objective; no scorer or receiver logic is duplicated.
+
+VALID_MASK_ESTIMATORS: tuple[str, ...] = (
+    "one_plus_one_es",
+    "ugc",
+    "disarm",
+    "rloo",
+    "exact_enumeration",
+)
+_GRADIENT_MASK_ESTIMATORS = frozenset({"ugc", "disarm", "rloo"})
+
+
+def ugc_boundary_threshold(n_bits: int) -> float:
+    """Paper-standard UGC switch ``tau = 1 / (2 K)`` (DERIVED FROM LITERATURE).
+
+    UGC uses bitflip-1 coordinatewise when ``min(p_i, 1-p_i) < tau`` and DisARM
+    otherwise.  The strict inequality is equation (7) of Kunes et al.; equality stays on
+    the DisARM interior branch.
+    """
+
+    if int(n_bits) <= 0:
+        raise MCFinisherError("n_bits must be positive")
+    return 1.0 / (2.0 * int(n_bits))
+
+
+def _validate_probabilities(probabilities: np.ndarray | Sequence[float]) -> np.ndarray:
+    p = np.asarray(probabilities, dtype=np.float64)
+    if p.ndim != 1 or p.size == 0:
+        raise MCFinisherError("probabilities must be a non-empty rank-1 vector")
+    if not np.all(np.isfinite(p)) or np.any((p < 0.0) | (p > 1.0)):
+        raise MCFinisherError("probabilities must be finite and lie in [0, 1]")
+    return p
+
+
+def _validate_mask(mask: np.ndarray | Sequence[int] | Sequence[bool], n_bits: int) -> np.ndarray:
+    b = np.asarray(mask, dtype=np.int8)
+    if b.shape != (int(n_bits),):
+        raise MCFinisherError(f"mask must have shape ({n_bits},); got {b.shape}")
+    if np.any((b != 0) & (b != 1)):
+        raise MCFinisherError("mask entries must be binary (0 or 1)")
+    return b
+
+
+def _exact_mask_value(objective: Callable[[np.ndarray], float], mask: np.ndarray) -> float:
+    value = float(objective(np.asarray(mask, dtype=np.int8)))
+    if not math.isfinite(value):
+        raise MCFinisherError(f"exact mask objective returned non-finite value {value!r}")
+    return value
+
+
+@dataclass(frozen=True)
+class BernoulliGradientEstimate:
+    """One unbiased stochastic gradient estimate with exact function-eval custody."""
+
+    estimator: str
+    gradient: np.ndarray
+    n_function_evals: int
+    masks: tuple[np.ndarray, ...]
+    values: tuple[float, ...]
+    boundary_coordinates: np.ndarray
+    selected_bitflip_coordinate: int | None = None
+
+
+@dataclass(frozen=True)
+class ExactMaskComponents:
+    """Exact n-pair score components for one direction-pinned edit mask."""
+
+    d_seg: float
+    d_pose: float
+    archive_bytes: int
+    s: float
+
+
+@dataclass
+class DirectionPinnedPairLocalObjective:
+    """Exact n-pair S from frozen-scorer base/edit cells plus real repack bytes.
+
+    This is the #400 diagonal identity encoded as a reusable objective.  Candidate edits
+    MUST touch distinct pair rows.  For each candidate pair, ``edited_dseg`` and
+    ``edited_dpose`` are frozen CPU-torch measurements in the SAME canonical batch layout
+    as the corresponding base cells.  Untouched pairs retain their frozen base cells.
+    The aggregate pose term is computed only after the exact n-pair mean, and bytes come
+    from ``archive_bytes_fn(table_for_mask)`` on every call; no per-edit score or byte
+    additivity is assumed.
+    """
+
+    base_dseg: np.ndarray
+    base_dpose: np.ndarray
+    base_table: np.ndarray
+    candidate_pairs: np.ndarray
+    candidate_columns: np.ndarray
+    candidate_values: np.ndarray
+    edited_dseg: np.ndarray
+    edited_dpose: np.ndarray
+    archive_bytes_fn: Callable[[np.ndarray], int]
+    authority_label: str = "[frozen CPU-torch exact pair-local cells]"
+
+    def __post_init__(self) -> None:
+        self.base_dseg = np.asarray(self.base_dseg, dtype=np.float64)
+        self.base_dpose = np.asarray(self.base_dpose, dtype=np.float64)
+        self.base_table = np.asarray(self.base_table).copy()
+        self.candidate_pairs = np.asarray(self.candidate_pairs, dtype=np.int64)
+        self.candidate_columns = np.asarray(self.candidate_columns, dtype=np.int64)
+        self.candidate_values = np.asarray(self.candidate_values, dtype=self.base_table.dtype)
+        self.edited_dseg = np.asarray(self.edited_dseg, dtype=np.float64)
+        self.edited_dpose = np.asarray(self.edited_dpose, dtype=np.float64)
+        if self.base_dseg.ndim != 1 or self.base_dpose.shape != self.base_dseg.shape:
+            raise MCFinisherError("base d_seg/d_pose must be equal-length rank-1 arrays")
+        k = int(self.candidate_pairs.size)
+        expected = (k,)
+        for name, value in (
+            ("candidate_columns", self.candidate_columns),
+            ("candidate_values", self.candidate_values),
+            ("edited_dseg", self.edited_dseg),
+            ("edited_dpose", self.edited_dpose),
+        ):
+            if value.shape != expected:
+                raise MCFinisherError(f"{name} must have shape {expected}; got {value.shape}")
+        if k == 0:
+            raise MCFinisherError("at least one direction-pinned candidate is required")
+        if len(set(self.candidate_pairs.tolist())) != k:
+            raise MCFinisherError("candidate pairs must be distinct for pair-local composition")
+        if np.any((self.candidate_pairs < 0) | (self.candidate_pairs >= self.base_dseg.size)):
+            raise MCFinisherError("candidate pair index is outside the n-pair authority arrays")
+        if self.base_table.ndim != 2 or np.any(
+            (self.candidate_pairs < 0) | (self.candidate_pairs >= self.base_table.shape[0])
+        ):
+            raise MCFinisherError("base_table must be rank-2 and cover every candidate pair")
+        if np.any(
+            (self.candidate_columns < 0) | (self.candidate_columns >= self.base_table.shape[1])
+        ):
+            raise MCFinisherError("candidate column index is outside base_table")
+        if not np.all(np.isfinite(self.base_dseg)) or not np.all(np.isfinite(self.base_dpose)):
+            raise MCFinisherError("base exact cells must be finite")
+        if not np.all(np.isfinite(self.edited_dseg)) or not np.all(np.isfinite(self.edited_dpose)):
+            raise MCFinisherError("edited exact cells must be finite")
+
+    @property
+    def n_bits(self) -> int:
+        return int(self.candidate_pairs.size)
+
+    @property
+    def n_pairs(self) -> int:
+        return int(self.base_dseg.size)
+
+    def table_for_mask(self, mask: np.ndarray | Sequence[int] | Sequence[bool]) -> np.ndarray:
+        b = _validate_mask(mask, self.n_bits)
+        table = self.base_table.copy()
+        active = np.flatnonzero(b)
+        table[
+            self.candidate_pairs[active],
+            self.candidate_columns[active],
+        ] = self.candidate_values[active]
+        return table
+
+    def components(self, mask: np.ndarray | Sequence[int] | Sequence[bool]) -> ExactMaskComponents:
+        b = _validate_mask(mask, self.n_bits)
+        dseg = self.base_dseg.copy()
+        dpose = self.base_dpose.copy()
+        active = np.flatnonzero(b)
+        dseg[self.candidate_pairs[active]] = self.edited_dseg[active]
+        dpose[self.candidate_pairs[active]] = self.edited_dpose[active]
+        table = self.table_for_mask(b)
+        archive_bytes = int(self.archive_bytes_fn(table))
+        if archive_bytes < 0:
+            raise MCFinisherError("archive_bytes_fn returned a negative byte count")
+        mean_dseg = float(dseg.mean())
+        mean_dpose = float(dpose.mean())
+        s = float(compute_contest_score(mean_dseg, mean_dpose, archive_bytes))
+        return ExactMaskComponents(
+            d_seg=mean_dseg,
+            d_pose=mean_dpose,
+            archive_bytes=archive_bytes,
+            s=s,
+        )
+
+    def __call__(self, mask: np.ndarray) -> float:
+        return self.components(mask).s
+
+
+def sample_bernoulli_gradient(
+    estimator: str,
+    objective: Callable[[np.ndarray], float],
+    probabilities: np.ndarray | Sequence[float],
+    rng: np.random.Generator,
+    *,
+    ugc_tau: float | None = None,
+) -> BernoulliGradientEstimate:
+    """Sample an unbiased exact-objective logit-gradient estimate.
+
+    The estimand is ``d/dphi E[f(b)]`` for independent
+    ``b_i ~ Bernoulli(sigmoid(phi_i))``.  ``objective`` is called exactly twice for
+    DisARM/RLOO and exactly three times for UGC.  UGC deliberately constructs the full
+    bitflip-1 draw before applying the coordinatewise switch; if the selected bitflip
+    coordinate is interior its component is discarded, matching the estimator definition
+    while keeping function-eval custody explicit and deterministic.
+    """
+
+    if estimator not in _GRADIENT_MASK_ESTIMATORS:
+        raise MCFinisherError(
+            f"gradient estimator must be one of {sorted(_GRADIENT_MASK_ESTIMATORS)}; "
+            f"got {estimator!r}"
+        )
+    p = _validate_probabilities(probabilities)
+    k = int(p.size)
+    boundary = np.minimum(p, 1.0 - p) < (
+        ugc_boundary_threshold(k) if ugc_tau is None else float(ugc_tau)
+    )
+
+    if estimator == "rloo":
+        b = (rng.random(k) < p).astype(np.int8)
+        other = (rng.random(k) < p).astype(np.int8)
+        f_b = _exact_mask_value(objective, b)
+        f_other = _exact_mask_value(objective, other)
+        # Two-sample REINFORCE with the other sample as a leave-one-out baseline.
+        gradient = 0.5 * (f_b - f_other) * (b.astype(np.float64) - other)
+        return BernoulliGradientEstimate(
+            estimator=estimator,
+            gradient=gradient,
+            n_function_evals=2,
+            masks=(b, other),
+            values=(f_b, f_other),
+            boundary_coordinates=boundary,
+        )
+
+    # Shared antithetic Bernoulli construction for DisARM and UGC.
+    u = rng.random(k)
+    b = (u < p).astype(np.int8)
+    antithetic = ((1.0 - u) < p).astype(np.int8)
+    f_b = _exact_mask_value(objective, b)
+    f_antithetic = _exact_mask_value(objective, antithetic)
+    mismatch = b != antithetic
+    sign = np.where(antithetic == 0, 1.0, -1.0)
+    disarm_gradient = (
+        0.5
+        * (f_b - f_antithetic)
+        * sign
+        * mismatch.astype(np.float64)
+        * np.maximum(p, 1.0 - p)
+    )
+    if estimator == "disarm":
+        return BernoulliGradientEstimate(
+            estimator=estimator,
+            gradient=disarm_gradient,
+            n_function_evals=2,
+            masks=(b, antithetic),
+            values=(f_b, f_antithetic),
+            boundary_coordinates=boundary,
+        )
+
+    # bitflip-1: choose ONE coordinate uniformly from all K, multiply by K, and then
+    # retain it only if that coordinate is on UGC's boundary branch.  Selecting from all
+    # coordinates (rather than only boundary coordinates) is what preserves the paper's
+    # bitflip-1 normalization without an unregistered subset-size correction.
+    j = int(rng.integers(0, k))
+    flipped = b.copy()
+    flipped[j] = np.int8(1 - flipped[j])
+    f_flipped = _exact_mask_value(objective, flipped)
+    bitflip_gradient = np.zeros(k, dtype=np.float64)
+    bitflip_gradient[j] = (
+        k
+        * p[j]
+        * (1.0 - p[j])
+        * (1.0 if b[j] == 0 else -1.0)
+        * (f_flipped - f_b)
+    )
+    gradient = np.where(boundary, bitflip_gradient, disarm_gradient)
+    return BernoulliGradientEstimate(
+        estimator=estimator,
+        gradient=gradient,
+        n_function_evals=3,
+        masks=(b, antithetic, flipped),
+        values=(f_b, f_antithetic, f_flipped),
+        boundary_coordinates=boundary,
+        selected_bitflip_coordinate=j,
+    )
+
+
+def _mask_from_index(index: int, n_bits: int) -> np.ndarray:
+    return np.fromiter(
+        ((int(index) >> bit) & 1 for bit in range(int(n_bits))),
+        dtype=np.int8,
+        count=int(n_bits),
+    )
+
+
+def exact_bernoulli_logit_gradient(
+    objective: Callable[[np.ndarray], float],
+    probabilities: np.ndarray | Sequence[float],
+) -> np.ndarray:
+    """Brute-force exact ``d/dphi E[f(b)]`` over all ``2**K`` masks."""
+
+    p = _validate_probabilities(probabilities)
+    k = int(p.size)
+    if k > 20:
+        raise MCFinisherError("exact enumeration is restricted to K<=20")
+    gradient = np.zeros(k, dtype=np.float64)
+    for index in range(1 << k):
+        b = _mask_from_index(index, k)
+        probability = float(np.prod(np.where(b == 1, p, 1.0 - p)))
+        gradient += probability * _exact_mask_value(objective, b) * (b - p)
+    return gradient
+
+
+@dataclass(frozen=True)
+class EstimatorVarianceReceipt:
+    """Matched-function-evaluation variance receipt at a fixed Bernoulli point."""
+
+    estimator: str
+    function_evals: int
+    n_samples: int
+    trace_variance: float | None
+    mean_gradient: np.ndarray | None
+    proposal_gain_variance: float | None
+    budget_padding_evals: int
+    wall_clock_s: float
+
+
+@dataclass(frozen=True)
+class ExactEstimatorMoments:
+    """Exhaustive finite-support moments of an unbiased gradient estimator."""
+
+    estimator: str
+    mean_gradient: np.ndarray
+    coordinate_variance: np.ndarray
+    trace_variance: float
+    probability_mass: float
+    objective_states: int
+
+
+def exact_bernoulli_estimator_moments(
+    objective: Callable[[np.ndarray], float],
+    probabilities: np.ndarray | Sequence[float],
+    *,
+    ugc_tau: float | None = None,
+) -> dict[str, ExactEstimatorMoments]:
+    """Exhaust exact UGC, DisARM, and RLOO moments on a small Bernoulli support.
+
+    This is a DERIVED finite-support diagnostic, not a replacement for the matched-budget
+    Monte Carlo receipt.  It is useful when K is small enough for the exact-enumeration arm:
+    it distinguishes an estimator-law variance effect from sampling noise in a short A/B.
+    The objective is evaluated exactly once for each of the ``2**K`` masks.
+    """
+
+    p = _validate_probabilities(probabilities)
+    k = int(p.size)
+    if k > 10:
+        raise MCFinisherError("exact estimator moments are restricted to K<=10")
+    values: dict[tuple[int, ...], float] = {}
+    masks: list[tuple[np.ndarray, float, float]] = []
+    for index in range(1 << k):
+        b = _mask_from_index(index, k)
+        value = _exact_mask_value(objective, b)
+        key = tuple(int(x) for x in b)
+        values[key] = value
+        mass = float(np.prod(np.where(b == 1, p, 1.0 - p)))
+        masks.append((b, mass, value))
+
+    categories: list[list[tuple[int, int, float]]] = []
+    for probability in p:
+        if probability < 0.5:
+            categories.append(
+                [
+                    (1, 0, float(probability)),
+                    (0, 0, float(1.0 - 2.0 * probability)),
+                    (0, 1, float(probability)),
+                ]
+            )
+        elif probability > 0.5:
+            categories.append(
+                [
+                    (1, 0, float(1.0 - probability)),
+                    (1, 1, float(2.0 * probability - 1.0)),
+                    (0, 1, float(1.0 - probability)),
+                ]
+            )
+        else:
+            categories.append([(1, 0, 0.5), (0, 1, 0.5)])
+
+    tau = ugc_boundary_threshold(k) if ugc_tau is None else float(ugc_tau)
+    boundary = np.minimum(p, 1.0 - p) < tau
+    weighted: dict[str, list[tuple[float, np.ndarray]]] = {
+        "ugc": [],
+        "disarm": [],
+        "rloo": [],
+    }
+    for outcome in product(*categories):
+        b = np.fromiter((item[0] for item in outcome), dtype=np.int8, count=k)
+        antithetic = np.fromiter((item[1] for item in outcome), dtype=np.int8, count=k)
+        mass = float(np.prod([item[2] for item in outcome]))
+        f_b = values[tuple(int(x) for x in b)]
+        f_antithetic = values[tuple(int(x) for x in antithetic)]
+        disarm = (
+            0.5
+            * (f_b - f_antithetic)
+            * np.where(antithetic == 0, 1.0, -1.0)
+            * (b != antithetic)
+            * np.maximum(p, 1.0 - p)
+        )
+        weighted["disarm"].append((mass, disarm))
+        for j in range(k):
+            flipped = b.copy()
+            flipped[j] = np.int8(1 - flipped[j])
+            bitflip = np.zeros(k, dtype=np.float64)
+            bitflip[j] = (
+                k
+                * p[j]
+                * (1.0 - p[j])
+                * (1.0 if b[j] == 0 else -1.0)
+                * (values[tuple(int(x) for x in flipped)] - f_b)
+            )
+            weighted["ugc"].append((mass / k, np.where(boundary, bitflip, disarm)))
+    for b, b_mass, f_b in masks:
+        for other, other_mass, f_other in masks:
+            rloo = 0.5 * (f_b - f_other) * (b.astype(np.float64) - other)
+            weighted["rloo"].append((b_mass * other_mass, rloo))
+
+    result: dict[str, ExactEstimatorMoments] = {}
+    for estimator, outcomes in weighted.items():
+        probability_mass = float(sum(mass for mass, _gradient in outcomes))
+        mean = sum((mass * gradient for mass, gradient in outcomes), np.zeros(k))
+        second = sum((mass * gradient**2 for mass, gradient in outcomes), np.zeros(k))
+        variance = np.maximum(second - mean**2, 0.0)
+        result[estimator] = ExactEstimatorMoments(
+            estimator=estimator,
+            mean_gradient=mean,
+            coordinate_variance=variance,
+            trace_variance=float(variance.sum()),
+            probability_mass=probability_mass,
+            objective_states=1 << k,
+        )
+    return result
+
+
+def measure_estimator_variance(
+    estimator: str,
+    objective: Callable[[np.ndarray], float],
+    probabilities: np.ndarray | Sequence[float],
+    *,
+    eval_budget: int,
+    seed: int,
+    ugc_tau: float | None = None,
+) -> EstimatorVarianceReceipt:
+    """Measure estimator variance under an exact, matched function-eval budget.
+
+    ``one_plus_one_es`` has no unbiased gradient estimator, so its gradient trace is
+    honestly ``None`` and the scalar exact proposal-gain variance is reported separately.
+    Exact enumeration returns the exact gradient and zero estimator variance.
+    """
+
+    if estimator not in VALID_MASK_ESTIMATORS:
+        raise MCFinisherError(f"unknown estimator {estimator!r}")
+    if int(eval_budget) <= 0:
+        raise MCFinisherError("eval_budget must be positive")
+    p = _validate_probabilities(probabilities)
+    k = int(p.size)
+    rng = np.random.default_rng(int(seed))
+    calls = 0
+    padding = 0
+    t0 = time.monotonic()
+
+    def counted(mask: np.ndarray) -> float:
+        nonlocal calls
+        calls += 1
+        return _exact_mask_value(objective, mask)
+
+    if estimator == "exact_enumeration":
+        required = 1 << k
+        if eval_budget < required:
+            raise MCFinisherError(
+                f"exact_enumeration requires at least 2**K={required} evals; got {eval_budget}"
+            )
+        gradient = exact_bernoulli_logit_gradient(counted, p)
+        while calls < eval_budget:
+            counted(np.zeros(k, dtype=np.int8))
+            padding += 1
+        return EstimatorVarianceReceipt(
+            estimator=estimator,
+            function_evals=calls,
+            n_samples=1,
+            trace_variance=0.0,
+            mean_gradient=gradient,
+            proposal_gain_variance=None,
+            budget_padding_evals=padding,
+            wall_clock_s=time.monotonic() - t0,
+        )
+
+    if estimator == "one_plus_one_es":
+        base = np.zeros(k, dtype=np.int8)
+        # The control's reference objective is still a real function evaluation. Count
+        # it inside the same budget; hiding this call would give ES B+1 exact calls while
+        # reporting B and invalidate the matched-budget receipt.
+        base_value = counted(base)
+        gains: list[float] = []
+        while calls < eval_budget:
+            proposal = base.copy()
+            flips = rng.random(k) < (1.0 / k)
+            if not bool(np.any(flips)):
+                flips[int(rng.integers(0, k))] = True
+            proposal[flips] = 1 - proposal[flips]
+            gains.append(counted(proposal) - base_value)
+        return EstimatorVarianceReceipt(
+            estimator=estimator,
+            function_evals=calls,
+            n_samples=len(gains),
+            trace_variance=None,
+            mean_gradient=None,
+            proposal_gain_variance=float(np.var(gains, ddof=1)) if len(gains) > 1 else 0.0,
+            budget_padding_evals=0,
+            wall_clock_s=time.monotonic() - t0,
+        )
+
+    per_sample = 3 if estimator == "ugc" else 2
+    samples: list[np.ndarray] = []
+    while calls + per_sample <= eval_budget:
+        estimate = sample_bernoulli_gradient(
+            estimator, counted, p, rng, ugc_tau=ugc_tau
+        )
+        samples.append(estimate.gradient)
+    while calls < eval_budget:
+        counted(np.zeros(k, dtype=np.int8))
+        padding += 1
+    matrix = np.stack(samples) if samples else np.empty((0, k), dtype=np.float64)
+    trace = float(np.var(matrix, axis=0, ddof=1).sum()) if len(samples) > 1 else 0.0
+    mean = matrix.mean(axis=0) if len(samples) else np.zeros(k, dtype=np.float64)
+    return EstimatorVarianceReceipt(
+        estimator=estimator,
+        function_evals=calls,
+        n_samples=len(samples),
+        trace_variance=trace,
+        mean_gradient=mean,
+        proposal_gain_variance=None,
+        budget_padding_evals=padding,
+        wall_clock_s=time.monotonic() - t0,
+    )
+
+
+@dataclass(frozen=True)
+class MaskSearchOutcome:
+    proposal_index: int
+    candidate_mask: np.ndarray
+    candidate_value: float
+    delta_s: float
+    accepted: bool
+    reason: str
+    function_evals_after: int
+
+
+@dataclass(frozen=True)
+class MaskFinisherResult:
+    estimator: str
+    start_mask: np.ndarray
+    best_mask: np.ndarray
+    start_s: float
+    best_s: float
+    delta_s: float
+    function_evals: int
+    eval_budget: int
+    n_accepted: int
+    budget_padding_evals: int
+    outcomes: tuple[MaskSearchOutcome, ...]
+    seed: int
+    stop_reason: str
+    wall_clock_s: float
+
+
+class DirectionPinnedMaskFinisher:
+    """Exact-monotone finisher over direction-pinned apply/do-not-apply bits.
+
+    UGC/DisARM/RLOO provide only the proposed bit-flip direction.  The injected exact
+    objective decides acceptance with a strict ratchet.  `(1+1)-ES` and exact enumeration
+    use the same mask/objective/ratchet surface, making the A/B apples-to-apples.
+    """
+
+    def __init__(
+        self,
+        objective: Callable[[np.ndarray], float],
+        probabilities: np.ndarray | Sequence[float],
+        *,
+        estimator: str,
+        initial_mask: np.ndarray | Sequence[int] | Sequence[bool] | None = None,
+        initial_value: float | None = None,
+        seed: int = 0,
+        ugc_tau: float | None = None,
+    ) -> None:
+        if estimator not in VALID_MASK_ESTIMATORS:
+            raise MCFinisherError(f"unknown estimator {estimator!r}")
+        self.objective = objective
+        self.probabilities = _validate_probabilities(probabilities)
+        self.n_bits = int(self.probabilities.size)
+        self.estimator = estimator
+        self.seed = int(seed)
+        self.ugc_tau = ugc_tau
+        self.mask = _validate_mask(
+            np.zeros(self.n_bits, dtype=np.int8) if initial_mask is None else initial_mask,
+            self.n_bits,
+        )
+        self._rng = np.random.default_rng(self.seed)
+        self.function_evals = 0
+        self.n_accepted = 0
+        self.budget_padding_evals = 0
+        self.outcomes: list[MaskSearchOutcome] = []
+        self._enumeration_index = 0
+        self.current_value = (
+            _exact_mask_value(self.objective, self.mask)
+            if initial_value is None
+            else float(initial_value)
+        )
+        if not math.isfinite(self.current_value):
+            raise MCFinisherError("initial_value must be finite")
+        self.start_mask = self.mask.copy()
+        self.start_value = self.current_value
+
+    def _evaluate(self, mask: np.ndarray) -> float:
+        self.function_evals += 1
+        return _exact_mask_value(self.objective, mask)
+
+    def _accept_candidate(self, candidate: np.ndarray, *, reason: str) -> None:
+        value = self._evaluate(candidate)
+        delta = value - self.current_value
+        accepted = delta < 0.0
+        if accepted:
+            self.mask = candidate.copy()
+            self.current_value = value
+            self.n_accepted += 1
+        self.outcomes.append(
+            MaskSearchOutcome(
+                proposal_index=len(self.outcomes),
+                candidate_mask=candidate.copy(),
+                candidate_value=value,
+                delta_s=delta,
+                accepted=accepted,
+                reason=reason if accepted else f"{reason}_exact_no_improve",
+                function_evals_after=self.function_evals,
+            )
+        )
+
+    def _one_plus_one_step(self) -> None:
+        candidate = self.mask.copy()
+        flips = self._rng.random(self.n_bits) < (1.0 / self.n_bits)
+        if not bool(np.any(flips)):
+            flips[int(self._rng.integers(0, self.n_bits))] = True
+        candidate[flips] = 1 - candidate[flips]
+        self._accept_candidate(candidate, reason="one_plus_one_es")
+
+    def _gradient_step(self) -> None:
+        estimate = sample_bernoulli_gradient(
+            self.estimator,
+            self._evaluate,
+            self.probabilities,
+            self._rng,
+            ugc_tau=self.ugc_tau,
+        )
+        # Predicted first-order change for flipping the current deterministic bit.
+        directional = estimate.gradient * (1.0 - 2.0 * self.mask)
+        j = int(np.argmin(directional))
+        candidate = self.mask.copy()
+        candidate[j] = np.int8(1 - candidate[j])
+        self._accept_candidate(candidate, reason=f"{self.estimator}_direction")
+
+    def _enumeration_step(self) -> bool:
+        if self._enumeration_index >= (1 << self.n_bits):
+            return False
+        candidate = _mask_from_index(self._enumeration_index, self.n_bits)
+        self._enumeration_index += 1
+        self._accept_candidate(candidate, reason="exact_enumeration")
+        return True
+
+    def _snapshot_payload(self) -> dict[str, Any]:
+        return {
+            "schema": "direction_pinned_mask_finisher_snapshot.v1",
+            "estimator": self.estimator,
+            "seed": self.seed,
+            "probabilities": self.probabilities.tolist(),
+            "ugc_tau": self.ugc_tau,
+            "start_mask": self.start_mask.tolist(),
+            "mask": self.mask.tolist(),
+            "start_value": self.start_value,
+            "current_value": self.current_value,
+            "function_evals": self.function_evals,
+            "n_accepted": self.n_accepted,
+            "budget_padding_evals": self.budget_padding_evals,
+            "enumeration_index": self._enumeration_index,
+            "rng_state": self._rng.bit_generator.state,
+        }
+
+    def _atomic_snapshot(self, path: str | Path) -> None:
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_name(p.name + ".tmp")
+        tmp.write_text(json.dumps(self._snapshot_payload(), sort_keys=True), encoding="utf-8")
+        os.replace(tmp, p)
+
+    def _append_outcome(self, path: str | Path, outcome: MaskSearchOutcome) -> None:
+        row = {
+            "proposal_index": outcome.proposal_index,
+            "candidate_mask": outcome.candidate_mask.tolist(),
+            "candidate_value": outcome.candidate_value,
+            "delta_s": outcome.delta_s,
+            "accepted": outcome.accepted,
+            "reason": outcome.reason,
+            "function_evals_after": outcome.function_evals_after,
+            "estimator": self.estimator,
+            "seed": self.seed,
+        }
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, sort_keys=True) + "\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+
+    def run(
+        self,
+        *,
+        eval_budget: int,
+        snapshot_path: str | Path | None = None,
+        log_path: str | Path | None = None,
+    ) -> MaskFinisherResult:
+        """Run until the absolute exact-function-eval budget is exhausted.
+
+        Any residual calls smaller than one estimator+gate step re-evaluate the current
+        exact mask and are reported as ``budget_padding_evals``.  They make the A/B exact
+        call counts equal without laundering padding into search progress.
+        """
+
+        if int(eval_budget) <= 0:
+            raise MCFinisherError("eval_budget must be positive")
+        if self.function_evals > int(eval_budget):
+            raise MCFinisherError(
+                f"resumed function_evals={self.function_evals} exceeds budget={eval_budget}"
+            )
+        t0 = time.monotonic()
+        logged = len(self.outcomes)
+        stop_reason = "eval_budget"
+        while self.function_evals < int(eval_budget):
+            remaining = int(eval_budget) - self.function_evals
+            if self.estimator == "one_plus_one_es":
+                self._one_plus_one_step()
+            elif self.estimator == "exact_enumeration":
+                if not self._enumeration_step():
+                    stop_reason = "enumeration_exhausted"
+                    break
+            else:
+                step_cost = (3 if self.estimator == "ugc" else 2) + 1
+                if remaining < step_cost:
+                    self._evaluate(self.mask)
+                    self.budget_padding_evals += 1
+                else:
+                    self._gradient_step()
+            if log_path is not None:
+                for outcome in self.outcomes[logged:]:
+                    self._append_outcome(log_path, outcome)
+                logged = len(self.outcomes)
+            if snapshot_path is not None:
+                self._atomic_snapshot(snapshot_path)
+        while self.function_evals < int(eval_budget):
+            self._evaluate(self.mask)
+            self.budget_padding_evals += 1
+        if snapshot_path is not None:
+            self._atomic_snapshot(snapshot_path)
+        return MaskFinisherResult(
+            estimator=self.estimator,
+            start_mask=self.start_mask.copy(),
+            best_mask=self.mask.copy(),
+            start_s=self.start_value,
+            best_s=self.current_value,
+            delta_s=self.current_value - self.start_value,
+            function_evals=self.function_evals,
+            eval_budget=int(eval_budget),
+            n_accepted=self.n_accepted,
+            budget_padding_evals=self.budget_padding_evals,
+            outcomes=tuple(self.outcomes),
+            seed=self.seed,
+            stop_reason=stop_reason,
+            wall_clock_s=time.monotonic() - t0,
+        )
+
+    @classmethod
+    def resume_from(
+        cls,
+        snapshot_path: str | Path,
+        objective: Callable[[np.ndarray], float],
+    ) -> DirectionPinnedMaskFinisher:
+        payload = json.loads(Path(snapshot_path).read_text(encoding="utf-8"))
+        if payload.get("schema") != "direction_pinned_mask_finisher_snapshot.v1":
+            raise MCFinisherError("unsupported direction-pinned mask snapshot schema")
+        obj = cls(
+            objective,
+            payload["probabilities"],
+            estimator=payload["estimator"],
+            initial_mask=payload["mask"],
+            initial_value=float(payload["current_value"]),
+            seed=int(payload["seed"]),
+            ugc_tau=payload.get("ugc_tau"),
+        )
+        obj.start_mask = _validate_mask(payload["start_mask"], obj.n_bits)
+        obj.start_value = float(payload["start_value"])
+        obj.function_evals = int(payload["function_evals"])
+        obj.n_accepted = int(payload["n_accepted"])
+        obj.budget_padding_evals = int(payload.get("budget_padding_evals", 0))
+        obj._enumeration_index = int(payload.get("enumeration_index", 0))
+        obj._rng.bit_generator.state = payload["rng_state"]
+        return obj
+
+
+# ======================================================================================
 # PAIR-LOCAL DIAGONAL MODE (#400) — the witness realization of PR128's click-polish exploit
 # ======================================================================================
 # The witness carries PAIR-LOCAL clickable code tables (proven in
@@ -978,7 +1801,7 @@ class PairLocalDiagonalFinisher:
         trial_deltas = tuple(probe_deltas) if probe_deltas is not None else self.deltas
         a_changed = False
         b_unchanged = True
-        used = (None, None)
+        used: tuple[int | None, int | None] = (None, None)
         for col in self.columns:
             for dl in trial_deltas:
                 cand = self.table.copy()
@@ -1141,10 +1964,11 @@ class PairLocalDiagonalFinisher:
                     stop = "wall_clock_budget"
                     break
                 base = self.current_objective()
-                best = self._diagonal_sweep(base)
-                clicks = [
-                    (p, best[p][0], best[p][1]) for p in range(self.n_pairs) if best[p] is not None
-                ]
+                sweep_best = self._diagonal_sweep(base)
+                clicks: list[tuple[int, int, int]] = []
+                for p, candidate in enumerate(sweep_best):
+                    if candidate is not None:
+                        clicks.append((p, candidate[0], candidate[1]))
                 if not clicks:
                     stop = "plateau"
                     break
@@ -1176,14 +2000,14 @@ class PairLocalDiagonalFinisher:
                 else:
                     stop = "no_improving_subset"
                     break
-        best = self.current_objective()
+        final_obj = self.current_objective()
         touched = int((self.table != self._table0).any(axis=1).sum())
         return DiagonalFinisherResult(
             best_table=np.array(self.table, copy=True),
-            best_s_component=best.axis_s_component(),
+            best_s_component=final_obj.axis_s_component(),
             start_s_component=start_s,
-            delta_s_total=best.axis_s_component() - start_s,
-            best_agg=best.agg,
+            delta_s_total=final_obj.axis_s_component() - start_s,
+            best_agg=final_obj.agg,
             start_agg=start_agg,
             n_rounds=self._round_index,
             n_clicks_total=self._n_clicks_total,
@@ -1455,25 +2279,39 @@ __all__ = [
     "MC_FINISHER_LABEL",
     "R1_DXI_BYTECLOSE_MEMO",
     "VALID_DIAGONAL_AXES",
+    "VALID_MASK_ESTIMATORS",
     "BatchOutcome",
+    "BernoulliGradientEstimate",
     "DiagonalFinisherResult",
     "DiagonalObjective",
     "DiagonalProblem",
     "DiagonalRoundOutcome",
+    "DirectionPinnedMaskFinisher",
+    "DirectionPinnedPairLocalObjective",
+    "EstimatorVarianceReceipt",
+    "ExactEstimatorMoments",
+    "ExactMaskComponents",
     "FinisherProblem",
     "LocalityGuardError",
     "MCFinisher",
     "MCFinisherError",
     "MCFinisherResult",
+    "MaskFinisherResult",
+    "MaskSearchOutcome",
     "MeasuredObjective",
     "PairLocalDiagonalFinisher",
     "ParamState",
     "Proposal",
     "ProposalEngine",
     "delta_s_floor_per_confirmed_flip",
+    "exact_bernoulli_estimator_moments",
+    "exact_bernoulli_logit_gradient",
     "load_banked_r1_dxi_dpose_floor",
     "load_byte_close_pose_surfaces",
     "make_byte_close_xi_pose_measure",
     "make_through_r_code_measure",
+    "measure_estimator_variance",
     "params_sha256",
+    "sample_bernoulli_gradient",
+    "ugc_boundary_threshold",
 ]
