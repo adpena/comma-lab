@@ -16905,3 +16905,9 @@ when it lands) · 2 DIG-S1-QUERY-REAL-CALIBRATION (P0; epistemic-disagreement tr
 3 DIG-S2-SUPPORT-FIRST-ORGAN-OPE (joins causal-manifest/D40) · 4 DIG-S3-FINITE-BANK-INFO-GAIN ·
 5 DIG-S4-TRANSACTIONAL-OPTION-EXIT. DISPATCH SEQUENCING: tickets 1+2 WAIT on round-3 harvest (their input);
 ticket 3 WAITS on causal-manifest builder (live); 4+5 free-standing next-slot candidates.
+
+### FEED-muon-round2 consumer-leg addendum (main, 2026-07-13)
+Consumer leg for the new --film-polar-chart-spel DSL lever: HELD generically by lever_registry.completeness()
+(AST-derived — [consumers-generic] for the registry/readback surfaces) + duty row film_polar_chart_spel_finisher
+registered built-never-fired via the canonical pool API (digest pool surface renders it; gate = governed
+finishing boundary + n600 A/B admission). Full FEED: muon_round2_wire_fireable_DAG_FEED_20260713.md.
