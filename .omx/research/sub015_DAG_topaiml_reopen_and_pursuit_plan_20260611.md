@@ -17226,3 +17226,46 @@ for our (discontinuous-argmax) witness category + whether enriched localization 
 constructively.
 DSL leg: N/A — grounding, no lever. Equations leg: N/A for the seed (grounds existing Rung-2/3 laws); a
 successor equation registers ONLY if the deep read yields a typed R_twist^global.
+
+---
+
+## FEED-ane-correction-20260713 (#482, operator P0 "aggressively pursue ANE unlock" — CORRECTION LADDER, honest NO-GO)
+
+Research-only: true. Pointer UNMOVED (means). 31 tests passed. Full memo
+`.omx/research/ane_unlock_correction_20260713.md`; own DAG node `ane_unlock_correction_DAG_FEED_20260713.md`
+(carries the scoped decision tree); candidate rows `ane_unlock_correction_candidate_rows_20260713.jsonl`.
+
+MEASURED verdict (the correction ladder to make an ANE teacher-forward fast AND argmax-faithful FAILED):
+- R0: fp16 op-substitution floor = 28/2,359,296 = **0.00119% flips** (benign); fp16-vs-fp32 precision delta
+  = **2.78%** (DOMINATES — precision, not op-substitution, is the fidelity killer).
+- R1 selective-fp32 splits: no fidelity improvement. R2 affine/3×3-logit correction: WORSENED. R3
+  donated-23-SE-gate band correction: WORSENED 5%-band to 4.16% (scoped NO_GO core=64/halo=32). R4 W8A8:
+  45.8% flips.
+- R5 selection: the ONLY held-out fidelity pass is full CoreML **FLOAT32 CPU_AND_GPU** (0.00119% ≤ 0.0033%
+  bar) but at **3.609× < 10× speed bar** → NO_JOINT_BAR_CANDIDATE. Composed-teacher Amdahl 2.293×.
+- Consumer tiers: Training-gradient BLOCKED (VJP/cotangent parity unmeasured) · Verdict-advisory
+  UNLOCKED_LOCAL_ONLY (float32 CoreML) · Label-grade NOT_UNLOCKED.
+
+verdict_scope: FORMULATION (the CORRECTION-of-fp16 approach + the specific rungs R1-R4), family INTACT.
+Untested formulations / alternatives that keep ANE alive: (a) the **VJP/cotangent-parity** measurement for
+the training-gradient tier (never measured — the gate that would unlock the actual 95%-kill use); (b) a
+FLOAT32-native ANE placement path (the E5RT cache-permission failure blocked confirming true ANE placement
+this run — the 9.098 ms starting receipt stands but placement unconfirmed); (c) accept the
+verdict-advisory-ONLY unlock (float32 CoreML) as a real, banked local win for the verdict path even though
+it does not clear the training-loop speed bar. DSL leg: N/A (measurement, not a lever). Sister of the ANE
+survey (#471/#477) + the 95%-kill campaign (#455/#456, closed with theorem-grade ceilings).
+
+**10× BAR CRITIQUE (operator challenge 2026-07-13 "Why is 10x the threshold" — the bar is MIS-CALIBRATED):**
+The ≥10× speed bar was PREREGISTERED (good — no goalpost-moving) but never DERIVED; it is a round-number
+"don't stand up a whole compute rail for < an order of magnitude" heuristic. Two flaws: (1) It is applied
+to the FORWARD speedup, but the thing that actually matters — total teacher/training wall-clock — is
+**Amdahl-capped at 1/(1−p) = 1/0.22 = 4.55×** because ANE replaces only the forward (backward/VJP
+unmeasured). A ≥10× TOTAL win is unreachable forward-only BY CONSTRUCTION; a ≥10× forward bar is
+achievable (fp16 ANE = 38×) but only the FIDELITY-FAILING configs clear it. (2) By the operator's own
+revealed preference we STANDARDIZED on 1-thread CPU training for a **2.96×** win
+([[operator-1thread-training-standard]]) — so a 2.29×-teacher, FIDELITY-PASSING float32-CoreML config is
+NOT below "worth it"; the 10× bar wrongly discarded a bankable win. RE-SCOPED VERDICT: the verdict-advisory
+tier is a REAL banked local win (float32 CoreML, 2.29× teacher, argmax-faithful) — NOT a NO-GO. The
+training-gradient tier's true blocker is the unmeasured backward/VJP parity + the 4.55× forward-only Amdahl
+ceiling, NOT the 10× miss. The economically-correct bar = (integration+fidelity cost) vs (net wall-clock
+saving), which for the verdict path is already cleared. Re-derive the bar; do not re-use 10×.
