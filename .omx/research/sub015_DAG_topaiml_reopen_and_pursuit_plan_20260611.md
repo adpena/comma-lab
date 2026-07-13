@@ -17112,3 +17112,18 @@ coremltools conversion (CPU-heavy MIL passes) inside the window; steady-state pa
 predict-during-training, so mutual degradation bound < the 5% bar by construction of the deployment pattern.
 CONCURRENCY VERDICT: GREEN — the ANE is a genuine third compute rail; teacher-forward-on-ANE ∥ witness-on-GPU
 is pipeline parallelism, not time-slicing. Remaining ANE gate = FIDELITY only (the live correction ladder).
+
+## FEED-cl-apparatus-mapping-20260713 (pointer node; full FEED in cl_apparatus_mapping_dag_feed_20260713.md)
+CL-apparatus audit (#481, arXiv 2607.07847) [DERIVED; code "coming soon" so no code-parity claim]: our 10-yr
+campaign IS a continual-learning system; mapped to the paper's mechanism taxonomy: (1) retrieval/context
+(MEMORY.md + graph-memory #411 + retrieval-first #346) = GAPPED (context-mgmt insufficient for competence
+growth, as they measure) · (2) symbolic distillation (canonical_equations/DSL/pool) = MATCHED for accumulation,
+GAPPED for stale-fact replacement (our append-only supersession accumulates but their measured failure —
+resisting outdated-fact UPDATE — is a residual) · (3) organ RL arms = MATCHED only as GUARDED PREDICTION,
+GAPPED as true RL (best-for-updates but noise-sensitive). BIGGEST GAP: no lineage-aware mechanism ARBITER
+evaluated jointly on {current-adaptation, prior-retention, forward-transfer}. ORGAN MECHANISM-SELECTION RULE
+(feeds #436): new lineage → reversible retrieved priors · slow supported drift → lineage-conditioned
+distillation · selective clean change → RL credit ONLY after FORE/HCM support · noisy/unsupported →
+persistence/defer. GEPA: RESCOPE not confirm — keep "no help now, n=1, local GEPA-style candidates" + future
+sequential re-probe only after independent real lineages (papers-checked update note landed). 3 staged
+candidate rows (canonical pool readback passed).
