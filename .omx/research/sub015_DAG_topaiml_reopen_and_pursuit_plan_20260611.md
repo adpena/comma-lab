@@ -17419,3 +17419,31 @@ budget (150.453 ms) → inclusive 95%-kill impossible with positive student cost
 verdict_scope: WORTH-AN-ARM, feeds #455/#484. CONVERGENCE: decision-quotient (4-dim, argmax-relevant) = the
 low-rank output subspace the p0_sparse_adjoint + invprob_operator_fold (BCR) arms predict is cheap → the
 surrogate + the sparse-adjoint agree the backward's relevant output is 4-dim/low-rank. DSL leg N/A.
+
+---
+
+## FEED-p0-backward-wave-RESULTS-20260713 (3 arms CONVERGE: mechanism NO-GO, only reuse/sparsity/skip survive)
+
+Research-only. Pointer UNMOVED. Memos: `p0_checkpoint_backward_20260713.md`, `p0_costate_reuse_gradfree_20260713.md`,
+`calin_book_lessons_fold_20260713.md`. CONVERGENT verdict on attacking the 82% backward/costate-VJP (%
+still diagnostic-only, in-loop timer BLOCKED on governor — see GO_PACKET):
+- **p0_checkpoint_backward:** the backward is **COMPUTE/kernel-bound** (9.909 GMAC fwd, **73.57% in the dense
+  U-Net decoder**; conv execution dominates, NOT activation traffic). Checkpoint admission law G_ckpt>1 iff
+  Δ_mem>cT_f; here Δ_mem≈0 → recompute STRICTLY SLOWS (+18-46% teacher time, zero wall-clock win). NO-GO:
+  gradient-checkpointing, Neural-ODE-O(1)-adjoint (exact frozen scorer), reversible-approx (certified). ONE
+  survivor: PHASE-SPLIT-THREAD-CONTROL (WORTH-BUILD). verdict_scope: FORMULATION (checkpoint family), the
+  compute-bound fact is DERIVED-general.
+- **p0_costate_reuse:** costate lag-5 autocorrelation **ρ=0.847-0.865** → guarded **K_max=2 reuse WORTH-BUILD
+  (~2× teacher-call amortization)**; smoother K*=6 fails admission. Gradient-free: effective-dim≤2 only →
+  bulk NO-GO, **terminal guided search SURVIVES → feeds #396 MC-finisher**. FEEDS #454 schedule-adjoint.
+- **calin_book_fold:** top fold — the frozen-SegNet VJP IS already the exact discrete adjoint; speedups MUST
+  come from certified sparsity / checkpoint-memory / event-reuse, NOT a drop-in Neural-ODE adjoint. Also:
+  quotient-aware inverse solve (→#483/#157/#391/#249), adjoint-weighted Deep-Ritz allocation (→#316/#318/#320).
+
+SYNTHESIS: the backward MECHANISM cannot be cheapened (compute-bound exact adjoint). The cheap-backward
+survivors are all "compute-it-differently": (1) LESS OFTEN — K=2 reuse (~2×, ρ=0.85 grounded); (2) OUTPUT
+SPARSITY — the flagship p0_sparse_adjoint (still running; decision-quotient 4-dim per #485 → is the adjoint
+low-rank? Lexing-Ying PDO theory says the off-diagonal is low-rank); (3) SKIP at terminal — gradient-free
+(#396). The #484 pre-SE whole-teacher surrogate remains the orthogonal hedge (replaces fwd AND bwd). DSL leg
+N/A. All conditional on the in-loop 82% (timer owed). CONVERGENCE with #485 (decision-quotient 4-dim = the
+low-rank output subspace the flagship + BCR predict is cheap).
