@@ -70,3 +70,10 @@ forward-only monitoring. It is not a license to omit or double-count the MLX VJP
   about d_pose, another checkpoint, achieved QAT recovery, or contest score.
 
 Pointer delta: ZERO. No frontier/promotion/run-dir mutation.
+
+## Conformance addendum (main, 2026-07-13)
+The "premise FALSIFIED" line above — verdict_scope: instance — the aggregate post-hoc int8 cost premise on THIS
+checkpoint/LVLS1 format only (n600 MEASURED); other checkpoints/formats and the family remain open.
+Consumer leg: both proposals registered in the curriculum-candidate pool via the canonical API
+(int8_teacher_forward_w8a8 · int8_witness_qat_confirmatory, status needs_build) — rendered generically by the
+costate digest pool surface; the typed policy module is their dsl_lever anchor.
