@@ -96,7 +96,7 @@ Ranks are the `[DERIVED]` build/admission order for the current Pact graph. Lite
 ## 5. Licensing and import guard
 
 - `[FROM-LITERATURE]` Verified official-repository licenses: LingBot Apache-2.0, INSTANT MIT, LosslessINR BSD-3-Clause, NeuRBF MIT, CTC MIT, Neural Experts MIT, and CatLog Apache-2.0. `[DERIVED]` Import is permitted only for small reviewed primitives under those terms.
-- `[INFERRED]` No software license was located for YOPO or ReSprop during this search. `[DERIVED]` Those repositories are citation/equation sources only; no code copying. Papers without official OSS are clean-room reimplementation only.
+- `[OPERATOR-CORRECTION 2026-07-12]` The prior `[INFERRED]` claim "no license located for YOPO/ReSprop ⇒ clean-room only" was a SEARCH FAILURE, not a positive finding, and is WITHDRAWN. Operator states these repos and the related OSS ARE open source. YOPO (`github.com/a1600012888/YOPO-You-Only-Propagate-Once`), SFESS (`github.com/klaswijk/sfess`), INSTANT (`github.com/hieu-trannn/INSTANT`, MIT), and the JRD/Last-Byte + related refs are import-eligible. `[BINDING]` Before copying any file, READ that repo's actual LICENSE (a missing GitHub badge ≠ not-OSS; check the repo tree/headers) and attribute + comply per its terms; adapt-and-attribute is permitted, not just equation-only clean-room.
 - `[DERIVED]` Every imported or reimplemented primitive remains subordinate to deterministic NumPy/Torch/MLX parity, through-`R` receiver survival, archive-byte accounting, and exact-teacher descent gates.
 
 ## 6. Durable routing disposition

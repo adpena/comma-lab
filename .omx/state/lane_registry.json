@@ -74586,6 +74586,175 @@
       "research_only": true
     },
     {
+      "id": "lane_449_instant_projected_adjoint_probe_20260712",
+      "name": "INSTANT input-adjoint-only rank tournament",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Dollar-zero isolated Torch/NumPy saved-regime probe; no live trainer, training, paid dispatch, live V9 access, or score claim."
+    },
+    {
+      "id": "lane_sfess_cached_replay_ugc64_20260712",
+      "name": "SFESS cached replay on measured UGC 64-state objective",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/sfess_cached_replay_ugc64_20260712.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "$0 clean-room cached-only replay; score_claim=false; promotion_eligible=false; no scorer calls; no live trainer or V9 access"
+    },
+    {
+      "id": "lane_449_yopo_first_layer_costate_probe_20260712",
+      "name": "YOPO first-layer costate probe",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit 94fd0192b9886f6d9d0f2b77088085aaf97c0235"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "fresh-eyes-reviewed(2) plus post-fix round-1 self-review; receipt a89585cd70b9630c90468f3a502e1efc778836cffc56ca7fb71e997fff2e6fa3"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Scoped NO-GO on blocks[0], K={1,2,4}, n=1 pair0 macOS-CPU advisory; final receipt a89585cd70b9; score_claim=false; promotion_eligible=false",
+      "research_only": true,
+      "reactivation_criteria": [
+        "different pre-registered frozen-SegNet split with fresh-teacher early/boundary/late replay",
+        "different cadence family with zero registered non-descent and zero fallback"
+      ]
+    },
+    {
+      "id": "lane_v9_jrd_coeff_prefix_probe_20260712",
+      "name": "Exact JRD coefficient-prefix receiver probe",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "$0 isolated sealed-payload receiver-rate probe; research_only=true; score_claim=false; promotion_eligible=false; no trainer, live V9, cloud, or pointer access"
+    },
+    {
       "id": "lane_defect_network_tube_rate_code_20260712",
       "name": "Defect-network tube-algebra per-boundary rate-code probe",
       "phase": 0.0,
@@ -74626,6 +74795,212 @@
       },
       "notes": "",
       "research_only": true
+    },
+    {
+      "id": "lane_pointer_jrd_pr110_phase1_453_20260712",
+      "name": "Pointer JRD PR110 last-safe-plane Phase 1",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #453 local macOS-CPU advisory only; no paid dispatch, authoritative eval, or pointer mutation; primary ad02b012 submittable PR110-click archive, secondary 196acd18 borrowed PR128 bank"
+    },
+    {
+      "id": "lane_449_master_oss_reconciliation_20260713",
+      "name": "Task 449 master OSS reconciliation",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; local $0 only; pointer-neutral; reconciles YOPO INSTANT SFESS JRD landed probes against OSS; no live trainer or run-dir mutation",
+      "research_only": true
+    },
+    {
+      "id": "lane_454_segnet_cheap_validation_20260713",
+      "name": "Task 454 frozen-SegNet cheap validation mechanism",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; local $0 only; score_claim=false; mechanism lane owns isolated trust-region and margin proxy implementation, tests, receipt, note; no trainer/provider/protected-run mutation; no gate duplication with lane_449_master_oss_reconciliation_20260713"
+    },
+    {
+      "id": "lane_455_onpolicy_forward_surrogate_20260713",
+      "name": "Task 455 on-policy forward-replacing SegNet surrogate",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 local-only build; score_claim=false; no live trainer/protected run/cloud; forward-replacing nonlinear costate surrogate on yopo saved-regime harness; exact-teacher anchors control admission."
+    },
+    {
+      "id": "lane_456_frozen_segnet_exact_forward_20260712",
+      "name": "Task 456 argmax-preserving frozen SegNet exact forward",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -74635,5 +75010,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-12T23:50:06Z"
+  "updated_at": "2026-07-13T01:25:46Z"
 }
