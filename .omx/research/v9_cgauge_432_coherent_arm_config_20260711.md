@@ -210,3 +210,64 @@ capacity-reopen reconciliation on the row).
 - **GAP 2 — mod-19 safety net references a dead control.** #299 revert rule ("revert to 32 if d_seg > +2% vs mod-32 control") needs a LIVE mod-32 comparator; #205 (the mod-32 control) is DEAD → net has no comparator at fire time. eff_rank 16.4 is RISING → mod-19 may clip needed capacity.
 
 **Resolution (decisions, $0):** (1) For THE GOAL, fire #432 as a **whole-arm pointer bet vs the frozen 0.19108** — the pointer IS the control; no twin needed. Only T1-*attribution* science needs the phase-OFF twin (budget explicitly as a 2nd run). Stop calling #205 the "matched control." (2) Own the bundled T1+mod-19 bet — a MISS won't say which delta failed; split or ensure a live mod-32 comparator if attribution matters. Neither gap blocks the SEAL. Pointer 0.19108282 UNMOVED (MEANS).
+
+---
+
+## 9. DIVERGENCE POST-MORTEM + FIXED RELAUNCH — the response branch that was OWED (appended 2026-07-12)
+
+**Operator hit (accepted as legitimate):** *"V9 cgauge was supposed to be optimal ... all of that should
+have been turned in in the first place."* The fixed relaunch was NOT re-derivable-from-scratch work — the
+counter was a COMPLETED, MEASURED lever the arm simply did not turn on. Honest accounting below, all
+`[MEASURED]` from the dead run's own artifacts. Pointer 0.19108282 [contest-CPU] UNMOVED (this is MEANS).
+
+### 9.1 What actually happened (MEASURED from `v9_cgauge_432_coherent_arm_20260711/`)
+- Best-ever `d_seg = 0.03482 @ ep150` (`levelset_best.json`). Then the `unify_tau` stage **erased it**:
+  `d_seg 0.03482 → 0.04092 @ ep275` (RISING, `costate_shadow.jsonl` `classification: diverging_erasing`,
+  `d_seg_rel_slope +1.64e-3/ep` over ep175-275, `stage=unify_tau`). Run died at ep275, no live process.
+- **"Optimal" was ASPIRATION, not measurement.** Best 0.03482 is **~7× above** the mod32cap control
+  (~0.0047), the #205 CE-floor (0.00496), and the flicker oracle floor (0.005318); **~30-43× above** the
+  sub-0.15 need (0.0008-0.0012). The arm never reached the KNOWN baseline even at its best — the L87
+  Einstein-pass "single covariant trunk optimal both axes" is the design thesis the run did NOT realize.
+
+### 9.2 The precise gap (a KNOWN failure mode + a COMPLETED lever, both omitted)
+- `unify_tau` = τ-sharpening = an MCF-like flow. **MCF erases thin structures** — established finding L75
+  (`dash_erasure_homogenization`), the exact mechanism. The lane islands are the thinnest structure.
+- The dead run launched with **flat `--eikonal-weight 0.01`** and **NO `--eikonal-weight-end`** (default
+  `None` = flat). The eikonal term is what HOLDS the interface/SDF against MCF erosion. Flat-0.01 was too
+  weak to hold the thin lane through the sharpen stage.
+- `--eikonal-weight-end` EXISTS and its help string is literally *"(#292 control-system) STEP the eikonal
+  weight from --eikonal-weight up..."* — this IS task **#286** (COMPLETED: *"RAISE eikonal 0.01→0.05
+  COUPLED to τ-anneal"*), a MEASURED lever built specifically to counter τ-sharpen erosion. **It was not
+  in the arm.** That is the "should have been turned in": a settled counter-lever to the exact wall, left off.
+- The divergence RESPONSE was advisory-only (CONTAINMENT): the costate organ DID detect
+  `diverging_erasing` and DID emit `ROLLBACK_TO_BEST_CHECKPOINT` + `config_diffs`, but cannot autonomously
+  rollback+relaunch — so the run eroded to death and no fixed config was staged. Detection worked;
+  actuation + a prepared response did not exist.
+
+### 9.3 FIXED RELAUNCH CONFIG — ready to fire (HELD: operator-GO; do NOT fire during the 95%-kill P0)
+Warm-start weights from the ep150 EMA-best + turn ON the eikonal step-up coupled to the τ/MCF onset
+(the #286 counter). Same mod-dim 19 / hidden 96 ⇒ same-shape resume is valid.
+
+```bash
+.venv/bin/python tools/launch_witness_run.py \
+  --config v9_cgauge_432 \
+  --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz \
+  --num-pairs 600 \
+  --out-dir experiments/results/v9_cgauge_432_eikhold_relaunch_<UTC> \
+  --extra-trainer-flags \
+    "--resume-from experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_witness_ema_BEST.npz" \
+    "--warm-start-weights-only" \
+    "--resume-model-from ema" \
+    "--eikonal-weight-end 0.10"     # #286: STEP eikonal 0.01→0.10 across unify_tau to hold the thin lane
+```
+
+**HONEST caveat (do NOT oversell):** the eikonal-hold stops the EROSION; it does NOT by itself make the
+arm optimal. The best-of-0.03482 = 7× above baseline is a SEPARATE, open question — is the covariant-gauge
+trunk under-trained (best at ep150 of a run that died at 275), or does it structurally under-perform
+mod32cap on d_seg? The relaunch is the experiment that answers "can the trunk descend past ep150-best once
+the interface is held," NOT a claimed pointer-mover. Recommend it AFTER the 95%-kill P0 (GPU-timing
+contention would corrupt the throughput measurement) and paired with the trunk-vs-baseline question, not
+as a reflexive restart.
+
+**Triality:** `[no new equation]` (uses existing #286 eikonal-coupling law + L75 erasure law). DSL: the
+relaunch is expressible via the existing `--eikonal-weight-end` gauge (no new lever). DAG FEED appended.

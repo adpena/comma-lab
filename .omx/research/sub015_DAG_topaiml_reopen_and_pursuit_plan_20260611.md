@@ -16479,3 +16479,17 @@ identifier was resolved before derivation. No YOPO source code was imported. Rec
 `94fd0192b9886f6d9d0f2b77088085aaf97c0235`. Triality: DSL =
 `tac.witness_dsl.scorer_gradient_policy`; equation = `yopo_first_layer_costate_v1`; DAG = this FEED.
 `score_claim=false`; `promotion_eligible=false`; live trainer and protected run untouched.
+
+### FEED-v9div (2026-07-12): V9·CGauge DIVERGENCE post-mortem + fixed relaunch (the OWED response branch)
+SIGNAL: operator "V9 cgauge was supposed to be optimal ... should have been turned in — check the design memo."
+DIAGNOSTIC [MEASURED, run's own artifacts]: best d_seg 0.03482@ep150 (levelset_best.json) = 7× above mod32cap
+baseline 0.0047 / 30-43× above sub-0.15 need ⇒ "optimal" was ASPIRATION not measurement. Then unify_tau
+(τ-sharpen=MCF) ERASED it → 0.04092@ep275 (costate_shadow classification=diverging_erasing, +1.64e-3/ep) →
+died. ROOT: launched with FLAT --eikonal-weight 0.01, NO --eikonal-weight-end ⇒ interface not held vs MCF
+erosion (L75 dash-erasure). The counter — #286 (COMPLETED, MEASURED "RAISE eikonal coupled to τ-anneal", =
+the --eikonal-weight-end "STEP the eikonal weight up" flag) — was OMITTED from the "optimal" arm. Divergence
+RESPONSE was advisory-only (CONTAINMENT): organ detected+recommended ROLLBACK_TO_BEST but cannot actuate.
+RESPONSE [turned in, HELD operator-GO]: memo §9 fixed relaunch = warm-start-weights-only from ep150 EMA-best
++ --eikonal-weight-end 0.10 (hold thin lane through unify_tau). CAVEAT: stops erosion ≠ makes optimal; the
+7×-above-baseline best is a SEPARATE open question (under-train vs trunk under-performs mod32cap). Fire AFTER
+95%-kill P0 (GPU contention), paired with the trunk-vs-baseline question. Pointer 0.19108282 UNMOVED (MEANS).
