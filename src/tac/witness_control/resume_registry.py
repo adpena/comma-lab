@@ -111,6 +111,7 @@ DIRECT_CONTROLLER_NAMES: frozenset[str] = frozenset({
     # frequency/bias and receipt identity are part of the crash-resume initial
     # condition and must not disappear from the canonical sidecar.
     "fresh_init",
+    "margin_compander",
     # owed-1 REPAIRED POSE-GATE (SYNTHESIS_v3_v752 §A.4): the rolling-slope de-noised σ_min plateau
     # detector — persists the σ_min series + the monotone fire latch so a crash-resume re-derives the
     # IDENTICAL conditioning-gate decision. Registered ONLY when actuating (--pose-finish-engage-on

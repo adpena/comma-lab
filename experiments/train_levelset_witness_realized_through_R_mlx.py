@@ -602,6 +602,16 @@ def _build_ema_checkpoint_arrays(
     flat["__epoch"] = np.asarray(int(epoch))
     flat["__cfg_in_feat"] = np.asarray(int(in_feat))
     flat["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
+    flat["__cfg_ground_frame_chart"] = np.asarray(
+        int(bool(getattr(args, "ground_frame_chart", False))))
+    flat["__cfg_margin_companded_ground_chart"] = np.asarray(
+        int(bool(getattr(args, "margin_companded_ground_chart", False))))
+    flat["__cfg_margin_compander_horizon_row"] = np.asarray(
+        float(getattr(args, "margin_compander_horizon_row", 174.0)))
+    flat["__cfg_margin_compander_softening_offset_rows"] = np.asarray(
+        float(getattr(args, "margin_compander_softening_offset_rows", 32.5257801441824)))
+    flat["__cfg_margin_compander_seed"] = np.asarray(
+        int(getattr(args, "margin_compander_seed", 0)))
     flat["__cfg_n_dir_freqs"] = np.asarray(int(args.n_dir_freqs))
     flat["__cfg_freq_across"] = np.asarray(float(args.freq_across))
     flat["__cfg_freq_along"] = np.asarray(float(args.freq_along))
@@ -655,6 +665,18 @@ def _build_resume_state_arrays(
     out["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
     out["__cfg_mod_dim"] = np.asarray(args.mod_dim)
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
+    # S1 structural coordinate-basis identity. The wrapper adds no tensors, so
+    # param-key compatibility cannot detect a dropped/changed compander on resume.
+    out["__cfg_ground_frame_chart"] = np.asarray(
+        int(bool(getattr(args, "ground_frame_chart", False))))
+    out["__cfg_margin_companded_ground_chart"] = np.asarray(
+        int(bool(getattr(args, "margin_companded_ground_chart", False))))
+    out["__cfg_margin_compander_horizon_row"] = np.asarray(
+        float(getattr(args, "margin_compander_horizon_row", 174.0)))
+    out["__cfg_margin_compander_softening_offset_rows"] = np.asarray(
+        float(getattr(args, "margin_compander_softening_offset_rows", 32.5257801441824)))
+    out["__cfg_margin_compander_seed"] = np.asarray(
+        int(getattr(args, "margin_compander_seed", 0)))
     out["__cfg_in_feat"] = np.asarray(int(in_feat))
     out["__cfg_n_dir_freqs"] = np.asarray(int(args.n_dir_freqs))
     out["__cfg_freq_across"] = np.asarray(float(args.freq_across))
@@ -975,6 +997,16 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
     checks: list[tuple[str, object, bool]] = [
         ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
         ("__cfg_self_orient", int(bool(getattr(args, "self_orient", False))), False),
+        ("__cfg_ground_frame_chart",
+         int(bool(getattr(args, "ground_frame_chart", False))), False),
+        ("__cfg_margin_companded_ground_chart",
+         int(bool(getattr(args, "margin_companded_ground_chart", False))), False),
+        ("__cfg_margin_compander_horizon_row",
+         float(getattr(args, "margin_compander_horizon_row", 174.0)), True),
+        ("__cfg_margin_compander_softening_offset_rows",
+         float(getattr(args, "margin_compander_softening_offset_rows", 32.5257801441824)), True),
+        ("__cfg_margin_compander_seed",
+         int(getattr(args, "margin_compander_seed", 0)), False),
         ("__cfg_n_dir_freqs", int(getattr(args, "n_dir_freqs", 0)), False),
         ("__cfg_freq_across", float(getattr(args, "freq_across", 0.0)), True),
         ("__cfg_freq_along", float(getattr(args, "freq_along", 0.0)), True),
@@ -3863,13 +3895,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # render_aa block, where the fail-closed combination guards can see render_aa); the closure
     # here late-binds it. use_gfc=False (the default) leaves every path byte-identical.
     use_gfc = bool(getattr(args, "ground_frame_chart", False))
+    use_margin_compander = bool(getattr(args, "margin_companded_ground_chart", False))
+    if use_margin_compander and not use_gfc:
+        raise ValueError(
+            "--margin-companded-ground-chart composes AFTER --ground-frame-chart; "
+            "the base projective chart cannot be disabled"
+        )
     _gfc_chart = None
+    _input_chart = None
 
     def _feats_np_for_pair(pi: int) -> np.ndarray:
         if use_gfc:
             # per-pair chart coords -> curvelet feats, recomputed on demand (numpy side; the MLX
             # side caches ONCE via cf_mx_cache — the chart is static, unlike the reorient loop).
-            return curvelet_feats(_gfc_chart.coords_for_pair_numpy(coords_np, pi), B).astype(np.float32)
+            return curvelet_feats(_input_chart.coords_for_pair_numpy(coords_np, pi), B).astype(np.float32)
         if not use_self_orient:
             return curv_feats_np
         return np.concatenate([curv_feats_np, dir_feats_per_pair[pi]], axis=-1).astype(np.float32)
@@ -4068,11 +4107,33 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                    pitch=float(args.gfc_pitch)),
             grid_hw=(render_h, render_w),
         )
+        _input_chart = _gfc_chart
+        if use_margin_compander:
+            from tac.boundary_math.inverse_depth_compander import MarginCompandedGroundChart
+
+            _input_chart = MarginCompandedGroundChart.compose(
+                _gfc_chart,
+                horizon_row=float(args.margin_compander_horizon_row),
+                softening_offset_rows=float(args.margin_compander_softening_offset_rows),
+                seed=int(args.margin_compander_seed),
+            )
         print(json.dumps({"stage": "ground_frame_chart", "ref_pair": int(args.gfc_ref_pair),
                           "regime": "ground", "s_t": float(args.gfc_s_t), "s_r": float(args.gfc_s_r),
                           "pitch": float(args.gfc_pitch), "n_pairs": P,
                           "note": "#194/§17.1 witness input chart pre-composition (FEED-ll math; "
                           "rule-118 FREE from the stored pose table; STRUCTURAL from ep0)"}), flush=True)
+        if use_margin_compander:
+            print(json.dumps({
+                "stage": "margin_companded_ground_chart",
+                "horizon_row": float(args.margin_compander_horizon_row),
+                "softening_offset_rows": float(args.margin_compander_softening_offset_rows),
+                "seed": int(args.margin_compander_seed),
+                "value_provenance": (
+                    ".omx/research/manifold_geometry_slots_probe_s1_s2_20260713.json"
+                ),
+                "counting": "video-derived profile MUST be counted at receiver close",
+                "note": "coordinate-capacity placement only; feature/cache shapes unchanged",
+            }), flush=True)
 
     # (DIAGNOSED FIX) natural per-class palette = mean GT RGB per L* class (the transfer-probe's
     # winning ingredient; logit space). Anchors the learned palette inside SegNet's distribution so
@@ -7270,6 +7331,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         restore=lambda prefix, cfg: restore_fresh_state_from_cfg(
             _fresh_state, cfg, prefix=prefix),
     ))
+    if use_margin_compander:
+        from tac.boundary_math.inverse_depth_compander import MARGIN_COMPANDER_RESUME_PREFIX
+
+        _resume_registry.register(
+            "margin_compander", MARGIN_COMPANDER_RESUME_PREFIX, _input_chart)
 
     # Manifold-Muon round 2: construct/register the state ONLY for the typed
     # treatment arm.  Once initialized at the Muon boundary it persists Q,
@@ -12098,6 +12164,36 @@ def main(argv: list[str] | None = None) -> int:
                     help="ground-frame-chart rotation scale s_r (FEED-ll fit default 0.0).")
     ap.add_argument("--gfc-pitch", type=float, default=-0.01,
                     help="ground-frame-chart ground-plane pitch (rad; FEED-ll fit default -0.01).")
+    # S1 Riemannian compander: compose AFTER the projective chart. Structural from ep0,
+    # default OFF. The fitted profile is video-derived and must be counted in receiver bytes.
+    ap.add_argument(
+        "--margin-companded-ground-chart",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=("compose the S1 softened-inverse-depth row compander after GroundFrameChart; "
+              "moves fixed coordinate capacity toward dash-erasure rows without changing width; "
+              "requires --ground-frame-chart; fitted profile is receiver-counted; DEFAULT OFF"),
+    )
+    ap.add_argument(
+        "--margin-compander-horizon-row",
+        type=float,
+        default=174.0,
+        help=("S1 MEASURED horizon row; provenance: manifold_geometry_slots_probe_s1_s2_"
+              "20260713.json"),
+    )
+    ap.add_argument(
+        "--margin-compander-softening-offset-rows",
+        type=float,
+        default=32.5257801441824,
+        help=("S1 MEASURED softened-inverse-depth delta in rows; do not refit in a launch "
+              "configuration"),
+    )
+    ap.add_argument(
+        "--margin-compander-seed",
+        type=int,
+        default=0,
+        help="deterministic analytic-family identity seed (current transform consumes no RNG)",
+    )
     # ACTIVATION
     # (config-review #3) HOSC is the ONLY descent evidence (probe 0.0066; A/B 0.221 hosc vs 0.265
     # wire). WIRE was a paper-default guess; default HOSC, run wire as a sweep arm.

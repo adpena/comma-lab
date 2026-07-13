@@ -2799,6 +2799,44 @@ def GroundFrameChart(
                         "table; fail-closed with self-orient/render-aa in v0"))
 
 
+def MarginCompandedGroundChart() -> Lever:
+    """S1 inverse-depth Riemannian compander composed after ``GroundFrameChart``.
+
+    The exact softened profile is MEASURED in
+    ``.omx/research/manifold_geometry_slots_probe_s1_s2_20260713.json``.  This is a
+    structural chart change from epoch zero: it reallocates a fixed coordinate field's
+    sampling density toward the dash-erasure band without changing feature width,
+    parameter count, optimizer steps, or the matched-byte receiver budget.  The fitted
+    video-derived profile is COUNTED at receiver close.  Default OFF because no canonical
+    Program composes this factory; promotion remains owed on the ground-class-pair n600
+    ledger plus a receiver-closed matched-bytes/matched-steps A/B.
+    """
+    from tac.boundary_math.inverse_depth_compander import (
+        DEFAULT_COMPANDER_SEED,
+        MEASURED_HORIZON_ROW,
+        MEASURED_SOFTENING_OFFSET_ROWS,
+    )
+
+    return Lever(
+        "margin_companded_ground_chart",
+        overrides={
+            "--ground-frame-chart": True,
+            "--margin-companded-ground-chart": True,
+            "--margin-compander-horizon-row": float(MEASURED_HORIZON_ROW),
+            "--margin-compander-softening-offset-rows": float(
+                MEASURED_SOFTENING_OFFSET_ROWS
+            ),
+            "--margin-compander-seed": int(DEFAULT_COMPANDER_SEED),
+        },
+        notes=(
+            "S1 softened-inverse-depth Riemannian row compander composed AFTER #194 "
+            "GroundFrameChart; structural-from-ep0; exact measured delta; fixed capacity "
+            "moves toward dash-erasure rows; video-derived chart payload COUNTED; "
+            "built-never-fired pending receiver-close n600 matched-byte/step A/B"
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # COMPUTE/SPEED levers (the gauge's non-curriculum config that compiles to trainer argv).
 # SPEED-LEVER POLICY (#356 measurement + operator override 2026-07-12): fp-reorder transforms are

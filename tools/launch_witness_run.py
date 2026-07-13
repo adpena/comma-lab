@@ -382,7 +382,8 @@ def config_family(cfg) -> str:
                                     "v9_cgauge", "v9_cgauge_432",
                                     "v9_cgauge_truly_optimal_core",
                                     "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32",
-                                    "next_launch_all_levers_20260713"):
+                                    "next_launch_all_levers_20260713",
+                                    "next_launch_all_levers_trimmed_20260713"):
         return cfg.name
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
@@ -818,7 +819,7 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
         return compile_v9_cgauge_ideal_launch_config(
             gt_cache, num_pairs=num_pairs, mod_dim=mod_dim,
             program_name=config, **_ek)
-    if config == "next_launch_all_levers_20260713":
+    if config in ("next_launch_all_levers_20260713", "next_launch_all_levers_trimmed_20260713"):
         # 2026-07-13 operator-GO-only ticket.  The compiler starts from the
         # ideal mod19 lineage, composes every compatible speed/init/observer
         # lever through the typed DSL, and carries fail-closed launch blockers
@@ -827,8 +828,10 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
             compile_next_launch_all_levers_ticket,
         )
 
+        variant = ("trimmed_compliant"
+                   if config == "next_launch_all_levers_trimmed_20260713" else "full")
         return compile_next_launch_all_levers_ticket(
-            gt_cache, num_pairs=num_pairs, **_ek)
+            gt_cache, num_pairs=num_pairs, variant=variant, **_ek)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -843,7 +846,7 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
         f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
         f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432, "
         f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, v9_cgauge_ideal_mod32, "
-        f"next_launch_all_levers_20260713. "
+        f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713. "
         f"Add an explicit branch (NEVER "
         f"silently fall through to proven_base).")
 
@@ -1270,7 +1273,8 @@ def main(argv: list[str] | None = None) -> int:
                              "crucible_v753", "v9_cgauge_432",
                              "v9_cgauge_truly_optimal_core",
                              "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32",
-                             "next_launch_all_levers_20260713"],
+                             "next_launch_all_levers_20260713",
+                             "next_launch_all_levers_trimmed_20260713"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "

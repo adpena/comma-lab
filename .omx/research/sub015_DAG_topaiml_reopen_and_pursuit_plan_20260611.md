@@ -17029,3 +17029,19 @@ through-R score gain · regime/stratum coverage receipts · accrue independent r
 check_fore_support is a NECESSARY structural gate, NOT numeric-OPE authorization — it does not enforce
 multi-trajectory overlap, regime coverage, decision/transition equality, Markov replay, or prospective folds
 (consumer-hardening ticket for the manifest's next increment). Refusal schema = the durable deliverable.
+
+## FEED-compander+prego-20260713 (pointer nodes; full FEEDs in compander_build_DAG_FEED / launch_prego_worklist memos)
+COMPANDER BUILT (#476-S1 follow-up, operator-named): MarginCompandedGroundChart lever L1 impl_complete —
+inverse-depth compander module (numpy PASS deterministic; MLX parity env-blocked in sandbox, RUN BY MAIN locally:
+12/12 green incl. Metal) + default-OFF DSL/trainer wiring + margin_compander resume registration + pool
+built-never-fired via record_candidate. GROUND LEDGER (promotion-gate prep, n600 600/600): Road↔Lane carries
+57.02% of cached flips; fixed-S1 JS 0.1391 vs uniform 0.2373 vs log-depth 0.2599 [mechanism evidence only].
+A/B comparator built: Lane-primary per-class d_seg at matched seed/steps/archive-bytes, receiver-close,
+non-worsening d_pose. LAUNCH PRE-GO (#474b follow-up): R1 CLEARED as a TWO-CHOICE packet — FULL 71.54 GiB/run
+(system 119.4>97.7 REFUSE) vs TRIMMED 24.48 GiB/run (system 72.28<97.7 + live dry-run 67.3<100.2 =
+ADMIT_AT_SNAPSHOT; trim removes ONLY fresh_frequency_shift_init, whose implementation re-enables the 47 GiB
+self-orient directional bank over the self-orient-OFF V9 parent; self-orient direct transfer ~zero MEASURED at
+owed-16 n600; FreSh cold-start delta UNMEASURED → trim NOT claimed score-neutral). R2 B=1/B=2 n600 command
+PREPARED (r2_..._after_GO.sh). R3 SSD root: agent PermissionError was SANDBOX-only — main created
+/Volumes/VertigoDataTier/pact/witness_runs. R4 remaining REAL producer gaps: D-A 8-field component timers +
+D-B engagement callbacks (boundary rows land but don't emit these) — the LAST build before the GO decision.

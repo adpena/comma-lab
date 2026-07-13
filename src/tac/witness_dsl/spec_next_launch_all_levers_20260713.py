@@ -12,6 +12,7 @@ materialize and inspect the held ticket.
 """
 from __future__ import annotations
 
+import ast
 from dataclasses import replace
 from pathlib import Path
 
@@ -29,7 +30,12 @@ from tac.witness_dsl.typed_config import TypedLever, build_launch_manifest
 
 PROGRAM_NAME = "next_launch_all_levers_20260713"
 DEFAULT_OUT_DIR = "experiments/results/next_launch_all_levers_ticket_20260713"
+TRIMMED_PROGRAM_NAME = "next_launch_all_levers_trimmed_20260713"
+TRIMMED_OUT_DIR = "experiments/results/next_launch_all_levers_ticket_trimmed_20260713"
 DEFAULT_RUNTIME_OUT_DIR = "/Volumes/VertigoDataTier/pact/next_launch_all_levers_20260713"
+FULL_VARIANT = "full"
+TRIMMED_COMPLIANT_VARIANT = "trimmed_compliant"
+MEMORY_VARIANTS = (FULL_VARIANT, TRIMMED_COMPLIANT_VARIANT)
 
 # The exact schemas the requested debts require.  These names are dependency
 # slots, not claims that the producer exists.
@@ -77,6 +83,23 @@ EXCLUDED_LEVERS: dict[str, str] = {
         "bounded n8/n64 matched-slice protocol, not this long run"
     ),
 }
+
+
+def excluded_levers_for_variant(variant: str) -> dict[str, str]:
+    """Return the explicit, provenance-bearing exclusions for one ticket variant."""
+
+    if variant not in MEMORY_VARIANTS:
+        raise ValueError(f"unknown memory variant {variant!r}; expected one of {MEMORY_VARIANTS}")
+    excluded = dict(EXCLUDED_LEVERS)
+    if variant == TRIMMED_COMPLIANT_VARIANT:
+        excluded["fresh_frequency_shift_init"] = (
+            "MEMORY TRIM: FreSh re-enables --self-orient with n_dir_freqs=4 over the GO'd "
+            "V9 self-orient-OFF parent, creating the measured approximately 47 GiB per-pair "
+            "feature-cache tax. The underlying directional transfer measured approximately zero "
+            "at the owed-16 n600 receiver surface; FreSh's cold-start treatment delta remains "
+            "UNMEASURED, so this exclusion is not claimed score-neutral."
+        )
+    return excluded
 
 
 def _typed(lever: Lever) -> TypedLever:
@@ -130,10 +153,28 @@ def _dependency_slots(repo_root: Path) -> tuple[dict[str, dict], list[dict[str, 
     causal_dag_feed_landed = causal_dag_feed.is_file()
     trainer_path = repo_root / "experiments" / "train_levelset_witness_realized_through_R_mlx.py"
     trainer_text = trainer_path.read_text() if trainer_path.is_file() else ""
+    try:
+        trainer_tree = ast.parse(trainer_text) if trainer_text else None
+    except SyntaxError:
+        trainer_tree = None
+    trainer_string_literals = {
+        node.value
+        for node in ast.walk(trainer_tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    } if trainer_tree is not None else set()
     causal_trainer_default_on = (
         "CausalManifestWriter" in trainer_text
         and '"mode": "default_on_read_only"' in trainer_text
         and "CAUSAL_MANIFEST_FILENAME" in trainer_text
+    )
+    component_wallclock_producer_landed = (
+        COMPONENT_WALLCLOCK_SCHEMA in trainer_string_literals
+        and all(field in trainer_string_literals for field in REQUIRED_COMPONENT_FIELDS)
+    )
+    sps_engagement_producer_landed = (
+        SPS_ENGAGEMENT_SCHEMA in trainer_string_literals
+        and "temporal_screw_engaged" in trainer_string_literals
+        and "phase_advection_engaged" in trainer_string_literals
     )
     causal_contract_landed = (
         causal_module_landed
@@ -152,7 +193,14 @@ def _dependency_slots(repo_root: Path) -> tuple[dict[str, dict], list[dict[str, 
         "D_A_component_wallclock": {
             "schema": COMPONENT_WALLCLOCK_SCHEMA,
             "required_fields": list(REQUIRED_COMPONENT_FIELDS),
-            "status": "missing_exact_in_run_producer",
+            "status": (
+                "landed_exact_in_run_producer"
+                if component_wallclock_producer_landed
+                else "missing_exact_in_run_producer"
+            ),
+            "producer_detection": (
+                "schema id plus all eight exact field names must exist in the shared trainer"
+            ),
             "existing_partial": (
                 "--profile-timing emits fused step/verdict/overhead plus isolated-R microbench; "
                 "it does not separate all required components"
@@ -165,7 +213,15 @@ def _dependency_slots(repo_root: Path) -> tuple[dict[str, dict], list[dict[str, 
                 "phase_advection_engaged (ep726 static terminal-band anchor)",
             ],
             "required_math": "gradient cosine/norm/conflict rule from tools/probe_sps_gradient_role_conflict.py",
-            "status": "missing_exact_engagement_callback",
+            "status": (
+                "landed_exact_engagement_callback"
+                if sps_engagement_producer_landed
+                else "missing_exact_engagement_callback"
+            ),
+            "producer_detection": (
+                "schema id plus temporal_screw_engaged and phase_advection_engaged callbacks "
+                "must exist in the shared trainer"
+            ),
             "existing_partial": (
                 "--grad-interaction-telemetry emits the generic term matrix at seg-form boundaries; "
                 "screw/phase engagement is not a seg-form boundary"
@@ -217,23 +273,30 @@ def _dependency_slots(repo_root: Path) -> tuple[dict[str, dict], list[dict[str, 
             "status": "ready" if runtime_out_ready else "selected_workload_root_missing",
         },
     }
-    blockers = [
-        {
-            "id": "D_A_EXACT_COMPONENT_TIMERS_MISSING",
-            "detail": "exact in-run component timing producer is absent; coarse --profile-timing is insufficient",
-        },
-        {
-            "id": "D_B_EXACT_ENGAGEMENT_HOOK_MISSING",
-            "detail": "no exact screw/phase engagement callback invokes the SPS gradient-conflict observer",
-        },
+    blockers = []
+    if not component_wallclock_producer_landed:
+        blockers.append(
+            {
+                "id": "D_A_EXACT_COMPONENT_TIMERS_MISSING",
+                "detail": "exact in-run component timing producer is absent; coarse --profile-timing is insufficient",
+            }
+        )
+    if not sps_engagement_producer_landed:
+        blockers.append(
+            {
+                "id": "D_B_EXACT_ENGAGEMENT_HOOK_MISSING",
+                "detail": "no exact screw/phase engagement callback invokes the SPS gradient-conflict observer",
+            }
+        )
+    blockers.append(
         {
             "id": "MEMORY_WATERFILL_B2_UNMEASURED_N600",
             "detail": (
                 "canonical memory waterfill pins micro_batch=1 because B=2 has no target-n600 RSS "
                 "measurement; do not override the $0 gate"
             ),
-        },
-    ]
+        }
+    )
     if not runtime_out_ready:
         blockers.append(
             {
@@ -271,6 +334,7 @@ def compile_next_launch_all_levers_ticket(
     num_pairs: int = 600,
     epochs: int = 3000,
     out_dir: str = DEFAULT_OUT_DIR,
+    variant: str = FULL_VARIANT,
 ) -> CrucibleV7LaunchConfig:
     """Compile the strongest currently compatible held launch ticket.
 
@@ -279,11 +343,21 @@ def compile_next_launch_all_levers_ticket(
     is non-empty.
     """
 
+    if variant not in MEMORY_VARIANTS:
+        raise ValueError(f"unknown memory variant {variant!r}; expected one of {MEMORY_VARIANTS}")
+    trimmed = variant == TRIMMED_COMPLIANT_VARIANT
+    program_name = TRIMMED_PROGRAM_NAME if trimmed else PROGRAM_NAME
+    resolved_out_dir = (
+        TRIMMED_OUT_DIR
+        if trimmed and out_dir == DEFAULT_OUT_DIR
+        else out_dir
+    )
+
     parent = compile_v9_cgauge_ideal_mod19_launch_config(
         gt_cache_path=gt_cache_path,
         num_pairs=num_pairs,
         epochs=epochs,
-        out_dir=out_dir,
+        out_dir=resolved_out_dir,
     )
     # MicroBatch(B=2) is the V9 functional-parity treatment.  Tie-locus is the
     # sole ideal-core lever the real batched trainer explicitly refuses.
@@ -293,25 +367,27 @@ def compile_next_launch_all_levers_ticket(
         _typed(FusedRKernel()),
         _typed(CacheGtSkeleton()),
         _typed(SafeCompileRegions("hosc_activation")),
-        _typed(FreshFrequencyShift()),
+        *((_typed(FreshFrequencyShift()),) if not trimmed else ()),
         _observer_telemetry(),
+    )
+    purpose = (
+        "HELD operator-GO-only n600 all-compatible-speed-stack"
+        + (" with FreSh treatment; " if not trimmed else " with memory-compliant FreSh trim; ")
+        + "measure D-A component wall split, D-B screw/phase engagement gradient conflict, "
+        + "and causal transition rows; no launch until manifest blockers clear"
     )
     typed = parent.typed.model_copy(
         update={
-            "name": PROGRAM_NAME,
-            "out_dir": str(out_dir),
-            "purpose": (
-                "HELD operator-GO-only n600 all-compatible-speed-stack + FreSh treatment; "
-                "measure D-A component wall split, D-B screw/phase engagement gradient conflict, "
-                "and causal transition rows; no launch until manifest blockers clear"
-            ),
+            "name": program_name,
+            "out_dir": str(resolved_out_dir),
+            "purpose": purpose,
             "levers": kept + additions,
         }
     )
     violations = typed.validate_program()
     if violations:
         raise ValueError(
-            f"{PROGRAM_NAME} DSL gate: {len(violations)} WitnessProgram.validate violation(s): "
+            f"{program_name} DSL gate: {len(violations)} WitnessProgram.validate violation(s): "
             f"{violations[:6]}"
         )
 
@@ -325,15 +401,17 @@ def compile_next_launch_all_levers_ticket(
     }
     mismatch = {flag: (emitted.get(flag), value) for flag, value in required.items()
                 if emitted.get(flag) != value}
-    for boolean_flag in (
+    required_boolean_flags = [
         "--fused-r-kernel",
         "--cache-gt-skeleton",
-        "--fresh-init",
         "--profile-timing",
         "--grad-interaction-telemetry",
         "--stage-checkpoints",
         "--async-verdict",
-    ):
+    ]
+    if not trimmed:
+        required_boolean_flags.append("--fresh-init")
+    for boolean_flag in required_boolean_flags:
         if boolean_flag not in emitted:
             mismatch[boolean_flag] = (emitted.get(boolean_flag), "present")
     if "--seg-subpix-boundary-weight" in emitted and float(
@@ -344,12 +422,12 @@ def compile_next_launch_all_levers_ticket(
             "absent-or-zero under MicroBatch(B=2)",
         )
     if mismatch:
-        raise ValueError(f"{PROGRAM_NAME} actuation REFUSE: {mismatch}")
+        raise ValueError(f"{program_name} actuation REFUSE: {mismatch}")
 
     repo_root = Path(__file__).resolve().parents[3]
     dependency_slots, blockers = _dependency_slots(repo_root)
     manifest = build_launch_manifest(
-        program_name=PROGRAM_NAME,
+        program_name=program_name,
         emitted_flag_names=sorted(emitted),
         typed_config_hash=typed.typed_config_hash(),
         typed_validated=True,
@@ -357,7 +435,19 @@ def compile_next_launch_all_levers_ticket(
     manifest.update(
         {
             "expected_active_levers": [lv.name for lv in typed.levers],
-            "excluded_levers": dict(EXCLUDED_LEVERS),
+            "excluded_levers": excluded_levers_for_variant(variant),
+            "memory_variant": variant,
+            "memory_trim": ({
+                "trimmed_lever": "fresh_frequency_shift_init",
+                "removed_flags": [
+                    "--fresh-init", "--self-orient", "--n-dir-freqs", "--freq-across",
+                    "--freq-along", "--fresh-spectrum-size", "--fresh-sample-pairs",
+                    "--fresh-reference-freq-along", "--fresh-tangent-deficit",
+                    "--fresh-bias-k-min", "--fresh-bias-k-max", "--fresh-bias-k-step",
+                ],
+                "authority": "owed16_realized_transfer_measured_zero_20260710",
+                "score_impact": "UNKNOWN for FreSh treatment; underlying self-orient transfer measured approximately zero",
+            } if trimmed else None),
             "readiness_deferrals": {
                 "HorizonWeightedMargin": (
                     "isolated exact-V9 warm-start A/B required; stacking it into the FreSh "
@@ -388,18 +478,6 @@ def compile_next_launch_all_levers_ticket(
                 "fallback_used": False,
                 "note": "training-only operator waiver; not bit-identical and not score authority",
             },
-            "fresh_frequency_shift": {
-                "value": {
-                    "reference_freq_along": 8.0,
-                    "tangent_deficit": 3.2,
-                    "bias_grid": [0.0, 3.0, 0.1],
-                    "sample_pairs": 10,
-                },
-                "equation_id": "fresh_frequency_shift_init_v1",
-                "ladder_class": "measured_anchor",
-                "fallback_used": False,
-                "note": "cold-start selection; 94 treatment scorer-pair equivalents including epoch-zero commit",
-            },
             "sps_gradient_conflict_sample_pairs": {
                 "value": 4,
                 "equation_id": "sps_gradient_role_conflict_probe_20260713",
@@ -409,6 +487,19 @@ def compile_next_launch_all_levers_ticket(
             },
         }
     )
+    if not trimmed:
+        constants["fresh_frequency_shift"] = {
+            "value": {
+                "reference_freq_along": 8.0,
+                "tangent_deficit": 3.2,
+                "bias_grid": [0.0, 3.0, 0.1],
+                "sample_pairs": 10,
+            },
+            "equation_id": "fresh_frequency_shift_init_v1",
+            "ladder_class": "measured_anchor",
+            "fallback_used": False,
+            "note": "cold-start selection; 94 treatment scorer-pair equivalents including epoch-zero commit",
+        }
     return replace(
         parent,
         typed=typed,
@@ -421,10 +512,16 @@ __all__ = [
     "CAUSAL_MANIFEST_DEPENDENCY",
     "COMPONENT_WALLCLOCK_SCHEMA",
     "DEFAULT_OUT_DIR",
+    "TRIMMED_OUT_DIR",
+    "FULL_VARIANT",
+    "TRIMMED_COMPLIANT_VARIANT",
+    "MEMORY_VARIANTS",
     "DEFAULT_RUNTIME_OUT_DIR",
     "EXCLUDED_LEVERS",
     "PROGRAM_NAME",
+    "TRIMMED_PROGRAM_NAME",
     "REQUIRED_COMPONENT_FIELDS",
     "SPS_ENGAGEMENT_SCHEMA",
     "compile_next_launch_all_levers_ticket",
+    "excluded_levers_for_variant",
 ]

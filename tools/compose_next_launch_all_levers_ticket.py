@@ -25,7 +25,10 @@ for path in (REPO / "src", REPO / "tools"):
 
 from tac.witness_dsl.spec_next_launch_all_levers_20260713 import (  # noqa: E402
     DEFAULT_OUT_DIR,
-    EXCLUDED_LEVERS,
+    FULL_VARIANT,
+    MEMORY_VARIANTS,
+    TRIMMED_COMPLIANT_VARIANT,
+    TRIMMED_OUT_DIR,
     compile_next_launch_all_levers_ticket,
 )
 from tac.witness_dsl.typed_config import REQUIRED_PERF_ENV  # noqa: E402
@@ -131,10 +134,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--num-pairs", type=int, default=600)
     ap.add_argument("--epochs", type=int, default=3000)
-    ap.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
+    ap.add_argument("--variant", choices=MEMORY_VARIANTS, default=FULL_VARIANT)
+    ap.add_argument("--out-dir", default=None)
     args = ap.parse_args(argv)
 
-    out_dir = Path(args.out_dir)
+    default_out = TRIMMED_OUT_DIR if args.variant == TRIMMED_COMPLIANT_VARIANT else DEFAULT_OUT_DIR
+    out_dir = Path(args.out_dir or default_out)
     if not out_dir.is_absolute():
         out_dir = REPO / out_dir
     cfg = compile_next_launch_all_levers_ticket(
@@ -142,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         num_pairs=args.num_pairs,
         epochs=args.epochs,
         out_dir=str(out_dir.relative_to(REPO)),
+        variant=args.variant,
     )
     violations = cfg.typed.validate_program()
     if violations:
@@ -155,7 +161,7 @@ def main(argv: list[str] | None = None) -> int:
     include_rows = _include_rows(cfg)
     exclude_rows = [
         {"lever": name, "status": "EXCLUDED", "reason": reason}
-        for name, reason in EXCLUDED_LEVERS.items()
+        for name, reason in cfg.dsl_program_manifest.get("excluded_levers", {}).items()
     ]
 
     _atomic_json(out_dir / "dsl_program_manifest.json", cfg.dsl_program_manifest)
@@ -177,6 +183,7 @@ def main(argv: list[str] | None = None) -> int:
         "schema": "next_launch_ticket_compile_receipt.v1",
         "created_utc": datetime.now(UTC).isoformat(),
         "program_name": cfg.name,
+        "memory_variant": args.variant,
         "typed_validation": {"ok": True, "violations": []},
         "active_dsl_lever_count": len(cfg.dsl_levers),
         "include_count": len(include_rows),

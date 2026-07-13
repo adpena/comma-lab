@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from tac.causal_manifest import ExplorationDecisionRow, load_causal_manifest
 from tac.witness_control.costate_estimator import (
     ANALYTIC,
     MEASURED,
@@ -317,6 +318,15 @@ def test_write_shadow_row_appends_actuation_none(tmp_path):
         assert "advisory" in row["axis"]
         assert "0.19110" in row["pointer"]
         assert ACTUATION == "NONE"
+    decisions = [
+        row for row in load_causal_manifest(d / "causal_manifest.jsonl")
+        if isinstance(row, ExplorationDecisionRow)
+    ]
+    assert decisions
+    assert all(row.policy_mode == "deterministic" for row in decisions)
+    assert all(row.exploration_hook == "disabled_pending_operator_go" for row in decisions)
+    assert all(not row.executed and row.actuation == "NONE" for row in decisions)
+    assert all(sum(item.propensity for item in row.arm_propensities) == 1.0 for row in decisions)
 
 
 def test_uncertainty_propagation_formula():

@@ -33,3 +33,19 @@ def test_both_variants_remain_held_on_real_dependencies() -> None:
         assert "D_A_EXACT_COMPONENT_TIMERS_MISSING" in blockers
         assert "D_B_EXACT_ENGAGEMENT_HOOK_MISSING" in blockers
         assert "MEMORY_WATERFILL_B2_UNMEASURED_N600" in blockers
+
+
+def test_governed_launcher_resolves_the_trimmed_named_config() -> None:
+    from tools import launch_witness_run as launcher
+
+    cfg = launcher.derive_named_config(
+        "next_launch_all_levers_trimmed_20260713",
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        num_pairs=600,
+        epochs=3000,
+        overfit=True,
+    )
+
+    assert cfg.name == "next_launch_all_levers_trimmed_20260713"
+    assert cfg.dsl_program_manifest["memory_variant"] == TRIMMED_COMPLIANT_VARIANT
+    assert "--self-orient" not in _flags(cfg)
