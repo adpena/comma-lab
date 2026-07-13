@@ -1,0 +1,106 @@
+{
+  "S1_input_chart": {
+    "candidate_comparisons": {
+      "hyperbolic_log_depth_unshifted": {
+        "cdf_l1_rows": 15.25177725254714,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.3789095220299231,
+        "js_divergence_nats": 0.16044044809089875,
+        "max_row_allocation_fraction": 0.1688635717839506
+      },
+      "identity_uniform": {
+        "cdf_l1_rows": 68.0150818094732,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.05934354824160104,
+        "js_divergence_nats": 0.24818817978749463,
+        "max_row_allocation_fraction": 0.004784688995215311
+      },
+      "projective_inverse_depth_unshifted": {
+        "cdf_l1_rows": 33.536609434660356,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.3789095220299231,
+        "js_divergence_nats": 0.46026082706106153,
+        "max_row_allocation_fraction": 0.6096963152679252
+      }
+    },
+    "existing_chart_delta": "GroundFrameChart #194 is a temporal xi-homography precomposition, not a row-density compander. Its projective skeleton does not implement the measured equal-flip metric; unshifted inverse-depth is therefore a comparison model, not a claim about the chart's learned capacity allocation.",
+    "ground_rows": 209,
+    "horizon_row": 174.0,
+    "measured_flip_mass_below_horizon_fraction": 0.9292588586095267,
+    "measured_flip_mass_rows_175_through_210": 0.6565806260389953,
+    "measured_peak_row_below_horizon": 193,
+    "nonparametric_equal_flip_metric": {
+      "interpretation": "uniform metric arc-length bins equalize first-order flip mass per bin",
+      "js_divergence_nats": 0.0,
+      "law": "sqrt(g_vv) = rho(v) proportional to measured flip density w(v)"
+    },
+    "probe_scope": "all-class measured flip density restricted to image rows v>174; a ground-class-only row ledger does not exist, so class routing remains a named confound",
+    "shifted_family_fits": {
+      "shifted_hyperbolic_log_depth": {
+        "cdf_l1_rows": 22.25193867335755,
+        "exponent": 1.0,
+        "fitted_softening_offset_rows": 7.876139938338386,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.3789095220299231,
+        "js_divergence_nats": 0.10133805900890515,
+        "max_row_allocation_fraction": 0.03460493854410802
+      },
+      "shifted_projective_inverse_depth": {
+        "cdf_l1_rows": 11.351815074143179,
+        "exponent": 2.0,
+        "fitted_softening_offset_rows": 32.5257801441824,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.3789095220299231,
+        "js_divergence_nats": 0.06994264689610602,
+        "max_row_allocation_fraction": 0.03402898217309826
+      }
+    }
+  },
+  "S2_head_simplex": {
+    "flip_margin_quantiles": {
+      "p10": {
+        "flat_shadow_gap_over_2": 0.009088754653930664,
+        "logit_gap": 0.018177509307861328,
+        "pairwise_fisher_wall_distance": 0.009088629526386581,
+        "relative_error_vs_gap_over_2": -1.3767292533217734e-05
+      },
+      "p25": {
+        "flat_shadow_gap_over_2": 0.024808287620544434,
+        "logit_gap": 0.04961657524108887,
+        "pairwise_fisher_wall_distance": 0.024805743297216996,
+        "relative_error_vs_gap_over_2": -0.00010255940943426634
+      },
+      "p50": {
+        "flat_shadow_gap_over_2": 0.06082439422607422,
+        "logit_gap": 0.12164878845214844,
+        "pairwise_fisher_wall_distance": 0.060786924484955325,
+        "relative_error_vs_gap_over_2": -0.000616031472169265
+      },
+      "p75": {
+        "flat_shadow_gap_over_2": 0.12639647722244263,
+        "logit_gap": 0.25279295444488525,
+        "pairwise_fisher_wall_distance": 0.12606126206503354,
+        "relative_error_vs_gap_over_2": -0.0026520925644086812
+      },
+      "p90": {
+        "flat_shadow_gap_over_2": 0.2199985027313233,
+        "logit_gap": 0.4399970054626466,
+        "pairwise_fisher_wall_distance": 0.2182450476869096,
+        "relative_error_vs_gap_over_2": -0.007970304445913068
+      }
+    },
+    "formula": "d_FR,pair(delta)=2 asin(|sqrt(sigmoid(delta))-sqrt(sigmoid(-delta))|/sqrt(2))",
+    "ordering": "strictly monotone in nonnegative logit gap; it cannot change the argmax decision cells",
+    "probe_scope": "exact top-two renormalized Fisher--Rao distance computed from the n600 logit-gap distribution; the full five-class Fisher distance is not identifiable from a top1-top2 gap alone",
+    "weighted_linear_fit_on_nonempty_flip_histogram_bins": {
+      "counts_used": 250519,
+      "relative_rmse": 0.053481134111775894,
+      "slope_through_origin": 0.48601477304350377
+    }
+  },
+  "input": {
+    "authority_tier": "exact_cpu_advisory",
+    "n_pairs": 600,
+    "path": ".omx/research/dseg_reducibility_gt_margin_n600_20260623.json",
+    "sha256": "3660e89c8cbfc51d7ef0991f8c4718abb211b9e03cc7b9fd3875ca57fff1a413"
+  },
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "schema": "manifold_geometry_slots_probe.v1.stage_s1_s2",
+  "score_claim": false
+}

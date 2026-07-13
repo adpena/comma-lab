@@ -16924,3 +16924,21 @@ gradient-norm/exact-optimum stop. Plateau-as-stage-trigger NO-GO — verdict_sco
 mechanism does not transfer to the nonconvex level-set energy (decay-clock telemetry only, conditional).
 Steps verdict: no witness-stage shortening measured; composed SPS break-even unchanged. Equation + formulation-
 scoped probe row registered; no pool row (no lever emerged — correct restraint).
+
+## FEED-manifold-slots+launch-ticket-20260713 (pointer nodes; full FEEDs in manifold_geometry_slots_DAG_FEED / DAG_next_launch_all_levers_ticket)
+MANIFOLD SLOTS (#476) [MEASURED probes + DERIVED]: S1 LEVER — measured 1-D Riemannian COMPANDER √g_vv ∝ w_flip(v)
+∘ projective ground chart: n600 all-class JS(chart, flip-density) = 0.0699 softened-inverse-depth vs 0.1604
+log-depth vs 0.2482 uniform → inverse-depth compander wins; pool row margin_companded_ground_chart needs-build
+(promotion blocked on ground-class-pair n600 ledger + counted receiver-close A/B). de Sitter NO-GO —
+verdict_scope: derivation — volume is 2+1D (dS₃/SO(3,1) would be the analog); no constant curvature measured;
+the payable structure is the ADVECTIVE CONE (S3 primary = Newton-Cartan/Galilean + acoustic Lorentzian cone;
+marked_worldsheet_separatrix_codec pool row needs-build, conditional-entropy criterion, NO byte advantage
+claimed). S2 NO-GO — verdict_scope: derivation — Fisher-Rao is locally δ/2 on the flip band; fire built ETF
+first. S4 NO-GO (radial/gain DOF needed; only FiLM naturally Stiefel — sibling-owned). S5 NO-GO —
+verdict_scope: instance — curvature unidentifiable from the cache's 29 one-dimensional temporal curves.
+3 equations registered. LAUNCH TICKET (#474b): DSL-compiled all-levers ticket (28 include / 7 exclude, 21 typed
+levers, 231/231 argparse-verified) + full $0 preflight with HONEST REFUSES = the pre-GO worklist: (1) memory
+projection 119.4 GiB > 97.7 GiB adaptive ceiling → config trim or envelope re-derive owed; (2) B=2 micro-batch
+lacks n600 RSS custody; (3) SSD workload root missing; (4) D-A/D-B in-run producers absent (manifest builder
+live). Wall-clock projection REFUSED not guessed (only 295.352 s/ep prior baseline is MEASURED). Ticket consumes
+default-ON causal_manifest.jsonl. NO LAUNCH (operator-GO).

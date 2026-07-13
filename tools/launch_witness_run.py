@@ -57,8 +57,14 @@ if str(_REPO / "tools") not in sys.path:
 from tac import witness_autoconfig as wac  # noqa: E402
 from tac.witness_dsl.curriculum_dsl import (  # noqa: E402
     TRAINER_PATH,
+)
+from tac.witness_dsl.curriculum_dsl import (
     real_boolean_flags as _cdsl_real_boolean_flags,
+)
+from tac.witness_dsl.curriculum_dsl import (
     real_store_true_flags as _cdsl_real_store_true_flags,
+)
+from tac.witness_dsl.curriculum_dsl import (
     real_trainer_flags as _cdsl_real_trainer_flags,
 )
 
@@ -375,8 +381,9 @@ def config_family(cfg) -> str:
     if getattr(cfg, "name", "") in ("crucible_v7", "crucible_v752", "crucible_v753",
                                     "v9_cgauge", "v9_cgauge_432",
                                     "v9_cgauge_truly_optimal_core",
-                                    "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32"):
-        return getattr(cfg, "name")
+                                    "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32",
+                                    "next_launch_all_levers_20260713"):
+        return cfg.name
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
     if getattr(cfg, "fresh_seeded", False):
@@ -406,6 +413,30 @@ def _identity_header(cfg) -> str:
     return "".join(lines)
 
 
+def _readiness_deferral_header(cfg) -> str:
+    """Render typed config-owned readiness deferrals as score-neutral comments.
+
+    A held named config must survive every deterministic ``launch.sh`` regeneration;
+    requiring an operator to repeat already-authored causal-isolation reasons on the
+    CLI makes config freshness depend on shell history.  The values come only from
+    the typed launch manifest and never become trainer arguments.
+    """
+
+    manifest = dict(getattr(cfg, "dsl_program_manifest", None) or {})
+    deferrals = dict(manifest.get("readiness_deferrals", {}) or {})
+    lines: list[str] = []
+    for rung, reason in sorted(deferrals.items()):
+        rung_text = str(rung).strip()
+        reason_text = " ".join(str(reason).split())
+        if not rung_text or len(reason_text) < 8 or "\n" in rung_text:
+            raise ValueError(
+                f"invalid typed readiness deferral {rung!r}={reason!r}; "
+                "need a rung and substantive single-line reason"
+            )
+        lines.append(f"# LAUNCH_READINESS_DEFER:{rung_text}={reason_text}\n")
+    return "".join(lines)
+
+
 def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
                     extra_flags: list[str] | None = None) -> str:
     """Render the launch.sh body. The trainer command goes into a SCRIPT so the
@@ -429,6 +460,9 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
         "set -euo pipefail\n"
         # RUN-IDENTITY header (family always; purpose only when declared) — comments only.
         f"{_identity_header(cfg)}"
+        # Config-freshness readiness deferrals are typed manifest metadata, not trainer flags.
+        # Render them on every regeneration so held treatment-isolation decisions cannot vanish.
+        f"{_readiness_deferral_header(cfg)}"
         f"cd {repo}\n"
         # Trainer memory telemetry (mem_probe rows). The #205 run was SILENT because this env-gated
         # default-off flag was never set in launch.sh (memory mine 2026-07-04 §1/§6) — the launcher
@@ -700,7 +734,7 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
 
 
 # ───────────────────────── named-config derivation (shared by launch + calibration) ─────────────
-def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "int | None",
+def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: int | None,
                         overfit: bool):
     """Resolve a canonical named config to a derived trainer config at the given scale. The
     RSS-calibration smoke reuses this with a SMALL num_pairs/epochs but the SAME config name, so
@@ -784,6 +818,17 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
         return compile_v9_cgauge_ideal_launch_config(
             gt_cache, num_pairs=num_pairs, mod_dim=mod_dim,
             program_name=config, **_ek)
+    if config == "next_launch_all_levers_20260713":
+        # 2026-07-13 operator-GO-only ticket.  The compiler starts from the
+        # ideal mod19 lineage, composes every compatible speed/init/observer
+        # lever through the typed DSL, and carries fail-closed launch blockers
+        # for the exact D-A/D-B/causal dependency slots.  Pure derive only.
+        from tac.witness_dsl.spec_next_launch_all_levers_20260713 import (
+            compile_next_launch_all_levers_ticket,
+        )
+
+        return compile_next_launch_all_levers_ticket(
+            gt_cache, num_pairs=num_pairs, **_ek)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -797,7 +842,8 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
         f"derive_named_config: unknown config name {config!r} — no derive branch resolves it. Known "
         f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
         f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432, "
-        f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, v9_cgauge_ideal_mod32. "
+        f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, v9_cgauge_ideal_mod32, "
+        f"next_launch_all_levers_20260713. "
         f"Add an explicit branch (NEVER "
         f"silently fall through to proven_base).")
 
@@ -1005,8 +1051,8 @@ def dry_start_resume_ok(p2: dict) -> bool:
 
 
 def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
-                   extra_flags: "list[str] | None", wmp,
-                   projected_peak_gib: "float | None" = None) -> int:
+                   extra_flags: list[str] | None, wmp,
+                   projected_peak_gib: float | None = None) -> int:
     """FULL-CONFIG DRY-START (owed-2 / SYNTHESIS §C item 2). Reached AFTER the whole gate chain has run
     on the REAL n600 config (flag-validate, launch.sh, perf-env, constants, schedule-provenance,
     DSL-config, memory-preflight, safe-compile, system-admission, throughput) — so start-ability of the
@@ -1041,7 +1087,7 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
     # epochs stepped are READ BACK from run.log and reported. Both knobs are CLI-tunable.
     pass_timeout = float(args.dry_start_boot_budget_s) + n * float(args.dry_start_per_ep_budget_s)
 
-    def _pass(sub_name: str, resume_from: "Path | None") -> dict:
+    def _pass(sub_name: str, resume_from: Path | None) -> dict:
         sub = out_dir / sub_name
         cfg_b = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
                                     epochs=None, overfit=overfit)  # REAL sealed epochs → all validators pass
@@ -1223,7 +1269,8 @@ def main(argv: list[str] | None = None) -> int:
                              "fresh_seeded", "crucible_v6", "crucible_v7", "crucible_v752",
                              "crucible_v753", "v9_cgauge_432",
                              "v9_cgauge_truly_optimal_core",
-                             "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32"],
+                             "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32",
+                             "next_launch_all_levers_20260713"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
@@ -1803,6 +1850,32 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:  # governor unavailable => fail-open here; spawn's gate is the backstop.
             print(f"[launch-witness] WARNING: system admission unavailable ({type(exc).__name__}: {exc}); "
                   f"spawn_durable_daemon's admission gate remains the backstop.", file=sys.stderr)
+
+    # (b1-ticket) CONFIG-DECLARED DEPENDENCY BLOCKERS.  A held research ticket may need the whole
+    # zero-dollar chain (compile/flag/schedule/DSL/memory/fingerprint/governor) to materialize its
+    # launch.sh while still being structurally forbidden from spawning.  The typed DSL manifest is
+    # the single source: a non-empty ``launch_blockers`` list REFUSES every real launch and returns a
+    # distinct rc=11 on --dry-run after all preceding $0 gates have run.  There is deliberately no
+    # override flag; the config compiler must re-derive an empty list from landed dependencies.
+    _ticket_blockers = list(
+        (getattr(cfg, "dsl_program_manifest", None) or {}).get("launch_blockers") or []
+    )
+    if _ticket_blockers:
+        print(f"[launch-witness] TICKET BLOCKED: {len(_ticket_blockers)} declared dependency blocker(s):",
+              file=sys.stderr)
+        for _blk in _ticket_blockers:
+            if isinstance(_blk, dict):
+                print(f"    {_blk.get('id', 'UNNAMED')}: {_blk.get('detail', '')}", file=sys.stderr)
+            else:
+                print(f"    {_blk}", file=sys.stderr)
+        if args.dry_run:
+            print("# DRY-RUN: launch.sh written and every preceding $0 gate completed; NOT spawning. "
+                  "The ticket remains fail-closed until its typed manifest re-compiles with zero "
+                  "launch_blockers.")
+        else:
+            print("[launch-witness] ERROR: REFUSING to launch — clear the typed ticket dependency "
+                  "slots and recompile; no runtime override exists.", file=sys.stderr)
+        return 11
 
     if args.dry_run:
         print("# DRY-RUN: launch.sh written + flags validated; NOT spawning. "

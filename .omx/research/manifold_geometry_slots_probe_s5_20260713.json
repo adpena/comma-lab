@@ -1,0 +1,102 @@
+{
+  "extrinsic_only_diagnostics": {
+    "five_observation_path_over_chord": {
+      "mean": 5.564906411720036,
+      "median": 3.8236994502123673,
+      "n": 2842,
+      "p10": 1.8513321707583945,
+      "p90": 10.846944568870956
+    },
+    "normalized_menger_curvature": {
+      "mean": 1.9920624689475446,
+      "median": 1.7172239245607073,
+      "n": 2838,
+      "p10": 0.5226695679183785,
+      "p90": 3.5152993288742405
+    },
+    "units": "dimensionless after per-coordinate robust scaling"
+  },
+  "input": {
+    "archive_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "member": "lstars",
+    "member_sha256": "bf1d0e5c7e2ef1b3c38ce6cd51ec827169ac13a02c675638b7bd97344a089ec4",
+    "n_pairs": 600,
+    "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+  },
+  "intrinsic_curvature_verdict": {
+    "reason": "each tracked lane observation supplies a time-ordered one-parameter curve in R^8; one-dimensional Riemannian manifolds have identically zero intrinsic curvature, while the reported Menger values are embedding curvature. Pooling 29 tracks mixes strata and does not create the independent tangent 2-planes required for sectional-curvature estimation",
+    "status": "NOT_IDENTIFIABLE_FROM_THIS_CACHE",
+    "whitney_consequence": "none: Whitney's generic 2d+1 embedding bound depends on intrinsic/topological dimension, not curvature; curvature could only inform reach/chart count after multi-direction neighborhood sampling"
+  },
+  "lane_orbit_sampling": {
+    "ambient_coefficient_dimension": 8,
+    "global_pooled_participation_rank": 2.801160729507224,
+    "global_pooled_rank90": 4,
+    "observations": 2948,
+    "robust_dim_scales": [
+      4.805971799768428,
+      4.842681956356616,
+      5.060238227662886,
+      6.2502802363306635,
+      3.4308809160439737,
+      5.800273626044249,
+      3.791020618709712,
+      33.704852864089034
+    ],
+    "tracks": 29
+  },
+  "local_track_windows": {
+    "11": {
+      "participation_rank": {
+        "mean": 1.7903452135717652,
+        "median": 1.7412719511167403,
+        "n": 2740,
+        "p10": 1.258258585192684,
+        "p90": 2.3905842361468697
+      },
+      "rank90": {
+        "mean": 2.175912408759124,
+        "median": 2.0,
+        "n": 2740,
+        "p10": 2.0,
+        "p90": 3.0
+      }
+    },
+    "21": {
+      "participation_rank": {
+        "mean": 1.9840643932525053,
+        "median": 1.973639295819845,
+        "n": 2607,
+        "p10": 1.3921498272713075,
+        "p90": 2.55994271401622
+      },
+      "rank90": {
+        "mean": 2.3893364019946297,
+        "median": 2.0,
+        "n": 2607,
+        "p10": 2.0,
+        "p90": 3.0
+      }
+    },
+    "5": {
+      "participation_rank": {
+        "mean": 1.5098072119846477,
+        "median": 1.4292964626658224,
+        "n": 2842,
+        "p10": 1.1043568303578846,
+        "p90": 2.028793618091891
+      },
+      "rank90": {
+        "mean": 1.79064039408867,
+        "median": 2.0,
+        "n": 2842,
+        "p10": 1.0,
+        "p90": 2.0
+      }
+    }
+  },
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "schema": "manifold_geometry_slots_probe.v1.stage_s5",
+  "score_claim": false
+}

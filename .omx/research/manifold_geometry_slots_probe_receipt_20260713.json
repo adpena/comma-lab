@@ -1,0 +1,259 @@
+{
+  "S1_input_chart": {
+    "candidate_comparisons": {
+      "hyperbolic_log_depth_unshifted": {
+        "cdf_l1_rows": 15.25177725254714,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.3789095220299231,
+        "js_divergence_nats": 0.16044044809089875,
+        "max_row_allocation_fraction": 0.1688635717839506
+      },
+      "identity_uniform": {
+        "cdf_l1_rows": 68.0150818094732,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.05934354824160104,
+        "js_divergence_nats": 0.24818817978749463,
+        "max_row_allocation_fraction": 0.004784688995215311
+      },
+      "projective_inverse_depth_unshifted": {
+        "cdf_l1_rows": 33.536609434660356,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.3789095220299231,
+        "js_divergence_nats": 0.46026082706106153,
+        "max_row_allocation_fraction": 0.6096963152679252
+      }
+    },
+    "existing_chart_delta": "GroundFrameChart #194 is a temporal xi-homography precomposition, not a row-density compander. Its projective skeleton does not implement the measured equal-flip metric; unshifted inverse-depth is therefore a comparison model, not a claim about the chart's learned capacity allocation.",
+    "ground_rows": 209,
+    "horizon_row": 174.0,
+    "measured_flip_mass_below_horizon_fraction": 0.9292588586095267,
+    "measured_flip_mass_rows_175_through_210": 0.6565806260389953,
+    "measured_peak_row_below_horizon": 193,
+    "nonparametric_equal_flip_metric": {
+      "interpretation": "uniform metric arc-length bins equalize first-order flip mass per bin",
+      "js_divergence_nats": 0.0,
+      "law": "sqrt(g_vv) = rho(v) proportional to measured flip density w(v)"
+    },
+    "probe_scope": "all-class measured flip density restricted to image rows v>174; a ground-class-only row ledger does not exist, so class routing remains a named confound",
+    "shifted_family_fits": {
+      "shifted_hyperbolic_log_depth": {
+        "cdf_l1_rows": 22.25193867335755,
+        "exponent": 1.0,
+        "fitted_softening_offset_rows": 7.876139938338386,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.3789095220299231,
+        "js_divergence_nats": 0.10133805900890515,
+        "max_row_allocation_fraction": 0.03460493854410802
+      },
+      "shifted_projective_inverse_depth": {
+        "cdf_l1_rows": 11.351815074143179,
+        "exponent": 2.0,
+        "fitted_softening_offset_rows": 32.5257801441824,
+        "flip_mass_captured_by_top_10pct_allocated_rows": 0.3789095220299231,
+        "js_divergence_nats": 0.06994264689610602,
+        "max_row_allocation_fraction": 0.03402898217309826
+      }
+    }
+  },
+  "S2_head_simplex": {
+    "flip_margin_quantiles": {
+      "p10": {
+        "flat_shadow_gap_over_2": 0.009088754653930664,
+        "logit_gap": 0.018177509307861328,
+        "pairwise_fisher_wall_distance": 0.009088629526386581,
+        "relative_error_vs_gap_over_2": -1.3767292533217734e-05
+      },
+      "p25": {
+        "flat_shadow_gap_over_2": 0.024808287620544434,
+        "logit_gap": 0.04961657524108887,
+        "pairwise_fisher_wall_distance": 0.024805743297216996,
+        "relative_error_vs_gap_over_2": -0.00010255940943426634
+      },
+      "p50": {
+        "flat_shadow_gap_over_2": 0.06082439422607422,
+        "logit_gap": 0.12164878845214844,
+        "pairwise_fisher_wall_distance": 0.060786924484955325,
+        "relative_error_vs_gap_over_2": -0.000616031472169265
+      },
+      "p75": {
+        "flat_shadow_gap_over_2": 0.12639647722244263,
+        "logit_gap": 0.25279295444488525,
+        "pairwise_fisher_wall_distance": 0.12606126206503354,
+        "relative_error_vs_gap_over_2": -0.0026520925644086812
+      },
+      "p90": {
+        "flat_shadow_gap_over_2": 0.2199985027313233,
+        "logit_gap": 0.4399970054626466,
+        "pairwise_fisher_wall_distance": 0.2182450476869096,
+        "relative_error_vs_gap_over_2": -0.007970304445913068
+      }
+    },
+    "formula": "d_FR,pair(delta)=2 asin(|sqrt(sigmoid(delta))-sqrt(sigmoid(-delta))|/sqrt(2))",
+    "ordering": "strictly monotone in nonnegative logit gap; it cannot change the argmax decision cells",
+    "probe_scope": "exact top-two renormalized Fisher--Rao distance computed from the n600 logit-gap distribution; the full five-class Fisher distance is not identifiable from a top1-top2 gap alone",
+    "weighted_linear_fit_on_nonempty_flip_histogram_bins": {
+      "counts_used": 250519,
+      "relative_rmse": 0.053481134111775894,
+      "slope_through_origin": 0.48601477304350377
+    }
+  },
+  "S3_temporal_spacetime": {
+    "measurement_design": "compare a fixed quantized separatrix representation encoded (a) per frame and (b) as initial curve plus xi transport, event marks, receiver phase, and event residuals; require identical decoded world-sheets before attributing byte savings",
+    "settled_law_source": "tac.canonical_equations.rate_law_ladder_20260713.TEMPORAL_CHAIN",
+    "status": "DERIVED_ONLY_IN_THIS_PROBE"
+  },
+  "S4_optimizer_manifolds": {
+    "source": "tac.canonical_equations.witness_modular_norm_assignment_20260713.MODULE_NORM_ASSIGNMENTS",
+    "status": "SOURCE_AUDIT_ONLY",
+    "stiefel_film_owner": "muon_round2_wire (assessment-only here)"
+  },
+  "S5_witness_manifold": {
+    "extrinsic_only_diagnostics": {
+      "five_observation_path_over_chord": {
+        "mean": 5.564906411720036,
+        "median": 3.8236994502123673,
+        "n": 2842,
+        "p10": 1.8513321707583945,
+        "p90": 10.846944568870956
+      },
+      "normalized_menger_curvature": {
+        "mean": 1.9920624689475446,
+        "median": 1.7172239245607073,
+        "n": 2838,
+        "p10": 0.5226695679183785,
+        "p90": 3.5152993288742405
+      },
+      "units": "dimensionless after per-coordinate robust scaling"
+    },
+    "input": {
+      "archive_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "member": "lstars",
+      "member_sha256": "bf1d0e5c7e2ef1b3c38ce6cd51ec827169ac13a02c675638b7bd97344a089ec4",
+      "n_pairs": 600,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+    },
+    "intrinsic_curvature_verdict": {
+      "reason": "each tracked lane observation supplies a time-ordered one-parameter curve in R^8; one-dimensional Riemannian manifolds have identically zero intrinsic curvature, while the reported Menger values are embedding curvature. Pooling 29 tracks mixes strata and does not create the independent tangent 2-planes required for sectional-curvature estimation",
+      "status": "NOT_IDENTIFIABLE_FROM_THIS_CACHE",
+      "whitney_consequence": "none: Whitney's generic 2d+1 embedding bound depends on intrinsic/topological dimension, not curvature; curvature could only inform reach/chart count after multi-direction neighborhood sampling"
+    },
+    "lane_orbit_sampling": {
+      "ambient_coefficient_dimension": 8,
+      "global_pooled_participation_rank": 2.801160729507224,
+      "global_pooled_rank90": 4,
+      "observations": 2948,
+      "robust_dim_scales": [
+        4.805971799768428,
+        4.842681956356616,
+        5.060238227662886,
+        6.2502802363306635,
+        3.4308809160439737,
+        5.800273626044249,
+        3.791020618709712,
+        33.704852864089034
+      ],
+      "tracks": 29
+    },
+    "local_track_windows": {
+      "11": {
+        "participation_rank": {
+          "mean": 1.7903452135717652,
+          "median": 1.7412719511167403,
+          "n": 2740,
+          "p10": 1.258258585192684,
+          "p90": 2.3905842361468697
+        },
+        "rank90": {
+          "mean": 2.175912408759124,
+          "median": 2.0,
+          "n": 2740,
+          "p10": 2.0,
+          "p90": 3.0
+        }
+      },
+      "21": {
+        "participation_rank": {
+          "mean": 1.9840643932525053,
+          "median": 1.973639295819845,
+          "n": 2607,
+          "p10": 1.3921498272713075,
+          "p90": 2.55994271401622
+        },
+        "rank90": {
+          "mean": 2.3893364019946297,
+          "median": 2.0,
+          "n": 2607,
+          "p10": 2.0,
+          "p90": 3.0
+        }
+      },
+      "5": {
+        "participation_rank": {
+          "mean": 1.5098072119846477,
+          "median": 1.4292964626658224,
+          "n": 2842,
+          "p10": 1.1043568303578846,
+          "p90": 2.028793618091891
+        },
+        "rank90": {
+          "mean": 1.79064039408867,
+          "median": 2.0,
+          "n": 2842,
+          "p10": 1.0,
+          "p90": 2.0
+        }
+      }
+    },
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "schema": "manifold_geometry_slots_probe.v1.stage_s5",
+    "score_claim": false
+  },
+  "axis": "[macOS-CPU numpy advisory; n600 cached artifacts; no scorer/evaluator; non-promotable]",
+  "environment": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "false_authority": {
+    "evaluator_calls": 0,
+    "paid_dispatches": 0,
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "scorer_calls": 0
+  },
+  "provenance": {
+    "argv": [
+      "tools/probe_manifold_geometry_slots.py"
+    ],
+    "canonical_command": ".venv/bin/python tools/probe_manifold_geometry_slots.py",
+    "config": {
+      "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "horizon_row": 174.0,
+      "out": ".omx/research/manifold_geometry_slots_probe_receipt_20260713.json",
+      "row_artifact": ".omx/research/dseg_reducibility_gt_margin_n600_20260623.json"
+    },
+    "determinism": {
+      "rng": "none",
+      "seed": "not_applicable_no_rng",
+      "stage_reuse_requires_input_fingerprint": true,
+      "writes": "atomic_tmp_plus_os_replace"
+    },
+    "git_head": "3d1016f17e3f572b61d0ac28241a3dd9cc0dbcd3",
+    "inputs": {
+      "gt_cache_archive_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "gt_cache_member_lstars_sha256": "bf1d0e5c7e2ef1b3c38ce6cd51ec827169ac13a02c675638b7bd97344a089ec4",
+      "row_artifact_sha256": "3660e89c8cbfc51d7ef0991f8c4718abb211b9e03cc7b9fd3875ca57fff1a413"
+    },
+    "stage_receipt_sha256": {
+      "S1_S2": "a5513a161bcb2ba293c8b97d4458b70af4703eba95005ebeaf8d6bd8e84bfeec",
+      "S5": "24f444a3327ddd3c2be2f29846fb57c874041f05a80c3baebe05957e6a9a46f6"
+    },
+    "tool": {
+      "path": "tools/probe_manifold_geometry_slots.py",
+      "sha256": "7ca397fd09b41903d8e28aabdf9135fd7faaaa1750550ddefaa2248069d58a2e"
+    }
+  },
+  "schema": "manifold_geometry_slots_probe.v1",
+  "stages": {
+    "S1_S2": ".omx/research/manifold_geometry_slots_probe_s1_s2_20260713.json",
+    "S5": ".omx/research/manifold_geometry_slots_probe_s5_20260713.json"
+  }
+}
