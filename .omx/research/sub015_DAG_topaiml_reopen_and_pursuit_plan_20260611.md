@@ -16992,3 +16992,18 @@ lever): the FAMILY is now a tracked pool row surrogate_support_localization_fami
 record_candidate; digest pool surface renders it) carrying the round-4 admission bar (retained-mass ≥47% at
 4.70% area, oracle 52.78% MEASURED) + the family state (regression dead × 2 exact-optimum ceilings; ranking
 live). Registry/readback introspection covers the policy class generically [consumers-generic].
+
+## FEED-replace-round4-20260713 (pointer node; full FEED in replace_round4_support_ranking_DAG_FEED_20260713.md)
+Round-4 (#455) [MEASURED n600 heldout + exact-optimum certificates]: support-RANKING NO-GO — verdict_scope:
+family × fixed replay — shallow first-pre-SE cheap-feature CONVEX localizers (global + 20 ordered-pair
+weighted-top-k + 20 pairwise RankRLS heads, all with rank-truncated float64 Moore-Penrose optimum certificates,
+stage_fit sha b431f938…) on V9 n600 seed455: best retained-mass 20.17% at 4.70% area vs the 47% bar (oracle
+52.78% UNCHANGED — the information exists but is not convexly extractable from shallow pre-SE features; winner
+ECE 0.003 = calibration was fine, the FEATURES are the wall). Class-pair block heads beat scalar margin
+16.35%→20.17% (the 120× spread helps but is insufficient at this depth). Economics honesty: even a PASSING
+localizer's C_teacher = A + 0.0525·D = 19.06× VARIABLE-cost reduction only, NOT realized wall time. FOUR-ROUND
+CAMPAIGN STATE at theorem-grade ceilings: regression dead ×2 (rounds 2-3) + shallow-convex localization dead ×1
+(round 4) = the cheap-shallow-convex REPLACE program is CLOSED with certificates; family remains open ONLY on
+costlier rungs (deeper features = loses the pre-SE tileability premise · nonlinear/on-policy = new stability +
+economics gates · dense-label · transition-complete FORE once manifest data exists from a real run). Zero
+retries, 600 unique teacher calls, terminal resume byte-identical.
