@@ -126,6 +126,7 @@ from tac.causal_manifest import (  # noqa: E402
     unavailable_artifact as causal_unavailable_artifact,
     utc_now as causal_utc_now,
 )
+from tac.jsonl_store import append_locked_jsonl  # noqa: E402
 from tac.optimization.film_polar_chart_spel_mlx import (  # noqa: E402
     RESUME_PREFIX as FILM_POLAR_CHART_RESUME_PREFIX,
     FilmPolarChartSPELState,
@@ -138,6 +139,20 @@ from tac.optimization.md_decoupling import (  # noqa: E402
 from tac.optimization.muon_finisher_mlx import (  # noqa: E402
     build_muon_finisher_optimizer,
     count_muon_adamw_split,
+)
+from tac.witness_control.telemetry_producers import (  # noqa: E402
+    ClipActivationAggregator,
+    ComponentWallclock,
+    ProducerResumeState,
+    deterministic_strata,
+    engagement_reasons,
+    ladder_birth_complete_row,
+    lever_engage_row,
+    live_gap_fields,
+    sps_engagement_row,
+    tail_cycle_endpoint_row,
+    term_inert_rows,
+    would_fire_row,
 )
 # SENSE (opt-in --annulus-telemetry): REUSE the pure codim-1 boundary-annulus metric math
 # (no reimplementation). Only the low-level pure fns are used (flip split + per-class + GT-margin
@@ -169,6 +184,23 @@ from tac.witness_init.fresh_trainer_contract import (  # noqa: E402
 )
 
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
+
+# Launch-ticket producer contract literals.  Keep these in the shared trainer
+# (not only the hook module): the ticket compiler AST-verifies the exact in-run
+# producer surface before clearing D-A/D-B.
+_DA_COMPONENT_SCHEMA = "witness_component_wallclock.v1"
+_DA_COMPONENT_FIELDS = (
+    "teacher_forward_s",
+    "teacher_backward_s",
+    "witness_forward_s",
+    "witness_backward_s",
+    "realized_R_s",
+    "verdict_s",
+    "checkpoint_io_s",
+    "epoch_total_s",
+)
+_DB_SPS_SCHEMA = "sps_gradient_role_conflict_engagement.v1"
+_DB_SPS_ENGAGEMENTS = ("temporal_screw_engaged", "phase_advection_engaged")
 
 
 def _utc() -> str:
@@ -3281,6 +3313,7 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
     "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
     "margin_saliency", "subpix", "chroma_boundary", "margin_satisfice", "horizon_margin", "temporal_screw",
+    "phase_advect",
     "island_amplify", "area_constraint", "persistence",
     "rankfloor", "code_spectral", "thin_lane", "margin_field_head", "code_nuclear", "weight_entropy",
     # "margin_satisfice" (P0 FORCE 2 MarginBandSatisficing) + "temporal_screw" (P0 FORCE 1
@@ -3472,6 +3505,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     out_dir = Path(args.out_dir)
     _refuse_tmp(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    # D-A/D-B + task-408 observer state.  Pure telemetry is default ON and
+    # fail-open; the only score-affecting member of the batch is the separately
+    # typed/default-OFF VerdictLiveGap DSL lever below.
+    _component_wallclock_on = bool(
+        getattr(args, "component_wallclock_telemetry", True))
+    _component_probe_every = max(
+        1, int(getattr(args, "component_wallclock_probe_every", 1)))
+    _component_clock = ComponentWallclock(
+        out_dir / "witness_component_wallclock.jsonl")
+    _component_pending_lock = threading.Lock()
+    _component_pending: dict[int, dict[str, Any]] = {}
+    _sps_engagement_on = bool(getattr(args, "sps_engagement_telemetry", True))
+    _sps_k_pairs = max(1, int(getattr(args, "sps_engagement_k_pairs", 4)))
+    _sps_window = max(0, int(getattr(args, "sps_engagement_window", 2)))
+    _verdict_live_gap_every = max(
+        0, int(getattr(args, "verdict_live_gap_every", 0)))
+    _producer_resume = ProducerResumeState()
+    _sps_actual_events: dict[str, int] = {}
+    _tail_cycle_start_epoch = {"v": None}
     # #205 PROVENANCE: capture git sha + upstream snapshot sha ONCE at launch (threaded into result.json
     # AND every per-stage checkpoint cfg so the #205 run + each byte-close artifact is reproducible from
     # provenance). NO-FAKE: "unknown" when git is unavailable, never fabricated.
@@ -5532,6 +5584,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "additive_margin": float(getattr(args, "additive_margin", 0.0)),
                           "margin_field_head_weight": float(mfh_w),
                           "reason": _am_eng["reason"]}), flush=True)
+        print(json.dumps(lever_engage_row(
+            "additive_margin", status="armed", epoch=0,
+            via="typed_configuration")), flush=True)
+        if _am_eng["engaged"]:
+            print(json.dumps(lever_engage_row(
+                "additive_margin", status="fired", epoch=0,
+                via="setup_loss_binding")), flush=True)
         if _am_eng["inert"]:
             print(json.dumps({"stage": "confound_alarm", "kind": "additive_margin_inert",
                               "lever": "additive_margin", "engaged": False,
@@ -7337,6 +7396,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _resume_registry.register(
             "margin_compander", MARGIN_COMPANDER_RESUME_PREFIX, _input_chart)
 
+    # D-B engagement rows and Q2/Q6 latches must survive a crash so a resumed
+    # run neither duplicates a boundary record nor loses an in-progress inert
+    # streak.  Missing __dtp_* keys are the additive legacy case: fresh observer
+    # state, with model/optimizer/EMA semantics unchanged.
+    _resume_registry.register(
+        "da_db_telemetry", "__dtp_", _producer_resume)
+
     # Manifold-Muon round 2: construct/register the state ONLY for the typed
     # treatment arm.  Once initialized at the Muon boundary it persists Q,
     # frozen H0, transported tangent momentum, Q-EMA, and step through the same
@@ -7964,8 +8030,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (curv_feats_np, gt, frozen scorers) -> RACE-FREE (it never touches ema.shadow / model /
     # dir_feats_per_pair / cf_mx_cache, all of which the main loop keeps mutating). The worker
     # uses NO MLX op (pure numpy+torch) so it cannot race the GPU stream.
-    def _capture_verdict_snapshot() -> dict[str, Any]:
-        return {
+    def _capture_verdict_snapshot(*, include_live: bool = False) -> dict[str, Any]:
+        _snap = {
             # (review Med1) project the shadow film.weight on-manifold so the ASYNC verdict matches the
             # deployed (byte-closed) artifact (no-op unless --film-stiefel => bit-identical snapshot).
             "ema_np": _project_shadow_film_np({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}),
@@ -7973,16 +8039,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "hosc_beta": float(model.hosc_beta),  # FEED-fb: snapshot the live (possibly annealed) beta
             "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs} if use_self_orient else None),
         }
+        if include_live:
+            _snap["live_np"] = _project_shadow_film_np({
+                k: np.asarray(v, np.float32)
+                for k, v in tree_flatten(model.parameters())
+            })
+        return _snap
 
     def _feats_for_snapshot(pi: int, dir_snap) -> np.ndarray:
         if not use_self_orient:
             return curv_feats_np
         return np.concatenate([curv_feats_np, dir_snap[pi]], axis=-1).astype(np.float32)
 
-    def _verdict_from_snapshot(snap: dict[str, Any]) -> dict[str, float]:
+    def _verdict_from_snapshot(
+        snap: dict[str, Any], *, parameter_key: str = "ema_np"
+    ) -> dict[str, float]:
         # BIT-IDENTICAL to realized_verdict() on the captured state: same int8 dequant, same
         # fp32 ONE-CODEPATH forward, same softmax_temp, same per-pair feats, same CPU scorers.
-        deploy = int8_dequant_params(snap["ema_np"])
+        deploy = int8_dequant_params(snap[parameter_key])
         st = snap["softmax_temp"]
         sb = snap["hosc_beta"]  # FEED-fb: the live beta captured at schedule time (anneal-correct, NO-FAKE)
         f0s, f1s = [], []
@@ -8122,7 +8196,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     def _emit_verdict_row(v: dict[str, float], ema_np: dict[str, np.ndarray], ep: int,
                           seg_form: str, ep_loss: float, *, async_tag: bool,
                           liveness: "dict[str, Any] | None" = None,
-                          tau: "float | None" = None) -> None:
+                          tau: "float | None" = None,
+                          row_extra: "dict[str, float] | None" = None) -> None:
         # (mod-dim dynamics 2026-07-08) ``tau`` = the SNAPSHOT softmax-temp for octave alignment of the
         # companion mod_dim_dynamics row; None (non-async callers) falls back to the live model.softmax_temp.
         # (#302) split per-class counts OUT of ``v`` before it flows to the float-only verdict row /
@@ -8155,6 +8230,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                    # Additive presence-gated field (dashboard introspect layer reads by key);
                    # NON-PROMOTABLE regardless of device (CLAUDE.md: MLX/MPS is never a score).
                    "verdict_device": _verdict_device}
+            if row_extra:
+                row.update({k: round(float(vv), 6) for k, vv in row_extra.items()})
             # (2026-07-07) ADDITIVE observability fields — per-class d_seg (when the annulus branch
             # collected realized maps) + process/MLX memory (#329, every verdict row). Both fail-open
             # + row-only (never history/result.json); consumers read rows by key => additive-safe.
@@ -8270,6 +8347,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         with _verdict_lock:
             if not _is_new_best(d_seg, _best["d_seg"]):  # finite + strictly-better only
                 return
+            _da_best_checkpoint_start_ns = time.perf_counter_ns()
             prev = _best["d_seg"]
             ema_arrays = _build_ema_checkpoint_arrays(
                 shadow_np_proj, args=args, softmax_temp=float(softmax_temp),
@@ -8281,6 +8359,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "path": "levelset_witness_ema_BEST.npz",
                 "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")})
             _best.update(d_seg=float(d_seg), ep=int(ep), path="levelset_witness_ema_BEST.npz")
+            if _component_wallclock_on:
+                with _component_pending_lock:
+                    _da_best_pending = _component_pending.get(int(ep))
+                    if _da_best_pending is not None:
+                        _da_best_pending["clock"].add_ns(
+                            "checkpoint_io_s",
+                            time.perf_counter_ns() - _da_best_checkpoint_start_ns,
+                        )
             print(json.dumps({"stage": "checkpoint", "kind": "best", "epoch": int(ep),
                               "d_seg": round(float(d_seg), 6),
                               "prev_best": (round(prev, 6) if np.isfinite(prev) else None),
@@ -8301,8 +8387,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "total_skipped": _verdict_skipped[0],
                                   "note": "prior async verdict still running; cadence self-throttles "
                                   "(GPU never blocks)"}), flush=True)
+            _settle_component_verdict(ep, not_invoked=True)
             return False
-        snap = _capture_verdict_snapshot()  # MAIN thread, cheap, point-in-time
+        _live_gap_due = (
+            _verdict_live_gap_every > 0
+            and int(ep) % _verdict_live_gap_every == 0
+        )
+        snap = _capture_verdict_snapshot(
+            include_live=_live_gap_due)  # MAIN thread, point-in-time
         if _cl_on:
             # (M2 fix) PENDING-VERDICT record: THIS verdict is now in flight, so any resume sidecar
             # written before its row lands persists the EXACT inputs the worker scores (the SAME
@@ -8323,18 +8415,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
         def _worker() -> None:
             t0 = time.time()
+            _da_verdict_start_ns = time.perf_counter_ns()
             try:
                 v = _verdict_from_snapshot(snap)
+                _live_gap = None
+                if "live_np" in snap:
+                    _live_v = _verdict_from_snapshot(snap, parameter_key="live_np")
+                    _live_gap = live_gap_fields(v, _live_v)
                 _emit_verdict_row(v, snap["ema_np"], ep, seg_form, ep_loss, async_tag=True,
-                                  liveness=_lv_snap, tau=float(snap.get("softmax_temp")))
+                                  liveness=_lv_snap, tau=float(snap.get("softmax_temp")),
+                                  row_extra=_live_gap)
                 # HARDENING: preserve the best EMA shadow from the SAME snapshot the verdict scored
                 # (snap["ema_np"] is the point-in-time Stiefel-projected shadow; cfg from the snap).
                 _maybe_preserve_best(v["d_seg"], ep, snap["ema_np"],
                                      snap["softmax_temp"], snap["hosc_beta"])
+                _settle_component_verdict(
+                    ep, elapsed_ns=time.perf_counter_ns() - _da_verdict_start_ns)
                 with _verdict_lock:
                     print(json.dumps({"stage": "verdict_async_done", "epoch": ep,
                                       "secs": round(time.time() - t0, 1)}), flush=True)
             except Exception as exc:  # an eval failure must NOT kill training (daemon thread).
+                _settle_component_verdict(ep, error=exc)
                 with _verdict_lock:
                     # (M2 fix) a FAILED verdict produces NO row in the continuous run => drop the
                     # pending record so a resume does not resurrect a row that never existed.
@@ -8527,6 +8628,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         causal_boundary_kind: str | None = None,
         causal_stage: str | None = None,
     ) -> dict[str, Any]:
+        _da_checkpoint_start_ns = time.perf_counter_ns()
+        _da_checkpoint_clock = _component_clock
         shadow_np, live_np, opt_np = _snapshot_numpy_state()
         # (review Med1) the BYTE-CLOSE deploy npz ships the EMA shadow; re-project its film.weight onto
         # Stiefel so the shipped artifact is ON-MANIFOLD (PR(M)=PR(cov code) holds for what ships). The
@@ -8603,6 +8706,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             weights_stepped=bool(_live.get("stepped", True)),
             accepted_fraction=float(_live.get("frac", 1.0)),
         )
+        if _component_wallclock_on:
+            _da_checkpoint_clock.add_ns(
+                "checkpoint_io_s", time.perf_counter_ns() - _da_checkpoint_start_ns)
         return written
 
     # ---- RESUME restore (FEED-dz; --resume-from None => fresh start => behavior UNCHANGED). Loads
@@ -9234,6 +9340,313 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             return
         print(json.dumps(_row), flush=True)
 
+    # ---- D-A exact component timer producer.  MLX fuses the production loss
+    # into one lazy value_and_grad graph, so splitting teacher/witness backward
+    # in that graph would change its arithmetic.  Preserve the real update path
+    # and measure the four subcomponents with one deterministic, same-function,
+    # update-free probe; verdict/checkpoint/epoch intervals below wrap their real
+    # critical-path regions.  Backward timings are explicitly inclusive of the
+    # forward required by autodiff and are never asserted to form a disjoint sum.
+    def _measure_component_decomposition(ep: int) -> None:
+        if (not _component_wallclock_on
+                or int(ep) % int(_component_probe_every) != 0):
+            return
+        from tac.witness_control import grad_interaction as _gi_da
+        import mlx.nn as _da_nn
+        import train_witness_realized_through_R_mlx as _base_da
+
+        _pi = deterministic_strata(P, min(4, P))[0]
+        _cf = _cf_mx(_pi)
+        _c1 = 2 * _pi + 1
+
+        def _wit_fwd():
+            _raw = model(_cf, _c1)
+            mx.eval(_raw)
+            return _raw
+
+        def _wit_bwd():
+            def _probe(m):
+                return mx.mean(m(_cf, _c1))
+
+            _value, _grad = _da_nn.value_and_grad(model, _probe)(model)
+            mx.eval(_value, _grad)
+
+        try:
+            with _gi_da.MxRngGuard(where="witness_component_wallclock"):
+                _raw = _component_clock.measure_probe("witness_forward_s", _wit_fwd)
+                _component_clock.measure_probe("witness_backward_s", _wit_bwd)
+                if _raw is not None:
+                    _rgb = mx.reshape(_raw, (1, render_h, render_w, 3))
+
+                    def _r_fwd():
+                        _frame = _base_da._apply_R(_rgb)  # noqa: SLF001 -- actual trainer R dispatch
+                        mx.eval(_frame)
+                        return _frame
+
+                    _frame = _component_clock.measure_probe("realized_R_s", _r_fwd)
+                    if _frame is not None:
+
+                        def _teacher_fwd():
+                            _logits = adapter.segnet(_frame)
+                            mx.eval(_logits)
+
+                        def _teacher_bwd():
+                            def _teacher_scalar(frame):
+                                return mx.mean(adapter.segnet(frame))
+
+                            _grad = mx.grad(_teacher_scalar)(_frame)
+                            mx.eval(_grad)
+
+                        _component_clock.measure_probe("teacher_forward_s", _teacher_fwd)
+                        _component_clock.measure_probe("teacher_backward_s", _teacher_bwd)
+        except Exception as _da_exc:
+            # The producer remains loud (the epoch JSONL row carries incomplete/error)
+            # but read-only telemetry can never kill the score trajectory.
+            _component_clock.record_error("decomposition_probe", _da_exc)
+            print(json.dumps({
+                "stage": "witness_component_wallclock_error",
+                "epoch": int(ep),
+                "error": f"{type(_da_exc).__name__}: {_da_exc}",
+                "score_neutral": True,
+                "promotable": False,
+            }), flush=True)
+
+    def _emit_component_epoch_if_ready(ep: int) -> None:
+        """Emit one fcntl-locked D-A row after epoch and async verdict settle."""
+
+        if not _component_wallclock_on:
+            return
+        with _component_pending_lock:
+            _pending = _component_pending.get(int(ep))
+            if (_pending is None or _pending["emitted"]
+                    or _pending["epoch_total_s"] is None
+                    or not _pending["verdict_settled"]
+                    or not _pending["allow_emit"]):
+                return
+            _pending["emitted"] = True
+            _clock = _pending["clock"]
+            _epoch_total_s = float(_pending["epoch_total_s"])
+        try:
+            _row = _clock.emit(epoch=int(ep), epoch_total_s=_epoch_total_s)
+            print(json.dumps(_row), flush=True)
+            # Compose with the canonical causal-manifest boundary path rather
+            # than inventing a second transition/provenance writer.  Timings
+            # are non-authority observations, so this boundary has no score.
+            _record_causal_boundary(
+                epoch=int(ep), boundary_kind="component_wallclock",
+                stage="telemetry", outcome_values=None)
+            with _component_pending_lock:
+                _component_pending.pop(int(ep), None)
+        except Exception as _da_emit_exc:
+            with _component_pending_lock:
+                _pending = _component_pending.get(int(ep))
+                if _pending is not None:
+                    _pending["emitted"] = False
+            print(json.dumps({
+                "stage": "witness_component_wallclock_emit_error",
+                "epoch": int(ep),
+                "error": f"{type(_da_emit_exc).__name__}: {_da_emit_exc}",
+                "score_neutral": True,
+            }), flush=True)
+
+    def _settle_component_verdict(
+        ep: int,
+        *,
+        elapsed_ns: int | None = None,
+        not_invoked: bool = False,
+        error: BaseException | None = None,
+    ) -> None:
+        if not _component_wallclock_on:
+            return
+        with _component_pending_lock:
+            _pending = _component_pending.get(int(ep))
+            if _pending is None or _pending["verdict_settled"]:
+                return
+            _clock = _pending["clock"]
+            if elapsed_ns is not None:
+                _clock.add_ns("verdict_s", int(elapsed_ns))
+            elif error is not None:
+                _clock.record_error("verdict_s", error)
+            elif not_invoked:
+                _clock.mark_not_invoked("verdict_s")
+            else:
+                raise ValueError("verdict settlement needs elapsed_ns, error, or not_invoked")
+            _pending["verdict_settled"] = True
+        _emit_component_epoch_if_ready(int(ep))
+
+    def _finalize_component_epoch(ep: int, epoch_total_s: float) -> None:
+        if not _component_wallclock_on:
+            return
+        with _component_pending_lock:
+            _pending = _component_pending[int(ep)]
+            _pending["epoch_total_s"] = float(epoch_total_s)
+        _emit_component_epoch_if_ready(int(ep))
+
+    # ---- D-B engaged-regime SPS role-conflict callback.  Reuses the existing
+    # total_loss_fn terms and grad_interaction flatten/RNG guard, but aggregates
+    # the roles exactly as the standalone probe: prediction=(seg+pose), temporal
+    # is the screw or phase term.  The temporary gate flip is observer-local and
+    # restored in finally, allowing nominal pre-boundary rows to measure the
+    # counterfactual engaged mechanism without changing a training update.
+    def _emit_sps_engagement_conflict(
+        ep: int,
+        seg_form: str,
+        eik_w_ep: float,
+        *,
+        engagement: str,
+        reason: str,
+        actual_event: bool,
+    ) -> None:
+        if not _sps_engagement_on:
+            return
+        from tac.witness_control import grad_interaction as _gi_sps
+        import mlx.nn as _sps_nn
+
+        _term = "temporal_screw" if engagement == "temporal_screw_engaged" else "phase_advect"
+        _gate = ts_gate if engagement == "temporal_screw_engaged" else pa_gate
+        _weight = ts_w if engagement == "temporal_screw_engaged" else pa_w
+        if float(_weight) <= 0.0:
+            return
+        if not _producer_resume.mark_sps(
+                engagement=engagement, epoch=int(ep), reason=str(reason)):
+            return
+        _sample = deterministic_strata(P, min(_sps_k_pairs, P))
+        _old_gate = bool(_gate["on"])
+        try:
+            with _gi_sps.MxRngGuard(where="sps_gradient_role_conflict_engagement"):
+                _gate["on"] = True
+                _roles: dict[str, dict[str, np.ndarray]] = {
+                    "seg": {}, "pose": {}, "temporal": {}}
+                for _role, _terms in (("seg", ("seg",)),
+                                      ("pose", ("pose",)),
+                                      ("temporal", (_term,))):
+                    _acc: dict[str, np.ndarray] = {}
+                    for _pi in _sample:
+                        _oh, _mg = lstar_cache[_pi]
+
+                        def _role_loss(
+                            m,
+                            _pi_=_pi,
+                            _oh_=_oh,
+                            _mg_=_mg,
+                            _terms_=_terms,
+                        ):
+                            _d: dict[str, Any] = {}
+                            total_loss_fn(
+                                m, _cf_mx(_pi_), 2 * _pi_, 2 * _pi_ + 1,
+                                _oh_, _mg_, pose_tgts[_pi_], args.w_seg,
+                                _w_pose_now["v"], args.hinge_weight,
+                                args.margin_target_end, seg_form, eik_w_ep,
+                                args.length_weight, terms_out=_d)
+                            _vals = [_d[name] for name in _terms_ if name in _d]
+                            if not _vals:
+                                return mx.array(0.0)
+                            _out = _vals[0]
+                            for _value in _vals[1:]:
+                                _out = _out + _value
+                            return _out
+
+                        _value, _grads = _sps_nn.value_and_grad(model, _role_loss)(model)
+                        mx.eval(_value, _grads)
+                        for _name, _leaf in tree_flatten(_grads):
+                            if not _name.startswith(("in_proj.", "hidden.")):
+                                continue
+                            _vec = np.asarray(_leaf, np.float64).reshape(-1)
+                            _acc[_name] = _vec if _name not in _acc else _acc[_name] + _vec
+                    _roles[_role] = {
+                        name: value / float(len(_sample)) for name, value in _acc.items()}
+                if not _roles["seg"] or not _roles["temporal"]:
+                    raise RuntimeError("SPS hook selected no shared trunk gradient leaves")
+                _roles["prediction"] = {
+                    name: _roles["seg"][name] + _roles["pose"][name]
+                    for name in _roles["seg"]
+                }
+            _row = sps_engagement_row(
+                _roles["prediction"], _roles["temporal"], epoch=int(ep),
+                seg=_roles["seg"], pose=_roles["pose"],
+                engagement=engagement, reason=reason, actual_event=actual_event,
+                pair_indices=_sample, active_temporal_terms={_term: float(_weight)})
+            append_locked_jsonl(
+                out_dir / "sps_gradient_role_conflict_engagement.jsonl", _row)
+            print(json.dumps(_row), flush=True)
+        except Exception as _sps_exc:
+            # A failed attempt must be retryable at the next cadence/resume; only
+            # successful rows consume the nonduplicate latch.
+            _producer_resume.sps_emitted.discard(
+                f"{engagement}:{int(ep)}:{reason}")
+            print(json.dumps({
+                "stage": "sps_gradient_role_conflict_engagement_error",
+                "schema": _DB_SPS_SCHEMA,
+                "epoch": int(ep),
+                "engagement": engagement,
+                "error": f"{type(_sps_exc).__name__}: {_sps_exc}",
+                "score_neutral": True,
+                "promotable": False,
+            }), flush=True)
+        finally:
+            _gate["on"] = _old_gate
+
+    def _emit_sps_epoch(ep: int, seg_form: str, eik_w_ep: float) -> None:
+        if not _sps_engagement_on:
+            return
+        for _engagement, _nominal, _configured in (
+            ("temporal_screw_engaged", ts_start, ts_w > 0.0),
+            ("phase_advection_engaged", pa_start, pa_w > 0.0),
+        ):
+            if not _configured:
+                continue
+            _actual = _sps_actual_events.get(_engagement) == int(ep)
+            for _reason in engagement_reasons(
+                    ep, nominal_epoch=int(_nominal), window=_sps_window,
+                    actual_event=_actual):
+                _emit_sps_engagement_conflict(
+                    ep, seg_form, eik_w_ep, engagement=_engagement,
+                    reason=_reason, actual_event=(_reason == "actual_engagement_transition"))
+
+    def _emit_q5_would_fire(ep: int) -> None:
+        """Uniform held/fired rows for the two sparse event sensors."""
+
+        _traj = [
+            (int(row["epoch"]), float(row["d_seg"]))
+            for row in history
+            if "epoch" in row and "d_seg" in row
+        ]
+        _meat = _muon_meat(
+            _traj, nucleation_complete=_ladder_done(ep, _ladder_arm_windows))
+        print(json.dumps(would_fire_row(
+            epoch=ep,
+            lever="muon",
+            metric="powerlaw_remaining_meat",
+            value=_meat.get("remaining_meat"),
+            threshold={"meat_floor": 1e-4, "min_points": 8},
+            dwell=8,
+            sensor_data_epoch=(_traj[-1][0] if _traj else None),
+            event_mode=bool(_muon_gate.event_mode),
+            fired=bool(_meat.get("fired", False)),
+        )), flush=True)
+        _annulus = _annulus_plateau_ev(
+            _wire_sense["annulus_series"],
+            rel_eps=float(getattr(args, "annulus_plateau_rel_eps", 1e-4)),
+            dwell_windows=int(getattr(args, "annulus_plateau_dwell_windows", 4)),
+            min_epochs=int(getattr(args, "annulus_plateau_min_epochs", 150)),
+        )
+        _aseries = _wire_sense["annulus_series"]
+        print(json.dumps(would_fire_row(
+            epoch=ep,
+            lever="seg_chroma_boundary",
+            metric="annulus_relative_slope",
+            value=_annulus.get("rel_slope"),
+            threshold={
+                "rel_eps": float(getattr(args, "annulus_plateau_rel_eps", 1e-4)),
+                "min_epochs": int(getattr(args, "annulus_plateau_min_epochs", 150)),
+            },
+            dwell=int(getattr(args, "annulus_plateau_dwell_windows", 4)),
+            sensor_data_epoch=(int(_aseries[-1][0]) if _aseries else None),
+            event_mode=bool(
+                _chroma_gate.event_mode or _temporal_screw_gate.event_mode),
+            fired=bool(_annulus.get("fired", False)),
+        )), flush=True)
+
     # ---- (#312 Phase B) CURVATURE-SPECTRUM telemetry (the D-3/4/5 2nd-order costate SENSE state).
     # HVP-Lanczos top-k eigenvalues of the through-R SEG-loss Hessian w.r.t. the witness params at
     # CHECKPOINT cadence. Uses the SAME total_loss_fn seg term (score-aligned surface), the TESTED
@@ -9569,7 +9982,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return _running_accepted_frac(int(_live["ep_acc"]), int(_live["ep_tot"]), pending_accept)
 
     # typed confound-alarm streak state (turn the silent confounds LOUD; non-halting unless egregious).
-    _alarm: dict[str, Any] = {"deadlock_streak": 0, "termdom_streak": 0, "gnorm_streak": 0,
+    _alarm: dict[str, Any] = {"deadlock_streak": 0, "termdom_streaks": {}, "gnorm_streak": 0,
                               "adaptive_inert_since": None, "adaptive_last_eps": None}
     _CL_LIVENESS_MIN_ACCEPTED_FRAC = 0.10  # (C5) below this accepted-frac the run is FROZEN, never "converging"
     _TERMDOM_FRAC = 0.40      # (C6) a single reg term > 40% of loss => domination
@@ -9903,7 +10316,48 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             print(json.dumps(_lp_report), flush=True)
             _atomic_write_json(out_dir / "lambda_pre_probe.json", _lp_report)
             raise SystemExit(0)   # probe mode: NO training steps (default-OFF flag => unreachable)
+        # task-408 Q7: one reader-stable companion schema for all configured
+        # engagement surfaces.  These rows are additive configuration context;
+        # the existing mechanism-specific rows remain intact for back-compat.
+        _q7_armed = (
+            ("muon", getattr(args, "muon_start_epoch", None) is not None),
+            ("lane_edge", lane_w > 0.0),
+            ("margin_saliency", msal_w > 0.0),
+            ("subpixel", subpix_w > 0.0),
+            ("phase_advection", pa_w > 0.0),
+            ("pose_finish", _pose_finish_start > 0 and float(args.w_pose) > 0.0),
+            ("temporal_screw", ts_w > 0.0),
+            ("margin_satisficing", ms_w > 0.0),
+            ("horizon_margin", hz_w > 0.0),
+            ("chroma_boundary", chroma_bnd_w > 0.0),
+            ("thin_lane", lane_thin_w > 0.0),
+            ("lane_band", bool(_band_active)),
+            ("tail", _tail_ctrl is not None),
+            ("ladder_lane", _ladder_state is not None),
+            ("ladder_movable", _ladder_state is not None),
+        )
+        for _q7_lever, _q7_active in _q7_armed:
+            if _q7_active:
+                print(json.dumps(lever_engage_row(
+                    _q7_lever, status="armed", epoch=int(start_epoch),
+                    via=("resume_configuration" if args.resume_from
+                         else "typed_configuration"))), flush=True)
         for ep in range(start_epoch, args.epochs + 1):
+            _da_epoch_start_ns = time.perf_counter_ns()
+            # One object per epoch: an async verdict may finish after later
+            # epochs start, so resetting a shared accumulator would mix rows.
+            _component_clock = ComponentWallclock(
+                out_dir / "witness_component_wallclock.jsonl")
+            if _component_wallclock_on:
+                with _component_pending_lock:
+                    _component_pending[int(ep)] = {
+                        "clock": _component_clock,
+                        "epoch_total_s": None,
+                        "verdict_settled": False,
+                        "allow_emit": True,
+                        "emitted": False,
+                    }
+            _clip_activation = ClipActivationAggregator(float(args.grad_clip))
             _prof = {"ep_start": time.perf_counter(), "step_s": 0.0, "verdict_s": 0.0} if _profile_timing else None
             if _mem_probe_on and args.mlx_device == "gpu":
                 try:
@@ -9941,6 +10395,31 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "lambda_movable": (None if _ladder_state["lambda"][_ladder_state["arm_mov"]] == float("inf")
                                                          else round(float(_ladder_state["lambda"][_ladder_state["arm_mov"]]), 8)),
                                       "note": "advisory; pointer 0.19110 UNMOVED"}), flush=True)
+            # task-408 Q6: a discrete, resume-safe completion row for each
+            # configured ladder class (birth + hold + anneal fully elapsed).
+            if _ladder_state is not None:
+                _ladder_complete_specs = (
+                    (
+                        "lane", int(_ladder_state["lane_cls"]),
+                        int(args.ladder_lane_birth_epochs)
+                        + int(args.ladder_lane_hold_epochs)
+                        + int(args.ladder_lane_anneal_epochs),
+                    ),
+                    (
+                        "movable", int(_ladder_state["movable_cls"]),
+                        int(args.ladder_movable_birth_epochs)
+                        + int(args.ladder_movable_hold_epochs)
+                        + int(args.ladder_movable_anneal_epochs),
+                    ),
+                )
+                for _lname, _lcls, _lcomplete_ep in _ladder_complete_specs:
+                    if ep >= _lcomplete_ep and _producer_resume.mark_ladder(_lname):
+                        print(json.dumps(ladder_birth_complete_row(
+                            epoch=ep, class_id=_lcls, class_name=_lname,
+                            final_radius=0.0)), flush=True)
+                        print(json.dumps(lever_engage_row(
+                            f"ladder_{_lname}", status="complete", epoch=ep,
+                            via="birth_hold_anneal_complete")), flush=True)
             # (#292 build-2) EVENT-TRIGGERED CURRICULUM: when ON, the stage form + boundary resolution
             # come from the deterministic loss-plateau controller (caps = the hardcoded epochs). When OFF
             # (default), this is the ORIGINAL hardcoded call, UNCHANGED => byte-identical (the #205 path).
@@ -10162,6 +10641,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "muon_warm_seeded_leaves": _warm_seeded,
                                   "note": "AdamW->Muon (2D hidden weights; biases/code/heads stay AdamW); "
                                   "spike-guard re-treated; LR schedule frozen for the finisher"}), flush=True)
+                print(json.dumps(lever_engage_row(
+                    "muon", status="fired", epoch=ep,
+                    via=(_mstep.fired_by if _mstep is not None else "configured_boundary"))), flush=True)
                 if args.stage_checkpoints:
                     _wm = _do_checkpoint(ep, stage_tag="stageMuonStart")
                     stage_ckpts.append(_wm)
@@ -10176,6 +10658,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_edge_engage", "epoch": ep, "lane_start": lane_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "lane_edge", status="fired", epoch=ep, via="configured_boundary")), flush=True)
             # LEVER-4 margin-saliency engagement gate + transition RE-TREAT (same discipline as lane).
             if msal_w > 0.0:
                 _msal_was = msal_gate["on"]
@@ -10184,6 +10668,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "margin_saliency_engage", "epoch": ep, "start": msal_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "margin_saliency", status="fired", epoch=ep,
+                        via="configured_boundary")), flush=True)
             # LEVER-4b sub-pixel boundary engagement gate + transition RE-TREAT (same discipline as LEVER-4).
             if subpix_w > 0.0:
                 _subpix_was = subpix_gate["on"]
@@ -10192,6 +10679,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_subpix_boundary_engage", "epoch": ep, "start": subpix_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "subpixel", status="fired", epoch=ep, via="configured_boundary")), flush=True)
             # T1 cross-pair phase-advection engagement gate + transition RE-TREAT (same discipline as
             # LEVER-4b). REQUIRED: without this the setup-time pa_gate["on"] (= pa_start<=1) never flips,
             # so a start_epoch>1 (l7) lever would NEVER fire. The engage epoch clears recent_losses so the
@@ -10201,8 +10690,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 pa_gate["on"] = lever_gate_on_at_epoch(pa_w, pa_start, ep)
                 if pa_gate["on"] and not _pa_was:
                     recent_losses.clear()
+                    _sps_actual_events["phase_advection_engaged"] = int(ep)
                     print(json.dumps({"stage": "seg_phase_advect_engage", "epoch": ep, "start": pa_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "phase_advection", status="fired", epoch=ep,
+                        via="configured_boundary")), flush=True)
             # (v7.5 D.9) TERMINAL POSE-FINISH weight resolution — the R1 two-phase (SPEC §D.9). Resolve
             # the EFFECTIVE pose weight for THIS epoch: 0 (pose-blind, d_seg converges on a coherent render)
             # until the MUON switch has fired (_muon_gate.fired == d_seg-converged / powerlaw_meat regime;
@@ -10263,6 +10756,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "muon_fired": bool(_muon_gate.fired), "w_pose": float(args.w_pose),
                                       "note": "R1 terminal pose-finish engaged (d_seg-converged coherent "
                                       "render); spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "pose_finish", status="fired", epoch=ep, via=_engage_via)), flush=True)
                 # (owed-1 DISENGAGED alarm, SYNTHESIS §A.4 Repair 4) at the FINAL epoch: if the conditioning
                 # gate was requested but pose never engaged, fire the LOUD pose-DISENGAGED alarm (shipped
                 # banked R1). Never silent.
@@ -10306,9 +10801,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps(_tstep.telemetry), flush=True)
                 if ts_gate["on"] and not _ts_was:
                     recent_losses.clear()
+                    _sps_actual_events["temporal_screw_engaged"] = int(ep)
                     print(json.dumps({"stage": "seg_temporal_screw_engage", "epoch": ep, "start": ts_start,
                                       "xi_source": ts_xi_source,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "temporal_screw", status="fired", epoch=ep,
+                        via=(_tstep.fired_by or "configured_boundary"))), flush=True)
             # P0 FORCE 2 margin-satisfice engagement gate + transition RE-TREAT (MASK-BY-STAGE at l7).
             # Default ms_w=0.0 => never engages => bit-identical.
             if ms_w > 0.0:
@@ -10319,6 +10818,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "seg_margin_satisfice_engage", "epoch": ep, "start": ms_start,
                                       "m_safe": ms_msafe,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "margin_satisficing", status="fired", epoch=ep,
+                        via="configured_boundary")), flush=True)
             # (v7.5 B.5) HORIZON-WEIGHTED MARGIN (#169) engagement gate + transition RE-TREAT (same
             # discipline as the margin-satisfice hinge). Default hz_w=0.0 => never engages => bit-identical.
             if hz_w > 0.0:
@@ -10329,6 +10831,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "seg_horizon_margin_engage", "epoch": ep, "start": hz_start,
                                       "m_target": hz_target,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "horizon_margin", status="fired", epoch=ep,
+                        via="configured_boundary")), flush=True)
             # LEVER-4c chroma-sharpening engagement gate + transition RE-TREAT (same discipline as LEVER-4b).
             # (operator override 2026-07-08) SENSOR->START WIRING #3: engagement flips through the chroma
             # EventBackstopGate. EVENT MODE OFF (--seg-chroma-boundary-start-event absent) => under this
@@ -10360,6 +10865,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_chroma_boundary_engage", "epoch": ep, "start": chroma_bnd_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "chroma_boundary", status="fired", epoch=ep,
+                        via=(_cstep.fired_by or "configured_boundary"))), flush=True)
             # LEVER-B thin-lane engagement gate + transition RE-TREAT (review R3-M1: the gate was
             # initialized at :lane_thin_gate but NEVER flipped, so --lane-thin-start-epoch > 1 left the
             # gate stuck OFF => the loss branch at `lane_thin_gate["on"]` never fired => a SILENT NO-OP
@@ -10372,6 +10880,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_thin_engage", "epoch": ep, "start": lane_thin_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "thin_lane", status="fired", epoch=ep,
+                        via="configured_boundary")), flush=True)
             # #224 (2) analytic-lane render-band engagement gate + transition RE-TREAT (mirrors the
             # lane/margin/thin gates). No-op when --lane-render-band off (band never applies).
             # (operator override 2026-07-08) SENSOR->START WIRING #2: engagement flips through the
@@ -10409,6 +10920,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     recent_losses.clear()
                     print(json.dumps({"stage": "lane_render_band_engage", "epoch": ep, "start": _band_start,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "lane_band", status="fired", epoch=ep,
+                        via=(_lbstep.fired_by or "configured_boundary"))), flush=True)
             # #224 (4) persistence loss anneal (linear warm-up; coarse->fine). No-op when persist_w=0.
             # (#302 M1) TAU-RELATIVE re-anchor: the warmup was calibrated to COMPLETE at tau@300, so
             # under event-triggering it should complete at the FIRED tau (_lever_epoch; ep when OFF).
@@ -10718,6 +11232,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     except Exception:
                         pass
                 if _tstep.begin_cycle:
+                    _tail_endpoint = tail_cycle_endpoint_row(
+                        history[-1] if history else None,
+                        epoch=ep,
+                        cycle=max(int(_tstep.cycle_k) - 1, 0),
+                        start_epoch=(int(_tail_cycle_start_epoch["v"])
+                                     if _tail_cycle_start_epoch["v"] is not None else ep),
+                        boundary_reason=str(_tstep.reason),
+                    )
+                    if _tail_endpoint is not None:
+                        print(json.dumps(_tail_endpoint), flush=True)
                     _tw = (_do_checkpoint(ep, stage_tag=_tstep.stage_tag + "_muon")
                            if args.stage_checkpoints else {})
                     if _tw:
@@ -10725,6 +11249,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     print(json.dumps({"stage": "tail_cycle_begin", "epoch": ep, "cycle": _tstep.cycle_k,
                                       "tau": round(_tstep.tau, 5), "lr": float(_tstep.lr),
                                       "reason": _tstep.reason, **_tw}), flush=True)
+                    _tail_cycle_start_epoch["v"] = int(ep)
+                    print(json.dumps(lever_engage_row(
+                        "tail", status="fired", epoch=ep, via=str(_tstep.reason))), flush=True)
                 if _tstep.stop:
                     _tail_stop_now = True
                     # (S4-R2) stamp the MEASURED net-ΔS/ep NUMERATOR (not just the <threshold outcome)
@@ -10800,6 +11327,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _prof["_step0"] = time.perf_counter()  # #252 profile: fwd+bwd+opt+ema step start
             for s in range(0, P, args.accum_pairs):
                 chunk = order[s:s + args.accum_pairs]
+                if s == 0:
+                    _measure_component_decomposition(ep)
+                    _emit_sps_epoch(ep, seg_form, eik_w_ep)
                 accum = None
                 accum_seed = None   # #224 (5): seed grad accumulator (None unless --seed-islands)
                 lsum = 0.0
@@ -10877,11 +11407,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if (bool(getattr(args, "per_group_grad_clip", False)) and args.grad_clip > 0
                         and np.isfinite(gnorm) and isinstance(mean_grads, dict)):
                     _grp_clipped: dict[str, Any] = {}
+                    _group_clip_norms: dict[str, float] = {}
                     for _gk, _gsub in mean_grads.items():
                         _gc, _gt = optim.clip_grad_norm(_gsub, args.grad_clip)
+                        mx.eval(_gt)
+                        _group_clip_norms[str(_gk)] = float(_gt)
                         _grp_clipped[_gk] = _gc
                     clipped = _grp_clipped
                     mx.eval(clipped)
+                else:
+                    _group_clip_norms = {}
+                # task-408 Q1: consume the real norms returned at the existing
+                # clip sites; no extra gradient pass and no update-path input.
+                if np.isfinite(gnorm):
+                    _clip_activation.observe(gnorm, _group_clip_norms)
                 # spike-guard: skip non-finite / >spike_factor x running median.
                 # (EIK-STAB build 2) MODE DISPATCH. legacy (default; _sg_guard None): skip =
                 # nonfinite OR spiked — IDENTICAL semantics to the pre-build expression (with a
@@ -10947,21 +11486,42 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         hosc_beta=float(model.hosc_beta), softmax_temp=float(model.softmax_temp))), flush=True)
                     # (C6) term_domination alarm: a single reg term > 40% of the (post-weight) total
                     # for >= N sustained rows. _t_agg values are already post-weight addends.
-                    _reg_keys = ("eikonal", "length", "eik_steik", "boundary_distance")
+                    _reg_keys = (
+                        "eikonal", "length", "eik_steik", "boundary_distance",
+                        "chroma_boundary", "margin_saliency", "temporal_screw",
+                        "phase_advect", "island_amplify", "persistence",
+                    )
                     _tot_abs = abs(float(_t_tot)) + 1e-12
-                    _dom = max(((k, abs(float(_t_agg.get(k, 0.0))) / _tot_abs) for k in _reg_keys),
-                               key=lambda kv: kv[1], default=(None, 0.0))
-                    if _dom[1] > _TERMDOM_FRAC:
-                        _alarm["termdom_streak"] += 1
-                        if _alarm["termdom_streak"] == _TERMDOM_MIN_ROWS:
-                            _emit_confound_alarm("term_domination", ep=ep, term=_dom[0],
-                                                 frac_of_loss=round(float(_dom[1]), 4),
-                                                 sustained_rows=int(_alarm["termdom_streak"]),
-                                                 note="a single regularizer term dominates the loss "
-                                                 "(>40%): the scored seg/pose signal is a passenger "
-                                                 "(C3 recalibrates the viscous eik unit scale)")
-                    else:
-                        _alarm["termdom_streak"] = 0
+                    for _term in _reg_keys:
+                        _share = abs(float(_t_agg.get(_term, 0.0))) / _tot_abs
+                        _streak = int(_alarm["termdom_streaks"].get(_term, 0))
+                        _streak = _streak + 1 if _share > _TERMDOM_FRAC else 0
+                        _alarm["termdom_streaks"][_term] = _streak
+                        if _streak == _TERMDOM_MIN_ROWS:
+                            _emit_confound_alarm(
+                                "term_domination", ep=ep, term=_term,
+                                frac_of_loss=round(float(_share), 4),
+                                sustained_rows=int(_streak),
+                                note="one post-weight term dominates >40% of the loss; "
+                                "scored seg/pose signal may be a passenger")
+                    _engaged_terms = {
+                        "chroma_boundary": bool(chroma_bnd_w > 0.0 and chroma_bnd_gate["on"]),
+                        "margin_saliency": bool(msal_w > 0.0 and msal_gate["on"]),
+                        "temporal_screw": bool(ts_w > 0.0 and ts_gate["on"]),
+                        "phase_advect": bool(pa_w > 0.0 and pa_gate["on"]),
+                        "island_amplify": bool(amplify_w > 0.0),
+                        "persistence": bool(persist_gate["w"] > 0.0),
+                    }
+                    for _inert_row in term_inert_rows(
+                            _t_agg, engaged=_engaged_terms, epoch=ep,
+                            state=_producer_resume):
+                        print(json.dumps(_inert_row), flush=True)
+                        _emit_confound_alarm(
+                            "term_inert", ep=ep, term=_inert_row["term"],
+                            post_weight_share=_inert_row["post_weight_share"],
+                            share_threshold=_inert_row["share_threshold"],
+                            sustained_rows=_inert_row["sustained_rows"],
+                            note="engaged lever remained below the registered loss-share floor")
                     # (#312 Phase A) gradient-interaction telemetry: fires on the FIRST chunk of an
                     # epoch (co-located with the loss-terms summary), at stage/octave BOUNDARIES and
                     # every --grad-interaction-every epochs. Default-OFF => this block never runs =>
@@ -11169,7 +11729,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         _join_async_verdict()
                     _schedule_async_verdict(ep, seg_form, ep_loss)
                 else:
+                    _da_sync_verdict_start_ns = time.perf_counter_ns()
                     v = realized_verdict(ep=int(ep))
+                    _live_gap_sync = None
+                    if (_verdict_live_gap_every > 0
+                            and int(ep) % _verdict_live_gap_every == 0):
+                        _live_snap_sync = _capture_verdict_snapshot(include_live=True)
+                        _live_v_sync = _verdict_from_snapshot(
+                            _live_snap_sync, parameter_key="live_np")
+                        _live_gap_sync = live_gap_fields(v, _live_v_sync)
                     # (#302) split per-class counts out of the float-only sync verdict row / history.
                     _ncounts_sync = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
                     # (SENSE) pop annulus BEFORE the float-only row spread. None unless
@@ -11200,6 +11768,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                           "flip_share_by_class": _per_class_sync.get("flip_share_by_class")}
                                          if isinstance(_per_class_sync, dict)
                                          and "error" not in _per_class_sync else {}),
+                                      **({k: round(float(vv), 6)
+                                          for k, vv in _live_gap_sync.items()}
+                                         if _live_gap_sync is not None else {}),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     # (SENSE) companion annulus_convergence row (opt-in; byte-identical when absent).
                     if _annulus_sync is not None:
@@ -11252,12 +11823,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         _project_shadow_film_np({k: np.asarray(vv, np.float32)
                                                  for k, vv in ema.shadow.items()}),
                         float(model.softmax_temp), float(model.hosc_beta))
+                    _settle_component_verdict(
+                        ep, elapsed_ns=time.perf_counter_ns() - _da_sync_verdict_start_ns)
             # (JACOBIAN BASIN T1) authoritative σ_min conditioning of J_ξ on a stratified k-pair subsample,
             # cadenced (every --jacobian-basin-every-th verdict). Main-thread + SYNCHRONOUS (reads the LIVE
             # render + FROZEN PoseNet; NEVER off-thread => no train-stream race). OBSERVER-ONLY (B5):
             # records would-have-fired; does NOT actuate the engage-point. Fail-open (B2); byte-identical
             # (B1). Fires for BOTH the async and sync verdict branches (placed after the if/else).
             _jbasin_emit_t1(int(ep), str(seg_form))
+            if ep % args.eval_every == 0 or ep == args.epochs:
+                _emit_q5_would_fire(int(ep))
             if _prof is not None:
                 _prof["verdict_s"] += time.perf_counter() - _prof["_v0"]  # #252 profile: verdict wall-clock
             # ── (#292 build-3) CLOSED-LOOP decision point — SYNC-verdict path ONLY (M2 fix) ──
@@ -11425,6 +12000,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # readiness row's plateau_ok (passive validation) but no boundary ever fires => training
                 # is byte-identical. Both OFF => skipped entirely => byte-identical (the #205 path).
                 _evt_state["losses"].append(float(ep_loss))
+            # task-408 Q1: one per-epoch aggregation row from the norms the
+            # existing global/per-group clip sites already materialized.
+            print(json.dumps(_clip_activation.row(epoch=int(ep))), flush=True)
+            if _component_wallclock_on:
+                if not (is_transition or do_periodic):
+                    _component_clock.mark_not_invoked("checkpoint_io_s")
+                if not (ep % args.eval_every == 0 or ep == args.epochs):
+                    _settle_component_verdict(ep, not_invoked=True)
+                # The terminating epoch owns the mandatory post-loop final
+                # checkpoint.  Hold its row until that real I/O completes.
+                if ep == args.epochs or _cl_stop_now or _tail_stop_now:
+                    with _component_pending_lock:
+                        _component_pending[int(ep)]["allow_emit"] = False
+                _finalize_component_epoch(
+                    ep,
+                    (time.perf_counter_ns() - _da_epoch_start_ns) / 1_000_000_000.0,
+                )
             last_ep = ep
             # (#292 build-3) closed-loop EARLY-STOP: break at the END of the loop body (after
             # last_ep + the checkpoint/telemetry blocks above ran for this epoch) so the post-loop
@@ -11483,6 +12075,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         causal_boundary_kind="final",
         causal_stage=str(final_form),
     )
+    if _component_wallclock_on and last_ep in _component_pending:
+        with _component_pending_lock:
+            _component_pending[int(last_ep)]["allow_emit"] = True
+            _component_pending[int(last_ep)]["epoch_total_s"] = (
+                time.perf_counter_ns() - _da_epoch_start_ns) / 1_000_000_000.0
+        _emit_component_epoch_if_ready(int(last_ep))
     stage_ckpts.append({**final, "kind": "final"})
     ck = out_dir / "levelset_witness_ema_mlx.npz"
     print(json.dumps({"stage": "checkpoint", "kind": "final", **final}), flush=True)
@@ -11913,6 +12511,25 @@ def main(argv: list[str] | None = None) -> int:
                     "-1 = fully OFF (zero extra forwards). TAC_LOSS_TERM_PROBE=1 overrides to every "
                     "chunk (per-batch diagnostic). Pure no-grad recompute: the training trajectory is "
                     "bit-identical on/off.")
+    ap.add_argument("--component-wallclock-telemetry",
+                    action=argparse.BooleanOptionalAction, default=True,
+                    help="(D-A, default ON) emit fcntl-locked per-epoch "
+                    "witness_component_wallclock.v1 rows with exact teacher/witness/R/verdict/"
+                    "checkpoint/epoch component fields. Read-only timing; --no-* opts out.")
+    ap.add_argument("--component-wallclock-probe-every", type=int, default=1,
+                    help="(D-A) run the same-function read-only component decomposition probe every "
+                    "N epochs (default 1; real verdict/checkpoint/epoch intervals are always measured).")
+    ap.add_argument("--sps-engagement-telemetry",
+                    action=argparse.BooleanOptionalAction, default=True,
+                    help="(D-B, default ON) emit update-free SPS prediction-vs-temporal gradient "
+                    "conflict rows at screw/phase engagement boundaries; inert when both mechanisms "
+                    "are unconfigured.")
+    ap.add_argument("--sps-engagement-k-pairs", type=int, default=4,
+                    help="(D-B) deterministic midpoint strata used by each engagement gradient probe "
+                    "(default 4; n600 => 75,225,375,525).")
+    ap.add_argument("--sps-engagement-window", type=int, default=2,
+                    help="(D-B) nominal engagement cadence radius +/-N epochs; the actual transition "
+                    "always emits even when it fires outside this window.")
     # (#312 Phase A) per-term GRADIENT-INTERACTION telemetry (the synergy/antagonism matrix, live).
     # DEFAULT OFF => zero extra passes => BYTE-IDENTICAL trajectory. A separate value_and_grad per
     # ACTIVE term on a K-pair sample (never touches opt/ema/training grads); RNG snapshot/restore +
@@ -11949,6 +12566,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--verdict-batch", type=int, default=32,
                     help="(#205 OOM fix) CPU-scorer verdict inference chunk size (pairs per torch "
                     "batch); 0 = single N-wide batch (pre-fix). Score-neutral (eval-mode BN).")
+    ap.add_argument("--verdict-live-gap-every", type=int, default=0,
+                    help="(task-408 Q3 DSL Lever, default 0=OFF) every Kth verdict, run one extra "
+                    "advisory live-weight inference and append d_seg_live/d_pose_live plus EMA-minus-"
+                    "live gaps. Never feeds training or controller decisions.")
     ap.add_argument("--verdict-subprocess", action=argparse.BooleanOptionalAction, default=False,
                     help="(#330 memory-reclaim) run the CPU-torch verdict's chunked scorer forward in a "
                     "killpg-reclaimed CHILD process so its ~5-6 GiB fp32/activation transient is reclaimed "

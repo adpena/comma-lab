@@ -107,6 +107,11 @@ DIRECT_CONTROLLER_NAMES: frozenset[str] = frozenset({
     "tau_advance",
     "evt_curriculum",
     "birth_completion",
+    # D-A/D-B/task-408 observer latches: prevents duplicate SPS engagement and
+    # ladder-completion rows and preserves per-term inert streaks.  The
+    # controller emits no keys until it has state, so legacy/default sidecars
+    # remain additive and manifest-free in cap-only mode.
+    "da_db_telemetry",
     # Init-time spectral selection is immutable after epoch zero, but the chosen
     # frequency/bias and receipt identity are part of the crash-resume initial
     # condition and must not disappear from the canonical sidecar.

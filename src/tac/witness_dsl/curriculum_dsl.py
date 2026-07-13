@@ -930,6 +930,16 @@ class TelemetryCadence(ScheduleDisplay):
     curvature: bool = False
     curvature_k: int = 8
     curvature_k_pairs: int = 8
+    # D-A/D-B launch observers (2026-07-13).  Both are score-neutral and
+    # default ON.  The wall-clock producer performs one same-function
+    # decomposition probe per epoch; the SPS observer is inert unless phase or
+    # screw is configured and samples four deterministic strata at boundary
+    # +/- window plus the actual engagement transition.
+    component_wallclock: bool = True
+    component_wallclock_probe_every: int = 1
+    sps_engagement: bool = True
+    sps_engagement_k_pairs: int = 4
+    sps_engagement_window: int = 2
     # (JACOBIAN BASIN, 2026-07-09) the ξ→PoseNet Jacobian conditioning basin sensor — an OBSERVER of
     # render coherence (σ_min of J_ξ=∂PoseNet(R(θ,ξ))[:6]/∂ξ). Score-neutral read-only, so BOTH tiers
     # DEFAULT ON per the 'off is a tracked queue' law: T0 (near-free ∇f0 proxy, every verdict) + T1 (the
@@ -951,6 +961,11 @@ class TelemetryCadence(ScheduleDisplay):
             "--annulus-telemetry": bool(self.annulus),
             "--loss-term-log-every": int(self.loss_term_log_every),
             "--handoff-readiness-telemetry": bool(self.handoff_readiness),
+            "--component-wallclock-telemetry": bool(self.component_wallclock),
+            "--component-wallclock-probe-every": int(self.component_wallclock_probe_every),
+            "--sps-engagement-telemetry": bool(self.sps_engagement),
+            "--sps-engagement-k-pairs": int(self.sps_engagement_k_pairs),
+            "--sps-engagement-window": int(self.sps_engagement_window),
         }
         if self.annulus:
             f["--annulus-band"] = float(self.annulus_band)
@@ -2428,6 +2443,29 @@ def FusedRKernel(window: int = 0) -> Lever:
         notes=("#252/#348 fused Metal R roundtrip (metal_fused_r_operator); bit-identical fwd + "
                "~1 ULP VJP + ~8% faster + localizes GPU non-determinism (0/28 cross-proc N=10); "
                "score-NEUTRAL SPEED lever (sister of GROUPED_BACKWARD); requires --mlx-device gpu"),
+    )
+
+
+def VerdictLiveGap(every: int = 1, window: int = 0) -> Lever:
+    """Advisory EMA-vs-live verdict-gap observer (task #408 Q3).
+
+    The trainer default is ``0`` (OFF), so constructing this named Lever is the
+    only DSL route that enables the extra live-weight inference.  Its values are
+    appended to verdict telemetry and never consumed by a controller, optimizer,
+    checkpoint selector, or score pointer.  It is nevertheless a Lever because
+    the extra inference can change execution timing; the activation ledger must
+    therefore keep it in duty-to-measure until fired and measured.
+    """
+
+    cadence = int(every)
+    if cadence <= 0:
+        raise ValueError(f"VerdictLiveGap: every must be > 0, got {every!r}")
+    return Lever(
+        "verdict_live_gap",
+        overrides={"--verdict-live-gap-every": cadence},
+        epochs_delta=int(window),
+        notes=("task-408 Q3 default-OFF advisory live-vs-EMA verdict gap; extra inference only; "
+               "never feeds training/controller decisions; duty-to-measure"),
     )
 
 
