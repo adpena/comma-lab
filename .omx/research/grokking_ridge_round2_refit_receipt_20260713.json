@@ -1,0 +1,85 @@
+{
+  "schema": "grokking_ridge_round2_refit_research_receipt.v1",
+  "completed_at_utc": "2026-07-13T18:11:49.811894Z",
+  "lane_id": "lane_grokking_ridge_bounds_20260713",
+  "authority": "[macOS-CPU advisory; numpy-fp32 training-gradient evidence; frozen CPU SegNet heldout targets; no evaluator-score authority]",
+  "research_only": true,
+  "promotion_eligible": false,
+  "score_claim": false,
+  "pointer_moved": false,
+  "git_head": "2dce691facb75e8540a91981f24bf8c3800d2a4f",
+  "paper": {
+    "arxiv": "2601.19791v3",
+    "theorem_4_2_applicability": "REFUSED",
+    "refusal_reasons": [
+      "m=31 is not greater than n=1474560 scalar training rows",
+      "zero initialization gives nu^2=0 and removes the random empirical-null slow component",
+      "teacher realizability in the fixed chart is unproved",
+      "eta_times_lambda=0.6666666831905239 is outside the small-product simplification"
+    ]
+  },
+  "actual_delay_certificate": {
+    "feature_dimension_m": 31,
+    "scalar_training_rows_n": 1474560,
+    "training_row_interpretation": "sampled feature rows per one of three independent RGB output-coordinate regressions",
+    "output_coordinates": 3,
+    "m_minus_n": -1474529,
+    "initialization_variance_nu2": 0.0,
+    "ridge_lambda": 3.2247040271759033,
+    "learning_rate_eta": 0.20673732459545135,
+    "eta_times_lambda": 0.6666666831905239,
+    "null_retention_factor_at_15_steps": 6.969166755535331e-08,
+    "global_contraction_factor_at_15_steps": 6.969175963477342e-08,
+    "terminal_parameter_error_bound": 2.601118716541341e-15,
+    "measured_parameter_residual": 2.2703186949787158e-15
+  },
+  "real_heldout_measurement": {
+    "source_train_labels_reused": 480,
+    "new_heldout_teacher_calls": 120,
+    "synthetic_data_used": false,
+    "gd15_weights_bit_equal_to_committed": true,
+    "gd15_heldout_cosine": 0.001415793417951615,
+    "gd15_heldout_relative_l2": 1.000001870577624,
+    "gd150_heldout_cosine": 0.0014157934642280926,
+    "gd150_heldout_relative_l2": 1.000001870577245,
+    "gd150_minus_gd15_cosine": 4.627647760226061e-11,
+    "gd150_max_abs_weight_delta": 8.881784197001252e-16,
+    "ridge_ratios_to_data_lmax": [
+      0.0,
+      1e-06,
+      0.0001,
+      0.01,
+      0.1,
+      1.0,
+      10.0
+    ],
+    "best_exact_ridge_cosine": 0.007690592649965529,
+    "best_exact_ridge_cosine_ratio": 1e-06,
+    "relative_l2_at_best_exact_ridge_cosine": 1.0007586082750441
+  },
+  "verdict": {
+    "round2_autopsy": "FEATURE_POVERTY_FORMULATION_NOT_UNDERTRAINED",
+    "scope": "fixed 31-feature linear chart on registered replay and measured ridge ladder",
+    "plateau_transfer": "NO_GO_AS_STAGE_ADVANCE_AUTHORITY",
+    "witness_step_reduction": "NOT_MEASURED",
+    "pool_row_registered": false
+  },
+  "canonicalization": {
+    "equation_id": "grokking_ridge_undertraining_disambiguation_v1",
+    "probe_outcome_id": "grokking_ridge_round2_fixed_chart_autopsy_20260713",
+    "probe_verdict": "KILL",
+    "probe_verdict_scope": "fixed 31-feature linear chart on registered replay and measured ridge ladder"
+  },
+  "custody": {
+    "detailed_receipt_path": "experiments/results/grokking_ridge_round2_refit_20260713/measurement_receipt.json",
+    "detailed_receipt_sha256": "fc8c79ef82d829f05cee79890c9b5d237e12d84e92ec83982f182de15ecb6b4d",
+    "run_contract_path": "experiments/results/grokking_ridge_round2_refit_20260713/run_contract.json",
+    "run_contract_sha256": "676390de08f5aa4a7b469715d8a2462f773a91c2d670400adea870aecb226d91",
+    "source_receipt_sha256_before": "067ce197d30fa9e2c7c4bda48ac671af550e0a00f126289ba5b30946d44fc4b1",
+    "source_receipt_sha256_after": "067ce197d30fa9e2c7c4bda48ac671af550e0a00f126289ba5b30946d44fc4b1",
+    "source_run_mutated": false,
+    "source_tool_path": "tools/probe_grokking_ridge_round2.py",
+    "source_tool_sha256": "2d4aa84af00dcf292bdba42dadc0c4e367fa63bc6d7c10cf8cd4ebe500accaad",
+    "failed_first_attempt_preserved_at": "experiments/results/grokking_ridge_round2_refit_20260713_FAILED_nonfinite_pinv"
+  }
+}

@@ -16911,3 +16911,16 @@ Consumer leg for the new --film-polar-chart-spel DSL lever: HELD generically by 
 (AST-derived — [consumers-generic] for the registry/readback surfaces) + duty row film_polar_chart_spel_finisher
 registered built-never-fired via the canonical pool API (digest pool surface renders it; gate = governed
 finishing boundary + n600 A/B admission). Full FEED: muon_round2_wire_fireable_DAG_FEED_20260713.md.
+
+## FEED-grokking-autopsy-20260713 (pointer node; full FEED in grokking_ridge_bounds_DAG_FEED_20260713.md)
+Grokking-ridge reader (#475) [MEASURED n600 refit + DERIVED]: ROUND-2 AUTOPSY RESOLVED = FEATURE-POVERTY, not
+undertraining — verdict_scope: formulation — the fixed 31-feature linear chart on the registered n600 replay:
+(a) paper's delay bound INAPPLICABLE (m=31 ≪ n=1.47M, ν²=0 → no slow mode exists to grok; hypothetical null
+component retains 6.97e-8 after 15 steps); (b) MEASURED kill-shot: GD150 moves cosine by 4.6e-11 vs GD15; the
+EXACT 7-λ ridge-ladder optimum reaches cosine only 0.00769 / rel-L2 1.00076 — still noise. ⟹ NO fit-protocol
+tweak rescues the hand-chart; round-3's richer-features premise MAXIMALLY strengthened (its live arm consumes
+this on harvest). Fit-protocol banked for any future ridge head: W₀=0 · declared λ/λ_max ladder · η=2/(L+μ) ·
+gradient-norm/exact-optimum stop. Plateau-as-stage-trigger NO-GO — verdict_scope: formulation — ridge
+mechanism does not transfer to the nonconvex level-set energy (decay-clock telemetry only, conditional).
+Steps verdict: no witness-stage shortening measured; composed SPS break-even unchanged. Equation + formulation-
+scoped probe row registered; no pool row (no lever emerged — correct restraint).
