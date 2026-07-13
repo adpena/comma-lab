@@ -9,11 +9,8 @@ gradient update. This is a cached, six-bit, single-seed terminal-polish result,
 not a family-death verdict for SFESS as a generic discrete optimizer.
 
 **REVIEW STATUS:** the inherited clean-room verdict is `fresh-eyes-reviewed(3)`.
-The new measurement receipt is honestly tagged `recovery-written-UNREVIEWED`;
-own adversarial round 1 is complete, and the new bytes are
-`fresh-eyes-reviewed(0)`. Round 1 found and repaired a borrowed-control flaw by
-rerunning the clean-room arm inside the same harness; that repair reset the
-clean-pass counter.
+The current measurement receipt and authenticated checkpoint/recompute path are
+`fresh-eyes-reviewed(2)-CLEAN` under the final master seal.
 
 **STORES CONSULTED:** research(5715) equations(622) memory(1893) dag(505)
 council(277) tasks(96) docs(92). Loaded the unified corpus-query results, the
@@ -92,10 +89,15 @@ video frames, cloud state, paid providers, or `upstream/evaluate.py`.
   MAP proposal, exact descent gate, and zero-variance skip.
 - `tools/probe_sfess_oss_reconciliation.py`: same-envelope clean/enriched A/B,
   `k=1..5`, `M={2,4,5,8,16,32}`, exactly 64 counted calls per arm, per-arm atomic
-  stage checkpoints, source/input hashes, and false-authority receipt fields.
+  stage checkpoints, strict partial-checkpoint schema/custody validation, independent
+  full re-derivation before first terminal authority, source/input hashes, and
+  false-authority receipt fields.
 - `src/tac/tests/test_sfess_oss_reconciliation.py`: positive control that must
   learn the lower-S one-hot state and negative flat-objective control that must
-  skip Adam and the exact gate.
+  skip Adam and the exact gate. A second negative control forces a rejected
+  proposal and proves that its candidate Adam moments and logits are rolled back.
+- `src/tac/tests/test_probe_sfess_oss_reconciliation.py`: positive terminal
+  authentication plus receipt-field and checkpoint tamper canaries.
 
 The implementation is independent and MIT-marked; no file or code fragment was
 imported from the unlicensed-visible repository.
@@ -103,16 +105,18 @@ imported from the unlicensed-visible repository.
 ## Remeasurement
 
 Authoritative receipt:
-`experiments/results/sfess_oss_reconciliation_20260713T013642Z/measurement_receipt.json`,
-SHA-256 `e8ef829e2062ba40a8a8b04c5b37746526f52d9484cfaf992d4699e97755704c`.
-The earlier `T012400Z`, `T013600Z`, `T014500Z`, and `T015500Z` directories are superseded
-pre-review measurements and carry no verdict authority.
+`experiments/results/sfess_oss_reconciliation_20260713T024020Z/measurement_receipt.json`,
+SHA-256 `6b0726512fde6aee702f4cb501b819c4a8f20e53e114b9c90b08a68d792b97ff`.
+The earlier `T012400Z`, `T013600Z`, `T013642Z`, `T014500Z`, `T015500Z`, and `T020852Z` directories are
+superseded pre-review measurements and carry no verdict authority.
 
 - **MEASURED:** the in-run clean-room control reproduced the sealed result
   exactly: `k=5`, `M=5`, `S=0.19080429731336374`, 64 counted calls.
 - **MEASURED:** the best enriched arm was `k=5`, `M=4`,
   `S=0.19080429731336374`, with 12 learned-logit updates, 12 strict gates, and 3
-  padding calls. Delta against the in-run clean-room control was exactly `0.0 S`.
+  padding calls. Two proposals were admitted and ten were rejected without
+  mutating the retained optimizer state. Delta against the in-run clean-room
+  control was exactly `0.0 S`.
 - **MEASURED:** the official-paper-calibrated `k=5`, `M=32` arm returned the
   same `S=0.19080429731336374`, with 1 learned-logit update, 1 strict gate, and
   30 padding calls. Delta against the in-run clean-room control was exactly
@@ -125,8 +129,13 @@ pre-review measurements and carry no verdict authority.
 - **MEASURED:** the receipt records `score_claim=false`,
   `promotion_eligible=false`, `pointer_moved=false`, zero scorer calls, and zero
   paid dispatch.
-- **MEASURED:** rerunning the completed output directory returned rc=0 and left
-  stage-checkpoint SHA-256 unchanged, proving arm-level resume idempotence.
+- **MEASURED:** rerunning the completed output directory returned rc=0 after
+  independently recomputing and authenticating the complete checkpoint and
+  receipt. It left receipt SHA-256
+  `6b0726512fde6aee702f4cb501b819c4a8f20e53e114b9c90b08a68d792b97ff`
+  and stage-checkpoint SHA-256
+  `e2623c5fe4a9a72f6093653cce574de595dc0bfbd589fc6320bbc37df82169ee`
+  unchanged.
 - **UNKNOWN:** NumPy/Torch/MLX parity for the newly added learned-logit optimizer
   was not measured. The harness is NumPy-only and does not enter a live provider.
   Across-seed variance is also unknown.
@@ -138,7 +147,9 @@ frozen-SegNet forward-replacement route for #449 under exact-through-R objective
 queries.** The official paper itself identifies multiple `f` evaluations as the
 main limitation. Here, every SFESS sample is one exact objective lookup; in a
 live frozen-SegNet application that means repeated frozen-teacher forwards, not
-replacement of the 95%-dominant forward. `N=32` permits only one update in the
+replacement of the retained exact forward. The separate `~95%` profile belongs
+to SegNet forward-plus-backward plus the INR trunk on a stripped MLX closure,
+not to the forward alone. `N=32` permits only one update in the
 64-call envelope. The enriched estimator therefore does not clear the throughput
 bar and does not change the landed Pareto knee.
 
@@ -168,7 +179,7 @@ control described above. After repair:
 
 - `ruff check`: green.
 - `py_compile`: green.
-- focused pytest: `38 passed`.
+- post-partial-auth focused pytest: `14 passed`; the master comprehensive count is recorded in its seal receipt.
 - restart/resume check: rc=0; stage checkpoint byte hash unchanged.
 - positive and negative measurement canaries both green.
 
@@ -182,8 +193,8 @@ zero-variance branch still updated or gated, if cardinality changed, or if the
 `MEASURED OSS-paper reconciliation: in-run clean control and learned-logit
 SFESS both returned S=0.19080429731336374 at B=64; official N=32 also tied;
 delta=0.0 S; exact gap remains 7.052840218513268e-7 S; #449 forward-replacement
-NO-GO unchanged; receipt experiments/results/sfess_oss_reconciliation_20260713T013642Z/measurement_receipt.json;
-new bytes own-round-1 reviewed, fresh-eyes-reviewed(0), tests 38 passed.`
+NO-GO unchanged; receipt experiments/results/sfess_oss_reconciliation_20260713T024020Z/measurement_receipt.json;
+new bytes fresh-eyes-reviewed(2)-CLEAN under the master three-pass seal.`
 
 **SINGLE DAG FEED ROW:** `FEED-sfess-oss-reconciliation-20260713 — MEASURED:
 same-envelope clean control, learned-logit SFESS, and final-paper N=32 all return
@@ -192,7 +203,7 @@ clean=0.0 S and gap vs exact=7.052840218513268e-7 S. Official DFT+LOO pieces wer
 already present; learned logits, M ladder, and zero-variance skip add no Pareto
 movement. VERDICT NO-GO, scope SFESS as #449 frozen-forward replacement only,
 fresh-eyes-reviewed(0), score_claim=false, pointer_moved=false; receipt
-experiments/results/sfess_oss_reconciliation_20260713T013642Z/measurement_receipt.json.`
+experiments/results/sfess_oss_reconciliation_20260713T024020Z/measurement_receipt.json.`
 
 Shared DSL, canonical-equation registry, DAG, and task ledger were deliberately
 not edited in this subagent lane; the master reconciliation agent owns those

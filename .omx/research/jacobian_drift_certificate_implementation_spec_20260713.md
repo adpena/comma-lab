@@ -1,7 +1,7 @@
 # Jacobian-drift direct-full-costate certificate — implementation specification
 
-Date: 2026-07-13 UTC  
-Lane: `lane_jacobian_drift_certificate_95kill_20260713`  
+Date: 2026-07-13 UTC
+Lane: `lane_jacobian_drift_certificate_95kill_20260713`
 Authority: local theorem, synthetic rigorous canaries, and real `[macOS-CPU advisory; torch-fp32; training-signal]` measurement only. `research_only=true`; `score_claim=false`; `pointer_moved=false`; no paid/cloud/heavy dispatch.
 
 ## Outcome sought

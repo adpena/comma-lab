@@ -3,7 +3,7 @@
 Date: 2026-07-13 UTC  
 Lane: `lane_454_segnet_cheap_validation_20260713`  
 Authority: local mechanism and macOS-CPU advisory measurement only. `score_claim=false`; `promotion_eligible=false`.  
-Review status: `pre-registered-only`.
+Review status: `fresh-eyes-reviewed(1)-CLEAN` after implementation and terminal-receipt re-derivation; the pre-registration remained unchanged during measurement.
 
 STORES CONSULTED: `research(5715)`, `equations(622)`, `memory(1893)`, `dag(505)`, `council(277)`, `tasks(96)`, and `docs(92)` through `tools/corpus_query.py`; the landed YOPO provider and final receipt; the frozen-SegNet alternatives memo; the goldmine ledger; the operating manual; the current lane, task, probe-outcome, and subagent ledgers; the top-10 operator memory entries. Deliberately not consulted: paid/cloud state, live trainer state, the protected V9 run, and `upstream/evaluate.py`, because this is a zero-spend pointer-neutral mechanism probe.
 
@@ -79,4 +79,3 @@ For each measured cadence `K`, report
 `t_exact` and `t_approx` may be loaded from the content-addressed YOPO receipt only when their exact row identity and scope are retained. `t_validate_cheap` is measured by this probe. `t_fallback` is zero only for accepted candidates that exact measurement confirms safe; otherwise it includes the measured exact fallback cost. Component arithmetic is `DERIVED`; timings and exact scorer outcomes are `MEASURED`.
 
 The terminal verdict is scoped to pair 0, the three named saved regimes, the landed blocks[0] split, the registered candidate ladder, macOS CPU advisory execution, and this exact proxy/certificate formulation. It cannot kill trust regions, margin proxies, YOPO, or frozen-scorer reuse as families.
-

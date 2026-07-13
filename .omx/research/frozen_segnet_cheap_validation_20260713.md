@@ -3,13 +3,13 @@
 Date: 2026-07-13 UTC  
 Lane: `lane_454_segnet_cheap_validation_20260713`  
 Authority: `[macOS-CPU advisory]`; `score_claim=false`; `promotion_eligible=false`  
-Review status at write: `recovery-written-UNREVIEWED`. Any upgrade must be carried by fresh-context review receipts bound to this file's exact SHA-256; the measurement receipt retains its at-measurement `unreviewed_fix_round_2` tag.
+Resolved review status: `fresh-eyes-reviewed(1)-CLEAN`. The recovery reviewer re-derived counts, unsafe-accept classes, and both economics formulas from the terminal receipt; the receipt correctly retains its historical at-measurement `unreviewed_fix_round_2` tag.
 
 STORES CONSULTED: `research(5715)`, `equations(622)`, `memory(1893)`, `dag(505)`, `council(277)`, `tasks(96)`, and `docs(92)` through one `tools/corpus_query.py` retrieval; `CLAUDE.md`; `AGENTS.md`; `docs/operating_manual_craft_handoff.md`; the v7.5 and v8 specifications; the final YOPO provider, receipt, DSL, equation, and probe; the frozen-SegNet alternatives memo; the goldmine ledger; current canonical lane, task, probe-outcome, and subagent state; sealed pair-0 early, boundary, and late renderer checkpoints; the exact frozen CPU SegNet and PoseNet paths. Deliberately not consulted or actuated: paid/cloud state, the live trainer, the protected V9 run, `upstream/evaluate.py`, and score-pointer mutation.
 
 ## Outcome
 
-**VERDICT: NO-GO, recovery-written-UNREVIEWED.** `verdict_scope: formulation` — pair 0; sealed early, boundary, and late regimes; the landed `blocks[0]` YOPO split; seed `20260712`; the registered `1e-2 * 0.5^j` ladder; macOS CPU advisory execution; this empirical-bound and strict feature-ball formulation only.
+**VERDICT: NO-GO, fresh-eyes-reviewed(1)-CLEAN.** `verdict_scope: formulation` — pair 0; sealed early, boundary, and late regimes; the landed `blocks[0]` YOPO split; seed `20260712`; the registered `1e-2 * 0.5^j` ladder; macOS CPU advisory execution; this empirical-bound and strict feature-ball formulation only.
 
 **MEASURED:** the final receipt is `experiments/results/segnet_validation_certificate_20260713T015633Z/receipt.json`, SHA-256 `60fe88fa1a5058d018170005890ef0720f01b31762b5e7ef0b5c7d6dc19a7d60`. It admits 3 of 58 disjoint holdout candidates and rejects 55, a rejection rate of `0.9482758620689655`. There are zero exact-`d_seg` unsafe accepts among the three proxy accepts. Two accepted boundary candidates worsen exact Pose; one also worsens teacher cross-entropy. Thus the SegNet-only margin predicate has `false_negative_dseg=0/3` on a very small admitted set, while joint held CE/`d_seg`/`d_pose` descent is `NO-GO` with `unsafe_accepts_any=2/3`. Across-seed variance is **UNKNOWN**.
 
