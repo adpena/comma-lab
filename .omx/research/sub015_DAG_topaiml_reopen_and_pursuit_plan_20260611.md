@@ -17473,7 +17473,14 @@ The Round-5 surviving reformulation (block2/3 PRE-SE feature locus) MEASURED:
   **4/7 UPSTREAM SE global reductions** → strict end-to-end tileability falsified).
 - pre-SE cut FLOP cost: block2 1.50 GMAC (3.79%), block3 2.66 GMAC (6.70%).
 verdict: **WIDER-family-KILL**, verdict_scope = FAMILY × TESTED-SINGLE-SOURCE-LOCI × FIXED-REPLAY ×
-STRICT-END-TO-END-RGB-TILEABILITY — NOT a paradigm kill. Untested formulations / reformulation queue (the
+STRICT-END-TO-END-RGB-TILEABILITY — NOT a paradigm kill. **≥2 structurally distinct formulations killed (req
+R family-scope evidence):** FOUR measured formulations all FAIL vs 0.47 — block2-pre-SE {convex RankRLS/MP,
+nonlinear MLP-ensemble} = 0.202/0.274, block3-pre-SE {convex, nonlinear} = 0.093/0.313 — PLUS the Round-5
+sister kills (block2/3-POST-SE + shallow-pre-SE, `replace_round5_deeper_nonlinear_20260713.md`), ≥6 distinct
+formulations total; AND a STRUCTURAL cause (not per-formulation): the SE global-pool contaminates every
+feature downstream of the FIRST SE with global reductions (block2 inherits 4, block3 inherits 7), so NO
+single tileable feature source exists in this architecture by construction — that architectural fact is what
+elevates the verdict from FORMULATION to FAMILY. Untested formulations / reformulation queue (the
 cheap-teacher paradigm stays INTACT): (a) **tileable-MODULO-CHEAP-GLOBALS** — compute the ~11 upstream SE
 globals ONCE full-frame (cheap scalars; global-pool overhead measured 0.65-0.84%) + broadcast to
 independently-tiled local convs; the conv is the bottleneck, not the globals, so paying them once preserves
