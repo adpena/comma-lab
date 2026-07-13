@@ -16858,3 +16858,12 @@ single-trajectory organ dataset. REFORMULATION QUEUE (7 items, memo §7): causal
 run-level A/B stays the honest default → within-run pair-level randomization ONLY after interference-aware probe
 (shared-trunk coupling) → FORE-after-support: log (Z,A,R,Z') + target support, then DR, then HCM pooling — the
 ONE design change satisfying FORE + HCM + D40 jointly. No equation registered (no identification law closes).
+
+### FEED-hcm-attribution-20260713 conformance addendum (triality legs)
+DSL leg: N/A-with-reason (memo §8) — this is a FINDING about identification boundaries, not a lever/launch/
+curriculum change; NO trainer argv, controller, or activation surface exists to hold. A future
+`CausalAttributionSpec` (typed graph/version, treatment/outcome identities, pretreatment covariates, negative
+controls, clustering unit, support policy, verdict scope) is the named DSL object IF the causal-manifest schema
+(reformulation item 1) ever lands — default OFF until implementation+tests. Equations leg: N/A-with-reason
+(no identification law closes; memo eqs (2)-(9) are design/check equations). DAG leg: this node. MEMORY leg:
+durable line added (treatment-location boundary + the FORE+HCM+D40 convergent logging change).
