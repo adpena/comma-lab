@@ -17127,3 +17127,14 @@ distillation · selective clean change → RL credit ONLY after FORE/HCM support
 persistence/defer. GEPA: RESCOPE not confirm — keep "no help now, n=1, local GEPA-style candidates" + future
 sequential re-probe only after independent real lineages (papers-checked update note landed). 3 staged
 candidate rows (canonical pool readback passed).
+
+## FEED-digs3-s4-20260713 (pointer node; full FEED in digs3_s4_controllers_DAG_FEED_20260713.md)
+DIG-S3/S4 controllers (crosswalk free-standing tickets) [DERIVED; both PRIMARY FALSIFIERS FIRED honestly]:
+S3 finite-bank duty ranker — verdict_scope: instance — no winner vs the existing P8 heuristic; backtested regret
+NOT_IDENTIFIED (0 admissible custody-bearing rows/folds exist yet) → falsifier fired → FALLBACK to stratified
+cheapest-first, no VIME/RND/ICM theater; Double-Q cross-fitting MANDATORY once real folds exist. S4 transactional
+option-exit — verdict_scope: instance — valid option-typing DESIGN but NO proposed termination sensor beats the
+existing curriculum gates on read-only traces → falsifier fired → PRESERVE the fixed schedule. Net: both controller
+upgrades correctly REFUSED on current evidence (the apparatus has too few real trajectories — same n=1 data
+starvation the organ hits); the durable deliverables are the backtest harness + the refusal criteria, not adopted
+levers. 3 candidate-pool rows staged (record_candidate). No equation (0 folds / 0 branch-pairs can't close a law).
