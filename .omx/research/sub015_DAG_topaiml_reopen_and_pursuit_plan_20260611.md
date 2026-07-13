@@ -16306,30 +16306,96 @@ receipt with zero scorer calls. Memory hook intentionally omitted: operator MEMO
 above the requested `<17KB`; this FEED is the terse hook. Triality: `[no-triality]` pure reference/routing — no
 measured witness law, DSL lever, archive, or score claim. **Pointer 0.18804 `[contest-CPU]` UNMOVED (MEANS).**
 
-### FEED-jrd-coeff-prefix-pair0 (2026-07-12) — fixture GO; V9/v8 NEEDS-MORE
+### FEED-yopo-first-layer-costate-build-449 (2026-07-12) — isolated first-block provider and bounded probe
 
-**STORES CONSULTED:** retrieval-first corpus query over research/equations/memory/DAG/council/tasks/docs;
-sealed fixture; canonical receiver/R/scorer contracts; local and connected-SSD payload inventories; canonical
-task/probe ledgers. Deliberately not loaded: protected live V9 run and full 5 GB GT cache.
+**REVIEW STATUS:** `fresh-eyes-reviewed(3)` after three consecutive clean passes on the post-fix bytes.
+**STORES CONSULTED:** loaded the unified corpus query across research, equations, memory, DAG,
+council, tasks, and docs; the operating manual; the goldmine and frozen-SegNet costate memos; the settled
+SegNet block profile; the provider/DSL/equation/probe surfaces; canonical lane/task/frontier state; and the
+early/boundary/late checkpoint and source-video custody. Deliberately did not load or edit the live trainer,
+protected V9 run, cloud state, or `upstream/evaluate.py`.
 
-`[MEASURED] [macOS-CPU advisory] [recovery-written-UNREVIEWED]` Complete pair-0 enumeration covered 18
-coefficient sections × 2 families × 8 nonzero planes = 288 exact rows. Zero-tolerance Seg/Pose guards came
-from the exact positive-repeat noise floor. The exact combined replay accepted five sections and reduced the
-sealed v7.5.2 apply-pass fixture from 83,905 B to 81,154 B: **2,751 exact ZIP bytes saved**. Baseline→selected
-components were `d_seg 0.023157755533854168→0.0218505859375` and
-`d_pose 116.59830629690003→92.42743674059255`. Fixture verdict = **GO**.
+**DERIVED:** clean-room YOPO law at the pre-registered split
+`encoder.model.conv_stem -> encoder.model.bn1 -> encoder.model.blocks[0]`: bank
+`p1=dL/dz1` at a full-teacher refresh and compute the current-frame input costate
+`lambda_hat=J_prefix(x_t)^T p1` before the exact renderer pullback. Citation: Dinghuai Zhang, Tianyuan Zhang,
+Yiping Lu, Zhanxing Zhu, and Bin Dong (2019), *You Only Propagate Once: Accelerating Adversarial Training via
+Maximal Principle*, arXiv:1905.00877; the abstract identifiers were resolved before derivation. No official
+YOPO code was imported.
 
-`[DERIVED] [recovery-written-UNREVIEWED]` V9/v8 task verdict = **NEEDS-MORE** and canonical probe verdict =
-`DEFER`: inventory found zero typed, hash-bound, sealed, non-live V9/v8 LVLS1 payloads. Pair 0 does not
-establish full-600 or early/boundary/late saved-regime survival. Contest CPU, contest CUDA, cross-seed transfer,
-and V9/v8 transfer remain `[UNKNOWN]`. `upstream/evaluate.py` was not run; `score_claim=false`;
-`promotion_eligible=false`; pointer unchanged. No paid/cloud dispatch or live-run access occurred.
+**BUILT:** isolated fail-closed provider custody, `yopo_first_layer_costate` DSL mode, canonical equation
+`yopo_first_layer_costate_v1`, and a resumable local CPU probe over `K={1,2,4}` with fresh-teacher non-refresh
+controls. Admission has no universal cosine/regret threshold: a registered provider fallback or non-descent
+falsifies that cadence. Global `NO-GO` requires that no common eligible K>1 cadence survive, or that the selected
+shared Pareto knee fail; the same selected knee must survive early/boundary/late replay and beat K=1 above the
+observed timing envelope. Empirical receipt is pending current-source execution.
+`score_claim=false`; `promotion_eligible=false`; no paid/cloud dispatch; live trainer and protected V9 run
+untouched; submitted `[contest-CPU]` pointer `0.1910828242` UNMOVED. Triality legs: DSL =
+`tac.witness_dsl.scorer_gradient_policy`; equation = `yopo_first_layer_costate_v1`; DAG = this FEED.
 
-Triality: DAG = this FEED; equations = `jrd_exact_coefficient_prefix_selection_v1`; DSL = N/A-with-reason
-(offline frozen-payload receiver/byte-allocator oracle, not a trainer/curriculum/launch/actuator change).
-Memo: `.omx/research/codex_findings_jrd_coeff_prefix_20260712T224139Z_codex.md`. Receipt:
-`experiments/results/jrd_coeff_prefix_probe_20260712T221747Z/measurement_receipt.json`. Task blocker:
-`eligible_nonlive_v9_v8_payload_missing_or_unresolved`.
+### FEED-sfess-cached-replay-ugc64 (2026-07-12) — fixed-k structure does not change the B=64 ranking
+
+**REVIEW STATUS:** the verdict is `fresh-eyes-reviewed(3)` after three consecutive independent
+CLEAN passes on the current post-fix bytes; the immutable receipt retains its honest
+`recovery-written-UNREVIEWED` at-measurement tag. Inherited UGC baseline rows are
+`fresh-eyes-reviewed(3)`. **STORES CONSULTED:** loaded the unified corpus query across research,
+equations, memory, DAG, council, tasks, and docs; the sealed UGC exact-enumeration JSONL, source
+measurement receipt, candidate manifest, SFESS implementation contract, provider/DSL/equation
+surfaces, and the v2 replay receipt. Deliberately did not load the live trainer, protected V9 run,
+scorer weights, source-video frames, cloud state, or `upstream/evaluate.py`.
+
+**FROM-LITERATURE:** Klas Wijk, Ricardo Vinuesa, and Hossein Azizpour (2024), *Revisiting Score
+Function Estimators for k-Subset Sampling*, arXiv:2407.16058, supplies the exact conditional-
+Bernoulli score and five-sample leave-one-out SFESS estimator. Manuel Fernández and Stuart Williams
+(2010), *Closed-Form Expression for the Poisson-Binomial Probability Density Function*,
+DOI:10.1109/TAES.2010.5461658, supplies the DFT normalizer. Both identifiers were resolved before
+derivation; no official SFESS code was imported.
+
+**MEASURED:** v2 receipt
+`experiments/results/sfess_cached_replay_ugc64_20260712T214520Z/measurement_receipt.json`, SHA-256
+`aa296c61fde712f9a2207ff5ecf9298c2506c92e3a48af8ac2af3d9bc83e6c9e`, replays the SHA-pinned
+64-state objective with 64 counted cache lookups per arm and zero scorer/repacker calls. Exact
+enumeration and `(1+1)-ES` returned `S=0.19080359202934188`. The best non-degenerate SFESS arm was
+`k=5`, which tied UGC, DisARM, and RLOO at `S=0.19080429731336374`. Every `k=1..5` arm reached its
+exact within-cardinality minimum. The `k=6` global-minimum tie is a one-state structural control,
+not estimator evidence. A completed resume reproduced the receipt byte-for-byte. The receipt has
+five module-alias custody rows for four unique repository source paths, with combined custody-tree
+SHA-256 `ef65258b6c652b040a3ecbc5a8a6e2a3c12b9a30460fcea286ff9421c54b84fb`. Its fresh process loaded
+only `tac`, the top-level SFESS core, the isolated SFESS policy leaf, and the probe; the
+boundary-math package, scorer, renderer, trainer, Torch, MLX, Modal, and evaluator remained unloaded.
+The compiled policy directly hashed `upstream/videos/0.mkv` to the registered
+`2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9` and `37,545,489` bytes
+without decoding frames. Resume binds `k`, five samples, seed `396400`, and the `1e-12 S` floor to
+the compiled policy before restoring any snapshot trace.
+
+**DERIVED:** the best non-degenerate SFESS arm remains
+`7.052840218513268e-7 S` above enumeration/ES, larger than the registered `1e-12 S` comparison
+floor. **VERDICT: NO-GO, instance/formulation scoped.** Fixed-cardinality structure does not change
+the same-budget ranking on this enumerable six-bit support. **UNKNOWN:** across-seed variance and
+performance on a non-enumerable support remain unknown; this is not a family-death verdict.
+
+**Triality:** DSL = `tac.witness_dsl.sfess_cached_replay_policy` with
+`produces_costate=false` and live `full_teacher` fallback; equation =
+`sfess_fixed_k_cached_replay_ranking_v1`; DAG = this FEED; canonical task =
+`sfess_cached_replay_ugc64_20260712`. `score_claim=false`; `promotion_eligible=false`; submitted
+`[contest-CPU]` pointer `0.1910828242` UNMOVED; defensive bank `0.1880443979` remains separate and
+UNMOVED; no paid/cloud dispatch and no live-run mutation.
+
+### FEED-rl-transfer-kocher (2026-07-12) — RL-for-LLM variance-reduction → costate-organ / surrogate / verdict-clearance
+`[FROM-LITERATURE]` Arjun Kocher's RL Q&A (https://www.k-a.in/rl-algo.html, .md source). Full routing memo:
+`.omx/research/rl_transfer_kocher_costate_organ_20260712.md`. `[DERIVED]` The page is ONE object —
+variance-reduction of a policy gradient `E[∇log π·(G−b)]`; the GRPO lineage = "the value fn over sequences is too
+hard to learn, replace the critic with a group-relative baseline." That IS our costate-organ situation. THREE folded
+design inputs (each mapped to a live task): (1) **RLOO leave-one-out group baseline → #434** — cure n=1 starvation
+with a group-relative baseline over sampled witness perturbations through exact R, NOT a data-hungry surrogate;
+composes with SFESS control variates. (2) **Dr.GRPO/DAPO zero-variance SKIP → #319 / verdict-clearance** — band-spans-0
+= zero-variance group = no signal → skip/emit-K>1, never divide by ~0 std (same math we half-had). (3) **OPD on-policy
+distillation → #449 distilled-surrogate / #428/#431** — train the surrogate ON-POLICY on renders-as-produced (dense
+r_t=log(teacher/ref), ref cancels), never a fixed dataset; independently corroborates the codistillation finding +
+the descent-direction (not logit) admission gate. Folded into the staged master #451 prompt. Humility calibration for
+#434: RL mostly sharpens *reliable use* + test-time search, frontier set by pretraining (arXiv 2504.13837) — expect
+the organ to sharpen the witness basin, not create capability. `[no-triality]` pure reference/routing. **Pointer 0.18804
+[contest-CPU] UNMOVED (MEANS).**
 
 ### FEED-task452-defect-network-rate-code (2026-07-12) — exact component recode saves bytes; receiver gate remains open
 
@@ -16354,5 +16420,11 @@ NO-GO; equal
 phase section. Equation = `defect_network_component_delta_rate_v1`; DSL = N/A because this is an
 isolated `research_only=true` codec, not a Lever/policy/curriculum/export; DAG = this FEED. Receipt =
 `experiments/results/defect_network_tube_rate_code_20260712T225958Z/measurement_receipt.json`.
+verdict_scope: formulation — the defect-network integer-transform decomposition + finite-Z2 orientation
+quotient on the PHAS1 residual/phase codec (measured: transform +2,349 B, Z2 labels +18,897 B, zero-mode
+covers 3.98% of residual). PARADIGM INTACT: tube-algebra/gauging as a rate structure is NOT falsified —
+junction-fusion needs a codec that stores an independent vertex field (PHAS1 has none), and equal
+d_seg/d_pose through R stays UNKNOWN because the receiver consumes neither phase section. Reactivation:
+a vertex-storing codec + a carrier that packs+consumes the phase section for a real A/B.
 `score_claim=false`; `promotion_eligible=false`; submittable `[contest-CPU]` pointer 0.19108282
 UNMOVED; defensive bank 0.18804440 remains separate and UNMOVED.
