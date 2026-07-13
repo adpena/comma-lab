@@ -17349,3 +17349,26 @@ contention surface (also touched by #458 fleet-harvest / #408 telemetry batch / 
 a dedicated reconciliation (one deliberate act) before the launch preflight can be re-run to clear D-A/D-B on
 a committed tree. DSL leg: the VerdictLiveGap lever IS a proper DSL `Lever` (in the deferred curriculum_dsl
 edit) — it lands with the reconciliation, not orphaned.
+
+---
+
+## FEED-per-epoch-accounting-20260713 (operator "each epoch takes minutes we need a detailed accounting")
+
+Research-only: true. Pointer UNMOVED. Full doc `.omx/research/per_epoch_detailed_accounting_20260713.md`.
+Assembled the MEASURED per-epoch accounting from #306 (lever/stage) + #455/#456 (forward/backward). Envelope:
+CE **169.7 s/ep** (n600), tau-stage **+26%** (the ONLY large lever-GROUP cost), verdict **43-47% duty but
+ASYNC-HIDDEN**. Per-lever: pose-carrier NEGATIVE (speed-saver), wa-island/seed/self-orient ~free — the
+minutes are NOT the accreted levers.
+
+**THE FINDING (2 contradictions the accounting surfaces):** (1) **fwd-vs-bwd share is CONTRADICTED** — the
+95%-kill framed "replace the forward (78%)" (#455 title, ANE p=0.78) but the same-run direct measurement
+(#455) says the **BACKWARD/costate-VJP is 82%** (537 ms fwd vs 3009 ms fwd+bwd per pair). If backward
+dominates in-loop, the 95%-kill has been attacking the WRONG component and the ANE-forward Amdahl cap is
+1.22× not 4.55×. (2) **harness reconciliation** — 3009 ms/pair ×600 = 30 min/ep but in-loop is 169.7 s/ep →
+the diagnostic harness is ~12× heavier; only the RATIO transfers, unverified in-loop. RESOLVER: the da_db
+D-A `_measure_component_decomposition` timer (BUILT, `telemetry_producers.py` committed, wiring deferred)
+emits in-loop `_teacher_fwd`/`_teacher_bwd`/`_r_fwd`/`_wit_bwd` — wire + n24-profile (linear→n600, cheap) to
+get the authoritative split + RESOLVE which component the 95%-kill should attack. verdict_scope: the
+fwd/bwd-share is UNRESOLVED (diagnostic-harness ratio, in-loop unverified) — do not act on 82%-backward until
+the in-loop timer confirms. DSL leg N/A (accounting). Sister: #306, #455/#456, #482, #484 (pre-SE surrogate
+sidesteps the fwd/bwd question by replacing the whole teacher over the boundary).
