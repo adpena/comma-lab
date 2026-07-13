@@ -17522,3 +17522,40 @@ bias-variance. Memos `heavy_tail_interp_fold_20260713.md` + `_equation_feed_` + 
   regularization sweep** → #488 pre_se_reopen_a harvest should prefer the RankRLS ridge rung + report the
   retained-mass tail-quantile. Complementary to vrghal_theorem_deepen (iteration high-prob-convergence axis)
   — heavy-tail = ESTIMATOR tail, VR-GHAL = ITERATION convergence. DSL leg N/A (reliability discipline, no lever).
+
+---
+
+## FEED-p0-sparse-adjoint-20260713 (#486 flagship DONE — sparse/low-rank cheap-adjoint NO-GO; + the 82%-backward premise is now CONTESTED)
+
+Research-only. Pointer UNMOVED. MEANS (backward throughput, NOT the pointer). n600 real (600/600 task455
+costates hash-matched; spectrum over all 70,778,880 heldout elements; 3 tests). Memo
+`p0_sparse_adjoint_costate_vjp_20260713.md`; eq `src/tac/canonical_equations/sparse_adjoint_support_closure_20260713.py`;
+probe `tools/probe_sparse_adjoint_costate_vjp.py`; receipt sha 52a22f4b.
+
+**MEASURED:** input-costate concentrates 26.29% L1 mass / 61.01% L2 energy in 4.74% pixels, but is NEVER
+exactly sparse (exact-zero fraction = 0.0 every state); backprop SPREADS — the 4.74% source-margin mask
+captures only 10.31% of input-costate L1 mass; low-rank r95=68/120, r99=100/120 but rank-64 still 23.82%
+Frobenius error (broad fidelity tail); masked adjoint 36.35% oracle / 79.34% source-margin relative-L2 error;
+DERIVED backward FLOP saving 2.21× on an IDEAL custom sparse kernel, **1.0× on exact/dense-kernel arithmetic**;
+global coupling STRUCTURAL (23 SE reductions + 685-px exact halo → 100% source coverage — SAME SE-global
+contamination as the pre_se tileability kill).
+
+- **verdict_scope = FORMULATION NO-GO (dense-full-rank masked adjoint on the CE-state costate)**, req-R evidence:
+  ≥2 structurally distinct formulations fail — (i) source-margin-masked adjoint 79.34% rel-L2, (ii) rank-64
+  low-rank adjoint 23.82% Frobenius — PLUS a STRUCTURAL cause: a SCALAR loss already has a single optimal
+  reverse-mode VJP, so r basis-VJPs cannot beat 1 VJP without reusable state-stable Jacobians (dominated by
+  construction), and the SE-global coupling forbids a local support. NOT a paradigm kill.
+- **Reformulation queue (untested formulations — the cheap-backward IDEA is not dead):** (a) the POST-HOC
+  ORACLE-masked adjoint is ACCURATE (2.62% rel-L2) — the sole open child — reopens IF a CHEAP current-witness
+  mask PREDICTOR exists (predict the oracle support without the full backward) + a custom-kernel wall
+  measurement + an optimizer-regret gate; (b) STATE-STABLE JACOBIAN REUSE across steps — the arm's own
+  economics note ("r VJPs don't beat 1 without reusable state-stable Jacobians") is SATISFIABLE if the
+  Jacobian is stable across K steps (the ρ=0.85 lag-5 autocorrelation from #454/K=2-costate-reuse) → amortize
+  r basis-VJPs over K steps; DIRECTLY composes with the #487-closer K=2 reuse survivor; (c) realize the 2.21×
+  via a CUSTOM SPARSE Metal kernel (#478) — currently 1.0× only because dense kernels can't exploit the mask.
+- **⚠ PREMISE CONTEST (the finding that redirects the pivot):** this replay measured median **forward 606ms /
+  backward 289ms → backward ~32%, forward ~68%** — the OPPOSITE of #455's diagnostic 82%-backward that
+  triggered the whole P0-backward pivot. NEITHER is in-loop-authoritative. **The D-A in-loop component timer
+  (GO_PACKET, operator-GO) is the ONLY resolver** and is now HIGHER-value: if forward is truly ~68% in-loop,
+  the forward-attack arms (#455/#456/#482) were correctly aimed and the backward-pivot was a diagnostic-harness
+  artifact. DSL leg N/A (measurement).
