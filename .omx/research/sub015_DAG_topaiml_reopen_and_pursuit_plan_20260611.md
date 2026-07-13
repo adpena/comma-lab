@@ -16890,3 +16890,18 @@ default-OFF confirmatory. Training-at-int8 rationale reduces to SPEED only: (A1)
 Linear/Embedding but NO native quantized CONV — verdict_scope: instance — this MLX version; (A2) ANE W8A8 fwd
 latency TICKET (coremltools absent); (A3) int8 flips/cosine TICKET (sandbox had no Metal device — runnable by
 main locally). No fabricated numbers on blocked rungs — correct restraint. Equations + default-OFF DSL policy landed.
+
+## FEED-spinningup-crosswalk-20260713 (pointer node; full syntheses + tickets in spinningup_keypapers_crosswalk_20260713.md)
+Spinning Up key-papers crosswalk (#473) [DERIVED mappings; enumeration MEASURED against the official page]:
+105 papers enumerated / 47 mapped to the 5 surfaces / 58 DISCARDED with per-paper reasons (official list has NO
+modern offline-RL section — BCQ/CQL/MBPO/PEARL handled as explicit off-list supplements, correctly separated).
+Per-surface syntheses: S1 surrogate = short-horizon learned world model (MBPO/MVE/STEVE branch horizons at equal
+exact-call budgets) · S2 organ OPE = support-FIRST (typed action support + refusal schema before any numeric row)
+· S3 duty-ranker = finite-bank experimental design (VIME/bootstrap info-gain vs P8 vs cheapest-first, chronological
+backtest) · S4 stages = options with TRANSACTIONAL exits (dwell/hysteresis/rollback; test sensors on read-only
+traces first) · S5 meta-init held (rankable only after corpus-compatibility audit + FreSh gate). TOP-5 TICKETS
+(each with primary falsifier + verdict-scope guard): 1 DIG-S1-BRANCH-AUDIT-HORIZON (P0; consumes round-3 receipt
+when it lands) · 2 DIG-S1-QUERY-REAL-CALIBRATION (P0; epistemic-disagreement trust/query/refuse policy) ·
+3 DIG-S2-SUPPORT-FIRST-ORGAN-OPE (joins causal-manifest/D40) · 4 DIG-S3-FINITE-BANK-INFO-GAIN ·
+5 DIG-S4-TRANSACTIONAL-OPTION-EXIT. DISPATCH SEQUENCING: tickets 1+2 WAIT on round-3 harvest (their input);
+ticket 3 WAITS on causal-manifest builder (live); 4+5 free-standing next-slot candidates.
