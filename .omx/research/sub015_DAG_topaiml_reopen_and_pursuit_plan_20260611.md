@@ -17007,3 +17007,14 @@ CAMPAIGN STATE at theorem-grade ceilings: regression dead ×2 (rounds 2-3) + sha
 costlier rungs (deeper features = loses the pre-SE tileability premise · nonlinear/on-policy = new stability +
 economics gates · dense-label · transition-complete FORE once manifest data exists from a real run). Zero
 retries, 600 unique teacher calls, terminal resume byte-identical.
+
+## FEED-negative-audit-20260713 (pointer node; full table in negative_audit_wave_20260713.md)
+Fresh-eyes audit of all 12 wave negatives [DERIVED re-grades]: 2 of 12 changed. (1) N6/SPS RE-GRADED:
+"separation NO-GO" → UNINFORMATIVE DISENGAGED INSTANCE + n=4 instance prior — the ep275 probe measured a
+regime with EXACTLY ZERO live temporal gradient, so it carries NO information about separation (not even a
+scoped negative); engaged-n600 evidence owed (rides the launch D-B hook). Supersedes the FEED-sps node's
+reading; pool row stays reformulation-queue. (2) DIG-S1-BRANCH-AUDIT-HORIZON + DIG-S1-QUERY-REAL-CALIBRATION
+RESCOPED (not dead): premise shifts to the surviving deeper/nonlinear/on-policy surrogate rungs post-family-
+kill. (3) N11 census corrected 47→49 mapped / 58→56 discarded: Double-Q → S3 duty-ranker DEBIASING guard
+(optimism bias in measure-next selection) · MFEC → S5 retrieval baseline. (4) N9 upheld; N12 all four REFUSEs
+genuine, zero misconfigured gates. Remaining 8 negatives: declared scopes confirmed as narrowest-supported.
