@@ -17018,3 +17018,14 @@ RESCOPED (not dead): premise shifts to the surviving deeper/nonlinear/on-policy 
 kill. (3) N11 census corrected 47→49 mapped / 58→56 discarded: Double-Q → S3 duty-ranker DEBIASING guard
 (optimism bias in measure-next selection) · MFEC → S5 retrieval baseline. (4) N9 upheld; N12 all four REFUSEs
 genuine, zero misconfigured gates. Remaining 8 negatives: declared scopes confirmed as narrowest-supported.
+
+## FEED-organ-ope-support-first-20260713 (pointer node; full FEED in organ_ope_support_first_DAG_FEED_20260713.md)
+DIG-S2 support-first organ OPE [DERIVED matrix + 3-clean-pass]: PRIMARY FALSIFIER FIRED as designed —
+verdict REFUSAL_SCHEMA_ONLY, no numeric OPE row: matrix 0 SUPPORTED_EVALUABLE / 3 NOT_IDENTIFIED /
+3 SCHEMA_INCOMPLETE across regime-arms (one predictive trajectory, zero emitted manifests, zero executed
+schedule decisions, no decision↔transition join). Smallest D40 deltas enumerated: join executed decisions to
+transitions · log authorized positive propensities (or restrict target to behavior) · record adjacent
+through-R score gain · regime/stratum coverage receipts · accrue independent runs. FRESH-EYES FINDING:
+check_fore_support is a NECESSARY structural gate, NOT numeric-OPE authorization — it does not enforce
+multi-trajectory overlap, regime coverage, decision/transition equality, Markov replay, or prospective folds
+(consumer-hardening ticket for the manifest's next increment). Refusal schema = the durable deliverable.

@@ -1,0 +1,470 @@
+{
+  "schema_id": "pact.organ_ope_support_matrix.v1",
+  "date_utc": "2026-07-13",
+  "lane_id": "lane_organ_ope_support_first_20260713",
+  "checkpoint_id": "organ_ope_support",
+  "research_only": true,
+  "score_claim": false,
+  "promotable": false,
+  "pointer_delta": "NONE",
+  "source_schema": {
+    "schema_id": "pact.causal_manifest.v1",
+    "source_path": "src/tac/causal_manifest.py",
+    "source_sha256": "65abcf9213926c1f7ddd5ea333f5a19d0cdc2d4341231d1004ea308a8b03f6fa",
+    "landing_commit": "b6783d45dc",
+    "capability_verdict": "REPRESENTATION_SKELETON_PRESENT__IDENTIFICATION_NOT_ESTABLISHED"
+  },
+  "audit_scope": {
+    "run_id": "levelset_v752_baseline_20260710T185913Z",
+    "axis": "[macOS advisory] NON-PROMOTABLE",
+    "target_action_family": "regime_dispatch_forecaster_route_as_candidate_schedule_action",
+    "matrix_arms": [
+      "T_gp_costate_posterior",
+      "persistence"
+    ],
+    "regimes": [
+      "transient",
+      "plateau",
+      "uncertain"
+    ],
+    "excluded_predictive_comparators": [
+      "E_prototype",
+      "E_prototype_bregman",
+      "F_bsf"
+    ],
+    "excluded_reason": "They are scored forecast comparators in DEFAULT_ARM_POOL but are not reachable arms in DISPATCH_POLICY. Treating them as logged schedule actions would invent support."
+  },
+  "status_definitions": {
+    "SUPPORTED_EVALUABLE": "A joined executed decision and transition exists in the target regime and exact run stratum; the arm has positive logged propensity, initial and one-step coverage, transition-sufficient state, observed preregistered reward, and independent whole-run validation support.",
+    "NOT_IDENTIFIED": "The target arm has structural zero executed propensity in the regime or the treatment contrast remains unidentifiable. Conservative value penalties may not replace the missing intervention support.",
+    "OUT_OF_SUPPORT": "The target regime, initial state, or exact run/code/hardware/scorer stratum lies outside all logged support.",
+    "SCHEMA_INCOMPLETE": "The arm is behavior-reachable in the current predictive policy, but actual evidence lacks a joined executed decision, transition-sufficient Z-A-R-Z-prime row, typed estimand/time law, or whole-run fold custody."
+  },
+  "status_precedence": [
+    "OUT_OF_SUPPORT",
+    "NOT_IDENTIFIED",
+    "SCHEMA_INCOMPLETE",
+    "SUPPORTED_EVALUABLE"
+  ],
+  "primary_falsifier": {
+    "fired": true,
+    "verdict": "REFUSAL_SCHEMA_ONLY__NO_NUMERIC_OPE_ROW",
+    "reasons": [
+      "one independent real trajectory",
+      "zero production causal_manifest.jsonl files in the audited workspace",
+      "zero executed schedule-action decision rows",
+      "zero explicit coverage receipt rows",
+      "no decision_id/regime join from ExplorationDecisionRow to TransitionRow",
+      "current walk-forward arms are non-actuating forecasters, not observed schedule interventions",
+      "transition sufficiency has not been replay-certified"
+    ]
+  },
+  "current_inventory": {
+    "independent_real_trajectories": 1,
+    "intervals": 9,
+    "walk_forward_folds": 7,
+    "fold_regime_counts": {
+      "transient": 3,
+      "plateau": 3,
+      "uncertain": 1
+    },
+    "production_causal_manifest_files": 0,
+    "run_manifest_rows": 0,
+    "transition_rows": 0,
+    "executed_decision_rows": 0,
+    "coverage_receipt_rows": 0,
+    "hcm_l4_whole_run_folds": 0,
+    "fore_checker_observed_status": "NOT_IDENTIFIED",
+    "fore_checker_blockers": [
+      "missing_run_treatment_manifest",
+      "missing_state_action_reward_successor_transitions",
+      "missing_explicit_coverage_receipt",
+      "target_action_not_supported:persistence",
+      "target_action_not_supported:T_gp_costate_posterior",
+      "no_executed_decision_rows_for_target_policy"
+    ],
+    "hcm_l4_observed_status": "NO_ROWS"
+  },
+  "transition_schema_audit": [
+    {
+      "surface": "run_treatment_and_stratum",
+      "represented": true,
+      "current_rows_present": false,
+      "audit": "RunTreatmentManifest can carry treatment, base checkpoint, seed, machine/backend/axis, data order, stage plan, and scorer/cache custody."
+    },
+    {
+      "surface": "transition_state",
+      "represented": "PARTIAL",
+      "current_rows_present": false,
+      "audit": "StateSummary commits to boundary history and optional checkpoint custody, but Markov sufficiency is explicitly unproved; producer RNG/controller hashes remain null and not every verdict boundary carries a complete checkpoint."
+    },
+    {
+      "surface": "typed_action_and_behavior_propensity",
+      "represented": "SPLIT_ACROSS_UNJOINED_ROWS",
+      "current_rows_present": false,
+      "audit": "ActionSummary carries the transition arm while ExplorationDecisionRow carries alternatives and propensities, but TransitionRow has no validated decision_id/regime join."
+    },
+    {
+      "surface": "reward_and_target_estimand",
+      "represented": "PARTIAL",
+      "current_rows_present": false,
+      "audit": "RewardObservation names an estimand, but the trainer currently emits negative_implied_score rather than the preregistered one-boundary full-score gain and the schema has no target time-law or censoring identity."
+    },
+    {
+      "surface": "regime_conditioned_coverage",
+      "represented": false,
+      "current_rows_present": false,
+      "audit": "CoverageReceiptRow is target-policy-wide; no typed regime/stratum key or checker enforcement proves per-regime overlap."
+    },
+    {
+      "surface": "future_fold_split",
+      "represented": false,
+      "current_rows_present": false,
+      "audit": "No row freezes outer whole-run folds, inner chronological folds, split seed, estimator version, or pre-outcome target-policy hash."
+    },
+    {
+      "surface": "hcm_pair_and_apparatus_custody",
+      "represented": "PARTIAL",
+      "current_rows_present": false,
+      "audit": "The trainer producer emits aggregate pair sentinels and lacks typed loss-term closure, negative controls, and the frozen/no-update positive control required by hcm_l4_residual_check."
+    },
+    {
+      "surface": "fore_structural_checker",
+      "represented": true,
+      "current_rows_present": false,
+      "audit": "check_fore_support is a necessary structural gate only; its one-run positive test does not require multi-trajectory overlap, regime-specific support, a decision-transition join, or a replay proof of Markov sufficiency."
+    }
+  ],
+  "run_stratum": {
+    "current_description": "one vehicle, one deterministic regime sequence, seed 0, one macOS-advisory run; treatment/policy/scorer/cache hashes are not materialized in pact.causal_manifest.v1 for this legacy run",
+    "future_exact_key_fields": [
+      "git_sha",
+      "treatment_sha256",
+      "base_checkpoint_sha256",
+      "seed",
+      "machine",
+      "backend",
+      "axis",
+      "data_order_sha256",
+      "scorer_artifact_sha256",
+      "cache_artifact_sha256",
+      "regime_schema_sha256",
+      "behavior_policy_sha256",
+      "target_estimand_id",
+      "time_law_id"
+    ],
+    "out_of_support_rule": "Any target whose exact key has no logged initial-state and one-step coverage receipt is OUT_OF_SUPPORT, never pooled by assumed equivalence."
+  },
+  "target_estimand": {
+    "estimand_id": "organ_one_boundary_full_score_gain_v1",
+    "definition": "E[S(Z_t)-S(Z_t_plus_1) | regime_t=g, do(A_t=a), exact run stratum]",
+    "boundary": "adjacent complete, preserved, realized-through-R organ decision boundaries",
+    "direction": "larger is better",
+    "components": [
+      "d_seg",
+      "nonlinear_pose_term",
+      "archive_bytes_rate_term",
+      "implied_score"
+    ],
+    "current_identified": false,
+    "notes": "This one-step target avoids silently choosing FORE gamma. Any multi-step FQE/FORE policy value must add a preregistered finite-horizon or geometric time_law_id and may not reuse predictive slope MAE as reward."
+  },
+  "future_fold_split": {
+    "outer_unit": "whole independent run",
+    "outer_scheme": "leave-one-future-run-out, with policy/estimand/estimator hashes frozen before the held-out run begins",
+    "inner_unit": "ordered decision boundary",
+    "inner_scheme": "past-only expanding chronological folds within training runs",
+    "forbidden": [
+      "random pair-row split",
+      "random epoch-row split",
+      "treating repeated snapshots as independent runs",
+      "fitting the regime policy on the held-out future fold",
+      "pooling CPU/CUDA/MLX or code/hardware strata by inferred equivalence"
+    ],
+    "current_outer_folds": 0,
+    "minimum_for_hcm_l4_code_path": 2,
+    "adoption_rule": "Retain the existing real-only organ accrual gate; synthetic rows and same-run folds do not count as new trajectories."
+  },
+  "matrix_summary": {
+    "total_cells": 6,
+    "SUPPORTED_EVALUABLE": 0,
+    "NOT_IDENTIFIED": 3,
+    "OUT_OF_SUPPORT": 0,
+    "SCHEMA_INCOMPLETE": 3,
+    "numeric_ope_rows": 0
+  },
+  "regime_arm_matrix": [
+    {
+      "regime": "transient",
+      "arm": "T_gp_costate_posterior",
+      "legacy_regime_fold_count": 3,
+      "legacy_chosen_fold_count": 3,
+      "behavior_route": true,
+      "logged_executed_propensity": null,
+      "status": "SCHEMA_INCOMPLETE",
+      "numeric_ope_allowed": false,
+      "blockers": [
+        "predictive route only; no schedule actuation",
+        "no legacy pact.causal_manifest.v1 rows",
+        "no joined transition/reward/coverage receipt",
+        "one trajectory gives no outer future fold"
+      ],
+      "smallest_delta_ids": [
+        "D40-L1",
+        "D40-L2",
+        "D40-L3",
+        "D40-L4",
+        "D40-L5"
+      ]
+    },
+    {
+      "regime": "transient",
+      "arm": "persistence",
+      "legacy_regime_fold_count": 3,
+      "legacy_chosen_fold_count": 0,
+      "behavior_route": false,
+      "logged_executed_propensity": 0.0,
+      "status": "NOT_IDENTIFIED",
+      "numeric_ope_allowed": false,
+      "blockers": [
+        "deterministic dispatch routes transient to T_gp_costate_posterior",
+        "zero alternative propensity is decisive even after schema materialization",
+        "predictive comparator output is not an intervention outcome"
+      ],
+      "smallest_delta_ids": [
+        "D40-L2",
+        "D40-L3",
+        "D40-L4",
+        "D40-L5"
+      ]
+    },
+    {
+      "regime": "plateau",
+      "arm": "T_gp_costate_posterior",
+      "legacy_regime_fold_count": 3,
+      "legacy_chosen_fold_count": 0,
+      "behavior_route": false,
+      "logged_executed_propensity": 0.0,
+      "status": "NOT_IDENTIFIED",
+      "numeric_ope_allowed": false,
+      "blockers": [
+        "deterministic dispatch routes plateau to persistence",
+        "zero alternative propensity is decisive even after schema materialization",
+        "same-trajectory counterfactual forecast error is not an action outcome"
+      ],
+      "smallest_delta_ids": [
+        "D40-L2",
+        "D40-L3",
+        "D40-L4",
+        "D40-L5"
+      ]
+    },
+    {
+      "regime": "plateau",
+      "arm": "persistence",
+      "legacy_regime_fold_count": 3,
+      "legacy_chosen_fold_count": 3,
+      "behavior_route": true,
+      "logged_executed_propensity": null,
+      "status": "SCHEMA_INCOMPLETE",
+      "numeric_ope_allowed": false,
+      "blockers": [
+        "predictive route only; no schedule actuation",
+        "no legacy pact.causal_manifest.v1 rows",
+        "no joined transition/reward/coverage receipt",
+        "one trajectory gives no outer future fold"
+      ],
+      "smallest_delta_ids": [
+        "D40-L1",
+        "D40-L2",
+        "D40-L3",
+        "D40-L4",
+        "D40-L5"
+      ]
+    },
+    {
+      "regime": "uncertain",
+      "arm": "T_gp_costate_posterior",
+      "legacy_regime_fold_count": 1,
+      "legacy_chosen_fold_count": 0,
+      "behavior_route": false,
+      "logged_executed_propensity": 0.0,
+      "status": "NOT_IDENTIFIED",
+      "numeric_ope_allowed": false,
+      "blockers": [
+        "meta-lambda guard routes uncertain to persistence",
+        "zero alternative propensity is decisive even after schema materialization",
+        "one same-run uncertain fold cannot establish regime support"
+      ],
+      "smallest_delta_ids": [
+        "D40-L2",
+        "D40-L3",
+        "D40-L4",
+        "D40-L5"
+      ]
+    },
+    {
+      "regime": "uncertain",
+      "arm": "persistence",
+      "legacy_regime_fold_count": 1,
+      "legacy_chosen_fold_count": 1,
+      "behavior_route": true,
+      "logged_executed_propensity": null,
+      "status": "SCHEMA_INCOMPLETE",
+      "numeric_ope_allowed": false,
+      "blockers": [
+        "predictive route only; no schedule actuation",
+        "no legacy pact.causal_manifest.v1 rows",
+        "no joined transition/reward/coverage receipt",
+        "one same-run uncertain fold cannot support uncertainty"
+      ],
+      "smallest_delta_ids": [
+        "D40-L1",
+        "D40-L2",
+        "D40-L3",
+        "D40-L4",
+        "D40-L5"
+      ]
+    }
+  ],
+  "estimator_comparison": [
+    {
+      "estimator": "current_regime_dispatcher",
+      "current_result": 0.0015959393896760557,
+      "metric": "walk_forward_class_weighted_d_seg_slope_mae",
+      "evidence_label": "MEASURED_INHERITED",
+      "authority": "PREDICTIVE_ONLY",
+      "numeric_ope_allowed": false,
+      "refusal": "one trajectory; policy derived from the same trajectory; no action intervention"
+    },
+    {
+      "estimator": "T_gp_costate_posterior",
+      "current_result": 0.00185206618604584,
+      "metric": "walk_forward_class_weighted_d_seg_slope_mae",
+      "evidence_label": "MEASURED_INHERITED",
+      "authority": "PREDICTIVE_ONLY",
+      "numeric_ope_allowed": false,
+      "refusal": "forecast error is not organ action value"
+    },
+    {
+      "estimator": "persistence_no_change",
+      "current_result": 0.002791931483929152,
+      "metric": "walk_forward_class_weighted_d_seg_slope_mae",
+      "evidence_label": "MEASURED_INHERITED",
+      "authority": "PREDICTIVE_ONLY_BEHAVIOR_BASELINE",
+      "numeric_ope_allowed": false,
+      "refusal": "baseline remains valid for prediction but has no executed schedule-action transitions"
+    },
+    {
+      "estimator": "behavior_policy_value",
+      "current_result": null,
+      "evidence_label": "REFUSED",
+      "authority": "NONE",
+      "numeric_ope_allowed": false,
+      "refusal": "zero executed decision rows and no one-boundary score-gain rewards"
+    },
+    {
+      "estimator": "FQE_bootstrapped",
+      "current_result": null,
+      "evidence_label": "REFUSED_BEFORE_FIT",
+      "authority": "NONE",
+      "numeric_ope_allowed": false,
+      "refusal": "no transition-complete joined action corpus, fixed time law, or whole-run folds"
+    },
+    {
+      "estimator": "FORE_direct_or_DR",
+      "current_result": null,
+      "evidence_label": "REFUSED_BEFORE_FIT",
+      "authority": "NONE",
+      "numeric_ope_allowed": false,
+      "refusal": "current check_fore_support blockers plus no multi-trajectory/regime overlap"
+    },
+    {
+      "estimator": "BCQ_BEAR_CQL_style_conservative",
+      "current_result": null,
+      "evidence_label": "REFUSED_BEFORE_FIT",
+      "authority": "NONE",
+      "numeric_ope_allowed": false,
+      "refusal": "the supported action set is empty for causal schedule OPE; pessimism cannot identify a zero-propensity arm"
+    }
+  ],
+  "d40_smallest_remaining_logging_deltas": [
+    {
+      "id": "D40-L1",
+      "priority": 1,
+      "delta": "Join the actual regime decision to the following transition.",
+      "minimum_change": "At each preserved stage decision boundary, put decision_id, regime_id, behavior_policy_sha256, chosen schedule arm, and actuation identity into ActionSummary.parameters and the matching ExplorationDecisionRow; validate equality. The chosen object must be an executed schedule action, not a forecaster label.",
+      "schema_version_change_required": false
+    },
+    {
+      "id": "D40-L2",
+      "priority": 2,
+      "delta": "Create genuine positive action support or restrict targets to behavior.",
+      "minimum_change": "Under a separate operator-GO'd typed policy, randomize only safe eligible arms at complete stage checkpoints and log actual seed, draw, and nonzero propensities. Without GO, keep 1/0 rows and refuse alternative-arm OPE.",
+      "schema_version_change_required": false
+    },
+    {
+      "id": "D40-L3",
+      "priority": 3,
+      "delta": "Log the preregistered reward and replay-sufficient successor.",
+      "minimum_change": "Use adjacent complete realized-through-R decision boundaries, emit organ_one_boundary_full_score_gain_v1, and retain complete checkpoint/resume, RNG, controller, data-order, telemetry, scorer, and cache custody sufficient for one-step replay.",
+      "schema_version_change_required": false
+    },
+    {
+      "id": "D40-L4",
+      "priority": 4,
+      "delta": "Produce regime- and stratum-specific coverage receipts.",
+      "minimum_change": "Emit initial-state and one-step target coverage evidence per regime, exact stratum, target policy, and arm; extend checker validation so support cannot be borrowed across regimes or unrelated runs.",
+      "schema_version_change_required": true
+    },
+    {
+      "id": "D40-L5",
+      "priority": 5,
+      "delta": "Accrue independent future runs and freeze folds prospectively.",
+      "minimum_change": "At least two independent real runs are required for the existing HCM-L4 whole-run code path; freeze the estimator/policy/estimand before a future held-out run. Preserve the stricter existing real-only organ graduation rule for adoption.",
+      "schema_version_change_required": false
+    },
+    {
+      "id": "D40-L6",
+      "priority": 6,
+      "delta": "Add HCM apparatus rows if L4 is part of clearance.",
+      "minimum_change": "Log pair-custodied outcomes, typed loss terms and weights, preregistered negative controls, and a frozen/no-update positive control; aggregate pair rows only after whole-run cross-fitting.",
+      "schema_version_change_required": false
+    }
+  ],
+  "refusal_schema": {
+    "required_output_when_no_supported_cells": {
+      "verdict": "REFUSAL_SCHEMA_ONLY__NO_NUMERIC_OPE_ROW",
+      "matrix_summary": "required",
+      "cell_statuses": "required",
+      "blockers": "required",
+      "smallest_delta_ids": "required",
+      "numeric_value": null,
+      "confidence_interval": null,
+      "importance_weight_diagnostics": null
+    },
+    "admission_rule": "A numeric estimator row may be added only when at least one cell is SUPPORTED_EVALUABLE and the estimator was frozen before its whole-run future fold."
+  },
+  "evidence": [
+    {
+      "path": "experiments/results/costate_organ_backtests/costate_organ_backtest_20260711T164017Z.json",
+      "sha256": "35e79ca420672c7769377a8b96e18de8459e0cbae4c732c8278f613bc3a2ab61",
+      "role": "sealed predictive fold and arm inventory"
+    },
+    {
+      "path": ".omx/research/fore_occupancy_ratio_dig_20260713.md",
+      "sha256": "7f3cbb6babb31f438ed721274a082af6a9c43df27d31f4c8372860048875ad47",
+      "role": "FORE assumptions and current support refusal"
+    },
+    {
+      "path": ".omx/research/hcm_causal_attribution_dig_20260713.md",
+      "sha256": "fe58d31645559648f6096324388995b7a5ab91d0847bdb38797c839b30f4a874",
+      "role": "HCM run-level identification and whole-run fold boundary"
+    },
+    {
+      "path": ".omx/research/organ_regime_conditional_dispatch_436_20260711.md",
+      "sha256": "b9c03cf52c53354be13eb84fe59fc508f585bec1c0f6ae6519e5ab282f876ab2",
+      "role": "current regime policy and predictive authority boundary"
+    }
+  ]
+}
