@@ -17401,3 +17401,21 @@ resolves the in-loop fwd/bwd split (operator-GO); the verdict fires/re-scopes th
 witness IS an inverse problem (Ying's BCR-Net/Switch-Net are the mathematically-motivated architectures); the
 adjoint is the shared theory of the P0 backward + the witness-inverse-solve. DSL leg N/A (measurement/theory
 routing). Pointer UNMOVED.
+
+---
+
+## FEED-jepa-latent-surrogate-20260713 (#485 DONE — decision-quotient is the target, VJP-fidelity required)
+
+Research-only. Pointer UNMOVED. Memo `.omx/research/jepa_latent_surrogate_20260713.md`; eq
+`src/tac/canonical_equations/segnet_decision_quotient_surrogate_20260713.py`. B-dig verdict (feeds the P0
+backward wave): the JEPA *learned* latent does NOT beat the natural target — the win is the **decision-quotient
+= centered logits (the 4-dim softmax/argmax-relevant subspace)** as the smooth surrogate target: better than
+hard labels / raw costate, NOT better than full smooth logits (full penultimate features = matched comparator,
+not a derived improvement). Costate-VJP-via-surrogate: YES conditionally, cost law **C_S + (C_T+U)/K** (surrogate
++ amortized-teacher over reuse K) — BUT requires EXPLICIT Jacobian/VJP fidelity (latent-VALUE matching alone
+insufficient; must match the gradient). Composes with #484 ONLY after restoring differentiability. n=1 prior:
+WORTH as initialization only. HARD CONSTRAINT: at K=20 the exact anchors alone consume the full 5% diagnostic
+budget (150.453 ms) → inclusive 95%-kill impossible with positive student cost (K can't be too aggressive).
+verdict_scope: WORTH-AN-ARM, feeds #455/#484. CONVERGENCE: decision-quotient (4-dim, argmax-relevant) = the
+low-rank output subspace the p0_sparse_adjoint + invprob_operator_fold (BCR) arms predict is cheap → the
+surrogate + the sparse-adjoint agree the backward's relevant output is 4-dim/low-rank. DSL leg N/A.
