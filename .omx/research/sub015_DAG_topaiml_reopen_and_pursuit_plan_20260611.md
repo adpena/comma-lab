@@ -17459,3 +17459,27 @@ low-rank? Lexing-Ying PDO theory says the off-diagonal is low-rank); (3) SKIP at
 (#396). The #484 pre-SE whole-teacher surrogate remains the orthogonal hedge (replaces fwd AND bwd). DSL leg
 N/A. All conditional on the in-loop 82% (timer owed). CONVERGENCE with #485 (decision-quotient 4-dim = the
 low-rank output subspace the flagship + BCR predict is cheap).
+
+---
+
+## FEED-pre-se-locus-20260713 (#484 DONE — WIDER-family-KILL on strict single-source tileability, reformulation LIVE)
+
+Research-only. Pointer UNMOVED. n600 real (480 inherited exact + 120 fresh heldout costates; 40/40
+Moore-Penrose certs, 13 tests). Memo `pre_se_locus_20260713.md`; own DAG FEED `pre_se_locus_DAG_FEED_20260713.md`;
+formulation `src/tac/scorer_surrogate/pre_se_locus_20260713.py`; eq `src/tac/canonical_equations/pre_se_locus_20260713.py`.
+The Round-5 surviving reformulation (block2/3 PRE-SE feature locus) MEASURED:
+- block2-pre-SE retained mass @4.70% = 0.202 convex / 0.274 nonlinear — FAIL vs 0.47.
+- block3-pre-SE = 0.093 / 0.313 — FAIL. Tileable = **N** (KEY: the hooks are before their OWN SE but inherit
+  **4/7 UPSTREAM SE global reductions** → strict end-to-end tileability falsified).
+- pre-SE cut FLOP cost: block2 1.50 GMAC (3.79%), block3 2.66 GMAC (6.70%).
+verdict: **WIDER-family-KILL**, verdict_scope = FAMILY × TESTED-SINGLE-SOURCE-LOCI × FIXED-REPLAY ×
+STRICT-END-TO-END-RGB-TILEABILITY — NOT a paradigm kill. Untested formulations / reformulation queue (the
+cheap-teacher paradigm stays INTACT): (a) **tileable-MODULO-CHEAP-GLOBALS** — compute the ~11 upstream SE
+globals ONCE full-frame (cheap scalars; global-pool overhead measured 0.65-0.84%) + broadcast to
+independently-tiled local convs; the conv is the bottleneck, not the globals, so paying them once preserves
+the tile economics — the STRICT framing wrongly discarded this; (b) **MULTI-SOURCE** composition
+(block2+block3+shallow jointly) vs the tested single loci; (c) **DECODER-surrogate** — the decoder is 73.6%
+of FLOPs (p0_checkpoint); a tileable surrogate of the DECODER (not encoder features) is untested; (d) family
+boundary: the whole-teacher DISTILLED student (#455) needs no tileability at all. DSL leg N/A (measurement).
+The #484 hedge for the 82%-backward pivot is thus NOT dead — reformulation (a) is the live reopen. #484 closed
+as measured; reopen-(a) queued.
