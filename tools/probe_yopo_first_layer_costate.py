@@ -51,6 +51,10 @@ VIDEO_SHA256 = "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9
 VIDEO_BYTES = 37_545_489
 K_VALUES = (1, 2, 4)
 SCHEMA = "yopo_first_layer_costate_probe.v2"
+REGISTERED_VERDICT_SCOPE = (
+    "n=1 pair0 early/boundary/late saved-regime replay on macOS-CPU advisory; measured first-block split; "
+    "K={1,2,4}; event-conditioned CE-decrease+d_seg-nonworsening fractional-recess control law only"
+)
 SAME_FRAME_TEACHER_CE_PATH_MAX_FLOAT32_ULP = 4
 SAME_FRAME_TEACHER_CE_PATH_FLOOR_ANCHOR = {
     "status": "MEASURED",
@@ -181,17 +185,142 @@ def _teacher_label_path_floor_canary() -> dict[str, Any]:
     }
 
 
+_SOURCE_PATHS = (
+    "tools/probe_yopo_first_layer_costate.py",
+    "src/tac/cuda_levelset_training.py",
+    "src/tac/boundary_math/seg_core.py",
+    "src/tac/boundary_math/segnet_gradient_replacement.py",
+    "src/tac/local_acceleration/torch_levelset_inflate.py",
+    "src/tac/witness_annulus_metrics.py",
+    "tools/dash_comb_probe_n600.py",
+)
+
+
 def _source_custody() -> dict[str, dict[str, Any]]:
-    sources = (
-        REPO / "tools/probe_yopo_first_layer_costate.py",
-        REPO / "src/tac/cuda_levelset_training.py",
-        REPO / "src/tac/boundary_math/seg_core.py",
-        REPO / "src/tac/boundary_math/segnet_gradient_replacement.py",
-        REPO / "src/tac/local_acceleration/torch_levelset_inflate.py",
-        REPO / "src/tac/witness_annulus_metrics.py",
-        REPO / "tools/dash_comb_probe_n600.py",
+    return {
+        relative: {
+            "sha256": _sha256(REPO / relative),
+            "bytes": (REPO / relative).stat().st_size,
+        }
+        for relative in _SOURCE_PATHS
+    }
+
+
+def _atomic_write_bytes(path: Path, payload: bytes) -> None:
+    """Atomically persist small byte evidence with a durable directory entry."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+        _fsync_directory(path.parent)
+    finally:
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+
+
+def _source_reconstruction_receipt(
+    *,
+    output_dir: Path,
+    base_git_head: str,
+    source_custody: dict[str, dict[str, Any]],
+    persist_patch: bool = True,
+) -> dict[str, Any]:
+    """Bind dirty launch bytes to a committed base plus an exact git patch."""
+    if not base_git_head:
+        raise RuntimeError("source reconstruction requires a recorded git HEAD")
+    for relative in source_custody:
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "--", relative],
+            cwd=REPO,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if tracked.returncode != 0:
+            raise RuntimeError(f"source reconstruction refuses untracked source {relative!r}")
+    patch_result = subprocess.run(
+        ["git", "diff", "--binary", "--no-ext-diff", base_git_head, "--", *source_custody],
+        cwd=REPO,
+        capture_output=True,
+        check=False,
     )
-    return {str(path.relative_to(REPO)): {"sha256": _sha256(path), "bytes": path.stat().st_size} for path in sources}
+    if patch_result.returncode != 0:
+        raise RuntimeError(
+            "source reconstruction git diff failed: "
+            + patch_result.stderr.decode("utf-8", errors="replace").strip()
+        )
+    patch_path = output_dir / "source_reconstruction.patch"
+    if persist_patch and patch_path.exists():
+        raise RuntimeError("fresh launch found orphaned source patch evidence; refusing overwrite")
+    with tempfile.TemporaryDirectory(prefix=".yopo_source_reconstruction.") as temporary:
+        reconstruction_root = Path(temporary)
+        for relative in source_custody:
+            base_blob = subprocess.run(
+                ["git", "show", f"{base_git_head}:{relative}"],
+                cwd=REPO,
+                capture_output=True,
+                check=False,
+            )
+            if base_blob.returncode != 0:
+                raise RuntimeError(
+                    f"source reconstruction cannot read base source {relative!r}: "
+                    + base_blob.stderr.decode("utf-8", errors="replace").strip()
+                )
+            reconstructed_path = reconstruction_root / relative
+            reconstructed_path.parent.mkdir(parents=True, exist_ok=True)
+            _atomic_write_bytes(reconstructed_path, base_blob.stdout)
+        if patch_result.stdout:
+            apply_patch = subprocess.run(
+                ["git", "apply", "--no-index", "--binary", "-"],
+                cwd=reconstruction_root,
+                input=patch_result.stdout,
+                capture_output=True,
+                check=False,
+            )
+            if apply_patch.returncode != 0:
+                raise RuntimeError(
+                    "source reconstruction isolated-tree apply failed: "
+                    + apply_patch.stderr.decode("utf-8", errors="replace").strip()
+                )
+        for relative, custody in source_custody.items():
+            reconstructed_path = reconstruction_root / relative
+            if (
+                not reconstructed_path.is_file()
+                or reconstructed_path.stat().st_size != custody["bytes"]
+                or _sha256(reconstructed_path) != custody["sha256"]
+            ):
+                raise RuntimeError(f"reconstructed source at {relative!r} does not match launch custody")
+    if persist_patch:
+        _atomic_write_bytes(patch_path, patch_result.stdout)
+    elif not patch_path.is_file() or patch_path.read_bytes() != patch_result.stdout:
+        raise RuntimeError("resume source reconstruction patch differs; original evidence left untouched")
+    reconstruction_kind = (
+        "committed_base_plus_binary_patch" if patch_result.stdout else "committed_base_exact"
+    )
+    try:
+        command_patch_path = patch_path.relative_to(REPO)
+    except ValueError:
+        command_patch_path = patch_path
+    return {
+        "status": "PASS",
+        "base_git_head": base_git_head,
+        "patch": _file_custody(patch_path),
+        "patch_format": "git binary diff",
+        "reconstruction_kind": reconstruction_kind,
+        "source_sha256": {relative: row["sha256"] for relative, row in source_custody.items()},
+        "canary": "isolated-tree reconstruction with exact byte-count and SHA-256 equality for every source",
+        "reconstruction_command": (
+            f"git checkout --detach {base_git_head} && git apply {command_patch_path}"
+            if patch_result.stdout
+            else f"git checkout --detach {base_git_head}"
+        ),
+    }
 
 
 def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
@@ -213,7 +342,8 @@ def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
 
 
 _CLEANUP_REPRODUCIBILITY_CONTEXT = (
-    "receipt.config + receipt.runtime_provenance.argv + receipt.inputs + receipt.source_custody"
+    "receipt.config + receipt.runtime_provenance.argv + receipt.inputs + receipt.source_custody + "
+    "receipt.source_reconstruction"
 )
 _CLEANUP_STATUSES = {
     "CERTIFIED_REBUILDABLE_SCRATCH_PENDING_REMOVAL",
@@ -331,27 +461,68 @@ def _require_active_scratch_custody(arm: dict[str, Any], scratch_path: Path) -> 
     return pending_cleanup, removed_cleanup
 
 
+def _reconcile_removed_scratch_metadata(
+    *,
+    receipt_path: Path,
+    receipt: dict[str, Any],
+    arm: dict[str, Any],
+    scratch_path: Path,
+    state_path: Path,
+) -> bool:
+    """Complete the crash-recoverable metadata half of certified removal."""
+    _pending_cleanup, removed_cleanup = _require_active_scratch_custody(arm, scratch_path)
+    if not removed_cleanup or arm.get("active_bank") is None:
+        return False
+    if scratch_path.exists():
+        raise RuntimeError("removed scratch cleanup certificate still has live bytes")
+    # State is cleared first.  Until the receipt replacement lands, its durable
+    # active-bank pointer keeps the removed certificate verifiable on resume.
+    _clear_active_bank_in_state(state_path)
+    arm["active_bank"] = None
+    _atomic_write(receipt_path, receipt)
+    return True
+
+
 def _reconcile_terminal_arm_cleanup(
     *,
     receipt_path: Path,
     receipt: dict[str, Any],
     arm: dict[str, Any],
     scratch_path: Path,
+    state_path: Path,
 ) -> bool:
     """Finish certified scratch cleanup before skipping a terminal arm."""
-    if arm.get("status") not in {"NO_GO_NON_DESCENT", "NO_GO_PROVIDER_FALLBACK"}:
+    if arm.get("status") not in {
+        "NO_GO_NON_DESCENT",
+        "NO_GO_PROVIDER_FALLBACK",
+        "BLOCKED_CUSTODY_DRIFT",
+    }:
         return False
     pending_cleanup, _removed_cleanup = _require_active_scratch_custody(arm, scratch_path)
     if scratch_path.exists() or pending_cleanup:
+        last_step = arm.get("steps", [])[-1] if arm.get("steps") else {}
+        if arm.get("status") == "BLOCKED_CUSTODY_DRIFT":
+            reason = "live decision custody drift selected exact-teacher safety fallback; scientific arm blocked"
+        elif arm.get("status") == "NO_GO_PROVIDER_FALLBACK":
+            reason = "provider rejection selected the exact-teacher fallback; retired bank is rebuildable"
+        elif last_step.get("fallback_to_full_teacher") is True:
+            reason = "candidate non-descent selected the exact-teacher reference; retired bank is rebuildable"
+        else:
+            reason = "no admissible descending candidate; arm terminated without a parameter update"
         _certify_then_remove_scratch(
             receipt_path=receipt_path,
             receipt=receipt,
             arm=arm,
             scratch_path=scratch_path,
-            reason="adjudicated arm fell back to its already-custodied exact teacher",
+            reason=reason,
         )
-    arm["active_bank"] = None
-    _atomic_write(receipt_path, receipt)
+    _reconcile_removed_scratch_metadata(
+        receipt_path=receipt_path,
+        receipt=receipt,
+        arm=arm,
+        scratch_path=scratch_path,
+        state_path=state_path,
+    )
     return True
 
 
@@ -457,6 +628,7 @@ def _provider_or_full_teacher_fallback(
     started = time.perf_counter()
     try:
         candidate, metadata = provider(**provider_kwargs)
+        metadata = {**metadata, "selected_mode": "yopo_first_layer_costate"}
     except (OSError, TypeError, ValueError, RuntimeError) as exc:
         return (
             exact_costate,
@@ -509,12 +681,84 @@ def _arm_ready_for_success_finalization(arm: dict[str, Any], *, expected_steps: 
     )
 
 
+def _derived_step_non_descent(step: dict[str, Any]) -> bool | None:
+    try:
+        current_ce = float(step["exact_teacher_ce"])
+        current_dseg = float(step["exact_teacher_dseg"])
+        candidate_ce = float(step["candidate_ce"])
+        candidate_dseg = float(step["candidate_dseg"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    values = (current_ce, current_dseg, candidate_ce, candidate_dseg)
+    if not all(np.isfinite(value) for value in values):
+        return None
+    return candidate_ce >= current_ce or candidate_dseg > current_dseg
+
+
+def _derived_step_regret(step: dict[str, Any]) -> tuple[float, float] | None:
+    try:
+        candidate_ce = float(step["candidate_ce"])
+        candidate_dseg = float(step["candidate_dseg"])
+        reference_ce = float(step["exact_reference_ce"])
+        reference_dseg = float(step["exact_reference_dseg"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    values = (candidate_ce, candidate_dseg, reference_ce, reference_dseg)
+    if not all(np.isfinite(value) for value in values):
+        return None
+    return candidate_ce - reference_ce, candidate_dseg - reference_dseg
+
+
+def _arm_measurement_control_failures(arm: dict[str, Any]) -> list[str]:
+    """Re-derive arm controls from step evidence instead of trusting its cache."""
+    k_value = int(arm["K"])
+    steps = arm.get("steps", [])
+    failures: list[str] = []
+    if not steps:
+        return ["missing step evidence"]
+    for index, step in enumerate(steps):
+        controls = step.get("controls", {})
+        derived_non_descent = _derived_step_non_descent(step)
+        if derived_non_descent is None or step.get("candidate_non_descent") is not derived_non_descent:
+            failures.append(f"step {index} cached descent flag differs from CE+d_seg evidence")
+        derived_regret = _derived_step_regret(step)
+        if derived_regret is None:
+            failures.append(f"step {index} exact-reference regret evidence is missing or nonfinite")
+        elif (
+            step.get("ce_regret_vs_exact_reference") != derived_regret[0]
+            or step.get("dseg_regret_vs_exact_reference") != derived_regret[1]
+        ):
+            failures.append(f"step {index} cached regret differs from detailed evidence")
+        provider_mode = step.get("provider_metadata", {}).get("selected_mode")
+        derived_fallback = provider_mode == "full_teacher_fallback"
+        if not isinstance(provider_mode, str) or step.get("provider_fallback") is not derived_fallback:
+            failures.append(f"step {index} cached provider fallback differs from provider evidence")
+        if step.get("timing_order_canary", {}).get("status") != "PASS":
+            failures.append(f"step {index} timing-order canary failed")
+        if controls.get("teacher_label_path_agreement", {}).get("status") != "PASS":
+            failures.append(f"step {index} teacher-label-path canary failed")
+        if controls.get("sign_reversed_behavioral_negative", {}).get("status") != "PASS":
+            failures.append(f"step {index} sign-reversed negative control failed")
+        if step.get("refresh") is True:
+            refresh_control = controls.get("refresh_exact_positive_canary") or {}
+            if refresh_control.get("status") != "MEASURED" or refresh_control.get("costate_max_abs") != 0.0:
+                failures.append(f"step {index} refresh exact positive control failed")
+        if k_value == 1:
+            k1_control = controls.get("K1_exact_refresh_positive_canary") or {}
+            if k1_control.get("status") != "MEASURED" or k1_control.get("costate_max_abs") != 0.0:
+                failures.append(f"step {index} K1 exact positive control failed")
+    if max(int(step.get("bank_age_steps", -1)) for step in steps) < k_value - 1:
+        failures.append("full K-1 age horizon was not exercised")
+    return failures
+
+
 def _admission(regime_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """No invented cosine threshold: descent and matching measured K knees decide."""
     knees: dict[str, int] = {}
     blockers: list[str] = []
     falsified_cadences: dict[str, list[int]] = {}
     falsifier_reasons: dict[str, list[str]] = {}
+    derived_paretos: dict[str, dict[str, Any]] = {}
     for regime in REGIMES:
         row = regime_rows.get(regime)
         if not row or row.get("status") != "MEASURED":
@@ -531,27 +775,47 @@ def _admission(regime_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
                 falsified_cadences.setdefault(regime, []).append(k_value)
                 falsifier_reasons.setdefault(regime, []).append(f"K={k_value} terminated as {arm['status']}")
                 continue
-            if any(step.get("candidate_non_descent") is True for step in steps):
+            if any(_derived_step_non_descent(step) is not False for step in steps):
                 falsified_cadences.setdefault(regime, []).append(k_value)
-                falsifier_reasons.setdefault(regime, []).append(f"K={k_value} recorded non-descent")
+                falsifier_reasons.setdefault(regime, []).append(f"K={k_value} detailed CE+d_seg evidence is non-descent")
                 continue
-            if any(step.get("provider_fallback") is True for step in steps):
+            if any(
+                step.get("provider_metadata", {}).get("selected_mode") == "full_teacher_fallback" for step in steps
+            ):
                 falsified_cadences.setdefault(regime, []).append(k_value)
-                falsifier_reasons.setdefault(regime, []).append(f"K={k_value} recorded full-teacher fallback")
+                falsifier_reasons.setdefault(regime, []).append(f"K={k_value} provider evidence records full-teacher fallback")
                 continue
             if arm.get("status") != "MEASURED":
                 blockers.append(f"{regime}: K={k_value} is not a completed MEASURED arm")
                 continue
-            if arm.get("controls", {}).get("status") != "PASS":
-                blockers.append(f"{regime}: K={k_value} measurement controls did not pass")
+            detailed_control_failures = _arm_measurement_control_failures(arm)
+            if (
+                arm.get("controls", {}).get("status") != "PASS"
+                or arm.get("controls", {}).get("full_age_horizon_exercised") is not True
+                or detailed_control_failures
+            ):
+                falsified_cadences.setdefault(regime, []).append(k_value)
+                detail = "; ".join(detailed_control_failures) or "cached arm control status failed"
+                falsifier_reasons.setdefault(regime, []).append(
+                    f"K={k_value} measurement controls did not pass: {detail}"
+                )
                 continue
-            if arm.get("controls", {}).get("full_age_horizon_exercised") is not True:
-                blockers.append(f"{regime}: K={k_value} did not reach bank age K-1")
         controls = row.get("controls", {})
-        if controls.get("status") != "PASS":
-            blockers.append(f"{regime}: positive/negative measurement controls did not pass")
+        if not controls:
+            blockers.append(f"{regime}: regime measurement controls are missing")
             continue
-        pareto = row.get("pareto", {})
+        if controls.get("status") != "PASS":
+            blockers.append(f"{regime}: regime measurement controls did not pass")
+        provider_canary_pass = row.get("provider_negative_canary", {}).get("status") == "MEASURED_REJECTED"
+        if controls.get("provider_forged_split_negative") is not True or not provider_canary_pass:
+            for k_value in K_VALUES:
+                if k_value not in falsified_cadences.setdefault(regime, []):
+                    falsified_cadences[regime].append(k_value)
+                    falsifier_reasons.setdefault(regime, []).append(
+                        f"K={k_value} provider forged-split negative canary did not pass"
+                    )
+        pareto = _pareto_knee(row.get("arms", []))
+        derived_paretos[regime] = pareto
         if not pareto.get("pareto_nondominated_K") or pareto.get("pareto_knee_K") is None:
             reasons = pareto.get("reason") or ["no measured non-dominated speed/regret arm"]
             if isinstance(reasons, str):
@@ -560,17 +824,18 @@ def _admission(regime_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
             blockers.append(f"{regime}: {detail}")
             continue
         knees[regime] = int(pareto["pareto_knee_K"])
+    falsified_cadences = {regime: sorted(set(values)) for regime, values in falsified_cadences.items()}
     fully_falsified_regimes = [regime for regime in REGIMES if set(falsified_cadences.get(regime, [])) == set(K_VALUES)]
     if fully_falsified_regimes:
         return {
             "status": "NO-GO",
             "reason": [
-                f"{regime}: every registered cadence recorded non-descent or provider fallback"
+                f"{regime}: every registered cadence recorded non-descent, provider fallback, or failed canary/horizon"
                 for regime in fully_falsified_regimes
             ],
             "pareto_knee_by_regime": knees,
             "falsified_cadences_by_regime": falsified_cadences,
-            "verdict_scope": "the measured first-block split and K={1,2,4} cadence set only",
+            "verdict_scope": REGISTERED_VERDICT_SCOPE,
         }
     if blockers:
         return {
@@ -586,7 +851,7 @@ def _admission(regime_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
             "reason": ["Pareto knee differs across regimes"],
             "pareto_knee_by_regime": knees,
             "falsified_cadences_by_regime": falsified_cadences,
-            "verdict_scope": "the measured cadence-invariance formulation only",
+            "verdict_scope": REGISTERED_VERDICT_SCOPE,
         }
     selected_k = next(iter(knees.values()))
     if selected_k <= 1:
@@ -596,7 +861,7 @@ def _admission(regime_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
             "pareto_knee_by_regime": knees,
             "selected_K": selected_k,
             "falsified_cadences_by_regime": falsified_cadences,
-            "verdict_scope": "the measured first-block split and K={1,2,4} cadence set only",
+            "verdict_scope": REGISTERED_VERDICT_SCOPE,
         }
     selected_failures = [
         f"{regime}: {reason}"
@@ -611,12 +876,12 @@ def _admission(regime_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
             "pareto_knee_by_regime": knees,
             "selected_K": selected_k,
             "falsified_cadences_by_regime": falsified_cadences,
-            "verdict_scope": "the selected cadence at the measured first-block split only",
+            "verdict_scope": REGISTERED_VERDICT_SCOPE,
         }
     speeds: dict[str, float] = {}
     speed_lower_bounds: dict[str, float] = {}
-    for regime, row in regime_rows.items():
-        pareto_row = next(item for item in row["pareto"]["rows"] if int(item["K"]) == selected_k)
+    for regime in REGIMES:
+        pareto_row = next(item for item in derived_paretos[regime]["rows"] if int(item["K"]) == selected_k)
         speeds[regime] = float(pareto_row["measured_operational_speedup_vs_K1"])
         speed_lower_bounds[regime] = float(pareto_row["conservative_speedup_lower_bound_vs_K1"])
     if any(speed <= 1.0 for speed in speed_lower_bounds.values()):
@@ -630,7 +895,7 @@ def _admission(regime_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
             "measured_operational_speedup_vs_K1_by_regime": speeds,
             "conservative_speedup_lower_bound_vs_K1_by_regime": speed_lower_bounds,
             "falsified_cadences_by_regime": falsified_cadences,
-            "verdict_scope": "the measured operational component path and within-run timing floor only",
+            "verdict_scope": REGISTERED_VERDICT_SCOPE,
         }
     return {
         "status": "GO",
@@ -643,7 +908,7 @@ def _admission(regime_rows: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "measured_operational_speedup_vs_K1_by_regime": speeds,
         "conservative_speedup_lower_bound_vs_K1_by_regime": speed_lower_bounds,
         "falsified_cadences_by_regime": falsified_cadences,
-        "verdict_scope": "n=1 pair0 early/boundary/late saved-regime replay only",
+        "verdict_scope": REGISTERED_VERDICT_SCOPE,
     }
 
 
@@ -691,13 +956,21 @@ def _pareto_knee(arms: list[dict[str, Any]]) -> dict[str, Any]:
         if not steps or max(int(step.get("bank_age_steps", -1)) for step in steps) < k_value - 1:
             excluded_underexercised.append(k_value)
             continue
-        if arm.get("controls", {}).get("status") != "PASS":
+        if (
+            arm.get("controls", {}).get("status") != "PASS"
+            or arm.get("controls", {}).get("full_age_horizon_exercised") is not True
+            or _arm_measurement_control_failures(arm)
+        ):
             excluded_control_failure.append(k_value)
             continue
-        if not steps or any(step.get("candidate_non_descent") is not False for step in steps):
+        if not steps or any(_derived_step_non_descent(step) is not False for step in steps):
             excluded_non_descent.append(k_value)
             continue
-        summary = arm["summary"]
+        regrets = [_derived_step_regret(step) for step in steps]
+        if any(regret is None for regret in regrets):
+            excluded_control_failure.append(k_value)
+            continue
+        typed_regrets = [regret for regret in regrets if regret is not None]
         arm_time, arm_lower, arm_upper = timing_support(arm)
         speedup = control_time / arm_time
         conservative_speedup_lower_bound = control_lower / arm_upper
@@ -712,8 +985,8 @@ def _pareto_knee(arms: list[dict[str, Any]]) -> dict[str, Any]:
                     "observed extrema expanded by two perf-counter ticks; "
                     "conservative lower bound is K1 lower / arm upper; across-seed variance UNKNOWN"
                 ),
-                "mean_ce_regret": float(summary["mean_ce_regret_vs_exact_reference"]),
-                "mean_dseg_regret": float(summary["mean_dseg_regret_vs_exact_reference"]),
+                "mean_ce_regret": float(np.mean([regret[0] for regret in typed_regrets])),
+                "mean_dseg_regret": float(np.mean([regret[1] for regret in typed_regrets])),
             }
         )
     front: list[dict[str, Any]] = []
@@ -769,10 +1042,19 @@ def _pareto_knee(arms: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _base_receipt(args: argparse.Namespace) -> dict[str, Any]:
+def _base_receipt(args: argparse.Namespace, *, persist_source_patch: bool = True) -> dict[str, Any]:
     _require_complete_horizon(args.steps)
     checkpoints = {name: CHECKPOINT_DIR / filename for name, filename in REGIMES.items()}
-    return {
+    git_head = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPO,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    ).stdout.strip()
+    source_custody = _source_custody()
+    receipt = {
         "schema": SCHEMA,
         "created_at_utc": datetime.now(UTC).isoformat(),
         "authority": {
@@ -819,15 +1101,7 @@ def _base_receipt(args: argparse.Namespace) -> dict[str, Any]:
             "platform": platform.platform(),
             "machine": platform.machine(),
             "deterministic_algorithms": True,
-            "git_head": subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=REPO,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            ).stdout.strip()
-            or None,
+            "git_head": git_head or None,
         },
         "inputs": {
             "video": _file_custody(VIDEO),
@@ -835,7 +1109,7 @@ def _base_receipt(args: argparse.Namespace) -> dict[str, Any]:
             "gt_cache": _file_custody(GT_CACHE),
             "checkpoints": {name: _file_custody(path) for name, path in checkpoints.items()},
         },
-        "source_custody": _source_custody(),
+        "source_custody": source_custody,
         "split": {
             "name": "efficientnet_b2_block0_provider_cut",
             "prefix": ["encoder.model.conv_stem", "encoder.model.bn1", "encoder.model.blocks[0]"],
@@ -850,6 +1124,22 @@ def _base_receipt(args: argparse.Namespace) -> dict[str, Any]:
         "regimes": {},
         "admission": {"status": "PENDING"},
     }
+    receipt["source_reconstruction"] = _source_reconstruction_receipt(
+        output_dir=args.output_dir,
+        base_git_head=git_head,
+        source_custody=source_custody,
+        persist_patch=persist_source_patch,
+    )
+    return receipt
+
+
+def _source_patch_persistence_for_run(*, resume: bool, receipt: dict[str, Any] | None) -> bool:
+    """Permit patch creation only for an unequivocally fresh launch."""
+    if resume:
+        if receipt is None:
+            raise RuntimeError("resume receipt is missing; original source patch evidence left untouched")
+        return False
+    return True
 
 
 def _atomic_savez(path: Path, **arrays: Any) -> None:
@@ -872,11 +1162,28 @@ def _atomic_savez(path: Path, **arrays: Any) -> None:
 
 def _terminal_status_for_step(step_row: dict[str, Any]) -> str | None:
     """Use one deterministic terminal precedence in live and resumed paths."""
+    if step_row.get("custody_drift_fields"):
+        return "BLOCKED_CUSTODY_DRIFT"
     if step_row.get("provider_fallback") is True:
         return "NO_GO_PROVIDER_FALLBACK"
     if step_row.get("candidate_non_descent") is True:
         return "NO_GO_NON_DESCENT"
     return None
+
+
+def _resume_theta_custody(theta: Any) -> dict[str, Any]:
+    array = np.ascontiguousarray(np.asarray(theta, np.float32))
+    return {
+        "dtype": "float32",
+        "shape": list(array.shape),
+        "bytes": int(array.nbytes),
+        "sha256": hashlib.sha256(array.tobytes(order="C")).hexdigest(),
+    }
+
+
+def _validate_resume_theta(theta: Any, step_row: dict[str, Any]) -> None:
+    if step_row.get("resume_theta_custody") != _resume_theta_custody(theta):
+        raise RuntimeError("resume theta custody differs from the durable step receipt")
 
 
 def _recover_pending_step(arm: dict[str, Any], state_path: Path) -> tuple[np.ndarray, bool]:
@@ -895,6 +1202,7 @@ def _recover_pending_step(arm: dict[str, Any], state_path: Path) -> tuple[np.nda
     steps = arm["steps"]
     if pending_raw:
         pending = json.loads(pending_raw)
+        _validate_resume_theta(theta, pending)
         if next_step == len(steps) + 1 and int(pending["step"]) == len(steps):
             steps.append(pending)
             arm["active_bank"] = staged_active_bank
@@ -908,6 +1216,8 @@ def _recover_pending_step(arm: dict[str, Any], state_path: Path) -> tuple[np.nda
                 arm["status"] = terminal_status
             return theta, False
         raise RuntimeError("state pending-step record does not match receipt")
+    if steps:
+        _validate_resume_theta(theta, steps[-1])
     if next_step != len(steps) or staged_active_bank != arm.get("active_bank"):
         raise RuntimeError("state/receipt step or active-bank metadata mismatch")
     return theta, False
@@ -920,6 +1230,7 @@ def _stage_step_state(
     step_row: dict[str, Any],
     active_bank: dict[str, Any] | None,
 ) -> None:
+    step_row["resume_theta_custody"] = _resume_theta_custody(theta)
     _atomic_savez(
         state_path,
         theta=np.asarray(theta, np.float32),
@@ -937,6 +1248,53 @@ def _clear_staged_step_state(state_path: Path, theta: Any, next_step: int, activ
         pending_step_json=np.asarray(""),
         active_bank_json=np.asarray(json.dumps(active_bank, sort_keys=True, separators=(",", ":"))),
     )
+
+
+def _clear_active_bank_in_state(state_path: Path) -> None:
+    """Retire a removed scratch bank from the durable resume checkpoint."""
+    if not state_path.is_file():
+        raise RuntimeError(f"resume state is missing while retiring active bank: {state_path}")
+    with np.load(state_path, allow_pickle=False) as state:
+        theta = np.asarray(state["theta"], np.float32)
+        next_step = int(state["next_step"].item())
+        pending = str(state["pending_step_json"].item()) if "pending_step_json" in state.files else ""
+    if pending:
+        raise RuntimeError("cannot retire an active bank while a staged step is pending")
+    _clear_staged_step_state(state_path, theta, next_step, None)
+
+
+def _resumability_state_canary(
+    output_dir: Path, regime_rows: dict[str, dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    """Prove every terminal checkpoint has no stale scratch-bank pointer."""
+    rows: dict[str, dict[str, Any]] = {}
+    for regime in REGIMES:
+        for k_value in K_VALUES:
+            state_path = output_dir / "state" / f"{regime}_K{k_value}.npz"
+            if not state_path.is_file():
+                raise RuntimeError(f"terminal resumability checkpoint is missing: {state_path}")
+            with np.load(state_path, allow_pickle=False) as state:
+                theta = np.asarray(state["theta"], np.float32)
+                pending = str(state["pending_step_json"].item()) if "pending_step_json" in state.files else ""
+                active_raw = str(state["active_bank_json"].item()) if "active_bank_json" in state.files else ""
+                next_step = int(state["next_step"].item())
+            active = json.loads(active_raw) if active_raw else None
+            if pending or active is not None:
+                raise RuntimeError(f"terminal resume state retains transient metadata: {state_path}")
+            if regime_rows is not None:
+                arm = next(item for item in regime_rows[regime]["arms"] if int(item["K"]) == k_value)
+                if next_step != len(arm["steps"]) or not arm["steps"]:
+                    raise RuntimeError(f"terminal resume state step count differs from receipt: {state_path}")
+                _validate_resume_theta(theta, arm["steps"][-1])
+            rows[f"{regime}_K{k_value}"] = {
+                "path": str(state_path),
+                "sha256": _sha256(state_path),
+                "bytes": state_path.stat().st_size,
+                "next_step": next_step,
+                "pending_step_cleared": True,
+                "active_bank_cleared": True,
+            }
+    return {"status": "PASS", "states": rows}
 
 
 def _acquire_output_lock(output_dir: Path) -> int:
@@ -1096,13 +1454,17 @@ def _objective_fingerprint(
 
 
 def _decision_custody_changed(receipt: dict[str, Any], regime: str, live: dict[str, Any]) -> bool:
+    return bool(_decision_custody_drift_fields(receipt, regime, live))
+
+
+def _decision_custody_drift_fields(receipt: dict[str, Any], regime: str, live: dict[str, Any]) -> list[str]:
     expected = {
         "gt_sha256": receipt["inputs"]["gt_cache"]["sha256"],
         "segnet_sha256": receipt["inputs"]["segnet"]["sha256"],
         "checkpoint_sha256": receipt["inputs"]["checkpoints"][regime]["sha256"],
         "source_sha256": {name: row["sha256"] for name, row in receipt["source_custody"].items()},
     }
-    return live != expected
+    return sorted(key for key in expected if live.get(key) != expected[key])
 
 
 def _evaluate_teacher(segnet: Any, frame_nhwc: Any, labels: Any) -> tuple[float, float]:
@@ -1250,6 +1612,7 @@ def _validate_resume_custody(receipt: dict[str, Any], template: dict[str, Any]) 
         "config",
         "inputs",
         "source_custody",
+        "source_reconstruction",
         "split",
         "objective",
         "measurement_canaries",
@@ -1313,7 +1676,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         _release_output_lock(lock_fd)
         raise RuntimeError("output receipt already exists; choose a fresh content-bound output directory")
     receipt = _load_existing(receipt_path) if args.resume else None
-    template = _base_receipt(args)
+    try:
+        persist_source_patch = _source_patch_persistence_for_run(resume=args.resume, receipt=receipt)
+    except RuntimeError:
+        _release_output_lock(lock_fd)
+        raise
+    template = _base_receipt(args, persist_source_patch=persist_source_patch)
     if template["measurement_canaries"]["same_frame_teacher_label_path_float32_floor"]["status"] != "PASS":
         _release_output_lock(lock_fd)
         raise RuntimeError("same-frame teacher label-path floor canary failed before measurement")
@@ -1326,6 +1694,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     if receipt is None:
         receipt = template
+        _atomic_write(receipt_path, receipt)
     try:
         _validate_resume_custody(receipt, template)
     except RuntimeError:
@@ -1415,6 +1784,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     row["arms"].append(arm)
                 state_path = args.output_dir / "state" / f"{regime}_K{k_value}.npz"
                 scratch_path = args.output_dir / "scratch" / f"{regime}_K{k_value}_active_bank.npz"
+                _reconcile_removed_scratch_metadata(
+                    receipt_path=receipt_path,
+                    receipt=receipt,
+                    arm=arm,
+                    scratch_path=scratch_path,
+                    state_path=state_path,
+                )
                 if arm.get("status") in {"MEASURED", "BLOCKED"}:
                     continue
                 if _reconcile_terminal_arm_cleanup(
@@ -1422,6 +1798,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     receipt=receipt,
                     arm=arm,
                     scratch_path=scratch_path,
+                    state_path=state_path,
                 ):
                     continue
                 if state_path.is_file():
@@ -1437,6 +1814,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         receipt=receipt,
                         arm=arm,
                         scratch_path=scratch_path,
+                        state_path=state_path,
                     ):
                         continue
                 else:
@@ -1450,7 +1828,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     live_custody = _live_decision_custody(regime)
                     objective_context = _objective_fingerprint(row["objective_metadata"], receipt, live_custody)
                     scorer_fingerprint = live_custody["segnet_sha256"]
-                    decision_custody_changed = _decision_custody_changed(receipt, regime, live_custody)
+                    custody_drift_fields = _decision_custody_drift_fields(receipt, regime, live_custody)
                     operational_shared_seconds = time.perf_counter() - step_started
                     bank_write_seconds = 0.0
                     refresh_bank_capture_seconds = 0.0
@@ -1472,7 +1850,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     active = arm.get("active_bank")
                     provider_preflight_failure = None
                     provider_kwargs = None
-                    if decision_custody_changed:
+                    if custody_drift_fields:
                         provider_preflight_failure = f"ValueError: live objective/scorer custody changed: {json.dumps(live_custody, sort_keys=True)}"
                     elif refresh:
                         # The refresh creates the bank; no prior bank is required.
@@ -1750,6 +2128,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "status": "MEASURED",
                             "candidate_non_descent": True,
                             "provider_fallback": provider_fallback,
+                            "custody_drift_fields": custody_drift_fields,
                             "fallback_to_full_teacher": provider_fallback,
                             "terminal_stop_requires_no_parameter_update": True,
                             "blocker": "candidate anneal reached fp32 completion without CE+d_seg descent",
@@ -1904,6 +2283,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         "exact_reference_dseg": exact_reference_dseg,
                         "candidate_non_descent": candidate_non_descent,
                         "provider_fallback": provider_fallback,
+                        "custody_drift_fields": custody_drift_fields,
                         "fallback_to_full_teacher": provider_fallback or candidate_non_descent,
                         "ce_regret_vs_exact_reference": candidate_ce - exact_reference_ce,
                         "dseg_regret_vs_exact_reference": candidate_dseg - exact_reference_dseg,
@@ -2040,7 +2420,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             scratch_path=scratch_path,
                             reason="completed arm has durable state and receipt metadata",
                         )
-                    arm["active_bank"] = None
+                    _reconcile_removed_scratch_metadata(
+                        receipt_path=receipt_path,
+                        receipt=receipt,
+                        arm=arm,
+                        scratch_path=scratch_path,
+                        state_path=state_path,
+                    )
                     arm["status"] = "MEASURED"
                     positive_pass = bool(
                         all(
@@ -2137,12 +2523,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         },
                     }
                     _atomic_write(receipt_path, receipt)
-                if arm.get("status") in {"NO_GO_NON_DESCENT", "NO_GO_PROVIDER_FALLBACK"}:
+                if arm.get("status") in {
+                    "NO_GO_NON_DESCENT",
+                    "NO_GO_PROVIDER_FALLBACK",
+                    "BLOCKED_CUSTODY_DRIFT",
+                }:
                     _reconcile_terminal_arm_cleanup(
                         receipt_path=receipt_path,
                         receipt=receipt,
                         arm=arm,
                         scratch_path=scratch_path,
+                        state_path=state_path,
                     )
             terminal_arm_statuses = {
                 "MEASURED",
@@ -2177,6 +2568,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         receipt["peak_rss_bytes"] = _peak_rss_bytes()
         receipt["admission"] = _admission(receipt["regimes"])
         _atomic_write(receipt_path, receipt)
+    receipt["resumability_state_canary"] = _resumability_state_canary(args.output_dir, receipt["regimes"])
     receipt["completed_at_utc"] = datetime.now(UTC).isoformat()
     receipt["admission"] = _admission(receipt["regimes"])
     _atomic_write(receipt_path, receipt)

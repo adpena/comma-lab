@@ -22,7 +22,8 @@ SPEC.loader.exec_module(probe)
 def _regime(*, ks: tuple[int, ...], descent: bool = True) -> dict:
     row = {
         "status": "MEASURED",
-        "controls": {"status": "PASS"},
+        "controls": {"status": "PASS", "provider_forged_split_negative": True},
+        "provider_negative_canary": {"status": "MEASURED_REJECTED"},
         "arms": [
             {
                 "K": k,
@@ -30,9 +31,38 @@ def _regime(*, ks: tuple[int, ...], descent: bool = True) -> dict:
                 "steps": [
                     {
                         "candidate_non_descent": not descent,
+                        "provider_fallback": False,
+                        "provider_metadata": {
+                            "selected_mode": (
+                                "ordinary_exact_K1_control"
+                                if k == 1
+                                else "exact_refresh_from_banked_teacher"
+                                if step % k == 0
+                                else "yopo_first_layer_costate"
+                            )
+                        },
+                        "exact_teacher_ce": 1.0,
+                        "exact_teacher_dseg": 0.2,
+                        "candidate_ce": 0.9 if descent else 1.1,
+                        "candidate_dseg": 0.1 if descent else 0.3,
+                        "exact_reference_ce": (0.9 if descent else 1.1) - float(k - 1),
+                        "exact_reference_dseg": (0.1 if descent else 0.3) - float(k - 1),
+                        "ce_regret_vs_exact_reference": float(k - 1),
+                        "dseg_regret_vs_exact_reference": float(k - 1),
                         "bank_age_steps": step % k,
+                        "refresh": step % k == 0,
                         "timing_measured_seconds": {"operational_cycle": 10.0 / k},
-                        "controls": {"sign_reversed_behavioral_negative": {"status": "PASS"}},
+                        "timing_order_canary": {"status": "PASS"},
+                        "controls": {
+                            "teacher_label_path_agreement": {"status": "PASS"},
+                            "refresh_exact_positive_canary": (
+                                {"status": "MEASURED", "costate_max_abs": 0.0} if step % k == 0 else None
+                            ),
+                            "K1_exact_refresh_positive_canary": (
+                                {"status": "MEASURED", "costate_max_abs": 0.0} if k == 1 else None
+                            ),
+                            "sign_reversed_behavioral_negative": {"status": "PASS"},
+                        },
                     }
                     for step in range(max(k, 4))
                 ],
@@ -51,6 +81,16 @@ def _regime(*, ks: tuple[int, ...], descent: bool = True) -> dict:
     }
     row["pareto"] = probe._pareto_knee(row["arms"])
     return row
+
+
+def _set_arm_regret(arm: dict, ce_regret: float, dseg_regret: float) -> None:
+    for step in arm["steps"]:
+        step["exact_reference_ce"] = step["candidate_ce"] - ce_regret
+        step["exact_reference_dseg"] = step["candidate_dseg"] - dseg_regret
+        step["ce_regret_vs_exact_reference"] = ce_regret
+        step["dseg_regret_vs_exact_reference"] = dseg_regret
+    arm["summary"]["mean_ce_regret_vs_exact_reference"] = ce_regret
+    arm["summary"]["mean_dseg_regret_vs_exact_reference"] = dseg_regret
 
 
 def test_admission_requires_all_registered_regimes_and_matching_knee():
@@ -85,8 +125,7 @@ def test_admission_allows_clean_shared_knee_when_other_cadence_is_falsified():
             }
         ]
         surviving = next(arm for arm in row["arms"] if arm["K"] == 2)
-        surviving["summary"]["mean_ce_regret_vs_exact_reference"] = 0.0
-        surviving["summary"]["mean_dseg_regret_vs_exact_reference"] = 0.0
+        _set_arm_regret(surviving, 0.0, 0.0)
         row["pareto"] = probe._pareto_knee(row["arms"])
     verdict = probe._admission(rows)
     assert verdict["status"] == "GO"
@@ -114,23 +153,84 @@ def test_admission_refuses_when_selected_cadence_does_not_survive_every_regime()
 
 def test_admission_requires_measurement_canaries():
     rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
+    for arm in rows["early"]["arms"]:
+        arm["controls"]["status"] = "FAIL"
+    rows["early"]["controls"]["status"] = "FAIL"
+    rows["early"]["pareto"] = probe._pareto_knee(rows["early"]["arms"])
+    verdict = probe._admission(rows)
+    assert verdict["status"] == "NO-GO"
+    assert verdict["falsified_cadences_by_regime"]["early"] == [1, 2, 4]
+    assert "failed canary" in " ".join(verdict["reason"])
+
+
+def test_admission_never_goes_when_only_regime_control_status_fails():
+    rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
     rows["early"]["controls"]["status"] = "FAIL"
     verdict = probe._admission(rows)
     assert verdict["status"] == "NEEDS-MORE"
-    assert "controls" in " ".join(verdict["reason"])
+    assert "regime measurement controls did not pass" in " ".join(verdict["reason"])
+
+
+def test_admission_rederives_detailed_step_controls_and_pareto():
+    rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
+    expected = probe._admission(rows)
+    assert expected["status"] == "GO" and expected["selected_K"] == 2
+
+    for row in rows.values():
+        row["pareto"] = {
+            "pareto_nondominated_K": [4],
+            "pareto_knee_K": 4,
+            "rows": [
+                {
+                    "K": 4,
+                    "measured_operational_speedup_vs_K1": 999.0,
+                    "conservative_speedup_lower_bound_vs_K1": 999.0,
+                }
+            ],
+        }
+    assert probe._admission(rows) == expected
+
+    for row in rows.values():
+        for arm in row["arms"]:
+            arm["summary"]["mean_ce_regret_vs_exact_reference"] = -1_000_000.0
+            arm["summary"]["mean_dseg_regret_vs_exact_reference"] = -1_000_000.0
+    assert probe._admission(rows) == expected
+
+    selected = next(arm for arm in rows["early"]["arms"] if arm["K"] == 2)
+    selected["steps"][1]["controls"]["sign_reversed_behavioral_negative"]["status"] = "FAIL"
+    verdict = probe._admission(rows)
+    assert verdict["status"] != "GO"
+    assert 2 in verdict["falsified_cadences_by_regime"]["early"]
+
+    rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
+    for step in next(arm for arm in rows["early"]["arms"] if arm["K"] == 2)["steps"]:
+        step["candidate_ce"] = 2.0
+        step["candidate_dseg"] = 0.4
+    assert probe._admission(rows)["status"] != "GO"
+
+    rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
+    rows["early"]["provider_negative_canary"]["status"] = "FAIL"
+    assert probe._admission(rows)["status"] != "GO"
+
+
+def test_admission_classifies_underexercised_arm_as_falsified_cadence():
+    rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
+    underexercised = next(arm for arm in rows["early"]["arms"] if arm["K"] == 4)
+    underexercised["controls"]["full_age_horizon_exercised"] = False
+    rows["early"]["pareto"] = probe._pareto_knee(rows["early"]["arms"])
+    verdict = probe._admission(rows)
+    assert verdict["falsified_cadences_by_regime"]["early"] == [4]
 
 
 def test_pareto_knee_requires_measured_speed_regret_nondominance_not_max_descent_k():
     arms = _regime(ks=(1, 2, 4))["arms"]
     # K=4 is fast but loses on both regrets to K=2, so it is dominated even
     # though every arm descends. The knee follows the measured Pareto front.
-    arms[-1]["summary"]["mean_ce_regret_vs_exact_reference"] = 3.0
-    arms[-1]["summary"]["mean_dseg_regret_vs_exact_reference"] = 3.0
+    _set_arm_regret(arms[-1], 3.0, 3.0)
     arms[-1]["summary"]["mean_operational_cycle_seconds"] = 8.0
     for step in arms[-1]["steps"]:
         step["timing_measured_seconds"]["operational_cycle"] = 8.0
-    arms[-2]["summary"]["mean_ce_regret_vs_exact_reference"] = 1.0
-    arms[-2]["summary"]["mean_dseg_regret_vs_exact_reference"] = 1.0
+    _set_arm_regret(arms[-2], 1.0, 1.0)
     result = probe._pareto_knee(arms)
     assert result["pareto_nondominated_K"] == [1, 2]
     assert result["pareto_knee_K"] == 1
@@ -140,34 +240,25 @@ def test_pareto_knee_requires_measured_speed_regret_nondominance_not_max_descent
 def test_admission_rejects_k1_only_or_no_measured_whole_step_speedup():
     rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
     for row in rows.values():
-        row["pareto"] = {
-            "pareto_nondominated_K": [1],
-            "pareto_knee_K": 1,
-            "rows": [
-                {
-                    "K": 1,
-                    "measured_operational_speedup_vs_K1": 1.0,
-                    "conservative_speedup_lower_bound_vs_K1": 1.0,
-                }
-            ],
-        }
+        for arm in row["arms"]:
+            if arm["K"] > 1:
+                arm["status"] = "NO_GO_NON_DESCENT"
+                arm["steps"][0]["candidate_non_descent"] = True
     verdict = probe._admission(rows)
     assert verdict["status"] == "NO-GO"
     assert verdict["selected_K"] == 1
 
     rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
     for row in rows.values():
-        row["pareto"] = {
-            "pareto_nondominated_K": [2],
-            "pareto_knee_K": 2,
-            "rows": [
-                {
-                    "K": 2,
-                    "measured_operational_speedup_vs_K1": 10.0 / 11.0,
-                    "conservative_speedup_lower_bound_vs_K1": 0.9,
-                }
-            ],
-        }
+        k1 = next(arm for arm in row["arms"] if arm["K"] == 1)
+        k2 = next(arm for arm in row["arms"] if arm["K"] == 2)
+        k4 = next(arm for arm in row["arms"] if arm["K"] == 4)
+        for step in k2["steps"]:
+            step["timing_measured_seconds"]["operational_cycle"] = 11.0
+        _set_arm_regret(k1, 1.0, 1.0)
+        _set_arm_regret(k2, 0.0, 0.0)
+        k4["status"] = "NO_GO_NON_DESCENT"
+        k4["steps"][0]["candidate_non_descent"] = True
     verdict = probe._admission(rows)
     assert verdict["status"] == "NO-GO"
     assert verdict["selected_K"] == 2
@@ -243,6 +334,26 @@ def test_provider_rejection_automatically_selects_exact_teacher_fallback_and_bin
     assert candidate is exact
     assert fallback is True
     assert "bank vanished after is_file" in metadata["provider_failure"]
+
+
+def test_provider_success_records_the_selected_yopo_mode():
+    candidate = object()
+    provider_metadata = {"bank_sha256": "a" * 64}
+
+    returned, metadata, elapsed, fallback = probe._provider_or_full_teacher_fallback(
+        provider=lambda **_kwargs: (candidate, provider_metadata),
+        provider_kwargs={"current_step": 1},
+        exact_costate=None,
+    )
+
+    assert returned is candidate
+    assert fallback is False
+    assert elapsed >= 0.0
+    assert metadata == {
+        "bank_sha256": "a" * 64,
+        "selected_mode": "yopo_first_layer_costate",
+    }
+    assert provider_metadata == {"bank_sha256": "a" * 64}
 
 
 def test_pareto_timing_lower_bound_contains_skewed_observed_support():
@@ -371,6 +482,23 @@ def test_live_decision_custody_comparison_is_fail_closed():
     assert probe._decision_custody_changed(receipt, "early", live) is False
     live["source_sha256"]["src/tac/boundary_math/seg_core.py"] = "f" * 64
     assert probe._decision_custody_changed(receipt, "early", live) is True
+    assert probe._decision_custody_drift_fields(receipt, "early", live) == ["source_sha256"]
+
+
+def test_custody_drift_blocks_scientific_admission_instead_of_falsifying_cadence():
+    step = {
+        "provider_fallback": True,
+        "candidate_non_descent": False,
+        "custody_drift_fields": ["source_sha256"],
+    }
+    assert probe._terminal_status_for_step(step) == "BLOCKED_CUSTODY_DRIFT"
+    rows = {name: _regime(ks=(1, 2, 4)) for name in probe.REGIMES}
+    rows["early"]["status"] = "BLOCKED"
+    rows["early"]["arms"][0]["status"] = "BLOCKED_CUSTODY_DRIFT"
+    rows["early"]["arms"][0]["steps"] = [step]
+    verdict = probe._admission(rows)
+    assert verdict["status"] == "NEEDS-MORE"
+    assert "early" not in verdict["falsified_cadences_by_regime"]
 
 
 def test_fresh_teacher_timer_includes_bound_ce_and_dseg_labels():
@@ -600,6 +728,23 @@ def test_pending_atomic_state_promotes_one_unwritten_step_on_resume(tmp_path):
     assert promoted_again is False
 
 
+def test_resume_rejects_theta_tamper_with_unchanged_step_and_bank_metadata(tmp_path):
+    import numpy as np
+
+    bank = {"sha256": "a" * 64, "source_step": 0}
+    step = {"step": 0, "status": "MEASURED", "candidate_non_descent": False, "refresh": True}
+    arm = {"steps": [], "active_bank": bank}
+    state = tmp_path / "state.npz"
+    expected_theta = np.asarray([1.0, 2.0], np.float32)
+    probe._stage_step_state(state, expected_theta, 1, step, bank)
+    theta, promoted = probe._recover_pending_step(arm, state)
+    assert promoted is True
+    probe._clear_staged_step_state(state, theta, 1, bank)
+    probe._clear_staged_step_state(state, np.asarray([999.0, -777.0], np.float32), 1, bank)
+    with pytest.raises(RuntimeError, match="theta custody"):
+        probe._recover_pending_step(arm, state)
+
+
 @pytest.mark.parametrize(
     ("provider_fallback", "candidate_non_descent", "expected_status"),
     [
@@ -712,7 +857,47 @@ def test_cleanup_without_rebuild_proof_keeps_bytes(tmp_path):
     assert scratch.read_bytes() == b"keep-me"
 
 
+def test_non_descent_cleanup_does_not_claim_teacher_fallback(tmp_path):
+    import numpy as np
+
+    scratch = tmp_path / "bank.npz"
+    scratch.write_bytes(b"terminal-bank")
+    active = {
+        "path": str(scratch),
+        "sha256": probe._sha256(scratch),
+        "rebuild": "fresh exact teacher plus recorded code-row state",
+    }
+    arm = {
+        "status": "NO_GO_NON_DESCENT",
+        "steps": [{"fallback_to_full_teacher": False}],
+        "active_bank": active,
+        "cleanup": [],
+    }
+    receipt = {
+        "config": {},
+        "runtime_provenance": {"argv": ["probe"]},
+        "inputs": {},
+        "source_custody": {},
+        "arm": arm,
+    }
+    receipt_path = tmp_path / "receipt.json"
+    state_path = tmp_path / "state.npz"
+    probe._clear_staged_step_state(state_path, np.asarray([1.0], np.float32), 1, active)
+    assert probe._reconcile_terminal_arm_cleanup(
+        receipt_path=receipt_path,
+        receipt=receipt,
+        arm=arm,
+        scratch_path=scratch,
+        state_path=state_path,
+    )
+    reason = probe._load_existing(receipt_path)["arm"]["cleanup"][0]["reason"]
+    assert reason == "no admissible descending candidate; arm terminated without a parameter update"
+    assert "fell back" not in reason
+
+
 def test_resumed_terminal_arm_reconciles_cleanup_before_skip(tmp_path):
+    import numpy as np
+
     scratch = tmp_path / "bank.npz"
     scratch.write_bytes(b"terminal-bank")
     rebuild = "fresh exact teacher plus recorded code-row state"
@@ -729,17 +914,23 @@ def test_resumed_terminal_arm_reconciles_cleanup_before_skip(tmp_path):
         "arm": arm,
     }
     receipt_path = tmp_path / "receipt.json"
+    state_path = tmp_path / "state.npz"
+    probe._clear_staged_step_state(state_path, np.asarray([1.0], np.float32), 1, arm["active_bank"])
     assert probe._reconcile_terminal_arm_cleanup(
         receipt_path=receipt_path,
         receipt=receipt,
         arm=arm,
         scratch_path=scratch,
+        state_path=state_path,
     )
     assert not scratch.exists()
     durable = probe._load_existing(receipt_path)
     assert durable["arm"]["status"] == "NO_GO_PROVIDER_FALLBACK"
     assert durable["arm"]["active_bank"] is None
     assert durable["arm"]["cleanup"][0]["status"] == "CERTIFIED_REBUILDABLE_SCRATCH_REMOVED"
+    assert "provider rejection selected the exact-teacher fallback" in durable["arm"]["cleanup"][0]["reason"]
+    with np.load(state_path, allow_pickle=False) as state:
+        assert state["active_bank_json"].item() == "null"
 
 
 def test_missing_active_scratch_without_cleanup_certificate_blocks_all_finalizers(tmp_path):
@@ -761,6 +952,7 @@ def test_missing_active_scratch_without_cleanup_certificate_blocks_all_finalizer
             receipt={"arm": arm},
             arm=arm,
             scratch_path=scratch,
+            state_path=tmp_path / "state.npz",
         )
     assert arm["active_bank"] is not None
     assert arm["cleanup"] == []
@@ -798,6 +990,198 @@ def test_resume_rejects_receipt_bank_metadata_that_differs_from_cleared_state(tm
         probe._recover_pending_step(arm, state)
 
 
+def test_removed_cleanup_certificate_repairs_successful_finalizer_crash(tmp_path):
+    import numpy as np
+
+    scratch = tmp_path / "bank.npz"
+    scratch.write_bytes(b"successful-bank")
+    rebuild = "fresh exact teacher plus recorded code-row state"
+    bank = {"path": str(scratch), "sha256": probe._sha256(scratch), "rebuild": rebuild}
+    arm = {"status": "RUNNING", "steps": [], "active_bank": deepcopy(bank), "cleanup": []}
+    receipt = {"arm": arm}
+    receipt_path = tmp_path / "receipt.json"
+    state_path = tmp_path / "state.npz"
+    probe._clear_staged_step_state(state_path, np.asarray([1.0], np.float32), 0, bank)
+    probe._certify_then_remove_scratch(
+        receipt_path=receipt_path,
+        receipt=receipt,
+        arm=arm,
+        scratch_path=scratch,
+        reason="completed arm has durable state and receipt metadata",
+    )
+    # Simulate a crash after the finalizer cleared the state but before it
+    # replaced the receipt, which therefore still holds the bank pointer.
+    probe._clear_active_bank_in_state(state_path)
+
+    assert probe._reconcile_removed_scratch_metadata(
+        receipt_path=receipt_path,
+        receipt=receipt,
+        arm=arm,
+        scratch_path=scratch,
+        state_path=state_path,
+    )
+    durable = probe._load_existing(receipt_path)
+    assert durable["arm"]["active_bank"] is None
+    probe._recover_pending_step(durable["arm"], state_path)
+
+
+def test_resumability_state_canary_requires_all_active_bank_pointers_cleared(tmp_path):
+    import numpy as np
+
+    for regime in probe.REGIMES:
+        for k_value in probe.K_VALUES:
+            state = tmp_path / "state" / f"{regime}_K{k_value}.npz"
+            probe._clear_staged_step_state(state, np.asarray([1.0], np.float32), 1, None)
+    canary = probe._resumability_state_canary(tmp_path)
+    assert canary["status"] == "PASS"
+    assert len(canary["states"]) == len(probe.REGIMES) * len(probe.K_VALUES)
+
+    stale = tmp_path / "state" / "early_K2.npz"
+    probe._clear_staged_step_state(stale, np.asarray([1.0], np.float32), 1, {"sha256": "a" * 64})
+    with pytest.raises(RuntimeError, match="retains transient metadata"):
+        probe._resumability_state_canary(tmp_path)
+
+
+def test_terminal_state_canary_binds_theta_and_step_count_to_receipt(tmp_path):
+    import numpy as np
+
+    regimes = {}
+    for regime in probe.REGIMES:
+        arms = []
+        for k_value in probe.K_VALUES:
+            state = tmp_path / "state" / f"{regime}_K{k_value}.npz"
+            step = {"step": 0, "status": "MEASURED"}
+            theta = np.asarray([float(k_value)], np.float32)
+            probe._stage_step_state(state, theta, 1, step, None)
+            probe._clear_staged_step_state(state, theta, 1, None)
+            arms.append({"K": k_value, "steps": [step]})
+        regimes[regime] = {"arms": arms}
+    assert probe._resumability_state_canary(tmp_path, regimes)["status"] == "PASS"
+
+    tampered = tmp_path / "state" / "early_K1.npz"
+    probe._clear_staged_step_state(tampered, np.asarray([999.0], np.float32), 1, None)
+    with pytest.raises(RuntimeError, match="theta custody"):
+        probe._resumability_state_canary(tmp_path, regimes)
+
+
+def test_source_reconstruction_patch_rebuilds_dirty_launch_bytes(tmp_path):
+    import subprocess
+
+    base = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=probe.REPO,
+        text=True,
+        stdout=subprocess.PIPE,
+        check=True,
+    ).stdout.strip()
+    custody = probe._source_custody()
+    result = probe._source_reconstruction_receipt(
+        output_dir=tmp_path,
+        base_git_head=base,
+        source_custody=custody,
+    )
+    assert result["status"] == "PASS"
+    assert result["base_git_head"] == base
+    assert result["patch"]["sha256"] == probe._sha256(tmp_path / "source_reconstruction.patch")
+    assert result["source_sha256"] == {name: row["sha256"] for name, row in custody.items()}
+
+    patch_before = (tmp_path / "source_reconstruction.patch").read_bytes()
+    false_custody = deepcopy(custody)
+    first_source = next(iter(false_custody))
+    false_custody[first_source]["sha256"] = "0" * 64
+    with pytest.raises(RuntimeError, match="does not match launch custody"):
+        probe._source_reconstruction_receipt(
+            output_dir=tmp_path,
+            base_git_head=base,
+            source_custody=false_custody,
+            persist_patch=False,
+        )
+    assert (tmp_path / "source_reconstruction.patch").read_bytes() == patch_before
+
+
+def test_source_reconstruction_isolated_tree_stays_outside_repo_discovery():
+    import subprocess
+    import tempfile
+
+    base = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=probe.REPO,
+        text=True,
+        stdout=subprocess.PIPE,
+        check=True,
+    ).stdout.strip()
+    durable_root = probe.REPO / "experiments" / "results"
+    with tempfile.TemporaryDirectory(prefix="yopo_source_reconstruction_test.", dir=durable_root) as output:
+        result = probe._source_reconstruction_receipt(
+            output_dir=Path(output),
+            base_git_head=base,
+            source_custody=probe._source_custody(),
+        )
+        assert result["status"] == "PASS"
+
+
+def test_resume_source_reconstruction_never_overwrites_original_patch(tmp_path):
+    import subprocess
+
+    base = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=probe.REPO,
+        text=True,
+        stdout=subprocess.PIPE,
+        check=True,
+    ).stdout.strip()
+    custody = probe._source_custody()
+    probe._source_reconstruction_receipt(
+        output_dir=tmp_path,
+        base_git_head=base,
+        source_custody=custody,
+    )
+    patch_path = tmp_path / "source_reconstruction.patch"
+    original = patch_path.read_bytes()
+    patch_path.write_bytes(b"immutable-original-evidence")
+    with pytest.raises(RuntimeError, match="original evidence left untouched"):
+        probe._source_reconstruction_receipt(
+            output_dir=tmp_path,
+            base_git_head=base,
+            source_custody=custody,
+            persist_patch=False,
+        )
+    assert patch_path.read_bytes() == b"immutable-original-evidence"
+    patch_path.write_bytes(original)
+
+
+def test_fresh_launch_never_overwrites_orphaned_source_patch(tmp_path):
+    import subprocess
+
+    base = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=probe.REPO,
+        text=True,
+        stdout=subprocess.PIPE,
+        check=True,
+    ).stdout.strip()
+    patch_path = tmp_path / "source_reconstruction.patch"
+    patch_path.write_bytes(b"orphaned-launch-evidence")
+    with pytest.raises(RuntimeError, match="orphaned source patch evidence"):
+        probe._source_reconstruction_receipt(
+            output_dir=tmp_path,
+            base_git_head=base,
+            source_custody=probe._source_custody(),
+            persist_patch=True,
+        )
+    assert patch_path.read_bytes() == b"orphaned-launch-evidence"
+
+
+def test_run_mode_never_creates_source_patch_for_missing_receipt_resume(tmp_path):
+    patch_path = tmp_path / "source_reconstruction.patch"
+    patch_path.write_bytes(b"orphaned-launch-evidence")
+    with pytest.raises(RuntimeError, match="resume receipt is missing"):
+        probe._source_patch_persistence_for_run(resume=True, receipt=None)
+    assert patch_path.read_bytes() == b"orphaned-launch-evidence"
+    assert probe._source_patch_persistence_for_run(resume=True, receipt={"schema": "existing"}) is False
+    assert probe._source_patch_persistence_for_run(resume=False, receipt=None) is True
+
+
 def test_single_writer_lock_fails_closed_until_owner_releases(tmp_path):
     fd = probe._acquire_output_lock(tmp_path)
     try:
@@ -825,6 +1209,7 @@ def test_resume_custody_rejects_changed_source_and_terminal_receipt():
         "runtime_provenance": {"argv": ["current", "--resume"], **stable_runtime},
         "inputs": {"video": {"sha256": "a"}},
         "source_custody": {"probe": {"sha256": "b"}},
+        "source_reconstruction": {"status": "PASS", "patch": {"sha256": "c"}},
         "split": {"name": "block0"},
         "objective": "frozen SegNet CE",
         "measurement_canaries": {"same_frame_teacher_label_path_float32_floor": {"status": "PASS"}},
@@ -838,6 +1223,7 @@ def test_resume_custody_rejects_changed_source_and_terminal_receipt():
         "config",
         "inputs",
         "source_custody",
+        "source_reconstruction",
         "split",
         "objective",
         "measurement_canaries",
