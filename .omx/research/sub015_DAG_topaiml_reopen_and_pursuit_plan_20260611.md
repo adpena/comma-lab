@@ -16807,3 +16807,19 @@ ADOPTION ANCHOR (ADOPTED_AS_TRAINING_STANDARD, scope=training-only, auth-eval un
 unchanged). MEASURED basis: 2.956x/2.997x n600 both builds (#456); accepted trade = 15/600 razor-tie cross-thread
 SHA drift (~2.4e-7 margins), training gradients only. Next witness launch inherits ~3x frozen-forward speedup free.
 Memory operator_1thread_training_standard_20260713. pointer 0.19108282 UNMOVED (means).
+
+### FEED-math-ladder-20260713: the four-rung DERIVED rate theory (operator-sourced digs, one day; eq rate_law_ladder_v1)
+SIGNAL: operator source drops — Weyl "Symmetry" PDF · Newstead infdesc · Garrett Abstract Algebra · Noether slide ·
+"conditional probabilities + homotopy + ξ + Lie groups, dig deeper."
+DIAGNOSTIC [all DERIVED, per-rung adversarially reviewed; detail in per-rung FEEDs]:
+R1 #464 Weyl: invariance = state-dependent stratified groupoid ⋊ H_cov (NOT a global group; exact completion =
+   score-fiber permutation group); Noether charge = conjugate momentum of the phase zero-mode.
+R2 #466 setoid: R^sem = H(U(W)); fiber-completeness gap = H(q_G(W)|U(W)) ≥ 0 — un-captured invariance rate, NAMED.
+R3 #467 Burnside: |im S| ≤ 2^64 ⇒ quotient label ≤64 ideal bits/axis ⇒ PAYLOAD = SECTION COST (witness paradigm #155
+   DERIVED); twist R_twist^ideal = H(Θ|q_H,𝒜,public); H² awaits typing H_cov; global Galois anti-iso NO-GO.
+R4 #468 temporal: marked conditional chain rule H(X,W′|C)=H(X|C)+H(E|X,C)+H(Φ|E,X,C)+H(Δᴱ|…); strata≠homotopy
+   (κ = projection, groupoid FINER); L85 spikes = receiver-phase channel not π₀/π₁; flip cond-indep universally NO,
+   I(F;C|M,ξ) UNKNOWN.
+RESPONSE: eq module rate_law_ladder_20260713 (anchors + constants + OWED_MEASURABLES) · 4 costate pool rows appended
+(fiber-gap n600 · I(F;C|M,ξ) codelength probe · H² post-typing · event-marks telemetry) · composed operating
+statement: rate work = SECTION ENGINEERING. pointer 0.19108282 UNMOVED (theory = means).
