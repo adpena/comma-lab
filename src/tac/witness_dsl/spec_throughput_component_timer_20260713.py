@@ -89,6 +89,16 @@ def compile_throughput_component_timer_ticket(
         "--length-weight": 0.0,
         "--weight-decay": 0.0,
         "--witness-alone-island-loss": False,
+        # BOOT-DEFECT FIX (2026-07-13): the v7.5.2 parent's finisher stage-starts
+        # (muon@726, l7@800) are OUTSIDE this 4-epoch budget, tripping the trainer's
+        # fail-closed "finisher never engages -> false verdict" guard at boot (the
+        # launcher dry-run validates flags but never BOOTS the trainer, so this was
+        # latent).  Cap both stage-starts into [1, EPOCHS] so the guard passes.  For
+        # this CE component-timing probe the loss weights above are already zeroed, so
+        # the clean fwd/bwd split is read from epochs 1..(muon_start-1); muon at the
+        # final epoch minimally perturbs only that epoch's optimizer step.
+        "--l7-start-epoch": max(1, EPOCHS - 1),
+        "--muon-start-epoch": EPOCHS,
     }
     probe_lever = TypedLever(
         name=f"throughput_component_timer_{variant}",
