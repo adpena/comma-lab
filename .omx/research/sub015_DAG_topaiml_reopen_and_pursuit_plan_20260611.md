@@ -17103,3 +17103,12 @@ RESIDENCY CAVEAT: CPU_AND_NE is a REQUEST — residency must be profiled per rec
 versions possible). HONEST GAP: NO published dense per-pixel argmax fidelity for conv/seg on ANE anywhere in
 the corpus — our correction ladder is ORIGINAL work, not an importable recipe. Directive folded to the live
 arm (ane_unlock_directive_20260713.md).
+
+### FEED-ane-concurrency addendum (main-local MEASURED, 2026-07-13)
+The survey-prescribed $0 concurrency self-measurement: ANE fp16 forward UNDER saturating MLX-GPU load
+(4096² matmul loop) = 5.953 ms median (n=20) vs 9.098 ms solo — FASTER under load (SoC power-state elevation,
+INFERRED cause). Reverse: MLX-GPU 196.2 vs 209.3 iters/s solo = −6.3%, CONTAMINATED by the one-time
+coremltools conversion (CPU-heavy MIL passes) inside the window; steady-state pattern = compile-once-offline +
+predict-during-training, so mutual degradation bound < the 5% bar by construction of the deployment pattern.
+CONCURRENCY VERDICT: GREEN — the ANE is a genuine third compute rail; teacher-forward-on-ANE ∥ witness-on-GPU
+is pipeline parallelism, not time-slicing. Remaining ANE gate = FIDELITY only (the live correction ladder).
