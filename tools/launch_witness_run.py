@@ -373,7 +373,9 @@ def config_family(cfg) -> str:
     # crucible_v7 is a DSL TypedWitnessConfig (name field), not a witness_autoconfig dataclass —
     # detect it by its declared name so the run-identity header does not MISLABEL it proven_base.
     if getattr(cfg, "name", "") in ("crucible_v7", "crucible_v752", "crucible_v753",
-                                    "v9_cgauge", "v9_cgauge_432"):
+                                    "v9_cgauge", "v9_cgauge_432",
+                                    "v9_cgauge_truly_optimal_core",
+                                    "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32"):
         return getattr(cfg, "name")
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
@@ -769,6 +771,19 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
         from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_432_launch_config
         return compile_v9_cgauge_432_launch_config(
             gt_cache, num_pairs=num_pairs, **_ek)
+    if config in ("v9_cgauge_truly_optimal_core", "v9_cgauge_ideal_mod19",
+                  "v9_cgauge_ideal_mod32"):
+        # 2026-07-13 held event-native V9. The core is the mod19 main bet; the two
+        # ideal_mod* names are the decisive matched FAMILY A/B. Both scientific arms
+        # compile the same actuated flow; only --mod-dim differs (plus custody out-dir).
+        # CONTAINMENT: derive only. launch remains operator-GO and is held until the
+        # 95%-kill P0 completes to avoid GPU-timing contention.
+        from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_ideal_launch_config
+
+        mod_dim = 32 if config == "v9_cgauge_ideal_mod32" else 19
+        return compile_v9_cgauge_ideal_launch_config(
+            gt_cache, num_pairs=num_pairs, mod_dim=mod_dim,
+            program_name=config, **_ek)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -781,7 +796,9 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: "
     raise ValueError(
         f"derive_named_config: unknown config name {config!r} — no derive branch resolves it. Known "
         f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
-        f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432. Add an explicit branch (NEVER "
+        f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432, "
+        f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, v9_cgauge_ideal_mod32. "
+        f"Add an explicit branch (NEVER "
         f"silently fall through to proven_base).")
 
 
@@ -1204,7 +1221,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", default=None,
                     choices=["proven_base", "all_levers", "sealed_205", "store_nothing_205",
                              "fresh_seeded", "crucible_v6", "crucible_v7", "crucible_v752",
-                             "crucible_v753", "v9_cgauge_432"],
+                             "crucible_v753", "v9_cgauge_432",
+                             "v9_cgauge_truly_optimal_core",
+                             "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "

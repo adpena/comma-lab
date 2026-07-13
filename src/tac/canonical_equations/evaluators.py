@@ -305,6 +305,23 @@ def eval_cgauge_beta2_window(inputs: Mapping[str, Any]) -> tuple[float, float]:
     )
 
 
+def eval_margin_band_satisficing_threshold(inputs: Mapping[str, Any]) -> float:
+    """m_safe = headroom * delta_R for the MarginBandSatisficing DSL lever.
+
+    ``delta_R`` is a MEASURED artifact input and ``headroom`` is DERIVED at
+    config time.  Keeping this adapter in the LawRef evaluator registry makes
+    the canonical equation executable instead of leaving it as memo prose.
+    """
+    from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        margin_safe_threshold,
+    )
+
+    return margin_safe_threshold(
+        float(inputs["delta_r"]),
+        float(inputs["headroom"]),
+    )
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
@@ -324,6 +341,8 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "cgauge_whitney_moddim_v1": eval_cgauge_whitney_moddim,
     "cgauge_curvelet_parabolic_bank_v1": eval_cgauge_parabolic_along_tangent,
     "cgauge_beta2_window_v1": eval_cgauge_beta2_window,
+    # MarginBandSatisficing provenance repair (2026-07-12): DERIVED-LIVE threshold law.
+    "margin_band_satisficing_threshold_v1": eval_margin_band_satisficing_threshold,
 }
 
 
@@ -352,6 +371,7 @@ __all__ = [
     "eval_hosc_beta_fireband_pin",
     "eval_lr_control_denominator",
     "eval_lr_hold_frac_no_hold",
+    "eval_margin_band_satisficing_threshold",
     "eval_settle_window",
     "eval_tail_cycle_floor",
     "eval_tau_end_knee_launch",

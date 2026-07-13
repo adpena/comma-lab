@@ -74800,15 +74800,15 @@
       "id": "lane_pointer_jrd_pr110_phase1_453_20260712",
       "name": "Pointer JRD PR110 last-safe-plane Phase 1",
       "phase": 1.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "32 focused pytest PASS and ruff PASS; .omx/research/jrd_pr110_pointer_completion_20260713.md"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/jrd_pr110_pointer_completion_20260713T023300Z/measurement_receipt.json; exact b468972 archive NULL"
         },
         "contest_cuda": {
           "status": false,
@@ -74819,8 +74819,8 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Exact source/runtime/scorer/GT fingerprint plus n600 positive and negative controls; FIFO proof PASS x2"
         },
         "three_clean_review": {
           "status": false,
@@ -75001,6 +75001,387 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_marginband_satisficing_provenance_fix_20260712",
+      "name": "MarginBandSatisficing provenance fix and invariant",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_v9_cgauge_ideal_event_eikonal_ab_20260713",
+      "name": "V9 CGauge ideal event-native eikonal mod19-mod32 A/B",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_trust_region_validation_95kill_20260713",
+      "name": "Trust-region validation economics 95-kill",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/trust_region_validation_95kill_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_n456_cheaper_exact_forward",
+      "name": "Task 456 exact forward n600 transfer and autotuned argmax-safe variants",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only transfer extension; existing lane_456_frozen_segnet_exact_forward_20260712 files are dependency-only and owned by sealing sibling; new files only; no paid/cloud/upstream eval; score_claim=false."
+    },
+    {
+      "id": "lane_jacobian_drift_certificate_95kill_20260713",
+      "name": "Jacobian-drift direct full-costate certificate 95-kill",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/jacobian_drift_certificate_95kill_20260713.md"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "DERIVED theorem; rigorous BLOCKED; faithful and collinear measured formulations NO-GO; pair0 three-regime sampled-ray scope; terminal receipt c1a2431; score_claim=false; pointer_moved=false; canonical DAG append deferred via validated serializer patch.",
+      "reactivation_criteria": [
+        "whole-ball Lip(DJ) and activation-cell or semismooth custody",
+        "coercive geometry and corrected-gradient floor",
+        "integrated HVP derivation receipt",
+        "contiguous matched window below 8.375 validation equivalents"
+      ],
+      "research_only": true
+    },
+    {
+      "id": "lane_jrd_reusable_priors_harvest_20260713",
+      "name": "JRD reusable priors harvest",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/jrd_priors.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/jrd_reusable_priors_harvest_20260713.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "real-GT n600 NumPy-fp32 exact-R witness response receipt",
+        "structurally different learned conditional codec with exact byte shrink"
+      ]
+    },
+    {
+      "id": "lane_witness_sensitivity_bitalloc_336",
+      "name": "Witness sensitivity bit allocation #336",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_witness_crosstensor_structure_rate_20260713",
+      "name": "Witness cross-tensor lossless rate coding",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task-local $0 n600 Step-0 clustering gate; owns joint coding only; sibling lane_witness_sensitivity_bitalloc_336 owns per-tensor budgets."
+    },
+    {
+      "id": "adaptivebayes_intrinsictime_reader",
+      "name": "Adaptive Bayes intrinsic-time costate controller design",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -75010,5 +75391,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-13T01:25:46Z"
+  "updated_at": "2026-07-13T15:09:37Z"
 }

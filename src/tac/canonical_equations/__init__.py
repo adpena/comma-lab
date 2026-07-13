@@ -145,6 +145,11 @@ from tac.canonical_equations.dseg_aware_fourier_taper_20260709 import (
     build_dseg_aware_fourier_taper_v1,
     populate_dseg_aware_fourier_taper_equation,
 )
+from tac.canonical_equations.eikonal_retention_tau_rung_20260713 import (
+    build_eikonal_retention_couples_to_tau_rung_v1,
+    eikonal_retention_for_rung,
+    populate_eikonal_retention_couples_to_tau_rung_v1,
+)
 from tac.canonical_equations.equation import (
     CANONICAL_EQUATION_SCHEMA_VERSION,
     RECALIBRATE_NEVER_AUTO,
@@ -304,11 +309,6 @@ from tac.canonical_equations.registry import (
     update_equation_with_domain_refinement,
     update_equation_with_empirical_anchor,
 )
-from tac.canonical_equations.eikonal_retention_tau_rung_20260713 import (
-    build_eikonal_retention_couples_to_tau_rung_v1,
-    eikonal_retention_for_rung,
-    populate_eikonal_retention_couples_to_tau_rung_v1,
-)
 from tac.canonical_equations.resize_exploit_flip_fix_frontier_20260709 import (
     build_resize_exploit_flip_fix_frontier_v1,
     populate_resize_exploit_flip_fix_frontier_equation,
@@ -439,6 +439,7 @@ __all__ = [
     "build_dash_erasure_homogenization_v1",
     "build_defect_network_component_delta_rate_v1",
     "build_dseg_aware_fourier_taper_v1",
+    "build_eikonal_retention_couples_to_tau_rung_v1",
     "build_ema_window_pi_group_v1",
     "build_fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
     "build_focal_gradient_concentration_v1",
@@ -453,7 +454,6 @@ __all__ = [
     "build_lane_groundframe_xi_transport_no_collapse_v1",
     "build_leverd_flicker_residual_reactivation_economics_v1",
     "build_logit_adjustment_class_prior_law_v1",
-    "build_eikonal_retention_couples_to_tau_rung_v1",
     "build_margin_band_satisficing_threshold_v1",
     "build_margin_saliency_reachability_replaces_texture_proxy_v1",
     "build_maslov_dequantization_bound_v1",
@@ -494,13 +494,13 @@ __all__ = [
     "categorical_bregman_divergence",
     "categorical_fisher_trace_two_class",
     "chained_ds_depoch",
-    "eikonal_retention_for_rung",
     "chroma_margin_gradient_energy_fraction",
     "classify_mlx_matmul_drift",
     "compute_predicted_band_from_posterior",
     "contest_score_as_powerplay_cost",
     "costate_vector",
     "delta_exceeds_floor",
+    "eikonal_retention_for_rung",
     "focal_region_share",
     "focal_weight_ratio",
     "freq_along_for_regime",
@@ -538,9 +538,9 @@ __all__ = [
     "populate_dash_erasure_homogenization_equation",
     "populate_defect_network_component_delta_rate_v1",
     "populate_dseg_aware_fourier_taper_equation",
+    "populate_eikonal_retention_couples_to_tau_rung_v1",
     "populate_focal_gradient_concentration_equation",
     "populate_frozen_scorer_forward_batch_dependence_equation",
-    "populate_eikonal_retention_couples_to_tau_rung_v1",
     "populate_fullstack_unique_home_assignment_equation",
     "populate_horizon_weighted_margin_equation",
     "populate_initial_equations",

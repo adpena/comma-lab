@@ -134,6 +134,7 @@ from tac import contest_score as _cscore  # noqa: E402  (canonical S = 100*d_seg
 from tac.local_acceleration import torch_levelset_inflate as _tli  # noqa: E402  (canonical FREE-table regen)
 from tac.boundary_math import warp_real_luma_frame0 as _wrl  # noqa: E402  (#205 pose carrier: warp-real-luma frame0)
 from tac.boundary_math import xi_pose_coder as _xip  # noqa: E402  (#257 store-nothing derive-H + ξ entropy coder)
+from tac.boundary_math import witness_crosstensor_codec as _wxc  # noqa: E402  (lossless joint weight/code storage)
 from tac import witness_run_artifacts as _wra  # noqa: E402  (canonical run-artifact filename CONTRACT)
 
 # canonical FREE-table regen fns (rule-118 curvelet bank + self-orient dir feats) — the bit-exact
@@ -428,6 +429,7 @@ def build_levelset_blob(
     params: dict[str, np.ndarray], cfg: dict[str, Any], so: dict[str, Any], pose_sidecar: bytes | None,
     lane_band_bytes: bytes | None = None, lane_manifest: dict[str, Any] | None = None,
     pose_carrier_bytes: bytes | None = None, pose_carrier_manifest: dict[str, Any] | None = None,
+    cross_tensor_codec: bool = False,
 ) -> tuple[bytes, dict[str, Any]]:
     """Layout: magic | u32 manifest_len | manifest_json | u32 base_brotli_len | base_brotli |
             u32 code_brotli_len | code_brotli | u32 pose_len | pose_sidecar
@@ -467,20 +469,28 @@ def build_levelset_blob(
         base_order, _INFLATE_PY, context="build_levelset_blob base blob", allow_unconsumed=_allow,
     )
 
-    base_chunks: list[bytes] = []
     shapes: dict[str, list[int]] = {}
     scales: dict[str, float] = {}
     for name in base_order:
         a = np.asarray(params[name], dtype=np.float32)
-        q, scale = _int8_symmetric(a)
-        base_chunks.append(q.astype(np.int8).tobytes())
+        _, scale = _int8_symmetric(a)
         shapes[name] = list(a.shape)
         scales[name] = float(scale)
-    base_brotli = brotli.compress(b"".join(base_chunks), quality=11)
 
     code = np.asarray(params["code"], dtype=np.float32)
     qc, code_scale = _int8_symmetric(code)
-    code_brotli = brotli.compress(qc.astype(np.int8).tobytes(), quality=11)
+    base_plan = None
+    code_plan = None
+    if cross_tensor_codec:
+        base_plan = _wxc.derive_base_permutation_plan(params, base_order)
+        code_plan = _wxc.derive_code_transform_plan(code)
+        base_raw = _wxc.encode_base_quantized(params, base_order, base_plan.transposed_names)
+        code_raw = _wxc.encode_code_quantized(qc, code_plan.transform)
+    else:
+        base_raw = _wxc.encode_base_quantized(params, base_order, ())
+        code_raw = _wxc.encode_code_quantized(qc, _wxc.CODE_TRANSFORM_RAW)
+    base_brotli = brotli.compress(base_raw, quality=11)
+    code_brotli = brotli.compress(code_raw, quality=11)
 
     manifest = {
         "format_version": 1,
@@ -513,6 +523,14 @@ def build_levelset_blob(
         "so_iters": int(so.get("iters", 0)),
         "has_pose_sidecar": bool(pose_sidecar is not None),
     }
+    if cross_tensor_codec:
+        # Compact receiver contract: ``p`` holds indices into base_param_order whose 2-D storage is
+        # transposed; ``c=1`` is frame-separated modulo-256 temporal delta for code[2*pair+frame].
+        # The human-readable derivation lives in the breakdown/receipt, not the counted manifest.
+        manifest["xcodec"] = {
+            "p": [base_order.index(name) for name in base_plan.transposed_names],
+            "c": int(code_plan.transform == _wxc.CODE_TRANSFORM_FRAME_DELTA_MOD256),
+        }
     # #224 Wave E: the analytic-lane RENDER-BAND cfg (ONLY when active -> default-off byte-identical).
     # The lane MANIFOLD COORDS ride the 5th block (counted); this cfg (scalars) rides the manifest so
     # inflate reproduces the coverage raster + composite decode-consistently (rule 118 FREE rasterizer).
@@ -549,8 +567,68 @@ def build_levelset_blob(
         "accounting_matches_canonical": bool(
             len(base_brotli) == canon["base_int8_brotli_bytes"]
             and len(code_brotli) == canon["code_int8_brotli_bytes"]),
+        "cross_tensor_codec": {
+            "active": bool(cross_tensor_codec),
+            "base_permutation": (base_plan.to_json() if base_plan is not None else None),
+            "code_transform": (code_plan.to_json() if code_plan is not None else None),
+            "quantized_state_lossless_by_construction": True,
+        },
     }
     return out, breakdown
+
+
+def _xcodec_transposed_names(manifest: dict[str, Any]) -> tuple[str, ...]:
+    xc = manifest.get("xcodec") or {}
+    order = manifest["base_param_order"]
+    indices = tuple(int(i) for i in xc.get("p", ()))
+    if len(set(indices)) != len(indices) or any(i < 0 or i >= len(order) for i in indices):
+        raise ValueError(f"LVLS1 xcodec has invalid base permutation indices {indices}")
+    return tuple(order[i] for i in indices)
+
+
+def _decode_base_params(manifest: dict[str, Any], base_brotli: bytes) -> dict[str, np.ndarray]:
+    import brotli
+
+    q = _wxc.decode_base_quantized(
+        brotli.decompress(base_brotli),
+        manifest["base_param_order"],
+        manifest["base_shapes"],
+        _xcodec_transposed_names(manifest),
+    )
+    return {
+        name: (arr.astype(np.float32) * float(manifest["base_scales"][name]))
+        for name, arr in q.items()
+    }
+
+
+def _xcodec_code_transform(manifest: dict[str, Any]) -> str:
+    code = int((manifest.get("xcodec") or {}).get("c", 0))
+    if code not in (0, 1):
+        raise ValueError(f"LVLS1 xcodec has unknown code transform id {code}")
+    return (
+        _wxc.CODE_TRANSFORM_FRAME_DELTA_MOD256
+        if code == 1
+        else _wxc.CODE_TRANSFORM_RAW
+    )
+
+
+def _decode_code(manifest: dict[str, Any], code_brotli: bytes) -> np.ndarray:
+    import brotli
+
+    q = _wxc.decode_code_quantized(
+        brotli.decompress(code_brotli),
+        manifest["code_shape"],
+        _xcodec_code_transform(manifest),
+    )
+    return q.astype(np.float32) * float(manifest["code_scale"])
+
+
+def _encode_code_brotli(q: np.ndarray, manifest: dict[str, Any]) -> bytes:
+    import brotli
+
+    return brotli.compress(
+        _wxc.encode_code_quantized(q, _xcodec_code_transform(manifest)), quality=11
+    )
 
 
 def _io_pack(
@@ -1143,19 +1221,45 @@ def _read_blob(path):
     return m, out[1], out[2], out[3], lane_b, pcar_b
 
 
-def _dequant(blob, order, shapes, scales):
+def _dequant(blob, order, shapes, scales, xcodec=None):
     out, off = {}, 0
     flat = np.frombuffer(blob, dtype=np.int8)
-    for name in order:
+    perm_indices = set(int(i) for i in (xcodec or {}).get("p", []))
+    if any(i < 0 or i >= len(order) for i in perm_indices):
+        raise ValueError("LVLS1 xcodec has invalid base permutation index")
+    for index, name in enumerate(order):
         shp = tuple(shapes[name]); n = int(np.prod(shp))
         chunk = flat[off:off + n]
         if chunk.size != n:  # #402: base blob short for this tensor -> fail closed, never partial-decode.
             raise ValueError("LVLS1 base blob short for %r: need %d int8 got %d" % (name, n, int(chunk.size)))
-        out[name] = (chunk.astype(np.float32) * float(scales[name])).reshape(shp); off += n
+        if index in perm_indices:
+            if len(shp) != 2:
+                raise ValueError("LVLS1 xcodec transpose targets non-2-D tensor %r" % name)
+            q = chunk.reshape(shp[1], shp[0]).T
+        else:
+            q = chunk.reshape(shp)
+        out[name] = q.astype(np.float32) * float(scales[name]); off += n
     if off != flat.size:  # #402 EXACT CONSUMPTION: trailing int8 in the base blob = format mismatch.
         raise ValueError("LVLS1 base blob has %d unconsumed int8 byte(s) (off=%d size=%d) -- fail closed."
                          % (int(flat.size) - off, off, int(flat.size)))
     return out
+
+
+def _decode_code_q(blob, shape, xcodec=None):
+    rows, dims = int(shape[0]), int(shape[1])
+    raw = np.frombuffer(blob, dtype=np.uint8)
+    if raw.size != rows * dims:
+        raise ValueError("LVLS1 code stream has %d B, expected %d B" % (raw.size, rows * dims))
+    mode = int((xcodec or {}).get("c", 0))
+    if mode == 0:
+        return raw.view(np.int8).reshape(rows, dims).copy()
+    if mode != 1 or rows % 2:
+        raise ValueError("LVLS1 xcodec has invalid code transform id/shape")
+    pairs = rows // 2; half = pairs * dims
+    d0 = raw[:half].reshape(pairs, dims); d1 = raw[half:].reshape(pairs, dims)
+    q0 = (np.cumsum(d0.astype(np.uint64), axis=0) & 255).astype(np.uint8)
+    q1 = (np.cumsum(d1.astype(np.uint64), axis=0) & 255).astype(np.uint8)
+    return np.stack([q0, q1], axis=1).reshape(rows, dims).view(np.int8).copy()
 
 
 def _coords(h, w):
@@ -1708,8 +1812,8 @@ def _setup(src):
     # bank + coords. Deterministic + identical across workers -> bit-exact. ~150ms, amortized over the
     # worker's pairs. Same op order as the serial main -> identical output.
     m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob(src)
-    params = _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"])
-    code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32) * float(m["code_scale"])).reshape(m["code_shape"])
+    params = _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"], m.get("xcodec"))
+    code = _decode_code_q(brotli.decompress(code_b), m["code_shape"], m.get("xcodec")).astype(np.float32) * float(m["code_scale"])
     rh, rw, ch, cw = int(m["render_h"]), int(m["render_w"]), int(m["camera_h"]), int(m["camera_w"])
     coords = _coords(rh, rw)
     B = _curvelet_B(m["bank_n_scales"], m["bank_n_orient0"], m["bank_f0"], m["bank_base"], m["bank_n_iso"], m["max_bank_freq"])
@@ -1925,8 +2029,7 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
         import brotli
 
         man, base_b, code_b, pose_b, lane_b, pcar_b = _read_blob_bytes(src_bin.read_bytes())
-        code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32)
-                * man["code_scale"]).reshape(man["code_shape"])
+        code = _decode_code(man, code_b)
         code_cap = code[: 2 * eval_pairs]
         qc, sc = _int8_symmetric(code_cap)
         man["n_pairs"] = eval_pairs
@@ -1945,7 +2048,7 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
             pcar_cap = _cap_pose_carrier(pcar_b, eval_pairs)
             man["pose_carrier"] = {**man["pose_carrier"], "n_pairs": eval_pairs}
         mj = json.dumps(man, separators=(",", ":")).encode()
-        capped = _io_pack(mj, base_b, brotli.compress(qc.astype(np.int8).tobytes(), quality=11),
+        capped = _io_pack(mj, base_b, _encode_code_brotli(qc, man),
                           pose_b or None, lane_cap, pcar_cap)
         src_bin.write_bytes(capped)
 
@@ -2014,22 +2117,8 @@ def _dequant_blob(blob: bytes) -> tuple[dict[str, Any], dict[str, np.ndarray], n
     import brotli
 
     m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob_bytes(blob)
-    order = m["base_param_order"]
-    flat = np.frombuffer(brotli.decompress(base_b), dtype=np.int8)
-    params: dict[str, np.ndarray] = {}
-    off = 0
-    for name in order:
-        shp = tuple(m["base_shapes"][name])
-        n = int(np.prod(shp))
-        chunk = flat[off:off + n]
-        if chunk.size != n:  # #402: base blob short for this tensor -> fail closed.
-            raise ValueError(f"LVLS1 base blob short for {name!r}: need {n} int8 got {int(chunk.size)}")
-        params[name] = (chunk.astype(np.float32) * float(m["base_scales"][name])).reshape(shp)
-        off += n
-    if off != flat.size:  # #402 EXACT CONSUMPTION (mirrors the shipped inflate._dequant).
-        raise ValueError(f"LVLS1 base blob has {int(flat.size) - off} unconsumed int8 byte(s) -- fail closed.")
-    code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32)
-            * float(m["code_scale"])).reshape(m["code_shape"])
+    params = _decode_base_params(m, base_b)
+    code = _decode_code(m, code_b)
     lane_pairs: list[list[Any]] | None = None
     if lane_b is not None and m.get("lane_render_band") is not None:
         lane_pairs, _hdr = deserialize_lane_band_any(brotli.decompress(lane_b))
@@ -2250,22 +2339,8 @@ def bit_exact_roundtrip_gate(
 
     # dequant the blob EXACTLY as the shipped inflate does (int8 -> fp32 * scale).
     m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob_bytes(blob)
-    order = m["base_param_order"]
-    flat = np.frombuffer(brotli.decompress(base_b), dtype=np.int8)
-    params: dict[str, np.ndarray] = {}
-    off = 0
-    for name in order:
-        shp = tuple(m["base_shapes"][name])
-        n = int(np.prod(shp))
-        chunk = flat[off:off + n]
-        if chunk.size != n:  # #402: base blob short for this tensor -> fail closed.
-            raise ValueError(f"LVLS1 base blob short for {name!r}: need {n} int8 got {int(chunk.size)}")
-        params[name] = (chunk.astype(np.float32) * float(m["base_scales"][name])).reshape(shp)
-        off += n
-    if off != flat.size:  # #402 EXACT CONSUMPTION (mirrors the shipped inflate._dequant).
-        raise ValueError(f"LVLS1 base blob has {int(flat.size) - off} unconsumed int8 byte(s) -- fail closed.")
-    code = (np.frombuffer(brotli.decompress(code_b), dtype=np.int8).astype(np.float32)
-            * float(m["code_scale"])).reshape(m["code_shape"])
+    params = _decode_base_params(m, base_b)
+    code = _decode_code(m, code_b)
     n_pairs_total = int(m["n_pairs"])
     gp = max(1, min(int(gate_pairs), n_pairs_total))
 
@@ -2299,7 +2374,7 @@ def bit_exact_roundtrip_gate(
     mj = json.dumps(man, separators=(",", ":")).encode()
     capped_bin = gate_root / "gate.bin"
     capped_bin.write_bytes(_io_pack(
-        mj, base_b, brotli.compress(qc.astype(np.int8).tobytes(), quality=11), None, lane_b_cap, pcar_cap))
+        mj, base_b, _encode_code_brotli(qc, man), None, lane_b_cap, pcar_cap))
     gate_raw = gate_root / "gate.raw"
     proc = subprocess.run(
         [sys.executable, str(packet_dir / "inflate.py"), str(capped_bin), str(gate_raw)],
@@ -2316,7 +2391,7 @@ def bit_exact_roundtrip_gate(
 
     # canonical numpy-fp32 ORACLE reference (dequant capped code so both sides see identical values).
     ref_params: dict[str, np.ndarray] = {}
-    for name in order:  # re-dequant from the SAME capped blob for byte-identical inputs
+    for name in m["base_param_order"]:  # re-dequant from the SAME capped blob for byte-identical inputs
         ref_params[name] = params[name]
     ref_code = (qc.astype(np.float32) * sc).reshape(code_cap.shape)
     ref_frames, ref_argmax = numpy_oracle_reference_frames(
@@ -2710,6 +2785,7 @@ def run(
     pose_carrier_xi_override: np.ndarray | None = None,  # #238: ship the TRAINED ξ_eff (xi_stored+dxi)
     phase_carrier: bool = False,  # #359 phase-residual carrier (store-half of the flicker reframe)
     phase_carrier_cfg: dict[str, Any] | None = None,
+    cross_tensor_codec: bool = False,
     verify_bit_exact: bool = False,
     bit_exact_pairs: int = 2,
     bit_exact_strict: bool = True,
@@ -2818,8 +2894,9 @@ def run(
               f"recovered_d_seg={phase_carrier_report_out['recovered_d_seg_status']}  {_AUTHORITY}", flush=True)
 
     blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest,
-                                          pose_carrier_bytes, pose_carrier_manifest)
-    if not breakdown["accounting_matches_canonical"]:
+                                          pose_carrier_bytes, pose_carrier_manifest,
+                                          cross_tensor_codec=cross_tensor_codec)
+    if not cross_tensor_codec and not breakdown["accounting_matches_canonical"]:
         print(f"[WARN] byte-close accounting (base={breakdown['base_int8_brotli_bytes']}, "
               f"code={breakdown['code_int8_brotli_bytes']}) != canonical quantize_levelset_blob "
               f"({breakdown['canonical_quantize_blob_bytes']}) -- investigate (should match exactly).", flush=True)
@@ -3255,6 +3332,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="phase-carrier annulus band |margin| < band (the flip-prone straddle set).")
     ap.add_argument("--phase-carrier-pitch", type=float, default=0.0,
                     help="phase-carrier ground-plane pitch for the xi-transport warp (rad).")
+    ap.add_argument("--cross-tensor-codec", type=str, default="off",
+                    choices=["off", "auto_lossless"],
+                    help="lossless witness joint coder. auto_lossless exhaustively derives 2-D axis "
+                         "storage permutations from exact Brotli bytes and selects raw-vs-frame-split "
+                         "temporal-delta coding for the per-frame FiLM table. It acts after the canonical "
+                         "int8 grid, so decoded quantized state is exact. DSL owner: "
+                         "WitnessCrossTensorCoderGauge.AUTO_LOSSLESS.")
     # #224 Wave E: decode-consistent analytic-lane RENDER-BAND (fork B). OFF by default -> byte-identical.
     # Fits per-pair lane manifold coords from --gt-cache (COUNTED), reproduces the coverage+composite
     # in inflate (FREE, rule 118) so the band is a REAL (non-phantom) score. Closes R5_BLOCK.
@@ -3369,6 +3453,7 @@ def main(argv: list[str] | None = None) -> int:
             "annulus_band": args.phase_carrier_band,
             "pitch": args.phase_carrier_pitch,
         },
+        cross_tensor_codec=(args.cross_tensor_codec == "auto_lossless"),
         verify_bit_exact=args.verify_bit_exact,
         bit_exact_pairs=args.bit_exact_pairs,
         bit_exact_strict=not args.no_bit_exact_strict,

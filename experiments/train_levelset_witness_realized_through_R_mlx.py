@@ -2693,6 +2693,60 @@ def _scheduled_eikonal_weight(ep: int, args, step_epoch: "int | None" = None) ->
     return base + (end - base) * w
 
 
+def _validate_eikonal_ramp_actuation_config(args) -> str:
+    """Fail closed when an armed eikonal ramp has no reachable actuator.
+
+    Returns the active actuator name for startup telemetry.  Under unified-τ the
+    discrete CE→τ event is intentionally absent, so the only causal actuator is
+    the live event-mode τ-rung controller.  Accepting the old sentinel path here
+    would make ``--eikonal-weight-end`` a config orphan again.
+    """
+    base = float(args.eikonal_weight)
+    end_raw = getattr(args, "eikonal_weight_end", None)
+    if end_raw is None or float(end_raw) == base:
+        return "constant"
+    if not bool(getattr(args, "curriculum", False)):
+        raise ValueError(
+            "--eikonal-weight-end differs from --eikonal-weight but --curriculum is OFF: "
+            "the ramp has no reachable stage or tau-rung actuator (config orphan).")
+    if bool(getattr(args, "seg_form_unify_tau", False)):
+        if str(getattr(args, "tau_advance_mode", "clock")) != "event":
+            raise ValueError(
+                "--eikonal-weight-end is armed under --seg-form-unify-tau, but "
+                "--tau-advance-mode is not 'event': unified-tau dissolves the discrete CE->tau "
+                "event, so the ramp can never fire. Use the event tau-rung controller or remove "
+                "the ramp (FAIL-CLOSED config-orphan invariant).")
+        return "tau_rung"
+    if bool(getattr(args, "curriculum_event_triggered", False)):
+        return "resolved_stage_event"
+    return "clock_stage_boundary"
+
+
+def _scheduled_eikonal_weight_for_tau_rung(args, tau_ctrl) -> float:
+    """Event-native retention law ``λ_k=λ_0+(λ_N-λ_0)k/N``.
+
+    The controller's persisted rung is the single continuation state.  Therefore
+    resume reconstructs the same λ exactly, and every sharpening advance raises
+    (or lowers, if explicitly configured) retention *before* the trainer assigns
+    the new render/loss τ.  This path is deliberately independent of the inert
+    discrete-stage sentinel used by non-unified curriculum modes.
+    """
+    base = float(args.eikonal_weight)
+    end_raw = getattr(args, "eikonal_weight_end", None)
+    if end_raw is None or not bool(getattr(args, "curriculum", False)):
+        return base
+    end = float(end_raw)
+    if end == base:
+        return base
+    if tau_ctrl is None or not bool(getattr(tau_ctrl, "event_mode", False)):
+        raise ValueError(
+            "tau-rung eikonal schedule requested without an event-mode TauAdvanceController")
+    from tac.canonical_equations.eikonal_retention_tau_rung_20260713 import (
+        eikonal_retention_for_rung,
+    )
+    return eikonal_retention_for_rung(base, end, int(tau_ctrl.rung), int(tau_ctrl.n_octaves))
+
+
 # ── (#292 build-3) CLOSED-LOOP LEVER CONTROL — pure, deterministic, default-OFF ──────────────────
 # Classification sentinels + slope/persistence math MUST MATCH tools/witness_control_monitor.py::
 # classify_trajectory (the monitor is the read-only sibling; this is the in-run actuator). Replicated
@@ -9349,22 +9403,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             else:
                 seg_form = _seg_form_for_epoch(ep, args)
                 _evt_event = None
-            # (#292 SEAL fix) With event-triggering ON the eikonal STEP tracks the RESOLVED tau
-            # boundary (the ACTUAL MCF onset), not the hardcoded cap — else an early-fired tau runs
-            # MCF at base eikonal until the cap (the survival window the ramp protects). Unfired ->
-            # large sentinel -> base (still CE). OFF -> original call, BYTE-IDENTICAL (#205 path).
-            if _evt_on:
+            # (#292 SEAL fix + V9 event-native fix) Select the eikonal schedule's REAL actuator.
+            # Unified-τ + event mode is driven by the persisted τ rung, never by the discrete-stage
+            # sentinel (that boundary is dissolved). The value is recomputed after maybe_advance()
+            # below, before the new τ is assigned, so λ retention causally precedes sharpening.
+            if _tau_ctrl is not None:
+                eik_w_ep = _scheduled_eikonal_weight_for_tau_rung(args, _tau_ctrl)
+            elif _evt_on:
                 _eik_step_ep = _evt_state["tau"] if _evt_state["tau"] is not None else (1 << 30)
                 eik_w_ep = _scheduled_eikonal_weight(ep, args, step_epoch=_eik_step_ep)
             else:
                 eik_w_ep = _scheduled_eikonal_weight(ep, args)   # (#292) eikonal STEP-ramp; base if --eikonal-weight-end unset (BYTE-IDENTICAL)
-            # (#292 build-3) closed-loop BOUNDED bump composes ON TOP of the build-1 schedule:
-            # eff = min(scheduled + bump_add, max(--closed-loop-eikonal-max, scheduled)). Guarded so
-            # OFF (or ON with no bump fired) leaves eik_w_ep EXACTLY _scheduled_eikonal_weight
-            # (the byte-identity contract; #205 runs closed-loop OFF).
-            if _cl_on and _cl_state["bump_add"] > 0.0:
-                eik_w_ep = _cl_effective_eikonal(eik_w_ep, float(_cl_state["bump_add"]),
-                                                 float(args.closed_loop_eikonal_max))
             # BUILD 1 (FEED-fw): detect an AdamW->AdamW stage boundary at THIS epoch BEFORE the
             # existing transition blocks mutate prev_seg_form / lane_gate / msal_gate. Consumed below
             # (after the Muon block, so muon_switched is current) to register the LR re-warmup anchor
@@ -9880,15 +9929,57 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _tau_ctrl is not None and not muon_switched:
                 _tau_ctrl.ingest(history)
                 _adv = _tau_ctrl.maybe_advance(ep)
+                # V9 retention-before-sharpening operator split. maybe_advance mutates only the pure
+                # controller; the model still holds the OLD τ here. Prime λ_eik from the NEW rung,
+                # emit its causal receipt, and only then assign the lower render/loss τ below.
+                eik_w_ep = _scheduled_eikonal_weight_for_tau_rung(args, _tau_ctrl)
+                if (_adv.advanced and getattr(args, "eikonal_weight_end", None) is not None
+                        and float(args.eikonal_weight_end) != float(args.eikonal_weight)):
+                    _base_eik = float(args.eikonal_weight)
+                    _end_eik = float(args.eikonal_weight_end)
+                    _prev_frac = (int(_adv.rung) - 1) / max(int(_tau_ctrl.n_octaves), 1)
+                    _prev_eik = _base_eik + (_end_eik - _base_eik) * _prev_frac
+                    print(json.dumps({
+                        "stage": "eikonal_retention_prime",
+                        "epoch": ep,
+                        "from_rung": int(_adv.rung) - 1,
+                        "to_rung": int(_adv.rung),
+                        "lambda_eik_from": round(float(_prev_eik), 8),
+                        "lambda_eik_to": round(float(eik_w_ep), 8),
+                        "tau_to": round(float(_adv.tau), 8),
+                        "ordering": "prime_lambda_before_assign_lower_tau",
+                        "law": "eikonal_retention_couples_to_tau_rung_v1",
+                    }), flush=True)
+                if _adv.advanced:
+                    # The octave is a REAL accepted treatment boundary under unified-τ. Re-treat
+                    # AdamW here so Beta2WindowRewarmup is not another config orphan: clear the
+                    # spike scale, register the LR floor anchor, and (when armed) reset m/v before
+                    # the lower-τ landscape is assigned. This is additive/event-mode-only.
+                    recent_losses.clear()
+                    last_boundary_epoch = ep
+                    if args.stage_transition_reset_moments:
+                        opt = optim.AdamW(
+                            learning_rate=float(opt.learning_rate),
+                            weight_decay=args.weight_decay,
+                            betas=[0.9, float(getattr(args, "adam_beta2", 0.999))],
+                            bias_correction=_adam_bias_correction_for(
+                                getattr(args, "adam_beta2", 0.999)),
+                        )
+                        opt.init(model.trainable_parameters())
+                        mx.eval(opt.state)
+                    print(json.dumps({
+                        "stage": "tau_rung_transition_retreat",
+                        "epoch": ep,
+                        "rung": int(_adv.rung),
+                        "reset_moments": bool(args.stage_transition_reset_moments),
+                        "rewarmup_epochs": int(args.stage_transition_rewarmup_epochs),
+                        "note": "event tau rung is an AdamW treatment boundary; spike scale reset "
+                                "and beta2-window LR rewarmup anchored before lower-tau assignment",
+                    }), flush=True)
                 if _adv.telemetry is not None:
                     print(json.dumps(_adv.telemetry), flush=True)
-                if _adv.advanced and args.stage_checkpoints:
-                    # PRESERVE a stage-encoded ckpt at each octave boundary (independently byte-
-                    # closeable + resumable, like the Muon-switch stage ckpt, and guarded on the same
-                    # --stage-checkpoints flag) — the octaves ARE the event-mode "stages" (unify-τ has
-                    # no discrete seg-form stage ckpts).
-                    _oc = _do_checkpoint(ep, stage_tag=f"stageOctave{int(_adv.rung)}")
-                    stage_ckpts.append(_oc)
+            else:
+                _adv = None
             _anneal_ep = int(args.muon_start_epoch) if muon_switched else ep
             if _tau_ctrl is not None:
                 # event mode: τ = the held octave rung value (frozen after the Muon switch). The
@@ -9916,6 +10007,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _beta = _hosc_beta_for_epoch(_anneal_ep, args)
             if _beta is not None:
                 model.hosc_beta = _beta
+            if _adv is not None and _adv.advanced and args.stage_checkpoints:
+                # A complete octave checkpoint must encode the controller's NEW rung and model's NEW
+                # τ/β state together. Saving before these assignments produced a resume-inconsistent
+                # boundary artifact (new controller rung with old model continuation values).
+                _oc = _do_checkpoint(ep, stage_tag=f"stageOctave{int(_adv.rung)}")
+                stage_ckpts.append(_oc)
+            # (#292 build-3) closed-loop BOUNDED bump composes on TOP of the now-current rung/stage
+            # schedule. Keeping this after the τ-rung recompute prevents the event-native actuator
+            # from silently erasing an already-fired erosion bump.
+            if _cl_on and _cl_state["bump_add"] > 0.0:
+                eik_w_ep = _cl_effective_eikonal(eik_w_ep, float(_cl_state["bump_add"]),
+                                                 float(args.closed_loop_eikonal_max))
             # (EIK-STAB build 1b) vanishing-viscosity anneal: mutate the closure cell so
             # total_loss_fn reads the CURRENT eps live (same pattern as the lever gate dicts).
             # Default eps0 0.0 => never touched => byte-identical. (V6 #320) when
@@ -12767,13 +12870,18 @@ def main(argv: list[str] | None = None) -> int:
             "once, then re-freezes in 1-13 ep on the same sustained loss shift; #205 measured). Use "
             "--spike-guard-mode rollback (the DEFAULT, and the actual cure) OR "
             "--warm-start-weights-only (a clean fresh-optimizer re-treatment).")
+    # (V9 self-protect) Resolve the eikonal ramp actuator before applying the direction guard below.
+    # This is the fail-loud config-orphan invariant: unified-τ may not arm an end weight unless the
+    # live event-mode τ-rung controller can actually move it.
+    _eik_actuator = _validate_eikonal_ramp_actuation_config(args)
     # (C14) --eikonal-weight-end must not anneal UP relative to --eikonal-weight without an explicit
     # rationale: the eikonal weight should DECAY post-SDF (once the interface is a valid unit-gradient
     # SDF the unit-gradient enforcement is done), not RISE. An end>base ramp is the wrong direction
     # and was a live confound (it drove the eik term to dominate the loss). Refuse unless the operator
     # sets TAC_EIKONAL_WEIGHT_END_UP_OK=<rationale> (a non-empty, non-placeholder string).
     _ewe = getattr(args, "eikonal_weight_end", None)
-    if _ewe is not None and float(_ewe) > float(args.eikonal_weight):
+    if (_ewe is not None and float(_ewe) > float(args.eikonal_weight)
+            and _eik_actuator != "tau_rung"):
         _up_ok = os.environ.get("TAC_EIKONAL_WEIGHT_END_UP_OK", "").strip()
         if _up_ok in ("", "<rationale>", "<reason>"):
             raise ValueError(
@@ -12783,6 +12891,18 @@ def main(argv: list[str] | None = None) -> int:
                 "intentional, set env TAC_EIKONAL_WEIGHT_END_UP_OK=<real rationale>.")
         print(json.dumps({"stage": "eikonal_weight_end_up_WAIVED", "base": float(args.eikonal_weight),
                           "end": float(_ewe), "rationale": _up_ok}), flush=True)
+    elif _ewe is not None and float(_ewe) != float(args.eikonal_weight):
+        print(json.dumps({
+            "stage": "eikonal_ramp_actuation_armed",
+            "base": float(args.eikonal_weight),
+            "end": float(_ewe),
+            "actuator": _eik_actuator,
+            "law": ("eikonal_retention_couples_to_tau_rung_v1"
+                    if _eik_actuator == "tau_rung" else "eikonal_stage_boundary_step_v1"),
+            "note": ("under unified-tau, lambda_eik follows the persisted tau rung and is primed "
+                     "before each lower-tau assignment" if _eik_actuator == "tau_rung" else
+                     "non-unified curriculum uses its reachable stage boundary"),
+        }), flush=True)
     # (C16) --seed-anneal-epochs is interpreted in ABSOLUTE epochs; on a --resume-from whose start
     # epoch is >= the anneal length, the seed compose weight is ALREADY fully withdrawn before the run
     # begins (the seed crutch never contributes) -- warn loudly (the seed-formation losses may still
@@ -12969,7 +13089,9 @@ def main(argv: list[str] | None = None) -> int:
                     "per-epoch seg_form dispatch short-circuits to 'unify_tau' BEFORE the event "
                     "controller (never fires a dissolved boundary). Muon entry has its own "
                     "EventBackstopGate wiring. Flag retained (not removed) for resume/config stability; "
-                    "surfaced LOUD so it is not mis-read as active (S6-R5)."}), flush=True)
+                    "surfaced LOUD so it is not mis-read as active (S6-R5). The independent "
+                    "--tau-advance-mode event controller remains LIVE and, when an eikonal ramp is "
+                    "armed, owns eikonal_retention_couples_to_tau_rung_v1."}), flush=True)
 
     # BUILD 1 (FEED-fw) fail-closed config guards (same NO-FAKE silent-no-op class as the lane/muon
     # validators). DEFAULT-OFF (rewarmup-epochs 0, lane-prior off) => none of these fire => unchanged.

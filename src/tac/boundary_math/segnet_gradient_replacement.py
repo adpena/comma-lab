@@ -18,6 +18,7 @@ NumPy owns the framework-independent faithfulness metrics.  Torch is imported
 inside the Torch helper and MLX is imported inside the MLX helper so importing
 this module on a CPU-only/headless host cannot initialize a Metal device.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -33,8 +34,42 @@ import numpy as np
 _METRIC_EPS = 1.0e-12
 
 
+@dataclass(frozen=True, init=False)
+class TerminalObjectiveProviderMode:
+    """Fail-closed descriptor for a non-costate terminal-objective provider.
+
+    SFESS can search a sealed exact-objective table, but it cannot supply the
+    frame-shaped input costate required by this module's injection seam. The
+    descriptor is intentionally non-configurable: an attempted live-gradient
+    use always retains the full frozen teacher.
+    """
+
+    mode: str = "sfess_cached_k_subset"
+    objective_surface: str = "terminal_exact_through_r"
+    produces_costate: bool = False
+    research_only: bool = True
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    live_gradient_fallback: str = "full_teacher"
+    cache_failure_action: str = "refuse"
+    requires_rederived_objective_context_fingerprint: bool = True
+    requires_rederived_frame_or_state_fingerprint: bool = True
+    requires_rederived_provider_fingerprint: bool = True
+    max_evidence_age_queries: int = 0
+    requires_finite_objective: bool = True
+    live_admission_requires_real_teacher_regret_gate: bool = True
+
+    def resolve_live_gradient(self) -> str:
+        """Return the only legal action for a live-gradient request."""
+
+        return self.live_gradient_fallback
+
+
+SFESS_CACHED_K_SUBSET_PROVIDER_MODE = TerminalObjectiveProviderMode()
+
 YOPO_FIRST_LAYER_SPLIT_PATH = "encoder.model.blocks[0]"
 _YOPO_BANK_SCHEMA = "yopo_first_layer_costate_bank_v1"
+
 
 @dataclass(frozen=True)
 class CostateAgreementMetrics:
@@ -102,12 +137,7 @@ class TeacherStepCheck:
     reference_frame: Any
 
     def passes(self, *, max_regret: float) -> bool:
-        return (
-            self.finite
-            and self.decreases_teacher_loss
-            and self.regret is not None
-            and self.regret <= max_regret
-        )
+        return self.finite and self.decreases_teacher_loss and self.regret is not None and self.regret <= max_regret
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -276,9 +306,7 @@ def evaluate_teacher_step(
     anchor_frame_sha256 = array_content_sha256(anchor_frame)
     candidate_frame_sha256 = array_content_sha256(candidate_frame)
     reference_frame_sha256 = array_content_sha256(reference_frame)
-    frame_arrays = tuple(
-        _as_numpy_array(value) for value in (anchor_frame, candidate_frame, reference_frame)
-    )
+    frame_arrays = tuple(_as_numpy_array(value) for value in (anchor_frame, candidate_frame, reference_frame))
     if any(array.shape != frame_arrays[0].shape for array in frame_arrays[1:]):
         raise ValueError("teacher step anchor/candidate/reference frames must have identical shapes")
     if not all(np.isfinite(array).all() for array in frame_arrays):
@@ -293,11 +321,7 @@ def evaluate_teacher_step(
     for name, value in bindings.items():
         if not _is_sha256(value):
             raise ValueError(f"{name} must be a lowercase 64-character SHA-256")
-    if (
-        not isinstance(evaluated_at_step, int)
-        or isinstance(evaluated_at_step, bool)
-        or evaluated_at_step < 0
-    ):
+    if not isinstance(evaluated_at_step, int) or isinstance(evaluated_at_step, bool) or evaluated_at_step < 0:
         raise ValueError("evaluated_at_step must be an integer >= 0")
 
     current = float(current_loss)
@@ -323,11 +347,7 @@ def evaluate_teacher_step(
 
 
 def _is_sha256(value: Any) -> bool:
-    return (
-        isinstance(value, str)
-        and len(value) == 64
-        and all(ch in "0123456789abcdef" for ch in value)
-    )
+    return isinstance(value, str) and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
 
 
 def _as_numpy_array(value: Any) -> np.ndarray:
@@ -370,9 +390,7 @@ def relative_frame_displacement(anchor_frame: Any, current_frame: Any) -> float:
 
     anchor = np.asarray(anchor_frame)
     current = np.asarray(current_frame)
-    if anchor.shape != current.shape or not (
-        np.isfinite(anchor).all() and np.isfinite(current).all()
-    ):
+    if anchor.shape != current.shape or not (np.isfinite(anchor).all() and np.isfinite(current).all()):
         return float("inf")
     anchor64 = np.asarray(anchor, dtype=np.float64)
     current64 = np.asarray(current, dtype=np.float64)
@@ -891,9 +909,11 @@ def costate_injection_loss_mlx(frame: Any, costate: Any) -> Any:
 
 
 __all__ = [
+    "SFESS_CACHED_K_SUBSET_PROVIDER_MODE",
     "YOPO_FIRST_LAYER_SPLIT_PATH",
     "CostateAgreementMetrics",
     "TeacherStepCheck",
+    "TerminalObjectiveProviderMode",
     "YopoFirstLayerBank",
     "array_content_sha256",
     "capture_yopo_first_layer_bank",

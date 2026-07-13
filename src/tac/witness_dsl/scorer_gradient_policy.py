@@ -10,6 +10,7 @@ This is a contract surface, not a live-trainer flag.  Any missing, stale,
 replayed, cross-frame, cross-objective, mutated-custody, or nonfinite evidence
 selects ``full_teacher``.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -37,16 +38,15 @@ GradientMode = Literal[
     "periodic_costate",
     "trusted_jacobian_cache",
     "yopo_first_layer_costate",
+    "instant_projected_adjoint",
 ]
 JsonScalar = str | int | float | bool | None
+_THRESHOLD_FREE_COSTATE_MODES = frozenset({"yopo_first_layer_costate", "instant_projected_adjoint"})
+INSTANT_VALIDATION_HORIZONS = (2, 4, 8)
 
 
 def _is_sha256(value: Any) -> bool:
-    return (
-        isinstance(value, str)
-        and len(value) == 64
-        and all(ch in "0123456789abcdef" for ch in value)
-    )
+    return isinstance(value, str) and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
 
 
 def _sha256_file(path: Path) -> str:
@@ -67,6 +67,142 @@ def _array_shape_and_finite(value: Any) -> tuple[tuple[int, ...], bool]:
         array_like = array_like.numpy()
     array = np.asarray(array_like)
     return tuple(array.shape), bool(np.isfinite(array).all())
+
+
+def instant_validation_economics(
+    *,
+    k: int,
+    exact_seconds: float,
+    approximate_seconds: float,
+    validate_seconds: float = 0.0,
+    fallback_seconds: float = 0.0,
+    calibration_seconds: float = 0.0,
+) -> float:
+    """Equal-refresh cycle speedup after charging every registered cost."""
+
+    values = (
+        exact_seconds,
+        approximate_seconds,
+        validate_seconds,
+        fallback_seconds,
+        calibration_seconds,
+    )
+    if (
+        not isinstance(k, int)
+        or isinstance(k, bool)
+        or k < 1
+        or any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            or value < 0.0
+            for value in values
+        )
+        or exact_seconds <= 0.0
+    ):
+        raise ValueError("invalid INSTANT validation-economics inputs")
+    denominator = calibration_seconds + exact_seconds + (k - 1) * (
+        approximate_seconds + validate_seconds + fallback_seconds
+    )
+    return k * exact_seconds / denominator
+
+
+class InstantAdmissionEconomics(BaseModel):
+    """Typed cycle law shared by the probe and the live-admission DSL."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    exact_seconds: float = Field(gt=0.0)
+    approximate_seconds: float = Field(ge=0.0)
+    projected_candidate_validation_seconds: float = Field(ge=0.0)
+    calibration_seconds: float = Field(default=0.0, ge=0.0)
+    fallback_seconds: float = Field(default=0.0, ge=0.0)
+
+    @field_validator(
+        "exact_seconds",
+        "approximate_seconds",
+        "projected_candidate_validation_seconds",
+        "calibration_seconds",
+        "fallback_seconds",
+    )
+    @classmethod
+    def _finite_seconds(cls, value: float) -> float:
+        if not math.isfinite(value):
+            raise ValueError("INSTANT admission economics require finite seconds")
+        return value
+
+    def cadence_rows(self) -> tuple[dict[str, Any], ...]:
+        rows: list[dict[str, Any]] = []
+        for k in INSTANT_VALIDATION_HORIZONS:
+            ratio = instant_validation_economics(
+                k=k,
+                exact_seconds=self.exact_seconds,
+                approximate_seconds=self.approximate_seconds,
+                validate_seconds=self.projected_candidate_validation_seconds,
+                fallback_seconds=self.fallback_seconds,
+                calibration_seconds=self.calibration_seconds,
+            )
+            rows.append(
+                {
+                    "K_steps": k,
+                    "exact_refreshes_per_cycle": 1,
+                    "projected_steps_per_cycle": k - 1,
+                    "projected_candidate_validations_per_cycle": k - 1,
+                    "charged_validation_seconds_per_projected_step": (
+                        self.projected_candidate_validation_seconds
+                    ),
+                    "optimistic_upper_bound_ratio": ratio,
+                    "clears_one_under_labeled_assumptions": bool(ratio > 1.0),
+                    "decisive_no_go": bool(ratio <= 1.0),
+                }
+            )
+        return tuple(rows)
+
+    def admitted_cadences(self) -> tuple[int, ...]:
+        return tuple(
+            row["K_steps"]
+            for row in self.cadence_rows()
+            if row["clears_one_under_labeled_assumptions"]
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        cadences = list(self.cadence_rows())
+        admitted = list(self.admitted_cadences())
+        return {
+            "schema": "instant_admission_economics.v1",
+            "formula": (
+                "K*t_exact/(t_calibration+t_exact+(K-1)*(t_projected+"
+                "t_projected_validation+t_fallback))"
+            ),
+            "units": {
+                "time_terms": "seconds_per_cycle_or_step_as_named",
+                "ratio": "dimensionless_dense_cycle_seconds_per_instant_cycle_second",
+            },
+            "charged_terms": {
+                "exact_refresh_seconds": self.exact_seconds,
+                "projected_hot_step_seconds": self.approximate_seconds,
+                "projected_candidate_validation_seconds": (
+                    self.projected_candidate_validation_seconds
+                ),
+                "calibration_seconds": self.calibration_seconds,
+                "fallback_seconds": self.fallback_seconds,
+            },
+            "assumptions": {
+                "calibration": (
+                    "OPTIMISTIC_LOWER_COST_ASSUMPTION: zero pending a registered "
+                    "amortization cadence"
+                ),
+                "fallback": (
+                    "OPTIMISTIC_LOWER_COST_ASSUMPTION: zero pending measured fallback frequency"
+                ),
+                "interpretation": (
+                    "ratios are optimistic upper bounds; any ratio <= 1 is a decisive NO_GO"
+                ),
+            },
+            "cadences": cadences,
+            "admitted_cadences_K": admitted,
+            "decisive_no_go": not admitted,
+        }
 
 
 class ScorerObjectiveContext(BaseModel):
@@ -178,8 +314,7 @@ class ProviderCustody(BaseModel):
         if before.size_bytes != self.size_bytes:
             return (
                 False,
-                f"provider custody byte count changed: expected={self.size_bytes}, "
-                f"actual={before.size_bytes}",
+                f"provider custody byte count changed: expected={self.size_bytes}, actual={before.size_bytes}",
                 None,
             )
         actual_sha = _sha256_file(path)
@@ -194,9 +329,7 @@ class ProviderCustody(BaseModel):
             )
         return True, "provider custody full SHA-256 verified", after
 
-    def verify_stat(
-        self, expected: ProviderStatFingerprint | None
-    ) -> tuple[bool, str, ProviderStatFingerprint | None]:
+    def verify_stat(self, expected: ProviderStatFingerprint | None) -> tuple[bool, str, ProviderStatFingerprint | None]:
         """Use one ``stat`` between refreshes; never rehash unchanged bytes per step."""
 
         if expected is None:
@@ -240,6 +373,8 @@ class TeacherGradientObservation:
     objective_context_fingerprint: str
     scorer_fingerprint: str
     teacher_step_check: TeacherStepCheck
+    renderer_gradient_cosine: float | None = None
+    renderer_gradient_cosine_floor: float | None = None
 
 
 @dataclass(frozen=True)
@@ -268,18 +403,12 @@ class ScorerGradientDecision:
             "fallback_to_full_teacher": self.fallback_to_full_teacher,
             "reasons": list(self.reasons),
             "global_costate_metrics": (
-                None
-                if self.global_costate_metrics is None
-                else self.global_costate_metrics.to_dict()
+                None if self.global_costate_metrics is None else self.global_costate_metrics.to_dict()
             ),
             "annulus_costate_metrics": (
-                None
-                if self.annulus_costate_metrics is None
-                else self.annulus_costate_metrics.to_dict()
+                None if self.annulus_costate_metrics is None else self.annulus_costate_metrics.to_dict()
             ),
-            "teacher_step_check": (
-                None if self.teacher_step_check is None else self.teacher_step_check.to_dict()
-            ),
+            "teacher_step_check": (None if self.teacher_step_check is None else self.teacher_step_check.to_dict()),
             "frame_relative_displacement": self.frame_relative_displacement,
             "custody_check": self.custody_check,
         }
@@ -305,6 +434,7 @@ class ScorerGradientPolicy(BaseModel):
     max_frame_relative_l2: float | None = Field(default=None, gt=0.0)
     split_module_path: str | None = None
     split_identity_sha256: str | None = None
+    instant_admission_economics: InstantAdmissionEconomics | None = None
 
     @model_validator(mode="after")
     def _mode_contract(self) -> ScorerGradientPolicy:
@@ -329,14 +459,14 @@ class ScorerGradientPolicy(BaseModel):
                 supplied.append("split_module_path")
             if self.split_identity_sha256 is not None:
                 supplied.append("split_identity_sha256")
+            if self.instant_admission_economics is not None:
+                supplied.append("instant_admission_economics")
             if supplied:
-                raise ValueError(
-                    "full_teacher must not carry dormant replacement fields: " + ", ".join(supplied)
-                )
+                raise ValueError("full_teacher must not carry dormant replacement fields: " + ", ".join(supplied))
             return self
 
-        if self.mode == "yopo_first_layer_costate":
-            yopo_base_fields = (
+        if self.mode in _THRESHOLD_FREE_COSTATE_MODES:
+            threshold_free_base_fields = (
                 "refresh_interval_steps",
                 "max_staleness_steps",
                 "scorer_fingerprint",
@@ -344,7 +474,7 @@ class ScorerGradientPolicy(BaseModel):
                 "objective_context_fingerprint",
                 "provider_custody",
             )
-            missing = [name for name in yopo_base_fields if getattr(self, name) is None]
+            missing = [name for name in threshold_free_base_fields if getattr(self, name) is None]
             forbidden_thresholds = (
                 "min_costate_cosine",
                 "max_costate_relative_l2",
@@ -355,15 +485,13 @@ class ScorerGradientPolicy(BaseModel):
             supplied_thresholds = [name for name in forbidden_thresholds if getattr(self, name) is not None]
             if supplied_thresholds:
                 raise ValueError(
-                    "yopo_first_layer_costate rejects universal agreement/regret thresholds: "
+                    f"{self.mode} rejects universal agreement/regret thresholds: "
                     + ", ".join(supplied_thresholds)
                 )
         else:
             missing = [name for name in replacement_fields if getattr(self, name) is None]
         if missing:
-            raise ValueError(
-                f"replacement mode {self.mode!r} requires explicit fields: {', '.join(missing)}"
-            )
+            raise ValueError(f"replacement mode {self.mode!r} requires explicit fields: {', '.join(missing)}")
 
         assert self.refresh_interval_steps is not None
         assert self.max_staleness_steps is not None
@@ -377,21 +505,22 @@ class ScorerGradientPolicy(BaseModel):
         if self.scorer_fingerprint != self.objective_context.scorer_sha256:
             raise ValueError("scorer_fingerprint must equal objective_context.scorer_sha256")
         if self.objective_context_fingerprint != self.objective_context.fingerprint():
-            raise ValueError(
-                "objective_context_fingerprint does not match the canonical context payload"
-            )
-        if self.mode != "yopo_first_layer_costate":
+            raise ValueError("objective_context_fingerprint does not match the canonical context payload")
+        if self.mode not in _THRESHOLD_FREE_COSTATE_MODES:
             assert self.min_costate_norm_ratio is not None
             assert self.max_costate_norm_ratio is not None
             if self.min_costate_norm_ratio > self.max_costate_norm_ratio:
                 raise ValueError("costate norm-ratio lower bound exceeds upper bound")
 
         assert self.provider_custody is not None
-        expected_kind = "cache" if self.mode in {"trusted_jacobian_cache", "yopo_first_layer_costate"} else "checkpoint"
+        expected_kind = (
+            "cache"
+            if self.mode in {"trusted_jacobian_cache", "yopo_first_layer_costate", "instant_projected_adjoint"}
+            else "checkpoint"
+        )
         if self.provider_custody.kind != expected_kind:
             raise ValueError(
-                f"{self.mode} requires provider_custody.kind={expected_kind!r}, got "
-                f"{self.provider_custody.kind!r}"
+                f"{self.mode} requires provider_custody.kind={expected_kind!r}, got {self.provider_custody.kind!r}"
             )
         if self.mode == "trusted_jacobian_cache":
             if self.max_frame_relative_l2 is None:
@@ -399,6 +528,10 @@ class ScorerGradientPolicy(BaseModel):
         elif self.max_frame_relative_l2 is not None:
             raise ValueError("max_frame_relative_l2 is cache-specific")
         if self.mode == "yopo_first_layer_costate":
+            if self.instant_admission_economics is not None:
+                raise ValueError(
+                    "instant_admission_economics is exclusive to instant_projected_adjoint"
+                )
             if self.split_module_path != "encoder.model.blocks[0]":
                 raise ValueError("yopo_first_layer_costate requires split_module_path='encoder.model.blocks[0]'")
             if not _is_sha256(self.split_identity_sha256):
@@ -407,8 +540,30 @@ class ScorerGradientPolicy(BaseModel):
             assert self.max_staleness_steps is not None
             if self.max_staleness_steps != self.refresh_interval_steps - 1:
                 raise ValueError("yopo_first_layer_costate requires max_staleness_steps=refresh_interval_steps - 1")
+        elif self.mode == "instant_projected_adjoint":
+            assert self.refresh_interval_steps is not None
+            assert self.max_staleness_steps is not None
+            if self.max_staleness_steps != self.refresh_interval_steps - 1:
+                raise ValueError("instant_projected_adjoint requires max_staleness_steps=refresh_interval_steps - 1")
+            if self.split_module_path is not None or self.split_identity_sha256 is not None:
+                raise ValueError("split identity fields are exclusive to yopo_first_layer_costate")
+            if self.instant_admission_economics is None:
+                raise ValueError(
+                    "instant_projected_adjoint requires instant_admission_economics"
+                )
+            admitted_cadences = self.instant_admission_economics.admitted_cadences()
+            if not admitted_cadences:
+                raise ValueError(
+                    "instant_projected_adjoint economics are decisive NO-GO for K={2,4,8}"
+                )
+            if self.refresh_interval_steps not in admitted_cadences:
+                raise ValueError(
+                    "refresh_interval_steps must be an economics-admitted INSTANT cadence"
+                )
         elif self.split_module_path is not None or self.split_identity_sha256 is not None:
             raise ValueError("split identity fields are exclusive to yopo_first_layer_costate")
+        elif self.instant_admission_economics is not None:
+            raise ValueError("instant_admission_economics is exclusive to instant_projected_adjoint")
         return self
 
     def compile(self) -> CompiledScorerGradientPolicy:
@@ -424,9 +579,7 @@ class ScorerGradientPolicy(BaseModel):
         assert self.objective_context_fingerprint is not None
         compiled_objective_fingerprint = self.objective_context.fingerprint()
         if compiled_objective_fingerprint != self.objective_context_fingerprint:
-            raise ValueError(
-                "objective context changed between validation and policy compilation"
-            )
+            raise ValueError("objective context changed between validation and policy compilation")
         assert self.provider_custody is not None
         ok, reason, stat = self.provider_custody.verify_full()
         if not ok:
@@ -450,7 +603,7 @@ class CompiledScorerGradientPolicy:
         custody = self.source.provider_custody
         if custody is None:
             return True, "full teacher has no replacement provider custody"
-        if refresh or self.source.mode == "yopo_first_layer_costate":
+        if refresh or self.source.mode in _THRESHOLD_FREE_COSTATE_MODES:
             ok, reason, stat = custody.verify_full()
             if ok:
                 self._provider_stat = stat
@@ -458,13 +611,11 @@ class CompiledScorerGradientPolicy:
         ok, reason, _ = custody.verify_stat(self._provider_stat)
         return ok, reason
 
-    def _metric_reasons(
-        self, metrics: CostateAgreementMetrics, *, label: str
-    ) -> list[str]:
+    def _metric_reasons(self, metrics: CostateAgreementMetrics, *, label: str) -> list[str]:
         policy = self.source
         if not metrics.valid:
             return [f"{label}: {reason}" for reason in (metrics.reasons or ("invalid metrics",))]
-        if self.source.mode == "yopo_first_layer_costate":
+        if self.source.mode in _THRESHOLD_FREE_COSTATE_MODES:
             return []
         assert metrics.cosine_similarity is not None
         assert metrics.relative_l2_error is not None
@@ -475,20 +626,12 @@ class CompiledScorerGradientPolicy:
         assert policy.max_costate_norm_ratio is not None
         reasons: list[str] = []
         if metrics.cosine_similarity < policy.min_costate_cosine:
-            reasons.append(
-                f"{label} cosine {metrics.cosine_similarity:.9g} < "
-                f"minimum {policy.min_costate_cosine:.9g}"
-            )
+            reasons.append(f"{label} cosine {metrics.cosine_similarity:.9g} < minimum {policy.min_costate_cosine:.9g}")
         if metrics.relative_l2_error > policy.max_costate_relative_l2:
             reasons.append(
-                f"{label} relative L2 {metrics.relative_l2_error:.9g} > "
-                f"maximum {policy.max_costate_relative_l2:.9g}"
+                f"{label} relative L2 {metrics.relative_l2_error:.9g} > maximum {policy.max_costate_relative_l2:.9g}"
             )
-        if not (
-            policy.min_costate_norm_ratio
-            <= metrics.norm_ratio
-            <= policy.max_costate_norm_ratio
-        ):
+        if not (policy.min_costate_norm_ratio <= metrics.norm_ratio <= policy.max_costate_norm_ratio):
             reasons.append(
                 f"{label} norm ratio {metrics.norm_ratio:.9g} outside "
                 f"[{policy.min_costate_norm_ratio:.9g}, "
@@ -511,6 +654,66 @@ class CompiledScorerGradientPolicy:
         reasons: list[str] = []
         if not isinstance(evaluation, ProviderCostateEvaluation):
             return [f"{label} is not a ProviderCostateEvaluation"]
+        if policy.mode == "instant_projected_adjoint":
+            # Local import avoids the intentional module cycle: the provider
+            # subclasses this module's generic evaluation envelope.
+            from tac.boundary_math.instant_projected_adjoint import (
+                InstantProviderCostateEvaluation,
+                verify_instant_provider_evaluation_origin,
+            )
+
+            if not isinstance(evaluation, InstantProviderCostateEvaluation):
+                reasons.append(
+                    f"{label} INSTANT evidence was not produced by the mechanism-owning provider"
+                )
+            else:
+                origin_ok, origin_reason = verify_instant_provider_evaluation_origin(evaluation)
+                if not origin_ok:
+                    reasons.append(f"{label} {origin_reason}")
+                proof = evaluation.mechanism_proof
+                if proof is None:
+                    reasons.append(f"{label} INSTANT mechanism proof is missing")
+                else:
+                    try:
+                        costate_sha256 = array_content_sha256(evaluation.costate)
+                        recomputed_digest = proof.recompute_derivation_digest()
+                    except (TypeError, ValueError) as exc:
+                        reasons.append(f"{label} INSTANT mechanism proof cannot be rederived: {exc}")
+                    else:
+                        if evaluation.derivation_digest != proof.derivation_digest:
+                            reasons.append(f"{label} INSTANT evaluation/proof digest mismatch")
+                        if proof.derivation_digest != recomputed_digest:
+                            reasons.append(f"{label} INSTANT derivation digest mismatch")
+                        if proof.frame_sha256 != frame_sha256:
+                            reasons.append(f"{label} INSTANT proof frame SHA-256 mismatch")
+                        if proof.costate_sha256 != costate_sha256:
+                            reasons.append(f"{label} INSTANT proof costate SHA-256 mismatch")
+                        if proof.objective_context_fingerprint != objective_context_fingerprint:
+                            reasons.append(f"{label} INSTANT proof objective/context mismatch")
+                        if proof.provider_manifest_sha256 != policy.provider_custody.sha256:
+                            reasons.append(f"{label} INSTANT proof provider custody mismatch")
+                        if proof.scorer_state_sha256 != policy.scorer_fingerprint:
+                            reasons.append(f"{label} INSTANT proof scorer custody mismatch")
+                        if proof.evaluated_at_step != evaluated_at_step:
+                            reasons.append(f"{label} INSTANT proof step mismatch")
+                        if proof.exact_forward_equal is not True:
+                            reasons.append(f"{label} INSTANT proof did not preserve the exact forward")
+                        layer_names = [name for name, _ in proof.eligible_layer_identities]
+                        calibration_names = [name for name, _ in proof.calibration_sha256]
+                        backward_names = [name for name, _ in proof.backward_calls]
+                        if (
+                            not layer_names
+                            or len(layer_names) != len(set(layer_names))
+                            or layer_names != calibration_names
+                            or layer_names != backward_names
+                            or any(
+                                not isinstance(count, int)
+                                or isinstance(count, bool)
+                                or count < 1
+                                for _, count in proof.backward_calls
+                            )
+                        ):
+                            reasons.append(f"{label} INSTANT per-layer mechanism proof is invalid")
         if not _is_sha256(evaluation.frame_sha256):
             reasons.append(f"{label} frame SHA-256 is invalid")
         if not _is_sha256(evaluation.objective_context_fingerprint):
@@ -534,14 +737,20 @@ class CompiledScorerGradientPolicy:
                 or evaluation.bank_source_step < 0
             ):
                 reasons.append(f"{label} YOPO bank source step must be an integer >= 0")
-        if not isinstance(evaluation.evaluated_at_step, int) or isinstance(
-            evaluation.evaluated_at_step, bool
+        elif any(
+            value is not None
+            for value in (
+                evaluation.split_module_path,
+                evaluation.split_identity_sha256,
+                evaluation.bank_source_step,
+            )
         ):
+            reasons.append(f"{label} split/bank metadata is exclusive to YOPO")
+        if not isinstance(evaluation.evaluated_at_step, int) or isinstance(evaluation.evaluated_at_step, bool):
             reasons.append(f"{label} evaluated_at_step must be an integer")
         if evaluation.evaluated_at_step != evaluated_at_step:
             reasons.append(
-                f"{label} replayed step: evaluated={evaluation.evaluated_at_step}, "
-                f"required={evaluated_at_step}"
+                f"{label} replayed step: evaluated={evaluation.evaluated_at_step}, required={evaluated_at_step}"
             )
         try:
             frame_shape, frame_finite = _array_shape_and_finite(frame)
@@ -550,9 +759,7 @@ class CompiledScorerGradientPolicy:
             reasons.append(f"{label} array conversion failed: {exc}")
             return reasons
         if frame_shape != costate_shape:
-            reasons.append(
-                f"{label} costate/frame shape mismatch: {costate_shape} != {frame_shape}"
-            )
+            reasons.append(f"{label} costate/frame shape mismatch: {costate_shape} != {frame_shape}")
         if not frame_finite or not costate_finite:
             reasons.append(f"{label} frame or costate contains a nonfinite value")
         return reasons
@@ -601,25 +808,13 @@ class CompiledScorerGradientPolicy:
         if policy.objective_context_fingerprint != required_objective_fingerprint:
             reasons.append("declared objective/context fingerprint changed after compilation")
 
-        current_step_valid = (
-            isinstance(current_step, int)
-            and not isinstance(current_step, bool)
-            and current_step >= 0
-        )
+        current_step_valid = isinstance(current_step, int) and not isinstance(current_step, bool) and current_step >= 0
         if not current_step_valid:
             reasons.append("current_step must be an integer >= 0")
-        observation = (
-            teacher_observation
-            if isinstance(teacher_observation, TeacherGradientObservation)
-            else None
-        )
+        observation = teacher_observation if isinstance(teacher_observation, TeacherGradientObservation) else None
         if teacher_observation is not None and observation is None:
             reasons.append("teacher observation has the wrong contract type")
-        refresh = bool(
-            observation is not None
-            and current_step_valid
-            and observation.measured_at_step == current_step
-        )
+        refresh = bool(observation is not None and current_step_valid and observation.measured_at_step == current_step)
         custody_ok, custody_reason = self._verify_custody(refresh=refresh)
         if not custody_ok:
             reasons.append(custody_reason)
@@ -647,24 +842,18 @@ class CompiledScorerGradientPolicy:
             )
             if not measured_step_valid:
                 reasons.append("teacher measured_at_step must be an integer >= 0")
-            age = (
-                current_step - observation.measured_at_step
-                if current_step_valid and measured_step_valid
-                else None
-            )
+            age = current_step - observation.measured_at_step if current_step_valid and measured_step_valid else None
             assert policy.max_staleness_steps is not None
             assert policy.refresh_interval_steps is not None
             if age is not None and age < 0:
                 reasons.append("teacher observation is from the future")
             if age is not None and age > policy.max_staleness_steps:
                 reasons.append(
-                    f"teacher observation is stale: age={age} > "
-                    f"max_staleness_steps={policy.max_staleness_steps}"
+                    f"teacher observation is stale: age={age} > max_staleness_steps={policy.max_staleness_steps}"
                 )
             if age is not None and age >= policy.refresh_interval_steps:
                 reasons.append(
-                    f"teacher refresh is due: age={age} >= "
-                    f"refresh_interval_steps={policy.refresh_interval_steps}"
+                    f"teacher refresh is due: age={age} >= refresh_interval_steps={policy.refresh_interval_steps}"
                 )
             if observation.objective_context_fingerprint != required_objective_fingerprint:
                 reasons.append("teacher anchor objective/context fingerprint mismatch")
@@ -683,9 +872,7 @@ class CompiledScorerGradientPolicy:
 
             try:
                 anchor_shape, anchor_finite = _array_shape_and_finite(observation.anchor_frame)
-                teacher_shape, teacher_finite = _array_shape_and_finite(
-                    observation.teacher_costate_at_anchor
-                )
+                teacher_shape, teacher_finite = _array_shape_and_finite(observation.teacher_costate_at_anchor)
             except (TypeError, ValueError) as exc:
                 reasons.append(f"real-teacher anchor array conversion failed: {exc}")
             else:
@@ -727,9 +914,7 @@ class CompiledScorerGradientPolicy:
                             provider_anchor.costate,
                             mask=annulus_mask,
                         )
-                        reasons.extend(
-                            self._metric_reasons(annulus_metrics, label="annulus costate")
-                        )
+                        reasons.extend(self._metric_reasons(annulus_metrics, label="annulus costate"))
                 except (TypeError, ValueError) as exc:
                     reasons.append(f"costate metric evaluation failed: {exc}")
 
@@ -752,56 +937,131 @@ class CompiledScorerGradientPolicy:
             ):
                 reasons.append("teacher step check was replayed from a different step")
             if isinstance(step_check, TeacherStepCheck) and (
-                not _is_sha256(step_check.candidate_frame_sha256)
-                or not _is_sha256(step_check.reference_frame_sha256)
+                not _is_sha256(step_check.candidate_frame_sha256) or not _is_sha256(step_check.reference_frame_sha256)
             ):
                 reasons.append("teacher step check candidate/reference frame hashes are invalid")
             if isinstance(step_check, TeacherStepCheck):
                 try:
                     actual_candidate_sha = array_content_sha256(step_check.candidate_frame)
                     actual_reference_sha = array_content_sha256(step_check.reference_frame)
-                    candidate_shape, candidate_finite = _array_shape_and_finite(
-                        step_check.candidate_frame
-                    )
-                    reference_shape, reference_finite = _array_shape_and_finite(
-                        step_check.reference_frame
-                    )
+                    candidate_shape, candidate_finite = _array_shape_and_finite(step_check.candidate_frame)
+                    reference_shape, reference_finite = _array_shape_and_finite(step_check.reference_frame)
                     anchor_shape, _ = _array_shape_and_finite(observation.anchor_frame)
                 except (TypeError, ValueError) as exc:
                     reasons.append(f"teacher step check candidate provenance failed: {exc}")
                 else:
                     if actual_candidate_sha != step_check.candidate_frame_sha256:
-                        reasons.append(
-                            "teacher step check candidate frame content SHA-256 mismatch"
-                        )
+                        reasons.append("teacher step check candidate frame content SHA-256 mismatch")
                     if actual_reference_sha != step_check.reference_frame_sha256:
-                        reasons.append(
-                            "teacher step check reference frame content SHA-256 mismatch"
-                        )
+                        reasons.append("teacher step check reference frame content SHA-256 mismatch")
                     if candidate_shape != anchor_shape or reference_shape != anchor_shape:
-                        reasons.append(
-                            "teacher step check candidate/reference frame shape differs from anchor"
-                        )
+                        reasons.append("teacher step check candidate/reference frame shape differs from anchor")
                     if not candidate_finite or not reference_finite:
                         reasons.append("teacher step check candidate/reference frame is nonfinite")
             if isinstance(step_check, TeacherStepCheck):
-                if policy.mode == "yopo_first_layer_costate":
+                scalar_contract_valid = True
+                loss_scalars: list[float] = []
+                for value in (
+                    step_check.current_loss,
+                    step_check.candidate_loss,
+                    step_check.reference_loss,
+                ):
+                    if isinstance(value, (bool, str, bytes)):
+                        scalar_contract_valid = False
+                        break
+                    try:
+                        loss_scalars.append(float(value))
+                    except (TypeError, ValueError, OverflowError):
+                        scalar_contract_valid = False
+                        break
+                if not scalar_contract_valid:
+                    reasons.append("teacher step scalar loss is not a real numeric value")
+
+                flags_valid = isinstance(step_check.finite, bool) and isinstance(
+                    step_check.decreases_teacher_loss, bool
+                )
+                if not flags_valid:
+                    reasons.append("teacher step finite/descent flags must be booleans")
+
+                regret_scalar: float | None = None
+                regret_valid = step_check.regret is None
+                if step_check.regret is not None and not isinstance(step_check.regret, (bool, str, bytes)):
+                    try:
+                        regret_scalar = float(step_check.regret)
+                    except (TypeError, ValueError, OverflowError):
+                        pass
+                    else:
+                        regret_valid = True
+                if not regret_valid:
+                    reasons.append("teacher step regret is not a real numeric value or None")
+
+                derived_finite = bool(
+                    scalar_contract_valid and all(math.isfinite(value) for value in loss_scalars)
+                )
+                derived_decreases = bool(
+                    derived_finite and loss_scalars[1] < loss_scalars[0]
+                )
+                derived_regret = (
+                    float(loss_scalars[1] - loss_scalars[2]) if derived_finite else None
+                )
+                if flags_valid and step_check.finite != derived_finite:
+                    reasons.append("teacher step finite flag disagrees with its scalar losses")
+                if flags_valid and step_check.decreases_teacher_loss != derived_decreases:
+                    reasons.append("teacher step descent flag disagrees with its scalar losses")
+                if regret_valid and regret_scalar != derived_regret:
+                    reasons.append("teacher step regret disagrees with candidate_loss - reference_loss")
+
+                step_contract_valid = scalar_contract_valid and flags_valid and regret_valid
+                if policy.mode in _THRESHOLD_FREE_COSTATE_MODES:
                     if not (
-                        step_check.finite
-                        and step_check.decreases_teacher_loss
-                        and step_check.regret is not None
-                        and math.isfinite(step_check.regret)
+                        step_contract_valid
+                        and derived_finite
+                        and derived_decreases
+                        and regret_scalar is not None
+                        and math.isfinite(regret_scalar)
                     ):
                         reasons.append(
-                            "YOPO real-teacher one-step check must be finite, decreasing, "
+                            f"{policy.mode} real-teacher one-step check must be finite, decreasing, "
                             "and carry finite measured regret"
                         )
                 else:
                     assert policy.max_teacher_loss_regret is not None
-                    if not step_check.passes(max_regret=policy.max_teacher_loss_regret):
+                    if not (
+                        step_contract_valid
+                        and derived_finite
+                        and derived_decreases
+                        and regret_scalar is not None
+                        and regret_scalar <= policy.max_teacher_loss_regret
+                    ):
                         reasons.append(
                             "real-teacher one-step check failed: candidate must decrease teacher loss "
                             "with bounded regret"
+                        )
+
+            if policy.mode == "instant_projected_adjoint":
+                direction_values = (
+                    observation.renderer_gradient_cosine,
+                    observation.renderer_gradient_cosine_floor,
+                )
+                if any(
+                    value is None or isinstance(value, (bool, str, bytes))
+                    for value in direction_values
+                ):
+                    reasons.append(
+                        "instant_projected_adjoint requires measured renderer-gradient cosine and floor"
+                    )
+                else:
+                    direction_cosine = float(observation.renderer_gradient_cosine)
+                    direction_floor = float(observation.renderer_gradient_cosine_floor)
+                    if not (
+                        math.isfinite(direction_cosine)
+                        and math.isfinite(direction_floor)
+                        and direction_floor >= 0.0
+                        and direction_cosine > direction_floor
+                    ):
+                        reasons.append(
+                            "instant_projected_adjoint renderer gradient is not a positive descent direction "
+                            "above its numeric floor"
                         )
 
         if current_provider_evaluation is None:
@@ -822,18 +1082,14 @@ class CompiledScorerGradientPolicy:
 
         if refresh and observation is not None:
             if observation.anchor_frame_sha256 != current_frame_sha256:
-                reasons.append(
-                    "refresh anchor frame SHA-256 does not equal the current injection frame"
-                )
+                reasons.append("refresh anchor frame SHA-256 does not equal the current injection frame")
             provider_anchor = observation.provider_costate_at_anchor
             if isinstance(provider_anchor, ProviderCostateEvaluation) and isinstance(
                 current_provider_evaluation, ProviderCostateEvaluation
             ):
                 try:
                     anchor_provider_costate_sha = array_content_sha256(provider_anchor.costate)
-                    current_provider_costate_sha = array_content_sha256(
-                        current_provider_evaluation.costate
-                    )
+                    current_provider_costate_sha = array_content_sha256(current_provider_evaluation.costate)
                 except (TypeError, ValueError) as exc:
                     reasons.append(f"refresh provider costate content hashing failed: {exc}")
                 else:
@@ -859,9 +1115,7 @@ class CompiledScorerGradientPolicy:
                 reasons.append("trusted cache is missing current-frame trust evidence")
             else:
                 try:
-                    frame_displacement = relative_frame_displacement(
-                        observation.anchor_frame, current_frame
-                    )
+                    frame_displacement = relative_frame_displacement(observation.anchor_frame, current_frame)
                 except (TypeError, ValueError) as exc:
                     frame_displacement = float("inf")
                     reasons.append(f"cache trust-radius evaluation failed: {exc}")
@@ -893,8 +1147,10 @@ def compile_scorer_gradient_policy(payload: Mapping[str, Any]) -> CompiledScorer
 
 
 __all__ = [
+    "INSTANT_VALIDATION_HORIZONS",
     "CompiledScorerGradientPolicy",
     "GradientMode",
+    "InstantAdmissionEconomics",
     "ProviderCostateEvaluation",
     "ProviderCustody",
     "ProviderStatFingerprint",
@@ -903,4 +1159,5 @@ __all__ = [
     "ScorerObjectiveContext",
     "TeacherGradientObservation",
     "compile_scorer_gradient_policy",
+    "instant_validation_economics",
 ]

@@ -16480,6 +16480,19 @@ identifier was resolved before derivation. No YOPO source code was imported. Rec
 `tac.witness_dsl.scorer_gradient_policy`; equation = `yopo_first_layer_costate_v1`; DAG = this FEED.
 `score_claim=false`; `promotion_eligible=false`; live trainer and protected run untouched.
 
+### FEED-task456-exact-forward-thread-control (2026-07-13)
+
+**MEASURED, fresh-eyes-reviewed(1)-CLEAN:** on the first 64 receiver-realized witness pairs, a
+finite six-to-one CPU-thread control reduced the matched frozen Torch-fp32 SegNet forward median
+from 936.312 ms to 312.677 ms (2.995x) with zero flips in 12,582,912 argmax pixels; the
+623.635 ms gain exceeded the 610.671 ms composed run-local timing floor. **VERDICT: GO** within the
+registered macOS-arm64 CPU/Torch formulation; **NEEDS-MORE** for the 95% kill, training integration,
+unseen pairs, and contest CPU/CUDA/MLX/Metal transfer. `verdict_scope: registered
+formulation/substrate`; `research_only=true`; `score_claim=false`; pointers unmoved. Receipt =
+`experiments/results/segnet_exact_forward_20260713T020000Z/receipt.json`; equation =
+`segnet_exact_forward_cpu_thread_control_v1`; DSL deliberately unchanged because no trainer lever
+was wired under the no-live-trainer-edit boundary.
+
 ### FEED-v9div (2026-07-12): V9·CGauge DIVERGENCE post-mortem + fixed relaunch (the OWED response branch)
 SIGNAL: operator "V9 cgauge was supposed to be optimal ... should have been turned in — check the design memo."
 DIAGNOSTIC [MEASURED, run's own artifacts]: best d_seg 0.03482@ep150 (levelset_best.json) = 7× above mod32cap
@@ -16493,3 +16506,257 @@ RESPONSE [turned in, HELD operator-GO]: memo §9 fixed relaunch = warm-start-wei
 + --eikonal-weight-end 0.10 (hold thin lane through unify_tau). CAVEAT: stops erosion ≠ makes optimal; the
 7×-above-baseline best is a SEPARATE open question (under-train vs trunk under-performs mod32cap). Fire AFTER
 95%-kill P0 (GPU contention), paired with the trunk-vs-baseline question. Pointer 0.19108282 UNMOVED (MEANS).
+
+### FEED-frozen-segnet-oss-master-449 (2026-07-13) — four-route OSS reconciliation leaves the forward-replacing surrogate as the surviving direction
+
+**REVIEW STATUS:** `fresh-eyes-reviewed(3)-CLEAN`; the post-fix three-pass seal is recorded by the master
+review receipts. **STORES CONSULTED:** one
+unified corpus query loaded research, equations, memory, DAG, council, tasks, and docs; operating manual;
+corrected goldmine and costate memos; four landed probes and reconciliation receipts; canonical DSL, equation,
+task, and DAG surfaces; SHARE_GE2 receipt; official repository, license, and paper pages. Protected live runs,
+paid/cloud surfaces, the live trainer, and `upstream/evaluate.py` were deliberately excluded.
+
+**MEASURED:** YOPO remains validation-dominated despite minimum non-refresh cosines above `0.9998`; INSTANT
+admits none of nine arms after the shared typed economics law charges measured validation. Its largest hot-step
+median-minus-MAD ratio is `1.0353914790745997`, but its largest optimistic `K={2,4,8}` cycle ratio is only
+`0.5888733451533681`. Its live admission now requires an identity-bound provider-issued capability, and the
+provider pins and re-verifies the projected primitive before trusting mechanism counters. SFESS learned logits,
+M-ladder, zero-spread skip, and authenticated partial resume leave
+the same-budget clean result unchanged at delta `0.0 S`; JRD has no
+OSS-enriched replay and its delta is UNKNOWN. **UNKNOWN:** `share_{>=2}(tau)` is not load-bearing because neither
+`beta_i` nor `tau` is mapped to the frozen SegNet Jacobian; exact-teacher descent/regret and measured validation
+economics decide instead. **VERDICT: none clears task 449 in the registered scopes.** YOPO loses on per-step
+validation cost. INSTANT retains the exact forward and has no admitted arm. Live SFESS adds exact
+objective forwards. JRD is rate-only and removes zero scorer calls. The surviving direction is a separately
+scoped, amortized on-policy nonlinear surrogate that replaces the frozen forward. That direction is DERIVED,
+currently unmeasured and unpromoted; this FEED does not build or measure it. `score_claim=false`; defensive
+`[contest-CPU]` pointer `0.1880443979880752` unmoved.
+
+Triality: DSL = existing `yopo_first_layer_costate`, `instant_projected_adjoint` with shared typed
+`InstantAdmissionEconomics`, existing SFESS cached policy,
+and JRD N/A-with-reason as an offline receiver oracle; equations = `yopo_first_layer_costate_v1`,
+`instant_projected_input_adjoint_v1`, `sfess_fixed_k_cached_replay_ranking_v1`, and
+`jrd_exact_coefficient_prefix_selection_v1`; durable finding =
+`.omx/research/codex_findings_master_oss_reconciliation_20260713_codex.md`; DAG = this single master FEED.
+
+### FEED-task454-segnet-cheap-validation (2026-07-13) — cheap gate loses to its refresh rate
+
+**REVIEW STATUS:** `fresh-eyes-reviewed(1)-CLEAN`; the recovery reviewer re-derived the receipt counts and formulas.
+**STORES CONSULTED:** one unified corpus query loaded research, equations, memory, DAG, council, tasks, and docs;
+the operating manual; v7.5/v8 contracts; final YOPO provider/receipt; costate and goldmine memos; sealed pair-0
+early/boundary/late checkpoints; canonical lane/task state. Paid/cloud state, the live trainer, protected V9 run,
+and `upstream/evaluate.py` were deliberately excluded.
+
+**MEASURED:** the empirical feature ball accepts 3/58 disjoint holdouts, with zero exact-`d_seg` unsafe accepts
+but two joint CE/`d_seg`/`d_pose` unsafe accepts; rejection rate is `0.9482758620689655`. **DERIVED from measured,
+content-bound components:** the cheap prefix-plus-array gate median is `0.006529812060762197 s`; charging the DSL's
+`full_teacher_and_refresh` action on rejection gives K2 `0.9869128501255486x` and K4 `0.9818936607306264x`.
+**VERDICT: NO-GO, formulation scoped.** No actual suffix upper-bound artifact exists, joint held descent fails,
+and component economics remain below parity; sequence-integrated whole-step speedup is UNKNOWN and no GO is claimed.
+Receipt = `experiments/results/segnet_validation_certificate_20260713T015633Z/receipt.json`, SHA-256
+`60fe88fa1a5058d018170005890ef0720f01b31762b5e7ef0b5c7d6dc19a7d60`. Triality: DSL =
+`tac.witness_dsl.segnet_validation_certificate_policy`; equation = `segnet_margin_trust_region_v1`; DAG = this
+FEED. `research_only=true`; `score_claim=false`; defensive `[contest-CPU]` pointer `0.1880443979880752` UNMOVED.
+
+### FEED-task455-onpolicy-costate-scaffold-seal (2026-07-13) — partial mechanism preserved, terminal verdict UNKNOWN
+
+**DERIVED, fresh-eyes-reviewed(1)-CLEAN-AS-SCAFFOLD:** the nonlinear provider consumes current/anchor through-R
+frames plus the exact anchor input costate, fits only teacher-labelled on-trajectory transitions, and emits a
+detached frame-shaped training-signal replacement. **MEASURED PARTIAL ONLY:** the interrupted receipt at
+`experiments/results/onpolicy_scorer_surrogate_20260713T020600Z/measurement_receipt.json` remains `RUNNING` and
+has no terminal verdict; it is not an empirical anchor and supports no throughput or admission claim. **VERDICT:
+UNKNOWN / SEALED-RESEARCH-ONLY.** `verdict_scope: implementation scaffold and interrupted single-seed pair-0
+early/boundary progress only`; no family verdict. Full #455 still owes a terminal resumable K={1,4,20}
+early/boundary/late run, EMA-shadow inference, and typed live-trainer integration after admission. Triality: DSL =
+`tac.witness_dsl.onpolicy_scorer_surrogate_policy`; equation = `onpolicy_input_costate_surrogate_v1`; DAG = this
+FEED. `research_only=true`; `score_claim=false`; pointers unmoved; no live trainer or protected run was touched.
+
+### FEED-task455-terminal-correction (2026-07-13) — late terminal receipt supersedes RUNNING snapshot
+
+**SUPERSEDES only the receipt-status and terminal-verdict statements in the immediately preceding task-455 FEED.**
+The recovery inventory observed the in-progress receipt, but the already-running local process subsequently finished
+at `2026-07-13T02:35:08.485921Z`; no recovery launch or resume was performed. **MEASURED,
+fresh-eyes-reviewed(1)-CLEAN-PARTIAL:** the terminal receipt is `MEASURED / NEEDS-MORE`, its canonical run-contract
+SHA-256 re-derives exactly, and all 14 referenced stage/resume checkpoint records pass bytes + SHA-256 custody.
+Two of nine regime/cadence arms completed: boundary K4 at `2.622949309431545x` and late K4 at
+`2.6257356434284387x`; seven arms blocked. Every K20 arm blocked at its next anchor fit, early K4 blocked, and each
+K1 control terminated before the 40-step horizon. Thus no cadence is admitted across all early/boundary/late
+regimes. **VERDICT: NEEDS-MORE / SEALED-RESEARCH-ONLY.** `verdict_scope: formulation; n=1 pair0; saved
+early/boundary/late; macOS-CPU advisory; nonlinear 9-channel on-policy input-costate student with EMA shadow;
+K={1,4,20}; 40 post-bootstrap steps`. The two K4 speedups are not a family or live-trainer GO. Full #455 now owes a
+changed pre-registered capacity/control law that completes one common cadence across all regimes; typed live-trainer
+integration remains correctly absent until that admission. Receipt SHA-256 =
+`2812cd3a984fb063845d0690d79e319f2875aad4954630a87b43cda94d22211b`. Triality remains DSL =
+`tac.witness_dsl.onpolicy_scorer_surrogate_policy`; equation = `onpolicy_input_costate_surrogate_v1`; DAG = this
+corrective FEED. `research_only=true`; `score_claim=false`; pointers unmoved.
+
+### FEED-v9opt (2026-07-13): SOL xhigh truly-optimal V9·CGauge design (rc=0) — the DEEPER config-orphan
+SIGNAL: operator "sweep for all should-be-on + all missing + event-curriculum optimal + multi-basin solve; design truly-optimal V9."
+DIAGNOSTIC [MEASURED/DERIVED, memo v9_cgauge_truly_optimal_design_20260712.md]: my §9 one-line fix (--eikonal-weight-end)
+is INERT — --seg-form-unify-tau BYPASSES the discrete event controller while _evt_on stays true, so the eikonal step
+reads an UNFIRED SENTINEL forever = 2nd config-orphan, DEEPER than the missing flag. The dead arm's "cascade" was
+NEVER ACTUATED (lane/chroma/screw gates observability-ONLY, sensors not forces). TRUNK CRUX (3 live hyps): INSTANCE
+config-fail PRIMARY · under-train SECONDARY (died ep275 < 3000/ep726-Muon) · mod19-STRUCTURAL live 3rd (best 0.03482
+= 7.4× above 0.0047 control, UNEXPLAINED by eikonal — eikonal only explains post-best regression). 
+RESPONSE [design, HELD op-GO]: truly-optimal V9 = receiver-closed EVENT-NATIVE OPERATOR-SPLITTING flow (form regions/
+nuclei → repeat{prime retention→lower τ ONE rung→repair→accept-or-rollback} → Muon-AFTER-stable → appearance-phase for
+flicker → MULTI-BASIN terminal solve keep-min). #1 change: τ rung must CAUSALLY raise eikonal BEFORE sharpening.
+DECISIVE TEST (owed): corrected mod19 vs mod32 under SAME actuated flow, n600 through-R per-class, +2% revert threshold
+→ decides FAMILY (salvage V9 vs escalate v8 per-class carriers). §2 = 15-row ranked SHOULD-BE-ON (LengthSigma aniso-σ
+Road-Lane 0.377 / AA-supersample authority-render 0.00247→0.00091 / TieLocus / ...); REFUSED MarginBandSatisficing on
+provenance inconsistency (msafe 0.06 vs derived 0.0392) = NO-FAKE held. Also: #449 fleet (YOPO/INSTANT/SFESS/JRD) all
+NO-GO for throughput; surviving 95%-kill route = on-policy amortized surrogate REPLACING the forward. pointer 0.19108282 UNMOVED (MEANS).
+
+### FEED-margin-satisfice-provenance (2026-07-12): MarginBandSatisficing threshold repaired and self-protected
+
+**BUG — MEASURED from code:** the DSL factory simultaneously emitted `msafe=0.06`, `delta_r=0.0196`, and
+`headroom=2.0` while promising `m_safe=headroom*delta_R`; those values cannot all satisfy the stated law. The
+V9 truly-optimal sweep correctly REFUSED the lever at this provenance boundary. **RESOLUTION — DERIVED from the
+MEASURED artifact:** `reports/delta_R_noise_floor.json` records `delta_R=0.019590163230895963` and full-R annulus
+p95 `0.03712034225463867`; the smallest integer multiplier covering that conservative cross-check is headroom
+`ceil(0.03712034225463867/0.019590163230895963)=2`, so the config-derived threshold is
+`m_safe=2*delta_R=0.039180326461791926`. No MEASURED A/B pins headroom 3; it remains an OPEN treatment, not the
+default. **FIX:** `MarginBandSatisficing` now resolves the measured artifact and executable canonical equation
+`margin_band_satisficing_threshold_v1` at config construction; a missing artifact uses an explicitly recorded
+WAIVER fallback copied exactly from the measured artifact. **SELF-PROTECT GATE:** any `msafe` or `delta_r`
+compatibility override that disagrees with the artifact-derived law within fp tolerance fails loud; the factory
+also rechecks `m_safe == headroom*delta_R` before emitting argv values. **VERIFIED:** 38 focused tests cover the
+derived path, headroom-3 explicit treatment path, artifact refresh, missing-artifact fallback, malformed schema,
+LawRef manifest/anchor SHA, inconsistent overrides, docstring relation, equation registry append, and package
+exports; the combined P0-force surface is 62 tests green. Lever remains DEFAULT-OFF and was not composed, fired,
+trained, or launched. Treatment delta-S is UNMEASURED; pointer UNMOVED (MEANS).
+
+### FEED-task455-first-receipt-methodology-falsification (2026-07-13) — raw observations retained, verdict authority revoked
+
+**SUPERSEDES only the evidentiary interpretation of `FEED-task455-terminal-correction`; it does not rewrite or
+discard the source-custodied receipt.** Three independent fresh-eyes reviews re-derived the probe from code and
+found that the terminal `020600Z` receipt cannot answer Task #455's decisive questions. Its K4 values
+`2.622949309431545x` and `2.6257356434284387x` are **MEASURED whole anchored-control-law ratios**, but they mix
+exact-teacher line search, recurring fit, and a different non-anchor step schedule; they are not an isolated
+comparison to the operator-supplied `1656 ms` frozen-forward baseline. Its admission predicate checks independent
+descent, not matched exact-versus-surrogate `d_seg` trajectory parity; fit admission checks live weights while EMA
+weights drive inference; dense per-pixel labels occur only at sparse anchors rather than every student-generated
+training step; and resume reconstructs an omitted anchor costate with an unscheduled exact-teacher call.
+
+**CANONICAL DISPOSITION: METHODOLOGY-FALSIFIED / RESEARCH-ONLY.** The receipt's K20 CE failures, recurrent-fit
+failures, provider timings, and checkpoint bytes remain valid historical observations, while its raw
+`NEEDS-MORE` verdict and reported speedups carry no terminal throughput/fidelity authority. `verdict_scope`:
+first 9-channel effective-5x5 residual CNN, pair0, one seed, saved early/boundary/late states, K={1,4,20},
+macOS-CPU advisory; this is not a family kill. Corrected work must use student-owned dense on-policy collection,
+EMA-provider admission, exact and surrogate branches under one step-norm schedule, every-step CE/d_seg/d_pose
+traces, isolated forward/costate/fit/inference/VJP/window timings, and checkpoints that preserve the anchor frame
+and costate. **STORES CONSULTED:** `reports/latest.md`, `tac.frontier_scan.build_frontier_scan_payload`, lane and
+subagent registries, the terminal receipt/checkpoints, canonical equation registry, latest task-455 equation, and
+three fresh-eyes code reviews. Triality: DSL = `tac.witness_dsl.onpolicy_scorer_surrogate_policy`; equation =
+`onpolicy_input_costate_surrogate_v1`; DAG = this FEED. `research_only=true`; `score_claim=false`; current scanner
+`[contest-CPU]` pointer `0.1880443979880752` UNMOVED.
+
+### FEED-task455-corrected-onpolicy-matched-campaign (2026-07-13) — economics survive, fidelity does not admit
+
+**SUPERSEDES the task-455 first-receipt evidentiary interpretation, not its historical bytes. MEASURED,
+POST-MEASUREMENT REVIEW PENDING:** a source-custodied nonlinear multi-receptive-field EMA provider was trained on
+exact costates at every one of five contiguous student-owned states, then compared with exact costates under one
+exact-derived step-norm schedule per saved regime. Every step records exact CE, through-R `d_seg`, and frozen-PoseNet
+`d_pose`; deterministic exact repeats derived zero floors. Atomic two-slot plus four preserved stage checkpoints
+include the exact anchor frame/costate and restore with zero teacher calls. All SegNet/PoseNet forward counts reconcile.
+
+**MEASURED economics:** across early/boundary/late, exact forward-only mean = `0.4345562303826834 s` (`n=15`),
+surrogate inference mean = `0.13003257649446218 s` (`n=12`), and independently timed anchored windows total
+`46.26509220909793 s` exact versus `22.718549541546963 s` surrogate (`2.0364456861336944x`). **DERIVED:** same-run
+forward replacement = `3.341902791576157x`; versus the operator-supplied, not run-measured `1656 ms` comparator =
+`12.735270227230524x`, a `92.147791274489%` time reduction. The bounded W5 window observes an `80%` teacher skip;
+full K20/`95%` fidelity remains UNKNOWN and the projected K20 economics have no admission authority.
+
+**FIDELITY:** early exact endpoint `d_seg` improved `0.0047149658203125 -> 0.0046539306640625`, but final EMA
+admission failed and target `d_seg` first departed the zero repeat floor at step 5 by
+`0.000025431315104166956`: **NO-GO, formulation scoped**. Boundary and late exact CE-descent controls worsened endpoint
+`d_seg` (`0.0035247802734375 -> 0.003926595052083333` and `0.003992716471354167 -> 0.0043182373046875`), so their
+fail-closed verdict is **NEEDS-MORE**. Campaign precedence is `NEEDS-MORE`; there is no three-regime or live-trainer
+admission. `verdict_scope`: pair0, seed455, saved early/boundary/late, W5 bounded proof, macOS-CPU advisory; not a
+family kill or score authority. `research_only=true`; `score_claim=false`; pointer
+`0.1880443979880752` UNMOVED.
+
+**STORES CONSULTED:** operating contracts and v7.5/v8 specs; frontier scanner; lane/task/subagent/equation/DAG/probe
+registries; sealed dependency; methodology-falsified first receipt; corrected source bundles, receipts, checkpoints,
+and campaign reducer. No cloud/GPU/live-run/evaluator actuation. Campaign =
+`experiments/results/onpolicy_costate_matched_campaign_20260713T031500Z.json`, SHA-256
+`dc56941789b2746bb53a6cb652b9a42dcd1299e11cdaa8567aae96a930e9b8bf`. Triality: DSL =
+`tac.witness_dsl.onpolicy_scorer_surrogate_policy`; equation = `onpolicy_input_costate_surrogate_v1`; DAG = this FEED;
+durable memo = `.omx/research/onpolicy_surrogate_95kill_20260713.md`.
+
+### FEED-task455-final-joint-control-campaign (2026-07-13) — inference is cheaper, tested formulation fails fidelity
+
+**SUPERSEDES only the adjudication and evidence claims of
+`FEED-task455-corrected-onpolicy-matched-campaign`; all earlier receipts remain historical evidence.**
+The final source-frozen harness applies one exact-derived parameter-step schedule to exact and surrogate
+branches, and the exact controller admits only strict CE descent with nonworsening through-R `d_seg` and
+frozen-PoseNet `d_pose`. A fresh review revoked parameter-quantization exhaustion as a terminal floor;
+all three runs end in `LINE_SEARCH_BLOCKED_AFTER_MEASURED_PREFIX`, and only an exact zero renderer-gradient
+certificate may close a future floor. Every run uses five contiguous exact-labelled student-owned collection states, EMA-only
+serving/admission, two-slot plus four preserved stage checkpoints, source bundles, zero-teacher resume, and
+reconciled SegNet/PoseNet call counts.
+
+**MEASURED `[macOS-CPU advisory training-gradient]`:** isolated exact frozen forward mean =
+`0.4284219396585185 s` (`n=9`); surrogate inference mean = `0.15149266664714864 s` (`n=3`), giving
+`2.828004477975054x` DERIVED same-run forward-only speedup. Against the operator-supplied, not
+run-measured `1.656 s`, the DERIVED speedup is `10.931222194781855x`. Symmetric complete operational
+windows total `18.046950208954513 s` exact versus `13.56999491690658 s` surrogate, or
+`1.329915767799602x`; line search and authority validation are separately accounted.
+
+**FIDELITY / VERDICT: `NO-GO`, tested-formulation scoped.** Early's exact and surrogate `d_seg` traces
+match through its two-update measured prefix, but the final EMA provider is not admitted and CE/`d_pose`
+depart from zero repeat floors. Boundary is a canonical exact-anchor-only prefix `GO` but mission
+`NEEDS-MORE`: its single update contains no non-anchor surrogate inference. Late's valid exact control ends
+at `d_seg=0.003977457682291667`, while the surrogate ends at `0.003997802734375`; the maximum exact-target
+`d_seg` delta is `0.000020345052083333044` and first fails at step 3. Because admission is conjunctive over
+requested regimes, either valid-control failure rejects the registered formulation; an inconclusive boundary
+cannot mask it. Full K20 fidelity remains separately **UNKNOWN** because blocked line searches ended the
+three measured prefixes after `2/1/3` accepted updates. The typed contract now permits either W5 smoke or
+the complete K20 decisive horizon, so K20 is executable rather than structurally capped.
+
+`verdict_scope`: nonlinear 3/5-receptive-field EMA input-costate provider; pair0; seed455; saved
+early/boundary/late states; up-to-W5 measured prefixes; joint CE/`d_seg`/`d_pose` control;
+macOS-arm64 CPU/Torch-fp32 advisory. Not a family kill, score claim, promotion result, MPS authority, or
+contest-CPU/CUDA inference. `research_only=true`; `score_claim=false`; live trainer untouched; pointer
+`0.1880443979880752` UNMOVED.
+
+Final campaign =
+`experiments/results/onpolicy_costate_matched_campaign_final_20260713T040800Z.json`, SHA-256 =
+`fa1f0bda3fe568e5f6721671a813547cc72b72c628e3006cbebebe29c9fb5dfc`. Triality: DSL =
+`tac.witness_dsl.onpolicy_scorer_surrogate_policy`; equation = `onpolicy_input_costate_surrogate_v1`;
+DAG = this FEED; memo = `.omx/research/onpolicy_surrogate_95kill_20260713.md`. Reactivation requires a
+pre-registered changed provider/update law that clears non-anchor fidelity in every saved regime before a
+full K20 replay or live-trainer activation.
+
+### FEED-witness-xcodec (2026-07-13) — fixed-symbol cross-tensor witness coding admits losslessly
+
+**MEASURED, $0 LOCAL, n600 checkpoint-state authority:** the current preserved V9 EMA-best witness
+(`levelset_witness_ema_BEST.npz`, SHA-256
+`2599ad8b396af2af220a3bdbeee2ade92f194771ae6ef01a6faa15d39333484c`) contains 61,175 base-weight
+int8 symbols and 22,800 pair-code symbols. STEP 0 rejects a new post-hoc exact shared-value codebook:
+pooled entropy is 6.711633424476405 bits/weight versus weighted per-tensor entropy
+5.585418071303699, so tensor identity carries 1.1262153531727064 bits/weight; the already-pooled
+Brotli stream saves only 26 B versus separate streams. `verdict_scope: FORMULATION x INSTANCE — an
+additional exact shared value codebook on this fixed symmetric-int8 checkpoint; not training-induced
+tying, low-rank, VQ-in-loop, #110, #242, or other checkpoints.`
+
+The admitted bijective chart exhaustively measured all 512 2-D axis-storage combinations and saved
+180 B in the base Brotli stream; frame-separated modulo-256 temporal deltas saved 268 B in the pair-code
+stream. Exact archive rows are identity 63,659 B, permutation-only 63,510 B, pair-delta-only 63,408 B,
+and joint 63,242 B: **MEASURED joint saving = 417 B**. Every one of the four full n600 decoded quantized
+states has SHA-256 `c67830f51d58291c7e6f92ef6140fc3599e872b7fb1436874577ea66f32e14fb`;
+therefore `DERIVED delta_d_seg=0` and `DERIVED delta_d_pose=0` for the deterministic receiver, and the
+rate-only advisory change is `DERIVED delta_S=-0.0002776631834519455` via the canonical score helper.
+Both identity and joint shipped decoders are additionally **MEASURED BIT-EXACT** versus the NumPy-fp32
+oracle on the receiver smoke (1 pair / 2 frames, max uint8 delta 0). The 600-row pose twist table has no
+exact duplicate rows; the existing lossless `delta_res` surface already reduces its fixed q payload from
+7,232 B raw to 2,714 B, so this lane reuses rather than duplicates it.
+
+Triality: DSL = `WitnessCrossTensorCoderGauge.AUTO_LOSSLESS` -> real byte-close argv
+`--cross-tensor-codec auto_lossless`; equation = `witness_lossless_cross_tensor_storage_law_v1`;
+DAG = this FEED. Receipt =
+`experiments/results/witness_crosstensor_structure_rate_20260713/measurement_receipt.json`; memo =
+`.omx/research/witness_crosstensor_structure_rate_20260713.md`. The absolute int8 byte-closed n600
+`d_seg/d_pose` row was not re-inflated because the workspace-only sandbox cannot place the 3.66 GB raw on
+the required SSD tier; the component delta is instead closed by exact full-state equality. `score_claim=false`;
+`promotion_eligible=false`; no paid/cloud dispatch, no training, no frontier-pointer mutation.
