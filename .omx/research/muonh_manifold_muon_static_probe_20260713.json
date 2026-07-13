@@ -1,0 +1,42 @@
+{
+  "axis": "[macOS-CPU/numpy-fp64 static checkpoint probe; no training; non-promotable]",
+  "checkpoint": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_ckpt_stageOctave1_ep251.npz",
+  "checkpoint_sha256": "c59cdec6eec16677c0a2eb5667979dd1c8f883bcd1cf5532302d67acd633c758",
+  "film_stiefel": {
+    "best_scalar_stiefel_projection": {
+      "frob_optimal_scale": 8.42673883829343,
+      "projection_delta_frob": 3.275222773304734,
+      "projection_delta_relative_frob": 0.0888146994166776
+    },
+    "polar_projection_delta_frob": 32.537664788470586,
+    "polar_projection_delta_relative_frob": 0.882328659125916,
+    "singular_max_before": 10.076844066238596,
+    "singular_mean_before": 8.42673883829343,
+    "singular_min_before": 7.283143447157408,
+    "singular_rms_before": 8.460172033033833,
+    "singular_value_cv_before": 0.08916707287910362,
+    "wtw_minus_i_frob_after_fp64_svd": 9.064166793036178e-15,
+    "wtw_minus_i_frob_before": 312.70283944056365
+  },
+  "matrix_rows": [
+    {"frob": 19.075711533568118, "key": "in_proj.weight", "shape": [96, 80], "sigma_min": 0.15078134727125989, "spectral": 6.481109029714014, "stable_rank": 8.66289075385849, "stable_rank_ratio": 0.10828613442323112},
+    {"frob": 36.877034936963526, "key": "film.weight", "shape": [768, 19], "sigma_min": 7.2831434471574115, "spectral": 10.076844066238593, "stable_rank": 13.39253879888299, "stable_rank_ratio": 0.7048704630991047},
+    {"frob": 23.972900765513106, "key": "hidden.0.weight", "shape": [96, 96], "sigma_min": 0.013563088837265454, "spectral": 8.434310082874308, "stable_rank": 8.078710549376126, "stable_rank_ratio": 0.08415323488933464},
+    {"frob": 22.89412627720722, "key": "hidden.1.weight", "shape": [96, 96], "sigma_min": 0.00815355336217303, "spectral": 7.520289508704126, "stable_rank": 9.26785067910011, "stable_rank_ratio": 0.09654011124062616},
+    {"frob": 18.08280540094754, "key": "hidden.2.weight", "shape": [96, 96], "sigma_min": 0.02823736841423311, "spectral": 7.370088821039605, "stable_rank": 6.019856983574193, "stable_rank_ratio": 0.06270684357889784},
+    {"frob": 17.77585598374661, "key": "hidden.3.weight", "shape": [96, 96], "sigma_min": 0.0021244489618023046, "spectral": 7.5713646962454, "stable_rank": 5.512044494896453, "stable_rank_ratio": 0.057417130155171386},
+    {"frob": 18.647626831478508, "key": "out_sdf.weight", "shape": [5, 96], "sigma_min": 2.8024546029187807, "spectral": 11.450376148663114, "stable_rank": 2.652208313855324, "stable_rank_ratio": 0.5304416627710647},
+    {"frob": 1.438084869713894, "key": "out_tex.weight", "shape": [3, 96], "sigma_min": 0.5643592797990473, "spectral": 1.0412406484467103, "stable_rank": 1.9075099242393272, "stable_rank_ratio": 0.635836641413109},
+    {"frob": 7.083562230061671, "key": "palette", "shape": [5, 3], "sigma_min": 0.25430522380394216, "spectral": 7.070320769493763, "stable_rank": 1.003749153809876, "stable_rank_ratio": 0.33458305126995863}
+  ],
+  "pointer_moved": false,
+  "probe_environment": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "probe_method": "np.load(allow_pickle=False); cast named matrices to float64; np.linalg.svd(full_matrices=False); form polar Q=U@Vt; form Gram matrices by explicit float64 einsum; compute Frobenius and stable-rank scalars",
+  "schema": "muon_geometry_static_probe.v1",
+  "score_claim": false,
+  "verdict_scope": "static matrix geometry only; no d_seg, d_pose, byte, optimizer, wall, or contest-score claim"
+}

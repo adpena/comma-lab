@@ -1,0 +1,24 @@
+{
+  "schema": "frozen_replay_terminal_resume_tree_receipt.v1",
+  "captured_at_utc": "2026-07-13T17:14:59.700845Z",
+  "run_directory": "experiments/results/frozen_replay_convex_head_95kill_n600_20260713",
+  "measurement_receipt": {
+    "bytes": 136633,
+    "path": "experiments/results/frozen_replay_convex_head_95kill_n600_20260713/measurement_receipt.json",
+    "sha256": "067ce197d30fa9e2c7c4bda48ac671af550e0a00f126289ba5b30946d44fc4b1"
+  },
+  "terminal_resume_command": "PYTHONPATH=src .venv/bin/python tools/probe_frozen_replay_convex_head.py --output-dir experiments/results/frozen_replay_convex_head_95kill_n600_20260713 --teacher-batch-size 1 --resume",
+  "tree_hash": {
+    "algorithm": "sha256 of shasum -a 256 output lines for every regular file, with NUL-delimited repo-relative paths sorted bytewise before per-file hashing",
+    "cwd": "/Users/adpena/Projects/pact",
+    "reproduction_command": "out=experiments/results/frozen_replay_convex_head_95kill_n600_20260713; find \"$out\" -type f -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256",
+    "file_count": 2451,
+    "total_file_bytes": 7572854,
+    "before_resume_sha256": "00777398fcf874a59cc06cc7e288d90b20f164a89170c23f51370e6a9b41769e",
+    "after_resume_sha256": "00777398fcf874a59cc06cc7e288d90b20f164a89170c23f51370e6a9b41769e",
+    "post_handoff_recheck_sha256": "00777398fcf874a59cc06cc7e288d90b20f164a89170c23f51370e6a9b41769e",
+    "unchanged": true
+  },
+  "authority": "auxiliary local sacred-run immutability check; not evaluator score authority",
+  "pointer_moved": false
+}
