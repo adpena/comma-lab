@@ -16428,3 +16428,13 @@ d_seg/d_pose through R stays UNKNOWN because the receiver consumes neither phase
 a vertex-storing codec + a carrier that packs+consumes the phase section for a real A/B.
 `score_claim=false`; `promotion_eligible=false`; submittable `[contest-CPU]` pointer 0.19108282
 UNMOVED; defensive bank 0.18804440 remains separate and UNMOVED.
+
+### FEED-share-ge2-linearity-gate (2026-07-12) — closed-form YOPO linear-vs-nonlinear go/no-go (operator-supplied)
+`[OPERATOR-SUPPLIED]` two equations (IMG_6984, provenance UNKNOWN). `[DERIVED]` interpretation (definitions not
+confirmed): (1) `W_k = c^2[Π_i(1-a_i p)^2]e_k` = YOPO's O(L) claim made precise — the deep Jacobian factorizes as a
+per-layer PRODUCT, obtainable in O(L) FORWARD passes (bank deep costate, cheap layer-product between anchors). (2)
+`share_{≥2} = 1 - τ^2/(Π_i(1+β_i)-1)` = the fraction of signal in 2nd-order-and-higher (nonlinear cross-layer)
+interactions = the closed-form go/no-go for linearizing the costate. SMALL → banked LINEAR costate (YOPO) faithful;
+LARGE → must go nonlinear-surrogate (#449/#428), INSTANT low-rank ceilinged. Measurable $0 in O(L) forwards on frozen
+SegNet; share_{≥2}(τ) predicts at which τ the linear costate goes stale. Folded into master #451 as the share_{≥2}
+gate. Memo share_ge2_linearity_gate_yopo_20260712. `[no-triality]` reference/routing. **Pointer 0.18804 UNMOVED (MEANS).**
