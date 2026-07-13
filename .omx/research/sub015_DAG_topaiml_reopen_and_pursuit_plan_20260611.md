@@ -17372,3 +17372,32 @@ get the authoritative split + RESOLVE which component the 95%-kill should attack
 fwd/bwd-share is UNRESOLVED (diagnostic-harness ratio, in-loop unverified) — do not act on 82%-backward until
 the in-loop timer confirms. DSL leg N/A (accounting). Sister: #306, #455/#456, #482, #484 (pre-SE surrogate
 sidesteps the fwd/bwd question by replacing the whole teacher over the boundary).
+
+---
+
+## FEED-p0-backward-wave-20260713 (operator GO "pursue all P0 pivot recs as P0 + feed the queue + deep math")
+
+Research-only for the pointer (MEANS). The per-epoch accounting reframed P0 (95%-kill) onto the BACKWARD /
+costate-VJP (~82%, diagnostic-ratio, in-loop unverified). Dispatched a DESIGNED wave attacking the 82%
+backward from complementary deep-math angles, all grounded in the ADJOINT method (Calin book + Lexing Ying
+ICM operator theory):
+- **p0_sparse_adjoint** (flagship): is the input-costate low-rank/sparse so a masked/low-rank adjoint is
+  cheap+bounded-error? d_seg=discrete argmax → CE surrogate saturates in confident interiors → output-grad
+  boundary-concentrated (#333 annulus). GROUNDED by Lexing Ying ICM: PDOs have low-rank off-diagonal blocks
+  → O(n) adjoint via non-standard wavelet (BCR-Net); PDOs preserve singularity support (= d_seg on the
+  separatrix). Measures on #455 cached costate (70M elements).
+- **p0_checkpoint_backward**: is the 82% backward COMPUTE- or MEMORY-bound (gating derivation)? gradient-
+  checkpointing / Neural-ODE O(1)-memory adjoint / reversible-approx / 1-thread-on-backward.
+- **p0_costate_reuse** (horizon): do we need the backward EVERY step? costate temporal autocorrelation →
+  reuse-every-k (YOPO #454); gradient-free ES/score-function (forward-only); adjoint-as-smooth-flow.
+- **invprob_operator_fold**: Lexing Ying ICM (PDO/FIO low-rank operators, BCR-Net/Switch-Net) + TUM diss +
+  Deepray + PRIP → the CONCRETE BCR cheap-adjoint construction for the SegNet costate-VJP + witness-as-
+  inverse-map + n=1 cure (operator-structure prior replaces data) + FIO=pose Hamiltonian flow.
+- **calin_book_fold**: Calin "DL Methods of Math Physics vI" lessons (Neural ODE adjoint / PINN / HNN-LNN /
+  inverse problems) from OPEN literature → routed folds.
+Plus LIVE: #484 pre-SE (whole-teacher-over-boundary, hedge robust to fwd/bwd split), #485 JEPA-latent
+surrogate VJP. GATE: **GO_PACKET_inloop_component_timer_20260713.md** — bounded n24 D-A-timer profile
+resolves the in-loop fwd/bwd split (operator-GO); the verdict fires/re-scopes the whole wave. CONVERGENCE:
+witness IS an inverse problem (Ying's BCR-Net/Switch-Net are the mathematically-motivated architectures); the
+adjoint is the shared theory of the P0 backward + the witness-inverse-solve. DSL leg N/A (measurement/theory
+routing). Pointer UNMOVED.
