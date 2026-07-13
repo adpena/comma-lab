@@ -17431,11 +17431,23 @@ still diagnostic-only, in-loop timer BLOCKED on governor — see GO_PACKET):
   U-Net decoder**; conv execution dominates, NOT activation traffic). Checkpoint admission law G_ckpt>1 iff
   Δ_mem>cT_f; here Δ_mem≈0 → recompute STRICTLY SLOWS (+18-46% teacher time, zero wall-clock win). NO-GO:
   gradient-checkpointing, Neural-ODE-O(1)-adjoint (exact frozen scorer), reversible-approx (certified). ONE
-  survivor: PHASE-SPLIT-THREAD-CONTROL (WORTH-BUILD). verdict_scope: FORMULATION (checkpoint family), the
-  compute-bound fact is DERIVED-general.
+  survivor: PHASE-SPLIT-THREAD-CONTROL (WORTH-BUILD). verdict_scope: FORMULATION (checkpoint family, on the
+  CURRENT SegNet at exact precision), the compute-bound fact is DERIVED-general. **Untested formulations /
+  reformulation queue (family INTACT):** (a) adjoint-ODE on a SMOOTHED SURROGATE scorer (not the exact
+  discrete one) — the Bousfield-smoothed-presheaf / JEPA-latent path (#483/#485) where the continuous-depth
+  adjoint IS defined; (b) BOUNDED-ERROR reversible-approx (tolerance-gated like the K=2 reuse, not
+  certified-exact) — pays if the trained-result error stays in-band; (c) lower-precision (fp16/int8) or
+  fused-Metal DECODER-backward kernel — attacks the 73.6% compute-bound cost DIRECTLY without touching the
+  mechanism (#443/#478 kernel path); (d) family boundary: a distilled SMALLER teacher (#455/#484) makes the
+  whole backward cheaper (the surrogate path, orthogonal family).
 - **p0_costate_reuse:** costate lag-5 autocorrelation **ρ=0.847-0.865** → guarded **K_max=2 reuse WORTH-BUILD
   (~2× teacher-call amortization)**; smoother K*=6 fails admission. Gradient-free: effective-dim≤2 only →
   bulk NO-GO, **terminal guided search SURVIVES → feeds #396 MC-finisher**. FEEDS #454 schedule-adjoint.
+  verdict_scope: FORMULATION (naive full-bulk ES + K*=6-unguarded). Untested formulations (family INTACT):
+  (a) VARIANCE-REDUCED ES — antithetic + control-variates (surrogate #455 as baseline) may lift the
+  effective-dim ceiling; (b) gradient-free RESTRICTED to the 4-dim decision-quotient subspace (#485), not
+  the ambient bulk (the ≤2 wall is on the ambient dim); (c) K*=6 fails ADMISSION not correctness — a hybrid
+  K-schedule (K=2 boundary, K=6 confident-interior) or tighter fidelity gate may reopen it.
 - **calin_book_fold:** top fold — the frozen-SegNet VJP IS already the exact discrete adjoint; speedups MUST
   come from certified sparsity / checkpoint-memory / event-reuse, NOT a drop-in Neural-ODE adjoint. Also:
   quotient-aware inverse solve (→#483/#157/#391/#249), adjoint-weighted Deep-Ritz allocation (→#316/#318/#320).
