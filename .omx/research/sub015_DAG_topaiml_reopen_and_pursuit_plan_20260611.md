@@ -17088,3 +17088,18 @@ DOMINATED by both MLX-native and the ANE path; pool row stays built-never-fired 
 int8 0.783% · int4 10.84% ⟹ fp16 ARITHMETIC is benign (consistent with the earlier 0.0033% MLX measurement) —
 ANE's 2.47% must originate in MIL op substitution / ANE-specific behavior, NOT fp16 per se → routes the
 ane_unlock_correction arm's R0 directly. 23 tests green.
+
+## FEED-ane-ecosystem-20260713 (pointer node; full survey in ane_ecosystem_survey_20260713.md)
+ANE ecosystem survey (17 techniques, receipted) [DERIVED/INFERRED per item]: TOP-5 → (1) per-op fp32 via
+ct.transform.FP16ComputePrecision(op_selector) = R1 without surgery (~3% latency community analogue) · (2)
+Anemll batch-tier multifunction compile + weight dedup (+55% ANE batch gain, 2606.22283) = NEW R6 throughput
+rung on top of 38× · (3) WhisperKit QoI WORST-PAIR no-regression gate = the acceptance-metric upgrade · (4)
+Anemll fp16-preflight weight pre-scaling (free, offline, SE-pool/BN-fold hot spots) → R0 · (5) W8A8 reframed:
+M5 win = SRAM-FIT (B2 fp16 weights ~31MB brush the 32MB ANE SRAM cliff, −30% beyond); int8 COMPUTE gain
+CONTESTED between sources → A/B owed. CONCURRENCY: qualified GREEN (ANE = dedicated hard-power-gated silicon;
+single-stream dispatch-bound not bandwidth-bound; teacher demand ≪ M5-Max bus) BUT no published ANE∥GPU-training
+benchmark exists → $0 self-measurement assigned to main (solo-vs-concurrent, <5% mutual-degradation bar).
+RESIDENCY CAVEAT: CPU_AND_NE is a REQUEST — residency must be profiled per receipt (drift across macOS
+versions possible). HONEST GAP: NO published dense per-pixel argmax fidelity for conv/seg on ANE anywhere in
+the corpus — our correction ladder is ORIGINAL work, not an importable recipe. Directive folded to the live
+arm (ane_unlock_directive_20260713.md).
