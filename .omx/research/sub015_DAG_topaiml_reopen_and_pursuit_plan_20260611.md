@@ -17325,3 +17325,27 @@ killer) — localize on pre-SE activations only; (c) query-disagreement ranking 
 disambiguator (passed research bar; live remains REFUSE pending calibration). DSL leg: N/A (measurement +
 research-only surrogate, not a live lever; candidate rows staged reformulation-queue/needs-build/
 built-never-fired). Sister of the 95%-kill campaign (#455/#456 theorem-grade ceilings).
+
+---
+
+## FEED-da-db-producers-20260713 (#480 launch-unblock producers — standalone COMMITTED, hot-file wiring DEFERRED)
+
+Research-only for the pointer (means). 175 tests passed. Memo `.omx/research/da_db_producers_20260713.md`;
+own DAG FEED `da_db_producers_DAG_FEED_20260713.md`; spec `da_db_producers_implementation_spec_20260713.md`;
+candidate rows `da_db_producers_candidate_rows_20260713.jsonl`; standalone module
+`src/tac/witness_control/telemetry_producers.py` (+ test, 48 pass). Built the D-A eight-field monotonic timer
+producer + D-B ep450/ep726 SPS-engagement hook + Q1-Q7 (7/7) resume-boundary telemetry + default-OFF
+VerdictLiveGap DSL lever + resume-safe da_db_telemetry state. Recompiled preflight: **D-A/D-B CLEARED**
+both variants; FULL variant memory-governor REFUSE_RC11_NO_SPAWN; TRIMMED variant memory ADMIT; **B2 + SSD
+blockers remain** (so the launch stays gated — operator-GO regardless). Q3 duty row built-never-fired; SPS
+reformulation-queue.
+
+HARVEST SPLIT (absorption-pattern discipline): the standalone NEW files (telemetry_producers.py + test + the
+4 research files) are COMMITTED — unambiguously da_db's, no sibling contention. The **hot-file wiring is
+DEFERRED**: the 665-line edit to `experiments/train_levelset_witness_realized_through_R_mlx.py` + the
+`resume_registry.py` (+5) + `curriculum_dsl.py` (+38) VerdictLiveGap lever edits are on a MULTI-ARM
+contention surface (also touched by #458 fleet-harvest / #408 telemetry batch / the #432 live arm) — committing
+665 mixed lines under a harvest message would risk absorbing sibling state. Those wire-in commits are OWED as
+a dedicated reconciliation (one deliberate act) before the launch preflight can be re-run to clear D-A/D-B on
+a committed tree. DSL leg: the VerdictLiveGap lever IS a proper DSL `Lever` (in the deferred curriculum_dsl
+edit) — it lands with the reconciliation, not orphaned.
