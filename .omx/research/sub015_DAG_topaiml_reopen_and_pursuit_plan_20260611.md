@@ -17490,3 +17490,26 @@ of FLOPs (p0_checkpoint); a tileable surrogate of the DECODER (not encoder featu
 boundary: the whole-teacher DISTILLED student (#455) needs no tileability at all. DSL leg N/A (measurement).
 The #484 hedge for the 82%-backward pivot is thus NOT dead — reformulation (a) is the live reopen. #484 closed
 as measured; reopen-(a) queued.
+
+---
+
+## FEED-heavy-tail-interp-fold-20260713 (operator arXiv 2607.09547 — MEANS reliability fold; literal-transfer NO-GO, qualitative ridge-default ADOPT)
+
+Research-only. Pointer UNMOVED. MEANS (interpolator/solver reliability, NOT the pointer). Zhu & Lu
+"High-Dimensional Interpolators Can Be Fragile" — ridgeless (min-norm/MP) interpolation is heavy-tailed
+(upper-tail decays n·log n vs ridge's n²); ridge suppresses RARE SEVERE errors, a distinct axis from
+bias-variance. Memos `heavy_tail_interp_fold_20260713.md` + `_equation_feed_` + `_DAG_FEED_`.
+- **verdict_scope = FORMULATION NO-GO on LITERAL RATE TRANSFER** (req-R evidence: the n²/n·log-n theorem
+  holds only under RANDOM-DESIGN proportional asymptotics; OUR designs break it across ≥2 structurally
+  distinct interpolators — pre-SE convex rung n/d={2.553,1.446} with CORRELATED unequal heads → no
+  theorem-valid ratio; costate organ n/p=0.118-0.471 far from proportional asymptotics). NOT a paradigm kill.
+- **ADOPT (qualitative reliability direction, survives the regime mismatch):** (1) prefer the RIDGE (RankRLS)
+  rung over MP/ridgeless for any LOAD-BEARING verdict, conditional on an equal-mean + custody gate; (2) REPORT
+  a TAIL-QUANTILE of retained mass across heldout costates+seeds, not just the mean; (3) organ A_ridge_solve
+  is tail-JUSTIFIED but NOT currently selected for that reason → choose fixed-positive λ by downstream
+  control-regret CVaR subject to a mean gate (tune λ for the TAIL, not MSE); (4) #433 −18% prior-mean win is
+  tail-CONSISTENT (not tail-confirmed) with MORE available via a $0 cached λ-for-tail sweep.
+- **ACTIONABLE CATCH (live):** the sealed pre_se receipt is **MP-only (ridgeless = the FRAGILE rung), no
+  regularization sweep** → #488 pre_se_reopen_a harvest should prefer the RankRLS ridge rung + report the
+  retained-mass tail-quantile. Complementary to vrghal_theorem_deepen (iteration high-prob-convergence axis)
+  — heavy-tail = ESTIMATOR tail, VR-GHAL = ITERATION convergence. DSL leg N/A (reliability discipline, no lever).
