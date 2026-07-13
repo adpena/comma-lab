@@ -96,6 +96,11 @@ CHROMA_HISTORY_PREFIX = "__cbh_"
 # controller_is_canonical`` fails), so it is consciously acknowledged as resume-relevant — the same
 # no-silent-orphan discipline GATE_KEY_PREFIXES enforces for gates.
 DIRECT_CONTROLLER_NAMES: frozenset[str] = frozenset({
+    # Manifold-Muon round 2: when the default-OFF FiLM polar-chart finisher is
+    # armed, Q, frozen H0, transported tangent momentum, Q-EMA, and the step
+    # counter are a single resumable controller.  It is registered only for
+    # the treatment arm, so legacy/default runs emit no new keys.
+    "film_polar_chart_spel",
     "polyak_finisher",
     "rng_streams",
     "closed_loop",

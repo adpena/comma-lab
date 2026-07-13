@@ -4,9 +4,9 @@
 FIX-1 (LAUNCH-BLOCKER): MLX ``optim.AdamW`` ``bias_correction`` DEFAULTS FALSE => the all-levers
 small-n beta2 (0.9999999) leaves ``sqrt(v)`` ~sqrt(1-beta2) too small at step 1 => ~100x effective-LR
 blowup => divergence. The fix threads ``bias_correction=_adam_bias_correction_for(adam_beta2)`` into
-BOTH AdamW constructions (main + stage-transition moment-reset), gated ON only off the 0.999 default
+ALL AdamW constructions (main + every stage-transition moment-reset), gated ON only off the 0.999 default
 (so the default path is BYTE-IDENTICAL). These tests assert the OPTIMIZER NUMERICS (step-1 ratio back
-to O(1), not ~100x) with real MLX AdamW + the source-level self-protect (both sites thread the gate).
+to O(1), not ~100x) with real MLX AdamW + the source-level self-protect (all sites thread the gate).
 
 FIX-2 (OPTIMAL-AA switch): the all-levers config now emits ``--render-aa supersample --aa-supersample 2
 --aa-self-orient-fine-mode full`` (the observation-correct AA; probe-confirmed ~63GB n600 peak, ~65GB
@@ -19,6 +19,7 @@ config-argv / source-structure — NOT a scorer d_seg claim (per NO-FAKE #3, no 
 """
 from __future__ import annotations
 
+import ast
 import importlib.util
 import sys
 from pathlib import Path
@@ -83,9 +84,14 @@ def _step1_update_norm(beta2: float, bias_correction: bool) -> float:
 
 @pytest.mark.skipif(not _HAS_MLX, reason="mlx not available")
 def test_beta2_step1_bias_correction_removes_100x_blowup():
-    default = _step1_update_norm(0.999, False)          # the UNCHANGED default path (MLX default)
-    fixed = _step1_update_norm(0.9999999, True)         # the FIXED all-levers path
-    bug = _step1_update_norm(0.9999999, False)          # the BUG the fix removes
+    try:
+        default = _step1_update_norm(0.999, False)      # the UNCHANGED default path (MLX default)
+        fixed = _step1_update_norm(0.9999999, True)     # the FIXED all-levers path
+        bug = _step1_update_norm(0.9999999, False)      # the BUG the fix removes
+    except RuntimeError as exc:
+        if "No Metal device available" in str(exc):
+            pytest.skip(f"MLX installed but execution unavailable: {exc}")
+        raise
 
     # (a) THE FIX: the all-levers step-1 update is O(1) relative to the default path — NOT ~100x.
     fixed_ratio = fixed / default
@@ -103,19 +109,28 @@ def test_beta2_step1_bias_correction_removes_100x_blowup():
 
 
 # ---------------------------------------------------------------------------
-# FIX-1 — self-protect: BOTH AdamW constructions that carry the adam_beta2 betas
-# MUST thread the bias_correction gate (main + stage-transition moment-reset).
+# FIX-1 — self-protect: ALL AdamW constructions that carry the adam_beta2 betas
+# MUST thread the bias_correction gate (main + every stage-transition reset).
 # ---------------------------------------------------------------------------
-def test_both_adam_beta2_sites_thread_bias_correction():
-    betas_sites = _TRAINER_SRC.count('betas=[0.9, float(getattr(args, "adam_beta2"')
-    # both AdamW constructions must thread `bias_correction=` (main via _adam_bc local, reset inline);
-    # the helper def uses `-> bool` (no `bias_correction=`), so the count == the # of gated AdamW sites.
-    gated_sites = _TRAINER_SRC.count("bias_correction=")
-    calls = _TRAINER_SRC.count("_adam_bias_correction_for(")  # helper def + 2 call sites
-    assert betas_sites == 2, f"expected 2 adam_beta2 AdamW sites, found {betas_sites}"
-    assert gated_sites == 2, (
-        f"expected both adam_beta2 AdamW sites to thread bias_correction=, found {gated_sites}")
-    assert calls >= 3, f"expected helper def + 2 call sites, found {calls}"
+def test_all_adam_beta2_sites_thread_bias_correction():
+    tree = ast.parse(_TRAINER_SRC)
+    sites: list[ast.Call] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "AdamW" or "adam_beta2" not in ast.unparse(node):
+            continue
+        sites.append(node)
+
+    assert len(sites) >= 3, f"expected main plus stage/rung AdamW sites, found {len(sites)}"
+    for site in sites:
+        keywords = {kw.arg: kw.value for kw in site.keywords if kw.arg is not None}
+        assert "bias_correction" in keywords, (
+            f"AdamW at line {site.lineno} carries adam_beta2 without bias_correction")
+        correction_source = ast.unparse(keywords["bias_correction"])
+        assert correction_source == "_adam_bc" or "_adam_bias_correction_for" in correction_source, (
+            f"AdamW at line {site.lineno} bypasses the canonical correction gate: "
+            f"{correction_source}")
 
 
 # ---------------------------------------------------------------------------

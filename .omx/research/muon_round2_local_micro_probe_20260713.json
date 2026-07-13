@@ -1,0 +1,64 @@
+{
+  "authority": "MEASURED_LOCAL_NUMPY_FP32_PROXY_NON_PROMOTABLE",
+  "boundary": {
+    "direct_unit_projection_relative_fro": 0.8698047399520874,
+    "h0_sigma_max": 9.126911748215987,
+    "h0_sigma_min": 6.571900542517128,
+    "q_orthogonality_residual_fro": 1.7445133428197232e-06,
+    "reconstruction_relative_fro": 8.231831571947623e-08
+  },
+  "checkpoint": "/Users/adpena/Projects/pact/experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_witness_ema_mlx.npz",
+  "checkpoint_epoch": 275,
+  "checkpoint_sha256": "1676e4d45e180c7a28ec2ecce2b932d0e5087a2cfec2636ff2efe1673dbbcbf0",
+  "constructed_local_regression": {
+    "ambient_muon_final_loss": 0.0002701219927985221,
+    "ambient_muon_h_relative_drift": 0.009847401641309261,
+    "ambient_muon_loss_ratio": 1.8849751997550694,
+    "initial_loss": 0.00014330267731565982,
+    "polar_spel_final_loss": 0.00016498226614203304,
+    "polar_spel_h_relative_drift": 0.0,
+    "polar_spel_loss_ratio": 1.1512853020786105
+  },
+  "effective_film_learning_rate": 0.01271551062782442,
+  "fireability_dry_run": {
+    "constants_manifest_sha256": "07b1d3b94ec1039f9c65726a5c820cc917e37502dc187368e60e3205c914a3aa",
+    "dsl_flag_count": "200/200",
+    "epochs": 727,
+    "launch_sha256": "7790cd4fa4661846c99a20461460382ee1788abd1e363f2169ae1f252c81de45",
+    "muon_start_epoch_cap": 726,
+    "out_dir": "experiments/results/muon_round2_dryrun_treatment_schedulevalid_20260713",
+    "process_spawned": false,
+    "schedule_provenance_gate": "PASS",
+    "stage_checkpoints": true
+  },
+  "film_shape": [
+    768,
+    19
+  ],
+  "mlx_execution": {
+    "exception_type": "RuntimeError",
+    "reason": "[metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+    "status": "BLOCKED"
+  },
+  "muon_aspect_scale": 6.35775531391221,
+  "muon_learning_rate": 0.002,
+  "requested_local_mlx_micro_ab": {
+    "apparatus_blockers": [
+      "MLX Metal device unavailable on this host",
+      "checkpoint epoch 275 precedes the governed V9 ladder-to-Muon finishing boundary; launch.sh caps Muon at epoch 726 and event wiring also gates on ladder completion"
+    ],
+    "control_dsl_factory": "MuonAtCheckpointBoundary",
+    "derived_first_finisher_epoch": 276,
+    "matched_steps": 8,
+    "seed": 469,
+    "source_checkpoint_epoch": 275,
+    "status": "BLOCKED",
+    "treatment_dsl_factory": "FilmPolarChartSPELManifoldMuon",
+    "verdict_owed": "n600 at next real finishing stage"
+  },
+  "required_next_authority": "matched governed local MLX fine-tune from this checkpoint, then n600 finishing-stage through-R verdict",
+  "schema": "film_polar_chart_spel_local_micro_probe.v1",
+  "seed": 469,
+  "steps": 8,
+  "verdict_scope": "checkpoint-bound chart/reproducibility mechanics plus constructed local FiLM-map regression; NOT a trainer fine-tune, NOT through-R, NOT d_seg/d_pose, NOT n600"
+}

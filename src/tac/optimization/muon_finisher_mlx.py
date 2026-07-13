@@ -158,14 +158,19 @@ def count_muon_adamw_split(params: Any) -> tuple[int, int]:
     return n_muon, n_adamw
 
 
-def _adamw_bias_correction_for(adamw_beta2: float) -> bool:
+def _adamw_bias_correction_for(
+    adamw_beta2: float,
+    *,
+    reference_semantics: bool = False,
+) -> bool:
     """#222/#224 Wave D: mirror the trainer's ``_adam_bias_correction_for`` gate for the finisher's
     AdamW rest-group. Bias correction is REQUIRED off the 0.999 default (e.g. the all-levers small-n
     beta2 0.9999999): without it the second moment ``v ~ (1-beta2)*mean(g^2)`` is not divided by
     ``(1-beta2^t)``, so ``sqrt(v)`` is ``~sqrt(1-beta2)`` too small early => ~100x step-1 LR blowup =>
-    AdamW random-walk / divergence. At exactly 0.999 (== the MLX AdamW default) it stays False so the
-    finisher path is BYTE-IDENTICAL to the pre-Wave-D construction (betas + bias_correction default)."""
-    return abs(float(adamw_beta2) - 0.999) > 1e-9
+    AdamW random-walk / divergence. At exactly 0.999 it stays False unless the typed round-2
+    reference-semantics treatment requests standard bias-corrected AdamW; default OFF preserves the
+    pre-Wave-D trajectory."""
+    return bool(reference_semantics) or abs(float(adamw_beta2) - 0.999) > 1e-9
 
 
 def build_muon_finisher_optimizer(
@@ -177,6 +182,7 @@ def build_muon_finisher_optimizer(
     muon_ns_steps: int = 5,
     adamw_weight_decay: float = 1e-4,
     adamw_beta2: float = 0.999,
+    adamw_reference_semantics: bool = False,
     nesterov: bool = True,
     muon_lr_final_frac: float = 1.0,
     muon_anneal_steps: int = 0,
@@ -213,6 +219,9 @@ def build_muon_finisher_optimizer(
         AdamW default => byte-identical to the pre-Wave-D finisher. The all-levers path threads the
         derived small-n optimum (0.9999999) so the Muon-stage rest-group is CONSISTENT with the main
         AdamW; bias correction is auto-gated ON off the 0.999 default (see ``_adamw_bias_correction_for``).
+    adamw_reference_semantics : bool
+        Apply the standard bias-corrected AdamW update even at beta2=0.999.
+        Default ``False`` preserves existing checkpoint trajectories.
     nesterov : bool
         Nesterov momentum for Muon (default ``True``; recommended).
     muon_lr_final_frac : float
@@ -278,7 +287,10 @@ def build_muon_finisher_optimizer(
         learning_rate=float(muon_adamw_lr),
         weight_decay=float(adamw_weight_decay),
         betas=[0.9, float(adamw_beta2)],
-        bias_correction=_adamw_bias_correction_for(adamw_beta2),
+        bias_correction=_adamw_bias_correction_for(
+            adamw_beta2,
+            reference_semantics=adamw_reference_semantics,
+        ),
     )
     # filters has len == len(optimizers) - 1; the last optimizer (adamw) is the
     # fallback for everything the muon filter rejects.

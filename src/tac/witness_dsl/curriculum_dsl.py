@@ -1751,6 +1751,28 @@ def Muon(start_epoch: int, window: int = 100) -> Lever:
     )
 
 
+def MuonAtCheckpointBoundary(start_epoch: int, window: int = 0) -> Lever:
+    """Enter the incumbent Muon stage at a warm-start checkpoint boundary.
+
+    Unlike the historical :func:`Muon` experiment factory, this does not
+    overwrite temperature with a hard-coded 0.05.  The trainer freezes the
+    compiled schedule at ``start_epoch`` itself, which makes this the matched
+    control for a checkpoint-derived finisher probe.
+    """
+
+    if int(start_epoch) < 1:
+        raise ValueError("MuonAtCheckpointBoundary: start_epoch must be >= 1")
+    if int(window) < 0:
+        raise ValueError("MuonAtCheckpointBoundary: window must be >= 0")
+    return Lever(
+        "muon_at_checkpoint_boundary",
+        overrides={"--muon-start-epoch": int(start_epoch)},
+        epochs_delta=int(window),
+        notes=("matched warm-start Muon control; freezes the existing typed tau schedule at the "
+               "checkpoint-derived boundary; no hand trainer flags"),
+    )
+
+
 def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,
                      window: int = 100) -> Lever:
     """Turn the lane-edge directional term ON (the completed run had weight 0).
@@ -3076,6 +3098,25 @@ def AdamBeta2(beta2: float = 0.99, window: int = 0) -> Lever:
                  notes="#222 Adam β₂ second-moment decay sweep (β₁<√β₂ guard)")
 
 
+def AdamWReferenceSemantics(window: int = 0) -> Lever:
+    """Default-OFF reference AdamW update for a matched optimizer A/B.
+
+    MLX AdamW defaults ``bias_correction=False`` whereas reference AdamW and
+    PyTorch use bias-corrected moments.  This typed lever enables correction at
+    the incumbent beta2=0.999 without silently changing legacy trajectories.
+    """
+
+    if int(window) < 0:
+        raise ValueError("AdamWReferenceSemantics: window must be >= 0")
+    return Lever(
+        "adamw_reference_semantics",
+        overrides={"--adamw-reference-semantics": True},
+        epochs_delta=int(window),
+        notes=("round-2 AdamW audit treatment: standard bias-corrected moments at beta2=0.999; "
+               "matched local A/B owed; default OFF preserves incumbent resumes"),
+    )
+
+
 def DirectionalBasisRebalance(freq_across: int = 32, regime: str = "lane_offloaded",
                               window: int = 0) -> Lever:
     """FEED-07a arm-(A): DERIVED two-regime along-tangent frequency rebalance of the directional
@@ -3916,6 +3957,43 @@ def MuonWarmStart(lr_final_frac: float = 0.1, window: int = 0) -> Lever:
         epochs_delta=window,
         notes=("#270/#272 Muon warm-start momentum + lr-final-frac anneal (measured +8% "
                "cold-Muon transient; fires at the l7->Muon switch)"),
+    )
+
+
+def FilmPolarChartSPELManifoldMuon(
+    window: int = 0,
+    *,
+    start_epoch: int | None = None,
+) -> Lever:
+    """Default-OFF FiLM-only polar-chart MCSD/SPEL finisher.
+
+    This is the honest round-2 fallback for the registered
+    ``film_polar_chart_exact_manifold_muon_finisher`` ticket.  It reuses the
+    typed Muon-stage learning-rate, momentum, Newton--Schulz, and schedule
+    settings, but removes ``film.weight`` from ambient Muon dynamics and
+    updates the function-preserving chart ``W=QH0`` with a single-loop
+    Riemannian-gradient / projected spectral-LMO step.  It is not the exact
+    nested tangent-dual solver and must not be reported as such.
+
+    ``window=0`` means this lever changes optimizer geometry only; the owning
+    program supplies the finisher window.  The trainer refuses the flag unless
+    a real ``--muon-start-epoch`` is also compiled, preventing a silent no-op.
+    """
+
+    if int(window) < 0:
+        raise ValueError("FilmPolarChartSPELManifoldMuon: window must be >= 0")
+    overrides: dict = {"--film-polar-chart-spel": True}
+    if start_epoch is not None:
+        if int(start_epoch) < 1:
+            raise ValueError("FilmPolarChartSPELManifoldMuon: start_epoch must be >= 1")
+        overrides["--muon-start-epoch"] = int(start_epoch)
+    return Lever(
+        "film_polar_chart_spel_manifold_muon_finisher",
+        overrides=overrides,
+        epochs_delta=int(window),
+        notes=("round-2 FiLM W=QH0 MCSD/SPEL fallback; registry-resumable Q/H0/"
+               "tangent-momentum/Q-EMA; exact nested tangent-dual remains ticketed; "
+               "n600 matched finishing-stage verdict owed"),
     )
 
 
