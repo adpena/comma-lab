@@ -17152,3 +17152,30 @@ low-elasticity throttle) + retrieval-layer gap (#481 "context mgmt insufficient"
 warning IS our means-vs-ends firewall restated by economists: "narrow benchmark-opt masquerading as broad
 acceleration" = exactly the CLAUDE.md means/ends failure mode. OWED (deferred, not fired — rate backoff): apparatus-
 elasticity audit — product-of-elasticities on the real feedback graph + bottleneck-edge diagnosis; spawn on GO/drain.
+
+---
+
+## FEED-ladder-measurables-20260713 (grokking/symmetry/algebra diggers' OWED D36-D39, MEASURED)
+
+Research-only: true. Pointer UNMOVED (means). $0 local n600, read-only caches. Closes the four owed
+measurables the 4-rung rate-law ladder (eq rate_law_ladder_v1, #464/#466/#467/#468) spawned. Full DAG node:
+`.omx/research/ladder_owed_measurables_DAG_FEED_20260713.md`; memo `ladder_owed_measurables_20260713.md`;
+successor equation `rate_law_ladder_measured_20260713.py` (8 tests, lint clean); tool
+`tools/measure_rate_law_ladder_owed.py`.
+
+- **D36 fiber-completeness gap H(q_G|U) = 147,616 bits = 22.117% of the archive rate term** (MEASURED,
+  the ladder's headline budget number banked). BUT the conditional-stream saving 1,903 B does NOT survive
+  the 15,256 B predictor charge → **NO codec lever admitted** on current sections (verdict_scope: instance —
+  mod32cap shipped int8 code; a future <1,903 B public/compact-section predictor reopens it).
+- **D37 I(F;C|M,ξ) POSITIVE** — class conditioning admitted on the scoped n600 surface, net **+318,586 bits**
+  (95% CI [306,950, 329,650]) after coarse-table charge; phase-aware flat table LOSES 44,438 bits (hierarchy/
+  share tables owed before retry). verdict_scope: formulation — flat-table phase contrast failed, class-edge
+  contour grammar is the live candidate (gated on exact packed decode + receiver survival + 0.65 B/flip).
+- **D38 local strict extension SPLIT, R_twist^ideal = 0** (neutral Schreier class on the fixed regular
+  stratum); global overlap/gluing maps NOT-TYPED (still owed). Removes only a local ideal twist term; chart/
+  action/gluing bytes stay charged.
+- **D39 marked-event manifest increment SPEC'D** — `pact_causal_manifest_v1_event_marks_increment_spec` +
+  `TICKET_D39_event_marks_telemetry`; observability-only (event counts → MARKED events, mark = prediction-
+  break family); `src/tac/causal_manifest.py` implementation owed.
+
+Deferral ledger D36-D39 flipped CLOSED-MEASURED. Six-hook wire-in in the full FEED node.
