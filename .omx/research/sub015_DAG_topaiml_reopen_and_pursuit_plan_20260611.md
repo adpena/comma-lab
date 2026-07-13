@@ -17138,3 +17138,17 @@ existing curriculum gates on read-only traces → falsifier fired → PRESERVE t
 upgrades correctly REFUSED on current evidence (the apparatus has too few real trajectories — same n=1 data
 starvation the organ hits); the durable deliverables are the backtest harness + the refusal criteria, not adopted
 levers. 3 candidate-pool rows staged (record_candidate). No equation (0 folds / 0 branch-pairs can't close a law).
+
+## FEED-rsi-economics-20260713 (pointer node; assessed by main, no arm spent — rate-recovery backoff)
+"The Economics of Recursive Self-Improvement" (Cunningham/METR + Elasticity Institute, 2026-07-13; elasticity.institute/rsi-paper.pdf)
+[DERIVED mapping; MEANS-layer lens, NOT a pointer-mover — touches nothing on sub-0.15]. Mechanism: AI-accelerates-AI
+as feedback loops on DIRECTED GRAPHS; net acceleration = PRODUCT OF ELASTICITIES across each loop (any single
+bottlenecked edge — humans/compute/data/ideas-harder — kills the explosion). Narrow-vs-broad: systems improve at
+optimizing R&D BENCHMARKS without improving at broadly-valuable TASKS. Calibration verdict: current loops NOT
+strong enough for self-sustaining acceleration, but STRENGTHENING. COMPOSES with #481 (campaign IS an RSI system):
+(1) product-of-elasticities = a testable claim on OUR feedback graph (measure→system-intelligence→better-measure);
+the MEASURED bottleneck edges are already on record — n=1 DATA STARVATION (organ + DIG-S3/S4 + HCM all hit it =
+low-elasticity throttle) + retrieval-layer gap (#481 "context mgmt insufficient"). (2) Their narrow-vs-broad
+warning IS our means-vs-ends firewall restated by economists: "narrow benchmark-opt masquerading as broad
+acceleration" = exactly the CLAUDE.md means/ends failure mode. OWED (deferred, not fired — rate backoff): apparatus-
+elasticity audit — product-of-elasticities on the real feedback graph + bottleneck-edge diagnosis; spawn on GO/drain.
