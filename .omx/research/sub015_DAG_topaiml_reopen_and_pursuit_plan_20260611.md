@@ -16760,3 +16760,25 @@ DAG = this FEED. Receipt =
 `d_seg/d_pose` row was not re-inflated because the workspace-only sandbox cannot place the 3.66 GB raw on
 the required SSD tier; the component delta is instead closed by exact full-state equality. `score_claim=false`;
 `promotion_eligible=false`; no paid/cloud dispatch, no training, no frontier-pointer mutation.
+
+### FEED-95kill-fleet-round1 (2026-07-13): the three-prong frozen-SegNet 95%-kill — full fleet verdicts (consolidated node; detail in standalone FEEDs)
+SIGNAL: frozen-SegNet fwd(78%)+bwd(22%) = ~95% of witness training wall-clock (#449); operator P0 ×3.
+DIAGNOSTIC [all MEASURED, verdict_scope'd, advisory NON-PROMOTABLE]:
+- REUSE (#454/454b): Jacobian-drift certificate MATH CORRECT (costate-err ↓62/64, dot +64/64) but ECONOMICS DEAD —
+  HVP correction ≥2.55 validations/step, rigorous cert certifies 0 reuse, ≥16.3–26.4 val-equiv vs 8.375 baseline.
+  NO-GO (pair0/3-regime scope). → .omx/research/jacobian_drift_certificate_95kill_DAG_FEED_20260713.md
+- REPLACE (#455): on-policy input-costate surrogate formulation-1 NO-GO — drifts by step 2-3 between exact anchors
+  (early EMA-reject; late SegNet drift 2.03e-5 @step3); pair0/seed455 FORMULATION scope, family OPEN via the
+  VR-GHAL-named frozen-replay convex-head contraction. → onpolicy_surrogate_95kill_20260713.md
+- CHEAPEN (#456): static-thread 1-thread NCHW forward ~2.9563×/2.9970× (T2.12.1/2.12.0), ALL 600 timing wins BOTH
+  builds, each arm internally replay-stable — but cross-thread exactness FAILED on the same 15/600 pair SHAs both
+  builds (razor-thin top-2 ties, e.g. pair78 margin 2.384e-7); flip count UNKNOWN → no zero-flip claim; training-time
+  advisory only. → cheaper_exact_forward_transfer_95kill_20260713.md + segnet_exact_forward_cpu_thread_law eq
+- THEORY (#462 VR-GHAL): direct wrapper NO-GO (on-policy shift = operator-drift bias not zero-mean; theorem-certified
+  saving 0%; conditional K20→95% UNMEASURED; law C_teacher=A+c_label·D). → vrghal_95kill_fixedpoint_DAG_FEED_20260713.md
+- THEORY (#463 TOFU-POV): FEED-costate ranker (9× conditional OFUL-dim advantage, r≠8 caveat) + repaired pull-when-
+  uncertain allocator design; exact-label caching on frozen replay may dominate. → tofupov_ranker_allocation_DAG_FEED_20260713.md
+RESPONSE: surviving 95%-kill routes = (a) frozen-replay convex-head contraction surrogate (theory-designed, unbuilt),
+(b) exact-label caching on frozen replay (both readers), (c) 456's ~3× as a training-reference-thread-count decision
+(operator design call: accept 15-pair tie drift for TRAINING gradients?). OSS-master (#451) + master ranking agree:
+no measured route yet clears #449. pointer 0.19108282 UNMOVED (all means).
