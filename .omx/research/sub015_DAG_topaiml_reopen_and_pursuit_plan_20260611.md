@@ -17179,3 +17179,26 @@ successor equation `rate_law_ladder_measured_20260713.py` (8 tests, lint clean);
   break family); `src/tac/causal_manifest.py` implementation owed.
 
 Deferral ledger D36-D39 flipped CLOSED-MEASURED. Six-hook wire-in in the full FEED node.
+
+---
+
+## FEED-bousfield-descent-20260713 (operator drop arXiv 0708.2067, Barwick — DEEP read owed)
+
+Research-only: true. Pointer UNMOVED (means). Operator dropped Clark Barwick, "On (Enriched) Left
+Bousfield Localization of Model Categories" (abstract homotopy theory) — companion to the abstract-algebra
+diggers (#464/#466/#467/#468 = the rate-law ladder). Seed assessment `bousfield_localization_dig_20260713.md`;
+operator directive "Need to read deeply it's complex" → DEEP codex SOL-xhigh reader dispatched.
+
+Seed verdict (main, $0): the witness program **already IS a left Bousfield localization** — witnesses =
+the model category, scorer-INVISIBLE perturbations (argmax-interior + pose-null + blind-coord #401 +
+ξ-transport) = the maps S to invert, task-sufficient statistic (#155) = the S-local objects. This is the
+categorical HOME of Rung-2's setoid quotient (#466) + Rung-1's score-fiber group (#464); D36's
+fiber-completeness gap = "distance from S-local." HONEST NO-GO: it is EXISTENCE theory (proves the
+localization/reflection exists, not the cheap receiver-computable SECTION — which Rung-3 #467 said IS the
+payload) → redundant with #466/#467 on the quotient/section axis; moves nothing alone. The ONE
+non-redundant gift: **homotopy-coherent DESCENT** = the exact framework for D38's OWED global-gluing
+("overlap maps / changing isotropy NOT TYPED") — v8 per-class carriers are local sections, reconciliation
+is a gluing/descent problem. DIG-D38-DESCENT registered (type R_twist^global, currently symbol-only).
+verdict_scope: DESIGN/GROUNDING (MEANS). Deep read to confirm/refute the model-category hypotheses hold
+for our (discontinuous-argmax) witness category + whether enriched localization gives the section
+constructively.
