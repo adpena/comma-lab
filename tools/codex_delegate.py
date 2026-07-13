@@ -30,7 +30,7 @@ import argparse
 import fcntl
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -38,12 +38,25 @@ RUNS = REPO / ".omx" / "tmp" / "codex_runs"
 EVENTS = RUNS / "codex_events.log"
 LEDGER = REPO / ".omx" / "state" / "codex_delegations.jsonl"
 
+# Transient-death auto-recovery (apparatus fix for the codex_probe_token_limit_death /
+# "Selected model is at capacity" bug class): a capacity/rate-limit/disconnect is a
+# SERVER blip, not a token limit — a bump of model_context_window would NOT help. On such
+# a death the launcher re-runs the SAME prompt after backoff; the agent self-resumes from
+# its tools/subagent_checkpoint.py record (the crash-resume protocol) so no work is orphaned.
+# Fatal errors (bad flag, syntax, non-transient) do NOT match the signature → no retry loop.
+_MAX_CAPACITY_RETRIES = 8            # linear backoff attempts before giving up
+_CAPACITY_BACKOFF_STEP_SECONDS = 20  # attempt N waits N * step seconds (20,40,...,160)
+_TRANSIENT_DEATH_SIGNATURE = (
+    "at capacity|rate.?limit|429|overloaded|temporarily unavailable|"
+    "stream disconnected|error sending request|connection reset|timed out|503|502"
+)
+
 # The one-line notifier the main loop arms once (printed on launch for convenience).
 NOTIFIER_CMD = f"tail -n +1 -f {EVENTS} | grep --line-buffered '^DONE'"
 
 
 def _utc() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _append_ledger(row: dict) -> None:
@@ -81,6 +94,27 @@ codex exec \\
   "$(cat {prompt_file})" \\
   2>&1 | tee {log}
 RC=${{PIPESTATUS[0]}}
+# --- transient-death auto-recovery: capacity/rate-limit/disconnect is a SERVER blip, not a
+# token limit. Re-run the same prompt after backoff; the agent self-resumes from its
+# subagent_checkpoint so no work is orphaned. Fatal (non-transient) errors do not match → no loop.
+attempt=0
+while [ "$RC" -ne 0 ] && [ "$attempt" -lt {_MAX_CAPACITY_RETRIES} ] && \\
+      grep -qiE '{_TRANSIENT_DEATH_SIGNATURE}' {log}; do
+  attempt=$((attempt+1))
+  backoff=$(({_CAPACITY_BACKOFF_STEP_SECONDS} * attempt))
+  echo "RETRY {label} transient rc=$RC attempt=$attempt/{_MAX_CAPACITY_RETRIES} backoff=${{backoff}}s $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> {EVENTS}
+  echo "=== TRANSIENT death (rc=$RC) — re-run $attempt/{_MAX_CAPACITY_RETRIES} in ${{backoff}}s; agent self-resumes from checkpoint ===" | tee -a {log}
+  sleep $backoff
+  codex exec \\
+    --skip-git-repo-check \\
+    --sandbox {sandbox} \\
+    -m {model} \\
+    -c model_reasoning_effort={effort} \\
+    -o {last} \\
+    "$(cat {prompt_file})" \\
+    2>&1 | tee -a {log}
+  RC=${{PIPESTATUS[0]}}
+done
 # one-line summary from the tail of the final-message file (best-effort, sanitized)
 SUMMARY=$(tail -c 400 {last} 2>/dev/null | tr '\\n' ' ' | tr -s ' ' | sed 's/[|]/ /g' | tail -c 200)
 echo "DONE {label} rc=$RC {stamp} $(date -u +%Y-%m-%dT%H:%M:%SZ) :: ${{SUMMARY}}" >> {EVENTS}
@@ -132,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
         "label": args.label, "stamp": stamp, "model": args.model, "effort": args.effort,
         "sandbox": args.sandbox, "launcher": str(launcher), "log": str(log),
         "last": str(last), "done_marker": str(done), "prompt_file": str(prompt_file),
-        "launched_utc": datetime.now(timezone.utc).isoformat(), "status": "running",
+        "launched_utc": datetime.now(UTC).isoformat(), "status": "running",
     })
 
     launched = False
