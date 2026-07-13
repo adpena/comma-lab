@@ -16942,3 +16942,16 @@ projection 119.4 GiB > 97.7 GiB adaptive ceiling → config trim or envelope re-
 lacks n600 RSS custody; (3) SSD workload root missing; (4) D-A/D-B in-run producers absent (manifest builder
 live). Wall-clock projection REFUSED not guessed (only 295.352 s/ep prior baseline is MEASURED). Ticket consumes
 default-ON causal_manifest.jsonl. NO LAUNCH (operator-GO).
+
+## FEED-causal-manifest-20260713 (pointer node; full FEED in causal_manifest_DAG_FEED_20260713.md)
+CAUSAL MANIFEST BUILT (#474a) — the ONE logging change FORE+HCM+D40 converged on, now LANDED: schema
+pact.causal_manifest.v1 (frozen dataclasses, validate-before-append, canonical fcntl JSONL, immutable resume
+custody). PRODUCERS: trainer startup/baseline/verdict/checkpoint/stage/final boundaries (default ON,
+score-neutral, trainer:~3498) + organ arm-decisions with chosen/alternatives/PROPENSITIES (shadow_controller:731;
+policy stays deterministic executed=false — randomized rows require external authorization + real seed/draw =
+D40's cure armed but not fired). CONSUMERS: loader + FORE-support checker (REFUSES missing transitions/coverage/
+rewards/positive target-arm propensity — the surrogate round-4 admission gate) + HCM-L4 skeleton (REFUSES missing
+pair custody/source hashes/whole-run support/loss closure/negative controls/frozen-run positive control).
+67 tests green. This closes the build side of D40 + HCM reformulation item 1 + FORE §5's logging demand; the
+launch ticket already consumes causal_manifest.jsonl default-ON. Muon trainer wiring committed same batch
+(manifest builder's landing released the trainer hold; both regions verified coexisting, trainer parses).

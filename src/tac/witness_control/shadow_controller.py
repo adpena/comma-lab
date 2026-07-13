@@ -39,11 +39,23 @@ import importlib
 import itertools
 import math
 import sys
+import warnings
 from dataclasses import dataclass, field as _dc_field
 from datetime import UTC, datetime
 from pathlib import Path
 
 from tac.jsonl_store import append_locked_jsonl
+from tac.causal_manifest import (
+    MANIFEST_FILENAME as CAUSAL_MANIFEST_FILENAME,
+    ApparatusState as CausalApparatusState,
+    ArmPropensity,
+    CausalManifestWriter,
+    ExplorationDecisionRow,
+    RealizedOutcome as CausalRealizedOutcome,
+    StateSummary as CausalStateSummary,
+    boundary_sequence_index as causal_boundary_sequence_index,
+    canonical_sha256 as causal_sha256,
+)
 from tac.witness_control.costate_estimator import (
     BINDING_TERM_STALL,
     MEASURED,
@@ -717,14 +729,122 @@ def build_shadow_report(inputs: RunInputs,
 
 
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:
-    """Append the report row to ``<run_dir>/costate_shadow.jsonl`` (the ONLY write this
-    package performs — an advisory sidecar in the run dir, never a mutation of the run).
+    """Append the report plus its typed deterministic arm-decision observation.
+
+    Both writes are advisory sidecars in the run dir, never mutations of checkpoint/run bytes.
+    The causal row exposes the D40 exploration hook but keeps it disabled pending operator GO;
+    this function still has no actuation or randomization capability.
 
     fcntl-locked append via the canonical .omx/state helper (tac.jsonl_store); aligns with
     the sibling stores (costate_posterior.py). See
     .omx/research/fcntl_lock_canonicalization_plan_20260710.md Batch 1.
     """
     from tac import witness_run_artifacts as _wra
-    out = Path(run_dir) / _wra.COSTATE_JSONL
-    append_locked_jsonl(out, report.to_row())
+    run_path = Path(run_dir)
+    out = run_path / _wra.COSTATE_JSONL
+    report_row = report.to_row()
+    append_locked_jsonl(out, report_row)
+    try:
+        _write_causal_arm_decision(run_path, report, report_row)
+    except Exception as exc:  # score-neutral observability is loud, never an actuator/blocker
+        warnings.warn(
+            f"causal-manifest arm decision was not appended: {type(exc).__name__}: {exc}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     return out
+
+
+def _write_causal_arm_decision(run_dir: Path, report: ShadowReport, report_row: dict) -> None:
+    """Record the shadow policy's chosen arm and all considered alternatives.
+
+    This is the D40 build-side hook only.  Propensity is exactly 1/0 because the current policy is
+    deterministic, ``executed=False``, and ``actuation=NONE``.  A future randomized policy must pass
+    the schema's externally-authorized-hook + actual seed/draw validation before it can append.
+    """
+
+    run_id = run_dir.name
+    emitted_at = str(report_row["ts"])
+    report_digest = causal_sha256(report_row)
+    epoch = int(report.epoch_latest) if report.epoch_latest is not None else 0
+    actions = [
+        str(item["action"])
+        for item in [*report.recommendations, *report.refused]
+        if isinstance(item, dict) and item.get("action")
+    ]
+    alternatives = tuple(dict.fromkeys(actions)) or ("NO_RANKED_ARM",)
+    chosen = alternatives[0]
+    policy_id = "costate_shadow_rank_v1"
+    policy_sha = causal_sha256({
+        "classification": report.classification,
+        "ordered_alternatives": alternatives,
+        "policy_id": policy_id,
+    })
+    state_values = report.state if isinstance(report.state, dict) else {}
+    if any(isinstance(state_values.get(name), (int, float)) for name in ("d_seg", "d_pose", "implied_S")):
+        outcome = CausalRealizedOutcome(
+            observed=True,
+            through_r=True,
+            d_seg=(float(state_values["d_seg"])
+                   if isinstance(state_values.get("d_seg"), (int, float)) else None),
+            d_pose=(float(state_values["d_pose"])
+                    if isinstance(state_values.get("d_pose"), (int, float)) else None),
+            archive_bytes=(int(state_values["blob_bytes"])
+                           if isinstance(state_values.get("blob_bytes"), (int, float)) else None),
+            implied_score=(float(state_values["implied_S"])
+                           if isinstance(state_values.get("implied_S"), (int, float)) else None),
+            axis=AXIS_TAG,
+        )
+    else:
+        outcome = CausalRealizedOutcome(
+            observed=False,
+            through_r=False,
+            axis=AXIS_TAG,
+            missing_reason="costate shadow ran before the first realized-through-R verdict",
+        )
+    state = CausalStateSummary(
+        boundary_id=f"costate_shadow:{epoch}:{emitted_at}:{report_digest[:16]}",
+        sequence_index=causal_boundary_sequence_index(epoch, "costate_decision"),
+        boundary_kind="costate_decision",
+        epoch=epoch,
+        stage=str(state_values.get("stage") or "unknown"),
+        policy_sha256=policy_sha,
+        data_order_cursor=None,
+        telemetry_history_sha256=causal_sha256({
+            "classification": report.classification,
+            "state": state_values,
+        }),
+        telemetry_history_rows=int(state_values.get("n_verdicts", 0) or 0),
+        checkpoint=None,
+        resume_state_sha256=None,
+        rng_state_sha256=None,
+        controller_state_sha256=None,
+        apparatus=CausalApparatusState(
+            guard_path="costate_shadow.never_regress_then_delta_s_per_cost",
+            measurement_mode="costate_shadow_observational",
+        ),
+        outcome=outcome,
+        observed_at_utc=emitted_at,
+    )
+    decision_id = f"costate_shadow:{epoch}:{emitted_at}:{report_digest[:16]}"
+    decision = ExplorationDecisionRow(
+        row_id=f"exploration_decision:{run_id}:{decision_id}",
+        decision_id=decision_id,
+        run_id=run_id,
+        state=state,
+        chosen_arm=chosen,
+        arm_propensities=tuple(
+            ArmPropensity(arm_id=arm, propensity=1.0 if arm == chosen else 0.0)
+            for arm in alternatives
+        ),
+        policy_id=policy_id,
+        policy_sha256=policy_sha,
+        policy_mode="deterministic",
+        exploration_hook="disabled_pending_operator_go",
+        executed=False,
+        actuation=ACTUATION,
+        random_seed=None,
+        random_draw=None,
+        emitted_at_utc=emitted_at,
+    )
+    CausalManifestWriter(run_dir / CAUSAL_MANIFEST_FILENAME, run_id).record_decision(decision)

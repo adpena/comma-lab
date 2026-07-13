@@ -43,6 +43,7 @@ import argparse
 import json
 import math
 import os
+import platform
 import sys
 import threading
 import time
@@ -103,13 +104,40 @@ from tac.boundary_math.mod_dim_dynamics import (  # noqa: E402
     per_dim_dseg_ablation,
     per_dim_film_consumption,
 )
-from tac.optimization.muon_finisher_mlx import (  # noqa: E402
-    build_muon_finisher_optimizer,
-    count_muon_adamw_split,
+from tac.causal_manifest import (  # noqa: E402
+    MANIFEST_FILENAME as CAUSAL_MANIFEST_FILENAME,
+    ActionSummary as CausalActionSummary,
+    ApparatusState as CausalApparatusState,
+    ArtifactRef as CausalArtifactRef,
+    BoundaryObservationRow as CausalBoundaryObservationRow,
+    CausalManifestConflictError,
+    CausalManifestWriter,
+    DigestRef as CausalDigestRef,
+    RealizedOutcome as CausalRealizedOutcome,
+    RewardObservation as CausalRewardObservation,
+    RunTreatmentManifest,
+    StagePlanEntry as CausalStagePlanEntry,
+    StateSummary as CausalStateSummary,
+    boundary_sequence_index as causal_boundary_sequence_index,
+    canonical_sha256 as _causal_sha256,
+    freeze_fields as causal_freeze_fields,
+    load_causal_manifest,
+    sha256_file as causal_sha256_file,
+    unavailable_artifact as causal_unavailable_artifact,
+    utc_now as causal_utc_now,
+)
+from tac.optimization.film_polar_chart_spel_mlx import (  # noqa: E402
+    RESUME_PREFIX as FILM_POLAR_CHART_RESUME_PREFIX,
+    FilmPolarChartSPELState,
+    muon_aspect_ratio_scale,
 )
 from tac.optimization.md_decoupling import (  # noqa: E402
     stiefel_project_columns,
     stiefel_residual,
+)
+from tac.optimization.muon_finisher_mlx import (  # noqa: E402
+    build_muon_finisher_optimizer,
+    count_muon_adamw_split,
 )
 # SENSE (opt-in --annulus-telemetry): REUSE the pure codim-1 boundary-annulus metric math
 # (no reimplementation). Only the low-level pure fns are used (flip split + per-class + GT-margin
@@ -757,6 +785,16 @@ def _build_resume_state_arrays(
     out["__cfg_film_per_layer"] = np.asarray(int(bool(getattr(args, "film_per_layer", False))))
     out["__cfg_film_concat_code"] = np.asarray(int(bool(getattr(args, "film_concat_code", False))))
     out["__cfg_film_stiefel"] = np.asarray(int(bool(getattr(args, "film_stiefel", False))))
+    # Manifold-Muon round 2: trajectory-affecting optimizer geometry with no
+    # parameter-key change.  Persist the typed intent separately from the
+    # registry-owned Q/H0/momentum state so dropping the lever on resume fails
+    # closed even if every model leaf still matches.
+    out["__cfg_film_polar_chart_spel"] = np.asarray(
+        int(bool(getattr(args, "film_polar_chart_spel", False))))
+    # Reference AdamW is a trajectory-affecting default-OFF treatment: preserve
+    # its bias-correction choice so a resume cannot silently change the update.
+    out["__cfg_adamw_reference_semantics"] = np.asarray(
+        int(bool(getattr(args, "adamw_reference_semantics", False))))
     # TEXTURE TRUNK (#395): texture_trunk adds params (tex_trunk.w_tex/bias); band_hi changes the FIXED
     # bank shape (F) => the resume MUST rebuild with the same band or model.update silently drops/
     # mis-shapes the trained coeffs. These provenance scalars cost ZERO archive bytes (resume sidecar).
@@ -1033,6 +1071,10 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # __cfg_film_stiefel [R2a-MED-1 note there] precisely so THIS guard can fail-closed on a
         # resume that silently drops/adds the Stiefel constraint).
         ("__cfg_film_stiefel", int(bool(getattr(args, "film_stiefel", False))), False),
+        ("__cfg_film_polar_chart_spel",
+         int(bool(getattr(args, "film_polar_chart_spel", False))), False),
+        ("__cfg_adamw_reference_semantics",
+         int(bool(getattr(args, "adamw_reference_semantics", False))), False),
         # (#403 P0 gap-1) LEVER-5 hardness-oversample data curriculum: the oversample FRACTION is
         # always material (0->0.5 adds extra code-fit steps => changes the trajectory + optimizer-step
         # count). The four sub-fields (weighted/source/power/band) are inert while oversample==0 in both
@@ -2329,7 +2371,11 @@ def seed_compose_weight_at_epoch(anneal_epochs: int, shape: str, ep: int) -> flo
     return 1.0 - frac                                         # linear 1 -> 0
 
 
-def _adam_bias_correction_for(adam_beta2: float) -> bool:
+def _adam_bias_correction_for(
+    adam_beta2: float,
+    *,
+    reference_semantics: bool = False,
+) -> bool:
     """#224 Wave C FIX-1 (LAUNCH-BLOCKER): MLX ``optim.AdamW`` ``bias_correction`` DEFAULTS FALSE.
 
     Without bias correction, at step ``t`` the second-moment ``v`` is ``(1-beta2) * mean(g^2)`` and is
@@ -2340,12 +2386,13 @@ def _adam_bias_correction_for(adam_beta2: float) -> bool:
     faithful ONLY with bias correction (which makes vhat = v/(1-beta2^t) => step-1 update ~ lr*sign(g)
     independent of beta2). So bias correction is REQUIRED on the high-beta2 path.
 
-    Gate ON only OFF THE DEFAULT (adam_beta2 != 0.999). At 0.999 (== the MLX/proven_base default) we
-    keep ``bias_correction`` at the MLX default (False) so the DEFAULT AdamW construction is BYTE-
-    IDENTICAL to the pre-FIX-1 path (the --adam-beta2 default stays 0.999 => byte-identical-off 7/7).
+    Gate ON off the default (adam_beta2 != 0.999), OR when the typed
+    ``--adamw-reference-semantics`` treatment requests reference AdamW.  At
+    0.999 with that treatment OFF we keep the MLX default (False), so the
+    default construction and legacy resume trajectories stay byte-identical.
     Pure + total => $0 unit-testable. Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
     against"."""
-    return abs(float(adam_beta2) - 0.999) > 1e-9
+    return bool(reference_semantics) or abs(float(adam_beta2) - 0.999) > 1e-9
 
 
 def _seg_form_for_epoch(ep: int, args) -> str:
@@ -3438,6 +3485,290 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         })
     print(json.dumps({"stage": "gt", "n_pairs": P, "secs": round(time.time() - t0, 1)}), flush=True)
 
+    _causal_writer: CausalManifestWriter | None = None
+    _causal_treatment_sha256: str | None = None
+    _causal_sequence_lock = threading.Lock()
+    _causal_ordinals: dict[tuple[int, str], int] = {}
+
+    def _causal_warning(where: str, exc: BaseException) -> None:
+        # Observability must be loud but cannot alter a score trajectory.  A corrupt existing
+        # manifest is therefore NOT overwritten/repaired; the training path continues and emits an
+        # explicit non-authority warning for the operator/review gate.
+        print(json.dumps({
+            "stage": "causal_manifest_warning",
+            "where": str(where),
+            "error": f"{type(exc).__name__}: {exc}",
+            "score_neutral": True,
+            "promotable": False,
+        }), flush=True)
+
+    try:
+        # Hash the exact active GT arrays once so source-cache truncation/subsetting cannot
+        # masquerade as the treatment actually seen by this run. This stays inside the advisory
+        # fail-open boundary; telemetry hashing can never prevent a non-FreSh training run.
+        _causal_active_target_sha256 = (
+            _fresh_target_authority_sha256
+            if _fresh_target_authority_sha256 is not None
+            else fresh_training_target_sha256({
+                "gt_f0": gt.gt_f0,
+                "gt_f1": gt.gt_f1,
+                "lstars": gt.lstars,
+                "margins": gt.margins,
+                "gt_poses": gt.gt_poses,
+            })
+        )
+        _causal_run_id = out_dir.resolve().name
+        _causal_path = out_dir / CAUSAL_MANIFEST_FILENAME
+        _causal_writer = CausalManifestWriter(_causal_path, _causal_run_id)
+        for _existing_row in load_causal_manifest(_causal_path):
+            if isinstance(_existing_row, CausalBoundaryObservationRow):
+                _key = (_existing_row.state.epoch, _existing_row.state.boundary_kind)
+                _base = causal_boundary_sequence_index(*_key, ordinal=0)
+                _causal_ordinals[_key] = max(
+                    _causal_ordinals.get(_key, 0),
+                    _existing_row.state.sequence_index - _base + 1,
+                )
+
+        # ``resume_from`` and ``out_dir`` are storage/continuation locators, not causal treatments.
+        # Every other typed argparse value is frozen exactly; no parallel flag vocabulary is added.
+        _causal_treatment_values = {
+            key: value for key, value in vars(args).items()
+            if key not in {"out_dir", "resume_from"}
+        }
+        _causal_treatment = causal_freeze_fields(_causal_treatment_values)
+        _causal_treatment_sha256 = _causal_sha256(_causal_treatment_values)
+
+        _n_extra = int(round(P * max(float(getattr(args, "hardness_oversample", 0.0)), 0.0)))
+        _causal_data_order_values = {
+            "algorithm": "np.random.permutation(P); optional PCG64(seed+777) hardness choice; permutation(concat)",
+            "base_pair_visits_per_epoch": int(P),
+            "extra_pair_visits_per_epoch": int(_n_extra),
+            "hardness_band": float(getattr(args, "hardness_band", 0.5)),
+            "hardness_power": float(getattr(args, "hardness_power", 1.0)),
+            "hardness_source": str(getattr(args, "hardness_source", "margin")),
+            "hardness_weighted": bool(getattr(args, "hardness_weighted", False)),
+            "numpy_global_seed": int(args.seed),
+            "pcg64_hardness_seed": int(args.seed) + 777,
+        }
+        _causal_data_order = causal_freeze_fields(_causal_data_order_values)
+        _causal_data_order_sha256 = _causal_sha256(_causal_data_order_values)
+
+        if bool(getattr(args, "seg_form_unify_tau", False)):
+            _causal_stages = [CausalStagePlanEntry("unify_tau", 0, "continuous_tau_single_form")]
+        elif bool(getattr(args, "curriculum", False)):
+            _event = bool(getattr(args, "curriculum_event_triggered", False))
+            _causal_stages = [CausalStagePlanEntry("ce", 0, "initial")]
+            _causal_stages.append(CausalStagePlanEntry(
+                "tau_softplus",
+                None if _event else int(args.tau_softplus_start_epoch),
+                (f"event_plateau_with_cap_epoch_{int(args.tau_softplus_start_epoch)}"
+                 if _event else "fixed_epoch"),
+            ))
+            if int(args.l7_start_epoch) <= int(args.epochs):
+                _causal_stages.append(CausalStagePlanEntry(
+                    "l7_softplus",
+                    None if _event else int(args.l7_start_epoch),
+                    (f"event_plateau_with_cap_epoch_{int(args.l7_start_epoch)}"
+                     if _event else "fixed_epoch"),
+                ))
+        else:
+            _causal_stages = [CausalStagePlanEntry(str(args.seg_loss), 0, "single_stage")]
+        if args.muon_start_epoch is not None:
+            _causal_stages.append(CausalStagePlanEntry(
+                "muon_finisher", int(args.muon_start_epoch), "fixed_optimizer_boundary"))
+
+        _upstream_sha = str(_run_provenance.get("upstream_snapshot_sha256", "unknown"))
+        if len(_upstream_sha) == 64 and all(c in "0123456789abcdef" for c in _upstream_sha.lower()):
+            _scorer_artifacts = (CausalArtifactRef(
+                role="frozen_scorer_snapshot",
+                uri=str(REPO / "upstream"),
+                digest=CausalDigestRef("sha256", _upstream_sha),
+            ),)
+        else:
+            _scorer_artifacts = (causal_unavailable_artifact(
+                "frozen_scorer_snapshot", str(REPO / "upstream"),
+                "canonical upstream snapshot hash was unavailable at launch"),)
+
+        _cache_artifacts = [CausalArtifactRef(
+            role="active_frozen_training_targets",
+            uri=(str(Path(args.gt_cache).resolve()) if args.gt_cache else "memory://precomputed_gt"),
+            digest=CausalDigestRef("sha256", _causal_active_target_sha256),
+        )]
+        if args.gt_cache:
+            _cache_artifacts.append(CausalArtifactRef(
+                role="source_gt_cache_file",
+                uri=str(Path(args.gt_cache).resolve()),
+                digest=CausalDigestRef("sha256", causal_sha256_file(Path(args.gt_cache))),
+            ))
+
+        _existing_manifest = _causal_writer.run_manifest
+        if _existing_manifest is not None:
+            if (
+                _existing_manifest.treatment_sha256 != _causal_treatment_sha256
+                or _existing_manifest.data_order_sha256 != _causal_data_order_sha256
+                or _existing_manifest.seed != int(args.seed)
+            ):
+                raise CausalManifestConflictError(
+                    "resume treatment/data-order differs from the immutable run manifest")
+            _causal_treatment_sha256 = _existing_manifest.treatment_sha256
+        else:
+            if args.resume_from:
+                _base_path = _resolve_resume_path(Path(args.resume_from)).resolve()
+                _base_checkpoint = CausalArtifactRef(
+                    role="base_checkpoint",
+                    uri=str(_base_path),
+                    digest=CausalDigestRef("sha256", causal_sha256_file(_base_path)),
+                )
+            else:
+                _base_checkpoint = causal_unavailable_artifact(
+                    "base_checkpoint", "fresh_init", "run initialized without a base checkpoint")
+            _causal_writer.ensure_run_manifest(RunTreatmentManifest(
+                row_id=f"run_manifest:{_causal_run_id}",
+                run_id=_causal_run_id,
+                treatment_vector=_causal_treatment,
+                treatment_sha256=_causal_treatment_sha256,
+                base_checkpoint=_base_checkpoint,
+                seed=int(args.seed),
+                machine=f"{platform.node()}|{platform.machine()}|{platform.platform()}",
+                backend="mlx",
+                axis="[macOS-MLX training-gradient] NON-PROMOTABLE",
+                data_order=_causal_data_order,
+                data_order_sha256=_causal_data_order_sha256,
+                stage_plan=tuple(_causal_stages),
+                scorer_artifacts=_scorer_artifacts,
+                cache_artifacts=tuple(_cache_artifacts),
+                created_at_utc=causal_utc_now(),
+            ))
+        print(json.dumps({
+            "stage": "causal_manifest",
+            "schema": "pact.causal_manifest.v1",
+            "path": str(_causal_path),
+            "mode": "default_on_read_only",
+            "score_neutral": True,
+            "promotable": False,
+        }), flush=True)
+    except Exception as _causal_init_exc:
+        _causal_warning("run_manifest", _causal_init_exc)
+        _causal_writer = None
+        _causal_treatment_sha256 = None
+
+    def _record_causal_boundary(
+        *,
+        epoch: int,
+        boundary_kind: str,
+        stage: str,
+        outcome_values: dict[str, Any] | None,
+        checkpoint_path: Path | None = None,
+        total_loss: float | None = None,
+        weights_stepped: bool | None = None,
+        accepted_fraction: float | None = None,
+        d_seg_by_class: Any = None,
+    ) -> None:
+        """Append one aggregate boundary and, when ordered, its preceding ``(Z,A,R,Z')`` row."""
+        if _causal_writer is None or _causal_treatment_sha256 is None:
+            return
+        try:
+            with _causal_sequence_lock:
+                _key = (int(epoch), str(boundary_kind))
+                _ordinal = _causal_ordinals.get(_key, 0)
+                _causal_ordinals[_key] = _ordinal + 1
+                _checkpoint_ref = None
+                _resume_sha = None
+                if checkpoint_path is not None:
+                    _resume_sha = causal_sha256_file(checkpoint_path)
+                    _checkpoint_ref = CausalArtifactRef(
+                        role="resume_checkpoint",
+                        uri=str(checkpoint_path.resolve()),
+                        digest=CausalDigestRef("sha256", _resume_sha),
+                    )
+                if outcome_values is None:
+                    _outcome = CausalRealizedOutcome(
+                        observed=False,
+                        through_r=False,
+                        axis="[observability-only] NON-PROMOTABLE",
+                        missing_reason="no realized-through-R scorer evaluation at this boundary",
+                    )
+                    _reward = CausalRewardObservation(
+                        estimand_id="negative_implied_score",
+                        observed=False,
+                        value=None,
+                        missing_reason="boundary has no realized-through-R score",
+                    )
+                else:
+                    _causal_os_axis = "macOS" if platform.system() == "Darwin" else platform.system()
+                    _outcome = CausalRealizedOutcome(
+                        observed=True,
+                        through_r=True,
+                        d_seg=float(outcome_values["d_seg"]),
+                        d_pose=float(outcome_values["d_pose"]),
+                        archive_bytes=int(outcome_values["blob_bytes"]),
+                        implied_score=float(outcome_values["implied_S"]),
+                        d_seg_by_class=tuple(float(v) for v in (d_seg_by_class or ())),
+                        axis=(f"[{_causal_os_axis}-{str(getattr(args, 'verdict_device', 'cpu')).upper()} "
+                              "advisory] NON-PROMOTABLE"),
+                    )
+                    _reward = CausalRewardObservation(
+                        estimand_id="negative_implied_score",
+                        observed=True,
+                        value=-float(outcome_values["implied_S"]),
+                        components=causal_freeze_fields({
+                            "archive_bytes": int(outcome_values["blob_bytes"]),
+                            "d_pose": float(outcome_values["d_pose"]),
+                            "d_seg": float(outcome_values["d_seg"]),
+                        }),
+                    )
+                _state = CausalStateSummary(
+                    boundary_id=f"{boundary_kind}:ep{int(epoch)}:{stage}:{_ordinal}",
+                    sequence_index=causal_boundary_sequence_index(
+                        int(epoch), str(boundary_kind), ordinal=_ordinal),
+                    boundary_kind=str(boundary_kind),
+                    epoch=int(epoch),
+                    stage=str(stage),
+                    policy_sha256=_causal_treatment_sha256,
+                    data_order_cursor=(
+                        max(int(epoch), 0)
+                        * (int(P) + int(round(P * max(float(getattr(args, "hardness_oversample", 0.0)), 0.0))))
+                    ),
+                    telemetry_history_sha256=_causal_sha256(history),
+                    telemetry_history_rows=len(history),
+                    checkpoint=_checkpoint_ref,
+                    resume_state_sha256=_resume_sha,
+                    # RNG/controller bytes are inside the exact resume bundle above.  Separate hashes
+                    # stay None rather than pretending extraction occurred.
+                    rng_state_sha256=None,
+                    controller_state_sha256=None,
+                    apparatus=CausalApparatusState(
+                        weights_stepped=weights_stepped,
+                        accepted_fraction=accepted_fraction,
+                        guard_path="trainer_boundary_observer",
+                        measurement_mode=("realized_through_R" if outcome_values is not None
+                                          else "checkpoint_only"),
+                        total_loss=total_loss,
+                    ),
+                    outcome=_outcome,
+                    observed_at_utc=causal_utc_now(),
+                )
+                _action = CausalActionSummary(
+                    action_id=f"training_interval:{_state.boundary_id}",
+                    action_type="training_interval_to_boundary",
+                    arm_id=str(stage),
+                    policy_id="run_treatment_vector",
+                    policy_sha256=_causal_treatment_sha256,
+                    parameters=causal_freeze_fields({
+                        "boundary_kind": str(boundary_kind),
+                        "epoch": int(epoch),
+                        "stage": str(stage),
+                    }),
+                )
+                _causal_writer.record_boundary(
+                    _state,
+                    action=_action,
+                    reward=_reward,
+                    pair_id="__aggregate_all_pairs__",
+                )
+        except Exception as _causal_boundary_exc:
+            _causal_warning(f"boundary:{boundary_kind}:ep{epoch}", _causal_boundary_exc)
+
     render_h, render_w = args.render_h, args.render_w
     coords_np = _build_render_coords(render_h, render_w)
 
@@ -4359,10 +4690,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     ema_finisher_start = (int(args.ema_decay_finisher_start_epoch)
                           if getattr(args, "ema_decay_finisher_start_epoch", None) is not None
                           else (int(args.muon_start_epoch) if args.muon_start_epoch is not None else None))
-    # #224 Wave C FIX-1: bias_correction ON only on the high-beta2 all-levers path (0.9999999); at the
-    # 0.999 default it stays MLX-default False => BYTE-IDENTICAL. Without it high beta2 => ~100x step-1
-    # LR blowup => divergence (see _adam_bias_correction_for).
-    _adam_bc = _adam_bias_correction_for(getattr(args, "adam_beta2", 0.999))
+    # #224 Wave C FIX-1 plus round-2 audit: high-beta2 always corrects; at beta2=0.999 the typed
+    # reference-semantics treatment corrects while its default OFF preserves legacy trajectories.
+    _adam_bc = _adam_bias_correction_for(
+        getattr(args, "adam_beta2", 0.999),
+        reference_semantics=bool(getattr(args, "adamw_reference_semantics", False)),
+    )
     opt = optim.AdamW(learning_rate=args.lr, weight_decay=args.weight_decay,
                       betas=[0.9, float(getattr(args, "adam_beta2", 0.999))],
                       bias_correction=_adam_bc)
@@ -6819,7 +7152,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return mag / max(P, 1)
 
     def _project_shadow_film_np(params_np: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
-        """(review Med1) Re-orthonormalize the EMA SHADOW's film.weight for the DEPLOYED artifact.
+        """Put the EMA film leaf on its armed deployment manifold.
 
         The EMA shadow is an arithmetic average of (per-step on-manifold) film.weight matrices, which
         is itself NOT orthonormal -> the shipped/verdicted weight drifts OFF-Stiefel and PR(M)=PR(cov
@@ -6827,7 +7160,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         so the DEPLOYED (verdict + byte-close) weight is on-manifold. Returns a SHALLOW copy with
         film.weight replaced; the live ``ema.shadow`` is UNTOUCHED so --resume-from stays bit-faithful
         to a continuous run (the resume sidecar keeps the un-projected shadow). No-op unless
-        --film-stiefel (default OFF => byte-identical)."""
+        --film-stiefel (default OFF => byte-identical).
+
+        For the polar-chart arm, the registry-owned Q-EMA is retracted and
+        folded as ``Q_ema @ H0``.  This is the chart's actual deploy surface;
+        the generic arithmetic ``film.weight`` EMA is retained only in the
+        resume sidecar so the rest of the legacy EMA tree stays unchanged."""
+        if (_film_polar_state is not None and _film_polar_state.initialized
+                and "film.weight" in params_np):
+            out = dict(params_np)
+            out["film.weight"] = _film_polar_state.deploy_weight_numpy()
+            return out
         if not args.film_stiefel or "film.weight" not in params_np:
             return params_np
         out = dict(params_np)
@@ -6927,6 +7270,28 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         restore=lambda prefix, cfg: restore_fresh_state_from_cfg(
             _fresh_state, cfg, prefix=prefix),
     ))
+
+    # Manifold-Muon round 2: construct/register the state ONLY for the typed
+    # treatment arm.  Once initialized at the Muon boundary it persists Q,
+    # frozen H0, transported tangent momentum, Q-EMA, and step through the same
+    # atomic resume NPZ as every other controller.  OFF => no controller/no
+    # keys/no branch in the update loop (legacy path unchanged).
+    _film_polar_state: FilmPolarChartSPELState | None = None
+    if bool(getattr(args, "film_polar_chart_spel", False)):
+        _film_polar_state = FilmPolarChartSPELState(
+            momentum_beta=float(args.muon_momentum),
+            nesterov=True,
+            ns_steps=int(args.muon_ns_steps),
+        )
+        _resume_registry.register(
+            "film_polar_chart_spel", FILM_POLAR_CHART_RESUME_PREFIX, _film_polar_state)
+        print(json.dumps({
+            "stage": "film_polar_chart_spel_armed",
+            "method": "MCSD/SPEL single-loop projected tangent spectral step",
+            "exact_tangent_dual": False,
+            "resume_prefix": FILM_POLAR_CHART_RESUME_PREFIX,
+            "note": "default-OFF FiLM-only W=QH0 finisher; H0 frozen; n600 matched verdict owed",
+        }), flush=True)
 
     # (v7.5 D.9) TERMINAL POSE-FINISH state (SPEC §D.9; the R1 two-phase, FEED-238resolved). The EFFECTIVE
     # per-epoch pose weight rides the ``_w_pose_now`` holder (read at every training + telemetry loss call
@@ -7803,6 +8168,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _rec = _cl_pending["rec"]
                 if _rec is not None and int(_rec["epoch"]) == int(ep):
                     _cl_pending["rec"] = None
+        _record_causal_boundary(
+            epoch=int(ep),
+            boundary_kind="verdict",
+            stage=str(seg_form),
+            outcome_values={
+                "d_seg": float(v["d_seg"]),
+                "d_pose": float(v["d_pose"]),
+                "blob_bytes": int(blob["total_quantized_blob_bytes"]),
+                "implied_S": float(s),
+            },
+            total_loss=float(ep_loss),
+            weights_stepped=(None if _lv is None else bool(_lv.get("stepped", True))),
+            accepted_fraction=(None if _lv is None else float(_lv.get("frac", 1.0))),
+            d_seg_by_class=(
+                _per_class.get("d_seg_by_class")
+                if isinstance(_per_class, dict) and "error" not in _per_class else None
+            ),
+        )
         # (#302) emit the handoff_readiness row + update the nucleus trigger state — OUTSIDE the lock
         # (the helper re-acquires _verdict_lock; threading.Lock is non-reentrant). No-op when counts
         # is None (feature OFF) => byte-identical.
@@ -8071,7 +8454,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             opt_np = {}
         return shadow_np, live_np, opt_np
 
-    def _do_checkpoint(epoch: int, *, stage_tag: str | None = None) -> dict[str, Any]:
+    def _do_checkpoint(
+        epoch: int,
+        *,
+        stage_tag: str | None = None,
+        causal_boundary_kind: str | None = None,
+        causal_stage: str | None = None,
+    ) -> dict[str, Any]:
         shadow_np, live_np, opt_np = _snapshot_numpy_state()
         # (review Med1) the BYTE-CLOSE deploy npz ships the EMA shadow; re-project its film.weight onto
         # Stiefel so the shipped artifact is ON-MANIFOLD (PR(M)=PR(cov code) holds for what ships). The
@@ -8138,6 +8527,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 polyak_pres = f"levelset_polyak_{stage_tag}_ep{epoch}.npz"
                 _atomic_savez(out_dir / polyak_pres, polyak_arrays)
                 written["polyak_preserved"] = polyak_pres
+        _causal_resume_name = str(written.get("resume_preserved", written["resume_latest"]))
+        _record_causal_boundary(
+            epoch=int(epoch),
+            boundary_kind=(causal_boundary_kind or ("stage" if stage_tag is not None else "checkpoint")),
+            stage=str(causal_stage or stage_tag or "checkpoint_unspecified_stage"),
+            outcome_values=None,
+            checkpoint_path=out_dir / _causal_resume_name,
+            weights_stepped=bool(_live.get("stepped", True)),
+            accepted_fraction=float(_live.get("frac", 1.0)),
+        )
         return written
 
     # ---- RESUME restore (FEED-dz; --resume-from None => fresh start => behavior UNCHANGED). Loads
@@ -8362,6 +8761,49 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         else:
             _resume_into_finisher = (args.muon_start_epoch is not None
                                      and start_epoch > int(args.muon_start_epoch))
+        if _film_polar_state is not None:
+            _film_polar_restored = bool(
+                _resume_report.restored.get("film_polar_chart_spel", False))
+            _ckpt_polar_active = bool(
+                int(resume_cfg.get("__cfg_film_polar_chart_spel", 0) or 0))
+            if (_ckpt_polar_active and not _film_polar_restored
+                    and not bool(getattr(args, "warm_start_weights_only", False))):
+                raise RuntimeError(
+                    "resume checkpoint says film_polar_chart_spel was active but its canonical "
+                    "Q/H0/momentum state is missing; refusing a non-bit-faithful reinitialization")
+            # A weights-only warm start from a pre-chart checkpoint is an
+            # explicit new treatment boundary.  If it begins inside the Muon
+            # window, initialize the chart from the loaded film tensor now;
+            # otherwise the normal Muon switch initializes it below.
+            if not _film_polar_state.initialized and _resume_into_finisher:
+                model.film.weight = _film_polar_state.initialize_mlx(model.film.weight)
+                mx.eval(model.film.weight)
+                print(json.dumps({
+                    "stage": "film_polar_chart_spel_initialized_on_warm_start",
+                    "start_epoch": int(start_epoch),
+                    **_film_polar_state.telemetry_numpy(),
+                }), flush=True)
+            elif _film_polar_restored:
+                if (str(getattr(args, "resume_model_from", "live")) == "ema"
+                        and not bool(getattr(args, "warm_start_weights_only", False))):
+                    raise RuntimeError(
+                        "active film_polar_chart_spel state belongs to the live Q trajectory but "
+                        "--resume-model-from ema selected a different film tensor; use the normal live "
+                        "resume or an explicit weights-only re-treatment")
+                _restored_film = np.asarray(model.film.weight, dtype=np.float32)
+                _state_film = _film_polar_state.live_weight_numpy()
+                _resume_chart_rel = float(
+                    np.linalg.norm(_state_film - _restored_film)
+                    / max(float(np.linalg.norm(_restored_film)), 1e-30))
+                if _resume_chart_rel > 2e-6:
+                    raise RuntimeError(
+                        "restored film_polar_chart_spel Q/H0 does not reconstruct the live model "
+                        f"film.weight: relative Frobenius {_resume_chart_rel:.3e} > 2e-6")
+                print(json.dumps({
+                    "stage": "film_polar_chart_spel_resumed",
+                    "resume_chart_relative_fro": _resume_chart_rel,
+                    **_film_polar_state.telemetry_numpy(),
+                }), flush=True)
         # (CANONICAL RESUME REGISTRY 2026-07-08) seed the lane-band + chroma LEVER dicts from the
         # restored gate FIRE state so the FIRST post-resume epoch does NOT spuriously re-treat: the
         # engage blocks (lane_render_band_engage / seg_chroma_boundary_engage) compare the lever dict's
@@ -8401,6 +8843,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 muon_lr=_mlr, muon_adamw_lr=_malr, muon_momentum=float(args.muon_momentum),
                 muon_weight_decay=_mwd, muon_ns_steps=int(args.muon_ns_steps),
                 adamw_weight_decay=float(args.weight_decay),
+                adamw_beta2=float(getattr(args, "adam_beta2", 0.999)),
+                adamw_reference_semantics=bool(
+                    getattr(args, "adamw_reference_semantics", False)),
                 muon_lr_final_frac=_r_final_frac, muon_anneal_steps=_r_anneal_steps,
             )
             print(json.dumps({"stage": "resume_muon_rebuild", "start_epoch": start_epoch,
@@ -8491,6 +8936,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps(_mdd_v0), flush=True)
     history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0,
                     "blob_bytes": blob["total_quantized_blob_bytes"]})  # (S1-R1) byte trace for TAIL stop
+    _record_causal_boundary(
+        epoch=int(start_epoch - 1),
+        boundary_kind="baseline",
+        stage="baseline_v0",
+        outcome_values={
+            "d_seg": float(v0["d_seg"]),
+            "d_pose": float(v0["d_pose"]),
+            "blob_bytes": int(blob["total_quantized_blob_bytes"]),
+            "implied_S": float(s0),
+        },
+        weights_stepped=False,
+        accepted_fraction=None,
+        d_seg_by_class=(
+            _per_class_v0.get("d_seg_by_class")
+            if isinstance(_per_class_v0, dict) and "error" not in _per_class_v0 else None
+        ),
+    )
 
     # (C3 confound fix) STARTUP regularizer-magnitude log: the raw (PRE-weight) scale of each active
     # level-set regularizer on ONE pair, so the eikonal unit-recalibration is auditable and the
@@ -9066,6 +9528,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "ema": dict(ema.shadow),
             "opt": dict(tree_flatten(opt.state)),
         }
+        if _film_polar_state is not None and _film_polar_state.initialized:
+            snap["film_polar"] = _film_polar_state.state_arrays(
+                FILM_POLAR_CHART_RESUME_PREFIX)
         if seed_mod is not None:
             snap["seed"] = dict(tree_flatten(seed_mod.parameters()))
             snap["seed_opt"] = dict(tree_flatten(seed_opt.state))
@@ -9086,6 +9551,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             ema.shadow[_k] = _v
         mx.eval(list(ema.shadow.values()))
         opt.state = tree_unflatten(list(snap["opt"].items()))
+        if _film_polar_state is not None and "film_polar" in snap:
+            _film_polar_state.restore_from_cfg(
+                FILM_POLAR_CHART_RESUME_PREFIX, snap["film_polar"])
         new_lr = cur_lr * cut
         opt.learning_rate = new_lr        # AFTER the state restore (state carries learning_rate)
         mx.eval(opt.state)
@@ -9553,6 +10021,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # #224 Wave D (R4 #2): thread the same beta2 as the main AdamW so the finisher
                     # rest-group is consistent (default 0.999 => byte-identical).
                     adamw_beta2=float(getattr(args, "adam_beta2", 0.999)),
+                    adamw_reference_semantics=bool(
+                        getattr(args, "adamw_reference_semantics", False)),
                     # GAP 1: default (1.0 / 0) => scalar Muon LR => byte-identical.
                     muon_lr_final_frac=_muon_final_frac, muon_anneal_steps=_muon_anneal_steps,
                 )
@@ -9573,6 +10043,38 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             "err": str(_warm_err),
                         }), flush=True)
                     mx.eval(opt.state)
+                if _film_polar_state is not None:
+                    _film_before = np.asarray(model.film.weight, dtype=np.float32)
+                    model.film.weight = _film_polar_state.initialize_mlx(model.film.weight)
+                    mx.eval(model.film.weight)
+                    _film_polar_warm_seeded = False
+                    if _old_adam_state is not None:
+                        _old_m = {
+                            k[:-2]: v
+                            for k, v in tree_flatten(_old_adam_state)
+                            if k.endswith(".m")
+                        }
+                        _film_m = _old_m.get("film.weight")
+                        if _film_m is not None:
+                            _film_polar_state.warm_start_momentum_mlx(_film_m)
+                            _film_polar_warm_seeded = True
+                    _film_after = np.asarray(model.film.weight, dtype=np.float32)
+                    _film_rel = float(
+                        np.linalg.norm(_film_after - _film_before)
+                        / max(float(np.linalg.norm(_film_before)), 1e-30))
+                    print(json.dumps({
+                        "stage": "film_polar_chart_spel_initialized",
+                        "epoch": int(ep),
+                        "boundary_reconstruction_relative_fro": _film_rel,
+                        "function_preserving_tolerance": 2e-6,
+                        "within_tolerance": bool(_film_rel <= 2e-6),
+                        "tangent_momentum_warm_seeded": _film_polar_warm_seeded,
+                        **_film_polar_state.telemetry_numpy(),
+                    }), flush=True)
+                    if _film_rel > 2e-6:
+                        raise RuntimeError(
+                            "film polar-chart boundary reconstruction exceeded the registered fp32 "
+                            f"tolerance: relative Frobenius {_film_rel:.3e} > 2e-6")
                 muon_switched = True
                 recent_losses.clear()
                 # (S6-R4) FREEZE the τ-advance ladder at the Muon switch: post-Muon τ is driven ONLY
@@ -9910,7 +10412,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       weight_decay=args.weight_decay,
                                       betas=[0.9, float(getattr(args, "adam_beta2", 0.999))],
                                       bias_correction=_adam_bias_correction_for(
-                                          getattr(args, "adam_beta2", 0.999)))
+                                          getattr(args, "adam_beta2", 0.999),
+                                          reference_semantics=bool(getattr(
+                                              args, "adamw_reference_semantics", False))))
                     opt.init(model.trainable_parameters())
                     mx.eval(opt.state)
                     print(json.dumps({"stage": "stage_transition_reset_moments", "epoch": ep,
@@ -9984,7 +10488,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             weight_decay=args.weight_decay,
                             betas=[0.9, float(getattr(args, "adam_beta2", 0.999))],
                             bias_correction=_adam_bias_correction_for(
-                                getattr(args, "adam_beta2", 0.999)),
+                                getattr(args, "adam_beta2", 0.999),
+                                reference_semantics=bool(getattr(
+                                    args, "adamw_reference_semantics", False)),
+                            ),
                         )
                         opt.init(model.trainable_parameters())
                         mx.eval(opt.state)
@@ -10436,7 +10943,36 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     clipped = per_param_normalize_grads(
                         clipped, tree_map=tree_map,
                         leaf_norm=lambda g: float(mx.sqrt(mx.sum(g * g))))
+                _film_polar_grad = None
+                _film_polar_lr = None
+                if _film_polar_state is not None and _film_polar_state.initialized:
+                    try:
+                        _film_polar_grad = clipped["film"]["weight"]
+                    except (KeyError, TypeError):
+                        raise RuntimeError(
+                            "film polar-chart finisher is active but the clipped gradient tree has "
+                            "no film.weight leaf") from None
+                    try:
+                        _film_polar_lr = float(opt.optimizers[0].learning_rate)
+                    except (AttributeError, IndexError, TypeError, ValueError):
+                        _film_polar_lr = float(muon_lr_eff)
+                    # MLX Muon multiplies every tall 2-D matrix step by
+                    # sqrt(rows/cols).  Match that incumbent learning-rate
+                    # convention before applying the Stiefel tangent LMO.
+                    _film_polar_lr *= muon_aspect_ratio_scale(
+                        tuple(int(v) for v in model.film.weight.shape))
                 opt.update(model, clipped)
+                # The existing MultiOptimizer still visits film.weight in its
+                # standard tree, preserving all incumbent state/layout code.
+                # Override that single leaf from the registry-owned chart using
+                # the ORIGINAL clipped task gradient.  Every other leaf remains
+                # exactly the result of the incumbent Muon/AdamW update.
+                if _film_polar_grad is not None:
+                    model.film.weight = _film_polar_state.step_mlx(
+                        _film_polar_grad,
+                        learning_rate=float(_film_polar_lr),
+                        ema_decay=float(ema.decay),
+                    )
                 mx.eval(model.parameters(), opt.state)
                 _live["ep_acc"] += 1  # (C6 liveness) an ACCEPTED (weight-stepping) accum-batch
                 # #224 (5) SEED CONTAINMENT step: shield the seed grad (defend the seeded islands from
@@ -10618,6 +11154,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                              "as a plateau or a 'best')")
                     history.append({"epoch": ep, **v, "implied_S": s,
                                     "blob_bytes": blob["total_quantized_blob_bytes"]})  # (S1-R1) byte trace
+                    _record_causal_boundary(
+                        epoch=int(ep),
+                        boundary_kind="verdict",
+                        stage=str(seg_form),
+                        outcome_values={
+                            "d_seg": float(v["d_seg"]),
+                            "d_pose": float(v["d_pose"]),
+                            "blob_bytes": int(blob["total_quantized_blob_bytes"]),
+                            "implied_S": float(s),
+                        },
+                        total_loss=float(ep_loss),
+                        weights_stepped=bool(_live["stepped"]),
+                        accepted_fraction=float(_live["frac"]),
+                        d_seg_by_class=(
+                            _per_class_sync.get("d_seg_by_class")
+                            if isinstance(_per_class_sync, dict)
+                            and "error" not in _per_class_sync else None
+                        ),
+                    )
                     _emit_handoff_readiness(_ncounts_sync, ep, seg_form)  # (#302) readiness row; no-op OFF
                     # (#292 build-3) closed-loop capture on the SYNC verdict path too (already
                     # deterministic — no thread). OFF => appends nothing => byte-identical.
@@ -10747,11 +11302,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # FEED-fi: tag the preserved ckpt with the optimizer phase too, so a curriculum
                 # transition DURING the Muon finisher is distinctly byte-closeable (suffix "" when
                 # the finisher is off => identical filename to the pre-FEED-fi path).
-                w = _do_checkpoint(ep, stage_tag=_stage_tag(seg_form) + ("_muon" if muon_switched else ""))
+                w = _do_checkpoint(
+                    ep,
+                    stage_tag=_stage_tag(seg_form) + ("_muon" if muon_switched else ""),
+                    causal_stage=str(seg_form),
+                )
                 stage_ckpts.append(w)
                 print(json.dumps({"stage": "checkpoint", "kind": "stage_transition", **w}), flush=True)
             elif do_periodic:
-                w = _do_checkpoint(ep)
+                w = _do_checkpoint(ep, causal_stage=str(seg_form))
                 print(json.dumps({"stage": "checkpoint", "kind": "intra_stage", **w}), flush=True)
             # (MOD-DIM DYNAMICS 2026-07-08, cut 3) per-dim d_seg zero-ablation attribution at CHECKPOINT
             # cadence (heavier => governor-gated + skip-logged inside the helper). AFTER the checkpoint
@@ -10852,7 +11411,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # FEED-fi: the FINAL ckpt is the Muon-finished decoder when the finisher ran -> tag it "_muon"
     # so it is distinctly byte-closeable (suffix "" when off => identical to the pre-FEED-fi path).
     _final_tag = (_stage_tag(final_form) + ("_muon" if muon_switched else "")) if args.stage_checkpoints else None
-    final = _do_checkpoint(last_ep, stage_tag=_final_tag)
+    final = _do_checkpoint(
+        last_ep,
+        stage_tag=_final_tag,
+        causal_boundary_kind="final",
+        causal_stage=str(final_form),
+    )
     stage_ckpts.append({**final, "kind": "final"})
     ck = out_dir / "levelset_witness_ema_mlx.npz"
     print(json.dumps({"stage": "checkpoint", "kind": "final", **final}), flush=True)
@@ -11085,6 +11649,14 @@ def main(argv: list[str] | None = None) -> int:
                     help="#222 AdamW second-moment decay beta2 (beta1 fixed 0.9). Default 0.999 = MLX "
                     "default => bit-identical. Small-n (n~75 accum steps) optimum ~0.9999999 per "
                     "arXiv 2603.02092 (1-beta2 <~ (1-beta1^5)/n^3.5).")
+    ap.add_argument(
+        "--adamw-reference-semantics",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=("AdamW audit treatment: enable standard bias correction at beta2=0.999 too. "
+              "Default OFF preserves incumbent checkpoint trajectories; non-default beta2 already "
+              "enables correction through the existing stability guard."),
+    )
     ap.add_argument("--ema-decay", type=float, default=0.997)
     # (THETA* TIER-2 MUST-3) SWA / wider-finisher EMA (additive; default None == bit-identical to the
     # --ema-decay path). When set, from the resolved finisher-start epoch onward the EMA uses this
@@ -12437,6 +13009,15 @@ def main(argv: list[str] | None = None) -> int:
         "Adam/AdamW base is transferable; non-Adam bases fall back to cold. On a RESUME INTO the "
         "finisher this is N/A (the Muon momentum is restored from the checkpoint). A/B-ready.",
     )
+    ap.add_argument(
+        "--film-polar-chart-spel", action=argparse.BooleanOptionalAction, default=False,
+        help="Manifold-Muon round 2 (DEFAULT OFF): during the Muon finisher, update only "
+        "film.weight through the function-preserving W=QH0 polar chart. Q uses the single-loop "
+        "MCSD/SPEL projected tangent spectral step; H0 is frozen; Q/H0/tangent momentum/Q-EMA "
+        "ride the canonical atomic resume registry. This is the labeled approximation fallback, "
+        "NOT the exact nested tangent-dual solver. Requires --muon-start-epoch and conflicts with "
+        "--film-stiefel. OFF leaves the incumbent optimizer/checkpoint path byte-identical.",
+    )
     # ---- TAIL_k WARM-RESTART REFINEMENT (crucible req L / v6 §2.2e; all default-OFF => BIT-IDENTICAL).
     # Post-Muon warm-restart cycles: each re-sharpens τ (halving / live-m_q) + re-warms LR ∝ τ_k
     # (moments NEVER reset), runs until a per-cycle powerlaw_meat exit (or the cycle-floor cap),
@@ -13041,6 +13622,28 @@ def main(argv: list[str] | None = None) -> int:
         if args.margin_saliency_tau <= 0.0:
             raise ValueError(f"--margin-saliency-tau ({args.margin_saliency_tau}) must be > 0 "
                              "(sal=exp(-gt_margin/tau)).")
+
+    # Manifold-Muon round 2: the shipped chart is deliberately the source-inspected
+    # V9 film.weight (768x19) formulation.  Refuse every configuration that would
+    # make the arm inert, double-project it, or silently apply the law to a
+    # different FiLM architecture.
+    if bool(getattr(args, "film_polar_chart_spel", False)):
+        if args.muon_start_epoch is None:
+            raise ValueError(
+                "--film-polar-chart-spel requires --muon-start-epoch: the chart is a Muon-finisher "
+                "treatment and would otherwise never engage")
+        if bool(getattr(args, "film_stiefel", False)):
+            raise ValueError(
+                "--film-polar-chart-spel conflicts with --film-stiefel: two independent Stiefel "
+                "projections would mutate film.weight")
+        if bool(getattr(args, "film_per_layer", False)) or bool(getattr(args, "film_concat_code", False)):
+            raise ValueError(
+                "--film-polar-chart-spel is sealed to the source-inspected single film.weight chart; "
+                "--film-per-layer/--film-concat-code require a separately derived assignment")
+        if int(getattr(args, "mod_dim", 0)) != 19:
+            raise ValueError(
+                "--film-polar-chart-spel is currently sealed to mod_dim=19 (V9 768x19 FiLM map); "
+                "re-derive and parity-test before applying it to another chart")
 
     # (FEED-fi) MUON FINISHER fail-closed config guard (same NO-FAKE class as the lane/saliency
     # validators): a finisher that never engages (start > epochs) is a silent no-op = a FALSE
