@@ -78,3 +78,13 @@ STORES CONSULTED: `CLAUDE.md`; `AGENTS.md`; `docs/operating_manual_craft_handoff
 - DAG: `.omx/research/sub015_DAG_jrd_reusable_priors_20260713.md`.
 - Machine-readable derivation receipt: `.omx/research/jrd_reusable_priors_harvest_20260713.json`.
 - Pointer delta: **MEASURED 0 B candidate delta; pointer unmoved; no contest score claim.**
+
+## Consumer-leg disposition (triality, recorded 2026-07-13)
+`src/tac/witness_dsl/jrd_priors.py::JrdReusablePriorPolicy` is a **dormant routing/reference Policy, NOT a
+live-run Lever** — it emits NO trainer flag (absent from `lever_registry.completeness().unmapped`), is not an
+`witness_dsl/__init__` package export, and produces no runtime telemetry. Its sole consumer is the **#336
+offline sensitivity-bit-allocator** via `compile_warm_start(confirmation)`, gated on `N600PriorConfirmation`
+(warm-start budget is dormant until an n600 real-GT measurement confirms it). The live-render/costate
+consumers (`schedule_readback.py`, `dashboard_server.py`, `costate_digest.py`, `producer_bridge.py`) render
+LIVE-RUN objects and correctly do NOT render a dormant prior — so the consumer leg is `[consumers-generic]`
+for those surfaces; the real consumer (#336) is routed via the task rows + DAG FEED this harvest already added.
