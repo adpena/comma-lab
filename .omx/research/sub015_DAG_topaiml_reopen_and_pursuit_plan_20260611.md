@@ -17602,7 +17602,8 @@ passes). Consumes the heavy_tail catch (prefer ridge rung) + closes the #484 ref
   best multi-source 0.1123 convex / 0.3156 nonlinear vs the 0.47 bar; best joint gain over block3 alone only
   **+0.00238**. The binding failure was ALWAYS retained-mass, orthogonal to tileability; cheap-globals bought
   the axis that was never the blocker.
-- **verdict_scope = RETAINED-MASS-FAMILY-KILL (req-R satisfied):** ≥4 structurally distinct formulations fail
+- **verdict_scope: family — cheap-PRE-SE-localizer** (the cheap single/multi-source PRE-SE feature-localizer
+  family; NOT paradigm — the distilled-student family #455 survives). RETAINED-MASS-FAMILY-KILL, req-R satisfied: ≥4 structurally distinct formulations fail
   (block2 · block3 · joint-multi-source, each convex + nonlinear) PLUS the structural cause — the pre-SE
   feature manifold does not CARRY enough boundary-localization mass at 4.70% area regardless of source
   composition or tileability. NOT a paradigm kill.
