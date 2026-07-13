@@ -17180,6 +17180,23 @@ successor equation `rate_law_ladder_measured_20260713.py` (8 tests, lint clean);
 
 Deferral ledger D36-D39 flipped CLOSED-MEASURED. Six-hook wire-in in the full FEED node.
 
+**verdict_scope (all FORMULATION-level, family INTACT — reformulation queue):**
+- D36 "no codec lever admitted" is FORMULATION-scoped (mod32cap shipped int8 code + current 15,256 B
+  charged predictor). Untested formulations / alternatives that keep the family alive: (a) a <1,903 B
+  public/compact-section predictor (shared/hierarchical table amortized across pairs); (b) condition on a
+  cheaper-to-predict section than the int8 code (e.g. the horizon-poly / ξ section); (c) a learned predictor
+  whose OWN bytes are amortized across the whole clip rather than charged per-section.
+- D37 "phase-aware flat table LOSES 44,438 bits" is FORMULATION-scoped (FLAT table). Untested: (a)
+  hierarchical / shared phase tables; (b) the class-pair conditional CONTOUR grammar (the live positive-MI
+  candidate, gated on packed decode + receiver survival + 0.65 B/flip); (c) coarse-to-fine phase residual.
+- D38 "global gluing NOT-TYPED" is OWED, not killed. Untested: type it as a homotopy-coherent DESCENT datum
+  over the per-class-boundary cover (the Bousfield/#483 dig) → derive R_twist^global.
+- D39 is a SPEC, no negative.
+DSL leg: N/A for these commits — they are MEASUREMENT/GROUNDING, not lever/launch/curriculum changes; the
+owed BUILD candidates (D37 contour grammar, D39 event-marks) are registered in
+`ladder_owed_measurables_pool_FEED_20260713.jsonl` (the pool is the pre-DSL tracking surface). No `Lever`
+factory is owed until one is BUILT.
+
 ---
 
 ## FEED-bousfield-descent-20260713 (operator drop arXiv 0708.2067, Barwick — DEEP read owed)
@@ -17199,6 +17216,13 @@ payload) → redundant with #466/#467 on the quotient/section axis; moves nothin
 non-redundant gift: **homotopy-coherent DESCENT** = the exact framework for D38's OWED global-gluing
 ("overlap maps / changing isotropy NOT TYPED") — v8 per-class carriers are local sections, reconciliation
 is a gluing/descent problem. DIG-D38-DESCENT registered (type R_twist^global, currently symbol-only).
-verdict_scope: DESIGN/GROUNDING (MEANS). Deep read to confirm/refute the model-category hypotheses hold
+verdict_scope: DESIGN/GROUNDING (MEANS); the NO-GO is FORMULATION-scoped (redundant-on-the-section-axis),
+family INTACT. Untested formulations / alternatives that keep it alive (the deep read #483 arbitrates):
+(a) ENRICHED localization giving the reflection/section CONSTRUCTIVELY (not just existence) → would be a
+real surprise, not redundant; (b) a SMOOTHED-scorer (τ-softened / level-set-viscosity) model structure that
+recovers the model-category axioms the discontinuous argmax may break; (c) the DESCENT→D38 typing of
+R_twist^global (the one non-redundant lead). Deep read to confirm/refute the model-category hypotheses hold
 for our (discontinuous-argmax) witness category + whether enriched localization gives the section
 constructively.
+DSL leg: N/A — grounding, no lever. Equations leg: N/A for the seed (grounds existing Rung-2/3 laws); a
+successor equation registers ONLY if the deep read yields a typed R_twist^global.
