@@ -16832,3 +16832,14 @@ completion of the groupoid lands (e.g. via the score-fiber permutation completio
 working substitute. DSL-leg note: the ladder registers LAWS not levers — no Lever/WitnessProgram change exists by
 type; levers spawned from these laws (e.g. event-marks telemetry D39, fiber-gap probe D36) register their own DSL
 legs when built.
+
+## FEED-fore-occupancy-20260713 (pointer node; full FEED in fore_occupancy_ratio_DAG_FEED_20260713.md)
+FORE (arXiv 2607.05375) reader verdicts [DERIVED, verdict_scope per-item in memo]: (1) drift-bridge NO-GO on the
+LIVE round-2 cache (isolated states, no Markov transitions/coverage) · CONDITIONAL GO as repaired formulation —
+future replay caches must log state-action-NEXT-state transitions + one-step coverage (A/B ticket addressed to
+round-3, §5); (2) POSITIVE LAW: discounted KL-contraction (γ<1) SURVIVES deterministic optimizer dynamics
+(joint convexity + data processing; strictness from the (1−γ)d0 reset, NOT noise; γ=1 only nonexpansive);
+(3) organ OPE estimator DERIVED (FORE + DR) but causal backtest NO-GO on current logs — deterministic schedule
+decisions identify walk-forward forecasting only, NOT counterfactual arms → logged exploration/randomization
+owed at next organ arm (deferral D40); (4) #468 composition = outer change of measure, no new chain-rule term;
+slots NOWHERE for the decoded bitstream. No equation registered (bridge doesn't close live; conditional law in memo).
