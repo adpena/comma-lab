@@ -16438,3 +16438,42 @@ interactions = the closed-form go/no-go for linearizing the costate. SMALL → b
 LARGE → must go nonlinear-surrogate (#449/#428), INSTANT low-rank ceilinged. Measurable $0 in O(L) forwards on frozen
 SegNet; share_{≥2}(τ) predicts at which τ the linear costate goes stale. Folded into master #451 as the share_{≥2}
 gate. Memo share_ge2_linearity_gate_yopo_20260712. `[no-triality]` reference/routing. **Pointer 0.18804 UNMOVED (MEANS).**
+
+### FEED-yopo-first-layer-costate-final-449 (2026-07-13) — bounded replay closes the registered cadence set
+
+**REVIEW STATUS:** `fresh-eyes-reviewed(2)` on final receipt SHA-256
+`a89585cd70b9630c90468f3a502e1efc778836cffc56ca7fb71e997fff2e6fa3`, plus the required post-fix
+round-1 self-review; three consecutive post-fix passes were clean. **STORES CONSULTED:** unified corpus query
+over research, equations, memory, DAG, council, tasks, and docs; operating manual; v7.5 contract; goldmine and
+frozen-SegNet costate memos; SegNet block profile; provider, DSL, equation, probe, tests, canonical lane/task
+state, content-addressed early/boundary/late checkpoints, source video, and the final receipt. Deliberately did
+not load or actuate the protected V9 run, cloud state, paid dispatch, live trainer, or `upstream/evaluate.py`.
+
+**MEASURED:** the clean-room split is
+`encoder.model.conv_stem -> encoder.model.bn1 -> encoder.model.blocks[0]`, with output shape
+`(1,16,192,256)` and a 3,145,728-byte fp32 `p1`. Across the 28-step, single-seed, n=1 pair-0 replay there were
+48 total teacher forward/backward calls, 402 operational validation forwards, 44 measurement-control forwards,
+zero provider/full-teacher fallbacks, and eight successful non-refresh YOPO provider selections. The all-in
+K1-to-arm wall-time ratios were boundary K2 `0.486136`, early K2 `0.683734`, late K2 `0.569113`, and late K4
+`0.422978`; every complete K>1 cadence was slower than K1 despite its idealized algebraic ceiling exceeding one.
+Boundary K4 and early K4 terminated after refresh-only prefixes and are not cadence-speedup evidence. The
+minimum non-refresh global, boundary-annulus, and renderer-gradient cosines were respectively
+`0.9998774505`, `0.9998451426`, and `0.9999437091`; they are diagnostics, not admission thresholds.
+
+**CONTROL LAW:** pre-registered event-conditioned fractional recess starts at `1e-2`, multiplies the fraction
+by `0.5`, accepts only strict teacher-CE decrease with non-worsening `d_seg`, and completes at fp32 bit identity.
+**VERDICT: NO-GO, fresh-eyes-reviewed(2).** Early falsified K=`{1,2,4}`; boundary falsified K=`{1,2,4}`;
+late falsified K=`{2,4}` and retained K=`1` as its only knee. Verdict scope is exactly: n=1 pair0
+early/boundary/late saved-regime replay on macOS-CPU advisory; measured first-block split; K=`{1,2,4}`;
+event-conditioned CE-decrease plus d_seg-nonworsening fractional-recess control law only. This closes the
+registered instance/formulation, not the YOPO family. Across-seed variance, contest-CPU/CUDA transfer, and a
+different pre-registered split/cadence family remain **UNKNOWN**.
+
+**CITATION:** Dinghuai Zhang, Tianyuan Zhang, Yiping Lu, Zhanxing Zhu, and Bin Dong (2019), *You Only
+Propagate Once: Accelerating Adversarial Training via Maximal Principle*, arXiv:1905.00877; the arXiv abstract
+identifier was resolved before derivation. No YOPO source code was imported. Receipt =
+`experiments/results/yopo_first_layer_costate_probe_20260713T003635Z/receipt.json`; source-video SHA-256 =
+`2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9`; harness/test commit =
+`94fd0192b9886f6d9d0f2b77088085aaf97c0235`. Triality: DSL =
+`tac.witness_dsl.scorer_gradient_policy`; equation = `yopo_first_layer_costate_v1`; DAG = this FEED.
+`score_claim=false`; `promotion_eligible=false`; live trainer and protected run untouched.
