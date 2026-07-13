@@ -16467,7 +16467,9 @@ late falsified K=`{2,4}` and retained K=`1` as its only knee. `verdict_scope: fo
 early/boundary/late saved-regime replay on macOS-CPU advisory; measured first-block split; K=`{1,2,4}`;
 event-conditioned CE-decrease plus d_seg-nonworsening fractional-recess control law only. This closes the
 registered instance/formulation, not the YOPO family. Across-seed variance, contest-CPU/CUDA transfer, and a
-different pre-registered split/cadence family remain **UNKNOWN**.
+different pre-registered split/cadence family remain **UNKNOWN**. untested formulations / alternatives: a
+different pre-registered frozen-SegNet split; a different event-conditioned cadence family; multi-seed and
+contest-CPU/CUDA replay.
 
 **CITATION:** Dinghuai Zhang, Tianyuan Zhang, Yiping Lu, Zhanxing Zhu, and Bin Dong (2019), *You Only
 Propagate Once: Accelerating Adversarial Training via Maximal Principle*, arXiv:1905.00877; the arXiv abstract
