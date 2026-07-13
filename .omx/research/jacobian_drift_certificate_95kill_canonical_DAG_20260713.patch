@@ -1,0 +1,29 @@
+diff --git a/.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md b/.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md
+index f45621c0..00000000 100644
+--- a/.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md
++++ b/.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md
+@@ -16494,2 +16494,24 @@ RESPONSE [turned in, HELD operator-GO]: memo §9 fixed relaunch = warm-start-weig
+ 7×-above-baseline best is a SEPARATE open question (under-train vs trunk under-performs mod32cap). Fire AFTER
+ 95%-kill P0 (GPU contention), paired with the trunk-vs-baseline question. Pointer 0.19108282 UNMOVED (MEANS).
++
++### FEED-454b (2026-07-13): Jacobian-drift direct full-input-costate certificate
++SIGNAL: task #454 proved anchor-only validation economics but left direct full-costate reuse owing Jacobian drift.
++DIRECT LAW [DERIVED]: p_x=J_x^Tq_x, p_hat_x=p_a+(DJ_a[x-a])^Tq_a, with whole-ball error
++E(r)=(B_J L_q+L_c)r+(B_H L_q+L_H Q_a/2)r^2+(L_H L_q/2)r^3.
++The self-adjusting radius is r*=min(sup{r<=r_cap:E(r)<gamma_theta/B_R},r_geometry,r_cap); equality refreshes.
++AUTHORITY: training-signal research only; exact d_seg/d_pose authority unchanged; no evaluator or score claim.
++MEASURED receipt SHA-256 c1a2431ebe9df21a370748f864f2da81a5f242544051986ed341d59fe1518d48.
++RIGOROUS reuse=0; missing whole-ball curvature/cell/norm/descent/correction-derivation custody => BLOCKED.
++Post-hoc sampled-ray fresh-control prefixes [early,boundary,late]=[6/22,10/21,0/21], not a ball or live gate.
++DERIVED from 64 measured rows: corrected error improves 62/64; gradient dot positive 64/64;
++corrected CE descends 63/64; exact numpy-fp32 d_seg is nonworsening 49/64.
++HVP incremental median MEASURED=3.350555353972595 s; matched through-R validation median DERIVED=1.3124769580317661 s.
++Faithful high-reuse lower bounds=16.32124488283467/26.430512487347823 per early/boundary anchor >8.375.
++COLLINEAR NO-GO: unexplained displacement fractions=[0.9998776887,0.9995586818,0.9998358998].
++VERDICT: rigorous BLOCKED; faithful and collinear measured formulations NO-GO within pair0/three-regime/ray scope.
++BLOCKERS: Lip(DJ), scorer activation-cell/semismooth proof, coercive geometry, corrected-gradient floor,
++correction numerical bound, and integrated HVP derivation receipt; current policy fails closed to exact refresh.
++TRIALITY: DSL=DirectFullCostatePolicy; equation=jacobian_drift_full_costate_v1; mechanism=costate_trust_region.py.
++CONSUMERS: #454 remains intact; #455 must not use per-step HVP gating; #456 raises the exact-forward cost bar.
++POINTER UNMOVED; score_claim=false; research_only=true; no paid/cloud/GPU/live-run actuation.
++CANONICAL SOURCE: .omx/research/jacobian_drift_certificate_95kill_20260713.md.
