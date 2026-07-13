@@ -17269,3 +17269,59 @@ tier is a REAL banked local win (float32 CoreML, 2.29× teacher, argmax-faithful
 training-gradient tier's true blocker is the unmeasured backward/VJP parity + the 4.55× forward-only Amdahl
 ceiling, NOT the 10× miss. The economically-correct bar = (integration+fidelity cost) vs (net wall-clock
 saving), which for the verdict path is already cleared. Re-derive the bar; do not re-use 10×.
+
+---
+
+## FEED-bousfield-deepread-20260713 (#483 DONE — deep read confirms seed NO-GO, SHARPENS descent lead)
+
+Research-only: true. Pointer UNMOVED. Memo `.omx/research/bousfield_deep_read_20260713.md` (sha256
+4c63efef6155…). Deep read of Barwick arXiv 0708.2067. Verdict (confirms + sharpens the seed):
+- **Model-category hypotheses BREAK at argmax** — but NOT via 2-out-of-3 (argmax preserves it). The real
+  blockers: the exact witness collection is NOT complete/cocomplete, lacks a factorization system, lacks a
+  left-proper/combinatorial proof. Only a SMOOTHED presheaf surrogate recovers the axioms (so the τ-softened/
+  viscosity structure is the only place the framework applies — the discontinuous exact witness is not a
+  model category).
+- **Enriched section NOT constructive** — Barwick's ordinary+enriched existence theorems give abstract
+  localizations, NOT a split receiver-computable quotient section or a bounded decoder algorithm. CONFIRMS
+  the seed NO-GO: existence theory, redundant with #466/#467 on the section axis.
+- **Descent→D38: KILL-as-stated, but a conditional form SURVIVES.** The direct descent typing is missing the
+  site / cover / restriction maps / isotropy band, so R_twist^global is NOT yet typed. What survives: the
+  conditional filler-space form **G_U(x) = hofib_x(Desc_U(F) → ∏ F(U_i))** — a NONEMPTY filler space carries
+  a conditional R_twist^global; an EMPTY one is INFEASIBILITY (not a payable bit term). No canonical equation
+  / DAG successor registered (correctly — the form is conditional/unproven).
+- **Postnikov towers: no curriculum stage-count or convergence measurable** (confirms seed).
+overall: DESCENT-worth-a-dig, GROUNDING-ONLY. verdict_scope: FORMULATION (the direct descent typing failed
+for lack of a defined cover), family intact. Reformulation queue to revive the descent lead: (a) DEFINE the
+site/cover = the per-class-boundary charts with explicit overlap/restriction maps + the isotropy band; (b)
+compute whether G_U(x) is nonempty on real n600 states (nonempty → conditional R_twist^global is typable;
+empty → the global gluing is INFEASIBLE, itself a finding); (c) only then register a canonical equation.
+DSL leg N/A (grounding). #483 closed.
+
+---
+
+## FEED-replace-round5-20260713 (deeper/nonlinear rung, #479 — SCOPED family-kill, research-only L1)
+
+Research-only: true. Pointer UNMOVED. 14 tests passed. Memo `.omx/research/replace_round5_deeper_nonlinear_20260713.md`;
+own DAG FEED `replace_round5_deeper_nonlinear_DAG_FEED_20260713.md`; formulation
+`src/tac/scorer_surrogate/replace_round5_deeper_nonlinear.py`; eq
+`src/tac/canonical_equations/replace_round5_deeper_nonlinear_20260713.py`; candidate rows
+`replace_round5_deeper_nonlinear_candidate_rows_20260713.jsonl`. The Round-5 of the 95%-kill REPLACE campaign:
+does going DEEPER (block-2/block-3) or NONLINEAR recover the cheap-localization that shallow pre-SE features
+failed?
+
+MEASURED: deeper-cut FLOP cost block-2 4.21%, block-3 7.13% of full teacher conv; retained mass at the
+4.70%-area annulus: convex-deeper 13.05%, nonlinear 29.46% vs the **47% needed** — still short. Global-pooling
+overhead is tiny (0.84%/0.65%) but **SE's full-frame dependency destroys independent tileability** (not
+tileable after the first SE). Conditional c_label=0.115 → 8.70× IF pay-only-on-support were admitted, but it
+is NOT (localization fails). Query audit: high/low error ratio 189.8×, Spearman 0.866, but ECE 0.186 → NOT
+live trust calibration (research-only).
+
+verdict: **KILL-CHEAP-LOCALIZATION-FAMILY-BY-FEATURE-SOURCE**, verdict_scope = **FAMILY × FEATURE-SOURCE ×
+FIXED-REPLAY** (the cheap-localization family FROM shallow/deeper pre-SE conv features, under fixed n24
+replay) — NOT a paradigm kill. Untested formulations / reformulation queue that keep the paradigm alive: (a)
+**branch horizon** feature source (BLOCKED-NOT-IDENTIFIED this run — a different, tileable feature locus may
+carry the localization SE destroys); (b) a feature source BEFORE the first SE global-pool (the tileability
+killer) — localize on pre-SE activations only; (c) query-disagreement ranking as a research-only
+disambiguator (passed research bar; live remains REFUSE pending calibration). DSL leg: N/A (measurement +
+research-only surrogate, not a live lever; candidate rows staged reformulation-queue/needs-build/
+built-never-fired). Sister of the 95%-kill campaign (#455/#456 theorem-grade ceilings).
