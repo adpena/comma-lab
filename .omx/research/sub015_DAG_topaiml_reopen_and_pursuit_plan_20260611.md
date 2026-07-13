@@ -16968,3 +16968,20 @@ CONVEX ridge — the receipt's 7-λ ladder computes the EXACT optimum in closed 
 training protocol (GD/steps/lr/init) by theorem; GD150-vs-GD15 Δcosine 4.6e-11 confirms the iterates already
 sit at that ceiling (receipt: grokking_ridge_round2_refit_receipt_20260713.json). verdict_scope: formulation —
 the 31-feature chart only; the surrogate FAMILY is open and actively pursued (round-3 frozen-stem/RFF live).
+
+## FEED-replace-round3-20260713 (pointer node; full FEED in replace_round3_fidelity_wall_DAG_FEED_20260713.md)
+Round-3 (#455) [MEASURED n600 replay + DERIVED]: (1) fixed-RFF on the first-block pre-SE prefix NO-GO —
+verdict_scope: formulation × instance — this 42-col chart + 16-freq seed455 RFF + log-mass ridge on the fixed
+V9 replay: heldout cosine 0.00168 vs preregistered 0.0708 bar (1.19× round-2 noise; linear 0.00167 ≈ identical)
+⟹ direct costate REGRESSION from cheap features now dead across 2 formulations. (2) THE POSITIVE THAT REDIRECTS
+THE FAMILY: same-area ORACLE retains 52.78% of exact costate L2² mass at 4.70% area (>47% gate PASSES) —
+support LOCALIZATION is PROVEN viable; the registered predictors failed it (scalar margin 16.35% = only 30.97%
+of oracle mass; RFF log-mass head 2.44% = WORSE than uniform), and the committed ~120× class-pair sensitivity
+spread is UNEXPLOITED by a class-agnostic margin. (3) Prefix cost DERIVED 0.5714% of teacher fwd+input-bwd FLOPs
+(no wall-speed claim — host contention contaminated timing). Campaign-honest economics 11.50× label-only /
+9.65× inclusive (626 training starts charged). FORE uncomposed this instance (transitions absent — the landed
+causal manifest supplies them for the successor). EV-ordered reformulation queue (memo §): 1 direct support-
+RANKING target (top-k/quantile/pairwise + calibration) · 2 margin × class-pair localization · 3 class-pair
+block heads (convex custody, no cross-regime cancellation) · 4 deeper features need new cost/tileability
+receipt (pre-SE cut is the local/tileable boundary) · 5 transition-complete FORE successor · 6 on-policy
+nonlinear (new family). ROUND-4 = items 1+2+3 composed: rank-the-support, pay exact teacher only there.
