@@ -103,6 +103,11 @@ class GaugeComponent(Enum):
     # facet, ships in the counted 5th block; NOT a GaugeChoice STORE field and NOT a trainer flag —
     # the flag lives on tools/levelset_byte_close_and_eval.py, like LaneGauge's --lane-band-naive).
     LANE_BAND_CODER = "lane_band_coder"                  # LBND2 raw-zigzag vs LBND4 ξ-residual entropy stage
+    # Witness cross-tensor rate lane (FEED-witness-xcodec, APPEND-ONLY; BYTE-CLOSE-side,
+    # lossless storage chart after the per-tensor int8 grid is fixed). This is deliberately
+    # distinct from sensitivity/bit allocation: it may reorder/code the fixed symbols jointly,
+    # but cannot change a quantizer, scale, dequantized coefficient, or receiver output.
+    WITNESS_CROSS_TENSOR_CODER = "witness_cross_tensor_coder"
 
 
 class WarpGauge(Enum):
@@ -288,6 +293,21 @@ class LaneBandCoderGauge(Enum):
     RD = "rd"        # LBND2: raw uint32 zigzag words + outer brotli (shipping default)
     RES = "res"      # LBND4: ξ delta/context residual stage (best-of-three) + outer brotli
     NAIVE = "naive"  # LBND1: per-pair float64 (kept for the naive-vs-RD comparison gate)
+
+
+class WitnessCrossTensorCoderGauge(Enum):
+    """How fixed witness int8 symbols are stored jointly by the byte-close tool.
+
+    ``IDENTITY`` is the byte-identical shipping default. ``AUTO_LOSSLESS`` derives the exact
+    Brotli-minimizing matrix-axis storage chart and selects raw-vs-frame-delta pair coding by
+    measured byte count. Both transforms are bijections over the existing int8 symbols; this
+    chart never owns per-tensor precision or bit allocation. The real argparse surface lives on
+    ``tools/levelset_byte_close_and_eval.py`` and is rendered only by
+    :func:`witness_cross_tensor_coder_byte_close_flags`.
+    """
+
+    IDENTITY = "identity"
+    AUTO_LOSSLESS = "auto_lossless"
 
 
 class HeadGeometryGauge(Enum):
@@ -769,6 +789,8 @@ COMPONENT_GAUGES: dict[GaugeComponent, type[Enum]] = {
     # codec — a RATE-only chart over the identical dequantized statistic; NOT a GaugeChoice
     # STORE field and NOT a trainer flag; accessor = lane_band_coder_byte_close_flags).
     GaugeComponent.LANE_BAND_CODER: LaneBandCoderGauge,
+    # FEED-witness-xcodec: byte-close storage chart over fixed int8 symbols; NOT a trainer flag.
+    GaugeComponent.WITNESS_CROSS_TENSOR_CODER: WitnessCrossTensorCoderGauge,
 }
 
 
@@ -793,6 +815,14 @@ LANE_BAND_CODER_BYTE_CLOSE_FLAGS: dict[LaneBandCoderGauge, tuple[str, ...]] = {
     LaneBandCoderGauge.RD: (),
     LaneBandCoderGauge.RES: ("--lane-band-res",),
     LaneBandCoderGauge.NAIVE: ("--lane-band-naive",),
+}
+WITNESS_CROSS_TENSOR_CODER_BYTE_CLOSE_FLAGS: dict[
+    WitnessCrossTensorCoderGauge, tuple[str, ...]
+] = {
+    WitnessCrossTensorCoderGauge.IDENTITY: (),
+    WitnessCrossTensorCoderGauge.AUTO_LOSSLESS: (
+        "--cross-tensor-codec", "auto_lossless",
+    ),
 }
 # AM-softmax margin default (CosFace-family m~0.35-0.5, adapted to the realized-margin-hinge target).
 # The fixed ADDITIVE_MARGIN chart cannot carry a per-instance value, so this is the default the static
@@ -825,6 +855,14 @@ def lane_band_coder_byte_close_flags(chart: LaneBandCoderGauge) -> tuple[str, ..
     tool default). These are ``tools/levelset_byte_close_and_eval.py`` flags, NEVER trainer
     argv (kept out of the DSL trainer-emitted surface by design; see the chart docstring)."""
     return LANE_BAND_CODER_BYTE_CLOSE_FLAGS[chart]
+
+
+def witness_cross_tensor_coder_byte_close_flags(
+    chart: WitnessCrossTensorCoderGauge,
+) -> tuple[str, ...]:
+    """Return only real byte-close argv for the fixed-symbol joint storage chart."""
+
+    return WITNESS_CROSS_TENSOR_CODER_BYTE_CLOSE_FLAGS[chart]
 
 
 def head_geometry_trainer_flags(chart: HeadGeometryGauge,
