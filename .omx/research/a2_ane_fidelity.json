@@ -1,0 +1,11 @@
+{
+  "schema": "a2_ane_fidelity.v1",
+  "weights": "REAL upstream segnet.safetensors",
+  "frames": "gt_n24 cache key gt_f1, n=24 REAL frames (probe-scope; n600 owed for promotion)",
+  "argmax_flips": 116764,
+  "total_px": 4718592,
+  "flip_rate": 0.024745517306857638,
+  "logit_cosine_min": 0.9850387573242188,
+  "logit_cosine_median": 0.9943149983882904,
+  "written_at_utc": "2026-07-13T20:24:50Z"
+}

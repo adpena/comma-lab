@@ -1,0 +1,27 @@
+{
+  "schema": "a2_ane_latency.v1",
+  "weights": "RANDOM_INIT (latency evidence only)",
+  "shape": [
+    1,
+    3,
+    384,
+    512
+  ],
+  "cpu_torch_1thread": {
+    "median_s": 0.3460063749807887,
+    "min_s": 0.3118947090115398,
+    "reps": 10
+  },
+  "coreml_fp16_ane": {
+    "median_s": 0.009098124981392175,
+    "min_s": 0.006412916001863778,
+    "reps": 10
+  },
+  "coreml_fp16_coreml_cpu": {
+    "median_s": 0.06527056248160079,
+    "min_s": 0.04212733404710889,
+    "reps": 10
+  },
+  "ane_speedup_vs_cpu_torch_1thread": 38.030514604762395,
+  "written_at_utc": "2026-07-13T20:23:15Z"
+}

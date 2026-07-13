@@ -17058,3 +17058,18 @@ owed (sandbox DNS blocked coremltools; main-local scratch-venv run queued). (5) 
 UNCHANGED (MLX-fp32 fwd + custom-Metal bwd + async CPU verdict); DERIVED ceilings 4.545× (95%-kill perfect) /
 3.861× (ANE −95% forward) — composed claim REFUSED until A2/A3 measured. CPU W8A8 stem 1.006×@B1 / 1.219×@B8
 = existence evidence only (synthetic weights). 5 buildable candidates pooled via record_candidate.
+
+## FEED-a2-ane-measured-20260713 (main-local measurements closing the #477 A2 ticket)
+A2 MEASURED (main-local, coremltools 9.0 scratch venv, receipts precision_backend_matrix_20260713/main_local/):
+(1) LATENCY: ANE fp16 forward at (1,3,384,512) = 9.098 ms median vs 1-thread CPU-torch 346.0 ms = **38.03×**
+(CoreML-CPU alone 65.3 ms = 5.3×). RANDOM-INIT weights = latency evidence only (architecture-determined).
+The measured 97.4% forward-cost cut ≈ realizes the matrix memo's derived 3.861× composed ceiling — IF fidelity
+permits. (2) FIDELITY (REAL upstream segnet.safetensors + 24 REAL gt-cache frames, probe-scope, n600 owed):
+CPU-fp32 vs ANE-fp16 argmax flip rate 2.4746% (116,764/4,718,592 px), logit cosine median 0.9943 / min 0.9850
+— ~750× MORE flips than MLX-fp16 (0.0033%) ⟹ ANE fp16 (+MIL op substitutions) is NOT label-grade at face
+value (flip rate rivals baseline d_seg) — verdict_scope: instance — this conversion path/precision/preprocess;
+surviving rungs: looser-tolerance gradient/loss forwards · advisory/ranking verdicts · fp32-precision CoreML
+variant · W8A8 (still unmeasured). THE MEASURED TRADE CURVE: 38× speed ↔ 2.47% flips at fp16 — the
+heterogeneous-assignment table now has real endpoints. FRESH A/B RESPAWN: governor fail-closed correctly
+(projected 90.0 > 87.4 GiB ceiling; fleet itself holds 68.3 GiB) — re-fires on fleet drain, not blocked
+intrinsically.
