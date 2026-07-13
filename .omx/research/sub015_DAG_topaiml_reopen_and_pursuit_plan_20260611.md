@@ -17559,3 +17559,28 @@ contamination as the pre_se tileability kill).
   (GO_PACKET, operator-GO) is the ONLY resolver** and is now HIGHER-value: if forward is truly ~68% in-loop,
   the forward-attack arms (#455/#456/#482) were correctly aimed and the backward-pivot was a diagnostic-harness
   artifact. DSL leg N/A (measurement).
+
+---
+
+## FEED-vrghal-theorem-deepen-20260713 (deepens #462, does NOT re-run — theorem body CUSTODIED, convex-rung NO-GO by domination)
+
+Research-only. Pointer UNMOVED. MEANS (solver reliability). Deepens the abstract-only #462 fold: the FULL
+paper (Diakonikolas 2607.09097) theorem body now MEASURED — exact clipping radius γ̄·‖x−y‖ (NO free c),
+recursive MoME/clipped-difference estimator, anytime A_p residual envelope, fixed-operator assumptions.
+#462's `PAPER_2607_09097_THEOREMS: BLOCKED/UNKNOWN` node → **MEASURED**. Superseding canonical equation
+`vrghal_high_probability_fixed_operator_law_v2` (append-only over #462's equations; 8 tests). #462's moving-map
++ teacher-query debt equations remain valid.
+- **verdict_scope = FORMULATION NO-GO for the pre-SE convex rung (DOMINATION):** VR-GHAL's iterative
+  high-probability machinery buys NOTHING there — the rung is a DETERMINISTIC cached-n600, 40/40-certified
+  Moore-Penrose normal-equation solve (no stochastic oracle, no iteration → an iterative stochastic
+  fixed-point solver is strictly dominated by the exact closed form). req-R: dominance is structural (exact
+  solve exists + is cheap), holds for BOTH the RankRLS-ridge and MP rungs. NOT a paradigm kill.
+- **Reformulation queue (the ONLY non-dominated locus):** the **witness-SGD solve window**
+  (frozen-stage / frozen-replay / fixed-loss) IS a stochastic fixed-point iteration toward the descent fixed
+  point — conditionally OPEN, but NONE currently theorem-admitted (the fixed-operator + bounded-variance
+  assumptions are unverified for our moving-witness SGD). Untested formulations: (a) verify the fixed-operator
+  assumption on a FROZEN-stage window (constant loss + fixed replay) where the map IS stationary → VR-GHAL's
+  anytime A_p residual envelope could give high-prob convergence guarantees for that window; (b) the
+  clipped-difference variance-reduction as a MONITORING signal (residual-envelope early-stop) even where the
+  convergence theorem doesn't strictly admit. Complementary to heavy_tail (estimator tail) — VR-GHAL = ITERATION
+  convergence residual. DSL leg N/A (measurement/reliability).
