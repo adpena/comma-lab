@@ -16880,3 +16880,13 @@ token stream/KV cache). (3) STEPS break-even CONDITIONAL: r>1.05× only if the 9
 overhead stays on the 5%; PCGrad costs an EXTRA scorer VJP → break-even rises to ~1.95–2.0× (expensive here). The
 95/5 component split itself remains UNMEASURED (the known all-levers-on wall-split debt). No equation minted
 (n600 + engaged-terms + MLX evidence owed) — correct restraint.
+
+## FEED-int8-rungs-20260713 (pointer node; full FEED in sub015_DAG_int8_training_rungs_20260713.md)
+int8 rungs (#470) [MEASURED n600 + tickets]: (B) post-hoc int8 QUANT COST FALSIFIED on this checkpoint —
+fp32-EMA d_seg 0.037527 vs parsed-LVLS1-int8 0.037097, gap −0.00043 (int8 BETTER; 415 improved/182 worse/3 tied,
+600 real pairs, canonical parse-back equality) — verdict_scope: instance — this checkpoint/format; the archive's
+int8 parse-back paid at ship time is free-or-better, QAT recovery ceiling = ZERO here → QAT ticket stays
+default-OFF confirmatory. Training-at-int8 rationale reduces to SPEED only: (A1) MLX 0.31.2 has quantized_matmul/
+Linear/Embedding but NO native quantized CONV — verdict_scope: instance — this MLX version; (A2) ANE W8A8 fwd
+latency TICKET (coremltools absent); (A3) int8 flips/cosine TICKET (sandbox had no Metal device — runnable by
+main locally). No fabricated numbers on blocked rungs — correct restraint. Equations + default-OFF DSL policy landed.
