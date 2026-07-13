@@ -16867,3 +16867,16 @@ controls, clustering unit, support policy, verdict scope) is the named DSL objec
 (reformulation item 1) ever lands — default OFF until implementation+tests. Equations leg: N/A-with-reason
 (no identification law closes; memo eqs (2)-(9) are design/check equations). DAG leg: this node. MEMORY leg:
 durable line added (treatment-location boundary + the FORE+HCM+D40 convergent logging change).
+
+## FEED-sps-gradient-separation-20260713 (pointer node; full FEED in sub015_DAG_sps_gradient_separation_20260713.md)
+SPS (lil-lab 2607.01218) reader [MEASURED probe + DERIVED]: (1) separation design NO-GO — verdict_scope: instance —
+ep275 checkpoint, n=4-pair PROBE-SCOPE, temporal terms DISENGAGED (screw fires ep450, phase ep726 → live temporal
+gradient exactly ZERO at the probed epoch): aggregate d_seg-vs-temporal cosine +0.107 with 0% negative-cosine tensor
+weight = no aggregate role conflict in the disengaged regime. Reformulation queue survives NARROW: n600 + ENGAGED
+checkpoint (post-ep726) + pair-225-class states (measured −0.279, 100% negative weight — the one anti-aligned pair).
+Canonical pool row registered as reformulation-queue via the canonical API. (2) Weight-space SPS REDUCES to known
+multi-task gradient surgery (PCGrad); the causal slot architecture + 2.6× token-efficiency do NOT transfer (no
+token stream/KV cache). (3) STEPS break-even CONDITIONAL: r>1.05× only if the 95/5 split holds AND separation
+overhead stays on the 5%; PCGrad costs an EXTRA scorer VJP → break-even rises to ~1.95–2.0× (expensive here). The
+95/5 component split itself remains UNMEASURED (the known all-levers-on wall-split debt). No equation minted
+(n600 + engaged-terms + MLX evidence owed) — correct restraint.
