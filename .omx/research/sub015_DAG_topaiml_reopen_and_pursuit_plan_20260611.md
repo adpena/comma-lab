@@ -16823,3 +16823,12 @@ R4 #468 temporal: marked conditional chain rule H(X,W′|C)=H(X|C)+H(E|X,C)+H(Φ
 RESPONSE: eq module rate_law_ladder_20260713 (anchors + constants + OWED_MEASURABLES) · 4 costate pool rows appended
 (fiber-gap n600 · I(F;C|M,ξ) codelength probe · H² post-typing · event-marks telemetry) · composed operating
 statement: rate work = SECTION ENGINEERING. pointer 0.19108282 UNMOVED (theory = means).
+
+### FEED-math-ladder-20260713 scope addendum (ladder conformance)
+verdict_scope: DERIVATION — the R3 "global Galois anti-isomorphism NO-GO" is scoped to GLOBAL generality over the
+state-dependent stratified groupoid (the anti-isomorphism fails to close globally); the PER-STRATUM closure-fixed
+Galois connection SURVIVES and is usable. untested formulations / alternatives: revisit global closure IF a global
+completion of the groupoid lands (e.g. via the score-fiber permutation completion) · per-stratum lattice walks as the
+working substitute. DSL-leg note: the ladder registers LAWS not levers — no Lever/WitnessProgram change exists by
+type; levers spawned from these laws (e.g. event-marks telemetry D39, fiber-gap probe D36) register their own DSL
+legs when built.
