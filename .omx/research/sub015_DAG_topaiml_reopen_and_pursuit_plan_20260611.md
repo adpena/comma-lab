@@ -16463,7 +16463,7 @@ minimum non-refresh global, boundary-annulus, and renderer-gradient cosines were
 **CONTROL LAW:** pre-registered event-conditioned fractional recess starts at `1e-2`, multiplies the fraction
 by `0.5`, accepts only strict teacher-CE decrease with non-worsening `d_seg`, and completes at fp32 bit identity.
 **VERDICT: NO-GO, fresh-eyes-reviewed(2).** Early falsified K=`{1,2,4}`; boundary falsified K=`{1,2,4}`;
-late falsified K=`{2,4}` and retained K=`1` as its only knee. Verdict scope is exactly: n=1 pair0
+late falsified K=`{2,4}` and retained K=`1` as its only knee. `verdict_scope: formulation` — n=1 pair0
 early/boundary/late saved-regime replay on macOS-CPU advisory; measured first-block split; K=`{1,2,4}`;
 event-conditioned CE-decrease plus d_seg-nonworsening fractional-recess control law only. This closes the
 registered instance/formulation, not the YOPO family. Across-seed variance, contest-CPU/CUDA transfer, and a
