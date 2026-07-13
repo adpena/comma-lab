@@ -3547,6 +3547,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       "in_feat": int(in_feat), "self_orient": use_self_orient,
                       "front_end": ("curvelet+self_orient" if use_self_orient else "generic-curvelet only")}), flush=True)
 
+    # (OPERATOR STANDARD 2026-07-13 "We are standardizing on 1 thread for training") TRAINING-path
+    # CPU-torch forwards (teacher/verdict; NEVER auth-eval scoring — upstream/evaluate.py is a
+    # separate process, untouched by construction) run at the MEASURED-optimal intraop thread count
+    # from the canonical law segnet_exact_forward_cpu_thread_law_20260713 (SELECTED_THREADS=1:
+    # 2.96x/3.00x vs the 6-thread default at n600 on both local Torch builds, each arm internally
+    # replay-stable; the 15/600 razor-tie cross-thread SHA drift is accepted for TRAINING gradients
+    # — numpy-fp32 stays the verdict authority). Value-provenance: MEASURED-ANCHOR via the law
+    # module, not a bare literal. Fail-soft: a thread-count miss is a speed loss, never correctness.
+    try:
+        import torch as _torch_thread_std
+        from tac.canonical_equations.segnet_exact_forward_cpu_thread_law_20260713 import (
+            SELECTED_THREADS as _TRAIN_TORCH_THREADS,
+        )
+        _torch_thread_std.set_num_threads(int(_TRAIN_TORCH_THREADS))
+        print(json.dumps({"stage": "torch_thread_standard", "intraop_threads": int(_TRAIN_TORCH_THREADS),
+                          "provenance": "segnet_exact_forward_cpu_thread_law_20260713.SELECTED_THREADS",
+                          "scope": "training teacher/verdict CPU-torch forwards ONLY (auth-eval untouched)"}),
+              flush=True)
+    except Exception as _thr_exc:
+        print(json.dumps({"stage": "torch_thread_standard", "status": "SKIPPED", "err": str(_thr_exc)[:120]}),
+              flush=True)
     # (DEVICE BUG FIX) the adapter LOADS the upstream torch scorers then converts to MLX — the
     # torch .device() must be "cpu" (torch has no "gpu"; args.mlx_device="gpu" crashed here in 3.4s).
     # The MLX render runs on mx.gpu via temporary_mlx_device(args.mlx_device) below; the torch
