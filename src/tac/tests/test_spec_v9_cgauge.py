@@ -226,6 +226,89 @@ def test_432_purpose_declares_fresh_start_containment_and_control(launch_432) ->
     assert "0.19108282" in p
 
 
+# ───────────────────────── 2026-07-13 event-native ideal + family A/B ─────────────────────────
+@pytest.fixture(scope="module")
+def ideal_ab():
+    from tac.witness_dsl.spec_v9_cgauge import (
+        compile_v9_cgauge_ideal_mod19_launch_config,
+        compile_v9_cgauge_ideal_mod32_launch_config,
+    )
+
+    return (
+        compile_v9_cgauge_ideal_mod19_launch_config(gt_cache_path=_GT),
+        compile_v9_cgauge_ideal_mod32_launch_config(gt_cache_path=_GT),
+    )
+
+
+def _argv_pairs(argv):
+    from tac.witness_autoconfig import _crucible_v7_argv_pairs
+
+    return dict(_crucible_v7_argv_pairs(argv))
+
+
+def test_ideal_programs_validate_parse_and_actuate(ideal_ab) -> None:
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
+
+    for cfg, dim in zip(ideal_ab, (19, 32), strict=True):
+        assert cfg.typed.validate_program() == []
+        argv = tuple(cfg.typed.to_program().compile_trainer_argv())
+        ns = build_real_trainer_parser().parse_args(list(argv[2:]))
+        assert ns.mod_dim == dim
+        assert ns.seg_form_unify_tau is True
+        assert ns.tau_advance_mode == "event"
+        assert ns.eikonal_weight == pytest.approx(0.01)
+        assert ns.eikonal_weight_end == pytest.approx(0.05)
+        assert ns.stage_transition_rewarmup_epochs == 14
+        assert ns.stage_transition_reset_moments is True
+        assert ns.length_sigma_matrix == "fitted-20260707"
+        assert ns.seg_subpix_edge_weight_source == "pa_flipmass"
+        assert ns.closed_loop_control is True
+        assert ns.stage_checkpoints is True
+        assert ns.verdict_pairs == 0
+
+
+def test_ideal_mod19_vs_mod32_scientific_argv_diff_is_only_mod_dim(ideal_ab) -> None:
+    p19 = _argv_pairs(ideal_ab[0].typed.to_program().compile_trainer_argv())
+    p32 = _argv_pairs(ideal_ab[1].typed.to_program().compile_trainer_argv())
+    # Custody paths differ by necessity; after removing them the family dimension is
+    # the sole scientific treatment delta.
+    p19.pop("--out-dir")
+    p32.pop("--out-dir")
+    changed = {k for k in set(p19) | set(p32) if p19.get(k) != p32.get(k)}
+    assert changed == {"--mod-dim"}
+    assert p19["--mod-dim"] == "19"
+    assert p32["--mod-dim"] == "32"
+
+
+def test_ideal_manifest_parity_extincts_hosc_duplicate_owner(ideal_ab) -> None:
+    for cfg in ideal_ab:
+        emitted = _argv_pairs(cfg.typed.to_program().compile_trainer_argv())
+        row = cfg.constants_manifest["hosc_beta_end"]
+        assert row["single_value_owner"] == "compiled_dsl_argv"
+        assert float(row["value"]) == float(emitted["--hosc-beta-end"]) == pytest.approx(3.177)
+        assert float(row["inherited_manifest_value_replaced"]) == pytest.approx(10.0)
+
+
+def test_ideal_includes_safe_set_and_composed_margin(ideal_ab) -> None:
+    expected = {
+        "unified_tau_eikonal_hold",
+        "n292_closed_loop_eikonal_control",
+        "R7_beta2_window_rewarmup",
+        "FEED_08a_length_sigma",
+        "tie_locus_displacement",
+        # margin_band_satisficing composed 2026-07-13 after its provenance fix landed (a79f5d68cd):
+        # ON in core + both A/B arms (identical → mod-dim FAMILY A/B stays unconfounded).
+        "margin_band_satisficing",
+    }
+    for cfg in ideal_ab:
+        names = set(cfg.dsl_levers)
+        assert expected <= names
+        assert "margin_band_satisficing" in names
+        manifest = cfg.dsl_program_manifest
+        assert manifest["ab_decision_rule"]["threshold"] == pytest.approx(0.02)
+        assert manifest["held"] is True and manifest["operator_go_required"] is True
+
+
 def test_lawref_evaluators_executable_for_223_laws() -> None:
     from tac.canonical_equations.evaluators import (
         populate_lawref_evaluators,

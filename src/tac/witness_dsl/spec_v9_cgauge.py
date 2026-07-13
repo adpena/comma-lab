@@ -638,12 +638,7 @@ def compile_v9_cgauge_432_launch_config(
     # are value-identical, so composition cannot drift the argv).
     _t1 = PhaseAdvectionConsistency(weight=0.4, start_epoch=726)
     _updates: dict = {
-        "levers": tuple(typed.levers) + (
-            TypedLever(name=_gate.name, overrides=dict(_gate.overrides),
-                       epochs_delta=_gate.epochs_delta, notes=_gate.notes),
-            TypedLever(name=_t1.name, overrides=dict(_t1.overrides),
-                       epochs_delta=_t1.epochs_delta, notes=_t1.notes),
-        ),
+        "levers": (*tuple(typed.levers), TypedLever(name=_gate.name, overrides=dict(_gate.overrides), epochs_delta=_gate.epochs_delta, notes=_gate.notes), TypedLever(name=_t1.name, overrides=dict(_t1.overrides), epochs_delta=_t1.epochs_delta, notes=_t1.notes)),
         # amber HELD from the #205 launch (SPEC §1.1 explicit values — the arm must
         # not silently differ from the control on stability):
         "base": {**typed.base,
@@ -720,13 +715,269 @@ def compile_v9_cgauge_432_launch_config(
     )
 
 
+# ===========================================================================
+# 2026-07-13 — TRULY-OPTIMAL EVENT-NATIVE V9 + MATCHED MOD19/MOD32 FAMILY A/B
+# ===========================================================================
+
+V9_CGAUGE_IDEAL_EXPECTED_ADDITIONS: tuple[str, ...] = (
+    "unified_tau_eikonal_hold",
+    "n292_closed_loop_eikonal_control",
+    "R7_beta2_window_rewarmup",
+    "FEED_08a_length_sigma",
+    "tie_locus_displacement",
+    "margin_band_satisficing",
+)
+
+V9_CGAUGE_IDEAL_EXCLUSIONS: dict[str, str] = {
+    # margin_band_satisficing REMOVED from exclusions 2026-07-13: sibling provenance fix landed
+    # (a79f5d68cd; m_safe DERIVED via LawRef + fail-closed) → now composed ON in core + both A/B arms.
+    "step_native_endpoint": "ISOLATE: endpoint/activation basin; never stack into the matched core A/B",
+    "fresh_finer_start": "ISOLATE: fresh-start representation basin; incompatible with this trunk control",
+    "ot_head_offset": "EXCLUDE: matched measurement was +5.1% worse; formulation remains isolated",
+    "eikonal_viscosity": "ISOLATE: can reproduce thin-lane smoothing pressure; test only after proactive hold",
+    "horizon_weighted_margin": "ISOLATE: favorable geometry but its treatment weight lacks V9 custody",
+    "aa_coverage": "ISOLATE: 4x supersample compute treatment; not part of the family-dimension test",
+    "hardness_oversample": "ISOLATE: requires equal-step accounting before score attribution",
+    "code_spectral_entropy": "EXCLUDE: assumed weight and no matched V9 score/rate receipt",
+    "dense_phase_carrier": "ISOLATE at byte-close: n600 rate/score A/B owed; not a trainer-core flag",
+}
+
+
+def _typed_ideal_lever(lever):
+    """Lossless curriculum-DSL Lever -> typed-config adapter."""
+    from tac.witness_dsl.typed_config import TypedLever
+
+    return TypedLever(
+        name=lever.name,
+        overrides=dict(lever.overrides),
+        epochs_delta=int(lever.epochs_delta),
+        notes=str(lever.notes),
+    )
+
+
+def _derive_manifest_from_emitted_argv(constants: dict, argv: tuple[str, ...]) -> dict:
+    """Make emitted argv the single scalar-value owner, then fail closed on drift.
+
+    The inherited V7 manifest recorded ``hosc_beta_end=10`` while the program emitted
+    ``--hosc-beta-end 3.177``.  For every manifest key with an identically named emitted
+    flag, this helper derives the manifest value from the compiled DSL argv and immediately
+    re-checks identity.  This is deliberately applied only to the new ideal configs so the
+    review-gated historical compiler remains untouched.
+    """
+    from tac.witness_autoconfig import _crucible_v7_argv_pairs
+
+    emitted = dict(_crucible_v7_argv_pairs(argv))
+    out = {k: (dict(v) if isinstance(v, dict) else v) for k, v in constants.items()}
+    for key, rec in out.items():
+        if not isinstance(rec, dict) or "value" not in rec:
+            continue
+        flag = "--" + str(key).replace("_", "-")
+        if flag not in emitted:
+            continue
+        raw = emitted[flag]
+        old = rec["value"]
+        if raw is None:
+            value = True
+        elif isinstance(old, bool):
+            value = str(raw).lower() not in ("0", "false", "no")
+        elif isinstance(old, int) and not isinstance(old, bool):
+            value = int(raw)
+        elif isinstance(old, float):
+            value = float(raw)
+        else:
+            value = str(raw)
+        rec["value"] = value
+        rec["single_value_owner"] = "compiled_dsl_argv"
+        rec["inherited_manifest_value_replaced"] = old
+        check = rec["value"]
+        if check != value:
+            raise ValueError(
+                f"manifest parity REFUSE: {key} records {check!r}, emitted {flag}={value!r}")
+    return out
+
+
+def compile_v9_cgauge_ideal_launch_config(
+    gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    *,
+    num_pairs: int = 600,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/v9_cgauge_truly_optimal_core_20260713",
+    mod_dim: int = 19,
+    program_name: str = "v9_cgauge_truly_optimal_core",
+):
+    """Compile the held event-native V9 core or either matched family A/B arm.
+
+    Pure construction only: this function validates and compiles a WitnessProgram; it
+    cannot launch.  ``mod_dim`` is restricted to the pre-registered 19-vs-32 family test.
+    The two A/B programs are byte-identical in scientific argv except ``--mod-dim``
+    (their ``--out-dir`` custody paths necessarily differ).
+    """
+    if int(mod_dim) not in (19, 32):
+        raise ValueError(f"ideal V9 family A/B admits mod_dim 19 or 32 only, got {mod_dim!r}")
+
+    from tac.witness_autoconfig import CrucibleV7LaunchConfig, _crucible_v7_argv_pairs
+    from tac.witness_dsl.curriculum_dsl import (
+        Beta2WindowRewarmup,
+        ClosedLoopEikonalControl,
+        LengthSigma,
+        Lever,
+        MarginBandSatisficing,
+        TieLocusDisplacement,
+    )
+    from tac.witness_dsl.typed_config import build_launch_manifest
+
+    wrapped = compile_v9_cgauge_432_launch_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir)
+    typed = wrapped.typed
+
+    # The new trainer actuator owns λ_k = λ_0 + (λ_N-λ_0)k/N on the persisted event
+    # τ rung and primes λ BEFORE assigning the lower τ.  Values are the settled V9
+    # retention transition (0.01 -> 0.05), not the older F0 constant-hold rescue.
+    eik_hold = Lever(
+        "unified_tau_eikonal_hold",
+        overrides={
+            "--seg-form-unify-tau": True,
+            "--tau-advance-mode": "event",
+            "--eikonal-weight": 0.01,
+            "--eikonal-weight-end": 0.05,
+        },
+        notes=("eikonal_retention_couples_to_tau_rung_v1: lambda_k=0.01+(0.05-0.01)k/N; "
+               "persisted rung is the single actuator; trainer primes retention before lower tau"),
+    )
+    additions = (
+        _typed_ideal_lever(eik_hold),
+        _typed_ideal_lever(ClosedLoopEikonalControl(
+            eikonal_bump=0.05, eikonal_max=0.20, max_bumps=2,
+            stop_after_windows=3, min_sustained_windows=3)),
+        _typed_ideal_lever(Beta2WindowRewarmup(beta2=0.999, steps_per_epoch=75)),
+        _typed_ideal_lever(LengthSigma("fitted-20260707")),
+        _typed_ideal_lever(TieLocusDisplacement(
+            weight=0.3, start_epoch=0, v_band=1.0,
+            edge_weight_source="pa_flipmass",
+            edge_weight_path="reports/pa_edge_weights.json", ref_domain="seg384")),
+        # MarginBandSatisficing: sibling provenance fix LANDED (a79f5d68cd) — m_safe now DERIVED via
+        # LawRef (headroom*delta_R=0.03918), fail-closed invariant. Operator 2026-07-13: "belongs in the
+        # ideal v9 cgauge". ON in core + BOTH A/B arms (identical → mod-dim FAMILY A/B stays unconfounded).
+        _typed_ideal_lever(MarginBandSatisficing(weight=0.2)),
+    )
+    purpose = (
+        "HELD operator-GO V9 CGauge event-native family A/B: form nuclei; persisted tau-rung "
+        "retention prime; one-rung sharpen; actuated lane/chroma/screw plus tie-locus/anisotropic-"
+        "length repair; beta2-window re-treatment; Muon only on its stable-trunk gate; terminal "
+        "appearance-phase handoff. Exact n600 per-class through-R and complete stage checkpoints; "
+        "MEANS only until receiver-closed exact evaluation. Fire after the 95%-kill P0."
+    )
+    typed = typed.model_copy(update={
+        "name": str(program_name),
+        "purpose": purpose,
+        "base": {
+            **typed.base,
+            "--mod-dim": int(mod_dim),
+            "--verdict-pairs": 0,
+        },
+        "levers": tuple(typed.levers) + additions,
+    })
+    violations = typed.validate_program()
+    if violations:
+        raise ValueError(
+            f"{program_name} DSL gate: {len(violations)} WitnessProgram.validate violation(s): "
+            f"{violations[:4]}")
+
+    got = tuple(lv.name for lv in typed.levers)
+    expected = tuple(V9_CGAUGE_432_EXPECTED_LEVERS) + V9_CGAUGE_IDEAL_EXPECTED_ADDITIONS
+    if sorted(got) != sorted(expected):
+        raise ValueError(
+            f"{program_name} expected-lever REFUSE: {sorted(got)} != {sorted(expected)}")
+    # MarginBandSatisficing is now REQUIRED-present (sibling provenance fix landed a79f5d68cd; m_safe
+    # DERIVED + fail-closed). The expected-lever check above enforces its presence in all three programs.
+
+    argv = tuple(typed.to_program().compile_trainer_argv())
+    emitted_pairs = dict(_crucible_v7_argv_pairs(argv))
+    required = {
+        "--mod-dim": str(int(mod_dim)),
+        "--eikonal-weight": "0.01",
+        "--eikonal-weight-end": "0.05",
+        "--tau-advance-mode": "event",
+        "--length-sigma-matrix": "fitted-20260707",
+        "--seg-subpix-edge-weight-source": "pa_flipmass",
+        "--stage-transition-rewarmup-epochs": "14",
+        "--verdict-pairs": "0",
+    }
+    mismatches = {
+        flag: (emitted_pairs.get(flag), want)
+        for flag, want in required.items() if emitted_pairs.get(flag) != want
+    }
+    if mismatches:
+        raise ValueError(f"{program_name} actuation/custody REFUSE: {mismatches}")
+    for flag in ("--stage-checkpoints", "--closed-loop-control"):
+        if flag not in emitted_pairs:
+            raise ValueError(f"{program_name} required Boolean actuator missing: {flag}")
+
+    manifest = build_launch_manifest(
+        program_name=str(program_name),
+        emitted_flag_names=sorted(emitted_pairs),
+        typed_config_hash=typed.typed_config_hash(),
+        typed_validated=True,
+    )
+    manifest.update({
+        "expected_active_levers": list(expected),
+        "excluded_levers": dict(V9_CGAUGE_IDEAL_EXCLUSIONS),
+        "ab_decision_rule": {
+            "metric": "n600 per-class through-R residual d_seg",
+            "formula": "(d_seg_mod19 - d_seg_mod32) / d_seg_mod32",
+            "threshold": 0.02,
+            "action": "revert_to_mod32_if_residual_gt_threshold",
+            "threshold_provenance": "DERIVED pre-registered cgauge_whitney_moddim_v1 family gate",
+        },
+        "held": True,
+        "operator_go_required": True,
+        "fire_after": "95%-kill P0 to avoid GPU-timing contention",
+    })
+    constants = _derive_manifest_from_emitted_argv(wrapped.constants_manifest, argv)
+    constants["eikonal_retention_tau_rung"] = {
+        "value": {"base": 0.01, "end": 0.05},
+        "equation_id": "eikonal_retention_couples_to_tau_rung_v1",
+        "ladder_class": "derived_at_config",
+        "fallback_used": False,
+        "inputs": {"actuator": "persisted TauAdvanceController.rung", "fraction": "k/N"},
+        "note": "retention is primed before each lower-tau model assignment",
+    }
+    if float(constants["hosc_beta_end"]["value"]) != float(emitted_pairs["--hosc-beta-end"]):
+        raise ValueError("hosc_beta_end constants manifest does not match compiled DSL argv")
+    return CrucibleV7LaunchConfig(
+        typed=typed,
+        constants_manifest=constants,
+        dsl_program_manifest=manifest,
+        schedule_governance=dict(wrapped.schedule_governance),
+    )
+
+
+def compile_v9_cgauge_ideal_mod19_launch_config(**kwargs):
+    kwargs.setdefault("mod_dim", 19)
+    kwargs.setdefault("program_name", "v9_cgauge_ideal_mod19")
+    kwargs.setdefault("out_dir", "experiments/results/v9_cgauge_ideal_mod19_20260713")
+    return compile_v9_cgauge_ideal_launch_config(**kwargs)
+
+
+def compile_v9_cgauge_ideal_mod32_launch_config(**kwargs):
+    kwargs.setdefault("mod_dim", 32)
+    kwargs.setdefault("program_name", "v9_cgauge_ideal_mod32")
+    kwargs.setdefault("out_dir", "experiments/results/v9_cgauge_ideal_mod32_20260713")
+    return compile_v9_cgauge_ideal_launch_config(**kwargs)
+
+
 __all__ = [
     "V9_CGAUGE_432_CASCADE_REALIZATION",
     "V9_CGAUGE_432_EXPECTED_LEVERS",
     "V9_CGAUGE_432_PROVENANCE",
+    "V9_CGAUGE_IDEAL_EXCLUSIONS",
+    "V9_CGAUGE_IDEAL_EXPECTED_ADDITIONS",
     "V9_CGAUGE_PROVENANCE",
     "compile_v9_cgauge_432_launch_config",
     "compile_v9_cgauge_config",
+    "compile_v9_cgauge_ideal_launch_config",
+    "compile_v9_cgauge_ideal_mod19_launch_config",
+    "compile_v9_cgauge_ideal_mod32_launch_config",
     "derive_v9_cgauge_432_config",
     "derive_v9_cgauge_config",
 ]

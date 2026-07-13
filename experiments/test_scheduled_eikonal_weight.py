@@ -14,6 +14,8 @@ import sys
 from argparse import Namespace
 from pathlib import Path
 
+import pytest
+
 _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO / "src") not in sys.path:
     sys.path.insert(0, str(_REPO / "src"))
@@ -23,11 +25,23 @@ _spec = importlib.util.spec_from_file_location("_lv_eik", _TRAINER)
 _m = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_m)
 _scheduled_eikonal_weight = _m._scheduled_eikonal_weight
+_scheduled_eikonal_weight_for_tau_rung = _m._scheduled_eikonal_weight_for_tau_rung
+_validate_eikonal_ramp_actuation_config = _m._validate_eikonal_ramp_actuation_config
+
+from tac.witness_control.tau_advance import TauAdvanceController
 
 
 def _args(**kw) -> Namespace:
-    d = dict(eikonal_weight=0.05, eikonal_weight_end=None, curriculum=True,
-             tau_softplus_start_epoch=300, stage_transition_rewarmup_epochs=20)
+    d = {
+        "eikonal_weight": 0.05,
+        "eikonal_weight_end": None,
+        "curriculum": True,
+        "tau_softplus_start_epoch": 300,
+        "stage_transition_rewarmup_epochs": 20,
+        "seg_form_unify_tau": False,
+        "tau_advance_mode": "clock",
+        "curriculum_event_triggered": False,
+    }
     d.update(kw)
     return Namespace(**d)
 
@@ -86,6 +100,44 @@ def test_zero_ease_is_a_hard_step():
     a = _args(eikonal_weight_end=0.10, stage_transition_rewarmup_epochs=0)
     assert _scheduled_eikonal_weight(299, a) == 0.05
     assert _scheduled_eikonal_weight(300, a) == 0.10, "no ease window => hard step at tau onset"
+
+
+def test_unified_tau_rung_law_tracks_persisted_progression_exactly():
+    """The V9 actuator is k/N, not the unfired discrete-stage sentinel."""
+    a = _args(eikonal_weight=0.01, eikonal_weight_end=0.05,
+              seg_form_unify_tau=True, tau_advance_mode="event",
+              curriculum_event_triggered=True)
+    ctrl = TauAdvanceController(
+        mode="event", ladder=(1.0, 0.7, 0.49, 0.31), per_octave_cap=10, min_dwell=0)
+    expected = (0.01, 0.01 + 0.04 / 3, 0.01 + 0.08 / 3, 0.05)
+    for rung, want in enumerate(expected):
+        ctrl._rung = rung
+        assert _scheduled_eikonal_weight_for_tau_rung(a, ctrl) == pytest.approx(want)
+
+
+def test_unified_tau_armed_ramp_without_event_controller_fails_loud():
+    a = _args(eikonal_weight=0.01, eikonal_weight_end=0.05,
+              seg_form_unify_tau=True, tau_advance_mode="clock",
+              curriculum_event_triggered=True)
+    with pytest.raises(ValueError, match="ramp can never fire"):
+        _validate_eikonal_ramp_actuation_config(a)
+
+
+def test_unified_tau_event_rung_is_the_registered_live_actuator():
+    a = _args(eikonal_weight=0.01, eikonal_weight_end=0.05,
+              seg_form_unify_tau=True, tau_advance_mode="event",
+              curriculum_event_triggered=True)
+    assert _validate_eikonal_ramp_actuation_config(a) == "tau_rung"
+
+
+def test_retention_prime_precedes_tau_assignment_and_complete_stage_checkpoint():
+    """Structural self-protect: λ prime -> lower τ/β -> preserved octave checkpoint."""
+    src = _TRAINER.read_text()
+    prime = src.index('"stage": "eikonal_retention_prime"')
+    assign_tau = src.index("model.softmax_temp = _tau_ctrl.tau_for_epoch", prime)
+    assign_beta = src.index("model.hosc_beta = _beta", assign_tau)
+    stage_ckpt = src.index('stage_tag=f"stageOctave{int(_adv.rung)}"', assign_beta)
+    assert prime < assign_tau < assign_beta < stage_ckpt
 
 
 if __name__ == "__main__":
