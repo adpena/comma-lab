@@ -16843,3 +16843,18 @@ round-3, §5); (2) POSITIVE LAW: discounted KL-contraction (γ<1) SURVIVES deter
 organ dataset's deterministic logs only (walk-forward forecasting remains valid); cure = logged exploration/randomization
 owed at next organ arm (deferral D40); (4) #468 composition = outer change of measure, no new chain-rule term;
 slots NOWHERE for the decoded bitstream. No equation registered (bridge doesn't close live; conditional law in memo).
+
+## FEED-hcm-attribution-20260713 (pointer node; full FEED in hcm_causal_attribution_DAG_FEED_20260713.md)
+HCM (Weinstein/Blei JMLR 2026) reader verdicts [DERIVED]: (1) measurement-for-free COUNT=0 — NO-GO —
+verdict_scope: instance — the EXISTING corpus only: the decisive paper boundary is TREATMENT LOCATION — HCM's
+identification gain requires treatment variation INSIDE the subunit plate; our levers are RUN-level treatments,
+so rich within-run M (600 pairs) improves mechanism estimation but cannot create assignments (unit count N is a
+separate debt). Top-3 duty rows (DsegAwareTaper/HorizonWeightedMargin/StepNativeActivation) each refused with the
+exact open-backdoor/positivity condition. (2) Confound-L4 check DERIVED — whole-run graph/apparatus residual
+falsification test (falsifies the assumed graph, never proves no-hidden-confounder); land as strict read-only gate
+AFTER the telemetry schema supports it + frozen-run positive control. (3) Organ partial pooling: CONDITIONAL GO
+for predictive shrinkage · NO-GO for causal credit/self-activation — verdict_scope: instance — the current
+single-trajectory organ dataset. REFORMULATION QUEUE (7 items, memo §7): causal manifest schema FIRST → matched
+run-level A/B stays the honest default → within-run pair-level randomization ONLY after interference-aware probe
+(shared-trunk coupling) → FORE-after-support: log (Z,A,R,Z') + target support, then DR, then HCM pooling — the
+ONE design change satisfying FORE + HCM + D40 jointly. No equation registered (no identification law closes).
