@@ -16985,3 +16985,10 @@ RANKING target (top-k/quantile/pairwise + calibration) · 2 margin × class-pair
 block heads (convex custody, no cross-regime cancellation) · 4 deeper features need new cost/tileability
 receipt (pre-SE cut is the local/tileable boundary) · 5 transition-complete FORE successor · 6 on-policy
 nonlinear (new family). ROUND-4 = items 1+2+3 composed: rank-the-support, pay exact teacher only there.
+
+### FEED-replace-round3 consumer-leg addendum (main, 2026-07-13)
+Consumer leg for the round-3 DSL policy (ReplaceRound3FidelityWallPolicy — a sealed formulation guard, not a
+lever): the FAMILY is now a tracked pool row surrogate_support_localization_family (needs-build via canonical
+record_candidate; digest pool surface renders it) carrying the round-4 admission bar (retained-mass ≥47% at
+4.70% area, oracle 52.78% MEASURED) + the family state (regression dead × 2 exact-optimum ceilings; ranking
+live). Registry/readback introspection covers the policy class generically [consumers-generic].
