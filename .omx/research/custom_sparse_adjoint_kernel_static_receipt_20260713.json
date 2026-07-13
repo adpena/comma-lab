@@ -1,0 +1,304 @@
+{
+  "axis": "[macOS-MLX research-signal; NumPy-fp32 parity authority; non-promotable MEANS]",
+  "completed_at_utc": "2026-07-13T23:25:36.011653Z",
+  "compositions": {
+    "oracle_mask_predictor": {
+      "absolute_relative_l2_predictor_gap": 0.5139673529494547,
+      "authority": "MEASURED predecessor n600; no predictor built here",
+      "cheap_source_margin_global_relative_l2_at_same_support": 0.5401736369574366,
+      "named_gap": "current_witness_oracle_mask_predictor_gap",
+      "posthoc_oracle_global_relative_l2": 0.026206284007981848
+    },
+    "rank2_k2": {
+      "accuracy_authority": "separate guarded #487 K=2 provider; current n1 smoke NOT_ADMITTED",
+      "hardware_timing": "UNMEASURED_BLOCKED",
+      "kernel_composition": "implemented rank-batched VJPs up to rank 8"
+    }
+  },
+  "contract": {
+    "contract_sha256": "81d0c52bec90e392ba6578bf010c265266a9dcc44135fd1d0f2c0e39c95d03f8",
+    "cross_process_count": 10,
+    "lane_id": "custom_sparse_adjoint_kernel",
+    "live_run_mutation": false,
+    "paid_dispatch": false,
+    "parity_rule": "bit-identical to NumPy-fp32 dense-on-support for every config",
+    "schema": "custom_sparse_adjoint_kernel_benchmark.v1",
+    "seed": 486,
+    "source_custody": {
+      "experiments/results/p0_costate_reuse_k2_smoke_v2_20260713/measurement_receipt.json": {
+        "bytes": 18165,
+        "sha256": "38c8d8b8e9426527fb2e528e15d4d6c5f1f620d2636b35da258f188305f2660b"
+      },
+      "experiments/results/p0_sparse_adjoint_costate_vjp_20260713/measurement_receipt.json": {
+        "bytes": 114011,
+        "sha256": "52a22f4b60367fc27ca0fca7293b0741da4b809724479cd3ef7e92291c250cef"
+      },
+      "src/tac/local_acceleration/metal_sparse_adjoint.py": {
+        "bytes": 22894,
+        "sha256": "fa600f44a046c5beb7ef3f51bc49a0b3939c50605807ea3184ca1924f81ec400"
+      },
+      "tools/bench_custom_sparse_adjoint_kernel.py": {
+        "bytes": 40244,
+        "sha256": "aa5465bb46186735be6f6abb2e402bd28eaa634a1800e1967c2dacf52f3a6921"
+      }
+    },
+    "training": false,
+    "wall_replay": "all frozen-SegNet Conv2d shapes; sealed #486 family support fractions",
+    "whole_network_derived_ceiling_x": 2.208577465069467
+  },
+  "lane_id": "custom_sparse_adjoint_kernel",
+  "metal_parity": {
+    "probe": {
+      "available": false,
+      "exception": "[metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+      "exception_type": "RuntimeError"
+    },
+    "required_gate": "N=10 cross-process, per-config bit identity",
+    "verdict": "UNMEASURED_BLOCKED"
+  },
+  "metal_wall_benchmark": {
+    "achieved_to_ceiling_ratio": null,
+    "gap_reason": "execution substrate exposes no Metal device; memory, gather, occupancy, and launch-overhead attribution is forbidden until the benchmark runs",
+    "verdict": "UNMEASURED_BLOCKED",
+    "wall_speedup_x": null
+  },
+  "numpy_fp32_static_parity": {
+    "configs": [
+      {
+        "all_numpy_compact_bit_identical_to_numpy_dense_on_support": true,
+        "authority_limit": "CPU implementation proof only; not the required N=10 cross-process Metal-kernel parity gate",
+        "config": "standard_3x3_rank1",
+        "in_process_deterministic_trials": 10,
+        "rank": 1,
+        "spec": {
+          "cin": 7,
+          "cout": 9,
+          "dilation_hw": [
+            1,
+            1
+          ],
+          "groups": 1,
+          "input_hw": [
+            13,
+            15
+          ],
+          "kernel_hw": [
+            3,
+            3
+          ],
+          "output_hw": [
+            13,
+            15
+          ],
+          "padding_hw": [
+            1,
+            1
+          ],
+          "stride_hw": [
+            1,
+            1
+          ]
+        },
+        "trial_output_sha256": [
+          "d3169c6dc4d46e6f5f8c41ece278280a572fd85a337b4d02cfffd12587e65187",
+          "1759efbb45fb61a6b7dedaa9b1a9f3f677a97576ddc11cc162e291e313e944a9",
+          "f24e8958fc4a49ea268a86ff66266610940dacd5908af65ccbf4586d4bb03ff5",
+          "b05d8edf9797e37755ba3ecbc32ab121a5f716cc11a9bb3f147f34e764d2bf32",
+          "cb36f0be3f0a07c87e611cbfac5a344bbdb67384a7206763ad108b7acfd83c88",
+          "aa384565729944593202ee85cef9c4896bccc96be6a7d60ce942aada9d95b7b2",
+          "7d8a733e8cca080114b34eeac796ae190c2fe4ded62f670cc81a8f4c9b0acb95",
+          "24553373707ed7ee2c7809b64227d44fb0d4dd5c37f2f7a8289d6f9591bff9e3",
+          "3d37b2e852d4a953a3a1dd02d0fa1aaadf58ca960860a91cb6706e51bc6c8499",
+          "889c33dea0894ff458245431abab907c4587f26384e9904818fb5a4ca332ce0c"
+        ]
+      },
+      {
+        "all_numpy_compact_bit_identical_to_numpy_dense_on_support": true,
+        "authority_limit": "CPU implementation proof only; not the required N=10 cross-process Metal-kernel parity gate",
+        "config": "grouped_3x3_stride2_rank2",
+        "in_process_deterministic_trials": 10,
+        "rank": 2,
+        "spec": {
+          "cin": 8,
+          "cout": 12,
+          "dilation_hw": [
+            1,
+            1
+          ],
+          "groups": 4,
+          "input_hw": [
+            14,
+            16
+          ],
+          "kernel_hw": [
+            3,
+            3
+          ],
+          "output_hw": [
+            7,
+            8
+          ],
+          "padding_hw": [
+            1,
+            1
+          ],
+          "stride_hw": [
+            2,
+            2
+          ]
+        },
+        "trial_output_sha256": [
+          "3fab6cc557ba0c1b5b5b7ceb4b295a9205c52ed1bc6dd8364d1a240feafd40c3",
+          "29c461542d63a8c7b46fe705e38c66debe5558670ff210a3f045a368675fc7ae",
+          "439c3cce1415c8a4fbe02ad982aa57ba92ce97999f9c594a47935668dd40e15a",
+          "5c446149e7e0ab01c51c14c6ee5b9f544868d4d8075054b0c9f2e384b68d3444",
+          "e3c0c820a5b2366f9a52ecd55bb5762295c5aa847c1c39cc4b91cab8a06b9e2a",
+          "d164ab2b9db5e9f3a39720a7b7e4aa2b96e438c47911db6ce966797f7df52f08",
+          "32f3638f541c50fbcccca409d4ee342b022c49e9ac9e0020c38315c4d922aac9",
+          "35c191608db75781b0d710feac2b4b3a730201ff3e0a519ac7e77ae3e66f2d1d",
+          "07e886bb5e6b6f3fd7e83bfc73794540afe427c751bdff1e18646ef1ff8277cb",
+          "0fc88757ba7ffd7ad510bfcef2fa8601da3a634799bc12f429a9c57fff2488ef"
+        ]
+      },
+      {
+        "all_numpy_compact_bit_identical_to_numpy_dense_on_support": true,
+        "authority_limit": "CPU implementation proof only; not the required N=10 cross-process Metal-kernel parity gate",
+        "config": "depthwise_5x5_stride2_rank3",
+        "in_process_deterministic_trials": 10,
+        "rank": 3,
+        "spec": {
+          "cin": 6,
+          "cout": 6,
+          "dilation_hw": [
+            1,
+            1
+          ],
+          "groups": 6,
+          "input_hw": [
+            15,
+            17
+          ],
+          "kernel_hw": [
+            5,
+            5
+          ],
+          "output_hw": [
+            8,
+            9
+          ],
+          "padding_hw": [
+            2,
+            2
+          ],
+          "stride_hw": [
+            2,
+            2
+          ]
+        },
+        "trial_output_sha256": [
+          "321cef62e26b560c880a8fcb28866b18515a4ec4139dd3a43c9a7525bd4b9096",
+          "11c56f00a7414f1735e02f90f9032c4f5a88f0b4c22fd8ef6a4724638f31278d",
+          "ade2a47a009af8cdd6d93aa869a23e4516ecd1dc09e215a498837de553207553",
+          "e4ae28761fc2df2ef6792946940eba35f09398516a08cc7ab685d024ed998c30",
+          "832421420507165eebb31fce8a4711883a48a078ea1fffd751894cccfd872ab3",
+          "0bb5dce6a86248abc0073f594fefd15ecaecafece521f77e9eab578b44c8cfd3",
+          "6dbc33b5ad61cd0d89ca987992b7df97770b24bf9ec3f3a436ff1e8834ca585e",
+          "c79851548b518e53073b9105185df94b19d1eee6680cb10aac2489fca241b9ad",
+          "42fb0fc174e5d6366bfcd5d30df93b29605b6cc8355c182e357d7981452efaf1",
+          "e38d2c0d27d7b106c70b6a3613d31269323bba16bfeb6368ba2669b58c3b0936"
+        ]
+      },
+      {
+        "all_numpy_compact_bit_identical_to_numpy_dense_on_support": true,
+        "authority_limit": "CPU implementation proof only; not the required N=10 cross-process Metal-kernel parity gate",
+        "config": "pointwise_full_support_rank8",
+        "in_process_deterministic_trials": 10,
+        "rank": 8,
+        "spec": {
+          "cin": 11,
+          "cout": 13,
+          "dilation_hw": [
+            1,
+            1
+          ],
+          "groups": 1,
+          "input_hw": [
+            9,
+            11
+          ],
+          "kernel_hw": [
+            1,
+            1
+          ],
+          "output_hw": [
+            9,
+            11
+          ],
+          "padding_hw": [
+            0,
+            0
+          ],
+          "stride_hw": [
+            1,
+            1
+          ]
+        },
+        "trial_output_sha256": [
+          "cf3386acd821ed23bae55b396d22f002f2f19099663fdec8fecbe5ea35ea5ed2",
+          "256ae1138010acd5555869df1fb136823961878d6e9620b877d10c5b8dc96cce",
+          "4bee3fdb17f8ee8de1eca26a3dd3f621cab326d4f70ed3beb271d24ae177a27b",
+          "d2cb2cbed5467afc3d6a079a206196a4526251cd0b167c7961701dc76baa6924",
+          "c400d772d15df0c31640fc5808acab72059e6d0415876ea2d37df5042bc8e844",
+          "bfba644ed3af81b71272e6c45398a4148830efe5cc196beebd2b06f9cf8272ae",
+          "8a0579abbb35640f636ace16f09f0a185a71aaf8c5234ef8e2bf4066ed88d7d1",
+          "09717cb882ce3f7d0edaed43b398ffe4867c971b2dd3fb34442c767919a43153",
+          "e879f6f9b44f73fe4d7de4a49202260a22085752e29b3f4948980a32ee11f056",
+          "3f9f88a8e3628203b82ae4c8ba4ab413737d5d29eb213f0d334d75e0854456f7"
+        ]
+      }
+    ],
+    "verdict": "BIT_IDENTICAL_DENSE_ON_SUPPORT"
+  },
+  "pointer_delta": "NONE",
+  "promotion_eligible": false,
+  "real_segnet_static_replay": {
+    "conv_case_count": 125,
+    "family_counts": {
+      "decoder": 10,
+      "encoder": 114,
+      "segmentation_head": 1
+    },
+    "family_support_fractions": {
+      "decoder": 0.28029733278990565,
+      "encoder": 0.9834764762802691,
+      "segmentation_head": 0.0473683662712574
+    },
+    "flagship_derived_ceiling_x": 2.208577465069467,
+    "support_geometry": "deterministic evenly-spaced masks at sealed #486 family aggregate fractions; not mask-fidelity evidence",
+    "totals": {
+      "absolute_nominal_replay_gap_from_flagship_ceiling_x": 3.779715239327075e-05,
+      "dense_exact_valid_tap_flops": 19530212096,
+      "dense_nominal_flops": 19818667904,
+      "exact_valid_tap_arithmetic_ceiling_x": 2.2002297677359484,
+      "nominal_arithmetic_ceiling_x": 2.20861526222186,
+      "sparse_exact_valid_tap_flops": 8876442080,
+      "sparse_nominal_flops": 8973345536
+    }
+  },
+  "req_R": "run the resumable host command on real Metal; require N=10 per-config bit identity before accepting any wall result or wiring a DSL lever",
+  "research_only": true,
+  "runtime": {
+    "argv": [
+      "tools/bench_custom_sparse_adjoint_kernel.py",
+      "--static-verify"
+    ],
+    "git_head": "24b30e54cb9b296f99221433878337fa738a2663",
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+  },
+  "schema": "custom_sparse_adjoint_kernel_static_verification.v1",
+  "score_claim": false,
+  "status": "BLOCKED_NO_METAL_DEVICE_IN_EXECUTION_SANDBOX",
+  "verdict_scope": "current execution substrate and default-off compact frozen-Conv2d input-adjoint source only; no Metal parity/wall, mask predictor, full nonlinear SegNet VJP, training, score, or pointer verdict"
+}

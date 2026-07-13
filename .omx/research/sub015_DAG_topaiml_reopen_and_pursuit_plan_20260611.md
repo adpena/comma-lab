@@ -17613,3 +17613,36 @@ passes). Consumes the heavy_tail catch (prefer ridge rung) + closes the #484 ref
   wall (it isn't a feature-source localizer). Also: FORE-successor / costlier learned rungs (round-4 queue).
   The cheap-PRE-SE localizer family is CLOSED; the distilled-student family is where the 95%-kill
   whole-teacher-over-boundary hedge now lives. DSL leg N/A (measurement; policy file is generic-registry-covered).
+
+---
+
+## FEED-throughput-triple-20260713 (throughput_fresh_eyes + quant_tail + custom_kernel — all MEANS, pointer UNMOVED)
+
+Research-only. Three throughput/reliability arms landed. MEANS (throughput/solver reliability, NOT the pointer).
+
+**throughput_fresh_eyes (8baee7ff05):** real n600 wall MEASURED = v7.5.2 295.56 / V9 282.96 s/ep (1.67-1.74×
+SLOWER than the historical 169.72 envelope, cause UNALLOCATED); fwd:bwd:render:witness split STILL UNMEASURED;
+verdict service DERIVED 89.5-97.4 s/ep async, zero cadence misses. Biggest banked lever = grouped-backward
+17.96× component / 5.5× n8 e2e (ON). **Fresh-eyes OVERTURNED (verdict_scope: instance — the specific prior
+claims):** (a) micro-batch 2-4× is UNSUPPORTED — MEASURED 1.036× epoch / 1.001× step at B2, B4/B8 REGRESS;
+(b) "async verdict is free" — contention UNMEASURED (only bounds MLX-GPU step ≤2%); (c) the 169.7 baseline is
+stale; (d) additive D-A accounting + persistence-dominant tau cost overturned. **The in-loop D-A timer is
+ONE-GO-READY** (163/163 flags, zero naked schedules, 21.2 GiB projected, admission PASSES) — the sole resolver
+of the fwd/bwd contradiction; needs operator-GO (governed launch; codex can't boot it, no Metal).
+**quant_tail_reliability (6a19132e98, 9388099337):** λ-for-tail curve MEASURED on cached dev split (n120
+official receipts only support the MP anchor — missing raw-feature/exact-mass arrays block a legit held-out
+ridge curve). block2 p95/p99 shortfall improves 0.933/0.954→0.869/0.886 at λ*=1; block3 →0.920/0.933 at λ*=0.3.
+Finite-sample bound closes SYMBOLICALLY (Gaussian constants) but NOT numerically (needs residual-covariance
+custody). organ A NOT tail-optimal today (rec: persistence). #433: λ=.1 cuts CVaR 4.11% but stays 5.6-7.7%
+worse than A. **verdict_scope: instance** (cached-dev-split measurement) — ADOPT-FOR-MEANS, NO-GO for
+operational λ or score promotion.
+**custom_sparse_adjoint_kernel (harvested by main — arm's own commit hit .git-read-only):** Metal sparse/
+rank-batched adjoint kernel BUILT default-off; CPU compact-authority bit-identical 40/40; re-derived the ceiling
+2.208615× (matches #486's 2.208577× within 3.8e-5). **verdict_scope: formulation — BUILT_DEFAULT_OFF /
+BLOCKED-NO-METAL-ADMISSION** (Metal execution unavailable in-process → achieved-vs-ceiling wall UNMEASURED,
+N=10 cross-process owed). Compositions: oracle-mask-predictor gap = 0.514 rel-L2 (a cheap oracle-mask predictor
+is NOT accurate — reformulation: the predictor needs work); K=2 rank-batched reuse implemented, hardware timing
+blocked, accuracy NOT_ADMITTED. Reformulation queue: (a) run the host Metal runner (run_custom_sparse_adjoint_
+kernel_host.command) on a Metal-capable process to measure the real wall; (b) improve the oracle-mask predictor
+(0.514 rel-L2 too high). NOT a paradigm kill — the kernel primitive exists + is CPU-parity-proven; only the
+Metal wall + predictor accuracy are open. DSL leg N/A (compute primitive). [consumers-generic]
