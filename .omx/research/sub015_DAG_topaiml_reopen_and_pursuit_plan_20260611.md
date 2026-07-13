@@ -16782,3 +16782,19 @@ RESPONSE: surviving 95%-kill routes = (a) frozen-replay convex-head contraction 
 (b) exact-label caching on frozen replay (both readers), (c) 456's ~3× as a training-reference-thread-count decision
 (operator design call: accept 15-pair tie drift for TRAINING gradients?). OSS-master (#451) + master ranking agree:
 no measured route yet clears #449. pointer 0.19108282 UNMOVED (all means).
+
+### FEED-95kill-fleet-round1-scope-addendum (2026-07-13): reformulation queue (verdict-scope ladder conformance for the round-1 NO-GOs)
+Every round-1 negative is FORMULATION-scoped (INSTANCE for 455's pair0/seed455); NO family/paradigm is closed.
+untested formulations / alternatives:
+- REPLACE family (#455): (1) frozen-replay CONVEX-HEAD contraction w/ explicit norm+curvature+variance+teacher-call
+  custody [VR-GHAL-admissible, #462-named]; (2) exact-label CACHING on frozen replay [both readers: may dominate];
+  (3) TOFU-POV pull-when-uncertain allocator w/ frozen epochs + p_t>0 + IPW residual correction [#463-repaired];
+  (4) linear-head-only surrogate (C_teacher=A+c_label·D law — teacher term cancels from parameter-space differences);
+  (5) K<20 shorter-horizon windows (only K=20 fidelity was UNKNOWN, small-K untested).
+- REUSE family (#454): (1) cheaper drift PROXY below HVP cost (the ≥2.55-validations/step is the HVP formulation's
+  cost, not a family bound); (2) reuse across MICRO-batch members within one step (untested granularity);
+  (3) monitoring-only clipped-difference alarm (VR-GHAL #462: valid as monitor, not certificate).
+- CHEAPEN (#456): (1) reference-thread-count standardization (design decision, OPEN — not a measurement gap);
+  (2) Linux-x86 contest-CPU-axis timing (unmeasured); (3) fused/quantized exact forward at fixed thread count.
+Ladder: 454b HVP-certificate=FORMULATION · 455 surrogate-v1=INSTANCE-to-FORMULATION · 456 cross-thread-transfer=
+FORMULATION · 462/463 direct-wrappers=FORMULATION. No KILL anywhere; queue above is the reactivation surface.
