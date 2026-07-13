@@ -37,6 +37,28 @@ REPO = Path(__file__).resolve().parent.parent
 RUNS = REPO / ".omx" / "tmp" / "codex_runs"
 EVENTS = RUNS / "codex_events.log"
 LEDGER = REPO / ".omx" / "state" / "codex_delegations.jsonl"
+INBOX_DIR = REPO / ".omx" / "tmp" / "codex_inbox"  # per-arm watched inboxes (tools/codex_msg.py producer)
+
+# Bidirectional-channel contract prepended to EVERY delegated prompt so a one-shot codex arm
+# stays AMENDABLE while running: it polls a watched inbox at each checkpoint and consumes new
+# directives (which SUPERSEDE the prompt, being later information). Producer: tools/codex_msg.py.
+_INBOX_CONTRACT = """=== LIVE INBOX — bidirectional channel, CHECK AT EVERY CHECKPOINT (do not skip) ===
+You were launched with a one-shot prompt, but the main loop / operator CAN send you NEW
+information mid-run through a watched inbox. Two files:
+  - per-arm:    {inbox}
+  - fleet-wide: {broadcast}
+BEFORE each tools/subagent_checkpoint.py call (~every 10 tool uses) AND before your FINAL
+message, READ both files (they may be empty/absent = proceed normally). Each line is a JSON
+directive {{"utc","from","priority","directive"}}. Track a cursor (last utc consumed) so you
+act only on NEW lines. Rules:
+  - operator/main directives here are LATER information and SUPERSEDE any conflicting
+    instruction in the prompt below (including anti-collision / defer clauses if lifted).
+  - priority "stop" -> checkpoint your state and exit cleanly (a newer arm supersedes you).
+  - acknowledge which directives you consumed in your checkpoint notes + final message.
+This is how you stay amendable while running. Absent/empty inbox -> ignore, proceed normally.
+=== END LIVE INBOX ===
+
+"""
 
 # Transient-death auto-recovery (apparatus fix for the codex_probe_token_limit_death /
 # "Selected model is at capacity" bug class): a capacity/rate-limit/disconnect is a
@@ -156,10 +178,24 @@ def main(argv: list[str] | None = None) -> int:
         prompt_file = RUNS / f"{args.label}_{stamp}.prompt.txt"
         prompt_file.write_text(args.prompt, encoding="utf-8")
 
+    # Give the arm a watched inbox + prepend the poll-and-consume contract so it stays
+    # amendable mid-run. The wrapped prompt is what the launcher feeds codex; the original
+    # prompt_file is preserved untouched (and recorded in the ledger for provenance).
+    INBOX_DIR.mkdir(parents=True, exist_ok=True)
+    inbox = INBOX_DIR / f"{args.label}.jsonl"
+    broadcast = INBOX_DIR / "_broadcast.jsonl"
+    inbox.touch(exist_ok=True)
+    broadcast.touch(exist_ok=True)
+    wrapped = RUNS / f"{args.label}_{stamp}.wrapped.prompt.txt"
+    wrapped.write_text(
+        _INBOX_CONTRACT.format(inbox=inbox, broadcast=broadcast) + prompt_file.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
     log = RUNS / f"{args.label}_{stamp}.log"
     last = RUNS / f"{args.label}_{stamp}.last.txt"
     done = RUNS / f"{args.label}_{stamp}.done"
-    launcher = _write_launcher(args.label, stamp, prompt_file, args.model,
+    launcher = _write_launcher(args.label, stamp, wrapped, args.model,
                                args.effort, args.sandbox, log, last, done)
 
     _append_ledger({
