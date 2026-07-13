@@ -16798,3 +16798,12 @@ untested formulations / alternatives:
   (2) Linux-x86 contest-CPU-axis timing (unmeasured); (3) fused/quantized exact forward at fixed thread count.
 Ladder: 454b HVP-certificate=FORMULATION · 455 surrogate-v1=INSTANCE-to-FORMULATION · 456 cross-thread-transfer=
 FORMULATION · 462/463 direct-wrappers=FORMULATION. No KILL anywhere; queue above is the reactivation surface.
+
+### FEED-1thread-training-standard (2026-07-13): operator standard ADOPTED + encoded (triality legs for the trainer commit)
+SIGNAL: operator "We are standardizing on 1 thread for training" (the #456 design decision, GO).
+RESPONSE [ENCODED]: trainer sets torch intraop threads from segnet_exact_forward_cpu_thread_law_20260713
+.SELECTED_THREADS at scorer load (stage=torch_thread_standard telemetry, fail-soft); law module carries the
+ADOPTION ANCHOR (ADOPTED_AS_TRAINING_STANDARD, scope=training-only, auth-eval untouched, numpy-fp32 authority
+unchanged). MEASURED basis: 2.956x/2.997x n600 both builds (#456); accepted trade = 15/600 razor-tie cross-thread
+SHA drift (~2.4e-7 margins), training gradients only. Next witness launch inherits ~3x frozen-forward speedup free.
+Memory operator_1thread_training_standard_20260713. pointer 0.19108282 UNMOVED (means).

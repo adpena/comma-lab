@@ -679,3 +679,17 @@ __all__ = [
     "load_and_validate_static_process_receipt",
     "populate_segnet_exact_forward_cpu_thread_control_v1",
 ]
+
+# --- ADOPTION ANCHOR (operator standard 2026-07-13) -------------------------------------------
+# Operator verbatim: "We are standardizing on 1 thread for training." SELECTED_THREADS (=1) is
+# ADOPTED as the TRAINING-path default for CPU-torch teacher/verdict forwards, consumed by
+# experiments/train_levelset_witness_realized_through_R_mlx.py (stage=torch_thread_standard).
+# Scope: TRAINING ONLY — auth-eval scoring (upstream/evaluate.py, separate process) untouched;
+# numpy-fp32 remains the bit-identical verdict authority. Accepted trade (MEASURED, #456 static-
+# thread ABBA n600 BOTH builds): 2.9562855x / 2.9970427x vs 6-thread default, all 600 timing wins,
+# each arm internally replay-stable; 15/600 razor-tie pair SHAs differ ACROSS thread counts
+# (top-2 margin ~2.384e-7) — accepted for training gradients, inadmissible for cross-thread
+# bit-identity claims. Memory: operator_1thread_training_standard_20260713.md.
+ADOPTED_AS_TRAINING_STANDARD = True
+ADOPTION_UTC = "2026-07-13"
+ADOPTION_SCOPE = "training teacher/verdict CPU-torch forwards ONLY (auth-eval untouched)"
