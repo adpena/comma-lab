@@ -79,10 +79,6 @@ from tac.canonical_equations.blind_coordinate_rate_lever_20260711 import (
     build_blind_coordinate_rate_lever_v1,
     populate_blind_coordinate_rate_lever_equation,
 )
-from tac.canonical_equations.tropnnc_dense_trunk_exact_reduction_20260712 import (
-    build_tropnnc_dense_trunk_exact_reduction_empty_v1,
-    populate_tropnnc_dense_trunk_exact_reduction_equation,
-)
 from tac.canonical_equations.boundary_distance_calibration_20260705 import (
     bd_weight_for_ratio,
     build_boundary_distance_weight_calibration_v1,
@@ -187,6 +183,10 @@ from tac.canonical_equations.horizon_weighted_margin_20260709 import (
     build_horizon_weighted_margin_v1,
     populate_horizon_weighted_margin_equation,
 )
+from tac.canonical_equations.instant_projected_input_adjoint_20260712 import (
+    build_instant_projected_input_adjoint_v1,
+    populate_instant_projected_input_adjoint_v1,
+)
 from tac.canonical_equations.laguerre_ot_head_offset_20260709 import (
     build_laguerre_ot_head_offset_v1,
     populate_laguerre_ot_head_offset_equation,
@@ -226,6 +226,13 @@ from tac.canonical_equations.logit_adjustment_class_prior_20260707 import (
     logit_adjust_offsets,
     populate_logit_adjustment_class_prior_equation,
 )
+from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+    build_margin_band_satisficing_threshold_v1,
+    margin_safe_threshold,
+    minimum_integer_headroom,
+    populate_margin_band_satisficing_threshold_equation,
+    resolve_margin_band_threshold,
+)
 from tac.canonical_equations.margin_saliency_reachability_and_muon_finisher_20260703 import (
     build_margin_saliency_reachability_replaces_texture_proxy_v1,
     build_muon_finisher_schedule_warmstart_and_lr_anneal_v1,
@@ -242,6 +249,10 @@ from tac.canonical_equations.mlx_pytorch_drift import (
 from tac.canonical_equations.mlx_pytorch_drift import (
     build_mlx_pytorch_full_decoder_downstream_scorer_drift_propagation_v1,
     mlx_pytorch_full_decoder_downstream_scorer_drift_bound,
+)
+from tac.canonical_equations.onpolicy_input_costate_surrogate_20260713 import (
+    build_onpolicy_input_costate_surrogate_v1,
+    populate_onpolicy_input_costate_surrogate_v1,
 )
 from tac.canonical_equations.oom_verdict_batch_spike_peak_rss_20260702 import (
     build_oom_verdict_batch_spike_peak_rss_v1,
@@ -293,6 +304,11 @@ from tac.canonical_equations.registry import (
     update_equation_with_domain_refinement,
     update_equation_with_empirical_anchor,
 )
+from tac.canonical_equations.eikonal_retention_tau_rung_20260713 import (
+    build_eikonal_retention_couples_to_tau_rung_v1,
+    eikonal_retention_for_rung,
+    populate_eikonal_retention_couples_to_tau_rung_v1,
+)
 from tac.canonical_equations.resize_exploit_flip_fix_frontier_20260709 import (
     build_resize_exploit_flip_fix_frontier_v1,
     populate_resize_exploit_flip_fix_frontier_equation,
@@ -313,6 +329,18 @@ from tac.canonical_equations.scorer_input_cache_hash_identity import (
     build_scorer_input_cache_hash_identity_v1,
     scorer_input_cache_hash_identity,
 )
+from tac.canonical_equations.segnet_exact_forward_cpu_thread_law_20260713 import (
+    build_segnet_exact_forward_cpu_thread_control_v1,
+    populate_segnet_exact_forward_cpu_thread_control_v1,
+)
+from tac.canonical_equations.segnet_margin_trust_region_20260713 import (
+    build_segnet_margin_trust_region_v1,
+    populate_segnet_margin_trust_region_v1,
+)
+from tac.canonical_equations.sfess_k_subset_cached_replay_20260712 import (
+    build_sfess_fixed_k_cached_replay_ranking_v1,
+    populate_sfess_fixed_k_cached_replay_equation,
+)
 from tac.canonical_equations.step_native_activation_edge_optimality_20260707 import (
     build_step_native_activation_edge_optimality_v1,
     hosc_step_limit_beta_ratio,
@@ -326,6 +354,10 @@ from tac.canonical_equations.store_nothing_pose_carrier_rate_dpose_20260702 impo
 from tac.canonical_equations.task_rd_dominates_reconstruction_rd_20260702 import (
     build_task_rd_dominates_reconstruction_rd_v1,
     task_rd_dominance_gap,
+)
+from tac.canonical_equations.tropnnc_dense_trunk_exact_reduction_20260712 import (
+    build_tropnnc_dense_trunk_exact_reduction_empty_v1,
+    populate_tropnnc_dense_trunk_exact_reduction_equation,
 )
 from tac.canonical_equations.v8_geometric_rate_decomposition_20260709 import (
     build_v8_geometric_rate_decomposition_v1,
@@ -341,6 +373,10 @@ from tac.canonical_equations.witness_pose_grad_coeff_stability_20260709 import (
 from tac.canonical_equations.wyner_ziv_decoder_side_posenet_side_information import (
     build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1,
     predict_wyner_ziv_posenet_side_info_savings,
+)
+from tac.canonical_equations.yopo_first_layer_costate_20260712 import (
+    build_yopo_first_layer_costate_v1,
+    populate_yopo_first_layer_costate_v1,
 )
 
 __all__ = [
@@ -410,12 +446,15 @@ __all__ = [
     "build_fullstack_unique_home_assignment_v1",
     "build_horizon_weighted_margin_v1",
     "build_independent_flicker_jitter_dseg_floor_smooth_optimal_v1",
+    "build_instant_projected_input_adjoint_v1",
     "build_label_floor_to_phase_tail_handoff_v1",
     "build_laguerre_ot_head_offset_v1",
     "build_lane_band_res_entropy_stage_v1",
     "build_lane_groundframe_xi_transport_no_collapse_v1",
     "build_leverd_flicker_residual_reactivation_economics_v1",
     "build_logit_adjustment_class_prior_law_v1",
+    "build_eikonal_retention_couples_to_tau_rung_v1",
+    "build_margin_band_satisficing_threshold_v1",
     "build_margin_saliency_reachability_replaces_texture_proxy_v1",
     "build_maslov_dequantization_bound_v1",
     "build_mcf_minority_erasure_inevitability_v1",
@@ -425,6 +464,7 @@ __all__ = [
     "build_multiphase_modica_mortola_perimeter_gamma_limit_v1",
     "build_muon_finisher_schedule_warmstart_and_lr_anneal_v1",
     "build_muon_switch_conditioning_criterion_v1",
+    "build_onpolicy_input_costate_surrogate_v1",
     "build_oom_verdict_batch_spike_peak_rss_v1",
     "build_pairset_component_marginal_score_decomposition_v1",
     "build_palette_realization_ceiling_v1",
@@ -437,18 +477,24 @@ __all__ = [
     "build_safe_compile_hosc_device_bitidentity_v1",
     "build_scalar_top1_top2_margin_is_exact_distance_to_flip_v1",
     "build_scorer_input_cache_hash_identity_v1",
+    "build_segnet_exact_forward_cpu_thread_control_v1",
+    "build_segnet_margin_trust_region_v1",
     "build_separatrix_asymmetry_t_subpixel_boundary_localizer_v1",
+    "build_sfess_fixed_k_cached_replay_ranking_v1",
     "build_shearlet_nterm_upper_bounds_task_rate_v1",
     "build_step_native_activation_edge_optimality_v1",
     "build_store_nothing_pose_carrier_rate_collapse_vs_dpose_v1",
     "build_task_rd_dominates_reconstruction_rd_v1",
     "build_tau_eps_hbar_one_dequantization_two_scales_v1",
+    "build_tropnnc_dense_trunk_exact_reduction_empty_v1",
     "build_v8_geometric_rate_decomposition_v1",
     "build_witness_pose_grad_coeff_stability_v1",
     "build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1",
+    "build_yopo_first_layer_costate_v1",
     "categorical_bregman_divergence",
     "categorical_fisher_trace_two_class",
     "chained_ds_depoch",
+    "eikonal_retention_for_rung",
     "chroma_margin_gradient_energy_fraction",
     "classify_mlx_matmul_drift",
     "compute_predicted_band_from_posterior",
@@ -472,9 +518,11 @@ __all__ = [
     "load_equation_registry_strict",
     "load_registry_events_lenient",
     "logit_adjust_offsets",
+    "margin_safe_threshold",
     "maslov_dequantization_bound",
     "mbo_smoothing_cost_lane_fraction",
     "measured_entropy_stage_delta_bytes",
+    "minimum_integer_headroom",
     "mlx_pytorch_full_decoder_downstream_scorer_drift_bound",
     "muon_cold_start_transition_spike",
     "pairset_component_marginal_payload",
@@ -482,8 +530,6 @@ __all__ = [
     "populate_adaptive_eps_cfl_edge_tracking_equation",
     "populate_anisotropic_basis_two_regime_allocation_equation",
     "populate_blind_coordinate_rate_lever_equation",
-    "build_tropnnc_dense_trunk_exact_reduction_empty_v1",
-    "populate_tropnnc_dense_trunk_exact_reduction_equation",
     "populate_boundary_distance_weight_calibration_equation",
     "populate_chan_vese_area_constraint_birth_balance_equation",
     "populate_chroma_boundary_annulus_match_equation",
@@ -494,22 +540,31 @@ __all__ = [
     "populate_dseg_aware_fourier_taper_equation",
     "populate_focal_gradient_concentration_equation",
     "populate_frozen_scorer_forward_batch_dependence_equation",
+    "populate_eikonal_retention_couples_to_tau_rung_v1",
     "populate_fullstack_unique_home_assignment_equation",
     "populate_horizon_weighted_margin_equation",
     "populate_initial_equations",
+    "populate_instant_projected_input_adjoint_v1",
     "populate_laguerre_ot_head_offset_equation",
     "populate_lane_band_res_entropy_stage_equation",
     "populate_lane_groundframe_xi_transport_no_collapse_equation",
     "populate_lawref_evaluators",
     "populate_logit_adjustment_class_prior_equation",
+    "populate_margin_band_satisficing_threshold_equation",
+    "populate_onpolicy_input_costate_surrogate_v1",
     "populate_palette_realization_ceiling_equation",
     "populate_quadratic_head_chart_subset_solve_gap_equation",
     "populate_resize_exploit_flip_fix_frontier_equation",
     "populate_roadlane_grating_composition_refuted_equation",
     "populate_safe_compile_device_bitidentity_equation",
+    "populate_segnet_exact_forward_cpu_thread_control_v1",
+    "populate_segnet_margin_trust_region_v1",
+    "populate_sfess_fixed_k_cached_replay_equation",
     "populate_step_native_activation_edge_optimality_equation",
+    "populate_tropnnc_dense_trunk_exact_reduction_equation",
     "populate_v8_geometric_rate_decomposition_equation",
     "populate_witness_pose_grad_coeff_stability_equation",
+    "populate_yopo_first_layer_costate_v1",
     "predict_procedural_predictor_plus_residual_correction_savings",
     "predict_wyner_ziv_posenet_side_info_savings",
     "query_equations",
@@ -521,6 +576,7 @@ __all__ = [
     "register_evaluator",
     "registered_equation_ids",
     "resolve_equation_value",
+    "resolve_margin_band_threshold",
     "scorer_input_cache_hash_identity",
     "shearlet_nterm_error",
     "smoothing_crossover_ok",

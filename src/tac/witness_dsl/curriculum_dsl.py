@@ -3395,8 +3395,9 @@ def TemporalScrewConsistency(
 
 
 def MarginBandSatisficing(
-    weight: float = 0.2, msafe: float = 0.06, delta_r: float = 0.0196,
-    headroom: float = 2.0, start_epoch: int = 0, band: float = 2.0, window: int = 0,
+    weight: float = 0.2, msafe: float | None = None, delta_r: float | None = None,
+    headroom: float | None = None, start_epoch: int = 0, band: float = 2.0, window: int = 0,
+    delta_r_artifact: str | Path = "reports/delta_R_noise_floor.json",
 ) -> Lever:
     """P0 FORCE 2 — MARGIN-BAND SATISFICING (derivation
     ``.omx/research/p0_forces_derivation_20260708.md`` §FORCE 2; task #360). DEFAULT-OFF.
@@ -3408,11 +3409,17 @@ def MarginBandSatisficing(
     the ~2.6%-area boundary band. This is the UNIWARD/Fisher satisficing reading: spend the code where
     the detector's margin is fragile.
 
-    ``m_safe = headroom·δ_R`` (default ``3·δ_R ≈ 0.06``, headroom 2). ``δ_R = 0.0196`` is the MEASURED
-    R-survival noise floor (p95 of the uint8-at-camera margin perturbation over the annulus;
-    ``tools/measure_delta_R_noise_floor.py`` → ``reports/delta_R_noise_floor.json``; RE-RUN the tool for
-    n600, never rebuild). m_safe is stamped WITH its δ_R provenance; the trainer fails loud if
-    ``m_safe < δ_R`` (the hinge would sit inside the noise floor = pointless).
+    ``m_safe = headroom·δ_R``. Both values are resolved at config compile time by canonical law
+    ``margin_band_satisficing_threshold_v1``: ``δ_R`` is read from the MEASURED artifact
+    ``reports/delta_R_noise_floor.json`` and the default headroom is the smallest integer factor whose
+    threshold covers that artifact's full-R annulus p95. The current artifact gives DERIVED headroom 2
+    and DERIVED ``m_safe = 0.039180326461791926`` from MEASURED
+    ``δ_R = 0.019590163230895963``. Headroom 3 remains an OPEN, UNMEASURED treatment rather than a
+    default. A documented WAIVER fallback uses the exact artifact values if the report is unavailable.
+
+    ``msafe`` and ``delta_r`` are compatibility overrides only: when supplied, each MUST match the
+    canonical resolution within floating-point tolerance or the factory REFUSES the config. This is the
+    invariant that prevents an independently hardcoded threshold from drifting back in.
 
     Does NOT REPLACE CE — the incumbent ``tau_softplus`` seg loss is ALREADY a temperature-τ margin loss
     (its τ→0 hard limit IS this hinge). REPLACING it early would starve region formation (the area-
@@ -3424,27 +3431,61 @@ def MarginBandSatisficing(
     ``window=0`` = loss-config lever. Advisory until byte-closed (pointer 0.19110 UNMOVED)."""
     if not (float(weight) >= 0.0):
         raise ValueError(f"MarginBandSatisficing: weight must be >= 0, got {weight!r}")
-    if not (float(delta_r) > 0.0):
-        raise ValueError(f"MarginBandSatisficing: delta_r must be > 0, got {delta_r!r}")
-    if not (float(headroom) >= 0.0):
-        raise ValueError(f"MarginBandSatisficing: headroom must be >= 0, got {headroom!r}")
     if not (float(band) > 0.0):
         raise ValueError(f"MarginBandSatisficing: band must be > 0, got {band!r}")
-    if not (float(msafe) >= float(delta_r)):
+
+    from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        INVARIANT_FP_TOL,
+        resolve_margin_band_threshold,
+    )
+
+    resolved = resolve_margin_band_threshold(
+        headroom=headroom,
+        artifact_path=delta_r_artifact,
+        repo_root=_REPO_ROOT,
+    )
+    # Numerical gate tolerance only (not a scientific tolerance): both values
+    # are config scalars produced from the same deterministic fp64 law.
+    _rel_tol = INVARIANT_FP_TOL
+    _abs_tol = INVARIANT_FP_TOL
+    if delta_r is not None and not math.isclose(
+        float(delta_r), resolved.delta_r, rel_tol=_rel_tol, abs_tol=_abs_tol
+    ):
         raise ValueError(
-            f"MarginBandSatisficing: msafe ({msafe!r}) must be >= delta_r ({delta_r!r}) — else the hinge "
-            "saturates inside the measured R-noise floor and does nothing (fail closed).")
+            "MarginBandSatisficing: delta_r override does not match the MEASURED artifact: "
+            f"override={delta_r!r}, resolved={resolved.delta_r!r}, artifact={delta_r_artifact!s}"
+        )
+    if msafe is not None and not math.isclose(
+        float(msafe), resolved.m_safe, rel_tol=_rel_tol, abs_tol=_abs_tol
+    ):
+        raise ValueError(
+            "MarginBandSatisficing: msafe override violates the canonical invariant "
+            "m_safe = headroom * delta_R: "
+            f"override={msafe!r}, derived={resolved.m_safe!r}, "
+            f"headroom={resolved.headroom!r}, delta_r={resolved.delta_r!r}"
+        )
+    # Self-protect even if the resolver implementation changes: the emitted
+    # values may never disagree with their defining law.
+    expected_msafe = resolved.headroom * resolved.delta_r
+    if not math.isclose(
+        resolved.m_safe, expected_msafe, rel_tol=_rel_tol, abs_tol=_abs_tol
+    ):
+        raise ValueError(
+            "MarginBandSatisficing: REFUSE inconsistent canonical resolution: "
+            f"m_safe={resolved.m_safe!r}, headroom*delta_R={expected_msafe!r}"
+        )
     return Lever(
         "margin_band_satisficing",
         overrides={"--seg-margin-satisfice-weight": float(weight),
-                   "--seg-margin-satisfice-msafe": float(msafe),
-                   "--seg-margin-satisfice-delta-r": float(delta_r),
-                   "--seg-margin-satisfice-headroom": float(headroom),
+                   "--seg-margin-satisfice-msafe": resolved.m_safe,
+                   "--seg-margin-satisfice-delta-r": resolved.delta_r,
+                   "--seg-margin-satisfice-headroom": resolved.headroom,
                    "--seg-margin-satisfice-start-epoch": int(start_epoch),
                    "--seg-margin-satisfice-band": float(band)},
         epochs_delta=window,
         notes=("P0 FORCE 2 margin-band satisficing (one-sided relu(m_safe - m_wit) on the annulus; "
-               f"m_safe={float(msafe)} = {float(headroom)}*delta_R({float(delta_r)}) MEASURED R-noise "
+               f"m_safe={resolved.m_safe} DERIVED-LIVE = headroom({resolved.headroom}) * "
+               f"delta_R({resolved.delta_r}) MEASURED R-noise "
                "floor); frees the interior gradient budget onto the band (UNIWARD satisficing); "
                "MASK-BY-STAGE at l7 preserves the tau-anneal; default-OFF; advisory until byte-closed"))
 

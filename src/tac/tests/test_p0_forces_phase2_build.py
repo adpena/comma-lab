@@ -100,16 +100,22 @@ def test_dsl_temporal_screw_rejects_bad_xi_source():
 def test_dsl_margin_satisfice_factory_emits_flags():
     lev = MarginBandSatisficing()
     assert lev.name == "margin_band_satisficing"
-    assert lev.overrides["--seg-margin-satisfice-msafe"] == pytest.approx(0.06)   # 3*delta_R
-    assert lev.overrides["--seg-margin-satisfice-delta-r"] == pytest.approx(0.0196)  # MEASURED floor
+    delta_r = lev.overrides["--seg-margin-satisfice-delta-r"]
+    headroom = lev.overrides["--seg-margin-satisfice-headroom"]
+    assert delta_r == pytest.approx(0.019590163230895963)  # MEASURED artifact floor
+    assert headroom == pytest.approx(2.0)  # DERIVED minimum covering full-R annulus p95
+    assert lev.overrides["--seg-margin-satisfice-msafe"] == pytest.approx(
+        headroom * delta_r
+    )
 
 
-def test_dsl_margin_satisfice_rejects_msafe_below_delta_r():
-    # m_safe below the measured R-noise floor => the hinge saturates inside noise = pointless (#2).
-    with pytest.raises(ValueError, match="delta_r"):
-        MarginBandSatisficing(msafe=0.01, delta_r=0.0196)
-    # exactly at the floor is allowed (>=)
-    assert MarginBandSatisficing(msafe=0.0196, delta_r=0.0196) is not None
+def test_dsl_margin_satisfice_rejects_msafe_not_derived_from_delta_r():
+    # Any independently supplied m_safe must equal headroom*delta_R; merely
+    # sitting above/below the floor is no longer sufficient provenance.
+    with pytest.raises(ValueError, match="canonical invariant"):
+        MarginBandSatisficing(msafe=0.01)
+    with pytest.raises(ValueError, match="canonical invariant"):
+        MarginBandSatisficing(msafe=0.019590163230895963)
 
 
 # --------------------------------------------------------------------------- FORCE 3: tie-locus + w_e
