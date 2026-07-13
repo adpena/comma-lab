@@ -17073,3 +17073,18 @@ variant · W8A8 (still unmeasured). THE MEASURED TRADE CURVE: 38× speed ↔ 2.4
 heterogeneous-assignment table now has real endpoints. FRESH A/B RESPAWN: governor fail-closed correctly
 (projected 90.0 > 87.4 GiB ceiling; fleet itself holds 68.3 GiB) — re-fires on fleet drain, not blocked
 intrinsically.
+
+## FEED-custom-metal-conv-20260713 (pointer node; full FEED in custom_metal_conv_DAG_FEED_20260713.md + MAIN-LOCAL measured rows)
+Custom Metal conv (#478) [BUILT + MAIN-LOCAL MEASURED — sandbox lacked Metal, main ran the recorded 4-pair bench:
+39 pointwise + 14 depthwise rows in the receipt]: (1) SHAPE CENSUS PRIOR-CORRECTION: pointwise = 89.54% of
+ENCODER MACs but only 22.39% of FULL SegNet (smp-Unet decoder dense convs = 75.43%) — structural pointwise
+ceiling 1.326× fwd / 1.237× wall; my "70% pointwise" prior was encoder-only thinking. (2) MEASURED VERDICT:
+custom kernels LOSE to MLX native at real shapes — verdict_scope: formulation — this simdgroup implementation
+on this M5 host: shape-weighted pointwise fp16 0.651× / int8 0.855× / int4 0.816×; depthwise fp16 weighted
+0.967× (bandwidth thesis UNCONFIRMED — isolated shapes hit 2.2-3.5× but weighted ≈ parity); direct full-forward
+0.76-0.79×; all training-wall projections <1.0. MLX native conv is well-optimized ⟹ custom-Metal conv is
+DOMINATED by both MLX-native and the ANE path; pool row stays built-never-fired with the measured-loser note.
+(3) THE GOLD DATUM for ANE R0 decomposition: full-forward MLX flip rates on real frames = fp16 0.0584% ·
+int8 0.783% · int4 10.84% ⟹ fp16 ARITHMETIC is benign (consistent with the earlier 0.0033% MLX measurement) —
+ANE's 2.47% must originate in MIL op substitution / ANE-specific behavior, NOT fp16 per se → routes the
+ane_unlock_correction arm's R0 directly. 23 tests green.
