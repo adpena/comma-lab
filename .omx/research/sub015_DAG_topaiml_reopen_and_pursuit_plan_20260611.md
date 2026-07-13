@@ -17584,3 +17584,31 @@ recursive MoME/clipped-difference estimator, anytime A_p residual envelope, fixe
   clipped-difference variance-reduction as a MONITORING signal (residual-envelope early-stop) even where the
   convergence theorem doesn't strictly admit. Complementary to heavy_tail (estimator tail) — VR-GHAL = ITERATION
   convergence residual. DSL leg N/A (measurement/reliability).
+
+---
+
+## FEED-pre-se-reopen-a-20260713 (#488 DONE — composed cheap-globals+multi-source reopen: tileability SOLVED, retained-mass FAMILY-KILL)
+
+Research-only. Pointer UNMOVED. MEANS. n600 real (480 inherited + 120 heldout, all 120 costate hashes matched,
+0 retries; realized area 0.04702; oracle 0.5278). Arm committed its own build 289a077f02 (memo
+`pre_se_multi_source_reopen_20260713.md`, receipt sha a092dd5c, eq + DAG FEED file, 26 tests, 2 clean review
+passes). Consumes the heavy_tail catch (prefer ridge rung) + closes the #484 reformulation-(a)/(b).
+- **tileable-modulo-cheap-globals = CONFIRMED Y** (the operator-grant reopen worked at the tileability axis):
+  the SE-global contamination is only **7 unique** upstream reductions (4+7=11 double-counts shared ancestors),
+  computed once = **16,864,000 FLOPs / 864 broadcast scalars**, then broadcast to independently-tiled convs →
+  DERIVED true per-tile operational cost 1,049,488,384 fwd+VJP FLOPs (RF/stride/halo 111/8/56). So the strict
+  end-to-end tileability kill (pre_se_locus) IS liftable — the cheap-globals framing was correct.
+- **BUT retained-mass = FAIL, multi-source could not rescue it:** block2/block3/joint × {convex, nonlinear} —
+  best multi-source 0.1123 convex / 0.3156 nonlinear vs the 0.47 bar; best joint gain over block3 alone only
+  **+0.00238**. The binding failure was ALWAYS retained-mass, orthogonal to tileability; cheap-globals bought
+  the axis that was never the blocker.
+- **verdict_scope = RETAINED-MASS-FAMILY-KILL (req-R satisfied):** ≥4 structurally distinct formulations fail
+  (block2 · block3 · joint-multi-source, each convex + nonlinear) PLUS the structural cause — the pre-SE
+  feature manifold does not CARRY enough boundary-localization mass at 4.70% area regardless of source
+  composition or tileability. NOT a paradigm kill.
+- **Reformulation queue (the cheap-teacher paradigm's surviving route):** the **#455 whole-teacher DISTILLED
+  student** — needs NO tileability and NO single-feature-source (it distills the full teacher fwd+bwd over the
+  boundary region), so it is untouched by BOTH the tileability wall (now lifted anyway) and the retained-mass
+  wall (it isn't a feature-source localizer). Also: FORE-successor / costlier learned rungs (round-4 queue).
+  The cheap-PRE-SE localizer family is CLOSED; the distilled-student family is where the 95%-kill
+  whole-teacher-over-boundary hedge now lives. DSL leg N/A (measurement; policy file is generic-registry-covered).
