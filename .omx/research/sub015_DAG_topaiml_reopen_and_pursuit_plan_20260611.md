@@ -17045,3 +17045,16 @@ owed-16 n600; FreSh cold-start delta UNMEASURED → trim NOT claimed score-neutr
 PREPARED (r2_..._after_GO.sh). R3 SSD root: agent PermissionError was SANDBOX-only — main created
 /Volumes/VertigoDataTier/pact/witness_runs. R4 remaining REAL producer gaps: D-A 8-field component timers +
 D-B engagement callbacks (boundary rows land but don't emit these) — the LAST build before the GO decision.
+
+## FEED-precision-matrix-20260713 (pointer node; full FEED in precision_backend_matrix_DAG_FEED_20260713.md)
+Precision×backend matrix (#477) [existence MEASURED/receipted + main-local measurement]: (1) int16 conv ABSENT
+as usable on all Apple backends — CPU exposes only an overflowing raw primitive (operator's int16 question
+answered: NO; fp16+int8 are the hardware formats). (2) fp32/fp16 conv broad; W8A8 on CPU + CoreML/ANE (MPSCNN
+dequantizes uint8→fp16; CoreML documents TRUE W8A8 NE acceleration on M4-class). (3) MAIN-LOCAL MEASURED
+(sandbox lacked Metal — run by main): im2col+quantized_matmul at the SegNet STEM = 0.416× vs fp32 conv (2.4×
+SLOWER) — verdict_scope: instance — the 3×3 stride-2 stem on this M5 host (im2col patch overhead dominates);
+the pointwise-1×1 rung (im2col ≈ free) stays OPEN with the custom-Metal build arm. (4) A2 ANE latency still
+owed (sandbox DNS blocked coremltools; main-local scratch-venv run queued). (5) Current optimal assignment
+UNCHANGED (MLX-fp32 fwd + custom-Metal bwd + async CPU verdict); DERIVED ceilings 4.545× (95%-kill perfect) /
+3.861× (ANE −95% forward) — composed claim REFUSED until A2/A3 measured. CPU W8A8 stem 1.006×@B1 / 1.219×@B8
+= existence evidence only (synthetic weights). 5 buildable candidates pooled via record_candidate.
