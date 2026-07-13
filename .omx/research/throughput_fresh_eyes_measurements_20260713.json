@@ -1,0 +1,979 @@
+{
+  "authority": {
+    "axis": "[macOS local wall-clock advisory] NON-PROMOTABLE",
+    "evidence": "MEASURED artifact fields plus explicitly DERIVED arithmetic",
+    "means_caveat": "throughput is MEANS; only a byte-closed exact row moves score",
+    "pointer_moved": false,
+    "score_claim": false
+  },
+  "equation_id": "async_overlap_and_inclusive_vjp_throughput_v1",
+  "generated_at_utc": "2026-07-13T23:15:41Z",
+  "microbatch_comparison": {
+    "arms": [
+      {
+        "epoch_speedup_vs_B1": 1.0,
+        "git_sha": "55b1f50527ce9ffcd80bbead1a6fa7783a572421",
+        "median_epoch_s": 15.192350000000001,
+        "median_step_s": 9.17485,
+        "median_verdict_s": 5.99245,
+        "micro_batch_pairs": 1,
+        "path": "experiments/results/mb_twin_ab_20260705/B1/run.log",
+        "profile_row_count": 2,
+        "step_speedup_vs_B1": 1.0
+      },
+      {
+        "epoch_speedup_vs_B1": 1.0359950901837771,
+        "git_sha": "701544bf68367cde613c8aea28a7fe977a2daacf",
+        "median_epoch_s": 14.6645,
+        "median_step_s": 9.165600000000001,
+        "median_verdict_s": 5.475899999999999,
+        "micro_batch_pairs": 2,
+        "path": "experiments/results/mb_twin_ab_20260705/B2/run.log",
+        "profile_row_count": 2,
+        "step_speedup_vs_B1": 1.0010092083442435
+      },
+      {
+        "epoch_speedup_vs_B1": 0.828094722871011,
+        "git_sha": "55b1f50527ce9ffcd80bbead1a6fa7783a572421",
+        "median_epoch_s": 18.34615,
+        "median_step_s": 11.5094,
+        "median_verdict_s": 6.8111,
+        "micro_batch_pairs": 4,
+        "path": "experiments/results/mb_twin_ab_20260705/B4/run.log",
+        "profile_row_count": 2,
+        "step_speedup_vs_B1": 0.7971614506403462
+      },
+      {
+        "epoch_speedup_vs_B1": 0.6481364160912627,
+        "git_sha": "701544bf68367cde613c8aea28a7fe977a2daacf",
+        "median_epoch_s": 23.44005,
+        "median_step_s": 16.5096,
+        "median_verdict_s": 6.9014,
+        "micro_batch_pairs": 8,
+        "path": "experiments/results/mb_twin_ab_20260705/B8/run.log",
+        "profile_row_count": 2,
+        "step_speedup_vs_B1": 0.5557281823908514
+      }
+    ],
+    "current_v9_in_loop_transfer_established": false,
+    "pairing_caveat": "two profile rows per separately launched arm; git SHAs may differ; no ABBA thermal control",
+    "score_claim": false,
+    "status": "MEASURED_HISTORICAL_N24_DIAGNOSTIC__NOT_CURRENT_V9_AUTHORITY"
+  },
+  "runs": [
+    {
+      "async_done_count": 5,
+      "async_identifiability": {
+        "cadence_miss_count": 0,
+        "contention_identified": false,
+        "contention_penalty_fraction": null,
+        "evidence_label": "MEASURED_CADENCE_EVENTS__CONTENTION_UNMEASURED",
+        "no_cadence_miss_measured": true,
+        "req_r": "re-run a matched solo/concurrent A/B when host load, frozen-scorer build, thread binding, MLX build, batch geometry, or verdict cadence changes",
+        "verdict_scope": "wall-clock MEANS accounting on a matched host/config only; no transfer to contest-CPU/CUDA, score, archive, fidelity, or promotion"
+      },
+      "async_service_s_median": 1500.4,
+      "completion_interval_s_per_epoch_median": 169.72,
+      "completion_windows": [
+        {
+          "async_service_s": null,
+          "completion_interval_s": 5354.0,
+          "completion_interval_s_per_epoch": 214.16,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 25,
+          "epoch_delta": 25,
+          "service_over_completion_interval": null,
+          "start_epoch": 0
+        },
+        {
+          "async_service_s": 1410.7,
+          "completion_interval_s": 4162.0,
+          "completion_interval_s_per_epoch": 166.48,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 50,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.33894762133589623,
+          "start_epoch": 25
+        },
+        {
+          "async_service_s": 1500.4,
+          "completion_interval_s": 4640.0,
+          "completion_interval_s_per_epoch": 185.6,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 75,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3233620689655173,
+          "start_epoch": 50
+        },
+        {
+          "async_service_s": 1461.7,
+          "completion_interval_s": 3952.0,
+          "completion_interval_s_per_epoch": 158.08,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 100,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.36986336032388667,
+          "start_epoch": 75
+        },
+        {
+          "async_service_s": 1517.3,
+          "completion_interval_s": 4243.0,
+          "completion_interval_s_per_epoch": 169.72,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 125,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3576007541833608,
+          "start_epoch": 100
+        }
+      ],
+      "component_timing": {
+        "additivity_refused": true,
+        "complete_row_count": 0,
+        "measurement_scope": [],
+        "median_seconds": {
+          "checkpoint_io_s": null,
+          "epoch_total_s": null,
+          "realized_R_s": null,
+          "teacher_backward_s": null,
+          "teacher_forward_s": null,
+          "verdict_s": null,
+          "witness_backward_s": null,
+          "witness_forward_s": null
+        },
+        "reason": "teacher_backward_s and witness_backward_s include their required forward; observed fields cannot be summed into epoch_total_s",
+        "row_count": 0,
+        "teacher_incremental_vjp_median_s": null,
+        "teacher_incremental_vjp_unresolved_rows": 0
+      },
+      "contention_penalty_fraction": null,
+      "contention_status": "UNMEASURED_NO_MATCHED_SOLO_ARM",
+      "json_row_count": 4037,
+      "line_count": 4038,
+      "malformed_json_line_count": 0,
+      "n_pairs": 600,
+      "path": "experiments/results/levelset_n600_witness_20260705T015247Z/run.log",
+      "profile_timing_rows": [],
+      "provenance": {
+        "git_dirty": true,
+        "git_sha": "c85a36cf5255eed649ad794bdd87fae1c2c927b4",
+        "seed": 0,
+        "stage": "provenance",
+        "upstream_snapshot_sha256": "d46d89155dbf0848e357858c8f62e12ef450a2914ef65814a4359ef6768d2d41"
+      },
+      "service_over_completion_interval_median": 0.3482741877596285,
+      "verdict_count": 6,
+      "verdict_skip_count": 0
+    },
+    {
+      "async_done_count": 9,
+      "async_identifiability": {
+        "cadence_miss_count": 0,
+        "contention_identified": false,
+        "contention_penalty_fraction": null,
+        "evidence_label": "MEASURED_CADENCE_EVENTS__CONTENTION_UNMEASURED",
+        "no_cadence_miss_measured": true,
+        "req_r": "re-run a matched solo/concurrent A/B when host load, frozen-scorer build, thread binding, MLX build, batch geometry, or verdict cadence changes",
+        "verdict_scope": "wall-clock MEANS accounting on a matched host/config only; no transfer to contest-CPU/CUDA, score, archive, fidelity, or promotion"
+      },
+      "async_service_s_median": 2238.3,
+      "completion_interval_s_per_epoch_median": 295.56,
+      "completion_windows": [
+        {
+          "async_service_s": null,
+          "completion_interval_s": 6755.0,
+          "completion_interval_s_per_epoch": 293.69565217391306,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 25,
+          "epoch_delta": 23,
+          "service_over_completion_interval": null,
+          "start_epoch": 2
+        },
+        {
+          "async_service_s": 2194.3,
+          "completion_interval_s": 7416.0,
+          "completion_interval_s_per_epoch": 296.64,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 50,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.2958872707659116,
+          "start_epoch": 25
+        },
+        {
+          "async_service_s": 2320.9,
+          "completion_interval_s": 7555.0,
+          "completion_interval_s_per_epoch": 302.2,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 75,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3072005294506949,
+          "start_epoch": 50
+        },
+        {
+          "async_service_s": 2278.0,
+          "completion_interval_s": 7363.0,
+          "completion_interval_s_per_epoch": 294.52,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 100,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.30938476164606815,
+          "start_epoch": 75
+        },
+        {
+          "async_service_s": 2249.1,
+          "completion_interval_s": 7293.0,
+          "completion_interval_s_per_epoch": 291.72,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 125,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3083916083916084,
+          "start_epoch": 100
+        },
+        {
+          "async_service_s": 2189.9,
+          "completion_interval_s": 7389.0,
+          "completion_interval_s_per_epoch": 295.56,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 150,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.2963729868723779,
+          "start_epoch": 125
+        },
+        {
+          "async_service_s": 2249.6,
+          "completion_interval_s": 7441.0,
+          "completion_interval_s_per_epoch": 297.64,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 175,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3023249563230748,
+          "start_epoch": 150
+        },
+        {
+          "async_service_s": 2237.0,
+          "completion_interval_s": 7377.0,
+          "completion_interval_s_per_epoch": 295.08,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 200,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3032397993764403,
+          "start_epoch": 175
+        },
+        {
+          "async_service_s": 2238.3,
+          "completion_interval_s": 7444.0,
+          "completion_interval_s_per_epoch": 297.76,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 225,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.30068511552928534,
+          "start_epoch": 200
+        }
+      ],
+      "component_timing": {
+        "additivity_refused": true,
+        "complete_row_count": 0,
+        "measurement_scope": [],
+        "median_seconds": {
+          "checkpoint_io_s": null,
+          "epoch_total_s": null,
+          "realized_R_s": null,
+          "teacher_backward_s": null,
+          "teacher_forward_s": null,
+          "verdict_s": null,
+          "witness_backward_s": null,
+          "witness_forward_s": null
+        },
+        "reason": "teacher_backward_s and witness_backward_s include their required forward; observed fields cannot be summed into epoch_total_s",
+        "row_count": 0,
+        "teacher_incremental_vjp_median_s": null,
+        "teacher_incremental_vjp_unresolved_rows": 0
+      },
+      "contention_penalty_fraction": null,
+      "contention_status": "UNMEASURED_NO_MATCHED_SOLO_ARM",
+      "json_row_count": 592,
+      "line_count": 594,
+      "malformed_json_line_count": 0,
+      "n_pairs": 600,
+      "path": "experiments/results/levelset_v752_baseline_20260710T185913Z/run.log",
+      "profile_timing_rows": [],
+      "provenance": {
+        "git_dirty": true,
+        "git_sha": "6a34b66d6966546c4a3d677dc2f70879cd54a342",
+        "seed": 0,
+        "stage": "provenance",
+        "upstream_snapshot_sha256": "d46d89155dbf0848e357858c8f62e12ef450a2914ef65814a4359ef6768d2d41"
+      },
+      "service_over_completion_interval_median": 0.3027823778497576,
+      "verdict_count": 10,
+      "verdict_skip_count": 0
+    },
+    {
+      "async_done_count": 11,
+      "async_identifiability": {
+        "cadence_miss_count": 0,
+        "contention_identified": false,
+        "contention_penalty_fraction": null,
+        "evidence_label": "MEASURED_CADENCE_EVENTS__CONTENTION_UNMEASURED",
+        "no_cadence_miss_measured": true,
+        "req_r": "re-run a matched solo/concurrent A/B when host load, frozen-scorer build, thread binding, MLX build, batch geometry, or verdict cadence changes",
+        "verdict_scope": "wall-clock MEANS accounting on a matched host/config only; no transfer to contest-CPU/CUDA, score, archive, fidelity, or promotion"
+      },
+      "async_service_s_median": 2434.9,
+      "completion_interval_s_per_epoch_median": 282.96,
+      "completion_windows": [
+        {
+          "async_service_s": null,
+          "completion_interval_s": 7178.0,
+          "completion_interval_s_per_epoch": 287.12,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 25,
+          "epoch_delta": 25,
+          "service_over_completion_interval": null,
+          "start_epoch": 0
+        },
+        {
+          "async_service_s": 2377.6,
+          "completion_interval_s": 6722.0,
+          "completion_interval_s_per_epoch": 268.88,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 50,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.35370425468610533,
+          "start_epoch": 25
+        },
+        {
+          "async_service_s": 2445.4,
+          "completion_interval_s": 7474.0,
+          "completion_interval_s_per_epoch": 298.96,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 75,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3271875836232272,
+          "start_epoch": 50
+        },
+        {
+          "async_service_s": 2473.6,
+          "completion_interval_s": 7074.0,
+          "completion_interval_s_per_epoch": 282.96,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 100,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3496748657054,
+          "start_epoch": 75
+        },
+        {
+          "async_service_s": 2417.9,
+          "completion_interval_s": 7073.0,
+          "completion_interval_s_per_epoch": 282.92,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 125,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.34184928601724873,
+          "start_epoch": 100
+        },
+        {
+          "async_service_s": 2434.9,
+          "completion_interval_s": 7041.0,
+          "completion_interval_s_per_epoch": 281.64,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 150,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3458173554892771,
+          "start_epoch": 125
+        },
+        {
+          "async_service_s": 2422.0,
+          "completion_interval_s": 7090.0,
+          "completion_interval_s_per_epoch": 283.6,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 175,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.341607898448519,
+          "start_epoch": 150
+        },
+        {
+          "async_service_s": 2430.4,
+          "completion_interval_s": 7069.0,
+          "completion_interval_s_per_epoch": 282.76,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 200,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3438110057999717,
+          "start_epoch": 175
+        },
+        {
+          "async_service_s": 2449.5,
+          "completion_interval_s": 7035.0,
+          "completion_interval_s_per_epoch": 281.4,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 225,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.34818763326226015,
+          "start_epoch": 200
+        },
+        {
+          "async_service_s": 2427.3,
+          "completion_interval_s": 7135.0,
+          "completion_interval_s_per_epoch": 285.4,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 250,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3401962158374212,
+          "start_epoch": 225
+        },
+        {
+          "async_service_s": 2458.3,
+          "completion_interval_s": 7179.0,
+          "completion_interval_s_per_epoch": 287.16,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 275,
+          "epoch_delta": 25,
+          "service_over_completion_interval": 0.3424293077030227,
+          "start_epoch": 250
+        }
+      ],
+      "component_timing": {
+        "additivity_refused": true,
+        "complete_row_count": 0,
+        "measurement_scope": [],
+        "median_seconds": {
+          "checkpoint_io_s": null,
+          "epoch_total_s": null,
+          "realized_R_s": null,
+          "teacher_backward_s": null,
+          "teacher_forward_s": null,
+          "verdict_s": null,
+          "witness_backward_s": null,
+          "witness_forward_s": null
+        },
+        "reason": "teacher_backward_s and witness_backward_s include their required forward; observed fields cannot be summed into epoch_total_s",
+        "row_count": 0,
+        "teacher_incremental_vjp_median_s": null,
+        "teacher_incremental_vjp_unresolved_rows": 0
+      },
+      "contention_penalty_fraction": null,
+      "contention_status": "UNMEASURED_NO_MATCHED_SOLO_ARM",
+      "json_row_count": 813,
+      "line_count": 816,
+      "malformed_json_line_count": 0,
+      "n_pairs": 600,
+      "path": "experiments/results/v9_cgauge_432_coherent_arm_20260711/run.log",
+      "profile_timing_rows": [],
+      "provenance": {
+        "git_dirty": true,
+        "git_sha": "462b99370128d510488cd42faa6ef2aa7270df48",
+        "seed": 0,
+        "stage": "provenance",
+        "upstream_snapshot_sha256": "d46d89155dbf0848e357858c8f62e12ef450a2914ef65814a4359ef6768d2d41"
+      },
+      "service_over_completion_interval_median": 0.3431201567514972,
+      "verdict_count": 12,
+      "verdict_skip_count": 0
+    },
+    {
+      "async_done_count": 0,
+      "async_identifiability": {
+        "cadence_miss_count": 0,
+        "contention_identified": false,
+        "contention_penalty_fraction": null,
+        "evidence_label": "MEASURED_CADENCE_EVENTS__CONTENTION_UNMEASURED",
+        "no_cadence_miss_measured": true,
+        "req_r": "re-run a matched solo/concurrent A/B when host load, frozen-scorer build, thread binding, MLX build, batch geometry, or verdict cadence changes",
+        "verdict_scope": "wall-clock MEANS accounting on a matched host/config only; no transfer to contest-CPU/CUDA, score, archive, fidelity, or promotion"
+      },
+      "async_service_s_median": null,
+      "completion_interval_s_per_epoch_median": 10.5,
+      "completion_windows": [
+        {
+          "async_service_s": null,
+          "completion_interval_s": 26.0,
+          "completion_interval_s_per_epoch": 8.666666666666666,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 3,
+          "epoch_delta": 3,
+          "service_over_completion_interval": null,
+          "start_epoch": 0
+        },
+        {
+          "async_service_s": null,
+          "completion_interval_s": 37.0,
+          "completion_interval_s_per_epoch": 12.333333333333334,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 6,
+          "epoch_delta": 3,
+          "service_over_completion_interval": null,
+          "start_epoch": 3
+        }
+      ],
+      "component_timing": {
+        "additivity_refused": true,
+        "complete_row_count": 0,
+        "measurement_scope": [],
+        "median_seconds": {
+          "checkpoint_io_s": null,
+          "epoch_total_s": null,
+          "realized_R_s": null,
+          "teacher_backward_s": null,
+          "teacher_forward_s": null,
+          "verdict_s": null,
+          "witness_backward_s": null,
+          "witness_forward_s": null
+        },
+        "reason": "teacher_backward_s and witness_backward_s include their required forward; observed fields cannot be summed into epoch_total_s",
+        "row_count": 0,
+        "teacher_incremental_vjp_median_s": null,
+        "teacher_incremental_vjp_unresolved_rows": 0
+      },
+      "contention_penalty_fraction": null,
+      "contention_status": "UNMEASURED_NO_MATCHED_SOLO_ARM",
+      "json_row_count": 31,
+      "line_count": 58,
+      "malformed_json_line_count": 4,
+      "n_pairs": 24,
+      "path": "experiments/results/mb_twin_ab_20260705/B1/run.log",
+      "profile_timing_rows": [
+        {
+          "R_fraction_of_step_est": 0.0208,
+          "R_isolated": {
+            "fused_fwd_ms_per_frame": 0.2795,
+            "fused_fwd_speedup": 8.222,
+            "fused_fwdbwd_ms_per_frame": 0.5381,
+            "fused_fwdbwd_speedup": 5.626,
+            "n_frames": 2,
+            "ref_fwd_ms_per_frame": 2.2981,
+            "ref_fwdbwd_ms_per_frame": 3.0274,
+            "render_hw": [
+              384,
+              512
+            ],
+            "reps": 15
+          },
+          "epoch": 3,
+          "frames_per_epoch": 48,
+          "fused_r_active": false,
+          "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl 1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED",
+          "stage": "profile_timing",
+          "t_epoch_s": 12.0587,
+          "t_overhead_s": 0.0264,
+          "t_step_fwd_bwd_opt_ema_s": 6.9774,
+          "t_verdict_s": 5.055
+        },
+        {
+          "R_fraction_of_step_est": 0.0268,
+          "R_isolated": {
+            "fused_fwd_ms_per_frame": 0.3666,
+            "fused_fwd_speedup": 12.058,
+            "fused_fwdbwd_ms_per_frame": 1.0444,
+            "fused_fwdbwd_speedup": 6.083,
+            "n_frames": 2,
+            "ref_fwd_ms_per_frame": 4.4198,
+            "ref_fwdbwd_ms_per_frame": 6.3524,
+            "render_hw": [
+              384,
+              512
+            ],
+            "reps": 15
+          },
+          "epoch": 6,
+          "frames_per_epoch": 48,
+          "fused_r_active": false,
+          "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl 1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED",
+          "stage": "profile_timing",
+          "t_epoch_s": 18.326,
+          "t_overhead_s": 0.0237,
+          "t_step_fwd_bwd_opt_ema_s": 11.3723,
+          "t_verdict_s": 6.9299
+        }
+      ],
+      "provenance": {
+        "git_dirty": true,
+        "git_sha": "55b1f50527ce9ffcd80bbead1a6fa7783a572421",
+        "seed": 0,
+        "stage": "provenance",
+        "upstream_snapshot_sha256": "d46d89155dbf0848e357858c8f62e12ef450a2914ef65814a4359ef6768d2d41"
+      },
+      "service_over_completion_interval_median": null,
+      "verdict_count": 3,
+      "verdict_skip_count": 0
+    },
+    {
+      "async_done_count": 0,
+      "async_identifiability": {
+        "cadence_miss_count": 0,
+        "contention_identified": false,
+        "contention_penalty_fraction": null,
+        "evidence_label": "MEASURED_CADENCE_EVENTS__CONTENTION_UNMEASURED",
+        "no_cadence_miss_measured": true,
+        "req_r": "re-run a matched solo/concurrent A/B when host load, frozen-scorer build, thread binding, MLX build, batch geometry, or verdict cadence changes",
+        "verdict_scope": "wall-clock MEANS accounting on a matched host/config only; no transfer to contest-CPU/CUDA, score, archive, fidelity, or promotion"
+      },
+      "async_service_s_median": null,
+      "completion_interval_s_per_epoch_median": 12.166666666666668,
+      "completion_windows": [
+        {
+          "async_service_s": null,
+          "completion_interval_s": 39.0,
+          "completion_interval_s_per_epoch": 13.0,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 3,
+          "epoch_delta": 3,
+          "service_over_completion_interval": null,
+          "start_epoch": 0
+        },
+        {
+          "async_service_s": null,
+          "completion_interval_s": 34.0,
+          "completion_interval_s_per_epoch": 11.333333333333334,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 6,
+          "epoch_delta": 3,
+          "service_over_completion_interval": null,
+          "start_epoch": 3
+        }
+      ],
+      "component_timing": {
+        "additivity_refused": true,
+        "complete_row_count": 0,
+        "measurement_scope": [],
+        "median_seconds": {
+          "checkpoint_io_s": null,
+          "epoch_total_s": null,
+          "realized_R_s": null,
+          "teacher_backward_s": null,
+          "teacher_forward_s": null,
+          "verdict_s": null,
+          "witness_backward_s": null,
+          "witness_forward_s": null
+        },
+        "reason": "teacher_backward_s and witness_backward_s include their required forward; observed fields cannot be summed into epoch_total_s",
+        "row_count": 0,
+        "teacher_incremental_vjp_median_s": null,
+        "teacher_incremental_vjp_unresolved_rows": 0
+      },
+      "contention_penalty_fraction": null,
+      "contention_status": "UNMEASURED_NO_MATCHED_SOLO_ARM",
+      "json_row_count": 32,
+      "line_count": 59,
+      "malformed_json_line_count": 4,
+      "n_pairs": 24,
+      "path": "experiments/results/mb_twin_ab_20260705/B2/run.log",
+      "profile_timing_rows": [
+        {
+          "R_fraction_of_step_est": 0.0281,
+          "R_isolated": {
+            "fused_fwd_ms_per_frame": 0.5606,
+            "fused_fwd_speedup": 9.338,
+            "fused_fwdbwd_ms_per_frame": 1.1195,
+            "fused_fwdbwd_speedup": 5.83,
+            "n_frames": 2,
+            "ref_fwd_ms_per_frame": 5.2355,
+            "ref_fwdbwd_ms_per_frame": 6.5272,
+            "render_hw": [
+              384,
+              512
+            ],
+            "reps": 15
+          },
+          "epoch": 3,
+          "frames_per_epoch": 48,
+          "fused_r_active": false,
+          "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl 1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED",
+          "stage": "profile_timing",
+          "t_epoch_s": 17.0479,
+          "t_overhead_s": 0.0301,
+          "t_step_fwd_bwd_opt_ema_s": 11.1552,
+          "t_verdict_s": 5.8626
+        },
+        {
+          "R_fraction_of_step_est": 0.0202,
+          "R_isolated": {
+            "fused_fwd_ms_per_frame": 0.2841,
+            "fused_fwd_speedup": 8.123,
+            "fused_fwdbwd_ms_per_frame": 0.5649,
+            "fused_fwdbwd_speedup": 5.354,
+            "n_frames": 2,
+            "ref_fwd_ms_per_frame": 2.3075,
+            "ref_fwdbwd_ms_per_frame": 3.0245,
+            "render_hw": [
+              384,
+              512
+            ],
+            "reps": 15
+          },
+          "epoch": 6,
+          "frames_per_epoch": 48,
+          "fused_r_active": false,
+          "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl 1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED",
+          "stage": "profile_timing",
+          "t_epoch_s": 12.2811,
+          "t_overhead_s": 0.0159,
+          "t_step_fwd_bwd_opt_ema_s": 7.176,
+          "t_verdict_s": 5.0892
+        }
+      ],
+      "provenance": {
+        "git_dirty": true,
+        "git_sha": "701544bf68367cde613c8aea28a7fe977a2daacf",
+        "seed": 0,
+        "stage": "provenance",
+        "upstream_snapshot_sha256": "d46d89155dbf0848e357858c8f62e12ef450a2914ef65814a4359ef6768d2d41"
+      },
+      "service_over_completion_interval_median": null,
+      "verdict_count": 3,
+      "verdict_skip_count": 0
+    },
+    {
+      "async_done_count": 0,
+      "async_identifiability": {
+        "cadence_miss_count": 0,
+        "contention_identified": false,
+        "contention_penalty_fraction": null,
+        "evidence_label": "MEASURED_CADENCE_EVENTS__CONTENTION_UNMEASURED",
+        "no_cadence_miss_measured": true,
+        "req_r": "re-run a matched solo/concurrent A/B when host load, frozen-scorer build, thread binding, MLX build, batch geometry, or verdict cadence changes",
+        "verdict_scope": "wall-clock MEANS accounting on a matched host/config only; no transfer to contest-CPU/CUDA, score, archive, fidelity, or promotion"
+      },
+      "async_service_s_median": null,
+      "completion_interval_s_per_epoch_median": 13.833333333333332,
+      "completion_windows": [
+        {
+          "async_service_s": null,
+          "completion_interval_s": 41.0,
+          "completion_interval_s_per_epoch": 13.666666666666666,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 3,
+          "epoch_delta": 3,
+          "service_over_completion_interval": null,
+          "start_epoch": 0
+        },
+        {
+          "async_service_s": null,
+          "completion_interval_s": 42.0,
+          "completion_interval_s_per_epoch": 14.0,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 6,
+          "epoch_delta": 3,
+          "service_over_completion_interval": null,
+          "start_epoch": 3
+        }
+      ],
+      "component_timing": {
+        "additivity_refused": true,
+        "complete_row_count": 0,
+        "measurement_scope": [],
+        "median_seconds": {
+          "checkpoint_io_s": null,
+          "epoch_total_s": null,
+          "realized_R_s": null,
+          "teacher_backward_s": null,
+          "teacher_forward_s": null,
+          "verdict_s": null,
+          "witness_backward_s": null,
+          "witness_forward_s": null
+        },
+        "reason": "teacher_backward_s and witness_backward_s include their required forward; observed fields cannot be summed into epoch_total_s",
+        "row_count": 0,
+        "teacher_incremental_vjp_median_s": null,
+        "teacher_incremental_vjp_unresolved_rows": 0
+      },
+      "contention_penalty_fraction": null,
+      "contention_status": "UNMEASURED_NO_MATCHED_SOLO_ARM",
+      "json_row_count": 32,
+      "line_count": 59,
+      "malformed_json_line_count": 4,
+      "n_pairs": 24,
+      "path": "experiments/results/mb_twin_ab_20260705/B4/run.log",
+      "profile_timing_rows": [
+        {
+          "R_fraction_of_step_est": 0.0217,
+          "R_isolated": {
+            "fused_fwd_ms_per_frame": 0.4962,
+            "fused_fwd_speedup": 12.152,
+            "fused_fwdbwd_ms_per_frame": 0.9281,
+            "fused_fwdbwd_speedup": 5.568,
+            "n_frames": 2,
+            "ref_fwd_ms_per_frame": 6.0302,
+            "ref_fwdbwd_ms_per_frame": 5.1676,
+            "render_hw": [
+              384,
+              512
+            ],
+            "reps": 15
+          },
+          "epoch": 3,
+          "frames_per_epoch": 48,
+          "fused_r_active": false,
+          "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl 1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED",
+          "stage": "profile_timing",
+          "t_epoch_s": 18.4816,
+          "t_overhead_s": 0.0245,
+          "t_step_fwd_bwd_opt_ema_s": 11.4363,
+          "t_verdict_s": 7.0207
+        },
+        {
+          "R_fraction_of_step_est": 0.0296,
+          "R_isolated": {
+            "fused_fwd_ms_per_frame": 0.2741,
+            "fused_fwd_speedup": 17.363,
+            "fused_fwdbwd_ms_per_frame": 0.9066,
+            "fused_fwdbwd_speedup": 7.872,
+            "n_frames": 2,
+            "ref_fwd_ms_per_frame": 4.7597,
+            "ref_fwdbwd_ms_per_frame": 7.1361,
+            "render_hw": [
+              384,
+              512
+            ],
+            "reps": 15
+          },
+          "epoch": 6,
+          "frames_per_epoch": 48,
+          "fused_r_active": false,
+          "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl 1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED",
+          "stage": "profile_timing",
+          "t_epoch_s": 18.2107,
+          "t_overhead_s": 0.0267,
+          "t_step_fwd_bwd_opt_ema_s": 11.5825,
+          "t_verdict_s": 6.6015
+        }
+      ],
+      "provenance": {
+        "git_dirty": true,
+        "git_sha": "55b1f50527ce9ffcd80bbead1a6fa7783a572421",
+        "seed": 0,
+        "stage": "provenance",
+        "upstream_snapshot_sha256": "d46d89155dbf0848e357858c8f62e12ef450a2914ef65814a4359ef6768d2d41"
+      },
+      "service_over_completion_interval_median": null,
+      "verdict_count": 3,
+      "verdict_skip_count": 0
+    },
+    {
+      "async_done_count": 0,
+      "async_identifiability": {
+        "cadence_miss_count": 0,
+        "contention_identified": false,
+        "contention_penalty_fraction": null,
+        "evidence_label": "MEASURED_CADENCE_EVENTS__CONTENTION_UNMEASURED",
+        "no_cadence_miss_measured": true,
+        "req_r": "re-run a matched solo/concurrent A/B when host load, frozen-scorer build, thread binding, MLX build, batch geometry, or verdict cadence changes",
+        "verdict_scope": "wall-clock MEANS accounting on a matched host/config only; no transfer to contest-CPU/CUDA, score, archive, fidelity, or promotion"
+      },
+      "async_service_s_median": null,
+      "completion_interval_s_per_epoch_median": 18.166666666666664,
+      "completion_windows": [
+        {
+          "async_service_s": null,
+          "completion_interval_s": 49.0,
+          "completion_interval_s_per_epoch": 16.333333333333332,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 3,
+          "epoch_delta": 3,
+          "service_over_completion_interval": null,
+          "start_epoch": 0
+        },
+        {
+          "async_service_s": null,
+          "completion_interval_s": 60.0,
+          "completion_interval_s_per_epoch": 20.0,
+          "denominator_scope": "DERIVED completion-to-completion interval; not a dispatch-to-dispatch train window",
+          "end_epoch": 6,
+          "epoch_delta": 3,
+          "service_over_completion_interval": null,
+          "start_epoch": 3
+        }
+      ],
+      "component_timing": {
+        "additivity_refused": true,
+        "complete_row_count": 0,
+        "measurement_scope": [],
+        "median_seconds": {
+          "checkpoint_io_s": null,
+          "epoch_total_s": null,
+          "realized_R_s": null,
+          "teacher_backward_s": null,
+          "teacher_forward_s": null,
+          "verdict_s": null,
+          "witness_backward_s": null,
+          "witness_forward_s": null
+        },
+        "reason": "teacher_backward_s and witness_backward_s include their required forward; observed fields cannot be summed into epoch_total_s",
+        "row_count": 0,
+        "teacher_incremental_vjp_median_s": null,
+        "teacher_incremental_vjp_unresolved_rows": 0
+      },
+      "contention_penalty_fraction": null,
+      "contention_status": "UNMEASURED_NO_MATCHED_SOLO_ARM",
+      "json_row_count": 32,
+      "line_count": 59,
+      "malformed_json_line_count": 4,
+      "n_pairs": 24,
+      "path": "experiments/results/mb_twin_ab_20260705/B8/run.log",
+      "profile_timing_rows": [
+        {
+          "R_fraction_of_step_est": 0.0275,
+          "R_isolated": {
+            "fused_fwd_ms_per_frame": 0.5407,
+            "fused_fwd_speedup": 13.243,
+            "fused_fwdbwd_ms_per_frame": 1.7444,
+            "fused_fwdbwd_speedup": 5.094,
+            "n_frames": 2,
+            "ref_fwd_ms_per_frame": 7.1599,
+            "ref_fwdbwd_ms_per_frame": 8.886,
+            "render_hw": [
+              384,
+              512
+            ],
+            "reps": 15
+          },
+          "epoch": 3,
+          "frames_per_epoch": 48,
+          "fused_r_active": false,
+          "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl 1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED",
+          "stage": "profile_timing",
+          "t_epoch_s": 22.4168,
+          "t_overhead_s": 0.0266,
+          "t_step_fwd_bwd_opt_ema_s": 15.5094,
+          "t_verdict_s": 6.8808
+        },
+        {
+          "R_fraction_of_step_est": 0.0267,
+          "R_isolated": {
+            "fused_fwd_ms_per_frame": 0.5833,
+            "fused_fwd_speedup": 13.221,
+            "fused_fwdbwd_ms_per_frame": 1.7386,
+            "fused_fwdbwd_speedup": 5.603,
+            "n_frames": 2,
+            "ref_fwd_ms_per_frame": 7.7118,
+            "ref_fwdbwd_ms_per_frame": 9.7416,
+            "render_hw": [
+              384,
+              512
+            ],
+            "reps": 15
+          },
+          "epoch": 6,
+          "frames_per_epoch": 48,
+          "fused_r_active": false,
+          "note": "R fraction from isolated in-situ R fwd+bwd; whole-run speedup by Amdahl 1/((1-f)+f/su_R); advisory, buys SPEED not score; pointer 0.19110 UNMOVED",
+          "stage": "profile_timing",
+          "t_epoch_s": 24.4633,
+          "t_overhead_s": 0.0314,
+          "t_step_fwd_bwd_opt_ema_s": 17.5098,
+          "t_verdict_s": 6.922
+        }
+      ],
+      "provenance": {
+        "git_dirty": true,
+        "git_sha": "701544bf68367cde613c8aea28a7fe977a2daacf",
+        "seed": 0,
+        "stage": "provenance",
+        "upstream_snapshot_sha256": "d46d89155dbf0848e357858c8f62e12ef450a2914ef65814a4359ef6768d2d41"
+      },
+      "service_over_completion_interval_median": null,
+      "verdict_count": 3,
+      "verdict_skip_count": 0
+    }
+  ],
+  "schema": "witness_throughput_corpus_analysis.v1"
+}

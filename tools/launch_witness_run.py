@@ -383,7 +383,9 @@ def config_family(cfg) -> str:
                                     "v9_cgauge_truly_optimal_core",
                                     "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32",
                                     "next_launch_all_levers_20260713",
-                                    "next_launch_all_levers_trimmed_20260713"):
+                                    "next_launch_all_levers_trimmed_20260713",
+                                    "throughput_component_timer_async_20260713",
+                                    "throughput_component_timer_solo_20260713"):
         return cfg.name
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
@@ -832,6 +834,20 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
                    if config == "next_launch_all_levers_trimmed_20260713" else "full")
         return compile_next_launch_all_levers_ticket(
             gt_cache, num_pairs=num_pairs, variant=variant, **_ek)
+    if config in ("throughput_component_timer_async_20260713",
+                  "throughput_component_timer_solo_20260713"):
+        # Bounded n24, four-epoch, tau=1 (CE-exact) D-A timer and its
+        # matched no-async control. Pure compile here; real actuation still
+        # traverses every governed launcher gate and remains operator-GO-only.
+        from tac.witness_dsl.spec_throughput_component_timer_20260713 import (
+            compile_throughput_component_timer_ticket,
+        )
+
+        variant = ("solo_control"
+                   if config == "throughput_component_timer_solo_20260713"
+                   else "async_current")
+        return compile_throughput_component_timer_ticket(
+            gt_cache, num_pairs=num_pairs, epochs=int(_ek.get("epochs", 4)), variant=variant)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -846,7 +862,9 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
         f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
         f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432, "
         f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, v9_cgauge_ideal_mod32, "
-        f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713. "
+        f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713, "
+        f"throughput_component_timer_async_20260713, "
+        f"throughput_component_timer_solo_20260713. "
         f"Add an explicit branch (NEVER "
         f"silently fall through to proven_base).")
 
@@ -1274,7 +1292,9 @@ def main(argv: list[str] | None = None) -> int:
                              "v9_cgauge_truly_optimal_core",
                              "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32",
                              "next_launch_all_levers_20260713",
-                             "next_launch_all_levers_trimmed_20260713"],
+                             "next_launch_all_levers_trimmed_20260713",
+                             "throughput_component_timer_async_20260713",
+                             "throughput_component_timer_solo_20260713"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
