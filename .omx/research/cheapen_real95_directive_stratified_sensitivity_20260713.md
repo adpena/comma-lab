@@ -24,3 +24,20 @@ low-cadence; ~5-10% every-step), not from the binary annulus alone. Exactness di
 evaluated pixels bit-compare vs full-frame; TIER 1 staleness is a TRAINING-path tolerance (1-thread principle),
 never an authority claim. If you have already built the binary-annulus version, keep it as the ablation control
 and add the waterfilled arm — the A/B between them is itself signal.
+
+## ADDENDUM (operator, same day): the CLASS-LEVEL axis — waterfill = margin × class-pair weight, cadence per class-pair
+Operator: "We also have class level analysis." The spatial tiers under-resolve a MEASURED ~120× per-area sensitivity
+spread across classes. Consume (all measured, committed — do not re-derive):
+- Canonical class order + stats (gt_n600/gt_n96, MEMORY class-index law): 0=Road 22.9% area IoU 0.955 · 1=Lane 0.59%
+  area IoU 0.263 (THE unstable orbit) · 2=Undrivable 49.3% IoU 0.995 · 3=Movable 1.56% IoU 0.903 · 4=MyCar 25.6%
+  IoU 0.994 (static core).
+- d_seg flip mass: ~50% Road / 19% Lane / 13% Undrivable → flip-density per area-share: Lane ≈ 32× · Road ≈ 2.2× ·
+  Undrivable ≈ 0.26× · hood ≈ 0 — a ~120× dynamic range the binary annulus flattens.
+- Per-class-pair machinery already built: σ_cc′ anisotropic surface tension (#382) · per-class λ sensors (#315,
+  #253/#255 attribution) · per-class-λ costate arm (#433, aniso formulation −18%) · L83 ground-plane law (horizon
+  97.5% temporally coherent).
+DIRECTIVE REFINEMENT: the compute waterfill weight = margin-saliency × class-pair sensitivity (flip-density), and
+the TIER-1 refresh CADENCE is PER CLASS-PAIR from measured temporal IoU: Lane-adjacent tiles every step; Movable
+tiles per its 0.903 IoU; Road↔Undrivable horizon at low cadence; hood never. State the derived per-class-pair
+cadences with their IoU provenance. This is the same per-class decomposition v8 carriers use for BYTES, applied to
+FLOPs — third consumer of the same object.
