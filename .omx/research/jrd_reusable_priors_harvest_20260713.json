@@ -1,0 +1,78 @@
+{
+  "schema": "jrd_reusable_priors_harvest.v1",
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "promotion_eligible": false,
+    "score_claim": false,
+    "pointer_moved": false
+  },
+  "sources": {
+    "response_curves": {
+      "path": "experiments/results/jrd_pr110_pointer_completion_20260713T023300Z/section_precision_response_curves.json",
+      "sha256": "ac6ed0960c96a8bcd357da954e6e036824b672b4a4c262757c25e3c233b78cb4"
+    },
+    "n600_receipt": {
+      "path": "experiments/results/jrd_pr110_pointer_completion_20260713T023300Z/measurement_receipt.json",
+      "sha256": "2cdb36ff2b842b72d284368de44a04883a50ab4db6d886ca7402631bcd5eabb8"
+    },
+    "packet_adapter": {
+      "path": "src/tac/packet_compiler/jrd_pr110_coefficient_prefix.py",
+      "sha256": "20dcef88208c7bce20dba39022613b0f4946a85426c3f810b8f2e03832297d9d"
+    }
+  },
+  "n1_screen": {
+    "evidence_label": "MEASURED_N1_SCREEN_NOT_LOAD_BEARING",
+    "eval_pairs": 1,
+    "response_rows": 448,
+    "zero_delta_dseg_rows": 33,
+    "zero_delta_dseg_positive_dpose_rows": 29,
+    "zero_delta_dseg_byte_shrinking_rows": 22,
+    "component_safe_and_byte_shrinking_rows": 0,
+    "zero_delta_dseg_sections": [
+      "refine.1.bias",
+      "rgb_0.bias",
+      "rgb_0.weight"
+    ]
+  },
+  "coefficient_mass": {
+    "measurement_method": "sum packet.sections count partitioned by canonical tensor-name suffix",
+    "bias_coefficients": {
+      "value": 2446,
+      "evidence_label": "MEASURED_PACKET_SCHEMA"
+    },
+    "weight_coefficients": {
+      "value": 226512,
+      "evidence_label": "MEASURED_PACKET_SCHEMA"
+    },
+    "total_coefficients": {
+      "value": 228958,
+      "evidence_label": "MEASURED_PACKET_SCHEMA"
+    },
+    "bias_mass_fraction": {
+      "value": 0.010683182068326942,
+      "evidence_label": "DERIVED"
+    },
+    "weight_mass_fraction": {
+      "value": 0.989316817931673,
+      "evidence_label": "DERIVED"
+    }
+  },
+  "operator_warm_start": {
+    "bias_planes": [5, 6],
+    "weight_planes": [3, 4],
+    "evidence_label": "ASSUMED_OPERATOR_WARM_START",
+    "activation_criterion": "real-GT n600 NumPy-fp32 bit-identical exact-R response receipt with separate d_seg/d_pose and exact archive bytes"
+  },
+  "negative": {
+    "archive_sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e",
+    "archive_bytes": {
+      "value": 177169,
+      "evidence_label": "MEASURED"
+    },
+    "archive_bytes_saved": {
+      "value": 0,
+      "evidence_label": "MEASURED_EXACT"
+    },
+    "verdict_scope": "FORMULATION x INSTANCE: exact PR110 archive plus post-hoc uniform and Laplace-dead-zone int8 prefix cuts"
+  }
+}
