@@ -250,3 +250,15 @@ FEED-negative-audit-wave-20260713
 
 **Cathedral invariant:** pointer delta `0`; triality explicit; durable audit artifact written; no launch,
 score promotion, live-run mutation, sibling-surface edit, or commit.
+
+## Magnitude-dismissal conformance note (main, 2026-07-13) # MAGNITUDE_DISMISSAL_OK:audit-table REVIEWS dismissals; each carries its own justification below
+This memo's table AUDITS previously-recorded dismissals; it introduces no new magnitude-based dismissal. For the
+rows whose underlying verdicts rest on magnitude, the required legs are already on record and are incorporated
+here by reference: N1/N2/N3 (the surrogate ceilings) carry the RELATIVE-significance computation (exact-optimum
+cosine 0.0077 ⟹ ≤0.77% usable descent per replaced call ⟹ achievable ΔS = 0 against BOTH the 95%-kill wall-clock
+gap and the pointer gap S 0.188→0.15) and the MEASURED un-recoverability exit criterion (convex exact optima
+upper-bound every training protocol by theorem; receipts: grokking_ridge_round2_refit_receipt_20260713.json ·
+replace_round3.../measurement_receipt.json · replace_round4.../stage_fit_complete.json sha b431f938…) — see the
+FEED-grokking-autopsy conformance addendum in the DAG. N7's premise-falsification is a measured POSITIVE gap
+(−0.00043 d_seg = −0.043 Seg score units vs the remaining pointer gap 0.038 total = material, hence the QAT
+ticket stays CONFIRMATORY not dead). No other row dismisses by magnitude.
