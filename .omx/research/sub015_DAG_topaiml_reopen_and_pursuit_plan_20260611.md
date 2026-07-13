@@ -17503,6 +17503,15 @@ bias-variance. Memos `heavy_tail_interp_fold_20260713.md` + `_equation_feed_` + 
   holds only under RANDOM-DESIGN proportional asymptotics; OUR designs break it across ≥2 structurally
   distinct interpolators — pre-SE convex rung n/d={2.553,1.446} with CORRELATED unequal heads → no
   theorem-valid ratio; costate organ n/p=0.118-0.471 far from proportional asymptotics). NOT a paradigm kill.
+  **Reformulation queue (untested formulations / alternatives — a QUANTITATIVE tail bound is not dead, only
+  the LITERAL asymptotic transfer):** (a) a FINITE-SAMPLE NON-ASYMPTOTIC concentration/tail bound matched to
+  OUR correlated finite design (Hanson-Wright / matrix-Bernstein for the actual head-covariance structure),
+  which does NOT need proportional asymptotics; (b) EMPIRICAL tail estimation — the $0 cached λ-for-tail sweep
+  produces our OWN measured tail-decay curve (retained-mass quantiles vs λ across heldout costates+seeds),
+  making the reliability quantitative WITHOUT borrowing the paper's rate; (c) a STRUCTURED/anisotropic-design
+  extension of the ridgeless-fragility theorem (correlated-covariance regime) if the literature supplies one.
+  The ADOPT direction below is the qualitative floor available NOW; (a)/(b) are the paths to a quantitative
+  tail claim on our actual designs.
 - **ADOPT (qualitative reliability direction, survives the regime mismatch):** (1) prefer the RIDGE (RankRLS)
   rung over MP/ridgeless for any LOAD-BEARING verdict, conditional on an equal-mean + custody gate; (2) REPORT
   a TAIL-QUANTILE of retained mass across heldout costates+seeds, not just the mean; (3) organ A_ridge_solve
