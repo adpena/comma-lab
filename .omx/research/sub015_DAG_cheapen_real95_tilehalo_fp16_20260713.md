@@ -60,3 +60,12 @@ All live run inputs were read only. No score authority, promotion authority, GPU
 ## 6-hook wire-in
 
 Sensitivity map: ACTIVE (margin × class-pair sensitivity) · Pareto: ACTIVE (exactness/cosine/wall gates) · bit allocator: SAME sensitivity object, no byte mutation here · cathedral/autopilot: REFUSE until GO receipts · continual learning: memo + receipts + this FEED · probe disambiguator: exact binary-tile control vs approximate waterfill and fp16 vs bf16.
+
+## verdict_scope addendum (main, ladder conformance)
+verdict_scope: FAMILY — exact spatial sparsity (any tile/crop/mask formulation) on THIS exact scorer
+(EfficientNet-B2 UNet): the 23 global squeeze-excite reductions make every output pixel depend on every input
+pixel — a PROOF, so all exact-tiling formulations fail, not just the halo one tested. NOT paradigm: spatial
+sparsity remains open for (a) SE-free architectures — the surrogate (directive routed to replace_round2), and
+(b) NON-exact low-cadence tiling (training-path tolerance, unmeasured). untested formulations / alternatives:
+SE-free surrogate tiling · approximate (stale-SE-statistics) tiling at pre-registered cadence · fp16 Lever-B
+(probe running locally on main's Metal, receipt pending).
