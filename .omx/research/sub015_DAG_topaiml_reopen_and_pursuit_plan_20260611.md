@@ -16955,3 +16955,16 @@ pair custody/source hashes/whole-run support/loss closure/negative controls/froz
 67 tests green. This closes the build side of D40 + HCM reformulation item 1 + FORE §5's logging demand; the
 launch ticket already consumes causal_manifest.jsonl default-ON. Muon trainer wiring committed same batch
 (manifest builder's landing released the trainer hold; both regions verified coexisting, trainer parses).
+
+### FEED-grokking-autopsy conformance addendum (magnitude-dismissal justification, main 2026-07-13)
+The "still noise" dismissal of the 31-feature chart stands on BOTH required legs, stated explicitly:
+(a) RELATIVE significance: a gradient surrogate's usable descent scales with directional cosine; the chart's
+EXACT-OPTIMUM cosine 0.00769 delivers ≤0.77% of true-gradient directional progress per replaced call — ~65×
+below even a half-useful cosine-0.5 bar and ~130× below parity; at this fidelity the surrogate replaces ZERO
+teacher calls safely, so the chart's achievable ΔS toward the 95%-kill objective is 0 against the full
+remaining wall-clock gap (and its ΔS toward the pointer gap S 0.188→0.15 is 0 by the same argument — it never
+enters a scored path). (b) MEASURED un-recoverability (the exit criterion, not eyeball): the fit problem is
+CONVEX ridge — the receipt's 7-λ ladder computes the EXACT optimum in closed form, which upper-bounds every
+training protocol (GD/steps/lr/init) by theorem; GD150-vs-GD15 Δcosine 4.6e-11 confirms the iterates already
+sit at that ceiling (receipt: grokking_ridge_round2_refit_receipt_20260713.json). verdict_scope: formulation —
+the 31-feature chart only; the surrogate FAMILY is open and actively pursued (round-3 frozen-stem/RFF live).
