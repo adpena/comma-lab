@@ -194,3 +194,19 @@ Six-hook disposition: sensitivity map **ACTIVE** via margin × class-pair waterf
 - Pointer delta: **ZERO**. All evidence is `[macOS-MLX research-signal / macOS-CPU advisory; NON-PROMOTABLE]`.
 - Files remain **uncommitted for main review**, as requested.
 - Integration note: the sibling-owned uncommitted `steps_dimension_95kill_20260713{,_SPEC}.md` and `sub015_DAG_steps_dimension_95kill_20260713.md` captured interim hashes of these receipts while this lane was still hardening source custody. They were not edited here; main must refresh those citations to the final hashes above before joint landing.
+
+## Lever-B FINAL (main's local Metal run, 2026-07-13T16:28Z — the measurement the sandbox couldn't make)
+Receipt: experiments/results/mlx_precision_probe_local_20260713/receipt.json (schema cheapen_real95_mlx_precision_n600.v1,
+checkpoint ef2c097f, git 03bb3ab2, M5 Max / MLX 0.31.2). MEASURED n600 real states:
+- fp16: QUALITY PASSES BIG (global grad cosine 0.9999586 vs bar 0.99; argmax flips 3,895 / 117,964,800 px = 0.0033%;
+  pose max-abs 0.01798) but SPEED FAILS: 0.9915× (fwd 20.44ms vs fp32 20.20ms) — fp16 is marginally SLOWER on M5 Max
+  MLX for this scorer. verdict: NO_GO. verdict_scope: this dtype policy on the measured real-state MLX scorer window /
+  M5-class host — NOT the dtype family, NOT CUDA.
+- bf16: BLOCKED_OR_UNSUPPORTED (MLX↔numpy PEP-3118 buffer item-size bug, error preserved) — no verdict.
+- reformulation queue (agent-declared): selective fp16 hot-layers · bf16 + fp32 SegNet head (post buffer-fix) ·
+  layerwise precision waterfill ranked by measured gradient damage.
+- POSITIVE BANK: the 0.99996 cosine PRE-CLEARS fp16 training gradients for the CUDA arm (#445), where tensor cores
+  make fp16 genuinely faster — the lever is host-dead, CUDA-alive.
+NET #465: on M5-class local hardware the exact-forward CHEAPEN dimension is exhausted beyond the already-banked
+levers (micro-batch #447, megakernel #356, grouped-backward ~17×, 1-thread verdict standard); local wall-clock attack
+concentrates on REPLACE (#455 round-2, live) + STEPS (#448 FreSh et al.) + the CUDA fire-ready asset.
