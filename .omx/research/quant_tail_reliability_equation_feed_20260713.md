@@ -49,4 +49,3 @@ P[Q-EQ >= 2 sqrt((||A||F^2 + 2||c||2^2)t) + 2||A||op t] <= delta.
 typed DSL, DAG FEED, equation FEED, measurement receipt, and tests are complete. Applying
 the two registry rows must use `tac.canonical_equations.registry.register_canonical_equation`
 under its lock and a serializer patch that excludes all sibling rows.
-
