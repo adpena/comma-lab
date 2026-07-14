@@ -91,18 +91,18 @@ class ThroughputAuthorityPolicy:
     assignments: tuple[Assignment, ...]
     pose_gate_enabled: bool
     pose_canary_every: int
-    banked_r1_dpose: float
+    unselected_r1_advisory_dpose: float
     research_only: bool = True
     score_claim: bool = False
     pointer_moved: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "schema": "throughput_authority_policy.v1",
+            "schema": "throughput_authority_policy.v2",
             "assignments": [row.to_dict() for row in self.assignments],
             "pose_gate_enabled": self.pose_gate_enabled,
             "pose_canary_every": self.pose_canary_every,
-            "banked_r1_dpose": self.banked_r1_dpose,
+            "unselected_r1_advisory_dpose": self.unselected_r1_advisory_dpose,
             "research_only": self.research_only,
             "score_claim": self.score_claim,
             "pointer_moved": self.pointer_moved,
@@ -404,16 +404,21 @@ def compile_throughput_authority_policy(
     integer_scorer_receipt: Mapping[str, Any] | None = None,
     metal_fixedpoint_receipt: Mapping[str, Any] | None = None,
     integer_r_receipt: Mapping[str, Any] | None = None,
-    pose_gate_enabled: bool = True,
+    pose_gate_enabled: bool = False,
     pose_canary_every: int = 8,
-    banked_r1_dpose: float = 0.001610,
+    unselected_r1_advisory_dpose: float = 0.001610,
 ) -> ThroughputAuthorityPolicy:
     """Compile the fastest assignment that preserves the declared authority ladder."""
 
     if isinstance(pose_canary_every, bool) or pose_canary_every < 1:
         raise ValueError("pose_canary_every must be a positive integer")
-    if not (0.0 <= float(banked_r1_dpose) < float("inf")):
-        raise ValueError("banked_r1_dpose must be finite and non-negative")
+    if not (0.0 <= float(unselected_r1_advisory_dpose) < float("inf")):
+        raise ValueError("unselected_r1_advisory_dpose must be finite and non-negative")
+    if pose_gate_enabled:
+        raise ValueError(
+            "pose_gate_enabled REFUSE: current V9 has no payload-bound current-run pose cache; "
+            "live PoseNet remains mandatory"
+        )
 
     qdq_ok, qdq_bits, qdq_scale_mode, qdq_reason = _fixedpoint_qdq_gate(
         fixedpoint_qdq_receipt
@@ -561,13 +566,16 @@ def compile_throughput_authority_policy(
         ),
         Assignment(
             Operation.POSENET_VERDICT_PRE_FINISH,
-            Substrate.BANKED_TELEMETRY,
-            Precision.BANKED_FP64_SCALAR,
-            AssignmentState.ACTIVE if pose_gate_enabled else AssignmentState.DEFAULT_OFF_CANDIDATE,
-            AuthorityGrade.LOCAL_ADVISORY,
-            "pose weight is zero pre-finish; skip live PoseNet except periodic drift canaries",
-            f"banked_r1_dpose={banked_r1_dpose:.6f}; live canary every {pose_canary_every}",
-            "MAIN governed n96 dry-start before live use",
+            Substrate.TORCH_CPU_ONE_THREAD,
+            Precision.TORCH_FP32,
+            AssignmentState.ACTIVE,
+            AuthorityGrade.LOCAL_REFERENCE,
+            "live PoseNet is mandatory until a current-run payload-bound cache is receiver-proven",
+            (
+                "R1 d_pose reference is unselected full-n600 byte-closed macOS-CPU advisory: "
+                f"{unselected_r1_advisory_dpose:.6f}; numeric substitution retired"
+            ),
+            "future cache must prove current payload, parse-back, and no score-path substitution",
         ),
         Assignment(
             Operation.POSENET_VERDICT_ACTIVE,
@@ -609,9 +617,9 @@ def compile_throughput_authority_policy(
     )
     return ThroughputAuthorityPolicy(
         assignments=rows,
-        pose_gate_enabled=bool(pose_gate_enabled),
+        pose_gate_enabled=False,
         pose_canary_every=int(pose_canary_every),
-        banked_r1_dpose=float(banked_r1_dpose),
+        unselected_r1_advisory_dpose=float(unselected_r1_advisory_dpose),
     )
 
 

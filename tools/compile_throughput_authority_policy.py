@@ -57,10 +57,10 @@ def main() -> int:
     parser.add_argument("--integer-r", type=Path, default=DEFAULT_INTEGER_R)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
-        "--pose-gate", action=argparse.BooleanOptionalAction, default=True
+        "--pose-gate", action=argparse.BooleanOptionalAction, default=False
     )
     parser.add_argument("--pose-canary-every", type=int, default=8)
-    parser.add_argument("--banked-r1-dpose", type=float, default=0.001610)
+    parser.add_argument("--unselected-r1-advisory-dpose", type=float, default=0.001610)
     parser.add_argument("--require-receipts", action="store_true")
     args = parser.parse_args()
 
@@ -75,7 +75,7 @@ def main() -> int:
         integer_r_receipt=integer_r,
         pose_gate_enabled=args.pose_gate,
         pose_canary_every=args.pose_canary_every,
-        banked_r1_dpose=args.banked_r1_dpose,
+        unselected_r1_advisory_dpose=args.unselected_r1_advisory_dpose,
     )
     missing = [
         name

@@ -349,20 +349,26 @@ def test_ane_w8a8_is_settled_formulation_refusal() -> None:
 
 def test_pose_gate_and_inputs_are_typed() -> None:
     policy = compile_throughput_authority_policy(
-        pose_gate_enabled=False, pose_canary_every=3, banked_r1_dpose=0.2
+        pose_gate_enabled=False,
+        pose_canary_every=3,
+        unselected_r1_advisory_dpose=0.2,
     )
-    row = _find(policy, Operation.POSENET_VERDICT_PRE_FINISH, Substrate.BANKED_TELEMETRY)
-    assert row.state is AssignmentState.DEFAULT_OFF_CANDIDATE
+    row = _find(policy, Operation.POSENET_VERDICT_PRE_FINISH, Substrate.TORCH_CPU_ONE_THREAD)
+    assert row.state is AssignmentState.ACTIVE
+    assert "numeric substitution retired" in row.evidence
     assert policy.pose_canary_every == 3
+    assert policy.unselected_r1_advisory_dpose == 0.2
     with pytest.raises(ValueError, match="positive integer"):
         compile_throughput_authority_policy(pose_canary_every=0)
     with pytest.raises(ValueError, match="finite"):
-        compile_throughput_authority_policy(banked_r1_dpose=float("nan"))
+        compile_throughput_authority_policy(unselected_r1_advisory_dpose=float("nan"))
+    with pytest.raises(ValueError, match="live PoseNet remains mandatory"):
+        compile_throughput_authority_policy(pose_gate_enabled=True)
 
 
 def test_policy_serialization_is_explicitly_non_authority_for_score() -> None:
     payload = compile_throughput_authority_policy().to_dict()
-    assert payload["schema"] == "throughput_authority_policy.v1"
+    assert payload["schema"] == "throughput_authority_policy.v2"
     assert payload["research_only"] is True
     assert payload["score_claim"] is False
     assert payload["pointer_moved"] is False
