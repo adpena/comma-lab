@@ -3,7 +3,7 @@
 **UTC:** 2026-07-14T03:10:02Z  
 **Lane:** `throughput_authority_ladder`  
 **Task:** `#494`  
-**Status:** `BUILT; FIXED+DYNAMIC_N600_MEASURED; INT64_CEILING_N600_RUNNING; HOST_GATES_OWED`  
+**Status:** `BUILT; WEIGHT_L1_AND_GLOBAL_TIE_N600_MEASURED; CLASS_PAIR_SECOND_VALIDATION_RUNNING; HOST_DEVICE_GATES_OWED`
 **Authority:** `[macOS-CPU Torch one-thread advisory/QDQ feasibility]` plus
 `[source-built custom Metal; host measurement owed]`  
 **Flags:** `research_only=true` · `score_claim=false` · `promotion_eligible=false` ·
@@ -24,7 +24,10 @@ The optimal authority-preserving architecture is heterogeneous:
 
 1. keep differentiable witness/teacher work on **MLX/Metal fp32**;
 2. make the slow local SegNet verdict a receipt-gated **dynamic-scale fixed-point custom-Metal
-   candidate**, but retain one-thread CPU-Torch as the automatic fallback;
+   candidate**, but retain one-thread CPU-Torch as the automatic fallback; the label/frame-free
+   W27..W31 weight-L1 arithmetic leaves one exact-reference tie flip, and a global epsilon head
+   fails heldout, so the surviving pre-device formulation is a frozen ordered class-pair head with
+   a disjoint second validation;
 3. skip PoseNet only while pose is frozen, using **explicitly NON-LIVE banked telemetry plus live
    canaries**, and restore CPU-Torch immediately after pose engages;
 4. use exact integer accumulation for the render-R adjoint only as a training-reproducibility
@@ -43,16 +46,28 @@ ladder.
 |---|---|---|---|---|
 | 1 — full render-R adjoint | **OWED ON MAIN** | full four-axis, real n600, 1,200 frames, N=10/process variant | full NumPy-fp32/int32 authority, overflow/error proof, float-atomic and Q15/int32-atomic Metal children, resumable receipt | `tools/run_full_r_adjoint_bitident_host.command` |
 | 2a — fixed calibration forward | **MEASURED NO-ADMITTED-PRECISION-IN-LADDER** | `INSTANCE`: frozen SegNet/PoseNet, real 0.mkv pairs 0..599, one-thread CPU control, W8..W24 QDQ/fp32 accumulation | full receipt with exact row/hash custody | failure is **FORMULATION**, not fixed-point family; held-out calibration clipping causes a high-bit plateau |
-| 2b — dynamic max-absolute forward | **MEASURED NO-EXACT-ARM THROUGH W24** | `INSTANCE`: same real n600 SegNet surface, W16/W18/W20/W22/W24, label-free runtime scale | full exact-row/hash receipt; W20 first training-tolerance arm; W24 leaves 19 flips | finite W25/W26 ceiling check is running; W26 is the last uniform precision with an exact single-int64 static bound |
-| 3 — fixed-point verdict substrate | **BUILT; HOST MEASUREMENT OWED** | custom direct NHWC dense/grouped/depthwise Conv2d, exact int64 MAC, dynamic/fixed scale | all 125 Conv2d replacement, NumPy integer reference, cross-process n600 harness | exact argmax + zero uncertified + one candidate digest across 10 processes + speedup >1 |
+| 2b — dynamic max-absolute QDQ forward | **MEASURED NO-EXACT-ARM THROUGH W26** | `INSTANCE`: same real n600 SegNet surface, W16..W26, label-free runtime scale, QDQ with fp32 Conv accumulation | exact 0..599 rows/hashes; W20 first tolerance arm; W26 leaves 3 flips | finite single-int64 QDQ ceiling is closed; this is a **FORMULATION** negative, not a direct-int64 negative |
+| 2c — uniform dynamic exact-int64 forward twin | **MEASURED NO-EXACT-W26 INSTANCE** | W26A26 signed codes, exact int64 Conv2d accumulation, one fp32 finalization, all 125 Conv2d, unchanged fp32 non-Conv ops | exact real 0..599 custody; 4 flips at pairs 64, 362, 371, 507; training tolerance passes | `INSTANCE` negative only; label-free mixed precision and multi-limb formulations remain open |
+| 2d — geometry-safe mixed exact-int64 twin | **MEASURED NO-EXACT INSTANCE** | per-layer largest W26..W30 whose `fan_in*qmax^2` fits signed int64 | exact real 0..599 custody; 1 flip at pair 11; aggregate 8.4771050e-9; training tolerance passes | `INSTANCE` negative only; tighter frozen-weight-L1 allocation remains open |
+| 2e — frozen-weight-L1-safe exact-int64 twin | **MEASURED INSTANCE NEGATIVE** | per-layer largest W26..W31 whose `activation_qmax * max_oc sum(abs(weight_q[oc]))` fits signed int64 | exact real 0..599 custody; 1 flip at pair 11; aggregate 8.4771050e-9; 36 uncertified; training tolerance passes | the zero-margin tie semantics remain open; arithmetic family is not killed |
+| 2f — global lowest-class epsilon tie head | **MEASURED FORMULATION/INSTANCE NEGATIVE** | dyadic epsilon ladder `0, 2^-24..2^-10`; minimum calibration-exact epsilon `2^-19` on pairs 0..119 | full split-honest n600 receipt; calibration exact; 3 heldout flips at pairs 195, 263, 587 | global near-tie correction is too broad; class-pair restriction remains distinct |
+| 2g — ordered class-pair tie head | **DESIGN EXACT; SECOND VALIDATION RUNNING** | if candidate top2 is `(4,0)` and gap `<=2^-19`, choose 0; otherwise plain argmax | rule frozen from pairs 0..263; design has 0 flips and exactly one snap; pairs 264..599 untouched until freeze | finish pair-atomic second validation without reselection |
+| 3 — fixed-point verdict substrate | **BUILT; WEIGHT-L1-PRECURSOR-GATED HOST MEASUREMENT OWED** | custom direct NHWC dense/grouped/depthwise Conv2d, exact int64 MAC, dynamic scale | all 125 Conv2d replacement, NumPy/CPU exact-integer twins, weight-L1 precision map, optional receipt-selected MLX tie head, cross-process n600 harness | admitted exact weight-L1 or calibration/heldout-exact tie-snap CPU precursor, then exact argmax + one candidate digest across 10 processes + speedup >1; interval enclosure reported separately |
 | 3 — ANE | **PUBLIC-API FORMULATION BLOCKED** | CoreML 9 public activation compute exposes W8A8; settled W8A8 PTQ failed 45.836809% held-out flips | settled-state-aware ticket compiler; refuses duplicate W8A8 and unrepresentable higher-bit requests | a genuinely distinct W8 formulation, or a public higher-bit ANE compute surface with proved placement |
 | 4 — integer render-R backend | **BUILT; HOST MEASUREMENT OWED** | four axes, Q15 weights, Q7/Q5 state, no atomics, exact int32 gather | default-off VJP backend, static overflow proof, exact NumPy-state hash gate, n600 matched benchmark | full-R source receipt + exact int-state parity + repeat identity + bounded fp32 error + speedup >1 |
 | 4 — integer megakernel | **UNREFUTED DISTINCT FORMULATION** | integer/exact reductions only | the integer R kernel establishes the first exact component | #356 refuted fp32 reorder/fusion; no graph-wide integer lowering or speed receipt exists |
 
 Every negative above is scoped. Fixed calibration W24 failing does not kill dynamic scaling, mixed
-precision, integer convolution, Metal, ANE, or the authority-ladder paradigm. A direct-int64 Metal
+precision, integer convolution, Metal, ANE, or the authority-ladder paradigm. The geometry-only
+one-pixel failure does not kill tighter static bounds or multi-limb accumulation. A direct-int64 Metal
 speed loss would kill that kernel formulation only; exact limb/tensor decomposition and per-layer
 precision allocation would remain open.
+
+Round-1 implementation review found a real pre-measurement throughput defect: the custom-Metal
+adapter reconstructed all 125 immutable weight/scale/bias arrays on every forward. Both uniform and
+mixed/weight-L1 adapters now prepare, evaluate, and retain device constant buffers once per adapter;
+coverage and signature tests make that cache contract load-bearing. No speedup is claimed until MAIN
+measures the corrected host path.
 
 ## Rung 2 fixed-calibration n600 measurement
 
@@ -110,10 +125,74 @@ each on 19 distinct pairs, so this is not one pathological frame.
 
 The real frozen SegNet maximum Conv2d fan-in is 4,248. The uniform W26A26 static worst-case
 accumulator bound is `4,782,822,519,189,016,728 < 2^63`, requiring 64 signed bits; W27A27 requires
-66 bits and exceeds signed int64. A separate resumable W25/W26 full-n600 receipt is therefore the
-finite **single-int64 ceiling check**, not an unbounded resweep. Its final result will decide whether
-the built uniform direct-int64 Metal formulation remains admissible or yields to mixed precision,
-limb accumulation, or a correction ladder.
+66 bits and exceeds signed int64. The finite **single-int64 QDQ ceiling check** is complete:
+
+| Arm | flips / 117,964,800 | aggregate | worst pair | uncertified pixels | max logit error | tolerance |
+|---|---:|---:|---:|---:|---:|---|
+| W25 | 13 | 1.1020237e-7 | 5.0862630e-6 | 139 | 5.9628487e-4 | pass |
+| W26 | 3 | 2.5431315e-8 | 5.0862630e-6 | 83 | 3.2696128e-4 | pass |
+
+The corrected receipt is
+`dynamic_fixedpoint_scorer_forward_int64_ceiling_corrected_n600.json`, SHA-256
+`a04a8e2672981faeda9a2a1adb086c8e1a4c073c0e1319dcd78ee1536c594c91`. W26's
+three flips are on pairs 64, 371, and 587, whose reference winner-rival margins are respectively
+`4.7683716e-7`, `4.0531158e-6`, and `1.4305115e-6`.
+
+An adversarial audit found that fp32 cannot represent positive W26 `qmax=33,554,431`; a float-domain
+clamp could admit `33,554,432`. Quantization now rounds to int64, clamps against the exact integer
+qmax, and only then returns to the requested representation. The predecessor diagnostic receipt
+`dynamic_fixedpoint_scorer_forward_int64_ceiling_n600.json` (SHA-256
+`d6ccc273c0b2a9f1313588237eeb412773757c91a1e21e9b06c09dd9280a8a41`) is excluded from
+authority even though its final flip totals happened to match. No result is trusted through a broken
+representation contract.
+
+This closes only **QDQ with fp32 Conv accumulation**. W26 codes returned to fp32 cannot retain every
+odd integer above the 24-bit significand range, and fp32 Conv reduction is not the exact-int64 custom
+kernel. The separate exact-int64 CPU twin replaced all 125 Conv2d and completed exact pairs 0..599.
+Uniform W26 still has 4 / 117,964,800 flips, aggregate `3.3908420e-8`, worst pair
+`5.0862630e-6`, 77 conservative uncertified pixels, and maximum absolute logit error
+`2.5255978e-4`. The flips occur one each at pairs 64, 362, 371, and 507. Receipt SHA-256 is
+`b4bd48f580501926492d826a8a2504f5420fa266d6270f4aff915e7820f60af2`.
+
+This is a **MEASURED INSTANCE negative** for uniform W26 direct-int64, not an integer-convolution or
+fixed-point-family negative. Its static worst-layer bound already consumes 64 signed bits, but 120
+of 125 layers have smaller geometry. The successor therefore assigns each layer the largest label-free
+precision in W26..W30 satisfying `fan_in*qmax^2 <= 2^63-1`: W26:5, W27:30, W28:22, W29:19,
+W30:49. The full n600 receipt closed with exactly 1 flip / 117,964,800 pixels at pair 11,
+aggregate `8.477105034722222e-09`, worst pair `5.086263020833333e-06`, 38 conservative
+uncertified pixels, and maximum absolute logit error `7.62939453125e-05`. Training tolerance
+passes, but exact authority does not. Receipt SHA-256 is
+`129e9d39d09ff2e019cdab7ac04f699b64a846d319390d71d3bd12d9497959f5`.
+
+This is a **MEASURED INSTANCE negative** for the geometry-only W26..W30 allocation. The failure is
+an exact zero-margin tie at pair 11; it is not a family-level statement.
+
+The tighter frozen-weight L1 inequality
+`|acc_oc| <= activation_qmax * sum_i |weight_q[oc,i]|` is independent of frames, labels, logits,
+and margins. It assigns W27:4, W28:28, W29:32, W30:41, W31:20, with worst proven accumulator
+`9,035,402,569,620,285,889` and signed-int64 headroom `187,969,467,234,489,918`. Its full
+real-0.mkv n600 run is **MEASURED**: one flip / 117,964,800 at pair 11, aggregate
+`8.477105034722222e-09`, worst pair `5.086263020833333e-06`, 36 conservative uncertified
+pixels, maximum absolute logit error `7.2479248046875e-05`, and training tolerance pass. The CPU
+integer twin is only `0.080916x` the one-thread fp32 reference, so it is a numerical surface—not a
+throughput claim. Receipt SHA-256 is
+`bc8ce702189246b46970f85a79a78b94e68a74d59e9787d766c8c52deb96d7d5`.
+
+The remaining flip is an exact reference tie at pair 11 between classes 0 and 4. The W27..W31
+candidate separates them by `1.430511474609375e-06` in favor of class 4, while upstream
+`torch.argmax` selects class 0 at the exact tie. The preregistered global lowest-class epsilon
+ladder selected `2^-19` on calibration pairs 0..119, but full heldout validation falsified it:
+three single-pixel false snaps occur at pairs 195, 263, and 587. Full flip mass is
+3 / 117,964,800 (`2.5431315104166668e-08`). Receipt SHA-256 is
+`651df3364a8921ad5b1936a9f831251c33fce2703a3c5675dc7b92607f239386`. This is a
+**FORMULATION-at-n600-INSTANCE** negative for a global epsilon head, not for decision correction.
+
+Fresh design inspection was then frozen at pair 263: pair 11 is ordered candidate top2 `(4,0)`,
+whereas the pair-195 and pair-263 false snaps are `(1,0)`. Before reading any pair >=264, the
+successor rule was preregistered in code: only `(4,0)` with gap `<=2^-19` snaps to class 0. Runtime
+uses candidate logits/classes only; labels select the rule on design pairs 0..263. That design split
+is now exact with one intended snap. Pairs 264..599 remain the untouched, no-reselection second
+validation surface and are running pair-atomically.
 
 Pair-0 smoke (**MEASURED, INSTANCE only**) was:
 
@@ -125,8 +204,9 @@ Pair-0 smoke (**MEASURED, INSTANCE only**) was:
 | W22 | 0 | 1 |
 | W24 | 0 | 0 |
 
-No native-integer latency claim follows from QDQ. With no exact QDQ arm yet, the custom Metal
-command fails closed before speed measurement; it cannot launder a tolerance-only arm into authority.
+No native-integer latency claim follows from QDQ or the slow CPU numerical twin. The custom Metal
+command fails closed unless its selected exact-int64 CPU receipt is complete and exact; it cannot
+launder a tolerance-only QDQ, uniform-W26 arm, or the geometry-only one-flip arm into authority.
 
 ## Op × substrate × precision authority-throughput assignment
 
@@ -137,7 +217,7 @@ command fails closed before speed measurement; it cannot launder a tolerance-onl
 | render-R forward | MLX/Metal | fp32 | training signal | **ACTIVE**; NumPy-fp32 receiver remains reference |
 | render-R adjoint | fixed-order custom Metal fp32 today | fp32 | training signal | candidate Q15/int32 gather only after exact n600/parity/speed gate |
 | SegNet local verdict | CPU-Torch one thread | fp32 | local deterministic reference | automatic fallback; custom Metal may become a default-off candidate only after full conjunction |
-| SegNet candidate verdict | custom Metal | receipt-selected dynamic WnAn, int64 MAC | local candidate filter | **HELD/OWED** until dynamic QDQ + exact/certified/cross-process/positive-speed receipt |
+| SegNet candidate verdict | custom Metal | frozen-weight-L1-safe per-layer W27..W31 dynamic signed int32 codes, exact int64 MAC; frozen `(4,0)->0` tie head only if second validation is exact | local candidate filter | **HELD/OWED** until exact class-pair precursor + exhaustive source-n600 equality + cross-process identity + positive speed; actual evolving witness frames still require shadow/certificate before CPU suppression |
 | SegNet advisory | CoreML CPU_AND_GPU/ANE-selected | fp32 | local advisory only | retain as detached forward signal; placement and equivalence unproved |
 | SegNet W8A8 | CoreML/ANE | W8A8 | no authority | **FORBIDDEN settled formulation**; 45.836809% held-out flips |
 | SegNet via MPS | torch-MPS | fp32 | no authority | **FORBIDDEN**; distinct numeric drift, never rehabilitated by integer R evidence |
@@ -158,8 +238,9 @@ resume registry + stage checkpoint
   -> receipt-admitted integer R adjoint OR fixed-order fp32 fused-R fallback
   -> stage-boundary checkpoint (EMA shadow + optimizer + stage position, atomic)
   -> local verdict:
-       SegNet = admitted custom-Metal dynamic fixedpoint
-                OR one-thread CPU-Torch fp32 fallback
+       SegNet = admitted custom-Metal dynamic fixedpoint candidate
+                + actual-witness shadow/certificate while default-off
+                OR one-thread CPU-Torch fp32 authority fallback
        PoseNet = live CPU canary at index 0 and every K while frozen;
                  labelled banked value otherwise;
                  always live after pose engagement
@@ -168,9 +249,13 @@ resume registry + stage checkpoint
   -> exact contest CPU and separately contest CUDA replay on identical bytes
 ```
 
-There is no silent fallback. The policy compiler binds custom Metal to the exact QDQ receipt
-fingerprint, selected bit width, scale mode, exact n600 custody, interval certificate, one candidate
-digest across processes, and positive speed. Any missing conjunct returns to CPU.
+There is no silent fallback. The host gate binds custom Metal to the QDQ and selected exact-int64
+receipt fingerprints, complete per-layer precision map, decision head, scale mode, exact source-n600
+custody, one candidate digest across processes, and positive speed. Source-n600 equality is the
+requested feasibility surface and local candidate-filter evidence; it is not a universal theorem for
+evolving reconstructed witness frames. CPU suppression therefore additionally requires a governed
+actual-witness shadow/certificate gate. The interval enclosure remains separately reported and cannot
+overrule direct equality. Any missing conjunct returns to CPU.
 
 For a SegNet speedup `r_seg` and Pose live cadence `K`, ignoring boundary overhead `h`, the verdict
 fraction is
@@ -206,6 +291,37 @@ is forward-only CPU-Torch.
 a distinct, unrefuted formulation, but it is not build-authorized by analogy. Every reduction and
 nonlinearity in a claimed fusion domain needs an exact/bounded lowering plus a matched speed receipt.
 
+## OSS reconciliation (#451)
+
+The external ecosystem supports the architecture but does not supply an authority shortcut:
+
+- PyTorch explicitly does not guarantee identical results across releases/platforms or CPU versus
+  GPU, and its deterministic mode either selects a deterministic implementation where one exists or
+  throws when none exists. That supports fail-closed CPU/CUDA separation; a framework flag cannot
+  prove Pact's exact argmax surface. See the official
+  [PyTorch reproducibility note](https://docs.pytorch.org/docs/stable/notes/randomness.html).
+- PyTorch's built-in quantized types center on qint8/qint32 and its documented quantization equation
+  is Q/DQ with clamping; additional schemes require custom operators. Task #494's W20+ and exact
+  reduction route is therefore genuinely custom rather than a missed built-in switch. See the
+  [PyTorch quantization API](https://docs.pytorch.org/docs/stable/quantization-support).
+- MLX officially exposes JIT-compiled custom Metal kernels with caller-declared input/output dtypes,
+  grid, and threadgroup geometry. The Task #494 kernel uses that supported surface, caches each
+  kernel object, and assigns one thread per output—while still requiring the real host compile and
+  receipt. See [MLX custom Metal kernels](https://ml-explore.github.io/mlx/build/html/dev/custom_metal_kernels.html).
+- Core ML's public activation-quantization path is specifically 8-bit and is paired with W8 weights
+  for NE int8-int8 compute. That independently corroborates the typed higher-bit public-API blocker;
+  it does not generalize the settled W8A8 failure to ANE as a family. See the
+  [Core ML Tools optimization API](https://apple.github.io/coremltools/docs-guides/source/opt-quantization-api.html)
+  and [optimization overview](https://apple.github.io/coremltools/docs-guides/source/opt-overview.html).
+- TensorRT exposes explicit INT8/FP8/INT4/NVFP4 schemes, but its INT4 path is weight-only and none of
+  those documents promises CPU-identical frozen-scorer argmax. CUDA remains a separately measured,
+  operator-GO axis rather than an inferred equivalent. See the
+  [TensorRT quantization schemes](https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/quantized-types-schemes.html).
+
+Thus the four local probes were not rediscovering a packaged authority backend: the missing piece is
+the exact, receipt-bound scorer-specific reduction/decision implementation and its real n600
+cross-process measurement.
+
 ## Host execution packet for MAIN
 
 Run on the M5-Max Metal host, in order; these are the prepared commands, not executions by this arm:
@@ -227,8 +343,10 @@ dispatch, live-run/config mutation, and any run stop remain operator-GO containm
 
 - **Equations:** empirical anchor builders target
   `exact_commutative_reduction_reorder_invariance_v1` and
-  `interval_argmax_enclosure_certificate_v1`. Registration is append-only and deferred to MAIN
-  after complete host receipts.
+  `interval_argmax_enclosure_certificate_v1`, including distinct uniform, geometry-mixed, and
+  weight-L1 exact-int64, global-tie, and ordered-class-pair SegNet anchors. Fixed, dynamic,
+  corrected-ceiling, uniform, geometry-mixed, weight-L1, and global-tie anchors are registered;
+  the class-pair anchor remains fail-closed until its second validation completes.
 - **Trajectory/DAG:**
   `.omx/research/throughput_authority_ladder_DAG_FEED_20260714T031002Z.md` is the standalone,
   collision-safe feed; the shared DAG was not edited.
@@ -241,8 +359,8 @@ dispatch, live-run/config mutation, and any run stop remain operator-GO containm
 - **Autopilot:** CPU fallback is unconditional until every receipt predicate passes. MPS and settled
   CoreML W8A8 are explicit refusals.
 - **Continual learning:** the fixed-calibration plateau, cache-thread delta, fp32-control false
-  admission bug, and Metal legacy-cache overwrite bug are durable typed guards/tests, not chat-only
-  observations.
+  admission bug, W26 qmax representation bug, and Metal legacy-cache overwrite bug are durable typed
+  guards/tests, not chat-only observations.
 
 ## STORES CONSULTED
 

@@ -3,8 +3,8 @@
 set -euo pipefail
 
 ROOT="/Users/adpena/Projects/pact"
-OUT="$ROOT/experiments/results/throughput_authority_ladder_20260714/dynamic_fixedpoint_scorer_forward_int64_ceiling_n600.json"
-LOG="$ROOT/experiments/results/throughput_authority_ladder_20260714/dynamic_fixedpoint_scorer_forward_int64_ceiling_n600.host.log"
+OUT="$ROOT/experiments/results/throughput_authority_ladder_20260714/dynamic_fixedpoint_scorer_forward_int64_ceiling_corrected_n600.json"
+LOG="$ROOT/experiments/results/throughput_authority_ladder_20260714/dynamic_fixedpoint_scorer_forward_int64_ceiling_corrected_n600.host.log"
 cd "$ROOT"
 mkdir -p "${OUT:h}"
 

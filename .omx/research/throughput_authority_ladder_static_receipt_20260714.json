@@ -1,0 +1,278 @@
+{
+  "schema": "throughput_authority_ladder_static_receipt.v1",
+  "task_id": 494,
+  "lane_id": "throughput_authority_ladder",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "pointer": {
+    "submittable_score": 0.19108282419209976,
+    "submittable_axis": "[contest-CPU]",
+    "submittable_archive_sha256_prefix": "ad02b012",
+    "borrowed_lineage_defensive_bank_score": 0.1880443979880752,
+    "borrowed_lineage_axis": "[contest-CPU]",
+    "borrowed_lineage_archive_sha256_prefix": "196acd18"
+  },
+  "measured_timing": {
+    "axis": "[macOS-CPU Torch one-thread advisory]",
+    "pairs": 96,
+    "seconds": 59.615,
+    "seconds_per_pair": 0.621,
+    "segnet_fraction": 0.774,
+    "posenet_fraction": 0.226,
+    "n600_seconds_linear_projection": 372.6,
+    "n600_projection_label": "DERIVED"
+  },
+  "rung2": {
+    "fixed_calibration_qdq": {
+      "status": "MEASURED",
+      "verdict": "NO_ADMITTED_PRECISION_IN_LADDER",
+      "verdict_scope": "FORMULATION: fixed-calibration W8A8 through W24A24 QDQ with fp32 accumulation on frozen SegNet/PoseNet real pairs 0..599",
+      "path": "experiments/results/throughput_authority_ladder_20260714/fixedpoint_scorer_forward_n600_v2.json",
+      "sha256": "2d6f655718519750a8d6b463924b53e72b6e6a326fe27e6b60843a1587293834",
+      "w24": {
+        "flips": 8960,
+        "pixels": 117964800,
+        "aggregate_flip_fraction": 0.00007595486111111111,
+        "worst_pair_flip_fraction": 0.0009358723958333334,
+        "uncertified_pixels": 133890,
+        "pose_d_pose": 0.0000013420506,
+        "pose_sqrt_10_d_pose": 0.0036634
+      }
+    },
+    "dynamic_qdq": {
+      "status": "MEASURED",
+      "verdict": "NO_EXACT_ARM_THROUGH_W26",
+      "verdict_scope": "FORMULATION: dynamic exact-max-absolute W16A16 through W26A26 QDQ with fp32 Conv accumulation on frozen SegNet real pairs 0..599",
+      "base_path": "experiments/results/throughput_authority_ladder_20260714/dynamic_fixedpoint_scorer_forward_n600.json",
+      "base_sha256": "feaf29ab8d1ca3fef20976586141b57dcfdb6da23c77140d142813c02f97fb5f",
+      "corrected_ceiling_path": "experiments/results/throughput_authority_ladder_20260714/dynamic_fixedpoint_scorer_forward_int64_ceiling_corrected_n600.json",
+      "corrected_ceiling_sha256": "a04a8e2672981faeda9a2a1adb086c8e1a4c073c0e1319dcd78ee1536c594c91",
+      "minimum_training_tolerance_bits": 20,
+      "w25": {
+        "flips": 13,
+        "pixels": 117964800,
+        "aggregate_flip_fraction": 1.1020236545138888e-7,
+        "worst_pair_flip_fraction": 0.000005086263020833333,
+        "uncertified_pixels": 139,
+        "max_abs_logit_error": 0.0005962848663330078
+      },
+      "w26": {
+        "flips": 3,
+        "pixels": 117964800,
+        "aggregate_flip_fraction": 2.5431315104166668e-8,
+        "worst_pair_flip_fraction": 0.000005086263020833333,
+        "uncertified_pixels": 83,
+        "max_abs_logit_error": 0.0003269612789154053,
+        "flip_pairs": [64, 371, 587]
+      },
+      "excluded_diagnostic": {
+        "path": "experiments/results/throughput_authority_ladder_20260714/dynamic_fixedpoint_scorer_forward_int64_ceiling_n600.json",
+        "sha256": "d6ccc273c0b2a9f1313588237eeb412773757c91a1e21e9b06c09dd9280a8a41",
+        "reason": "fp32 could not represent positive W26 qmax=33554431; integer-domain clamp contract was broken"
+      }
+    },
+    "uniform_exact_int64": {
+      "status": "MEASURED",
+      "verdict": "NO_EXACT_ARGMAX_IN_W26_DIRECT_INT64_INSTANCE",
+      "verdict_scope": "INSTANCE: frozen SegNet W26A26 dynamic exact-max-absolute signed codes, all 125 Conv2d, exact signed-int64 accumulation, one fp32 finalization, unchanged fp32 non-Conv operators, real pairs 0..599",
+      "path": "experiments/results/throughput_authority_ladder_20260714/exact_int64_fixedpoint_scorer_forward_n600.json",
+      "sha256": "b4bd48f580501926492d826a8a2504f5420fa266d6270f4aff915e7820f60af2",
+      "fingerprint": "915d34293a09d27fdc693c69e552b246ceb475168b4f366f6035054942c9522f",
+      "flips": 4,
+      "pixels": 117964800,
+      "aggregate_flip_fraction": 3.390842013888889e-8,
+      "worst_pair_flip_fraction": 0.000005086263020833333,
+      "uncertified_pixels": 77,
+      "max_abs_logit_error": 0.0002525597810745239,
+      "flip_pairs": [64, 362, 371, 507],
+      "training_tolerance_admitted": true,
+      "maximum_fan_in": 4248,
+      "maximum_accumulator_bound": 4782822519189016728,
+      "candidate_median_seconds_per_pair": 2.2572703125188127,
+      "cpu_twin_speed_claim": "numerical reference only; not a throughput candidate"
+    },
+    "geometry_safe_mixed_exact_int64": {
+      "status": "MEASURED",
+      "verdict": "NO_EXACT_ARGMAX_IN_GEOMETRY_SAFE_MIXED_INSTANCE",
+      "verdict_scope": "INSTANCE: geometry-only largest signed W26..W30 per Conv2d whose fan-in*qmax^2 fits signed int64",
+      "path": "experiments/results/throughput_authority_ladder_20260714/mixed_int64_fixedpoint_scorer_forward_n600.json",
+      "sha256": "129e9d39d09ff2e019cdab7ac04f699b64a846d319390d71d3bd12d9497959f5",
+      "fingerprint": "402e430e150e574deaa9c6be1c94c5c90ab770638c25bcac80b9310f925facc7",
+      "precision_histogram": {
+        "26": 5,
+        "27": 30,
+        "28": 22,
+        "29": 19,
+        "30": 49
+      },
+      "assignment_rule": "largest_geometry_safe_bits_with_signed_int64_static_bound",
+      "flips": 1,
+      "pixels": 117964800,
+      "aggregate_flip_fraction": 8.477105034722222E-9,
+      "worst_pair_flip_fraction": 0.000005086263020833333,
+      "uncertified_pixels": 38,
+      "max_abs_logit_error": 0.0000762939453125,
+      "flip_pairs": [
+        11
+      ],
+      "training_tolerance_admitted": true,
+      "candidate_median_seconds_per_pair": 2.248767645447515,
+      "checkpoint_every_pairs": 1,
+      "resumable_from_disk": true
+    },
+    "frozen_weight_l1_safe_exact_int64": {
+      "status": "MEASURED",
+      "verdict": "NO_EXACT_ARGMAX_IN_WEIGHT_L1_SAFE_INSTANCE",
+      "verdict_scope": "INSTANCE: per-layer largest W26..W31 whose activation_qmax times max-output quantized frozen-weight L1 fits signed int64",
+      "path": "experiments/results/throughput_authority_ladder_20260714/weight_l1_int64_fixedpoint_scorer_forward_n600.json",
+      "sha256": "bc8ce702189246b46970f85a79a78b94e68a74d59e9787d766c8c52deb96d7d5",
+      "fingerprint": "cbb8b19776fa9da8adb4acdabcea037c13c863f6b5e59a8ce3cf87850521aca4",
+      "precision_histogram": {
+        "27": 4,
+        "28": 28,
+        "29": 32,
+        "30": 41,
+        "31": 20
+      },
+      "assignment_rule": "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound",
+      "bound_kind": "activation_qmax_times_max_output_quantized_weight_l1",
+      "label_or_frame_dependent": false,
+      "maximum_accumulator_bound": 9035402569620285889,
+      "signed_int64_headroom": 187969467234489918,
+      "flips": 1,
+      "pixels": 117964800,
+      "aggregate_flip_fraction": 8.477105034722222E-9,
+      "worst_pair_flip_fraction": 0.000005086263020833333,
+      "uncertified_pixels": 36,
+      "max_abs_logit_error": 0.000072479248046875,
+      "flip_pairs": [
+        11
+      ],
+      "training_tolerance_admitted": true,
+      "candidate_median_seconds_per_pair": 2.24190581246512,
+      "candidate_speedup_vs_reference_x": 0.08091633956119879,
+      "checkpoint_every_pairs": 1,
+      "resumable_from_disk": true,
+      "command": "tools/run_weight_l1_int64_scorer_forward_n600_host.command"
+    },
+    "weight_l1_tie_snap_decision_head": {
+      "status": "MEASURED",
+      "verdict": "NO_CALIBRATION_HELDOUT_EXACT_TIE_SNAP_IN_LADDER",
+      "verdict_scope": "INSTANCE: frozen SegNet weight-L1 W27..W31 logits plus preregistered dyadic lowest-class epsilon snap selected on calibration 0..119 and validated without reselection on heldout 120..599",
+      "path": "experiments/results/throughput_authority_ladder_20260714/weight_l1_tie_snap_scorer_forward_n600.json",
+      "sha256": "651df3364a8921ad5b1936a9f831251c33fce2703a3c5675dc7b92607f239386",
+      "fingerprint": "760e0a6630064d5bfda0c62e17058febf27afa2e8336dc313b8c752a41e0e343",
+      "epsilon_ladder": [
+        0.0,
+        5.960464477539063E-8,
+        1.1920928955078125E-7,
+        2.384185791015625E-7,
+        4.76837158203125E-7,
+        9.5367431640625E-7,
+        0.0000019073486328125,
+        0.000003814697265625,
+        0.00000762939453125,
+        0.0000152587890625,
+        0.000030517578125,
+        0.00006103515625,
+        0.0001220703125,
+        0.000244140625,
+        0.00048828125,
+        0.0009765625
+      ],
+      "selection": "minimum calibration-exact epsilon; no heldout reselection",
+      "selected_epsilon": 0.0000019073486328125,
+      "calibration_flips": 0,
+      "heldout_flips": 3,
+      "full_flips": 3,
+      "full_pixels": 117964800,
+      "full_aggregate_flip_fraction": 2.5431315104166668E-8,
+      "false_snap_pairs": [
+        195,
+        263,
+        587
+      ],
+      "runtime_label_or_frame_dependent": false,
+      "checkpoint_every_pairs": 1,
+      "resumable_from_disk": true,
+      "command": "tools/run_weight_l1_tie_snap_scorer_forward_n600_host.command"
+    },
+    "weight_l1_class_pair_tie_snap_decision_head": {
+      "status": "SECOND_VALIDATION_RUNNING_RESUMABLY",
+      "verdict": "OWED_FULL_N600",
+      "verdict_scope": "INSTANCE: frozen SegNet weight-L1 W27..W31 logits; ordered candidate top2 (4,0) with gap <=2^-19 snaps to class 0; designed on 0..263 and validated without reselection on 264..599",
+      "path": "experiments/results/throughput_authority_ladder_20260714/weight_l1_class_pair_tie_snap_scorer_forward_n600.json",
+      "design_split": [
+        0,
+        264
+      ],
+      "second_validation_split": [
+        264,
+        600
+      ],
+      "epsilon": 0.0000019073486328125,
+      "ordered_candidate_top2": [
+        4,
+        0
+      ],
+      "replacement_class": 0,
+      "runtime_label_or_frame_dependent": false,
+      "checkpoint_every_pairs": 1,
+      "resumable_from_disk": true,
+      "command": "tools/run_weight_l1_class_pair_tie_snap_scorer_forward_n600_host.command"
+    }
+  },
+  "rung1": {
+    "status": "OWED_MAIN_METAL_HOST",
+    "verdict_scope": "full four-axis render-R adjoint, real n600, 1200 frames, ten processes",
+    "command": "tools/run_full_r_adjoint_bitident_host.command"
+  },
+  "rung3": {
+    "status": "BUILT_PRECURSOR_GATED_HOST_MEASUREMENT_OWED",
+    "precision_assignment": "select the narrowest full-n600 exact precursor; frozen-weight-L1 W26..W31 is the current highest-precision candidate",
+    "arithmetic": "int32 activation and weight codes; exact signed-int64 direct Conv2d MAC; one fp32 finalization",
+    "command": "tools/run_fixedpoint_authority_kernels_host.command",
+    "admission": [
+      "admitted exact-int64 full-n600 CPU precursor bound to the corrected QDQ receipt",
+      "zero argmax flips on real pairs 0..599 against recomputed one-thread CPU-Torch control",
+      "one candidate argmax corpus digest across ten processes",
+      "positive synchronized Metal speedup versus the CPU-Torch control"
+    ],
+    "interval_certificate_policy": "reported as a sufficient enclosure; exhaustive exact equality on the fixed n600 corpus owns local candidate admission",
+    "ane": {
+      "status": "PUBLIC_API_FORMULATION_BLOCKED",
+      "verdict_scope": "FORMULATION/API: public CoreML activation compute exposes W8A8; settled calibrated W8A8 has 45.836809 percent held-out flips; ANE family remains open"
+    }
+  },
+  "rung4": {
+    "status": "BUILT_HOST_MEASUREMENT_OWED",
+    "verdict_scope": "INSTANCE: Q15 weights, Q7/Q5 state, exact int32 no-atomic four-axis render-R adjoint",
+    "command": "tools/run_integer_r_adjoint_backend_host.command",
+    "throughput_role": "training reproducibility; not the slow local forward-verdict wall"
+  },
+  "recommended_assignment": {
+    "witness_and_teacher_gradients": "MLX/Metal fp32 training signal",
+    "segnet_local_verdict": "receipt-selected exact-int64 custom Metal only after full precursor and device admission; otherwise one-thread CPU-Torch fp32",
+    "posenet_pre_finish": "labelled banked telemetry with live index-0 and periodic CPU canaries, default off until governed dry-start",
+    "posenet_active": "one-thread CPU-Torch fp32",
+    "render_R_adjoint": "integer custom Metal only after full parity/determinism/error/speed receipt; otherwise fixed-order fp32",
+    "decode": "portable deterministic NumPy-fp32 and exact integer receiver operations",
+    "terminal_score": "exact identical archive bytes through separate contest-CPU and contest-CUDA evaluator axes"
+  },
+  "triality": {
+    "equations": [
+      "interval_argmax_enclosure_certificate_v1",
+      "exact_commutative_reduction_reorder_invariance_v1"
+    ],
+    "dag_feed": ".omx/research/throughput_authority_ladder_DAG_FEED_20260714T031002Z.md",
+    "dsl_policy": "src/tac/witness_dsl/throughput_authority_policy_20260714.py"
+  },
+  "containment": {
+    "paid_or_cuda_dispatch": "NOT_RUN_OPERATOR_GO",
+    "live_run_or_config_change": "NOT_RUN_OPERATOR_GO",
+    "run_stop": "NOT_ACTUATED",
+    "metal_execution": "MAIN_M5_MAX_HOST_ONLY"
+  }
+}

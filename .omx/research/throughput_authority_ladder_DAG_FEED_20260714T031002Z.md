@@ -3,7 +3,7 @@
 **UTC:** 2026-07-14T03:10:02Z  
 **Feed:** `FEED-494-throughput-authority-ladder`  
 **Lane:** `throughput_authority_ladder`  
-**Status:** `FIXED+DYNAMIC_N600_MEASURED; INT64_CEILING_N600_RUNNING; HOST_GATES_OWED`  
+**Status:** `QDQ_UNIFORM_AND_GEOMETRY_INT64_N600_MEASURED; WEIGHT_L1_INT64_N600_RUNNING; HOST_GATES_OWED`
 **Authority:** `[research-only MEANS; score_claim=false; pointer_moved=false]`
 
 The shared pursuit DAG is hot. This standalone feed is the collision-safe trajectory leg MAIN may
@@ -37,11 +37,28 @@ fixed-calibration real n600 W8..W24 QDQ:
     -> dynamic max(abs(x)) scale [distinct; label-free; order-independent selection]
     -> W16/W18/W20/W22/W24 real n600 [MEASURED]
        W20 first tolerance arm; W24 = 19 flips; no exact arm
-    -> W25/W26 real n600 [RUNNING; finite single-int64 ceiling]
+    -> W25/W26 real n600 [MEASURED; finite single-int64 QDQ ceiling]
        W26 bound 4.782822519e18 < 2^63; W27 exceeds int64
-    -> {minimum exact arm | uniform-single-int64 FORMULATION negative}
-    -> custom Metal exact-int64 all-Conv2d host gate
-    -> exact + certified + 10-process same digest + speed > 1
+       W25=13 flips; W26=3 flips; no exact QDQ/fp32 arm
+    -| uniform dynamic QDQ/fp32-accumulation FORMULATION
+    -> exact-int64 CPU twin, all 125 Conv2d [MEASURED]
+       W26=4 flips at pairs 64,362,371,507
+    -| uniform W26 direct-int64 INSTANCE
+    -> geometry-only maximum safe W26..W30 per layer [MEASURED]
+       histogram={26:5,27:30,28:22,29:19,30:49}
+       1 flip / 117,964,800 at pair11; 38 uncertified; training tolerance pass
+    -| geometry-only mixed direct-int64 INSTANCE
+    -> frozen-weight-L1 safe W26..W31 [RUNNING; pair-atomic resume]
+       bound=activation_qmax*max_oc sum(abs(weight_q[oc]))
+       histogram={27:4,28:28,29:32,30:41,31:20}
+    -> {exact weight-L1 integer arm | weight-L1 INSTANCE negative}
+    -> on full negative: dyadic lowest-class epsilon tie snap
+       select minimum calibration-exact epsilon on 0..119
+       validate unchanged on heldout 120..599 and full n600
+    -> {exact tie-safe decision head | tie-snap FORMULATION negative}
+    -> custom Metal mixed exact-int64 all-Conv2d host gate
+    -> exhaustive exact n600 + 10-process same digest + speed > 1
+       (conservative interval certificate reported separately)
     -> {local candidate verdict backend | one-thread CPU fallback}
 
 CoreML W8A8 settled 45.836809% held-out flips
@@ -72,7 +89,7 @@ complete QDQ + Metal + integer-R + pose receipts
 
 - Equations: `exact_commutative_reduction_reorder_invariance_v1` and
   `interval_argmax_enclosure_certificate_v1`, via
-  `throughput_authority_anchors_20260714.py`.
+  `throughput_authority_anchors_20260714.py`, including uniform and mixed exact-int64 SegNet anchors.
 - DSL: `PoseVerdictGate`, `PoseVerdictGateDryStart`, and pure receipt-bound
   `compile_throughput_authority_policy`.
 - Synthesis:
@@ -81,7 +98,10 @@ complete QDQ + Metal + integer-R + pose receipts
 ## Verdict-scope guard
 
 - fixed calibration negative = `FORMULATION`, never family/paradigm;
-- dynamic QDQ = numerical feasibility only, never native speed;
+- dynamic QDQ = numerical feasibility only, never native speed; its negative does not kill exact
+  integer accumulation;
+- uniform W26 direct-int64 negative = `INSTANCE`; it does not kill geometry-safe mixed precision or
+  multi-limb exact accumulation;
 - custom direct-int64 Metal negative, if any = kernel formulation;
 - public ANE higher-bit block = API/formulation, never ANE family;
 - integer R = training reproducibility, never score authority;
