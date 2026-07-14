@@ -83,10 +83,11 @@ def test_standard_contract_grounding_phrase_always_present() -> None:
 
 def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     composed = sc.standard_contract()
-    # 17 blocks by default (6 harvest + AUTONOMOUS_REFORMULATION + 4 #346 clauses +
-    # requirement-S citation clause + eightfold-philosophies clause + review + triality
-    # + commit-discipline + manual) -> 16 separators.
-    assert composed.count("\n\n") == 16
+    # 18 blocks by default (6 harvest + AUTONOMOUS_REFORMULATION +
+    # PAPER_WARM_START_FROM_DIVERGENCE + 4 #346 clauses + requirement-S citation clause +
+    # eightfold-philosophies clause + review + triality + commit-discipline + manual)
+    # -> 17 separators.
+    assert composed.count("\n\n") == 17
 
 
 def test_review_only_names_are_subset_of_contract_names() -> None:

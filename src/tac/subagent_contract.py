@@ -43,6 +43,7 @@ __all__ = [
     "NO_ENDING_ON_PROMISES",
     "NO_MANUFACTURED_FINDINGS",
     "OWN_ROUND1_REVIEW",
+    "PAPER_WARM_START_FROM_DIVERGENCE",
     "RECURSION_CLAUSE",
     "RETRIEVAL_FIRST_CLAUSE",
     "REVIEW_ONLY_CONSTANT_NAMES",
@@ -296,6 +297,24 @@ AUTONOMOUS_REFORMULATION = (
     "launch) or a truly exhausted optimal-form family ends the pursuit — not a first cut."
 )
 
+#: Operator 2026-07-14 — external research rarely hands a precisely-on-point implementation,
+#: but carries rich signal; trace assumption-divergence, warm-start with OUR premises, carry to code.
+PAPER_WARM_START_FROM_DIVERGENCE = (
+    "PAPER WARM-START FROM DIVERGENCE: an external paper rarely hands you a precisely-on-point "
+    "implementation — but it almost always carries rich signal. Do NOT collapse intake to "
+    "'directly-applicable -> route / else cross-ref-and-dismiss' (that binary is the failure "
+    "mode). When a paper is NOT directly applicable: TRACE UPSTREAM through its derivation ONLY "
+    "AS FAR AS its assumptions diverge from OURS, and stop at that fork. WARM-START at the "
+    "paper's research from that fork — but substitute OUR assumptions, OUR problem space "
+    "(v9·CGauge witness + level-set flow), and the FROZEN CONTEST INFORMATION SPACE (SegNet "
+    "argmax / PoseNet YUV6 / exact archive bytes) for theirs. Then carry the re-derivation ALL "
+    "THE WAY THROUGH — to a concrete DESIGN and an IMPLEMENTATION against our codebase — not a "
+    "'conceptual cross-ref'. The deliverable is a v9·CGauge design brief (and, where "
+    "$0-measurable, a queued/dispatched lever under the per-task cap; heavy/paid stays "
+    "operator-GO), NEVER a dismissal. 'Not directly applicable' is the START of the warm-start, "
+    "not a verdict."
+)
+
 # --- Registry (consumed by tests + the preflight integrity gate) -----------------------------
 
 #: Every named contract constant this module guarantees. The preflight integrity gate
@@ -325,6 +344,7 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "SECTION8_CHECKLIST",
     "EXECUTE_DONT_READ",
     "AUTONOMOUS_REFORMULATION",
+    "PAPER_WARM_START_FROM_DIVERGENCE",
 )
 
 #: Review-dispatch-only constants: composed by ``review_contract()``, deliberately NOT
@@ -364,6 +384,7 @@ KEY_PHRASES: dict[str, str] = {
     "SECTION8_CHECKLIST": "competence-lookalike mistakes",
     "EXECUTE_DONT_READ": "not by reading commit messages",
     "AUTONOMOUS_REFORMULATION": "start of the reformulation ladder",
+    "PAPER_WARM_START_FROM_DIVERGENCE": "the warm-start, not a verdict",
 }
 
 
@@ -393,6 +414,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         STATE_THE_BOUNDARIES,
         ANTI_GOLDPLATING,
         AUTONOMOUS_REFORMULATION,
+        PAPER_WARM_START_FROM_DIVERGENCE,
         FRESH_CONTEXT_VERIFIER,
         RECURSION_CLAUSE,
         CONTROL_LAW_CLAUSE,
