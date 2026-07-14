@@ -67,6 +67,19 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
   n=1/low-data theory, the sweep_spec arm's dual-purpose mapping. (Witness-overfit is n=1 by design —
   this feeds the ORGAN data-curation, NOT the witness.)
 
+## Captured signal (no loss) — the click-polish run (#399 `_import` block-loop)
+- STOPPED 2026-07-14 11:30 by **main stopping it under OPERATOR AUTHORIZATION** (after the safety
+  classifier first denied the kill; operator then authorized) — **NOT jetsam/OOM** (my earlier
+  forensic was a mis-attribution; corrected here so it is never re-forgotten). No crash marker in the
+  log because it was a clean authorized stop.
+- CONSEQUENCE: it is **NOT** a governor-OOM receipt — do not cite it as before/after evidence for the
+  governor fix (that needs a genuinely memory-killed workload). Retracted.
+- SUBSTANCE (intact, resumable): 52 blocks banked; best block-0 advisory **S=0.18791567** (−0.00013 vs
+  the 0.18804 pointer, splice-verified seg_maxabs=0/pose_maxabs=0); sweep_state resumable at pass 129 /
+  block 1; clicks_ledger intact; candidate staged **MODAL-HOLD**, NEVER exact-eval'd → pointer UNMOVED.
+  Follow-on (operator-GO): resume the block-loop OR exact-eval the banked candidate. Capture the
+  clicks_ledger + advisory candidate in the consolidation so a resumable sub-0.18804 advisory is not lost.
+
 ## Invariants
 NO signal loss (every arm final message + research memo + DAG FEED captured before any prune). NO trample
 (per-arm serializer commits, shared files reconciled by hand). ONE SoT (DSL + canonical_equations + memory
