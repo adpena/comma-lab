@@ -25,6 +25,7 @@ from __future__ import annotations
 
 __all__ = [
     "ANTI_GOLDPLATING",
+    "AUTONOMOUS_REFORMULATION",
     "CITATION_CLAUSE",
     "COMMIT_DISCIPLINE",
     "CONFIRMED_VS_PLAUSIBLE",
@@ -283,6 +284,18 @@ EXECUTE_DONT_READ = (
     "or execute the two paths and diff the outputs."
 )
 
+#: Operator 2026-07-14 — a naive NO-GO is the start of the reformulation ladder, not a stop.
+AUTONOMOUS_REFORMULATION = (
+    "AUTONOMOUS REFORMULATION: a naive/first-cut NO-GO is the start of the reformulation "
+    "ladder, not a stopping point. NEVER hand back a naive negative. If your first "
+    "implementation hits NO-GO/BLOCKED, build the OPTIMAL FORM (all canonical fixes "
+    "applied) and pursue the reformulation queue + follow-ons AUTONOMOUSLY within this run "
+    "— iterate until you have an optimal-form verdict or the family is genuinely exhausted. "
+    "A negative from a naive form is INSTANCE-scoped only, never a family/paradigm kill, and "
+    "must carry the untested-reformulation queue. Only a hard operator-GO gate (heavy/paid "
+    "launch) or a truly exhausted optimal-form family ends the pursuit — not a first cut."
+)
+
 # --- Registry (consumed by tests + the preflight integrity gate) -----------------------------
 
 #: Every named contract constant this module guarantees. The preflight integrity gate
@@ -311,6 +324,7 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "NO_MANUFACTURED_FINDINGS",
     "SECTION8_CHECKLIST",
     "EXECUTE_DONT_READ",
+    "AUTONOMOUS_REFORMULATION",
 )
 
 #: Review-dispatch-only constants: composed by ``review_contract()``, deliberately NOT
@@ -349,6 +363,7 @@ KEY_PHRASES: dict[str, str] = {
     "NO_MANUFACTURED_FINDINGS": "honest limits ≠ defects",
     "SECTION8_CHECKLIST": "competence-lookalike mistakes",
     "EXECUTE_DONT_READ": "not by reading commit messages",
+    "AUTONOMOUS_REFORMULATION": "start of the reformulation ladder",
 }
 
 
@@ -377,6 +392,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         FINAL_MESSAGE_REGROUNDING,
         STATE_THE_BOUNDARIES,
         ANTI_GOLDPLATING,
+        AUTONOMOUS_REFORMULATION,
         FRESH_CONTEXT_VERIFIER,
         RECURSION_CLAUSE,
         CONTROL_LAW_CLAUSE,
