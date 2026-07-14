@@ -183,7 +183,7 @@ def build(argmax_path: Path, out_dir: Path, *, band_thresh: float) -> dict[str, 
             "capacity-routing MASK: 0 INR basis on clamped px, all on the dynamic ~28% annulus."
         ),
         "NOT_producible_here": (
-            "directional/annulus targeting (the -48% d_seg lever) is GT-derived per-frame; it "
+            "directional/annulus targeting (historical -48% is UN-REPRODUCED in V9) is GT-derived per-frame; it "
             "byte-closes only via the task-space vehicle (oriented basis + stored 8-dim coords)."
         ),
         "disk_hygiene": {
