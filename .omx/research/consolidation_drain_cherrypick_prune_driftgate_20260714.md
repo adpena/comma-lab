@@ -193,3 +193,29 @@ These are OWED (queued, not built now per consolidate-asap). Land at/after conso
 NO signal loss (every arm final message + research memo + DAG FEED captured before any prune). NO trample
 (per-arm serializer commits, shared files reconciled by hand). ONE SoT (DSL + canonical_equations + memory
 + DAG are the canonical four; prune duplicates INTO them). MPS never a score. Deterministic. Pointer honesty.
+
+## Consolidation closure — 2026-07-14
+
+The code/SoT drain landed in 18 reviewed serializer groups before the receipt commit:
+`f43554bbf6`, `3c38aed572`, `4925036623`, `ae5b57525b`, `b70e51454e`, `7263015bd1`,
+`b673d8fb85`, `4cf6be0bcd`, `d900c3cc1c`, `7be3499ca6`, `f8074d6e1c`, `84b5007a05`,
+`5bacd6d5b1`, `cc7c02f78b`, `587ed7f98a`, `6bae3f73d3`, `cca5f1a1af`, and `0e9229ffd7`.
+
+SoT reconciliation result: 701 canonical-equation events resolve to 332 unique current law IDs;
+1,884 lane IDs validate with zero duplicates and all 24 additive lanes retained; 168 canonical task
+rows pass strict validation with one registration per task. The current canonical-equations query and
+lever registry load, with 80 unique lever factories and zero stale emitted flags.
+
+Main-supervisor independently compared the landing with baseline `f8074d6e1c` and classified the
+surfaced pytest failures as baseline debt. The only two pass-on-baseline flips are flaky PR85 real-smoke
+probes whose subject code is byte-identical baseline-to-landing. Regression verdict: CLEAN versus that
+baseline. This does not make the 12 baseline preflight-drift findings or the partial-suite failures green.
+
+The three apparatus bugs above remain OWED: none was narrow enough for an honest `$0` strict
+self-protect in this consolidation. The complete evidence and partial-suite counts are in
+`.omx/research/consolidation_code_land_receipt_20260714.md`. Frontier pointer unchanged; no paid/GPU
+launch occurred.
+
+DAG FEED: `FEED-CONSOLIDATION-CODE-LAND-20260714` — 18 reviewed landings; equations/lane/task SoTs
+reconciled; loaders verified; clean-versus-baseline regression verdict; baseline gate debt preserved;
+three apparatus fixes OWED; pointer unchanged.
