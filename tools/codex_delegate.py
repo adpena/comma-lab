@@ -38,6 +38,12 @@ RUNS = REPO / ".omx" / "tmp" / "codex_runs"
 EVENTS = RUNS / "codex_events.log"
 LEDGER = REPO / ".omx" / "state" / "codex_delegations.jsonl"
 INBOX_DIR = REPO / ".omx" / "tmp" / "codex_inbox"  # per-arm watched inboxes (tools/codex_msg.py producer)
+MANIFEST_DIR = REPO / ".omx" / "tmp" / "codex_manifests"  # per-arm files-touched manifest (harvest-commit contract)
+
+# Back-pressure: a workspace-write arm CANNOT commit (sandbox blocks .git/objects), so every arm
+# strands its diff UNCOMMITTED in the shared tree. Above this many uncommitted files the dispatcher
+# REFUSES to launch (accruing more drift) until the pile is harvest-drained. --force overrides.
+_MAX_UNCOMMITTED_PILE = 40
 
 # Bidirectional-channel contract prepended to EVERY delegated prompt so a one-shot codex arm
 # stays AMENDABLE while running: it polls a watched inbox at each checkpoint and consumes new
@@ -59,6 +65,35 @@ This is how you stay amendable while running. Absent/empty inbox -> ignore, proc
 === END LIVE INBOX ===
 
 """
+
+# Commit-path contract (apparatus fix for codex_workspace_write_sandbox_blocks_git_objects_20260712):
+# a workspace-write arm CANNOT write .git/objects -> `git add`/`git commit` (and the serializer) fail
+# rc=128 -> its work strands UNCOMMITTED in the shared tree. Instead of committing, the arm writes a
+# MANIFEST of the files it touched; MAIN (unsandboxed) harvests + REVIEWS + serializer-commits them via
+# tools/codex_harvest_commit.py. Prepended to EVERY delegated prompt so no arm silently orphans its work.
+_HARVEST_CONTRACT = """=== COMMIT PATH — YOU CANNOT COMMIT; MANIFEST INSTEAD (mandatory; skipping ORPHANS your work) ===
+Your sandbox (workspace-write) BLOCKS writes to .git/objects, so `git add` / `git commit` / the
+serializer WILL fail rc=128. DO NOT attempt to commit, and DO NOT try to bypass it (no direct-git,
+no override). Instead:
+  1. Make your file edits normally.
+  2. BEFORE your FINAL message, write the EXACT repo-relative paths you created/modified to:
+       {manifest}
+     as JSON: {{"files": ["path/a.md", "src/tac/b.py", ...],
+                "code_files": ["src/tac/b.py", ...],   # subset needing code review
+                "verdict": "<one-line result>", "review_notes": "<what MAIN should check>"}}
+  3. Repeat your verdict + what-to-review in your FINAL message.
+MAIN (unsandboxed) reads the manifest, REVIEWS, and serializer-commits your diff — that harvest IS the
+non-negotiable follow-up review. An arm that edits files but writes NO manifest ORPHANS its work into an
+un-attributable shared-tree pile. Writing the manifest is MANDATORY.
+=== END COMMIT PATH ===
+
+"""
+
+
+def _uncommitted_pile_size() -> int:
+    r = subprocess.run(["git", "-C", str(REPO), "status", "--short"],
+                       capture_output=True, text=True)
+    return sum(1 for ln in r.stdout.splitlines() if ln.strip())
 
 # Transient-death auto-recovery (apparatus fix for the codex_probe_token_limit_death /
 # "Selected model is at capacity" bug class): a capacity/rate-limit/disconnect is a
@@ -205,6 +240,16 @@ def main(argv: list[str] | None = None) -> int:
               f"Redirect it via .omx/tmp/codex_inbox/{args.label}.jsonl, or pass --force to run a second.")
         return 3
 
+    # Back-pressure: refuse to launch into a growing drift pile. Arms CANNOT commit (sandbox blocks
+    # .git/objects), so every launch accrues more stranded, un-attributable work in the shared tree.
+    pile = _uncommitted_pile_size()
+    if pile > _MAX_UNCOMMITTED_PILE and not args.force:
+        print(f"REFUSED (back-pressure): {pile} uncommitted files in the shared tree "
+              f"(> {_MAX_UNCOMMITTED_PILE}). Codex arms CANNOT commit (sandbox blocks .git/objects), so "
+              f"launching more ACCRUES drift. Harvest-drain done arms first "
+              f"(tools/codex_harvest_commit.py --label <L> --stamp <S>), then relaunch — or --force.")
+        return 4
+
     stamp = _utc()
 
     if args.prompt_file:
@@ -219,13 +264,17 @@ def main(argv: list[str] | None = None) -> int:
     # amendable mid-run. The wrapped prompt is what the launcher feeds codex; the original
     # prompt_file is preserved untouched (and recorded in the ledger for provenance).
     INBOX_DIR.mkdir(parents=True, exist_ok=True)
+    MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
     inbox = INBOX_DIR / f"{args.label}.jsonl"
     broadcast = INBOX_DIR / "_broadcast.jsonl"
+    manifest = MANIFEST_DIR / f"{args.label}_{stamp}.json"
     inbox.touch(exist_ok=True)
     broadcast.touch(exist_ok=True)
     wrapped = RUNS / f"{args.label}_{stamp}.wrapped.prompt.txt"
     wrapped.write_text(
-        _INBOX_CONTRACT.format(inbox=inbox, broadcast=broadcast) + prompt_file.read_text(encoding="utf-8"),
+        _HARVEST_CONTRACT.format(manifest=manifest)
+        + _INBOX_CONTRACT.format(inbox=inbox, broadcast=broadcast)
+        + prompt_file.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
 
