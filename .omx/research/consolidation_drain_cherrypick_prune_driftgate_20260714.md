@@ -53,6 +53,18 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
    CLAUDE.md catalog row per "Bugs must be permanently fixed AND self-protected against."
 
 ## Follow-ons QUEUED — DO NOT LAUNCH (held until clean tree + governor fix + operator GO)
+- **$0 n600 ISLAND-BIRTH DILATION-λ HYSTERESIS SWEEP (queued, from the Fork/continuation reframe).** The
+  measurement-first gate that decides whether continuation earns its keep. Ramp dilation-λ (or seed-anneal)
+  UP until the movable/lane island nucleates through frozen-SegNet at n600, then ramp BACK DOWN and record
+  birth-fraction per class both directions. Outputs simultaneously: (a) the saddle-node critical λ*, (b)
+  bistable-vs-monotone verdict (hysteresis loop present?), (c) whether the quasi-static assumption is even
+  plausible. IF bistable → replace the #300/#323 GO-gate with a COMPUTED critical λ + principled
+  fold-crossing (the Chan-Vese `λ_c=W_birth/(δ·A_GT_c)` balance law is the fixed-point; this pins the fold
+  around it). IF monotone → continuation reframe has no operational value, say so + drop. NO model-build
+  until this measures (the balance law + one operating point exist; the MISSING pieces are the transient/
+  basin dynamics + this swept curve + time-scale-separation check). A MEANS: earns keep only via the run-
+  config critical-λ it produces. Sisters: memory curriculum_is_continuation_instabilities_are_bifurcations,
+  #300/#323 island-birth, #315 birth-completion ramp, Chan-Vese birth-balance canonical-eq, #318/#344.
 - Witness training sweep (from `witness_train_sweep_spec` output) — dual-purpose (pointer candidates +
   costate-organ n=1 trajectory data).
 - n600 pairkkt confirmation (banked; admits on correct accounting once governor lands).
