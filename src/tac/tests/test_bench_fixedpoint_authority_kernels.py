@@ -190,6 +190,7 @@ def test_weight_l1_precursor_requires_label_free_static_bound(tmp_path: Path) ->
             "assignment_rule": "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound",
             "bound_kind": "activation_qmax_times_max_output_quantized_weight_l1",
             "label_or_frame_dependent": False,
+            "precision_histogram": {"27": 4, "28": 28, "29": 32, "30": 41, "31": 20},
         },
         "custody": {"qdq_precursor_sha256": _sha256(qdq_path)},
     }
@@ -260,6 +261,7 @@ def test_tie_snap_precursor_requires_calibration_and_heldout_exactness(
             ),
             "bound_kind": "activation_qmax_times_max_output_quantized_weight_l1",
             "label_or_frame_dependent": False,
+            "precision_histogram": {"27": 4, "28": 28, "29": 32, "30": 41, "31": 20},
         },
         "contract": {
             "decision_rule": "lowest class index within epsilon of candidate maximum",
@@ -333,6 +335,7 @@ def test_class_pair_tie_snap_requires_frozen_disjoint_validation(tmp_path: Path)
             ),
             "bound_kind": "activation_qmax_times_max_output_quantized_weight_l1",
             "label_or_frame_dependent": False,
+            "precision_histogram": {"27": 4, "28": 28, "29": 32, "30": 41, "31": 20},
         },
         "contract": {
             "design_split": [0, 264],
@@ -361,6 +364,10 @@ def test_class_pair_tie_snap_requires_frozen_disjoint_validation(tmp_path: Path)
         "runner_class": 0,
         "replacement_class": 0,
     }
+    assert GATE._realized_precision_bounds(precursor) == (27, 31)
+    precursor["model_manifest"]["precision_histogram"] = {"25": 125}
+    with pytest.raises(ValueError, match="coverage differs"):
+        GATE._realized_precision_bounds(precursor)
     payload["summary"]["second_validation_exact"] = False  # type: ignore[index]
     _write_json(precursor_path, payload)
     with pytest.raises(ValueError, match="has not admitted"):

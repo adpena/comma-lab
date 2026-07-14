@@ -200,10 +200,12 @@
       "command": "tools/run_weight_l1_tie_snap_scorer_forward_n600_host.command"
     },
     "weight_l1_class_pair_tie_snap_decision_head": {
-      "status": "SECOND_VALIDATION_RUNNING_RESUMABLY",
-      "verdict": "OWED_FULL_N600",
+      "status": "MEASURED",
+      "verdict": "CLASS_PAIR_TIE_SNAP_ARGMAX_FEASIBLE",
       "verdict_scope": "INSTANCE: frozen SegNet weight-L1 W27..W31 logits; ordered candidate top2 (4,0) with gap <=2^-19 snaps to class 0; designed on 0..263 and validated without reselection on 264..599",
       "path": "experiments/results/throughput_authority_ladder_20260714/weight_l1_class_pair_tie_snap_scorer_forward_n600.json",
+      "sha256": "65b7ac09705b769968429ad2cfe9dc781972348ac6da061b9d1fcdda313d7da7",
+      "fingerprint": "799496b7d55a056136a621756e11d71a02b55d7711f656c3e3a6a5a7b9a52ec2",
       "design_split": [
         0,
         264
@@ -218,6 +220,18 @@
         0
       ],
       "replacement_class": 0,
+      "design_pairs": 264,
+      "design_flips": 0,
+      "design_snapped_pixels": 1,
+      "second_validation_pairs": 336,
+      "second_validation_flips": 0,
+      "second_validation_snapped_pixels": 0,
+      "full_pairs": 600,
+      "full_pixels": 117964800,
+      "full_flips": 0,
+      "full_snapped_pixels": 1,
+      "full_argmax_corpus_sha256": "f9458f5a37089541c2690b3d48230224132e486fe571d30f1e910c2d32729938",
+      "canonical_anchor_id": "task494_weight_l1_class_pair_tie_snap_segnet_n600_65b7ac09705b7699",
       "runtime_label_or_frame_dependent": false,
       "checkpoint_every_pairs": 1,
       "resumable_from_disk": true,
@@ -231,11 +245,11 @@
   },
   "rung3": {
     "status": "BUILT_PRECURSOR_GATED_HOST_MEASUREMENT_OWED",
-    "precision_assignment": "select the narrowest full-n600 exact precursor; frozen-weight-L1 W26..W31 is the current highest-precision candidate",
+    "precision_assignment": "realized frozen-weight-L1 W27..W31 plus the frozen ordered (4,0)->0 gap<=2^-19 decision head",
     "arithmetic": "int32 activation and weight codes; exact signed-int64 direct Conv2d MAC; one fp32 finalization",
     "command": "tools/run_fixedpoint_authority_kernels_host.command",
     "admission": [
-      "admitted exact-int64 full-n600 CPU precursor bound to the corrected QDQ receipt",
+      "admitted exact-int64 full-n600 CPU precursor bound to the corrected QDQ receipt and disjoint class-pair validation",
       "zero argmax flips on real pairs 0..599 against recomputed one-thread CPU-Torch control",
       "one candidate argmax corpus digest across ten processes",
       "positive synchronized Metal speedup versus the CPU-Torch control"
@@ -243,7 +257,10 @@
     "interval_certificate_policy": "reported as a sufficient enclosure; exhaustive exact equality on the fixed n600 corpus owns local candidate admission",
     "ane": {
       "status": "PUBLIC_API_FORMULATION_BLOCKED",
-      "verdict_scope": "FORMULATION/API: public CoreML activation compute exposes W8A8; settled calibrated W8A8 has 45.836809 percent held-out flips; ANE family remains open"
+      "verdict_scope": "FORMULATION/API: public CoreML activation compute exposes W8A8; settled calibrated W8A8 has 45.836809 percent held-out flips; ANE family remains open",
+      "required_bits": 27,
+      "ticket_path": "experiments/results/throughput_authority_ladder_20260714/ane_fixedpoint_authority_ticket.json",
+      "ticket_sha256": "0eb970b31cb4eafe059e747bc056149ad859735992f2aa40f9b645a529d9bd44"
     }
   },
   "rung4": {
@@ -260,6 +277,16 @@
     "render_R_adjoint": "integer custom Metal only after full parity/determinism/error/speed receipt; otherwise fixed-order fp32",
     "decode": "portable deterministic NumPy-fp32 and exact integer receiver operations",
     "terminal_score": "exact identical archive bytes through separate contest-CPU and contest-CUDA evaluator axes"
+  },
+  "compiled_policy": {
+    "path": "experiments/results/throughput_authority_ladder_20260714/throughput_authority_policy.json",
+    "sha256": "4dc658e73e608b81ae4fe661c50b2613cf43d35c234dfb99106233b710b61d67",
+    "custom_metal_segnet_state": "held_owed",
+    "custom_metal_selected_minimum_realized_bits": 27,
+    "missing_receipts": [
+      "metal",
+      "integer_r"
+    ]
   },
   "triality": {
     "equations": [

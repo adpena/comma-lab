@@ -232,6 +232,32 @@ def _selected_tie_snap_epsilon(receipt: dict[str, Any] | None) -> float | None:
     return None if rule is None else float(rule["epsilon"])
 
 
+def _realized_precision_bounds(receipt: dict[str, Any]) -> tuple[int, int]:
+    manifest = receipt.get("model_manifest", {})
+    histogram = manifest.get("precision_histogram")
+    if not isinstance(histogram, dict):
+        raise ValueError("exact-int64 precursor lacks a realized precision histogram")
+    try:
+        realized = sorted(
+            int(raw_bits)
+            for raw_bits, raw_count in histogram.items()
+            if int(raw_count) > 0
+        )
+        count = sum(int(raw_count) for raw_count in histogram.values())
+    except (TypeError, ValueError) as exc:
+        raise ValueError("exact-int64 precursor precision histogram is malformed") from exc
+    configured_minimum = int(manifest.get("minimum_bits", -1))
+    configured_maximum = int(manifest.get("maximum_bits", -1))
+    if (
+        not realized
+        or count != int(manifest.get("converted_conv2d_count", -1))
+        or realized[0] < configured_minimum
+        or realized[-1] > configured_maximum
+    ):
+        raise ValueError("exact-int64 precursor precision histogram coverage differs")
+    return realized[0], realized[-1]
+
+
 def _selected_tie_snap_rule(receipt: dict[str, Any] | None) -> dict[str, Any] | None:
     if receipt is None:
         return None
@@ -381,13 +407,27 @@ def run_child(args: argparse.Namespace) -> dict[str, Any]:
     tie_snap_epsilon = _selected_tie_snap_epsilon(integer_precursor)
     model, weights = _load_segnet()
     if args.weight_l1_safe:
+        if integer_precursor is None or integer_precursor.get("schema") not in {
+            "weight_l1_int64_fixedpoint_scorer_n600.v1",
+            "weight_l1_tie_snap_scorer_n600.v1",
+            "weight_l1_class_pair_tie_snap_scorer_n600.v1",
+        }:
+            raise ValueError(
+                "weight-L1 Metal child requires its admitted exact-int64 precursor"
+            )
         adapter, adapter_manifest = build_metal_weight_l1_int64_segnet_adapter(
             model,
             operator_absmax=calibration,
             require_opt_in=False,
         )
-        precision_assignment = "frozen_weight_l1_safe_W26_to_W31"
+        realized_minimum_bits, realized_maximum_bits = _realized_precision_bounds(
+            integer_precursor
+        )
+        precision_assignment = (
+            f"frozen_weight_l1_safe_W{realized_minimum_bits}_to_W{realized_maximum_bits}"
+        )
         precision_assignment += _tie_snap_assignment_suffix(tie_snap_rule)
+        reported_bits = realized_minimum_bits
     elif args.mixed_geometry_safe:
         adapter, adapter_manifest = build_metal_mixed_int64_segnet_adapter(
             model,
@@ -395,6 +435,7 @@ def run_child(args: argparse.Namespace) -> dict[str, Any]:
             require_opt_in=False,
         )
         precision_assignment = "geometry_safe_W26_to_W30"
+        reported_bits = selected_bits
     else:
         adapter, adapter_manifest = build_metal_fixedpoint_segnet_adapter(
             model,
@@ -404,6 +445,7 @@ def run_child(args: argparse.Namespace) -> dict[str, Any]:
             require_opt_in=False,
         )
         precision_assignment = f"uniform_W{selected_bits}A{selected_bits}"
+        reported_bits = selected_bits
     frame1 = stored_npy_memmap(args.gt_cache, "gt_f1.npy")
     labels = stored_npy_memmap(args.gt_cache, "lstars.npy")
     margins = stored_npy_memmap(args.gt_cache, "margins.npy")
@@ -509,7 +551,8 @@ def run_child(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "status": "MEASURED",
         "fidelity": bool(args.fidelity),
-        "bits": selected_bits,
+        "bits": reported_bits,
+        "qdq_precursor_bits": selected_bits,
         "precision_assignment": precision_assignment,
         "activation_scale_mode": activation_scale_mode,
         "pair_start": int(args.pair_start),
@@ -679,8 +722,14 @@ def run_parent(args: argparse.Namespace) -> dict[str, Any]:
                 "weight-L1 Metal gate requires its admitted exact-int64 or tie-snap precursor"
             )
         kernel_signature = weight_l1_fixedpoint_verdict_signature()
-        precision_assignment = "frozen_weight_l1_safe_W26_to_W31"
+        realized_minimum_bits, realized_maximum_bits = _realized_precision_bounds(
+            integer_precursor
+        )
+        precision_assignment = (
+            f"frozen_weight_l1_safe_W{realized_minimum_bits}_to_W{realized_maximum_bits}"
+        )
         precision_assignment += _tie_snap_assignment_suffix(tie_snap_rule)
+        reported_bits = realized_minimum_bits
         if tie_snap_rule is not None:
             kernel_signature = {
                 **kernel_signature,
@@ -697,11 +746,17 @@ def run_parent(args: argparse.Namespace) -> dict[str, Any]:
             raise ValueError("mixed Metal gate requires an admitted mixed exact-int64 precursor")
         kernel_signature = mixed_fixedpoint_verdict_signature()
         precision_assignment = "geometry_safe_W26_to_W30"
+        reported_bits = selected_bits
     else:
         kernel_signature = fixedpoint_verdict_signature()
         precision_assignment = f"uniform_W{selected_bits}A{selected_bits}"
+        reported_bits = selected_bits
     contract = {
-        "bits": selected_bits,
+        "bits": reported_bits,
+        "qdq_precursor_bits": selected_bits,
+        "maximum_realized_bits": (
+            realized_maximum_bits if args.weight_l1_safe else reported_bits
+        ),
         "precision_assignment": precision_assignment,
         "mixed_geometry_safe": bool(args.mixed_geometry_safe),
         "weight_l1_safe": bool(args.weight_l1_safe),
@@ -824,7 +879,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--weight-l1-safe",
         action="store_true",
-        help="run the frozen-weight-L1-safe W26..W31 exact-int64 SegNet contract",
+        help="run the configured W26..W31 frozen-weight-L1 exact-int64 SegNet contract",
     )
     parser.add_argument("--pair-start", type=int, default=0)
     parser.add_argument("--pair-count", type=int, default=600)

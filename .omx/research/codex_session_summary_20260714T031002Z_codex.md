@@ -2,14 +2,16 @@
 
 **UTC:** 2026-07-14T03:10:02Z  
 **Lane:** `throughput_authority_ladder`  
-**Status:** `BUILD_COMPLETE; QDQ_UNIFORM_AND_GEOMETRY_INT64_N600_MEASURED; WEIGHT_L1_INT64_N600_RUNNING; HOST_DEVICE_GATES_OWED`
+**Status:** `BUILD_COMPLETE; RUNG2_CLASS_PAIR_EXACT_N600_MEASURED; HOST_DEVICE_GATES_OWED`
 **Flags:** `research_only=true` · `score_claim=false` · `pointer_moved=false`
 
 ## TIER-0 outcome
 
 Task #494 now has a fail-closed heterogeneous authority policy and executable host packet rather than
 an architectural conjecture. The fixed-calibration n600 formulation is decisively negative. A
-distinct dynamic max-absolute QDQ formulation is closed through its W26 single-int64 ceiling. Full-R
+distinct dynamic max-absolute QDQ formulation is closed through its W26 single-int64 ceiling. The
+direct-int64 ladder then converges to a frozen W27..W31 ordered class-pair decision head with 0
+argmax flips across all 117,964,800 real n600 source pixels and a disjoint 336-pair validation. Full-R
 integer accumulation, a no-atomic integer R-adjoint backend, an all-Conv2d custom-Metal fixed-point
 SegNet, an ANE formulation ticket, a pose-frozen canary gate, policy compiler, and empirical equation
 anchors are built and covered by CPU contract tests. Device execution remains with MAIN's M5-Max as
@@ -44,10 +46,15 @@ borrowed-lineage defensive bank `0.1880443979880752 [contest-CPU]`.
   aggregate `8.477105034722222e-09`, 38 conservative uncertified pixels, maximum logit error
   `7.62939453125e-05`. This is an `INSTANCE` negative; receipt SHA-256
   `129e9d39d09ff2e019cdab7ac04f699b64a846d319390d71d3bd12d9497959f5`.
-- Frozen-weight-L1-safe successor passed the full geometry-negative gate and is running resumably:
-  label/frame-free static int64 proof, histogram W27:4, W28:28, W29:32, W30:41, W31:20,
-  worst bound `9,035,402,569,620,285,889`, with CPU/Metal twins, pair-atomic n600 runner, typed
-  policy, and canonical anchor.
+- Frozen-weight-L1-safe W27..W31 CPU twin: 1 flip / 117,964,800 at exact-tie pair 11; aggregate
+  `8.477105034722222e-09`; 36 uncertified; receipt SHA-256
+  `bc8ce702189246b46970f85a79a78b94e68a74d59e9787d766c8c52deb96d7d5`. `INSTANCE` negative.
+- Global `2^-19` lowest-class head: calibration exact, but three heldout/full false snaps at pairs
+  195, 263, and 587. `FORMULATION-at-n600-INSTANCE` negative; receipt SHA-256
+  `651df3364a8921ad5b1936a9f831251c33fce2703a3c5675dc7b92607f239386`.
+- Frozen ordered `(4,0)->0`, gap `<=2^-19` head: design 0..263 = 0 flips/1 snap; untouched second
+  validation 264..599 = 0 flips/0 snaps; full = 0 / 117,964,800 flips. `INSTANCE` feasible;
+  receipt SHA-256 `65b7ac09705b769968429ad2cfe9dc781972348ac6da061b9d1fcdda313d7da7`.
 
 ## Built
 
@@ -71,6 +78,8 @@ borrowed-lineage defensive bank `0.1880443979880752 [contest-CPU]`.
 10. Split-honest lowest-class epsilon tie-snap decision head: preregistered dyadic ladder,
     calibration-only selection, heldout validation without reselection, pair-atomic n600 probe,
     NumPy/MLX twins, canonical anchor, policy gate, and synchronized Metal-host binding.
+11. Frozen ordered class-pair successor with disjoint design/second-validation custody, exact full
+    source-n600 argmax, registered equation anchor, realized W27..W31 policy, and Metal-host binding.
 
 ## Adversarial bugs extinguished
 
@@ -83,17 +92,20 @@ borrowed-lineage defensive bank `0.1880443979880752 [contest-CPU]`.
 - Pose timing documentation mislabeled the DERIVED n600 projection as measured.
 - W26 positive qmax was rounded upward by fp32 before clamping; all paths now clamp exact integers.
 - QDQ/fp32 accumulation was at risk of being mislabeled as the actual direct-int64 formulation.
+- uniform and weight-L1 Metal adapters rebuilt 125 immutable device constant buffers per forward;
+  adapters now prepare and cache them once;
+- configured W26 floor was mislabeled as realized precision although the histogram is W27..W31;
+  policy and Metal contracts now derive nonzero realized bounds and require 125-layer coverage.
 
 The detailed review is
 `.omx/research/codex_findings_throughput_authority_ladder_20260714T031002Z_codex.md`.
 
 ## Host packet owed to MAIN
 
-Run on the M5-Max host in this order after the dynamic QDQ receipt is complete:
+Run on the M5-Max host in this order; CPU precursor feasibility is complete:
 
 ```bash
 tools/run_full_r_adjoint_bitident_host.command
-tools/run_mixed_int64_scorer_forward_n600_host.command
 tools/run_fixedpoint_authority_kernels_host.command
 tools/run_integer_r_adjoint_backend_host.command
 tools/run_pose_verdict_gate_dry_start_host.command
@@ -108,11 +120,11 @@ equivalence.
 
 ## Recommended next action
 
-The highest-EV next rung is conditional and fail-closed: finish the frozen-weight-L1-safe W27..W31
-exact-int64 CPU twin. If exact, MAIN runs its bound full-n600 custom-Metal receipt (one fidelity
-process, ten total processes, exact argmax, one digest, placement, and speed). If non-exact, do not
-spend Metal time on it; the next formulation is multi-limb exact accumulation or a separately
-measured sparse near-tie correction ladder.
+The single highest-EV next rung is MAIN's bound custom-Metal n600 receipt via
+`tools/run_fixedpoint_authority_kernels_host.command`: one fidelity process, ten total processes,
+exact source-corpus argmax, one digest, real placement, and positive speed. Even a green receipt is
+only a default-off local candidate; CPU suppression still requires an actual evolving-witness
+shadow/certificate gate. A Metal failure is scoped to that kernel formulation.
 
 ## Inbox/directive custody
 

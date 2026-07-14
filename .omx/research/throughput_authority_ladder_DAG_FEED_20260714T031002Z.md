@@ -3,7 +3,7 @@
 **UTC:** 2026-07-14T03:10:02Z  
 **Feed:** `FEED-494-throughput-authority-ladder`  
 **Lane:** `throughput_authority_ladder`  
-**Status:** `QDQ_UNIFORM_AND_GEOMETRY_INT64_N600_MEASURED; WEIGHT_L1_INT64_N600_RUNNING; HOST_GATES_OWED`
+**Status:** `RUNG2_CLASS_PAIR_EXACT_N600_MEASURED; HOST_GATES_OWED`
 **Authority:** `[research-only MEANS; score_claim=false; pointer_moved=false]`
 
 The shared pursuit DAG is hot. This standalone feed is the collision-safe trajectory leg MAIN may
@@ -48,14 +48,20 @@ fixed-calibration real n600 W8..W24 QDQ:
        histogram={26:5,27:30,28:22,29:19,30:49}
        1 flip / 117,964,800 at pair11; 38 uncertified; training tolerance pass
     -| geometry-only mixed direct-int64 INSTANCE
-    -> frozen-weight-L1 safe W26..W31 [RUNNING; pair-atomic resume]
+    -> frozen-weight-L1 safe configured W26..W31 [MEASURED]
        bound=activation_qmax*max_oc sum(abs(weight_q[oc]))
-       histogram={27:4,28:28,29:32,30:41,31:20}
-    -> {exact weight-L1 integer arm | weight-L1 INSTANCE negative}
-    -> on full negative: dyadic lowest-class epsilon tie snap
+       realized histogram={27:4,28:28,29:32,30:41,31:20}
+       1 flip / 117,964,800 at exact tie pair11
+    -| plain weight-L1 INSTANCE
+    -> dyadic lowest-class epsilon tie snap
        select minimum calibration-exact epsilon on 0..119
        validate unchanged on heldout 120..599 and full n600
-    -> {exact tie-safe decision head | tie-snap FORMULATION negative}
+       selected 2^-19; 3 heldout/full false snaps at 195,263,587
+    -| global epsilon FORMULATION-at-n600-INSTANCE
+    -> freeze ordered (4,0)->0 gap<=2^-19 rule on design 0..263
+       validate without reselection on untouched 264..599
+       design=0 flips/1 snap; validation=0 flips/0 snaps
+       full=0 flips / 117,964,800 [MEASURED INSTANCE FEASIBLE]
     -> custom Metal mixed exact-int64 all-Conv2d host gate
     -> exhaustive exact n600 + 10-process same digest + speed > 1
        (conservative interval certificate reported separately)
@@ -94,6 +100,8 @@ complete QDQ + Metal + integer-R + pose receipts
   `compile_throughput_authority_policy`.
 - Synthesis:
   `.omx/research/throughput_authority_ladder_20260714T031002Z.md`.
+- Registered class-pair anchor:
+  `task494_weight_l1_class_pair_tie_snap_segnet_n600_65b7ac09705b7699`.
 
 ## Verdict-scope guard
 

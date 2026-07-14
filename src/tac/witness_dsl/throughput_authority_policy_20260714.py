@@ -192,6 +192,31 @@ def _integer_scorer_gate(
         != required_qdq_fingerprint
     ):
         return False, None, None, None, "exact-int64 scorer is not bound to this QDQ receipt"
+
+    def realized_precision_bounds() -> tuple[int, int] | None:
+        histogram = manifest.get("precision_histogram")
+        if not isinstance(histogram, Mapping):
+            return None
+        try:
+            realized = sorted(
+                int(raw_bits)
+                for raw_bits, raw_count in histogram.items()
+                if int(raw_count) > 0
+            )
+            count = sum(int(raw_count) for raw_count in histogram.values())
+        except (TypeError, ValueError):
+            return None
+        configured_minimum = int(manifest.get("minimum_bits", -1))
+        configured_maximum = int(manifest.get("maximum_bits", -1))
+        if (
+            not realized
+            or count != int(manifest.get("converted_conv2d_count", -1))
+            or realized[0] < configured_minimum
+            or realized[-1] > configured_maximum
+        ):
+            return None
+        return realized[0], realized[-1]
+
     if schema == "exact_int64_fixedpoint_scorer_n600.v1":
         bits = int(summary.get("bits", -1))
         if bits < 2 or int(manifest.get("bits", -1)) != bits:
@@ -211,13 +236,15 @@ def _integer_scorer_gate(
             return False, None, None, None, "mixed exact-int64 precision manifest differs"
         assignment = "geometry_safe_W26_to_W30"
     elif schema == "weight_l1_int64_fixedpoint_scorer_n600.v1":
-        bits = int(summary.get("minimum_bits", -1))
+        configured_minimum_bits = int(summary.get("minimum_bits", -1))
         maximum_bits = int(summary.get("maximum_bits", -1))
+        realized_bounds = realized_precision_bounds()
         if (
-            bits != 26
+            configured_minimum_bits != 26
             or maximum_bits != 31
-            or int(manifest.get("minimum_bits", -1)) != bits
+            or int(manifest.get("minimum_bits", -1)) != configured_minimum_bits
             or int(manifest.get("maximum_bits", -1)) != maximum_bits
+            or realized_bounds is None
             or manifest.get("assignment_rule")
             != "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
             or manifest.get("bound_kind")
@@ -225,14 +252,17 @@ def _integer_scorer_gate(
             or manifest.get("label_or_frame_dependent") is not False
         ):
             return False, None, None, None, "weight-L1 exact-int64 precision manifest differs"
-        assignment = "frozen_weight_l1_safe_W26_to_W31"
+        bits, realized_maximum_bits = realized_bounds
+        assignment = f"frozen_weight_l1_safe_W{bits}_to_W{realized_maximum_bits}"
     elif schema == "weight_l1_tie_snap_scorer_n600.v1":
-        bits = int(manifest.get("minimum_bits", -1))
+        configured_minimum_bits = int(manifest.get("minimum_bits", -1))
         maximum_bits = int(manifest.get("maximum_bits", -1))
+        realized_bounds = realized_precision_bounds()
         epsilon = summary.get("minimum_calibration_exact_epsilon")
         if (
-            bits != 26
+            configured_minimum_bits != 26
             or maximum_bits != 31
+            or realized_bounds is None
             or int(manifest.get("converted_conv2d_count", -1)) != 125
             or manifest.get("assignment_rule")
             != "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
@@ -251,17 +281,23 @@ def _integer_scorer_gate(
             or contract.get("runtime_label_or_frame_dependent") is not False
         ):
             return False, None, None, None, "weight-L1 tie-snap precision manifest differs"
-        assignment = f"frozen_weight_l1_safe_W26_to_W31_tie_snap_{float(epsilon).hex()}"
+        bits, realized_maximum_bits = realized_bounds
+        assignment = (
+            f"frozen_weight_l1_safe_W{bits}_to_W{realized_maximum_bits}_tie_snap_"
+            f"{float(epsilon).hex()}"
+        )
     elif schema == "weight_l1_class_pair_tie_snap_scorer_n600.v1":
-        bits = int(manifest.get("minimum_bits", -1))
+        configured_minimum_bits = int(manifest.get("minimum_bits", -1))
         maximum_bits = int(manifest.get("maximum_bits", -1))
+        realized_bounds = realized_precision_bounds()
         epsilon = contract.get("epsilon")
         winner = contract.get("candidate_winner_class")
         runner = contract.get("candidate_runner_class")
         replacement = contract.get("replacement_class")
         if (
-            bits != 26
+            configured_minimum_bits != 26
             or maximum_bits != 31
+            or realized_bounds is None
             or int(manifest.get("converted_conv2d_count", -1)) != 125
             or manifest.get("assignment_rule")
             != "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
@@ -288,8 +324,10 @@ def _integer_scorer_gate(
                 None,
                 "weight-L1 class-pair tie-snap precision manifest differs",
             )
+        bits, realized_maximum_bits = realized_bounds
         assignment = (
-            f"frozen_weight_l1_safe_W26_to_W31_class_pair_tie_snap_w{winner}_r{runner}"
+            f"frozen_weight_l1_safe_W{bits}_to_W{realized_maximum_bits}"
+            f"_class_pair_tie_snap_w{winner}_r{runner}"
             f"_to{replacement}_eps_{float(epsilon).hex()}"
         )
     else:

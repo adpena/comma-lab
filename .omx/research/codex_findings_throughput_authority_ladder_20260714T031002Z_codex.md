@@ -2,8 +2,8 @@
 
 **UTC:** 2026-07-14T03:10:02Z  
 **Lane:** `throughput_authority_ladder`  
-**Review:** round 1, independent re-derivation from code and receipts  
-**Status:** `QDQ_UNIFORM_AND_GEOMETRY_INT64_N600_REDERIVED; WEIGHT_L1_INT64_N600_RUNNING; DEVICE_GATES_OWED_MAIN`
+**Review:** rounds 1–3, independent re-derivation from code and receipts
+**Status:** `RUNG2_CLASS_PAIR_EXACT_N600_REDERIVED; DEVICE_GATES_OWED_MAIN`
 **Authority:** `[macOS-CPU Torch one-thread advisory/QDQ feasibility]`  
 **Flags:** `research_only=true` · `score_claim=false` · `pointer_moved=false`
 
@@ -116,37 +116,50 @@ passes, but exact authority does not. Receipt SHA-256 is
 SegNet and real n600 corpus. The flipped reference pixel is an exact zero-margin tie; tighter static
 bounds, multi-limb accumulation, sparse tie policy, Metal, and the fixed-point family remain open.
 
-### F5f — frozen-weight L1 is the tighter static bound — DISTINCT SUCCESSOR RUNNING
+### F5f — frozen-weight L1 is tighter, but arithmetic alone leaves one tie flip — MEASURED INSTANCE
 
 The geometry bound still assumes every frozen weight code has magnitude `qmax`. For output channel
 `oc`, exact integer convolution instead satisfies
 `|acc_oc| <= activation_qmax * sum_i |weight_q[oc,i]|`. This uses only frozen model bytes and the
 chosen precision; it is independent of frames, labels, logits, margins, and the observed flip set.
-At the maximum safe signed-int32 code width W31, it yields W27:4, W28:28, W29:32, W30:41,
+At the maximum safe signed-int32 code width W31, it realizes W27:4, W28:28, W29:32, W30:41,
 W31:20. The worst proven accumulator is `9,035,402,569,620,285,889`, leaving
-`187,969,467,234,489,918` of signed-int64 headroom. The CPU twin, pair-atomic n600 runner, custom
-Metal adapter, receipt-bound policy, and canonical anchor are built. The full geometry-only
-predecessor closed negative, the fail-closed gate admitted this arm, and its full n600 run is now
-resumable in progress; partial rows carry no verdict.
+`187,969,467,234,489,918` of signed-int64 headroom. The full n600 receipt has one flip /
+117,964,800 at pair 11, aggregate `8.477105034722222e-09`, 36 conservative uncertified pixels,
+and maximum logit error `7.2479248046875e-05`. Its CPU numerical twin is `0.080916x` the
+one-thread fp32 reference and carries no throughput claim. Receipt SHA-256 is
+`bc8ce702189246b46970f85a79a78b94e68a74d59e9787d766c8c52deb96d7d5`.
 
-### F5g — the surviving error is currently tie semantics, not accumulator width — SUCCESSOR BUILT
+**Verdict scope:** `INSTANCE` negative for plain W27..W31 weight-L1 exact-int64 argmax. It does not
+kill the exact arithmetic, decision correction, custom Metal, or fixed-point family.
 
-The only partial W27..W31 flip observed so far is the same pair-11 pixel as the geometry arm. The
-one-thread reference logits for classes 0 and 4 are exactly equal at `5.2026519775390625`, so
+### F5g — global epsilon fixes calibration but creates heldout false snaps — MEASURED FORMULATION
+
+The pair-11 reference logits for classes 0 and 4 are exactly equal at `5.2026519775390625`, so
 `torch.argmax` selects lower class 0. The W27..W31 candidate differs by only
-`1.430511474609375e-06` and selects class 4. A focused diagnostic corrects that pixel first at
-epsilon `2^-19` by choosing the lowest class within epsilon of the candidate maximum; epsilon
-`2^-15` already changes an additional pixel, proving that an arbitrary wide tie band is unsafe.
+`1.430511474609375e-06` and selects class 4. The preregistered `0, 2^-24..2^-10` ladder selects
+`2^-19` on calibration pairs 0..119. Heldout validation without reselection then finds three false
+snaps at pairs 195, 263, and 587: 3 / 117,964,800 full pixels, aggregate
+`2.5431315104166668e-08`. No arm is both calibration- and heldout-exact. Receipt SHA-256 is
+`651df3364a8921ad5b1936a9f831251c33fce2703a3c5675dc7b92607f239386`.
 
-The production probe therefore preregisters `0, 2^-24..2^-10`, selects the minimum
-calibration-exact epsilon using pairs 0..119 only, and validates heldout pairs 120..599 without
-reselection. It is pair-atomic/resumable, refuses an incomplete or already-exact W27..W31
-predecessor, binds transitive corrected-QDQ custody, and has NumPy plus MLX decision heads. The
-custom-Metal host includes the selected MLX head inside synchronized latency and refuses any tie
-receipt lacking calibration, heldout, and full exactness.
+**Verdict scope:** `FORMULATION-at-n600-INSTANCE` negative for a global lowest-class epsilon head,
+not for class-pair decision correction or the fixed-point family.
 
-**Verdict scope:** pair-11 behavior is `INSTANCE` diagnostic until the full split-honest receipt
-closes. No tie-snap feasibility claim is made from this one pair.
+### F5h — the frozen ordered class-pair rule closes source-n600 argmax — MEASURED INSTANCE FEASIBLE
+
+Before any pair >=264 was inspected, the design receipt froze this rule from pairs 0..263: when
+candidate top two classes are ordered `(4,0)` and their gap is `<=2^-19`, choose class 0; otherwise
+use ordinary lowest-index argmax. The design split has 0 flips and one intended snap. The untouched
+second-validation surface 264..599 has 0 flips and zero snaps. Full 0..599 therefore has 0 /
+117,964,800 flips and exactly one snap, with argmax corpus SHA-256
+`f9458f5a37089541c2690b3d48230224132e486fe571d30f1e910c2d32729938`. Receipt SHA-256 is
+`65b7ac09705b769968429ad2cfe9dc781972348ac6da061b9d1fcdda313d7da7`; fingerprint is
+`799496b7d55a056136a621756e11d71a02b55d7711f656c3e3a6a5a7b9a52ec2`.
+
+**Verdict scope:** source-corpus `INSTANCE` feasibility for the frozen CPU exact-int64 twin and
+decision head. Device placement, speed, ten-process Metal identity, evolving witness frames, and
+contest CPU/CUDA remain separate gates.
 
 ### F6 — the full-R equation anchor originally targeted the wrong receipt schema — FIXED
 
@@ -168,7 +181,17 @@ converter symbols, and a post-conversion set/unique-count predicate refuses inco
 Exact integer accumulation removes reduction-order variation, but dynamic scaling, fp32
 dequant/bias, device compiler support, end-to-end logits, cross-process digests, and latency still
 require the M5-Max receipt. The worker environment has no evaluated Metal and does not manufacture
-those measurements.
+those measurements. Round-1 review also found both uniform and mixed/weight-L1 adapters rebuilding
+all 125 immutable weight/scale/bias device arrays on every forward. They now cache the constant
+buffers once; coverage and signature tests make that throughput fix load-bearing.
+
+### F8b — configured floor W26 was mislabeled as realized precision — FIXED
+
+The weight-L1 manifest is configured over W26..W31, but the frozen model realizes only W27:4,
+W28:28, W29:32, W30:41, W31:20. The first policy compile reported `selected_bits=26`, while the
+ANE ticket correctly required 27. Policy and Metal receipt contracts now derive the minimum and
+maximum from the nonzero histogram, require histogram coverage of all 125 Conv2d layers, and report
+W27..W31. W26 remains explicitly labelled the QDQ precursor bit width, not a realized kernel layer.
 
 ### F9 — strict interval certification is reported separately from empirical exact argmax — FIXED POLICY
 
@@ -214,8 +237,12 @@ evidence only; the local exact n600/cross-process/latency receipts stay load-bea
   flips; training tolerance passes, but authority does not.
 - Geometry-safe mixed W26..W30 CPU twin: **accepted as MEASURED INSTANCE negative** with one
   exact-zero-margin flip at pair 11; training tolerance passes.
-- Frozen-weight-L1-safe W27..W31 CPU twin: **full 0..599 run in progress**; no partial result
-  promoted.
+- Frozen-weight-L1-safe W27..W31 CPU twin: **accepted as MEASURED INSTANCE negative** with one
+  exact-tie flip at pair 11.
+- Global epsilon head: **accepted as MEASURED FORMULATION-at-n600-INSTANCE negative** with three
+  heldout false snaps.
+- Frozen ordered class-pair head: **accepted as MEASURED source-n600 INSTANCE feasible** with 0
+  flips on both design and untouched second validation; device/evolving-witness gates remain open.
 - Full-R, integer-R, custom-Metal, Pose dry-start: **built but OWED MAIN host measurements**.
 - CoreML/ANE W8A8: **settled FORMULATION refusal**; no duplicate run.
 - Contest CPU/CUDA authority: **unchanged and not inferred** from local substrate results.

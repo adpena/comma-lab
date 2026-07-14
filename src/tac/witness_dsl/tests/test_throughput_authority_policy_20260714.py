@@ -111,6 +111,7 @@ def _weight_l1_integer_scorer() -> dict[str, object]:
             "assignment_rule": "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound",
             "bound_kind": "activation_qmax_times_max_output_quantized_weight_l1",
             "label_or_frame_dependent": False,
+            "precision_histogram": {"27": 4, "28": 28, "29": 32, "30": 41, "31": 20},
         }
     )
     return receipt
@@ -118,8 +119,9 @@ def _weight_l1_integer_scorer() -> dict[str, object]:
 
 def _weight_l1_metal(**overrides: object) -> dict[str, object]:
     receipt = _mixed_metal(**overrides)
+    receipt["contract"]["bits"] = 27  # type: ignore[index]
     receipt["contract"]["precision_assignment"] = (  # type: ignore[index]
-        "frozen_weight_l1_safe_W26_to_W31"
+        "frozen_weight_l1_safe_W27_to_W31"
     )
     return receipt
 
@@ -151,7 +153,7 @@ def _tie_snap_integer_scorer() -> dict[str, object]:
 def _tie_snap_metal(**overrides: object) -> dict[str, object]:
     receipt = _weight_l1_metal(**overrides)
     receipt["contract"]["precision_assignment"] = (  # type: ignore[index]
-        f"frozen_weight_l1_safe_W26_to_W31_tie_snap_{float(2.0**-19).hex()}"
+        f"frozen_weight_l1_safe_W27_to_W31_tie_snap_{float(2.0**-19).hex()}"
     )
     return receipt
 
@@ -181,7 +183,7 @@ def _class_pair_tie_snap_integer_scorer() -> dict[str, object]:
 def _class_pair_tie_snap_metal(**overrides: object) -> dict[str, object]:
     receipt = _weight_l1_metal(**overrides)
     receipt["contract"]["precision_assignment"] = (  # type: ignore[index]
-        "frozen_weight_l1_safe_W26_to_W31_class_pair_tie_snap_w4_r0_to0_eps_"
+        "frozen_weight_l1_safe_W27_to_W31_class_pair_tie_snap_w4_r0_to0_eps_"
         f"{float(2.0**-19).hex()}"
     )
     return receipt
@@ -253,7 +255,8 @@ def test_weight_l1_integer_precursor_is_typed_and_label_free() -> None:
     )
     metal = _find(policy, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL)
     assert metal.state is AssignmentState.DEFAULT_OFF_CANDIDATE
-    assert "frozen_weight_l1_safe_W26_to_W31" in metal.evidence
+    assert metal.selected_bits == 27
+    assert "frozen_weight_l1_safe_W27_to_W31" in metal.evidence
 
 
 def test_calibration_selected_tie_snap_precursor_binds_metal_decision_head() -> None:
@@ -282,6 +285,7 @@ def test_frozen_class_pair_rule_requires_disjoint_second_validation() -> None:
     )
     metal = _find(policy, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL)
     assert metal.state is AssignmentState.DEFAULT_OFF_CANDIDATE
+    assert metal.selected_bits == 27
     assert "class_pair_tie_snap_w4_r0_to0" in metal.evidence
     scorer["summary"]["second_validation_exact"] = False  # type: ignore[index]
     held = compile_throughput_authority_policy(
@@ -291,6 +295,17 @@ def test_frozen_class_pair_rule_requires_disjoint_second_validation() -> None:
     )
     assert (
         _find(held, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL).state
+        is AssignmentState.HELD_OWED
+    )
+    scorer["summary"]["second_validation_exact"] = True  # type: ignore[index]
+    scorer["model_manifest"]["precision_histogram"] = {"25": 125}  # type: ignore[index]
+    out_of_range = compile_throughput_authority_policy(
+        fixedpoint_qdq_receipt=qdq,
+        integer_scorer_receipt=scorer,
+        metal_fixedpoint_receipt=_class_pair_tie_snap_metal(),
+    )
+    assert (
+        _find(out_of_range, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL).state
         is AssignmentState.HELD_OWED
     )
 

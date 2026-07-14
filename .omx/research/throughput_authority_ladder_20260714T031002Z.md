@@ -3,7 +3,7 @@
 **UTC:** 2026-07-14T03:10:02Z  
 **Lane:** `throughput_authority_ladder`  
 **Task:** `#494`  
-**Status:** `BUILT; WEIGHT_L1_AND_GLOBAL_TIE_N600_MEASURED; CLASS_PAIR_SECOND_VALIDATION_RUNNING; HOST_DEVICE_GATES_OWED`
+**Status:** `BUILT; RUNG2_CLASS_PAIR_EXACT_N600_MEASURED; HOST_DEVICE_GATES_OWED`
 **Authority:** `[macOS-CPU Torch one-thread advisory/QDQ feasibility]` plus
 `[source-built custom Metal; host measurement owed]`  
 **Flags:** `research_only=true` · `score_claim=false` · `promotion_eligible=false` ·
@@ -25,9 +25,9 @@ The optimal authority-preserving architecture is heterogeneous:
 1. keep differentiable witness/teacher work on **MLX/Metal fp32**;
 2. make the slow local SegNet verdict a receipt-gated **dynamic-scale fixed-point custom-Metal
    candidate**, but retain one-thread CPU-Torch as the automatic fallback; the label/frame-free
-   W27..W31 weight-L1 arithmetic leaves one exact-reference tie flip, and a global epsilon head
-   fails heldout, so the surviving pre-device formulation is a frozen ordered class-pair head with
-   a disjoint second validation;
+   W27..W31 weight-L1 arithmetic leaves one exact-reference tie flip, a global epsilon head fails
+   heldout, and the frozen ordered `(4,0)->0` class-pair head then preserves all 117,964,800 real
+   n600 source-corpus argmax pixels across its disjoint second validation;
 3. skip PoseNet only while pose is frozen, using **explicitly NON-LIVE banked telemetry plus live
    canaries**, and restore CPU-Torch immediately after pose engages;
 4. use exact integer accumulation for the render-R adjoint only as a training-reproducibility
@@ -51,8 +51,8 @@ ladder.
 | 2d — geometry-safe mixed exact-int64 twin | **MEASURED NO-EXACT INSTANCE** | per-layer largest W26..W30 whose `fan_in*qmax^2` fits signed int64 | exact real 0..599 custody; 1 flip at pair 11; aggregate 8.4771050e-9; training tolerance passes | `INSTANCE` negative only; tighter frozen-weight-L1 allocation remains open |
 | 2e — frozen-weight-L1-safe exact-int64 twin | **MEASURED INSTANCE NEGATIVE** | per-layer largest W26..W31 whose `activation_qmax * max_oc sum(abs(weight_q[oc]))` fits signed int64 | exact real 0..599 custody; 1 flip at pair 11; aggregate 8.4771050e-9; 36 uncertified; training tolerance passes | the zero-margin tie semantics remain open; arithmetic family is not killed |
 | 2f — global lowest-class epsilon tie head | **MEASURED FORMULATION/INSTANCE NEGATIVE** | dyadic epsilon ladder `0, 2^-24..2^-10`; minimum calibration-exact epsilon `2^-19` on pairs 0..119 | full split-honest n600 receipt; calibration exact; 3 heldout flips at pairs 195, 263, 587 | global near-tie correction is too broad; class-pair restriction remains distinct |
-| 2g — ordered class-pair tie head | **DESIGN EXACT; SECOND VALIDATION RUNNING** | if candidate top2 is `(4,0)` and gap `<=2^-19`, choose 0; otherwise plain argmax | rule frozen from pairs 0..263; design has 0 flips and exactly one snap; pairs 264..599 untouched until freeze | finish pair-atomic second validation without reselection |
-| 3 — fixed-point verdict substrate | **BUILT; WEIGHT-L1-PRECURSOR-GATED HOST MEASUREMENT OWED** | custom direct NHWC dense/grouped/depthwise Conv2d, exact int64 MAC, dynamic scale | all 125 Conv2d replacement, NumPy/CPU exact-integer twins, weight-L1 precision map, optional receipt-selected MLX tie head, cross-process n600 harness | admitted exact weight-L1 or calibration/heldout-exact tie-snap CPU precursor, then exact argmax + one candidate digest across 10 processes + speedup >1; interval enclosure reported separately |
+| 2g — ordered class-pair tie head | **MEASURED ARGMAX-FEASIBLE INSTANCE** | if candidate top2 is `(4,0)` and gap `<=2^-19`, choose 0; otherwise plain argmax | rule frozen from pairs 0..263: 0 flips, one snap; untouched pairs 264..599: 0 flips, zero snaps; full 0..599: 0 / 117,964,800 flips | CPU feasibility closed; device placement/latency and evolving-witness shadow remain separate |
+| 3 — fixed-point verdict substrate | **BUILT; PRECURSOR ADMITTED; HOST MEASUREMENT OWED** | custom direct NHWC dense/grouped/depthwise Conv2d, exact int64 MAC, dynamic scale | all 125 Conv2d replacement, NumPy/CPU exact-integer twins, realized W27..W31 precision map, frozen receipt-selected MLX tie head, cross-process n600 harness | exact source-n600 argmax + one candidate digest across 10 processes + speedup >1; interval enclosure reported separately; actual-witness shadow/certificate before CPU suppression |
 | 3 — ANE | **PUBLIC-API FORMULATION BLOCKED** | CoreML 9 public activation compute exposes W8A8; settled W8A8 PTQ failed 45.836809% held-out flips | settled-state-aware ticket compiler; refuses duplicate W8A8 and unrepresentable higher-bit requests | a genuinely distinct W8 formulation, or a public higher-bit ANE compute surface with proved placement |
 | 4 — integer render-R backend | **BUILT; HOST MEASUREMENT OWED** | four axes, Q15 weights, Q7/Q5 state, no atomics, exact int32 gather | default-off VJP backend, static overflow proof, exact NumPy-state hash gate, n600 matched benchmark | full-R source receipt + exact int-state parity + repeat identity + bounded fp32 error + speedup >1 |
 | 4 — integer megakernel | **UNREFUTED DISTINCT FORMULATION** | integer/exact reductions only | the integer R kernel establishes the first exact component | #356 refuted fp32 reorder/fusion; no graph-wide integer lowering or speed receipt exists |
@@ -190,9 +190,17 @@ three single-pixel false snaps occur at pairs 195, 263, and 587. Full flip mass 
 Fresh design inspection was then frozen at pair 263: pair 11 is ordered candidate top2 `(4,0)`,
 whereas the pair-195 and pair-263 false snaps are `(1,0)`. Before reading any pair >=264, the
 successor rule was preregistered in code: only `(4,0)` with gap `<=2^-19` snaps to class 0. Runtime
-uses candidate logits/classes only; labels select the rule on design pairs 0..263. That design split
-is now exact with one intended snap. Pairs 264..599 remain the untouched, no-reselection second
-validation surface and are running pair-atomically.
+uses candidate logits/classes only; labels selected the rule on design pairs 0..263. The completed
+receipt is **MEASURED**: design 0..263 has 0 flips and one intended snap; the previously untouched
+second-validation pairs 264..599 have 0 flips and zero snaps; full 0..599 has 0 / 117,964,800
+flips and exactly one snap. The full argmax corpus SHA-256 is
+`f9458f5a37089541c2690b3d48230224132e486fe571d30f1e910c2d32729938`.
+Receipt SHA-256 is
+`65b7ac09705b769968429ad2cfe9dc781972348ac6da061b9d1fcdda313d7da7`;
+fingerprint is
+`799496b7d55a056136a621756e11d71a02b55d7711f656c3e3a6a5a7b9a52ec2`.
+This proves an **INSTANCE** source-corpus decision-head feasibility result. It does not prove the
+custom-Metal kernel, ANE placement, evolving reconstructed witness frames, or either contest axis.
 
 Pair-0 smoke (**MEASURED, INSTANCE only**) was:
 
@@ -217,7 +225,7 @@ launder a tolerance-only QDQ, uniform-W26 arm, or the geometry-only one-flip arm
 | render-R forward | MLX/Metal | fp32 | training signal | **ACTIVE**; NumPy-fp32 receiver remains reference |
 | render-R adjoint | fixed-order custom Metal fp32 today | fp32 | training signal | candidate Q15/int32 gather only after exact n600/parity/speed gate |
 | SegNet local verdict | CPU-Torch one thread | fp32 | local deterministic reference | automatic fallback; custom Metal may become a default-off candidate only after full conjunction |
-| SegNet candidate verdict | custom Metal | frozen-weight-L1-safe per-layer W27..W31 dynamic signed int32 codes, exact int64 MAC; frozen `(4,0)->0` tie head only if second validation is exact | local candidate filter | **HELD/OWED** until exact class-pair precursor + exhaustive source-n600 equality + cross-process identity + positive speed; actual evolving witness frames still require shadow/certificate before CPU suppression |
+| SegNet candidate verdict | custom Metal | frozen-weight-L1-safe per-layer W27..W31 dynamic signed int32 codes, exact int64 MAC; frozen `(4,0)->0` tie head | local candidate filter | **PRECURSOR ADMITTED; DEVICE HELD/OWED** until exhaustive source-n600 Metal equality + cross-process identity + positive speed; actual evolving witness frames still require shadow/certificate before CPU suppression |
 | SegNet advisory | CoreML CPU_AND_GPU/ANE-selected | fp32 | local advisory only | retain as detached forward signal; placement and equivalence unproved |
 | SegNet W8A8 | CoreML/ANE | W8A8 | no authority | **FORBIDDEN settled formulation**; 45.836809% held-out flips |
 | SegNet via MPS | torch-MPS | fp32 | no authority | **FORBIDDEN**; distinct numeric drift, never rehabilitated by integer R evidence |
@@ -257,6 +265,11 @@ evolving reconstructed witness frames. CPU suppression therefore additionally re
 actual-witness shadow/certificate gate. The interval enclosure remains separately reported and cannot
 overrule direct equality. Any missing conjunct returns to CPU.
 
+The compiled policy now reports the actual nonzero W27..W31 histogram (minimum realized precision
+27), keeps custom Metal `held_owed`, and keeps one-thread CPU active because the Metal and integer-R
+receipts are absent. Policy receipt SHA-256 is
+`4dc658e73e608b81ae4fe661c50b2613cf43d35c234dfb99106233b710b61d67`.
+
 For a SegNet speedup `r_seg` and Pose live cadence `K`, ignoring boundary overhead `h`, the verdict
 fraction is
 
@@ -275,9 +288,11 @@ The public CoreML route exposes calibrated 8-bit activation quantization, not a 
 ANE convolution surface. The already-settled calibrated CoreML W8A8 formulation has 1,081,426 /
 2,359,296 held-out flips (45.836809%). It is not rerun. If dynamic n600 selects more than eight
 bits, `compile_ane_fixedpoint_authority_ticket.py` emits
-`PUBLIC_ANE_PRECISION_UNREPRESENTABLE`. That is a **FORMULATION/API** negative, not an ANE-family
-negative. CoreML fp32 remains a forward-only advisory route; #490 established zero backward
-selectors.
+`PUBLIC_ANE_PRECISION_UNREPRESENTABLE`. The compiled class-pair ticket requires the realized
+minimum 27 bits and emits that refusal; receipt SHA-256 is
+`0eb970b31cb4eafe059e747bc056149ad859735992f2aa40f9b645a529d9bd44`. That is a
+**FORMULATION/API** negative, not an ANE-family negative. CoreML fp32 remains a forward-only
+advisory route; #490 established zero backward selectors.
 
 ## Rung 4 and #356
 
@@ -345,8 +360,9 @@ dispatch, live-run/config mutation, and any run stop remain operator-GO containm
   `exact_commutative_reduction_reorder_invariance_v1` and
   `interval_argmax_enclosure_certificate_v1`, including distinct uniform, geometry-mixed, and
   weight-L1 exact-int64, global-tie, and ordered-class-pair SegNet anchors. Fixed, dynamic,
-  corrected-ceiling, uniform, geometry-mixed, weight-L1, and global-tie anchors are registered;
-  the class-pair anchor remains fail-closed until its second validation completes.
+  corrected-ceiling, uniform, geometry-mixed, weight-L1, global-tie, and class-pair anchors are
+  registered; the final class-pair anchor is
+  `task494_weight_l1_class_pair_tie_snap_segnet_n600_65b7ac09705b7699`.
 - **Trajectory/DAG:**
   `.omx/research/throughput_authority_ladder_DAG_FEED_20260714T031002Z.md` is the standalone,
   collision-safe feed; the shared DAG was not edited.
@@ -359,8 +375,9 @@ dispatch, live-run/config mutation, and any run stop remain operator-GO containm
 - **Autopilot:** CPU fallback is unconditional until every receipt predicate passes. MPS and settled
   CoreML W8A8 are explicit refusals.
 - **Continual learning:** the fixed-calibration plateau, cache-thread delta, fp32-control false
-  admission bug, W26 qmax representation bug, and Metal legacy-cache overwrite bug are durable typed
-  guards/tests, not chat-only observations.
+  admission bug, W26 qmax representation bug, Metal legacy-cache overwrite, per-forward constant
+  buffer rebuild, global-tie heldout failure, and configured-vs-realized precision drift are durable
+  typed guards/tests, not chat-only observations.
 
 ## STORES CONSULTED
 
