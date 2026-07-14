@@ -21,7 +21,15 @@ from tac.boundary_math.aa_sdf_observation_render import (
     build_supersampled_coords,
     ipe_curvelet_attenuation,
     ipe_footprint_sigma,
+    ipe_polar_directional_fourier_attenuation,
 )
+
+
+def test_legacy_ipe_name_is_exact_alias() -> None:
+    B = np.array([[0.0, 2.0], [1.0, 3.0]], dtype=np.float32)
+    expected = ipe_polar_directional_fourier_attenuation(B, 0.01, 0.02)
+    actual = ipe_curvelet_attenuation(B, 0.01, 0.02)
+    assert np.array_equal(actual, expected)
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +38,7 @@ from tac.boundary_math.aa_sdf_observation_render import (
 def test_seg_constants_match_canonical_scorer_hw():
     from tac.local_acceleration.pr95_hnerv_mlx_training import SCORER_HW
 
-    assert (SEG_H, SEG_W) == tuple(SCORER_HW)
+    assert tuple(SCORER_HW) == (SEG_H, SEG_W)
 
 
 def test_build_render_coords_bit_identical_to_trainer_helper():
@@ -127,7 +135,7 @@ def test_ipe_attenuation_bounded_and_monotone():
     # Frequencies increasing in magnitude -> attenuation strictly decreasing, in (0, 1].
     B = np.array([[0.0, 1.0, 2.0, 8.0], [0.0, 1.0, 2.0, 8.0]], np.float64)
     sx, sy = ipe_footprint_sigma(64, 64, 1.0)
-    att = ipe_curvelet_attenuation(B, sx, sy)
+    att = ipe_polar_directional_fourier_attenuation(B, sx, sy)
     assert att.shape == (4,)
     assert att[0] == pytest.approx(1.0)  # zero frequency: no attenuation
     assert np.all(att > 0.0) and np.all(att <= 1.0)

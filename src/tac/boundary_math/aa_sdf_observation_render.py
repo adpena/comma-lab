@@ -30,7 +30,8 @@ so compose-before == compose-after bit-for-bit):
 
   2. **mip-NeRF IPE CONE** (analytical, ~0 extra compute; Barron et al. mip-NeRF 2103.13415).
      Instead of supersampling, integrate the positional encoding over the per-pixel Gaussian
-     footprint. For the curvelet basis ``feats = [sin(2*pi coords@B), cos(2*pi coords@B)]`` the
+     footprint. For the polar directional Fourier basis
+     ``feats = [sin(2*pi coords@B), cos(2*pi coords@B)]`` the
      footprint expectation is ``E[sin(2*pi b.x)] = sin(2*pi b.mu) * exp(-2*pi^2 b^T Sigma b)``
      (same exp factor for the cos twin). So each Fourier column is multiplied by
      ``att_c = exp(-2*pi^2 (Bx_c^2 sx^2 + By_c^2 sy^2))`` where ``(sx, sy)`` is the footprint
@@ -189,31 +190,35 @@ def ipe_footprint_sigma(
     return sx, sy
 
 
-def ipe_curvelet_attenuation(
+def ipe_polar_directional_fourier_attenuation(
     B: np.ndarray, sigma_x: float, sigma_y: float
 ) -> np.ndarray:
-    """Per-Fourier-column IPE attenuation ``(cols,)`` for a curvelet basis ``B`` of shape ``(2, cols)``.
+    """Per-column IPE attenuation for a polar directional Fourier ``B`` of shape ``(2, cols)``.
 
-    ``B[0]`` = x-frequencies, ``B[1]`` = y-frequencies (cycles per coord unit; the ``curvelet_feats``
+    ``B[0]`` = x-frequencies, ``B[1]`` = y-frequencies (cycles per coord unit; the ``polar_directional_fourier_feats``
     projection is ``2*pi * coords@B``). For a Gaussian footprint ``N(mu, diag(sx^2, sy^2))`` the
     positional-encoding expectation attenuates every column by
     ``att_c = exp(-2*pi^2 (Bx_c^2 sx^2 + By_c^2 sy^2))`` (mip-NeRF IPE; same factor for sin & cos).
     """
     Bx = np.asarray(B, np.float64)
     if Bx.ndim != 2 or Bx.shape[0] != 2:
-        raise AASDFRenderError(f"curvelet B must be (2, cols); got {Bx.shape}")
+        raise AASDFRenderError(f"directional Fourier B must be (2, cols); got {Bx.shape}")
     two_pi2 = 2.0 * np.pi * np.pi
     quad = (Bx[0] ** 2) * (float(sigma_x) ** 2) + (Bx[1] ** 2) * (float(sigma_y) ** 2)
     return np.exp(-two_pi2 * quad).astype(np.float32)
 
 
-def apply_ipe_attenuation(curv_feats: np.ndarray, att: np.ndarray) -> np.ndarray:
-    """Attenuate ``[sin, cos]`` curvelet feats ``(P, 2*cols)`` by the per-column IPE factor ``att``.
+# Historical import alias for the same global-Fourier IPE calculation.
+ipe_curvelet_attenuation = ipe_polar_directional_fourier_attenuation
 
-    ``curvelet_feats`` returns ``concatenate([sin(proj), cos(proj)], -1)``; both halves share the
+
+def apply_ipe_attenuation(directional_feats: np.ndarray, att: np.ndarray) -> np.ndarray:
+    """Attenuate directional Fourier ``[sin, cos]`` features by the per-column IPE factor.
+
+    ``polar_directional_fourier_feats`` returns ``concatenate([sin(proj), cos(proj)], -1)``; both halves share the
     per-frequency ``att`` (the exp footprint factor is identical for the sin and cos twins).
     """
-    feats = np.asarray(curv_feats)
+    feats = np.asarray(directional_feats)
     cols = feats.shape[-1] // 2
     a = np.asarray(att, feats.dtype)
     if a.shape[-1] != cols:
@@ -242,7 +247,7 @@ def render_aa_batch_through_R_mlx(
     """SUPERSAMPLE->BOX AA batched render-through-R: ``(M,) codes -> (M, SEG_H, SEG_W, 3)``.
 
     ``coord_feats_fine`` MUST be the coord feats at the SUPERSAMPLED grid ``(ss*render_h,
-    ss*render_w)`` (i.e. ``curvelet_feats(build_supersampled_coords(render_h, render_w, ss), B)``
+    ss*render_w)`` (i.e. ``polar_directional_fourier_feats(build_supersampled_coords(render_h, render_w, ss), B)``
     plus any per-pair directional augmentation, exactly as the trainer builds ``coord_feats_mx``
     but at the fine grid). ``(render_h, render_w)`` is the BASE grid R sees after box-downsample.
 
@@ -308,14 +313,15 @@ __all__ = [
     "SEG_H",
     "SEG_W",
     "AASDFRenderError",
+    "apply_ipe_attenuation",
+    "box_downsample",
+    "box_downsample_mlx",
+    "box_downsample_np",
     "build_render_coords",
     "build_supersampled_coords",
-    "box_downsample",
-    "box_downsample_np",
-    "box_downsample_mlx",
-    "ipe_footprint_sigma",
     "ipe_curvelet_attenuation",
-    "apply_ipe_attenuation",
+    "ipe_footprint_sigma",
+    "ipe_polar_directional_fourier_attenuation",
     "render_aa_batch_through_R_mlx",
     "render_aa_through_R_mlx",
 ]

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""LEVER-B LEVEL-SET — softmax-of-SDF witness + GENERIC curvelet/shearlet front-end.
+"""LEVER-B LEVEL-SET — softmax-of-SDF witness + polar directional Fourier front end.
 
 Deep-math (operator 2026-06-26 "step and non-linear and non-spectral bias … informed by
 deep math and topology and manifolds"). The SegNet argmax is a PARTITION (a cartoon
@@ -18,18 +18,12 @@ for the Gibbs/R-aliasing that caps the sine/Fourier (spectral-bias) witness: a b
 periodic basis overshoots the indicator near the edge, and uint8 quantization freezes that
 overshoot into argmax flips FAR from the true boundary.
 
-WHY the generic CURVELET/SHEARLET front-end (the byte-closeability crux). The measured
-decisive d_seg lever is an ORIENTED (anisotropic) basis matched to the all-class boundary
-tangent (-48% d_seg). But the in-tree ``directional_fourier_feats`` orients to the GT SegNet
-argmax tangent => GT-DERIVED => NOT byte-closeable (trainer bug #5: no inflate-time SegNet,
-the RGB witness emits no class map, and storing the tangent field is image-sized). A
-curvelet/shearlet bank instead covers ALL orientations at ALL scales from a PARAMETRIC SEED
-(J scales x L_j orientations, parabolic L_j ~ L0*2^(j//2)) — it is the provably ``N^-2``
-optimal generic basis for curved C^2 singularities (Candes-Donoho curvelets; Labate-Kutyniok
-shearlets) and is regenerated identically at decode from ``(J, L0, f0, base)``. The network
-LEARNS which orientations to use per region via its trained weights; the BANK costs ZERO
-archive bytes (free generic code in inflate.py, rule 118) and leaks NO GT. This is the
-directional benefit made FREE + leak-free.
+WHY the polar directional Fourier front end.  It covers all sampled orientations and radial
+scales from a deterministic parametric frequency grid and is regenerated identically at decode.
+Its features are global ``sin/cos(2*pi*X@B)`` plane waves: there is no translation index,
+spatial window, localized envelope, or curvelet/shearlet frame claim.  The scale-dependent
+orientation count is curvelet-*inspired sampling only*.  Genuine localized curvelet and
+shearlet families live in ``localized_basis_frames.py`` and carry separate structural receipts.
 
 COMPUTE-SUBSTRATE LAW (CLAUDE.md): the MLX module is the fast train path; the numpy forward
 is the portability reference (ARGMAX-parity, not bit-exact logits). NO MPS. The d_seg VERDICT
@@ -38,19 +32,20 @@ NEVER MPS. Evidence ``[macOS-MLX research-signal]`` for the forward, ``[macOS-CP
 once scored by the exact SegNet. promotion_eligible=False until a byte-closed exact-eval row.
 
 NO-FAKE: ``signed_distance_fields`` runs the ACTUAL scipy EDT on the ACTUAL label map (a stub
-returning constants FAILS the round-trip assertion ``argmax(sdf) == labels``). The curvelet
-bank is the ACTUAL parametric polar frequency grid (a random matrix FAILS the orientation-
+returning constants FAILS the round-trip assertion ``argmax(sdf) == labels``). The directional
+Fourier bank is the ACTUAL parametric polar frequency grid (a random matrix FAILS the orientation-
 coverage assertion). ``r_survival_flip_fraction`` applies the ACTUAL contest R and counts the
 ACTUAL argmax disagreement — no proxy stands in for the measured flip set.
 
 BORROWED-SUBSTRATE (CLAUDE.md NO-FAKE #7):
-  * BORROWED: curvelets (Candes-Donoho 2004) / shearlets (Labate-Kutyniok 2005); WIRE Gabor
+  * BORROWED: polar Fourier features and curvelet-inspired angular sampling (not a localized
+    frame); WIRE Gabor
     activation (Saragadam et al. CVPR 2023); HOSC (Serrano 2024); Fourier features (Tancik
     2020); FiLM (Perez 2018); level-set / Chan-Vese length term (Osher-Sethian; Chan-Vese
     2001); scipy EDT; the frozen contest scorers + GT decode + CPU authority.
   * OURS-ORIGINAL: representing the SegNet argmax partition as softmax-of-SDF level sets whose
     1-Lipschitz margin field is R-survival-by-construction, driven by a GENERIC (byte-closeable,
-    GT-free) curvelet/shearlet directional bank — the joint resolution of the R-aliasing wall
+    GT-free) polar directional Fourier bank — the joint resolution of the R-aliasing wall
     AND the directional byte-closeability crux for the task-space witness capstone.
 """
 
@@ -83,15 +78,15 @@ def build_coords(h: int, w: int) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# GENERIC curvelet / shearlet directional Fourier bank (byte-closeable, GT-free).
+# Global polar directional Fourier plane-wave bank (byte-closeable, GT-free).
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
-class CurveletBankConfig:
+class PolarDirectionalFourierBankConfig:
     """Parametric (seed-free) polar frequency grid -> a generic anisotropic bank.
 
     ``n_scales`` J radial octaves; ``n_orient0`` L0 orientations at the coarsest scale, with
-    CURVELET parabolic doubling ``L_j = L0 * 2**(j//2)`` (more orientations at finer scales —
-    the anisotropic ``width ~ length^2`` law); ``f0`` base radial frequency (cycles over the
+    curvelet-inspired angular doubling ``L_j = L0 * 2**(j//2)`` (more sampled directions at
+    finer radial scales, but no spatial support); ``f0`` base radial frequency (cycles over the
     [-1,1] coord span); ``base`` the radial octave ratio; ``n_iso`` extra low isotropic
     frequencies (coarse / DC-ish bands the oriented atoms miss). Fully determined by these 5
     scalars -> reconstructed identically at decode, ZERO archive bytes, no GT leak.
@@ -104,13 +99,18 @@ class CurveletBankConfig:
     n_iso: int = 4
 
 
+# Additive import compatibility for sealed trainers/checkpoints. The old name
+# denotes this exact global plane-wave bank; it is not a second implementation.
+CurveletBankConfig = PolarDirectionalFourierBankConfig
+
+
 def stem_nyquist_max_freq_cycles_per_unit(scorer_w: int = 512, stem_stride: int = 2) -> float:
-    """LEVER-2 (stem-Nyquist) — max USEFUL curvelet frequency (cycles per coord unit).
+    """LEVER-2 (stem-Nyquist) — max useful directional-Fourier frequency.
 
     The contest SegNet is EfficientNet-B2 whose stride-2 stem halves the input immediately, so
     the finest spatial feature it can resolve lives on the post-stem feature map (``scorer_w /
     stem_stride`` px wide ~ 256). Sampling theory: that feature map's Nyquist is ``W_f / 2``
-    cycles ACROSS the full width. Our coord grid is ``x in [-1,1]`` (span 2) and the curvelet
+    cycles ACROSS the full width. Our coord grid is ``x in [-1,1]`` (span 2) and the plane-wave
     feature is ``sin(2*pi f x)`` which completes ``2 f`` cycles across the full width. Equating::
 
         2 * f_max  =  W_f / 2  =  scorer_w / (2 * stem_stride)
@@ -121,8 +121,8 @@ def stem_nyquist_max_freq_cycles_per_unit(scorer_w: int = 512, stem_stride: int 
     camera) it instead ALIASES into off-boundary argmax flips (the d_seg killer). So this is the
     free byte/aliasing budget cap: drop (or never generate) atoms with ``|f| > f_max``.
 
-    NOTE (measured 2026-06-27): the DEFAULT curvelet bank (f0=2, base=2, n_scales=4 -> max
-    f=16 cycles/unit) is already ~4x BELOW this Nyquist, so capping the curvelet bank itself is a
+    NOTE (measured 2026-06-27): the default directional-Fourier bank (f0=2, base=2,
+    n_scales=4 -> max f=16 cycles/unit) is already ~4x BELOW this Nyquist, so its cap is a
     no-op at the default config. The over-Nyquist waste lives in the SELF-ORIENT directional
     feats (``freq_across=32, n_dir_freqs=6`` -> across-edge freqs up to 32*2^5 = 1024 cycles/unit,
     16x over Nyquist): the Nyquist-implied directional config is ``n_dir_freqs<=2`` at
@@ -133,14 +133,14 @@ def stem_nyquist_max_freq_cycles_per_unit(scorer_w: int = 512, stem_stride: int 
     return float(scorer_w) / (4.0 * float(max(stem_stride, 1)))
 
 
-def curvelet_directional_B(cfg: CurveletBankConfig, max_freq: float | None = None) -> np.ndarray:
-    """The (2, n_feats) generic curvelet/shearlet frequency matrix (NOT trained, NOT GT).
+def polar_directional_fourier_B(cfg: PolarDirectionalFourierBankConfig, max_freq: float | None = None) -> np.ndarray:
+    """The ``(2, n_feats)`` global polar plane-wave frequency matrix.
 
     Columns are frequency vectors on a polar grid: J scales x L_j orientations (parabolic
     doubling) + ``n_iso`` low isotropic frequencies. Orientations span ``[0, pi)`` (k and -k
     give redundant sin/cos). The resulting ``sin(2*pi X@B), cos(2*pi X@B)`` features are a
-    multi-scale, multi-ORIENTATION, anisotropic basis: a curved boundary at any local tangent
-    is covered by SOME atom at SOME scale, so the net synthesizes oriented edges cheaply.
+    multiscale directional Fourier dictionary.  It is not spatially localized and is not a
+    curvelet or shearlet frame.
 
     LEVER-2 (stem-Nyquist) ``max_freq`` (cycles per coord unit; default ``None`` = NO cap =
     current behavior, fully ADDITIVE): when given, atoms whose frequency magnitude exceeds
@@ -154,9 +154,9 @@ def curvelet_directional_B(cfg: CurveletBankConfig, max_freq: float | None = Non
     cols: list[np.ndarray] = []
     for j in range(int(cfg.n_scales)):
         f_j = float(cfg.f0) * (float(cfg.base) ** j)
-        l_j = int(cfg.n_orient0) * (2 ** (j // 2))  # parabolic curvelet doubling
-        for l in range(l_j):
-            theta = np.pi * l / l_j
+        l_j = int(cfg.n_orient0) * (2 ** (j // 2))  # curvelet-inspired angular sampling only
+        for orientation_index in range(l_j):
+            theta = np.pi * orientation_index / l_j
             cols.append(np.array([f_j * np.cos(theta), f_j * np.sin(theta)], dtype=np.float32))
     # Low isotropic coarse bands (radial only; spread over [0,pi) at f0/2).
     for i in range(int(cfg.n_iso)):
@@ -173,7 +173,7 @@ def curvelet_directional_B(cfg: CurveletBankConfig, max_freq: float | None = Non
     return stacked
 
 
-def curvelet_feats(coords: np.ndarray, B: np.ndarray) -> np.ndarray:
+def polar_directional_fourier_feats(coords: np.ndarray, B: np.ndarray) -> np.ndarray:
     """``[sin(2*pi X@B), cos(2*pi X@B)]`` -> (P, 2*n_feats). Identical at train + inflate."""
 
     # (FEED-fb hygiene) errstate(all="ignore") around the fp64 matmul: bit-identical (errstate only
@@ -182,6 +182,10 @@ def curvelet_feats(coords: np.ndarray, B: np.ndarray) -> np.ndarray:
     with np.errstate(all="ignore"):
         proj = (2.0 * np.pi) * (np.asarray(coords, np.float64) @ np.asarray(B, np.float64))
         return np.concatenate([np.sin(proj), np.cos(proj)], axis=-1).astype(np.float32)
+
+
+curvelet_directional_B = polar_directional_fourier_B
+curvelet_feats = polar_directional_fourier_feats
 
 
 def isotropic_fourier_B(n_fourier: int, sigma: float, seed: int = _LEVELSET_SEED) -> np.ndarray:
@@ -225,7 +229,7 @@ def _act(u: np.ndarray, name: str, **kw) -> np.ndarray:
 @dataclass(frozen=True)
 class LevelSetConfig:
     num_pairs: int
-    bank: CurveletBankConfig = CurveletBankConfig()
+    bank: PolarDirectionalFourierBankConfig = PolarDirectionalFourierBankConfig()
     hidden_dim: int = 96
     n_hidden: int = 4
     mod_dim: int = 32
@@ -235,22 +239,32 @@ class LevelSetConfig:
     wire_s0: float = 10.0
     hosc_beta: float = 4.0
     hosc_omega: float = 1.0
-    front_end: str = "curvelet"     # "curvelet" | "isotropic"
+    front_end: str = "polar_directional_fourier"  # or "isotropic"
     iso_n_fourier: int = 48
     iso_sigma: float = 8.0
-    # LEVER-2 (stem-Nyquist): optional curvelet-bank frequency cap (cycles/unit); None = no cap
+    # LEVER-2 (stem-Nyquist): optional directional-Fourier frequency cap; None = no cap
     # = current behavior. See ``stem_nyquist_max_freq_cycles_per_unit``. Additive/default-off.
     max_freq: float | None = None
+
+    def __post_init__(self) -> None:
+        front_end = str(self.front_end)
+        if front_end == "curvelet":
+            object.__setattr__(self, "front_end", "polar_directional_fourier")
+        elif front_end not in {"polar_directional_fourier", "isotropic"}:
+            raise ValueError(
+                "front_end must be 'polar_directional_fourier' or 'isotropic'; "
+                f"got {self.front_end!r}"
+            )
 
     def in_feat(self) -> int:
         if self.front_end == "isotropic":
             return 2 * int(self.iso_n_fourier)
-        return 2 * curvelet_directional_B(self.bank, max_freq=self.max_freq).shape[1]
+        return 2 * polar_directional_fourier_B(self.bank, max_freq=self.max_freq).shape[1]
 
     def build_B(self) -> np.ndarray:
         if self.front_end == "isotropic":
             return isotropic_fourier_B(self.iso_n_fourier, self.iso_sigma)
-        return curvelet_directional_B(self.bank, max_freq=self.max_freq)
+        return polar_directional_fourier_B(self.bank, max_freq=self.max_freq)
 
 
 def numpy_levelset_forward(
@@ -269,7 +283,12 @@ def numpy_levelset_forward(
     p = {k: np.asarray(v, np.float64) for k, v in params.items()}
     feats = np.asarray(feats, np.float64)
     mod_vec = np.asarray(mod_vec, np.float64)
-    akw = dict(w0=cfg.wire_w0, s0=cfg.wire_s0, beta=cfg.hosc_beta, omega=cfg.hosc_omega)
+    akw = {
+        "w0": cfg.wire_w0,
+        "s0": cfg.wire_s0,
+        "beta": cfg.hosc_beta,
+        "omega": cfg.hosc_omega,
+    }
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         h = _act(feats @ p["in_proj.weight"].T + p["in_proj.bias"], cfg.activation, **akw)
         film = (mod_vec @ p["film.weight"].T + p["film.bias"]).reshape(cfg.n_hidden, 2, cfg.hidden_dim)
@@ -287,7 +306,11 @@ def levelset_argmax(
     """Per-(pair,frame) generator partition (H,W) uint8 = ``argmax_k phi_k`` (numpy-portable)."""
 
     B = cfg.build_B()
-    feats = curvelet_feats(coords, B) if cfg.front_end == "curvelet" else _iso_feats(coords, B)
+    feats = (
+        polar_directional_fourier_feats(coords, B)
+        if cfg.front_end == "polar_directional_fourier"
+        else _iso_feats(coords, B)
+    )
     sdf = numpy_levelset_forward(params, feats, np.asarray(params["code"])[pair_idx], cfg)
     return sdf.argmax(axis=-1).reshape(h, w).astype(np.uint8)
 
@@ -472,7 +495,7 @@ def spectral_lowpass_fields(labels: np.ndarray, n_classes: int, cutoff_frac: flo
 
 
 # ---------------------------------------------------------------------------
-# Front-end fit test (curvelet vs isotropic at EQUAL budget) — least-squares, $0.
+# Front-end fit test (directional vs isotropic Fourier at equal budget) — least-squares, $0.
 # ---------------------------------------------------------------------------
 def front_end_fit_disagreement(
     coords: np.ndarray, sdf_target_hwk: np.ndarray, B: np.ndarray, h: int, w: int, ridge: float = 1e-3
@@ -482,7 +505,7 @@ def front_end_fit_disagreement(
     the basis represents the partition better at EQUAL feature count (the front-end's value).
     """
 
-    feats = curvelet_feats(coords, B).astype(np.float64)  # (P, F)
+    feats = polar_directional_fourier_feats(coords, B).astype(np.float64)  # (P, F)
     tgt = np.asarray(sdf_target_hwk, np.float64).reshape(h * w, -1)  # (P, K)
     G = feats.T @ feats + ridge * np.eye(feats.shape[1])
     W = np.linalg.solve(G, feats.T @ tgt)  # (F, K)
@@ -735,14 +758,14 @@ def levelset_rgb_forward_numpy(
     Used by BOTH the trainer's fp32 deploy-faithful verdict AND the byte-close / inflate forward
     (representation = carrier = archive: one forward that cannot diverge). Returns ``(rgb (P,3) in
     [0,255], phi (P,K) SDF)``. ``params`` are the (optionally int8-dequantized) deploy weights;
-    ``feats`` is the curvelet coord feature grid (the free bank's output). mlx.nn.Linear is
+    ``feats`` is the directional-Fourier coordinate grid (the free bank's output). mlx.nn.Linear is
     ``x @ W.T + b`` (W is (out,in)) — mirrored exactly here in float64 accumulation (argmax-stable).
     """
 
     p = {k: np.asarray(v, np.float64) for k, v in params.items()}
     feats = np.asarray(feats, np.float64)
     code_row = np.asarray(code_row, np.float64)
-    akw = dict(w0=wire_w0, s0=wire_s0, beta=hosc_beta, omega=hosc_omega)
+    akw = {"w0": wire_w0, "s0": wire_s0, "beta": hosc_beta, "omega": hosc_omega}
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         h = _act(feats @ p["in_proj.weight"].T + p["in_proj.bias"], activation, **akw)
         film = (code_row @ p["film.weight"].T + p["film.bias"]).reshape(n_hidden, 2, hidden_dim)
@@ -814,7 +837,7 @@ def levelset_band_forward_numpy(
     p = {k: np.asarray(v, np.float64) for k, v in params.items()}
     feats = np.asarray(feats, np.float64)
     code_row = np.asarray(code_row, np.float64)
-    akw = dict(w0=wire_w0, s0=wire_s0, beta=hosc_beta, omega=hosc_omega)
+    akw = {"w0": wire_w0, "s0": wire_s0, "beta": hosc_beta, "omega": hosc_omega}
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         h = _act(feats @ p["in_proj.weight"].T + p["in_proj.bias"], activation, **akw)
         film = (code_row @ p["film.weight"].T + p["film.bias"]).reshape(n_hidden, 2, hidden_dim)
@@ -954,7 +977,7 @@ def lane_thin_weight_map(lstar: np.ndarray, *, lane_class: int = 1, radius: int 
 
 
 def quantize_levelset_blob(params: dict[str, np.ndarray]) -> dict[str, Any]:
-    """int8 + brotli the learned params (weights + per-frame ``code``). The curvelet bank ``B``
+    """int8 + brotli the learned params (weights + per-frame ``code``). The Fourier bank ``B``
     is EXCLUDED (rule 118: a deterministic free table regenerated at decode from the 5 cfg
     scalars). Returns the MEASURED archive bytes (the counted rate term)."""
 
@@ -1011,11 +1034,11 @@ def save_levelset_npz(path: Path, params: dict[str, np.ndarray], cfg: LevelSetCo
 # run with ZERO MLX dependency (the $0 CPU build/feasibility surface).
 # ---------------------------------------------------------------------------
 def build_levelset_witness_module(cfg: LevelSetConfig):
-    """The MLX coord-INR level-set witness: curvelet/iso feats -> WIRE/HOSC hidden -> K SDF.
+    """The MLX coord-INR level-set witness: directional/iso Fourier feats -> WIRE/HOSC -> K SDF.
 
     Mirrors the RGB witness's FiLM-per-(pair,frame) structure (``code`` has ``2*num_pairs`` rows
     = f0,f1 interleaved) but the head outputs K=5 SDF fields (LINEAR, no sigmoid). The frozen
-    curvelet bank ``_B`` is held as a non-trainable constant (free table). The future
+    directional Fourier bank ``_B`` is held as a non-trainable constant (free table). The future
     ``train_levelset_witness_realized_through_R_mlx.py`` renders ``argmax_k phi_k`` -> a class
     palette RGB -> R -> frozen CPU-torch SegNet for the d_seg VERDICT.
     """
@@ -1036,7 +1059,7 @@ def build_levelset_witness_module(cfg: LevelSetConfig):
             self.hosc_omega = float(cfg.hosc_omega)
             self.n_hidden = cfg.n_hidden
             self.hidden_dim = cfg.hidden_dim
-            self._B = mx.array(B_np)  # free deterministic curvelet bank (not trained)
+            self._B = mx.array(B_np)  # free deterministic directional Fourier bank (not trained)
             self.code = mx.zeros((cfg.num_pairs * 2, cfg.mod_dim))
             self.in_proj = nn.Linear(in_feat, cfg.hidden_dim)
             self.film = nn.Linear(cfg.mod_dim, 2 * cfg.hidden_dim * cfg.n_hidden)
@@ -1069,6 +1092,7 @@ __all__ = [
     "SCORER_HW",
     "CurveletBankConfig",
     "LevelSetConfig",
+    "PolarDirectionalFourierBankConfig",
     "RSurvivalStats",
     "apply_R_to_fields",
     "boundary_length_penalty",
@@ -1076,27 +1100,29 @@ __all__ = [
     "build_levelset_witness_module",
     "build_static_core_partition",
     "build_static_core_phi_target",
+    "code_spectral_entropy_penalty",
+    "code_spectrum_participation_ratio",
     "curvelet_directional_B",
     "curvelet_feats",
     "eikonal_penalty",
     "film_modulation_participation_ratio",
     "film_rank_floor_penalty",
-    "code_spectrum_participation_ratio",
-    "code_spectral_entropy_penalty",
     "fit_out_sdf_to_structured_target",
     "front_end_fit_disagreement",
-    "lane_thin_weight_map",
+    "hosc_activation",
     "isotropic_fourier_B",
+    "lane_thin_weight_map",
     "levelset_argmax",
-    "rebuild_per_pair_feats_in_place",
     "numpy_levelset_forward",
+    "polar_directional_fourier_B",
+    "polar_directional_fourier_feats",
     "quantize_levelset_blob",
     "r_survival_flip_fraction",
+    "rebuild_per_pair_feats_in_place",
     "save_levelset_npz",
     "signed_distance_fields",
     "spectral_lowpass_fields",
     "stem_nyquist_max_freq_cycles_per_unit",
     "structured_init_fit_disagree",
     "wire_activation",
-    "hosc_activation",
 ]

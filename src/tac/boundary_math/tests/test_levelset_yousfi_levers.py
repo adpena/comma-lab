@@ -3,7 +3,7 @@
 
 Covers the pure-numpy (MLX-free) lever code landed 2026-06-27:
   * LEVER-2 stem-Nyquist: ``stem_nyquist_max_freq_cycles_per_unit`` + the additive ``max_freq``
-    cap on ``curvelet_directional_B`` / ``LevelSetConfig`` (default None = current behavior).
+    cap on ``polar_directional_fourier_B`` / ``LevelSetConfig`` (default None = current behavior).
   * LEVER-1 chroma: ``levelset_rgb_forward_numpy`` chroma=True/False parity (the byte-close
     ONE-CODEPATH forward) — phi/argmax invariant, RGB differs, achromatic => R==G==B.
 
@@ -18,11 +18,32 @@ import numpy as np
 from tac.boundary_math.lever_b_levelset_generator import (
     CurveletBankConfig,
     LevelSetConfig,
+    PolarDirectionalFourierBankConfig,
     curvelet_directional_B,
+    curvelet_feats,
     levelset_rgb_forward_numpy,
+    polar_directional_fourier_B,
+    polar_directional_fourier_feats,
     quantize_levelset_blob,
     stem_nyquist_max_freq_cycles_per_unit,
 )
+
+
+def test_legacy_directional_api_is_byte_identical_and_config_canonicalizes() -> None:
+    legacy_bank = CurveletBankConfig()
+    current_bank = PolarDirectionalFourierBankConfig()
+    assert legacy_bank == current_bank
+    legacy_b = curvelet_directional_B(legacy_bank)
+    current_b = polar_directional_fourier_B(current_bank)
+    assert np.array_equal(legacy_b, current_b)
+    coords = np.array([[-1.0, 0.0], [0.25, 0.75]], dtype=np.float32)
+    assert np.array_equal(
+        curvelet_feats(coords, legacy_b),
+        polar_directional_fourier_feats(coords, current_b),
+    )
+    assert LevelSetConfig(num_pairs=1, front_end="curvelet").front_end == (
+        "polar_directional_fourier"
+    )
 
 
 def test_stem_nyquist_formula():
@@ -35,9 +56,9 @@ def test_stem_nyquist_formula():
 
 
 def test_curvelet_max_freq_default_is_unchanged():
-    bank = CurveletBankConfig()
-    base = curvelet_directional_B(bank)
-    none = curvelet_directional_B(bank, max_freq=None)
+    bank = PolarDirectionalFourierBankConfig()
+    base = polar_directional_fourier_B(bank)
+    none = polar_directional_fourier_B(bank, max_freq=None)
     assert base.shape == none.shape
     assert np.array_equal(base, none)
 
@@ -45,24 +66,24 @@ def test_curvelet_max_freq_default_is_unchanged():
 def test_curvelet_default_bank_is_sub_nyquist():
     # The default curvelet bank max freq (f0=2,base=2,n_scales=4 -> 16) is below the stem Nyquist
     # (64), so capping at Nyquist is a no-op (the over-Nyquist waste is in the self-orient feats).
-    bank = CurveletBankConfig()
-    B = curvelet_directional_B(bank)
+    bank = PolarDirectionalFourierBankConfig()
+    B = polar_directional_fourier_B(bank)
     norms = np.sqrt((B.astype(np.float64) ** 2).sum(axis=0))
     assert float(norms.max()) <= 16.0 + 1e-6
     nyq = stem_nyquist_max_freq_cycles_per_unit(512, 2)
-    capped = curvelet_directional_B(bank, max_freq=nyq)
+    capped = polar_directional_fourier_B(bank, max_freq=nyq)
     assert capped.shape[1] == B.shape[1]  # no-op at Nyquist for the default bank
 
 
 def test_curvelet_max_freq_drops_high_atoms_and_never_empties():
-    bank = CurveletBankConfig()
-    full = curvelet_directional_B(bank)
-    capped = curvelet_directional_B(bank, max_freq=5.0)
+    bank = PolarDirectionalFourierBankConfig()
+    full = polar_directional_fourier_B(bank)
+    capped = polar_directional_fourier_B(bank, max_freq=5.0)
     assert capped.shape[1] < full.shape[1]  # drops atoms above 5
     norms = np.sqrt((capped.astype(np.float64) ** 2).sum(axis=0))
     assert float(norms.max()) <= 5.0 + 1e-6
     # cap below the minimum still keeps >=1 atom (never empties).
-    tiny = curvelet_directional_B(bank, max_freq=0.0)
+    tiny = polar_directional_fourier_B(bank, max_freq=0.0)
     assert tiny.shape[1] >= 1
 
 
@@ -94,8 +115,17 @@ def _toy_levelset_params(H=32, NH=2, M=8, K=5, F=24, seed=1):
         p[f"hidden.{li}.bias"] = rng.standard_normal(H).astype(np.float32) * 0.05
     code = rng.standard_normal(M).astype(np.float32) * 0.2
     feats = rng.standard_normal((50, F)).astype(np.float32) * 0.5
-    return p, feats, code, dict(n_hidden=NH, hidden_dim=H, n_classes=K, activation="hosc",
-                                softmax_temp=0.1, wire_w0=20.0, wire_s0=10.0, hosc_beta=4.0, hosc_omega=1.0)
+    return p, feats, code, {
+        "n_hidden": NH,
+        "hidden_dim": H,
+        "n_classes": K,
+        "activation": "hosc",
+        "softmax_temp": 0.1,
+        "wire_w0": 20.0,
+        "wire_s0": 10.0,
+        "hosc_beta": 4.0,
+        "hosc_omega": 1.0,
+    }
 
 
 def test_chroma_parity_phi_invariant_rgb_differs():
