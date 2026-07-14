@@ -1,0 +1,2871 @@
+{
+  "axis": "[macOS-CPU-torch advisory; bounded-n1; no training; realized through R]",
+  "coordinates": [
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.008631388346354166,
+        "central_endpoint_winner_switch_rate": 0.0011138916015625,
+        "minus_rival_switch_rate_vs_baseline": 0.004597981770833333,
+        "minus_winner_flip_rate_vs_baseline": 0.0006052652994791666,
+        "plus_rival_switch_rate_vs_baseline": 0.005035400390625,
+        "plus_winner_flip_rate_vs_baseline": 0.0006815592447916666
+      },
+      "epsilon": 0.01,
+      "name": "palette_Road_R",
+      "palette_delta": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.02569593147751606,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.017130620985010708,
+          "plus_flip_rate": 0.01284796573875803
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0005611672278338945,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0002805836139169473,
+          "plus_flip_rate": 0.0002805836139169473
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 5.932605600379687e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 1.9775352001265622e-05,
+          "plus_flip_rate": 3.9550704002531244e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0032855977521979514,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.001744765702891326,
+          "plus_flip_rate": 0.0019486993564760266
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00034040621808691704,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.00016504543907244464,
+          "plus_flip_rate": 0.0002785141784347503
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.008839624471365508,
+        "plus": 0.00682759382462348
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.0081634521484375,
+        "central_endpoint_winner_switch_rate": 0.0012257893880208333,
+        "minus_rival_switch_rate_vs_baseline": 0.005452473958333333,
+        "minus_winner_flip_rate_vs_baseline": 0.0006306966145833334,
+        "plus_rival_switch_rate_vs_baseline": 0.005406697591145833,
+        "plus_winner_flip_rate_vs_baseline": 0.0009307861328125
+      },
+      "epsilon": 0.01,
+      "name": "palette_Road_G",
+      "palette_delta": [
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.027123483226266953,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.010706638115631691,
+          "plus_flip_rate": 0.019271948608137045
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0005611672278338945,
+          "plus_flip_rate": 0.0005611672278338945
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 1.9775352001265622e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 1.9775352001265622e-05,
+          "plus_flip_rate": 3.9550704002531244e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0033309163418834406,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0017674249977340706,
+          "plus_flip_rate": 0.0023792259584881716
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.0005673436968115284,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.00028882951837677813,
+          "plus_flip_rate": 0.0004848209772753061
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.011009075782769726,
+        "plus": 0.016420869862470242
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.0056304931640625,
+        "central_endpoint_winner_switch_rate": 0.0006764729817708334,
+        "minus_rival_switch_rate_vs_baseline": 0.0028330485026041665,
+        "minus_winner_flip_rate_vs_baseline": 0.0003763834635416667,
+        "plus_rival_switch_rate_vs_baseline": 0.0030721028645833335,
+        "plus_winner_flip_rate_vs_baseline": 0.0003611246744791667
+      },
+      "epsilon": 0.01,
+      "name": "palette_Road_B",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.012134189864382585,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.007851534618129907,
+          "plus_flip_rate": 0.007137758743754461
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 5.932605600379687e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 3.9550704002531244e-05,
+          "plus_flip_rate": 1.9775352001265622e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0019940179461615153,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0011329647421372247,
+          "plus_flip_rate": 0.0010423275627662468
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00025788349855069474,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.00011346873936230568,
+          "plus_flip_rate": 0.00014441475918838906
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.009587027088551183,
+        "plus": 0.006927269080013021
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.0034281412760416665,
+        "central_endpoint_winner_switch_rate": 0.0005391438802083334,
+        "minus_rival_switch_rate_vs_baseline": 0.0017242431640625,
+        "minus_winner_flip_rate_vs_baseline": 0.00023396809895833334,
+        "plus_rival_switch_rate_vs_baseline": 0.0019378662109375,
+        "plus_winner_flip_rate_vs_baseline": 0.0003458658854166667
+      },
+      "epsilon": 0.01,
+      "name": "palette_Lane_R",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.012134189864382585,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.007137758743754461,
+          "plus_flip_rate": 0.006423982869379015
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0008417508417508417,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0002805836139169473,
+          "plus_flip_rate": 0.0005611672278338945
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 1.9775352001265622e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 1.9775352001265622e-05,
+          "plus_flip_rate": 0.0
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0014275355750929032,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0005891416659113568,
+          "plus_flip_rate": 0.0009743496782380133
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00022693747872461136,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 8.252271953622232e-05,
+          "plus_flip_rate": 0.00014441475918838906
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.002941843706765558,
+        "plus": 0.0020342126981189594
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.003326416015625,
+        "central_endpoint_winner_switch_rate": 0.0006306966145833334,
+        "minus_rival_switch_rate_vs_baseline": 0.0018819173177083333,
+        "minus_winner_flip_rate_vs_baseline": 0.0003712972005208333,
+        "plus_rival_switch_rate_vs_baseline": 0.0019073486328125,
+        "plus_winner_flip_rate_vs_baseline": 0.0003916422526041667
+      },
+      "epsilon": 0.01,
+      "name": "palette_Lane_G",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.01998572448251249,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.011420413990007138,
+          "plus_flip_rate": 0.009992862241256246
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0002805836139169473,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0002805836139169473,
+          "plus_flip_rate": 0.0
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 3.9550704002531244e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 1.9775352001265622e-05,
+          "plus_flip_rate": 1.9775352001265622e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0018127435874195595,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0009743496782380133,
+          "plus_flip_rate": 0.0010196682679235022
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00013409941924636125,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.00012378407930433346,
+          "plus_flip_rate": 0.00017536077901447242
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.008673168546240055,
+        "plus": 0.010596094265726982
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.0019327799479166667,
+        "central_endpoint_winner_switch_rate": 0.0003662109375,
+        "minus_rival_switch_rate_vs_baseline": 0.0009104410807291666,
+        "minus_winner_flip_rate_vs_baseline": 0.00018310546875,
+        "plus_rival_switch_rate_vs_baseline": 0.0010935465494791667,
+        "plus_winner_flip_rate_vs_baseline": 0.00020345052083333334
+      },
+      "epsilon": 0.01,
+      "name": "palette_Lane_B",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.007137758743754461,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.004282655246252677,
+          "plus_flip_rate": 0.0028551034975017845
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0002805836139169473,
+          "plus_flip_rate": 0.0002805836139169473
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 1.9775352001265622e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 1.9775352001265622e-05,
+          "plus_flip_rate": 0.0
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0009970089730807576,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0004531858968548899,
+          "plus_flip_rate": 0.0005891416659113568
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00017536077901447242,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 8.252271953622232e-05,
+          "plus_flip_rate": 9.28380594782501e-05
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.0005733510658518882,
+        "plus": 0.0009329427463111496
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.005828857421875,
+        "central_endpoint_winner_switch_rate": 0.0006306966145833334,
+        "minus_rival_switch_rate_vs_baseline": 0.0030924479166666665,
+        "minus_winner_flip_rate_vs_baseline": 0.000335693359375,
+        "plus_rival_switch_rate_vs_baseline": 0.0033721923828125,
+        "plus_winner_flip_rate_vs_baseline": 0.000335693359375
+      },
+      "epsilon": 0.01,
+      "name": "palette_Undrivable_R",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.007137758743754461,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.0035688793718772305,
+          "plus_flip_rate": 0.0035688793718772305
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0005611672278338945,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0005611672278338945
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.001699447113205837,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0009290310885525242,
+          "plus_flip_rate": 0.0008610532040242908
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00038166757785502824,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.00020630679884055578,
+          "plus_flip_rate": 0.00021662213878258357
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.0002733511678438029,
+        "plus": 0.0005001466471420006
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.007181803385416667,
+        "central_endpoint_winner_switch_rate": 0.0008138020833333334,
+        "minus_rival_switch_rate_vs_baseline": 0.0036773681640625,
+        "minus_winner_flip_rate_vs_baseline": 0.0003865559895833333,
+        "plus_rival_switch_rate_vs_baseline": 0.004353841145833333,
+        "plus_winner_flip_rate_vs_baseline": 0.000518798828125
+      },
+      "epsilon": 0.01,
+      "name": "palette_Undrivable_G",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.009279086366880799,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.004282655246252677,
+          "plus_flip_rate": 0.007851534618129907
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0005611672278338945,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0005611672278338945,
+          "plus_flip_rate": 0.0
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 1.9775352001265622e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 1.9775352001265622e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0027417746759720836,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0011103054472944801,
+          "plus_flip_rate": 0.0018580621771050485
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00023725281866663917,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.000195991458898528,
+          "plus_flip_rate": 8.252271953622232e-05
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.0056252814421231395,
+        "plus": 0.0015634941075500662
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.00384521484375,
+        "central_endpoint_winner_switch_rate": 0.0003865559895833333,
+        "minus_rival_switch_rate_vs_baseline": 0.0020650227864583335,
+        "minus_winner_flip_rate_vs_baseline": 0.00017801920572916666,
+        "plus_rival_switch_rate_vs_baseline": 0.0021565755208333335,
+        "plus_winner_flip_rate_vs_baseline": 0.0002288818359375
+      },
+      "epsilon": 0.01,
+      "name": "palette_Undrivable_B",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.004282655246252677,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.0028551034975017845,
+          "plus_flip_rate": 0.004282655246252677
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0010423275627662468,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0005438230762258679,
+          "plus_flip_rate": 0.0004985044865403788
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00024756815860866693,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 7.220737959419453e-05,
+          "plus_flip_rate": 0.00017536077901447242
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.00012896717128375794,
+        "plus": 0.0004739393690436183
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.0008697509765625,
+        "central_endpoint_winner_switch_rate": 8.646647135416667e-05,
+        "minus_rival_switch_rate_vs_baseline": 0.00048828125,
+        "minus_winner_flip_rate_vs_baseline": 5.0862630208333336e-05,
+        "plus_rival_switch_rate_vs_baseline": 0.0005442301432291666,
+        "plus_winner_flip_rate_vs_baseline": 5.5948893229166664e-05
+      },
+      "epsilon": 0.01,
+      "name": "palette_Movable_R",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.0007137758743754461,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.0007137758743754461,
+          "plus_flip_rate": 0.0
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 1.9775352001265622e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 1.9775352001265622e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0002945708329556784,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.00013595576905646697,
+          "plus_flip_rate": 0.00020393365358470044
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 2.063067988405558e-05,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 3.0946019826083366e-05,
+          "plus_flip_rate": 1.031533994202779e-05
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.0001978455967652094,
+        "plus": 0.00010301477008455331
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.0008087158203125,
+        "central_endpoint_winner_switch_rate": 0.00010172526041666667,
+        "minus_rival_switch_rate_vs_baseline": 0.0005442301432291666,
+        "minus_winner_flip_rate_vs_baseline": 5.5948893229166664e-05,
+        "plus_rival_switch_rate_vs_baseline": 0.00048828125,
+        "plus_winner_flip_rate_vs_baseline": 5.5948893229166664e-05
+      },
+      "epsilon": 0.01,
+      "name": "palette_Movable_G",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.0007137758743754461,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.0007137758743754461,
+          "plus_flip_rate": 0.0
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0002945708329556784,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.00015861506389921147,
+          "plus_flip_rate": 0.00013595576905646697
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 6.189203965216673e-05,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 3.0946019826083366e-05,
+          "plus_flip_rate": 5.1576699710138946e-05
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.0007414743468271356,
+        "plus": 0.0005144950968488497
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.0008646647135416666,
+        "central_endpoint_winner_switch_rate": 7.62939453125e-05,
+        "minus_rival_switch_rate_vs_baseline": 0.0004831949869791667,
+        "minus_winner_flip_rate_vs_baseline": 4.0690104166666664e-05,
+        "plus_rival_switch_rate_vs_baseline": 0.0005035400390625,
+        "plus_winner_flip_rate_vs_baseline": 5.5948893229166664e-05
+      },
+      "epsilon": 0.01,
+      "name": "palette_Movable_B",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.0014275517487508922,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.0007137758743754461,
+          "plus_flip_rate": 0.0007137758743754461
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0002805836139169473,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0002805836139169473
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 1.9775352001265622e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 1.9775352001265622e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.00015861506389921147,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.00013595576905646697,
+          "plus_flip_rate": 0.00011329647421372247
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 4.126135976811116e-05,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 1.031533994202779e-05,
+          "plus_flip_rate": 3.0946019826083366e-05
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.0002772322842861958,
+        "plus": 0.0003146085885557287
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.005157470703125,
+        "central_endpoint_winner_switch_rate": 0.0004221598307291667,
+        "minus_rival_switch_rate_vs_baseline": 0.0031229654947916665,
+        "minus_winner_flip_rate_vs_baseline": 0.0002695719401041667,
+        "plus_rival_switch_rate_vs_baseline": 0.0029551188151041665,
+        "plus_winner_flip_rate_vs_baseline": 0.00022379557291666666
+      },
+      "epsilon": 0.01,
+      "name": "palette_MyCar_R",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.006423982869379015,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.004996431120628123,
+          "plus_flip_rate": 0.0028551034975017845
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0005611672278338945,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0002805836139169473,
+          "plus_flip_rate": 0.0002805836139169473
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 3.9550704002531244e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 1.9775352001265622e-05,
+          "plus_flip_rate": 1.9775352001265622e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.001336898395721925,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0007250974349678238,
+          "plus_flip_rate": 0.0006571195504395903
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00011346873936230568,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.00012378407930433346,
+          "plus_flip_rate": 9.28380594782501e-05
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.0017087435449284062,
+        "plus": 0.0030103573309151976
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.006581624348958333,
+        "central_endpoint_winner_switch_rate": 0.0004069010416666667,
+        "minus_rival_switch_rate_vs_baseline": 0.0040740966796875,
+        "minus_winner_flip_rate_vs_baseline": 0.0002695719401041667,
+        "plus_rival_switch_rate_vs_baseline": 0.0039520263671875,
+        "plus_winner_flip_rate_vs_baseline": 0.00020853678385416666
+      },
+      "epsilon": 0.01,
+      "name": "palette_MyCar_G",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.005710206995003569,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.004996431120628123,
+          "plus_flip_rate": 0.0021413276231263384
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0002805836139169473,
+          "plus_flip_rate": 0.0002805836139169473
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 1.9775352001265622e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 1.9775352001265622e-05,
+          "plus_flip_rate": 0.0
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0010649868576089912,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0006118009607541013,
+          "plus_flip_rate": 0.0005438230762258679
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00024756815860866693,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.00017536077901447242,
+          "plus_flip_rate": 0.00013409941924636125
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.005027793523619794,
+        "plus": 0.007774524352599506
+      },
+      "source": "palette15_checkpoint_logit"
+    },
+    {
+      "actual_events": {
+        "central_endpoint_rival_switch_rate": 0.005696614583333333,
+        "central_endpoint_winner_switch_rate": 0.0004323323567708333,
+        "minus_rival_switch_rate_vs_baseline": 0.0031331380208333335,
+        "minus_winner_flip_rate_vs_baseline": 0.00023396809895833334,
+        "plus_rival_switch_rate_vs_baseline": 0.0031483968098958335,
+        "plus_winner_flip_rate_vs_baseline": 0.0002288818359375
+      },
+      "epsilon": 0.01,
+      "name": "palette_MyCar_B",
+      "palette_delta": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "per_gt_class": {
+        "Lane": {
+          "central_endpoint_switch_rate": 0.008565310492505354,
+          "gt_pixels": 1401,
+          "minus_flip_rate": 0.004996431120628123,
+          "plus_flip_rate": 0.0035688793718772305
+        },
+        "Movable": {
+          "central_endpoint_switch_rate": 0.0,
+          "gt_pixels": 3564,
+          "minus_flip_rate": 0.0,
+          "plus_flip_rate": 0.0
+        },
+        "MyCar": {
+          "central_endpoint_switch_rate": 3.9550704002531244e-05,
+          "gt_pixels": 50568,
+          "minus_flip_rate": 1.9775352001265622e-05,
+          "plus_flip_rate": 1.9775352001265622e-05
+        },
+        "Road": {
+          "central_endpoint_switch_rate": 0.0010649868576089912,
+          "gt_pixels": 44132,
+          "minus_flip_rate": 0.0005664823710686123,
+          "plus_flip_rate": 0.0005891416659113568
+        },
+        "Undrivable": {
+          "central_endpoint_switch_rate": 0.00024756815860866693,
+          "gt_pixels": 96943,
+          "minus_flip_rate": 0.00013409941924636125,
+          "plus_flip_rate": 0.00013409941924636125
+        }
+      },
+      "pose6_endpoint_rmse_vs_baseline": {
+        "minus": 0.0054896990707259535,
+        "plus": 0.007279088478234749
+      },
+      "source": "palette15_checkpoint_logit"
+    }
+  ],
+  "custody_verdicts": {
+    "canonical_M_selection": "NO_VERDICT_DATA_CUSTODY",
+    "decision_carrier_bundle": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+    "metric_id": "argmax_native_vjp_fidelity_v1",
+    "pointer_moved": false
+  },
+  "frozen_cpu_torch": true,
+  "global_status": "BOUNDED_MEASUREMENT_NON_AUTHORITY",
+  "measurement": {
+    "baseline": {
+      "aggregate_render_digest_sha256": "f4da9f9be3da0ad8fea2c2b64cf4b200f477e350cf7f7e6252c1166f216c2408",
+      "d_pose": 22.862144083717407,
+      "d_seg": 0.026580810546875,
+      "digest_parity_canary": "PASS"
+    },
+    "coverage_cells_complete": 15,
+    "coverage_cells_required": 15,
+    "object": "central_realized_secants_not_Jacobian_uint8_R_is_nondifferentiable",
+    "pose_gram_fp64": [
+      [
+        3.681911501895174,
+        -6.445862727204737,
+        3.880809080950426,
+        -1.1693332604001405,
+        -4.528211943421317,
+        -0.3539042909443679,
+        -0.18152590469278085,
+        -0.9546502117528666,
+        -0.14131129627392713,
+        -0.02232059343118542,
+        0.2950094467925324,
+        -0.13907828903703123,
+        -1.1088975255313382,
+        3.008558302270148,
+        -3.000746238119439
+      ],
+      [
+        -6.445862727204737,
+        11.28594887583198,
+        -6.794623625021172,
+        2.0471499374771773,
+        7.927053781647681,
+        0.6196095749973207,
+        0.3177923358439749,
+        1.6707684799957545,
+        0.24726495950797012,
+        0.039088363137790294,
+        -0.5164209267892461,
+        0.2434784979619964,
+        1.941546815690115,
+        -5.266780305887287,
+        5.253487302840366
+      ],
+      [
+        3.880809080950426,
+        -6.794623625021172,
+        4.090790605780492,
+        -1.2325605924137784,
+        -4.772659214715425,
+        -0.37304745403227146,
+        -0.19136368378747104,
+        -1.0061538178889051,
+        -0.14891242540782113,
+        -0.023540569099589348,
+        0.3108930787146247,
+        -0.14659572184688718,
+        -1.1688733692143127,
+        3.1710181386881975,
+        -3.1628972588752804
+      ],
+      [
+        -1.1693332604001405,
+        2.0471499374771773,
+        -1.2325605924137784,
+        0.37139757019244435,
+        1.4381115673514633,
+        0.1124005041977516,
+        0.05766624702030487,
+        0.30325139674020063,
+        0.04488572492855614,
+        0.007092268950181779,
+        -0.09367821971223433,
+        0.044171804861048436,
+        0.3521689670454853,
+        -0.9554975284670197,
+        0.9530076185673697
+      ],
+      [
+        -4.528211943421317,
+        7.927053781647681,
+        -4.772659214715425,
+        1.4381115673514633,
+        5.569185074248556,
+        0.43523919851268245,
+        0.22325397881634013,
+        1.1742546245610552,
+        0.17383211566565637,
+        0.02744667874199358,
+        -0.3628383022107051,
+        0.17104704256823422,
+        1.3637138561689577,
+        -3.7001621681709285,
+        3.6904469195753187
+      ],
+      [
+        -0.3539042909443679,
+        0.6196095749973207,
+        -0.37304745403227146,
+        0.1124005041977516,
+        0.43523919851268245,
+        0.034019622112413384,
+        0.017451961430992036,
+        0.09176678135144889,
+        0.013582767065534185,
+        0.002147226367266164,
+        -0.028350013938915897,
+        0.013369041817201666,
+        0.10658919731440508,
+        -0.28918252783199927,
+        0.2884314199368132
+      ],
+      [
+        -0.18152590469278085,
+        0.3177923358439749,
+        -0.19136368378747104,
+        0.05766624702030487,
+        0.22325397881634013,
+        0.017451961430992036,
+        0.008961431324921998,
+        0.04712265138206995,
+        0.006975852595431098,
+        0.0011040414249485764,
+        -0.01453254759087308,
+        0.006859276097254119,
+        0.05466172091739274,
+        -0.14834616836573167,
+        0.14793826931203125
+      ],
+      [
+        -0.9546502117528666,
+        1.6707684799957545,
+        -1.0061538178889051,
+        0.30325139674020063,
+        1.1742546245610552,
+        0.09176678135144889,
+        0.04712265138206995,
+        0.24803240753171196,
+        0.03673699315490109,
+        0.005801625535678534,
+        -0.07644178460747275,
+        0.03607468867281027,
+        0.28737965783426356,
+        -0.7802706738033183,
+        0.7779520380891969
+      ],
+      [
+        -0.14131129627392713,
+        0.24726495950797012,
+        -0.14891242540782113,
+        0.04488572492855614,
+        0.17383211566565637,
+        0.013582767065534185,
+        0.006975852595431098,
+        0.03673699315490109,
+        0.005444030460322047,
+        0.0008588860067604287,
+        -0.011315441364873058,
+        0.005340444692858437,
+        0.04252902924870017,
+        -0.11551113730856599,
+        0.11514764099926356
+      ],
+      [
+        -0.02232059343118542,
+        0.039088363137790294,
+        -0.023540569099589348,
+        0.007092268950181779,
+        0.02744667874199358,
+        0.002147226367266164,
+        0.0011040414249485764,
+        0.005801625535678534,
+        0.0008588860067604287,
+        0.00013687884409252504,
+        -0.0017830358400861002,
+        0.0008440623547323334,
+        0.0067206702579480915,
+        -0.018243834482845056,
+        0.01818895458097214
+      ],
+      [
+        0.2950094467925324,
+        -0.5164209267892461,
+        0.3108930787146247,
+        -0.09367821971223433,
+        -0.3628383022107051,
+        -0.028350013938915897,
+        -0.01453254759087308,
+        -0.07644178460747275,
+        -0.011315441364873058,
+        -0.0017830358400861002,
+        0.023657364466439512,
+        -0.011140450008190195,
+        -0.08885417142001639,
+        0.24103938451480733,
+        -0.2404396993826996
+      ],
+      [
+        -0.13907828903703123,
+        0.2434784979619964,
+        -0.14659572184688718,
+        0.044171804861048436,
+        0.17104704256823422,
+        0.013369041817201666,
+        0.006859276097254119,
+        0.03607468867281027,
+        0.005340444692858437,
+        0.0008440623547323334,
+        -0.011140450008190195,
+        0.005254128819243142,
+        0.04188370352029014,
+        -0.11364921593037813,
+        0.11334578164282072
+      ],
+      [
+        -1.1088975255313382,
+        1.941546815690115,
+        -1.1688733692143127,
+        0.3521689670454853,
+        1.3637138561689577,
+        0.10658919731440508,
+        0.05466172091739274,
+        0.28737965783426356,
+        0.04252902924870017,
+        0.0067206702579480915,
+        -0.08885417142001639,
+        0.04188370352029014,
+        0.334018558777599,
+        -0.9060376577257889,
+        0.903780055150627
+      ],
+      [
+        3.008558302270148,
+        -5.266780305887287,
+        3.1710181386881975,
+        -0.9554975284670197,
+        -3.7001621681709285,
+        -0.28918252783199927,
+        -0.14834616836573167,
+        -0.7802706738033183,
+        -0.11551113730856599,
+        -0.018243834482845056,
+        0.24103938451480733,
+        -0.11364921593037813,
+        -0.9060376577257889,
+        2.4584431756380365,
+        -2.451919862643537
+      ],
+      [
+        -3.000746238119439,
+        5.253487302840366,
+        -3.1628972588752804,
+        0.9530076185673697,
+        3.6904469195753187,
+        0.2884314199368132,
+        0.14793826931203125,
+        0.7779520380891969,
+        0.11514764099926356,
+        0.01818895458097214,
+        -0.2404396993826996,
+        0.11334578164282072,
+        0.903780055150627,
+        -2.451919862643537,
+        2.4456274378566176
+      ]
+    ],
+    "pose_object": "frozen-PoseNet first six outputs",
+    "pose_rank": {
+      "algebraic_rank_default_tol": 6,
+      "eigenvalues_desc": [
+        30.560779814072003,
+        0.001634618713695325,
+        0.00036310142124536184,
+        4.485384317340726e-05,
+        4.153352060134212e-06,
+        2.122377882151632e-06,
+        7.605518010323988e-16,
+        7.522056496020608e-18,
+        4.116151259423208e-18,
+        2.974420064662332e-18,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "energy": 30.56282866378006,
+      "rank_at_99pct_energy": 1
+    },
+    "seg_gram_fp64": [
+      [
+        1716291.6379096352,
+        -514268.39692281175,
+        -383482.75996669533,
+        -67587.73374395234,
+        46881.67113982089,
+        67100.5477583557,
+        -524300.743583903,
+        306657.49618112005,
+        94631.9574535044,
+        -29740.08406537149,
+        -9486.692596024375,
+        -18278.992809595315,
+        -291725.98383968277,
+        14056.98153098683,
+        144151.1095213235
+      ],
+      [
+        -514268.39692281175,
+        1585869.6411233763,
+        -99343.36883945334,
+        -118447.26410280172,
+        -186582.86198418672,
+        -17644.53149532674,
+        277183.7194744331,
+        -226884.26075561906,
+        -51580.127855219216,
+        -3589.7928302197743,
+        -7435.636151277238,
+        12223.768569821026,
+        114318.56180884475,
+        -524285.1513707434,
+        628.8580193454736
+      ],
+      [
+        -383482.75996669533,
+        -99343.36883945334,
+        762065.9086387083,
+        -8171.782979618341,
+        -48435.91160298685,
+        -103455.6526546002,
+        183347.70227093328,
+        -89164.30430295672,
+        -81018.92372543109,
+        13664.250143623422,
+        -528.4474803771282,
+        -20185.271454383404,
+        38458.58813896471,
+        160301.64524545186,
+        -167147.36814265812
+      ],
+      [
+        -67587.73374395234,
+        -118447.26410280172,
+        -8171.782979618341,
+        273531.1551359232,
+        37876.10550270539,
+        -15822.614251887946,
+        -122762.58774792682,
+        -110078.49981968438,
+        53157.78194739979,
+        10646.616633688076,
+        4402.305569168707,
+        -274.880979188898,
+        70044.09705301508,
+        178525.14691334413,
+        -52830.028655342125
+      ],
+      [
+        46881.67113982089,
+        -186582.86198418672,
+        -48435.91160298685,
+        37876.10550270539,
+        271923.8715568611,
+        -9033.240712369894,
+        -38667.01008483774,
+        -35207.17971271926,
+        19225.283950989906,
+        4286.230497355554,
+        -931.742869742754,
+        -10658.765613043777,
+        -12989.92032946047,
+        11847.169649463005,
+        4479.6940963955985
+      ],
+      [
+        67100.5477583557,
+        -17644.53149532674,
+        -103455.6526546002,
+        -15822.614251887946,
+        -9033.240712369894,
+        110502.80211448044,
+        -47967.48142696665,
+        50733.368087095085,
+        -36873.82976582673,
+        -1541.7442617124045,
+        -1780.454945831475,
+        2169.8056969316676,
+        19947.76609312848,
+        -32419.626508633395,
+        -14439.736519855851
+      ],
+      [
+        -524300.743583903,
+        277183.7194744331,
+        183347.70227093328,
+        -122762.58774792682,
+        -38667.01008483774,
+        -47967.48142696665,
+        602165.1436218861,
+        -109818.53414599776,
+        -113300.21082041808,
+        -14503.644228429564,
+        -8151.0900662009935,
+        7691.2213412077435,
+        -106966.70825901328,
+        -41301.09941378134,
+        82853.535002699
+      ],
+      [
+        306657.49618112005,
+        -226884.26075561906,
+        -89164.30430295672,
+        -110078.49981968438,
+        -35207.17971271926,
+        50733.368087095085,
+        -109818.53414599776,
+        861586.5988257291,
+        -7876.618879101422,
+        -26799.605546702984,
+        -8621.391862167617,
+        -7762.046532127151,
+        -116552.56438281984,
+        -439737.74712039996,
+        -107403.71865376423
+      ],
+      [
+        94631.9574535044,
+        -51580.127855219216,
+        -81018.92372543109,
+        53157.78194739979,
+        19225.283950989906,
+        -36873.82976582673,
+        -113300.21082041808,
+        -7876.618879101422,
+        278312.3174081552,
+        -1192.741152422848,
+        -2331.71436285262,
+        -2667.142478419406,
+        -14764.170224420755,
+        -2929.572341479133,
+        -105417.75644581686
+      ],
+      [
+        -29740.08406537149,
+        -3589.7928302197743,
+        13664.250143623422,
+        10646.616633688076,
+        4286.230497355554,
+        -1541.7442617124045,
+        -14503.644228429564,
+        -26799.605546702984,
+        -1192.741152422848,
+        11708.3553441385,
+        5054.737277927368,
+        2034.347087120263,
+        23746.96151995233,
+        18605.84134479491,
+        -5968.610647610802
+      ],
+      [
+        -9486.692596024375,
+        -7435.636151277238,
+        -528.4474803771282,
+        4402.305569168707,
+        -931.742869742754,
+        -1780.454945831475,
+        -8151.0900662009935,
+        -8621.391862167617,
+        -2331.71436285262,
+        5054.737277927368,
+        8973.895262878392,
+        4279.535190738132,
+        8519.699433140093,
+        4201.704911659141,
+        1981.8517759189008
+      ],
+      [
+        -18278.992809595315,
+        12223.768569821026,
+        -20185.271454383404,
+        -274.880979188898,
+        -10658.765613043777,
+        2169.8056969316676,
+        7691.2213412077435,
+        -7762.046532127151,
+        -2667.142478419406,
+        2034.347087120263,
+        4279.535190738132,
+        14467.39509096586,
+        1701.4982347632913,
+        6184.795375462026,
+        14130.94824925788
+      ],
+      [
+        -291725.98383968277,
+        114318.56180884475,
+        38458.58813896471,
+        70044.09705301508,
+        -12989.92032946047,
+        19947.76609312848,
+        -106966.70825901328,
+        -116552.56438281984,
+        -14764.170224420755,
+        23746.96151995233,
+        8519.699433140093,
+        1701.4982347632913,
+        358595.8366694432,
+        49101.801157695125,
+        -133388.91101705167
+      ],
+      [
+        14056.98153098683,
+        -524285.1513707434,
+        160301.64524545186,
+        178525.14691334413,
+        11847.169649463005,
+        -32419.626508633395,
+        -41301.09941378134,
+        -439737.74712039996,
+        -2929.572341479133,
+        18605.84134479491,
+        4201.704911659141,
+        6184.795375462026,
+        49101.801157695125,
+        1084929.558096671,
+        55936.35199889867
+      ],
+      [
+        144151.1095213235,
+        628.8580193454736,
+        -167147.36814265812,
+        -52830.028655342125,
+        4479.6940963955985,
+        -14439.736519855851,
+        82853.535002699,
+        -107403.71865376423,
+        -105417.75644581686,
+        -5968.610647610802,
+        1981.8517759189008,
+        14130.94824925788,
+        -133388.91101705167,
+        55936.35199889867,
+        485260.78038458776
+      ]
+    ],
+    "seg_object": "baseline-winner minus baseline-rival frozen-SegNet logit margin",
+    "seg_rank": {
+      "algebraic_rank_default_tol": 15,
+      "eigenvalues_desc": [
+        2595769.6633935785,
+        1833732.824737934,
+        1116521.849396609,
+        768036.3405013881,
+        613664.1885706908,
+        376108.0530214745,
+        330530.6990523881,
+        233727.47286461922,
+        199567.1046871468,
+        155533.310699535,
+        113598.72858464236,
+        60020.44414615247,
+        16669.962236238796,
+        8488.646079832566,
+        4215.609211210105
+      ],
+      "energy": 8426184.897183439,
+      "rank_at_99pct_energy": 12
+    }
+  },
+  "metric_id": "argmax_native_vjp_fidelity_v1",
+  "n_pairs": 1,
+  "pair_contract": {
+    "complete_real_n600": false,
+    "measured_end_exclusive": 1,
+    "measured_indices": [
+      0
+    ],
+    "measured_start": 0,
+    "n_measured": 1,
+    "required": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137,
+      138,
+      139,
+      140,
+      141,
+      142,
+      143,
+      144,
+      145,
+      146,
+      147,
+      148,
+      149,
+      150,
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      160,
+      161,
+      162,
+      163,
+      164,
+      165,
+      166,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173,
+      174,
+      175,
+      176,
+      177,
+      178,
+      179,
+      180,
+      181,
+      182,
+      183,
+      184,
+      185,
+      186,
+      187,
+      188,
+      189,
+      190,
+      191,
+      192,
+      193,
+      194,
+      195,
+      196,
+      197,
+      198,
+      199,
+      200,
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210,
+      211,
+      212,
+      213,
+      214,
+      215,
+      216,
+      217,
+      218,
+      219,
+      220,
+      221,
+      222,
+      223,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235,
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259,
+      260,
+      261,
+      262,
+      263,
+      264,
+      265,
+      266,
+      267,
+      268,
+      269,
+      270,
+      271,
+      272,
+      273,
+      274,
+      275,
+      276,
+      277,
+      278,
+      279,
+      280,
+      281,
+      282,
+      283,
+      284,
+      285,
+      286,
+      287,
+      288,
+      289,
+      290,
+      291,
+      292,
+      293,
+      294,
+      295,
+      296,
+      297,
+      298,
+      299,
+      300,
+      301,
+      302,
+      303,
+      304,
+      305,
+      306,
+      307,
+      308,
+      309,
+      310,
+      311,
+      312,
+      313,
+      314,
+      315,
+      316,
+      317,
+      318,
+      319,
+      320,
+      321,
+      322,
+      323,
+      324,
+      325,
+      326,
+      327,
+      328,
+      329,
+      330,
+      331,
+      332,
+      333,
+      334,
+      335,
+      336,
+      337,
+      338,
+      339,
+      340,
+      341,
+      342,
+      343,
+      344,
+      345,
+      346,
+      347,
+      348,
+      349,
+      350,
+      351,
+      352,
+      353,
+      354,
+      355,
+      356,
+      357,
+      358,
+      359,
+      360,
+      361,
+      362,
+      363,
+      364,
+      365,
+      366,
+      367,
+      368,
+      369,
+      370,
+      371,
+      372,
+      373,
+      374,
+      375,
+      376,
+      377,
+      378,
+      379,
+      380,
+      381,
+      382,
+      383,
+      384,
+      385,
+      386,
+      387,
+      388,
+      389,
+      390,
+      391,
+      392,
+      393,
+      394,
+      395,
+      396,
+      397,
+      398,
+      399,
+      400,
+      401,
+      402,
+      403,
+      404,
+      405,
+      406,
+      407,
+      408,
+      409,
+      410,
+      411,
+      412,
+      413,
+      414,
+      415,
+      416,
+      417,
+      418,
+      419,
+      420,
+      421,
+      422,
+      423,
+      424,
+      425,
+      426,
+      427,
+      428,
+      429,
+      430,
+      431,
+      432,
+      433,
+      434,
+      435,
+      436,
+      437,
+      438,
+      439,
+      440,
+      441,
+      442,
+      443,
+      444,
+      445,
+      446,
+      447,
+      448,
+      449,
+      450,
+      451,
+      452,
+      453,
+      454,
+      455,
+      456,
+      457,
+      458,
+      459,
+      460,
+      461,
+      462,
+      463,
+      464,
+      465,
+      466,
+      467,
+      468,
+      469,
+      470,
+      471,
+      472,
+      473,
+      474,
+      475,
+      476,
+      477,
+      478,
+      479,
+      480,
+      481,
+      482,
+      483,
+      484,
+      485,
+      486,
+      487,
+      488,
+      489,
+      490,
+      491,
+      492,
+      493,
+      494,
+      495,
+      496,
+      497,
+      498,
+      499,
+      500,
+      501,
+      502,
+      503,
+      504,
+      505,
+      506,
+      507,
+      508,
+      509,
+      510,
+      511,
+      512,
+      513,
+      514,
+      515,
+      516,
+      517,
+      518,
+      519,
+      520,
+      521,
+      522,
+      523,
+      524,
+      525,
+      526,
+      527,
+      528,
+      529,
+      530,
+      531,
+      532,
+      533,
+      534,
+      535,
+      536,
+      537,
+      538,
+      539,
+      540,
+      541,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      549,
+      550,
+      551,
+      552,
+      553,
+      554,
+      555,
+      556,
+      557,
+      558,
+      559,
+      560,
+      561,
+      562,
+      563,
+      564,
+      565,
+      566,
+      567,
+      568,
+      569,
+      570,
+      571,
+      572,
+      573,
+      574,
+      575,
+      576,
+      577,
+      578,
+      579,
+      580,
+      581,
+      582,
+      583,
+      584,
+      585,
+      586,
+      587,
+      588,
+      589,
+      590,
+      591,
+      592,
+      593,
+      594,
+      595,
+      596,
+      597,
+      598,
+      599
+    ]
+  },
+  "provenance": {
+    "argv": [
+      "--timing-smoke",
+      "--allow-local-storage",
+      "--work-dir",
+      "experiments/results/appearance_task_rank_n600_task503_20260714",
+      "--receipt",
+      ".omx/research/recursive_fractal_optimal_representation_v9_timing_smoke_20260714.json",
+      "--requested-free-bytes",
+      "104857600"
+    ],
+    "argv_sha256": "097bc7005da74ffd729d6675b480d5089624e42ef8c9b3c4afc276cc9ab3ac6d",
+    "git_head": "5ed573f3cdd702bf42119810a74c538412a8d7af",
+    "git_status_short": [
+      " M .omx/state/canonical_equations_registry.jsonl",
+      " M .omx/state/canonical_task_status.jsonl",
+      " M .omx/state/lane_maturity_audit.log",
+      " M .omx/state/lane_registry.json",
+      " M experiments/probe_boundary_distance_calibration.py",
+      " M experiments/probe_flip_bc_n600_gate.py",
+      " M experiments/probe_focal_gamma_calibration.py",
+      " M experiments/probe_hessian_precond_ot_ab.py",
+      " M experiments/probe_laguerre_logit_offset_sweep.py",
+      " M experiments/probe_levelset_gpu_reorient_parity.py",
+      " M experiments/probe_sr_reachability_calibration.py",
+      " M experiments/rl_annulus_unlock_gate.py",
+      " M experiments/tests/test_levelset_byte_close_and_eval.py",
+      " M experiments/tests/test_levelset_lane_band_decode_consistency.py",
+      " M experiments/tests/test_v9_cuda_controller_trainer_integration.py",
+      " M experiments/train_levelset_witness_realized_through_R_mlx.py",
+      " M experiments/train_levelset_witness_realized_through_R_torch.py",
+      " M src/tac/boundary_math/aa_sdf_observation_render.py",
+      " M src/tac/boundary_math/decoupled_field.py",
+      " M src/tac/boundary_math/lever_b_levelset_generator.py",
+      " M src/tac/boundary_math/segnet_gradient_replacement.py",
+      " M src/tac/boundary_math/tests/test_aa_sdf_observation_render.py",
+      " M src/tac/boundary_math/tests/test_dseg_aware_fourier_taper.py",
+      " M src/tac/boundary_math/tests/test_levelset_yousfi_levers.py",
+      " M src/tac/canonical_equations/optimal_basis_selection_20260714.py",
+      " M src/tac/cuda_v9_controller_runtime.py",
+      " M src/tac/local_acceleration/torch_levelset_inflate.py",
+      " M src/tac/preflight.py",
+      " M src/tac/scorer_surrogate/whole_teacher_distilled_student.py",
+      " M src/tac/tests/test_compose_witness_archive_pipeline.py",
+      " M src/tac/tests/test_crucible2_v752_dsl_wirein.py",
+      " M src/tac/tests/test_cuda_v9_controller_runtime.py",
+      " M src/tac/tests/test_dashboard_liveobs.py",
+      " M src/tac/tests/test_instant_projected_adjoint_provider.py",
+      " M src/tac/tests/test_launch_witness_run.py",
+      " M src/tac/tests/test_onpolicy_scorer_surrogate_policy.py",
+      " M src/tac/tests/test_optimal_basis_20260714.py",
+      " M src/tac/tests/test_probe_instant_projected_adjoint.py",
+      " M src/tac/tests/test_probe_whole_teacher_distilled_student.py",
+      " M src/tac/tests/test_scorer_gradient_policy.py",
+      " M src/tac/tests/test_segnet_gradient_replacement.py",
+      " M src/tac/tests/test_spec_v9_cgauge.py",
+      " M src/tac/tests/test_v2_residual_compose.py",
+      " M src/tac/tests/test_v752_owed_gates.py",
+      " M src/tac/tests/test_whole_teacher_distilled_student_vjp.py",
+      " M src/tac/tests/test_wire_in_224_optionb_compose.py",
+      " M src/tac/v2_compose/archive_grammar.py",
+      " M src/tac/witness_autoconfig.py",
+      " M src/tac/witness_control/resume_registry.py",
+      " M src/tac/witness_control/sigma_min_plateau.py",
+      " M src/tac/witness_control/tests/test_sigma_min_plateau.py",
+      " M src/tac/witness_dsl/__init__.py",
+      " M src/tac/witness_dsl/curriculum_dsl.py",
+      " M src/tac/witness_dsl/lever_registry.py",
+      " M src/tac/witness_dsl/onpolicy_scorer_surrogate_policy.py",
+      " M src/tac/witness_dsl/optimal_basis_20260714.py",
+      " M src/tac/witness_dsl/scorer_gradient_policy.py",
+      " M src/tac/witness_dsl/spec_v9_cgauge.py",
+      " M src/tac/witness_dsl/tests/test_whole_teacher_distilled_student_policy.py",
+      " M src/tac/witness_dsl/whole_teacher_distilled_student_policy.py",
+      " M tools/build_witness_showcase.py",
+      " M tools/dash_comb_probe_n600.py",
+      " M tools/dashboard_flow_sequence.py",
+      " M tools/elm_inr_head_seed.py",
+      " M tools/erasure_timing_attribution.py",
+      " M tools/launch_witness_run.py",
+      " M tools/levelset_analytic_lane_band_dseg_n600.py",
+      " M tools/levelset_byte_close_and_eval.py",
+      " D tools/levelset_curvelet_feasibility_smoke.py",
+      " M tools/levelset_render_side_sizing_l7best_n600.py",
+      " M tools/levelset_torch_inflate_parity.py",
+      " M tools/measure_contour_string_flip_coding.py",
+      " M tools/probe_instant_projected_adjoint.py",
+      " M tools/probe_mlx_real_n600_precision.py",
+      " M tools/probe_onpolicy_scorer_surrogate.py",
+      " M tools/probe_sps_gradient_role_conflict.py",
+      " M tools/probe_whole_teacher_distilled_student.py",
+      " M tools/quadratic_basin_finisher_probe.py",
+      " M tools/render_comma_baseline_vs_ours_viz.py",
+      " M tools/render_witness_morse_smale_viz.py",
+      " M tools/wire_in_224_byte_identical_smoke.py",
+      " M tools/witness_apply_pass.py",
+      " M tools/witness_code_pca_byteclose.py",
+      " M tools/witness_memory_preflight.py",
+      " M tools/witness_per_stage_annulus_attribution.py",
+      "?? .omx/research/codex_findings_margin_adaptive_perlayer_followon_20260714_codex.md",
+      "?? .omx/research/codex_findings_optimal_basis_beyond_fourier_20260714_codex.md",
+      "?? .omx/research/codex_findings_optimal_metric_p0_surrogate_followons_20260714_codex.md",
+      "?? .omx/research/codex_findings_optimal_metric_training_loss_curriculum_20260714_codex.md",
+      "?? .omx/research/codex_findings_throughput_nogo_naive_rescope_audit_20260714_codex.md",
+      "?? .omx/research/codex_session_summary_20260714_margin_adaptive_perlayer_followon_codex.md",
+      "?? .omx/research/codex_session_summary_20260714_optimal_basis_beyond_fourier_codex.md",
+      "?? .omx/research/codex_session_summary_20260714_optimal_metric_p0_surrogate_followons_codex.md",
+      "?? .omx/research/codex_session_summary_20260714_optimal_metric_training_loss_curriculum_codex.md",
+      "?? .omx/research/codex_session_summary_20260714_throughput_nogo_rescope_codex.md",
+      "?? .omx/research/genuine_curvelet_shearlet_build_measure_build_spec_20260714.md",
+      "?? .omx/research/genuine_curvelet_shearlet_receiver_n600_progress_20260714.json",
+      "?? .omx/research/genuine_curvelet_shearlet_structural_proof_20260714.json",
+      "?? .omx/research/genuine_frame_fresh_start_3arm_ticket_20260714.json",
+      "?? .omx/research/margin_adaptive_perlayer_followon_DAG_FEED_20260714.md",
+      "?? .omx/research/margin_adaptive_perlayer_followon_build_spec_20260714.md",
+      "?? .omx/research/margin_adaptive_perlayer_followon_plan_only_20260714.json",
+      "?? .omx/research/optimal_basis_beyond_fourier_DAG_FEED_20260714.md",
+      "?? .omx/research/optimal_basis_saved_n600_audit_20260714.json",
+      "?? .omx/research/optimal_metric_p0_data_custody_receipt_20260714.json",
+      "?? .omx/research/optimal_metric_p0_raw_cosine_audit_20260714.md",
+      "?? .omx/research/optimal_metric_p0_surrogate_followons_DAG_FEED_20260714.md",
+      "?? .omx/research/optimal_metric_p0_surrogate_followons_build_spec_20260714.md",
+      "?? .omx/research/optimal_metric_training_loss_curriculum_DAG_FEED_20260714.md",
+      "?? .omx/research/optimal_metric_training_loss_curriculum_build_spec_20260714.md",
+      "?? .omx/research/recursive_fractal_optimal_representation_v9_admission_SPEC_20260714.md",
+      "?? .omx/research/recursive_fractal_optimal_representation_v9_bundle_blocker_20260714.json",
+      "?? .omx/research/recursive_fractal_optimal_representation_v9_preflight_20260714.json",
+      "?? .omx/research/recursive_fractal_optimal_representation_v9_rate_only_20260714.json",
+      "?? .omx/research/recursive_fractal_optimal_representation_v9_renderer_integrity_SPEC_20260714.md",
+      "?? .omx/research/recursive_fractal_optimal_representation_v9_timing_smoke_interrupted_20260714.json",
+      "?? .omx/research/throughput_nogo_naive_rescope_audit_DAG_FEED_20260714.md",
+      "?? .omx/research/throughput_nogo_naive_rescope_audit_build_spec_20260714.md",
+      "?? src/tac/boundary_math/decision_carrier_bundle.py",
+      "?? src/tac/boundary_math/decision_palette_chroma.py",
+      "?? src/tac/boundary_math/localized_basis_frames.py",
+      "?? src/tac/boundary_math/tests/test_decision_carrier_bundle.py",
+      "?? src/tac/boundary_math/tests/test_decision_palette_chroma.py",
+      "?? src/tac/boundary_math/tests/test_localized_basis_frames.py",
+      "?? src/tac/canonical_equations/argmax_native_vjp_fidelity_20260714.py",
+      "?? src/tac/canonical_equations/margin_adaptive_perlayer_waterfill_20260714.py",
+      "?? src/tac/canonical_equations/tests/test_argmax_native_vjp_fidelity_20260714.py",
+      "?? src/tac/canonical_equations/tests/test_margin_adaptive_perlayer_waterfill_20260714.py",
+      "?? src/tac/evidence_authority.py",
+      "?? src/tac/local_acceleration/metal_perchannel_adaptive_width.py",
+      "?? src/tac/local_acceleration/perlayer_adaptive_width.py",
+      "?? src/tac/local_acceleration/tests/test_metal_perchannel_adaptive_width.py",
+      "?? src/tac/local_acceleration/tests/test_perlayer_adaptive_width.py",
+      "?? src/tac/optimization/mplus_adam_mlx.py",
+      "?? src/tac/optimization/tests/test_mplus_adam_mlx.py",
+      "?? src/tac/scorer_surrogate/vjp_fidelity.py",
+      "?? src/tac/tests/test_evidence_authority.py",
+      "?? src/tac/tests/test_optimal_basis_genuine_measurement_20260714.py",
+      "?? src/tac/tests/test_optimal_metric_training_loss_curriculum.py",
+      "?? src/tac/tests/test_probe_appearance_task_rank_n600.py",
+      "?? src/tac/tests/test_probe_genuine_frame_nterm_n600.py",
+      "?? src/tac/tests/test_probe_margin_adaptive_perlayer_metal_n600.py",
+      "?? src/tac/tests/test_probe_margin_adaptive_perlayer_n600.py",
+      "?? src/tac/tests/test_probe_optimal_basis_saved_n600.py",
+      "?? src/tac/tests/test_probe_surrogate_vjp_fidelity_metric.py",
+      "?? src/tac/tests/test_spec_perclass_convergence_ab_20260714.py",
+      "?? src/tac/tests/test_vjp_fidelity.py",
+      "?? src/tac/witness_control/perclass_convergence.py",
+      "?? src/tac/witness_control/pose_selection_receiver_effect.py",
+      "?? src/tac/witness_control/tests/test_perclass_convergence.py",
+      "?? src/tac/witness_control/tests/test_pose_selection_receiver_effect.py",
+      "?? src/tac/witness_dsl/basis_claim_guard.py",
+      "?? src/tac/witness_dsl/config_provenance.py",
+      "?? src/tac/witness_dsl/decision_carrier_policy.py",
+      "?? src/tac/witness_dsl/margin_adaptive_perlayer_20260714.py",
+      "?? src/tac/witness_dsl/spec_perclass_convergence_ab_20260714.py",
+      "?? src/tac/witness_dsl/surrogate_vjp_fidelity_policy.py",
+      "?? src/tac/witness_dsl/tests/test_basis_claim_guard.py",
+      "?? src/tac/witness_dsl/tests/test_config_provenance.py",
+      "?? src/tac/witness_dsl/tests/test_decision_carrier_policy.py",
+      "?? src/tac/witness_dsl/tests/test_margin_adaptive_perlayer_20260714.py",
+      "?? src/tac/witness_dsl/tests/test_perclass_convergence_levers_20260714.py",
+      "?? src/tac/witness_dsl/tests/test_surrogate_vjp_fidelity_policy.py",
+      "?? tools/levelset_directional_fourier_feasibility_smoke.py",
+      "?? tools/probe_appearance_task_rank_n600.py",
+      "?? tools/probe_genuine_frame_nterm_n600.py",
+      "?? tools/probe_margin_adaptive_perlayer_metal_n600.py",
+      "?? tools/probe_margin_adaptive_perlayer_n600.py",
+      "?? tools/probe_optimal_basis_saved_n600.py",
+      "?? tools/probe_surrogate_vjp_fidelity_metric.py",
+      "?? tools/run_margin_adaptive_perlayer_host.command",
+      "?? tools/run_surrogate_vjp_fidelity_metric_host.command"
+    ],
+    "host": {
+      "machine": "arm64",
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O"
+    },
+    "inputs": {
+      "checkpoint": {
+        "bytes": 380136,
+        "path": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_ckpt_stageOctave1_ep251.npz",
+        "sha256": "c59cdec6eec16677c0a2eb5667979dd1c8f883bcd1cf5532302d67acd633c758",
+        "sha256_verified_this_run": true
+      },
+      "gt_cache": {
+        "bytes": 5078017610,
+        "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+        "sha256_verified_this_run": true
+      },
+      "levelset_byte_close_source": {
+        "bytes": 219073,
+        "path": "tools/levelset_byte_close_and_eval.py",
+        "sha256": "ef9451872c01cceae49b2722eebaa79b783df87947825a29304f71e5bad4c51c",
+        "sha256_verified_this_run": true
+      },
+      "posenet": {
+        "bytes": 55835560,
+        "path": "upstream/models/posenet.safetensors",
+        "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+        "sha256_verified_this_run": true
+      },
+      "probe_source": {
+        "bytes": 62995,
+        "path": "tools/probe_appearance_task_rank_n600.py",
+        "sha256": "28bd4f2ddc17229ca6f42b3e76bf67b7405a7cf8c59a49e070d4247abe672494",
+        "sha256_verified_this_run": true
+      },
+      "realized_through_R_trainer_source": {
+        "bytes": 193326,
+        "path": "experiments/train_witness_realized_through_R_mlx.py",
+        "sha256": "788a51ef3d50c244e1d441e210c7a0213834705727bc73e43e63bb2430b08ac6",
+        "sha256_verified_this_run": true
+      },
+      "segnet": {
+        "bytes": 38502892,
+        "path": "upstream/models/segnet.safetensors",
+        "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+        "sha256_verified_this_run": true
+      },
+      "upstream_modules_source": {
+        "bytes": 8322,
+        "path": "upstream/modules.py",
+        "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+        "sha256_verified_this_run": true
+      }
+    }
+  },
+  "rate": {
+    "achievable_savings_bytes": null,
+    "alternate_encoder_present": false,
+    "alternate_payload_bytes": null,
+    "baseline_checkpoint_file_bytes": 380136,
+    "baseline_current_receiver_0bin": {
+      "accounting_matches_canonical": true,
+      "archive_zip_bytes": null,
+      "archive_zip_status": "NOT_ASSEMBLED_RATE_ONLY",
+      "base_int8_brotli_bytes": 44661,
+      "canonical_quantize_blob_bytes": 63269,
+      "code_int8_brotli_bytes": 18608,
+      "cross_tensor_codec": {
+        "active": false,
+        "base_permutation": null,
+        "code_transform": null,
+        "quantized_state_lossless_by_construction": true
+      },
+      "exactness_scope": "deterministic current encoder output from current checkpoint",
+      "lane_band_counted_bytes": 0,
+      "magic_and_prefixes_bytes": 22,
+      "manifest_bytes": 1881,
+      "n_params": 83975,
+      "pose_carrier_counted_bytes": 0,
+      "pose_sidecar_bytes": 0,
+      "pre_existing_reference_blob_match": null,
+      "rate_score_units_per_byte": 6.658589531221714e-07,
+      "receiver": "current_levelset_receiver",
+      "reconstruction_exact": true,
+      "reference_blob_comparison": false,
+      "sha256": "0196e921881eac0670bda29e7d910b0ce95c232106ae710e320cbf5fb07917f5",
+      "total_0bin_bytes": 65172
+    },
+    "baseline_parameter_groups_uncompressed": {
+      "code": {
+        "bytes": 91200,
+        "values": 22800
+      },
+      "film.bias": {
+        "bytes": 3072,
+        "values": 768
+      },
+      "film.weight": {
+        "bytes": 58368,
+        "values": 14592
+      },
+      "hidden.0.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "hidden.0.weight": {
+        "bytes": 36864,
+        "values": 9216
+      },
+      "hidden.1.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "hidden.1.weight": {
+        "bytes": 36864,
+        "values": 9216
+      },
+      "hidden.2.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "hidden.2.weight": {
+        "bytes": 36864,
+        "values": 9216
+      },
+      "hidden.3.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "hidden.3.weight": {
+        "bytes": 36864,
+        "values": 9216
+      },
+      "in_proj.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "in_proj.weight": {
+        "bytes": 30720,
+        "values": 7680
+      },
+      "out_sdf.bias": {
+        "bytes": 20,
+        "values": 5
+      },
+      "out_sdf.weight": {
+        "bytes": 1920,
+        "values": 480
+      },
+      "out_tex.bias": {
+        "bytes": 12,
+        "values": 3
+      },
+      "out_tex.weight": {
+        "bytes": 1152,
+        "values": 288
+      },
+      "palette": {
+        "bytes": 60,
+        "values": 15
+      },
+      "pose_carrier.dxi": {
+        "bytes": 14400,
+        "values": 3600
+      },
+      "pose_carrier.xi_stored": {
+        "bytes": 14400,
+        "values": 3600
+      }
+    },
+    "diagnostic_zero_group_recompression": {
+      "code": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 18595,
+        "baseline_minus_zeroed_rate_score_units": 0.012381647233306776,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "code"
+        ],
+        "raw_parameter_bytes": 91200,
+        "zero_blob_sha256": "6469ffe5a130b1a35412b5cc6b1ed91e3af0c36067f1c6d4012ef8887761426f",
+        "zeroed_0bin_bytes": 46577
+      },
+      "code_plus_film": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 28494,
+        "baseline_minus_zeroed_rate_score_units": 0.01897298501026315,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "code",
+          "film.weight",
+          "film.bias"
+        ],
+        "raw_parameter_bytes": 152640,
+        "zero_blob_sha256": "48883bf71a082e45e47277a6009ee02279ce496b8f8788605fc1286708a93cc9",
+        "zeroed_0bin_bytes": 36678
+      },
+      "film": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 9899,
+        "baseline_minus_zeroed_rate_score_units": 0.006591337776956374,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "film.weight",
+          "film.bias"
+        ],
+        "raw_parameter_bytes": 61440,
+        "zero_blob_sha256": "ce045697328fa360f25618029dde03b1b4bbb3508d99b68a097688f0dec9b4c2",
+        "zeroed_0bin_bytes": 55273
+      },
+      "out_tex": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 321,
+        "baseline_minus_zeroed_rate_score_units": 0.000213740723952217,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "out_tex.weight",
+          "out_tex.bias"
+        ],
+        "raw_parameter_bytes": 1164,
+        "zero_blob_sha256": "e82a0274134be4ddbc5b262d73b52cbdeb35f0b951c14e3d61aea8ee13868bdd",
+        "zeroed_0bin_bytes": 64851
+      },
+      "palette": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 64,
+        "baseline_minus_zeroed_rate_score_units": 4.261497299981897e-05,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "palette"
+        ],
+        "raw_parameter_bytes": 60,
+        "zero_blob_sha256": "de0040fe2b6e1cb4a571e1b274a6815322b9988e9d61db74a902b5d9c1e2a437",
+        "zeroed_0bin_bytes": 65108
+      },
+      "palette_out_tex_code": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 18948,
+        "baseline_minus_zeroed_rate_score_units": 0.012616695443758902,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "palette",
+          "out_tex.weight",
+          "out_tex.bias",
+          "code"
+        ],
+        "raw_parameter_bytes": 92424,
+        "zero_blob_sha256": "8606bf7b24b07ff4e9d406fa0d5c95e5f08df054ed512c6a8b9583c6fcd5453e",
+        "zeroed_0bin_bytes": 46224
+      },
+      "palette_plus_out_tex": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 353,
+        "baseline_minus_zeroed_rate_score_units": 0.00023504821045212647,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "palette",
+          "out_tex.weight",
+          "out_tex.bias"
+        ],
+        "raw_parameter_bytes": 1224,
+        "zero_blob_sha256": "e97f06c365ea9b82c11b76110b2eff0f11b2696deccea9534cfd9b360a2733cc",
+        "zeroed_0bin_bytes": 64819
+      }
+    },
+    "palette15_values": 15,
+    "reason": "secant perturbations are not encoded alternate payloads; no real encoder/receiver parseback or exact alternate archive bytes exist",
+    "receiver_parseback": false,
+    "reference_blob_comparison": false,
+    "status": "INCOMPLETE_NO_ALTERNATE_ENCODER",
+    "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+    "zero_group_diagnostics_preserve_behavior": false
+  },
+  "realized_through_R": true,
+  "receiver_rate_custody": {
+    "achievable_savings_bytes": null,
+    "alternate_encoder_present": false,
+    "alternate_payload_bytes": null,
+    "alternate_receiver_parseback": false,
+    "bundle_admission_valid": false,
+    "current_receiver_baseline_0bin_reconstructed_exactly": true,
+    "diagnostic_zero_group_count": 7,
+    "diagnostic_zero_groups_preserve_behavior": false,
+    "reason": "zero-group recompressions are non-behavior-preserving diagnostics; no alternate encoder, receiver parse-back, or exact alternate payload bytes exist",
+    "status": "INCOMPLETE_NO_ALTERNATE_ENCODER",
+    "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+  },
+  "runtime_accounting": {
+    "clock": "time.perf_counter",
+    "derived_linear_n600_projection": {
+      "evidence_grade": "DERIVED",
+      "fixture_init_included": false,
+      "formula": "measurement_seconds / newly_completed_pairs * 600",
+      "scope": "same coordinate set, scorer backend, renderer, and host",
+      "seconds": 43224.46292464156,
+      "seconds_per_pair": 72.04077154106926,
+      "status": "DERIVED_LINEAR_FROM_THIS_INVOCATION"
+    },
+    "fixture_init": {
+      "seconds": 6.054961250047199,
+      "status": "MEASURED"
+    },
+    "measurement": {
+      "coordinate_count": 15,
+      "fresh_invocation": true,
+      "newly_completed_coordinate_cells": 15,
+      "newly_completed_pairs": 1,
+      "requested_pairs": 1,
+      "seconds": 72.04077154106926,
+      "status": "MEASURED"
+    }
+  },
+  "schema": "appearance_task_rank_n600.v1",
+  "schema_version": "appearance_task_rank_n600.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "storage": {
+    "checkpointing": "atomic after every completed pair-coordinate cell",
+    "persisted_bulk": "none; no frames, logits, or per-observation secants retained",
+    "scratch": "none allocated",
+    "state_bytes": 59820,
+    "state_path": "/Users/adpena/Projects/pact/experiments/results/appearance_task_rank_n600_task503_20260714/appearance_task_rank_n600_state.npz",
+    "state_snapshot_sha256": "db296043403941474bd53910327365d3fbe1bba23beb3398803b929396a5c23c"
+  },
+  "training_run": false,
+  "written_at_utc": "2026-07-14T14:14:33.308743Z"
+}

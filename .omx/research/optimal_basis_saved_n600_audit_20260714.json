@@ -1,0 +1,112 @@
+{
+  "schema_version": "optimal_basis_saved_n600_audit_v1_20260714",
+  "execution": {
+    "mode": "read_only_saved_artifact_rederivation",
+    "training_run": false,
+    "scorer_forward_run": false,
+    "evaluator_run": false,
+    "artifact_written_by_probe": false
+  },
+  "inputs": {
+    "verdict": {
+      "path": ".omx/research/owed16_verdict_20260710.json",
+      "sha256": "92e5b6bb05da7575d83c8ce4b61c359c232eaedfc7a557fe9cf0cdad128be08d"
+    },
+    "verdict_v2": {
+      "path": ".omx/research/owed16v2_verdict_20260710.json",
+      "sha256": "355e9b93e24bc5ab80537f7a58b2cb0400535bf7df226d3263200489c4f52336"
+    },
+    "gt_cache": {
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "loaded": false
+    },
+    "checkpoints": {
+      "off": {
+        "path": "experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_witness_ema_BEST.npz",
+        "sha256": "eb2d5784975859c7a2e4e4b05cedc53ccd3c68ad6b9df3797521f3ad32b80e8d",
+        "file_bytes": 452776,
+        "trainable_values_including_codes": 109559,
+        "decoder_values_excluding_codes": 71159,
+        "in_proj_weight_shape": [96, 80],
+        "config": {
+          "in_feat": 80,
+          "self_orient": false,
+          "n_dir_freqs": 6,
+          "freq_across": 32.0,
+          "freq_along": 4.0
+        }
+      },
+      "on_along8": {
+        "path": "experiments/results/owed16_ab_selforient_ON_20260710T032859Z/levelset_witness_ema_BEST.npz",
+        "sha256": "0ab77f6d6945e7785936af7023d39b5bbe0c371c3aece676a37a26b1897f678d",
+        "file_bytes": 458920,
+        "trainable_values_including_codes": 111095,
+        "decoder_values_excluding_codes": 72695,
+        "in_proj_weight_shape": [96, 96],
+        "config": {
+          "in_feat": 96,
+          "self_orient": true,
+          "n_dir_freqs": 4,
+          "freq_across": 32.0,
+          "freq_along": 8.0
+        }
+      },
+      "on_along26": {
+        "path": "experiments/results/owed16v2_rebalanced_ON_20260710T114759Z/levelset_witness_ema_BEST.npz",
+        "sha256": "dea40f0b6b5be136a9ea86ad0d9250179aa42081d7f4342d0c969492de9907cf",
+        "file_bytes": 458920,
+        "trainable_values_including_codes": 111095,
+        "decoder_values_excluding_codes": 72695,
+        "in_proj_weight_shape": [96, 96],
+        "config": {
+          "in_feat": 96,
+          "self_orient": true,
+          "n_dir_freqs": 4,
+          "freq_across": 32.0,
+          "freq_along": 26.0
+        }
+      }
+    }
+  },
+  "measurement": {
+    "n_pairs": 600,
+    "surface": "actual R plus frozen CPU-torch SegNet argmax (settled receipt)",
+    "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+    "matched_ep675_dseg": {
+      "off_ep675": 0.004244,
+      "on_along8_ep675": 0.004259058634440104,
+      "on_along26_ep675": 0.004286
+    },
+    "delta_on_along8_minus_off": 0.000015058634440103837,
+    "delta_on_along26_minus_off": 0.0000419999999999995,
+    "off_parameter_advantage_values": 1536,
+    "archive_bytes": null,
+    "archive_byte_verdict": "NO_VERDICT_NO_BYTE_CLOSED_ARCHIVES"
+  },
+  "structural_audit": {
+    "representation_label": "polar_directional_fourier",
+    "frequency_columns": 40,
+    "paired_feature_columns": 80,
+    "maximum_envelope_span": 1.462174630262325e-07,
+    "spatially_localized": false,
+    "has_translation_index": false,
+    "has_spatial_window": false,
+    "has_parabolic_orientation_count": true,
+    "missing_true_curvelet_properties": [
+      "spatial_window",
+      "translation_index",
+      "scale_dependent_anisotropic_support",
+      "localized_tight_frame_normalization"
+    ]
+  },
+  "verdict": {
+    "measured_winner": "polar_directional_fourier_self_orient_off",
+    "directional_minus48_reconfirmed": false,
+    "directional_vs_off": "REFUTED_AT_BOUNDED_WARM_START_FORMULATION",
+    "different_localized_frame": "NO_VERDICT_NOT_MEASURED",
+    "fresh_start": "OPEN_NOT_MEASURED",
+    "scope": "bounded warm-start ep650-to-700 from a self-orient-trained parent; marginal directional-channel contribution only",
+    "pointer_moved": false
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "archive_byte_closed": false,
+  "schema": "optimal_basis_completed_advisory_receipts.v1",
+  "status": "MEASURED_ADVISORY_NOT_BYTE_CLOSED",
+  "selection_eligible": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "family_verdict": "OPEN",
+  "metric_id": "argmax_native_vjp_fidelity_v1",
+  "n_pairs": 600,
+  "receiver_surface": "REALIZED_THROUGH_R_SAVED_OFF_RGB_NTERM",
+  "receiver_authority_label": "[macOS-CPU advisory . REALIZED-through-R CPU-SegNet . NON-PROMOTABLE]",
+  "mask_proxy_surface": "MASK_SPACE_PROXY_NOT_THROUGH_R_NOT_SCORE",
+  "receiver_inverse_status": "UNAVAILABLE for mask proxy: no custodied SegNet-output-to-RGB inverse",
+  "equal_coefficient_scalar_values": true,
+  "equal_support_index_count": true,
+  "equal_archive_bytes_claim": false,
+  "equal_parameter_bytes_claim": false,
+  "receiver_receipt_path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v4_polar_frequency_wedge_deploy_int8_batch32_20260714.json",
+  "receiver_receipt_sha256": "031a1569c600bf5d1a3551a4da668db67bb80380d0678f964ca5476e0b293c33",
+  "receiver_git_sha": "9680b7158eac38439ae70e79516fbd0fa5057666",
+  "receiver_progress_path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_progress_v4_polar_frequency_wedge_deploy_int8_batch32_20260714.json",
+  "receiver_progress_sha256": "ae281589cadf57c3fbbbcbe50fe3d1c4f3f10d8706abfd67e403369e0c47daec",
+  "mask_proxy_receipt_path": ".omx/research/genuine_curvelet_shearlet_mask_n600_receipt_v3_polar_frequency_wedge_20260714.json",
+  "mask_proxy_receipt_sha256": "72c0c1f736e68267d346885792901d64f0c7c3ff83952e4a7a41831330587aa0",
+  "mask_proxy_git_sha": "960b97f46e4acb3248878481c9a8c560e5d8282d",
+  "mask_proxy_progress_path": ".omx/research/genuine_curvelet_shearlet_mask_n600_progress_v3_polar_frequency_wedge_20260714.json",
+  "mask_proxy_progress_sha256": "d513c3e256b8986eef003f807f1b66060edc60d61646af41e369cbe9880ac23b",
+  "receiver_parameter_custody": {
+    "schema": "genuine_frame_receiver_parameter_custody.v1",
+    "interpretation": "ema_fp32_shadow_int8_symmetric_dequant_receiver_v1",
+    "raw_fp32_shadow_parameter_map_sha256": "71ecad3160b78bc72ba3e4666cec312eda0481e7510d44e3ba6010e75e7575ab",
+    "deploy_int8_parameter_map_sha256": "2f5e2b6de2d48342e377897bb6e0f5c5c0e9b94fd328b7b6991bc218e4ec970d",
+    "changed_parameter_tensor_count": 18,
+    "changed_parameter_scalar_value_count": 109545,
+    "changed_parameter_names": ["code", "film.bias", "film.weight", "hidden.0.bias", "hidden.0.weight", "hidden.1.bias", "hidden.1.weight", "hidden.2.bias", "hidden.2.weight", "hidden.3.bias", "hidden.3.weight", "in_proj.bias", "in_proj.weight", "out_sdf.bias", "out_sdf.weight", "out_tex.bias", "out_tex.weight", "palette"],
+    "roundtrip_callable": "tac.boundary_math.lever_b_levelset_generator.int8_dequant_params",
+    "roundtrip_apply_count_after_checkpoint_load": 1,
+    "checkpoint_payload_interpretation": "fp32_ema_shadow_not_receiver_authority",
+    "receiver_parameter_interpretation": "int8_dequant_deploy_authority",
+    "source_rgb_target_interpretation": "rendered_from_int8_dequant_deploy_params",
+    "candidate_rgb_fit_target_interpretation": "same_deploy_source_rgb_before_generic_frame_coefficient_fit",
+    "generic_frame_coefficient_accounting_unchanged": true
+  },
+  "structural_proof": {
+    "path": ".omx/research/genuine_curvelet_shearlet_structural_proof_v2_polar_frequency_wedge_20260714.json",
+    "sha256": "677a2252c43c1272ec0e2e83d65ce1b82d23b8ddb089d73a111a5f0b26d46d25",
+    "status": "COMPLETE",
+    "finite_discrete_claim_only": true,
+    "continuum_tight_frame_completeness_rate_claim": "NOT_CLAIMED"
+  },
+  "receiver_decay_curves": {
+    "polar_directional_fourier": [
+      {"budget_fraction": 0.125, "d_seg": 0.6277346038818359, "coefficient_scalar_values": 13695, "support_index_count": 13695},
+      {"budget_fraction": 0.25, "d_seg": 0.6005332777235243, "coefficient_scalar_values": 27390, "support_index_count": 27390},
+      {"budget_fraction": 0.5, "d_seg": 0.47180653042263454, "coefficient_scalar_values": 54780, "support_index_count": 54780},
+      {"budget_fraction": 1.0, "d_seg": 0.40972231547037763, "coefficient_scalar_values": 109559, "support_index_count": 109559}
+    ],
+    "windowed_curvelet": [
+      {"budget_fraction": 0.125, "d_seg": 0.5078373294406467, "coefficient_scalar_values": 13695, "support_index_count": 13695},
+      {"budget_fraction": 0.25, "d_seg": 0.5045310295952691, "coefficient_scalar_values": 27390, "support_index_count": 27390},
+      {"budget_fraction": 0.5, "d_seg": 0.5048346201578776, "coefficient_scalar_values": 54780, "support_index_count": 54780},
+      {"budget_fraction": 1.0, "d_seg": 0.5048239559597439, "coefficient_scalar_values": 109559, "support_index_count": 109559}
+    ],
+    "compact_shearlet": [
+      {"budget_fraction": 0.125, "d_seg": 0.5654775746663412, "coefficient_scalar_values": 13695, "support_index_count": 13695},
+      {"budget_fraction": 0.25, "d_seg": 0.4538553195529514, "coefficient_scalar_values": 27390, "support_index_count": 27390},
+      {"budget_fraction": 0.5, "d_seg": 0.33307122972276476, "coefficient_scalar_values": 54780, "support_index_count": 54780},
+      {"budget_fraction": 1.0, "d_seg": 0.42886043124728734, "coefficient_scalar_values": 109559, "support_index_count": 109559}
+    ],
+    "hybrid_fixed_fourier38_curvelet38": [
+      {"budget_fraction": 0.125, "d_seg": 0.49349054124620223, "coefficient_scalar_values": 13695, "support_index_count": 13695},
+      {"budget_fraction": 0.25, "d_seg": 0.4831833224826389, "coefficient_scalar_values": 27390, "support_index_count": 27390},
+      {"budget_fraction": 0.5, "d_seg": 0.49360439724392363, "coefficient_scalar_values": 54780, "support_index_count": 54780},
+      {"budget_fraction": 1.0, "d_seg": 0.5303014119466146, "coefficient_scalar_values": 109559, "support_index_count": 109559}
+    ]
+  },
+  "mask_proxy_decay_curves": {
+    "polar_directional_fourier": [
+      {"budget_fraction": 0.125, "d_mask_argmax": 0.05273525661892361, "coefficient_scalar_values": 13695, "support_index_count": 13695},
+      {"budget_fraction": 0.25, "d_mask_argmax": 0.048664686414930554, "coefficient_scalar_values": 27390, "support_index_count": 27390},
+      {"budget_fraction": 0.5, "d_mask_argmax": 0.04872350904676649, "coefficient_scalar_values": 54780, "support_index_count": 54780},
+      {"budget_fraction": 1.0, "d_mask_argmax": 0.04866945054796007, "coefficient_scalar_values": 109559, "support_index_count": 109559}
+    ],
+    "windowed_curvelet": [
+      {"budget_fraction": 0.125, "d_mask_argmax": 0.24489429897732204, "coefficient_scalar_values": 13695, "support_index_count": 13695},
+      {"budget_fraction": 0.25, "d_mask_argmax": 0.23919029235839845, "coefficient_scalar_values": 27390, "support_index_count": 27390},
+      {"budget_fraction": 0.5, "d_mask_argmax": 0.2391814253065321, "coefficient_scalar_values": 54780, "support_index_count": 54780},
+      {"budget_fraction": 1.0, "d_mask_argmax": 0.23918173048231336, "coefficient_scalar_values": 109559, "support_index_count": 109559}
+    ],
+    "compact_shearlet": [
+      {"budget_fraction": 0.125, "d_mask_argmax": 0.11530280219184028, "coefficient_scalar_values": 13695, "support_index_count": 13695},
+      {"budget_fraction": 0.25, "d_mask_argmax": 0.11605059305826823, "coefficient_scalar_values": 27390, "support_index_count": 27390},
+      {"budget_fraction": 0.5, "d_mask_argmax": 0.11053274366590712, "coefficient_scalar_values": 54780, "support_index_count": 54780},
+      {"budget_fraction": 1.0, "d_mask_argmax": 0.11024330139160156, "coefficient_scalar_values": 109559, "support_index_count": 109559}
+    ],
+    "hybrid_fixed_fourier38_curvelet38": [
+      {"budget_fraction": 0.125, "d_mask_argmax": 0.052096227010091145, "coefficient_scalar_values": 13695, "support_index_count": 13695},
+      {"budget_fraction": 0.25, "d_mask_argmax": 0.041628104315863716, "coefficient_scalar_values": 27390, "support_index_count": 27390},
+      {"budget_fraction": 0.5, "d_mask_argmax": 0.041714536878797746, "coefficient_scalar_values": 54780, "support_index_count": 54780},
+      {"budget_fraction": 1.0, "d_mask_argmax": 0.041684273613823784, "coefficient_scalar_values": 109559, "support_index_count": 109559}
+    ]
+  },
+  "receiver_full_budget_rank": ["polar_directional_fourier", "compact_shearlet", "windowed_curvelet", "hybrid_fixed_fourier38_curvelet38"],
+  "receiver_full_budget_rank_values": {
+    "polar_directional_fourier": 0.40972231547037763,
+    "compact_shearlet": 0.42886043124728734,
+    "windowed_curvelet": 0.5048239559597439,
+    "hybrid_fixed_fourier38_curvelet38": 0.5303014119466146
+  },
+  "round1_artifacts_and_ranks": "INVALID",
+  "literal_pou_status": "BLOCKED_FAIL_CLOSED_NO_CUSTODIED_DECODER_BOUNDARY_POU",
+  "fixed_mix_is_partition_of_unity": false,
+  "canonical_equation_registry": {
+    "path": ".omx/state/canonical_equations_registry.jsonl",
+    "anchor_id": "genuine_polar_curvelet_compact_shearlet_n600_advisory_20260714",
+    "anchor_appended_line": 721,
+    "anchor_appended_row_sha256": "9718486df60569cc9906fc114559a9ed9dc919a11561535658f594858642227b",
+    "domain_refined_line": 722,
+    "domain_refined_row_sha256": "93b309254e296aea79f892d74508538e19ce6cce5f31d4d07063b90cbc86041b",
+    "registry_sha256": "4c9de561729707af245fcdb0d39c0aac9f3973dc357813f9f2beabf85ee9115d",
+    "residual": 0.09510164048936631,
+    "selection_eligible": false,
+    "equation_source_sha256": "3eb00fba7f68cc9b37be5cbf48951d828c8af50b2eb006228800c5182fa3bcc0",
+    "equation_source_role": "live strict-ingest source; registry-only refinement is recorded above"
+  },
+  "ticket_receipt": {
+    "path": ".omx/research/genuine_frame_fresh_start_3arm_ticket_20260714.json",
+    "sha256": "41ace6c31a476ceb2f7f3160023362b034781fc26c935d008daa82883b3febb0"
+  },
+  "partition_of_unity_blocker_receipt": {
+    "path": ".omx/research/genuine_curvelet_shearlet_partition_of_unity_hybrid_blocker_20260714.json",
+    "sha256": "76eaf17b0e2f7db56e9d4e9f81b0fa86ec090f7363811e59b2de6cb323e5a45a"
+  },
+  "probe_outcome": {
+    "path": ".omx/state/probe_outcomes.jsonl",
+    "line": 643,
+    "probe_id": "genuine_curvelet_shearlet_equal_budget_nterm_n600_20260714",
+    "verdict": "PARTIAL",
+    "row_sha256": "ed118c0e7f1b355b1fdd4efb88c53c9662ae98b8b7baa030d59d744c8c412ae3",
+    "ledger_sha256": "871e4a5929c1b32e685dbc5ae11fd24e0574229b47a7f5934cbb7b04e9b064fb",
+    "selection_eligible": false
+  },
+  "git_sha_note": "receiver and mask git SHAs differ due concurrent main movement; all seven runtime/code source hashes match and strict live rehash passed",
+  "gram_status": "NO-VERDICT_DATA_CUSTODY",
+  "pointer_moved": false,
+  "measurements": [
+    {
+      "family": "windowed_curvelet",
+      "receiver_d_seg": 0.5048239559597439,
+      "mask_space_argmax_disagreement": 0.23918173048231336,
+      "n_pairs": 600,
+      "evidence_axis": "[macOS-CPU advisory . REALIZED-through-R CPU-SegNet . NON-PROMOTABLE]",
+      "verdict_scope": "receiver_rgb_nterm_formulation plus separate mask_space_nterm_formulation",
+      "receiver_candidate_camera_stream_sha256": "37f4cb970b9dd34ef655509d55f6062ccb38b12a09581ce2a50c2d1bc6ae11f7",
+      "receiver_argmax_stream_sha256": "4fef0f9f3b34b70a943f67c0b5c73c75fb1204768f775b4daab84228c0c75098",
+      "receiver_support_stream_sha256": "870cc1a78084a62208df828a5f46330aa9ab2fe5c11869b3ee98e8d5d3894bed",
+      "mask_support_digest_sha256": "8673ec0293d8df1d31780fe932d795cd30e12eb2b09727b77f54af5bafdc3539",
+      "dictionary_spec_sha256": "7ef5fa940193012fed1a996ed6a9f7b6fdf913118b2e0f2066d4c99680a4794c",
+      "source_atom_spec_sha256": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91",
+      "status": "MEASURED_ADVISORY_NOT_BYTE_CLOSED",
+      "archive_byte_closed": false,
+      "selection_eligible": false
+    },
+    {
+      "family": "compact_shearlet",
+      "receiver_d_seg": 0.42886043124728734,
+      "mask_space_argmax_disagreement": 0.11024330139160156,
+      "n_pairs": 600,
+      "evidence_axis": "[macOS-CPU advisory . REALIZED-through-R CPU-SegNet . NON-PROMOTABLE]",
+      "verdict_scope": "receiver_rgb_nterm_formulation plus separate mask_space_nterm_formulation",
+      "receiver_candidate_camera_stream_sha256": "fe9cf6af343401e059af0fdc29538430f4c6261f2ff734d8e08cbc05117c4872",
+      "receiver_argmax_stream_sha256": "9144c834d2c871f56bbc674b289d47f4194f56d139b6762498964cefc855fe6f",
+      "receiver_support_stream_sha256": "8599a4cf0c739e3cb121c77caac7d46cd3621a9f8e059e57b20067db234d9607",
+      "mask_support_digest_sha256": "511cc585d8565b8831d2ba27d2ab31305bca1f3e122e90f667d1204db6ce9fe0",
+      "dictionary_spec_sha256": "a8f77043832853b26fa6076c1bd52844d9bf39e1815dbc6b8ccfc6cfcf7d6648",
+      "source_atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+      "status": "MEASURED_ADVISORY_NOT_BYTE_CLOSED",
+      "archive_byte_closed": false,
+      "selection_eligible": false
+    }
+  ]
+}

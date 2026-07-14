@@ -1,0 +1,76 @@
+{
+  "schema": "genuine_frame_receiver_batch_geometry_invalidation.v1",
+  "written_at_utc": "2026-07-14T16:48:55Z",
+  "status": "INVALIDATED_NOT_RANK_ELIGIBLE",
+  "reason_code": "SEGNET_BATCH_GEOMETRY_NOT_HISTORICAL_AUTHORITY",
+  "verdict_scope": "receiver_batch8_formulation_only; no curvelet, shearlet, Fourier, or hybrid family verdict",
+  "source_bytes_mutated": false,
+  "pointer_moved": false,
+  "score_claim": false,
+  "invalidated_artifacts": [
+    {
+      "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_progress_v3_deploy_int8_20260714.json",
+      "bytes": 7269881,
+      "sha256": "abc3fd331da287d723995382ae97f4188b6ca829503ea663910d02a68b09adce",
+      "row_count": 600,
+      "resumable_under_current_contract": false
+    },
+    {
+      "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v3_deploy_int8_20260714.json",
+      "bytes": 11950,
+      "sha256": "94dd178485e8e0f29ada433a347b59c5a74659ed67d6b7cc254c68f7675a6bce",
+      "status": "BLOCKED",
+      "blocker_code": "SOURCE_POSITIVE_CONTROL_MISMATCH"
+    }
+  ],
+  "historical_authority": {
+    "receiver_batch_size": 32,
+    "expected_total_flips": 493260,
+    "expected_total_pixels": 117964800,
+    "expected_d_seg": 0.004181416829427084,
+    "run_log_path": "experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/run.log",
+    "run_log_sha256": "06a3fcfce6279ba93066f818669b6e061b6a3377d681eedb6ae8a06474ff7d0e",
+    "launch_path": "experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+    "launch_sha256": "335d9d02388b381c22a79ebd75a26b1083d5c4702984ba41fe50a54ba4a63ade"
+  },
+  "measured_batch_geometry_ab": {
+    "all_other_inputs_identical": true,
+    "batch8_total_flips": 493257,
+    "batch8_d_seg": 0.00418139139811198,
+    "batch32_total_flips": 493260,
+    "batch32_d_seg": 0.004181416829427084,
+    "net_batch32_minus_batch8_flips": 3,
+    "changed_pair_count": 12,
+    "changed_pairs": [
+      {"pair_index": 3, "batch8_flips": 698, "batch32_flips": 697, "delta": -1},
+      {"pair_index": 79, "batch8_flips": 939, "batch32_flips": 940, "delta": 1},
+      {"pair_index": 86, "batch8_flips": 1040, "batch32_flips": 1041, "delta": 1},
+      {"pair_index": 102, "batch8_flips": 925, "batch32_flips": 924, "delta": -1},
+      {"pair_index": 138, "batch8_flips": 1122, "batch32_flips": 1124, "delta": 2},
+      {"pair_index": 143, "batch8_flips": 850, "batch32_flips": 849, "delta": -1},
+      {"pair_index": 154, "batch8_flips": 879, "batch32_flips": 880, "delta": 1},
+      {"pair_index": 262, "batch8_flips": 727, "batch32_flips": 726, "delta": -1},
+      {"pair_index": 266, "batch8_flips": 762, "batch32_flips": 763, "delta": 1},
+      {"pair_index": 303, "batch8_flips": 770, "batch32_flips": 771, "delta": 1},
+      {"pair_index": 580, "batch8_flips": 817, "batch32_flips": 818, "delta": 1},
+      {"pair_index": 589, "batch8_flips": 1061, "batch32_flips": 1060, "delta": -1}
+    ]
+  },
+  "diagnostic_runtime": {
+    "torch_num_threads": 6,
+    "torch_num_interop_threads": 18,
+    "torch_mkldnn_enabled": true,
+    "torch_deterministic_algorithms_enabled": false,
+    "torch_float32_matmul_precision": "highest",
+    "cross_batch_bit_identity_claim": false,
+    "cross_kernel_setting_bit_identity_claim": false
+  },
+  "repair": {
+    "required_receiver_batch_size": 32,
+    "probe_path": "tools/probe_genuine_frame_nterm_n600.py",
+    "probe_sha256": "3caf346949384a70d51b079b0c839bf7cb9b84c9f265da9da4b72d35167d9418",
+    "stable_blocker_for_other_n600_batches": "RECEIVER_HISTORICAL_BATCH_SIZE_REQUIRED",
+    "candidate_scores_reusable": false,
+    "why_candidate_scores_require_rerun": "Progress preserves only hashes and counts, not reconstructed camera bytes or fitted coefficients; mixing batch-8 candidate scores with a batch-32 source control is forbidden."
+  }
+}

@@ -1,0 +1,568 @@
+{
+  "coefficient_accounting_caveat": "each selected atom also needs a uint8 support index (width=80), framing, and metadata; compression and exact archive bytes are unmeasured",
+  "equal_archive_bytes_claim": false,
+  "equal_coefficient_scalar_values": true,
+  "equal_parameter_bytes_claim": false,
+  "equal_support_index_count": true,
+  "git_sha": "9680b7158eac38439ae70e79516fbd0fa5057666",
+  "intended_selection_metric_id": "argmax_native_vjp_fidelity_v1",
+  "pointer_moved": false,
+  "receiver_preflight": {
+    "checkpoint": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_witness_ema_BEST.npz",
+    "checkpoint_epoch": 700,
+    "checkpoint_sha256": "eb2d5784975859c7a2e4e4b05cedc53ccd3c68ad6b9df3797521f3ad32b80e8d",
+    "ep700_receipt": {
+      "checkpoint_epoch": 700,
+      "checks": {
+        "best_epoch": true,
+        "best_path": true,
+        "train_best_d_seg": true,
+        "train_best_epoch": true,
+        "train_best_path": true,
+        "train_final_epoch": true,
+        "train_n_pairs": true
+      },
+      "comparison_anchor": "ep700 only; ep675=0.004244 is explicitly superseded",
+      "expected_logged_d_seg": 0.004181416829427084,
+      "expected_total_flips": 493260,
+      "expected_total_pixels": 117964800,
+      "files": {
+        "best": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_best.json",
+          "sha256": "dc4f871a946e5fa53660b97b10384452b08e1f302a9db77489e5447e7ff9bdab"
+        },
+        "launch": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+          "sha256": "335d9d02388b381c22a79ebd75a26b1083d5c4702984ba41fe50a54ba4a63ade"
+        },
+        "run_log": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/run.log",
+          "sha256": "06a3fcfce6279ba93066f818669b6e061b6a3377d681eedb6ae8a06474ff7d0e"
+        },
+        "train_result": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_train_result.json",
+          "sha256": "226ae29cb95aedea856b18daaa78fd368f7cfa98accf5863e002f9b0a085bb4d"
+        }
+      },
+      "status": "BOUND_SAVED_OFF_EP700"
+    },
+    "feature_width": 80,
+    "frame1_code_index": "2*pair_index+1",
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz",
+    "gt_cache_sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+    "render_hw": [
+      384,
+      512
+    ],
+    "segnet": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "self_orient": false,
+    "status": "READY_SAVED_OFF_EP700_RGB_RECEIVER",
+    "verdict_scope": "receiver_rgb_nterm_formulation"
+  },
+  "schema": "genuine_frame_nterm_probe.v4",
+  "score_claim": false,
+  "seed": 0,
+  "selection_metric_computed_by_probe": false,
+  "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+  "status": "COMPLETE",
+  "structural_proof": {
+    "compact_shearlet": {
+      "inflate_contract": {
+        "compiled": true,
+        "counted_state": [
+          "learned_basis_coefficients",
+          "downstream_decoder_weights",
+          "per_pair_codes"
+        ],
+        "entrypoint": "localized_basis_features_numpy",
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "generic_regenerated_state": [
+          "basis_family",
+          "basis_seed",
+          "fixed_scaling_and_parabolic_geometry",
+          "atom_generation_source"
+        ],
+        "rule118_status": "generic deterministic frame code/scalars are regenerated; all video-derived coefficients and downstream weights remain counted",
+        "source_sha256": "2946f0a7647f03223d56b7921042a58e0a934825b95da9395f43d0aff98e46ef"
+      },
+      "metadata": {
+        "atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "cone_seam_policy": "horizontal cone exclusively owns physical slopes -1 and +1; vertical extreme shears are omitted",
+        "construction": "finite cone-adapted compact shearlet-system truncation with compact derivative generator",
+        "directional_atoms": 76,
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "finite_truncation": true,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "partition_of_unity_scaling": true,
+        "proven_frame_bounds": false,
+        "rule118_contract": "family, seed, fixed atom scalars, and evaluation code are generic regenerated state; learned/video-derived coefficients are counted",
+        "scales": [
+          0,
+          2,
+          4
+        ],
+        "scaling_atoms": 4,
+        "seed": 0,
+        "tight_or_complete_claim": false,
+        "translation_count_by_scale": [
+          [
+            0,
+            6
+          ],
+          [
+            2,
+            16
+          ],
+          [
+            4,
+            54
+          ]
+        ]
+      },
+      "proof": {
+        "analytic_inverse_kernel_max_abs_error": null,
+        "angular_bandwidth_shrinks_with_scale": null,
+        "angular_half_width_by_scale": [],
+        "angular_overlap_points_by_scale": [],
+        "angular_sos_bounds_by_scale": [],
+        "atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "cone_seam_duplicate_direction_count": 0,
+        "cone_seam_owners_by_scale": [
+          [
+            0,
+            [
+              "horizontal:-1:negative_diagonal",
+              "horizontal:1:positive_diagonal"
+            ]
+          ],
+          [
+            2,
+            [
+              "horizontal:-2:negative_diagonal",
+              "horizontal:2:positive_diagonal"
+            ]
+          ],
+          [
+            4,
+            [
+              "horizontal:-4:negative_diagonal",
+              "horizontal:4:positive_diagonal"
+            ]
+          ]
+        ],
+        "cones": [
+          "horizontal",
+          "vertical"
+        ],
+        "diagnostic_grid_size": 257,
+        "directional_columns": 76,
+        "energy_core_fraction_by_scale": [],
+        "expected_parabolic_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0
+          ],
+          [
+            4,
+            4.0
+          ]
+        ],
+        "family": "compact_shearlet",
+        "far_tail_energy_ratio_by_scale": [],
+        "feature_width": 80,
+        "fft_direct_max_abs_error": null,
+        "finest_scale_nonzero_fraction": 0.01335372223652137,
+        "frequency_center_and_bands_by_scale": [],
+        "frequency_construction": null,
+        "frequency_lattice_index_radius": null,
+        "frequency_lattice_step": null,
+        "frequency_period": null,
+        "hermitian_symmetry_max_abs_error": null,
+        "inclusive_endpoint_max_abs_error": null,
+        "inverse_imaginary_max_abs": null,
+        "legacy_fourier_global_support": true,
+        "legacy_fourier_pair_envelope_max_abs_error": 8.259105754859775e-08,
+        "max_aspect_relative_error": 0.1071428571428572,
+        "max_outside_support_abs": 0.0,
+        "max_translation_lattice_residual": null,
+        "measured_support_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.032258064516129
+          ],
+          [
+            4,
+            4.428571428571429
+          ]
+        ],
+        "normal_vanishing_moment_abs": 0.0,
+        "orientation_alignment_max_abs_radians": null,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "orientation_refines_with_scale": true,
+        "passed": true,
+        "polar_factorization_max_abs_error": null,
+        "radial_annulus_by_scale": [],
+        "radial_annulus_excludes_dc": null,
+        "radial_overlap_points": null,
+        "radial_registered_points": null,
+        "radial_sos_bounds": null,
+        "scaling_columns": 4,
+        "scaling_partition_unity_max_abs_error": 0.0,
+        "shear_indices_by_scale": [
+          [
+            0,
+            [
+              -1,
+              0,
+              1
+            ]
+          ],
+          [
+            2,
+            [
+              -2,
+              -1,
+              0,
+              1,
+              2
+            ]
+          ],
+          [
+            4,
+            [
+              -4,
+              -3,
+              -2,
+              -1,
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          ]
+        ],
+        "spatial_second_moment_aspect_by_scale": [],
+        "spatially_localized": true,
+        "translation_indices_present": true,
+        "verdict_scope": "SOURCE-DERIVED/NUMERIC-STRUCTURAL: deterministic finite 80-column discrete periodized polar curvelet-system/shearlet truncation; exactness applies only to the declared discrete dictionary; no continuum-transform, frame-bound, tightness, completeness, approximation-rate, through-R, or score claim"
+      }
+    },
+    "windowed_curvelet": {
+      "inflate_contract": {
+        "compiled": true,
+        "counted_state": [
+          "learned_basis_coefficients",
+          "downstream_decoder_weights",
+          "per_pair_codes"
+        ],
+        "entrypoint": "localized_basis_features_numpy",
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "generic_regenerated_state": [
+          "basis_family",
+          "basis_seed",
+          "fixed_scaling_and_parabolic_geometry",
+          "atom_generation_source"
+        ],
+        "rule118_status": "generic deterministic frame code/scalars are regenerated; all video-derived coefficients and downstream weights remain counted",
+        "source_sha256": "2946f0a7647f03223d56b7921042a58e0a934825b95da9395f43d0aff98e46ef"
+      },
+      "metadata": {
+        "atom_spec_sha256": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91",
+        "cone_seam_policy": null,
+        "construction": "finite discrete periodized polar curvelet-system truncation from literal compact radial-times-angular wedges on a half-cycle lattice and rotated parabolic translations; exact for the declared discrete dictionary, not a continuum transform",
+        "directional_atoms": 76,
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "finite_truncation": true,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "partition_of_unity_scaling": true,
+        "proven_frame_bounds": false,
+        "rule118_contract": "family, seed, fixed atom scalars, and evaluation code are generic regenerated state; learned/video-derived coefficients are counted",
+        "scales": [
+          0,
+          2,
+          4
+        ],
+        "scaling_atoms": 4,
+        "seed": 0,
+        "tight_or_complete_claim": false,
+        "translation_count_by_scale": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            15
+          ],
+          [
+            4,
+            56
+          ]
+        ]
+      },
+      "proof": {
+        "analytic_inverse_kernel_max_abs_error": null,
+        "angular_bandwidth_shrinks_with_scale": true,
+        "angular_half_width_by_scale": [
+          [
+            0,
+            0.7853981633974483
+          ],
+          [
+            2,
+            0.39269908169872414
+          ],
+          [
+            4,
+            0.19634954084936207
+          ]
+        ],
+        "angular_overlap_points_by_scale": [
+          [
+            0,
+            250
+          ],
+          [
+            2,
+            4748
+          ],
+          [
+            4,
+            76712
+          ]
+        ],
+        "angular_sos_bounds_by_scale": [
+          [
+            0,
+            0.1267831846986356,
+            1.0
+          ],
+          [
+            2,
+            0.12505231044224363,
+            1.0
+          ],
+          [
+            4,
+            0.12499966266709084,
+            1.0
+          ]
+        ],
+        "atom_spec_sha256": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91",
+        "cone_seam_duplicate_direction_count": null,
+        "cone_seam_owners_by_scale": [],
+        "cones": [],
+        "diagnostic_grid_size": 257,
+        "directional_columns": 76,
+        "energy_core_fraction_by_scale": [
+          [
+            0,
+            0.9918797513785639
+          ],
+          [
+            2,
+            0.9928722345299077
+          ],
+          [
+            4,
+            0.9965034189928681
+          ]
+        ],
+        "expected_parabolic_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0
+          ],
+          [
+            4,
+            4.0
+          ]
+        ],
+        "family": "windowed_curvelet",
+        "far_tail_energy_ratio_by_scale": [
+          [
+            0,
+            1.4921222331908646e-05
+          ],
+          [
+            2,
+            2.658554171752939e-05
+          ],
+          [
+            4,
+            2.8298949952974704e-05
+          ]
+        ],
+        "feature_width": 80,
+        "fft_direct_max_abs_error": 5.7220458984375e-06,
+        "finest_scale_nonzero_fraction": 1.0,
+        "frequency_center_and_bands_by_scale": [
+          [
+            0,
+            3.0,
+            2.0,
+            0.7853981633974483
+          ],
+          [
+            2,
+            12.0,
+            8.0,
+            0.39269908169872414
+          ],
+          [
+            4,
+            48.0,
+            32.0,
+            0.19634954084936207
+          ]
+        ],
+        "frequency_construction": "exact inverse discrete Fourier series of literal compact polar W_j(|xi|)*V_j(wrap_pi(arg(xi)-theta_l)) wedges on xi=q/2",
+        "frequency_lattice_index_radius": 160,
+        "frequency_lattice_step": 0.5,
+        "frequency_period": 2.0,
+        "hermitian_symmetry_max_abs_error": 0.0,
+        "inclusive_endpoint_max_abs_error": 0.0,
+        "inverse_imaginary_max_abs": 6.843817556864196e-16,
+        "legacy_fourier_global_support": true,
+        "legacy_fourier_pair_envelope_max_abs_error": 8.259105754859775e-08,
+        "max_aspect_relative_error": 0.009250111971839559,
+        "max_outside_support_abs": null,
+        "max_translation_lattice_residual": 1.7763568394002505e-15,
+        "measured_support_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0091595412156495
+          ],
+          [
+            4,
+            4.037000447887358
+          ]
+        ],
+        "normal_vanishing_moment_abs": 1.265655452741759e-18,
+        "orientation_alignment_max_abs_radians": 8.881784197001252e-16,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "orientation_refines_with_scale": true,
+        "passed": true,
+        "polar_factorization_max_abs_error": 0.0,
+        "radial_annulus_by_scale": [
+          [
+            0,
+            1.0,
+            5.0
+          ],
+          [
+            2,
+            4.0,
+            20.0
+          ],
+          [
+            4,
+            16.0,
+            80.0
+          ]
+        ],
+        "radial_annulus_excludes_dc": true,
+        "radial_overlap_points": 1912,
+        "radial_registered_points": 80356,
+        "radial_sos_bounds": [
+          2.567939384542559e-25,
+          1.0
+        ],
+        "scaling_columns": 4,
+        "scaling_partition_unity_max_abs_error": 0.0,
+        "shear_indices_by_scale": [],
+        "spatial_second_moment_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0091595412156495
+          ],
+          [
+            4,
+            4.037000447887358
+          ]
+        ],
+        "spatially_localized": true,
+        "translation_indices_present": true,
+        "verdict_scope": "SOURCE-DERIVED/NUMERIC-STRUCTURAL: deterministic finite 80-column discrete periodized polar curvelet-system/shearlet truncation; exactness applies only to the declared discrete dictionary; no continuum-transform, frame-bound, tightness, completeness, approximation-rate, through-R, or score claim"
+      }
+    }
+  }
+}

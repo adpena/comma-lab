@@ -1,0 +1,99 @@
+{
+  "schema": "genuine_frame_receiver_artifact_invalidation.v1",
+  "created_at_utc": "2026-07-14T15:38:10Z",
+  "status": "INVALIDATED_NOT_RESUMABLE_NOT_RANKABLE",
+  "reason_code": "FP32_SHADOW_NOT_DEPLOY_INT8_RECEIVER",
+  "reason": "The completed v2 receiver progress rendered the raw fp32 EMA checkpoint shadow. The historical realized_verdict and byte-close/inflate receiver first apply int8_dequant_params to that shadow, so the v2 source positive control and every candidate RGB fit target were outside the deploy receiver interpretation.",
+  "verdict_scope": "This invalidates only the listed v2 progress and BLOCKED receipt as realized-through-R receiver/ranking evidence. It does not invalidate the generic curvelet/shearlet dictionaries, structural proof, equal generic-frame coefficient accounting, or either frame family.",
+  "pointer_moved": false,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "source_bytes_preserved": true,
+  "source_bytes_mutated": false,
+  "source_bytes_deleted": false,
+  "invalidated_artifacts": [
+    {
+      "role": "completed_raw_fp32_receiver_progress_batch8",
+      "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_progress_v2_batch8_20260714.json",
+      "bytes": 7269218,
+      "sha256": "e788b0733e97366e052e94c66dc278800d0e03317339ac195a026ddaa13870be",
+      "schema": "genuine_frame_receiver_progress.v2",
+      "row_count": 600,
+      "config_sha256": "f5e87a7bee3ba29f53d5aaddd9237f93545a5cacaac79f1da00282fcb95edfc4",
+      "preserved_in_place": true,
+      "resumable_by_repaired_probe": false,
+      "rankable": false
+    },
+    {
+      "role": "blocked_raw_fp32_receiver_receipt",
+      "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v2_20260714.json",
+      "bytes": 11950,
+      "sha256": "0dbd6462c5dedde0944916f0147edfed1bf5a97a4a41d76e5506b73366d5ce6d",
+      "schema": "genuine_frame_nterm_probe.v2",
+      "status": "BLOCKED",
+      "historical_blocker": {
+        "code": "SOURCE_POSITIVE_CONTROL_MISMATCH",
+        "detail": "measured_flips=401625,expected=493260"
+      },
+      "preserved_in_place": true,
+      "resumable_by_repaired_probe": false,
+      "rankable": false
+    }
+  ],
+  "authority_path": {
+    "trainer": {
+      "path": "experiments/train_levelset_witness_realized_through_R_mlx.py",
+      "sha256": "31b6645e1f5512fe6865f987b2361dcca094796eeece99b540db17ff293bbb1f",
+      "evidence_lines": [8448, 8454],
+      "contract": "realized_verdict renders int8_dequant_params(ema_np), not the raw fp32 EMA shadow"
+    },
+    "deploy_roundtrip": {
+      "path": "src/tac/boundary_math/lever_b_levelset_generator.py",
+      "sha256": "2a686103bc50505ba0c531681f6eda820e1b59adc1a2881919862785f6998149",
+      "callable": "int8_dequant_params",
+      "evidence_lines": [700, 713],
+      "contract": "the same symmetric int8 roundtrip used by byte-close and inflate deploy rendering"
+    }
+  },
+  "replacement_contract": {
+    "probe_path": "tools/probe_genuine_frame_nterm_n600.py",
+    "probe_schema": "genuine_frame_nterm_probe.v3",
+    "receiver_config_schema": "genuine_frame_receiver_config.v3",
+    "progress_schema": "genuine_frame_receiver_progress.v3",
+    "parameter_interpretation": "ema_fp32_shadow_int8_symmetric_dequant_receiver_v1",
+    "roundtrip_apply_count_after_checkpoint_load": 1,
+    "raw_and_deploy_parameter_map_sha256_required": true,
+    "source_rgb_target": "int8_dequant deploy parameters",
+    "all_candidate_rgb_fit_targets": "the same deploy source RGB before generic-frame fitting",
+    "generic_frame_coefficient_accounting_unchanged": true,
+    "old_v2_progress_refused": true,
+    "checkpoint_only_deploy_contract_smoke": {
+      "status": "PASS_NO_RENDER_NO_SCORER",
+      "checkpoint_path": "experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_witness_ema_BEST.npz",
+      "checkpoint_sha256": "eb2d5784975859c7a2e4e4b05cedc53ccd3c68ad6b9df3797521f3ad32b80e8d",
+      "checkpoint_epoch": 700,
+      "raw_fp32_shadow_parameter_map_sha256": "71ecad3160b78bc72ba3e4666cec312eda0481e7510d44e3ba6010e75e7575ab",
+      "deploy_int8_parameter_map_sha256": "2f5e2b6de2d48342e377897bb6e0f5c5c0e9b94fd328b7b6991bc218e4ec970d",
+      "changed_parameter_tensor_count": 18,
+      "changed_parameter_scalar_value_count": 109545,
+      "frames_rendered": 0,
+      "segnet_calls": 0,
+      "full_n600_measurement_run": false
+    },
+    "execution_status": "PREPARED_NOT_FIRED",
+    "full_n600_repair_run_fired": false,
+    "recommended_progress_path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_progress_v3_deploy_int8_20260714.json",
+    "recommended_receipt_path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v3_deploy_int8_20260714.json",
+    "recommended_command": "PYTHONPATH=src .venv/bin/python tools/probe_genuine_frame_nterm_n600.py --mode receiver --num-pairs 600 --equal-value-budget 109559 --budget-fractions 0.125,0.25,0.5,1.0 --seed 0 --receiver-batch-size 8 --progress-json .omx/research/genuine_curvelet_shearlet_receiver_n600_progress_v3_deploy_int8_20260714.json --output .omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v3_deploy_int8_20260714.json"
+  },
+  "coefficient_accounting": {
+    "equal_coefficient_scalar_value_budget": 109559,
+    "equal_support_index_count_per_arm": 109559,
+    "generic_dictionary_code": "rule-118 deterministic and uncounted",
+    "video_derived_coefficients_counted": true,
+    "video_derived_support_indices_counted": true,
+    "equal_parameter_bytes_claim": false,
+    "equal_archive_bytes_claim": false
+  }
+}

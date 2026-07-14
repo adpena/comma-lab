@@ -1,0 +1,100 @@
+{
+  "schema": "pact.exp_linear_reparam_warmstart.common_start.v1",
+  "utc": "2026-07-14T17:28:43Z",
+  "mission": "PAPER_WARM_START_FROM_DIVERGENCE",
+  "paper": {
+    "arxiv": "2607.09967",
+    "title": "Learning in Curved Weight Space: Exponential-Linear Weight Reparameterization for Improved Optimization",
+    "author": "Ethan Smith"
+  },
+  "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "pointer_eligible": false,
+  "formulation": "mismatch_no_offset_anchored_state_preserving_fixed_scale_lr_v1",
+  "actual_witness_checkpoint": {
+    "path": "experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz",
+    "sha256": "6dd28a6e295d007ef0e53ae3e0e792a517a5708394a17d2185870e44920dedca",
+    "epoch": 650,
+    "hidden_width": 96,
+    "hidden_layers": 4,
+    "activation": "hosc",
+    "code_width": 32
+  },
+  "real_gt_cache": {
+    "path": "experiments/results/mlx_fleet_gt_cache/gt_n6.npz",
+    "sha256": "e3f5ce8e79374ed0b9a3f007167dd7488862b51420f0b25b7bcec7ee6865f63e"
+  },
+  "feature_state": {
+    "path": "experiments/results/basin_finisher_probe_20260707/feats_state_main_gt1.npz",
+    "sha256": "441d1c04b29e4c52dce9d5c2b154eb39ab1407411444d7ea76e593eea1d38a45"
+  },
+  "pairs": [0, 1, 2, 3],
+  "segnet_batch_geometry": "batch32_with_deterministic_duplicate_padding",
+  "sel_parameter_scope": {
+    "rule": "linear weights and biases only; frame code and palette excluded",
+    "parameter_count": 72680,
+    "keys": [
+      "film.bias",
+      "film.weight",
+      "hidden.0.bias",
+      "hidden.0.weight",
+      "hidden.1.bias",
+      "hidden.1.weight",
+      "hidden.2.bias",
+      "hidden.2.weight",
+      "hidden.3.bias",
+      "hidden.3.weight",
+      "in_proj.bias",
+      "in_proj.weight",
+      "out_sdf.bias",
+      "out_sdf.weight",
+      "out_tex.bias",
+      "out_tex.weight"
+    ]
+  },
+  "conversion": {
+    "beta": 2.5,
+    "numerical_inverse_max_abs_error_before_anchor": 2.384185791015625e-07,
+    "effective_chart": "W_eff = W_checkpoint + f(u,s) - f(u0,s0)",
+    "exact_effective_identity": true,
+    "rate_identity": true,
+    "reason": "The naked numerical inverse moved three SegNet argmax pixels. The anchored chart cancels inversion error exactly while preserving the SEL Jacobian."
+  },
+  "measured_common_start": {
+    "d_seg_mean": 0.0032145182291666665,
+    "d_seg_by_pair": {
+      "0": 0.0035654703776041665,
+      "1": 0.00323486328125,
+      "2": 0.003021240234375,
+      "3": 0.0030364990234375
+    },
+    "forward": "exact_int8_dequant_then_numpy_fp32_levelset_forward_then_torch_authority_R_then_frozen_cpu_segnet",
+    "int8_brotli": {
+      "total_quantized_blob_bytes": 62087,
+      "base_int8_brotli_bytes": 61842,
+      "code_int8_brotli_bytes": 245,
+      "n_params": 72951
+    },
+    "weight_distribution": {
+      "n": 72951,
+      "mean": -0.004231504000308684,
+      "std": 0.21997597024881693,
+      "abs_p50": 0.12676525115966797,
+      "abs_p90": 0.34952425956726074,
+      "abs_p99": 0.6148827970027924,
+      "abs_p999": 1.2095741450787771,
+      "abs_max": 3.608865737915039,
+      "pearson_kurtosis": 11.040301617134494,
+      "tail_fraction_gt_4std": 0.0021247138490219464,
+      "zero_fraction": 0.0
+    }
+  },
+  "four_arm_status": {
+    "adamw": "NOT_RUN_EXECUTION_CUSTODY_BLOCKER",
+    "muon": "NOT_RUN_EXECUTION_CUSTODY_BLOCKER",
+    "sel_adamw": "NOT_RUN_EXECUTION_CUSTODY_BLOCKER",
+    "sel_muon": "NOT_RUN_EXECUTION_CUSTODY_BLOCKER"
+  },
+  "muon_additive_or_redundant": "NO_VERDICT_EXECUTION_CUSTODY_BLOCKER",
+  "terminal_rate_effect": "NO_VERDICT_EXECUTION_CUSTODY_BLOCKER",
+  "probe_tool_sha256": "e599b3e15d7d7d4241b5629b494ce94ce68d613711c0faac4bbdac5bae2e4925"
+}

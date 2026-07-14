@@ -1,0 +1,32 @@
+{
+  "schema": "genuine_frame_receiver_invalidation.v1",
+  "status": "INVALIDATED_NOT_RESUMABLE_NOT_RANK_ELIGIBLE",
+  "pointer_moved": false,
+  "score_claim": false,
+  "source_progress": {
+    "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_progress_20260714.json",
+    "sha256": "9b0476b20b2145f86d9543d67c02ca151080daa4b9eee38b224a29300bac5cf2",
+    "bytes": 349041,
+    "schema": "genuine_frame_receiver_progress.v1",
+    "config_sha256": "264a8e08087329e948785c3982bbe52f5e565b0c4fbf303e61b8d79af17cc85d",
+    "row_count": 160,
+    "pair_index_min": 0,
+    "pair_index_max": 159,
+    "pair_indices_contiguous": true,
+    "source_bytes_mutated": false
+  },
+  "scientific_invalidation_reasons": [
+    "UNEQUAL_COARSE_SPACE_LINEAR_RGB_INSTANCE",
+    "SOURCE_PHI_ORACLE_MASK_UNCOUNTED"
+  ],
+  "verdict_scope": "the stopped v1 linear saved-OFF-RGB approximation instance only",
+  "family_verdict_allowed": false,
+  "replacement_contract": {
+    "receiver_progress_schema": "genuine_frame_receiver_progress.v2",
+    "common_coarse_columns": 4,
+    "directional_columns_per_family": 76,
+    "hybrid": "fixed target-independent 4 Q1 + 38 polar + 38 curvelet columns",
+    "source_positive_control": "unmodified saved-OFF ep700 RGB through exact R and frozen CPU SegNet",
+    "resume_policy": "v1 progress is refused even if its old config hash matches"
+  }
+}

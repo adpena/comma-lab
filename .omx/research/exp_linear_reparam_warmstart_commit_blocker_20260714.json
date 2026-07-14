@@ -1,0 +1,29 @@
+{
+  "schema": "pact.exp_linear_reparam_warmstart.commit_blocker.v1",
+  "utc": "2026-07-14T17:36:30Z",
+  "status": "LOCAL_ARTIFACTS_UNCOMMITTED_GIT_CUSTODY_BLOCKER",
+  "serializer_invoked": true,
+  "serializer_label": "exp_linear_reparam_warmstart",
+  "serializer_message": "Add actual-witness SEL x Muon warm-start probe",
+  "allowlist_count": 7,
+  "allowlist": [
+    "tools/probe_exp_linear_reparam_warmstart_mlx.py",
+    "tests/test_probe_exp_linear_reparam_warmstart.py",
+    ".omx/research/exp_linear_reparam_warmstart_common_start_20260714.json",
+    ".omx/research/exp_linear_reparam_warmstart_execution_blocker_20260714.json",
+    ".omx/research/codex_findings_exp_linear_reparam_warmstart_20260714T172843Z_codex.md",
+    ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+    ".omx/research/codex_session_summary_20260714T172843Z_codex.md"
+  ],
+  "return_code": 128,
+  "error": "error: unable to create temporary file: Operation not permitted; fatal: adding files failed",
+  "stage_reached": "git_add_failed_before_commit",
+  "bypass_attempted": false,
+  "shared_hot_files_excluded": [
+    ".omx/state/lane_registry.json",
+    ".omx/state/lane_maturity_audit.log",
+    ".omx/state/subagent_progress.jsonl",
+    ".omx/state/review_tracker.json",
+    ".omx/state/review_tracker.duckdb"
+  ]
+}

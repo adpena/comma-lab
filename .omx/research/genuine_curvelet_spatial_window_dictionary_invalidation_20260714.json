@@ -1,0 +1,41 @@
+{
+  "schema": "genuine_curvelet_spatial_window_dictionary_invalidation.v1",
+  "status": "INVALIDATED_NO_FAKE",
+  "created_at_utc": "2026-07-14T18:13:00Z",
+  "reason_code": "SPATIAL_WINDOW_WAVEPACKET_NOT_EXPLICIT_SECOND_GENERATION_CURVELET_WEDGE",
+  "finding": "The first windowed_curvelet implementation imposed a compact parabolic spatial bump around a single carrier, but did not derive its atoms from a smooth radial-annular and angular frequency-wedge tiling on a parabolic translation lattice. Its support-aspect and orientation-label tests distinguished it from a global plane wave but did not prove the requested Candes-Donoho second-generation curvelet construction.",
+  "invalidated_artifacts": [
+    {
+      "path": ".omx/research/genuine_curvelet_shearlet_structural_proof_20260714.json",
+      "sha256": "24136f168a1debd6efc40b40d4b8522d6593a820d2bed9fe6f862095b7bbfd3a",
+      "invalidated_scope": "windowed_curvelet genuine-frame proof"
+    },
+    {
+      "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v3_deploy_int8_batch32_20260714.json",
+      "sha256": "de5e15b41e8460bffd9f25bb123795bcec456e024186ce33f12a1d4318d950dc",
+      "invalidated_scope": "windowed_curvelet row and any four-arm family rank"
+    },
+    {
+      "path": ".omx/research/genuine_curvelet_shearlet_mask_n600_receipt_v2_20260714.json",
+      "sha256": "121ef7a5ac7904ee76476d345271b3e9c917ace628ca8738395828def68c6bc1",
+      "invalidated_scope": "windowed_curvelet proxy row and any four-arm proxy rank"
+    },
+    {
+      "path": ".omx/research/genuine_curvelet_shearlet_canonical_advisory_ingest_20260714.json",
+      "sha256": "7bbc38ce11e21f744ea0b438b692d0b27f65262bc117d122dce464b834120154",
+      "invalidated_scope": "completed genuine-frame advisory ingest"
+    }
+  ],
+  "historical_rows_not_promoted": "The old Fourier and compact-shearlet raw advisory rows remain historical measurements of their named finite dictionaries, but are not reused as the final comparison and convey no score, family, launch, or pointer authority.",
+  "required_remediation": [
+    "derive curvelet atoms from explicit radial-annular and angular frequency windows",
+    "use a parabolic scale-orientation translation lattice",
+    "prove DC exclusion, wedge refinement, spatial decay/localization, and parabolic aspect",
+    "rerun structural, receiver n600 batch32, and mask n600 receipts under new source hashes",
+    "bind exact batch, kernel, progress, and raw-row custody in canonical ingest"
+  ],
+  "verdict_scope": "IMPLEMENTATION instance only; the second-generation curvelet family remains OPEN",
+  "pointer_moved": false,
+  "score_claim": false,
+  "launch_fired": false
+}

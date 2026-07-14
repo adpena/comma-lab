@@ -1,0 +1,710 @@
+{
+  "schema": "genuine_frame_fresh_start_3arm_ticket.v1",
+  "ticket_id": "genuine_frame_fresh_start_equal_value_v9_20260714",
+  "created_at_utc": "2026-07-14T13:40:00Z",
+  "pointer": {
+    "submittable_score": 0.1910828242,
+    "submittable_axis": "[contest-CPU Linux x86_64]",
+    "non_submission_defensive_bank": 0.1880443979880752,
+    "moved": false,
+    "reason": "A ticket is MEANS; only a byte-closed exact evaluator row can move the pointer."
+  },
+  "execution": {
+    "status": "PREPARED_NOT_FIRED",
+    "v9_integration_status": "PENDING_OWNER",
+    "operator_go_required": true,
+    "operator_go_received": false,
+    "paid_or_heavy_launch_fired": false,
+    "dry_start_fired": false,
+    "containment": "No training or dispatch authority is conveyed by this artifact."
+  },
+  "fleet_directive_20260714T145258Z": {
+    "issued_at_utc": "2026-07-14T14:52:58Z",
+    "status": "SUPERSEDED_BY_20260714T145531Z",
+    "superseded_by": "fleet_directive_20260714T145531Z",
+    "historical_only": true,
+    "scope": "current V9 provenance-owner blocker",
+    "ideal_mod32_compile": {
+      "status": "FAIL",
+      "declared_mod_dim_claim": 19,
+      "live_mod_dim_value": 32,
+      "failure": "Ideal mod32 compile fails because the declared --mod-dim claim is 19 while the live value is 32."
+    },
+    "v9_test_receipt": {
+      "passed": 26,
+      "setup_errors": 4
+    },
+    "repair_owner": "exclusive provenance owner",
+    "repair_status": "REPAIRING",
+    "config_provenance_seal": "NOT_GREEN",
+    "containment": "PREPARED_NOT_FIRED and PENDING_OWNER remain binding; operator GO is still required and has not been conveyed."
+  },
+  "fleet_directive_20260714T145531Z": {
+    "issued_at_utc": "2026-07-14T14:55:31Z",
+    "supersedes": "fleet_directive_20260714T145258Z",
+    "scope": "V9 provenance-seal restoration; no launch or pointer authority",
+    "provenance_seal": {
+      "status": "RESTORED",
+      "mod_dim_custody": {
+        "status": "REPAIRED_ARM_SCOPED",
+        "mod19": "derived candidate",
+        "mod32": "sealed control"
+      },
+      "strict_test_receipt": {
+        "groups": [
+          "test_spec_v9_cgauge",
+          "test_config_provenance"
+        ],
+        "passed": 30,
+        "failed": 0,
+        "setup_errors": 0,
+        "status": "PASS_30_OF_30"
+      }
+    },
+    "bregman_binding": {
+      "status": "EXACTLY_COMPOSED",
+      "trainer_activation_model_covariance": false,
+      "trainer_activation_model_covariance_reason": "false by design"
+    },
+    "remaining_gap": {
+      "v9_composition_status": "PENDING_OWNER",
+      "affine_legendre_implementation_custody": "OPEN",
+      "requirement": "Provide the typed affine-Legendre gauge-transform pair and a pre/post divergence-plus-action equality receipt with explicit R/xi chart custody. This remains an implementation-custody gap only, not a CGauge family verdict."
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "pointer_moved": false
+    }
+  },
+  "fleet_directive_20260714T151138Z": {
+    "issued_at_utc": "2026-07-14T15:11:38Z",
+    "priority": "high",
+    "scope": "standalone optimal-metric verifier custody; independent of the restored V9 provenance seal",
+    "status": "OPEN_LAUNCH_CUSTODY_BLOCKER",
+    "defect": {
+      "component": "src/tac/witness_dsl/surrogate_vjp_fidelity_policy.py",
+      "verifier_surface": "standalone optimal-metric verifier",
+      "failure": "binding.get conflates an absent measurement_receipt key with an explicitly present null value, so the standalone verifier incorrectly accepts an absent nullable measurement_receipt.",
+      "verdict_scope": "Standalone verifier implementation bug only; this does not invalidate the optimal-metric family or erase the separately restored V9 config/provenance seal."
+    },
+    "owner_integration_dependency": {
+      "status": "PRIVILEGED_MAIN_FOLLOWUP_REQUIRED",
+      "reason": "The sibling optimal-metric owner lane is already marked complete.",
+      "required_action": "Reopen the owner lane or patch only src/tac/witness_dsl/surrogate_vjp_fidelity_policy.py plus a regression that distinguishes an absent measurement_receipt key from an explicitly present null value.",
+      "required_before_launch": true
+    },
+    "independent_provenance_work": {
+      "work": "The provenance owner is separately adding nested-Bregman/top-level optimal_metric cross-binding.",
+      "effect": "This closes the live V9 mutation path only.",
+      "does_not_close": "The standalone verifier bug remains open until the scoped patch and regression have custody."
+    },
+    "containment": {
+      "launch_ticket_status": "BLOCKED",
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "pointer_moved": false
+    }
+  },
+  "fleet_directive_20260714T153749Z": {
+    "issued_at_utc": "2026-07-14T15:37:49Z",
+    "bregman_hash_status": "SUPERSEDED_BY_20260714T154358Z",
+    "bregman_hashes_historical_only": true,
+    "bregman_hashes_superseded_by": "fleet_directive_20260714T154358Z",
+    "scope": "final deterministic Bregman all-surfaces handoff and V9 scientific-declaration custody",
+    "bregman_handoff": {
+      "status": "HISTORICAL_SUPERSEDED",
+      "receipt_sha256": "17eb58d64f21f293db95048eb7479e070df6fd4db884c7474de628ba463cfafc",
+      "v9_binding_sha256": "b0e4a96c25c36a2a582288fe7c841a8d7cbce77ea28b4d1df81181a83e79a43e",
+      "repeated_byte_identically": true,
+      "canonical_metric_id": "argmax_native_vjp_fidelity_v1",
+      "raw_dual_euclidean_semantics": "squared-Hessian H_F^2 geometry; not ordinary Fisher-natural solve elimination",
+      "cgauge_verdict": "IMPLEMENTATION_CUSTODY_GAP_ONLY",
+      "exact_sigma_point_result": "600-to-5 synthetic only",
+      "live_ef_kl_status": "NO_VERDICT_DATA_CUSTODY",
+      "older_bregman_hashes_authoritative": false
+    },
+    "v9_scientific_declaration_seal": {
+      "status": "HISTORICAL_DRIFT_SUPERSEDED_BY_20260714T155640Z",
+      "historical_only": true,
+      "superseded_by": "fleet_directive_20260714T155640Z",
+      "expected_sha256_prefix": "4f00122d",
+      "observed_live_sha256_prefix": "6cfa9845",
+      "hash_values_are_prefixes": true,
+      "owner": "provenance_canonicalize_fix_all_fakes",
+      "reseal_status": "PENDING_OWNER",
+      "required_receipt": "fresh strict source-closure/provenance receipt after all scientific sources are frozen"
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "pointer_moved": false
+    }
+  },
+  "fleet_directive_20260714T153927Z": {
+    "issued_at_utc": "2026-07-14T15:39:27Z",
+    "status": "HISTORICAL_TOCTOU_RESOLVED_BY_FROZEN_SOURCE_20260714T154210Z",
+    "historical_only": true,
+    "scope": "strict V9 source-custody TOCTOU; gate must not be weakened",
+    "strict_receipt": {
+      "passed": 41,
+      "failed": 1,
+      "failure": "optimal_basis_selection_20260714.py changed after declaration reseal",
+      "contract_sha256_prefix": "554b87e4",
+      "observed_live_sha256_prefix": "7a30b30b",
+      "bregman_functional_contract": "GREEN"
+    },
+    "resolution": {
+      "directive": "fleet_directive_20260714T154210Z",
+      "source_freeze_status": "RESOLVED",
+      "provenance_reseal_status": "PENDING_OWNER"
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "pointer_moved": false
+    }
+  },
+  "fleet_directive_20260714T154210Z": {
+    "issued_at_utc": "2026-07-14T15:42:10Z",
+    "scope": "basis-equation source freeze after deploy-int8 v3 custody repair",
+    "source_freeze": {
+      "status": "FROZEN",
+      "equation_path": "src/tac/canonical_equations/optimal_basis_selection_20260714.py",
+      "equation_sha256": "8880ba155a21de51d77522c7771032198757b123d0f55ceb3cd194ee0c9b40cf",
+      "test_sha256": "3a7aa0d4d2e0de0d4c0145cb2fbf86f78ae1ed5bf9ee6fb116250c5fc16f52b4",
+      "ruff_passed": true,
+      "pycompile_passed": true,
+      "tests_passed": 29,
+      "diff_check_passed": true
+    },
+    "legitimate_change_contract": {
+      "receiver_config_schema": "genuine_frame_receiver_config.v3",
+      "receiver_progress_schema": "genuine_frame_receiver_progress.v3",
+      "receiver_parameter_interpretation": "ema_fp32_shadow_int8_symmetric_dequant_receiver_v1",
+      "exact_deploy_int8_custody_required": true,
+      "raw_fp32_v2_receipts_refused": true
+    },
+    "strict_source_closure": {
+      "historical_toctou_status": "RESOLVED_SOURCE_FROZEN",
+      "provenance_reseal_status": "PENDING_OWNER",
+      "required_action": "The exclusive provenance owner must rerun strict source closure and reseal against equation_sha256=8880ba155a21de51d77522c7771032198757b123d0f55ceb3cd194ee0c9b40cf.",
+      "required_receipt_status": "NOT_YET_RECEIVED",
+      "gate_may_be_weakened": false
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "pointer_moved": false
+    }
+  },
+  "fleet_directive_20260714T154358Z": {
+    "issued_at_utc": "2026-07-14T15:43:58Z",
+    "scope": "authoritative Bregman final-hash supersession after fresh custody review",
+    "status": "HISTORICAL_SUPERSEDED_BY_20260714T154818Z",
+    "historical_only": true,
+    "superseded_by": "fleet_directive_20260714T154818Z",
+    "supersedes_bregman_hashes_from": "fleet_directive_20260714T153749Z",
+    "bregman_handoff": {
+      "receipt_sha256": "460dc605944324c364586c57eac8a1a744ef004036d68806a53729b0dde2fbaa",
+      "v9_binding_sha256": "e775c8a943e9290ef9097f53852f6fef0469ad6790c46d9d33c9f21851dbe8dd",
+      "source_closure_revalidated": true,
+      "normalized_self_source_revalidated": true,
+      "complete_binding_payload_revalidated": true,
+      "older_bregman_hashes_authoritative": false
+    },
+    "v9_provenance_scope": {
+      "scientific_declaration_reseal_status": "PENDING_OWNER",
+      "strict_owner_receipt_received": false,
+      "reason": "This Bregman custody supersession is not the exclusive provenance owner's strict V9 scientific-declaration reseal receipt against the frozen basis equation source."
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "pointer_moved": false,
+      "score_claim": false
+    }
+  },
+  "fleet_directive_20260714T154818Z": {
+    "issued_at_utc": "2026-07-14T15:48:18Z",
+    "scope": "current Bregman receipt closure authority",
+    "status": "CURRENT_BREGMAN_HASH_AUTHORITY",
+    "supersedes_all_older_bregman_hashes": true,
+    "bregman_handoff": {
+      "receipt_sha256": "12b82ca3f9809339746cc03b48a3237643861dec9e9baec19852a184fa7f358c",
+      "v9_binding_sha256": "bdc01ae586c4467b18ebf4deee206242426ddc51da3dc47d8a2b8fff6cab8481",
+      "direct_code_dependency_count": 8,
+      "all_direct_code_dependencies_revalidated": true,
+      "normalized_self_policy_revalidated": true,
+      "exact_binding_payload_required": true,
+      "older_bregman_hashes_authoritative": false
+    },
+    "v9_provenance_scope": {
+      "scientific_declaration_reseal_status": "PENDING_OWNER",
+      "strict_owner_receipt_received": false,
+      "reason": "Bregman receipt closure does not independently convey the exclusive provenance owner's strict V9 scientific-declaration reseal receipt against the frozen basis equation source."
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "pointer_moved": false
+    }
+  },
+  "fleet_directive_20260714T155640Z": {
+    "issued_at_utc": "2026-07-14T15:56:40Z",
+    "scope": "final strict Bregman recheck and fail-closed end-to-end V9 provenance custody",
+    "bregman_seal": {
+      "status": "GREEN",
+      "receipt_sha256": "12b82ca3f9809339746cc03b48a3237643861dec9e9baec19852a184fa7f358c",
+      "v9_binding_sha256": "bdc01ae586c4467b18ebf4deee206242426ddc51da3dc47d8a2b8fff6cab8481",
+      "repeat_count": 3,
+      "tests_per_repeat": 71,
+      "all_repeats_passed": true
+    },
+    "end_to_end_v9": {
+      "status": "FAIL_CLOSED_EXCLUSIVE_PROVENANCE_SCIENTIFIC_DECLARATION_SEAL",
+      "failure_precedes_bregman_literal_assertion": true,
+      "scientific_declaration_expected_sha256_prefix": "6cfa9845",
+      "scientific_declaration_live_sha256_prefix": "5c926130",
+      "hash_values_are_prefixes": true,
+      "combined_group": {
+        "passed": 16,
+        "failed": 2,
+        "setup_errors": 24,
+        "all_failures_rooted_at_scientific_declaration_seal": true
+      },
+      "stale_bregman_literal_assertion_status": "NOT_REACHED_NO_VERDICT",
+      "exclusive_owner": "provenance_canonicalize_fix_all_fakes",
+      "owner_required_action": "Reseal and review the hot config/spec scientific-declaration surface, then emit a fresh strict receipt.",
+      "source_closure_may_be_weakened": false,
+      "provenance_reseal_status": "PENDING_OWNER"
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "pointer_moved": false,
+      "score_claim": false
+    }
+  },
+  "fleet_directive_20260714T180319Z": {
+    "issued_at_utc": "2026-07-14T18:03:19Z",
+    "scope": "completed genuine-frame advisory measurement and legitimate equation-source supersession; no training verdict, GO, or pointer authority",
+    "status": "HISTORICAL_INVALIDATED_BY_FRESH_COMPLETE_RECEIPTS",
+    "historical_only": true,
+    "superseded_by": "fleet_directive_20260714T201543Z",
+    "invalidation_reason": "Round-1 receiver, mask-proxy, canonical-ingest, and equation-source references are superseded by the fresh schema-v4 receiver/mask COMPLETE receipts and frozen source custody below. The old forecast remains historical only and cannot supply training ranks, a GO, or pointer authority.",
+    "completed_advisory_receipts": {
+      "receiver": {
+        "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v3_deploy_int8_batch32_20260714.json",
+        "sha256": "de5e15b41e8460bffd9f25bb123795bcec456e024186ce33f12a1d4318d950dc",
+        "authority": "macOS-CPU advisory receiver comparison only; not byte-closed and not a score"
+      },
+      "mask_proxy": {
+        "path": ".omx/research/genuine_curvelet_shearlet_mask_n600_receipt_v2_20260714.json",
+        "sha256": "121ef7a5ac7904ee76476d345271b3e9c917ace628ca8738395828def68c6bc1",
+        "authority": "mask-space proxy only; not through R and not a score"
+      },
+      "canonical_advisory_ingest": {
+        "path": ".omx/research/genuine_curvelet_shearlet_canonical_advisory_ingest_20260714.json",
+        "sha256": "7bbc38ce11e21f744ea0b438b692d0b27f65262bc117d122dce464b834120154",
+        "status": "MEASURED_ADVISORY_NOT_BYTE_CLOSED",
+        "selection_eligible": false
+      }
+    },
+    "forecast": {
+      "full_budget_receiver_d_seg_order": [
+        "polar_directional_fourier=0.40972231547037763",
+        "compact_shearlet=0.42886043124728734",
+        "windowed_curvelet=0.5048035939534505"
+      ],
+      "early_budget_observation": "compact_shearlet is lowest at 0.125, 0.25, and 0.5 of the equal-value budget; the full-budget compact-shearlet result is nonmonotonic under this RGB-MSE selector.",
+      "scope": "INSTANCE x saved-OFF deploy-RGB x LS-magnitude-prune-refit x finite dictionary truncation",
+      "equal_value_not_equal_byte": true,
+      "not_training_empirical_rank": true,
+      "not_promotable": true,
+      "fixed_mix": "The fourth fixed38/38 mix is neither a training arm nor a decoder-boundary partition-of-unity hybrid."
+    },
+    "equation_source_supersession": {
+      "path": "src/tac/canonical_equations/optimal_basis_selection_20260714.py",
+      "supersedes_sha256": "8880ba155a21de51d77522c7771032198757b123d0f55ceb3cd194ee0c9b40cf",
+      "current_sha256": "2be6643d63652757f33ba7d006a8d7dfbb6fe41b510908fd49a3abf7c5e8d3b8",
+      "provenance_reseal_required": true,
+      "source_closure_may_be_weakened": false
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "pointer_moved": false,
+      "score_claim": false
+    }
+  },
+  "fleet_directive_20260714T201543Z": {
+    "issued_at_utc": "2026-07-14T20:15:43Z",
+    "scope": "fresh COMPLETE genuine-frame advisory receipts and source custody refresh; formulation-level forecast only; no training verdict, GO, launch, or pointer authority",
+    "status": "CURRENT_ADVISORY_FORECAST_CUSTODY",
+    "historical_predecessor": "fleet_directive_20260714T180319Z",
+    "completed_advisory_receipts": {
+      "receiver": {
+        "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v4_polar_frequency_wedge_deploy_int8_batch32_20260714.json",
+        "sha256": "031a1569c600bf5d1a3551a4da668db67bb80380d0678f964ca5476e0b293c33",
+        "progress_path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_progress_v4_polar_frequency_wedge_deploy_int8_batch32_20260714.json",
+        "progress_sha256": "ae281589cadf57c3fbbbcbe50fe3d1c4f3f10d8706abfd67e403369e0c47daec",
+        "schema": "genuine_frame_nterm_probe.v4 / genuine_frame_receiver_progress.v4",
+        "status": "COMPLETE",
+        "authority": "macOS-CPU advisory receiver comparison realized through R with deployed-int8 parameters and receiver_batch_size=32; not byte-closed and not a score",
+        "selection_metric_id": "argmax_native_vjp_fidelity_v1",
+        "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+        "gram_status": "NO-VERDICT_DATA_CUSTODY",
+        "equal_scalar_budget": 109559,
+        "equal_support_index_budget": 109559,
+        "equal_archive_bytes": false,
+        "training_rank_eligible": false,
+        "pointer_moved": false
+      },
+      "mask_proxy": {
+        "path": ".omx/research/genuine_curvelet_shearlet_mask_n600_receipt_v3_polar_frequency_wedge_20260714.json",
+        "sha256": "72c0c1f736e68267d346885792901d64f0c7c3ff83952e4a7a41831330587aa0",
+        "progress_path": ".omx/research/genuine_curvelet_shearlet_mask_n600_progress_v3_polar_frequency_wedge_20260714.json",
+        "progress_sha256": "d513c3e256b8986eef003f807f1b66060edc60d61646af41e369cbe9880ac23b",
+        "schema": "genuine_frame_nterm_probe.v4 / genuine_frame_mask_progress.v3",
+        "status": "COMPLETE",
+        "authority": "mask-space proxy only; not through R, not a score, and not training-rank authority",
+        "selection_metric_id": "argmax_native_vjp_fidelity_v1",
+        "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+        "equal_scalar_budget": 109559,
+        "equal_support_index_budget": 109559,
+        "equal_archive_bytes": false,
+        "training_rank_eligible": false,
+        "pointer_moved": false
+      },
+      "structural_proof": {
+        "path": ".omx/research/genuine_curvelet_shearlet_structural_proof_v2_polar_frequency_wedge_20260714.json",
+        "sha256": "677a2252c43c1272ec0e2e83d65ce1b82d23b8ddb089d73a111a5f0b26d46d25",
+        "schema": "genuine_frame_nterm_probe.v4",
+        "status": "COMPLETE",
+        "selection_metric_status": "NO-VERDICT_DATA_CUSTODY"
+      }
+    },
+    "frozen_source_custody": {
+      "equation_path": "src/tac/canonical_equations/optimal_basis_selection_20260714.py",
+      "equation_sha256": "3eb00fba7f68cc9b37be5cbf48951d828c8af50b2eb006228800c5182fa3bcc0",
+      "equation_source_status": "CURRENT_STRICT_ADVISORY_INGEST_SOURCE_REGISTRY_REFINED",
+      "probe_path": "tools/probe_genuine_frame_nterm_n600.py",
+      "probe_sha256": "f0caf12699a9a4dae7b1cef2f5eda1575b6991c0b2692455466ecd9cff1ad1d1",
+      "embedded_basis_source_sha256": "2c855662e7c6ef47bdc70b3d4ae879084855f06b0e8a4e5dd35cbba7736c5220",
+      "curvelet_atom_sha256": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91",
+      "curvelet_semantic_sha256": "f587564eba26dbb50b81418565b4b1e685b298c14c272a716bc607b9d8b7f0d5",
+      "shearlet_atom_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+      "shearlet_semantic_sha256": "6566acbbfd4ec9a5b8fa797730b6adb72d6b14145aa82f0f6ea33f388c65d6ad",
+      "equation_registry_append": {
+        "anchor_row_line": 721,
+        "anchor_row_sha256": "9718486df60569cc9906fc114559a9ed9dc919a11561535658f594858642227b",
+        "domain_row_line": 722,
+        "domain_row_sha256": "93b309254e296aea79f892d74508538e19ce6cce5f31d4d07063b90cbc86041b",
+        "anchor_id": "genuine_polar_curvelet_compact_shearlet_n600_advisory_20260714"
+      },
+      "probe_outcome": {
+        "row_line": 643,
+        "row_sha256": "ed118c0e7f1b355b1fdd4efb88c53c9662ae98b8b7baa030d59d744c8c412ae3",
+        "verdict": "PARTIAL",
+        "authority": "advisory"
+      }
+    },
+    "formulation_level_forecast": {
+      "authority": "advisory only; formulation-level ordering is not a training empirical rank",
+      "full_budget_order": [
+        "polar_directional_fourier=0.40972231547037763",
+        "compact_shearlet=0.42886043124728734",
+        "windowed_curvelet=0.5048239559597439",
+        "fixed_target_independent_mix_4Q1_plus_38_polar_fourier_plus_38_windowed_curvelet=0.5303014119466146"
+      ],
+      "equal_scalar_values": 109559,
+      "equal_support_index_budget": 109559,
+      "equal_archive_bytes": false,
+      "not_training_empirical_rank": true,
+      "not_promotable": true,
+      "metric_id": "argmax_native_vjp_fidelity_v1",
+      "family_scope": "localized curvelet and compact shearlet families remain OPEN; no family-level negative"
+    },
+    "containment": {
+      "execution_status": "PREPARED_NOT_FIRED",
+      "v9_integration_status": "PENDING_OWNER",
+      "operator_go_required": true,
+      "operator_go_received": false,
+      "paid_or_heavy_launch_fired": false,
+      "dry_start_fired": false,
+      "full_launch_command": null,
+      "all_gates_pass": false,
+      "pointer_moved": false,
+      "score_claim": false
+    }
+  },
+  "receiver_source_control_custody": {
+    "status": "DEPLOY_INT8_BATCH32_KERNEL_CUSTODY_REQUIRED_BEFORE_DRY_START_OR_LAUNCH",
+    "probe_path": "tools/probe_genuine_frame_nterm_n600.py",
+    "probe_sha256": "f0caf12699a9a4dae7b1cef2f5eda1575b6991c0b2692455466ecd9cff1ad1d1",
+    "fp32_shadow_invalidation": {
+      "receipt_path": ".omx/research/genuine_curvelet_shearlet_receiver_fp32_shadow_invalidation_20260714.json",
+      "receipt_sha256": "03383f8c107c4dfe367f198e93359d6efc195d5d6353884cfaaf9f7e7fd58e40",
+      "reason_code": "FP32_SHADOW_NOT_DEPLOY_INT8_RECEIVER",
+      "invalidated_artifacts_rankable": false
+    },
+    "batch8_geometry_invalidation": {
+      "receipt_path": ".omx/research/genuine_curvelet_shearlet_receiver_batch8_geometry_invalidation_20260714.json",
+      "receipt_sha256": "82b4145e2188624a946e0b1e6cc81c2d152209cfb47546f094605dccb3dc38c1",
+      "reason_code": "RECEIVER_HISTORICAL_BATCH_SIZE_REQUIRED",
+      "historical_control": {
+        "required_receiver_batch_size": 32,
+        "observed_batch_size": 8,
+        "expected_source_positive_control_flips": 493260,
+        "observed_source_positive_control_flips": 493257,
+        "changed_pairs": 12
+      },
+      "invalidated_artifacts_rankable": false,
+      "cross_batch_or_kernel_identity_claim_allowed": false
+    },
+    "required_parameter_interpretation": "ema_fp32_shadow_int8_symmetric_dequant_receiver_v1",
+    "training_ticket_source_control_requirement": "Every source replay, positive control, candidate RGB fit target, dry-start receipt, and receiver comparison must render the exact int8_dequant deploy parameters rather than the raw fp32 EMA checkpoint shadow, use receiver_batch_size=32 for the historical n600 source control and dry-start control, and retain live Torch kernel custody.",
+    "receiver_batch_geometry_requirement": "Do not assert identity across different receiver batch sizes or Torch kernels. Any new batch or kernel requires its own source-positive-control receipt, executable/kernel provenance, and an explicit verdict scope before it can support a receiver comparison.",
+    "live_torch_kernel_custody_required_fields": [
+      "torch_version",
+      "torch_git_version_or_build",
+      "device",
+      "device_name",
+      "device_capability_or_cpu_architecture",
+      "kernel_or_backend_configuration",
+      "determinism_settings",
+      "receiver_batch_size",
+      "scorer_model_sha256",
+      "source_positive_control_flip_count"
+    ],
+    "receiver_config_schema": "genuine_frame_receiver_config.v4",
+    "receiver_progress_schema": "genuine_frame_receiver_progress.v4",
+    "raw_fp32_v2_progress_resumable": false,
+    "generic_frame_coefficient_accounting_unchanged": true,
+    "required_before_launch": true
+  },
+  "vehicle": {
+    "family": "v9_cgauge",
+    "typed_base_factory": "tac.witness_dsl.spec_v9_cgauge.derive_v9_cgauge_config",
+    "basis_lever_factory": "tac.witness_dsl.optimal_basis_20260714.BasisLeverSpec.compile_lever",
+    "selection_law_ref": "optimal_basis_equal_budget_through_r_v1",
+    "metric_id": "argmax_native_vjp_fidelity_v1",
+    "metric_state_receipt_schema": "reachable_decision_geometry_fidelity.v1",
+    "metric_selection_receipt_schema": "reachable_decision_preconditioner_selection.v1",
+    "basis_gram": "Gamma_ij(q) = <psi_i, G_q psi_j>",
+    "basis_gram_status": "NO-VERDICT_DATA_CUSTODY",
+    "metric_fixed_state_geometry": "For one sealed state, PSD M defines the local quadratic Mahalanobis/Bregman divergence 0.5*delta.T@M@delta; no global Bregman integrability is inferred for state-dependent M.",
+    "metric_dual_softmax_euclidean_distance": "||grad F(theta_1)-grad F(theta_2)||_2 is the dual-coordinate distance induced by squared Hessian H_F^2 only.",
+    "metric_dual_distance_exclusions": "The dual softmax Euclidean distance is not finite categorical KL/B_F, not reachable-VJP alignment rho, and not Fisher-natural cotangent geometry.",
+    "fisher_natural_solve_status": "REQUIRED when applying the Fisher-natural cotangent metric; NO-VERDICT_DATA_CUSTODY and no global no-solve claim.",
+    "metric_selection_status": "NO-VERDICT_DATA_CUSTODY",
+    "bregman_final_receipt_sha256": "12b82ca3f9809339746cc03b48a3237643861dec9e9baec19852a184fa7f358c",
+    "v9_bregman_binding_sha256": "bdc01ae586c4467b18ebf4deee206242426ddc51da3dc47d8a2b8fff6cab8481",
+    "basis_equation_source_sha256": "3eb00fba7f68cc9b37be5cbf48951d828c8af50b2eb006228800c5182fa3bcc0",
+    "basis_equation_source_supersedes_sha256": "2be6643d63652757f33ba7d006a8d7dfbb6fe41b510908fd49a3abf7c5e8d3b8",
+    "basis_equation_source_reseal_status": "CURRENT_STRICT_ADVISORY_INGEST_SOURCE_REGISTRY_REFINED",
+    "bregman_seal_status": "GREEN_3X71",
+    "v9_scientific_declaration_seal_status": "FAIL_CLOSED_MISMATCH",
+    "v9_scientific_declaration_expected_sha256_prefix": "6cfa9845",
+    "v9_scientific_declaration_live_sha256_prefix": "5c926130",
+    "v9_scientific_declaration_reseal_status": "PENDING_OWNER",
+    "v9_strict_source_closure_receipt": null,
+    "v9_composition_status": "PENDING_OWNER",
+    "v9_composition_owner": "provenance_canonicalize_fix_all_fakes",
+    "v9_composition_requirement": "Compose exactly one BasisLeverSpec into the typed v9 program and its config/provenance bijection; direct extra trainer flags are forbidden on V9. The owner must also provide a typed affine-Legendre gauge-transform pair and a pre/post divergence-plus-action equality receipt with explicit R/xi chart custody. This is an implementation-custody gap only, not a CGauge family verdict."
+  },
+  "equal_value_budget": {
+    "feature_width": 80,
+    "hidden_dim": 96,
+    "hidden_layers": 4,
+    "mod_dim": 32,
+    "pair_frame_code_rows": 1200,
+    "decoder_values": 71159,
+    "decoder_breakdown": {
+      "in_projection": 7776,
+      "film_projection": 25344,
+      "hidden_stack": 37248,
+      "sdf_head": 485,
+      "texture_head": 291,
+      "palette": 15
+    },
+    "per_pair_code_values": 38400,
+    "total_trainable_values": 109559,
+    "support_index_values_per_arm": 109559,
+    "equal_support_index_count": true,
+    "derivation": "71159 + (600 pairs * 2 frames * 32 code values) = 109559",
+    "archive_bytes_equal": false,
+    "archive_byte_caveat": "Equal scalar values do not imply equal archive bytes; each arm requires parse-back and exact archive-byte custody before a rate or score verdict."
+  },
+  "common_treatment": {
+    "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "num_pairs": 600,
+    "epochs": 3000,
+    "anneal_epochs": 3000,
+    "eval_every": 25,
+    "checkpoint_every": 25,
+    "stage_checkpoints": true,
+    "seed": 0,
+    "basis_frame_seed": 0,
+    "fresh_start": true,
+    "initial_resume_from": null,
+    "initialization_contract": "Identical trainer RNG seed, tensor shapes, optimizer, v9 schedule, and fresh initialization; only the typed basis family changes.",
+    "resume_contract": "After dry-start or launch begins, resume only the same family and seed from its own complete atomic checkpoint; family, seed, atom-table, generated-source, or combined-semantic drift is refused even when feature width stays 80."
+  },
+  "arm_order_semantics": "arm_order is presentation order only; empirical_rank remains null until a byte-closed, training-arm receiver-custodied measurement exists. The completed saved-OFF finite-dictionary advisory forecast is explicitly not a training empirical_rank.",
+  "arms": [
+    {
+      "arm_order": 1,
+      "empirical_rank": null,
+      "arm_id": "v9_basis_polar_directional_fourier_seed0",
+      "family": "polar_directional_fourier",
+      "basis_lever_name": "basis_family::polar_directional_fourier",
+      "basis_lever_constructor": {
+        "family": "polar_directional_fourier",
+        "basis_frame_seed": 0
+      },
+      "compiled_basis_argv": [
+        "--basis-family",
+        "polar_directional_fourier",
+        "--basis-frame-seed",
+        "0",
+        "--bank-n-scales",
+        "4",
+        "--bank-n-orient0",
+        "6",
+        "--bank-f0",
+        "2.0",
+        "--bank-base",
+        "2.0",
+        "--bank-n-iso",
+        "4",
+        "--max-bank-freq",
+        "64.0",
+        "--no-self-orient"
+      ],
+      "role": "global polar directional Fourier control"
+    },
+    {
+      "arm_order": 2,
+      "empirical_rank": null,
+      "arm_id": "v9_basis_windowed_curvelet_seed0",
+      "family": "windowed_curvelet",
+      "basis_lever_name": "basis_family::windowed_curvelet",
+      "basis_lever_constructor": {
+        "family": "windowed_curvelet",
+        "basis_frame_seed": 0
+      },
+      "compiled_basis_argv": [
+        "--basis-family",
+        "windowed_curvelet",
+        "--basis-frame-seed",
+        "0",
+        "--no-self-orient"
+      ],
+      "atom_spec_sha256_seed0": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91",
+      "basis_generated_source_sha256_seed0": "2c855662e7c6ef47bdc70b3d4ae879084855f06b0e8a4e5dd35cbba7736c5220",
+      "basis_semantic_sha256_seed0": "f587564eba26dbb50b81418565b4b1e685b298c14c272a716bc607b9d8b7f0d5",
+      "role": "finite deterministic localized parabolic curvelet-like dictionary; not an exact FDCT or proven tight/full frame"
+    },
+    {
+      "arm_order": 3,
+      "empirical_rank": null,
+      "arm_id": "v9_basis_compact_shearlet_seed0",
+      "family": "compact_shearlet",
+      "basis_lever_name": "basis_family::compact_shearlet",
+      "basis_lever_constructor": {
+        "family": "compact_shearlet",
+        "basis_frame_seed": 0
+      },
+      "compiled_basis_argv": [
+        "--basis-family",
+        "compact_shearlet",
+        "--basis-frame-seed",
+        "0",
+        "--no-self-orient"
+      ],
+      "atom_spec_sha256_seed0": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+      "basis_generated_source_sha256_seed0": "2c855662e7c6ef47bdc70b3d4ae879084855f06b0e8a4e5dd35cbba7736c5220",
+      "basis_semantic_sha256_seed0": "6566acbbfd4ec9a5b8fa797730b6adb72d6b14145aa82f0f6ea33f388c65d6ad",
+      "role": "finite deterministic compact cone-adapted shearlet-like dictionary; not a proven tight/full frame"
+    }
+  ],
+  "ordered_admission_gates": [
+    {
+      "order": 1,
+      "gate": "V9_TYPED_COMPOSITION",
+      "pass": false,
+      "requirement": "The provenance owner resolves the fail-closed scientific-declaration mismatch (expected sha256 prefix 6cfa9845, live prefix 5c926130) AND reseals against the latest optimal_basis_selection_20260714.py source hash 3eb00fba7f68cc9b37be5cbf48951d828c8af50b2eb006228800c5182fa3bcc0 (superseding the historical 2be6643d63652757f33ba7d006a8d7dfbb6fe41b510908fd49a3abf7c5e8d3b8 source). It must return a new strict source-closure/reseal receipt plus three registered V9 configs whose only scientific delta is one BasisLeverSpec, with LawRef, trainer consumer, generated-inflate consumer, and receipt edges in the config/provenance bijection. The V9 covariant-gauge implementation must expose a typed affine-Legendre gauge-transform pair and prove pre/post divergence and action equality with explicit R/xi chart custody; this is an implementation-custody gap only, not a family verdict."
+    },
+    {
+      "order": 2,
+      "gate": "STATIC_EQUALITY_AND_PARSE",
+      "pass": false,
+      "requirement": "All three compiled programs parse against the real trainer, have feature width 80 and exactly 109559 trainable values, and carry no duplicate long flags."
+    },
+    {
+      "order": 3,
+      "gate": "STORAGE_WATERFALL",
+      "pass": false,
+      "requirement": "Select /Volumes/VertigoDataTier/pact first, then /Volumes/APDataStore/pact, and fail closed unless the storage preflight records enough free bytes and the automatic cleanup/cold-store manifest path."
+    },
+    {
+      "order": 4,
+      "gate": "MEMORY_GOVERNOR",
+      "pass": false,
+      "requirement": "The governed launcher admits each arm; arms run sequentially, never concurrently. A governor refusal is evidence and is not bypassed."
+    },
+    {
+      "order": 5,
+      "gate": "CONTENT_ADDRESSED_DRY_START_2",
+      "pass": false,
+      "requirement": "For every exact final compiled source/config hash, obtain boot_ok=true, stage_checkpoint_ok=true, resume_round_trip_ok=true, atom_spec_hash_match=true, and generated-inflate parity from --dry-start 2. Every source replay, positive control, and receiver target must use receiver config/progress v4 with exact deploy-int8 parameter interpretation; raw-fp32 v2 and older v3 progress or receipts are refused for current custody. The historical n600 source control and dry-start control require receiver_batch_size=32 plus retained live Torch kernel custody fields; batch8 geometry-invalidated artifacts are refused. No cross-batch or cross-kernel identity claim is admissible."
+    },
+    {
+      "order": 6,
+      "gate": "OPERATOR_GO",
+      "pass": false,
+      "requirement": "Explicit operator GO after reviewing the three dry-start receipts; this ticket supplies no GO."
+    },
+    {
+      "order": 7,
+      "gate": "GOVERNED_SEQUENTIAL_LAUNCH",
+      "pass": false,
+      "requirement": "Launch only through tools/launch_witness_run.py with lane claim, durable daemon, per-stage preserved checkpoints, periodic checkpoints, and same-arm resume."
+    },
+    {
+      "order": 8,
+      "gate": "RECEIVER_CLOSED_N600_VERDICT",
+      "pass": false,
+      "requirement": "Byte-close each arm, parse back exact archive bytes, run real R and frozen CPU-torch SegNet on all 600, then exact contest-CPU/CUDA replay as separate axes before any pointer claim."
+    }
+  ],
+  "governed_command_contract": {
+    "launcher": "tools/launch_witness_run.py",
+    "dry_start_epochs": 2,
+    "config_argument": "The provenance owner must register one real named V9 config per arm before a command exists.",
+    "direct_extra_trainer_flags_forbidden": true,
+    "full_launch_command": null,
+    "reason_command_is_null": "Current V9 admission rejects --extra-trainer-flags and --dsl-lever because they bypass the typed config/provenance bijection. Inventing a config name or direct Python launch would violate the live vehicle contract."
+  },
+  "verdict_scope": {
+    "unit": "fresh-start equal-value V9 witness-training formulation, seed0",
+    "negative_floor": "A negative can scope only this implementation, seed, schedule, and dictionary truncation; it cannot close curvelet or shearlet families.",
+    "optimal_form_queue": [
+      "metric-sparse atom selection under Gamma_ij(q)=<psi_i,G_q psi_j> after full-n600 metric custody",
+      "adaptive translated atom allocation under equal counted bytes",
+      "Fourier-interior plus localized-boundary partition-of-unity hybrid",
+      "multi-seed fresh-start replication if seed0 spread is decision-relevant"
+    ]
+  }
+}

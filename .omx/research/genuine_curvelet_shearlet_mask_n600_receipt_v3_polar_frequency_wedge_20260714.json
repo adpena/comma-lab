@@ -1,0 +1,1987 @@
+{
+  "coefficient_accounting_caveat": "each selected atom also needs a uint8 support index (width=80), framing, and metadata; compression and exact archive bytes are unmeasured",
+  "equal_archive_bytes_claim": false,
+  "equal_coefficient_scalar_values": true,
+  "equal_parameter_bytes_claim": false,
+  "equal_support_index_count": true,
+  "git_sha": "960b97f46e4acb3248878481c9a8c560e5d8282d",
+  "intended_selection_metric_id": "argmax_native_vjp_fidelity_v1",
+  "mask_proxy": {
+    "config": {
+      "budget_fractions": [
+        0.125,
+        0.25,
+        0.5,
+        1.0
+      ],
+      "dictionary_contracts": {
+        "compact_shearlet": {
+          "arm": "compact_shearlet",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "a8f77043832853b26fa6076c1bd52844d9bf39e1815dbc6b8ccfc6cfcf7d6648",
+          "directional": {
+            "family": "compact_shearlet",
+            "raw_scalar_columns": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              77,
+              78,
+              79
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "96f81ce43981f4f3e865554f96f704f5ff1102e12506e6ece6b2ec957a7ee79b",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91"
+          }
+        },
+        "hybrid_fixed_fourier38_curvelet38": {
+          "arm": "hybrid_fixed_fourier38_curvelet38",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "966745ea416dd0e54bdacd4f289296e066421cb96d7cd7406a23f2e88085e4f6",
+          "directional": {
+            "curvelet_directional_positions": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+              12,
+              14,
+              16,
+              18,
+              20,
+              22,
+              24,
+              26,
+              28,
+              30,
+              32,
+              34,
+              36,
+              39,
+              41,
+              43,
+              45,
+              47,
+              49,
+              51,
+              53,
+              55,
+              57,
+              59,
+              61,
+              63,
+              65,
+              67,
+              69,
+              71,
+              73,
+              75
+            ],
+            "curvelet_family": "windowed_curvelet",
+            "curvelet_width": 38,
+            "fixed_target_independent_mix": true,
+            "polar_fair_directional_positions": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+              12,
+              14,
+              16,
+              18,
+              21,
+              23,
+              25,
+              27,
+              29,
+              31,
+              33,
+              35,
+              37,
+              38,
+              40,
+              42,
+              44,
+              46,
+              48,
+              50,
+              52,
+              54,
+              56,
+              59,
+              61,
+              63,
+              65,
+              67,
+              69,
+              71,
+              73,
+              75
+            ],
+            "polar_family": "polar_directional_fourier",
+            "polar_width": 38,
+            "source_or_target_mask_used": false
+          },
+          "feature_matrix_sha256": "590f67d4e9449aa5b480df6c58ae7bbeb649bfff7cbfe58032c85be67ac8f38c",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91"
+          }
+        },
+        "polar_directional_fourier": {
+          "arm": "polar_directional_fourier",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "19e1ab66f91e9b73a5f23856d16156b86d4c8f4cfe77ec60634a801a267f8e95",
+          "directional": {
+            "family": "polar_directional_fourier",
+            "raw_scalar_columns": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              38,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              78
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "2fdcf0742fa925d710d368644c71e6aac24482dc3a67e68c46df1bf759f32f4b",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91"
+          }
+        },
+        "windowed_curvelet": {
+          "arm": "windowed_curvelet",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "7ef5fa940193012fed1a996ed6a9f7b6fdf913118b2e0f2066d4c99680a4794c",
+          "directional": {
+            "family": "windowed_curvelet",
+            "raw_scalar_columns": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              77,
+              78,
+              79
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "6e9e6a9d0151e08549236df73c6b0425684e667839e116ae01d0fff8aa06b268",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91"
+          }
+        }
+      },
+      "equal_coefficient_scalar_value_budget": 109559,
+      "equal_support_index_count_per_arm": 109559,
+      "grid_hw": [
+        384,
+        512
+      ],
+      "gt_cache_path": "/Users/adpena/Projects/pact/experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz",
+      "gt_cache_sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+      "intended_selection_metric_id": "argmax_native_vjp_fidelity_v1",
+      "n_pairs": 600,
+      "progress_schema": "genuine_frame_mask_progress.v3",
+      "runtime_and_code_custody": {
+        "code_sources": {
+          "frozen_scorer_module": {
+            "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+            "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+          },
+          "lever_b_levelset_generator": {
+            "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/lever_b_levelset_generator.py",
+            "sha256": "2a686103bc50505ba0c531681f6eda820e1b59adc1a2881919862785f6998149"
+          },
+          "localized_basis_frames": {
+            "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/localized_basis_frames.py",
+            "sha256": "8a2e8befde890f769997f5efdd917cb0eee52219c7e86393dc016604b8674697"
+          },
+          "probe": {
+            "path": "/Users/adpena/Projects/pact/tools/probe_genuine_frame_nterm_n600.py",
+            "sha256": "f0caf12699a9a4dae7b1cef2f5eda1575b6991c0b2692455466ecd9cff1ad1d1"
+          },
+          "seg_core_loader": {
+            "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/seg_core.py",
+            "sha256": "ea9accb303fb9297a10048bf0054ae6e358bc5415016aee9ac66c55fce82acd6"
+          },
+          "through_r_harness": {
+            "path": "/Users/adpena/Projects/pact/src/tac/through_r/harness.py",
+            "sha256": "c3408716251613b3b837d7739bd20c18ea8dac4756000d3bacf375976b4a1e89"
+          },
+          "through_r_resolution_chain": {
+            "path": "/Users/adpena/Projects/pact/src/tac/through_r/resolution_chain.py",
+            "sha256": "6d476b13d2130a7c9d366ceef5cd679bc356f34ccda508729dfad72b0f2934d0"
+          }
+        },
+        "dependencies": {
+          "numpy": {
+            "metadata_sha256": "5c1b93660f7925c7a3f5433faa2d2e20720b42df5338c6600a444916375da0de",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/numpy/__init__.py",
+            "module_file_sha256": "22cd1535fa14d74ef6f457cca149ffdc80875f460be313b8f895273f78bc402e",
+            "version": "1.26.4"
+          },
+          "safetensors": {
+            "metadata_sha256": "645be7b8d55e91534f991d144dc9e279581ea8dbea1a8c5b0be14e529d01e345",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/safetensors/__init__.py",
+            "module_file_sha256": "92c988289b8c225a92f25e487ad5d7a1eb7e326eec0fedfc6b75e6f04d85e32f",
+            "version": "0.8.0"
+          },
+          "scipy": {
+            "metadata_sha256": "b1cd2c784f6e003c6c71af4c5ee57f6370ee467d17b656250d9fd38cf579d7d0",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/scipy/__init__.py",
+            "module_file_sha256": "335bc6e0a9909dc7534f9569a3685a92dc8001cb8c63a6da4c239849ff02d4d0",
+            "version": "1.17.1"
+          },
+          "segmentation_models_pytorch": {
+            "metadata_sha256": "2e2be520bb242c0f78ecf960d70b209d18722a8c9f9d59c4ef0e9e2e5e04305b",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/segmentation_models_pytorch/__init__.py",
+            "module_file_sha256": "622b944ad2fab4f89e53fb84458eaa68327b41caa6140f906b19258a86f4da92",
+            "version": "0.5.0"
+          },
+          "timm": {
+            "metadata_sha256": "b6ecaedbcaea5d0d5e431983c3df8e05113a51a2dad062e51dab0500ac6f2bb4",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/timm/__init__.py",
+            "module_file_sha256": "9668df8ff48b33f846428cd7607399cf14b4f0feef157930eabf6defe932b1d3",
+            "version": "1.0.27"
+          },
+          "torch": {
+            "metadata_sha256": "a0e493588a0381cc478d848e7f7a334ef7f17e8973c70b657867a5eeadb732df",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/torch/__init__.py",
+            "module_file_sha256": "d9dfff4b75d46e4c75572200a3466b70231d05b0318e38ac1bd121789165fb49",
+            "version": "2.12.1"
+          }
+        },
+        "numpy_blas_build": {
+          "detection method": "system",
+          "found": true,
+          "include directory": "unknown",
+          "lib directory": "unknown",
+          "name": "accelerate",
+          "openblas configuration": "unknown",
+          "pc file directory": "unknown",
+          "version": "unknown"
+        },
+        "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+        "python": {
+          "executable": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+          "implementation": "CPython",
+          "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+        }
+      },
+      "schema": "genuine_frame_mask_config.v3",
+      "seed": 0,
+      "selection_metric_computed_by_probe": false,
+      "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+      "selector_formulation": "batched_full_ls_magnitude_prune_then_selected_support_refit_v2"
+    },
+    "config_sha256": "4d68a0a475c243db4c2374d37d3a12a27ad2249869a0fab4d1292d376e2ff3ec",
+    "equal_archive_bytes_claim": false,
+    "equal_coefficient_scalar_value_budget": 109559,
+    "equal_parameter_bytes_claim": false,
+    "equal_support_index_count_per_arm": 109559,
+    "families": {
+      "compact_shearlet": {
+        "decay": [
+          {
+            "budget_fraction": 0.125,
+            "coefficient_scalar_values": 13695,
+            "d_mask_argmax": 0.11530280219184028,
+            "d_mask_argmax_on_target_boundary": 0.5772600888459666,
+            "d_mask_argmax_on_target_interior": 0.1050905623469188,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04526333527957459,
+            "prediction_argmax_stream_sha256": "c2469236d9b55570c6e9c901cb954801c80d515dbf63f12aea01b062c54f23af",
+            "support_index_count": 13695,
+            "support_index_uint8_raw_bytes": 13695,
+            "support_stream_sha256": "5c432805a7018f4868178ae050b1a2d71db5922de7404e03971cf2bdf140b96c",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1472811,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 12128861,
+            "target_interior_pixels": 115413418,
+            "total_flips": 13601672,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 0.25,
+            "coefficient_scalar_values": 27390,
+            "d_mask_argmax": 0.11605059305826823,
+            "d_mask_argmax_on_target_boundary": 0.5764044741242197,
+            "d_mask_argmax_on_target_interior": 0.10587379883333843,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.042191939943434384,
+            "prediction_argmax_stream_sha256": "ef869f79c84f7998c55e7c1decde7e7838bb55a7cf32595088155f1766a7ec61",
+            "support_index_count": 27390,
+            "support_index_uint8_raw_bytes": 27390,
+            "support_stream_sha256": "21954cbfb4070199fd97732c0a185d2f9ef1be0cd8251463dfc49028590b83d4",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1470628,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 12219257,
+            "target_interior_pixels": 115413418,
+            "total_flips": 13689885,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 0.5,
+            "coefficient_scalar_values": 54780,
+            "d_mask_argmax": 0.11053274366590712,
+            "d_mask_argmax_on_target_boundary": 0.5734441177369755,
+            "d_mask_argmax_on_target_interior": 0.10029941232656328,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04067255203354622,
+            "prediction_argmax_stream_sha256": "9487bb46262d2231ec791b86e9ee48c02f9fdc2e2deef2d65e6fb6b6c46e19c9",
+            "support_index_count": 54780,
+            "support_index_uint8_raw_bytes": 54780,
+            "support_stream_sha256": "5b6ae81e353a6bf8f6049200a1b181576af20265b96012c42c28d1cb94e52bd8",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1463075,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 11575898,
+            "target_interior_pixels": 115413418,
+            "total_flips": 13038973,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 1.0,
+            "coefficient_scalar_values": 109559,
+            "d_mask_argmax": 0.11024330139160156,
+            "d_mask_argmax_on_target_boundary": 0.5753936494025591,
+            "d_mask_argmax_on_target_interior": 0.099960474266519,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04022651000455922,
+            "prediction_argmax_stream_sha256": "85ec115e8442476190e479fa7a6e5ad7b53080b028653599bb3686dd358b7c73",
+            "support_index_count": 109559,
+            "support_index_uint8_raw_bytes": 109559,
+            "support_stream_sha256": "511cc585d8565b8831d2ba27d2ab31305bca1f3e122e90f667d1204db6ce9fe0",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1468049,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 11536780,
+            "target_interior_pixels": 115413418,
+            "total_flips": 13004829,
+            "total_pixels": 117964800
+          }
+        ],
+        "dictionary_contract": {
+          "arm": "compact_shearlet",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "a8f77043832853b26fa6076c1bd52844d9bf39e1815dbc6b8ccfc6cfcf7d6648",
+          "directional": {
+            "family": "compact_shearlet",
+            "raw_scalar_columns": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              77,
+              78,
+              79
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "96f81ce43981f4f3e865554f96f704f5ff1102e12506e6ece6b2ec957a7ee79b",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91"
+          }
+        },
+        "family": "compact_shearlet",
+        "family_verdict_allowed": false,
+        "selector_formulation": "batched_full_ls_magnitude_prune_then_selected_support_refit_v2",
+        "support_digest_sha256": "511cc585d8565b8831d2ba27d2ab31305bca1f3e122e90f667d1204db6ce9fe0",
+        "verdict_scope": "mask_space_nterm_formulation"
+      },
+      "hybrid_fixed_fourier38_curvelet38": {
+        "decay": [
+          {
+            "budget_fraction": 0.125,
+            "coefficient_scalar_values": 13695,
+            "d_mask_argmax": 0.052096227010091145,
+            "d_mask_argmax_on_target_boundary": 0.5647531416306927,
+            "d_mask_argmax_on_target_interior": 0.04076319791516789,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04456107082040413,
+            "prediction_argmax_stream_sha256": "dcfe5cf9f8f8ed8d420b60c3a69d11a638aab999a1fcbe3fa612dcf0d5001065",
+            "support_index_count": 13695,
+            "support_index_uint8_raw_bytes": 13695,
+            "support_stream_sha256": "6bfe2bad106a31c6bacaebdc38b929fba62f51bcd39898d9fcf2bc0767b7102c",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1440901,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 4704620,
+            "target_interior_pixels": 115413418,
+            "total_flips": 6145521,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 0.25,
+            "coefficient_scalar_values": 27390,
+            "d_mask_argmax": 0.041628104315863716,
+            "d_mask_argmax_on_target_boundary": 0.5343021938698321,
+            "d_mask_argmax_on_target_interior": 0.030736824725180568,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04273855855556018,
+            "prediction_argmax_stream_sha256": "da70ec86b30e1e8c1d0c3943fa167dd0960183ce147e466123e8f9be26b3b06f",
+            "support_index_count": 27390,
+            "support_index_uint8_raw_bytes": 27390,
+            "support_stream_sha256": "22b7366a09a7c8c254d06b55e180b709e376a34d524b9d91790273cde60a5576",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1363209,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 3547442,
+            "target_interior_pixels": 115413418,
+            "total_flips": 4910651,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 0.5,
+            "coefficient_scalar_values": 54780,
+            "d_mask_argmax": 0.041714536878797746,
+            "d_mask_argmax_on_target_boundary": 0.5347121677584933,
+            "d_mask_argmax_on_target_interior": 0.03081610493504317,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04267057268323082,
+            "prediction_argmax_stream_sha256": "7d6c73bd28255241199d8a9d04162c1a15ee794dcf8271556f33422994cab529",
+            "support_index_count": 54780,
+            "support_index_uint8_raw_bytes": 54780,
+            "support_stream_sha256": "8fbb8cfa99390394e640cb8bb0705f98f0c3886728d7aede549f86abb79651d9",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1364255,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 3556592,
+            "target_interior_pixels": 115413418,
+            "total_flips": 4920847,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 1.0,
+            "coefficient_scalar_values": 109559,
+            "d_mask_argmax": 0.041684273613823784,
+            "d_mask_argmax_on_target_boundary": 0.5347094241473836,
+            "d_mask_argmax_on_target_interior": 0.03078523330796771,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04266000839277261,
+            "prediction_argmax_stream_sha256": "be5686e451056aca56f28fff4603cc652ed2a133adfe81696e74bb88fc030478",
+            "support_index_count": 109559,
+            "support_index_uint8_raw_bytes": 109559,
+            "support_stream_sha256": "9836cf8092cf3b3933d8ab25c02d8d83c6d71013e23198d2cf29de370e4d1a8e",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1364248,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 3553029,
+            "target_interior_pixels": 115413418,
+            "total_flips": 4917277,
+            "total_pixels": 117964800
+          }
+        ],
+        "dictionary_contract": {
+          "arm": "hybrid_fixed_fourier38_curvelet38",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "966745ea416dd0e54bdacd4f289296e066421cb96d7cd7406a23f2e88085e4f6",
+          "directional": {
+            "curvelet_directional_positions": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+              12,
+              14,
+              16,
+              18,
+              20,
+              22,
+              24,
+              26,
+              28,
+              30,
+              32,
+              34,
+              36,
+              39,
+              41,
+              43,
+              45,
+              47,
+              49,
+              51,
+              53,
+              55,
+              57,
+              59,
+              61,
+              63,
+              65,
+              67,
+              69,
+              71,
+              73,
+              75
+            ],
+            "curvelet_family": "windowed_curvelet",
+            "curvelet_width": 38,
+            "fixed_target_independent_mix": true,
+            "polar_fair_directional_positions": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+              12,
+              14,
+              16,
+              18,
+              21,
+              23,
+              25,
+              27,
+              29,
+              31,
+              33,
+              35,
+              37,
+              38,
+              40,
+              42,
+              44,
+              46,
+              48,
+              50,
+              52,
+              54,
+              56,
+              59,
+              61,
+              63,
+              65,
+              67,
+              69,
+              71,
+              73,
+              75
+            ],
+            "polar_family": "polar_directional_fourier",
+            "polar_width": 38,
+            "source_or_target_mask_used": false
+          },
+          "feature_matrix_sha256": "590f67d4e9449aa5b480df6c58ae7bbeb649bfff7cbfe58032c85be67ac8f38c",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91"
+          }
+        },
+        "family": "hybrid_fixed_fourier38_curvelet38",
+        "family_verdict_allowed": false,
+        "selector_formulation": "batched_full_ls_magnitude_prune_then_selected_support_refit_v2",
+        "support_digest_sha256": "9836cf8092cf3b3933d8ab25c02d8d83c6d71013e23198d2cf29de370e4d1a8e",
+        "verdict_scope": "mask_space_nterm_formulation"
+      },
+      "polar_directional_fourier": {
+        "decay": [
+          {
+            "budget_fraction": 0.125,
+            "coefficient_scalar_values": 13695,
+            "d_mask_argmax": 0.05273525661892361,
+            "d_mask_argmax_on_target_boundary": 0.5653908352414495,
+            "d_mask_argmax_on_target_interior": 0.04140225705818712,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04456670636236034,
+            "prediction_argmax_stream_sha256": "5584fdabfc3a5aa5cc46226ca3fc5d638d5016307f1fbc94fa9f826d8b68e8ba",
+            "support_index_count": 13695,
+            "support_index_uint8_raw_bytes": 13695,
+            "support_stream_sha256": "aaf37d441a2df006359c0726b46354a63fb889837d55799d1d64d8daa4d81499",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1442528,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 4778376,
+            "target_interior_pixels": 115413418,
+            "total_flips": 6220904,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 0.25,
+            "coefficient_scalar_values": 27390,
+            "d_mask_argmax": 0.048664686414930554,
+            "d_mask_argmax_on_target_boundary": 0.5434250927536527,
+            "d_mask_argmax_on_target_interior": 0.037727285747658906,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04071745044156501,
+            "prediction_argmax_stream_sha256": "70e3230e283866253ca9ba977d88c42f1a4ed73f1bcab2c621e0c7deb4e8d868",
+            "support_index_count": 27390,
+            "support_index_uint8_raw_bytes": 27390,
+            "support_stream_sha256": "955caf2a1a20910e983e23917a81cce9fc086c5f9d7e88b7333d12bb6f3ec452",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1386485,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 4354235,
+            "target_interior_pixels": 115413418,
+            "total_flips": 5740720,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 0.5,
+            "coefficient_scalar_values": 54780,
+            "d_mask_argmax": 0.04872350904676649,
+            "d_mask_argmax_on_target_boundary": 0.5392406938670885,
+            "d_mask_argmax_on_target_interior": 0.037879910982274174,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04049107002100465,
+            "prediction_argmax_stream_sha256": "43ecdfb0dcf39364c8e1e497a00406a8044c238ed2944304a19891f7a5044525",
+            "support_index_count": 54780,
+            "support_index_uint8_raw_bytes": 54780,
+            "support_stream_sha256": "8dbadaf4dacc67fa8a5f0c58c8949d28bd3e29aa1ae732a28bc640e58a85701b",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1375809,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 4371850,
+            "target_interior_pixels": 115413418,
+            "total_flips": 5747659,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 1.0,
+            "coefficient_scalar_values": 109559,
+            "d_mask_argmax": 0.04866945054796007,
+            "d_mask_argmax_on_target_boundary": 0.5403640066442422,
+            "d_mask_argmax_on_target_interior": 0.03779982497355723,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.04043477971666321,
+            "prediction_argmax_stream_sha256": "e7a9b23fca12bf8cf23d3ab536b127f9d1e0eb9d49fffc233d3324ae2a5809c1",
+            "support_index_count": 109559,
+            "support_index_uint8_raw_bytes": 109559,
+            "support_stream_sha256": "792e77b5d2178ae0b42d84444585cd7d25f60a337978aededdb2df41583cc155",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1378675,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 4362607,
+            "target_interior_pixels": 115413418,
+            "total_flips": 5741282,
+            "total_pixels": 117964800
+          }
+        ],
+        "dictionary_contract": {
+          "arm": "polar_directional_fourier",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "19e1ab66f91e9b73a5f23856d16156b86d4c8f4cfe77ec60634a801a267f8e95",
+          "directional": {
+            "family": "polar_directional_fourier",
+            "raw_scalar_columns": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              38,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              78
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "2fdcf0742fa925d710d368644c71e6aac24482dc3a67e68c46df1bf759f32f4b",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91"
+          }
+        },
+        "family": "polar_directional_fourier",
+        "family_verdict_allowed": false,
+        "selector_formulation": "batched_full_ls_magnitude_prune_then_selected_support_refit_v2",
+        "support_digest_sha256": "792e77b5d2178ae0b42d84444585cd7d25f60a337978aededdb2df41583cc155",
+        "verdict_scope": "mask_space_nterm_formulation"
+      },
+      "windowed_curvelet": {
+        "decay": [
+          {
+            "budget_fraction": 0.125,
+            "coefficient_scalar_values": 13695,
+            "d_mask_argmax": 0.24489429897732204,
+            "d_mask_argmax_on_target_boundary": 0.7371867482015629,
+            "d_mask_argmax_on_target_interior": 0.2340114561029637,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.06574649376619916,
+            "prediction_argmax_stream_sha256": "208e13c9b698aff31c27e2b9d4e7b1733c99f8bd2afd4a3038225f4e5afd6fe3",
+            "support_index_count": 13695,
+            "support_index_uint8_raw_bytes": 13695,
+            "support_stream_sha256": "08083d74267327c059b9374dff75a005d01d64b25de9fe16fa5a839f969b25d6",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1880845,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 27008062,
+            "target_interior_pixels": 115413418,
+            "total_flips": 28888907,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 0.25,
+            "coefficient_scalar_values": 27390,
+            "d_mask_argmax": 0.23919029235839845,
+            "d_mask_argmax_on_target_boundary": 0.7222803170987332,
+            "d_mask_argmax_on_target_interior": 0.22851088250414697,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.06556053268031045,
+            "prediction_argmax_stream_sha256": "9004189187cbe74ee16c077f6e05c2646863c2eb7165d3ba07515d3279302fe0",
+            "support_index_count": 27390,
+            "support_index_uint8_raw_bytes": 27390,
+            "support_stream_sha256": "532651ddfb16a45479408370c7e986defab6e44319ba725717f9631861b5e807",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1842813,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 26373222,
+            "target_interior_pixels": 115413418,
+            "total_flips": 28216035,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 0.5,
+            "coefficient_scalar_values": 54780,
+            "d_mask_argmax": 0.2391814253065321,
+            "d_mask_argmax_on_target_boundary": 0.7224359190430911,
+            "d_mask_argmax_on_target_interior": 0.22849837962514896,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.06555755081756472,
+            "prediction_argmax_stream_sha256": "4bb8a6a56ca7cfae5e9a2973ea3bc693d7890528b7320a738074f8dbc5c5270c",
+            "support_index_count": 54780,
+            "support_index_uint8_raw_bytes": 54780,
+            "support_stream_sha256": "aecdc323d86327e8b6233b3f9fa04718396472292a1243b9bf0f7147ad845747",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1843210,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 26371779,
+            "target_interior_pixels": 115413418,
+            "total_flips": 28214989,
+            "total_pixels": 117964800
+          },
+          {
+            "budget_fraction": 1.0,
+            "coefficient_scalar_values": 109559,
+            "d_mask_argmax": 0.23918173048231336,
+            "d_mask_argmax_on_target_boundary": 0.7224394465430892,
+            "d_mask_argmax_on_target_interior": 0.22849861356675183,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_onehot_mse": 0.06555749901683842,
+            "prediction_argmax_stream_sha256": "36d7a61fab4ecc59e0d30c0e7cc766645f76011e16fae90c755a790a35847fdb",
+            "support_index_count": 109559,
+            "support_index_uint8_raw_bytes": 109559,
+            "support_stream_sha256": "8673ec0293d8df1d31780fe932d795cd30e12eb2b09727b77f54af5bafdc3539",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_flips": 1843219,
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "target_boundary_pixels": 2551382,
+            "target_interior_flips": 26371806,
+            "target_interior_pixels": 115413418,
+            "total_flips": 28215025,
+            "total_pixels": 117964800
+          }
+        ],
+        "dictionary_contract": {
+          "arm": "windowed_curvelet",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "7ef5fa940193012fed1a996ed6a9f7b6fdf913118b2e0f2066d4c99680a4794c",
+          "directional": {
+            "family": "windowed_curvelet",
+            "raw_scalar_columns": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              77,
+              78,
+              79
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "6e9e6a9d0151e08549236df73c6b0425684e667839e116ae01d0fff8aa06b268",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91"
+          }
+        },
+        "family": "windowed_curvelet",
+        "family_verdict_allowed": false,
+        "selector_formulation": "batched_full_ls_magnitude_prune_then_selected_support_refit_v2",
+        "support_digest_sha256": "8673ec0293d8df1d31780fe932d795cd30e12eb2b09727b77f54af5bafdc3539",
+        "verdict_scope": "mask_space_nterm_formulation"
+      }
+    },
+    "grid_hw": [
+      384,
+      512
+    ],
+    "n_pairs": 600,
+    "progress_custody": {
+      "config_sha256": "4d68a0a475c243db4c2374d37d3a12a27ad2249869a0fab4d1292d376e2ff3ec",
+      "coverage_kind": "one_mask_row_per_pair",
+      "pair_coverage": "0..n_pairs-1_contiguous",
+      "path_is_repo_relative": true,
+      "progress_bytes": 4626655,
+      "progress_path": ".omx/research/genuine_curvelet_shearlet_mask_n600_progress_v3_polar_frequency_wedge_20260714.json",
+      "progress_schema": "genuine_frame_mask_progress.v3",
+      "progress_sha256": "d513c3e256b8986eef003f807f1b66060edc60d61646af41e369cbe9880ac23b",
+      "repo_relative_non_symlink_required_for_ingest": true,
+      "row_count": 600,
+      "schema": "genuine_frame_progress_custody.v1",
+      "status": "COMPLETE"
+    },
+    "progress_path": ".omx/research/genuine_curvelet_shearlet_mask_n600_progress_v3_polar_frequency_wedge_20260714.json",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "receiver_inverse_status": "UNAVAILABLE: no custodied SegNet-output-to-RGB inverse; no palette fabrication",
+    "score_claim": false,
+    "storage_preflight": {
+      "large_artifacts_written": false,
+      "required_free_bytes": 67108864,
+      "scratch_cleanup": "atomic .tmp progress files are os.replace'd; no frame cache is written",
+      "selected_free_bytes": 708700188672,
+      "selected_metadata_tier": "/Users/adpena/Projects/pact/.omx/research",
+      "status": "PASS",
+      "waterfall": [
+        {
+          "exists": true,
+          "free_bytes": 827380576256,
+          "path": "/Volumes/VertigoDataTier/pact"
+        },
+        {
+          "exists": false,
+          "free_bytes": null,
+          "path": "/Volumes/APDataStore/pact"
+        },
+        {
+          "exists": true,
+          "free_bytes": 708700188672,
+          "path": "/Users/adpena/Projects/pact/.omx/research"
+        }
+      ]
+    },
+    "surface": "MASK_SPACE_PROXY_NOT_THROUGH_R_NOT_SCORE"
+  },
+  "pointer_moved": false,
+  "receiver_preflight": {
+    "checkpoint": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_witness_ema_BEST.npz",
+    "checkpoint_epoch": 700,
+    "checkpoint_sha256": "eb2d5784975859c7a2e4e4b05cedc53ccd3c68ad6b9df3797521f3ad32b80e8d",
+    "ep700_receipt": {
+      "checkpoint_epoch": 700,
+      "checks": {
+        "best_epoch": true,
+        "best_path": true,
+        "train_best_d_seg": true,
+        "train_best_epoch": true,
+        "train_best_path": true,
+        "train_final_epoch": true,
+        "train_n_pairs": true
+      },
+      "comparison_anchor": "ep700 only; ep675=0.004244 is explicitly superseded",
+      "expected_logged_d_seg": 0.004181416829427084,
+      "expected_total_flips": 493260,
+      "expected_total_pixels": 117964800,
+      "files": {
+        "best": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_best.json",
+          "sha256": "dc4f871a946e5fa53660b97b10384452b08e1f302a9db77489e5447e7ff9bdab"
+        },
+        "launch": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+          "sha256": "335d9d02388b381c22a79ebd75a26b1083d5c4702984ba41fe50a54ba4a63ade"
+        },
+        "run_log": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/run.log",
+          "sha256": "06a3fcfce6279ba93066f818669b6e061b6a3377d681eedb6ae8a06474ff7d0e"
+        },
+        "train_result": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_train_result.json",
+          "sha256": "226ae29cb95aedea856b18daaa78fd368f7cfa98accf5863e002f9b0a085bb4d"
+        }
+      },
+      "status": "BOUND_SAVED_OFF_EP700"
+    },
+    "feature_width": 80,
+    "frame1_code_index": "2*pair_index+1",
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz",
+    "gt_cache_sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+    "render_hw": [
+      384,
+      512
+    ],
+    "segnet": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "self_orient": false,
+    "status": "READY_SAVED_OFF_EP700_RGB_RECEIVER",
+    "verdict_scope": "receiver_rgb_nterm_formulation"
+  },
+  "schema": "genuine_frame_nterm_probe.v4",
+  "score_claim": false,
+  "seed": 0,
+  "selection_metric_computed_by_probe": false,
+  "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+  "status": "COMPLETE",
+  "structural_proof": {
+    "compact_shearlet": {
+      "inflate_contract": {
+        "compiled": true,
+        "counted_state": [
+          "learned_basis_coefficients",
+          "downstream_decoder_weights",
+          "per_pair_codes"
+        ],
+        "entrypoint": "localized_basis_features_numpy",
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "generic_regenerated_state": [
+          "basis_family",
+          "basis_seed",
+          "fixed_scaling_and_parabolic_geometry",
+          "atom_generation_source"
+        ],
+        "rule118_status": "generic deterministic frame code/scalars are regenerated; all video-derived coefficients and downstream weights remain counted",
+        "source_sha256": "2946f0a7647f03223d56b7921042a58e0a934825b95da9395f43d0aff98e46ef"
+      },
+      "metadata": {
+        "atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "cone_seam_policy": "horizontal cone exclusively owns physical slopes -1 and +1; vertical extreme shears are omitted",
+        "construction": "finite cone-adapted compact shearlet-system truncation with compact derivative generator",
+        "directional_atoms": 76,
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "finite_truncation": true,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "partition_of_unity_scaling": true,
+        "proven_frame_bounds": false,
+        "rule118_contract": "family, seed, fixed atom scalars, and evaluation code are generic regenerated state; learned/video-derived coefficients are counted",
+        "scales": [
+          0,
+          2,
+          4
+        ],
+        "scaling_atoms": 4,
+        "seed": 0,
+        "tight_or_complete_claim": false,
+        "translation_count_by_scale": [
+          [
+            0,
+            6
+          ],
+          [
+            2,
+            16
+          ],
+          [
+            4,
+            54
+          ]
+        ]
+      },
+      "proof": {
+        "analytic_inverse_kernel_max_abs_error": null,
+        "angular_bandwidth_shrinks_with_scale": null,
+        "angular_half_width_by_scale": [],
+        "angular_overlap_points_by_scale": [],
+        "angular_sos_bounds_by_scale": [],
+        "atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "cone_seam_duplicate_direction_count": 0,
+        "cone_seam_owners_by_scale": [
+          [
+            0,
+            [
+              "horizontal:-1:negative_diagonal",
+              "horizontal:1:positive_diagonal"
+            ]
+          ],
+          [
+            2,
+            [
+              "horizontal:-2:negative_diagonal",
+              "horizontal:2:positive_diagonal"
+            ]
+          ],
+          [
+            4,
+            [
+              "horizontal:-4:negative_diagonal",
+              "horizontal:4:positive_diagonal"
+            ]
+          ]
+        ],
+        "cones": [
+          "horizontal",
+          "vertical"
+        ],
+        "diagnostic_grid_size": 257,
+        "directional_columns": 76,
+        "energy_core_fraction_by_scale": [],
+        "expected_parabolic_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0
+          ],
+          [
+            4,
+            4.0
+          ]
+        ],
+        "family": "compact_shearlet",
+        "far_tail_energy_ratio_by_scale": [],
+        "feature_width": 80,
+        "fft_direct_max_abs_error": null,
+        "finest_scale_nonzero_fraction": 0.01335372223652137,
+        "frequency_center_and_bands_by_scale": [],
+        "frequency_construction": null,
+        "frequency_lattice_index_radius": null,
+        "frequency_lattice_step": null,
+        "frequency_period": null,
+        "hermitian_symmetry_max_abs_error": null,
+        "inclusive_endpoint_max_abs_error": null,
+        "inverse_imaginary_max_abs": null,
+        "legacy_fourier_global_support": true,
+        "legacy_fourier_pair_envelope_max_abs_error": 8.259105754859775e-08,
+        "max_aspect_relative_error": 0.1071428571428572,
+        "max_outside_support_abs": 0.0,
+        "max_translation_lattice_residual": null,
+        "measured_support_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.032258064516129
+          ],
+          [
+            4,
+            4.428571428571429
+          ]
+        ],
+        "normal_vanishing_moment_abs": 0.0,
+        "orientation_alignment_max_abs_radians": null,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "orientation_refines_with_scale": true,
+        "passed": true,
+        "polar_factorization_max_abs_error": null,
+        "radial_annulus_by_scale": [],
+        "radial_annulus_excludes_dc": null,
+        "radial_overlap_points": null,
+        "radial_registered_points": null,
+        "radial_sos_bounds": null,
+        "scaling_columns": 4,
+        "scaling_partition_unity_max_abs_error": 0.0,
+        "shear_indices_by_scale": [
+          [
+            0,
+            [
+              -1,
+              0,
+              1
+            ]
+          ],
+          [
+            2,
+            [
+              -2,
+              -1,
+              0,
+              1,
+              2
+            ]
+          ],
+          [
+            4,
+            [
+              -4,
+              -3,
+              -2,
+              -1,
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          ]
+        ],
+        "spatial_second_moment_aspect_by_scale": [],
+        "spatially_localized": true,
+        "translation_indices_present": true,
+        "verdict_scope": "SOURCE-DERIVED/NUMERIC-STRUCTURAL: deterministic finite 80-column discrete periodized polar curvelet-system/shearlet truncation; exactness applies only to the declared discrete dictionary; no continuum-transform, frame-bound, tightness, completeness, approximation-rate, through-R, or score claim"
+      }
+    },
+    "windowed_curvelet": {
+      "inflate_contract": {
+        "compiled": true,
+        "counted_state": [
+          "learned_basis_coefficients",
+          "downstream_decoder_weights",
+          "per_pair_codes"
+        ],
+        "entrypoint": "localized_basis_features_numpy",
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "generic_regenerated_state": [
+          "basis_family",
+          "basis_seed",
+          "fixed_scaling_and_parabolic_geometry",
+          "atom_generation_source"
+        ],
+        "rule118_status": "generic deterministic frame code/scalars are regenerated; all video-derived coefficients and downstream weights remain counted",
+        "source_sha256": "2946f0a7647f03223d56b7921042a58e0a934825b95da9395f43d0aff98e46ef"
+      },
+      "metadata": {
+        "atom_spec_sha256": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91",
+        "cone_seam_policy": null,
+        "construction": "finite discrete periodized polar curvelet-system truncation from literal compact radial-times-angular wedges on a half-cycle lattice and rotated parabolic translations; exact for the declared discrete dictionary, not a continuum transform",
+        "directional_atoms": 76,
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "finite_truncation": true,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "partition_of_unity_scaling": true,
+        "proven_frame_bounds": false,
+        "rule118_contract": "family, seed, fixed atom scalars, and evaluation code are generic regenerated state; learned/video-derived coefficients are counted",
+        "scales": [
+          0,
+          2,
+          4
+        ],
+        "scaling_atoms": 4,
+        "seed": 0,
+        "tight_or_complete_claim": false,
+        "translation_count_by_scale": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            15
+          ],
+          [
+            4,
+            56
+          ]
+        ]
+      },
+      "proof": {
+        "analytic_inverse_kernel_max_abs_error": null,
+        "angular_bandwidth_shrinks_with_scale": true,
+        "angular_half_width_by_scale": [
+          [
+            0,
+            0.7853981633974483
+          ],
+          [
+            2,
+            0.39269908169872414
+          ],
+          [
+            4,
+            0.19634954084936207
+          ]
+        ],
+        "angular_overlap_points_by_scale": [
+          [
+            0,
+            250
+          ],
+          [
+            2,
+            4748
+          ],
+          [
+            4,
+            76712
+          ]
+        ],
+        "angular_sos_bounds_by_scale": [
+          [
+            0,
+            0.1267831846986356,
+            1.0
+          ],
+          [
+            2,
+            0.12505231044224363,
+            1.0
+          ],
+          [
+            4,
+            0.12499966266709084,
+            1.0
+          ]
+        ],
+        "atom_spec_sha256": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91",
+        "cone_seam_duplicate_direction_count": null,
+        "cone_seam_owners_by_scale": [],
+        "cones": [],
+        "diagnostic_grid_size": 257,
+        "directional_columns": 76,
+        "energy_core_fraction_by_scale": [
+          [
+            0,
+            0.9918797513785639
+          ],
+          [
+            2,
+            0.9928722345299077
+          ],
+          [
+            4,
+            0.9965034189928681
+          ]
+        ],
+        "expected_parabolic_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0
+          ],
+          [
+            4,
+            4.0
+          ]
+        ],
+        "family": "windowed_curvelet",
+        "far_tail_energy_ratio_by_scale": [
+          [
+            0,
+            1.4921222331908646e-05
+          ],
+          [
+            2,
+            2.658554171752939e-05
+          ],
+          [
+            4,
+            2.8298949952974704e-05
+          ]
+        ],
+        "feature_width": 80,
+        "fft_direct_max_abs_error": 5.7220458984375e-06,
+        "finest_scale_nonzero_fraction": 1.0,
+        "frequency_center_and_bands_by_scale": [
+          [
+            0,
+            3.0,
+            2.0,
+            0.7853981633974483
+          ],
+          [
+            2,
+            12.0,
+            8.0,
+            0.39269908169872414
+          ],
+          [
+            4,
+            48.0,
+            32.0,
+            0.19634954084936207
+          ]
+        ],
+        "frequency_construction": "exact inverse discrete Fourier series of literal compact polar W_j(|xi|)*V_j(wrap_pi(arg(xi)-theta_l)) wedges on xi=q/2",
+        "frequency_lattice_index_radius": 160,
+        "frequency_lattice_step": 0.5,
+        "frequency_period": 2.0,
+        "hermitian_symmetry_max_abs_error": 0.0,
+        "inclusive_endpoint_max_abs_error": 0.0,
+        "inverse_imaginary_max_abs": 6.843817556864196e-16,
+        "legacy_fourier_global_support": true,
+        "legacy_fourier_pair_envelope_max_abs_error": 8.259105754859775e-08,
+        "max_aspect_relative_error": 0.009250111971839559,
+        "max_outside_support_abs": null,
+        "max_translation_lattice_residual": 1.7763568394002505e-15,
+        "measured_support_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0091595412156495
+          ],
+          [
+            4,
+            4.037000447887358
+          ]
+        ],
+        "normal_vanishing_moment_abs": 1.265655452741759e-18,
+        "orientation_alignment_max_abs_radians": 8.881784197001252e-16,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "orientation_refines_with_scale": true,
+        "passed": true,
+        "polar_factorization_max_abs_error": 0.0,
+        "radial_annulus_by_scale": [
+          [
+            0,
+            1.0,
+            5.0
+          ],
+          [
+            2,
+            4.0,
+            20.0
+          ],
+          [
+            4,
+            16.0,
+            80.0
+          ]
+        ],
+        "radial_annulus_excludes_dc": true,
+        "radial_overlap_points": 1912,
+        "radial_registered_points": 80356,
+        "radial_sos_bounds": [
+          2.567939384542559e-25,
+          1.0
+        ],
+        "scaling_columns": 4,
+        "scaling_partition_unity_max_abs_error": 0.0,
+        "shear_indices_by_scale": [],
+        "spatial_second_moment_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0091595412156495
+          ],
+          [
+            4,
+            4.037000447887358
+          ]
+        ],
+        "spatially_localized": true,
+        "translation_indices_present": true,
+        "verdict_scope": "SOURCE-DERIVED/NUMERIC-STRUCTURAL: deterministic finite 80-column discrete periodized polar curvelet-system/shearlet truncation; exactness applies only to the declared discrete dictionary; no continuum-transform, frame-bound, tightness, completeness, approximation-rate, through-R, or score claim"
+      }
+    }
+  }
+}

@@ -1,0 +1,399 @@
+{
+  "blocker": {
+    "code": "SOURCE_POSITIVE_CONTROL_MISMATCH",
+    "detail": "measured_flips=493257,expected=493260"
+  },
+  "coefficient_accounting_caveat": "each selected atom also needs a uint8 support index (width=80), framing, and metadata; compression and exact archive bytes are unmeasured",
+  "equal_archive_bytes_claim": false,
+  "equal_coefficient_scalar_values": true,
+  "equal_parameter_bytes_claim": false,
+  "equal_support_index_count": true,
+  "git_sha": "31564c77b7fbb39df80a940b6bb8f149b60b384d",
+  "intended_selection_metric_id": "argmax_native_vjp_fidelity_v1",
+  "pointer_moved": false,
+  "receiver_preflight": {
+    "checkpoint": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_witness_ema_BEST.npz",
+    "checkpoint_epoch": 700,
+    "checkpoint_sha256": "eb2d5784975859c7a2e4e4b05cedc53ccd3c68ad6b9df3797521f3ad32b80e8d",
+    "ep700_receipt": {
+      "checkpoint_epoch": 700,
+      "checks": {
+        "best_epoch": true,
+        "best_path": true,
+        "train_best_d_seg": true,
+        "train_best_epoch": true,
+        "train_best_path": true,
+        "train_final_epoch": true,
+        "train_n_pairs": true
+      },
+      "comparison_anchor": "ep700 only; ep675=0.004244 is explicitly superseded",
+      "expected_logged_d_seg": 0.004181416829427084,
+      "expected_total_flips": 493260,
+      "expected_total_pixels": 117964800,
+      "files": {
+        "best": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_best.json",
+          "sha256": "dc4f871a946e5fa53660b97b10384452b08e1f302a9db77489e5447e7ff9bdab"
+        },
+        "launch": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+          "sha256": "335d9d02388b381c22a79ebd75a26b1083d5c4702984ba41fe50a54ba4a63ade"
+        },
+        "run_log": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/run.log",
+          "sha256": "06a3fcfce6279ba93066f818669b6e061b6a3377d681eedb6ae8a06474ff7d0e"
+        },
+        "train_result": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_train_result.json",
+          "sha256": "226ae29cb95aedea856b18daaa78fd368f7cfa98accf5863e002f9b0a085bb4d"
+        }
+      },
+      "status": "BOUND_SAVED_OFF_EP700"
+    },
+    "feature_width": 80,
+    "frame1_code_index": "2*pair_index+1",
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz",
+    "gt_cache_sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+    "render_hw": [
+      384,
+      512
+    ],
+    "segnet": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "self_orient": false,
+    "status": "READY_SAVED_OFF_EP700_RGB_RECEIVER",
+    "verdict_scope": "receiver_rgb_nterm_formulation"
+  },
+  "schema": "genuine_frame_nterm_probe.v3",
+  "score_claim": false,
+  "seed": 0,
+  "selection_metric_computed_by_probe": false,
+  "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+  "status": "BLOCKED",
+  "structural_proof": {
+    "compact_shearlet": {
+      "inflate_contract": {
+        "compiled": true,
+        "counted_state": [
+          "learned_basis_coefficients",
+          "downstream_decoder_weights",
+          "per_pair_codes"
+        ],
+        "entrypoint": "localized_basis_features_numpy",
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "generic_regenerated_state": [
+          "basis_family",
+          "basis_seed",
+          "fixed_scaling_and_parabolic_geometry",
+          "atom_generation_source"
+        ],
+        "rule118_status": "generic deterministic frame code/scalars are regenerated; all video-derived coefficients and downstream weights remain counted",
+        "source_sha256": "f497322322170099d2a9aea62e21d48d2543e2909463777c989086545202f811"
+      },
+      "metadata": {
+        "atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "cone_seam_policy": "horizontal cone exclusively owns physical slopes -1 and +1; vertical extreme shears are omitted",
+        "directional_atoms": 76,
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "finite_truncation": true,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "partition_of_unity_scaling": true,
+        "rule118_contract": "family, seed, fixed atom scalars, and evaluation code are generic regenerated state; learned/video-derived coefficients are counted",
+        "scales": [
+          0,
+          2,
+          4
+        ],
+        "scaling_atoms": 4,
+        "seed": 0,
+        "tight_or_complete_claim": false,
+        "translation_count_by_scale": [
+          [
+            0,
+            6
+          ],
+          [
+            2,
+            16
+          ],
+          [
+            4,
+            54
+          ]
+        ]
+      },
+      "proof": {
+        "atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "cone_seam_duplicate_direction_count": 0,
+        "cone_seam_owners_by_scale": [
+          [
+            0,
+            [
+              "horizontal:-1:negative_diagonal",
+              "horizontal:1:positive_diagonal"
+            ]
+          ],
+          [
+            2,
+            [
+              "horizontal:-2:negative_diagonal",
+              "horizontal:2:positive_diagonal"
+            ]
+          ],
+          [
+            4,
+            [
+              "horizontal:-4:negative_diagonal",
+              "horizontal:4:positive_diagonal"
+            ]
+          ]
+        ],
+        "cones": [
+          "horizontal",
+          "vertical"
+        ],
+        "diagnostic_grid_size": 257,
+        "directional_columns": 76,
+        "expected_parabolic_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0
+          ],
+          [
+            4,
+            4.0
+          ]
+        ],
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "finest_scale_nonzero_fraction": 0.01335372223652137,
+        "legacy_fourier_global_support": true,
+        "legacy_fourier_pair_envelope_max_abs_error": 8.259105754859775e-08,
+        "max_aspect_relative_error": 0.1071428571428572,
+        "max_outside_support_abs": 0.0,
+        "measured_support_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.032258064516129
+          ],
+          [
+            4,
+            4.428571428571429
+          ]
+        ],
+        "normal_vanishing_moment_abs": 0.0,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "orientation_refines_with_scale": true,
+        "passed": true,
+        "scaling_columns": 4,
+        "scaling_partition_unity_max_abs_error": 0.0,
+        "shear_indices_by_scale": [
+          [
+            0,
+            [
+              -1,
+              0,
+              1
+            ]
+          ],
+          [
+            2,
+            [
+              -2,
+              -1,
+              0,
+              1,
+              2
+            ]
+          ],
+          [
+            4,
+            [
+              -4,
+              -3,
+              -2,
+              -1,
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          ]
+        ],
+        "spatially_localized": true,
+        "translation_indices_present": true,
+        "verdict_scope": "SOURCE-DERIVED/NUMERIC-STRUCTURAL: deterministic finite 80-atom truncation; no tightness, completeness, approximation-rate, through-R, or score claim"
+      }
+    },
+    "windowed_curvelet": {
+      "inflate_contract": {
+        "compiled": true,
+        "counted_state": [
+          "learned_basis_coefficients",
+          "downstream_decoder_weights",
+          "per_pair_codes"
+        ],
+        "entrypoint": "localized_basis_features_numpy",
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "generic_regenerated_state": [
+          "basis_family",
+          "basis_seed",
+          "fixed_scaling_and_parabolic_geometry",
+          "atom_generation_source"
+        ],
+        "rule118_status": "generic deterministic frame code/scalars are regenerated; all video-derived coefficients and downstream weights remain counted",
+        "source_sha256": "f497322322170099d2a9aea62e21d48d2543e2909463777c989086545202f811"
+      },
+      "metadata": {
+        "atom_spec_sha256": "458848fde9ad4d84da145a8c8f385c68daf74680544face3b61850ed16a64b9d",
+        "cone_seam_policy": null,
+        "directional_atoms": 76,
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "finite_truncation": true,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "partition_of_unity_scaling": true,
+        "rule118_contract": "family, seed, fixed atom scalars, and evaluation code are generic regenerated state; learned/video-derived coefficients are counted",
+        "scales": [
+          0,
+          2,
+          4
+        ],
+        "scaling_atoms": 4,
+        "seed": 0,
+        "tight_or_complete_claim": false,
+        "translation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            16
+          ],
+          [
+            4,
+            56
+          ]
+        ]
+      },
+      "proof": {
+        "atom_spec_sha256": "458848fde9ad4d84da145a8c8f385c68daf74680544face3b61850ed16a64b9d",
+        "cone_seam_duplicate_direction_count": null,
+        "cone_seam_owners_by_scale": [],
+        "cones": [],
+        "diagnostic_grid_size": 257,
+        "directional_columns": 76,
+        "expected_parabolic_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0
+          ],
+          [
+            4,
+            4.0
+          ]
+        ],
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "finest_scale_nonzero_fraction": 0.01430755953913004,
+        "legacy_fourier_global_support": true,
+        "legacy_fourier_pair_envelope_max_abs_error": 8.259105754859775e-08,
+        "max_aspect_relative_error": 0.1071428571428572,
+        "max_outside_support_abs": 0.0,
+        "measured_support_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.032258064516129
+          ],
+          [
+            4,
+            4.428571428571429
+          ]
+        ],
+        "normal_vanishing_moment_abs": null,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "orientation_refines_with_scale": true,
+        "passed": true,
+        "scaling_columns": 4,
+        "scaling_partition_unity_max_abs_error": 0.0,
+        "shear_indices_by_scale": [],
+        "spatially_localized": true,
+        "translation_indices_present": true,
+        "verdict_scope": "SOURCE-DERIVED/NUMERIC-STRUCTURAL: deterministic finite 80-atom truncation; no tightness, completeness, approximation-rate, through-R, or score claim"
+      }
+    }
+  }
+}

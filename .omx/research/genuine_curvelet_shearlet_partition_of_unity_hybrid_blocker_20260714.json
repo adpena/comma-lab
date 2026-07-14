@@ -1,0 +1,157 @@
+{
+  "schema": "genuine_curvelet_shearlet.partition_of_unity_hybrid_blocker.v1",
+  "utc": "2026-07-14T16:52:33Z",
+  "status": "BLOCKED_FAIL_CLOSED",
+  "research_only": false,
+  "score_claim": false,
+  "pointer_delta": "UNCHANGED",
+  "canonical_metric_id": "argmax_native_vjp_fidelity_v1",
+  "gram_status": "NO-VERDICT_DATA_CUSTODY",
+  "requested_formulation": {
+    "name": "fourier_interior_curvelet_boundary_annulus_partition_of_unity",
+    "claim": "Use a decoder-owned boundary field to route Fourier on the interior and localized curvelet atoms on a boundary annulus."
+  },
+  "actual_measured_fourth_arm": {
+    "name": "fixed_target_independent_column_mix",
+    "columns": {
+      "common_q1": 4,
+      "polar_fourier": 38,
+      "windowed_curvelet": 38,
+      "total": 80
+    },
+    "column_expression": "4Q1 + 38 Fourier + 38 curvelet",
+    "target_independent": true,
+    "is_partition_of_unity": false,
+    "has_decoder_boundary_annulus": false,
+    "has_target_derived_routing": false,
+    "interpretation": "Measured fourth arm is a fixed target-independent 4Q1 + 38 polar-Fourier + 38 windowed-curvelet comparison dictionary only; it is not a decoder-boundary Fourier-interior/curvelet-boundary-annulus partition-of-unity hybrid."
+  },
+  "blockers": [
+    {
+      "id": "missing_counted_self_consistent_decoder_phi_annulus_state",
+      "detail": "The direct N-term receiver representation has no counted and receiver-reconstructible decoder phi/annulus state from which a partition of unity can be formed."
+    },
+    {
+      "id": "target_derived_gt_mask_is_oracle",
+      "detail": "A ground-truth or target-derived segmentation mask would choose the annulus using unavailable receiver-side information and is inadmissible."
+    },
+    {
+      "id": "source_phi_mask_invalidated",
+      "detail": "The v1 source-phi mask does not provide valid current custody and cannot be reused as the routing surface."
+    },
+    {
+      "id": "equal_value_is_not_equal_byte",
+      "detail": "The current 109559-value comparison does not establish exact archive-byte equality, including support/routing/state payload costs."
+    }
+  ],
+  "verdict_scope": {
+    "level": "FORMULATION",
+    "statement": "Only the literal decoder-boundary partition-of-unity formulation is blocked for missing receiver/state custody. The localized curvelet and compact shearlet frame families remain OPEN."
+  },
+  "receiver_custody": {
+    "authority_path": "CPU-torch frozen SegNet through real R with receiver_batch_size=32 and deployed-int8 parameter-map custody",
+    "fresh_complete_receipts": {
+      "receiver": {
+        "path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_receipt_v4_polar_frequency_wedge_deploy_int8_batch32_20260714.json",
+        "sha256": "031a1569c600bf5d1a3551a4da668db67bb80380d0678f964ca5476e0b293c33",
+        "progress_path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_progress_v4_polar_frequency_wedge_deploy_int8_batch32_20260714.json",
+        "progress_sha256": "ae281589cadf57c3fbbbcbe50fe3d1c4f3f10d8706abfd67e403369e0c47daec",
+        "receipt_schema": "genuine_frame_nterm_probe.v4",
+        "progress_schema": "genuine_frame_receiver_progress.v4",
+        "status": "COMPLETE",
+        "selection_metric_id": "argmax_native_vjp_fidelity_v1",
+        "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+        "equal_scalar_values": 109559,
+        "equal_support_index_count": 109559,
+        "equal_archive_bytes": false,
+        "score_claim": false,
+        "pointer_moved": false
+      },
+      "mask_proxy": {
+        "path": ".omx/research/genuine_curvelet_shearlet_mask_n600_receipt_v3_polar_frequency_wedge_20260714.json",
+        "sha256": "72c0c1f736e68267d346885792901d64f0c7c3ff83952e4a7a41831330587aa0",
+        "progress_path": ".omx/research/genuine_curvelet_shearlet_mask_n600_progress_v3_polar_frequency_wedge_20260714.json",
+        "progress_sha256": "d513c3e256b8986eef003f807f1b66060edc60d61646af41e369cbe9880ac23b",
+        "receipt_schema": "genuine_frame_nterm_probe.v4",
+        "progress_schema": "genuine_frame_mask_progress.v3",
+        "status": "COMPLETE",
+        "selection_metric_id": "argmax_native_vjp_fidelity_v1",
+        "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+        "equal_scalar_values": 109559,
+        "equal_support_index_count": 109559,
+        "equal_archive_bytes": false,
+        "score_claim": false,
+        "pointer_moved": false
+      },
+      "structural_proof": {
+        "path": ".omx/research/genuine_curvelet_shearlet_structural_proof_v2_polar_frequency_wedge_20260714.json",
+        "sha256": "677a2252c43c1272ec0e2e83d65ce1b82d23b8ddb089d73a111a5f0b26d46d25",
+        "status": "COMPLETE",
+        "selection_metric_status": "NO-VERDICT_DATA_CUSTODY"
+      },
+      "equation_source": {
+        "path": "src/tac/canonical_equations/optimal_basis_selection_20260714.py",
+        "sha256": "3eb00fba7f68cc9b37be5cbf48951d828c8af50b2eb006228800c5182fa3bcc0",
+        "status": "CURRENT_STRICT_ADVISORY_INGEST_SOURCE_REGISTRY_REFINED",
+        "equation_registry_append": {
+          "anchor_row_line": 721,
+          "anchor_row_sha256": "9718486df60569cc9906fc114559a9ed9dc919a11561535658f594858642227b",
+          "domain_row_line": 722,
+          "domain_row_sha256": "93b309254e296aea79f892d74508538e19ce6cce5f31d4d07063b90cbc86041b",
+          "anchor_id": "genuine_polar_curvelet_compact_shearlet_n600_advisory_20260714"
+        },
+        "probe_outcome": {
+          "row_line": 643,
+          "row_sha256": "ed118c0e7f1b355b1fdd4efb88c53c9662ae98b8b7baa030d59d744c8c412ae3",
+          "verdict": "PARTIAL",
+          "authority": "advisory"
+        }
+      },
+      "probe": {
+        "path": "tools/probe_genuine_frame_nterm_n600.py",
+        "sha256": "f0caf12699a9a4dae7b1cef2f5eda1575b6991c0b2692455466ecd9cff1ad1d1"
+      },
+      "basis_source_and_semantics": {
+        "embedded_source_sha256": "2c855662e7c6ef47bdc70b3d4ae879084855f06b0e8a4e5dd35cbba7736c5220",
+        "curvelet_atom_sha256": "b4ff750267aab9298f1e5a09c0f05e1f398ccea42dd89c5b4f8c61cd9d3fde91",
+        "curvelet_semantic_sha256": "f587564eba26dbb50b81418565b4b1e685b298c14c272a716bc607b9d8b7f0d5",
+        "shearlet_atom_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "shearlet_semantic_sha256": "6566acbbfd4ec9a5b8fa797730b6adb72d6b14145aa82f0f6ea33f388c65d6ad"
+      }
+    },
+    "current_receipt_schemas": {
+      "receiver_config": "genuine_frame_receiver_config.v4",
+      "receiver_progress": "genuine_frame_receiver_progress.v4",
+      "mask_progress": "genuine_frame_mask_progress.v3"
+    },
+    "invalidated_paths": [
+      {
+        "path": ".omx/research/genuine_curvelet_shearlet_receiver_fp32_shadow_invalidation_20260714.json",
+        "status": "INVALID_FOR_RANKING_NOT_RESUMABLE_NOT_INGESTIBLE",
+        "reason": "The v2 path rendered raw fp32 EMA-shadow parameters instead of the deployed int8 dequantization map."
+      },
+      {
+        "path": ".omx/research/genuine_curvelet_shearlet_receiver_batch8_geometry_invalidation_20260714.json",
+        "status": "INVALID_FOR_RANKING_NOT_RESUMABLE_NOT_INGESTIBLE",
+        "reason": "The v3 path used correct deploy-int8 parameters but receiver_batch_size=8; its 493257-flip source control differs from the historical batch-32 authority's 493260 flips."
+      },
+      {
+        "path": ".omx/research/genuine_curvelet_spatial_window_dictionary_invalidation_20260714.json",
+        "receipt_sha256": "fdcf184a81cc7f00ba3c1f3b2f82ad9e73cdbb0bba64c213e31652fd3c5c26b9",
+        "status": "ROUND1_FAKE_CURVELET_FOUR_ARM_INVALIDATED",
+        "reason": "Round-1 windowed-curvelet/four-arm artifacts were not the explicit inverse-frequency-wedge construction and lacked complete batch32/kernel/progress custody; old proof, receiver, mask, and ingest surfaces are invalid for genuine-family ranking."
+      }
+    ]
+  },
+  "required_next_artifact": {
+    "name": "optimal_counted_self_consistent_phi_annulus_representation",
+    "requirements": [
+      "phi and annulus state are deterministic, counted, and reconstructible by inflate/receiver",
+      "routing is target-independent and does not use a GT mask",
+      "partition-of-unity identity is proved on the receiver surface",
+      "equal-value and exact equal-byte accounting include phi, routing, supports, and coefficients",
+      "rerun all 600 pairs through real R and frozen CPU-torch SegNet with batch-32/deploy-int8 custody"
+    ]
+  },
+    "admission": "No PoU rank, frame-family verdict, launch decision, or pointer update may use the measured fixed target-independent 4Q1 + 38 Fourier + 38 curvelet column mix as if it were a decoder-boundary PoU hybrid. The PoU formulation remains BLOCKED_FAIL_CLOSED; score and pointer remain unchanged, while localized curvelet and compact shearlet families remain OPEN."
+}

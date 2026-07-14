@@ -1,0 +1,373 @@
+{
+  "argv": [
+    "--rate-only",
+    "--allow-local-storage",
+    "--work-dir",
+    "experiments/results/appearance_task_rank_n600_task503_20260714",
+    "--receipt",
+    ".omx/research/recursive_fractal_optimal_representation_v9_rate_only_20260714.json",
+    "--requested-free-bytes",
+    "104857600"
+  ],
+  "custody_verdicts": {
+    "canonical_M_selection": "NO_VERDICT_DATA_CUSTODY",
+    "decision_carrier_bundle": "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+  },
+  "full_run_contract": {
+    "atomic_per_coordinate_resume": true,
+    "axis": "[macOS-CPU-torch advisory; real-n600; no training; realized through R]",
+    "central_realized_secants_not_Jacobian": true,
+    "frozen_CPU_torch_SegNet_PoseNet_first6": true,
+    "no_retained_frame_or_logit_bulk": true,
+    "pairs": "exactly 0..599",
+    "rounded_clamped_R": true,
+    "score_claim": false
+  },
+  "global_status": "RATE_DIAGNOSTIC_ONLY_NO_BUNDLE_ADMISSION",
+  "gt_keys": [
+    "gt_f0",
+    "gt_f1",
+    "gt_poses",
+    "lstars",
+    "margins",
+    "n_pairs"
+  ],
+  "input_custody": {
+    "checkpoint": {
+      "bytes": 380136,
+      "path": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_ckpt_stageOctave1_ep251.npz",
+      "sha256": "c59cdec6eec16677c0a2eb5667979dd1c8f883bcd1cf5532302d67acd633c758",
+      "sha256_verified_this_run": true
+    },
+    "gt_cache": {
+      "bytes": 5078017610,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "sha256_verified_this_run": false
+    },
+    "levelset_byte_close_source": {
+      "bytes": 219149,
+      "path": "tools/levelset_byte_close_and_eval.py",
+      "sha256": "25d93537929f314df0d0a2667d461bbd9696e0d3da733e4862e7ef095c445d2f",
+      "sha256_verified_this_run": true
+    },
+    "posenet": {
+      "bytes": 55835560,
+      "path": "upstream/models/posenet.safetensors",
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+      "sha256_verified_this_run": true
+    },
+    "probe_source": {
+      "bytes": 62995,
+      "path": "tools/probe_appearance_task_rank_n600.py",
+      "sha256": "28bd4f2ddc17229ca6f42b3e76bf67b7405a7cf8c59a49e070d4247abe672494",
+      "sha256_verified_this_run": true
+    },
+    "realized_through_R_trainer_source": {
+      "bytes": 193326,
+      "path": "experiments/train_witness_realized_through_R_mlx.py",
+      "sha256": "788a51ef3d50c244e1d441e210c7a0213834705727bc73e43e63bb2430b08ac6",
+      "sha256_verified_this_run": true
+    },
+    "segnet": {
+      "bytes": 38502892,
+      "path": "upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+      "sha256_verified_this_run": true
+    },
+    "upstream_modules_source": {
+      "bytes": 8322,
+      "path": "upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "sha256_verified_this_run": true
+    }
+  },
+  "metric_id": "argmax_native_vjp_fidelity_v1",
+  "n_pairs": 600,
+  "preflight_only": false,
+  "rate": {
+    "achievable_savings_bytes": null,
+    "alternate_encoder_present": false,
+    "alternate_payload_bytes": null,
+    "baseline_checkpoint_file_bytes": 380136,
+    "baseline_current_receiver_0bin": {
+      "accounting_matches_canonical": true,
+      "archive_zip_bytes": null,
+      "archive_zip_status": "NOT_ASSEMBLED_RATE_ONLY",
+      "base_int8_brotli_bytes": 44661,
+      "canonical_quantize_blob_bytes": 63269,
+      "code_int8_brotli_bytes": 18608,
+      "cross_tensor_codec": {
+        "active": false,
+        "base_permutation": null,
+        "code_transform": null,
+        "quantized_state_lossless_by_construction": true
+      },
+      "exactness_scope": "deterministic current encoder output from current checkpoint",
+      "lane_band_counted_bytes": 0,
+      "magic_and_prefixes_bytes": 22,
+      "manifest_bytes": 1881,
+      "n_params": 83975,
+      "pose_carrier_counted_bytes": 0,
+      "pose_sidecar_bytes": 0,
+      "pre_existing_reference_blob_match": null,
+      "rate_score_units_per_byte": 6.658589531221714e-07,
+      "receiver": "current_levelset_receiver",
+      "reconstruction_exact": true,
+      "reference_blob_comparison": false,
+      "sha256": "0196e921881eac0670bda29e7d910b0ce95c232106ae710e320cbf5fb07917f5",
+      "total_0bin_bytes": 65172
+    },
+    "baseline_parameter_groups_uncompressed": {
+      "code": {
+        "bytes": 91200,
+        "values": 22800
+      },
+      "film.bias": {
+        "bytes": 3072,
+        "values": 768
+      },
+      "film.weight": {
+        "bytes": 58368,
+        "values": 14592
+      },
+      "hidden.0.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "hidden.0.weight": {
+        "bytes": 36864,
+        "values": 9216
+      },
+      "hidden.1.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "hidden.1.weight": {
+        "bytes": 36864,
+        "values": 9216
+      },
+      "hidden.2.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "hidden.2.weight": {
+        "bytes": 36864,
+        "values": 9216
+      },
+      "hidden.3.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "hidden.3.weight": {
+        "bytes": 36864,
+        "values": 9216
+      },
+      "in_proj.bias": {
+        "bytes": 384,
+        "values": 96
+      },
+      "in_proj.weight": {
+        "bytes": 30720,
+        "values": 7680
+      },
+      "out_sdf.bias": {
+        "bytes": 20,
+        "values": 5
+      },
+      "out_sdf.weight": {
+        "bytes": 1920,
+        "values": 480
+      },
+      "out_tex.bias": {
+        "bytes": 12,
+        "values": 3
+      },
+      "out_tex.weight": {
+        "bytes": 1152,
+        "values": 288
+      },
+      "palette": {
+        "bytes": 60,
+        "values": 15
+      },
+      "pose_carrier.dxi": {
+        "bytes": 14400,
+        "values": 3600
+      },
+      "pose_carrier.xi_stored": {
+        "bytes": 14400,
+        "values": 3600
+      }
+    },
+    "diagnostic_zero_group_recompression": {
+      "code": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 18595,
+        "baseline_minus_zeroed_rate_score_units": 0.012381647233306776,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "code"
+        ],
+        "raw_parameter_bytes": 91200,
+        "zero_blob_sha256": "6469ffe5a130b1a35412b5cc6b1ed91e3af0c36067f1c6d4012ef8887761426f",
+        "zeroed_0bin_bytes": 46577
+      },
+      "code_plus_film": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 28494,
+        "baseline_minus_zeroed_rate_score_units": 0.01897298501026315,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "code",
+          "film.weight",
+          "film.bias"
+        ],
+        "raw_parameter_bytes": 152640,
+        "zero_blob_sha256": "48883bf71a082e45e47277a6009ee02279ce496b8f8788605fc1286708a93cc9",
+        "zeroed_0bin_bytes": 36678
+      },
+      "film": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 9899,
+        "baseline_minus_zeroed_rate_score_units": 0.006591337776956374,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "film.weight",
+          "film.bias"
+        ],
+        "raw_parameter_bytes": 61440,
+        "zero_blob_sha256": "ce045697328fa360f25618029dde03b1b4bbb3508d99b68a097688f0dec9b4c2",
+        "zeroed_0bin_bytes": 55273
+      },
+      "out_tex": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 321,
+        "baseline_minus_zeroed_rate_score_units": 0.000213740723952217,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "out_tex.weight",
+          "out_tex.bias"
+        ],
+        "raw_parameter_bytes": 1164,
+        "zero_blob_sha256": "e82a0274134be4ddbc5b262d73b52cbdeb35f0b951c14e3d61aea8ee13868bdd",
+        "zeroed_0bin_bytes": 64851
+      },
+      "palette": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 64,
+        "baseline_minus_zeroed_rate_score_units": 4.261497299981897e-05,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "palette"
+        ],
+        "raw_parameter_bytes": 60,
+        "zero_blob_sha256": "de0040fe2b6e1cb4a571e1b274a6815322b9988e9d61db74a902b5d9c1e2a437",
+        "zeroed_0bin_bytes": 65108
+      },
+      "palette_out_tex_code": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 18948,
+        "baseline_minus_zeroed_rate_score_units": 0.012616695443758902,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "palette",
+          "out_tex.weight",
+          "out_tex.bias",
+          "code"
+        ],
+        "raw_parameter_bytes": 92424,
+        "zero_blob_sha256": "8606bf7b24b07ff4e9d406fa0d5c95e5f08df054ed512c6a8b9583c6fcd5453e",
+        "zeroed_0bin_bytes": 46224
+      },
+      "palette_plus_out_tex": {
+        "achievable_savings_bytes": null,
+        "achievable_savings_status": "NO_VERDICT_BEHAVIOR_NOT_PRESERVED",
+        "admissible_alternate_payload": false,
+        "baseline_minus_zeroed_0bin_bytes": 353,
+        "baseline_minus_zeroed_rate_score_units": 0.00023504821045212647,
+        "behavior_preserved": false,
+        "interpretation": "diagnostic current-receiver rate locus; not achievable savings",
+        "keys": [
+          "palette",
+          "out_tex.weight",
+          "out_tex.bias"
+        ],
+        "raw_parameter_bytes": 1224,
+        "zero_blob_sha256": "e97f06c365ea9b82c11b76110b2eff0f11b2696deccea9534cfd9b360a2733cc",
+        "zeroed_0bin_bytes": 64819
+      }
+    },
+    "palette15_values": 15,
+    "reason": "secant perturbations are not encoded alternate payloads; no real encoder/receiver parseback or exact alternate archive bytes exist",
+    "receiver_parseback": false,
+    "reference_blob_comparison": false,
+    "status": "INCOMPLETE_NO_ALTERNATE_ENCODER",
+    "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+    "zero_group_diagnostics_preserve_behavior": false
+  },
+  "rate_only": true,
+  "receiver_rate_custody": {
+    "achievable_savings_bytes": null,
+    "alternate_encoder_present": false,
+    "alternate_payload_bytes": null,
+    "alternate_receiver_parseback": false,
+    "bundle_admission_valid": false,
+    "current_receiver_baseline_0bin_reconstructed_exactly": true,
+    "diagnostic_zero_group_count": 7,
+    "diagnostic_zero_groups_preserve_behavior": false,
+    "reason": "zero-group recompressions are non-behavior-preserving diagnostics; no alternate encoder, receiver parse-back, or exact alternate payload bytes exist",
+    "status": "INCOMPLETE_NO_ALTERNATE_ENCODER",
+    "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+  },
+  "schema": "appearance_task_rank_n600.v1",
+  "schema_version": "appearance_task_rank_n600.v1.preflight",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "storage": {
+    "certify_or_block": true,
+    "requested_free_bytes": 104857600,
+    "selected_waterfall_root": "/Users/adpena/Projects/pact/experiments/results",
+    "selected_work_dir": "/Users/adpena/Projects/pact/experiments/results/appearance_task_rank_n600_task503_20260714",
+    "success_only_scratch_cleanup": "no scratch is allocated by this probe",
+    "waterfall": [
+      {
+        "exists": true,
+        "free_bytes": 827380576256,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "writable": false
+      },
+      {
+        "exists": false,
+        "free_bytes": 0,
+        "root": "/Volumes/APDataStore/pact",
+        "writable": false
+      },
+      {
+        "exists": true,
+        "free_bytes": 695093903360,
+        "root": "/Users/adpena/Projects/pact/experiments/results",
+        "writable": true
+      }
+    ]
+  },
+  "written_at_utc": "2026-07-14T14:15:13.017734Z"
+}

@@ -1,0 +1,1773 @@
+{
+  "coefficient_accounting_caveat": "each selected atom also needs a uint8 support index (width=80), framing, and metadata; compression and exact archive bytes are unmeasured",
+  "equal_archive_bytes_claim": false,
+  "equal_coefficient_scalar_values": true,
+  "equal_parameter_bytes_claim": false,
+  "equal_support_index_count": true,
+  "git_sha": "7fb1b00eb1409cfd0930da1a77fa2d68956597b0",
+  "intended_selection_metric_id": "argmax_native_vjp_fidelity_v1",
+  "pointer_moved": false,
+  "receiver_measurement": {
+    "authority_label": "[macOS-CPU advisory . REALIZED-through-R CPU-SegNet . NON-PROMOTABLE]",
+    "budget_fractions": [
+      0.125,
+      0.25,
+      0.5,
+      1.0
+    ],
+    "config": {
+      "batch_size": 32,
+      "budget_fractions": [
+        0.125,
+        0.25,
+        0.5,
+        1.0
+      ],
+      "checkpoint_epoch": 700,
+      "checkpoint_sha256": "eb2d5784975859c7a2e4e4b05cedc53ccd3c68ad6b9df3797521f3ad32b80e8d",
+      "dictionary_contracts": {
+        "compact_shearlet": {
+          "arm": "compact_shearlet",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "225429b81486238881d4fb30fb9b322834ce5b8d34623c47d2d629adeae636b6",
+          "directional": {
+            "family": "compact_shearlet",
+            "raw_scalar_columns": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              77,
+              78,
+              79
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "96f81ce43981f4f3e865554f96f704f5ff1102e12506e6ece6b2ec957a7ee79b",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "458848fde9ad4d84da145a8c8f385c68daf74680544face3b61850ed16a64b9d"
+          }
+        },
+        "hybrid_fixed_fourier38_curvelet38": {
+          "arm": "hybrid_fixed_fourier38_curvelet38",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "635ec523bcbc1514df863ef3030f497be92b91506725920ea7c7ddd5bfa87632",
+          "directional": {
+            "curvelet_directional_positions": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+              12,
+              14,
+              16,
+              18,
+              20,
+              22,
+              24,
+              26,
+              28,
+              30,
+              32,
+              34,
+              36,
+              39,
+              41,
+              43,
+              45,
+              47,
+              49,
+              51,
+              53,
+              55,
+              57,
+              59,
+              61,
+              63,
+              65,
+              67,
+              69,
+              71,
+              73,
+              75
+            ],
+            "curvelet_family": "windowed_curvelet",
+            "curvelet_width": 38,
+            "fixed_target_independent_mix": true,
+            "polar_fair_directional_positions": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+              12,
+              14,
+              16,
+              18,
+              21,
+              23,
+              25,
+              27,
+              29,
+              31,
+              33,
+              35,
+              37,
+              38,
+              40,
+              42,
+              44,
+              46,
+              48,
+              50,
+              52,
+              54,
+              56,
+              59,
+              61,
+              63,
+              65,
+              67,
+              69,
+              71,
+              73,
+              75
+            ],
+            "polar_family": "polar_directional_fourier",
+            "polar_width": 38,
+            "source_or_target_mask_used": false
+          },
+          "feature_matrix_sha256": "26f99db2b5056746dceb0d958e71b498d47cbf78968c727cbad8b004059755b9",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "458848fde9ad4d84da145a8c8f385c68daf74680544face3b61850ed16a64b9d"
+          }
+        },
+        "polar_directional_fourier": {
+          "arm": "polar_directional_fourier",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "9d412101e868dd304dafd124bf38c3c88afedb8e4f847815212dd939a5fe5ba6",
+          "directional": {
+            "family": "polar_directional_fourier",
+            "raw_scalar_columns": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              38,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              78
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "2fdcf0742fa925d710d368644c71e6aac24482dc3a67e68c46df1bf759f32f4b",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "458848fde9ad4d84da145a8c8f385c68daf74680544face3b61850ed16a64b9d"
+          }
+        },
+        "windowed_curvelet": {
+          "arm": "windowed_curvelet",
+          "common_coarse": {
+            "columns": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "family": "windowed_curvelet",
+            "role": "identical_common_Q1_coarse_DC_subspace",
+            "width": 4
+          },
+          "dictionary_spec_sha256": "d182083f4c988a6d7ebef9ccb5232c922499ad62efc647d0374a7a2b0faf6aa3",
+          "directional": {
+            "family": "windowed_curvelet",
+            "raw_scalar_columns": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76,
+              77,
+              78,
+              79
+            ],
+            "width": 76
+          },
+          "feature_matrix_sha256": "0c8251bf92c380f6ece2d58e7eff738084871011edd5a067239e69f00a330c42",
+          "feature_width": 80,
+          "schema": "genuine_frame_fair_dictionary.v2",
+          "seed": 0,
+          "source_atom_spec_sha256": {
+            "compact_shearlet": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+            "polar_directional_fourier": "2d82acd5d6c351185684b7e6029f9356e0af9d9f9e9b73d950417f17547d4d85",
+            "windowed_curvelet": "458848fde9ad4d84da145a8c8f385c68daf74680544face3b61850ed16a64b9d"
+          }
+        }
+      },
+      "ep700_receipt_files": {
+        "best": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_best.json",
+          "sha256": "dc4f871a946e5fa53660b97b10384452b08e1f302a9db77489e5447e7ff9bdab"
+        },
+        "launch": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+          "sha256": "335d9d02388b381c22a79ebd75a26b1083d5c4702984ba41fe50a54ba4a63ade"
+        },
+        "run_log": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/run.log",
+          "sha256": "06a3fcfce6279ba93066f818669b6e061b6a3377d681eedb6ae8a06474ff7d0e"
+        },
+        "train_result": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_train_result.json",
+          "sha256": "226ae29cb95aedea856b18daaa78fd368f7cfa98accf5863e002f9b0a085bb4d"
+        }
+      },
+      "equal_archive_bytes_claim": false,
+      "equal_coefficient_scalar_value_budget": 109559,
+      "equal_parameter_bytes_claim": false,
+      "equal_support_index_count_per_arm": 109559,
+      "gt_cache_sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+      "intended_selection_metric_id": "argmax_native_vjp_fidelity_v1",
+      "invalidated_predecessor_schemas": [
+        "genuine_frame_receiver_progress.v1",
+        "genuine_frame_receiver_progress.v2"
+      ],
+      "legacy_source_feature_matrix_sha256": "16e8ca3bddd8fc631efb4721c0363d6306e298708971f29d2b568d581e1d005a",
+      "n_pairs": 600,
+      "predecessor_invalidation_reason": "FP32_SHADOW_NOT_DEPLOY_INT8_RECEIVER",
+      "progress_schema": "genuine_frame_receiver_progress.v3",
+      "receiver_parameter_custody": {
+        "candidate_rgb_fit_target_interpretation": "same_deploy_source_rgb_before_generic_frame_coefficient_fit",
+        "changed_parameter_names": [
+          "code",
+          "film.bias",
+          "film.weight",
+          "hidden.0.bias",
+          "hidden.0.weight",
+          "hidden.1.bias",
+          "hidden.1.weight",
+          "hidden.2.bias",
+          "hidden.2.weight",
+          "hidden.3.bias",
+          "hidden.3.weight",
+          "in_proj.bias",
+          "in_proj.weight",
+          "out_sdf.bias",
+          "out_sdf.weight",
+          "out_tex.bias",
+          "out_tex.weight",
+          "palette"
+        ],
+        "changed_parameter_scalar_value_count": 109545,
+        "changed_parameter_tensor_count": 18,
+        "checkpoint_payload_interpretation": "fp32_ema_shadow_not_receiver_authority",
+        "deploy_int8_parameter_map_sha256": "2f5e2b6de2d48342e377897bb6e0f5c5c0e9b94fd328b7b6991bc218e4ec970d",
+        "generic_frame_coefficient_accounting_unchanged": true,
+        "interpretation": "ema_fp32_shadow_int8_symmetric_dequant_receiver_v1",
+        "raw_fp32_shadow_parameter_map_sha256": "71ecad3160b78bc72ba3e4666cec312eda0481e7510d44e3ba6010e75e7575ab",
+        "receiver_parameter_interpretation": "int8_dequant_deploy_authority",
+        "roundtrip_apply_count_after_checkpoint_load": 1,
+        "roundtrip_callable": "tac.boundary_math.lever_b_levelset_generator.int8_dequant_params",
+        "schema": "genuine_frame_receiver_parameter_custody.v1",
+        "source_rgb_target_interpretation": "rendered_from_int8_dequant_deploy_params"
+      },
+      "runtime_and_code_custody": {
+        "code_sources": {
+          "frozen_scorer_module": {
+            "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+            "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+          },
+          "lever_b_levelset_generator": {
+            "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/lever_b_levelset_generator.py",
+            "sha256": "2a686103bc50505ba0c531681f6eda820e1b59adc1a2881919862785f6998149"
+          },
+          "localized_basis_frames": {
+            "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/localized_basis_frames.py",
+            "sha256": "e1d41c158f24a5fa33f85f349e3c4d784004be5ecc95a0ffe75659e14e452844"
+          },
+          "probe": {
+            "path": "/Users/adpena/Projects/pact/tools/probe_genuine_frame_nterm_n600.py",
+            "sha256": "3caf346949384a70d51b079b0c839bf7cb9b84c9f265da9da4b72d35167d9418"
+          },
+          "seg_core_loader": {
+            "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/seg_core.py",
+            "sha256": "ea9accb303fb9297a10048bf0054ae6e358bc5415016aee9ac66c55fce82acd6"
+          },
+          "through_r_harness": {
+            "path": "/Users/adpena/Projects/pact/src/tac/through_r/harness.py",
+            "sha256": "c3408716251613b3b837d7739bd20c18ea8dac4756000d3bacf375976b4a1e89"
+          },
+          "through_r_resolution_chain": {
+            "path": "/Users/adpena/Projects/pact/src/tac/through_r/resolution_chain.py",
+            "sha256": "6d476b13d2130a7c9d366ceef5cd679bc356f34ccda508729dfad72b0f2934d0"
+          }
+        },
+        "dependencies": {
+          "numpy": {
+            "metadata_sha256": "5c1b93660f7925c7a3f5433faa2d2e20720b42df5338c6600a444916375da0de",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/numpy/__init__.py",
+            "module_file_sha256": "22cd1535fa14d74ef6f457cca149ffdc80875f460be313b8f895273f78bc402e",
+            "version": "1.26.4"
+          },
+          "safetensors": {
+            "metadata_sha256": "645be7b8d55e91534f991d144dc9e279581ea8dbea1a8c5b0be14e529d01e345",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/safetensors/__init__.py",
+            "module_file_sha256": "92c988289b8c225a92f25e487ad5d7a1eb7e326eec0fedfc6b75e6f04d85e32f",
+            "version": "0.8.0"
+          },
+          "scipy": {
+            "metadata_sha256": "b1cd2c784f6e003c6c71af4c5ee57f6370ee467d17b656250d9fd38cf579d7d0",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/scipy/__init__.py",
+            "module_file_sha256": "335bc6e0a9909dc7534f9569a3685a92dc8001cb8c63a6da4c239849ff02d4d0",
+            "version": "1.17.1"
+          },
+          "segmentation_models_pytorch": {
+            "metadata_sha256": "2e2be520bb242c0f78ecf960d70b209d18722a8c9f9d59c4ef0e9e2e5e04305b",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/segmentation_models_pytorch/__init__.py",
+            "module_file_sha256": "622b944ad2fab4f89e53fb84458eaa68327b41caa6140f906b19258a86f4da92",
+            "version": "0.5.0"
+          },
+          "timm": {
+            "metadata_sha256": "b6ecaedbcaea5d0d5e431983c3df8e05113a51a2dad062e51dab0500ac6f2bb4",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/timm/__init__.py",
+            "module_file_sha256": "9668df8ff48b33f846428cd7607399cf14b4f0feef157930eabf6defe932b1d3",
+            "version": "1.0.27"
+          },
+          "torch": {
+            "metadata_sha256": "a0e493588a0381cc478d848e7f7a334ef7f17e8973c70b657867a5eeadb732df",
+            "module_file": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/torch/__init__.py",
+            "module_file_sha256": "d9dfff4b75d46e4c75572200a3466b70231d05b0318e38ac1bd121789165fb49",
+            "version": "2.12.1"
+          }
+        },
+        "numpy_blas_build": {
+          "detection method": "system",
+          "found": true,
+          "include directory": "unknown",
+          "lib directory": "unknown",
+          "name": "accelerate",
+          "openblas configuration": "unknown",
+          "pc file directory": "unknown",
+          "version": "unknown"
+        },
+        "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+        "python": {
+          "executable": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+          "implementation": "CPython",
+          "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+        }
+      },
+      "schema": "genuine_frame_receiver_config.v3",
+      "scorer_batch_custody": {
+        "authority_statement": "saved-OFF ep700 source-positive-control authority was measured with receiver_batch_size=32; other batch geometries are not bit-identical by claim and are refused for n600 receiver replay",
+        "cross_batch_bit_identity_claim": false,
+        "historical_authority_receiver_batch_size": 32,
+        "n600_requires_historical_batch_size": true,
+        "requested_receiver_batch_size": 32
+      },
+      "scorer_kernel_custody": {
+        "authority_statement": "these are live scorer-kernel settings; the source-positive-control is the admission authority and no identity is claimed across differing Torch numerical-kernel settings",
+        "cross_kernel_setting_bit_identity_claim": false,
+        "torch_deterministic_algorithms_enabled": false,
+        "torch_float32_matmul_precision": "highest",
+        "torch_mkldnn_enabled": true,
+        "torch_num_interop_threads": 18,
+        "torch_num_threads": 6
+      },
+      "seed": 0,
+      "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+      "selection_metric_computed_by_probe": false,
+      "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+      "selector_formulation": "batched_full_ls_magnitude_prune_then_selected_support_refit_v2"
+    },
+    "config_sha256": "ea253cd1785b6d2c11bfe8fae4cba3f6cd58437734fc3b3f710118045c1169f0",
+    "custody": {
+      "checkpoint": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_witness_ema_BEST.npz",
+      "checkpoint_epoch": 700,
+      "checkpoint_sha256": "eb2d5784975859c7a2e4e4b05cedc53ccd3c68ad6b9df3797521f3ad32b80e8d",
+      "ep700_receipt": {
+        "checkpoint_epoch": 700,
+        "checks": {
+          "best_epoch": true,
+          "best_path": true,
+          "train_best_d_seg": true,
+          "train_best_epoch": true,
+          "train_best_path": true,
+          "train_final_epoch": true,
+          "train_n_pairs": true
+        },
+        "comparison_anchor": "ep700 only; ep675=0.004244 is explicitly superseded",
+        "expected_logged_d_seg": 0.004181416829427084,
+        "expected_total_flips": 493260,
+        "expected_total_pixels": 117964800,
+        "files": {
+          "best": {
+            "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_best.json",
+            "sha256": "dc4f871a946e5fa53660b97b10384452b08e1f302a9db77489e5447e7ff9bdab"
+          },
+          "launch": {
+            "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+            "sha256": "335d9d02388b381c22a79ebd75a26b1083d5c4702984ba41fe50a54ba4a63ade"
+          },
+          "run_log": {
+            "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/run.log",
+            "sha256": "06a3fcfce6279ba93066f818669b6e061b6a3377d681eedb6ae8a06474ff7d0e"
+          },
+          "train_result": {
+            "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_train_result.json",
+            "sha256": "226ae29cb95aedea856b18daaa78fd368f7cfa98accf5863e002f9b0a085bb4d"
+          }
+        },
+        "status": "BOUND_SAVED_OFF_EP700"
+      },
+      "feature_width": 80,
+      "frame1_code_index": "2*pair_index+1",
+      "gt_cache": "/Users/adpena/Projects/pact/experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz",
+      "gt_cache_sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+      "receiver_parameter_custody": {
+        "candidate_rgb_fit_target_interpretation": "same_deploy_source_rgb_before_generic_frame_coefficient_fit",
+        "changed_parameter_names": [
+          "code",
+          "film.bias",
+          "film.weight",
+          "hidden.0.bias",
+          "hidden.0.weight",
+          "hidden.1.bias",
+          "hidden.1.weight",
+          "hidden.2.bias",
+          "hidden.2.weight",
+          "hidden.3.bias",
+          "hidden.3.weight",
+          "in_proj.bias",
+          "in_proj.weight",
+          "out_sdf.bias",
+          "out_sdf.weight",
+          "out_tex.bias",
+          "out_tex.weight",
+          "palette"
+        ],
+        "changed_parameter_scalar_value_count": 109545,
+        "changed_parameter_tensor_count": 18,
+        "checkpoint_payload_interpretation": "fp32_ema_shadow_not_receiver_authority",
+        "deploy_int8_parameter_map_sha256": "2f5e2b6de2d48342e377897bb6e0f5c5c0e9b94fd328b7b6991bc218e4ec970d",
+        "generic_frame_coefficient_accounting_unchanged": true,
+        "interpretation": "ema_fp32_shadow_int8_symmetric_dequant_receiver_v1",
+        "raw_fp32_shadow_parameter_map_sha256": "71ecad3160b78bc72ba3e4666cec312eda0481e7510d44e3ba6010e75e7575ab",
+        "receiver_parameter_interpretation": "int8_dequant_deploy_authority",
+        "roundtrip_apply_count_after_checkpoint_load": 1,
+        "roundtrip_callable": "tac.boundary_math.lever_b_levelset_generator.int8_dequant_params",
+        "schema": "genuine_frame_receiver_parameter_custody.v1",
+        "source_rgb_target_interpretation": "rendered_from_int8_dequant_deploy_params"
+      },
+      "render_hw": [
+        384,
+        512
+      ],
+      "segnet": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+      "self_orient": false,
+      "status": "READY_SAVED_OFF_EP700_RGB_RECEIVER",
+      "verdict_scope": "receiver_rgb_nterm_formulation"
+    },
+    "equal_archive_bytes_claim": false,
+    "equal_coefficient_scalar_value_budget": 109559,
+    "equal_parameter_bytes_claim": false,
+    "equal_support_index_count_per_arm": 109559,
+    "exact_r_custody": {
+      "camera_stream_hash_contract": "sha256(concat(bytes.fromhex(per_pair_camera_frame_sha256))) in pair order",
+      "contract": {
+        "camera_res_placement_149": "carriers MAY place a field at CAMERA res before R (render-time prior); that is a legal PLACEMENT, distinct from the COMPARE grid (always SEG_HW post-argmax). NOT a transposition.",
+        "chain": [
+          "render-grid RGB (h,w,3) float[0,255]",
+          "R.up: bicubic -> CAMERA_HW=[874, 1164] -> round -> clamp[0,255] -> uint8 (stored recon)",
+          "R.down (SegNet.preprocess_input): x[:,-1] last-frame + bilinear -> SEG_HW=[384, 512]",
+          "SegNet forward -> argmax(dim=1) -> (384,512) label map",
+          "d_seg = mean_pixels(argmax != L*)"
+        ],
+        "orderings": {
+          "HW_convention": "numpy .shape + torch interpolate size (the RESIZE targets)",
+          "WH_convention": "upstream constant NAMES (camera_size / segnet_model_input_size)",
+          "camera_hw": [
+            874,
+            1164
+          ],
+          "camera_size_wh": [
+            1164,
+            874
+          ],
+          "seg_hw": [
+            384,
+            512
+          ],
+          "segnet_input_size_wh": [
+            512,
+            384
+          ]
+        },
+        "r_second_half_owner": "upstream/modules.py::SegNet.preprocess_input (delegated, not re-implemented)",
+        "schema": "through_r_resolution_chain.v1",
+        "seq_len": 2,
+        "source_of_truth": {
+          "camera_size": "upstream/frame_utils.py:11 (verify_against_upstream asserts parity)",
+          "pinned_constants_reused_from": "tac.contest_eval_contract",
+          "score_formula": "upstream/evaluate.py:92 (100*seg + sqrt(10*pose) + 25*rate)",
+          "segnet_model_input_size": "upstream/frame_utils.py:13",
+          "segnet_preprocess": "upstream/modules.py:107-109 (x[:,-1] + interpolate to (H,W))"
+        },
+        "transposition_hazard": "WH tuples are provenance-only; resize targets are the HW forms. Crossing them (feeding (W,H) to interpolate) is the flip-resolution bug class this module extincts."
+      },
+      "source_path": "/Users/adpena/Projects/pact/src/tac/through_r/resolution_chain.py",
+      "source_sha256": "6d476b13d2130a7c9d366ceef5cd679bc356f34ccda508729dfad72b0f2934d0"
+    },
+    "families": {
+      "compact_shearlet": {
+        "argmax_stream_sha256": "9144c834d2c871f56bbc674b289d47f4194f56d139b6762498964cefc855fe6f",
+        "budget_fraction": 1.0,
+        "candidate_camera_stream_sha256": "fe9cf6af343401e059af0fdc29538430f4c6261f2ff734d8e08cbc05117c4872",
+        "coefficient_fp32_raw_bytes": 438236,
+        "coefficient_scalar_values": 109559,
+        "d_seg": 0.42886043124728734,
+        "d_seg_on_target_boundary": 0.8504798575830668,
+        "d_seg_on_target_interior": 0.4195399186600643,
+        "decay": [
+          {
+            "argmax_stream_sha256": "0026002c4f2cc4aa7fd1a87ee15933004da9b7ccf8fdd66ff9c5c26a97794fd7",
+            "budget_fraction": 0.125,
+            "candidate_camera_stream_sha256": "543200bdbd9daf66b8121da842da6236e81f5931b08d7ef02ba6881658ba3541",
+            "coefficient_fp32_raw_bytes": 54780,
+            "coefficient_scalar_values": 13695,
+            "d_seg": 0.5654775746663412,
+            "d_seg_on_target_boundary": 0.8646952906307248,
+            "d_seg_on_target_interior": 0.5588629304783261,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 264.77982362501933,
+            "per_class_d_seg": [
+              0.9989478618016695,
+              1.0,
+              0.46981625634074553,
+              1.0,
+              0.3245290839427958
+            ],
+            "support_index_count": 13695,
+            "support_index_uint8_raw_bytes": 13695,
+            "support_stream_sha256": "eadf5ee6347a0cb5fcc70add86944ab4b2c5a7f1c808748b22880327988a45bd",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 66706449,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "361ecf406caaffe6fd719061e4672b3564d97c86fa72e937d011b17929d012f9",
+            "budget_fraction": 0.25,
+            "candidate_camera_stream_sha256": "0b8e42ced0367c2248b87e252d58340c2c9e01a3cc485741882e4835d235da3a",
+            "coefficient_fp32_raw_bytes": 109560,
+            "coefficient_scalar_values": 27390,
+            "d_seg": 0.4538553195529514,
+            "d_seg_on_target_boundary": 0.8385882631452287,
+            "d_seg_on_target_interior": 0.4453502364863676,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 258.74551384802993,
+            "per_class_d_seg": [
+              0.9989207884716945,
+              0.9999753851143651,
+              0.40943972998195394,
+              1.0,
+              0.0031279767899114437
+            ],
+            "support_index_count": 27390,
+            "support_index_uint8_raw_bytes": 27390,
+            "support_stream_sha256": "6c6633a77762bfd33fd280a311697c10926d5c37796a10468eb7e8bc567f8cb6",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 53538952,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "641fdd3610ad967f95848e6ab9f6add496cadc2e8ee788bca9d289b1f0df794d",
+            "budget_fraction": 0.5,
+            "candidate_camera_stream_sha256": "5a7c153231cdd64f8c4ded75d579b9bbe979045d32829606bf7dafd2f78e3558",
+            "coefficient_fp32_raw_bytes": 219120,
+            "coefficient_scalar_values": 54780,
+            "d_seg": 0.33307122972276476,
+            "d_seg_on_target_boundary": 0.8104925095497264,
+            "d_seg_on_target_interior": 0.32251713574586277,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 256.23076319522625,
+            "per_class_d_seg": [
+              0.9995269829517562,
+              1.0,
+              0.09838392744964967,
+              1.0,
+              0.13331907913808952
+            ],
+            "support_index_count": 54780,
+            "support_index_uint8_raw_bytes": 54780,
+            "support_stream_sha256": "bfb75ef79cc999ae7ef8be28a27dae44810e17c7157c2b21a1db2ddf4991d264",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 39290681,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "9144c834d2c871f56bbc674b289d47f4194f56d139b6762498964cefc855fe6f",
+            "budget_fraction": 1.0,
+            "candidate_camera_stream_sha256": "fe9cf6af343401e059af0fdc29538430f4c6261f2ff734d8e08cbc05117c4872",
+            "coefficient_fp32_raw_bytes": 438236,
+            "coefficient_scalar_values": 109559,
+            "d_seg": 0.42886043124728734,
+            "d_seg_on_target_boundary": 0.8504798575830668,
+            "d_seg_on_target_interior": 0.4195399186600643,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 255.3547083451173,
+            "per_class_d_seg": [
+              0.999986609282883,
+              1.0,
+              0.004216541097905458,
+              1.0,
+              0.6930329492291148
+            ],
+            "support_index_count": 109559,
+            "support_index_uint8_raw_bytes": 109559,
+            "support_stream_sha256": "8599a4cf0c739e3cb121c77caac7d46cd3621a9f8e059e57b20067db234d9607",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 50590435,
+            "total_pixels": 117964800
+          }
+        ],
+        "equal_archive_bytes_claim": false,
+        "equal_parameter_bytes_claim": false,
+        "mean_render_grid_rgb_mse": 255.3547083451173,
+        "per_class_d_seg": [
+          0.999986609282883,
+          1.0,
+          0.004216541097905458,
+          1.0,
+          0.6930329492291148
+        ],
+        "support_index_count": 109559,
+        "support_index_uint8_raw_bytes": 109559,
+        "support_stream_sha256": "8599a4cf0c739e3cb121c77caac7d46cd3621a9f8e059e57b20067db234d9607",
+        "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+        "target_boundary_pixel_fraction": 0.02162833319769965,
+        "total_flips": 50590435,
+        "total_pixels": 117964800
+      },
+      "hybrid_fixed_fourier38_curvelet38": {
+        "argmax_stream_sha256": "df75b20dddbc7833479cac0de26de7975916c7de6c5416627e5984d96673bbbd",
+        "budget_fraction": 1.0,
+        "candidate_camera_stream_sha256": "e80a5992acb493a7a29dfef930c26f968a0d52a4cd41e0eaab60a9f39db2d5ef",
+        "coefficient_fp32_raw_bytes": 438236,
+        "coefficient_scalar_values": 109559,
+        "d_seg": 0.5272844696044922,
+        "d_seg_on_target_boundary": 0.6803156093442692,
+        "d_seg_on_target_interior": 0.5239014929789186,
+        "decay": [
+          {
+            "argmax_stream_sha256": "390105bb327785a503e26d14d348132825d9f1029e82ff789423e5375d50df4d",
+            "budget_fraction": 0.125,
+            "candidate_camera_stream_sha256": "a22ff19ca1a8a3d4633a3511dede2cd6ff2009a0cac6ed352b109ecdbb8d3bda",
+            "coefficient_fp32_raw_bytes": 54780,
+            "coefficient_scalar_values": 13695,
+            "d_seg": 0.6260341220431858,
+            "d_seg_on_target_boundary": 0.8580961220232799,
+            "d_seg_on_target_interior": 0.6209040529412273,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 250.86466934531984,
+            "per_class_d_seg": [
+              0.9718550477858869,
+              1.0,
+              0.7679488334168388,
+              1.0,
+              0.006832778385483339
+            ],
+            "support_index_count": 13695,
+            "support_index_uint8_raw_bytes": 13695,
+            "support_stream_sha256": "7bb8e50b7f59bacd175a8171f4365ae3091451e61ad2d1c0a854bb36e6c5e0ed",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 73849990,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "e8701769c6405e2c61b35401edaa04605b9e861f7878b5c42d4ce70e36dbb7e9",
+            "budget_fraction": 0.25,
+            "candidate_camera_stream_sha256": "c7a193e5724ec562db68cca3d7da94afa9ebbae367007580cff6afd26c6cf1ea",
+            "coefficient_fp32_raw_bytes": 109560,
+            "coefficient_scalar_values": 27390,
+            "d_seg": 0.716771977742513,
+            "d_seg_on_target_boundary": 0.5428230660873206,
+            "d_seg_on_target_interior": 0.7206173722365626,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 246.6830119577335,
+            "per_class_d_seg": [
+              0.07348825553837506,
+              0.9810262669788413,
+              0.9010306063787104,
+              0.9974909694759728,
+              0.9259809180713067
+            ],
+            "support_index_count": 27390,
+            "support_index_uint8_raw_bytes": 27390,
+            "support_stream_sha256": "78b19ec49a00ed18638594d5e7f5b599fd43209f15093e16fae446ab7212d3b7",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 84553863,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "a77c80ed49b12da53274a120212d9fc09454b3b5f149a914432aa5b8e4f51c68",
+            "budget_fraction": 0.5,
+            "candidate_camera_stream_sha256": "4b48d7f034608ccd0d15410ae63436e01b0c7dacc7201db61278e14272d32720",
+            "coefficient_fp32_raw_bytes": 219120,
+            "coefficient_scalar_values": 54780,
+            "d_seg": 0.563273179796007,
+            "d_seg_on_target_boundary": 0.7430157459761023,
+            "d_seg_on_target_interior": 0.5592997081153943,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 244.63986710428046,
+            "per_class_d_seg": [
+              0.6140967180483442,
+              0.9986085349944037,
+              0.41564761616455,
+              0.9999958913255611,
+              0.7730503623300629
+            ],
+            "support_index_count": 54780,
+            "support_index_uint8_raw_bytes": 54780,
+            "support_stream_sha256": "15d30dceea3bef56e66e3604cc37151bded408099a68f848a614f3e8dae4677c",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 66446408,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "df75b20dddbc7833479cac0de26de7975916c7de6c5416627e5984d96673bbbd",
+            "budget_fraction": 1.0,
+            "candidate_camera_stream_sha256": "e80a5992acb493a7a29dfef930c26f968a0d52a4cd41e0eaab60a9f39db2d5ef",
+            "coefficient_fp32_raw_bytes": 438236,
+            "coefficient_scalar_values": 109559,
+            "d_seg": 0.5272844696044922,
+            "d_seg_on_target_boundary": 0.6803156093442692,
+            "d_seg_on_target_interior": 0.5239014929789186,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 243.95232817874427,
+            "per_class_d_seg": [
+              0.45935329914796363,
+              0.9996829023556446,
+              0.3893779738207138,
+              1.0,
+              0.8240416284736808
+            ],
+            "support_index_count": 109559,
+            "support_index_uint8_raw_bytes": 109559,
+            "support_stream_sha256": "02ebc7b9c5acf75ca1d9c45effe66288a372a811abdce0f4973a1b7a5c79541b",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 62201007,
+            "total_pixels": 117964800
+          }
+        ],
+        "equal_archive_bytes_claim": false,
+        "equal_parameter_bytes_claim": false,
+        "mean_render_grid_rgb_mse": 243.95232817874427,
+        "per_class_d_seg": [
+          0.45935329914796363,
+          0.9996829023556446,
+          0.3893779738207138,
+          1.0,
+          0.8240416284736808
+        ],
+        "support_index_count": 109559,
+        "support_index_uint8_raw_bytes": 109559,
+        "support_stream_sha256": "02ebc7b9c5acf75ca1d9c45effe66288a372a811abdce0f4973a1b7a5c79541b",
+        "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+        "target_boundary_pixel_fraction": 0.02162833319769965,
+        "total_flips": 62201007,
+        "total_pixels": 117964800
+      },
+      "polar_directional_fourier": {
+        "argmax_stream_sha256": "b343e3e59aaaa900e79dcebfa755c8b602b6d6f261a9695db83023fa794a5706",
+        "budget_fraction": 1.0,
+        "candidate_camera_stream_sha256": "222d68be43a403ccee0839ecffb38c25bec09236993c442f919adc3ea7c38f86",
+        "coefficient_fp32_raw_bytes": 438236,
+        "coefficient_scalar_values": 109559,
+        "d_seg": 0.40972231547037763,
+        "d_seg_on_target_boundary": 0.7979357853900356,
+        "d_seg_on_target_interior": 0.4011402902910301,
+        "decay": [
+          {
+            "argmax_stream_sha256": "408479bf5d8e8feaed0c2b3461b71734281884c9c08e6a0aa1f687c4b268280b",
+            "budget_fraction": 0.125,
+            "candidate_camera_stream_sha256": "55073c2b267f8a637b1cff332d414d6b1cef90620bb64eb4759f7eafa0810807",
+            "coefficient_fp32_raw_bytes": 54780,
+            "coefficient_scalar_values": 13695,
+            "d_seg": 0.6277346038818359,
+            "d_seg_on_target_boundary": 0.8513621245270211,
+            "d_seg_on_target_interior": 0.6227909912519877,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 254.04176920682298,
+            "per_class_d_seg": [
+              0.9954402601433223,
+              1.0,
+              0.7590646894154088,
+              1.0,
+              0.00927157272595214
+            ],
+            "support_index_count": 13695,
+            "support_index_uint8_raw_bytes": 13695,
+            "support_stream_sha256": "ad3acf90a42e01ea550f006b0376d9d208c3de894d54e8b0351c95a72c29477e",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 74050587,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "89d88b55d94ebcae7325f85289b78029fc018288afc35548a502bb8f9127fe89",
+            "budget_fraction": 0.25,
+            "candidate_camera_stream_sha256": "ba15d75a342e3df95b6c07584bbd5d4b1c2f33bdb4371ec4941e72fe0b004c13",
+            "coefficient_fp32_raw_bytes": 109560,
+            "coefficient_scalar_values": 27390,
+            "d_seg": 0.6005332777235243,
+            "d_seg_on_target_boundary": 0.8301226550943763,
+            "d_seg_on_target_interior": 0.595457869552048,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 250.15248031915002,
+            "per_class_d_seg": [
+              0.9994854972695707,
+              1.0,
+              0.624632367423429,
+              1.0,
+              0.1604031392258905
+            ],
+            "support_index_count": 27390,
+            "support_index_uint8_raw_bytes": 27390,
+            "support_stream_sha256": "6e5f73f2c475a600081d268c3ec567be071304ce8de8bca2188cfe2441bf00ee",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 70841788,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "903c823535ea276d4b3733ad80d4343e643dbb5d398721353743fe5e93ae8d3b",
+            "budget_fraction": 0.5,
+            "candidate_camera_stream_sha256": "59151bbfb6e3c19f363407973717d8202abe93c26f5485f3ca28d5a3c3456f6d",
+            "coefficient_fp32_raw_bytes": 219120,
+            "coefficient_scalar_values": 54780,
+            "d_seg": 0.47180653042263454,
+            "d_seg_on_target_boundary": 0.8278434981511981,
+            "d_seg_on_target_interior": 0.4639358137716708,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 248.75949976256345,
+            "per_class_d_seg": [
+              0.9118523389934107,
+              1.0,
+              0.040570568189792315,
+              1.0,
+              0.871673934516965
+            ],
+            "support_index_count": 54780,
+            "support_index_uint8_raw_bytes": 54780,
+            "support_stream_sha256": "94cd8af4e535b282be5a5d005e44720f95234a056414c1435f8274b4c769466e",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 55656563,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "b343e3e59aaaa900e79dcebfa755c8b602b6d6f261a9695db83023fa794a5706",
+            "budget_fraction": 1.0,
+            "candidate_camera_stream_sha256": "222d68be43a403ccee0839ecffb38c25bec09236993c442f919adc3ea7c38f86",
+            "coefficient_fp32_raw_bytes": 438236,
+            "coefficient_scalar_values": 109559,
+            "d_seg": 0.40972231547037763,
+            "d_seg_on_target_boundary": 0.7979357853900356,
+            "d_seg_on_target_interior": 0.4011402902910301,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 248.25629383636075,
+            "per_class_d_seg": [
+              0.8666572822185944,
+              1.0,
+              0.018580860061601402,
+              1.0,
+              0.7116193707111762
+            ],
+            "support_index_count": 109559,
+            "support_index_uint8_raw_bytes": 109559,
+            "support_stream_sha256": "77f2d1fbcf75c0ed983b12a841b132dc000c1ff44d8867b96b186d635830ddc6",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 48332811,
+            "total_pixels": 117964800
+          }
+        ],
+        "equal_archive_bytes_claim": false,
+        "equal_parameter_bytes_claim": false,
+        "mean_render_grid_rgb_mse": 248.25629383636075,
+        "per_class_d_seg": [
+          0.8666572822185944,
+          1.0,
+          0.018580860061601402,
+          1.0,
+          0.7116193707111762
+        ],
+        "support_index_count": 109559,
+        "support_index_uint8_raw_bytes": 109559,
+        "support_stream_sha256": "77f2d1fbcf75c0ed983b12a841b132dc000c1ff44d8867b96b186d635830ddc6",
+        "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+        "target_boundary_pixel_fraction": 0.02162833319769965,
+        "total_flips": 48332811,
+        "total_pixels": 117964800
+      },
+      "windowed_curvelet": {
+        "argmax_stream_sha256": "9e36fc0b0c534be72dbef4e53dce824ac1398d646ad8be4c9a1659a3b376019c",
+        "budget_fraction": 1.0,
+        "candidate_camera_stream_sha256": "ea8173e1e91f5b0140d655b834d1393121538ccb6e0d3907028f0ad41605ec9a",
+        "coefficient_fp32_raw_bytes": 438236,
+        "coefficient_scalar_values": 109559,
+        "d_seg": 0.5048035939534505,
+        "d_seg_on_target_boundary": 0.8699398992389222,
+        "d_seg_on_target_interior": 0.4967317231693112,
+        "decay": [
+          {
+            "argmax_stream_sha256": "5fb7d0768a9d6ad4a587747e60af3232cc8a86cdf5783b6714e9587502d715f8",
+            "budget_fraction": 0.125,
+            "candidate_camera_stream_sha256": "8a18137800468125e1024f5c430e6dbaad10f2e15fe7eeb6a41c9dc28a301085",
+            "coefficient_fp32_raw_bytes": 54780,
+            "coefficient_scalar_values": 13695,
+            "d_seg": 0.6039131588406033,
+            "d_seg_on_target_boundary": 0.8508459336939744,
+            "d_seg_on_target_interior": 0.5984543495627173,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 263.8584300338959,
+            "per_class_d_seg": [
+              0.9611953801952973,
+              1.0,
+              0.6662359198758241,
+              1.0,
+              0.12766025475712095
+            ],
+            "support_index_count": 13695,
+            "support_index_uint8_raw_bytes": 13695,
+            "support_stream_sha256": "cef9f178465bdf3d1bdb85d1498848762b253287a1db701eab552a519f13fc0a",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 71240495,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "cab62f94ffabbb2688befa2280e03b8de8b0ce075a0a5822832cbc97e26650f3",
+            "budget_fraction": 0.25,
+            "candidate_camera_stream_sha256": "e5fdd7e3efa248fa206fc143e47e59f8b20e33b39a9bc746f110c422a4e3b303",
+            "coefficient_fp32_raw_bytes": 109560,
+            "coefficient_scalar_values": 27390,
+            "d_seg": 0.5645753479003907,
+            "d_seg_on_target_boundary": 0.7272243043182087,
+            "d_seg_on_target_interior": 0.5609797554041767,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 256.968915944563,
+            "per_class_d_seg": [
+              0.5736780242569739,
+              0.9893156917000053,
+              0.5037802618894152,
+              0.9637628610069676,
+              0.6454420854858963
+            ],
+            "support_index_count": 27390,
+            "support_index_uint8_raw_bytes": 27390,
+            "support_stream_sha256": "71ab27839a309f60ddf54e644dd3c0a4edb0b65db1b5325a274e29a4e3c1aeae",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 66600018,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "545207522eb98d0f7184fc0850d2838816d0b04f37d03ff72fde92bb6dfb4122",
+            "budget_fraction": 0.5,
+            "candidate_camera_stream_sha256": "dc212d14169c70b9f5f9af605c81927b68c76eab9049d86a91c428f75f88348a",
+            "coefficient_fp32_raw_bytes": 219120,
+            "coefficient_scalar_values": 54780,
+            "d_seg": 0.5047332848442926,
+            "d_seg_on_target_boundary": 0.8701915275721158,
+            "d_seg_on_target_interior": 0.496654297163264,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 253.65868046823306,
+            "per_class_d_seg": [
+              1.0,
+              1.0,
+              0.0034630994276798116,
+              1.0,
+              0.9928968297774028
+            ],
+            "support_index_count": 54780,
+            "support_index_uint8_raw_bytes": 54780,
+            "support_stream_sha256": "a6dece9aca3aa7e68192ada7312ba3d541bdfab5342c9d7126bb9ae703719fbc",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 59540761,
+            "total_pixels": 117964800
+          },
+          {
+            "argmax_stream_sha256": "9e36fc0b0c534be72dbef4e53dce824ac1398d646ad8be4c9a1659a3b376019c",
+            "budget_fraction": 1.0,
+            "candidate_camera_stream_sha256": "ea8173e1e91f5b0140d655b834d1393121538ccb6e0d3907028f0ad41605ec9a",
+            "coefficient_fp32_raw_bytes": 438236,
+            "coefficient_scalar_values": 109559,
+            "d_seg": 0.5048035939534505,
+            "d_seg_on_target_boundary": 0.8699398992389222,
+            "d_seg_on_target_interior": 0.4967317231693112,
+            "equal_archive_bytes_claim": false,
+            "equal_parameter_bytes_claim": false,
+            "mean_render_grid_rgb_mse": 252.38317339753408,
+            "per_class_d_seg": [
+              1.0,
+              1.0,
+              0.0,
+              1.0,
+              0.9999178488919053
+            ],
+            "support_index_count": 109559,
+            "support_index_uint8_raw_bytes": 109559,
+            "support_stream_sha256": "6a4ed9d009f7bb253239a6daf4f8c8af9bf1180480108cddfcfc147d38602fda",
+            "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+            "target_boundary_pixel_fraction": 0.02162833319769965,
+            "total_flips": 59549055,
+            "total_pixels": 117964800
+          }
+        ],
+        "equal_archive_bytes_claim": false,
+        "equal_parameter_bytes_claim": false,
+        "mean_render_grid_rgb_mse": 252.38317339753408,
+        "per_class_d_seg": [
+          1.0,
+          1.0,
+          0.0,
+          1.0,
+          0.9999178488919053
+        ],
+        "support_index_count": 109559,
+        "support_index_uint8_raw_bytes": 109559,
+        "support_stream_sha256": "6a4ed9d009f7bb253239a6daf4f8c8af9bf1180480108cddfcfc147d38602fda",
+        "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+        "target_boundary_pixel_fraction": 0.02162833319769965,
+        "total_flips": 59549055,
+        "total_pixels": 117964800
+      }
+    },
+    "hybrid_contract": "fixed 4 common Q1 + 38 global-polar + 38 localized-curvelet columns; no source/target-derived mask or oracle annulus",
+    "is_n600": true,
+    "n_pairs": 600,
+    "negative_scope": "any loss is INSTANCE x full-LS-magnitude-prune-refit x saved-OFF-RGB formulation only; fresh-start training and all frame families remain open",
+    "progress_path": ".omx/research/genuine_curvelet_shearlet_receiver_n600_progress_v3_deploy_int8_batch32_20260714.json",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "score_claim": false,
+    "source_positive_control": {
+      "argmax_stream_sha256": "4b1dcdd2f0116f60c1a711830768d6aee80122648394db55f73895e81335fed8",
+      "candidate_camera_stream_sha256": "697bf6bcdeb9892dd72c49185c1af7330baa817359db7770d3988b30393081e1",
+      "checkpoint_epoch": 700,
+      "d_seg": 0.004181416829427084,
+      "d_seg_on_target_boundary": 0.17098341212723145,
+      "d_seg_on_target_interior": 0.0004940153492378156,
+      "equal_budget_comparison_arm": false,
+      "expected_ep700_logged_d_seg": 0.004181416829427084,
+      "expected_ep700_total_flips": 493260,
+      "matches_bound_ep700_receipt": true,
+      "mean_render_grid_rgb_mse": 0.0,
+      "name": "saved_off_ep700_unmodified_source_positive_control",
+      "per_class_d_seg": [
+        0.006003383217585726,
+        0.2668572148401698,
+        0.0010180903894099014,
+        0.040712855015150734,
+        0.0008501506109205161
+      ],
+      "target_boundary_definition": "undilated_4_neighbor_class_transition_evaluation_only",
+      "target_boundary_pixel_fraction": 0.02162833319769965,
+      "total_flips": 493260,
+      "total_pixels": 117964800,
+      "unmodified_source_rgb": true
+    },
+    "storage_preflight": {
+      "large_artifacts_written": false,
+      "required_free_bytes": 67108864,
+      "scratch_cleanup": "atomic .tmp progress files are os.replace'd; no frame cache is written",
+      "selected_free_bytes": 701688455168,
+      "selected_metadata_tier": "/Users/adpena/Projects/pact/.omx/research",
+      "status": "PASS",
+      "waterfall": [
+        {
+          "exists": true,
+          "free_bytes": 827380576256,
+          "path": "/Volumes/VertigoDataTier/pact"
+        },
+        {
+          "exists": false,
+          "free_bytes": null,
+          "path": "/Volumes/APDataStore/pact"
+        },
+        {
+          "exists": true,
+          "free_bytes": 701688455168,
+          "path": "/Users/adpena/Projects/pact/.omx/research"
+        }
+      ]
+    },
+    "subset_reason": null,
+    "surface": "REALIZED_THROUGH_R_SAVED_OFF_RGB_NTERM",
+    "verdict_scope": "receiver_rgb_nterm_formulation"
+  },
+  "receiver_preflight": {
+    "checkpoint": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_witness_ema_BEST.npz",
+    "checkpoint_epoch": 700,
+    "checkpoint_sha256": "eb2d5784975859c7a2e4e4b05cedc53ccd3c68ad6b9df3797521f3ad32b80e8d",
+    "ep700_receipt": {
+      "checkpoint_epoch": 700,
+      "checks": {
+        "best_epoch": true,
+        "best_path": true,
+        "train_best_d_seg": true,
+        "train_best_epoch": true,
+        "train_best_path": true,
+        "train_final_epoch": true,
+        "train_n_pairs": true
+      },
+      "comparison_anchor": "ep700 only; ep675=0.004244 is explicitly superseded",
+      "expected_logged_d_seg": 0.004181416829427084,
+      "expected_total_flips": 493260,
+      "expected_total_pixels": 117964800,
+      "files": {
+        "best": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_best.json",
+          "sha256": "dc4f871a946e5fa53660b97b10384452b08e1f302a9db77489e5447e7ff9bdab"
+        },
+        "launch": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/launch.sh",
+          "sha256": "335d9d02388b381c22a79ebd75a26b1083d5c4702984ba41fe50a54ba4a63ade"
+        },
+        "run_log": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/run.log",
+          "sha256": "06a3fcfce6279ba93066f818669b6e061b6a3377d681eedb6ae8a06474ff7d0e"
+        },
+        "train_result": {
+          "path": "/Users/adpena/Projects/pact/experiments/results/owed16_ab_selforient_OFF_20260710T032859Z/levelset_train_result.json",
+          "sha256": "226ae29cb95aedea856b18daaa78fd368f7cfa98accf5863e002f9b0a085bb4d"
+        }
+      },
+      "status": "BOUND_SAVED_OFF_EP700"
+    },
+    "feature_width": 80,
+    "frame1_code_index": "2*pair_index+1",
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz",
+    "gt_cache_sha256": "e41718a047b77b9072828e72f8cbffa0f5ef7ddf462c7ef4329d997ace89de50",
+    "render_hw": [
+      384,
+      512
+    ],
+    "segnet": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "self_orient": false,
+    "status": "READY_SAVED_OFF_EP700_RGB_RECEIVER",
+    "verdict_scope": "receiver_rgb_nterm_formulation"
+  },
+  "schema": "genuine_frame_nterm_probe.v3",
+  "score_claim": false,
+  "seed": 0,
+  "selection_metric_computed_by_probe": false,
+  "selection_metric_status": "NO-VERDICT_DATA_CUSTODY",
+  "status": "COMPLETE",
+  "structural_proof": {
+    "compact_shearlet": {
+      "inflate_contract": {
+        "compiled": true,
+        "counted_state": [
+          "learned_basis_coefficients",
+          "downstream_decoder_weights",
+          "per_pair_codes"
+        ],
+        "entrypoint": "localized_basis_features_numpy",
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "generic_regenerated_state": [
+          "basis_family",
+          "basis_seed",
+          "fixed_scaling_and_parabolic_geometry",
+          "atom_generation_source"
+        ],
+        "rule118_status": "generic deterministic frame code/scalars are regenerated; all video-derived coefficients and downstream weights remain counted",
+        "source_sha256": "f497322322170099d2a9aea62e21d48d2543e2909463777c989086545202f811"
+      },
+      "metadata": {
+        "atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "cone_seam_policy": "horizontal cone exclusively owns physical slopes -1 and +1; vertical extreme shears are omitted",
+        "directional_atoms": 76,
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "finite_truncation": true,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "partition_of_unity_scaling": true,
+        "rule118_contract": "family, seed, fixed atom scalars, and evaluation code are generic regenerated state; learned/video-derived coefficients are counted",
+        "scales": [
+          0,
+          2,
+          4
+        ],
+        "scaling_atoms": 4,
+        "seed": 0,
+        "tight_or_complete_claim": false,
+        "translation_count_by_scale": [
+          [
+            0,
+            6
+          ],
+          [
+            2,
+            16
+          ],
+          [
+            4,
+            54
+          ]
+        ]
+      },
+      "proof": {
+        "atom_spec_sha256": "7d56e1ce59792df9bf5c019533c62a2d5cebd479170b03de7fbcf8c9ed21171d",
+        "cone_seam_duplicate_direction_count": 0,
+        "cone_seam_owners_by_scale": [
+          [
+            0,
+            [
+              "horizontal:-1:negative_diagonal",
+              "horizontal:1:positive_diagonal"
+            ]
+          ],
+          [
+            2,
+            [
+              "horizontal:-2:negative_diagonal",
+              "horizontal:2:positive_diagonal"
+            ]
+          ],
+          [
+            4,
+            [
+              "horizontal:-4:negative_diagonal",
+              "horizontal:4:positive_diagonal"
+            ]
+          ]
+        ],
+        "cones": [
+          "horizontal",
+          "vertical"
+        ],
+        "diagnostic_grid_size": 257,
+        "directional_columns": 76,
+        "expected_parabolic_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0
+          ],
+          [
+            4,
+            4.0
+          ]
+        ],
+        "family": "compact_shearlet",
+        "feature_width": 80,
+        "finest_scale_nonzero_fraction": 0.01335372223652137,
+        "legacy_fourier_global_support": true,
+        "legacy_fourier_pair_envelope_max_abs_error": 8.259105754859775e-08,
+        "max_aspect_relative_error": 0.1071428571428572,
+        "max_outside_support_abs": 0.0,
+        "measured_support_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.032258064516129
+          ],
+          [
+            4,
+            4.428571428571429
+          ]
+        ],
+        "normal_vanishing_moment_abs": 0.0,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "orientation_refines_with_scale": true,
+        "passed": true,
+        "scaling_columns": 4,
+        "scaling_partition_unity_max_abs_error": 0.0,
+        "shear_indices_by_scale": [
+          [
+            0,
+            [
+              -1,
+              0,
+              1
+            ]
+          ],
+          [
+            2,
+            [
+              -2,
+              -1,
+              0,
+              1,
+              2
+            ]
+          ],
+          [
+            4,
+            [
+              -4,
+              -3,
+              -2,
+              -1,
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          ]
+        ],
+        "spatially_localized": true,
+        "translation_indices_present": true,
+        "verdict_scope": "SOURCE-DERIVED/NUMERIC-STRUCTURAL: deterministic finite 80-atom truncation; no tightness, completeness, approximation-rate, through-R, or score claim"
+      }
+    },
+    "windowed_curvelet": {
+      "inflate_contract": {
+        "compiled": true,
+        "counted_state": [
+          "learned_basis_coefficients",
+          "downstream_decoder_weights",
+          "per_pair_codes"
+        ],
+        "entrypoint": "localized_basis_features_numpy",
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "generic_regenerated_state": [
+          "basis_family",
+          "basis_seed",
+          "fixed_scaling_and_parabolic_geometry",
+          "atom_generation_source"
+        ],
+        "rule118_status": "generic deterministic frame code/scalars are regenerated; all video-derived coefficients and downstream weights remain counted",
+        "source_sha256": "f497322322170099d2a9aea62e21d48d2543e2909463777c989086545202f811"
+      },
+      "metadata": {
+        "atom_spec_sha256": "458848fde9ad4d84da145a8c8f385c68daf74680544face3b61850ed16a64b9d",
+        "cone_seam_policy": null,
+        "directional_atoms": 76,
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "finite_truncation": true,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "partition_of_unity_scaling": true,
+        "rule118_contract": "family, seed, fixed atom scalars, and evaluation code are generic regenerated state; learned/video-derived coefficients are counted",
+        "scales": [
+          0,
+          2,
+          4
+        ],
+        "scaling_atoms": 4,
+        "seed": 0,
+        "tight_or_complete_claim": false,
+        "translation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            16
+          ],
+          [
+            4,
+            56
+          ]
+        ]
+      },
+      "proof": {
+        "atom_spec_sha256": "458848fde9ad4d84da145a8c8f385c68daf74680544face3b61850ed16a64b9d",
+        "cone_seam_duplicate_direction_count": null,
+        "cone_seam_owners_by_scale": [],
+        "cones": [],
+        "diagnostic_grid_size": 257,
+        "directional_columns": 76,
+        "expected_parabolic_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.0
+          ],
+          [
+            4,
+            4.0
+          ]
+        ],
+        "family": "windowed_curvelet",
+        "feature_width": 80,
+        "finest_scale_nonzero_fraction": 0.01430755953913004,
+        "legacy_fourier_global_support": true,
+        "legacy_fourier_pair_envelope_max_abs_error": 8.259105754859775e-08,
+        "max_aspect_relative_error": 0.1071428571428572,
+        "max_outside_support_abs": 0.0,
+        "measured_support_aspect_by_scale": [
+          [
+            0,
+            1.0
+          ],
+          [
+            2,
+            2.032258064516129
+          ],
+          [
+            4,
+            4.428571428571429
+          ]
+        ],
+        "normal_vanishing_moment_abs": null,
+        "orientation_count_by_scale": [
+          [
+            0,
+            4
+          ],
+          [
+            2,
+            8
+          ],
+          [
+            4,
+            16
+          ]
+        ],
+        "orientation_refines_with_scale": true,
+        "passed": true,
+        "scaling_columns": 4,
+        "scaling_partition_unity_max_abs_error": 0.0,
+        "shear_indices_by_scale": [],
+        "spatially_localized": true,
+        "translation_indices_present": true,
+        "verdict_scope": "SOURCE-DERIVED/NUMERIC-STRUCTURAL: deterministic finite 80-atom truncation; no tightness, completeness, approximation-rate, through-R, or score claim"
+      }
+    }
+  }
+}

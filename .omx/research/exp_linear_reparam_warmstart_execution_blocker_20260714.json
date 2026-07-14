@@ -1,0 +1,35 @@
+{
+  "schema": "pact.exp_linear_reparam_warmstart.execution_blocker.v1",
+  "utc": "2026-07-14T17:28:43Z",
+  "status": "NO_VERDICT_EXECUTION_CUSTODY_BLOCKER",
+  "scope": "The four MLX optimizer arms have not executed. Static checks and the CPU/numpy common-start verdict completed.",
+  "error": "RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+  "attempts": [
+    "project .venv with --mlx-device gpu",
+    "project .venv with --mlx-device cpu",
+    "SSD uv environment with MLX CPU selection",
+    "MLX compile-disabled and compile-monkeypatched import checks"
+  ],
+  "failed_closed": true,
+  "unacceptable_fallbacks": [
+    "invent post-step values",
+    "substitute a numpy optimizer and call it the required MLX 2x2",
+    "infer SEL plus Muon complementarity from the paper or geometry",
+    "treat MPS or macOS advisory evidence as a contest score"
+  ],
+  "ordinary_terminal_resume_command": "cd /Users/adpena/Projects/pact && TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 .venv/bin/python tools/probe_exp_linear_reparam_warmstart_mlx.py --steps 24 --eval-every 2 --pairs 0,1,2,3",
+  "output_dir": "experiments/results/exp_linear_reparam_warmstart_20260714",
+  "resumability": "Each arm atomically saves the exact evaluation-boundary raw parameters, SEL scales, optimizer state, trace, metadata, and step cursor. Re-running continues from the last saved boundary.",
+  "expected_receipts": [
+    "state_adamw.npz",
+    "state_muon.npz",
+    "state_sel_adamw.npz",
+    "state_sel_muon.npz",
+    "trace_adamw.json",
+    "trace_muon.json",
+    "trace_sel_adamw.json",
+    "trace_sel_muon.json",
+    "summary.json"
+  ],
+  "pointer_delta": "NONE"
+}

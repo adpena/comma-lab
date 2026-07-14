@@ -1,0 +1,169 @@
+{
+  "schema": "recursive_fractal_optimal_representation_v9_measurement_receipt.v1",
+  "task_id": "task503_recursive_fractal_optimal_representation_v9_20260714",
+  "lane_id": "recursive_fractal_optimal_representation_v9",
+  "written_at_utc": "2026-07-14T14:45:00Z",
+  "pointer": {
+    "submittable_score": 0.1910828242,
+    "submittable_axis": "[contest-CPU Linux x86_64]",
+    "non_submission_defensive_bank_score": 0.1880443979880752,
+    "non_submission_defensive_bank_status": "BORROWED_NON_SUBMISSION",
+    "moved": false
+  },
+  "authority": {
+    "score_claim": false,
+    "score_claim_valid": false,
+    "promotion_eligible": false,
+    "candidate_archive_present": false,
+    "exact_evaluator_called": false,
+    "full_n600_measured": false,
+    "training_run": false,
+    "heavy_or_paid_launch": false,
+    "metric_id": "argmax_native_vjp_fidelity_v1",
+    "metric_selection_status": "NO_VERDICT_DATA_CUSTODY",
+    "decision_carrier_bundle_status": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+    "live_v9_status": "V9_INTEGRATION_BLOCKED_OWNER"
+  },
+  "source_receipts": {
+    "bounded_n1_timing": {
+      "path": ".omx/research/recursive_fractal_optimal_representation_v9_timing_smoke_20260714.json",
+      "sha256": "7417c0e214501ae28424bc7a860c4d415a8aa78d5a1feb70a7e468bfb607f236",
+      "schema": "appearance_task_rank_n600.v1",
+      "global_status": "BOUNDED_MEASUREMENT_NON_AUTHORITY",
+      "source_snapshot": {
+        "probe_source_sha256": "28bd4f2ddc17229ca6f42b3e76bf67b7405a7cf8c59a49e070d4247abe672494",
+        "levelset_byte_close_source_sha256": "ef9451872c01cceae49b2722eebaa79b783df87947825a29304f71e5bad4c51c"
+      }
+    },
+    "refreshed_rate_only": {
+      "path": ".omx/research/recursive_fractal_optimal_representation_v9_rate_only_20260714.json",
+      "sha256": "9bd1b1b19fb0c356173dea8444dd77bd70c5282c95cd06532a97beb0256dad80",
+      "schema": "appearance_task_rank_n600.v1",
+      "global_status": "RATE_DIAGNOSTIC_ONLY_NO_BUNDLE_ADMISSION",
+      "source_snapshot": {
+        "probe_source_sha256": "28bd4f2ddc17229ca6f42b3e76bf67b7405a7cf8c59a49e070d4247abe672494",
+        "levelset_byte_close_source_sha256": "25d93537929f314df0d0a2667d461bbd9696e0d3da733e4862e7ef095c445d2f"
+      }
+    },
+    "preflight": {
+      "path": ".omx/research/recursive_fractal_optimal_representation_v9_preflight_20260714.json",
+      "sha256": "197166cc97b038c3783ac0ff40b5e66feff7e0dd7c4bf0ff72cf5f547c598d5c",
+      "global_status": "PREFLIGHT_ONLY"
+    },
+    "bundle_blocker": {
+      "path": ".omx/research/recursive_fractal_optimal_representation_v9_bundle_blocker_20260714.json",
+      "sha256": "1364e87db206ecfc03638f73362415c2945c336071c647c147fbb10155890749",
+      "global_status": "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+    },
+    "interrupted_state_record": {
+      "path": ".omx/research/recursive_fractal_optimal_representation_v9_timing_smoke_interrupted_20260714.json",
+      "sha256": "bee018276c9233e1ff97ffeae28648e72e32c99b1aa3523c1d723ba70cac5dc7",
+      "state_path": "experiments/results/appearance_task_rank_n600_task503_20260714/appearance_task_rank_n600_state_interrupted_fpe_warning_20260714.npz",
+      "state_sha256": "945459eac7f6489b4304ddf4055a76f315d5dcc13bc2678a60651eddfc13f7fd",
+      "authority": "HISTORICAL_INTERRUPTED_NON_VERDICT"
+    }
+  },
+  "source_snapshot_separation": {
+    "timing_and_rate_levelset_byte_close_hashes_equal": false,
+    "must_be_treated_as_separate_evidence_snapshots": true,
+    "merged_authority_claim_allowed": false,
+    "reason": "The timing receipt and refreshed rate receipt bind different levelset_byte_close source hashes."
+  },
+  "bounded_n1_measurement": {
+    "axis": "[macOS-CPU-torch advisory; bounded-n1; no training; realized through R]",
+    "global_status": "BOUNDED_MEASUREMENT_NON_AUTHORITY",
+    "pairs_measured": 1,
+    "pair_indices": [
+      0
+    ],
+    "coordinate_family": "palette15_checkpoint_logit",
+    "coordinate_cells_complete": 15,
+    "coordinate_cells_required": 15,
+    "coverage_complete": true,
+    "seg_object": "baseline-winner minus baseline-rival frozen-SegNet logit margin",
+    "seg_gram_algebraic_rank_default_tol": 15,
+    "seg_gram_rank_at_99pct_energy": 12,
+    "pose_object": "frozen-PoseNet first six outputs",
+    "pose_gram_algebraic_rank_default_tol": 6,
+    "pose_gram_rank_at_99pct_energy": 1,
+    "fixture_init_seconds_measured": 6.054961250047199,
+    "coordinate_measurement_seconds_measured": 72.04077154106926,
+    "n600_seconds_linear_projection_derived": 43224.46292464156,
+    "n600_hours_linear_projection_derived": 12.006795256844877,
+    "n600_projection_measured": false,
+    "baseline_pair0_d_seg_diagnostic": 0.026580810546875,
+    "baseline_pair0_d_pose_diagnostic": 22.862144083717407,
+    "verdict": "BOUNDED_N1_RANK_MEASURED_NO_LOW_RANK_RATE_PROOF",
+    "full_decision_carrier_bundle_measured": false,
+    "low_rank_palette_rate_compression_demonstrated": false
+  },
+  "bounded_n1_state": {
+    "path": "experiments/results/appearance_task_rank_n600_task503_20260714/appearance_task_rank_n600_state.npz",
+    "bytes": 59820,
+    "sha256": "db296043403941474bd53910327365d3fbe1bba23beb3398803b929396a5c23c",
+    "historical_source_snapshot": true,
+    "resume_into_final_hardened_source_allowed": false,
+    "reason": "The probe source was hardened after the timing run. A future full run must start in a fresh stable work directory with final source hashes pinned."
+  },
+  "rate_diagnostic": {
+    "axis": "current local receiver diagnostic; no archive.zip assembled",
+    "baseline_current_receiver_0bin": {
+      "bytes": 65172,
+      "sha256": "0196e921881eac0670bda29e7d910b0ce95c232106ae710e320cbf5fb07917f5",
+      "reconstruction_exact": true
+    },
+    "behavior_changing_zero_group_deltas_bytes": {
+      "palette": 64,
+      "out_tex": 321,
+      "palette_plus_out_tex": 353,
+      "code": 18595,
+      "film": 9899,
+      "code_plus_film": 28494,
+      "palette_plus_out_tex_plus_code": 18948
+    },
+    "all_zero_group_rows_behavior_preserving": false,
+    "achievable_savings_bytes": null,
+    "alternate_encoder_present": false,
+    "alternate_payload_bytes": null,
+    "alternate_receiver_parseback": false,
+    "alternate_archive_present": false,
+    "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+    "interpretation": "Byte-locus diagnostic only. Zeroing changes behavior and is not an encoder or achievable saving."
+  },
+  "full_n600": {
+    "status": "NO_VERDICT_NOT_RUN",
+    "operator_go_required": true,
+    "operator_go_received": false,
+    "n_pairs_required": 600,
+    "n_pairs_measured": 0,
+    "runtime_seconds_derived_from_n1": 43224.46292464156,
+    "runtime_measured": false,
+    "fresh_stable_work_dir_required": true,
+    "final_source_pin_required": true
+  },
+  "representation_verdict": {
+    "pixel_palette_pair0_rank": "MEASURED_FULL_ALGEBRAIC_RANK_15_RANK99_12",
+    "full_bundle": "NO_VERDICT_RECEIVER_RATE_CUSTODY",
+    "palette_chroma_full_consume": "NO_VERDICT",
+    "basis": "NO_VERDICT_GENUINE_FRESH_START_CORRECTED_MEASUREMENT_PENDING_TASK502",
+    "metric_selection": "NO_VERDICT_DATA_CUSTODY",
+    "family_status": "OPEN",
+    "bundle_rule118_review_status": "HARDENED_STRUCTURAL_CONTRACT_NO_LIVE_RECEIVER_CUSTODY"
+  },
+  "v9_integration_blocker": {
+    "status": "V9_INTEGRATION_BLOCKED_OWNER",
+    "reported_at_utc": "2026-07-14T14:28:41Z",
+    "reserved_flags_present_in_real_trainer_parser": false,
+    "disabled_consumer_receipt_present": false,
+    "policy_binding_composed": false,
+    "reason": "Composing explicit-OFF flags without real parser and consumer edges would violate the V9 DSL parser/semantic-consumer bijection."
+  },
+  "pointer_delta": {
+    "score_delta": null,
+    "archive_byte_delta": null,
+    "d_seg_delta": null,
+    "d_pose_delta": null,
+    "pointer_moved": false,
+    "reason": "No alternate archive and no exact evaluator row exist."
+  }
+}

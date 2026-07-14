@@ -1,0 +1,132 @@
+{
+  "argv": [
+    "--preflight-only",
+    "--allow-local-storage",
+    "--work-dir",
+    "experiments/results/appearance_task_rank_n600_task503_20260714",
+    "--receipt",
+    ".omx/research/recursive_fractal_optimal_representation_v9_preflight_20260714.json",
+    "--requested-free-bytes",
+    "104857600"
+  ],
+  "custody_verdicts": {
+    "canonical_M_selection": "NO_VERDICT_DATA_CUSTODY",
+    "decision_carrier_bundle": "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+  },
+  "full_run_contract": {
+    "atomic_per_coordinate_resume": true,
+    "axis": "[macOS-CPU-torch advisory; real-n600; no training; realized through R]",
+    "central_realized_secants_not_Jacobian": true,
+    "frozen_CPU_torch_SegNet_PoseNet_first6": true,
+    "no_retained_frame_or_logit_bulk": true,
+    "pairs": "exactly 0..599",
+    "rounded_clamped_R": true,
+    "score_claim": false
+  },
+  "global_status": "PREFLIGHT_ONLY",
+  "gt_keys": [
+    "gt_f0",
+    "gt_f1",
+    "gt_poses",
+    "lstars",
+    "margins",
+    "n_pairs"
+  ],
+  "input_custody": {
+    "checkpoint": {
+      "bytes": 380136,
+      "path": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_ckpt_stageOctave1_ep251.npz",
+      "sha256": "c59cdec6eec16677c0a2eb5667979dd1c8f883bcd1cf5532302d67acd633c758",
+      "sha256_verified_this_run": true
+    },
+    "gt_cache": {
+      "bytes": 5078017610,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "sha256_verified_this_run": false
+    },
+    "levelset_byte_close_source": {
+      "bytes": 219149,
+      "path": "tools/levelset_byte_close_and_eval.py",
+      "sha256": "25d93537929f314df0d0a2667d461bbd9696e0d3da733e4862e7ef095c445d2f",
+      "sha256_verified_this_run": true
+    },
+    "posenet": {
+      "bytes": 55835560,
+      "path": "upstream/models/posenet.safetensors",
+      "sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+      "sha256_verified_this_run": true
+    },
+    "probe_source": {
+      "bytes": 62995,
+      "path": "tools/probe_appearance_task_rank_n600.py",
+      "sha256": "28bd4f2ddc17229ca6f42b3e76bf67b7405a7cf8c59a49e070d4247abe672494",
+      "sha256_verified_this_run": true
+    },
+    "realized_through_R_trainer_source": {
+      "bytes": 193326,
+      "path": "experiments/train_witness_realized_through_R_mlx.py",
+      "sha256": "788a51ef3d50c244e1d441e210c7a0213834705727bc73e43e63bb2430b08ac6",
+      "sha256_verified_this_run": true
+    },
+    "segnet": {
+      "bytes": 38502892,
+      "path": "upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+      "sha256_verified_this_run": true
+    },
+    "upstream_modules_source": {
+      "bytes": 8322,
+      "path": "upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "sha256_verified_this_run": true
+    }
+  },
+  "metric_id": "argmax_native_vjp_fidelity_v1",
+  "n_pairs": 600,
+  "preflight_only": true,
+  "receiver_rate_custody": {
+    "achievable_savings_bytes": null,
+    "alternate_encoder_present": false,
+    "alternate_payload_bytes": null,
+    "alternate_receiver_parseback": false,
+    "bundle_admission_valid": false,
+    "current_receiver_baseline_0bin_reconstructed_exactly": false,
+    "diagnostic_zero_group_count": 0,
+    "diagnostic_zero_groups_preserve_behavior": false,
+    "reason": "zero-group recompressions are non-behavior-preserving diagnostics; no alternate encoder, receiver parse-back, or exact alternate payload bytes exist",
+    "status": "INCOMPLETE_NO_ALTERNATE_ENCODER",
+    "verdict": "NO_VERDICT_RECEIVER_RATE_CUSTODY"
+  },
+  "schema": "appearance_task_rank_n600.v1",
+  "schema_version": "appearance_task_rank_n600.v1.preflight",
+  "score_claim_valid": false,
+  "storage": {
+    "certify_or_block": true,
+    "requested_free_bytes": 104857600,
+    "selected_waterfall_root": "/Users/adpena/Projects/pact/experiments/results",
+    "selected_work_dir": "/Users/adpena/Projects/pact/experiments/results/appearance_task_rank_n600_task503_20260714",
+    "success_only_scratch_cleanup": "no scratch is allocated by this probe",
+    "waterfall": [
+      {
+        "exists": true,
+        "free_bytes": 827380576256,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "writable": false
+      },
+      {
+        "exists": false,
+        "free_bytes": 0,
+        "root": "/Volumes/APDataStore/pact",
+        "writable": false
+      },
+      {
+        "exists": true,
+        "free_bytes": 695093927936,
+        "root": "/Users/adpena/Projects/pact/experiments/results",
+        "writable": true
+      }
+    ]
+  },
+  "written_at_utc": "2026-07-14T14:15:12.873810Z"
+}

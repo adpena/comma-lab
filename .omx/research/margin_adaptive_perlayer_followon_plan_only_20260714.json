@@ -1,0 +1,574 @@
+{
+  "argv": [
+    "tools/probe_margin_adaptive_perlayer_n600.py",
+    "--execution-mode",
+    "plan-only",
+    "--pair-start",
+    "0",
+    "--pair-stop",
+    "600",
+    "--design-stop",
+    "264",
+    "--logical-widths",
+    "8,16,28",
+    "--channel-prefix-fractions",
+    "0.125,0.25,0.5,0.75,1.0",
+    "--n-processes",
+    "10",
+    "--checkpoint-every-pairs",
+    "1",
+    "--se-control",
+    "full-fp",
+    "--predecessor-receipt",
+    "experiments/results/margin_adaptive_mixed_precision_20260714/margin_adaptive_mixed_precision_n600.json",
+    "--gt-cache",
+    "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "--segnet-weights",
+    "upstream/models/segnet.safetensors",
+    "--resume",
+    "--output",
+    "/Users/adpena/Projects/pact/experiments/results/margin_adaptive_perlayer_followon_20260714/plan_only.json"
+  ],
+  "axis": "[saved-artifact structural remeasurement; no Metal timing; no score authority]",
+  "contract": {
+    "cached_lstars_authority": false,
+    "candidate_checkpoint_storage_waterfall": [
+      "/Volumes/VertigoDataTier/pact",
+      "/Volumes/APDataStore/pact",
+      "local_only_by_explicit_opt_in"
+    ],
+    "candidate_cleanup": "certify_tree_then_delete_after_map_freeze",
+    "channel_prefix_fractions": [
+      0.125,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "checkpoint_every_pairs": 1,
+    "decision_head_frozen_at_cap": 28,
+    "decision_head_path": "segmentation_head.0",
+    "design_split": [
+      0,
+      264
+    ],
+    "exact_seed_safe_widths_present": [
+      27,
+      28
+    ],
+    "global_cap_ladder": [
+      8,
+      16,
+      28
+    ],
+    "known_cached_lstars_mismatch": {
+      "pair_index": 195,
+      "pixels": 1
+    },
+    "n_processes": 10,
+    "pair_start": 0,
+    "pair_stop": 600,
+    "preserved_stage_checkpoints": [
+      "plan_complete",
+      "live_reference_hash_manifest_complete",
+      "seed_design_certificate",
+      "layer_search_complete",
+      "channel_search_complete",
+      "exchange_search_complete",
+      "map_frozen_before_validation",
+      "candidate_cleanup_manifest",
+      "validation_complete",
+      "identity_and_timing_complete",
+      "ten_fresh_process_trials",
+      "complete"
+    ],
+    "reference_decision_authority": "live_numpy_fp32_lowest_index_argmax",
+    "resumable_from_disk": true,
+    "same_map_width_isolation": "A32_M/AN_M",
+    "score_claim": false,
+    "se_control": "full-fp",
+    "search_assumes_width_monotonicity": false,
+    "timing_arms": [
+      "U32_M",
+      "A32_M",
+      "AN_M",
+      "U32_C"
+    ],
+    "untouched_validation_split": [
+      264,
+      600
+    ]
+  },
+  "custody": {
+    "core_module_sha256": "ab4f37415566a0ae2f400029e75bd48cd7ddcc7c332acd16595a543024f293af",
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "metal_executor_sha256": "993e8dabee158d369316164e3fd2ab4573ea0402bcfdeec11f008736f5adf951",
+    "metal_module_sha256": "fc18728651ca12a4cb6d753787cf13c30077551ac81a462f94123046e1ebdaa7",
+    "predecessor_receipt": "/Users/adpena/Projects/pact/experiments/results/margin_adaptive_mixed_precision_20260714/margin_adaptive_mixed_precision_n600.json",
+    "predecessor_receipt_sha256": "bd8e83704d23518a725bbea4f4404e84d1f07b6efc0b30c7e7104d20f8d56b4c",
+    "probe_sha256": "91bdf1cae1cf1dcabe7436d6a360c7b439347550d2e8e6e647c9c203393631d7",
+    "segnet_weights": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "durability": {
+    "canonical_payload_sha256": "0d78924f87151b4011b4f3283a435c468da0b787d74a945f43a48fa42e979ee3",
+    "committed_mirror": ".omx/research/margin_adaptive_perlayer_followon_plan_only_20260714.json",
+    "experiment_receipt": "experiments/results/margin_adaptive_perlayer_followon_20260714/plan_only.json"
+  },
+  "execution_mode": "plan-only",
+  "fingerprint": "a17139015e4b061be03076ccacce12d7dea602e7684b2e3afcb3ca49005aa724",
+  "git_base_head_before_landing": "e7bf07e0b806aa60c8baf1a75cd6c62c072b2690",
+  "highest_ev_main_measurement": "After frozen-map n600 identity: same logical map A32_M forced-int32 versus AN_M physically native per-layer/per-channel Metal",
+  "host": "Primary.local",
+  "lane_id": "margin_adaptive_perlayer_followon",
+  "normalized_config": {
+    "channel_prefix_fractions": "0.125,0.25,0.5,0.75,1.0",
+    "checkpoint_every_pairs": 1,
+    "design_stop": 264,
+    "execution_mode": "plan-only",
+    "logical_widths": "8,16,28",
+    "n_processes": 10,
+    "pair_start": 0,
+    "pair_stop": 600,
+    "resume": true,
+    "se_control": "full-fp"
+  },
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "ranked_formulations": [
+    {
+      "certified_argmax": "OWED_MAIN",
+      "conventional_flop_cut_fraction": 0.0,
+      "measured_width_latency": "OWED_MAIN",
+      "modeled_operand_traffic_cut": "OWED_MAIN_SEARCH",
+      "name": "per_channel_within_layer_native_width",
+      "physical_width_reduction": "BUILT_NOT_MEASURED",
+      "rank": 1
+    },
+    {
+      "certified_argmax": "OWED_MAIN",
+      "conventional_flop_cut_fraction": 0.0,
+      "measured_width_latency": "OWED_MAIN",
+      "modeled_operand_traffic_cut": "OWED_MAIN_SEARCH",
+      "name": "per_layer_native_width",
+      "physical_width_reduction": "BUILT_NOT_MEASURED",
+      "rank": 2
+    },
+    {
+      "bulk_adaptive_fraction_under_convention": 0.9984007643624927,
+      "certified_argmax": "OWED_MAIN",
+      "measured_width_latency": "OWED_MAIN",
+      "name": "se_full_fp_control_bulk_adaptive_int",
+      "physical_width_reduction": "BUILT_NOT_MEASURED",
+      "rank": 3,
+      "se_control_fraction_under_convention": 0.0015992356375073553,
+      "se_conv_mac_fraction": 0.00013257480334839765,
+      "spatial_skip_solution_claim": false
+    }
+  ],
+  "schema": "margin_adaptive_perlayer_plan.v1",
+  "score_claim": false,
+  "search_plan": {
+    "authority_guard": "recompute live fp32 decisions and match predecessor per-pair hashes; never select against cached lstars because pair 195 differs by one pixel",
+    "global_optimum_claim": false,
+    "stage_1": "exhaustive non-monotonic per-layer best-improvement on design 0..263",
+    "stage_2": "all registered per-channel risk-prefix widths plus one adjacent exchange pass",
+    "stage_3": "freeze map before untouched validation 264..599; no repair/reselection",
+    "stage_4": "exhaustive identity, exceptional witness, ten processes, rotated four-arm timing",
+    "status_if_selected": "BEST_FOUND_CERTIFIED"
+  },
+  "seed": {
+    "exhaustive_n600_argmax_identity": true,
+    "layer_count": 125,
+    "map_sha256": "e435c1dda17a10792cfd6e881917ef0eb7dfaed80ddd7bcc372f424ae435db28",
+    "n600_flips": 0,
+    "per_layer_logical_width": {
+      "decoder.blocks.0.conv1.0": 27,
+      "decoder.blocks.0.conv2.0": 27,
+      "decoder.blocks.1.conv1.0": 27,
+      "decoder.blocks.1.conv2.0": 28,
+      "decoder.blocks.2.conv1.0": 28,
+      "decoder.blocks.2.conv2.0": 28,
+      "decoder.blocks.3.conv1.0": 28,
+      "decoder.blocks.3.conv2.0": 28,
+      "decoder.blocks.4.conv1.0": 28,
+      "decoder.blocks.4.conv2.0": 28,
+      "encoder.model.blocks.0.0.conv_dw": 28,
+      "encoder.model.blocks.0.0.conv_pw": 28,
+      "encoder.model.blocks.0.0.se.conv_expand": 28,
+      "encoder.model.blocks.0.0.se.conv_reduce": 28,
+      "encoder.model.blocks.0.1.conv_dw": 28,
+      "encoder.model.blocks.0.1.conv_pw": 28,
+      "encoder.model.blocks.0.1.se.conv_expand": 28,
+      "encoder.model.blocks.0.1.se.conv_reduce": 28,
+      "encoder.model.blocks.1.0.conv_dw": 28,
+      "encoder.model.blocks.1.0.conv_pw": 28,
+      "encoder.model.blocks.1.0.conv_pwl": 28,
+      "encoder.model.blocks.1.0.se.conv_expand": 28,
+      "encoder.model.blocks.1.0.se.conv_reduce": 28,
+      "encoder.model.blocks.1.1.conv_dw": 28,
+      "encoder.model.blocks.1.1.conv_pw": 28,
+      "encoder.model.blocks.1.1.conv_pwl": 28,
+      "encoder.model.blocks.1.1.se.conv_expand": 28,
+      "encoder.model.blocks.1.1.se.conv_reduce": 28,
+      "encoder.model.blocks.1.2.conv_dw": 28,
+      "encoder.model.blocks.1.2.conv_pw": 28,
+      "encoder.model.blocks.1.2.conv_pwl": 28,
+      "encoder.model.blocks.1.2.se.conv_expand": 28,
+      "encoder.model.blocks.1.2.se.conv_reduce": 28,
+      "encoder.model.blocks.2.0.conv_dw": 28,
+      "encoder.model.blocks.2.0.conv_pw": 28,
+      "encoder.model.blocks.2.0.conv_pwl": 28,
+      "encoder.model.blocks.2.0.se.conv_expand": 28,
+      "encoder.model.blocks.2.0.se.conv_reduce": 28,
+      "encoder.model.blocks.2.1.conv_dw": 28,
+      "encoder.model.blocks.2.1.conv_pw": 28,
+      "encoder.model.blocks.2.1.conv_pwl": 28,
+      "encoder.model.blocks.2.1.se.conv_expand": 28,
+      "encoder.model.blocks.2.1.se.conv_reduce": 28,
+      "encoder.model.blocks.2.2.conv_dw": 28,
+      "encoder.model.blocks.2.2.conv_pw": 28,
+      "encoder.model.blocks.2.2.conv_pwl": 28,
+      "encoder.model.blocks.2.2.se.conv_expand": 28,
+      "encoder.model.blocks.2.2.se.conv_reduce": 28,
+      "encoder.model.blocks.3.0.conv_dw": 28,
+      "encoder.model.blocks.3.0.conv_pw": 28,
+      "encoder.model.blocks.3.0.conv_pwl": 28,
+      "encoder.model.blocks.3.0.se.conv_expand": 28,
+      "encoder.model.blocks.3.0.se.conv_reduce": 28,
+      "encoder.model.blocks.3.1.conv_dw": 28,
+      "encoder.model.blocks.3.1.conv_pw": 28,
+      "encoder.model.blocks.3.1.conv_pwl": 28,
+      "encoder.model.blocks.3.1.se.conv_expand": 28,
+      "encoder.model.blocks.3.1.se.conv_reduce": 28,
+      "encoder.model.blocks.3.2.conv_dw": 28,
+      "encoder.model.blocks.3.2.conv_pw": 28,
+      "encoder.model.blocks.3.2.conv_pwl": 28,
+      "encoder.model.blocks.3.2.se.conv_expand": 28,
+      "encoder.model.blocks.3.2.se.conv_reduce": 28,
+      "encoder.model.blocks.3.3.conv_dw": 28,
+      "encoder.model.blocks.3.3.conv_pw": 28,
+      "encoder.model.blocks.3.3.conv_pwl": 28,
+      "encoder.model.blocks.3.3.se.conv_expand": 28,
+      "encoder.model.blocks.3.3.se.conv_reduce": 28,
+      "encoder.model.blocks.4.0.conv_dw": 28,
+      "encoder.model.blocks.4.0.conv_pw": 28,
+      "encoder.model.blocks.4.0.conv_pwl": 28,
+      "encoder.model.blocks.4.0.se.conv_expand": 28,
+      "encoder.model.blocks.4.0.se.conv_reduce": 28,
+      "encoder.model.blocks.4.1.conv_dw": 28,
+      "encoder.model.blocks.4.1.conv_pw": 28,
+      "encoder.model.blocks.4.1.conv_pwl": 28,
+      "encoder.model.blocks.4.1.se.conv_expand": 28,
+      "encoder.model.blocks.4.1.se.conv_reduce": 28,
+      "encoder.model.blocks.4.2.conv_dw": 28,
+      "encoder.model.blocks.4.2.conv_pw": 28,
+      "encoder.model.blocks.4.2.conv_pwl": 28,
+      "encoder.model.blocks.4.2.se.conv_expand": 28,
+      "encoder.model.blocks.4.2.se.conv_reduce": 28,
+      "encoder.model.blocks.4.3.conv_dw": 28,
+      "encoder.model.blocks.4.3.conv_pw": 28,
+      "encoder.model.blocks.4.3.conv_pwl": 28,
+      "encoder.model.blocks.4.3.se.conv_expand": 28,
+      "encoder.model.blocks.4.3.se.conv_reduce": 28,
+      "encoder.model.blocks.5.0.conv_dw": 28,
+      "encoder.model.blocks.5.0.conv_pw": 28,
+      "encoder.model.blocks.5.0.conv_pwl": 28,
+      "encoder.model.blocks.5.0.se.conv_expand": 28,
+      "encoder.model.blocks.5.0.se.conv_reduce": 28,
+      "encoder.model.blocks.5.1.conv_dw": 28,
+      "encoder.model.blocks.5.1.conv_pw": 28,
+      "encoder.model.blocks.5.1.conv_pwl": 28,
+      "encoder.model.blocks.5.1.se.conv_expand": 28,
+      "encoder.model.blocks.5.1.se.conv_reduce": 28,
+      "encoder.model.blocks.5.2.conv_dw": 28,
+      "encoder.model.blocks.5.2.conv_pw": 28,
+      "encoder.model.blocks.5.2.conv_pwl": 28,
+      "encoder.model.blocks.5.2.se.conv_expand": 28,
+      "encoder.model.blocks.5.2.se.conv_reduce": 28,
+      "encoder.model.blocks.5.3.conv_dw": 28,
+      "encoder.model.blocks.5.3.conv_pw": 28,
+      "encoder.model.blocks.5.3.conv_pwl": 28,
+      "encoder.model.blocks.5.3.se.conv_expand": 28,
+      "encoder.model.blocks.5.3.se.conv_reduce": 28,
+      "encoder.model.blocks.5.4.conv_dw": 28,
+      "encoder.model.blocks.5.4.conv_pw": 28,
+      "encoder.model.blocks.5.4.conv_pwl": 28,
+      "encoder.model.blocks.5.4.se.conv_expand": 28,
+      "encoder.model.blocks.5.4.se.conv_reduce": 28,
+      "encoder.model.blocks.6.0.conv_dw": 28,
+      "encoder.model.blocks.6.0.conv_pw": 28,
+      "encoder.model.blocks.6.0.conv_pwl": 28,
+      "encoder.model.blocks.6.0.se.conv_expand": 28,
+      "encoder.model.blocks.6.0.se.conv_reduce": 28,
+      "encoder.model.blocks.6.1.conv_dw": 28,
+      "encoder.model.blocks.6.1.conv_pw": 28,
+      "encoder.model.blocks.6.1.conv_pwl": 27,
+      "encoder.model.blocks.6.1.se.conv_expand": 28,
+      "encoder.model.blocks.6.1.se.conv_reduce": 28,
+      "encoder.model.conv_stem": 28,
+      "segmentation_head.0": 28
+    },
+    "physical_storage_bits": 32,
+    "profile": "cap28",
+    "strict_interval_coordinates": 117964792,
+    "strict_interval_or_frozen_tie_coordinates": 117964793,
+    "ten_process_identity": false,
+    "ten_process_status": "OWED_MAIN",
+    "total_coordinates": 117964800
+  },
+  "status": "PLAN_ONLY_MEASURED_FROM_SAVED_N600",
+  "storage_preflight": {
+    "artifact_class": "small atomic JSON receipt",
+    "cleanup": "no bulky rebuildable artifact is produced",
+    "free_bytes": 695425433600,
+    "minimum_free_bytes": 67108864,
+    "path": "/Users/adpena/Projects/pact/experiments/results/margin_adaptive_perlayer_followon_20260714",
+    "status": "PASS"
+  },
+  "structural_accounting": {
+    "activation_buffer_count_per_layer": 1,
+    "conv2d_layers": 125,
+    "conv_macs_per_pair": 9909333952,
+    "conventional_flop_cut_fraction": 0.0,
+    "conventional_mac_cut": 0,
+    "measured_native_width_latency": "OWED_MAIN",
+    "non_se_conv_mac_fraction": 0.9998674251966516,
+    "output_accumulator_traffic_held_constant": true,
+    "se_blocks": 23,
+    "se_control_cost": {
+      "bulk_adaptive_fraction_under_convention": 0.9984007643624927,
+      "derived_cost_label": "DERIVED_EXPLICIT_OPERATION_CONVENTION",
+      "operation_convention": "Conv2d MAC=2 FLOPs; GAP plus feature-map gate=2 scalar ops per SE input element; SiLU/sigmoid transcendental implementation cost excluded",
+      "pair_index": 0,
+      "schema": "margin_adaptive_se_control_cost.v1",
+      "score_claim": false,
+      "se_block_input_shapes": [
+        {
+          "nchw": [
+            1,
+            32,
+            192,
+            256
+          ],
+          "path": "encoder.model.blocks.0.0.se"
+        },
+        {
+          "nchw": [
+            1,
+            16,
+            192,
+            256
+          ],
+          "path": "encoder.model.blocks.0.1.se"
+        },
+        {
+          "nchw": [
+            1,
+            96,
+            96,
+            128
+          ],
+          "path": "encoder.model.blocks.1.0.se"
+        },
+        {
+          "nchw": [
+            1,
+            144,
+            96,
+            128
+          ],
+          "path": "encoder.model.blocks.1.1.se"
+        },
+        {
+          "nchw": [
+            1,
+            144,
+            96,
+            128
+          ],
+          "path": "encoder.model.blocks.1.2.se"
+        },
+        {
+          "nchw": [
+            1,
+            144,
+            48,
+            64
+          ],
+          "path": "encoder.model.blocks.2.0.se"
+        },
+        {
+          "nchw": [
+            1,
+            288,
+            48,
+            64
+          ],
+          "path": "encoder.model.blocks.2.1.se"
+        },
+        {
+          "nchw": [
+            1,
+            288,
+            48,
+            64
+          ],
+          "path": "encoder.model.blocks.2.2.se"
+        },
+        {
+          "nchw": [
+            1,
+            288,
+            24,
+            32
+          ],
+          "path": "encoder.model.blocks.3.0.se"
+        },
+        {
+          "nchw": [
+            1,
+            528,
+            24,
+            32
+          ],
+          "path": "encoder.model.blocks.3.1.se"
+        },
+        {
+          "nchw": [
+            1,
+            528,
+            24,
+            32
+          ],
+          "path": "encoder.model.blocks.3.2.se"
+        },
+        {
+          "nchw": [
+            1,
+            528,
+            24,
+            32
+          ],
+          "path": "encoder.model.blocks.3.3.se"
+        },
+        {
+          "nchw": [
+            1,
+            528,
+            24,
+            32
+          ],
+          "path": "encoder.model.blocks.4.0.se"
+        },
+        {
+          "nchw": [
+            1,
+            720,
+            24,
+            32
+          ],
+          "path": "encoder.model.blocks.4.1.se"
+        },
+        {
+          "nchw": [
+            1,
+            720,
+            24,
+            32
+          ],
+          "path": "encoder.model.blocks.4.2.se"
+        },
+        {
+          "nchw": [
+            1,
+            720,
+            24,
+            32
+          ],
+          "path": "encoder.model.blocks.4.3.se"
+        },
+        {
+          "nchw": [
+            1,
+            720,
+            12,
+            16
+          ],
+          "path": "encoder.model.blocks.5.0.se"
+        },
+        {
+          "nchw": [
+            1,
+            1248,
+            12,
+            16
+          ],
+          "path": "encoder.model.blocks.5.1.se"
+        },
+        {
+          "nchw": [
+            1,
+            1248,
+            12,
+            16
+          ],
+          "path": "encoder.model.blocks.5.2.se"
+        },
+        {
+          "nchw": [
+            1,
+            1248,
+            12,
+            16
+          ],
+          "path": "encoder.model.blocks.5.3.se"
+        },
+        {
+          "nchw": [
+            1,
+            1248,
+            12,
+            16
+          ],
+          "path": "encoder.model.blocks.5.4.se"
+        },
+        {
+          "nchw": [
+            1,
+            1248,
+            12,
+            16
+          ],
+          "path": "encoder.model.blocks.6.0.se"
+        },
+        {
+          "nchw": [
+            1,
+            2112,
+            12,
+            16
+          ],
+          "path": "encoder.model.blocks.6.1.se"
+        }
+      ],
+      "se_blocks": 23,
+      "se_control_flops_excluding_nonlinear_transcendental_cost": 31694720,
+      "se_control_fraction_under_convention": 0.0015992356375073553,
+      "se_conv_flops": 2627456,
+      "se_conv_mac_fraction": 0.00013257480334839765,
+      "se_conv_macs": 1313728,
+      "se_feature_elements": 14533632,
+      "se_gap_plus_gate_scalar_ops": 29067264,
+      "shape_evidence": "MEASURED_REAL_SOURCE_PAIR_0_CPU_TORCH_FORWARD_HOOK",
+      "total_conv_flops": 19818667904
+    },
+    "se_conv_mac_fraction": 0.00013257480334839765,
+    "se_conv_macs_per_pair": 1313728,
+    "se_conv_paths": 46,
+    "selected_map_direct_operand_load_bytes_per_pair": "OWED_MAIN_SEARCH",
+    "uniform_int32_direct_operand_load_bytes_per_pair": 79274671616
+  },
+  "verdict_scope": "No technique verdict: plan-only saved-artifact remeasurement. Any future map failure is INSTANCE-scoped and queues sound-affine and richer finite-search reformulations."
+}

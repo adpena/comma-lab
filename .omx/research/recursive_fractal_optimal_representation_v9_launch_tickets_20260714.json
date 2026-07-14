@@ -1,0 +1,230 @@
+{
+  "schema": "recursive_fractal_optimal_representation_v9_launch_tickets.v2",
+  "task_id": "task503_recursive_fractal_optimal_representation_v9_20260714",
+  "lane_id": "recursive_fractal_optimal_representation_v9",
+  "created_at_utc": "2026-07-14T14:19:12Z",
+  "updated_at_utc": "2026-07-14T14:45:00Z",
+  "pointer": {
+    "submittable_score": 0.1910828242,
+    "submittable_axis": "[contest-CPU Linux x86_64]",
+    "non_submission_defensive_bank_score": 0.1880443979880752,
+    "non_submission_defensive_bank_status": "BORROWED_NON_SUBMISSION",
+    "moved": false,
+    "score_claim": false
+  },
+  "live_v9_integration": {
+    "status": "V9_INTEGRATION_BLOCKED_OWNER",
+    "reported_at_utc": "2026-07-14T14:28:41Z",
+    "reason": "The real trainer parser lacks --decision-carrier-bundle and --decision-palette-chroma, and no disabled _compose_rgb/appearance_initializer consumer receipt exists. Even explicit-OFF composition would create a config-orphan fake.",
+    "policy_binding_composed": false,
+    "expected_levers_composed": false,
+    "receipt_fabricated": false
+  },
+  "execution": {
+    "status": "PREPARED_NOT_FIRED",
+    "operator_go_required": true,
+    "operator_go_received": false,
+    "local_only": true,
+    "predicted_cost_usd": 0.0,
+    "paid_dispatch_allowed": false,
+    "heavy_or_paid_launch_fired": false,
+    "training_fired": false,
+    "archive_mutation_fired": false,
+    "evaluator_fired": false,
+    "containment": "This artifact carries no actuation authority. Every ticket remains blocked until a fresh explicit operator GO for that exact ticket and all listed prerequisites pass."
+  },
+  "shared_contract": {
+    "vehicle_family": "v9_cgauge",
+    "metric_id": "argmax_native_vjp_fidelity_v1",
+    "metric_selection_status": "NO_VERDICT_DATA_CUSTODY",
+    "composition_law_ref": "fullstack_unique_home_assignment_v1",
+    "n_pairs": 600,
+    "pair_indices": "exactly 0..599",
+    "realized_through_R": true,
+    "frozen_scorers": "CPU-torch SegNet and official PoseNet first-six output",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "pointer_moved": false,
+    "storage_waterfall": [
+      "/Volumes/VertigoDataTier/pact",
+      "/Volumes/APDataStore/pact",
+      "local only by explicit opt-in"
+    ],
+    "resume": {
+      "required": true,
+      "atomic": true,
+      "maximum_loss": "one coordinate cell or one explicitly declared encode/parse/eval stage",
+      "preserve_stage_artifacts": true,
+      "content_hash_bind_inputs": true,
+      "stable_final_source_pin_required": true
+    }
+  },
+  "bounded_measurement_prerequisite": {
+    "status": "PASSED_HISTORICAL_SOURCE_SNAPSHOT",
+    "receipt_path": ".omx/research/recursive_fractal_optimal_representation_v9_timing_smoke_20260714.json",
+    "receipt_sha256": "7417c0e214501ae28424bc7a860c4d415a8aa78d5a1feb70a7e468bfb607f236",
+    "axis": "[macOS-CPU-torch advisory; bounded-n1; no training; realized through R]",
+    "pairs": 1,
+    "coordinate_cells_complete": 15,
+    "coordinate_cells_required": 15,
+    "measurement_seconds": 72.04077154106926,
+    "derived_n600_seconds": 43224.46292464156,
+    "derived_n600_hours": 12.006795256844877,
+    "derived_not_measured": true,
+    "historical_state_resume_allowed_into_final_source": false,
+    "reason": "The probe source was hardened after the timing receipt. The bounded result establishes a timing/feasibility prior only; the full run must start in a fresh stable work directory with final source hashes pinned."
+  },
+  "referenced_not_duplicated": {
+    "path": ".omx/research/genuine_frame_fresh_start_3arm_ticket_20260714.json",
+    "sha256": "5d147a34cb831894e3b361c3b0bc4e7a57051be7545698784672ddb3a7b63cda",
+    "owner_task": 502,
+    "status": "CORRECTED_RECEIVER_MEASUREMENT_PENDING_AFTER_CONFOUND_STOP",
+    "reason": "The genuine localized fresh-start basis treatment is sibling-owned. Task503 consumes its eventual selected basis and does not restate or fire its arms."
+  },
+  "tickets": [
+    {
+      "ticket_id": "task503_full_n600_no_training_secants_20260714",
+      "rank": 1,
+      "name": "Full no-training palette/chroma secant sweep",
+      "status": "PREPARED_NOT_FIRED_OPERATOR_GO_ONLY",
+      "operator_go_required": true,
+      "operator_go_received": false,
+      "predicted_cost_usd": 0.0,
+      "local_only": true,
+      "training": false,
+      "purpose": "Measure the full real-n600 reachable Seg winner-rival and Pose6 secant Grams for palette15 plus any declared luma-null directions. Do not infer an alternate carrier, archive saving, selected M, or score.",
+      "timing": {
+        "bounded_n1_seconds_measured": 72.04077154106926,
+        "n600_seconds_derived": 43224.46292464156,
+        "n600_hours_derived": 12.006795256844877,
+        "n600_measured": false,
+        "projection_scope": "same 15 coordinates, scorer backend, renderer, and host"
+      },
+      "prerequisites": [
+        "The bounded-n1 timing/feasibility prerequisite is acknowledged as historical and non-authority.",
+        "The parent final pass freezes and hashes the final hardened probe and byte-close helper source.",
+        "A fresh durable work directory is selected; the historical n1 state is not resumed.",
+        "Storage waterfall records enough free bytes and the durable work directory.",
+        "Checkpoint, GT cache, scorer weights, probe source, renderer config, and trainer helper hashes are bound.",
+        "Explicit operator GO releases --allow-full-secants for this exact command."
+      ],
+      "command_template_after_go": [
+        ".venv/bin/python",
+        "tools/probe_appearance_task_rank_n600.py",
+        "--mode",
+        "palette15",
+        "--allow-full-secants",
+        "--allow-local-storage",
+        "--start-pair",
+        "0",
+        "--end-pair",
+        "600",
+        "--verify-large-hashes",
+        "--work-dir",
+        "experiments/results/appearance_task_rank_n600_task503_full_finalsource_20260714",
+        "--receipt",
+        ".omx/research/recursive_fractal_optimal_representation_v9_full_n600_secants_20260714.json",
+        "--requested-free-bytes",
+        "104857600"
+      ],
+      "resume_state_after_go": "experiments/results/appearance_task_rank_n600_task503_full_finalsource_20260714/appearance_task_rank_n600_state.npz",
+      "historical_state_not_resumable": "experiments/results/appearance_task_rank_n600_task503_20260714/appearance_task_rank_n600_state.npz",
+      "current_blocker": "Explicit operator GO and a stable final-source pin are absent. Full-n600 runtime is only a 12.0068-hour linear projection.",
+      "admission_output": "appearance_task_rank_n600.v1 with exact 0..599 coverage, finite complete cells, input/source custody, and score_claim=false. Metric selection remains NO_VERDICT_DATA_CUSTODY unless #500 supplies separate custody."
+    },
+    {
+      "ticket_id": "task503_actual_alternate_decision_carrier_archive_ab_20260714",
+      "rank": 2,
+      "name": "Actual alternate DecisionCarrier archive A/B",
+      "status": "BLOCKED_PREPARED_NOT_FIRED",
+      "operator_go_required": true,
+      "operator_go_received": false,
+      "predicted_cost_usd": 0.0,
+      "local_only": true,
+      "training": false,
+      "purpose": "Encode a real DCB alternate, assemble exact baseline and alternate archive.zip files, parse both receivers, and measure exact counted bytes plus full-n600 scorer nonworsening.",
+      "prerequisites": [
+        "Bundle structural contract is HARDENED_STRUCTURAL_CONTRACT_NO_LIVE_RECEIVER_CUSTODY; a real receiver-owned attestation trust root and runtime receipt remain required.",
+        "Exclusive V9 owner lands real parser flags, disabled consumers, LawRefs, receipt edges, and additive checkpoint fields before explicit-OFF composition.",
+        "Live _compose_rgb/appearance_initializer and generated-inflate receiver consume DCB bytes.",
+        "A real alternate encoder exists; secant rank and zero-group recompression are not encoders.",
+        "Bundle activation receipt proves enabled output differs from disabled while enabled equals parse-back and resume.",
+        "Explicit operator GO authorizes creation of the two local candidate archives."
+      ],
+      "command_template_after_go": null,
+      "reason_command_is_null": "No real V9 DCB encoder/archive builder/parser exists. Inventing a command would fake the missing implementation.",
+      "resume_stages": [
+        "encode_baseline",
+        "encode_alternate_dcb",
+        "assemble_exact_archives",
+        "parseback_and_output_digest",
+        "full_n600_scorer_ab",
+        "emit_one_hash_bound_evidence_chain"
+      ],
+      "required_admission": {
+        "baseline_archive_counting_surface": "archive.zip",
+        "alternate_archive_counting_surface": "archive.zip",
+        "exact_archive_sha256_both": true,
+        "baseline_archive_bytes_gt_alternate": true,
+        "distinct_receiver_outputs": true,
+        "alternate_receiver_parseback": true,
+        "enabled_equals_parseback_equals_resume": true,
+        "full_n600_d_seg_nonworse": true,
+        "pose6_trust_status": "PASS_FULL_N600_DECLARED_BOUND",
+        "score_claim": false,
+        "pointer_moved": false
+      },
+      "current_blocker": "V9_INTEGRATION_BLOCKED_OWNER plus NO_VERDICT_RECEIVER_RATE_CUSTODY: no live parser/consumer, alternate encoder, alternate archive, or exact receiver A/B exists."
+    },
+    {
+      "ticket_id": "task503_full_n600_palette_chroma_consume_20260714",
+      "rank": 3,
+      "name": "Full-n600 decision palette/chroma consume",
+      "status": "BLOCKED_PREPARED_NOT_FIRED",
+      "operator_go_required": true,
+      "operator_go_received": false,
+      "predicted_cost_usd": 0.0,
+      "local_only": true,
+      "training": false,
+      "purpose": "Apply the constrained palette/chroma correction inside the actual textured V9 carrier and prove full-n600 through-R margin/Pose behavior, camera uint8 survival, parse-back, resume, and exact archive-byte effect.",
+      "prerequisites": [
+        "The full n600 secant ticket completes with finite exact coverage, or the treatment remains explicitly unselected/no-verdict.",
+        "Metric-owner selection receipt is supplied or selected M stays NO_VERDICT_DATA_CUSTODY.",
+        "Live V9 textured-carrier consumer exists; flat-palette replacement remains forbidden.",
+        "Camera uint8 ties-to-even, minimum changed uint8 step, signed delta, luma tolerance, finite numerics, and through-R scorer provenance are bound.",
+        "Palette consume receipt shares the bundle/archive evidence identity and output hashes.",
+        "Explicit operator GO authorizes the full local consume measurement."
+      ],
+      "command_template_after_go": null,
+      "reason_command_is_null": "The NumPy reference exists, but no live V9 apply/receiver runner emits a real palette consume receipt. A fabricated command would overstate integration.",
+      "resume_stages": [
+        "load_hash_bound_full_n600_secants",
+        "solve_constrained_correction",
+        "apply_textured_carrier",
+        "uint8_and_R_parseback",
+        "full_n600_pose6_and_dseg",
+        "exact_archive_byte_accounting",
+        "emit_hash_bound_consume_receipt"
+      ],
+      "required_admission": {
+        "textured_carrier_preserved": true,
+        "flat_palette_replacement": false,
+        "uint8_survival_status": "PASS",
+        "pose6_trust_status": "PASS",
+        "raw_dense_rgb_state_stored": false,
+        "enabled_output_differs_from_disabled": true,
+        "enabled_equals_parseback_equals_resume": true,
+        "n_pairs": 600,
+        "score_claim": false
+      },
+      "current_blocker": "V9_INTEGRATION_BLOCKED_OWNER and NO_VERDICT: the local solver has no live V9 consumer or full-n600 receiver custody."
+    }
+  ],
+  "verdict_scope": {
+    "warm_start_basis_rows": "FORMULATION: bounded global-polar warm-start ep675 seed0 only",
+    "bounded_n1_rank": "INSTANCE: pair0 palette15 central realized secants only; not full DCB or low-rank rate proof",
+    "rate_diagnostic": "DIAGNOSTIC: current receiver group loci only; all behavior-changing; no achievable saving",
+    "task503_family": "OPEN until actual alternate receiver-closed full-n600 archive A/B",
+    "metric_geometry": "Fixed-state PSD M is local Bregman/Mahalanobis; dual-Euclidean applies only to squared-Hessian geometry and not finite KL/reachable rho/Fisher-natural"
+  }
+}

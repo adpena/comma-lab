@@ -1,0 +1,37 @@
+{
+  "schema": "appearance_task_rank_n600.interrupted.v1",
+  "written_at_utc": "2026-07-14T14:08:16Z",
+  "axis": "[macOS-CPU-torch advisory; bounded-n1; no training; realized through R]",
+  "command": ".venv/bin/python tools/probe_appearance_task_rank_n600.py --timing-smoke --allow-local-storage --work-dir experiments/results/appearance_task_rank_n600_task503_20260714 --receipt .omx/research/recursive_fractal_optimal_representation_v9_timing_smoke_20260714.json --requested-free-bytes 104857600",
+  "status": "INTERRUPTED_FAIL_CLOSED_RUNTIME_FPE_WARNING",
+  "returncode": 130,
+  "stop_authority": "operator-containment delegate manual stop before receipt emission",
+  "warning": {
+    "site": "streamed fp64 SegNet Gram diagonal/cross matmul",
+    "tokens": [
+      "divide by zero encountered in matmul",
+      "overflow encountered in matmul",
+      "invalid value encountered in matmul"
+    ],
+    "interpretation": "NO_VERDICT: retained arrays were finite, so the warning may be backend floating-point status pollution; the old probe had no explicit finite/result gate and therefore could not continue safely"
+  },
+  "preserved_state": {
+    "original_path": "experiments/results/appearance_task_rank_n600_task503_20260714/appearance_task_rank_n600_state.npz",
+    "preserved_path": "experiments/results/appearance_task_rank_n600_task503_20260714/appearance_task_rank_n600_state_interrupted_fpe_warning_20260714.npz",
+    "bytes": 59820,
+    "sha256": "945459eac7f6489b4304ddf4055a76f315d5dcc13bc2678a60651eddfc13f7fd",
+    "mtime_utc": "2026-07-14T14:06:23Z",
+    "covered_coordinate_cells": 11,
+    "required_coordinate_cells_for_timing_pair": 15,
+    "seg_gram_all_finite": true,
+    "pose_gram_all_finite": true,
+    "seg_gram_max_abs_finite": 1716291.6379096305,
+    "pose_gram_max_abs_finite": 11.28594887583198,
+    "reason_preserved": "small resumability/failure artifact; no deletion or cleanup is authorized until the warning class is explained or guarded"
+  },
+  "emitted_measurement_receipt": false,
+  "score_claim_valid": false,
+  "promotion_eligible": false,
+  "pointer_moved": false,
+  "next_gate": "explicit observation/secant/Gram finiteness checks plus atomic ProbeError refusal receipt, then a fresh one-pair timing smoke"
+}

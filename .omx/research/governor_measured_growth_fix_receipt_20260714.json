@@ -1,0 +1,82 @@
+{
+  "schema": "system_memory_governor_measured_growth_receipt.v1",
+  "utc_date": "2026-07-14",
+  "lane_id": "governor_measured_growth_fix",
+  "research_only": true,
+  "score_claim": false,
+  "pointer_moved": false,
+  "dispatch_cost_usd": 0,
+  "authority_axis": "local_control_plane_fixed_snapshot",
+  "code_bundle_sha256": "2ccdefba59bfb491f0ed6393552e0808e90492f2d5fd83aadca9df68bcd97342",
+  "source_sha256": {
+    "tools/system_memory_governor.py": "78c54a9c6a7265f94b1bf01e6d77dcc79e3880793f2dbcea44f6c472d1daad1d",
+    "tools/memory_guard.py": "f7cfb1acc6e881c4a6f6eebbca8a3ba15bedf0cc936c7b3d708a6d0df346ba4e",
+    "src/tac/tests/test_system_memory_governor.py": "1d3662817c4dad571dfa842e55322c0031715fcb577e1de0349380725e2a3369",
+    "src/tac/tests/test_admission_reservation_toctou.py": "2a192a14cbb8c632e2b63a70f00c82634100065e11a52fc64aec6b217619ecc3",
+    "src/tac/tests/test_tier_scaled_safety_floor.py": "bb175f79e2622dbfd00aedcba539daa3fb5e1c0d29f070931b1d0a4c117837e1",
+    "src/tac/tests/test_memory_guard.py": "2db7d933062eabf19428a57b233dd0ada91093d2bec9b05ac33477e75b52e8e0"
+  },
+  "incident_replay": {
+    "inputs_gib": {
+      "system_used": 50.0,
+      "stable_process_rss": [4.4, 5.1],
+      "new_projection": 6.0,
+      "adaptive_ceiling": 72.0
+    },
+    "legacy_no_history": {
+      "growth_reserve_per_process_gib": [25.0, 25.0],
+      "projected_system_used_gib": 106.0,
+      "decision": "REFUSE"
+    },
+    "stable_measured": {
+      "growth_reserve_per_process_gib": [1.6666666666666667, 1.6666666666666667],
+      "projected_system_used_gib": 59.333333333333336,
+      "decision": "ADMIT"
+    },
+    "real_rising_fixture": {
+      "second_process_rss_gib": 8.1,
+      "projected_system_used_gib": 82.66666666666667,
+      "decision": "REFUSE"
+    }
+  },
+  "safety_invariants": {
+    "pid_reuse_key": "pid_plus_kernel_start_identity",
+    "plateau_reserve_gib": 1.6666666666666667,
+    "projection_cap_gib": 25.0,
+    "runtime_throttle_poll_s": 2.0,
+    "relaxation_requires_throttle_eligibility": true,
+    "noneligible_material_reserve_gib": 25.0,
+    "unknown_or_stale_or_corrupt_reserve_gib": 25.0,
+    "runtime_critical_action": "pause",
+    "signals_sent_during_verification": 0
+  },
+  "verification": {
+    "focused_suites": "195 passed, 1 deselected",
+    "deselection_reason": "existing test intentionally SIGKILLs its own throwaway sleep; operator required no process kills",
+    "property_cases": 25000,
+    "concurrent_history_writers": 8,
+    "review_surface": "governor_measured_growth_fix_20260714",
+    "review_rounds": {
+      "pre_reset_finding_round": 3,
+      "post_reset_clean_rounds": [4, 5, 6],
+      "consecutive_clean": 3,
+      "sealed": true
+    },
+    "review_policy_violations": 0,
+    "py_compile": "PASS",
+    "ruff_selected_E9_F63_F7_F82": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "serializer": {
+    "status": "REFUSED_GIT_ADD_RC128",
+    "error": "unable to create temporary file: Operation not permitted",
+    "direct_git_fallback_attempted": false,
+    "commit_landed": false
+  },
+  "measurement_boundary": {
+    "live_ps_scan": "UNAVAILABLE_IN_MANAGED_SANDBOX_OPERATION_NOT_PERMITTED",
+    "claim": "fixed_snapshot_apparatus_replay_only",
+    "mps_score_claim": false,
+    "contest_score_claim": false
+  }
+}

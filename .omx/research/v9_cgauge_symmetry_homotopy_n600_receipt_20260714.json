@@ -1,0 +1,1205 @@
+{
+  "authority": "[macOS CPU-torch through-R advisory; numpy aggregation; non-promotable]",
+  "completed_at_utc": "2026-07-14T17:04:00.649016+00:00",
+  "custody": {
+    "aa_ipe_source": {
+      "bytes": 16090,
+      "path": "src/tac/boundary_math/aa_sdf_observation_render.py",
+      "sha256": "6965304f1c2a72e2562a0beb3514c075bfdce1fdc155ae925cb1db9cdd9a7da3"
+    },
+    "attribution_helper": {
+      "bytes": 30087,
+      "path": "tools/witness_per_stage_annulus_attribution.py",
+      "sha256": "0272b850d9abb978e0295ebbec9a6bf0971f033de6b7d6a85c78c78f25916a43"
+    },
+    "checkpoint": {
+      "bytes": 379776,
+      "path": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_witness_ema_BEST.npz",
+      "sha256": "2599ad8b396af2af220a3bdbeee2ade92f194771ae6ef01a6faa15d39333484c"
+    },
+    "gt_cache": {
+      "bytes": 5078017610,
+      "path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "launch": {
+      "bytes": 7018,
+      "path": "experiments/results/v9_cgauge_432_coherent_arm_20260711/launch.sh",
+      "sha256": "bd760505c445d51dc51d0b31eadd5a4d2628261220ffa46e2474ca83f358c601"
+    },
+    "levelset_numpy_forward": {
+      "bytes": 57018,
+      "path": "src/tac/boundary_math/lever_b_levelset_generator.py",
+      "sha256": "2a686103bc50505ba0c531681f6eda820e1b59adc1a2881919862785f6998149"
+    },
+    "levelset_trainer": {
+      "bytes": 1113751,
+      "path": "experiments/train_levelset_witness_realized_through_R_mlx.py",
+      "sha256": "31b6645e1f5512fe6865f987b2361dcca094796eeece99b540db17ff293bbb1f"
+    },
+    "math_module": {
+      "bytes": 32295,
+      "path": "src/tac/boundary_math/gauge_symmetry_homotopy_20260714.py",
+      "sha256": "7bfa4ec64eec74c0e4ce7e87a82882c6eb130bde3038c32bd3cb109252664e68"
+    },
+    "probe": {
+      "bytes": 51579,
+      "path": "tools/probe_v9_cgauge_symmetry_homotopy_n600_20260714.py",
+      "sha256": "2b211cb5a5868ad699916af1fb7f271b63cb98c70b01e44557a4c21b8241347b"
+    },
+    "r_operator_source": {
+      "bytes": 193326,
+      "path": "experiments/train_witness_realized_through_R_mlx.py",
+      "sha256": "788a51ef3d50c244e1d441e210c7a0213834705727bc73e43e63bb2430b08ac6"
+    },
+    "segnet_architecture": {
+      "bytes": 8322,
+      "path": "upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    "segnet_loader": {
+      "bytes": 7111,
+      "path": "src/tac/boundary_math/seg_core.py",
+      "sha256": "ea9accb303fb9297a10048bf0054ae6e358bc5415016aee9ac66c55fce82acd6"
+    },
+    "segnet_model": {
+      "bytes": 38502892,
+      "path": "upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "selector": {
+      "bytes": 125,
+      "path": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_best.json",
+      "sha256": "4d676a12d2cb5f955ec686338409d9c7f3dc34a0159ce1a082986d5a833a64a4"
+    },
+    "taper_source": {
+      "bytes": 10488,
+      "path": "src/tac/boundary_math/dseg_aware_fourier_taper.py",
+      "sha256": "2fa0f86a3fa205999830d8754458f505ab59cf0adcc413ebfa4597a91116597f"
+    },
+    "thread_law": {
+      "bytes": 38210,
+      "path": "src/tac/canonical_equations/segnet_exact_forward_cpu_thread_law_20260713.py",
+      "sha256": "ac0f62fe04b19f3c0a70bc5adfde5a6287bdc366a4e2587580719e3b487b4480"
+    }
+  },
+  "d37": {
+    "authority": "[macOS CPU-torch through-R advisory; numpy aggregation; non-promotable]",
+    "boundary_flip_rate": 0.4180585267121897,
+    "debt_id": "D37",
+    "delta_L_MX": {
+      "class_pair_calibration": [
+        {
+          "base_brier": 0.24914853930076308,
+          "base_mean_prediction": 0.4029251696907722,
+          "class_pair": [
+            0,
+            1
+          ],
+          "class_pair_id": 1,
+          "flip_rate": 0.442299868049251,
+          "n": 626749,
+          "refined_brier": 0.24535732229047486,
+          "refined_mean_prediction": 0.44223443150277303
+        },
+        {
+          "base_brier": 0.2835262995205187,
+          "base_mean_prediction": 0.4222413811734639,
+          "class_pair": [
+            0,
+            2
+          ],
+          "class_pair_id": 2,
+          "flip_rate": 0.6997902100675373,
+          "n": 252157,
+          "refined_brier": 0.2052143685469304,
+          "refined_mean_prediction": 0.7001460450373553
+        },
+        {
+          "base_brier": 0.3003162180486563,
+          "base_mean_prediction": 0.45098138222139783,
+          "class_pair": [
+            0,
+            3
+          ],
+          "class_pair_id": 3,
+          "flip_rate": 0.9557777460362805,
+          "n": 70010,
+          "refined_brier": 0.04223803939406108,
+          "refined_mean_prediction": 0.955091942454532
+        },
+        {
+          "base_brier": 0.2306202552279749,
+          "base_mean_prediction": 0.41577671721077347,
+          "class_pair": [
+            0,
+            4
+          ],
+          "class_pair_id": 4,
+          "flip_rate": 0.4690063237550934,
+          "n": 302352,
+          "refined_brier": 0.21445056430949339,
+          "refined_mean_prediction": 0.4693209605651653
+        },
+        {
+          "base_brier": 0.240880251273942,
+          "base_mean_prediction": 0.416145825415338,
+          "class_pair": [
+            1,
+            0
+          ],
+          "class_pair_id": 5,
+          "flip_rate": 0.4461799157223948,
+          "n": 512829,
+          "refined_brier": 0.2382467414597522,
+          "refined_mean_prediction": 0.4468698211891714
+        },
+        {
+          "base_brier": 0.28164313200075014,
+          "base_mean_prediction": 0.45461107952485363,
+          "class_pair": [
+            1,
+            2
+          ],
+          "class_pair_id": 7,
+          "flip_rate": 0.829733163913596,
+          "n": 787,
+          "refined_brier": 0.14981242045619392,
+          "refined_mean_prediction": 0.7817104890460126
+        },
+        {
+          "base_brier": 0.2931186512711205,
+          "base_mean_prediction": 0.46100203692104275,
+          "class_pair": [
+            1,
+            3
+          ],
+          "class_pair_id": 8,
+          "flip_rate": 0.9968304278922345,
+          "n": 631,
+          "refined_brier": 0.011766803101122053,
+          "refined_mean_prediction": 0.9315720350084243
+        },
+        {
+          "base_brier": 0.28528981128732206,
+          "base_mean_prediction": 0.3899693532918557,
+          "class_pair": [
+            1,
+            4
+          ],
+          "class_pair_id": 9,
+          "flip_rate": 0.6526916397916149,
+          "n": 4031,
+          "refined_brier": 0.2134248744346081,
+          "refined_mean_prediction": 0.642815558061787
+        },
+        {
+          "base_brier": 0.22318443389828455,
+          "base_mean_prediction": 0.41965923340668787,
+          "class_pair": [
+            2,
+            0
+          ],
+          "class_pair_id": 10,
+          "flip_rate": 0.30323440596395207,
+          "n": 254328,
+          "refined_brier": 0.20881360522694603,
+          "refined_mean_prediction": 0.30309193435836757
+        },
+        {
+          "base_brier": 0.29195220808240324,
+          "base_mean_prediction": 0.4164754045081458,
+          "class_pair": [
+            2,
+            1
+          ],
+          "class_pair_id": 11,
+          "flip_rate": 0.6746707978311387,
+          "n": 1291,
+          "refined_brier": 0.23262768876489595,
+          "refined_mean_prediction": 0.6757554706335531
+        },
+        {
+          "base_brier": 0.28454827413955014,
+          "base_mean_prediction": 0.462503659537757,
+          "class_pair": [
+            2,
+            3
+          ],
+          "class_pair_id": 13,
+          "flip_rate": 0.9184008187472118,
+          "n": 76214,
+          "refined_brier": 0.07446162434097324,
+          "refined_mean_prediction": 0.917389779813004
+        },
+        {
+          "base_brier": 0.20687095767080502,
+          "base_mean_prediction": 0.45028825302713543,
+          "class_pair": [
+            3,
+            0
+          ],
+          "class_pair_id": 15,
+          "flip_rate": 0.018339978252990215,
+          "n": 68975,
+          "refined_brier": 0.017947637379631558,
+          "refined_mean_prediction": 0.018781892248589702
+        },
+        {
+          "base_brier": 0.19514680988193067,
+          "base_mean_prediction": 0.43561039063914303,
+          "class_pair": [
+            3,
+            1
+          ],
+          "class_pair_id": 16,
+          "flip_rate": 0.012371134020618556,
+          "n": 970,
+          "refined_brier": 0.013672289210834878,
+          "refined_mean_prediction": 0.04429060138674029
+        },
+        {
+          "base_brier": 0.21903596564442804,
+          "base_mean_prediction": 0.46392372605938315,
+          "class_pair": [
+            3,
+            2
+          ],
+          "class_pair_id": 17,
+          "flip_rate": 0.039854519205408334,
+          "n": 72037,
+          "refined_brier": 0.037906458344065606,
+          "refined_mean_prediction": 0.040417386331108425
+        },
+        {
+          "base_brier": 0.21730563442138512,
+          "base_mean_prediction": 0.44929487609488916,
+          "class_pair": [
+            3,
+            4
+          ],
+          "class_pair_id": 19,
+          "flip_rate": 0.225,
+          "n": 120,
+          "refined_brier": 0.18387325389358075,
+          "refined_mean_prediction": 0.2727321044076749
+        },
+        {
+          "base_brier": 0.17999748732841456,
+          "base_mean_prediction": 0.41503374504998364,
+          "class_pair": [
+            4,
+            0
+          ],
+          "class_pair_id": 20,
+          "flip_rate": 0.06304294033223906,
+          "n": 303095,
+          "refined_brier": 0.05547105072454795,
+          "refined_mean_prediction": 0.06301245071253024
+        },
+        {
+          "base_brier": 0.15658336453252125,
+          "base_mean_prediction": 0.38511096378680865,
+          "class_pair": [
+            4,
+            1
+          ],
+          "class_pair_id": 21,
+          "flip_rate": 0.03527902501603592,
+          "n": 4677,
+          "refined_brier": 0.03410458562535708,
+          "refined_mean_prediction": 0.04164808076492352
+        },
+        {
+          "base_brier": 0.2700134915848398,
+          "base_mean_prediction": 0.4441207560061238,
+          "class_pair": [
+            4,
+            3
+          ],
+          "class_pair_id": 23,
+          "flip_rate": 0.6046511627906976,
+          "n": 129,
+          "refined_brier": 0.2725328963532991,
+          "refined_mean_prediction": 0.522519119871477
+        }
+      ],
+      "empirically_supported_partition_group": "refined product of within-(M,xi,C) fiber permutations",
+      "estimator": "nested 5x3 pair-blocked beta-binomial context codelength",
+      "full_data_modal_spec": {
+        "margin_bins": 16,
+        "phase_bins": 8,
+        "xi_bins": 2
+      },
+      "gross_gain_bits": 467373.90888513427,
+      "gross_gain_bits_per_boundary_pixel": 0.18318460696404312,
+      "gross_gain_bits_per_flip": 0.4381793343738104,
+      "model_table_overhead": {
+        "base_nonempty_contexts": 64,
+        "incremental_bytes": 10342,
+        "refined_nonempty_contexts": 1095,
+        "schema": "ASSUMED fixed rows: uint16 context + uint32 n0 + uint32 n1; 32-byte header"
+      },
+      "net_gain_bits_after_table_overhead": 384637.90888513427,
+      "net_gain_ci95_high_bits": 395236.54874890414,
+      "net_gain_ci95_low_bits": 373674.7586229076,
+      "operational_target": "conditional-codelength proxy for I(F;C|M,xi)",
+      "pair_bootstrap": {
+        "bootstrap_mean": 467343.0846139872,
+        "ci95_high": 477972.54874890414,
+        "ci95_low": 456410.7586229076,
+        "estimate": 467373.90888513427,
+        "n_bootstrap": 10000,
+        "resampling_unit": "pair",
+        "seed": 20260714
+      },
+      "selected_spec_by_outer_fold": [
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        }
+      ],
+      "table_rows_by_fold": [
+        {
+          "base_nonempty": 64,
+          "outer_fold": 0,
+          "refined_nonempty": 1093
+        },
+        {
+          "base_nonempty": 64,
+          "outer_fold": 1,
+          "refined_nonempty": 1090
+        },
+        {
+          "base_nonempty": 64,
+          "outer_fold": 2,
+          "refined_nonempty": 1077
+        },
+        {
+          "base_nonempty": 64,
+          "outer_fold": 3,
+          "refined_nonempty": 1074
+        },
+        {
+          "base_nonempty": 64,
+          "outer_fold": 4,
+          "refined_nonempty": 1090
+        }
+      ],
+      "uncharged_context_blocker": "table rows are charged, but the C sequence is not; a codec may consume this only if C is receiver-derived or jointly charged",
+      "verdict": "RESIDUAL_NON_GAUGE_STRUCTURE_DETECTED__M_NOT_SUFFICIENT",
+      "verdict_scope": "FORMULATION x EMPIRICAL_SURFACE; not an exact MI identity or LieFlow family verdict"
+    },
+    "delta_L_MX_phase_aware": {
+      "class_pair_calibration": [
+        {
+          "base_brier": 0.2483724945511197,
+          "base_mean_prediction": 0.4119958360621204,
+          "class_pair": [
+            0,
+            1
+          ],
+          "class_pair_id": 1,
+          "flip_rate": 0.442299868049251,
+          "n": 626749,
+          "refined_brier": 0.24311573358909916,
+          "refined_mean_prediction": 0.4422094833642338
+        },
+        {
+          "base_brier": 0.28504662307299955,
+          "base_mean_prediction": 0.41917148355501205,
+          "class_pair": [
+            0,
+            2
+          ],
+          "class_pair_id": 2,
+          "flip_rate": 0.6997902100675373,
+          "n": 252157,
+          "refined_brier": 0.20120094379020648,
+          "refined_mean_prediction": 0.6994752843835792
+        },
+        {
+          "base_brier": 0.29065923814430855,
+          "base_mean_prediction": 0.46232190048280963,
+          "class_pair": [
+            0,
+            3
+          ],
+          "class_pair_id": 3,
+          "flip_rate": 0.9557777460362805,
+          "n": 70010,
+          "refined_brier": 0.042438849722001876,
+          "refined_mean_prediction": 0.952018654819343
+        },
+        {
+          "base_brier": 0.23219875869833212,
+          "base_mean_prediction": 0.3924749367218467,
+          "class_pair": [
+            0,
+            4
+          ],
+          "class_pair_id": 4,
+          "flip_rate": 0.4690063237550934,
+          "n": 302352,
+          "refined_brier": 0.21385159702520526,
+          "refined_mean_prediction": 0.4694211500067104
+        },
+        {
+          "base_brier": 0.24088397795271735,
+          "base_mean_prediction": 0.42591982039503123,
+          "class_pair": [
+            1,
+            0
+          ],
+          "class_pair_id": 5,
+          "flip_rate": 0.4461799157223948,
+          "n": 512829,
+          "refined_brier": 0.2369236607224572,
+          "refined_mean_prediction": 0.4467726705976347
+        },
+        {
+          "base_brier": 0.27001717804571,
+          "base_mean_prediction": 0.47147564269174386,
+          "class_pair": [
+            1,
+            2
+          ],
+          "class_pair_id": 7,
+          "flip_rate": 0.829733163913596,
+          "n": 787,
+          "refined_brier": 0.20817012822824707,
+          "refined_mean_prediction": 0.6479534806427796
+        },
+        {
+          "base_brier": 0.27676591396613975,
+          "base_mean_prediction": 0.477260067794225,
+          "class_pair": [
+            1,
+            3
+          ],
+          "class_pair_id": 8,
+          "flip_rate": 0.9968304278922345,
+          "n": 631,
+          "refined_brier": 0.09860996778275083,
+          "refined_mean_prediction": 0.740479948413705
+        },
+        {
+          "base_brier": 0.27022325817137727,
+          "base_mean_prediction": 0.42557155825104925,
+          "class_pair": [
+            1,
+            4
+          ],
+          "class_pair_id": 9,
+          "flip_rate": 0.6526916397916149,
+          "n": 4031,
+          "refined_brier": 0.23069519210826092,
+          "refined_mean_prediction": 0.6131450276457786
+        },
+        {
+          "base_brier": 0.22417649723785107,
+          "base_mean_prediction": 0.41783661968341784,
+          "class_pair": [
+            2,
+            0
+          ],
+          "class_pair_id": 10,
+          "flip_rate": 0.30323440596395207,
+          "n": 254328,
+          "refined_brier": 0.20791710671354108,
+          "refined_mean_prediction": 0.30328886374506003
+        },
+        {
+          "base_brier": 0.2898538702876991,
+          "base_mean_prediction": 0.42794942015534637,
+          "class_pair": [
+            2,
+            1
+          ],
+          "class_pair_id": 11,
+          "flip_rate": 0.6746707978311387,
+          "n": 1291,
+          "refined_brier": 0.26314002096528777,
+          "refined_mean_prediction": 0.6065091127378157
+        },
+        {
+          "base_brier": 0.2691949085486191,
+          "base_mean_prediction": 0.4802905343655121,
+          "class_pair": [
+            2,
+            3
+          ],
+          "class_pair_id": 13,
+          "flip_rate": 0.9184008187472118,
+          "n": 76214,
+          "refined_brier": 0.07485954043020064,
+          "refined_mean_prediction": 0.9149437379524071
+        },
+        {
+          "base_brier": 0.2178345102830089,
+          "base_mean_prediction": 0.46163922798102397,
+          "class_pair": [
+            3,
+            0
+          ],
+          "class_pair_id": 15,
+          "flip_rate": 0.018339978252990215,
+          "n": 68975,
+          "refined_brier": 0.018098656068622578,
+          "refined_mean_prediction": 0.020977741380133398
+        },
+        {
+          "base_brier": 0.20607815353342213,
+          "base_mean_prediction": 0.4466396945144992,
+          "class_pair": [
+            3,
+            1
+          ],
+          "class_pair_id": 16,
+          "flip_rate": 0.012371134020618556,
+          "n": 970,
+          "refined_brier": 0.04605639760239456,
+          "refined_mean_prediction": 0.15959495036805518
+        },
+        {
+          "base_brier": 0.23442341053829976,
+          "base_mean_prediction": 0.4810982648314893,
+          "class_pair": [
+            3,
+            2
+          ],
+          "class_pair_id": 17,
+          "flip_rate": 0.039854519205408334,
+          "n": 72037,
+          "refined_brier": 0.03817402425276589,
+          "refined_mean_prediction": 0.04243647408236528
+        },
+        {
+          "base_brier": 0.2158872240756589,
+          "base_mean_prediction": 0.45854808620972953,
+          "class_pair": [
+            3,
+            4
+          ],
+          "class_pair_id": 19,
+          "flip_rate": 0.225,
+          "n": 120,
+          "refined_brier": 0.200179311401357,
+          "refined_mean_prediction": 0.36982402757468547
+        },
+        {
+          "base_brier": 0.16494472358105816,
+          "base_mean_prediction": 0.3921170397107319,
+          "class_pair": [
+            4,
+            0
+          ],
+          "class_pair_id": 20,
+          "flip_rate": 0.06304294033223906,
+          "n": 303095,
+          "refined_brier": 0.0553864059057967,
+          "refined_mean_prediction": 0.06317204208932142
+        },
+        {
+          "base_brier": 0.1823528543568025,
+          "base_mean_prediction": 0.4179511826330677,
+          "class_pair": [
+            4,
+            1
+          ],
+          "class_pair_id": 21,
+          "flip_rate": 0.03527902501603592,
+          "n": 4677,
+          "refined_brier": 0.04156370441481286,
+          "refined_mean_prediction": 0.07283823044636493
+        },
+        {
+          "base_brier": 0.27954427447467384,
+          "base_mean_prediction": 0.45364847801564956,
+          "class_pair": [
+            4,
+            3
+          ],
+          "class_pair_id": 23,
+          "flip_rate": 0.6046511627906976,
+          "n": 129,
+          "refined_brier": 0.2731655345733021,
+          "refined_mean_prediction": 0.45399135475011143
+        }
+      ],
+      "empirically_supported_partition_group": "refined product of within-(M,xi,C) fiber permutations",
+      "estimator": "nested 5x3 pair-blocked beta-binomial context codelength",
+      "full_data_modal_spec": {
+        "margin_bins": 16,
+        "phase_bins": 8,
+        "xi_bins": 2
+      },
+      "gross_gain_bits": 464657.2100251259,
+      "gross_gain_bits_per_boundary_pixel": 0.18211981193922583,
+      "gross_gain_bits_per_flip": 0.43563233447599387,
+      "model_table_overhead": {
+        "base_nonempty_contexts": 442,
+        "incremental_bytes": 56552,
+        "refined_nonempty_contexts": 6094,
+        "schema": "ASSUMED fixed rows: uint16 context + uint32 n0 + uint32 n1; 32-byte header"
+      },
+      "net_gain_bits_after_table_overhead": 12241.210025125882,
+      "net_gain_ci95_high_bits": 23180.749990467913,
+      "net_gain_ci95_low_bits": 957.5520005738945,
+      "operational_target": "conditional-codelength proxy for I(F;C|M,xi)",
+      "pair_bootstrap": {
+        "bootstrap_mean": 464631.9412176648,
+        "ci95_high": 475596.7499904679,
+        "ci95_low": 453373.5520005739,
+        "estimate": 464657.2100251259,
+        "n_bootstrap": 10000,
+        "resampling_unit": "pair",
+        "seed": 20260714
+      },
+      "selected_spec_by_outer_fold": [
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        }
+      ],
+      "table_rows_by_fold": [
+        {
+          "base_nonempty": 441,
+          "outer_fold": 0,
+          "refined_nonempty": 5973
+        },
+        {
+          "base_nonempty": 441,
+          "outer_fold": 1,
+          "refined_nonempty": 5950
+        },
+        {
+          "base_nonempty": 443,
+          "outer_fold": 2,
+          "refined_nonempty": 5912
+        },
+        {
+          "base_nonempty": 441,
+          "outer_fold": 3,
+          "refined_nonempty": 5923
+        },
+        {
+          "base_nonempty": 439,
+          "outer_fold": 4,
+          "refined_nonempty": 5932
+        }
+      ],
+      "uncharged_context_blocker": "table rows are charged, but the C sequence is not; a codec may consume this only if C is receiver-derived or jointly charged",
+      "verdict": "RESIDUAL_NON_GAUGE_STRUCTURE_DETECTED__M_NOT_SUFFICIENT",
+      "verdict_scope": "FORMULATION x EMPIRICAL_SURFACE; not an exact MI identity or LieFlow family verdict"
+    },
+    "n_boundary_flips": 1066627,
+    "n_boundary_pixels": 2551382,
+    "n_pairs": 600,
+    "normalized_jacobian_velocity_diagnostic": {
+      "class_pair_calibration": [
+        {
+          "base_brier": 0.2452375053040594,
+          "base_mean_prediction": 0.45099137361098757,
+          "class_pair": [
+            0,
+            1
+          ],
+          "class_pair_id": 1,
+          "flip_rate": 0.442299868049251,
+          "n": 626749,
+          "refined_brier": 0.23974425007355782,
+          "refined_mean_prediction": 0.4420460377774365
+        },
+        {
+          "base_brier": 0.27798092376029493,
+          "base_mean_prediction": 0.45186525188041254,
+          "class_pair": [
+            0,
+            2
+          ],
+          "class_pair_id": 2,
+          "flip_rate": 0.6997902100675373,
+          "n": 252157,
+          "refined_brier": 0.18933731298181355,
+          "refined_mean_prediction": 0.6981774376186429
+        },
+        {
+          "base_brier": 0.30953714347720457,
+          "base_mean_prediction": 0.4437164337424516,
+          "class_pair": [
+            0,
+            3
+          ],
+          "class_pair_id": 3,
+          "flip_rate": 0.9557777460362805,
+          "n": 70010,
+          "refined_brier": 0.043691767585592414,
+          "refined_mean_prediction": 0.9407898974279468
+        },
+        {
+          "base_brier": 0.24160132900072878,
+          "base_mean_prediction": 0.326749417213939,
+          "class_pair": [
+            0,
+            4
+          ],
+          "class_pair_id": 4,
+          "flip_rate": 0.4690063237550934,
+          "n": 302352,
+          "refined_brier": 0.21281523190124269,
+          "refined_mean_prediction": 0.46780718776153707
+        },
+        {
+          "base_brier": 0.24301670735610545,
+          "base_mean_prediction": 0.4610703481863191,
+          "class_pair": [
+            1,
+            0
+          ],
+          "class_pair_id": 5,
+          "flip_rate": 0.4461799157223948,
+          "n": 512829,
+          "refined_brier": 0.23380488772821614,
+          "refined_mean_prediction": 0.44636953805420615
+        },
+        {
+          "base_brier": 0.2655012373628309,
+          "base_mean_prediction": 0.4809696390455715,
+          "class_pair": [
+            1,
+            2
+          ],
+          "class_pair_id": 7,
+          "flip_rate": 0.829733163913596,
+          "n": 787,
+          "refined_brier": 0.22872719829380514,
+          "refined_mean_prediction": 0.6022516103212517
+        },
+        {
+          "base_brier": 0.27932716540739677,
+          "base_mean_prediction": 0.47536303103889077,
+          "class_pair": [
+            1,
+            3
+          ],
+          "class_pair_id": 8,
+          "flip_rate": 0.9968304278922345,
+          "n": 631,
+          "refined_brier": 0.16295327660504777,
+          "refined_mean_prediction": 0.6568326381564943
+        },
+        {
+          "base_brier": 0.26418717902810085,
+          "base_mean_prediction": 0.4637935813489094,
+          "class_pair": [
+            1,
+            4
+          ],
+          "class_pair_id": 9,
+          "flip_rate": 0.6526916397916149,
+          "n": 4031,
+          "refined_brier": 0.2575716701615417,
+          "refined_mean_prediction": 0.5758836133646292
+        },
+        {
+          "base_brier": 0.21935039320722663,
+          "base_mean_prediction": 0.4029243380052547,
+          "class_pair": [
+            2,
+            0
+          ],
+          "class_pair_id": 10,
+          "flip_rate": 0.30323440596395207,
+          "n": 254328,
+          "refined_brier": 0.20083066554219756,
+          "refined_mean_prediction": 0.30309766831333623
+        },
+        {
+          "base_brier": 0.27004503540377156,
+          "base_mean_prediction": 0.4541257162620211,
+          "class_pair": [
+            2,
+            1
+          ],
+          "class_pair_id": 11,
+          "flip_rate": 0.6746707978311387,
+          "n": 1291,
+          "refined_brier": 0.2725033290435612,
+          "refined_mean_prediction": 0.5580991363526783
+        },
+        {
+          "base_brier": 0.3018895144159862,
+          "base_mean_prediction": 0.44520057641150534,
+          "class_pair": [
+            2,
+            3
+          ],
+          "class_pair_id": 13,
+          "flip_rate": 0.9184008187472118,
+          "n": 76214,
+          "refined_brier": 0.07509000049379165,
+          "refined_mean_prediction": 0.9055656552478375
+        },
+        {
+          "base_brier": 0.20517867195580058,
+          "base_mean_prediction": 0.44377958372903137,
+          "class_pair": [
+            3,
+            0
+          ],
+          "class_pair_id": 15,
+          "flip_rate": 0.018339978252990215,
+          "n": 68975,
+          "refined_brier": 0.01884834706864701,
+          "refined_mean_prediction": 0.029485706962471707
+        },
+        {
+          "base_brier": 0.20893163851967836,
+          "base_mean_prediction": 0.4533125843247015,
+          "class_pair": [
+            3,
+            1
+          ],
+          "class_pair_id": 16,
+          "flip_rate": 0.012371134020618556,
+          "n": 970,
+          "refined_brier": 0.06379257614579781,
+          "refined_mean_prediction": 0.19329872742829146
+        },
+        {
+          "base_brier": 0.20989022933464885,
+          "base_mean_prediction": 0.44771040378495547,
+          "class_pair": [
+            3,
+            2
+          ],
+          "class_pair_id": 17,
+          "flip_rate": 0.039854519205408334,
+          "n": 72037,
+          "refined_brier": 0.0392434246073122,
+          "refined_mean_prediction": 0.049926850080494425
+        },
+        {
+          "base_brier": 0.23413069538561893,
+          "base_mean_prediction": 0.4556229110640498,
+          "class_pair": [
+            3,
+            4
+          ],
+          "class_pair_id": 19,
+          "flip_rate": 0.225,
+          "n": 120,
+          "refined_brier": 0.210857499214872,
+          "refined_mean_prediction": 0.4087050140080827
+        },
+        {
+          "base_brier": 0.1320255802816573,
+          "base_mean_prediction": 0.3273732939295762,
+          "class_pair": [
+            4,
+            0
+          ],
+          "class_pair_id": 20,
+          "flip_rate": 0.06304294033223906,
+          "n": 303095,
+          "refined_brier": 0.056163904324231045,
+          "refined_mean_prediction": 0.06461913932701147
+        },
+        {
+          "base_brier": 0.20513498472761227,
+          "base_mean_prediction": 0.4395283453300096,
+          "class_pair": [
+            4,
+            1
+          ],
+          "class_pair_id": 21,
+          "flip_rate": 0.03527902501603592,
+          "n": 4677,
+          "refined_brier": 0.05660437121683697,
+          "refined_mean_prediction": 0.13745493228985295
+        },
+        {
+          "base_brier": 0.25185043743459024,
+          "base_mean_prediction": 0.4589633708307428,
+          "class_pair": [
+            4,
+            3
+          ],
+          "class_pair_id": 23,
+          "flip_rate": 0.6046511627906976,
+          "n": 129,
+          "refined_brier": 0.2604689306099387,
+          "refined_mean_prediction": 0.44255754187346863
+        }
+      ],
+      "empirically_supported_partition_group": "coarser product of within-(M,xi) fiber permutations",
+      "estimator": "nested 5x3 pair-blocked beta-binomial context codelength",
+      "full_data_modal_spec": {
+        "margin_bins": 16,
+        "phase_bins": 8,
+        "xi_bins": 2
+      },
+      "gross_gain_bits": 455325.2274510118,
+      "gross_gain_bits_per_boundary_pixel": 0.17846219321568146,
+      "gross_gain_bits_per_flip": 0.4268832754571296,
+      "model_table_overhead": {
+        "base_nonempty_contexts": 1536,
+        "incremental_bytes": 175262,
+        "refined_nonempty_contexts": 19059,
+        "schema": "ASSUMED fixed rows: uint16 context + uint32 n0 + uint32 n1; 32-byte header"
+      },
+      "net_gain_bits_after_table_overhead": -946770.7725489882,
+      "net_gain_ci95_high_bits": -934484.2094690836,
+      "net_gain_ci95_low_bits": -959399.4400688461,
+      "operational_target": "conditional-codelength proxy for I(F;C|M,xi)",
+      "pair_bootstrap": {
+        "bootstrap_mean": 455260.0967839278,
+        "ci95_high": 467611.7905309164,
+        "ci95_low": 442696.5599311539,
+        "estimate": 455325.2274510118,
+        "n_bootstrap": 10000,
+        "resampling_unit": "pair",
+        "seed": 20260714
+      },
+      "selected_spec_by_outer_fold": [
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        },
+        {
+          "margin_bins": 16,
+          "phase_bins": 8,
+          "xi_bins": 2
+        }
+      ],
+      "table_rows_by_fold": [
+        {
+          "base_nonempty": 1536,
+          "outer_fold": 0,
+          "refined_nonempty": 18706
+        },
+        {
+          "base_nonempty": 1536,
+          "outer_fold": 1,
+          "refined_nonempty": 18675
+        },
+        {
+          "base_nonempty": 1536,
+          "outer_fold": 2,
+          "refined_nonempty": 18600
+        },
+        {
+          "base_nonempty": 1536,
+          "outer_fold": 3,
+          "refined_nonempty": 18596
+        },
+        {
+          "base_nonempty": 1536,
+          "outer_fold": 4,
+          "refined_nonempty": 18636
+        }
+      ],
+      "uncharged_context_blocker": "table rows are charged, but the C sequence is not; a codec may consume this only if C is receiver-derived or jointly charged",
+      "verdict": "MARGIN_SUFFICIENCY_NOT_REJECTED__CLASS_BLIND_GROUP_SUPPORTED",
+      "verdict_scope": "FORMULATION x EMPIRICAL_SURFACE; not an exact MI identity or LieFlow family verdict"
+    },
+    "operational_completion": {
+      "C": "ASSUMED directed unlike four-neighbour GT class edge",
+      "F": "MEASURED through-R frozen-SegNet disagreement against frozen GT lstar",
+      "M": "MEASURED frozen-GT top1/top2 margin",
+      "Phi": "ASSUMED local ratio M_self/(M_self+M_neighbour)",
+      "Qxi": "ASSUMED train-fold PCA quantization of cached official PoseNet YUV6 output",
+      "velocity": "ASSUMED pose_xy projected on normalized margin gradient; not a scorer Jacobian"
+    },
+    "status": "MEASURED",
+    "sufficiency_verdict": "RESIDUAL_NON_GAUGE_STRUCTURE_DETECTED__M_NOT_SUFFICIENT",
+    "surface": "V9 CGauge EMA-best epoch150 deploy-int8 through canonical R at n600",
+    "verdict_scope": "FORMULATION x V9_EMA_BEST_N600_EMPIRICAL_SURFACE"
+  },
+  "d38": {
+    "cover": "four 16-pixel-overlap image quadrants",
+    "debt_id": "D38",
+    "exact_section_glues": true,
+    "failed_pairs": [],
+    "honesty": "local sections were exact restrictions of one global realized flip map; this is a receiver-array consistency check, not evidence of zero encoded section cost",
+    "n_pairs": 600,
+    "rate_verdict": "GLOBAL_RATE_DESCENT_NOT_TYPED",
+    "status": "MEASURED",
+    "total_pairwise_overlap_points": 19660800,
+    "verdict": "EXACT_SECTION_GLUES",
+    "verdict_scope": "INSTANCE x EXACT_ARRAY_RESTRICTION"
+  },
+  "d_seg": {
+    "d_seg": 0.03482035319010417,
+    "per_gt_class": {
+      "0": {
+        "disagreement": 0.11065169153946762,
+        "gt_pixels": 27407046,
+        "name": "Road",
+        "share_of_flip_mass": 0.7383030770459268,
+        "wrong_pixels": 3032636
+      },
+      "1": {
+        "disagreement": 0.38477554844137096,
+        "gt_pixels": 690639,
+        "name": "Lane",
+        "share_of_flip_mass": 0.06469533369559079,
+        "wrong_pixels": 265741
+      },
+      "2": {
+        "disagreement": 0.013246473862682016,
+        "gt_pixels": 58413281,
+        "name": "Undrivable",
+        "share_of_flip_mass": 0.1883763075838402,
+        "wrong_pixels": 773770
+      },
+      "3": {
+        "disagreement": 0.006786160614931608,
+        "gt_pixels": 1460325,
+        "name": "Movable",
+        "share_of_flip_mass": 0.0024126151287279895,
+        "wrong_pixels": 9910
+      },
+      "4": {
+        "disagreement": 0.0008508174218628437,
+        "gt_pixels": 29993509,
+        "name": "MyCar",
+        "share_of_flip_mass": 0.006212666545914184,
+        "wrong_pixels": 25519
+      }
+    },
+    "status": "MEASURED",
+    "total_pixels": 117964800,
+    "wrong_pixels": 4107576
+  },
+  "d_seg_decomposition": {
+    "compatibility_warning": "the gauge anchor is a registered scalar sampling-phase term; this receipt does not identify a pointwise covariant/gauge partition",
+    "d_cov": {
+      "label": "DERIVED",
+      "value": 0.029502353190104167
+    },
+    "d_gauge": {
+      "authority": "MEASURED registered n600 spike/gauge scalar; consumed without remeasurement; clip-level scalar compatibility only",
+      "label": "MEASURED_REGISTERED_ANCHOR_CONSUMED_NOT_REMEASURED",
+      "source": "src/tac/canonical_equations/einstein_pass_covariance_laws_20260710.py::dseg_covariant_residual and registered n600 lattice sampling-phase anchor",
+      "value": 0.005318
+    },
+    "d_total": {
+      "label": "MEASURED_CURRENT_SURFACE",
+      "value": 0.03482035319010417
+    },
+    "decomposition_scope": "SCALAR_ONLY_NOT_POINTWISE",
+    "equation": "d_cov=max(0,d_total-d_gauge)",
+    "status": "DERIVED_FROM_SEPARATELY_MEASURED_SCALAR_ANCHOR"
+  },
+  "git_head": "7fb1b00eb1409cfd0930da1a77fa2d68956597b0",
+  "held_v9_integration": {
+    "consumer": "asynchronous/local frozen-SegNet verdict-forward plus provenance bijection",
+    "dsl": "one default-OFF observational receipt path/hash lever",
+    "factory": "GaugeSymmetryHomotopyProbePolicy.from_receipt",
+    "law_ref": "v9_empirical_gauge_refinement_d37_v1",
+    "status": "V9_INTEGRATION_BLOCKED_EXCLUSIVE_PROVENANCE_OWNER"
+  },
+  "lieflow_fino_warm_start": {
+    "candidate_refinement": "directed unlike-neighbour GT class pair C",
+    "supported_partition_group": "refined product of within-(M,xi,C) fiber permutations",
+    "surface": "deterministic factor-refinement support test on frozen receiver cells",
+    "trained_fino": false,
+    "trained_lieflow": false,
+    "verdict": "RESIDUAL_NON_GAUGE_STRUCTURE_DETECTED__M_NOT_SUFFICIENT"
+  },
+  "n_pairs": 600,
+  "noether": {
+    "continuity_holds_off_events": false,
+    "density": "per-pair per-GT-class flip mass",
+    "flux": "zero placeholder; no executable action momentum is implemented",
+    "implementation_custody": "IMPLEMENTATION_CUSTODY_GAP_ONLY",
+    "l1_residual_off_event": 3.0925445556640625,
+    "max_abs_raw_pair_change": 0.08527628580729167,
+    "max_abs_residual_off_event": 0.08527628580729167,
+    "n_event_excluded": 0,
+    "n_tested_off_event": 2995,
+    "schema": "pact.discrete_noether_continuity.v1",
+    "status": "OBSERVABILITY_PROXY_NOT_NOETHER_CHARGE",
+    "verdict": "NO_NOETHER_VERDICT_ACTION_MOMENTUM_UNTYPED"
+  },
+  "pointer_status": {
+    "defensive_bank": 0.18804,
+    "moved": false,
+    "submit_ready": 0.19108
+  },
+  "promotion_eligible": false,
+  "rebuild_command": "/Users/adpena/Projects/pact/.venv/bin/python tools/probe_v9_cgauge_symmetry_homotopy_n600_20260714.py --streaming-small-state --run-name v9_ema_best_n600_threads6_batch32_r2 --batch-size 32 --torch-threads 6 --thread-custody 'HISTORICAL_SELECTOR_EXECUTION: git 462b9937 launch predates 2026-07-13 one-thread standard; canonical thread-law BASELINE_THREADS=6 records contemporaneous local Torch default; exact selector all-pixel equality required' --n-bootstrap 10000",
+  "schema": "pact.v9_cgauge_symmetry_homotopy_n600.receipt.v1",
+  "score_claim": false,
+  "selector_d_seg_recorded": 0.03482035319010417,
+  "small_live_state": {
+    "bytes": 1502287,
+    "camera_frames_persisted": false,
+    "files": 600,
+    "full_argmax_persisted": false,
+    "path": "experiments/results/v9_cgauge_symmetry_homotopy_n600_20260714/v9_ema_best_n600_threads6_batch32_r2/pairs",
+    "tree_sha256": "74826f03b799f6ec904f71f721c97ca2757a90191aa9425b9885c303efb98723"
+  },
+  "v9_runtime_covariance_blocker": "no typed affine-Legendre gauge transform pair or content-bound pre/post action/divergence equality receipt with R/xi chart custody exists",
+  "v9_runtime_covariance_verdict": "IMPLEMENTATION_CUSTODY_GAP_ONLY"
+}
