@@ -36,7 +36,7 @@ from tac.witness_dsl.curriculum_dsl import Lever, Muon, WitnessProgram
 # ---------------------------------------------------------------------------
 # Flags that change the INPUT-feature COUNT or a WEIGHT SHAPE -> a warm-start resume would
 # crash on a shape mismatch -> the pass that changes one MUST be a FRESH arm (resume cleared).
-# (Curvelet coarse->fine via --max-bank-freq / --freq-across / --freq-along changes frequency
+# (Polar directional Fourier coarse->fine via --max-bank-freq / --freq-across / --freq-along changes frequency
 # VALUES at FIXED feature count => warm-start SAFE; adding bands / capacity changes the count.)
 _SHAPE_CHANGING_FLAGS = frozenset({
     "--hidden-dim", "--mod-dim", "--n-hidden",
@@ -670,15 +670,12 @@ def priming_chain(programs: list[WitnessProgram]) -> tuple[dict, ...]:
 
 
 # ---------------------------------------------------------------------------
-# 7. SCALING = the CURVELET multi-scale COARSE->FINE band climb (operator enrichment 2026-06-29)
+# 7. SCALING = global directional-Fourier coarse-to-fine frequency passes
 # ---------------------------------------------------------------------------
-# The SCALE dimension of the search is a coarse->fine MULTI-SCALE CURVELET climb (the #1 MEASURED
-# d_seg lever: all-class DIRECTIONAL/anisotropic curvelet basis on the boundary tangent = -48%
-# d_seg, ~0 byte, DAG FEED 2026-06-25t; Candes-Donoho 2004 curvelet edge-basis O(N^-2(logN)^3)
-# for cartoon (C2-curve + cross-edge step) functions, FEED 2026-06-25j; research:
-# .omx/research/levelset_curvelet_witness_feasibility_20260627.md). The openpilot seed gives the
-# COARSE/low-freq lane structure free (NTK); the curriculum CLIMBS to finer curvelet bands oriented
-# to the boundary annulus. Substrate: tac.torch_vehicle.boundary_routing.{local_boundary_tangent,
+# This legacy campaign helper changes global polar-Fourier frequency values only. It does not
+# construct localized atoms and carries no curvelet/shearlet or -48% V9 claim. The openpilot seed
+# supplies coarse structure; passes raise the global frequency cap. Substrate:
+# tac.torch_vehicle.boundary_routing.{local_boundary_tangent,
 # directional_positional_encoding} (the oriented-PE helper; 0 archive bytes => rule-118 FREE).
 #
 # WARM-START SAFETY (critical): --max-bank-freq / --freq-across / --freq-along change frequency
@@ -689,8 +686,9 @@ def priming_chain(programs: list[WitnessProgram]) -> tuple[dict, ...]:
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class ScalePass:
-    """One coarse->fine pass: ``window`` epochs with ``overrides`` (e.g. a finer curvelet band
-    via --max-bank-freq). ``fresh`` (from-scratch) is auto-forced when an override changes a
+    """One coarse-to-fine pass, for example a higher directional-Fourier cap.
+
+    ``fresh`` (from-scratch) is auto-forced when an override changes a
     feature-count/weight-shape flag (else a warm-start resume crashes on a shape mismatch)."""
 
     name: str
@@ -703,18 +701,18 @@ class ScalePass:
         return self.fresh or any(f in _SHAPE_CHANGING_FLAGS for f in self.overrides)
 
 
-def curvelet_scale_passes(
+def polar_fourier_scale_passes(
     max_bank_freqs: tuple[float, ...],
     *,
     window: int,
     freq_across: float | None = None,
     freq_along: float | None = None,
 ) -> list[ScalePass]:
-    """Build the coarse->fine CURVELET band schedule: one warm-start-safe pass per finest-band
+    """Build a coarse-to-fine global directional-Fourier schedule: one pass per cap
     frequency in ``max_bank_freqs`` (ascending == coarse->fine), each raising --max-bank-freq
     (value-only => same feature count => warm-startable). Optionally pin the anisotropy ratio
-    (--freq-across HIGH across the edge / --freq-along LOW along it = the -48% directional lever).
-    REQUIRES --self-orient ON in the base program (the directional/curvelet basis enable; there is
+    (--freq-across high across the edge / --freq-along low along it). No percentage effect is
+    claimed. REQUIRES --self-orient ON in the base program (there is
     NO --use-dir flag -- recorded trainer-gap). All passes are WARM (no shape change)."""
     passes: list[ScalePass] = []
     for i, f in enumerate(max_bank_freqs):
@@ -723,8 +721,29 @@ def curvelet_scale_passes(
             ov["--freq-across"] = freq_across
         if freq_along is not None:
             ov["--freq-along"] = freq_along
-        passes.append(ScalePass(f"curvelet_band_{f:g}", window=window, overrides=ov))
+        passes.append(ScalePass(f"polar_fourier_band_{f:g}", window=window, overrides=ov))
     return passes
+
+
+def curvelet_scale_passes(
+    max_bank_freqs: tuple[float, ...],
+    *,
+    window: int,
+    freq_across: float | None = None,
+    freq_along: float | None = None,
+) -> list[ScalePass]:
+    """Compatibility wrapper preserving historical pass names for resumes."""
+
+    passes = polar_fourier_scale_passes(
+        max_bank_freqs,
+        window=window,
+        freq_across=freq_across,
+        freq_along=freq_along,
+    )
+    return [
+        replace(p, name=p.name.replace("polar_fourier_band_", "curvelet_band_", 1))
+        for p in passes
+    ]
 
 
 def scale_progression(
@@ -740,8 +759,8 @@ def scale_progression(
     Pass i resumes from pass (i-1)'s ckpt and runs ``passes[i].window`` more epochs at the new
     scale. A FRESH pass (capacity / band-count change) is from-scratch (resume cleared) — and the
     NEXT pass then resumes from THIS fresh pass's ckpt. l7 is auto-PARKED at the new end (each
-    pass re-runs the current stage at a finer scale, not an advance). This realizes the curvelet
-    coarse->fine climb as real, deterministic, emit-only programs."""
+    pass re-runs the current stage at a finer scale, not an advance). This realizes the polar
+    directional Fourier coarse->fine climb as real, deterministic, emit-only programs."""
     programs: list[WitnessProgram] = []
     resume = start_resume_from
     epoch = start_epoch

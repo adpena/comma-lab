@@ -9,7 +9,8 @@ NOT independently n600-confirmed and rides load-bearing in the trunk:
   * #121 d_seg-aware taper — ESTIMATED ~0.03 RANK-1 from ONE under-converged run; "converged flips to
     -8%" is INFERRED, not measured.
   * AA render-IPE — oracle-R lane-recall +0.38 @384; through-training ΔS ASSUMED.
-  * self-orient directional basis — MEASURED -48% (n600-class) = the STRONG anchor, needs no isolation.
+  * self-orient Fourier augmentation — historical -48% n96 direct-partition result is
+    UN-REPRODUCED; owed16 n600 warm-start OFF beat ON, so no strong-anchor claim.
 
 R8 LAW (SYNTHESIS §C item 15, CODE-GROUNDED): NEVER inference-toggle a trained-WITH render lever. #121
 taper is a trained-WITH curvelet-amplitude reshape; --render-aa ipe reshapes the render path (persisted

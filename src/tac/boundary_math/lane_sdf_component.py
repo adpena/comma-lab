@@ -367,7 +367,7 @@ def inject_lane_sdf(phi_hwk: np.ndarray, phi_1_lane: np.ndarray, *, lane_cls: in
     elif mode == "bias":
         out[..., int(lane_cls)] = out[..., int(lane_cls)] + float(bias_scale) * np.asarray(phi_1_lane, np.float32)
     elif mode == "paint":
-        # Lazy import (avoids a module-load cycle: lever_b imports scipy/curvelet, not this file).
+        # Lazy import (avoids a module-load cycle: lever_b imports scipy/Fourier helpers, not this file).
         from tac.boundary_math.lever_b_levelset_generator import signed_distance_fields
         n_k = int(out.shape[-1])
         labels = out.argmax(-1)                                   # current seed partition

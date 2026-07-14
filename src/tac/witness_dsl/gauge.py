@@ -221,12 +221,13 @@ class RenderAAGauge(Enum):
     UNCHANGED — the IPE attenuation + supersample grid are functions of the checkpoint cfg).
     Chart ↔ trainer flag: NONE=--render-aa none (byte-identical baseline); SUPERSAMPLE_2X/3X=
     --render-aa supersample --aa-supersample 2/3 (ground-truth footprint integration); IPE=
-    --render-aa ipe (mip-NeRF cone attenuation of the curvelet basis, analytical ~0-compute)."""
+    --render-aa ipe (mip-NeRF cone attenuation of the polar directional Fourier basis,
+    analytical ~0-compute)."""
 
     NONE = "none"                    # point-sample (byte-identical to the pre-#224 trainer)
     SUPERSAMPLE_2X = "supersample_2x"  # render at 2*grid + box-downsample (footprint integration)
     SUPERSAMPLE_3X = "supersample_3x"  # render at 3*grid + box-downsample
-    IPE = "ipe"                      # mip-NeRF IPE cone attenuation of the curvelet columns
+    IPE = "ipe"                      # mip-NeRF IPE attenuation of directional Fourier columns
 
 
 class LaneGauge(Enum):
@@ -478,17 +479,15 @@ class EikonalViscoStabGauge(Enum):
 
 
 class AlongTangentFrequencyGauge(Enum):
-    """How much ALONG-TANGENT Fourier bandwidth the anisotropic self-orient/curvelet basis carries
+    """How much along-tangent bandwidth the self-oriented Fourier augmentation carries
     (FEED-03t, equation ``anisotropic_basis_along_tangent_frequency_deficit_v1`` + memory
     [[lane-dash-residual-root-is-along-tangent-freq-deficit-R-allpass]]).
 
-    Deep-math cross-ref (#284 FEED-03y/03z, equation ``shearlet_nterm_upper_bounds_task_rate_v1``):
-    the self-orient directional basis IS a discrete SHEARLET frame — the provably-optimal sparse basis
-    for a curved codim-1 (cartoon) singularity — so the MEASURED -48% D1 d_seg of the all-class
-    directional basis is the cartoon-optimal outcome, and the N-term shearlet coefficient count
-    UPPER-BOUNDS the task rate of the argmax-edge manifold (the rate half of the sub-0.15 path). HONEST
-    scope: the shearlet advantage over wavelets is ASYMPTOTIC (N->infinity), not guaranteed at the
-    finite curvelet-column budget here; the cross-ref frames the basis-match, the net is still a #205 A/B.
+    The live implementation is global Fourier, not a discrete shearlet frame.  Cartoon-optimal
+    shearlet N-term theory motivates the separate localized-family candidate only; it proves no
+    property of this augmentation.  The historical -48% n96 circular direct-partition result is
+    UN-REPRODUCED in V9, while owed16 n600 warm-start measured OFF 0.004244 versus ON 0.004259.
+    Fresh-start and genuine localized-family effects remain open.
 
     Lens-2 ROOT CAUSE of the lane-dash d_seg residual: the basis is SHARP ACROSS edges
     (freq_across -> 32,64 = Nyquist) but SMOOTH ALONG them (freq_along <= 8 cyc/unit); the lane
@@ -1565,7 +1564,8 @@ def default_cost_table() -> GaugeCostTable:
         RenderAAGauge.IPE: GaugeCost(
             counted_bytes=None, d_seg_through_R=None, conditioning=None,
             compliant=True, deterministic=True, measured=False,
-            provenance="mip-NeRF IPE cone attenuation of the curvelet columns (analytical ~0-compute "
+            provenance="mip-NeRF IPE cone attenuation of polar directional Fourier columns "
+                       "(analytical ~0-compute "
                        "AA proxy, 0-rate; self-orient-COMPATIBLE, already wired in the trainer); "
                        "through-R d_seg floor UNMEASURED (pending) -- supersample->box is the authority"),
 

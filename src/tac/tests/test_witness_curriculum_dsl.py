@@ -601,6 +601,7 @@ from tac.witness_dsl import (  # noqa: E402
     expand_cycles,
     measure_synergy,
     priming_chain,
+    polar_fourier_scale_passes,
     rerun_stage_new_config,
     scale_progression,
     select_synergistic_combos,
@@ -765,6 +766,14 @@ def test_curvelet_scale_passes_coarse_to_fine_warm():
     assert passes[2].overrides["--max-bank-freq"] == 64.0    # fine
     assert passes[0].overrides["--freq-across"] == 48.0      # anisotropy ratio (directional)
     assert all(not p.is_fresh for p in passes)               # value-only -> warm-start safe
+
+
+def test_truthful_scale_api_preserves_legacy_resume_names() -> None:
+    current = polar_fourier_scale_passes((16.0, 32.0), window=10)
+    legacy = curvelet_scale_passes((16.0, 32.0), window=10)
+    assert [p.overrides for p in current] == [p.overrides for p in legacy]
+    assert [p.name for p in current] == ["polar_fourier_band_16", "polar_fourier_band_32"]
+    assert [p.name for p in legacy] == ["curvelet_band_16", "curvelet_band_32"]
 
 
 def test_scale_progression_warm_chain_validates_and_parks_l7():

@@ -2,8 +2,8 @@
 """d_seg-aware Fourier-feature amplitude taper (#121 lever, re-validate-at-convergence).
 
 WHAT IT IS (mechanically). The level-set / coord-INR witness feeds a coordinate grid through a
-FIXED Fourier / curvelet-directional basis to get per-pixel features ``feats[px, k]`` (k indexes
-the Fourier/curvelet columns). The witness's ``in_proj`` linear layer consumes those features.
+FIXED polar directional Fourier basis to get per-pixel features ``feats[px, k]`` (k indexes
+the Fourier columns). The witness's ``in_proj`` linear layer consumes those features.
 Every column currently enters with UNIT amplitude — a FLAT taper. A *taper* is a per-column
 amplitude envelope ``w[k]`` applied as ``feats[px, k] *= w[k]``: it reallocates the INR's spectral
 prior across the Fourier columns WITHOUT adding a single trainable parameter (byte-neutral) and
@@ -138,7 +138,7 @@ def compute_dseg_aware_fourier_taper(
 ) -> np.ndarray:
     """Per-Fourier-column amplitude taper ``w`` (F,) reweighting the taper by d_seg saliency.
 
-    ``feats``: ``(P_px, F)`` Fourier/curvelet features. ``saliency``: ``(P_px,)`` per-pixel d_seg
+    ``feats``: ``(P_px, F)`` directional Fourier features. ``saliency``: ``(P_px,)`` per-pixel d_seg
     saliency (unit-mean, high near the boundary annulus; from :func:`saliency_from_margins`).
 
     Per column k:

@@ -9,8 +9,8 @@ WHY THIS IS THE RATE LEVER (same math as ``tac.torch_vehicle.weight_entropy_pena
 --------------------------------------------------------------------------------------
 The contest rate term scores ONLY ``archive.zip`` bytes; the witness's counted payload is the
 int8+brotli blob of its LEARNED params (``lever_b_levelset_generator.quantize_levelset_blob``:
-per-tensor symmetric grid ``q = round(w / s * 127)`` with ``s = max|w| + 1e-8``; the curvelet
-bank ``B``/``*_B`` is a FREE deterministic table, rule 118). brotli sits near the order-0
+per-tensor symmetric grid ``q = round(w / s * 127)`` with ``s = max|w| + 1e-8``; the polar
+directional Fourier bank ``B``/``*_B`` is a FREE deterministic table, rule 118). brotli sits near the order-0
 entropy floor, so the byte floor is ``Σ_t H(symbols_t)·numel_t/8`` — set by TRAINING. Adding
 ``λ·rate_term`` (the expected symbol codelength mapped onto the contest rate scale) pulls the
 weight-symbol distribution toward low entropy → a lower deployed byte floor.
@@ -70,7 +70,7 @@ def is_counted_param(name: str) -> bool:
     """True iff the named witness param is COUNTED in archive.zip (the learned payload).
 
     Mirrors ``quantize_levelset_blob`` / ``save_levelset_npz`` membership EXACTLY: everything is
-    counted EXCEPT the free deterministic curvelet bank (``B`` / ``*_B`` — rule 118, regenerated
+    counted EXCEPT the free deterministic directional Fourier bank (``B`` / ``*_B`` — rule 118, regenerated
     at decode from cfg scalars). Penalizing a free table would be a fake rate lever (it ships no
     bytes); the predicate is shared so the penalty's tensor set provably matches the codec's.
     """

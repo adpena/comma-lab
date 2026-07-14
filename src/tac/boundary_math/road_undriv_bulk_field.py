@@ -475,12 +475,12 @@ def horizon_poly_xi_byte_cost(
     degree: int = 3,
     n_frames: int = 600,
 ) -> dict:
-    """MEASURE the geometry-native (curvelet + ξ) cost of the Road↔Undrivable horizon.
+    """MEASURE the geometry-native (polynomial horizon + ξ) Road↔Undrivable cost.
 
     The REAL-MACHINERY representation (operator 2026-07-09 "prefer the real thing to a proxy";
     DAG FEED-v8-realmachinery). The Road↔Undrivable boundary IS the horizon, which is *ego-rigid*:
-    a low-order polynomial (a single-scale curvelet atom — the provably-optimal sparse basis for a
-    codim-1 curve) fits it, and its high-order coefficients are *frozen* frame-to-frame while only
+    a low-order polynomial fits its dominant arc, and its high-order coefficients are *frozen*
+    frame-to-frame while only
     the intercept moves ~1 px/frame = ego pitch = the vertical component of the ξ we ALREADY store
     for pose. So the store is one curve + a slowly-drifting coefficient stream (delta-coded), NOT
     600 independent contours.

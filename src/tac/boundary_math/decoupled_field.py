@@ -84,7 +84,7 @@ class DecoupledFieldError(ValueError):
 class DecoupledFieldSpec:
     """The decoupled per-class field spec (K independent coordinate-INR scalar fields).
 
-    * ``in_feat`` — input coordinate-feature dim (the witness ``curv_feats`` width; matches the trunk
+    * ``in_feat`` — input coordinate-feature dim (the witness ``directional_feats`` width; matches the trunk
       ``in_proj`` in-dim so the field reads the SAME per-pixel coordinate features).
     * ``mod_dim`` — per-pair code dim (the witness ``--mod-dim``; the field's FiLM reads the SAME
       per-pair latent so it can amortize the 600 pairs, exactly like the shared trunk).

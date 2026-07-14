@@ -69,10 +69,10 @@ def deterministic_fourier_B(n_fourier: int, fourier_sigma: float) -> np.ndarray:
 # MEASURED on targets_n600: the witness's argmax flips concentrate at ALL inter-class
 # boundaries (a codim-1 curve = union of every class edge), NOT just the class-1 lane
 # (only ~19% of small-margin px are class-1; ~50% are class-0). The decisive d_seg lever
-# is an oriented/anisotropic ("curvelet") Fourier basis oriented to that ALL-CLASS boundary
-# tangent: high frequency ACROSS the edge, low frequency ALONG it. MEASURED win:
-# -48% d_seg (dir-only) to -64% (dir + modest capacity) over the isotropic-only control
-# at the n96 regime (see .omx/research/witness_capstone_deepmath_levers_20260625.md).
+# is an oriented/anisotropic Fourier basis oriented to that ALL-CLASS boundary tangent:
+# high frequency ACROSS the edge, low frequency ALONG it. Historical n96 direct-partition
+# advisories reported -48% d_seg (direction-only) to -64% (direction + capacity), but these
+# effects are UN-REPRODUCED in V9 and are not live score claims (see the dated source memo).
 # These helpers are the reusable, portable (numpy/scipy, 0-byte train-time prior) home for
 # that lever; the prototype is tools/witness_capstone_deepmath_smoke.py.
 # ---------------------------------------------------------------------------
@@ -135,14 +135,14 @@ def directional_fourier_feats(
     freq_across: float = 32.0,
     freq_along: float = 4.0,
 ) -> np.ndarray:
-    """Oriented/anisotropic ("curvelet") Fourier features ``(P, 4*n_freqs)``.
+    """Oriented/anisotropic directional Fourier features ``(P, 4*n_freqs)``.
 
     For each pixel, build the local frame ``(tangent t, normal n)`` and encode the coordinate's
     projection onto each with DIFFERENT frequency scales: HIGH across the edge (``freq_across``,
     normal) and LOW along it (``freq_along``, tangent). Deterministic (no random projection) so it
     is identical at train and inflate and adds ZERO archive bytes. ``coords``/``tangent`` are
     ``(P, 2)``. Borrowed mechanism: AFPE (Kuckelhaus 2025) / Tancik 2020 / steerable filters /
-    curvelets; OURS: orienting to the all-class GT boundary tangent for the argmax witness.
+    directional-filter inspiration; OURS: all-class GT-boundary tangent orientation.
     """
 
     coords = np.asarray(coords)
@@ -177,7 +177,7 @@ def self_orientation_directional_feats(
 ) -> np.ndarray:
     """BYTE-CLOSEABLE directional features: tangent derived from a DECODER-REPRODUCIBLE partition.
 
-    The -48% d_seg directional lever needs the all-class boundary tangent field, but
+    The directional Fourier candidate needs the all-class boundary tangent field, but
     ``directional_fourier_feats`` orients to the GT SegNet argmax tangent — UNAVAILABLE at
     inflate.py (and storing it is image-sized) so it does NOT byte-close. This helper closes
     that gap: it computes the tangent from ``cheap_partition_hw`` — any partition the DECODER
@@ -191,7 +191,7 @@ def self_orientation_directional_feats(
     ``[macOS-CPU advisory]``): the tangent of these cheap partitions agrees with the GT-fine
     tangent at mean |cos| = 0.893 (own generator argmax) / 0.909 (coarse majority) / 0.908
     (temporal mode) on the boundary band — above the 0.85 byte-closeability bar. So the
-    directional lever transfers byte-closeably (NECESSARY-not-sufficient: directional alone is
+    directional geometry can survive byte-closeably (NECESSARY-not-sufficient: directional alone is
     ~0.0044 proxy d_seg; reaching the 7.2e-4 capstone needs step-native + capacity-routing +
     convergence on top, per the realized-through-R GPU witness).
 

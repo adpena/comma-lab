@@ -168,7 +168,8 @@ def probe_layer_stats(
     """Render the activation stack over ``pair_frame_indices`` (columns of ``code``) and compute
     per-output-layer mean/std + downstream-weighted tropical influence.
 
-    ``feats`` is the (fixed) curvelet bank output for the render grid; ``pair_frame_indices`` are
+    ``feats`` is the fixed polar directional Fourier bank output for the render grid;
+    ``pair_frame_indices`` are
     indices into ``code`` (``2*pair + frame``). d_seg rides frame1 (``2*pair+1``)."""
     p = ck.params
     nH = ck.n_hidden

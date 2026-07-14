@@ -198,16 +198,16 @@ def test_real_curvelet_basis_off_is_byte_identical_on_changes():
     feats; strength>0 with a real boundary margin ⇒ changed feats. Proves the wire-in mechanism is
     real AND byte-identical-when-off on the production basis, not just synthetic features."""
     from tac.boundary_math.lever_b_levelset_generator import (
-        CurveletBankConfig,
-        curvelet_directional_B,
-        curvelet_feats,
+        PolarDirectionalFourierBankConfig,
+        polar_directional_fourier_B,
+        polar_directional_fourier_feats,
     )
 
     h, w_ = 24, 32
     ys, xs = np.mgrid[0:h, 0:w_]
     coords = np.stack([xs.reshape(-1) / w_, ys.reshape(-1) / h], axis=-1).astype(np.float32)
-    bank = CurveletBankConfig(n_scales=2, n_orient0=4, f0=1.0, base=2.0, n_iso=2)
-    feats = curvelet_feats(coords, curvelet_directional_B(bank)).astype(np.float32)
+    bank = PolarDirectionalFourierBankConfig(n_scales=2, n_orient0=4, f0=1.0, base=2.0, n_iso=2)
+    feats = polar_directional_fourier_feats(coords, polar_directional_fourier_B(bank)).astype(np.float32)
     # a real-ish diagonal-boundary GT margin (small margin ON the diagonal).
     mar = (np.abs(xs / w_ - ys / h) * 5.0).astype(np.float32)
     sal = saliency_from_margins([mar, mar * 0.9], scale=None)
