@@ -24,12 +24,77 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 LEDGER = REPO / ".omx" / "state" / "codex_delegations.jsonl"
+LANDING_LEDGER = REPO / ".omx" / "state" / "codex_landing_ledger.jsonl"
+INBOX_DIR = REPO / ".omx" / "tmp" / "codex_inbox"
+
+# A landed arm is DISPOSITIONED only when the landing review gate records a
+# TERMINAL state (mirrors tools/codex_landing_review_gate.py). Anything else
+# (undispositioned, or held_entangled) is un-reviewed = the drift/signal-loss
+# the operator flagged: landed but not yet reviewed/respawned/closed.
+_TERMINAL_DISPOSITIONS = {"reviewed_committed", "respawned", "closed"}
+# A no-proc/no-marker arm launched within this window DIED (actionable); older =
+# STALE noise (ancient self-tests) suppressed unless --all.
+_STALE_AFTER_HOURS = 6.0
 
 
 def _alive(label: str, stamp: str) -> bool:
-    # a codex whose -o path contains "<label>_<stamp>" is this run's process
+    # a codex whose -o path contains "<label>_<stamp>" is this run's process.
+    # NOTE: match on the label_stamp TOKEN, never `pgrep -fl | head` — the full
+    # prompt is inlined into argv, so a line-count clip silently undercounts live
+    # arms (the 1-of-8 misread this hardening extincts). Use this fn, not ad-hoc pgrep.
     r = subprocess.run(["pgrep", "-f", f"{label}_{stamp}"], capture_output=True, text=True)
     return r.returncode == 0 and bool(r.stdout.strip())
+
+
+def _latest_dispositions() -> dict[tuple[str, str], str]:
+    """(label, stamp) -> latest landing-gate disposition status (append-only ⇒ last wins)."""
+    out: dict[tuple[str, str], str] = {}
+    if not LANDING_LEDGER.is_file():
+        return out
+    for line in LANDING_LEDGER.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            d = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        lbl, stmp, st = d.get("label"), d.get("stamp"), d.get("status")
+        if lbl and stmp and st:
+            out[(lbl, stmp)] = st
+    return out
+
+
+def _inbox_lines(label: str) -> int:
+    """Count directive lines queued in this arm's inbox (unconsumed cursor is
+    arm-internal; a non-empty inbox on a RUNNING arm flags 'directive in flight')."""
+    p = INBOX_DIR / f"{label}.jsonl"
+    if not p.is_file():
+        return 0
+    return sum(1 for ln in p.read_text(encoding="utf-8", errors="ignore").splitlines() if ln.strip())
+
+
+def _age_hours(launched_utc: str | None) -> float | None:
+    if not launched_utc:
+        return None
+    try:
+        from datetime import UTC, datetime
+        t = datetime.fromisoformat(launched_utc)
+        return (datetime.now(UTC) - t).total_seconds() / 3600.0
+    except Exception:
+        return None
+
+
+def _bucket(alive: bool, done: dict | None, disp: str | None, age_h: float | None) -> str:
+    """RUNNING · NEEDS_REVIEW (landed, no terminal disposition) · REVIEWED · DIED (recent
+    no-proc/no-marker) · STALE (ancient, suppressed by default)."""
+    if done:
+        return "REVIEWED" if disp in _TERMINAL_DISPOSITIONS else "NEEDS_REVIEW"
+    if alive:
+        return "RUNNING"
+    if age_h is not None and age_h <= _STALE_AFTER_HOURS:
+        return "DIED"
+    return "STALE"
 
 
 def _read_done(marker: str) -> dict | None:
@@ -101,6 +166,9 @@ def _classify_outcome(last_text: str) -> dict:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--all", action="store_true",
+                    help="show every row incl. REVIEWED + STALE (default: only actionable "
+                         "RUNNING / NEEDS_REVIEW / DIED)")
     ap.add_argument("--classify", action="store_true",
                     help="classify each DONE run's final message via fmtools on-device FM "
                          "(run from the fmtools venv; base venv reports fm-unavailable)")
@@ -109,6 +177,8 @@ def main(argv: list[str] | None = None) -> int:
     if not LEDGER.is_file():
         print("(no codex delegations yet)")
         return 0
+
+    dispositions = _latest_dispositions()
 
     rows: list[dict] = []
     # latest ledger row per label+stamp wins
@@ -124,13 +194,18 @@ def main(argv: list[str] | None = None) -> int:
         seen[f"{d.get('label')}_{d.get('stamp')}"] = d
 
     for d in seen.values():
+        label, stamp = d.get("label", ""), d.get("stamp", "")
         done = _read_done(d.get("done_marker", ""))
-        alive = _alive(d.get("label", ""), d.get("stamp", ""))
-        status = "DONE" if done else ("RUNNING" if alive else "UNKNOWN(no-marker,no-proc)")
+        alive = _alive(label, stamp)
+        disp = dispositions.get((label, stamp))
+        age_h = _age_hours(d.get("launched_utc"))
+        bucket = _bucket(alive, done, disp, age_h)
         row = {
-            "label": d.get("label"), "stamp": d.get("stamp"),
+            "label": label, "stamp": stamp,
             "model": d.get("model"), "effort": d.get("effort"),
-            "status": status, "rc": (done or {}).get("rc"),
+            "status": bucket, "disposition": disp,
+            "inbox_pending": _inbox_lines(label) if bucket == "RUNNING" else 0,
+            "rc": (done or {}).get("rc"),
             "finished_utc": (done or {}).get("finished_utc"),
             "launched_utc": d.get("launched_utc"), "log": d.get("log"),
         }
@@ -151,16 +226,30 @@ def main(argv: list[str] | None = None) -> int:
     if not rows:
         print("(no codex delegations yet)")
         return 0
-    print(f"{'LABEL':<24} {'STATUS':<26} {'RC':<4} {'MODEL/EFFORT':<22} LAUNCHED")
-    for r in rows:
-        me = f"{r.get('model') or '?'}/{r.get('effort') or '?'}"
-        print(f"{(r['label'] or '?'):<24} {r['status']:<26} {r.get('rc') or '-'!s:<4} {me:<22} {r.get('launched_utc') or '?'}")
+
+    # high-signal digest: one summary line, then only ACTIONABLE rows by default.
+    from collections import Counter
+    counts = Counter(r["status"] for r in rows)
+    summary = " · ".join(f"{counts[b]} {b}" for b in
+                         ("RUNNING", "NEEDS_REVIEW", "DIED", "REVIEWED", "STALE") if counts.get(b))
+    print(f"codex fleet: {summary or '(none)'}"
+          + ("" if args.all else "   [--all for REVIEWED+STALE]"))
+    actionable = {"RUNNING", "NEEDS_REVIEW", "DIED"}
+    shown = [r for r in rows if args.all or r["status"] in actionable]
+    for r in shown:
+        me = f"{(r.get('model') or '?').split('-')[-1]}/{r.get('effort') or '?'}"
+        flag = ""
+        if r["status"] == "NEEDS_REVIEW":
+            flag = f"  ⚠ disposition={r.get('disposition') or 'none'} → codex_landing_review_gate"
+        elif r["status"] == "DIED":
+            flag = "  ⚠ no proc, no DONE marker — investigate/relaunch"
+        elif r["status"] == "RUNNING" and r.get("inbox_pending"):
+            flag = f"  ✉ {r['inbox_pending']} inbox directive(s)"
+        print(f"  {r['status']:<13} {(r['label'] or '?'):<40} {me:<12} rc={r.get('rc') or '-'!s}{flag}")
         oc = r.get("outcome")  # present only under --classify on DONE runs
         if oc:
-            if oc.get("ok"):
-                print(f"    ↳ {oc['outcome']} (committed={oc.get('committed', '?')}) — {oc.get('reason', '')}")
-            else:
-                print(f"    ↳ [not classified: {oc.get('why', '?')}]")
+            print(f"      ↳ {oc['outcome']} (committed={oc.get('committed', '?')}) — {oc.get('reason', '')}"
+                  if oc.get("ok") else f"      ↳ [not classified: {oc.get('why', '?')}]")
     return 0
 
 

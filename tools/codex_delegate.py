@@ -81,6 +81,30 @@ def _utc() -> str:
     return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
+def _live_labels() -> list[str]:
+    """Labels of currently-alive delegated arms (robust: pgrep on the label_stamp
+    token per ledger row, never `pgrep -fl | head` which the inlined prompt clips)."""
+    if not LEDGER.is_file():
+        return []
+    seen: dict[str, dict] = {}
+    for line in LEDGER.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            d = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        seen[f"{d.get('label')}_{d.get('stamp')}"] = d
+    live: list[str] = []
+    for d in seen.values():
+        label, stamp = d.get("label", ""), d.get("stamp", "")
+        r = subprocess.run(["pgrep", "-f", f"{label}_{stamp}"], capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip():
+            live.append(label)
+    return live
+
+
 def _append_ledger(row: dict) -> None:
     LEDGER.parent.mkdir(parents=True, exist_ok=True)
     with open(LEDGER, "a", encoding="utf-8") as f:
@@ -163,11 +187,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sandbox", default="workspace-write",
                     choices=["read-only", "workspace-write", "danger-full-access"])
     ap.add_argument("--no-launch", action="store_true", help="write launcher + ledger but do not osascript-launch")
+    ap.add_argument("--force", action="store_true",
+                    help="launch even if an arm with this label is already live (de-confliction override)")
     args = ap.parse_args(argv)
 
     if " " in args.label:
         ap.error("--label must not contain spaces")
     RUNS.mkdir(parents=True, exist_ok=True)
+
+    # De-confliction preflight: surface the live fleet before adding to it, and REFUSE a
+    # duplicate-live-label (the over-launch this hardening extincts) unless --force.
+    live = _live_labels()
+    if live:
+        print(f"[de-conflict] {len(live)} arm(s) live: {', '.join(sorted(live))}")
+    if args.label in live and not args.force:
+        print(f"REFUSED: an arm labeled '{args.label}' is already live. "
+              f"Redirect it via .omx/tmp/codex_inbox/{args.label}.jsonl, or pass --force to run a second.")
+        return 3
+
     stamp = _utc()
 
     if args.prompt_file:
