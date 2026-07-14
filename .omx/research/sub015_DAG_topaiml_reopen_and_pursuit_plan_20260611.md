@@ -17673,3 +17673,26 @@ kernel + bench + GO packet + 8 tests.
   fixed only 2 of the inherited-schedule stages; the CE-only probe needs curriculum FULLY off, not per-stage caps.
 - **tiers unchanged:** advisory = UNLOCKED_LOCAL_ONLY (forward, ~2.3×); training-gradient = BLOCKED_NOT_MEASURED
   (now KNOWN unreachable via ANE); label-grade = NOT_UNLOCKED. DSL leg = policy file (generic-registry-covered).
+
+---
+
+## FEED-local-global-descent-dig-20260713 (operator Hasse-Minkowski/Gauss-Bonnet analogy — right FRAME, not yet a rate result)
+
+Research-only. Pointer UNMOVED. MEANS/analysis (capstone rate/descent lens). Memo
+`local_global_descent_dig_20260713.md` + DAG FEED. NO canonical equation registered — equating D36's codelength
+with an untyped obstruction would be NO-FAKE (the arm honestly refused).
+- **Descent obstruction = OTHER (NOT the measured D36 H(q_G|U)=147,616 bits / 18,452 B).** Fixed-stratum D38
+  splits at 0 ideal bits (locally solvable, obstruction vanishes on fixed strata); the GLOBAL descent
+  obstruction remains UNTYPED. Local-to-global (Hasse-Minkowski) is the correct ACCOUNTING FRAME for the v8
+  per-class-local → global-witness gluing, but the obstruction is NOT yet identified with a measured rate gap.
+- **2-jet sufficient for the complete boundary code = NO** (verdict_scope: formulation — the 2-jet/second-
+  fundamental-form truncation for the FULL boundary rate code). Third order binds: conditional rate
+  `N₂ ≥ L(M₃/(6ε))^(1/3)`; numerical saving UNKNOWN, banked 0. The tweet's 2-jet↔mod-p³ truncation is too
+  coarse for our separatrix. Reformulation: the finite receiver-space descent-filler measurement (below).
+- **Gauss-Bonnet storable invariant = YES as topology/CHECKSUM (cheap integrity guard), NO as boundary
+  REPLACEMENT** (verdict_scope: formulation — as a boundary-code substitute; the integral-curvature invariant
+  is a checksum, not the geometry). Composes with #139 static-core / island-birth topology.
+- **THE ONE REAL LEVER: a finite receiver-space descent-filler measurement** — the concrete measurable that
+  the frame identifies. Jet analogy is conditional; Gauss-Bonnet-as-codec is beautiful-but-inert. Overall
+  scoped verdict: RIGHT-FRAME / NOT-YET-A-RATE-RESULT; the receiver-space descent-filler is the follow-on probe.
+  DSL leg N/A (analysis). [consumers-generic]
