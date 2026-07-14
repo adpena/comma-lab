@@ -68,8 +68,8 @@
     "expected_fit_driver_status": "EXECUTABLE_CACHED_ONLY_MLX_AUTOGRAD_V1",
     "fit_driver_status": "EXECUTABLE_CACHED_ONLY_MLX_AUTOGRAD_V1"
   },
-  "generated_at_utc": "2026-07-14T00:58:05.701057Z",
-  "git_head": "8cdc4c4d556718c10aa1e1695761956463318294",
+  "generated_at_utc": "2026-07-14T01:03:06.642814Z",
+  "git_head": "65be3f5a1e5fb439896b017155ab628bc340f1e0",
   "lane_id": "lane_whole_teacher_distilled_student_20260713",
   "measurement": {
     "economics": "UNMEASURED_BLOCKED",

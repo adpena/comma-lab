@@ -363,6 +363,10 @@ passed, and `git diff --check` passed.
 
 Final sealed implementation hashes:
 
+The 15-file implementation/triality landing is commit
+`65be3f5a1e5fb439896b017155ab628bc340f1e0`; the containment receipt below was
+regenerated after that commit so its `git_head` names the landed source state.
+
 | Surface | SHA-256 |
 |---|---|
 | student/core | `f2bf229dc67ce78b05c03be8c49e41e33021083cafd7ecda720ffc3baf9c48ec` |
@@ -380,7 +384,7 @@ not a failed structural test.
 The durable receipt is
 `.omx/research/whole_teacher_distilled_student_blocker_receipt_20260713.json`,
 13,471 bytes,
-`SHA-256=563af3e81023da5bc2c245c576c9d4703abfc0a06f5d6a0540694acac77a388b`.
+`SHA-256=81a7f8db9e2e3e41fe37b9751de1cf1bca0077e31da27bd6bd46f2709a6fd69a`.
 It is byte-identical to the experiment receipt and binds the exact source
 hashes, current typed policy, separate blocker scopes/req-R, zero teacher calls,
 and no bulk-root mutation. It contains no n600 fidelity or timing claim.
