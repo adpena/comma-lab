@@ -29,8 +29,14 @@ stories on Bregman divergences — Flat and curved" (Sony CSL). Six stories, eac
    compute the closed-form full centroid θ̄=Σwᵢθᵢ, then project ONCE onto the constraint submanifold.
 5. **Bregman gauge freedom** (2507.20577) = the mathematical grounding of **V9·CGauge (Covariant-Gauge)**:
    B_F=(1/λ)B_F̄ under F̄=λF(Aθ+b)+⟨c,θ⟩+d (affine Legendre invariance + divergence unit); dually-flat
-   (M,g,∇,∇*). ⇒ VERIFY (NO-FAKE): is v9·CGauge actually implementing this covariant gauge, or is
-   "CGauge" another name-vs-code gap like the curvelet? Ground it or rename.
+   (M,g,∇,∇*). **RECALL CORRECTION (graph-memory):** CGauge is NOT undefined — `cgauge_master_action_v1`
+   (`tac.canonical_equations.cgauge_master_action_20260711`) ALREADY registers a covariant Lagrangian
+   S=100·D_seg+√(10·D_pose)+(25/N)·L_MDL **on the Fisher base, covariant under (ξ,R)** — i.e. a Bregman-
+   adjacent grounding exists. The NO-FAKE verify is therefore SHARPER: does the CODE implement
+   `cgauge_master_action_v1` (the gauge covariance), or is the covariance a paper-equation the trainer
+   doesn't honor? Ground the Nielsen gauge-freedom INTO the existing master action; flag any code gap to the
+   fake-fix arm. Also recall FEED-v9div: the v9·CGauge run DIVERGED (best d_seg 0.03482, ~7× above baseline)
+   — a live post-mortem the grounding must reconcile with.
 6. **Riemann-Bregman vs Euclidean** (2511.21173): separable BD ⇒ Euclidean on h(x)=∫√φ''; squared Hessian
    ⇒ Euclidean on dual params (the cheap form above). Rao/geodesic distance = flat Euclidean in the right chart.
 
@@ -46,3 +52,14 @@ stories on Bregman divergences — Flat and curved" (Sony CSL). Six stories, eac
 
 **Pointer:** 0.19108 / 0.18804 UNMOVED. This is the rigorous grounding + cheap-form + anti-bug + throughput
 levers for the metric/CGauge thread; the pointer moves via a byte-closed exact row through the grounded vehicle.
+
+**STORES CONSULTED:** (honestly) FIRST the in-session committed artifacts — the optimal-metric-unification
+DAG FEED (c05acb2135 lineage), the surrogate/metric arm findings (argmax_native_vjp_fidelity_v1, "cosine is
+wrong"), the curvelet-fake + −48%-unreproduced memories, the fake-audit ledger (6408b07ef0), CLAUDE.md
+(operating-point seg-vs-pose, NO-FAKE). THEN (post-hook, before re-finishing) a fresh recall: graph-memory
+(`tools/graph_memory_recall.py`) which surfaced `cgauge_master_action_v1` + `cgauge_parametrization_optima_v1`
++ FEED-v9div (the CGauge divergence post-mortem) + FEED-cgauge-master; and `git grep` of
+`src/tac/canonical_equations/` (found cgauge_master_action_20260711, cgauge_parametrization_optima_20260711)
++ the canonical_equations_registry.jsonl. GAP (honest): the graph-memory/equations recall was done AFTER the
+first synthesis write (in-session context only), not before — this correction note + the story-5 CGauge
+refinement above are the result. The `cgauge_master_action_v1` connection is the key recovered signal.
