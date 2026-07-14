@@ -1,0 +1,59 @@
+{
+  "axis": "[macOS-MLX research-signal; NumPy-fp32/int32 authority; non-promotable MEANS]",
+  "contract": {
+    "acceptance": "float cross-process divergence; integer 0/N divergence; exact NumPy-int32 parity; dequantized result within derived Q15+fp32 authority tolerance",
+    "float_formulation": "MLX float32 duplicate-index atomic scatter-add",
+    "integer_formulation": "same indices/cotangent; Q15 cubic weights; bounded MLX int32 atomic add",
+    "real_op": "one-axis transpose accumulation of render-R bicubic resize 384->874"
+  },
+  "failure": {
+    "returncode": 1,
+    "stderr_tail": "Traceback (most recent call last):\n  File \"/Users/adpena/Projects/pact/tools/probe_pythagorean_exact_arithmetic_bitident.py\", line 458, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/adpena/Projects/pact/tools/probe_pythagorean_exact_arithmetic_bitident.py\", line 429, in main\n    print(json.dumps(run_mlx_variant(args.child), sort_keys=True))\n                     ~~~~~~~~~~~~~~~^^^^^^^^^^^^\n  File \"/Users/adpena/Projects/pact/tools/probe_pythagorean_exact_arithmetic_bitident.py\", line 169, in run_mlx_variant\n    destination = mx.array(fixture[\"destination_u32\"], dtype=mx.uint32)\nRuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.\nException ignored in atexit callback <nanobind.nb_func object at 0x10b34f9a0>:\nRuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.\n",
+    "stdout_tail": "",
+    "trial_index": 0,
+    "variant": "float_atomic"
+  },
+  "git_head_at_probe": "301ab2fb9be49e45be2247b0ead44737cfd9f2b5",
+  "host": "Primary.local",
+  "lane_id": "pythagorean_exact_arithmetic_bitident",
+  "live_run_mutation": false,
+  "n_requested_per_variant": 10,
+  "numpy_static_contract": {
+    "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+    "dequantized_rmse_vs_numpy_fp32": 0.0019357680482321848,
+    "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+    "float_reference_sha256": "b740231347c8fcc0c52d02a3a58f4153e8dbae41cc58a135cee74c27a57529a7",
+    "float_reorder_tolerance": 0.0008129412114279191,
+    "int32_positive_limit": 2147483647,
+    "int_reference_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+    "max_abs_integer_accumulator": 11159918,
+    "max_contributions_per_destination": 10,
+    "overflow_headroom_x": 192.42826398903648,
+    "within_derived_tolerance": true
+  },
+  "paid_dispatch": false,
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "schema": "pythagorean_exact_arithmetic_bitident_probe.v1",
+  "score_claim": false,
+  "source_custody": {
+    "l70_probe": {
+      "path": "tools/mlx_gpu_determinism_probe.py",
+      "sha256": "38df4339f95fe7e21611ce78efcc106a70ed2936e03e308a55ad1e4076ac8c70"
+    },
+    "probe": {
+      "path": "tools/probe_pythagorean_exact_arithmetic_bitident.py",
+      "sha256": "07440e0821a91a3558eb6c9710e65bb2c3d57d4e677bc0d1279f2c13e3d785a6"
+    },
+    "reference_r": {
+      "path": "src/tac/local_acceleration/pr95_hnerv_mlx_training.py",
+      "sha256": "92f3050fd738624716bff024ccb287f39780a71b9f4f67cd6ac873efef2a6054"
+    }
+  },
+  "training": false,
+  "trials": {
+    "fixed_q15_int32_atomic": [],
+    "float_atomic": []
+  }
+}
