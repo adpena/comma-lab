@@ -13,6 +13,15 @@ dominated by the apparatus we already run. This is a ~200-line, stdlib-only (url
 ranked feed INTO the unchanged deep-read engine. It NEVER launches arms (CONTAINMENT): it emits
 a queue; main/operator decide what to warm-start.
 
+DEEP-READ CONTRACT (BINDING — memory paper_warm_start_is_deep_math_plus_oss_harvest_never_abstract):
+a surfaced row is NOT "checked" until its PAPER_WARM_START delivers ALL of: (1) FULL MATH — whole
+paper incl. appendices/proofs, load-bearing theorem(s) restated with hypotheses, key derivation
+reproduced (not the abstract's summary); (2) AUTHOR-OSS HARVEST — find/read/assess the ACTUAL code
+the authors + the cited lineage released (repo/license/reusable-function/transfers-to-our-vehicle?),
+harvest patterns not links; (3) CRITIQUES + FORWARD citations; (4) HONEST FORK to the live task#/P0
+with the $0 next-probe. Abstract-only intake dressed as a warm-start is the NO-FAKE surrogate trap at
+the research layer and is FORBIDDEN. This queue FEEDS that contract; it does not replace it.
+
 CRUX QUERIES: each row cites its MEASURED anchor (canonical equation / DAG feed / task#) so the
 list is provenance-backed, not vibes. Refresh when the crux ledger moves (grep the anchors).
 

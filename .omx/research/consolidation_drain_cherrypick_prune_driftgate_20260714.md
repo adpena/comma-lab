@@ -161,6 +161,34 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
   Follow-on (operator-GO): resume the block-loop OR exact-eval the banked candidate. Capture the
   clicks_ledger + advisory candidate in the consolidation so a resumable sub-0.18804 advisory is not lost.
 
+## APPARATUS BUGS diagnosed 2026-07-14 (operator "another bug or code smell") — OWED permanent fixes (two-landing)
+Root cause of the stuck consolidation: the 2 "RUNNING" arms were pre-CFL `--sandbox workspace-write` arms
+that STRUCTURALLY CANNOT COMMIT (blocks `.git/objects`) → doomed to strand regardless of runtime. Diagnosed:
+1. **Retry inherits the pre-fix broken sandbox + NO RESUMABILITY** — ripo's codex died transient rc=1 after
+   ~4h; the harness re-launched it FROM SCRATCH (pid 5481, 8min old under launcher 26184) STILL on
+   workspace-write (up to 8×). FIX: retries must (a) use the current default sandbox (danger-full-access),
+   (b) be resumable (not restart a 4h job from 0), OR (c) not auto-retry heavy long arms at all. + STRICT
+   self-protect.
+2. **In-flight pre-CFL arms not retrofitted or capped** — the CFL fix only helps NEW arms; nothing caps
+   runtime or warns that a workspace-write arm will strand. FIX: a launch/liveness gate that flags/caps
+   workspace-write arms as strand-doomed.
+3. **Drain-detector TIMEOUT exits 0** — "DRAIN WAIT TIMEOUT: still 2 arms" surfaced as "completed (exit 0)"
+   = a give-up looks like success (sibling of the _wt_test phantom + the codex_status-over-pgrep memory).
+   FIX: timeout → nonzero exit + explicit TIMEOUT status. + reinforce: NEVER hand-roll pgrep for codex
+   liveness (shared-pid false match — memory codex_fleet_liveness_use_status_tool_not_handrolled_pgrep);
+   always tools/codex_status.py.
+These are OWED (queued, not built now per consolidate-asap). Land at/after consolidation, two-landing each.
+
+## ripo STOPPED (operator-GO 2026-07-14) + state
+- `ripo_deep_warmstart_trust_region_500` STOPPED via killpg pgid 26184 (pgid-guarded, curvelet 85966
+  untouched). Reason: doomed-to-strand (workspace-write) + no-resume retry loop wasting ~4h/cycle. Its
+  written signal (log tail captured); its shared-tree code slice folds into the WHOLE-PILE consolidation
+  (un-attributable per-arm — no manifest). Delegations + landing gate → terminal.
+- Sibling `ripo_margin_fisher_seg_head_preconditioner_500` already REVIEWED rc=1 (errored, terminal).
+- **Fleet now: 1 RUNNING = `genuine_curvelet_shearlet_build_measure` (#502 P0, ~6h).** Per operator: let it
+  FINISH, then main-harvest its stranded diff (codex_harvest_commit --files — a stranded diff lands
+  main-side, so finish≠loss). Consolidation (full sequence above) fires on curvelet DONE. Pointer 0.18804/0.19108.
+
 ## Invariants
 NO signal loss (every arm final message + research memo + DAG FEED captured before any prune). NO trample
 (per-arm serializer commits, shared files reconciled by hand). ONE SoT (DSL + canonical_equations + memory
