@@ -1,0 +1,293 @@
+{
+  "authority": {
+    "axis": "[n600 macOS-MLX advisory; NumPy-fp32 reference; no score authority]",
+    "byte_closed_exact_row_required_for_score": true,
+    "live_trainer_activation": false,
+    "means_only": true,
+    "mlx_is_advisory": true,
+    "mps_is_score_authority": false,
+    "numpy_fp32_reference": true,
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "synthetic_data": false,
+    "teacher_regeneration": false
+  },
+  "backend_preflight": {
+    "cpu_fallback_allowed": false,
+    "error": "RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+    "metal_usable": false,
+    "probe_returncode": 7,
+    "reported_metal_available": true,
+    "requested_backend": "mlx_metal",
+    "torch_debug_relabel_allowed": false
+  },
+  "blocker_surfaces": [
+    "backend",
+    "cache",
+    "storage"
+  ],
+  "blockers": [
+    {
+      "code": "storage_plan_blocked",
+      "detail": "selected_workload_root_missing",
+      "surface": "storage"
+    },
+    {
+      "code": "storage_plan_blocked",
+      "detail": "selected_workload_root_mismatch",
+      "surface": "storage"
+    },
+    {
+      "code": "selected_workload_root_missing",
+      "detail": "plan selected no workload root",
+      "surface": "storage"
+    },
+    {
+      "code": "cache_manifest_missing",
+      "detail": "cache manifest does not exist: experiments/results/whole_teacher_distilled_student_20260713/n600_cache_manifest.json",
+      "surface": "cache"
+    },
+    {
+      "code": "mlx_metal_device_unusable",
+      "detail": "RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+      "surface": "backend"
+    }
+  ],
+  "bulk_output_root_touched": false,
+  "cache_preflight": {
+    "bundle_root": null,
+    "path": "/Users/adpena/Projects/pact/experiments/results/whole_teacher_distilled_student_20260713/n600_cache_manifest.json",
+    "regeneration_fallback_available": false,
+    "synthetic_fallback_available": false,
+    "teacher_calls_attempted": 0
+  },
+  "family_boundary": "whole-teacher RGB-to-quotient/value-and-VJP distillation is structurally different from the family-closed fixed-feature cheap localizer; this receipt does not reopen the localizer or close the student family",
+  "fit_implementation_preflight": {
+    "executable": true,
+    "expected_fit_driver_status": "EXECUTABLE_CACHED_ONLY_MLX_AUTOGRAD_V1",
+    "fit_driver_status": "EXECUTABLE_CACHED_ONLY_MLX_AUTOGRAD_V1"
+  },
+  "generated_at_utc": "2026-07-14T00:58:05.701057Z",
+  "git_head": "8cdc4c4d556718c10aa1e1695761956463318294",
+  "lane_id": "lane_whole_teacher_distilled_student_20260713",
+  "measurement": {
+    "economics": "UNMEASURED_BLOCKED",
+    "fit_steps": 0,
+    "forward_fidelity": "UNMEASURED_BLOCKED",
+    "n_pairs": 0,
+    "teacher_calls": 0,
+    "vjp_fidelity": "UNMEASURED_BLOCKED"
+  },
+  "mode": "preflight",
+  "output_dir": "/Volumes/VertigoDataTier/pact/whole_teacher_distilled_student_20260713",
+  "output_existed_before": false,
+  "primary_state": "BLOCKED_DATA_CUSTODY",
+  "probe_schema": "whole_teacher_distilled_student_probe.v1",
+  "receipt_dir": "/Users/adpena/Projects/pact/experiments/results/whole_teacher_distilled_student_20260713",
+  "req_R": "rerun on a host/process with an evaluated-array-proven usable MLX Metal device | seal the exact real n600 rendered-frame, quotient, full input-VJP, labels, and hash bundle | select a writable SSD-tier workload root with the requested free-space reserve",
+  "req_R_by_blocker_surface": {
+    "backend": "rerun on a host/process with an evaluated-array-proven usable MLX Metal device",
+    "cache": "seal the exact real n600 rendered-frame, quotient, full input-VJP, labels, and hash bundle",
+    "storage": "select a writable SSD-tier workload root with the requested free-space reserve"
+  },
+  "schema": "whole_teacher_distilled_student_preflight_receipt.v1",
+  "source_custody": {
+    ".omx/research/whole_teacher_distilled_student_build_spec_20260713.md": {
+      "bytes": 9355,
+      "path": "/Users/adpena/Projects/pact/.omx/research/whole_teacher_distilled_student_build_spec_20260713.md",
+      "sha256": "8a36ef201bcd2ac89d4456a96b792bfa0ac8eaa8cb0e6f6d24e0835804345eae"
+    },
+    "src/tac/canonical_equations/whole_teacher_distilled_student_20260713.py": {
+      "bytes": 17772,
+      "path": "/Users/adpena/Projects/pact/src/tac/canonical_equations/whole_teacher_distilled_student_20260713.py",
+      "sha256": "97d5f65e598cd5c865616acc2d2cca4fc826d83951a3b67106114439e953c496"
+    },
+    "src/tac/scorer_surrogate/whole_teacher_distilled_student.py": {
+      "bytes": 148658,
+      "path": "/Users/adpena/Projects/pact/src/tac/scorer_surrogate/whole_teacher_distilled_student.py",
+      "sha256": "f2bf229dc67ce78b05c03be8c49e41e33021083cafd7ecda720ffc3baf9c48ec"
+    },
+    "src/tac/witness_dsl/whole_teacher_distilled_student_policy.py": {
+      "bytes": 37809,
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/whole_teacher_distilled_student_policy.py",
+      "sha256": "9d63c763af1f515cebf8ff63f654911d063f71b9e382d61a4ac2de59d3769577"
+    },
+    "tools/probe_whole_teacher_distilled_student.py": {
+      "bytes": 88373,
+      "path": "/Users/adpena/Projects/pact/tools/probe_whole_teacher_distilled_student.py",
+      "sha256": "23b37ad74f9069985fa54593fc2298499730ee08f76be6ab7941636d403b77fa"
+    }
+  },
+  "source_custody_sha256": "44f2b593eac6a9fdd7282c85ac92d9eef34a5f1deeb65008b38de399d12ca7db",
+  "status": "blocked",
+  "storage_preflight": {
+    "bulk_write_attempted": false,
+    "custody": {
+      "bytes": 6699,
+      "path": "/Users/adpena/Projects/pact/.omx/research/whole_teacher_distilled_student_storage_preflight_20260713.json",
+      "sha256": "55387d60a5f30e1259fe580174a62881f4c00bd446057f74ada56f38c2eaf7db"
+    },
+    "explicit_local_opt_in": false,
+    "output_dir": "/Volumes/VertigoDataTier/pact/whole_teacher_distilled_student_20260713",
+    "path": "/Users/adpena/Projects/pact/.omx/research/whole_teacher_distilled_student_storage_preflight_20260713.json",
+    "plan_blockers": [
+      "selected_workload_root_missing",
+      "selected_workload_root_mismatch"
+    ],
+    "requested_bytes": 7000000000,
+    "schema": "comma_lab.experiment_storage_tier_plan.v1",
+    "selected_tier": null,
+    "selected_workload_root": null
+  },
+  "typed_policy": {
+    "cadence_composition_law": "K_student controls periodic whole-teacher anchors independently; optional #487 K_max=2 controls only its own inner stale-costate reuse attempt and contributes no inherited speed claim",
+    "constant_provenance": {
+      "exact_costate_reuse_kmax": "MEASURED-INHERITED #487 guarded exact-costate-reuse policy; separate inner controller with no cadence cap or speed transfer to K_student",
+      "fidelity_gates": "ASSUMED_AWAITING_VERIFICATION; preregistered 2026-07-13 before any whole-teacher student heldout bundle was available",
+      "seed": "MEASURED-INHERITED sealed Round-5 deterministic seed",
+      "student_anchor_cadence_candidates": "SOURCE operator K economics request; K=20 comparison plus DERIVED power-of-two bracketing above the inclusive-95 feasibility boundary",
+      "target": "DERIVED JEPA decision-quotient memo and softmax gauge law"
+    },
+    "containment": {
+      "evaluator_enabled": false,
+      "live_run_mutation_enabled": false,
+      "live_training_enabled": false,
+      "paid_or_remote_dispatch_enabled": false,
+      "teacher_recomputation_enabled": false
+    },
+    "economics_law": "C_S,t + (C_T,t + U) / K_student",
+    "economics_raw_timing_fields": {
+      "all_tiers": [
+        "anchor_update_cost_ms",
+        "student_timing_axis",
+        "teacher_timing_axis"
+      ],
+      "forward_advisory": [
+        "student_forward_cost_ms",
+        "exact_teacher_forward_cost_ms"
+      ],
+      "training_gradient": [
+        "student_forward_vjp_cost_ms",
+        "exact_teacher_forward_vjp_cost_ms"
+      ]
+    },
+    "enabled": false,
+    "exact_anchor_fallback": "full_frozen_teacher_forward_and_input_vjp",
+    "exact_costate_reuse_kmax": 2,
+    "forced_refresh_boundaries": [
+      "event",
+      "stage",
+      "custody_change",
+      "trust_region"
+    ],
+    "gates": {
+      "forward_worst_pair_max_argmax_disagreement": 0.005,
+      "forward_worst_pair_max_relative_l2": 0.05,
+      "forward_worst_pair_min_cosine": 0.995,
+      "numpy_framework_min_cosine": 0.9997,
+      "provenance": "ASSUMED_AWAITING_VERIFICATION; preregistered 2026-07-13 before any whole-teacher student heldout bundle was available",
+      "vjp_worst_pair_max_relative_l2": 0.25,
+      "vjp_worst_pair_min_cosine": 0.95
+    },
+    "live_trainer_argv": [],
+    "measurement_authority": "real cached n600 rendered states through actual R; worst-pair QoI; exact teacher input-VJP",
+    "negative_dispositions": {
+      "BLOCKED_DATA_CUSTODY": {
+        "req_R": "reconstruct a content-bound n600 real rendered-state bundle through the actual R surface, including full teacher quotient and exact input-VJP custody; then rerun the preregistered worst-pair value/VJP gates and matched in-loop timing before activation",
+        "verdict_scope": "INSTANCE x INPUT-CACHE x SEMANTIC-CUSTODY; missing or drifted evidence says nothing about whole-teacher distilled-student fidelity"
+      },
+      "BLOCKED_ECONOMICS": {
+        "req_R": "measure another preregistered tier, size, or K_student on content-bound matched hardware, or reduce fully charged student/update cost before requesting in-loop activation",
+        "verdict_scope": "INSTANCE x TIER x STUDENT-SIZE x K-STUDENT x HARDWARE x TIMING-RECEIPT; one non-paying operating point does not close the architecture or family"
+      },
+      "BLOCKED_FORWARD_FIDELITY": {
+        "req_R": "change the typed student architecture, size, or preregistered fit policy; reseal its parameters and repeat the same real-n600 NumPy-fp32 worst-pair quotient and parity gates",
+        "verdict_scope": "FORMULATION x STUDENT-SIZE x FIT-POLICY x REAL-N600-REPLAY; one value-fidelity failure does not close the whole-teacher distilled-student family"
+      },
+      "BLOCKED_VJP_FIDELITY": {
+        "req_R": "change the typed differentiable architecture or preregistered scalar-composed Sobolev fit; then repeat the exact full-input-VJP and NumPy/MLX parity gates on the same real n600",
+        "verdict_scope": "FORMULATION x STUDENT-SIZE x SCALAR-OBJECTIVE x FIT-POLICY x REAL-N600-REPLAY; one Jacobian failure does not close whole-teacher distillation"
+      }
+    },
+    "numerical_authority": "teacher fidelity is decided by the NumPy-fp32 reference; MLX is advisory for matched-device timing and owes separate forward and input-VJP parity",
+    "policy": "whole_teacher_distilled_student",
+    "promotion_eligible": false,
+    "req_R": "reconstruct a content-bound n600 real rendered-state bundle through the actual R surface, including full teacher quotient and exact input-VJP custody; then rerun the preregistered worst-pair value/VJP gates and matched in-loop timing before activation",
+    "required_cache_fields": {
+      "all_tiers": [
+        "rendered_frame",
+        "teacher_quotient4",
+        "labels",
+        "per_tensor_sha256"
+      ],
+      "training_gradient_additional": [
+        "teacher_input_costate"
+      ]
+    },
+    "required_evidence_binding_fields": [
+      "measured_tier",
+      "measured_student_size",
+      "measured_student_anchor_cadence",
+      "cache_manifest_sha256",
+      "cache_manifest_file_sha256",
+      "cache_validated_sha256",
+      "source_custody_sha256",
+      "teacher_source_custody_sha256",
+      "actual_r_operator_sha256",
+      "post_r_input_surface_sha256",
+      "frozen_teacher_weights_sha256",
+      "quotient_basis_sha256",
+      "scalar_objective_sha256",
+      "fit_policy_sha256",
+      "parameter_layout_sha256",
+      "student_parameters_sha256",
+      "deterministic_repeat_sha256",
+      "measurement_contract_sha256",
+      "teacher_timing_receipt_sha256"
+    ],
+    "required_n_pairs": 600,
+    "required_replay_states": [
+      "ep150",
+      "ep251",
+      "ep275"
+    ],
+    "research_only": true,
+    "score_claim": false,
+    "seed": 455,
+    "selected_size": "small",
+    "semantic_custody_requirements": {
+      "actual_r_custody_verified": true,
+      "backend": "mlx",
+      "deterministic_repeat_verified": true,
+      "frozen_teacher_custody_verified": true,
+      "measurement_axis": "[n600 macOS-MLX advisory; NumPy-fp32 reference; no score authority]",
+      "scalar_objective_custody_verified": true,
+      "teacher_calls": 0
+    },
+    "size_candidates": [
+      "tiny",
+      "small",
+      "medium"
+    ],
+    "student_anchor_cadence": 64,
+    "student_anchor_cadence_candidates": [
+      2,
+      4,
+      8,
+      20,
+      32,
+      64,
+      128
+    ],
+    "target": "centered_logit_quotient",
+    "tier": "training_gradient",
+    "verdict_scope": "INSTANCE x INPUT-CACHE x STUDENT-SIZE x CADENCE; a failed or missing receipt does not close the whole-teacher distilled-student family"
+  },
+  "verdict_scope": "INSTANCE x CURRENT-HOST | INSTANCE x INPUT-CACHE | INSTANCE x STORAGE-PREFLIGHT",
+  "verdict_scope_by_blocker_surface": {
+    "backend": "INSTANCE x CURRENT-HOST",
+    "cache": "INSTANCE x INPUT-CACHE",
+    "storage": "INSTANCE x STORAGE-PREFLIGHT"
+  }
+}
