@@ -8,7 +8,9 @@ sealed 7.427d and PASSED every gate (orchestrator dry-run, 2026-07-08).
 
 Fix under test: ``--epochs`` defaults to ``None``; ``derive_named_config(epochs=None)`` omits
 the kwarg so each config family's signature default — the single source of truth — applies.
-An explicit value still overrides (with a loud provenance note at launch time).
+An explicit feasible value still overrides (with a loud provenance note at launch time).
+An explicit value shorter than an enabled curriculum's stage caps now fails at config
+construction; it is not a valid override merely because argparse accepted the integer.
 """
 import pathlib
 import sys
@@ -38,9 +40,14 @@ def test_proven_base_none_epochs_uses_sealed_1000():
     assert int(cfg.epochs) == 1000
 
 
-def test_explicit_epochs_still_overrides():
-    cfg = L.derive_named_config("crucible_v6", _GT, num_pairs=8, epochs=42, overfit=True)
-    assert int(cfg.epochs) == 42
+def test_feasible_explicit_epochs_still_overrides():
+    cfg = L.derive_named_config("crucible_v6", _GT, num_pairs=8, epochs=1000, overfit=True)
+    assert int(cfg.epochs) == 1000
+
+
+def test_impossible_explicit_epochs_refuses_before_launch():
+    with pytest.raises(ValueError, match="EPOCH-BUDGET FEASIBILITY"):
+        L.derive_named_config("crucible_v6", _GT, num_pairs=8, epochs=42, overfit=True)
 
 
 def test_argparse_epochs_defaults_to_none():

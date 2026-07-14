@@ -17696,3 +17696,73 @@ with an untyped obstruction would be NO-FAKE (the arm honestly refused).
   the frame identifies. Jet analogy is conditional; Gauss-Bonnet-as-codec is beautiful-but-inert. Overall
   scoped verdict: RIGHT-FRAME / NOT-YET-A-RATE-RESULT; the receiver-space descent-filler is the follow-on probe.
   DSL leg N/A (analysis). [consumers-generic]
+
+---
+
+## FEED-timer-curriculum-complete-20260713 (CE-only timer + schedule-feasibility class fix)
+
+Research/build apparatus only. Pointer UNMOVED. The n24 four-epoch async/solo component-timer pair now
+compiles as a true one-stage CE-only program: curriculum/events OFF, tau=1, no inherited typed stages,
+regularizers, levers, start epochs, or start events; all non-CE weights including pose are zero. The prior
+163-flag artifact was the defect signature: the corrected governed dry-runs are MEASURED 99/99 because 70
+parent schedule/controller flags were removed and 6 explicit OFF tokens added. Both dry-runs PASS real
+argparse, expected-lever, schedule-provenance (no positive-epoch triggers), DSL-config, memory, and admission
+gates; they do not boot Metal.
+
+The class fix is `tac.witness_dsl.curriculum_dsl.schedule_epoch_budget_violations`, consumed by
+`WitnessProgram.validate` and every `tools.launch_witness_run.derive_named_config` path before writes. It uses
+the trainer's real parser defaults and implements `curriculum_epoch_budget_feasibility_v1`:
+`m_sched = E - max(S_active) >= 0` for enabled curricula; disabled curricula are explicit vacuous passes.
+Sixteen of seventeen launcher config choices pass their sealed budgets; the broader audit found and now
+compile-refuses `fresh_seeded`'s latent E=1000/l7@1001 window. Every non-timer E=4 override fail-closes at
+config construction unless all starts are derived into-budget: 12 refuse, while all_levers/sealed_205/
+store_nothing_205 and both timers pass. The three non-timer passes remain curriculum-bearing; only the timers
+are CE-only. verdict_scope=config/boot-runnability-only; this law makes no quality,
+score, byte, or promotion claim.
+
+Curriculum owed audit: #302 PR95-clock classification consumed/not re-derived; #315/#334/#339 event and
+first-class schedule DSL already built and consistency-checked; #430's DSL-map owed already closed by #432;
+#403 pool current at 57 total/47 duty and consumed by the costate digest. Remaining Metal timer boot/run,
+#430/V9 live A/B, N7 label-floor event, and candidate measurements remain operator-GO/build-owner obligations,
+not fake-closed. Memo: `timer_curriculum_complete_20260713.md`. Triality: DSL + this DAG FEED + equation.
+
+---
+
+## FEED-pythagorean-exact-arithmetic-bitident-20260713 (MEANS; pointer 0.19108/bank 0.18804 UNMOVED)
+
+**Edge:** `real render-R bicubic 384→874 dup-index resize-adjoint accumulation → N=10 float/int32 Metal
+cross-process hash cells → parity gate → REAL-L70-LEVER (INSTANCE)`. The codex arm (a05a4b18c3) built the
+probe + confirmed NumPy authority but its execution surface refused Metal (0/10 children →
+ENVIRONMENT-BLOCKED). `main` re-ran on an M5-Max Metal shell and RESOLVED the decisive cell.
+
+**MEASURED (10/10 processes, both variants):**
+- `float_atomic` (current float32 dup-index adjoint accumulation): **10 unique hashes / 10** →
+  cross_process_identical=False. **Reproduces the L70 wall exactly** — Metal atomic-scatter reorders →
+  order-dependent fp rounding → divergent bytes.
+- `fixed_q15_int32_atomic` (integer Q15/int32 lowering, identical indices + cotangents): **1 unique hash
+  / 10** → cross_process_identical=True, **bit-identical**; dequant max-abs 0.007969 < derived 0.011561.
+
+**Why it holds (deep-math):** integer addition is associative → accumulation is order-INDEPENDENT →
+invariant to Metal's non-deterministic atomic-scatter ordering. Float is not associative → the same
+reordering yields different rounding. This is the mechanism of the L70 wall, now localized to ARITHMETIC
+TYPE (not "GPU is fundamentally nondeterministic"). Confirms `decode_determinism_integer_arithmetic_v1`
+(empirical anchor appended, residual 0.0, `[macOS-MLX research-signal]`).
+
+**verdict_scope:** `INSTANCE × MLX-0.31.2 × M5-Max-Metal × render-R bicubic 384→874 one-axis transpose
+accumulation × Q15/int32 bounded fixture`. This is the ONE op class that #348 localized the entire 28/28
+wall to (dup-index atomic scatter = reference-R UP-backward), so the instance is on the wall's critical
+path — but it is NOT yet whole-render-R, NOT n600, NOT the full 28-tensor decode. verdict_scope=INSTANCE:
+one failed/succeeded FIXTURE is not the whole decode.
+
+**What it unblocks (scope-up ladder, none fired):** (1) integer-lowered fused-R adjoint as an
+order-INDEPENDENT alternative to #348's fixed-order VJP workaround (more robust — no order contract to
+preserve); (2) reframes the #356 megakernel NO-GO — that NO-GO was fp-reorder for FLOAT fusion; integer
+lowering sidesteps fp-reorder entirely for this op class, so an integer-lowered megakernel is a distinct,
+un-refuted question; (3) a GPU-side bit-identical decode path (breaks the L70 CPU-lock) IF the integer
+lowering extends across all 28 tensors within the derived-error budget at n600 — the decisive scope-up.
+
+**Still MEANS.** Pointer 0.19108 [contest-CPU] / bank 0.18804 UNMOVED. No training, eval, paid dispatch,
+or score claim. This is a determinism-mechanism confirmation on the real wall op, not a rate/d_seg lever.
+Memo: `pythagorean_exact_arithmetic_bitident_20260713.md` (RESOLVED section). Triality: this DAG FEED +
+equation anchor (`decode_determinism_integer_arithmetic_v1`); DSL leg N/A (no config lever — a decode
+determinism property, not a trainer knob).

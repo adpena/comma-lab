@@ -36,6 +36,7 @@ def test_tickets_are_ce_exact_n24_matched_arms(
     assert flags["--ckpt-every"] == "1"
     assert flags["--loss-term-log-every"] == "-1"
     assert flags["--seg-loss"] == "ce"
+    assert flags["--w-pose"] == "0.0"
     for zero_flag in (
         "--persistence-loss-weight",
         "--persistence-recall-weight",
@@ -50,10 +51,38 @@ def test_tickets_are_ce_exact_n24_matched_arms(
     ):
         assert flags[zero_flag] == "0.0"
     assert "--no-witness-alone-island-loss" in flags
+    for off_flag in (
+        "--no-curriculum",
+        "--no-curriculum-event-triggered",
+        "--no-curriculum-nucleus-guard",
+        "--no-curriculum-reanchor-levers",
+        "--no-dseg-aware-taper",
+        "--no-seed-islands",
+    ):
+        assert off_flag in flags
+    assert not any(flag.endswith("-start-epoch") for flag in flags)
+    assert not any(flag.endswith("-start-event") for flag in flags)
+    assert cfg.dsl_levers == (f"throughput_component_timer_{variant}",)
+    assert cfg.schedule_governance == {}
+    assert "polyak_finisher_start_epoch" not in cfg.constants_manifest
     assert ("--async-verdict" in flags) is async_expected
     assert ("--no-async-verdict" in flags) is (not async_expected)
     assert cfg.dsl_program_manifest["operator_go_required"] is True
     assert cfg.dsl_program_manifest["score_claim"] is False
+
+
+def test_async_and_solo_are_exactly_matched_except_async_toggle() -> None:
+    async_flags = dict(
+        compile_throughput_component_timer_ticket(variant="async_current")
+        .to_trainer_flags("OUT")
+    )
+    solo_flags = dict(
+        compile_throughput_component_timer_ticket(variant="solo_control")
+        .to_trainer_flags("OUT")
+    )
+    assert async_flags.pop("--async-verdict") is None
+    assert solo_flags.pop("--no-async-verdict") is None
+    assert async_flags == solo_flags
 
 
 def test_schedule_provenance_has_zero_naked_epochs() -> None:

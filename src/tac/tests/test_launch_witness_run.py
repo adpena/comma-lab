@@ -277,24 +277,14 @@ def test_dsl_lever_help_enumeration_derived_from_predicate():
 
 
 # ───────────────────────── C5 (SEAL review 2026-07-04): fresh_seeded + passthrough ─────────────
-def test_main_dry_run_fresh_seeded_emits_the_review_deltas(tmp_path, capsys):
+def test_main_dry_run_fresh_seeded_refuses_impossible_l7_window(tmp_path):
     out = tmp_path / "fresh"
-    rc = lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--epochs", "1000",
-                  "--config", "fresh_seeded", "--out-dir", str(out), "--dry-run", "--no-dashboard"])
-    assert rc == 0
-    body = (out / "launch.sh").read_text()
-    for token in ("--lane-prior-phi1-mode paint", "--seed-islands", "--eikonal-weight 0.05",
-                  "--eikonal-weight-end 0.1", "--tau-anneal-shape geometric",
-                  "--softmax-temp-end 1.0", "--mod-dim 19", "--film-stiefel",
-                  "--muon-warm-start-momentum", "--muon-lr-final-frac 0.1",
-                  "--lane-band-start-epoch 350", "--stage-transition-rewarmup-epochs 20",
-                  "--stage-transition-rewarmup-shape cosine", "--closed-loop-control",
-                  "--l7-start-epoch 1001", "--hosc-beta-end 5.134", "--verdict-batch 64"):
-        assert token in body, f"fresh_seeded launch.sh missing {token}"
-    # the review's excluded levers must NOT appear (C1/C2/C3)
-    assert "--curriculum-event-triggered" not in body
-    assert "--bank-n-scales" not in body
-    assert not (out / "run.log").exists()  # DRY-RUN must NOT spawn
+    with pytest.raises(ValueError, match=r"--l7-start-epoch=1001"):
+        lw.main(["--gt-cache", _GT, "--num-pairs", "600", "--epochs", "1000",
+                 "--config", "fresh_seeded", "--out-dir", str(out), "--dry-run",
+                 "--no-dashboard"])
+    # Config construction must fail before the launcher writes or spawns.
+    assert not out.exists()
 
 
 def test_parse_extra_trainer_flags_validates_against_argparse():

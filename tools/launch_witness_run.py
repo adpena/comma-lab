@@ -58,14 +58,17 @@ from tac import witness_autoconfig as wac  # noqa: E402
 from tac.witness_dsl.curriculum_dsl import (  # noqa: E402
     TRAINER_PATH,
 )
-from tac.witness_dsl.curriculum_dsl import (
+from tac.witness_dsl.curriculum_dsl import (  # noqa: E402
     real_boolean_flags as _cdsl_real_boolean_flags,
 )
-from tac.witness_dsl.curriculum_dsl import (
+from tac.witness_dsl.curriculum_dsl import (  # noqa: E402
     real_store_true_flags as _cdsl_real_store_true_flags,
 )
-from tac.witness_dsl.curriculum_dsl import (
+from tac.witness_dsl.curriculum_dsl import (  # noqa: E402
     real_trainer_flags as _cdsl_real_trainer_flags,
+)
+from tac.witness_dsl.curriculum_dsl import (  # noqa: E402
+    schedule_epoch_budget_violations as _schedule_epoch_budget_violations,
 )
 
 _TRAINER = TRAINER_PATH  # canonical single-source: curriculum_dsl.TRAINER_PATH
@@ -737,8 +740,8 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
 
 
 # ───────────────────────── named-config derivation (shared by launch + calibration) ─────────────
-def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: int | None,
-                        overfit: bool):
+def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int,
+                                   epochs: int | None, overfit: bool):
     """Resolve a canonical named config to a derived trainer config at the given scale. The
     RSS-calibration smoke reuses this with a SMALL num_pairs/epochs but the SAME config name, so
     the calibration exercises the REAL flag set (not a toy variant).
@@ -867,6 +870,29 @@ def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: i
         f"throughput_component_timer_solo_20260713. "
         f"Add an explicit branch (NEVER "
         f"silently fall through to proven_base).")
+
+
+def derive_named_config(config: str, gt_cache: str, *, num_pairs: int, epochs: int | None,
+                        overfit: bool):
+    """Derive a named config and reject an impossible curriculum before writes.
+
+    The wrapper covers typed and legacy config families alike and therefore runs
+    for dry-run, calibration, dry-start, and real launch callers.  Epoch-budget
+    feasibility is a compiler/config-construction invariant, not an advisory
+    launcher check.
+    """
+
+    cfg = _derive_named_config_unchecked(
+        config, gt_cache, num_pairs=num_pairs, epochs=epochs, overfit=overfit
+    )
+    emitted = cfg.to_trainer_flags("SCHEDULE_FEASIBILITY_AUDIT")
+    violations = _schedule_epoch_budget_violations(emitted, TRAINER_PATH)
+    if violations:
+        raise ValueError(
+            f"named config {config!r} failed the DSL schedule epoch-budget gate: "
+            + " | ".join(violations)
+        )
+    return cfg
 
 
 # ───────────────────────── RSS calibration smoke (BUILD #294 piece B; optional, default OFF) ────

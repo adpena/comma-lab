@@ -32,6 +32,7 @@ if _TOOLS not in sys.path:
 
 import launch_witness_run as L  # noqa: E402  (after the sys.path shim, like the operator's invocation)
 import schedule_provenance_gate as gate  # noqa: E402
+
 from tac.witness_autoconfig import CrucibleV7LaunchConfig  # noqa: E402
 from tac.witness_dsl.curriculum_dsl import TRAINER_REL  # noqa: E402
 from tac.witness_dsl.typed_config import verify_launch_manifest  # noqa: E402
@@ -83,9 +84,9 @@ def test_unknown_config_name_raises_not_silent_fallthrough():
 
 
 def test_proven_base_and_all_levers_still_fall_through():
-    """Regression: the two names that LEGITIMATELY use derive_config still resolve (no over-tighten)."""
-    pb = L.derive_named_config("proven_base", _GT, num_pairs=8, epochs=8, overfit=True)
-    al = L.derive_named_config("all_levers", _GT, num_pairs=8, epochs=8, overfit=True)
+    """The two names that legitimately use derive_config resolve at their feasible defaults."""
+    pb = L.derive_named_config("proven_base", _GT, num_pairs=8, epochs=None, overfit=True)
+    al = L.derive_named_config("all_levers", _GT, num_pairs=8, epochs=None, overfit=True)
     assert L.config_family(pb) == "proven_base"
     assert L.config_family(al) == "all_levers"
 

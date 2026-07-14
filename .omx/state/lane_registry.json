@@ -75382,6 +75382,1654 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_95kill_round2_frozen_replay_convex_head_20260713",
+      "name": "95kill round-2 frozen-replay convex-head cached-label contraction",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "GO on preregistered n600-real local training-gradient rule; 12x teacher amortization; score_claim=false; uncommitted pending main review",
+      "research_only": true,
+      "reactivation_criteria": [
+        "replay distribution changes",
+        "feature chart changes",
+        "ridge or dtype changes",
+        "live evaluator-cell debt gate requested"
+      ]
+    },
+    {
+      "id": "lane_cheapen_real95_tilehalo_fp16_20260713",
+      "name": "Cheapen real 95 percent loop: sensitivity-waterfilled exact tile halo plus mixed-precision MLX training",
+      "phase": 7.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_steps_dimension_95kill_20260713",
+      "name": "Steps-dimension 95-kill: FreSh, hardness oversampling, and terminal solve epochs-to-target",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "New-file-only activation audit and bounded n600 preregistration; no live trainer edits; no heavy or paid dispatch."
+    },
+    {
+      "id": "lane_muonh_manifold_muon_dig_20260713",
+      "name": "MuonH and Manifold Muon deep-math dig",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_int8_training_rungs_20260713",
+      "name": "INT8 training rungs local probes",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only n600 teacher precision and byte-close QAT-prize measurement; no training, provider, exact evaluator, or sibling-file mutation."
+    },
+    {
+      "id": "lane_fore_occupancy_ratio_dig_20260713",
+      "name": "FORE occupancy-ratio drift bridge dig",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; design/analysis; no launches; no sibling edits; main review owns integration",
+      "research_only": true
+    },
+    {
+      "id": "lane_sps_gradient_separation_probe_20260713",
+      "name": "SPS gradient-role conflict probe and witness-native separation",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "epoch275 n4 formulation-instance NO-GO; live temporal gradient zero; counterfactual seg cosine +0.107189; pair225 reformulation signal; pointer unchanged",
+      "research_only": true,
+      "lane_class": "research-only",
+      "reactivation_criteria": [
+        "n600 engaged-checkpoint material conflict",
+        "equal-step scalarization-PCGrad control",
+        "measured scorer-VJP cost"
+      ]
+    },
+    {
+      "id": "muon_round2_wire",
+      "name": "Manifold-Muon round-2 polar-chart finisher",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Uncommitted round-2 build: MCSD/SPEL polar-chart finisher is default-OFF, DSL/trainer/resume wired; exact tangent-dual not built; MLX parity and governed real finishing-stage A/B/n600 remain owed.",
+      "reactivation_criteria": [
+        "Metal-capable local host",
+        "first governed V9 finishing-stage checkpoint",
+        "matched n600 through-R control/treatment custody"
+      ]
+    },
+    {
+      "id": "lane_replace_round3_fidelity_wall_20260713",
+      "name": "Round 3 Fidelity Wall Replacement",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/scorer_surrogate/replace_round3_fidelity_wall.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "new prefix depth or feature chart",
+        "direct top-k or class-pair support target",
+        "transition-complete FORE support receipt"
+      ]
+    },
+    {
+      "id": "lane_spinningup_crosswalk_20260713",
+      "name": "Spinning Up key-papers live-surface crosswalk",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; analysis-only; no launches; owns only .omx/research/spinningup_keypapers_crosswalk_20260713.md; FEED to replace_round3_fidelity_wall"
+    },
+    {
+      "id": "lane_causal_manifest_build_20260713",
+      "name": "Causal transition manifest build",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 local-only build; observability-only schema/logging; no score claim, no run launch, no paid dispatch; trainer edits telemetry-only and must preserve sibling Muon changes."
+    },
+    {
+      "id": "lane_next_launch_all_levers_ticket_20260713",
+      "name": "Next launch all-levers ticket",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 configuration-composition only; operator-GO launch boundary; consumes causal-manifest schema when sealed; no trainer/DSL edits; no launch or paid dispatch."
+    },
+    {
+      "id": "lane_grokking_ridge_bounds_20260713",
+      "name": "Grokking ridge quantitative bounds autopsy and local refit",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; $0 cached-label NumPy refit; no live run/provider/evaluator; owns grokking memo and isolated receipt only"
+    },
+    {
+      "id": "lane_manifold_slots_dig_20260713",
+      "name": "Manifold geometry slots deep dig",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; $0 local-only; no scorer/evaluator/provider/paid launch; S4 Stiefel/FiLM assessment-only; own files; run dirs read-only"
+    },
+    {
+      "id": "lane_replace_round4_support_ranking_20260713",
+      "name": "Round 4 Support Ranking",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/replace_round4_support_ranking_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; local $0 n600 replay; support-ranking formulation; no launch, score, promotion, or pointer authority",
+      "research_only": true,
+      "reactivation_criteria": [
+        "prefix feature depth changes",
+        "target ranking objective changes",
+        "class-pair block structure changes",
+        "replay distribution changes",
+        "FORE-complete on-policy transitions become available"
+      ]
+    },
+    {
+      "id": "launch_prego",
+      "name": "Launch pre-GO ticket worklist",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "compander_build",
+      "name": "Inverse-depth Riemannian compander chart",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/compander_build_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; build-only local $0; default OFF; no launch/evaluator/provider/commit; receiver-close n600 matched-budget A/B owed; launch-ticket and memory-envelope configs sibling-owned"
+    },
+    {
+      "id": "lane_organ_ope_support_first_20260713",
+      "name": "DIG-S2 support-first organ OPE audit matrix",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; support-first refusal matrix; zero supported cells; no numeric OPE; $0; no launch/evaluator/provider/commit; main review owed",
+      "research_only": true,
+      "reactivation_criteria": [
+        "joined executed decision-transition rows exist",
+        "positive per-regime arm propensities and coverage receipts exist",
+        "transition sufficiency is replay-certified",
+        "independent future whole-run folds accrue"
+      ]
+    },
+    {
+      "id": "lane_precision_backend_matrix_20260713",
+      "name": "precision-backend-matrix-frozen-segnet",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/probe_mlx_im2col_quantized_stem_conv.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Run the exact A2/A3/im2col receipts in a Metal+network-entitled host; require A2 placement/latency/fidelity and A3 n600 gradient admission before heterogeneous actuation."
+      ]
+    },
+    {
+      "id": "negative_audit_wave",
+      "name": "2026-07-13 negative-results fresh-eyes audit",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_custom_metal_conv_20260713",
+      "name": "Custom Metal frozen-SegNet pointwise and depthwise conv kernels",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/custom_metal_conv_build_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; local Metal build and benchmark; default OFF; numpy-fp32 parity authority; training-tolerance gradient regime only; no score claim; no live trainer/provider/protected-run mutation; n600 fidelity gate required for promotion"
+    },
+    {
+      "id": "lane_digs3_s4_20260713",
+      "name": "DIG S3 finite-bank information gain and S4 transactional option exit",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Advisory-only $0 local backtest/design. S3 and S4 primary falsifiers fired; no live controller actuation.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "S3 >=2 custody-complete rows and calibrated chronological win",
+        "S4 identical-checkpoint identical-horizon stay/advance fork"
+      ]
+    },
+    {
+      "id": "lane_ladder_owed_measurables_20260713",
+      "name": "Rate-law ladder owed measurables",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/ladder_owed_measurables_20260713/d36_fiber_completeness_gap_n600.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "lane_class": "measurement_derivation_spec",
+      "reactivation_criteria": [
+        "D36 receiver-public section predictor under 1903 charged bytes; D37 exact packed class-aware contour A/B; D38 typed global overlaps; D39 schema implementation"
+      ]
+    },
+    {
+      "id": "lane_replace_round5_deeper_nonlinear_20260713",
+      "name": "Round 5 Deeper Nonlinear REPLACE",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/replace_round5_deeper_nonlinear_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; $0 local-only fixed replay; KILL-CHEAP-LOCALIZATION-FAMILY-BY-FEATURE-SOURCE scoped FAMILY x FEATURE-SOURCE x FIXED REPLAY; query error-ranking research gate passes; branch horizon NOT_IDENTIFIED; no score/promotion; uncommitted",
+      "research_only": true
+    },
+    {
+      "id": "lane_da_db_producers_20260713",
+      "name": "D-A D-B exact telemetry producers",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/da_db_producers_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "experiments/results/next_launch_all_levers_ticket_20260713/da_db_preflight_receipt.json"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_ane_unlock_correction_20260713",
+      "name": "ANE forward correction ladder",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only ANE correction ladder complete: no joint <=3.3e-5 flip and >=10x matched candidate; see .omx/research/ane_unlock_correction_20260713.md.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "clean E5RT placement available",
+        "n600 cotangent probe built",
+        "dense-encoder sparse-decoder cut built"
+      ]
+    },
+    {
+      "id": "lane_replace_round5_pre_se_locus_20260713",
+      "name": "Round 5 PRE-SE Feature Locus",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/pre_se_locus_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "User-directed /bin/zsh local n600 real-state apples-to-apples PRE-SE locus probe; new-file-only; no paid dispatch, live-run mutation, or witness training.",
+      "research_only": true,
+      "lane_class": "measurement_derivation_spec",
+      "reactivation_criteria": [
+        "zero-upstream-global deep extractor",
+        "charged donated SE gates",
+        "multi-source or dense-label localizer",
+        "transition-complete on-policy successor",
+        "different replay distribution or seed"
+      ]
+    },
+    {
+      "id": "calin_book_fold",
+      "name": "Calin book lessons fold",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "p0_sparse_adjoint",
+      "name": "P0 Sparse Adjoint Costate VJP",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/p0_sparse_adjoint_costate_vjp_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; NO_GO_DENSE_FULLRANK scoped to task455 n600 4.7366pct masks and high-fidelity fixed basis; MEANS-only; no training/live mutation/score/pointer; uncommitted",
+      "research_only": true,
+      "lane_class": "measurement_derivation_spec",
+      "reactivation_criteria": [
+        "cheap current-witness mask near measured 20pct oracle frontier",
+        "custom decoder-head sparse kernels with measured wall time",
+        "explicit global-SE removal or donation",
+        "n600 renderer-gradient and optimizer-regret gates",
+        "fresh in-loop D-A accounting"
+      ]
+    },
+    {
+      "id": "lane_p0_backward_closer_20260713",
+      "name": "P0 backward closer",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 preregistration equivalent: local-only build+cached-n600 measurement; no heavy/governed training launch; consumes sibling p0_costate_reuse, p0_sparse_adjoint, invprob_operator_fold without absorbing their files."
+    },
+    {
+      "id": "lane_vrghal_theorem_deepen_20260713",
+      "name": "VR-GHAL theorem-body deepening and live-rung re-adjudication",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEANS-only full-paper custody; no training, paid dispatch, live-run mutation, or sibling-file edits; pointer unchanged",
+      "research_only": true
+    },
+    {
+      "id": "lane_throughput_fresh_eyes_20260713",
+      "name": "Fresh-eyes witness throughput maximization",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/throughput_fresh_eyes_20260713.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Training-throughput MEANS only; local $0 build/measure authority; governed runs OPERATOR-GO; owns new throughput bench/memo/triality files only; trainer/witness_control/curriculum_dsl/resume_registry/v9 run files read-only.",
+      "lane_class": "measurement_derivation_spec",
+      "research_only": true
+    },
+    {
+      "id": "custom_sparse_adjoint_kernel",
+      "name": "Custom sparse/low-rank SegNet adjoint Metal kernel",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 preregistration: local build+bench only; compute MEANS; numpy-fp32 parity authority; no trainer/live-run/paid mutation; consumes completed p0_sparse_adjoint #486 without editing its files."
+    },
+    {
+      "id": "lane_quant_tail_reliability_20260713",
+      "name": "Quantitative tail reliability for control interpolators",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEANS only; $0 cached real-state measurement; no training, scorer calls, paid dispatch, live-run, archive, or pointer mutation",
+      "research_only": true
+    },
+    {
+      "id": "lane_ane_unlock_followup_20260713",
+      "name": "ANE direct residency, concurrency, and SRAM batch tiers",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "MEANS-only local build/bench lane; direct private residency probe, representative MLX concurrency A/B, weight-only compression plus batch-tier and T4 probes; no governed trainer/evaluator/paid launch; full-trainer n24 A/B remains OPERATOR-GO.",
+      "research_only": true
+    },
+    {
+      "id": "lane_whole_teacher_distilled_student_20260713",
+      "name": "Whole-teacher centered-logit distilled student",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 new-file-only local cached-fit lane; MEANS throughput only; no teacher recomputation, trainer/live-run/paid/evaluator mutation; in-loop activation requires OPERATOR-GO.",
+      "research_only": true
+    },
+    {
+      "id": "timer_curriculum_complete",
+      "name": "Timer curriculum feasibility class fix",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Build/fix/validate timer curriculum-off config and DSL compile-time schedule feasibility guard. Training-throughput apparatus/MEANS only; heavy Metal boot/run remains operator-GO; no score or pointer authority."
+    },
+    {
+      "id": "pythagorean_exact_arithmetic_bitident",
+      "name": "Pythagorean exact arithmetic cross-process bit identity",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "integer-lowered real render-R primitive measures 0/10 cross-process divergence and passes numpy-fp32 parity contract"
+      ]
     }
   ],
   "level_rules": {
@@ -75391,5 +77039,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-13T15:09:37Z"
+  "updated_at": "2026-07-14T00:14:12Z"
 }

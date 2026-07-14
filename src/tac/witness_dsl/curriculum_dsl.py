@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from numbers import Integral
 from pathlib import Path
@@ -125,6 +126,100 @@ def build_real_trainer_parser(trainer_path: Path | None = None):
             "build_real_trainer_parser: extracted parser is missing flags the trainer source "
             f"declares (extraction drift): {sorted(missing)[:10]}")
     return ap
+
+
+def schedule_epoch_budget_violations(
+    flags: Mapping[str, object] | Iterable[tuple[str, object]],
+    trainer_path: Path | None = None,
+) -> list[str]:
+    """Return enabled-curriculum stage caps that exceed the configured epoch budget.
+
+    The trainer's real argparse parser supplies defaults, so an omitted schedule
+    flag cannot hide an out-of-budget default.  Emitted ``--no-*`` BooleanOptional
+    tokens are normalized back to their canonical flag.  ``--warm-start-epoch`` is
+    resume metadata, not a curriculum stage.  With curriculum explicitly disabled
+    the curriculum-family law is vacuous; independent controllers still own their
+    trainer guards and a single-stage config must disable/strip those separately.
+
+    This is a config/boot-runnability invariant only.  It does not claim training
+    quality, score movement, archive closure, or promotion authority.
+    """
+
+    parser = build_real_trainer_parser(trainer_path)
+    action_by_option = {
+        option: action
+        for action in parser._actions
+        for option in action.option_strings
+        if option.startswith("--")
+    }
+    effective: dict[str, object] = {}
+    canonical_for_action: dict[int, str] = {}
+    for action in parser._actions:
+        canonical = next(
+            (opt for opt in action.option_strings
+             if opt.startswith("--") and not opt.startswith("--no-")),
+            None,
+        )
+        if canonical is None:
+            continue
+        canonical_for_action[id(action)] = canonical
+        effective[canonical] = action.default
+
+    mapping_input = isinstance(flags, Mapping)
+    items = flags.items() if mapping_input else flags
+    for option, raw_value in items:
+        option = str(option)
+        action = action_by_option.get(option)
+        if action is None:
+            # Unknown flags are reported by the existing never-invent-flags gate.
+            continue
+        canonical = canonical_for_action[id(action)]
+        if option.startswith("--no-"):
+            value: object = False
+        elif raw_value is None and not mapping_input:
+            # Bare emitted options are boolean actions in this CLI.
+            value = True
+        else:
+            value = raw_value
+        effective[canonical] = value
+
+    curriculum = effective.get("--curriculum", False)
+    if isinstance(curriculum, str):
+        curriculum = curriculum.strip().lower() not in {"", "0", "false", "no", "off"}
+    if not bool(curriculum):
+        return []
+
+    try:
+        epochs = int(effective["--epochs"])
+    except (KeyError, TypeError, ValueError):
+        return [
+            "CURRICULUM EPOCH-BUDGET FEASIBILITY: enabled curriculum has no valid "
+            "--epochs value; disable curriculum for a true single-stage program or "
+            "compile a feasible schedule"
+        ]
+
+    offenders: list[tuple[str, int]] = []
+    for flag, value in effective.items():
+        if flag == "--warm-start-epoch" or not flag.endswith("-start-epoch"):
+            continue
+        if value is None:
+            continue
+        try:
+            start_epoch = int(value)
+        except (TypeError, ValueError):
+            continue  # real argparse/type validation owns malformed values
+        if start_epoch > epochs:
+            offenders.append((flag, start_epoch))
+    if not offenders:
+        return []
+    offenders.sort(key=lambda row: row[0])
+    detail = ", ".join(f"{flag}={value}" for flag, value in offenders)
+    return [
+        "CURRICULUM EPOCH-BUDGET FEASIBILITY: enabled curriculum with "
+        f"epochs={epochs} cannot engage every configured stage/cap: {detail}. "
+        "Disable curriculum for a true single-stage program or use a feasible "
+        "schedule whose start epochs are <= epochs. verdict_scope=config/boot-runnability-only"
+    ]
 
 
 # sentinel so with_lever() can explicitly CLEAR resume_from (fresh run) vs inherit it
@@ -1481,6 +1576,13 @@ class WitnessProgram(ScheduleDisplay):
                     f"TYPE-INCOMPATIBLE OVERRIDE: {flag} is boolean-action (takes no value) but "
                     f"the override is {val!r}; compile would emit '{flag} {val}' which the "
                     "trainer argparse rejects (unrecognized arguments)")
+        # CONFIG-BUILD-TIME RUNNABILITY: an enabled curriculum whose effective
+        # stage caps lie beyond this run's epoch budget would produce a false
+        # verdict (the stage can never engage).  Use the real parser defaults so
+        # omission cannot conceal a latent tau/l7 window.  This deliberately
+        # precedes the narrower ordering/stagger checks and reports every
+        # out-of-budget cap in one violation.
+        problems.extend(schedule_epoch_budget_violations(fd, trainer_path))
         # C1 (review): DEAD ARM — resuming from a ckpt at/after epochs == zero gradient steps
         if self.resume_from is not None:
             try:

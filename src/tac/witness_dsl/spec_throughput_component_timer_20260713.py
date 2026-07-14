@@ -6,12 +6,12 @@ The two variants are a matched throughput A/B, not score arms:
 * ``async_current`` keeps the incumbent async CPU verdict worker; and
 * ``solo_control`` removes only that async overlap.
 
-Both freeze unified ``L_tau`` at tau=1, which is exactly cross entropy, zero
-every non-CE loss/regularizer that could be active in the four-epoch window,
-and run four real n24 epochs with two verdict pairs.  They inherit the v7.5.2
-event/cap governance and per-stage resume contract, so the launcher-path
-schedule-provenance gate has zero naked epochs.  Compilation is pure and
-cannot launch; the governed launcher remains the sole actuation surface.
+Both freeze unified ``L_tau`` at tau=1, which is exactly cross entropy, disable
+curriculum and every inherited stage/controller, zero every non-CE loss or
+regularizer, and run four real n24 epochs with two verdict pairs.  The v7.5.2
+geometry/performance substrate remains, but its score-moving curriculum levers
+do not: this is a one-stage component timer.  Compilation is pure and cannot
+launch; the governed launcher remains the sole actuation surface.
 """
 
 from __future__ import annotations
@@ -30,6 +30,23 @@ SOLO_PROGRAM = "throughput_component_timer_solo_20260713"
 VARIANTS = ("async_current", "solo_control")
 N_PAIRS = 24
 EPOCHS = 4
+
+_NON_CE_BASE_FLAGS = frozenset({
+    "--curriculum-min-stage-epochs",
+    "--muon-start-event",
+    "--seg-chroma-boundary-start-event",
+    "--tau-advance-mode",
+    "--seed-island-eased",
+    "--stage-transition-reset-moments",
+    "--stage-transition-rewarmup-epochs",
+    "--stage-transition-rewarmup-floor",
+    "--stage-transition-rewarmup-shape",
+    "--muon-lr",
+    "--muon-lr-final-frac",
+    "--muon-momentum",
+    "--muon-ns-steps",
+    "--muon-warm-start-momentum",
+})
 
 
 def compile_throughput_component_timer_ticket(
@@ -54,11 +71,35 @@ def compile_throughput_component_timer_ticket(
     parent = compile_crucible_v752_launch_config(
         gt_cache_path,
         num_pairs=N_PAIRS,
-        epochs=EPOCHS,
+        # Compile the parent at its sealed feasible budget, then derive the
+        # four-epoch single-stage child below.  The class guard must reject the
+        # impossible parent itself; the timer is not allowed to bypass it.
+        epochs=3000,
         out_dir=out_dir,
         self_orient=False,
         amber=True,
     )
+
+    # Keep the v7.5.2 representation/performance substrate, but remove every
+    # schedule cap and controller that could engage or fail a four-epoch boot.
+    # Defaults are intentionally used for inert stages; no start epoch is
+    # emitted by this single-stage program.
+    timer_base = {
+        flag: value
+        for flag, value in parent.typed.base.items()
+        if not flag.endswith(("-start-epoch", "-start-event"))
+        and flag not in _NON_CE_BASE_FLAGS
+    }
+    timer_base.update({
+        "--curriculum": False,
+        "--curriculum-event-triggered": False,
+        "--curriculum-nucleus-guard": False,
+        "--curriculum-reanchor-levers": False,
+        "--dseg-aware-taper": False,
+        "--seed-islands": False,
+        "--witness-alone-island-loss": False,
+        "--w-pose": 0.0,
+    })
 
     probe_overrides = {
         "--async-verdict": async_on,
@@ -78,6 +119,8 @@ def compile_throughput_component_timer_ticket(
         # warm-up arithmetic.  Pose is already event-gated to epoch 726 by the
         # parent, hence its effective weight is zero throughout epochs 1..4.
         "--seg-loss": "ce",
+        "--seg-form-unify-tau": True,
+        "--w-pose": 0.0,
         "--persistence-loss-weight": 0.0,
         "--persistence-recall-weight": 0.0,
         "--amplify-weight": 0.0,
@@ -89,16 +132,6 @@ def compile_throughput_component_timer_ticket(
         "--length-weight": 0.0,
         "--weight-decay": 0.0,
         "--witness-alone-island-loss": False,
-        # BOOT-DEFECT FIX (2026-07-13): the v7.5.2 parent's finisher stage-starts
-        # (muon@726, l7@800) are OUTSIDE this 4-epoch budget, tripping the trainer's
-        # fail-closed "finisher never engages -> false verdict" guard at boot (the
-        # launcher dry-run validates flags but never BOOTS the trainer, so this was
-        # latent).  Cap both stage-starts into [1, EPOCHS] so the guard passes.  For
-        # this CE component-timing probe the loss weights above are already zeroed, so
-        # the clean fwd/bwd split is read from epochs 1..(muon_start-1); muon at the
-        # final epoch minimally perturbs only that epoch's optimizer step.
-        "--l7-start-epoch": max(1, EPOCHS - 1),
-        "--muon-start-epoch": EPOCHS,
     }
     probe_lever = TypedLever(
         name=f"throughput_component_timer_{variant}",
@@ -117,10 +150,14 @@ def compile_throughput_component_timer_ticket(
     )
     typed = parent.typed.model_copy(update={
         "name": program_name,
+        "epochs": EPOCHS,
         "out_dir": str(out_dir),
         "purpose": purpose,
         "temp": temp,
-        "levers": (*tuple(parent.typed.levers), probe_lever),
+        "base": timer_base,
+        "stages": (),
+        "regularizers": (),
+        "levers": (probe_lever,),
     })
     rebound = parent._rebind_typed(typed)
     pairs = dict(_crucible_v7_argv_pairs(typed.to_program().compile_trainer_argv()))
@@ -133,6 +170,7 @@ def compile_throughput_component_timer_ticket(
         "--ckpt-every": "1",
         "--loss-term-log-every": "-1",
         "--seg-loss": "ce",
+        "--w-pose": "0.0",
         "--persistence-loss-weight": "0.0",
         "--persistence-recall-weight": "0.0",
         "--amplify-weight": "0.0",
@@ -147,6 +185,12 @@ def compile_throughput_component_timer_ticket(
     mismatch = {flag: (pairs.get(flag), value) for flag, value in expected.items()
                 if pairs.get(flag) != value}
     for flag in (
+        "--no-curriculum",
+        "--no-curriculum-event-triggered",
+        "--no-curriculum-nucleus-guard",
+        "--no-curriculum-reanchor-levers",
+        "--no-dseg-aware-taper",
+        "--no-seed-islands",
         "--seg-form-unify-tau",
         "--component-wallclock-telemetry",
         "--stage-checkpoints",
@@ -154,13 +198,27 @@ def compile_throughput_component_timer_ticket(
     ):
         if flag not in pairs:
             mismatch[flag] = (pairs.get(flag), "present")
+    emitted_stage_caps = sorted(flag for flag in pairs if flag.endswith("-start-epoch"))
+    if emitted_stage_caps:
+        mismatch["stage_start_epochs"] = (emitted_stage_caps, "absent")
+    emitted_stage_events = sorted(flag for flag in pairs if flag.endswith("-start-event"))
+    if emitted_stage_events:
+        mismatch["stage_start_events"] = (emitted_stage_events, "absent")
+    if len(typed.levers) != 1 or typed.levers[0].name != probe_lever.name:
+        mismatch["inherited_levers"] = (
+            [lever.name for lever in typed.levers], [probe_lever.name]
+        )
     async_flag = "--async-verdict" if async_on else "--no-async-verdict"
     if async_flag not in pairs:
         mismatch[async_flag] = (pairs.get(async_flag), "present")
     if mismatch:
         raise ValueError(f"component-timer typed actuation REFUSE: {mismatch}")
 
-    constants = dict(rebound.constants_manifest)
+    constants = {
+        key: value
+        for key, value in rebound.constants_manifest.items()
+        if key != "polyak_finisher_start_epoch"
+    }
     constants["softmax_temp_end"] = {
         "value": 1.0,
         "equation_id": "cross_entropy_is_unified_ltau_at_tau_one_v1",
@@ -193,8 +251,8 @@ def compile_throughput_component_timer_ticket(
         ),
         "active_loss_epochs_1_through_4": (
             "seg-form-unify-tau at tau=1 equals CE; persistence/amplify/chroma/screw/"
-            "entropy/logit-adjust/eikonal/length/weight-decay are explicit zero; pose "
-            "finish remains event-gated beyond the held four-epoch window"
+            "entropy/logit-adjust/eikonal/length/weight-decay/pose are explicit zero; "
+            "curriculum and all inherited stages/controllers are disabled"
         ),
         "variant": variant,
         "matched_control_program": SOLO_PROGRAM if async_on else ASYNC_PROGRAM,
@@ -203,6 +261,11 @@ def compile_throughput_component_timer_ticket(
         rebound,
         constants_manifest=constants,
         dsl_program_manifest=manifest,
+        schedule_governance={
+            flag: governance
+            for flag, governance in rebound.schedule_governance.items()
+            if flag in pairs
+        },
     )
 
 
