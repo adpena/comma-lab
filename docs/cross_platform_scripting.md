@@ -27,7 +27,7 @@ Binding memory: `cross_platform_cross_os_scripts_by_default_20260707`.
 | version sort | `sort -V` | Python `packaging.version`, or accept lexicographic |
 | date arithmetic | `date -d '…'` | Python `datetime` |
 | array-from-lines | `mapfile`/`readarray` | `while IFS= read -r line; do …; done` |
-| find + format | `find … -printf` | `find … -print0 \| while …`, or Python `os.walk` |
+| find + format | GNU `find` formatted-output option | `find … -print0 \| while …`, or Python `os.walk` |
 
 ## Rules of thumb
 
