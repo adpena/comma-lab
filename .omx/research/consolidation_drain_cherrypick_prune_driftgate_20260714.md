@@ -75,6 +75,14 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
   frequency allocation → directly attacks the measured 3.2× along-tangent deficit (#277/#497) and
   grounds curvelet/shearlet basis choice (#502). Waterfilling connects to our #157/#336 bit-alloc.
   Sisters: #25 BASIS-OVER-CREDITED, #497 alt-to-Fourier, #502 genuine curvelet/shearlet.
+- **WECO AIDE² RSI (queued, not launched) — weco.ai/blog/first-evidence-of-recursive-self-improvement.**
+  Verdict: their core mechanisms CONVERGE with ours (hidden-score-only selection = our exact-authority
+  split, empirically dropping reward-hacking 63%→34% structurally; fixed $ budget = our ≤$20 cap;
+  ~90% incumbent-rejection = our seal/A/B). IMPORTABLE DELTA: measured outer-loop selection for
+  APPARATUS changes — build an INCIDENT-REPLAY BATTERY from harness_failure_ledger's 12 classes so
+  harness edits get a measured accept/reject vs incumbent, not review-only (their 8-days-vs-2-years
+  efficiency claim is the EV case). AIDE85 unreleased → watch-item. Sisters: #346 retrieval-first,
+  #481 apparatus-as-CL-system, the codex CFL fix (today's apparatus edits = first battery candidates).
 
 ## Captured signal (no loss) — the click-polish run (#399 `_import` block-loop)
 - STOPPED 2026-07-14 11:30 by **main stopping it under OPERATOR AUTHORIZATION** (after the safety
