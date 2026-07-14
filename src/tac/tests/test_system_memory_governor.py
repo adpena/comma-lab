@@ -10,6 +10,7 @@ These tests make the guard TRUSTWORTHY (despite eyeballing vm_stat/ps by hand be
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -480,9 +481,10 @@ def test_resolve_default_and_registered_paths_unchanged_by_fix():
     assert gov.resolve_projected_peak_gib(60.0, 0.0002, unregistered_ps_only=True) == 60.0
 
 
-def _ps(pid, command, *, rss_kb=200, ppid=1, pgid=None):
+def _ps(pid, command, *, rss_kb=200, ppid=1, pgid=None, start_identity=None):
     return gov._mg.ProcessSample(pid=pid, ppid=ppid, rss_kb=rss_kb, command=command,
-                                 pgid=pgid if pgid is not None else pid)
+                                 pgid=pgid if pgid is not None else pid,
+                                 start_identity=start_identity)
 
 
 @pytest.mark.skipif(gov._mg is None, reason="memory_guard unavailable (fail-safe: no tracked jobs)")
@@ -529,6 +531,257 @@ def test_registered_heavy_job_low_rss_still_fully_charged():
     j = next(x for x in jobs if x.pid == 800)
     assert j.projected_peak_gib == 60.0
     assert gov.sum_active_growth_headroom_gib(jobs) > 55.0  # full remaining growth reserved
+
+
+# ── 2026-07-14 material-unregistered MEASURED-growth fix ───────────────────────────────────────
+def _history(pid, rss_rows, *, process_key="proc-start-a"):
+    return [
+        gov.RSSHistorySample(pid=pid, rss_gib=rss, ts=ts, process_key=process_key)
+        for ts, rss in rss_rows
+    ]
+
+
+def test_observed_growth_stable_material_keeps_nonzero_runtime_poll_reserve():
+    observed = gov.estimate_observed_remaining_growth_gib(
+        _history(71, [(100.0, 4.4), (160.0, 4.4)]),
+        now_ts=160.0,
+    )
+    assert observed == pytest.approx(gov.MATERIAL_PLATEAU_GROWTH_RESERVE_GIB)
+    assert 0.0 < observed < gov.UNKNOWN_GROWTH_HEADROOM_GIB
+    assert gov.resolve_projected_peak_gib(
+        None,
+        4.4,
+        unregistered_ps_only=True,
+        observed_remaining_growth_gib=observed,
+    ) == pytest.approx(4.4 + gov.MATERIAL_PLATEAU_GROWTH_RESERVE_GIB)
+
+
+def test_observed_growth_real_rising_trend_saturates_old_charge():
+    observed = gov.estimate_observed_remaining_growth_gib(
+        _history(72, [(100.0, 5.1), (160.0, 8.1)]),
+        now_ts=160.0,
+    )
+    assert observed == gov.UNKNOWN_GROWTH_HEADROOM_GIB
+    assert gov.resolve_projected_peak_gib(
+        None,
+        8.1,
+        unregistered_ps_only=True,
+        observed_remaining_growth_gib=observed,
+    ) == pytest.approx(33.1)
+
+
+def test_observed_growth_requires_two_well_separated_current_samples():
+    assert gov.estimate_observed_remaining_growth_gib(
+        _history(73, [(100.0, 4.4)]), now_ts=100.0
+    ) is None
+    assert gov.estimate_observed_remaining_growth_gib(
+        _history(73, [(100.0, 4.4), (101.0, 4.4)]), now_ts=101.0
+    ) is None
+
+
+@pytest.mark.parametrize("bad_observation", [None, float("nan"), float("inf"), "bad"])
+def test_observed_growth_no_or_invalid_history_falls_back_to_plus_25(bad_observation):
+    assert gov.resolve_projected_peak_gib(
+        None,
+        4.4,
+        unregistered_ps_only=True,
+        observed_remaining_growth_gib=bad_observation,
+    ) == pytest.approx(29.4)
+
+
+def test_observed_growth_cannot_change_recorded_descendant_infra_or_below_floor_paths():
+    # Every result is the exact pre-fix branch result even with an adversarial zero observation.
+    assert gov.resolve_projected_peak_gib(
+        9.0, 4.4, unregistered_ps_only=True, observed_remaining_growth_gib=0.0
+    ) == 9.0
+    assert gov.resolve_projected_peak_gib(
+        None, 4.4, governed_descendant=True, unregistered_ps_only=True,
+        observed_remaining_growth_gib=0.0,
+    ) == 4.4
+    assert gov.resolve_projected_peak_gib(
+        None, 4.4, cmd="python tools/memory_blackbox.py", unregistered_ps_only=True,
+        observed_remaining_growth_gib=0.0,
+    ) == 4.4
+    assert gov.resolve_projected_peak_gib(
+        None, 1.99, unregistered_ps_only=True, observed_remaining_growth_gib=25.0
+    ) == 1.99
+
+
+@pytest.mark.skipif(gov._mg is None, reason="memory_guard unavailable (fail-safe: no tracked jobs)")
+def test_fixed_snapshot_plus50_false_refuse_is_gone_but_real_growth_still_refuses(tmp_path):
+    """MEASURED apparatus replay of the incident: used~50 + two material stable ps-only jobs whose
+    current 4.4/5.1 GiB is already in used + new 6. Old +25 each => 106 > 72 REFUSE. Fresh measured
+    plateaus keep only the runtime-poll reserves => ~59.3 < 72 ADMIT. A real rising fixture still
+    reaches the old +25 and refuses.
+    """
+    history_path = tmp_path / "rss_history.json"
+    ceiling = gov.compute_adaptive_ceiling(
+        total_gib=80.0,
+        used_gib=50.0,
+        tracked_current_gib=9.5,
+        safety_margin_gib=8.0,
+    )
+    assert ceiling.adaptive_ceiling_gib == 72.0
+
+    stable = {
+        710: _ps(
+            710,
+            "python tools/levelset_byte_close_and_eval.py --click-polish",
+            rss_kb=round(4.4 * 1024**2),
+            start_identity="Tue Jul 14 00:00:01 2026",
+        ),
+        720: _ps(
+            720,
+            "python tools/verdict_mem_microprobe.py --n 600",
+            rss_kb=round(5.1 * 1024**2),
+            start_identity="Tue Jul 14 00:00:02 2026",
+        ),
+    }
+    first = gov.list_tracked_jobs(
+        samples=stable, registry_rows=[], self_pid=1,
+        rss_history_path=history_path, rss_history_now_ts=100.0,
+    )
+    old_headroom = gov.sum_active_growth_headroom_gib(first)
+    old_decision = gov.admission_decision(
+        projected_new_gib=6.0,
+        system_used_gib=50.0,
+        active_growth_headroom_gib=old_headroom,
+        ceiling=ceiling,
+    )
+    assert old_headroom == 50.0
+    assert old_decision.projected_system_used_gib == 106.0
+    assert not old_decision.admit
+
+    plateau = gov.list_tracked_jobs(
+        samples=stable, registry_rows=[], self_pid=1,
+        rss_history_path=history_path, rss_history_now_ts=160.0,
+    )
+    measured_headroom = gov.sum_active_growth_headroom_gib(plateau)
+    measured_decision = gov.admission_decision(
+        projected_new_gib=6.0,
+        system_used_gib=50.0,
+        active_growth_headroom_gib=measured_headroom,
+        ceiling=ceiling,
+    )
+    assert measured_headroom == pytest.approx(2.0 * gov.MATERIAL_PLATEAU_GROWTH_RESERVE_GIB)
+    assert measured_decision.projected_system_used_gib == pytest.approx(
+        56.0 + 2.0 * gov.MATERIAL_PLATEAU_GROWTH_RESERVE_GIB
+    )
+    assert measured_decision.admit
+
+    growing = dict(stable)
+    growing[720] = _ps(
+        720,
+        "python tools/verdict_mem_microprobe.py --n 600",
+        rss_kb=round(8.1 * 1024**2),
+        start_identity="Tue Jul 14 00:00:02 2026",
+    )
+    rising = gov.list_tracked_jobs(
+        samples=growing, registry_rows=[], self_pid=1,
+        rss_history_path=history_path, rss_history_now_ts=220.0,
+    )
+    rising_headroom = gov.sum_active_growth_headroom_gib(rising)
+    assert rising_headroom >= gov.UNKNOWN_GROWTH_HEADROOM_GIB
+    rising_decision = gov.admission_decision(
+        projected_new_gib=6.0,
+        system_used_gib=50.0,
+        active_growth_headroom_gib=rising_headroom,
+        ceiling=ceiling,
+    )
+    assert rising_decision.projected_system_used_gib > 72.0
+    assert not rising_decision.admit
+
+
+@pytest.mark.skipif(gov._mg is None, reason="memory_guard unavailable (fail-safe: no tracked jobs)")
+def test_measured_relaxation_requires_start_identity_and_throttle_eligibility(tmp_path):
+    path = tmp_path / "rss_history.json"
+    no_start = {
+        730: _ps(730, "python tools/verdict_mem_microprobe.py", rss_kb=5 * 1024**2),
+    }
+    for now in (100.0, 160.0):
+        jobs = gov.list_tracked_jobs(
+            samples=no_start, registry_rows=[], self_pid=1,
+            rss_history_path=path, rss_history_now_ts=now,
+        )
+    assert gov.sum_active_growth_headroom_gib(jobs) == 25.0
+    assert not path.exists(), "missing kernel start identity must not create relaxable evidence"
+
+    nonleader = {
+        740: _ps(
+            740,
+            "python tools/verdict_mem_microprobe.py",
+            rss_kb=5 * 1024**2,
+            pgid=700,
+            start_identity="Tue Jul 14 00:00:04 2026",
+        ),
+    }
+    for now in (200.0, 260.0):
+        jobs = gov.list_tracked_jobs(
+            samples=nonleader, registry_rows=[], self_pid=1,
+            rss_history_path=path, rss_history_now_ts=now,
+        )
+    assert jobs[0].throttle_eligible is False
+    assert gov.sum_active_growth_headroom_gib(jobs) == 25.0
+
+
+def test_history_store_is_pid_reuse_safe_ttl_swept_bounded_and_atomic(tmp_path):
+    path = tmp_path / "rss_history.json"
+    assert gov.update_rss_history_and_estimate_growth(
+        {800: (4.4, "start-a")}, history_path=path, now_ts=100.0
+    )[800] is None
+    assert gov.update_rss_history_and_estimate_growth(
+        {800: (4.4, "start-a")}, history_path=path, now_ts=160.0
+    )[800] == pytest.approx(gov.MATERIAL_PLATEAU_GROWTH_RESERVE_GIB)
+    # Same PID, different kernel start identity: prior evidence is dropped, never mixed to a plateau.
+    assert gov.update_rss_history_and_estimate_growth(
+        {800: (4.4, "start-b")}, history_path=path, now_ts=220.0
+    )[800] is None
+
+    seeded = {
+        "schema": gov.RSS_HISTORY_SCHEMA,
+        "samples": [
+            {"pid": pid, "rss_gib": 3.0, "ts": 300.0 + i, "process_key": f"start-{pid}"}
+            for pid in range(1, gov.RSS_HISTORY_MAX_PIDS + 20)
+            for i in range(gov.RSS_HISTORY_MAX_SAMPLES_PER_PID + 5)
+        ] + [
+            {"pid": 9999, "rss_gib": 3.0, "ts": -10_000.0, "process_key": "stale"},
+        ],
+    }
+    path.write_text(json.dumps(seeded), encoding="utf-8")
+    gov.update_rss_history_and_estimate_growth(
+        {900: (4.4, "start-900")}, history_path=path, now_ts=400.0
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload["samples"]
+    assert len({row["pid"] for row in rows}) <= gov.RSS_HISTORY_MAX_PIDS
+    counts: dict[int, int] = {}
+    for row in rows:
+        counts[row["pid"]] = counts.get(row["pid"], 0) + 1
+    assert max(counts.values()) <= gov.RSS_HISTORY_MAX_SAMPLES_PER_PID
+    assert all(row["pid"] != 9999 for row in rows)
+    assert path.with_suffix(path.suffix + ".lock").exists()
+    assert list(tmp_path.glob(f".{path.name}.*.tmp")) == []
+
+
+def test_history_corrupt_or_unwritable_state_never_relaxes(tmp_path):
+    corrupt = tmp_path / "corrupt.json"
+    corrupt.write_text("{not-json", encoding="utf-8")
+    first = gov.update_rss_history_and_estimate_growth(
+        {901: (4.4, "start-901")}, history_path=corrupt, now_ts=100.0
+    )
+    assert first[901] is None
+    assert json.loads(corrupt.read_text(encoding="utf-8"))["schema"] == gov.RSS_HISTORY_SCHEMA
+
+    unwritable_shape = tmp_path / "is-a-directory"
+    unwritable_shape.mkdir()
+    failed = gov.update_rss_history_and_estimate_growth(
+        {902: (4.4, "start-902")}, history_path=unwritable_shape, now_ts=100.0
+    )
+    assert failed[902] is None
+    assert gov.resolve_projected_peak_gib(
+        None, 4.4, unregistered_ps_only=True,
+        observed_remaining_growth_gib=failed[902],
+    ) == pytest.approx(29.4)
 
 
 # ── PENDING admission reservations (review-fix CRITICAL C, read side) ────────────────────────────

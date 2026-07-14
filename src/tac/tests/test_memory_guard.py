@@ -61,6 +61,17 @@ def test_parse_ps_table_5col():
     assert samples[500].pid == 500 and samples[500].ppid == 1 and samples[500].pgid == 500
     assert samples[500].rss_kb == 1048576
     assert "train_witness" in samples[500].command
+    assert samples[500].start_identity is None  # legacy fixtures cannot authorize history relaxation
+
+
+def test_parse_ps_table_lstart_binds_kernel_process_identity():
+    text = (
+        "500 1 500 1048576 Tue Jul 14 11:23:45 2026 "
+        "python train_witness.py --n 16\n"
+    )
+    sample = mg.parse_ps_table(text)[500]
+    assert sample.start_identity == "Tue Jul 14 11:23:45 2026"
+    assert sample.command == "python train_witness.py --n 16"
 
 
 def test_parse_ps_table_skips_garbage():

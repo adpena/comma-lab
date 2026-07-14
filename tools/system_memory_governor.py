@@ -58,12 +58,15 @@ peak projection — the ``projected_new_gib`` this gate consumes).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import math
 import os
 import re
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
@@ -85,6 +88,7 @@ except Exception:  # pragma: no cover - defensive
     _mg = None
 
 _DURABLE_DAEMON_REGISTRY = _REPO_ROOT / ".omx" / "state" / "durable_daemons.json"
+_RSS_HISTORY_PATH = _REPO_ROOT / ".omx" / "state" / "system_memory_governor_rss_history.json"
 
 # ── policy constants ────────────────────────────────────────────────────────────────────────
 DEFAULT_SAFETY_MARGIN_FLOOR_GIB = 8.0    # LEGACY fixed-mode floor (128 GB-calibrated; kept for
@@ -269,13 +273,58 @@ _PROTECTION_INFRA_TOKENS = ("memory_blackbox.py", "memory_guard.py", "system_mem
 # is already inside the vm_stat ``used`` baseline the gate anchors on), exactly like the protection-infra /
 # governed-descendant exemptions. SAFETY PRESERVED: (1) every genuine heavy launch goes through the
 # governed path and REGISTERS (running row with a projected_peak, or a pending reservation) -> recorded
-# projection wins -> fully charged, untouched; (2) an unregistered match that IS materially resident
-# (>= floor) still gets the full current+25 charge — the SUM-over-RAM crash is driven by multi-GiB resident
-# jobs, which stay fully counted; (3) a sub-floor process by construction cannot itself drive a 128 GiB
-# crash. Value 2.0 GiB == ABS_MIN_SAFETY_FLOOR_GIB (the jetsam-avoidance minimum): below it a lone process
-# is never the crash driver. This ONLY relaxes the unknown-peak default for the unregistered-ps case; the
-# registered / reservation / infra / descendant paths are bit-identical.
+# projection wins -> fully charged, untouched; (2) a materially resident unregistered match retains the
+# full current+25 charge unless fresh same-process history exists AND the job is structurally eligible for
+# the live runtime throttle; only that throttle-backed intersection may use the bounded measured reserve;
+# (3) a sub-floor process by construction cannot itself drive a 128 GiB crash. Value 2.0 GiB ==
+# ABS_MIN_SAFETY_FLOOR_GIB (the jetsam-avoidance minimum): below it a lone process is never the crash
+# driver. This ONLY relaxes the unknown-peak default for the unregistered-ps case; the registered /
+# reservation / infra / descendant paths are bit-identical.
 MATERIAL_UNREGISTERED_RSS_FLOOR_GIB = 2.0
+
+# ── measured recent-growth history for MATERIAL unregistered ps-only matches (2026-07-14) ──────
+# Admission is a prediction layer. The old flat +25 GiB prediction remains the fail-conservative
+# fallback, but it is no longer substituted for a measurement when one exists. The daemon already
+# samples process RSS through ``list_tracked_jobs``; that same impure edge persists a bounded rolling
+# history, while ``estimate_observed_remaining_growth_gib`` and ``resolve_projected_peak_gib`` remain
+# PURE. The bounded projection law is:
+#
+#   G_remaining(p,t) = clamp(max(G_poll, H * max_i((rss_t-rss_i)/(t-t_i), 0)), 0, G_unknown)
+#
+# over fresh same-process samples in the rolling window. A flat series at ps' 1-KiB RSS resolution
+# has zero slope. Insufficient/stale/clock-skewed/PID-reused history is UNKNOWN and therefore retains
+# ``G_unknown = 25 GiB`` exactly. ``H`` is bounded by the history window, so a demonstrably growing
+# process can still saturate the old +25 charge. A plateau retains ``G_poll`` (one live-throttle
+# poll of reserve at the fastest modeled rate), so lazy materialization never receives literal zero.
+#
+# SAFETY LAYERS (canonical-equation-style control argument): admission is LAYER 3 prediction;
+# ``decide_governor_action`` is the unchanged LAYER 2 live backstop. The measured reserve is passed to
+# the pure projection law only when ``_throttle_eligible`` proves the process is an own-group leader the
+# daemon can pause; every non-eligible process stays on +25. If a measured slope later rises, every daemon
+# tick sees actual available memory and the tier-scaled WARN/CRITICAL floor SIGSTOPs the lowest-priority
+# eligible job before jetsam. Therefore this change only removes prediction error for demonstrated,
+# throttle-backed plateaus; it does NOT weaken the live throttle, tier-scaled floor, control-plane
+# exclusions, recorded projections, pending reservations, or unknown-history fallback.
+RSS_HISTORY_SCHEMA = "system_memory_governor_rss_history.v1"
+RSS_HISTORY_WINDOW_S = 10.0 * 60.0
+RSS_HISTORY_TTL_S = 15.0 * 60.0
+RSS_HISTORY_MIN_OBSERVATION_S = 30.0
+RSS_GROWTH_PROJECTION_HORIZON_S = RSS_HISTORY_WINDOW_S
+RSS_HISTORY_CLOCK_SKEW_TOLERANCE_S = 5.0
+RSS_HISTORY_MAX_SAMPLES_PER_PID = 64
+RSS_HISTORY_MAX_PIDS = 128
+# Canonical runtime pressure sampler cadence (mirrors memory_blackbox.DEFAULT_INTERVAL_S). A material
+# plateau keeps one poll's worth of growth at the fastest modeled rate (the old 25-GiB unknown budget
+# materializing within the minimum evidence span). This is deliberately NONZERO: lazy graphs/inflate
+# can be flat during warmup and burst after the observation window.
+RUNTIME_THROTTLE_POLL_INTERVAL_S = 2.0
+MATERIAL_PLATEAU_GROWTH_RESERVE_GIB = (
+    UNKNOWN_GROWTH_HEADROOM_GIB
+    * RUNTIME_THROTTLE_POLL_INTERVAL_S
+    / RSS_HISTORY_MIN_OBSERVATION_S
+)
+# ``ps`` reports RSS in KiB, so one KiB in true GiB is the measurement-resolution plateau epsilon.
+RSS_PLATEAU_EPSILON_GIB = 1.0 / (1024.0 * 1024.0)
 
 # ── PENDING admission reservations (review-fix CRITICAL C: launch TOCTOU) ────────────────────────
 # Two near-simultaneous governed launches could BOTH pass the admission gate before either wrote
@@ -296,6 +345,256 @@ def is_protection_infra_cmd(cmd: str) -> bool:
     return any(tok in str(cmd) for tok in _PROTECTION_INFRA_TOKENS)
 
 
+@dataclass(frozen=True)
+class RSSHistorySample:
+    """One process-identity-bound RSS observation. PURE value object."""
+
+    pid: int
+    rss_gib: float
+    ts: float
+    process_key: str
+
+    def to_json(self) -> dict:
+        return {
+            "pid": int(self.pid),
+            "rss_gib": float(self.rss_gib),
+            "ts": float(self.ts),
+            "process_key": str(self.process_key),
+        }
+
+
+def estimate_observed_remaining_growth_gib(
+    samples: Sequence[RSSHistorySample],
+    *,
+    now_ts: float,
+    window_s: float = RSS_HISTORY_WINDOW_S,
+    min_observation_s: float = RSS_HISTORY_MIN_OBSERVATION_S,
+    projection_horizon_s: float = RSS_GROWTH_PROJECTION_HORIZON_S,
+    plateau_epsilon_gib: float = RSS_PLATEAU_EPSILON_GIB,
+    plateau_growth_reserve_gib: float = MATERIAL_PLATEAU_GROWTH_RESERVE_GIB,
+    clock_skew_tolerance_s: float = RSS_HISTORY_CLOCK_SKEW_TOLERANCE_S,
+    unknown_growth_headroom_gib: float = UNKNOWN_GROWTH_HEADROOM_GIB,
+) -> float | None:
+    """Estimate remaining growth from a fresh same-PID/same-identity RSS series. PURE.
+
+    ``None`` means NO admissible history and deliberately selects the legacy +25 GiB fallback.
+    Any future timestamp invalidates the whole series; silently using it could manufacture a long
+    observation span after a clock reset. The newest sample must be current (within the recency
+    tolerance), which prevents a stale plateau from relaxing admission.
+    """
+    now = float(now_ts)
+    window = max(0.0, float(window_s))
+    min_span = max(0.0, float(min_observation_s))
+    horizon = max(0.0, float(projection_horizon_s))
+    cap = max(0.0, float(unknown_growth_headroom_gib))
+    epsilon = max(0.0, float(plateau_epsilon_gib))
+    plateau_reserve = min(cap, max(0.0, float(plateau_growth_reserve_gib)))
+    skew = max(0.0, float(clock_skew_tolerance_s))
+    if not math.isfinite(now):
+        return None
+
+    valid: list[RSSHistorySample] = []
+    identities: set[str] = set()
+    pids: set[int] = set()
+    for sample in samples:
+        try:
+            ts = float(sample.ts)
+            rss = float(sample.rss_gib)
+            pid = int(sample.pid)
+            process_key = str(sample.process_key)
+        except (AttributeError, TypeError, ValueError):
+            return None
+        if not (math.isfinite(ts) and math.isfinite(rss)) or rss < 0.0 or pid <= 0 or not process_key:
+            return None
+        if ts > now:
+            return None
+        if now - ts <= window:
+            valid.append(RSSHistorySample(pid=pid, rss_gib=rss, ts=ts, process_key=process_key))
+            pids.add(pid)
+            identities.add(process_key)
+    if len(valid) < 2 or len(pids) != 1 or len(identities) != 1:
+        return None
+
+    valid.sort(key=lambda sample: (sample.ts, sample.rss_gib))
+    latest = valid[-1]
+    if now - latest.ts > skew:
+        return None
+    earliest = valid[0]
+    if latest.ts - earliest.ts < min_span:
+        return None
+
+    rss_values = [sample.rss_gib for sample in valid]
+    if max(rss_values) - min(rss_values) <= epsilon:
+        return plateau_reserve
+
+    # Conservative recent-trend estimate: take the largest positive endpoint slope from ANY earlier
+    # sample, rather than a least-squares average that could cancel a late growth burst.
+    max_positive_rate = 0.0
+    for sample in valid[:-1]:
+        elapsed = latest.ts - sample.ts
+        if elapsed <= 0.0:
+            continue
+        max_positive_rate = max(
+            max_positive_rate,
+            max(0.0, latest.rss_gib - sample.rss_gib) / elapsed,
+        )
+    return min(cap, max(plateau_reserve, max_positive_rate * horizon))
+
+
+def _rss_history_process_key(sample: object) -> str | None:
+    """Kernel-start-bound identity guard for PID reuse, content-hashed. PURE.
+
+    A missing start identity is not approximated with command/ppid: two recycled processes can share
+    both. ``None`` forces the conservative +25 path until the live sampler supplies ``ps lstart``.
+    """
+    start_identity = getattr(sample, "start_identity", None)
+    if not start_identity:
+        return None
+    payload = "\0".join(
+        (
+            str(start_identity),
+            str(getattr(sample, "ppid", "")),
+            str(getattr(sample, "pgid", "")),
+            str(getattr(sample, "command", "")),
+        )
+    ).encode("utf-8", errors="surrogatepass")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _parse_rss_history_rows(payload: object) -> list[RSSHistorySample]:
+    """Parse a history payload fail-closed; any malformed row is discarded. PURE."""
+    if not isinstance(payload, dict) or payload.get("schema") != RSS_HISTORY_SCHEMA:
+        return []
+    raw_rows = payload.get("samples")
+    if not isinstance(raw_rows, list):
+        return []
+    rows: list[RSSHistorySample] = []
+    for row in raw_rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            parsed = RSSHistorySample(
+                pid=int(row["pid"]),
+                rss_gib=float(row["rss_gib"]),
+                ts=float(row["ts"]),
+                process_key=str(row["process_key"]),
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+        if (
+            parsed.pid > 0
+            and parsed.rss_gib >= 0.0
+            and math.isfinite(parsed.rss_gib)
+            and math.isfinite(parsed.ts)
+            and parsed.process_key
+        ):
+            rows.append(parsed)
+    return rows
+
+
+def update_rss_history_and_estimate_growth(
+    current_samples: Mapping[int, tuple[float, str]],
+    *,
+    history_path: Path = _RSS_HISTORY_PATH,
+    now_ts: float | None = None,
+) -> dict[int, float | None]:
+    """fcntl-lock, TTL-sweep, atomically persist RSS samples, and return pure trend estimates.
+
+    This is the IMPURE edge. It never weakens admission on an I/O/parse/lock failure: callers receive
+    ``None`` for every PID, which ``resolve_projected_peak_gib`` maps to the legacy +25 GiB charge.
+    The separate lock inode stays stable while the JSON data file is atomically replaced.
+    """
+    # Monotonic time is comparable across governor processes in one boot and cannot jump backward
+    # under NTP/wall-clock adjustment. A reboot resets it; the future/stale sweep then drops old rows.
+    now = time.monotonic() if now_ts is None else float(now_ts)
+    fallback = {int(pid): None for pid in current_samples}
+    if not current_samples or not math.isfinite(now):
+        return fallback
+    path = Path(history_path)
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    temporary_name: str | None = None
+    try:
+        import fcntl
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_path, "a+", encoding="utf-8") as lock_fh:
+            fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX)
+            try:
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+                except (OSError, UnicodeError, json.JSONDecodeError):
+                    payload = {}
+                prior = _parse_rss_history_rows(payload)
+
+                # TTL sweep first. A stored future timestamp indicates wall-clock rollback/skew; it
+                # is not carried forward because it could fake an observation span.
+                kept = [
+                    row for row in prior
+                    if 0.0 <= now - row.ts <= RSS_HISTORY_TTL_S
+                ]
+                for pid, (rss_gib, process_key) in sorted(current_samples.items()):
+                    pid_i = int(pid)
+                    rss = max(0.0, float(rss_gib))
+                    key = str(process_key)
+                    # PID reuse/exec identity change resets this PID's evidence to one sample, which
+                    # deliberately yields UNKNOWN/+25 until a new observation window accrues.
+                    kept = [row for row in kept if row.pid != pid_i or row.process_key == key]
+                    kept.append(RSSHistorySample(pid=pid_i, rss_gib=rss, ts=now, process_key=key))
+
+                by_pid: dict[int, list[RSSHistorySample]] = {}
+                for row in sorted(kept, key=lambda item: (item.pid, item.ts, item.rss_gib)):
+                    by_pid.setdefault(row.pid, []).append(row)
+                # Bound both axes deterministically: newest PIDs by last timestamp, then numeric PID.
+                pid_order = sorted(
+                    by_pid,
+                    key=lambda pid: (-by_pid[pid][-1].ts, pid),
+                )[:RSS_HISTORY_MAX_PIDS]
+                bounded: list[RSSHistorySample] = []
+                for pid in pid_order:
+                    bounded.extend(by_pid[pid][-RSS_HISTORY_MAX_SAMPLES_PER_PID:])
+                bounded.sort(key=lambda item: (item.pid, item.ts, item.rss_gib))
+
+                out_payload = {
+                    "schema": RSS_HISTORY_SCHEMA,
+                    "samples": [row.to_json() for row in bounded],
+                }
+                with tempfile.NamedTemporaryFile(
+                    "w",
+                    encoding="utf-8",
+                    dir=path.parent,
+                    prefix=f".{path.name}.",
+                    suffix=".tmp",
+                    delete=False,
+                ) as temporary:
+                    temporary_name = temporary.name
+                    json.dump(out_payload, temporary, sort_keys=True, separators=(",", ":"))
+                    temporary.write("\n")
+                    temporary.flush()
+                    os.fsync(temporary.fileno())
+                os.replace(temporary_name, path)
+                temporary_name = None
+            finally:
+                fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
+    except (OSError, TypeError, ValueError) as exc:
+        print(
+            f"[system-governor] WARNING: RSS-history update failed; retaining +25 GiB fallback: {exc}",
+            file=sys.stderr,
+        )
+        return fallback
+    finally:
+        if temporary_name is not None:
+            try:
+                os.unlink(temporary_name)
+            except OSError:
+                pass
+
+    estimates: dict[int, float | None] = {}
+    for pid in current_samples:
+        series = [row for row in bounded if row.pid == int(pid)]
+        estimates[int(pid)] = estimate_observed_remaining_growth_gib(series, now_ts=now)
+    return estimates
+
+
 def resolve_projected_peak_gib(
     recorded_peak,
     current_rss_gib: float,
@@ -303,6 +602,7 @@ def resolve_projected_peak_gib(
     cmd: str = "",
     governed_descendant: bool = False,
     unregistered_ps_only: bool = False,
+    observed_remaining_growth_gib: float | None = None,
     material_rss_floor_gib: float = MATERIAL_UNREGISTERED_RSS_FLOOR_GIB,
     unknown_growth_headroom_gib: float = UNKNOWN_GROWTH_HEADROOM_GIB,
 ) -> float:
@@ -316,8 +616,11 @@ def resolve_projected_peak_gib(
       (a grep/editor/``python -c``/launch pipeline/short probe) is NOT a heavy job; its RSS is already
       in the vm_stat ``used`` baseline. Charging it +25 GiB manufactures the phantom refusal fixed
       2026-07-11 (see the MATERIAL_UNREGISTERED_RSS_FLOOR_GIB constants block). A genuine heavy job
-      registers (recorded projection wins above) OR is materially resident (>= floor -> full charge
-      below), so safety is preserved.
+      registers (recorded projection wins above) OR is materially resident. For a MATERIAL ps-only
+      process, a finite ``observed_remaining_growth_gib`` is clamped to [0, +25] and charged; ``None``
+      or a malformed/non-finite value retains the full +25 fallback. Safety precondition at the impure
+      caller: pass an observation only for an own-group-leader process that ``_throttle_eligible`` says
+      Layer 2 can pause; otherwise pass ``None`` and retain +25.
     * Everything else with an unknown peak: ``current_rss + UNKNOWN_GROWTH_HEADROOM_GIB`` — an
       unknown-peak job is assumed to still be able to grow by the same 25 GiB the launch paths
       project by default, NEVER by zero (the old backwards fallback).
@@ -332,6 +635,16 @@ def resolve_projected_peak_gib(
         return current
     if unregistered_ps_only and current < float(material_rss_floor_gib):
         return current  # incidental/transient ps-token match -> zero phantom growth (ground truth)
+    if unregistered_ps_only and observed_remaining_growth_gib is not None:
+        try:
+            observed = float(observed_remaining_growth_gib)
+        except (TypeError, ValueError):
+            observed = math.nan
+        if math.isfinite(observed):
+            # Never charge more than the old guard and never turn a negative/noisy trend into credit.
+            cap = max(0.0, float(unknown_growth_headroom_gib))
+            remaining = min(cap, max(0.0, observed))
+            return current + remaining
     return current + float(unknown_growth_headroom_gib)
 
 
@@ -1154,12 +1467,19 @@ def list_tracked_jobs(
     self_pid: int | None = None,
     self_pgid: int | None = None,
     our_jobs_pattern: str = OUR_JOBS_PATTERN,
+    rss_history_path: Path | None = None,
+    rss_history_now_ts: float | None = None,
 ) -> list[TrackedJob]:
     """Build the live tracked-job list = (registry custody jobs) UNION (ps processes matching the
     broad our-jobs pattern), each annotated with priority / projected-peak / current-RSS / paused /
-    throttle-eligibility. Live I/O; the PURE selectors below consume the result."""
+    throttle-eligibility. Live I/O; the PURE selectors below consume the result.
+
+    A real live scan records material unregistered RSS history at ``_RSS_HISTORY_PATH``. Tests and
+    callers that inject ``samples`` remain hermetic unless they explicitly provide a history path.
+    """
     if _mg is None:
         return []
+    live_process_scan = samples is None
     if samples is None:
         samples = _mg.sample_processes()
     if registry_rows is None:
@@ -1190,8 +1510,35 @@ def list_tracked_jobs(
         if matches_our_jobs(getattr(s, "command", "")):
             candidate_pids.add(pid)
 
+    # Read-boundary conversion + measured-growth sampling happen ONCE per candidate per scan. The
+    # history edge is intentionally outside the pure resolver. Only MATERIAL unregistered ps-only
+    # candidates need trend evidence; all other branches are bit-identical and never consult it.
+    current_rss_by_pid: dict[int, float] = {}
+    material_unregistered_samples: dict[int, tuple[float, str]] = {}
+    for pid in sorted(candidate_pids):
+        sample = samples.get(pid)
+        if sample is None:
+            continue
+        current_rss = _mg.group_rss_gb(samples, pid) * TRACKED_RSS_UNITS_TO_GIB
+        current_rss_by_pid[pid] = current_rss
+        if pid not in reg_by_pid and current_rss >= MATERIAL_UNREGISTERED_RSS_FLOOR_GIB:
+            process_key = _rss_history_process_key(sample)
+            if process_key is not None:
+                material_unregistered_samples[pid] = (current_rss, process_key)
+    effective_history_path = (
+        _RSS_HISTORY_PATH if live_process_scan and rss_history_path is None else rss_history_path
+    )
+    if effective_history_path is not None and material_unregistered_samples:
+        observed_growth_by_pid = update_rss_history_and_estimate_growth(
+            material_unregistered_samples,
+            history_path=effective_history_path,
+            now_ts=rss_history_now_ts,
+        )
+    else:
+        observed_growth_by_pid = dict.fromkeys(material_unregistered_samples)
+
     jobs: list[TrackedJob] = []
-    for pid in candidate_pids:
+    for pid in sorted(candidate_pids):
         s = samples.get(pid)
         if s is None:
             continue
@@ -1208,7 +1555,7 @@ def list_tracked_jobs(
         # once, at the read boundary. Everything downstream (growth_headroom, admission baseline,
         # band comparison, blackbox rows) is true GiB. Pre-fix the admission path under-counted
         # remaining growth by a measured 2.63 GiB (anti-conservative mixed-unit arithmetic).
-        current_rss = _mg.group_rss_gb(samples, pid) * TRACKED_RSS_UNITS_TO_GIB
+        current_rss = current_rss_by_pid[pid]
         # Projected peak (review-fix CRITICAL B): explicit registry field wins; an UNKNOWN peak
         # gets the CONSERVATIVE +UNKNOWN_GROWTH_HEADROOM_GIB default (never the old zero-growth
         # fallback), except protection infra + governed descendants (see resolve_projected_peak_gib
@@ -1228,6 +1575,12 @@ def list_tracked_jobs(
             # match (grep/editor/launcher/short probe), NOT a heavy job — charge it zero phantom growth
             # (2026-07-11 phantom-reservation fix). A registered row (rec present) is never relaxed.
             unregistered_ps_only=(not rec),
+            # MATERIAL unregistered jobs use a bounded fresh observed slope. Missing/stale/invalid
+            # history is None and therefore retains the old +25 GiB conservative fallback.
+            # CRITICAL safety precondition: only throttle-eligible detached group leaders may use a
+            # relaxed measurement. A non-leader/unpausable material process has no Layer-2 backstop
+            # and therefore stays on +25 even if its history appears flat.
+            observed_remaining_growth_gib=(observed_growth_by_pid.get(pid) if eligible else None),
         )
         prio_field = rec.get("priority")
         try:

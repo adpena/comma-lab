@@ -343,31 +343,67 @@ class ProcessSample:
     rss_kb: int
     command: str
     pgid: int | None = None
+    # Kernel-reported process start identity (``ps lstart``). PIDs recycle; any persisted per-PID
+    # safety history must bind to this value, never to PID alone. Optional only for legacy fixtures.
+    start_identity: str | None = None
 
 
 def parse_ps_table(text: str) -> dict[int, ProcessSample]:
-    """Parse ``ps -axo pid=,ppid=,pgid=,rss=,command=`` output.
+    """Parse ``ps -axo pid=,ppid=,pgid=,rss=,lstart=,command=`` output.
 
-    Vendored/trimmed from molt ``parse_process_table`` (we drop the etime column
-    — the OOM guard does not need process age). Falls back to a 4-column
-    (no-pgid) parse if pgid is absent.
+    ``lstart`` is five tokens on BSD/macOS. It is retained as process-start identity so a recycled
+    PID cannot inherit the prior process's safety history. Legacy 5-column and 4-column fixtures
+    remain accepted with ``start_identity=None``; consumers must fail conservative when identity is
+    unavailable.
     """
     samples: dict[int, ProcessSample] = {}
     for raw_line in text.splitlines():
         line = raw_line.strip()
         if not line:
             continue
-        parts = line.split(None, 4)
+        extended = line.split(None, 9)
+        start_identity: str | None = None
         pgid: int | None
-        if len(parts) >= 5:
+        looks_extended = (
+            len(extended) >= 10
+            and extended[4] in {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}
+            and re.fullmatch(r"\d{1,2}", extended[6]) is not None
+            and re.fullmatch(r"\d{2}:\d{2}:\d{2}", extended[7]) is not None
+            and re.fullmatch(r"\d{4}", extended[8]) is not None
+        )
+        if looks_extended:
             try:
-                pid = int(parts[0])
-                ppid = int(parts[1])
-                pgid = int(parts[2])
-                rss_kb = int(parts[3])
-                command = parts[4]
+                pid = int(extended[0])
+                ppid = int(extended[1])
+                pgid = int(extended[2])
+                rss_kb = int(extended[3])
+                start_identity = " ".join(extended[4:9])
+                command = extended[9]
             except ValueError:
-                # legacy 4-col (no pgid): pid ppid rss command
+                continue
+        else:
+            parts = line.split(None, 4)
+            if len(parts) >= 5:
+                try:
+                    pid = int(parts[0])
+                    ppid = int(parts[1])
+                    pgid = int(parts[2])
+                    rss_kb = int(parts[3])
+                    command = parts[4]
+                except ValueError:
+                    # legacy 4-col (no pgid): pid ppid rss command
+                    legacy = line.split(None, 3)
+                    if len(legacy) < 4:
+                        continue
+                    try:
+                        pid = int(legacy[0])
+                        ppid = int(legacy[1])
+                        rss_kb = int(legacy[2])
+                    except ValueError:
+                        continue
+                    command = legacy[3]
+                    pgid = None
+            else:
                 legacy = line.split(None, 3)
                 if len(legacy) < 4:
                     continue
@@ -379,20 +415,9 @@ def parse_ps_table(text: str) -> dict[int, ProcessSample]:
                     continue
                 command = legacy[3]
                 pgid = None
-        else:
-            legacy = line.split(None, 3)
-            if len(legacy) < 4:
-                continue
-            try:
-                pid = int(legacy[0])
-                ppid = int(legacy[1])
-                rss_kb = int(legacy[2])
-            except ValueError:
-                continue
-            command = legacy[3]
-            pgid = None
         samples[pid] = ProcessSample(
-            pid=pid, ppid=ppid, rss_kb=rss_kb, command=command, pgid=pgid
+            pid=pid, ppid=ppid, rss_kb=rss_kb, command=command, pgid=pgid,
+            start_identity=start_identity,
         )
     return samples
 
@@ -400,11 +425,12 @@ def parse_ps_table(text: str) -> dict[int, ProcessSample]:
 def sample_processes() -> dict[int, ProcessSample]:
     try:
         result = subprocess.run(
-            ["ps", "-axo", "pid=,ppid=,pgid=,rss=,command="],
+            ["ps", "-axo", "pid=,ppid=,pgid=,rss=,lstart=,command="],
             capture_output=True,
             text=True,
             timeout=10,
             check=False,
+            env={**os.environ, "LC_ALL": "C"},
         )
     except (OSError, subprocess.TimeoutExpired):
         return {}

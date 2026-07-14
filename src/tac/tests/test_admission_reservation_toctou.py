@@ -82,6 +82,69 @@ def test_two_sequential_admits_see_each_others_pending_row(tmp_registry):
     assert gov.sum_active_growth_headroom_gib(jobs3) >= 110.0
 
 
+def test_stale_clock_skew_and_mixed_identity_history_fail_conservative():
+    S = gov.RSSHistorySample
+    stale = [S(700, 4.4, 0.0, "start-a"), S(700, 4.4, 60.0, "start-a")]
+    future = [S(700, 4.4, 100.0, "start-a"), S(700, 4.4, 200.0, "start-a")]
+    recycled = [S(700, 4.4, 100.0, "start-a"), S(700, 4.4, 160.0, "start-b")]
+    assert gov.estimate_observed_remaining_growth_gib(stale, now_ts=1000.0) is None
+    assert gov.estimate_observed_remaining_growth_gib(future, now_ts=160.0) is None
+    assert gov.estimate_observed_remaining_growth_gib(recycled, now_ts=160.0) is None
+    for series in (stale, future, recycled):
+        estimate = gov.estimate_observed_remaining_growth_gib(series, now_ts=160.0)
+        assert gov.resolve_projected_peak_gib(
+            None, 4.4, unregistered_ps_only=True,
+            observed_remaining_growth_gib=estimate,
+        ) == pytest.approx(29.4)
+
+
+def test_history_sweep_runs_before_refuse_and_pending_reservation_stays_fully_charged(
+    tmp_registry, tmp_path
+):
+    if gov._mg is None:
+        pytest.skip("memory_guard unavailable (fail-safe: no tracked jobs)")
+    sd._write_pending_reservation("launcher_a", 50.0)
+    history_path = tmp_path / "rss_history.json"
+    history_path.write_text(
+        json.dumps({
+            "schema": gov.RSS_HISTORY_SCHEMA,
+            "samples": [
+                {"pid": 999, "rss_gib": 4.4, "ts": -10_000.0, "process_key": "stale"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    sample = gov._mg.ProcessSample(
+        pid=700,
+        ppid=1,
+        pgid=700,
+        rss_kb=round(4.4 * 1024**2),
+        command="python tools/verdict_mem_microprobe.py --n 600",
+        start_identity="Tue Jul 14 00:00:07 2026",
+    )
+    jobs = gov.list_tracked_jobs(
+        samples={700: sample},
+        registry_rows=_rows(tmp_registry),
+        self_pid=1,
+        rss_history_path=history_path,
+        rss_history_now_ts=100.0,
+    )
+    headroom = gov.sum_active_growth_headroom_gib(jobs)
+    assert headroom >= 75.0  # pending 50 + first-sample/no-history material fallback 25
+    ceiling = gov.compute_adaptive_ceiling(
+        total_gib=80.0, used_gib=50.0, tracked_current_gib=4.4, safety_margin_gib=8.0
+    )
+    decision = gov.admission_decision(
+        projected_new_gib=6.0,
+        system_used_gib=50.0,
+        active_growth_headroom_gib=headroom,
+        ceiling=ceiling,
+    )
+    assert not decision.admit
+    persisted = json.loads(history_path.read_text(encoding="utf-8"))
+    assert all(row["pid"] != 999 for row in persisted["samples"]), "TTL sweep must precede REFUSE"
+
+
 def test_register_daemon_promotes_pending_row_same_label(tmp_registry):
     """The upsert-by-label promote: after Popen the real running row REPLACES the reservation —
     exactly one row per label, no double count."""

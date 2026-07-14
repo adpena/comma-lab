@@ -257,6 +257,54 @@ def test_band_defer_to_throttle_precedence_preserved_at_edge_tier():
     assert d.action == "defer_to_throttle"
 
 
+def test_measured_growth_relaxation_retains_runtime_throttle_backstop():
+    """Layer-3 admission may use a stable measured trend only for the exact class Layer 2 can pause.
+    The tier-scaled pressure policy and throttle target remain unchanged and still fire.
+    """
+    assert gov.RUNTIME_THROTTLE_POLL_INTERVAL_S == mbb.DEFAULT_INTERVAL_S
+    assert inspect.signature(mbb.run_daemon).parameters["govern"].default is True
+    assert '"--no-govern"' not in inspect.getsource(mbb.ensure_blackbox_running)
+    list_source = inspect.getsource(gov.list_tracked_jobs)
+    assert "if eligible else None" in list_source
+    observed = gov.estimate_observed_remaining_growth_gib(
+        [
+            gov.RSSHistorySample(900, 4.4, 100.0, "start-a"),
+            gov.RSSHistorySample(900, 4.4, 160.0, "start-a"),
+        ],
+        now_ts=160.0,
+    )
+    assert observed == pytest.approx(gov.MATERIAL_PLATEAU_GROWTH_RESERVE_GIB)
+    projected = gov.resolve_projected_peak_gib(
+        None,
+        4.4,
+        unregistered_ps_only=True,
+        observed_remaining_growth_gib=observed,
+    )
+    job = gov.TrackedJob(
+        label="stable_material_unregistered",
+        pid=900,
+        pgid=900,
+        cmd="python tools/verdict_mem_microprobe.py",
+        priority=-10,
+        projected_peak_gib=projected,
+        current_rss_gib=4.4,
+        paused=False,
+        throttle_eligible=True,
+        own_group_leader=True,
+    )
+    action = gov.decide_governor_action(
+        level="critical",
+        consecutive_warn=0,
+        consecutive_critical=gov.DEFAULT_CRITICAL_CONSECUTIVE,
+        jobs=[job],
+    )
+    assert action.action == "pause"
+    assert action.target == job
+    # Actuator vocabulary is still reversible pause only; this test never sends a signal.
+    assert "SIGSTOP" in inspect.getsource(gov.pause_job)
+    assert "SIGKILL" not in inspect.getsource(gov.pause_job)
+
+
 # ── 5. GB-F1: admission-path units are TRUE GiB (converted once, at read) ──────────────────────
 def test_admission_growth_headroom_true_gib_matches_review_numbers():
     """The review's measured case: projected 67.61 true / tracked 56.69 units = 54.06 true.
