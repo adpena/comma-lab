@@ -4,7 +4,8 @@
 Covers the operator-mandated truth-rendering fix: the curriculum is DERIVED from
 the schedule read-back + parsed flags (no hardcoded PR95 epoch skeleton), event
 states are honest (pending when no row), the provenance line is present, and the
-BANKED R1 pose card is READ from the byte-close artifact (never hardcoded).
+R1 pose artifact is READ as an unselected advisory reference (never hardcoded or
+substituted into current vehicle claims).
 """
 from __future__ import annotations
 
@@ -139,8 +140,8 @@ def test_muon_event_trigger_and_tau_anneal_continuous():
     assert ta["span_end_epoch"] == 726  # the finishing-optimizer boundary, from read-back
 
 
-# ── 5) BANKED R1 card read from the byte-close artifact (value-provenance) ──
-def test_pose_readiness_banked_r1_from_artifact(tmp_path):
+# ── 5) R1 is an unselected reference, never a current-config fallback claim ──
+def test_pose_readiness_r1_reference_from_artifact(tmp_path):
     art = tmp_path / "r1.json"
     art.write_text(json.dumps({
         "authority": "[macOS-CPU advisory] NON-PROMOTABLE", "promotion_claim": False,
@@ -150,25 +151,31 @@ def test_pose_readiness_banked_r1_from_artifact(tmp_path):
                                       "pairs_scored": 600},
     }))
     pm = cp.build_pose_readiness_model(_flags(), {}, {}, r1_path=art)
-    b = pm["banked_r1"]
+    b = pm["r1_reference"]
+    a = b["advisory_artifact"]
     assert b["ok"] is True
-    assert b["d_pose"] == 0.0016095471538913576
-    assert b["xi_bytes"] == 7195
-    assert b["promotable"] is False
-    assert "NON-PROMOTABLE" in b["authority"]
-    # contribution is DERIVED, not hardcoded
-    assert abs(b["contribution"] - math.sqrt(10.0 * b["d_pose"])) < 1e-12
+    assert b["status"] == "unselected_reference"
+    assert b["label"] == "full-n600 byte-closed macOS-CPU advisory"
+    assert b["payload_selected"] is False
+    assert b["current_config_claims"] == {"d_pose": None, "archive_bytes": None}
+    assert a["d_pose"] == 0.0016095471538913576
+    assert a["counted_pose_bytes"] == 7195
+    assert a["promotable"] is False
+    assert "NON-PROMOTABLE" in a["source_axis"]
+    # contribution is DERIVED inside the advisory artifact, never a current claim
+    assert abs(a["pose_term"] - math.sqrt(10.0 * a["d_pose"])) < 1e-12
 
 
 def test_pose_readiness_missing_artifact_is_honest():
     pm = cp.build_pose_readiness_model(_flags(), {}, {}, r1_path="/no/such/r1.json")
-    assert pm["banked_r1"]["ok"] is False
-    assert "reason" in pm["banked_r1"]
-    # the contract still renders (banked card degrades, contract stands)
+    assert pm["r1_reference"]["ok"] is False
+    assert "reason" in pm["r1_reference"]
+    assert pm["r1_reference"]["payload_selected"] is False
+    # the contract still renders (reference card degrades, contract stands)
     assert pm["contract"]["detector_mode"] == "sigma_min_plateau"
 
 
-# ── 6) fallback contract: detector mode/state/decision-tree + degenerate detection ──
+# ── 6) pose contract: detector state + explicit nonselection ──
 def test_pose_contract_state_and_decision_tree():
     # pending detector, no basin probe
     pm = cp.build_pose_readiness_model(_flags(), {}, {})
@@ -177,8 +184,10 @@ def test_pose_contract_state_and_decision_tree():
     assert c["detector_cap"] == 726  # from the flag, not hardcoded in logic
     assert c["detector_state"] == "pending"
     assert c["degenerate"] is False
-    assert "ship banked R1" in c["decision_tree"]
-    assert c["should_ship_banked_r1"] is None  # honest: no telemetry yet
+    assert "pose_disengaged_no_banked_payload" in c["decision_tree"]
+    assert c["payload_selected"] is False
+    assert c["d_pose_claim"] is None
+    assert c["archive_bytes_claim"] is None
     # DEGENERATE: basin probe present with sigma at/below floor
     sensors = {"jacobian_basin": {"median_sigma_min": 1e-5, "sigma_floor": 1e-4}}
     pm2 = cp.build_pose_readiness_model(_flags(), {}, sensors)
@@ -188,6 +197,40 @@ def test_pose_contract_state_and_decision_tree():
     pm3 = cp.build_pose_readiness_model(_flags(), {"pose_finish_engage": {"epoch": 812}}, {})
     assert pm3["contract"]["detector_state"] == "fired"
     assert pm3["contract"]["detector_at_epoch"] == 812
+
+
+def test_pose_disengagement_alarm_current_and_legacy_read_compatibility(tmp_path):
+    log = tmp_path / "run.log"
+    current = {
+        "stage": "confound_alarm",
+        "alarm": "pose_finish_disengaged_no_banked_payload",
+        "epoch": 900,
+        "pose_state": "pose_disengaged_no_banked_payload",
+        "payload_selected": False,
+        "d_pose_claim": None,
+        "archive_bytes_claim": None,
+    }
+    log.write_text(json.dumps(current) + "\n")
+    states = cp.read_mechanism_event_states([log])
+    canonical = states["pose_finish_disengaged_no_banked_payload"]
+    assert canonical["legacy_read_only"] is False
+    model = cp.build_pose_readiness_model(_flags(), states, {})
+    assert model["contract"]["detector_state"] == "disengaged"
+    assert model["contract"]["pose_state"] == "pose_disengaged_no_banked_payload"
+    assert model["contract"]["payload_selected"] is False
+
+    # Old alarm bytes remain readable, but are normalized and cannot restore selection authority.
+    legacy = {
+        "stage": "confound_alarm",
+        "alarm": "pose_finish_disengaged_shipped_banked_r1",
+        "epoch": 901,
+    }
+    log.write_text(json.dumps(legacy) + "\n")
+    legacy_states = cp.read_mechanism_event_states([log])
+    parsed = legacy_states["pose_finish_disengaged_no_banked_payload"]
+    assert parsed["legacy_read_only"] is True
+    assert parsed["legacy_alarm_name"] == "pose_finish_disengaged_shipped_banked_r1"
+    assert parsed["payload_selected"] is False
 
 
 # ── 7) integration: the live v7.5.2 run dir (if present) builds a valid model ──

@@ -103,7 +103,7 @@ except Exception:  # load-bearing daemon; degrade visibly, never crash
 
 # ── curriculum + pose-readiness truth-rendering models (operator 2026-07-10: the
 # curriculum panel must render the DERIVED event-gated schedule, not a hardcoded
-# PR95 epoch skeleton; the pose panel must display the BANKED R1 fallback). Sibling
+# PR95 epoch skeleton; the pose panel must display honest disengagement plus the R1 reference). Sibling
 # tools/ module; guarded so an import error leaves the panels on their legacy path.
 try:
     import dashboard_curriculum_panel as _dcp
@@ -1166,7 +1166,7 @@ class LiveState:
         self._epochs: set[int] = set()
         self.sensors: dict = {}  # latest jacobian_basin + loss_terms (non-verdict stages)
         self.curriculum_panel: dict = {}  # DERIVED curriculum model (event triggers + lanes)
-        self.pose_readiness: dict = {}    # banked R1 fallback + pose-finish contract state
+        self.pose_readiness: dict = {}    # honest pose state + unselected R1 reference
         self.liveness: dict = {"kind": "missing"}
         self.watched: str | None = None
         self.watched_dir: str | None = None  # live arm dir (auto-latest); shown as run_dir
@@ -1558,8 +1558,8 @@ class LiveState:
 
         # CURRICULUM POSITION + POSE-DESCENT READINESS truth models (operator 2026-07-10):
         # the curriculum as DERIVED (event triggers + fail-safe caps + mechanism-lane state,
-        # never a hardcoded PR95 epoch skeleton) + the BANKED R1 pose fallback (numbers READ
-        # from the #238 byte-close artifact). Fail-open -> the JS panels fall back to legacy.
+        # never a hardcoded PR95 epoch skeleton) + the unselected full-n600 byte-closed
+        # macOS-CPU advisory R1 reference. Fail-open -> the JS panels fall back to legacy.
         self.curriculum_panel = {}
         self.pose_readiness = {}
         if _dcp is not None:
@@ -2117,7 +2117,7 @@ class LiveState:
             "run_info_html": self.run_info_html,       # #205 pre-rendered run-info strip (rld._run_info_html)
             "sensors": self.sensors or {},             # latest jacobian_basin + loss_terms (LIVE-tab panels)
             "curriculum_panel": self.curriculum_panel or {},  # DERIVED curriculum (events/caps/lanes)
-            "pose_readiness": self.pose_readiness or {},      # banked R1 fallback + pose-finish contract
+            "pose_readiness": self.pose_readiness or {},      # honest pose state + R1 reference
             # POSE-DEFERRED (masthead honesty): the run has w_pose>0 (NOT pose_blind) but pose descent
             # has NOT engaged yet -- pose is HELD OUT until the pose-finish stage by design, so its loss
             # term is EXACTLY 0.0 in loss_terms and the MEASURED d_pose stays high-by-design. Without
@@ -2699,7 +2699,7 @@ font-weight:600;letter-spacing:-.4px}
 #tab-live .lv-lane .lt .cap{color:var(--lv-mut);font-family:var(--lv-mono);font-size:9px}
 #tab-live .lv-prov{font-size:9.5px;color:var(--lv-mut);line-height:1.5;margin-top:9px;
   border-top:1px solid var(--lv-hair);padding-top:8px;word-break:break-word}
-/* pose readiness — banked R1 fallback card + contract */
+/* pose readiness — honest disengagement + unselected R1 reference + contract */
 #tab-live .lv-r1{grid-column:1/-1;background:var(--bg);border:1px solid var(--lv-hair);padding:9px 11px;margin-top:1px}
 #tab-live .lv-r1 .r1h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:7px}
 #tab-live .lv-r1 .r1t{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--lv-mut)}
@@ -4625,9 +4625,9 @@ function renderClasses(last){
   box.innerHTML=html;
 }
 
-// 4 · POSE-DESCENT READINESS — the BANKED R1 fallback (sealed pose custody) + the
-// fallback contract state + the jacobian_basin readiness sensor. Pose is pose-BLIND
-// until the finishing stage by design; the BANKED R1 is the shippable floor meanwhile.
+// 4 · POSE-DESCENT READINESS — honest current pose state + an unselected R1 reference
+// artifact + the jacobian_basin readiness sensor. Pose is pose-BLIND until the finishing
+// stage by design; the current vehicle has no compatibility-checked R1 payload selector.
 function renderPose(){
   const box=$("lv_pose"), meta=$("lv_pose_meta");
   if(!box)return;
@@ -4636,22 +4636,22 @@ function renderPose(){
   const cell=(l,v,cls)=>"<div class='lv-pcell'><span class='pl'>"+l+"</span><span class='pvv "+(cls||"")+"'>"+v+"</span></div>";
   let html="";
 
-  // (a) BANKED R1 artifact card + the fallback contract (from the #238 byte-close JSON).
-  if(PR.banked_r1){
-    const b=PR.banked_r1;
+  // (a) R1 reference artifact. These values are advisory context, never current config claims.
+  if(PR.r1_reference){
+    const b=PR.r1_reference, a=b.advisory_artifact||{};
     if(b.ok){
-      html+="<div class='lv-r1'><div class='r1h'><span class='r1t'>banked R1 · pose custody (fallback)</span>"+
-        "<span class='r1tag'>"+esc(b.authority||"advisory")+"</span></div>"+
+      html+="<div class='lv-r1'><div class='r1h'><span class='r1t'>R1 reference · not selected</span>"+
+        "<span class='r1tag'>"+esc(b.label||"full-n600 byte-closed macOS-CPU advisory")+"</span></div>"+
         "<div class='lv-r1grid'>"+
-          "<div class='rc'><span class='rk'>d_pose</span><span class='rv'>"+sig(b.d_pose,4)+"</span></div>"+
-          "<div class='rc'><span class='rk'>√(10·d_pose)</span><span class='rv'>"+
-            (b.contribution!=null?sig(b.contribution,4):"—")+"</span></div>"+
-          "<div class='rc'><span class='rk'>ξ_eff / dxi</span><span class='rv'>"+
-            (b.xi_bytes!=null?fmtInt(b.xi_bytes)+" B":"—")+"</span></div>"+
-        "</div><div class='lv-r1src'>src "+esc(b.source||"?")+"</div></div>";
+          "<div class='rc'><span class='rk'>advisory d_pose</span><span class='rv'>"+sig(a.d_pose,4)+"</span></div>"+
+          "<div class='rc'><span class='rk'>advisory √(10·d_pose)</span><span class='rv'>"+
+            (a.pose_term!=null?sig(a.pose_term,4):"—")+"</span></div>"+
+          "<div class='rc'><span class='rk'>reference ξ / dxi</span><span class='rv'>"+
+            (a.counted_pose_bytes!=null?fmtInt(a.counted_pose_bytes)+" B":"—")+"</span></div>"+
+        "</div><div class='lv-r1src'>UNSELECTED REFERENCE ONLY · src "+esc(b.source||"?")+"</div></div>";
     }else{
-      html+="<div class='lv-r1'><div class='r1h'><span class='r1t'>banked R1 · pose custody</span></div>"+
-        "<div class='lv-r1src'>artifact unreadable ("+esc(b.reason||"?")+") — src "+esc(b.source||"?")+"</div></div>";
+      html+="<div class='lv-r1'><div class='r1h'><span class='r1t'>R1 reference · not selected</span></div>"+
+        "<div class='lv-r1src'>reference unreadable ("+esc(b.reason||"?")+") — src "+esc(b.source||"?")+"</div></div>";
     }
   }
   // (b) fallback contract state (detector mode / state / decision tree).
@@ -4660,11 +4660,12 @@ function renderPose(){
     const stCls=(c.detector_state==="fired")?"ok":(c.degenerate?"bd":(c.detector_state==="armed"?"wn":""));
     const stLbl=c.degenerate?"DEGENERATE":String(c.detector_state||"pending");
     const cap=(c.detector_cap!=null)?(" · fail-safe cap ep"+fmtInt(c.detector_cap)):"";
-    const ssbr=(c.should_ship_banked_r1==null)?"—":(c.should_ship_banked_r1?"yes":"no");
+    const selected=(c.payload_selected===true)?"yes":"no";
     html+="<div class='lv-contract'><span class='ck'>pose-finish</span> detector <b>"+esc(c.detector_mode||"—")+"</b>"+
       cap+" · state <span class='"+stCls+"'>"+esc(stLbl)+"</span>"+
       (c.detector_at_epoch!=null?("@ep"+c.detector_at_epoch):"")+
-      " · ship banked R1: <b>"+ssbr+"</b>"+
+      " · pose <b>"+esc(c.pose_state||"pose_finish_pending")+"</b>"+
+      " · payload selected: <b>"+selected+"</b>"+
       "<div class='dt'>"+esc(c.decision_tree||"")+"</div>"+
       (c.detector_state==="pending"?("<div style='margin-top:3px'>"+esc(c.pending_note||"")+"</div>"):"")+
       "</div>";

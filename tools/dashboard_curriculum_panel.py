@@ -6,8 +6,10 @@ Operator complaint (verbatim, 2026-07-10): the curriculum panel rendered a
 3-segment epoch bar (CE | tau | Muon) with HARDCODED epoch positions — hiding the
 event-gated DERIVED schedule that is actually running, which made our derived
 curriculum look cargo-culted from PR95. Sister complaint: "It also doesn't display
-the R1" — the pose panel showed only the jacobian_basin readiness, never the BANKED
-R1 fallback (the sealed program's shippable pose custody).
+the R1" — the pose panel showed only the jacobian_basin readiness. The R1 artifact
+remains useful context, but the current vehicle has no compatibility-checked selector
+for it: the panel therefore renders it only as an unselected full-n600 byte-closed
+macOS-CPU advisory reference, never as a live fallback or score floor.
 
 This module builds two JSON-able display MODELS the (JS) panels render verbatim:
 
@@ -20,10 +22,10 @@ This module builds two JSON-able display MODELS the (JS) panels render verbatim:
      {trigger, cap, state: pending|armed|fired@ep};
    * a provenance line that answers the cargo-cult question on the panel itself.
 
-2. :func:`build_pose_readiness_model` — the BANKED R1 fallback + the fallback
-   contract state (detector mode / state / decision tree). The R1 numbers are READ
-   from the #238 byte-close artifact JSON (never hardcoded); the contribution is
-   DERIVED as sqrt(10*d_pose).
+2. :func:`build_pose_readiness_model` — the honest pose-finish state + an unselected
+   R1 reference artifact. The R1 numbers are READ from the #238 byte-close artifact
+   JSON (never hardcoded), isolated under ``advisory_artifact``, and never substituted
+   for the current vehicle's null d_pose / byte claims.
 
 VALUE-PROVENANCE DISCIPLINE (CLAUDE.md): every epoch/cap comes from the schedule
 read-back or the parsed launch.sh flags; every R1 number comes from the artifact
@@ -44,6 +46,7 @@ from pathlib import Path
 __all__ = [
     "MECHANISM_LANES",
     "R1_BYTECLOSE_JSON",
+    "R1_REFERENCE_LABEL",
     "SCHEDULE_PROVENANCE_LINE",
     "build_curriculum_panel_model",
     "build_pose_readiness_model",
@@ -58,8 +61,19 @@ SCHEDULE_PROVENANCE_LINE = (
     "removed-by-measurement: l7, smooth, QAT/c1a/lambda/sigma)"
 )
 
-# ── The #238 R1 byte-close artifact (machine-readable) — the BANKED pose custody. ──
+# ── The #238 R1 byte-close artifact (machine-readable) — reference only. ──
 R1_BYTECLOSE_JSON = "reports/r1_dxi_238/n600_shipdxi.json"
+R1_REFERENCE_LABEL = "full-n600 byte-closed macOS-CPU advisory"
+
+_CURRENT_POSE_DISENGAGEMENT_ALARMS: frozenset[str] = frozenset({
+    "pose_finish_disengaged_no_banked_payload",
+    "pose_finish_backstop_pose_disengaged",
+    "legacy_banked_r1_marker_migrated_to_pose_disengaged",
+})
+_LEGACY_POSE_DISENGAGEMENT_ALARMS: frozenset[str] = frozenset({
+    "pose_finish_disengaged_shipped_banked_r1",
+    "pose_finish_backstop_overridden_banked_r1",
+})
 
 # ── Event-gated MECHANISM LANE specs. Each lane's cap + trigger are READ from the
 # named launch.sh flags (never hardcoded here); the descriptive name/prose is
@@ -108,7 +122,7 @@ MECHANISM_LANES: tuple[dict, ...] = (
 # the two curriculum/optimizer boundary rows the stages themselves fire on).
 _LANE_STAGES: frozenset[str] = frozenset(
     [s for lane in MECHANISM_LANES for s in (lane.get("armed_stage"), lane.get("fired_stage")) if s]
-    + ["muon_finisher_switch", "curriculum_transition_fired"])
+    + ["muon_finisher_switch", "curriculum_transition_fired", "confound_alarm"])
 
 _TAIL_BYTES = 524_288  # bounded run.log tail — O(1) in file size for the multi-day run
 
@@ -127,7 +141,9 @@ def read_mechanism_event_states(log_paths, tail_bytes: int = _TAIL_BYTES) -> dic
     TAIL(s). Returns ``{stage_name: {"epoch": int}}`` (latest wins). Bounded tail
     read (the log grows to MBs over 3000 epochs). READ-ONLY, fail-open to ``{}`` so a
     parse error never kills the daemon — a lane with no row is then honestly
-    'pending'."""
+    'pending'. Pose-disengagement confound alarms are normalized into the canonical
+    ``pose_finish_disengaged_no_banked_payload`` key. The former banked-R1 alarm names
+    remain readable only as ``legacy_read_only`` historical evidence."""
     out: dict = {}
     for lp in log_paths or ():
         try:
@@ -156,7 +172,26 @@ def read_mechanism_event_states(log_paths, tail_bytes: int = _TAIL_BYTES) -> dic
             if st in _LANE_STAGES:
                 ep = _row_epoch(d)
                 if ep is not None:
-                    out[st] = {"epoch": ep}  # later line wins
+                    if st == "confound_alarm":
+                        alarm = d.get("alarm")
+                        if alarm in (
+                            _CURRENT_POSE_DISENGAGEMENT_ALARMS
+                            | _LEGACY_POSE_DISENGAGEMENT_ALARMS
+                        ):
+                            out["pose_finish_disengaged_no_banked_payload"] = {
+                                "epoch": ep,
+                                "alarm": "pose_finish_disengaged_no_banked_payload",
+                                "legacy_alarm_name": (
+                                    alarm if alarm in _LEGACY_POSE_DISENGAGEMENT_ALARMS else None
+                                ),
+                                "legacy_read_only": alarm in _LEGACY_POSE_DISENGAGEMENT_ALARMS,
+                                "pose_state": "pose_disengaged_no_banked_payload",
+                                "payload_selected": False,
+                                "d_pose_claim": None,
+                                "archive_bytes_claim": None,
+                            }
+                    else:
+                        out[st] = {"epoch": ep}  # later line wins
     return out
 
 
@@ -305,21 +340,29 @@ def _flt(v):
 
 def build_pose_readiness_model(flags, event_states, sensors,
                                r1_path: str | Path = R1_BYTECLOSE_JSON) -> dict:
-    """The POSE-DESCENT READINESS model: the BANKED R1 fallback card + the fallback
-    contract state (detector mode / state / decision tree).
+    """Build the honest pose-finish state plus an unselected R1 reference.
 
     The R1 numbers are READ from the #238 byte-close artifact JSON (value-provenance:
-    never hardcoded); the pose contribution is DERIVED as ``sqrt(10*d_pose)``. The
-    detector mode is the ``--pose-finish-engage-on`` flag; the detector state derives
-    from the pose_finish evidence rows + the jacobian_basin sensor. Fail-open:
-    a missing artifact yields ``banked_r1: {ok: False}`` (the panel still shows the
-    contract + honest pending)."""
+    never hardcoded), but live under ``r1_reference.advisory_artifact`` only.  They are
+    not the current V9 vehicle's d_pose or byte claims because no compatibility-checked
+    payload selector exists.  The current contract therefore always reports
+    ``payload_selected=false`` and null score/byte claims. The detector mode is the
+    ``--pose-finish-engage-on`` flag; state derives from pose-finish rows, canonical
+    disengagement alarms, and the jacobian_basin sensor. Fail-open: an unreadable R1
+    artifact leaves the contract intact and honestly marks only the reference unreadable.
+    """
     flags = flags or {}
     event_states = event_states or {}
     sensors = sensors or {}
 
-    # ── 1) BANKED R1 artifact card (read from JSON; contribution derived). ──
-    banked: dict = {"ok": False}
+    # ── 1) R1 REFERENCE card.  Artifact values are quarantined from current claims. ──
+    r1_reference: dict = {
+        "ok": False,
+        "status": "unselected_reference",
+        "label": R1_REFERENCE_LABEL,
+        "payload_selected": False,
+        "current_config_claims": {"d_pose": None, "archive_bytes": None},
+    }
     try:
         d = json.loads(Path(r1_path).read_text(errors="replace"))
         parity = d.get("parity_on_inflated_frames") or {}
@@ -330,28 +373,44 @@ def build_pose_readiness_model(flags, event_states, sensors,
                 "d_pose_carrier_warp_f0_witness_f1")
         xi_bytes = bc.get("pose_carrier_counted_bytes")
         contribution = math.sqrt(10.0 * float(dpose)) if isinstance(dpose, (int, float)) else None
-        banked = {
+        r1_reference = {
             "ok": dpose is not None,
-            "d_pose": dpose,
-            "contribution": contribution,          # DERIVED sqrt(10*d_pose)
-            "xi_bytes": xi_bytes,                   # xi_eff / dxi section (COUNTED)
-            "n_pairs": parity.get("pairs_scored") or d.get("n_pairs_total"),
-            "authority": d.get("authority") or "[macOS-CPU advisory] NON-PROMOTABLE",
-            "promotable": bool(d.get("promotion_claim", False)),
+            "status": "unselected_reference",
+            "label": R1_REFERENCE_LABEL,
+            "payload_selected": False,
+            "current_config_claims": {"d_pose": None, "archive_bytes": None},
+            "advisory_artifact": {
+                "d_pose": dpose,
+                "pose_term": contribution,          # DERIVED sqrt(10*d_pose), reference only
+                "counted_pose_bytes": xi_bytes,      # reference artifact's xi_eff / dxi section
+                "n_pairs": parity.get("pairs_scored") or d.get("n_pairs_total"),
+                "source_axis": d.get("authority") or "[macOS-CPU advisory] NON-PROMOTABLE",
+                "promotable": bool(d.get("promotion_claim", False)),
+            },
             "source": str(r1_path),
         }
     except Exception as exc:
-        banked = {"ok": False, "reason": f"R1 artifact unreadable: {exc}",
-                  "source": str(r1_path)}
+        r1_reference.update({
+            "reason": f"R1 reference artifact unreadable: {exc}",
+            "source": str(r1_path),
+        })
 
     # ── 2) fallback contract state. ──
     detector_mode = flags.get("pose-finish-engage-on")  # e.g. sigma_min_plateau
     pose_finish_cap = _int_flag(flags, "pose-finish-start-epoch")
     engage = event_states.get("pose_finish_engage")
     armed = event_states.get("pose_finish_armed")
+    disengaged = event_states.get("pose_finish_disengaged_no_banked_payload")
     jb = sensors.get("jacobian_basin") or {}
-    # detector state precedence: fired > degenerate(basin unidentifiable) > armed > pending.
-    if engage is not None:
+    # Latest emitted terminal decision wins; otherwise armed/pending remain non-terminal.
+    engage_ep = engage.get("epoch") if isinstance(engage, dict) else None
+    disengaged_ep = disengaged.get("epoch") if isinstance(disengaged, dict) else None
+    disengagement_is_latest = (
+        disengaged_ep is not None and (engage_ep is None or disengaged_ep >= engage_ep)
+    )
+    if disengagement_is_latest:
+        det_state, det_at = "disengaged", disengaged_ep
+    elif engage is not None:
         det_state, det_at = "fired", engage.get("epoch")
     elif armed is not None:
         det_state, det_at = "armed", armed.get("epoch")
@@ -363,26 +422,27 @@ def build_pose_readiness_model(flags, event_states, sensors,
         sm, floor = jb.get("median_sigma_min"), jb.get("sigma_floor")
         if isinstance(sm, (int, float)) and isinstance(floor, (int, float)) and sm <= floor:
             degenerate = True
-    # should_ship_banked_r1: read from telemetry if the trainer emits it; else honest None.
-    ssbr = None
-    for src in (engage, armed):
-        if isinstance(src, dict) and "should_ship_banked_r1" in src:
-            ssbr = bool(src["should_ship_banked_r1"])
-            break
-
     contract = {
         "detector_mode": detector_mode,
         "detector_cap": pose_finish_cap,             # fail-safe cap epoch (from flag)
         "detector_state": det_state,
         "detector_at_epoch": det_at,
         "degenerate": degenerate,
-        "should_ship_banked_r1": ssbr,
+        "pose_state": (
+            "pose_disengaged_no_banked_payload" if det_state == "disengaged"
+            else "pose_finish_engaged" if det_state == "fired"
+            else "pose_finish_armed" if det_state == "armed"
+            else "pose_finish_pending"
+        ),
+        "payload_selected": False,
+        "d_pose_claim": None,
+        "archive_bytes_claim": None,
         "basin_probe_present": bool(jb),
         "decision_tree": ("detector fires -> joint pose finish · "
-                          "degenerate/never-fires -> ship banked R1 · "
+                          "degenerate/never-fires -> pose_disengaged_no_banked_payload · "
                           "regression -> rollback"),
         # honest pending copy while pose is terminal (no live pose telemetry yet).
         "pending_note": "joint finish: awaiting conditioning (first sigma rows >= ~ep400)",
     }
-    return {"ok": True, "banked_r1": banked, "contract": contract,
+    return {"ok": True, "r1_reference": r1_reference, "contract": contract,
             "pose_blind_by_design": True}
