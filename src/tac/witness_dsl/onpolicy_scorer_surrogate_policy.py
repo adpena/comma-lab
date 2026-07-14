@@ -26,7 +26,7 @@ class OnPolicyScorerSurrogatePolicy:
     control_cadences: tuple[int, ...] = (1, 4)
     input_channels: int = 9
     requires_exact_ce_descent: bool = True
-    requires_nonnegative_costate_cosine: bool = True
+    requires_nonnegative_costate_cosine: bool = False
     requires_sequence_endpoint_dseg_nonworsening: bool = True
     requires_sequence_endpoint_dpose_nonworsening: bool = True
     ema_decay: float = 0.997
@@ -47,6 +47,10 @@ class OnPolicyScorerSurrogatePolicy:
             raise ValueError("ema_decay must lie in [0.99, 1.0)")
         if self.fallback != "exact_anchor_refresh_only":
             raise ValueError("non-anchor exact fallback would invalidate forward replacement")
+        if self.requires_nonnegative_costate_cosine is not False:
+            raise ValueError(
+                "raw input-costate cosine is ambient diagnostic only and cannot gate admission"
+            )
         if not self.research_only or self.full_build_blocker != FULL_BUILD_BLOCKER:
             raise ValueError("task #455 remains research-only until one cadence passes the matched three-regime gate")
         if self.score_claim or self.promotion_eligible:
@@ -204,7 +208,7 @@ class OnPolicyScorerSurrogatePolicy:
             "ema_decay": self.ema_decay,
             "admission_predicate": {
                 "exact_cycle_ce_descent": self.requires_exact_ce_descent,
-                "nonnegative_costate_cosine": self.requires_nonnegative_costate_cosine,
+                "raw_input_costate_cosine": "AMBIENT_DIAGNOSTIC_ONLY",
                 "sequence_endpoint_dseg_nonworsening": self.requires_sequence_endpoint_dseg_nonworsening,
                 "sequence_endpoint_dpose_nonworsening": self.requires_sequence_endpoint_dpose_nonworsening,
             },

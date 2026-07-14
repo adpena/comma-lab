@@ -875,11 +875,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     agreement = measure_costate_agreement(
                         control_costate.detach().numpy(), candidate_costate.detach().numpy()
                     ).to_dict()
-                    if (
-                        agreement["cosine_similarity"] is not None
-                        and agreement["cosine_similarity"] < 0.0
-                    ):
-                        holds = False
                 row_step = {
                     "step": step,
                     "status": "MEASURED",

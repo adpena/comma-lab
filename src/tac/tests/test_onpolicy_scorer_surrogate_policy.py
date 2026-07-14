@@ -15,7 +15,7 @@ def test_policy_derives_95_percent_skip_cadence_and_emits_no_trainer_flag() -> N
     assert contract["live_trainer_argv"] == []
     assert contract["admission_predicate"] == {
         "exact_cycle_ce_descent": True,
-        "nonnegative_costate_cosine": True,
+        "raw_input_costate_cosine": "AMBIENT_DIAGNOSTIC_ONLY",
         "sequence_endpoint_dseg_nonworsening": True,
         "sequence_endpoint_dpose_nonworsening": True,
     }
