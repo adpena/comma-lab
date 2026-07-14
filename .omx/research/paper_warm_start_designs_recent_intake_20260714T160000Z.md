@@ -67,6 +67,32 @@ a recursive-refinement decode structure for #503's fractal-composition (interior
 partition-of-unity). Design-level; folds into #503, not a standalone dispatch.
 
 ---
+## DEEP-READ CORRECTION — RIPO's ACTUAL methodology supersedes my shallow §1 (operator depth directive)
+Operator: a warm-start requires DEEP reading of methodology + deep math, not a one-shot map. I deep-read
+RIPO's real methodology (arxiv HTML) and my §1 first-cut ("g'=P(margin)⊙g gradient preconditioner") was
+WRONG — an INSTANCE-only shallow map, per the reformulation ladder. The ACTUAL RIPO mechanism:
+- **It is NOT a natural-gradient / diagonal-Fisher PRECONDITIONER** (no matrix inversion). It is a
+  **distribution-dependent trust-region CLIP** on the importance ratio. From the KL Taylor expansion
+  (their Eq.7) `D_KL ≈ ½ Σ_a π_old(a) (r_a−1)²`, EQUAL GEOMETRIC (Fisher/KL) distance per action ⇒ the
+  per-action ratio budget is `ε_{s,a} = √(δ / π_old(a|s))` (their Eq.11) — inverse-sqrt in the action's
+  own probability. Low-prob actions get a LARGER budget; high-prob a SMALLER one (inverts PPO's uniform ε).
+  Variance becomes density-INDEPENDENT O(δ) (homoscedastic; their Prop 4.1), vs PPO heteroscedastic→0.
+- **Re-derived for OUR premises (the corrected warm-start):** our "policy" = the per-pixel SegNet softmax;
+  the "action prob" = the pixel's max-softmax CONFIDENCE p_pixel; the "update" = the witness seg-head logit
+  step. The RIPO isometric principle ⇒ a **per-pixel Fisher-isometric TRUST-REGION on the logit update:
+  ‖Δlogit_pixel‖ ≤ √(δ / p_pixel)** — low-confidence ANNULUS pixels (small margin, near-tie) get a WIDE
+  trust region (free to move to flip the argmax correctly); high-confidence INTERIOR pixels get a TIGHT
+  region (don't perturb what is already correct + dark in Fisher). This is a CONSTRAINT on update
+  magnitude, NOT a rescaling of the gradient direction (my first-cut confused the two). Bonus: the
+  homoscedastic-variance property is directly relevant to our EoS/eikonal instability (#316-#320) — a
+  density-independent step bound is exactly the anneal-stability shape we fought for from the DE side.
+- **Remaining deep-warm-start cycle (multi-step, main-Opus; codex out until Jul 20):** (a) verify the
+  KL→√(δ/p) derivation for the MULTI-CLASS softmax (RIPO is per-action-binary; our margin is a 5-class
+  tie-margin — the derivation must be redone for the argmax-margin, not a single action prob); (b) connect
+  δ to our measured margin/eikonal scales; (c) BUILD the per-pixel trust-region-clipped seg-head update;
+  (d) EXPERIMENT + ITERATE through R at n600 on the EMA-best until it converges. This supersedes the
+  shallow $0-ablation framing — it is a real re-derivation + build + iterate.
+
 **Disposition:** Designs 1-3 are the strongest and $0-measurable now; #1 (RIPO margin-Fisher seg-head
 preconditioner) is the single highest-value — it drops straight into the live #500 metric arm and targets
 the annulus where d_seg lives. I recommend folding #1 into #500 (or a focused $0 dispatch under the cap)
