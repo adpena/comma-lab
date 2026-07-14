@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: MIT
 """Pose-verdict gate — skip the CPU-torch PoseNet forward while pose is FROZEN.
 
-The authority verdict computes d_seg (SegNet) + d_pose (PoseNet) every eval. MEASURED
-(``frozen_scorer_verdict_wallclock_n96_20260714``): d_pose = **22.6%** of the verdict
-(~75 s / n600). But during the entire pre-pose-finish phase ``w_pose = 0`` — the pose carrier
+The authority verdict computes d_seg (SegNet) + d_pose (PoseNet) every eval. MEASURED on
+the n96 macOS-CPU Torch one-thread advisory timer
+(``frozen_scorer_verdict_wallclock_n96_20260714``): d_pose = **22.6%** of 59.615 s,
+or about 13.47 s. The corresponding n600 PoseNet cost is **DERIVED**, not measured:
+about 84.2 s under linear projection. During the entire pre-pose-finish phase ``w_pose = 0``
+— the pose carrier
 (dxi) is FROZEN at the banked-R1 init, so pose is NOT descending and the live d_pose is
 non-actionable telemetry. Recomputing PoseNet every verdict is dead work.
 

@@ -70,6 +70,7 @@ from train_witness_realized_through_R_mlx import (  # noqa: E402
     cpu_verdict_d_seg_argmax_batch,
     cpu_verdict_d_seg_batch,
     focal_pixel_weight_mlx,
+    gpu_verdict_d_seg_argmax_batch,
     gpu_verdict_dseg_dpose_chunked,
     implied_score_from_verdict,
     load_gt_from_cache,
@@ -139,6 +140,11 @@ from tac.optimization.md_decoupling import (  # noqa: E402
 from tac.optimization.muon_finisher_mlx import (  # noqa: E402
     build_muon_finisher_optimizer,
     count_muon_adamw_split,
+)
+from tac.witness_control.pose_verdict_gate import (  # noqa: E402
+    banked_pose_telemetry,
+    canary_drift,
+    decide_pose_verdict,
 )
 from tac.witness_control.telemetry_producers import (  # noqa: E402
     ClipActivationAggregator,
@@ -230,8 +236,8 @@ def _rss_gib() -> float:
 def _verdict_dseg_dpose_chunked(
     seg_cpu: Any, posenet_cpu: Any,
     f0s: list, f1s: list, lstars: list, poses: list, *, vbatch: int,
-    return_realized: bool = False,
-) -> "tuple[float, float] | tuple[float, float, list]":
+    return_realized: bool = False, compute_pose: bool = True,
+) -> tuple[float, float | None] | tuple[float, float | None, list]:
     """(#205 REAL OOM FIX) mean d_seg / d_pose over N pairs, running SegNet/PoseNet in CHUNKS of
     ``vbatch`` instead of one N-wide torch batch.
 
@@ -247,7 +253,10 @@ def _verdict_dseg_dpose_chunked(
     concatenation equals the single N-wide batch to the last bit. ``vbatch<=0`` restores the
     single-batch (pre-fix) path for the A/B parity check.
 
-    ``return_realized`` (DEFAULT False => BYTE-IDENTICAL to the sealed #205 verdict): when True, ALSO
+    ``compute_pose=False`` is the default-OFF pose-verdict gate: it skips every PoseNet
+    forward and returns ``None`` for d_pose so the shared caller must substitute explicitly
+    labelled banked telemetry. ``return_realized`` (DEFAULT False => BYTE-IDENTICAL to the
+    sealed #205 verdict): when True, ALSO
     returns the realized SegNet argmax maps (list of (h,w) int64) collected from the SAME forward via
     ``cpu_verdict_d_seg_argmax_batch`` (whose per-pair d_seg is bit-identical to ``cpu_verdict_d_seg_batch``
     -- same preprocess -> forward -> argmax(dim=1) -> per-pixel disagreement). This lets the opt-in
@@ -259,6 +268,8 @@ def _verdict_dseg_dpose_chunked(
         # ── UNCHANGED default path (byte-identical to the sealed #205 verdict) ──
         if vbatch is None or vbatch <= 0 or vbatch >= n:
             ds = cpu_verdict_d_seg_batch(seg_cpu, f1s, lstars)
+            if not compute_pose:
+                return float(np.mean(ds)), None
             dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, poses)
             return float(np.mean(ds)), float(np.mean(dp))
         ds_all: list[float] = []
@@ -266,8 +277,13 @@ def _verdict_dseg_dpose_chunked(
         for s in range(0, n, vbatch):
             e = min(s + vbatch, n)
             ds_all.extend(cpu_verdict_d_seg_batch(seg_cpu, f1s[s:e], lstars[s:e]))
-            dp_all.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
-        return float(np.mean(ds_all)), float(np.mean(dp_all))
+            if compute_pose:
+                dp_all.extend(
+                    cpu_verdict_d_pose_batch(
+                        posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]
+                    )
+                )
+        return float(np.mean(ds_all)), (float(np.mean(dp_all)) if compute_pose else None)
     # ── return_realized path (annulus telemetry ON only): bit-identical d_seg via the argmax variant,
     #    plus the realized maps collected from the SAME chunked forward. ──
     vb = n if (vbatch is None or vbatch <= 0 or vbatch >= n) else int(vbatch)
@@ -278,15 +294,23 @@ def _verdict_dseg_dpose_chunked(
         e = min(s + vb, n)
         ds_chunk, realized = cpu_verdict_d_seg_argmax_batch(seg_cpu, f1s[s:e], lstars[s:e])
         ds_all.extend(ds_chunk)
-        dp_all.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
+        if compute_pose:
+            dp_all.extend(
+                cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e])
+            )
         realized_all.extend([realized[i] for i in range(e - s)])
-    return float(np.mean(ds_all)), float(np.mean(dp_all)), realized_all
+    return (
+        float(np.mean(ds_all)),
+        float(np.mean(dp_all)) if compute_pose else None,
+        realized_all,
+    )
 
 
 def _verdict_dseg_dpose_nucleus_chunked(
     seg_cpu: Any, posenet_cpu: Any,
     f0s: list, f1s: list, lstars: list, poses: list, *, vbatch: int,
-) -> "tuple[float, float, dict]":
+    compute_pose: bool = True,
+) -> tuple[float, float | None, dict]:
     """(#302 nucleus guard) Same chunked mean d_seg / d_pose as ``_verdict_dseg_dpose_chunked`` PLUS
     the per-class critical-nucleus COUNTS, in the SAME single SegNet forward (no double cost).
 
@@ -301,16 +325,101 @@ def _verdict_dseg_dpose_nucleus_chunked(
     vb = n if (vbatch is None or vbatch <= 0 or vbatch >= n) else int(vbatch)
     ds_all: list[float] = []
     dp_all: list[float] = []
-    counts: "dict | None" = None
+    counts: dict | None = None
     for s in range(0, n, vb):
         e = min(s + vb, n)
         ds_chunk, realized = cpu_verdict_d_seg_argmax_batch(seg_cpu, f1s[s:e], lstars[s:e])
         ds_all.extend(ds_chunk)
-        dp_all.extend(cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e]))
+        if compute_pose:
+            dp_all.extend(
+                cpu_verdict_d_pose_batch(posenet_cpu, f0s[s:e], f1s[s:e], poses[s:e])
+            )
         counts = _evt_counts_add(
             counts, _evt_nucleus_counts([realized[i] for i in range(e - s)], lstars[s:e]))
-    return (float(np.mean(ds_all)), float(np.mean(dp_all)),
-            counts if counts is not None else _evt_nucleus_counts([], []))
+    return (
+        float(np.mean(ds_all)),
+        float(np.mean(dp_all)) if compute_pose else None,
+        counts if counts is not None else _evt_nucleus_counts([], []),
+    )
+
+
+def _gpu_verdict_dseg_chunked(
+    mlx_adapter: Any,
+    seg_cpu: Any,
+    f1s: list,
+    lstars: list,
+    *,
+    vbatch: int,
+    return_realized: bool = False,
+) -> float | tuple[float, list]:
+    """Seg-only MLX verdict path used when the pose-verdict gate skips PoseNet.
+
+    This deliberately does not call ``gpu_verdict_dseg_dpose_chunked`` because that
+    combined helper necessarily forwards PoseNet. The default-OFF gate therefore saves
+    PoseNet on the GPU branch too, while preserving the identical SegNet primitive.
+    """
+
+    n = len(f1s)
+    vb = n if vbatch is None or vbatch <= 0 or vbatch >= n else int(vbatch)
+    ds_all: list[float] = []
+    realized_all: list = []
+    for start in range(0, n, vb):
+        stop = min(start + vb, n)
+        ds_chunk, realized = gpu_verdict_d_seg_argmax_batch(
+            mlx_adapter.segnet,
+            seg_cpu,
+            f1s[start:stop],
+            lstars[start:stop],
+        )
+        ds_all.extend(ds_chunk)
+        if return_realized:
+            realized_all.extend([realized[i] for i in range(stop - start)])
+    d_seg = float(np.mean(ds_all))
+    return (d_seg, realized_all) if return_realized else d_seg
+
+
+def _paired_seg_anchor(
+    mlx_adapter: Any,
+    seg_cpu: Any,
+    f1s: list,
+    lstars: list,
+    *,
+    vbatch: int,
+) -> dict[str, Any]:
+    """CPU/MLX Seg-only anchor for a pose-gated GPU verdict.
+
+    The emitted row is intentionally a different schema from the paired Seg+Pose drift
+    row so banked pose telemetry can never masquerade as a live PoseNet comparison.
+    """
+
+    n = len(f1s)
+    vb = n if vbatch is None or vbatch <= 0 or vbatch >= n else int(vbatch)
+    cpu_ds: list[float] = []
+    gpu_ds: list[float] = []
+    flips = 0
+    for start in range(0, n, vb):
+        stop = min(start + vb, n)
+        cpu_chunk, cpu_realized = cpu_verdict_d_seg_argmax_batch(
+            seg_cpu, f1s[start:stop], lstars[start:stop]
+        )
+        gpu_chunk, gpu_realized = gpu_verdict_d_seg_argmax_batch(
+            mlx_adapter.segnet,
+            seg_cpu,
+            f1s[start:stop],
+            lstars[start:stop],
+        )
+        cpu_ds.extend(cpu_chunk)
+        gpu_ds.extend(gpu_chunk)
+        flips += int(np.count_nonzero(np.asarray(cpu_realized) != np.asarray(gpu_realized)))
+    return {
+        "stage": "verdict_anchor_seg_only",
+        "d_seg_cpu": float(np.mean(cpu_ds)),
+        "d_seg_gpu": float(np.mean(gpu_ds)),
+        "argmax_flip_disagreement_count": flips,
+        "d_pose_source": "banked_R1_pose_gated",
+        "d_pose_live": False,
+        "axis": "[macOS CPU/MLX advisory; pose banked NON-LIVE] NON-PROMOTABLE",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -7481,6 +7590,32 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _verdict_device = str(getattr(args, "verdict_device", "cpu"))
     _verdict_anchor_every = int(getattr(args, "verdict_anchor_every", 0))
     _gpu_verdict_count = [0]  # mutable closure counter of gpu verdicts (anchor cadence)
+    _pose_verdict_count = [0]
+    _pose_verdict_count_lock = threading.Lock()
+
+    def _pose_verdict_gate_state(_prefix: str) -> dict[str, Any]:
+        if not bool(getattr(args, "verdict_pose_gate", False)):
+            return {}
+        return {f"{_prefix}count": np.asarray([_pose_verdict_count[0]], dtype=np.int64)}
+
+    def _restore_pose_verdict_gate(_prefix: str, cfg: dict[str, Any]) -> bool:
+        key = f"{_prefix}count"
+        if not bool(getattr(args, "verdict_pose_gate", False)) or key not in cfg:
+            return False
+        value = int(np.asarray(cfg[key]).reshape(-1)[0])
+        if value < 0:
+            raise ValueError(f"invalid resumed pose-verdict count {value}")
+        _pose_verdict_count[0] = value
+        return True
+
+    _resume_registry.register(
+        "pose_verdict_gate",
+        "__pvg_",
+        _FreshFnResumable(
+            write=_pose_verdict_gate_state,
+            restore=_restore_pose_verdict_gate,
+        ),
+    )
 
     # (#330 memory-reclaim) subprocess verdict gate. ON only for the PLAIN d_seg/d_pose path (cpu
     # device, nucleus OFF, annulus OFF -- those variants need the realized argmax maps, which the
@@ -7491,7 +7626,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _verdict_subprocess_on = (bool(getattr(args, "verdict_subprocess", False))
                               and _verdict_device == "cpu" and not _nucleus_on and not _annulus_on)
 
-    def _verdict_v(f0s: list, f1s: list, *, ep: int = -1) -> dict[str, float]:
+    def _verdict_v(
+        f0s: list,
+        f1s: list,
+        *,
+        ep: int = -1,
+        pose_verdict_index: int | None = None,
+    ) -> dict[str, Any]:
         """Shared verdict tail: given rendered f0s/f1s over ``vpairs``, return the {d_seg,d_pose} dict.
 
         Nucleus OFF + --no-annulus-telemetry => the UNCHANGED _verdict_dseg_dpose_chunked call =>
@@ -7504,19 +7645,88 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         lstars_v = [gt.lstars[pi] for pi in vpairs]
         poses_v = [gt.gt_poses[pi] for pi in vpairs]
         _realized: "list | None" = None
+        if pose_verdict_index is None:
+            with _pose_verdict_count_lock:
+                _pose_verdict_index = _pose_verdict_count[0]
+                _pose_verdict_count[0] += 1
+        else:
+            _pose_verdict_index = int(pose_verdict_index)
+        _pose_decision = decide_pose_verdict(
+            epoch=int(ep),
+            pose_engaged_epoch=int(_pose_gate["engaged_epoch"]),
+            verdict_index=_pose_verdict_index,
+            gate_on=bool(getattr(args, "verdict_pose_gate", False)),
+            canary_every=int(getattr(args, "verdict_pose_canary_every", 8)),
+        )
+
+        def _finish_pose_gate(v: dict[str, Any]) -> dict[str, Any]:
+            if not _pose_decision.compute_live:
+                telemetry = banked_pose_telemetry(
+                    float(args.banked_r1_dpose), _pose_decision.reason
+                )
+                v["d_pose"] = float(telemetry["d_pose"])
+                v["_pose_gate_telemetry"] = {
+                    **{key: value for key, value in telemetry.items() if key != "d_pose"},
+                    "pose_verdict_index": _pose_verdict_index,
+                }
+            elif bool(getattr(args, "verdict_pose_gate", False)):
+                v["_pose_gate_telemetry"] = {
+                    "d_pose_source": "live",
+                    "d_pose_axis": "[macOS-CPU-torch advisory; LIVE] NON-PROMOTABLE",
+                    "d_pose_live": True,
+                    "pose_gate_reason": _pose_decision.reason,
+                    "pose_verdict_index": _pose_verdict_index,
+                }
+                if _pose_decision.is_canary:
+                    print(
+                        json.dumps(
+                            {
+                                **canary_drift(
+                                    float(v["d_pose"]), float(args.banked_r1_dpose)
+                                ),
+                                "epoch": int(ep),
+                                "verdict_index": _pose_verdict_index,
+                            }
+                        ),
+                        flush=True,
+                    )
+            return v
         # (operator 2026-07-08) GPU verdict device. Runs the ADVISORY d_seg/d_pose through the MLX
         # scorer ports (the nucleus-guard / ladder controllers are refused up-front, so the gpu path
         # never feeds training; annulus/per-class telemetry rides the gpu realized when ON). Then, on
         # the anchor cadence, ALSO run the CPU-torch positive-control + emit the paired drift row.
         if _verdict_device == "gpu":
             _need_realized = _annulus_on
-            _gpu = gpu_verdict_dseg_dpose_chunked(
-                adapter, seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v,
-                vbatch=int(args.verdict_batch), return_realized=_need_realized)
-            if _need_realized:
-                d_seg, d_pose, _realized = _gpu
+            if _pose_decision.compute_live:
+                _gpu = gpu_verdict_dseg_dpose_chunked(
+                    adapter,
+                    seg_cpu,
+                    posenet_cpu,
+                    f0s,
+                    f1s,
+                    lstars_v,
+                    poses_v,
+                    vbatch=int(args.verdict_batch),
+                    return_realized=_need_realized,
+                )
+                if _need_realized:
+                    d_seg, d_pose, _realized = _gpu
+                else:
+                    d_seg, d_pose = _gpu
             else:
-                d_seg, d_pose = _gpu
+                _gpu_seg = _gpu_verdict_dseg_chunked(
+                    adapter,
+                    seg_cpu,
+                    f1s,
+                    lstars_v,
+                    vbatch=int(args.verdict_batch),
+                    return_realized=_need_realized,
+                )
+                if _need_realized:
+                    d_seg, _realized = _gpu_seg
+                else:
+                    d_seg = _gpu_seg
+                d_pose = None
             v = {"d_seg": d_seg, "d_pose": d_pose}
             if _annulus_on:
                 try:
@@ -7537,25 +7747,62 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _gpu_verdict_count[0] += 1
             if _should_anchor(_gpu_verdict_count[0], _verdict_anchor_every):
                 try:  # the CPU-torch positive-control ANCHOR + paired drift row (fail-open telemetry).
-                    _paired = paired_anchor_verdict(
-                        adapter, seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v,
-                        vbatch=int(args.verdict_batch))
-                    print(json.dumps(_build_paired_drift_row(
-                        _paired, epoch=int(ep), verdict_batch=int(args.verdict_batch))), flush=True)
+                    if _pose_decision.compute_live:
+                        _paired = paired_anchor_verdict(
+                            adapter,
+                            seg_cpu,
+                            posenet_cpu,
+                            f0s,
+                            f1s,
+                            lstars_v,
+                            poses_v,
+                            vbatch=int(args.verdict_batch),
+                        )
+                        _anchor_row = _build_paired_drift_row(
+                            _paired,
+                            epoch=int(ep),
+                            verdict_batch=int(args.verdict_batch),
+                        )
+                    else:
+                        _anchor_row = {
+                            **_paired_seg_anchor(
+                                adapter,
+                                seg_cpu,
+                                f1s,
+                                lstars_v,
+                                vbatch=int(args.verdict_batch),
+                            ),
+                            "epoch": int(ep),
+                            "verdict_batch": int(args.verdict_batch),
+                        }
+                    print(json.dumps(_anchor_row), flush=True)
                 except Exception as exc:
                     print(json.dumps({"stage": "verdict_anchor", "epoch": int(ep),
                                       "error": f"{type(exc).__name__}: {exc}"}), flush=True)
-            return v
+            return _finish_pose_gate(v)
         if _nucleus_on:
             d_seg, d_pose, _ncounts = _verdict_dseg_dpose_nucleus_chunked(
-                seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch))
-            v: dict[str, float] = {"d_seg": d_seg, "d_pose": d_pose, "nucleus_counts": _ncounts}
+                seg_cpu,
+                posenet_cpu,
+                f0s,
+                f1s,
+                lstars_v,
+                poses_v,
+                vbatch=int(args.verdict_batch),
+                compute_pose=_pose_decision.compute_live,
+            )
+            v: dict[str, Any] = {
+                "d_seg": d_seg,
+                "d_pose": d_pose,
+                "nucleus_counts": _ncounts,
+            }
         elif _annulus_on:
             d_seg, d_pose, _realized = _verdict_dseg_dpose_chunked(
                 seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v,
-                vbatch=int(args.verdict_batch), return_realized=True)
+                vbatch=int(args.verdict_batch), return_realized=True,
+                compute_pose=_pose_decision.compute_live)
             v = {"d_seg": d_seg, "d_pose": d_pose}
-        elif _verdict_subprocess_on:
+        elif _verdict_subprocess_on and _pose_decision.compute_live:
             # (#330) plain d_seg/d_pose path in a killpg-reclaimed CHILD process (parent RSS returns to
             # baseline; BIT-IDENTICAL — same cpu_verdict_* + same --verdict-batch). Fail-open: any child
             # error falls back to the in-process chunked call (NEVER a fabricated verdict).
@@ -7573,7 +7820,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             v = {"d_seg": d_seg, "d_pose": d_pose}
         else:
             d_seg, d_pose = _verdict_dseg_dpose_chunked(
-                seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch))
+                seg_cpu,
+                posenet_cpu,
+                f0s,
+                f1s,
+                lstars_v,
+                poses_v,
+                vbatch=int(args.verdict_batch),
+                compute_pose=_pose_decision.compute_live,
+            )
             v = {"d_seg": d_seg, "d_pose": d_pose}
         if _annulus_on:
             try:
@@ -7597,7 +7852,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     v["per_class"] = per_class_dseg_fields(_fl, _px)
             except Exception as exc:
                 v["per_class"] = {"error": f"{type(exc).__name__}: {exc}"}
-        return v
+        return _finish_pose_gate(v)
 
     def realized_verdict(ep: int = -1) -> dict[str, float]:
         # (fix a+b+c) verdict the EMA SHADOW, int8-DEQUANTIZED, via the fp32 numpy ONE CODEPATH
@@ -7749,7 +8004,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # byte-identical). Degenerate/canary-fail/never-fired => ship banked R1 (DISENGAGED + LOUD alarm,
     # NEVER blocks — SYNTHESIS §A.4 Repair 2b/4).
     _pose_gate_mode = str(getattr(args, "pose_finish_engage_on", "muon"))
-    _pose_gate: dict = {"det": None, "actuating": False, "trusted": True, "engaged_epoch": -1,
+    _pose_gate: dict = {"det": None, "actuating": False, "trusted": True,
+                        "engaged_epoch": (0 if _pose_finish_start <= 0 else -1),
                         "armed": _pose_finish_start > 0}
     _pose_gate_requested = (_pose_gate_mode == "sigma_min_plateau") and (_pose_finish_start > 0)
     if _pose_gate_requested and not _jbasin_on:
@@ -8052,7 +8308,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return np.concatenate([curv_feats_np, dir_snap[pi]], axis=-1).astype(np.float32)
 
     def _verdict_from_snapshot(
-        snap: dict[str, Any], *, parameter_key: str = "ema_np"
+        snap: dict[str, Any],
+        *,
+        epoch: int,
+        parameter_key: str = "ema_np",
+        pose_verdict_index: int | None = None,
     ) -> dict[str, float]:
         # BIT-IDENTICAL to realized_verdict() on the captured state: same int8 dequant, same
         # fp32 ONE-CODEPATH forward, same softmax_temp, same per-pair feats, same CPU scorers.
@@ -8085,7 +8345,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (#205 OOM fix) chunk the CPU-scorer inference (bit-identical; eval-mode BN running stats).
         # (#302) nucleus + (SENSE) annulus routed through the SAME shared _verdict_v tail as the sync
         # path, so the ASYNC worker's row is bit-identical and the flag-absent path is byte-identical.
-        return _verdict_v(f0s, f1s)
+        return _verdict_v(
+            f0s,
+            f1s,
+            ep=int(epoch),
+            pose_verdict_index=pose_verdict_index,
+        )
 
     history: list[dict[str, Any]] = []
     _verdict_lock = threading.Lock()
@@ -8210,6 +8475,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # (2026-07-07) pop the per-class decomposition the same way (dict of lists — must not hit
         # the float spread, and must NOT reach history/result.json: observability-only).
         _per_class = v.pop("per_class", None) if isinstance(v, dict) else None
+        # (task-494) source label for a pose-gated value. Pop before the float-only spread, then
+        # add it verbatim to the emitted verdict row so a banked value can never pose as live.
+        _pose_gate_m = v.pop("_pose_gate_telemetry", None) if isinstance(v, dict) else None
         blob = quantize_levelset_blob(ema_np)
         s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
         # (C6) LIVENESS STAMP captured at SCHEDULE time (the async worker runs later, off a snapshot;
@@ -8232,6 +8500,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                    "verdict_device": _verdict_device}
             if row_extra:
                 row.update({k: round(float(vv), 6) for k, vv in row_extra.items()})
+            if isinstance(_pose_gate_m, dict):
+                row.update(_pose_gate_m)
             # (2026-07-07) ADDITIVE observability fields — per-class d_seg (when the annulus branch
             # collected realized maps) + process/MLX memory (#329, every verdict row). Both fail-open
             # + row-only (never history/result.json); consumers read rows by key => additive-safe.
@@ -8417,11 +8687,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             t0 = time.time()
             _da_verdict_start_ns = time.perf_counter_ns()
             try:
-                v = _verdict_from_snapshot(snap)
+                v = _verdict_from_snapshot(snap, epoch=ep)
                 _live_gap = None
                 if "live_np" in snap:
-                    _live_v = _verdict_from_snapshot(snap, parameter_key="live_np")
+                    _pose_meta_for_gap = v.get("_pose_gate_telemetry", {})
+                    _live_v = _verdict_from_snapshot(
+                        snap,
+                        epoch=ep,
+                        parameter_key="live_np",
+                        pose_verdict_index=_pose_meta_for_gap.get("pose_verdict_index"),
+                    )
                     _live_gap = live_gap_fields(v, _live_v)
+                    if _pose_meta_for_gap.get("d_pose_live") is False:
+                        _live_gap.pop("d_pose_live", None)
+                        _live_gap.pop("d_pose_ema_minus_live", None)
                 _emit_verdict_row(v, snap["ema_np"], ep, seg_form, ep_loss, async_tag=True,
                                   liveness=_lv_snap, tau=float(snap.get("softmax_temp")),
                                   row_extra=_live_gap)
@@ -9832,12 +10111,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _pshadow = {k: np.asarray(v, np.float32).reshape(np.asarray(ema.shadow[k]).shape)
                         for k, v in _pend["ema_np"].items()}
             try:
-                _pv = _verdict_from_snapshot({
-                    "ema_np": _pshadow,
-                    "softmax_temp": float(_pend["softmax_temp"]),
-                    "hosc_beta": float(_pend["hosc_beta"]),
-                    "dir": ({pi: dir_feats_per_pair[pi].copy() for pi in vpairs}
-                            if use_self_orient else None)})
+                _pv = _verdict_from_snapshot(
+                    {
+                        "ema_np": _pshadow,
+                        "softmax_temp": float(_pend["softmax_temp"]),
+                        "hosc_beta": float(_pend["hosc_beta"]),
+                        "dir": (
+                            {pi: dir_feats_per_pair[pi].copy() for pi in vpairs}
+                            if use_self_orient
+                            else None
+                        ),
+                    },
+                    epoch=int(_pend["epoch"]),
+                )
             except Exception as exc:
                 # (M2-F2 fix, throughput review 2026-07-04) FAIL-SAFE: a pending record whose
                 # synchronous recompute FAILS is DROPPED — explicitly, logged, deterministically.
@@ -10745,6 +11031,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _pose_finish_on["on"] = bool(_muon_gate.fired) or (ep >= _pose_finish_start)
                 _w_pose_now["v"] = float(args.w_pose) if _pose_finish_on["on"] else 0.0
                 if _pose_finish_on["on"] and not _pf_was_on:
+                    _pose_gate["engaged_epoch"] = int(ep)
                     recent_losses.clear()  # treat as an AdamW->AdamW loss-form boundary (spike-guard re-treat)
                     if _pose_gate_mode == "sigma_min_plateau":
                         _engage_via = "sigma_min_plateau" if _cond_fired else "backstop_fail_safe"
@@ -11735,9 +12022,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     if (_verdict_live_gap_every > 0
                             and int(ep) % _verdict_live_gap_every == 0):
                         _live_snap_sync = _capture_verdict_snapshot(include_live=True)
+                        _pose_meta_sync = v.get("_pose_gate_telemetry", {})
                         _live_v_sync = _verdict_from_snapshot(
-                            _live_snap_sync, parameter_key="live_np")
+                            _live_snap_sync,
+                            epoch=ep,
+                            parameter_key="live_np",
+                            pose_verdict_index=_pose_meta_sync.get("pose_verdict_index"),
+                        )
                         _live_gap_sync = live_gap_fields(v, _live_v_sync)
+                        if _pose_meta_sync.get("d_pose_live") is False:
+                            _live_gap_sync.pop("d_pose_live", None)
+                            _live_gap_sync.pop("d_pose_ema_minus_live", None)
                     # (#302) split per-class counts out of the float-only sync verdict row / history.
                     _ncounts_sync = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
                     # (SENSE) pop annulus BEFORE the float-only row spread. None unless
@@ -11748,6 +12043,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # append, mirroring _emit_verdict_row (row-only observability; a dict here
                     # crashed round() on every sync in-loop verdict with annulus telemetry active).
                     _per_class_sync = v.pop("per_class", None) if isinstance(v, dict) else None
+                    _pose_gate_sync = (
+                        v.pop("_pose_gate_telemetry", None) if isinstance(v, dict) else None
+                    )
                     blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
                     s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
                     # (C6) LIVENESS STAMP on the verdict row + frozen_epoch flag/alarm: a verdict d_seg
@@ -11771,6 +12069,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       **({k: round(float(vv), 6)
                                           for k, vv in _live_gap_sync.items()}
                                          if _live_gap_sync is not None else {}),
+                                      **(_pose_gate_sync if isinstance(_pose_gate_sync, dict) else {}),
                                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}), flush=True)
                     # (SENSE) companion annulus_convergence row (opt-in; byte-identical when absent).
                     if _annulus_sync is not None:
@@ -12570,6 +12869,28 @@ def main(argv: list[str] | None = None) -> int:
                     help="(task-408 Q3 DSL Lever, default 0=OFF) every Kth verdict, run one extra "
                     "advisory live-weight inference and append d_seg_live/d_pose_live plus EMA-minus-"
                     "live gaps. Never feeds training or controller decisions.")
+    ap.add_argument(
+        "--verdict-pose-gate",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="(task-494, default OFF) skip the frozen CPU/MLX PoseNet verdict while the pose "
+        "carrier is pre-finish frozen; substitute explicitly labelled banked-R1 d_pose telemetry "
+        "and force a live drift canary every --verdict-pose-canary-every verdicts. Score-neutral "
+        "telemetry optimization; live PoseNet resumes when pose engages.",
+    )
+    ap.add_argument(
+        "--verdict-pose-canary-every",
+        type=int,
+        default=8,
+        help="(task-494) pose-verdict gate live-canary cadence; clamped to at least 1.",
+    )
+    ap.add_argument(
+        "--banked-r1-dpose",
+        type=float,
+        default=0.001610,
+        help="(task-494) banked R1 d_pose emitted only with an explicit NON-LIVE source label "
+        "while --verdict-pose-gate skips frozen-pose PoseNet forwards.",
+    )
     ap.add_argument("--verdict-subprocess", action=argparse.BooleanOptionalAction, default=False,
                     help="(#330 memory-reclaim) run the CPU-torch verdict's chunked scorer forward in a "
                     "killpg-reclaimed CHILD process so its ~5-6 GiB fp32/activation transient is reclaimed "
