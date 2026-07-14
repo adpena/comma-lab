@@ -125,3 +125,6 @@ measured-response allocation dominates proxy-saliency tiers); DSL TieredCodeQATL
 ROUTES: #406 rate/pose apply-pass + #336 bit-alloc (banked); #501 fake-audit (the seed-proxy negative).
 APPARATUS FLAG: 2 unregistered heavy sibling arms are blowing +50GiB phantom RSS + refusing legit launches —
 governor contained (refused, no override); operator-decide register-or-stop.
+
+## FEED-click-stopcause-correct (2026-07-14) [no-triality]
+click_polish_399 `_import` block-loop STOPPED 07-14 11:30 — **main stopped it under OPERATOR AUTHORIZATION** (safety-classifier first denied; operator then authorized), NOT jetsam/OOM (forensic mis-attribution, corrected; no crash marker = clean intentional stop). RETRACT the governor-OOM-receipt framing (not a memory casualty). SUBSTANCE intact/resumable: 52 blocks banked, best block-0 advisory S=0.18791567 (splice-verified seg/pose maxabs=0), sweep_state pass 129/block1, clicks_ledger intact, candidate MODAL-HOLD never exact-eval-d -> pointer UNMOVED 0.18804/0.19108. canonical-eq leg N/A (no new law; 0.18791567 is the run own advisory). Memory: [[dont_forensically_misattribute_own_authorized_action_to_system_event_20260714]]. Ledger: consolidation_drain_cherrypick_prune_driftgate_20260714.md.
