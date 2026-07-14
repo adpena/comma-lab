@@ -97,3 +97,31 @@ self-generated-data + MDL parent of margin-conditional flip coder (#226/#307); 2
 → HSE diagnostic for organ #436 regime-dispatch (vacuous-vs-real); 2607.10109 AMC saliency compression → margin-
 saliency bit/rank tiering RATE lever (Fable arm live, macOS=all-surfaces); 2607.10765 Lee-Yang spectral-gap =
 COOL-BUT-DISTANT (quantum; one thread = size-independent-gap↔anneal-rate floor #318/log-Sobolev, no arm).
+
+---
+## FEED-fable-AMC-saliency (2026-07-14, pointer 0.19108/0.18804 UNMOVED, advisory axis)
+
+**Fable arm (Apple adaptive-compression warm-start, macOS=all-surfaces; committed 7c99b52b75) — a BANKED
+advisory RATE lever + an honest seed-proxy NEGATIVE.**
+STRUCTURAL KEY (verified in render path): pair i's d_seg depends ONLY on its own frame_1 code row ⇒ per-row
+QDQ composition is EXACTLY ADDITIVE ⇒ escapes the 07-13 cross-tensor joint-REJECT by construction; per-row QDQ
+on the tensor-global absmax grid needs ZERO receiver changes + ZERO side info.
+MEASURED (real brotli, exact grammar; d_seg = DERIVED-exact recombination of measured per-pair rung rows,
+pre-registered): role arms −5,704/−8,461 B at unchanged d_seg. **pairkkt (exact per-pair KKT from measured
+responses): d_seg 0.031523 BELOW the int8 baseline at 52,981 B = −10,683 B** — encoder-side per-video search,
+receiver unchanged, PR101-sidecar lineage. NEGATIVE: naive AMC error-mass saliency tiers DOMINATED (d_seg
+0.034019, worse than its own random falsifier 0.033926 AND uniform int4 0.033804) → the seed's saliency proxy
+is INSTANCE-level falsified (NOT a family NO-GO). Tiering-changes-allocation proven (230 B + sha delta for
+same tier sizes, different assignment). Custody: baseline/uniform re-derived byte-identical 6/6 sha vs 07-13
+n600 artifact. VERDICT SCOPE: INSTANCE×FORMULATION. AXIS: [macOS-CPU; NumPy-fp32; CPU frozen scorers],
+score_claim=false — NOT contest-CPU.
+OWED (operator-GO): fresh joint n600 scoring (d_pose NOT recombinable + fresh d_seg confirmation) was REFUSED
+TWICE by the governed admission gate (+50 GiB phantom growth charged to 2 UNREGISTERED sibling arms
+click_polish_block_loop / probe_genuine_frame_nterm_n600; no override — operator-verbatim required). Resumable
+~50 min command in .omx/research/fable_amc_saliency_codex.md §6. PAYS ONLY at a competitive witness checkpoint
+(witness still S≈4+ advisory; allocation re-solves per checkpoint from its own response rows).
+HELD for provenance owner: canonical eq amc_perrow_tiered_code_bitalloc_v1 (law: pair-local rows ⇒ additive ⇒
+measured-response allocation dominates proxy-saliency tiers); DSL TieredCodeQATLever spec (train-time, born-through-DSL).
+ROUTES: #406 rate/pose apply-pass + #336 bit-alloc (banked); #501 fake-audit (the seed-proxy negative).
+APPARATUS FLAG: 2 unregistered heavy sibling arms are blowing +50GiB phantom RSS + refusing legit launches —
+governor contained (refused, no override); operator-decide register-or-stop.
