@@ -1,0 +1,223 @@
+{
+  "schema": "perclass_convergence_ab_preflight.v1",
+  "generated_at_utc": "2026-07-14T12:25:03Z",
+  "git_head_before_lane_commit": "c12957757efaaa2e5311ea8ae3cd33a922bd6407",
+  "pointer": {
+    "submittable_score": 0.1910828242,
+    "submittable_axis": "[contest-CPU]",
+    "bank_score": 0.188044398,
+    "bank_status": "non-submission defensive",
+    "moved": false
+  },
+  "scope": {
+    "execution": "BUILD_PREFLIGHT_ONLY",
+    "metal_training_launched": false,
+    "score_claim": false,
+    "launch_owner": "main on M5-Max Metal",
+    "evidence_axis": "[macOS-MLX training-gradient]/[macOS-CPU advisory] verdict; real-n600; NON-PROMOTABLE",
+    "verdict_scope": "INSTANCE: exact typed arm, seed, real-n600 cache, and 150-epoch horizon"
+  },
+  "inputs": {
+    "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_bytes": 5078017610,
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "pair_count": 600,
+    "epochs": 150,
+    "eval_every": 25,
+    "checkpoint_every": 25,
+    "preregistration": ".omx/research/perclass_convergence_ab_implementation_spec_20260714_codex.md",
+    "preregistration_sha256": "988eb7962c9c58e0d4c3f0bdae07ff58393e2599cef8eeaba03aaab8f632ed10",
+    "analyzer": "tools/probe_ordinal_perclass_convergence.py",
+    "analyzer_sha256": "e126a2ae220e73c619e295095fb06586e03882cc5f5f36b4be223b7878b3ac4d"
+  },
+  "horizon_derivation": {
+    "label": "DERIVED_FROM_MEASURED_SLOPES",
+    "ep100_to_125_relative_slope": -0.00114,
+    "ep125_to_150_relative_slope": -0.000822,
+    "reason": "150 epochs spans the measured early-slope slowdown window and the 100-epoch step-native anneal without becoming a 3000/50000-epoch pointer pursuit"
+  },
+  "memory_preflight": {
+    "tool": "tools/witness_memory_preflight.py",
+    "safe_fraction": 0.7,
+    "total_ram_gib": 128.0,
+    "safe_ceiling_gib": 89.6,
+    "projected_peak_gib_each": 24.48,
+    "breakdown_gib": {
+      "fixed": 15.0,
+      "cf_mx_cache": 0.07,
+      "gt": 3.41,
+      "verdict": 6.0,
+      "aa_fine": 0.0
+    },
+    "all_arms_safe": true,
+    "concurrent_two_arm_system_safe": false,
+    "sequencing": "SEQUENTIAL: CE then MARGIN; STEP-NATIVE and M+ADAM only afterward"
+  },
+  "storage_preflight": {
+    "receipt": ".omx/research/perclass_convergence_ab_storage_preflight_20260714.json",
+    "receipt_sha256": "f0ed6b1fba6916d93cf8666496458880c66dff0f79c32c4d2f1deb1a3c9f173e",
+    "requested_bytes": 21474836480,
+    "vertigo_free_bytes_measured": 827380576256,
+    "selected_workload_root": null,
+    "expected_workload_root": "/Volumes/VertigoDataTier/pact/perclass_convergence_ab_20260714",
+    "blockers": ["selected_workload_root_missing", "selected_workload_root_mismatch"],
+    "status": "BLOCKED_SANDBOX_CREATE_PERMISSION",
+    "main_owed": "create/select the workload root through the same storage preflight before Metal dry-start"
+  },
+  "arms": {
+    "ce": {
+      "config": "perclass_convergence_ce_20260714",
+      "treatment": {"seg_loss": "ce"},
+      "compiled_flag_count": 102,
+      "launch_sh": "experiments/results/perclass_convergence_ab_preflight_r4_20260714/ce/launch.sh",
+      "launch_sh_sha256": "88305dc3250dad055ffd3e46c263773c3c588329c478a36a1d4e6b508225674d",
+      "constants_manifest_sha256": "5a968f2d9e9b231fb065d9a1965f6ec82439714cec58a2ccab7b1aebeb239a06",
+      "duplicate_long_flags": [],
+      "memory_preflight": "SAFE",
+      "dry_start_2": {
+        "attempted": true,
+        "launcher_exit_code": 6,
+        "boot_ok": false,
+        "resume_round_trip_ok": false,
+        "classification": "BLOCKED_HOST_NO_METAL",
+        "pass1_exit_code": 1,
+        "pass2": "SKIPPED_PASS1_DID_NOT_BOOT",
+        "checkpoint_flag_count": 1,
+        "duplicate_long_flags": [],
+        "report_schema": "perclass_content_addressed_dry_start.v1",
+        "report_state": "complete",
+        "launch_custody_matches_final_sources": true,
+        "report": "experiments/results/perclass_convergence_ab_preflight_r4_20260714/ce/dry_start_report.json",
+        "report_sha256": "4f16622da403842345a8a641022c7620ad32a481dc1aa55de4d77329f266cefb"
+      }
+    },
+    "margin": {
+      "config": "perclass_convergence_margin_20260714",
+      "treatment": {"seg_loss": "margin_hinge", "margin_target_end": 0.0},
+      "compiled_flag_count": 103,
+      "launch_sh": "experiments/results/perclass_convergence_ab_preflight_r4_20260714/margin/launch.sh",
+      "launch_sh_sha256": "f3cefc307e67c78c0eda62e87c57c8d339f52529d2a34c7569ca742f57042831",
+      "constants_manifest_sha256": "76a95b67405cf9120783796bc209b1ebdfeb53c300add09a17a33bb318530b69",
+      "duplicate_long_flags": [],
+      "memory_preflight": "SAFE",
+      "dry_start_2": {
+        "attempted": true,
+        "launcher_exit_code": 6,
+        "boot_ok": false,
+        "resume_round_trip_ok": false,
+        "classification": "BLOCKED_HOST_NO_METAL",
+        "pass1_exit_code": 1,
+        "pass2": "SKIPPED_PASS1_DID_NOT_BOOT",
+        "checkpoint_flag_count": 1,
+        "duplicate_long_flags": [],
+        "report_schema": "perclass_content_addressed_dry_start.v1",
+        "report_state": "complete",
+        "launch_custody_matches_final_sources": true,
+        "report": "experiments/results/perclass_convergence_ab_preflight_r4_20260714/margin/dry_start_report.json",
+        "report_sha256": "481f5d23c4f1d38a3dcbe3bacaffe8e288bd0224ab27ab123e7da5bd8471d758"
+      }
+    },
+    "stepnative": {
+      "config": "perclass_convergence_stepnative_20260714",
+      "treatment": {"seg_loss": "ce", "basis": "step_basis", "activation": "hosc", "hosc_beta_start": 1.0, "hosc_beta_end": 8.0, "hosc_beta_anneal": "linear", "hosc_omega": 1.0, "finer_bias_init": true, "finer_bias_k": 10.0},
+      "compiled_flag_count": 104,
+      "launch_sh": "experiments/results/perclass_convergence_ab_preflight_r4_20260714/stepnative/launch.sh",
+      "launch_sh_sha256": "651c3bb50142b43673a8bbf4093a24f6a361cafb28eada150b5f2424150272a7",
+      "constants_manifest_sha256": "de1877bace2eb129f5bfb1fdb16c4872455b5a09324fad8d6ec5b4d2c4e8b460",
+      "duplicate_long_flags": [],
+      "memory_preflight": "SAFE",
+      "dry_start_2": {
+        "attempted": true,
+        "launcher_exit_code": 6,
+        "boot_ok": false,
+        "resume_round_trip_ok": false,
+        "classification": "BLOCKED_HOST_NO_METAL",
+        "pass1_exit_code": 1,
+        "pass2": "SKIPPED_PASS1_DID_NOT_BOOT",
+        "checkpoint_flag_count": 1,
+        "duplicate_long_flags": [],
+        "report_schema": "perclass_content_addressed_dry_start.v1",
+        "report_state": "complete",
+        "launch_custody_matches_final_sources": true,
+        "report": "experiments/results/perclass_convergence_ab_preflight_r4_20260714/stepnative/dry_start_report.json",
+        "report_sha256": "e96cf62c748ddb55e0bbf7b640418d9a944c57b9ae8da7e76a8c2ba341de0781"
+      }
+    },
+    "mplus_adam": {
+      "config": "perclass_convergence_mplus_adam_20260714",
+      "treatment": {"seg_loss": "ce", "base_optimizer": "mplus_adam", "additive_learning_rate": 0.001, "multiplicative_learning_rate": 0.001, "tau": 0.000001},
+      "compiled_flag_count": 104,
+      "launch_sh": "experiments/results/perclass_convergence_ab_preflight_r4_20260714/mplus_adam/launch.sh",
+      "launch_sh_sha256": "6822c8b26a65966932f1fc6738c663af5725a6d4bde41c18f0a8c21a15dab483",
+      "constants_manifest_sha256": "e3eec28f6e84535c8f80fcc189cffa63c869a67035fb6608127d8a0bbcd98fcd",
+      "duplicate_long_flags": [],
+      "memory_preflight": "SAFE",
+      "dry_start_2": {
+        "attempted": true,
+        "launcher_exit_code": 6,
+        "boot_ok": false,
+        "resume_round_trip_ok": false,
+        "classification": "BLOCKED_HOST_NO_METAL",
+        "pass1_exit_code": 1,
+        "pass2": "SKIPPED_PASS1_DID_NOT_BOOT",
+        "checkpoint_flag_count": 1,
+        "duplicate_long_flags": [],
+        "report_schema": "perclass_content_addressed_dry_start.v1",
+        "report_state": "complete",
+        "launch_custody_matches_final_sources": true,
+        "report": "experiments/results/perclass_convergence_ab_preflight_r4_20260714/mplus_adam/dry_start_report.json",
+        "report_sha256": "6225d2aca6618e2e0a954d10150d63125d0e9e03ad79e2100daa93e873bc85e1"
+      }
+    }
+  },
+  "test_evidence": {
+    "command": ".venv/bin/pytest -q src/tac/witness_control/tests/test_perclass_convergence.py src/tac/tests/test_resume_registry.py src/tac/tests/test_spec_perclass_convergence_ab_20260714.py src/tac/optimization/tests/test_mplus_adam_mlx.py src/tac/witness_dsl/tests/test_perclass_convergence_levers_20260714.py src/tac/tests/test_probe_ordinal_perclass_convergence.py src/tac/tests/test_launch_witness_run.py src/tac/tests/test_v752_owed_gates.py",
+    "passed": 149,
+    "skipped": 1,
+    "skip_reason": "MLX parity requires a Metal-capable host",
+    "ruff_new_modules": "PASS",
+    "py_compile": "PASS"
+  },
+  "launch_readiness": {
+    "compile_and_memory_ready": true,
+    "metal_boot_ready": false,
+    "blocker": "Main must obtain boot_ok=true and resume_round_trip_ok=true from an exact content-addressed --dry-start 2 on M5-Max before any 150-epoch launch",
+    "machine_gate_probe": "CE real-mode invocation refused with exit 12 because the exact dry-start report was not green; no trainer spawned",
+    "means_status": "BUILT_AND_LOCALLY_PREFLIGHTED_NOT_MEASURED",
+    "pointer_moved": false
+  },
+  "main_handoff": ".omx/research/perclass_convergence_ab_main_handoff_20260714.md",
+  "round_1_adversarial_review": {
+    "high_or_p0_open": false,
+    "closed_medium": "dry-start checkpoint override formerly duplicated --ckpt-every; final builder structurally replaces it and refuses every duplicate long flag",
+    "low_nonblocking": "the sealed real-n600/150 ticket intentionally refuses calibration-mode dimension shrinking",
+    "post_closure_duplicate_flags_all_arms": []
+  },
+  "post_fix_adversarial_review": {
+    "verdict": "GREEN",
+    "open_findings": [],
+    "verified_hash_references": 16,
+    "verified_flag_counts": [102, 103, 104, 104],
+    "verified_content_addressed_reports": 4,
+    "verified_storage_selection": null,
+    "test_evidence": "149 passed, 1 skipped"
+  },
+  "review_seal": {
+    "required_clean_passes": 3,
+    "minimum_recorded_clean_passes_on_hot_files": 3,
+    "distinct_approvers": ["codex", "council"],
+    "status": "SEALED"
+  },
+  "serializer": {
+    "attempted": true,
+    "mode": "patch_file_intent_manifest",
+    "base_head": "5aa921fc7af7105ed1a931a75d701000564ceb85",
+    "exit_code": 128,
+    "classification": "BLOCKED_SANDBOX_GIT_OBJECT_WRITE",
+    "error": "unable to create temporary/backing-store file: Operation not permitted",
+    "working_tree_preserved": true,
+    "staged": false,
+    "main_owed": "rerun tools/subagent_commit_serializer.py from a Git-writable main workspace"
+  },
+  "inbox_cursor_utc": "2026-07-14T12:19:54Z"
+}
