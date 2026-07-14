@@ -871,9 +871,11 @@ def main() -> int:
         help="Commit message (passed to `git commit -m`).",
     )
     parser.add_argument(
-        "--files", "-f", nargs="*", default=None,
-        help="Files to stage. Required UNLESS --stdin-files OR "
-             "--no-stage is passed.",
+        "--files", "-f", nargs="*", action="extend", default=None,
+        help="Files to stage. Required UNLESS --stdin-files OR --no-stage is "
+             "passed. Repeated --files flags ACCUMULATE (extend) — a repeated "
+             "flag never silently drops earlier files. One flag with many "
+             "paths (`--files a b c`) is equivalent.",
     )
     parser.add_argument(
         "--stdin-files", action="store_true",
