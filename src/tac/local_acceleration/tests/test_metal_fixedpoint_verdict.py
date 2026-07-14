@@ -84,7 +84,7 @@ def test_high_precision_packet_requires_int64_but_is_safe() -> None:
 
 def test_precision_above_single_int64_ladder_is_refused() -> None:
     conv, _ = _conv(bits=26)
-    with pytest.raises(ValueError, match="2..26"):
+    with pytest.raises(ValueError, match=r"2\.\.26"):
         verdict.build_fixedpoint_conv_packet(
             conv,
             activation_absmax=3.0,
@@ -121,11 +121,27 @@ def test_dynamic_packet_rejects_nonfinite_input() -> None:
         )
 
 
+def test_w26_endpoint_is_clamped_in_exact_integer_domain() -> None:
+    qmax = (1 << 25) - 1
+    # fp32 rounds qmax upward, so a float-domain clamp would admit qmax+1.
+    scale = np.float32(1.0) / np.float32(qmax)
+    quantized = verdict.quantize_activation_numpy(
+        np.asarray([1.0, -1.0], dtype=np.float32),
+        activation_scale=float(scale),
+        qmax=qmax,
+    )
+    assert quantized.tolist() == [qmax, -qmax]
+
+
 def test_kernel_source_uses_int64_accumulator_and_no_atomic() -> None:
     source = inspect.getsource(verdict._conv_kernel)
     assert "long accumulator" in source
     assert "atomic_fetch" not in source
+    quantize_source = inspect.getsource(verdict._quantize_kernel)
+    assert "int qmax" in quantize_source
+    assert "clamp(q, -qmax, qmax)" in quantize_source
     signature = verdict.fixedpoint_verdict_signature()
     assert signature["default_enabled"] is False
     assert signature["score_claim"] is False
     assert signature["numpy_integer_reference"] is True
+    assert signature["constant_buffers_cached"] is True

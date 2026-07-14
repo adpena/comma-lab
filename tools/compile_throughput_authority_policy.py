@@ -27,8 +27,13 @@ from tac.witness_dsl.throughput_authority_policy_20260714 import (  # noqa: E402
 )
 
 RESULTS = REPO / "experiments/results/throughput_authority_ladder_20260714"
-DEFAULT_QDQ = RESULTS / "dynamic_fixedpoint_scorer_forward_n600.json"
-DEFAULT_METAL = RESULTS / "metal_dynamic_fixedpoint_segnet_n600.json"
+DEFAULT_QDQ = RESULTS / "dynamic_fixedpoint_scorer_forward_int64_ceiling_corrected_n600.json"
+DEFAULT_INTEGER_SCORER = (
+    RESULTS / "weight_l1_class_pair_tie_snap_scorer_forward_n600.json"
+)
+DEFAULT_METAL = (
+    RESULTS / "metal_weight_l1_class_pair_tie_snap_w27_w31_exact_int64_segnet_n600.json"
+)
 DEFAULT_INTEGER_R = RESULTS / "integer_r_backend_n600.json"
 DEFAULT_OUTPUT = RESULTS / "throughput_authority_policy.json"
 
@@ -47,6 +52,7 @@ def _load_optional(path: Path) -> tuple[dict[str, Any] | None, dict[str, Any]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qdq", type=Path, default=DEFAULT_QDQ)
+    parser.add_argument("--integer-scorer", type=Path, default=DEFAULT_INTEGER_SCORER)
     parser.add_argument("--metal", type=Path, default=DEFAULT_METAL)
     parser.add_argument("--integer-r", type=Path, default=DEFAULT_INTEGER_R)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -59,10 +65,12 @@ def main() -> int:
     args = parser.parse_args()
 
     qdq, qdq_custody = _load_optional(args.qdq)
+    integer_scorer, integer_scorer_custody = _load_optional(args.integer_scorer)
     metal, metal_custody = _load_optional(args.metal)
     integer_r, integer_r_custody = _load_optional(args.integer_r)
     policy = compile_throughput_authority_policy(
         fixedpoint_qdq_receipt=qdq,
+        integer_scorer_receipt=integer_scorer,
         metal_fixedpoint_receipt=metal,
         integer_r_receipt=integer_r,
         pose_gate_enabled=args.pose_gate,
@@ -73,6 +81,7 @@ def main() -> int:
         name
         for name, row in (
             ("qdq", qdq_custody),
+            ("integer_scorer", integer_scorer_custody),
             ("metal", metal_custody),
             ("integer_r", integer_r_custody),
         )
@@ -86,6 +95,7 @@ def main() -> int:
             "axis": "[decision compile; research-only MEANS]",
             "receipt_custody": {
                 "qdq": qdq_custody,
+                "integer_scorer": integer_scorer_custody,
                 "metal": metal_custody,
                 "integer_r": integer_r_custody,
             },

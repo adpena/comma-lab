@@ -49,6 +49,11 @@ def _sha256(path: Path) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qdq-receipt", type=Path, default=DEFAULT_QDQ)
+    parser.add_argument(
+        "--integer-scorer-receipt",
+        type=Path,
+        help="optional exact-int64/tie-snap successor; takes precedence over --qdq-receipt",
+    )
     parser.add_argument("--settled-r4-receipt", type=Path, default=SETTLED_R4)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
@@ -56,13 +61,21 @@ def main() -> int:
         default="coreml_linear_symmetric_per_channel_w8a8_ptq",
     )
     args = parser.parse_args()
-    for path in (args.qdq_receipt, args.settled_r4_receipt):
+    qdq_path = args.qdq_receipt.resolve()
+    numerical_path = (
+        args.integer_scorer_receipt.resolve()
+        if args.integer_scorer_receipt is not None
+        else qdq_path
+    )
+    settled_path = args.settled_r4_receipt.resolve()
+    output_path = args.output.resolve()
+    for path in (numerical_path, settled_path):
         if not path.is_file():
             parser.error(f"required receipt is absent: {path}")
-    qdq = json.loads(args.qdq_receipt.read_text(encoding="utf-8"))
-    r4 = json.loads(args.settled_r4_receipt.read_text(encoding="utf-8"))
+    numerical = json.loads(numerical_path.read_text(encoding="utf-8"))
+    r4 = json.loads(settled_path.read_text(encoding="utf-8"))
     ticket = compile_ane_fixedpoint_ticket(
-        qdq_receipt=qdq,
+        qdq_receipt=numerical,
         settled_r4_receipt=r4,
         formulation_id=args.formulation_id,
     )
@@ -71,17 +84,22 @@ def main() -> int:
         "lane_id": "throughput_authority_ladder",
         "task_id": 494,
         "axis": "[source-inspection + receipt compile; research-only MEANS]",
-        "qdq_receipt": str(args.qdq_receipt.relative_to(REPO)),
-        "qdq_receipt_sha256": _sha256(args.qdq_receipt),
-        "settled_r4_receipt": str(args.settled_r4_receipt.relative_to(REPO)),
-        "settled_r4_receipt_sha256": _sha256(args.settled_r4_receipt),
+        "numerical_receipt": str(numerical_path.relative_to(REPO)),
+        "numerical_receipt_sha256": _sha256(numerical_path),
+        "numerical_receipt_schema": numerical.get("schema"),
+        "qdq_receipt": (
+            str(qdq_path.relative_to(REPO)) if numerical_path == qdq_path else None
+        ),
+        "qdq_receipt_sha256": _sha256(qdq_path) if numerical_path == qdq_path else None,
+        "settled_r4_receipt": str(settled_path.relative_to(REPO)),
+        "settled_r4_receipt_sha256": _sha256(settled_path),
         "formulation_id": args.formulation_id,
         "ticket": ticket.to_dict(),
         "research_only": True,
         "score_claim": False,
         "pointer_moved": False,
     }
-    atomic_json(args.output, payload)
+    atomic_json(output_path, payload)
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0
 

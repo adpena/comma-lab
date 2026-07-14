@@ -52,11 +52,139 @@ def _metal(bits: int = 22, **overrides: object) -> dict[str, object]:
         "schema": "metal_fixedpoint_segnet_n600.v1",
         "contract": {
             "bits": bits,
+            "precision_assignment": f"uniform_W{bits}A{bits}",
             "activation_scale_mode": "dynamic_exact_absmax",
             "qdq_receipt_fingerprint": "b" * 64,
         },
         "summary": summary,
     }
+
+
+def _mixed_integer_scorer() -> dict[str, object]:
+    indices_hash = "d" * 64
+    return {
+        "schema": "mixed_int64_fixedpoint_scorer_n600.v1",
+        "fingerprint": "c" * 64,
+        "contract": {
+            "native_integer_speed_claim": True,
+            "activation_scale_mode": "dynamic_exact_absmax",
+        },
+        "custody": {"qdq_precursor_fingerprint": "b" * 64},
+        "model_manifest": {
+            "minimum_bits": 26,
+            "maximum_bits": 30,
+            "converted_conv2d_count": 125,
+            "accumulation": "exact_signed_int64",
+            "assignment_rule": "largest_geometry_safe_bits_with_signed_int64_static_bound",
+        },
+        "summary": {
+            "status": "MEASURED",
+            "full_real_n600": True,
+            "argmax_exact_admitted": True,
+            "minimum_bits": 26,
+            "maximum_bits": 30,
+            "cache_custody": {
+                "status": "MEASURED",
+                "pairs": 600,
+                "unique_pair_indices": 600,
+                "observed_pair_indices_sha256": indices_hash,
+                "expected_pair_indices_sha256": indices_hash,
+            },
+        },
+    }
+
+
+def _mixed_metal(**overrides: object) -> dict[str, object]:
+    receipt = _metal(bits=26, **overrides)
+    receipt["contract"]["precision_assignment"] = "geometry_safe_W26_to_W30"  # type: ignore[index]
+    receipt["contract"]["exact_int64_cpu_precursor_fingerprint"] = "c" * 64  # type: ignore[index]
+    return receipt
+
+
+def _weight_l1_integer_scorer() -> dict[str, object]:
+    receipt = _mixed_integer_scorer()
+    receipt["schema"] = "weight_l1_int64_fixedpoint_scorer_n600.v1"
+    receipt["summary"]["maximum_bits"] = 31  # type: ignore[index]
+    receipt["model_manifest"]["maximum_bits"] = 31  # type: ignore[index]
+    receipt["model_manifest"].update(  # type: ignore[union-attr]
+        {
+            "assignment_rule": "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound",
+            "bound_kind": "activation_qmax_times_max_output_quantized_weight_l1",
+            "label_or_frame_dependent": False,
+        }
+    )
+    return receipt
+
+
+def _weight_l1_metal(**overrides: object) -> dict[str, object]:
+    receipt = _mixed_metal(**overrides)
+    receipt["contract"]["precision_assignment"] = (  # type: ignore[index]
+        "frozen_weight_l1_safe_W26_to_W31"
+    )
+    return receipt
+
+
+def _tie_snap_integer_scorer() -> dict[str, object]:
+    receipt = _weight_l1_integer_scorer()
+    epsilon = 2.0**-19
+    receipt["schema"] = "weight_l1_tie_snap_scorer_n600.v1"
+    receipt["contract"].update(  # type: ignore[union-attr]
+        {
+            "decision_rule": "lowest class index within epsilon of candidate maximum",
+            "epsilon_selection": (
+                "minimum calibration-exact epsilon; no heldout reselection"
+            ),
+            "runtime_label_or_frame_dependent": False,
+        }
+    )
+    receipt["summary"].update(  # type: ignore[union-attr]
+        {
+            "minimum_calibration_exact_arm": "epsilon_2m19",
+            "minimum_calibration_exact_epsilon": epsilon,
+            "selected_heldout_exact": True,
+            "selected_full_exact": True,
+        }
+    )
+    return receipt
+
+
+def _tie_snap_metal(**overrides: object) -> dict[str, object]:
+    receipt = _weight_l1_metal(**overrides)
+    receipt["contract"]["precision_assignment"] = (  # type: ignore[index]
+        f"frozen_weight_l1_safe_W26_to_W31_tie_snap_{float(2.0**-19).hex()}"
+    )
+    return receipt
+
+
+def _class_pair_tie_snap_integer_scorer() -> dict[str, object]:
+    receipt = _weight_l1_integer_scorer()
+    receipt["schema"] = "weight_l1_class_pair_tie_snap_scorer_n600.v1"
+    receipt["contract"].update(  # type: ignore[union-attr]
+        {
+            "design_split": [0, 264],
+            "second_validation_split": [264, 600],
+            "epsilon": 2.0**-19,
+            "candidate_winner_class": 4,
+            "candidate_runner_class": 0,
+            "replacement_class": 0,
+            "rule_frozen_before_second_validation_access": True,
+            "second_validation_reselection": False,
+            "runtime_label_or_frame_dependent": False,
+        }
+    )
+    receipt["summary"].update(  # type: ignore[union-attr]
+        {"design_exact": True, "second_validation_exact": True}
+    )
+    return receipt
+
+
+def _class_pair_tie_snap_metal(**overrides: object) -> dict[str, object]:
+    receipt = _weight_l1_metal(**overrides)
+    receipt["contract"]["precision_assignment"] = (  # type: ignore[index]
+        "frozen_weight_l1_safe_W26_to_W31_class_pair_tie_snap_w4_r0_to0_eps_"
+        f"{float(2.0**-19).hex()}"
+    )
+    return receipt
 
 
 def _integer_r(admitted: bool = True) -> dict[str, object]:
@@ -95,7 +223,76 @@ def test_full_conjunction_unlocks_default_off_candidates() -> None:
     assert metal.state is AssignmentState.DEFAULT_OFF_CANDIDATE
     assert metal.selected_bits == 22
     assert metal.activation_scale_mode == "dynamic_exact_absmax"
+    assert "actual evolving witness frames" in str(metal.required_next_gate)
     assert integer_r.state is AssignmentState.DEFAULT_OFF_CANDIDATE
+
+
+def test_exact_mixed_integer_precursor_can_replace_nonexact_qdq_gate() -> None:
+    qdq = _qdq(bits=26)
+    qdq["summary"]["minimum_argmax_exact_arm"] = None  # type: ignore[index]
+    qdq["summary"]["arms"]["w26a26"]["argmax_exact_admitted"] = False  # type: ignore[index]
+    policy = compile_throughput_authority_policy(
+        fixedpoint_qdq_receipt=qdq,
+        integer_scorer_receipt=_mixed_integer_scorer(),
+        metal_fixedpoint_receipt=_mixed_metal(strict_interval_certified=False),
+    )
+    metal = _find(policy, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL)
+    assert metal.state is AssignmentState.DEFAULT_OFF_CANDIDATE
+    assert metal.selected_bits == 26
+    assert "exact-int64 scorer admits geometry_safe_W26_to_W30" in metal.evidence
+
+
+def test_weight_l1_integer_precursor_is_typed_and_label_free() -> None:
+    qdq = _qdq(bits=26)
+    qdq["summary"]["minimum_argmax_exact_arm"] = None  # type: ignore[index]
+    qdq["summary"]["arms"]["w26a26"]["argmax_exact_admitted"] = False  # type: ignore[index]
+    policy = compile_throughput_authority_policy(
+        fixedpoint_qdq_receipt=qdq,
+        integer_scorer_receipt=_weight_l1_integer_scorer(),
+        metal_fixedpoint_receipt=_weight_l1_metal(strict_interval_certified=False),
+    )
+    metal = _find(policy, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL)
+    assert metal.state is AssignmentState.DEFAULT_OFF_CANDIDATE
+    assert "frozen_weight_l1_safe_W26_to_W31" in metal.evidence
+
+
+def test_calibration_selected_tie_snap_precursor_binds_metal_decision_head() -> None:
+    qdq = _qdq(bits=26)
+    qdq["summary"]["minimum_argmax_exact_arm"] = None  # type: ignore[index]
+    qdq["summary"]["arms"]["w26a26"]["argmax_exact_admitted"] = False  # type: ignore[index]
+    policy = compile_throughput_authority_policy(
+        fixedpoint_qdq_receipt=qdq,
+        integer_scorer_receipt=_tie_snap_integer_scorer(),
+        metal_fixedpoint_receipt=_tie_snap_metal(),
+    )
+    metal = _find(policy, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL)
+    assert metal.state is AssignmentState.DEFAULT_OFF_CANDIDATE
+    assert "tie_snap_0x1.0000000000000p-19" in metal.evidence
+
+
+def test_frozen_class_pair_rule_requires_disjoint_second_validation() -> None:
+    qdq = _qdq(bits=26)
+    qdq["summary"]["minimum_argmax_exact_arm"] = None  # type: ignore[index]
+    qdq["summary"]["arms"]["w26a26"]["argmax_exact_admitted"] = False  # type: ignore[index]
+    scorer = _class_pair_tie_snap_integer_scorer()
+    policy = compile_throughput_authority_policy(
+        fixedpoint_qdq_receipt=qdq,
+        integer_scorer_receipt=scorer,
+        metal_fixedpoint_receipt=_class_pair_tie_snap_metal(),
+    )
+    metal = _find(policy, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL)
+    assert metal.state is AssignmentState.DEFAULT_OFF_CANDIDATE
+    assert "class_pair_tie_snap_w4_r0_to0" in metal.evidence
+    scorer["summary"]["second_validation_exact"] = False  # type: ignore[index]
+    held = compile_throughput_authority_policy(
+        fixedpoint_qdq_receipt=qdq,
+        integer_scorer_receipt=scorer,
+        metal_fixedpoint_receipt=_class_pair_tie_snap_metal(),
+    )
+    assert (
+        _find(held, Operation.SEGNET_VERDICT, Substrate.CUSTOM_METAL).state
+        is AssignmentState.HELD_OWED
+    )
 
 
 @pytest.mark.parametrize(
@@ -105,7 +302,6 @@ def test_full_conjunction_unlocks_default_off_candidates() -> None:
         "full_real_n600",
         "cross_process_argmax_identical",
         "argmax_exact",
-        "strict_interval_certified",
         "positive_speed",
         "admitted_candidate_authority_filter",
     ],

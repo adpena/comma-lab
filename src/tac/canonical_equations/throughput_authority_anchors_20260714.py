@@ -215,6 +215,9 @@ def build_metal_segnet_anchor(
         inputs={
             "in_domain_context": "custom_metal_fixedpoint_segnet_real_n600",
             "bits": payload.get("contract", {}).get("bits"),
+            "precision_assignment": payload.get("contract", {}).get(
+                "precision_assignment"
+            ),
             "activation_scale_mode": payload.get("contract", {}).get(
                 "activation_scale_mode"
             ),
@@ -234,6 +237,384 @@ def build_metal_segnet_anchor(
             "custom direct-int64 Metal frozen-SegNet versus one-thread CPU-Torch fp32 control"
         ),
         provenance=_provenance(path, repo=repo, mlx=True),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
+
+
+def build_exact_int64_segnet_anchor(
+    path: Path, payload: Mapping[str, Any], *, repo: Path
+) -> EmpiricalAnchor:
+    if payload.get("schema") != "exact_int64_fixedpoint_scorer_n600.v1":
+        raise ValueError("exact-int64 SegNet receipt schema mismatch")
+    summary = payload.get("summary", {})
+    custody = summary.get("cache_custody", {})
+    manifest = payload.get("model_manifest", {})
+    if not (
+        summary.get("status") == "MEASURED"
+        and summary.get("full_real_n600") is True
+        and custody.get("status") == "MEASURED"
+        and int(custody.get("pairs", -1)) == 600
+        and int(custody.get("unique_pair_indices", -1)) == 600
+        and custody.get("observed_pair_indices_sha256")
+        == custody.get("expected_pair_indices_sha256")
+        and int(manifest.get("converted_conv2d_count", -1)) == 125
+        and manifest.get("accumulation") == "exact_signed_int64"
+        and payload.get("contract", {}).get("native_integer_speed_claim") is True
+    ):
+        raise ValueError("exact-int64 SegNet receipt lacks exact 0..599 integer custody")
+    full = summary.get("candidate", {}).get("full", {})
+    return EmpiricalAnchor(
+        anchor_id=_anchor_id("exact_int64_fixedpoint_segnet_n600", path),
+        measurement_utc=_measurement_utc(path),
+        inputs={
+            "in_domain_context": "exact_int64_fixedpoint_segnet_real_n600",
+            "bits": summary.get("bits"),
+            "activation_scale_mode": payload.get("contract", {}).get(
+                "activation_scale_mode"
+            ),
+            "pair_indices": "exact 0..599",
+            "converted_conv2d_count": manifest.get("converted_conv2d_count"),
+            "accumulation": manifest.get("accumulation"),
+            "finalization": manifest.get("finalization"),
+        },
+        predicted_output={
+            "argmax_exact": True,
+            "within_static_int64_bound": True,
+            "strict_interval_certified_fraction": "reported separately",
+        },
+        empirical_output={
+            "argmax_exact_admitted": summary.get("argmax_exact_admitted"),
+            "training_tolerance_admitted": summary.get(
+                "training_tolerance_admitted"
+            ),
+            "candidate_full": full,
+            "timing": summary.get("timing"),
+            "rung2_integer_verdict": summary.get("rung2_integer_verdict"),
+            "verdict_scope": summary.get("verdict_scope"),
+        },
+        residual=float(full.get("aggregate_flip_fraction", 1.0)),
+        source_artifact=str(path.resolve().relative_to(repo.resolve())),
+        measurement_method=(
+            "exact signed-int64 CPU Conv2d twin with signed W26A26 codes and one fp32 "
+            "finalization versus one-thread CPU-Torch fp32 over exact real pairs 0..599"
+        ),
+        provenance=_provenance(path, repo=repo, mlx=False),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
+
+
+def build_mixed_int64_segnet_anchor(
+    path: Path, payload: Mapping[str, Any], *, repo: Path
+) -> EmpiricalAnchor:
+    if payload.get("schema") != "mixed_int64_fixedpoint_scorer_n600.v1":
+        raise ValueError("mixed exact-int64 SegNet receipt schema mismatch")
+    summary = payload.get("summary", {})
+    custody = summary.get("cache_custody", {})
+    manifest = payload.get("model_manifest", {})
+    if not (
+        summary.get("status") == "MEASURED"
+        and summary.get("full_real_n600") is True
+        and custody.get("status") == "MEASURED"
+        and int(custody.get("pairs", -1)) == 600
+        and int(custody.get("unique_pair_indices", -1)) == 600
+        and custody.get("observed_pair_indices_sha256")
+        == custody.get("expected_pair_indices_sha256")
+        and int(manifest.get("minimum_bits", -1)) == 26
+        and int(manifest.get("maximum_bits", -1)) == 30
+        and int(manifest.get("converted_conv2d_count", -1)) == 125
+        and manifest.get("accumulation") == "exact_signed_int64"
+        and manifest.get("assignment_rule")
+        == "largest_geometry_safe_bits_with_signed_int64_static_bound"
+        and payload.get("contract", {}).get("native_integer_speed_claim") is True
+    ):
+        raise ValueError("mixed exact-int64 SegNet receipt lacks exact 0..599 integer custody")
+    full = summary.get("candidate", {}).get("full", {})
+    return EmpiricalAnchor(
+        anchor_id=_anchor_id("mixed_int64_fixedpoint_segnet_n600", path),
+        measurement_utc=_measurement_utc(path),
+        inputs={
+            "in_domain_context": "mixed_exact_int64_fixedpoint_segnet_real_n600",
+            "minimum_bits": manifest.get("minimum_bits"),
+            "maximum_bits": manifest.get("maximum_bits"),
+            "assignment_rule": manifest.get("assignment_rule"),
+            "precision_histogram": manifest.get("precision_histogram"),
+            "pair_indices": "exact 0..599",
+            "converted_conv2d_count": manifest.get("converted_conv2d_count"),
+            "accumulation": manifest.get("accumulation"),
+            "finalization": manifest.get("finalization"),
+        },
+        predicted_output={
+            "argmax_exact": True,
+            "every_layer_within_static_int64_bound": True,
+            "precision_assignment_is_label_free": True,
+        },
+        empirical_output={
+            "argmax_exact_admitted": summary.get("argmax_exact_admitted"),
+            "training_tolerance_admitted": summary.get(
+                "training_tolerance_admitted"
+            ),
+            "candidate_full": full,
+            "timing": summary.get("timing"),
+            "rung2_mixed_integer_verdict": summary.get(
+                "rung2_mixed_integer_verdict"
+            ),
+            "verdict_scope": summary.get("verdict_scope"),
+        },
+        residual=float(full.get("aggregate_flip_fraction", 1.0)),
+        source_artifact=str(path.resolve().relative_to(repo.resolve())),
+        measurement_method=(
+            "geometry-only maximum signed W26..W30 precision per Conv2d under a static "
+            "int64 bound, exact signed-int64 CPU MAC, and one fp32 finalization versus "
+            "one-thread CPU-Torch fp32 over exact real pairs 0..599"
+        ),
+        provenance=_provenance(path, repo=repo, mlx=False),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
+
+
+def build_weight_l1_int64_segnet_anchor(
+    path: Path, payload: Mapping[str, Any], *, repo: Path
+) -> EmpiricalAnchor:
+    if payload.get("schema") != "weight_l1_int64_fixedpoint_scorer_n600.v1":
+        raise ValueError("weight-L1 exact-int64 SegNet receipt schema mismatch")
+    summary = payload.get("summary", {})
+    custody = summary.get("cache_custody", {})
+    manifest = payload.get("model_manifest", {})
+    if not (
+        summary.get("status") == "MEASURED"
+        and summary.get("full_real_n600") is True
+        and custody.get("status") == "MEASURED"
+        and int(custody.get("pairs", -1)) == 600
+        and int(custody.get("unique_pair_indices", -1)) == 600
+        and custody.get("observed_pair_indices_sha256")
+        == custody.get("expected_pair_indices_sha256")
+        and int(manifest.get("minimum_bits", -1)) == 26
+        and int(manifest.get("maximum_bits", -1)) == 31
+        and int(manifest.get("converted_conv2d_count", -1)) == 125
+        and manifest.get("accumulation") == "exact_signed_int64"
+        and manifest.get("assignment_rule")
+        == "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
+        and manifest.get("bound_kind")
+        == "activation_qmax_times_max_output_quantized_weight_l1"
+        and manifest.get("label_or_frame_dependent") is False
+        and payload.get("contract", {}).get("native_integer_speed_claim") is True
+    ):
+        raise ValueError("weight-L1 exact-int64 receipt lacks exact 0..599 integer custody")
+    full = summary.get("candidate", {}).get("full", {})
+    return EmpiricalAnchor(
+        anchor_id=_anchor_id("weight_l1_int64_fixedpoint_segnet_n600", path),
+        measurement_utc=_measurement_utc(path),
+        inputs={
+            "in_domain_context": "weight_l1_exact_int64_fixedpoint_segnet_real_n600",
+            "minimum_bits": manifest.get("minimum_bits"),
+            "maximum_bits": manifest.get("maximum_bits"),
+            "assignment_rule": manifest.get("assignment_rule"),
+            "bound_kind": manifest.get("bound_kind"),
+            "precision_histogram": manifest.get("precision_histogram"),
+            "label_or_frame_dependent": False,
+            "pair_indices": "exact 0..599",
+            "converted_conv2d_count": manifest.get("converted_conv2d_count"),
+            "accumulation": manifest.get("accumulation"),
+            "finalization": manifest.get("finalization"),
+        },
+        predicted_output={
+            "argmax_exact": True,
+            "every_layer_within_static_int64_bound": True,
+            "precision_assignment_is_label_and_frame_free": True,
+        },
+        empirical_output={
+            "argmax_exact_admitted": summary.get("argmax_exact_admitted"),
+            "training_tolerance_admitted": summary.get(
+                "training_tolerance_admitted"
+            ),
+            "candidate_full": full,
+            "timing": summary.get("timing"),
+            "rung2_weight_l1_integer_verdict": summary.get(
+                "rung2_weight_l1_integer_verdict"
+            ),
+            "verdict_scope": summary.get("verdict_scope"),
+        },
+        residual=float(full.get("aggregate_flip_fraction", 1.0)),
+        source_artifact=str(path.resolve().relative_to(repo.resolve())),
+        measurement_method=(
+            "per-layer maximum W26..W31 under activation_qmax times exact frozen "
+            "quantized-weight L1 int64 bounds, exact CPU MAC, and one fp32 finalization "
+            "versus one-thread CPU-Torch fp32 over exact real pairs 0..599"
+        ),
+        provenance=_provenance(path, repo=repo, mlx=False),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
+
+
+def build_weight_l1_tie_snap_segnet_anchor(
+    path: Path, payload: Mapping[str, Any], *, repo: Path
+) -> EmpiricalAnchor:
+    if payload.get("schema") != "weight_l1_tie_snap_scorer_n600.v1":
+        raise ValueError("weight-L1 tie-snap SegNet receipt schema mismatch")
+    summary = payload.get("summary", {})
+    custody = summary.get("cache_custody", {})
+    manifest = payload.get("model_manifest", {})
+    contract = payload.get("contract", {})
+    if not (
+        summary.get("status") == "MEASURED"
+        and summary.get("full_real_n600") is True
+        and custody.get("status") == "MEASURED"
+        and int(custody.get("pairs", -1)) == 600
+        and int(custody.get("unique_pair_indices", -1)) == 600
+        and custody.get("observed_pair_indices_sha256")
+        == custody.get("expected_pair_indices_sha256")
+        and int(manifest.get("minimum_bits", -1)) == 26
+        and int(manifest.get("maximum_bits", -1)) == 31
+        and int(manifest.get("converted_conv2d_count", -1)) == 125
+        and manifest.get("accumulation") == "exact_signed_int64"
+        and manifest.get("assignment_rule")
+        == "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
+        and manifest.get("bound_kind")
+        == "activation_qmax_times_max_output_quantized_weight_l1"
+        and manifest.get("label_or_frame_dependent") is False
+        and contract.get("decision_rule")
+        == "lowest class index within epsilon of candidate maximum"
+        and contract.get("epsilon_selection")
+        == "minimum calibration-exact epsilon; no heldout reselection"
+        and contract.get("runtime_label_or_frame_dependent") is False
+    ):
+        raise ValueError("weight-L1 tie-snap receipt lacks exact 0..599 custody")
+    selected = summary.get("minimum_calibration_exact_arm")
+    selected_rows = (
+        summary.get("arms", {}).get(selected, {}) if isinstance(selected, str) else {}
+    )
+    full = selected_rows.get("full", {})
+    residual = float(full.get("aggregate_flip_fraction", 1.0))
+    return EmpiricalAnchor(
+        anchor_id=_anchor_id("weight_l1_tie_snap_segnet_n600", path),
+        measurement_utc=_measurement_utc(path),
+        inputs={
+            "in_domain_context": "weight_l1_exact_int64_tie_snap_segnet_real_n600",
+            "minimum_bits": manifest.get("minimum_bits"),
+            "maximum_bits": manifest.get("maximum_bits"),
+            "precision_histogram": manifest.get("precision_histogram"),
+            "bound_kind": manifest.get("bound_kind"),
+            "epsilon_ladder": contract.get("epsilon_ladder"),
+            "epsilon_selection": contract.get("epsilon_selection"),
+            "decision_rule": contract.get("decision_rule"),
+            "calibration_split": contract.get("calibration_split"),
+            "heldout_start": contract.get("heldout_start"),
+            "pair_indices": "exact 0..599",
+        },
+        predicted_output={
+            "calibration_exact": True,
+            "heldout_exact_without_reselection": True,
+            "full_argmax_exact": True,
+            "runtime_decision_is_label_and_frame_free": True,
+        },
+        empirical_output={
+            "argmax_exact_admitted": summary.get("argmax_exact_admitted"),
+            "selected_arm": selected,
+            "selected_epsilon": summary.get("minimum_calibration_exact_epsilon"),
+            "selected_calibration": selected_rows.get("calibration"),
+            "selected_heldout": selected_rows.get("heldout"),
+            "selected_full": full,
+            "rung2_tie_snap_verdict": summary.get("rung2_tie_snap_verdict"),
+            "verdict_scope": summary.get("verdict_scope"),
+        },
+        residual=residual,
+        source_artifact=str(path.resolve().relative_to(repo.resolve())),
+        measurement_method=(
+            "preregistered dyadic lowest-class epsilon tie-snap ladder over weight-L1-safe "
+            "W27..W31 exact-int64 logits; minimum calibration-exact epsilon selected on "
+            "pairs 0..119 and validated without reselection on pairs 120..599"
+        ),
+        provenance=_provenance(path, repo=repo, mlx=False),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
+
+
+def build_weight_l1_class_pair_tie_snap_segnet_anchor(
+    path: Path, payload: Mapping[str, Any], *, repo: Path
+) -> EmpiricalAnchor:
+    if payload.get("schema") != "weight_l1_class_pair_tie_snap_scorer_n600.v1":
+        raise ValueError("weight-L1 class-pair tie-snap receipt schema mismatch")
+    summary = payload.get("summary", {})
+    custody = summary.get("cache_custody", {})
+    manifest = payload.get("model_manifest", {})
+    contract = payload.get("contract", {})
+    if not (
+        summary.get("status") == "MEASURED"
+        and summary.get("full_real_n600") is True
+        and custody.get("status") == "MEASURED"
+        and int(custody.get("pairs", -1)) == 600
+        and int(custody.get("unique_pair_indices", -1)) == 600
+        and custody.get("observed_pair_indices_sha256")
+        == custody.get("expected_pair_indices_sha256")
+        and int(manifest.get("minimum_bits", -1)) == 26
+        and int(manifest.get("maximum_bits", -1)) == 31
+        and int(manifest.get("converted_conv2d_count", -1)) == 125
+        and manifest.get("accumulation") == "exact_signed_int64"
+        and manifest.get("assignment_rule")
+        == "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
+        and manifest.get("bound_kind")
+        == "activation_qmax_times_max_output_quantized_weight_l1"
+        and manifest.get("label_or_frame_dependent") is False
+        and contract.get("design_split") == [0, 264]
+        and contract.get("second_validation_split") == [264, 600]
+        and contract.get("candidate_winner_class") == 4
+        and contract.get("candidate_runner_class") == 0
+        and contract.get("replacement_class") == 0
+        and float(contract.get("epsilon", -1.0)) == float(2.0**-19)
+        and contract.get("rule_frozen_before_second_validation_access") is True
+        and contract.get("second_validation_reselection") is False
+        and contract.get("runtime_label_or_frame_dependent") is False
+    ):
+        raise ValueError("class-pair tie-snap receipt lacks honest exact 0..599 custody")
+    decisions = summary.get("class_pair_tie_snap", {})
+    full = decisions.get("full", {})
+    return EmpiricalAnchor(
+        anchor_id=_anchor_id("weight_l1_class_pair_tie_snap_segnet_n600", path),
+        measurement_utc=_measurement_utc(path),
+        inputs={
+            "in_domain_context": (
+                "weight_l1_exact_int64_class_pair_tie_snap_segnet_real_n600"
+            ),
+            "minimum_bits": manifest.get("minimum_bits"),
+            "maximum_bits": manifest.get("maximum_bits"),
+            "precision_histogram": manifest.get("precision_histogram"),
+            "bound_kind": manifest.get("bound_kind"),
+            "design_split": contract.get("design_split"),
+            "second_validation_split": contract.get("second_validation_split"),
+            "epsilon": contract.get("epsilon"),
+            "ordered_candidate_top2": [
+                contract.get("candidate_winner_class"),
+                contract.get("candidate_runner_class"),
+            ],
+            "replacement_class": contract.get("replacement_class"),
+            "pair_indices": "exact 0..599",
+        },
+        predicted_output={
+            "design_exact": True,
+            "second_validation_exact_without_reselection": True,
+            "full_argmax_exact": True,
+            "runtime_decision_is_label_and_frame_free": True,
+        },
+        empirical_output={
+            "argmax_exact_admitted": summary.get("argmax_exact_admitted"),
+            "design_exact": summary.get("design_exact"),
+            "second_validation_exact": summary.get("second_validation_exact"),
+            "design": decisions.get("design"),
+            "second_validation": decisions.get("second_validation"),
+            "full": full,
+            "rung2_class_pair_tie_snap_verdict": summary.get(
+                "rung2_class_pair_tie_snap_verdict"
+            ),
+            "verdict_scope": summary.get("verdict_scope"),
+        },
+        residual=float(full.get("aggregate_flip_fraction", 1.0)),
+        source_artifact=str(path.resolve().relative_to(repo.resolve())),
+        measurement_method=(
+            "frozen ordered candidate-top2 (4,0), gap <=2^-19 decision head over "
+            "weight-L1-safe W27..W31 exact-int64 logits; designed on pairs 0..263 "
+            "and validated without reselection on previously untouched pairs 264..599"
+        ),
+        provenance=_provenance(path, repo=repo, mlx=False),
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
     )
 
@@ -277,8 +658,13 @@ def build_integer_r_backend_anchor(
 __all__ = [
     "ARGMAX_CERTIFICATE_EQUATION_ID",
     "EXACT_REDUCTION_EQUATION_ID",
+    "build_exact_int64_segnet_anchor",
     "build_full_r_anchor",
     "build_integer_r_backend_anchor",
     "build_metal_segnet_anchor",
+    "build_mixed_int64_segnet_anchor",
     "build_qdq_anchor",
+    "build_weight_l1_class_pair_tie_snap_segnet_anchor",
+    "build_weight_l1_int64_segnet_anchor",
+    "build_weight_l1_tie_snap_segnet_anchor",
 ]

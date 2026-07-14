@@ -595,6 +595,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             else None
         ),
         "native_integer_speed_claim": False,
+        "quantized_code_clamp": "round_fp32_then_exact_signed_int64_clamp",
         "training_tolerance": TRAINING_TOLERANCE,
         "pose_cache_selfcheck_atol": POSE_CACHE_SELFCHECK_ATOL,
         "segnet_reference_control": (

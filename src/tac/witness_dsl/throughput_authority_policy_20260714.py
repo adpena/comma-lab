@@ -158,12 +158,159 @@ def _fixedpoint_qdq_gate(
     )
 
 
+def _integer_scorer_gate(
+    receipt: Mapping[str, Any] | None,
+    *,
+    required_qdq_fingerprint: str | None,
+) -> tuple[bool, int | None, str | None, str | None, str]:
+    if not receipt:
+        return False, None, None, None, "exact-int64 scorer receipt is absent"
+    schema = receipt.get("schema")
+    summary = receipt.get("summary", {})
+    manifest = receipt.get("model_manifest", {})
+    contract = receipt.get("contract", {})
+    custody = summary.get("cache_custody", {})
+    common_ok = bool(
+        summary.get("status") == "MEASURED"
+        and summary.get("full_real_n600") is True
+        and summary.get("argmax_exact_admitted") is True
+        and custody.get("status") == "MEASURED"
+        and int(custody.get("pairs", -1)) == 600
+        and int(custody.get("unique_pair_indices", -1)) == 600
+        and custody.get("observed_pair_indices_sha256")
+        == custody.get("expected_pair_indices_sha256")
+        and int(manifest.get("converted_conv2d_count", -1)) == 125
+        and manifest.get("accumulation") == "exact_signed_int64"
+        and contract.get("native_integer_speed_claim") is True
+        and contract.get("activation_scale_mode") == "dynamic_exact_absmax"
+    )
+    if not common_ok:
+        return False, None, None, None, "exact-int64 scorer n600 conjunction is incomplete"
+    if (
+        required_qdq_fingerprint is None
+        or receipt.get("custody", {}).get("qdq_precursor_fingerprint")
+        != required_qdq_fingerprint
+    ):
+        return False, None, None, None, "exact-int64 scorer is not bound to this QDQ receipt"
+    if schema == "exact_int64_fixedpoint_scorer_n600.v1":
+        bits = int(summary.get("bits", -1))
+        if bits < 2 or int(manifest.get("bits", -1)) != bits:
+            return False, None, None, None, "uniform exact-int64 precision manifest differs"
+        assignment = f"uniform_W{bits}A{bits}"
+    elif schema == "mixed_int64_fixedpoint_scorer_n600.v1":
+        bits = int(summary.get("minimum_bits", -1))
+        maximum_bits = int(summary.get("maximum_bits", -1))
+        if (
+            bits != 26
+            or maximum_bits != 30
+            or int(manifest.get("minimum_bits", -1)) != bits
+            or int(manifest.get("maximum_bits", -1)) != maximum_bits
+            or manifest.get("assignment_rule")
+            != "largest_geometry_safe_bits_with_signed_int64_static_bound"
+        ):
+            return False, None, None, None, "mixed exact-int64 precision manifest differs"
+        assignment = "geometry_safe_W26_to_W30"
+    elif schema == "weight_l1_int64_fixedpoint_scorer_n600.v1":
+        bits = int(summary.get("minimum_bits", -1))
+        maximum_bits = int(summary.get("maximum_bits", -1))
+        if (
+            bits != 26
+            or maximum_bits != 31
+            or int(manifest.get("minimum_bits", -1)) != bits
+            or int(manifest.get("maximum_bits", -1)) != maximum_bits
+            or manifest.get("assignment_rule")
+            != "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
+            or manifest.get("bound_kind")
+            != "activation_qmax_times_max_output_quantized_weight_l1"
+            or manifest.get("label_or_frame_dependent") is not False
+        ):
+            return False, None, None, None, "weight-L1 exact-int64 precision manifest differs"
+        assignment = "frozen_weight_l1_safe_W26_to_W31"
+    elif schema == "weight_l1_tie_snap_scorer_n600.v1":
+        bits = int(manifest.get("minimum_bits", -1))
+        maximum_bits = int(manifest.get("maximum_bits", -1))
+        epsilon = summary.get("minimum_calibration_exact_epsilon")
+        if (
+            bits != 26
+            or maximum_bits != 31
+            or int(manifest.get("converted_conv2d_count", -1)) != 125
+            or manifest.get("assignment_rule")
+            != "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
+            or manifest.get("bound_kind")
+            != "activation_qmax_times_max_output_quantized_weight_l1"
+            or manifest.get("label_or_frame_dependent") is not False
+            or not summary.get("minimum_calibration_exact_arm")
+            or epsilon is None
+            or float(epsilon) <= 0.0
+            or summary.get("selected_heldout_exact") is not True
+            or summary.get("selected_full_exact") is not True
+            or contract.get("decision_rule")
+            != "lowest class index within epsilon of candidate maximum"
+            or contract.get("epsilon_selection")
+            != "minimum calibration-exact epsilon; no heldout reselection"
+            or contract.get("runtime_label_or_frame_dependent") is not False
+        ):
+            return False, None, None, None, "weight-L1 tie-snap precision manifest differs"
+        assignment = f"frozen_weight_l1_safe_W26_to_W31_tie_snap_{float(epsilon).hex()}"
+    elif schema == "weight_l1_class_pair_tie_snap_scorer_n600.v1":
+        bits = int(manifest.get("minimum_bits", -1))
+        maximum_bits = int(manifest.get("maximum_bits", -1))
+        epsilon = contract.get("epsilon")
+        winner = contract.get("candidate_winner_class")
+        runner = contract.get("candidate_runner_class")
+        replacement = contract.get("replacement_class")
+        if (
+            bits != 26
+            or maximum_bits != 31
+            or int(manifest.get("converted_conv2d_count", -1)) != 125
+            or manifest.get("assignment_rule")
+            != "largest_frozen_weight_l1_safe_bits_with_signed_int64_bound"
+            or manifest.get("bound_kind")
+            != "activation_qmax_times_max_output_quantized_weight_l1"
+            or manifest.get("label_or_frame_dependent") is not False
+            or summary.get("design_exact") is not True
+            or summary.get("second_validation_exact") is not True
+            or contract.get("design_split") != [0, 264]
+            or contract.get("second_validation_split") != [264, 600]
+            or winner != 4
+            or runner != 0
+            or replacement != 0
+            or epsilon is None
+            or float(epsilon) != float(2.0**-19)
+            or contract.get("rule_frozen_before_second_validation_access") is not True
+            or contract.get("second_validation_reselection") is not False
+            or contract.get("runtime_label_or_frame_dependent") is not False
+        ):
+            return (
+                False,
+                None,
+                None,
+                None,
+                "weight-L1 class-pair tie-snap precision manifest differs",
+            )
+        assignment = (
+            f"frozen_weight_l1_safe_W26_to_W31_class_pair_tie_snap_w{winner}_r{runner}"
+            f"_to{replacement}_eps_{float(epsilon).hex()}"
+        )
+    else:
+        return False, None, None, None, "exact-int64 scorer receipt schema mismatch"
+    return (
+        True,
+        bits,
+        "dynamic_exact_absmax",
+        assignment,
+        f"full-n600 exact-int64 scorer admits {assignment}",
+    )
+
+
 def _metal_gate(
     receipt: Mapping[str, Any] | None,
     *,
     required_bits: int | None,
     required_scale_mode: str | None,
     required_qdq_fingerprint: str | None,
+    required_precision_assignment: str | None,
+    required_integer_fingerprint: str | None,
 ) -> tuple[bool, str]:
     if not receipt:
         return False, "custom-Metal receipt is absent"
@@ -174,15 +321,25 @@ def _metal_gate(
         return False, "custom-Metal bits do not match the admitted QDQ arm"
     if required_scale_mode is None or contract.get("activation_scale_mode") != required_scale_mode:
         return False, "custom-Metal activation scale mode does not match QDQ"
+    if (
+        required_precision_assignment is None
+        or contract.get("precision_assignment") != required_precision_assignment
+    ):
+        return False, "custom-Metal precision assignment does not match the admitted precursor"
     if required_qdq_fingerprint is None or contract.get("qdq_receipt_fingerprint") != required_qdq_fingerprint:
         return False, "custom-Metal receipt is not bound to the admitted QDQ receipt"
+    if (
+        required_integer_fingerprint is not None
+        and contract.get("exact_int64_cpu_precursor_fingerprint")
+        != required_integer_fingerprint
+    ):
+        return False, "custom-Metal receipt is not bound to the admitted exact-int64 precursor"
     summary = receipt.get("summary", {})
     gates = (
         "complete",
         "full_real_n600",
         "cross_process_argmax_identical",
         "argmax_exact",
-        "strict_interval_certified",
         "positive_speed",
         "admitted_candidate_authority_filter",
     )
@@ -206,6 +363,7 @@ def _integer_r_gate(receipt: Mapping[str, Any] | None) -> tuple[bool, str]:
 def compile_throughput_authority_policy(
     *,
     fixedpoint_qdq_receipt: Mapping[str, Any] | None = None,
+    integer_scorer_receipt: Mapping[str, Any] | None = None,
     metal_fixedpoint_receipt: Mapping[str, Any] | None = None,
     integer_r_receipt: Mapping[str, Any] | None = None,
     pose_gate_enabled: bool = True,
@@ -222,20 +380,53 @@ def compile_throughput_authority_policy(
     qdq_ok, qdq_bits, qdq_scale_mode, qdq_reason = _fixedpoint_qdq_gate(
         fixedpoint_qdq_receipt
     )
+    qdq_fingerprint = (
+        str(fixedpoint_qdq_receipt.get("fingerprint"))
+        if fixedpoint_qdq_receipt and fixedpoint_qdq_receipt.get("fingerprint")
+        else None
+    )
+    (
+        integer_scorer_ok,
+        integer_scorer_bits,
+        integer_scorer_scale_mode,
+        integer_scorer_assignment,
+        integer_scorer_reason,
+    ) = _integer_scorer_gate(
+        integer_scorer_receipt,
+        required_qdq_fingerprint=qdq_fingerprint,
+    )
+    scorer_numerics_ok = qdq_ok or integer_scorer_ok
+    scorer_bits = integer_scorer_bits if integer_scorer_ok else qdq_bits
+    scorer_scale_mode = (
+        integer_scorer_scale_mode if integer_scorer_ok else qdq_scale_mode
+    )
+    scorer_assignment = (
+        integer_scorer_assignment
+        if integer_scorer_ok
+        else f"uniform_W{qdq_bits}A{qdq_bits}"
+        if qdq_bits is not None
+        else None
+    )
     metal_ok, metal_reason = _metal_gate(
         metal_fixedpoint_receipt,
-        required_bits=qdq_bits,
-        required_scale_mode=qdq_scale_mode,
-        required_qdq_fingerprint=(
-            str(fixedpoint_qdq_receipt.get("fingerprint"))
-            if fixedpoint_qdq_receipt and fixedpoint_qdq_receipt.get("fingerprint")
+        required_bits=scorer_bits,
+        required_scale_mode=scorer_scale_mode,
+        required_qdq_fingerprint=qdq_fingerprint,
+        required_precision_assignment=scorer_assignment,
+        required_integer_fingerprint=(
+            str(integer_scorer_receipt.get("fingerprint"))
+            if integer_scorer_ok
+            and integer_scorer_receipt
+            and integer_scorer_receipt.get("fingerprint")
             else None
         ),
     )
     integer_r_ok, integer_r_reason = _integer_r_gate(integer_r_receipt)
 
     seg_state = (
-        AssignmentState.DEFAULT_OFF_CANDIDATE if qdq_ok and metal_ok else AssignmentState.HELD_OWED
+        AssignmentState.DEFAULT_OFF_CANDIDATE
+        if scorer_numerics_ok and metal_ok
+        else AssignmentState.HELD_OWED
     )
     r_state = AssignmentState.DEFAULT_OFF_CANDIDATE if integer_r_ok else AssignmentState.HELD_OWED
     rows = (
@@ -273,12 +464,25 @@ def compile_throughput_authority_policy(
             Substrate.CUSTOM_METAL,
             Precision.FIXEDPOINT_MIXED,
             seg_state,
-            AuthorityGrade.LOCAL_CANDIDATE_FILTER if qdq_ok and metal_ok else AuthorityGrade.NO_AUTHORITY,
+            (
+                AuthorityGrade.LOCAL_CANDIDATE_FILTER
+                if scorer_numerics_ok and metal_ok
+                else AuthorityGrade.NO_AUTHORITY
+            ),
             "candidate replacement for the slow one-thread local SegNet verdict",
-            f"QDQ: {qdq_reason}; Metal: {metal_reason}",
-            None if qdq_ok and metal_ok else "complete full-n600 QDQ then custom-Metal host receipts",
-            selected_bits=qdq_bits,
-            activation_scale_mode=qdq_scale_mode,
+            f"QDQ: {qdq_reason}; exact-int64: {integer_scorer_reason}; Metal: {metal_reason}",
+            (
+                (
+                    "shadow/certify the admitted kernel on actual evolving witness frames "
+                    "before suppressing the CPU reference"
+                )
+                if scorer_numerics_ok and metal_ok
+                else "complete a full-n600 exact-argmax exact-int64 scorer precursor"
+                if not scorer_numerics_ok
+                else "complete the bound custom-Metal n600/cross-process/speed receipt"
+            ),
+            selected_bits=scorer_bits,
+            activation_scale_mode=scorer_scale_mode,
         ),
         Assignment(
             Operation.SEGNET_VERDICT,

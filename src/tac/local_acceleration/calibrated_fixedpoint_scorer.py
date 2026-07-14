@@ -104,6 +104,20 @@ def weight_bearing_modules(model: Any) -> dict[str, Any]:
     }
 
 
+def _round_clamp_codes(value: Any, *, qmax: int) -> Any:
+    """Round fp32 ratios, then clamp in exact signed-int64 code space.
+
+    The integer-domain clamp is load-bearing above 24 bits: fp32 cannot
+    represent W26's positive qmax=33,554,431 and a float-domain clamp can
+    silently admit 33,554,432.
+    """
+
+    import torch
+
+    rounded = torch.round(value.to(torch.float32)).to(torch.int64)
+    return torch.clamp(rounded, min=-int(qmax), max=int(qmax)).to(torch.float32)
+
+
 def quantize_weight_per_output(weight: Any, *, bits: int) -> tuple[Any, np.ndarray]:
     """Return per-output-channel QDQ weight and immutable float32 scales."""
 
@@ -120,7 +134,7 @@ def quantize_weight_per_output(weight: Any, *, bits: int) -> tuple[Any, np.ndarr
         maximum / float(qmax),
         torch.ones_like(maximum),
     )
-    quantized = torch.clamp(torch.round(source / scale), -qmax, qmax)
+    quantized = _round_clamp_codes(source / scale, qmax=qmax)
     dequantized = quantized * scale
     scales = scale.detach().reshape(source.shape[0]).cpu().numpy().astype(np.float32)
     return dequantized.to(dtype=weight.dtype), np.ascontiguousarray(scales)
@@ -136,7 +150,7 @@ def quantize_activation_fixed(value: Any, *, absmax: float, bits: int) -> Any:
     if maximum == 0.0:
         return torch.zeros_like(value)
     scale = maximum / float(qmax)
-    return torch.clamp(torch.round(value.to(torch.float32) / scale), -qmax, qmax) * scale
+    return _round_clamp_codes(value.to(torch.float32) / scale, qmax=qmax) * scale
 
 
 def quantize_activation_dynamic(value: Any, *, bits: int) -> Any:
@@ -152,7 +166,7 @@ def quantize_activation_dynamic(value: Any, *, bits: int) -> Any:
     if float(maximum.item()) == 0.0:
         return torch.zeros_like(source).to(dtype=value.dtype)
     scale = maximum / float(qmax)
-    output = torch.clamp(torch.round(source / scale), -qmax, qmax) * scale
+    output = _round_clamp_codes(source / scale, qmax=qmax) * scale
     return output.to(dtype=value.dtype)
 
 
@@ -268,6 +282,7 @@ def build_calibrated_qdq_model(
                 "weight_output_channels": int(weight_scales.size),
                 "bias_precision": "fp32" if module.bias is not None else "none",
                 "accumulation": policy.accumulation,
+                "quantized_code_clamp": "round_fp32_then_exact_signed_int64_clamp",
             }
         )
     candidate._task494_qdq_hook_handles = handles

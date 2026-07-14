@@ -47,6 +47,15 @@ class FixedPointConvPacket:
     minimum_signed_accumulator_bits: int
 
 
+@dataclass(frozen=True)
+class FixedPointMetalConstants:
+    """One-time device-resident buffers shared by every invocation of a layer."""
+
+    weight_q_ohwi: Any
+    weight_scales: Any
+    bias: Any
+
+
 def _pair(value: Any) -> tuple[int, int]:
     if isinstance(value, (tuple, list)):
         if len(value) != 2:
@@ -70,7 +79,8 @@ def quantize_activation_numpy(
     if not np.isfinite(scale) or scale <= 0.0:
         raise ValueError("activation_scale must be finite and positive")
     scaled = (source / np.float32(scale)).astype(np.float32)
-    return np.clip(np.rint(scaled), -qmax, qmax).astype(np.int32)
+    rounded = np.rint(scaled).astype(np.int64)
+    return np.clip(rounded, -int(qmax), int(qmax)).astype(np.int32)
 
 
 def build_fixedpoint_conv_packet(
@@ -97,11 +107,10 @@ def build_fixedpoint_conv_packet(
         weight_maximum / np.float32(qmax),
         np.float32(1.0),
     ).astype(np.float32)
-    quantized = np.clip(
-        np.rint(weight / weight_scales[:, None, None, None]),
-        -qmax,
-        qmax,
-    ).astype(np.int32)
+    rounded_weight = np.rint(
+        weight / weight_scales[:, None, None, None]
+    ).astype(np.int64)
+    quantized = np.clip(rounded_weight, -int(qmax), int(qmax)).astype(np.int32)
     out_channels, in_per_group, kernel_h, kernel_w = map(int, weight.shape)
     groups = int(torch_conv.groups)
     in_channels = int(torch_conv.in_channels)
@@ -214,11 +223,10 @@ def _quantize_kernel() -> Any:
                     uint gid = thread_position_in_grid.x;
                     int count = dims[0];
                     float activation_scale = scale[0];
-                    float qmax = qmax_value[0];
+                    int qmax = qmax_value[0];
                     if (gid >= (uint)count) return;
-                    float q = rint(inp[gid] / activation_scale);
-                    q = clamp(q, -qmax, qmax);
-                    out[gid] = int(q);
+                    int q = int(rint(inp[gid] / activation_scale));
+                    out[gid] = clamp(q, -qmax, qmax);
                 """,
             )
     return _QUANTIZE_KERNEL
@@ -317,7 +325,7 @@ def quantize_activation_metal(
         if hasattr(activation_scale, "astype")
         else mx.array([float(activation_scale)], dtype=mx.float32)
     )
-    qmax_value = mx.array([float(qmax)], dtype=mx.float32)
+    qmax_value = mx.array([int(qmax)], dtype=mx.int32)
     (output,) = _quantize_kernel()(
         inputs=[value.astype(mx.float32), dims, scale, qmax_value],
         output_shapes=[value.shape],
@@ -328,7 +336,34 @@ def quantize_activation_metal(
     return output
 
 
-def fixedpoint_conv2d_metal(x_nhwc: Any, packet: FixedPointConvPacket) -> Any:
+def prepare_fixedpoint_conv_packet_metal(
+    packet: FixedPointConvPacket,
+) -> FixedPointMetalConstants:
+    """Materialize immutable packet arrays once instead of per forward call."""
+
+    import mlx.core as mx
+
+    if not metal_fixedpoint_backend_available():
+        raise RuntimeError("fixed-point verdict constants require evaluated MLX Metal")
+    constants = FixedPointMetalConstants(
+        weight_q_ohwi=mx.array(packet.weight_q_ohwi, dtype=mx.int32),
+        weight_scales=mx.array(packet.weight_scales, dtype=mx.float32),
+        bias=mx.array(packet.bias, dtype=mx.float32),
+    )
+    mx.eval(
+        constants.weight_q_ohwi,
+        constants.weight_scales,
+        constants.bias,
+    )
+    return constants
+
+
+def fixedpoint_conv2d_metal(
+    x_nhwc: Any,
+    packet: FixedPointConvPacket,
+    *,
+    constants: FixedPointMetalConstants | None = None,
+) -> Any:
     import mlx.core as mx
 
     if not metal_fixedpoint_backend_available():
@@ -354,9 +389,13 @@ def fixedpoint_conv2d_metal(x_nhwc: Any, packet: FixedPointConvPacket) -> Any:
     xq = quantize_activation_metal(
         x_nhwc, activation_scale=activation_scale, qmax=packet.qmax
     )
-    wq = mx.array(packet.weight_q_ohwi, dtype=mx.int32)
-    wscale = mx.array(packet.weight_scales, dtype=mx.float32)
-    bias = mx.array(packet.bias, dtype=mx.float32)
+    device = constants or prepare_fixedpoint_conv_packet_metal(packet)
+    if (
+        tuple(device.weight_q_ohwi.shape) != tuple(packet.weight_q_ohwi.shape)
+        or tuple(device.weight_scales.shape) != tuple(packet.weight_scales.shape)
+        or tuple(device.bias.shape) != tuple(packet.bias.shape)
+    ):
+        raise ValueError("fixed-point Metal constant-buffer geometry differs from packet")
     dims = mx.array(
         [
             batch,
@@ -382,9 +421,9 @@ def fixedpoint_conv2d_metal(x_nhwc: Any, packet: FixedPointConvPacket) -> Any:
     (output,) = _conv_kernel()(
         inputs=[
             xq,
-            wq,
-            wscale,
-            bias,
+            device.weight_q_ohwi,
+            device.weight_scales,
+            device.bias,
             dims,
             activation_scale.reshape((1,)),
         ],
@@ -413,9 +452,14 @@ class MetalFixedPointConv2DAdapter:
             bits=bits,
             activation_scale_mode=activation_scale_mode,
         )
+        self.constants = prepare_fixedpoint_conv_packet_metal(self.packet)
 
     def __call__(self, x_nhwc: Any) -> Any:
-        return fixedpoint_conv2d_metal(x_nhwc, self.packet)
+        return fixedpoint_conv2d_metal(
+            x_nhwc,
+            self.packet,
+            constants=self.constants,
+        )
 
 
 _ADAPTER_LOCK = threading.Lock()
@@ -500,6 +544,7 @@ def build_metal_fixedpoint_segnet_adapter(
         "operator_paths": sorted(consumed),
         "all_convs_replaced": True,
         "arithmetic": "integer activation/weight; exact int64 MAC; fp32 dequant+bias",
+        "constant_buffers_cached": True,
         "bound_kind": "STATIC_WORST_CASE_FAN_IN_QMAX_PRODUCT",
         "maximum_accumulator_bound": max(packet.accumulator_bound for packet in packets),
         "maximum_minimum_signed_accumulator_bits": max(
@@ -520,8 +565,10 @@ def fixedpoint_verdict_signature() -> dict[str, Any]:
         "env_flag": METAL_FIXEDPOINT_VERDICT_FLAG,
         "operation": "frozen-SegNet all-Conv2d fixed-point forward",
         "kernel": "direct NHWC grouped Conv2d; exact int64 accumulator",
+        "constant_buffers_cached": True,
         "activation_quantization": (
-            "separate int32 kernel; fixed calibration or dynamic max-absolute scale"
+            "separate int32 kernel; exact integer-domain qmax clamp; fixed calibration "
+            "or dynamic max-absolute scale"
         ),
         "activation_scale_modes": ["fixed_calibration", "dynamic_exact_absmax"],
         "supported_bits": list(range(2, 27)),
@@ -535,6 +582,7 @@ def fixedpoint_verdict_signature() -> dict[str, Any]:
 __all__ = [
     "METAL_FIXEDPOINT_VERDICT_FLAG",
     "FixedPointConvPacket",
+    "FixedPointMetalConstants",
     "MetalFixedPointConv2DAdapter",
     "build_fixedpoint_conv_packet",
     "build_metal_fixedpoint_segnet_adapter",
@@ -543,6 +591,7 @@ __all__ = [
     "fixedpoint_verdict_signature",
     "metal_fixedpoint_backend_available",
     "minimum_signed_bits_for_bound",
+    "prepare_fixedpoint_conv_packet_metal",
     "quantize_activation_metal",
     "quantize_activation_numpy",
 ]
