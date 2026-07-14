@@ -59,6 +59,24 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
 - exp-linear weight reparam run (if its $0 2x2 smoke shows fewer-steps additive to Muon).
 - The 4 other live arms' (curvelet/ripo/gauge/reparam/sweep) surfaced follow-ons — capture from their
   final messages into this list on drain.
+- **TOOL (queued, not launched) Fork Dynamics — forkdynamics.com (rendered via agent-browser; og:title
+  verbatim "numerical bifurcation continuation tool for dynamical systems, web UI + CLI for maps and
+  ODEs").** The AUTO/MatCont/BifurcationKit lineage: continue equilibria/limit-cycle branches as a
+  parameter varies, detect+classify bifurcations (fold/Hopf/pitchfork/period-double). VERDICT — deepest
+  conceptual fit of today's four (openresearch/weco/PTRM/Fork), but CONDITIONAL leverage, honest boundary:
+  Fork eats LOW-dim explicit maps/ODEs; the witness is ~100K-param n=1 stochastic INR — you CANNOT feed it
+  raw. It helps ONLY on a REDUCED-ORDER model we derive. The reframe it crystallizes (worth more than the
+  tool): **our curriculum IS a continuation problem and our instabilities ARE bifurcations** — τ/ε/λ
+  hand-offs = continuation parameters (#302); the ep110 eikonal re-entry = a stability-boundary crossing
+  (#318 modified-eqn); **island-birth (movable/lane unborn, #300/#323) = a saddle-node/transcritical in the
+  class-occupancy order parameter as dilation-λ/seed-anneal varies** → continuation would COMPUTE the exact
+  critical λ the birth-lever must cross, replacing GO-gated trial-and-error with a bifurcation diagram; the
+  costate/Pontryagin TPBVP (#247/#426) is an ODE system Fork could branch-analyze. NOT core infra (it's a
+  MEANS, an analysis instrument like the dashboard — moves the pointer only via a better hand-off/birth
+  point). Warm-start = derive the reduced order-parameter model (we have pieces: #318 DE, #344 linear-NCDE,
+  #180 Morse-Smale) → run Fork's CLI on IT → get the bifurcation points. Sisters: #302/#315/#318/#344
+  curriculum cluster, #300/#323 island-birth, #217 saddle-to-saddle, memory
+  curriculum_is_continuation_instabilities_are_bifurcations_20260714.
 - **PAPER (queued, not launched, per drain directive) arXiv 2607.11052 "Domain-Aware Scaling Laws
   Uncover Data Synergy" (Hamidieh/Mackey/Alvarez-Melis).** Warm-start (codex/opus, post-consolidation
   clean tree): data-synergy = which COMBINATIONS of trajectory "domains" give super-additive learning.
