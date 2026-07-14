@@ -1,0 +1,123 @@
+{
+  "schema": "v9_cgauge_fake_implementation_audit_receipt.v1",
+  "utc": "2026-07-14T13:09:13Z",
+  "lane_id": "lane_v9_cgauge_fake_implementation_audit_20260714",
+  "research_only": true,
+  "pointer": {
+    "contest_cpu_linux_x86_64": 0.1910828242,
+    "archive_sha256_prefix": "ad02b0124cbb",
+    "changed": false,
+    "local_defensive_non_submission": 0.1880443979880752
+  },
+  "compiled": {
+    "v9_cgauge_432": {
+      "argv_tokens": 362,
+      "provenance_rows_total": 45,
+      "provenance_rows_active": 44,
+      "constants_manifest_rows": 6,
+      "active_provenance_flags_without_matching_manifest_key": 43,
+      "hosc_beta_end_argv": 3.177,
+      "hosc_beta_end_manifest": 10.0,
+      "basis_flags": {
+        "self_orient": "ABSENT",
+        "n_dir_freqs": "ABSENT",
+        "freq_across": "ABSENT",
+        "freq_along": "ABSENT",
+        "max_bank_freq": 64
+      },
+      "pose_flags": {
+        "pose_carrier": true,
+        "pose_carrier_source": "generated",
+        "pose_carrier_residual_mode": "table",
+        "pose_carrier_xi_from_ckpt": "ABSENT",
+        "w_pose": 1.0
+      },
+      "event_flags": {
+        "curriculum_event_triggered": true,
+        "seg_form_unify_tau": true,
+        "tau_advance_mode": "event"
+      }
+    },
+    "v9_cgauge_ideal": {
+      "argv_tokens": 401,
+      "provenance_rows_total": 45,
+      "provenance_rows_active": 44,
+      "constants_manifest_rows": 7,
+      "active_provenance_flags_without_matching_manifest_key": 43,
+      "hosc_beta_end_argv": 3.177,
+      "hosc_beta_end_manifest": 3.177,
+      "note": "ideal compiler repairs the one matching inherited manifest value; it does not give the other 43 active provenance flags executable manifest custody"
+    }
+  },
+  "basis_mechanism": {
+    "claimed_family": "generic curvelet/shearlet",
+    "actual_family": "global polar directional Fourier plane-wave bank",
+    "actual_formula": "concat(sin(2*pi*X@B), cos(2*pi*X@B))",
+    "has_translated_spatial_windows": false,
+    "has_localized_envelope": false,
+    "has_parabolic_orientation_count": true,
+    "receiver_closed": true,
+    "self_orient_live": false
+  },
+  "directional_measurements": {
+    "minus48": {
+      "value_fraction": -0.48,
+      "n": 96,
+      "gt": "circular_synthetic",
+      "surface": "direct_partition",
+      "realized_v9_n600_effect": false
+    },
+    "owed16_ep675": {
+      "axis": "macOS-CPU advisory through-R n600 NON-PROMOTABLE",
+      "formulation": "bounded_warm_start",
+      "self_orient_off_d_seg": 0.004244,
+      "self_orient_on_along8_d_seg": 0.004259,
+      "self_orient_on_along26_d_seg": 0.004286,
+      "fresh_start_covered": false
+    }
+  },
+  "pose_fallback": {
+    "claim": "degenerate or never-fired gate ships banked R1",
+    "actual_action": "prints banked selection/disengaged telemetry and keeps pose weight zero",
+    "loads_r1_checkpoint": false,
+    "switches_export_payload": false,
+    "changes_archive_bytes": false,
+    "current_table_initialization": "zeros",
+    "separate_real_byte_close_connector_exists": true
+  },
+  "r1_receipt": {
+    "axis": "macOS-CPU advisory NON-PROMOTABLE",
+    "pairs": 600,
+    "d_seg": 0.004549119737413194,
+    "d_pose": 0.0016095471538913576,
+    "pose_term": 0.12686792951299228,
+    "archive_zip_bytes": 89772,
+    "exact_eval_upstream_evaluate_ran": false,
+    "promotion_claim": false,
+    "transfer_into_current_v9_proven": false
+  },
+  "confirmed_findings": [
+    "pose_banked_r1_fallback_marker_without_payload_switch",
+    "curvelet_name_for_global_polar_fourier_plane_waves",
+    "stale_self_orient_on_minus48_live_claim",
+    "provenance_metadata_without_executable_manifest_custody",
+    "discrete_event_curriculum_flag_inert_under_unified_tau",
+    "r1_n600_authority_wording_on_advisory_non_exact_receipt"
+  ],
+  "suspected_not_promoted": [
+    "localized_equal_budget_basis_improves_v9_d_seg",
+    "banked_r1_payload_transfers_compatibly_into_current_v9",
+    "every_uncovered_provenance_row_should_be_a_lawref"
+  ],
+  "metric_contract": {
+    "metric_id": "argmax_native_vjp_fidelity_v1",
+    "state_receipt_schema": "reachable_decision_geometry_fidelity.v1",
+    "selection_receipt_schema": "reachable_decision_preconditioner_selection.v1",
+    "candidate_preconditioner": "winner_rival_margin_fisher_natural",
+    "full_n600_selection_verdict": "NO-VERDICT_DATA_CUSTODY"
+  },
+  "verification_command": "PYTHONPATH=src .venv/bin/python read-only compile/recount of compile_v9_cgauge_432_launch_config and compile_v9_cgauge_ideal_launch_config",
+  "no_heavy_launch": true,
+  "no_score_claim": true
+}
+
