@@ -93,6 +93,12 @@ EVIDENCE_BYTE_CLOSED = "byte_closed"
 EVIDENCE_RESEARCH_DIAGNOSTIC = "research_diagnostic"
 VALID_EVIDENCE_KINDS = frozenset({EVIDENCE_BYTE_CLOSED, EVIDENCE_RESEARCH_DIAGNOSTIC})
 
+# Production ``measured`` is deliberately narrower than "a file with a matching hash".  This
+# normalized wrapper is the only receipt type this pool currently knows how to adjudicate.  New
+# receipt families must add an explicit validator here; there is no permissive fallback.
+PRODUCTION_RECEIPT_SCHEMA = "curriculum_candidate_production_admission.v1"
+PRODUCTION_RECEIPT_TYPE = "curriculum_candidate_production_admission"
+
 # ranking order: the duty queue the controller drains (built-never-fired highest readiness) first.
 _STATUS_ORDER = {
     STATUS_BUILT_NEVER_FIRED: 0,
@@ -126,7 +132,122 @@ def _valid_sha256(value: object) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
 
 
-def _receipt_custody_error(verdict_ref: object, trusted_sha256: object) -> str | None:
+def _production_admission_receipt_error(payload: object, *, candidate: str) -> str | None:
+    """Validate the one explicitly supported production-admission receipt schema."""
+
+    if not isinstance(payload, dict):
+        return "production receipt must contain a JSON object"
+    if payload.get("receipt_type") != PRODUCTION_RECEIPT_TYPE:
+        return f"receipt_type must equal {PRODUCTION_RECEIPT_TYPE!r}"
+    if payload.get("candidate") != candidate:
+        return f"receipt candidate must equal {candidate!r}"
+
+    verdict = payload.get("verdict")
+    if not isinstance(verdict, dict):
+        return "verdict must be an object"
+    if verdict.get("status") != "ADMITTED" or verdict.get("passed") is not True:
+        return "verdict must record status='ADMITTED' and passed=true"
+    if verdict.get("byte_closed") is not True:
+        return "verdict.byte_closed must be true"
+
+    authority = payload.get("authority")
+    if not isinstance(authority, dict):
+        return "authority must be an object"
+    if authority.get("outcome") != "ACCEPTED":
+        return "authority.outcome must equal 'ACCEPTED'"
+    if authority.get("research_only") is not False:
+        return "authority.research_only must be false"
+    if authority.get("promotion_eligible") is not True:
+        return "authority.promotion_eligible must be true"
+
+    custody = payload.get("custody")
+    if not isinstance(custody, dict):
+        return "custody must be an object"
+    if custody.get("outcome") != "VALID":
+        return "custody.outcome must equal 'VALID'"
+    archive_sha256 = custody.get("archive_sha256")
+    runtime_tree_sha256 = custody.get("runtime_tree_sha256")
+    upstream_snapshot_sha256 = custody.get("upstream_snapshot_sha256")
+    if not _valid_sha256(archive_sha256):
+        return "custody.archive_sha256 must be lowercase SHA-256 hex"
+    if not _valid_sha256(runtime_tree_sha256):
+        return "custody.runtime_tree_sha256 must be lowercase SHA-256 hex"
+    if not _valid_sha256(upstream_snapshot_sha256):
+        return "custody.upstream_snapshot_sha256 must be lowercase SHA-256 hex"
+    archive_bytes = custody.get("archive_bytes")
+    if isinstance(archive_bytes, bool) or not isinstance(archive_bytes, int) or archive_bytes <= 0:
+        return "custody.archive_bytes must be a positive integer"
+
+    measurement = payload.get("measurement")
+    if not isinstance(measurement, dict):
+        return "measurement must be an object"
+    if measurement.get("n_samples") != 600:
+        return "measurement.n_samples must equal 600"
+    d_seg = measurement.get("d_seg")
+    d_pose = measurement.get("d_pose")
+    score = measurement.get("score")
+    for name, value in (("d_seg", d_seg), ("d_pose", d_pose), ("score", score)):
+        if not _finite_number(value) or float(value) < 0.0:
+            return f"measurement.{name} must be a finite non-negative number"
+
+    # Route axis/hardware acceptance through the existing Catalog #127 canonical validator instead
+    # of duplicating its allow-list here.
+    from tac.continual_learning import ContestResult
+
+    custody_verdict = ContestResult(
+        axis=authority.get("axis", ""),
+        hardware_substrate=authority.get("hardware_substrate", ""),
+        architecture_class=f"curriculum_candidate:{candidate}",
+        score_value=float(score),
+        evidence_tag=authority.get("evidence_tag", ""),
+        archive_sha256=str(archive_sha256),
+        archive_bytes=archive_bytes,
+    ).validate_custody_verdict()
+    if not custody_verdict.accepted:
+        return f"canonical authority custody refused: {custody_verdict.reason}"
+
+    from tac.auth_eval_schema import contest_formula_score
+
+    recomputed = contest_formula_score(
+        seg_dist=float(d_seg),
+        pose_dist=float(d_pose),
+        archive_bytes=archive_bytes,
+    )
+    if not math.isclose(float(score), recomputed, rel_tol=0.0, abs_tol=1e-9):
+        return f"measurement.score mismatch: receipt {float(score)}, recomputed {recomputed}"
+    return None
+
+
+_PRODUCTION_RECEIPT_VALIDATORS = {
+    PRODUCTION_RECEIPT_SCHEMA: _production_admission_receipt_error,
+}
+
+# Code-reviewed trust root.  A caller cannot mint authority by writing a syntactically valid JSON
+# object and hashing it: candidate, path, and exact receipt bytes must first be pinned here.  Keep the
+# default fail-closed; tests may monkeypatch a scoped entry to exercise a supported validator.
+_TRUSTED_PRODUCTION_RECEIPTS: dict[tuple[str, str], str] = {}
+
+
+def _production_receipt_semantic_error(receipt_bytes: bytes, *, candidate: str) -> str | None:
+    try:
+        payload = json.loads(receipt_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        return f"production receipt is not valid JSON: {exc}"
+    if not isinstance(payload, dict):
+        return "production receipt must contain a JSON object"
+    schema = payload.get("schema")
+    validator = _PRODUCTION_RECEIPT_VALIDATORS.get(schema)
+    if validator is None:
+        return f"unsupported production receipt schema {schema!r}"
+    return validator(payload, candidate=candidate)
+
+
+def _receipt_custody_error(
+    verdict_ref: object,
+    trusted_sha256: object,
+    *,
+    production_candidate: str | None = None,
+) -> str | None:
     """Return why a receipt lacks durable byte custody, or ``None`` when verified.
 
     Production ``measured`` authority always calls this gate. A research diagnostic calls it when
@@ -140,6 +261,16 @@ def _receipt_custody_error(verdict_ref: object, trusted_sha256: object) -> str |
         return "verdict_ref is required"
     if not _valid_sha256(trusted_sha256):
         return "trusted_receipt_sha256 is required and must be lowercase SHA-256 hex"
+
+    if production_candidate is not None:
+        trusted_registry_sha = _TRUSTED_PRODUCTION_RECEIPTS.get((production_candidate, str(verdict_ref)))
+        if trusted_registry_sha is None:
+            return "production receipt candidate/path is not in the code-reviewed trust registry"
+        if trusted_registry_sha != trusted_sha256:
+            return (
+                "production receipt SHA-256 does not match the code-reviewed trust registry: "
+                f"expected {trusted_registry_sha}, got {trusted_sha256}"
+            )
 
     ref = Path(verdict_ref)
     if ref.is_absolute():
@@ -175,6 +306,7 @@ def _receipt_custody_error(verdict_ref: object, trusted_sha256: object) -> str |
         return f"receipt cannot be opened without following symlinks: {exc}"
 
     digest = hashlib.sha256()
+    receipt_bytes = bytearray()
     try:
         before = os.fstat(fd)
         if not stat.S_ISREG(before.st_mode):
@@ -183,6 +315,8 @@ def _receipt_custody_error(verdict_ref: object, trusted_sha256: object) -> str |
             return "receipt changed while custody was being established"
         while chunk := os.read(fd, 1024 * 1024):
             digest.update(chunk)
+            if production_candidate is not None:
+                receipt_bytes.extend(chunk)
         after = os.fstat(fd)
     except OSError as exc:
         return f"receipt bytes could not be read: {exc}"
@@ -196,6 +330,10 @@ def _receipt_custody_error(verdict_ref: object, trusted_sha256: object) -> str |
     actual_sha256 = digest.hexdigest()
     if actual_sha256 != trusted_sha256:
         return f"receipt SHA-256 mismatch: expected {trusted_sha256}, got {actual_sha256}"
+    if production_candidate is not None:
+        semantic_error = _production_receipt_semantic_error(bytes(receipt_bytes), candidate=production_candidate)
+        if semantic_error is not None:
+            return semantic_error
     return None
 
 
@@ -239,7 +377,9 @@ def _valid_stored_row(row: object) -> bool:
             return False
         receipt_sha = row.get("trusted_receipt_sha256")
         if (not research_only or receipt_sha is not None) and _receipt_custody_error(
-            row.get("verdict_ref"), receipt_sha
+            row.get("verdict_ref"),
+            receipt_sha,
+            production_candidate=row["candidate"] if not research_only else None,
         ):
             return False
     elif evidence_kind is not None:
@@ -268,6 +408,44 @@ def _valid_stored_row(row: object) -> bool:
         or not isinstance(blockers, Sequence)
         or any(not _nonempty_string(item) for item in blockers)
     )
+
+
+def _blocked_research_seed_for_missing_custody(row: object) -> dict | None:
+    """Keep a pinned research signal visible when its receipt bytes are unavailable.
+
+    A missing/changed research receipt must remove ``measured`` authority, but silently deleting the
+    candidate recreates the orphan class this pool exists to prevent.  Only otherwise-valid,
+    explicitly research-only measured seeds are downgraded; malformed or production seeds still
+    disappear fail-closed.
+    """
+
+    if not isinstance(row, dict):
+        return None
+    if (
+        row.get("status") != STATUS_MEASURED
+        or row.get("research_only") is not True
+        or row.get("evidence_kind") != EVIDENCE_RESEARCH_DIAGNOSTIC
+        or not _nonempty_string(row.get("candidate"))
+    ):
+        return None
+    receipt_sha = row.get("trusted_receipt_sha256")
+    if receipt_sha is None:
+        return None
+    custody_error = _receipt_custody_error(row.get("verdict_ref"), receipt_sha)
+    if custody_error is None:
+        return None
+
+    blocked = dict(row)
+    blocked["status"] = STATUS_REFORMULATION_QUEUE
+    blocked["evidence_kind"] = None
+    blocked["gate"] = f"RECEIPT_CUSTODY_BLOCKED: {custody_error}; {row.get('gate', '')}"
+    blocked["justification"] = f"UNVERIFIED_CUSTODY_RESEARCH_SIGNAL: {row.get('justification', '')}"
+    blocked["activation_status"] = "RECEIPT_CUSTODY_BLOCKED_NO_PRODUCTION_AUTHORITY"
+    blocked["blockers"] = [
+        *row.get("blockers", ()),
+        f"RECEIPT_CUSTODY_BLOCKED: {custody_error}",
+    ]
+    return blocked if _valid_stored_row(blocked) else None
 
 
 # _append_locked_jsonl canonicalized to tac.jsonl_store.append_locked_jsonl (audit finding #4,
@@ -385,7 +563,11 @@ def record_candidate(
     if trusted_receipt_sha256 is not None and not _valid_sha256(trusted_receipt_sha256):
         raise ValueError("trusted_receipt_sha256 must be a lowercase SHA-256 hex digest")
     if status == STATUS_MEASURED and (not research_only or trusted_receipt_sha256 is not None):
-        custody_error = _receipt_custody_error(verdict_ref, trusted_receipt_sha256)
+        custody_error = _receipt_custody_error(
+            verdict_ref,
+            trusted_receipt_sha256,
+            production_candidate=candidate if not research_only else None,
+        )
         if custody_error is not None:
             authority = "production measured" if not research_only else "research diagnostic pinned"
             raise ValueError(f"{authority} receipt custody invalid: {custody_error}")
@@ -441,7 +623,13 @@ def _read_pool(path: Path | None = None, *, include_seed: bool | None = None) ->
         # A committed seed is an evidence path too, not a validation bypass.  Invalid seeds fail
         # closed exactly like invalid JSONL overlays; production measured seeds must prove live byte
         # custody before they can appear in the typed pool.
-        out.update({candidate: row for candidate, row in _seed_map().items() if _valid_stored_row(row)})
+        for candidate, row in _seed_map().items():
+            if _valid_stored_row(row):
+                out[candidate] = row
+                continue
+            blocked = _blocked_research_seed_for_missing_custody(row)
+            if blocked is not None:
+                out[candidate] = blocked
     p = Path(path) if path is not None else POOL_PATH
     if not p.exists():
         return out
@@ -1000,22 +1188,22 @@ _SEED: tuple[dict, ...] = (
         "owner": "lane_p0_backward_closer_20260713",
         "gate": "NOT_ADMITTED corrected n600 gate: accepted stale-minus-exact d_seg regret <= 0 only 308/456 (requires 456/456); renderer-gradient relL2 < 1 passed 456/456; default OFF",
         "justification": "MEASURED research diagnostic: 456/600 behavioral full-facet accepts (p=0.76), but the corrected fidelity gate failed; admitted realized bulk saving is 1.0x / reduction 0.0",
-        "source_anchor": "experiments/results/p0_costate_reuse_k2_n600_v3_20260713/corrected_adjudication_receipt.json",
-        "verdict_ref": "experiments/results/p0_costate_reuse_k2_n600_v3_20260713/corrected_adjudication_receipt.json",
+        "source_anchor": ".omx/research/p0_costate_reuse_k2_corrected_adjudication_receipt_20260714.json",
+        "verdict_ref": ".omx/research/p0_costate_reuse_k2_corrected_adjudication_receipt_20260714.json",
         "evidence_kind": EVIDENCE_RESEARCH_DIAGNOSTIC,
         "research_only": True,
         "authority_axis": "[macOS-CPU advisory; cached n600 Torch/NumPy-fp32 training-gradient MEANS; teacher-backward slice only; NON-GLOBAL]",
-        "verdict_scope": "corrected source-bound n600 K=2 teacher-backward diagnostic only; NOT a global throughput win; HEAD e59f69a79c dominant 95%-kill forward-only frozen authority verdict remains controlling; pointer_moved=false; score_claim=false; whole-epoch speedup UNKNOWN_IN_LOOP_TIMER_OWED",
+        "verdict_scope": "corrected source-bound n600 K=2 teacher-backward diagnostic only; NOT a global throughput win; HEAD e59f69a79c dominant 95%-kill forward-only frozen authority verdict remains controlling; pointer_moved=false; score_claim=false; FIDELITY_BLOCKED_PENDING_NEW_FORMULATION",
         "activation_status": "NOT_ADMITTED_DEFAULT_OFF_NO_LIVE_PROVIDER_OR_RESUME_REGISTRATION",
         "realized_speedup_factor": 1.0,
         "derived_cost_reduction_fraction": 0.0,
-        "trusted_receipt_sha256": "2102912bc8bd9711f00869746414fb21ea723729bcd26e612274547c6ca73d59",
+        "trusted_receipt_sha256": "30ce7e5e23b10cb15c52a89debc57b0bf5349be16ed9cb0e97c3974579465ff7",
         "blockers": (
             "accepted stale-minus-exact d_seg regret <= 0 only 308/456; corrected fidelity gate requires 456/456",
             "DERIVED_COUNTERFACTUAL_BEHIND_FAILED_FIDELITY_GATE: exact-backward-call amortization 1.6129032258064517x and reduction 0.38; never achieved, admitted, global, or wall-clock",
             "live exact-costate provider absent",
             "canonical resume-registry integration absent",
-            "whole-epoch in-loop timer owed",
+            "in-loop timer is owed only after a fresh formulation passes fidelity admission; no timer is owed for this rejected formulation",
         ),
     },
     {
@@ -1028,14 +1216,14 @@ _SEED: tuple[dict, ...] = (
         "gate": "NO_GO_DENSE_FULLRANK; realized exact/dense saving 1.0x; do not dispatch the tested arm",
         "justification": "MEASURED n600 source-bound costate replay; ideal custom spatial ceiling is not realized exact/dense saving",
         "source_anchor": ".omx/research/p0_sparse_adjoint_costate_vjp_20260713.md",
-        "verdict_ref": "experiments/results/p0_sparse_adjoint_costate_vjp_20260713/measurement_receipt.json",
+        "verdict_ref": ".omx/research/p0_sparse_adjoint_costate_vjp_20260713.md",
         "evidence_kind": EVIDENCE_RESEARCH_DIAGNOSTIC,
         "research_only": True,
         "authority_axis": "[macOS-CPU advisory; Torch/NumPy-fp32 training-gradient MEANS only]",
         "verdict_scope": "source-bound task455 n600 replay; frozen EfficientNet-B2 U-Net SegNet CE input costate; 4.7366% output masks and high-fidelity cross-state low-rank basis",
         "activation_status": "NO_PRODUCTION_ACTIVATION_NO_GO_DENSE_FULLRANK",
         "realized_speedup_factor": 1.0,
-        "trusted_receipt_sha256": "52a22f4b60367fc27ca0fca7293b0741da4b809724479cd3ef7e92291c250cef",
+        "trusted_receipt_sha256": "bc3e68c139f8472cd43badeb6ce70d3270f2a30945c714a0b2c1d8da57eeb771",
         "blockers": ("dense framework realizes no sparse saving", "tested input costate is nonzero and high-rank"),
     },
     {
@@ -1156,6 +1344,8 @@ __all__ = [
     "EVIDENCE_BYTE_CLOSED",
     "EVIDENCE_RESEARCH_DIAGNOSTIC",
     "POOL_PATH",
+    "PRODUCTION_RECEIPT_SCHEMA",
+    "PRODUCTION_RECEIPT_TYPE",
     "STATUS_ARMED",
     "STATUS_BUILT_NEVER_FIRED",
     "STATUS_MEASURED",

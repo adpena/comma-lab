@@ -16,6 +16,41 @@ import pytest
 from tac.witness_dsl import curriculum_candidate_pool as ccp
 
 
+def _production_receipt(
+    candidate: str,
+    *,
+    axis: str = "cpu",
+    evidence_tag: str = "[contest-CPU]",
+    hardware_substrate: str = "linux_x86_64_cpu",
+) -> dict:
+    archive_bytes = 1234
+    d_seg = 0.001
+    d_pose = 0.0001
+    score = 100.0 * d_seg + (10.0 * d_pose) ** 0.5 + 25.0 * archive_bytes / 37_545_489
+    return {
+        "schema": ccp.PRODUCTION_RECEIPT_SCHEMA,
+        "receipt_type": ccp.PRODUCTION_RECEIPT_TYPE,
+        "candidate": candidate,
+        "verdict": {"status": "ADMITTED", "passed": True, "byte_closed": True},
+        "authority": {
+            "outcome": "ACCEPTED",
+            "axis": axis,
+            "evidence_tag": evidence_tag,
+            "hardware_substrate": hardware_substrate,
+            "research_only": False,
+            "promotion_eligible": True,
+        },
+        "custody": {
+            "outcome": "VALID",
+            "archive_sha256": "a" * 64,
+            "archive_bytes": archive_bytes,
+            "runtime_tree_sha256": "b" * 64,
+            "upstream_snapshot_sha256": "c" * 64,
+        },
+        "measurement": {"n_samples": 600, "d_seg": d_seg, "d_pose": d_pose, "score": score},
+    }
+
+
 # ── store round-trip + latest-wins ───────────────────────────────────────────────────────────────
 def test_record_and_read_roundtrip(tmp_path):
     p = tmp_path / "pool.jsonl"
@@ -259,14 +294,39 @@ def test_measured_requires_verdict_ref(tmp_path):
         )
 
 
-def test_measured_with_real_receipt_custody_ok(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    ("axis", "evidence_tag", "hardware_substrate"),
+    [
+        ("cpu", "[contest-CPU]", "linux_x86_64_cpu"),
+        ("cuda", "[contest-CUDA]", "linux_x86_64_t4"),
+    ],
+)
+def test_measured_with_allowlisted_semantically_authoritative_receipt_ok(
+    tmp_path, monkeypatch, axis, evidence_tag, hardware_substrate
+):
     repo = tmp_path / "repo"
     receipt = repo / "byteclose" / "verdict.json"
     receipt.parent.mkdir(parents=True)
-    receipt_bytes = b'{"archive_sha256":"authority"}\n'
+    receipt_bytes = (
+        json.dumps(
+            _production_receipt(
+                "c",
+                axis=axis,
+                evidence_tag=evidence_tag,
+                hardware_substrate=hardware_substrate,
+            ),
+            sort_keys=True,
+        ).encode("utf-8")
+        + b"\n"
+    )
     receipt.write_bytes(receipt_bytes)
     receipt_sha256 = hashlib.sha256(receipt_bytes).hexdigest()
     monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
+    monkeypatch.setattr(
+        ccp,
+        "_TRUSTED_PRODUCTION_RECEIPTS",
+        {("c", "byteclose/verdict.json"): receipt_sha256},
+    )
 
     pool_path = tmp_path / "p.jsonl"
     row = ccp.record_candidate(
@@ -286,6 +346,109 @@ def test_measured_with_real_receipt_custody_ok(tmp_path, monkeypatch):
     assert row["evidence_kind"] == ccp.EVIDENCE_BYTE_CLOSED
     assert row["trusted_receipt_sha256"] == receipt_sha256
     assert ccp.candidate_status("c", path=pool_path) is not None
+
+
+def test_readme_hash_attack_cannot_mint_production_authority(tmp_path):
+    readme = ccp._REPO_ROOT / "README.md"
+    assert readme.is_file()
+    with pytest.raises(ValueError, match="not in the code-reviewed trust registry"):
+        ccp.record_candidate(
+            "readme-attack",
+            ccp.STATUS_MEASURED,
+            form_class="averaging",
+            source_anchor="caller-controlled",
+            gate="must fail closed",
+            dsl_lever="L",
+            verdict_ref="README.md",
+            evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
+            trusted_receipt_sha256=hashlib.sha256(readme.read_bytes()).hexdigest(),
+            path=tmp_path / "p.jsonl",
+        )
+
+
+def test_forged_supported_schema_and_matching_hash_still_need_trust_root(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    receipt = repo / "forged.json"
+    receipt.write_text(json.dumps(_production_receipt("forged"), sort_keys=True), encoding="utf-8")
+    digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+    monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
+    with pytest.raises(ValueError, match="not in the code-reviewed trust registry"):
+        ccp.record_candidate(
+            "forged",
+            ccp.STATUS_MEASURED,
+            form_class="averaging",
+            source_anchor="caller-controlled",
+            gate="must fail closed",
+            dsl_lever="L",
+            verdict_ref="forged.json",
+            evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
+            trusted_receipt_sha256=digest,
+            path=tmp_path / "p.jsonl",
+        )
+
+
+def test_allowlisted_old_synthetic_archive_sha_fixture_is_semantically_rejected(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    receipt = repo / "synthetic.json"
+    receipt.write_bytes(b'{"archive_sha256":"authority"}\n')
+    digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+    monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
+    monkeypatch.setattr(ccp, "_TRUSTED_PRODUCTION_RECEIPTS", {("synthetic", "synthetic.json"): digest})
+    with pytest.raises(ValueError, match="unsupported production receipt schema"):
+        ccp.record_candidate(
+            "synthetic",
+            ccp.STATUS_MEASURED,
+            form_class="averaging",
+            source_anchor="old fixture",
+            gate="must fail closed",
+            dsl_lever="L",
+            verdict_ref="synthetic.json",
+            evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
+            trusted_receipt_sha256=digest,
+            path=tmp_path / "p.jsonl",
+        )
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "value", "message"),
+    [
+        ("verdict", "passed", False, "status='ADMITTED' and passed=true"),
+        ("authority", "outcome", "REFUSED", "authority.outcome"),
+        ("custody", "outcome", "INVALID", "custody.outcome"),
+        ("authority", "hardware_substrate", "macos_arm64", "canonical authority custody refused"),
+    ],
+)
+def test_allowlisted_receipt_still_requires_admission_authority_and_custody_outcomes(
+    tmp_path, monkeypatch, section, field, value, message
+):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    payload = _production_receipt("semantic-refuse")
+    payload[section][field] = value
+    receipt = repo / "receipt.json"
+    receipt.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+    monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
+    monkeypatch.setattr(
+        ccp,
+        "_TRUSTED_PRODUCTION_RECEIPTS",
+        {("semantic-refuse", "receipt.json"): digest},
+    )
+    with pytest.raises(ValueError, match=message):
+        ccp.record_candidate(
+            "semantic-refuse",
+            ccp.STATUS_MEASURED,
+            form_class="averaging",
+            source_anchor="reviewed receipt",
+            gate="must fail closed",
+            dsl_lever="L",
+            verdict_ref="receipt.json",
+            evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
+            trusted_receipt_sha256=digest,
+            path=tmp_path / "p.jsonl",
+        )
 
 
 def test_measured_production_rejects_missing_receipt_sha(tmp_path, monkeypatch):
@@ -312,6 +475,7 @@ def test_measured_production_rejects_nonexistent_receipt(tmp_path, monkeypatch):
     repo = tmp_path / "repo"
     repo.mkdir()
     monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
+    monkeypatch.setattr(ccp, "_TRUSTED_PRODUCTION_RECEIPTS", {("missing-receipt", "missing.json"): "0" * 64})
     with pytest.raises(ValueError, match="receipt path is unavailable"):
         ccp.record_candidate(
             "missing-receipt",
@@ -332,6 +496,7 @@ def test_measured_production_rejects_wrong_receipt_hash(tmp_path, monkeypatch):
     repo.mkdir()
     (repo / "receipt.json").write_text("{}\n", encoding="utf-8")
     monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
+    monkeypatch.setattr(ccp, "_TRUSTED_PRODUCTION_RECEIPTS", {("wrong-sha", "receipt.json"): "0" * 64})
     with pytest.raises(ValueError, match="receipt SHA-256 mismatch"):
         ccp.record_candidate(
             "wrong-sha",
@@ -354,6 +519,8 @@ def test_measured_production_rejects_symlink_receipt(tmp_path, monkeypatch):
     target.write_text("{}\n", encoding="utf-8")
     (repo / "receipt.json").symlink_to(target.name)
     monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
+    target_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+    monkeypatch.setattr(ccp, "_TRUSTED_PRODUCTION_RECEIPTS", {("symlink", "receipt.json"): target_sha})
     with pytest.raises(ValueError, match="contains a symlink"):
         ccp.record_candidate(
             "symlink",
@@ -364,7 +531,7 @@ def test_measured_production_rejects_symlink_receipt(tmp_path, monkeypatch):
             dsl_lever="L",
             verdict_ref="receipt.json",
             evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
-            trusted_receipt_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),
+            trusted_receipt_sha256=target_sha,
             path=tmp_path / "p.jsonl",
         )
 
@@ -373,9 +540,11 @@ def test_measured_production_tamper_invalidates_stored_authority(tmp_path, monke
     repo = tmp_path / "repo"
     repo.mkdir()
     receipt = repo / "receipt.json"
-    original = b'{"verdict":"admitted"}\n'
+    original = json.dumps(_production_receipt("tamper"), sort_keys=True).encode("utf-8") + b"\n"
     receipt.write_bytes(original)
     monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
+    original_sha = hashlib.sha256(original).hexdigest()
+    monkeypatch.setattr(ccp, "_TRUSTED_PRODUCTION_RECEIPTS", {("tamper", "receipt.json"): original_sha})
     pool_path = tmp_path / "p.jsonl"
     ccp.record_candidate(
         "tamper",
@@ -386,7 +555,7 @@ def test_measured_production_tamper_invalidates_stored_authority(tmp_path, monke
         dsl_lever="L",
         verdict_ref="receipt.json",
         evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
-        trusted_receipt_sha256=hashlib.sha256(original).hexdigest(),
+        trusted_receipt_sha256=original_sha,
         path=pool_path,
     )
     assert ccp.candidate_status("tamper", path=pool_path) is not None
@@ -628,6 +797,28 @@ def test_seed_is_idempotent(tmp_path):
     assert n2 == 0  # re-seed writes nothing
 
 
+def test_clean_checkout_seed_reads_tracked_k2_and_sparse_receipts_without_runtime_jsonl(tmp_path):
+    rows = ccp._read_pool(path=tmp_path / "absent.jsonl", include_seed=True)
+    for candidate in ("p0_guarded_exact_costate_reuse_k2", "p0_sparse_adjoint_dense_fullrank"):
+        assert candidate in rows
+        assert rows[candidate]["status"] == ccp.STATUS_MEASURED
+        assert rows[candidate]["research_only"] is True
+        assert not any("RECEIPT_CUSTODY_BLOCKED" in blocker for blocker in rows[candidate]["blockers"])
+
+
+def test_missing_pinned_research_receipt_surfaces_blocker_instead_of_losing_seed(tmp_path, monkeypatch):
+    seed = next(row for row in ccp._SEED if row["candidate"] == "p0_guarded_exact_costate_reuse_k2")
+    monkeypatch.setattr(ccp, "_SEED", (seed,))
+    monkeypatch.setattr(ccp, "_REPO_ROOT", tmp_path)
+    rows = ccp._read_pool(path=tmp_path / "absent.jsonl", include_seed=True)
+    blocked = rows["p0_guarded_exact_costate_reuse_k2"]
+    assert blocked["status"] == ccp.STATUS_REFORMULATION_QUEUE
+    assert blocked["evidence_kind"] is None
+    assert blocked["activation_status"] == "RECEIPT_CUSTODY_BLOCKED_NO_PRODUCTION_AUTHORITY"
+    assert "UNVERIFIED_CUSTODY_RESEARCH_SIGNAL" in blocked["justification"]
+    assert any("RECEIPT_CUSTODY_BLOCKED" in blocker for blocker in blocked["blockers"])
+
+
 def test_seed_measured_rows_have_verdict_and_are_research_only(tmp_path):
     # NO-FAKE: committed measured research findings cite their verdict and cannot activate production.
     p = tmp_path / "p.jsonl"
@@ -686,10 +877,8 @@ def test_p0_research_candidates_are_discoverable_with_honest_states():
     assert reuse["research_only"] is True
     assert reuse["realized_speedup_factor"] == 1.0
     assert reuse["derived_cost_reduction_fraction"] == 0.0
-    assert reuse["trusted_receipt_sha256"] == ("2102912bc8bd9711f00869746414fb21ea723729bcd26e612274547c6ca73d59")
-    assert reuse["verdict_ref"] == (
-        "experiments/results/p0_costate_reuse_k2_n600_v3_20260713/corrected_adjudication_receipt.json"
-    )
+    assert reuse["trusted_receipt_sha256"] == ("30ce7e5e23b10cb15c52a89debc57b0bf5349be16ed9cb0e97c3974579465ff7")
+    assert reuse["verdict_ref"] == (".omx/research/p0_costate_reuse_k2_corrected_adjudication_receipt_20260714.json")
     assert "NOT_ADMITTED corrected n600 gate" in reuse["gate"]
     assert "308/456" in reuse["gate"]
     assert "renderer-gradient relL2 < 1 passed 456/456" in reuse["gate"]
@@ -698,6 +887,8 @@ def test_p0_research_candidates_are_discoverable_with_honest_states():
     assert "HEAD e59f69a79c dominant 95%-kill forward-only frozen authority" in reuse["verdict_scope"]
     assert "pointer_moved=false" in reuse["verdict_scope"]
     assert "score_claim=false" in reuse["verdict_scope"]
+    assert "FIDELITY_BLOCKED_PENDING_NEW_FORMULATION" in reuse["verdict_scope"]
+    assert "UNKNOWN_IN_LOOP_TIMER_OWED" not in reuse["verdict_scope"]
     assert reuse["activation_status"] == ("NOT_ADMITTED_DEFAULT_OFF_NO_LIVE_PROVIDER_OR_RESUME_REGISTRATION")
     counterfactual = next(
         blocker
@@ -708,6 +899,7 @@ def test_p0_research_candidates_are_discoverable_with_honest_states():
     assert "reduction 0.38" in counterfactual
     assert "never achieved, admitted, global, or wall-clock" in counterfactual
     assert "canonical resume-registry integration absent" in reuse["blockers"]
+    assert any("timer is owed only after a fresh formulation passes fidelity admission" in b for b in reuse["blockers"])
     assert reuse["candidate"] not in fireable_names
     assert reuse["candidate"] in research_names
     assert ccp.candidate_status(reuse["candidate"]).in_duty_queue is False
@@ -716,7 +908,8 @@ def test_p0_research_candidates_are_discoverable_with_honest_states():
     assert sparse["status"] == ccp.STATUS_MEASURED
     assert sparse["realized_speedup_factor"] == 1.0
     assert sparse["derived_cost_reduction_fraction"] is None
-    assert sparse["trusted_receipt_sha256"] == ("52a22f4b60367fc27ca0fca7293b0741da4b809724479cd3ef7e92291c250cef")
+    assert sparse["trusted_receipt_sha256"] == ("bc3e68c139f8472cd43badeb6ce70d3270f2a30945c714a0b2c1d8da57eeb771")
+    assert sparse["verdict_ref"] == ".omx/research/p0_sparse_adjoint_costate_vjp_20260713.md"
     assert "NO_GO_DENSE_FULLRANK" in sparse["activation_status"]
     assert "source-bound task455 n600 replay" in sparse["verdict_scope"]
     assert sparse["candidate"] not in fireable_names

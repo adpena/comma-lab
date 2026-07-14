@@ -8,7 +8,13 @@ import pytest
 
 import tac.through_r.terminal_costate_skip as terminal_runtime
 from tac.canonical_equations.exact_costate_reuse_k2_20260713 import (
+    CORRECTED_RECEIPT,
+    CORRECTED_RECEIPT_SHA256,
+    CORRECTED_WRAPPER,
+    CORRECTED_WRAPPER_SHA256,
     EQUATION_ID,
+    FIDELITY_BLOCKED_STATUS,
+    TIMING_ELIGIBILITY,
     amortized_cost_fraction,
     build_exact_costate_reuse_k2_guarded_v1,
     corrected_diagnostic_threshold,
@@ -50,7 +56,10 @@ def sha256(path: Path) -> str:
 
 def test_k2_cost_law_and_non_k2_refusal():
     assert amortized_cost_fraction(alpha=0.2) == pytest.approx(0.6)
+    assert amortized_cost_fraction(alpha=0.2, charged_nonaccept_rate=0.25) == pytest.approx(0.725)
     assert amortized_cost_fraction(alpha=0.2, fallback_rate=0.25) == pytest.approx(0.725)
+    with pytest.raises(ValueError, match="alias"):
+        amortized_cost_fraction(alpha=0.2, charged_nonaccept_rate=0.25, fallback_rate=0.5)
     assert exact_backward_call_amortization(reuse_accept_fraction=1.0) == pytest.approx(2.0)
     with pytest.raises(ValueError):
         amortized_cost_fraction(alpha=0.2, cadence=3)
@@ -287,11 +296,23 @@ def test_laws_inject_cost_guard_and_terminal_skip():
         exact_metric_accept_reject=True,
         terminal_receipt_path=TERMINAL_RECEIPT_PATH,
         expected_receipt_sha256=REVIEWED_TERMINAL_RECEIPT_SHA256,
-        reuse_accept_fraction=1.0,
+        charged_accept_fraction=1.0,
+        actual_guard_fallback_fraction=0.0,
+        terminal_or_blocked_fraction=0.0,
     )
     assert laws == {
         "cadence": 2,
         "n_pairs": 600,
+        "charged_accept_fraction": 1.0,
+        "actual_guard_fallback_fraction": 0.0,
+        "terminal_or_blocked_fraction": 0.0,
+        "charged_nonaccept_fraction": 0.0,
+        "counterfactual_nonadmitted_amortized_cost_fraction": 0.625,
+        "counterfactual_nonadmitted_teacher_slice_speedup": 1.6,
+        "counterfactual_nonadmitted_exact_backward_call_amortization": 2.0,
+        "counterfactual_nonadmitted_exact_backward_call_reduction": 0.5,
+        "admitted_teacher_slice_speedup": 1.0,
+        "admitted_exact_backward_call_reduction": 0.0,
         "reuse_accept_fraction": 1.0,
         "fallback_rate": 0.0,
         "amortized_cost_fraction": 0.625,
@@ -307,8 +328,8 @@ def test_laws_inject_cost_guard_and_terminal_skip():
 def test_corrected_economics_and_strict_threshold_boundaries():
     alpha = 0.1784755863
     p = 0.76
-    q = 1.0 - p
-    cost_fraction = amortized_cost_fraction(alpha=alpha, fallback_rate=q)
+    charged_nonaccept = 1.0 - p
+    cost_fraction = amortized_cost_fraction(alpha=alpha, charged_nonaccept_rate=charged_nonaccept)
     assert cost_fraction == pytest.approx(1.4184755862999998 / 2.0)
     assert 1.0 / cost_fraction == pytest.approx(1.4099643443401577)
     assert exact_backward_call_amortization(reuse_accept_fraction=p) == pytest.approx(1.6129032258064517)
@@ -319,7 +340,7 @@ def test_corrected_economics_and_strict_threshold_boundaries():
     assert threshold < 1.0
 
 
-def test_laws_derive_complement_and_reject_noncomplementary_rates():
+def test_laws_distinguish_guard_fallback_from_terminal_charged_nonaccept():
     common = {
         "alpha": 0.2,
         "anchor_ce": 1.0,
@@ -328,16 +349,20 @@ def test_laws_derive_complement_and_reject_noncomplementary_rates():
         "candidate_d_seg": 0.2,
         "anchor_d_pose": 0.3,
         "candidate_d_pose": 0.3,
-        "reuse_accept_fraction": 0.25,
+        "charged_accept_fraction": 0.25,
+        "actual_guard_fallback_fraction": 0.5,
+        "terminal_or_blocked_fraction": 0.25,
     }
     derived = exact_costate_reuse_k2_laws(**common)
-    explicit = exact_costate_reuse_k2_laws(**common, fallback_rate=0.75)
-    assert derived["fallback_rate"] == pytest.approx(0.75)
-    assert derived["amortized_cost_fraction"] == pytest.approx(0.975)
-    assert derived["teacher_slice_speedup"] == pytest.approx(1.0 / 0.975)
-    assert explicit == derived
-    with pytest.raises(ValueError, match="1 - reuse_accept_fraction"):
-        exact_costate_reuse_k2_laws(**common, fallback_rate=0.0)
+    assert derived["actual_guard_fallback_fraction"] == pytest.approx(0.5)
+    assert derived["terminal_or_blocked_fraction"] == pytest.approx(0.25)
+    assert derived["charged_nonaccept_fraction"] == pytest.approx(0.75)
+    assert derived["counterfactual_nonadmitted_amortized_cost_fraction"] == pytest.approx(0.975)
+    assert derived["counterfactual_nonadmitted_teacher_slice_speedup"] == pytest.approx(1.0 / 0.975)
+    assert derived["admitted_teacher_slice_speedup"] == 1.0
+    assert derived["admitted_exact_backward_call_reduction"] == 0.0
+    with pytest.raises(ValueError, match="must equal 1"):
+        exact_costate_reuse_k2_laws(**(common | {"terminal_or_blocked_fraction": 0.0}))
 
     default_rates = exact_costate_reuse_k2_laws(
         alpha=0.2,
@@ -348,16 +373,61 @@ def test_laws_derive_complement_and_reject_noncomplementary_rates():
         anchor_d_pose=0.3,
         candidate_d_pose=0.3,
     )
-    assert default_rates["reuse_accept_fraction"] == 0.0
-    assert default_rates["fallback_rate"] == 1.0
-    assert default_rates["teacher_slice_speedup"] == pytest.approx(2.0 / 2.2)
+    assert default_rates["charged_accept_fraction"] == 0.0
+    assert default_rates["actual_guard_fallback_fraction"] is None
+    assert default_rates["terminal_or_blocked_fraction"] is None
+    assert default_rates["charged_nonaccept_fraction"] == 1.0
+    assert default_rates["counterfactual_nonadmitted_teacher_slice_speedup"] == pytest.approx(2.0 / 2.2)
+
+
+def test_v1_aliases_and_output_keys_remain_compatible_without_conflating_fallback():
+    common = {
+        "alpha": 0.2,
+        "anchor_ce": 1.0,
+        "candidate_ce": 0.9,
+        "anchor_d_seg": 0.2,
+        "candidate_d_seg": 0.2,
+        "anchor_d_pose": 0.3,
+        "candidate_d_pose": 0.3,
+    }
+    legacy = exact_costate_reuse_k2_laws(
+        **common,
+        reuse_accept_fraction=0.25,
+        fallback_rate=0.75,
+    )
+    assert legacy["reuse_accept_fraction"] == 0.25
+    assert legacy["fallback_rate"] == 0.75
+    assert legacy["charged_nonaccept_fraction"] == 0.75
+    assert legacy["actual_guard_fallback_fraction"] is None
+    assert legacy["terminal_or_blocked_fraction"] is None
+    assert legacy["amortized_cost_fraction"] == legacy["counterfactual_nonadmitted_amortized_cost_fraction"]
+    assert legacy["teacher_slice_speedup"] == legacy["counterfactual_nonadmitted_teacher_slice_speedup"]
+    assert (
+        legacy["exact_backward_call_amortization"]
+        == (legacy["counterfactual_nonadmitted_exact_backward_call_amortization"])
+    )
+    assert (
+        legacy["exact_backward_call_reduction"] == (legacy["counterfactual_nonadmitted_exact_backward_call_reduction"])
+    )
+    with pytest.raises(ValueError, match="reuse_accept_fraction alias"):
+        exact_costate_reuse_k2_laws(
+            **common,
+            charged_accept_fraction=0.5,
+            reuse_accept_fraction=0.25,
+        )
+    with pytest.raises(ValueError, match="fallback_rate alias"):
+        exact_costate_reuse_k2_laws(
+            **common,
+            charged_accept_fraction=0.25,
+            fallback_rate=0.5,
+        )
 
 
 @pytest.mark.parametrize(
     ("call", "match"),
     [
         (lambda: amortized_cost_fraction(alpha=True), "alpha"),
-        (lambda: amortized_cost_fraction(alpha=0.2, fallback_rate=False), "fallback_rate"),
+        (lambda: amortized_cost_fraction(alpha=0.2, charged_nonaccept_rate=False), "charged_nonaccept_rate"),
         (lambda: amortized_cost_fraction(alpha=0.2, cadence=True), "K=2"),
         (lambda: exact_backward_call_amortization(reuse_accept_fraction=True), "reuse_accept_fraction"),
         (lambda: exact_backward_call_reduction(reuse_accept_fraction=False), "reuse_accept_fraction"),
@@ -377,9 +447,16 @@ def test_composed_laws_and_full_facet_guard_reject_bool_numerics():
         "candidate_d_seg": 0.2,
         "anchor_d_pose": 0.3,
         "candidate_d_pose": 0.3,
-        "reuse_accept_fraction": 0.25,
+        "charged_accept_fraction": 0.25,
+        "actual_guard_fallback_fraction": 0.5,
+        "terminal_or_blocked_fraction": 0.25,
     }
-    for field in ("alpha", "fallback_rate", "reuse_accept_fraction"):
+    for field in (
+        "alpha",
+        "charged_accept_fraction",
+        "actual_guard_fallback_fraction",
+        "terminal_or_blocked_fraction",
+    ):
         with pytest.raises(ValueError, match=field):
             exact_costate_reuse_k2_laws(**(common | {field: True}))
     with pytest.raises(ValueError, match="finite numbers"):
@@ -409,9 +486,26 @@ def test_equation_declares_measured_scoped_no_go_and_false_authority():
     assert equation.domain_of_validity["pointer_moved"] is False
     assert equation.domain_of_validity["verdict"] == "NO_GO_NOT_ADMITTED"
     assert equation.domain_of_validity["diagnostic_economics_authority"] == ("DERIVED_DIAGNOSTIC_NOT_IN_LOOP")
-    assert equation.domain_of_validity["whole_epoch_speedup"] == ("UNKNOWN_IN_LOOP_TIMER_OWED")
+    assert equation.domain_of_validity["timing_status"] == FIDELITY_BLOCKED_STATUS
+    assert equation.domain_of_validity["timing_eligibility"] == TIMING_ELIGIBILITY
     assert len(equation.empirical_anchors) == 1
     anchor = equation.empirical_anchors[0]
-    assert anchor.inputs["accepted"] == 456
+    tracked_receipt = REPO / CORRECTED_RECEIPT
+    assert tracked_receipt.is_file()
+    assert sha256(tracked_receipt) == CORRECTED_RECEIPT_SHA256
+    assert anchor.source_artifact == CORRECTED_RECEIPT
+    assert anchor.inputs["tracked_receipt_sha256"] == CORRECTED_RECEIPT_SHA256
+    assert anchor.inputs["embedded_full_wrapper_path"] == CORRECTED_WRAPPER
+    assert anchor.inputs["embedded_full_wrapper_sha256"] == CORRECTED_WRAPPER_SHA256
+    assert anchor.inputs["actual_guard_accept"] == 456
+    assert anchor.inputs["actual_guard_fallback"] == 67
+    assert anchor.inputs["terminal_or_blocked"] == 77
+    assert anchor.inputs["charged_nonaccept"] == 144
+    assert "fallback" not in anchor.inputs
+    assert anchor.predicted_output["admitted_teacher_slice_speedup_x"] == 1.0
+    assert anchor.predicted_output["admitted_exact_backward_call_reduction_fraction"] == 0.0
+    assert anchor.predicted_output["timing_status"] == FIDELITY_BLOCKED_STATUS
+    assert anchor.predicted_output["timing_eligibility"] == TIMING_ELIGIBILITY
+    assert "UNKNOWN_IN_LOOP_TIMER_OWED" not in repr(equation)
     assert anchor.empirical_output["corrected_gate_passed"] is False
     assert anchor.empirical_output["accepted_d_seg_regret_lte_zero"] == "308/456"

@@ -29,6 +29,10 @@ MEASUREMENT_UTC = "2026-07-14T02:24:28Z"
 AXIS = "[macOS-CPU advisory; offline n600 training-signal only; no score authority]"
 CORRECTED_WRAPPER = "experiments/results/p0_costate_reuse_k2_n600_v3_20260713/corrected_adjudication_receipt.json"
 CORRECTED_WRAPPER_SHA256 = "2102912bc8bd9711f00869746414fb21ea723729bcd26e612274547c6ca73d59"
+CORRECTED_RECEIPT = ".omx/research/p0_costate_reuse_k2_corrected_adjudication_receipt_20260714.json"
+CORRECTED_RECEIPT_SHA256 = "30ce7e5e23b10cb15c52a89debc57b0bf5349be16ed9cb0e97c3974579465ff7"
+FIDELITY_BLOCKED_STATUS = "FIDELITY_BLOCKED_PENDING_NEW_FORMULATION"
+TIMING_ELIGIBILITY = "OWED_ONLY_AFTER_NEW_PREREGISTERED_FORMULATION_PASSES_FRESH_N600_FIDELITY"
 
 
 def _unit_interval(value: float, name: str) -> float:
@@ -40,30 +44,52 @@ def _unit_interval(value: float, name: str) -> float:
     return result
 
 
-def amortized_cost_fraction(*, alpha: float, fallback_rate: float = 0.0, cadence: int = K2) -> float:
-    """Return guarded K2 teacher-compute fraction for forward share ``alpha``.
+def amortized_cost_fraction(
+    *,
+    alpha: float,
+    charged_nonaccept_rate: float | None = None,
+    cadence: int = K2,
+    fallback_rate: float | None = None,
+) -> float:
+    """Return counterfactual guarded-K2 cost for forward share ``alpha``.
 
-    Every attempted reuse pays the exact forward guard.  After rollback, a
-    rejected fraction ``fallback_rate`` pays a complete exact forward plus
-    backward refresh; the stale-candidate guard forward cannot be recycled.
+    Every attempted reuse pays the exact forward guard.  Under the sealed
+    all-state accounting convention, ``charged_nonaccept_rate`` includes both
+    actual guard fallbacks and states that are terminal or blocked before a
+    reuse decision.  It must therefore never be reported as a fallback rate.
+    Each charged nonaccept pays a complete exact forward plus backward refresh;
+    the stale-candidate guard forward cannot be recycled. ``fallback_rate`` is
+    the v1 compatibility alias for this *charged nonaccept* rate; it is not an
+    actual-guard-fallback rate.
     """
 
     if isinstance(cadence, bool) or not isinstance(cadence, int) or cadence != K2:
         raise ValueError("this canonical policy is sealed to K=2")
     alpha_value = _unit_interval(alpha, "alpha")
-    fallback_value = _unit_interval(fallback_rate, "fallback_rate")
-    return (1.0 + alpha_value + fallback_value) / float(cadence)
+    charged_nonaccept_value = (
+        0.0
+        if charged_nonaccept_rate is None and fallback_rate is None
+        else _unit_interval(
+            charged_nonaccept_rate if charged_nonaccept_rate is not None else fallback_rate,
+            "charged_nonaccept_rate",
+        )
+    )
+    if fallback_rate is not None:
+        legacy_value = _unit_interval(fallback_rate, "fallback_rate")
+        if not math.isclose(legacy_value, charged_nonaccept_value, rel_tol=0.0, abs_tol=1e-12):
+            raise ValueError("fallback_rate alias must equal charged_nonaccept_rate")
+    return (1.0 + alpha_value + charged_nonaccept_value) / float(cadence)
 
 
 def exact_backward_call_amortization(*, reuse_accept_fraction: float) -> float:
-    """Return exact-backward call ratio ``2/(2-a)`` for accept fraction ``a``."""
+    """Return counterfactual, nonadmitted call ratio ``2/(2-a)``."""
 
     accept_fraction = _unit_interval(reuse_accept_fraction, "reuse_accept_fraction")
     return 2.0 / (2.0 - accept_fraction)
 
 
 def exact_backward_call_reduction(*, reuse_accept_fraction: float) -> float:
-    """Return counterfactual exact-backward reduction ``p/2``."""
+    """Return counterfactual, nonadmitted exact-backward reduction ``p/2``."""
 
     exact_backward_call_amortization(reuse_accept_fraction=reuse_accept_fraction)
     return _unit_interval(reuse_accept_fraction, "reuse_accept_fraction") / 2.0
@@ -174,8 +200,12 @@ def exact_costate_reuse_k2_laws(
     candidate_d_seg: float,
     anchor_d_pose: float,
     candidate_d_pose: float,
+    charged_accept_fraction: float | None = None,
+    actual_guard_fallback_fraction: float | None = None,
+    terminal_or_blocked_fraction: float | None = None,
+    # v1 compatibility aliases. ``fallback_rate`` means charged nonaccept.
     fallback_rate: float | None = None,
-    reuse_accept_fraction: float = 0.0,
+    reuse_accept_fraction: float | None = None,
     exact_metric_accept_reject: bool = False,
     terminal_receipt_path: str | Path | None = None,
     expected_receipt_sha256: str | None = None,
@@ -188,28 +218,75 @@ def exact_costate_reuse_k2_laws(
     terminal_receipt_custody_valid: bool = False,
     terminal_receipt_sha256: str | None = None,
     effective_dimension_certificate_sha256: str | None = None,
-) -> dict[str, float | bool | int]:
+) -> dict[str, float | bool | int | None]:
     """Inject the cost, full-facet guard, and terminal-skip laws together."""
 
-    accept_fraction = _unit_interval(reuse_accept_fraction, "reuse_accept_fraction")
-    derived_fallback_rate = 1.0 - accept_fraction
-    if fallback_rate is None:
-        effective_fallback_rate = derived_fallback_rate
+    if charged_accept_fraction is None and reuse_accept_fraction is None:
+        accept_fraction = 0.0
     else:
-        effective_fallback_rate = _unit_interval(fallback_rate, "fallback_rate")
+        accept_fraction = _unit_interval(
+            charged_accept_fraction if charged_accept_fraction is not None else reuse_accept_fraction,
+            "charged_accept_fraction",
+        )
+    if reuse_accept_fraction is not None:
+        legacy_accept_fraction = _unit_interval(reuse_accept_fraction, "reuse_accept_fraction")
+        if not math.isclose(legacy_accept_fraction, accept_fraction, rel_tol=0.0, abs_tol=1e-12):
+            raise ValueError("reuse_accept_fraction alias must equal charged_accept_fraction")
+
+    charged_nonaccept_fraction = 1.0 - accept_fraction
+    if fallback_rate is not None:
+        legacy_charged_nonaccept = _unit_interval(fallback_rate, "fallback_rate")
         if not math.isclose(
-            effective_fallback_rate,
-            derived_fallback_rate,
+            legacy_charged_nonaccept,
+            charged_nonaccept_fraction,
             rel_tol=0.0,
             abs_tol=1e-12,
         ):
-            raise ValueError("fallback_rate must equal 1 - reuse_accept_fraction")
-    cost_fraction = amortized_cost_fraction(alpha=alpha, fallback_rate=effective_fallback_rate)
+            raise ValueError("fallback_rate alias must equal 1 - charged_accept_fraction")
+
+    component_values = (actual_guard_fallback_fraction, terminal_or_blocked_fraction)
+    if all(value is None for value in component_values):
+        guard_fallback_fraction = None
+        blocked_fraction = None
+    elif any(value is None for value in component_values):
+        raise ValueError("actual_guard_fallback_fraction and terminal_or_blocked_fraction must be supplied together")
+    else:
+        guard_fallback_fraction = _unit_interval(actual_guard_fallback_fraction, "actual_guard_fallback_fraction")
+        blocked_fraction = _unit_interval(terminal_or_blocked_fraction, "terminal_or_blocked_fraction")
+        if not math.isclose(
+            guard_fallback_fraction + blocked_fraction,
+            charged_nonaccept_fraction,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        ):
+            raise ValueError(
+                "actual_guard_fallback_fraction + terminal_or_blocked_fraction must equal 1 - charged_accept_fraction"
+            )
+    cost_fraction = amortized_cost_fraction(
+        alpha=alpha,
+        charged_nonaccept_rate=charged_nonaccept_fraction,
+    )
     return {
         "cadence": K2,
         "n_pairs": N_PAIRS,
+        "charged_accept_fraction": accept_fraction,
+        "actual_guard_fallback_fraction": guard_fallback_fraction,
+        "terminal_or_blocked_fraction": blocked_fraction,
+        "charged_nonaccept_fraction": charged_nonaccept_fraction,
+        "counterfactual_nonadmitted_amortized_cost_fraction": cost_fraction,
+        "counterfactual_nonadmitted_teacher_slice_speedup": 1.0 / cost_fraction,
+        "counterfactual_nonadmitted_exact_backward_call_amortization": exact_backward_call_amortization(
+            reuse_accept_fraction=accept_fraction
+        ),
+        "counterfactual_nonadmitted_exact_backward_call_reduction": exact_backward_call_reduction(
+            reuse_accept_fraction=accept_fraction
+        ),
+        "admitted_teacher_slice_speedup": 1.0,
+        "admitted_exact_backward_call_reduction": 0.0,
+        # v1 output aliases retained. ``fallback_rate`` is charged nonaccept,
+        # never the actual-guard-fallback component.
         "reuse_accept_fraction": accept_fraction,
-        "fallback_rate": effective_fallback_rate,
+        "fallback_rate": charged_nonaccept_fraction,
         "amortized_cost_fraction": cost_fraction,
         "teacher_slice_speedup": 1.0 / cost_fraction,
         "exact_backward_call_amortization": exact_backward_call_amortization(reuse_accept_fraction=accept_fraction),
@@ -255,19 +332,30 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
             "stage_counts": (200, 200, 200),
             "eligible": 523,
             "terminal_or_blocked": 77,
-            "accepted": 456,
-            "fallback": 144,
-            "accept_fraction_p": 0.76,
+            "actual_guard_accept": 456,
+            "actual_guard_fallback": 67,
+            "charged_accept": 456,
+            "charged_nonaccept": 144,
+            "actual_guard_accept_fraction": 456.0 / 523.0,
+            "charged_accept_fraction_p": 0.76,
+            "actual_guard_fallback_fraction_all_states": 67.0 / 600.0,
+            "terminal_or_blocked_fraction": 77.0 / 600.0,
+            "charged_nonaccept_fraction_q": 0.24,
             "forward_share_alpha": 0.1784755863,
-            "wrapper_sha256": CORRECTED_WRAPPER_SHA256,
+            "tracked_receipt_sha256": CORRECTED_RECEIPT_SHA256,
+            "embedded_full_wrapper_path": CORRECTED_WRAPPER,
+            "embedded_full_wrapper_sha256": CORRECTED_WRAPPER_SHA256,
         },
         predicted_output={
-            "guarded_expected_cost": 1.4184755862999998,
-            "diagnostic_teacher_slice_speedup_x": 1.4099643443401577,
-            "exact_backward_call_amortization_x": 1.6129032258064517,
-            "exact_backward_call_reduction_fraction": 0.38,
+            "counterfactual_nonadmitted_guarded_expected_cost": 1.4184755862999998,
+            "counterfactual_nonadmitted_diagnostic_teacher_slice_speedup_x": 1.4099643443401577,
+            "counterfactual_nonadmitted_exact_backward_call_amortization_x": 1.6129032258064517,
+            "counterfactual_nonadmitted_exact_backward_call_reduction_fraction": 0.38,
+            "admitted_teacher_slice_speedup_x": 1.0,
+            "admitted_exact_backward_call_reduction_fraction": 0.0,
             "required_accept_fraction_strict_gt": 0.5354267588999999,
-            "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
+            "timing_status": FIDELITY_BLOCKED_STATUS,
+            "timing_eligibility": TIMING_ELIGIBILITY,
         },
         empirical_output={
             "corrected_gate_passed": False,
@@ -281,7 +369,7 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
             "provider_current": False,
         },
         residual=0.0,
-        source_artifact=CORRECTED_WRAPPER,
+        source_artifact=CORRECTED_RECEIPT,
         measurement_method=(
             "sealed n600 row replay with recursive custody validation and arithmetic-only "
             "corrected adjudication; DERIVED_DIAGNOSTIC_NOT_IN_LOOP"
@@ -296,8 +384,10 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
             "Corrected n600 K=2 economics are favorable diagnostically, but the direct raw-ZOH policy is NOT_ADMITTED on accepted-row d_seg regret."
         ),
         latex_form=(
-            r"C_2(\alpha,q)=(1+\alpha+q)/2=(2+\alpha-p)/2;\quad "
-            r"A_B(p)=2/(2-p);\quad p_{ceiling}>3\alpha;\quad "
+            r"q_c=q_{guard\_fallback}+q_{terminal\_or\_blocked}=1-p_c;\quad "
+            r"C_2^{cf}(\alpha,q_c)=(1+\alpha+q_c)/2=(2+\alpha-p_c)/2;\quad "
+            r"A_B^{cf}(p_c)=2/(2-p_c);\quad p_{c,ceiling}>3\alpha;\quad "
+            r"\neg A_{fidelity}\Rightarrow A_B^{admitted}=1\land R_B^{admitted}=0;\quad "
             r"A_{reuse}\iff CE_1<CE_0\land d_{seg,1}\le d_{seg,0}\land d_{pose,1}\le d_{pose,0};\quad "
             r"A_{skip}\iff load_R(path_R,h_R)\land verified_R\land "
             r"[MC_{exact}\lor(load_D(path_D,h_D)\land verified_D\land r_{eff}\le2)]"
@@ -329,7 +419,8 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
                 "SegNet CE scalar; sibling costate/provider families and a factored full live scalar remain open"
             ),
             "diagnostic_economics_authority": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP",
-            "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
+            "timing_status": FIDELITY_BLOCKED_STATUS,
+            "timing_eligibility": TIMING_ELIGIBILITY,
             "provider_current": False,
             "pointer_moved": False,
             "score_claim": False,
@@ -337,8 +428,11 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
         },
         units_in={
             "alpha": "forward_fraction_of_exact_teacher_call",
-            "fallback_rate": "fraction_of_reuse_attempts_forcing_exact_backward_refresh",
-            "reuse_accept_fraction": "fraction_of_reuse_attempts_accepted",
+            "charged_accept_fraction": "accepted_states_per_all_charged_states",
+            "actual_guard_fallback_fraction": "guard_fallback_states_per_all_charged_states",
+            "terminal_or_blocked_fraction": "terminal_or_blocked_states_per_all_charged_states",
+            "reuse_accept_fraction": "v1_alias_of_charged_accept_fraction",
+            "fallback_rate": "v1_alias_of_charged_nonaccept_fraction_not_actual_guard_fallback",
             "CE": "cross_entropy_loss",
             "d_seg": "exact_through_R_segmentation_distance",
             "d_pose": "exact_through_R_pose_distance",
@@ -348,10 +442,16 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
             "expected_dimension_certificate_sha256": ("code_reviewed_effective_dimension_certificate_identity"),
         },
         units_out={
-            "C_2": "fraction_of_exact_per_step_cost",
-            "teacher_slice_speedup": "dimensionless_ratio",
-            "exact_backward_call_amortization": "dimensionless_ratio",
-            "exact_backward_call_reduction": "fraction",
+            "C_2_counterfactual_nonadmitted": "fraction_of_exact_per_step_cost",
+            "counterfactual_nonadmitted_teacher_slice_speedup": "dimensionless_ratio",
+            "counterfactual_nonadmitted_exact_backward_call_amortization": "dimensionless_ratio",
+            "counterfactual_nonadmitted_exact_backward_call_reduction": "fraction",
+            "admitted_teacher_slice_speedup": "dimensionless_ratio_fixed_at_1_when_not_admitted",
+            "admitted_exact_backward_call_reduction": "fraction_fixed_at_0_when_not_admitted",
+            "amortized_cost_fraction": "v1_alias_of_counterfactual_nonadmitted_C_2",
+            "teacher_slice_speedup": "v1_alias_of_counterfactual_nonadmitted_speedup",
+            "exact_backward_call_amortization": "v1_alias_of_counterfactual_nonadmitted_call_ratio",
+            "exact_backward_call_reduction": "v1_alias_of_counterfactual_nonadmitted_reduction",
             "full_facet_guard": "boolean",
             "terminal_costate_skip": "boolean",
         },
@@ -391,7 +491,7 @@ def populate_exact_costate_reuse_k2_guarded_v1(
         subagent_id=subagent_id,
         notes=(
             "FEED-p0-backward-wave; corrected n600 NO-GO; provider-current=false; "
-            "pointer_moved=false; whole-epoch speedup UNKNOWN"
+            "pointer_moved=false; fidelity-blocked pending a new preregistered formulation"
         ),
     )
     return equation
@@ -399,10 +499,16 @@ def populate_exact_costate_reuse_k2_guarded_v1(
 
 __all__ = [
     "AXIS",
+    "CORRECTED_RECEIPT",
+    "CORRECTED_RECEIPT_SHA256",
+    "CORRECTED_WRAPPER",
+    "CORRECTED_WRAPPER_SHA256",
     "EQUATION_ID",
+    "FIDELITY_BLOCKED_STATUS",
     "K2",
     "MEMO",
     "N_PAIRS",
+    "TIMING_ELIGIBILITY",
     "amortized_cost_fraction",
     "build_exact_costate_reuse_k2_guarded_v1",
     "corrected_diagnostic_threshold",
