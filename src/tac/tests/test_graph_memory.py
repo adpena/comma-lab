@@ -186,6 +186,21 @@ def test_parse_dag_duplicate_slug_disambiguated(tmp_path):
     assert "feed:gf" in g.nodes and "feed:gf#2" in g.nodes  # both preserved
 
 
+def test_parse_dag_summary_excludes_complete_crlf_heading(tmp_path):
+    dag = tmp_path / "sub015_DAG_topaiml_reopen_and_pursuit_plan_crlf.md"
+    dag.write_bytes(
+        b"## FEED-crlf (2026-07-14) NO-GO heading with trailing whitespace   \r\n"
+        b" \t\r\n"
+        b"   Body starts cleanly.  \r\n"
+        b"Next body line.\r\n"
+    )
+    g = Graph()
+    parse_dag_feeds(g, dag, set())
+    node = g.nodes["feed:crlf"]
+    assert node.summary == "Body starts cleanly. Next body line."
+    assert node.attrs == {"date": "2026-07-14", "verdict": "NO-GO"}
+
+
 def test_parse_tasks_and_deferrals(tiny_corpus):
     g = Graph()
     parse_tasks(g, tiny_corpus["tasks"])
@@ -285,3 +300,20 @@ def test_real_corpus_reconstructs_known_topic():
     recon = reconstruct(g, "lane d_seg", max_nodes=6)
     assert recon.seeds, "known topic should have seeds in the real corpus"
     assert recon.nodes
+
+
+def test_real_corpus_contains_p0_backward_closer_feed():
+    """The corrected p0 feed preserves its date, verdict, scope, and family semantics."""
+    g = build_graph()
+    node = g.nodes["feed:p0-backward-closer-20260713"]
+    assert node.ntype == "decision"
+    assert node.attrs["date"] == "2026-07-14"
+    assert node.attrs["verdict"] == "NO-GO"
+    assert node.summary.startswith(
+        "**NO-GO.** Date: 2026-07-14 Actual verdict: `K2_CORRECTED_NOT_ADMITTED_DEFAULT_OFF`"
+    )
+    assert "K2_CORRECTED_NOT_ADMITTED_DEFAULT_OFF" in node.summary
+    assert "verdict_scope=FORMULATION" in node.summary
+    assert "strict all-accepted stale-minus-exact `d_seg<=0`" in node.summary
+    assert "family remains intact" in node.summary
+    assert "NOW_LANDED" in node.summary

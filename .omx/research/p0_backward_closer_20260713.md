@@ -204,3 +204,66 @@ latest sister findings/session/design/council memos and recent operator directiv
 the immutable V9/task455 checkpoints, frozen scorer weights, GT cache, and cached n600 state
 assignments. No live trainer/run, provider, GPU, paid dispatch, evaluator, submission, or frontier
 pointer was actuated.
+
+---
+
+## 2026-07-14 CORRECTION / SUPERSESSION — corrected n600 K2 closure
+
+Everything above this divider is retained byte-for-byte as **HISTORICAL_PROVENANCE**. In
+particular, its `K2_N600_RESULT_PENDING`, placeholder economics, and deferred shared-DAG language
+describe the state on 2026-07-13; they are not current claims. This dated block supersedes those
+claims without erasing them. The shared DAG feed is **NOW LANDED** under the exact heading
+`FEED-p0-backward-closer-20260713`.
+
+**Actual verdict:** `K2_CORRECTED_NOT_ADMITTED_DEFAULT_OFF` (`NOT_ADMITTED`, default-off,
+pointer unchanged). **verdict_scope=FORMULATION:** this negative applies only to the bounded direct
+raw-input-costate zero-order-hold K2 formulation (`exact_costate_reuse_k2_guarded_v1`), evaluated
+under the strict rule that every accepted row must have stale-minus-exact `d_seg` regret `<=0`, on
+three V9 checkpoint states (`v9_ep150_ema_best`, `v9_ep251_stage_octave1`,
+`v9_ep275_ema_final`; 200 rows each) and the sealed
+`[macOS-CPU advisory; Torch/NumPy-fp32 training-gradient MEANS only]` axis. The costate-reuse family
+remains intact for a newly preregistered guard/tolerance formulation; no sibling family is killed.
+
+The corrected wrapper is
+`experiments/results/p0_costate_reuse_k2_n600_v3_20260713/corrected_adjudication_receipt.json`
+(397028 bytes; file SHA-256
+`2102912bc8bd9711f00869746414fb21ea723729bcd26e612274547c6ca73d59`; adjudication-content
+SHA-256 `4f7f2a6ef95f9989b734cd6e785d8b55dca7a77d7d9f03c693ff18287dea6e6e`). The
+tracked compact custody summary is
+`.omx/research/p0_costate_reuse_k2_corrected_adjudication_receipt_20260714.json`. A clean clone does
+**not** contain the full wrapper or its 600 source rows; revalidation requires restoration of the
+hash-matching 606-file sealed source tree from certified cold storage or another certified source.
+No cold-store destination is recorded by the wrapper, so that restoration location remains an
+explicit custody gap.
+
+**MEASURED n600:** 523 rows were eligible, 456 were behavioral full-facet accepts (`p=0.76`), 67
+were actual guard fallbacks, and 77 were terminal/blocked. Thus total nonaccept is `144=67+77`
+(`q=0.24`); `144` must not be reported as 144 actual guard fallbacks. Accepted renderer-gradient
+relative-L2 was `456/456 <1` (median `0.03072912052372636`, p90 `0.0518675255971356`, max
+`0.1432164947042975`). Accepted stale-minus-exact `d_seg<=0` held for only `308/456` (median `0`,
+p90 `0.000020345052083335646`, max `0.000091552734375`). The corrected gate therefore has
+`passed=false` solely because `all_accepted_stale_d_seg_regret_lte_exact=false`; the earlier verdict
+status is `SUPERSEDED_INVALID_FALLBACK_CHARGE`.
+
+**DERIVED diagnostic economics, behind the failed gate:** with baseline `2.0`,
+`alpha=0.1784755863`, and `p=0.76`, guarded expected cost is
+`2+alpha-p=1.4184755862999998` and diagnostic teacher-slice speedup is
+`2/(2+alpha-p)=1.4099643443401577x`. The exact-backward factor
+`2/(2-p)=1.6129032258064517x` and reduction `p/2=0.38` are a counterfactual for this rejected
+formulation. They are never multiplied into admitted composition. Admitted composition is K2
+`1.0x` times sparse realized `1.0x`, for **0% admitted bulk teacher-cost reduction**. Terminal #396
+remains a local exact-metric win only and is nonmultiplicative. Whole-epoch wall-clock effect is
+`UNKNOWN`.
+
+**Latest canonical timing caveat:** commit
+`e59f69a79cb2d974ec29fcaf75c6c855bd782a7a` and
+`.omx/research/frozen_scorer_verdict_wallclock_n96_20260714.json` report a **MEASURED** n96
+`0.621 s/pair` on `[macOS-CPU-torch 1-thread advisory wall-clock] NON-PROMOTABLE`, with measured
+SegNet/PoseNet forward shares `0.774/0.226`. `6.21 min/n600` (`372.6 s`) is a **DERIVED linear
+extrapolation**, not an n600 measurement. This forward-only authority-verdict result supersedes use
+of the old backward-share diagnostic as a global 95%-kill claim. Zero K2 benefit is admitted and
+the whole-epoch effect remains unknown.
+
+The in-loop timer packet is now classified `FIDELITY_BLOCKED_FUTURE_TEMPLATE`: it does not solicit
+current GO and cannot activate this formulation. A diagnostic timer may run only after a newly
+preregistered formulation/provider is fidelity-admitted.

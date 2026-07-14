@@ -17766,3 +17766,49 @@ or score claim. This is a determinism-mechanism confirmation on the real wall op
 Memo: `pythagorean_exact_arithmetic_bitident_20260713.md` (RESOLVED section). Triality: this DAG FEED +
 equation anchor (`decode_determinism_integer_arithmetic_v1`); DSL leg N/A (no config lever — a decode
 determinism property, not a trainer knob).
+
+---
+
+## FEED-p0-backward-closer-20260713 (corrected n600 K2 adjudication + sparse and terminal closure)
+
+**NO-GO.**
+Date: 2026-07-14
+Actual verdict: `K2_CORRECTED_NOT_ADMITTED_DEFAULT_OFF`
+**verdict_scope=FORMULATION:** direct raw-input-costate zero-order-hold K2; strict all-accepted
+stale-minus-exact `d_seg<=0`; three V9 checkpoint states, 200 rows each; sealed
+`[macOS-CPU advisory; Torch/NumPy-fp32 training-gradient MEANS only]` axis. The family remains intact
+under a newly preregistered guard/tolerance. Shared-DAG state is **NOW_LANDED**; the original
+2026-07-13 `PENDING`/deferred bodies remain historical provenance and are superseded only by their
+appended 2026-07-14 correction blocks. Research-only; pointer UNMOVED.
+
+The corrected wrapper at
+`experiments/results/p0_costate_reuse_k2_n600_v3_20260713/corrected_adjudication_receipt.json`
+has file SHA `2102912bc8bd9711f00869746414fb21ea723729bcd26e612274547c6ca73d59`, 397028 bytes, and
+adjudication-content SHA `4f7f2a6ef95f9989b734cd6e785d8b55dca7a77d7d9f03c693ff18287dea6e6e`.
+The tracked compact summary
+`.omx/research/p0_costate_reuse_k2_corrected_adjudication_receipt_20260714.json` preserves the full
+606-file custody index roots. The full wrapper and 600 rows are not in git; clean-clone
+revalidation requires certified restoration, and no cold-store destination is recorded.
+
+**MEASURED n600:** eligible `523`; behavioral full-facet accepts `456` (`p=0.76`); actual guard
+fallbacks `67`; terminal/blocked `77`; total nonaccept `144=67+77` (`q=0.24`). Accepted renderer-
+gradient rel-L2 is `456/456 <1` (median `0.03072912052372636`, p90 `0.0518675255971356`, max
+`0.1432164947042975`). Accepted stale-minus-exact `d_seg<=0` holds only `308/456` (median `0`, p90
+`0.000020345052083335646`, max `0.000091552734375`). The corrected gate is false solely on
+`all_accepted_stale_d_seg_regret_lte_exact=false`; receipt verdict `NOT_ADMITTED`; original status
+`SUPERSEDED_INVALID_FALLBACK_CHARGE`.
+
+**Economics and composition:** baseline `2.0`; DERIVED diagnostic guarded cost
+`2+alpha-p=1.4184755862999998`; diagnostic speedup `1.4099643443401577x`. The exact-backward
+`1.6129032258064517x` / `0.38` reduction is a **DERIVED COUNTERFACTUAL BEHIND THE FAILED GATE** and
+is never multiplied. Admitted K2 factor is `1.0x`; sparse realized factor is `1.0x` with
+`NO_GO_DENSE_FULLRANK`; terminal #396 is route-local and nonmultiplicative. Admitted bulk teacher-
+cost reduction is `0%`; whole-epoch wall-clock is `UNKNOWN`.
+
+**Latest timing caveat:** commit `e59f69a79cb2d974ec29fcaf75c6c855bd782a7a` and artifact
+`.omx/research/frozen_scorer_verdict_wallclock_n96_20260714.json` provide **MEASURED** n96
+`0.621 s/pair` on `[macOS-CPU-torch 1-thread advisory wall-clock] NON-PROMOTABLE`, with measured
+SegNet/PoseNet forward shares `0.774/0.226`. `372.6 s = 6.21 min/n600` is a **DERIVED linear
+extrapolation**. The old backward-share diagnostic is not the global 95%-kill authority. The timer
+packet is `FIDELITY_BLOCKED_FUTURE_TEMPLATE`, does not solicit current GO, and is diagnostic-only
+after a newly fidelity-admitted formulation/provider.

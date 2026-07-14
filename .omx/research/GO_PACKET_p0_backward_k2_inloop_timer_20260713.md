@@ -99,3 +99,38 @@ governed timing treatment. Main then lands the patch, compiles typed tickets, cl
 lane, runs storage/memory/governor preflights, launches, harvests the receipt, and updates the
 canonical equation/DAG/posterior. Until that explicit GO, the measured cached-data landing remains
 default-off and no training launch is permitted.
+
+---
+
+## 2026-07-14 CORRECTION / SUPERSESSION — FIDELITY_BLOCKED_FUTURE_TEMPLATE
+
+The 2026-07-13 packet above is retained byte-for-byte as **HISTORICAL_PROVENANCE**. Its pending
+receipt premise and `GO P0-K2 TIMER` solicitation are superseded. The shared DAG feed is **NOW
+LANDED** as `FEED-p0-backward-closer-20260713`.
+
+**Status:** `FIDELITY_BLOCKED_FUTURE_TEMPLATE`. **No current GO is requested or authorized.**
+**verdict_scope=FORMULATION:** the blocked formulation is direct raw-input-costate zero-order-hold
+K2 with strict all-accepted stale-minus-exact `d_seg<=0`, three V9 checkpoint states (200 rows each),
+and `[macOS-CPU advisory; Torch/NumPy-fp32 training-gradient MEANS only]`. It closed as
+`K2_CORRECTED_NOT_ADMITTED_DEFAULT_OFF`; the family remains intact under a newly preregistered
+guard/tolerance formulation.
+
+The sealed breakdown is 456 accepts, 67 actual guard fallbacks, and 77 terminal/blocked rows;
+total nonaccept is `144=67+77`, not 144 guard fallbacks. Only `308/456` accepted rows met the strict
+`d_seg` regret rule, so a timer cannot repair or waive the fidelity gate. Baseline cost is `2.0` and
+the diagnostic guarded cost is `2+alpha-p=1.4184755862999998`. The `1.6129032258064517x` exact-
+backward factor and `0.38` reduction are separate **DERIVED COUNTERFACTUALS behind the failed gate**.
+Admitted K2 factor is `1.0x`; admitted sparse factor is `1.0x`; admitted bulk reduction is `0%`;
+whole-epoch effect is `UNKNOWN`.
+
+Commit `e59f69a79cb2d974ec29fcaf75c6c855bd782a7a` and
+`.omx/research/frozen_scorer_verdict_wallclock_n96_20260714.json` provide a **MEASURED** n96
+`0.621 s/pair` on `[macOS-CPU-torch 1-thread advisory wall-clock] NON-PROMOTABLE`; `6.21 min/n600`
+is a **DERIVED linear extrapolation**. That forward-only authority-verdict result makes this timer
+diagnostic rather than the global bottleneck authority.
+
+This template becomes actionable only after a distinct formulation/provider is preregistered and
+fidelity-admitted by a new reviewed receipt. Then, and only then, an operator may authorize a
+bounded diagnostic in-loop timer under the original resumability, per-stage-checkpoint, custody,
+governor, and holistic-facet rules. The present K2 formulation remains default-off and cannot be
+activated by timing evidence.

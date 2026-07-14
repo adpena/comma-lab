@@ -1,0 +1,233 @@
+{
+  "schema": "p0_costate_reuse_k2_corrected_adjudication_summary.v2",
+  "date": "2026-07-14",
+  "lane_id": "lane_p0_backward_closer_20260713",
+  "status": "K2_CORRECTED_NOT_ADMITTED_DEFAULT_OFF",
+  "axis": "[macOS-CPU advisory; Torch/NumPy-fp32 training-gradient MEANS only]",
+  "verdict_scope": "FORMULATION",
+  "verdict_scope_token": "verdict_scope=FORMULATION",
+  "verdict_scope_detail": {
+    "formulation": "direct raw-input-costate zero-order-hold K2",
+    "equation_id": "exact_costate_reuse_k2_guarded_v1",
+    "strict_admission_rule": "all accepted stale-minus-exact d_seg regret <= 0",
+    "v9_checkpoint_state_count": 3,
+    "v9_checkpoint_states": [
+      "v9_ep150_ema_best",
+      "v9_ep251_stage_octave1",
+      "v9_ep275_ema_final"
+    ],
+    "rows_per_checkpoint_state": 200,
+    "axis": "[macOS-CPU advisory; Torch/NumPy-fp32 training-gradient MEANS only]",
+    "family_status": "INTACT_UNDER_NEW_PREREGISTERED_GUARD_OR_TOLERANCE"
+  },
+  "receipt": {
+    "path": "experiments/results/p0_costate_reuse_k2_n600_v3_20260713/corrected_adjudication_receipt.json",
+    "bytes": 397028,
+    "sha256": "2102912bc8bd9711f00869746414fb21ea723729bcd26e612274547c6ca73d59",
+    "adjudication_content_sha256": "4f7f2a6ef95f9989b734cd6e785d8b55dca7a77d7d9f03c693ff18287dea6e6e"
+  },
+  "producer": {
+    "tool": "tools/adjudicate_p0_costate_reuse_k2.py",
+    "tool_bytes_observed_local_at_summary": 61849,
+    "tool_sha256_observed_local_at_summary": "72ca55ffaec0a647d4a9d559304e2422c6874a3398b34fe13a82631e468a53c9",
+    "tool_hash_binding_status": "LOCAL_OBSERVATION_NOT_EMBEDDED_IN_WRAPPER",
+    "producer_command_recorded": false,
+    "producer_command": null,
+    "producer_command_custody_status": "NOT_RECORDED_IN_WRAPPER_OR_DURABLE_SOURCE",
+    "deterministic_reproduction_command": "python3 tools/adjudicate_p0_costate_reuse_k2.py --source-dir experiments/results/p0_costate_reuse_k2_n600_v3_20260713",
+    "adjudicator_git_head_at_emission": "NOT_RECORDED",
+    "source_replay_git_head_at_launch": "0c4e7c957793de6a8081317f3c57ed3c71bbdcc8",
+    "source_replay_launch_provenance_sha256": "6d98e094918ae8d8ac3d9d077e4644e9aaec8e7685f138136d6a4be6952618e8",
+    "source_measurement_tool": "tools/probe_p0_costate_reuse_k2.py",
+    "source_measurement_tool_sha256_at_launch": "4ce58d7471c66a33cbd362bfa647c449eae451e5bf67c5d825d6834e05928f0d"
+  },
+  "source_custody": {
+    "source_file_count": 606,
+    "source_tree_sha256": "42a03f6e11470a843cbbe4b3f8216328d4bca6f8166b9a95f039e27fc29ea330",
+    "source_tree_composition": {
+      "pair_record_count": 600,
+      "stage_manifest_count": 3,
+      "run_contract_count": 1,
+      "measurement_receipt_count": 1,
+      "completion_seal_count": 1
+    },
+    "measurement_receipt": {
+      "path": "measurement_receipt.json",
+      "bytes": 20879,
+      "sha256": "4c84c1f80ae7fc1b4ee76d28395405834e3eecd439155e4ebd79d4e81530506c"
+    },
+    "complete": {
+      "path": "complete.json",
+      "bytes": 258,
+      "sha256": "45ccbccee780d26bf350442ddf5551d62d483957c591b706fe5eb746dfbea34c"
+    },
+    "run_contract": {
+      "path": "run_contract.json",
+      "bytes": 7321,
+      "file_sha256": "b4b032f216952fb3ba7d50e3feb9ae47e84060f91191e558e89463eec33f8f67",
+      "semantic_sha256": "e9c4a6629bcbc91876d2476b0bef051dfe56fe27d93076fa79f7225a5b62d56f"
+    },
+    "stage_manifests": [
+      {
+        "checkpoint_index": 0,
+        "checkpoint_name": "v9_ep150_ema_best",
+        "path": "stage_v9_ep150_ema_best_complete.json",
+        "bytes": 36389,
+        "state_count": 200,
+        "file_sha256": "af71303d3b660d153e5f96b5b2f54c04c62055edf03dcfb734c4aa10d2c33bc2",
+        "tree_sha256": "d9249bab3b71c0c0a1a6e90f746ef23f53721c2d737a354aae9ccce7c6d068f1"
+      },
+      {
+        "checkpoint_index": 1,
+        "checkpoint_name": "v9_ep251_stage_octave1",
+        "path": "stage_v9_ep251_stage_octave1_complete.json",
+        "bytes": 36396,
+        "state_count": 200,
+        "file_sha256": "5d92944d9b9512f64d347b9106ee017f4dc606eb07f9f105778635382f2fbe5e",
+        "tree_sha256": "f3f997c490c42935f4bac0c2dfe9f6248302c2eeec5503992c358e49f28d89fe"
+      },
+      {
+        "checkpoint_index": 2,
+        "checkpoint_name": "v9_ep275_ema_final",
+        "path": "stage_v9_ep275_ema_final_complete.json",
+        "bytes": 36403,
+        "state_count": 200,
+        "file_sha256": "71c722ad6999519b1d8dbe00bf9ac574ef8beb867a930e7ced799e8619222199",
+        "tree_sha256": "db6128c3882ff0fdf5e94a9e0622f91f50f3341ddbf05e9910938ef1e793a6fc"
+      }
+    ],
+    "hash_roots": {
+      "objective_sha256": "af5ae342f3987b82c2d3ee5bdb12dcfca1ecab07631fd545a9e723c15cb7c9e7",
+      "scorer_sha256": "584f711dfb85163c38caf8976ebeda87698baefb45f9f5979539a8c176b6b73e",
+      "original_admission_content_sha256": "11c2575692e78d9093ac151d4ba576c65bf69c8ad9c45ce6cf34f95325dd539d",
+      "original_admission_content_revalidated_sha256": "11c2575692e78d9093ac151d4ba576c65bf69c8ad9c45ce6cf34f95325dd539d",
+      "source_admission_spec_sha256": "dda7f09bc9043a8d54eea56ad8332a1bb1d95644be2c4b6d027a7344adc8fce7",
+      "corrected_admission_spec_sha256": "ac481071ad57ac3f1b5069d1330061a3e9b5d429c143faa0581a206c2651a90e"
+    }
+  },
+  "clean_clone_custody": {
+    "compact_summary_intended_for_git": true,
+    "full_wrapper_tracked_in_git": false,
+    "source_pair_rows_tracked_in_git": false,
+    "sealed_source_tree_tracked_in_git": false,
+    "git_alone_can_revalidate": false,
+    "local_source_tree_available_when_summary_was_built": true,
+    "cold_store_destination": null,
+    "cold_store_destination_status": "NOT_RECORDED_IN_WRAPPER_OR_SOURCE_RECEIPT",
+    "restoration_required_for_revalidation": true,
+    "restoration_requirement": "restore the hash-matching 606-file sealed source tree and full wrapper from certified cold storage or another certified source before revalidation",
+    "unresolved_custody": "no certified cold-store destination or restoration locator is recorded"
+  },
+  "execution": {
+    "method": "deterministic byte-custody revalidation and arithmetic-only re-adjudication",
+    "teacher_calls": 0,
+    "scorer_calls": 0,
+    "renderer_calls": 0,
+    "source_row_rewrites": 0,
+    "source_manifest_rewrites": 0,
+    "source_receipt_rewrites": 0
+  },
+  "quantile_replay_environment": {
+    "source_numpy_version": "1.26.4",
+    "replay_numpy_version": "1.26.4",
+    "exact_version_match": true,
+    "quantile_schema": "min/p10/median/mean/p90/max; NumPy default linear method"
+  },
+  "measurement": {
+    "state_count": 600,
+    "unique_pair_count": 600,
+    "eligible_state_count": 523,
+    "behavioral_full_facet_accept_count": 456,
+    "accept_fraction_p": 0.76,
+    "actual_guard_fallback_count": 67,
+    "terminal_or_blocked_state_count": 77,
+    "terminal_or_blocked_at_anchor_count": 21,
+    "terminal_or_blocked_at_reuse_point_count": 56,
+    "total_nonaccept_count": 144,
+    "total_nonaccept_decomposition": "144 = 67 actual guard fallbacks + 77 terminal/blocked",
+    "nonaccept_fraction_q": 0.24,
+    "accepted_renderer_gradient_relative_l2": {
+      "present_count": 456,
+      "strict_lt_one_count": 456,
+      "median": 0.03072912052372636,
+      "p90": 0.0518675255971356,
+      "max": 0.1432164947042975
+    },
+    "accepted_stale_minus_exact_dseg_regret": {
+      "present_count": 456,
+      "lte_zero_count": 308,
+      "median": 0.0,
+      "p90": 0.000020345052083335646,
+      "max": 0.000091552734375
+    }
+  },
+  "gate": {
+    "verdict": "NOT_ADMITTED",
+    "passed": false,
+    "sole_failed_predicate": "all_accepted_stale_d_seg_regret_lte_exact=false",
+    "original_verdict_status": "SUPERSEDED_INVALID_FALLBACK_CHARGE",
+    "verdict_scope": "FORMULATION"
+  },
+  "derived_diagnostic_economics_behind_failed_gate": {
+    "evidence_grade": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP_NOT_ADMITTED",
+    "two_step_baseline_cost": 2.0,
+    "forward_share_alpha": 0.1784755863,
+    "accept_fraction_p": 0.76,
+    "nonaccept_fraction_q": 0.24,
+    "guarded_expected_cost_formula": "2+alpha-p",
+    "guarded_expected_cost": 1.4184755862999998,
+    "corrected_teacher_slice_speedup_formula": "2/(2+alpha-p)",
+    "corrected_teacher_slice_speedup_x": 1.4099643443401577,
+    "exact_backward_call_factor_formula": "2/(2-p)",
+    "exact_backward_call_factor_x": 1.6129032258064517,
+    "exact_backward_call_reduction_formula": "p/2",
+    "exact_backward_call_reduction_fraction": 0.38,
+    "diagnostic_charged_reduction_fraction": 0.29076220685,
+    "multiplication_authority": "FORBIDDEN_FAILED_GATE_COUNTERFACTUAL",
+    "whole_epoch_speedup": "UNKNOWN"
+  },
+  "admitted_composition": {
+    "k2_factor_x": 1.0,
+    "sparse_realized_factor_x": 1.0,
+    "combined_bulk_factor_x": 1.0,
+    "bulk_teacher_cost_reduction_fraction": 0.0,
+    "sparse_verdict": "NO_GO_DENSE_FULLRANK",
+    "terminal_route": "#396 local exact-metric route only; nonmultiplicative",
+    "whole_epoch_wall_clock": "UNKNOWN"
+  },
+  "latest_canonical_wallclock_caveat": {
+    "commit": "e59f69a79cb2d974ec29fcaf75c6c855bd782a7a",
+    "artifact": ".omx/research/frozen_scorer_verdict_wallclock_n96_20260714.json",
+    "measurement_axis": "[macOS-CPU-torch 1-thread advisory wall-clock] NON-PROMOTABLE",
+    "measured_n96": {
+      "evidence_grade": "MEASURED",
+      "pair_count": 96,
+      "per_pair_verdict_s": 0.621,
+      "seg_fraction_of_verdict": 0.774,
+      "pose_fraction_of_verdict": 0.226
+    },
+    "derived_n600_linear_extrapolation": {
+      "evidence_grade": "DERIVED",
+      "seconds": 372.6,
+      "minutes": 6.21
+    },
+    "scope": "forward-only frozen-scorer authority-verdict timing; does not change K2 fidelity verdict or admit whole-epoch benefit"
+  },
+  "timer_packet_status": "FIDELITY_BLOCKED_FUTURE_TEMPLATE",
+  "authority": {
+    "contest_cpu_cuda": "NOT_MEASURED",
+    "research_only": true,
+    "promotion_eligible": false,
+    "live_trainer_activation": false,
+    "pointer_moved": false,
+    "score_claim": false,
+    "training_signal_only": true,
+    "whole_epoch_speedup": "UNKNOWN"
+  },
+  "durable_adjacent_evidence": [
+    ".omx/research/p0_backward_closer_20260713.md",
+    ".omx/research/p0_backward_closer_DAG_FEED_20260713.md",
+    ".omx/research/GO_PACKET_p0_backward_k2_inloop_timer_20260713.md",
+    ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md"
+  ]
+}

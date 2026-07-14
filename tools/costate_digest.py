@@ -29,6 +29,7 @@ Usage:
   .venv/bin/python tools/costate_digest.py --json     # machine-readable
   .venv/bin/python tools/costate_digest.py --session-start  # hook mode (always rc 0)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -94,18 +95,19 @@ def section_pointer() -> tuple[str, dict]:
         cpu = d.get("our_local_frontier_contest_cpu") or {}
         score = float(cpu["score"])
         since = str(cpu.get("measured_at_utc", ""))[:10] or "?"
-        line = (f"POINTER {score:.5f} [contest-CPU] UNMOVED since {since} — "
-                f"everything below is means.")
+        line = f"POINTER {score:.5f} [contest-CPU] UNMOVED since {since} — everything below is means."
         return line, {"score": score, "axis": "contest-CPU", "since": since}
     except Exception as exc:
-        return (f"POINTER: unavailable ({type(exc).__name__}) — read "
-                f".omx/state/canonical_frontier_pointer.json"), {"error": str(exc)}
+        return (f"POINTER: unavailable ({type(exc).__name__}) — read .omx/state/canonical_frontier_pointer.json"), {
+            "error": str(exc)
+        }
 
 
 def section_live_run() -> tuple[str, dict, Path | None]:
     """Live-run state via the canonical check-in tool (imported, not duplicated)."""
     try:
         import witness_checkin as wc
+
         procs = wc.find_trainer_procs()
         run_dir, proc, how = wc.pick_run_dir(procs, wc.RESULTS_DEFAULT)
         if run_dir is None or not run_dir.is_dir():
@@ -127,8 +129,10 @@ def section_annulus(run_dir: Path | None) -> tuple[str | None, dict | None]:
     try:
         ann = row.get("annulus") or {}
         lane = (ann.get("per_class_annulus_flip_frac") or {}).get("1")
-        parts = [f"annulus: ep{row.get('epoch')} d_seg {ann.get('overall_d_seg'):.6f}",
-                 f"annulus mass share {100 * ann.get('annulus_flip_mass_share', 0):.1f}%"]
+        parts = [
+            f"annulus: ep{row.get('epoch')} d_seg {ann.get('overall_d_seg'):.6f}",
+            f"annulus mass share {100 * ann.get('annulus_flip_mass_share', 0):.1f}%",
+        ]
         if lane is not None:
             parts.append(f"lane(cls1) flip {100 * float(lane):.1f}%")
         parts.append(f"[{row.get('seg_form')}, advisory]")
@@ -147,6 +151,7 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
         # No sidecar yet but telemetry exists: compute ONE read-only in-memory report.
         try:
             from tac.witness_control import build_shadow_report, load_run_inputs
+
             row = build_shadow_report(load_run_inputs(run_dir)).to_row()
         except Exception:
             row = None
@@ -169,8 +174,9 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
             # P9 (proxies are poison, use the thing itself): the band gates predicted_dS in the SAME units
             # (ΔS) as the Δ — never a proxy-unit floor (the R7 category-error lesson).
             band = r.get("predicted_dS_band")
-            if not (isinstance(band, (list, tuple)) and len(band) == 2
-                    and all(isinstance(x, (int, float)) for x in band)):
+            if not (
+                isinstance(band, (list, tuple)) and len(band) == 2 and all(isinstance(x, (int, float)) for x in band)
+            ):
                 floor_tag = " [INSTANCE — no noise floor]"
             elif band[0] <= 0.0 <= band[1]:
                 floor_tag = f" [INSTANCE — Δ within noise floor [{band[0]:+.4f},{band[1]:+.4f}]]"
@@ -181,8 +187,7 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
             lines.append("  rec: (none identifiable)")
         lines.insert(0, head)
         if age is not None and age > _SHADOW_STALE_S:
-            lines.append(f"  refresh: .venv/bin/python tools/costate_shadow_report.py "
-                         f"--run-dir {run_dir} --write")
+            lines.append(f"  refresh: .venv/bin/python tools/costate_shadow_report.py --run-dir {run_dir} --write")
     except Exception as exc:
         lines = [f"costate-shadow: unavailable ({type(exc).__name__}: {exc})"]
     return lines, row
@@ -200,11 +205,7 @@ def format_ncde_line(row: dict) -> str:
     asym = row.get("predicted_asymptote")  # log_d_seg space
     eta = row.get("eta_handoff_epochs")
     rem = row.get("remaining_descent_frac")
-    invalid = (
-        "instrument-invalid" in reason
-        or stable is False
-        or (isinstance(r2, (int, float)) and r2 < 0.5)
-    )
+    invalid = "instrument-invalid" in reason or stable is False or (isinstance(r2, (int, float)) and r2 < 0.5)
     ep_s = f"{ep:.0f}" if isinstance(ep, (int, float)) else "?"
     r2_s = f"{r2:.2f}" if isinstance(r2, (int, float)) else "?"
     if invalid:
@@ -247,14 +248,14 @@ def section_ncde(run_dir: Path | None) -> tuple[str | None, dict | None]:
         if cached is not None and cached[0] == sig:
             return cached[1], cached[2]
         import ncde_trajectory_probe as ntp
+
         report = ntp.run_probe(run_dir, window=12, emit=False, do_backtest=False)
         adv = report.get("verdict_latest_advisory")
         if not adv:  # no d_seg advisory yet (short verdict telemetry) — omit, honestly
             _NCDE_CACHE[str(run_dir)] = (sig, None, None)
             return None, None
         line = format_ncde_line(adv)
-        data = {"advisory": adv, "verdict_points": report.get("verdict_points"),
-                "n_fires": report.get("n_fires")}
+        data = {"advisory": adv, "verdict_points": report.get("verdict_points"), "n_fires": report.get("n_fires")}
         _NCDE_CACHE[str(run_dir)] = (sig, line, data)
         return line, data
     except Exception:
@@ -283,8 +284,9 @@ def section_verdict_trend(run_dir: Path | None) -> tuple[str | None, dict | None
             load_run_inputs,
             verdict_trend_alarm,
         )
+
         alarm = verdict_trend_alarm(load_run_inputs(run_dir).verdicts)
-        if not alarm.fired():        # only surface when there is a real rising trend
+        if not alarm.fired():  # only surface when there is a real rising trend
             _VERDICT_TREND_CACHE[str(run_dir)] = (sig, None, None)
             return None, None
         line = format_verdict_trend_line(alarm)
@@ -304,6 +306,7 @@ def section_pose_conditioning_gate(run_dir: Path | None) -> tuple[str | None, di
         return None, None
     try:
         from tac.witness_control.sigma_min_plateau import format_gate_line, scan_run_for_pose_gate
+
         row = scan_run_for_pose_gate(run_dir)
         if not row:
             return None, None
@@ -322,12 +325,14 @@ def section_telemetry_binding(run_dir: Path | None) -> tuple[str | None, dict | 
         return None, None
     try:
         from tac.witness_control import telemetry_binding as _tb
+
         rows = _tb.load_run_rows(run_dir, tail_bytes=1_500_000)
         if not rows:
             return None, None
         audit = _tb.audit_rows(rows)
         return _tb.format_summary(audit), {
-            k: audit.get(k) for k in ("amber", "chroma", "pose_gate", "ema_lag", "terminal_band")}
+            k: audit.get(k) for k in ("amber", "chroma", "pose_gate", "ema_lag", "terminal_band")
+        }
     except Exception:
         return None, None
 
@@ -368,11 +373,13 @@ def format_duty_to_measure_line(ranked: list[dict], top_n: int = _DUTY_TOP_N) ->
 
     top = ranked[:top_n]
     more = len(ranked) - len(top)
-    anchor = (f"pointer {s_cur:.5f}→{tgt:g}" if isinstance(s_cur, float) else "pointer unavailable")
-    return (f"duty-to-measure ({owed_n} owed; ranked by % of remaining descent [P8 floor-aware], {anchor}; "
-            f"*=never-fired ~=unbuilt ?=est-owed !FLOOR=at-floor ^cap=headroom-capped): "
-            + ", ".join(_cell(r) for r in top)
-            + (f" (+{more} more)" if more > 0 else ""))
+    anchor = f"pointer {s_cur:.5f}→{tgt:g}" if isinstance(s_cur, float) else "pointer unavailable"
+    return (
+        f"duty-to-measure ({owed_n} owed; ranked by % of remaining descent [P8 floor-aware], {anchor}; "
+        f"*=never-fired ~=unbuilt ?=est-owed !FLOOR=at-floor ^cap=headroom-capped): "
+        + ", ".join(_cell(r) for r in top)
+        + (f" (+{more} more)" if more > 0 else "")
+    )
 
 
 def _live_term_current(annulus_data: dict | None) -> dict[str, float] | None:
@@ -404,6 +411,7 @@ def section_duty_to_measure(term_current: dict[str, float] | None = None) -> tup
     no raw-key read exists in the digest (audited 2026-07-09)."""
     try:
         from tac.witness_dsl.activation_ledger import duty_to_measure_ranked
+
         # reads the LIVE pointer + significance store (not hardcoded); term_current from live telemetry.
         ranked = duty_to_measure_ranked(term_current=term_current)
         line = format_duty_to_measure_line(ranked)
@@ -411,10 +419,15 @@ def section_duty_to_measure(term_current: dict[str, float] | None = None) -> tup
         tgt = ranked[0].get("s_target", 0.15) if ranked else 0.15
         n_at_floor = sum(1 for r in ranked if r.get("floor_status") == "AT_FLOOR")
         n_capped = sum(1 for r in ranked if r.get("floor_status") == "HEADROOM_CAPPED")
-        return line, {"ranked_top": ranked[:_DUTY_TOP_N],
-                      "owed_registered": sum(1 for r in ranked if r.get("in_duty_queue")),
-                      "term_current": term_current, "n_at_floor": n_at_floor, "n_headroom_capped": n_capped,
-                      "s_current": s_cur, "s_target": tgt}
+        return line, {
+            "ranked_top": ranked[:_DUTY_TOP_N],
+            "owed_registered": sum(1 for r in ranked if r.get("in_duty_queue")),
+            "term_current": term_current,
+            "n_at_floor": n_at_floor,
+            "n_headroom_capped": n_capped,
+            "s_current": s_cur,
+            "s_target": tgt,
+        }
     except Exception as exc:
         return f"duty-to-measure: unavailable ({type(exc).__name__}: {exc})", None
 
@@ -427,26 +440,36 @@ def _pool_marker(r: dict) -> str:
 
 def format_curriculum_pool_line(summary: dict, top_n: int = _DUTY_TOP_N) -> str:
     """Pure formatter for the curriculum-candidate pool (unit-testable without touching real state).
-    Leads with the counts, then the top next-fireable rows (built-never-fired first). ~ = not-a-DSL-
-    lever (tool/vehicle/unbuilt)."""
+    Leads with production-fireable duty, then a separate research-only SENSE channel. Research rows
+    are visible but never presented as DECIDE/fireable. ~ = not-a-DSL lever (tool/vehicle/unbuilt)."""
     counts = summary.get("counts", {})
     owed = summary.get("owed", 0)
     total = summary.get("total", 0)
     top = summary.get("top_fireable", [])[:top_n]
     more = summary.get("owed", 0) - len(top)
+    research = summary.get("research_signals", [])[:top_n]
+    research_more = len(summary.get("research_signals", [])) - len(research)
 
     def _cell(r: dict) -> str:
         leg = r.get("dsl_lever") or "N/A"
         return f"{r['candidate']}{_pool_marker(r)}[{r.get('status', '?')[:5]}·{leg}]"
 
-    return (
+    line = (
         f"curriculum-pool ({total} tracked; {owed} owed a fire; "
         f"{counts.get('built-never-fired', 0)} built-never-fired · "
         f"{counts.get('needs-build', 0)} needs-build · "
         f"{counts.get('reformulation-queue', 0)} reformulation-queue · "
         f"{counts.get('armed', 0)} armed; ~=not-a-DSL-lever): "
         + ", ".join(_cell(r) for r in top)
-        + (f" (+{more} more owed)" if more > 0 else ""))
+        + (f" (+{more} more owed)" if more > 0 else "")
+    )
+    if research:
+        line += " | research-only SENSE (non-fireable): " + ", ".join(
+            f"{row['candidate']}[{row.get('status', '?')}]" for row in research
+        )
+        if research_more > 0:
+            line += f" (+{research_more} more research signals)"
+    return line
 
 
 def section_curriculum_pool() -> tuple[str | None, dict | None]:
@@ -455,22 +478,48 @@ def section_curriculum_pool() -> tuple[str | None, dict | None]:
     / averaging / solve-interleave / state-evolution) that is designed-or-built-but-never-fired is the
     SAME orphaned-signal class the lever ledger tracks — but is often a TOOL / stage / vehicle DOF, not a
     single-flag DSL lever, so it lives in the sibling ``curriculum_candidate_pool`` store. This SENSE row
-    surfaces the next-fireable rows (built-never-fired first) beside the lever duty-to-measure line, so
-    NO curriculum candidate is orphaned and the operator never has to remember it. Read-only, score-
-    neutral, fail-open (omit on any error)."""
+    surfaces production-fireable rows beside a separate research-only SENSE channel, so NO curriculum
+    candidate is orphaned and an unactivatable research finding never enters DECIDE. Read-only,
+    score-neutral, fail-open (omit on any error)."""
     try:
         from tac.witness_dsl.curriculum_candidate_pool import pool_summary
+
         summary = pool_summary()
         if not summary.get("total"):
             return None, None
         line = format_curriculum_pool_line(summary)
-        return line, {"total": summary["total"], "owed": summary["owed"],
-                      "counts": summary["counts"],
-                      "top_fireable": [
-                          {"candidate": r.get("candidate"), "status": r.get("status"),
-                           "dsl_lever": r.get("dsl_lever"), "dsl_na_reason": r.get("dsl_na_reason"),
-                           "form_class": r.get("form_class"), "owner": r.get("owner")}
-                          for r in summary.get("top_fireable", [])]}
+        return line, {
+            "total": summary["total"],
+            "owed": summary["owed"],
+            "counts": summary["counts"],
+            "top_fireable": [
+                {
+                    "candidate": r.get("candidate"),
+                    "status": r.get("status"),
+                    "dsl_lever": r.get("dsl_lever"),
+                    "dsl_na_reason": r.get("dsl_na_reason"),
+                    "form_class": r.get("form_class"),
+                    "owner": r.get("owner"),
+                }
+                for r in summary.get("top_fireable", [])
+            ],
+            "research_signals": [
+                {
+                    "candidate": r.get("candidate"),
+                    "status": r.get("status"),
+                    "research_only": r.get("research_only"),
+                    "evidence_kind": r.get("evidence_kind"),
+                    "authority_axis": r.get("authority_axis"),
+                    "verdict_scope": r.get("verdict_scope"),
+                    "activation_status": r.get("activation_status"),
+                    "realized_speedup_factor": r.get("realized_speedup_factor"),
+                    "derived_cost_reduction_fraction": r.get("derived_cost_reduction_fraction"),
+                    "trusted_receipt_sha256": r.get("trusted_receipt_sha256"),
+                    "blockers": r.get("blockers", []),
+                }
+                for r in summary.get("research_signals", [])
+            ],
+        }
     except Exception as exc:
         return f"curriculum-pool: unavailable ({type(exc).__name__}: {exc})", None
 
@@ -483,13 +532,13 @@ def section_deferral_ledger() -> tuple[str | None, dict | None]:
         path = _REPO / ".omx" / "state" / "deferral_ledger.md"
         if not path.exists():
             return None, None
-        rows = [ln for ln in path.read_text(errors="replace").splitlines()
-                if ln.startswith("| D")]
-        hot = [ln.split("|")[1].strip() for ln in rows
-               if "SURFACED" in ln or "FIRING" in ln or "ARMED" in ln]
-        line = (f"deferral-ledger: {len(rows)} open"
-                + (f"; hot: {', '.join(hot)}" if hot else "")
-                + " (.omx/state/deferral_ledger.md — every row has a named trigger)")
+        rows = [ln for ln in path.read_text(errors="replace").splitlines() if ln.startswith("| D")]
+        hot = [ln.split("|")[1].strip() for ln in rows if "SURFACED" in ln or "FIRING" in ln or "ARMED" in ln]
+        line = (
+            f"deferral-ledger: {len(rows)} open"
+            + (f"; hot: {', '.join(hot)}" if hot else "")
+            + " (.omx/state/deferral_ledger.md — every row has a named trigger)"
+        )
         return line, {"open": len(rows), "hot": hot}
     except Exception as exc:
         return f"deferral-ledger: unavailable ({type(exc).__name__}: {exc})", None
@@ -518,16 +567,17 @@ def section_failure_ledger() -> tuple[str | None, dict | None]:
         by_id: dict[str, list[dict]] = {}
         for r in rows:
             by_id.setdefault(str(r.get("failure_id") or "?"), []).append(r)
-        unresolved = sorted(fid for fid, evs in by_id.items()
-                            if evs[-1].get("event") != "resolution")
-        recurrent = sorted(fid for fid, evs in by_id.items()
-                           if sum(1 for e in evs if e.get("event") != "resolution") >= 2)
-        line = (f"failure-ledger ({path.name}): {len(by_id)} class(es), "
-                f"{len(unresolved)} unresolved, {len(recurrent)} recurrent")
+        unresolved = sorted(fid for fid, evs in by_id.items() if evs[-1].get("event") != "resolution")
+        recurrent = sorted(
+            fid for fid, evs in by_id.items() if sum(1 for e in evs if e.get("event") != "resolution") >= 2
+        )
+        line = (
+            f"failure-ledger ({path.name}): {len(by_id)} class(es), "
+            f"{len(unresolved)} unresolved, {len(recurrent)} recurrent"
+        )
         if unresolved:
             line += f"; open: {', '.join(unresolved[:3])}"
-        return line, {"path": str(path), "classes": len(by_id),
-                      "unresolved": unresolved, "recurrent": recurrent}
+        return line, {"path": str(path), "classes": len(by_id), "unresolved": unresolved, "recurrent": recurrent}
     except Exception:
         return None, None
 
@@ -575,20 +625,28 @@ def section_verdict_scope_advisories() -> tuple[str | None, dict | None]:
         # recency window: a 14-day count keeps the line live (the file is append-only,
         # so an all-time count would grow monotonically and go stale-misleading).
         import datetime as _dt
+
         cutoff = _dt.datetime.now(_dt.UTC) - _dt.timedelta(days=14)
+
         def _fresh(r: dict) -> bool:
             try:
                 return _dt.datetime.fromisoformat(str(r.get("ts", ""))) >= cutoff
             except Exception:
                 return True  # unparsable ts → keep (fail toward visibility)
+
         fresh = [r for r in rows if _fresh(r)]
         if not fresh:
             return None, None
         last = str(fresh[-1].get("advisory", ""))[:110]
-        line = (f"verdict-scope advisories: {len(fresh)} doc-flag(s) in the last 14d "
-                f"(latest: {last}) — re-check declared scope vs evidence (req R)")
-        return line, {"count_14d": len(fresh), "count_all": len(rows),
-                      "recent": [r.get("advisory") for r in fresh[-3:]]}
+        line = (
+            f"verdict-scope advisories: {len(fresh)} doc-flag(s) in the last 14d "
+            f"(latest: {last}) — re-check declared scope vs evidence (req R)"
+        )
+        return line, {
+            "count_14d": len(fresh),
+            "count_all": len(rows),
+            "recent": [r.get("advisory") for r in fresh[-3:]],
+        }
     except Exception:
         return None, None
 
@@ -604,8 +662,7 @@ def section_resume_spine() -> tuple[str, dict | None]:
                     feed = ln[3:].strip()
                     break
         feed_txt = (feed[:100] + "…") if feed and len(feed) > 100 else (feed or "none found")
-        return (f"resume spine: MEMORY.md ⭐CURRENT-STATE → newest DAG {feed_txt}",
-                {"newest_feed": feed})
+        return (f"resume spine: MEMORY.md ⭐CURRENT-STATE → newest DAG {feed_txt}", {"newest_feed": feed})
     except Exception as exc:
         return f"resume spine: unavailable ({type(exc).__name__})", None
 
@@ -616,22 +673,24 @@ def section_active_convening() -> tuple[str | None, dict | None]:
     log line; fail-open (omit if absent). Operator binding 2026-07-07: 'you are once again
     requiring me to have an insane memory' — the system holds the thread, not the human."""
     try:
-        ledgers = sorted(glob.glob(".omx/research/*crucible*/ORCHESTRATION_LEDGER.md")) + \
-            sorted(glob.glob(".omx/research/*/ORCHESTRATION_LEDGER.md"))
+        ledgers = sorted(glob.glob(".omx/research/*crucible*/ORCHESTRATION_LEDGER.md")) + sorted(
+            glob.glob(".omx/research/*/ORCHESTRATION_LEDGER.md")
+        )
         if not ledgers:
             return None, None
         txt = Path(ledgers[-1]).read_text(errors="replace")
         done = txt.count("- [x] P")
         total = done + txt.count("- [ ] P")
         # current phase = first unchecked
-        phase = next((ln.strip()[6:60] for ln in txt.splitlines()
-                      if ln.strip().startswith("- [ ] P")), "ALL PHASES DONE")
-        last_log = next((ln.strip() for ln in reversed(txt.splitlines())
-                         if ln.strip().startswith("- 2026")), "")
-        line = (f"ACTIVE CONVENING ({Path(ledgers[-1]).parent.name}): phases {done}/{total} done; "
-                f"NEXT: {phase} | last: {last_log[:120]} | ledger: {ledgers[-1]}")
-        return line, {"ledger": ledgers[-1], "phases_done": done,
-                      "phases_total": total, "next_phase": phase}
+        phase = next(
+            (ln.strip()[6:60] for ln in txt.splitlines() if ln.strip().startswith("- [ ] P")), "ALL PHASES DONE"
+        )
+        last_log = next((ln.strip() for ln in reversed(txt.splitlines()) if ln.strip().startswith("- 2026")), "")
+        line = (
+            f"ACTIVE CONVENING ({Path(ledgers[-1]).parent.name}): phases {done}/{total} done; "
+            f"NEXT: {phase} | last: {last_log[:120]} | ledger: {ledgers[-1]}"
+        )
+        return line, {"ledger": ledgers[-1], "phases_done": done, "phases_total": total, "next_phase": phase}
     except Exception as exc:
         return f"active convening: unavailable ({type(exc).__name__})", None
 
@@ -645,6 +704,7 @@ def section_corpus_recall(conv: dict | None) -> tuple[list[str], dict | None]:
         return [], None
     try:
         import corpus_query
+
         result = corpus_query.run_query(str(conv["next_phase"]), top=3, max_seconds=2.0)
         hits = result.get("hits") or []
         if not hits:
@@ -667,14 +727,19 @@ def section_graph_memory() -> tuple[str | None, dict | None]:
     start). Score-neutral, fail-open."""
     try:
         from tac.graph_memory import cache_paths
+
         npath, epath = cache_paths()
         if not (npath.is_file() and epath.is_file()):
-            return ("graph-memory: not yet built — reconstruct-on-demand via "
-                    "`tools/graph_memory_recall.py --rebuild` (the DAG-as-graph, #411)"), None
+            return (
+                "graph-memory: not yet built — reconstruct-on-demand via "
+                "`tools/graph_memory_recall.py --rebuild` (the DAG-as-graph, #411)"
+            ), None
         n_nodes = sum(1 for _ in npath.open(encoding="utf-8"))
         n_edges = sum(1 for _ in epath.open(encoding="utf-8"))
-        line = (f"graph-memory: {n_nodes} nodes / {n_edges} edges — RECONSTRUCT before "
-                f"grepping: `tools/graph_memory_recall.py \"<query>\"` (#411 DAG-as-graph)")
+        line = (
+            f"graph-memory: {n_nodes} nodes / {n_edges} edges — RECONSTRUCT before "
+            f'grepping: `tools/graph_memory_recall.py "<query>"` (#411 DAG-as-graph)'
+        )
         return line, {"nodes": n_nodes, "edges": n_edges}
     except Exception as exc:
         return f"graph-memory: unavailable ({type(exc).__name__})", None
@@ -691,6 +756,7 @@ def section_costate_organ(run_dir: Path | None) -> tuple[list[str], dict | None]
     # (a) the compounding memory summary (triality ledger — cheap parse)
     try:
         from tac.witness_control.continual_costate import organ_summary
+
         s = organ_summary()
         data["memory"] = s
         if s["n_records"]:
@@ -698,7 +764,8 @@ def section_costate_organ(run_dir: Path | None) -> tuple[list[str], dict | None]
                 f"λ-organ memory: {s['n_records']} trajectory record(s) / "
                 f"{s['total_intervals']} intervals; {s['n_regimes']} regime(s) "
                 f"[{', '.join(s['regimes'][:4])}{'…' if s['n_regimes'] > 4 else ''}]; "
-                f"recommended arch {s['recommended_architecture']}")
+                f"recommended arch {s['recommended_architecture']}"
+            )
     except Exception as exc:
         lines.append(f"λ-organ memory: unavailable ({type(exc).__name__})")
     # (b) the live observatory + acquisition queue (needs a run dir with verdicts)
@@ -709,9 +776,15 @@ def section_costate_organ(run_dir: Path | None) -> tuple[list[str], dict | None]
 
         from tac.witness_control.control_alphabet import powerplay_acquisition
         from tac.witness_control.lambda_net import (
-            RidgeSolveAdjoint, build_intervals, evaluate_lambda_field,
-            fit_score_composition, lever_features, read_trajectory)
+            RidgeSolveAdjoint,
+            build_intervals,
+            evaluate_lambda_field,
+            fit_score_composition,
+            lever_features,
+            read_trajectory,
+        )
         from tac.witness_control.prototype_router import PrototypeRouterLens
+
         traj = read_trajectory(run_dir)
         if traj.n_verdicts >= 3:
             comp = fit_score_composition(traj.verdicts)
@@ -720,48 +793,56 @@ def section_costate_organ(run_dir: Path | None) -> tuple[list[str], dict | None]
             lens = PrototypeRouterLens()
             lens.fit(intervals, phis)
             last = traj.verdicts[-1]
-            x = np.concatenate([np.asarray(last["d_seg_by_class"], dtype=float),
-                                [math.log(max(float(last.get("blob_bytes", 1.0)), 1.0))]])
+            x = np.concatenate(
+                [
+                    np.asarray(last["d_seg_by_class"], dtype=float),
+                    [math.log(max(float(last.get("blob_bytes", 1.0)), 1.0))],
+                ]
+            )
             att = lens.attribute(x, float(last["epoch"]), comp.grad_s_wrt_state())
             data["observatory"] = {
-                "explain": att.explain(), "fired": list(att.fired),
-                "mixture_entropy": att.mixture_entropy}
+                "explain": att.explain(),
+                "fired": list(att.fired),
+                "mixture_entropy": att.mixture_entropy,
+            }
             lines.append("λ-organ observatory: " + att.explain())
-            faith = lens.faithfulness_audit(x, intervals[-1].ctx,
-                                            comp.grad_s_wrt_state(),
-                                            lever_features("seg"))
-            data["faithfulness"] = {k: faith[k] for k in
-                                    ("faithful", "max_rel_gap", "rel_tol")}
+            faith = lens.faithfulness_audit(x, intervals[-1].ctx, comp.grad_s_wrt_state(), lever_features("seg"))
+            data["faithfulness"] = {k: faith[k] for k in ("faithful", "max_rel_gap", "rel_tol")}
             lines.append(
                 f"λ-organ faithfulness: {'OK' if faith['faithful'] else 'DIVERGENT'} "
                 f"(max_rel_gap {faith['max_rel_gap']:.3f} ≤ tol {faith['rel_tol']}; "
-                "stated-vs-counterfactual, 2607.08046)")
+                "stated-vs-counterfactual, 2607.08046)"
+            )
             m = RidgeSolveAdjoint()
             m.fit(intervals, phis)
-            fld = evaluate_lambda_field(m, traj, comp, intervals,
-                                        status="SPECULATIVE-UNTIL-BACKTESTED")
+            fld = evaluate_lambda_field(m, traj, comp, intervals, status="SPECULATIVE-UNTIL-BACKTESTED")
             ever = {n: fld.identified.get(n, False) for n in fld.per_lever}
             acq = powerplay_acquisition(fld.per_lever, ever_fired=ever)[:3]
-            data["acquisition_top"] = [
-                {"lever": r.lever, "acquisition": r.acquisition, "kind": r.kind}
-                for r in acq]
+            data["acquisition_top"] = [{"lever": r.lever, "acquisition": r.acquisition, "kind": r.kind} for r in acq]
             lines.append(
-                "λ-organ acquisition (PowerPlay top-3): " + " · ".join(
-                    f"{r.lever}({r.kind.split('-')[0]},{r.acquisition:.2f})" for r in acq))
+                "λ-organ acquisition (PowerPlay top-3): "
+                + " · ".join(f"{r.lever}({r.kind.split('-')[0]},{r.acquisition:.2f})" for r in acq)
+            )
             # (c) #436 regime-conditional SELF-DISPATCH — the per-state arbiter decision
             #     (advisory, past-only, NON-PROMOTABLE): current regime + which tool it
             #     dispatches (or PERSISTENCE), provenance-labeled to the measured verdict.
             from tac.witness_control.regime_dispatch import dispatch_for_trajectory
+
             dd = dispatch_for_trajectory(traj)
             data["dispatch"] = {
-                "regime": dd.classification.regime, "tool": dd.tool,
+                "regime": dd.classification.regime,
+                "tool": dd.tool,
                 "deciding_signal": dd.classification.deciding_signal,
-                "explain": dd.explain(), "artifact": _DISPATCH_DOC,
-                "axis_tag": dd.axis_tag, "actuation": dd.actuation}
+                "explain": dd.explain(),
+                "artifact": _DISPATCH_DOC,
+                "axis_tag": dd.axis_tag,
+                "actuation": dd.actuation,
+            }
             lines.append(
                 f"organ-dispatch (#436, {dd.axis_tag}): regime={dd.classification.regime} "
                 f"→ TOOL={dd.tool} [{dd.classification.deciding_signal}] "
-                f"· actuation={dd.actuation} · {_DISPATCH_DOC}")
+                f"· actuation={dd.actuation} · {_DISPATCH_DOC}"
+            )
     except Exception as exc:
         lines.append(f"λ-organ observatory: unavailable ({type(exc).__name__})")
     return lines, data
@@ -774,8 +855,10 @@ def section_review_counter() -> tuple[str | None, dict | None]:
         return None, None
     try:
         # sibling schema review_counter.v1: surface_id / round_n / findings_count / verdict
-        line = (f"review-counter: {row.get('surface_id', '?')} round {row.get('round_n', '?')} "
-                f"findings {row.get('findings_count', '?')} verdict {row.get('verdict', '?')}")
+        line = (
+            f"review-counter: {row.get('surface_id', '?')} round {row.get('round_n', '?')} "
+            f"findings {row.get('findings_count', '?')} verdict {row.get('verdict', '?')}"
+        )
         return line[:130], row
     except Exception:
         return None, None
@@ -788,10 +871,10 @@ def build_digest() -> tuple[list[str], dict]:
     data: dict = {}
 
     ptr_line, data["pointer"] = section_pointer()
-    lines.append(ptr_line)                               # NEVER dropped (amendment 1)
+    lines.append(ptr_line)  # NEVER dropped (amendment 1)
 
     live_line, data["live_run"], run_dir = section_live_run()
-    lines.append(live_line)                              # NEVER dropped
+    lines.append(live_line)  # NEVER dropped
 
     ann_line, data["annulus"] = section_annulus(run_dir)
     if ann_line:
@@ -863,7 +946,8 @@ def build_digest() -> tuple[list[str], dict]:
     lines.append(
         "BOUNDARY: autonomous = advisory recs · duty-to-measure ranking · curriculum "
         "condition inputs · this digest. Operator-GO = heavy/paid launches · run stops · "
-        "live-config changes (CONTAINMENT).")
+        "live-config changes (CONTAINMENT)."
+    )
     lines.append(f"deeper: {_DESIGN_DOC} (§2026-07-07 agent-native surfacing)")
     data["wall_clock_s"] = round(time.time() - t0, 3)
     return lines, data
@@ -872,8 +956,9 @@ def build_digest() -> tuple[list[str], dict]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", action="store_true", help="machine-readable output")
-    ap.add_argument("--session-start", action="store_true",
-                    help="hook mode: same digest, ALWAYS exits 0 (never blocks a session)")
+    ap.add_argument(
+        "--session-start", action="store_true", help="hook mode: same digest, ALWAYS exits 0 (never blocks a session)"
+    )
     args = ap.parse_args(argv)
     try:
         lines, data = build_digest()
@@ -881,8 +966,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(data, indent=2, sort_keys=True, default=str))
         else:
             if args.session_start:
-                print("[costate-digest] controller SENSE+DECIDE state "
-                      "(auto-surfaced; tools/costate_digest.py):")
+                print("[costate-digest] controller SENSE+DECIDE state (auto-surfaced; tools/costate_digest.py):")
             print("\n".join(lines))
         return 0
     except Exception as exc:  # fail-open: a broken digest must never crash a session

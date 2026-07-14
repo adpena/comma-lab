@@ -57,8 +57,7 @@ MAX_HALVINGS = 23
 K_MAX = 2
 DIAGNOSTIC_FORWARD_SHARE = 0.1784755863
 DIAGNOSTIC_FORWARD_SHARE_PROVENANCE = (
-    ".omx/research/p0_costate_reuse_gradfree_20260713.md; "
-    "task-455 diagnostic ratio, explicitly unresolved in-loop"
+    ".omx/research/p0_costate_reuse_gradfree_20260713.md; task-455 diagnostic ratio, explicitly unresolved in-loop"
 )
 
 OBJECTIVE_SPEC = {
@@ -73,8 +72,7 @@ OBJECTIVE_SPEC = {
     "fallback": "byte-exact rollback plus full exact-teacher refresh",
     "calibration_admission": {
         "economics": (
-            "guarded diagnostic teacher-slice speedup strictly exceeds the "
-            "forward-elimination Amdahl ceiling"
+            "guarded diagnostic teacher-slice speedup strictly exceeds the forward-elimination Amdahl ceiling"
         ),
         "gradient": "every behaviorally accepted calibration row has renderer-gradient relative L2 < 1",
         "d_seg_regret": "every behaviorally accepted calibration row has stale-minus-exact d_seg <= 0",
@@ -85,10 +83,8 @@ OBJECTIVE_SPEC = {
 ADMISSION_SPEC = {
     "schema": "p0_costate_reuse_k2_admission.v1",
     "complete_state_count": N_PAIRS,
-    "required_accept_fraction_formula": "2*forward_share/(1-forward_share), strict greater-than",
-    "accept_fraction_denominator": (
-        "all n600 calibration states; terminal/blocked states are charged as fallback"
-    ),
+    "required_accept_fraction_formula": "3*forward_share, strict greater-than",
+    "accept_fraction_denominator": ("all n600 calibration states; terminal/blocked states are charged as fallback"),
     "amdahl_ceiling_formula": "1/(1-forward_share)",
     "gradient_relative_l2_threshold": 1.0,
     "gradient_relative_l2_comparator": "strict_lt",
@@ -206,14 +202,18 @@ def _validate_storage_plan(path: Path, output_dir: Path) -> dict[str, Any]:
         # Canonical waterfall v1 records capacity on the selected tier row.
         # Accept that schema only when the row is unique and fully bound.
         tier_rows = payload.get("tiers")
-        matches = [
-            row
-            for row in tier_rows
-            if isinstance(row, dict)
-            and row.get("name") == selected
-            and row.get("workload_root") == selected_root
-            and row.get("eligible") is True
-        ] if isinstance(tier_rows, list) else []
+        matches = (
+            [
+                row
+                for row in tier_rows
+                if isinstance(row, dict)
+                and row.get("name") == selected
+                and row.get("workload_root") == selected_root
+                and row.get("eligible") is True
+            ]
+            if isinstance(tier_rows, list)
+            else []
+        )
         if len(matches) != 1:
             raise ProbeError("storage plan selected_free_bytes is missing or invalid")
         free_bytes = matches[0].get("free_bytes")
@@ -330,9 +330,7 @@ def candidate_at_norm(theta: Any, gradient: Any, step_norm: float) -> Any | None
     return None if torch.equal(candidate, theta.detach()) else candidate
 
 
-def exact_call_amortization(
-    *, calibration_states: int, accepted_reuses: int
-) -> dict[str, float | int | None]:
+def exact_call_amortization(*, calibration_states: int, accepted_reuses: int) -> dict[str, float | int | None]:
     """Count exact costate calls for two-step K2 cycles with exact fallback."""
 
     if calibration_states < 0 or accepted_reuses < 0 or accepted_reuses > calibration_states:
@@ -364,21 +362,20 @@ def exact_call_amortization(
 
 
 def diagnostic_admission_threshold(forward_share: float) -> dict[str, float]:
-    """Derive the strict reuse-rate gate from the same diagnostic cost split.
+    """Derive the corrected strict reuse-rate gate.
 
-    With acceptance fraction ``p``, fallback fraction ``1-p``, and teacher
-    forward share ``a``, guarded K=2 costs ``2 - p(1-a)`` per two baseline
-    calls.  Requiring its speedup to beat the forward-elimination ceiling
-    ``1/(1-a)`` gives ``p > 2a/(1-a)``.
+    A rejected candidate pays its guard forward and, after rollback, a full
+    exact forward-plus-backward refresh.  Thus two-step expected cost is
+    ``2 + a - p``.  Beating the forward-elimination ceiling ``1/(1-a)`` is
+    equivalent to the strict boundary ``p > 3a``.
     """
 
     if not 0.0 <= forward_share < 1.0:
         raise ValueError("forward_share must be in [0,1)")
-    denominator = 1.0 - forward_share
     return {
         "forward_share_alpha": forward_share,
-        "forward_elimination_amdahl_ceiling_x": 1.0 / denominator,
-        "required_accept_fraction_strict_gt": 2.0 * forward_share / denominator,
+        "forward_elimination_amdahl_ceiling_x": 1.0 / (1.0 - forward_share),
+        "required_accept_fraction_strict_gt": 3.0 * forward_share,
     }
 
 
@@ -391,9 +388,7 @@ def _render_camera_pair(renderer: Any, theta: Any, pair_index: int) -> tuple[np.
     from tac.local_acceleration.torch_levelset_inflate import _torch_act
 
     renderer.code[2 * pair_index + 1] = theta.detach()
-    features_np = (
-        renderer._self_orient_native(pair_index) if renderer.m["self_orient"] else renderer.curv_n
-    )
+    features_np = renderer._self_orient_native(pair_index) if renderer.m["self_orient"] else renderer.curv_n
     features = torch.as_tensor(features_np, dtype=torch.float32)
     model, parameters = renderer.m, renderer.P
     hidden0 = tli.torch_in_proj_h0(parameters, features, model)
@@ -407,9 +402,7 @@ def _render_camera_pair(renderer: Any, theta: Any, pair_index: int) -> tuple[np.
     frames: list[np.ndarray] = []
     for frame_index in (2 * pair_index, 2 * pair_index + 1):
         code_row = theta if frame_index == 2 * pair_index + 1 else renderer.code[frame_index]
-        film = (code_row @ parameters["film.weight"].T + parameters["film.bias"]).reshape(
-            renderer.nH, 2, renderer.hd
-        )
+        film = (code_row @ parameters["film.weight"].T + parameters["film.bias"]).reshape(renderer.nH, 2, renderer.hd)
         hidden = hidden0
         for layer in range(renderer.nH):
             hidden = _torch_act(
@@ -430,8 +423,17 @@ def _render_camera_pair(renderer: Any, theta: Any, pair_index: int) -> tuple[np.
 
 
 def _metric_state(
-    *, round2: Any, trainer: Any, renderer: Any, theta: Any, pair_index: int,
-    segnet: Any, posenet: Any, labels_t: Any, labels_np: np.ndarray, pose: np.ndarray,
+    *,
+    round2: Any,
+    trainer: Any,
+    renderer: Any,
+    theta: Any,
+    pair_index: int,
+    segnet: Any,
+    posenet: Any,
+    labels_t: Any,
+    labels_np: np.ndarray,
+    pose: np.ndarray,
 ) -> dict[str, float]:
     import torch
     import torch.nn.functional as functional
@@ -447,8 +449,17 @@ def _metric_state(
 
 
 def _exact_state(
-    *, round2: Any, trainer: Any, renderer: Any, theta: Any, pair_index: int,
-    segnet: Any, posenet: Any, labels_t: Any, labels_np: np.ndarray, pose: np.ndarray,
+    *,
+    round2: Any,
+    trainer: Any,
+    renderer: Any,
+    theta: Any,
+    pair_index: int,
+    segnet: Any,
+    posenet: Any,
+    labels_t: Any,
+    labels_np: np.ndarray,
+    pose: np.ndarray,
 ) -> dict[str, Any]:
     import torch
     import torch.nn.functional as functional
@@ -464,9 +475,7 @@ def _exact_state(
     costate = torch.autograd.grad(loss, frame_nchw, retain_graph=True)[0].detach()
     backward_seconds = time.perf_counter() - backward_started
     renderer_started = time.perf_counter()
-    gradient = torch.autograd.grad(
-        (frame_nchw * costate).sum(), theta_live
-    )[0].detach()
+    gradient = torch.autograd.grad((frame_nchw * costate).sum(), theta_live)[0].detach()
     renderer_vjp_seconds = time.perf_counter() - renderer_started
     if not bool(torch.isfinite(costate).all() and torch.isfinite(gradient).all()):
         raise ProbeError("exact teacher or renderer VJP produced a nonfinite tensor")
@@ -488,7 +497,12 @@ def _exact_state(
 
 
 def _stale_renderer_gradient(
-    *, round2: Any, renderer: Any, theta: Any, pair_index: int, anchor_costate: Any,
+    *,
+    round2: Any,
+    renderer: Any,
+    theta: Any,
+    pair_index: int,
+    anchor_costate: Any,
 ) -> tuple[Any, float, str]:
     import torch
 
@@ -506,50 +520,79 @@ def _stale_renderer_gradient(
 
 
 def _select_exact_candidate(
-    *, round2: Any, trainer: Any, renderer: Any, theta: Any, gradient: Any,
-    pair_index: int, segnet: Any, posenet: Any, labels_t: Any,
-    labels_np: np.ndarray, pose: np.ndarray, current: dict[str, float],
+    *,
+    round2: Any,
+    trainer: Any,
+    renderer: Any,
+    theta: Any,
+    gradient: Any,
+    pair_index: int,
+    segnet: Any,
+    posenet: Any,
+    labels_t: Any,
+    labels_np: np.ndarray,
+    pose: np.ndarray,
+    current: dict[str, float],
 ) -> tuple[Any | None, float | None, list[dict[str, Any]]]:
     import torch
 
     theta_norm = max(float(torch.linalg.vector_norm(theta.detach()).item()), float(torch.finfo(theta.dtype).eps))
     trials: list[dict[str, Any]] = []
     for halving in range(MAX_HALVINGS + 1):
-        fraction = STEP_FRACTION * (0.5 ** halving)
+        fraction = STEP_FRACTION * (0.5**halving)
         step_norm = fraction * theta_norm
         candidate = candidate_at_norm(theta, gradient, step_norm)
         if candidate is None:
-            trials.append({
-                "halving": halving,
-                "fraction": fraction,
-                "step_norm": step_norm,
-                "accepted": False,
-                "reason": "zero_gradient_or_bit_identical_completion",
-            })
+            trials.append(
+                {
+                    "halving": halving,
+                    "fraction": fraction,
+                    "step_norm": step_norm,
+                    "accepted": False,
+                    "reason": "zero_gradient_or_bit_identical_completion",
+                }
+            )
             return None, None, trials
         metrics = _metric_state(
-            round2=round2, trainer=trainer, renderer=renderer, theta=candidate,
-            pair_index=pair_index, segnet=segnet, posenet=posenet,
-            labels_t=labels_t, labels_np=labels_np, pose=pose,
+            round2=round2,
+            trainer=trainer,
+            renderer=renderer,
+            theta=candidate,
+            pair_index=pair_index,
+            segnet=segnet,
+            posenet=posenet,
+            labels_t=labels_t,
+            labels_np=labels_np,
+            pose=pose,
         )
         predicates = joint_guard(current, metrics)
         accepted = guard_passes(predicates)
-        trials.append({
-            "halving": halving,
-            "fraction": fraction,
-            "step_norm": step_norm,
-            "metrics": metrics,
-            "predicates": predicates,
-            "accepted": accepted,
-        })
+        trials.append(
+            {
+                "halving": halving,
+                "fraction": fraction,
+                "step_norm": step_norm,
+                "metrics": metrics,
+                "predicates": predicates,
+                "accepted": accepted,
+            }
+        )
         if accepted:
             return candidate, step_norm, trials
     return None, None, trials
 
 
 def _measure_pair(
-    *, assignment: Any, renderer: Any, round2: Any, trainer: Any, segnet: Any,
-    posenet: Any, labels: Any, poses: Any, run_contract_sha256: str,
+    *,
+    assignment: Any,
+    renderer: Any,
+    round2: Any,
+    trainer: Any,
+    segnet: Any,
+    posenet: Any,
+    labels: Any,
+    poses: Any,
+    run_contract_sha256: str,
 ) -> dict[str, Any]:
     import torch
 
@@ -559,14 +602,29 @@ def _measure_pair(
     pose = np.array(poses[pair_index], dtype=np.float64, copy=True)
     theta0 = renderer.code[2 * pair_index + 1].detach().clone()
     state0 = _exact_state(
-        round2=round2, trainer=trainer, renderer=renderer, theta=theta0,
-        pair_index=pair_index, segnet=segnet, posenet=posenet,
-        labels_t=labels_t, labels_np=labels_np, pose=pose,
+        round2=round2,
+        trainer=trainer,
+        renderer=renderer,
+        theta=theta0,
+        pair_index=pair_index,
+        segnet=segnet,
+        posenet=posenet,
+        labels_t=labels_t,
+        labels_np=labels_np,
+        pose=pose,
     )
     theta1, step0_norm, step0_trials = _select_exact_candidate(
-        round2=round2, trainer=trainer, renderer=renderer, theta=theta0,
-        gradient=state0["gradient"], pair_index=pair_index, segnet=segnet,
-        posenet=posenet, labels_t=labels_t, labels_np=labels_np, pose=pose,
+        round2=round2,
+        trainer=trainer,
+        renderer=renderer,
+        theta=theta0,
+        gradient=state0["gradient"],
+        pair_index=pair_index,
+        segnet=segnet,
+        posenet=posenet,
+        labels_t=labels_t,
+        labels_np=labels_np,
+        pose=pose,
         current=state0["metrics"],
     )
     base = {
@@ -590,108 +648,145 @@ def _measure_pair(
     }
     if theta1 is None:
         renderer.code[2 * pair_index + 1] = theta0
-        base.update({
-            "status": "TERMINAL_OR_BLOCKED_AT_ANCHOR",
-            "eligible_for_k2": False,
-            "reuse_guard_accept": False,
-            "verdict_scope": "real state had no full-facet exact anchor step under the preregistered halving law",
-        })
+        base.update(
+            {
+                "status": "TERMINAL_OR_BLOCKED_AT_ANCHOR",
+                "eligible_for_k2": False,
+                "reuse_guard_accept": False,
+                "verdict_scope": "real state had no full-facet exact anchor step under the preregistered halving law",
+            }
+        )
         return base
 
     state1 = _exact_state(
-        round2=round2, trainer=trainer, renderer=renderer, theta=theta1,
-        pair_index=pair_index, segnet=segnet, posenet=posenet,
-        labels_t=labels_t, labels_np=labels_np, pose=pose,
+        round2=round2,
+        trainer=trainer,
+        renderer=renderer,
+        theta=theta1,
+        pair_index=pair_index,
+        segnet=segnet,
+        posenet=posenet,
+        labels_t=labels_t,
+        labels_np=labels_np,
+        pose=pose,
     )
     stale_gradient, stale_vjp_seconds, stale_frame_sha = _stale_renderer_gradient(
-        round2=round2, renderer=renderer, theta=theta1, pair_index=pair_index,
+        round2=round2,
+        renderer=renderer,
+        theta=theta1,
+        pair_index=pair_index,
         anchor_costate=state0["costate"],
     )
     if stale_frame_sha != _array_sha256(state1["frame"].cpu().numpy()):
         raise ProbeError(f"pair {pair_index} repeated current frame drifted")
     theta2_exact, step1_norm, step1_trials = _select_exact_candidate(
-        round2=round2, trainer=trainer, renderer=renderer, theta=theta1,
-        gradient=state1["gradient"], pair_index=pair_index, segnet=segnet,
-        posenet=posenet, labels_t=labels_t, labels_np=labels_np, pose=pose,
+        round2=round2,
+        trainer=trainer,
+        renderer=renderer,
+        theta=theta1,
+        gradient=state1["gradient"],
+        pair_index=pair_index,
+        segnet=segnet,
+        posenet=posenet,
+        labels_t=labels_t,
+        labels_np=labels_np,
+        pose=pose,
         current=state1["metrics"],
     )
     base["exact_costate_shadow_calls"] = 2
-    base.update({
-        "theta1_sha256": _array_sha256(theta1.cpu().numpy()),
-        "current_frame_sha256": _array_sha256(state1["frame"].cpu().numpy()),
-        "current_costate_sha256": _array_sha256(state1["costate"].cpu().numpy()),
-        "current_metrics": state1["metrics"],
-        "current_timing_seconds": state1["timing_seconds"],
-        "costate_fidelity": vector_metrics(
-            state1["costate"].cpu().numpy(), state0["costate"].cpu().numpy()
-        ),
-        "renderer_gradient_fidelity": vector_metrics(
-            state1["gradient"].cpu().numpy(), stale_gradient.cpu().numpy()
-        ),
-        "stale_renderer_vjp_seconds": stale_vjp_seconds,
-        "exact_second_step_norm": step1_norm,
-        "exact_second_line_search": step1_trials,
-    })
+    base.update(
+        {
+            "theta1_sha256": _array_sha256(theta1.cpu().numpy()),
+            "current_frame_sha256": _array_sha256(state1["frame"].cpu().numpy()),
+            "current_costate_sha256": _array_sha256(state1["costate"].cpu().numpy()),
+            "current_metrics": state1["metrics"],
+            "current_timing_seconds": state1["timing_seconds"],
+            "costate_fidelity": vector_metrics(state1["costate"].cpu().numpy(), state0["costate"].cpu().numpy()),
+            "renderer_gradient_fidelity": vector_metrics(
+                state1["gradient"].cpu().numpy(), stale_gradient.cpu().numpy()
+            ),
+            "stale_renderer_vjp_seconds": stale_vjp_seconds,
+            "exact_second_step_norm": step1_norm,
+            "exact_second_line_search": step1_trials,
+        }
+    )
     if theta2_exact is None or step1_norm is None:
         renderer.code[2 * pair_index + 1] = theta0
-        base.update({
-            "status": "TERMINAL_OR_BLOCKED_AT_REUSE_POINT",
-            "eligible_for_k2": False,
-            "reuse_guard_accept": False,
-            "verdict_scope": "real state reached no full-facet exact second step under the matched schedule",
-        })
+        base.update(
+            {
+                "status": "TERMINAL_OR_BLOCKED_AT_REUSE_POINT",
+                "eligible_for_k2": False,
+                "reuse_guard_accept": False,
+                "verdict_scope": "real state reached no full-facet exact second step under the matched schedule",
+            }
+        )
         return base
 
     theta2_stale = candidate_at_norm(theta1, stale_gradient, step1_norm)
     if theta2_stale is None:
         renderer.code[2 * pair_index + 1] = theta0
-        base.update({
-            "status": "STALE_ZERO_OR_BIT_IDENTICAL",
-            "eligible_for_k2": True,
-            "reuse_guard_accept": False,
-            "reuse_guard": {
-                "ce_strict_descent": False,
-                "d_seg_nonworsening": False,
-                "d_pose_nonworsening": False,
-            },
-            "verdict_scope": "raw input-costate ZOH at Kmax=2 on the registered real-state replay",
-        })
+        base.update(
+            {
+                "status": "STALE_ZERO_OR_BIT_IDENTICAL",
+                "eligible_for_k2": True,
+                "reuse_guard_accept": False,
+                "reuse_guard": {
+                    "ce_strict_descent": False,
+                    "d_seg_nonworsening": False,
+                    "d_pose_nonworsening": False,
+                },
+                "verdict_scope": "raw input-costate ZOH at Kmax=2 on the registered real-state replay",
+            }
+        )
         return base
 
     exact_metrics = _metric_state(
-        round2=round2, trainer=trainer, renderer=renderer, theta=theta2_exact,
-        pair_index=pair_index, segnet=segnet, posenet=posenet,
-        labels_t=labels_t, labels_np=labels_np, pose=pose,
+        round2=round2,
+        trainer=trainer,
+        renderer=renderer,
+        theta=theta2_exact,
+        pair_index=pair_index,
+        segnet=segnet,
+        posenet=posenet,
+        labels_t=labels_t,
+        labels_np=labels_np,
+        pose=pose,
     )
     stale_metrics = _metric_state(
-        round2=round2, trainer=trainer, renderer=renderer, theta=theta2_stale,
-        pair_index=pair_index, segnet=segnet, posenet=posenet,
-        labels_t=labels_t, labels_np=labels_np, pose=pose,
+        round2=round2,
+        trainer=trainer,
+        renderer=renderer,
+        theta=theta2_stale,
+        pair_index=pair_index,
+        segnet=segnet,
+        posenet=posenet,
+        labels_t=labels_t,
+        labels_np=labels_np,
+        pose=pose,
     )
     predicates = joint_guard(state1["metrics"], stale_metrics)
     accepted = guard_passes(predicates)
-    base.update({
-        "status": "REUSE_GUARD_ACCEPT" if accepted else "REUSE_GUARD_FALLBACK",
-        "eligible_for_k2": True,
-        "reuse_guard_accept": accepted,
-        "reuse_guard": predicates,
-        "exact_second_metrics": exact_metrics,
-        "stale_second_metrics": stale_metrics,
-        "stale_minus_exact_regret": {
-            key: float(stale_metrics[key] - exact_metrics[key])
-            for key in ("ce", "d_seg", "d_pose")
-        },
-        "theta2_exact_sha256": _array_sha256(theta2_exact.cpu().numpy()),
-        "theta2_stale_sha256": _array_sha256(theta2_stale.cpu().numpy()),
-        "verdict_scope": "guarded raw input-costate ZOH Kmax=2 on one n600 stratified real-state replay",
-    })
+    base.update(
+        {
+            "status": "REUSE_GUARD_ACCEPT" if accepted else "REUSE_GUARD_FALLBACK",
+            "eligible_for_k2": True,
+            "reuse_guard_accept": accepted,
+            "reuse_guard": predicates,
+            "exact_second_metrics": exact_metrics,
+            "stale_second_metrics": stale_metrics,
+            "stale_minus_exact_regret": {
+                key: float(stale_metrics[key] - exact_metrics[key]) for key in ("ce", "d_seg", "d_pose")
+            },
+            "theta2_exact_sha256": _array_sha256(theta2_exact.cpu().numpy()),
+            "theta2_stale_sha256": _array_sha256(theta2_stale.cpu().numpy()),
+            "verdict_scope": "guarded raw input-costate ZOH Kmax=2 on one n600 stratified real-state replay",
+        }
+    )
     renderer.code[2 * pair_index + 1] = theta0
     return base
 
 
-def _validate_pair_record(
-    row: dict[str, Any], *, assignment: Any, run_contract_sha256: str
-) -> None:
+def _validate_pair_record(row: dict[str, Any], *, assignment: Any, run_contract_sha256: str) -> None:
     pair_index = int(assignment.pair_index)
     if row.get("schema") != PAIR_SCHEMA:
         raise ProbeError(f"pair record schema drift at {pair_index}")
@@ -771,18 +866,14 @@ def _stage_manifest(
     return payload
 
 
-def _load_records(
-    output_dir: Path, assignments: Sequence[Any], run_contract_sha256: str
-) -> list[dict[str, Any]]:
+def _load_records(output_dir: Path, assignments: Sequence[Any], run_contract_sha256: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for assignment in assignments:
         path = _pair_path(output_dir, int(assignment.pair_index))
         if not path.is_file():
             raise ProbeError(f"final aggregate is missing pair {assignment.pair_index}")
         row = json.loads(path.read_text())
-        _validate_pair_record(
-            row, assignment=assignment, run_contract_sha256=run_contract_sha256
-        )
+        _validate_pair_record(row, assignment=assignment, run_contract_sha256=run_contract_sha256)
         rows.append(row)
     return rows
 
@@ -790,19 +881,12 @@ def _load_records(
 def aggregate_records(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     eligible = [row for row in records if row.get("eligible_for_k2") is True]
     accepted = [
-        row
-        for row in eligible
-        if row.get("reuse_guard_accept") is True
-        and guard_passes(row.get("reuse_guard") or {})
+        row for row in eligible if row.get("reuse_guard_accept") is True and guard_passes(row.get("reuse_guard") or {})
     ]
     inconsistent_accept_count = sum(
-        row.get("reuse_guard_accept") is True
-        and not guard_passes(row.get("reuse_guard") or {})
-        for row in eligible
+        row.get("reuse_guard_accept") is True and not guard_passes(row.get("reuse_guard") or {}) for row in eligible
     )
-    calls = exact_call_amortization(
-        calibration_states=len(records), accepted_reuses=len(accepted)
-    )
+    calls = exact_call_amortization(calibration_states=len(records), accepted_reuses=len(accepted))
     status_counts = Counter(str(row.get("status")) for row in records)
     failure_counts: Counter[str] = Counter()
     for row in eligible:
@@ -814,31 +898,17 @@ def aggregate_records(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     grad_rows = [row["renderer_gradient_fidelity"] for row in records if "renderer_gradient_fidelity" in row]
     costate_rows = [row["costate_fidelity"] for row in records if "costate_fidelity" in row]
     regret_rows = [row["stale_minus_exact_regret"] for row in eligible if "stale_minus_exact_regret" in row]
-    accepted_regret_rows = [
-        row["stale_minus_exact_regret"]
-        for row in accepted
-        if "stale_minus_exact_regret" in row
-    ]
-    accepted_grad_rows = [
-        row["renderer_gradient_fidelity"]
-        for row in accepted
-        if "renderer_gradient_fidelity" in row
-    ]
+    accepted_regret_rows = [row["stale_minus_exact_regret"] for row in accepted if "stale_minus_exact_regret" in row]
+    accepted_grad_rows = [row["renderer_gradient_fidelity"] for row in accepted if "renderer_gradient_fidelity" in row]
     accepted_d_seg_regrets = [
         float(row["stale_minus_exact_regret"]["d_seg"])
         for row in accepted
-        if "stale_minus_exact_regret" in row
-        and "d_seg" in row["stale_minus_exact_regret"]
+        if "stale_minus_exact_regret" in row and "d_seg" in row["stale_minus_exact_regret"]
     ]
-    fallback_rate = (len(records) - len(accepted)) / len(records) if records else None
+    accept_fraction = len(accepted) / len(records) if records else None
+    fallback_rate = 1.0 - accept_fraction if accept_fraction is not None else None
     diagnostic_speedup = (
-        2.0
-        / (
-            1.0
-            + DIAGNOSTIC_FORWARD_SHARE
-            + fallback_rate * (1.0 - DIAGNOSTIC_FORWARD_SHARE)
-        )
-        if fallback_rate is not None else None
+        2.0 / (2.0 + DIAGNOSTIC_FORWARD_SHARE - accept_fraction) if accept_fraction is not None else None
     )
     return {
         "state_count": len(records),
@@ -876,19 +946,15 @@ def aggregate_records(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "accepted_d_seg_regret_gate": {
             "accepted_calibration_row_count": len(accepted),
             "accepted_calibration_regret_present_count": len(accepted_d_seg_regrets),
-            "accepted_calibration_d_seg_regret_lte_zero_count": sum(
-                value <= 0.0 for value in accepted_d_seg_regrets
-            ),
+            "accepted_calibration_d_seg_regret_lte_zero_count": sum(value <= 0.0 for value in accepted_d_seg_regrets),
             "threshold": 0.0,
             "comparator": "lte",
         },
         "accepted_stale_minus_exact_regret": {
-            key: _quantiles([row[key] for row in accepted_regret_rows])
-            for key in ("ce", "d_seg", "d_pose")
+            key: _quantiles([row[key] for row in accepted_regret_rows]) for key in ("ce", "d_seg", "d_pose")
         },
         "all_eligible_stale_minus_exact_regret": {
-            key: _quantiles([row[key] for row in regret_rows])
-            for key in ("ce", "d_seg", "d_pose")
+            key: _quantiles([row[key] for row in regret_rows]) for key in ("ce", "d_seg", "d_pose")
         },
         "exact_costate_call_economics": calls,
         "diagnostic_teacher_slice_economics": {
@@ -900,7 +966,15 @@ def aggregate_records(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
                 "are conservatively charged as exact fallback"
             ),
             "conditional_speedup_x": diagnostic_speedup,
-            "formula": "2/(1+forward_share+fallback_rate*(1-forward_share))",
+            "guarded_expected_cost": (
+                2.0 + DIAGNOSTIC_FORWARD_SHARE - accept_fraction if accept_fraction is not None else None
+            ),
+            "formula": "2/(2+forward_share-accept_fraction)",
+            "rejected_second_step_charge": {
+                "guard_forward": DIAGNOSTIC_FORWARD_SHARE,
+                "rollback_exact_forward_plus_backward_refresh": 1.0,
+                "total": 1.0 + DIAGNOSTIC_FORWARD_SHARE,
+            },
             **diagnostic_admission_threshold(DIAGNOSTIC_FORWARD_SHARE),
             "evidence_grade": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP",
             "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
@@ -908,9 +982,7 @@ def aggregate_records(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def evaluate_admission_gate(
-    aggregate: dict[str, Any], *, complete_n600: bool
-) -> dict[str, Any]:
+def evaluate_admission_gate(aggregate: dict[str, Any], *, complete_n600: bool) -> dict[str, Any]:
     """Evaluate the preregistered, calibration-only K=2 admission contract."""
 
     accepted = int(aggregate["behavioral_full_facet_accept_count"])
@@ -926,26 +998,18 @@ def evaluate_admission_gate(
     observed_unique_pair_count = int(aggregate["unique_pair_count"])
     predicates = {
         "complete_n600": (
-            bool(complete_n600)
-            and observed_state_count == N_PAIRS
-            and observed_unique_pair_count == N_PAIRS
+            bool(complete_n600) and observed_state_count == N_PAIRS and observed_unique_pair_count == N_PAIRS
         ),
         "has_behavioral_full_facet_accepts": accepted > 0,
         "accept_fraction_strictly_exceeds_required": (
             accept_fraction is not None and accept_fraction > required_fraction
         ),
-        "diagnostic_speedup_strictly_exceeds_amdahl_ceiling": (
-            speedup is not None and float(speedup) > ceiling
-        ),
-        "all_accepted_gradient_fidelity_present": (
-            gradient["accepted_calibration_fidelity_present_count"] == accepted
-        ),
+        "diagnostic_speedup_strictly_exceeds_amdahl_ceiling": (speedup is not None and float(speedup) > ceiling),
+        "all_accepted_gradient_fidelity_present": (gradient["accepted_calibration_fidelity_present_count"] == accepted),
         "all_accepted_gradient_relative_l2_strict_lt_one": (
             gradient["accepted_calibration_relative_l2_lt_one_count"] == accepted
         ),
-        "all_accepted_d_seg_regret_present": (
-            regret["accepted_calibration_regret_present_count"] == accepted
-        ),
+        "all_accepted_d_seg_regret_present": (regret["accepted_calibration_regret_present_count"] == accepted),
         "all_accepted_stale_d_seg_regret_lte_exact": (
             regret["accepted_calibration_d_seg_regret_lte_zero_count"] == accepted
         ),
@@ -993,7 +1057,11 @@ def build_admission_content(
 
 
 def _run_contract(
-    *, output_dir: Path, storage_plan: Path, round2: Any, max_pairs: int | None,
+    *,
+    output_dir: Path,
+    storage_plan: Path,
+    round2: Any,
+    max_pairs: int | None,
 ) -> dict[str, Any]:
     input_custody: dict[str, Any] = {}
     for relative, expected in round2.EXPECTED_INPUTS.items():
@@ -1049,9 +1117,7 @@ def _run_contract(
         "promotion_eligible": False,
         "pointer_moved": False,
     }
-    semantic_payload = {
-        key: value for key, value in payload.items() if key != "git_head_at_launch"
-    }
+    semantic_payload = {key: value for key, value in payload.items() if key != "git_head_at_launch"}
     return {
         "sha256": _canonical_sha256(semantic_payload),
         "payload": payload,
@@ -1068,9 +1134,7 @@ def _semantic_contract_payload(contract: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in payload.items() if key != "git_head_at_launch"}
 
 
-def _validate_resume_contract(
-    prior: dict[str, Any], current: dict[str, Any]
-) -> dict[str, Any]:
+def _validate_resume_contract(prior: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
     """Adopt the launch contract when every semantic byte identity still matches."""
 
     prior_semantic = _semantic_contract_payload(prior)
@@ -1104,9 +1168,7 @@ def _load_completed_receipt(
         complete = json.loads(complete_path.read_text())
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ProbeError("completed-run seal is unreadable") from exc
-    if not isinstance(complete, dict) or complete.get("schema") != (
-        "p0_costate_reuse_k2_complete.v2"
-    ):
+    if not isinstance(complete, dict) or complete.get("schema") != ("p0_costate_reuse_k2_complete.v2"):
         raise ProbeError("completed-run seal schema changed")
     if complete.get("receipt") != "measurement_receipt.json":
         raise ProbeError("completed-run receipt path changed")
@@ -1114,9 +1176,7 @@ def _load_completed_receipt(
     if not receipt_path.is_file():
         raise ProbeError("completed-run receipt bytes are unavailable")
     raw = receipt_path.read_bytes()
-    if complete.get("receipt_bytes") != len(raw) or complete.get("receipt_sha256") != (
-        hashlib.sha256(raw).hexdigest()
-    ):
+    if complete.get("receipt_bytes") != len(raw) or complete.get("receipt_sha256") != (hashlib.sha256(raw).hexdigest()):
         raise ProbeError("completed-run receipt custody changed")
     try:
         receipt = json.loads(raw)
@@ -1138,26 +1198,16 @@ def _load_completed_receipt(
 
     stage_manifests: list[dict[str, Any]] = []
     for checkpoint_name in checkpoint_names:
-        cohort = [
-            assignment
-            for assignment in assignments
-            if assignment.checkpoint_name == checkpoint_name
-        ]
+        cohort = [assignment for assignment in assignments if assignment.checkpoint_name == checkpoint_name]
         if cohort:
-            stage_manifests.append(
-                _verify_stage_manifest(
-                    output_dir, checkpoint_name, cohort, run_contract["sha256"]
-                )
-            )
+            stage_manifests.append(_verify_stage_manifest(output_dir, checkpoint_name, cohort, run_contract["sha256"]))
     expected_stage_custody = [
         {
             "checkpoint_name": manifest["checkpoint_name"],
             "run_contract_sha256": manifest["run_contract_sha256"],
             "state_count": manifest["state_count"],
             "tree_sha256": manifest["tree_sha256"],
-            **_file_custody(
-                output_dir / f"stage_{manifest['checkpoint_name']}_complete.json"
-            ),
+            **_file_custody(output_dir / f"stage_{manifest['checkpoint_name']}_complete.json"),
         }
         for manifest in stage_manifests
     ]
@@ -1190,16 +1240,13 @@ def _load_completed_receipt(
         admission_gate=gate,
         admission_verdict=verdict,
     )
-    if (
-        receipt.get("admission_content") != expected_admission_content
-        or receipt.get("admission_content_sha256")
-        != _canonical_sha256(expected_admission_content)
-    ):
+    if receipt.get("admission_content") != expected_admission_content or receipt.get(
+        "admission_content_sha256"
+    ) != _canonical_sha256(expected_admission_content):
         raise ProbeError("completed-run admission content changed")
     authority = receipt.get("authority")
     if not isinstance(authority, dict) or any(
-        authority.get(field) is not False
-        for field in ("score_claim", "promotion_eligible", "pointer_moved")
+        authority.get(field) is not False for field in ("score_claim", "promotion_eligible", "pointer_moved")
     ):
         raise ProbeError("completed-run receipt carries false authority")
     return receipt
@@ -1266,9 +1313,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 continue
             manifest_path = output_dir / f"stage_{checkpoint_name}_complete.json"
             if manifest_path.is_file():
-                _verify_stage_manifest(
-                    output_dir, checkpoint_name, cohort, run_contract_sha256
-                )
+                _verify_stage_manifest(output_dir, checkpoint_name, cohort, run_contract_sha256)
                 continue
             renderer, code, model, _dash = yopo._load_renderer(checkpoint_path)
             if model["n_pairs"] != N_PAIRS or code.shape[0] != 2 * N_PAIRS:
@@ -1296,43 +1341,37 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 )
                 row["record_content_sha256"] = _canonical_sha256(row)
                 _atomic_json(path, row)
-                print(json.dumps({
-                    "stage": "pair_complete",
-                    "pair_index": int(assignment.pair_index),
-                    "checkpoint": checkpoint_name,
-                    "status": row["status"],
-                }, sort_keys=True), flush=True)
-            _stage_manifest(
-                output_dir, checkpoint_name, cohort, run_contract_sha256
-            )
+                print(
+                    json.dumps(
+                        {
+                            "stage": "pair_complete",
+                            "pair_index": int(assignment.pair_index),
+                            "checkpoint": checkpoint_name,
+                            "status": row["status"],
+                        },
+                        sort_keys=True,
+                    ),
+                    flush=True,
+                )
+            _stage_manifest(output_dir, checkpoint_name, cohort, run_contract_sha256)
 
         stage_manifests: list[dict[str, Any]] = []
-        for checkpoint_index, (checkpoint_name, _checkpoint_path, _epoch) in enumerate(
-            round2.CHECKPOINTS
-        ):
+        for checkpoint_index, (checkpoint_name, _checkpoint_path, _epoch) in enumerate(round2.CHECKPOINTS):
             cohort = [row for row in assignments if row.checkpoint_index == checkpoint_index]
             if cohort:
-                stage_manifests.append(
-                    _verify_stage_manifest(
-                        output_dir, checkpoint_name, cohort, run_contract_sha256
-                    )
-                )
+                stage_manifests.append(_verify_stage_manifest(output_dir, checkpoint_name, cohort, run_contract_sha256))
         records = _load_records(output_dir, assignments, run_contract_sha256)
         aggregate = aggregate_records(records)
         complete_n600 = len(records) == N_PAIRS and args.max_pairs is None
         admission_gate = evaluate_admission_gate(aggregate, complete_n600=complete_n600)
-        admission_verdict = (
-            "ADMIT_K2_GUARDED_REUSE" if admission_gate["passed"] else "NOT_ADMITTED"
-        )
+        admission_verdict = "ADMIT_K2_GUARDED_REUSE" if admission_gate["passed"] else "NOT_ADMITTED"
         stage_manifest_custody = [
             {
                 "checkpoint_name": manifest["checkpoint_name"],
                 "run_contract_sha256": manifest["run_contract_sha256"],
                 "state_count": manifest["state_count"],
                 "tree_sha256": manifest["tree_sha256"],
-                **_file_custody(
-                    output_dir / f"stage_{manifest['checkpoint_name']}_complete.json"
-                ),
+                **_file_custody(output_dir / f"stage_{manifest['checkpoint_name']}_complete.json"),
             }
             for manifest in stage_manifests
         ]
@@ -1396,13 +1435,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         }
         receipt_path = output_dir / "measurement_receipt.json"
         _atomic_json(receipt_path, receipt)
-        _atomic_json(output_dir / "complete.json", {
-            "schema": "p0_costate_reuse_k2_complete.v2",
-            "receipt": str(receipt_path.relative_to(output_dir)),
-            "receipt_bytes": receipt_path.stat().st_size,
-            "receipt_sha256": _sha256(receipt_path),
-            "completed_at_utc": _utc(),
-        })
+        _atomic_json(
+            output_dir / "complete.json",
+            {
+                "schema": "p0_costate_reuse_k2_complete.v2",
+                "receipt": str(receipt_path.relative_to(output_dir)),
+                "receipt_bytes": receipt_path.stat().st_size,
+                "receipt_sha256": _sha256(receipt_path),
+                "completed_at_utc": _utc(),
+            },
+        )
         return receipt
     finally:
         _release_lock(descriptor)
@@ -1414,7 +1456,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--storage-plan", type=Path, default=DEFAULT_STORAGE_PLAN)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
-        "--max-pairs", type=int,
+        "--max-pairs",
+        type=int,
         help="bounded non-authority smoke prefix; omit for the sealed n600 replay",
     )
     return parser
@@ -1425,15 +1468,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_pairs is not None and not (1 <= args.max_pairs <= N_PAIRS):
         raise ProbeError("--max-pairs must be in [1,600]")
     receipt = run(args)
-    print(json.dumps({
-        "receipt": str(args.output_dir / "measurement_receipt.json"),
-        "admission": receipt["fidelity_gate"]["admission"],
-        "eligible": receipt["measurement"]["eligible_state_count"],
-        "accepted": receipt["measurement"]["reuse_guard_accept_count"],
-        "exact_call_amortization_x": receipt["measurement"]["exact_costate_call_economics"][
-            "exact_call_amortization_x"
-        ],
-    }, sort_keys=True))
+    print(
+        json.dumps(
+            {
+                "receipt": str(args.output_dir / "measurement_receipt.json"),
+                "admission": receipt["fidelity_gate"]["admission"],
+                "eligible": receipt["measurement"]["eligible_state_count"],
+                "accepted": receipt["measurement"]["reuse_guard_accept_count"],
+                "exact_call_amortization_x": receipt["measurement"]["exact_costate_call_economics"][
+                    "exact_call_amortization_x"
+                ],
+            },
+            sort_keys=True,
+        )
+    )
     return 0
 
 

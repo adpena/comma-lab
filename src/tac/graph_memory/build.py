@@ -197,6 +197,8 @@ def parse_dag_feeds(graph: Graph, dag_path: Path, eq_ids: set[str]) -> int:
     for idx, (ln, slug, header) in enumerate(starts):
         end = starts[idx + 1][0] if idx + 1 < len(starts) else len(lines)
         block = "\n".join(lines[ln:end])
+        # Line slicing excludes the complete heading regardless of LF/CRLF or heading whitespace.
+        body = "\n".join(lines[ln + 1 : end])
         # disambiguate repeated slugs (an addendum/correction reuses a slug) so
         # every distinct block is preserved as its own node, not merged away.
         seen = slug_seen.get(slug, 0)
@@ -206,7 +208,7 @@ def parse_dag_feeds(graph: Graph, dag_path: Path, eq_ids: set[str]) -> int:
         graph.add_node(Node(
             id=node_id, ntype="decision" if verdict else "finding",
             title=_clean(header, 160),
-            summary=_clean(block[len(header):], _BLOCK_SUMMARY_CAP),
+            summary=_clean(body, _BLOCK_SUMMARY_CAP),
             source=f"{dag_path}#L{ln + 1}-L{end}",
             attrs={
                 "date": (_DATE_RE.search(block).group(1) if _DATE_RE.search(block) else ""),

@@ -91,33 +91,27 @@ def test_exact_call_amortization_counts_fallback_without_fake_speedup() -> None:
 def test_aggregate_charges_forward_guard_and_only_labels_accepted_regret() -> None:
     aggregate = probe.aggregate_records([_row(0, accepted=True), _row(1, accepted=False)])
     forward_share = probe.DIAGNOSTIC_FORWARD_SHARE
-    expected = 2.0 / (1.0 + forward_share + 0.5 * (1.0 - forward_share))
-    assert aggregate["diagnostic_teacher_slice_economics"]["conditional_speedup_x"] == pytest.approx(
-        expected
-    )
+    expected = 2.0 / (2.0 + forward_share - 0.5)
+    assert aggregate["diagnostic_teacher_slice_economics"]["conditional_speedup_x"] == pytest.approx(expected)
+    rejection = aggregate["diagnostic_teacher_slice_economics"]["rejected_second_step_charge"]
+    assert rejection["guard_forward"] == pytest.approx(forward_share)
+    assert rejection["rollback_exact_forward_plus_backward_refresh"] == 1.0
+    assert rejection["total"] == pytest.approx(1.0 + forward_share)
     assert aggregate["accepted_stale_minus_exact_regret"]["ce"]["mean"] == pytest.approx(-0.01)
     assert aggregate["all_eligible_stale_minus_exact_regret"]["ce"]["mean"] == pytest.approx(0.005)
 
 
 def test_admission_requires_rate_above_derived_amdahl_gate_and_all_fidelity() -> None:
     threshold = probe.diagnostic_admission_threshold(probe.DIAGNOSTIC_FORWARD_SHARE)
-    assert threshold["required_accept_fraction_strict_gt"] == pytest.approx(
-        2.0 * probe.DIAGNOSTIC_FORWARD_SHARE / (1.0 - probe.DIAGNOSTIC_FORWARD_SHARE)
-    )
+    assert threshold["required_accept_fraction_strict_gt"] == pytest.approx(3.0 * probe.DIAGNOSTIC_FORWARD_SHARE)
 
-    passing = probe.aggregate_records(
-        [_row(index, accepted=index < 264) for index in range(600)]
-    )
+    passing = probe.aggregate_records([_row(index, accepted=index < 322) for index in range(600)])
     gate = probe.evaluate_admission_gate(passing, complete_n600=True)
-    assert gate["measured_accept_fraction"] == pytest.approx(0.44)
+    assert gate["measured_accept_fraction"] == pytest.approx(322 / 600)
     assert gate["passed"] is True
-    assert gate["diagnostic_teacher_slice_speedup_x"] > gate[
-        "forward_elimination_amdahl_ceiling_x"
-    ]
+    assert gate["diagnostic_teacher_slice_speedup_x"] > gate["forward_elimination_amdahl_ceiling_x"]
 
-    below_rate = probe.aggregate_records(
-        [_row(index, accepted=index < 258) for index in range(600)]
-    )
+    below_rate = probe.aggregate_records([_row(index, accepted=index < 321) for index in range(600)])
     assert probe.evaluate_admission_gate(below_rate, complete_n600=True)["passed"] is False
 
     one_of_six_hundred = probe.aggregate_records(
@@ -127,27 +121,36 @@ def test_admission_requires_rate_above_derived_amdahl_gate_and_all_fidelity() ->
     assert one_gate["measured_accept_fraction"] == pytest.approx(1 / 600)
     assert one_gate["passed"] is False
 
-    bad_gradient_rows = [_row(index, accepted=index < 264) for index in range(600)]
+    bad_gradient_rows = [_row(index, accepted=index < 322) for index in range(600)]
     bad_gradient_rows[0]["renderer_gradient_fidelity"]["relative_l2_error_fp32"] = 1.0
-    bad_gradient_gate = probe.evaluate_admission_gate(
-        probe.aggregate_records(bad_gradient_rows), complete_n600=True
-    )
+    bad_gradient_gate = probe.evaluate_admission_gate(probe.aggregate_records(bad_gradient_rows), complete_n600=True)
     assert bad_gradient_gate["passed"] is False
-    assert (
-        bad_gradient_gate["predicates"]["all_accepted_gradient_relative_l2_strict_lt_one"]
-        is False
-    )
+    assert bad_gradient_gate["predicates"]["all_accepted_gradient_relative_l2_strict_lt_one"] is False
 
-    bad_regret_rows = [_row(index, accepted=index < 264) for index in range(600)]
+    bad_regret_rows = [_row(index, accepted=index < 322) for index in range(600)]
     bad_regret_rows[0]["stale_minus_exact_regret"]["d_seg"] = 1e-6
-    bad_regret_gate = probe.evaluate_admission_gate(
-        probe.aggregate_records(bad_regret_rows), complete_n600=True
-    )
+    bad_regret_gate = probe.evaluate_admission_gate(probe.aggregate_records(bad_regret_rows), complete_n600=True)
     assert bad_regret_gate["passed"] is False
-    assert (
-        bad_regret_gate["predicates"]["all_accepted_stale_d_seg_regret_lte_exact"]
-        is False
-    )
+    assert bad_regret_gate["predicates"]["all_accepted_stale_d_seg_regret_lte_exact"] is False
+
+
+@pytest.mark.parametrize(
+    ("p_expression", "positive", "beats_ceiling"),
+    [
+        (lambda alpha: 0.0, False, False),
+        (lambda alpha: alpha, False, False),
+        (lambda alpha: 3.0 * alpha, True, False),
+        (lambda alpha: 1.0, True, True),
+    ],
+)
+def test_corrected_economics_strict_boundaries(p_expression, positive: bool, beats_ceiling: bool) -> None:
+    alpha = probe.DIAGNOSTIC_FORWARD_SHARE
+    p = p_expression(alpha)
+    expected_cost = 2.0 + alpha - p
+    threshold = probe.diagnostic_admission_threshold(alpha)
+    assert (p > alpha) is positive
+    assert 2.0 / expected_cost == pytest.approx(2.0 / (2.0 + alpha - p))
+    assert (p > threshold["required_accept_fraction_strict_gt"]) is beats_ceiling
 
 
 def test_stage_manifest_detects_tampered_row_and_manifest(tmp_path: Path) -> None:
@@ -184,9 +187,7 @@ def test_row_resume_and_load_refuse_stale_contract(tmp_path: Path) -> None:
     assignment = _Assignment(0)
     pairs = tmp_path / "pairs"
     pairs.mkdir()
-    probe._atomic_json(
-        probe._pair_path(tmp_path, 0), _sealed_row(assignment, "a" * 64)
-    )
+    probe._atomic_json(probe._pair_path(tmp_path, 0), _sealed_row(assignment, "a" * 64))
     assert len(probe._load_records(tmp_path, [assignment], "a" * 64)) == 1
     with pytest.raises(probe.ProbeError, match="run contract drift"):
         probe._load_records(tmp_path, [assignment], "b" * 64)
@@ -330,12 +331,8 @@ def test_completed_receipt_is_immutable_and_contract_bound(tmp_path: Path) -> No
     )
     assignment = _Assignment(0)
     (tmp_path / "pairs").mkdir()
-    probe._atomic_json(
-        probe._pair_path(tmp_path, 0), _sealed_row(assignment, contract["sha256"])
-    )
-    manifest = probe._stage_manifest(
-        tmp_path, "v9", [assignment], contract["sha256"]
-    )
+    probe._atomic_json(probe._pair_path(tmp_path, 0), _sealed_row(assignment, contract["sha256"]))
+    manifest = probe._stage_manifest(tmp_path, "v9", [assignment], contract["sha256"])
     manifest_path = tmp_path / "stage_v9_complete.json"
     stage_custody = [
         {
@@ -394,13 +391,16 @@ def test_completed_receipt_is_immutable_and_contract_bound(tmp_path: Path) -> No
             "receipt_sha256": probe._sha256(receipt_path),
         },
     )
-    assert probe._load_completed_receipt(
-        tmp_path,
-        run_contract=contract,
-        assignments=[assignment],
-        checkpoint_names=["v9"],
-        complete_n600=False,
-    ) == receipt
+    assert (
+        probe._load_completed_receipt(
+            tmp_path,
+            run_contract=contract,
+            assignments=[assignment],
+            checkpoint_names=["v9"],
+            complete_n600=False,
+        )
+        == receipt
+    )
 
     tampered = dict(receipt)
     tampered["measurement"] = {"n": 599}

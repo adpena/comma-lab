@@ -1,4 +1,3 @@
-import hashlib
 import json
 import shutil
 import uuid
@@ -6,16 +5,16 @@ from pathlib import Path
 
 import pytest
 
+import tac.witness_dsl.exact_costate_reuse_policy as policy_module
 from tac.witness_dsl.exact_costate_reuse_policy import (
-    ADMISSION_VERDICT,
+    CORRECTED_ADMISSION_VERDICT,
     ExactCostateReusePolicy,
     TemporalFidelityReceiptCustody,
     exact_costate_reuse_k2_lever,
 )
 
-SHA_A = "a" * 64
-SHA_B = "b" * 64
-RUN_CONTRACT_SHA = "d" * 64
+REPO = Path(__file__).resolve().parents[4]
+REAL_WRAPPER = REPO / "experiments/results/p0_costate_reuse_k2_n600_v3_20260713" / "corrected_adjudication_receipt.json"
 
 
 @pytest.fixture
@@ -31,129 +30,26 @@ def durable_dir():
             parent.rmdir()
 
 
-def write_receipt(path: Path, **overrides) -> Path:
-    values = {
-        "schema": "p0_costate_reuse_k2_n600.v2",
-        "status": "completed",
-        "admission_verdict": ADMISSION_VERDICT,
-        "n_pairs": 600,
-        "objective_sha256": SHA_A,
-        "scorer_sha256": SHA_B,
-    }
-    gate_passed = overrides.pop("gate_passed", True)
-    values.update(overrides)
-    values["run_contract"] = {"sha256": RUN_CONTRACT_SHA}
-    values["measurement"] = {"state_count": 600, "accepted": 300}
-    stage_custody = []
-    for stage_index in range(3):
-        checkpoint_name = f"v9_{stage_index}"
-        records = []
-        for pair_index in range(stage_index * 200, (stage_index + 1) * 200):
-            pair = {
-                "schema": "p0_costate_reuse_k2_pair.v2",
-                "run_contract_sha256": RUN_CONTRACT_SHA,
-                "assignment": {
-                    "pair_index": pair_index,
-                    "checkpoint_name": checkpoint_name,
-                },
-                "status": "TERMINAL_OR_BLOCKED_AT_ANCHOR",
-                "eligible_for_k2": False,
-                "reuse_guard_accept": False,
-            }
-            pair["record_content_sha256"] = hashlib.sha256(
-                json.dumps(
-                    pair, sort_keys=True, separators=(",", ":"), allow_nan=False
-                ).encode()
-            ).hexdigest()
-            pair_path = path.parent / "pairs" / f"pair_{pair_index:04d}.json"
-            pair_path.parent.mkdir(parents=True, exist_ok=True)
-            pair_raw = (json.dumps(pair, indent=2, sort_keys=True) + "\n").encode()
-            pair_path.write_bytes(pair_raw)
-            records.append(
-                {
-                    "pair_index": pair_index,
-                    "path": str(pair_path.relative_to(path.parent)),
-                    "bytes": len(pair_raw),
-                    "sha256": hashlib.sha256(pair_raw).hexdigest(),
-                }
-            )
-        manifest = {
-            "schema": "p0_costate_reuse_k2_stage.v2",
-            "completed_at_utc": "2026-07-13T00:00:00Z",
-            "run_contract_sha256": RUN_CONTRACT_SHA,
-            "checkpoint_name": checkpoint_name,
-            "state_count": len(records),
-            "records": records,
-            "tree_sha256": hashlib.sha256(
-                json.dumps(
-                    records, sort_keys=True, separators=(",", ":"), allow_nan=False
-                ).encode()
-            ).hexdigest(),
-        }
-        manifest_path = path.parent / f"stage_{checkpoint_name}_complete.json"
-        manifest_raw = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
-        manifest_path.write_bytes(manifest_raw)
-        stage_custody.append(
-            {
-                "checkpoint_name": checkpoint_name,
-                "run_contract_sha256": RUN_CONTRACT_SHA,
-                "state_count": len(records),
-                "tree_sha256": manifest["tree_sha256"],
-                "path": str(manifest_path),
-                "bytes": len(manifest_raw),
-                "sha256": hashlib.sha256(manifest_raw).hexdigest(),
-            }
-        )
-    values["stage_manifest_custody"] = stage_custody
-    gate = {"passed": gate_passed, "spec_sha256": "e" * 64}
-    values["fidelity_gate"] = {
-        "live_trainer_activation": False,
-        "calibration_admission_gate": gate,
-    }
-    admission_content = {
-        "run_contract_sha256": values["run_contract"]["sha256"],
-        "objective_sha256": values["objective_sha256"],
-        "scorer_sha256": values["scorer_sha256"],
-        "admission_spec_sha256": gate["spec_sha256"],
-        "stage_manifest_custody": values["stage_manifest_custody"],
-        "aggregate_sha256": hashlib.sha256(
-            json.dumps(
-                values["measurement"],
-                sort_keys=True,
-                separators=(",", ":"),
-                allow_nan=False,
-            ).encode()
-        ).hexdigest(),
-        "admission_verdict": values["admission_verdict"],
-    }
-    values["admission_content"] = admission_content
-    values["admission_content_sha256"] = hashlib.sha256(
-        json.dumps(
-            admission_content,
-            sort_keys=True,
-            separators=(",", ":"),
-            allow_nan=False,
-        ).encode()
-    ).hexdigest()
-    path.write_text(json.dumps(values, indent=2, sort_keys=True) + "\n")
-    return path
-
-
-def policy_from_path(path: Path, *, enabled: bool = True) -> ExactCostateReusePolicy:
-    receipt = TemporalFidelityReceiptCustody.from_path(path)
+def real_policy(*, enabled: bool = True) -> ExactCostateReusePolicy:
     return ExactCostateReusePolicy(
         enabled=enabled,
-        objective_sha256=SHA_A,
-        scorer_sha256=SHA_B,
-        receipt=receipt,
-        expected_receipt_sha256=receipt.sha256,
+        receipt=TemporalFidelityReceiptCustody.from_path(REAL_WRAPPER),
     )
+
+
+def trusted_copy(monkeypatch, durable_dir: Path) -> Path:
+    copied_root = durable_dir / "sealed"
+    shutil.copytree(REAL_WRAPPER.parent, copied_root)
+    wrapper = copied_root / REAL_WRAPPER.name
+    monkeypatch.setattr(policy_module, "TRUSTED_CORRECTED_WRAPPER_PATH", wrapper)
+    return wrapper
 
 
 def test_default_off_and_lever_is_argv_inert():
     policy = ExactCostateReusePolicy()
     compiled = policy.compile_activation_contract()
     lever = exact_costate_reuse_k2_lever(policy)
+    assert compiled["measurement_verified"] is False
     assert compiled["measurement_admitted"] is False
     assert compiled["trainer_activation_admitted"] is False
     assert compiled["live_trainer_argv"] == []
@@ -168,107 +64,191 @@ def test_kmax_not_two_or_n_not_600_is_refused(field, value):
         ExactCostateReusePolicy(**{field: value})
 
 
-def test_actual_receipt_bytes_admit_measurement_but_never_trainer(durable_dir):
-    policy = policy_from_path(write_receipt(durable_dir / "measurement_receipt.json"))
-    compiled = policy.compile_activation_contract()
-    assert compiled["measurement_admitted"] is True
+def test_real_corrected_wrapper_is_verified_offline_but_preserves_no_go():
+    compiled = real_policy().compile_activation_contract()
+    assert compiled["measurement_verified"] is True
+    assert compiled["measurement_admitted"] is False
+    assert compiled["corrected_admission_verdict"] == CORRECTED_ADMISSION_VERDICT
+    assert compiled["measurement_authority"] == "OFFLINE_N600_TRAINING_SIGNAL_ONLY_NOT_ADMITTED"
     assert compiled["trainer_activation_admitted"] is False
+    assert compiled["live_trainer_argv"] == []
     assert "current-costate provider is unavailable" in compiled["trainer_activation_errors"]
-    assert "live trainer argv is empty" in compiled["trainer_activation_errors"]
 
 
-def test_expected_receipt_sha256_is_required_for_non_advisory_admission(durable_dir):
-    path = write_receipt(durable_dir / "measurement_receipt.json")
-    receipt = TemporalFidelityReceiptCustody.from_path(path)
-    policy = ExactCostateReusePolicy(
-        objective_sha256=SHA_A,
-        scorer_sha256=SHA_B,
-        receipt=receipt,
+def test_original_receipt_and_arbitrary_paths_are_not_trusted():
+    with pytest.raises(ValueError, match="not code-reviewed"):
+        TemporalFidelityReceiptCustody.from_path(REAL_WRAPPER.parent / "measurement_receipt.json")
+    with pytest.raises(ValueError, match="not code-reviewed"):
+        TemporalFidelityReceiptCustody.from_path(Path.cwd() / "arbitrary.json")
+
+
+def test_caller_selected_hash_api_does_not_exist():
+    with pytest.raises(TypeError):
+        ExactCostateReusePolicy(expected_receipt_sha256="0" * 64)
+
+
+def test_direct_receipt_constructor_cannot_mint_verified_authority():
+    trusted = TemporalFidelityReceiptCustody.from_path(REAL_WRAPPER)
+    with pytest.raises(TypeError, match="_authority_token"):
+        TemporalFidelityReceiptCustody(
+            **trusted.public_custody(),
+            _authority_token=object(),
+        )
+
+    direct_nominal = TemporalFidelityReceiptCustody(**trusted.public_custody())
+    nominal_errors = ExactCostateReusePolicy(receipt=direct_nominal).measurement_errors()
+    assert "corrected wrapper custody was not established by from_path" in nominal_errors
+    assert "corrected wrapper from_path snapshot mismatch" in nominal_errors
+
+    fake_fields = trusted.public_custody()
+    fake_fields["objective_sha256"] = "0" * 64
+    direct_fake = TemporalFidelityReceiptCustody(**fake_fields)
+    fake_errors = ExactCostateReusePolicy(receipt=direct_fake).measurement_errors()
+    assert "corrected wrapper custody was not established by from_path" in fake_errors
+    assert "corrected wrapper instance objective_sha256 does not match bytes" in fake_errors
+    assert "receipt objective sha256 mismatch" in fake_errors
+
+
+def test_duck_receipt_is_rejected_before_any_method_dispatch():
+    calls: list[str] = []
+
+    class DuckReceipt:
+        def validation_errors(self, **_kwargs):
+            calls.append("validation_errors")
+            raise AssertionError("duck validation method must not run")
+
+        def public_custody(self):
+            calls.append("public_custody")
+            raise AssertionError("duck serialization method must not run")
+
+    with pytest.raises(TypeError, match="subclasses and duck types are refused"):
+        ExactCostateReusePolicy(receipt=DuckReceipt())
+    assert calls == []
+
+
+def test_malicious_receipt_subclass_is_rejected_before_overrides_run():
+    calls: list[str] = []
+
+    class MaliciousReceipt(TemporalFidelityReceiptCustody):
+        def validation_errors(self, **_kwargs):
+            calls.append("validation_errors")
+            raise AssertionError("subclass validation override must not run")
+
+        def public_custody(self):
+            calls.append("public_custody")
+            raise AssertionError("subclass serialization override must not run")
+
+    malicious = MaliciousReceipt.from_path(REAL_WRAPPER)
+    with pytest.raises(TypeError, match="subclasses and duck types are refused"):
+        ExactCostateReusePolicy(receipt=malicious)
+    assert calls == []
+
+
+def test_symlink_wrapper_is_refused(monkeypatch, durable_dir):
+    link = durable_dir / "wrapper.json"
+    link.symlink_to(REAL_WRAPPER)
+    monkeypatch.setattr(policy_module, "TRUSTED_CORRECTED_WRAPPER_PATH", link)
+    with pytest.raises(ValueError, match="symlink"):
+        TemporalFidelityReceiptCustody.from_path(link)
+
+
+def test_wrapper_tamper_after_loading_fails_closed(monkeypatch, durable_dir):
+    wrapper = trusted_copy(monkeypatch, durable_dir)
+    custody = TemporalFidelityReceiptCustody.from_path(wrapper)
+    payload = json.loads(wrapper.read_text())
+    payload["authority"]["pointer_moved"] = True
+    wrapper.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    errors = ExactCostateReusePolicy(receipt=custody).measurement_errors()
+    assert "corrected wrapper bytes sha256 mismatch" in errors
+    assert "corrected wrapper content sha256 mismatch" in errors
+    assert "corrected wrapper carries false authority" in errors
+
+
+def test_mutation_after_last_first_pass_read_fails_final_snapshot(monkeypatch, durable_dir):
+    wrapper = trusted_copy(monkeypatch, durable_dir)
+    custody = TemporalFidelityReceiptCustody.from_path(wrapper)
+    pair_path = wrapper.parent / "pairs/pair_0599.json"
+
+    def mutate_after_first_pass() -> None:
+        pair = json.loads(pair_path.read_text())
+        pair["status"] = "MUTATED_BETWEEN_PASSES"
+        pair_path.write_text(json.dumps(pair, indent=2, sort_keys=True) + "\n")
+
+    monkeypatch.setattr(policy_module, "_before_final_snapshot_verify", mutate_after_first_pass)
+    errors = ExactCostateReusePolicy(receipt=custody).measurement_errors()
+    assert "pairs/pair_0599.json changed between custody passes" in errors
+
+
+def test_activation_contract_reuses_one_fail_closed_custody_transaction(monkeypatch, durable_dir):
+    wrapper = trusted_copy(monkeypatch, durable_dir)
+    custody = TemporalFidelityReceiptCustody.from_path(wrapper)
+    pair_path = wrapper.parent / "pairs/pair_0599.json"
+    hook_calls = 0
+
+    def mutate_during_only_transaction() -> None:
+        nonlocal hook_calls
+        hook_calls += 1
+        if hook_calls == 1:
+            pair = json.loads(pair_path.read_text())
+            pair["status"] = "MUTATED_DURING_COMPILED_TRANSACTION"
+            pair_path.write_text(json.dumps(pair, indent=2, sort_keys=True) + "\n")
+
+    monkeypatch.setattr(
+        policy_module,
+        "_before_final_snapshot_verify",
+        mutate_during_only_transaction,
     )
-    compiled = policy.compile_activation_contract()
-    assert compiled["measurement_admitted"] is False
-    assert "trusted expected receipt sha256 is missing or invalid" in compiled["measurement_errors"]
-
-
-def test_forged_self_consistent_receipt_cannot_match_trusted_sha(durable_dir):
-    trusted_path = write_receipt(durable_dir / "trusted.json")
-    trusted_sha = TemporalFidelityReceiptCustody.from_path(trusted_path).sha256
-    forged_path = write_receipt(durable_dir / "forged.json", forged_marker="not_trusted")
-    forged = TemporalFidelityReceiptCustody.from_path(forged_path)
-    policy = ExactCostateReusePolicy(
-        objective_sha256=SHA_A,
-        scorer_sha256=SHA_B,
-        receipt=forged,
-        expected_receipt_sha256=trusted_sha,
+    contract = ExactCostateReusePolicy(enabled=True, receipt=custody).compile_activation_contract()
+    tamper_error = "pairs/pair_0599.json changed between custody passes"
+    assert hook_calls == 1
+    assert contract["measurement_verified"] is False
+    assert tamper_error in contract["measurement_errors"]
+    assert contract["trainer_activation_admitted"] is False
+    assert (
+        contract["trainer_activation_errors"][: len(contract["measurement_errors"])] == contract["measurement_errors"]
     )
-    assert policy.compile_activation_contract()["measurement_admitted"] is False
-    assert "receipt sha256 does not match trusted expected receipt sha256" in policy.measurement_errors()
+    assert tamper_error in contract["trainer_activation_errors"]
 
 
-def test_receipt_tamper_after_loading_refuses_measurement(durable_dir):
-    path = write_receipt(durable_dir / "measurement_receipt.json")
-    policy = policy_from_path(path)
-    write_receipt(path, scorer_sha256="c" * 64)
-    compiled = policy.compile_activation_contract()
-    assert compiled["measurement_admitted"] is False
-    assert "receipt bytes sha256 mismatch" in compiled["measurement_errors"]
-    assert "receipt content scorer_sha256 mismatch" in compiled["measurement_errors"]
-
-
-def test_pair_or_manifest_tamper_after_loading_refuses_measurement(durable_dir):
-    path = write_receipt(durable_dir / "measurement_receipt.json")
-    policy = policy_from_path(path)
-    pair_path = durable_dir / "pairs" / "pair_0000.json"
+def test_nested_pair_tamper_after_loading_fails_closed(monkeypatch, durable_dir):
+    wrapper = trusted_copy(monkeypatch, durable_dir)
+    custody = TemporalFidelityReceiptCustody.from_path(wrapper)
+    pair_path = wrapper.parent / "pairs/pair_0000.json"
     pair = json.loads(pair_path.read_text())
     pair["status"] = "TAMPERED"
     pair_path.write_text(json.dumps(pair, indent=2, sort_keys=True) + "\n")
-    errors = policy.measurement_errors()
+    errors = ExactCostateReusePolicy(receipt=custody).measurement_errors()
+    assert "pairs/pair_0000.json sha256 mismatch" in errors
     assert "pair 0 sha256 mismatch" in errors
-    assert "pair 0 self-hash mismatch" in errors
-
-    path = write_receipt(durable_dir / "measurement_receipt_2.json")
-    policy = policy_from_path(path)
-    manifest_path = durable_dir / "stage_v9_0_complete.json"
-    manifest = json.loads(manifest_path.read_text())
-    manifest["tree_sha256"] = "0" * 64
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
-    errors = policy.measurement_errors()
-    assert "stage manifest v9_0 sha256 mismatch" in errors
-    assert "stage manifest v9_0 tree sha256 mismatch" in errors
+    assert "pair 0 semantic custody mismatch" in errors
 
 
-def test_missing_receipt_after_loading_refuses_measurement(durable_dir):
-    path = write_receipt(durable_dir / "measurement_receipt.json")
-    policy = policy_from_path(path)
-    path.unlink()
-    assert "receipt bytes are unavailable" in policy.measurement_errors()
+def test_nested_stage_and_completion_tamper_fail_closed(monkeypatch, durable_dir):
+    wrapper = trusted_copy(monkeypatch, durable_dir)
+    custody = TemporalFidelityReceiptCustody.from_path(wrapper)
+    stage_path = wrapper.parent / "stage_v9_ep150_ema_best_complete.json"
+    stage = json.loads(stage_path.read_text())
+    stage["tree_sha256"] = "0" * 64
+    stage_path.write_text(json.dumps(stage, indent=2, sort_keys=True) + "\n")
+    complete_path = wrapper.parent / "complete.json"
+    complete = json.loads(complete_path.read_text())
+    complete["receipt_sha256"] = "0" * 64
+    complete_path.write_text(json.dumps(complete, indent=2, sort_keys=True) + "\n")
+    errors = ExactCostateReusePolicy(receipt=custody).measurement_errors()
+    assert any("stage_v9_ep150_ema_best_complete.json sha256 mismatch" in e for e in errors)
+    assert "completion seal does not bind the reviewed receipt" in errors
 
 
-def test_incomplete_or_nonadmitting_content_refuses_measurement(durable_dir):
-    path = write_receipt(
-        durable_dir / "measurement_receipt.json",
-        status="running",
-        admission_verdict="MEASURE_ONLY",
-    )
-    errors = policy_from_path(path).measurement_errors()
-    assert "receipt is not completed" in errors
-    assert "receipt does not admit guarded K2 reuse" in errors
-
-
-def test_top_level_admit_cannot_override_failed_inner_gate(durable_dir):
-    path = write_receipt(
-        durable_dir / "measurement_receipt.json", gate_passed=False
-    )
-    errors = policy_from_path(path).measurement_errors()
-    assert "receipt calibration admission gate did not pass" in errors
-
-
-def test_transient_or_missing_receipt_cannot_create_custody(tmp_path):
-    transient = write_receipt(tmp_path / "measurement_receipt.json")
-    with pytest.raises(ValueError, match="transient"):
-        TemporalFidelityReceiptCustody.from_path(transient)
-    with pytest.raises(ValueError, match="unavailable"):
-        TemporalFidelityReceiptCustody.from_path(Path.cwd() / "does-not-exist.json")
+def test_nested_source_symlink_is_refused(monkeypatch, durable_dir):
+    wrapper = trusted_copy(monkeypatch, durable_dir)
+    custody = TemporalFidelityReceiptCustody.from_path(wrapper)
+    pair_path = wrapper.parent / "pairs/pair_0000.json"
+    target = durable_dir / "pair.json"
+    target.write_bytes(pair_path.read_bytes())
+    pair_path.unlink()
+    pair_path.symlink_to(target)
+    errors = ExactCostateReusePolicy(receipt=custody).measurement_errors()
+    assert any("symlink" in error for error in errors)
 
 
 def test_provider_current_cannot_be_claimed_before_integration():

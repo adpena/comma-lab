@@ -4,50 +4,76 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
-from tac.canonical_equations.equation import RECALIBRATE_ON_NEW_ANCHORS, CanonicalEquation
+from tac.canonical_equations.equation import (
+    RECALIBRATE_ON_NEW_ANCHORS,
+    VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    CanonicalEquation,
+    EmpiricalAnchor,
+)
 from tac.provenance.builders import build_provenance_for_research_sidecar
+from tac.through_r.terminal_costate_skip import (
+    EffectiveDimensionCertificate,
+    TerminalAction,
+    TerminalMethod,
+    TerminalReceiptIdentity,
+    decide_terminal_costate_skip,
+)
 
 EQUATION_ID = "exact_costate_reuse_k2_guarded_v1"
 K2 = 2
 N_PAIRS = 600
 MEMO = ".omx/research/p0_backward_closer_20260713.md"
-MEASUREMENT_UTC = "2026-07-13T22:30:00Z"
-AXIS = "[DERIVED guarded policy; receipt admission pending; no score authority]"
+MEASUREMENT_UTC = "2026-07-14T02:24:28Z"
+AXIS = "[macOS-CPU advisory; offline n600 training-signal only; no score authority]"
+CORRECTED_WRAPPER = "experiments/results/p0_costate_reuse_k2_n600_v3_20260713/corrected_adjudication_receipt.json"
+CORRECTED_WRAPPER_SHA256 = "2102912bc8bd9711f00869746414fb21ea723729bcd26e612274547c6ca73d59"
 
 
-def amortized_cost_fraction(
-    *, alpha: float, fallback_rate: float = 0.0, cadence: int = K2
-) -> float:
+def _unit_interval(value: float, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+        raise ValueError(f"{name} must be a finite non-boolean number")
+    result = float(value)
+    if not 0.0 <= result <= 1.0:
+        raise ValueError(f"{name} must be in [0, 1]")
+    return result
+
+
+def amortized_cost_fraction(*, alpha: float, fallback_rate: float = 0.0, cadence: int = K2) -> float:
     """Return guarded K2 teacher-compute fraction for forward share ``alpha``.
 
-    Every attempted reuse pays the exact forward guard.  A rejected fraction
-    ``fallback_rate`` additionally pays the exact backward refresh.
+    Every attempted reuse pays the exact forward guard.  After rollback, a
+    rejected fraction ``fallback_rate`` pays a complete exact forward plus
+    backward refresh; the stale-candidate guard forward cannot be recycled.
     """
 
-    if cadence != K2:
+    if isinstance(cadence, bool) or not isinstance(cadence, int) or cadence != K2:
         raise ValueError("this canonical policy is sealed to K=2")
-    if not isinstance(alpha, (int, float)) or not math.isfinite(float(alpha)):
-        raise ValueError("alpha must be finite")
-    if not 0.0 <= float(alpha) <= 1.0:
-        raise ValueError("alpha must be in [0, 1]")
-    if not isinstance(fallback_rate, (int, float)) or not math.isfinite(float(fallback_rate)):
-        raise ValueError("fallback_rate must be finite")
-    if not 0.0 <= float(fallback_rate) <= 1.0:
-        raise ValueError("fallback_rate must be in [0, 1]")
-    return float(alpha) + (1.0 - float(alpha)) * (1.0 + float(fallback_rate)) / float(cadence)
+    alpha_value = _unit_interval(alpha, "alpha")
+    fallback_value = _unit_interval(fallback_rate, "fallback_rate")
+    return (1.0 + alpha_value + fallback_value) / float(cadence)
 
 
 def exact_backward_call_amortization(*, reuse_accept_fraction: float) -> float:
     """Return exact-backward call ratio ``2/(2-a)`` for accept fraction ``a``."""
 
-    if not isinstance(reuse_accept_fraction, (int, float)) or not math.isfinite(
-        float(reuse_accept_fraction)
-    ):
-        raise ValueError("reuse_accept_fraction must be finite")
-    if not 0.0 <= float(reuse_accept_fraction) <= 1.0:
-        raise ValueError("reuse_accept_fraction must be in [0, 1]")
-    return 2.0 / (2.0 - float(reuse_accept_fraction))
+    accept_fraction = _unit_interval(reuse_accept_fraction, "reuse_accept_fraction")
+    return 2.0 / (2.0 - accept_fraction)
+
+
+def exact_backward_call_reduction(*, reuse_accept_fraction: float) -> float:
+    """Return counterfactual exact-backward reduction ``p/2``."""
+
+    exact_backward_call_amortization(reuse_accept_fraction=reuse_accept_fraction)
+    return _unit_interval(reuse_accept_fraction, "reuse_accept_fraction") / 2.0
+
+
+def corrected_diagnostic_threshold(*, alpha: float) -> float:
+    """Return strict diagnostic ceiling boundary ``p > 3*alpha``."""
+
+    alpha_value = _unit_interval(alpha, "alpha")
+    return 3.0 * alpha_value
 
 
 def full_facet_guard(
@@ -69,37 +95,74 @@ def full_facet_guard(
         anchor_d_pose,
         candidate_d_pose,
     )
-    if not all(isinstance(value, (int, float)) and math.isfinite(float(value)) for value in values):
+    if not all(
+        not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(float(value))
+        for value in values
+    ):
         raise ValueError("all guard values must be finite numbers")
     if any(float(value) < 0.0 for value in values):
         raise ValueError("all guard values must be non-negative")
-    return (
-        candidate_ce < anchor_ce
-        and candidate_d_seg <= anchor_d_seg
-        and candidate_d_pose <= anchor_d_pose
-    )
+    return candidate_ce < anchor_ce and candidate_d_seg <= anchor_d_seg and candidate_d_pose <= anchor_d_pose
 
 
 def terminal_costate_skip_admitted(
     *,
     exact_metric_accept_reject: bool,
-    effective_dimension: int | None,
-    deterministic_dimension_certificate: bool,
-    n_pairs: int,
-    receipt_custody_valid: bool,
+    terminal_receipt_path: str | Path | None = None,
+    expected_receipt_sha256: str | None = None,
+    dimension_certificate_path: str | Path | None = None,
+    expected_dimension_certificate_sha256: str | None = None,
+    # Legacy scalar claims remain accepted only so stale callers fail closed.
+    effective_dimension: int | None = None,
+    deterministic_dimension_certificate: bool = False,
+    n_pairs: int = 0,
+    receipt_custody_valid: bool = False,
+    terminal_receipt_sha256: str | None = None,
+    effective_dimension_certificate_sha256: str | None = None,
 ) -> bool:
-    """Encode the #396-versus-SPSA/ES distinction in the equation surface."""
+    """Load durable evidence and delegate terminal admission to the runtime."""
 
-    if n_pairs != N_PAIRS or receipt_custody_valid is not True:
+    if exact_metric_accept_reject is True:
+        method = TerminalMethod.EXACT_METRIC_MC_396
+        admitted_action = TerminalAction.SKIP_COSTATE_EXACT_METRIC_MC
+    elif exact_metric_accept_reject is False:
+        method = TerminalMethod.SPSA
+        admitted_action = TerminalAction.SKIP_COSTATE_DIMENSION_CERTIFIED
+    else:
         return False
-    if exact_metric_accept_reject:
-        return True
-    return (
-        not isinstance(effective_dimension, bool)
-        and isinstance(effective_dimension, int)
-        and 0 <= effective_dimension <= 2
-        and deterministic_dimension_certificate is True
-    )
+    if terminal_receipt_path is None or expected_receipt_sha256 is None:
+        return False
+
+    try:
+        receipt = TerminalReceiptIdentity.from_path(
+            terminal_receipt_path,
+            expected_sha256=expected_receipt_sha256,
+        )
+        expected_receipt = TerminalReceiptIdentity.from_path(
+            terminal_receipt_path,
+            expected_sha256=expected_receipt_sha256,
+        )
+        dimension_certificate = None
+        if method is not TerminalMethod.EXACT_METRIC_MC_396:
+            if dimension_certificate_path is None or expected_dimension_certificate_sha256 is None:
+                return False
+            dimension_certificate = EffectiveDimensionCertificate.from_path(
+                dimension_certificate_path,
+                expected_sha256=expected_dimension_certificate_sha256,
+            )
+        decision = decide_terminal_costate_skip(
+            method=method,
+            receipt=receipt,
+            expected_receipt=expected_receipt,
+            expected_receipt_sha256=expected_receipt_sha256,
+            dimension_certificate=dimension_certificate,
+            expected_dimension_certificate_sha256=(
+                expected_dimension_certificate_sha256 if dimension_certificate is not None else None
+            ),
+        )
+    except (OSError, TypeError, ValueError):
+        return False
+    return decision.action is admitted_action and decision.costate_required is False
 
 
 def exact_costate_reuse_k2_laws(
@@ -111,27 +174,47 @@ def exact_costate_reuse_k2_laws(
     candidate_d_seg: float,
     anchor_d_pose: float,
     candidate_d_pose: float,
-    fallback_rate: float = 0.0,
+    fallback_rate: float | None = None,
     reuse_accept_fraction: float = 0.0,
     exact_metric_accept_reject: bool = False,
+    terminal_receipt_path: str | Path | None = None,
+    expected_receipt_sha256: str | None = None,
+    dimension_certificate_path: str | Path | None = None,
+    expected_dimension_certificate_sha256: str | None = None,
+    # Deprecated claims are forwarded nowhere and cannot authorize a skip.
     effective_dimension: int | None = None,
     deterministic_dimension_certificate: bool = False,
     terminal_n_pairs: int = 0,
     terminal_receipt_custody_valid: bool = False,
+    terminal_receipt_sha256: str | None = None,
+    effective_dimension_certificate_sha256: str | None = None,
 ) -> dict[str, float | bool | int]:
     """Inject the cost, full-facet guard, and terminal-skip laws together."""
 
+    accept_fraction = _unit_interval(reuse_accept_fraction, "reuse_accept_fraction")
+    derived_fallback_rate = 1.0 - accept_fraction
+    if fallback_rate is None:
+        effective_fallback_rate = derived_fallback_rate
+    else:
+        effective_fallback_rate = _unit_interval(fallback_rate, "fallback_rate")
+        if not math.isclose(
+            effective_fallback_rate,
+            derived_fallback_rate,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        ):
+            raise ValueError("fallback_rate must equal 1 - reuse_accept_fraction")
+    cost_fraction = amortized_cost_fraction(alpha=alpha, fallback_rate=effective_fallback_rate)
     return {
         "cadence": K2,
         "n_pairs": N_PAIRS,
-        "amortized_cost_fraction": amortized_cost_fraction(
-            alpha=alpha, fallback_rate=fallback_rate
-        ),
-        "teacher_slice_speedup": 1.0
-        / amortized_cost_fraction(alpha=alpha, fallback_rate=fallback_rate),
-        "exact_backward_call_amortization": exact_backward_call_amortization(
-            reuse_accept_fraction=reuse_accept_fraction
-        ),
+        "reuse_accept_fraction": accept_fraction,
+        "fallback_rate": effective_fallback_rate,
+        "amortized_cost_fraction": cost_fraction,
+        "teacher_slice_speedup": 1.0 / cost_fraction,
+        "exact_backward_call_amortization": exact_backward_call_amortization(reuse_accept_fraction=accept_fraction),
+        "exact_backward_call_reduction": exact_backward_call_reduction(reuse_accept_fraction=accept_fraction),
+        "diagnostic_accept_fraction_threshold_strict_gt": corrected_diagnostic_threshold(alpha=alpha),
         "full_facet_guard_admitted": full_facet_guard(
             anchor_ce=anchor_ce,
             candidate_ce=candidate_ce,
@@ -142,37 +225,82 @@ def exact_costate_reuse_k2_laws(
         ),
         "terminal_costate_skip_admitted": terminal_costate_skip_admitted(
             exact_metric_accept_reject=exact_metric_accept_reject,
-            effective_dimension=effective_dimension,
-            deterministic_dimension_certificate=deterministic_dimension_certificate,
-            n_pairs=terminal_n_pairs,
-            receipt_custody_valid=terminal_receipt_custody_valid,
+            terminal_receipt_path=terminal_receipt_path,
+            expected_receipt_sha256=expected_receipt_sha256,
+            dimension_certificate_path=dimension_certificate_path,
+            expected_dimension_certificate_sha256=(expected_dimension_certificate_sha256),
         ),
     }
 
 
 def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
-    """Build the held equation; no empirical provider-current claim is made."""
+    """Build the measured offline NO-GO equation; provider-current stays false."""
 
     provenance = build_provenance_for_research_sidecar(
         sidecar_path=MEMO,
         reactivation_criteria=(
-            "append completed content-bound n600 temporal-fidelity receipt with exact forward-only "
-            "CE/d_seg/d_pose guards, charged in-loop timing, rollback/resume proof, and scorer/objective hashes"
+            "a new provider formulation must factor the complete supported SegNet-backed scalar, "
+            "preserve exact Pose/non-scorer gradients, pass provider-gradient parity, and earn a new "
+            "content-bound n600 admission receipt; the sealed direct raw-ZOH K2 result remains NO-GO"
         ),
         measurement_axis=AXIS,
-        hardware_substrate="symbolic_derivation_only_no_provider_current",
+        hardware_substrate="macOS_CPU_Torch_NumPy_fp32_offline_sealed_replay",
         captured_at_utc=MEASUREMENT_UTC,
+    )
+    anchor = EmpiricalAnchor(
+        anchor_id="p0_costate_reuse_k2_corrected_n600_no_go_20260714",
+        measurement_utc=MEASUREMENT_UTC,
+        inputs={
+            "n_pairs": 600,
+            "stage_counts": (200, 200, 200),
+            "eligible": 523,
+            "terminal_or_blocked": 77,
+            "accepted": 456,
+            "fallback": 144,
+            "accept_fraction_p": 0.76,
+            "forward_share_alpha": 0.1784755863,
+            "wrapper_sha256": CORRECTED_WRAPPER_SHA256,
+        },
+        predicted_output={
+            "guarded_expected_cost": 1.4184755862999998,
+            "diagnostic_teacher_slice_speedup_x": 1.4099643443401577,
+            "exact_backward_call_amortization_x": 1.6129032258064517,
+            "exact_backward_call_reduction_fraction": 0.38,
+            "required_accept_fraction_strict_gt": 0.5354267588999999,
+            "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
+        },
+        empirical_output={
+            "corrected_gate_passed": False,
+            "corrected_verdict": "NOT_ADMITTED",
+            "accepted_d_seg_regret_lte_zero": "308/456",
+            "accepted_renderer_gradient_rel_l2_lt_one": "456/456",
+            "renderer_gradient_rel_l2_median": 0.03072912052372636,
+            "renderer_gradient_rel_l2_p90": 0.0518675255971356,
+            "renderer_gradient_rel_l2_max": 0.1432164947042975,
+            "pointer_moved": False,
+            "provider_current": False,
+        },
+        residual=0.0,
+        source_artifact=CORRECTED_WRAPPER,
+        measurement_method=(
+            "sealed n600 row replay with recursive custody validation and arithmetic-only "
+            "corrected adjudication; DERIVED_DIAGNOSTIC_NOT_IN_LOOP"
+        ),
+        provenance=provenance,
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
     )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="Guarded K2 exact-costate reuse with terminal gradient-free handoff",
         one_line_summary=(
-            "K=2 reuse is admissible only under exact CE/d_seg/d_pose guards; #396 needs no gradient, while SPSA/ES needs certified dimension <=2."
+            "Corrected n600 K=2 economics are favorable diagnostically, but the direct raw-ZOH policy is NOT_ADMITTED on accepted-row d_seg regret."
         ),
         latex_form=(
-            r"C_2(f,q)=f+(1-f)(1+q)/2;\quad A_B(a)=2/(2-a);\quad "
+            r"C_2(\alpha,q)=(1+\alpha+q)/2=(2+\alpha-p)/2;\quad "
+            r"A_B(p)=2/(2-p);\quad p_{ceiling}>3\alpha;\quad "
             r"A_{reuse}\iff CE_1<CE_0\land d_{seg,1}\le d_{seg,0}\land d_{pose,1}\le d_{pose,0};\quad "
-            r"A_{skip}\iff MC_{exact}\lor(r_{eff}\le2\land cert_{det})"
+            r"A_{skip}\iff load_R(path_R,h_R)\land verified_R\land "
+            r"[MC_{exact}\lor(load_D(path_D,h_D)\land verified_D\land r_{eff}\le2)]"
         ),
         python_callable_module_path=(
             "tac.canonical_equations.exact_costate_reuse_k2_20260713:exact_costate_reuse_k2_laws"
@@ -185,16 +313,25 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
             ),
             "refresh_boundaries": ("event", "stage", "custody_change"),
             "terminal_skip": (
-                "#396 exact-metric accept/reject after matching n600 receipt; SPSA/ES only with "
-                "deterministic effective_dimension_certificate <=2"
+                "#396 exact-metric accept/reject only after runtime validation of durable n600 "
+                "receipt bytes against a code-reviewed SHA-256; SPSA/ES additionally requires "
+                "runtime validation of durable deterministic effective-dimension evidence <=2"
             ),
             "excluded": (
                 "K>2; n<600 admission; cosine-only admission; proxy-only guard; blind cadence; "
+                "caller-asserted custody/dimension/determinism without validated durable bytes; "
                 "bulk SPSA/ES; provider-current, score, pointer, or promotion claims"
             ),
             "fallback": "rollback and full_teacher_refresh; #396 ordinary route at terminal",
-            "verdict_scope": "bounded direct raw-ZOH K2 policy; sibling provider families remain open",
+            "verdict": "NO_GO_NOT_ADMITTED",
+            "verdict_scope": (
+                "bounded direct raw-input-costate zero-order-hold K2 policy on the sealed primary "
+                "SegNet CE scalar; sibling costate/provider families and a factored full live scalar remain open"
+            ),
+            "diagnostic_economics_authority": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP",
+            "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
             "provider_current": False,
+            "pointer_moved": False,
             "score_claim": False,
             "promotion_eligible": False,
         },
@@ -205,17 +342,24 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
             "CE": "cross_entropy_loss",
             "d_seg": "exact_through_R_segmentation_distance",
             "d_pose": "exact_through_R_pose_distance",
-            "effective_dimension": "active_search_coordinates",
+            "terminal_receipt_path": "durable_terminal_receipt_path",
+            "expected_receipt_sha256": "code_reviewed_terminal_receipt_identity",
+            "dimension_certificate_path": "durable_effective_dimension_certificate_path",
+            "expected_dimension_certificate_sha256": ("code_reviewed_effective_dimension_certificate_identity"),
         },
         units_out={
             "C_2": "fraction_of_exact_per_step_cost",
             "teacher_slice_speedup": "dimensionless_ratio",
             "exact_backward_call_amortization": "dimensionless_ratio",
+            "exact_backward_call_reduction": "fraction",
             "full_facet_guard": "boolean",
             "terminal_costate_skip": "boolean",
         },
-        empirical_anchors=(),
-        predicted_vs_empirical_residual={},
+        empirical_anchors=(anchor,),
+        predicted_vs_empirical_residual={
+            "corrected_arithmetic_residual": 0.0,
+            "accepted_d_seg_violation_fraction": 148.0 / 456.0,
+        },
         last_calibration_utc=MEASUREMENT_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
@@ -223,7 +367,10 @@ def build_exact_costate_reuse_k2_guarded_v1() -> CanonicalEquation:
             "tac.witness_dsl.exact_costate_reuse_policy",
             "tac.through_r.terminal_costate_skip",
         ),
-        canonical_producers=("tools.probe_p0_costate_reuse_k2",),
+        canonical_producers=(
+            "tools.probe_p0_costate_reuse_k2",
+            "tools.adjudicate_p0_costate_reuse_k2",
+        ),
         provenance=provenance,
     )
 
@@ -242,7 +389,10 @@ def populate_exact_costate_reuse_k2_guarded_v1(
         lock_path=lock_path,
         agent=agent,
         subagent_id=subagent_id,
-        notes="FEED-p0-backward-wave; guarded K2 reuse; provider-current=false; receipt pending",
+        notes=(
+            "FEED-p0-backward-wave; corrected n600 NO-GO; provider-current=false; "
+            "pointer_moved=false; whole-epoch speedup UNKNOWN"
+        ),
     )
     return equation
 
@@ -255,7 +405,9 @@ __all__ = [
     "N_PAIRS",
     "amortized_cost_fraction",
     "build_exact_costate_reuse_k2_guarded_v1",
+    "corrected_diagnostic_threshold",
     "exact_backward_call_amortization",
+    "exact_backward_call_reduction",
     "exact_costate_reuse_k2_laws",
     "full_facet_guard",
     "populate_exact_costate_reuse_k2_guarded_v1",
