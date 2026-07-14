@@ -78,6 +78,17 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
   frequency allocation → directly attacks the measured 3.2× along-tangent deficit (#277/#497) and
   grounds curvelet/shearlet basis choice (#502). Waterfilling connects to our #157/#336 bit-alloc.
   Sisters: #25 BASIS-OVER-CREDITED, #497 alt-to-Fourier, #502 genuine curvelet/shearlet.
+- **PAPER (queued, not launched) arXiv 2605.19943 PTRM — Probabilistic Tiny Recursive Model (Sghaier,
+  Mila).** Mechanism: 7M TRM + SEEDED Gaussian noise at each deep-recursion step at inference → K
+  parallel latent rollouts (diverse basins) → select via the model's Q-head (Sudoku-X 87.4→98.75%;
+  91.2% vs 55.1% frontier at ~1e-4× cost). Warm-start fork, 3 surfaces: (1) STRONGEST → #396/#400
+  MC-finisher: same shape (noise→parallel candidates→value-select) but WE select with the EXACT
+  evaluator (no reward-model error); importable refinement = structured PER-DEPTH noise for basin
+  diversity in the finisher proposal distribution. (2) costate organ n=1 ceiling: K seeded rollouts of
+  the tiny organ = epistemic uncertainty (rollout spread = rec confidence) at ZERO added params —
+  answers the measured bigger-nets-overfit wall. (3) decode-time K-rollout+stored-selection = already
+  our selector-splice family (#48/R1/#399), validated not new; learned Q-head at inflate barred
+  (no-scorers-at-inflate). Sisters: n1_organ_capacity memo, #426/#436, weco-AIDE² row above.
 - **WECO AIDE² RSI (queued, not launched) — weco.ai/blog/first-evidence-of-recursive-self-improvement.**
   Verdict: their core mechanisms CONVERGE with ours (hidden-score-only selection = our exact-authority
   split, empirically dropping reward-hacking 63%→34% structurally; fixed $ budget = our ≤$20 cap;
