@@ -167,7 +167,7 @@ def kl_on_logits_distillation(
 
         student_log_probs = F.log_softmax(student_logits / T, dim=-1)
         teacher_probs     = F.softmax(teacher_logits.detach() / T, dim=-1)
-        kl = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean')
+        kl = F.kl_div(student_log_probs, teacher_probs, reduction='none').sum(dim=-1).mean()
         loss = config.kl_weight * (T ** 2) * kl
 
     The ``teacher_logits.detach()`` is mandatory per CLAUDE.md "Bugs must be
@@ -194,5 +194,7 @@ def kl_on_logits_distillation(
     T = config.temperature
     student_log_probs = F.log_softmax(student_logits / T, dim=-1)
     teacher_probs = F.softmax(teacher_logits.detach() / T, dim=-1)
-    kl = F.kl_div(student_log_probs, teacher_probs, reduction="batchmean")
+    # The public API accepts (B, ..., C), so reduce C first and then average
+    # every batch/support element.  ``batchmean`` is only valid for flat B,C.
+    kl = F.kl_div(student_log_probs, teacher_probs, reduction="none").sum(dim=-1).mean()
     return config.kl_weight * (T**2) * kl

@@ -59,6 +59,13 @@ def frozen_teacher_distillation_loss(
     cfg = config or FrozenTeacherDistillationConfig()
     if cfg.temperature <= 0:
         raise ValueError("temperature must be positive")
+    if student_logits.shape != teacher_logits.shape:
+        raise ValueError("student and teacher logits must have identical shapes")
+    if cfg.reduction == "batchmean" and student_logits.ndim != 2:
+        raise ValueError(
+            "batchmean is valid only for flat (B,C) logits; use a support-aware "
+            "none->sum(class)->mean reduction for spatial or sequence logits"
+        )
     log_p = F.log_softmax(student_logits / cfg.temperature, dim=-1)
     q = F.softmax(teacher_logits.detach() / cfg.temperature, dim=-1)
     loss = F.kl_div(log_p, q, reduction=cfg.reduction) * (cfg.temperature**2)

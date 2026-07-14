@@ -291,7 +291,10 @@ def compute_die_weight_map(
     # we only need a scalar to backprop from.
     seg_log_p = F.log_softmax(fs_out, dim=1)
     seg_q = F.softmax(gs_out, dim=1).detach()
-    seg_dist = F.kl_div(seg_log_p, seg_q, reduction="batchmean")
+    # Canonical spatial categorical KL: sum classes per pixel, then average
+    # over batch and spatial support.  ``batchmean`` would silently multiply
+    # this term by H*W and distort the Seg/Pose balance.
+    seg_dist = F.kl_div(seg_log_p, seg_q, reduction="none").sum(dim=1).mean()
 
     score_dist = 100.0 * seg_dist + torch.sqrt(10.0 * pose_dist + 1e-8)
     grad = torch.autograd.grad(

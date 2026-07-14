@@ -577,7 +577,7 @@ def cooperative_receiver_dinov3_kl_loss(
         if use_cls_token:
             # KL on CLS token logits softened by T
             cls_loss = (
-                F.kl_div(
+                F.kl_div(  # KL_BATCHMEAN_OK:CLS-is-flat-B-by-D
                     F.log_softmax(pred_fr.cls_token / temperature, dim=-1),
                     F.softmax(gt_fr.cls_token / temperature, dim=-1),
                     reduction="batchmean",
@@ -595,7 +595,7 @@ def cooperative_receiver_dinov3_kl_loss(
             pred_log = F.log_softmax(pred_patch / temperature, dim=-1)
             gt_p = F.softmax(gt_patch / temperature, dim=-1)
             patch_loss = (
-                F.kl_div(pred_log, gt_p, reduction="batchmean")
+                F.kl_div(pred_log, gt_p, reduction="batchmean")  # KL_BATCHMEAN_OK:patches-flattened-to-BP-by-D
                 * (temperature ** 2)
                 * patch_weight
             )

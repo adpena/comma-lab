@@ -63,6 +63,23 @@ class NSCS02LossComponents:
     total: torch.Tensor
 
 
+def _spatial_categorical_kl_distillation(
+    student_logits: torch.Tensor,
+    teacher_logits: torch.Tensor,
+    *,
+    temperature: float,
+) -> torch.Tensor:
+    """Average categorical KL per spatial site, independent of resolution."""
+
+    if student_logits.shape != teacher_logits.shape or student_logits.ndim < 3:
+        raise ValueError("spatial student/teacher logits must have equal (B,C,...) shape")
+    if not isinstance(temperature, (int, float)) or temperature <= 0.0:
+        raise ValueError("temperature must be positive")
+    log_student = F.log_softmax(student_logits / temperature, dim=1)
+    teacher = F.softmax(teacher_logits / temperature, dim=1)
+    return F.kl_div(log_student, teacher, reduction="none").sum(dim=1).mean() * (temperature * temperature)
+
+
 def compute_nscs02_score_aware_loss(
     decoder: NSCS02DownsampledDecoder,
     z: torch.Tensor,
@@ -116,9 +133,11 @@ def compute_nscs02_score_aware_loss(
         seg_pred_logits = seg_scorer(seg_in_pred)  # SCORER_PREPROCESS_HANDLED_OK:bare_seg_scorer_local_var_called_AFTER_preprocess_input_3_lines_above_canonical_pattern_per_comprehensive_bug_audit_cascade_20260526
         # 5-class soft-argmax disagreement via KL-distill (T=2.0 per Quantizr).
         T_distill = 2.0
-        log_p_pred = F.log_softmax(seg_pred_logits / T_distill, dim=1)
-        p_target = F.softmax(seg_target_logits / T_distill, dim=1)
-        seg_loss = F.kl_div(log_p_pred, p_target, reduction="batchmean") * (T_distill * T_distill)
+        seg_loss = _spatial_categorical_kl_distillation(
+            seg_pred_logits,
+            seg_target_logits,
+            temperature=T_distill,
+        )
 
     if pose_scorer is not None:
         # PoseNet expects (B, T, C, H, W) -> preprocess to (B, T*6, H/2, W/2).

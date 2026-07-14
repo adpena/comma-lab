@@ -72,7 +72,7 @@ def test_t_squared_scaling_applied():
     # Manually replicate without T^2:
     log_p2 = F.log_softmax(s / 2.0, dim=-1)
     q2 = F.softmax(t / 2.0, dim=-1)
-    raw_kl_2 = F.kl_div(log_p2, q2, reduction="batchmean")
+    raw_kl_2 = F.kl_div(log_p2, q2, reduction="batchmean")  # KL_BATCHMEAN_OK:test-fixture-is-flat-B-by-C
     assert float(loss2) == pytest.approx(float(raw_kl_2) * 4.0, rel=1e-4)
 
 
@@ -85,6 +85,15 @@ def test_gradient_flows_to_student_not_teacher():
     assert s.grad is not None
     # Teacher is .detach()ed inside the helper so teacher.grad is None.
     assert t.grad is None
+
+
+def test_batchmean_refuses_nonflat_logits() -> None:
+    """The generic helper cannot silently scale a spatial KL by H*W."""
+
+    student = torch.randn(2, 5, 3, 4)
+    teacher = torch.randn(2, 5, 3, 4)
+    with pytest.raises(ValueError, match=r"flat \(B,C\)"):
+        frozen_teacher_distillation_loss(student, teacher)
 
 
 def test_report_records_temperature_and_reduction():
