@@ -13,7 +13,7 @@ is reach/showcase, not a pointer-mover.
 ## Files
 | file | what |
 |---|---|
-| `export_fixture.py` | loads a live EMA-best checkpoint, reconstructs the curvelet + self-orient front-end with the repo's own functions, computes the numpy-fp32 reference partition, writes `fixture.json` / `feats.bin` / `reference.bin`. |
+| `export_fixture.py` | loads a live EMA-best checkpoint, reconstructs the polar directional Fourier + self-orient front-end with the repo's own functions, computes the numpy-fp32 reference partition, writes `fixture.json` / `feats.bin` / `reference.bin`. |
 | `witness_forward.wgsl` | Kernel B as a WebGPU compute shader — faithful port of `levelset_sdf_argmax_mlx` (in_proj → FiLM hidden×N → out_sdf → argmax). |
 | `parity_shader_model.py` | numpy fp32 shader-model vs the numpy-fp32 authority → per-frame pixel-match parity (advisory). |
 | `index.html` | the client-side demo (WebGPU forward + WebNN trunk + live parity badge). |

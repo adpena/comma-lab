@@ -12,8 +12,8 @@ exec .venv/bin/python tools/compile_throughput_authority_policy.py \
   --integer-scorer experiments/results/throughput_authority_ladder_20260714/weight_l1_class_pair_tie_snap_scorer_forward_n600.json \
   --metal experiments/results/throughput_authority_ladder_20260714/metal_weight_l1_class_pair_tie_snap_w27_w31_exact_int64_segnet_n600.json \
   --integer-r experiments/results/throughput_authority_ladder_20260714/integer_r_backend_n600.json \
-  --pose-gate \
+  --no-pose-gate \
   --pose-canary-every 8 \
-  --banked-r1-dpose 0.001610 \
+  --unselected-r1-advisory-dpose 0.001610 \
   --require-receipts \
   --output "$OUT"

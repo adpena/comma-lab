@@ -426,6 +426,44 @@ other unit: automated · world-class · recursively-adversarial-reviewed · deep
 `upstream/evaluate.py` n600 exact row. **Comprehensive deep-math + meta version:
 `docs/triality_dag_dsl_equations_deepmath.md`.**
 
+### 2026-07-14 catalog amendments — V9 provenance is the anti-fake boundary
+
+- **Catalog #332 (DSL-as-SoT), STRICT completion:**
+  `check_config_flag_provenance_bijection_complete` compiles every live V9 factory and
+  refuses unless the closed semantic flag set has exactly one DSL Lever owner, exact
+  raw-DSL token/type custody plus separate argparse-normalized runtime custody, one actual
+  `Lever.constant_refs` LawRef and canonical compiler record per flag, a reviewed
+  value-provenance rung, executable trainer-consumer locations, and a runtime receipt schema.
+  LawRef coverage MUST equal the semantic flag set: missing, stale, duplicate, reordered, or
+  post-compile flags refuse. The governed launcher
+  refuses V9 post-compile flags or DSL bypasses; the trainer defaults provenance enforcement ON,
+  authenticates the launcher contract by recompiling a closed-set canonical factory, binds git,
+  seed, raw argv, full flag values, source hashes, and upstream SHA, and refuses result emission
+  until every source-hashed runtime consumer actually reads its value. This consolidates the
+  config-orphan, inert-flag, marker-without-work, and non-deterministic-recompile cases rather
+  than adding a parallel registry. Identical config compiles must have identical bijection hashes;
+  volatile LawRef observation times are preserved as non-authoritative context outside that hash.
+- **Catalog #351 (LawRef/value custody), STRICT completion:**
+  Every V9 semantic flag is resolved by the existing canonical LawRef compiler. Scientific
+  derivations require an executable registry evaluator and exact resolved value/type; measured
+  anchors require content-hashed artifacts; class-4 values require typed
+  `HardcodedWaiverCustody(reason, owner, rederivation_trigger)`. The registered
+  `dsl_custodied_scalar_identity_v1` law preserves bool/int/float/string bytes for measured or
+  waived values but is explicitly non-derivational; it cannot manufacture scientific authority.
+  Non-finite literals, anchors, fallbacks, or equation outputs refuse. Historical superseded
+  provenance is nested-content-hashed and labeled `historical_non_authorizing`; in particular,
+  V9 emits and custodies `hosc_beta_end=3.177` while preserving inherited `10.0` only as history.
+  `check_v9_fake_claim_guards` plus `check_evidence_authority_claims_are_custodied` also refuses an
+  unlocalized Fourier implementation carrying a curvelet/shearlet active label, a selected-pose
+  marker without an authenticated receiver/parse-back byte effect, numeric non-live PoseNet
+  substitution, a self-orient/percentage claim whose vehicle flag and scoped receipt disagree,
+  and exact-authority language on advisory evidence. V9's Bregman leg is content-addressed to its
+  deterministic local receipt, remains
+  `GAUGE_IDENTITY_VERIFIED_NOT_MODEL_FACTORIZED`, keeps trainer/model activation false, and must
+  embed the exact same canonical metric binding as `policy_bindings.optimal_metric`; absent
+  nullable custody fields are missing, never equivalent to explicit `None`. Waivers may only
+  downgrade or preserve honest nonselection; no waiver grants mechanism, score, or authority.
+
 ## "Off" is a tracked queue, never a forgotten default — orphaned-signal reconciliation — NON-NEGOTIABLE
 
 **Source:** operator binding directive 2026-07-06 verbatim *"Default off is a source of orphaned
