@@ -1,17 +1,24 @@
 # Pythagorean exact arithmetic → MLX cross-process bit identity (2026-07-13)
 
-**Lead verdict:** **UNMEASURED-BLOCKED, not a claimed L70 break.** The real-op probe is built for the
-384→874 bicubic render-R transpose accumulation, but this execution surface completed **MEASURED
-0/10** requested MLX-GPU children because Metal device creation was refused. The integer formulation
-therefore has no cross-process verdict. The pure NumPy authority side is **MEASURED green**: Q15/int32
-is overflow-safe by **DERIVED 192.428×** headroom and differs from NumPy-fp32 by **MEASURED
-0.007968902587890625 max-abs**, inside the **DERIVED 0.011561438380080984** quantization-plus-fp32
-bound. This is not evidence that MLX integer atomics schedule deterministically.
+**Lead verdict (RESOLVED on Metal host 2026-07-13, `main`):** **REAL-L70-LEVER (INSTANCE-scoped).**
+The codex arm built the real-op probe but its execution surface refused Metal (0/10 children). `main`
+re-ran `tools/run_pythagorean_exact_arithmetic_bitident_host.command` on an M5-Max Metal shell and the
+decisive cross-process cell completed **10/10** on both variants: the **float** dup-index resize-adjoint
+accumulation produced **10 unique hashes / 10 processes** (reproduces the L70 wall exactly — Metal atomic
+scatter reorders → order-dependent rounding → divergent bytes), and the **Q15/int32 integer** lowering
+(identical indices + cotangents) produced **1 unique hash / 10 processes — cross-process bit-identical**,
+dequantizing within the derived NumPy-fp32 bound (max-abs 0.007969 < 0.011561). Integer arithmetic is
+order-independent (associative accumulation), so it is invariant to Metal's atomic-scatter reordering.
+This CONFIRMS the L70 wall is **fp-reorder-caused** for the single op class that constitutes it (#348:
+28/28 tensors = one dup-index atomic-scatter class in reference-R UP-backward), and confirms the standing
+prediction `decode_determinism_integer_arithmetic_v1` (empirical anchor appended, residual 0.0).
 
-**One-line requested taxonomy:** integer/Gaussian-integer lowering **BREAKS L70 for a real op =
-UNMEASURED**, because the decisive Metal cell ran **MEASURED 0/10 processes**, not measured 0/10
-divergences; NumPy parity is bounded-green; overall verdict is **ENVIRONMENT-BLOCKED / NO ADMISSIBLE
-SELECTION YET** among `REAL-L70-LEVER`, `L70-DEEPER-THAN-FP-REORDER`, and `INERT-CURIO`.
+**One-line requested taxonomy:** integer/Gaussian-integer lowering **BREAKS L70 for a real op = YES
+(MEASURED)**; float cell divergent 10/10, integer cell bit-identical 1-hash/10; overall verdict
+**`REAL-L70-LEVER`** (selected over `L70-DEEPER-THAN-FP-REORDER` and `INERT-CURIO`).
+`verdict_scope`: `INSTANCE × MLX-0.31.2 × M5-Max-Metal × render-R bicubic 384→874 one-axis transpose
+accumulation × Q15/int32 bounded fixture` — NOT yet whole-render-R, n600, nor the full 28-tensor decode
+(the scope-up ladder). Superseded blocked-status lines below are historical (codex arm's environment).
 
 This is **MEANS**, never the pointer. No training, evaluator, paid dispatch, live-run mutation,
 archive mutation, score claim, or pointer movement occurred. Axis:

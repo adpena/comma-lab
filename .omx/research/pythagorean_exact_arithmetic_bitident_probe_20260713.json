@@ -1,17 +1,11 @@
 {
   "axis": "[macOS-MLX research-signal; NumPy-fp32/int32 authority; non-promotable MEANS]",
+  "completed": true,
   "contract": {
     "acceptance": "float cross-process divergence; integer 0/N divergence; exact NumPy-int32 parity; dequantized result within derived Q15+fp32 authority tolerance",
     "float_formulation": "MLX float32 duplicate-index atomic scatter-add",
     "integer_formulation": "same indices/cotangent; Q15 cubic weights; bounded MLX int32 atomic add",
     "real_op": "one-axis transpose accumulation of render-R bicubic resize 384->874"
-  },
-  "failure": {
-    "returncode": 1,
-    "stderr_tail": "Traceback (most recent call last):\n  File \"/Users/adpena/Projects/pact/tools/probe_pythagorean_exact_arithmetic_bitident.py\", line 458, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/adpena/Projects/pact/tools/probe_pythagorean_exact_arithmetic_bitident.py\", line 429, in main\n    print(json.dumps(run_mlx_variant(args.child), sort_keys=True))\n                     ~~~~~~~~~~~~~~~^^^^^^^^^^^^\n  File \"/Users/adpena/Projects/pact/tools/probe_pythagorean_exact_arithmetic_bitident.py\", line 169, in run_mlx_variant\n    destination = mx.array(fixture[\"destination_u32\"], dtype=mx.uint32)\nRuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.\nException ignored in atexit callback <nanobind.nb_func object at 0x10b34f9a0>:\nRuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.\n",
-    "stdout_tail": "",
-    "trial_index": 0,
-    "variant": "float_atomic"
   },
   "git_head_at_probe": "301ab2fb9be49e45be2247b0ead44737cfd9f2b5",
   "host": "Primary.local",
@@ -51,9 +45,647 @@
       "sha256": "92f3050fd738624716bff024ccb287f39780a71b9f4f67cd6ac873efef2a6054"
     }
   },
+  "summary": {
+    "complete": true,
+    "decisive_positive": true,
+    "fixed_q15_int32_atomic": {
+      "cross_process_identical": true,
+      "divergent_from_modal_hash": 0,
+      "hashes": [
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18"
+      ],
+      "max_abs_error_vs_numpy": 0.007968902587890625,
+      "n": 10,
+      "parity_all": true,
+      "unique_hashes": 1
+    },
+    "float_atomic": {
+      "cross_process_identical": false,
+      "divergent_from_modal_hash": 9,
+      "hashes": [
+        "d0c67104789a4fd6bc497062f6e31368449e0ac2aae025e207fc2971022d10e2",
+        "8bd3af946ec4e4139c5d06a7ed4935b8758abb771060e4a14b80f76b1e3816c8",
+        "04e886425f5936fca584e79660cbb67a0436d482ac8884c53edafc075219865c",
+        "8a51958b33b94c6a1c06bbe91f3126601d60e5377df87fa1d5edac2e27dd53f1",
+        "8859a397245f679be6198b1c3c6802022cc827ab8f9033c6e6e25aa21b72e66e",
+        "56f4d86e5b06068c9b7f4cd17e98db295b2afdfccf709d7fd6758fb0b7113591",
+        "f47757936d12c4937901af2c813e00b53e206168453560fa571609d3af19fdff",
+        "7a7b1b969800ec5195cd4e8d6ddb24cc95824da9e3d3deea2d32909e4bd27868",
+        "8936ad54a2ee11f5d85b60d1cf7227e27261f1a60a533f8d7d008bdd41c88b0b",
+        "1139b8bb8eab59c38a999eba5d6a2e331cbe7796028a03370cf2bf830dc56ec8"
+      ],
+      "max_abs_error_vs_numpy": 7.62939453125e-05,
+      "n": 10,
+      "parity_all": true,
+      "unique_hashes": 10
+    },
+    "overall_verdict": "REAL-L70-LEVER",
+    "verdict_scope": "INSTANCE x MLX-0.31.2 x M5-Max-Metal x render-R bicubic 384->874 one-axis transpose accumulation x Q15/int32 bounded fixture"
+  },
   "training": false,
   "trials": {
-    "fixed_q15_int32_atomic": [],
-    "float_atomic": []
+    "fixed_q15_int32_atomic": [
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 0,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 1,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 2,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 3,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 4,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 5,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 6,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 7,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 8,
+        "variant": "fixed_q15_int32_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "int32",
+        "output_sha256": "923f884ffeb8ad93d4531460ae17bba3799d8a25815c62876d27cbe6f3900c18",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "dequantized_max_abs_error_vs_numpy_fp32": 0.007968902587890625,
+          "derived_quantization_plus_fp32_tolerance": 0.011561438380080984,
+          "integer_bit_identical": true,
+          "reference_dtype": "numpy-int32 plus numpy-fp32 resize-adjoint authority",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 9,
+        "variant": "fixed_q15_int32_atomic"
+      }
+    ],
+    "float_atomic": [
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "d0c67104789a4fd6bc497062f6e31368449e0ac2aae025e207fc2971022d10e2",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 0,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "8bd3af946ec4e4139c5d06a7ed4935b8758abb771060e4a14b80f76b1e3816c8",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 1,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "04e886425f5936fca584e79660cbb67a0436d482ac8884c53edafc075219865c",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 2,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "8a51958b33b94c6a1c06bbe91f3126601d60e5377df87fa1d5edac2e27dd53f1",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 3,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "8859a397245f679be6198b1c3c6802022cc827ab8f9033c6e6e25aa21b72e66e",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 4,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "56f4d86e5b06068c9b7f4cd17e98db295b2afdfccf709d7fd6758fb0b7113591",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 5,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "f47757936d12c4937901af2c813e00b53e206168453560fa571609d3af19fdff",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 6,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "7a7b1b969800ec5195cd4e8d6ddb24cc95824da9e3d3deea2d32909e4bd27868",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 7,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "8936ad54a2ee11f5d85b60d1cf7227e27261f1a60a533f8d7d008bdd41c88b0b",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 7.62939453125e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 8,
+        "variant": "float_atomic"
+      },
+      {
+        "device": "Device(gpu, 0)",
+        "fixture": {
+          "in_size": 384,
+          "int32_limit": 2147483647,
+          "lanes": 384,
+          "max_abs_integer_accumulator": 11159918,
+          "max_contributions_per_destination": 10,
+          "out_size": 874,
+          "q_bits": 15,
+          "seed": 157,
+          "taps": 4
+        },
+        "mlx_version": "0.31.2",
+        "output_dtype": "float32",
+        "output_sha256": "1139b8bb8eab59c38a999eba5d6a2e331cbe7796028a03370cf2bf830dc56ec8",
+        "output_shape": [
+          147456
+        ],
+        "parity": {
+          "bit_identical": false,
+          "derived_two_order_fp32_tolerance": 0.0008129412114279191,
+          "interpretation": "fp32 atomic reduction-order delta; not authority bytes",
+          "max_abs_error": 6.103515625e-05,
+          "reference_dtype": "numpy-fp32",
+          "within_derived_tolerance": true
+        },
+        "trial_index": 9,
+        "variant": "float_atomic"
+      }
+    ]
   }
 }
