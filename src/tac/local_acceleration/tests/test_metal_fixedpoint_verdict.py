@@ -145,3 +145,20 @@ def test_kernel_source_uses_int64_accumulator_and_no_atomic() -> None:
     assert signature["score_claim"] is False
     assert signature["numpy_integer_reference"] is True
     assert signature["constant_buffers_cached"] is True
+
+
+@pytest.mark.parametrize(
+    ("precision", "storage"),
+    ((2, 8), (8, 8), (9, 16), (16, 16), (17, 32), (31, 32)),
+)
+def test_logical_precision_uses_narrowest_exact_native_storage(
+    precision: int,
+    storage: int,
+) -> None:
+    assert verdict.integer_storage_bits_for_precision(precision) == storage
+
+
+@pytest.mark.parametrize("precision", (1, 32))
+def test_native_storage_bucket_refuses_invalid_logical_precision(precision: int) -> None:
+    with pytest.raises(ValueError):
+        verdict.integer_storage_bits_for_precision(precision)

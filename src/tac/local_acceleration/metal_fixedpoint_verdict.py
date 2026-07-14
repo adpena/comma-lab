@@ -54,6 +54,20 @@ class FixedPointMetalConstants:
     weight_q_ohwi: Any
     weight_scales: Any
     bias: Any
+    integer_storage_bits: int = 32
+
+
+def integer_storage_bits_for_precision(bits: int) -> int:
+    """Return the narrowest native signed storage bucket for a logical code."""
+
+    precision = int(bits)
+    if precision < 2 or precision > 31:
+        raise ValueError("logical signed precision must be within 2..31")
+    if precision <= 8:
+        return 8
+    if precision <= 16:
+        return 16
+    return 32
 
 
 def _pair(value: Any) -> tuple[int, int]:
@@ -312,7 +326,11 @@ def metal_fixedpoint_backend_available() -> bool:
 
 
 def quantize_activation_metal(
-    value: Any, *, activation_scale: Any, qmax: int
+    value: Any,
+    *,
+    activation_scale: Any,
+    qmax: int,
+    integer_storage_bits: int = 32,
 ) -> Any:
     import mlx.core as mx
 
@@ -326,10 +344,16 @@ def quantize_activation_metal(
         else mx.array([float(activation_scale)], dtype=mx.float32)
     )
     qmax_value = mx.array([int(qmax)], dtype=mx.int32)
+    storage_dtypes = {8: mx.int8, 16: mx.int16, 32: mx.int32}
+    if int(integer_storage_bits) not in storage_dtypes:
+        raise ValueError("integer_storage_bits must be one of 8, 16, or 32")
+    signed_maximum = (1 << (int(integer_storage_bits) - 1)) - 1
+    if int(qmax) > signed_maximum:
+        raise ValueError("qmax is not representable in requested integer storage")
     (output,) = _quantize_kernel()(
         inputs=[value.astype(mx.float32), dims, scale, qmax_value],
         output_shapes=[value.shape],
-        output_dtypes=[mx.int32],
+        output_dtypes=[storage_dtypes[int(integer_storage_bits)]],
         grid=(count, 1, 1),
         threadgroup=(256, 1, 1),
     )
@@ -338,6 +362,8 @@ def quantize_activation_metal(
 
 def prepare_fixedpoint_conv_packet_metal(
     packet: FixedPointConvPacket,
+    *,
+    integer_storage_bits: int = 32,
 ) -> FixedPointMetalConstants:
     """Materialize immutable packet arrays once instead of per forward call."""
 
@@ -345,10 +371,17 @@ def prepare_fixedpoint_conv_packet_metal(
 
     if not metal_fixedpoint_backend_available():
         raise RuntimeError("fixed-point verdict constants require evaluated MLX Metal")
+    storage_dtypes = {8: mx.int8, 16: mx.int16, 32: mx.int32}
+    storage = int(integer_storage_bits)
+    if storage not in storage_dtypes:
+        raise ValueError("integer_storage_bits must be one of 8, 16, or 32")
+    if packet.qmax > (1 << (storage - 1)) - 1:
+        raise ValueError("packet qmax is not representable in requested integer storage")
     constants = FixedPointMetalConstants(
-        weight_q_ohwi=mx.array(packet.weight_q_ohwi, dtype=mx.int32),
+        weight_q_ohwi=mx.array(packet.weight_q_ohwi, dtype=storage_dtypes[storage]),
         weight_scales=mx.array(packet.weight_scales, dtype=mx.float32),
         bias=mx.array(packet.bias, dtype=mx.float32),
+        integer_storage_bits=storage,
     )
     mx.eval(
         constants.weight_q_ohwi,
@@ -387,7 +420,10 @@ def fixedpoint_conv2d_metal(
     else:
         activation_scale = mx.array(packet.activation_scale, dtype=mx.float32)
     xq = quantize_activation_metal(
-        x_nhwc, activation_scale=activation_scale, qmax=packet.qmax
+        x_nhwc,
+        activation_scale=activation_scale,
+        qmax=packet.qmax,
+        integer_storage_bits=(constants.integer_storage_bits if constants else 32),
     )
     device = constants or prepare_fixedpoint_conv_packet_metal(packet)
     if (
@@ -567,8 +603,8 @@ def fixedpoint_verdict_signature() -> dict[str, Any]:
         "kernel": "direct NHWC grouped Conv2d; exact int64 accumulator",
         "constant_buffers_cached": True,
         "activation_quantization": (
-            "separate int32 kernel; exact integer-domain qmax clamp; fixed calibration "
-            "or dynamic max-absolute scale"
+            "separate integer kernel with caller-selected exact int8/int16/int32 storage; "
+            "exact integer-domain qmax clamp; fixed calibration or dynamic max-absolute scale"
         ),
         "activation_scale_modes": ["fixed_calibration", "dynamic_exact_absmax"],
         "supported_bits": list(range(2, 27)),
@@ -589,6 +625,7 @@ __all__ = [
     "fixedpoint_conv2d_metal",
     "fixedpoint_conv2d_numpy",
     "fixedpoint_verdict_signature",
+    "integer_storage_bits_for_precision",
     "metal_fixedpoint_backend_available",
     "minimum_signed_bits_for_bound",
     "prepare_fixedpoint_conv_packet_metal",
