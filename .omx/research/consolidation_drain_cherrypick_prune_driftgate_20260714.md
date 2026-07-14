@@ -66,6 +66,15 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
   clip/lever/regime composition. Sisters: #434 synthetic-data SOTA, #481 continual-learning, #499
   n=1/low-data theory, the sweep_spec arm's dual-purpose mapping. (Witness-overfit is n=1 by design —
   this feeds the ORGAN data-curation, NOT the witness.)
+- **PAPER (queued, not launched) arXiv 2607.07470 "A Theory of Contrastive Learning with Natural
+  Images" (Torralba/Weiss).** Warm-start (codex/opus): the OPTIMAL contrastive representation = CNN with
+  SINUSOIDAL first-layer filters whose FREQUENCIES come from a WATERFILLING algorithm on the dataset
+  power spectrum + partial whitening. Fork: paper = contrastive SSL on stationary natural-image stats;
+  ours = witness coord-INR fitting a frozen-SegNet argmax partition (n=1 clip, non-stationary). CRUX:
+  does waterfill-on-the-BOUNDARY/along-tangent power-spectrum give the optimal witness Fourier-feature
+  frequency allocation → directly attacks the measured 3.2× along-tangent deficit (#277/#497) and
+  grounds curvelet/shearlet basis choice (#502). Waterfilling connects to our #157/#336 bit-alloc.
+  Sisters: #25 BASIS-OVER-CREDITED, #497 alt-to-Fourier, #502 genuine curvelet/shearlet.
 
 ## Captured signal (no loss) — the click-polish run (#399 `_import` block-loop)
 - STOPPED 2026-07-14 11:30 by **main stopping it under OPERATOR AUTHORIZATION** (after the safety
