@@ -73,11 +73,13 @@ _YOPO_BANK_SCHEMA = "yopo_first_layer_costate_bank_v1"
 
 @dataclass(frozen=True)
 class CostateAgreementMetrics:
-    """Measured agreement between a candidate and a real-teacher input costate.
+    """Ambient diagnostic between a candidate and real-teacher input costate.
 
     ``None`` metrics mean that a fail-closed prerequisite was not satisfied
     (shape, finiteness, non-empty mask, or non-zero reference norm).  Callers
-    must check :attr:`valid` before comparing thresholds.
+    must check :attr:`valid` before comparing thresholds.  This record has no
+    replacement authority: the canonical replacement metric is measured after
+    renderer pullback with :func:`measure_reachable_costate_agreement`.
     """
 
     shape_match: bool
@@ -87,6 +89,8 @@ class CostateAgreementMetrics:
     relative_l2_error: float | None
     norm_ratio: float | None
     reasons: tuple[str, ...] = ()
+    authority_surface: str = "ambient_input_costate_diagnostic_only"
+    replacement_authority: bool = False
 
     @property
     def valid(self) -> bool:
@@ -108,6 +112,8 @@ class CostateAgreementMetrics:
             "relative_l2_error": self.relative_l2_error,
             "norm_ratio": self.norm_ratio,
             "reasons": list(self.reasons),
+            "authority_surface": self.authority_surface,
+            "replacement_authority": self.replacement_authority,
             "valid": self.valid,
         }
 
@@ -188,11 +194,12 @@ def measure_costate_agreement(
     mask: Any | None = None,
     eps: float = _METRIC_EPS,
 ) -> CostateAgreementMetrics:
-    """Measure candidate input-costate fidelity with pure NumPy arithmetic.
+    """Measure ambient input-costate diagnostics with pure NumPy arithmetic.
 
     Metrics are accumulated in float64 even when training uses float32.  Shape,
     finiteness, empty-mask, and zero-reference-norm failures return an invalid
     metric record rather than laundering undefined values into a threshold.
+    Raw cosine/L2 from this function must never admit a replacement provider.
     """
 
     ref = np.asarray(teacher_costate)

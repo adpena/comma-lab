@@ -148,6 +148,14 @@ def test_costate_metrics_support_margin_annulus_mask() -> None:
     assert metrics.relative_l2_error > 0.0
 
 
+def test_ambient_metric_is_explicitly_diagnostic_only() -> None:
+    teacher = np.array([1.0, 2.0, 100.0], dtype=np.float32)
+    candidate = np.array([1.0, 2.0, -100.0], dtype=np.float32)
+    ambient = measure_costate_agreement(teacher, candidate)
+    assert ambient.replacement_authority is False
+    assert ambient.authority_surface == "ambient_input_costate_diagnostic_only"
+
+
 @pytest.mark.parametrize(
     ("teacher", "candidate", "reason"),
     [
