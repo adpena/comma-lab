@@ -41,7 +41,10 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
    (lever_registry.completeness — no orphan/dup), memory (MEMORY.md >17KB → cluster-compact via
    tools/cluster_summarize_memory_category.py, NOT hasty hand-prune), task-ledger re-disposition (500+ rows,
    mostly done — collapse). Drop stale/orphan artifacts with certify-or-block (provenance preserved).
-6. **Permanent drift-gate (two-landing: fix + STRICT self-protect).** The drift class = concurrent arms
+6. **Full arxiv_scout sweep (operator-queued 2026-07-14).** Run `tools/arxiv_scout.py` across ALL 8
+   cruxes (default flags; ~30s of API-politeness delays) → ranked discovery queue → surface to operator;
+   each accepted row routes into PAPER_WARM_START on the clean post-consolidation tree. NO auto-launch.
+7. **Permanent drift-gate (two-landing: fix + STRICT self-protect).** The drift class = concurrent arms
    pile uncommitted edits into the shared worktree → trample/signal-loss/non-reproducible-launch risk.
    Gate options (pick the structural one): (a) uncommitted-pile detector — Stop-hook/preflight WARNs when
    the working tree exceeds N files / M arms' worth without disentangle-commit; (b) strengthen the landing
