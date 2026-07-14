@@ -1,0 +1,104 @@
+{
+  "canonical_metric_binding": {
+    "bregman_geometry_id": "argmax_native_bregman_grounding_v1",
+    "bregman_receipt_schema": "categorical_bregman_geometry.v1",
+    "consumer": "tac.witness_dsl.scorer_gradient_policy.CompiledScorerGradientPolicy",
+    "dsl_lever_name": "surrogate_vjp_fidelity_metric",
+    "extended_kl_receipt_schema": "extended_nonnegative_kl_mc.v1",
+    "fallback": "full_frozen_teacher",
+    "functional_gate_receipt": null,
+    "functional_gate_receipt_sha256": null,
+    "law_ref": "argmax_native_vjp_fidelity_v1",
+    "measurement_contract_sha256": "61a0330352c6ab15aeaac07c3c81ba48aca4dc0fc1f3a6c5ed6ea3296d300839",
+    "measurement_receipt": null,
+    "measurement_receipt_sha256": null,
+    "metric_id": "argmax_native_vjp_fidelity_v1",
+    "promotion_eligible": false,
+    "provider_current": false,
+    "required_n_pairs": 600,
+    "schema": "v9_cgauge_optimal_metric_binding.v1",
+    "score_claim": false,
+    "selection_receipt_schema": "reachable_decision_preconditioner_selection.v1",
+    "state_receipt_schema": "reachable_decision_geometry_fidelity.v1",
+    "terminality_receipt": null,
+    "terminality_receipt_sha256": null,
+    "trainer_activation_admitted": false,
+    "vehicle_family": "v9_cgauge"
+  },
+  "canonical_metric_id": "argmax_native_vjp_fidelity_v1",
+  "composition_verified_by_policy": false,
+  "dsl_binding_consumer": "tac.witness_dsl.config_provenance.check_compiled_v9_config_provenance",
+  "dsl_lever_name": "bregman_geometry",
+  "durable_binding_artifact": null,
+  "durable_binding_artifact_sha256": null,
+  "live_trainer_argv": [],
+  "local_receipt": ".omx/research/bregman_v9_all_surfaces_measurement_20260714.json",
+  "local_receipt_sealed": true,
+  "local_receipt_sha256": "12b82ca3f9809339746cc03b48a3237643861dec9e9baec19852a184fa7f358c",
+  "owner_composition_required": true,
+  "promotion_eligible": false,
+  "provenance_owner": "provenance_canonicalize_fix_all_fakes",
+  "schema": "v9_cgauge_bregman_surfaces_binding.v1",
+  "score_claim": false,
+  "surface_contract_sha256": "027023ee004765b1ecf064052aaeb800c33e0ece9d1ae40c60ee70881cc94973",
+  "surface_law_refs": {
+    "centroid_projection": "curved_bregman_centroid_projection_v1",
+    "chernoff": "categorical_chernoff_bisector_v1",
+    "cosine": "unit_sphere_cosine_curved_bregman_v1",
+    "extended_kl": "extended_nonnegative_mc_kl_v1",
+    "gauge": "affine_legendre_gauge_covariance_v1",
+    "metric": "argmax_native_vjp_fidelity_v1",
+    "sigma_points": "exp_family_sigma_point_kl_v1"
+  },
+  "surfaces": {
+    "centroid_projection": {
+      "head_offset_centroid_substitution": "REFUSED_JENSEN_INVALID",
+      "receipt_schema": "joint_p18_p19_implicit_kkt_dykstra.v1",
+      "runtime_consumer": "tac.optimization.joint_p18_p19_waterfill.solve_joint_p18_p19_implicit_kkt_dykstra_allocator",
+      "status": "ALREADY_ONE_EUCLIDEAN_BREGMAN_PROJECTION_NO_DUPLICATE_SOLVER",
+      "terminal_solve_status": "DESIGNED_NOT_BUILT"
+    },
+    "chernoff": {
+      "fallback": "exact_score_gradient_operating_point",
+      "receipt_schema": "categorical_chernoff_bisector.v1",
+      "required_runtime_consumer": "common-support normalized seg/pose endpoint distributions",
+      "runtime_consumer": null,
+      "status": "NO_VERDICT_DISTRIBUTION_CUSTODY"
+    },
+    "cosine": {
+      "receipt_schema": "unit_sphere_curved_bregman.v1",
+      "runtime_consumer": null,
+      "runtime_consumer_required": false,
+      "status": "DIAGNOSTIC_ONLY_CURVED_NOT_PROPER_FLAT_BREGMAN"
+    },
+    "extended_kl": {
+      "receipt_schema": "extended_nonnegative_kl_mc.v1",
+      "runtime_consumer": "tac.findings_lagrangian.info_gain.monte_carlo_kl_fallback",
+      "status": "LIVE_CONSUMER_PATCHED_IID_FROM_P_ONLY"
+    },
+    "gauge": {
+      "model_xi_R_factorization_verified": false,
+      "receipt_schema": "affine_legendre_gauge_semantic_receipt.v1",
+      "required_runtime_consumer": "typed affine-Legendre transform-pair verifier",
+      "runtime_consumer": null,
+      "status": "GAUGE_IMPLEMENTATION_CUSTODY_GAP",
+      "verified_state_label": "GAUGE_IDENTITY_VERIFIED_NOT_MODEL_FACTORIZED"
+    },
+    "metric": {
+      "dual_euclidean_scope": "squared_hessian_H_squared_only",
+      "fisher_natural_cotangent_solve_elided": false,
+      "receipt_schema": "categorical_bregman_geometry.v1",
+      "runtime_consumer": "tac.witness_dsl.scorer_gradient_policy.CompiledScorerGradientPolicy",
+      "status": "BOUND_PROVIDER_SELECTION_NO_VERDICT_DATA_CUSTODY"
+    },
+    "sigma_points": {
+      "activation_admitted": false,
+      "receipt_schema": "exp_family_sigma_point_kl.v1",
+      "required_runtime_consumer": "custodied regular exponential-family KL term",
+      "runtime_consumer": null,
+      "status": "NO_VERDICT_LIVE_THROUGHPUT_NO_APPLICABLE_CUSTODIED_EF_KL"
+    }
+  },
+  "trainer_activation_admitted": false,
+  "vehicle_family": "v9_cgauge"
+}

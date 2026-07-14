@@ -1,0 +1,270 @@
+{
+  "centroid_projection": {
+    "allocation_l1_difference": 0,
+    "axis": "[macOS-CPU advisory only]",
+    "bregman_result": "ALREADY_ONE_EUCLIDEAN_BREGMAN_PROJECTION",
+    "duplicate_solver_built": false,
+    "fista_seconds": 0.0037170839495956898,
+    "n_weights": 50000,
+    "new_solver_speedup": 1.0,
+    "receipt_prose_consistency": "INCONSISTENT_HYPOTHESIS_TEXT_SAYS_WATERFILL_WINS",
+    "recorded_wallclock_winner": "fista",
+    "source_artifact": "experiments/results/empirical_solver_paired_comparison_20260518/summary.json",
+    "source_sha256": "deeeb738bd470dbe5ab0207b6bd759f82e8421711b7ba9db8d2b695a417f5415",
+    "waterfill_over_fista_speed_ratio": 0.7995735875714349,
+    "waterfill_seconds": 0.0046488328371196985
+  },
+  "chernoff": {
+    "existing_exact_fallback": {
+      "equal_marginal_threshold_d_pose": 0.00025,
+      "formula": "1/(20*sqrt(10*d_pose))",
+      "is_chernoff_point": false,
+      "law": "score-gradient operating point",
+      "pose_over_seg_ratio": 1.0
+    },
+    "reason": "100*d_seg and sqrt(10*d_pose) are scalar score contributions, not normalized endpoint distributions on one support",
+    "seg_pose_status": "NO_VERDICT_DISTRIBUTION_CUSTODY",
+    "synthetic_categorical_bisector": {
+      "alpha_star": 0.5064439201178175,
+      "bisector_residual": 5.252465129501616e-13,
+      "custody": {
+        "endpoint_1_sha256": "7181ea6884bda8b0595e530a668b9e69c43471107dbad3b6d2a32716e0537fc0",
+        "endpoint_2_sha256": "38758f6410c390234ec11d55a6d81f949ed6d39797426222b88a0575273ff65d",
+        "support_id": "b7301f1c057a54aca5bad0be622a7658d689d52f36948090648a3c6bffe30f01"
+      },
+      "distribution": [
+        0.531913679773689,
+        0.4680863202263111
+      ],
+      "divergence_subtraction_residual": 5.252465129501616e-13,
+      "divergence_to_endpoint_1": 0.1809401482502202,
+      "divergence_to_endpoint_2": 0.18094014825074545,
+      "iterations": 39,
+      "scalar_score_contributions_are_distributions": false,
+      "schema": "categorical_chernoff_bisector.v1",
+      "score_claim": false,
+      "seg_pose_application_status": "NO_VERDICT_DISTRIBUTION_CUSTODY",
+      "support_point_ids": [
+        "in_memory_support_0",
+        "in_memory_support_1"
+      ]
+    }
+  },
+  "containment": {
+    "evaluator_call": false,
+    "heavy_launch": false,
+    "live_run_mutation": false,
+    "paid_dispatch": false,
+    "teacher_call": false
+  },
+  "cosine": {
+    "ambient_euclidean_bregman": 1.0,
+    "ambient_generator": "F(x)=0.5*||x||^2",
+    "classification": "CURVED_RESTRICTION_NOT_PROPER_FLAT_BREGMAN_GENERATOR",
+    "cosine_distance": 1.0,
+    "generator_restriction": "F|sphere=0.5_constant",
+    "replacement_metric_license": false,
+    "schema": "unit_sphere_curved_bregman.v1"
+  },
+  "extended_kl": {
+    "axis": "MEASURED_LOCAL_CPU_SYNTHETIC_MATH_FIXTURE_NOT_SCORE",
+    "consumer": "tac.findings_lagrangian.info_gain.monte_carlo_kl_fallback",
+    "exact_gaussian_kl": 5.0000000000105516e-05,
+    "extended_estimate": 0.0003236638484699489,
+    "extended_estimate_nonnegative": true,
+    "naive_estimate_was_negative": true,
+    "naive_log_ratio_mean": -0.019200644981038906,
+    "sample_count": 1,
+    "sampling_custody": "iid_from_posterior_after",
+    "seed": 26
+  },
+  "five_class_categorical_sigma_points": {
+    "classes": 5,
+    "family_dimension": 4,
+    "point_count_reduction_factor": 1.0,
+    "sigma_point_count": 5,
+    "source_point_count": 5,
+    "throughput_verdict": "ZERO_POINT_COUNT_BENEFIT_ON_FIVE_CLASS_SUPPORT",
+    "verification": {
+      "actual_mc_error": 1.3877787807814457e-17,
+      "density_ratio_residual_linf": 0.0,
+      "exact_kl": 0.06047642321422142,
+      "exactness_verified": true,
+      "expected_statistics_sha256": "784c47c6d5ffb51511a2b67f7c61987058d8c471411c2f75e383613489a086df",
+      "family_dimension": 4,
+      "finite_sample_estimate_was_negative": false,
+      "mc_error_identity_residual": 2.2204460492503138e-17,
+      "moment_match_required": true,
+      "moment_residual_linf": 5.551115123125783e-17,
+      "natural_p_sha256": "1b808313b35b3c54f9116e85abb034aea09a3209fbdf4d67c27338d85f1e41ca",
+      "natural_q_sha256": "65e645c6673b8a2595614e073f61ede2c509216b8ece75b2106225cb83b0268a",
+      "point_bound": 5,
+      "point_count": 5,
+      "predicted_mc_error": 3.6082248300317595e-17,
+      "schema": "exp_family_sigma_point_kl.v1",
+      "score_claim": false,
+      "sigma_point_kl": 0.060476423214221434,
+      "sigma_statistics_sha256": "b6633636824bce78616235c9737917db1563d325acdc095f0058f3820c3932a4",
+      "support_point_ids": [
+        "class_0",
+        "class_1",
+        "class_2",
+        "class_3",
+        "class_4"
+      ],
+      "weights": [
+        0.2631392292641126,
+        0.1596020103218361,
+        0.21544017933976664,
+        0.18543108080018209,
+        0.1763875002741026
+      ]
+    }
+  },
+  "gauge": {
+    "absolute_identity_error": 8.881784197001252e-16,
+    "base_bregman": 1.8144000000000007,
+    "base_from_transformed": 1.8144000000000005,
+    "dimension": 2,
+    "divergence_unit_scale": 2.75,
+    "dual_coordinate_rule": "eta_bar=lambda*A.T@eta+c",
+    "matrix_sha256": "fcf7d02b8443de1bc0ea9a503289b3e1f04e66ff6a14f5c015a7bec6fc1a7281",
+    "model_xi_R_factorization_verified": false,
+    "primal_coordinate_rule": "x=A@theta+b",
+    "same_coordinate_invariance_claim": false,
+    "schema": "affine_legendre_gauge_semantic_receipt.v1",
+    "score_claim": false,
+    "status": "GAUGE_IDENTITY_VERIFIED_NOT_MODEL_FACTORIZED",
+    "theta1_sha256": "0f5d70d22e64b3b73fe87cc5260514e39ad2c074f78403c32507f7a27388da2e",
+    "theta2_sha256": "3787549b2e94421d525b4c01f51e46e8da81306e206b806202dc0c55ba22c93f",
+    "transformed_bregman": 4.989600000000001
+  },
+  "historical_v9": {
+    "best_d_seg": 0.03482035319010417,
+    "best_epoch": 150,
+    "missing_affine_covariance_is_causal_claim": false,
+    "source_artifact": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_best.json",
+    "source_sha256": "4d676a12d2cb5f955ec686338409d9c7f3dc34a0159ce1a082986d5a833a64a4",
+    "verdict_scope": "HISTORICAL_FORMULATION_ONLY_NOT_CGAUGE_FAMILY"
+  },
+  "lane_id": "bregman_apply_all_surfaces_20260714",
+  "live_custody_blockers": {
+    "basis_gram": "NO_VERDICT_DATA_CUSTODY",
+    "chernoff": "NO_VERDICT_DISTRIBUTION_CUSTODY",
+    "gauge": "IMPLEMENTATION_CUSTODY_GAP_NOT_MODEL_FACTORIZED",
+    "metric": "NO_VERDICT_DATA_CUSTODY",
+    "sigma_points": "NO_APPLICABLE_CUSTODIED_EF_KL_SURFACE",
+    "terminal_solve": "DESIGNED_NOT_BUILT"
+  },
+  "metric": {
+    "axis": "MEASURED_LOCAL_CPU_SYNTHETIC_MATH_FIXTURE_NOT_SCORE",
+    "dimension": 5,
+    "dual_euclidean_no_solve_scope": "squared_hessian_H_squared_only",
+    "fixture": "synthetic_fixed_spd_local_chart_600_states",
+    "max_abs_dual_euclidean_vs_squared_hessian_error": 9.094947017729282e-13,
+    "max_abs_primal_vs_exact_dual_metric_error": 5.684341886080802e-14,
+    "metric_id": "argmax_native_vjp_fidelity_v1",
+    "raw_dual_euclidean_not_primal_hessian_fraction": 1.0,
+    "saved_real_n600_metric_status": "NO_VERDICT_DATA_CUSTODY",
+    "state_count": 600
+  },
+  "pointer": {
+    "authority": "NO_POINTER_WRITE_PERFORMED",
+    "moved": false,
+    "scores_embedded": false
+  },
+  "promotion_eligible": false,
+  "provenance": {
+    "archive_sha256": null,
+    "archive_used": false,
+    "canonical_command": ".venv/bin/python tools/probe_bregman_v9_all_surfaces.py --output .omx/research/bregman_v9_all_surfaces_measurement_20260714.json --binding-output .omx/research/bregman_v9_all_surfaces_binding_20260714.json",
+    "git_head": "31564c77b7fbb39df80a940b6bb8f149b60b384d",
+    "git_head_scope": "base_commit_only_exact_relevant_worktree_bytes_bound_below",
+    "hardware_axis": "macOS_CPU_LOCAL_DETERMINISTIC_MATH_NOT_CONTEST_SCORE",
+    "normalized_source_sha256": {
+      "src/tac/witness_dsl/bregman_geometry_policy.py": {
+        "normalization": "only SEALED_LOCAL_RECEIPT_SHA256 and SEALED_BINDING_ARTIFACT_SHA256 values replaced by a fixed token; all other policy bytes are content-bound",
+        "sha256": "6b91221f3d61419a2f2671c49f08f70f7a09ea807bbc3bee9921b7881127db0f"
+      }
+    },
+    "runtime": {
+      "machine": "arm64",
+      "numpy_version": "1.26.4",
+      "python_implementation": "CPython",
+      "python_version": "3.13.12",
+      "scipy_version": "1.17.1",
+      "system": "Darwin"
+    },
+    "source_sha256": {
+      "src/tac/canonical_equations/bregman_v9_surfaces_20260714.py": "daa0de11eeeb215b3fa651f5ed6fad450f2ddb431898497da506f1c76fa8052d",
+      "src/tac/findings_lagrangian/info_gain.py": "4646ceae0fc1573c13004a4e8de0f2bfac318ea1a02aad7bcf5cd2cf4a28d419",
+      "src/tac/findings_lagrangian/posterior.py": "5499789947db0364fcdc6da7dc28e556b8d9b9429e2a8dfd35a43c0debb8676b",
+      "src/tac/information_geometry/bregman_v9_surfaces.py": "78aa17f65f35478adbf1d028a9887e397786933c9de5d1dec7c150fb6095fb4e",
+      "src/tac/score_geometry.py": "77d1f8542c28d0e4e8142180cf64d6a31bd4cb3d8ae5816f5d6631de1d255457",
+      "src/tac/scorer_surrogate/vjp_fidelity.py": "7283adf2f33d461921079ee7d4d1b59a2a96dda3d19c7ce49f7c5f3debb14d7b",
+      "src/tac/witness_dsl/surrogate_vjp_fidelity_policy.py": "5061c3609fc0053d0de59da6daa8ed3f08186af0c8385cc9bfb4505601c5d2d3",
+      "tools/probe_bregman_v9_all_surfaces.py": "7703df170e0cdf55cef3e059df4db77798fd8a668c7fd74200fee3db3d81f20b"
+    },
+    "upstream_evaluator_used": false,
+    "upstream_snapshot_sha256": null
+  },
+  "schema": "bregman_v9_all_surfaces_measurement.v1",
+  "score_claim": false,
+  "seed": 20260714,
+  "sigma_points": {
+    "axis": "MEASURED_LOCAL_CPU_SYNTHETIC_MATH_FIXTURE_NOT_SCORE",
+    "fixture": "synthetic_finite_support_regular_exponential_family",
+    "live_v9_status": "NO_VERDICT_LIVE_THROUGHPUT_NO_APPLICABLE_CUSTODIED_EF_KL",
+    "moment_residual_linf": 7.389922007661198e-16,
+    "point_count_reduction_factor": 120.0,
+    "selection_cost_amortization_rule": "Caratheodory reduction cost is setup; point-count benefit applies only to repeated density-ratio evaluations with the same expectation coordinate",
+    "sigma_point_count": 5,
+    "source_point_count": 600,
+    "timing": {
+      "authority": "local_CPU_advisory_microbenchmark_not_live_V9_throughput",
+      "caratheodory_setup_seconds": 0.014754292,
+      "full_log_ratio_evaluations": 120000,
+      "full_seconds": 0.031899792,
+      "measured_speedup": 112.63732662919126,
+      "platform": "Darwin_arm64",
+      "repetitions": 200,
+      "sigma_log_ratio_evaluations": 1000,
+      "sigma_seconds": 0.000283208
+    },
+    "verification": {
+      "actual_mc_error": 2.7755575615628914e-16,
+      "density_ratio_residual_linf": 4.440892098500626e-16,
+      "exact_kl": 0.29780435845399555,
+      "exactness_verified": true,
+      "expected_statistics_sha256": "302c18251ddbe970992c5a491ced63faab9a4b1dd7b0f672f2a18e479120b2f0",
+      "family_dimension": 4,
+      "finite_sample_estimate_was_negative": false,
+      "mc_error_identity_residual": 2.1996293675385916e-16,
+      "moment_match_required": true,
+      "moment_residual_linf": 7.303185833862358e-16,
+      "natural_p_sha256": "7790a82f02f7275b93243f0e32e118fac106b5c82f11cf15619afd4a331e3308",
+      "natural_q_sha256": "66bf4a453c9f62cc4b8bb5d1b29789b3f7cdbce8f3870ecd260c85107a7ef3ba",
+      "point_bound": 5,
+      "point_count": 5,
+      "predicted_mc_error": 4.975186929101483e-16,
+      "schema": "exp_family_sigma_point_kl.v1",
+      "score_claim": false,
+      "sigma_point_kl": 0.29780435845399583,
+      "sigma_statistics_sha256": "cbb5e0caf85ade4d2b721ccf29c695cfe150901cd585c1b1bea2b113c3af0f50",
+      "support_point_ids": [
+        "synthetic_row_583",
+        "synthetic_row_590",
+        "synthetic_row_594",
+        "synthetic_row_595",
+        "synthetic_row_598"
+      ],
+      "weights": [
+        0.11616021752999632,
+        0.21317209085241495,
+        0.3927672675476029,
+        0.030101634350416878,
+        0.24779878971956906
+      ]
+    }
+  }
+}
