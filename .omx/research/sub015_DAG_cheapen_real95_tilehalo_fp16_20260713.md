@@ -69,3 +69,31 @@ sparsity remains open for (a) SE-free architectures — the surrogate (directive
 (b) NON-exact low-cadence tiling (training-path tolerance, unmeasured). untested formulations / alternatives:
 SE-free surrogate tiling · approximate (stale-SE-statistics) tiling at pre-registered cadence · fp16 Lever-B
 (probe running locally on main's Metal, receipt pending).
+
+---
+## FEED-bregman-review + apparatus + paper-intake (2026-07-14, pointer 0.19108/0.18804 UNMOVED)
+
+**Bregman review (arm bregman_v9_all_surfaces, reviewed_committed) — LOAD-BEARING geometric correction.**
+The proposed NO-SOLVE dual metric `ρ=‖η1−η2‖₂=√(Δθᵀ H Δθ)` is FALSE for a general PD Hessian. Re-derived +
+MEASURED (600/600 synthetic SPD states, false-equality err ~9e-13): raw dual-Euclidean `‖Δη‖₂²=Δθᵀ H² Δθ`
+is a SQUARED-HESSIAN geometry, NOT the ordinary/Fisher-natural Hessian metric `Δθᵀ H Δθ = Δηᵀ H⁻¹ Δη`
+(Crouzeix H_F H_F*=I gives the INVERSE-Hessian dual, not the identity). ⇒ the Fisher-natural cotangent dual
+REQUIRES the typed H⁻¹ solve; a no-solve `‖Δη‖` shortcut would silently corrupt `argmax_native_vjp_fidelity_v1`
+while preserving its name (a caught name-preserving FAKE). Routes to #500 (metric design), #501 (fake-audit
+candidate — provenance arm owns), #504 (grounding). Also banked: KL batchmean bug fix (nonneg log(p/q)+q/p−1
+estimator, live consumer patched) + 120× exact sigma-point reduction (600→5 Caratheodory). 7 .py HELD for the
+live provenance owner (canonical_equations/witness_dsl). All synthetic numbers tagged local-CPU-fixture, NOT
+through-R n600. eq candidates (held): local_hessian_dual_geometry / affine_legendre_gauge_covariance /
+exp_family_sigma_point_kl / categorical_chernoff_bisector / curved_bregman_centroid_projection.
+
+**Apparatus (less-fragile/verbose, operator):** serializer `--files` now `action=extend` — repeated flags
+ACCUMULATE (silent-drop fragility that wasted 5 commits, fixed; single-flag unchanged, 1cb053f53e). codex_status
+= high-signal digest (folds landing-gate disposition + NEEDS_REVIEW surfacing) + delegate de-conflict preflight
+(refuse duplicate-live-label) + robust-liveness discipline (never pgrep-fl|head — 1-of-8 undercount). Codex
+landing review gate now enforced (Stop hook) — every arm dispositioned before trust.
+
+**Paper intake dispositions (warm-start-from-divergence):** 2607.11883 Requential Coding → organ n=1
+self-generated-data + MDL parent of margin-conditional flip coder (#226/#307); 2607.09197 routing-meaningfulness
+→ HSE diagnostic for organ #436 regime-dispatch (vacuous-vs-real); 2607.10109 AMC saliency compression → margin-
+saliency bit/rank tiering RATE lever (Fable arm live, macOS=all-surfaces); 2607.10765 Lee-Yang spectral-gap =
+COOL-BUT-DISTANT (quantum; one thread = size-independent-gap↔anneal-rate floor #318/log-Sobolev, no arm).
