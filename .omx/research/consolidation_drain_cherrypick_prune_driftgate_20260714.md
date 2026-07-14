@@ -71,6 +71,26 @@ survives compaction. NO signal loss, NO trampling, ONE source of truth, permanen
 - exp-linear weight reparam run (if its $0 2x2 smoke shows fewer-steps additive to Muon).
 - The 4 other live arms' (curvelet/ripo/gauge/reparam/sweep) surfaced follow-ons — capture from their
   final messages into this list on drain.
+- **PAPER (queued, not launched) arXiv 2602.18428 "The Geometry of Noise: Why Diffusion Models Don't Need
+  Noise Conditioning" (Sahraee-Ardakan/Delbracio/Milanfar, Google, 2026-02).** SHARPEST hit of today's
+  inputs for our live metric P0s. Mechanism: raw Marginal Energy E=-log p(u) has a **1/tᵖ singularity
+  normal to the data manifold** (gradients diverge); the learned autonomous (time-invariant) field carries
+  an implicit **local conformal metric that PERFECTLY CANCELS the singularity** → infinitely-deep well
+  becomes a stable attractor; generation = Riemannian gradient flow on E. Plus a **Jensen-Gap / bounded-gain**
+  result: velocity-based parameterizations are inherently stable, noise-prediction ones are high-gain
+  unstable. FORK (PAPER_WARM_START): paper = diffusion on a data-manifold density w/ noise-marginalization;
+  ours = coord-INR fitting a FROZEN-SCORER argmax partition (no diffusion/noise-conditioning). Transferable
+  = the MATH not the application. 4 surfaces: (1) **#500 OPTIMAL-METRIC + #504 Bregman** — our d_seg lives
+  on the codim-1 SEPARATRIX = a decision-landscape singularity where the margin field diverges; test whether
+  a conformal factor cancels it and whether it's the SAME object #500/#504 derive ($0 derivation check).
+  (2) **eikonal cure (#316/#318/#320)** — the ep110 divergence IS this boundary singularity; a
+  conformal-metric flow could REPLACE adaptive-ε (singularity-free vs stabilized-singular). (3)
+  **parameterization selection (#310/#497)** — bounded-gain → prefer SDF-velocity output over residual;
+  explains hosc/fixed-β high-gain death. (4) **autonomous-flow-vs-SCHEDULE (#302, ties to Fork row below)**
+  — "geometry encodes the conditioning, no schedule needed" → is the witness-native optimum an autonomous
+  flow with the right metric, not a multi-stage τ/ε/λ schedule? (the autonomous-field concept the
+  continuation reframe needs). A MEANS: earns keep via a measured eikonal-cure or a #500 metric-derivation
+  row. Sisters: #500/#504/#316-#320/#302/#310/#497, Fork row, memory curriculum_is_continuation.
 - **TOOL (queued, not launched) Fork Dynamics — forkdynamics.com (rendered via agent-browser; og:title
   verbatim "numerical bifurcation continuation tool for dynamical systems, web UI + CLI for maps and
   ODEs").** The AUTO/MatCont/BifurcationKit lineage: continue equilibria/limit-cycle branches as a
