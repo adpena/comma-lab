@@ -46,6 +46,12 @@ _NON_CE_BASE_FLAGS = frozenset({
     "--muon-momentum",
     "--muon-ns-steps",
     "--muon-warm-start-momentum",
+    # Pose-carrier value sub-flags: the CE-only timer sets --w-pose 0.0, and the
+    # trainer fail-closes ("--pose-carrier requires --w-pose > 0"). Strip the
+    # carrier's value sub-flags here and disable the boolean below so the CE-only
+    # timing probe boots. (measured-runnability defect, dry-start 2026-07-14.)
+    "--pose-carrier-source",
+    "--pose-carrier-residual-mode",
 })
 
 
@@ -99,6 +105,9 @@ def compile_throughput_component_timer_ticket(
         "--seed-islands": False,
         "--witness-alone-island-loss": False,
         "--w-pose": 0.0,
+        # CE-only timer carries no pose objective; the pose carrier requires
+        # w_pose > 0, so disable it (BooleanOptional -> emits --no-pose-carrier).
+        "--pose-carrier": False,
     })
 
     probe_overrides = {
@@ -195,6 +204,7 @@ def compile_throughput_component_timer_ticket(
         "--component-wallclock-telemetry",
         "--stage-checkpoints",
         "--no-witness-alone-island-loss",
+        "--no-pose-carrier",
     ):
         if flag not in pairs:
             mismatch[flag] = (pairs.get(flag), "present")
