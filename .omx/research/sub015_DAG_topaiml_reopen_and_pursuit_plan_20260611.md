@@ -17646,3 +17646,30 @@ blocked, accuracy NOT_ADMITTED. Reformulation queue: (a) run the host Metal runn
 kernel_host.command) on a Metal-capable process to measure the real wall; (b) improve the oracle-mask predictor
 (0.514 rel-L2 too high). NOT a paradigm kill — the kernel primitive exists + is CPU-parity-proven; only the
 Metal wall + predictor accuracy are open. DSL leg N/A (compute primitive). [consumers-generic]
+
+---
+
+## FEED-ane-unlock-followup-20260713 (#490 DONE, harvested by main — ANE is FORWARD-ONLY, backward NOT reachable)
+
+Research-only. Pointer UNMOVED. MEANS (teacher throughput). Arm commit hit .git-read-only (same bug as
+custom_kernel); harvested by main. Memo `ane_unlock_followup_20260713.md` + impl spec + DAG FEED + policy +
+kernel + bench + GO packet + 8 tests.
+- **DECISIVE: backward/costate-VJP reachable on ANE = N (verdict_scope: formulation — the exposed private ANE
+  inference API).** Direct probe: 35 ANE runtime classes, 22 FORWARD selectors, **ZERO backward-family
+  selectors** across 11 tokens (receipt direct_ane_probe.json). The private ANE API is forward-only by
+  construction → ANE can NEVER produce d(loss)/d(frames). This CAPS ANE at the forward and keeps the
+  training-gradient tier BLOCKED. Consequence: the 82%-backward kill must route through the distilled student
+  (#491) or the sparse-adjoint kernel — NOT ANE.
+- **weight-only int8 fold (the operator "fold that as well"): advisory-tier NO-GO.** W8 blob 9.686 MB MEASURED
+  (corrects the 31 MB survey estimate) BUT worst-pair n600 QoI flip = **88.775%** (fidelity-dead); batching
+  REGRESSED 10.5% at b8/b32 (SRAM→batch throughput did NOT materialize); T4 op-selector 8.83% aggregate /
+  63.34% worst-pair → no repair. verdict_scope: formulation — weight-only-W8 + LUT-none + op-selector-logit-head;
+  reformulation queue: (a) per-CHANNEL W8 scales + LSQ (canonical low-bit fixes, untested), (b) LUT4/6
+  palettization (untested vs W8), (c) the SRAM-residency was never PROVEN (CoreML CPU_AND_NE is a request) so
+  the batch regression may be a placement artifact — needs a Metal-capable residency probe.
+- **concurrency A/B: NOT_MEASURED** (codex lacked Metal + powermetrics needs superuser — no values invented).
+  Full-trainer A/B PREPPED but NOT one-GO-ready (GO_PACKET_ane_full_trainer_concurrency_ab): the timer config
+  ALSO has inherited LADDER windows @340/260-epoch out of the 4-epoch budget — my muon/l7 cap (61569fa752)
+  fixed only 2 of the inherited-schedule stages; the CE-only probe needs curriculum FULLY off, not per-stage caps.
+- **tiers unchanged:** advisory = UNLOCKED_LOCAL_ONLY (forward, ~2.3×); training-gradient = BLOCKED_NOT_MEASURED
+  (now KNOWN unreachable via ANE); label-grade = NOT_UNLOCKED. DSL leg = policy file (generic-registry-covered).
