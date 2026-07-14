@@ -1,0 +1,80 @@
+{
+  "axis": "[research-only receipt synthesis; no Metal execution; no score authority]",
+  "content_addressed_output_dir": "/Users/adpena/Projects/pact/experiments/results/throughput_frontier_math_static_20260714_v2/c0438164e39c2805f456a77f70c7584564f3dff5c1fd2ada1a88d94e244ad3eb",
+  "derived_linear_extrapolation_n600_minutes": 6.21,
+  "derived_linear_extrapolation_n600_seconds": 372.6,
+  "fingerprint": "c0438164e39c2805f456a77f70c7584564f3dff5c1fd2ada1a88d94e244ad3eb",
+  "fixedpoint_forward_validation": {
+    "admitted_arm": null,
+    "failures": [
+      "receipt missing"
+    ],
+    "status": "OWED_FIXEDPOINT_FORWARD_RECEIPT",
+    "valid_full_n600": false
+  },
+  "full_r_training_repro_status": "OWED_FULL_R_TRAINING_REPRO_RECEIPT",
+  "full_r_training_repro_validation": {
+    "complete": false,
+    "failures": [
+      "receipt missing"
+    ],
+    "status": "OWED_FULL_R_TRAINING_REPRO_RECEIPT",
+    "valid_contract": false
+  },
+  "git_head_at_probe": "5c9db035765a4b72544086b5fec5ac86fddbcd84",
+  "integer_gpu_ane_backend_authority_complete": false,
+  "integer_gpu_ane_backend_authority_owed": true,
+  "lane_id": "lane_throughput_frontier_math_20260713",
+  "live_run_mutated": false,
+  "measured_authority_verdict_axis": "[macOS-CPU-torch 1-thread advisory wall-clock] NON-PROMOTABLE",
+  "measured_authority_verdict_combined_seconds": 59.615,
+  "measured_authority_verdict_component_share_n96": {
+    "posenet_forward": 0.226,
+    "segnet_forward": 0.774
+  },
+  "measured_authority_verdict_n_pairs": 96,
+  "measured_authority_verdict_seconds_per_pair": 0.621,
+  "measured_authority_verdict_torch_threads": 1,
+  "n_pairs_required": 600,
+  "overall_status": "OWED_FIXEDPOINT_FORWARD_RECEIPT",
+  "paid_dispatch": false,
+  "pointer_moved": false,
+  "premise_status": "CORRECTED_BY_MAIN_VERDICT_TIMER: authority verdict is forward-only. MEASURED n96 combined=59.615s, per_pair=0.621s, SegNet share=0.774, PoseNet share=0.226; DERIVED linear n600 extrapolation=372.6s=6.21min. The earlier fast in-loop MLX backward-heavy slice is not the throughput bottleneck and its routing is retracted.",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ranked_build_next": [
+    "BUILD/MEASURE calibrated fixed-point SegNet forward over real n600 with strict argmax certificates and synchronized GPU/ANE latency",
+    "BUILD a deterministic tropical class-selection head only after upstream fixed-point logits carry a valid error certificate",
+    "BUILD/MEASURE exact-forward or distilled-forward alternatives against the derived 6.21-minute n600 authority-verdict wall",
+    "BUILD a separate continuous-output PoseNet error/score certificate for the measured 22.6pct n96 verdict share",
+    "KEEP full-R integer adjoint as training-reproducibility infrastructure, not the primary authority-verdict throughput lever"
+  ],
+  "research_only": true,
+  "schema": "throughput_frontier_math_probe.v1",
+  "score_claim": false,
+  "single_highest_ev_measurement": "real n600 calibrated fixed-point SegNet forward rung: aggregate and worst-pair argmax flips/uncertified fraction plus synchronized integer GPU/ANE residency and latency",
+  "stage_files": {
+    "stage_00_custody.json": {
+      "bytes": 3230,
+      "sha256": "f7ca19033c216e9ea4989bd8f79d466df5044a179e7d1495e2a1c15ad7976101"
+    },
+    "stage_01_exact_number_system.json": {
+      "bytes": 3960,
+      "sha256": "1c26515127ac2ce1090a7039cd1728b250ab32194e273f33fe8823055121ca0e"
+    },
+    "stage_02_argmax_certificate.json": {
+      "bytes": 1512,
+      "sha256": "1528f4f124f9757cd32446246062a715f43e23f9783ad63da1b70bfef4ef8d73"
+    },
+    "stage_03_discrete_waterfill.json": {
+      "bytes": 673,
+      "sha256": "4ffa61f0115f3b0454aa141665a56c1a3271fdeda1ef94e5b388d1f19d06d059"
+    },
+    "stage_04_support_closure.json": {
+      "bytes": 1093,
+      "sha256": "a6a8b0e5e270d0ff90d5c34e91636e832a4a5b5d99acc7a579a69d648899b362"
+    }
+  },
+  "task_cluster": 494,
+  "training_performed": false
+}
