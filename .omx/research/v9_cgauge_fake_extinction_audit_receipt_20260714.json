@@ -1,0 +1,310 @@
+{
+  "check_count": 6,
+  "checks": [
+    {
+      "evidence": {
+        "current_selection_state": "pose_disengaged_no_banked_payload",
+        "numeric_nonlive_dpose_admitted": false,
+        "payload_selected": false,
+        "payload_sha256": null,
+        "score_path_d_pose_source": "live_posenet",
+        "selected_state_negative_control": "ValueError: *_selected pose state REFUSED: no authenticated receiver callable is bound. Caller-supplied payload/xi/frame arrays cannot prove parse-back or decoded-byte mutation; remain pose_disengaged_no_banked_payload until a real selector invokes the content-hashed archive receiver itself",
+        "waiver_payload_selected": false,
+        "waiver_state": "pose_disengaged_no_banked_payload"
+      },
+      "fake_id": "F1_BANKED_R1_POSE_FALLBACK",
+      "guard_ids": [
+        "tac.preflight.check_v9_fake_claim_guards[pose-*]",
+        "tac.witness_control.pose_selection_receiver_effect.assert_pose_selection_receiver_effect",
+        "tac.witness_control.pose_verdict_gate.check_pose_verdict_fallback_is_live_or_refused"
+      ],
+      "ledger_claim": "banked-R1 pose fallback emitted selection without changing payload bytes",
+      "live_fake": false,
+      "refusal": null,
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "active_claim_label": "polar_directional_fourier_plane_wave",
+        "binding_sha256": "40047348accfaaccfa81b6f0f42dec9443434c1b7ae8da0d13f96673132b1fd8",
+        "false_name_negative_control": "BasisClaimError: unlocalized global Fourier atoms may not be named curvelet/shearlet; use an honest rename correction receipt",
+        "family_id": "polar_directional_fourier",
+        "honest_rename_waiver_action": "rename_to_polar_directional_fourier_plane_wave",
+        "localization_waived": false,
+        "receiver_consumer": "tools/levelset_byte_close_and_eval.py::_setup",
+        "structural_assertions": {
+          "atom_spec_sha256": null,
+          "parabolic_scale_orientation_support": false,
+          "spatial_window_or_compact_support": false,
+          "spatially_localized": false,
+          "train_receiver_op_parity": true,
+          "translated_atom_index": false
+        },
+        "trainer_consumer": "experiments/train_levelset_witness_realized_through_R_mlx.py::_base_basis_feats_np"
+      },
+      "fake_id": "F2_BASIS_FAMILY_NAME",
+      "guard_ids": [
+        "tac.preflight.check_v9_fake_claim_guards[basis-claim:*]",
+        "tac.witness_dsl.basis_claim_guard.check_live_basis_claim_source_surfaces_are_honest",
+        "tac.witness_dsl.basis_claim_guard.check_basis_family_claim_is_structurally_truthful"
+      ],
+      "ledger_claim": "global polar Fourier plane waves were named curvelet/shearlet",
+      "live_fake": false,
+      "refusal": null,
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "active_state_label": "polar_directional_fourier_plane_wave=ON; self_orient=OFF",
+        "dsl_self_orient": false,
+        "historical_minus48_status": "UN-REPRODUCED; not a V9 realized effect",
+        "measurement_axis": "macOS-CPU advisory",
+        "measurement_scope": "owed16 bounded warm-start formulation",
+        "score_claim": false
+      },
+      "fake_id": "F3_SELF_ORIENT_MINUS48_SCOPE",
+      "guard_ids": [
+        "tac.witness_dsl.basis_claim_guard.check_basis_family_claim_is_structurally_truthful",
+        "tac.witness_dsl.config_provenance.check_config_flag_provenance_bijection_complete"
+      ],
+      "ledger_claim": "self-orient -48% was labelled ON and realized for live n600 V9",
+      "live_fake": false,
+      "refusal": null,
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "all_live_variants_strict": true,
+        "bijection_sha256": "1eb9fa39ae58c13e34ab66994bb438f0c88b0a08d8f0eaa636fe5f4459bf66c8",
+        "binding_count": 208,
+        "bregman_circular_self_composition_claim_absent": true,
+        "bregman_durable_binding_artifact_sha256": "bdc01ae586c4467b18ebf4deee206242426ddc51da3dc47d8a2b8fff6cab8481",
+        "bregman_local_receipt_sealed": true,
+        "bregman_local_receipt_sha256": "12b82ca3f9809339746cc03b48a3237643861dec9e9baec19852a184fa7f358c",
+        "bregman_model_xi_R_factorization_verified": false,
+        "bregman_nested_metric_equals_top_level": true,
+        "bregman_trainer_activation_admitted": false,
+        "constants_manifest_count": 208,
+        "full_semantic_flag_total": 208,
+        "hosc_beta_end_inherited_value_replaced": 10.0,
+        "hosc_beta_end_live_and_custodied": 3.177,
+        "program": "v9_cgauge_432",
+        "scientific_active_total": 44,
+        "scientific_declared_total": 45,
+        "scientific_inactive_total": 1,
+        "variant_lawref_custody": {
+          "v9_cgauge_432": {
+            "bijection_canonical_compiler_total": 208,
+            "bound_canonical_compiler_record_total": 208,
+            "canonical_compiler_manifest_sha256": "4a5d94179f67c70ca62ac26c06c80ef4e955a76ce646facf3ba7a5dd558ba18f",
+            "canonical_compiler_record_total": 208,
+            "compiled_argv_sha256": "afafc3365502eb6db8953be3856f5fcc1cde21f428d274d7d81ddc505f5887d9",
+            "coverage": "208/208",
+            "coverage_complete": true,
+            "direct_argv_matches_lawref_compiler": true,
+            "direct_owning_lever_lawref_total": 208,
+            "direct_owning_lever_lawref_unique_total": 208,
+            "duplicate_lawref_owners": [],
+            "full_semantic_ladder_rung_counts": {
+              "derived_at_config": 1,
+              "derived_live": 0,
+              "hardcoded_waiver": 186,
+              "measured_anchor": 21
+            },
+            "missing_bound_canonical_compiler_records": [],
+            "missing_bound_constant_rows": [],
+            "missing_canonical_compiler_records": [],
+            "missing_owned_lawrefs": [],
+            "missing_provenance_bindings": [],
+            "missing_registry_bound_compiler_records": [],
+            "no_missing_stale_or_duplicate_refs": true,
+            "program": "v9_cgauge_432",
+            "public_argv_matches_lawref_compiler": true,
+            "registry_bound_compiler_record_total": 208,
+            "semantic_flag_total": 208,
+            "stale_bound_canonical_compiler_records": [],
+            "stale_canonical_compiler_records": [],
+            "stale_owned_lawrefs": [],
+            "stale_provenance_bindings": [],
+            "unknown_ladder_rungs": []
+          },
+          "v9_cgauge_ideal_mod19": {
+            "bijection_canonical_compiler_total": 228,
+            "bound_canonical_compiler_record_total": 228,
+            "canonical_compiler_manifest_sha256": "01415bdd181a3b7ce03c54d351de17e2a1766f3be38edc837e9480abf4157551",
+            "canonical_compiler_record_total": 228,
+            "compiled_argv_sha256": "29e64a05e742b7acd6b2513fb7e77eb162cb63c0c0d5e56e89f267a9052a4f1a",
+            "coverage": "228/228",
+            "coverage_complete": true,
+            "direct_argv_matches_lawref_compiler": true,
+            "direct_owning_lever_lawref_total": 228,
+            "direct_owning_lever_lawref_unique_total": 228,
+            "duplicate_lawref_owners": [],
+            "full_semantic_ladder_rung_counts": {
+              "derived_at_config": 1,
+              "derived_live": 0,
+              "hardcoded_waiver": 206,
+              "measured_anchor": 21
+            },
+            "missing_bound_canonical_compiler_records": [],
+            "missing_bound_constant_rows": [],
+            "missing_canonical_compiler_records": [],
+            "missing_owned_lawrefs": [],
+            "missing_provenance_bindings": [],
+            "missing_registry_bound_compiler_records": [],
+            "no_missing_stale_or_duplicate_refs": true,
+            "program": "v9_cgauge_ideal_mod19",
+            "public_argv_matches_lawref_compiler": true,
+            "registry_bound_compiler_record_total": 228,
+            "semantic_flag_total": 228,
+            "stale_bound_canonical_compiler_records": [],
+            "stale_canonical_compiler_records": [],
+            "stale_owned_lawrefs": [],
+            "stale_provenance_bindings": [],
+            "unknown_ladder_rungs": []
+          },
+          "v9_cgauge_ideal_mod32": {
+            "bijection_canonical_compiler_total": 228,
+            "bound_canonical_compiler_record_total": 228,
+            "canonical_compiler_manifest_sha256": "def0920189fc6cadeba1f878bbbe173bfb76c91afa1bfa2eae931ca69f9f1fbe",
+            "canonical_compiler_record_total": 228,
+            "compiled_argv_sha256": "a45ea32a1117be299c2ab1c99a3868821b79733fdc19142684b93ae52f4b27c3",
+            "coverage": "228/228",
+            "coverage_complete": true,
+            "direct_argv_matches_lawref_compiler": true,
+            "direct_owning_lever_lawref_total": 228,
+            "direct_owning_lever_lawref_unique_total": 228,
+            "duplicate_lawref_owners": [],
+            "full_semantic_ladder_rung_counts": {
+              "derived_at_config": 0,
+              "derived_live": 0,
+              "hardcoded_waiver": 206,
+              "measured_anchor": 22
+            },
+            "missing_bound_canonical_compiler_records": [],
+            "missing_bound_constant_rows": [],
+            "missing_canonical_compiler_records": [],
+            "missing_owned_lawrefs": [],
+            "missing_provenance_bindings": [],
+            "missing_registry_bound_compiler_records": [],
+            "no_missing_stale_or_duplicate_refs": true,
+            "program": "v9_cgauge_ideal_mod32",
+            "public_argv_matches_lawref_compiler": true,
+            "registry_bound_compiler_record_total": 228,
+            "semantic_flag_total": 228,
+            "stale_bound_canonical_compiler_records": [],
+            "stale_canonical_compiler_records": [],
+            "stale_owned_lawrefs": [],
+            "stale_provenance_bindings": [],
+            "unknown_ladder_rungs": []
+          },
+          "v9_cgauge_truly_optimal_core": {
+            "bijection_canonical_compiler_total": 228,
+            "bound_canonical_compiler_record_total": 228,
+            "canonical_compiler_manifest_sha256": "27265285111a2fd687cefa9dead65b35a5c67bcedf7de6d6b13238ad7a1714d9",
+            "canonical_compiler_record_total": 228,
+            "compiled_argv_sha256": "af5412bfa7752be36c228fe023632d188d6616388bf235103bcf4933b93b0697",
+            "coverage": "228/228",
+            "coverage_complete": true,
+            "direct_argv_matches_lawref_compiler": true,
+            "direct_owning_lever_lawref_total": 228,
+            "direct_owning_lever_lawref_unique_total": 228,
+            "duplicate_lawref_owners": [],
+            "full_semantic_ladder_rung_counts": {
+              "derived_at_config": 1,
+              "derived_live": 0,
+              "hardcoded_waiver": 206,
+              "measured_anchor": 21
+            },
+            "missing_bound_canonical_compiler_records": [],
+            "missing_bound_constant_rows": [],
+            "missing_canonical_compiler_records": [],
+            "missing_owned_lawrefs": [],
+            "missing_provenance_bindings": [],
+            "missing_registry_bound_compiler_records": [],
+            "no_missing_stale_or_duplicate_refs": true,
+            "program": "v9_cgauge_truly_optimal_core",
+            "public_argv_matches_lawref_compiler": true,
+            "registry_bound_compiler_record_total": 228,
+            "semantic_flag_total": 228,
+            "stale_bound_canonical_compiler_records": [],
+            "stale_canonical_compiler_records": [],
+            "stale_owned_lawrefs": [],
+            "stale_provenance_bindings": [],
+            "unknown_ladder_rungs": []
+          }
+        }
+      },
+      "fake_id": "F4_EXECUTABLE_PROVENANCE",
+      "guard_ids": [
+        "tac.preflight.check_config_flag_provenance_bijection_complete",
+        "tac.witness_dsl.config_provenance.check_config_flag_provenance_bijection_complete"
+      ],
+      "ledger_claim": "43/44 active provenance flags lacked executable custody and hosc_beta_end recorded 10.0 while V9 emitted 3.177",
+      "live_fake": false,
+      "refusal": null,
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "discrete_curriculum_flag": "--curriculum-event-triggered",
+        "emitted_flag": "--no-curriculum-event-triggered",
+        "status": "inert_compat",
+        "status_reason": "unified tau bypasses the discrete CE/tau/l7 dispatcher; the independent --tau-advance-mode event controller remains active",
+        "tau_event_controller": {
+          "canonical_flag": "--tau-advance-mode",
+          "status": "active",
+          "value": "event"
+        }
+      },
+      "fake_id": "F5_UNIFIED_TAU_INERT_CURRICULUM",
+      "guard_ids": [
+        "tac.witness_dsl.config_provenance.check_config_flag_provenance_bijection_complete"
+      ],
+      "ledger_claim": "--curriculum-event-triggered appeared active under unified tau",
+      "live_fake": false,
+      "refusal": null,
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "accepted": true,
+        "archive_zip_bytes": 89772,
+        "archive_zip_sha256": "17f8da14b8ea5408fab442a3a1e3c63f7df9706e6bd192cfe2651b27a73f2902",
+        "effective_label": "full-n600 byte-closed macOS-CPU advisory",
+        "exact_authority": false,
+        "exact_eval_upstream_evaluate_ran": false,
+        "exact_overclaim_negative_control_violations": [
+          "exact authority requires exact_eval_upstream_evaluate.ran=true",
+          "exact authority requires declared contest-CPU or contest-CUDA hardware",
+          "exact authority is incompatible with promotion_claim=false"
+        ],
+        "pairs": 600,
+        "promotion_claim": false,
+        "receipt_path": "reports/r1_dxi_238/n600_shipdxi.json",
+        "requested_exact_authority": false,
+        "waiver_effective_label": "full-n600 byte-closed macOS-CPU advisory",
+        "waiver_grants_exact_authority": false
+      },
+      "fake_id": "F6_R1_EVIDENCE_AUTHORITY",
+      "guard_ids": [
+        "tac.evidence_authority.check_evidence_authority_claims_are_custodied",
+        "tac.evidence_authority.evaluate_evidence_authority"
+      ],
+      "ledger_claim": "R1 full-n600 advisory evidence was worded as exact authority",
+      "live_fake": false,
+      "refusal": null,
+      "status": "PASS"
+    }
+  ],
+  "execution_order": "provenance-first prerequisite; output rows retain ledger F1-F6 order",
+  "live_fake_count": 0,
+  "no_heavy_launch": true,
+  "no_score_claim": true,
+  "overall": "PASS",
+  "read_only": true,
+  "receipt_sha256": "19bd75fc79287e50ef8cee005bc4adf479a4b115c12d98966ff305313627d70f",
+  "schema": "v9_cgauge_fake_extinction_audit.v1",
+  "source_ledger": ".omx/research/codex_findings_v9_cgauge_fake_implementation_audit_20260714_codex.md",
+  "vehicle": "v9_cgauge"
+}
