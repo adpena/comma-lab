@@ -95,10 +95,13 @@ def main(argv: list[str] | None = None) -> int:
     # regime-conditional self-dispatch backtest (#436): does per-STATE dispatch beat the
     # global-single-best arm walk-forward? (past-only, no look-ahead; the honest arbiter)
     dispatch = None
+    live_dispatch = None
     print("\n== regime-conditional dispatch backtest (#436; walk-forward vs global-single-best) ==")
     try:
         from tac.witness_control.regime_dispatch import (
-            backtest_dispatch, dispatch_for_trajectory)
+            backtest_dispatch,
+            dispatch_for_trajectory,
+        )
         dispatch = backtest_dispatch(traj, seed=args.seed)
         print(f"  dispatcher WF {dispatch.dispatcher_wf_mae:.6f} "
               f"(no-meta-guard {dispatch.dispatcher_wf_mae_no_meta_guard:.6f}) | "
@@ -112,7 +115,13 @@ def main(argv: list[str] | None = None) -> int:
                   f"err {r['dispatcher_err']:.5f} (oracle {r['oracle_arm']}"
                   f"{' ✓' if r['route_matches_oracle'] else ''})")
         print(f"  VERDICT: {dispatch.verdict}")
-        print(f"  LIVE: {dispatch_for_trajectory(traj, seed=args.seed).explain()}")
+        live_dispatch = dispatch_for_trajectory(traj, seed=args.seed)
+        print(f"  LIVE: {live_dispatch.explain()}")
+        cert = live_dispatch.classification.gate_certificate
+        if cert is not None:
+            print(f"  GATE: {cert.gate_dtype}; slope margin "
+                  f"{cert.slope_abs_margin} ({cert.slope_margin_ulps} ULP guards); "
+                  f"stable={cert.stable_beyond_float32_roundoff}")
     except Exception as exc:
         print(f"  dispatch backtest unavailable ({type(exc).__name__}: {exc})")
 
@@ -146,6 +155,54 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     out = out_dir / f"costate_organ_backtest_{stamp}.json"
+
+    # Molt-pattern router stability: content-address the current DECIDE selection,
+    # replay that exact selection at advisory APPLY, and fail closed on IS until a
+    # separately-custodied visited-live density exists.  No run-dir writes or actuation.
+    router_stability = None
+    if dispatch is not None and live_dispatch is not None:
+        from tac.witness_control.router_stability import (
+            append_decide_record,
+            calibrate_router_forecast,
+            importance_weighted_architecture_eval,
+            make_decision_record,
+            replay_apply,
+        )
+        cert = live_dispatch.classification.gate_certificate
+        if cert is None:
+            raise RuntimeError("dispatch omitted router gate certificate")
+        replay_path = out_dir / f"costate_router_replay_{stamp}.jsonl"
+        record = make_decision_record(
+            run_ref=Path(traj.run_dir).name,
+            decision_epoch=float(traj.verdicts[-1]["epoch"]),
+            selected_regime=live_dispatch.classification.regime,
+            selected_tool=live_dispatch.tool,
+            certificate=cert,
+        )
+        append_decide_record(replay_path, record)
+        replay = replay_apply(replay_path, record.decision_id)
+        is_report = importance_weighted_architecture_eval(
+            dispatch.fold_rows,
+            custody=None,
+            clip_bounds=None,
+        )
+        forecast_calibration = calibrate_router_forecast(dispatch.fold_rows)
+        router_stability = {
+            "gate_certificate": cert.to_dict(),
+            "decide_record": record.to_dict(),
+            "apply_replay": replay.to_dict(),
+            "replay_ledger": str(replay_path),
+            "importance_weighted_architecture_eval": is_report.to_dict(),
+            "forecast_calibration": forecast_calibration.to_dict(),
+        }
+        print("\n== Molt-pattern router stability (advisory) ==")
+        print(f"  gate={cert.gate_dtype} stable={cert.stable_beyond_float32_roundoff}; "
+              f"replay={replay.status} tool={replay.selected_tool}")
+        print(f"  IS={is_report.status}: {is_report.blocker}")
+        print(f"  forecast_calibration={forecast_calibration.status}; "
+              f"posterior_match_p="
+              f"{forecast_calibration.terminal_posterior_match_probability:.6f}; "
+              f"compute={forecast_calibration.allocation_verdict}")
     payload = {
         "run_dir": traj.run_dir, "seed": args.seed, "generated_at": stamp,
         "axis_tag": "[macOS advisory] NON-PROMOTABLE", "score_claim": False,
@@ -161,6 +218,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         "faithfulness_audit": faith,
         "regime_dispatch_backtest": dispatch.to_dict() if dispatch else None,
+        "router_stability": router_stability,
     }
     out.write_text(json.dumps(payload, indent=1, default=str))
     print(f"\nwrote {out}")
@@ -168,7 +226,10 @@ def main(argv: list[str] | None = None) -> int:
     if not args.no_record:
         try:
             from tac.witness_control.continual_costate import (
-                append_trajectory_record, compose_trajectory_record, organ_summary)
+                append_trajectory_record,
+                compose_trajectory_record,
+                organ_summary,
+            )
             protos = lens.prototypes if faith is not None else []
             rec = compose_trajectory_record(traj, arch_reports, protos)
             append_trajectory_record(rec)

@@ -55,6 +55,11 @@ from tac.witness_control.lambda_net import (
     lever_features,
     make_model,
 )
+from tac.witness_control.router_stability import (
+    RouterGateCertificate,
+    calibrate_router_forecast,
+    certify_fp32_gate,
+)
 
 #: the tool a persistence route resolves to (the incumbent heuristic, NOT a lambda_net arm)
 PERSISTENCE = "persistence"
@@ -99,6 +104,7 @@ class RegimeClassification:
     n_past_intervals: int
     meta_lambda_surprise: bool = False   # the meta-λ self-monitor's model-distrust guard
     surprise_ratio: float = float("nan") # model self-forecast error / persistence error
+    gate_certificate: RouterGateCertificate | None = None
     axis_tag: str = "[macOS advisory] NON-PROMOTABLE"
 
 
@@ -167,26 +173,57 @@ def classify_regime(past: list[Interval], comp: ScoreComposition,
         except Exception:
             proto_name, ent = "unclassified", float("inf")
     if len(mags) < 2:
+        cert = certify_fp32_gate(
+            recent_slope_mag=(mags[-1] if mags else 0.0),
+            median_slope_mag=0.0,
+            n_past_intervals=len(past),
+            surprise_ratio=float("nan"),
+            meta_lambda_guard=meta_lambda_guard,
+            policy=DISPATCH_POLICY,
+            surprise_threshold=META_LAMBDA_SURPRISE_RATIO,
+        )
         return RegimeClassification(
-            regime="uncertain",
+            regime=cert.selected_regime,
             deciding_signal=(f"insufficient history ({len(mags)} observed interval(s) < 2) "
                              "→ cannot classify → defer to persistence"),
             recent_slope_mag=(mags[-1] if mags else float("nan")),
             median_slope_mag=float("nan"), plateau=False,
             prototype_regime=proto_name, routing_entropy_nats=ent,
-            n_past_intervals=len(past))
-    recent = float(mags[-1])
-    med = float(np.median(mags))
-    plateau = recent < med
-    regime = "plateau" if plateau else "transient"
+            n_past_intervals=len(past), gate_certificate=cert)
+    # The discrete branch itself is canonical NumPy-fp32.  The upstream response
+    # estimates may be higher precision; they are explicitly rounded before selection.
+    recent = float(np.float32(mags[-1]))
+    med = float(np.float32(np.median(np.asarray(mags, dtype=np.float32))))
+    slope_cert = certify_fp32_gate(
+        recent_slope_mag=recent,
+        median_slope_mag=med,
+        n_past_intervals=len(past),
+        surprise_ratio=float("nan"),
+        meta_lambda_guard=False,
+        policy=DISPATCH_POLICY,
+        surprise_threshold=META_LAMBDA_SURPRISE_RATIO,
+    )
+    plateau = slope_cert.selected_regime == "plateau"
+    regime = slope_cert.selected_regime
     rel = " (razor-thin: recent≈median)" if med > 0 and abs(recent - med) / med < 0.02 else ""
     signal = (f"recent |d_seg slope| {recent:.2e} {'<' if plateau else '≥'} running median "
               f"{med:.2e} over {len(mags)} obs → {regime}{rel}")
     # meta-λ defer governor: distrust the model-based λ when it was just surprised
-    surprise, ratio = (_model_surprise(past, comp, lever_names, seed=seed)
-                       if (meta_lambda_guard and not plateau) else (False, float("nan")))
+    surprise_raw, ratio = (_model_surprise(past, comp, lever_names, seed=seed)
+                           if (meta_lambda_guard and not plateau)
+                           else (False, float("nan")))
+    cert = certify_fp32_gate(
+        recent_slope_mag=recent,
+        median_slope_mag=med,
+        n_past_intervals=len(past),
+        surprise_ratio=ratio,
+        meta_lambda_guard=meta_lambda_guard,
+        policy=DISPATCH_POLICY,
+        surprise_threshold=META_LAMBDA_SURPRISE_RATIO,
+    )
+    regime = cert.selected_regime
+    surprise = bool(regime == "uncertain" and not plateau and surprise_raw)
     if surprise:
-        regime = "uncertain"
         signal += (f"; BUT meta-λ model-surprise ×{ratio:.1f} > "
                    f"{META_LAMBDA_SURPRISE_RATIO} (self-monitor distrusts the head — the "
                    "freshest observed interval was mispredicted) → defer to persistence")
@@ -194,7 +231,8 @@ def classify_regime(past: list[Interval], comp: ScoreComposition,
         regime=regime, deciding_signal=signal, recent_slope_mag=recent,
         median_slope_mag=med, plateau=plateau, prototype_regime=proto_name,
         routing_entropy_nats=ent, n_past_intervals=len(past),
-        meta_lambda_surprise=surprise, surprise_ratio=ratio)
+        meta_lambda_surprise=surprise, surprise_ratio=ratio,
+        gate_certificate=cert)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -226,10 +264,16 @@ def dispatch_decision(past: list[Interval], comp: ScoreComposition,
     """The per-state self-dispatch: classify past-only, route by the measured policy."""
     cls = classify_regime(past, comp, lever_names, seed=seed,
                           meta_lambda_guard=meta_lambda_guard)
-    tool = DISPATCH_POLICY[cls.regime]
+    if cls.gate_certificate is None:
+        raise RuntimeError("regime classification omitted the fp32 gate certificate")
+    tool = cls.gate_certificate.selected_tool
     rationale = (f"regime '{cls.regime}' → policy → {tool}: {cls.deciding_signal}")
+    ranking = PER_REGIME_WF_PRIOR[cls.regime]
+    if cls.regime == "uncertain" and cls.meta_lambda_surprise:
+        ranking = ("persistence (meta-λ surprise defer: the latest observed model error "
+                   f"was ×{cls.surprise_ratio:.2f} persistence; no target-fold look-ahead)")
     return DispatchDecision(classification=cls, tool=tool, rationale=rationale,
-                            per_regime_wf_ranking=PER_REGIME_WF_PRIOR[cls.regime])
+                            per_regime_wf_ranking=ranking)
 
 
 def dispatch_for_trajectory(traj: CampaignTrajectory, *, seed: int = 0,
@@ -275,6 +319,9 @@ class DispatchBacktest:
     beats_persistence: bool
     beats_global_single_best: bool
     meta_lambda_guard: bool
+    gate_min_boundary_margin_ulps: float
+    gate_unstable_fold_count: int
+    forecast_calibration: dict
     fold_rows: tuple[dict, ...]
     verdict: str
     notes: tuple[str, ...] = field(default_factory=tuple)
@@ -358,11 +405,13 @@ def backtest_dispatch(traj: CampaignTrajectory, *, seed: int = 0,
             "deciding_signal": dec.classification.deciding_signal,
             "prototype_regime": dec.classification.prototype_regime,
             "meta_lambda_surprise": bool(dec.classification.meta_lambda_surprise),
+            "gate_certificate": dec.classification.gate_certificate.to_dict(),
             "dispatcher_err": round(err, 8),
             "persistence_err": round(fold_arm_err.get(PERSISTENCE, float("nan")), 8),
             "global_single_best_err": round(fold_arm_err.get(gsb_arm, float("nan")), 8),
             "oracle_arm": oracle_arm,
             "route_matches_oracle": bool(dec.tool == oracle_arm),
+            "per_arm_err": {a: float(fold_arm_err[a]) for a in sorted(fold_arm_err)},
         })
 
     disp_mae = float(np.mean(disp_errs))
@@ -399,11 +448,27 @@ def backtest_dispatch(traj: CampaignTrajectory, *, seed: int = 0,
         "route) — they measure how often the past-only classifier matched the best-in-hindsight arm",
         f"n={len(intervals)} intervals / {len(rows)} folds — small-data regime; every margin "
         "is verdict_scope: instance (re-runs per record accrual via the organ ledger)",
+        "router gate comparisons are deterministic NumPy-fp32; every fold carries a "
+        "selection-margin/ULP certificate and a fixed tie rule",
     )
+    boundary_ulps = []
+    for row in rows:
+        cert = row["gate_certificate"]
+        for key in ("slope_margin_ulps", "surprise_margin_ulps"):
+            if cert.get(key) is not None:
+                boundary_ulps.append(float(cert[key]))
+    unstable = sum(
+        not bool(row["gate_certificate"]["stable_beyond_float32_roundoff"])
+        for row in rows
+    )
+    forecast_calibration = calibrate_router_forecast(rows).to_dict()
     return DispatchBacktest(
         n_folds=len(rows), dispatcher_wf_mae=disp_mae,
         dispatcher_wf_mae_no_meta_guard=disp_mae_ng, persistence_wf_mae=persistence_mae,
         global_single_best_arm=gsb_arm, global_single_best_wf_mae=gsb_mae,
         per_arm_wf_mae=per_arm_mae, beats_persistence=beats_p,
         beats_global_single_best=beats_g, meta_lambda_guard=meta_lambda_guard,
+        gate_min_boundary_margin_ulps=(min(boundary_ulps) if boundary_ulps else float("nan")),
+        gate_unstable_fold_count=unstable,
+        forecast_calibration=forecast_calibration,
         fold_rows=tuple(rows), verdict=verdict, notes=notes)

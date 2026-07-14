@@ -1,0 +1,109 @@
+{
+  "schema_version": "pact.costate_router_stability_backtest.v1",
+  "generated_at_utc": "2026-07-14T11:55:00Z",
+  "research_only": true,
+  "axis_tag": "[macOS-CPU advisory; deterministic NumPy-fp32 router; no score authority]",
+  "score_claim": false,
+  "promotable": false,
+  "actuation": "NONE",
+  "pointer_status": {
+    "status": "UNCHANGED",
+    "submittable_contest_cpu_linux_x86_64": 0.1910828242,
+    "submittable_archive_sha256_prefix": "ad02b0124cbb",
+    "borrowed_lineage_defensive_bank_contest_cpu": 0.1880443979880752,
+    "reason": "advisory MEANS only; no byte-closed exact evaluator row"
+  },
+  "input_custody": {
+    "run_ref": "levelset_v752_baseline_20260710T185913Z",
+    "run_dir": "experiments/results/levelset_v752_baseline_20260710T185913Z",
+    "daemon_log_sha256_before": "7fdc44d19946121fb18e35060f5146bf1f48dea81c08891f8f4477d42b0bed82",
+    "daemon_log_sha256_after": "7fdc44d19946121fb18e35060f5146bf1f48dea81c08891f8f4477d42b0bed82",
+    "verdict_rows": 10,
+    "intervals": 9,
+    "walk_forward_folds": 7,
+    "seed": 0,
+    "run_dir_mutated": false
+  },
+  "authoritative_local_artifacts": {
+    "backtest_json": "experiments/results/costate_organ_router_stability_20260714/costate_organ_backtest_20260714T115500Z.json",
+    "backtest_json_sha256": "939af8df48b644646bfed406564519cb064e13ca3b7747c2203871db4b134e23",
+    "replay_jsonl": "experiments/results/costate_organ_router_stability_20260714/costate_router_replay_20260714T115500Z.jsonl",
+    "replay_jsonl_sha256": "34441f31876406353445a00e75ec01813e5c5f9ebd27144da951057115949c23"
+  },
+  "legacy_436_rederived": {
+    "dispatcher_walk_forward_mae": 0.0015959393896760557,
+    "dispatcher_no_meta_guard_walk_forward_mae": 0.0017378015724245231,
+    "global_single_best_arm": "T_gp_costate_posterior",
+    "global_single_best_walk_forward_mae": 0.00185206618604584,
+    "persistence_walk_forward_mae": 0.002791931483929152,
+    "oracle_route_matches": "5/7",
+    "verdict_scope": "INSTANCE: same one real trajectory that motivated the policy; not an out-of-trajectory transfer claim"
+  },
+  "three_pathology_audit": {
+    "gate_drift": {
+      "status": "PRESENT_AT_BOUNDARY_AND_NOW_CERTIFIED",
+      "gate_dtype": "numpy.float32",
+      "exact_zero_margin_epochs": [75.0, 125.0],
+      "exact_zero_margin_fold_count": 2,
+      "fraction": 0.2857142857142857,
+      "minimum_boundary_margin_ulps": 0.0,
+      "tie_law": "slope equality selects transient; surprise equality does not defer",
+      "current_live_gate_stable": true,
+      "current_live_slope_margin_ulps": 3067246.5,
+      "current_live_surprise_margin_ulps": 2357229.5
+    },
+    "decide_apply_mismatch": {
+      "historical_status": "UNMEASURED_NO_HISTORICAL_APPLY_LEDGER",
+      "structural_status_before": "POSSIBLE",
+      "status_after": "REPLAY_MATCH",
+      "decision_id": "3b9b225c617e58324e242183a433397df9e53d58c4f1796418379830870821d0",
+      "mismatch_behavior": "append MISMATCH_ALARM then fail closed",
+      "router_learning_frozen": false
+    },
+    "backtest_live_distribution_shift": {
+      "status": "BLOCKED_DISTRIBUTION_CUSTODY",
+      "blocker": "no separately hashed visited-live density/support manifest, no production causal manifest, no executed decision rows, no coverage receipt rows, and no provenance-derived clip bounds",
+      "uniform_substitution_allowed": false,
+      "synthetic_434_composition": "synthetic rows may train/propose experts but cannot supply real live-density or adoption authority"
+    }
+  },
+  "forecast_calibration": {
+    "status": "MIS_CALIBRATED_INSTANCE",
+    "diagnostic_only": true,
+    "posterior_kind": "SEQUENTIAL_BETA_BERNOULLI_ROUTE_MATCH_PATH",
+    "prior": "ASSUMED_DATA_NEUTRAL_BETA_1_1; NO_PROMOTION_THRESHOLD",
+    "terminal_posterior": "Beta(6,3)",
+    "terminal_posterior_match_probability": 0.6666666666666666,
+    "terminal_posterior_std": 0.14907119849998599,
+    "float32_stable_bin": {
+      "oracle_matches": "3/5",
+      "mismatch_rate": 0.4,
+      "mean_dispatcher_error": 0.0018393701175227761,
+      "posterior": "Beta(4,3)"
+    },
+    "within_roundoff_bin": {
+      "oracle_matches": "2/2",
+      "mismatch_rate": 0.0,
+      "mean_dispatcher_error": 0.0009873600210994482,
+      "posterior": "Beta(3,1)"
+    },
+    "high_minus_low_match_rate": -0.4,
+    "high_minus_low_mean_error": 0.0008520100964233279,
+    "compute_allocation": "K2_SHADOW_A_RIDGE_SOLVE_OWED_FOR_ALL_FOLDS; CURRENT_ROUTE_UNCHANGED",
+    "full_trajectory_posterior_status": "NOT_IDENTIFIED; future custody/admission feed, not a duplicate estimator",
+    "verdict_scope": "INSTANCE: one trajectory and hindsight-oracle diagnostic labels; no policy adoption"
+  },
+  "lateral_audit": {
+    "name": "PRISM prototype faithfulness",
+    "status": "FAILED_CURRENT_INSTANCE",
+    "max_relative_gap": 0.3980379016841891,
+    "tolerance": 0.35,
+    "verdict_scope": "current prototype explanation counterfactual only; not a router-stability refutation"
+  },
+  "verification": {
+    "pytest": "81 passed in 18.73s",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "git_diff_check": "PASS"
+  }
+}

@@ -28,6 +28,7 @@ clause verbatim inside their composed prompt.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -188,6 +189,51 @@ class DispatchPolicySpec(BaseModel):
 
     def policy_dict(self) -> dict[str, str]:
         return dict(self.regime_tool)
+
+
+class RouterStabilitySpec(BaseModel):
+    """Molt-pattern stability contract for the advisory regime router.
+
+    Clip bounds intentionally have no default: importing an LLM-RL recipe threshold into
+    a nine-interval control-organ backtest would violate value provenance.  Until a real
+    live-density manifest and derived bounds exist, the IS leg compiles to an explicit
+    ``BLOCKED_DISTRIBUTION_CUSTODY`` result rather than uniform weights.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    enabled: bool = True
+    gate_dtype: Literal["numpy.float32"] = "numpy.float32"
+    selection_margin_certificate: Literal[True] = True
+    decide_apply_replay_required: Literal[True] = True
+    router_learning_frozen: Literal[False] = False
+    is_correction: Literal["self_normalized_clipped_masked"] = (
+        "self_normalized_clipped_masked")
+    density_custody_required: Literal[True] = True
+    is_clip_bounds: tuple[float, float] | None = None
+    forecast_calibration: Literal["sequential_beta_bernoulli_route_match"] = (
+        "sequential_beta_bernoulli_route_match")
+    forecast_prior_alpha: float = 1.0
+    forecast_prior_beta: float = 1.0
+    forecast_prior_provenance: Literal[
+        "ASSUMED_DATA_NEUTRAL_BETA_1_1; NO_PROMOTION_THRESHOLD"
+    ] = "ASSUMED_DATA_NEUTRAL_BETA_1_1; NO_PROMOTION_THRESHOLD"
+    untrusted_compute_policy: Literal["k2_shadow_with_A_ridge_solve"] = (
+        "k2_shadow_with_A_ridge_solve")
+    untrusted_fallback_architecture: Literal["A_ridge_solve"] = "A_ridge_solve"
+    provenance: str = (
+        "NVIDIA-NeMo/labs-molt patterns only: fp32 gate + exact discrete route replay "
+        "without freezing router learning + clipped/masked IS. Costate transfer remains "
+        "advisory and real-backtest-gated; no Molt dependency or heavy actuation.")
+
+    @model_validator(mode="after")
+    def _valid_clip_bounds(self) -> "RouterStabilitySpec":
+        if self.is_clip_bounds is not None:
+            low, high = self.is_clip_bounds
+            if not (0.0 < low <= high):
+                raise ValueError("is_clip_bounds must satisfy 0 < low <= high")
+        if not (self.forecast_prior_alpha > 0.0 and self.forecast_prior_beta > 0.0):
+            raise ValueError("forecast Beta prior parameters must be > 0")
+        return self
 
 
 class AcquisitionSpec(BaseModel):
@@ -426,6 +472,7 @@ class CostateAgentProgram(BaseModel):
     experts: tuple[ExpertSpec, ...]
     routing: RoutingSpec
     dispatch_policy: DispatchPolicySpec = DispatchPolicySpec()
+    router_stability: RouterStabilitySpec = RouterStabilitySpec()
     acquisition: AcquisitionSpec = AcquisitionSpec()
     equations: EquationBinding = EquationBinding()
     containment: ContainmentSpec = ContainmentSpec()
@@ -477,6 +524,10 @@ class CostateAgentProgram(BaseModel):
             "dispatch_enabled": self.dispatch_policy.enabled,
             "dispatch_policy": self.dispatch_policy.policy_dict(),
             "dispatch_meta_lambda_guard": self.dispatch_policy.meta_lambda_guard,
+            "router_gate_dtype": self.router_stability.gate_dtype,
+            "router_replay_required": self.router_stability.decide_apply_replay_required,
+            "router_is_correction": self.router_stability.is_correction,
+            "router_is_clip_bounds": self.router_stability.is_clip_bounds,
             "containment_envelope": self.containment.autonomous_envelope,
             "training_stages": {s.name: s.status for s in self.training_pipeline},
         }
@@ -500,6 +551,10 @@ class CostateAgentProgram(BaseModel):
             f"  dispatch: {'ON' if self.dispatch_policy.enabled else 'off'} regime→tool "
             f"{self.dispatch_policy.policy_dict()} "
             f"(meta-λ guard {'on' if self.dispatch_policy.meta_lambda_guard else 'off'})",
+            f"  router stability: gate={self.router_stability.gate_dtype}; "
+            f"decide/apply replay={'required' if self.router_stability.decide_apply_replay_required else 'off'}; "
+            f"IS={self.router_stability.is_correction} "
+            f"(clip={self.router_stability.is_clip_bounds or 'BLOCKED-no-derived-bounds'})",
             f"  acquisition: {self.acquisition.policy} / {self.acquisition.proof_gate}",
             f"  laws: {self.equations.master_action_id} + {self.equations.costate_law_id}",
             f"  containment: {self.containment.autonomous_envelope}; heavy⇒operator-GO; "
@@ -601,6 +656,35 @@ class CompiledCostateOrgan:
             self.sense(), seed=seed,
             meta_lambda_guard=self.program.dispatch_policy.meta_lambda_guard)
 
+    # DECIDE-RECORD — content-address the exact selected arm.  This is the router
+    # analogue of the binding/receiver proof: later APPLY must consume this token.
+    def dispatch_record(self, replay_ledger: str, *, seed: int = 0):
+        from tac.witness_control.router_stability import (
+            append_decide_record,
+            make_decision_record,
+        )
+        traj = self.sense()
+        decision = self.dispatch(seed=seed)
+        cert = decision.classification.gate_certificate
+        if cert is None:
+            raise RuntimeError("dispatch omitted its router-stability certificate")
+        record = make_decision_record(
+            run_ref=Path(traj.run_dir).name,
+            decision_epoch=float(traj.verdicts[-1]["epoch"]),
+            selected_regime=decision.classification.regime,
+            selected_tool=decision.tool,
+            certificate=cert,
+        )
+        return append_decide_record(replay_ledger, record)
+
+    # APPLY-REPLAY — validates/returns the DECIDE arm; it deliberately has no process
+    # or launcher surface and cannot cross the operator-GO boundary.
+    def dispatch_apply(self, replay_ledger: str, decision_id: str,
+                       *, requested_tool: str | None = None):
+        from tac.witness_control.router_stability import replay_apply
+        return replay_apply(replay_ledger, decision_id,
+                            requested_tool=requested_tool)
+
     # DISPATCH BACKTEST — the arbiter (does per-state dispatch beat the global-single-best
     # arm walk-forward? the honest gate, past-only, no look-ahead)
     def dispatch_backtest(self, *, seed: int = 0):
@@ -608,6 +692,35 @@ class CompiledCostateOrgan:
         return backtest_dispatch(
             self.sense(), seed=seed,
             meta_lambda_guard=self.program.dispatch_policy.meta_lambda_guard)
+
+    # FORECAST-CALIBRATE — sequential posterior over the backtest route-match path.
+    # Hindsight oracle labels are diagnostics only; this cannot change an APPLY token.
+    def dispatch_forecast_calibration(self, *, seed: int = 0):
+        from tac.witness_control.router_stability import calibrate_router_forecast
+        backtest = self.dispatch_backtest(seed=seed)
+        spec = self.program.router_stability
+        return calibrate_router_forecast(
+            backtest.fold_rows,
+            prior_alpha=spec.forecast_prior_alpha,
+            prior_beta=spec.forecast_prior_beta,
+            prior_provenance=spec.forecast_prior_provenance,
+            fallback_architecture=spec.untrusted_fallback_architecture,
+        )
+
+    # IS-EVAL — consumes the same #436 fold rows, but refuses a numeric weighted
+    # result until a real visited-live density manifest supplies custody.
+    def dispatch_is_backtest(self, *, seed: int = 0, density_custody=None,
+                             support_mask=None):
+        from tac.witness_control.router_stability import (
+            importance_weighted_architecture_eval,
+        )
+        backtest = self.dispatch_backtest(seed=seed)
+        return importance_weighted_architecture_eval(
+            backtest.fold_rows,
+            custody=density_custody,
+            clip_bounds=self.program.router_stability.is_clip_bounds,
+            support_mask=support_mask,
+        )
 
     # REFLECT — one GEPA cycle (reflection proposes, backtest disposes; Pareto
     # frontier over measured candidates; adoption only through the Gödel gate)
