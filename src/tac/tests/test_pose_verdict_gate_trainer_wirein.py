@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Task-494 adversarial tests for the frozen-pose verdict skip wire-in."""
+"""Adversarial tests for retirement of the unbound pose-verdict fallback."""
 
 from __future__ import annotations
 
@@ -33,38 +33,23 @@ def _load_trainer():
     return module
 
 
-def test_pose_verdict_gate_is_a_real_composable_dsl_lever() -> None:
-    assert "PoseVerdictGate" in lever_registry.name_composable_levers()
-    lever = lever_registry.resolve_composable_lever("PoseVerdictGate")
-    assert lever.overrides == {
-        "--verdict-pose-gate": True,
-        "--verdict-pose-canary-every": 8,
-        "--banked-r1-dpose": 0.001610,
-    }
-    assert not cd.BASELINE.with_lever(lever).validate()
-
-    assert "PoseVerdictGateDryStart" in lever_registry.name_composable_levers()
-    probe = lever_registry.resolve_composable_lever("PoseVerdictGateDryStart")
-    assert probe.overrides["--eval-every"] == 1
-    assert probe.overrides["--verdict-pose-canary-every"] == 2
-    assert not cd.BASELINE.with_lever(probe).validate()
+def test_pose_verdict_gate_names_fail_closed_at_composition() -> None:
+    names = lever_registry.name_composable_levers()
+    assert "PoseVerdictGate" not in names
+    assert "PoseVerdictGateDryStart" not in names
 
 
-def test_pose_verdict_gate_rejects_invalid_values() -> None:
-    with pytest.raises(ValueError, match="canary_every must be > 0"):
-        cd.PoseVerdictGate(canary_every=0)
-    with pytest.raises(ValueError, match="finite and >= 0"):
-        cd.PoseVerdictGate(banked_r1_dpose=float("nan"))
-    with pytest.raises(ValueError, match="finite and >= 0"):
-        cd.PoseVerdictGate(banked_r1_dpose=-1.0)
+def test_pose_verdict_gate_rejects_every_legacy_value() -> None:
+    with pytest.raises(ValueError, match="no payload-bound pose cache"):
+        cd.PoseVerdictGate(canary_every=1, banked_r1_dpose=0.0)
 
 
-def test_real_parser_defaults_off_and_accepts_dsl_values() -> None:
+def test_real_parser_preserves_only_disabled_legacy_parse_surface() -> None:
     parser = cd.build_real_trainer_parser()
     defaults = parser.parse_args(["--out-dir", "task494_parser_only"])
     assert defaults.verdict_pose_gate is False
     assert defaults.verdict_pose_canary_every == 8
-    assert defaults.banked_r1_dpose == pytest.approx(0.001610)
+    assert not hasattr(defaults, "banked_r1_dpose")
     armed = parser.parse_args(
         [
             "--out-dir",
@@ -72,13 +57,10 @@ def test_real_parser_defaults_off_and_accepts_dsl_values() -> None:
             "--verdict-pose-gate",
             "--verdict-pose-canary-every",
             "3",
-            "--banked-r1-dpose",
-            "0.002",
         ]
     )
     assert armed.verdict_pose_gate is True
     assert armed.verdict_pose_canary_every == 3
-    assert armed.banked_r1_dpose == pytest.approx(0.002)
 
 
 def test_cpu_chunked_skip_never_calls_posenet(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -141,9 +123,8 @@ def test_wirein_covers_all_branches_and_resume_counter() -> None:
         "_verdict_subprocess_on and _pose_decision.compute_live",
         "_gpu_verdict_dseg_chunked(",
         "_verdict_dseg_dpose_nucleus_chunked(",
-        "banked_pose_telemetry(",
-        "canary_drift(",
-        '"__pvg_"',
-        'v.pop("_pose_gate_telemetry", None)',
+        "check_pose_verdict_fallback_is_live_or_refused(",
     ):
         assert required in source
+    for forbidden in ("banked_pose_telemetry(",):
+        assert forbidden not in source

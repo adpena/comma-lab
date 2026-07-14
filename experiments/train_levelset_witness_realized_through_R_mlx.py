@@ -142,8 +142,7 @@ from tac.optimization.muon_finisher_mlx import (  # noqa: E402
     count_muon_adamw_split,
 )
 from tac.witness_control.pose_verdict_gate import (  # noqa: E402
-    banked_pose_telemetry,
-    canary_drift,
+    check_pose_verdict_fallback_is_live_or_refused,
     decide_pose_verdict,
 )
 from tac.witness_control.telemetry_producers import (  # noqa: E402
@@ -386,10 +385,10 @@ def _paired_seg_anchor(
     *,
     vbatch: int,
 ) -> dict[str, Any]:
-    """CPU/MLX Seg-only anchor for a pose-gated GPU verdict.
+    """CPU/MLX Seg-only diagnostic for a pose-gated GPU verdict.
 
     The emitted row is intentionally a different schema from the paired Seg+Pose drift
-    row so banked pose telemetry can never masquerade as a live PoseNet comparison.
+    row so an absent pose computation can never masquerade as a live PoseNet comparison.
     """
 
     n = len(f1s)
@@ -416,9 +415,9 @@ def _paired_seg_anchor(
         "d_seg_cpu": float(np.mean(cpu_ds)),
         "d_seg_gpu": float(np.mean(gpu_ds)),
         "argmax_flip_disagreement_count": flips,
-        "d_pose_source": "banked_R1_pose_gated",
+        "d_pose_source": "unavailable_live_posenet_required",
         "d_pose_live": False,
-        "axis": "[macOS CPU/MLX advisory; pose banked NON-LIVE] NON-PROMOTABLE",
+        "axis": "[macOS CPU/MLX advisory; no numeric d_pose] NON-PROMOTABLE",
     }
 
 
@@ -7660,36 +7659,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         )
 
         def _finish_pose_gate(v: dict[str, Any]) -> dict[str, Any]:
-            if not _pose_decision.compute_live:
-                telemetry = banked_pose_telemetry(
-                    float(args.banked_r1_dpose), _pose_decision.reason
+            if not _pose_decision.compute_live or v.get("d_pose") is None:
+                raise RuntimeError(
+                    "pose verdict guard REFUSE: numeric live PoseNet d_pose is required; "
+                    "non-live substitutions may not reach implied score"
                 )
-                v["d_pose"] = float(telemetry["d_pose"])
-                v["_pose_gate_telemetry"] = {
-                    **{key: value for key, value in telemetry.items() if key != "d_pose"},
-                    "pose_verdict_index": _pose_verdict_index,
-                }
-            elif bool(getattr(args, "verdict_pose_gate", False)):
-                v["_pose_gate_telemetry"] = {
-                    "d_pose_source": "live",
-                    "d_pose_axis": "[macOS-CPU-torch advisory; LIVE] NON-PROMOTABLE",
-                    "d_pose_live": True,
-                    "pose_gate_reason": _pose_decision.reason,
-                    "pose_verdict_index": _pose_verdict_index,
-                }
-                if _pose_decision.is_canary:
-                    print(
-                        json.dumps(
-                            {
-                                **canary_drift(
-                                    float(v["d_pose"]), float(args.banked_r1_dpose)
-                                ),
-                                "epoch": int(ep),
-                                "verdict_index": _pose_verdict_index,
-                            }
-                        ),
-                        flush=True,
-                    )
             return v
         # (operator 2026-07-08) GPU verdict device. Runs the ADVISORY d_seg/d_pose through the MLX
         # scorer ports (the nucleus-guard / ladder controllers are refused up-front, so the gpu path
@@ -12873,10 +12847,9 @@ def main(argv: list[str] | None = None) -> int:
         "--verdict-pose-gate",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="(task-494, default OFF) skip the frozen CPU/MLX PoseNet verdict while the pose "
-        "carrier is pre-finish frozen; substitute explicitly labelled banked-R1 d_pose telemetry "
-        "and force a live drift canary every --verdict-pose-canary-every verdicts. Score-neutral "
-        "telemetry optimization; live PoseNet resumes when pose engages.",
+        help="(task-494 compatibility, default OFF) RETIRED/REFUSED: current V9 does not import "
+        "a payload-bound pose cache, so enabling this option fails closed and live PoseNet remains "
+        "mandatory. A future replacement needs current-run payload+receiver custody.",
     )
     ap.add_argument(
         "--verdict-pose-canary-every",
@@ -12885,11 +12858,11 @@ def main(argv: list[str] | None = None) -> int:
         help="(task-494) pose-verdict gate live-canary cadence; clamped to at least 1.",
     )
     ap.add_argument(
-        "--banked-r1-dpose",
+        "--unselected-r1-advisory-dpose",
         type=float,
-        default=0.001610,
-        help="(task-494) banked R1 d_pose emitted only with an explicit NON-LIVE source label "
-        "while --verdict-pose-gate skips frozen-pose PoseNet forwards.",
+        default=None,
+        help="DEPRECATED historical read-only reference; any supplied numeric value is refused "
+        "for training/verdict execution and can never enter the score path.",
     )
     ap.add_argument("--verdict-subprocess", action=argparse.BooleanOptionalAction, default=False,
                     help="(#330 memory-reclaim) run the CPU-torch verdict's chunked scorer forward in a "
@@ -14452,6 +14425,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="#323 recompute the per-class rungs (and rebuild masks on a rung CHANGE) every N "
                     "epochs (bounds the rebuild cost; a rung changes at most ~r0 times per arm per run).")
     args = ap.parse_args(argv)
+    check_pose_verdict_fallback_is_live_or_refused(
+        gate_on=bool(args.verdict_pose_gate),
+        configured_nonlive_dpose=args.unselected_r1_advisory_dpose,
+    )
 
     # (#254) P0 admission guard: refuse a RAW heavy launch that skipped the governed admission gate
     # (tools/launch_witness_run.py / tools/safe_run.py / spawn_durable_daemon register the footprint

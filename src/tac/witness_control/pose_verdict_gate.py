@@ -1,43 +1,71 @@
 # SPDX-License-Identifier: MIT
-"""Pose-verdict gate — skip the CPU-torch PoseNet forward while pose is FROZEN.
+"""Fail-closed guard for the retired banked-pose verdict substitution.
 
-The authority verdict computes d_seg (SegNet) + d_pose (PoseNet) every eval. MEASURED on
-the n96 macOS-CPU Torch one-thread advisory timer
-(``frozen_scorer_verdict_wallclock_n96_20260714``): d_pose = **22.6%** of 59.615 s,
-or about 13.47 s. The corresponding n600 PoseNet cost is **DERIVED**, not measured:
-about 84.2 s under linear projection. During the entire pre-pose-finish phase ``w_pose = 0``
-— the pose carrier
-(dxi) is FROZEN at the banked-R1 init, so pose is NOT descending and the live d_pose is
-non-actionable telemetry. Recomputing PoseNet every verdict is dead work.
-
-This gate SKIPS the live PoseNet forward while pose is frozen and ships the banked-R1 d_pose
-**LABELLED ``banked``** (never passed off as a live measurement — a checkpoint number reported
-as a live verdict is the surrogate-as-authority NO-FAKE trap). It composes with a cheap
-**drift-canary**: every ``canary_every`` verdicts it forces a live compute so a real d_pose
-drift (frame_1 changes as SEG trains, and PoseNet reads both frames) is caught for ~1/K the cost
-instead of paying 23% every verdict.
-
-Score-neutral: skipping a TELEMETRY forward changes no trained weight, no archive byte, no d_seg.
-The costate/shadow controllers already tolerate ``d_pose=None``/banked (costate_estimator
-line 141). Post-finish (pose engaged) the live forward returns — d_pose is actionable again.
-
-Authority of the returned d_pose while gated: ``[banked-R1 pose-gated; NON-LIVE]``. NON-PROMOTABLE.
+The R1 artifact is a real full-n600 byte-closed macOS-CPU advisory artifact, but
+the live V9 program does not import its pose payload.  Substituting its scalar
+``d_pose`` into a current-run verdict would therefore be a confounded score path.
+Until a current-run, payload-bound cache with receiver custody exists, PoseNet is
+always computed live.  No numeric non-live value can reach implied score,
+checkpoint selection, or a controller.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-# Banked R1 dxi d_pose (byte-close measured, memory L68 / r1_dxi_shippability): the frozen
-# pre-finish pose value. Default only; the trainer passes the run's own banked value.
+POSE_VERDICT_GUARD_SCHEMA = "pose_verdict_live_or_refused.v1"
+
+# Retained only so older checkpoints/config imports remain loadable.  This
+# number cannot be returned by the live score path.
 BANKED_R1_DPOSE_DEFAULT = 0.001610
+
+
+class PoseVerdictGateError(ValueError):
+    """A non-live pose scalar attempted to enter the score path."""
 
 
 @dataclass(frozen=True)
 class PoseGateDecision:
-    compute_live: bool          # True => run the real PoseNet forward this verdict
-    is_canary: bool             # True => a forced live compute purely to measure drift
-    reason: str                 # provenance for the telemetry row
-    d_pose_source: str          # "live" | "banked_R1_pose_gated"
+    compute_live: bool
+    is_canary: bool
+    reason: str
+    d_pose_source: str
+
+
+def check_pose_verdict_fallback_is_live_or_refused(
+    *,
+    gate_on: bool,
+    configured_nonlive_dpose: float | None = None,
+    legacy_read_only_waiver: bool = False,
+) -> dict[str, Any]:
+    """Return a guard receipt or refuse any enabled non-live score substitution.
+
+    ``legacy_read_only_waiver`` permits parsing an old *disabled* configuration for
+    audit/replay.  It never permits an enabled gate or a numeric score-path value.
+    """
+
+    if gate_on:
+        raise PoseVerdictGateError(
+            "--verdict-pose-gate REFUSE: current V9 has no payload-bound pose cache; "
+            "live PoseNet is required"
+        )
+    if configured_nonlive_dpose is not None and not legacy_read_only_waiver:
+        raise PoseVerdictGateError(
+            "numeric non-live d_pose is forbidden outside historical read-only parsing"
+        )
+    return {
+        "schema": POSE_VERDICT_GUARD_SCHEMA,
+        "gate_enabled": False,
+        "score_path_d_pose_source": "live_posenet",
+        "numeric_nonlive_dpose_admitted": False,
+        "legacy_reference_present": configured_nonlive_dpose is not None,
+        "legacy_read_only_waiver": bool(legacy_read_only_waiver),
+        "reference_authority": (
+            "full-n600 byte-closed macOS-CPU advisory; unselected"
+            if configured_nonlive_dpose is not None
+            else None
+        ),
+    }
 
 
 def decide_pose_verdict(
@@ -48,55 +76,51 @@ def decide_pose_verdict(
     gate_on: bool,
     canary_every: int,
 ) -> PoseGateDecision:
-    """Return whether to compute the live d_pose this verdict.
+    """Select the only admitted current score path: a live PoseNet forward."""
 
-    ``pose_engaged_epoch < 0`` OR ``epoch < pose_engaged_epoch`` => pose is FROZEN (pre-finish).
-    ``verdict_index`` is a monotonic per-run verdict counter (0-based); the canary fires when
-    ``verdict_index % canary_every == 0`` (so index 0 always computes live => the first row is a
-    real anchor, never a bare banked constant).
-    """
-    # Gate off, or pose has engaged => always live (the incumbent, byte-identical behaviour).
-    engaged = pose_engaged_epoch >= 0 and epoch >= pose_engaged_epoch
-    if not gate_on or engaged:
-        return PoseGateDecision(True, False, "pose_engaged_or_gate_off", "live")
-    # Pre-finish: canary cadence forces a live compute to measure drift; else ship banked.
-    k = max(1, int(canary_every))
-    if verdict_index % k == 0:
-        return PoseGateDecision(True, True, f"canary(index={verdict_index},every={k})", "live")
-    return PoseGateDecision(False, False, "pose_frozen_pre_finish", "banked_R1_pose_gated")
+    del epoch, pose_engaged_epoch, verdict_index, canary_every
+    check_pose_verdict_fallback_is_live_or_refused(gate_on=gate_on)
+    return PoseGateDecision(
+        compute_live=True,
+        is_canary=False,
+        reason="live_posenet_required_no_payload_bound_fallback",
+        d_pose_source="live",
+    )
 
 
-def banked_pose_telemetry(banked_dpose: float, reason: str) -> dict:
-    """The LABELLED banked-d_pose telemetry fields (honest: never claims 'live')."""
+def banked_pose_telemetry(banked_dpose: float, reason: str) -> dict[str, Any]:
+    """Refuse the retired numeric substitution while preserving import ABI."""
+
+    del banked_dpose, reason
+    raise PoseVerdictGateError(
+        "banked_pose_telemetry is retired: live PoseNet is required"
+    )
+
+
+def canary_drift(live_dpose: float, banked_dpose: float) -> dict[str, Any]:
+    """Return explicitly non-authoritative historical drift diagnostics."""
+
+    live = float(live_dpose)
+    banked = float(banked_dpose)
+    abs_drift = abs(live - banked)
     return {
-        "d_pose": float(banked_dpose),
-        "d_pose_source": "banked_R1_pose_gated",
-        "d_pose_axis": "[banked-R1 pose-gated; NON-LIVE] NON-PROMOTABLE",
-        "d_pose_live": False,
-        "pose_gate_reason": reason,
-    }
-
-
-def canary_drift(live_dpose: float, banked_dpose: float) -> dict:
-    """Drift row emitted whenever the canary fires: how far live has moved from banked-R1."""
-    abs_drift = abs(float(live_dpose) - float(banked_dpose))
-    rel = abs_drift / max(1e-12, abs(float(banked_dpose)))
-    return {
-        "stage": "pose_gate_canary",
-        "d_pose_live": float(live_dpose),
-        "d_pose_banked": float(banked_dpose),
+        "schema": "pose_verdict_historical_drift_diagnostic.v1",
+        "d_pose_live": live,
+        "d_pose_historical_reference": banked,
         "abs_drift": abs_drift,
-        "rel_drift": rel,
-        "axis": "[macOS-CPU-torch 1-thread advisory] NON-PROMOTABLE",
-        "note": "if abs_drift stays small the banked constant is trustworthy between canaries; "
-                "a rising drift = SEG-training is moving PoseNet's input => widen the live cadence.",
+        "rel_drift": abs_drift / max(1e-12, abs(banked)),
+        "score_claim": False,
+        "selection_eligible": False,
     }
 
 
 __all__ = [
     "BANKED_R1_DPOSE_DEFAULT",
+    "POSE_VERDICT_GUARD_SCHEMA",
     "PoseGateDecision",
+    "PoseVerdictGateError",
     "banked_pose_telemetry",
     "canary_drift",
+    "check_pose_verdict_fallback_is_live_or_refused",
     "decide_pose_verdict",
 ]

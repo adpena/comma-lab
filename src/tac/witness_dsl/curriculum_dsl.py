@@ -2576,60 +2576,21 @@ def PoseVerdictGate(
     banked_r1_dpose: float = 0.001610,
     window: int = 0,
 ) -> Lever:
-    """Skip PoseNet verdict forwards only while the pose carrier is frozen.
+    """Refuse the retired unbound banked-pose substitution lever."""
 
-    This task-494 throughput lever is score-neutral: it does not alter training or archive
-    bytes. Every skipped value is labelled ``banked_R1_pose_gated``/NON-LIVE, verdict zero
-    is a live anchor, every ``canary_every`` verdicts forces a live drift measurement, and
-    PoseNet resumes unconditionally once terminal pose finish engages. Default OFF keeps the
-    incumbent verdict path byte-identical.
-    """
-
-    cadence = int(canary_every)
-    if cadence <= 0:
-        raise ValueError(f"PoseVerdictGate: canary_every must be > 0, got {canary_every!r}")
-    banked = float(banked_r1_dpose)
-    if not math.isfinite(banked) or banked < 0.0:
-        raise ValueError(
-            "PoseVerdictGate: banked_r1_dpose must be finite and >= 0, "
-            f"got {banked_r1_dpose!r}"
-        )
-    return Lever(
-        "task494_pose_verdict_gate",
-        overrides={
-            "--verdict-pose-gate": True,
-            "--verdict-pose-canary-every": cadence,
-            "--banked-r1-dpose": banked,
-        },
-        epochs_delta=int(window),
-        notes=(
-            "task-494 default-off score-neutral PoseNet verdict skip while pose is frozen; "
-            "banked d_pose is explicitly NON-LIVE; live canary + post-engagement restore"
-        ),
+    del canary_every, banked_r1_dpose, window
+    raise ValueError(
+        "PoseVerdictGate is retired: no payload-bound pose cache exists; "
+        "live PoseNet is required"
     )
 
 
 def PoseVerdictGateDryStart(window: int = 0) -> Lever:
-    """Bounded n96 dry-start treatment that exposes both skip and canary paths.
+    """Refuse the retired dry-start for the unbound pose substitution."""
 
-    ``eval_every=1`` and a two-verdict canary cadence guarantee a three-epoch
-    governed dry-start exercises live -> banked -> live, including its resume
-    round-trip. This is measurement scaffolding, not the production cadence.
-    """
-
-    return Lever(
-        "task494_pose_verdict_gate_dry_start",
-        overrides={
-            "--verdict-pose-gate": True,
-            "--verdict-pose-canary-every": 2,
-            "--banked-r1-dpose": 0.001610,
-            "--eval-every": 1,
-        },
-        epochs_delta=int(window),
-        notes=(
-            "task-494 n96 governed dry-start probe: live/banked/live PoseNet verdict sequence; "
-            "production PoseVerdictGate cadence remains 8"
-        ),
+    del window
+    raise ValueError(
+        "PoseVerdictGateDryStart is retired: live PoseNet is required"
     )
 
 

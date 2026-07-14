@@ -1,76 +1,70 @@
 # SPDX-License-Identifier: MIT
-"""Tests for the pose-verdict gate (skip PoseNet forward while pose is frozen)."""
+"""Guards for the retired banked-pose verdict substitution."""
 from __future__ import annotations
+
+import pytest
 
 from tac.witness_control.pose_verdict_gate import (
     BANKED_R1_DPOSE_DEFAULT,
+    PoseVerdictGateError,
     banked_pose_telemetry,
     canary_drift,
+    check_pose_verdict_fallback_is_live_or_refused,
     decide_pose_verdict,
 )
 
 
-def _d(**kw):
-    base = {"epoch": 10, "pose_engaged_epoch": 726, "verdict_index": 3,
-            "gate_on": True, "canary_every": 8}
-    base.update(kw)
-    return decide_pose_verdict(**base)
+def test_gate_off_always_requires_live_posenet() -> None:
+    decision = decide_pose_verdict(
+        epoch=10,
+        pose_engaged_epoch=726,
+        verdict_index=3,
+        gate_on=False,
+        canary_every=8,
+    )
+    assert decision.compute_live is True
+    assert decision.d_pose_source == "live"
+    assert decision.is_canary is False
 
 
-def test_gate_off_always_live():
-    d = _d(gate_on=False)
-    assert d.compute_live and not d.is_canary and d.d_pose_source == "live"
+def test_enabled_nonlive_gate_fails_closed() -> None:
+    with pytest.raises(PoseVerdictGateError, match="live PoseNet is required"):
+        decide_pose_verdict(
+            epoch=10,
+            pose_engaged_epoch=726,
+            verdict_index=3,
+            gate_on=True,
+            canary_every=8,
+        )
 
 
-def test_pose_engaged_always_live():
-    # epoch past the engage point => pose descending => must be live.
-    d = _d(epoch=800, pose_engaged_epoch=726)
-    assert d.compute_live and d.d_pose_source == "live"
+def test_numeric_nonlive_pose_is_refused() -> None:
+    with pytest.raises(PoseVerdictGateError, match="numeric non-live d_pose"):
+        check_pose_verdict_fallback_is_live_or_refused(
+            gate_on=False, configured_nonlive_dpose=0.001610
+        )
 
 
-def test_engaged_epoch_boundary_is_live():
-    d = _d(epoch=726, pose_engaged_epoch=726)
-    assert d.compute_live
+def test_legacy_waiver_is_read_only_and_cannot_enable_gate() -> None:
+    receipt = check_pose_verdict_fallback_is_live_or_refused(
+        gate_on=False,
+        configured_nonlive_dpose=0.001610,
+        legacy_read_only_waiver=True,
+    )
+    assert receipt["numeric_nonlive_dpose_admitted"] is False
+    assert receipt["score_path_d_pose_source"] == "live_posenet"
+    assert receipt["reference_authority"].endswith("unselected")
+    with pytest.raises(PoseVerdictGateError, match="live PoseNet is required"):
+        check_pose_verdict_fallback_is_live_or_refused(
+            gate_on=True,
+            configured_nonlive_dpose=0.001610,
+            legacy_read_only_waiver=True,
+        )
 
 
-def test_pre_finish_ships_banked():
-    d = _d(epoch=10, pose_engaged_epoch=726, verdict_index=3, canary_every=8)
-    assert not d.compute_live
-    assert d.d_pose_source == "banked_R1_pose_gated"
-    assert "pre_finish" in d.reason
-
-
-def test_canary_fires_on_cadence():
-    d = _d(verdict_index=8, canary_every=8)  # 8 % 8 == 0
-    assert d.compute_live and d.is_canary and d.d_pose_source == "live"
-
-
-def test_index_zero_is_always_a_live_anchor():
-    d = _d(verdict_index=0, canary_every=8)
-    assert d.compute_live and d.is_canary  # first verdict never a bare banked constant
-
-
-def test_never_engaged_pre_finish_ships_banked():
-    d = _d(epoch=100, pose_engaged_epoch=-1, verdict_index=1, canary_every=8)
-    assert not d.compute_live and d.d_pose_source == "banked_R1_pose_gated"
-
-
-def test_canary_every_one_is_always_live():
-    # K=1 => every verdict is a canary => full drift visibility, zero savings (safe default rollout).
-    for i in range(5):
-        assert _d(verdict_index=i, canary_every=1).compute_live
-
-
-def test_banked_telemetry_is_labelled_nonlive():
-    t = banked_pose_telemetry(BANKED_R1_DPOSE_DEFAULT, "pose_frozen_pre_finish")
-    assert t["d_pose"] == BANKED_R1_DPOSE_DEFAULT
-    assert t["d_pose_live"] is False
-    assert t["d_pose_source"] == "banked_R1_pose_gated"
-    assert "NON-LIVE" in t["d_pose_axis"] and "NON-PROMOTABLE" in t["d_pose_axis"]
-
-
-def test_canary_drift_computation():
-    r = canary_drift(0.00200, 0.00161)
-    assert abs(r["abs_drift"] - 0.00039) < 1e-9
-    assert r["d_pose_live"] == 0.00200 and r["d_pose_banked"] == 0.00161
-    assert r["rel_drift"] > 0.0
+def test_legacy_import_surface_cannot_reenable_numeric_substitution() -> None:
+    with pytest.raises(PoseVerdictGateError, match="live PoseNet is required"):
+        banked_pose_telemetry(BANKED_R1_DPOSE_DEFAULT, "historical")
+    diagnostic = canary_drift(0.002, BANKED_R1_DPOSE_DEFAULT)
+    assert diagnostic["score_claim"] is False
+    assert diagnostic["selection_eligible"] is False
