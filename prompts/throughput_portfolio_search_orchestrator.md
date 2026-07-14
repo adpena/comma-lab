@@ -24,10 +24,12 @@ subagent-coherence risk, while GPU is governor-gated + $-capped. Concretely:
 
 1. **The MAIN thread is the persistent root.** It holds the family registry, runs the adversarial
    audit itself, synthesizes across rounds, and launches new rounds. **Never delegate the root loop.**
-2. **HARD CAP: ≤ 3 concurrent subagent arms** (operator 2026-07-14: *"We can fan out but only to three
-   subagents"*). Fan-out IS permitted — up to three. Prefer sequential rounds of 1–2 when a family can
-   develop alone. Before spawning, `tools/codex_status.py` — never duplicate a live arm (route to it via
-   broadcast inbox instead), and never launch a new arm while 3 are already live; let one drain first.
+2. **HARD CAP: ≤ 3 subagents fanned out ON A SINGLE TASK** (operator 2026-07-14: *"We can fan out but
+   only to three subagents"* + *"The cap only applies to fanout on a single task"*). The cap is
+   PER-TASK, not a global concurrent-arm ceiling: one task may fan out to at most 3 arms; distinct
+   tasks/families each carry their own budget, so the total live fleet across the portfolio can exceed 3.
+   Prefer sequential rounds of 1–2 when a family can develop alone. Before spawning,
+   `tools/codex_status.py` — never duplicate a live arm (route to it via broadcast inbox instead).
 3. **Spend a subagent ONLY for one of two things:** (a) a family that needs *genuinely independent*
    parallel development (the CDC independence-preservation payoff — but at N≤4, not 64), or (b) one
    deep single-family dig that needs a fresh full context window (the SOL-ultra pattern). **Never** for
