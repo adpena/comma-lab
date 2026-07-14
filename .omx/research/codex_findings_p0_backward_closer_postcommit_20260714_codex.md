@@ -63,3 +63,38 @@ Sibling costate-provider families remain open.
 - tracked K2 compact receipt, sparse-adjoint memo, terminal handoff receipt, synthesis memo, and
   DAG FEED under `.omx/research/`
 
+## Second exact-commit review and closure
+
+Commit `668a2886842759d3867e7e47ecfc4e15e6dea986` passed the independent science/math
+re-derivation but remained **NOT CLEAN** on authority and integration. Review-counter rounds 4--6
+preserve those exact-commit verdicts. The subsequent closure does not count that isolated science
+pass toward a future three-clean seal.
+
+1. **HIGH -- allowlisting was necessary but not sufficient.** The first correction still left a
+   future typed production receipt able to self-attest an incomplete evaluator transaction. The
+   production validator registry is therefore now deliberately empty: even an allowlisted,
+   byte-hash-matching, semantically well-formed v1 receipt is refused, so this lane cannot mint a
+   production `measured` row. Re-enablement requires a new reviewed schema that binds the exact
+   archive copy actually evaluated, an immutable executed runtime, scorer import origins, the
+   canonical n600 names/GT transaction, and their complete pre/post custody. Research-diagnostic
+   rows remain separately hash-bound and non-promotable. This is a fail-closed blocker, not a claim
+   that the existing general-purpose `contest_auth_eval.py` transaction already supplies those
+   missing guarantees.
+2. **HIGH -- future producers still exposed obsolete timing routing.** The raw probe now emits
+   `PENDING_CORRECTED_ADJUDICATION_NO_GO`. Corrected non-admission emits
+   `FIDELITY_BLOCKED_PENDING_NEW_FORMULATION`; even a hypothetical fidelity admission stops at
+   `FIDELITY_ADMITTED_PENDING_PROVIDER_RESUME_PARITY_NO_TIMER_GO`. Every current request/grant
+   boolean is false. Only a separate provider/resume-parity validator may later make a timer request
+   eligible.
+3. **HIGH -- immutable v2 resume needed equation-aware compatibility.** Public resume accepts only
+   the exact code-pinned legacy receipt/complete/run-contract/objective/scorer/full-run identity.
+   It re-derives the historical v2 economics from sealed pair rows, keeps the corrected economics
+   separate and non-authoritative, and normalizes only the public control-routing view in memory.
+   The real pinned run re-derived historical `1.4538672169368423x` versus corrected diagnostic
+   `1.4099643443401577x`, returned no-GO routing, loaded no scorer/trainer, and left all 608 sealed
+   regular files byte-identical. Unpinned, resealed, current, and incomplete paths remain on strict
+   rejection/current-contract enforcement.
+
+The closure changes no scientific verdict: direct raw-input-costate zero-order-hold K2 remains
+`NOT_ADMITTED`; sparse realized saving remains `1.0x`; terminal exact-metric post-training search
+remains route-local; composed admitted bulk teacher-cost reduction remains `0%`.

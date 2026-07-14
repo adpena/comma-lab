@@ -88,6 +88,28 @@ def test_exact_call_amortization_counts_fallback_without_fake_speedup() -> None:
     assert calls["backward_call_reduction_fraction"] == pytest.approx(3 / 8)
 
 
+def test_raw_probe_timing_routing_requires_corrected_adjudication_without_go() -> None:
+    routing = probe.raw_probe_timing_routing()
+    assert routing == {
+        "status": probe.RAW_PROBE_TIMING_STATUS,
+        "corrected_adjudication_required": True,
+        "operator_go_request_eligible": False,
+        "operator_go_granted": False,
+    }
+    surfaces = probe.raw_probe_timing_surfaces()
+    assert surfaces == {
+        "fidelity_gate": {
+            "in_loop_timing": routing["status"],
+            "timing_routing": routing,
+        },
+        "authority": {
+            "whole_epoch_speedup": routing["status"],
+            "operator_go_request_eligible": False,
+            "operator_go_granted": False,
+        },
+    }
+
+
 def test_aggregate_charges_forward_guard_and_only_labels_accepted_regret() -> None:
     aggregate = probe.aggregate_records([_row(0, accepted=True), _row(1, accepted=False)])
     forward_share = probe.DIAGNOSTIC_FORWARD_SHARE
@@ -97,8 +119,28 @@ def test_aggregate_charges_forward_guard_and_only_labels_accepted_regret() -> No
     assert rejection["guard_forward"] == pytest.approx(forward_share)
     assert rejection["rollback_exact_forward_plus_backward_refresh"] == 1.0
     assert rejection["total"] == pytest.approx(1.0 + forward_share)
+    assert aggregate["diagnostic_teacher_slice_economics"]["whole_epoch_speedup"] == (probe.RAW_PROBE_TIMING_STATUS)
     assert aggregate["accepted_stale_minus_exact_regret"]["ce"]["mean"] == pytest.approx(-0.01)
     assert aggregate["all_eligible_stale_minus_exact_regret"]["ce"]["mean"] == pytest.approx(0.005)
+
+
+def test_legacy_v2_rederivation_reproduces_superseded_equation_from_rows() -> None:
+    rows = [_row(0, accepted=True), _row(1, accepted=False)]
+    legacy = probe._aggregate_records_legacy_v2(rows)
+    corrected = probe.aggregate_records(rows)
+    alpha = probe.DIAGNOSTIC_FORWARD_SHARE
+    legacy_economics = legacy["diagnostic_teacher_slice_economics"]
+    corrected_economics = corrected["diagnostic_teacher_slice_economics"]
+
+    assert legacy_economics["formula"] == "2/(1+forward_share+fallback_rate*(1-forward_share))"
+    assert legacy_economics["whole_epoch_speedup"] == probe.HISTORICAL_EMBEDDED_WHOLE_EPOCH_LABEL
+    assert legacy_economics["conditional_speedup_x"] == pytest.approx(2.0 / (1.0 + alpha + 0.5 * (1 - alpha)))
+    assert legacy_economics["required_accept_fraction_strict_gt"] == pytest.approx(2 * alpha / (1 - alpha))
+    assert "guarded_expected_cost" not in legacy_economics
+    assert "rejected_second_step_charge" not in legacy_economics
+    assert corrected_economics["formula"] == "2/(2+forward_share-accept_fraction)"
+    assert corrected_economics["conditional_speedup_x"] != legacy_economics["conditional_speedup_x"]
+    assert probe._canonical_sha256(probe.LEGACY_V2_ADMISSION_SPEC) == (probe.EXPECTED_LEGACY_ADMISSION_SPEC_SHA256)
 
 
 def test_admission_requires_rate_above_derived_amdahl_gate_and_all_fidelity() -> None:
@@ -292,6 +334,188 @@ def _contract(payload: dict) -> dict:
     }
 
 
+def _completed_receipt_fixture(tmp_path: Path, *, routing_class: str) -> dict:
+    if routing_class == probe.CURRENT_TIMING_ROUTING_CLASS:
+        admission_spec = probe.ADMISSION_SPEC
+    elif routing_class == probe.LEGACY_TIMING_ROUTING_CLASS:
+        admission_spec = probe.LEGACY_V2_ADMISSION_SPEC
+    else:
+        raise AssertionError(f"unsupported fixture routing class: {routing_class}")
+    contract = _contract(
+        {
+            "schema": probe.SCHEMA,
+            "git_head_at_launch": "a" * 40,
+            "output_dir": str(tmp_path.resolve()),
+            "source_custody": {},
+            "objective_sha256": "b" * 64,
+            "scorer_sha256": "c" * 64,
+            "admission_spec": admission_spec,
+            "admission_spec_sha256": probe._canonical_sha256(admission_spec),
+            "constants": {"n_pairs": 1},
+            "max_pairs": None,
+        }
+    )
+    assignment = _Assignment(0)
+    (tmp_path / "pairs").mkdir()
+    probe._atomic_json(probe._pair_path(tmp_path, 0), _sealed_row(assignment, contract["sha256"]))
+    manifest = probe._stage_manifest(tmp_path, "v9", [assignment], contract["sha256"])
+    manifest_path = tmp_path / "stage_v9_complete.json"
+    stage_custody = [
+        {
+            "checkpoint_name": "v9",
+            "run_contract_sha256": contract["sha256"],
+            "state_count": 1,
+            "tree_sha256": manifest["tree_sha256"],
+            "path": str(manifest_path),
+            "bytes": manifest_path.stat().st_size,
+            "sha256": probe._sha256(manifest_path),
+        }
+    ]
+    records = probe._load_records(tmp_path, [assignment], contract["sha256"])
+    if routing_class == probe.LEGACY_TIMING_ROUTING_CLASS:
+        aggregate = probe._aggregate_records_legacy_v2(records)
+        gate = probe._evaluate_legacy_v2_admission_gate(aggregate, complete_n600=False)
+    else:
+        aggregate = probe.aggregate_records(records)
+        gate = probe.evaluate_admission_gate(aggregate, complete_n600=False)
+    admission_content = probe.build_admission_content(
+        run_contract=contract,
+        stage_manifest_custody=stage_custody,
+        aggregate=aggregate,
+        admission_gate=gate,
+        admission_verdict="NOT_ADMITTED",
+    )
+    fidelity_gate = {
+        "complete_n600": False,
+        "calibration_admission_gate": gate,
+        "admission": "NOT_ADMITTED",
+        "live_trainer_activation": False,
+        "runtime_exact_gradient_access": False,
+    }
+    authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "pointer_moved": False,
+    }
+    if routing_class == probe.CURRENT_TIMING_ROUTING_CLASS:
+        timing_surfaces = probe.raw_probe_timing_surfaces()
+        fidelity_gate.update(timing_surfaces["fidelity_gate"])
+        authority.update(timing_surfaces["authority"])
+    elif routing_class == probe.LEGACY_TIMING_ROUTING_CLASS:
+        fidelity_gate["in_loop_timing"] = probe.HISTORICAL_SOURCE_IN_LOOP_TIMING_LABEL
+        authority["whole_epoch_speedup"] = probe.HISTORICAL_EMBEDDED_WHOLE_EPOCH_LABEL
+    receipt = {
+        "schema": probe.SCHEMA,
+        "status": "completed",
+        "n_pairs": 1,
+        "run_contract": contract,
+        "objective_sha256": "b" * 64,
+        "scorer_sha256": "c" * 64,
+        "stage_manifest_custody": stage_custody,
+        "measurement": aggregate,
+        "admission_verdict": "NOT_ADMITTED",
+        "admission_content": admission_content,
+        "admission_content_sha256": probe._canonical_sha256(admission_content),
+        "fidelity_gate": fidelity_gate,
+        "authority": authority,
+    }
+    receipt_path = tmp_path / "measurement_receipt.json"
+    complete_path = tmp_path / "complete.json"
+    run_contract_path = tmp_path / "run_contract.json"
+    probe._atomic_json(run_contract_path, contract)
+    probe._atomic_json(receipt_path, receipt)
+    probe._atomic_json(
+        complete_path,
+        {
+            "schema": "p0_costate_reuse_k2_complete.v2",
+            "receipt": "measurement_receipt.json",
+            "receipt_bytes": receipt_path.stat().st_size,
+            "receipt_sha256": probe._sha256(receipt_path),
+        },
+    )
+    return {
+        "contract": contract,
+        "assignment": assignment,
+        "receipt": receipt,
+        "receipt_path": receipt_path,
+        "complete_path": complete_path,
+        "run_contract_path": run_contract_path,
+    }
+
+
+def _legacy_roots_for_fixture(fixture: dict) -> object:
+    contract = fixture["contract"]
+    return probe._ExpectedLegacyReceiptRoots(
+        output_dir=fixture["receipt_path"].parent.resolve(),
+        receipt_sha256=probe._sha256(fixture["receipt_path"]),
+        complete_sha256=probe._sha256(fixture["complete_path"]),
+        run_contract_file_sha256=probe._sha256(fixture["run_contract_path"]),
+        run_contract_sha256=contract["sha256"],
+        objective_sha256=contract["payload"]["objective_sha256"],
+        scorer_sha256=contract["payload"]["scorer_sha256"],
+        state_count=1,
+    )
+
+
+def _load_completed_fixture(tmp_path: Path, fixture: dict, *, expected_legacy_roots=None) -> dict:
+    loaded = probe._load_completed_receipt(
+        tmp_path,
+        run_contract=fixture["contract"],
+        assignments=[fixture["assignment"]],
+        checkpoint_names=["v9"],
+        complete_n600=False,
+        expected_legacy_roots=expected_legacy_roots,
+    )
+    assert loaded is not None
+    return loaded
+
+
+def _reseal_completed_fixture(fixture: dict, receipt: dict) -> None:
+    receipt_path = fixture["receipt_path"]
+    probe._atomic_json(receipt_path, receipt)
+    complete = json.loads(fixture["complete_path"].read_text())
+    complete["receipt_bytes"] = receipt_path.stat().st_size
+    complete["receipt_sha256"] = probe._sha256(receipt_path)
+    probe._atomic_json(fixture["complete_path"], complete)
+
+
+def _patch_public_resume_fixture(monkeypatch, tmp_path: Path, fixture: dict, *, expected_roots=None):
+    module_loads = []
+
+    class _Round2:
+        CHECKPOINTS = (("v9", Path("unused"), 0),)
+
+        @staticmethod
+        def deterministic_replay_assignments(**_kwargs):
+            return [fixture["assignment"]]
+
+    class _Torch:
+        set_num_threads = staticmethod(lambda _value: None)
+        set_num_interop_threads = staticmethod(lambda _value: None)
+        manual_seed = staticmethod(lambda _value: None)
+        use_deterministic_algorithms = staticmethod(lambda _value: None)
+
+    def fake_load_module(name: str, relative: str):
+        module_loads.append((name, relative))
+        return _Round2 if relative == "tools/probe_frozen_replay_convex_head.py" else object()
+
+    monkeypatch.setattr(probe, "REPO", tmp_path)
+    monkeypatch.setattr(probe, "_validate_storage_plan", lambda *_args: {"fixture": True})
+    monkeypatch.setattr(probe, "_acquire_lock", lambda _output_dir: -1)
+    monkeypatch.setattr(probe, "_release_lock", lambda _descriptor: None)
+    monkeypatch.setattr(probe, "_load_module", fake_load_module)
+    monkeypatch.setitem(sys.modules, "torch", _Torch)
+    if expected_roots is not None:
+        monkeypatch.setattr(probe, "_public_expected_legacy_receipt_roots", lambda: expected_roots)
+    args = probe.argparse.Namespace(
+        output_dir=fixture["receipt_path"].parent,
+        storage_plan=tmp_path / "storage.json",
+        max_pairs=None,
+        resume=True,
+    )
+    return module_loads, args
+
+
 def test_resume_contract_ignores_only_launch_head_provenance() -> None:
     prior = _contract(
         {
@@ -321,98 +545,205 @@ def test_resume_contract_ignores_only_launch_head_provenance() -> None:
 
 
 def test_completed_receipt_is_immutable_and_contract_bound(tmp_path: Path) -> None:
-    contract = _contract(
-        {
-            "git_head_at_launch": "a" * 40,
-            "source_custody": {},
-            "objective_sha256": "b" * 64,
-            "scorer_sha256": "c" * 64,
-        }
-    )
-    assignment = _Assignment(0)
-    (tmp_path / "pairs").mkdir()
-    probe._atomic_json(probe._pair_path(tmp_path, 0), _sealed_row(assignment, contract["sha256"]))
-    manifest = probe._stage_manifest(tmp_path, "v9", [assignment], contract["sha256"])
-    manifest_path = tmp_path / "stage_v9_complete.json"
-    stage_custody = [
-        {
-            "checkpoint_name": "v9",
-            "run_contract_sha256": contract["sha256"],
-            "state_count": 1,
-            "tree_sha256": manifest["tree_sha256"],
-            "path": str(manifest_path),
-            "bytes": manifest_path.stat().st_size,
-            "sha256": probe._sha256(manifest_path),
-        }
-    ]
-    records = probe._load_records(tmp_path, [assignment], contract["sha256"])
-    aggregate = probe.aggregate_records(records)
-    gate = probe.evaluate_admission_gate(aggregate, complete_n600=False)
-    admission_content = probe.build_admission_content(
-        run_contract=contract,
-        stage_manifest_custody=stage_custody,
-        aggregate=aggregate,
-        admission_gate=gate,
-        admission_verdict="NOT_ADMITTED",
-    )
-    receipt_path = tmp_path / "measurement_receipt.json"
-    receipt = {
-        "schema": probe.SCHEMA,
-        "status": "completed",
-        "n_pairs": 1,
-        "run_contract": contract,
-        "objective_sha256": "b" * 64,
-        "scorer_sha256": "c" * 64,
-        "stage_manifest_custody": stage_custody,
-        "measurement": aggregate,
-        "admission_verdict": "NOT_ADMITTED",
-        "admission_content": admission_content,
-        "admission_content_sha256": probe._canonical_sha256(admission_content),
-        "fidelity_gate": {
-            "complete_n600": False,
-            "calibration_admission_gate": gate,
-            "admission": "NOT_ADMITTED",
-            "live_trainer_activation": False,
-            "runtime_exact_gradient_access": False,
-        },
-        "authority": {
-            "score_claim": False,
-            "promotion_eligible": False,
-            "pointer_moved": False,
-        },
-    }
-    probe._atomic_json(receipt_path, receipt)
-    probe._atomic_json(
-        tmp_path / "complete.json",
-        {
-            "schema": "p0_costate_reuse_k2_complete.v2",
-            "receipt": "measurement_receipt.json",
-            "receipt_bytes": receipt_path.stat().st_size,
-            "receipt_sha256": probe._sha256(receipt_path),
-        },
-    )
-    assert (
-        probe._load_completed_receipt(
-            tmp_path,
-            run_contract=contract,
-            assignments=[assignment],
-            checkpoint_names=["v9"],
-            complete_n600=False,
-        )
-        == receipt
-    )
+    fixture = _completed_receipt_fixture(tmp_path, routing_class=probe.CURRENT_TIMING_ROUTING_CLASS)
+    receipt = fixture["receipt"]
+    receipt_path = fixture["receipt_path"]
+    assert _load_completed_fixture(tmp_path, fixture) == receipt
 
     tampered = dict(receipt)
     tampered["measurement"] = {"n": 599}
     probe._atomic_json(receipt_path, tampered)
     with pytest.raises(probe.ProbeError, match="receipt custody changed"):
-        probe._load_completed_receipt(
-            tmp_path,
-            run_contract=contract,
-            assignments=[assignment],
-            checkpoint_names=["v9"],
-            complete_n600=False,
+        _load_completed_fixture(tmp_path, fixture)
+
+
+def test_current_completed_receipt_contains_no_historical_timer_routing(tmp_path: Path) -> None:
+    fixture = _completed_receipt_fixture(tmp_path, routing_class=probe.CURRENT_TIMING_ROUTING_CLASS)
+    serialized = json.dumps(fixture["receipt"], sort_keys=True)
+
+    assert probe.HISTORICAL_EMBEDDED_WHOLE_EPOCH_LABEL not in serialized
+    assert probe.HISTORICAL_SOURCE_IN_LOOP_TIMING_LABEL not in serialized
+    assert probe.RAW_PROBE_TIMING_STATUS in serialized
+    assert fixture["receipt"]["fidelity_gate"]["calibration_admission_gate"]["whole_epoch_speedup"] == (
+        probe.RAW_PROBE_TIMING_STATUS
+    )
+
+
+def test_legacy_completed_receipt_is_public_normalized_without_source_byte_mutation(tmp_path: Path) -> None:
+    fixture = _completed_receipt_fixture(tmp_path, routing_class=probe.LEGACY_TIMING_ROUTING_CLASS)
+    expected_roots = _legacy_roots_for_fixture(fixture)
+    receipt_path = fixture["receipt_path"]
+    source_receipt_bytes = receipt_path.read_bytes()
+    source_receipt_sha256 = probe._sha256(receipt_path)
+    source_complete_bytes = fixture["complete_path"].read_bytes()
+
+    normalized = _load_completed_fixture(tmp_path, fixture, expected_legacy_roots=expected_roots)
+    current = probe.raw_probe_timing_surfaces()
+    assert normalized["fidelity_gate"]["in_loop_timing"] == current["fidelity_gate"]["in_loop_timing"]
+    assert normalized["fidelity_gate"]["timing_routing"] == current["fidelity_gate"]["timing_routing"]
+    for field, value in current["authority"].items():
+        assert normalized["authority"][field] == value
+    assert normalized["source_receipt_sha256"] == source_receipt_sha256
+    historical = normalized["historical_source_routing"]
+    assert historical["classification"] == probe.LEGACY_TIMING_ROUTING_CLASS
+    assert historical["control_routing_authority"] is False
+    assert normalized["measurement"] == fixture["receipt"]["measurement"]
+    assert (
+        normalized["fidelity_gate"]["calibration_admission_gate"]
+        == (fixture["receipt"]["fidelity_gate"]["calibration_admission_gate"])
+    )
+    economics = normalized["historical_embedded_economics"]
+    assert economics["status"] == "SUPERSEDED_LEGACY_V2_ECONOMICS_NON_AUTHORITY"
+    assert economics["embedded_historical_economics_preserved"] is True
+    assert economics["corrected_adjudication_required"] is True
+    assert economics["promotion_authority"] is False
+    assert economics["legacy_diagnostic"]["formula"] == ("2/(1+forward_share+fallback_rate*(1-forward_share))")
+    assert economics["corrected_rederived_diagnostic"]["formula"] == ("2/(2+forward_share-accept_fraction)")
+    assert economics["legacy_aggregate_sha256"] == probe._canonical_sha256(fixture["receipt"]["measurement"])
+    assert economics["corrected_rederived_aggregate_sha256"] != economics["legacy_aggregate_sha256"]
+    assert receipt_path.read_bytes() == source_receipt_bytes
+    assert probe._sha256(receipt_path) == source_receipt_sha256
+    assert fixture["complete_path"].read_bytes() == source_complete_bytes
+    assert fixture["receipt"]["fidelity_gate"]["in_loop_timing"] == "OWED_OPERATOR_GO"
+    assert "timing_routing" not in fixture["receipt"]["fidelity_gate"]
+
+
+def test_public_resume_returns_pinned_legacy_normalization_before_current_source_contract(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    output_dir = tmp_path / "experiments/results/legacy"
+    output_dir.mkdir(parents=True)
+    fixture = _completed_receipt_fixture(output_dir, routing_class=probe.LEGACY_TIMING_ROUTING_CLASS)
+    expected_roots = _legacy_roots_for_fixture(fixture)
+    receipt_bytes = fixture["receipt_path"].read_bytes()
+    complete_bytes = fixture["complete_path"].read_bytes()
+    module_loads, args = _patch_public_resume_fixture(
+        monkeypatch,
+        tmp_path,
+        fixture,
+        expected_roots=expected_roots,
+    )
+
+    normalized = probe.run(args)
+    assert normalized["fidelity_gate"]["in_loop_timing"] == probe.RAW_PROBE_TIMING_STATUS
+    assert normalized["authority"]["operator_go_request_eligible"] is False
+    assert normalized["authority"]["operator_go_granted"] is False
+    assert normalized["source_receipt_sha256"] == expected_roots.receipt_sha256
+    assert normalized["measurement"]["diagnostic_teacher_slice_economics"]["formula"] == (
+        "2/(1+forward_share+fallback_rate*(1-forward_share))"
+    )
+    assert normalized["historical_embedded_economics"]["promotion_authority"] is False
+    assert module_loads == [("_p0_k2_round2", "tools/probe_frozen_replay_convex_head.py")]
+    assert fixture["receipt_path"].read_bytes() == receipt_bytes
+    assert fixture["complete_path"].read_bytes() == complete_bytes
+
+
+@pytest.mark.parametrize("completed", (False, True))
+def test_public_resume_current_or_incomplete_receipt_still_enforces_current_contract(
+    tmp_path: Path,
+    monkeypatch,
+    completed: bool,
+) -> None:
+    output_dir = tmp_path / "experiments/results/current_or_incomplete"
+    output_dir.mkdir(parents=True)
+    fixture = _completed_receipt_fixture(output_dir, routing_class=probe.CURRENT_TIMING_ROUTING_CLASS)
+    if not completed:
+        fixture["complete_path"].unlink()
+    _module_loads, args = _patch_public_resume_fixture(monkeypatch, tmp_path, fixture)
+    monkeypatch.setattr(
+        probe,
+        "_run_contract",
+        lambda **_kwargs: (_ for _ in ()).throw(probe.ProbeError("CURRENT_CONTRACT_ENFORCED")),
+    )
+
+    with pytest.raises(probe.ProbeError, match="CURRENT_CONTRACT_ENFORCED"):
+        probe.run(args)
+
+
+def test_unpinned_legacy_label_receipt_is_refused_even_after_outer_reseal(tmp_path: Path) -> None:
+    fixture = _completed_receipt_fixture(tmp_path, routing_class=probe.LEGACY_TIMING_ROUTING_CLASS)
+    expected_roots = _legacy_roots_for_fixture(fixture)
+    with pytest.raises(probe.ProbeError, match="not bound to reviewed immutable roots"):
+        _load_completed_fixture(tmp_path, fixture)
+
+    tampered = json.loads(json.dumps(fixture["receipt"]))
+    tampered["axis"] = "RESEALED_UNPINNED_SYNTHETIC"
+    _reseal_completed_fixture(fixture, tampered)
+    with pytest.raises(probe.ProbeError, match="not the pinned immutable receipt"):
+        probe._pinned_legacy_receipt_present(tmp_path, expected_roots)
+
+
+def test_public_resume_rederives_actual_pinned_legacy_receipt_read_only_when_present(monkeypatch) -> None:
+    roots = probe._public_expected_legacy_receipt_roots()
+    required = tuple(
+        roots.output_dir / name for name in ("measurement_receipt.json", "complete.json", "run_contract.json")
+    )
+    if not all(path.is_file() for path in required):
+        pytest.skip("ignored local sealed K2 receipt is unavailable")
+
+    def sealed_tree_hashes() -> dict[str, str]:
+        return {
+            str(path.relative_to(roots.output_dir)): probe._sha256(path)
+            for path in roots.output_dir.rglob("*")
+            if path.is_file() and not path.is_symlink()
+        }
+
+    before = sealed_tree_hashes()
+    module_loads: list[str] = []
+    real_load_module = probe._load_module
+
+    def read_only_load_module(name: str, relative: str):
+        module_loads.append(relative)
+        assert relative == "tools/probe_frozen_replay_convex_head.py"
+        return real_load_module(name, relative)
+
+    monkeypatch.setattr(probe, "_validate_storage_plan", lambda *_args: {"read_only_test": True})
+    monkeypatch.setattr(probe, "_acquire_lock", lambda _output_dir: -1)
+    monkeypatch.setattr(probe, "_release_lock", lambda _descriptor: None)
+    monkeypatch.setattr(probe, "_load_module", read_only_load_module)
+    normalized = probe.run(
+        probe.argparse.Namespace(
+            output_dir=roots.output_dir,
+            storage_plan=probe.DEFAULT_STORAGE_PLAN,
+            max_pairs=None,
+            resume=True,
         )
+    )
+
+    economics = normalized["historical_embedded_economics"]
+    assert normalized["fidelity_gate"]["in_loop_timing"] == probe.RAW_PROBE_TIMING_STATUS
+    assert normalized["authority"]["operator_go_request_eligible"] is False
+    assert normalized["authority"]["operator_go_granted"] is False
+    assert economics["legacy_diagnostic"]["conditional_speedup_x"] == pytest.approx(1.4538672169368423)
+    assert economics["corrected_rederived_diagnostic"]["conditional_speedup_x"] == pytest.approx(1.4099643443401577)
+    assert economics["corrected_adjudication_required"] is True
+    assert economics["promotion_authority"] is False
+    assert module_loads == ["tools/probe_frozen_replay_convex_head.py"]
+    assert sealed_tree_hashes() == before
+
+
+@pytest.mark.parametrize(
+    "tamper_case",
+    ("mixed_legacy_status", "missing_routing", "arbitrary_authority", "go_enabled"),
+)
+def test_hash_consistent_completed_receipt_timing_tamper_is_refused(tmp_path: Path, tamper_case: str) -> None:
+    fixture = _completed_receipt_fixture(tmp_path, routing_class=probe.CURRENT_TIMING_ROUTING_CLASS)
+    tampered = json.loads(json.dumps(fixture["receipt"]))
+    if tamper_case == "mixed_legacy_status":
+        tampered["fidelity_gate"]["in_loop_timing"] = probe.HISTORICAL_SOURCE_IN_LOOP_TIMING_LABEL
+    elif tamper_case == "missing_routing":
+        tampered["fidelity_gate"].pop("timing_routing")
+    elif tamper_case == "arbitrary_authority":
+        tampered["authority"]["whole_epoch_speedup"] = "ARBITRARY"
+    elif tamper_case == "go_enabled":
+        tampered["authority"]["operator_go_request_eligible"] = True
+    else:
+        raise AssertionError(tamper_case)
+    _reseal_completed_fixture(fixture, tampered)
+
+    with pytest.raises(probe.ProbeError, match="timing routing changed"):
+        _load_completed_fixture(tmp_path, fixture)
 
 
 def test_hash_consistent_incomplete_completed_receipt_is_refused(tmp_path: Path) -> None:

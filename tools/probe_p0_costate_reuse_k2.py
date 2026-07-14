@@ -19,6 +19,7 @@ sealed by a stage manifest before the aggregate receipt is written.
 from __future__ import annotations
 
 import argparse
+import copy
 import fcntl
 import hashlib
 import importlib.util
@@ -31,6 +32,7 @@ import sys
 import time
 from collections import Counter
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -59,6 +61,21 @@ DIAGNOSTIC_FORWARD_SHARE = 0.1784755863
 DIAGNOSTIC_FORWARD_SHARE_PROVENANCE = (
     ".omx/research/p0_costate_reuse_gradfree_20260713.md; task-455 diagnostic ratio, explicitly unresolved in-loop"
 )
+# The v2 contract, aggregate, and gate were sealed with this embedded label.
+# It remains only for deterministic historical receipt revalidation and is not
+# the raw probe's current timing/actuation routing.
+HISTORICAL_EMBEDDED_WHOLE_EPOCH_LABEL = "UNKNOWN_IN_LOOP_TIMER_OWED"
+HISTORICAL_SOURCE_IN_LOOP_TIMING_LABEL = "OWED_OPERATOR_GO"
+RAW_PROBE_TIMING_STATUS = "PENDING_CORRECTED_ADJUDICATION_NO_GO"
+LEGACY_TIMING_ROUTING_CLASS = "IMMUTABLE_LEGACY_V2"
+CURRENT_TIMING_ROUTING_CLASS = "CURRENT_RAW_PROBE_PENDING_CORRECTED_ADJUDICATION"
+EXPECTED_LEGACY_RECEIPT_SHA256 = "4c84c1f80ae7fc1b4ee76d28395405834e3eecd439155e4ebd79d4e81530506c"
+EXPECTED_LEGACY_COMPLETE_SHA256 = "45ccbccee780d26bf350442ddf5551d62d483957c591b706fe5eb746dfbea34c"
+EXPECTED_LEGACY_RUN_CONTRACT_FILE_SHA256 = "b4b032f216952fb3ba7d50e3feb9ae47e84060f91191e558e89463eec33f8f67"
+EXPECTED_LEGACY_RUN_CONTRACT_SHA256 = "e9c4a6629bcbc91876d2476b0bef051dfe56fe27d93076fa79f7225a5b62d56f"
+EXPECTED_LEGACY_OBJECTIVE_SHA256 = "af5ae342f3987b82c2d3ee5bdb12dcfca1ecab07631fd545a9e723c15cb7c9e7"
+EXPECTED_LEGACY_SCORER_SHA256 = "584f711dfb85163c38caf8976ebeda87698baefb45f9f5979539a8c176b6b73e"
+EXPECTED_LEGACY_ADMISSION_SPEC_SHA256 = "dda7f09bc9043a8d54eea56ad8332a1bb1d95644be2c4b6d027a7344adc8fce7"
 
 OBJECTIVE_SPEC = {
     "schema": "p0_costate_reuse_k2_objective.v2",
@@ -80,6 +97,19 @@ OBJECTIVE_SPEC = {
     },
 }
 
+LEGACY_V2_ADMISSION_SPEC = {
+    "schema": "p0_costate_reuse_k2_admission.v1",
+    "complete_state_count": N_PAIRS,
+    "required_accept_fraction_formula": "2*forward_share/(1-forward_share), strict greater-than",
+    "accept_fraction_denominator": ("all n600 calibration states; terminal/blocked states are charged as fallback"),
+    "amdahl_ceiling_formula": "1/(1-forward_share)",
+    "gradient_relative_l2_threshold": 1.0,
+    "gradient_relative_l2_comparator": "strict_lt",
+    "accepted_stale_minus_exact_d_seg_threshold": 0.0,
+    "accepted_stale_minus_exact_d_seg_comparator": "lte",
+    "whole_epoch_speedup": HISTORICAL_EMBEDDED_WHOLE_EPOCH_LABEL,
+}
+
 ADMISSION_SPEC = {
     "schema": "p0_costate_reuse_k2_admission.v1",
     "complete_state_count": N_PAIRS,
@@ -90,7 +120,7 @@ ADMISSION_SPEC = {
     "gradient_relative_l2_comparator": "strict_lt",
     "accepted_stale_minus_exact_d_seg_threshold": 0.0,
     "accepted_stale_minus_exact_d_seg_comparator": "lte",
-    "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
+    "whole_epoch_speedup": RAW_PROBE_TIMING_STATUS,
 }
 
 SOURCE_FILES = (
@@ -110,6 +140,180 @@ SOURCE_FILES = (
 
 class ProbeError(RuntimeError):
     """The replay, custody, or fidelity contract failed closed."""
+
+
+@dataclass(frozen=True)
+class _ExpectedLegacyReceiptRoots:
+    output_dir: Path
+    receipt_sha256: str
+    complete_sha256: str
+    run_contract_file_sha256: str
+    run_contract_sha256: str
+    objective_sha256: str
+    scorer_sha256: str
+    state_count: int
+
+
+def _public_expected_legacy_receipt_roots() -> _ExpectedLegacyReceiptRoots:
+    return _ExpectedLegacyReceiptRoots(
+        output_dir=DEFAULT_OUTPUT.resolve(),
+        receipt_sha256=EXPECTED_LEGACY_RECEIPT_SHA256,
+        complete_sha256=EXPECTED_LEGACY_COMPLETE_SHA256,
+        run_contract_file_sha256=EXPECTED_LEGACY_RUN_CONTRACT_FILE_SHA256,
+        run_contract_sha256=EXPECTED_LEGACY_RUN_CONTRACT_SHA256,
+        objective_sha256=EXPECTED_LEGACY_OBJECTIVE_SHA256,
+        scorer_sha256=EXPECTED_LEGACY_SCORER_SHA256,
+        state_count=N_PAIRS,
+    )
+
+
+def _validate_expected_legacy_receipt_roots(
+    roots: _ExpectedLegacyReceiptRoots,
+) -> _ExpectedLegacyReceiptRoots:
+    sha_fields = (
+        roots.receipt_sha256,
+        roots.complete_sha256,
+        roots.run_contract_file_sha256,
+        roots.run_contract_sha256,
+        roots.objective_sha256,
+        roots.scorer_sha256,
+    )
+    if any(
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+        for value in sha_fields
+    ):
+        raise ProbeError("expected legacy receipt roots contain an invalid SHA-256")
+    if isinstance(roots.state_count, bool) or not isinstance(roots.state_count, int) or roots.state_count <= 0:
+        raise ProbeError("expected legacy receipt state count is invalid")
+    return roots
+
+
+def raw_probe_timing_routing() -> dict[str, Any]:
+    """Return the raw probe's fail-closed pre-adjudication timing state."""
+
+    return {
+        "status": RAW_PROBE_TIMING_STATUS,
+        "corrected_adjudication_required": True,
+        "operator_go_request_eligible": False,
+        "operator_go_granted": False,
+    }
+
+
+def raw_probe_timing_surfaces() -> dict[str, dict[str, Any]]:
+    """Return the exact current routing tuple shared by fresh receipts and resume validation."""
+
+    routing = raw_probe_timing_routing()
+    return {
+        "fidelity_gate": {
+            "in_loop_timing": routing["status"],
+            "timing_routing": routing,
+        },
+        "authority": {
+            "whole_epoch_speedup": routing["status"],
+            "operator_go_request_eligible": routing["operator_go_request_eligible"],
+            "operator_go_granted": routing["operator_go_granted"],
+        },
+    }
+
+
+def _classify_completed_receipt_timing_routing(receipt: dict[str, Any]) -> str:
+    """Accept only the exact immutable legacy or exact current routing tuple."""
+
+    fidelity_gate = receipt.get("fidelity_gate")
+    authority = receipt.get("authority")
+    if not isinstance(fidelity_gate, dict) or not isinstance(authority, dict):
+        raise ProbeError("completed-run timing routing changed")
+
+    go_boolean_fields = ("operator_go_request_eligible", "operator_go_granted")
+    control_fields_on_expected_surfaces = (
+        "whole_epoch_speedup" not in fidelity_gate
+        and "in_loop_timing" not in authority
+        and "timing_routing" not in authority
+    )
+    exact_legacy = (
+        fidelity_gate.get("in_loop_timing") == HISTORICAL_SOURCE_IN_LOOP_TIMING_LABEL
+        and "timing_routing" not in fidelity_gate
+        and authority.get("whole_epoch_speedup") == HISTORICAL_EMBEDDED_WHOLE_EPOCH_LABEL
+        and all(field not in fidelity_gate and field not in authority for field in go_boolean_fields)
+        and control_fields_on_expected_surfaces
+        and "historical_source_routing" not in receipt
+        and "source_receipt_sha256" not in receipt
+    )
+    if exact_legacy:
+        return LEGACY_TIMING_ROUTING_CLASS
+
+    expected = raw_probe_timing_surfaces()
+    exact_current = (
+        all(fidelity_gate.get(field) == value for field, value in expected["fidelity_gate"].items())
+        and all(authority.get(field) == value for field, value in expected["authority"].items())
+        and all(field not in fidelity_gate for field in go_boolean_fields)
+        and control_fields_on_expected_surfaces
+        and "historical_source_routing" not in receipt
+        and "source_receipt_sha256" not in receipt
+    )
+    if exact_current:
+        return CURRENT_TIMING_ROUTING_CLASS
+    raise ProbeError("completed-run timing routing changed")
+
+
+def _normalize_legacy_completed_receipt_routing(
+    receipt: dict[str, Any],
+    *,
+    source_receipt_sha256: str,
+    legacy_aggregate: dict[str, Any],
+    legacy_gate: dict[str, Any],
+    corrected_aggregate: dict[str, Any],
+    corrected_gate: dict[str, Any],
+) -> dict[str, Any]:
+    """Normalize only legacy control routing and label its economics non-authority."""
+
+    normalized = copy.deepcopy(receipt)
+    normalized["historical_source_routing"] = {
+        "classification": LEGACY_TIMING_ROUTING_CLASS,
+        "fidelity_gate_in_loop_timing": HISTORICAL_SOURCE_IN_LOOP_TIMING_LABEL,
+        "fidelity_gate_timing_routing_present": False,
+        "authority_whole_epoch_speedup": HISTORICAL_EMBEDDED_WHOLE_EPOCH_LABEL,
+        "authority_operator_go_request_eligible_present": False,
+        "authority_operator_go_granted_present": False,
+        "control_routing_authority": False,
+    }
+    legacy_economics = legacy_aggregate["diagnostic_teacher_slice_economics"]
+    corrected_economics = corrected_aggregate["diagnostic_teacher_slice_economics"]
+    normalized["historical_embedded_economics"] = {
+        "status": "SUPERSEDED_LEGACY_V2_ECONOMICS_NON_AUTHORITY",
+        "reason": (
+            "the legacy fallback equation undercharged rejection by omitting the guard-forward "
+            "charge before the full exact refresh"
+        ),
+        "embedded_historical_economics_preserved": True,
+        "legacy_aggregate_sha256": _canonical_sha256(legacy_aggregate),
+        "corrected_rederived_aggregate_sha256": _canonical_sha256(corrected_aggregate),
+        "legacy_gate_sha256": _canonical_sha256(legacy_gate),
+        "corrected_rederived_gate_sha256": _canonical_sha256(corrected_gate),
+        "legacy_diagnostic": {
+            "formula": legacy_economics["formula"],
+            "conditional_speedup_x": legacy_economics["conditional_speedup_x"],
+            "required_accept_fraction_strict_gt": legacy_economics["required_accept_fraction_strict_gt"],
+        },
+        "corrected_rederived_diagnostic": {
+            "formula": corrected_economics["formula"],
+            "conditional_speedup_x": corrected_economics["conditional_speedup_x"],
+            "required_accept_fraction_strict_gt": corrected_economics["required_accept_fraction_strict_gt"],
+        },
+        "legacy_admission_verdict": "ADMIT_K2_GUARDED_REUSE" if legacy_gate["passed"] else "NOT_ADMITTED",
+        "corrected_rederived_admission_verdict": (
+            "ADMIT_K2_GUARDED_REUSE" if corrected_gate["passed"] else "NOT_ADMITTED"
+        ),
+        "corrected_adjudication_required": True,
+        "promotion_authority": False,
+    }
+    normalized["source_receipt_sha256"] = source_receipt_sha256
+    current = raw_probe_timing_surfaces()
+    normalized["fidelity_gate"].update(current["fidelity_gate"])
+    normalized["authority"].update(current["authority"])
+    return normalized
 
 
 def _utc() -> str:
@@ -376,6 +580,19 @@ def diagnostic_admission_threshold(forward_share: float) -> dict[str, float]:
         "forward_share_alpha": forward_share,
         "forward_elimination_amdahl_ceiling_x": 1.0 / (1.0 - forward_share),
         "required_accept_fraction_strict_gt": 3.0 * forward_share,
+    }
+
+
+def _legacy_v2_diagnostic_admission_threshold(forward_share: float) -> dict[str, float]:
+    """Reproduce the superseded v2 threshold exactly for sealed-byte validation."""
+
+    if not 0.0 <= forward_share < 1.0:
+        raise ValueError("forward_share must be in [0,1)")
+    denominator = 1.0 - forward_share
+    return {
+        "forward_share_alpha": forward_share,
+        "forward_elimination_amdahl_ceiling_x": 1.0 / denominator,
+        "required_accept_fraction_strict_gt": 2.0 * forward_share / denominator,
     }
 
 
@@ -977,12 +1194,56 @@ def aggregate_records(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             },
             **diagnostic_admission_threshold(DIAGNOSTIC_FORWARD_SHARE),
             "evidence_grade": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP",
-            "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
+            "whole_epoch_speedup": RAW_PROBE_TIMING_STATUS,
         },
     }
 
 
-def evaluate_admission_gate(aggregate: dict[str, Any], *, complete_n600: bool) -> dict[str, Any]:
+def _aggregate_records_legacy_v2(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Re-derive the immutable v2 aggregate, including its superseded economics.
+
+    This path exists only to authenticate the one pinned historical receipt. It
+    derives every shared field from sealed pair rows, then recomputes the exact
+    historical fallback equation instead of trusting receipt aggregate fields.
+    """
+
+    aggregate = aggregate_records(records)
+    accepted = [
+        row
+        for row in records
+        if row.get("eligible_for_k2") is True
+        and row.get("reuse_guard_accept") is True
+        and guard_passes(row.get("reuse_guard") or {})
+    ]
+    fallback_rate = (len(records) - len(accepted)) / len(records) if records else None
+    diagnostic_speedup = (
+        2.0 / (1.0 + DIAGNOSTIC_FORWARD_SHARE + fallback_rate * (1.0 - DIAGNOSTIC_FORWARD_SHARE))
+        if fallback_rate is not None
+        else None
+    )
+    aggregate["diagnostic_teacher_slice_economics"] = {
+        "forward_share_alpha": DIAGNOSTIC_FORWARD_SHARE,
+        "forward_share_provenance": DIAGNOSTIC_FORWARD_SHARE_PROVENANCE,
+        "fallback_rate": fallback_rate,
+        "fallback_scope": (
+            "all non-accepted calibration states, including terminal/blocked states, "
+            "are conservatively charged as exact fallback"
+        ),
+        "conditional_speedup_x": diagnostic_speedup,
+        "formula": "2/(1+forward_share+fallback_rate*(1-forward_share))",
+        **_legacy_v2_diagnostic_admission_threshold(DIAGNOSTIC_FORWARD_SHARE),
+        "evidence_grade": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP",
+        "whole_epoch_speedup": HISTORICAL_EMBEDDED_WHOLE_EPOCH_LABEL,
+    }
+    return aggregate
+
+
+def _evaluate_admission_gate_with_spec(
+    aggregate: dict[str, Any],
+    *,
+    complete_n600: bool,
+    admission_spec: dict[str, Any],
+) -> dict[str, Any]:
     """Evaluate the preregistered, calibration-only K=2 admission contract."""
 
     accepted = int(aggregate["behavioral_full_facet_accept_count"])
@@ -1016,9 +1277,9 @@ def evaluate_admission_gate(aggregate: dict[str, Any], *, complete_n600: bool) -
         "no_inconsistent_accept_flags": aggregate["inconsistent_accept_flag_count"] == 0,
     }
     return {
-        "schema": ADMISSION_SPEC["schema"],
-        "spec": ADMISSION_SPEC,
-        "spec_sha256": _canonical_sha256(ADMISSION_SPEC),
+        "schema": admission_spec["schema"],
+        "spec": admission_spec,
+        "spec_sha256": _canonical_sha256(admission_spec),
         "predicates": predicates,
         "passed": all(predicates.values()),
         "behavioral_full_facet_accept_count": accepted,
@@ -1031,8 +1292,28 @@ def evaluate_admission_gate(aggregate: dict[str, Any], *, complete_n600: bool) -
         "forward_elimination_amdahl_ceiling_x": ceiling,
         "evidence_grade": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP",
         "runtime_exact_gradient_access": False,
-        "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
+        "whole_epoch_speedup": admission_spec["whole_epoch_speedup"],
     }
+
+
+def evaluate_admission_gate(aggregate: dict[str, Any], *, complete_n600: bool) -> dict[str, Any]:
+    """Evaluate the corrected calibration-only K=2 admission contract."""
+
+    return _evaluate_admission_gate_with_spec(
+        aggregate,
+        complete_n600=complete_n600,
+        admission_spec=ADMISSION_SPEC,
+    )
+
+
+def _evaluate_legacy_v2_admission_gate(aggregate: dict[str, Any], *, complete_n600: bool) -> dict[str, Any]:
+    """Reproduce the superseded v2 gate only for pinned receipt validation."""
+
+    return _evaluate_admission_gate_with_spec(
+        aggregate,
+        complete_n600=complete_n600,
+        admission_spec=LEGACY_V2_ADMISSION_SPEC,
+    )
 
 
 def build_admission_content(
@@ -1151,6 +1432,94 @@ def _validate_resume_contract(prior: dict[str, Any], current: dict[str, Any]) ->
     return prior
 
 
+def _validate_pinned_legacy_receipt_identity(
+    output_dir: Path,
+    *,
+    receipt: dict[str, Any],
+    run_contract: dict[str, Any],
+    source_receipt_sha256: str,
+    source_complete_sha256: str,
+    expected_roots: _ExpectedLegacyReceiptRoots,
+) -> None:
+    """Bind legacy-label compatibility to the one reviewed immutable receipt."""
+
+    roots = _validate_expected_legacy_receipt_roots(expected_roots)
+    resolved_output = output_dir.resolve()
+    if resolved_output != roots.output_dir.resolve():
+        raise ProbeError("legacy completed receipt output identity is not pinned")
+    if source_receipt_sha256 != roots.receipt_sha256:
+        raise ProbeError("legacy completed receipt is not the pinned immutable receipt")
+    if source_complete_sha256 != roots.complete_sha256:
+        raise ProbeError("legacy completed receipt completion seal is not pinned")
+
+    contract_path = resolved_output / "run_contract.json"
+    receipt_path = resolved_output / "measurement_receipt.json"
+    complete_path = resolved_output / "complete.json"
+    for path, label in (
+        (contract_path, "run contract"),
+        (receipt_path, "measurement receipt"),
+        (complete_path, "completion seal"),
+    ):
+        if path.is_symlink() or not path.is_file():
+            raise ProbeError(f"legacy completed receipt {label} identity is not a regular file")
+    contract_raw = contract_path.read_bytes()
+    if hashlib.sha256(contract_raw).hexdigest() != roots.run_contract_file_sha256:
+        raise ProbeError("legacy completed receipt run-contract file is not pinned")
+    try:
+        stored_contract = json.loads(contract_raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ProbeError("legacy completed receipt run contract is unreadable") from exc
+    if stored_contract != run_contract or receipt.get("run_contract") != run_contract:
+        raise ProbeError("legacy completed receipt run-contract identity changed")
+    _validate_resume_contract(run_contract, run_contract)
+    payload = run_contract.get("payload")
+    constants = payload.get("constants") if isinstance(payload, dict) else None
+    output_identity = payload.get("output_dir") if isinstance(payload, dict) else None
+    if _canonical_sha256(LEGACY_V2_ADMISSION_SPEC) != EXPECTED_LEGACY_ADMISSION_SPEC_SHA256:
+        raise ProbeError("code-pinned legacy admission specification changed")
+    if (
+        run_contract.get("sha256") != roots.run_contract_sha256
+        or not isinstance(payload, dict)
+        or payload.get("schema") != SCHEMA
+        or payload.get("objective_sha256") != roots.objective_sha256
+        or payload.get("scorer_sha256") != roots.scorer_sha256
+        or payload.get("admission_spec") != LEGACY_V2_ADMISSION_SPEC
+        or payload.get("admission_spec_sha256") != EXPECTED_LEGACY_ADMISSION_SPEC_SHA256
+        or not isinstance(output_identity, str)
+        or Path(output_identity).resolve() != resolved_output
+        or not isinstance(constants, dict)
+        or constants.get("n_pairs") != roots.state_count
+        or payload.get("max_pairs") is not None
+        or receipt.get("n_pairs") != roots.state_count
+        or receipt.get("objective_sha256") != roots.objective_sha256
+        or receipt.get("scorer_sha256") != roots.scorer_sha256
+    ):
+        raise ProbeError("legacy completed receipt immutable source contract changed")
+
+
+def _pinned_legacy_receipt_present(output_dir: Path, expected_roots: _ExpectedLegacyReceiptRoots) -> bool:
+    """Detect only the pinned receipt; fail closed on an unpinned legacy label."""
+
+    if not (output_dir / "complete.json").is_file():
+        return False
+    receipt_path = output_dir / "measurement_receipt.json"
+    if not receipt_path.is_file():
+        raise ProbeError("completed-run receipt bytes are unavailable")
+    raw = receipt_path.read_bytes()
+    roots = _validate_expected_legacy_receipt_roots(expected_roots)
+    if hashlib.sha256(raw).hexdigest() == roots.receipt_sha256:
+        return True
+    try:
+        candidate = json.loads(raw)
+        if isinstance(candidate, dict) and (
+            _classify_completed_receipt_timing_routing(candidate) == LEGACY_TIMING_ROUTING_CLASS
+        ):
+            raise ProbeError("legacy completed receipt is not the pinned immutable receipt")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        pass
+    return False
+
+
 def _load_completed_receipt(
     output_dir: Path,
     *,
@@ -1158,6 +1527,7 @@ def _load_completed_receipt(
     assignments: Sequence[Any],
     checkpoint_names: Sequence[str],
     complete_n600: bool,
+    expected_legacy_roots: _ExpectedLegacyReceiptRoots | None = None,
 ) -> dict[str, Any] | None:
     """Re-derive a completed run from sealed rows before returning its receipt."""
 
@@ -1165,9 +1535,11 @@ def _load_completed_receipt(
     if not complete_path.is_file():
         return None
     try:
-        complete = json.loads(complete_path.read_text())
+        complete_raw = complete_path.read_bytes()
+        complete = json.loads(complete_raw)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ProbeError("completed-run seal is unreadable") from exc
+    source_complete_sha256 = hashlib.sha256(complete_raw).hexdigest()
     if not isinstance(complete, dict) or complete.get("schema") != ("p0_costate_reuse_k2_complete.v2"):
         raise ProbeError("completed-run seal schema changed")
     if complete.get("receipt") != "measurement_receipt.json":
@@ -1176,7 +1548,8 @@ def _load_completed_receipt(
     if not receipt_path.is_file():
         raise ProbeError("completed-run receipt bytes are unavailable")
     raw = receipt_path.read_bytes()
-    if complete.get("receipt_bytes") != len(raw) or complete.get("receipt_sha256") != (hashlib.sha256(raw).hexdigest()):
+    source_receipt_sha256 = hashlib.sha256(raw).hexdigest()
+    if complete.get("receipt_bytes") != len(raw) or complete.get("receipt_sha256") != source_receipt_sha256:
         raise ProbeError("completed-run receipt custody changed")
     try:
         receipt = json.loads(raw)
@@ -1195,6 +1568,23 @@ def _load_completed_receipt(
         raise ProbeError("completed-run objective custody changed")
     if receipt.get("scorer_sha256") != run_contract["payload"]["scorer_sha256"]:
         raise ProbeError("completed-run scorer custody changed")
+    authority = receipt.get("authority")
+    if not isinstance(authority, dict) or any(
+        authority.get(field) is not False for field in ("score_claim", "promotion_eligible", "pointer_moved")
+    ):
+        raise ProbeError("completed-run receipt carries false authority")
+    routing_class = _classify_completed_receipt_timing_routing(receipt)
+    if routing_class == LEGACY_TIMING_ROUTING_CLASS:
+        if expected_legacy_roots is None:
+            raise ProbeError("legacy completed receipt is not bound to reviewed immutable roots")
+        _validate_pinned_legacy_receipt_identity(
+            output_dir,
+            receipt=receipt,
+            run_contract=run_contract,
+            source_receipt_sha256=source_receipt_sha256,
+            source_complete_sha256=source_complete_sha256,
+            expected_roots=expected_legacy_roots,
+        )
 
     stage_manifests: list[dict[str, Any]] = []
     for checkpoint_name in checkpoint_names:
@@ -1216,10 +1606,17 @@ def _load_completed_receipt(
     records = _load_records(output_dir, assignments, run_contract["sha256"])
     if len(records) != len(assignments):
         raise ProbeError("completed-run pair-record count changed")
-    aggregate = aggregate_records(records)
+    corrected_aggregate = aggregate_records(records)
+    if routing_class == LEGACY_TIMING_ROUTING_CLASS:
+        aggregate = _aggregate_records_legacy_v2(records)
+        gate = _evaluate_legacy_v2_admission_gate(aggregate, complete_n600=complete_n600)
+        corrected_gate = evaluate_admission_gate(corrected_aggregate, complete_n600=complete_n600)
+    else:
+        aggregate = corrected_aggregate
+        gate = evaluate_admission_gate(aggregate, complete_n600=complete_n600)
+        corrected_gate = gate
     if receipt.get("measurement") != aggregate:
         raise ProbeError("completed-run aggregate changed")
-    gate = evaluate_admission_gate(aggregate, complete_n600=complete_n600)
     verdict = "ADMIT_K2_GUARDED_REUSE" if gate["passed"] else "NOT_ADMITTED"
     fidelity_gate = receipt.get("fidelity_gate")
     if (
@@ -1244,46 +1641,31 @@ def _load_completed_receipt(
         "admission_content_sha256"
     ) != _canonical_sha256(expected_admission_content):
         raise ProbeError("completed-run admission content changed")
-    authority = receipt.get("authority")
-    if not isinstance(authority, dict) or any(
-        authority.get(field) is not False for field in ("score_claim", "promotion_eligible", "pointer_moved")
-    ):
-        raise ProbeError("completed-run receipt carries false authority")
+    if routing_class == LEGACY_TIMING_ROUTING_CLASS:
+        return _normalize_legacy_completed_receipt_routing(
+            receipt,
+            source_receipt_sha256=source_receipt_sha256,
+            legacy_aggregate=aggregate,
+            legacy_gate=gate,
+            corrected_aggregate=corrected_aggregate,
+            corrected_gate=corrected_gate,
+        )
     return receipt
 
 
-def run(args: argparse.Namespace) -> dict[str, Any]:
+def _run_with_expected_legacy_roots(
+    args: argparse.Namespace,
+    *,
+    expected_legacy_roots: _ExpectedLegacyReceiptRoots,
+) -> dict[str, Any]:
+    """Private fixture seam; public :func:`run` always uses code-pinned roots."""
+
     output_dir = args.output_dir.resolve()
     output_dir.relative_to((REPO / "experiments/results").resolve())
     storage = _validate_storage_plan(args.storage_plan.resolve(), output_dir)
     descriptor = _acquire_lock(output_dir)
     try:
-        import torch
-
-        torch.set_num_threads(1)
-        torch.set_num_interop_threads(1)
-        torch.manual_seed(SEED)
-        torch.use_deterministic_algorithms(True)
-
         round2 = _load_module("_p0_k2_round2", "tools/probe_frozen_replay_convex_head.py")
-        old_probe = _load_module("_p0_k2_old_probe", "tools/probe_onpolicy_scorer_surrogate.py")
-        yopo = _load_module("_p0_k2_yopo", "tools/probe_yopo_first_layer_costate.py")
-        trainer = _load_module("_p0_k2_trainer", "experiments/train_witness_realized_through_R_mlx.py")
-        contract = _run_contract(
-            output_dir=output_dir,
-            storage_plan=args.storage_plan.resolve(),
-            round2=round2,
-            max_pairs=args.max_pairs,
-        )
-        contract_path = output_dir / "run_contract.json"
-        if contract_path.is_file():
-            prior = json.loads(contract_path.read_text())
-            if not args.resume:
-                raise ProbeError("output already exists; pass --resume")
-            contract = _validate_resume_contract(prior, contract)
-        else:
-            _atomic_json(contract_path, contract)
-
         checkpoint_names = tuple(row[0] for row in round2.CHECKPOINTS)
         assignments = round2.deterministic_replay_assignments(
             n_pairs=N_PAIRS,
@@ -1293,6 +1675,46 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         )
         if args.max_pairs is not None:
             assignments = assignments[: args.max_pairs]
+
+        contract_path = output_dir / "run_contract.json"
+        prior: dict[str, Any] | None = None
+        if contract_path.is_file():
+            prior = json.loads(contract_path.read_text())
+            if not args.resume:
+                raise ProbeError("output already exists; pass --resume")
+            if _pinned_legacy_receipt_present(output_dir, expected_legacy_roots):
+                legacy_completed = _load_completed_receipt(
+                    output_dir,
+                    run_contract=prior,
+                    assignments=assignments,
+                    checkpoint_names=checkpoint_names,
+                    complete_n600=(len(assignments) == N_PAIRS and args.max_pairs is None),
+                    expected_legacy_roots=expected_legacy_roots,
+                )
+                if legacy_completed is None:
+                    raise ProbeError("pinned legacy completion seal disappeared during validation")
+                return legacy_completed
+
+        import torch
+
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        torch.manual_seed(SEED)
+        torch.use_deterministic_algorithms(True)
+
+        old_probe = _load_module("_p0_k2_old_probe", "tools/probe_onpolicy_scorer_surrogate.py")
+        yopo = _load_module("_p0_k2_yopo", "tools/probe_yopo_first_layer_costate.py")
+        trainer = _load_module("_p0_k2_trainer", "experiments/train_witness_realized_through_R_mlx.py")
+        contract = _run_contract(
+            output_dir=output_dir,
+            storage_plan=args.storage_plan.resolve(),
+            round2=round2,
+            max_pairs=args.max_pairs,
+        )
+        if prior is not None:
+            contract = _validate_resume_contract(prior, contract)
+        else:
+            _atomic_json(contract_path, contract)
         completed_receipt = _load_completed_receipt(
             output_dir,
             run_contract=contract,
@@ -1382,6 +1804,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             admission_gate=admission_gate,
             admission_verdict=admission_verdict,
         )
+        timing_surfaces = raw_probe_timing_surfaces()
         receipt = {
             "schema": SCHEMA,
             "completed_at_utc": _utc(),
@@ -1412,7 +1835,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "admission": admission_verdict,
                 "live_trainer_activation": False,
                 "runtime_exact_gradient_access": False,
-                "in_loop_timing": "OWED_OPERATOR_GO",
+                **timing_surfaces["fidelity_gate"],
             },
             "cleanup": {
                 "status": "NO_BULK_SCRATCH_CREATED",
@@ -1423,7 +1846,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "score_claim": False,
                 "promotion_eligible": False,
                 "pointer_moved": False,
-                "whole_epoch_speedup": "UNKNOWN_IN_LOOP_TIMER_OWED",
+                **timing_surfaces["authority"],
                 "contest_cpu_cuda": "NOT_MEASURED",
             },
             "host": {
@@ -1433,6 +1856,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "numpy": np.__version__,
             },
         }
+        if _classify_completed_receipt_timing_routing(receipt) != CURRENT_TIMING_ROUTING_CLASS:
+            raise ProbeError("fresh receipt timing routing is not the exact current tuple")
         receipt_path = output_dir / "measurement_receipt.json"
         _atomic_json(receipt_path, receipt)
         _atomic_json(
@@ -1448,6 +1873,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         return receipt
     finally:
         _release_lock(descriptor)
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    """Run or resume with the one code-reviewed immutable legacy identity."""
+
+    return _run_with_expected_legacy_roots(
+        args,
+        expected_legacy_roots=_public_expected_legacy_receipt_roots(),
+    )
 
 
 def _parser() -> argparse.ArgumentParser:

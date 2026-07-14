@@ -48,11 +48,40 @@ EXPECTED_SCORER_SHA256 = "584f711dfb85163c38caf8976ebeda87698baefb45f9f5979539a8
 EXPECTED_SOURCE_RECEIPT_SHA256: str | None = "4c84c1f80ae7fc1b4ee76d28395405834e3eecd439155e4ebd79d4e81530506c"
 EXPECTED_SOURCE_COMPLETE_SHA256: str | None = "45ccbccee780d26bf350442ddf5551d62d483957c591b706fe5eb746dfbea34c"
 SUPERSEDED_LABEL = "SUPERSEDED_INVALID_FALLBACK_CHARGE"
-WHOLE_EPOCH_OWED = "UNKNOWN_IN_LOOP_TIMER_OWED"
+# This label is part of the immutable v2 source receipt.  It is accepted only
+# while revalidating those historical bytes; it is not current timing routing.
+HISTORICAL_SOURCE_WHOLE_EPOCH_LABEL = "UNKNOWN_IN_LOOP_TIMER_OWED"
+DIAGNOSTIC_ONLY_NO_TIMING_AUTHORITY = "NOT_MEASURED_DIAGNOSTIC_ONLY"
+FIDELITY_BLOCKED_STATUS = "FIDELITY_BLOCKED_PENDING_NEW_FORMULATION"
+FIDELITY_ADMITTED_STATUS = "FIDELITY_ADMITTED_PENDING_PROVIDER_RESUME_PARITY_NO_TIMER_GO"
 
 
 class AdjudicationError(RuntimeError):
     """The sealed-source or corrected-adjudication contract failed closed."""
+
+
+def corrected_timing_routing(corrected_admission_verdict: str) -> dict[str, Any]:
+    """Report the corrected fidelity stage without minting timing authority.
+
+    A separate downstream validator must bind a fresh preregistered formulation,
+    its admitted sealed n600 receipt, exact provider-gradient parity, canonical
+    resume registration, and uninterrupted-versus-resumed state parity before
+    any operator timing request can become eligible.
+    """
+
+    if corrected_admission_verdict == "ADMIT_K2_GUARDED_REUSE":
+        return {
+            "status": FIDELITY_ADMITTED_STATUS,
+            "operator_go_request_eligible": False,
+            "operator_go_granted": False,
+        }
+    if corrected_admission_verdict == "NOT_ADMITTED":
+        return {
+            "status": FIDELITY_BLOCKED_STATUS,
+            "operator_go_request_eligible": False,
+            "operator_go_granted": False,
+        }
+    raise AdjudicationError(f"unknown corrected admission verdict: {corrected_admission_verdict}")
 
 
 @dataclass(frozen=True)
@@ -761,7 +790,7 @@ def derive_corrected_economics(accept_fraction: float, forward_share_alpha: floa
         "exact_backward_call_reduction_fraction": p / 2.0,
         "exact_backward_call_reduction_formula": "p/2",
         "evidence_grade": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP",
-        "whole_epoch_speedup": WHOLE_EPOCH_OWED,
+        "whole_epoch_speedup": DIAGNOSTIC_ONLY_NO_TIMING_AUTHORITY,
     }
 
 
@@ -972,7 +1001,7 @@ def _validate_original_receipt(
     for field in ("score_claim", "promotion_eligible", "pointer_moved"):
         if authority.get(field) is not False:
             raise AdjudicationError(f"original receipt carries false authority at {field}")
-    if authority.get("whole_epoch_speedup") != WHOLE_EPOCH_OWED:
+    if authority.get("whole_epoch_speedup") != HISTORICAL_SOURCE_WHOLE_EPOCH_LABEL:
         raise AdjudicationError("original receipt claims unmeasured whole-epoch speedup")
     if authority.get("contest_cpu_cuda") != "NOT_MEASURED":
         raise AdjudicationError("original receipt carries unmeasured contest-axis authority")
@@ -1001,7 +1030,9 @@ def _corrected_gate(
         "gradient_relative_l2_comparator": "strict_lt",
         "accepted_stale_minus_exact_d_seg_threshold": 0.0,
         "accepted_stale_minus_exact_d_seg_comparator": "lte",
-        "whole_epoch_speedup": WHOLE_EPOCH_OWED,
+        "whole_epoch_speedup_routing": (
+            "fidelity_stage_only; downstream_provider_resume_parity_validator_required_before_timer_request"
+        ),
     }
     predicates = {
         "source_complete": True,
@@ -1022,12 +1053,15 @@ def _corrected_gate(
         "all_accepted_stale_d_seg_regret_lte_exact": regret["lte_zero_count"] == accepted_count,
         "no_inconsistent_accept_flags": rederived["inconsistent_accept_flag_count"] == 0,
     }
+    passed = all(predicates.values())
+    corrected_verdict = "ADMIT_K2_GUARDED_REUSE" if passed else "NOT_ADMITTED"
+    timing_routing = corrected_timing_routing(corrected_verdict)
     return {
         "schema": CORRECTED_GATE_SCHEMA,
         "spec": spec,
         "spec_sha256": canonical_sha256(spec),
         "predicates": predicates,
-        "passed": all(predicates.values()),
+        "passed": passed,
         "behavioral_full_facet_accept_count": accepted_count,
         "observed_state_count": rederived["state_count"],
         "observed_unique_pair_count": rederived["unique_pair_count"],
@@ -1037,7 +1071,8 @@ def _corrected_gate(
         "forward_elimination_amdahl_ceiling_x": economics["forward_elimination_amdahl_ceiling_x"],
         "evidence_grade": "DERIVED_DIAGNOSTIC_NOT_IN_LOOP",
         "runtime_exact_gradient_access": False,
-        "whole_epoch_speedup": WHOLE_EPOCH_OWED,
+        "whole_epoch_speedup": timing_routing["status"],
+        "timing_routing": timing_routing,
     }
 
 
@@ -1151,6 +1186,10 @@ def _build_wrapper(
         expected_stage_count=expected_stage_count,
     )
     corrected_verdict = "ADMIT_K2_GUARDED_REUSE" if gate["passed"] else "NOT_ADMITTED"
+    timing_routing = corrected_timing_routing(corrected_verdict)
+    if gate["timing_routing"] != timing_routing:
+        raise AdjudicationError("corrected gate timing routing disagrees with its verdict")
+    economics["whole_epoch_speedup"] = timing_routing["status"]
     source_tree = _snapshot_tree(snapshot)
     wrapper: dict[str, Any] = {
         "schema": WRAPPER_SCHEMA,
@@ -1188,6 +1227,7 @@ def _build_wrapper(
         "corrected_diagnostic_economics": economics,
         "corrected_admission_gate": gate,
         "corrected_admission_verdict": corrected_verdict,
+        "timing_routing": timing_routing,
         "execution": {
             "teacher_calls": 0,
             "scorer_calls": 0,
@@ -1205,7 +1245,9 @@ def _build_wrapper(
             "pointer_moved": False,
             "live_trainer_activation": False,
             "runtime_exact_gradient_access": False,
-            "whole_epoch_speedup": WHOLE_EPOCH_OWED,
+            "whole_epoch_speedup": timing_routing["status"],
+            "operator_go_request_eligible": timing_routing["operator_go_request_eligible"],
+            "operator_go_granted": timing_routing["operator_go_granted"],
             "contest_cpu_cuda": "NOT_MEASURED",
         },
     }

@@ -93,9 +93,10 @@ EVIDENCE_BYTE_CLOSED = "byte_closed"
 EVIDENCE_RESEARCH_DIAGNOSTIC = "research_diagnostic"
 VALID_EVIDENCE_KINDS = frozenset({EVIDENCE_BYTE_CLOSED, EVIDENCE_RESEARCH_DIAGNOSTIC})
 
-# Production ``measured`` is deliberately narrower than "a file with a matching hash".  This
-# normalized wrapper is the only receipt type this pool currently knows how to adjudicate.  New
-# receipt families must add an explicit validator here; there is no permissive fallback.
+# Production ``measured`` is deliberately narrower than "a file with a matching hash".  These v1
+# names and the parser below are retained only to diagnose historical rows; no production receipt
+# schema is currently admitted.  Re-enablement requires a new full-transaction validator; there is
+# no permissive fallback.
 PRODUCTION_RECEIPT_SCHEMA = "curriculum_candidate_production_admission.v1"
 PRODUCTION_RECEIPT_TYPE = "curriculum_candidate_production_admission"
 
@@ -133,7 +134,7 @@ def _valid_sha256(value: object) -> bool:
 
 
 def _production_admission_receipt_error(payload: object, *, candidate: str) -> str | None:
-    """Validate the one explicitly supported production-admission receipt schema."""
+    """Parse disabled historical v1 semantics without granting production authority."""
 
     if not isinstance(payload, dict):
         return "production receipt must contain a JSON object"
@@ -218,9 +219,12 @@ def _production_admission_receipt_error(payload: object, *, candidate: str) -> s
     return None
 
 
-_PRODUCTION_RECEIPT_VALIDATORS = {
-    PRODUCTION_RECEIPT_SCHEMA: _production_admission_receipt_error,
-}
+# Production admission is intentionally disabled.  The historical v1 parser above is retained so
+# old rows can be diagnosed, but it is not an authority surface: it does not bind the exact archive
+# copied into evaluation, an immutable executed runtime, scorer import origins, or the canonical
+# n600 names/GT transaction.  Re-enable only by landing and registering a new schema that binds that
+# full evaluator transaction.  An allowlisted path/SHA cannot override this empty registry.
+_PRODUCTION_RECEIPT_VALIDATORS = {}
 
 # Code-reviewed trust root.  A caller cannot mint authority by writing a syntactically valid JSON
 # object and hashing it: candidate, path, and exact receipt bytes must first be pinned here.  Keep the

@@ -384,7 +384,7 @@ def _make_fixture(
             "score_claim": False,
             "promotion_eligible": False,
             "pointer_moved": False,
-            "whole_epoch_speedup": tool.WHOLE_EPOCH_OWED,
+            "whole_epoch_speedup": tool.HISTORICAL_SOURCE_WHOLE_EPOCH_LABEL,
             "contest_cpu_cuda": "NOT_MEASURED",
         },
         "host": {"numpy": tool.np.__version__},
@@ -474,6 +474,15 @@ def test_adjudicator_recursively_binds_source_and_is_idempotent(tmp_path: Path) 
         "quantile_schema": "min/p10/median/mean/p90/max; NumPy default linear method",
     }
     assert wrapper["authority"]["promotion_eligible"] is False
+    assert wrapper["timing_routing"] == {
+        "status": tool.FIDELITY_ADMITTED_STATUS,
+        "operator_go_request_eligible": False,
+        "operator_go_granted": False,
+    }
+    assert wrapper["corrected_admission_gate"]["whole_epoch_speedup"] == tool.FIDELITY_ADMITTED_STATUS
+    assert wrapper["corrected_diagnostic_economics"]["whole_epoch_speedup"] == tool.FIDELITY_ADMITTED_STATUS
+    assert wrapper["authority"]["whole_epoch_speedup"] == tool.FIDELITY_ADMITTED_STATUS
+    assert "TIMING_PENDING_OPERATOR_GO" not in json.dumps(wrapper, sort_keys=True)
     unsigned = dict(wrapper)
     claimed_content_hash = unsigned.pop("adjudication_content_sha256")
     assert claimed_content_hash == tool.canonical_sha256(unsigned)
@@ -494,6 +503,15 @@ def test_adjudicator_emits_nonadmission_when_accepted_fidelity_fails(tmp_path: P
     assert gate["passed"] is False
     assert wrapper["corrected_admission_verdict"] == "NOT_ADMITTED"
     assert wrapper["authority"]["live_trainer_activation"] is False
+    assert wrapper["timing_routing"] == {
+        "status": tool.FIDELITY_BLOCKED_STATUS,
+        "operator_go_request_eligible": False,
+        "operator_go_granted": False,
+    }
+    assert wrapper["corrected_admission_gate"]["whole_epoch_speedup"] == tool.FIDELITY_BLOCKED_STATUS
+    assert wrapper["corrected_diagnostic_economics"]["whole_epoch_speedup"] == tool.FIDELITY_BLOCKED_STATUS
+    assert wrapper["authority"]["whole_epoch_speedup"] == tool.FIDELITY_BLOCKED_STATUS
+    assert "TIMING_PENDING_OPERATOR_GO" not in json.dumps(wrapper, sort_keys=True)
 
 
 def test_adjudicator_uses_source_fallback_operation_order(tmp_path: Path) -> None:

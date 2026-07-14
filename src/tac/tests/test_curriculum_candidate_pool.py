@@ -301,7 +301,7 @@ def test_measured_requires_verdict_ref(tmp_path):
         ("cuda", "[contest-CUDA]", "linux_x86_64_t4"),
     ],
 )
-def test_measured_with_allowlisted_semantically_authoritative_receipt_ok(
+def test_allowlisted_v1_receipt_cannot_mint_production_authority(
     tmp_path, monkeypatch, axis, evidence_tag, hardware_substrate
 ):
     repo = tmp_path / "repo"
@@ -328,24 +328,19 @@ def test_measured_with_allowlisted_semantically_authoritative_receipt_ok(
         {("c", "byteclose/verdict.json"): receipt_sha256},
     )
 
-    pool_path = tmp_path / "p.jsonl"
-    row = ccp.record_candidate(
-        "c",
-        ccp.STATUS_MEASURED,
-        form_class="averaging",
-        source_anchor="a",
-        gate="g",
-        dsl_lever="L",
-        verdict_ref="byteclose/verdict.json",
-        evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
-        trusted_receipt_sha256=receipt_sha256,
-        path=pool_path,
-    )
-    assert row["status"] == ccp.STATUS_MEASURED
-    assert row["verdict_ref"] == "byteclose/verdict.json"
-    assert row["evidence_kind"] == ccp.EVIDENCE_BYTE_CLOSED
-    assert row["trusted_receipt_sha256"] == receipt_sha256
-    assert ccp.candidate_status("c", path=pool_path) is not None
+    with pytest.raises(ValueError, match="unsupported production receipt schema"):
+        ccp.record_candidate(
+            "c",
+            ccp.STATUS_MEASURED,
+            form_class="averaging",
+            source_anchor="a",
+            gate="g",
+            dsl_lever="L",
+            verdict_ref="byteclose/verdict.json",
+            evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
+            trusted_receipt_sha256=receipt_sha256,
+            path=tmp_path / "p.jsonl",
+        )
 
 
 def test_readme_hash_attack_cannot_mint_production_authority(tmp_path):
@@ -412,17 +407,15 @@ def test_allowlisted_old_synthetic_archive_sha_fixture_is_semantically_rejected(
 
 
 @pytest.mark.parametrize(
-    ("section", "field", "value", "message"),
+    ("section", "field", "value"),
     [
-        ("verdict", "passed", False, "status='ADMITTED' and passed=true"),
-        ("authority", "outcome", "REFUSED", "authority.outcome"),
-        ("custody", "outcome", "INVALID", "custody.outcome"),
-        ("authority", "hardware_substrate", "macos_arm64", "canonical authority custody refused"),
+        ("verdict", "passed", False),
+        ("authority", "outcome", "REFUSED"),
+        ("custody", "outcome", "INVALID"),
+        ("authority", "hardware_substrate", "macos_arm64"),
     ],
 )
-def test_allowlisted_receipt_still_requires_admission_authority_and_custody_outcomes(
-    tmp_path, monkeypatch, section, field, value, message
-):
+def test_disabled_v1_schema_precedes_receipt_field_semantics(tmp_path, monkeypatch, section, field, value):
     repo = tmp_path / "repo"
     repo.mkdir()
     payload = _production_receipt("semantic-refuse")
@@ -436,7 +429,7 @@ def test_allowlisted_receipt_still_requires_admission_authority_and_custody_outc
         "_TRUSTED_PRODUCTION_RECEIPTS",
         {("semantic-refuse", "receipt.json"): digest},
     )
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError, match="unsupported production receipt schema"):
         ccp.record_candidate(
             "semantic-refuse",
             ccp.STATUS_MEASURED,
@@ -536,32 +529,12 @@ def test_measured_production_rejects_symlink_receipt(tmp_path, monkeypatch):
         )
 
 
-def test_measured_production_tamper_invalidates_stored_authority(tmp_path, monkeypatch):
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    receipt = repo / "receipt.json"
+def test_production_validator_registry_is_fail_closed_even_for_well_formed_v1():
     original = json.dumps(_production_receipt("tamper"), sort_keys=True).encode("utf-8") + b"\n"
-    receipt.write_bytes(original)
-    monkeypatch.setattr(ccp, "_REPO_ROOT", repo)
-    original_sha = hashlib.sha256(original).hexdigest()
-    monkeypatch.setattr(ccp, "_TRUSTED_PRODUCTION_RECEIPTS", {("tamper", "receipt.json"): original_sha})
-    pool_path = tmp_path / "p.jsonl"
-    ccp.record_candidate(
-        "tamper",
-        ccp.STATUS_MEASURED,
-        form_class="averaging",
-        source_anchor="receipt",
-        gate="byte-close",
-        dsl_lever="L",
-        verdict_ref="receipt.json",
-        evidence_kind=ccp.EVIDENCE_BYTE_CLOSED,
-        trusted_receipt_sha256=original_sha,
-        path=pool_path,
+    assert ccp._PRODUCTION_RECEIPT_VALIDATORS == {}
+    assert ccp._production_receipt_semantic_error(original, candidate="tamper") == (
+        "unsupported production receipt schema 'curriculum_candidate_production_admission.v1'"
     )
-    assert ccp.candidate_status("tamper", path=pool_path) is not None
-
-    receipt.write_bytes(b'{"verdict":"tampered"}\n')
-    assert ccp.candidate_status("tamper", path=pool_path) is None
 
 
 def test_untrusted_production_seed_cannot_bypass_receipt_custody(tmp_path, monkeypatch):
