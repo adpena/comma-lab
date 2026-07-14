@@ -181,7 +181,7 @@ def merge_worktree(label: str, stamp: str, branch: str, worktree: str, reviewed:
         print(f"\n  → review `git diff main...{branch}`, then re-run with --reviewed to merge to main.")
         return 1
     # 3) reviewed → merge under the serializer lock (serialized ref update = Courant<=1)
-    with open(merge_lock, "a") as lk:
+    with open(merge_lock, "a") as lk:  # BARE_WRITE_OK: lockfile descriptor only; immediately flocked below
         fcntl.flock(lk, fcntl.LOCK_EX)
         try:
             m = _run(["git", "-C", REPO, "merge", "--no-ff", "-m",
