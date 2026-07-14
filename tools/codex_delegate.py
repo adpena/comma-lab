@@ -39,6 +39,7 @@ EVENTS = RUNS / "codex_events.log"
 LEDGER = REPO / ".omx" / "state" / "codex_delegations.jsonl"
 INBOX_DIR = REPO / ".omx" / "tmp" / "codex_inbox"  # per-arm watched inboxes (tools/codex_msg.py producer)
 MANIFEST_DIR = REPO / ".omx" / "tmp" / "codex_manifests"  # per-arm files-touched manifest (harvest-commit contract)
+WORKTREE_DIR = REPO / ".omx" / "tmp" / "codex_worktrees"  # per-arm isolated git worktree (CFL disjoint domain)
 
 # Back-pressure: a workspace-write arm CANNOT commit (sandbox blocks .git/objects), so every arm
 # strands its diff UNCOMMITTED in the shared tree. Above this many uncommitted files the dispatcher
@@ -66,25 +67,26 @@ This is how you stay amendable while running. Absent/empty inbox -> ignore, proc
 
 """
 
-# Commit-path contract (apparatus fix for codex_workspace_write_sandbox_blocks_git_objects_20260712):
-# a workspace-write arm CANNOT write .git/objects -> `git add`/`git commit` (and the serializer) fail
-# rc=128 -> its work strands UNCOMMITTED in the shared tree. Instead of committing, the arm writes a
-# MANIFEST of the files it touched; MAIN (unsandboxed) harvests + REVIEWS + serializer-commits them via
-# tools/codex_harvest_commit.py. Prepended to EVERY delegated prompt so no arm silently orphans its work.
-_HARVEST_CONTRACT = """=== COMMIT PATH — YOU CANNOT COMMIT; MANIFEST INSTEAD (mandatory; skipping ORPHANS your work) ===
-Your sandbox (workspace-write) BLOCKS writes to .git/objects, so `git add` / `git commit` / the
-serializer WILL fail rc=128. DO NOT attempt to commit, and DO NOT try to bypass it (no direct-git,
-no override). Instead:
-  1. Make your file edits normally.
-  2. BEFORE your FINAL message, write the EXACT repo-relative paths you created/modified to:
-       {manifest}
-     as JSON: {{"files": ["path/a.md", "src/tac/b.py", ...],
-                "code_files": ["src/tac/b.py", ...],   # subset needing code review
-                "verdict": "<one-line result>", "review_notes": "<what MAIN should check>"}}
-  3. Repeat your verdict + what-to-review in your FINAL message.
-MAIN (unsandboxed) reads the manifest, REVIEWS, and serializer-commits your diff — that harvest IS the
-non-negotiable follow-up review. An arm that edits files but writes NO manifest ORPHANS its work into an
-un-attributable shared-tree pile. Writing the manifest is MANDATORY.
+# Commit-path contract — full-authority + worktree-ISOLATED (operator 2026-07-14: codex is a trusted
+# partner with full authority; coherent parallelism = CFL: disjoint write-domains + serialized merge).
+# The arm runs in its OWN git worktree on branch codexwt/<label>_<stamp>, commits FREELY there (full
+# sandbox), and MAIN reviews the branch diff + merges to main. No trample (disjoint domain); the review
+# survives at the merge boundary. Prepended to every delegated prompt.
+_WORKTREE_CONTRACT = """=== COMMIT PATH — YOU ARE IN YOUR OWN ISOLATED GIT WORKTREE; COMMIT FREELY HERE ===
+You are running in your OWN git worktree at:
+    {worktree}
+on branch:  {branch}   (NOT main; shares .git/objects but has its own index + HEAD)
+You have FULL git authority HERE and you are ISOLATED — no other arm shares this tree, so there is NO
+trample risk. Therefore:
+  1. Make your edits and COMMIT them on THIS branch (plain `git commit` is fine — you are isolated).
+     Commit early + often; your commits ARE your deliverable.
+  2. Do NOT `cd` to or touch the main repo ({repo}) or any other worktree — stay in your worktree.
+  3. In your FINAL message, list your commit(s) + a one-line verdict + what MAIN should review.
+  4. (optional, aids review) write the files you touched to {manifest} as
+     {{"files":[...], "code_files":[...], "verdict":"...", "review_notes":"..."}}.
+MAIN reviews your branch diff (base..{branch}) and MERGES it to main — that review at the merge boundary
+IS the non-negotiable follow-up. Uncommitted edits left in your worktree are ALSO harvested, but
+committing is cleaner. Never force, never touch main directly.
 === END COMMIT PATH ===
 
 """
@@ -152,20 +154,40 @@ def _append_ledger(row: dict) -> None:
 
 def _write_launcher(label: str, stamp: str, prompt_file: Path, model: str,
                     effort: str, sandbox: str, log: Path, last: Path,
-                    done: Path) -> Path:
+                    done: Path, isolate: bool, worktree: Path) -> Path:
     launcher = RUNS / f"launch_{label}_{stamp}.sh"
-    # The launcher: run codex, tee to log, capture final message via -o, then on
-    # exit append a DONE line (with a one-line summary from the tail of `last`) to
-    # the shared events log + write a per-run .done marker. `exec bash` keeps the
-    # Terminal window open for inspection AFTER the notification has fired.
+    # Per-arm git-worktree ISOLATION (CFL disjoint write-domain -> no trample). When isolate, the arm
+    # runs in its OWN worktree on branch codexwt/<label>_<stamp> (shares .git/objects, own index+HEAD),
+    # commits there with full authority, and MAIN merges the branch to main (the single serialized
+    # integration point = Courant<=1). Falls back to the shared tree if `git worktree add` fails.
+    branch = f"codexwt/{label}_{stamp}"
+    if isolate:
+        isolate_setup = (
+            f'BASE=$(git -C {REPO} rev-parse HEAD 2>/dev/null)\n'
+            f'if git -C {REPO} worktree add -b {branch} "{worktree}" "$BASE" >> {log} 2>&1; then\n'
+            f'  WORKDIR="{worktree}"\n'
+            f'  echo "WORKTREE {label} {stamp} base=$BASE branch={branch} path={worktree}" >> {EVENTS}\n'
+            f'else\n'
+            f'  echo "WORKTREE-FAIL {label} {stamp} — shared-tree fallback (NO isolation)" >> {EVENTS}\n'
+            f'fi'
+        )
+    else:
+        isolate_setup = '# --no-isolate: running in the shared repo tree (legacy; use for read-only arms only)'
+    # The launcher: (worktree isolate ->) run codex, tee to log, capture final message via -o, then on
+    # exit append a DONE line (with a one-line summary from the tail of `last`) to the shared events log
+    # + write a per-run .done marker recording the worktree/branch for main to merge. `exec bash` keeps
+    # the Terminal window open for inspection AFTER the notification has fired.
     launcher.write_text(
         f"""#!/bin/bash
 set +e
-cd {REPO} || exit 1
 mkdir -p {RUNS}
 echo "START {label} {stamp} $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> {EVENTS}
 echo "=== codex delegate '{label}' [{model}/{effort}/{sandbox}] {stamp} ==="
 echo "log:  {log}"
+WORKDIR="{REPO}"
+{isolate_setup}
+cd "$WORKDIR" || cd {REPO} || exit 1
+echo "cwd: $WORKDIR"
 codex exec \\
   --skip-git-repo-check \\
   --sandbox {sandbox} \\
@@ -199,9 +221,9 @@ done
 # one-line summary from the tail of the final-message file (best-effort, sanitized)
 SUMMARY=$(tail -c 400 {last} 2>/dev/null | tr '\\n' ' ' | tr -s ' ' | sed 's/[|]/ /g' | tail -c 200)
 echo "DONE {label} rc=$RC {stamp} $(date -u +%Y-%m-%dT%H:%M:%SZ) :: ${{SUMMARY}}" >> {EVENTS}
-printf 'rc=%s\\nfinished_utc=%s\\nlog=%s\\nlast=%s\\n' "$RC" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "{log}" "{last}" > {done}
+printf 'rc=%s\\nfinished_utc=%s\\nlog=%s\\nlast=%s\\nworktree=%s\\nbranch=%s\\nisolate=%s\\n' "$RC" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "{log}" "{last}" "{worktree if isolate else ''}" "{branch if isolate else ''}" "{'1' if isolate else '0'}" > {done}
 echo ""
-echo "=== codex delegate '{label}' exited rc=$RC — DONE line appended to codex_events.log ==="
+echo "=== codex delegate '{label}' exited rc=$RC — DONE appended; MAIN: harvest+merge worktree branch to main ==="
 echo "(window kept open; review {last})"
 exec bash
 """,
@@ -219,8 +241,16 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--prompt", help="inline prompt string (written to a prompt file)")
     ap.add_argument("--model", default="gpt-5.6-sol")
     ap.add_argument("--effort", default="ultra", choices=["low", "medium", "high", "xhigh", "ultra"])
-    ap.add_argument("--sandbox", default="workspace-write",
+    # Sandbox relaxed to FULL AUTHORITY (operator 2026-07-14: "codex is a trusted partner, I trust it
+    # with as much authority as you"). danger-full-access lets an arm write .git/objects and COMMIT —
+    # coherent (no-trample) because each arm runs in its OWN git worktree (disjoint write-domain, the
+    # CFL well-posedness condition), and MAIN is the single serialized merge point (Courant<=1).
+    ap.add_argument("--sandbox", default="danger-full-access",
                     choices=["read-only", "workspace-write", "danger-full-access"])
+    ap.add_argument("--no-isolate", action="store_true",
+                    help="run in the shared repo tree (LEGACY) instead of a per-arm git worktree. "
+                         "Isolation (default) is the no-trample guarantee — only use --no-isolate for "
+                         "a read-only/analysis arm that writes nothing.")
     ap.add_argument("--no-launch", action="store_true", help="write launcher + ledger but do not osascript-launch")
     ap.add_argument("--force", action="store_true",
                     help="launch even if an arm with this label is already live (de-confliction override)")
@@ -265,14 +295,21 @@ def main(argv: list[str] | None = None) -> int:
     # prompt_file is preserved untouched (and recorded in the ledger for provenance).
     INBOX_DIR.mkdir(parents=True, exist_ok=True)
     MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
+    isolate = not args.no_isolate
+    worktree = WORKTREE_DIR / f"{args.label}_{stamp}"
+    branch = f"codexwt/{args.label}_{stamp}"
     inbox = INBOX_DIR / f"{args.label}.jsonl"
     broadcast = INBOX_DIR / "_broadcast.jsonl"
     manifest = MANIFEST_DIR / f"{args.label}_{stamp}.json"
     inbox.touch(exist_ok=True)
     broadcast.touch(exist_ok=True)
     wrapped = RUNS / f"{args.label}_{stamp}.wrapped.prompt.txt"
+    commit_contract = (
+        _WORKTREE_CONTRACT.format(worktree=worktree, branch=branch, manifest=manifest, repo=REPO)
+        if isolate else ""
+    )
     wrapped.write_text(
-        _HARVEST_CONTRACT.format(manifest=manifest)
+        commit_contract
         + _INBOX_CONTRACT.format(inbox=inbox, broadcast=broadcast)
         + prompt_file.read_text(encoding="utf-8"),
         encoding="utf-8",
@@ -282,12 +319,14 @@ def main(argv: list[str] | None = None) -> int:
     last = RUNS / f"{args.label}_{stamp}.last.txt"
     done = RUNS / f"{args.label}_{stamp}.done"
     launcher = _write_launcher(args.label, stamp, wrapped, args.model,
-                               args.effort, args.sandbox, log, last, done)
+                               args.effort, args.sandbox, log, last, done, isolate, worktree)
 
     _append_ledger({
         "label": args.label, "stamp": stamp, "model": args.model, "effort": args.effort,
         "sandbox": args.sandbox, "launcher": str(launcher), "log": str(log),
         "last": str(last), "done_marker": str(done), "prompt_file": str(prompt_file),
+        "isolate": isolate, "worktree": str(worktree) if isolate else None,
+        "branch": branch if isolate else None,
         "launched_utc": datetime.now(UTC).isoformat(), "status": "running",
     })
 

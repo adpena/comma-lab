@@ -152,14 +152,74 @@ def _serializer_commit(label: str, stamp: str, files: list[str], message: str) -
     return r.returncode
 
 
+def merge_worktree(label: str, stamp: str, branch: str, worktree: str, reviewed: bool) -> int:
+    """Isolated-worktree harvest: MAIN reviews the arm's branch diff and MERGES it to main (the single
+    coherent, Courant-serialized integration point). No trample (disjoint domain); review at the merge
+    boundary preserves the non-negotiable follow-up. --reviewed asserts MAIN reviewed the branch diff."""
+    import fcntl
+    wt = Path(worktree)
+    merge_lock = REPO / ".omx" / "state" / ".commit-lock"  # reuse the serializer lock -> coherent ref updates
+
+    def _run(a, cwd=REPO):
+        return subprocess.run([str(x) for x in a], cwd=str(cwd), capture_output=True, text=True)
+
+    # 1) commit any leftover uncommitted edits in the arm's OWN isolated worktree (its branch; safe)
+    if wt.is_dir() and _run(["git", "-C", wt, "status", "--short"]).stdout.strip():
+        _run(["git", "-C", wt, "add", "-A"])
+        _run(["git", "-C", wt, "commit", "--no-verify", "-m",
+              f"harvest[{label}] leftover uncommitted worktree edits"])
+    # 2) branch changes vs main
+    names = _run(["git", "-C", REPO, "diff", "--name-only", f"main...{branch}"]).stdout.split()
+    if not names:
+        print(f"[ok] {label}: branch {branch} has no changes vs main — nothing to merge.")
+        return 0
+    code = [n for n in names if Path(n).suffix in _CODE_SUFFIXES]
+    if not reviewed:
+        print(f"\n=== {label} branch {branch} OWED REVIEW before merge "
+              f"({len(names)} files, {len(code)} code) ===")
+        print(_run(["git", "-C", REPO, "diff", "--stat", f"main...{branch}"]).stdout.strip()[:1500])
+        print(f"\n  → review `git diff main...{branch}`, then re-run with --reviewed to merge to main.")
+        return 1
+    # 3) reviewed → merge under the serializer lock (serialized ref update = Courant<=1)
+    with open(merge_lock, "a") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        try:
+            m = _run(["git", "-C", REPO, "merge", "--no-ff", "-m",
+                      f"merge codex worktree {branch} (reviewed main-side harvest)", branch])
+        finally:
+            fcntl.flock(lk, fcntl.LOCK_UN)
+    print((m.stdout + m.stderr).strip()[-500:])
+    if m.returncode != 0:
+        print(f"REFUSED: merge of {branch} failed (main tree not clean, or conflict). "
+              f"Clean/resolve main first, then re-run.")
+        return 2
+    # 4) cleanup + disposition
+    _run(["git", "-C", REPO, "worktree", "remove", str(wt), "--force"])
+    _run(["git", "-C", REPO, "branch", "-D", branch])
+    head = _run(["git", "-C", REPO, "rev-parse", "--short", "HEAD"]).stdout.strip()
+    subprocess.run([str(VENV_PY), str(LANDING_GATE), "disposition", "--label", label, "--stamp", stamp,
+                    "--status", "reviewed_committed", "--commit", head or "HEAD",
+                    "--reason", f"worktree-isolated arm: reviewed branch {branch} + merged to main "
+                    f"({len(names)} files); worktree removed"], cwd=REPO)
+    print(f"[ok] {label} merged + dispositioned reviewed_committed @ {head}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Harvest + review + commit a codex arm's stranded diff (main-side).")
+    ap = argparse.ArgumentParser(description="Harvest + review + commit a codex arm's diff (main-side).")
     ap.add_argument("--label", required=True)
     ap.add_argument("--stamp", required=True)
-    ap.add_argument("--files", nargs="*", help="explicit file list (legacy/no-manifest drain)")
+    ap.add_argument("--files", nargs="*", help="explicit file list (legacy/no-manifest shared-tree drain)")
     ap.add_argument("--code-reviewed", action="store_true",
-                    help="assert MAIN has reviewed the arm's code files → mark reviewed + commit them")
+                    help="assert MAIN reviewed the arm's code files → mark reviewed + commit them")
+    ap.add_argument("--merge-worktree", help="ISOLATED mode: path to the arm's git worktree to merge")
+    ap.add_argument("--branch", help="the arm's branch (codexwt/<label>_<stamp>) to merge to main")
+    ap.add_argument("--reviewed", action="store_true", help="assert MAIN reviewed the branch diff → merge")
     args = ap.parse_args(argv)
+    if args.merge_worktree:
+        if not args.branch:
+            ap.error("--merge-worktree requires --branch")
+        return merge_worktree(args.label, args.stamp, args.branch, args.merge_worktree, args.reviewed)
     return harvest(args.label, args.stamp, args.files, args.code_reviewed)
 
 
