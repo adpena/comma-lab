@@ -113,8 +113,8 @@ def harvest(label: str, stamp: str, explicit_files: list[str] | None,
         print(f"\n⚠ {len(code)} CODE file(s) OWED REVIEW before commit (review gate — NOT bypassed):")
         for f in code:
             print(f"    {f}")
-        print(f"  → review them, then re-run with --code-reviewed to mark + commit + disposition "
-              f"reviewed_committed.")
+        print("  → review them, then re-run with --code-reviewed to mark + commit + disposition "
+              "reviewed_committed.")
         # partial: safe landed, code owed. Disposition stays NEEDS_REVIEW (code) — do NOT claim done.
         return 0 if not safe or committed_any else 1
     if code and code_reviewed:
