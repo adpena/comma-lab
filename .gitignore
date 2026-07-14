@@ -578,3 +578,6 @@ submission_packets/
 
 # rebuildable manim viz frame-stacks (regenerate from the run; disk-hygiene non-negotiable)
 experiments/manim_levelset/assets/
+
+# Ephemeral per-arm scratch (venvs, build caches) — rebuildable, never tracked
+experiments/.scratch/
