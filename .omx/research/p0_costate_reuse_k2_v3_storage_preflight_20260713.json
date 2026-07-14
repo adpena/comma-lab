@@ -1,0 +1,168 @@
+{
+  "artifact_catalog_metadata": {
+    "artifact_paths": [
+      ".omx/research/p0_costate_reuse_k2_v3_storage_preflight_20260713.json"
+    ],
+    "cleanup_plan_path": null,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "journal_path": null,
+    "lifecycle_kind": "HISTORICAL_PROVENANCE",
+    "policy_id": "operator_storage_waterfall.v1",
+    "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_plan_path": ".omx/research/p0_costate_reuse_k2_v3_storage_preflight_20260713.json",
+    "tracked_local_boundary": {
+      ".omx/research/p0_costate_reuse_k2_v3_storage_preflight_20260713.json": {
+        "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+        "git_boundary": "trackable_when_promoted",
+        "lifecycle_kind": "HISTORICAL_PROVENANCE",
+        "local_only": false
+      }
+    }
+  },
+  "blockers": [],
+  "contest_cuda_auth_eval": false,
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval": false,
+  "expected_workload_root": "/Users/adpena/Projects/pact/experiments/results/p0_costate_reuse_k2_n600_v3_20260713",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "20260713T232655Z",
+  "gpu_launched": false,
+  "min_free_bytes": 0,
+  "operator_storage_policy": {
+    "cold_store_roots": [
+      "/Volumes/VertigoDataTier/pact/cold_store",
+      "/Volumes/APDataStore/pact/cold_store"
+    ],
+    "cold_store_subdir": "cold_store",
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "explicit_cold_store_override": false,
+    "explicit_storage_tier_override": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "local_disk_enabled": true,
+    "local_disk_enabled_by_default": false,
+    "local_disk_requires_explicit_opt_in": true,
+    "policy_id": "operator_storage_waterfall.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "comma_lab.operator_storage_waterfall.v1",
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "storage_tier_cli_specs": [
+      "vertigo=/Volumes/VertigoDataTier/pact",
+      "apdatastore=/Volumes/APDataStore/pact"
+    ],
+    "work_tier_order": [
+      {
+        "allow_local_disk": false,
+        "name": "vertigo",
+        "priority": 0,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "source": "operator_policy"
+      },
+      {
+        "allow_local_disk": false,
+        "name": "apdatastore",
+        "priority": 1,
+        "root": "/Volumes/APDataStore/pact",
+        "source": "operator_policy"
+      }
+    ]
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requested_bytes": 67108864,
+  "schema": "comma_lab.experiment_storage_tier_plan.v1",
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_root": "/Users/adpena/Projects/pact",
+  "selected_tier": "local",
+  "selected_workload_root": "/Users/adpena/Projects/pact/experiments/results/p0_costate_reuse_k2_n600_v3_20260713",
+  "selected_workload_root_matches_expected": true,
+  "storage_required": true,
+  "tiers": [
+    {
+      "allow_local_disk": false,
+      "blockers": [
+        "mkdir_failed:PermissionError",
+        "workload_root_missing",
+        "write_probe_failed"
+      ],
+      "eligible": false,
+      "exists": true,
+      "free_bytes": 827380576256,
+      "name": "vertigo",
+      "parent_exists": true,
+      "priority": 0,
+      "requested_bytes": 67108864,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Volumes/VertigoDataTier/pact",
+      "total_bytes": 2000189177856,
+      "usable_bytes": 784430903296,
+      "workload_root": "/Volumes/VertigoDataTier/pact/experiments/results/p0_costate_reuse_k2_n600_v3_20260713",
+      "workload_root_exists": false,
+      "writable": false
+    },
+    {
+      "allow_local_disk": false,
+      "blockers": [
+        "volume_mount_missing:APDataStore",
+        "workload_root_missing",
+        "free_bytes_unavailable"
+      ],
+      "eligible": false,
+      "exists": false,
+      "free_bytes": null,
+      "name": "apdatastore",
+      "parent_exists": true,
+      "priority": 1,
+      "requested_bytes": 67108864,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Volumes/APDataStore/pact",
+      "total_bytes": null,
+      "usable_bytes": 0,
+      "workload_root": "/Volumes/APDataStore/pact/experiments/results/p0_costate_reuse_k2_n600_v3_20260713",
+      "workload_root_exists": false,
+      "writable": false
+    },
+    {
+      "allow_local_disk": true,
+      "blockers": [],
+      "eligible": true,
+      "exists": true,
+      "free_bytes": 702963724288,
+      "name": "local",
+      "parent_exists": true,
+      "priority": 2,
+      "requested_bytes": 67108864,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Users/adpena/Projects/pact",
+      "total_bytes": 1995165736960,
+      "usable_bytes": 660014051328,
+      "workload_root": "/Users/adpena/Projects/pact/experiments/results/p0_costate_reuse_k2_n600_v3_20260713",
+      "workload_root_exists": true,
+      "writable": true
+    }
+  ],
+  "workload_subdir": "experiments/results/p0_costate_reuse_k2_n600_v3_20260713"
+}

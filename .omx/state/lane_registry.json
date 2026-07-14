@@ -77030,6 +77030,47 @@
       "reactivation_criteria": [
         "integer-lowered real render-R primitive measures 0/10 cross-process divergence and passes numpy-fp32 parity contract"
       ]
+    },
+    {
+      "id": "throughput_authority_ladder",
+      "name": "Task 494 compute-substrate authority ladder",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only authority/throughput ladder; composes settled pythagorean integer-arithmetic instance evidence. No score claim; operator-GO for governed timer, paid/CUDA, live config/run actuation."
     }
   ],
   "level_rules": {
@@ -77039,5 +77080,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-14T00:14:12Z"
+  "updated_at": "2026-07-14T01:00:38Z"
 }

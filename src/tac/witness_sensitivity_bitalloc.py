@@ -128,7 +128,14 @@ def classify_response_rows(
                 }
             )
             out.append(row)
-    return sorted(out, key=lambda r: (str(r["tensor"]), int(r.get("bits", -1))), reverse=False)
+    return sorted(
+        out,
+        key=lambda r: (
+            str(r["tensor"]),
+            -1 if r.get("bits") is None else int(r["bits"]),
+        ),
+        reverse=False,
+    )
 
 
 def build_rd_table(

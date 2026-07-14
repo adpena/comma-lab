@@ -1,0 +1,95 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory; frozen CPU-torch exact cells; NON-PROMOTABLE]",
+    "candidate_bytes_revalidated_at_authorization": false,
+    "candidate_custody_scope": "original ignored archive bytes are not required or rehashed by the fresh-clone policy; committed snapshots bind path/bytes/SHA-256 and authorization requires restoration plus explicit audit before any remeasurement",
+    "contest_cpu_cuda": "NOT_MEASURED",
+    "live_trainer_activation": false,
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "candidate_archive_custody": {
+    "bytes": 177169,
+    "path": "experiments/results/click_polish_399_campaign/candidate_archive.zip",
+    "sha256": "9c2afa96abdd6fa401bbdfa7a29a7f26ef67c70540656b6fd9ffd87d0bb91d6c"
+  },
+  "derived": {
+    "bulk_training_teacher_cost_reduction_fraction": "UNQUANTIFIED_NOT_COMPOSABLE",
+    "terminal_route_costate_calls": 0,
+    "terminal_route_teacher_cost_reduction_fraction": 1.0,
+    "terminal_skip_reason": "exact-metric accept/reject search has no gradient or costate call"
+  },
+  "fixture_manifest_custody": {
+    "bytes": 846,
+    "path": ".omx/research/p0_terminal_costate_skip_fixture_snapshot_20260713.json",
+    "sha256": "ce213e92cf4cc04be78701518118bc8dff9e97733a16feb8fab7cec29673463f"
+  },
+  "harness_custody": [
+    {
+      "bytes": 23521,
+      "path": "tools/ugc_terminal_polish_ab.py",
+      "sha256": "d87f38489dc68d3c62d1098fd9882ace0b582eb3f92b67258681d31b80777dd8"
+    },
+    {
+      "bytes": 101175,
+      "path": "src/tac/through_r/mc_finisher.py",
+      "sha256": "ecf9e4643bf246ebb6c31e3091dcdcc00c49bf27d0f929d0ca1c5aaee8e77b4c"
+    }
+  ],
+  "measured": {
+    "active_support_dimension": 6,
+    "candidate_pairs": [
+      144,
+      147,
+      150,
+      153,
+      156,
+      159
+    ],
+    "delta_s": -8.229284904293088e-06,
+    "exact_function_evaluations_search": 64,
+    "final_mask": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "local_wall_clock_seconds_variance_search_verify": 56.84323175007012,
+    "n_pairs_composed_per_objective": 600,
+    "winner": "one_plus_one_es"
+  },
+  "method": "exact_metric_mc_396",
+  "n_pairs": 600,
+  "objective": {
+    "archive_bytes_measured_every_mask": true,
+    "formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "nonlinear_pose_recomputed_from_n600_mean": true,
+    "pair_local_changed_cells": 6,
+    "realized_through_R": true,
+    "seg_pose_cells_composed": 600
+  },
+  "objective_sha256": "85187560bbbc9c931f81d6201290673688bc05daaf02ac7bbd4af645f210e641",
+  "schema": "p0_terminal_costate_skip_handoff.v1",
+  "scorer_custody": {
+    "canonical_chunk_size": 16,
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "posenet_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "verification": "frozen CPU-torch exact cells; final-mask seg/pose cell maxabs=0 and score residual=0"
+  },
+  "scorer_sha256": "4a77028175c531545a2719caca586db5ac074fe6d4c6845409c616399c4c85bc",
+  "source_receipt_custody": {
+    "bytes": 1401,
+    "path": ".omx/research/p0_terminal_costate_skip_source_snapshot_20260713.json",
+    "sha256": "064bc29152628f62c66e4b30098a7de732eadaceef782444f08426c540625c73"
+  },
+  "status": "completed",
+  "verdict_scope": {
+    "admitted": "post-training #396 exact-metric accept/reject terminal route on the pinned n600 objective",
+    "not_admitted": "bulk SPSA/ES gradient estimation; training-loop teacher reduction; contest score or runtime claim",
+    "spsa_es_effective_dimension_gate": 2
+  }
+}

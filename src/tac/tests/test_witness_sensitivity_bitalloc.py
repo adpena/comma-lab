@@ -50,6 +50,37 @@ def test_repeat_floor_and_zero_invariance_are_componentwise() -> None:
     assert all(not r["zero_invariant_within_repeat_floor"] for r in classified if r["bits"] < 8)
 
 
+def test_classifier_accepts_nonprecision_ablation_rows() -> None:
+    base, rows = _curves()
+    rows.extend(
+        [
+            {
+                "tensor": "a",
+                "bits": None,
+                "label": "a:zero",
+                "archive_bytes": 500,
+                "d_seg": 0.5,
+                "d_pose": 0.04,
+            },
+            {
+                "tensor": "a",
+                "bits": None,
+                "label": "a:mean",
+                "archive_bytes": 501,
+                "d_seg": 0.4,
+                "d_pose": 0.04,
+            },
+        ]
+    )
+    classified = classify_response_rows(
+        rows, baseline=base, noise_floor={"d_seg": 0.0, "d_pose": 0.0}
+    )
+    assert {row["label"] for row in classified if row["bits"] is None} == {
+        "a:zero",
+        "a:mean",
+    }
+
+
 def test_rd_table_uses_real_qmax_levels() -> None:
     base, rows = _curves()
     classified = classify_response_rows(

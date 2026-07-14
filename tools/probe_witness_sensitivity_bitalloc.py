@@ -333,15 +333,81 @@ def _fingerprint_payload(args, ckpt_sha: str, tensors: list[str], bits: list[int
     }
 
 
-def _load_or_init_state(path: Path, fingerprint_payload: dict[str, Any]) -> dict[str, Any]:
+def _load_or_init_state(
+    path: Path,
+    fingerprint_payload: dict[str, Any],
+    *,
+    allow_complete_postprocess_drift: bool = False,
+    required_complete_labels: list[str] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
     fingerprint = _sha256_bytes(
         json.dumps(fingerprint_payload, sort_keys=True, separators=(",", ":")).encode()
     )
     if path.exists():
         state = json.loads(path.read_text())
         if state.get("fingerprint") != fingerprint:
-            raise ValueError("resume fingerprint mismatch; refusing to mix checkpoint/GT/config evidence")
-        return state
+            if not allow_complete_postprocess_drift:
+                raise ValueError(
+                    "resume fingerprint mismatch; refusing to mix checkpoint/GT/config evidence"
+                )
+            stored_payload = state.get("fingerprint_payload")
+            if not isinstance(stored_payload, dict):
+                raise ValueError("postprocess migration requires the stored fingerprint payload")
+            stored_fingerprint = _sha256_bytes(
+                json.dumps(stored_payload, sort_keys=True, separators=(",", ":")).encode()
+            )
+            if state.get("fingerprint") != stored_fingerprint:
+                raise ValueError("stored measurement fingerprint is internally inconsistent")
+            stored_config = {k: v for k, v in stored_payload.items() if k != "bound_source_sha256"}
+            current_config = {
+                k: v for k, v in fingerprint_payload.items() if k != "bound_source_sha256"
+            }
+            if stored_config != current_config:
+                raise ValueError("postprocess migration refuses measurement config drift")
+            stored_sources = stored_payload.get("bound_source_sha256", {})
+            current_sources = fingerprint_payload.get("bound_source_sha256", {})
+            if set(stored_sources) != set(current_sources):
+                raise ValueError("postprocess migration refuses bound-source set drift")
+            changed_sources = sorted(
+                key for key in stored_sources if stored_sources[key] != current_sources[key]
+            )
+            allowed_sources = sorted(
+                [
+                    "src/tac/witness_sensitivity_bitalloc.py",
+                    "tools/probe_witness_sensitivity_bitalloc.py",
+                ]
+            )
+            if changed_sources != allowed_sources:
+                raise ValueError(
+                    "postprocess migration permits only the classifier and probe-tool fixes; "
+                    f"changed={changed_sources}"
+                )
+            expected_pairs = {str(i) for i in range(int(fingerprint_payload["n_pairs"]))}
+            missing_or_partial = []
+            for label in required_complete_labels or []:
+                pairs = state.get("units", {}).get(label, {}).get("pairs", {})
+                if set(pairs) != expected_pairs:
+                    missing_or_partial.append(label)
+            if missing_or_partial:
+                raise ValueError(
+                    "postprocess migration requires a complete measured surface; "
+                    f"incomplete={missing_or_partial[:8]}"
+                )
+            lineage = {
+                "schema": "witness_sensitivity_bitalloc_postprocess_lineage.v1",
+                "measurement_fingerprint": stored_fingerprint,
+                "postprocess_fingerprint": fingerprint,
+                "changed_sources": changed_sources,
+                "measurement_bound_source_sha256": stored_sources,
+                "postprocess_bound_source_sha256": current_sources,
+                "acceptance_checks": {
+                    "measurement_config_identical": True,
+                    "all_measured_units_complete": True,
+                    "candidate_custody_rederived_before_allocation": True,
+                },
+            }
+            return state, lineage
+        return state, None
     state = {
         "schema": "witness_sensitivity_bitalloc_resume.v1",
         "fingerprint": fingerprint,
@@ -351,7 +417,7 @@ def _load_or_init_state(path: Path, fingerprint_payload: dict[str, Any]) -> dict
         "final_inflate_chunks": {},
     }
     _atomic_json(path, state)
-    return state
+    return state, None
 
 
 def _response_payload(
@@ -740,6 +806,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                     default=Path("experiments/.scratch/witness_bitalloc_336"),
                     help="transient certified raw root; local fallback is explicitly authorized by #336")
     ap.add_argument("--skip-zero-mean", action="store_true", help="diagnostic smoke only")
+    ap.add_argument(
+        "--finalize-complete-state-after-postprocess-fix",
+        action="store_true",
+        help=(
+            "allow the recorded classifier/probe postprocess-only source drift only when the "
+            "entire measured surface is complete; re-derives every candidate custody before solve"
+        ),
+    )
     return ap.parse_args(argv)
 
 
@@ -789,7 +863,14 @@ def main(argv: list[str] | None = None) -> int:
     fingerprint_payload = _fingerprint_payload(args, source_sha, tensors, bits)
     fingerprint_payload["skip_zero_mean"] = bool(args.skip_zero_mean)
     state_path = out_dir / "resume_state.json"
-    state = _load_or_init_state(state_path, fingerprint_payload)
+    state, postprocess_lineage = _load_or_init_state(
+        state_path,
+        fingerprint_payload,
+        allow_complete_postprocess_drift=bool(
+            args.finalize_complete_state_after_postprocess_fix
+        ),
+        required_complete_labels=[str(spec["label"]) for spec in plan],
+    )
     gt, seg_cpu, pose_cpu = load_gt_from_cache(args.gt_cache, int(args.n_pairs))
     batch_control_path = out_dir / "scorer_batch_axis_control.json"
 
@@ -863,6 +944,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     response, allocation = _response_payload(state, plan, tensors, bits, int(args.n_pairs))
+    if postprocess_lineage is not None:
+        response["postprocess_lineage"] = postprocess_lineage
+        allocation["postprocess_lineage"] = postprocess_lineage
+        _atomic_json(out_dir / "postprocess_lineage.json", postprocess_lineage)
     response["scorer_batch_axis"] = {
         "selected_batch": int(args.verdict_batch),
         "control": json.loads(batch_control_path.read_text()),
@@ -874,6 +959,8 @@ def main(argv: list[str] | None = None) -> int:
     combined_p, combined_c = _realize_combined(params_fp, code_fp, allocation["nbits"])
     combined = _candidate(bc, cfg, so, combined_p, combined_c)
     combined_unit = state["units"].setdefault("combined_kkt", {"pairs": {}})
+    if postprocess_lineage is not None:
+        combined_unit["postprocess_lineage"] = postprocess_lineage
     for key in ("archive_bytes", "archive_sha256", "blob_sha256"):
         value = combined[key]
         if key in combined_unit and combined_unit[key] != value:
@@ -948,6 +1035,8 @@ def main(argv: list[str] | None = None) -> int:
         "promotion_eligible": False,
         "pointer_moved": False,
     }
+    if postprocess_lineage is not None:
+        final_row["postprocess_lineage"] = postprocess_lineage
     _atomic_json(out_dir / "byte_closed_advisory_row.json", final_row)
     print(f"[#336] COMPLETE receiver-closed n{args.n_pairs}: delta_S={final_row['net_delta_S_advisory_byte_closed']:+.9g}")
     return 0

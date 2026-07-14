@@ -1,0 +1,286 @@
+{
+  "arm1_lane_code": {
+    "cubic_current_LBND2_brotli_bytes": 41303,
+    "cubic_current_LBND2_meta": {
+      "K": 6,
+      "n_births": 1,
+      "n_deaths": 0,
+      "pack_mode": "coherent_slot",
+      "smooth": "none"
+    },
+    "cubic_predicted_lane_states": 619738,
+    "cubic_vs_gt_lane_xor_fraction_all_states": 0.004738794962565104,
+    "cubic_vs_gt_lane_xor_states": 559011,
+    "current_coder_identity": "cubic LBND2 (the present horizon/lane family already stores c3)",
+    "gt_lane_states": 690639,
+    "matched_pre_receiver_saving_bytes_vs_current_cubic": -123454,
+    "matched_pre_receiver_target": "quadratic+ABS2 decodes bit-identically to the cubic Lane mask",
+    "quadratic_LBND2_brotli_bytes": 34402,
+    "quadratic_LBND2_meta": {
+      "K": 6,
+      "n_births": 1,
+      "n_deaths": 0,
+      "pack_mode": "coherent_slot",
+      "smooth": "none"
+    },
+    "quadratic_plus_exact_cubic_mask_correction_bytes": 164757,
+    "quadratic_predicted_lane_states": 641366,
+    "quadratic_vs_gt_lane_xor_fraction_all_states": 0.00489943610297309,
+    "quadratic_vs_gt_lane_xor_states": 577961,
+    "quadratic_xor_cubic_exact_correction_ABS2_bytes": 130355,
+    "quadratic_xor_cubic_support_fraction_all_states": 0.0017549472384982639,
+    "quadratic_xor_cubic_support_states": 207022,
+    "receiver_blocker": "no V9 decoder consumes either jet stream into RGB before R+SegNet; matched d_seg-through-R bytes are therefore NOT MEASURED",
+    "scope": "pre-receiver Lane-vs-not-Lane scorer-grid mask; NOT d_seg-through-R"
+  },
+  "arm1_third_order": {
+    "cubic_fit_M3_abs_lateral_m_per_forward_m3": {
+      "count": 2958,
+      "empirical_bound_max": 0.23793115324109215,
+      "quantiles": {
+        "q0": 8.028323334436311e-09,
+        "q0.1": 5.291308466243301e-08,
+        "q1": 5.076921331397788e-07,
+        "q100": 0.23793115324109215,
+        "q25": 2.3737791376695637e-05,
+        "q5": 3.121358278432457e-06,
+        "q50": 9.344139632277115e-05,
+        "q75": 0.0003794784852058017,
+        "q95": 0.0032967167785852586,
+        "q99": 0.04109983714459371,
+        "q99.9": 0.14689244316835726
+      }
+    },
+    "epsilon_definition": "min(t,1-t) at #275 genuine-V straddles; linearized normal displacement before either sampled endpoint crosses the tie",
+    "fit_stats": {
+      "cubic": {
+        "band_recall_mean": 0.5474557765871068,
+        "n_lines_mean": 4.945,
+        "n_pairs": 600,
+        "total_lines": 2967
+      },
+      "quadratic": {
+        "band_recall_mean": 0.5490731432931557,
+        "n_lines_mean": 4.945,
+        "n_pairs": 600,
+        "total_lines": 2967
+      }
+    },
+    "flip_radius_all_boundaries_px": {
+      "count": 1325485,
+      "quantiles": {
+        "q0": 0.0,
+        "q0.1": 0.0007744460087269544,
+        "q1": 0.0077357498556375505,
+        "q100": 0.4999997615814209,
+        "q25": 0.15715336799621582,
+        "q5": 0.03709277212619781,
+        "q50": 0.2808881103992462,
+        "q75": 0.3919696807861328,
+        "q95": 0.4783078312873841,
+        "q99": 0.49565660238265985,
+        "q99.9": 0.4995700159072876
+      }
+    },
+    "flip_radius_road_lane_px": {
+      "count": 617212,
+      "quantiles": {
+        "q0": 2.1457672119140625e-06,
+        "q0.1": 0.0007695785164833069,
+        "q1": 0.007707322561182082,
+        "q100": 0.4999995231628418,
+        "q25": 0.16673924401402473,
+        "q5": 0.037976464629173284,
+        "q50": 0.29356667399406433,
+        "q75": 0.3992849066853523,
+        "q95": 0.47963984310626984,
+        "q99": 0.4958977708220482,
+        "q99.9": 0.4996060444712639
+      }
+    },
+    "line_arclength_m": {
+      "count": 2945,
+      "quantiles": {
+        "q0": 3.666662574759206,
+        "q0.1": 4.193837341368965,
+        "q1": 6.276048920153534,
+        "q100": 1130.256176617827,
+        "q25": 27.701765255958758,
+        "q5": 13.748170741835061,
+        "q50": 39.97792680125268,
+        "q75": 58.8430499360718,
+        "q95": 92.24799175863838,
+        "q99": 228.0283097805236,
+        "q99.9": 520.5471171339123
+      },
+      "sum": 142640.82452628546
+    },
+    "n_pairs": 600,
+    "n_scorer_states": 117964800,
+    "predicted_piece_counts": {
+      "distributional_p0.1": {
+        "N2_intervals_sum": 307072,
+        "N2_quadratic_terms_3_per_interval": 921216,
+        "N3_cubic_terms_4_per_interval": 297192,
+        "N3_intervals_sum": 74298,
+        "N3_over_N2_interval_ratio": 0.24195628386827844,
+        "N3_over_N2_term_ratio": 0.3226083784910379,
+        "epsilon_ground_m_near_endpoint": {
+          "q0": 7.87733859438962e-06,
+          "q0.1": 7.945246685720565e-06,
+          "q1": 8.014335787335525e-06,
+          "q100": 7.68040512952988e-05,
+          "q25": 1.0128006764215226e-05,
+          "q5": 8.084636978452505e-06,
+          "q50": 1.5108993697435829e-05,
+          "q75": 2.1433688733571757e-05,
+          "q95": 2.880151923573705e-05,
+          "q99": 3.686594462174342e-05,
+          "q99.9": 4.947797830813002e-05
+        },
+        "epsilon_px": 0.0007695785164833069,
+        "pixel_to_ground_conversion": "epsilon_m_i = epsilon_px * forward_min_i / fx",
+        "status": "DERIVED_dimensionally_matched_Taylor_bound_on_quartic_ground_frame_fits"
+      },
+      "distributional_p1": {
+        "N2_intervals_sum": 143248,
+        "N2_quadratic_terms_3_per_interval": 429744,
+        "N3_cubic_terms_4_per_interval": 169620,
+        "N3_intervals_sum": 42405,
+        "N3_over_N2_interval_ratio": 0.29602507539372275,
+        "N3_over_N2_term_ratio": 0.3947001005249637,
+        "epsilon_ground_m_near_endpoint": {
+          "q0": 7.889148172696736e-05,
+          "q0.1": 7.957158070737227e-05,
+          "q1": 8.026350749613203e-05,
+          "q100": 0.0007691919468379319,
+          "q25": 0.00010143190507752948,
+          "q5": 8.096757335136126e-05,
+          "q50": 0.0001513164485582817,
+          "q75": 0.00021465821772221355,
+          "q95": 0.0002884469800642245,
+          "q99": 0.00036921213448220727,
+          "q99.9": 0.0004955215489103378
+        },
+        "epsilon_px": 0.007707322561182082,
+        "pixel_to_ground_conversion": "epsilon_m_i = epsilon_px * forward_min_i / fx",
+        "status": "DERIVED_dimensionally_matched_Taylor_bound_on_quartic_ground_frame_fits"
+      },
+      "strict_min": {
+        "N2_intervals_sum": 2172734,
+        "N2_quadratic_terms_3_per_interval": 6518202,
+        "N3_cubic_terms_4_per_interval": 1273676,
+        "N3_intervals_sum": 318419,
+        "N3_over_N2_interval_ratio": 0.14655222406424348,
+        "N3_over_N2_term_ratio": 0.1954029654189913,
+        "epsilon_ground_m_near_endpoint": {
+          "q0": 2.1963886089526907e-08,
+          "q0.1": 2.2153229935126276e-08,
+          "q1": 2.2345866717170846e-08,
+          "q100": 2.141478893728873e-07,
+          "q25": 2.823928211510602e-08,
+          "q5": 2.2541883091882875e-08,
+          "q50": 4.2127453647125376e-08,
+          "q75": 5.976220168545693e-08,
+          "q95": 8.030545851483274e-08,
+          "q99": 1.027909868989859e-07,
+          "q99.9": 1.3795632452232512e-07
+        },
+        "epsilon_px": 2.1457672119140625e-06,
+        "pixel_to_ground_conversion": "epsilon_m_i = epsilon_px * forward_min_i / fx",
+        "status": "DERIVED_dimensionally_matched_Taylor_bound_on_quartic_ground_frame_fits"
+      }
+    },
+    "quartic_check_M3_sup_abs_lateral_m_per_forward_m3": {
+      "count": 2945,
+      "empirical_bound_max": 0.9227458049600337,
+      "quantiles": {
+        "q0": 1.6037583563862057e-06,
+        "q0.1": 4.545849163358405e-06,
+        "q1": 1.1193861380054188e-05,
+        "q100": 0.9227458049600337,
+        "q25": 0.00020585170537329743,
+        "q5": 3.6345823190081725e-05,
+        "q50": 0.0008442472765922368,
+        "q75": 0.0034286529787001772,
+        "q95": 0.02414479961910601,
+        "q99": 0.15437598060083746,
+        "q99.9": 0.7110409481403668
+      }
+    },
+    "quartic_check_M4_abs_lateral_m_per_forward_m4": {
+      "count": 2945,
+      "empirical_bound_max": 0.39173355242134345,
+      "quantiles": {
+        "q0": 3.100176725668349e-09,
+        "q0.1": 7.158253939254007e-09,
+        "q1": 1.0422230594210428e-07,
+        "q100": 0.39173355242134345,
+        "q25": 5.78817983826957e-06,
+        "q5": 5.811068990411373e-07,
+        "q50": 3.1787863413047295e-05,
+        "q75": 0.0001763630948309458,
+        "q95": 0.0023680832451197153,
+        "q99": 0.03202770710288446,
+        "q99.9": 0.2224202686891805
+      }
+    },
+    "scope": "real n600 Road/Lane ground-frame generator; not the full V9 separatrix"
+  },
+  "arm2_phase_candidate": {
+    "D36_bits": 147616,
+    "D36_bytes": 18452,
+    "active_ground_straddle_fraction_all_states": 0.010913119845920138,
+    "active_ground_straddle_states": 1287364,
+    "amortization_ratio": 1.0478655564646127,
+    "max_abs_residual_q": 64,
+    "mean_abs_residual_q": 15.578457219558727,
+    "n_pairs": 600,
+    "nonzero_quantized_residual_fraction_active": 0.9824835866157513,
+    "nonzero_quantized_residual_fraction_all_states": 0.010721961127387153,
+    "nonzero_quantized_residual_states": 1264814,
+    "per_class_active_states_road_lane_undrivable": [
+      649336,
+      337094,
+      300934
+    ],
+    "raw_tie_residual_bytes": 944813,
+    "receiver_blockers": [
+      "d_cov+d_gauge is registered only as a scalar distortion taxonomy, not a pointwise state projection",
+      "PHAS1 has no V9 inflate/render consumer and recovered_d_seg is explicitly OWED",
+      "therefore section_bytes is a candidate upper bound, not the finite obstruction or a minimal filler"
+    ],
+    "reconstruction_bit_identical": true,
+    "scope": "V9-twist PHAS1 pre-receiver tie-residual candidate; not a finite/minimal descent filler",
+    "section_bytes": 1006377,
+    "section_minus_D36_bytes": 987925,
+    "section_over_D36_ratio": 54.54026663776284,
+    "tie_recon_rmse_px": 0.07189029474944486,
+    "triple_junction_active_ground_straddle_states": 6542,
+    "triple_junction_nonzero_quantized_residual_states": 4285,
+    "triple_junction_states": 6703,
+    "xi_amortized_residual_bytes": 990037,
+    "xi_source": "pose_carrier.xi_stored + pose_carrier.dxi from V9 checkpoint"
+  },
+  "elapsed_seconds": 69.79371690750122,
+  "labels": {
+    "Taylor_piece_counts": "DERIVED from measured derivatives and epsilon",
+    "numeric_arrays": "MEASURED on real n600 cached SegNet states",
+    "score_authority": "NONE; no exact byte-closed d_seg-through-R row was run"
+  },
+  "pointer_moved": false,
+  "provenance": {
+    "axis": "[macOS-CPU advisory] numpy-fp32/fp64 analysis; no score claim",
+    "git_sha": "8cdc4c4d556718c10aa1e1695761956463318294",
+    "git_worktree_dirty": true,
+    "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "measurement_tool": "tools/measure_third_order_descent_filler.py",
+    "measurement_tool_sha256": "21d67072c7682ecde2013496d4453b9956c99210af775e37ed56a875093bd1c5",
+    "n_pairs": 600,
+    "numpy_version": "1.26.4",
+    "v9_ckpt": "experiments/results/v9_cgauge_432_coherent_arm_20260711/levelset_witness_ema_BEST.npz",
+    "v9_ckpt_sha256": "2599ad8b396af2af220a3bdbeee2ade92f194771ae6ef01a6faa15d39333484c"
+  },
+  "schema": "third_order_descent_filler_measurement.v1"
+}

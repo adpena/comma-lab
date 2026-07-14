@@ -1,0 +1,40 @@
+{
+  "captured_at_utc": "2026-07-13T23:00:00Z",
+  "fixture": {
+    "archive_sha256": "9c2afa96abdd6fa401bbdfa7a29a7f26ef67c70540656b6fd9ffd87d0bb91d6c",
+    "authority_sha256": "0eae0bdef32431514561acea3b0354a9fd4098e8f68af9ec838c9ec6518d62c0",
+    "base_archive_bytes": 177169,
+    "base_s_rederived": 0.19081182131424618,
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "measured_stochastic_winner": "one_plus_one_es",
+  "n_pairs_authority": 600,
+  "original_schema": "ugc_terminal_polish_ab_receipt.v2",
+  "paid_dispatch": false,
+  "schema": "p0_terminal_costate_skip_source_snapshot.v1",
+  "score_claim": false,
+  "source_receipt_custody": {
+    "bytes": 17593,
+    "path": "experiments/results/ugc_terminal_polish_ab_20260712/measurement_receipt.json",
+    "sha256": "b2f7a87b43ce5face651da5caf4cd723884445d4fa04f92c007811b40d32b357"
+  },
+  "snapshot_scope": "verbatim authority fields extracted from the content-hashed original receipt; original bytes remain local durable evidence and are restorable by recorded SHA-256",
+  "winning_arm": {
+    "delta_s": -8.229284904293088e-06,
+    "estimator": "one_plus_one_es",
+    "final_mask": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "function_evals_search": 64,
+    "verification": {
+      "pose_cell_maxabs": 0.0,
+      "residual": 0.0,
+      "seg_cell_maxabs": 0.0
+    }
+  }
+}

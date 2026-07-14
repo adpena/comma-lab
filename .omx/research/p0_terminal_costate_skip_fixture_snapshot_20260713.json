@@ -1,0 +1,17 @@
+{
+  "S_authority": 0.19081182131424618,
+  "archive_sha256": "9c2afa96abdd6fa401bbdfa7a29a7f26ef67c70540656b6fd9ffd87d0bb91d6c",
+  "authority_sha256": "0eae0bdef32431514561acea3b0354a9fd4098e8f68af9ec838c9ec6518d62c0",
+  "base_archive_bytes": 177169,
+  "base_s_rederived": 0.19081182131424618,
+  "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+  "original_fixture_manifest_custody": {
+    "bytes": 1111,
+    "path": "experiments/results/ugc_terminal_polish_ab_20260712/fixture_manifest.json",
+    "sha256": "42cc41ff6ce0efa9f527b786ff976a36c7e88f73829f1ca3db38d2781d97ea41"
+  },
+  "promotable": false,
+  "schema": "p0_terminal_costate_skip_fixture_snapshot.v1",
+  "score_claim": false,
+  "snapshot_scope": "verbatim custody and authority fields extracted from the content-hashed original fixture manifest"
+}
