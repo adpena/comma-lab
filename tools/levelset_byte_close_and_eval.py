@@ -118,11 +118,18 @@ from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
 )
 from tac.boundary_math.windowed_curvelet_frame import (  # noqa: E402
     WindowedCurveletConfig,
-    n_atoms as windowed_curvelet_n_atoms,
     windowed_curvelet_feats,
 )
+from tac.boundary_math.compact_shearlet_frame import (  # noqa: E402
+    CompactShearletConfig,
+    compact_shearlet_feats,
+)
 from tac.witness_dsl.basis_control import (  # noqa: E402
+    COMPACT_SHEARLET,
     LEGACY_FOURIER_AB_CONTROL,
+    GENUINE_FRAME_FEATURE_WIDTH,
+    genuine_frame_compact_shearlet_config,
+    genuine_frame_windowed_curvelet_config,
     normalize_basis_family,
 )
 
@@ -147,6 +154,7 @@ from tac.boundary_math import warp_real_luma_frame0 as _wrl  # noqa: E402  (#205
 from tac.boundary_math import xi_pose_coder as _xip  # noqa: E402  (#257 store-nothing derive-H + ξ entropy coder)
 from tac.boundary_math import witness_crosstensor_codec as _wxc  # noqa: E402  (lossless joint weight/code storage)
 from tac import witness_run_artifacts as _wra  # noqa: E402  (canonical run-artifact filename CONTRACT)
+from tac.through_r.blind_coordinate import apply_blind_fill  # noqa: E402  (#401/D21a FREE fill)
 
 # canonical FREE-table regen fns (rule-118 curvelet bank + self-orient dir feats) — the bit-exact
 # oracle reference reuses these so the gate compares against the SAME free tables the inflate uses.
@@ -160,6 +168,81 @@ RATE_DENOM = 37_545_489.0
 _MAGIC = b"LVLS1\x00"  # level-set softmax-of-SDF carrier v1
 _PCAR_MAGIC = b"PCAR1\x00"  # #205 pose carrier: warp-real-luma frame0 (stored keyframe luma + per-pair homography)
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
+_BLIND_COORDINATE_PROOF_SCHEMA = "blind_coordinate_proof.v1"
+_BLIND_COORDINATE_RECEIVER_SCHEMA = "blind_coordinate_receiver_binding.v1"
+_BLIND_COORDINATE_N_PAIRS = 600
+_BLIND_COORDINATE_N_PX = 230_904
+
+
+def validate_blind_coordinate_n600_receipt(path: Path) -> dict[str, Any]:
+    """Fail closed unless ``path`` proves n600 bit identity through both scorer inputs."""
+
+    receipt_path = Path(path)
+    if not receipt_path.is_file():
+        raise FileNotFoundError(
+            f"D21a blind-coordinate fill requires an existing n600 proof receipt; missing {receipt_path}"
+        )
+    raw = receipt_path.read_bytes()
+    try:
+        receipt = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"D21a blind-coordinate receipt is not valid JSON: {receipt_path}") from exc
+    if receipt.get("schema") != _BLIND_COORDINATE_PROOF_SCHEMA:
+        raise ValueError(
+            "D21a blind-coordinate receipt schema mismatch: "
+            f"expected={_BLIND_COORDINATE_PROOF_SCHEMA}, got={receipt.get('schema')!r}"
+        )
+    fraction = receipt.get("blind_fraction")
+    bit_identity = receipt.get("bit_identity_through_R")
+    if not isinstance(fraction, dict) or not isinstance(bit_identity, dict):
+        raise ValueError("D21a receipt needs blind_fraction and bit_identity_through_R objects")
+    if fraction.get("schema") != "blind_coordinate_fraction.v1":
+        raise ValueError("D21a receipt blind_fraction schema mismatch")
+    if bit_identity.get("schema") != "blind_coordinate_bit_identity.v1":
+        raise ValueError("D21a receipt bit_identity_through_R schema mismatch")
+    expected = {
+        "n_pairs": _BLIND_COORDINATE_N_PAIRS,
+        "all_bit_identical": True,
+        "max_abs_diff_pose": 0.0,
+        "max_abs_diff_seg": 0.0,
+        "n_failures": 0,
+        "failing_pairs": [],
+    }
+    mismatches = {
+        key: {"expected": value, "got": bit_identity.get(key)}
+        for key, value in expected.items()
+        if bit_identity.get(key) != value
+    }
+    if fraction.get("n_blind_px") != _BLIND_COORDINATE_N_PX:
+        mismatches["n_blind_px"] = {
+            "expected": _BLIND_COORDINATE_N_PX,
+            "got": fraction.get("n_blind_px"),
+        }
+    if fraction.get("retained_subgrid_hw") != [768, 1024]:
+        mismatches["retained_subgrid_hw"] = {
+            "expected": [768, 1024],
+            "got": fraction.get("retained_subgrid_hw"),
+        }
+    if mismatches:
+        raise ValueError(f"D21a n600 zero-delta receipt gate failed: {mismatches}")
+    return {
+        "schema": _BLIND_COORDINATE_RECEIVER_SCHEMA,
+        "active": True,
+        "proof_receipt_path": str(receipt_path),
+        "proof_receipt_sha256": hashlib.sha256(raw).hexdigest(),
+        "n_pairs": _BLIND_COORDINATE_N_PAIRS,
+        "n_blind_px_per_frame": _BLIND_COORDINATE_N_PX,
+        "delta_d_seg": 0.0,
+        "delta_d_pose": 0.0,
+        "all_scorer_inputs_bit_identical": True,
+        "lawref": "blind_coordinate_rate_lever_v1",
+        "status": "MEASURED_N600_ZERO_DELTA_RECEIPT_ACCEPTED",
+        "verdict_scope": (
+            "receiver fill admissibility only; direct archive saving is zero for a pure generator "
+            "until a camera-resolution residual or sidecar stores the retained subgrid"
+        ),
+        "score_claim": False,
+    }
 
 
 def _is_linux_x86_64() -> bool:
@@ -406,8 +489,11 @@ def _curvelet_feat_width(cfg: dict[str, Any]) -> int:
 
 def _basis_feat_width(cfg: dict[str, Any]) -> int:
     """Feature width regenerated by the selected FREE basis compiler."""
-    if normalize_basis_family(cfg.get("basis", LEGACY_FOURIER_AB_CONTROL)) == "windowed_curvelet":
-        return 2 * int(windowed_curvelet_n_atoms(WindowedCurveletConfig()))
+    family = normalize_basis_family(cfg.get("basis", LEGACY_FOURIER_AB_CONTROL))
+    if family == "windowed_curvelet":
+        return GENUINE_FRAME_FEATURE_WIDTH
+    if family == COMPACT_SHEARLET:
+        return GENUINE_FRAME_FEATURE_WIDTH
     return _curvelet_feat_width(cfg)
 
 
@@ -449,6 +535,7 @@ def build_levelset_blob(
     lane_band_bytes: bytes | None = None, lane_manifest: dict[str, Any] | None = None,
     pose_carrier_bytes: bytes | None = None, pose_carrier_manifest: dict[str, Any] | None = None,
     cross_tensor_codec: bool = False,
+    blind_coordinate_fill: bool = False,
 ) -> tuple[bytes, dict[str, Any]]:
     """Layout: magic | u32 manifest_len | manifest_json | u32 base_brotli_len | base_brotli |
             u32 code_brotli_len | code_brotli | u32 pose_len | pose_sidecar
@@ -546,7 +633,20 @@ def build_levelset_blob(
         # Generic, video-free receiver program state (rule 118 FREE).  Emitted only for the selected
         # treatment so a polar/default packet retains its historical manifest bytes exactly.
         manifest["basis_family"] = "windowed_curvelet"
-        manifest["windowed_curvelet_config"] = asdict(WindowedCurveletConfig())
+        manifest["windowed_curvelet_config"] = asdict(genuine_frame_windowed_curvelet_config())
+    elif normalize_basis_family(cfg.get("basis", LEGACY_FOURIER_AB_CONTROL)) == COMPACT_SHEARLET:
+        # Same rule-118 boundary as the curvelet treatment: the deterministic atom table is
+        # regenerated in inflate.py; only learned coefficients remain counted.
+        manifest["basis_family"] = COMPACT_SHEARLET
+        manifest["compact_shearlet_config"] = asdict(genuine_frame_compact_shearlet_config())
+    if blind_coordinate_fill:
+        # Rule-118 FREE receiver program.  The measured proof receipt stays outside the counted
+        # packet; only this generic activation/law identity is needed to reproduce the decode.
+        manifest["blind_coordinate_fill"] = {
+            "schema": _BLIND_COORDINATE_RECEIVER_SCHEMA,
+            "lawref": "blind_coordinate_rate_lever_v1",
+            "n_blind_px_per_frame": _BLIND_COORDINATE_N_PX,
+        }
     if cross_tensor_codec:
         # Compact receiver contract: ``p`` holds indices into base_param_order whose 2-D storage is
         # transposed; ``c=1`` is frame-separated modulo-256 temporal delta for code[2*pair+frame].
@@ -1367,6 +1467,58 @@ def _windowed_curvelet_feats(coords, cfg):
     ).astype(np.float32)
 
 
+def _compact_shearlet_feats(coords, cfg):
+    # Op-for-op compiler twin of
+    # tac.boundary_math.compact_shearlet_frame.compact_shearlet_feats.  The atom table is
+    # deterministic, video-free rule-118 program state; learned coefficients stay counted.
+    required = {
+        "n_scales", "n_shear", "two_cones", "shear_step", "f0", "base", "w0",
+        "width_ratio", "n_trans", "coord_margin", "min_sigma", "aniso",
+    }
+    if set(cfg) != required:
+        raise ValueError("compact_shearlet_config keys do not match the sealed receiver schema")
+    ns, nsh, nt = int(cfg["n_scales"]), int(cfg["n_shear"]), int(cfg["n_trans"])
+    if ns <= 0 or nsh < 0 or nt <= 0 or not isinstance(cfg["two_cones"], bool):
+        raise ValueError("invalid compact shearlet integer/bool config")
+    shear_step, f0, base = float(cfg["shear_step"]), float(cfg["f0"]), float(cfg["base"])
+    w0, ratio = float(cfg["w0"]), float(cfg["width_ratio"])
+    margin, min_sigma, aniso = (
+        float(cfg["coord_margin"]), float(cfg["min_sigma"]), float(cfg["aniso"])
+    )
+    vals = (shear_step, f0, base, w0, ratio, margin, min_sigma, aniso)
+    if not all(math.isfinite(v) for v in vals):
+        raise ValueError("compact shearlet float config must be finite")
+    if min(shear_step, f0, w0, min_sigma, aniso) <= 0.0 or base <= 1.0 or ratio <= 1.0:
+        raise ValueError("invalid compact shearlet scale/frequency config")
+    if margin < 0.0 or aniso < 1.0:
+        raise ValueError("invalid compact shearlet margin/anisotropy config")
+    centers = [0.0] if nt == 1 else list(np.linspace(-1.0 + margin, 1.0 - margin, nt))
+    shears = [shear_step * s for s in range(-nsh, nsh + 1)]
+    x = np.asarray(coords)[:, 0]
+    y = np.asarray(coords)[:, 1]
+    real_cols, imag_cols = [], []
+    for cone in range(2 if cfg["two_cones"] else 1):
+        for j in range(ns):
+            freq = f0 * (base ** j)
+            sigma_n = max(w0 * ratio ** (-j), min_sigma)
+            sigma_t = max(aniso * w0 * ratio ** (-0.5 * j), min_sigma)
+            for shear_k in shears:
+                for cy in centers:
+                    for cx in centers:
+                        dx, dy = x - float(cx), y - float(cy)
+                        if cone == 0:
+                            xi, eta = dx + shear_k * dy, dy
+                        else:
+                            xi, eta = dy + shear_k * dx, dx
+                        env = np.exp(-0.5 * ((xi / sigma_n) ** 2 + (eta / sigma_t) ** 2))
+                        phase = (2.0 * math.pi) * freq * xi
+                        real_cols.append(env * np.cos(phase))
+                        imag_cols.append(env * np.sin(phase))
+    return np.concatenate(
+        [np.stack(real_cols, axis=-1), np.stack(imag_cols, axis=-1)], axis=-1
+    ).astype(np.float32)
+
+
 def _basis_feats(coords, m):
     family = m.get("basis_family", "polar_fourier")
     if family == "polar_fourier":
@@ -1377,6 +1529,8 @@ def _basis_feats(coords, m):
         return _curvelet_feats(coords, B)
     if family == "windowed_curvelet":
         return _windowed_curvelet_feats(coords, m["windowed_curvelet_config"])
+    if family == "compact_shearlet":
+        return _compact_shearlet_feats(coords, m["compact_shearlet_config"])
     raise ValueError("unknown basis_family %r" % (family,))
 
 
@@ -1894,6 +2048,46 @@ def _pcar_frame0(pc, pi, ch, cw):
     return _pcar_warp_f0(src, pc["H"][pi], ch, cw)
 
 
+def _blind_retained_axis(n_in, n_out):
+    # Exact align_corners=False bilinear support geometry.  This derives only which input
+    # coordinates are read; no video-derived values are embedded in receiver code.
+    used = np.zeros(int(n_in), dtype=bool)
+    for oi in range(int(n_out)):
+        source = (oi + 0.5) * float(n_in) / float(n_out) - 0.5
+        lo = max(0, min(int(n_in) - 1, int(np.floor(source))))
+        hi = max(0, min(int(n_in) - 1, lo + 1))
+        used[lo] = True
+        used[hi] = True
+    return np.where(used)[0]
+
+
+def _blind_coordinate_fill(frame):
+    # Op twin of tac.through_r.blind_coordinate.apply_blind_fill(..., fill=None): retain the
+    # scorer-visible 768x1024 product grid and fill the blind complement by separable interpolation.
+    a = np.asarray(frame)
+    ch, cw = a.shape[:2]
+    rr = _blind_retained_axis(ch, 384)
+    cc = _blind_retained_axis(cw, 512)
+    sub = a[np.ix_(rr, cc)].astype(np.float64)
+    full_w = np.empty((len(rr), cw, 3), dtype=np.float64)
+    all_cols = np.arange(cw)
+    for k in range(3):
+        for ri in range(len(rr)):
+            full_w[ri, :, k] = np.interp(all_cols, cc, sub[ri, :, k])
+    out = np.empty((ch, cw, 3), dtype=np.float64)
+    all_rows = np.arange(ch)
+    for k in range(3):
+        for ci in range(cw):
+            out[:, ci, k] = np.interp(all_rows, rr, full_w[:, ci, k])
+    return np.clip(np.round(out), 0, 255).astype(np.uint8)
+
+
+def _maybe_blind_coordinate_fill(frame, manifest):
+    if manifest.get("blind_coordinate_fill") is None:
+        return np.asarray(frame)
+    return _blind_coordinate_fill(frame)
+
+
 _G = {}
 
 
@@ -1965,16 +2159,18 @@ def _render_pair(pi):
             if pcar["hdr"].get("pose_carrier_mode") == "store_nothing":
                 _phi0, rgb0 = _outputs_from_h0(P, h0, code[2 * pi + 0], m, True, feats=feats)
                 src0 = _R(rgb0, rh, rw, ch, cw).astype(np.float64)  # witness frame0 render, camera-native
-                frames.append(_pcar_warp_f0(src0, pcar["H"][pi], ch, cw).tobytes())
+                frame = _pcar_warp_f0(src0, pcar["H"][pi], ch, cw)
             else:
-                frames.append(_pcar_frame0(pcar, pi, ch, cw).tobytes())
+                frame = _pcar_frame0(pcar, pi, ch, cw)
+            frames.append(_maybe_blind_coordinate_fill(frame, m).tobytes())
             continue
         if band:
             _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True, feats=feats)
             rgb = _lane_composite(rgb, lane_rgb, cov_flat, margin, lane_hdr)
         else:
             _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, feats=feats)
-        frames.append(_R(rgb, rh, rw, ch, cw).tobytes())
+        frame = _R(rgb, rh, rw, ch, cw)
+        frames.append(_maybe_blind_coordinate_fill(frame, m).tobytes())
     fb = _G["framebytes"]
     with open(_G["dst"], "r+b") as f:
         f.seek(pi * 2 * fb); f.write(b"".join(frames))
@@ -2328,6 +2524,16 @@ def _torch_R_reference(rgb: np.ndarray, rh: int, rw: int, ch: int, cw: int) -> n
     return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.uint8)
 
 
+def _blind_coordinate_reference(
+    frame: np.ndarray, manifest: dict[str, Any]
+) -> np.ndarray:
+    """Canonical helper consumer paired with the generated receiver op twin."""
+
+    if manifest.get("blind_coordinate_fill") is None:
+        return np.asarray(frame)
+    return apply_blind_fill(np.asarray(frame), fill=None)
+
+
 def numpy_oracle_reference_frames(
     params: dict[str, np.ndarray], code: np.ndarray, manifest: dict[str, Any], n_pairs: int,
     lane_pairs: list[list[Any]] | None = None, pose_carrier: dict[str, Any] | None = None,
@@ -2357,6 +2563,10 @@ def numpy_oracle_reference_frames(
     elif basis_family == "windowed_curvelet":
         curv = windowed_curvelet_feats(
             coords, WindowedCurveletConfig(**manifest["windowed_curvelet_config"])
+        )
+    elif basis_family == COMPACT_SHEARLET:
+        curv = compact_shearlet_feats(
+            coords, CompactShearletConfig(**manifest["compact_shearlet_config"])
         )
     else:
         raise ValueError(f"unknown basis_family {basis_family!r} in byte-closed manifest")
@@ -2407,9 +2617,10 @@ def numpy_oracle_reference_frames(
                 if pose_carrier_mode(pose_carrier) == "store_nothing":
                     rgb0, _phi0 = levelset_rgb_forward_numpy(params, feats, code[2 * pi + 0], **fwd_kw)
                     src0 = _torch_R_reference(rgb0, rh, rw, ch, cw).astype(np.float64)
-                    frames.append(pose_carrier_frame0_from_source(pose_carrier, pi, src0))
+                    frame = pose_carrier_frame0_from_source(pose_carrier, pi, src0)
                 else:
-                    frames.append(pose_carrier_frame0(pose_carrier, pi))
+                    frame = pose_carrier_frame0(pose_carrier, pi)
+                frames.append(_blind_coordinate_reference(frame, manifest))
                 continue
             if cov is not None:
                 rgb, phi, lane_rgb, margin = levelset_band_forward_numpy(
@@ -2419,7 +2630,8 @@ def numpy_oracle_reference_frames(
                 rgb = composite_band_on_render(rgb, lane_rgb, cov, um, lane_cfg.weight)
             else:
                 rgb, phi = levelset_rgb_forward_numpy(params, feats, code[2 * pi + fk], **fwd_kw)
-            frames.append(_torch_R_reference(rgb, rh, rw, ch, cw))
+            frame = _torch_R_reference(rgb, rh, rw, ch, cw)
+            frames.append(_blind_coordinate_reference(frame, manifest))
             if fk == 1:
                 argmaxes.append(phi.argmax(-1).reshape(rh, rw).astype(np.int64))
     return frames, argmaxes
@@ -2883,6 +3095,8 @@ def run(
     phase_carrier: bool = False,  # #359 phase-residual carrier (store-half of the flicker reframe)
     phase_carrier_cfg: dict[str, Any] | None = None,
     cross_tensor_codec: bool = False,
+    blind_coordinate_fill: bool = False,
+    blind_coordinate_receipt: Path | None = None,
     verify_bit_exact: bool = False,
     bit_exact_pairs: int = 2,
     bit_exact_strict: bool = True,
@@ -2892,6 +3106,17 @@ def run(
     video_names_file: Path | None = None,
     eval_timeout: int = 18000,
 ) -> dict[str, Any]:
+    blind_coordinate_report: dict[str, Any] = {"active": False}
+    if blind_coordinate_fill:
+        if blind_coordinate_receipt is None:
+            raise ValueError(
+                "--blind-coordinate-fill requires --blind-coordinate-receipt with n600 zero-delta custody"
+            )
+        # Receipt validation precedes checkpoint loading, packet construction, raw generation, and
+        # weights-arm selection.  A malformed proof cannot mutate or rank a candidate.
+        blind_coordinate_report = validate_blind_coordinate_n600_receipt(
+            blind_coordinate_receipt
+        )
     params, cfg = _load_levelset_ckpt(ckpt_dir, npz_name)
     n_pairs = int(cfg["n_pairs"])
     so = detect_self_orient(cfg, so_overrides)
@@ -2992,7 +3217,8 @@ def run(
 
     blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest,
                                           pose_carrier_bytes, pose_carrier_manifest,
-                                          cross_tensor_codec=cross_tensor_codec)
+                                          cross_tensor_codec=cross_tensor_codec,
+                                          blind_coordinate_fill=blind_coordinate_fill)
     if not cross_tensor_codec and not breakdown["accounting_matches_canonical"]:
         print(f"[WARN] byte-close accounting (base={breakdown['base_int8_brotli_bytes']}, "
               f"code={breakdown['code_int8_brotli_bytes']}) != canonical quantize_levelset_blob "
@@ -3114,10 +3340,12 @@ def run(
             "lane_render_band": lane_report,
             "pose_carrier": pose_carrier_report,
             "phase_carrier": phase_carrier_report_out,
+            "blind_coordinate_fill": blind_coordinate_report,
         },
         "lane_render_band": lane_report,
         "pose_carrier": pose_carrier_report,
         "phase_carrier": phase_carrier_report_out,
+        "blind_coordinate_fill": blind_coordinate_report,
         "pose_carrier_keyframe_accounting": (
             None if keyframe_accounting is None else {
                 **keyframe_accounting,
@@ -3436,6 +3664,23 @@ def main(argv: list[str] | None = None) -> int:
                          "temporal-delta coding for the per-frame FiLM table. It acts after the canonical "
                          "int8 grid, so decoded quantized state is exact. DSL owner: "
                          "WitnessCrossTensorCoderGauge.AUTO_LOSSLESS.")
+    ap.add_argument(
+        "--blind-coordinate-fill",
+        action="store_true",
+        help=(
+            "D21a/#401 rule-118 FREE fill of the 230,904 camera pixels/frame that are "
+            "structurally invisible through R. Requires a measured n600 zero-delta receipt."
+        ),
+    )
+    ap.add_argument(
+        "--blind-coordinate-receipt",
+        type=Path,
+        default=None,
+        help=(
+            "blind_coordinate_proof.v1 JSON with n_pairs=600, bit-identical Pose/Seg inputs, "
+            "and exactly zero max differences; mandatory when --blind-coordinate-fill is active"
+        ),
+    )
     # #224 Wave E: decode-consistent analytic-lane RENDER-BAND (fork B). OFF by default -> byte-identical.
     # Fits per-pair lane manifold coords from --gt-cache (COUNTED), reproduces the coverage+composite
     # in inflate (FREE, rule 118) so the band is a REAL (non-phantom) score. Closes R5_BLOCK.
@@ -3551,6 +3796,8 @@ def main(argv: list[str] | None = None) -> int:
             "pitch": args.phase_carrier_pitch,
         },
         cross_tensor_codec=(args.cross_tensor_codec == "auto_lossless"),
+        blind_coordinate_fill=args.blind_coordinate_fill,
+        blind_coordinate_receipt=args.blind_coordinate_receipt,
         verify_bit_exact=args.verify_bit_exact,
         bit_exact_pairs=args.bit_exact_pairs,
         bit_exact_strict=not args.no_bit_exact_strict,

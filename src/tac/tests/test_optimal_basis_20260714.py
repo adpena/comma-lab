@@ -76,7 +76,9 @@ def test_self_oriented_reproduction_and_wired_windowed_treatment_compile() -> No
     assert "--self-orient" in argv
     assert argv[argv.index("--freq-along") + 1] == "26.0"
     treatment = BasisLeverSpec(family=BasisFamily.WINDOWED_CURVELET).compile_lever()
-    assert treatment.overrides == {"--basis": "windowed_curvelet"}
+    assert treatment.overrides["--basis"] == "windowed_curvelet"
+    assert treatment.overrides["--self-orient"] is False
+    assert treatment.overrides["--bank-n-scales"] == 4
 
 
 def test_siren_finer_compile_checks_periodic_inflate_activation() -> None:

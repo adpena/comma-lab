@@ -40,7 +40,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
-import hashlib
 import json
 import os
 import re
@@ -376,6 +375,13 @@ def apply_emit_side_confound_fixes(extra_flags: list[str], config_flag_names: li
 
 
 # ───────────────────────── launch.sh (no word-split fragility) ─────────────────────────
+_V9_BASIS_CONFIG_NAMES = (
+    "v9_cgauge_ideal_mod32_basis_polar_fourier",
+    "v9_cgauge_ideal_mod32_basis_windowed_curvelet",
+    "v9_cgauge_ideal_mod32_basis_compact_shearlet",
+)
+
+
 def config_family(cfg) -> str:
     """The canonical named-config FAMILY this cfg renders, derived from the cfg's own
     selector fields (factual — never a guess). Stamped into the launch.sh RUN-IDENTITY
@@ -387,9 +393,7 @@ def config_family(cfg) -> str:
                                     "v9_cgauge_truly_optimal_core",
                                     "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
                                     "v9_cgauge_ideal_mod32",
-                                    "v9_cgauge_432_taper_off",
-                                    "v9_cgauge_432_horizon_iso",
-                                    "v9_cgauge_432_step_iso",
+                                    *_V9_BASIS_CONFIG_NAMES,
                                     "next_launch_all_levers_20260713",
                                     "next_launch_all_levers_trimmed_20260713",
                                     "throughput_component_timer_async_20260713",
@@ -408,7 +412,7 @@ def config_family(cfg) -> str:
     return "proven_base"
 
 
-def _identity_header(cfg, *, dsl_compile_hash: str | None = None) -> str:
+def _identity_header(cfg) -> str:
     """Machine-readable RUN-IDENTITY header lines for launch.sh (the run dir's config
     record; operator 2026-07-07 run-identity row). ``# tac-config-family:`` is always
     stamped (factual, derived from the cfg itself); ``# tac-run-purpose:`` only when a
@@ -418,8 +422,6 @@ def _identity_header(cfg, *, dsl_compile_hash: str | None = None) -> str:
     the sealed_205 argv byte-identity gate) skips ``#`` lines, so the header is
     provenance-neutral to training + argv byte-identity."""
     lines = [f"# tac-config-family: {config_family(cfg)}\n"]
-    if dsl_compile_hash:
-        lines.append(f"# dsl_compile_hash: {dsl_compile_hash}\n")
     purpose = getattr(cfg, "purpose", None)
     if purpose:
         lines.append(f"# tac-run-purpose: {' '.join(str(purpose).split())}\n")
@@ -451,8 +453,7 @@ def _readiness_deferral_header(cfg) -> str:
 
 
 def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
-                    extra_flags: list[str] | None = None,
-                    dsl_compile_hash: str | None = None) -> str:
+                    extra_flags: list[str] | None = None) -> str:
     """Render the launch.sh body. The trainer command goes into a SCRIPT so the
     daemon cmd is ``bash launch.sh`` (2 clean tokens) — never a space-bearing
     single argv[0]. Includes the perf-env prefix (TAC_MLX_CUSTOM_GROUPED_BACKWARD=1)
@@ -465,15 +466,6 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
     cmd = cfg.to_command(out_dir, perf_env=True)
     if extra_flags:
         cmd += " \\\n  " + " ".join(shlex.quote(t) for t in extra_flags)
-    dsl_admission_exports = ""
-    if dsl_compile_hash:
-        dsl_admission_exports = (
-            f"export TAC_DSL_COMPILE_HASH={dsl_compile_hash}\n"
-            f"export TAC_DSL_PROVENANCE_PATH="
-            f"{shlex.quote(str(Path(out_dir) / 'dsl_provenance.json'))}\n"
-            f"export TAC_DSL_LAUNCH_SH_PATH="
-            f"{shlex.quote(str(Path(out_dir) / 'launch.sh'))}\n"
-        )
     return (
         # cross-platform-by-default (operator 2026-07-07): env-resolved bash finds
         # a modern bash on PATH; macOS pins /bin/bash to 3.2. The durable-daemon
@@ -482,7 +474,7 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
         # RUN-IDENTITY header (family always; purpose only when declared) — comments only.
-        f"{_identity_header(cfg, dsl_compile_hash=dsl_compile_hash)}"
+        f"{_identity_header(cfg)}"
         # Config-freshness readiness deferrals are typed manifest metadata, not trainer flags.
         # Render them on every regeneration so held treatment-isolation decisions cannot vanish.
         f"{_readiness_deferral_header(cfg)}"
@@ -497,16 +489,12 @@ def build_launch_sh(cfg, out_dir: str, repo_root: Path | None = None,
         # guard. Raw `python train_...py ...` that never went through a governed path lacks this
         # and is refused when enforce is armed (tac.admission_guard.GOVERNED_MARKER_ENV).
         "export TAC_GOVERNED_ADMISSION=1\n"
-        # The trainer-side admission guard independently re-opens and recomputes
-        # this exact binding.  A marker without these three values has no authority.
-        f"{dsl_admission_exports}"
         f"{cmd}\n"
     )
 
 
 def write_launch_sh(cfg, out_dir: Path, repo_root: Path | None = None,
-                    extra_flags: list[str] | None = None,
-                    dsl_compile_hash: str | None = None) -> Path:
+                    extra_flags: list[str] | None = None) -> Path:
     """Write launch.sh ATOMICALLY (tmp + os.replace, same dir → new inode).
 
     NEVER ``write_text`` in place: bash reads scripts incrementally from an open
@@ -520,153 +508,12 @@ def write_launch_sh(cfg, out_dir: Path, repo_root: Path | None = None,
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     launch = out_dir / "launch.sh"
-    body = build_launch_sh(
-        cfg,
-        str(out_dir),
-        repo_root,
-        extra_flags=extra_flags,
-        dsl_compile_hash=dsl_compile_hash,
-    )
+    body = build_launch_sh(cfg, str(out_dir), repo_root, extra_flags=extra_flags)
     tmp = out_dir / f".launch.sh.tmp.{os.getpid()}"
     tmp.write_text(body)
     tmp.chmod(0o755)
     os.replace(tmp, launch)
     return launch
-
-
-def _write_json_atomic(path: Path, payload: dict) -> None:
-    """Write a launch-admission JSON artifact atomically in its run directory."""
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
-
-
-def write_dsl_compile_artifacts(
-    cfg,
-    launch_sh: Path,
-    provenance_document: dict,
-) -> tuple[Path, Path]:
-    """Write and recompute the #405 DSL admission unit beside ``launch.sh``.
-
-    The compile token itself excludes run identity, while this run manifest binds
-    the exact artifact bytes the launcher/governor will consume.  Neither file is
-    trusted on its own: :func:`verify_dsl_provenance_artifacts` re-hashes both and
-    round-trips the shell argv back to the DSL compile.
-    """
-
-    from tac.v9_provenance_gates import (
-        DSL_LAUNCH_MANIFEST_SCHEMA,
-        extract_trainer_argv_from_launch_sh,
-        verify_dsl_provenance_artifacts,
-    )
-    from tac.witness_run_artifacts import DSL_PROVENANCE_JSON, LAUNCH_MANIFEST_JSON
-
-    launch_sh = Path(launch_sh)
-    provenance_path = launch_sh.with_name(DSL_PROVENANCE_JSON)
-    manifest_path = launch_sh.with_name(LAUNCH_MANIFEST_JSON)
-    _write_json_atomic(provenance_path, provenance_document)
-    launch_bytes = launch_sh.read_bytes()
-    provenance_bytes = provenance_path.read_bytes()
-    exact_argv = extract_trainer_argv_from_launch_sh(launch_bytes.decode("utf-8"))
-    manifest = {
-        "schema": DSL_LAUNCH_MANIFEST_SCHEMA,
-        "config_family": config_family(cfg),
-        "spec_id": provenance_document["spec_id"],
-        "dsl_compile_hash": provenance_document["dsl_compile_hash"],
-        "launch_sh": launch_sh.name,
-        "launch_sh_sha256": hashlib.sha256(launch_bytes).hexdigest(),
-        "dsl_provenance": provenance_path.name,
-        "dsl_provenance_sha256": hashlib.sha256(provenance_bytes).hexdigest(),
-        "resolved_launch_argv": list(exact_argv),
-        "non_authoritative_context": {"written_at_utc": _utc()},
-    }
-    _write_json_atomic(manifest_path, manifest)
-    ok, detail = verify_dsl_provenance_artifacts(
-        launch_sh,
-        provenance_path=provenance_path,
-        launch_manifest_path=manifest_path,
-        expected_hash=str(provenance_document["dsl_compile_hash"]),
-    )
-    if not ok:
-        raise RuntimeError(detail)
-    return provenance_path, manifest_path
-
-
-def compile_dsl_document_for_config(
-    cfg,
-    out_dir: Path | str,
-    *,
-    program_name: str | None = None,
-) -> tuple[dict, dict, str]:
-    """Compile and validate the one DSL authority document for a launcher config."""
-
-    from tac.v9_provenance_gates import build_dsl_compile_provenance_document
-    from tac.witness_dsl.typed_config import verify_launch_manifest as _verify_dsl_manifest
-
-    typed = getattr(cfg, "typed", None)
-    if typed is None and hasattr(cfg, "to_program") and hasattr(cfg, "model_dump"):
-        typed = cfg
-    if typed is None:
-        raise RuntimeError("launch config has no TypedWitnessConfig/WitnessProgram compile custody")
-    dsl_manifest = dict(getattr(cfg, "dsl_program_manifest", {}) or {})
-    dsl_ok, dsl_detail = _verify_dsl_manifest(
-        dsl_manifest, list(_emitted_flag_names(cfg, str(out_dir)))
-    )
-    if not dsl_ok:
-        raise RuntimeError(dsl_detail)
-    if dsl_manifest.get("typed_config_hash") != typed.typed_config_hash():
-        raise RuntimeError("typed config hash differs from its carried DSL program manifest")
-    document = build_dsl_compile_provenance_document(
-        program_name=str(program_name or getattr(typed, "name", config_family(cfg))),
-        typed_config=typed,
-        compiler_manifest=dict(getattr(cfg, "constants_manifest", {}) or {}),
-        repo_root=_REPO,
-    )
-    return document, dsl_manifest, dsl_detail
-
-
-def write_dsl_bound_launch(
-    cfg,
-    out_dir: Path,
-    *,
-    program_name: str | None = None,
-) -> tuple[Path, Path, Path, dict]:
-    """Compile, emit, persist, reopen, and recompute an internal launch unit."""
-
-    document, _, _ = compile_dsl_document_for_config(
-        cfg, out_dir, program_name=program_name
-    )
-    launch_sh = write_launch_sh(
-        cfg,
-        out_dir,
-        dsl_compile_hash=str(document["dsl_compile_hash"]),
-    )
-    provenance_path, manifest_path = write_dsl_compile_artifacts(
-        cfg, launch_sh, document
-    )
-    return launch_sh, provenance_path, manifest_path, document
-
-
-def with_internal_dsl_lever(cfg, *, name: str, overrides: dict[str, object]):
-    """Compose a launcher-owned bounded-smoke delta through a typed DSL Lever."""
-
-    from tac.witness_dsl.typed_config import TypedLever
-
-    typed = getattr(cfg, "typed", None)
-    rebind = getattr(cfg, "_rebind_typed", None)
-    if typed is None or not callable(rebind):
-        raise RuntimeError(
-            "internal witness launch delta requires a typed launch adapter with _rebind_typed"
-        )
-    lever = TypedLever(
-        name=name,
-        overrides=dict(overrides),
-        notes="launcher-owned bounded smoke/resume custody; Catalog #406 DSL-authored",
-    )
-    rebound = typed.model_copy(update={"levers": (*typed.levers, lever)})
-    return rebind(rebound)
 
 
 def write_constants_manifest(cfg, out_dir: Path) -> Path | None:
@@ -799,19 +646,33 @@ def dsl_config_gate_action(
 ) -> tuple[str, str]:
     """Pure decision for the DSL-authored-config gate (unit-testable, no I/O).
 
-    Catalog #406 retires every migration/override branch.  The legacy arguments
-    remain in the signature so older callers receive a deterministic refusal
-    instead of an argparse/import crash, but none can authorize a hand-ruled run.
+    Returns ``(action, message)`` where action is one of:
+      * ``"ok"``       — config carries a valid DSL-provenance manifest; proceed.
+      * ``"override"`` — --allow-non-dsl-config supplied a real rationale; proceed LOUDLY.
+      * ``"warn"``     — advisory (dry-run / --skip-dsl-config-gate / an ABSENT manifest
+                         when --enforce-dsl-config-gate is NOT set — the migration queue).
+      * ``"refuse"``   — REFUSE (rc=7): a manifest present-but-TAMPERED, or an absent
+                         manifest under --enforce-dsl-config-gate.
     """
     if ok:
         return "ok", detail
-    requested_bypass = bool(skip or allow_rationale)
-    suffix = " Retired bypass option supplied; it has no authority." if requested_bypass else ""
-    return "refuse", (
-        f"Catalog #406 DSL compile binding REFUSED for config {config!r}: {detail}. "
-        "A typed WitnessProgram compile, recomputable dsl_compile_hash, and exact argv "
-        f"round-trip are mandatory in dry-run and real-launch modes.{suffix}"
-    )
+    rationale_ok = bool(allow_rationale and allow_rationale.strip())
+    if rationale_ok:
+        return "override", (f"DSL-authored-config gate OVERRIDDEN (--allow-non-dsl-config: "
+                            f"{allow_rationale}); {detail}")
+    if dry_run or skip:
+        why = "DRY-RUN advisory" if dry_run else "--skip-dsl-config-gate set"
+        return "warn", f"({why}): DSL-authored-config gate — {detail}; proceeding."
+    if manifest_absent and not enforce:
+        return "warn", (f"config {config!r} carries NO DSL-provenance manifest (migration queue — only "
+                        f"crucible_v6 is migrated so far). Proceeding WARN-only; pass "
+                        f"--enforce-dsl-config-gate to REFUSE, or migrate the config's derive_* seam "
+                        f"through tac.witness_dsl.typed_config.")
+    return "refuse", (f"DSL-authored-config gate (operator 2026-07-08 no-ad-hoc-config): {detail}. The "
+                      f"launch config must be authored + typed-validated through "
+                      f"tac.witness_dsl.typed_config (a DSL WitnessProgram / TypedWitnessConfig). Pass "
+                      f"--allow-non-dsl-config \"<rationale>\" to override loudly, or "
+                      f"--skip-dsl-config-gate to downgrade to WARN.")
 
 
 def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
@@ -973,24 +834,29 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
             gt_cache, num_pairs=num_pairs, mod_dim=mod_dim,
             program_name=config,
             with_reachability=(config == "v9_cgauge_ideal_mod19_sR"), **_ek)
-    if config in ("v9_cgauge_432_taper_off", "v9_cgauge_432_horizon_iso",
-                  "v9_cgauge_432_step_iso"):
-        # Task #432 top-3 duty-to-measure typed one-delta arms.  Each compiler starts from the
-        # identical ideal-mod19 scientific control and fail-closes on the exact argv delta plus
-        # LawRef/parser/trainer-consumer custody before returning a launchable config.
-        from tac.witness_dsl.spec_v9_cgauge import (
-            compile_v9_cgauge_432_horizon_iso_launch_config,
-            compile_v9_cgauge_432_step_iso_launch_config,
-            compile_v9_cgauge_432_taper_off_launch_config,
+    if config in _V9_BASIS_CONFIG_NAMES:
+        # Genuine-frame fresh-start A/B/C. Each name resolves through a reviewed
+        # typed factory whose config/LawRef/consumer/receipt bijection proves the
+        # common 80-column, 109559-value n600 shape. Pure derivation only; launch
+        # remains governed, sequential, and operator-GO-only.
+        from tac.witness_dsl.optimal_basis_20260714 import (
+            compile_v9_basis_compact_shearlet_launch_config,
+            compile_v9_basis_polar_fourier_launch_config,
+            compile_v9_basis_windowed_curvelet_launch_config,
         )
 
-        _iso_compilers = {
-            "v9_cgauge_432_taper_off": compile_v9_cgauge_432_taper_off_launch_config,
-            "v9_cgauge_432_horizon_iso": compile_v9_cgauge_432_horizon_iso_launch_config,
-            "v9_cgauge_432_step_iso": compile_v9_cgauge_432_step_iso_launch_config,
+        factories = {
+            "v9_cgauge_ideal_mod32_basis_polar_fourier": (
+                compile_v9_basis_polar_fourier_launch_config
+            ),
+            "v9_cgauge_ideal_mod32_basis_windowed_curvelet": (
+                compile_v9_basis_windowed_curvelet_launch_config
+            ),
+            "v9_cgauge_ideal_mod32_basis_compact_shearlet": (
+                compile_v9_basis_compact_shearlet_launch_config
+            ),
         }
-        return _iso_compilers[config](
-            gt_cache_path=gt_cache, num_pairs=num_pairs, **_ek)
+        return factories[config](gt_cache, num_pairs=num_pairs, **_ek)
     if config in ("next_launch_all_levers_20260713", "next_launch_all_levers_trimmed_20260713"):
         # 2026-07-13 operator-GO-only ticket.  The compiler starts from the
         # ideal mod19 lineage, composes every compatible speed/init/observer
@@ -1033,8 +899,7 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432, "
         f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, "
         f"v9_cgauge_ideal_mod19_sR, v9_cgauge_ideal_mod32, "
-        f"v9_cgauge_432_taper_off, v9_cgauge_432_horizon_iso, "
-        f"v9_cgauge_432_step_iso, "
+        f"{', '.join(_V9_BASIS_CONFIG_NAMES)}, "
         f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713, "
         f"throughput_component_timer_async_20260713, "
         f"throughput_component_timer_solo_20260713. "
@@ -1102,22 +967,7 @@ def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label:
     calib_dir = out_dir / "calibrate_rss"
     cfg_c = derive_named_config(config, args.gt_cache, num_pairs=args.calibrate_pairs,
                                 epochs=args.calibrate_epochs, overfit=overfit)
-    if extra_flags:
-        print(
-            "[launch-witness] ERROR: calibration received post-DSL trainer flags; "
-            "Catalog #406 requires a typed Lever (rc=8).",
-            file=sys.stderr,
-        )
-        return 8
-    try:
-        launch_c, _, _, _ = write_dsl_bound_launch(cfg_c, calib_dir)
-    except Exception as exc:
-        print(
-            "[launch-witness] ERROR: calibration DSL compile binding REFUSED rc=8: "
-            f"{type(exc).__name__}: {exc}",
-            file=sys.stderr,
-        )
-        return 8
+    launch_c = write_launch_sh(cfg_c, calib_dir, extra_flags=extra_flags)
     proj_c = wmp.project_from_launch_sh(launch_c, safe_frac=args.mem_preflight_safe_frac)
     print(f"# calibrate-rss: n={args.calibrate_pairs} epochs={args.calibrate_epochs} "
           f"projected peak {proj_c.projected_peak_gib} GiB — running FOREGROUND via safe_run "
@@ -1250,6 +1100,21 @@ def dry_start_sec_per_ep(wall_s: float, gt_secs: float | None,
     return round(gross, 2), round(max(marginal, 0.0), 2)
 
 
+def _inject_extra_flag(extra: list[str], flag: str, value: str) -> list[str]:
+    """Return ``extra`` with ``flag value`` present (replace the value if the flag is already there,
+    else append the pair). Keeps the dry-start's --ckpt-every / --resume-from injection idempotent and
+    dup-free (the launcher's C13 duplicate-long-flag guard would otherwise refuse it)."""
+    out = list(extra)
+    if flag in out:
+        i = out.index(flag)
+        if i + 1 < len(out):
+            out[i + 1] = value
+        else:
+            out.append(value)
+        return out
+    return out + [flag, value]
+
+
 def dry_start_boot_ok(p: dict) -> bool:
     """PASS-1 boots+steps+ckpts (regardless of the terminal rc — the pass is INTENTIONALLY wall-clock
     bounded, so safe_run's timeout SIGTERM is the EXPECTED terminus, not a failure): >=1 epoch stepped
@@ -1308,19 +1173,10 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
         sub = out_dir / sub_name
         cfg_b = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
                                     epochs=None, overfit=overfit)  # REAL sealed epochs → all validators pass
-        if extra_flags:
-            raise RuntimeError(
-                "Catalog #406 dry-start received post-DSL trainer flags; compose a typed Lever"
-            )
-        overrides: dict[str, object] = {"--ckpt-every": 1}
+        eflags = _inject_extra_flag(list(extra_flags or []), "--ckpt-every", "1")
         if resume_from is not None:
-            overrides["--resume-from"] = str(resume_from)
-        cfg_b = with_internal_dsl_lever(
-            cfg_b,
-            name=f"catalog406_dry_start_{sub_name}",
-            overrides=overrides,
-        )
-        launch_b, _, _, _ = write_dsl_bound_launch(cfg_b, sub)
+            eflags = eflags + ["--resume-from", str(resume_from)]
+        launch_b = write_launch_sh(cfg_b, sub, extra_flags=eflags)  # the EXACT REAL launch.sh (unmodified)
         cmd = [sys.executable, str(_REPO / "tools" / "safe_run.py"),
                "--rss-mb", str(int(args.rss_cap_mb)),
                "--timeout", str(pass_timeout),
@@ -1364,15 +1220,7 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
 
     print(f"# dry-start PASS 1: fresh boot at REAL n={args.num_pairs} config={config!r}, wall-clock bounded "
           f"~{n} epoch(s) (safe_run --timeout {pass_timeout:.0f}s; SIGTERM = intended bound + crash sim)")
-    try:
-        p1 = _pass("dry_start", None)
-    except Exception as exc:
-        print(
-            "[launch-witness] ERROR: dry-start DSL compile binding REFUSED rc=8: "
-            f"{type(exc).__name__}: {exc}",
-            file=sys.stderr,
-        )
-        return 8
+    p1 = _pass("dry_start", None)
     boot_ok = dry_start_boot_ok(p1)
     print(f"#   PASS 1: rc={p1['rc']} epochs={p1['epochs_completed']} peak={p1['peak_rss_gib']} GiB "
           f"ckpt={p1['checkpoint_written']} sec/ep(gross~{p1['sec_per_ep_gross']}) -> boot_ok={boot_ok}")
@@ -1381,15 +1229,7 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
     resume_ok = False
     if boot_ok:
         print(f"# dry-start PASS 2: RESUME round-trip (--resume-from {p1['dir']}, wall-clock bounded)")
-        try:
-            p2 = _pass("dry_start_resume", Path(p1["dir"]))
-        except Exception as exc:
-            print(
-                "[launch-witness] ERROR: dry-start resume DSL compile binding REFUSED rc=8: "
-                f"{type(exc).__name__}: {exc}",
-                file=sys.stderr,
-            )
-            return 8
+        p2 = _pass("dry_start_resume", Path(p1["dir"]))
         resume_ok = dry_start_resume_ok(p2)
         print(f"#   PASS 2: rc={p2['rc']} resume_source={p2['resume_model_source']} "
               f"resume_start_epoch={p2['resume_start_epoch']} epochs={p2['epochs_completed']} "
@@ -1513,9 +1353,7 @@ def main(argv: list[str] | None = None) -> int:
                              "v9_cgauge_truly_optimal_core",
                              "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
                              "v9_cgauge_ideal_mod32",
-                             "v9_cgauge_432_taper_off",
-                             "v9_cgauge_432_horizon_iso",
-                             "v9_cgauge_432_step_iso",
+                             *_V9_BASIS_CONFIG_NAMES,
                              "next_launch_all_levers_20260713",
                              "next_launch_all_levers_trimmed_20260713",
                              "throughput_component_timer_async_20260713",
@@ -1662,15 +1500,21 @@ def main(argv: list[str] | None = None) -> int:
                     "not LawRef-DERIVED (in constants_manifest.json), and not a TAGGED fail-safe cap. "
                     "Default ENFORCES (--dry-run is always advisory: it prints the table, never refuses).")
     ap.add_argument("--skip-dsl-config-gate", action="store_true",
-                    help="RETIRED compatibility option. Catalog #406 never downgrades the DSL compile "
-                    "hash gate; an invalid/missing binding is REFUSED with rc=8 in dry-run and real "
-                    "launch modes.")
+                    help="(operator 2026-07-08 'config must be defined in the DSL, no ad hoc') downgrade "
+                    "the DSL-authored-config gate from REFUSE to WARN. The gate verifies the launch "
+                    "config carries a DSL-provenance manifest (authored + typed-validated through "
+                    "tac.witness_dsl.typed_config) whose flag fingerprint matches the emitted argv; a "
+                    "config whose manifest is present-but-TAMPERED is REFUSED (rc=7). Default ENFORCES "
+                    "integrity (--dry-run is always advisory).")
     ap.add_argument("--enforce-dsl-config-gate", action="store_true",
-                    help="RETIRED compatibility option. DSL compile-hash enforcement is now always on "
-                    "and fail-closed (rc=8).")
+                    help="STRICT-FLIP opt-in: additionally REFUSE a launch whose config carries NO DSL "
+                    "manifest at all (a not-yet-migrated hand-assembled config). Default WARNs on an "
+                    "absent manifest (migration queue: only crucible_v6 is migrated so far) but REFUSES "
+                    "a tampered one. Flip this on once the autoconfig migration queue is drained.")
     ap.add_argument("--allow-non-dsl-config", default=None, metavar="RATIONALE",
-                    help="RETIRED compatibility option. A rationale cannot authorize a hand-ruled "
-                    "config; missing/mismatched DSL compile custody is always REFUSED with rc=8.")
+                    help="ESCAPE HATCH (emergencies only): proceed past the DSL-authored-config gate "
+                    "even when the config has no/invalid DSL provenance, LOUDLY stamping a non-DSL "
+                    "override marker (dsl_config_override.txt) into the run dir. Requires a real rationale.")
     ap.add_argument("--throughput-threshold-ms", type=float, default=None,
                     help="override the SegNet fwd+bwd median ms gate (default 700; measured ON~396 / "
                     "OFF~6713). >threshold => REFUSE (custom-grouped-backward fast path not active).")
@@ -1848,42 +1692,8 @@ def main(argv: list[str] | None = None) -> int:
     if extra_flags:
         print(f"# extra trainer flags (final, post emit-side fixes): {' '.join(extra_flags)}")
 
-    # (a4 / Catalog #406) COMPILE THE CRYPTOGRAPHIC DSL BINDING.  Any trailing
-    # semantic token is, by construction, outside the WitnessProgram and has no
-    # #332 Lever owner.  It cannot acquire a valid hash by being argparse-valid.
-    if extra_flags:
-        print(
-            "[launch-witness] ERROR: REFUSING to launch — rc=8 Catalog #406: "
-            f"post-DSL semantic argv tokens have no #332 Lever owner: {extra_flags}. "
-            "Move the change into a typed DSL Lever and recompile; "
-            "--extra-trainer-flags cannot authorize a hand-ruled argv.",
-            file=sys.stderr,
-        )
-        return 8
-    try:
-        _dsl_document, _dsl_manifest, _dsl_detail = compile_dsl_document_for_config(
-            cfg,
-            out_dir,
-            program_name=config,
-        )
-        _dsl_compile_hash = str(_dsl_document["dsl_compile_hash"])
-    except Exception as exc:
-        print(
-            "[launch-witness] ERROR: REFUSING to launch — rc=8 Catalog #406 DSL "
-            f"compile binding unavailable: {type(exc).__name__}: {exc}. "
-            "Rule chain: TypedWitnessConfig -> WitnessProgram.compile_trainer_argv() "
-            "-> #332 bijection/LawRef manifest -> dsl_compile_hash.",
-            file=sys.stderr,
-        )
-        return 8
-
-    # (b) WRITE launch.sh (script-based command — no word-split fragility) with
-    # the compile hash in its header and trainer-side admission environment.
-    launch_sh = write_launch_sh(
-        cfg,
-        out_dir,
-        dsl_compile_hash=_dsl_compile_hash,
-    )
+    # (b) WRITE launch.sh (script-based command — no word-split fragility).
+    launch_sh = write_launch_sh(cfg, out_dir, extra_flags=extra_flags or None)
     if getattr(args, "readiness_defer", None):
         # Persist operator-recorded readiness DEFERs into the emitted launch.sh (the
         # surface the readiness gate reads). Atomic rewrite (tmp+os.replace) per the
@@ -1905,23 +1715,8 @@ def main(argv: list[str] | None = None) -> int:
         os.replace(_tmp, launch_sh)
         print(f"[launch-witness] readiness-defer recorded in launch.sh: "
               f"{', '.join(d.split('=')[0] for d in args.readiness_defer)}")
-    try:
-        _dsl_provenance_path, _launch_manifest_path = write_dsl_compile_artifacts(
-            cfg, launch_sh, _dsl_document
-        )
-    except Exception as exc:
-        print(
-            "[launch-witness] ERROR: REFUSING to launch — rc=8 Catalog #406 exact "
-            f"artifact recomputation failed: {type(exc).__name__}: {exc}. "
-            "No launch/governor path may proceed without an exact DSL argv round-trip.",
-            file=sys.stderr,
-        )
-        return 8
     run_log = out_dir / "run.log"
     print(f"# wrote {launch_sh}")
-    print(f"# wrote {_dsl_provenance_path}")
-    print(f"# wrote {_launch_manifest_path}")
-    print(f"# dsl_compile_hash={_dsl_compile_hash}")
 
     # (b-perf) PERF-ENV CLASS GUARD (operator 2026-07-08 "shouldn't have had to be caught manually").
     # Assert the EMITTED launch.sh env block carries every REQUIRED_PERF_ENV var (the ~17x custom-
@@ -1995,12 +1790,22 @@ def main(argv: list[str] | None = None) -> int:
               f"({type(exc).__name__}: {exc}); proceeding (no naked-epoch protection this launch).",
               file=sys.stderr)
 
-    # (b0.6) LEGACY MANIFEST CHECK, now a fail-closed rc=8 subset of the stronger
-    # exact artifact recomputation above.  The old WARN/override migration paths
-    # are deliberately dead; keeping this call protects legacy API consumers.
+    # (b0.6) DSL-AUTHORED-CONFIG GATE (operator 2026-07-08, verbatim: "The config must be defined in the
+    # DSL — no ad hoc or hand crafting ... pydantic ... integrate all with apparatus to prevent more
+    # dumbass bullshit"). The config must arrive with a DSL-provenance manifest (authored + typed-
+    # validated through tac.witness_dsl.typed_config) whose flag fingerprint MATCHES the emitted argv.
+    #  * manifest present + fingerprint matches  -> OK (proceed).
+    #  * manifest present but TAMPERED/mismatched -> REFUSE rc=7 (a config mutated after typed authoring).
+    #  * manifest ABSENT (a not-yet-migrated hand-assembled config) -> WARN (migration queue) unless
+    #    --enforce-dsl-config-gate is set, then REFUSE. Refusing all absent-manifest configs by default
+    #    would break every non-crucible launch mid-migration; the strict-flip lands when the autoconfig
+    #    migration queue is drained (Strict-flip atomicity).
+    #  * --allow-non-dsl-config "<rationale>" -> LOUD non-DSL override, stamps dsl_config_override.txt.
+    #  * --dry-run / --skip-dsl-config-gate -> advisory (print, proceed). Fail-OPEN on infra error.
     try:
         from tac.witness_dsl.typed_config import verify_launch_manifest as _verify_dsl_manifest
 
+        _dsl_manifest = getattr(cfg, "dsl_program_manifest", {}) or {}
         _emitted_dsl_names = list(_emitted_flag_names(cfg, str(out_dir)))
         _dsl_ok, _dsl_detail = _verify_dsl_manifest(_dsl_manifest, _emitted_dsl_names)
         _action, _msg = dsl_config_gate_action(
@@ -2009,13 +1814,25 @@ def main(argv: list[str] | None = None) -> int:
             enforce=args.enforce_dsl_config_gate, allow_rationale=args.allow_non_dsl_config)
         if _action == "ok":
             print(f"# dsl-config gate: OK — {_dsl_detail}")
+        elif _action == "override":
+            marker = out_dir / "dsl_config_override.txt"
+            try:
+                marker.write_text(
+                    "NON-DSL CONFIG OVERRIDE (--allow-non-dsl-config)\n"
+                    f"rationale: {args.allow_non_dsl_config}\n"
+                    f"gate_detail: {_dsl_detail}\nconfig: {config}\n")
+            except Exception:  # marker is best-effort provenance; never block on it
+                pass
+            print(f"[launch-witness] WARNING: {_msg}. Stamped {marker}.", file=sys.stderr)
+        elif _action == "warn":
+            print(f"[launch-witness] WARNING: {_msg}", file=sys.stderr)
         else:  # "refuse"
             print(f"[launch-witness] ERROR: REFUSING to launch — {_msg}", file=sys.stderr)
-            return 8
-    except Exception as exc:
-        print(f"[launch-witness] ERROR: REFUSING to launch — rc=8 legacy DSL manifest "
-              f"recheck failed ({type(exc).__name__}: {exc}).", file=sys.stderr)
-        return 8
+            return 7
+    except Exception as exc:  # infra/import failure must never wedge the ONE launch path (fail-open, loud)
+        print(f"[launch-witness] WARNING: DSL-authored-config gate unavailable "
+              f"({type(exc).__name__}: {exc}); proceeding (no DSL-provenance check this launch).",
+              file=sys.stderr)
 
     # (b1) MEMORY PREFLIGHT (#205 OOM self-protection). Project peak RSS from the EMITTED launch.sh
     # using MEASURED constants (2026-07-02 ledger) and REFUSE a config whose projected peak busts a

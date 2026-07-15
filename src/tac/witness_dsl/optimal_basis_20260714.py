@@ -17,8 +17,10 @@ an equal-budget real-n600 through-R receipt exists.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -30,6 +32,12 @@ from tac.boundary_math.lever_b_levelset_generator import (
     build_coords,
     curvelet_directional_B,
     curvelet_feats,
+)
+from tac.witness_dsl.basis_control import (
+    GENUINE_FRAME_FEATURE_WIDTH,
+    genuine_frame_compact_shearlet_config,
+    genuine_frame_equal_value_budget,
+    genuine_frame_windowed_curvelet_config,
 )
 from tac.witness_dsl.basis_control import (
     LEGACY_FOURIER_AB_CONTROL as LEGACY_FOURIER_AB_CONTROL_ID,
@@ -399,11 +407,18 @@ class BasisLeverSpec:
                 "surface but carries no n600 basis-win claim"
             )
         elif self.family is BasisFamily.WINDOWED_CURVELET:
-            overrides = {"--basis": "windowed_curvelet"}
+            overrides = {**common, "--self-orient": False, "--basis": "windowed_curvelet"}
             notes = (
                 "FEED-cvl-throughR selected windowed-directional frame; trainer MLX/NumPy parity "
                 "and generated inflate receiver op parity are wired; equal-config byte-closed n600 "
                 "realized d_seg remains OWED (operator-GO, PREPARED_NOT_FIRED); no family-win claim"
+            )
+        elif self.family is BasisFamily.COMPACT_SHEARLET:
+            overrides = {**common, "--self-orient": False, "--basis": "compact_shearlet"}
+            notes = (
+                "FEED-shr-throughR selected compact cone-adapted shearlet frame; trainer MLX/NumPy "
+                "parity and generated inflate receiver op parity are wired; equal-config byte-closed "
+                "n600 realized d_seg remains OWED (operator-GO, PREPARED_NOT_FIRED); no family-win claim"
             )
         else:
             raise UnsupportedBasisFamily(
@@ -468,6 +483,13 @@ def inflate_compile_contract(spec: BasisLeverSpec) -> InflateCompileContract:
         inflate_functions = ("_windowed_curvelet_feats", "_basis_feats")
         train_functions = ("windowed_curvelet_feats", "mlx_parity_check")
         regenerated = ("windowed_curvelet_config", "basis_family")
+    elif spec.family is BasisFamily.COMPACT_SHEARLET:
+        required = ("def _compact_shearlet_feats", "def _basis_feats")
+        if not all(token in inflate_source for token in required):
+            raise RuntimeError("generated inflate source lost compact-shearlet regeneration functions")
+        inflate_functions = ("_compact_shearlet_feats", "_basis_feats")
+        train_functions = ("compact_shearlet_feats", "mlx_parity_check")
+        regenerated = ("compact_shearlet_config", "basis_family")
     else:
         required = ("def _curvelet_B", "def _curvelet_feats")
         if not all(token in inflate_source for token in required):
@@ -515,6 +537,103 @@ class BasisMetricInterface:
     selection_law: str = "optimal_basis_equal_budget_through_r_v1"
 
 
+BASIS_ABC_EQUATION_SOURCE_SHA256 = (
+    "c965d2198ff925bc7686a21ab47d86fd7cd8a71ec801943bf89583855106e3f9"
+)
+BASIS_ABC_SCIENTIFIC_DECLARATION: tuple[dict[str, str], ...] = (
+    {
+        "arm": "polar_directional_fourier",
+        "config_id": "v9_cgauge_ideal_mod32_basis_polar_fourier",
+        "config_factory": "compile_v9_basis_polar_fourier_launch_config",
+        "family": "legacy_fourier_ab_control",
+        "basis_lever_spec": "BasisLeverSpec(LEGACY_FOURIER_AB_CONTROL)",
+        "lever_factory": "LegacyFourierABControl",
+        "lawref": "optimal_basis_equal_budget_through_r_v1",
+        "trainer_consumer": "basis_family == LEGACY_FOURIER_AB_CONTROL",
+        "inflate_consumer": 'family == "polar_fourier"',
+        "receipt_schema": "genuine_frame_basis_arm.v1",
+    },
+    {
+        "arm": "windowed_curvelet",
+        "config_id": "v9_cgauge_ideal_mod32_basis_windowed_curvelet",
+        "config_factory": "compile_v9_basis_windowed_curvelet_launch_config",
+        "family": "windowed_curvelet",
+        "basis_lever_spec": "BasisLeverSpec(WINDOWED_CURVELET)",
+        "lever_factory": "WindowedCurveletBasis",
+        "lawref": "optimal_basis_equal_budget_through_r_v1",
+        "trainer_consumer": 'basis_family == "windowed_curvelet"',
+        "inflate_consumer": 'family == "windowed_curvelet"',
+        "receipt_schema": "genuine_frame_basis_arm.v1",
+    },
+    {
+        "arm": "compact_shearlet",
+        "config_id": "v9_cgauge_ideal_mod32_basis_compact_shearlet",
+        "config_factory": "compile_v9_basis_compact_shearlet_launch_config",
+        "family": "compact_shearlet",
+        "basis_lever_spec": "BasisLeverSpec(COMPACT_SHEARLET)",
+        "lever_factory": "CompactShearletBasis",
+        "lawref": "optimal_basis_equal_budget_through_r_v1",
+        "trainer_consumer": "basis_family == COMPACT_SHEARLET",
+        "inflate_consumer": 'family == "compact_shearlet"',
+        "receipt_schema": "genuine_frame_basis_arm.v1",
+    },
+)
+# Reviewed literal seal over BASIS_ABC_SCIENTIFIC_DECLARATION.  Validation never derives the
+# expected value from live bytes; an intentional declaration edit must explicitly reseal this.
+BASIS_ABC_SCIENTIFIC_DECLARATION_SHA256 = (
+    "912958cf190e770d81976f0880cc1ad04c9baeeeac56ecd18e6e4a144aeed441"
+)
+
+
+def validate_basis_abc_scientific_declaration(
+    declaration: tuple[dict[str, str], ...] | None = None,
+    *,
+    root: Path | None = None,
+) -> dict[str, Any]:
+    """Fail closed on declaration, equation-source, or executable-consumer drift."""
+
+    rows = BASIS_ABC_SCIENTIFIC_DECLARATION if declaration is None else declaration
+    raw = json.dumps(rows, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    live_sha = hashlib.sha256(raw.encode()).hexdigest()
+    if live_sha != BASIS_ABC_SCIENTIFIC_DECLARATION_SHA256:
+        raise RuntimeError(
+            "V9 genuine-frame scientific declaration seal mismatch: "
+            f"expected={BASIS_ABC_SCIENTIFIC_DECLARATION_SHA256}, live={live_sha}"
+        )
+    repo = root or Path(__file__).resolve().parents[3]
+    equation_path = repo / "src/tac/canonical_equations/optimal_basis_selection_20260714.py"
+    equation_sha = hashlib.sha256(equation_path.read_bytes()).hexdigest()
+    if equation_sha != BASIS_ABC_EQUATION_SOURCE_SHA256:
+        raise RuntimeError(
+            "V9 genuine-frame optimal-basis equation source closure mismatch: "
+            f"expected={BASIS_ABC_EQUATION_SOURCE_SHA256}, live={equation_sha}"
+        )
+    trainer_source = (repo / "experiments/train_levelset_witness_realized_through_R_mlx.py").read_text()
+    inflate_source = (repo / "tools/levelset_byte_close_and_eval.py").read_text()
+    missing = []
+    for row in rows:
+        if not callable(globals().get(row["config_factory"])):
+            missing.append(f"{row['arm']}:config_factory")
+        if row["trainer_consumer"] not in trainer_source:
+            missing.append(f"{row['arm']}:trainer")
+        if row["inflate_consumer"] not in inflate_source:
+            missing.append(f"{row['arm']}:inflate")
+    if missing:
+        raise RuntimeError(f"V9 genuine-frame executable consumer closure missing: {missing}")
+    receipt: dict[str, Any] = {
+        "schema": "v9_genuine_frame_scientific_declaration.v1",
+        "scientific_declaration_sha256": live_sha,
+        "equation_source_sha256": equation_sha,
+        "arms": [dict(row) for row in rows],
+        "status": "RESEALED_SOURCE_AND_CONSUMER_CLOSED",
+        "verdict_scope": "implementation custody only; PREPARED_NOT_FIRED; families OPEN",
+        "score_claim": False,
+    }
+    canonical = json.dumps(receipt, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    receipt["receipt_sha256"] = hashlib.sha256(canonical.encode()).hexdigest()
+    return receipt
+
+
 def basis_metric_interface(family: BasisFamily) -> BasisMetricInterface:
     """Expose basis-perp-metric duality without implementing the metric."""
 
@@ -539,8 +658,165 @@ class BasisABConfigPair:
     status: str = "BLOCKED_FAIL_CLOSED_BUILD_THEN_OPERATOR_GO"
 
 
+@dataclass(frozen=True)
+class BasisABCConfigSet:
+    """Pure V9 three-arm genuine-frame surface; construction never launches."""
+
+    polar_fourier: Any
+    windowed_curvelet: Any
+    compact_shearlet: Any
+    lever_specs: tuple[BasisLeverSpec, BasisLeverSpec, BasisLeverSpec]
+    pairwise_differing_flags_excluding_out_dir: dict[str, tuple[str, ...]]
+    status: str = "PREPARED_NOT_FIRED_OPERATOR_GO_REQUIRED"
+    verdict_scope: str = (
+        "implementation custody only; families OPEN; advisory receiver ranks are not selection authority"
+    )
+
+
 def _trainer_flag_map(config: Any) -> dict[str, Any]:
     return dict(config.to_trainer_flags())
+
+
+def _basis_abc_provenance_receipt(
+    config: Any,
+    *,
+    family: str,
+    num_pairs: int,
+) -> dict[str, Any]:
+    """Prove config/LawRef/lever/consumer/receipt bijection and static equality."""
+
+    flags_list = list(config.to_trainer_flags())
+    flag_names = [str(flag) for flag, _ in flags_list]
+    if len(flag_names) != len(set(flag_names)):
+        duplicates = sorted({flag for flag in flag_names if flag_names.count(flag) > 1})
+        raise RuntimeError(f"V9 genuine-frame config has duplicate long flags: {duplicates}")
+    flags = dict(flags_list)
+    expected_config_ids = {row["family"]: row["config_id"] for row in BASIS_ABC_SCIENTIFIC_DECLARATION}
+    expected_id = expected_config_ids[family]
+    if str(config.name) != expected_id:
+        raise RuntimeError(
+            f"V9 genuine-frame config-id mismatch for {family}: "
+            f"expected={expected_id!r}, live={config.name!r}"
+        )
+    if str(flags.get("--basis")) != family:
+        raise RuntimeError(
+            f"V9 genuine-frame basis consumer mismatch for {expected_id}: "
+            f"expected={family!r}, live={flags.get('--basis')!r}"
+        )
+    if "--no-self-orient" not in flags or "--self-orient" in flags:
+        raise RuntimeError(
+            f"V9 genuine-frame isolated-basis config must emit --no-self-orient: {expected_id}"
+        )
+    basis_levers = [name for name in config.dsl_levers if str(name).startswith("basis_family::")]
+    if basis_levers != [f"basis_family::{family}"]:
+        raise RuntimeError(
+            f"V9 genuine-frame config must carry exactly one BasisLeverSpec: {basis_levers}"
+        )
+
+    if family == LEGACY_FOURIER_AB_CONTROL_ID:
+        bank = CurveletBankConfig(
+            n_scales=int(flags["--bank-n-scales"]),
+            n_orient0=int(flags["--bank-n-orient0"]),
+            f0=float(flags["--bank-f0"]),
+            base=float(flags["--bank-base"]),
+            n_iso=int(flags["--bank-n-iso"]),
+        )
+        feature_width = 2 * int(
+            curvelet_directional_B(bank, max_freq=float(flags["--max-bank-freq"])).shape[1]
+        )
+        frame_config: dict[str, Any] = asdict(bank)
+    elif family == "windowed_curvelet":
+        frame_config = asdict(genuine_frame_windowed_curvelet_config())
+        feature_width = GENUINE_FRAME_FEATURE_WIDTH
+    elif family == "compact_shearlet":
+        frame_config = asdict(genuine_frame_compact_shearlet_config())
+        feature_width = GENUINE_FRAME_FEATURE_WIDTH
+    else:  # pragma: no cover - declaration construction prevents this
+        raise RuntimeError(f"unregistered genuine-frame family: {family!r}")
+    if feature_width != GENUINE_FRAME_FEATURE_WIDTH:
+        raise RuntimeError(
+            f"V9 genuine-frame feature-width mismatch for {family}: "
+            f"expected={GENUINE_FRAME_FEATURE_WIDTH}, live={feature_width}"
+        )
+
+    budget = genuine_frame_equal_value_budget(
+        num_pairs=num_pairs,
+        mod_dim=int(flags["--mod-dim"]),
+    )
+    shape_mismatches = {
+        "--hidden-dim": (flags.get("--hidden-dim"), budget["hidden_dim"]),
+        "--n-hidden": (flags.get("--n-hidden"), budget["hidden_layers"]),
+        "--mod-dim": (flags.get("--mod-dim"), budget["mod_dim"]),
+    }
+    shape_mismatches = {
+        flag: values for flag, values in shape_mismatches.items() if int(values[0]) != values[1]
+    }
+    if shape_mismatches:
+        raise RuntimeError(f"V9 genuine-frame equal-value shape drift: {shape_mismatches}")
+    if int(num_pairs) == 600 and budget["total_trainable_values"] != 109_559:
+        raise RuntimeError(
+            "V9 genuine-frame n600 value-budget drift: "
+            f"expected=109559, live={budget['total_trainable_values']}"
+        )
+
+    row = next(row for row in BASIS_ABC_SCIENTIFIC_DECLARATION if row["family"] == family)
+    receipt: dict[str, Any] = {
+        "schema": "v9_genuine_frame_config_provenance_bijection.v1",
+        "config_id": expected_id,
+        "family": family,
+        "basis_lever": basis_levers[0],
+        "lawref": row["lawref"],
+        "trainer_consumer": row["trainer_consumer"],
+        "inflate_consumer": row["inflate_consumer"],
+        "receipt_schema": row["receipt_schema"],
+        "feature_width": feature_width,
+        "self_orient": False,
+        "frame_config": frame_config,
+        "equal_value_budget": budget,
+        "duplicate_long_flags": [],
+        "status": "MAPPED_STATIC_EQUALITY_GREEN",
+        "verdict_scope": "static implementation custody only; PREPARED_NOT_FIRED; families OPEN",
+        "score_claim": False,
+    }
+    canonical = json.dumps(receipt, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    receipt["receipt_sha256"] = hashlib.sha256(canonical.encode()).hexdigest()
+    return receipt
+
+
+def _attach_basis_abc_receipts(
+    config: Any,
+    *,
+    family: str,
+    num_pairs: int,
+) -> Any:
+    """Bind the reviewed source seal and typed gauge pair to a launch-shaped config."""
+
+    from tac.witness_dsl.affine_legendre_gauge_policy import (
+        canonical_v9_affine_legendre_receipt,
+    )
+
+    manifest = dict(config.dsl_program_manifest)
+    manifest["genuine_frame_basis_abc"] = validate_basis_abc_scientific_declaration()
+    manifest["affine_legendre_gauge_pair"] = canonical_v9_affine_legendre_receipt()
+    manifest["genuine_frame_config_provenance_bijection"] = _basis_abc_provenance_receipt(
+        config,
+        family=family,
+        num_pairs=num_pairs,
+    )
+    constants = dict(config.constants_manifest)
+    constants["optimal_basis_equal_budget_through_r"] = {
+        "value": family,
+        "equation_id": "optimal_basis_equal_budget_through_r_v1",
+        "ladder_class": "derived_at_config",
+        "fallback_used": False,
+        "inputs": {
+            "feature_width": GENUINE_FRAME_FEATURE_WIDTH,
+            "num_pairs": int(num_pairs),
+            "mod_dim": 32,
+        },
+        "note": "one typed basis family; static equality only; n600 through-R verdict owed",
+    }
+    return replace(config, dsl_program_manifest=manifest, constants_manifest=constants)
 
 
 def v9_ideal_mod32_basis_ab_configs(
@@ -620,7 +896,148 @@ def v9_ideal_mod32_basis_ab_configs(
     )
 
 
+def v9_ideal_mod32_basis_abc_configs(
+    *,
+    gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    num_pairs: int = 600,
+    epochs: int = 3000,
+    polar_out_dir: str = "experiments/results/v9_cgauge_ideal_mod32_polar_fourier_20260715",
+    curvelet_out_dir: str = "experiments/results/v9_cgauge_ideal_mod32_windowed_curvelet_20260715",
+    shearlet_out_dir: str = "experiments/results/v9_cgauge_ideal_mod32_compact_shearlet_20260715",
+) -> BasisABCConfigSet:
+    """Compile the held genuine-frame A/B/C with one typed basis treatment per arm.
+
+    The explicit Fourier arm uses the governed legacy-Fourier A/B-control runtime identity;
+    ``polar_directional_fourier`` remains its mathematical label.  Excluding output custody,
+    every pair must differ on exactly the real ``--basis`` trainer flag.
+    """
+
+    from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_ideal_mod32_launch_config
+
+    shared = {
+        "gt_cache_path": gt_cache_path,
+        "num_pairs": num_pairs,
+        "epochs": epochs,
+    }
+    polar = _attach_basis_abc_receipts(
+        compile_v9_cgauge_ideal_mod32_launch_config(
+            **shared,
+            out_dir=polar_out_dir,
+            program_name="v9_cgauge_ideal_mod32_basis_polar_fourier",
+        ).with_dsl_lever_factories("LegacyFourierABControl"),
+        family=LEGACY_FOURIER_AB_CONTROL_ID,
+        num_pairs=num_pairs,
+    )
+    curvelet = _attach_basis_abc_receipts(
+        compile_v9_cgauge_ideal_mod32_launch_config(
+            **shared,
+            out_dir=curvelet_out_dir,
+            program_name="v9_cgauge_ideal_mod32_basis_windowed_curvelet",
+        ).with_dsl_lever_factories("WindowedCurveletBasis"),
+        family="windowed_curvelet",
+        num_pairs=num_pairs,
+    )
+    shearlet = _attach_basis_abc_receipts(
+        compile_v9_cgauge_ideal_mod32_launch_config(
+            **shared,
+            out_dir=shearlet_out_dir,
+            program_name="v9_cgauge_ideal_mod32_basis_compact_shearlet",
+        ).with_dsl_lever_factories("CompactShearletBasis"),
+        family="compact_shearlet",
+        num_pairs=num_pairs,
+    )
+    configs = {
+        "polar_fourier": polar,
+        "windowed_curvelet": curvelet,
+        "compact_shearlet": shearlet,
+    }
+    maps = {name: _trainer_flag_map(cfg) for name, cfg in configs.items()}
+    deltas: dict[str, tuple[str, ...]] = {}
+    names = tuple(configs)
+    for left_index, left in enumerate(names):
+        for right in names[left_index + 1 :]:
+            differing = tuple(
+                sorted(
+                    flag
+                    for flag in set(maps[left]) | set(maps[right])
+                    if flag != "--out-dir" and maps[left].get(flag) != maps[right].get(flag)
+                )
+            )
+            if differing != ("--basis",):
+                raise RuntimeError(
+                    "V9 genuine-frame A/B/C must differ only by --basis excluding --out-dir; "
+                    f"{left} vs {right} got {differing}"
+                )
+            deltas[f"{left}__vs__{right}"] = differing
+    return BasisABCConfigSet(
+        polar_fourier=polar,
+        windowed_curvelet=curvelet,
+        compact_shearlet=shearlet,
+        lever_specs=(
+            BasisLeverSpec(family=BasisFamily.LEGACY_FOURIER_AB_CONTROL),
+            BasisLeverSpec(family=BasisFamily.WINDOWED_CURVELET),
+            BasisLeverSpec(family=BasisFamily.COMPACT_SHEARLET),
+        ),
+        pairwise_differing_flags_excluding_out_dir=deltas,
+    )
+
+
+def compile_v9_basis_polar_fourier_launch_config(
+    gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    *,
+    num_pairs: int = 600,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/v9_cgauge_ideal_mod32_polar_fourier_20260715",
+):
+    """Resolve the registered Fourier-control arm without launching it."""
+
+    return v9_ideal_mod32_basis_abc_configs(
+        gt_cache_path=gt_cache_path,
+        num_pairs=num_pairs,
+        epochs=epochs,
+        polar_out_dir=out_dir,
+    ).polar_fourier
+
+
+def compile_v9_basis_windowed_curvelet_launch_config(
+    gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    *,
+    num_pairs: int = 600,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/v9_cgauge_ideal_mod32_windowed_curvelet_20260715",
+):
+    """Resolve the registered localized-curvelet arm without launching it."""
+
+    return v9_ideal_mod32_basis_abc_configs(
+        gt_cache_path=gt_cache_path,
+        num_pairs=num_pairs,
+        epochs=epochs,
+        curvelet_out_dir=out_dir,
+    ).windowed_curvelet
+
+
+def compile_v9_basis_compact_shearlet_launch_config(
+    gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    *,
+    num_pairs: int = 600,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/v9_cgauge_ideal_mod32_compact_shearlet_20260715",
+):
+    """Resolve the registered compact-shearlet arm without launching it."""
+
+    return v9_ideal_mod32_basis_abc_configs(
+        gt_cache_path=gt_cache_path,
+        num_pairs=num_pairs,
+        epochs=epochs,
+        shearlet_out_dir=out_dir,
+    ).compact_shearlet
+
+
 __all__ = [
+    "BASIS_ABC_EQUATION_SOURCE_SHA256",
+    "BASIS_ABC_SCIENTIFIC_DECLARATION",
+    "BASIS_ABC_SCIENTIFIC_DECLARATION_SHA256",
+    "BasisABCConfigSet",
     "BasisABConfigPair",
     "BasisCandidate",
     "BasisEvidence",
@@ -633,7 +1050,12 @@ __all__ = [
     "audit_legacy_polar_bank",
     "basis_catalog",
     "basis_metric_interface",
+    "compile_v9_basis_compact_shearlet_launch_config",
+    "compile_v9_basis_polar_fourier_launch_config",
+    "compile_v9_basis_windowed_curvelet_launch_config",
     "inflate_compile_contract",
     "lever_argv",
     "v9_ideal_mod32_basis_ab_configs",
+    "v9_ideal_mod32_basis_abc_configs",
+    "validate_basis_abc_scientific_declaration",
 ]

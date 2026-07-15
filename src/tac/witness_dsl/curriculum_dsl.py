@@ -2136,9 +2136,44 @@ def WindowedCurveletBasis(window: int = 0) -> Lever:
         raise ValueError("WindowedCurveletBasis: window must be >= 0")
     return Lever(
         "basis_family::windowed_curvelet",
-        overrides={"--basis": "windowed_curvelet"},
+        overrides={
+            "--bank-n-scales": 4,
+            "--bank-n-orient0": 6,
+            "--bank-f0": 2.0,
+            "--bank-base": 2.0,
+            "--bank-n-iso": 4,
+            "--max-bank-freq": 64.0,
+            "--self-orient": False,
+            "--basis": "windowed_curvelet",
+        },
         epochs_delta=int(window),
         notes=("FEED-cvl-throughR: train+generated-inflate op parity wired; default-off treatment; "
+               "byte-closed n600 realized d_seg A/B OWED (operator-GO, PREPARED_NOT_FIRED)"),
+    )
+
+
+def CompactShearletBasis(window: int = 0) -> Lever:
+    """Select the generated-receiver-sealed compact cone-adapted shearlet frame.
+
+    This remains a default-off, PREPARED_NOT_FIRED treatment.  Its structural frame proof and
+    advisory receiver row are not a byte-equal n600 score verdict.
+    """
+    if int(window) < 0:
+        raise ValueError("CompactShearletBasis: window must be >= 0")
+    return Lever(
+        "basis_family::compact_shearlet",
+        overrides={
+            "--bank-n-scales": 4,
+            "--bank-n-orient0": 6,
+            "--bank-f0": 2.0,
+            "--bank-base": 2.0,
+            "--bank-n-iso": 4,
+            "--max-bank-freq": 64.0,
+            "--self-orient": False,
+            "--basis": "compact_shearlet",
+        },
+        epochs_delta=int(window),
+        notes=("FEED-shr-throughR: train+generated-inflate op parity wired; default-off treatment; "
                "byte-closed n600 realized d_seg A/B OWED (operator-GO, PREPARED_NOT_FIRED)"),
     )
 
@@ -2154,7 +2189,16 @@ def LegacyFourierABControl(window: int = 0) -> Lever:
         raise ValueError("LegacyFourierABControl: window must be >= 0")
     return Lever(
         "basis_family::legacy_fourier_ab_control",
-        overrides={"--basis": "legacy_fourier_ab_control"},
+        overrides={
+            "--bank-n-scales": 4,
+            "--bank-n-orient0": 6,
+            "--bank-f0": 2.0,
+            "--bank-base": 2.0,
+            "--bank-n-iso": 4,
+            "--max-bank-freq": 64.0,
+            "--self-orient": False,
+            "--basis": "legacy_fourier_ab_control",
+        },
         epochs_delta=int(window),
         notes=("historical global Fourier plane-wave computation retained only as explicit "
                "legacy A/B control; no curvelet win or default-ship claim"),

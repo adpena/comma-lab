@@ -26,6 +26,7 @@ from tac.boundary_math.windowed_curvelet_frame import (
     localization_certificate,
     n_atoms,
 )
+from tac.witness_dsl.basis_control import genuine_frame_windowed_curvelet_config
 from tac.witness_dsl.curriculum_dsl import Lever, real_trainer_flags
 from tac.witness_dsl.optimal_basis_20260714 import BasisFamily, BasisLeverSpec
 
@@ -46,7 +47,7 @@ class WindowedCurveletWireNotReady(RuntimeError):
 class WindowedCurveletBasisLeverSpec:
     """Typed windowed-curvelet treatment; default-off is program composition, not a fake no-op."""
 
-    config: WindowedCurveletConfig = field(default_factory=WindowedCurveletConfig)
+    config: WindowedCurveletConfig = field(default_factory=genuine_frame_windowed_curvelet_config)
     enabled: bool = True
     wire_status: str = WIRE_STATUS_READY
 
@@ -56,7 +57,7 @@ class WindowedCurveletBasisLeverSpec:
 
     def compile_lever(self) -> Lever:
         """Compile to the canonical real trainer flag, or an explicit disabled no-op."""
-        if self.config != WindowedCurveletConfig():
+        if self.config != genuine_frame_windowed_curvelet_config():
             raise WindowedCurveletWireNotReady(
                 "custom windowed-curvelet configs are not serialized by the current trainer flag; "
                 "use the sealed default config or extend train+checkpoint+inflate together"
@@ -89,7 +90,7 @@ def windowed_curvelet_basis_lever(
     config: WindowedCurveletConfig | None = None,
 ) -> Lever:
     """Convenience factory for the explicit treatment (baseline omission keeps it default-OFF)."""
-    spec = WindowedCurveletBasisLeverSpec(config=config or WindowedCurveletConfig())
+    spec = WindowedCurveletBasisLeverSpec(config=config or genuine_frame_windowed_curvelet_config())
     return spec.compile_lever()
 
 

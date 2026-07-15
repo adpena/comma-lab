@@ -38,7 +38,9 @@ from tac.witness_dsl.windowed_curvelet_basis_lever_20260714 import (
 def test_lever_compiles_real_treatment_while_baseline_stays_default_off():
     lev = windowed_curvelet_basis_lever()
     assert lev.name == "basis_family::windowed_curvelet"
-    assert lev.overrides == {"--basis": "windowed_curvelet"}
+    assert lev.overrides["--basis"] == "windowed_curvelet"
+    assert lev.overrides["--self-orient"] is False
+    assert lev.overrides["--bank-n-scales"] == 4
     assert "--basis" not in BASELINE.flag_dict()
     assert lev.epochs_delta == 0
 
@@ -86,7 +88,10 @@ def test_custom_config_refuses_until_checkpoint_and_receiver_serialize_it():
 
 def test_optimal_basis_spec_and_generated_inflate_contract_compile():
     spec = BasisLeverSpec(family=BasisFamily.WINDOWED_CURVELET)
-    assert spec.compile_lever().overrides == {"--basis": "windowed_curvelet"}
+    overrides = spec.compile_lever().overrides
+    assert overrides["--basis"] == "windowed_curvelet"
+    assert overrides["--self-orient"] is False
+    assert overrides["--bank-n-scales"] == 4
     contract = inflate_compile_contract(spec)
     assert contract.compiled is True
     assert "_windowed_curvelet_feats" in contract.inflate_functions
@@ -95,8 +100,20 @@ def test_optimal_basis_spec_and_generated_inflate_contract_compile():
 
 def test_completeness_and_activation_duty_queue_surface_lever(tmp_path):
     factories = lever_factories()
-    assert factories["WindowedCurveletBasis"] == frozenset({"--basis"})
-    assert factories["LegacyFourierABControl"] == frozenset({"--basis"})
+    expected = frozenset(
+        {
+            "--basis",
+            "--bank-n-scales",
+            "--bank-n-orient0",
+            "--bank-f0",
+            "--bank-base",
+            "--bank-n-iso",
+            "--max-bank-freq",
+            "--self-orient",
+        }
+    )
+    assert factories["WindowedCurveletBasis"] == expected
+    assert factories["LegacyFourierABControl"] == expected
     report = completeness()
     assert "--basis" in report.mapped
     assert "--basis" not in report.unmapped and "--basis" not in report.stale
