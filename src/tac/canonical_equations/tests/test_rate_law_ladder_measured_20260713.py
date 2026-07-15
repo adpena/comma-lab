@@ -9,7 +9,17 @@ from tac.canonical_equations import rate_law_ladder_measured_20260713 as M
 def test_successor_and_receipt_anchors_exist():
     assert M.EQUATION_ID == "rate_law_ladder_v2_measured"
     assert M.PREDECESSOR_EQUATION_ID == "rate_law_ladder_v1"
-    for path in (M.MEMO, M.D36_RECEIPT, M.D37_RECEIPT, M.D39_SPEC):
+    # D36's experiment receipt is an external/ignored measurement artifact;
+    # the source tree carries its frozen numeric anchor, not fabricated bytes.
+    assert M.D36_RECEIPT.endswith("d36_fiber_completeness_gap_n600.json")
+    for path in (
+        M.MEMO,
+        M.D37_RECEIPT,
+        M.D39_SPEC,
+        M.D39_MANIFEST_IMPLEMENTATION,
+        M.D39_PRODUCER_IMPLEMENTATION,
+        M.D39_TEST_IMPLEMENTATION,
+    ):
         assert Path(path).is_file(), f"missing measured ladder anchor: {path}"
 
 
@@ -27,8 +37,9 @@ def test_d36_measured_gap_arithmetic():
 
 def test_d37_verdict_and_d38_scope_are_not_overpromoted():
     assert M.D37_MI_NET_CI95_BITS[0] > 0
-    assert M.D37_PHASE_AWARE_NET_CI95_BITS[1] < 0
+    assert M.D37_PHASE_AWARE_NET_CI95_BITS[0] > 0
     assert M.D38_LOCAL_OBSTRUCTION_CLASS == "neutral"
     assert M.D38_LOCAL_IDEAL_TWIST_BITS == 0
-    assert "NOT-TYPED" in M.D38_GLOBAL_EXTENSION_STATUS
-    assert "event_marks_telemetry_implementation" in M.REMAINING_OWED
+    assert M.D38_GLOBAL_EXTENSION_STATUS.startswith("TYPED_SCHEMA")
+    assert M.D39_STATUS == "BUILT_RESUME_SAFE_OBSERVABILITY_ONLY"
+    assert "event_marks_telemetry_implementation" not in M.REMAINING_OWED

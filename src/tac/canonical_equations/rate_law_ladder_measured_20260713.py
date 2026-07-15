@@ -2,7 +2,7 @@
 
 This row does not overwrite the four-rung theory.  It anchors the scoped n600
 operational codelength measurements for D36/D37, the fixed-stratum D38 splitting
-derivation, and the D39 additive telemetry specification.  It is not a contest
+derivation, and the D39 additive telemetry implementation.  It is not a contest
 score claim and does not promote either empirical proxy beyond its named surface.
 """
 from __future__ import annotations
@@ -23,6 +23,10 @@ D37_PREDECESSOR_RECEIPT = (
 D37_RECEIPT = ".omx/research/v9_cgauge_symmetry_homotopy_n600_receipt_20260714.json"
 D37_RECEIPT_SHA256 = "60dd6a4837706d100932416cf8fdf77fce0e7c171b1ef58fd3f1154021428308"
 D39_SPEC = ".omx/research/pact_causal_manifest_v1_event_marks_increment_spec_20260713.md"
+D39_MANIFEST_IMPLEMENTATION = "src/tac/causal_manifest.py"
+D39_PRODUCER_IMPLEMENTATION = "src/tac/witness_control/telemetry_producers.py"
+D39_TEST_IMPLEMENTATION = "src/tac/tests/test_event_mark_telemetry.py"
+D39_STATUS = "BUILT_RESUME_SAFE_OBSERVABILITY_ONLY"
 
 ARCHIVE_BYTES = 83_430
 RATE_DENOMINATOR_BYTES = 37_545_489
@@ -63,7 +67,6 @@ D38_GLOBAL_EXTENSION_STATUS = (
 REMAINING_OWED = (
     "exact_packed_class_conditional_contour_AB",
     "populate_Hcov_edge_tube_junction_atlas_and_charged_receiver_section",
-    "event_marks_telemetry_implementation",
 )
 
 
@@ -94,6 +97,7 @@ __all__ = [
     "D37_MI_NET_BITS",
     "D37_RECEIPT_SHA256",
     "D38_LOCAL_IDEAL_TWIST_BITS",
+    "D39_STATUS",
     "EQUATION_ID",
     "PREDECESSOR_EQUATION_ID",
     "d38_split_statement",

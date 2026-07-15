@@ -1,6 +1,6 @@
 # TICKET-D39 — implement marked-event rows in `pact.causal_manifest.v1`
 
-**Status:** BUILD-OWED
+**Status:** BUILD-COMPLETE / RUN-CALIBRATION-OWED (2026-07-15 successor landing)
 **Source spec:** `.omx/research/pact_causal_manifest_v1_event_marks_increment_spec_20260713.md`
 **Do not infer launch authority:** implementation and local tests only
 
@@ -12,6 +12,17 @@
 - One small fixture JSONL with all three event families; no score fields.
 - A typed producer adapter at the event detector boundary only after the schema
   landing is sealed.
+
+Successor implementation:
+
+- `src/tac/causal_manifest.py` owns the additive strict row and canonical ID;
+- `src/tac/witness_control/telemetry_producers.py` owns the priority producer
+  and resume cursor;
+- `src/tac/tests/test_event_mark_telemetry.py` covers the ten required cases
+  plus canonical-UTC and axis rejection; combined existing/new manifest suite:
+  **47 passed**.
+
+No entropy calibration, training launch, score, or promotion authority follows.
 
 ## Acceptance gates
 

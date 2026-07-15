@@ -32,9 +32,11 @@ rung-1 kernel join + admissible covariance arrows
 
 rung-4 priority event partition
   +-- event_mark v1 increment spec [D39]
-        +-- TICKET-D39 implementation
-              +-- typed marked telemetry
-                    +-- calibrated H(E|X,C) + regular/event branch allocator
+        +-- TICKET-D39 implementation COMPLETE (resume-safe, observability-only)
+              +-- typed manifest row + strict parser/writer
+              +-- priority-partition producer + checkpoint cursor
+              +-- 47 manifest/event tests PASS
+                    `-- calibrated H(E|X,C) + regular/event branch allocator OWED
 ```
 
 ## Promotion boundary
@@ -43,7 +45,8 @@ No node above moves a score pointer. D36/D37 are codelength advisories on named
 instances. A rate lever becomes reviewable only after exact packed bytes,
 bit-exact decode, receiver parse-back, scorer survival, and an axis-tagged exact
 archive row. D38 removes only a **local ideal twist** term; it does not make
-chart/action/gluing bytes free. D39 is observability-only.
+chart/action/gluing bytes free. D39 is observability-only; its producer does not
+by itself calibrate an entropy model or authorize a marked-branch codec.
 
 ## Six-hook wire-in
 
