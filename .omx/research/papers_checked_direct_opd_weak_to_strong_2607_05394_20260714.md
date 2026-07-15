@@ -1,0 +1,18 @@
+# PAPER CHECKED — arXiv 2607.05394 "Weak-to-Strong Generalization via Direct On-Policy Distillation" (Direct-OPD; Feng, Gao, Chi, … Hao Zhou — ByteDance/Tsinghua)
+
+**Assessed 2026-07-14** (operator-supplied, HF papers link). Recall-first: NOT previously in corpus. MEANS-layer, pointer UNMOVED 0.19108/0.18804. Project page https://bytedtsinghua-sia.github.io/Direct-OPD/ — NO github/code. Deep-read: full abstract engaged.
+
+## What it says (verbatim-grounded)
+LLM-RLVR (reasoning) post-training. RL on the target strong model is expensive (many rollouts). Direct-OPD: run RL on a SMALL/weak model (cheap rollouts), then transfer the RL-INDUCED POLICY SHIFT — NOT the final weak policy (which "mixes useful RL gains with the limitations of the smaller model"). Mechanism: treat the **log-ratio of the post-RL weak checkpoint vs its own pre-RL reference as a DENSE IMPLICIT REWARD**, applied on the STRONG student's OWN on-policy states. Reuses the weak RL supervision without sparse-reward RL on the target. Result: Qwen3-1.7B 48.3%→58.3% AIME (4h/8×A100); beats step-matched direct RL; sequential composition of shifts.
+
+## Honest-fork — DIRECT MECHANISM = NOT-APPLICABLE (state it plainly)
+Our stack is NOT RL post-training of LLMs: the witness is a level-set INR trained by SUPERVISED gradient descent through the FROZEN scorer; the costate organ is a SUPERVISED adjoint (λ=∂S/∂x), n=1; the contest is deterministic (no policy, no rollouts, no RLVR). There is no weak/strong SCALE LADDER of witness/organ models. So Direct-OPD's literal weak-to-strong-RL-transfer does NOT map.
+
+## Warm-start-from-divergence (per `[[paper_warm_start_from_assumption_divergence_not_route_or_dismiss_20260714]]` — 'not applicable' = START, not dismiss)
+The ASSUMPTION-FORK is "our learning is not RL." But the DEEP idea survives the fork: **transfer the DELTA (shift / log-ratio), which is a DENSER + CLEANER signal than the absolute, because the delta cancels the small-model's fixed limitations.** Warm-started under OUR premises:
+- **REFRAME for the costate organ n=1 starvation (#499) — the genuine transfer.** The organ can't identify the ABSOLUTE λ-field from 9 intervals (n=1). Direct-OPD's lesson: don't learn the absolute — learn the per-INTERVENTION DELTA. Concretely: instead of fitting λ(state) absolutely, fit the **per-lever λ-SHIFT** (Δλ under a lever intervention = a log-ratio-like dense signal, one per intervention), which cancels the common-mode field the n=1 data can't pin down. This is a real reformulation of the n=1 problem (denser, intervention-local signal) — ROUTE to #499/#485/the organ line as a design candidate, backtest-gated on the existing 9 intervals (must beat persistence per-class 0.0108 per the n=1 memory).
+- **Curriculum shift-composition (soft, already-covered).** "Sequential composition of policy shifts" ≈ our curriculum-as-continuation (stage-to-stage shifts). Already framed; no new lever.
+- **Future-conditional:** if we ever build a small-witness→large-witness ladder (we do NOT), Direct-OPD's cross-scale-reuse would apply. Note only.
+
+## Verdict
+Direct mechanism NOT-APPLICABLE (no RL/rollouts/RLVR/scale-ladder). The transferable DEEP idea — **learn the intervention DELTA, not the absolute** — is a genuine REFRAME for the n=1 organ (#499): fit per-lever λ-shifts (dense, common-mode-cancelling) instead of the absolute λ-field. Routed to #499/#485, backtest-gated (beat persistence per-class 0.0108). NOT a pointer-mover, NOT a d_seg/rate technique, no code. Sisters: `[[n1_organ_capacity_ceiling_shrinkage_physics_residual_measured_20260714]]`, `[[paper_warm_start_from_assumption_divergence_not_route_or_dismiss_20260714]]`. MEANS.
