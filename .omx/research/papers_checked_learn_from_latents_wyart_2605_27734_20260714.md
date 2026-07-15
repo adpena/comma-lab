@@ -1,0 +1,16 @@
+# PAPER CHECKED — arXiv 2605.27734 "Learn from your own latents and not from tokens: A sample-complexity theory" (Korchinski, Favero, Wyart)
+
+**Assessed 2026-07-14** (operator-supplied). Recall-first: NOT previously in the corpus. MEANS-layer (organ/surrogate apparatus), pointer UNMOVED 0.19108/0.18804. Deep-read: engaged the claim + mechanism + honest-fork; exact poly-constants in the PDF are compression-obscured (PDF saved locally) → the precise `N=poly(L,d,|Σ|)` extraction is ROUTED to #485 (which needs it to size a surrogate's data budget).
+
+## What it says (MEASURED from abstract + PDF structure)
+- **Claim (Thm 1/2):** a network trained to predict its OWN latents (JEPA / data2vec self-distillation) needs a number of samples **CONSTANT in compositional depth L (up to log factors)**; token-level / supervised learning needs **EXPONENTIAL-in-L** samples, on a tractable hierarchical PCFG data model (recursive productions over a depth-L tree of hidden symbols). Heavily cites data2vec (Baevski 2022).
+- **Mechanism:** hierarchical/compositional structure — predicting intermediate latents lets the net learn the tree's clustering level-by-level (predictor+clusterer), instead of paying exponentially to bridge tokens→root supervision.
+- **CRITICAL nuance (honest):** "constant in L" is DEPTH-independence, NOT low-data. The bound still scales with the latent dimension / vocabulary / symbols-per-level (poly, not confirmed exact). It is NOT an n=1 result. No released code (theory paper); Wyart/Favero's PRIOR "Random Hierarchy Model" code is the OSS to harvest for #485, not this paper.
+
+## Honest-fork vs OUR stack (the load-bearing distinction)
+Two DIFFERENT "data-efficiency" problems — do NOT conflate:
+1. **#485 (JEPA-latent surrogate for the cheap costate VJP) — RELEVANT, a real PRO.** The costate organ's 82% cost is the backward VJP through frozen SegNet (EfficientNet-B2 = a genuine compositional feature hierarchy). This paper is a THEORETICAL grounding that a latent-prediction (JEPA/data2vec self-distill) surrogate can be trained data-EFFICIENTLY on SegNet's own latents — strengthening the #485 hypothesis. Also feeds the distilled-surrogate (#455/#428) which has abundant data (n600 forwards). ROUTE: #485 should (a) extract the exact poly-in-latent-dim bound from the PDF, (b) harvest Wyart/Favero RHM OSS, (c) decide whether a data2vec-EMA-target surrogate delivers the cheap VJP within the SegNet latent dim.
+2. **n=1 organ (#499/#434) — NOT cured, do NOT over-claim.** The λ-field organ is n=1-capacity-capped (9 intervals; MEASURED bigger-nets-overfit). The paper's depth-independence still needs poly-in-latent-dim samples — that is NOT n=1. This paper does NOT dissolve the organ's n=1 starvation; that constraint (measured) dominates. The paper's regime is the SURROGATE (abundant SegNet data), not the λ-field (n=1).
+
+## Verdict
+RELEVANT-to-#485 (theoretical PRO for the JEPA-latent costate-VJP surrogate) + a soft PRO for the distilled surrogate #455/#428. NOT a pointer-mover, NOT an n=1 cure, NOT a d_seg/rate/pose technique. No code. Route to #485 for the exact-bound extraction + RHM-OSS harvest + the data2vec-EMA-target design decision. Sister: `[[n1_organ_capacity_ceiling_shrinkage_physics_residual_measured_20260714]]` (the n=1 constraint this must NOT be conflated with). MEANS.
