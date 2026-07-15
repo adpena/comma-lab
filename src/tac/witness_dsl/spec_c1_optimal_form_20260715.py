@@ -517,7 +517,9 @@ def compile_c1_optimal_form_launch_config(
     constants = dict(rebound.constants_manifest)
     constants["head_offset_solver"] = {
         "value": "flip_median",
-        "equation_id": "laguerre_ot_head_offset_20260709",
+        # the REGISTERED law id (the #332 LawRef gate requires a registered ..._vN equation;
+        # the memo slug laguerre_ot_head_offset_20260709 is its source artifact, not the id).
+        "equation_id": "laguerre_ot_head_offset_v1",
         "ladder_class": "derived_at_config",
         "fallback_used": False,
         "inputs": {
@@ -529,15 +531,10 @@ def compile_c1_optimal_form_launch_config(
         "note": "#386 flip_median advisory arbiter folded per the 2026-07-15 directive; the "
                 "n600 realized-through-R delta rows it emits ARE the owed A/B instrument.",
     }
-    constants["c1_component_wallclock_probe_every"] = {
-        "value": 1,
-        "equation_id": None,
-        "ladder_class": "derived_at_config",
-        "fallback_used": False,
-        "inputs": {"trainer_default": 1},
-        "note": "score-neutral observability cadence (trainer's own designed default; "
-                "NO_EQUATION_NEEDED — read-only telemetry).",
-    }
+    # NB deliberately NO constants row for --component-wallclock-probe-every: constants rows are
+    # for VALUE-PROVENANCE-notable constants (each must cite a registered ..._vN LawRef per the
+    # #332 gate); probe-every=1 is the trainer's own designed default for read-only score-neutral
+    # telemetry — its provenance lives in the lever notes, not the LawRef surface.
     from tac.witness_autoconfig import CrucibleV7LaunchConfig
 
     governance = dict(rebound.schedule_governance)
