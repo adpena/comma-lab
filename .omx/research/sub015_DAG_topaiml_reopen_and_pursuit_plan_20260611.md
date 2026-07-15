@@ -18078,3 +18078,73 @@ training alone = contribution 0.10-0.127 (recovers ~0-0.03 S; no store-nothing m
 below 1.0e-3); the full ~0.11 S rides on the UNMEASURED L1 gate (Contrarian dissent preserved:
 "another linearized-Jacobian argument — measure before believing"); plan-of-record floor stays 0.127.
 NO training launched; C0 untouched. Pointer 0.19108 UNMOVED — MEANS.
+
+---
+
+## FEED-508-cargocult-sweep-pr95-fourier-rgb (2026-07-15)
+
+**Task #508** — three-family cargo-cult sweep over the LIVE stack (compiled c1_optimal_form argv, the
+actual launch surface), per operator 2026-07-15 "RGB only has place as a finisher at the edges and
+annulus and longest end of long tail". Full table:
+`.omx/research/cargocult_sweep_pr95_fourier_rgb_20260715.md`. Pointer 0.19108 UNMOVED — MEANS.
+
+- **FIXED (custody, behavior-identical):** basis-family custody — the #1 lever family rode trainer
+  argparse defaults; `--basis legacy_fourier_ab_control` + `--no-self-orient` now travel through
+  `_V9_CGAUGE_DELTA` with provenance rows (no-Fourier doctrine: a TRACKED A/B-control state, never a
+  silent default). Plus the `witness_autoconfig:403` NO-FAKE "curvelet" label residue (07-14 memory's
+  ordered remediation) → honest directional-FOURIER naming. Bijection goldens amended
+  [199,224,224,224]→[201,226,226,226].
+- **LIVE-ACTIVE cargo-cult (queued reformulations):** R1 `--palette-anchor` mean-GT-RGB init (07-14
+  H3 re-affirmed as ACTIVE in the launch argv; decision-optimal 15-D palette solve owed) · F3
+  `--dseg-aware-taper` ON while its verdict is RE-VALIDATE-AT-CONVERGENCE (owed converged A/B) · P1
+  the trainer-DEFAULT curriculum is still PR95's ce→tau→l7 chain with the MEASURED-DEFECT l7 at
+  ep800 — the live config escapes it only via explicit `--seg-form-unify-tau` (default-sentinel
+  ticket queued).
+- **SCOPE-COMPLIANT RGB (doctrine positives):** chroma-boundary is annulus-scoped + annulus_plateau
+  event-gated (RGB-as-finisher done right; Euclidean metric form still queued = 07-14 H4);
+  appearance-phase advect = the long-tail finisher; NO full-frame RGB reconstruction anywhere in the
+  compiled argv; texture trunk absent (L87); UNIWARD texture prior replaced by S_R (L76 cure); pose
+  on dxi. The live vehicle IS the non-RGB task-space witness.
+- **Apparatus (pre-existing, P0 queued):** the #332 DSL-compile self-recompile gate is DARK on the
+  live ideal config at clean HEAD (`test_dsl_compile_hash_enforcement` 1F+7E) — lever-carried
+  LawRef `constant_refs` don't survive the model_dump→model_validate round-trip (msafe
+  merge-reconciliation blast radius). Owner: typed_config serialization.
+- **verdict_scope:** all negatives instance/formulation-level; no family closure; no exact row.
+
+## FEED-510-constants-audit (2026-07-15) — missing-signal sweep + constants-are-poison audit + hotspot ledger (#510/#509)
+
+- **Artifact:** `.omx/research/v9_missing_signal_constants_audit_20260715.md` + typed carrier
+  `src/tac/witness_dsl/adaptivization_tickets_20260715.py` (11 ADAPTIVIZATION-QUEUED tickets,
+  research-only, data-only). Doctrine: constants-are-poison (operator 2026-07-15) + joint
+  wall-clock-to-target objective.
+- **SIGNAL (new, MEASURED on C0 `levelset_n600_witness_20260715T095030Z`):**
+  (1) **grad-clip SATURATED**: frac_clipped=1.0 at every accum step ep1–39, gnorm mean ~6 vs threshold
+  0.5 ⇒ effective step ≈ lr/12; the LR cosine is not the descent clock; loss weights set direction
+  only. FORMULATION-level for the v9_cgauge family. Cure law: AutoClip percentile (2007.14469) /
+  #500 Fisher trust region.
+  (2) **component-timer coverage gap**: 4 timed components ≈94 s/ep of 251.6 ⇒ ~63% of epoch wall
+  unattributed; #480 producer committed, trainer wiring DEFERRED — the owed instrument.
+  (3) **async-verdict submit BLOCKS ~903s** (ep25 wall 1152.8 vs 250 steady) ⇒ ~+36 s/ep at cadence 25
+  — FALSIFIES the #306 "verdict fully async-hidden, no action" row (supersede, APPEND-ONLY).
+  (4) **lane_band engagement (+75 s/ep, +30%)** fired at ep33 via lane_nucleus (event LIVE; cap 500
+  backstop unused) ⇒ post-engage steady 325–333 s/ep ⇒ 3000-ep projection ~12.5 days vs compiled
+  8.314-day budget and 3.99 min/ep refuse ceiling — budget was anchored pre-lane-band.
+- **DIAGNOSTIC (dry-start-3 rc=8 root cause, VERIFIED):** launch.sh generated without TAC_DSL_* exports
+  after `fa5a671330` armed enforcement; sister uncommitted `tools/launch_witness_run.py` edit already
+  carries the fix (dsl_compile_hash threaded into build/write_launch_sh). C0′ relaunch blocked on
+  landing it + dry-start green. C0 itself DEAD at ep39 (best d_seg 0.045805 @ ep25, advisory).
+- **RESPONSE (ranked burn-down, joint objective):** 1) wire #480 + n24 rerun ($0 instrument);
+  2) fix verdict-submit block (−10% now, cadence law after); 3) cache lane-band per-pair geometry
+  (−40–60 s/ep target); 4) grad-clip law A/B; 5) event-mode LR + β co-anneal (built controllers,
+  wire-in); 6) #341 terminal head GN solve; 7) vb=64 (never-slower); micro-batch B>1 DOWNGRADED
+  (newest receipt 1.0–1.07× supersedes 2–4×); Metal-conv/#356 stay measured LOSERS.
+- **Constants classification:** 13 manifest constants → 4 keep / 2 derived-live / 7 queued;
+  argv extras → grad-clip measured-POISON; ema-decay 0.997 + Muon internals + beta2 =
+  ancestor-suspect; accum-8 / w-pose 1.0 / eval-every 25 / ladder birth constants cross-stage
+  unvalidated. Laws with BUILT implementations awaiting wire-in: event-LR (`lr_anneal_fraction`),
+  β rung co-anneal, adaptive-ε (#318), Polyak finisher, NCDE verdict-cadence sensor.
+- **Triality:** DAG=this FEED · DSL=`adaptivization_tickets_20260715.py` (+ §E typed-diff proposal
+  tiers, never hand flags) · equations=laws cited per ticket (no NEW registered equation — the
+  grad-clip law lands its EmpiricalAnchor only with the owed n24 A/B; flagged as the known gap).
+- **pointer 0.19108 UNMOVED (means/apparatus).** verdict_scope: instance (this host/config) except
+  grad-clip saturation = formulation (family-wide flag).
