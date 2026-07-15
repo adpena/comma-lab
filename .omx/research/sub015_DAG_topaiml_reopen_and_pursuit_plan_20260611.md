@@ -18172,7 +18172,10 @@ annulus and longest end of long tail". Full table:
   (b) **CONFOUND (FORMULATION, source-verified): C0 runs `--grad-normalize per-param`** —
   per-tensor unit-norm AFTER the clip ⇒ ANY norm clip (0.5/per-group/autoclip) is a NO-OP on
   the applied update ⇒ FEED-205watch (1)'s "effective step ≈ lr/12" mechanism claim is
-  **REFUTED for C0** (saturation telemetry real but INERT). C0's magnitude law = per-tensor
+  **REFUTED for C0** (saturation telemetry real but INERT). verdict_scope: formulation —
+  the lr/12 mechanism claim on configs running per-param grad-normalize after clip (C0 lineage);
+  norm-clip levers may still bind on normalize-none formulations (the owed magnitude-law A/B).
+  C0's magnitude law = per-tensor
   unit-norm × LR (SignSGD-like, #146 preset, its own docstring: unproven for our objective).
   The epochs-to-target A/B is magnitude-LAW vs magnitude-LAW: incumbent vs
   (`--grad-normalize none` + AutoClip) vs (`none` + fixed 0.5).
