@@ -86,12 +86,31 @@ CANONICAL_SCORER_SURFACE = "real_frozen_v9"
 CANONICAL_MINIMUM_SPEEDUP = 1.0
 _CANONICAL_PARITY_POLICY = (
     # lever, loss_abs, loss_rel, grad_rel_l2, grad_maxabs, backend
+    #
+    # (2026-07-15 recalibration, routed via blocked_codex_landing_recovery_20260715) loss_abs
+    # is the FLOOR of the derived isclose bound, not a standalone absolute gate: the pass
+    # check is ``loss_abs <= floor + loss_rel_tol * |serial_mean_loss|`` (np.isclose form).
+    # The old standalone ``loss_abs <= 1e-4`` was calibrated pre-D15 (loss O(1)); after
+    # bd6219a0a3 routed --logit-adjust-loss-tau/--seg-form-unify-tau the loss scale is
+    # O(1e4), where a 1-2 fp32-ULP quantum is ~2e-3 — receipts failed on loss_abs≈0.0039
+    # while loss_rel≈4.5e-8 held perfectly. The strict RELATIVE check remains binding at
+    # every realistic loss scale; the floor only matters as |serial_mean_loss| -> 0.
     ("chroma", 1e-4, 1e-4, 1e-4, 1e-2, "metal"),
     ("phase", 1e-4, 1e-4, 1e-4, 1e-2, "metal"),
     ("temporal", 1e-4, 1e-4, 1e-4, 1e-2, "metal"),
     ("area", 1e-4, 1e-4, 1e-4, 1e-2, "mlx_vectorized"),
     ("full_v9", 1e-4, 1e-4, 1e-4, 1e-2, "metal+mlx"),
 )
+
+
+def _effective_loss_abs_bound(
+    loss_abs_floor: float, loss_rel_tolerance: float, serial_mean_loss_abs: float,
+) -> float:
+    """The DERIVED loss-abs bound (value-provenance: derived-from-scale, never hand-picked):
+    ``floor + rel_tol * |serial_mean_loss|`` — the standard isclose form. At the post-D15
+    loss scale the relative term dominates (the strict standalone loss_rel check still
+    binds); the floor governs only the degenerate near-zero-loss regime."""
+    return float(loss_abs_floor) + float(loss_rel_tolerance) * max(float(serial_mean_loss_abs), 0.0)
 
 
 def _canonical_parity_policy(lever: str) -> tuple[float, float, float, float, str]:
@@ -542,7 +561,10 @@ def make_functional_parity_receipt(
                   float(grad_rel_tolerance), float(grad_maxabs_tolerance))
     passed = (
         all(math.isfinite(value) and value >= 0.0 for value in metrics + tolerances)
-        and loss_abs <= float(loss_abs_tolerance)
+        # (2026-07-15) DERIVED isclose bound (floor + rel_tol*|serial|), not the pre-D15
+        # standalone floor; the strict loss_rel check below remains the binding criterion.
+        and loss_abs <= _effective_loss_abs_bound(
+            loss_abs_tolerance, loss_rel_tolerance, abs(float(serial_mean_loss)))
         and loss_rel <= float(loss_rel_tolerance)
         and float(grad_rel_l2) <= float(grad_rel_tolerance)
         and float(grad_maxabs) <= float(grad_maxabs_tolerance)
@@ -824,10 +846,17 @@ def _parity_passed(receipt: FunctionalParityReceipt) -> bool:
         metrics = (receipt.loss_abs, receipt.loss_rel, receipt.grad_rel_l2, receipt.grad_maxabs)
         tolerances = (receipt.loss_abs_tolerance, receipt.loss_rel_tolerance,
                       receipt.grad_rel_tolerance, receipt.grad_maxabs_tolerance)
+        # (2026-07-15) reconstruct |serial_mean_loss| from the stored pair (loss_rel =
+        # loss_abs/(|serial|+1e-12)) so the recompute applies the SAME derived isclose
+        # bound as the classifier. loss_rel == 0 implies loss_abs == 0 (floor suffices);
+        # a forged tiny loss_rel cannot help — the strict loss_rel check still binds.
+        serial_abs = (float(receipt.loss_abs) / float(receipt.loss_rel) - 1e-12
+                      if float(receipt.loss_rel) > 0.0 else 0.0)
         return bool(
             all(math.isfinite(float(value)) and float(value) >= 0.0 for value in metrics)
             and all(math.isfinite(float(value)) and float(value) >= 0.0 for value in tolerances)
-            and float(receipt.loss_abs) <= float(receipt.loss_abs_tolerance)
+            and float(receipt.loss_abs) <= _effective_loss_abs_bound(
+                receipt.loss_abs_tolerance, receipt.loss_rel_tolerance, serial_abs)
             and float(receipt.loss_rel) <= float(receipt.loss_rel_tolerance)
             and float(receipt.grad_rel_l2) <= float(receipt.grad_rel_tolerance)
             and float(receipt.grad_maxabs) <= float(receipt.grad_maxabs_tolerance)
