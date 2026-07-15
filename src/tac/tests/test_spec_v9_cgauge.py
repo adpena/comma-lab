@@ -315,7 +315,11 @@ def test_ideal_manifest_parity_extincts_margin_msafe_duplicate_owner(ideal_ab) -
     for cfg in ideal_ab:
         emitted = _argv_pairs(cfg.typed.to_program().compile_trainer_argv())
         row = cfg.constants_manifest["seg_margin_satisfice_msafe"]
-        assert row["single_value_owner"] == "margin_band_satisficing_threshold_v1"
+        # Reconciled 2026-07-15: lever-owned constants are stamped single_value_owner =
+        # "dsl_lever:<name>" by _merge_lever_constant_manifests (the #332 one-DSL-Lever-owner
+        # contract); the LawRef equation stays custodied via equation_id. Prior expectation
+        # (owner == the equation id) is superseded.
+        assert row["single_value_owner"] == "dsl_lever:margin_band_satisficing"
         assert row["equation_id"] == "margin_band_satisficing_threshold_v1"
         assert float(row["value"]) == float(
             emitted["--seg-margin-satisfice-msafe"]

@@ -381,6 +381,15 @@ _V9_BASIS_CONFIG_NAMES = (
     "v9_cgauge_ideal_mod32_basis_compact_shearlet",
 )
 
+# Top-3 duty-to-measure matched ISO arms over the ideal mod19 control (one-lever deltas;
+# mirrors tac.witness_dsl.spec_v9_cgauge.V9_CGAUGE_ISO_CONFIG_IDS — kept as a local literal
+# per the _V9_BASIS_CONFIG_NAMES pattern so config_family stays import-light).
+_V9_ISO_CONFIG_NAMES = (
+    "v9_cgauge_432_taper_off",
+    "v9_cgauge_432_horizon_iso",
+    "v9_cgauge_432_step_iso",
+)
+
 
 def config_family(cfg) -> str:
     """The canonical named-config FAMILY this cfg renders, derived from the cfg's own
@@ -394,6 +403,7 @@ def config_family(cfg) -> str:
                                     "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
                                     "v9_cgauge_ideal_mod32",
                                     *_V9_BASIS_CONFIG_NAMES,
+                                    *_V9_ISO_CONFIG_NAMES,
                                     "next_launch_all_levers_20260713",
                                     "next_launch_all_levers_trimmed_20260713",
                                     "throughput_component_timer_async_20260713",
@@ -857,6 +867,25 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
             ),
         }
         return factories[config](gt_cache, num_pairs=num_pairs, **_ek)
+    if config in _V9_ISO_CONFIG_NAMES:
+        # Top-3 duty-to-measure matched ISO arms (taper_off 78.9% / horizon_iso 47.3% /
+        # step_iso 34.2%) — each a ONE-LEVER delta over the ideal mod19 control, compiled
+        # through the reviewed iso factories in spec_v9_cgauge (iso_contract stamps the
+        # argv diff + PREPARED_NOT_FIRED_OPERATOR_GO_REQUIRED). Pure derivation only;
+        # launch remains governed, sequential, and operator-GO-only.
+        from tac.witness_dsl.spec_v9_cgauge import (
+            compile_v9_cgauge_432_horizon_iso_launch_config,
+            compile_v9_cgauge_432_step_iso_launch_config,
+            compile_v9_cgauge_432_taper_off_launch_config,
+        )
+
+        iso_factories = {
+            "v9_cgauge_432_taper_off": compile_v9_cgauge_432_taper_off_launch_config,
+            "v9_cgauge_432_horizon_iso": compile_v9_cgauge_432_horizon_iso_launch_config,
+            "v9_cgauge_432_step_iso": compile_v9_cgauge_432_step_iso_launch_config,
+        }
+        return iso_factories[config](
+            gt_cache_path=gt_cache, num_pairs=num_pairs, **_ek)
     if config in ("next_launch_all_levers_20260713", "next_launch_all_levers_trimmed_20260713"):
         # 2026-07-13 operator-GO-only ticket.  The compiler starts from the
         # ideal mod19 lineage, composes every compatible speed/init/observer
@@ -900,6 +929,7 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, "
         f"v9_cgauge_ideal_mod19_sR, v9_cgauge_ideal_mod32, "
         f"{', '.join(_V9_BASIS_CONFIG_NAMES)}, "
+        f"{', '.join(_V9_ISO_CONFIG_NAMES)}, "
         f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713, "
         f"throughput_component_timer_async_20260713, "
         f"throughput_component_timer_solo_20260713. "
