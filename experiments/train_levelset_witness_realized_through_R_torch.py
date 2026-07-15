@@ -40,6 +40,7 @@ from tac.boundary_math.lever_b_levelset_generator import (
     curvelet_feats,
 )
 from tac.cuda_levelset_training import (
+    NUMPY_FP32_PARITY_COSINE_BAR,
     CudaLevelSetConfig,
     DeterministicPairCursor,
     TorchLevelSetWitness,
@@ -1104,7 +1105,12 @@ def main(argv: list[str] | None = None) -> int:
            "measured": True, "promotion_eligible": False}
     print(json.dumps(row), flush=True)
     print(json.dumps({"stage": "cuda_v9_port_coverage", **coverage}), flush=True)
-    parity_passed = bool(parity["argmax_equal"] and parity["cosine_phi"] >= 0.9997)
+    # F7 provenance: NUMPY_FP32_PARITY_COSINE_BAR = the CLAUDE.md
+    # deterministic-reproducibility item (3) numpy-fp32 authority parity bar.
+    parity_passed = bool(
+        parity["argmax_equal"]
+        and parity["cosine_phi"] >= NUMPY_FP32_PARITY_COSINE_BAR
+    )
     if not parity_passed and not args.verify_only:
         raise RuntimeError("CUDA/NumPy forward parity gate failed; refusing before compile or scorers")
 

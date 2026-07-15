@@ -12,7 +12,11 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Callable, Mapping
 
-from tac.cuda_levelset_training import CudaGraphRecaptureGuard, TorchExecutionPolicy
+from tac.cuda_levelset_training import (
+    NUMPY_FP32_PARITY_COSINE_BAR,
+    CudaGraphRecaptureGuard,
+    TorchExecutionPolicy,
+)
 
 
 @dataclass(frozen=True)
@@ -23,6 +27,19 @@ class CompiledRegionReceipt:
     functional_argmax_equal: bool
     functional_cosine_phi: float
     throughput: str = "UNMEASURED-pending-CUDA-dispatch"
+    # F7 (fresh-eyes 2026-07-15) — honest receipt scope: the adoption probe that
+    # feeds this receipt is an INSTANCE receipt (r3: feats[:64] + synthetic
+    # rgb^2+phi^2 closure), not a full-config functional proof of every compiled
+    # region. Upgrade path: a full-config probe on the real loss, nearly free
+    # from the r6 harvest's own outputs.
+    functional_probe_scope: str = (
+        "INSTANCE receipt: 64-feat synthetic-loss closure probe; NOT a "
+        "full-config functional proof — full-config real-loss probe owed"
+    )
+    adoption_rule: str = (
+        "argmax_equal && cosine_phi>=0.9997 (NUMPY_FP32_PARITY_COSINE_BAR: "
+        "CLAUDE.md deterministic-reproducibility item 3, numpy-fp32 parity bar)"
+    )
 
 
 def adopt_compiled_training_region(
@@ -40,11 +57,14 @@ def adopt_compiled_training_region(
 
     argmax_equal = bool(functional_probe.get("argmax_equal", False))
     cosine_phi = float(functional_probe.get("cosine_phi", float("nan")))
-    functional_ok = argmax_equal and cosine_phi >= 0.9997
+    # F7 provenance: NUMPY_FP32_PARITY_COSINE_BAR is the CLAUDE.md
+    # deterministic-reproducibility item (3) numpy-fp32 authority parity bar.
+    functional_ok = argmax_equal and cosine_phi >= NUMPY_FP32_PARITY_COSINE_BAR
     if not functional_ok:
         raise RuntimeError(
             "compiled training refused: functional oracle requires "
-            f"argmax_equal and cosine_phi>=0.9997, got {dict(functional_probe)}"
+            f"argmax_equal and cosine_phi>={NUMPY_FP32_PARITY_COSINE_BAR}, "
+            f"got {dict(functional_probe)}"
         )
     if policy.device_type != "cuda" or policy.compile_mode is None:
         return fn, CompiledRegionReceipt(
@@ -98,6 +118,8 @@ class CudaGraphForwardBackward:
     actuation outside the graph supports the typed AdamW-to-Muon transition even
     though native Torch Muon is not graph-capturable.  Warmup calls are real
     training steps supplied by the caller; no unrecorded dummy update occurs.
+    The capture call replays immediately after recording (F8, 2026-07-15), so
+    it too performs exactly one real training step and returns defined outputs.
     """
 
     def __init__(
@@ -167,6 +189,14 @@ class CudaGraphForwardBackward:
                 return self.fn(*values)
             self._graph = graph
             self.guard.mark_captured()
+            # F8 (fresh-eyes 2026-07-15): torch.cuda.graph capture RECORDS the
+            # kernels without executing them — at this point the static outputs
+            # hold UNDEFINED values and the caller's real training step was
+            # consumed into the recording. Replay immediately so this call still
+            # performs its training step and returns defined outputs (the static
+            # inputs already hold this call's `values` by construction).
+            self._graph.replay()
+            self.guard.mark_replayed()
             return self._static_outputs
         if not self.guard.may_replay():
             raise RuntimeError("stale CUDA graph requires explicit invalidation/recapture")

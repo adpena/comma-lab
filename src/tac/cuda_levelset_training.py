@@ -43,6 +43,14 @@ class CudaLevelSetConfig:
     camera_w: int = 1164
 
 
+# F7 provenance (fresh-eyes 2026-07-15): the 0.9997 cosine bar is the CLAUDE.md
+# "Deterministic reproducibility principles" item (3) parity bar — backends
+# (MLX/torch) must match the numpy-fp32 bit-identical verdict authority at
+# parity >= 0.9997. Every adoption/parity gate on this substrate cites THIS
+# constant; a bare 0.9997 literal at a use site is provenance drift.
+NUMPY_FP32_PARITY_COSINE_BAR = 0.9997
+
+
 @dataclass(frozen=True)
 class TorchExecutionPolicy:
     """Backend-derived throughput policy; never owns scientific values."""
@@ -950,7 +958,7 @@ def compile_identity_probe(
             comp_phi.float().reshape(1, -1), eager_phi.float().reshape(1, -1)
         ))
         rgb_max_abs_delta = float((comp_rgb.float() - eager_rgb.float()).abs().max())
-    adoptable = bool(argmax_equal and cosine_phi >= 0.9997)
+    adoptable = bool(argmax_equal and cosine_phi >= NUMPY_FP32_PARITY_COSINE_BAR)
     return {
         "available": True,
         "compile_mode": mode,
@@ -960,7 +968,11 @@ def compile_identity_probe(
         "cosine_phi": cosine_phi,
         "rgb_max_abs_delta": rgb_max_abs_delta,
         "adoptable": adoptable,
-        "adoption_rule": "argmax_equal && cosine_phi>=0.9997",
+        "adoption_rule": (
+            "argmax_equal && cosine_phi>=0.9997 "
+            "(NUMPY_FP32_PARITY_COSINE_BAR: CLAUDE.md deterministic-reproducibility "
+            "item 3, numpy-fp32 authority parity bar)"
+        ),
         "training_loop_bit_identity_waiver": True,
         "law": "witness_fp_reorder_transform_bit_identity_wall_v1",
     }
@@ -970,6 +982,7 @@ __all__ = [
     "CudaGraphRecaptureGuard",
     "CudaLevelSetConfig",
     "DeterministicPairCursor",
+    "NUMPY_FP32_PARITY_COSINE_BAR",
     "TorchExecutionPolicy",
     "TorchLevelSetWitness",
     "TorchPoseCarrier",

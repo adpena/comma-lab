@@ -61,6 +61,77 @@ def test_cuda_graph_runner_cpu_fallback_executes_every_real_step():
     assert not runner.receipt()["captured"]
 
 
+class _FakeCudaGraph:
+    """Records replay() calls; the fake capture context runs fn eagerly."""
+
+    def __init__(self):
+        self.replay_calls = 0
+
+    def replay(self):
+        self.replay_calls += 1
+
+
+class _FakeGraphContext:
+    def __init__(self, graph):
+        self.graph = graph
+
+    def __enter__(self):
+        return self.graph
+
+    def __exit__(self, *exc):
+        return False
+
+
+def test_cuda_graph_capture_step_replays_and_counts_as_training_step(monkeypatch):
+    """F8 (fresh-eyes 2026-07-15): torch.cuda.graph capture RECORDS kernels
+    without executing them — the pre-fix code returned undefined static outputs
+    from the capture call AND silently consumed the caller's real training step
+    into the recording. The capture call must replay() immediately so it still
+    performs its training step, and every subsequent call replays again."""
+    graphs = []
+
+    def fake_cuda_graph_cls():
+        g = _FakeCudaGraph()
+        graphs.append(g)
+        return g
+
+    monkeypatch.setattr(torch.cuda, "CUDAGraph", fake_cuda_graph_cls, raising=False)
+    monkeypatch.setattr(
+        torch.cuda, "graph", lambda g: _FakeGraphContext(g), raising=False
+    )
+    monkeypatch.setattr(torch.cuda, "synchronize", lambda: None, raising=False)
+
+    calls = []
+
+    def step(x):
+        calls.append(float(x[0]))
+        return x * 2
+
+    runner = CudaGraphForwardBackward(step, enabled=True, warmup_real_steps=1)
+    # CPU tensors would normally fall back; force the CUDA-ready branch so the
+    # capture/replay control flow is exercised at $0 with the fake graph.
+    monkeypatch.setattr(runner, "_cuda_ready", lambda inputs: True)
+
+    # Warmup step: eager, real.
+    out0 = runner.run(torch.tensor([1.0]))
+    assert float(out0[0]) == 2.0 and calls == [1.0]
+
+    # Capture step: fn recorded once with the static copy of THIS call's input,
+    # then the graph MUST replay immediately (the F8 fix) so the caller's step
+    # still executes; the guard must be in a replayable state afterwards.
+    out1 = runner.run(torch.tensor([5.0]))
+    assert calls == [1.0, 5.0]  # capture consumed exactly this call's values
+    assert len(graphs) == 1 and graphs[0].replay_calls == 1
+    assert runner.receipt()["captured"]
+    assert float(out1[0]) == 10.0  # defined because the fake context ran eagerly
+
+    # Subsequent step: pure replay with copied inputs, no new fn invocation.
+    runner.run(torch.tensor([7.0]))
+    assert graphs[0].replay_calls == 2
+    assert calls == [1.0, 5.0]  # no eager re-invocation after capture
+    assert float(runner._static_inputs[0][0]) == 7.0  # inputs copied for replay
+
+
 def _cuda_shaped_policy():
     return TorchExecutionPolicy(
         device_type="cuda",
