@@ -17812,3 +17812,45 @@ SegNet/PoseNet forward shares `0.774/0.226`. `372.6 s = 6.21 min/n600` is a **DE
 extrapolation**. The old backward-share diagnostic is not the global 95%-kill authority. The timer
 packet is `FIDELITY_BLOCKED_FUTURE_TEMPLATE`, does not solicit current GO, and is diagnostic-only
 after a newly fidelity-admitted formulation/provider.
+
+## FEED-cvl-windowed-curvelet-frame-20260714 (#502 — GENUINELY localized curvelet frame BUILT + capacity MEASURED; MEANS, pointer 0.19108/bank 0.18804 UNMOVED)
+**SIGNAL** (#503 ranked the oriented curvelet/shearlet boundary-annulus frame #1: entire sub-0.19 gap
+is d_seg (L68); ~26.8% n600 flip-mass in the 4.7%-area annulus (L66/#333); boundary spectrum 41x
+anisotropic; waterfill probe MEASURED a 1.7-2.0x spectral capacity gain (upper bound)). The witness's
+current "curvelet" is GLOBAL polar-Fourier (constant envelope, NOT localized — catalog-#351 fake class).
+**BUILT** (`src/tac/boundary_math/windowed_curvelet_frame.py`) a genuinely localized windowed-curvelet /
+directional-Gabor frame: anisotropic Gaussian window + oriented oscillation + PARABOLIC scaling
+(sigma_n = (sigma_t/aniso)^2/w0 -> width ~ length^2, Candes-Donoho). Numpy fp64 authority + MLX mirror
+(parity 9e-8). **LOCALIZATION CERTIFIED (the swap-test):** paired-envelope span **1.0** (Gaussian bump)
+vs polar-Fourier **1.5e-7** (constant); 98.7% energy in top-10% pixels; 1.99x tangent elongation;
+parabolic-monotone. A plain oriented-Fourier basis FAILS the same span gate (`passes` flips False) —
+extincts catalog #351. **CAPACITY MEASURED** (`experiments/curvelet_vs_fourier_capacity_probe.py`, $0,
+real cached SegNet boundary annulus, OMP N-term at MATCHED coeff budget = matched counted bytes): with a
+curvelet dictionary kept SMALLER than Fourier (192 vs 236 cols), curvelet reaches rel-err<=0.10 with
+**~1.09x (n600) / ~1.23x (n96)** FEWER coefficients, gain GROWS with fidelity (K=16 error ratio 1.10-1.20;
+robust over seeds 0/1/2). Same SIGN, below the spectral 1.7-2.0x upper bound (conservative greedy OMP +
+modest bank) — honest. `[macOS advisory / not score authority]`. **TRIALITY:** primitive + eqs
+(`tac.canonical_equations.windowed_curvelet_parabolic_capacity_v1`, parabolic law + 41x anisotropy +
+Torralba-Weiss + measured anchors) + DSL lever (`tac.witness_dsl.windowed_curvelet_basis_lever_20260714`
+— DEFAULT-OFF, BYTE-IDENTICAL empty overrides, refuses fake-active, holds owed_wire). 27 tests.
+**OWED (needs a run; operator-GO / CONTAINMENT):** trainer forward + inflate op-parity for the
+windowed-curvelet feats, then real n600 through-R d_seg A/B (curvelet vs polar-Fourier) at matched bytes
+— the ONLY score authority; the linear/greedy probes are an UPPER bound. curvelet-vs-shearlet FAMILY
+selection is a further $0 probe (OWED). **means != ends: pointer UNMOVED.**
+
+### FEED-ripo-d42 (2026-07-14) — categorical-Fisher trust-region falsification MEASURED (was asserted)
+SIGNAL: the #498 naive→NO-GO audit flagged the RIPO intake transfer `‖Δlogit‖≤√(δ/p_w)` (borrowed convex/binary
+result) as a NOT-ADMITTED FORMULATION-scope negative (D42), memo-only. DIAGNOSTIC (opus Fisher-validation arm,
+commit 3ec891e07a, `[macOS-CPU advisory/NumPy-fp32; no score authority]`): reproduced real K=5 SegNet logits
+through `upstream/modules.py::SegNet` on `mlx_fleet_gt_cache/gt_n96.npz` (argmax==cached lstars 18874368/18874368
+= 1.000000; p_w median 0.994 matches cached RIPO n600 0.997). MEASURED the falsification the RIPO memo only
+asserted at 2 hand-points: Spearman(r_bin=1/√p_w, r_dir=2/√C_wr) = **−0.9601** — the false binary transfer orders
+pixels ALMOST PERFECTLY OPPOSITELY to the correct categorical-Fisher directional radius `|t|≤√(8·δ_KL/C_wr)`,
+`C_wr=p_w+p_r−(p_w−p_r)²`; ratio r_dir/r_bin median 16.3× / worst 1025×; full-distribution rank reversal
+(annulus r_bin 1.34>interior 1.00 but annulus r_dir 2.02≪interior 17.10). RESPONSE: the falsification HARDENS
+D42 (binary/cosine wall carries ZERO authority) but D42 stays OPEN-CUSTODY — surrogate re-admission under the
+correct locus is a BLOCKER (advanced-locus receipts were store-nothing/deleted; `n=0 is not a negative`), so
+reopen = a RE-CAPTURE task, NOT a $0 recompute. Triality: memory `[[ripo_categorical_fisher_trust_region_falsification_20260714]]`
+(appended MEASURED numbers) ✓; canonical-eq `categorical_fisher_trust_region_winner_rival_v1` registration OWED
+(serialized behind the island-birth canonical_eq arm). Sister: `[[dual_metric_no_solve_is_squared_hessian_not_fisher_natural_20260714]]`
+(same NO-FAKE guard family — borrowed convex transfers). **means != ends: pointer UNMOVED 0.19108/0.18804.**
