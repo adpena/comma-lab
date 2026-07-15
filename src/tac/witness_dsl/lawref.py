@@ -534,6 +534,72 @@ def resolve_flag_dict_constants(
     return resolved, manifest
 
 
+# ---------------------------------------------------------------------------
+# Declaration codec — the LOSSLESS, symmetric JSON round-trip for a LawRef.
+#
+# ``TypedLever.lawrefs`` carries live LawRef objects but is ``exclude=True``
+# (resolved metadata must not make identical compiles hash-differently), so a
+# serialized WitnessProgram spec keeps only ``lawref_declarations``. Without a
+# decoder, ``model_validate(spec).to_program()`` rebuilt levers with EMPTY
+# LawRef custody and the #506 dsl_compile_hash self-recompile refused its own
+# document (lawref_equation_ids vanished on round-trip; 2026-07-15 incident).
+# This pair is the single canonical codec: encode when authoring a TypedLever,
+# decode when rehydrating a Lever from a deserialized spec. Fallback fields are
+# included so hardcoded_waiver-class refs survive the round-trip too.
+# ---------------------------------------------------------------------------
+def lawref_to_declaration(ref: LawRef) -> dict[str, Any]:
+    """Serialize a :class:`LawRef` to its timestamp-free JSON declaration."""
+    return {
+        "equation_id": ref.equation_id,
+        "ladder_class": ref.ladder_class,
+        "fallback": ref.fallback,
+        "fallback_waiver_reason": ref.fallback_waiver_reason,
+        "inputs": {
+            name: {
+                "kind": inp.kind,
+                "value": inp.value,
+                "artifact_path": inp.artifact_path,
+                "extract": inp.extract,
+                "expected_sha256": inp.expected_sha256,
+                "config_tags": dict(inp.config_tags),
+                "max_staleness_days": inp.max_staleness_days,
+                "provenance": inp.provenance,
+            }
+            for name, inp in ref.inputs.items()
+        },
+    }
+
+
+def lawref_from_declaration(declaration: Mapping[str, Any]) -> LawRef:
+    """Rehydrate a :class:`LawRef` from :func:`lawref_to_declaration` output.
+
+    Tolerates legacy declarations that predate the ``fallback`` fields (they
+    take the LawRef defaults). Raises :class:`LawRefError` via the
+    LawRef/InputRef validators on any malformed declaration — never a silent
+    partial object.
+    """
+    inputs = {
+        str(name): InputRef(
+            kind=str(inp["kind"]),
+            provenance=str(inp["provenance"]),
+            value=inp.get("value"),
+            artifact_path=inp.get("artifact_path"),
+            extract=inp.get("extract"),
+            expected_sha256=inp.get("expected_sha256"),
+            config_tags=dict(inp.get("config_tags") or {}),
+            max_staleness_days=inp.get("max_staleness_days"),
+        )
+        for name, inp in dict(declaration.get("inputs") or {}).items()
+    }
+    return LawRef(
+        equation_id=str(declaration["equation_id"]),
+        inputs=inputs,
+        ladder_class=str(declaration["ladder_class"]),
+        fallback=declaration.get("fallback"),
+        fallback_waiver_reason=str(declaration.get("fallback_waiver_reason") or ""),
+    )
+
+
 __all__ = [
     "LADDER_DERIVED_AT_CONFIG",
     "LADDER_DERIVED_LIVE",
@@ -547,6 +613,8 @@ __all__ = [
     "LawResolveError",
     "ResolvedConstant",
     "ResolvedInputRecord",
+    "lawref_from_declaration",
+    "lawref_to_declaration",
     "resolve",
     "resolve_flag_dict_constants",
 ]

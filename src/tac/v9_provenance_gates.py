@@ -1003,22 +1003,27 @@ def build_config_bijection_snapshot(
     provenance_rows = dict(provenance or _provenance_table_for_program(program_name))
     flag_dict = program.flag_dict()
     argv, resolved_constants = program.compile_trainer_argv_with_constants(repo_root=root)
+    # ONE normalization authority for BOTH record sources: canonicalize each record via
+    # _canonical_lawref_provenance (volatile strip + custody-annotation strip + source-path
+    # relativization) BEFORE merge/dedup. Comparing a canonicalized wrapper record against a
+    # RAW resolved record (absolute `source` path, resolved_at) made the dedup a permanent
+    # miss — the snapshot carried a duplicate compiler record from the wrapper leg while the
+    # spec round-trip carried one, so the #506 self-recompile refused (2026-07-15 incident).
     compiler_records: dict[str, list[Mapping[str, Any]]] = {}
     for key, record in dict(compiler_manifest or {}).items():
         normalized = str(key) if str(key).startswith("--") else f"--{str(key).replace('_', '-')}"
         if isinstance(record, Mapping):
-            compiler_records.setdefault(normalized, []).append(record)
+            canonical_record = _canonical_lawref_provenance({"r": record}, repo_root=root)["r"]
+            compiler_records.setdefault(normalized, []).append(canonical_record)
     for key, record in resolved_constants.items():
         if isinstance(record, Mapping):
             bucket = compiler_records.setdefault(str(key), [])
-            normalized_record = json.dumps(
-                _without_volatile_context(record), sort_keys=True, default=str
-            )
-            if normalized_record not in {
-                json.dumps(_without_volatile_context(item), sort_keys=True, default=str)
-                for item in bucket
+            canonical_record = _canonical_lawref_provenance({"r": record}, repo_root=root)["r"]
+            fingerprint = json.dumps(canonical_record, sort_keys=True, default=str)
+            if fingerprint not in {
+                json.dumps(item, sort_keys=True, default=str) for item in bucket
             }:
-                bucket.append(record)
+                bucket.append(canonical_record)
     namespace = parser.parse_args(argv[2:])
     bindings: list[FlagProvenanceBinding] = []
     for flag, raw_value in flag_dict.items():

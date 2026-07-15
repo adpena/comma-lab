@@ -391,12 +391,27 @@ class TypedLever(BaseModel):
         return self
 
     def to_dsl(self) -> Lever:
+        # LawRef REHYDRATION (2026-07-15 dsl_compile_hash round-trip fix): ``lawrefs`` is
+        # ``exclude=True``, so a TypedLever rebuilt from a serialized spec arrives with
+        # live LawRef custody EMPTY while its serializable twin ``lawref_declarations``
+        # survives. Decode the declarations back into LawRef objects via the canonical
+        # codec so the recompiled program carries identical custody (lawref_equation_ids
+        # etc.) — the #506 self-recompile check depends on this symmetry. When live
+        # lawrefs are present (the authoring path), they are authoritative as-is.
+        lawrefs = dict(self.lawrefs)
+        if not lawrefs and self.lawref_declarations:
+            from tac.witness_dsl.lawref import lawref_from_declaration
+
+            lawrefs = {
+                flag: lawref_from_declaration(declaration)
+                for flag, declaration in self.lawref_declarations.items()
+            }
         return Lever(
             self.name,
             dict(self.overrides),
             self.epochs_delta,
             self.notes,
-            lawrefs=dict(self.lawrefs),
+            lawrefs=lawrefs,
             constant_manifest=dict(self.constant_manifest),
             runtime_receipt_schemas=dict(self.runtime_receipt_schemas),
         )
