@@ -18276,3 +18276,12 @@ annulus and longest end of long tail". Full table:
   low-precision support), all committed with H100-measured receipts in-comment. No DSL leg owed:
   these are cuda_v9_* runtime-port fixes, not lever/curriculum changes (the smoke-regime config's
   DSL factory landed earlier). r5 queued on the sealed plan flow. Apparatus/means; pointer 0.19108 UNMOVED.
+
+## FEED-438-r5 (2026-07-15) — CUDA smoke r5 DISPATCHED (live H100 paid call) carrying the r4 fp32-island fix
+- r5 IS LIVE: fc-01KXKG3EQV92YZ4PRK1XMWHHCW, sealed plan at HEAD, same upgraded smoke-regime form
+  (timeout-stop, post-event levers from ep1, ≥1 verdict epoch, drift column owed). Carries forward
+  r2 lazy-import + r3 one-options-dict compile + r4 linalg.inv fp32-island fixes, all H100-confirmed
+  at their respective depths. Cumulative smoke spend before r5 ≈ $1.24 (#381 envelope).
+- If r5 clears the pose solve it enters the training loop proper — the first CUDA epochs of the real
+  config → the warm/post-event/verdict s/ep numbers + trajectory drift vs MLX that fill the CUDA
+  column of the operator's cost table. Apparatus/means; pointer 0.19110-family UNMOVED (0.19108).
