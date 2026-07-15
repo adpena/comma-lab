@@ -222,8 +222,16 @@ def test_gradient_quality_gate_validation():
         gradient_quality_gate(np.ones(2), np.ones(2), rel_band=(1.1, 0.9))
 
 
-def test_equation_builds_with_owed_anchor():
+def test_equation_builds_with_measured_anchor():
+    """(#509 batch 3) the owed n24 QC anchor is now MEASURED: gate ADMIT, median cosine
+    0.992538 over 60 steps; honest scope preserved (p10 below the bar; speed un-measured)."""
     eq = build_bf16_compute_seam_gradient_quality_v1()
     assert eq.equation_id == "bf16_compute_seam_gradient_quality_v1"
     assert len(eq.empirical_anchors) == 1
-    assert "OWED" in str(eq.empirical_anchors[0].empirical_output)
+    a = eq.empirical_anchors[0]
+    assert a.anchor_id == "bf16_seam_n24_quality_check_measured_20260715"
+    assert a.empirical_output["gate_verdict"] == "ADMIT"
+    assert a.empirical_output["n_steps"] == 60
+    assert abs(a.empirical_output["median_cosine"] - 0.992538) < 1e-6
+    assert "p10 BELOW the" in a.empirical_output["honest_scope"]
+    assert "FORMULATION" in a.empirical_output["verdict_scope"]

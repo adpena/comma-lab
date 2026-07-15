@@ -21,9 +21,11 @@ optimizer never applies), measured over the first N optimizer steps ALONG the fp
 trajectory (the QC mode applies the reference update, so gradient quality is never conflated
 with trajectory divergence).
 
-Thresholds (cos_min=0.99, r in [0.9, 1.1]) are PROPOSED admission constants, operator-adjustable
-— ASSUMED_AWAITING_VERIFICATION until the bounded n24 QC run measures the actual cosine/rel-norm
-distribution (the anchor below is OWED; the run may justify tightening or loosening).
+Thresholds (cos_min=0.99, r in [0.9, 1.1]): the bounded n24 QC run is MEASURED (anchor
+``bf16_seam_n24_quality_check_measured_20260715``, 60 steps): gate ADMIT — median cosine
+0.992538 (clearance +0.0025 over the bar; p10 0.9869 sits BELOW it), median rel_norm 1.0000
+(pinned ~1 by construction under per-param normalize). CE-stage/first-60-steps scope only;
+stage-boundary re-runs + the paired sec/ep speed bench remain OWED before any adoption.
 
 Mechanism: ``tac.witness_control.compute_dtype_seam`` (fp32 masters; cast-inside-the-trace;
 entry shims; scorer/render/verdict/decode fp32; resume-safe — nothing persisted). DSL leg:
@@ -39,12 +41,17 @@ from __future__ import annotations
 import numpy as np
 
 from tac.canonical_equations.equation import (
-    ASSUMED_AWAITING_VERIFICATION,
     RECALIBRATE_ON_NEW_ANCHORS,
+    VERIFIED_VIA_EMPIRICAL_ANCHOR,
     CanonicalEquation,
     EmpiricalAnchor,
 )
-from tac.provenance.builders import build_provenance_for_predicted
+from tac.provenance.builders import (
+    build_provenance_for_predicted,
+    build_provenance_for_research_sidecar,
+)
+
+_ADVISORY_MLX = "[macOS-MLX research-signal] NON-PROMOTABLE"
 
 EQUATION_ID = "bf16_compute_seam_gradient_quality_v1"
 
@@ -52,7 +59,8 @@ _UTC = "2026-07-15T00:00:00Z"
 _PREDICTED = "[predicted]"
 _MEMO = ".omx/research/wallclock_burndown_build_20260715.md"
 
-# PROPOSED admission constants (operator-adjustable; awaiting the n24 QC distribution).
+# Admission constants (operator-adjustable). First anchor MEASURED 2026-07-15: median
+# cosine 0.992538 clears cos_min by +0.0025 (p10 0.9869 below the bar — median law holds).
 COS_MIN_PROPOSED = 0.99
 REL_NORM_BAND_PROPOSED = (0.9, 1.1)
 # The max-Metal precision ceiling ESTIMATE (flagged, never a measurement): bf16 rate ~2x fp32
@@ -97,17 +105,17 @@ def gradient_quality_gate(
 
 
 def build_bf16_compute_seam_gradient_quality_v1() -> CanonicalEquation:
-    """Build the compute-seam gradient-quality gate law with its OWED anchor."""
-    anchor_qc_owed = EmpiricalAnchor(
-        anchor_id="bf16_seam_n24_quality_check_owed_20260715",
-        measurement_utc=_UTC,
+    """Build the compute-seam gradient-quality gate law with its MEASURED n24 QC anchor."""
+    anchor_qc_measured = EmpiricalAnchor(
+        anchor_id="bf16_seam_n24_quality_check_measured_20260715",
+        measurement_utc="2026-07-15T20:55:00Z",
         inputs={
-            "arm": ("--compute-dtype bf16 --compute-dtype-quality-check 50 (n24, "
-                    "--grad-clip-mode fixed, seed OFF, incumbent --grad-normalize per-param)"),
+            "arm": ("--dsl-lever ComputeDtypeBf16QCGate (bf16 + 60-step QC window + fixed clip + "
+                    "seed OFF; incumbent --grad-normalize per-param), config v9_cgauge_ideal_mod19, "
+                    "gt_n24, seed 0 — experiments/results/levelset_n24_bf16qc_20260715"),
             "comparator": ("tac.witness_control.compute_dtype_seam.update_direction_stats "
                            "(POST-normalize; fp32-reference trajectory)"),
-            "proposed_gate": {"cos_min": COS_MIN_PROPOSED,
-                              "rel_band": list(REL_NORM_BAND_PROPOSED)},
+            "gate": {"cos_min": COS_MIN_PROPOSED, "rel_band": list(REL_NORM_BAND_PROPOSED)},
         },
         predicted_output={
             "hypothesis": ("bf16 (fp32-range exponent) passes the direction gate; the sec/ep win "
@@ -115,17 +123,48 @@ def build_bf16_compute_seam_gradient_quality_v1() -> CanonicalEquation:
                            "fp16 (no loss scaling) may fail — exposed for the matrix only."),
         },
         empirical_output={
-            "status": ("OWED — the bounded n24 QC run is the admission measurement; NO adoption "
-                       "claim before it; means != ends; pointer UNMOVED"),
+            "gate_verdict": "ADMIT",
+            "n_steps": 60,
+            "median_cosine": 0.992538,
+            "median_rel_norm": 1.0000003,
+            "distribution": {
+                "cosine_min": 0.9454, "cosine_p10": 0.9869, "cosine_p90": 0.9962,
+                "cosine_max": 0.9971, "frac_ge_0p99": 0.783, "frac_ge_0p95": 0.983,
+                "rel_norm_range": [1.000000, 1.000012],
+            },
+            "per_group_cosine_median": {
+                "code": 0.9913, "film": 0.9813, "hidden": 0.9954, "in_proj": 0.9930,
+                "out_sdf": 0.9984, "out_tex": 0.9976, "palette": 0.9973,
+                "pose_carrier": 0.0,
+            },
+            "per_group_notes": ("pose_carrier cosine 0.0 = INACTIVE group (zero grads in the "
+                                "trunk phase, w_pose 0) not a quality failure; film worst early "
+                                "step 0.5623, settles to 0.9813 median; rel_norm pinned ~1.0 BY "
+                                "CONSTRUCTION under per-param normalize (the C0 lesson is why the "
+                                "gate grades DIRECTION)"),
+            "honest_scope": ("median-law ADMIT clears cos_min 0.99 by 0.0025 with p10 BELOW the "
+                             "bar (0.9869) — the admission holds under the registered median law "
+                             "but is NOT a large margin; first-60-steps CE-stage only; later "
+                             "stages (l7/Muon/finisher) un-measured; the SPEED effect is NOT "
+                             "measured by this run (QC computes both grads + steps with the fp32 "
+                             "reference => its sec/ep is not the bf16 number)"),
+            "verdict_scope": ("FORMULATION — n24, single seed, CE-stage first 60 opt steps, "
+                              "per-param lineage, seed-islands off; [macOS-MLX research-signal] "
+                              "NON-PROMOTABLE; no score/adoption claim; pointer UNMOVED"),
         },
-        residual=0.0,
-        source_artifact=_MEMO,
-        measurement_method="bounded n24 governed QC run (launch pending at registration time)",
-        empirical_verification_status=ASSUMED_AWAITING_VERIFICATION,
-        provenance=build_provenance_for_predicted(
-            model_id="bf16_compute_seam.gradient_quality_gate",
-            inputs_sha256="0" * 64,
-            measurement_axis=_PREDICTED,
+        residual=0.002538,  # measured median_cosine minus the 0.99 gate line (the clearance)
+        source_artifact="experiments/results/levelset_n24_bf16qc_20260715/compute_dtype_quality.jsonl",
+        measurement_method=("bounded n24 governed QC run via the launcher-composable "
+                            "ComputeDtypeBf16QCGate; 60 per-step receipts; gate evaluated by "
+                            "gradient_quality_gate (median law); sanctioned stop after ep25 "
+                            "verdict (fp32-reference trajectory d_seg 0.018829)"),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path="experiments/results/levelset_n24_bf16qc_20260715/compute_dtype_quality.jsonl",
+            reactivation_criteria=("re-run QC at stage boundaries (l7/Muon/finisher norms differ); "
+                                   "paired sec/ep bench (bf16 no-QC vs fp32) = the speed anchor "
+                                   "OWED before any adoption; fp16 arm un-measured"),
+            measurement_axis=_ADVISORY_MLX,
             hardware_substrate="apple_m5_max_cpu_mlx",
         ),
     )
@@ -160,7 +199,7 @@ def build_bf16_compute_seam_gradient_quality_v1() -> CanonicalEquation:
                   "cos_min": "dimensionless", "rel_band": "ratio"},
         units_out={"admit": "bool", "median_cosine": "dimensionless",
                    "median_rel_norm": "ratio"},
-        empirical_anchors=(anchor_qc_owed,),
+        empirical_anchors=(anchor_qc_measured,),
         predicted_vs_empirical_residual={
             "n24_quality_check_owed": 0.0,
         },
