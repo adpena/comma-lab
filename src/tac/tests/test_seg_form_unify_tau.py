@@ -160,6 +160,40 @@ def test_unify_tau_argparse_flag_is_store_true_default_off():
     assert "def _seg_unify_tau_perpixel(" in bsrc
 
 
+def test_l7_argparse_default_is_disabled_sentinel():
+    src = _LEVELSET.read_text(encoding="utf-8")
+    assert (
+        '"--l7-start-epoch",\n'
+        "        type=int,\n"
+        "        default=-1,"
+    ) in src
+
+
+def test_l7_default_sentinel_resolves_to_positive_never_runs_form():
+    m = _load_levelset()
+    resolved, warning = m.resolve_l7_start_epoch(-1, 1000)
+    assert resolved == 1001
+    assert warning is None
+
+
+def test_l7_explicit_historical_value_is_preserved_and_warned():
+    m = _load_levelset()
+    resolved, warning = m.resolve_l7_start_epoch(800, 1000)
+    assert resolved == 800
+    assert warning is not None
+    assert warning["stage"] == "l7_explicit_opt_in_WARN"
+    assert warning["classification"] == "MEASURED_DEFECT"
+    assert warning["explicit_opt_in"] is True
+
+
+@pytest.mark.parametrize("requested", [0, -1, 1001, 5000])
+def test_l7_explicit_disabled_or_parked_values_do_not_warn(requested):
+    m = _load_levelset()
+    resolved, warning = m.resolve_l7_start_epoch(requested, 1000)
+    assert resolved > 1000
+    assert warning is None
+
+
 def test_trainer_couples_loss_tau_to_render_temp_floored():
     """The coupling cell is set to max(render softmax-temp, --softmax-temp-end) and passed as
     tau_override ONLY for the unify form (byte-identical when off)."""

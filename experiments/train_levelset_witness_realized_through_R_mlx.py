@@ -2625,6 +2625,36 @@ def _seg_form_for_epoch(ep: int, args) -> str:
     return "l7_softplus"
 
 
+def resolve_l7_start_epoch(
+    l7_start_epoch: int, epochs: int
+) -> tuple[int, dict[str, object] | None]:
+    """Resolve the disabled l7 sentinel and produce its explicit-opt-in warning.
+
+    Non-positive values are parked at ``epochs + 1`` so every downstream
+    schedule/resume consumer retains the existing positive never-runs
+    representation. Positive historical values are preserved byte-for-byte;
+    only values reachable inside this run emit the structured warning.
+    """
+
+    requested = int(l7_start_epoch)
+    run_epochs = int(epochs)
+    if requested <= 0:
+        return run_epochs + 1, None
+    if requested > run_epochs:
+        return requested, None
+    return requested, {
+        "stage": "l7_explicit_opt_in_WARN",
+        "l7_start_epoch": requested,
+        "epochs": run_epochs,
+        "explicit_opt_in": True,
+        "classification": "MEASURED_DEFECT",
+        "msg": (
+            "l7 is a measured defect (L-infinity sharpening inside a smoothing/viscosity flow); "
+            "this reachable stage is enabled only because --l7-start-epoch was explicitly set"
+        ),
+    }
+
+
 def _stage_converged(
     stage_epochs: "list[int]",
     stage_losses: "list[float]",
@@ -13596,7 +13626,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seg-loss", choices=["ce", "tau_softplus", "l7_softplus", "margin_hinge"], default="ce")
     ap.add_argument("--curriculum", action=argparse.BooleanOptionalAction, default=False)
     ap.add_argument("--tau-softplus-start-epoch", type=int, default=300)
-    ap.add_argument("--l7-start-epoch", type=int, default=800)
+    ap.add_argument(
+        "--l7-start-epoch",
+        type=int,
+        default=-1,
+        help=(
+            "l7_softplus start epoch. Default -1 disables the measured-defect stage and resolves "
+            "to epochs+1; a positive reachable value is an explicit opt-in and warns loudly."
+        ),
+    )
     # (--seg-form-unify-tau, witness-native schedule derivation 20260709 §1.2) DISSOLVE the discrete
     # CE->tau_softplus loss-form switch into the ONE continuous family L_τ = τ·logsumexp(φ/τ) − φ_y,
     # with loss-τ COUPLED to the render softmax-temp (the SAME --softmax-temp-* geometric anneal),
@@ -14854,6 +14892,11 @@ def main(argv: list[str] | None = None) -> int:
                     help="#323 recompute the per-class rungs (and rebuild masks on a rung CHANGE) every N "
                     "epochs (bounds the rebuild cost; a rung changes at most ~r0 times per arm per run).")
     args = ap.parse_args(argv)
+    args.l7_start_epoch, _l7_opt_in_warning = resolve_l7_start_epoch(
+        args.l7_start_epoch, args.epochs
+    )
+    if _l7_opt_in_warning is not None:
+        print(json.dumps(_l7_opt_in_warning), flush=True)
     args.basis = normalize_basis_family(args.basis)
     if args.basis == LEGACY_FOURIER_AB_CONTROL:
         print(json.dumps({

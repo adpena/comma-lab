@@ -26,7 +26,9 @@ def test_enabled_short_budget_reports_every_effective_stage_cap() -> None:
     assert "--pose-finish-start-epoch=726" in message
     # Real argparse defaults are part of the effective config, not hidden.
     assert "--tau-softplus-start-epoch=300" in message
-    assert "--l7-start-epoch=800" in message
+    # The disabled l7 sentinel is intentionally excluded: it resolves to
+    # epochs+1 and therefore is not an enabled stage/cap violation.
+    assert "--l7-start-epoch" not in message
 
 
 def test_stage_at_budget_boundary_passes() -> None:
