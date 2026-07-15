@@ -407,7 +407,8 @@ def config_family(cfg) -> str:
                                     "next_launch_all_levers_20260713",
                                     "next_launch_all_levers_trimmed_20260713",
                                     "throughput_component_timer_async_20260713",
-                                    "throughput_component_timer_solo_20260713"):
+                                    "throughput_component_timer_solo_20260713",
+                                    "c1_optimal_form"):
         return cfg.name
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
@@ -913,6 +914,21 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
                    else "async_current")
         return compile_throughput_component_timer_ticket(
             gt_cache, num_pairs=num_pairs, epochs=int(_ek.get("epochs", 4)), variant=variant)
+    if config == "c1_optimal_form":
+        # #507 C1 OPTIMAL-FORM COMPOSITION (2026-07-15): the official leg-A S_R treatment
+        # (v9_cgauge_ideal_mod19_sR) + the leg-B joint-wall-clock speed stack (parent-carried
+        # fused-R/cache-gt-skeleton/async-verdict/verdict-chunk-32 + PERF_ENV ~17x kernels +
+        # component-wallclock telemetry) + the consumable leg-C deep-math folds
+        # (PoseBlindComputeGate + flip_median advisory head-offset arbiter) with typed slots
+        # for Bregman #504 / Fisher trust-region / #423 preconditioning / curvelet (each
+        # blocked by a cited missing trainer consumer or owed optimal-form receipt). Pose
+        # UNCHANGED: the R1 two-phase finisher. S_R forces --micro-batch-pairs 1 BY TRAINER
+        # CODE (batched LEVER-4 twin gap). Pure compile; LAUNCH = operator-GO. A MEANS.
+        from tac.witness_dsl.spec_c1_optimal_form_20260715 import (
+            compile_c1_optimal_form_launch_config,
+        )
+        return compile_c1_optimal_form_launch_config(
+            gt_cache, num_pairs=num_pairs, **_ek)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -932,7 +948,7 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         f"{', '.join(_V9_ISO_CONFIG_NAMES)}, "
         f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713, "
         f"throughput_component_timer_async_20260713, "
-        f"throughput_component_timer_solo_20260713. "
+        f"throughput_component_timer_solo_20260713, c1_optimal_form. "
         f"Add an explicit branch (NEVER "
         f"silently fall through to proven_base).")
 
@@ -1387,7 +1403,8 @@ def main(argv: list[str] | None = None) -> int:
                              "next_launch_all_levers_20260713",
                              "next_launch_all_levers_trimmed_20260713",
                              "throughput_component_timer_async_20260713",
-                             "throughput_component_timer_solo_20260713"],
+                             "throughput_component_timer_solo_20260713",
+                             "c1_optimal_form"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
