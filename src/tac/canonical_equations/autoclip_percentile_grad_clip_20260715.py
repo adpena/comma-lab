@@ -1,14 +1,20 @@
 # SPDX-License-Identifier: MIT
 """Canonical equation: AutoClip percentile grad-clip threshold (the #B-4 clip cure).
 
-THE MEASURED POISON (audit §A-1, ``.omx/research/v9_missing_signal_constants_audit_20260715.md``):
+THE MEASURED TELEMETRY (audit §A-1, ``.omx/research/v9_missing_signal_constants_audit_20260715.md``):
 the sealed ``--grad-clip 0.5`` is SATURATED on the live V9·CGauge config — C0
 (``levelset_n600_witness_20260715T095030Z``) ``grad_clip_activation`` rows ep1-39 show global
 ``frac_clipped=1.0`` at EVERY accum step, ``norm_mean≈5.9-6.2`` (max 17.5) vs threshold 0.5.
-A saturated clip re-parametrizes descent into NORMALIZED flow with effective step
-``lr·c/‖g‖ ≈ lr/12`` — the LR cosine no longer controls the descent clock, and every
-loss-WEIGHT sweep verdict taken under saturation conflates direction with magnitude
-(the weights only set the direction mixture when the norm is pinned).
+
+HONEST MECHANISM STATE (fresh-eyes F5 correction, 2026-07-15): the original reading — "a
+saturated clip re-parametrizes descent into NORMALIZED flow with effective step
+``lr·c/‖g‖ ≈ lr/12``, dethroning the LR cosine" — is REFUTED on the C0 per-param-normalize
+lineage: normalize runs on the already-clipped tree and divides out any uniform norm scaling,
+so the saturation was INERT there (telemetry != mechanism;
+``perparam_normalize_masks_all_norm_clipping_c0_confound_20260715``). The magnitude mechanism
+can bind only on normalize-none arms (formulation-scoped; the n24 maglaw arms are the lineage
+test, armB-vs-armC attribution owed), and the trainer refuses the autoclip x per-param
+composition outright.
 
 THE LAW (AutoClip, Seetharaman-Wichern-Venkataramani-Le Roux, arXiv:2007.14469):
 
@@ -144,7 +150,8 @@ def build_autoclip_percentile_threshold_v1() -> CanonicalEquation:
               "with fixed-clip warmup — the cure for the measured saturated --grad-clip 0.5"),
         one_line_summary=(
             "Adaptive clip at the p-th percentile of the observed gradient-norm history (AutoClip "
-            "2007.14469); cures the C0-measured frac_clipped=1.0 saturation (effective step lr/12)."
+            "2007.14469); responds to the C0-measured frac_clipped=1.0 saturation telemetry "
+            "(magnitude mechanism binds on normalize-none lineage only; inert under per-param)."
         ),
         latex_form=(
             r"c_t=\mathrm{P}_p\left(\{\|g_s\|\}_{s=t-w+1}^{t}\right),\quad "

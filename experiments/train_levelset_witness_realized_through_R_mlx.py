@@ -7975,6 +7975,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "--grad-clip-mode autoclip requires --grad-clip > 0: the fixed clip is the "
                 "warmup fallback threshold (the percentile of a near-empty history is noise). "
                 "Set a positive --grad-clip or use --grad-clip-mode fixed.")
+        if str(getattr(args, "grad_normalize", "none")) == "per-param":
+            # (fresh-eyes F5, 2026-07-15) counted-but-inert composition (#417-shaped): per-param
+            # normalize runs on the ALREADY-CLIPPED tree and divides out ANY uniform norm scaling,
+            # so the autoclip threshold never reaches the applied update — the lever would be
+            # armed, telemetered, and INERT (the exact C0 confound: telemetry != mechanism).
+            raise RuntimeError(
+                "--grad-clip-mode autoclip with --grad-normalize per-param is REFUSED: per-param "
+                "normalize divides out any norm clip downstream (C0-measured inert composition; "
+                "perparam_normalize_masks_all_norm_clipping_c0_confound_20260715). Run autoclip "
+                "on a normalize-none lineage (--grad-normalize none) or keep --grad-clip-mode "
+                "fixed — an armed-but-inert lever is orphaned signal, not a safe default.")
         _autoclip = AutoClipController(
             percentile=float(args.grad_clip_percentile),
             window=int(args.grad_clip_window),
@@ -7995,6 +8006,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "warmup_steps": int(args.grad_clip_warmup_steps),
             "fallback_clip": float(args.grad_clip),
             "per_group": bool(getattr(args, "per_group_grad_clip", False)),
+            # (fresh-eyes F5c) the composition context the C0 confound taught us to record:
+            # autoclip is only mechanism-bearing on normalize-none lineage (per-param REFUSED above).
+            "grad_normalize": str(getattr(args, "grad_normalize", "none")),
             "law": "autoclip_percentile_threshold_v1 (arXiv:2007.14469)",
             "note": "training-path lever (relaxed-identity directive 2026-07-15); "
                     "decode/verdict untouched; advisory; pointer UNMOVED"}), flush=True)

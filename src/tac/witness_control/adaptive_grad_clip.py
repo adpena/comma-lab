@@ -1,13 +1,23 @@
 # SPDX-License-Identifier: MIT
 """AutoClip percentile gradient-clip law — the #B-4 grad-clip cure state machine.
 
-MEASURED POISON this replaces (audit ``.omx/research/v9_missing_signal_constants_
+MEASURED TELEMETRY this responds to (audit ``.omx/research/v9_missing_signal_constants_
 audit_20260715.md`` §A-1, C0 run ``levelset_n600_witness_20260715T095030Z``):
 ``--grad-clip 0.5`` is SATURATED — ``grad_clip_activation`` rows ep1-39 show global
-``frac_clipped=1.0`` at EVERY accum step with ``norm_mean≈5.9-6.2`` (max 17.5), so
-the effective step is ``lr*0.5/gnorm ≈ lr/12`` and the LR cosine no longer controls
-the descent clock. Under the joint wall-clock objective (epochs-to-target ×
-sec/epoch) this is the largest epochs-to-target lever in the stack.
+``frac_clipped=1.0`` at EVERY accum step with ``norm_mean≈5.9-6.2`` (max 17.5).
+
+HONEST MECHANISM STATE (fresh-eyes F5 correction, 2026-07-15): the original
+"effective step ≈ lr/12, LR cosine dethroned" reading of that telemetry is REFUTED
+on the C0 (per-param normalize) lineage — per-param normalize runs on the
+already-clipped tree and divides out ANY uniform norm scaling, so the saturation
+was INERT there (telemetry != mechanism;
+``perparam_normalize_masks_all_norm_clipping_c0_confound_20260715``). The lr/12
+magnitude mechanism CAN bind only on normalize-none arms, where the clip scale
+actually reaches the applied update (formulation-scoped; the n24 magnitude-law
+A/B arms are exactly this lineage test — armC normalize-none+fixed vs armB
+normalize-none+autoclip attribution owed). The trainer REFUSES the
+autoclip x per-param-normalize composition outright (armed-but-inert lever =
+orphaned signal).
 
 THE LAW (AutoClip, Seetharaman et al., arXiv:2007.14469): at each optimizer step,
 observe the gradient norm into a history, then clip at the p-th percentile of the

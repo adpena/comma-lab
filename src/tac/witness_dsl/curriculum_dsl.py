@@ -2616,13 +2616,19 @@ def AdaptiveGradClip(
     """#B-4 grad-clip cure: AutoClip percentile clip law (arXiv:2007.14469) replacing the
     MEASURED-SATURATED fixed ``--grad-clip 0.5``.
 
-    THE POISON (audit ``.omx/research/v9_missing_signal_constants_audit_20260715.md`` §A-1,
+    THE TELEMETRY (audit ``.omx/research/v9_missing_signal_constants_audit_20260715.md`` §A-1,
     MEASURED on C0 ``levelset_n600_witness_20260715T095030Z``): ``grad_clip_activation`` rows
     ep1-39 show global ``frac_clipped=1.0`` at EVERY accum step with ``norm_mean≈5.9-6.2``
-    (max 17.5) vs threshold 0.5 — the clip is saturated 100% of CE-stage steps, the effective
-    step is ``lr·0.5/‖g‖ ≈ lr/12``, and the LR cosine no longer controls the descent clock
-    (verdict_scope: FORMULATION-level for the v9_cgauge_* config family). Corollary: with the
-    norm pinned, loss WEIGHTS only set the descent direction mixture, never magnitude.
+    (max 17.5) vs threshold 0.5 — the clip is saturated 100% of CE-stage steps.
+
+    HONEST MECHANISM STATE (fresh-eyes F5 correction, 2026-07-15): the "effective step
+    ``lr·0.5/‖g‖ ≈ lr/12``, LR cosine dethroned" mechanism is REFUTED on the C0 per-param-
+    normalize lineage — normalize runs on the already-clipped tree and divides out any uniform
+    norm scaling, so the saturation was INERT there (telemetry != mechanism;
+    ``perparam_normalize_masks_all_norm_clipping_c0_confound_20260715``). The magnitude
+    mechanism can bind ONLY on normalize-none arms (formulation-scoped; the n24 maglaw A/B is
+    the lineage test), and the trainer REFUSES autoclip x per-param normalize outright
+    (armed-but-inert lever = orphaned signal).
 
     THE LAW: ``clip_t = percentile_p(‖g‖ history, window w)`` — observe-then-threshold per
     accum step; the fixed ``--grad-clip`` is the warmup fallback. With ``--per-group-grad-clip``
@@ -2659,8 +2665,10 @@ def AdaptiveGradClip(
             numeric,
             provenance=(
                 "AutoClip percentile clip law (arXiv:2007.14469): percentile 10 = paper default; "
-                "window 1000 / warmup 10 = stage-tracking pragmatics; cures the C0-measured "
-                "frac_clipped=1.0 saturation of --grad-clip 0.5 (effective step lr/12)"
+                "window 1000 / warmup 10 = stage-tracking pragmatics. Responds to the C0-measured "
+                "frac_clipped=1.0 saturation telemetry; the lr/12 magnitude mechanism is REFUTED "
+                "on per-param-normalize lineage (inert there; trainer refuses that composition) "
+                "and can bind only on normalize-none arms (maglaw A/B attribution owed)"
             ),
         )
         receipt_schemas = dict.fromkeys(numeric, "v9_config_compile.v1")
@@ -2727,10 +2735,12 @@ def VerdictParallelWorkers(workers: "int | None" = None) -> Lever:
     idle-core parallelism is legal. BIT-IDENTICAL values by construction: same chunk
     spans, same per-chunk ``cpu_verdict_*`` calls with unchanged torch intra-op thread
     count, ``Executor.map`` chunk-index-order aggregation => the same float sequence and
-    mean as the sequential loop. Targets the measured 2555.7 s/verdict C0 wall (audit
-    .omx/research/v9_missing_signal_constants_audit_20260715.md §D.2); expected
-    ~/min(workers, cores_free, n_chunks) minus staging overhead — MEASURE, never assume
-    (n24 A/B + a bounded verdict-wall bench owed before any adoption claim).
+    mean as the sequential loop. HONEST SCOPE (bench receipt 20260715T184252Z + fresh-eyes
+    F4): the lever divides the SCORER-FORWARD share of the verdict — MEASURED 370.6s -> 65.2s
+    at w=8 (5.686x, eta_8=0.711, values float-identical) — NOT the whole ~2555.7 s C0 in-run
+    verdict wall (audit §D.2), which is dominated by the un-parallelized render/realized
+    stages (a SEPARATE owed lever). The per-dim mdd-ablation sweep (~443 s of the measured
+    630 s n24 verdict-epoch tail) inherits this same pool via per_dim_dseg_ablation(workers=).
 
     Memory: the #205 per-chunk transient is multiplied by chunks in flight (<= workers);
     size against free-RSS headroom (safe-run guard + launcher memory preflight stay).
@@ -2812,6 +2822,50 @@ def ComputeDtype(dtype: str = "bf16", quality_check: int = 0) -> Lever:
                  notes="#509 bf16/fp16 compute seam (fp32 masters; low-precision witness "
                        "fwd/bwd only; scorer/verdict/decode fp32; QC gate = post-normalize "
                        "update-direction cosine vs fp32 reference)")
+
+
+# QC measurement window: enough per-step rows for a stable median + tail read of the
+# cosine/rel-norm distribution (>= 50 rows; 60 = 20 bounded n24 epochs at accum-pairs 8
+# -> 3 optimizer steps/epoch). A window length (CONFIG-class), not a scientific constant;
+# the ADMISSION thresholds live in the law module (bf16_compute_seam_gradient_quality_v1).
+COMPUTE_DTYPE_QC_WINDOW_STEPS = 60
+
+
+def ComputeDtypeBf16QCGate() -> Lever:
+    """#509 batch 3: the ZERO-ARG composable arm for the OWED bounded-n24 bf16 QC anchor —
+    ``--dsl-lever ComputeDtypeBf16QCGate`` through the governed launcher (the launcher's
+    ``--dsl-lever`` accepts only zero-arg factories, and the parameterized ``ComputeDtype``
+    cannot express the QC gate's config COMPATIBILITY set by itself).
+
+    Composes, in ONE lever, everything the trainer's QC admission requires
+    (train_levelset ``_cdt_qc_n`` refusal cascade):
+    - ``--compute-dtype bf16`` + ``--compute-dtype-quality-check 60`` (the seam + the gate;
+      window = ``COMPUTE_DTYPE_QC_WINDOW_STEPS``);
+    - ``--grad-clip-mode fixed`` (QC replicates only the fixed-clip pipeline; autoclip's
+      history state would be double-fed by the dual grad computes);
+    - seed-islands OFF (``--seed-islands/--seed-island-eased/--witness-alone-island-loss``
+      False -> ``--no-*`` negation tokens; the reference recompute has no dual seed leg).
+      The FreSh matched-control lever set the precedent for this exact off-triple.
+
+    The QC mode STEPS WITH THE FP32 REFERENCE, so the bounded run's trajectory is the
+    fp32 one — this arm produces the ``compute_dtype_quality.jsonl`` distribution that
+    turns the law's PROPOSED cos_min 0.99 / rel-band [0.9, 1.1] into measured admission
+    thresholds. means != ends: an apparatus/measurement arm; NO score claim; pointer
+    UNMOVED."""
+    return Lever(
+        "compute_dtype_bf16_qc_gate",
+        overrides={
+            "--compute-dtype": "bf16",
+            "--compute-dtype-quality-check": int(COMPUTE_DTYPE_QC_WINDOW_STEPS),
+            "--grad-clip-mode": "fixed",
+            "--seed-islands": False,
+            "--seed-island-eased": False,
+            "--witness-alone-island-loss": False,
+        },
+        notes=("#509 bounded-n24 bf16 QC anchor arm: seam + 60-step QC window + the trainer's "
+               "full QC compatibility set (fixed clip, seed-islands off); steps with the fp32 "
+               "reference"),
+    )
 
 
 def HardnessOversample(
