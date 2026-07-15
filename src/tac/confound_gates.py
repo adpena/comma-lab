@@ -1935,6 +1935,8 @@ def check_codex_retry_preserves_original_sandbox_authority(
             "--progress-file \"$WORKDIR/.omx/state/subagent_progress.jsonl\"",
             "RETRY-REFUSED-NO-CHECKPOINT",
             str(resume),
+            "2>&1 | tee",
+            "tail -c 400",
             "LANDING-REVIEW-REQUIRED",
             "review_required=1",
         )
