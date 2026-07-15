@@ -15,6 +15,7 @@
 - Drain classification is evidence-bearing and fail-closed: empty current set is `DRAINED`; every survivor needs recent log or an advancing cursor and cannot be strand-doomed for `TIMED_OUT`; any other survivor is `WEDGED`; exit codes are exactly 0/2/3 (`tools/codex_drain_detector.py:120-161,194-220`).
 - Optional `.last.txt` and stage-NPZ globs are lexically inspected outside quoted/comment text and require `null_glob`, `nullglob`, `(N)`, or a non-expanding `find(1)` path (`tools/check_dispatch_cli_shell_hazards.py:245-324`).
 - Retry custody accepts only the exact delegation key, `in_progress`, positive integer step, and nonempty next action; absent custody refuses rc 20 (`tools/codex_retry_checkpoint.py:19-58`). Retry count is capped at two and the resume prompt carries only the external authority digest/key (`tools/codex_delegate.py:214-225,260-288,362-396`).
+- Follow-on audit closed one carryover edge: each retry now writes a fresh attempt log, and only that immediately preceding attempt can authorize the next retry. A fatal retry cannot inherit the original attempt's transient signature (`tools/codex_delegate.py:365-397`; `tools/tests/test_codex_delegate_retry.py`). The strict confound gate requires this isolation surface.
 
 **Verdict scope:** requested classification, exit-code, empty-glob, checkpoint-key, and retry-cap invariants. No claim about unrelated harness behavior.
 
@@ -316,6 +317,6 @@ For every tuple above, backfill the missing canonical edge on the owning closed 
 
 ## Verification
 
-- Focused tests: 102 passed (`test_codex_apparatus_safety`, `test_codex_delegate_retry`, `test_dispatch_cli_shell_hazards`, `test_dsl_compile_hash_enforcement`, `test_launch_dsl_config_gate`).
+- Focused tests: 103 passed (`test_codex_apparatus_safety`, `test_codex_delegate_retry`, `test_dispatch_cli_shell_hazards`, `test_dsl_compile_hash_enforcement`, `test_launch_dsl_config_gate`).
 - No GPU, provider dispatch, score claim, frontier movement, or experiment/result run-directory access.
 - Pointer delta: **UNMOVED**.

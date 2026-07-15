@@ -1935,12 +1935,25 @@ def check_codex_retry_preserves_original_sandbox_authority(
             "--progress-file \"$WORKDIR/.omx/state/subagent_progress.jsonl\"",
             "RETRY-REFUSED-NO-CHECKPOINT",
             str(resume),
+            "ATTEMPT_LOG=",
+            'grep -qiE',
+            '"$ATTEMPT_LOG"; do',
+            ': > "$ATTEMPT_LOG"',
             "2>&1 | tee",
+            '"$ATTEMPT_LOG"',
             "tail -c 400",
             "LANDING-REVIEW-REQUIRED",
             "review_required=1",
         )
-        if not bounded or any(token not in body for token in required):
+        attempt_output_isolated = bool(
+            re.search(r'grep -qiE [^\n]* "\$ATTEMPT_LOG"; do', body)
+            and re.search(r'tee -a [^\n]* "\$ATTEMPT_LOG"', body)
+        )
+        if (
+            not bounded
+            or not attempt_output_isolated
+            or any(token not in body for token in required)
+        ):
             violations.append(
                 "tools/codex_delegate.py: compact checkpoint-custodied retry or landing-review guard is missing"
             )
