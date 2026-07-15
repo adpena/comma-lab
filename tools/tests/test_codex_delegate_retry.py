@@ -1,17 +1,13 @@
-"""Regression test for the codex_delegate transient-death auto-recovery (apparatus fix
-for the codex_probe_token_limit_death / "Selected model is at capacity" bug class).
-
-The generated launcher MUST re-run on a transient (capacity/rate-limit/disconnect) death
-so the agent self-resumes from its subagent_checkpoint instead of orphaning work.
-"""
+"""Regression tests for checkpoint-custodied Codex transient retries."""
 from __future__ import annotations
 
 import re
 
-from tools import codex_delegate
+from tools import codex_delegate, codex_retry_checkpoint
 
 
-def _gen_launcher(tmp_path):
+def _gen_launcher(tmp_path, monkeypatch):
+    monkeypatch.setattr(codex_delegate, "RUNS", tmp_path)
     prompt = tmp_path / "p.txt"
     prompt.write_text("do a thing", encoding="utf-8")
     log = tmp_path / "run.log"
@@ -24,14 +20,18 @@ def _gen_launcher(tmp_path):
     return launcher.read_text(encoding="utf-8")
 
 
-def test_launcher_has_bounded_retry_loop(tmp_path):
-    body = _gen_launcher(tmp_path)
+def test_launcher_has_bounded_retry_loop(tmp_path, monkeypatch):
+    body = _gen_launcher(tmp_path, monkeypatch)
     # A while-loop bounded by the retry cap, gated on RC != 0 AND the transient signature.
     assert 'while [ "$RC" -ne 0 ]' in body
     assert f'-lt {codex_delegate._MAX_CAPACITY_RETRIES}' in body
     assert "grep -qiE" in body
-    # It re-runs codex exec (self-resume) — codex is invoked at least twice in the script.
+    # It may re-run codex only after exact checkpoint custody is proved.
     assert body.count("codex exec") >= 2
+    assert "codex_retry_checkpoint.py" in body
+    assert "RETRY-REFUSED-NO-CHECKPOINT" in body
+    assert '--progress-file "$WORKDIR/.omx/state/subagent_progress.jsonl"' in body
+    assert "resume.prompt" not in body  # compatibility call uses the same small fixture prompt
     assert "sleep $backoff" in body
 
 
@@ -45,6 +45,61 @@ def test_transient_signature_matches_the_real_capacity_error():
     assert re.search(sig, fatal, re.IGNORECASE) is None
 
 
-def test_retry_constants_are_sane():
-    assert codex_delegate._MAX_CAPACITY_RETRIES >= 3
+def test_retry_constants_are_bounded_for_long_arms():
+    assert 1 <= codex_delegate._MAX_CAPACITY_RETRIES <= 2
     assert codex_delegate._CAPACITY_BACKOFF_STEP_SECONDS >= 5
+
+
+def test_retry_checkpoint_selects_latest_exact_custody_row(tmp_path):
+    progress = tmp_path / "progress.jsonl"
+    progress.write_text(
+        "\n".join(
+            [
+                '{"parent_id_or_session":"other","status":"in_progress","step":99,"next_action":"wrong"}',
+                '{"parent_id_or_session":"codex_delegate:arm:stamp","status":"in_progress","step":1,"next_action":"first"}',
+                '{"parent_id_or_session":"codex_delegate:arm:stamp","status":"in_progress","step":2,"next_action":"continue"}',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    row = codex_retry_checkpoint.latest_resumable_checkpoint(
+        progress, "codex_delegate:arm:stamp"
+    )
+    assert row and row["step"] == 2 and row["next_action"] == "continue"
+
+
+def test_retry_checkpoint_refuses_missing_or_nonresumable_rows(tmp_path, capsys):
+    progress = tmp_path / "progress.jsonl"
+    progress.write_text(
+        '{"parent_id_or_session":"codex_delegate:arm:stamp","status":"complete",'
+        '"step":2,"next_action":""}\n',
+        encoding="utf-8",
+    )
+    rc = codex_retry_checkpoint.main(
+        [
+            "--delegation-key",
+            "codex_delegate:arm:stamp",
+            "--progress-file",
+            str(progress),
+        ]
+    )
+    assert rc == codex_retry_checkpoint.REFUSED_RC
+    assert "RETRY-REFUSED-NO-CHECKPOINT" in capsys.readouterr().out
+
+
+def test_compact_prompts_externalize_large_authority(monkeypatch, tmp_path):
+    monkeypatch.setattr(codex_delegate, "RUNS", tmp_path)
+    authority = tmp_path / "wrapped.txt"
+    authority.write_text("x" * 200_000, encoding="utf-8")
+    entry, resume = codex_delegate._write_compact_prompts(
+        label="arm",
+        stamp="stamp",
+        wrapped_prompt=authority,
+        delegation_key="codex_delegate:arm:stamp",
+    )
+    assert entry.stat().st_size < 2_000
+    assert resume.stat().st_size < 2_000
+    assert "bytes=200000" in entry.read_text(encoding="utf-8")
+    assert "--latest-only" in resume.read_text(encoding="utf-8")
+    assert "32768-byte chunks" in resume.read_text(encoding="utf-8")

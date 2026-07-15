@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Wait for the canonical codex fleet to drain without false-stuck alarms.
 
-A wall-clock timeout is not evidence that an arm is wedged.  At the deadline
+A wall-clock timeout is not success. At the deadline
 this helper classifies every remaining RUNNING arm using two independent
 liveness signals: a recently advancing log mtime and an advancing progress
-cursor.  Healthy slow work exits non-alarmingly with an explicit status;
-only arms with neither signal produce the WEDGED alarm (rc=3).
+cursor. Healthy slow work reports explicit TIMED_OUT (rc=2); arms with neither
+signal, or legacy strand-doomed writers, produce WEDGED (rc=3).
 
 The fleet snapshot comes from :func:`codex_status.status_rows`; this module does
 not hand-roll process discovery.
@@ -28,7 +28,8 @@ DEFAULT_POLL_SECONDS = 30.0
 DEFAULT_LIVENESS_WINDOW_SECONDS = 15.0 * 60.0
 
 DRAINED = "DRAINED"
-HEALTHY_BUT_SLOW = "HEALTHY_BUT_SLOW"
+TIMED_OUT = "TIMED_OUT"
+HEALTHY_BUT_SLOW = TIMED_OUT  # compatibility alias; timeouts never exit zero
 WEDGED = "WEDGED"
 
 
@@ -84,7 +85,7 @@ def observe_running(
     overrides = progress_overrides or {}
     observations: dict[str, dict[str, Any]] = {}
     for row in rows:
-        if row.get("status") != "RUNNING":
+        if row.get("status") not in {"RUNNING", "STRAND_DOOMED"}:
             continue
         label, stamp = str(row.get("label") or ""), str(row.get("stamp") or "")
         key = f"{label}_{stamp}"
@@ -101,6 +102,7 @@ def observe_running(
             "log_mtime": log_mtime,
             "progress_path": str(progress) if progress else None,
             "progress_cursor": _cursor_from_json(progress) if progress else None,
+            "strand_doomed": row.get("status") == "STRAND_DOOMED",
         }
     return observations
 
@@ -126,7 +128,7 @@ def classify_timeout(
 
     A remaining arm is healthy when its log was written within the liveness
     window OR its progress cursor advanced since the baseline.  Every remaining
-    arm must be healthy for ``HEALTHY_BUT_SLOW``; any arm lacking both signals
+    arm must be healthy for ``TIMED_OUT``; any arm lacking both signals
     makes the result ``WEDGED``.
     """
     if not current:
@@ -140,7 +142,8 @@ def classify_timeout(
         progress_advanced = _cursor_advanced(
             before.get("progress_cursor"), after.get("progress_cursor")
         )
-        healthy = bool(log_recent or progress_advanced)
+        strand_doomed = bool(after.get("strand_doomed"))
+        healthy = bool(log_recent or progress_advanced) and not strand_doomed
         any_wedged = any_wedged or not healthy
         details.append(
             {
@@ -150,12 +153,12 @@ def classify_timeout(
                 "health": "healthy" if healthy else "wedged",
             }
         )
-    return (WEDGED if any_wedged else HEALTHY_BUT_SLOW), details
+    return (WEDGED if any_wedged else TIMED_OUT), details
 
 
 def exit_code_for_status(status: str) -> int:
-    """Only a genuine liveness-negative WEDGED classification is alarming."""
-    return 3 if status == WEDGED else 0
+    """DRAINED is the only successful terminal state."""
+    return {DRAINED: 0, TIMED_OUT: 2, WEDGED: 3}.get(status, 4)
 
 
 def _parse_progress_overrides(values: list[str]) -> dict[str, Path]:
@@ -206,9 +209,9 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2, sort_keys=True))
     elif status == DRAINED:
         print("DRAINED: 0 RUNNING arms remain")
-    elif status == HEALTHY_BUT_SLOW:
+    elif status == TIMED_OUT:
         labels = ", ".join(item["label"] for item in details)
-        print(f"HEALTHY_BUT_SLOW: {len(details)} RUNNING arm(s) exceeded the wall-clock window "
+        print(f"TIMEOUT: {len(details)} RUNNING arm(s) exceeded the wall-clock window "
               f"but have advancing liveness evidence: {labels}")
     else:
         labels = ", ".join(item["label"] for item in details if item["health"] == "wedged")
