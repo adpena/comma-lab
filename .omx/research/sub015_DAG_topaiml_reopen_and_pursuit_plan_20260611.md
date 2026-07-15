@@ -18222,3 +18222,18 @@ annulus and longest end of long tail". Full table:
   `domain_refined`/`anchor_appended` events on
   `gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1` (this build is their trainer
   realization; NO_EQUATION_NEEDED on the wiring itself). **pointer 0.19108 UNMOVED (means).**
+
+## FEED-recovery-close (2026-07-15) — blocked-codex respawn queue was STALE; zero unlanded bytes; verify-against-main before executing checkpoint-derived queues
+- The signal-loss sweep's respawn-queue rows 1–3 (frozen_segnet_p0 20-files / micro_batch_v9 /
+  sfess-replay, "blocked on read-only .git") were written from the arms' `blocked` CHECKPOINTS
+  without verifying main — all three were ALREADY LANDED (d880211c96 · subsumed 115/115 distinctive
+  lines · 141fcf23aa; sfess receipt sha256 byte-identical to recorded custody). Recovery became
+  verify-review-close: dispositions on the real landing commits, closure rows in
+  subagent_progress.jsonl, 153+267 tests run. Note: .omx/research/blocked_codex_landing_recovery_20260715.md (6360867ae6).
+- LESSON (meta, durable): a checkpoint-derived work queue is a CLAIM about main, not a fact —
+  verify each row against main CONTENT before respawning/executing it (same family as
+  proactive-recall-before-concluding; sister of the stale-base clobber class at the queue level).
+- Routed: 11 pre-existing red micro_batch tests = ABS receipt tolerance (1e-4) miscalibrated vs
+  post-D15 loss scale while REL parity 4.5e-8 holds → #509 domain (tolerance re-derived per
+  value-provenance ladder, not hand-picked). verdict_scope: instance — the tolerance constant, not the parity mechanism.
+- Apparatus/means; pointer 0.19108 UNMOVED.
