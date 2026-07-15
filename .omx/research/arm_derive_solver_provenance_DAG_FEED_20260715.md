@@ -1,7 +1,7 @@
 # FEED-ARM-DERIVE — solver, provenance, rate, and marked telemetry
 
-Date: 2026-07-15 UTC  
-Lane: `lane_arm_derive_solver_provenance_20260715`  
+Date: 2026-07-15 UTC
+Lane: `lane_arm_derive_solver_provenance_20260715`
 Authority: `$0` local build/derivation only; pointer unchanged
 
 ```text

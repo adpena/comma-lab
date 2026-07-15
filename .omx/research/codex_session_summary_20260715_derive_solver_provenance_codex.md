@@ -1,6 +1,6 @@
 # Codex TIER-0 session summary — derive solver/provenance arm
 
-Date: 2026-07-15 UTC  
+Date: 2026-07-15 UTC
 Lane: `lane_arm_derive_solver_provenance_20260715`
 
 ## Landed on the isolated branch

@@ -1,7 +1,7 @@
 # Codex findings — ARM-DERIVE solver, provenance, rate, and telemetry closure
 
-Date: 2026-07-15 UTC  
-Lane: `lane_arm_derive_solver_provenance_20260715`  
+Date: 2026-07-15 UTC
+Lane: `lane_arm_derive_solver_provenance_20260715`
 Scope: `$0` local build/derivation/tests only; no GPU, provider, training,
 evaluator, archive mutation, promotion, or pointer update
 
