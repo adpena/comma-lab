@@ -177,24 +177,34 @@ class TorchPoseCarrier:
                     raise ValueError(
                         f"pose source HW {tuple(source_nhwc.shape[1:3])} != geom {self.native_hw}"
                     )
-                R, t = exp_se3(xi)
-                tn = t[..., :, None] * self.plane_n[None, None, :]
-                H = self.K[None] @ (R - tn / self.plane_d) @ self.Kinv[None]
-                src_h = torch.linalg.inv(H) @ self.target_grid[None]
-                z = src_h[:, 2]
-                z_safe = torch.where(z.abs() < 1e-8, torch.ones_like(z), z)
-                u, v = src_h[:, 0] / z_safe, src_h[:, 1] / z_safe
-                h, w = self.native_hw
-                valid = (z > 0) & (u >= 0) & (u <= w - 1) & (v >= 0) & (v <= h - 1)
-                grid = torch.stack((
-                    2.0 * u / max(w - 1, 1) - 1.0,
-                    2.0 * v / max(h - 1, 1) - 1.0,
-                ), dim=-1).reshape(-1, h, w, 2)
-                x = source_nhwc.permute(0, 3, 1, 2).contiguous()
-                warped = F.grid_sample(
-                    x, grid, mode="bilinear", padding_mode="border", align_corners=True
-                ).permute(0, 2, 3, 1).contiguous()
-                return torch.where(valid.reshape(-1, h, w, 1), warped, source_nhwc)
+                # The homography warp is precision-critical (projective coords
+                # at ~1164 px scale; bf16 quantizes to multi-pixel error) and
+                # torch.linalg.inv has no low-precision kernel (H100 r4 smoke,
+                # rc=1 @415.4s under bf16 autocast). Run the WHOLE warp in
+                # fp32 with autocast disabled — matching the fp32 MLX/NumPy
+                # reference warp — and let downstream autocast re-cast as it
+                # consumes the output.
+                with torch.autocast(device_type=source_nhwc.device.type, enabled=False):
+                    xi = xi.float()
+                    source_f32 = source_nhwc.float()
+                    R, t = exp_se3(xi)
+                    tn = t[..., :, None] * self.plane_n[None, None, :]
+                    H = self.K[None] @ (R - tn / self.plane_d) @ self.Kinv[None]
+                    src_h = torch.linalg.inv(H) @ self.target_grid[None]
+                    z = src_h[:, 2]
+                    z_safe = torch.where(z.abs() < 1e-8, torch.ones_like(z), z)
+                    u, v = src_h[:, 0] / z_safe, src_h[:, 1] / z_safe
+                    h, w = self.native_hw
+                    valid = (z > 0) & (u >= 0) & (u <= w - 1) & (v >= 0) & (v <= h - 1)
+                    grid = torch.stack((
+                        2.0 * u / max(w - 1, 1) - 1.0,
+                        2.0 * v / max(h - 1, 1) - 1.0,
+                    ), dim=-1).reshape(-1, h, w, 2)
+                    x = source_f32.permute(0, 3, 1, 2).contiguous()
+                    warped = F.grid_sample(
+                        x, grid, mode="bilinear", padding_mode="border", align_corners=True
+                    ).permute(0, 2, 3, 1).contiguous()
+                    return torch.where(valid.reshape(-1, h, w, 1), warped, source_f32)
 
             def forward(self, source_nhwc, pair_indices):
                 return self.forward_with_xi(source_nhwc, self.xi_effective(pair_indices))

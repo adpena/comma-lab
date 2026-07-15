@@ -12,7 +12,6 @@ from dataclasses import dataclass
 import copy
 from typing import Any
 
-import numpy as np
 
 from tac.witness_control.birth_completion import (
     BirthCompletionController,
@@ -758,7 +757,10 @@ def torch_pose_jacobian_conditioning(
             jacobian = torch.autograd.functional.jacobian(
                 fn, xi0, create_graph=False, vectorize=True
             )
-            conds.append(conditioning(jacobian.detach().cpu().numpy()))
+            # .float() before .numpy(): numpy has no bfloat16, and under the
+            # run-global CUDA autocast the pose forward can emit bf16 (sister
+            # of the r4 linalg.inv bf16 crash class; $0-testable).
+            conds.append(conditioning(jacobian.detach().float().cpu().numpy()))
     aggregate = aggregate_conditioning(conds, sigma_floor=float(sigma_floor))
     return {**aggregate, "pair_indices": idxs}
 

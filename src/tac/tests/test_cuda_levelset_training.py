@@ -277,3 +277,26 @@ def test_compile_adoption_uses_functional_gate_not_gradient_identity(monkeypatch
     assert row["adoptable"]
     assert row["training_loop_bit_identity_waiver"] is True
     assert "grad_max_abs_delta" in row
+
+
+def test_pose_carrier_forward_survives_bf16_autocast_inputs():
+    """$0 guard for the 2026-07-15 r4 H100 rc=1 (@415.4s, ~$0.58):
+    torch.linalg.inv has no BFloat16 kernel, and under bf16 autocast the
+    homography chain fed it a bf16 H. The warp must run fully in fp32 with
+    autocast disabled (matching the fp32 NumPy/MLX reference warp) regardless
+    of the surrounding autocast context or input dtype."""
+    from tac.boundary_math.warp_real_luma_frame0 import GroundHomographyGeom
+
+    geom = GroundHomographyGeom.eon(native_hw=(12, 16), pitch=-0.01)
+    xi = np.array([[0.002, -0.001, 0.003, 0.0004, -0.0002, 0.0003]], np.float32)
+    carrier = TorchPoseCarrier.build(xi, geom)
+    src32 = torch.linspace(0.0, 255.0, 12 * 16 * 3).reshape(1, 12, 16, 3)
+    baseline = carrier(src32, torch.tensor([0]))
+    with torch.autocast(device_type="cpu", dtype=torch.bfloat16):
+        under_autocast = carrier(src32, torch.tensor([0]))
+    assert under_autocast.dtype == torch.float32
+    assert torch.allclose(under_autocast, baseline, atol=1e-6)
+    src_bf16 = src32.to(torch.bfloat16)
+    from_bf16_input = carrier(src_bf16, torch.tensor([0]))
+    assert from_bf16_input.dtype == torch.float32
+    assert torch.isfinite(from_bf16_input).all()
