@@ -140,4 +140,3 @@ entries · `tools/graph_memory_recall.py` · `.omx/research/papers_checked_*` ·
 `#426`/the organ duty queue · arXiv metadata/abstract · the authors' full primary PDF.
 
 **Pointer delta:** none. **Raw Pact measurements:** none. **Promotion authority:** none.
-

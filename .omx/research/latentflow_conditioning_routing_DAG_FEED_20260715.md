@@ -1,8 +1,11 @@
 # DAG FEED — LatentFlow-conditioned terminal warm start
 
-**Date:** 2026-07-15  
-**Feed:** `FEED-paper-2607-12922-conditioned-terminal-warmstart`  
-**Status:** `research_only=true`; `METHOD-CUSTODY-BLOCKED`; no build, launch, queue mutation, or score claim  
+**Date:** 2026-07-15
+
+**Feed:** `FEED-paper-2607-12922-conditioned-terminal-warmstart`
+
+**Status:** `research_only=true`; `METHOD-CUSTODY-BLOCKED`; no build, launch, queue mutation, or score claim
+
 **verdict_scope:** `SOURCE-CUSTODY x 2026-07-15-PUBLIC-ENDPOINTS` plus
 `DIRECT-MECHANISM x DETERMINISTIC-V9-OPTIMIZATION`; family open
 
