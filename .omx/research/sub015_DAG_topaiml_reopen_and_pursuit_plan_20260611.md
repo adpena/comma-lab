@@ -18399,9 +18399,11 @@ annulus and longest end of long tail". Full table:
   covers every v9-descendant config (negative-tested). Equations-leg note: this is a config-geometry
   CONSTRAINT (sensor sampling theorem), encoded in the gate + provenance — not an S_τ law row; reasoned skip.
   Chain restart NOT needed: the launcher DSL-compiles from source at fire time.
-- **Remaining findings routed:** F5+F4 (autoclip×per-param inert composition w/ REFUTED-mechanism
-  provenance string; verdict-workers SPEC tracking + stale docstring scope) → batch-3 arm (owns C
-  surfaces). F7+F8 (0.9997 uncited at use sites + instance-receipt-licenses-all; CudaGraphForwardBackward
+- **Remaining findings routed:** F5+F4 (autoclip×per-param inert composition whose provenance string
+  still cites the C0 lr/12 mechanism as live — that negative carries verdict_scope: formulation (the
+  lr/12 norm-clip mechanism is inert ONLY on the per-param-normalize-after-clip lineage; it may still
+  bind on normalize-none arms — exactly what the relaunched n24 magnitude-law A/B tests); plus
+  verdict-workers SPEC tracking + stale docstring scope) → batch-3 arm (owns C surfaces). F7+F8 (0.9997 uncited at use sites + instance-receipt-licenses-all; CudaGraphForwardBackward
   capture-step returns undefined outputs + skips one real step — consumer-less, MUST fix before first
   consumer) → CUDA arm post-dispatch. F1 (dry-start GREEN receipt binds config NAME not dsl_compile_hash
   → stale-receipt clearance) + F2 (label_floor lower-band masking → T1 falls to cap 726, still fires,
