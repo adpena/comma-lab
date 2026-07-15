@@ -190,3 +190,33 @@ or invoke the torch trainer's `--dsl-config` CPU path).
   (rc=144) but ORPHANS the daemon bash (ppid 1, kept looping + logging) — enumerate
   `pgrep -f <script>` and kill orphans BEFORE relaunching, else double-fire risk; relaunch via the
   CLAUDE.md Pattern A (`nohup bash -c ... & disown`).
+
+## 10. r6 FIRED — clone-fire procedure + final single-flight predicate (for #513)
+
+- **Coordinator-corrected single-flight predicate (recorded verbatim intent):** hold iff
+  `Tasks>0 AND State in (ephemeral, deployed)` — stopped apps' Tasks column shows a PERSISTENT
+  HISTORICAL count that never clears, and the CLI TABLE renders each app as a MULTI-LINE row
+  (timestamps wrap to a second line with an empty app-id), so a naive per-line column parse can
+  mispair state/tasks. Canonical implementation = `modal app list --json` filtered
+  `int(tasks)>0 and state not in {stopped, stopping}` (daemon v2 + the clone-fire preflight both
+  use this). Dead-runner "ephemeral (detached)" apps with a crashed runner keep tasks=1 until an
+  explicit `modal app stop -y` — stop them WITH log evidence (3 stopped today, all
+  ModuleNotFoundError crash-runners from 05-31/06-04/06-09).
+- **Why clone-fire:** 3 consecutive shared-worktree execute attempts lost the race to sister
+  edit/commit cadence (attempt 1: my own ledger commit moved HEAD mid-execute; attempt 2: sister
+  EDIT dirtied the tree in the 9s between daemon check and launcher gate; attempt 3: sister
+  commit 42dfedd4 mid-execute). The launcher's ~2.5-min execute window needs BOTH no-edits and
+  no-commits; with 4+ active arms that window rarely opens.
+- **Clone-fire procedure (generalizes the git-archive wheel-build precedent):**
+  `git clone --local --branch main <repo> <clone>` (pins HEAD; sister activity invisible) →
+  `cp -Rc upstream <clone>/upstream` (gitignored pinned snapshot, APFS clonefile) →
+  `ln -s <repo>/.venv <clone>/.venv` + add `.venv` to `<clone>/.git/info/exclude` (the ignore
+  lives in .git/info/exclude, which does NOT clone) → symlink the gitignored GT cache
+  (plan build stats it) → plan-only build + field-shape guard (incl. torch_compile_mode) →
+  single-flight JSON check → `--execute --expected-plan-sha256 <sealed>` from the clone cwd →
+  copy the new ledger row + lane call_id metadata back to the real repo (lane dirs are
+  gitignored LIVE_STATE; ledger rows commit) → delete the clone after harvest (rebuildable
+  scratch: pure committed-state + pinned-upstream copy).
+- **r6 dispatch receipt:** call_id `fc-01KXKRRF450JTF4BNAM9XG6B35`, fired 20:49:51Z, sealed HEAD
+  `c84a6d7a`, plan_sha `6590a9f8...`, ceiling $3.296256, `WITNESS_TORCH_COMPILE_MODE=default` on
+  the dispatch argv, single-flight clear at fire, custody committed ec57c8000c.
