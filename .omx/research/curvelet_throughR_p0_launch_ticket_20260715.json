@@ -1,0 +1,155 @@
+{
+  "schema": "curvelet_through_r_ab_ticket.v1",
+  "ticket_id": "curvelet_throughR_p0_20260715",
+  "lane_id": "curvelet_throughR_p0_20260715T011951Z",
+  "status": "PREPARED_NOT_FIRED",
+  "operator_go_required": true,
+  "heavy_or_paid_work_performed_by_builder": false,
+  "pointer_moved": false,
+  "canonical_metric_id": "argmax_native_vjp_fidelity_v1",
+  "authority_contract": {
+    "only_admissible_basis_row": "realized d_seg and d_pose through the actual R operator on the exact byte-closed archive, followed by upstream/evaluate.py on a declared contest axis",
+    "capacity_probes": "UPPER_BOUND_ONLY",
+    "prior_saved-OFF_receiver_rows": "ADVISORY_NOT_SCORE_AND_NOT_THIS_FRESH_TRAIN_AB",
+    "score_axes": [
+      "contest-CPU",
+      "contest-CUDA"
+    ],
+    "axis_equivalence_inference_forbidden": true
+  },
+  "common_config": {
+    "launcher": "tools/launch_witness_run.py",
+    "named_config": "v9_cgauge_ideal_mod32",
+    "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "num_pairs": 600,
+    "storage_tier": "/Volumes/VertigoDataTier/pact",
+    "seed_and_stage_schedule": "inherited identically from the sealed named config",
+    "resumability": "launcher must emit --resume-from-compatible state, periodic checkpoints, and preserved stage checkpoints",
+    "pre_fire_rule": "run the corresponding dry_run_argv first; any governor, storage, source-seal, DSL, or readiness refusal blocks fire"
+  },
+  "arms": [
+    {
+      "arm_id": "control_polar_fourier",
+      "only_intended_basis_delta": "trainer argparse default basis=polar_fourier; no basis treatment lever composed",
+      "out_dir": "/Volumes/VertigoDataTier/pact/experiments/results/curvelet_throughR_p0_control_n600_seed0",
+      "dry_run_argv": [
+        "python3",
+        "tools/launch_witness_run.py",
+        "--gt-cache",
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "--num-pairs",
+        "600",
+        "--config",
+        "v9_cgauge_ideal_mod32",
+        "--out-dir",
+        "/Volumes/VertigoDataTier/pact/experiments/results/curvelet_throughR_p0_control_n600_seed0",
+        "--label",
+        "curvelet-throughR-control-n600",
+        "--purpose",
+        "P0 equal-config polar-Fourier control; operator-GO only",
+        "--dry-run"
+      ],
+      "fire_argv": [
+        "python3",
+        "tools/launch_witness_run.py",
+        "--gt-cache",
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "--num-pairs",
+        "600",
+        "--config",
+        "v9_cgauge_ideal_mod32",
+        "--out-dir",
+        "/Volumes/VertigoDataTier/pact/experiments/results/curvelet_throughR_p0_control_n600_seed0",
+        "--label",
+        "curvelet-throughR-control-n600",
+        "--purpose",
+        "P0 equal-config polar-Fourier control; operator-GO only"
+      ]
+    },
+    {
+      "arm_id": "treatment_windowed_curvelet",
+      "only_intended_basis_delta": "compose WindowedCurveletBasis, which emits exactly --basis windowed_curvelet",
+      "out_dir": "/Volumes/VertigoDataTier/pact/experiments/results/curvelet_throughR_p0_windowed_n600_seed0",
+      "dry_run_argv": [
+        "python3",
+        "tools/launch_witness_run.py",
+        "--gt-cache",
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "--num-pairs",
+        "600",
+        "--config",
+        "v9_cgauge_ideal_mod32",
+        "--dsl-lever",
+        "WindowedCurveletBasis",
+        "--out-dir",
+        "/Volumes/VertigoDataTier/pact/experiments/results/curvelet_throughR_p0_windowed_n600_seed0",
+        "--label",
+        "curvelet-throughR-windowed-n600",
+        "--purpose",
+        "P0 windowed-curvelet treatment; operator-GO only",
+        "--dry-run"
+      ],
+      "fire_argv": [
+        "python3",
+        "tools/launch_witness_run.py",
+        "--gt-cache",
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "--num-pairs",
+        "600",
+        "--config",
+        "v9_cgauge_ideal_mod32",
+        "--dsl-lever",
+        "WindowedCurveletBasis",
+        "--out-dir",
+        "/Volumes/VertigoDataTier/pact/experiments/results/curvelet_throughR_p0_windowed_n600_seed0",
+        "--label",
+        "curvelet-throughR-windowed-n600",
+        "--purpose",
+        "P0 windowed-curvelet treatment; operator-GO only"
+      ]
+    }
+  ],
+  "post_training_byte_close_exact_eval_template": [
+    "python3",
+    "tools/levelset_byte_close_and_eval.py",
+    "--ckpt-dir",
+    "{arm.out_dir}",
+    "--gt-cache",
+    "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "--verify-bit-exact",
+    "--bit-exact-pairs",
+    "2",
+    "--run-exact-eval",
+    "--eval-device",
+    "{contest_axis_device}",
+    "--keep-packet",
+    "--out",
+    "{arm.out_dir}/byte_close_exact_eval_{contest_axis_device}.json"
+  ],
+  "acceptance": {
+    "resolved_trainer_argv_diff": [
+      "--basis polar_fourier (implicit parser default)",
+      "--basis windowed_curvelet (explicit treatment)"
+    ],
+    "require_no_other_resolved_config_delta": true,
+    "require_default_checkpoint_and_packet_bytes_unchanged": true,
+    "require_mlx_numpy_basis_parity": true,
+    "require_generated_inflate_numpy_oracle_uint8_bit_exact": true,
+    "require_basis_manifest_mutation_changes_uint8_output": true,
+    "require_archive_sha256_size_command_seed_git_upstream_hardware_logs_lane_claim": true,
+    "realized_d_seg_row": "OWED_OPERATOR_GO_RUN",
+    "family_verdict_before_row": "OPEN"
+  },
+  "local_pure_compile_receipt": {
+    "named_config_derived": "v9_cgauge_ideal_mod32",
+    "control_only_pairs_excluding_out_dir": [],
+    "treatment_only_pairs_excluding_out_dir": [
+      [
+        "--basis",
+        "windowed_curvelet"
+      ]
+    ],
+    "launcher_or_training_started": false
+  },
+  "frame_swap_caveat": "The dispatch/receiver harness is a basis-family switch. If the separately proved literal polar-curvelet or shearlet primitive becomes the selected implementation, swap the frame compiler and its sealed manifest schema together; do not reuse this windowed-directional family label as proof of literal Candes-Donoho construction."
+}
