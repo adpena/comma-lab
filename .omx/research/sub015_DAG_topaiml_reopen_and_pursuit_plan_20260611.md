@@ -18248,3 +18248,17 @@ annulus and longest end of long tail". Full table:
   the upgraded smoke-regime plan (post-event levers from ep1, verdict epoch, drift column) at HEAD.
 - Spend state: #381 envelope debited ~$0.21; smoke budget unchanged (~$3.30-class pre-approved,
   stop-and-report >$5). Apparatus/means; pointer 0.19108 UNMOVED.
+
+## FEED-438-r3 (2026-07-15) — upgraded CUDA smoke DISPATCHED (live H100 paid call), 2 × $0 HEAD-race pre-spawn refusals en route
+- r3 IS LIVE: fc-01KXKE6QJH27DEHV3RC7XCQZ1C — the UPGRADED smoke-regime plan (timeout-stop, no
+  3-epoch toy cutoff; post-event levers forced from ep1 via compile_v9_cgauge_432_smoke_regime_config;
+  ≥1 verdict epoch; drift column owed), sealed plan sha bound at HEAD, ~$3.30-class ceiling on the
+  #381 envelope. Prior call fc-01KXKBQ1B6NZ0YR7Z7TJB585YT = the r2 rc=1 eager-MLX boot crash
+  (FEED-438-r2, ~$0.21, root-cause fixed).
+- Two $0 pre_spawn_fatal rows between attempts: the plan binds source_git_head and live arms kept
+  landing → HEAD moved between plan-build and --execute → launcher refused BEFORE spawn (fail-closed
+  working exactly as designed; $0 each). Instance note: on a busy main, build-plan→execute must be
+  ONE atomic step (the arm's one-shot script does this; the races were manual retries).
+- Deliverable when it lands: warm steady-state s/ep · post-event s/ep · verdict cost · gradient/
+  trajectory drift vs MLX reference → the CUDA side of the operator's cost table (vs the measured
+  max-Metal row). Apparatus/means; pointer 0.19108 UNMOVED.
