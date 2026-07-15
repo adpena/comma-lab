@@ -172,3 +172,21 @@ or invoke the torch trainer's `--dsl-config` CPU path).
   attribution via `compile_warmup_epoch` + per-epoch mirror rows; fallback lever wired
   (`--torch-compile-mode off`) for r7 if compile still eats the window; (ii) Inductor cudagraph
   trees ride with default mode (same as sealed design; degrade-gracefully expected).
+
+## 9. Single-flight detection pattern — CORRECTED (execution-time findings, for #513's structural build)
+
+- **Wrong (r6 daemon v1):** `modal app list | awk -F'│' '$5+0>0'` — box-drawing column split is
+  fragile (coordinator verified `$4` is the Tasks column in the current CLI table), AND the table
+  keeps a HISTORICAL task count on stopped apps (measured 2026-07-15: two crashed-runner zombie
+  apps — `comma-auth-eval` ap-aFBsw5qxwMVZlJIc8wSliy [ModuleNotFoundError: modal_auth_eval,
+  2026-05-31] and `comma-auth-eval-cpu` ap-JrmQnaJQZBZYwOkdT9Zc2e [ModuleNotFoundError: tac,
+  2026-06-04] — showed tasks=1 both before AND after `modal app stop -y`; both stopped by this arm
+  at 15:09/15:10 CDT with crashed-runner log evidence).
+- **Correct (r6 daemon v2, live):** `modal app list --json` → hold iff
+  `int(tasks) > 0 AND state not in {stopped, stopping}`. Key strictly on a live task count, never
+  on app presence/name/date (ephemeral app records linger for months at $0). Policy intent = one
+  RUNNING job, not zero stale app records.
+- Sister lesson (process plane): a `Bash run_in_background` daemon wrapper dies at harness SIGURG
+  (rc=144) but ORPHANS the daemon bash (ppid 1, kept looping + logging) — enumerate
+  `pgrep -f <script>` and kill orphans BEFORE relaunching, else double-fire risk; relaunch via the
+  CLAUDE.md Pattern A (`nohup bash -c ... & disown`).
