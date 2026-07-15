@@ -1,0 +1,48 @@
+{
+  "schema": "c1_throughput_composed_bench.v1",
+  "status": "BLOCKED_INPUT_CUSTODY",
+  "program_name": "v9_cgauge_ideal_mod19_sR_c1_throughput",
+  "scientific_argv_sha256": "ea9e8a3f22ef9121dedcb689a7debc26171eee2ce613224824d09db052135d78",
+  "typed_config_hash": "4f1b9d1cc23383e134ce6213a8e6f43e53800a64d5174b7f2c60262cb453d1e6",
+  "authority_axis": "[macOS-M5-Max local training-throughput advisory; MEANS only]",
+  "attempted_at_utc": "2026-07-15T09:22:37Z",
+  "micro_batch_pairs": 1,
+  "num_pairs": 600,
+  "real_gt_cache": false,
+  "gt_cache_path": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "gt_cache_sha256": null,
+  "sr_source_kind": null,
+  "sr_cache_path": "experiments/results/mlx_fleet_gt_cache/gt_n600_sR.npz",
+  "sr_cache_sha256": null,
+  "sr_consumer_exercised": false,
+  "seconds_per_epoch": null,
+  "peak_rss_gib": null,
+  "bit_identity_spot_check": "NOT_RUN",
+  "launch_attempted": false,
+  "blockers": [
+    "C1_REAL_GT_CACHE_MISSING: no gt_n600.npz exists in this isolated worktree",
+    "C1_SR_CUSTODY_MISSING: neither an adjacent gt_n600_sR.npz nor an admitted in-cache S_R receipt exists",
+    "C1_UPSTREAM_RUNTIME_MISSING: the gitignored upstream scorer/runtime tree is absent in this isolated worktree"
+  ],
+  "stores_searched": [
+    "isolated worktree experiments/results",
+    "/Volumes/VertigoDataTier/pact",
+    "/Volumes/APDataStore/pact"
+  ],
+  "intended_launcher_argv": [
+    ".venv/bin/python",
+    "tools/launch_witness_run.py",
+    "--gt-cache",
+    "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "--num-pairs",
+    "600",
+    "--config",
+    "v9_cgauge_ideal_mod19_sR_c1_throughput",
+    "--out-dir",
+    "experiments/results/v9_cgauge_ideal_mod19_sR_c1_throughput_20260715",
+    "--no-dashboard"
+  ],
+  "verdict_scope": "current isolated-worktree input/runtime custody only; no throughput, identity, or C1 formulation verdict",
+  "score_claim": false,
+  "pointer_moved": false
+}
