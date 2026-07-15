@@ -59,3 +59,52 @@ def test_cuda_graph_runner_cpu_fallback_executes_every_real_step():
     assert float(runner.run(torch.tensor(3.0))) == 9.0
     assert calls == [2.0, 3.0]
     assert not runner.receipt()["captured"]
+
+
+def _cuda_shaped_policy():
+    return TorchExecutionPolicy(
+        device_type="cuda",
+        amp_dtype="bfloat16",
+        grad_scaler=False,
+        tf32=True,
+        cudnn_benchmark=True,
+        compile_mode="max-autotune",
+        cuda_graphs=True,
+        execution_label="megakernel_candidate",
+    )
+
+
+def test_compile_kwargs_accepted_by_torch():
+    """$0 wrap-time guard for the 2026-07-15 r3 H100 rc=1 (@323.8s, ~$0.45):
+    torch.compile refuses mode= and options= together, and it validates kwargs
+    at WRAP time on any device — so this failure class never needed a paid
+    dispatch to surface. The prior source-token test verified constants, not
+    behavior (NO-FAKE class #2); this one actually wraps through the real
+    adoption path with a CUDA-shaped policy."""
+    fn, receipt = adopt_compiled_training_region(
+        lambda x: x * 2,
+        _cuda_shaped_policy(),
+        {"argmax_equal": True, "cosine_phi": 1.0},
+    )
+    assert receipt.adopted
+    assert receipt.mode == "max-autotune"
+    assert callable(fn)
+
+
+def test_compile_refuses_unregistered_mode():
+    policy = TorchExecutionPolicy(
+        device_type="cuda",
+        amp_dtype="bfloat16",
+        grad_scaler=False,
+        tf32=True,
+        cudnn_benchmark=True,
+        compile_mode="not-a-mode",
+        cuda_graphs=True,
+        execution_label="megakernel_candidate",
+    )
+    with pytest.raises(RuntimeError, match="no options-equivalent"):
+        adopt_compiled_training_region(
+            lambda x: x,
+            policy,
+            {"argmax_equal": True, "cosine_phi": 1.0},
+        )

@@ -54,15 +54,32 @@ def adopt_compiled_training_region(
             functional_argmax_equal=argmax_equal,
             functional_cosine_phi=cosine_phi,
         )
+    # torch.compile REFUSES mode= and options= together (measured on the H100
+    # container's torch, 2026-07-15 r3 smoke, rc=1 @323.8s). Express the mode
+    # via its documented option equivalents so the cudagraph toggles and the
+    # mode live in ONE options dict. Wrap-time kwarg validation happens on any
+    # device, so test_compile_kwargs_accepted_by_torch guards this at $0.
+    mode_option_equivalents: dict[str, dict[str, Any]] = {
+        "default": {},
+        "reduce-overhead": {},
+        "max-autotune": {"max_autotune": True},
+    }
+    mode = str(policy.compile_mode)
+    if mode not in mode_option_equivalents:
+        raise RuntimeError(
+            f"compiled training refused: no options-equivalent registered for "
+            f"torch.compile mode {mode!r}"
+        )
+    options: dict[str, Any] = {
+        "triton.cudagraphs": bool(policy.cuda_graphs),
+        "triton.cudagraph_trees": bool(policy.cuda_graphs),
+        **mode_option_equivalents[mode],
+    }
     compiled = torch.compile(
         fn,
-        mode=str(policy.compile_mode),
         fullgraph=False,
         dynamic=False,
-        options={
-            "triton.cudagraphs": bool(policy.cuda_graphs),
-            "triton.cudagraph_trees": bool(policy.cuda_graphs),
-        },
+        options=options,
     )
     return compiled, CompiledRegionReceipt(
         adopted=True,
