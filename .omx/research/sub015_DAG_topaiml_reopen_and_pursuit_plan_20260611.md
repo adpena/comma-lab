@@ -18285,3 +18285,16 @@ annulus and longest end of long tail". Full table:
 - If r5 clears the pose solve it enters the training loop proper — the first CUDA epochs of the real
   config → the warm/post-event/verdict s/ep numbers + trajectory drift vs MLX that fill the CUDA
   column of the operator's cost table. Apparatus/means; pointer 0.19110-family UNMOVED (0.19108).
+
+## FEED-509-3c (2026-07-15) — mem-for-compute fire-now increment: #480 v2 epoch SPANS + verdict-workers ÷N bench (telemetry/instrument, no lever semantics change)
+- Batch 3c (235f02aac4), per the operator's use-the-100GiB directive: (a) #480 telemetry v2 adds
+  disjoint epoch SPANS (span_pre_loop / span_accum_loop / span_epoch_tail) that classify the MEASURED
+  ep2 unattributed 848.5s (77.4%) into pre-loop vs in-loop-gap vs epoch-tail — deliberately NOT
+  real_-prefixed so real_path_sum semantics are unchanged (schema additive-legacy); (b)
+  tools/bench_verdict_parallel_workers.py — the measured ÷N row producer for the workers lever
+  (trainer's own chunked verdict on real gt_n600, 1-thread-law pinned, value-equality asserted
+  across worker counts).
+- Leg disposition: NO DSL leg owed — no lever added/changed (VerdictParallelWorkers already exists;
+  this is its measurement instrument + read-only telemetry fields). NO equation leg owed YET — the
+  anchors land WITH the measurements (the ÷N row + the span classification of the 848.5s), not
+  before them. Apparatus/means; pointer 0.19108 UNMOVED.
