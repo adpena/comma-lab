@@ -29,8 +29,11 @@ with NO GPU / NO scorer weights.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Any, Optional
+
+from tac.witness_dsl.lawref import LawRef, LawResolveError, resolve
 
 # Measured anchors (compute design pass 2026-07-02; [macOS-MLX advisory]). Overridable.
 ON_REF_MS: float = 396.0      # custom-grouped-backward ON (fast path) SegNet fwd+bwd @ B=8
@@ -76,31 +79,226 @@ RUN1_MEASURED_MIN_PER_EP: float = 3.47  # crucible_v6 run-1 startup-AMORTIZED 30
 RUN1_ANCHOR_SEGNET_MS: float = ON_REF_MS  # the run-1 machine's SegNet fwd+bwd micro-bench reference
 
 # ── wall-clock BUDGET slack factor (req-T tagged) ──
-# A DERIVED wall-clock budget = anchor min/ep x epochs x this slack (project_wall_clock_days x slack).
-# The budget is a REFUSE CEILING (default-on gate), not a target: it fires when THIS machine's measured
-# SegNet bench projects a run SLOWER than the run-1 anchor by more than the slack. Provenance
-# (value-provenance ladder, req-T): HARDCODED-WITH-WAIVER-class magnitude with a MEASURED anchor for the
-# ceiling. As of the v7.3 round-2 re-anchor the min/ep anchor is the STARTUP-AMORTIZED 3000-ep cadence
-# (3.47; startup S is now amortized IN the anchor, not double-counted), so this slack is a slim PURE
-# thermal/per-ep-jitter headroom and the gate is a TRUE >15% refuse (>15% slower than the honest
-# amortized cadence => REFUSE) rather than the ~23% gate the un-amortized 3.62 anchor gave. RE-DERIVE if
-# the run-1 startup/steady split changes or a lever batches the forward (micro-batch>1 => a different
-# min/ep => a different implied ceiling).
+# The canonical DERIVED budget integrates each event stage's LawRef-resolved min/ep anchor, then applies
+# this thermal/jitter headroom once to the sum. The budget is a REFUSE CEILING (default-on gate), not a
+# target. The older RUN1_MEASURED_MIN_PER_EP flat law remains only the explicit, reason-logged fallback
+# when the event telemetry cannot be resolved. Re-derive the stage profile when an actuator changes the
+# event boundary or per-stage work; re-derive this slack if the tolerated machine/jitter envelope changes.
 WALL_CLOCK_SLACK_FACTOR: float = 1.15
+
+
+@dataclass(frozen=True)
+class StageWallClockAnchor:
+    """One event stage's minutes/epoch anchor with executable LawRef custody."""
+
+    name: str
+    min_per_ep_ref: LawRef
+    source: str
+
+
+@dataclass(frozen=True)
+class EventConditionalWallClockProfile:
+    """Two-stage profile separated by a measured event transition epoch."""
+
+    transition_epoch_ref: LawRef
+    pre_event: StageWallClockAnchor
+    post_event: StageWallClockAnchor
+    source: str
+    config_tags: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class DerivedWallClockStage:
+    """Resolved contribution from one stage in a wall-clock budget receipt."""
+
+    name: str
+    epochs: int
+    min_per_ep: float
+    source: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "epochs": self.epochs,
+            "min_per_ep": self.min_per_ep,
+            "source": self.source,
+        }
+
+
+@dataclass(frozen=True)
+class WallClockBudgetReceipt:
+    """Auditable result of the event-conditional or explicit flat fallback law."""
+
+    total_days: float
+    slack: float
+    stages: tuple[DerivedWallClockStage, ...]
+    lawref_manifest: Mapping[str, Mapping[str, Any]]
+    flat_fallback_used: bool
+    fallback_reason: str | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_days": self.total_days,
+            "slack": self.slack,
+            "stages": [stage.to_dict() for stage in self.stages],
+            "lawref_manifest": dict(self.lawref_manifest),
+            "flat_fallback_used": self.flat_fallback_used,
+            "fallback_reason": self.fallback_reason,
+        }
+
+
+def canonical_event_wall_clock_profile() -> EventConditionalWallClockProfile:
+    """Build the content-addressed C0 lane-band profile (ep1..32, then ep33+)."""
+
+    from tac.canonical_equations.event_conditional_wall_clock_budget_20260715 import (
+        CONFIG_TAGS,
+        canonical_event_wall_clock_lawrefs,
+    )
+
+    refs = canonical_event_wall_clock_lawrefs()
+    return EventConditionalWallClockProfile(
+        transition_epoch_ref=refs["transition_epoch"],
+        pre_event=StageWallClockAnchor(
+            name="pre_event",
+            min_per_ep_ref=refs["pre_event_min_per_ep"],
+            source="MEASURED C0 ep1..32 median 251.6 s/ep",
+        ),
+        post_event=StageWallClockAnchor(
+            name="post_event",
+            min_per_ep_ref=refs["post_event_min_per_ep"],
+            source="DERIVED midpoint of MEASURED C0 ep33+ range 325..333 s/ep",
+        ),
+        source="C0 lane_band_via_lane_nucleus event fired at epoch 33",
+        config_tags=CONFIG_TAGS,
+    )
+
+
+_CANONICAL_EVENT_PROFILE = object()
+
+
+def derive_wall_clock_budget_receipt(
+    epochs: int,
+    *,
+    profile: EventConditionalWallClockProfile | None | object = _CANONICAL_EVENT_PROFILE,
+    flat_min_per_ep: float = RUN1_MEASURED_MIN_PER_EP,
+    slack: float = WALL_CLOCK_SLACK_FACTOR,
+) -> WallClockBudgetReceipt:
+    """Derive ``sum(stage_epochs * stage_min_per_ep) / 1440 * slack``.
+
+    ``profile=None`` explicitly requests the legacy flat fallback. Missing,
+    content-rotted, or otherwise invalid stage telemetry also falls back and
+    records the exact reason in the receipt.
+    """
+
+    if epochs <= 0:
+        raise ValueError(f"epochs must be positive to derive a wall-clock budget, got {epochs}")
+    if flat_min_per_ep <= 0.0 or slack <= 0.0:
+        raise ValueError(
+            f"flat_min_per_ep/slack must be positive, got {flat_min_per_ep}/{slack}"
+        )
+
+    fallback_reason: str | None = None
+    if profile is _CANONICAL_EVENT_PROFILE:
+        profile = canonical_event_wall_clock_profile()
+    if profile is None:
+        fallback_reason = "event telemetry profile absent"
+    elif not isinstance(profile, EventConditionalWallClockProfile):
+        fallback_reason = f"event telemetry profile invalid type: {type(profile).__name__}"
+
+    if fallback_reason is None:
+        assert isinstance(profile, EventConditionalWallClockProfile)
+        try:
+            transition = resolve(
+                profile.transition_epoch_ref, profile.config_tags
+            )
+            pre = resolve(profile.pre_event.min_per_ep_ref, profile.config_tags)
+            post = resolve(profile.post_event.min_per_ep_ref, profile.config_tags)
+            transition_epoch = int(transition.value)
+            if transition_epoch != transition.value or transition_epoch < 1:
+                raise ValueError(
+                    f"transition epoch must be a positive integer, got {transition.value!r}"
+                )
+            pre_min_per_ep = float(pre.value)
+            post_min_per_ep = float(post.value)
+            if not (0.0 < pre_min_per_ep < float("inf")):
+                raise ValueError(f"pre-event min/ep is invalid: {pre_min_per_ep!r}")
+            if not (0.0 < post_min_per_ep < float("inf")):
+                raise ValueError(f"post-event min/ep is invalid: {post_min_per_ep!r}")
+
+            # The event is observed at epoch 33, so epochs 1..32 are pre-event
+            # and epoch 33 onward is post-event. Short runs truncate exactly.
+            pre_epochs = min(int(epochs), max(transition_epoch - 1, 0))
+            post_epochs = int(epochs) - pre_epochs
+            stages = (
+                DerivedWallClockStage(
+                    profile.pre_event.name,
+                    pre_epochs,
+                    pre_min_per_ep,
+                    profile.pre_event.source,
+                ),
+                DerivedWallClockStage(
+                    profile.post_event.name,
+                    post_epochs,
+                    post_min_per_ep,
+                    profile.post_event.source,
+                ),
+            )
+            total_minutes = sum(stage.epochs * stage.min_per_ep for stage in stages)
+            return WallClockBudgetReceipt(
+                total_days=(total_minutes / (60.0 * 24.0)) * float(slack),
+                slack=float(slack),
+                stages=stages,
+                lawref_manifest={
+                    "transition_epoch": transition.to_dict(),
+                    "pre_event_min_per_ep": pre.to_dict(),
+                    "post_event_min_per_ep": post.to_dict(),
+                },
+                flat_fallback_used=False,
+                fallback_reason=None,
+            )
+        except (KeyError, LawResolveError, OSError, ValueError) as exc:
+            fallback_reason = f"event telemetry unusable: {exc}"
+
+    stages = (
+        DerivedWallClockStage(
+            "flat_fallback",
+            int(epochs),
+            float(flat_min_per_ep),
+            "legacy RUN1_MEASURED_MIN_PER_EP flat anchor",
+        ),
+    )
+    return WallClockBudgetReceipt(
+        total_days=project_wall_clock_days(float(flat_min_per_ep), int(epochs)) * float(slack),
+        slack=float(slack),
+        stages=stages,
+        lawref_manifest={},
+        flat_fallback_used=True,
+        fallback_reason=fallback_reason,
+    )
 
 
 def derive_wall_clock_budget_days(epochs: int,
                                   min_per_ep: float = RUN1_MEASURED_MIN_PER_EP,
-                                  slack: float = WALL_CLOCK_SLACK_FACTOR) -> float:
-    """DERIVE a config's wall-clock BUDGET (days) from the measured anchor x epochs x slack — the
-    single SoT for both the typed-config REQUIRED field and the launcher's default-on fallback.
-    ``budget = project_wall_clock_days(min_per_ep, epochs) * slack``. Pure. NEVER hand-pick a budget;
-    compute it here so the ceiling tracks the anchor. Raises on non-positive inputs."""
-    if epochs <= 0:
-        raise ValueError(f"epochs must be positive to derive a wall-clock budget, got {epochs}")
-    if min_per_ep <= 0.0 or slack <= 0.0:
-        raise ValueError(f"min_per_ep/slack must be positive, got {min_per_ep}/{slack}")
-    return project_wall_clock_days(min_per_ep, int(epochs)) * float(slack)
+                                  slack: float = WALL_CLOCK_SLACK_FACTOR,
+                                  *,
+                                  profile: EventConditionalWallClockProfile | None | object = (
+                                      _CANONICAL_EVENT_PROFILE
+                                  )) -> float:
+    """Backward-compatible float facade over the event-conditional receipt law.
+
+    ``min_per_ep`` remains in the signature for existing callers and is the
+    explicit flat fallback anchor when stage telemetry is unavailable.
+    """
+
+    # Backward compatibility: callers that explicitly supplied a non-canonical
+    # flat anchor were asking for the old ``anchor * epochs * slack`` law. Do
+    # not silently ignore that override merely because the canonical event
+    # profile is now the default.
+    if profile is _CANONICAL_EVENT_PROFILE and min_per_ep != RUN1_MEASURED_MIN_PER_EP:
+        profile = None
+    return derive_wall_clock_budget_receipt(
+        epochs, profile=profile, flat_min_per_ep=min_per_ep, slack=slack
+    ).total_days
 
 
 def implied_segnet_ms_ceiling(budget_days: float, epochs: int,
@@ -178,6 +376,36 @@ def project_launch_wall_clock(machine_segnet_ms: Optional[float], epochs: int,
     over = None if budget_days is None else bool(days > float(budget_days))
     return WallClockProjection(min_per_ep=mpe, epochs=int(epochs), total_days=days,
                                budget_days=budget_days, over_budget=over)
+
+
+def project_event_conditional_launch_wall_clock(
+    machine_segnet_ms: float | None,
+    epochs: int,
+    budget_days: float | None = None,
+    ref_segnet_ms: float = RUN1_ANCHOR_SEGNET_MS,
+) -> WallClockProjection | None:
+    """Scale the event-stage reference law by this machine's measured scorer ratio.
+
+    The reference receipt carries the stage-dependent non-scorer work; the
+    measured SegNet ratio scales the full observed cadence, matching the prior
+    gate's conservative assumption while avoiding a pre-event-only projection.
+    """
+
+    if machine_segnet_ms is None:
+        return None
+    if ref_segnet_ms <= 0.0:
+        raise ValueError(f"ref_segnet_ms must be positive, got {ref_segnet_ms}")
+    receipt = derive_wall_clock_budget_receipt(int(epochs), slack=1.0)
+    days = receipt.total_days * (float(machine_segnet_ms) / float(ref_segnet_ms))
+    min_per_ep = days * (60.0 * 24.0) / float(epochs)
+    over = None if budget_days is None else bool(days > float(budget_days))
+    return WallClockProjection(
+        min_per_ep=min_per_ep,
+        epochs=int(epochs),
+        total_days=days,
+        budget_days=budget_days,
+        over_budget=over,
+    )
 
 
 @dataclass(frozen=True)

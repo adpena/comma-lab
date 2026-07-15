@@ -91,6 +91,83 @@ def test_anchors_are_sane():
     assert gate.SEG_H == 384 and gate.SEG_W == 512
 
 
+def test_event_conditional_budget_has_lawref_custody_and_midpoint():
+    receipt = gate.derive_wall_clock_budget_receipt(3000)
+    assert receipt.flat_fallback_used is False
+    assert receipt.fallback_reason is None
+    assert [stage.epochs for stage in receipt.stages] == [32, 2968]
+    assert receipt.stages[0].min_per_ep == pytest.approx(251.6 / 60.0)
+    assert receipt.stages[1].min_per_ep == pytest.approx(((325.0 + 333.0) / 2.0) / 60.0)
+    assert set(receipt.lawref_manifest) == {
+        "transition_epoch",
+        "pre_event_min_per_ep",
+        "post_event_min_per_ep",
+    }
+    for row in receipt.lawref_manifest.values():
+        assert row["fallback_used"] is False
+        assert row["inputs"]
+        assert all(item["sha256"] for item in row["inputs"])
+
+
+@pytest.mark.parametrize(
+    ("epochs", "expected_counts"),
+    [(1, [1, 0]), (20, [20, 0]), (32, [32, 0]), (33, [32, 1])],
+)
+def test_event_conditional_budget_truncates_short_runs(epochs, expected_counts):
+    receipt = gate.derive_wall_clock_budget_receipt(epochs)
+    assert [stage.epochs for stage in receipt.stages] == expected_counts
+    assert sum(stage.epochs for stage in receipt.stages) == epochs
+
+
+def test_flat_fallback_is_explicit_and_keeps_old_formula():
+    receipt = gate.derive_wall_clock_budget_receipt(3000, profile=None)
+    assert receipt.flat_fallback_used is True
+    assert receipt.fallback_reason == "event telemetry profile absent"
+    assert receipt.total_days == pytest.approx(
+        gate.project_wall_clock_days(gate.RUN1_MEASURED_MIN_PER_EP, 3000)
+        * gate.WALL_CLOCK_SLACK_FACTOR
+    )
+
+
+def test_explicit_custom_flat_anchor_keeps_backward_compatible_math():
+    got = gate.derive_wall_clock_budget_days(20, min_per_ep=2.5, slack=1.1)
+    assert got == pytest.approx(gate.project_wall_clock_days(2.5, 20) * 1.1)
+
+
+def test_invalid_event_profile_falls_back_with_reason():
+    receipt = gate.derive_wall_clock_budget_receipt(10, profile=object())
+    assert receipt.flat_fallback_used is True
+    assert "invalid type" in str(receipt.fallback_reason)
+
+
+def test_missing_lawref_anchor_falls_back_with_logged_reason(tmp_path):
+    from dataclasses import replace
+
+    from tac.witness_dsl.lawref import InputRef, LawRef
+
+    profile = gate.canonical_event_wall_clock_profile()
+    original = profile.pre_event.min_per_ep_ref
+    missing_ref = LawRef(
+        equation_id=original.equation_id,
+        inputs={
+            "seconds": InputRef.anchor(
+                str(tmp_path / "missing.json"),
+                "telemetry/pre_event/median_seconds_per_epoch",
+                "test-only missing measured telemetry anchor",
+                config_tags=profile.config_tags,
+            )
+        },
+        ladder_class=original.ladder_class,
+    )
+    broken = replace(
+        profile,
+        pre_event=replace(profile.pre_event, min_per_ep_ref=missing_ref),
+    )
+    receipt = gate.derive_wall_clock_budget_receipt(20, profile=broken)
+    assert receipt.flat_fallback_used is True
+    assert "artifact" in str(receipt.fallback_reason)
+
+
 # --------------------------------------------------------------------------
 # GPU-gated smoke: the REAL micro-bench returns a finite ms (skips w/o MLX+scorer)
 # --------------------------------------------------------------------------

@@ -771,17 +771,18 @@ def test_registered_off_levers_carry_named_triggers():
     assert "road" in rd and "0.30" in rd and "ep200" in rd
 
 
-# ── (o) v7.3 delta 4: the wall-clock budget re-derived from the LIVE 3.62 incl-startup cadence ──
-def test_wall_clock_budget_rederived_from_amortized_cadence(compiled):
-    """SEAL v7.4 round-3 DM-MINOR-1: the DERIVED budget uses the STARTUP-AMORTIZED 3000-ep cadence
-    3.47 min/ep, re-fit on the WIDER ep25->125 window (was 3.39 on the narrow ep75->100 window that
-    landed in a slow-adjacent-fast trough; the full-window MEASURED steady slope is 3.4537, so
-    amortized(3000)=3.47), so at 3000 ep the ceiling is ~8.31 days (7.23 anchor projection x 1.15
-    slack). Direction is strictly more conservative (ceiling tightens, budget grows ~0.2 d)."""
+# ── (o) wall-clock budget re-derived from event-conditional measured cadence ──
+def test_wall_clock_budget_rederived_from_event_stage_cadence(compiled):
+    """The DERIVED budget integrates the measured lane-band event discontinuity.
+
+    Epochs 1..32 use the C0 251.6 s/ep median; epoch 33 onward uses the
+    transparent midpoint of the measured 325..333 s/ep range. The older 3.47
+    min/ep run-1 anchor remains the explicit flat fallback only.
+    """
     from tac.local_acceleration.scorer_throughput_gate import RUN1_MEASURED_MIN_PER_EP
-    assert RUN1_MEASURED_MIN_PER_EP == 3.47  # startup-amortized 3000-ep cadence, ep25->125 window (measured, not a bound)
+    assert RUN1_MEASURED_MIN_PER_EP == 3.47
     budget = compiled.to_launch_config().wall_clock_budget_days
-    assert 8.0 <= float(budget.value) <= 8.5  # ~8.31 days at 3000 ep
+    assert 13.0 <= float(budget.value) <= 13.2
 
 
 # ── (c.7) v7.5 ACTUATION item C.7 — curriculum_min_stage_epochs on the value-provenance ladder ──

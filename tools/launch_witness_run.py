@@ -793,19 +793,30 @@ def resolve_wall_clock_budget(accept_days: float | None, declared_days: float | 
     """Resolve the effective wall-clock budget for the launch (DEFAULT-ON, pure, unit-testable).
 
     Priority: (1) operator ``--accept-wall-clock`` override (stamps the run dir) > (2) the config's
-    DECLARED budget > (3) a launcher-DERIVED fallback from the throughput anchor x epochs x slack (so
-    a legacy config that never declared a budget STILL gets a default-on refuse — the gate never
-    silently disappears). Returns ``(budget_days | None, source_label, is_operator_override)``;
+    DECLARED budget > (3) a launcher-DERIVED event-conditional receipt (so a legacy config that never
+    declared a budget STILL gets a default-on refuse — the gate never silently disappears). If its
+    stage telemetry is absent/unusable, the receipt explicitly identifies the legacy flat fallback
+    reason. Returns ``(budget_days | None, source_label, is_operator_override)``;
     None only when epochs<=0 and nothing was supplied/declared (the gate then stays silent)."""
     if accept_days is not None:
         return float(accept_days), "operator --accept-wall-clock (override, stamped)", True
     if declared_days is not None:
         return float(declared_days), "config-declared (typed DERIVED budget)", False
     if epochs and epochs > 0:
-        from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
-        return (derive_wall_clock_budget_days(int(epochs)),
-                "launcher-derived fallback (anchor min/ep x epochs x slack; config declared none)",
-                False)
+        from tac.local_acceleration.scorer_throughput_gate import (
+            derive_wall_clock_budget_receipt,
+        )
+
+        receipt = derive_wall_clock_budget_receipt(int(epochs))
+        if receipt.flat_fallback_used:
+            source = f"launcher-derived flat fallback: {receipt.fallback_reason}"
+        else:
+            stage_summary = ", ".join(
+                f"{stage.name}={stage.epochs}ep@{stage.min_per_ep:.4f}min/ep"
+                for stage in receipt.stages
+            )
+            source = f"launcher-derived event-conditional ({stage_summary})"
+        return receipt.total_days, source, False
     return None, "unavailable (no budget; epochs unknown)", False
 
 
@@ -839,7 +850,7 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
         from tac.local_acceleration.scorer_throughput_gate import (
             ABS_THRESHOLD_MS,
             evaluate_throughput,
-            project_launch_wall_clock,
+            project_event_conditional_launch_wall_clock,
         )
     except Exception as exc:  # helper import failure must not block the launch
         print(f"[launch-witness] WARNING: throughput gate unavailable (import: {exc}); "
@@ -867,13 +878,14 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
               f"deterministic). See tac.local_acceleration.scorer_throughput_gate."
               f"assert_compile_step_bit_identical.")
     # sub-part 4 (L45): DEFAULT-ON WALL-CLOCK GATE. PROJECT total wall-clock from the measured SegNet
-    # ms + the run-1 anchor and REFUSE against the DECLARED budget (config typed field) — no opt-in
+    # ms + the event-conditional LawRef stage profile and REFUSE against the DECLARED budget — no opt-in
     # flag needed (operator 2026-07-08 "default on always"). Budget resolution: --accept-wall-clock
     # override (stamps) > config-declared > launcher-derived anchor fallback (so a legacy non-declaring
     # config STILL gets a refuse). This also couples throughput to budget (fix #3): a bench that passes
     # the 700ms absolute gate but is slower than the budget-implied ceiling STILL REFUSES here (catches
     # a non-env perf regression — kernel not loading / wrong device / thermal — even with the env set).
-    # Projection is off a same-class (B=1-accum) MEASURED anchor, NOT a fresh per-ep measurement.
+    # Projection is off same-class C0 MEASURED stage anchors, NOT a fresh per-ep measurement. Missing
+    # stage telemetry takes the explicit legacy flat fallback and names the reason in ``budget_src``.
     epochs = int(getattr(cfg, "epochs", 0) or 0)
     budget, budget_src, is_override = resolve_wall_clock_budget(
         accept_wall_clock_days, _config_wall_clock_budget_days(cfg), epochs)
@@ -890,7 +902,9 @@ def _run_throughput_gate(cfg, out_dir, *, threshold_ms: float | None,
                   file=sys.stderr)
         except Exception:  # stamp is best-effort provenance; never block on it
             print(f"[launch-witness] WALL-CLOCK ACCEPT (operator): budget {budget:.2f} days.", file=sys.stderr)
-    proj = project_launch_wall_clock(verdict.segnet_fwd_bwd_ms, epochs, budget_days=budget)
+    proj = project_event_conditional_launch_wall_clock(
+        verdict.segnet_fwd_bwd_ms, epochs, budget_days=budget
+    )
     if proj is not None and epochs > 0:
         print(f"[launch-witness] wall-clock gate (L45, default-on): {proj.detail} [budget: {budget_src}]")
         if proj.over_budget:

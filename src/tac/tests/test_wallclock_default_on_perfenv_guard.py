@@ -110,19 +110,19 @@ def test_budget_is_in_the_config_hash():
     assert a.typed_config_hash() != b.typed_config_hash()
 
 
-# ── FIX 1b: the DERIVED budget math (anchor x epochs x slack) ────────────────────────────
-def test_derive_budget_math_matches_anchor_times_slack():
+# ── FIX 1b: the DERIVED event-conditional budget math ───────────────────────────────────
+def test_derive_budget_math_matches_event_stage_sum_times_slack():
     from tac.local_acceleration.scorer_throughput_gate import (
-        RUN1_MEASURED_MIN_PER_EP,
         WALL_CLOCK_SLACK_FACTOR,
         derive_wall_clock_budget_days,
-        project_wall_clock_days,
     )
     got = derive_wall_clock_budget_days(3000)
-    want = project_wall_clock_days(RUN1_MEASURED_MIN_PER_EP, 3000) * WALL_CLOCK_SLACK_FACTOR
+    # Event fires at ep33: 32 pre-event epochs at 251.6 s/ep, then 2968 at the
+    # transparent midpoint of the measured 325..333 s/ep post-event range.
+    want = ((32 * 251.6 + 2968 * ((325.0 + 333.0) / 2.0)) / 60.0 / 1440.0
+            * WALL_CLOCK_SLACK_FACTOR)
     assert got == pytest.approx(want)
-    # SEAL v7.4 round-3 DM-MINOR-1: 3.47 startup-amortized (ep25->125 window) x 3000 / 1440 = 7.22917 anchor projection.
-    assert got == pytest.approx(7.22917 * WALL_CLOCK_SLACK_FACTOR, rel=1e-3)  # ~8.31 days at 3000 ep
+    assert got == pytest.approx(13.10, rel=1e-3)
 
 
 def test_derive_budget_rejects_nonpositive_epochs():
@@ -137,7 +137,7 @@ def test_v7_config_declares_a_derived_amortized_budget():
                                   out_dir="experiments/results/__v7_budget_test__")
     from tac.witness_dsl.typed_config import ProvenanceClass
     assert c.wall_clock_budget_days.provenance is ProvenanceClass.DERIVED_AT_CONFIG
-    assert 8.0 <= c.budget_days_value() <= 8.5   # ~8.31 days at 3000 ep (SEAL v7.4 r3 DM-MINOR-1 ep25->125 re-anchor)
+    assert 13.0 <= c.budget_days_value() <= 13.2
 
 
 # ── FIX 1c: the launcher budget resolver (pure, default-on) ─────────────────────────────
@@ -157,8 +157,24 @@ def test_resolve_uses_config_declared_when_no_accept():
 def test_resolve_falls_back_to_derived_when_nothing_declared():
     # DEFAULT-ON: a legacy config that declared no budget STILL gets a refuse ceiling.
     b, src, override = _lw.resolve_wall_clock_budget(accept_days=None, declared_days=None, epochs=3000)
-    # SEAL v7.4 r3 DM-MINOR-1: derived fallback now ~8.31 days (3.47 startup-amortized anchor x 3000 x 1.15 slack).
-    assert b == pytest.approx(8.31, rel=1e-2) and override is False and "fallback" in src.lower()
+    assert b == pytest.approx(13.10, rel=1e-2)
+    assert override is False and "event-conditional" in src.lower()
+
+
+def test_resolve_flat_fallback_source_includes_reason(monkeypatch):
+    import tac.local_acceleration.scorer_throughput_gate as stg
+
+    derive = stg.derive_wall_clock_budget_receipt
+    monkeypatch.setattr(
+        stg,
+        "derive_wall_clock_budget_receipt",
+        lambda epochs: derive(epochs, profile=None),
+    )
+    _, src, override = _lw.resolve_wall_clock_budget(
+        accept_days=None, declared_days=None, epochs=3000
+    )
+    assert override is False
+    assert "flat fallback: event telemetry profile absent" in src.lower()
 
 
 def test_resolve_none_only_when_epochs_unknown_and_nothing_supplied():

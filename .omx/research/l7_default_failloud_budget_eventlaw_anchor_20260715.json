@@ -1,0 +1,27 @@
+{
+  "schema": "event_conditional_wall_clock_telemetry.v1",
+  "authority": "MEASURED_MACOS_MLX_ADVISORY_TIMING_ONLY",
+  "score_claim": false,
+  "source_memo": {
+    "path": ".omx/research/v9_missing_signal_constants_audit_20260715.md",
+    "sha256": "99b1c6810c30dcae52851768100efef11eee18a4eb1df6c372027017e5e1218f"
+  },
+  "config_tags": {
+    "vehicle": "v9_cgauge_c0",
+    "num_pairs": 600,
+    "event": "lane_band_via_lane_nucleus"
+  },
+  "telemetry": {
+    "transition_epoch": 33,
+    "pre_event": {
+      "epoch_domain": "1..32",
+      "median_seconds_per_epoch": 251.6
+    },
+    "post_event": {
+      "epoch_domain": "33+",
+      "observed_seconds_per_epoch_lower": 325.0,
+      "observed_seconds_per_epoch_upper": 333.0,
+      "scalar_rule": "arithmetic_midpoint"
+    }
+  }
+}

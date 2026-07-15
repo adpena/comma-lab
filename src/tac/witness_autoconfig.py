@@ -1782,8 +1782,8 @@ def _attach_dsl_program_manifest(cfg: "WitnessConfig", *, program_name: str, d6:
         wall_clock_budget_days=Provenanced(
             value=round(derive_wall_clock_budget_days(int(cfg.epochs)), 3),
             provenance=_PC.DERIVED_AT_CONFIG, unit="days",
-            source="scorer_throughput_gate.derive_wall_clock_budget_days"
-                   "(anchor RUN1_MEASURED_MIN_PER_EP x epochs x WALL_CLOCK_SLACK_FACTOR)"),
+            source="scorer_throughput_gate.derive_wall_clock_budget_receipt"
+                   "(event-stage LawRefs x expected stage epochs x WALL_CLOCK_SLACK_FACTOR)"),
         mlx_device="gpu",
         temp=TypedAnneal(
             start=Provenanced(value=1.0, provenance=_PC.MEASURED_ANCHOR, unit="tau",
@@ -2679,8 +2679,8 @@ def _build_crucible_v7(
         wall_clock_budget_days=Provenanced(
             value=round(derive_wall_clock_budget_days(int(epochs)), 3),
             provenance=_PC.DERIVED_AT_CONFIG, unit="days",
-            source="scorer_throughput_gate.derive_wall_clock_budget_days"
-                   "(anchor RUN1_MEASURED_MIN_PER_EP x epochs x WALL_CLOCK_SLACK_FACTOR)"),
+            source="scorer_throughput_gate.derive_wall_clock_budget_receipt"
+                   "(event-stage LawRefs x expected stage epochs x WALL_CLOCK_SLACK_FACTOR)"),
         mlx_device="gpu",
         seed=0,
         purpose=(
