@@ -18192,3 +18192,33 @@ annulus and longest end of long tail". Full table:
 - **Triality:** DAG=this FEED · DSL=`AdaptiveGradClip`/`LaneBandStaticCache` factories ·
   equations=`autoclip_percentile_grad_clip_20260715` (closes FEED-205watch's flagged
   no-registered-equation gap for the clip law). **pointer 0.19108 UNMOVED (means).**
+
+## FEED-507-fire (2026-07-15) — cohesive package COMPOSED + skeleton DISSOLVED + fire chain armed
+
+- **SIGNAL:** operator 2026-07-15 "stop deferring and build aggressively" + "Three stages cargo
+  culted is naive and toy" + the flicker-floor re-scope (FEED-507-flicker-floor-rescope, committed).
+- **BUILT (commits 34e375a2e7 · 22808dc7eb · 4443481059 · 6d39a7dfc9 · e71445a025):** the LAST
+  epoch-scripted transition dissolved — `--seg-phase-advect-start-event label_floor` (5th
+  EventBackstopGate, `__pag_` resume prefix, `event_wirings.label_floor_event` reading the
+  trainer's OWN verdict stream {epoch, d_seg, seg_form} — poison-law compliant; epoch 726 demoted
+  to LOUD backstop; governance event=fires/cap=backstops; schedule-provenance 12/12 OK). spec_c1:
+  `phase_tail_label_floor_event` lever + adaptive-ε #318 typed SLOT (inert-without-viscosity +
+  FALSIFIED_MECHANISM cite) + #425 `byte_close_contract.phase_carrier` (post-engage checkpoints
+  byte-close WITH --phase-carrier) + flicker-floor licensing block. PAIRED curvelet A/B arm config
+  `c1_optimal_form_curvelet_arm` (same seed; delta = basis family only; the
+  `curvelet_through_R_dseg_ab` receipt producer) registered + STAGED (dry-run all-gates green).
+  Timer family #406 custody UNBLOCKED (hosc_beta_end argv-owner 3.177, 10.0 historical). Blockers
+  now COMPILE-TIME DERIVED (sR custody CLEAR from the real sidecar; bench blocker drops on a GREEN
+  dry_start_report); the bounded --dry-start PROCEEDS under blockers as the receipt producer
+  (rc=11 real-launch invariant intact). DIRECT_CONTROLLER_NAMES coverage backfilled (red at HEAD).
+- **FIRE:** durable chain `.omx/tmp/c1_dry_start/chain_507.sh` — drain-wait (sibling GPU contention
+  made the b2 bench 678ms > 594ms; fast path active, OFF≈6713) → bounded dry-start (the
+  C1_COMPOSED_BENCH receipt) → on GREEN the REAL governed launch. Four governor REFUSEs treated as
+  information (LawRef rc=8 → fixed; admission; blocker rc=11 → derivation fixed; throughput rc=3 →
+  transient contention, not threshold-bumped). Ledger: `SPEC_cohesive_v9max_package_20260715.md`
+  (ON/OFF table + 6-cluster theory→config traceability, consume-or-explain).
+- **Triality:** DAG=this FEED + the SPEC ledger · DSL=`spec_c1_optimal_form_20260715`
+  (`phase_tail_label_floor_event`, derived blockers, curvelet arm) · equations=the 2026-07-15
+  `domain_refined`/`anchor_appended` events on
+  `gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1` (this build is their trainer
+  realization; NO_EQUATION_NEEDED on the wiring itself). **pointer 0.19108 UNMOVED (means).**
