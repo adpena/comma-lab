@@ -300,9 +300,21 @@ def test_ideal_manifest_parity_extincts_hosc_duplicate_owner(ideal_ab) -> None:
     for cfg in ideal_ab:
         emitted = _argv_pairs(cfg.typed.to_program().compile_trainer_argv())
         row = cfg.constants_manifest["hosc_beta_end"]
-        assert row["single_value_owner"] == "compiled_dsl_argv"
-        assert float(row["value"]) == float(emitted["--hosc-beta-end"]) == pytest.approx(3.177)
+        assert row["single_value_owner"] == "v9_hosc_beta_endpoint_v1"
+        assert row["equation_id"] == "v9_hosc_beta_endpoint_v1"
+        assert float(row["value"]) == float(emitted["--hosc-beta-end"]) == pytest.approx(8.0)
         assert float(row["inherited_manifest_value_replaced"]) == pytest.approx(10.0)
+
+
+def test_ideal_manifest_parity_extincts_margin_msafe_duplicate_owner(ideal_ab) -> None:
+    for cfg in ideal_ab:
+        emitted = _argv_pairs(cfg.typed.to_program().compile_trainer_argv())
+        row = cfg.constants_manifest["seg_margin_satisfice_msafe"]
+        assert row["single_value_owner"] == "margin_band_satisficing_threshold_v1"
+        assert row["equation_id"] == "margin_band_satisficing_threshold_v1"
+        assert float(row["value"]) == float(
+            emitted["--seg-margin-satisfice-msafe"]
+        ) == pytest.approx(0.039180326461791926)
 
 
 def test_ideal_includes_safe_set_and_composed_margin(ideal_ab) -> None:

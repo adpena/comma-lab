@@ -322,6 +322,18 @@ def eval_margin_band_satisficing_threshold(inputs: Mapping[str, Any]) -> float:
     )
 
 
+def eval_v9_hosc_beta_endpoint(inputs: Mapping[str, Any]) -> float:
+    """V9 beta endpoint from its dyadic interface-width continuation."""
+
+    from tac.canonical_equations.v9_hosc_beta_endpoint_20260715 import (
+        v9_hosc_beta_endpoint,
+    )
+
+    return v9_hosc_beta_endpoint(
+        float(inputs["beta_start"]), int(inputs["dyadic_refinements"])
+    )
+
+
 def eval_isoperimetric_birth_weight(inputs: Mapping[str, Any]) -> float:
     """Resolve the island-birth support radius from sealed per-class ``P/A`` geometry.
 
@@ -361,6 +373,8 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "cgauge_beta2_window_v1": eval_cgauge_beta2_window,
     # MarginBandSatisficing provenance repair (2026-07-12): DERIVED-LIVE threshold law.
     "margin_band_satisficing_threshold_v1": eval_margin_band_satisficing_threshold,
+    # V9-only hosc endpoint. Historical V6/V7 pins retain their own laws.
+    "v9_hosc_beta_endpoint_v1": eval_v9_hosc_beta_endpoint,
     # Island-birth geometry wire (2026-07-15): ratio DERIVED from sealed n96 P/A receipt;
     # absolute scale remains tunable and efficacy remains owed.
     "isoperimetric_birth_weight_scaling_v1": eval_isoperimetric_birth_weight,
@@ -398,6 +412,7 @@ __all__ = [
     "eval_tail_cycle_floor",
     "eval_tau_end_knee_launch",
     "eval_tau_star_maslov_quantile",
+    "eval_v9_hosc_beta_endpoint",
     "get_evaluator",
     "has_evaluator",
     "populate_lawref_evaluators",

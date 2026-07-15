@@ -765,8 +765,8 @@ def _typed_ideal_lever(lever):
 def _derive_manifest_from_emitted_argv(constants: dict, argv: tuple[str, ...]) -> dict:
     """Make emitted argv the single scalar-value owner, then fail closed on drift.
 
-    The inherited V7 manifest recorded ``hosc_beta_end=10`` while the program emitted
-    ``--hosc-beta-end 3.177``.  For every manifest key with an identically named emitted
+    Historical V7/V6 manifests can legitimately own values distinct from a child
+    vehicle.  For every manifest key with an identically named emitted
     flag, this helper derives the manifest value from the compiled DSL argv and immediately
     re-checks identity.  This is deliberately applied only to the new ideal configs so the
     review-gated historical compiler remains untouched.
@@ -826,6 +826,9 @@ def compile_v9_cgauge_ideal_launch_config(
     if int(mod_dim) not in (19, 32):
         raise ValueError(f"ideal V9 family A/B admits mod_dim 19 or 32 only, got {mod_dim!r}")
 
+    from tac.canonical_equations.v9_hosc_beta_endpoint_20260715 import (
+        resolve_v9_hosc_beta_endpoint,
+    )
     from tac.witness_autoconfig import CrucibleV7LaunchConfig, _crucible_v7_argv_pairs
     from tac.witness_dsl.curriculum_dsl import (
         Beta2WindowRewarmup,
@@ -857,6 +860,7 @@ def compile_v9_cgauge_ideal_launch_config(
         notes=("eikonal_retention_couples_to_tau_rung_v1: lambda_k=0.01+(0.05-0.01)k/N; "
                "persisted rung is the single actuator; trainer primes retention before lower tau"),
     )
+    margin_satisfice = MarginBandSatisficing(weight=0.2)
     additions = (
         _typed_ideal_lever(eik_hold),
         _typed_ideal_lever(ClosedLoopEikonalControl(
@@ -871,7 +875,7 @@ def compile_v9_cgauge_ideal_launch_config(
         # MarginBandSatisficing: sibling provenance fix LANDED (a79f5d68cd) — m_safe now DERIVED via
         # LawRef (headroom*delta_R=0.03918), fail-closed invariant. Operator 2026-07-13: "belongs in the
         # ideal v9 cgauge". ON in core + BOTH A/B arms (identical → mod-dim FAMILY A/B stays unconfounded).
-        _typed_ideal_lever(MarginBandSatisficing(weight=0.2)),
+        _typed_ideal_lever(margin_satisfice),
         # C1 matched control.  Reachability is a source multiplier inside this
         # loss and is inert when margin_saliency_weight==0; compose the existing
         # margin-saliency Lever on BOTH arms.  No event-native margin-saliency
@@ -889,12 +893,16 @@ def compile_v9_cgauge_ideal_launch_config(
         "appearance-phase handoff. Exact n600 per-class through-R and complete stage checkpoints; "
         "MEANS only until receiver-closed exact evaluation. Fire after the 95%-kill P0."
     )
+    hosc_endpoint = resolve_v9_hosc_beta_endpoint()
     typed = typed.model_copy(update={
         "name": str(program_name),
         "purpose": purpose,
         "base": {
             **typed.base,
             "--mod-dim": int(mod_dim),
+            # V9 owns the step-native dyadic continuation endpoint.  Do not
+            # inherit V7's event-frozen 3.177 or V6's clock-replica 10.0.
+            "--hosc-beta-end": float(hosc_endpoint.value),
             # The trainer refuses S_R with a larger pair micro-batch because
             # provider weights are pair-local.  Pin 1 in the shared control,
             # not only in the treatment, so C1 stays clean.
@@ -935,6 +943,7 @@ def compile_v9_cgauge_ideal_launch_config(
         "--margin-saliency-tau": "0.5",
         "--margin-saliency-target": "0.5",
         "--verdict-pairs": "0",
+        "--hosc-beta-end": "8.0",
     }
     mismatches = {
         flag: (emitted_pairs.get(flag), want)
@@ -981,6 +990,20 @@ def compile_v9_cgauge_ideal_launch_config(
         },
     })
     constants = _derive_manifest_from_emitted_argv(wrapped.constants_manifest, argv)
+    inherited_hosc_value = constants["hosc_beta_end"].get(
+        "inherited_manifest_value_replaced",
+        wrapped.constants_manifest["hosc_beta_end"]["value"],
+    )
+    constants["hosc_beta_end"] = {
+        **hosc_endpoint.to_dict(),
+        "single_value_owner": "v9_hosc_beta_endpoint_v1",
+        "inherited_manifest_value_replaced": inherited_hosc_value,
+        "note": (
+            "V9-only dyadic step-native continuation 1->2->4->8; historical "
+            "V7 event-freeze and V6 clock-replica values remain scoped to those vehicles"
+        ),
+    }
+    constants.update(margin_satisfice.constant_manifest)
     constants["eikonal_retention_tau_rung"] = {
         "value": {"base": 0.01, "end": 0.05},
         "equation_id": "eikonal_retention_couples_to_tau_rung_v1",
@@ -1003,6 +1026,11 @@ def compile_v9_cgauge_ideal_launch_config(
     }
     if float(constants["hosc_beta_end"]["value"]) != float(emitted_pairs["--hosc-beta-end"]):
         raise ValueError("hosc_beta_end constants manifest does not match compiled DSL argv")
+    msafe_row = constants["seg_margin_satisfice_msafe"]
+    if float(msafe_row["value"]) != float(emitted_pairs["--seg-margin-satisfice-msafe"]):
+        raise ValueError(
+            "seg_margin_satisfice_msafe constants manifest does not match compiled DSL argv"
+        )
     return CrucibleV7LaunchConfig(
         typed=typed,
         constants_manifest=constants,

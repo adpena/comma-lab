@@ -398,6 +398,128 @@ class HoscSchedule(ScheduleDisplay):
 
 
 @dataclass(frozen=True)
+class MorseContinuationSchedule(ScheduleDisplay):
+    """#302 action-native replacement for the three inherited PR95 scalars.
+
+    Construct this object through :func:`WitnessNativeMorseContinuationSchedule`.
+    The schedule stores the resolved equation inputs and emits only real trainer
+    flags.  In particular Muon's step is a checkpoint-local Fisher trust radius,
+    not ``0.1 * Adam lr``; the discontinuous L7 loss is retired under unified-tau
+    while its R-safe boundary remains explicit for telemetry/resume compatibility.
+    """
+
+    muon_lr: float
+    l7_mult: float
+    l7_threshold: float
+    trust_region_kl: float
+    fisher_curvature_upper: float
+    m_safe: float
+    equation_id: str = "witness_native_morse_continuation_v1"
+    margin_law_manifest: dict = field(default_factory=dict, compare=False, repr=False)
+
+    def flags(self) -> dict:
+        return {
+            "--muon-lr": self.muon_lr,
+            "--l7-mult": self.l7_mult,
+            "--l7-threshold": self.l7_threshold,
+        }
+
+    def validate(self) -> list[str]:
+        problems: list[str] = []
+        if not math.isfinite(self.muon_lr) or self.muon_lr <= 0.0:
+            problems.append(f"MorseContinuationSchedule.muon_lr must be > 0, got {self.muon_lr!r}")
+        if self.l7_mult != 0.0:
+            problems.append(
+                "MorseContinuationSchedule.l7_mult must be the structural zero under unified-tau"
+            )
+        if not math.isclose(
+            self.l7_threshold, self.m_safe, rel_tol=1e-12, abs_tol=1e-12
+        ):
+            problems.append(
+                "MorseContinuationSchedule.l7_threshold must equal canonical m_safe"
+            )
+        expected = math.sqrt(
+            2.0 * self.trust_region_kl / self.fisher_curvature_upper
+        )
+        if not math.isclose(self.muon_lr, expected, rel_tol=1e-12, abs_tol=1e-12):
+            problems.append(
+                "MorseContinuationSchedule.muon_lr diverges from sqrt(2*delta_KL/lambda_max)"
+            )
+        return problems
+
+    def canonical_manifest(self) -> dict:
+        """Return equation custody for all emitted values."""
+
+        return {
+            "equation_id": self.equation_id,
+            "ladder_class": "derived_at_config",
+            "values": self.flags(),
+            "inputs": {
+                "trust_region_kl": self.trust_region_kl,
+                "fisher_curvature_upper": self.fisher_curvature_upper,
+                "m_safe": self.m_safe,
+                "m_safe_law": dict(self.margin_law_manifest),
+            },
+            "verdict_scope": (
+                "FORMULATION x config compilation only; checkpoint curvature and byte-closed "
+                "A/B remain owed"
+            ),
+        }
+
+
+def WitnessNativeMorseContinuationSchedule(
+    *,
+    trust_region_kl: float,
+    fisher_curvature_upper: float,
+    margin_headroom: float | None = None,
+    delta_r_artifact: str | Path = "reports/delta_R_noise_floor.json",
+) -> MorseContinuationSchedule:
+    """Derive the #302 schedule from local action geometry and the R-safe margin law.
+
+    No defaults are provided for the trust-region inputs: a launch compiler must
+    bind them to checkpoint-local curvature custody rather than smuggling the old
+    ``0.1 * lr`` convention back through another literal.
+    """
+
+    from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        resolve_margin_band_threshold,
+    )
+    from tac.canonical_equations.witness_native_morse_continuation_20260715 import (
+        derive_morse_continuation_controls,
+    )
+
+    margin = resolve_margin_band_threshold(
+        headroom=margin_headroom,
+        artifact_path=delta_r_artifact,
+        repo_root=_REPO_ROOT,
+    )
+    controls = derive_morse_continuation_controls(
+        trust_region_kl=trust_region_kl,
+        fisher_curvature_upper=fisher_curvature_upper,
+        m_safe=margin.m_safe,
+    )
+    schedule = MorseContinuationSchedule(
+        muon_lr=controls.muon_lr,
+        l7_mult=controls.l7_mult,
+        l7_threshold=controls.l7_threshold,
+        trust_region_kl=controls.trust_region_kl,
+        fisher_curvature_upper=controls.fisher_curvature_upper,
+        m_safe=controls.m_safe,
+        margin_law_manifest=margin.lawref_manifest,
+    )
+    problems = schedule.validate()
+    if problems:
+        raise ValueError("WitnessNativeMorseContinuationSchedule: " + "; ".join(problems))
+    unknown = set(schedule.flags()) - real_trainer_flags()
+    if unknown:
+        raise ValueError(
+            "WitnessNativeMorseContinuationSchedule invented trainer flags: "
+            f"{sorted(unknown)}"
+        )
+    return schedule
+
+
+@dataclass(frozen=True)
 class Transition(ScheduleDisplay):
     """The stage-transition REHEAT treatment (FEED-fz BUILD 1 / FEED-bu, "different stages need
     different treatment"): LR floor→1× rewarmup over a window + optional AdamW 2nd-moment reset,
@@ -1221,6 +1343,7 @@ class Curriculum(ScheduleDisplay):
     hosc: HoscSchedule | None = None
     tau: float | None = None                           # --tau-softplus-tau (tau_softplus stage T)
     transition: Transition | None = None
+    morse_continuation: MorseContinuationSchedule | None = None
     handoff: str = "fixed"                             # "fixed" | "event"
     curriculum_on: bool = True                         # the --curriculum master flag
     # §14 additions (task #339): levels-as-paths λ(t) + the operational schedule.
@@ -1246,6 +1369,8 @@ class Curriculum(ScheduleDisplay):
             owners.append(("tau", {"--tau-softplus-tau": self.tau}))
         if self.transition is not None:
             owners.append(("transition", self.transition.flags()))
+        if self.morse_continuation is not None:
+            owners.append(("morse_continuation", self.morse_continuation.flags()))
         for lp in self.level_paths:
             owners.append((f"level_path:{lp.quantity}", lp.flags()))
         if self.operational is not None:
@@ -1310,6 +1435,8 @@ class Curriculum(ScheduleDisplay):
             problems.extend(lp.validate())
         if self.operational is not None:
             problems.extend(self.operational.validate())
+        if self.morse_continuation is not None:
+            problems.extend(self.morse_continuation.validate())
         # DUPLICATE-EMITTER check (compose, don't duplicate — review attack surface): a flag
         # emitted by 2+ owners with UNEQUAL values is ambiguous (dict merge order would silently
         # pick a winner). Equal values are legal (e.g. a LevelPath agreeing with the temp Anneal
@@ -3902,6 +4029,7 @@ def MarginBandSatisficing(
 
     from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
         INVARIANT_FP_TOL,
+        margin_safe_lawref,
         resolve_margin_band_threshold,
     )
 
@@ -3949,6 +4077,17 @@ def MarginBandSatisficing(
                    "--seg-margin-satisfice-start-epoch": int(start_epoch),
                    "--seg-margin-satisfice-band": float(band)},
         epochs_delta=window,
+        lawrefs={
+            "--seg-margin-satisfice-msafe": margin_safe_lawref(
+                headroom=resolved.headroom, artifact_path=delta_r_artifact
+            )
+        },
+        constant_manifest={
+            "seg_margin_satisfice_msafe": {
+                **resolved.lawref_manifest,
+                "single_value_owner": "margin_band_satisficing_threshold_v1",
+            }
+        },
         notes=("P0 FORCE 2 margin-band satisficing (one-sided relu(m_safe - m_wit) on the annulus; "
                f"m_safe={resolved.m_safe} DERIVED-LIVE = headroom({resolved.headroom}) * "
                f"delta_R({resolved.delta_r}) MEASURED R-noise "
