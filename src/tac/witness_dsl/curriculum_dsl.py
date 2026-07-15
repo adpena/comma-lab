@@ -4258,7 +4258,10 @@ def MarginBandSatisficing(
             )
         },
         constant_manifest={
-            "seg_margin_satisfice_msafe": {
+            # Keyed by the emitted --flag (TypedLever validator requires constant_manifest keys to
+            # be override flags); _merge_lever_constant_manifests normalizes to the underscore key
+            # 'seg_margin_satisfice_msafe' at the cfg.constants_manifest surface.
+            "--seg-margin-satisfice-msafe": {
                 **resolved.lawref_manifest,
                 "single_value_owner": "margin_band_satisficing_threshold_v1",
             }

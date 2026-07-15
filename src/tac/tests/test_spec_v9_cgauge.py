@@ -300,9 +300,14 @@ def test_ideal_manifest_parity_extincts_hosc_duplicate_owner(ideal_ab) -> None:
     for cfg in ideal_ab:
         emitted = _argv_pairs(cfg.typed.to_program().compile_trainer_argv())
         row = cfg.constants_manifest["hosc_beta_end"]
-        assert row["single_value_owner"] == "v9_hosc_beta_endpoint_v1"
-        assert row["equation_id"] == "v9_hosc_beta_endpoint_v1"
-        assert float(row["value"]) == float(emitted["--hosc-beta-end"]) == pytest.approx(8.0)
+        # Reconciled 2026-07-15 (merge of the derive-solver V9-constants branch): the emitted
+        # DSL argv is the single scalar-value OWNER (anti-drift: the hosc 10.0-vs-3.177 incident),
+        # and the value is the LawRef-derived 3.177 via hosc_beta_fireband_pin_v1 — matching the
+        # sealed live launches (H4 confound hunt verified byte-identity). The prior expectation
+        # (owner=v9_hosc_beta_endpoint_v1, value=8.0) is superseded.
+        assert row["single_value_owner"] == "compiled_dsl_argv"
+        assert row["equation_id"] == "hosc_beta_fireband_pin_v1"
+        assert float(row["value"]) == float(emitted["--hosc-beta-end"]) == pytest.approx(3.177)
         assert float(row["inherited_manifest_value_replaced"]) == pytest.approx(10.0)
 
 

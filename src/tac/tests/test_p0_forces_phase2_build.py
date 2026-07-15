@@ -108,7 +108,7 @@ def test_dsl_margin_satisfice_factory_emits_flags():
         headroom * delta_r
     )
     lawref = lev.lawrefs["--seg-margin-satisfice-msafe"]
-    row = lev.constant_manifest["seg_margin_satisfice_msafe"]
+    row = lev.constant_manifest["--seg-margin-satisfice-msafe"]
     assert lawref.equation_id == "margin_band_satisficing_threshold_v1"
     assert row["single_value_owner"] == "margin_band_satisficing_threshold_v1"
     assert row["value"] == pytest.approx(lev.overrides["--seg-margin-satisfice-msafe"])
