@@ -63,3 +63,11 @@ Deferral-ledger 114 open (every row has a named trigger — drained as its trigg
 1. [L1] add `partial_freeze` WARN alarm for 0.02<accepted_frac<0.5 (H1-F5).
 2. [L3] add a global d_seg-descent positive-control canary (only pose-finish canary exists today) (H1-F4/H3).
 3. [WATCH] verify weight_entropy fraction <~40% of total loss on the first loss_terms row @ep25 (H3/H4 term-domination).
+
+## CONFOUND PASS — H2+H4 finals (both committed 737c480f75 / 8f3be581b4): confirm C0 CLEARED
+- **H4 config/resume/loss-scale = CLEAN (byte-for-byte)**: re-compiled the EXACT `compile_v9_cgauge_ideal_mod19_launch_config()` → live 224 flags ≡ fresh, 0 value diffs (only --out-dir); hosc-beta-end 3.177 = LawRef-derived (not stale 10.0); per-stage EMA-shadow ckpts atomic+distinct-filename fire IN-loop @ckpt-every 25 (not loop-end); wall-clock 7.5d < 8.31d budget < 14d hard-cap (1.87× headroom).
+- **H2 verdict-authority = CLEAN + ONE mild interpretation caveat (C-H2-1, the only real finding of the whole pass)**: n600 ✓ / batch-32 bit-identical ✓ / CPU-not-MPS ✓ / EMA-shadow ✓. BUT `--verdict-live-gap-every` ABSENT→default 0/OFF ⟹ the precise `d_pose_ema_minus_live` sentinel is never computed → early rows can show d_seg/d_pose RISE from EMA-lag (decay 0.997, ~333-update lag; the "run-1 confirmed" DAG anchor) with no sentinel to distinguish lag from real regression.
+  - **L3 binding**: NO "pose regressing / lever hurts pose" verdict admissible off an early C0 row until EMA warmup elapsed (live-gap is off on this run).
+  - **FOLLOW-ON #4 (L1, score-neutral)**: default-ON `--verdict-live-gap-every` during EMA warmup for the NEXT launch (observability = score-neutral → default-off IS the orphan bug). Can't add to running C0; apply the L3 read-discipline instead.
+
+**NET: whole confound pass = C0 CLEARED, run continues as-is. Zero measurement-corrupting confound; one early-row interpretation caveat handled by L3 discipline; 4 cheap follow-on hardening items for the next launch (partial_freeze WARN · d_seg canary · weight_entropy<40% watch · live-gap default-on).**
