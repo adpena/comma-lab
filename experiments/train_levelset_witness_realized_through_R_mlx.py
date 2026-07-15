@@ -6822,6 +6822,61 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     value_and_grad = nn.value_and_grad(model, total_loss_fn)
 
+    # (#509 batch 3, 2026-07-15) bf16/fp16 COMPUTE SEAM — fp32 master weights + low-precision
+    # witness forward/backward ONLY (tac.witness_control.compute_dtype_seam; law leg
+    # mixed_precision_compute_seam_20260715; DSL leg curriculum_dsl.ComputeDtype). DEFAULT
+    # --compute-dtype fp32 => _cdt_seam None => value_and_grad above is used UNCHANGED
+    # (BYTE-IDENTICAL — the seam object is never even constructed). When bf16/fp16: the wrapped
+    # vag casts the masters to the compute dtype INSIDE the trace (gradients arrive back fp32
+    # through the astype VJP) and the module entry shims cast inputs down / outputs back UP to
+    # fp32, so the render/R (incl. the fused-R Metal kernel), FROZEN-SCORER forwards, verdict,
+    # EMA, checkpoints, and decode all stay fp32 (training-only drift per the 2026-07-15
+    # relaxed-identity directive). Masters are restored after every call => nothing outside the
+    # trace ever sees low-precision params => resume-safe by construction (nothing new persisted).
+    _cdt_seam = None
+    _vg_ref_fp32 = None
+    _cdt_name = str(getattr(args, "compute_dtype", "fp32"))
+    _cdt_qc_n = int(getattr(args, "compute_dtype_quality_check", 0))
+    _cdt_qc_done = 0
+    _cdt_qc_path = out_dir / "compute_dtype_quality.jsonl"
+    if _cdt_name != "fp32":
+        if int(getattr(args, "micro_batch_pairs", 1)) > 1:
+            raise RuntimeError(
+                "--compute-dtype bf16/fp16 does not support --micro-batch-pairs > 1 yet (the "
+                "batched value_and_grad twin is un-seamed; OWED — fail loud, never silently fp32).")
+        from tac.witness_control.compute_dtype_seam import ComputeDtypeSeam
+        _cdt_seam = ComputeDtypeSeam(model, _cdt_name)
+        _vg_ref_fp32 = value_and_grad  # pure-fp32 reference (shims dormant when seam inactive)
+        value_and_grad = _cdt_seam.wrap_module_value_and_grad(total_loss_fn)
+        print(f"[compute-dtype] SEAM ACTIVE: witness forward/backward in {_cdt_name}; "
+              "fp32 masters + fp32 scorer/render/verdict/decode (training-only drift; "
+              "[macOS-MLX advisory], NON-PROMOTABLE)", flush=True)
+    if _cdt_qc_n > 0:
+        if _cdt_seam is None:
+            raise RuntimeError(
+                "--compute-dtype-quality-check requires --compute-dtype bf16/fp16 (there is "
+                "nothing to compare under fp32).")
+        if str(getattr(args, "grad_clip_mode", "fixed")) != "fixed":
+            raise RuntimeError(
+                "--compute-dtype-quality-check replicates only the FIXED-clip pipeline for the "
+                "fp32 reference; run the QC gate with --grad-clip-mode fixed (autoclip's "
+                "history state would be double-fed by the dual grad computes).")
+        if seed_mod is not None:
+            raise RuntimeError(
+                "--compute-dtype-quality-check does not support --seed-islands (the reference "
+                "recompute would need the dual seed leg; run the QC gate with seed OFF).")
+        if (bool(getattr(args, "per_group_grad_clip", False))
+                and str(getattr(args, "grad_normalize", "none")) != "per-param"):
+            raise RuntimeError(
+                "--compute-dtype-quality-check with --per-group-grad-clip requires "
+                "--grad-normalize per-param (per-param normalize renders the group scales inert "
+                "— the C0 lesson — so the fixed-clip reference replication stays faithful; with "
+                "normalize=none the un-replicated group clip would contaminate the comparison).")
+        print(f"[compute-dtype] QUALITY-CHECK: first {_cdt_qc_n} optimizer steps compute BOTH "
+              f"{_cdt_name} and fp32 grads, compare POST-normalize update direction "
+              "(cosine + rel-norm; C0 lesson), and STEP WITH THE FP32 REFERENCE — the run's "
+              "trajectory is the fp32 reference while QC is live.", flush=True)
+
     # #224 (5) DUAL value_and_grad for the island SEED (its OWN param tree + optimizer). Co-differentiate
     # the witness (model) AND the seed (seed_mod) w.r.t. the SAME loss (the seed enters via _compose_chain
     # -> _f1 -> seg_l). Default OFF (seed_mod None) => _dual_vg None => the loop takes the single
@@ -6832,11 +6887,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _dual_vg = None
     if seed_mod is not None:
         def _combined_seed_loss(model_p, seed_p, cf, c0, c1, oh, mg, ptg, ws, wp, hg, mt, sf, ew, lw):
-            model.update(model_p)
+            # (#509 batch 3) seam ON => cast the WITNESS masters to the compute dtype inside the
+            # trace (fp32 grads via the astype VJP); the SEED tree stays fp32 (it composes at the
+            # fp32 module boundary). Seam OFF (default) => identical to the incumbent update.
+            model.update(model_p if _cdt_seam is None else _cdt_seam.cast_tree(model_p))
             seed_mod.update(seed_p)
             return total_loss_fn(model, cf, c0, c1, oh, mg, ptg, ws, wp, hg, mt, sf, ew, lw)
 
         _dual_vg = mx.value_and_grad(_combined_seed_loss, argnums=(0, 1))
+        if _cdt_seam is not None:
+            # flips seam.active around the call + restores the fp32 masters after (the call site
+            # passes model.trainable_parameters() explicitly and never restores).
+            _dual_vg = _cdt_seam.wrap_dual_value_and_grad(_dual_vg)
 
     # ===================================================================================
     # (--micro-batch-pairs, DAG FEED 2026-07-03c) BATCHED twin of ``total_loss_fn``. OPT-IN
@@ -12127,6 +12189,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _rp_ns["probes"] += time.perf_counter_ns() - _rp_t0
                 accum = None
                 accum_seed = None   # #224 (5): seed grad accumulator (None unless --seed-islands)
+                # (#509 batch 3) QC reference accumulator: fp32 grads alongside the low-precision
+                # ones for the first --compute-dtype-quality-check optimizer steps. None unless live.
+                accum_qc_ref = None
+                _cdt_qc_live = _cdt_seam is not None and 0 <= _cdt_qc_done < _cdt_qc_n
                 lsum = 0.0
                 _rp_t0 = time.perf_counter_ns()  # (#480) real grad-accum interval start
                 if _use_micro_batch:
@@ -12173,6 +12239,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                 args.w_seg, _w_pose_now["v"], args.hinge_weight, args.margin_target_end, seg_form,  # (D.9) gated pose weight
                                 eik_w_ep, args.length_weight,
                             )
+                            if _cdt_qc_live:
+                                # (#509 batch 3 QC) same masters, same args, seam INACTIVE => the
+                                # pure-fp32 reference gradient for this pair (measured ALONG the
+                                # fp32 trajectory — the QC step below applies the reference update).
+                                _, _g_qc_ref = _vg_ref_fp32(
+                                    model, _cf_mx(pi), 2 * pi + 0, 2 * pi + 1, oh, mg, pose_tgts[pi],
+                                    args.w_seg, _w_pose_now["v"], args.hinge_weight,
+                                    args.margin_target_end, seg_form, eik_w_ep, args.length_weight,
+                                )
+                                mx.eval(_g_qc_ref)
+                                accum_qc_ref = (_g_qc_ref if accum_qc_ref is None
+                                                else tree_map(lambda a, b: a + b, accum_qc_ref, _g_qc_ref))
+                                mx.eval(accum_qc_ref)
                         else:
                             # #224 (5) dual co-grad: witness grads[0] (== the single-path grads, same loss/
                             # params) + seed grads[1]. The seed leg is accumulated + shielded separately below.
@@ -12402,6 +12481,42 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     clipped = per_param_normalize_grads(
                         clipped, tree_map=tree_map,
                         leaf_norm=lambda g: float(mx.sqrt(mx.sum(g * g))))
+                # (#509 batch 3) QC compare: replicate the FIXED-clip (+ per-param normalize)
+                # pipeline on the fp32 reference accum, compare the POST-normalize update
+                # direction (cosine + rel-norm; the C0 lesson — per-param normalize divides out
+                # uniform per-tensor scales, so pre-normalize comparison grades a direction the
+                # optimizer never sees), append the receipt row, then STEP WITH THE REFERENCE
+                # (the run's trajectory stays the fp32 reference while QC is live). The per-group
+                # clip stage is deliberately NOT replicated: under per-param normalize its group
+                # scales are inert (startup refusal enforces that pairing). Default OFF (fp32 /
+                # no QC) => accum_qc_ref None => this block never runs => byte-identical.
+                if _cdt_qc_live and accum_qc_ref is not None:
+                    from tac.witness_control.compute_dtype_seam import update_direction_stats
+                    _qc_ref_mean = tree_map(lambda g, c=float(nb): g / c, accum_qc_ref)
+                    _qc_ref_clipped, _qc_ref_total = optim.clip_grad_norm(
+                        _qc_ref_mean, args.grad_clip if args.grad_clip > 0 else 1e30)
+                    mx.eval(_qc_ref_total)
+                    if str(getattr(args, "grad_normalize", "none")) == "per-param":
+                        from tac.witness_stability import per_param_normalize_grads
+                        _qc_ref_clipped = per_param_normalize_grads(
+                            _qc_ref_clipped, tree_map=tree_map,
+                            leaf_norm=lambda g: float(mx.sqrt(mx.sum(g * g))))
+                    mx.eval(_qc_ref_clipped)
+                    _qc_stats = update_direction_stats(clipped, _qc_ref_clipped)
+                    _qc_row = {
+                        "schema": "compute_dtype_quality.v1", "epoch": int(ep),
+                        "qc_step": int(_cdt_qc_done), "compute_dtype": _cdt_name,
+                        "gnorm_lowp": float(gnorm), "gnorm_ref": float(_qc_ref_total),
+                        "grad_normalize": str(getattr(args, "grad_normalize", "none")),
+                        "applied_update": "fp32_reference", **_qc_stats,
+                    }
+                    try:
+                        with open(_cdt_qc_path, "a", encoding="utf-8") as _qc_fh:
+                            _qc_fh.write(json.dumps(_qc_row) + "\n")
+                    except OSError as _qc_err:  # fail-open telemetry, loud
+                        print(f"[compute-dtype] QC row write failed: {_qc_err}", flush=True)
+                    _cdt_qc_done += 1
+                    clipped = _qc_ref_clipped  # fp32 REFERENCE trajectory under QC
                 _film_polar_grad = None
                 _film_polar_lr = None
                 if _film_polar_state is not None and _film_polar_state.initialized:
@@ -13386,6 +13501,23 @@ def main(argv: list[str] | None = None) -> int:
                     help="(#146 Cells2Pixels stability) 'per-param' = g_p/(||g_p||+eps) per tensor "
                     "before the opt step (scale-free NCA deep-unroll stabilizer; alters seg-vs-pose "
                     "scale ratio => owed A/B). 'none' (default) = byte-identical.")
+    ap.add_argument("--compute-dtype", type=str, default="fp32", choices=["fp32", "bf16", "fp16"],
+                    help="(#509 batch 3, 2026-07-15) mixed-precision COMPUTE SEAM: fp32 master "
+                    "weights + low-precision witness forward/backward ONLY (params cast inside the "
+                    "trace; module entry inputs cast down, outputs cast back to fp32 => render/R, "
+                    "frozen scorers, verdict, EMA, checkpoints, decode all stay fp32). 'fp32' "
+                    "(default) = the seam is never constructed => byte-identical. bf16 recommended "
+                    "over fp16 (fp32-range exponent; no loss scaling is implemented). Training-only "
+                    "drift per the 2026-07-15 relaxed-identity directive; refuses "
+                    "--micro-batch-pairs > 1 (un-seamed twin). Gate: --compute-dtype-quality-check.")
+    ap.add_argument("--compute-dtype-quality-check", type=int, default=0,
+                    help="(#509 batch 3) N>0: for the first N optimizer steps compute BOTH the "
+                    "low-precision and pure-fp32 gradients from the SAME masters, compare the "
+                    "POST-normalize update direction (cosine + rel-norm; the C0 per-param-normalize "
+                    "lesson), append compute_dtype_quality.jsonl receipts, and APPLY THE FP32 "
+                    "REFERENCE update (the seam is measured along the fp32 trajectory). Requires "
+                    "--compute-dtype bf16/fp16 + --grad-clip-mode fixed + seed OFF. 0 (default) = "
+                    "no comparison, byte-identical to the plain seam/incumbent path.")
     ap.add_argument("--per-group-grad-clip", action=argparse.BooleanOptionalAction, default=False,
                     help="(C4 confound fix 2026-07-05) clip the global grad-norm PER top-level "
                     "parameter GROUP (in_proj / hidden / out_sdf / out_tex / film / palette / code) "

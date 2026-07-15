@@ -2749,6 +2749,59 @@ def VerdictParallelWorkers(workers: int = 4) -> Lever:
                        "verdict-wall sec lever; OFF arm = sequential control)")
 
 
+def ComputeDtype(dtype: str = "bf16", quality_check: int = 0) -> Lever:
+    """#509 burn-down batch 3 / m5max unconstrained-leverage constraint 1 (2026-07-15): the
+    bf16/fp16 mixed-precision COMPUTE SEAM — fp32 master weights + low-precision witness
+    forward/backward ONLY.
+
+    THE BUILD-OWED THIS ARMS (memo ``wallclock_burndown_build_20260715.md`` §3): no dtype seam
+    existed in either trainer; M-series GPUs run bf16/fp16 at ~2x the fp32 rate (ESTIMATE-flagged
+    — the ceiling row becomes measured only via the paired bench this lever enables). Mechanism:
+    ``tac.witness_control.compute_dtype_seam.ComputeDtypeSeam`` — masters cast to the compute
+    dtype INSIDE the traced loss (gradients return fp32 through the astype VJP); module entry
+    shims cast inputs down / outputs back UP to fp32 so the render/R (incl. the fused-R Metal
+    kernel), FROZEN-SCORER forwards, verdict, EMA, checkpoints, and decode stay fp32. Masters
+    restored after every call => resume-safe by construction (nothing new persisted). Law leg:
+    ``tac.canonical_equations.mixed_precision_compute_seam_20260715``
+    (``bf16_compute_seam_gradient_quality_v1``).
+
+    ``quality_check=N`` arms the ADMISSION GATE (the C0 lesson,
+    ``perparam_normalize_masks_all_norm_clipping_c0_confound_20260715``): the first N optimizer
+    steps compute BOTH dtype arms from the same masters, compare the POST-normalize update
+    direction (cosine + rel-norm — per-param normalize divides out uniform per-tensor scales,
+    so a pre-normalize comparison grades a direction the optimizer never sees), and step with
+    the fp32 REFERENCE (the seam is measured along the reference trajectory). Receipts:
+    ``compute_dtype_quality.jsonl``. Trainer refuses QC with autoclip / seed-islands / the
+    per-group+normalize-none pairing (un-replicated pipeline stages would contaminate the
+    comparison).
+
+    bf16 is the recommended arm (fp32-range exponent; NO loss scaling is implemented — fp16 is
+    exposed for the measurement matrix only). Trainer default ``--compute-dtype fp32`` =>
+    byte-identical (the seam is never constructed); this factory is what ARMS it. Training-only
+    drift under the 2026-07-15 relaxed-identity directive (drift OK if gradient quality + no
+    flicker); decode/verdict/byte-close untouched.
+
+    means != ends: a sec/ep lever candidate; the speed AND gradient-quality effects are BOTH
+    ASSUMED_AWAITING_VERIFICATION until the bounded n24 QC run + paired sec/ep bench land;
+    NO score claim; pointer UNMOVED."""
+    d = str(dtype)
+    if d not in ("bf16", "fp16"):
+        raise ValueError(
+            f"ComputeDtype requires dtype in ('bf16','fp16') (got {d!r}): fp32 is the incumbent "
+            "path — compose nothing instead of a no-op lever (off-is-orphan rule).")
+    qc = int(quality_check)
+    if qc < 0:
+        raise ValueError(f"ComputeDtype quality_check must be >= 0 (got {qc})")
+    overrides: dict = {"--compute-dtype": d}
+    if qc > 0:
+        overrides["--compute-dtype-quality-check"] = qc
+    return Lever("compute_dtype_seam",
+                 overrides=overrides,
+                 notes="#509 bf16/fp16 compute seam (fp32 masters; low-precision witness "
+                       "fwd/bwd only; scorer/verdict/decode fp32; QC gate = post-normalize "
+                       "update-direction cosine vs fp32 reference)")
+
+
 def HardnessOversample(
     oversample: float = 0.5, weighted: bool = True, source: str = "realized",
     power: float = 1.0, band: float = 0.5,
