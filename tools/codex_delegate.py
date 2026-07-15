@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import hashlib
 import json
 import shlex
 import subprocess
@@ -77,6 +78,10 @@ act only on NEW lines. Rules:
     instruction in the prompt below (including anti-collision / defer clauses if lifted).
   - priority "stop" -> checkpoint your state and exit cleanly (a newer arm supersedes you).
   - acknowledge which directives you consumed in your checkpoint notes + final message.
+Every checkpoint for this delegation MUST use the exact parent/session key:
+    {delegation_key}
+The transient retry controller refuses to retry without an in_progress row under that key
+containing a positive integer step and non-empty next_action.
 This is how you stay amendable while running. Absent/empty inbox -> ignore, proceed normally.
 === END LIVE INBOX ===
 
@@ -209,11 +214,11 @@ def _launch_policy_refusal(
 # Transient-death auto-recovery (apparatus fix for the codex_probe_token_limit_death /
 # "Selected model is at capacity" bug class): a capacity/rate-limit/disconnect is a
 # SERVER blip, not a token limit — a bump of model_context_window would NOT help. On such
-# a death the launcher re-runs the SAME prompt after backoff; the agent self-resumes from
-# its tools/subagent_checkpoint.py record (the crash-resume protocol) so no work is orphaned.
+# a death the launcher runs a compact RESUME prompt after backoff, but only after the exact
+# delegation checkpoint has been proved. Blind replay of the original prompt is forbidden.
 # Fatal errors (bad flag, syntax, non-transient) do NOT match the signature → no retry loop.
-_MAX_CAPACITY_RETRIES = 8            # linear backoff attempts before giving up
-_CAPACITY_BACKOFF_STEP_SECONDS = 20  # attempt N waits N * step seconds (20,40,...,160)
+_MAX_CAPACITY_RETRIES = 2            # checkpoint-custodied retries; never eight blind restarts
+_CAPACITY_BACKOFF_STEP_SECONDS = 20  # attempt N waits N * step seconds (20, 40)
 _TRANSIENT_DEATH_SIGNATURE = (
     "at capacity|rate.?limit|429|overloaded|temporarily unavailable|"
     "stream disconnected|error sending request|connection reset|timed out|503|502"
@@ -252,13 +257,48 @@ def _append_ledger(row: dict) -> None:
             fcntl.flock(f, fcntl.LOCK_UN)
 
 
+def _write_compact_prompts(
+    *, label: str, stamp: str, wrapped_prompt: Path, delegation_key: str
+) -> tuple[Path, Path]:
+    """Externalize the authority prompt and return bounded entry/resume prompts."""
+    payload = wrapped_prompt.read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    entry = RUNS / f"{label}_{stamp}.entry.prompt.txt"
+    resume = RUNS / f"{label}_{stamp}.resume.prompt.txt"
+    entry.write_text(
+        "Delegated task authority is the file below. Read it completely before acting, "
+        "using bounded 32768-byte chunks if needed; do not ask the launcher to inline it.\n"
+        f"authority_file={wrapped_prompt}\nsha256={digest}\nbytes={len(payload)}\n"
+        f"delegation_checkpoint_key={delegation_key}\n"
+        "Checkpoint after each major milestone with that exact key. Land durable artifacts, "
+        "keep the final response concise, and require MAIN landing review.\n",
+        encoding="utf-8",
+    )
+    resume.write_text(
+        "This is a checkpoint-custodied transient retry, not a fresh execution.\n"
+        f"delegation_checkpoint_key={delegation_key}\n"
+        f"authority_file={wrapped_prompt}\nsha256={digest}\nbytes={len(payload)}\n"
+        "First run: python3 tools/subagent_checkpoint.py read "
+        f"--parent-id-or-session {delegation_key} --latest-only\n"
+        "Continue only from that checkpoint's next_action and durable files. Do not restart "
+        "completed work. Re-read authority in bounded 32768-byte chunks only as needed. "
+        "Finish with a concise result and require MAIN landing review.\n",
+        encoding="utf-8",
+    )
+    return entry, resume
+
+
 def _write_launcher(label: str, stamp: str, prompt_file: Path, model: str,
                     effort: str, sandbox: str, log: Path, last: Path,
                     done: Path, isolate: bool = True,
                     worktree: Path | None = None,
-                    allow_network: bool = False) -> Path:
+                    allow_network: bool = False,
+                    resume_prompt_file: Path | None = None,
+                    delegation_key: str | None = None) -> Path:
     launcher = RUNS / f"launch_{label}_{stamp}.sh"
     worktree = worktree or (WORKTREE_DIR / f"{label}_{stamp}")
+    resume_prompt_file = resume_prompt_file or prompt_file
+    delegation_key = delegation_key or f"codex_delegate:{label}:{stamp}"
     # --- codex-contract fix (2026-07-15): an isolated git worktree writes its objects + index to the
     # SHARED <repo>/.git, which lives OUTSIDE the workspace-write sandbox root (=the worktree dir). So a
     # workspace-write isolated arm literally CANNOT `git add`/`commit` ("Operation not permitted") and
@@ -320,12 +360,21 @@ codex exec \\
   2>&1 | tee {log}
 RC=${{PIPESTATUS[0]}}
 # --- transient-death auto-recovery: capacity/rate-limit/disconnect is a SERVER blip, not a
-# token limit. Re-run the same prompt after backoff; the agent self-resumes from its
-# subagent_checkpoint so no work is orphaned. Fatal (non-transient) errors do not match → no loop.
+# token limit. Retry only after proving the exact delegation checkpoint, then pass a compact
+# resume prompt. Fatal errors or missing custody do not retry.
 attempt=0
 while [ "$RC" -ne 0 ] && [ "$attempt" -lt {_MAX_CAPACITY_RETRIES} ] && \\
       grep -qiE '{_TRANSIENT_DEATH_SIGNATURE}' {log}; do
   attempt=$((attempt+1))
+  python3 "$WORKDIR/tools/codex_retry_checkpoint.py" \\
+    --delegation-key {shlex.quote(delegation_key)} \\
+    --progress-file "$WORKDIR/.omx/state/subagent_progress.jsonl" >> {log} 2>&1
+  CHECKPOINT_RC=$?
+  if [ "$CHECKPOINT_RC" -ne 0 ]; then
+    RC=$CHECKPOINT_RC
+    echo "RETRY-REFUSED-NO-CHECKPOINT {label} attempt=$attempt rc=$RC $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> {EVENTS}
+    break
+  fi
   backoff=$(({_CAPACITY_BACKOFF_STEP_SECONDS} * attempt))
   echo "RETRY {label} transient rc=$RC attempt=$attempt/{_MAX_CAPACITY_RETRIES} backoff=${{backoff}}s $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> {EVENTS}
   echo "=== TRANSIENT death (rc=$RC) — re-run $attempt/{_MAX_CAPACITY_RETRIES} in ${{backoff}}s; agent self-resumes from checkpoint ===" | tee -a {log}
@@ -336,14 +385,15 @@ while [ "$RC" -ne 0 ] && [ "$attempt" -lt {_MAX_CAPACITY_RETRIES} ] && \\
     -m {model} \\
     -c model_reasoning_effort={effort}{extra_c} \\
     -o {last} \\
-    "$(cat {prompt_file})" \\
+    "$(cat {resume_prompt_file})" \\
     2>&1 | tee -a {log}
   RC=${{PIPESTATUS[0]}}
 done
 # one-line summary from the tail of the final-message file (best-effort, sanitized)
 SUMMARY=$(tail -c 400 {last} 2>/dev/null | tr '\\n' ' ' | tr -s ' ' | sed 's/[|]/ /g' | tail -c 200)
 echo "DONE {label} rc=$RC {stamp} $(date -u +%Y-%m-%dT%H:%M:%SZ) :: ${{SUMMARY}}" >> {EVENTS}
-printf 'rc=%s\\nfinished_utc=%s\\nlog=%s\\nlast=%s\\nworktree=%s\\nbranch=%s\\nisolate=%s\\n' "$RC" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "{log}" "{last}" "{worktree if isolate else ''}" "{branch if isolate else ''}" "{'1' if isolate else '0'}" > {done}
+echo "LANDING-REVIEW-REQUIRED {label} {stamp}" >> {EVENTS}
+printf 'rc=%s\\nfinished_utc=%s\\nlog=%s\\nlast=%s\\nworktree=%s\\nbranch=%s\\nisolate=%s\\nreview_required=1\\n' "$RC" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "{log}" "{last}" "{worktree if isolate else ''}" "{branch if isolate else ''}" "{'1' if isolate else '0'}" > {done}
 echo ""
 echo "=== codex delegate '{label}' exited rc=$RC — DONE appended; MAIN: harvest+merge worktree branch to main ==="
 echo "(window kept open; review {last})"
@@ -362,7 +412,7 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--prompt-file", help="path to a file containing the codex prompt")
     g.add_argument("--prompt", help="inline prompt string (written to a prompt file)")
     ap.add_argument("--model", default="gpt-5.6-sol")
-    ap.add_argument("--effort", default="ultra", choices=["low", "medium", "high", "xhigh", "ultra"])
+    ap.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "ultra"])
     # Sandbox relaxed to FULL AUTHORITY (operator 2026-07-14: "codex is a trusted partner, I trust it
     # with as much authority as you"). danger-full-access lets an arm write .git/objects and COMMIT —
     # coherent (no-trample) because each arm runs in its OWN git worktree (disjoint write-domain, the
@@ -421,6 +471,7 @@ def main(argv: list[str] | None = None) -> int:
         return 4
 
     stamp = _utc()
+    delegation_key = f"codex_delegate:{args.label}:{stamp}"
 
     if args.prompt_file:
         prompt_file = Path(args.prompt_file).resolve()
@@ -449,22 +500,34 @@ def main(argv: list[str] | None = None) -> int:
     )
     wrapped.write_text(
         commit_contract
-        + _INBOX_CONTRACT.format(inbox=inbox, broadcast=broadcast)
+        + _INBOX_CONTRACT.format(
+            inbox=inbox, broadcast=broadcast, delegation_key=delegation_key
+        )
         + prompt_file.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
 
+    entry_prompt, resume_prompt = _write_compact_prompts(
+        label=args.label,
+        stamp=stamp,
+        wrapped_prompt=wrapped,
+        delegation_key=delegation_key,
+    )
     log = RUNS / f"{args.label}_{stamp}.log"
     last = RUNS / f"{args.label}_{stamp}.last.txt"
     done = RUNS / f"{args.label}_{stamp}.done"
-    launcher = _write_launcher(args.label, stamp, wrapped, args.model,
+    launcher = _write_launcher(args.label, stamp, entry_prompt, args.model,
                                args.effort, args.sandbox, log, last, done, isolate, worktree,
-                               allow_network=args.allow_network)
+                               allow_network=args.allow_network,
+                               resume_prompt_file=resume_prompt,
+                               delegation_key=delegation_key)
 
     _append_ledger({
         "label": args.label, "stamp": stamp, "model": args.model, "effort": args.effort,
         "sandbox": args.sandbox, "launcher": str(launcher), "log": str(log),
         "last": str(last), "done_marker": str(done), "prompt_file": str(prompt_file),
+        "wrapped_prompt": str(wrapped), "entry_prompt": str(entry_prompt),
+        "resume_prompt": str(resume_prompt), "delegation_key": delegation_key,
         "isolate": isolate, "worktree": str(worktree) if isolate else None,
         "branch": branch if isolate else None,
         "launched_utc": datetime.now(UTC).isoformat(), "status": "running",
