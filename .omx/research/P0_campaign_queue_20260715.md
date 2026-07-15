@@ -34,3 +34,12 @@ governed run at a time, sequential, each converge→next.
   byte-close+exact-eval every row that beats 0.19108 (Modal = operator-GO for the authority bank).
 
 ## DRIVE: as each arm auto-notifies → review+merge (arms commit clean now) → fire next in order → keep GPU saturated.
+
+## COMPLETE CLUSTER INVENTORY (durable — NO SIGNAL LOSS; every item has an owner-arm or a named phase gate)
+Phase-0 build arms LIVE: INFRA_gate · iso_configs · basis_d21a_prod · derive_solver_provenance · harness_consolidation_fixes · dsl_hash_enforcement(#506) · c1_throughput_integration · c1_deepmath_integration.
+LANDED: c1a S_R config (bdbbf5da17) · codex-contract fix (9cc9eb830b) · queue (d878d78b3b).
+Phase-1 (GPU, on INFRA-gate GO): v9_cgauge_ideal_mod19 C0 baseline → converge → unblocks D5/D6/D8/D11/D15/D16/D17/D19/D27b.
+Phase-2 (GPU, sequential vs C0): S_R · TAPER-off · HORIZON-iso · STEP-iso · curvelet_through_R(stripped) · genuine_frame 3-arm · HORIZON×STEP/AA-SUPER2/ETF-HEAD/POLAR-FINISH(compose after isolated) · #205-Muon-warm-start #270 · mod-dim/boundary #299.
+Phase-3 (per-ckpt): D18 truncate-k90 · D27b terminal-solve(#341/#396/#400/HeadOffset) · D24a margin-tail RUN · #336 bit-alloc · #311 TropNNC · #140 low-rank pose · #406 apply-pass · byte-close+exact-eval EVERY row that beats 0.19108.
+GO-gated follow: curvelet A/B fire · D1 GPU-verdict · next_launch_all_levers(after INFRA+producers) · Modal exact-eval bank rows(#444/#381).
+Deferral-ledger 114 open (every row has a named trigger — drained as its trigger fires) · duty-to-measure 87 owed · curriculum-pool 45 owed. DRIVER: main re-fires next-in-order on each arm land + fires C0 on INFRA-gate GO; ScheduleWakeup drives GPU-phase convergence checks. NOTHING dropped — this ledger + the deferral/duty/curriculum ledgers are the durable record.
