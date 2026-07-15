@@ -49,3 +49,17 @@ Deferral-ledger 114 open (every row has a named trigger — drained as its trigg
 - Readiness gate defers (campaign-designed): HorizonWeightedMargin=phase2_HORIZON-iso, StepNativeActivation=phase2_STEP-iso — both are Phase-2 treatments A/B'd vs THIS control.
 - INFRA-gate arm's key condition (governor ADMITS) empirically satisfied by the launch; SSD/OOM preflight passed. INFRA_gate arm continues (hardening, non-blocking).
 - NEXT: watch C0 convergence (ScheduleWakeup); on converge → Phase-2 treatment A/Bs sequential (S_R · TAPER-off · HORIZON-iso · STEP-iso · curvelet_through_R · genuine_frame). Codex Phase-0 arms auto-notify → disposition+cherry-pick as they land.
+
+## CONFOUND PASS 2026-07-15 (4 fresh-eyes hunters, $0, C0 live) — VERDICT: C0 CLEARED
+4 blind-parallel hunters over orthogonal surfaces (memos `.omx/research/confound_hunt_C0_H{1,2,3,4}_*_20260715.md` + DAG FEED-C0H{1,2,3,4}):
+- **H1 liveness/guards/schedule = LARGELY CLEAN**: spike-guard default=`rollback` (NOT the L5 median-freeze), verdict rows stamp accepted_frac/weights_stepped/frozen_epoch, event backstops guaranteed-fire (caps 726/500/450), NO live l7 (unify-tau dissolves it). Residuals: F4 epoch-liveness not-yet-observed (expected @ep0) · F5 partial-freeze L1 gap.
+- **H2 verdict-authority = CLEAN**: `--verdict-pairs 0`=n600 ✓, EMA-shadow ✓ (parameter_key=ema_np), verdict-batch-32 bit-identical, CPU-authority, self-orient OFF (no stale cache).
+- **H3 lever-efficacy = NO silent-inert lever**: taper scale=0.0 is AUTO median-|margin| sentinel (binding ±4.6%), l7-mask is stale NOTE not inert code, control CLEAN (Horizon/StepNative absent). Real finding = **stack-attribution** (C0 verdict admissible at STACK granularity only; per-lever = Phase-2 ablations). weight_entropy λ15 term-domination WATCH.
+- **H4 config/resume/loss-scale = CLEAN**: live config == sealed DSL spec byte-for-byte (no hand-drift), resume/per-stage-checkpoints OK, no loss-scale pathology.
+
+**BINDING L3 verdict-clearance for C0 (when verdicts land @ep25+):** admissible ONLY if the row shows frozen_epoch=false + accepted_frac>floor + the stage-under-interpretation actually fired, SAME epoch window control+treatment, EMA-shadow, interpreted at STACK granularity.
+
+**FOLLOW-ON HARDENING (cheap, non-blocking, L1/L3 gaps the hunt found — two-landing per confound-self-protection):**
+1. [L1] add `partial_freeze` WARN alarm for 0.02<accepted_frac<0.5 (H1-F5).
+2. [L3] add a global d_seg-descent positive-control canary (only pose-finish canary exists today) (H1-F4/H3).
+3. [WATCH] verify weight_entropy fraction <~40% of total loss on the first loss_terms row @ep25 (H3/H4 term-domination).
