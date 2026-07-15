@@ -287,8 +287,24 @@ def _verdict_dseg_dpose_chunked(
     -- same preprocess -> forward -> argmax(dim=1) -> per-pixel disagreement). This lets the opt-in
     ``--annulus-telemetry`` row reuse ONE forward instead of a second SegNet pass; the returned scalars
     are unchanged. The default branch below is left EXACTLY as before so the flag-absent path is
-    byte-identical."""
+    byte-identical.
+
+    ``workers`` (#509 burn-down 2 / m5max unconstrained-leverage constraint 4, 2026-07-15):
+    when >= 2 AND chunking is active, fan the per-chunk scorer forwards across a
+    ThreadPoolExecutor of ``workers`` threads. The advisory verdict otherwise runs its
+    chunks SEQUENTIALLY on ONE torch thread (the 1-thread law binds the TRAINING path;
+    the verdict is ADVISORY, so idle-CPU-core parallelism is legal). BIT-IDENTICAL by
+    construction: each chunk's inputs, single-op torch numerics (intra-op thread count
+    unchanged), and per-chunk outputs are exactly the sequential ones — only the wall-
+    clock instant a chunk runs changes; aggregation uses ``Executor.map`` (chunk-index
+    order), so the concatenated list — and hence the mean — is the same float sequence.
+    Thread safety: eval-mode scorers under per-call ``torch.inference_mode()`` with
+    read-only buffers and per-call input tensors. Memory: the #205 per-chunk transient
+    is multiplied by the chunks IN FLIGHT (<= workers) — size ``workers`` against free-
+    RSS headroom (the safe-run guard stays). ``workers<=1`` => the incumbent sequential
+    loop, byte-identical."""
     n = len(f1s)
+    _par = int(workers) >= 2 and vbatch is not None and 0 < int(vbatch) < n
     if not return_realized:
         # ── UNCHANGED default path (byte-identical to the sealed #205 verdict) ──
         if vbatch is None or vbatch <= 0 or vbatch >= n:
@@ -297,6 +313,24 @@ def _verdict_dseg_dpose_chunked(
                 return float(np.mean(ds)), None
             dp = cpu_verdict_d_pose_batch(posenet_cpu, f0s, f1s, poses)
             return float(np.mean(ds)), float(np.mean(dp))
+        if _par:
+            # ── (#509) parallel chunk fan-out: same chunks, same per-chunk calls, ordered
+            #    aggregation via Executor.map => the SAME float sequence as the loop below. ──
+            from concurrent.futures import ThreadPoolExecutor
+            spans = [(s, min(s + int(vbatch), n)) for s in range(0, n, int(vbatch))]
+            with ThreadPoolExecutor(max_workers=int(workers)) as ex:
+                seg_lists = list(ex.map(
+                    lambda se: cpu_verdict_d_seg_batch(seg_cpu, f1s[se[0]:se[1]], lstars[se[0]:se[1]]),
+                    spans))
+                pose_lists = (list(ex.map(
+                    lambda se: cpu_verdict_d_pose_batch(
+                        posenet_cpu, f0s[se[0]:se[1]], f1s[se[0]:se[1]], poses[se[0]:se[1]]),
+                    spans)) if compute_pose else None)
+            ds_all = [d for lst in seg_lists for d in lst]
+            if not compute_pose:
+                return float(np.mean(ds_all)), None
+            dp_all = [d for lst in pose_lists for d in lst]
+            return float(np.mean(ds_all)), float(np.mean(dp_all))
         ds_all: list[float] = []
         dp_all: list[float] = []
         for s in range(0, n, vbatch):
@@ -312,6 +346,26 @@ def _verdict_dseg_dpose_chunked(
     # ── return_realized path (annulus telemetry ON only): bit-identical d_seg via the argmax variant,
     #    plus the realized maps collected from the SAME chunked forward. ──
     vb = n if (vbatch is None or vbatch <= 0 or vbatch >= n) else int(vbatch)
+    if _par:
+        # (#509) parallel realized path: identical chunk spans + calls, ordered aggregation.
+        from concurrent.futures import ThreadPoolExecutor
+        spans = [(s, min(s + vb, n)) for s in range(0, n, vb)]
+        with ThreadPoolExecutor(max_workers=int(workers)) as ex:
+            seg_pairs = list(ex.map(
+                lambda se: cpu_verdict_d_seg_argmax_batch(seg_cpu, f1s[se[0]:se[1]], lstars[se[0]:se[1]]),
+                spans))
+            pose_lists = (list(ex.map(
+                lambda se: cpu_verdict_d_pose_batch(
+                    posenet_cpu, f0s[se[0]:se[1]], f1s[se[0]:se[1]], poses[se[0]:se[1]]),
+                spans)) if compute_pose else None)
+        ds_all = [d for ds_chunk, _r in seg_pairs for d in ds_chunk]
+        realized_all = [_r[i] for (s, e), (_ds, _r) in zip(spans, seg_pairs) for i in range(e - s)]
+        dp_all = ([d for lst in pose_lists for d in lst] if compute_pose else [])
+        return (
+            float(np.mean(ds_all)),
+            float(np.mean(dp_all)) if compute_pose else None,
+            realized_all,
+        )
     ds_all = []
     dp_all = []
     realized_all: list = []
@@ -8063,7 +8117,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             d_seg, d_pose, _realized = _verdict_dseg_dpose_chunked(
                 seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v,
                 vbatch=int(args.verdict_batch), return_realized=True,
-                compute_pose=_pose_decision.compute_live)
+                compute_pose=_pose_decision.compute_live,
+                workers=int(getattr(args, "verdict_parallel_workers", 0)))
             v = {"d_seg": d_seg, "d_pose": d_pose}
         elif _verdict_subprocess_on and _pose_decision.compute_live:
             # (#330) plain d_seg/d_pose path in a killpg-reclaimed CHILD process (parent RSS returns to
@@ -8079,7 +8134,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "err": f"{type(exc).__name__}: {exc}",
                                   "note": "child failed; falling back to in-process verdict"}), flush=True)
                 d_seg, d_pose = _verdict_dseg_dpose_chunked(
-                    seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch))
+                    seg_cpu, posenet_cpu, f0s, f1s, lstars_v, poses_v, vbatch=int(args.verdict_batch),
+                    workers=int(getattr(args, "verdict_parallel_workers", 0)))
             v = {"d_seg": d_seg, "d_pose": d_pose}
         else:
             d_seg, d_pose = _verdict_dseg_dpose_chunked(
@@ -8091,6 +8147,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 poses_v,
                 vbatch=int(args.verdict_batch),
                 compute_pose=_pose_decision.compute_live,
+                workers=int(getattr(args, "verdict_parallel_workers", 0)),
             )
             v = {"d_seg": d_seg, "d_pose": d_pose}
         if _annulus_on:
@@ -13436,6 +13493,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--verdict-batch", type=int, default=32,
                     help="(#205 OOM fix) CPU-scorer verdict inference chunk size (pairs per torch "
                     "batch); 0 = single N-wide batch (pre-fix). Score-neutral (eval-mode BN).")
+    ap.add_argument("--verdict-parallel-workers", type=int, default=0,
+                    help="(#509 burn-down 2, 2026-07-15) fan the ADVISORY CPU-torch verdict's "
+                    "--verdict-batch chunks across N ThreadPoolExecutor workers (idle CPU cores; "
+                    "the 1-thread law binds the TRAINING path, not the advisory verdict). 0/1 = "
+                    "incumbent sequential chunk loop, byte-identical. BIT-IDENTICAL values by "
+                    "construction (same chunks, same single-op torch numerics, Executor.map "
+                    "chunk-order aggregation). Memory: the #205 per-chunk transient x chunks in "
+                    "flight (<= workers) — size against free-RSS headroom; the safe-run guard "
+                    "stays. Applies to the CPU verdict path (plain + annulus-realized + the "
+                    "subprocess-fallback); the GPU/nucleus verdict paths are unchanged.")
     ap.add_argument("--verdict-live-gap-every", type=int, default=-1,
                     help="(task-408 Q3 DSL Lever; default -1=AUTO during the two-time-constant EMA "
                     "warmup) -1 observes each warmup verdict, 0 is explicit OFF, K>0 observes every "

@@ -78,3 +78,104 @@ def test_chunking_reduces_call_batch_width(trainer_mod):
     trainer_mod._verdict_dseg_dpose_chunked(None, None, f, f, [0] * n, [0] * n, vbatch=32)
     assert widths and max(widths) <= 32
     assert sum(widths) == n  # every pair scored exactly once
+
+
+# ── (#509 burn-down 2, 2026-07-15) chunk-PARALLEL advisory verdict: workers>=2 fans the
+#    SAME chunk spans across a ThreadPoolExecutor; values must be the SAME float sequence
+#    (Executor.map chunk-order aggregation) as the sequential loop. ──
+
+def _install_argmax_stub(m):
+    """Deterministic per-item stub for the return_realized (annulus) path."""
+    def fake_argmax(seg, f1s, lst):
+        ds = [0.001 * float(np.asarray(x).sum() + 1) for x in f1s]
+        realized = np.stack([np.full((2, 2), int(np.asarray(x).size), dtype=np.int64) for x in f1s])
+        return ds, realized
+
+    m.cpu_verdict_d_seg_argmax_batch = fake_argmax
+
+
+@pytest.mark.parametrize("workers", [2, 3, 8])
+@pytest.mark.parametrize("vbatch", [7, 32, 64])
+def test_parallel_equals_sequential_plain(trainer_mod, workers, vbatch):
+    _install_deterministic_stubs(trainer_mod)
+    rng = np.random.default_rng(1)
+    n = 200
+    f0s = [rng.random(k % 3 + 1) for k in range(n)]
+    f1s = [rng.random(k % 5 + 1) for k in range(n)]
+    lst = [0] * n
+    ps = [0] * n
+    seq = trainer_mod._verdict_dseg_dpose_chunked(None, None, f0s, f1s, lst, ps, vbatch=vbatch)
+    par = trainer_mod._verdict_dseg_dpose_chunked(
+        None, None, f0s, f1s, lst, ps, vbatch=vbatch, workers=workers)
+    # BIT-identical (same float sequence -> same mean), not approx.
+    assert par[0] == seq[0]
+    assert par[1] == seq[1]
+
+
+@pytest.mark.parametrize("workers", [2, 8])
+def test_parallel_equals_sequential_no_pose(trainer_mod, workers):
+    _install_deterministic_stubs(trainer_mod)
+    rng = np.random.default_rng(2)
+    n = 100
+    f0s = [rng.random(2) for _ in range(n)]
+    f1s = [rng.random(3) for _ in range(n)]
+    seq = trainer_mod._verdict_dseg_dpose_chunked(
+        None, None, f0s, f1s, [0] * n, [0] * n, vbatch=16, compute_pose=False)
+    par = trainer_mod._verdict_dseg_dpose_chunked(
+        None, None, f0s, f1s, [0] * n, [0] * n, vbatch=16, compute_pose=False, workers=workers)
+    assert par[0] == seq[0]
+    assert par[1] is None and seq[1] is None
+
+
+@pytest.mark.parametrize("workers", [2, 4])
+def test_parallel_equals_sequential_realized(trainer_mod, workers):
+    _install_deterministic_stubs(trainer_mod)
+    _install_argmax_stub(trainer_mod)
+    rng = np.random.default_rng(3)
+    n = 90
+    f0s = [rng.random(2) for _ in range(n)]
+    f1s = [rng.random(k % 4 + 1) for k in range(n)]
+    seq = trainer_mod._verdict_dseg_dpose_chunked(
+        None, None, f0s, f1s, [0] * n, [0] * n, vbatch=16, return_realized=True)
+    par = trainer_mod._verdict_dseg_dpose_chunked(
+        None, None, f0s, f1s, [0] * n, [0] * n, vbatch=16, return_realized=True, workers=workers)
+    assert par[0] == seq[0]
+    assert par[1] == seq[1]
+    assert len(par[2]) == len(seq[2]) == n
+    for a, b in zip(par[2], seq[2]):
+        assert np.array_equal(np.asarray(a), np.asarray(b))
+
+
+def test_workers_leq_1_uses_sequential_loop(trainer_mod):
+    """workers 0/1 must ride the INCUMBENT sequential loop (byte-identical default)."""
+    calls = []
+
+    def fake_seg(seg, f1s, lst):
+        calls.append(len(f1s))
+        return [0.0] * len(f1s)
+
+    def fake_pose(pn, f0s, f1s, ps):
+        return [0.0] * len(f1s)
+
+    trainer_mod.cpu_verdict_d_seg_batch = fake_seg
+    trainer_mod.cpu_verdict_d_pose_batch = fake_pose
+    n = 64
+    f = [np.zeros(1) for _ in range(n)]
+    for w in (0, 1):
+        calls.clear()
+        trainer_mod._verdict_dseg_dpose_chunked(
+            None, None, f, f, [0] * n, [0] * n, vbatch=16, workers=w)
+        assert calls == [16, 16, 16, 16]
+
+
+def test_parallel_full_batch_vbatch0_ignores_workers(trainer_mod):
+    """vbatch<=0 (single N-wide batch) has no chunks to fan out — workers must be a no-op."""
+    _install_deterministic_stubs(trainer_mod)
+    rng = np.random.default_rng(4)
+    n = 40
+    f0s = [rng.random(2) for _ in range(n)]
+    f1s = [rng.random(2) for _ in range(n)]
+    a = trainer_mod._verdict_dseg_dpose_chunked(None, None, f0s, f1s, [0] * n, [0] * n, vbatch=0)
+    b = trainer_mod._verdict_dseg_dpose_chunked(
+        None, None, f0s, f1s, [0] * n, [0] * n, vbatch=0, workers=8)
+    assert a == b
