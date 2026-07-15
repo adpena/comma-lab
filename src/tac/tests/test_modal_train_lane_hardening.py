@@ -1094,3 +1094,55 @@ def test_modal_train_lane_image_carries_hard_entropy_runtime_deps() -> None:
     assert '"brotli"' in text
     assert '"constriction>=0.4,<0.5"' in text
     assert '"pyppmd>=1.3,<2.0"' in text
+
+
+def _load_gpu_visibility_detector():
+    tree = ast.parse(SOURCE.read_text())
+    function = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_gpu_visible_in_container"
+    )
+    namespace: dict[str, object] = {}
+    exec(
+        compile(ast.Module(body=[function], type_ignores=[]), str(SOURCE), "exec"),
+        namespace,
+    )
+    return namespace["_gpu_visible_in_container"]
+
+
+def test_gpu_detector_accepts_measured_modal_h100_container_signals(monkeypatch) -> None:
+    """MEASURED 2026-07-15 gpu_probe_438: Modal H100 containers leave
+    CUDA_VISIBLE_DEVICES unset, set NVIDIA_VISIBLE_DEVICES to the GPU UUID,
+    and expose /dev/nvidia3 (host index, NOT /dev/nvidia0). The pre-fix
+    detector refused this healthy allocation with rc=13 twice (07-12, 07-15)."""
+    detector = _load_gpu_visibility_detector()
+    measured_env = {
+        "NVIDIA_VISIBLE_DEVICES": "GPU-60936b7e-a57a-60e4-ab35-1ca0fe6104ed",
+    }
+    assert detector(measured_env) is True
+    # Device-node-only visibility (env stripped) must also count.
+    import glob as glob_module
+
+    monkeypatch.setattr(
+        glob_module, "glob", lambda pattern: ["/dev/nvidia3"] if "nvidia" in pattern else []
+    )
+    assert detector({}) is True
+    # Classic CUDA_VISIBLE_DEVICES still counts.
+    monkeypatch.setattr(glob_module, "glob", lambda pattern: [])
+    assert detector({"CUDA_VISIBLE_DEVICES": "0"}) is True
+
+
+def test_gpu_detector_refuses_cpu_container_signals(monkeypatch) -> None:
+    """CPU containers (no env, no /dev/nvidia*) must stay False so the CPU
+    preflight/dispatch stages keep their GPU-free refusal; sentinel 'void'
+    and 'none' values never count as GPUs."""
+    detector = _load_gpu_visibility_detector()
+    import glob as glob_module
+
+    monkeypatch.setattr(glob_module, "glob", lambda pattern: [])
+    assert detector({}) is False
+    assert detector({"CUDA_VISIBLE_DEVICES": ""}) is False
+    assert detector({"CUDA_VISIBLE_DEVICES": "-1"}) is False
+    assert detector({"NVIDIA_VISIBLE_DEVICES": "void"}) is False
+    assert detector({"NVIDIA_VISIBLE_DEVICES": "none"}) is False

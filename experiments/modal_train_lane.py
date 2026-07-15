@@ -600,6 +600,35 @@ def _derive_cpu_preflight_receipt(
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def _gpu_visible_in_container(environ) -> bool:
+    """Detect an attached NVIDIA GPU inside a Modal container, fail-closed.
+
+    MEASURED 2026-07-15 (gpu_probe_438, H100 via with_options(gpu="H100")):
+    Modal GPU containers leave ``CUDA_VISIBLE_DEVICES`` UNSET, set
+    ``NVIDIA_VISIBLE_DEVICES`` to the GPU UUID, and expose the device node at
+    its HOST index (observed ``/dev/nvidia3``) — NOT necessarily
+    ``/dev/nvidia0``. The pre-2026-07-15 detector (CUDA_VISIBLE_DEVICES or
+    exactly /dev/nvidia0) therefore refused healthy H100 allocations with
+    rc=13 whenever the assigned index was nonzero (both the 2026-07-12 and
+    2026-07-15 "GPU dispatch stage has no visible GPU" failures; the 07-12
+    "H100! string" diagnosis was wrong — the GPU was attached).
+
+    False positives stay impossible-by-consequence: the driver hard-fails
+    rc=68 on ``torch.cuda.is_available()`` before training, and the CPU
+    stages REFUSE when this returns True — CPU containers carry none of
+    these signals.
+    """
+    import glob
+
+    cuda_env = environ.get("CUDA_VISIBLE_DEVICES", "")
+    if cuda_env not in {"", "-1", "NoDevFiles", "none", "None"}:
+        return True
+    nvidia_env = environ.get("NVIDIA_VISIBLE_DEVICES", "")
+    if nvidia_env not in {"", "none", "None", "void"}:
+        return True
+    return bool(glob.glob("/dev/nvidia[0-9]*"))
+
+
 def _validate_remote_dispatch_stage(
     *,
     dispatch_stage: str,
@@ -1850,11 +1879,7 @@ def run_lane_training_cpu(
     import os
     import time
 
-    visible_gpu_env = os.environ.get("CUDA_VISIBLE_DEVICES", "")
-    visible_gpu = (
-        visible_gpu_env not in {"", "-1", "NoDevFiles", "none", "None"}
-        or os.path.exists("/dev/nvidia0")
-    )
+    visible_gpu = _gpu_visible_in_container(os.environ)
     try:
         _validate_remote_dispatch_stage(
             dispatch_stage=dispatch_stage,
