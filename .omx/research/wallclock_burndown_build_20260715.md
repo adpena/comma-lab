@@ -169,3 +169,80 @@ FORMULATION-scoped as tagged; nothing here is a score claim; **pointer 0.19108 U
 - Pre-existing failures noted (NOT mine, verified by stash): 2 Metal-parity costate tests
   (`test_costate_warmstart_cluster` / `test_costate_requential_curriculum`) fail while the GPU
   is held by the dry-start.
+
+---
+
+## 6. BATCH 3 (same subagent-id continuation, 2026-07-15 ~17:00Z onward)
+
+### 6a. LANDED (serializer, reviewed, tests green, ruff clean)
+- **`9d3bfc837b`** — verdict-parallel-workers TRAINER WIRING (`--verdict-parallel-workers`,
+  default 0 = sequential byte-identical; ThreadPoolExecutor chunk fan-out on the ADVISORY
+  CPU verdict, bit-identical values by construction: same chunk spans, unchanged intra-op
+  torch threads, Executor.map ordered aggregation) + 34 custody/equivalence tests. The DSL
+  lever landed in batch 2; this closes the mechanism leg. Verdict-wall bench still OWED.
+- **bf16/fp16 COMPUTE SEAM (the §3 BUILD-OWED — now BUILT).** Mechanism
+  `tac.witness_control.compute_dtype_seam` (fp32 masters; params cast INSIDE the traced
+  loss — fp32 grads via the astype VJP; entry shims `__call__/call_batch/sdf/call_margin/
+  render_lane_appearance` cast inputs down + outputs back to fp32 ⇒ render/R incl. the
+  fused-R Metal kernel, FROZEN-SCORER forwards, verdict, EMA, checkpoints, decode ALL fp32;
+  masters restored after every call ⇒ resume-safe by construction, nothing persisted).
+  Trainer `--compute-dtype {fp32,bf16,fp16}` (default fp32 = seam never constructed =
+  byte-identical) + `--compute-dtype-quality-check N` (first N opt steps compute BOTH arms
+  from the same masters, compare POST-normalize update direction — cosine + rel-norm, the
+  C0 lesson — receipts to `compute_dtype_quality.jsonl`, and STEP WITH THE FP32 REFERENCE).
+  Refusals: micro-batch>1 (un-seamed twin), QC×autoclip, QC×seed-islands, QC×(per-group ∧
+  normalize-none). DSL leg `curriculum_dsl.ComputeDtype`; law leg
+  `bf16_compute_seam_gradient_quality_v1` (registered APPEND-ONLY; n24 QC anchor OWED;
+  admission thresholds cos_min 0.99 / rel-band [0.9,1.1] PROPOSED until the QC
+  distribution is measured). 26 new tests. **Cross-check (operator-shared intake
+  `pluralis_stoa_rl_on_macs_intake_20260715.md`): Pluralis runs fp32-master/bf16-trainer at
+  production scale on Macs — existence proof for the MLX low-precision path; their
+  tolerance regime is RL off-policy (laxer than our dense descent) so the QC gate is still
+  the admission authority, never the analogy.**
+- **`19e380a849`** — micro-batch parity-receipt loss-abs bound DERIVED from the loss scale
+  (isclose form `floor + rel_tol·|serial|`; strict relative check stays binding; canonical
+  stored constants unchanged). Fixes 8/11 routed pre-existing failures
+  (`blocked_codex_landing_recovery_20260715` finding). The remaining 3 are DISTINCT:
+  (a)×2 `test_v9_gpu_surface_emits_real_metal_backend_receipts` +
+  `test_v9_faithful_384x512_metal_maps_and_area_value_vjp` fail on a Metal shader JIT
+  breakage — `mlx/backend/metal/kernels/utils.h:443: invalid parameter name: 'signed' is a
+  keyword` — the custom v9-lever kernel build is broken against the current MLX/Metal
+  compiler (#478 kernel surface; deterministic, 0.6s fail, NOT contention);
+  (b) `test_temporal_uses_raw_f0_provider_while_pose_keeps_general_carrier_render`
+  negative-control fails with BOTH oracle and wrong-provider values = 0.0 — the temporal
+  term is zero in the fixture (fixture/routing regression, loss-internals surface, owed).
+
+### 6b. Custody-fix CONFIRMED + the ready-to-fire magnitude-law A/B ticket
+The compose arm's hosc_beta_end reconciliation (34e375a2e7..30c216617e) is verified live:
+arm-B (`--dsl-lever GradNormalizeNone --dsl-lever AdaptiveGradClip`) and arm-C
+(`GradNormalizeNone` alone) both compile END-TO-END through every launcher gate at n24 on
+`v9_cgauge_ideal_mod19` (dry-run: dsl-config gate OK 230 flags; admission ADMIT).
+**Bounded-window shape:** `--epochs 120` is REFUSED by the typed epoch-budget feasibility
+gate (fixed caps 450–800 in the sealed schedule) — the correct bounded form is the SEALED
+config + `--dry-start 39` (the C0 saturation window ep1-39; bounded execution, schedule
+integrity preserved, pass1/pass2 resume round-trip exercises the new `__acl_` state).
+Three arms, SEQUENTIAL (never concurrent — wall-clock hygiene):
+```
+.venv/bin/python tools/launch_witness_run.py \
+  --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n24.npz --num-pairs 24 \
+  --config v9_cgauge_ideal_mod19 --dry-start 39 --no-dashboard \
+  --out-dir experiments/results/levelset_n24_maglaw_armA_20260715 \
+  --purpose "m5_burndown_509 batch3: magnitude-law A/B arm A (incumbent per-param normalize + inert clip)"
+# arm B: + --dsl-lever GradNormalizeNone --dsl-lever AdaptiveGradClip   (out-dir ..._armB_...)
+# arm C: + --dsl-lever GradNormalizeNone                                (out-dir ..._armC_...)
+```
+Metric: d_seg v0→ep25 verdict delta + per-epoch ep_loss descent slope over ep1-39 =
+the epochs-to-target proxy; arm A also produces the FIRST verdict-epoch
+`real_verdict_submit_s` row (cadence-25 verdict + cadence-25 checkpoint + mdd-ablation all
+fire at ep25) = the §A-3 +903s decision datum (batch-3 step 4).
+
+### 6c. M1 attribution status (data-gated)
+The M1 dry-start DOUBLE-SPAWNED (launcher retry while attempt-1's trainer was live — the
+`launcher_buffered_log_not_hung_orphan_spawn_respawn_id_collision_20260715` class; the
+coordinator killed the duplicate, sole writer preserved). Pass1 (dry_start/) ran ep1 in
+2582s gross and was SIGTERM'd by the harness's resume-round-trip design BEFORE the ep1
+component row flushed ⇒ 0 rows from pass1. Pass2 (dry_start_resume/, pid 65778) resumed at
+ep2 and spends its first ~43 min in the blocking 600-pair v0 CPU verdict (the 2555.7s §D.2
+wall, now visible as boot-cost too). First #480 rows land when ep2 completes. NOTE for the
+harvest: ep1's 2582s gross ≈ v0-verdict-dominated, NOT a steady sec/ep; the real_* fields
+exist precisely to decompose this.
