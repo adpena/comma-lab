@@ -30,17 +30,19 @@ Mechanism: ``tac.witness_control.adaptive_grad_clip`` (ring-buffer state machine
 resume-safe under ``__acl_``). DSL leg: ``curriculum_dsl.AdaptiveGradClip``
 (``--grad-clip-mode autoclip``; default ``fixed`` => byte-identical incumbent path).
 
-means != ends: the descent-speed EFFECT is ASSUMED_AWAITING_VERIFICATION until the
-bounded n24 A/B lands (gradient-quality + no-flicker admission bar per the 2026-07-15
-relaxed-identity directive), and NO promotion claim exists without a byte-closed exact
-n600 row. Pointer UNMOVED.
+means != ends: the descent-speed EFFECT is now MEASURED at the bounded n24 3-arm A/B
+(anchor ``autoclip_descent_speed_effect_n24_ab_measured_20260715``: within the
+pre-registered ep1-39 window AutoClip-on-normalize-none wins ep25 d_seg −10.35% vs the
+same-lineage fixed-clip control, lineage alone ~neutral −1.7%; the BONUS overrun window
+shows an armB reversal so DURABILITY is un-established — verdict_scope FORMULATION,
+[macOS-MLX research-signal] NON-PROMOTABLE). NO promotion claim exists without a
+byte-closed exact n600 row. Pointer UNMOVED.
 """
 from __future__ import annotations
 
 import numpy as np
 
 from tac.canonical_equations.equation import (
-    ASSUMED_AWAITING_VERIFICATION,
     RECALIBRATE_ON_NEW_ANCHORS,
     VERIFIED_VIA_EMPIRICAL_ANCHOR,
     CanonicalEquation,
@@ -116,42 +118,67 @@ def build_autoclip_percentile_threshold_v1() -> CanonicalEquation:
             hardware_substrate="apple_m5_max_cpu_mlx",
         ),
     )
-    anchor_effect_owed = EmpiricalAnchor(
-        anchor_id="autoclip_descent_speed_effect_n24_ab_owed_20260715",
-        measurement_utc=_UTC,
+    anchor_effect_measured = EmpiricalAnchor(
+        anchor_id="autoclip_descent_speed_effect_n24_ab_measured_20260715",
+        measurement_utc="2026-07-15T20:25:00Z",
         inputs={
-            "arm_a": "--grad-clip 0.5 (sealed control)",
-            "arm_b": "--grad-clip-mode autoclip (percentile 10, window 1000, warmup 10)",
-            "admission_bar": ("gradient-quality + no-flicker telemetry; d_seg descent per "
-                              "WALL-CLOCK (joint objective), not per epoch"),
+            "arm_a": ("per-param normalize + fixed clip 0.5 (incumbent) — "
+                      "experiments/results/levelset_n24_maglaw_armA_20260715"),
+            "arm_b": ("normalize-none + AutoClip p10/w1000/warm10 — "
+                      "experiments/results/levelset_n24_maglaw_armB_20260715"),
+            "arm_c": ("normalize-none + fixed clip 0.5 (attribution control) — "
+                      "experiments/results/levelset_n24_maglaw_armC_r6_20260715"),
+            "window": "PRE-REGISTERED ep1-39; config v9_cgauge_ideal_mod19, gt_n24, seed 0",
         },
         predicted_output={
-            "hypothesis": ("un-pinning the effective LR (measured 12× suppression) speeds "
-                           "epochs-to-target; frac_clipped drops off 1.0 to ~p (the percentile)"),
+            "hypothesis": ("un-pinning the effective step magnitude (only possible on "
+                           "normalize-none lineage) speeds early descent"),
         },
         empirical_output={
-            "status": ("OWED — the bounded n24 A/B is the admission measurement; NO score claim; "
-                       "means != ends; pointer UNMOVED"),
+            "v0_d_seg_all_arms": 0.03231,   # identical across arms => clean 3-arm control
+            "ep25_d_seg": {"A": 0.018045, "B": 0.015902, "C": 0.017737},
+            "ep1_39_log_loss_slope_per_ep": {"A": -0.02202, "B": -0.02380, "C": -0.02247},
+            "attribution_ep25": {
+                "lineage_effect_C_minus_A": -0.000308,   # -1.71% vs A: normalize-none alone ~neutral
+                "autoclip_effect_B_minus_C": -0.001835,  # -10.35% vs C: the AutoClip law carries the win
+            },
+            "bonus_window_labeled_NOT_verdict": (
+                "ep40+ overrun (OUTSIDE the pre-registered window): armB REGRESSES after its ep25 "
+                "best (ep50 0.018215, ep75 0.018644) while armA keeps descending (ep50 0.016966, "
+                "ep75 0.015325); armC stopped at ep40 per protocol — the ep1-39 win's DURABILITY "
+                "is NOT established; a longer-window A/B is the follow-up measurement"),
+            "verdict": ("within the pre-registered ep1-39 window, AutoClip-on-normalize-none beats "
+                        "both controls on ep25 d_seg (-10.35% vs same-lineage fixed clip) and "
+                        "log-loss slope (+6.0% vs C); the lineage change alone is ~neutral (-1.7%)"),
+            "verdict_scope": ("FORMULATION — n24 subset, single seed, v9_cgauge_ideal_mod19, "
+                              "ep1-39 early-CE window only; NOT a family/paradigm verdict, NOT an "
+                              "n600 or full-curriculum claim; [macOS-MLX research-signal] "
+                              "NON-PROMOTABLE; no score claim; pointer UNMOVED"),
         },
         residual=0.0,
-        source_artifact=_AUDIT,
-        measurement_method="bounded n24 governed A/B (launch pending at registration time)",
-        empirical_verification_status=ASSUMED_AWAITING_VERIFICATION,
-        provenance=build_provenance_for_predicted(
-            model_id="autoclip_percentile_threshold.descent_speed_effect",
-            inputs_sha256="0" * 64,
-            measurement_axis=_PREDICTED,
+        source_artifact="experiments/results/levelset_n24_maglaw_armC_r6_20260715/run.log",
+        measurement_method=("three governed n24 launches, identical config family + seed, differing "
+                            "ONLY in --grad-normalize/--grad-clip-mode; epoch-indexed metrics "
+                            "(GPU-contention-immune); arms A/B stopped post-ep39 by protocol "
+                            "completion, arm C at ep40 by the sanctioned daemon stop"),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path="experiments/results/levelset_n24_maglaw_armC_r6_20260715/run.log",
+            reactivation_criteria=("longer-window (>=150 ep) A/B on the durability question (the "
+                                   "bonus-window armB reversal); n600 window before any config "
+                                   "adoption; re-measure on any loss-stack/norm-scale change"),
+            measurement_axis=_ADVISORY,
             hardware_substrate="apple_m5_max_cpu_mlx",
         ),
     )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=("AutoClip percentile grad-clip threshold: clip_t = percentile_p(‖g‖ history, window w) "
-              "with fixed-clip warmup — the cure for the measured saturated --grad-clip 0.5"),
+              "with fixed-clip warmup — magnitude law for normalize-none lineage (inert under "
+              "per-param normalize; trainer refuses that composition)"),
         one_line_summary=(
-            "Adaptive clip at the p-th percentile of the observed gradient-norm history (AutoClip "
-            "2007.14469); responds to the C0-measured frac_clipped=1.0 saturation telemetry "
-            "(magnitude mechanism binds on normalize-none lineage only; inert under per-param)."
+            "Percentile clip on the observed grad-norm history (AutoClip 2007.14469); "
+            "magnitude mechanism binds on normalize-none lineage only (inert under per-param)."
         ),
         latex_form=(
             r"c_t=\mathrm{P}_p\left(\{\|g_s\|\}_{s=t-w+1}^{t}\right),\quad "
@@ -171,10 +198,10 @@ def build_autoclip_percentile_threshold_v1() -> CanonicalEquation:
         },
         units_in={"history": "gradient_l2_norms", "percentile": "percent", "window": "steps"},
         units_out={"clip_t": "gradient_l2_norm"},
-        empirical_anchors=(anchor_saturation, anchor_effect_owed),
+        empirical_anchors=(anchor_saturation, anchor_effect_measured),
         predicted_vs_empirical_residual={
             "c0_saturation_measured": 0.0,
-            "descent_speed_effect_owed_n24_ab": 0.0,
+            "descent_speed_effect_n24_ab_measured": 0.0,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
