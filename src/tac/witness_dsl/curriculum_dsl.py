@@ -3379,9 +3379,16 @@ def EikonalViscosity(eps: float = 0.05, adaptive: bool = True, window: int = 0) 
     ov = {"--eikonal-viscosity": float(eps)}
     if adaptive:
         ov["--eikonal-viscosity-adaptive"] = True
+        # #320 DERIVED adaptive-ε bounds made DSL-EXPLICIT (equal to the trainer argparse defaults →
+        # byte-identical): floor 0.3 MEASURED (FEED-05v, above the rising lower-CFL edge), upper 0.7
+        # (below the ε=1.0 biharmonic instability), margin 0.5 (CFL safety above the lower edge).
+        ov["--eikonal-visco-eps-floor"] = 0.3
+        ov["--eikonal-visco-eps-upper"] = 0.7
+        ov["--eikonal-visco-margin-factor"] = 0.5
     return Lever("eikonal_viscosity",
                  overrides=ov, epochs_delta=window,
-                 notes="#316/#320 DE-derived viscous/adaptive-ε eikonal stabilization")
+                 notes="#316/#320 DE-derived viscous/adaptive-ε eikonal stabilization "
+                       "(adaptive-ε bounds DERIVED-explicit: floor 0.3 MEASURED / upper 0.7 / margin 0.5)")
 
 
 def AmplifyIsland(weight: float = 1.0, window: int = 100) -> Lever:
