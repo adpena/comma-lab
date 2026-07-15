@@ -266,8 +266,14 @@ def _write_launcher(label: str, stamp: str, prompt_file: Path, model: str,
     # git dir a writable_root so isolated arms commit their own work. (danger-full-access already has
     # full write, so this only matters for workspace-write.) network_access is opt-in per --allow-network
     # (least-privilege) — needed for Modal-dispatch arms whose sandbox otherwise cannot resolve DNS.
+    #   (2026-07-15 fix #2): the SAME `.git`-read-only block hits --no-isolate arms that must commit to
+    #   MAIN's .git directly (e.g. a branch-consolidation/merge arm) — codex's workspace-write sandbox
+    #   treats `.git` as read-only by default in BOTH modes. So grant `[REPO/.git]` as a writable_root
+    #   whenever sandbox==workspace-write, not just for isolated worktrees. (isolate -> shared .git for
+    #   worktree objects+index; --no-isolate -> the same main .git for direct commits.) Operator directive
+    #   2026-07-15: "give them the authority they need."
     _extra_c: list[str] = []
-    if isolate and sandbox == "workspace-write":
+    if sandbox == "workspace-write":
         _extra_c.append(f"-c 'sandbox_workspace_write.writable_roots=[\"{REPO}/.git\"]'")
     if allow_network and sandbox == "workspace-write":
         _extra_c.append("-c sandbox_workspace_write.network_access=true")
