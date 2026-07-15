@@ -18410,3 +18410,17 @@ annulus and longest end of long tail". Full table:
   later + one inverted alarm; ACCEPTED for this run) + F3/F6/F9-INFO: ledger-routed, next-config inputs.
   F9 verdict: boot suite COST-JUSTIFIED (all consumers named; async-overlap v0-verdict = routed ~40min optimization).
 - Everything MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-438-F8F7 (2026-07-15) — fresh-eyes F8+F7 dispositions LANDED 50ce946838 [no-triality]
+- **F8 (must-fix-before-first-consumer, CONFIRMED by read):** CudaGraphForwardBackward capture
+  returned UNDEFINED static outputs from inside torch.cuda.graph capture and silently swallowed
+  the caller's real training step into the recording. Fix: replay() immediately after
+  mark_captured (static inputs already hold that call's values) — the capture call now performs
+  exactly one real step; + $0 fake-graph capture-path test (prior test covered eager fallback
+  only). Consumer-less today (r6 uses the compiled-region path) — fixed before first consumer.
+- **F7:** 0.9997 bar unified as NUMPY_FP32_PARITY_COSINE_BAR (CLAUDE.md deterministic-repro item
+  3, numpy-fp32 parity) cited at all 3 use sites; CompiledRegionReceipt now carries honest
+  INSTANCE-receipt scope (r3 feats[:64]+synthetic-loss probe ≠ full-config proof) +
+  adoption-rule provenance. OWED at r6 harvest: full-config real-loss functional probe (nearly
+  free from the run's own outputs). F10 pulled (7d882182e2) before touching surfaces. MEANS;
+  **pointer 0.19108 UNMOVED.**
