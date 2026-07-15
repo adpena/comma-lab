@@ -85,13 +85,27 @@ def _age_hours(launched_utc: str | None) -> float | None:
         return None
 
 
-def _bucket(alive: bool, done: dict | None, disp: str | None, age_h: float | None) -> str:
+def _is_strand_doomed(delegation: dict) -> bool:
+    """Legacy live writers without an isolated worktree cannot land safely."""
+    return delegation.get("sandbox", "workspace-write") != "read-only" and (
+        delegation.get("isolate") is not True
+    )
+
+
+def _bucket(
+    alive: bool,
+    done: dict | None,
+    disp: str | None,
+    age_h: float | None,
+    *,
+    strand_doomed: bool = False,
+) -> str:
     """RUNNING · NEEDS_REVIEW (landed, no terminal disposition) · REVIEWED · DIED (recent
     no-proc/no-marker) · STALE (ancient, suppressed by default)."""
     if done:
         return "REVIEWED" if disp in _TERMINAL_DISPOSITIONS else "NEEDS_REVIEW"
     if alive:
-        return "RUNNING"
+        return "STRAND_DOOMED" if strand_doomed else "RUNNING"
     if age_h is not None and age_h <= _STALE_AFTER_HOURS:
         return "DIED"
     return "STALE"
@@ -192,7 +206,8 @@ def status_rows(*, classify: bool = False) -> list[dict]:
         alive = _alive(label, stamp)
         disp = dispositions.get((label, stamp))
         age_h = _age_hours(delegation.get("launched_utc"))
-        bucket = _bucket(alive, done, disp, age_h)
+        strand_doomed = _is_strand_doomed(delegation)
+        bucket = _bucket(alive, done, disp, age_h, strand_doomed=strand_doomed)
         row = {
             "label": label,
             "stamp": stamp,
@@ -203,8 +218,9 @@ def status_rows(*, classify: bool = False) -> list[dict]:
             "worktree": delegation.get("worktree"),
             "progress_path": delegation.get("progress_path"),
             "status": bucket,
+            "contract_violation": "nonisolated_writer" if strand_doomed else None,
             "disposition": disp,
-            "inbox_pending": _inbox_lines(label) if bucket == "RUNNING" else 0,
+            "inbox_pending": _inbox_lines(label) if bucket in {"RUNNING", "STRAND_DOOMED"} else 0,
             "rc": (done or {}).get("rc"),
             "finished_utc": (done or {}).get("finished_utc"),
             "launched_utc": delegation.get("launched_utc"),
@@ -251,16 +267,18 @@ def main(argv: list[str] | None = None) -> int:
     from collections import Counter
     counts = Counter(r["status"] for r in rows)
     summary = " · ".join(f"{counts[b]} {b}" for b in
-                         ("RUNNING", "NEEDS_REVIEW", "DIED", "REVIEWED", "STALE") if counts.get(b))
+                         ("STRAND_DOOMED", "RUNNING", "NEEDS_REVIEW", "DIED", "REVIEWED", "STALE") if counts.get(b))
     print(f"codex fleet: {summary or '(none)'}"
           + ("" if args.all else "   [--all for REVIEWED+STALE]"))
-    actionable = {"RUNNING", "NEEDS_REVIEW", "DIED"}
+    actionable = {"STRAND_DOOMED", "RUNNING", "NEEDS_REVIEW", "DIED"}
     shown = [r for r in rows if args.all or r["status"] in actionable]
     for r in shown:
         me = f"{(r.get('model') or '?').split('-')[-1]}/{r.get('effort') or '?'}"
         flag = ""
         if r["status"] == "NEEDS_REVIEW":
             flag = f"  ⚠ disposition={r.get('disposition') or 'none'} → codex_landing_review_gate"
+        elif r["status"] == "STRAND_DOOMED":
+            flag = "  ⚠ live non-isolated writer cannot land safely — drain/harvest; do not retry"
         elif r["status"] == "DIED":
             flag = "  ⚠ no proc, no DONE marker — investigate/relaunch"
         elif r["status"] == "RUNNING" and r.get("inbox_pending"):

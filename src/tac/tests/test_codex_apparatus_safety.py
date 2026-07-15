@@ -17,6 +17,7 @@ if str(_TOOLS) not in sys.path:
 
 import codex_delegate  # noqa: E402
 import codex_drain_detector as drain  # noqa: E402
+import codex_status  # noqa: E402
 
 
 def _policy(**overrides):
@@ -155,6 +156,23 @@ def test_live_nonisolated_writer_count_exempts_isolated_and_readonly(monkeypatch
     assert codex_delegate._live_nonisolated_writer_count() == 1
 
 
+def test_pre_cfl_live_writer_is_retroactively_strand_doomed():
+    legacy = {"sandbox": "workspace-write"}  # pre-CFL rows have no isolate field
+    assert codex_status._is_strand_doomed(legacy) is True
+    assert codex_status._bucket(
+        True, None, None, 0.1, strand_doomed=codex_status._is_strand_doomed(legacy)
+    ) == "STRAND_DOOMED"
+
+
+def test_isolated_or_readonly_live_arm_is_not_strand_doomed():
+    assert codex_status._is_strand_doomed(
+        {"sandbox": "workspace-write", "isolate": True}
+    ) is False
+    assert codex_status._is_strand_doomed(
+        {"sandbox": "read-only", "isolate": False}
+    ) is False
+
+
 # Bug 3: timeout classification uses activity, not elapsed wall clock alone.
 def _obs(*, mtime: float, cursor: int) -> dict[str, dict]:
     return {"arm_s": {"label": "arm", "stamp": "s", "log_mtime": mtime,
@@ -205,9 +223,9 @@ def test_empty_fleet_is_drained():
     assert drain.classify_timeout({}, {}, now=1000)[0] == drain.DRAINED
 
 
-def test_only_wedged_status_has_nonzero_alarm_exit():
+def test_timeout_and_wedged_are_nonzero_but_drained_is_success():
     assert drain.exit_code_for_status(drain.DRAINED) == 0
-    assert drain.exit_code_for_status(drain.HEALTHY_BUT_SLOW) == 0
+    assert drain.exit_code_for_status(drain.TIMED_OUT) == 2
     assert drain.exit_code_for_status(drain.WEDGED) == 3
 
 
@@ -217,15 +235,29 @@ def test_progress_cursor_reads_nested_index(tmp_path):
     assert drain._cursor_from_json(path) == 41
 
 
-def test_cli_healthy_but_slow_returns_zero(monkeypatch, tmp_path, capsys):
+def test_cli_healthy_but_slow_returns_timeout_nonzero(monkeypatch, tmp_path, capsys):
     log = tmp_path / "arm.log"
     log.write_text("still working", encoding="utf-8")
     monkeypatch.setattr(
         drain.codex_status, "status_rows",
         lambda: [{"label": "arm", "stamp": "s", "status": "RUNNING", "log": str(log)}],
     )
-    assert drain.main(["--timeout-seconds", "0", "--liveness-window-seconds", "60"]) == 0
-    assert "HEALTHY_BUT_SLOW" in capsys.readouterr().out
+    assert drain.main(["--timeout-seconds", "0", "--liveness-window-seconds", "60"]) == 2
+    assert "TIMEOUT" in capsys.readouterr().out
+
+
+def test_strand_doomed_arm_is_wedged_even_with_recent_log(monkeypatch, tmp_path, capsys):
+    log = tmp_path / "arm.log"
+    log.write_text("still writing shared tree", encoding="utf-8")
+    monkeypatch.setattr(
+        drain.codex_status,
+        "status_rows",
+        lambda: [
+            {"label": "arm", "stamp": "s", "status": "STRAND_DOOMED", "log": str(log)}
+        ],
+    )
+    assert drain.main(["--timeout-seconds", "0", "--liveness-window-seconds", "60"]) == 3
+    assert "WEDGED" in capsys.readouterr().out
 
 
 def test_cli_stale_arm_returns_three(monkeypatch, tmp_path, capsys):
