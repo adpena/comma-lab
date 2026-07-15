@@ -146,3 +146,26 @@ throughput_component_timer spec + its 07-13 GREEN run · launch_witness_run gate
 refusals recorded verbatim) · lawref_builtins · witness_stability · m5max campaign memory ·
 telemetry_producers/corpus analyzer · gt_n24 cache. verdict_scope: all negatives INSTANCE- or
 FORMULATION-scoped as tagged; nothing here is a score claim; **pointer 0.19108 UNMOVED**.
+
+---
+
+## 5. Session-end addendum (post-§2c developments)
+
+- Sister landed `fef6d3cc2b` (dsl_compile_hash round-trip CLOSED) mid-session. After it +
+  flipping `AdaptiveGradClip(scientific_declaration=False)` (the DsegAwareTaper precedent;
+  lawref-carrying INTERNAL levers still trip the #406 self-recompile — scoped, documented in
+  the factory docstring), **the magnitude-law A/B arm-B now composes END-TO-END on the v9
+  lineage**: dry-run emitted launch.sh with `--grad-normalize none --grad-clip-mode autoclip`
+  through every gate:
+  `tools/launch_witness_run.py --config v9_cgauge_ideal_mod19 --dsl-lever AdaptiveGradClip
+  --dsl-lever GradNormalizeNone …` (new `GradNormalizeNone` arm lever expresses the §2b
+  confound in the DSL). Remaining unlock for a BOUNDED run: a short-epoch governed ticket
+  (the v9 config compiles at epochs 3000; the sealed timer ticket refuses resizing + still
+  carries the §2c hosc custody mismatch).
+- The n600 attribution rows: the sister dry-start (`…drystart3_telemetry480…`, pid 14828) was
+  still in boot at session end (~19 min; n600 boot is long). Harvest is one command once
+  `dry_start/witness_component_wallclock.jsonl` exists — the reader script is pre-staged
+  (per-epoch real_* fields + `unattributed_s/frac`); every row after ep1 IS the 63%-answer.
+- Pre-existing failures noted (NOT mine, verified by stash): 2 Metal-parity costate tests
+  (`test_costate_warmstart_cluster` / `test_costate_requential_curriculum`) fail while the GPU
+  is held by the dry-start.

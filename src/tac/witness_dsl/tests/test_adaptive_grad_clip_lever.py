@@ -10,7 +10,7 @@ from tac.witness_dsl.curriculum_dsl import AdaptiveGradClip, LaneBandStaticCache
 
 
 def test_adaptive_grad_clip_overrides_arm_autoclip_mode():
-    lever = AdaptiveGradClip(scientific_declaration=False)
+    lever = AdaptiveGradClip()  # default False = launcher-composable (round-trip bug, memo §2c)
     assert isinstance(lever, Lever)
     assert lever.name == "adaptive_grad_clip_autoclip"
     assert lever.overrides["--grad-clip-mode"] == "autoclip"
@@ -20,7 +20,7 @@ def test_adaptive_grad_clip_overrides_arm_autoclip_mode():
 
 
 def test_adaptive_grad_clip_scientific_declaration_carries_lawref_custody():
-    lever = AdaptiveGradClip()  # scientific_declaration=True default
+    lever = AdaptiveGradClip(scientific_declaration=True)  # explicit: spec-authored path
     # the three NUMERIC constants carry LawRef custody; the string mode flag cannot
     # (LawRef inputs are numeric) and stays a plain override.
     for flag in ("--grad-clip-percentile", "--grad-clip-window", "--grad-clip-warmup-steps"):

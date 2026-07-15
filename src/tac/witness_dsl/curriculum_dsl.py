@@ -2611,7 +2611,7 @@ def DsegAwareTaper(
 
 def AdaptiveGradClip(
     percentile: float = 10.0, window: int = 1000, warmup_steps: int = 10,
-    *, scientific_declaration: bool = True,
+    *, scientific_declaration: bool = False,
 ) -> Lever:
     """#B-4 grad-clip cure: AutoClip percentile clip law (arXiv:2007.14469) replacing the
     MEASURED-SATURATED fixed ``--grad-clip 0.5``.
@@ -2633,6 +2633,11 @@ def AdaptiveGradClip(
     Training-path lever under the 2026-07-15 relaxed-identity directive (drift OK if gradient
     quality + no flicker); decode/verdict/byte-close paths untouched. DEFAULT-OFF in the trainer
     (``--grad-clip-mode fixed`` = byte-identical incumbent); this factory is what ARMS it.
+    ``scientific_declaration`` defaults FALSE (the DsegAwareTaper precedent): the launcher's
+    ``--dsl-lever`` compose path currently fails the #406 self-recompile for lawref-CARRYING
+    internal levers ('inputs must be a non-empty mapping' round-trip bug, 2026-07-15 —
+    memo wallclock_burndown_build_20260715.md §2c sister); spec-authored configs pass True
+    through the symmetric ``_typed_ideal_lever`` codec for full LawRef custody.
     Mechanism: ``tac.witness_control.adaptive_grad_clip`` (resume-safe under ``__acl_``). Law:
     ``tac.canonical_equations.autoclip_percentile_grad_clip_20260715``
     (``autoclip_percentile_threshold_v1``).
@@ -2670,6 +2675,27 @@ def AdaptiveGradClip(
     )
 
 
+def GradNormalizeNone() -> Lever:
+    """#B-4 A/B arm-B companion: DISARM per-parameter gradient normalization (--grad-normalize
+    none) so a norm-clip law actually controls the update magnitude.
+
+    THE CONFOUND THIS EXPRESSES (memo wallclock_burndown_build_20260715.md §2b, FORMULATION,
+    source-verified): the live v9 configs run ``--grad-normalize per-param``
+    (``tac.witness_stability.per_param_normalize_grads``: g_p <- g_p/(||g_p||+eps) per tensor,
+    applied AFTER the clip) — a uniform per-tensor scale is divided out exactly, so ANY norm
+    clip (fixed 0.5 / per-group / AutoClip) is a NO-OP on the applied update. The C0 clip
+    saturation telemetry was real but INERT. The honest epochs-to-target A/B is magnitude-LAW
+    vs magnitude-LAW: incumbent (per-param) vs [this lever + AdaptiveGradClip] vs
+    [this lever + fixed clip]. per-param-normalize's own docstring: "ALTERS the seg-vs-pose
+    gradient SCALE ratio ... NOT proven for our objective" (an owed A/B since #146).
+
+    means != ends: an A/B arm definition; NO score claim; pointer UNMOVED."""
+    return Lever("grad_normalize_none",
+                 overrides={"--grad-normalize": "none"},
+                 notes="#B-4 arm-B companion: disarm per-param normalize so the clip law "
+                       "controls magnitude (per-param masks ALL norm clipping; memo §2b)")
+
+
 def LaneBandStaticCache(enabled: bool = True) -> Lever:
     """#509 burn-down 3: cache the PAIR-STATIC lane-band constants (weighted stop-grad coverage
     per unique prior + gt-source u_mask per code) across compose calls, killing the per-call
@@ -2689,6 +2715,38 @@ def LaneBandStaticCache(enabled: bool = True) -> Lever:
                  overrides={"--lane-band-cache-static": bool(enabled)},
                  notes="#509 pair-static lane-band constant cache (bit-identical values; "
                        "sec/ep lever; OFF arm = the A/B control)")
+
+
+def VerdictParallelWorkers(workers: int = 4) -> Lever:
+    """#509 burn-down 2 / m5max unconstrained-leverage constraint 4 (2026-07-15): fan the
+    ADVISORY CPU-torch verdict's ``--verdict-batch`` chunks across ``workers``
+    ThreadPoolExecutor threads (idle CPU cores).
+
+    The 1-thread law (operator_1thread_training_standard_20260713) binds the TRAINING
+    determinism path; the verdict is ADVISORY (never read back into training), so
+    idle-core parallelism is legal. BIT-IDENTICAL values by construction: same chunk
+    spans, same per-chunk ``cpu_verdict_*`` calls with unchanged torch intra-op thread
+    count, ``Executor.map`` chunk-index-order aggregation => the same float sequence and
+    mean as the sequential loop. Targets the measured 2555.7 s/verdict C0 wall (audit
+    .omx/research/v9_missing_signal_constants_audit_20260715.md §D.2); expected
+    ~/min(workers, cores_free, n_chunks) minus staging overhead — MEASURE, never assume
+    (n24 A/B + a bounded verdict-wall bench owed before any adoption claim).
+
+    Memory: the #205 per-chunk transient is multiplied by chunks in flight (<= workers);
+    size against free-RSS headroom (safe-run guard + launcher memory preflight stay).
+    Default-OFF at the trainer (0 = sequential, byte-identical); this factory is the
+    DSL custody so the flag is never hand-typed. means != ends: sec lever on the
+    advisory verdict path; NO score claim; pointer UNMOVED."""
+    w = int(workers)
+    if w < 2:
+        raise ValueError(
+            f"VerdictParallelWorkers requires workers >= 2 (got {w}): 0/1 is the incumbent "
+            "sequential path — compose nothing instead of a no-op lever (off-is-orphan rule: "
+            "an inert composed lever is orphaned signal).")
+    return Lever("verdict_parallel_workers",
+                 overrides={"--verdict-parallel-workers": w},
+                 notes="#509 chunk-parallel ADVISORY CPU verdict (bit-identical values; "
+                       "verdict-wall sec lever; OFF arm = sequential control)")
 
 
 def HardnessOversample(
