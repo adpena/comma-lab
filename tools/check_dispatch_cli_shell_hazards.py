@@ -17,6 +17,8 @@ This guard covers sprint-expensive bug classes:
   that ran on a Lightning Studio runner;
 * remote runner shell scripts whose ``PYTHONPATH`` exports include operator
   paths (``/Users/`` / ``/home/adpena/``).
+* zsh monitor scripts expanding optional ``*.last.txt`` / ``*stage*.npz``
+  globs without ``null_glob`` (an empty match otherwise aborts under nomatch);
 * stale docs/reports that still authorize remote launch from prediction-era
   memos (``READY-TO-LAUNCH``, ``No additional approval needed``, or
   unsuperseded standing launch instructions).
@@ -63,7 +65,8 @@ DEFAULT_EXCLUDES = (
     "reports/raw",
     "runtime-rs/target",
 )
-TEXT_SUFFIXES = {".py", ".sh", ".bash", ".md", ".rst", ".txt", ".zsh"}
+TEXT_SUFFIXES = {".py", ".sh", ".bash", ".command", ".md", ".rst", ".txt", ".zsh"}
+SHELL_SUFFIXES = {".sh", ".bash", ".command", ".zsh"}
 DEFAULT_SCAN_WORKERS = 4
 
 # Flags whose values are paths consumed inside a remote runner script.
@@ -146,6 +149,10 @@ _SOURCE_INDEX_ANY_SUBSTRINGS = frozenset(
         "path=",
         "for path in",
         "PYTHONPATH",
+        "*.last.txt",
+        "*stage*.npz",
+        "null_glob",
+        "nullglob",
         "/Users/",
         "/home/adpena/",
         *REMOTE_PATH_FLAGS,
@@ -236,6 +243,10 @@ def _scan_worker_count(file_count: int) -> int:
 
 
 _HEREDOC_START_RE = re.compile(r"<<-?\s*['\"]?(?P<tag>[A-Za-z_][A-Za-z0-9_]*)['\"]?")
+_OPTIONAL_MONITOR_GLOB_RE = re.compile(
+    r"(?:^|[\s=:(])(?P<glob>[^\s;|&]*?(?:\*\.last\.txt|\*[^\s;|&]*stage[^\s;|&]*\.npz))"
+    r"(?=$|[\s;|&)])"
+)
 
 
 def strip_heredoc_bodies(text: str) -> list[tuple[int, str]]:
@@ -254,6 +265,63 @@ def strip_heredoc_bodies(text: str) -> list[tuple[int, str]]:
             continue
         out.append((lineno, line))
     return out
+
+
+def _unquoted_shell_code(line: str) -> str:
+    """Remove quoted/comment text so literal glob patterns remain safe."""
+    out: list[str] = []
+    quote: str | None = None
+    escaped = False
+    for char in line:
+        if escaped:
+            escaped = False
+            if quote is None:
+                out.append(" ")
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote is not None:
+            if char == quote:
+                quote = None
+            continue
+        if char in {"'", '"'}:
+            quote = char
+            continue
+        if char == "#":
+            break
+        out.append(char)
+    return "".join(out)
+
+
+def _scan_zsh_optional_globs(
+    rel: str, numbered: list[tuple[int, str]]
+) -> list[Hazard]:
+    """Reject known optional monitor globs unless empty matches are safe."""
+    hazards: list[Hazard] = []
+    nullglob_enabled = False
+    for lineno, line in numbered:
+        code = _unquoted_shell_code(line)
+        if re.search(r"\bsetopt\b[^#\n;]*(?:null_glob|NULL_GLOB)\b", code) or re.search(
+            r"\bshopt\s+-s\s+nullglob\b", code
+        ):
+            nullglob_enabled = True
+        if nullglob_enabled:
+            continue
+        for match in _OPTIONAL_MONITOR_GLOB_RE.finditer(code):
+            glob = match.group("glob")
+            if f"{glob}(N)" in code:  # zsh per-expansion null-glob qualifier
+                continue
+            hazards.append(
+                Hazard(
+                    rel,
+                    lineno,
+                    "zsh_nomatch_optional_glob",
+                    f"optional monitor glob {glob!r} can abort under zsh nomatch; "
+                    "use setopt null_glob, the zsh (N) qualifier, or find(1)",
+                )
+            )
+    return hazards
 
 
 def _logical_commands(numbered_lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
@@ -508,7 +576,7 @@ def scan_text(path: Path, text: str, *, root: Path) -> list[Hazard]:
                 )
             )
 
-    if path.suffix.lower() in {".md", ".rst", ".txt", ".zsh", ".sh", ".bash"}:
+    if path.suffix.lower() in {".md", ".rst", ".txt", *SHELL_SUFFIXES}:
         for lineno, line in numbered:
             if re.search(r"(^|[;&|]\s*)(local\s+)?path=", line) or re.search(
                 r"\bfor\s+path\s+in\b", line
@@ -524,6 +592,9 @@ def scan_text(path: Path, text: str, *, root: Path) -> list[Hazard]:
                 )
         hazards.extend(_scan_shell_pythonpath_leaks(rel, numbered))
         hazards.extend(_scan_stale_dispatch_authorization(rel, numbered))
+
+    if path.suffix.lower() in SHELL_SUFFIXES:
+        hazards.extend(_scan_zsh_optional_globs(rel, numbered))
 
     if path.suffix.lower() == ".py":
         hazards.extend(_scan_python_dispatch_path_leaks(rel, text))
@@ -567,7 +638,7 @@ def scan_paths(
             if facts.contains_any(_SOURCE_INDEX_ANY_SUBSTRINGS):
                 files.append(path)
                 continue
-            if suffix in {".md", ".rst", ".txt", ".zsh", ".sh", ".bash"}:
+            if suffix in {".md", ".rst", ".txt", *SHELL_SUFFIXES}:
                 if facts.contains("path"):
                     files.append(path)
                     continue

@@ -298,9 +298,34 @@ def test_strict_retry_gate_catches_behaviorally_broken_policy(tmp_path):
         )
 
 
+def test_strict_retry_gate_catches_missing_checkpoint_custody(tmp_path):
+    path = tmp_path / "tools" / "codex_delegate.py"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "_MAX_CAPACITY_RETRIES=8\n"
+        "def _launch_policy_refusal(**kwargs): return None\n"
+        "def main(): return _launch_policy_refusal()\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(PreflightError, match=r"retry|checkpoint"):
+        cg.check_codex_retry_preserves_original_sandbox_authority(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+
+
 def test_strict_writer_cap_gate_catches_behaviorally_broken_policy(tmp_path):
     _delegate_fixture(tmp_path, "return None")
     with pytest.raises(PreflightError, match="writer"):
+        cg.check_codex_nonisolated_writer_cap(repo_root=tmp_path, strict=True, verbose=False)
+
+
+def test_strict_writer_cap_gate_catches_missing_pre_cfl_retrofit(tmp_path):
+    _delegate_fixture(
+        tmp_path,
+        "return (6, 'writer refused') if not kwargs.get('isolate', True) "
+        "and kwargs.get('requested_sandbox') != 'read-only' else None",
+    )
+    with pytest.raises(PreflightError, match=r"codex_status|strand"):
         cg.check_codex_nonisolated_writer_cap(repo_root=tmp_path, strict=True, verbose=False)
 
 
