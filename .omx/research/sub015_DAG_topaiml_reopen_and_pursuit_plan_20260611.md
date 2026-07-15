@@ -18298,3 +18298,34 @@ annulus and longest end of long tail". Full table:
   this is its measurement instrument + read-only telemetry fields). NO equation leg owed YET — the
   anchors land WITH the measurements (the ÷N row + the span classification of the 848.5s), not
   before them. Apparatus/means; pointer 0.19108 UNMOVED.
+
+## FEED-509-3d (2026-07-15) — batch-3 unit: FIRST n600 real-path attribution row + bf16 seam BUILT + magnitude-law A/B LIVE
+- **MEASURED (the 63%-answer, first cut):** drystart3 ep2 (n600, v9_cgauge_ideal_mod19) epoch_total
+  1095.6s = real_grad_accum 232.1 (21.2%) + real_optimizer 14.2 (1.3%) + terms/probes/ckpt <1 +
+  **UNATTRIBUTED 848.5s (77.4%)**. One row only (pass1's ep1 row lost to the harness resume-SIGTERM;
+  ep3's withheld by the terminating-epoch hold at the pass timeout). vs C0 steady ~325 s/ep ⇒ the
+  848s smells early-epoch/one-time but is UNCLASSIFIED — #480 v2 spans (FEED-509-3c) decide it
+  mechanically on the next instrumented epochs (the live n24 arms emit them every epoch).
+- **BUILT (triality-complete): bf16/fp16 COMPUTE SEAM** — the §3 build-owed closed. mechanism
+  `tac.witness_control.compute_dtype_seam` (fp32 masters; cast-inside-trace, astype-VJP fp32 grads;
+  entry shims keep render/R + frozen scorers + verdict + EMA + checkpoints + decode fp32; masters
+  restored every call ⇒ resume-safe, nothing persisted) · DSL `curriculum_dsl.ComputeDtype` · law
+  `bf16_compute_seam_gradient_quality_v1` (registered; gate = POST-normalize update-direction cosine
+  + rel-norm vs same-master fp32 reference, the C0 per-param-normalize lesson; thresholds PROPOSED;
+  n24 QC anchor OWED). Trainer `--compute-dtype` default fp32 = seam never constructed =
+  byte-identical; QC mode steps with the fp32 reference. Cross-check: Pluralis (operator intake)
+  ships fp32-master/bf16 on Macs at scale — existence proof, not the gate.
+- **LIVE: the magnitude-law A/B** (audit §A-1 cure measurement; arms differ ONLY in the magnitude
+  law): A incumbent (per-param normalize + inert clip) + B (normalize-none + AutoClip) past boot;
+  C (normalize-none + fixed clip) governor-REFUSED on the memory ceiling → bounded governed retry.
+  Bounded window = sealed config + planned clean stop after ep39 (feasibility gate correctly refuses
+  --epochs 120; --dry-start capped at 3). Metric epoch-indexed (contention-immune): ep1-39 ep_loss
+  slope + v0→ep25 verdict d_seg. Arm A doubles as the FIRST verdict-epoch real_verdict_submit_s +
+  span_* datum (the §A-3 +903s decision, step 4).
+- **Fixes:** d2cc57dc6e island self-detector None-guard (n24 subsets legitimately detect no movable
+  class; n600 byte-identical) · 19e380a849 parity-receipt loss-abs bound DERIVED from loss scale
+  (isclose form; 8/11 routed failures fixed; remaining 3 = Metal JIT 'signed'-keyword kernel
+  breakage ×2 [#478 surface] + temporal zero-term fixture regression — precisely recorded, owed).
+- **IN FLIGHT:** verdict-workers ÷N bench (w=0/8/6, n600, value-equality asserted) — receipt sizes
+  the workers default (8-from-headroom derivation) for the next n600 compose.
+- Everything MEANS; projection honestly ~12.5 days until receipts; **pointer 0.19108 UNMOVED.**
