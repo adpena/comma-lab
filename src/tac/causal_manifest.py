@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 import threading
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -33,6 +34,7 @@ ROW_BOUNDARY = "boundary"
 ROW_TRANSITION = "transition"
 ROW_EXPLORATION_DECISION = "exploration_decision"
 ROW_COVERAGE_RECEIPT = "coverage_receipt"
+ROW_EVENT_MARK = "event_mark"
 
 _ROW_KINDS = frozenset(
     {
@@ -41,10 +43,48 @@ _ROW_KINDS = frozenset(
         ROW_TRANSITION,
         ROW_EXPLORATION_DECISION,
         ROW_COVERAGE_RECEIPT,
+        ROW_EVENT_MARK,
     }
 )
 _DIGEST_HEX_LENGTHS = {"sha256": 64, "git_sha": 40, "git_tree": 40}
 _BOUNDARY_PRIORITY = {"baseline": 0, "verdict": 2, "checkpoint": 4, "stage": 6, "final": 8}
+_CANONICAL_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+EVENT_FAMILY_KINDS: dict[str, frozenset[str]] = {
+    "topology": frozenset(
+        {
+            "component_birth",
+            "component_death",
+            "merge",
+            "split",
+            "hole_birth",
+            "hole_death",
+            "junction_incidence_change",
+        }
+    ),
+    "chart": frozenset(
+        {
+            "atlas_transition",
+            "stabilizer_change",
+            "admissible_arrow_change",
+            "occlusion",
+            "disocclusion",
+            "nonrigid_residual",
+            "clamp_cell_change",
+            "relu_cell_change",
+            "argmax_cell_change",
+        }
+    ),
+    "receiver_lattice": frozenset(
+        {
+            "resize_cell_crossing",
+            "uint8_rounding_crossing",
+            "subpixel_phase_wrap",
+            "sampled_connectivity_change",
+        }
+    ),
+}
+EVENT_FAMILY_PRIORITY = {"topology": 0, "chart": 1, "receiver_lattice": 2}
 
 
 class CausalManifestError(ValueError):
@@ -64,6 +104,17 @@ def utc_now() -> str:
 def _require_text(value: str, name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise CausalManifestError(f"{name} must be a non-empty string")
+    return value
+
+
+def _require_canonical_utc(value: str, name: str) -> str:
+    _require_text(value, name)
+    if not _CANONICAL_UTC_RE.fullmatch(value):
+        raise CausalManifestError(f"{name} must be canonical UTC YYYY-MM-DDTHH:MM:SSZ")
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    except ValueError as exc:
+        raise CausalManifestError(f"{name} is not a valid UTC timestamp") from exc
     return value
 
 
@@ -970,8 +1021,527 @@ class CoverageReceiptRow:
         )
 
 
+def _require_sorted_unique(values: Sequence[Any], name: str) -> None:
+    if tuple(values) != tuple(sorted(values)) or len(set(values)) != len(values):
+        raise CausalManifestError(f"{name} must be sorted and unique")
+
+
+@dataclass(frozen=True)
+class ClassEdgeMark:
+    winner_class: int
+    other_class: int
+    directed: bool
+    junction_classes: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        for name in ("winner_class", "other_class"):
+            value = getattr(self, name)
+            if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value <= 4:
+                raise CausalManifestError(f"ClassEdgeMark.{name} must be an int in [0,4]")
+        if self.winner_class == self.other_class:
+            raise CausalManifestError("ClassEdgeMark requires two distinct classes")
+        _require_sorted_unique(self.junction_classes, "ClassEdgeMark.junction_classes")
+        if any(
+            not isinstance(value, int) or isinstance(value, bool) or not 0 <= value <= 4
+            for value in self.junction_classes
+        ):
+            raise CausalManifestError("junction_classes values must be ints in [0,4]")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "winner_class": self.winner_class,
+            "other_class": self.other_class,
+            "directed": self.directed,
+            "junction_classes": list(self.junction_classes),
+        }
+
+    @classmethod
+    def from_dict(cls, row: Mapping[str, Any]) -> ClassEdgeMark:
+        return cls(
+            winner_class=int(row["winner_class"]),
+            other_class=int(row["other_class"]),
+            directed=bool(row["directed"]),
+            junction_classes=tuple(int(value) for value in row.get("junction_classes", ())),
+        )
+
+
+@dataclass(frozen=True)
+class SpacetimeMark:
+    coordinate_system: str
+    y: float
+    x: float
+    time_fraction: float
+    support_y0: float
+    support_x0: float
+    support_y1: float
+    support_x1: float
+    chart_id: str
+    location_quantizer_id: str
+
+    def __post_init__(self) -> None:
+        if self.coordinate_system not in {"scorer_grid", "camera_grid", "latent_chart"}:
+            raise CausalManifestError("SpacetimeMark.coordinate_system is invalid")
+        for name in (
+            "y",
+            "x",
+            "time_fraction",
+            "support_y0",
+            "support_x0",
+            "support_y1",
+            "support_x1",
+        ):
+            if _finite_or_none(getattr(self, name), f"SpacetimeMark.{name}") is None:
+                raise CausalManifestError(f"SpacetimeMark.{name} must be finite")
+        if not 0.0 <= float(self.time_fraction) <= 1.0:
+            raise CausalManifestError("SpacetimeMark.time_fraction must be in [0,1]")
+        if not self.support_y0 <= self.y <= self.support_y1:
+            raise CausalManifestError("SpacetimeMark.y must lie inside the support box")
+        if not self.support_x0 <= self.x <= self.support_x1:
+            raise CausalManifestError("SpacetimeMark.x must lie inside the support box")
+        _require_text(self.chart_id, "SpacetimeMark.chart_id")
+        _require_text(self.location_quantizer_id, "SpacetimeMark.location_quantizer_id")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            name: getattr(self, name)
+            for name in (
+                "coordinate_system",
+                "y",
+                "x",
+                "time_fraction",
+                "support_y0",
+                "support_x0",
+                "support_y1",
+                "support_x1",
+                "chart_id",
+                "location_quantizer_id",
+            )
+        }
+
+    @classmethod
+    def from_dict(cls, row: Mapping[str, Any]) -> SpacetimeMark:
+        return cls(
+            coordinate_system=str(row["coordinate_system"]),
+            y=float(row["y"]),
+            x=float(row["x"]),
+            time_fraction=float(row["time_fraction"]),
+            support_y0=float(row["support_y0"]),
+            support_x0=float(row["support_x0"]),
+            support_y1=float(row["support_y1"]),
+            support_x1=float(row["support_x1"]),
+            chart_id=str(row["chart_id"]),
+            location_quantizer_id=str(row["location_quantizer_id"]),
+        )
+
+
+@dataclass(frozen=True)
+class IncidenceMark:
+    before_component_ids: tuple[str, ...] = ()
+    after_component_ids: tuple[str, ...] = ()
+    before_junction_ids: tuple[str, ...] = ()
+    after_junction_ids: tuple[str, ...] = ()
+    parent_child_edges: tuple[tuple[str, str], ...] = ()
+    incidence_before_sha256: DigestRef | None = None
+    incidence_after_sha256: DigestRef | None = None
+    attachment_rule_id: str = ""
+
+    def __post_init__(self) -> None:
+        for name in (
+            "before_component_ids",
+            "after_component_ids",
+            "before_junction_ids",
+            "after_junction_ids",
+            "parent_child_edges",
+        ):
+            values = getattr(self, name)
+            _require_sorted_unique(values, f"IncidenceMark.{name}")
+        for edge in self.parent_child_edges:
+            if len(edge) != 2 or not all(isinstance(item, str) and item for item in edge):
+                raise CausalManifestError("parent_child_edges must contain nonempty string pairs")
+        _require_text(self.attachment_rule_id, "IncidenceMark.attachment_rule_id")
+        if not any(
+            (
+                self.before_component_ids,
+                self.after_component_ids,
+                self.before_junction_ids,
+                self.after_junction_ids,
+                self.parent_child_edges,
+                self.incidence_before_sha256,
+                self.incidence_after_sha256,
+            )
+        ):
+            raise CausalManifestError("IncidenceMark rejects count-only/attachment-free events")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "before_component_ids": list(self.before_component_ids),
+            "after_component_ids": list(self.after_component_ids),
+            "before_junction_ids": list(self.before_junction_ids),
+            "after_junction_ids": list(self.after_junction_ids),
+            "parent_child_edges": [list(edge) for edge in self.parent_child_edges],
+            "incidence_before_sha256": (
+                None if self.incidence_before_sha256 is None else self.incidence_before_sha256.to_dict()
+            ),
+            "incidence_after_sha256": (
+                None if self.incidence_after_sha256 is None else self.incidence_after_sha256.to_dict()
+            ),
+            "attachment_rule_id": self.attachment_rule_id,
+        }
+
+    @classmethod
+    def from_dict(cls, row: Mapping[str, Any]) -> IncidenceMark:
+        before_digest = row.get("incidence_before_sha256")
+        after_digest = row.get("incidence_after_sha256")
+        return cls(
+            before_component_ids=tuple(str(value) for value in row.get("before_component_ids", ())),
+            after_component_ids=tuple(str(value) for value in row.get("after_component_ids", ())),
+            before_junction_ids=tuple(str(value) for value in row.get("before_junction_ids", ())),
+            after_junction_ids=tuple(str(value) for value in row.get("after_junction_ids", ())),
+            parent_child_edges=tuple(
+                (str(edge[0]), str(edge[1])) for edge in row.get("parent_child_edges", ())
+            ),
+            incidence_before_sha256=(
+                None if before_digest is None else DigestRef.from_dict(before_digest)
+            ),
+            incidence_after_sha256=(
+                None if after_digest is None else DigestRef.from_dict(after_digest)
+            ),
+            attachment_rule_id=str(row["attachment_rule_id"]),
+        )
+
+
+@dataclass(frozen=True)
+class StratumMark:
+    topology_signature_id: str
+    orbit_stabilizer_chart_id: str
+    activation_chart_id: str
+    receiver_phase_cell_id: str
+
+    def __post_init__(self) -> None:
+        for name in (
+            "topology_signature_id",
+            "orbit_stabilizer_chart_id",
+            "activation_chart_id",
+            "receiver_phase_cell_id",
+        ):
+            _require_text(getattr(self, name), f"StratumMark.{name}")
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "topology_signature_id": self.topology_signature_id,
+            "orbit_stabilizer_chart_id": self.orbit_stabilizer_chart_id,
+            "activation_chart_id": self.activation_chart_id,
+            "receiver_phase_cell_id": self.receiver_phase_cell_id,
+        }
+
+    @classmethod
+    def from_dict(cls, row: Mapping[str, Any]) -> StratumMark:
+        return cls(**{name: str(row[name]) for name in cls.__dataclass_fields__})
+
+
+@dataclass(frozen=True)
+class ReceiverStateMark:
+    R_operator_id: str
+    uint8_rounding_id: str
+    xi_quantizer_id: str
+    xi_symbol: tuple[int, ...]
+    phase_symbol: int | None
+    prediction_chart_id: str
+
+    def __post_init__(self) -> None:
+        for name in (
+            "R_operator_id",
+            "uint8_rounding_id",
+            "xi_quantizer_id",
+            "prediction_chart_id",
+        ):
+            _require_text(getattr(self, name), f"ReceiverStateMark.{name}")
+        _require_sorted_unique(self.xi_symbol, "ReceiverStateMark.xi_symbol")
+        if any(not isinstance(value, int) or isinstance(value, bool) for value in self.xi_symbol):
+            raise CausalManifestError("ReceiverStateMark.xi_symbol must contain ints")
+        if self.phase_symbol is not None and (
+            not isinstance(self.phase_symbol, int) or isinstance(self.phase_symbol, bool)
+        ):
+            raise CausalManifestError("ReceiverStateMark.phase_symbol must be int or None")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "R_operator_id": self.R_operator_id,
+            "uint8_rounding_id": self.uint8_rounding_id,
+            "xi_quantizer_id": self.xi_quantizer_id,
+            "xi_symbol": list(self.xi_symbol),
+            "phase_symbol": self.phase_symbol,
+            "prediction_chart_id": self.prediction_chart_id,
+        }
+
+    @classmethod
+    def from_dict(cls, row: Mapping[str, Any]) -> ReceiverStateMark:
+        return cls(
+            R_operator_id=str(row["R_operator_id"]),
+            uint8_rounding_id=str(row["uint8_rounding_id"]),
+            xi_quantizer_id=str(row["xi_quantizer_id"]),
+            xi_symbol=tuple(int(value) for value in row["xi_symbol"]),
+            phase_symbol=None if row.get("phase_symbol") is None else int(row["phase_symbol"]),
+            prediction_chart_id=str(row["prediction_chart_id"]),
+        )
+
+
+def _detector_family(detector: str) -> str:
+    token = _require_text(detector, "detectors_matched item")
+    prefix = token.split(":", 1)[0]
+    if prefix in EVENT_FAMILY_KINDS:
+        return prefix
+    for family, kinds in EVENT_FAMILY_KINDS.items():
+        if token in kinds:
+            return family
+    raise CausalManifestError(
+        f"detector {detector!r} must be family-prefixed or a registered event kind"
+    )
+
+
+@dataclass(frozen=True)
+class EventMarkRow:
+    event_id: str
+    run_id: str
+    stage_id: str
+    checkpoint_id: str | None
+    pair_index: int
+    frame_from: int
+    frame_to: int
+    observed_at_utc: str
+    authority_axis: str
+    family: str
+    kind: str
+    detectors_matched: tuple[str, ...]
+    class_edge: ClassEdgeMark
+    location: SpacetimeMark
+    attachment: IncidenceMark
+    stratum_before: StratumMark
+    stratum_after: StratumMark
+    receiver_state: ReceiverStateMark
+    evidence: tuple[ArtifactRef, ...]
+    receiver_derivable: bool
+    public_derivation_ref: ArtifactRef | None
+    resume_key: str
+    notes: tuple[JsonField, ...] = ()
+    schema_id: str = SCHEMA_ID
+    row_kind: str = ROW_EVENT_MARK
+
+    @property
+    def row_id(self) -> str:
+        return f"event:{self.event_id}"
+
+    def __post_init__(self) -> None:
+        _validate_row_header(self.schema_id, self.row_kind, self.row_id, self.run_id, ROW_EVENT_MARK)
+        _validate_sha256(self.event_id, "EventMarkRow.event_id")
+        _require_text(self.stage_id, "EventMarkRow.stage_id")
+        if self.checkpoint_id is not None:
+            _require_text(self.checkpoint_id, "EventMarkRow.checkpoint_id")
+        if self.pair_index < 0 or self.frame_from < 0 or self.frame_to <= self.frame_from:
+            raise CausalManifestError(
+                "EventMarkRow requires pair_index/frame_from >=0 and frame_to > frame_from"
+            )
+        _require_canonical_utc(self.observed_at_utc, "EventMarkRow.observed_at_utc")
+        if self.authority_axis != NON_PROMOTABLE_AXIS:
+            raise CausalManifestError(
+                f"EventMarkRow.authority_axis must equal {NON_PROMOTABLE_AXIS!r}"
+            )
+        if self.family not in EVENT_FAMILY_KINDS:
+            raise CausalManifestError(f"unknown event family {self.family!r}")
+        if self.kind not in EVENT_FAMILY_KINDS[self.family]:
+            raise CausalManifestError(
+                f"event kind {self.kind!r} is not valid for family {self.family!r}"
+            )
+        if not self.detectors_matched:
+            raise CausalManifestError("EventMarkRow.detectors_matched must be nonempty")
+        _require_sorted_unique(self.detectors_matched, "EventMarkRow.detectors_matched")
+        selected_family = min(
+            (_detector_family(item) for item in self.detectors_matched),
+            key=EVENT_FAMILY_PRIORITY.__getitem__,
+        )
+        if selected_family != self.family:
+            raise CausalManifestError(
+                f"event priority requires family={selected_family!r}, got {self.family!r}"
+            )
+        evidence_keys = tuple(canonical_json(item.to_dict()) for item in self.evidence)
+        _require_sorted_unique(evidence_keys, "EventMarkRow.evidence")
+        _validate_fields(self.notes, "EventMarkRow.notes")
+        if self.receiver_derivable != (self.public_derivation_ref is not None):
+            raise CausalManifestError(
+                "receiver_derivable requires exactly one public_derivation_ref; "
+                "non-derivable marks must leave it null"
+            )
+        expected_id = canonical_sha256(self.identity_payload())
+        if self.event_id != expected_id:
+            raise CausalManifestError(
+                f"EventMarkRow.event_id mismatch: expected {expected_id}, got {self.event_id}"
+            )
+        expected_resume = (
+            f"{self.run_id}/{self.stage_id}/{self.pair_index}/{self.frame_to}/{self.event_id}"
+        )
+        if self.resume_key != expected_resume:
+            raise CausalManifestError("EventMarkRow.resume_key does not match canonical cursor")
+
+    def identity_payload(self) -> dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "stage_id": self.stage_id,
+            "pair_index": self.pair_index,
+            "frame_from": self.frame_from,
+            "frame_to": self.frame_to,
+            "family": self.family,
+            "kind": self.kind,
+            "class_edge": self.class_edge.to_dict(),
+            "location": self.location.to_dict(),
+            "attachment": self.attachment.to_dict(),
+        }
+
+    @classmethod
+    def build(
+        cls,
+        *,
+        run_id: str,
+        stage_id: str,
+        checkpoint_id: str | None,
+        pair_index: int,
+        frame_from: int,
+        frame_to: int,
+        observed_at_utc: str,
+        family: str,
+        kind: str,
+        detectors_matched: Sequence[str],
+        class_edge: ClassEdgeMark,
+        location: SpacetimeMark,
+        attachment: IncidenceMark,
+        stratum_before: StratumMark,
+        stratum_after: StratumMark,
+        receiver_state: ReceiverStateMark,
+        evidence: Sequence[ArtifactRef],
+        receiver_derivable: bool,
+        public_derivation_ref: ArtifactRef | None,
+        notes: Mapping[str, Any] | None = None,
+    ) -> EventMarkRow:
+        detectors = tuple(sorted({str(item) for item in detectors_matched}))
+        sorted_evidence = tuple(
+            sorted(evidence, key=lambda item: canonical_json(item.to_dict()))
+        )
+        identity = {
+            "run_id": run_id,
+            "stage_id": stage_id,
+            "pair_index": int(pair_index),
+            "frame_from": int(frame_from),
+            "frame_to": int(frame_to),
+            "family": family,
+            "kind": kind,
+            "class_edge": class_edge.to_dict(),
+            "location": location.to_dict(),
+            "attachment": attachment.to_dict(),
+        }
+        event_id = canonical_sha256(identity)
+        resume_key = f"{run_id}/{stage_id}/{int(pair_index)}/{int(frame_to)}/{event_id}"
+        return cls(
+            event_id=event_id,
+            run_id=run_id,
+            stage_id=stage_id,
+            checkpoint_id=checkpoint_id,
+            pair_index=int(pair_index),
+            frame_from=int(frame_from),
+            frame_to=int(frame_to),
+            observed_at_utc=observed_at_utc,
+            authority_axis=NON_PROMOTABLE_AXIS,
+            family=family,
+            kind=kind,
+            detectors_matched=detectors,
+            class_edge=class_edge,
+            location=location,
+            attachment=attachment,
+            stratum_before=stratum_before,
+            stratum_after=stratum_after,
+            receiver_state=receiver_state,
+            evidence=sorted_evidence,
+            receiver_derivable=bool(receiver_derivable),
+            public_derivation_ref=public_derivation_ref,
+            resume_key=resume_key,
+            notes=freeze_fields(notes),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_id": self.schema_id,
+            "row_kind": self.row_kind,
+            "event_id": self.event_id,
+            "run_id": self.run_id,
+            "stage_id": self.stage_id,
+            "checkpoint_id": self.checkpoint_id,
+            "pair_index": self.pair_index,
+            "frame_from": self.frame_from,
+            "frame_to": self.frame_to,
+            "observed_at_utc": self.observed_at_utc,
+            "authority_axis": self.authority_axis,
+            "family": self.family,
+            "kind": self.kind,
+            "detectors_matched": list(self.detectors_matched),
+            "class_edge": self.class_edge.to_dict(),
+            "location": self.location.to_dict(),
+            "attachment": self.attachment.to_dict(),
+            "stratum_before": self.stratum_before.to_dict(),
+            "stratum_after": self.stratum_after.to_dict(),
+            "receiver_state": self.receiver_state.to_dict(),
+            "evidence": [item.to_dict() for item in self.evidence],
+            "receiver_derivable": self.receiver_derivable,
+            "public_derivation_ref": (
+                None if self.public_derivation_ref is None else self.public_derivation_ref.to_dict()
+            ),
+            "resume_key": self.resume_key,
+            "notes": [item.to_dict() for item in self.notes],
+        }
+
+    @classmethod
+    def from_dict(cls, row: Mapping[str, Any]) -> EventMarkRow:
+        forbidden = {"score", "score_claim", "promotable", "promotion_eligible"} & set(row)
+        if forbidden:
+            raise CausalManifestError(
+                f"EventMarkRow rejects score/promotion fields: {sorted(forbidden)}"
+            )
+        public_ref = row.get("public_derivation_ref")
+        return cls(
+            event_id=str(row["event_id"]),
+            run_id=str(row["run_id"]),
+            stage_id=str(row["stage_id"]),
+            checkpoint_id=row.get("checkpoint_id"),
+            pair_index=int(row["pair_index"]),
+            frame_from=int(row["frame_from"]),
+            frame_to=int(row["frame_to"]),
+            observed_at_utc=str(row["observed_at_utc"]),
+            authority_axis=str(row["authority_axis"]),
+            family=str(row["family"]),
+            kind=str(row["kind"]),
+            detectors_matched=tuple(str(value) for value in row["detectors_matched"]),
+            class_edge=ClassEdgeMark.from_dict(row["class_edge"]),
+            location=SpacetimeMark.from_dict(row["location"]),
+            attachment=IncidenceMark.from_dict(row["attachment"]),
+            stratum_before=StratumMark.from_dict(row["stratum_before"]),
+            stratum_after=StratumMark.from_dict(row["stratum_after"]),
+            receiver_state=ReceiverStateMark.from_dict(row["receiver_state"]),
+            evidence=tuple(ArtifactRef.from_dict(item) for item in row["evidence"]),
+            receiver_derivable=bool(row["receiver_derivable"]),
+            public_derivation_ref=(
+                None if public_ref is None else ArtifactRef.from_dict(public_ref)
+            ),
+            resume_key=str(row["resume_key"]),
+            notes=tuple(JsonField.from_dict(item) for item in row.get("notes", ())),
+            schema_id=str(row["schema_id"]),
+            row_kind=str(row["row_kind"]),
+        )
+
+
 CausalRow: TypeAlias = (
-    RunTreatmentManifest | BoundaryObservationRow | TransitionRow | ExplorationDecisionRow | CoverageReceiptRow
+    RunTreatmentManifest
+    | BoundaryObservationRow
+    | TransitionRow
+    | ExplorationDecisionRow
+    | CoverageReceiptRow
+    | EventMarkRow
 )
 
 
@@ -1001,6 +1571,7 @@ def row_from_dict(row: Mapping[str, Any]) -> CausalRow:
         ROW_TRANSITION: TransitionRow.from_dict,
         ROW_EXPLORATION_DECISION: ExplorationDecisionRow.from_dict,
         ROW_COVERAGE_RECEIPT: CoverageReceiptRow.from_dict,
+        ROW_EVENT_MARK: EventMarkRow.from_dict,
     }.get(kind)
     if parser is None:
         raise CausalManifestError(f"unknown causal-manifest row_kind {kind!r}")
@@ -1012,7 +1583,14 @@ def append_causal_row(path: str | Path, row: CausalRow) -> Path:
 
     if not isinstance(
         row,
-        (RunTreatmentManifest, BoundaryObservationRow, TransitionRow, ExplorationDecisionRow, CoverageReceiptRow),
+        (
+            RunTreatmentManifest,
+            BoundaryObservationRow,
+            TransitionRow,
+            ExplorationDecisionRow,
+            CoverageReceiptRow,
+            EventMarkRow,
+        ),
     ):
         raise TypeError(f"unsupported causal row type {type(row).__name__}")
     target = Path(path)
@@ -1162,6 +1740,14 @@ class CausalManifestWriter:
             raise CausalManifestConflictError("writer run_id differs from coverage run_id")
         with self._lock:
             return self._append_idempotent(receipt)
+
+    def record_event_mark(self, event: EventMarkRow) -> bool:
+        """Append an immutable D39 event mark, idempotently across resume."""
+
+        if event.run_id != self.run_id:
+            raise CausalManifestConflictError("writer run_id differs from event-mark run_id")
+        with self._lock:
+            return self._append_idempotent(event)
 
 
 @dataclass(frozen=True)
@@ -1425,6 +2011,8 @@ def unavailable_artifact(role: str, uri: str, reason: str, *, deferred_cost: boo
 
 
 __all__ = [
+    "EVENT_FAMILY_KINDS",
+    "EVENT_FAMILY_PRIORITY",
     "MANIFEST_FILENAME",
     "NON_PROMOTABLE_AXIS",
     "SCHEMA_ID",
@@ -1437,19 +2025,25 @@ __all__ = [
     "CausalManifestConflictError",
     "CausalManifestError",
     "CausalManifestWriter",
+    "ClassEdgeMark",
     "CoverageReceiptRow",
     "DigestRef",
+    "EventMarkRow",
     "ExplorationDecisionRow",
     "FORESupportReport",
     "HCML4ResidualReport",
     "HCMNegativeControlMoment",
+    "IncidenceMark",
     "JsonField",
     "LossTerm",
     "RealizedOutcome",
+    "ReceiverStateMark",
     "RewardObservation",
     "RunTreatmentManifest",
+    "SpacetimeMark",
     "StagePlanEntry",
     "StateSummary",
+    "StratumMark",
     "TransitionRow",
     "append_causal_row",
     "boundary_sequence_index",

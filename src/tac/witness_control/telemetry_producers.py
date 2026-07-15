@@ -24,6 +24,17 @@ from typing import Any
 
 import numpy as np
 
+from tac.causal_manifest import (
+    EVENT_FAMILY_PRIORITY,
+    ArtifactRef,
+    CausalManifestWriter,
+    ClassEdgeMark,
+    EventMarkRow,
+    IncidenceMark,
+    ReceiverStateMark,
+    SpacetimeMark,
+    StratumMark,
+)
 from tac.jsonl_store import append_locked_jsonl
 
 COMPONENT_WALLCLOCK_SCHEMA = "witness_component_wallclock.v1"
@@ -376,6 +387,7 @@ class ProducerResumeState:
 
     sps_emitted: set[str] = field(default_factory=set)
     ladder_emitted: set[str] = field(default_factory=set)
+    event_mark_resume_keys: set[str] = field(default_factory=set)
     inert_streaks: dict[str, int] = field(default_factory=dict)
 
     def mark_sps(self, *, engagement: str, epoch: int, reason: str) -> bool:
@@ -392,18 +404,34 @@ class ProducerResumeState:
         self.ladder_emitted.add(key)
         return True
 
+    def mark_event_resume_key(self, resume_key: str) -> bool:
+        key = str(resume_key)
+        if key in self.event_mark_resume_keys:
+            return False
+        self.event_mark_resume_keys.add(key)
+        return True
+
     def state_arrays(self, prefix: str) -> dict[str, Any]:
-        if not (self.sps_emitted or self.ladder_emitted or self.inert_streaks):
+        if not (
+            self.sps_emitted
+            or self.ladder_emitted
+            or self.event_mark_resume_keys
+            or self.inert_streaks
+        ):
             return {}
         return {
             prefix + "sps_emitted_json": np.asarray(json.dumps(sorted(self.sps_emitted))),
             prefix + "ladder_emitted_json": np.asarray(json.dumps(sorted(self.ladder_emitted))),
+            prefix + "event_mark_resume_keys_json": np.asarray(
+                json.dumps(sorted(self.event_mark_resume_keys))
+            ),
             prefix + "inert_streaks_json": np.asarray(json.dumps(self.inert_streaks, sort_keys=True)),
         }
 
     def restore_from_cfg(self, prefix: str, cfg: dict) -> bool:
         key = prefix + "sps_emitted_json"
-        if key not in cfg:
+        event_key = prefix + "event_mark_resume_keys_json"
+        if key not in cfg and event_key not in cfg:
             return False
 
         def _load(name: str, default: str) -> Any:
@@ -414,10 +442,99 @@ class ProducerResumeState:
 
         self.sps_emitted = {str(v) for v in _load("sps_emitted_json", "[]")}
         self.ladder_emitted = {str(v) for v in _load("ladder_emitted_json", "[]")}
+        self.event_mark_resume_keys = {
+            str(v) for v in _load("event_mark_resume_keys_json", "[]")
+        }
         self.inert_streaks = {
             str(k): int(v) for k, v in _load("inert_streaks_json", "{}").items()
         }
         return True
+
+
+def select_marked_event_family(
+    detector_matches: Mapping[str, Sequence[str]],
+) -> tuple[str, tuple[str, ...]]:
+    """Apply D39's disjoint priority partition and preserve all matched detectors."""
+
+    normalized: dict[str, tuple[str, ...]] = {}
+    for family, detectors in detector_matches.items():
+        if family not in EVENT_FAMILY_PRIORITY:
+            raise ValueError(f"unknown marked-event family {family!r}")
+        items = tuple(sorted({str(item) for item in detectors if str(item).strip()}))
+        if items:
+            normalized[str(family)] = items
+    if not normalized:
+        raise ValueError("marked event requires at least one matched detector")
+    family = min(normalized, key=EVENT_FAMILY_PRIORITY.__getitem__)
+    flattened = tuple(
+        sorted(
+            f"{matched_family}:{detector}"
+            for matched_family, detectors in normalized.items()
+            for detector in detectors
+        )
+    )
+    return family, flattened
+
+
+@dataclass
+class MarkedEventTelemetryProducer:
+    """Resume-safe D39 producer over the canonical causal-manifest writer."""
+
+    writer: CausalManifestWriter
+    state: ProducerResumeState
+
+    def record(
+        self,
+        *,
+        stage_id: str,
+        checkpoint_id: str | None,
+        pair_index: int,
+        frame_from: int,
+        frame_to: int,
+        observed_at_utc: str,
+        detector_matches: Mapping[str, Sequence[str]],
+        kind_by_family: Mapping[str, str],
+        class_edge: ClassEdgeMark,
+        location: SpacetimeMark,
+        attachment: IncidenceMark,
+        stratum_before: StratumMark,
+        stratum_after: StratumMark,
+        receiver_state: ReceiverStateMark,
+        evidence: Sequence[ArtifactRef],
+        receiver_derivable: bool,
+        public_derivation_ref: ArtifactRef | None,
+        notes: Mapping[str, Any] | None = None,
+    ) -> tuple[EventMarkRow, bool]:
+        family, detectors = select_marked_event_family(detector_matches)
+        if family not in kind_by_family:
+            raise ValueError(f"missing kind for selected marked-event family {family!r}")
+        row = EventMarkRow.build(
+            run_id=self.writer.run_id,
+            stage_id=stage_id,
+            checkpoint_id=checkpoint_id,
+            pair_index=pair_index,
+            frame_from=frame_from,
+            frame_to=frame_to,
+            observed_at_utc=observed_at_utc,
+            family=family,
+            kind=str(kind_by_family[family]),
+            detectors_matched=detectors,
+            class_edge=class_edge,
+            location=location,
+            attachment=attachment,
+            stratum_before=stratum_before,
+            stratum_after=stratum_after,
+            receiver_state=receiver_state,
+            evidence=evidence,
+            receiver_derivable=receiver_derivable,
+            public_derivation_ref=public_derivation_ref,
+            notes=notes,
+        )
+        appended = self.writer.record_event_mark(row)
+        # Only advance the checkpoint cursor after the locked append/no-op has
+        # proved the immutable row exists with identical bytes.
+        self.state.mark_event_resume_key(row.resume_key)
+        return row, appended
 
 
 @dataclass
@@ -584,6 +701,7 @@ __all__ = [
     "SPS_MATERIAL_FRACTION_THRESHOLD",
     "ClipActivationAggregator",
     "ComponentWallclock",
+    "MarkedEventTelemetryProducer",
     "ProducerResumeState",
     "deterministic_strata",
     "engagement_reasons",
@@ -591,6 +709,7 @@ __all__ = [
     "ladder_birth_complete_row",
     "lever_engage_row",
     "live_gap_fields",
+    "select_marked_event_family",
     "sps_engagement_row",
     "tail_cycle_endpoint_row",
     "term_inert_rows",
