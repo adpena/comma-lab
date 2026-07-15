@@ -17998,3 +17998,25 @@ strictly lower N-term rel-err than shearlet than Fourier ~1.20x at EVERY K (n600
 (curvelet_optimal_form_crux arm): is the guard OVER-BROAD or a genuine math conflict? Build curvelet to OPTIMAL FORM
 (compose with placement OR reformulate: curvelet-on-post-placement-residual / curvelet-native self-orientation) +
 equal-byte receiver + real decode consumers → FAIR through-R d_seg test of the 1.20x win. Do NOT settle for the toy.
+
+## FEED-toy-regrade-six-tests (2026-07-15, $0 adversarial re-grade — MEANS, pointer 0.19108 UNMOVED)
+verdict_scope: audit (re-grade only; no new negative created). Full memo: `.omx/research/naive_toy_re_grade_six_tests_20260715.md`.
+Six-test signature (OPTIMAL-FORM/n600/REAL-PIPELINE/MATCHED-BYTES/AUTHORITY/RIGHT-SCOPE) applied to the recent
+NO-GO corpus. **0 PARADIGM-dead, 0 FAMILY-dead** (concurs w/ 4-enum + #498). THREE deliverables the two sister
+consolidation audits did NOT produce: (1) **c1_deepmath curvelet-0.505 through-R** — the week's canonical toy —
+is ABSENT from both sister tables; caught only by FEED-curvelet-crux-correction + the c1 codex arm. Fails tests
+1/3/4/5 (no-placement strawman train_levelset:4001-4014 · saved-OFF unwired decode · 109,559 equal scalars NOT
+equal bytes · advisory receiver). FORMULATION, REOPENABLE via curvelet_through_R_dseg_ab. (2) **THE CRUX** (operator
+"find the crux"): the directional-basis family's two load-bearing wins are BOTH surrogates — **−48% self-orient =
+PROXY (MEMORY L25 "over-credited, unverified") · 1.20× curvelet = OMP N-term UPPER BOUND [macOS advisory],
+score_claim=false** — while the ONLY through-R rows (c1 codex:51-53: self-orient along8 0.004259 / along26 0.004286
+vs OFF 0.004244) are NEUTRAL-to-worse. The family is neither dead (0.505 toy) nor proven (surrogate) — genuinely
+UNMEASURED through-R; NO-FAKE class-8 surrogate-positive over-credited into the curvelet/Taper/Horizon/Step/no-Fourier
+build direction. Decisive = OWED curvelet_through_R_dseg_ab + OWED-16 self-orient ON/OFF. (3) **STALENESS CORRECTION:**
+#498 top-reopenable-#3 + c1_throughput_integration_audit:95 both call custom sparse-adjoint "dense/NAIVE/1.0×/cheap
+reopen" — STALE by one day: the optimal-form Metal bench ran 07-14 (custom_sparse_adjoint_metal_wall_MEASURED) =
+**0.708× SLOWDOWN whole-net, parity GREEN, real kernel** → CLOSED-at-optimal-form (family open only via low-EV hybrid
+layer-route gated on unbuilt oracle-mask predictor rel-L2 0.514). Do NOT re-run as naive reopen; 4-enum row-7 is the
+only current sister on this. GENUINELY-CLOSED optimal-form walls (do NOT reopen): fp-reorder megakernel #356 · flicker
+floor 0.005318 (GT-oracle, warp family) · dual-metric squared-Hessian identity #504 · RIPO −0.9601 falsification-guard.
+Pointer delta 0.0000000000 — MEANS; only upstream/evaluate.py <0.19108 byte-closed moves it.
