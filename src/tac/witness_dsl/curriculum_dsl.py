@@ -1506,6 +1506,65 @@ class Lever:
     notes: str = ""
     lawrefs: dict = field(default_factory=dict, compare=False, repr=False)
     constant_manifest: dict = field(default_factory=dict, compare=False, repr=False)
+    runtime_receipt_schemas: dict = field(default_factory=dict, compare=False, repr=False)
+
+    @property
+    def constant_refs(self) -> dict:
+        """Compatibility name consumed by the V9 provenance-bijection gate.
+
+        ``lawrefs`` is the historical DSL field used by the Ladder homotopy.  The
+        provenance gate names the same ownership edge ``constant_refs``.  Keeping
+        one stored mapping and exposing this read-only alias prevents the two
+        vocabularies from drifting into parallel sources of truth.
+        """
+        return self.lawrefs
+
+
+def _v9_scientific_constant_custody(
+    equation_id: str,
+    declarations: dict[str, float | int | bool],
+    *,
+    provenance: str,
+    ladder_by_flag: dict[str, str] | None = None,
+) -> tuple[dict, dict]:
+    """Resolve scalar V9 declarations into LawRefs + compiler manifest rows.
+
+    This helper is intentionally private to the DSL factories: callers author a
+    scientific Lever, never a raw flag dictionary.  Boolean declarations resolve
+    through integer 0/1 because LawRef inputs are numeric; the emitted override
+    retains its real bool type and the trainer parser normalizes it as a bool.
+    """
+    from tac.witness_dsl.lawref import (
+        LADDER_DERIVED_AT_CONFIG,
+        InputRef,
+        LawRef,
+        resolve,
+    )
+
+    ladders = dict(ladder_by_flag or {})
+    refs: dict = {}
+    manifests: dict = {}
+    for flag, declared in declarations.items():
+        scalar = int(declared) if isinstance(declared, bool) else declared
+        ref = LawRef(
+            equation_id=equation_id,
+            inputs={
+                "value": InputRef.literal(
+                    scalar,
+                    f"{provenance}; declaration={flag}",
+                    config_tags={"vehicle": "v9_cgauge_ideal_mod19"},
+                ),
+            },
+            ladder_class=ladders.get(flag, LADDER_DERIVED_AT_CONFIG),
+        )
+        resolved = resolve(
+            ref,
+            target_config_tags={"vehicle": "v9_cgauge_ideal_mod19"},
+            repo_root=_REPO_ROOT,
+        )
+        refs[flag] = ref
+        manifests[flag] = resolved.to_dict()
+    return refs, manifests
 
 
 # ---------------------------------------------------------------------------
@@ -1888,6 +1947,29 @@ class WitnessProgram(ScheduleDisplay):
 
         resolved_fd, manifest = resolve_flag_dict_constants(
             self.flag_dict(), target_config_tags, repo_root=repo_root)
+        # Some factories resolve their LawRefs eagerly so the typed scalar
+        # layer never has to stringify a LawRef object.  Merge those canonical
+        # compiler rows here and prove their resolved value still matches the
+        # final composed flag value (later-lever drift is a hard refusal).
+        for lever in self.levers:
+            for flag, record in lever.constant_manifest.items():
+                if flag not in resolved_fd:
+                    raise ValueError(
+                        f"{self.purpose or self.out_dir}: constant manifest owns absent flag {flag}")
+                expected = record.get("value")
+                actual = resolved_fd[flag]
+                if isinstance(actual, bool) and isinstance(expected, int):
+                    matched = int(actual) == expected
+                else:
+                    matched = actual == expected
+                if not matched:
+                    raise ValueError(
+                        f"{lever.name}: LawRef compiler value {flag}={expected!r} "
+                        f"does not match composed DSL value {actual!r}")
+                prior = manifest.get(flag)
+                if prior is not None and prior != record:
+                    raise ValueError(f"{lever.name}: duplicate conflicting LawRef record for {flag}")
+                manifest[flag] = dict(record)
         argv = [python, TRAINER_REL]
         for flag, val in resolved_fd.items():
             if val is True:
@@ -2429,6 +2511,7 @@ def AnalyticLaneBandTraining(
 
 def DsegAwareTaper(
     strength: float = 1.0, scale: float = 0.0, floor: float = 0.05,
+    *, scientific_declaration: bool = False,
 ) -> Lever:
     """#121 d_seg-aware Fourier-feature amplitude taper: reweight each FIXED Fourier/curvelet basis
     column's amplitude by the GT d_seg saliency (top1-top2 SegNet argmax MARGIN) field, moving the
@@ -2454,13 +2537,32 @@ def DsegAwareTaper(
     flip sign to -8% ~0.03; RE-VALIDATE at convergence (cheap disk A/B)" — the d_seg effect is
     ASSUMED_AWAITING_VERIFICATION until a CONVERGED byte-close A/B measures it. means != ends: this
     factory BUILDS the mechanism; it makes NO score claim; pointer UNMOVED."""
-    return Lever("dseg_aware_taper",
-                 overrides={"--dseg-aware-taper": True,
-                            "--dseg-aware-taper-strength": float(strength),
-                            "--dseg-aware-taper-scale": float(scale),
-                            "--dseg-aware-taper-floor": float(floor)},
-                 notes="#121 d_seg-aware Fourier-feature amplitude taper (byte-neutral spectral "
-                       "reallocation by GT margin saliency; RE-VALIDATE at convergence)")
+    overrides = {"--dseg-aware-taper": True,
+                 "--dseg-aware-taper-strength": float(strength),
+                 "--dseg-aware-taper-scale": float(scale),
+                 "--dseg-aware-taper-floor": float(floor)}
+    lawrefs: dict = {}
+    constant_manifest: dict = {}
+    receipt_schemas: dict = {}
+    if scientific_declaration:
+        lawrefs, constant_manifest = _v9_scientific_constant_custody(
+            "dseg_aware_fourier_taper_reweight_v1",
+            overrides,
+            provenance=(
+                "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, "
+                "positive floor 0.05; rank-1 78.9% treatment removes this whole Lever"
+            ),
+        )
+        receipt_schemas = dict.fromkeys(overrides, "v9_config_compile.v1")
+    return Lever(
+        "dseg_aware_taper",
+        overrides=overrides,
+        notes="#121 d_seg-aware Fourier-feature amplitude taper (byte-neutral spectral "
+              "reallocation by GT margin saliency; RE-VALIDATE at convergence)",
+        lawrefs=lawrefs,
+        constant_manifest=constant_manifest,
+        runtime_receipt_schemas=receipt_schemas,
+    )
 
 
 def HardnessOversample(
@@ -4098,6 +4200,7 @@ def MarginBandSatisficing(
 def HorizonWeightedMargin(
     weight: float = 0.0, target: float = 0.5, margin_lo: float = 0.3, margin_hi: float = 0.5,
     row_lo: int = 96, row_hi: int = 288, start_epoch: int = 0, window: int = 0,
+    *, stage_share_derived_live: bool = False, scientific_declaration: bool = False,
 ) -> Lever:
     """v7.5 B.5 — HORIZON-WEIGHTED MARGIN (#169; derivation
     ``.omx/research/dseg_reducibility_gt_margin_verdict_20260623.md``). DEFAULT-OFF.
@@ -4135,15 +4238,48 @@ def HorizonWeightedMargin(
             "must be a non-empty SEG-row range (#169 measured band rows ~96-288).")
     if not (float(target) > 0.0):
         raise ValueError(f"HorizonWeightedMargin: target must be > 0, got {target!r}")
+    if stage_share_derived_live and not (0.0 < float(weight) < 1.0):
+        raise ValueError(
+            "HorizonWeightedMargin: derived-live mode interprets weight as the requested "
+            f"single-force loss share and requires 0 < weight < 1, got {weight!r}")
+    if stage_share_derived_live and int(start_epoch) <= 0:
+        raise ValueError(
+            "HorizonWeightedMargin: derived-live mode requires a positive typed stage boundary")
+    overrides = {"--seg-horizon-margin-weight": float(weight),
+                 "--seg-horizon-margin-target": float(target),
+                 "--seg-horizon-margin-lo": float(margin_lo),
+                 "--seg-horizon-margin-hi": float(margin_hi),
+                 "--seg-horizon-row-lo": int(row_lo),
+                 "--seg-horizon-row-hi": int(row_hi),
+                 "--seg-horizon-margin-start-epoch": int(start_epoch)}
+    if stage_share_derived_live:
+        # Select the real boundary-measurement consumer.  The seven HWM
+        # scientific scalars above retain exactly seven LawRefs; this Boolean is
+        # a mode declaration, not an eighth fitted scientific constant.
+        overrides["--seg-horizon-margin-derived-live"] = True
+    lawrefs: dict = {}
+    constant_manifest: dict = {}
+    receipt_schemas: dict = {}
+    if scientific_declaration:
+        scientific = {
+            flag: value for flag, value in overrides.items()
+            if flag != "--seg-horizon-margin-derived-live"
+        }
+        from tac.witness_dsl.lawref import LADDER_DERIVED_LIVE
+        lawrefs, constant_manifest = _v9_scientific_constant_custody(
+            "horizon_weighted_margin_hinge_v1",
+            scientific,
+            provenance=(
+                "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% "
+                "single-force share resolves at the frozen n600 boundary via "
+                "w_h=(0.15/0.85)*L_o/max(L_h,eps)"
+            ),
+            ladder_by_flag={"--seg-horizon-margin-weight": LADDER_DERIVED_LIVE},
+        )
+        receipt_schemas = dict.fromkeys(overrides, "hwm_v9_stage_share_boundary.v1")
     return Lever(
         "horizon_weighted_margin",
-        overrides={"--seg-horizon-margin-weight": float(weight),
-                   "--seg-horizon-margin-target": float(target),
-                   "--seg-horizon-margin-lo": float(margin_lo),
-                   "--seg-horizon-margin-hi": float(margin_hi),
-                   "--seg-horizon-row-lo": int(row_lo),
-                   "--seg-horizon-row-hi": int(row_hi),
-                   "--seg-horizon-margin-start-epoch": int(start_epoch)},
+        overrides=overrides,
         epochs_delta=window,
         notes=(
             "v7.5 B.5 #169 horizon-weighted margin (one-sided relu(m_target - m_wit) on the "
@@ -4153,6 +4289,9 @@ def HorizonWeightedMargin(
             "SHARED-structure; A/B arm NOT a claim (oracle ceiling dS~0.024); advisory until "
             "byte-close"
         ),
+        lawrefs=lawrefs,
+        constant_manifest=constant_manifest,
+        runtime_receipt_schemas=receipt_schemas,
     )
 
 
@@ -4442,7 +4581,8 @@ def AACoverageRender(mode: str = "supersample", ss: int = 2,
 def StepNativeActivation(beta_start: float = 1.0, beta_end: float = 8.0,
                          anneal: str = "linear", window: int = 100,
                          *, basis: str = "annealed_hosc", omega: float = 1.0,
-                         finer_bias_init: bool = False, finer_bias_k: float = 10.0) -> Lever:
+                         finer_bias_init: bool = False, finer_bias_k: float = 10.0,
+                         scientific_declaration: bool = False) -> Lever:
     """FEED-07b lever #2 (#310, capstone lever #5 — duty-to-measure #2, NEVER-FIRED): the step-native
     activation chart, deep-math L∞-at-edge optimal for the piecewise-constant argmax target (error
     confined to the flip band, O(1) params/edge, no Gibbs). §OPERATOR PRIORITY measured-lever #5.
@@ -4493,6 +4633,26 @@ def StepNativeActivation(beta_start: float = 1.0, beta_end: float = 8.0,
         # not emitted). --finer-bias-k only meaningful with --finer-bias-init on.
         overrides["--finer-bias-init"] = True
         overrides["--finer-bias-k"] = float(finer_bias_k)
+    lawrefs: dict = {}
+    constant_manifest: dict = {}
+    receipt_schemas: dict = {}
+    if scientific_declaration:
+        # Numeric activation-shape constants get executable LawRefs.  The two
+        # categorical tokens (activation/anneal) remain parser-enforced tokens;
+        # numeric InputRef must not be stretched to smuggle strings.
+        numeric = {
+            flag: value for flag, value in overrides.items()
+            if isinstance(value, (int, float)) and not isinstance(value, bool)
+        }
+        lawrefs, constant_manifest = _v9_scientific_constant_custody(
+            "step_native_activation_edge_optimality_v1",
+            numeric,
+            provenance=(
+                "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta "
+                "1->8 is a distinct treatment from the sealed event endpoint 3.177"
+            ),
+        )
+        receipt_schemas = dict.fromkeys(overrides, "v9_config_compile.v1")
     return Lever(
         "FEED_07b_step_native_activation",
         overrides=overrides,
@@ -4500,6 +4660,9 @@ def StepNativeActivation(beta_start: float = 1.0, beta_end: float = 8.0,
         notes=(f"#310 step-native chart via hosc beta-anneal ({basis}: beta {beta_start}->{beta_end} "
                f"@omega {omega}, FINER {finer_bias_init}; beta->inf = step limit; NEVER fixed-beta — "
                "anneal only); L-inf-at-edge optimality; duty-to-measure #2, #310 sweep owed"),
+        lawrefs=lawrefs,
+        constant_manifest=constant_manifest,
+        runtime_receipt_schemas=receipt_schemas,
     )
 
 

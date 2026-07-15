@@ -387,6 +387,9 @@ def config_family(cfg) -> str:
                                     "v9_cgauge_truly_optimal_core",
                                     "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
                                     "v9_cgauge_ideal_mod32",
+                                    "v9_cgauge_432_taper_off",
+                                    "v9_cgauge_432_horizon_iso",
+                                    "v9_cgauge_432_step_iso",
                                     "next_launch_all_levers_20260713",
                                     "next_launch_all_levers_trimmed_20260713",
                                     "throughput_component_timer_async_20260713",
@@ -970,6 +973,24 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
             gt_cache, num_pairs=num_pairs, mod_dim=mod_dim,
             program_name=config,
             with_reachability=(config == "v9_cgauge_ideal_mod19_sR"), **_ek)
+    if config in ("v9_cgauge_432_taper_off", "v9_cgauge_432_horizon_iso",
+                  "v9_cgauge_432_step_iso"):
+        # Task #432 top-3 duty-to-measure typed one-delta arms.  Each compiler starts from the
+        # identical ideal-mod19 scientific control and fail-closes on the exact argv delta plus
+        # LawRef/parser/trainer-consumer custody before returning a launchable config.
+        from tac.witness_dsl.spec_v9_cgauge import (
+            compile_v9_cgauge_432_horizon_iso_launch_config,
+            compile_v9_cgauge_432_step_iso_launch_config,
+            compile_v9_cgauge_432_taper_off_launch_config,
+        )
+
+        _iso_compilers = {
+            "v9_cgauge_432_taper_off": compile_v9_cgauge_432_taper_off_launch_config,
+            "v9_cgauge_432_horizon_iso": compile_v9_cgauge_432_horizon_iso_launch_config,
+            "v9_cgauge_432_step_iso": compile_v9_cgauge_432_step_iso_launch_config,
+        }
+        return _iso_compilers[config](
+            gt_cache_path=gt_cache, num_pairs=num_pairs, **_ek)
     if config in ("next_launch_all_levers_20260713", "next_launch_all_levers_trimmed_20260713"):
         # 2026-07-13 operator-GO-only ticket.  The compiler starts from the
         # ideal mod19 lineage, composes every compatible speed/init/observer
@@ -1012,6 +1033,8 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432, "
         f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, "
         f"v9_cgauge_ideal_mod19_sR, v9_cgauge_ideal_mod32, "
+        f"v9_cgauge_432_taper_off, v9_cgauge_432_horizon_iso, "
+        f"v9_cgauge_432_step_iso, "
         f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713, "
         f"throughput_component_timer_async_20260713, "
         f"throughput_component_timer_solo_20260713. "
@@ -1490,6 +1513,9 @@ def main(argv: list[str] | None = None) -> int:
                              "v9_cgauge_truly_optimal_core",
                              "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
                              "v9_cgauge_ideal_mod32",
+                             "v9_cgauge_432_taper_off",
+                             "v9_cgauge_432_horizon_iso",
+                             "v9_cgauge_432_step_iso",
                              "next_launch_all_levers_20260713",
                              "next_launch_all_levers_trimmed_20260713",
                              "throughput_component_timer_async_20260713",

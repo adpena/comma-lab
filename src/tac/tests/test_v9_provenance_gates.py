@@ -184,8 +184,15 @@ def test_live_v9_bijection_collector_walks_four_real_factories_deterministically
     # named config and is checked by the launcher/DSL manifest path.
     assert [len(snapshot.bindings) for snapshot in first] == [199, 224, 224, 224]
     assert [snapshot.bijection_hash for snapshot in first] == [snapshot.bijection_hash for snapshot in second]
-    assert all(not snapshot.lawref_flags for snapshot in first)
-    assert [len(snapshot.compiler_record_flags) for snapshot in first] == [6, 8, 8, 8]
+    taper_flags = (
+        "--dseg-aware-taper",
+        "--dseg-aware-taper-floor",
+        "--dseg-aware-taper-scale",
+        "--dseg-aware-taper-strength",
+    )
+    assert first[0].lawref_flags == ()
+    assert all(snapshot.lawref_flags == taper_flags for snapshot in first[1:])
+    assert [len(snapshot.compiler_record_flags) for snapshot in first] == [6, 12, 12, 12]
 
 
 # ---------------------------------------------------------------------------

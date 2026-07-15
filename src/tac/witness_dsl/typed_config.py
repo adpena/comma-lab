@@ -363,16 +363,43 @@ class TypedLever(BaseModel):
     )
     epochs_delta: int = Field(default=0, description="epochs this lever adds to the run window")
     notes: str = Field(default="", description="human note")
+    # Executable scientific-constant custody.  ``lawrefs`` carries the live
+    # LawRef objects into WitnessProgram; ``lawref_declarations`` is their
+    # timestamp-free JSON fingerprint in the typed-config hash.  The resolved
+    # manifest is excluded because ``resolved_at`` is metadata and must not make
+    # identical typed compilation non-deterministic.
+    lawrefs: dict[str, object] = Field(default_factory=dict, exclude=True, repr=False)
+    lawref_declarations: dict[str, dict] = Field(default_factory=dict)
+    constant_manifest: dict[str, dict] = Field(default_factory=dict, exclude=True, repr=False)
+    runtime_receipt_schemas: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _override_flags(self) -> "TypedLever":
         for k in self.overrides:
             if not k.startswith("--"):
                 raise ValueError(f"lever {self.name!r}: override key {k!r} must be a --flag")
+        for field_name, mapping in (
+            ("lawrefs", self.lawrefs),
+            ("lawref_declarations", self.lawref_declarations),
+            ("constant_manifest", self.constant_manifest),
+            ("runtime_receipt_schemas", self.runtime_receipt_schemas),
+        ):
+            unknown = sorted(set(mapping) - set(self.overrides))
+            if unknown:
+                raise ValueError(
+                    f"lever {self.name!r}: {field_name} contains non-override flags {unknown}")
         return self
 
     def to_dsl(self) -> Lever:
-        return Lever(self.name, dict(self.overrides), self.epochs_delta, self.notes)
+        return Lever(
+            self.name,
+            dict(self.overrides),
+            self.epochs_delta,
+            self.notes,
+            lawrefs=dict(self.lawrefs),
+            constant_manifest=dict(self.constant_manifest),
+            runtime_receipt_schemas=dict(self.runtime_receipt_schemas),
+        )
 
 
 # ---------------------------------------------------------------------------

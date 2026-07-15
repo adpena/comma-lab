@@ -720,6 +720,10 @@ def compile_v9_cgauge_432_launch_config(
 # ===========================================================================
 
 V9_CGAUGE_IDEAL_EXPECTED_ADDITIONS: tuple[str, ...] = (
+    # The v7.5.2 taper flags historically lived anonymously in ``base``.  V9
+    # isolation requires a real Lever owner + LawRefs so TAPER-off can remove
+    # the whole scientific declaration instead of emitting a forbidden zero.
+    "dseg_aware_taper",
     "unified_tau_eikonal_hold",
     "n292_closed_loop_eikonal_control",
     "R7_beta2_window_rewarmup",
@@ -754,19 +758,43 @@ def _typed_ideal_lever(lever):
     """Lossless curriculum-DSL Lever -> typed-config adapter."""
     from tac.witness_dsl.typed_config import TypedLever
 
+    declarations = {}
+    for flag, ref in lever.lawrefs.items():
+        declarations[flag] = {
+            "equation_id": ref.equation_id,
+            "ladder_class": ref.ladder_class,
+            "inputs": {
+                name: {
+                    "kind": inp.kind,
+                    "value": inp.value,
+                    "artifact_path": inp.artifact_path,
+                    "extract": inp.extract,
+                    "expected_sha256": inp.expected_sha256,
+                    "config_tags": dict(inp.config_tags),
+                    "max_staleness_days": inp.max_staleness_days,
+                    "provenance": inp.provenance,
+                }
+                for name, inp in ref.inputs.items()
+            },
+        }
+
     return TypedLever(
         name=lever.name,
         overrides=dict(lever.overrides),
         epochs_delta=int(lever.epochs_delta),
         notes=str(lever.notes),
+        lawrefs=dict(lever.lawrefs),
+        lawref_declarations=declarations,
+        constant_manifest=dict(lever.constant_manifest),
+        runtime_receipt_schemas=dict(lever.runtime_receipt_schemas),
     )
 
 
 def _derive_manifest_from_emitted_argv(constants: dict, argv: tuple[str, ...]) -> dict:
     """Make emitted argv the single scalar-value owner, then fail closed on drift.
 
-    Historical V7/V6 manifests can legitimately own values distinct from a child
-    vehicle.  For every manifest key with an identically named emitted
+    The inherited V7 manifest recorded ``hosc_beta_end=10`` while the program emitted
+    ``--hosc-beta-end 3.177``.  For every manifest key with an identically named emitted
     flag, this helper derives the manifest value from the compiled DSL argv and immediately
     re-checks identity.  This is deliberately applied only to the new ideal configs so the
     review-gated historical compiler remains untouched.
@@ -803,6 +831,22 @@ def _derive_manifest_from_emitted_argv(constants: dict, argv: tuple[str, ...]) -
     return out
 
 
+def _merge_lever_constant_manifests(constants: dict, levers: tuple) -> dict:
+    """Merge eager LawRef rows into launcher constants under canonical keys."""
+    out = {key: (dict(value) if isinstance(value, dict) else value)
+           for key, value in constants.items()}
+    for lever in levers:
+        for flag, record in lever.constant_manifest.items():
+            key = flag.removeprefix("--").replace("-", "_")
+            # A treatment replaces an inherited scalar only through this
+            # explicit owning Lever record (STEP's beta_end=8 is the case at
+            # hand); bare argv never reaches this merge surface.
+            out[key] = dict(record)
+            out[key]["single_value_owner"] = f"dsl_lever:{lever.name}"
+            out[key]["emitted_flag"] = flag
+    return out
+
+
 def compile_v9_cgauge_ideal_launch_config(
     gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
     *,
@@ -826,13 +870,11 @@ def compile_v9_cgauge_ideal_launch_config(
     if int(mod_dim) not in (19, 32):
         raise ValueError(f"ideal V9 family A/B admits mod_dim 19 or 32 only, got {mod_dim!r}")
 
-    from tac.canonical_equations.v9_hosc_beta_endpoint_20260715 import (
-        resolve_v9_hosc_beta_endpoint,
-    )
     from tac.witness_autoconfig import CrucibleV7LaunchConfig, _crucible_v7_argv_pairs
     from tac.witness_dsl.curriculum_dsl import (
         Beta2WindowRewarmup,
         ClosedLoopEikonalControl,
+        DsegAwareTaper,
         LengthSigma,
         Lever,
         MarginBandSatisficing,
@@ -845,6 +887,17 @@ def compile_v9_cgauge_ideal_launch_config(
     wrapped = compile_v9_cgauge_432_launch_config(
         gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir)
     typed = wrapped.typed
+
+    taper = DsegAwareTaper(
+        strength=1.0, scale=0.0, floor=0.05, scientific_declaration=True)
+    taper_flags = frozenset(taper.overrides)
+    missing_taper_flags = sorted(taper_flags - set(typed.base))
+    if missing_taper_flags:
+        raise ValueError(
+            f"{program_name} taper ownership REFUSE: inherited base lacks {missing_taper_flags}")
+    if any(typed.base[flag] != value for flag, value in taper.overrides.items()):
+        raise ValueError(
+            f"{program_name} taper ownership REFUSE: Lever values do not match inherited base")
 
     # The new trainer actuator owns λ_k = λ_0 + (λ_N-λ_0)k/N on the persisted event
     # τ rung and primes λ BEFORE assigning the lower τ.  Values are the settled V9
@@ -860,8 +913,8 @@ def compile_v9_cgauge_ideal_launch_config(
         notes=("eikonal_retention_couples_to_tau_rung_v1: lambda_k=0.01+(0.05-0.01)k/N; "
                "persisted rung is the single actuator; trainer primes retention before lower tau"),
     )
-    margin_satisfice = MarginBandSatisficing(weight=0.2)
     additions = (
+        _typed_ideal_lever(taper),
         _typed_ideal_lever(eik_hold),
         _typed_ideal_lever(ClosedLoopEikonalControl(
             eikonal_bump=0.05, eikonal_max=0.20, max_bumps=2,
@@ -875,7 +928,7 @@ def compile_v9_cgauge_ideal_launch_config(
         # MarginBandSatisficing: sibling provenance fix LANDED (a79f5d68cd) — m_safe now DERIVED via
         # LawRef (headroom*delta_R=0.03918), fail-closed invariant. Operator 2026-07-13: "belongs in the
         # ideal v9 cgauge". ON in core + BOTH A/B arms (identical → mod-dim FAMILY A/B stays unconfounded).
-        _typed_ideal_lever(margin_satisfice),
+        _typed_ideal_lever(MarginBandSatisficing(weight=0.2)),
         # C1 matched control.  Reachability is a source multiplier inside this
         # loss and is inert when margin_saliency_weight==0; compose the existing
         # margin-saliency Lever on BOTH arms.  No event-native margin-saliency
@@ -893,16 +946,12 @@ def compile_v9_cgauge_ideal_launch_config(
         "appearance-phase handoff. Exact n600 per-class through-R and complete stage checkpoints; "
         "MEANS only until receiver-closed exact evaluation. Fire after the 95%-kill P0."
     )
-    hosc_endpoint = resolve_v9_hosc_beta_endpoint()
     typed = typed.model_copy(update={
         "name": str(program_name),
         "purpose": purpose,
         "base": {
-            **typed.base,
+            **{flag: value for flag, value in typed.base.items() if flag not in taper_flags},
             "--mod-dim": int(mod_dim),
-            # V9 owns the step-native dyadic continuation endpoint.  Do not
-            # inherit V7's event-frozen 3.177 or V6's clock-replica 10.0.
-            "--hosc-beta-end": float(hosc_endpoint.value),
             # The trainer refuses S_R with a larger pair micro-batch because
             # provider weights are pair-local.  Pin 1 in the shared control,
             # not only in the treatment, so C1 stays clean.
@@ -943,7 +992,6 @@ def compile_v9_cgauge_ideal_launch_config(
         "--margin-saliency-tau": "0.5",
         "--margin-saliency-target": "0.5",
         "--verdict-pairs": "0",
-        "--hosc-beta-end": "8.0",
     }
     mismatches = {
         flag: (emitted_pairs.get(flag), want)
@@ -990,20 +1038,7 @@ def compile_v9_cgauge_ideal_launch_config(
         },
     })
     constants = _derive_manifest_from_emitted_argv(wrapped.constants_manifest, argv)
-    inherited_hosc_value = constants["hosc_beta_end"].get(
-        "inherited_manifest_value_replaced",
-        wrapped.constants_manifest["hosc_beta_end"]["value"],
-    )
-    constants["hosc_beta_end"] = {
-        **hosc_endpoint.to_dict(),
-        "single_value_owner": "v9_hosc_beta_endpoint_v1",
-        "inherited_manifest_value_replaced": inherited_hosc_value,
-        "note": (
-            "V9-only dyadic step-native continuation 1->2->4->8; historical "
-            "V7 event-freeze and V6 clock-replica values remain scoped to those vehicles"
-        ),
-    }
-    constants.update(margin_satisfice.constant_manifest)
+    constants = _merge_lever_constant_manifests(constants, tuple(typed.to_program().levers))
     constants["eikonal_retention_tau_rung"] = {
         "value": {"base": 0.01, "end": 0.05},
         "equation_id": "eikonal_retention_couples_to_tau_rung_v1",
@@ -1026,11 +1061,6 @@ def compile_v9_cgauge_ideal_launch_config(
     }
     if float(constants["hosc_beta_end"]["value"]) != float(emitted_pairs["--hosc-beta-end"]):
         raise ValueError("hosc_beta_end constants manifest does not match compiled DSL argv")
-    msafe_row = constants["seg_margin_satisfice_msafe"]
-    if float(msafe_row["value"]) != float(emitted_pairs["--seg-margin-satisfice-msafe"]):
-        raise ValueError(
-            "seg_margin_satisfice_msafe constants manifest does not match compiled DSL argv"
-        )
     return CrucibleV7LaunchConfig(
         typed=typed,
         constants_manifest=constants,
@@ -1064,6 +1094,227 @@ def compile_v9_cgauge_ideal_mod19_sR_launch_config(**kwargs):
     return compile_v9_cgauge_ideal_launch_config(**kwargs)
 
 
+V9_CGAUGE_ISO_CONFIG_IDS: tuple[str, ...] = (
+    "v9_cgauge_432_taper_off",
+    "v9_cgauge_432_horizon_iso",
+    "v9_cgauge_432_step_iso",
+)
+
+_TAPER_FLAGS = frozenset({
+    "--dseg-aware-taper",
+    "--dseg-aware-taper-strength",
+    "--dseg-aware-taper-scale",
+    "--dseg-aware-taper-floor",
+})
+
+
+def _assert_iso_lever_custody(lever, *, trainer_path=None, consumer_locations=None) -> None:
+    """Refuse an ISO Lever without parser, consumer, LawRef, or receipt custody.
+
+    ``consumer_locations`` is injectable for adversarial tests; production derives
+    it from the real trainer AST.  This is the requested missing-consumer refusal,
+    not a prose declaration.
+    """
+    from pathlib import Path
+
+    from tac.v9_provenance_gates import _trainer_consumers
+    from tac.witness_dsl.curriculum_dsl import TRAINER_REL, build_real_trainer_parser
+
+    root = Path(__file__).resolve().parents[3]
+    trainer = Path(trainer_path or root / TRAINER_REL)
+    parser = build_real_trainer_parser(trainer)
+    actions = {opt: action for action in parser._actions for opt in action.option_strings}
+    consumers = (dict(consumer_locations) if consumer_locations is not None
+                 else dict(_trainer_consumers(trainer, root)))
+    violations: list[str] = []
+    for flag in lever.overrides:
+        action = actions.get(flag)
+        dest = getattr(action, "dest", None)
+        if action is None:
+            violations.append(f"{flag}: absent from the real trainer parser")
+        elif not consumers.get(dest or ""):
+            violations.append(f"{flag}: no executable trainer consumer for args.{dest}")
+        if not lever.runtime_receipt_schemas.get(flag):
+            violations.append(f"{flag}: missing runtime receipt schema")
+    for flag, ref in lever.lawrefs.items():
+        rec = lever.constant_manifest.get(flag)
+        if rec is None or rec.get("equation_id") != ref.equation_id:
+            violations.append(f"{flag}: LawRef/compiler-record mismatch")
+    if violations:
+        raise ValueError(
+            f"{lever.name} ISO provenance/consumer REFUSE: " + "; ".join(violations))
+
+
+def _compile_v9_cgauge_iso_launch_config(
+    variant: str,
+    gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    *,
+    num_pairs: int = 600,
+    epochs: int = 3000,
+    out_dir: str,
+):
+    """Compile one top-three matched ISO arm over the ideal mod19 control."""
+    from tac.witness_autoconfig import CrucibleV7LaunchConfig, _crucible_v7_argv_pairs
+    from tac.witness_dsl.curriculum_dsl import HorizonWeightedMargin, StepNativeActivation
+
+    if variant not in {"taper_off", "horizon_iso", "step_iso"}:
+        raise ValueError(f"unknown V9 ISO variant {variant!r}")
+    config_id = f"v9_cgauge_432_{variant}"
+    wrapped = compile_v9_cgauge_ideal_launch_config(
+        gt_cache_path,
+        num_pairs=num_pairs,
+        epochs=epochs,
+        out_dir=out_dir,
+        mod_dim=19,
+        program_name="v9_cgauge_ideal_mod19",
+    )
+    typed = wrapped.typed
+    control_pairs = dict(_crucible_v7_argv_pairs(tuple(typed.to_program().compile_trainer_argv())))
+    levers = list(typed.levers)
+    delta_lever = None
+    duty = {"taper_off": 78.9, "horizon_iso": 47.3, "step_iso": 34.2}[variant]
+
+    if variant == "taper_off":
+        matches = [lever for lever in levers if lever.name == "dseg_aware_taper"]
+        if len(matches) != 1:
+            raise ValueError(
+                f"{config_id} REFUSE: expected exactly one base DsegAwareTaper Lever, got {len(matches)}")
+        _assert_iso_lever_custody(matches[0])
+        delta_lever = matches[0]
+        levers = [lever for lever in levers if lever.name != "dseg_aware_taper"]
+    elif variant == "horizon_iso":
+        stage_boundary = int(typed.base.get("--muon-start-epoch", 726))
+        raw = HorizonWeightedMargin(
+            weight=0.15,
+            target=0.5,
+            margin_lo=0.3,
+            margin_hi=0.5,
+            row_lo=96,
+            row_hi=288,
+            start_epoch=stage_boundary,
+            window=0,
+            stage_share_derived_live=True,
+            scientific_declaration=True,
+        )
+        if len(raw.lawrefs) != 7:
+            raise ValueError(
+                f"{config_id} REFUSE: HorizonWeightedMargin needs seven scientific LawRefs, "
+                f"got {len(raw.lawrefs)}")
+        _assert_iso_lever_custody(raw)
+        delta_lever = _typed_ideal_lever(raw)
+        levers.append(delta_lever)
+    else:
+        raw = StepNativeActivation(
+            beta_start=1.0,
+            beta_end=8.0,
+            anneal="linear",
+            window=0,
+            basis="annealed_hosc",
+            omega=1.0,
+            finer_bias_init=False,
+            scientific_declaration=True,
+        )
+        _assert_iso_lever_custody(raw)
+        beta_rec = raw.constant_manifest.get("--hosc-beta-end")
+        if beta_rec is None or float(beta_rec["value"]) != 8.0:
+            raise ValueError(
+                f"{config_id} REFUSE: beta_end=8 requires its own LawRef/compiler record")
+        delta_lever = _typed_ideal_lever(raw)
+        levers.append(delta_lever)
+
+    purpose = (
+        f"PREPARED_NOT_FIRED V9 CGauge {variant} matched one-Lever isolation arm; "
+        f"duty-to-measure={duty:.1f}% of remaining descent. Same seed/order/steps as "
+        "v9_cgauge_ideal_mod19. Operator-GO + governed lane claim still required; "
+        "means only, pointer 0.19108/0.18804 UNMOVED."
+    )
+    typed = typed.model_copy(update={
+        "name": config_id,
+        "purpose": purpose,
+        "out_dir": out_dir,
+        "levers": tuple(levers),
+    })
+    violations = typed.validate_program()
+    if violations:
+        raise ValueError(
+            f"{config_id} DSL gate: {len(violations)} WitnessProgram.validate violation(s): "
+            f"{violations[:4]}")
+
+    argv = tuple(typed.to_program().compile_trainer_argv())
+    treatment_pairs = dict(_crucible_v7_argv_pairs(argv))
+    absent = "<ABSENT>"
+    diff = {
+        flag: (
+            control_pairs.get(flag, absent),
+            treatment_pairs.get(flag, absent),
+        )
+        for flag in sorted(set(control_pairs) | set(treatment_pairs))
+        if flag != "--out-dir" and (
+            flag not in control_pairs
+            or flag not in treatment_pairs
+            or control_pairs[flag] != treatment_pairs[flag]
+        )
+    }
+    if variant == "taper_off":
+        expected_diff = {flag: (control_pairs[flag], absent) for flag in sorted(_TAPER_FLAGS)}
+    elif variant == "horizon_iso":
+        expected_diff = {
+            flag: (absent, treatment_pairs[flag]) for flag in sorted(delta_lever.overrides)
+        }
+    else:
+        expected_diff = {"--hosc-beta-end": (control_pairs["--hosc-beta-end"], "8.0")}
+    if diff != expected_diff:
+        raise ValueError(
+            f"{config_id} one-Lever-delta REFUSE: argv diff {diff} != expected {expected_diff}")
+
+    rebound = wrapped._rebind_typed(typed)
+    manifest = dict(rebound.dsl_program_manifest)
+    exclusions = dict(manifest.get("excluded_levers", {}))
+    if variant == "horizon_iso":
+        exclusions.pop("horizon_weighted_margin", None)
+    elif variant == "step_iso":
+        exclusions.pop("step_native_endpoint", None)
+    manifest.update({
+        "expected_active_levers": [lever.name for lever in typed.levers],
+        "excluded_levers": exclusions,
+        "iso_contract": {
+            "config_id": config_id,
+            "control_config": "v9_cgauge_ideal_mod19",
+            "duty_to_measure_percent": duty,
+            "argv_diff": {flag: list(values) for flag, values in diff.items()},
+            "one_lever_delta": True,
+            "status": "PREPARED_NOT_FIRED_OPERATOR_GO_REQUIRED",
+        },
+    })
+    constants = dict(wrapped.constants_manifest)
+    if variant == "taper_off":
+        for flag in _TAPER_FLAGS:
+            constants.pop(flag.removeprefix("--").replace("-", "_"), None)
+    constants = _derive_manifest_from_emitted_argv(constants, argv)
+    constants = _merge_lever_constant_manifests(constants, tuple(typed.to_program().levers))
+    return CrucibleV7LaunchConfig(
+        typed=typed,
+        constants_manifest=constants,
+        dsl_program_manifest=manifest,
+        schedule_governance=dict(wrapped.schedule_governance),
+    )
+
+
+def compile_v9_cgauge_432_taper_off_launch_config(**kwargs):
+    kwargs.setdefault("out_dir", "experiments/results/v9_cgauge_432_taper_off_20260715")
+    return _compile_v9_cgauge_iso_launch_config("taper_off", **kwargs)
+
+
+def compile_v9_cgauge_432_horizon_iso_launch_config(**kwargs):
+    kwargs.setdefault("out_dir", "experiments/results/v9_cgauge_432_horizon_iso_20260715")
+    return _compile_v9_cgauge_iso_launch_config("horizon_iso", **kwargs)
+
+
+def compile_v9_cgauge_432_step_iso_launch_config(**kwargs):
+    kwargs.setdefault("out_dir", "experiments/results/v9_cgauge_432_step_iso_20260715")
+    return _compile_v9_cgauge_iso_launch_config("step_iso", **kwargs)
+
+
 __all__ = [
     "V9_CGAUGE_432_CASCADE_REALIZATION",
     "V9_CGAUGE_432_EXPECTED_LEVERS",
@@ -1073,6 +1324,10 @@ __all__ = [
     "V9_CGAUGE_IDEAL_SR_EQUATION_ID",
     "V9_CGAUGE_IDEAL_SR_EXPECTED_ADDITION",
     "V9_CGAUGE_PROVENANCE",
+    "V9_CGAUGE_ISO_CONFIG_IDS",
+    "compile_v9_cgauge_432_horizon_iso_launch_config",
+    "compile_v9_cgauge_432_step_iso_launch_config",
+    "compile_v9_cgauge_432_taper_off_launch_config",
     "compile_v9_cgauge_432_launch_config",
     "compile_v9_cgauge_config",
     "compile_v9_cgauge_ideal_launch_config",

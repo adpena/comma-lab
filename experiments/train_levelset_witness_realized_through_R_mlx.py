@@ -904,6 +904,10 @@ def _build_resume_state_arrays(
     out["__cfg_seg_margin_satisfice_band"] = np.asarray(float(getattr(args, "seg_margin_satisfice_band", 2.0)))
     # (v7.5 B.5 #169) horizon-weighted margin cfg (weight/target/band/rows/start).
     out["__cfg_seg_horizon_margin_weight"] = np.asarray(float(getattr(args, "seg_horizon_margin_weight", 0.0)))
+    out["__cfg_seg_horizon_margin_derived_live"] = np.asarray(
+        int(bool(getattr(args, "seg_horizon_margin_derived_live", False))))
+    out["__cfg_seg_horizon_margin_resolved_weight"] = np.asarray(
+        float(getattr(args, "seg_horizon_margin_resolved_weight", -1.0)))
     out["__cfg_seg_horizon_margin_target"] = np.asarray(float(getattr(args, "seg_horizon_margin_target", 0.5)))
     out["__cfg_seg_horizon_margin_lo"] = np.asarray(float(getattr(args, "seg_horizon_margin_lo", 0.3)))
     out["__cfg_seg_horizon_margin_hi"] = np.asarray(float(getattr(args, "seg_horizon_margin_hi", 0.5)))
@@ -1245,6 +1249,8 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # (v7.5 B.5 #169) horizon-weighted margin: weight/target/band/rows are loss-affecting (guarded);
         # start-epoch is a WHEN (unguarded, palliative-resumable, like the other lever start-epochs).
         ("__cfg_seg_horizon_margin_weight", float(getattr(args, "seg_horizon_margin_weight", 0.0)), True),
+        ("__cfg_seg_horizon_margin_derived_live",
+         int(bool(getattr(args, "seg_horizon_margin_derived_live", False))), True),
         ("__cfg_seg_horizon_margin_target", float(getattr(args, "seg_horizon_margin_target", 0.5)), True),
         ("__cfg_seg_horizon_margin_lo", float(getattr(args, "seg_horizon_margin_lo", 0.3)), True),
         ("__cfg_seg_horizon_margin_hi", float(getattr(args, "seg_horizon_margin_hi", 0.5)), True),
@@ -3455,6 +3461,62 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # form) — the schema is unchanged, the semantic is logged by the "eik_stabilizer" stage row.
 )
 
+HWM_V9_BOUNDARY_RECEIPT_SCHEMA = "hwm_v9_stage_share_boundary.v1"
+
+
+def _resolve_hwm_v9_stage_share_weight(
+    loss_horizon_raw: float,
+    loss_other: float,
+    requested_share: float = 0.15,
+    eps: float = 1e-12,
+) -> float:
+    """Resolve ``w_h`` from a frozen-boundary loss-share measurement.
+
+    ``w_h = (q/(1-q)) * L_o/max(L_h, eps)`` makes the weighted horizon
+    term occupy share ``q`` of ``L_o + w_h L_h`` at that exact state.  Pure,
+    deterministic, and strict: bad telemetry may never become a training knob.
+    """
+    vals = (float(loss_horizon_raw), float(loss_other), float(requested_share), float(eps))
+    if not all(np.isfinite(v) for v in vals):
+        raise ValueError(f"HWM stage-share inputs must be finite, got {vals!r}")
+    lh, lo, share, floor = vals
+    if lh < 0.0 or lo < 0.0:
+        raise ValueError(f"HWM boundary losses must be non-negative, got L_h={lh}, L_o={lo}")
+    if not (0.0 < share < 1.0):
+        raise ValueError(f"HWM requested_share must lie in (0,1), got {share}")
+    if not floor > 0.0:
+        raise ValueError(f"HWM eps must be positive, got {floor}")
+    weight = (share / (1.0 - share)) * lo / max(lh, floor)
+    if not np.isfinite(weight) or weight <= 0.0:
+        raise ValueError(
+            f"HWM resolved weight must be finite and positive, got {weight} from L_h={lh}, L_o={lo}")
+    return float(weight)
+
+
+def _hwm_v9_boundary_receipt(
+    *, epoch: int, n_pairs: int, loss_horizon_raw: float, loss_other: float,
+    requested_share: float, resolved_weight: float,
+) -> dict[str, Any]:
+    """Machine-readable custody row for the frozen derived-live weight."""
+    realized = (resolved_weight * loss_horizon_raw) / max(
+        loss_other + resolved_weight * loss_horizon_raw, 1e-30)
+    return {
+        "schema": HWM_V9_BOUNDARY_RECEIPT_SCHEMA,
+        "stage": "seg_horizon_margin_weight_resolved",
+        "epoch": int(epoch),
+        "n_pairs": int(n_pairs),
+        "frozen_model_state": True,
+        "loss_horizon_raw": float(loss_horizon_raw),
+        "loss_other": float(loss_other),
+        "requested_share": float(requested_share),
+        "resolved_weight": float(resolved_weight),
+        "realized_share_at_boundary": float(realized),
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "law": "w_h=(q/(1-q))*L_o/max(L_h,eps)",
+        "promotable": False,
+        "pointer_moved": False,
+    }
+
 
 def _loss_terms_row(terms: "dict[str, float]", total: float, ep: int, accum_batch: int,
                     *, gnorm: "float | None" = None, skipped: "bool | None" = None,
@@ -5601,20 +5663,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # [lo,hi]) is precomputed below (built ONLY when hz_w>0). Reuses the SHARED realized _signed (no 2nd
     # SegNet). Derivation dseg_reducibility_gt_margin_verdict_20260623.md: push ONLY the reducible
     # confident-GT band [0.3,0.5], NEVER the <lo label-noise (irreducible frozen-SegNet coin-flip).
-    hz_w = float(getattr(args, "seg_horizon_margin_weight", 0.0))
+    hz_share_request = float(getattr(args, "seg_horizon_margin_weight", 0.0))
+    hz_derived_live = bool(getattr(args, "seg_horizon_margin_derived_live", False))
+    # Fixed-weight legacy mode remains byte-identical.  Derived-live mode keeps
+    # the term OFF until the frozen n600 boundary scan resolves the actual w_h.
+    hz_w = 0.0 if hz_derived_live else hz_share_request
     hz_target = float(getattr(args, "seg_horizon_margin_target", 0.5))
     hz_lo = float(getattr(args, "seg_horizon_margin_lo", 0.3))
     hz_hi = float(getattr(args, "seg_horizon_margin_hi", 0.5))
     hz_row_lo = int(getattr(args, "seg_horizon_row_lo", 96))
     hz_row_hi = int(getattr(args, "seg_horizon_row_hi", 288))
     hz_start = int(getattr(args, "seg_horizon_margin_start_epoch", 0))
-    hz_gate = {"on": hz_start <= 1}
+    hz_gate = {"on": (not hz_derived_live) and hz_start <= 1}
+    hz_enabled = hz_share_request > 0.0
     _hz_mask_prov: Any = None       # list[mx.array (1,H,W)] f32 stratified mask (horizon rows AND margin∈[lo,hi])
-    if hz_w > 0.0 and not (hz_lo < hz_hi):
+    if hz_enabled and not (hz_lo < hz_hi):
         raise ValueError(
             f"--seg-horizon-margin-lo ({hz_lo}) must be < --seg-horizon-margin-hi ({hz_hi}) — the "
             "reducible GT-margin band [lo,hi] must be non-empty (#169 derivation: [0.3,0.5]).")
-    if hz_w > 0.0 and not (hz_row_lo < hz_row_hi):
+    if hz_enabled and not (hz_row_lo < hz_row_hi):
         raise ValueError(
             f"--seg-horizon-row-lo ({hz_row_lo}) must be < --seg-horizon-row-hi ({hz_row_hi}) — the "
             "horizon band must be a non-empty row range (#169: rows ~96-288).")
@@ -7114,7 +7181,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # (top1-top2) is >=0. Rows are CLAMPED to the real grid H (so an over-wide default degrades to the
     # full column, never crashes). The [lo,hi] band EXCLUDES the <lo irreducible label-noise + the >hi
     # confident-decided pixels (the reducible + stably-decided sweet spot, MEASURED).
-    if hz_w > 0.0:
+    if hz_enabled:
         _hz_H, _hz_W = np.asarray(gt.lstars[0]).shape
         _rlo = max(0, min(int(hz_row_lo), _hz_H - 1))
         _rhi = max(_rlo + 1, min(int(hz_row_hi), _hz_H))
@@ -7129,7 +7196,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _hz_n_band += int(_m.sum())
             _hz_mask_prov.append(mx.array(_m[None]))                       # (1,H,W)
         print(json.dumps({"stage": "seg_horizon_margin", "active": True, "n_pairs": int(P),
-                          "weight": hz_w, "m_target": hz_target, "margin_lo": hz_lo, "margin_hi": hz_hi,
+                          "weight": hz_w, "weight_request": hz_share_request,
+                          "derived_live": hz_derived_live,
+                          "m_target": hz_target, "margin_lo": hz_lo, "margin_hi": hz_hi,
                           "row_lo": int(_rlo), "row_hi": int(_rhi), "start_epoch": int(hz_start),
                           "band_px_total": int(_hz_n_band),
                           "band_frac": round(_hz_n_band / max(P * _hz_H * _hz_W, 1), 5),
@@ -10673,6 +10742,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # task-408 Q7: one reader-stable companion schema for all configured
         # engagement surfaces.  These rows are additive configuration context;
         # the existing mechanism-specific rows remain intact for back-compat.
+        # Derived-live HWM is resume-safe: once the frozen boundary scan resolves
+        # w_h, every later checkpoint carries it.  Resuming past the boundary
+        # without that custody is a hard refusal (never silently re-measure a
+        # different model state).
+        if hz_derived_live and resume_cfg is not None:
+            _hz_resume_weight = float(
+                resume_cfg.get("__cfg_seg_horizon_margin_resolved_weight", -1.0) or -1.0)
+            if _hz_resume_weight > 0.0:
+                hz_w = _hz_resume_weight
+                args.seg_horizon_margin_resolved_weight = hz_w
+                hz_gate["on"] = int(start_epoch) > int(hz_start)
+            elif int(start_epoch) > int(hz_start):
+                raise ValueError(
+                    "derived-live HWM resume is past its boundary but the checkpoint lacks "
+                    "__cfg_seg_horizon_margin_resolved_weight; REFUSING to re-measure a changed state")
         _q7_armed = (
             ("muon", getattr(args, "muon_start_epoch", None) is not None),
             ("lane_edge", lane_w > 0.0),
@@ -10682,7 +10766,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             ("pose_finish", _pose_finish_start > 0 and float(args.w_pose) > 0.0),
             ("temporal_screw", ts_w > 0.0),
             ("margin_satisficing", ms_w > 0.0),
-            ("horizon_margin", hz_w > 0.0),
+            ("horizon_margin", hz_enabled),
             ("chroma_boundary", chroma_bnd_w > 0.0),
             ("thin_lane", lane_thin_w > 0.0),
             ("lane_band", bool(_band_active)),
@@ -11178,13 +11262,45 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         via="configured_boundary")), flush=True)
             # (v7.5 B.5) HORIZON-WEIGHTED MARGIN (#169) engagement gate + transition RE-TREAT (same
             # discipline as the margin-satisfice hinge). Default hz_w=0.0 => never engages => bit-identical.
-            if hz_w > 0.0:
+            if hz_enabled:
                 _hz_was = hz_gate["on"]
+                if hz_derived_live and hz_w <= 0.0 and ep >= hz_start:
+                    # Freeze the current state: this no-grad all-P scan performs
+                    # no optimizer/EMA/RNG mutation.  Use unit HWM weight solely
+                    # to expose raw L_h, then freeze the resolved w_h before the
+                    # first treatment update at this boundary.
+                    hz_w = 1.0
+                    hz_gate["on"] = True
+                    _hz_terms, _hz_total = _loss_terms_for_chunk(
+                        range(P), seg_form, eik_w_ep)
+                    _hz_raw = float(_hz_terms.get("horizon_margin", 0.0))
+                    _hz_other = max(float(_hz_total) - _hz_raw, 0.0)
+                    hz_w = _resolve_hwm_v9_stage_share_weight(
+                        _hz_raw, _hz_other, hz_share_request)
+                    args.seg_horizon_margin_resolved_weight = hz_w
+                    _hz_receipt = _hwm_v9_boundary_receipt(
+                        epoch=ep,
+                        n_pairs=P,
+                        loss_horizon_raw=_hz_raw,
+                        loss_other=_hz_other,
+                        requested_share=hz_share_request,
+                        resolved_weight=hz_w,
+                    )
+                    _hz_receipt.update({
+                        "config_weight_flag_semantics": "requested_share_in_derived_live_mode",
+                        "git_sha": _run_provenance.get("git_sha", "unknown"),
+                        "upstream_snapshot_sha256": _run_provenance.get(
+                            "upstream_snapshot_sha256", "unknown"),
+                    })
+                    _atomic_write_json(
+                        out_dir / "horizon_margin_boundary_receipt.json", _hz_receipt)
+                    print(json.dumps(_hz_receipt), flush=True)
                 hz_gate["on"] = lever_gate_on_at_epoch(hz_w, hz_start, ep)
                 if hz_gate["on"] and not _hz_was:
                     recent_losses.clear()
                     print(json.dumps({"stage": "seg_horizon_margin_engage", "epoch": ep, "start": hz_start,
-                                      "m_target": hz_target,
+                                      "m_target": hz_target, "weight": hz_w,
+                                      "derived_live": hz_derived_live,
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
                     print(json.dumps(lever_engage_row(
                         "horizon_margin", status="fired", epoch=ep,
@@ -13779,6 +13895,11 @@ def main(argv: list[str] | None = None) -> int:
                     "L_hz = w_h * mean_{horizon-band AND GT-margin∈[lo,hi]} relu(m_target - m_wit). Reuses "
                     "the SHARED realized through-R margin _signed (no 2nd SegNet, 0 bytes). w_h=0 => "
                     "byte-identical (branch skipped, provider None).")
+    ap.add_argument("--seg-horizon-margin-derived-live", action="store_true",
+                    help="V9 CGauge HORIZON-iso: interpret --seg-horizon-margin-weight as the requested "
+                    "stage-share q and, exactly once at the stage boundary, freeze the actual weight "
+                    "w_h=(q/(1-q))*L_other/max(L_h,eps) from an all-pair no-grad scan. The resolved "
+                    "weight and realized share are persisted in the stage checkpoint and boundary receipt.")
     ap.add_argument("--seg-horizon-margin-target", type=float, default=0.5,
                     help="v7.5 B.5 (#169): the safe witness-margin ceiling m_target the hinge pushes m_wit "
                     "up to (relu(m_target - m_wit)); DERIVED = the GT-margin band upper edge (make the "

@@ -1,0 +1,153 @@
+{
+  "schema": "constants_manifest.v1",
+  "config_family": "v9_cgauge_432_taper_off",
+  "generated_at": "20260715T095740Z",
+  "note": "LawRef-compiled launch constants (#351). Each value is BIT-IDENTICAL to the sealed literal it replaces (VALUE-IDENTITY IS THE LAW); this manifest carries the equation_id + typed inputs + artifact sha256 + value-provenance ladder class per constant. Provenance-only \u2014 never a trainer flag; the emitted launch.sh is unchanged.",
+  "constants": {
+    "softmax_temp_end": {
+      "value": 0.31,
+      "equation_id": "tau_end_knee_launch_v1",
+      "ladder_class": "measured_anchor",
+      "fallback_used": false,
+      "resolved_at": "2026-07-15T09:57:39Z",
+      "inputs": [
+        {
+          "name": "launch_tau",
+          "kind": "anchor",
+          "value": 0.31,
+          "source": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/iso_configs_20260715_20260715T092618Z/.omx/research/t5_crucible/artifacts/tau_knee_ptau2_20260708.json",
+          "sha256": "9898d8d76eaa7ce1f55e6272514690fd4fe7f01e28e525dcfad9af72ee719399",
+          "config_tags": {
+            "schedule": "mod32cap"
+          },
+          "provenance": "P-TAU2 knee probe launch_tau 0.31 (within knee band [0.19072,0.54294]; \u2248 mod32cap ep650-best \u03c4=0.3098). v6 \u00a71.4a \u03c4_end re-anchor.",
+          "staleness_days": null
+        }
+      ],
+      "warnings": [],
+      "single_value_owner": "compiled_dsl_argv",
+      "inherited_manifest_value_replaced": 0.31
+    },
+    "hosc_beta_end": {
+      "value": 3.177,
+      "equation_id": "hosc_beta_fireband_pin_v1",
+      "ladder_class": "derived_at_config",
+      "fallback_used": false,
+      "resolved_at": "2026-07-15T09:57:39Z",
+      "inputs": [
+        {
+          "name": "beta_end",
+          "kind": "literal",
+          "value": 10.0,
+          "source": "literal",
+          "sha256": null,
+          "config_tags": {},
+          "provenance": "v6.3 MAJOR-2(i) \u03b2-pin 10.0: \u03b2 is LINEAR over the SHARED --anneal-epochs 3000 den, so endpoint 10.0 reproduces the mod32cap control's \u03b2(ep) slope on [1,726] to \u22640.1% (the \u03bd/ep650-best/fire-band anchors were measured at the control's JOINT \u03b2 state). RE-DERIVE on any change to muon-start-epoch (726 freeze) / --anneal-epochs / --hosc-beta-anneal.",
+          "staleness_days": null
+        }
+      ],
+      "warnings": [],
+      "single_value_owner": "compiled_dsl_argv",
+      "inherited_manifest_value_replaced": 3.177
+    },
+    "lr_anneal_epochs": {
+      "value": 1000,
+      "equation_id": "lr_control_denominator_v1",
+      "ladder_class": "derived_at_config",
+      "fallback_used": false,
+      "resolved_at": "2026-07-15T09:57:39Z",
+      "inputs": [
+        {
+          "name": "control_den",
+          "kind": "literal",
+          "value": 1000,
+          "source": "literal",
+          "sha256": null,
+          "config_tags": {},
+          "provenance": "v6.4 MAJOR-2(ii) LR-pin: the mod32cap CONTROL ran its LR cosine at --epochs=1000, so --lr-anneal-epochs 1000 reproduces the control LR(ep) on [1,726] BIT-IDENTICALLY (unlike \u03b2 the LR curvature is not endpoint-rephasable => own denominator). INT (str '1000').",
+          "staleness_days": null
+        }
+      ],
+      "warnings": [],
+      "single_value_owner": "compiled_dsl_argv",
+      "inherited_manifest_value_replaced": 1000
+    },
+    "lr_hold_frac": {
+      "value": 1.0,
+      "equation_id": "lr_hold_frac_no_hold_v1",
+      "ladder_class": "derived_at_config",
+      "fallback_used": false,
+      "resolved_at": "2026-07-15T09:57:39Z",
+      "inputs": [
+        {
+          "name": "hold_frac",
+          "kind": "literal",
+          "value": 1.0,
+          "source": "literal",
+          "sha256": null,
+          "config_tags": {},
+          "provenance": "v6.4 LR-pin: --lr-hold-frac 1.0 = NO hold. The control's Muon freeze (726) < the LR den (1000), so it never held LR pre-freeze => hold-frac 1.0 is the bit-identical-cosine choice.",
+          "staleness_days": null
+        }
+      ],
+      "warnings": [],
+      "single_value_owner": "compiled_dsl_argv",
+      "inherited_manifest_value_replaced": 1.0
+    },
+    "polyak_finisher_start_epoch": {
+      "value": 2546,
+      "equation_id": "muon_finisher_schedule_warmstart_and_lr_anneal_v1",
+      "ladder_class": "derived_at_config",
+      "fallback_used": false,
+      "inputs": {
+        "epochs": 3000,
+        "muon_cap": 726,
+        "finishing_stage_window_epochs": 2274,
+        "tail_frac": 0.2,
+        "polyak_window_epochs": 455
+      },
+      "note": "v7 Polyak tail start = epochs - window + 1 (inclusive-final fencepost, averages EXACTLY window = round(frac\u00b7finishing_window) epochs over the trainer's [start, epochs] loop); finishing_window = epochs - muon_cap; always post-Muon inside the constant-\u03c4* turnpike dwell. Polyak tail window = round(frac * stage_window); frac in [0.1,0.3] per muon_finisher_schedule_warmstart_and_lr_anneal_v1 (finisher-EMA=Polyak averaging)",
+      "single_value_owner": "compiled_dsl_argv",
+      "inherited_manifest_value_replaced": 2546
+    },
+    "seg_phase_advect_start_epoch": {
+      "value": 726,
+      "equation_id": "gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1",
+      "ladder_class": "derived_at_config",
+      "fallback_used": false,
+      "inputs": {
+        "terminal_band_anchor_muon_cap": 726,
+        "placement_law": "Law-5 floor->phase-tail (flicker design memo \u00a7curriculum)"
+      },
+      "note": "T1 phase-advection engage epoch := the terminal-band anchor (muon cap; the phase term needs a formed trunk and treats the post-floor tail). STATIC APPROXIMATION of the label_floor detector event (N7 BUILD-OWED: --seg-phase-advect-start-event trainer hook); until built, the value is compiled from the flicker-floor law's placement + the muon-cap co-anchor, never hand-typed independently.",
+      "single_value_owner": "compiled_dsl_argv",
+      "inherited_manifest_value_replaced": 726
+    },
+    "eikonal_retention_tau_rung": {
+      "value": {
+        "base": 0.01,
+        "end": 0.05
+      },
+      "equation_id": "eikonal_retention_couples_to_tau_rung_v1",
+      "ladder_class": "derived_at_config",
+      "fallback_used": false,
+      "inputs": {
+        "actuator": "persisted TauAdvanceController.rung",
+        "fraction": "k/N"
+      },
+      "note": "retention is primed before each lower-tau model assignment"
+    },
+    "margin_saliency_reachability": {
+      "value": false,
+      "equation_id": "margin_saliency_reachability_replaces_texture_proxy_v1",
+      "ladder_class": "derived_at_config",
+      "fallback_used": false,
+      "inputs": {
+        "control": "exp(-margin/tau)",
+        "treatment_multiplier": "normalized cached through-R S_R",
+        "micro_batch_pairs": 1
+      },
+      "note": "C1 treatment selector; PREPARED_NOT_FIRED and no score authority"
+    }
+  }
+}

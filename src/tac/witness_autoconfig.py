@@ -4084,6 +4084,16 @@ class CrucibleV7LaunchConfig:
                 overrides=dict(lever.overrides),
                 epochs_delta=lever.epochs_delta,
                 notes=lever.notes,
+                lawrefs=dict(lever.lawrefs),
+                lawref_declarations={
+                    flag: {
+                        "equation_id": ref.equation_id,
+                        "ladder_class": ref.ladder_class,
+                    }
+                    for flag, ref in lever.lawrefs.items()
+                },
+                constant_manifest=dict(lever.constant_manifest),
+                runtime_receipt_schemas=dict(lever.runtime_receipt_schemas),
             )
             for lever in resolved
         )

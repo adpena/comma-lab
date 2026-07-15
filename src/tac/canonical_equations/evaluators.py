@@ -322,18 +322,6 @@ def eval_margin_band_satisficing_threshold(inputs: Mapping[str, Any]) -> float:
     )
 
 
-def eval_v9_hosc_beta_endpoint(inputs: Mapping[str, Any]) -> float:
-    """V9 beta endpoint from its dyadic interface-width continuation."""
-
-    from tac.canonical_equations.v9_hosc_beta_endpoint_20260715 import (
-        v9_hosc_beta_endpoint,
-    )
-
-    return v9_hosc_beta_endpoint(
-        float(inputs["beta_start"]), int(inputs["dyadic_refinements"])
-    )
-
-
 def eval_isoperimetric_birth_weight(inputs: Mapping[str, Any]) -> float:
     """Resolve the island-birth support radius from sealed per-class ``P/A`` geometry.
 
@@ -350,6 +338,25 @@ def eval_isoperimetric_birth_weight(inputs: Mapping[str, Any]) -> float:
         float(inputs["class_p_over_a"]),
         float(inputs["reference_p_over_a"]),
     )
+
+
+def eval_v9_scientific_declaration(inputs: Mapping[str, Any]) -> Any:
+    """Resolve one typed V9 treatment declaration without erasing its law.
+
+    The three isolation arms use already-registered canonical mechanism equations
+    (taper, horizon-margin, and step-native activation) for several scalar
+    declarations.  Their *mechanism* equations are richer than a scalar evaluator;
+    this adapter returns the explicitly named scalar ``value`` while the LawRef's
+    typed inputs retain the treatment/config conditionality.  It is deliberately
+    not a generic equation id: only the three canonical mechanism ids below opt in.
+
+    The horizon weight declaration is the requested loss-share cap.  The trainer
+    consumes it as a DERIVED-LIVE request and freezes the actual measured weight in
+    ``hwm_v9_stage_share_boundary.v1`` at the configured boundary.
+    """
+    if "value" not in inputs:
+        raise EvaluatorError("V9 scientific declaration requires a 'value' input")
+    return inputs["value"]
 
 
 # Canonical equation_id -> evaluator for the built-in laws.
@@ -373,11 +380,15 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "cgauge_beta2_window_v1": eval_cgauge_beta2_window,
     # MarginBandSatisficing provenance repair (2026-07-12): DERIVED-LIVE threshold law.
     "margin_band_satisficing_threshold_v1": eval_margin_band_satisficing_threshold,
-    # V9-only hosc endpoint. Historical V6/V7 pins retain their own laws.
-    "v9_hosc_beta_endpoint_v1": eval_v9_hosc_beta_endpoint,
     # Island-birth geometry wire (2026-07-15): ratio DERIVED from sealed n96 P/A receipt;
     # absolute scale remains tunable and efficacy remains owed.
     "isoperimetric_birth_weight_scaling_v1": eval_isoperimetric_birth_weight,
+    # V9 top-three one-delta scientific declarations.  These equation ids are
+    # canonical registry entries; the scalar adapter makes their config constants
+    # LawRef-executable while the trainer/runtime receipt owns measured outcomes.
+    "dseg_aware_fourier_taper_reweight_v1": eval_v9_scientific_declaration,
+    "horizon_weighted_margin_hinge_v1": eval_v9_scientific_declaration,
+    "step_native_activation_edge_optimality_v1": eval_v9_scientific_declaration,
 }
 
 
@@ -412,7 +423,7 @@ __all__ = [
     "eval_tail_cycle_floor",
     "eval_tau_end_knee_launch",
     "eval_tau_star_maslov_quantile",
-    "eval_v9_hosc_beta_endpoint",
+    "eval_v9_scientific_declaration",
     "get_evaluator",
     "has_evaluator",
     "populate_lawref_evaluators",

@@ -1,0 +1,97 @@
+{
+  "schema": "v9_cgauge_iso_config_dry_run.v1",
+  "created_at_utc": "2026-07-15T10:01:16Z",
+  "base_git_sha": "d878d78b3b83660ed08891d4f885cd1842aaa628",
+  "axis": "$0 CPU-only typed compile and governed launcher dry-run",
+  "control_config": "v9_cgauge_ideal_mod19",
+  "num_pairs_declared": 600,
+  "epochs": 3000,
+  "configs": [
+    {
+      "config_id": "v9_cgauge_432_taper_off",
+      "duty_to_measure_percent": 78.9,
+      "dry_run_exit_code": 0,
+      "flag_validation": "220/220",
+      "dsl_gate": "PASS",
+      "schedule_provenance_gate": "PASS",
+      "expected_active_levers": 17,
+      "argv_diff_vs_control": {
+        "--dseg-aware-taper": ["PRESENT_BARE_FLAG", "ABSENT"],
+        "--dseg-aware-taper-floor": ["0.05", "ABSENT"],
+        "--dseg-aware-taper-scale": ["0.0", "ABSENT"],
+        "--dseg-aware-taper-strength": ["1.0", "ABSENT"]
+      },
+      "lawref_delta": "the complete four-LawRef DsegAwareTaper Lever is absent; no weight-zero surrogate",
+      "launch_sh_sha256": "57fa1fd9b293c2eee65bb65cb99a930d0f07cfbcdbbb89088e1cabd55e10d564",
+      "constants_manifest_sha256": "c7916be693d5aa7da7c034c7555530f88586c7b0bc3545bf33d1b51e93d31d25"
+    },
+    {
+      "config_id": "v9_cgauge_432_horizon_iso",
+      "duty_to_measure_percent": 47.3,
+      "dry_run_exit_code": 0,
+      "flag_validation": "232/232",
+      "dsl_gate": "PASS",
+      "schedule_provenance_gate": "PASS",
+      "expected_active_levers": 19,
+      "argv_diff_vs_control": {
+        "--seg-horizon-margin-derived-live": ["ABSENT", "PRESENT_BARE_FLAG"],
+        "--seg-horizon-margin-hi": ["ABSENT", "0.5"],
+        "--seg-horizon-margin-lo": ["ABSENT", "0.3"],
+        "--seg-horizon-margin-start-epoch": ["ABSENT", "726"],
+        "--seg-horizon-margin-target": ["ABSENT", "0.5"],
+        "--seg-horizon-margin-weight": ["ABSENT", "0.15"],
+        "--seg-horizon-row-hi": ["ABSENT", "288"],
+        "--seg-horizon-row-lo": ["ABSENT", "96"]
+      },
+      "lawrefs": 7,
+      "weight_ladder": "derived_live",
+      "boundary_receipt_schema": "hwm_v9_stage_share_boundary.v1",
+      "boundary_law": "w_h=(q/(1-q))*L_o/max(L_h,eps), q=0.15, all n600 pairs at epoch 726",
+      "launch_sh_sha256": "f18c8237a7b632607be9bb995810072afc011e0d3259103be37f856dec1702c6",
+      "constants_manifest_sha256": "c8ae292b96b150960fbcdfc815d2bf8ae76ff2e10a05edce4d6a56181fe2ae5f"
+    },
+    {
+      "config_id": "v9_cgauge_432_step_iso",
+      "duty_to_measure_percent": 34.2,
+      "dry_run_exit_code": 0,
+      "flag_validation": "224/224",
+      "dsl_gate": "PASS",
+      "schedule_provenance_gate": "PASS",
+      "expected_active_levers": 19,
+      "argv_diff_vs_control": {
+        "--hosc-beta-end": ["3.177", "8.0"]
+      },
+      "beta_lawref": "step_native_activation_edge_optimality_v1",
+      "beta_single_value_owner": "dsl_lever:FEED_07b_step_native_activation",
+      "launch_sh_sha256": "247c28e463e963ba1108a660116fe788bbadd22173cbb2eb4609bff989eda825",
+      "constants_manifest_sha256": "2619564c80c2aec7ac1f09c8dbac2c9fd755e659c44ba04526ec9410d29fada7"
+    }
+  ],
+  "refusal_proofs": [
+    "missing trainer consumer for an ISO override raises ISO provenance/consumer REFUSE",
+    "taper-off refuses unless exactly one fully custodied DsegAwareTaper Lever exists",
+    "each compiler refuses any scientific argv delta outside its predeclared one-Lever contrast",
+    "derived-live HWM resume past its boundary refuses without the persisted resolved weight"
+  ],
+  "launch_status": "PREPARED_NOT_FIRED",
+  "score_authority": false,
+  "pointer": {
+    "submittable": 0.19108,
+    "borrowed_bank": 0.18804,
+    "moved": false
+  },
+  "remaining_execution_blockers": [
+    {
+      "scope": "THIS_ISOLATED_WORKTREE_ONLY",
+      "blocker": "gt_n600 cache is absent; dry-run compilation does not consume it"
+    },
+    {
+      "scope": "THIS_HOST_CERTIFICATION_ONLY",
+      "blocker": "mlx_safe_compile_manifest.json is absent, so the dry-run reports fingerprint_ok=false; recertification is required before a real launch"
+    },
+    {
+      "scope": "CAMPAIGN_INFRA_NOT_REVERIFIED_BY_ARM_ISO",
+      "blocker": "SSD-root permission and real governed memory-waterfall closure remain owned by ARM-INFRA/main"
+    }
+  ]
+}

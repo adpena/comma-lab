@@ -426,3 +426,145 @@ def test_lawref_evaluators_executable_for_223_laws() -> None:
         "cgauge_curvelet_parabolic_bank_v1", {"nu_across": 64}) == pytest.approx(8.0)
     lo, hi = resolve_equation_value("cgauge_beta2_window_v1", {"steps_per_epoch": 75})
     assert lo < 0.999 < hi
+
+
+# ───────────────────────── 2026-07-15 top-3 one-delta ISO configs ─────────────────────────
+@pytest.fixture(scope="module")
+def iso_configs():
+    from tac.witness_dsl.spec_v9_cgauge import (
+        compile_v9_cgauge_432_horizon_iso_launch_config,
+        compile_v9_cgauge_432_step_iso_launch_config,
+        compile_v9_cgauge_432_taper_off_launch_config,
+        compile_v9_cgauge_ideal_mod19_launch_config,
+    )
+
+    return {
+        "control": compile_v9_cgauge_ideal_mod19_launch_config(gt_cache_path=_GT),
+        "taper": compile_v9_cgauge_432_taper_off_launch_config(gt_cache_path=_GT),
+        "horizon": compile_v9_cgauge_432_horizon_iso_launch_config(gt_cache_path=_GT),
+        "step": compile_v9_cgauge_432_step_iso_launch_config(gt_cache_path=_GT),
+    }
+
+
+def test_iso_configs_validate_parse_and_name_their_duty(iso_configs) -> None:
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
+    from tac.witness_dsl.spec_v9_cgauge import V9_CGAUGE_ISO_CONFIG_IDS
+
+    expected_duty = {"taper": 78.9, "horizon": 47.3, "step": 34.2}
+    assert tuple(iso_configs[k].name for k in ("taper", "horizon", "step")) == (
+        V9_CGAUGE_ISO_CONFIG_IDS)
+    for key, duty in expected_duty.items():
+        cfg = iso_configs[key]
+        assert cfg.typed.validate_program() == []
+        ns = build_real_trainer_parser().parse_args(
+            list(cfg.typed.to_program().compile_trainer_argv()[2:]))
+        assert ns.mod_dim == 19
+        assert cfg.dsl_program_manifest["iso_contract"]["duty_to_measure_percent"] == duty
+        assert cfg.dsl_program_manifest["iso_contract"]["one_lever_delta"] is True
+
+
+@pytest.mark.parametrize("config_id", [
+    "v9_cgauge_432_taper_off",
+    "v9_cgauge_432_horizon_iso",
+    "v9_cgauge_432_step_iso",
+])
+def test_launcher_resolves_each_iso_config_id(config_id: str) -> None:
+    from tools.launch_witness_run import config_family, derive_named_config
+
+    cfg = derive_named_config(config_id, _GT, num_pairs=600, epochs=None, overfit=True)
+    assert cfg.name == config_id
+    assert config_family(cfg) == config_id
+
+
+def test_taper_off_drops_whole_lever_and_all_four_lawrefs(iso_configs) -> None:
+    control = iso_configs["control"].typed.to_program()
+    treatment = iso_configs["taper"].typed.to_program()
+    owned = [lever for lever in control.levers if lever.name == "dseg_aware_taper"]
+    assert len(owned) == 1
+    assert set(owned[0].lawrefs) == {
+        "--dseg-aware-taper", "--dseg-aware-taper-strength",
+        "--dseg-aware-taper-scale", "--dseg-aware-taper-floor",
+    }
+    # The ideal control owns taper through exactly one typed Lever; none of its
+    # flags may remain as anonymous base argv after the ownership refactor.
+    assert not set(owned[0].overrides) & set(iso_configs["control"].typed.base)
+    assert not any(lever.name == "dseg_aware_taper" for lever in treatment.levers)
+    assert not set(owned[0].overrides) & set(treatment.flag_dict())
+    diff = iso_configs["taper"].dsl_program_manifest["iso_contract"]["argv_diff"]
+    assert set(diff) == set(owned[0].overrides)
+    assert all(after == "<ABSENT>" for _, after in diff.values())
+    assert "dseg_aware_taper" not in iso_configs["taper"].dsl_program_manifest[
+        "expected_active_levers"]
+
+
+def test_horizon_iso_has_seven_lawrefs_receipts_and_derived_weight_consumer(iso_configs) -> None:
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
+
+    cfg = iso_configs["horizon"]
+    levers = [lever for lever in cfg.typed.to_program().levers
+              if lever.name == "horizon_weighted_margin"]
+    assert len(levers) == 1
+    lever = levers[0]
+    assert len(lever.lawrefs) == len(lever.constant_manifest) == 7
+    assert lever.constant_manifest["--seg-horizon-margin-weight"]["ladder_class"] == "derived_live"
+    assert set(lever.runtime_receipt_schemas) == set(lever.overrides)
+    assert set(lever.runtime_receipt_schemas.values()) == {"hwm_v9_stage_share_boundary.v1"}
+    ns = build_real_trainer_parser().parse_args(
+        list(cfg.typed.to_program().compile_trainer_argv()[2:]))
+    assert ns.seg_horizon_margin_derived_live is True
+    assert ns.seg_horizon_margin_weight == pytest.approx(0.15)
+    assert ns.seg_horizon_margin_start_epoch == 726
+    assert "horizon_weighted_margin" not in cfg.dsl_program_manifest["excluded_levers"]
+
+
+def test_horizon_iso_missing_consumer_refuses() -> None:
+    from pathlib import Path
+
+    from tac.v9_provenance_gates import _trainer_consumers
+    from tac.witness_dsl.curriculum_dsl import HorizonWeightedMargin
+    from tac.witness_dsl.spec_v9_cgauge import _assert_iso_lever_custody
+
+    trainer = Path("experiments/train_levelset_witness_realized_through_R_mlx.py")
+    consumers = _trainer_consumers(trainer.resolve(), Path.cwd())
+    consumers.pop("seg_horizon_margin_weight", None)
+    lever = HorizonWeightedMargin(
+        weight=0.15, start_epoch=726, window=0,
+        stage_share_derived_live=True, scientific_declaration=True)
+    with pytest.raises(ValueError, match=r"ISO provenance/consumer REFUSE.*weight"):
+        _assert_iso_lever_custody(
+            lever, trainer_path=trainer.resolve(), consumer_locations=consumers)
+
+
+def test_step_iso_is_one_activation_delta_with_distinct_beta_lawref(iso_configs) -> None:
+    cfg = iso_configs["step"]
+    diff = cfg.dsl_program_manifest["iso_contract"]["argv_diff"]
+    assert diff == {"--hosc-beta-end": ["3.177", "8.0"]}
+    levers = [lever for lever in cfg.typed.to_program().levers
+              if lever.name == "FEED_07b_step_native_activation"]
+    assert len(levers) == 1
+    beta = levers[0].constant_manifest["--hosc-beta-end"]
+    assert beta["value"] == pytest.approx(8.0)
+    assert beta["equation_id"] == "step_native_activation_edge_optimality_v1"
+    assert cfg.constants_manifest["hosc_beta_end"]["single_value_owner"] == (
+        "dsl_lever:FEED_07b_step_native_activation")
+    assert "step_native_endpoint" not in cfg.dsl_program_manifest["excluded_levers"]
+
+
+def test_iso_lever_factories_are_registry_mapped() -> None:
+    from tac.witness_dsl.lever_registry import completeness, lever_factories
+
+    factories = lever_factories()
+    assert set(factories["DsegAwareTaper"]) == {
+        "--dseg-aware-taper", "--dseg-aware-taper-strength",
+        "--dseg-aware-taper-scale", "--dseg-aware-taper-floor",
+    }
+    assert "--seg-horizon-margin-weight" in factories["HorizonWeightedMargin"]
+    assert "--seg-horizon-margin-derived-live" in factories["HorizonWeightedMargin"]
+    assert "--hosc-beta-end" in factories["StepNativeActivation"]
+    report = completeness()
+    for flag in (
+        "--dseg-aware-taper", "--seg-horizon-margin-weight",
+        "--seg-horizon-margin-derived-live", "--hosc-beta-end",
+    ):
+        assert flag in report.mapped
+        assert flag not in report.unmapped
