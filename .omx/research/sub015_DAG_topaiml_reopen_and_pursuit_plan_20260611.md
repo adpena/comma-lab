@@ -18329,3 +18329,12 @@ annulus and longest end of long tail". Full table:
 - **IN FLIGHT:** verdict-workers ÷N bench (w=0/8/6, n600, value-equality asserted) — receipt sizes
   the workers default (8-from-headroom derivation) for the next n600 compose.
 - Everything MEANS; projection honestly ~12.5 days until receipts; **pointer 0.19108 UNMOVED.**
+
+## FEED-509burn-b (2026-07-15) — trainer boot-guard: birth-completion ramp None fallback [no-triality]
+- Commit d2cc57dc6e: `_bc_lane_cls`/`_bc_mov_cls` binding now guards `None` from the island
+  self-detector. Small-subset n24 arms (the magnitude-law A/B) can legitimately detect NO movable
+  islands ⇒ `movable_cls=None` ⇒ the previous unconditional `int(None)` raised TypeError at boot.
+  Fix: fall back to the SAME canonical index {1,3} the ramp-OFF branch already uses. n600 behavior
+  byte-identical (detected indices non-None there). Pure apparatus (boot survivability of subset
+  arms); no lever, no schedule, no measured finding ⇒ no DSL/equations leg owed. Unblocks the
+  batch-3 magnitude-law A/B arms. MEANS; **pointer 0.19108 UNMOVED.**
