@@ -389,6 +389,11 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "dseg_aware_fourier_taper_reweight_v1": eval_v9_scientific_declaration,
     "horizon_weighted_margin_hinge_v1": eval_v9_scientific_declaration,
     "step_native_activation_edge_optimality_v1": eval_v9_scientific_declaration,
+    # AutoClip percentile grad-clip law (2026-07-15, #B-4 clip cure): the scalar
+    # adapter makes the Lever's config constants (percentile/window/warmup)
+    # LawRef-executable; the mechanism equation lives in
+    # autoclip_percentile_grad_clip_20260715 (autoclip_threshold).
+    "autoclip_percentile_threshold_v1": eval_v9_scientific_declaration,
 }
 
 

@@ -39,6 +39,15 @@ from tac.jsonl_store import append_locked_jsonl
 
 COMPONENT_WALLCLOCK_SCHEMA = "witness_component_wallclock.v1"
 SPS_ENGAGEMENT_SCHEMA = "sps_gradient_role_conflict_engagement.v1"
+# The 8 v1 fields (probe-derived + cadence-gated + total) PLUS the 2026-07-15 #480
+# REAL-PATH fields (``real_*``): disjoint main-thread wall intervals measured around
+# the ACTUAL training-loop regions (no probes, no graph changes — pure perf_counter_ns
+# around existing statements => score-neutral by construction). Unlike the inclusive
+# probe fields, the real_* fields ARE summable: real_path_sum_s <= epoch_total_s and
+# (epoch_total_s - real_path_sum_s - checkpoint_io_s) is the honest UNATTRIBUTED
+# remainder (python loop + staging + everything not yet timed). Additive + legacy-
+# compatible: v1 rows simply lack the real_* keys; readers keying the 8 v1 names are
+# unchanged (schema string deliberately stays .v1 — the launch-ticket AST gate pins it).
 COMPONENT_FIELDS: tuple[str, ...] = (
     "teacher_forward_s",
     "teacher_backward_s",
@@ -47,8 +56,15 @@ COMPONENT_FIELDS: tuple[str, ...] = (
     "realized_R_s",
     "verdict_s",
     "checkpoint_io_s",
+    "real_grad_accum_s",             # per-chunk fused value_and_grad + mx.eval (the real update path)
+    "real_optimizer_s",              # clip + per-group clip + opt.update + EMA + mx.eval
+    "real_loss_terms_telemetry_s",   # the per-term loss recompute/alarm block (_lt_stride)
+    "real_epoch_probes_s",           # the D-A decomposition probe + SPS emit themselves
+    "real_verdict_submit_s",         # MAIN-thread verdict join/decide/schedule (the submit block)
     "epoch_total_s",
 )
+REAL_PATH_FIELDS: tuple[str, ...] = tuple(
+    name for name in COMPONENT_FIELDS if name.startswith("real_"))
 SPS_MATERIAL_FRACTION_THRESHOLD = 0.10
 SPS_MATERIAL_COSINE_THRESHOLD = -0.05
 _TIMER_COMPONENTS = frozenset(COMPONENT_FIELDS[:-1])
@@ -167,6 +183,11 @@ class ComponentWallclock:
                 for name in COMPONENT_FIELDS[:-1]
                 if values[name] is not None
             )
+            real_path_sum = sum(
+                float(values[name])
+                for name in REAL_PATH_FIELDS
+                if values[name] is not None
+            )
             return {
                 "schema": COMPONENT_WALLCLOCK_SCHEMA,
                 "stage": "witness_component_wallclock",
@@ -180,9 +201,12 @@ class ComponentWallclock:
                 "clock": "time.perf_counter_ns",
                 "overlap_policy": (
                     "inclusive backward probes and real-path intervals are not asserted disjoint; "
-                    "do not sum components as an epoch decomposition"
+                    "do not sum components as an epoch decomposition — EXCEPT the real_* fields, "
+                    "which are disjoint main-thread intervals: real_path_sum_s is summable and "
+                    "epoch_total_s - real_path_sum_s - checkpoint_io_s = unattributed remainder"
                 ),
                 "observed_component_sum_s": float(observed_sum),
+                "real_path_sum_s": float(real_path_sum),
                 "errors": list(self._errors),
                 "complete": not self._errors and all(
                     values[name] is not None for name in COMPONENT_FIELDS
@@ -696,6 +720,7 @@ def lever_engage_row(
 __all__ = [
     "COMPONENT_FIELDS",
     "COMPONENT_WALLCLOCK_SCHEMA",
+    "REAL_PATH_FIELDS",
     "SPS_ENGAGEMENT_SCHEMA",
     "SPS_MATERIAL_COSINE_THRESHOLD",
     "SPS_MATERIAL_FRACTION_THRESHOLD",

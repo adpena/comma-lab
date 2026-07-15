@@ -368,3 +368,63 @@ def test_metal_kernel_flag_is_specified():
     assert "aa_sdf_lane_coverage" in METAL_KERNEL_FLAG["signature"]
     assert "numpy_reference" in METAL_KERNEL_FLAG
     assert DEFAULT_DASH_FORWARD_MAX_M == pytest.approx(55.0)
+
+
+# ---------------------------------------------------------------------------
+# (#509 burn-down 3, 2026-07-15) pair-static constant cache: BIT-IDENTICAL
+# values cached-vs-uncached + actual object reuse (the speed mechanism).
+# ---------------------------------------------------------------------------
+@pytest.mark.skipif(not _HAS_MLX, reason="mlx unavailable")
+def test_compose_fn_cache_static_is_bit_identical_mlx():
+    lstar = _synthetic_lstar_with_lane()
+    prior = build_analytic_lane_band_prior(lstar, lane_cls=1)
+    lane_rgb = np.array([255.0, 255.0, 255.0], np.float32)
+    margin = np.full((_H, _W), 0.1, np.float32)  # uncertain -> band ACTIVE
+    kw = {"lane_rgb_provider": lane_rgb, "margin_provider": {0: margin},
+          "tau": 0.5, "eps": 0.25, "weight": 0.7, "use_mlx": True}
+    compose_cached = make_lane_band_compose_fn({0: prior}, cache_static=True, **kw)
+    compose_plain = make_lane_band_compose_fn({0: prior}, cache_static=False, **kw)
+    rgb = mx.array(np.random.default_rng(0).uniform(0, 255, (1, _H, _W, 3)).astype(np.float32))
+    a1 = np.asarray(compose_cached(rgb, 0))
+    a2 = np.asarray(compose_plain(rgb, 0))
+    assert np.array_equal(a1, a2)  # BIT-identical, not just close
+    # second call through the cached fn is also bit-identical (reused constants)
+    assert np.array_equal(np.asarray(compose_cached(rgb, 0)), a1)
+
+
+@pytest.mark.skipif(not _HAS_MLX, reason="mlx unavailable")
+def test_compose_fn_cache_static_reuses_constant_objects():
+    lstar = _synthetic_lstar_with_lane()
+    prior = build_analytic_lane_band_prior(lstar, lane_cls=1)
+    lane_rgb = np.array([255.0, 255.0, 255.0], np.float32)
+    margin = np.full((_H, _W), 0.1, np.float32)
+    calls = {"margin": 0}
+
+    def _margin_provider(code_idx):
+        calls["margin"] += 1
+        return margin
+
+    compose = make_lane_band_compose_fn(
+        {0: prior}, lane_rgb_provider=lane_rgb, margin_provider=_margin_provider,
+        tau=0.5, eps=0.25, use_mlx=True, cache_static=True)
+    rgb = mx.array(np.full((1, _H, _W, 3), 10.0, np.float32))
+    compose(rgb, 0)
+    compose(rgb, 0)
+    # CALLABLE margin provider is theta-dependent -> NEVER cached (called per compose)
+    assert calls["margin"] == 2
+
+
+@pytest.mark.skipif(not _HAS_MLX, reason="mlx unavailable")
+def test_compose_fn_cache_static_caches_dict_margin_umask():
+    lstar = _synthetic_lstar_with_lane()
+    prior = build_analytic_lane_band_prior(lstar, lane_cls=1)
+    lane_rgb = np.array([255.0, 255.0, 255.0], np.float32)
+    margin = np.full((_H, _W), 0.1, np.float32)
+    kw = {"lane_rgb_provider": lane_rgb, "margin_provider": {0: margin},
+          "tau": 0.5, "eps": 0.25, "use_mlx": True}
+    compose_cached = make_lane_band_compose_fn({0: prior}, cache_static=True, **kw)
+    compose_plain = make_lane_band_compose_fn({0: prior}, cache_static=False, **kw)
+    rgb = mx.array(np.full((1, _H, _W, 3), 10.0, np.float32))
+    # dict (precomputed-GT) margin IS static -> cached path must equal per-call path
+    assert np.array_equal(np.asarray(compose_cached(rgb, 0)),
+                          np.asarray(compose_plain(rgb, 0)))

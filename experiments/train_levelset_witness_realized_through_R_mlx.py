@@ -5282,7 +5282,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         band_compose_fn = make_lane_band_compose_fn(
             _lane_priors, lane_rgb_provider=_band_lane_rgb, margin_provider=_margin_provider,
             tau=float(args.lane_band_tau), eps=float(args.lane_band_eps),
-            weight=float(args.lane_band_weight), use_mlx=True)
+            weight=float(args.lane_band_weight), use_mlx=True,
+            # (#509 burn-down 3) pair-static constant cache — bit-identical values,
+            # kills the per-call numpy->mx conversion once the band gate opens.
+            cache_static=bool(getattr(args, "lane_band_cache_static", True)))
         band_gate["on"] = _band_start <= 1
         _band_recalls = [float(_lane_priors[2 * pi + 1].band_recall) for pi in range(P)
                          if np.isfinite(_lane_priors[2 * pi + 1].band_recall)]
@@ -7725,6 +7728,46 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # state, with model/optimizer/EMA semantics unchanged.
     _resume_registry.register(
         "da_db_telemetry", "__dtp_", _producer_resume)
+
+    # (#B-4 grad-clip cure, 2026-07-15) AutoClip percentile controller — constructed ONLY in
+    # autoclip mode (fixed mode: None => the incumbent clip path below is BYTE-IDENTICAL and the
+    # resume sidecar carries NO __acl_ keys). Registered under the canonical resume registry so a
+    # crash/resume restores the norm-history ring bit-faithfully (P0 resumability). Law:
+    # tac.canonical_equations.autoclip_percentile_grad_clip_20260715 (autoclip_percentile_threshold_v1).
+    _autoclip = None
+    if str(getattr(args, "grad_clip_mode", "fixed")) == "autoclip":
+        from tac.witness_control.adaptive_grad_clip import (
+            AUTOCLIP_RESUME_PREFIX,
+            AutoClipController,
+        )
+        if not (float(args.grad_clip) > 0.0):
+            raise ValueError(
+                "--grad-clip-mode autoclip requires --grad-clip > 0: the fixed clip is the "
+                "warmup fallback threshold (the percentile of a near-empty history is noise). "
+                "Set a positive --grad-clip or use --grad-clip-mode fixed.")
+        _autoclip = AutoClipController(
+            percentile=float(args.grad_clip_percentile),
+            window=int(args.grad_clip_window),
+            warmup_steps=int(args.grad_clip_warmup_steps),
+            fallback_clip=float(args.grad_clip))
+        from tac.witness_control.resume_registry import (
+            FunctionResumable as _AclFnResumable,
+        )
+        _resume_registry.register(
+            "autoclip_grad_clip", AUTOCLIP_RESUME_PREFIX, _AclFnResumable(
+                write=lambda prefix: _autoclip.state_arrays(prefix),
+                restore=lambda prefix, cfg: _autoclip.restore_from_cfg(prefix, cfg),
+            ))
+        print(json.dumps({
+            "stage": "grad_clip_autoclip_armed",
+            "percentile": float(args.grad_clip_percentile),
+            "window": int(args.grad_clip_window),
+            "warmup_steps": int(args.grad_clip_warmup_steps),
+            "fallback_clip": float(args.grad_clip),
+            "per_group": bool(getattr(args, "per_group_grad_clip", False)),
+            "law": "autoclip_percentile_threshold_v1 (arXiv:2007.14469)",
+            "note": "training-path lever (relaxed-identity directive 2026-07-15); "
+                    "decode/verdict untouched; advisory; pointer UNMOVED"}), flush=True)
 
     # Manifold-Muon round 2: construct/register the state ONLY for the typed
     # treatment arm.  Once initialized at the Muon boundary it persists Q,
@@ -10968,6 +11011,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         "emitted": False,
                     }
             _clip_activation = ClipActivationAggregator(float(args.grad_clip))
+            # (#480 real-path decomposition, 2026-07-15) per-epoch ns accumulators for the
+            # DISJOINT main-thread wall intervals (grad accum / clip+opt+EMA / loss-term
+            # telemetry / epoch probes / verdict submit). Pure perf_counter_ns around
+            # EXISTING statements — no graph or RNG effect (score-neutral by construction);
+            # emitted into the witness_component_wallclock row when telemetry is on.
+            _rp_ns = {"grad": 0, "opt": 0, "terms": 0, "probes": 0, "submit": 0}
             _prof = {"ep_start": time.perf_counter(), "step_s": 0.0, "verdict_s": 0.0} if _profile_timing else None
             if _mem_probe_on and args.mlx_device == "gpu":
                 try:
@@ -11971,11 +12020,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             for s in range(0, P, args.accum_pairs):
                 chunk = order[s:s + args.accum_pairs]
                 if s == 0:
+                    _rp_t0 = time.perf_counter_ns()
                     _measure_component_decomposition(ep)
                     _emit_sps_epoch(ep, seg_form, eik_w_ep)
+                    _rp_ns["probes"] += time.perf_counter_ns() - _rp_t0
                 accum = None
                 accum_seed = None   # #224 (5): seed grad accumulator (None unless --seed-islands)
                 lsum = 0.0
+                _rp_t0 = time.perf_counter_ns()  # (#480) real grad-accum interval start
                 if _use_micro_batch:
                     # (--micro-batch-pairs B) sub-batch each accum chunk into B-pair groups; ONE batched
                     # value_and_grad per group. Weight each group's MEAN grad/loss by its pair count so
@@ -12035,12 +12087,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         lsum += float(loss)
                         accum = grads if accum is None else tree_map(lambda a, b: a + b, accum, grads)
                         mx.eval(accum)
+                _rp_ns["grad"] += time.perf_counter_ns() - _rp_t0  # (#480) grad-accum interval end
                 nb = max(len(chunk), 1)
                 batch_loss = lsum / nb
+                _rp_t0 = time.perf_counter_ns()  # (#480) clip interval start (folds into real_optimizer_s)
                 mean_grads = tree_map(lambda g, c=float(nb): g / c, accum)
-                clipped, total = optim.clip_grad_norm(mean_grads, args.grad_clip if args.grad_clip > 0 else 1e30)
-                mx.eval(total)
-                gnorm = float(total)
+                if _autoclip is None:
+                    clipped, total = optim.clip_grad_norm(mean_grads, args.grad_clip if args.grad_clip > 0 else 1e30)
+                    mx.eval(total)
+                    gnorm = float(total)
+                else:
+                    # (#B-4 AutoClip) measure the RAW norm (no-op clip at 1e30 returns the true
+                    # total), observe-then-threshold (paper Algorithm 1: the current step's norm
+                    # is IN the history), then scale only when the norm exceeds the percentile
+                    # threshold. Warmup => threshold == the fixed --grad-clip fallback.
+                    clipped, total = optim.clip_grad_norm(mean_grads, 1e30)
+                    mx.eval(total)
+                    gnorm = float(total)
+                    if np.isfinite(gnorm):
+                        _autoclip.global_state.observe(gnorm)
+                    _acl_t = _autoclip.global_state.threshold()
+                    _acl_hit = bool(np.isfinite(gnorm) and _acl_t > 0.0 and gnorm > _acl_t)
+                    if _acl_hit:
+                        clipped = tree_map(lambda g, c=float(_acl_t / gnorm): g * c, clipped)
+                    _autoclip.note_step(_acl_t, _acl_hit)
                 # (C4 confound fix) PER-GROUP grad clip: when --per-group-grad-clip is ON, re-clip each
                 # top-level parameter GROUP to --grad-clip INDEPENDENTLY, so a volatile regularizer
                 # gradient dominating the GLOBAL norm cannot throttle the seg/pose gradient on OTHER
@@ -12052,14 +12122,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _grp_clipped: dict[str, Any] = {}
                     _group_clip_norms: dict[str, float] = {}
                     for _gk, _gsub in mean_grads.items():
-                        _gc, _gt = optim.clip_grad_norm(_gsub, args.grad_clip)
-                        mx.eval(_gt)
-                        _group_clip_norms[str(_gk)] = float(_gt)
+                        if _autoclip is None:
+                            _gc, _gt = optim.clip_grad_norm(_gsub, args.grad_clip)
+                            mx.eval(_gt)
+                            _group_clip_norms[str(_gk)] = float(_gt)
+                        else:
+                            # (#B-4 AutoClip x C4 per-group) each top-level group gets its OWN
+                            # percentile threshold over its OWN norm history — the C4 anti-
+                            # starvation property preserved under the adaptive law.
+                            _gc, _gt = optim.clip_grad_norm(_gsub, 1e30)
+                            mx.eval(_gt)
+                            _gn = float(_gt)
+                            _group_clip_norms[str(_gk)] = _gn
+                            _gst = _autoclip.group(str(_gk))
+                            if np.isfinite(_gn):
+                                _gst.observe(_gn)
+                            _gthr = _gst.threshold()
+                            if np.isfinite(_gn) and _gthr > 0.0 and _gn > _gthr:
+                                _gc = tree_map(lambda g, c=float(_gthr / _gn): g * c, _gc)
                         _grp_clipped[_gk] = _gc
                     clipped = _grp_clipped
                     mx.eval(clipped)
                 else:
                     _group_clip_norms = {}
+                _rp_ns["opt"] += time.perf_counter_ns() - _rp_t0  # (#480) clip interval end
                 # task-408 Q1: consume the real norms returned at the existing
                 # clip sites; no extra gradient pass and no update-path input.
                 if np.isfinite(gnorm):
@@ -12117,7 +12203,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # chunks (the deadlock state) are covered too. Pure no-grad recompute + print.
                 _bidx_lt = s // args.accum_pairs
                 if _lt_stride and (_bidx_lt % _lt_stride == 0):
+                    _rp_t0 = time.perf_counter_ns()  # (#480) per-term no-grad recompute interval
                     _t_agg, _t_tot = _loss_terms_for_chunk(chunk, seg_form, eik_w_ep)
+                    _rp_ns["terms"] += time.perf_counter_ns() - _rp_t0
                     # (V6 #320) thread the adaptive-eps control state when active (None => omitted =>
                     # byte-identical row schema for non-adaptive runs).
                     _lt_ve = _eik_stab["visco_eps"] if _eik_stab["visco_adaptive"] else None
@@ -12207,6 +12295,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # stabilizer to the global clip). Applies to the ALREADY-clipped tree so the global
                 # spike-guard/telemetry `gnorm` above is untouched. DEFAULT 'none' => `clipped` used
                 # unchanged => BYTE-IDENTICAL. Only fires on the divergence-prone deep-unroll arm.
+                _rp_t0 = time.perf_counter_ns()  # (#480) opt.update+EMA interval start
                 if str(getattr(args, "grad_normalize", "none")) == "per-param":
                     from tac.witness_stability import per_param_normalize_grads
                     clipped = per_param_normalize_grads(
@@ -12273,6 +12362,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 ema.update(model)
                 _live["ema_updates"] += 1  # read-only warmup clock; never persisted or actuated
                 mx.eval(list(ema.shadow.values()))
+                _rp_ns["opt"] += time.perf_counter_ns() - _rp_t0  # (#480) opt.update+EMA interval end
                 # (EIK-STAB build 2) median hygiene: in rollback mode an ACCEPTED-but-spiked batch
                 # must NOT poison the running median (the spike detector's healthy reference).
                 # Legacy mode reaches here only for non-spiked batches => condition True => the
@@ -12351,6 +12441,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _cl_stop_now = False
             if ep % args.eval_every == 0 or ep == args.epochs:
                 if args.async_verdict:
+                    # (#480) time the MAIN-thread submit block (join + decide + snapshot +
+                    # schedule) — the audit's +903s "async-submit blocks" hypothesis vs the
+                    # coincident cadence-25 checkpoint/ablation work is DECIDED by this field.
+                    _rp_t0 = time.perf_counter_ns()
                     # FEED-em: offload the observational verdict to a background thread so the
                     # GPU loop never idles. BIT-IDENTICAL training (verdict is never read back).
                     if _cl_on:
@@ -12380,6 +12474,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         # at the FINAL epoch, JOIN first so the last row is not skip-throttled.
                         _join_async_verdict()
                     _schedule_async_verdict(ep, seg_form, ep_loss)
+                    _rp_ns["submit"] += time.perf_counter_ns() - _rp_t0  # (#480) submit block end
                 else:
                     _da_sync_verdict_start_ns = time.perf_counter_ns()
                     v = realized_verdict(ep=int(ep))
@@ -12673,7 +12768,23 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # task-408 Q1: one per-epoch aggregation row from the norms the
             # existing global/per-group clip sites already materialized.
             print(json.dumps(_clip_activation.row(epoch=int(ep))), flush=True)
+            # (#B-4) per-epoch AutoClip telemetry (dynamic thresholds + clip events); only in
+            # autoclip mode => fixed-mode stdout is byte-identical.
+            if _autoclip is not None:
+                print(json.dumps(_autoclip.row(epoch=int(ep))), flush=True)
             if _component_wallclock_on:
+                # (#480) land the DISJOINT real-path intervals into this epoch's clock BEFORE
+                # the row finalizes. add_ns(0) is a measured zero (the region genuinely ran for
+                # ~0s or never fired this epoch); the submit field distinguishes "no verdict
+                # scheduled" (not_invoked) from a measured submit duration.
+                _component_clock.add_ns("real_grad_accum_s", _rp_ns["grad"])
+                _component_clock.add_ns("real_optimizer_s", _rp_ns["opt"])
+                _component_clock.add_ns("real_loss_terms_telemetry_s", _rp_ns["terms"])
+                _component_clock.add_ns("real_epoch_probes_s", _rp_ns["probes"])
+                if _rp_ns["submit"] > 0:
+                    _component_clock.add_ns("real_verdict_submit_s", _rp_ns["submit"])
+                else:
+                    _component_clock.mark_not_invoked("real_verdict_submit_s")
                 if not (is_transition or do_periodic):
                     _component_clock.mark_not_invoked("checkpoint_io_s")
                 if not (ep % args.eval_every == 0 or ep == args.epochs):
@@ -13132,6 +13243,32 @@ def main(argv: list[str] | None = None) -> int:
                     help="(#205 OOM fix) mx.clear_cache() every N accum-batches inside the epoch loop "
                     "(GPU only; score-neutral). 0 disables the in-loop clear (pre-fix behaviour).")
     ap.add_argument("--grad-clip", type=float, default=1.0)
+    # (#B-4 grad-clip cure, 2026-07-15) ADAPTIVE clip law: AutoClip percentile threshold
+    # (arXiv:2007.14469) over a ring of observed gradient norms, replacing the MEASURED-SATURATED
+    # fixed constant (C0 grad_clip_activation ep1-39: frac_clipped=1.0, gnorm~6 vs 0.5 => effective
+    # step ~ lr/12; audit .omx/research/v9_missing_signal_constants_audit_20260715.md §A-1). Mode
+    # 'fixed' (DEFAULT) => the incumbent single clip_grad_norm call, BYTE-IDENTICAL. 'autoclip' =>
+    # observe-then-threshold per accum step, fixed --grad-clip as the warmup fallback; with
+    # --per-group-grad-clip each top-level group gets its OWN percentile threshold (C4 sibling).
+    # Training-path lever under the 2026-07-15 relaxed-identity directive (drift OK if gradient
+    # quality + no flicker); decode/verdict untouched. State resumes under __acl_ (registry).
+    # Law: tac.canonical_equations.autoclip_percentile_grad_clip_20260715; mechanism:
+    # tac.witness_control.adaptive_grad_clip; DSL lever: curriculum_dsl.AdaptiveGradClip.
+    ap.add_argument("--grad-clip-mode", type=str, default="fixed",
+                    choices=["fixed", "autoclip"],
+                    help="(#B-4) 'fixed' (default) = incumbent constant clip, byte-identical; "
+                    "'autoclip' = AutoClip percentile-of-history threshold (2007.14469) with "
+                    "--grad-clip as the warmup fallback (cures the measured saturation).")
+    ap.add_argument("--grad-clip-percentile", type=float, default=10.0,
+                    help="(#B-4 autoclip) percentile p of the gradient-norm history used as the "
+                    "clip threshold (AutoClip paper default 10).")
+    ap.add_argument("--grad-clip-window", type=int, default=1000,
+                    help="(#B-4 autoclip) ring-buffer window of most-recent finite gradient norms "
+                    "(tracks the CURRENT stage's norm scale across curriculum stages).")
+    ap.add_argument("--grad-clip-warmup-steps", type=int, default=10,
+                    help="(#B-4 autoclip) observations before the percentile engages; during "
+                    "warmup the fixed --grad-clip is the threshold (percentile of a near-empty "
+                    "history is noise).")
     # (#146 Cells2Pixels NCA-stability lever, tac.witness_stability) per-PARAMETER gradient
     # normalization g_p <- g_p/(||g_p||+1e-8) per tensor BEFORE the opt step — the scale-free NCA
     # deep-unroll stabilizer (SIGGRAPH'26 Cells2Pixels; memo cells2pixels_deepdive_bridge_20260709).
@@ -14602,6 +14739,18 @@ def main(argv: list[str] | None = None) -> int:
                     help="#224 uncertainty threshold (witness margin PROB [0,1]; gt margin LOGIT ~[0,13]).")
     ap.add_argument("--lane-band-eps", type=float, default=0.35, help="#224 uncertainty ramp width.")
     ap.add_argument("--lane-band-weight", type=float, default=1.0, help="#224 band strength (curriculum ramp).")
+    # (#509 burn-down item 3, 2026-07-15) cache the PAIR-STATIC band constants (weighted stop-grad
+    # coverage per unique prior + gt-source u_mask per code) instead of re-converting numpy->mx +
+    # re-scaling on EVERY compose call (~1200 calls/epoch once the band gate opens). Values are
+    # BIT-IDENTICAL by construction (same numpy source -> same mx constant; the multiply/stop_grad
+    # are computed once and reused — the _cf_mx cache precedent). Memory: ~0.79MB x unique priors
+    # (~600 @ n600 ~ 0.5 GiB — accounted in the launcher memory preflight envelope). Score-neutral
+    # speed lever => default ON per off-is-orphan; --no-lane-band-cache-static restores the
+    # per-call conversion path for the A/B.
+    ap.add_argument("--lane-band-cache-static", action=argparse.BooleanOptionalAction, default=True,
+                    help="(#509) cache pair-static lane-band constants (coverage/u_mask) across "
+                    "compose calls; bit-identical values, saves per-call numpy->mx conversion. "
+                    "--no-lane-band-cache-static = pre-cache behaviour (A/B control).")
     ap.add_argument("--lane-band-start-epoch", type=int, default=300, help="#224 engage the band at this epoch. "
                     "With --lane-band-start-event set this becomes the fail-safe BACKSTOP CAP.")
     # (operator override 2026-07-08) SENSOR->START WIRING #2: analytic lane-band engagement fires on

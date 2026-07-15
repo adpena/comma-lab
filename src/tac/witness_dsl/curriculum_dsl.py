@@ -2609,6 +2609,88 @@ def DsegAwareTaper(
     )
 
 
+def AdaptiveGradClip(
+    percentile: float = 10.0, window: int = 1000, warmup_steps: int = 10,
+    *, scientific_declaration: bool = True,
+) -> Lever:
+    """#B-4 grad-clip cure: AutoClip percentile clip law (arXiv:2007.14469) replacing the
+    MEASURED-SATURATED fixed ``--grad-clip 0.5``.
+
+    THE POISON (audit ``.omx/research/v9_missing_signal_constants_audit_20260715.md`` §A-1,
+    MEASURED on C0 ``levelset_n600_witness_20260715T095030Z``): ``grad_clip_activation`` rows
+    ep1-39 show global ``frac_clipped=1.0`` at EVERY accum step with ``norm_mean≈5.9-6.2``
+    (max 17.5) vs threshold 0.5 — the clip is saturated 100% of CE-stage steps, the effective
+    step is ``lr·0.5/‖g‖ ≈ lr/12``, and the LR cosine no longer controls the descent clock
+    (verdict_scope: FORMULATION-level for the v9_cgauge_* config family). Corollary: with the
+    norm pinned, loss WEIGHTS only set the descent direction mixture, never magnitude.
+
+    THE LAW: ``clip_t = percentile_p(‖g‖ history, window w)`` — observe-then-threshold per
+    accum step; the fixed ``--grad-clip`` is the warmup fallback. With ``--per-group-grad-clip``
+    each top-level parameter group gets its OWN percentile threshold (the C4 anti-starvation
+    sibling preserved). Constants: ``percentile=10`` is the AutoClip paper default; window/warmup
+    are stage-tracking pragmatics — all three custodied as scientific declarations below.
+
+    Training-path lever under the 2026-07-15 relaxed-identity directive (drift OK if gradient
+    quality + no flicker); decode/verdict/byte-close paths untouched. DEFAULT-OFF in the trainer
+    (``--grad-clip-mode fixed`` = byte-identical incumbent); this factory is what ARMS it.
+    Mechanism: ``tac.witness_control.adaptive_grad_clip`` (resume-safe under ``__acl_``). Law:
+    ``tac.canonical_equations.autoclip_percentile_grad_clip_20260715``
+    (``autoclip_percentile_threshold_v1``).
+
+    means != ends: ARMS the mechanism; NO score claim. The descent-speed effect is
+    ASSUMED_AWAITING_VERIFICATION until the bounded n24 A/B (d_seg descent per WALL-CLOCK,
+    gradient-quality + no-flicker admission bar) and any promotion needs a byte-closed exact
+    n600 row. Pointer UNMOVED."""
+    numeric = {"--grad-clip-percentile": float(percentile),
+               "--grad-clip-window": int(window),
+               "--grad-clip-warmup-steps": int(warmup_steps)}
+    overrides = {"--grad-clip-mode": "autoclip", **numeric}
+    lawrefs: dict = {}
+    constant_manifest: dict = {}
+    receipt_schemas: dict = {}
+    if scientific_declaration:
+        lawrefs, constant_manifest = _v9_scientific_constant_custody(
+            "autoclip_percentile_threshold_v1",
+            numeric,
+            provenance=(
+                "AutoClip percentile clip law (arXiv:2007.14469): percentile 10 = paper default; "
+                "window 1000 / warmup 10 = stage-tracking pragmatics; cures the C0-measured "
+                "frac_clipped=1.0 saturation of --grad-clip 0.5 (effective step lr/12)"
+            ),
+        )
+        receipt_schemas = dict.fromkeys(numeric, "v9_config_compile.v1")
+    return Lever(
+        "adaptive_grad_clip_autoclip",
+        overrides=overrides,
+        notes="#B-4 AutoClip percentile grad-clip (cures measured saturation; epochs-to-target "
+              "lever under the joint wall-clock objective; n24 A/B owed)",
+        lawrefs=lawrefs,
+        constant_manifest=constant_manifest,
+        runtime_receipt_schemas=receipt_schemas,
+    )
+
+
+def LaneBandStaticCache(enabled: bool = True) -> Lever:
+    """#509 burn-down 3: cache the PAIR-STATIC lane-band constants (weighted stop-grad coverage
+    per unique prior + gt-source u_mask per code) across compose calls, killing the per-call
+    numpy->mx conversion once the band gate opens (measured +75 s/ep from ep33 on C0; the cache
+    recovers the CONVERSION share — the theta-dependent witness margin/appearance forwards are
+    intrinsic to the lever and stay per-call).
+
+    Values are BIT-IDENTICAL by construction (same source array -> same mx constant, computed
+    once and reused — the ``_cf_mx`` cache precedent), so this is a SCORE-NEUTRAL speed lever:
+    trainer default ON per the off-is-orphan rule; this factory exists to compose the OFF arm
+    (``enabled=False``) for the paired A/B and to keep the flag DSL-held (never a hand flag).
+    Mechanism: ``tac.boundary_math.analytic_lane_render_band.make_lane_band_compose_fn``
+    (``cache_static``). Memory: one (H,W) fp32 per unique prior (~0.5 GiB @ n600), inside the
+    launcher memory-preflight envelope. means != ends: sec/ep lever; NO score claim; pointer
+    UNMOVED."""
+    return Lever("lane_band_static_cache",
+                 overrides={"--lane-band-cache-static": bool(enabled)},
+                 notes="#509 pair-static lane-band constant cache (bit-identical values; "
+                       "sec/ep lever; OFF arm = the A/B control)")
+
+
 def HardnessOversample(
     oversample: float = 0.5, weighted: bool = True, source: str = "realized",
     power: float = 1.0, band: float = 0.5,

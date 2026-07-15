@@ -372,6 +372,7 @@ def make_lane_band_compose_fn(
     eps: float = 0.25,
     weight: float = 1.0,
     use_mlx: bool = True,
+    cache_static: bool = True,
 ) -> Callable[[Any, int], Any]:
     """Build ``compose_fn(rgb_nhwc, code_idx) -> rgb_nhwc`` for the trainer hook.
 
@@ -388,6 +389,16 @@ def make_lane_band_compose_fn(
         ``top1(soft) - top2(soft)``; for an RGB witness pass a SegNet-margin proxy.
     tau, eps : uncertainty mask threshold + ramp.
     weight : global band strength in [0,1] (curriculum ramp knob).
+    cache_static : (#509 burn-down 3, 2026-07-15) cache the PAIR-STATIC MLX constants —
+        the weighted stop-grad coverage per UNIQUE prior object and, for a DICT
+        margin_provider (the precomputed-GT source), the stop-grad u_mask per code —
+        instead of re-running numpy->mx conversion + scale + stop_gradient on every
+        compose call (~2 calls/pair/epoch once the band gate opens). BIT-IDENTICAL
+        values by construction (same source array -> same constant; the op is computed
+        once and the SAME mx array object is reused — the ``_cf_mx`` cache precedent).
+        A CALLABLE margin_provider (the theta-dependent witness margin) is never
+        cached (it changes as the witness trains). Memory: one (H,W) fp32 per unique
+        prior (~0.79 MB @ 384x512; ~0.5 GiB at n600).
 
     The coverage / u_mask are treated as FIXED constants (stop-gradient); the
     gradient flows through ``rgb`` (witness) and ``lane_rgb`` (also witness-derived).
@@ -403,6 +414,13 @@ def make_lane_band_compose_fn(
             return provider[code_idx]
         return provider
 
+    # (#509) pair-static caches: keyed by id(prior) (priors are held for the run's
+    # lifetime by the priors dict/list, so ids are stable) and by code_idx for the
+    # dict-margin u_mask. Only populated when use_mlx and cache_static.
+    _cov_cache: dict[int, Any] = {}
+    _umask_cache: dict[int, Any] = {}
+    _margin_is_static = isinstance(margin_provider, dict)
+
     def compose_fn(rgb_nhwc: Any, code_idx: int) -> Any:
         prior = _get_prior(code_idx)
         lane_rgb = _get(lane_rgb_provider, code_idx)
@@ -413,12 +431,31 @@ def make_lane_band_compose_fn(
         if use_mlx:
             import mlx.core as mx
 
-            cov_mx = mx.array(cov) if not isinstance(cov, mx.array) else cov
-            cov_mx = cov_mx * float(weight)
+            if cache_static:
+                cov_mx = _cov_cache.get(id(prior))
+                if cov_mx is None:
+                    _c = mx.array(cov) if not isinstance(cov, mx.array) else cov
+                    cov_mx = mx.stop_gradient(_c * float(weight))
+                    mx.eval(cov_mx)
+                    _cov_cache[id(prior)] = cov_mx
+            else:
+                cov_mx = mx.array(cov) if not isinstance(cov, mx.array) else cov
+                cov_mx = mx.stop_gradient(cov_mx * float(weight))
             if margin_provider is not None:
-                margin_mx = margin if isinstance(margin, mx.array) else mx.array(np.asarray(margin, np.float32))
-                u_mask = mx.stop_gradient(witness_uncertainty_mask_mlx(margin_mx, tau=tau, eps=eps))
-            cov_mx = mx.stop_gradient(cov_mx)
+                if cache_static and _margin_is_static:
+                    u_mask = _umask_cache.get(int(code_idx))
+                    if u_mask is None:
+                        _m = margin if isinstance(margin, mx.array) else mx.array(
+                            np.asarray(margin, np.float32))
+                        u_mask = mx.stop_gradient(
+                            witness_uncertainty_mask_mlx(_m, tau=tau, eps=eps))
+                        mx.eval(u_mask)
+                        _umask_cache[int(code_idx)] = u_mask
+                else:
+                    margin_mx = margin if isinstance(margin, mx.array) else mx.array(
+                        np.asarray(margin, np.float32))
+                    u_mask = mx.stop_gradient(
+                        witness_uncertainty_mask_mlx(margin_mx, tau=tau, eps=eps))
             lane_mx = lane_rgb if isinstance(lane_rgb, mx.array) else mx.array(np.asarray(lane_rgb, np.float32))
             # rgb is (1,H,W,3); coverage is (H,W) -> broadcast on the batch dim.
             return composite_lane_band_mlx(rgb_nhwc, cov_mx[None], lane_mx, u_mask[None] if u_mask is not None else None)

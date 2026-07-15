@@ -26,7 +26,9 @@ from tac.witness_control.telemetry_producers import (
 )
 
 
-def test_component_contract_has_exact_eight_fields() -> None:
+def test_component_contract_has_exact_fields_v1_plus_real_path() -> None:
+    # The 8 v1 fields PLUS the 2026-07-15 #480 real-path fields (additive,
+    # legacy-compatible; epoch_total_s stays LAST so _TIMER_COMPONENTS holds).
     assert COMPONENT_FIELDS == (
         "teacher_forward_s",
         "teacher_backward_s",
@@ -35,8 +37,39 @@ def test_component_contract_has_exact_eight_fields() -> None:
         "realized_R_s",
         "verdict_s",
         "checkpoint_io_s",
+        "real_grad_accum_s",
+        "real_optimizer_s",
+        "real_loss_terms_telemetry_s",
+        "real_epoch_probes_s",
+        "real_verdict_submit_s",
         "epoch_total_s",
     )
+
+
+def test_real_path_fields_are_the_real_prefixed_subset() -> None:
+    from tac.witness_control.telemetry_producers import REAL_PATH_FIELDS
+
+    assert REAL_PATH_FIELDS == (
+        "real_grad_accum_s",
+        "real_optimizer_s",
+        "real_loss_terms_telemetry_s",
+        "real_epoch_probes_s",
+        "real_verdict_submit_s",
+    )
+    assert all(name in COMPONENT_FIELDS for name in REAL_PATH_FIELDS)
+
+
+def test_real_path_sum_is_summable_and_reported(tmp_path: Path) -> None:
+    clock = ComponentWallclock(tmp_path / "rows.jsonl")
+    clock.add("real_grad_accum_s", 10.0)
+    clock.add("real_optimizer_s", 2.0)
+    clock.add("real_loss_terms_telemetry_s", 1.0)
+    clock.add("real_epoch_probes_s", 0.5)
+    clock.mark_not_invoked("real_verdict_submit_s")
+    row = clock.row(epoch=1, epoch_total_s=20.0)
+    assert row["real_path_sum_s"] == pytest.approx(13.5)
+    assert "real_verdict_submit_s" in row["not_invoked"]
+    assert "real_* fields" in row["overlap_policy"] or "real_path_sum_s" in row["overlap_policy"]
 
 
 def test_component_schema_is_ticket_schema() -> None:
