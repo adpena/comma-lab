@@ -239,3 +239,10 @@ but the sandbox exposes no Metal device.
 
 Pointer movement: **none**. Score claim: **none**. Promotion eligibility:
 **false**. The branch advances means, custody, and build gates only.
+
+Lane maturity is **L1** with `impl_complete=true` and `research_only=true`;
+real-archive, contest CPU/CUDA, review, memory, and deploy gates remain false.
+The registry-wide validator is not globally green: it reports **110** older
+missing evidence paths across unrelated lanes. This arm's lane was not one of
+the reported invalid entries; MAIN should not interpret the global failure as
+an ARM-DERIVE empirical gate.

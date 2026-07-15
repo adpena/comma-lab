@@ -35,3 +35,5 @@ ordering before integration.
 
 Final targeted regression matrix: **136 passed, 1 skipped in 8.58 s**. The
 single skip is MLX parity execution because the sandbox has no Metal device.
+Lane maturity is L1/implementation-complete/research-only. Registry-wide
+validation remains red on 110 older missing-evidence paths outside this lane.
