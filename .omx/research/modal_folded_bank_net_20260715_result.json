@@ -1,0 +1,90 @@
+{
+  "schema": "modal_folded_bank_net_result_v1",
+  "recorded_at_utc": "2026-07-15T09:20:19Z",
+  "status": "REFUSED_PRE_DISPATCH_MISSING_ISOLATED_WORKTREE_CUSTODY",
+  "score_claim": false,
+  "dispatch_attempted": false,
+  "provider_call_accepted": false,
+  "call_id": null,
+  "git": {
+    "branch": "codexwt/modal_folded_bank_net_20260715_20260715T091647Z",
+    "head": "9cc9eb830bb9240cab94ca6dd27632d3fcbafbf2",
+    "contract_fix_present": true,
+    "worktree_isolated": true
+  },
+  "candidate": {
+    "required_path": "experiments/results/click_polish_399_folded/candidate_archive.zip",
+    "required_archive_bytes": 176562,
+    "required_archive_sha256": "7e83fdd926c58658d0d2654597c8eaf5eb7246ab925598975a75660b9479bcbb",
+    "classification": "BORROWED_MECHANISM_NON_SUBMISSION_DEFENSIVE_BANK",
+    "path_present": false,
+    "custody_verified_this_arm": false,
+    "observed_archive_bytes": null,
+    "observed_archive_sha256": null,
+    "search_evidence": {
+      "required_path_stat": "ENOENT",
+      "candidate_archive_name_matches_in_worktree": 0,
+      "files_of_required_size_in_worktree": 0,
+      "tracked_path_matches": 0
+    }
+  },
+  "runtime": {
+    "required_submission_dir": "experiments/results/pr110_payload_entropy_recode_20260610/submission_dir",
+    "path_present": false,
+    "custody_verified_this_arm": false,
+    "inflate_py_sha256": null,
+    "inflate_sh_sha256": null
+  },
+  "canonical_pointer_surface": {
+    "required_path": ".omx/state/canonical_frontier_pointer.json",
+    "path_present": false,
+    "action": "UNCHANGED_NOT_EVALUATED",
+    "edited": false,
+    "previous_recorded_borrowed_bank_score_contest_cpu": 0.1880443979880752,
+    "previous_recorded_archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
+    "previous_recorded_archive_bytes": 176564,
+    "submitted_pr_number_for_current_frontier": null,
+    "previous_record_source": ".omx/research/modal_click_bank_mainaccess_20260715_result.json",
+    "reason": "The required frozen candidate and runtime were absent, so no exact evaluator row exists and neither comparison branch is authorized."
+  },
+  "evaluator": {
+    "intended_axis": "contest_cpu",
+    "intended_hardware_substrate": "linux_x86_64_cpu_modal",
+    "canonical_score_formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "measured_d_seg": null,
+    "measured_d_pose": null,
+    "measured_archive_bytes": null,
+    "recomputed_score": null,
+    "axis_tag": null
+  },
+  "dispatch": {
+    "lane_id": "modal_folded_bank_net_20260715",
+    "failure_stage": "LOCAL_CUSTODY_PREFLIGHT",
+    "modal_invoked": false,
+    "exact_blocker": "HEAD 9cc9eb830b enables network and Git writes but does not stage the gitignored folded archive, PR110 runtime tree, or canonical pointer into this isolated worktree. The commit-path contract forbids reading or copying them from /Users/adpena/Projects/pact or another worktree."
+  },
+  "cost_envelope": {
+    "task": "#381",
+    "cap_usd": 20.0,
+    "this_arm_spend_usd": 0.0,
+    "billing_exact_cumulative_available": false,
+    "documented_known_cumulative_usd_range_before_and_after_this_arm": [
+      0.21,
+      0.28
+    ],
+    "conservative_ledger_reservation_upper_bound_usd_before_and_after_this_arm": 6.58,
+    "remaining_at_conservative_upper_bound_usd": 13.42,
+    "accounting_source": ".omx/research/modal_click_bank_mainaccess_20260715_result.json",
+    "accounting_note": "This arm made no provider call, so both the documented known range and conservative reservation bound are unchanged. Billing-exact cumulative remains unavailable."
+  },
+  "triality": {
+    "dsl": "N/A: exact evaluation of a frozen borrowed archive is not a trainer lever and introduces no configuration flag.",
+    "dag": ".omx/research/modal_folded_bank_net_20260715_DAG_FEED.md",
+    "equations": "Existing pr128_latent_click_structure_isotropic_geometric_v1 anchor; no empirical anchor appended because no evaluator components were measured."
+  },
+  "supersession_scope": {
+    "prior_receipt": ".omx/research/modal_click_bank_mainaccess_20260715_result.json",
+    "prior_custody_measurement_reused_for_score": false,
+    "note": "The prior shared-main receipt proves those bytes existed in that earlier environment, but it cannot substitute for recomputing custody in this isolated worktree."
+  }
+}
