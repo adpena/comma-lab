@@ -18383,3 +18383,28 @@ annulus and longest end of long tail". Full table:
   (phantom-active r5 campaign row terminal); ledger↔claims↔Modal agree, 0 running tasks.
   Receipt: .omx/research/cuda_438_smokereg_fire_and_cost_table_20260715.md §6. All MEANS;
   **pointer 0.19108 UNMOVED.**
+
+## FEED-507-F10 (2026-07-15) — fresh-eyes CRITICAL caught + fixed PRE-LAUNCH: annulus_plateau satisfiability
+- **Fresh-eyes fractal review (ledger fresheyes_fractal_review_20260715.md, b19757d7af; NOT sealed 0/3,
+  10 findings, 2 rounds):** F10 CRITICAL — the composed config's annulus_plateau event was STRUCTURALLY
+  UNSATISFIABLE: one series point per verdict (eval_every=25), trailing dwell_windows=4 → span 75 <
+  min_epochs 150 → seg-chroma-boundary + temporal-screw could NEVER event-fire; both guaranteed
+  backstop-cap fires at 450 with spurious cap_fired_before_event alarms — 2 of 5 "dissolved" transitions
+  epoch-scripted-in-effect, defeating the event-continuation design for those two. Caught BEFORE the real
+  launch (r6 chain still in drain-wait).
+- **FIX (7d882182e2, DSL leg = spec_v9_cgauge.py):** dwell DERIVED, not chosen — satisfiability law
+  (dwell−1)·eval_every ≥ min_epochs ⇒ dwell 7 at 25/150; provenance rung upgraded from bare constant to
+  derivation (poison-item-1 cure at the exact spot the taxonomy predicted: min_epochs was the measured
+  anchor, dwell the underived bolt-on). NEW fail-closed compile gate _assert_annulus_plateau_satisfiable
+  covers every v9-descendant config (negative-tested). Equations-leg note: this is a config-geometry
+  CONSTRAINT (sensor sampling theorem), encoded in the gate + provenance — not an S_τ law row; reasoned skip.
+  Chain restart NOT needed: the launcher DSL-compiles from source at fire time.
+- **Remaining findings routed:** F5+F4 (autoclip×per-param inert composition w/ REFUTED-mechanism
+  provenance string; verdict-workers SPEC tracking + stale docstring scope) → batch-3 arm (owns C
+  surfaces). F7+F8 (0.9997 uncited at use sites + instance-receipt-licenses-all; CudaGraphForwardBackward
+  capture-step returns undefined outputs + skips one real step — consumer-less, MUST fix before first
+  consumer) → CUDA arm post-dispatch. F1 (dry-start GREEN receipt binds config NAME not dsl_compile_hash
+  → stale-receipt clearance) + F2 (label_floor lower-band masking → T1 falls to cap 726, still fires,
+  later + one inverted alarm; ACCEPTED for this run) + F3/F6/F9-INFO: ledger-routed, next-config inputs.
+  F9 verdict: boot suite COST-JUSTIFIED (all consumers named; async-overlap v0-verdict = routed ~40min optimization).
+- Everything MEANS; **pointer 0.19108 UNMOVED.**
