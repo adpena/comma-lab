@@ -18044,3 +18044,37 @@ Trajectory point (pointer UNMOVED 0.19108 submittable / 0.18804 borrowed-bank �
 - **Phase-0 $0 arms landed** (branches, merge-to-main via p0_merge arm): iso_configs → 3 typed Phase-2 configs (taper_off/horizon_iso/step_iso); basis_d21a_prod PREPARED_NOT_FIRED (activate only on n600 proof); derive_solver_provenance (V9 hot-surface + D37/D38 successor + causal-manifest); dsl_hash #506 (Catalog #406 DSL-hash launcher+governor fail-closed); harness_consolidation (CFL/drain/zsh/git-objects); confound_hardening (partial_freeze WARN + d_seg canary + live-gap default-on + gates, score-neutral).
 - **Paper 2607.12438 Fisher-Rank-Inflation** ROUTED: NOT-APPLICABLE-direct (memorization-under-label-noise = generalization diagnostic; we overfit) BUT genuine MEANS diagnostic — Fisher-rank-inflation onset as a flicker-floor-memorization detector (early-stop + appearance-phase sharpener), grounded in Fisher-metric + measured flicker floor [[L85]]; backtest-gated LOW-MED → telemetry/costate #404/#247.
 - NEXT: merge 5 arm branches → main; Phase-2 treatment A/Bs sequential vs C0 on convergence; byte-close+exact-eval any row < 0.19108.
+
+## FEED-posefinisher (2026-07-15) — pose-FINISHER ladder prep (#248/#366): rung chosen, DSL delta landed, dry-run PASS, pre-registered [DSL-leg][eq-FORMALIZATION_PENDING]
+**OPERATOR REFRAME (supersedes standalone-run framing):** pose is the FINISHER — the R1 two-phase already
+sealed (pose-blind trunk → #383 sigma_min_plateau engage / ep726 cap → terminal joint descent) IS the
+vehicle; deliverable re-scoped to finisher-PHASE prep. Full memo `pose_finisher_ladder_prep_20260715.md`.
+**ARITHMETIC VERIFIED:** banked pose 0.127 (d_pose 0.001610 n600 byte-close) → 0.018-class needs d_pose
+3.24e-5 = **50× gap**; at rate 0.030 the d_seg budget is 3.4e-4 (infeasible, 2.6-4.3× below the L85
+appearance-phase band) vs 1.43e-3 at pose 0.018 (feasible-class) ⇒ **ladder worth 0.109 ≈ 0.11 S**;
+intermediate d_pose 2e-4 ⇒ 0.045 ⇒ ~0.08 S. Pose-budget law stated (registration FORMALIZATION_PENDING).
+**RUNG CHOICE (3 nested):** (1) incumbent R1 joint descent produces THIS trunk's own dxi (no delta);
+(2) P-B FiLM read-back in its FINISHER-WINDOW joint form = `PoseFinisherFilmReadbackArm` (NEW composable
+lever, table→film; HONEST prior: a constrained reparam of the same 6-DOF twist residual — a RATE arm
+~−0.0035 [7,195B table → ~1.7-2.2KB shared FiLM MLP off already-shipped codes], NOT a d_pose rung; kill
+= film > 1.5× table); (3) **THE DECISIVE RUNG = the #250 §6 L1 Jacobian-coefficient $0 read-back gate,
+NEVER FIRED, fallback-trigger now MEASURED MET** (store-nothing floors ~1.0-1.6e-3 ≫ 3.24e-5): at the
+finisher plateau, store K≈6-18 coeffs of r, decode-recompute the rank-6 J basis FREE (rule-118), k GN
+steps, n600 frozen CPU-torch; GO iff d_pose<3e-4 ∧ decode ≤10min of the 30-min budget. It is the ONLY
+rung with an existence proof below 1e-3 (P-E ~1e-8-class) and it composes with the finisher (descent
+shrinks r). **DSL delta LANDED + DRY-RUN PASS:** `PoseFinisherFilmReadbackArm` + `PoseFinisherLiveGap`
+(cadence 4 DERIVED via `pose_finisher_live_gap_cadence` = 2-samples-per-EMA-lag-window; closes C-H2-1 IN
+the finisher window where the trainer's -1 auto mode is structurally silent) + 9 tests green (sister
+suites 104+16 green); launcher dry-run `--config v9_cgauge_ideal_mod19 --dsl-lever
+PoseFinisherFilmReadbackArm --dsl-lever PoseFinisherLiveGap` = 225/225 flags, manifest OK, admission
+ADMIT with C0 live; emitted launch.sh carries film + live-gap-4; dry-run artifact moved to
+`.omx/research/pose_finisher_ladder_prep_20260715_dryrun/` (a levelset_*-named stub in
+experiments/results would repoint the dashboard latest-run resolver off live C0 — `is_run_dir` glob
+matches without run.log). **PRE-REGISTERED (binding):** trajectory d_pose ≤1.0@E0+30 / ≤0.01@E0+70 /
+≤0.003@E0+110 (R1 shape); CONTINUE while 20-ep improvement ≥3% on live-gap-corrected rows ONLY (H2 L3
+clearance); STOP-SHIP = plateau + 9-ep EMA-settle → #238 connector byte-close → fire the L1 gate;
+HARD-STOP d_pose>0.05@E0+120; d_seg guard ±2% of E0 (seg⊥pose null). **HONEST LANDING ZONE:** finisher
+training alone = contribution 0.10-0.127 (recovers ~0-0.03 S; no store-nothing measurement has ever gone
+below 1.0e-3); the full ~0.11 S rides on the UNMEASURED L1 gate (Contrarian dissent preserved:
+"another linearized-Jacobian argument — measure before believing"); plan-of-record floor stays 0.127.
+NO training launched; C0 untouched. Pointer 0.19108 UNMOVED — MEANS.

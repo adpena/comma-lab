@@ -3348,6 +3348,79 @@ def TerminalPoseFinish(
                "start_epoch = fail-safe CAP backstopping --muon-start-event; #238 ship-dxi; advisory"))
 
 
+# ── POSE-FINISHER LADDER, finisher-phase prep (#248/#366, 2026-07-15) ───────────────────────────
+# Operator reframe 2026-07-15: pose is the FINISHER, not a parallel run — the R1 two-phase
+# architecture already in the sealed config (pose-blind trunk → pose_finish engages on the #383
+# sigma_min_plateau gate / muon backstop → terminal joint descent) IS the vehicle. These two
+# zero-required-arg composable levers are the finisher-window DELTA that rides the NEXT converged
+# trunk via ``--dsl-lever`` (they modify ONLY the pose_finish window's carrier shape + its
+# observability; the engage criteria stay #383's). Plan + pre-registration:
+# .omx/research/pose_finisher_ladder_prep_20260715.md.
+
+def pose_finisher_live_gap_cadence(
+    ema_decay: float = 0.997, num_pairs: int = 600, accum_pairs: int = 8,
+) -> int:
+    """DERIVED (value-provenance ladder, no bare constant): the live-vs-EMA verdict cadence that
+    samples the EMA-lag window >= 2x during the terminal pose-finish descent.
+
+    The trainer's ``--verdict-live-gap-every -1`` auto mode fires ONLY during the run-start
+    two-time-constant EMA warmup (``tac.confound_observability.verdict_live_gap_due``) — it is
+    structurally SILENT at the pose-finish engage (ep726-class, EMA long warm), exactly where the
+    fast d_pose descent re-opens the shadow-vs-live gap (confound C-H2-1; DAG anchor "early-run
+    verdict-d_pose RISE = EMA-shadow lag, CONFIRMED run-1"). Derivation:
+    ``warmup_epochs = ceil(ema_warmup_updates(decay) / steps_per_epoch)`` with
+    ``steps_per_epoch = ceil(num_pairs / accum_pairs)``; cadence = ``max(1, warmup_epochs // 2)``
+    => >= 2 live-gap samples inside any EMA-lag window. Defaults (0.997 EMA non-negotiable /
+    n600 / --accum-pairs 8 proven_base) give ceil(667/75)=9 -> cadence 4."""
+    import math
+
+    from tac.confound_observability import ema_warmup_updates
+    if int(num_pairs) <= 0 or int(accum_pairs) <= 0:
+        raise ValueError(
+            f"pose_finisher_live_gap_cadence: num_pairs/accum_pairs must be > 0, got "
+            f"{num_pairs!r}/{accum_pairs!r}")
+    steps_per_epoch = math.ceil(int(num_pairs) / int(accum_pairs))
+    warmup_epochs = math.ceil(ema_warmup_updates(ema_decay) / steps_per_epoch)
+    return max(1, warmup_epochs // 2)
+
+
+def PoseFinisherLiveGap() -> Lever:
+    """Finisher-window OBSERVABILITY (score-neutral; composable via ``--dsl-lever``): the
+    live-vs-EMA verdict sentinel at the DERIVED cadence (``pose_finisher_live_gap_cadence`` -> 4),
+    all-run — so the pose-finish window's d_pose trajectory is READABLE (no EMA-lag misread) and
+    the pre-registered stop criterion (plateau + EMA-settle,
+    pose_finisher_ladder_prep_20260715.md) is measurable. Delegates to :func:`VerdictLiveGap`
+    (single emitter for ``--verdict-live-gap-every``; never a duplicate flag home). Read-only
+    telemetry — never consumed by training/controller; default-off-is-orphan rationale: the
+    trainer's auto mode cannot cover the finisher window (see the cadence derivation)."""
+    return VerdictLiveGap(every=pose_finisher_live_gap_cadence())
+
+
+def PoseFinisherFilmReadbackArm() -> Lever:
+    """#248 pose-ladder P-B rung in its FINISHER-WINDOW (joint-descent) form: the FiLM READ-BACK
+    residual arm — flips ``--pose-carrier-residual-mode`` table -> film over a pose-carrier-active
+    base (v9 lineage / store_nothing_205; composing on a carrier-less base is INERT — the flag is
+    unread when the carrier is off).
+
+    MECHANISM (trainer ``_PCCarrier`` film path): dxi is READ BACK from the ALREADY-SHIPPED
+    per-pair latent code through a tiny shared FiLM MLP (code[mod_dim] -> 32 -> 6, gelu), trained
+    JOINTLY in the pose-finish window (never post-hoc — post-hoc/stored is MEASURED DEAD on the
+    witness, CLAUDE.md 2026-07-10 CLARIFICATION). vs the R1-proven per-pair TABLE ((P,6) fp16 =
+    7,195 B counted, rate 0.004791, d_pose 0.001610 n600 byte-close, FEED-238resolved): film ships
+    ~0.8-1.1k params ~1.7-2.2 KB total => rate ~0.0011-0.0015, a -~0.0035 RATE arm. HONEST
+    prior: film is a CONSTRAINED reparameterization of the same 6-DOF twist residual — it cannot
+    beat table on d_pose; its win is RATE at held d_pose. Pre-registered kill: film d_pose >
+    1.5x table at matched finisher epochs => table ships, film = formulation-negative
+    (pose_finisher_ladder_prep_20260715.md pre-registration)."""
+    return Lever(
+        "pose_finisher_film_readback_arm",
+        overrides={"--pose-carrier-residual-mode": "film"},
+        notes=("#248 P-B finisher-window FiLM read-back: dxi = FiLM(code) shared MLP (~1.7-2.2 KB) "
+               "replacing the (P,6) dxi table (7,195 B, rate 0.004791) — a RATE arm at held d_pose; "
+               "joint-descent only (post-hoc measured dead); kill if film d_pose > 1.5x table; "
+               "advisory until byte-closed (pointer moves only via upstream/evaluate.py)"))
+
+
 def GroundFrameChart(
     ref_pair: int = 0,
     s_t: float = -0.003224707899359239,
