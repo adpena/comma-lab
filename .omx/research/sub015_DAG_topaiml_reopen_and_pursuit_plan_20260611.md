@@ -17917,3 +17917,12 @@ to prevent merge collisions). The OWED DSL wires, each durably tracked here so t
   already declare the surfaces (ripo trust region, horizon margin, cgauge covariant).
 All three fire cleanly once `curvelet_throughR_p0` lands and frees witness_dsl. Not [no-triality]: these ARE real
 DSL implications, correctly SEQUENCED (owner-domain contention), durably recorded here. pointer UNMOVED. [no-triality]
+
+### FEED-cvl-basis-consumer-generic (2026-07-14) — curvelet `--basis` DSL surface = [consumers-generic] (VERIFIED)
+Per the consumer-leg detector on the curvelet_throughR_p0 landing (added `--basis windowed_curvelet` / `WindowedCurveletBasis`
+DSL surface): the consumer leg is FULLY covered by the generic registry-introspection surfaces — VERIFIED: `lever_registry.completeness()`
+maps `--basis` (UNMAPPED = none, not stale), and the arm confirmed the activation-duty queue + dashboard render `WindowedCurveletBasis`
+generically via the registry (owed_wire completed → real trainer flag → auto-surfaced). No hand-wired consumer (schedule_readback /
+dashboard_server / costate_digest / producer_bridge) edit is needed — the generic describe()/completeness() path already covers it.
+This is the RESOLUTION of the earlier FEED-cvl-consumer-leg OWED (which was OWED precisely because owed_wire was incomplete; it is now
+complete). pointer UNMOVED. [consumers-generic]
