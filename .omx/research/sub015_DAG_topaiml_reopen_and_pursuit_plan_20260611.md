@@ -18262,3 +18262,17 @@ annulus and longest end of long tail". Full table:
 - Deliverable when it lands: warm steady-state s/ep · post-event s/ep · verdict cost · gradient/
   trajectory drift vs MLX reference → the CUDA side of the operator's cost table (vs the measured
   max-Metal row). Apparatus/means; pointer 0.19108 UNMOVED.
+
+## FEED-438-r4 (2026-07-15) — CUDA smoke r4 paid attempt rc=1 (torch.linalg.inv has no BFloat16 kernel under run-global autocast), ~$0.58, fixed; r5 queued; failure DEPTH is monotone
+- r4 (fc-01KXKF56T3BHNPAW1549XT3MK2) carried the r3 fixes forward — lie lazy-import + detector +
+  compile-adoption all CONFIRMED working on H100 — and died deeper: the pose solve calls
+  torch.linalg.inv, which has no BFloat16 kernel, and the run-global CUDA bf16 autocast routed it
+  bf16 → rc=1. Fix landed (12832dc2d0): the linalg solve escapes the autocast region (fp32 island).
+  ~$0.58 debited to #381 (cumulative smoke spend ≈ $1.24: r2 $0.21 · r3 $0.45 · r4 $0.58).
+- Trajectory note: r2 died at IMPORT → r3 died at COMPILE-ADOPT (after the fp-reorder drift probe
+  PASSED: argmax_equal, cosine_phi 0.9999998 ≥ 0.9997 — first green CUDA gradient-direction datum)
+  → r4 died at the POSE SOLVE. Monotone boot-depth progress; each rc=1 is a port-surface lesson
+  (CUDA-host-clean imports · one-options-dict compile · autocast fp32 islands for kernels without
+  low-precision support), all committed with H100-measured receipts in-comment. No DSL leg owed:
+  these are cuda_v9_* runtime-port fixes, not lever/curriculum changes (the smoke-regime config's
+  DSL factory landed earlier). r5 queued on the sealed plan flow. Apparatus/means; pointer 0.19108 UNMOVED.
