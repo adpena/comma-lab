@@ -726,7 +726,14 @@ V9_CGAUGE_IDEAL_EXPECTED_ADDITIONS: tuple[str, ...] = (
     "FEED_08a_length_sigma",
     "tie_locus_displacement",
     "margin_band_satisficing",
+    # C1 control leg: the S_R source selector is meaningful only when the
+    # margin-saliency loss itself is active.  Keep this in every ideal arm so
+    # the named S_R treatment differs from its control by exactly one Boolean.
+    "margin_saliency",
 )
+
+V9_CGAUGE_IDEAL_SR_EXPECTED_ADDITION = "lever4_margin_saliency_reachability"
+V9_CGAUGE_IDEAL_SR_EQUATION_ID = "margin_saliency_reachability_replaces_texture_proxy_v1"
 
 V9_CGAUGE_IDEAL_EXCLUSIONS: dict[str, str] = {
     # margin_band_satisficing REMOVED from exclusions 2026-07-13: sibling provenance fix landed
@@ -804,13 +811,17 @@ def compile_v9_cgauge_ideal_launch_config(
     out_dir: str = "experiments/results/v9_cgauge_truly_optimal_core_20260713",
     mod_dim: int = 19,
     program_name: str = "v9_cgauge_truly_optimal_core",
+    with_reachability: bool = False,
 ):
     """Compile the held event-native V9 core or either matched family A/B arm.
 
     Pure construction only: this function validates and compiles a WitnessProgram; it
     cannot launch.  ``mod_dim`` is restricted to the pre-registered 19-vs-32 family test.
-    The two A/B programs are byte-identical in scientific argv except ``--mod-dim``
-    (their ``--out-dir`` custody paths necessarily differ).
+    The two family A/B programs are byte-identical in scientific argv except
+    ``--mod-dim`` (their ``--out-dir`` custody paths necessarily differ).
+    ``with_reachability`` selects the C1 treatment over the matched weighted-
+    margin-saliency control; its only scientific argv delta is the DSL-owned
+    ``--margin-saliency-reachability`` Boolean.
     """
     if int(mod_dim) not in (19, 32):
         raise ValueError(f"ideal V9 family A/B admits mod_dim 19 or 32 only, got {mod_dim!r}")
@@ -822,6 +833,8 @@ def compile_v9_cgauge_ideal_launch_config(
         LengthSigma,
         Lever,
         MarginBandSatisficing,
+        MarginSaliency,
+        MarginSaliencyReachability,
         TieLocusDisplacement,
     )
     from tac.witness_dsl.typed_config import build_launch_manifest
@@ -859,7 +872,16 @@ def compile_v9_cgauge_ideal_launch_config(
         # LawRef (headroom*delta_R=0.03918), fail-closed invariant. Operator 2026-07-13: "belongs in the
         # ideal v9 cgauge". ON in core + BOTH A/B arms (identical → mod-dim FAMILY A/B stays unconfounded).
         _typed_ideal_lever(MarginBandSatisficing(weight=0.2)),
+        # C1 matched control.  Reachability is a source multiplier inside this
+        # loss and is inert when margin_saliency_weight==0; compose the existing
+        # margin-saliency Lever on BOTH arms.  No event-native margin-saliency
+        # engage sensor exists, so use the
+        # always-on value 0 rather than laundering the factory's historical
+        # naked ep900 default through a launchable config.
+        _typed_ideal_lever(MarginSaliency(start_epoch=0, window=0)),
     )
+    if with_reachability:
+        additions += (_typed_ideal_lever(MarginSaliencyReachability(window=0)),)
     purpose = (
         "HELD operator-GO V9 CGauge event-native family A/B: form nuclei; persisted tau-rung "
         "retention prime; one-rung sharpen; actuated lane/chroma/screw plus tie-locus/anisotropic-"
@@ -873,6 +895,10 @@ def compile_v9_cgauge_ideal_launch_config(
         "base": {
             **typed.base,
             "--mod-dim": int(mod_dim),
+            # The trainer refuses S_R with a larger pair micro-batch because
+            # provider weights are pair-local.  Pin 1 in the shared control,
+            # not only in the treatment, so C1 stays clean.
+            "--micro-batch-pairs": 1,
             "--verdict-pairs": 0,
         },
         "levers": tuple(typed.levers) + additions,
@@ -885,6 +911,8 @@ def compile_v9_cgauge_ideal_launch_config(
 
     got = tuple(lv.name for lv in typed.levers)
     expected = tuple(V9_CGAUGE_432_EXPECTED_LEVERS) + V9_CGAUGE_IDEAL_EXPECTED_ADDITIONS
+    if with_reachability:
+        expected += (V9_CGAUGE_IDEAL_SR_EXPECTED_ADDITION,)
     if sorted(got) != sorted(expected):
         raise ValueError(
             f"{program_name} expected-lever REFUSE: {sorted(got)} != {sorted(expected)}")
@@ -901,6 +929,11 @@ def compile_v9_cgauge_ideal_launch_config(
         "--length-sigma-matrix": "fitted-20260707",
         "--seg-subpix-edge-weight-source": "pa_flipmass",
         "--stage-transition-rewarmup-epochs": "14",
+        "--micro-batch-pairs": "1",
+        "--margin-saliency-weight": "1.0",
+        "--margin-saliency-start-epoch": "0",
+        "--margin-saliency-tau": "0.5",
+        "--margin-saliency-target": "0.5",
         "--verdict-pairs": "0",
     }
     mismatches = {
@@ -912,6 +945,11 @@ def compile_v9_cgauge_ideal_launch_config(
     for flag in ("--stage-checkpoints", "--closed-loop-control"):
         if flag not in emitted_pairs:
             raise ValueError(f"{program_name} required Boolean actuator missing: {flag}")
+    reachability_emitted = "--margin-saliency-reachability" in emitted_pairs
+    if reachability_emitted is not bool(with_reachability):
+        raise ValueError(
+            f"{program_name} S_R selector REFUSE: emitted={reachability_emitted} "
+            f"but with_reachability={bool(with_reachability)}")
 
     manifest = build_launch_manifest(
         program_name=str(program_name),
@@ -932,6 +970,15 @@ def compile_v9_cgauge_ideal_launch_config(
         "held": True,
         "operator_go_required": True,
         "fire_after": "95%-kill P0 to avoid GPU-timing contention",
+        "sr_ab_contract": {
+            "control_config": "v9_cgauge_ideal_mod19",
+            "treatment_config": "v9_cgauge_ideal_mod19_sR",
+            "treatment": bool(with_reachability),
+            "sole_scientific_argv_delta": "--margin-saliency-reachability",
+            "micro_batch_pairs": 1,
+            "equation_id": V9_CGAUGE_IDEAL_SR_EQUATION_ID,
+            "status": "PREPARED_NOT_FIRED",
+        },
     })
     constants = _derive_manifest_from_emitted_argv(wrapped.constants_manifest, argv)
     constants["eikonal_retention_tau_rung"] = {
@@ -941,6 +988,18 @@ def compile_v9_cgauge_ideal_launch_config(
         "fallback_used": False,
         "inputs": {"actuator": "persisted TauAdvanceController.rung", "fraction": "k/N"},
         "note": "retention is primed before each lower-tau model assignment",
+    }
+    constants["margin_saliency_reachability"] = {
+        "value": bool(with_reachability),
+        "equation_id": V9_CGAUGE_IDEAL_SR_EQUATION_ID,
+        "ladder_class": "derived_at_config",
+        "fallback_used": False,
+        "inputs": {
+            "control": "exp(-margin/tau)",
+            "treatment_multiplier": "normalized cached through-R S_R",
+            "micro_batch_pairs": 1,
+        },
+        "note": "C1 treatment selector; PREPARED_NOT_FIRED and no score authority",
     }
     if float(constants["hosc_beta_end"]["value"]) != float(emitted_pairs["--hosc-beta-end"]):
         raise ValueError("hosc_beta_end constants manifest does not match compiled DSL argv")
@@ -966,17 +1025,31 @@ def compile_v9_cgauge_ideal_mod32_launch_config(**kwargs):
     return compile_v9_cgauge_ideal_launch_config(**kwargs)
 
 
+def compile_v9_cgauge_ideal_mod19_sR_launch_config(**kwargs):
+    """Compile the C1 #268 treatment over the matched mod19 saliency control."""
+    if kwargs.get("with_reachability") is False:
+        raise ValueError("v9_cgauge_ideal_mod19_sR cannot disable its S_R treatment")
+    kwargs.setdefault("mod_dim", 19)
+    kwargs.setdefault("program_name", "v9_cgauge_ideal_mod19_sR")
+    kwargs.setdefault("out_dir", "experiments/results/v9_cgauge_ideal_mod19_sR_20260715")
+    kwargs["with_reachability"] = True
+    return compile_v9_cgauge_ideal_launch_config(**kwargs)
+
+
 __all__ = [
     "V9_CGAUGE_432_CASCADE_REALIZATION",
     "V9_CGAUGE_432_EXPECTED_LEVERS",
     "V9_CGAUGE_432_PROVENANCE",
     "V9_CGAUGE_IDEAL_EXCLUSIONS",
     "V9_CGAUGE_IDEAL_EXPECTED_ADDITIONS",
+    "V9_CGAUGE_IDEAL_SR_EQUATION_ID",
+    "V9_CGAUGE_IDEAL_SR_EXPECTED_ADDITION",
     "V9_CGAUGE_PROVENANCE",
     "compile_v9_cgauge_432_launch_config",
     "compile_v9_cgauge_config",
     "compile_v9_cgauge_ideal_launch_config",
     "compile_v9_cgauge_ideal_mod19_launch_config",
+    "compile_v9_cgauge_ideal_mod19_sR_launch_config",
     "compile_v9_cgauge_ideal_mod32_launch_config",
     "derive_v9_cgauge_432_config",
     "derive_v9_cgauge_config",

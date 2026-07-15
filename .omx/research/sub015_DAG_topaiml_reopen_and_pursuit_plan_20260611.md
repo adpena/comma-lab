@@ -17873,3 +17873,117 @@ no H⁻¹); the DUAL no-solve `Δθᵀg²Δθ` is the SQUARED-Hessian, NOT Fishe
 (canonical_equations) + this DAG FEED ✓ + memo `.omx/research/optimal_metric_unification_derivation_20260714.md`;
 RIPO memory marked registration DONE. OWED (serialized, `witness_dsl` arm-owned): the τ-metric DSL/curriculum
 trainer wire. **means != ends: pointer UNMOVED 0.19108/0.18804.**
+### FEED-shr (2026-07-14) — #502 shearlet half + curvelet-vs-shearlet FAMILY SELECTION MEASURED
+SIGNAL: the curvelet half (FEED-cvl) left the compact-shearlet half + the directional-frame family
+selection OWED. DIAGNOSTIC (opus shearlet arm, `[macOS advisory / not score authority]`): BUILT
+`tac.boundary_math.compact_shearlet_frame` — GENUINE cone-adapted shearlet (parabolic scaling A_j +
+SHEARING S_k + translation, two cones). Certificate PASSES two swap-tests a rotation/Fourier basis
+FAILS: (1) localization span 1.0 vs Fourier 1.5e-7; (2) shear-selectivity via ANCHOR-AXIS INVARIANCE
+(`S_k·(x,0)=(x,0)` ⇒ shear_anchor_dispersion 1e-34 vs a matched-normal ROTATION family 0.006, disc-ratio
+inf) + integer-lattice preservation. #351-tight: the gate reads the REAL forward — monkeypatching the
+steering to rotation FLIPS passes True→False (test-covered). MLX parity 6e-8; 14 tests. MEASURED the
+$0 OMP 3-way capacity probe (`experiments/shearlet_vs_curvelet_vs_fourier_capacity_probe.py`, reuses the
+curvelet harness verbatim; matched 160-col curvelet==shearlet < Fourier 236; seeds 0/1/2; gt_n600+gt_n96).
+**NO-FAKE catch:** an early ASYMMETRIC run (finer-orientation shearlet vs the coarser committed curvelet
+cols192) mislabeled shearlet ~1.08–1.33× ahead; giving BOTH the same finer-orientation optimal form at
+MATCHED budget REVERSED it. VERDICT: **CURVELET WINS** — strictly lower N-term rel-err at EVERY K on both
+caches (n600 K@0.10 F12/C10/S10, curvelet lower rel-err each K; n96 curvelet ahead every K); both
+directional frames beat Fourier ~1.20×. Mechanism: rotation rigidly aligns to the near-straight edge
+tangent; shear distorts the envelope to a parallelogram (worse constant on straight edges — matches
+shearlet lit: same asymptotic rate, integer-lattice is shear's decode-only edge). RESPONSE: build the
+OWED through-R d_seg harness for the CURVELET (winner + wired incumbent); shearlet is a certified,
+decode-cheaper fallback to A/B only if decode cost later binds. Triality: memo
+`.omx/research/shearlet_vs_curvelet_family_selection_20260714.md` ✓; canonical-eq
+`compact_shearlet_parabolic_capacity_v1` registration OWED (serialized behind the island-birth
+`canonical_equations/` arm) + shearlet DSL lever OWED (serialized behind the `witness_dsl` arm). **means
+!= ends: pointer UNMOVED 0.19108/0.18804.**
+
+### FEED-owed-dsl-legs (2026-07-14) — OWED DSL legs for the curvelet/shearlet/optimal-metric landings (serialized, NOT silent)
+Per the triality per-leg detector on the #500/#502/shearlet landings: those commits carry lever/curriculum
+vocabulary but their DSL legs are DELIBERATELY OWED-SERIALIZED, not withheld — the `src/tac/witness_dsl/` dir
+is owned RIGHT NOW by the running `curvelet_throughR_p0` codex arm (I scoped every sibling arm OUT of witness_dsl
+to prevent merge collisions). The OWED DSL wires, each durably tracked here so the drift is recorded not silent:
+- **curvelet basis lever `owed_wire()`** (#502 `windowed_curvelet_basis_lever_20260714`): default-OFF, `real_trainer_flags`
+  = `WIRE_STATUS_OWED`; the P0 `curvelet_throughR_p0` arm COMPLETES this owed_wire (adds the real `--basis
+  windowed_curvelet` flag → `lever_registry.completeness()` surfaces it → costate_digest/dashboard render it). See
+  FEED-cvl-consumer-leg.
+- **shearlet DSL lever** (`compact_shearlet_frame`): OWED — shearlet LOST the family selection (curvelet wins), so
+  its DSL lever is a low-priority fallback wire, registered as a duty-to-measure candidate only if curvelet's
+  through-R d_seg verdict disappoints.
+- **τ-metric DSL/curriculum wire** (#500 `optimal_metric_unification_v1` g(τ)=τ⁻²(...)): OWED — the curriculum-varying
+  metric's trainer/curriculum consumer wire is serialized behind the witness_dsl arm; eq-level `canonical_consumers`
+  already declare the surfaces (ripo trust region, horizon margin, cgauge covariant).
+All three fire cleanly once `curvelet_throughR_p0` lands and frees witness_dsl. Not [no-triality]: these ARE real
+DSL implications, correctly SEQUENCED (owner-domain contention), durably recorded here. pointer UNMOVED. [no-triality]
+
+### FEED-cvl-basis-consumer-generic (2026-07-14) — curvelet `--basis` DSL surface = [consumers-generic] (VERIFIED)
+Per the consumer-leg detector on the curvelet_throughR_p0 landing (added `--basis windowed_curvelet` / `WindowedCurveletBasis`
+DSL surface): the consumer leg is FULLY covered by the generic registry-introspection surfaces — VERIFIED: `lever_registry.completeness()`
+maps `--basis` (UNMAPPED = none, not stale), and the arm confirmed the activation-duty queue + dashboard render `WindowedCurveletBasis`
+generically via the registry (owed_wire completed → real trainer flag → auto-surfaced). No hand-wired consumer (schedule_readback /
+dashboard_server / costate_digest / producer_bridge) edit is needed — the generic describe()/completeness() path already covers it.
+This is the RESOLUTION of the earlier FEED-cvl-consumer-leg OWED (which was OWED precisely because owed_wire was incomplete; it is now
+complete). pointer UNMOVED. [consumers-generic]
+
+
+## FEED-nofourier-ban (2026-07-14) — "no more Fourier basis anywhere" landed as HONEST warn-only transition [no-triality][consumers-generic]
+**Landed** main `5bf7f4640f` (code `a6ecb2cb99`) + `c4568f715f` (audit md). Arm exited clean.
+- **Ban-gate** `check_no_fourier_basis_in_witness_representation` (v9_provenance_gates.py:813 + preflight.py:1442): WARN-ONLY. Classifies every Fourier occurrence BASIS(ban) vs FFT-TOOL(keep, `# FFT_TOOL_USE_OK:` waiver) vs curvelet-REPLACEMENT(keep). Strict-flip EXPLICITLY GATED on the operator-GO n600 byte-closed through-R curvelet-vs-legacy d_seg NO-REGRESSION verdict (F1 pattern — can't kill a working basis on an OMP upper-bound proxy).
+- **NO hard default-flip** (NO-FAKE crux): `basis_control.py` default = `LEGACY_FOURIER_AB_CONTROL` ("not a ship-default claim"; curvelet opt-in until the governed A/B; absence keeps old byte layout → backward-compat resume). `polar_fourier`→legacy alias, `windowed_curvelet`→curvelet. A/B DSL lever `LegacyFourierABControl` authors the owed run (no implicit parser default). 97 tests pass.
+- **EQUATION LEG [no-triality → NAMED-OWED]**: this is APPARATUS (warn-only gate); the curvelet advantage is an UNMEASURED $0 OMP upper bound, so NO EmpiricalAnchor is registered (registering a proxy would be the surrogate-not-authority fake). Owed anchor `curvelet_through_R_dseg_ab_anchor` registers ONLY when the operator-GO through-R n600 A/B emits a MEASURED d_seg row (curvelet vs legacy-Fourier). Until then the equation leg is correctly EMPTY.
+- **CONSUMER LEG [consumers-generic]**: `LegacyFourierABControl` is a standard `Lever` → rendered by the generic `lever_registry`/`describe()` introspection; `basis_control` constants are runtime-name normalization (not a rendered surface). No bespoke dashboard/costate consumer needed.
+- pointer UNMOVED 0.19108/0.18804 — MEANS (enforceable+honest "no Fourier anywhere" transition; the score-authority is the owed through-R d_seg A/B that flips the gate strict).
+
+
+## FEED-sweepB-optconfig (2026-07-14) — OPTIMAL×WIRED config + DSL-wiring audit landed [DSL-leg][consumers-generic][no-triality-eq]
+Landed main `a8ed7eb5d9` (5 commits). Report `.omx/research/sweep_arm_B_optimal_wired_matrix_20260714.md`.
+- **Registry**: unmapped 102→80, stale 0 (never-invent-flags PRESERVED — DSL emits zero flag the trainer rejects), config-gen↔launch.sh reconciliation PASS (16/16 parse-green). 6 orphaned-lever FOLDS (EikonalStEik #317 · EikonalJunctionRelax · CodeNuclearNorm · SegSpikeReweight L85-flicker · LambdaPreProbe · SpikeGuardRollback confound-fix) + B3 EikonalViscosity emits the #320 DERIVED adaptive-ε bounds (floor 0.3 MEASURED / upper 0.7 / margin 0.5), byte-identical. 80-remainder fully partitioned (aggregate 18 / held-elsewhere 29 / knob 11 / infra 8 / mode 5 / needs-deriv 3 / retired 3 / obs-on 3) — NO silent orphan.
+- **OPTIMAL×WIRED**: megakernel #356 = DERIVED NO-GO (FP-reorder wall) → --mx-compile default-off CORRECT (not a guess); adaptive-ε DERIVED+DSL-explicit; #500 optimal-metric IS bound (policy_bindings.optimal_metric); l7 = MEASURED DEFECT (demote).
+- **[DSL leg]** satisfied (7 Lever factories in witness_dsl). **[consumers-generic]** (Levers render via lever_registry/describe). **[no-triality-eq]** — wiring pass, no new law; every folded lever's weight/iters is RUN-GATED (no asserted optimum, NO-FAKE) → owed as `EmpiricalAnchor` rows once MEASURED through the real n600 verdict.
+- **OWED (routed, not deferred)**: `--muon-lr`=0.1×lr INHERITED-PR95 → witness-native derivation #302; curriculum schedule still PR95-echo → #302; #500 H⁻¹-solve = design+run blocker (squared-Hessian caveat); build-tickets B1 (registry whole-package scan for the 29 held-elsewhere) / B2 (env-toggle activation ledger) / B4 (Muon base hyperparams fold) / B5 (ResidualOnlyMode, run-gated artifact) / B6 (PerGroupGradClip). Every folded lever's optimum = per-lever A/B, operator-GO run.
+- pointer UNMOVED 0.19108/0.18804 — MEANS (apparatus: the DSL is now a more-complete SoT; the score authority is the owed n600 A/Bs).
+
+
+## FEED-sweepC-failures-deferral (2026-07-14) — fix-all-failures + deferral + duty drain landed [no-triality apparatus]
+Landed main `60895ca783` (3 commits). Report `.omx/research/codex_findings_sweep_failures_ledger_20260715_codex.md`.
+- **Failures**: 2 fixed-with-repro + self-protect gates (process-tree liveness · Python review-override gate — both regression-tested, two-landing) · 1 resolved-cited (workspace git-object → isolated-worktree apparatus) · 3 still-open-ROUTED with measured blockers (daemon-lifetime · zsh-nomatch · persistent-service-capacity) · 0 needs-investigation. Also surfaced+fixed a review-index duplicate-name class. Event-schema ledger (resolution/disposition/self_protect fields), not status-mutation.
+- **Deferrals**: all 57 dispositioned — 13 closed/cited/superseded · 7 trigger-met+owner-routed · 37 not-met/run-gated/blocked · 8 STALE triggers corrected (anti-defer: every not-yet row has a correct named trigger).
+- **Duty-to-measure**: Taper 78.9% / Horizon 47.3% / Step 34.2% have COMPLETE V9 build/fire-tickets — trainer-mapped, blocked on Arm-B-exclusive V9 typed-variant wiring → ROUTED to Arm B (boundary respected, no collision). 78 owed rows retain owner/gate dispositions. NO operator GO consumed.
+- Verify: 193 tests pass (harness 30 · ledger 19 · top-lever/readiness 82 · receiver byte-close 52 · legal inflate 10; 2 platform skips). VERIFIED on main: serializer+review_tracker still functional (I commit through them). [no-triality] apparatus — failure-fixes + ledger drain, no DSL/eq law. pointer UNMOVED 0.19108/0.18804 MEANS.
+## DAG FEED-armA-scorerelevant-drain (2026-07-14): Arm-A $0 SCORE-RELEVANT drain — 3 probes + 1 calibration; report `.omx/research/sweep_arm_A_scorerelevant_drain_20260714.md`. Pointer UNMOVED 0.19108/0.18804 (MEANS).
+- **A1 · #268 msal REACHABILITY orthogonality [MEASURED n600, $0]**: Spearman(S_R, fragility exp(-m/τ)) on the fragile annulus = **+0.0088** (orthogonal), S_R annulus **cv=0.79** (informative, 27.4% pixels S_R>0.5). Verdict ORTHOGONAL_ADDS_SIGNAL → the LEVER-4 `sal*=S_R` multiply picks a fragile-AND-reachable subset the fragility weight alone doesn't → **ROUTE-STRENGTHENED the #268 training A/B** (operator-GO GPU). Guarded against "orthogonal==flat" laundering. `experiments/probe_msal_reachability_orthogonality_268.py`. verdict-scope FORMULATION.
+- **A2 · #288 flip-weighted (annulus) OT head-offset reformulation [MEASURED n600, $0 BOTH-ARMS]**: closed-form menon `b=-τ·log(π)` (validation: reproduces the measured menon offsets max|Δ|=0.0) + the ALREADY-measured `per_class_1d_curves`. GT annulus priors [0.49,0.16,0.16,0.08,0.11] ≠ bulk [0.23,0.006,0.50,0.012,0.25]; annulus-menon offsets LARGE (Road −1.11) OUTSIDE the flat ±0.4 grid. The measured d_seg-vs-offset surface is **minimised at offset=0** (winner Δ=−3.4e-8; full menon +1.7e-4 WORSE) → any nonzero-offset reformulation predicted ≥ baseline → **PREDICTED_NOGO**, de-prioritise the realized arm. `experiments/probe_ot_flipweighted_mass_288.py`. verdict_scope: formulation — flip-weighted target + head-offset MECHANISM on the annulus; in-training coherence remains the live path (family/paradigm intact).
+- **A3 · #140/mod-fold cross-checkpoint `code` SVD eff-rank [MEASURED, $0 rate]**: mod-32 codes carry 90%-energy within rank≤18 on ALL checkpoints → **mod 32→19 fold rate-SAFE** (confirms FEED-fl −12KB decoder-free generalises). NEW: eff-rank is **VEHICLE-DEPENDENT (spread 13.5)** — mod32cap ep650 eff-rank 1.09 (rank-1) but **live V9·CGauge_432 mod-19 code eff-rank 14.5, 90%@15 = NEAR-SATURATED** → FEED-fl's single "13.5" NOT universal; **on V9 mod-19 is the FLOOR (not over-wide) — do NOT try sub-19 for free** (warning routed to Arm-B V9 config). ROUTE the mod-19-vs-32 A/B (operator-GO). `experiments/probe_code_effrank_cross_ckpt_140.py`. verdict_scope: formulation — mod-fold rate on THIS vehicle's code; fold generalises, sub-19 floor is V9-specific.
+- **A4 · LEVER-4 target/tau calibration [MEASURED, $0]**: median GT margin within the fragile annulus = **0.483** ≈ FEED-fl "separatrix margin 0.476" → the default `--margin-saliency-target 0.5` / `--margin-saliency-tau 0.5` are math-JUSTIFIED (≈ measured separatrix scale), **NOT arbitrary** — the FEED-fl "arbitrary target" flag is REFUTED at $0.  # VERDICT_SCOPE_OK: REFUTED here overturns a prior over-cautious 'arbitrary' flag → a POSITIVE calibration finding (target math-justified vs measured separatrix 0.483≈0.476), not a negative verdict on any family.
+- **DONE/dead (proactive-recall, do-not-rerun)**: #307 contour coder NO-GO n600 (0.820 B/flip>0.65, confetti residual → coherence is a TRAINING outcome); #242 weight-entropy DOMINATED (weights at i.i.d. entropy floor, λ=50 costs d_seg +0.038); msal_uni texture INERT (Pearson −0.033); #144 lane shape captured perfectly (residual=dash on/off → #137); iga_ntk_309 basis-cures measured ≈0 (deficit stands, cures point away).  verdict_scope: formulation — recall-CITATIONS of already-scoped prior negatives (#307 contour-coder-formulation / #242 λ-penalty-weight-entropy-formulation / msal_uni texture-proxy-formulation / iga_ntk basis-cure-formulation), each PARADIGM intact per its origin FEED; the in-training-coherence + through-R-witness paths remain live. No new family/paradigm kill.
+- **ROUTE (run-gated, named blockers)**: C1 #268 S_R A/B, C2 chroma add-back, C3 weight-entropy λ* knee, C4 mod-19 rate (−12KB banked, A3-safe), C5 #226 Lever-D 32-pair scaffold, C6 #227 seg⊥pose freeze-then-joint, C7 eikonal #316 fair test, C8 DashComb, C9→D5 d_pose-aware bitalloc, C11 #400 Modal exact eval (staged 0.19081 candidate — ONLY listed action that could move the pointer without a fresh train), C14 island-birth lever→Arm-B.
+- **DESIGN build-tickets (owned modules, ROUTED)**: D1 fisher_gn full-P head CG solve (K=8 subset overfits +5.1%→only full-P), D2 md_decoupling `--optimizer md` A/B (TRAINER-GAP), D3 swa_tail_soup cross-cycle, D4 SAM (precondition-gated on C3), D5 #336 d_pose-aware bitalloc (per-tensor pose-freeze), D6 SOM codebook (exact-gated, low-pri), D7 pose_inverse_carrier (BLOCKED on receiver-legality, 8 blockers), D8 in-run click (gated on #400), D9 grids re-scope vs v8, D10 kd_warm_start.
+- **TRIALITY**: DAG (this FEED) ✅; DSL leg — A1/A3 route DSL Levers owned by Arm-B (HeadFisherGNSolve, OptimizerChoice, mod-dim) → build-tickets in report §D, NOT touched; EQUATION leg — A2 owed anchor extends `laguerre_ot_head_offset_v1` (flip-weighted PREDICTED_NOGO), A3 extends the mod-fold rate finding (vehicle-dependent eff-rank), A1 the reachability-orthogonality (NAMED-OWED, registry owned — not edited). Apparatus honesty: pointer UNMOVED — MEANS.
+
+## FEED-c1a-sr-dsl-config (2026-07-15) — #268 S_R C1 A/B authored in the triality [DSL-leg][consumers-generic]
+- **DSL**: `v9_cgauge_ideal_mod19_sR` is now a named launcher config compiled wholly from the ideal
+  `WitnessProgram`; it composes the existing `MarginSaliencyReachability(window=0)` factory and never
+  uses `--extra-trainer-flags`. Its matched control remains `v9_cgauge_ideal_mod19`. NO-FAKE activation
+  fix: the source-selector is inert at `margin_saliency_weight=0`, so BOTH arms compose the existing
+  `MarginSaliency(start_epoch=0, window=0)` control and BOTH pin `--micro-batch-pairs 1`; after custody-only `--out-dir`
+  is removed, the treatment's EXACT scientific argv delta is only
+  `+--margin-saliency-reachability`. The S_R manifest lists
+  `lever4_margin_saliency_reachability` in `expected_active_levers` and not in `excluded_levers`.
+  The matched loss uses `--margin-saliency-start-epoch 0` (always-on): there is no implemented
+  margin-saliency event sensor, so the config does not launder the factory's historical naked ep900
+  default through the schedule-provenance gate.
+- **DAG / C1 enabled**: this authors the $0 configuration surface only. Governed main-tree launch remains
+  `--config v9_cgauge_ideal_mod19_sR` versus `--config v9_cgauge_ideal_mod19`; status
+  `PREPARED_NOT_FIRED`, no operator GO consumed, no paid dispatch, no score claim.
+- **EQUATION**: cites the already-registered canonical law
+  `margin_saliency_reachability_replaces_texture_proxy_v1`, with
+  `sal=exp(-margin/tau)*S_R_norm`; no duplicate equation registration. Values `tau=0.5` and target
+  `0.5` retain the MEASURED A4 separatrix calibration (annulus median 0.483), while activation is a
+  config-derived Boolean.
+- **Registry / duty**: `lever_registry.completeness()` maps
+  `--margin-saliency-reachability` to factory `MarginSaliencyReachability` (not unmapped/stale), and the
+  generic activation ledger still surfaces that factory as `never-fired` / duty-to-measure. The existing
+  candidate row `msal_uni_sr_reachability_268` remains the activation duty; authoring this config does
+  not fake a `fired` event.
+- **Custody**: pointer UNMOVED 0.19108/0.18804 — MEANS only; the C1 byte-closed n600 A/B is OWED to the
+  governed launcher after merge.

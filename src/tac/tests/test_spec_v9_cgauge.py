@@ -240,6 +240,19 @@ def ideal_ab():
     )
 
 
+@pytest.fixture(scope="module")
+def ideal_sr_ab():
+    from tac.witness_dsl.spec_v9_cgauge import (
+        compile_v9_cgauge_ideal_mod19_launch_config,
+        compile_v9_cgauge_ideal_mod19_sR_launch_config,
+    )
+
+    return (
+        compile_v9_cgauge_ideal_mod19_launch_config(gt_cache_path=_GT),
+        compile_v9_cgauge_ideal_mod19_sR_launch_config(gt_cache_path=_GT),
+    )
+
+
 def _argv_pairs(argv):
     from tac.witness_autoconfig import _crucible_v7_argv_pairs
 
@@ -265,6 +278,9 @@ def test_ideal_programs_validate_parse_and_actuate(ideal_ab) -> None:
         assert ns.closed_loop_control is True
         assert ns.stage_checkpoints is True
         assert ns.verdict_pairs == 0
+        assert ns.micro_batch_pairs == 1
+        assert ns.margin_saliency_weight == pytest.approx(1.0)
+        assert ns.margin_saliency_start_epoch == 0
 
 
 def test_ideal_mod19_vs_mod32_scientific_argv_diff_is_only_mod_dim(ideal_ab) -> None:
@@ -299,6 +315,9 @@ def test_ideal_includes_safe_set_and_composed_margin(ideal_ab) -> None:
         # margin_band_satisficing composed 2026-07-13 after its provenance fix landed (a79f5d68cd):
         # ON in core + both A/B arms (identical → mod-dim FAMILY A/B stays unconfounded).
         "margin_band_satisficing",
+        # C1 shared w-only control; the S_R treatment composes one additional
+        # source-selector Lever over this exact program.
+        "margin_saliency",
     }
     for cfg in ideal_ab:
         names = set(cfg.dsl_levers)
@@ -307,6 +326,79 @@ def test_ideal_includes_safe_set_and_composed_margin(ideal_ab) -> None:
         manifest = cfg.dsl_program_manifest
         assert manifest["ab_decision_rule"]["threshold"] == pytest.approx(0.02)
         assert manifest["held"] is True and manifest["operator_go_required"] is True
+
+
+def test_ideal_sr_treatment_is_exactly_one_dsl_flag_over_matched_control(ideal_sr_ab) -> None:
+    control, treatment = ideal_sr_ab
+    p0 = _argv_pairs(control.typed.to_program().compile_trainer_argv())
+    p1 = _argv_pairs(treatment.typed.to_program().compile_trainer_argv())
+    p0.pop("--out-dir")
+    p1.pop("--out-dir")
+    changed = {
+        k for k in set(p0) | set(p1)
+        if (k in p0, p0.get(k)) != (k in p1, p1.get(k))
+    }
+    assert changed == {"--margin-saliency-reachability"}
+    assert "--margin-saliency-reachability" not in p0
+    assert p1["--margin-saliency-reachability"] is None
+    assert p0["--micro-batch-pairs"] == p1["--micro-batch-pairs"] == "1"
+
+
+def test_ideal_sr_manifest_validate_parser_and_lawref(ideal_sr_ab) -> None:
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
+    from tac.witness_dsl.spec_v9_cgauge import (
+        V9_CGAUGE_IDEAL_SR_EQUATION_ID,
+        V9_CGAUGE_IDEAL_SR_EXPECTED_ADDITION,
+    )
+
+    control, treatment = ideal_sr_ab
+    assert control.typed.validate_program() == treatment.typed.validate_program() == []
+    ns0 = build_real_trainer_parser().parse_args(
+        list(control.typed.to_program().compile_trainer_argv()[2:]))
+    ns1 = build_real_trainer_parser().parse_args(
+        list(treatment.typed.to_program().compile_trainer_argv()[2:]))
+    assert ns0.margin_saliency_reachability is False
+    assert ns1.margin_saliency_reachability is True
+    assert ns0.margin_saliency_weight == ns1.margin_saliency_weight == pytest.approx(1.0)
+    manifest = treatment.dsl_program_manifest
+    assert V9_CGAUGE_IDEAL_SR_EXPECTED_ADDITION in manifest["expected_active_levers"]
+    assert V9_CGAUGE_IDEAL_SR_EXPECTED_ADDITION not in manifest["excluded_levers"]
+    assert manifest["sr_ab_contract"]["equation_id"] == V9_CGAUGE_IDEAL_SR_EQUATION_ID
+    assert treatment.constants_manifest["margin_saliency_reachability"]["equation_id"] == (
+        V9_CGAUGE_IDEAL_SR_EQUATION_ID)
+
+
+def test_sr_factory_is_mapped_and_activation_duty_is_preserved(tmp_path) -> None:
+    from tac.witness_dsl.activation_ledger import duty_to_measure
+    from tac.witness_dsl.lever_registry import completeness, lever_factories
+
+    report = completeness()
+    factories = lever_factories()
+    assert factories["MarginSaliencyReachability"] == frozenset(
+        {"--margin-saliency-reachability"})
+    assert "--margin-saliency-reachability" in report.mapped
+    assert "--margin-saliency-reachability" not in report.unmapped
+    assert "MarginSaliencyReachability" in duty_to_measure(
+        path=tmp_path / "empty-activation-ledger.jsonl")
+
+
+def test_ideal_sr_has_zero_naked_schedule_epochs(ideal_sr_ab) -> None:
+    from pathlib import Path
+
+    from tools import schedule_provenance_gate as gate
+
+    treatment = ideal_sr_ab[1]
+    trainer = Path("experiments/train_levelset_witness_realized_through_R_mlx.py").read_text()
+    verdicts = gate.classify_launch(
+        list(treatment.to_trainer_flags("OUT")),
+        registry=gate.schedule_when_flags(trainer),
+        manifest_keys=set(treatment.constants_manifest),
+        governance=treatment.schedule_governance,
+        event_registry=gate.event_start_flags(trainer),
+    )
+    ok, violations, table = gate.gate_report(verdicts)
+    assert ok, table
+    assert violations == []
 
 
 def test_lawref_evaluators_executable_for_223_laws() -> None:

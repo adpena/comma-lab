@@ -1,0 +1,87 @@
+{
+  "schema": "modal_click_bank_mainaccess_result_v1",
+  "recorded_at_utc": "2026-07-15T09:02:00Z",
+  "status": "REFUSED_PRE_DISPATCH_NETWORK_UNAVAILABLE",
+  "score_claim": false,
+  "dispatch_attempted": true,
+  "provider_call_accepted": false,
+  "call_id": null,
+  "candidate": {
+    "path": "experiments/results/click_polish_399_folded/candidate_archive.zip",
+    "archive_bytes": 176562,
+    "archive_sha256": "7e83fdd926c58658d0d2654597c8eaf5eb7246ab925598975a75660b9479bcbb",
+    "custody_verified": true,
+    "classification": "BORROWED_MECHANISM_NON_SUBMISSION_DEFENSIVE_BANK"
+  },
+  "runtime": {
+    "submission_dir": "experiments/results/pr110_payload_entropy_recode_20260610/submission_dir",
+    "inflate_py_sha256": "abf7d8e73f23211dd8dccd5f3cda067577d4b95b2258929b11a399565f0b3b7e",
+    "inflate_sh_sha256": "0878a7730e5caa2d6e0044ef3378c5772c67da0499958629ebca5285cfd503ab",
+    "modal_projected_runtime_tree_sha256": "dba682dd04b4a1de1e084d2954ff115c78ef9833fe9cafffd122db960b132fda",
+    "runtime_content_tree_sha256": "ea3c10fefbd7d4dadec966eb2e24fc903a30660883d2c4be35d95b4389fe1342",
+    "runtime_present": true
+  },
+  "evaluator": {
+    "path": "upstream/evaluate.py",
+    "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+    "video_names_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+    "intended_axis": "contest_cpu",
+    "intended_hardware_substrate": "linux_x86_64_cpu",
+    "canonical_score_formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "measured_d_seg": null,
+    "measured_d_pose": null,
+    "measured_score": null
+  },
+  "dispatch": {
+    "lane_id": "modal_click_bank_mainaccess_20260715",
+    "instance_job_id": "modal_cpu_folded_7e83fdd9_20260715",
+    "wrapper": "experiments/modal_auth_eval_cpu.py",
+    "mode": "detached_spawn_with_provider_detach_ack",
+    "failure_stage": "LOCAL_MODAL_CONTROL_PLANE_CONNECTION_BEFORE_CALL_ACCEPTANCE",
+    "failure_evidence": [
+      "modal CLI: Could not connect to the Modal server",
+      "DNS: api.modal.com and modal.com unresolved in sandbox",
+      "Computer Use: Terminal control safety-blocked",
+      "Browser fallback: no browser execution surface available"
+    ],
+    "exact_blocker": "The shared main-tree custody is valid, but this execution sandbox has no route to the Modal control plane; no FunctionCall was created."
+  },
+  "cost_envelope": {
+    "task": "#381",
+    "cap_usd": 20.0,
+    "this_arm_spend_usd": 0.0,
+    "billing_exact_cumulative_available": false,
+    "documented_known_cumulative_usd_range": [
+      0.21,
+      0.28
+    ],
+    "conservative_ledger_reservation_upper_bound_usd": 6.58,
+    "remaining_at_conservative_upper_bound_usd": 13.42,
+    "accounting_note": "Known range sums OT cancellation estimate 0.15, green n8 estimate 0.03, and import exact estimate 0.03-0.10. Conservative upper bound additionally reserves 1.00 for each of two failed n8 calls and 4.30 for the unresolved capped n600 call. Modal billing-exact per-call cost is unavailable from the CLI."
+  },
+  "frontier_pointer": {
+    "action": "UNCHANGED_NO_MEASUREMENT",
+    "current_borrowed_bank_score_contest_cpu": 0.1880443979880752,
+    "current_archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
+    "current_archive_bytes": 176564,
+    "submitted_pr_number_for_current_frontier": null,
+    "reason": "No Modal call was accepted and no evaluator components were measured; neither comparison branch is authorized."
+  },
+  "landing": {
+    "serializer_attempted": true,
+    "serializer_committed": false,
+    "serializer_error": "git add rc=128: unable to create temporary file: Operation not permitted; .git is read-only in this sandbox",
+    "bypass_used": false,
+    "files_left_uncommitted": [
+      ".omx/research/modal_click_bank_mainaccess_20260715_result.json",
+      ".omx/research/modal_click_bank_mainaccess_20260715_DAG_FEED.md",
+      ".omx/research/modal_click_bank_mainaccess_20260715_storage_preflight.json"
+    ]
+  },
+  "triality": {
+    "dsl": "N/A: exact evaluation of a frozen borrowed archive is not a trainer lever and introduces no configuration flag.",
+    "dag": ".omx/research/modal_click_bank_mainaccess_20260715_DAG_FEED.md",
+    "equations": "Existing anchor pr128_latent_click_structure_isotropic_geometric_v1; no new empirical anchor because dispatch failed before measurement."
+  },
+  "git_head_at_attempt": "4c77d9db6e4874192995e0839089b2fb127f4625"
+}

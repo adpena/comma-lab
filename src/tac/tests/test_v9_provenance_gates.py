@@ -179,10 +179,13 @@ def test_live_v9_bijection_collector_walks_four_real_factories_deterministically
         "v9_cgauge_ideal_mod19",
         "v9_cgauge_ideal_mod32",
     ]
-    assert [len(snapshot.bindings) for snapshot in first] == [199, 219, 219, 219]
+    # C1a adds the five shared, matched margin-saliency control flags to every
+    # ideal program. The treatment-only reachability flag lives in its sibling
+    # named config and is checked by the launcher/DSL manifest path.
+    assert [len(snapshot.bindings) for snapshot in first] == [199, 224, 224, 224]
     assert [snapshot.bijection_hash for snapshot in first] == [snapshot.bijection_hash for snapshot in second]
     assert all(not snapshot.lawref_flags for snapshot in first)
-    assert [len(snapshot.compiler_record_flags) for snapshot in first] == [6, 7, 7, 7]
+    assert [len(snapshot.compiler_record_flags) for snapshot in first] == [6, 8, 8, 8]
 
 
 # ---------------------------------------------------------------------------

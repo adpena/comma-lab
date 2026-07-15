@@ -384,7 +384,8 @@ def config_family(cfg) -> str:
     if getattr(cfg, "name", "") in ("crucible_v7", "crucible_v752", "crucible_v753",
                                     "v9_cgauge", "v9_cgauge_432",
                                     "v9_cgauge_truly_optimal_core",
-                                    "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32",
+                                    "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
+                                    "v9_cgauge_ideal_mod32",
                                     "next_launch_all_levers_20260713",
                                     "next_launch_all_levers_trimmed_20260713",
                                     "throughput_component_timer_async_20260713",
@@ -812,7 +813,7 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         return compile_v9_cgauge_432_launch_config(
             gt_cache, num_pairs=num_pairs, **_ek)
     if config in ("v9_cgauge_truly_optimal_core", "v9_cgauge_ideal_mod19",
-                  "v9_cgauge_ideal_mod32"):
+                  "v9_cgauge_ideal_mod19_sR", "v9_cgauge_ideal_mod32"):
         # 2026-07-13 held event-native V9. The core is the mod19 main bet; the two
         # ideal_mod* names are the decisive matched FAMILY A/B. Both scientific arms
         # compile the same actuated flow; only --mod-dim differs (plus custody out-dir).
@@ -823,7 +824,8 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         mod_dim = 32 if config == "v9_cgauge_ideal_mod32" else 19
         return compile_v9_cgauge_ideal_launch_config(
             gt_cache, num_pairs=num_pairs, mod_dim=mod_dim,
-            program_name=config, **_ek)
+            program_name=config,
+            with_reachability=(config == "v9_cgauge_ideal_mod19_sR"), **_ek)
     if config in ("next_launch_all_levers_20260713", "next_launch_all_levers_trimmed_20260713"):
         # 2026-07-13 operator-GO-only ticket.  The compiler starts from the
         # ideal mod19 lineage, composes every compatible speed/init/observer
@@ -864,7 +866,8 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         f"derive_named_config: unknown config name {config!r} — no derive branch resolves it. Known "
         f"configs: proven_base, all_levers, sealed_205, store_nothing_205, fresh_seeded, crucible_v6, "
         f"crucible_v7, crucible_v752, crucible_v753, v9_cgauge_432, "
-        f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, v9_cgauge_ideal_mod32, "
+        f"v9_cgauge_truly_optimal_core, v9_cgauge_ideal_mod19, "
+        f"v9_cgauge_ideal_mod19_sR, v9_cgauge_ideal_mod32, "
         f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713, "
         f"throughput_component_timer_async_20260713, "
         f"throughput_component_timer_solo_20260713. "
@@ -1316,7 +1319,8 @@ def main(argv: list[str] | None = None) -> int:
                              "fresh_seeded", "crucible_v6", "crucible_v7", "crucible_v752",
                              "crucible_v753", "v9_cgauge_432",
                              "v9_cgauge_truly_optimal_core",
-                             "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod32",
+                             "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR",
+                             "v9_cgauge_ideal_mod32",
                              "next_launch_all_levers_20260713",
                              "next_launch_all_levers_trimmed_20260713",
                              "throughput_component_timer_async_20260713",
