@@ -27,11 +27,19 @@ from tac.information_geometry.bregman_v9_surfaces import (
     squared_hessian_quadratic,
     stable_logsumexp,
 )
+from tac.information_geometry.fisher_natural_solver import (
+    FisherNaturalTrustResult,
+    centre_cotangent,
+    helmert_zero_sum_basis,
+    solve_categorical_fisher_natural_step,
+    solve_categorical_fisher_natural_step_numpy_fp32,
+)
 
 __all__ = [
     "DELTA_ETA_CONSISTENCY_ATOL",
     "DELTA_ETA_CONSISTENCY_RTOL",
     "GeometryValidationError",
+    "FisherNaturalTrustResult",
     "affine_legendre_logsumexp_summary",
     "bregman_divergence",
     "categorical_bregman_sigma_propagation",
@@ -54,4 +62,8 @@ __all__ = [
     "solve_fisher_natural_cotangent",
     "squared_hessian_quadratic",
     "stable_logsumexp",
+    "centre_cotangent",
+    "helmert_zero_sum_basis",
+    "solve_categorical_fisher_natural_step",
+    "solve_categorical_fisher_natural_step_numpy_fp32",
 ]
