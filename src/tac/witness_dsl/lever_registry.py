@@ -54,6 +54,53 @@ _NO_ARTIFACT = re.compile(r"^--no-")
 _FUNC_DEFS = (ast.FunctionDef, ast.AsyncFunctionDef)
 
 
+class MetricResolutionError(ValueError):
+    """Raised when a non-trainer canonical metric cannot resolve exactly once."""
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalMetricDescriptor:
+    """One canonical non-trainer metric known to the witness DSL."""
+
+    metric_id: str
+    binding_artifact: str
+
+
+_CANONICAL_METRICS = (
+    CanonicalMetricDescriptor(
+        metric_id="argmax_native_vjp_fidelity_v1",
+        binding_artifact=".omx/research/bregman_v9_all_surfaces_binding_20260714.json",
+    ),
+)
+
+
+def canonical_metric_ids() -> tuple[str, ...]:
+    """Return the deterministic canonical metric IDs held by this registry."""
+
+    return tuple(sorted(metric.metric_id for metric in _CANONICAL_METRICS))
+
+
+def resolve_canonical_metric(metric_id: str) -> CanonicalMetricDescriptor:
+    """Resolve exactly one canonical metric, failing on unknown or duplicate IDs."""
+
+    if not isinstance(metric_id, str) or not metric_id.strip():
+        raise MetricResolutionError("metric_id must be a non-empty string")
+    matches = [metric for metric in _CANONICAL_METRICS if metric.metric_id == metric_id]
+    if len(matches) != 1:
+        reason = "unknown" if not matches else "duplicated"
+        raise MetricResolutionError(
+            f"canonical metric {metric_id!r} is {reason}; registered ids: "
+            f"{', '.join(canonical_metric_ids())}"
+        )
+    descriptor = matches[0]
+    if not Path(descriptor.binding_artifact).is_file():
+        raise MetricResolutionError(
+            f"canonical metric {metric_id!r} is orphaned: missing binding artifact "
+            f"{descriptor.binding_artifact!r}"
+        )
+    return descriptor
+
+
 def _module_source() -> str:
     return Path(_cd.__file__).read_text()
 
@@ -68,10 +115,10 @@ def _flags_in_node(node: ast.AST) -> frozenset[str]:
 
 def _constructs(node: ast.FunctionDef, name: str) -> bool:
     """True if the function body calls ``name(...)`` (e.g. ``Lever`` / ``WitnessProgram``)."""
-    for n in ast.walk(node):
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == name:
-            return True
-    return False
+    return any(
+        isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == name
+        for n in ast.walk(node)
+    )
 
 
 def _anno_is_lever(a: ast.AST) -> bool:
@@ -311,7 +358,19 @@ def emit_stub_lever(flag: str) -> str:
 
 
 __all__ = [
-    "lever_factories", "program_constructors", "dsl_referenced_flags", "dsl_emitted_flags",
-    "Completeness", "completeness", "emit_stub_lever", "BASELINE",
-    "LeverCompositionError", "name_composable_levers", "resolve_composable_lever",
+    "BASELINE",
+    "CanonicalMetricDescriptor",
+    "Completeness",
+    "LeverCompositionError",
+    "MetricResolutionError",
+    "canonical_metric_ids",
+    "completeness",
+    "dsl_emitted_flags",
+    "dsl_referenced_flags",
+    "emit_stub_lever",
+    "lever_factories",
+    "name_composable_levers",
+    "program_constructors",
+    "resolve_canonical_metric",
+    "resolve_composable_lever",
 ]
