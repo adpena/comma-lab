@@ -1,7 +1,9 @@
 # Harness consolidation fixes — DAG FEED (2026-07-15)
 
-`research_only=true`  
-`score_claim=false`  
+`research_only=true`
+
+`score_claim=false`
+
 `verdict_scope=canonical local Codex delegation, status, drain, and tracked-shell lint surfaces only`
 
 ## Verdict
