@@ -82,3 +82,30 @@ No consumer is wired from the present blocker because doing so would turn an unm
 - DAG leg: this file.
 - Equation leg: `ΔW≈-ηJ_fJ_fᵀ∇_W L`, with local metric `(J_fJ_fᵀ)⁻¹`; canonical code **HELD**.
 - Pointer delta: **NONE**.
+
+## FEED-islandbirth (2026-07-15) — island-birth is NOT a visible saddle-node in $0 frozen data; DERIVED per-class birth-weight ∝ (P/A)_c
+
+`[macOS advisory] NON-PROMOTABLE` — pointer 0.19108 UNMOVED (means). Memo:
+`.omx/research/island_birth_saddle_node_hysteresis_measurement_20260715.md`.
+
+SIGNAL (source memory `curriculum_is_continuation_instabilities_are_bifurcations_20260714` + Fork Dynamics
+item-5): is witness island-birth a saddle-node with hysteresis → compute λ_c to set the curriculum's birth-λ?
+DIAGNOSTIC ($0, read-only): occupancy order parameter (Lane/Movable **islands/pair** = connected components,
++ area% + presence%) measured on frozen render-through-R argmax maps vs `gt_n96`.
+- **Continuation (curriculum stages CE299→Tau599→l7725→Muon900/925, n96): SMOOTH, no fold.** Lane islands/pair
+  flat ~16 (GT 21.3); Movable saturated at CE ~3.0 (GT 3.1); Lane area monotone 0.349→0.522% (GT 0.589).
+  Both classes 100% pair-presence at every stage — no global birth event.
+- **Cross-config (mod32cap n16, perclass_baseline n600): all cluster at one sub-GT plateau** (Lane ~15–16,
+  Movable ~2.6–3.0). The "mod32cap ZERO islands" (L2/L3) is NOT reproduced at component level — present-but-
+  deficient, not absent. No absent↔present branch pair ⇒ no hysteresis loop in frozen data.
+RESPONSE (honest): **hysteresis UNMEASURABLE at $0 by construction** — it's a training-flow property; a static
+frozen-checkpoint λ-sweep is algebraically reversible f(λ) → would be a surrogate FAKE (NO-FAKE class 8).
+Only measured bistability hint = #300 seed-absorption (n=2, subcritical-threshold-consistent, not a loop).
+Normal-form fit: too coarse / monotone → λ_c NOT extractable. **DERIVED reduced-order lever:** birth-balance
+group `λ_c ≡ W_birth/(δ·(P/A)_c)`; MEASURED GT `(P/A)_Lane/(P/A)_Movable = 0.760/0.086 = 8.9` ⇒ per-class
+birth-weight `∝ (P/A)_c` → **Lane ≈ 8.9× Movable** (isoperimetric drain; cruder 1/A_GT gives 2.6×). Absolute
+λ_c/δ needs the flow sweep. NEXT (operator-GO, not $0): resume EMA-BEST, quasi-static W_birth UP/DOWN ramp,
+log islands/pair per epoch (n96) → measured λ_c ± hysteresis margin, δ = W_birth*/(P/A)_c at the up-fold.
+Triality: memo (DAG leg) + lever `W_birth,c ∝ (P/A)_c` owed as a DSL Lever (register + duty-to-measure).
+saddle-node **NOT CONFIRMED** (frozen smooth; hysteresis unmeasurable $0) · concrete lever = per-class
+birth-weight ∝ (P/A)_c, **Lane ≈ 8.9× Movable**, MEASURED GT geometry n96.
