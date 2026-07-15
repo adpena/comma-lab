@@ -12,8 +12,10 @@ import ast
 import hashlib
 import json
 import re
+import shlex
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +36,29 @@ _RUNG_ALIASES = {
     "hardcoded_waiver",
 }
 _PRINT_LIMIT = 25
+DSL_PROVENANCE_SCHEMA = "dsl_provenance.v1"
+DSL_LAUNCH_MANIFEST_SCHEMA = "witness_launch_manifest.v1"
+DSL_COMPILE_HASH_ENV = "TAC_DSL_COMPILE_HASH"
+DSL_PROVENANCE_PATH_ENV = "TAC_DSL_PROVENANCE_PATH"
+DSL_LAUNCH_SH_PATH_ENV = "TAC_DSL_LAUNCH_SH_PATH"
+DSL_COMPILE_REFUSED_RC = 8
+_VOLATILE_PROVENANCE_KEYS = frozenset(
+    {
+        "compiled_at",
+        "compiled_at_utc",
+        "generated_at",
+        "generated_at_utc",
+        "observed_at",
+        "observed_at_utc",
+        "resolved_at",
+        "resolved_at_utc",
+        "run_id",
+        "staleness_days",
+        "timestamp",
+        "timestamp_utc",
+    }
+)
+_VOLATILE_ARGV_VALUE_FLAGS = frozenset({"--out-dir", "--run-id", "--label"})
 
 
 class V9ProvenanceGateError(RuntimeError):
@@ -103,7 +128,453 @@ class ConfigBijectionSnapshot:
 
     @property
     def bijection_hash(self) -> str:
-        return _hash_payload(asdict(self))
+        return _hash_payload(_canonical_bijection_payload(asdict(self)))
+
+
+def _canonical_bijection_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Extend #332's manifest with the compile-token volatility law."""
+
+    canonical = json.loads(json.dumps(_stable_value(payload)))
+    for binding in canonical.get("bindings", ()):
+        if not isinstance(binding, dict):
+            continue
+        flag = str(binding.get("flag", ""))
+        if flag not in _VOLATILE_ARGV_VALUE_FLAGS:
+            continue
+        placeholder = f"<{flag[2:].upper().replace('-', '_')}>"
+        binding["raw_value"] = placeholder
+        binding["runtime_value"] = placeholder
+        raw_tokens = list(binding.get("raw_tokens") or ())
+        if len(raw_tokens) >= 2:
+            raw_tokens[1] = placeholder
+        binding["raw_tokens"] = raw_tokens
+    return canonical
+
+
+def _without_volatile_context(value: Any, *, spec: bool = False) -> Any:
+    """Return the authoritative, deterministic portion of a provenance value.
+
+    LawRef observation times and run-local identity belong in the emitted document's
+    ``non_authoritative_context`` but never in the compile binding.  This is the same
+    timestamp-free rule already required by :class:`ConfigBijectionSnapshot`, applied
+    recursively to the program/LawRef legs rather than inventing a second digest.
+    """
+
+    excluded = _VOLATILE_PROVENANCE_KEYS
+    if isinstance(value, Mapping):
+        normalized: dict[str, Any] = {}
+        # spec=True preserves the compile's own (deterministic) insertion order: sorting the
+        # WitnessProgram spec alphabetized lever `overrides`, so model_validate(spec) rebuilt a
+        # program whose flag_dict/binding order diverged from the original compile and the
+        # dsl_compile_hash self-recompile refused its own document (2026-07-15 merge-
+        # reconciliation). Determinism comes from the deterministic compile itself
+        # (test_actual_v9_identical_compile_is_deterministic); non-spec provenance legs keep
+        # sorted order for hash stability of externally-sourced mappings.
+        items = value.items() if spec else sorted(value.items(), key=lambda pair: str(pair[0]))
+        for key, item in items:
+            name = str(key)
+            if name in excluded:
+                continue
+            if spec and name == "out_dir":
+                normalized[name] = "<OUT_DIR>"
+            elif spec and name == "purpose":
+                normalized[name] = None
+            else:
+                normalized[name] = _without_volatile_context(item, spec=spec)
+        return normalized
+    if isinstance(value, (list, tuple)):
+        return [_without_volatile_context(item, spec=spec) for item in value]
+    return _stable_value(value)
+
+
+def _canonical_lawref_provenance(
+    manifest: Mapping[str, Any] | None,
+    *,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    """Canonicalize resolved LawRef rows without host/worktree identity.
+
+    Resolved anchor records historically carry an absolute ``source`` path.  The
+    content SHA is authoritative; the checkout prefix is not.  Keeping that prefix
+    in the compile token would make the same DSL config hash differently in two
+    worktrees, contradicting #332 determinism.
+    """
+
+    root = Path(repo_root or _REPO_ROOT).resolve()
+    canonical = _without_volatile_context(dict(manifest or {}))
+    # Wrapper-custody annotations (stamped by _merge_lever_constant_manifests at the
+    # launch-config layer: emitted_flag + single_value_owner=dsl_lever:<name>) are NOT part
+    # of the LawRef authority record — the raw WitnessProgram recompile lacks them, and
+    # lever ownership is separately proven by the #332 bijection graph (lever_owners).
+    # Stripping them here keeps the wrapper manifest and the recompile comparable/hashable
+    # as ONE authority graph (2026-07-15 merge-reconciliation of the dsl-hash + derive legs).
+    _WRAPPER_CUSTODY_FIELDS = {"emitted_flag", "single_value_owner"}
+
+    def _walk(value: Any) -> Any:
+        if isinstance(value, Mapping):
+            out: dict[str, Any] = {}
+            for raw_key, item in value.items():
+                key = str(raw_key)
+                if key in _WRAPPER_CUSTODY_FIELDS:
+                    continue
+                if key in {"source", "artifact_path"} and isinstance(item, str):
+                    candidate = Path(item)
+                    if candidate.is_absolute():
+                        try:
+                            item = candidate.resolve().relative_to(root).as_posix()
+                        except ValueError:
+                            # An external authority path remains semantic.  Its byte
+                            # SHA is still verified below when the path is reachable.
+                            pass
+                out[key] = _walk(item)
+            return out
+        if isinstance(value, list):
+            return [_walk(item) for item in value]
+        return value
+
+    return _walk(canonical)
+
+
+def _normalized_manifest_flag(key: str) -> str:
+    return key if key.startswith("--") else f"--{key.replace('_', '-')}"
+
+
+def _validate_lawref_provenance_against_program(
+    provenance: Mapping[str, Any],
+    *,
+    program: Any,
+    resolved_constants: Mapping[str, Any],
+    repo_root: Path | None = None,
+) -> tuple[bool, str]:
+    """Recheck LawRef source existence, input bytes, equations, and emitted values."""
+
+    root = Path(repo_root or _REPO_ROOT).resolve()
+    recorded = _canonical_lawref_provenance(provenance, repo_root=root)
+    recompiled = _canonical_lawref_provenance(resolved_constants, repo_root=root)
+    by_flag = {_normalized_manifest_flag(str(key)): value for key, value in recorded.items()}
+    for key, value in recompiled.items():
+        if by_flag.get(_normalized_manifest_flag(str(key))) != value:
+            return False, f"reconstructed LawRef provenance differs for {key!r}"
+
+    try:
+        from tac.canonical_equations.evaluators import (
+            has_evaluator,
+            populate_lawref_evaluators,
+            resolve_equation_value,
+        )
+        from tac.canonical_equations.registry import get_equation_by_id
+
+        populate_lawref_evaluators()
+        flag_dict = program.flag_dict()
+        for key, row in recorded.items():
+            if not isinstance(row, Mapping):
+                return False, f"LawRef provenance row {key!r} is not an object"
+            equation_id = str(row.get("equation_id", ""))
+            if not re.fullmatch(r"[a-z][a-z0-9_]*_v\d+", equation_id):
+                return False, f"LawRef provenance row {key!r} has invalid equation_id {equation_id!r}"
+            evaluator_exists = has_evaluator(equation_id)
+            if not evaluator_exists and get_equation_by_id(equation_id) is None:
+                return False, (
+                    f"LawRef provenance row {key!r} cites unregistered equation {equation_id!r}"
+                )
+
+            inputs = row.get("inputs")
+            value_inputs: dict[str, Any] = {}
+            if isinstance(inputs, list):
+                for input_row in inputs:
+                    if not isinstance(input_row, Mapping) or not input_row.get("name"):
+                        return False, f"LawRef provenance row {key!r} has malformed resolved input"
+                    source = input_row.get("source")
+                    expected_sha = input_row.get("sha256")
+                    if source not in (None, "literal") and expected_sha:
+                        source_path = Path(str(source))
+                        if not source_path.is_absolute():
+                            source_path = root / source_path
+                        if not source_path.is_file():
+                            return False, f"LawRef authority artifact missing for {key!r}: {source_path}"
+                        actual_sha = hashlib.sha256(source_path.read_bytes()).hexdigest()
+                        if actual_sha != str(expected_sha):
+                            return False, (
+                                f"LawRef authority SHA mismatch for {key!r}: "
+                                f"{actual_sha} != {expected_sha}"
+                            )
+                    value_inputs[str(input_row["name"])] = input_row.get("value")
+            elif isinstance(inputs, Mapping):
+                value_inputs = dict(inputs)
+
+            if evaluator_exists and value_inputs:
+                evaluated = resolve_equation_value(equation_id, value_inputs)
+                recorded_equation_value = row.get(
+                    "inherited_manifest_value_replaced", row.get("value")
+                )
+                if not _semantically_equal(evaluated, recorded_equation_value):
+                    return False, (
+                        f"LawRef equation recompute differs for {key!r}: "
+                        f"{evaluated!r} != {recorded_equation_value!r}"
+                    )
+
+            flag = _normalized_manifest_flag(str(key))
+            if flag in flag_dict and not _semantically_equal(row.get("value"), flag_dict[flag]):
+                return False, (
+                    f"LawRef compiled value for {key!r} differs from WitnessProgram flag "
+                    f"{flag}: {row.get('value')!r} != {flag_dict[flag]!r}"
+                )
+    except (OSError, TypeError, ValueError) as exc:
+        return False, f"LawRef provenance recompute failed: {type(exc).__name__}: {exc}"
+    except Exception as exc:  # registry/evaluator unavailability is fail-closed
+        return False, f"LawRef provenance authority unavailable: {type(exc).__name__}: {exc}"
+    return True, f"LawRef provenance recomputed ({len(recorded)} record(s))"
+
+
+def canonicalize_resolved_argv(argv: Sequence[Any]) -> tuple[str, ...]:
+    """Canonicalize resolved trainer argv while excluding only run-local identity.
+
+    ``--out-dir`` changes on every launch but has no scientific meaning; replacing its
+    value is what makes identical configs compile to identical hashes.  Every semantic
+    flag, token order, bool spelling, and resolved value remains byte-visible.
+    """
+
+    tokens = [str(token) for token in argv]
+    out: list[str] = []
+    cursor = 0
+    while cursor < len(tokens):
+        token = tokens[cursor]
+        out.append(token)
+        if token in _VOLATILE_ARGV_VALUE_FLAGS and cursor + 1 < len(tokens):
+            out.append(f"<{token[2:].upper().replace('-', '_')}>")
+            cursor += 2
+            continue
+        cursor += 1
+    return tuple(out)
+
+
+def _dsl_compile_payload_from_document(document: Mapping[str, Any]) -> dict[str, Any]:
+    """Select the exact authoritative payload hashed as ``dsl_compile_hash``."""
+
+    return {
+        "schema": DSL_PROVENANCE_SCHEMA,
+        "spec_id": document.get("spec_id"),
+        "witness_program_spec": document.get("witness_program_spec"),
+        "resolved_argv": document.get("resolved_argv"),
+        "bijection_manifest": document.get("bijection_manifest"),
+        "bijection_hash": document.get("bijection_hash"),
+        "lawref_provenance": document.get("lawref_provenance"),
+    }
+
+
+def extract_trainer_argv_from_launch_sh(
+    launch_sh_text: str,
+    *,
+    trainer_rel: str | None = None,
+) -> tuple[str, ...]:
+    """Extract the one trainer command from a governed ``launch.sh``.
+
+    Parsing the emitted shell artifact is essential: comparing only an in-memory config
+    would miss a post-compile hand edit.  The launcher emits a single trainer command;
+    zero or multiple trainer tokens is therefore a fail-closed malformed artifact.
+    """
+
+    if trainer_rel is None:
+        from tac.witness_dsl.curriculum_dsl import TRAINER_REL
+
+        trainer_rel = TRAINER_REL
+    try:
+        # ``shlex`` preserves a backslash-newline continuation as a literal
+        # ``"\n"`` token even though POSIX shell removes it before argv
+        # construction.  Drop only that exact syntactic token; all real values
+        # (including whitespace-bearing quoted values) remain untouched.
+        tokens = [
+            token
+            for token in shlex.split(launch_sh_text, comments=True, posix=True)
+            if token != "\n"
+        ]
+    except ValueError as exc:
+        raise V9ProvenanceGateError(f"launch.sh shell parse failed: {exc}") from exc
+    matches = [
+        index
+        for index, token in enumerate(tokens)
+        if token == trainer_rel or token.endswith("/" + trainer_rel)
+    ]
+    if len(matches) != 1 or matches[0] == 0:
+        raise V9ProvenanceGateError(
+            f"launch.sh must contain exactly one {trainer_rel!r} command; found {len(matches)}"
+        )
+    start = matches[0] - 1
+    return tuple(tokens[start:])
+
+
+def verify_dsl_provenance_document(
+    document: Mapping[str, Any] | None,
+    *,
+    launch_argv: Sequence[Any] | None = None,
+    expected_hash: str | None = None,
+) -> tuple[bool, str]:
+    """Recompute and verify a DSL compile binding without trusting its PASS marker."""
+
+    if not isinstance(document, Mapping):
+        return False, "dsl_provenance.json is absent or not a JSON object"
+    if document.get("schema") != DSL_PROVENANCE_SCHEMA:
+        return False, (
+            f"dsl provenance schema {document.get('schema')!r} != {DSL_PROVENANCE_SCHEMA!r}"
+        )
+    required = (
+        "spec_id",
+        "witness_program_spec",
+        "resolved_argv",
+        "bijection_manifest",
+        "bijection_hash",
+        "lawref_provenance",
+        "dsl_compile_hash",
+    )
+    missing = [key for key in required if key not in document]
+    if missing:
+        return False, f"dsl provenance missing authoritative field(s): {missing}"
+    recorded_bijection_hash = str(document.get("bijection_hash", ""))
+    recomputed_bijection_hash = _hash_payload(document["bijection_manifest"])
+    if recorded_bijection_hash != recomputed_bijection_hash:
+        return False, (
+            "#332 bijection manifest hash mismatch "
+            f"({recorded_bijection_hash!r} != {recomputed_bijection_hash!r})"
+        )
+    recorded = str(document.get("dsl_compile_hash", ""))
+    recomputed = _hash_payload(_dsl_compile_payload_from_document(document))
+    if recorded != recomputed:
+        return False, f"dsl_compile_hash mismatch ({recorded!r} != recomputed {recomputed!r})"
+    if expected_hash is not None and recorded != str(expected_hash):
+        return False, f"carried dsl_compile_hash {expected_hash!r} != provenance {recorded!r}"
+    if launch_argv is not None:
+        recorded_argv = tuple(str(token) for token in document.get("resolved_argv") or ())
+        actual_argv = canonicalize_resolved_argv(launch_argv)
+        if recorded_argv != actual_argv:
+            return False, (
+                "launch argv does not round-trip to the DSL compile "
+                f"(recorded_tokens={len(recorded_argv)} actual_tokens={len(actual_argv)})"
+            )
+    return True, f"dsl_compile_hash={recorded} spec_id={document.get('spec_id')!r}"
+
+
+def _verify_dsl_program_recompile(document: Mapping[str, Any]) -> tuple[bool, str]:
+    """Reconstruct the typed spec and independently recompile every authority leg."""
+
+    try:
+        from pydantic import ValidationError
+
+        from tac.witness_dsl.typed_config import TypedWitnessConfig
+
+        spec = json.loads(json.dumps(document["witness_program_spec"]))
+        semantic_order = list(document["bijection_manifest"].get("semantic_order") or ())
+        rank = {str(flag): index for index, flag in enumerate(semantic_order)}
+
+        def _restore_flag_order(mapping: Any) -> Any:
+            if not isinstance(mapping, Mapping):
+                return mapping
+            return {
+                key: mapping[key]
+                for key in sorted(mapping, key=lambda item: rank.get(str(item), len(rank)))
+            }
+
+        spec["base"] = _restore_flag_order(spec.get("base", {}))
+        for lever in spec.get("levers", ()):
+            if isinstance(lever, dict):
+                lever["overrides"] = _restore_flag_order(lever.get("overrides", {}))
+        typed = TypedWitnessConfig.model_validate(spec)
+        program = typed.to_program()
+        violations = program.validate()
+        if violations:
+            return False, f"reconstructed WitnessProgram is invalid: {violations[:8]}"
+        argv, resolved_constants = program.compile_trainer_argv_with_constants(repo_root=_REPO_ROOT)
+        if list(canonicalize_resolved_argv(argv)) != list(document["resolved_argv"]):
+            return False, "reconstructed WitnessProgram argv differs from recorded DSL compile"
+        lawref_ok, lawref_detail = _validate_lawref_provenance_against_program(
+            document["lawref_provenance"],
+            program=program,
+            resolved_constants=resolved_constants,
+            repo_root=_REPO_ROOT,
+        )
+        if not lawref_ok:
+            return False, lawref_detail
+        snapshot = build_config_bijection_snapshot(
+            str(document["spec_id"]),
+            program,
+            compiler_manifest=document["lawref_provenance"],
+            repo_root=_REPO_ROOT,
+        )
+        recomputed_manifest = _canonical_bijection_payload(asdict(snapshot))
+        if recomputed_manifest != document["bijection_manifest"]:
+            return False, "reconstructed #332 flag-to-Lever bijection manifest differs"
+        if snapshot.bijection_hash != document["bijection_hash"]:
+            return False, "reconstructed #332 bijection hash differs"
+    except (KeyError, TypeError, ValueError, ValidationError, V9ProvenanceGateError) as exc:
+        return False, f"typed WitnessProgram recompile failed: {type(exc).__name__}: {exc}"
+    except Exception as exc:  # fail closed on unavailable compiler/LawRef/parser infrastructure
+        return False, f"typed WitnessProgram recompile unavailable: {type(exc).__name__}: {exc}"
+    return True, f"typed WitnessProgram/#332 recompile matched; {lawref_detail}"
+
+
+def verify_dsl_provenance_artifacts(
+    launch_sh: Path | str,
+    *,
+    provenance_path: Path | str | None = None,
+    launch_manifest_path: Path | str | None = None,
+    expected_hash: str | None = None,
+) -> tuple[bool, str]:
+    """Governor-side recomputation over exact on-disk launch artifacts."""
+
+    launch_path = Path(launch_sh)
+    from tac.witness_run_artifacts import DSL_PROVENANCE_JSON, LAUNCH_MANIFEST_JSON
+
+    provenance = (
+        Path(provenance_path)
+        if provenance_path
+        else launch_path.with_name(DSL_PROVENANCE_JSON)
+    )
+    run_manifest = (
+        Path(launch_manifest_path)
+        if launch_manifest_path
+        else launch_path.with_name(LAUNCH_MANIFEST_JSON)
+    )
+    if not launch_path.is_file():
+        return False, f"launch artifact missing: {launch_path}"
+    if not provenance.is_file():
+        return False, f"DSL provenance artifact missing: {provenance}"
+    if not run_manifest.is_file():
+        return False, f"run launch manifest missing: {run_manifest}"
+    try:
+        launch_text = launch_path.read_text(encoding="utf-8")
+        document = json.loads(provenance.read_text(encoding="utf-8"))
+        manifest = json.loads(run_manifest.read_text(encoding="utf-8"))
+        argv = extract_trainer_argv_from_launch_sh(launch_text)
+    except (OSError, json.JSONDecodeError, V9ProvenanceGateError) as exc:
+        return False, f"DSL launch artifact parse failed: {type(exc).__name__}: {exc}"
+    header_hashes = re.findall(r"^#\s*dsl_compile_hash:\s*([0-9a-f]{64})\s*$", launch_text, re.MULTILINE)
+    if len(header_hashes) != 1:
+        return False, f"launch.sh must stamp exactly one dsl_compile_hash header; found {len(header_hashes)}"
+    carried = expected_hash or header_hashes[0]
+    if header_hashes[0] != carried:
+        return False, f"launch.sh hash header {header_hashes[0]!r} != carried {carried!r}"
+    if manifest.get("schema") != DSL_LAUNCH_MANIFEST_SCHEMA:
+        return False, (
+            f"launch manifest schema {manifest.get('schema')!r} != {DSL_LAUNCH_MANIFEST_SCHEMA!r}"
+        )
+    if manifest.get("dsl_compile_hash") != carried:
+        return False, "launch manifest dsl_compile_hash disagrees with launch.sh/carried hash"
+    launch_sha = hashlib.sha256(launch_path.read_bytes()).hexdigest()
+    if manifest.get("launch_sh_sha256") != launch_sha:
+        return False, "launch manifest launch_sh_sha256 does not match exact launch.sh bytes"
+    provenance_sha = hashlib.sha256(provenance.read_bytes()).hexdigest()
+    if manifest.get("dsl_provenance_sha256") != provenance_sha:
+        return False, (
+            "launch manifest dsl_provenance_sha256 does not match exact provenance bytes"
+        )
+    ok, detail = verify_dsl_provenance_document(
+        document, launch_argv=argv, expected_hash=carried
+    )
+    if not ok:
+        return ok, detail
+    recompiled, recompile_detail = _verify_dsl_program_recompile(document)
+    if not recompiled:
+        return False, recompile_detail
+    return True, f"{detail}; {recompile_detail}"
 
 
 @dataclass(frozen=True)
@@ -496,79 +967,196 @@ def _emitted_order(flag_dict: Mapping[str, Any], argv: Sequence[str]) -> tuple[s
     return tuple(emitted)
 
 
-def collect_live_v9_bijection_snapshots(repo_root: Path | None = None) -> tuple[ConfigBijectionSnapshot, ...]:
-    """Compile the closed V9 factory set and walk its real ownership graph."""
+def _provenance_table_for_program(program_name: str) -> dict[str, Mapping[str, Any]]:
+    """Return the existing V9 value-provenance table for one canonical spec."""
+
+    from tac.witness_dsl.spec_v9_cgauge import V9_CGAUGE_432_PROVENANCE, V9_CGAUGE_PROVENANCE
+
+    provenance: dict[str, Mapping[str, Any]] = dict(V9_CGAUGE_PROVENANCE)
+    if program_name == "v9_cgauge_432":
+        provenance.update(V9_CGAUGE_432_PROVENANCE)
+    return provenance
+
+
+def build_config_bijection_snapshot(
+    program_name: str,
+    program: Any,
+    *,
+    compiler_manifest: Mapping[str, Any] | None = None,
+    provenance: Mapping[str, Mapping[str, Any]] | None = None,
+    repo_root: Path | None = None,
+) -> ConfigBijectionSnapshot:
+    """Build the #332 ownership snapshot for the exact program being launched.
+
+    This is the reusable core that the live-factory audit and ``dsl_compile_hash``
+    share.  Keeping one builder prevents a launch digest from becoming a parallel,
+    weaker provenance registry.
+    """
 
     from tac.witness_dsl.curriculum_dsl import TRAINER_REL, build_real_trainer_parser
-    from tac.witness_dsl.spec_v9_cgauge import V9_CGAUGE_432_PROVENANCE, V9_CGAUGE_PROVENANCE
 
     root = Path(repo_root or _REPO_ROOT).resolve()
     trainer_path = root / TRAINER_REL
     parser = build_real_trainer_parser(trainer_path)
     consumers = _trainer_consumers(trainer_path, root)
     actions = {option: action for action in parser._actions for option in action.option_strings}
+    provenance_rows = dict(provenance or _provenance_table_for_program(program_name))
+    flag_dict = program.flag_dict()
+    argv, resolved_constants = program.compile_trainer_argv_with_constants(repo_root=root)
+    compiler_records: dict[str, list[Mapping[str, Any]]] = {}
+    for key, record in dict(compiler_manifest or {}).items():
+        normalized = str(key) if str(key).startswith("--") else f"--{str(key).replace('_', '-')}"
+        if isinstance(record, Mapping):
+            compiler_records.setdefault(normalized, []).append(record)
+    for key, record in resolved_constants.items():
+        if isinstance(record, Mapping):
+            bucket = compiler_records.setdefault(str(key), [])
+            normalized_record = json.dumps(
+                _without_volatile_context(record), sort_keys=True, default=str
+            )
+            if normalized_record not in {
+                json.dumps(_without_volatile_context(item), sort_keys=True, default=str)
+                for item in bucket
+            }:
+                bucket.append(record)
+    namespace = parser.parse_args(argv[2:])
+    bindings: list[FlagProvenanceBinding] = []
+    for flag, raw_value in flag_dict.items():
+        emitted_option = flag.replace("--", "--no-", 1) if raw_value is False else flag
+        action = actions.get(emitted_option) or actions.get(flag)
+        runtime_dest = getattr(action, "dest", None)
+        runtime_value = getattr(namespace, runtime_dest) if runtime_dest else None
+        owners = tuple(lever.name for lever in program.levers if flag in lever.overrides)
+        refs = tuple(ref for lever in program.levers for ref in _lawrefs_for_flag(lever, flag))
+        law_ids = tuple(str(getattr(ref, "equation_id", "")) for ref in refs)
+        compiler_ids = tuple(
+            str(record.get("equation_id", "")) for record in compiler_records.get(flag, ())
+        )
+        receipt_schemas = tuple(
+            schema
+            for lever in program.levers
+            if flag in lever.overrides
+            for schema in _receipt_schemas_for_flag(lever, flag)
+        )
+        raw_tokens = (emitted_option,) if isinstance(raw_value, bool) else (flag, str(raw_value))
+        bindings.append(
+            FlagProvenanceBinding(
+                flag=flag,
+                raw_value=_stable_value(raw_value),
+                raw_type=type(raw_value).__name__,
+                raw_tokens=raw_tokens,
+                runtime_dest=runtime_dest,
+                runtime_value=_stable_value(runtime_value),
+                runtime_type=type(runtime_value).__name__ if runtime_dest else None,
+                lever_owners=owners,
+                lawref_equation_ids=law_ids,
+                compiler_record_equation_ids=compiler_ids,
+                provenance_rung=(provenance_rows.get(flag) or {}).get("rung"),
+                consumer_locations=consumers.get(runtime_dest or "", ()),
+                runtime_receipt_schemas=receipt_schemas,
+            )
+        )
+    return ConfigBijectionSnapshot(
+        program=program_name,
+        bindings=tuple(bindings),
+        semantic_order=tuple(flag_dict),
+        emitted_order=_emitted_order(flag_dict, argv),
+        lawref_flags=tuple(sorted(binding.flag for binding in bindings if binding.lawref_equation_ids)),
+        compiler_record_flags=tuple(sorted(compiler_records)),
+        provenance_flags=tuple(sorted(provenance_rows)),
+    )
+
+
+def build_dsl_compile_provenance_document(
+    *,
+    program_name: str,
+    typed_config: Any,
+    compiler_manifest: Mapping[str, Any] | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    """Compile the canonical DSL binding token for one exact typed config.
+
+    Definition: ``sha256(canonical WitnessProgram spec + resolved argv tuple +
+    #332 flag-to-Lever bijection manifest/hash + LawRef provenance)``.  The hash
+    is produced by this module's existing ``_hash_payload`` function and exact
+    ``ConfigBijectionSnapshot`` representation; timestamps/run-dir/purpose are
+    preserved only as non-authoritative context.
+    """
+
+    program = typed_config.to_program()
+    violations = program.validate()
+    if violations:
+        raise V9ProvenanceGateError(
+            f"typed WitnessProgram {program_name!r} is invalid: {violations[:8]}"
+        )
+    argv, resolved_constants = program.compile_trainer_argv_with_constants(
+        repo_root=Path(repo_root or _REPO_ROOT).resolve()
+    )
+    # Keep the canonical compiler's full resolved LawRef manifest in the token.
+    # Some older factory adapters materialize LawRefs before constructing the
+    # TypedWitnessConfig, while newer programs retain LawRef objects until
+    # WitnessProgram compilation.  Merge by semantic flag and refuse conflicts;
+    # either route therefore produces one authority graph, not parallel hashes.
+    lawref_rows = _canonical_lawref_provenance(compiler_manifest, repo_root=repo_root)
+    by_flag = {_normalized_manifest_flag(str(key)): key for key in lawref_rows}
+    for key, value in _canonical_lawref_provenance(
+        resolved_constants, repo_root=repo_root
+    ).items():
+        flag = _normalized_manifest_flag(str(key))
+        supplied_key = by_flag.get(flag)
+        if supplied_key is not None and lawref_rows[supplied_key] != value:
+            raise V9ProvenanceGateError(
+                f"wrapper LawRef record for {key!r} disagrees with WitnessProgram compile"
+            )
+        if supplied_key is None:
+            lawref_rows[str(key)] = value
+            by_flag[flag] = str(key)
+    snapshot = build_config_bijection_snapshot(
+        program_name,
+        program,
+        compiler_manifest=lawref_rows,
+        repo_root=repo_root,
+    )
+    raw_spec = typed_config.model_dump(mode="json", by_alias=True)
+    document: dict[str, Any] = {
+        "schema": DSL_PROVENANCE_SCHEMA,
+        "spec_id": program_name,
+        "witness_program_spec": _without_volatile_context(raw_spec, spec=True),
+        "resolved_argv": list(canonicalize_resolved_argv(argv)),
+        "bijection_manifest": _canonical_bijection_payload(asdict(snapshot)),
+        "bijection_hash": snapshot.bijection_hash,
+        "lawref_provenance": lawref_rows,
+        "non_authoritative_context": {
+            "compiled_at_utc": datetime.now(UTC).isoformat(),
+            "out_dir": getattr(typed_config, "out_dir", None),
+            "purpose": getattr(typed_config, "purpose", None),
+        },
+    }
+    document["dsl_compile_hash"] = _hash_payload(_dsl_compile_payload_from_document(document))
+    ok, detail = verify_dsl_provenance_document(document)
+    if not ok:
+        raise V9ProvenanceGateError(f"self-verification of DSL compile binding failed: {detail}")
+    recompiled, recompile_detail = _verify_dsl_program_recompile(document)
+    if not recompiled:
+        raise V9ProvenanceGateError(
+            f"self-recompile of DSL compile binding failed: {recompile_detail}"
+        )
+    return document
+
+
+def collect_live_v9_bijection_snapshots(repo_root: Path | None = None) -> tuple[ConfigBijectionSnapshot, ...]:
+    """Compile the closed V9 factory set and walk its real ownership graph."""
     snapshots: list[ConfigBijectionSnapshot] = []
 
     for program_name, factory in _canonical_factories().items():
-        provenance = dict(V9_CGAUGE_PROVENANCE)
-        if program_name == "v9_cgauge_432":
-            provenance.update(V9_CGAUGE_432_PROVENANCE)
         launch = factory()
         program = launch.typed.to_program()
-        flag_dict = program.flag_dict()
-        argv, constants_manifest = program.compile_trainer_argv_with_constants(repo_root=root)
-        compiler_records: dict[str, list[Mapping[str, Any]]] = {}
-        for key, record in launch.constants_manifest.items():
-            normalized = key if key.startswith("--") else f"--{key.replace('_', '-')}"
-            compiler_records.setdefault(normalized, []).append(record)
-        for key, record in constants_manifest.items():
-            bucket = compiler_records.setdefault(key, [])
-            if record not in bucket:
-                bucket.append(record)
-        namespace = parser.parse_args(argv[2:])
-        bindings: list[FlagProvenanceBinding] = []
-        for flag, raw_value in flag_dict.items():
-            emitted_option = flag.replace("--", "--no-", 1) if raw_value is False else flag
-            action = actions.get(emitted_option) or actions.get(flag)
-            runtime_dest = getattr(action, "dest", None)
-            runtime_value = getattr(namespace, runtime_dest) if runtime_dest else None
-            owners = tuple(lever.name for lever in program.levers if flag in lever.overrides)
-            refs = tuple(ref for lever in program.levers for ref in _lawrefs_for_flag(lever, flag))
-            law_ids = tuple(str(getattr(ref, "equation_id", "")) for ref in refs)
-            compiler_ids = tuple(str(record.get("equation_id", "")) for record in compiler_records.get(flag, ()))
-            receipt_schemas = tuple(
-                schema
-                for lever in program.levers
-                if flag in lever.overrides
-                for schema in _receipt_schemas_for_flag(lever, flag)
-            )
-            raw_tokens = (emitted_option,) if isinstance(raw_value, bool) else (flag, str(raw_value))
-            bindings.append(
-                FlagProvenanceBinding(
-                    flag=flag,
-                    raw_value=_stable_value(raw_value),
-                    raw_type=type(raw_value).__name__,
-                    raw_tokens=raw_tokens,
-                    runtime_dest=runtime_dest,
-                    runtime_value=_stable_value(runtime_value),
-                    runtime_type=type(runtime_value).__name__ if runtime_dest else None,
-                    lever_owners=owners,
-                    lawref_equation_ids=law_ids,
-                    compiler_record_equation_ids=compiler_ids,
-                    provenance_rung=(provenance.get(flag) or {}).get("rung"),
-                    consumer_locations=consumers.get(runtime_dest or "", ()),
-                    runtime_receipt_schemas=receipt_schemas,
-                )
-            )
         snapshots.append(
-            ConfigBijectionSnapshot(
-                program=program_name,
-                bindings=tuple(bindings),
-                semantic_order=tuple(flag_dict),
-                emitted_order=_emitted_order(flag_dict, argv),
-                lawref_flags=tuple(sorted(binding.flag for binding in bindings if binding.lawref_equation_ids)),
-                compiler_record_flags=tuple(sorted(compiler_records)),
-                provenance_flags=tuple(sorted(provenance)),
+            build_config_bijection_snapshot(
+                program_name,
+                program,
+                compiler_manifest=launch.constants_manifest,
+                repo_root=repo_root,
             )
         )
     return tuple(snapshots)
@@ -950,6 +1538,12 @@ def check_evidence_authority_claims_are_custodied(
 
 
 __all__ = [
+    "DSL_COMPILE_HASH_ENV",
+    "DSL_COMPILE_REFUSED_RC",
+    "DSL_LAUNCH_MANIFEST_SCHEMA",
+    "DSL_LAUNCH_SH_PATH_ENV",
+    "DSL_PROVENANCE_PATH_ENV",
+    "DSL_PROVENANCE_SCHEMA",
     "ConfigBijectionSnapshot",
     "EvidenceClaim",
     "FakeClaim",
@@ -960,6 +1554,9 @@ __all__ = [
     "audit_evidence_authority_claims",
     "audit_no_fourier_basis_in_witness_representation",
     "audit_v9_fake_claims",
+    "build_config_bijection_snapshot",
+    "build_dsl_compile_provenance_document",
+    "canonicalize_resolved_argv",
     "check_config_flag_provenance_bijection_complete",
     "check_evidence_authority_claims_are_custodied",
     "check_no_fourier_basis_in_witness_representation",
@@ -967,4 +1564,7 @@ __all__ = [
     "collect_live_v9_bijection_snapshots",
     "collect_live_v9_evidence_claims",
     "collect_live_v9_fake_claims",
+    "extract_trainer_argv_from_launch_sh",
+    "verify_dsl_provenance_artifacts",
+    "verify_dsl_provenance_document",
 ]
