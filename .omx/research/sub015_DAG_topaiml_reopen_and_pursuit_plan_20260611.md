@@ -17926,3 +17926,12 @@ generically via the registry (owed_wire completed → real trainer flag → auto
 dashboard_server / costate_digest / producer_bridge) edit is needed — the generic describe()/completeness() path already covers it.
 This is the RESOLUTION of the earlier FEED-cvl-consumer-leg OWED (which was OWED precisely because owed_wire was incomplete; it is now
 complete). pointer UNMOVED. [consumers-generic]
+
+
+## FEED-nofourier-ban (2026-07-14) — "no more Fourier basis anywhere" landed as HONEST warn-only transition [no-triality][consumers-generic]
+**Landed** main `5bf7f4640f` (code `a6ecb2cb99`) + `c4568f715f` (audit md). Arm exited clean.
+- **Ban-gate** `check_no_fourier_basis_in_witness_representation` (v9_provenance_gates.py:813 + preflight.py:1442): WARN-ONLY. Classifies every Fourier occurrence BASIS(ban) vs FFT-TOOL(keep, `# FFT_TOOL_USE_OK:` waiver) vs curvelet-REPLACEMENT(keep). Strict-flip EXPLICITLY GATED on the operator-GO n600 byte-closed through-R curvelet-vs-legacy d_seg NO-REGRESSION verdict (F1 pattern — can't kill a working basis on an OMP upper-bound proxy).
+- **NO hard default-flip** (NO-FAKE crux): `basis_control.py` default = `LEGACY_FOURIER_AB_CONTROL` ("not a ship-default claim"; curvelet opt-in until the governed A/B; absence keeps old byte layout → backward-compat resume). `polar_fourier`→legacy alias, `windowed_curvelet`→curvelet. A/B DSL lever `LegacyFourierABControl` authors the owed run (no implicit parser default). 97 tests pass.
+- **EQUATION LEG [no-triality → NAMED-OWED]**: this is APPARATUS (warn-only gate); the curvelet advantage is an UNMEASURED $0 OMP upper bound, so NO EmpiricalAnchor is registered (registering a proxy would be the surrogate-not-authority fake). Owed anchor `curvelet_through_R_dseg_ab_anchor` registers ONLY when the operator-GO through-R n600 A/B emits a MEASURED d_seg row (curvelet vs legacy-Fourier). Until then the equation leg is correctly EMPTY.
+- **CONSUMER LEG [consumers-generic]**: `LegacyFourierABControl` is a standard `Lever` → rendered by the generic `lever_registry`/`describe()` introspection; `basis_control` constants are runtime-name normalization (not a rendered surface). No bespoke dashboard/costate consumer needed.
+- pointer UNMOVED 0.19108/0.18804 — MEANS (enforceable+honest "no Fourier anywhere" transition; the score-authority is the owed through-R d_seg A/B that flips the gate strict).
