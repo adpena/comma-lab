@@ -18510,3 +18510,29 @@ annulus and longest end of long tail". Full table:
 - Pre-existing (NOT this arm): `test_fix4_{injects,opt_out}_*_per_group_grad_clip` fail identically
   at 6dfb43c96b (proven_base lacks #406 TypedWitnessConfig compile custody) — routed, untouched.
 - Everything MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-commavq (2026-07-15) — operator hypothesis "contest video in commaVQ" SETTLED: NOT CONTAINED (3 measured legs, $0, ~135 MB bounded) [no-triality: dataset-provenance verdict, no lever/equation]
+- **Hypothesis (operator 2026-07-15):** the contest video is in `commaai/commavq`. **VERDICT: NOT
+  CONTAINED** — memo `.omx/research/commavq_containment_and_exploit_menu_20260715.md` + ledger row
+  `papers_checked_commavq_dataset_containment_20260715.md`; artifacts
+  `.omx/research/commavq_containment_probe_20260715/` (sweep script + per-zip results + full
+  100k name index gz).
+- **Leg A (provenance, decisive):** commaVQ tokens are comma-three-era **ecamera** footage
+  (`transform_img` hard-codes SCALE=567/455 = the fl-567 wide cam; example
+  `sample_video_ecamera.hevc`; VQ input 256×128). Contest clip = 2018 EON comma2k19 road cam
+  fl=910 — a device generation with NO ecamera ⇒ comma2k19 ⊄ commaVQ source corpus.
+- **Leg B (name index, measured):** full 100,000-member listing extracted via ZIP
+  central-directory range requests (no bulk download; 50,220 unique anonymized 32-hex route
+  hashes); MD5 of 6 route-id encodings: 0 matches.
+- **Leg C (pose sweep, measured):** all 3,203 segment-index-10 `pose.npy` (1200×6) range-extracted
+  and speed-profile-correlated vs our local comma2k19 GT (mean 31.75 m/s): corr max 0.9431 /
+  median 0.0275; 0 pass corr≥0.99; 0 pass joint band+0.95; best in-band candidate REJECTED by
+  high-frequency detrended corr 0.1008. verdict_scope FORMULATION (index-10 slice + corpus
+  provenance; re-cut-index untested but mooted by Leg A).
+- **Residue banked:** (1) rate benchmark — comma's own VQ spends 192 KB raw / ~48 KB
+  GPT-AC-coded per driving minute at far-below-scorer quality ⇒ corroborates task-space-witness
+  parsimony over generic token codecs; (2) the surviving corpus lever is comma2k19
+  temporal-neighbor segments (`/9`,`/11`, same route/rig, downloadable) as train-time side
+  information — noted, un-actioned (d_seg is the binding axis, pose solved); (3) reusable method:
+  HF ZIP central-directory range-listing + per-member range extraction (429-safe pacing).
+- Closes a corpus-mining detour before it spent anything. MEANS; **pointer 0.19108 UNMOVED.**
