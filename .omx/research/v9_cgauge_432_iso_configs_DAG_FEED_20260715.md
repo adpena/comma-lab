@@ -1,8 +1,8 @@
 # DAG FEED — V9 CGauge top-3 one-delta ISO configs — 2026-07-15
 
-**FEED:** `FEED-V9-CGAUGE-432-ISO-CONFIGS-20260715`  
-**Lane:** `lane_v9_cgauge_iso_configs_20260715`  
-**Status:** `BUILD_COMPLETE / THREE_DRY_RUNS_PASS / PREPARED_NOT_FIRED`  
+**FEED:** `FEED-V9-CGAUGE-432-ISO-CONFIGS-20260715`
+**Lane:** `lane_v9_cgauge_iso_configs_20260715`
+**Status:** `BUILD_COMPLETE / THREE_DRY_RUNS_PASS / PREPARED_NOT_FIRED`
 **Pointer:** submittable `0.19108`, borrowed-bank `0.18804`; both unchanged.
 
 ## State transition
