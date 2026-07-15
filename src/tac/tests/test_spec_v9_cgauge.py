@@ -577,3 +577,74 @@ def test_iso_lever_factories_are_registry_mapped() -> None:
     ):
         assert flag in report.mapped
         assert flag not in report.unmapped
+
+
+# ───────────────────────── task #438 smoke-regime cost arm ─────────────────────────
+@pytest.fixture(scope="module")
+def smoke_regime_432():
+    from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_432_smoke_regime_config
+
+    return compile_v9_cgauge_432_smoke_regime_config(_GT, num_pairs=600, epochs=3000)
+
+
+def test_smoke_regime_factory_actually_forces_post_event_backstops(
+    smoke_regime_432, launch_432
+) -> None:
+    """The factory must be INVOKED and the forced values must reach the emitted
+    argv — this is the test the 2026-07-15 recovery landing lacked (the flag
+    ``--seg-temporal-screw-start-epoch`` is Lever-resident, not base-resident,
+    so a base-only override raised at invocation)."""
+    from tac.witness_dsl.spec_v9_cgauge import (
+        V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS,
+    )
+
+    def pairs(argv):
+        out, toks = {}, list(argv)
+        i = 0
+        while i < len(toks):
+            if toks[i].startswith("--"):
+                if i + 1 < len(toks) and not str(toks[i + 1]).startswith("--"):
+                    out[toks[i]] = str(toks[i + 1])
+                    i += 2
+                    continue
+                out[toks[i]] = True
+            i += 1
+        return out
+
+    smoke = pairs(smoke_regime_432.typed.to_program().compile_trainer_argv())
+    launch = pairs(launch_432.typed.to_program().compile_trainer_argv())
+    for flag, forced in V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS.items():
+        assert smoke[flag] == str(forced), flag
+        assert launch[flag] != str(forced), flag
+    changed = {key for key in smoke if smoke.get(key) != launch.get(key)}
+    assert changed == set(V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS)
+
+
+def test_smoke_regime_is_typed_hash_distinct_validated_and_parseable(
+    smoke_regime_432, launch_432
+) -> None:
+    from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
+
+    assert smoke_regime_432.typed.validate_program() == []
+    assert (
+        smoke_regime_432.typed.typed_config_hash()
+        != launch_432.typed.typed_config_hash()
+    )
+    argv = list(smoke_regime_432.typed.to_program().compile_trainer_argv())
+    ns = build_real_trainer_parser().parse_args(argv[2:])
+    assert ns.lane_band_start_epoch == 1
+    assert ns.seg_chroma_boundary_start_epoch == 1
+    assert ns.seg_temporal_screw_start_epoch == 1
+
+
+def test_smoke_regime_manifests_declare_non_promotable_forcing(smoke_regime_432) -> None:
+    manifest = smoke_regime_432.dsl_program_manifest
+    assert manifest["program_name"] == "v9_cgauge_432_smoke_regime"
+    assert manifest["smoke_regime_forced_starts"] == {
+        "--lane-band-start-epoch": 1,
+        "--seg-chroma-boundary-start-epoch": 1,
+        "--seg-temporal-screw-start-epoch": 1,
+    }
+    constants_row = smoke_regime_432.constants_manifest["smoke_regime_forced_starts"]
+    assert constants_row["ladder_class"] == "measurement_apparatus_forced"
+    assert "NON-PROMOTABLE" in constants_row["note"]

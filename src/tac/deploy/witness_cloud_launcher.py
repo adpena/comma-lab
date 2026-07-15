@@ -44,7 +44,17 @@ TASK438_GT_CACHE_SHA256 = (
 )
 TASK438_GT_CACHE_BYTES = 5_078_017_610
 TYPED_EPOCH_HORIZON = 3000
+# Maximum explicit runtime stop (1..3). ``stop_after_epochs=None`` selects
+# timeout-stop mode: the trainer runs toward the typed horizon and the
+# 1500-second child timeout is the stop. Timeout-stop is the canonical #438
+# smoke shape (operator 2026-07-15: a 3-warmup-epoch cutoff is a toy-regime
+# measurement; the smoke must reach + measure the expensive post-event regime).
 DEFAULT_STOP_AFTER_EPOCHS = 3
+# Named typed-DSL configs the remote driver may compile. smoke_regime is the
+# #438 cost-regime variant (post-event backstops forced to 1): NON-PROMOTABLE
+# timing evidence, never a science arm.
+V9_DSL_CONFIGS = ("v9_cgauge_432_launch", "v9_cgauge_432_smoke_regime")
+DEFAULT_DSL_CONFIG = "v9_cgauge_432_launch"
 CHILD_TIMEOUT_SECONDS = 1500
 INVOCATION_TIMEOUT_SECONDS = 1800
 # Canonical Modal GPU string (per https://modal.com/docs/guide/gpu). We use the
@@ -105,7 +115,8 @@ class WitnessCloudPlan:
     resume_sha256: str | None
     epochs: int
     num_pairs: int
-    stop_after_epochs: int
+    dsl_config: str
+    stop_after_epochs: int | None
     child_timeout_seconds: int
     invocation_timeout_seconds: int
     gpu_usd_per_hour_ceiling: float
@@ -176,7 +187,8 @@ def build_plan(
     gt_cache_bytes: int = TASK438_GT_CACHE_BYTES,
     segnet_sha256: str | None = None,
     posenet_sha256: str | None = None,
-    stop_after_epochs: int = DEFAULT_STOP_AFTER_EPOCHS,
+    dsl_config: str = DEFAULT_DSL_CONFIG,
+    stop_after_epochs: int | None = None,
     child_timeout_seconds: float = CHILD_TIMEOUT_SECONDS,
     invocation_timeout_seconds: float = INVOCATION_TIMEOUT_SECONDS,
     gpu_usd_per_hour_ceiling: float = H100_GPU_USD_PER_HOUR,
@@ -187,7 +199,10 @@ def build_plan(
 
     The V9 timing smoke intentionally preserves its 3000-epoch typed DSL
     horizon. ``stop_after_epochs`` is runtime control-plane state and is kept
-    out of that scientific config/hash.
+    out of that scientific config/hash; ``None`` (the default) selects
+    timeout-stop mode where the 1500-second child timeout is the stop.
+    ``dsl_config`` selects the named typed factory (scientific identity lives
+    in the factory's typed hash, not in this plan field).
     """
     if provider not in {"modal", "aws", "gcp"}:
         raise ValueError("provider must be one of modal, aws, gcp")
@@ -207,8 +222,14 @@ def build_plan(
         raise ValueError("num_pairs must equal the fixed 600-pair Task438 smoke custody")
     if not isinstance(gt_cache_bytes, int) or gt_cache_bytes <= 0:
         raise ValueError("gt_cache_bytes must be a positive integer")
-    if not 1 <= stop_after_epochs <= DEFAULT_STOP_AFTER_EPOCHS:
-        raise ValueError("stop_after_epochs must be within 1..3")
+    if dsl_config not in V9_DSL_CONFIGS:
+        raise ValueError(
+            f"dsl_config must be one of {V9_DSL_CONFIGS}; got {dsl_config!r}"
+        )
+    if stop_after_epochs is not None and not (
+        1 <= stop_after_epochs <= DEFAULT_STOP_AFTER_EPOCHS
+    ):
+        raise ValueError("stop_after_epochs must be None (timeout-stop) or within 1..3")
     for name, value in (
         ("child_timeout_seconds", child_timeout_seconds),
         ("invocation_timeout_seconds", invocation_timeout_seconds),
@@ -270,7 +291,10 @@ def build_plan(
             "WITNESS_GT_CACHE": remote_gt or "",
             "WITNESS_OUT_DIR": remote_out,
             "WITNESS_EPOCHS": str(epochs),
-            "WITNESS_STOP_AFTER_EPOCHS": str(stop_after_epochs),
+            "WITNESS_DSL_CONFIG": dsl_config,
+            "WITNESS_STOP_AFTER_EPOCHS": (
+                "" if stop_after_epochs is None else str(stop_after_epochs)
+            ),
             "WITNESS_CHILD_TIMEOUT_SECONDS": str(CHILD_TIMEOUT_SECONDS),
             "WITNESS_NUM_PAIRS": str(num_pairs),
             "WITNESS_RESUME_FROM": resume_from or "",
@@ -332,7 +356,7 @@ def build_plan(
         + custody_blockers
     )
     base: dict[str, object] = {
-        "schema": "witness_cloud_plan.v7",
+        "schema": "witness_cloud_plan.v8",
         "provider": provider,
         "status": contract.status,
         "lane_id": LANE_ID,
@@ -350,6 +374,7 @@ def build_plan(
         "resume_sha256": resume_digest,
         "epochs": epochs,
         "num_pairs": num_pairs,
+        "dsl_config": dsl_config,
         "stop_after_epochs": stop_after_epochs,
         "child_timeout_seconds": CHILD_TIMEOUT_SECONDS,
         "invocation_timeout_seconds": INVOCATION_TIMEOUT_SECONDS,
@@ -392,6 +417,7 @@ __all__ = [
     "CHILD_TIMEOUT_SECONDS",
     "CPU_PREFLIGHT_SECONDS",
     "CUDA_ENV",
+    "DEFAULT_DSL_CONFIG",
     "DEFAULT_STOP_AFTER_EPOCHS",
     "EXACT_H100_GPU",
     "H100_GPU_USD_PER_HOUR",
@@ -404,6 +430,7 @@ __all__ = [
     "TASK438_GT_CACHE_BYTES",
     "TASK438_GT_CACHE_SHA256",
     "TYPED_EPOCH_HORIZON",
+    "V9_DSL_CONFIGS",
     "WitnessCloudPlan",
     "build_plan", "render_command",
 ]

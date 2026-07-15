@@ -116,10 +116,24 @@ def _flag_map(argv: tuple[str, ...]) -> dict[str, Any]:
     return out
 
 
-def derive_config(args) -> tuple[dict[str, Any], str, tuple[str, ...]]:
-    from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_432_launch_config
+# Named DSL config selection (runtime plumbing only: each name resolves to a
+# typed spec_v9_cgauge factory whose typed hash is the scientific identity).
+# "v9_cgauge_432_smoke_regime" is the #438 CUDA timing-smoke cost-regime
+# variant: NON-PROMOTABLE timing evidence, never a science arm.
+V9_DSL_CONFIG_CHOICES = ("v9_cgauge_432_launch", "v9_cgauge_432_smoke_regime")
 
-    compiled = compile_v9_cgauge_432_launch_config(
+
+def derive_config(args) -> tuple[dict[str, Any], str, tuple[str, ...]]:
+    from tac.witness_dsl.spec_v9_cgauge import (
+        compile_v9_cgauge_432_launch_config,
+        compile_v9_cgauge_432_smoke_regime_config,
+    )
+
+    factory = {
+        "v9_cgauge_432_launch": compile_v9_cgauge_432_launch_config,
+        "v9_cgauge_432_smoke_regime": compile_v9_cgauge_432_smoke_regime_config,
+    }[getattr(args, "dsl_config", "v9_cgauge_432_launch")]
+    compiled = factory(
         args.gt_cache, num_pairs=args.num_pairs, epochs=args.epochs, out_dir=args.out_dir
     )
     argv = tuple(compiled.typed.to_program().compile_trainer_argv())
@@ -144,6 +158,15 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--expected-posenet-sha256")
     ap.add_argument("--verify-only", action="store_true")
     ap.add_argument("--compile-probe", action="store_true")
+    ap.add_argument(
+        "--dsl-config",
+        choices=V9_DSL_CONFIG_CHOICES,
+        default="v9_cgauge_432_launch",
+        help=(
+            "Named typed-DSL config to compile (default: the science launch "
+            "config; smoke_regime is #438 NON-PROMOTABLE timing-cost evidence)"
+        ),
+    )
     return ap
 
 
@@ -997,6 +1020,7 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "schema": "v9_cgauge_torch_preflight.v1",
                     "status": "passed",
+                    "dsl_config": args.dsl_config,
                     "config_hash": cfg_hash,
                     "typed_total_epochs": args.epochs,
                     "runtime_stop_after_epochs": args.stop_after_epochs,
@@ -2162,6 +2186,7 @@ def main(argv: list[str] | None = None) -> int:
             "runtime_epochs_completed": last_completed_epoch - start,
             "runtime_stop_after_epochs": args.stop_after_epochs,
             "typed_total_epochs": args.epochs,
+            "dsl_config": args.dsl_config,
             "config_hash": cfg_hash,
             "scorer_sha256": scorer_sha256,
             "seed": int(flags["--seed"]),

@@ -49,11 +49,17 @@ def _kwargs(**overrides: object) -> dict[str, object]:
 def test_modal_plan_is_deterministic_sha_bound_and_cost_conservative():
     a = build_plan(**_kwargs())
     b = build_plan(**_kwargs())
-    assert a.schema == "witness_cloud_plan.v7"
+    assert a.schema == "witness_cloud_plan.v8"
     assert a.plan_sha256 == b.plan_sha256
     assert a.lane_id == LANE_ID
     assert a.source_git_head == "a" * 40
-    assert a.stop_after_epochs == DEFAULT_STOP_AFTER_EPOCHS == 3
+    # Default plan shape is timeout-stop (operator 2026-07-15: 3-warmup-epoch
+    # cutoffs are toy-regime); explicit stops remain bounded by 1..3.
+    assert a.stop_after_epochs is None
+    assert DEFAULT_STOP_AFTER_EPOCHS == 3
+    assert a.dsl_config == "v9_cgauge_432_launch"
+    assert a.environment["WITNESS_DSL_CONFIG"] == "v9_cgauge_432_launch"
+    assert a.environment["WITNESS_STOP_AFTER_EPOCHS"] == ""
     assert a.epochs == 3000
     assert a.num_pairs == 600
     assert a.child_timeout_seconds == CHILD_TIMEOUT_SECONDS == 1500
@@ -307,9 +313,13 @@ def _valid_local_preflight_receipt(plan) -> dict[str, object]:
     return {
         "schema": "v9_cgauge_torch_preflight.v1",
         "status": "passed",
+        "dsl_config": plan.dsl_config,
         "typed_total_epochs": plan.epochs,
         "runtime_stop_after_epochs": plan.stop_after_epochs,
-        "runtime_epoch_window": [1, plan.stop_after_epochs],
+        "runtime_epoch_window": [
+            1,
+            plan.epochs if plan.stop_after_epochs is None else plan.stop_after_epochs,
+        ],
         "resume_epoch": 0,
         "num_pairs": plan.num_pairs,
         "output_created": False,
@@ -629,13 +639,15 @@ def test_local_v9_preflight_uses_real_strict_flags_and_no_output(
         "--gt-cache": str(cache),
         "--num-pairs": "600",
         "--epochs": "3000",
-        "--stop-after-epochs": "3",
+        "--dsl-config": plan.dsl_config,
         "--expected-segnet-sha256": plan.segnet_sha256,
         "--expected-posenet-sha256": plan.posenet_sha256,
         "--device": "cpu",
     }
     for flag, value in expected_values.items():
         assert command[command.index(flag) + 1] == value
+    # Timeout-stop default: no explicit runtime stop flag reaches the trainer.
+    assert "--stop-after-epochs" not in command
     assert "--no-implicit-resume" in command
     assert "--preflight-only" in command
     assert "--resume-from" not in command
@@ -1196,3 +1208,30 @@ def test_scaffold_providers_refuse_execution_without_invented_actuator():
         assert plan.status == "scaffold"
         assert not plan.execution_allowed
         assert plan.asset_stage_argv == plan.dispatch_argv == plan.harvest_argv == ()
+
+
+def test_smoke_regime_dsl_config_threads_env_and_hash():
+    baseline = build_plan(**_kwargs())
+    smoke = build_plan(**_kwargs(dsl_config="v9_cgauge_432_smoke_regime"))
+    assert smoke.dsl_config == "v9_cgauge_432_smoke_regime"
+    assert smoke.environment["WITNESS_DSL_CONFIG"] == "v9_cgauge_432_smoke_regime"
+    assert smoke.plan_sha256 != baseline.plan_sha256
+    overrides = smoke.dispatch_argv[smoke.dispatch_argv.index("--env-overrides") + 1]
+    assert "WITNESS_DSL_CONFIG=v9_cgauge_432_smoke_regime" in overrides
+
+
+def test_explicit_stop_after_epochs_still_threads_env_and_hash():
+    timeout_stop = build_plan(**_kwargs())
+    explicit = build_plan(**_kwargs(stop_after_epochs=2))
+    assert explicit.stop_after_epochs == 2
+    assert explicit.environment["WITNESS_STOP_AFTER_EPOCHS"] == "2"
+    assert timeout_stop.environment["WITNESS_STOP_AFTER_EPOCHS"] == ""
+    assert explicit.plan_sha256 != timeout_stop.plan_sha256
+
+
+@pytest.mark.parametrize(
+    "value", ("v9_cgauge_433", "", None, "launch", "V9_CGAUGE_432_LAUNCH")
+)
+def test_plan_refuses_unknown_dsl_config(value):
+    with pytest.raises(ValueError, match="dsl_config"):
+        build_plan(**_kwargs(dsl_config=value))

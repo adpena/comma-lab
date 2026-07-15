@@ -19,12 +19,14 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from tac.deploy.witness_cloud_launcher import (  # noqa: E402
+    DEFAULT_DSL_CONFIG,
     EXACT_H100_GPU,
     POSENET_WEIGHTS,
     RESULTS_VOLUME,
     SEGNET_WEIGHTS,
     TASK438_GT_CACHE_BYTES,
     TASK438_GT_CACHE_SHA256,
+    V9_DSL_CONFIGS,
     build_plan,
     render_command,
 )
@@ -425,8 +427,8 @@ def _run_local_v9_preflight(plan, *, local_cache: Path) -> None:
         str(preflight_out),
         "--device",
         "cpu",
-        "--stop-after-epochs",
-        str(plan.stop_after_epochs),
+        "--dsl-config",
+        str(plan.dsl_config),
         "--no-implicit-resume",
         "--expected-segnet-sha256",
         str(plan.segnet_sha256),
@@ -434,6 +436,8 @@ def _run_local_v9_preflight(plan, *, local_cache: Path) -> None:
         str(plan.posenet_sha256),
         "--preflight-only",
     ]
+    if plan.stop_after_epochs is not None:
+        command[-1:-1] = ["--stop-after-epochs", str(plan.stop_after_epochs)]
     try:
         proc = subprocess.run(
             command,
@@ -464,11 +468,15 @@ def _run_local_v9_preflight(plan, *, local_cache: Path) -> None:
             break
     if receipt is None:
         raise SystemExit("REFUSED: local V9 trainer preflight omitted its passed receipt")
+    expected_end_epoch = (
+        plan.epochs if plan.stop_after_epochs is None else plan.stop_after_epochs
+    )
     expected_values = {
         "status": "passed",
+        "dsl_config": plan.dsl_config,
         "typed_total_epochs": plan.epochs,
         "runtime_stop_after_epochs": plan.stop_after_epochs,
-        "runtime_epoch_window": [1, plan.stop_after_epochs],
+        "runtime_epoch_window": [1, expected_end_epoch],
         "resume_epoch": 0,
         "num_pairs": plan.num_pairs,
     }
@@ -711,6 +719,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gpu", default=EXACT_H100_GPU)
     ap.add_argument("--epochs", type=int, default=3000)
     ap.add_argument("--num-pairs", type=int, default=600)
+    ap.add_argument(
+        "--dsl-config",
+        choices=V9_DSL_CONFIGS,
+        default=DEFAULT_DSL_CONFIG,
+        help=(
+            "Named typed-DSL config the remote driver compiles "
+            "(smoke_regime = #438 NON-PROMOTABLE cost-regime variant)"
+        ),
+    )
+    ap.add_argument(
+        "--stop-after-epochs",
+        type=int,
+        default=None,
+        help=(
+            "Explicit runtime stop (1..3). Default None = timeout-stop: the "
+            "1500-second child timeout is the stop"
+        ),
+    )
     ap.add_argument("--resume-from")
     ap.add_argument("--resume-sha256")
     ap.add_argument("--gt-cache-sha256", help="Required exact SHA-256 for custody and staging")
@@ -738,7 +764,10 @@ def main(argv: list[str] | None = None) -> int:
     plan = build_plan(
         provider=args.provider, source_git_head=source_git_head,
         gt_cache=args.gt_cache, label=args.label, gpu=args.gpu,
-        epochs=args.epochs, num_pairs=args.num_pairs, resume_from=args.resume_from,
+        epochs=args.epochs, num_pairs=args.num_pairs,
+        dsl_config=args.dsl_config,
+        stop_after_epochs=args.stop_after_epochs,
+        resume_from=args.resume_from,
         resume_sha256=args.resume_sha256,
         gt_cache_sha256=args.gt_cache_sha256,
         gt_cache_bytes=TASK438_GT_CACHE_BYTES,

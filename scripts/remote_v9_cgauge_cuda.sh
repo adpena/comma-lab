@@ -17,6 +17,7 @@ POSENET_SHA256="${WITNESS_POSENET_SHA256:-}"
 OUT_DIR="${WITNESS_OUT_DIR:-}"
 EPOCHS="${WITNESS_EPOCHS:-3000}"
 STOP_AFTER_EPOCHS="${WITNESS_STOP_AFTER_EPOCHS:-}"
+DSL_CONFIG="${WITNESS_DSL_CONFIG:-v9_cgauge_432_launch}"
 CHILD_TIMEOUT_SECONDS="${WITNESS_CHILD_TIMEOUT_SECONDS:-}"
 NUM_PAIRS="${WITNESS_NUM_PAIRS:-600}"
 RESUME_FROM="${WITNESS_RESUME_FROM:-}"
@@ -63,15 +64,27 @@ if [[ ! "$GT_CACHE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
   exit 69
 fi
 require_positive_integer WITNESS_EPOCHS "$EPOCHS"
-require_positive_integer WITNESS_STOP_AFTER_EPOCHS "$STOP_AFTER_EPOCHS"
+# Empty WITNESS_STOP_AFTER_EPOCHS selects timeout-stop mode: the trainer runs
+# toward the typed horizon and the 1500-second child timeout is the stop
+# (operator 2026-07-15: a 3-warmup-epoch cutoff is a toy-regime measurement).
+if [ -n "$STOP_AFTER_EPOCHS" ]; then
+  require_positive_integer WITNESS_STOP_AFTER_EPOCHS "$STOP_AFTER_EPOCHS"
+  if [ "$STOP_AFTER_EPOCHS" -gt 3 ]; then
+    echo "REFUSED: WITNESS_STOP_AFTER_EPOCHS must be empty (timeout-stop) or within 1..3" >&2
+    exit 66
+  fi
+fi
 require_positive_integer WITNESS_NUM_PAIRS "$NUM_PAIRS"
 require_positive_integer WITNESS_CHILD_TIMEOUT_SECONDS "$CHILD_TIMEOUT_SECONDS"
+case "$DSL_CONFIG" in
+  v9_cgauge_432_launch|v9_cgauge_432_smoke_regime) ;;
+  *)
+    echo "REFUSED: WITNESS_DSL_CONFIG must be v9_cgauge_432_launch or v9_cgauge_432_smoke_regime; got '$DSL_CONFIG'" >&2
+    exit 66
+    ;;
+esac
 if [ "$EPOCHS" -ne 3000 ]; then
   echo "REFUSED: WITNESS_EPOCHS must retain the 3000-epoch typed horizon" >&2
-  exit 66
-fi
-if [ "$STOP_AFTER_EPOCHS" -gt 3 ]; then
-  echo "REFUSED: WITNESS_STOP_AFTER_EPOCHS must be within 1..3" >&2
   exit 66
 fi
 if [ "$CHILD_TIMEOUT_SECONDS" -ne 1500 ]; then
@@ -188,11 +201,14 @@ TRAINER_ARGS=(
   --out-dir "$OUT_DIR"
   --device cuda
   --compile-probe
-  --stop-after-epochs "$STOP_AFTER_EPOCHS"
+  --dsl-config "$DSL_CONFIG"
   --no-implicit-resume
   --expected-segnet-sha256 "$SEGNET_SHA256"
   --expected-posenet-sha256 "$POSENET_SHA256"
 )
+if [ -n "$STOP_AFTER_EPOCHS" ]; then
+  TRAINER_ARGS+=(--stop-after-epochs "$STOP_AFTER_EPOCHS")
+fi
 if [ -n "$RESUME_FROM" ]; then
   TRAINER_ARGS+=(--resume-from "$RESUME_FROM")
 fi

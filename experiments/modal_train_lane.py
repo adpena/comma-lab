@@ -105,6 +105,9 @@ from tac.deploy.witness_cloud_launcher import (
     TYPED_EPOCH_HORIZON as V9_TYPED_EPOCH_HORIZON,
 )
 from tac.deploy.witness_cloud_launcher import (
+    V9_DSL_CONFIGS,
+)
+from tac.deploy.witness_cloud_launcher import (
     _validate_modal_custody_path as _validate_v9_modal_custody_path,
 )
 
@@ -147,6 +150,7 @@ V9_UNIQUE_ENV_KEYS = frozenset(
         "WITNESS_POSENET_SHA256",
         "WITNESS_RESUME_SHA256",
         "WITNESS_STOP_AFTER_EPOCHS",
+        "WITNESS_DSL_CONFIG",
     }
 )
 
@@ -443,6 +447,7 @@ def _validate_v9_env_controls(*, label: str, overrides: dict[str, str]) -> None:
         "WITNESS_GT_CACHE",
         "WITNESS_OUT_DIR",
         "WITNESS_EPOCHS",
+        "WITNESS_DSL_CONFIG",
         "WITNESS_STOP_AFTER_EPOCHS",
         "WITNESS_CHILD_TIMEOUT_SECONDS",
         "WITNESS_NUM_PAIRS",
@@ -464,13 +469,24 @@ def _validate_v9_env_controls(*, label: str, overrides: dict[str, str]) -> None:
     fixed_values = {
         "WITNESS_TRAINER_MODE": "full",
         "WITNESS_EPOCHS": str(V9_TYPED_EPOCH_HORIZON),
-        "WITNESS_STOP_AFTER_EPOCHS": str(V9_STOP_AFTER_EPOCHS),
         "WITNESS_CHILD_TIMEOUT_SECONDS": str(V9_CHILD_TIMEOUT_SECONDS),
         "WITNESS_NUM_PAIRS": "600",
     }
     for key, expected in fixed_values.items():
         if overrides[key] != expected:
             raise ValueError(f"V9 env {key} must equal {expected!r}")
+    if overrides["WITNESS_DSL_CONFIG"] not in V9_DSL_CONFIGS:
+        raise ValueError(
+            f"V9 env WITNESS_DSL_CONFIG must be one of {sorted(V9_DSL_CONFIGS)}"
+        )
+    allowed_stop_values = {""} | {
+        str(value) for value in range(1, V9_STOP_AFTER_EPOCHS + 1)
+    }
+    if overrides["WITNESS_STOP_AFTER_EPOCHS"] not in allowed_stop_values:
+        raise ValueError(
+            "V9 env WITNESS_STOP_AFTER_EPOCHS must be '' (timeout-stop) or one of "
+            f"{sorted(value for value in allowed_stop_values if value)}"
+        )
     for key in (
         "WITNESS_GT_CACHE_SHA256",
         "WITNESS_SEGNET_SHA256",

@@ -792,16 +792,43 @@ def compile_v9_cgauge_432_smoke_regime_config(
         gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir
     )
     typed = base_compiled.typed
-    for flag in V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS:
-        if flag not in typed.base:
+    # A forced flag may live in ``typed.base`` (lane_band / chroma_boundary) OR
+    # in a Lever's overrides (temporal_screw emits its backstop via the
+    # temporal_screw_consistency Lever, never base). Force it wherever it
+    # actually lives; refuse absence AND base/lever ambiguity so the override
+    # can neither silently no-op nor double-emit.
+    base_updates: dict[str, int] = {}
+    levers = list(typed.levers)
+    for flag, forced in V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS.items():
+        owner_indices = [
+            index for index, lever in enumerate(levers) if flag in lever.overrides
+        ]
+        in_base = flag in typed.base
+        if in_base and owner_indices:
+            raise ValueError(
+                f"smoke-regime gate: forced flag {flag} is present in BOTH the "
+                "compiled base and a Lever override — ambiguous ownership would "
+                "double-emit (config drift; re-derive the forced set)"
+            )
+        if in_base:
+            base_updates[flag] = forced
+            continue
+        if len(owner_indices) != 1:
             raise ValueError(
                 f"smoke-regime gate: forced flag {flag} is absent from the "
-                "compiled v9_cgauge_432 base — the regime override would "
-                "silently no-op (config drift; re-derive the forced set)"
+                "compiled v9_cgauge_432 base and owned by "
+                f"{len(owner_indices)} levers — the regime override would "
+                "silently no-op or double-emit (config drift; re-derive the "
+                "forced set)"
             )
+        owner = levers[owner_indices[0]]
+        levers[owner_indices[0]] = owner.model_copy(
+            update={"overrides": {**owner.overrides, flag: forced}}
+        )
     typed = typed.model_copy(
         update={
-            "base": {**typed.base, **V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS},
+            "base": {**typed.base, **base_updates},
+            "levers": tuple(levers),
         }
     )
     viol = typed.validate_program()
@@ -884,12 +911,11 @@ V9_CGAUGE_IDEAL_EXCLUSIONS: dict[str, str] = {
 
 def _typed_ideal_lever(lever):
     """Lossless curriculum-DSL Lever -> typed-config adapter."""
-    from tac.witness_dsl.typed_config import TypedLever
-
     # Canonical symmetric codec (tac.witness_dsl.lawref) — the same declarations are
     # decoded back to LawRef objects by TypedLever.to_dsl() on the deserialized path,
     # so the dsl_compile_hash self-recompile sees identical LawRef custody.
     from tac.witness_dsl.lawref import lawref_to_declaration
+    from tac.witness_dsl.typed_config import TypedLever
 
     declarations = {
         flag: lawref_to_declaration(ref) for flag, ref in lever.lawrefs.items()
@@ -1440,12 +1466,12 @@ __all__ = [
     "V9_CGAUGE_IDEAL_EXPECTED_ADDITIONS",
     "V9_CGAUGE_IDEAL_SR_EQUATION_ID",
     "V9_CGAUGE_IDEAL_SR_EXPECTED_ADDITION",
-    "V9_CGAUGE_PROVENANCE",
     "V9_CGAUGE_ISO_CONFIG_IDS",
+    "V9_CGAUGE_PROVENANCE",
     "compile_v9_cgauge_432_horizon_iso_launch_config",
+    "compile_v9_cgauge_432_launch_config",
     "compile_v9_cgauge_432_step_iso_launch_config",
     "compile_v9_cgauge_432_taper_off_launch_config",
-    "compile_v9_cgauge_432_launch_config",
     "compile_v9_cgauge_config",
     "compile_v9_cgauge_ideal_launch_config",
     "compile_v9_cgauge_ideal_mod19_launch_config",
