@@ -246,6 +246,7 @@ def per_dim_bit_allocation_hint(per_dim_util: np.ndarray, per_dim_sensitivity: n
 
 def per_dim_dseg_ablation(
     code_table: np.ndarray, dims: "list[int]", render_dseg_fn, *, baseline_dseg: float,
+    workers: int = 0,
 ) -> list[float]:
     """Per-dim d_seg ATTRIBUTION by zero-ablation: for each dim ``j`` in ``dims``, zero column ``j`` of
     a COPY of the code table, hand the copy to ``render_dseg_fn`` (the trainer's K-pair render+SegNet
@@ -255,19 +256,34 @@ def per_dim_dseg_ablation(
     SCORE-NEUTRAL: the ablation is on ``code_table.copy()`` — the input table is never mutated, and
     ``render_dseg_fn`` is expected to be a read-only render (the trainer supplies a closure over
     deploy weights it does not modify). ``render_dseg_fn`` failing on a dim records ``nan`` for that
-    dim rather than aborting the sweep (NO-FAKE: never a fabricated Δ)."""
+    dim rather than aborting the sweep (NO-FAKE: never a fabricated Δ).
+
+    ``workers`` (#509 burn-down batch 3, 2026-07-15): when >= 2, fan the per-dim calls across a
+    ThreadPoolExecutor — this OBSERVABILITY-ONLY probe is the measured verdict-epoch tail burner
+    (~443 s of the 630 s n24 ep25 tail = (mod_dim+1) x (K-pair numpy render + CPU SegNet), each
+    call independent + read-only). VALUES IDENTICAL by construction: each dim's input (an
+    independent copy) and output are exactly the sequential ones; ``Executor.map`` preserves dim
+    order; per-dim nan semantics preserved (the try/except rides inside the mapped fn). Same
+    idle-core legality as the verdict workers lever (advisory path, never read into training).
+    ``workers<=1`` => the incumbent sequential loop, byte-identical."""
     M = np.asarray(code_table, np.float64)
     if M.ndim != 2:
         raise ValueError(f"code_table must be 2-D; got shape {M.shape}")
-    out: list[float] = []
-    for j in dims:
+
+    def _one(j: int) -> float:
         cc = M.copy()
         cc[:, int(j)] = 0.0
         try:
-            out.append(float(render_dseg_fn(cc)) - float(baseline_dseg))
+            return float(render_dseg_fn(cc)) - float(baseline_dseg)
         except Exception:
-            out.append(float("nan"))
-    return out
+            return float("nan")
+
+    if int(workers) >= 2 and len(dims) > 1:
+        from concurrent.futures import ThreadPoolExecutor  # noqa: PLC0415
+
+        with ThreadPoolExecutor(max_workers=int(workers)) as ex:
+            return list(ex.map(_one, [int(j) for j in dims]))
+    return [_one(int(j)) for j in dims]
 
 
 # ── row assemblers ───────────────────────────────────────────────────────────────────────────────

@@ -61,6 +61,38 @@ MARGINAL_GB_PER_WORKER = 2.9
 SIZED_WORKERS = 8
 
 
+def derived_verdict_workers(
+    available_gib: "float | None" = None, *, safe_frac: float = 0.70,
+) -> int:
+    """DERIVED sizing for ``VerdictParallelWorkers`` (value-provenance rung: DERIVED from the
+    measured anchor constants of this law — never a hand-typed count).
+
+    Largest ``w`` in ``[2, SIZED_WORKERS]`` whose projected pool RSS fits the safe fraction of
+    available memory::
+
+        base + w * MARGINAL_GB_PER_WORKER <= safe_frac * available_gib
+        base = PEAK_RSS_GIB - SIZED_WORKERS * MARGINAL_GB_PER_WORKER   (measured intercept)
+
+    ``SIZED_WORKERS`` (=8) is the measured ladder top — no efficiency evidence beyond w=8, so
+    the derivation never extrapolates above it. ``available_gib=None`` reads live available
+    memory via psutil; any failure returns the conservative floor 2 (fewest parallel workers =
+    least memory risk; 0/1 sequential is composed by NOT composing the lever, per the
+    off-is-orphan rule). Deterministic given ``available_gib``."""
+    if available_gib is None:
+        try:
+            import psutil  # noqa: PLC0415
+
+            available_gib = float(psutil.virtual_memory().available) / 2**30
+        except Exception:
+            return 2
+    base_gib = PEAK_RSS_GIB - SIZED_WORKERS * MARGINAL_GB_PER_WORKER
+    budget = float(safe_frac) * float(available_gib) - base_gib
+    if budget <= 0:
+        return 2
+    w = int(budget // MARGINAL_GB_PER_WORKER)
+    return max(2, min(int(SIZED_WORKERS), w))
+
+
 def verdict_wall_projection(wall_sequential_s: float, workers: int) -> float:
     """Project the scorer-forward verdict wall at N workers from the measured efficiency
     ladder (linear interpolation of eta between the measured points; eta clamps to the
@@ -193,6 +225,7 @@ __all__ = [
     "WALL_W6_S",
     "WALL_W8_S",
     "build_verdict_parallel_workers_speedup_v1",
+    "derived_verdict_workers",
     "populate_verdict_parallel_workers_speedup_equation",
     "verdict_wall_projection",
 ]

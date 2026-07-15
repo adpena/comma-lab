@@ -2717,7 +2717,7 @@ def LaneBandStaticCache(enabled: bool = True) -> Lever:
                        "sec/ep lever; OFF arm = the A/B control)")
 
 
-def VerdictParallelWorkers(workers: int = 4) -> Lever:
+def VerdictParallelWorkers(workers: "int | None" = None) -> Lever:
     """#509 burn-down 2 / m5max unconstrained-leverage constraint 4 (2026-07-15): fan the
     ADVISORY CPU-torch verdict's ``--verdict-batch`` chunks across ``workers``
     ThreadPoolExecutor threads (idle CPU cores).
@@ -2735,8 +2735,20 @@ def VerdictParallelWorkers(workers: int = 4) -> Lever:
     Memory: the #205 per-chunk transient is multiplied by chunks in flight (<= workers);
     size against free-RSS headroom (safe-run guard + launcher memory preflight stay).
     Default-OFF at the trainer (0 = sequential, byte-identical); this factory is the
-    DSL custody so the flag is never hand-typed. means != ends: sec lever on the
-    advisory verdict path; NO score claim; pointer UNMOVED."""
+    DSL custody so the flag is never hand-typed. ``workers=None`` (the default) DERIVES
+    the count from measured headroom via the registered law
+    (``verdict_parallel_workers_speedup_v1``:
+    ``derived_verdict_workers`` — base + w*2.9 GiB <= 0.70*available, capped at the
+    measured ladder top w=8; value-provenance DERIVED, never a hand count). The wired
+    trainer path self-checks bit-identity on its FIRST parallel verdict (chunk-0
+    sequential recompute; mismatch => confound_alarm + permanent sequential fallback).
+    means != ends: sec lever on the advisory verdict path; NO score claim; pointer
+    UNMOVED."""
+    if workers is None:
+        from tac.canonical_equations.verdict_parallel_workers_speedup_20260715 import (  # noqa: PLC0415
+            derived_verdict_workers,
+        )
+        workers = derived_verdict_workers()
     w = int(workers)
     if w < 2:
         raise ValueError(

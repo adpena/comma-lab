@@ -229,3 +229,28 @@ def test_ablation_row_shape():
     assert row["delta_d_seg"] == [0.01, None, 0.0]  # nan -> None (JSON-safe)
     assert row["bit_allocation_hint"] is not None and len(row["bit_allocation_hint"]) == 3
     assert row["k_sample"] == 32
+
+
+def test_ablation_parallel_values_identical_to_sequential():
+    """(#509) workers>=2 fans the per-dim calls across a thread pool with ordered
+    aggregation — the returned deltas must equal the sequential ones exactly (the
+    bit-identity claim), including per-dim nan semantics."""
+    rng = np.random.default_rng(7)
+    code = rng.standard_normal((12, 6))
+
+    def render_fn(cc):
+        if float(np.abs(cc[:, 3]).sum()) == 0.0:  # dim-3 arm deliberately fails
+            raise RuntimeError("boom")
+        return float(np.abs(cc).mean())
+
+    base = float(np.abs(code).mean())
+    dims = list(range(6))
+    seq = mdd.per_dim_dseg_ablation(code, dims, render_fn, baseline_dseg=base)
+    par = mdd.per_dim_dseg_ablation(code, dims, render_fn, baseline_dseg=base, workers=4)
+    assert len(seq) == len(par) == 6
+    for a, b in zip(seq, par):
+        if np.isnan(a):
+            assert np.isnan(b)
+        else:
+            assert float(a) == float(b)  # float-exact, not approx
+    assert np.isnan(par[3])  # failure semantics preserved under the pool

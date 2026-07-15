@@ -257,6 +257,37 @@ def _rss_gib() -> float:
             return -1.0
 
 
+# (#509) first-parallel-verdict identity self-check state (process-scoped). "verified" flips
+# True after chunk-0 pool-vs-sequential float-exact equality passes once; "disabled" flips True
+# on any mismatch (=> permanent sequential fallback + confound_alarm; the advisory verdict is
+# never taken from an unverified pool). Sister of the offline bench value-equality assertion.
+_VPW_IDENTITY: dict[str, bool] = {"verified": False, "disabled": False}
+
+
+def _vpw_chunk0_identity_check(
+    pool_chunk0: "list[float]", ref_chunk0: "list[float]", *, what: str, span: "tuple[int, int]",
+) -> bool:
+    """Float-exact comparison of the pool's chunk-0 per-pair values against the sequential
+    recompute. Returns True on pass (the CALLER marks the process verified after ALL checks
+    for the call pass); on mismatch emits a LOUD confound_alarm row and permanently disables
+    parallelism for the process (fail-safe). NaN anywhere compares unequal by design — a NaN
+    verdict is itself alarm-worthy."""
+    ok = (len(pool_chunk0) == len(ref_chunk0)
+          and all(float(a) == float(b) for a, b in zip(pool_chunk0, ref_chunk0)))
+    if ok:
+        return True
+    _VPW_IDENTITY["disabled"] = True
+    print(json.dumps({
+        "stage": "confound_alarm", "kind": "verdict_parallel_identity_mismatch",
+        "what": what, "chunk_span": list(span),
+        "pool": [float(x) for x in pool_chunk0][:8], "sequential": [float(x) for x in ref_chunk0][:8],
+        "action": "parallel verdict DISABLED for this process; call re-ran sequential",
+        "note": "bit-identity claim of verdict_parallel_workers_speedup_v1 violated on this host/"
+                "stack — re-bench before re-enabling (values must be float-exact by construction)"}),
+        flush=True)
+    return False
+
+
 def _verdict_dseg_dpose_chunked(
     seg_cpu: Any, posenet_cpu: Any,
     f0s: list, f1s: list, lstars: list, poses: list, *, vbatch: int,
@@ -302,8 +333,17 @@ def _verdict_dseg_dpose_chunked(
     read-only buffers and per-call input tensors. Memory: the #205 per-chunk transient
     is multiplied by the chunks IN FLIGHT (<= workers) — size ``workers`` against free-
     RSS headroom (the safe-run guard stays). ``workers<=1`` => the incumbent sequential
-    loop, byte-identical."""
+    loop, byte-identical.
+
+    IDENTITY SELF-CHECK (the in-path assertion the bench proved offline): on the FIRST
+    parallel call per process, chunk 0 is ALSO recomputed sequentially and compared
+    float-exact against the pool's chunk-0 output. Mismatch => a loud
+    ``confound_alarm`` row, parallelism PERMANENTLY DISABLED for the process, and the
+    call re-runs fully sequential (fail-safe: the verdict value is never taken from an
+    unverified pool). One-time cost: one extra chunk."""
     n = len(f1s)
+    if _VPW_IDENTITY["disabled"]:
+        workers = 0
     _par = int(workers) >= 2 and vbatch is not None and 0 < int(vbatch) < n
     if not return_realized:
         # ── UNCHANGED default path (byte-identical to the sealed #205 verdict) ──
@@ -326,6 +366,25 @@ def _verdict_dseg_dpose_chunked(
                     lambda se: cpu_verdict_d_pose_batch(
                         posenet_cpu, f0s[se[0]:se[1]], f1s[se[0]:se[1]], poses[se[0]:se[1]]),
                     spans)) if compute_pose else None)
+            if not _VPW_IDENTITY["verified"]:
+                s0, e0 = spans[0]
+                ok = _vpw_chunk0_identity_check(
+                    [float(x) for x in seg_lists[0]],
+                    [float(x) for x in cpu_verdict_d_seg_batch(seg_cpu, f1s[s0:e0], lstars[s0:e0])],
+                    what="d_seg", span=(s0, e0))
+                if ok and compute_pose:
+                    ok = _vpw_chunk0_identity_check(
+                        [float(x) for x in pose_lists[0]],
+                        [float(x) for x in cpu_verdict_d_pose_batch(
+                            posenet_cpu, f0s[s0:e0], f1s[s0:e0], poses[s0:e0])],
+                        what="d_pose", span=(s0, e0))
+                if not ok:
+                    return _verdict_dseg_dpose_chunked(
+                        seg_cpu, posenet_cpu, f0s, f1s, lstars, poses, vbatch=vbatch,
+                        return_realized=return_realized, compute_pose=compute_pose, workers=0)
+                _VPW_IDENTITY["verified"] = True
+                print(json.dumps({"stage": "verdict_parallel_identity_check", "ok": True,
+                                  "chunk_span": [s0, e0], "workers": int(workers)}), flush=True)
             ds_all = [d for lst in seg_lists for d in lst]
             if not compute_pose:
                 return float(np.mean(ds_all)), None
@@ -358,6 +417,36 @@ def _verdict_dseg_dpose_chunked(
                 lambda se: cpu_verdict_d_pose_batch(
                     posenet_cpu, f0s[se[0]:se[1]], f1s[se[0]:se[1]], poses[se[0]:se[1]]),
                 spans)) if compute_pose else None)
+        if not _VPW_IDENTITY["verified"]:
+            s0, e0 = spans[0]
+            _ref_ds, _ref_r = cpu_verdict_d_seg_argmax_batch(seg_cpu, f1s[s0:e0], lstars[s0:e0])
+            ok = _vpw_chunk0_identity_check(
+                [float(x) for x in seg_pairs[0][0]], [float(x) for x in _ref_ds],
+                what="d_seg_argmax", span=(s0, e0))
+            if ok:
+                ok = all(np.array_equal(np.asarray(seg_pairs[0][1][i]), np.asarray(_ref_r[i]))
+                         for i in range(e0 - s0))
+                if not ok:
+                    _VPW_IDENTITY["disabled"] = True
+                    print(json.dumps({
+                        "stage": "confound_alarm", "kind": "verdict_parallel_identity_mismatch",
+                        "what": "realized_maps", "chunk_span": [s0, e0],
+                        "action": "parallel verdict DISABLED for this process; call re-ran sequential",
+                        "note": "realized argmax maps differ pool-vs-sequential (bit-identity "
+                                "violated) — re-bench before re-enabling"}), flush=True)
+            if ok and compute_pose:
+                ok = _vpw_chunk0_identity_check(
+                    [float(x) for x in pose_lists[0]],
+                    [float(x) for x in cpu_verdict_d_pose_batch(
+                        posenet_cpu, f0s[s0:e0], f1s[s0:e0], poses[s0:e0])],
+                    what="d_pose", span=(s0, e0))
+            if not ok:
+                return _verdict_dseg_dpose_chunked(
+                    seg_cpu, posenet_cpu, f0s, f1s, lstars, poses, vbatch=vbatch,
+                    return_realized=return_realized, compute_pose=compute_pose, workers=0)
+            _VPW_IDENTITY["verified"] = True
+            print(json.dumps({"stage": "verdict_parallel_identity_check", "ok": True,
+                              "chunk_span": [s0, e0], "workers": int(workers)}), flush=True)
         ds_all = [d for ds_chunk, _r in seg_pairs for d in ds_chunk]
         realized_all = [_r[i] for (s, e), (_ds, _r) in zip(spans, seg_pairs) for i in range(e - s)]
         dp_all = ([d for lst in pose_lists for d in lst] if compute_pose else [])
@@ -8698,7 +8787,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
             base = _render_dseg(deploy["code"])
             dims = list(range(int(args.mod_dim)))
-            deltas = per_dim_dseg_ablation(deploy["code"], dims, _render_dseg, baseline_dseg=base)
+            # (#509) the per-dim sweep inherits the verdict workers pool (measured ~443 s of the
+            # 630 s n24 verdict-epoch tail; values identical — independent read-only per-dim calls,
+            # ordered aggregation). workers=0 (trainer default) => sequential, byte-identical.
+            deltas = per_dim_dseg_ablation(
+                deploy["code"], dims, _render_dseg, baseline_dseg=base,
+                workers=int(getattr(args, "verdict_parallel_workers", 0)))
             util = [float(x) for x in per_dim_film_consumption(_mdd_film_weights(deploy), int(args.mod_dim))]
             row = mod_dim_ablation_row(deltas, dims, util, epoch=int(ep), seg_form=seg_form,
                                        k_sample=len(kpairs))
