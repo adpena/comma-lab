@@ -1,8 +1,4 @@
-"""Tests for the launcher DSL-authored-config gate decision (tools/launch_witness_run.py).
-
-Covers the pure ``dsl_config_gate_action`` branches: ok / override / warn(dry-run,
-skip, migration-queue) / refuse(tampered, enforce-absent).
-"""
+"""Catalog #406 tests for the retired launcher DSL-bypass decision surface."""
 from __future__ import annotations
 
 import importlib.util
@@ -30,8 +26,16 @@ def lw():
 
 
 def _act(lw, **over):
-    kw = dict(ok=False, detail="d", manifest_absent=False, config="crucible_v6",
-              dry_run=False, skip=False, enforce=False, allow_rationale=None)
+    kw = {
+        "ok": False,
+        "detail": "d",
+        "manifest_absent": False,
+        "config": "crucible_v6",
+        "dry_run": False,
+        "skip": False,
+        "enforce": False,
+        "allow_rationale": None,
+    }
     kw.update(over)
     return lw.dsl_config_gate_action(**kw)
 
@@ -41,9 +45,9 @@ def test_ok_when_manifest_valid(lw):
     assert action == "ok"
 
 
-def test_override_when_rationale_supplied(lw):
+def test_rationale_cannot_override_refusal(lw):
     action, msg = _act(lw, ok=False, allow_rationale="emergency: hotfix launch")
-    assert action == "override" and "OVERRIDDEN" in msg
+    assert action == "refuse" and "no authority" in msg
 
 
 def test_override_ignored_when_rationale_blank(lw):
@@ -52,24 +56,24 @@ def test_override_ignored_when_rationale_blank(lw):
     assert action == "refuse"
 
 
-def test_warn_on_dry_run(lw):
+def test_dry_run_cannot_downgrade_refusal(lw):
     action, msg = _act(lw, dry_run=True)
-    assert action == "warn" and "DRY-RUN" in msg
+    assert action == "refuse" and "Catalog #406" in msg
 
 
-def test_warn_on_skip_flag(lw):
+def test_skip_flag_cannot_downgrade_refusal(lw):
     action, msg = _act(lw, skip=True)
-    assert action == "warn" and "skip-dsl-config-gate" in msg
+    assert action == "refuse" and "no authority" in msg
 
 
-def test_warn_on_absent_manifest_without_enforce(lw):
+def test_absent_manifest_refused_without_legacy_enforce_flag(lw):
     action, msg = _act(lw, manifest_absent=True, enforce=False)
-    assert action == "warn" and "migration queue" in msg
+    assert action == "refuse" and "Catalog #406" in msg
 
 
 def test_refuse_on_absent_manifest_with_enforce(lw):
     action, msg = _act(lw, manifest_absent=True, enforce=True)
-    assert action == "refuse" and "no-ad-hoc-config" in msg
+    assert action == "refuse" and "Catalog #406" in msg
 
 
 def test_refuse_on_tampered_manifest_default(lw):
@@ -78,12 +82,12 @@ def test_refuse_on_tampered_manifest_default(lw):
     assert action == "refuse"
 
 
-def test_dry_run_beats_enforce(lw):
-    """--dry-run is always advisory, even under --enforce-dsl-config-gate."""
+def test_dry_run_cannot_beat_enforce(lw):
+    """Dry-run emits artifacts but never authorizes an unbound config."""
     action, _ = _act(lw, manifest_absent=True, enforce=True, dry_run=True)
-    assert action == "warn"
+    assert action == "refuse"
 
 
-def test_override_beats_refuse(lw):
+def test_retired_override_cannot_beat_refuse(lw):
     action, _ = _act(lw, manifest_absent=False, allow_rationale="op signed off")
-    assert action == "override"
+    assert action == "refuse"

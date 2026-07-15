@@ -2607,8 +2607,69 @@ def _dispatch_noop(recipe: Recipe, instance_job_id: str, env_overrides: str) -> 
     return 0
 
 
+def _native_dispatch_dsl_compile_hash_preflight(recipe: Recipe) -> None:
+    """Require/recompute the DSL token carried by a native witness request."""
+
+    raw_text = json.dumps(recipe.raw, sort_keys=True, default=str).lower()
+    identity_text = " ".join(
+        (
+            str(recipe.name),
+            str(recipe.lane_id),
+            str(recipe.remote_driver or ""),
+            raw_text,
+        )
+    ).lower()
+    if "witness" not in identity_text:
+        return
+    binding = recipe.raw.get("dsl_compile_binding") or {}
+    required = (
+        "dsl_compile_hash",
+        "launch_sh",
+        "dsl_provenance",
+        "launch_manifest",
+    )
+    missing = [key for key in required if not binding.get(key)] if isinstance(binding, dict) else list(required)
+    if missing:
+        print(
+            "[operator-authorize] REFUSED rc=8 (Catalog #406): native witness "
+            f"admission request missing DSL compile binding field(s): {missing}",
+            file=sys.stderr,
+        )
+        raise SystemExit(8)
+
+    def _repo_path(value: object) -> Path:
+        path = Path(str(value))
+        return path if path.is_absolute() else REPO_ROOT / path
+
+    try:
+        from tac.v9_provenance_gates import verify_dsl_provenance_artifacts
+
+        ok, detail = verify_dsl_provenance_artifacts(
+            _repo_path(binding["launch_sh"]),
+            provenance_path=_repo_path(binding["dsl_provenance"]),
+            launch_manifest_path=_repo_path(binding["launch_manifest"]),
+            expected_hash=str(binding["dsl_compile_hash"]),
+        )
+    except Exception as exc:
+        ok, detail = False, f"verifier failure: {type(exc).__name__}: {exc}"
+    if not ok:
+        print(
+            "[operator-authorize] REFUSED rc=8 (Catalog #406): native witness "
+            f"DSL compile binding failed recomputation: {detail}",
+            file=sys.stderr,
+        )
+        raise SystemExit(8)
+    print(f"[operator-authorize] DSL COMPILE ADMISSION OK: {detail}")
+
+
 def _native_dispatch_preflight(recipe: Recipe) -> None:
-    """Validate native provider prerequisites before claiming a lane."""
+    """Validate native provider prerequisites before claiming a lane.
+
+    Catalog #406 makes a witness recipe's DSL compile binding part of the
+    admission request itself.  This check deliberately precedes provider/lane
+    work so a hand-authored remote argv cannot acquire authority downstream.
+    """
+    _native_dispatch_dsl_compile_hash_preflight(recipe)
     platform = recipe.platform
     if platform == "modal":
         modal_cfg = recipe.raw.get("modal", {}) or {}

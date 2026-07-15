@@ -21,6 +21,7 @@ Contract:
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -29,6 +30,7 @@ GOVERNED_MARKER_ENV = "TAC_GOVERNED_ADMISSION"       # set by governed launchers
 ADMISSION_ENFORCE_ENV = "TAC_ADMISSION_ENFORCE"      # per-invocation enforce override (mirrors governor)
 BYPASS_OVERRIDE_ENV = "TAC_ADMISSION_BYPASS_OK"      # reviewed raw-run exception (non-empty rationale)
 EXIT_ADMISSION_REFUSED = 7
+EXIT_DSL_COMPILE_REFUSED = 8
 
 _TRUTHY = {"1", "true", "yes", "on"}
 # Placeholder rationales that must NOT satisfy the bypass (so the docstring example cannot self-waive).
@@ -77,15 +79,87 @@ def mark_admitted_env(env: dict) -> dict:
     return env
 
 
-def admission_status(label: str, env: dict | None = None) -> tuple[bool, str]:
+def _requires_dsl_compile_hash(label: str) -> bool:
+    """The witness trainer family is the Catalog #406 protected surface."""
+
+    return "witness" in str(label).lower()
+
+
+def dsl_compile_admission_status(
+    label: str,
+    env: dict | None = None,
+    *,
+    process_argv: list[str] | tuple[str, ...] | None = None,
+) -> tuple[bool, str]:
+    """Recompute the DSL binding and match it to this trainer's actual argv."""
+
+    if not _requires_dsl_compile_hash(label):
+        return True, f"dsl_compile_hash not required for non-witness entrypoint {label!r}"
+    e = os.environ if env is None else env
+    from tac.v9_provenance_gates import (
+        DSL_COMPILE_HASH_ENV,
+        DSL_LAUNCH_SH_PATH_ENV,
+        DSL_PROVENANCE_PATH_ENV,
+        verify_dsl_provenance_artifacts,
+        verify_dsl_provenance_document,
+    )
+
+    carried = (e.get(DSL_COMPILE_HASH_ENV, "") or "").strip()
+    launch_sh = (e.get(DSL_LAUNCH_SH_PATH_ENV, "") or "").strip()
+    provenance_path = (e.get(DSL_PROVENANCE_PATH_ENV, "") or "").strip()
+    if not carried or not launch_sh or not provenance_path:
+        return False, (
+            "DSL COMPILE REFUSED: missing TAC_DSL_COMPILE_HASH / provenance / launch.sh "
+            "custody; a governed marker alone cannot admit a witness trainer"
+        )
+    ok, detail = verify_dsl_provenance_artifacts(
+        launch_sh,
+        provenance_path=provenance_path,
+        expected_hash=carried,
+    )
+    if not ok:
+        return False, f"DSL COMPILE REFUSED: artifact recomputation failed: {detail}"
+    if process_argv is not None:
+        try:
+            document = json.loads(Path(provenance_path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return False, f"DSL COMPILE REFUSED: provenance reread failed: {exc}"
+        recorded_argv = list(document.get("resolved_argv") or ())
+        if not recorded_argv:
+            return False, "DSL COMPILE REFUSED: provenance has no resolved interpreter argv"
+        # Python does not expose the interpreter in sys.argv.  Reuse only the
+        # already governor-verified recorded interpreter, then compare the
+        # actual script+flags byte-for-byte (apart from declared volatile values).
+        running = [str(recorded_argv[0]), *[str(token) for token in process_argv]]
+        ok, detail = verify_dsl_provenance_document(
+            document,
+            launch_argv=running,
+            expected_hash=carried,
+        )
+        if not ok:
+            return False, f"DSL COMPILE REFUSED: running argv mismatch: {detail}"
+    return True, f"DSL compile admission OK for {label!r}: {detail}"
+
+
+def admission_status(
+    label: str,
+    env: dict | None = None,
+    *,
+    process_argv: list[str] | tuple[str, ...] | None = None,
+) -> tuple[bool, str]:
     """Return (ok, message) WITHOUT exiting — the testable core of the guard. ``ok`` is False
     only when enforcement is ON and the process is neither governed nor bypass-approved."""
     e = os.environ if env is None else env
+    dsl_ok, dsl_detail = dsl_compile_admission_status(
+        label, e, process_argv=process_argv
+    )
+    if not dsl_ok:
+        return False, dsl_detail
     enforcing = admission_enforcing(e)
     admitted = is_admitted(e)
     if admitted:
         why = "bypass-approved" if bypass_rationale(e) else "governed"
-        return True, f"admission OK ({why}) for {label!r}"
+        return True, f"admission OK ({why}) for {label!r}; {dsl_detail}"
     if not enforcing:
         return True, (f"admission ADVISORY: {label!r} was NOT launched through the governed path "
                       f"(tools/launch_witness_run.py or tools/safe_run.py) — allowed because "
@@ -103,18 +177,28 @@ def assert_governed_admission(label: str, *, env: dict | None = None,
     """Call at the TOP of a heavy entrypoint's ``main()``. Prints the status; when REFUSED
     (enforce armed + not governed + no bypass) either exits ``EXIT_ADMISSION_REFUSED`` (default)
     or raises ``PermissionError`` (``on_refuse="raise"``). Returns True when admitted/advisory."""
-    ok, msg = admission_status(label, env)
+    ok, msg = admission_status(label, env, process_argv=sys.argv)
     stream = sys.stderr if not ok else sys.stdout
     print(f"[admission-guard] {msg}", file=stream)
     if ok:
         return True
     if on_refuse == "raise":
         raise PermissionError(msg)
-    sys.exit(EXIT_ADMISSION_REFUSED)
+    exit_code = EXIT_DSL_COMPILE_REFUSED if "DSL COMPILE REFUSED" in msg else EXIT_ADMISSION_REFUSED
+    sys.exit(exit_code)
 
 
 __all__ = [
-    "GOVERNED_MARKER_ENV", "ADMISSION_ENFORCE_ENV", "BYPASS_OVERRIDE_ENV",
-    "EXIT_ADMISSION_REFUSED", "admission_enforcing", "bypass_rationale", "is_admitted",
-    "mark_admitted_env", "admission_status", "assert_governed_admission",
+    "ADMISSION_ENFORCE_ENV",
+    "BYPASS_OVERRIDE_ENV",
+    "EXIT_ADMISSION_REFUSED",
+    "EXIT_DSL_COMPILE_REFUSED",
+    "GOVERNED_MARKER_ENV",
+    "admission_enforcing",
+    "admission_status",
+    "assert_governed_admission",
+    "bypass_rationale",
+    "dsl_compile_admission_status",
+    "is_admitted",
+    "mark_admitted_env",
 ]
