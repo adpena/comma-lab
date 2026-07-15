@@ -27,8 +27,10 @@ from tac.witness_control.telemetry_producers import (
 
 
 def test_component_contract_has_exact_fields_v1_plus_real_path() -> None:
-    # The 8 v1 fields PLUS the 2026-07-15 #480 real-path fields (additive,
-    # legacy-compatible; epoch_total_s stays LAST so _TIMER_COMPONENTS holds).
+    # The 8 v1 fields PLUS the 2026-07-15 #480 real-path fields PLUS the #480 v2 disjoint
+    # epoch SPANS (all additive, legacy-compatible; epoch_total_s stays LAST so
+    # _TIMER_COMPONENTS holds). span_* fields are deliberately NOT real_-prefixed so
+    # real_path_sum_s semantics are unchanged.
     assert COMPONENT_FIELDS == (
         "teacher_forward_s",
         "teacher_backward_s",
@@ -42,6 +44,9 @@ def test_component_contract_has_exact_fields_v1_plus_real_path() -> None:
         "real_loss_terms_telemetry_s",
         "real_epoch_probes_s",
         "real_verdict_submit_s",
+        "span_pre_loop_s",
+        "span_accum_loop_s",
+        "span_epoch_tail_s",
         "epoch_total_s",
     )
 

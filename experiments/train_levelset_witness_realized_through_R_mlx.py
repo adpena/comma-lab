@@ -12180,6 +12180,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _live["ep_tot"] = 0
             if _prof is not None:
                 _prof["_step0"] = time.perf_counter()  # #252 profile: fwd+bwd+opt+ema step start
+            _rp_loop_start_ns = time.perf_counter_ns()  # (#480 v2) accum-loop span start
             for s in range(0, P, args.accum_pairs):
                 chunk = order[s:s + args.accum_pairs]
                 if s == 0:
@@ -12604,6 +12605,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "mlx_cache_gib": round(_mm["cache"], 2),
                                       "mlx_peak_gib": round(_mm["peak"], 2),
                                       "clear_accum": int(args.mlx_cache_clear_accum)}), flush=True)
+            _rp_loop_end_ns = time.perf_counter_ns()  # (#480 v2) accum-loop span end
             if _prof is not None:
                 _prof["step_s"] = time.perf_counter() - _prof["_step0"]  # #252 profile: step (fwd+bwd+opt+ema)
             if args.mlx_device == "gpu":
@@ -13007,6 +13009,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _component_clock.add_ns("real_verdict_submit_s", _rp_ns["submit"])
                 else:
                     _component_clock.mark_not_invoked("real_verdict_submit_s")
+                # (#480 v2) the three DISJOINT epoch SPANS (second axis; classifies the measured
+                # 77% unattributed remainder into pre-loop / in-loop-gap / epoch-tail — the ep2
+                # drystart3 848.5s question). Pure perf_counter reads around existing statements.
+                _rp_now_ns = time.perf_counter_ns()
+                _component_clock.add_ns("span_pre_loop_s",
+                                        max(_rp_loop_start_ns - _da_epoch_start_ns, 0))
+                _component_clock.add_ns("span_accum_loop_s",
+                                        max(_rp_loop_end_ns - _rp_loop_start_ns, 0))
+                _component_clock.add_ns("span_epoch_tail_s",
+                                        max(_rp_now_ns - _rp_loop_end_ns, 0))
                 if not (is_transition or do_periodic):
                     _component_clock.mark_not_invoked("checkpoint_io_s")
                 if not (ep % args.eval_every == 0 or ep == args.epochs):

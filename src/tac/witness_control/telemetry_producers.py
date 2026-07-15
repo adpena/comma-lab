@@ -61,6 +61,16 @@ COMPONENT_FIELDS: tuple[str, ...] = (
     "real_loss_terms_telemetry_s",   # the per-term loss recompute/alarm block (_lt_stride)
     "real_epoch_probes_s",           # the D-A decomposition probe + SPS emit themselves
     "real_verdict_submit_s",         # MAIN-thread verdict join/decide/schedule (the submit block)
+    # (#480 v2, 2026-07-15) three DISJOINT SPANS covering the whole epoch body on a SECOND
+    # axis (complementary to the real_* update-path intervals; deliberately NOT real_-prefixed
+    # so REAL_PATH_FIELDS/real_path_sum_s are unchanged): span_pre_loop + span_accum_loop +
+    # span_epoch_tail ~= epoch_total. Classifies the measured 77% unattributed remainder
+    # (ep2 drystart3: 848.5s of 1095.6s): in-loop-gap = span_accum_loop_s - (real_grad_accum
+    # + real_optimizer + real_loss_terms + real_epoch_probes) vs epoch-tail (event sensors /
+    # annulus / jacobian-basin / causal-manifest / verdict+checkpoint region) vs pre-loop.
+    "span_pre_loop_s",
+    "span_accum_loop_s",
+    "span_epoch_tail_s",
     "epoch_total_s",
 )
 REAL_PATH_FIELDS: tuple[str, ...] = tuple(
