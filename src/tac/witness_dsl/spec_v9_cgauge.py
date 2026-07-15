@@ -744,6 +744,105 @@ def compile_v9_cgauge_432_launch_config(
     )
 
 
+# Post-event cost levers whose EventBackstopGate backstop epochs the CUDA timing
+# smoke forces to 1 so a time-boxed smoke measures the EXPENSIVE steady-state
+# regime (operator 2026-07-15: a 3-warmup-epoch cutoff is a toy-regime
+# measurement; on M5 the lane_band event at ep33 added ~+30% s/ep and binds
+# ~99% of a full run). Muon/tau/phase-advect are NOT forced: Muon warm-starts
+# from AdamW moments and the phase term needs a formed trunk — forcing them
+# from epoch 1 would change the physics, not just the cost regime; their cost
+# adders stay labeled UNMEASURED-extrapolation in the smoke report.
+V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS: dict[str, int] = {
+    "--lane-band-start-epoch": 1,
+    "--seg-chroma-boundary-start-epoch": 1,
+    "--seg-temporal-screw-start-epoch": 1,
+}
+
+
+def compile_v9_cgauge_432_smoke_regime_config(
+    gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    *,
+    num_pairs: int = 600,
+    epochs: int = 3000,
+    out_dir: str = "experiments/results/__v9_cgauge_432__",
+):
+    """#438 CUDA timing-smoke REGIME variant — NON-PROMOTABLE timing evidence.
+
+    Identical to :func:`compile_v9_cgauge_432_launch_config` except the
+    post-event cost levers (lane_band + seg_chroma_boundary +
+    seg_temporal_screw) have their EventBackstopGate backstop epochs forced to
+    1 (``V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS``), so a 1500-second
+    time-boxed CUDA smoke measures the expensive post-event regime that
+    dominates a full run instead of only the cheap warmup regime.
+
+    NEVER a science arm: rows produced under this config are
+    ``score_claim=false`` / ``promotion_eligible=false`` cost-regime
+    measurements. The typed hash differs from the launch config by exactly the
+    forced backstop values, so provenance cannot conflate the two.
+
+    CONTAINMENT: pure / $0 — returns the config; it never launches.
+    """
+    from tac.witness_autoconfig import (
+        CrucibleV7LaunchConfig,
+        _crucible_v7_argv_pairs,
+    )
+    from tac.witness_dsl.typed_config import build_launch_manifest
+
+    base_compiled = compile_v9_cgauge_432_launch_config(
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir
+    )
+    typed = base_compiled.typed
+    for flag in V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS:
+        if flag not in typed.base:
+            raise ValueError(
+                f"smoke-regime gate: forced flag {flag} is absent from the "
+                "compiled v9_cgauge_432 base — the regime override would "
+                "silently no-op (config drift; re-derive the forced set)"
+            )
+    typed = typed.model_copy(
+        update={
+            "base": {**typed.base, **V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS},
+        }
+    )
+    viol = typed.validate_program()
+    if viol:
+        raise ValueError(
+            "v9_cgauge_432 smoke-regime gate: forced backstops produced "
+            f"{len(viol)} WitnessProgram.validate violation(s): {viol[:4]}"
+        )
+    argv = typed.to_program().compile_trainer_argv()
+    emitted_names = sorted({f for f, _ in _crucible_v7_argv_pairs(argv)})
+    dsl_manifest = build_launch_manifest(
+        program_name="v9_cgauge_432_smoke_regime",
+        emitted_flag_names=emitted_names,
+        typed_config_hash=typed.typed_config_hash(),
+        typed_validated=True,
+    )
+    dsl_manifest["expected_active_levers"] = list(V9_CGAUGE_432_EXPECTED_LEVERS)
+    dsl_manifest["smoke_regime_forced_starts"] = dict(
+        V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS
+    )
+    constants = dict(base_compiled.constants_manifest)
+    constants["smoke_regime_forced_starts"] = {
+        "value": dict(V9_CGAUGE_432_SMOKE_REGIME_FORCED_STARTS),
+        "ladder_class": "measurement_apparatus_forced",
+        "fallback_used": False,
+        "note": (
+            "#438 CUDA timing-smoke cost-regime forcing (operator 2026-07-15 "
+            "'three stages cargo culted is naive and toy'): backstop epochs of "
+            "the post-event cost levers forced to 1 so the time-boxed smoke "
+            "measures the expensive regime. NON-PROMOTABLE; never cite as a "
+            "science arm."
+        ),
+    }
+    return CrucibleV7LaunchConfig(
+        typed=typed,
+        constants_manifest=constants,
+        dsl_program_manifest=dict(dsl_manifest),
+        schedule_governance=dict(base_compiled.schedule_governance),
+    )
+
+
 # ===========================================================================
 # 2026-07-13 — TRULY-OPTIMAL EVENT-NATIVE V9 + MATCHED MOD19/MOD32 FAMILY A/B
 # ===========================================================================
