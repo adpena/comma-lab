@@ -1,8 +1,8 @@
 # DAG FEED — DSL compile hash enforcement
 
-**Catalog:** #406  
-**Lane:** `dsl_hash_enforcement_20260715`  
-**Mode:** BUILD + local verification only; no training/provider dispatch  
+**Catalog:** #406
+**Lane:** `dsl_hash_enforcement_20260715`
+**Mode:** BUILD + local verification only; no training/provider dispatch
 **Pointer delta:** UNMOVED
 
 ## Authority flow
