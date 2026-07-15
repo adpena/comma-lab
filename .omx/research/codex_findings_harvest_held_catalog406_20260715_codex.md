@@ -319,4 +319,3 @@ For every tuple above, backfill the missing canonical edge on the owning closed 
 - Focused tests: 102 passed (`test_codex_apparatus_safety`, `test_codex_delegate_retry`, `test_dispatch_cli_shell_hazards`, `test_dsl_compile_hash_enforcement`, `test_launch_dsl_config_gate`).
 - No GPU, provider dispatch, score claim, frontier movement, or experiment/result run-directory access.
 - Pointer delta: **UNMOVED**.
-
