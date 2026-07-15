@@ -78518,6 +78518,52 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_c4_mod19_rate_byteclose_20260715",
+      "name": "C4 mod19 witness checkpoint byte-close local advisory",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BLOCKED_NO_ELIGIBLE_WITNESS_CHECKPOINT; exact/advisory fields null; authority follow-on AUTH-C4-MOD19-LINUX-X86_64-20260715; serializer rc128 preserved uncommitted.",
+      "lane_class": "witness_rate_measurement",
+      "research_only": false,
+      "reactivation_criteria": [
+        "C1-WITNESS-CLEAN-STAGE-EMA-20260715"
+      ]
     }
   ],
   "level_rules": {
