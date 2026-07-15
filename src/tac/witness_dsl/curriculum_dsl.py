@@ -3475,6 +3475,25 @@ def SegSpikeReweight(downweight: float = 0.5, coherent_upweight: float = 1.0,
                        "measured optimum)")
 
 
+def SpikeGuardRollback(frac: float = 0.5, lr_cut: float = 0.5, max_rollbacks: int = 8,
+                       window: int = 20, spike_factor: float = 5.0) -> Lever:  # noqa: N802
+    """Spike-guard stability actuator in ROLLBACK mode (the CLAUDE.md confound-fix). The prior
+    ``legacy`` median-freeze — a reference window that updates only on ACCEPTED batches — silently
+    FROZE runs at ep103-114 (`ep_loss==0.0`) and poisoned a whole session's verdicts; ``rollback``
+    (the trainer default since the fix) is the DERIVED-correct actuator. This Lever makes the mode
+    choice DSL-EXPLICIT (byte-identical to the sealed default) and HOLDS the rollback tuning knobs
+    (``frac``/``lr_cut``/``max_rollbacks``/``window``/``spike_factor``) whose optima are RUN-GATED
+    (owed A/B) — the emitted values equal the trainer defaults, so composing this Lever alone is
+    byte-identical; a swept override is the intent. Sister: Catalog #397/#398 confound gates."""
+    return Lever("spike_guard_rollback",
+                 overrides={"--spike-guard-mode": "rollback", "--spike-rollback-frac": float(frac),
+                            "--spike-rollback-lr-cut": float(lr_cut), "--spike-rollback-max": int(max_rollbacks),
+                            "--spike-rollback-window": int(window), "--spike-factor": float(spike_factor)},
+                 epochs_delta=0,
+                 notes="confound-fix: spike-guard ROLLBACK actuator DSL-explicit (mode DERIVED-correct; "
+                       "rollback tuning RUN-GATED, byte-identical to sealed defaults)")
+
+
 def LambdaPreProbe(iters: int = 4, fd_eps: float = 1e-3, window: int = 0) -> Lever:  # noqa: N802
     """EIK-STAB build-4 preconditioned power-iteration probe: run ``iters`` finite-difference HVP
     power iterations (relative FD step ``fd_eps``) to estimate the top Hessian eigen-direction of
