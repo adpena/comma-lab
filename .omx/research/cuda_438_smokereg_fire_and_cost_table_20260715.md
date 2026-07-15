@@ -140,3 +140,35 @@ or invoke the torch trainer's `--dsl-config` CPU path).
   `modal app list` running-task guard. Claims reconciled: phantom-active r5 campaign row
   terminal-rowed (`failed_rc124_training_region_max_autotune_window_exhausted`); no r6 traces on
   ledger/claims/Modal at staging.
+
+## 7. Modal docs-facts table (operator-GO condition 1, verified 2026-07-15 from primary docs)
+
+| # | Fact (verified) | r6 conformance | Source |
+|---|---|---|---|
+| a | Modal's own timeout raises `modal.exception.FunctionTimeoutError` to the caller — NO return value survives; functions "may run a handful of seconds longer"; docs recommend user-code timeout logic for precise control | CONFORMS BY CONSTRUCTION: we self-timeout INSIDE the function (GNU `timeout --signal=TERM 1440s` on the trainer child; wrapper survives, syncs volume, returns artifacts) with Modal's cap at 1800s (300s reserve). In-vivo proof: r5 rc=124 harvest returned manifest+log | https://modal.com/docs/guide/timeouts |
+| b | `.spawn()` results retained "up to 7 days after completion" (`OutputExpiredError` after); `FunctionCall.from_id(...).get(timeout=...)` retrieval | harvest window ample (same-session); SUPERSEDES the ~24h TTL note in CLAUDE.md (docs now say 7 days) | https://modal.com/docs/guide/job-queue |
+| c | H100 = $0.001097/s (≈$3.9492/hr); CPU $0.0000131/core/s; mem $0.00000222/GiB/s; per-second usage billing | our plan ceiling assumed $5.00/hr → 27% conservative. True-cost r6 ceiling: 1800s GPU=$1.97 + cpu/mem $0.22 + preflight $0.03 (+$0.50 staging allowance, unspent — GT asset already staged) ≈ $2.73 worst / ~$2.1 realistic | https://modal.com/pricing |
+| d | env-var injection: our launcher passes env_overrides as plain `.spawn()` function kwargs merged into the lane-script subprocess env (modal_train_lane.py:1613) — NOT Modal Secrets/image env; no Modal-side size/charset constraint applies; our own `,`/`=` delimiter guards are the constraint surface | `WITNESS_TORCH_COMPILE_MODE=default` (alnum+underscore) safe | code path + https://modal.com/docs/guide (no Secret used) |
+| e | queue/scheduling wait + cold start NOT billed ("You never pay for idle resources — just actual compute time"; billing guide: "only pay for the compute you use or request") | conforms; Modal H100 scheduling stalls cost $0 | https://modal.com/pricing + https://modal.com/docs/guide/billing |
+| f | `retries` config would restart a fresh timeout per attempt (double-billing risk) | our function sets `retries=0` (modal_train_lane.py:2886,2989) — no retry double-bill | https://modal.com/docs/guide/timeouts + code |
+
+## 8. r6 pre-fire recursive adversarial review (operator-GO condition 2)
+
+- **Round 1 (2 findings → counter 0):**
+  - **R1-1 (daemon):** single-flight `modal app list` guard ran once at daemon START — stale if the
+    clean-tree window opens hours later. FIXED: moved inside the loop, checked at fire time.
+  - **R1-2 (LAUNCH-INVALIDATING, trainer):** trajectory rows (`training_throughput_epoch`,
+    `v9_controller_epoch`, epoch-final-chunk `loss_terms`) were buffered in memory and flushed ONLY
+    at `--ckpt-every 25` checkpoints; no SIGTERM/atexit handler. A timeout-stop smoke killed at
+    1440s before epoch 25 would burn ~$2 and return ZERO regime numbers (r5 masked this — it never
+    reached epoch 1). FIXED: `_stage_epoch_row` mirrors every row to stdout at append time
+    (`stdout_mirror: true` for harvest dedupe); the provider lane log captures stdout even at
+    rc=124 (r5 in-vivo proof); the on-disk JSONL keeps its checkpoint-consistent resume invariant.
+- **Round 2 (fixes re-reviewed + all 5 axes, 0 findings → counter 1):** helper buffers the
+  UN-marked row (flush path unchanged); daemon `bash -n` clean; end-to-end trace re-verified;
+  Modal-facts table above; budget recomputed at true $/s (cumulative-measured ≈$2.9 at
+  $0.001097/s, r6 realistic ~$2.1 → projected ≈$5.0 of the $20 cap). Residual accepted risks,
+  stated honestly: (i) default-mode first-compile at full-P shapes may still be minutes —
+  attribution via `compile_warmup_epoch` + per-epoch mirror rows; fallback lever wired
+  (`--torch-compile-mode off`) for r7 if compile still eats the window; (ii) Inductor cudagraph
+  trees ride with default mode (same as sealed design; degrade-gracefully expected).

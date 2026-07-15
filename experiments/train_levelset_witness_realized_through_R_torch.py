@@ -458,6 +458,22 @@ def _flush_trajectory_rows(out: Path, rows: list[dict[str, Any]]) -> None:
     rows.clear()
 
 
+def _stage_epoch_row(rows: list[dict[str, Any]], row: dict[str, Any]) -> None:
+    """Buffer a row for the checkpoint-consistent flush AND mirror it to stdout NOW.
+
+    r6 pre-fire review (2026-07-15, launch-invalidating finding): rows were
+    ONLY emitted at --ckpt-every cadence, so a timeout-stop smoke killed by
+    SIGTERM before the first checkpoint-due epoch destroyed every regime
+    timing row in the in-memory buffer (r5 masked this — it never reached
+    epoch 1). The stdout mirror is captured by the provider lane log (harvested
+    even at rc=124, proven in-vivo by r5), while the on-disk trajectory JSONL
+    keeps its checkpoint-consistent resume invariant unchanged. Mirror rows
+    carry stdout_mirror=true so harvest dedupes them against flushed rows.
+    """
+    print(json.dumps({**row, "stdout_mirror": True}), flush=True)
+    rows.append(row)
+
+
 def _checkpoint_blob(
     model,
     ema,
@@ -2020,13 +2036,14 @@ def main(argv: list[str] | None = None) -> int:
                     "pose_banked_r1": controller_step.pose_banked_r1,
                     "effective_pose_weight": pose_weight,
                 }
-                pending_epoch_rows.append(telemetry)
+                _stage_epoch_row(pending_epoch_rows, telemetry)
             chunk_index += 1
 
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         epoch_train_seconds = time.perf_counter() - epoch_train_t0
-        pending_epoch_rows.append(
+        _stage_epoch_row(
+            pending_epoch_rows,
             {
                 "stage": "training_throughput_epoch",
                 "epoch": epoch,
@@ -2058,7 +2075,8 @@ def main(argv: list[str] | None = None) -> int:
 
         controller_epoch = controller.end_epoch(epoch)
         for birth_row in controller_epoch["birth_telemetry"]:
-            pending_epoch_rows.append(
+            _stage_epoch_row(
+            pending_epoch_rows,
                 {
                     **birth_row,
                     "backend": "torch_cuda",
@@ -2105,7 +2123,8 @@ def main(argv: list[str] | None = None) -> int:
             pose_verdict = controller.observe_sigma_min(
                 epoch, float(conditioning["median_sigma_min"])
             )
-            pending_epoch_rows.append(
+            _stage_epoch_row(
+            pending_epoch_rows,
                 {
                     "stage": "jacobian_basin_t1",
                     "epoch": epoch,
@@ -2121,7 +2140,8 @@ def main(argv: list[str] | None = None) -> int:
 
         polyak_observed = controller.observe_polyak(epoch, model)
         if polyak_observed:
-            pending_epoch_rows.append(
+            _stage_epoch_row(
+            pending_epoch_rows,
                 {
                     "stage": "polyak_finisher_observe",
                     "epoch": epoch,
@@ -2132,7 +2152,8 @@ def main(argv: list[str] | None = None) -> int:
                     "promotion_eligible": False,
                 }
             )
-        pending_epoch_rows.append(
+        _stage_epoch_row(
+            pending_epoch_rows,
             {
                 "stage": "v9_controller_epoch",
                 **{key: value for key, value in controller_epoch.items()
