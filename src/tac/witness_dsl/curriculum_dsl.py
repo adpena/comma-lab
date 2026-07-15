@@ -2704,6 +2704,41 @@ def GradNormalizeNone() -> Lever:
                        "controls magnitude (per-param masks ALL norm clipping; memo §2b)")
 
 
+def CorrectedWeightDecay() -> Lever:
+    """AdamC schedule-corrected decoupled weight decay on the AdamW TRUNK (arXiv:2506.02285).
+
+    THE LAW (Defazio 2025, read-in-full 2026-07-15; memo
+    ``.omx/research/adamc_muonc_optimizer_research_20260715.md``): for weights whose update
+    magnitude is weight-independent, decoupled wd drives ``||g||/||x||`` to the Van Laarhoven
+    steady state ``sqrt(2*lambda/gamma_t)`` — a DECAYING lr schedule therefore RAISES the target
+    like ``1/sqrt(gamma_t)`` (the tail gradient-norm blow-up + weight-norm collapse the paper
+    measures at LLM scale). The correction ``lambda_hat_t = lambda * gamma_t/gamma_max`` pins the
+    steady state at ``sqrt(2*lambda/gamma_max)`` — schedule-independent. Trainer mechanism:
+    per-epoch ``opt.weight_decay = _corrected_weight_decay(...)`` after every trunk lr driver.
+
+    ASSUMPTION FORK (why this is DEFAULT-OFF with a PREDICTED-NULL): their setting is
+    large-scale pretraining with lambda=0.05 and a full cosine tail (mechanism strength
+    ``lambda*sum(gamma_t) >~ O(1)``, weight norms moved ~70%); OUR premises are n=1 overfit,
+    lambda=1e-4, no normalization layers (Chou arXiv:2512.08217 independence form carries the
+    transfer; near-exact under per-param grad normalize) => mechanism strength ~2e-4 (n24) ..
+    ~1e-2 (n600 full) => PREDICTED-NULL (memo P1). The bounded n24 A/B is the CARGO-CULT GUARD:
+    a null keeps the correction out of the sealed config on evidence; a NON-null falsifies our
+    effective-decay-channel accounting (a bigger finding than the lever). TRUNK-ONLY: the MLX
+    Muon finisher's wd is coupled-through-NS ~= INERT (arming a scaled version would be the
+    #417 counted-but-inert fake) — the decoupled+corrected Muon path is an
+    ``adaptivization_tickets_20260715`` ticket, never a hand flag.
+
+    means != ends: ARMS the mechanism; NO score claim; verdict_scope FORMULATION;
+    [macOS-MLX research-signal] NON-PROMOTABLE. Pointer UNMOVED."""
+    return Lever(
+        "corrected_weight_decay_adamc",
+        overrides={"--weight-decay-corrected": True},
+        notes="AdamC lambda_hat_t = lambda*lr_t/lr_max on the AdamW trunk (arXiv:2506.02285); "
+              "PREDICTED-NULL at live lambda=1e-4 — the n24 A/B is the cargo-cult guard "
+              "(memo adamc_muonc_optimizer_research_20260715 P1); Muon side ticketed",
+    )
+
+
 def LaneBandStaticCache(enabled: bool = True) -> Lever:
     """#509 burn-down 3: cache the PAIR-STATIC lane-band constants (weighted stop-grad coverage
     per unique prior + gt-source u_mask per code) across compose calls, killing the per-call

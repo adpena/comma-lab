@@ -209,7 +209,16 @@ def build_muon_finisher_optimizer(
     muon_momentum : float
         Muon momentum (default 0.95).
     muon_weight_decay : float
-        Decoupled weight decay for the Muon group (default 1e-4).
+        Weight decay coefficient passed to ``mlx.optimizers.Muon`` (default 1e-4).
+        DOC-ACCURACY FIX (2026-07-15, adamc/muonc research): MLX Muon applies this
+        COUPLED — added to the raw gradient BEFORE momentum + Newton-Schulz
+        orthogonalization (``gradient += wd*parameter``) — NOT decoupled (the prior
+        docstring said "Decoupled", which was wrong). At wd=1e-4 vs raw gradient
+        norms O(1-17) the term is 3-4 orders down and NS re-normalizes the update,
+        so it is effectively INERT as a weight-norm control (Defazio arXiv:2506.02285
+        §4.1 failure class). A real decoupled+corrected Muon wd is ticketed:
+        ``tac.witness_dsl.adaptivization_tickets_20260715`` (``--muon-weight-decay``);
+        memo ``.omx/research/adamc_muonc_optimizer_research_20260715.md`` §2.
     muon_ns_steps : int
         Newton-Schulz iteration count (default 5; Keller Jordan's tuned value).
     adamw_weight_decay : float

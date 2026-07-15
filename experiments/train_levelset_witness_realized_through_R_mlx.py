@@ -3518,6 +3518,28 @@ def _lr_scheduled_event_for_epoch(ep: int, args, octave_frac: float) -> float:
     return args.lr_end + 0.5 * (args.lr - args.lr_end) * (1 + np.cos(np.pi * prog))
 
 
+def _corrected_weight_decay(base_wd: float, lr_current: float, lr_max: float) -> float:
+    """AdamC/SGDC schedule-corrected decoupled weight decay (Defazio, arXiv:2506.02285, Alg. 1).
+
+    ``lambda_hat_t = lambda * (gamma_t / gamma_max)``. MLX AdamW applies decay as
+    ``x <- x * (1 - lr * weight_decay)``, so with this corrected coefficient the APPLIED decay
+    term scales as ``gamma_t^2/gamma_max`` and the Van Laarhoven steady state
+    ``||g||/||x|| = sqrt(2*lambda/gamma_t)`` becomes ``sqrt(2*lambda/gamma_max)`` —
+    schedule-INDEPENDENT (no tail gradient-norm blow-up / weight-norm collapse). ``gamma_max``
+    keeps lambda's scale comparable to the uncorrected default (paper §5).
+
+    Pure + deterministic; guards return ``base_wd`` unchanged for degenerate inputs (wd<=0 or
+    lr_max<=0) so a zero-decay config is byte-identical with or without the flag. Assumption
+    fork vs the paper recorded in .omx/research/adamc_muonc_optimizer_research_20260715.md:
+    the witness has NO normalization layers, so this rides Chou's independence-assumption form
+    (arXiv:2512.08217) — near-exact under per-param grad normalize (unit-norm updates). At the
+    live lambda=1e-4 the mechanism-strength scalar lambda*sum(gamma_t) ~ 2e-4 (n24) .. 1e-2
+    (n600 full) => PREDICTED-NULL effect (the A/B is the cargo-cult guard, P1 of the memo)."""
+    if base_wd <= 0.0 or lr_max <= 0.0:
+        return float(base_wd)
+    return float(base_wd) * (float(lr_current) / float(lr_max))
+
+
 def validate_tau_advance_config(*, tau_advance_mode: str, tau_anneal_shape: str,
                                 softmax_temp_start: float, softmax_temp_end: float) -> None:
     """(S6-R4) Fail LOUD (not silent) on an event-mode config the derivation forbids.
@@ -12181,6 +12203,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if _sg_state["lr_scale"] != 1.0:
                     lr = lr * _sg_state["lr_scale"]
                 opt.learning_rate = float(lr)
+                # ADAMC corrected decoupled weight decay (arXiv:2506.02285 Alg. 1, #adamc-research):
+                # follow EVERY trunk lr driver (cosine/event/rewarmup/rollback-cut) with
+                # lambda_hat_t = lambda*(lr_t/lr_max) so the applied decay factor (1 - lr_t*wd)
+                # scales as lr_t^2/lr_max (schedule-independent ||g||/||w|| steady state).
+                # TRUNK-ONLY by construction (this block is gated `not muon_switched`; the MLX
+                # Muon finisher's coupled-through-NS wd is inert — ticketed, see
+                # adaptivization_tickets_20260715). DEFAULT-OFF (--weight-decay-corrected False)
+                # => no attribute mutation => byte-identical. Stateless (recomputed from args+lr
+                # each epoch) => resume-safe with no new persisted state.
+                if bool(getattr(args, "weight_decay_corrected", False)):
+                    opt.weight_decay = _corrected_weight_decay(
+                        float(args.weight_decay), float(lr), float(args.lr))
             # ── TAIL_k warm-restart (crucible req L / v6 §2.2e): post-Muon, OVERRIDE τ (over the finisher
             # freeze) + the optimizer LR (∝ τ_k; moments untouched = warm restart) from the controller.
             # Decide-on-previous: pass the finite verdict history observed so far (no lookahead). Per-cycle
@@ -13445,6 +13479,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--lr-end", type=float, default=1e-4)
     ap.add_argument("--weight-decay", type=float, default=1e-4)
+    ap.add_argument("--weight-decay-corrected", action=argparse.BooleanOptionalAction, default=False,
+                    help="ADAMC (Defazio, arXiv:2506.02285): per-epoch corrected decoupled weight "
+                         "decay lambda_hat_t = --weight-decay * (lr_t / --lr) on the AdamW TRUNK, "
+                         "so the applied decay term scales as lr_t^2/lr_max and the steady-state "
+                         "||g||/||w|| = sqrt(2*lambda/lr_max) is schedule-independent (kills the "
+                         "wd-x-schedule tail gradient-norm blow-up / weight-norm collapse). "
+                         "TRUNK-ONLY (pre-Muon; the MLX Muon coupled-through-NS wd is inert — see "
+                         "adaptivization_tickets_20260715). PREDICTED-NULL at the live lambda=1e-4 "
+                         "(mechanism strength lambda*sum(lr_t) ~ 2e-4..1e-2 << 1; the n24 A/B is "
+                         "the cargo-cult guard). DEFAULT OFF => byte-identical. DSL: "
+                         "curriculum_dsl.CorrectedWeightDecay.")
     # (#222 deep-math gap-1) Adam second-moment decay beta2. Default 0.999 == the MLX AdamW default
     # betas=[0.9, 0.999] => BIT-IDENTICAL to the pre-flag path. The n600 accumulated-microbatch regime
     # has only n = P/accum_pairs ~ 75 optimizer steps per epoch's worth of distinct gradient statistics;

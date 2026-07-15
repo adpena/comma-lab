@@ -236,6 +236,52 @@ ADAPTIVIZATION_TICKETS: tuple[AdaptivizationTicket, ...] = (
         unlock="registry LawRef ownership + cross-stage sweep at the Muon stage boundary",
         joint_wallclock_axis="epochs_to_target",
     ),
+    AdaptivizationTicket(
+        constant="--muon-weight-decay",
+        current_value="None => --weight-decay = 1e-4",
+        poison_evidence=(
+            "SOURCE-VERIFIED (adamc/muonc research 2026-07-15, memo "
+            ".omx/research/adamc_muonc_optimizer_research_20260715.md §2): mlx.optimizers.Muon "
+            "applies weight decay COUPLED — added to the raw gradient BEFORE momentum + "
+            "Newton-Schulz orthogonalization (gradient += wd*parameter) — NOT decoupled. At "
+            "wd=1e-4 the term enters 3-4 orders below the measured raw gradient scale (C0 band "
+            "5.9-17.5) and NS re-normalizes the update anyway => the Muon group's wd is "
+            "effectively INERT: the finisher stage that polishes the shipped EMA shadow has NO "
+            "weight-norm control (undamped ||W||^2 random-walk growth ~ lr_t^2 per step; the "
+            "lr-final-frac 0.1 anneal only shrinks the increments). Our "
+            "build_muon_finisher_optimizer docstring mis-labeled it 'Decoupled' (fixed same "
+            "landing). Defazio arXiv:2506.02285 §4.1 is the exact failure class: coupled decay "
+            "through a normalizing preconditioner loses the norm-damping role."
+        ),
+        law=(
+            "decoupled Muon-group wd (Moonlight form, arXiv:2502.16982: W <- W*(1-lr_t*wd) - "
+            "lr_t*NS(m)) with the AdamC/Chou schedule correction lambda_hat_t = "
+            "lambda*lr_t/lr_max_muon (arXiv:2506.02285 Alg.1 / arXiv:2512.08217 ScionC) => "
+            "steady-state ||W|| = sqrt(lr_max/(2*lambda))*||u|| schedule-independent; for Muon "
+            "the derivation is near-exact (NS-orthonormalized update norm is weight-independent "
+            "by construction). 'MuonC' is NOT a named optimizer in the literature (2026-07 "
+            "sweep); this ticket IS the honest referent."
+        ),
+        law_source=(
+            "adamc_wd_lr_equilibrium_v1 (src/tac/canonical_equations/"
+            "adamc_wd_lr_equilibrium_20260715.py) + arXiv:2506.02285 + 2512.08217 + 2502.16982"
+        ),
+        built_implementation=(
+            "TRUNK half only: --weight-decay-corrected (levelset trainer, per-epoch AdamW "
+            "opt.weight_decay = lambda*lr_t/lr_max; DSL curriculum_dsl.CorrectedWeightDecay). "
+            "Muon half: NONE — scaling the existing coupled wd would arm a no-op (#417 "
+            "counted-but-inert fake), so it is deliberately NOT wired."
+        ),
+        unlock=(
+            "P3 first ($0): measure Muon-group per-tensor ||W|| growth across existing "
+            "finisher-phase stage checkpoints; if material AND correlated with late-finisher "
+            "d_seg wobble, build the decoupled-wd Muon path in "
+            "tac.optimization.muon_finisher_mlx (subclass or post-step multiplicative shrink), "
+            "then the corrected-lambda A/B at the finisher window; else close as "
+            "measured-immaterial"
+        ),
+        joint_wallclock_axis="epochs_to_target",
+    ),
 )
 
 
