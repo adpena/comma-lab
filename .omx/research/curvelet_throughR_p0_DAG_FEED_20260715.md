@@ -22,4 +22,3 @@ Stores consulted: `CLAUDE.md`; `AGENTS.md`; `docs/operating_manual_craft_handoff
 `src/tac/boundary_math/windowed_curvelet_frame.py`;
 `src/tac/witness_dsl/optimal_basis_20260714.py`;
 `tools/levelset_byte_close_and_eval.py`; live inbox through `2026-07-14T20:32:37Z`.
-
