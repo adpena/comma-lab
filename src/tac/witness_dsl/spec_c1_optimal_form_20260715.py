@@ -179,6 +179,68 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _derive_launch_blockers(config_name: str, gt_cache: Path,
+                            manifest_sink: dict) -> list[dict[str, str]]:
+    """Re-derive the ticket's dependency blockers from LANDED artifacts (compile-time CHECKS).
+
+    The launcher's b1-ticket contract: a non-empty ``launch_blockers`` refuses every real launch
+    with NO runtime override — "the config compiler must re-derive an empty list from landed
+    dependencies". This is that re-derivation. Custody/receipt rows for satisfied slots are
+    written into ``manifest_sink`` so the manifest carries the EVIDENCE, not just the absence of
+    the blocker.
+    """
+    import json as _json
+
+    blockers: list[dict[str, str]] = []
+
+    # ── slot 1: the S_R reachability sidecar (the trainer fails closed without it). ──
+    sidecar = gt_cache.with_name(gt_cache.stem + "_sR.npz")
+    if sidecar.is_file():
+        manifest_sink["sr_sidecar_custody"] = {
+            "status": "CLEAR",
+            "path": str(sidecar),
+            "bytes": sidecar.stat().st_size,
+            "checked_at_compile": True,
+        }
+    else:
+        blockers.append({
+            "id": "C1_SR_SIDECAR_CUSTODY",
+            "detail": f"the sR sidecar {sidecar} must exist at launch "
+                      "(tools/precompute_sR_reachability.py); the trainer fails closed without it",
+        })
+
+    # ── slot 2: the composed-path bench receipt = a GREEN full_config_dry_start report for THIS
+    #    config name (peak RSS + sec/ep MEASURED on the real cache by the launcher's bounded
+    #    --dry-start, which is allowed to run under this blocker as the receipt producer). ──
+    receipt_row = None
+    for rp in sorted(Path("experiments/results").glob("*/dry_start_report.json")):
+        try:
+            rep = _json.loads(rp.read_text())
+        except (OSError, ValueError):
+            continue
+        if (rep.get("gate") == "full_config_dry_start"
+                and str(rep.get("config")) == str(config_name)
+                and bool(rep.get("green"))):
+            receipt_row = {
+                "status": "MEASURED_GREEN",
+                "report": str(rp),
+                "peak_rss_gib": rep.get("peak_rss_gib"),
+                "sec_per_ep_marginal": rep.get("sec_per_ep_marginal"),
+                "ts": rep.get("ts"),
+            }  # keep scanning: the LAST (lexicographically newest run dir) green report wins
+    if receipt_row is not None:
+        manifest_sink["composed_bench_receipt"] = receipt_row
+    else:
+        blockers.append({
+            "id": "C1_COMPOSED_BENCH_NOT_MEASURED",
+            "detail": "no GREEN full_config_dry_start report exists for config "
+                      f"{config_name!r} — run the launcher's bounded --dry-start (it proceeds "
+                      "under this blocker as the receipt producer) to measure sec/epoch + peak "
+                      "RSS on the real cache before the real launch",
+        })
+    return blockers
+
+
 def _telemetry_lever():
     """Score-neutral component-wallclock telemetry (leg B's only genuine argv delta).
 
@@ -504,16 +566,18 @@ def compile_c1_optimal_form_launch_config(
         },
         "held": True,
         "operator_go_required": True,
-        "launch_blockers": [
-            {"id": "C1_COMPOSED_BENCH_NOT_MEASURED",
-             "detail": "the composed-path throughput bench receipt is BLOCKED_INPUT_CUSTODY "
-                       "(.omx/research/c1_throughput_composed_bench_20260715.json), not "
-                       "MEASURED_PASS — measure sec/epoch + peak RSS on the real cache before GO"},
-            {"id": "C1_SR_SIDECAR_CUSTODY",
-             "detail": "the 'sR' cache member (or <stem>_sR.npz sidecar) must exist at launch "
-                       "(tools/precompute_sR_reachability.py); the trainer fails closed without it"},
-        ],
     })
+    # (#507, 2026-07-15) DERIVED launch blockers — "the config compiler must re-derive an empty
+    # list from landed dependencies" (the launcher's b1-ticket contract; no runtime override).
+    # Each slot is CHECKED at compile time against the real artifact, never hand-cleared:
+    #   - C1_SR_SIDECAR_CUSTODY drops when the sR sidecar file exists (custody row recorded);
+    #   - C1_COMPOSED_BENCH_NOT_MEASURED drops when a GREEN full_config_dry_start report for
+    #     THIS config name exists (the launcher's bounded --dry-start writes it — the receipt
+    #     producer path is allowed under blockers precisely because it cannot durable-spawn).
+    _blocker_evidence: dict[str, Any] = {}
+    manifest["launch_blockers"] = _derive_launch_blockers(
+        typed.name, Path(gt_cache_path), _blocker_evidence)
+    manifest.update(_blocker_evidence)
     constants = dict(rebound.constants_manifest)
     constants["head_offset_solver"] = {
         "value": "flip_median",

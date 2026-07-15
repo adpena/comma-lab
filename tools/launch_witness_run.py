@@ -2202,10 +2202,23 @@ def main(argv: list[str] | None = None) -> int:
             print("# DRY-RUN: launch.sh written and every preceding $0 gate completed; NOT spawning. "
                   "The ticket remains fail-closed until its typed manifest re-compiles with zero "
                   "launch_blockers.")
+            return 11
+        if args.dry_start:
+            # (#507, 2026-07-15) the BOUNDED dry-start PROCEEDS under declared blockers: it is the
+            # measuring instrument that DISCHARGES a bench-receipt blocker (e.g.
+            # C1_COMPOSED_BENCH_NOT_MEASURED — the config compiler re-derives an empty list from the
+            # GREEN dry_start_report.json this path writes), it runs FOREGROUND via safe_run
+            # (rss-capped + wall-clock bounded) and NEVER durable-spawns (_run_dry_start exits before
+            # the real spawn by construction), so the real-launch refusal invariant is preserved —
+            # this is NOT a runtime override of rc=11 (which still refuses every real launch until
+            # the manifest recompiles empty).
+            print("# TICKET BLOCKED but --dry-start PROCEEDS: the bounded dry-start is the "
+                  "receipt producer for the declared bench blocker(s); the durable spawn remains "
+                  "refused until the typed manifest recompiles with zero launch_blockers.")
         else:
             print("[launch-witness] ERROR: REFUSING to launch — clear the typed ticket dependency "
                   "slots and recompile; no runtime override exists.", file=sys.stderr)
-        return 11
+            return 11
 
     if args.dry_run:
         print("# DRY-RUN: launch.sh written + flags validated; NOT spawning. "
