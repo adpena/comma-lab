@@ -18482,3 +18482,31 @@ annulus and longest end of long tail". Full table:
   completion (named anchor autoclip_descent_speed_effect_n24_ab_owed_20260715) — partial A/B data must
   not register a law; that is the reasoned equations-leg state, not drift.
 - MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-509-b3x (2026-07-15) — batch-3 remainder EXECUTED post-unblock: 3-arm maglaw MEASURED+registered (9fefd157f7) · bf16 QC ADMIT+anchored (f35bd6fe3b) · micro-batch OWED (named blocker)
+- **Coordinator unblocked** (TERMed arms A/B past their pre-registered ep39 endpoint). Sequencing
+  honored: armC fired INSIDE r6's CPU-boot window (r6 throughput gate had passed — trainer spawn is
+  the proof; the "throughput OK" line sat in a block buffer, the buffered-log lesson). Launch-shape
+  lessons: `--dry-start` capped 1..3 (arms are REAL governed launches + sanctioned daemon stop);
+  readiness rungs need the A/B-isolation DEFER lines (replicated verbatim from armA's launch.sh).
+- **Maglaw 3-arm attribution MEASURED (pre-registered ep1-39 window; anchor
+  `autoclip_descent_speed_effect_n24_ab_measured_20260715`, registered):** v0 0.03231 identical all
+  arms; ep25 d_seg A 0.018045 / B 0.015902 / C 0.017737; log-slopes −0.02202/−0.02380/−0.02247 per
+  ep. **Attribution: lineage (C−A) −1.71% ≈ neutral; AutoClip law (B−C) −10.35% carries the win.**
+  BONUS overrun (labeled, NOT verdict): armB reverses post-ep25 (ep75 0.018644) while armA descends
+  (0.015325) ⇒ durability un-established; ≥150-ep A/B = the follow-up. verdict_scope FORMULATION.
+- **bf16 compute-seam QC gate MEASURED: ADMIT** (anchor `bf16_seam_n24_quality_check_measured_20260715`):
+  60 steps, median post-normalize cosine 0.992538 (+0.0025 clearance; p10 0.9869 BELOW the bar —
+  median law holds, margin small), rel_norm 1.0000 (pinned by per-param normalize by construction —
+  the C0 lesson is why the gate grades direction), per-group medians 0.981–0.998, pose_carrier
+  inactive (trunk phase). SPEED un-measured by design (QC computes both grads + steps with fp32
+  reference); stage-boundary QC re-runs + the paired sec/ep bench OWED before any adoption.
+- **Micro-batch re-measure (coordinator item 4): sequencing satisfied (QC ADMIT) but OWED on a NAMED
+  MEASURED blocker** — it is a wall-clock sec/ep A/B and the GPU belongs to r6 (dry-start boot 45min
+  in, 43 GB RSS → 2 GPU epochs → the REAL n600 launch = days). A contended bench is a toy (allergic
+  rule). Re-measure shape when GPU frees: paired bounded n24 governed launches, fp32 fused stack,
+  `--micro-batch-pairs 1` vs `2/4` (bf16×micro-batch stays REFUSED by the seam until the batched
+  twin is seamed — OWED separately).
+- Pre-existing (NOT this arm): `test_fix4_{injects,opt_out}_*_per_group_grad_clip` fail identically
+  at 6dfb43c96b (proven_base lacks #406 TypedWitnessConfig compile custody) — routed, untouched.
+- Everything MEANS; **pointer 0.19108 UNMOVED.**
