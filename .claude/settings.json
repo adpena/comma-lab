@@ -29,6 +29,10 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/codex_landing_review_gate.py\""
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/consolidation_debt.py\" --quiet-ok"
           }
         ]
       }
@@ -43,6 +47,10 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/dashboard_ctl.py\" ensure-up --quiet"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.venv/bin/python\" \"$CLAUDE_PROJECT_DIR/tools/consolidation_debt.py\" --quiet-ok"
           }
         ]
       }

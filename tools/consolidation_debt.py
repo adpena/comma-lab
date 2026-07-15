@@ -28,11 +28,11 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-PY = sys.executable or "python3"  # the venv interpreter, never a bare 'python' off PATH
+LANDING_LEDGER = REPO / ".omx" / "state" / "codex_landing_ledger.jsonl"
+TERMINAL_LANDING_STATES = frozenset({"reviewed_committed", "respawned", "closed"})
 
 # thresholds (soon / now) — deliberately conservative so debt is caught EARLY, not at crisis.
 TH = {
@@ -59,16 +59,43 @@ def _pile() -> tuple[int, int]:
     return len(files), lines
 
 
-def _undispositioned_landings() -> int:
-    """Count landed codex arms with no review disposition (via the landing-review gate)."""
-    out = _sh([PY, "tools/codex_landing_review_gate.py"])  # emits JSON block-decision if any
+def _landing_rows(path: Path = LANDING_LEDGER) -> list[dict]:
+    """Read the authoritative append-only landing ledger; malformed rows are ignored."""
     try:
-        rec = json.loads(out.strip() or "{}")
-        if rec.get("decision") == "block":
-            return rec.get("reason", "").count("•") or 1
-    except json.JSONDecodeError:
-        pass
-    return 0
+        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError:
+        return []
+    rows: list[dict] = []
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _undispositioned_landings(path: Path = LANDING_LEDGER) -> int:
+    """Count latest ledger entries without a terminal review disposition.
+
+    The landing ledger is append-only and the landing-review gate uses latest-row-wins
+    semantics per ``(label, stamp)``. Reading it directly avoids parsing human-facing
+    Stop-hook output, whose formatting and loop-suppression are intentionally advisory.
+    """
+    latest: dict[tuple[object, object], dict] = {}
+    for row in _landing_rows(path):
+        label = row.get("label")
+        stamp = row.get("stamp")
+        if not label or not stamp:
+            continue
+        latest[(label, stamp)] = row
+    return sum(
+        row.get("status") not in TERMINAL_LANDING_STATES
+        for row in latest.values()
+    )
 
 
 def _stale_commits() -> int:
