@@ -74,3 +74,4 @@ C0 live launch v9_cgauge_ideal_mod19 (224 trainer flags)
   `[macOS-CPU-torch 1-thread advisory wall-clock]`, score claim false.
 - Findings: `.omx/research/codex_findings_c0_optform_compute_audit_20260715_codex.md`.
 - DSL equation disposition: `# NO_EQUATION_NEEDED` for compute-elision; no loss/control math changes.
+

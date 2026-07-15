@@ -1,19 +1,22 @@
 # SPDX-License-Identifier: MIT
-"""Fail-closed guard for the retired banked-pose verdict substitution.
+"""Fail-closed pose-blind compute gate for V9 progress verdicts.
 
-The R1 artifact is a real full-n600 byte-closed macOS-CPU advisory artifact, but
-the live V9 program does not import its pose payload.  Substituting its scalar
-``d_pose`` into a current-run verdict would therefore be a confounded score path.
-Until a current-run, payload-bound cache with receiver custody exists, PoseNet is
-always computed live.  No numeric non-live value can reach implied score,
-checkpoint selection, or a controller.
+The safe optimization is narrower than the retired banked-pose substitution:
+while the two-phase trainer has not engaged its pose finish, a gated verdict may
+omit PoseNet and report only live ``d_seg``.  Such a row carries ``d_pose=None``
+and is ineligible for an implied-score claim.  Once pose finish engages, or when
+the gate is off, PoseNet is computed live.
+
+No historical or non-live numeric ``d_pose`` is admitted.  This distinction is
+load-bearing: skipping an irrelevant forward is safe; substituting a scalar from
+another payload/run is not.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
 
-POSE_VERDICT_GUARD_SCHEMA = "pose_verdict_live_or_refused.v1"
+POSE_VERDICT_GUARD_SCHEMA = "pose_verdict_live_or_progress_only.v2"
 
 # Retained only so older checkpoints/config imports remain loadable.  This
 # number cannot be returned by the live score path.
@@ -38,25 +41,25 @@ def check_pose_verdict_fallback_is_live_or_refused(
     configured_nonlive_dpose: float | None = None,
     legacy_read_only_waiver: bool = False,
 ) -> dict[str, Any]:
-    """Return a guard receipt or refuse any enabled non-live score substitution.
+    """Return a guard receipt and refuse every numeric non-live substitution.
 
     ``legacy_read_only_waiver`` permits parsing an old *disabled* configuration for
-    audit/replay.  It never permits an enabled gate or a numeric score-path value.
+    audit/replay.  It never permits a numeric score-path value.  ``gate_on`` now
+    means d_seg-only progress while pose is blind, not banked-pose substitution.
     """
 
-    if gate_on:
-        raise PoseVerdictGateError(
-            "--verdict-pose-gate REFUSE: current V9 has no payload-bound pose cache; "
-            "live PoseNet is required"
-        )
-    if configured_nonlive_dpose is not None and not legacy_read_only_waiver:
+    if configured_nonlive_dpose is not None and (
+        not legacy_read_only_waiver or gate_on
+    ):
         raise PoseVerdictGateError(
             "numeric non-live d_pose is forbidden outside historical read-only parsing"
         )
     return {
         "schema": POSE_VERDICT_GUARD_SCHEMA,
-        "gate_enabled": False,
-        "score_path_d_pose_source": "live_posenet",
+        "gate_enabled": bool(gate_on),
+        "score_path_d_pose_source": (
+            "live_posenet_or_missing_progress_only" if gate_on else "live_posenet"
+        ),
         "numeric_nonlive_dpose_admitted": False,
         "legacy_reference_present": configured_nonlive_dpose is not None,
         "legacy_read_only_waiver": bool(legacy_read_only_waiver),
@@ -75,15 +78,40 @@ def decide_pose_verdict(
     verdict_index: int,
     gate_on: bool,
     canary_every: int,
+    force_live: bool = False,
 ) -> PoseGateDecision:
-    """Select the only admitted current score path: a live PoseNet forward."""
+    """Choose live PoseNet or an explicitly score-ineligible d_seg-only row."""
 
-    del epoch, pose_engaged_epoch, verdict_index, canary_every
+    del canary_every
     check_pose_verdict_fallback_is_live_or_refused(gate_on=gate_on)
+    # The pre-loop baseline remains a full live verdict so the run has one
+    # current-payload score anchor.  In-loop pose-blind rows skip PoseNet until
+    # the existing pose-finish controller stamps an engagement epoch.
+    pose_blind = (
+        bool(gate_on)
+        and not bool(force_live)
+        and int(epoch) >= 0
+        and int(pose_engaged_epoch) < 0
+    )
+    if pose_blind:
+        return PoseGateDecision(
+            compute_live=False,
+            is_canary=False,
+            reason="pose_blind_dseg_progress_only",
+            d_pose_source="missing_progress_only",
+        )
     return PoseGateDecision(
         compute_live=True,
         is_canary=False,
-        reason="live_posenet_required_no_payload_bound_fallback",
+        reason=(
+            "forced_live_current_payload_anchor"
+            if force_live
+            else (
+                "pose_finish_engaged_live_posenet"
+                if gate_on
+                else "gate_off_live_posenet"
+            )
+        ),
         d_pose_source="live",
     )
 

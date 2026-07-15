@@ -2991,6 +2991,34 @@ def PoseVerdictGateDryStart(window: int = 0) -> Lever:
     )
 
 
+def PoseBlindComputeGate(window: int = 0) -> Lever:
+    """Task #495 compute-only gate for the existing two-phase pose finish.
+
+    This lever does not substitute or cache a pose value.  While effective
+    ``w_pose`` is zero it skips the training PoseNet graph and emits d_seg-only,
+    score-ineligible progress verdicts.  The pre-loop anchor and every verdict
+    after the existing pose-finish event use live PoseNet.  DEFAULT OFF leaves
+    both training and verdict paths byte-identical.
+
+    # NO_EQUATION_NEEDED: removes a zero-weight scorer graph and an ineligible
+    # observer forward; it adds no loss term, controller law, or score value.
+    """
+
+    return Lever(
+        "pose_blind_compute_gate",
+        overrides={
+            "--pose-training-compute-gate": True,
+            "--verdict-pose-gate": True,
+        },
+        epochs_delta=int(window),
+        notes=(
+            "task-495 compute-only gate: skip PoseNet while pose-finish is blind; "
+            "d_seg-only progress rows are score/selection-ineligible; live PoseNet "
+            "restored at engagement; no banked d_pose"
+        ),
+    )
+
+
 def ClosedLoopEikonalControl(
     eikonal_bump: float = 0.05, eikonal_max: float = 0.20, max_bumps: int = 2,
     stop_after_windows: int = 3, min_sustained_windows: int = 3, window: int = 0,

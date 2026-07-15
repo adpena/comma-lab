@@ -278,8 +278,9 @@ def _verdict_dseg_dpose_chunked(
     single-batch (pre-fix) path for the A/B parity check.
 
     ``compute_pose=False`` is the default-OFF pose-verdict gate: it skips every PoseNet
-    forward and returns ``None`` for d_pose so the shared caller must substitute explicitly
-    labelled banked telemetry. ``return_realized`` (DEFAULT False => BYTE-IDENTICAL to the
+    forward and returns ``None`` for d_pose.  The shared caller keeps that row explicitly
+    score/selection-ineligible; no numeric banked value is substituted. ``return_realized``
+    (DEFAULT False => BYTE-IDENTICAL to the
     sealed #205 verdict): when True, ALSO
     returns the realized SegNet argmax maps (list of (h,w) int64) collected from the SAME forward via
     ``cpu_verdict_d_seg_argmax_batch`` (whose per-pair d_seg is bit-identical to ``cpu_verdict_d_seg_batch``
@@ -5497,6 +5498,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         render_fn=render_fn,
         focal_gamma=focal_gamma,
     )
+    _pose_training_compute_gate_on = bool(
+        getattr(args, "pose_training_compute_gate", False)
+    )
 
     # (--seg-form-unify-tau, derivation 20260709 §1.2) unify-τ closure state. When ON, the seg loss
     # is the ONE continuous L_τ = τ·logsumexp(φ/τ) − φ_y (form == "unify_tau") with τ COUPLED to the
@@ -6253,7 +6257,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # None (default-off, or any non-unify form) => base_loss uses its tau_softplus_tau closure
         # default => BYTE-IDENTICAL (passing tau_override=None == not passing it).
         _uni_tau = _unify_tau_state["tau"] if (_unify_tau_on and seg_form == "unify_tau") else None
-        L = base_loss(model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, mtgt, seg_form=seg_form, tau_override=_uni_tau, seg_pixel_w=_seg_px_w, terms_out=terms_out)
+        _compute_pose = not (
+            _pose_training_compute_gate_on and float(w_pose) == 0.0
+        )
+        L = base_loss(
+            model, cf, c0, c1, lstar_oh, margin, pose_tgt, w_seg, w_pose,
+            hinge, mtgt, seg_form=seg_form, tau_override=_uni_tau,
+            seg_pixel_w=_seg_px_w, terms_out=terms_out,
+            compute_pose=_compute_pose,
+        )
         phi0 = model.sdf(cf, c0)
         # (THETA* TIER-2 STRETCH-1) junction relax threaded; eik_jrelax=0.0 (default) => BIT-IDENTICAL.
         # (--length-sigma-matrix) sigma threaded; _len_sigma None (default) => BYTE-IDENTICAL path.
@@ -7834,6 +7846,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         *,
         ep: int = -1,
         pose_verdict_index: int | None = None,
+        force_live_pose: bool = False,
     ) -> dict[str, Any]:
         """Shared verdict tail: given rendered f0s/f1s over ``vpairs``, return the {d_seg,d_pose} dict.
 
@@ -7859,14 +7872,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             verdict_index=_pose_verdict_index,
             gate_on=bool(getattr(args, "verdict_pose_gate", False)),
             canary_every=int(getattr(args, "verdict_pose_canary_every", 8)),
+            force_live=bool(force_live_pose),
         )
 
         def _finish_pose_gate(v: dict[str, Any]) -> dict[str, Any]:
-            if not _pose_decision.compute_live or v.get("d_pose") is None:
+            if _pose_decision.compute_live and v.get("d_pose") is None:
                 raise RuntimeError(
-                    "pose verdict guard REFUSE: numeric live PoseNet d_pose is required; "
-                    "non-live substitutions may not reach implied score"
+                    "pose verdict guard REFUSE: live PoseNet was selected but d_pose is missing"
                 )
+            if not _pose_decision.compute_live and v.get("d_pose") is not None:
+                raise RuntimeError(
+                    "pose verdict guard REFUSE: pose-blind progress row received a numeric d_pose"
+                )
+            if bool(getattr(args, "verdict_pose_gate", False)):
+                v["_pose_gate_telemetry"] = {
+                    "pose_verdict_index": int(_pose_verdict_index),
+                    "d_pose_live": bool(_pose_decision.compute_live),
+                    "d_pose_source": str(_pose_decision.d_pose_source),
+                    "pose_gate_reason": str(_pose_decision.reason),
+                    "selection_eligible": bool(_pose_decision.compute_live),
+                    "score_claim": False,
+                }
             return v
         # (operator 2026-07-08) GPU verdict device. Runs the ADVISORY d_seg/d_pose through the MLX
         # scorer ports (the nucleus-guard / ladder controllers are refused up-front, so the gpu path
@@ -8031,7 +8057,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 v["per_class"] = {"error": f"{type(exc).__name__}: {exc}"}
         return _finish_pose_gate(v)
 
-    def realized_verdict(ep: int = -1) -> dict[str, float]:
+    def realized_verdict(
+        ep: int = -1, *, force_live_pose: bool = False
+    ) -> dict[str, float]:
         # (fix a+b+c) verdict the EMA SHADOW, int8-DEQUANTIZED, via the fp32 numpy ONE CODEPATH
         # (NOT the MLX-GPU reduced-precision forward — the 4th artifact). This IS the deploy render.
         # (review Med1) project the shadow film.weight back onto Stiefel so the advisory d_seg reflects
@@ -8111,7 +8139,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             except Exception as _hos_exc:  # fail-open: advisory readout must NEVER break the verdict
                 print(json.dumps({"stage": "head_offset_solver_skip", "epoch": int(ep),
                                   "error": f"{type(_hos_exc).__name__}: {_hos_exc}"}), flush=True)
-        return _verdict_v(f0s, f1s, ep=int(ep))
+        return _verdict_v(
+            f0s, f1s, ep=int(ep), force_live_pose=bool(force_live_pose)
+        )
 
     # ---- MOD-DIM DYNAMICS telemetry (operator 2026-07-08; score-neutral observability DEFAULTS ON
     # per CLAUDE.md "'Off' is a tracked queue"). Read-only SVD of the per-pair latent (code) table +
@@ -8674,7 +8704,39 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             if _nucleus_guard_on:
                 _evt_state["nucleus_ready"] = bool(all_ok)
 
-    def _emit_verdict_row(v: dict[str, float], ema_np: dict[str, np.ndarray], ep: int,
+    def _optional_implied_score(v: dict[str, Any], blob_bytes: int) -> float | None:
+        """Return a score only for a complete live d_seg+d_pose verdict."""
+        if v.get("d_pose") is None:
+            return None
+        return implied_score_from_verdict(v["d_seg"], v["d_pose"], blob_bytes)
+
+    def _rounded_verdict_scalars(v: dict[str, Any]) -> dict[str, Any]:
+        return {
+            key: (None if value is None else round(float(value), 6))
+            for key, value in v.items()
+        }
+
+    def _history_verdict(ep: int, v: dict[str, Any], blob_bytes: int,
+                         implied_s: float | None) -> dict[str, Any]:
+        # Progress-only rows deliberately omit d_pose/implied_S from controller
+        # history so no legacy consumer can coerce ``None`` into score authority.
+        if v.get("d_pose") is not None and implied_s is not None:
+            # Preserve the incumbent insertion order for complete verdicts so
+            # the default-OFF result JSON remains byte-for-byte stable.
+            return {
+                "epoch": int(ep),
+                "d_seg": float(v["d_seg"]),
+                "d_pose": float(v["d_pose"]),
+                "implied_S": float(implied_s),
+                "blob_bytes": int(blob_bytes),
+            }
+        return {
+            "epoch": int(ep),
+            "d_seg": float(v["d_seg"]),
+            "blob_bytes": int(blob_bytes),
+        }
+
+    def _emit_verdict_row(v: dict[str, Any], ema_np: dict[str, np.ndarray], ep: int,
                           seg_form: str, ep_loss: float, *, async_tag: bool,
                           liveness: "dict[str, Any] | None" = None,
                           tau: "float | None" = None,
@@ -8695,15 +8757,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # add it verbatim to the emitted verdict row so a banked value can never pose as live.
         _pose_gate_m = v.pop("_pose_gate_telemetry", None) if isinstance(v, dict) else None
         blob = quantize_levelset_blob(ema_np)
-        s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
+        s = _optional_implied_score(v, blob["total_quantized_blob_bytes"])
         # (C6) LIVENESS STAMP captured at SCHEDULE time (the async worker runs later, off a snapshot;
         # the live _live dict would by then reflect a LATER epoch). None (sync callers not threading
         # it) => the fields are omitted (the sync path stamps liveness at its own call site).
         _lv = dict(liveness) if liveness else None
         with _verdict_lock:
             row = {"stage": "verdict", "epoch": ep, "seg_form": seg_form,
-                   **{k: round(vv, 6) for k, vv in v.items()},
-                   "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
+                   **_rounded_verdict_scalars(v),
+                   "blob_bytes": blob["total_quantized_blob_bytes"],
+                   "implied_S": (None if s is None else round(s, 4)),
                    "ep_loss": round(ep_loss, 3),
                    # ADDITIVE telemetry: UTC emit wall-time so dashboards read verdict
                    # arrival times DIRECTLY (the no-timestamp root cause the self-calibrating
@@ -8783,8 +8846,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # (S1-R1) blob_bytes carried into history so the TAIL rate-aware stop reads the coded-bytes
             # delta per cycle (additive key; d_seg/d_pose/implied_S unchanged; result.json gains an
             # auditable byte trace). Non-tail runs simply ignore it.
-            history.append({"epoch": ep, **v, "implied_S": s,
-                            "blob_bytes": blob["total_quantized_blob_bytes"]})
+            history.append(_history_verdict(
+                ep, v, blob["total_quantized_blob_bytes"], s))
             # (#292 build-3) deterministic closed-loop capture (ON only; OFF appends nothing =>
             # byte-identical). Under _verdict_lock; (M2 fix) the decision point joins the PREVIOUS
             # eval's thread first, so this row is ALWAYS visible to the controller that decides at
@@ -8802,12 +8865,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             epoch=int(ep),
             boundary_kind="verdict",
             stage=str(seg_form),
-            outcome_values={
+            outcome_values=(None if s is None else {
                 "d_seg": float(v["d_seg"]),
                 "d_pose": float(v["d_pose"]),
                 "blob_bytes": int(blob["total_quantized_blob_bytes"]),
                 "implied_S": float(s),
-            },
+            }),
             total_loss=float(ep_loss),
             weights_stepped=(None if _lv is None else bool(_lv.get("stepped", True))),
             accepted_fraction=(None if _lv is None else float(_lv.get("frac", 1.0))),
@@ -8911,10 +8974,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         parameter_key="live_np",
                         pose_verdict_index=_pose_meta_for_gap.get("pose_verdict_index"),
                     )
-                    _live_gap = live_gap_fields(v, _live_v)
                     if _pose_meta_for_gap.get("d_pose_live") is False:
-                        _live_gap.pop("d_pose_live", None)
-                        _live_gap.pop("d_pose_ema_minus_live", None)
+                        _live_gap = {
+                            "d_seg_live": float(_live_v["d_seg"]),
+                            "d_seg_ema_minus_live": (
+                                float(v["d_seg"]) - float(_live_v["d_seg"])
+                            ),
+                        }
+                    else:
+                        _live_gap = live_gap_fields(v, _live_v)
                 _emit_verdict_row(v, snap["ema_np"], ep, seg_form, ep_loss, async_tag=True,
                                   liveness=_lv_snap, tau=float(snap.get("softmax_temp")),
                                   row_extra=_live_gap)
@@ -9551,7 +9619,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "mem_probe", "phase": "before_v0_verdict", "n_pairs": P,
                           "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
                           "mlx_active_gib": round(_mm["active"], 2)}), flush=True)
-    v0 = realized_verdict(ep=int(start_epoch - 1))
+    v0 = realized_verdict(ep=int(start_epoch - 1), force_live_pose=True)
     v0.pop("nucleus_counts", None)  # (#302) baseline verdict: drop per-class counts (float-only row;
     #                                  readiness telemetry begins at the first in-loop verdict, after
     #                                  _evt_state exists). No-op when the nucleus feature is OFF.
@@ -9564,6 +9632,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # with annulus telemetry active (the default) crashed at the baseline_v0 print with
     # "TypeError: type dict doesn't define __round__ method".
     _per_class_v0 = v0.pop("per_class", None)
+    # (task-495) the gated pre-loop anchor is deliberately live, but its source/authority label is a
+    # row-only dict and therefore must not flow through the scalar rounding/history paths.
+    _pose_gate_v0 = v0.pop("_pose_gate_telemetry", None)
     if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
         _mm = _mlx_mem_gib(mx)
         print(json.dumps({"stage": "mem_probe", "phase": "after_v0_verdict", "n_pairs": P,
@@ -9586,6 +9657,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       **({"d_seg_by_class": _per_class_v0.get("d_seg_by_class"),
                           "flip_share_by_class": _per_class_v0.get("flip_share_by_class")}
                          if isinstance(_per_class_v0, dict) and "error" not in _per_class_v0 else {}),
+                      **(_pose_gate_v0 if isinstance(_pose_gate_v0, dict) else {}),
                       "phase": "baseline_v0",
                       "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                       "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
@@ -12321,10 +12393,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             parameter_key="live_np",
                             pose_verdict_index=_pose_meta_sync.get("pose_verdict_index"),
                         )
-                        _live_gap_sync = live_gap_fields(v, _live_v_sync)
                         if _pose_meta_sync.get("d_pose_live") is False:
-                            _live_gap_sync.pop("d_pose_live", None)
-                            _live_gap_sync.pop("d_pose_ema_minus_live", None)
+                            _live_gap_sync = {
+                                "d_seg_live": float(_live_v_sync["d_seg"]),
+                                "d_seg_ema_minus_live": (
+                                    float(v["d_seg"]) - float(_live_v_sync["d_seg"])
+                                ),
+                            }
+                        else:
+                            _live_gap_sync = live_gap_fields(v, _live_v_sync)
                     # (#302) split per-class counts out of the float-only sync verdict row / history.
                     _ncounts_sync = v.pop("nucleus_counts", None) if isinstance(v, dict) else None
                     # (SENSE) pop annulus BEFORE the float-only row spread. None unless
@@ -12339,13 +12416,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         v.pop("_pose_gate_telemetry", None) if isinstance(v, dict) else None
                     )
                     blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
-                    s = implied_score_from_verdict(v["d_seg"], v["d_pose"], blob["total_quantized_blob_bytes"])
+                    s = _optional_implied_score(v, blob["total_quantized_blob_bytes"])
                     # (C6) LIVENESS STAMP on the verdict row + frozen_epoch flag/alarm: a verdict d_seg
                     # from a FROZEN (all-skip) epoch is a frozen-state sample, NOT converged progress.
                     _frozen_ep = (int(_live["ep_tot"]) > 0 and int(_live["acc"]) == 0)
                     print(json.dumps({"stage": "verdict", "epoch": ep, "seg_form": seg_form,
-                                      **{k: round(vv, 6) for k, vv in v.items()},
-                                      "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s, 4),
+                                      **_rounded_verdict_scalars(v),
+                                      "blob_bytes": blob["total_quantized_blob_bytes"],
+                                      "implied_S": (None if s is None else round(s, 4)),
                                       "ep_loss": round(ep_loss, 3),
                                       "verdict_device": _verdict_device,
                                       "accepted_frac": round(float(_live["frac"]), 4),
@@ -12381,18 +12459,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                              note="ep_loss==0.0 / all batches skipped: this verdict is a "
                                              "FROZEN-state sample, not converged progress (do not treat "
                                              "as a plateau or a 'best')")
-                    history.append({"epoch": ep, **v, "implied_S": s,
-                                    "blob_bytes": blob["total_quantized_blob_bytes"]})  # (S1-R1) byte trace
+                    history.append(_history_verdict(
+                        ep, v, blob["total_quantized_blob_bytes"], s))  # (S1-R1) byte trace
                     _record_causal_boundary(
                         epoch=int(ep),
                         boundary_kind="verdict",
                         stage=str(seg_form),
-                        outcome_values={
+                        outcome_values=(None if s is None else {
                             "d_seg": float(v["d_seg"]),
                             "d_pose": float(v["d_pose"]),
                             "blob_bytes": int(blob["total_quantized_blob_bytes"]),
                             "implied_S": float(s),
-                        },
+                        }),
                         total_loss=float(ep_loss),
                         weights_stepped=bool(_live["stepped"]),
                         accepted_fraction=float(_live["frac"]),
@@ -12966,6 +13044,15 @@ def main(argv: list[str] | None = None) -> int:
                     "switch (--muon-start-event, the d_seg-converged coherent-render regime); this epoch "
                     "is the fail-safe BACKSTOP CAP (ep>=this also engages pose). 0 (default) => DISABLED "
                     "=> byte-identical (pose from ep0). Requires --w-pose > 0 (the finish-phase weight).")
+    ap.add_argument(
+        "--pose-training-compute-gate",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="(task-495, default OFF) when two-phase pose finish makes effective w_pose exactly "
+        "zero, skip the frame0 render and PoseNet forward/backward instead of constructing a "
+        "zero-weight graph. PoseNet resumes automatically when pose finish engages. Requires "
+        "--pose-finish-start-epoch>0 and --micro-batch-pairs=1.",
+    )
     # (owed-1 REPAIRED POSE-GATE; SYNTHESIS_v3_v752 §A.4) WHICH conditioning EVENT engages the pose-finish.
     # 'muon' (DEFAULT) = the incumbent: pose co-fires with the MUON switch (d_seg-converged coherent-render
     # regime) — BYTE-IDENTICAL. 'sigma_min_plateau' = the SEALED A-1 fix: a scale-free ROLLING-SLOPE ≈0 on
@@ -13171,9 +13258,10 @@ def main(argv: list[str] | None = None) -> int:
         "--verdict-pose-gate",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="(task-494 compatibility, default OFF) RETIRED/REFUSED: current V9 does not import "
-        "a payload-bound pose cache, so enabling this option fails closed and live PoseNet remains "
-        "mandatory. A future replacement needs current-run payload+receiver custody.",
+        help="(task-495, default OFF) while pose finish is not engaged, emit a d_seg-only "
+        "progress verdict with d_pose=null and implied_S=null and skip PoseNet. The pre-loop "
+        "baseline and every post-engagement verdict compute live PoseNet. No banked/non-live "
+        "numeric d_pose is admitted.",
     )
     ap.add_argument(
         "--verdict-pose-canary-every",
@@ -14778,6 +14866,21 @@ def main(argv: list[str] | None = None) -> int:
                 "realized-through-R no-d_seg-regression verdict"
             ),
         }), flush=True)
+    if bool(getattr(args, "pose_training_compute_gate", False)):
+        if int(getattr(args, "pose_finish_start_epoch", 0)) <= 0:
+            raise ValueError(
+                "--pose-training-compute-gate requires --pose-finish-start-epoch>0"
+            )
+        if int(getattr(args, "micro_batch_pairs", 1)) != 1:
+            raise ValueError(
+                "--pose-training-compute-gate requires --micro-batch-pairs=1; "
+                "the batched loss twin has no pose-skip consumer"
+            )
+    if bool(args.verdict_pose_gate) and int(args.pose_finish_start_epoch) <= 0:
+        raise ValueError(
+            "--verdict-pose-gate requires --pose-finish-start-epoch>0 so pose-blind "
+            "and pose-engaged verdict phases are defined"
+        )
     check_pose_verdict_fallback_is_live_or_refused(
         gate_on=bool(args.verdict_pose_gate),
         configured_nonlive_dpose=args.unselected_r1_advisory_dpose,

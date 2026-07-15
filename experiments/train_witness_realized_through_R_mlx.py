@@ -1225,7 +1225,7 @@ def make_loss_fn(
         b, t, h2, w2, c6 = yuv.shape
         return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
 
-    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None, terms_out=None):
+    def loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt, w_seg, w_pose, hinge, margin_target, mw_active=True, mw_temp=None, seg_form=None, tau_override=None, l7_thr_override=None, seg_pixel_w=None, terms_out=None, compute_pose=True):
         # ``terms_out`` (#304 item 4 per-term loss telemetry; ADDITIVE, default None => BYTE-IDENTICAL):
         # when given a dict, the WEIGHTED contributions {"seg": w_seg*seg_l, "pose": w_pose*pose_term}
         # are recorded as (lazy) mx arrays for the caller to eval OUTSIDE any grad transform. The
@@ -1252,7 +1252,11 @@ def make_loss_fn(
         # coarse->fine, PR95 signature). None -> the closed-over static value (back-compat).
         tau_use = tau_softplus_tau if tau_override is None else float(tau_override)
         l7_thr_use = l7_threshold if l7_thr_override is None else float(l7_thr_override)
-        f0 = _render(model, coord_feats, code0, render_h, render_w)
+        # Task #495: when the two-phase caller is explicitly pose-blind, do not
+        # render frame0 or construct a PoseNet graph merely to multiply its loss
+        # by zero.  ``compute_pose`` defaults True, so every existing caller and
+        # every pose-engaged epoch retains the exact incumbent graph.
+        f0 = _render(model, coord_feats, code0, render_h, render_w) if compute_pose else None
         f1 = _render(model, coord_feats, code1, render_h, render_w)
         # Realized seg loss on frame1 (post-R, frozen SegNet).
         seg_logits = adapter.segnet(f1)  # (1,H,W,5)
@@ -1322,12 +1326,16 @@ def make_loss_fn(
             if apply_mw:
                 pw = pw * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
             seg_l = mx.mean(pw if seg_pixel_w is None else pw * seg_pixel_w)
-        # Realized pose MSE on the pair (== realized d_pose).
-        yuv_nhwc = _yuv6_pair_nhwc(f0, f1)
-        pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]
-        pose_l = mx.mean(mx.square(pose[0] - pose_tgt))
-        # Score-domain: sqrt(10*d_pose) mirrors S's pose term (damp-then-sharpen).
-        pose_term = mx.sqrt(10.0 * pose_l + pose_eps) if score_domain else pose_l
+        # Realized pose MSE on the pair (== realized d_pose).  The false branch
+        # is intentionally graph-free: no PoseNet forward and no pose backward.
+        if compute_pose:
+            yuv_nhwc = _yuv6_pair_nhwc(f0, f1)
+            pose = adapter.posenet(yuv_nhwc)["pose"][..., : pose_tgt.shape[-1]]
+            pose_l = mx.mean(mx.square(pose[0] - pose_tgt))
+            # Score-domain: sqrt(10*d_pose) mirrors S's pose term (damp-then-sharpen).
+            pose_term = mx.sqrt(10.0 * pose_l + pose_eps) if score_domain else pose_l
+        else:
+            pose_term = mx.zeros_like(seg_l)
         if terms_out is not None:
             # #304 item 4: record the weighted contributions (lazy; caller evals outside grad).
             terms_out["seg"] = w_seg * seg_l

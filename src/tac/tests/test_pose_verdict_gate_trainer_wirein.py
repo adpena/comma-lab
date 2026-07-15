@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Adversarial tests for retirement of the unbound pose-verdict fallback."""
+"""Adversarial tests for the task-495 pose-blind compute gate."""
 
 from __future__ import annotations
 
@@ -37,6 +37,12 @@ def test_pose_verdict_gate_names_fail_closed_at_composition() -> None:
     names = lever_registry.name_composable_levers()
     assert "PoseVerdictGate" not in names
     assert "PoseVerdictGateDryStart" not in names
+    assert "PoseBlindComputeGate" in names
+    lever = lever_registry.resolve_composable_lever("PoseBlindComputeGate")
+    assert lever.overrides == {
+        "--pose-training-compute-gate": True,
+        "--verdict-pose-gate": True,
+    }
 
 
 def test_pose_verdict_gate_rejects_every_legacy_value() -> None:
@@ -48,6 +54,7 @@ def test_real_parser_preserves_only_disabled_legacy_parse_surface() -> None:
     parser = cd.build_real_trainer_parser()
     defaults = parser.parse_args(["--out-dir", "task494_parser_only"])
     assert defaults.verdict_pose_gate is False
+    assert defaults.pose_training_compute_gate is False
     assert defaults.verdict_pose_canary_every == 8
     assert not hasattr(defaults, "banked_r1_dpose")
     armed = parser.parse_args(
@@ -55,11 +62,13 @@ def test_real_parser_preserves_only_disabled_legacy_parse_surface() -> None:
             "--out-dir",
             "task494_parser_only",
             "--verdict-pose-gate",
+            "--pose-training-compute-gate",
             "--verdict-pose-canary-every",
             "3",
         ]
     )
     assert armed.verdict_pose_gate is True
+    assert armed.pose_training_compute_gate is True
     assert armed.verdict_pose_canary_every == 3
 
 
@@ -124,6 +133,9 @@ def test_wirein_covers_all_branches_and_resume_counter() -> None:
         "_gpu_verdict_dseg_chunked(",
         "_verdict_dseg_dpose_nucleus_chunked(",
         "check_pose_verdict_fallback_is_live_or_refused(",
+        "compute_pose=_compute_pose",
+        "_optional_implied_score(",
+        '_pose_gate_v0 = v0.pop("_pose_gate_telemetry", None)',
     ):
         assert required in source
     for forbidden in ("banked_pose_telemetry(",):
