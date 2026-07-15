@@ -18237,3 +18237,14 @@ annulus and longest end of long tail". Full table:
   post-D15 loss scale while REL parity 4.5e-8 holds → #509 domain (tolerance re-derived per
   value-provenance ladder, not hand-picked). verdict_scope: instance — the tolerance constant, not the parity mechanism.
 - Apparatus/means; pointer 0.19108 UNMOVED.
+
+## FEED-438-r2 (2026-07-15) — CUDA smoke r2 PAID ATTEMPT failed rc=1 (eager-MLX import on the CUDA image), ~$0.21 spent, root-cause FIXED, r3 queued
+- Modal H100 smoke attempt r2 died at boot: `tac.lie` eagerly imported 4 MLX submodules at package
+  import — MLX is Apple-only, so the CUDA container crashed before epoch 0. Root cause fixed on main
+  (lazy importlib indirection in tac.lie.__init__); ~$0.21 charged to the #381 envelope (ledger row in
+  modal_call_id_ledger.jsonl + terminal claim rows; launcher lane freed for r3).
+- LESSON (instance): the 1:1 CUDA port's import graph must be CUDA-host-clean — Apple-only deps
+  (mlx, Metal adapters) behind lazy imports everywhere the numpy-portable path can reach. r3 rebuilds
+  the upgraded smoke-regime plan (post-event levers from ep1, verdict epoch, drift column) at HEAD.
+- Spend state: #381 envelope debited ~$0.21; smoke budget unchanged (~$3.30-class pre-approved,
+  stop-and-report >$5). Apparatus/means; pointer 0.19108 UNMOVED.
