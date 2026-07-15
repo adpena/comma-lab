@@ -10,6 +10,7 @@ violation is caught.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -718,7 +719,7 @@ class TestTelemetryLiveness:
 
 class TestModule:
     def test_all_gates_registered(self):
-        assert len(cg.CONFOUND_GATES) == 13
+        assert len(cg.CONFOUND_GATES) == 14
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -734,7 +735,14 @@ class TestModule:
             "check_codex_retry_preserves_original_sandbox_authority",
             "check_codex_nonisolated_writer_cap",
             "check_codex_drain_timeout_uses_liveness",
+            "check_consolidation_debt_monitor_observability_and_cadence",
         }
+
+    def test_consolidation_debt_gate_is_wired_warn_only_in_preflight_all(self):
+        source = (cg.REPO_ROOT / "src" / "tac" / "preflight.py").read_text(encoding="utf-8")
+        assert "from tac.confound_gates import CONFOUND_GATES as _CONFOUND_GATES" in source
+        strict_block = source.split("_CONFOUND_STRICT = {", 1)[1].split("}", 1)[0]
+        assert "check_consolidation_debt_monitor_observability_and_cadence" not in strict_block
 
     @pytest.mark.parametrize("fn", cg.CONFOUND_GATES, ids=lambda f: f.__name__)
     def test_real_repo_warn_only_never_raises(self, fn):
@@ -775,9 +783,123 @@ class TestModule:
             "check_codex_retry_preserves_original_sandbox_authority": 0,
             "check_codex_nonisolated_writer_cap": 0,
             "check_codex_drain_timeout_uses_liveness": 0,
+            "check_consolidation_debt_monitor_observability_and_cadence": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"
+
+
+# ===========================================================================
+# consolidation-debt observability + cadence self-protect
+# ===========================================================================
+
+_CONSOLIDATION_CLEAN = """\
+import subprocess
+
+def read_status():
+    return subprocess.run([\"git\", \"status\"], capture_output=True, text=True).stdout
+"""
+
+
+def _consolidation_fixture(
+    root: Path,
+    source: str = _CONSOLIDATION_CLEAN,
+    *,
+    session_start: bool = True,
+    stop: bool = True,
+) -> None:
+    monitor = root / "tools" / "consolidation_debt.py"
+    monitor.parent.mkdir(parents=True)
+    monitor.write_text(source, encoding="utf-8")
+    command = cg._CONSOLIDATION_HOOK_COMMAND
+    settings = {
+        "hooks": {
+            "SessionStart": [{"hooks": [{"type": "command", "command": command}]}]
+            if session_start
+            else [],
+            "Stop": [{"hooks": [{"type": "command", "command": command}]}]
+            if stop
+            else [],
+        }
+    }
+    settings_path = root / ".claude" / "settings.json"
+    settings_path.parent.mkdir(parents=True)
+    settings_path.write_text(json.dumps(settings), encoding="utf-8")
+
+
+def test_consolidation_debt_guard_accepts_clean_read_only_monitor(tmp_path):
+    _consolidation_fixture(tmp_path)
+    assert cg.check_consolidation_debt_monitor_observability_and_cadence(
+        repo_root=tmp_path, strict=True, verbose=False
+    ) == []
+
+
+@pytest.mark.parametrize(
+    "source, expected",
+    [
+        ("def bad(p):\n    p.write_text('x')\n", "filesystem write"),
+        (
+            "import subprocess\ndef bad():\n    subprocess.run(['git', 'commit', '-m', 'x'])\n",
+            "mutating git subprocess",
+        ),
+        (
+            "import subprocess\ndef bad():\n    subprocess.run('git commit -m x', shell=True)\n",
+            "mutating git subprocess",
+        ),
+        (
+            "import subprocess\ndef bad():\n    subprocess.run(['python', 'tools/launch_job.py'])\n",
+            "launch/dispatch subprocess",
+        ),
+        ("def bad():\n    open('state.json', 'w')\n", "writable open"),
+        ("import os\ndef bad():\n    os.remove('state.json')\n", "filesystem write"),
+    ],
+)
+def test_consolidation_debt_guard_negates_side_effect_mutants(tmp_path, source, expected):
+    _consolidation_fixture(tmp_path, source)
+    violations = cg.check_consolidation_debt_monitor_observability_and_cadence(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert any(expected in violation for violation in violations)
+    with pytest.raises(PreflightError, match=expected):
+        cg.check_consolidation_debt_monitor_observability_and_cadence(
+            repo_root=tmp_path, strict=True, verbose=False
+        )
+
+
+@pytest.mark.parametrize("event", ["SessionStart", "Stop"])
+def test_consolidation_debt_guard_negates_lost_hook_wiring(tmp_path, event):
+    _consolidation_fixture(
+        tmp_path,
+        session_start=event != "SessionStart",
+        stop=event != "Stop",
+    )
+    violations = cg.check_consolidation_debt_monitor_observability_and_cadence(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert any(event in violation and "lost exact" in violation for violation in violations)
+
+
+def test_consolidation_debt_guard_respects_substantive_same_call_waiver(tmp_path):
+    source = (
+        "def reviewed_false_positive(p):\n"
+        "    p.write_text('x')  # CONSOLIDATION_DEBT_SIDE_EFFECT_OK:test fixture only\n"
+    )
+    _consolidation_fixture(tmp_path, source)
+    assert cg.check_consolidation_debt_monitor_observability_and_cadence(
+        repo_root=tmp_path, strict=True, verbose=False
+    ) == []
+
+
+def test_consolidation_debt_guard_rejects_placeholder_waiver(tmp_path):
+    source = (
+        "def bad(p):\n"
+        "    p.write_text('x')  # CONSOLIDATION_DEBT_SIDE_EFFECT_OK:<rationale>\n"
+    )
+    _consolidation_fixture(tmp_path, source)
+    violations = cg.check_consolidation_debt_monitor_observability_and_cadence(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert any("filesystem write" in violation for violation in violations)
 
 
 # ===========================================================================

@@ -40,6 +40,7 @@ Catalog map:
   2026-07-14 check_codex_retry_preserves_original_sandbox_authority
   2026-07-14 check_codex_nonisolated_writer_cap
   2026-07-14 check_codex_drain_timeout_uses_liveness
+  2026-07-15 check_consolidation_debt_monitor_observability_and_cadence
 """
 
 from __future__ import annotations
@@ -1540,10 +1541,248 @@ def check_no_inert_additive_margin_composition(
 
 
 # ===========================================================================
-# 2026-07-14 apparatus two-landings — delegation/drain confound extinction.
+# 2026-07-14/15 apparatus two-landings — workflow confound extinction.
 # These gates are behavior probes, not token checks: they import the exact pure
 # runtime boundary and execute the diagnosed counterexample plus clean controls.
 # ===========================================================================
+
+_CONSOLIDATION_MONITOR_REL = "tools/consolidation_debt.py"
+_CONSOLIDATION_SETTINGS_REL = ".claude/settings.json"
+_CONSOLIDATION_HOOK_COMMAND = (
+    '"$CLAUDE_PROJECT_DIR/.venv/bin/python" '
+    '"$CLAUDE_PROJECT_DIR/tools/consolidation_debt.py" --quiet-ok'
+)
+_CONSOLIDATION_WAIVER = "CONSOLIDATION_DEBT_SIDE_EFFECT_OK"
+_CONSOLIDATION_MUTATING_GIT_VERBS = frozenset(
+    {
+        "add",
+        "am",
+        "apply",
+        "checkout",
+        "clean",
+        "commit",
+        "merge",
+        "mv",
+        "push",
+        "rebase",
+        "reset",
+        "restore",
+        "revert",
+        "rm",
+        "switch",
+        "tag",
+    }
+)
+_CONSOLIDATION_WRITE_METHODS = frozenset(
+    {
+        "chmod",
+        "hardlink_to",
+        "mkdir",
+        "rename",
+        "rmdir",
+        "symlink_to",
+        "touch",
+        "unlink",
+        "write_bytes",
+        "write_text",
+    }
+)
+_CONSOLIDATION_SUBPROCESS_CALLS = frozenset(
+    {
+        "os.system",
+        "subprocess.call",
+        "subprocess.check_call",
+        "subprocess.check_output",
+        "subprocess.Popen",
+        "subprocess.run",
+    }
+)
+_CONSOLIDATION_WRITE_CALLS = frozenset(
+    {
+        "os.makedirs",
+        "os.mkdir",
+        "os.remove",
+        "os.rename",
+        "os.replace",
+        "os.rmdir",
+        "os.unlink",
+        "shutil.copy",
+        "shutil.copy2",
+        "shutil.copytree",
+        "shutil.move",
+        "shutil.rmtree",
+    }
+)
+
+
+def _dotted_call_name(node: ast.Call) -> str:
+    parts: list[str] = []
+    current = node.func
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if isinstance(current, ast.Name):
+        parts.append(current.id)
+    return ".".join(reversed(parts))
+
+
+def _call_string_literals(node: ast.Call) -> list[str]:
+    return [
+        child.value
+        for child in ast.walk(node)
+        if isinstance(child, ast.Constant) and isinstance(child.value, str)
+    ]
+
+
+def _consolidation_side_effect_waived(node: ast.Call, lines: list[str]) -> bool:
+    start = max(0, node.lineno - 1)
+    end = min(len(lines), getattr(node, "end_lineno", node.lineno))
+    return _waiver_present("\n".join(lines[start:end]), _CONSOLIDATION_WAIVER)
+
+
+def _open_call_is_writable(node: ast.Call) -> bool:
+    mode: str | None = None
+    if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+        mode = node.args[1].value if isinstance(node.args[1].value, str) else None
+    for keyword in node.keywords:
+        if keyword.arg == "mode" and isinstance(keyword.value, ast.Constant):
+            mode = keyword.value.value if isinstance(keyword.value.value, str) else None
+    return bool(mode and any(marker in mode for marker in ("w", "a", "x", "+")))
+
+
+def _mutating_command_reason(node: ast.Call, call_name: str) -> str | None:
+    if call_name not in _CONSOLIDATION_SUBPROCESS_CALLS and call_name != "_sh":
+        return None
+    tokens = _call_string_literals(node)
+    lowered = [token.strip().lower() for token in tokens]
+    for index, token in enumerate(lowered[:-1]):
+        if Path(token).name == "git" and lowered[index + 1] in _CONSOLIDATION_MUTATING_GIT_VERBS:
+            return f"mutating git subprocess (`git {lowered[index + 1]}`)"
+    joined = " ".join(lowered)
+    git_match = re.search(
+        r"(?:^|\s)git\s+(" + "|".join(sorted(_CONSOLIDATION_MUTATING_GIT_VERBS)) + r")(?:\s|$)",
+        joined,
+    )
+    if git_match:
+        return f"mutating git subprocess (`git {git_match.group(1)}`)"
+    for token in lowered:
+        basename = Path(token).name
+        if (
+            basename.startswith("launch")
+            or "dispatch" in basename
+            or re.search(r"(?:^|[/\s])launch[^\s/]*", token)
+            or basename in {"modal", "nohup", "vastai"}
+        ):
+            return f"launch/dispatch subprocess token ({token!r})"
+    return None
+
+
+def _hook_commands(settings: dict, event: str) -> list[str]:
+    commands: list[str] = []
+    groups = settings.get("hooks", {}).get(event, [])
+    if not isinstance(groups, list):
+        return commands
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        hooks = group.get("hooks", [])
+        if not isinstance(hooks, list):
+            continue
+        for hook in hooks:
+            if isinstance(hook, dict) and hook.get("type") == "command":
+                command = hook.get("command")
+                if isinstance(command, str):
+                    commands.append(command)
+    return commands
+
+
+def check_consolidation_debt_monitor_observability_and_cadence(
+    *, repo_root: str | Path | None = None, strict: bool = False, verbose: bool = True,
+) -> list[str]:
+    """Guard the consolidation monitor's read-only contract and proactive cadence.
+
+    The monitor may read Git and durable ledgers, but must not write files, mutate
+    Git, or invoke launch/dispatch tooling. Its exact non-blocking ``--quiet-ok``
+    command must remain wired into both ``SessionStart`` and ``Stop``. A suspicious
+    source call can carry a same-call ``# CONSOLIDATION_DEBT_SIDE_EFFECT_OK:<reason>``
+    waiver for a reviewed false positive; placeholder rationales are rejected.
+
+    Wired through ``CONFOUND_GATES`` WARN-ONLY: this is apparatus observability, while
+    the codex landing-review gate remains the only Stop-hook blocker.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    monitor = root / _CONSOLIDATION_MONITOR_REL
+    settings_path = root / _CONSOLIDATION_SETTINGS_REL
+    violations: list[str] = []
+
+    source = _read(monitor)
+    if source is None:
+        violations.append(
+            f"{_CONSOLIDATION_MONITOR_REL}: missing/unreadable — rule chain: proactive "
+            "consolidation cadence -> monitor must exist. Restore the monitor."
+        )
+    else:
+        try:
+            tree = ast.parse(source)
+        except SyntaxError as exc:
+            tree = None
+            violations.append(
+                f"{_CONSOLIDATION_MONITOR_REL}:{exc.lineno or 1}: syntax error — rule "
+                "chain: cadence monitor -> executable read-only telemetry. Fix syntax."
+            )
+        if tree is not None:
+            lines = source.splitlines()
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                call_name = _dotted_call_name(node)
+                reason: str | None = None
+                if call_name in _CONSOLIDATION_WRITE_CALLS:
+                    reason = f"filesystem write call ({call_name})"
+                elif isinstance(node.func, ast.Attribute) and node.func.attr in _CONSOLIDATION_WRITE_METHODS:
+                    reason = f"filesystem write call ({node.func.attr})"
+                elif (
+                    call_name in {"open", "builtins.open", "Path.open"}
+                    or (isinstance(node.func, ast.Attribute) and node.func.attr == "open")
+                ) and _open_call_is_writable(node):
+                    reason = "writable open() mode"
+                else:
+                    reason = _mutating_command_reason(node, call_name)
+                if reason and not _consolidation_side_effect_waived(node, lines):
+                    violations.append(
+                        f"{_CONSOLIDATION_MONITOR_REL}:{node.lineno}: {reason} — rule "
+                        "chain: consolidation monitor -> observability-only -> never "
+                        "write/commit/launch. Remove the side effect or add a substantive "
+                        f"same-call `# {_CONSOLIDATION_WAIVER}:<reason>` waiver."
+                    )
+
+    try:
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        if not isinstance(settings, dict):
+            raise ValueError("top-level JSON value is not an object")
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        settings = {}
+        violations.append(
+            f"{_CONSOLIDATION_SETTINGS_REL}: unreadable/invalid ({type(exc).__name__}) — "
+            "rule chain: proactive cadence -> valid hook config. Restore valid JSON."
+        )
+    for event in ("SessionStart", "Stop"):
+        commands = _hook_commands(settings, event)
+        if _CONSOLIDATION_HOOK_COMMAND not in commands:
+            violations.append(
+                f"{_CONSOLIDATION_SETTINGS_REL}: {event} lost exact non-blocking monitor "
+                "wiring — rule chain: regular proactive consolidation -> cadence hook -> "
+                f"`{_CONSOLIDATION_HOOK_COMMAND}`. Restore that command; do not add --strict."
+            )
+
+    return _finish(
+        name="check_consolidation_debt_monitor_observability_and_cadence",
+        tag="consolidation-debt-observability-cadence",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail="monitor read-only; SessionStart + Stop --quiet-ok wiring present",
+    )
 
 
 def _load_tool_module(root: Path, filename: str):
@@ -1784,4 +2023,5 @@ CONFOUND_GATES = (
     check_codex_retry_preserves_original_sandbox_authority,
     check_codex_nonisolated_writer_cap,
     check_codex_drain_timeout_uses_liveness,
+    check_consolidation_debt_monitor_observability_and_cadence,
 )
