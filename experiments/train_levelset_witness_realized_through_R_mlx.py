@@ -6219,8 +6219,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                 "amp_active": False}
     # the self-detected island class indices the amp-split multipliers key off (from _idet when amplify
     # is on; the birth-completion watched classes should equal {lane_cls, movable_cls} = canonical {1,3}).
-    _bc_lane_cls = int(_idet.lane_cls) if (_bc_ramp_on and amplify_w > 0.0) else 1
-    _bc_mov_cls = int(_idet.movable_cls) if (_bc_ramp_on and amplify_w > 0.0) else 3
+    # (#509 batch 3 fix, 2026-07-15) small-subset guard: the island detector SELF-DETECTS its
+    # classes (never hardcoded — the canonical-class-order rule), but on a small pair subset
+    # (n24 A/B arms) a class can legitimately detect as None (no movable islands in the subset)
+    # and the previous unconditional int(...) raised TypeError at boot. Fall back to the SAME
+    # canonical index the ramp-OFF branch already uses; n600 behavior byte-identical (detected
+    # indices non-None there).
+    _bc_lane_cls = (int(_idet.lane_cls)
+                    if (_bc_ramp_on and amplify_w > 0.0 and _idet.lane_cls is not None) else 1)
+    _bc_mov_cls = (int(_idet.movable_cls)
+                   if (_bc_ramp_on and amplify_w > 0.0 and _idet.movable_cls is not None) else 3)
     if _bc_ramp_on:
         print(json.dumps({"stage": "birth_completion_ramp_apply", "lane_cls": _bc_lane_cls,
                           "mov_cls": _bc_mov_cls,
