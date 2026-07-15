@@ -18148,3 +18148,44 @@ annulus and longest end of long tail". Full table:
   grad-clip law lands its EmpiricalAnchor only with the owed n24 A/B; flagged as the known gap).
 - **pointer 0.19108 UNMOVED (means/apparatus).** verdict_scope: instance (this host/config) except
   grad-clip saturation = formulation (family-wide flag).
+
+## FEED-509burn (2026-07-15) — #509 burn-down BUILD+MEASURE: #480 wired · AutoClip landed · two hypotheses REFUTED · timer-family launch blocker named
+- **SIGNAL (operator, verbatim):** "12.5 is unacceptable must continue optimizing" + mid-unit
+  resequence: telemetry-first, verdict fix HELD until the timer decides. Memo:
+  `.omx/research/wallclock_burndown_build_20260715.md`. Commit `c219841d8c`.
+- **BUILT (triality-complete):** (1) **#480 real-path decomposition WIRED** — five DISJOINT
+  main-thread fields (`real_grad_accum_s / real_optimizer_s / real_loss_terms_telemetry_s /
+  real_epoch_probes_s / real_verdict_submit_s` + `real_path_sum_s`) in
+  `witness_component_wallclock` rows; the submit field DECIDES the +903s submit-vs-checkpoint
+  coincidence (both fire at cadence 25). First n600 consumer = sister dry-start
+  `levelset_n600_drystart3_telemetry480_20260715` (launched post-commit). (2) **#B-4 AutoClip
+  percentile grad-clip** — equations leg `autoclip_percentile_threshold_v1` (registered) ·
+  mechanism `tac.witness_control.adaptive_grad_clip` (ring/warmup/per-group/resume `__acl_`) ·
+  trainer `--grad-clip-mode autoclip` (default fixed = byte-identical) · DSL `AdaptiveGradClip`
+  (LawRef custody, composable). (3) **lane-band pair-static cache** (bit-identical, default ON,
+  `LaneBandStaticCache` OFF-arm lever).
+- **MEASURED (receipts; advisory, NON-PROMOTABLE):**
+  (a) **cache microbench REFUTES D.3-3**: Δ0.033 ms/call ⇒ **−0.04 s/ep** at n600 (not −40–60);
+  the +75 s/ep band cost is the θ-dependent margin/appearance forwards in the fused graph —
+  the honest lever is score-affecting (fold call_margin into the main forward's soft output);
+  verdict_scope INSTANCE (microbench).
+  (b) **CONFOUND (FORMULATION, source-verified): C0 runs `--grad-normalize per-param`** —
+  per-tensor unit-norm AFTER the clip ⇒ ANY norm clip (0.5/per-group/autoclip) is a NO-OP on
+  the applied update ⇒ FEED-205watch (1)'s "effective step ≈ lr/12" mechanism claim is
+  **REFUTED for C0** (saturation telemetry real but INERT). C0's magnitude law = per-tensor
+  unit-norm × LR (SignSGD-like, #146 preset, its own docstring: unproven for our objective).
+  The epochs-to-target A/B is magnitude-LAW vs magnitude-LAW: incumbent vs
+  (`--grad-normalize none` + AutoClip) vs (`none` + fixed 0.5).
+- **BLOCKER (named, verbatim rc=8):** under today's #406 enforcement the whole
+  crucible_v752/timer-ticket family REFUSES to launch — `LawRef compiled value for
+  'hosc_beta_end' differs from WitnessProgram flag: 10.0 != 3.177`
+  (`lawref_builtins.HOSC_BETA_FIREBAND_PIN` stale vs the rephased flag). Unlock: rebind the
+  v752 lineage custody to 3.177 (10.0 → historical_non_authorizing) OR compile the A/B ticket
+  on the v9 lineage. Governor respected, not bypassed.
+- **HONEST PROJECTION: still ~12.5 days** (receipts this session: −0.04 s/ep). Path down, in
+  order: n600 attribution rows (instrument LIVE) → verdict decision row (−36 s/ep class) →
+  magnitude-law A/B (epochs-to-target, magnitude UNKNOWN until measured) → bf16 arm
+  (BUILD-OWED, no dtype seam exists; ceiling ~1.5–1.8× estimate-flagged).
+- **Triality:** DAG=this FEED · DSL=`AdaptiveGradClip`/`LaneBandStaticCache` factories ·
+  equations=`autoclip_percentile_grad_clip_20260715` (closes FEED-205watch's flagged
+  no-registered-equation gap for the clip law). **pointer 0.19108 UNMOVED (means).**
