@@ -1,8 +1,11 @@
 # DAG FEED — causal-SDE time-split intervention custody
 
-**Date:** 2026-07-15  
-**Feed:** `FEED-paper-2607-12140-stage-intervention-custody`  
-**Status:** `research_only=true`; staged route only; no shared DAG append, build, launch, or score claim  
+**Date:** 2026-07-15
+
+**Feed:** `FEED-paper-2607-12140-stage-intervention-custody`
+
+**Status:** `research_only=true`; staged route only; no shared DAG append, build, launch, or score claim
+
 **verdict_scope:** `DIRECT-MECHANISM x CURRENT-V9-TRAINING-CORPUS`; causal-process family open
 
 ```yaml
@@ -67,4 +70,3 @@ organ `#426/#436` records; canonical task-status rows; CLAUDE/AGENTS operating c
 paper's primary full text.
 
 **Pointer delta:** none. **Run/dispatch delta:** none. **Canonical equation delta:** none.
-
