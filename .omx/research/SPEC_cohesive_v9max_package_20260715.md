@@ -102,7 +102,25 @@ tests (`test_event_wirings.py` +2, static registry coverage green).
 - Memory: single run projected ~67.6 GiB peak (chunked verdict) < 0.85×128 GiB ✓; TWO concurrent
   runs ≈ 135 GiB > 0.70×128 GiB = 89.6 GiB ⇒ **curvelet arm CANNOT fire concurrent** — staged for
   immediate-next (launch.sh compiled, fires when the main run frees the waterfill).
-- Launch entries: see the run-dir `launch.sh` + `run.log` (filled below at fire).
+- Launch entries (2026-07-15, all through the governed launcher; each REFUSE = information):
+  - r1 REFUSE rc=8: `c1_component_wallclock_probe_every` equation_id None → #332 LawRef gate. FIX
+    `22808dc7eb` (registered `laguerre_ot_head_offset_v1`; probe-every row dropped — trainer default,
+    provenance in the lever notes).
+  - r2 REFUSE (system admission): 121.2 > 117.8 GiB ceiling — 3 sibling bounded dry-starts held
+    ~74 GiB active-growth. Not bypassed; waited.
+  - r3 REFUSE rc=11 (ticket blockers): static `launch_blockers` refused even the dry-start —
+    chicken-and-egg with the bench receipt. FIX `6d39a7dfc9`: blockers now COMPILE-TIME DERIVED
+    (sR sidecar custody CLEAR from the real 450 MB file; bench blocker drops on a GREEN
+    `full_config_dry_start` report for the config name) + the bounded `--dry-start` PROCEEDS under
+    declared blockers (receipt producer; cannot durable-spawn — rc=11 real-launch invariant intact).
+  - r4 REFUSE rc=3 (throughput gate): SegNet fwd+bwd 678 ms > 594 ms — the ~17× fast path IS active
+    (OFF ≈ 6713 ms) but ~1.7× GPU-contended by the sibling trainers. Transient; not threshold-bumped.
+  - r5: DURABLE CHAIN (`.omx/tmp/c1_dry_start/chain_507.sh`, driver log `chain_507_driver.log`) —
+    drain-wait → bounded dry-start (writes `dry_start_report.json`, discharging
+    C1_COMPOSED_BENCH_NOT_MEASURED on recompile) → on GREEN fires the REAL governed launch
+    (`real_launch_507.log`; all gates re-run at spawn). Gate-chain state at arm time: schedule
+    provenance 12/12 OK (5 events + backstops incl. `label_floor`), mem-preflight 24.48 GiB
+    projected, admission ADMIT, dsl_compile_hash bound.
 
 ## 6. FOLD-IN QUEUE (owned elsewhere / next)
 
