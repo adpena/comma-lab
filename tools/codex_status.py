@@ -163,6 +163,66 @@ def _classify_outcome(last_text: str) -> dict:
     }
 
 
+def status_rows(*, classify: bool = False) -> list[dict]:
+    """Return the canonical fleet snapshot consumed by status and drain tools.
+
+    Keeping liveness reconciliation here prevents drain monitors from growing a
+    second, subtly different ``pgrep`` implementation.  Additional custody
+    paths are carried through for liveness evidence but do not change buckets.
+    """
+    if not LEDGER.is_file():
+        return []
+
+    dispositions = _latest_dispositions()
+    seen: dict[str, dict] = {}
+    for line in LEDGER.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        seen[f"{row.get('label')}_{row.get('stamp')}"] = row
+
+    rows: list[dict] = []
+    for delegation in seen.values():
+        label, stamp = delegation.get("label", ""), delegation.get("stamp", "")
+        done = _read_done(delegation.get("done_marker", ""))
+        alive = _alive(label, stamp)
+        disp = dispositions.get((label, stamp))
+        age_h = _age_hours(delegation.get("launched_utc"))
+        bucket = _bucket(alive, done, disp, age_h)
+        row = {
+            "label": label,
+            "stamp": stamp,
+            "model": delegation.get("model"),
+            "effort": delegation.get("effort"),
+            "sandbox": delegation.get("sandbox"),
+            "isolate": delegation.get("isolate"),
+            "worktree": delegation.get("worktree"),
+            "progress_path": delegation.get("progress_path"),
+            "status": bucket,
+            "disposition": disp,
+            "inbox_pending": _inbox_lines(label) if bucket == "RUNNING" else 0,
+            "rc": (done or {}).get("rc"),
+            "finished_utc": (done or {}).get("finished_utc"),
+            "launched_utc": delegation.get("launched_utc"),
+            "log": delegation.get("log"),
+        }
+        if classify and done:
+            last_path = Path(delegation.get("last", "") or "")
+            if last_path.is_file():
+                row["outcome"] = _classify_outcome(
+                    last_path.read_text(encoding="utf-8", errors="ignore")
+                )
+            else:
+                row["outcome"] = {"ok": False, "why": "no-last-txt"}
+        rows.append(row)
+    rows.sort(key=lambda row: row.get("launched_utc") or "")
+    return rows
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true")
@@ -178,47 +238,7 @@ def main(argv: list[str] | None = None) -> int:
         print("(no codex delegations yet)")
         return 0
 
-    dispositions = _latest_dispositions()
-
-    rows: list[dict] = []
-    # latest ledger row per label+stamp wins
-    seen: dict[str, dict] = {}
-    for line in LEDGER.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            d = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        seen[f"{d.get('label')}_{d.get('stamp')}"] = d
-
-    for d in seen.values():
-        label, stamp = d.get("label", ""), d.get("stamp", "")
-        done = _read_done(d.get("done_marker", ""))
-        alive = _alive(label, stamp)
-        disp = dispositions.get((label, stamp))
-        age_h = _age_hours(d.get("launched_utc"))
-        bucket = _bucket(alive, done, disp, age_h)
-        row = {
-            "label": label, "stamp": stamp,
-            "model": d.get("model"), "effort": d.get("effort"),
-            "status": bucket, "disposition": disp,
-            "inbox_pending": _inbox_lines(label) if bucket == "RUNNING" else 0,
-            "rc": (done or {}).get("rc"),
-            "finished_utc": (done or {}).get("finished_utc"),
-            "launched_utc": d.get("launched_utc"), "log": d.get("log"),
-        }
-        if args.classify and done:  # semantic outcome only makes sense once finished
-            last_path = Path(d.get("last", "") or "")
-            if last_path.is_file():
-                row["outcome"] = _classify_outcome(
-                    last_path.read_text(encoding="utf-8", errors="ignore"))
-            else:
-                row["outcome"] = {"ok": False, "why": "no-last-txt"}
-        rows.append(row)
-
-    rows.sort(key=lambda r: r.get("launched_utc") or "")
+    rows = status_rows(classify=args.classify)
     if args.json:
         print(json.dumps(rows, indent=2))
         return 0

@@ -16,7 +16,7 @@ USAGE (launch):
     .venv/bin/python tools/codex_delegate.py \
         --label frozen_segnet \
         --prompt-file .omx/tmp/codex_runs/frozen_segnet_analysis.prompt.txt \
-        [--model gpt-5.6-sol] [--effort ultra] [--sandbox workspace-write] \
+        [--model gpt-5.6-sol] [--effort ultra] [--sandbox danger-full-access] \
         [--no-launch]   # write the launcher + ledger row but do not osascript-launch
 
     # then ONCE per session, arm the notifier (Claude Monitor tool, persistent):
@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import json
+import shlex
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,10 +42,24 @@ INBOX_DIR = REPO / ".omx" / "tmp" / "codex_inbox"  # per-arm watched inboxes (to
 MANIFEST_DIR = REPO / ".omx" / "tmp" / "codex_manifests"  # per-arm files-touched manifest (harvest-commit contract)
 WORKTREE_DIR = REPO / ".omx" / "tmp" / "codex_worktrees"  # per-arm isolated git worktree (CFL disjoint domain)
 
-# Back-pressure: a workspace-write arm CANNOT commit (sandbox blocks .git/objects), so every arm
-# strands its diff UNCOMMITTED in the shared tree. Above this many uncommitted files the dispatcher
-# REFUSES to launch (accruing more drift) until the pile is harvest-drained. --force overrides.
+# Back-pressure for legacy shared-tree writers: workspace-write blocks .git/objects,
+# so such an arm strands its diff. Above this many existing uncommitted files the
+# dispatcher refuses ordinary launches until the pile is harvest-drained.
 _MAX_UNCOMMITTED_PILE = 40
+
+# A shared-tree writer has no attribution boundary: two such arms can edit one
+# index/worktree and leave an intermingled, unreviewable pile. Isolated worktree
+# arms and read-only shared-tree arms cannot create that failure mode.
+_MAX_NONISOLATED_WRITERS = 1
+
+# Relaunches retain their label's custody. They may retain/increase authority,
+# but must never silently downgrade a commit-capable arm to a sandbox that
+# cannot write the worktree's git objects.
+_SANDBOX_AUTHORITY = {
+    "read-only": 0,
+    "workspace-write": 1,
+    "danger-full-access": 2,
+}
 
 # Bidirectional-channel contract prepended to EVERY delegated prompt so a one-shot codex arm
 # stays AMENDABLE while running: it polls a watched inbox at each checkpoint and consumes new
@@ -97,6 +112,100 @@ def _uncommitted_pile_size() -> int:
                        capture_output=True, text=True)
     return sum(1 for ln in r.stdout.splitlines() if ln.strip())
 
+
+def _ledger_rows() -> list[dict]:
+    """Return valid delegation rows; a corrupt line is not treated as a row."""
+    if not LEDGER.is_file():
+        return []
+    rows: list[dict] = []
+    for line in LEDGER.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _prior_sandboxes(label: str) -> list[str]:
+    """Every valid sandbox previously recorded for ``label`` (oldest first)."""
+    return [
+        str(row.get("sandbox"))
+        for row in _ledger_rows()
+        if row.get("label") == label and row.get("sandbox") in _SANDBOX_AUTHORITY
+    ]
+
+
+def _live_nonisolated_writer_count() -> int:
+    """Count live shared-tree arms that can write.
+
+    Legacy rows without an ``isolate`` field are conservatively non-isolated.
+    """
+    seen: dict[str, dict] = {}
+    for row in _ledger_rows():
+        seen[f"{row.get('label')}_{row.get('stamp')}"] = row
+    count = 0
+    for row in seen.values():
+        if bool(row.get("isolate", False)):
+            continue
+        if row.get("sandbox", "workspace-write") == "read-only":
+            continue
+        label, stamp = row.get("label", ""), row.get("stamp", "")
+        if not label or not stamp:
+            continue
+        r = subprocess.run(
+            ["pgrep", "-f", f"{label}_{stamp}"], capture_output=True, text=True
+        )
+        if r.returncode == 0 and r.stdout.strip():
+            count += 1
+    return count
+
+
+def _launch_policy_refusal(
+    *,
+    label: str,
+    requested_sandbox: str,
+    isolate: bool,
+    prior_sandboxes: list[str],
+    live_nonisolated_writers: int,
+    nonisolated_writer_cap: int = _MAX_NONISOLATED_WRITERS,
+) -> tuple[int, str] | None:
+    """Pure fail-closed policy for relaunch authority and shared-tree writers.
+
+    STRICT preflight executes the diagnosed counterexamples against this exact
+    function, so a token-only imitation cannot satisfy the gate.
+    """
+    requested_rank = _SANDBOX_AUTHORITY[requested_sandbox]
+    valid_prior = [s for s in prior_sandboxes if s in _SANDBOX_AUTHORITY]
+    if valid_prior:
+        strongest = max(valid_prior, key=_SANDBOX_AUTHORITY.__getitem__)
+        if requested_rank < _SANDBOX_AUTHORITY[strongest]:
+            return (
+                5,
+                f"REFUSED (sandbox downgrade): label '{label}' previously ran with "
+                f"sandbox={strongest}, but this relaunch requests {requested_sandbox}. "
+                "A retry/relaunch must preserve or increase the original arm's git "
+                "authority; use the original sandbox, or use a new label for a genuinely "
+                "read-only lineage. --force cannot bypass this custody guard.",
+            )
+
+    requested_is_writer = not isolate and requested_sandbox != "read-only"
+    if requested_is_writer and live_nonisolated_writers >= nonisolated_writer_cap:
+        return (
+            6,
+            "REFUSED (non-isolated writer cap): "
+            f"{live_nonisolated_writers} shared-tree writer arm(s) are already live "
+            f"(cap={nonisolated_writer_cap}). Multiple --no-isolate writer arms create "
+            "one intermingled, confounded diff with no reviewable attribution. Use the "
+            "default isolated worktree, wait for the current writer to finish, or make "
+            "this arm --sandbox read-only. --force cannot bypass this safety cap.",
+        )
+    return None
+
 # Transient-death auto-recovery (apparatus fix for the codex_probe_token_limit_death /
 # "Selected model is at capacity" bug class): a capacity/rate-limit/disconnect is a
 # SERVER blip, not a token limit — a bump of model_context_window would NOT help. On such
@@ -121,17 +230,8 @@ def _utc() -> str:
 def _live_labels() -> list[str]:
     """Labels of currently-alive delegated arms (robust: pgrep on the label_stamp
     token per ledger row, never `pgrep -fl | head` which the inlined prompt clips)."""
-    if not LEDGER.is_file():
-        return []
     seen: dict[str, dict] = {}
-    for line in LEDGER.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            d = json.loads(line)
-        except json.JSONDecodeError:
-            continue
+    for d in _ledger_rows():
         seen[f"{d.get('label')}_{d.get('stamp')}"] = d
     live: list[str] = []
     for d in seen.values():
@@ -154,8 +254,10 @@ def _append_ledger(row: dict) -> None:
 
 def _write_launcher(label: str, stamp: str, prompt_file: Path, model: str,
                     effort: str, sandbox: str, log: Path, last: Path,
-                    done: Path, isolate: bool, worktree: Path) -> Path:
+                    done: Path, isolate: bool = True,
+                    worktree: Path | None = None) -> Path:
     launcher = RUNS / f"launch_{label}_{stamp}.sh"
+    worktree = worktree or (WORKTREE_DIR / f"{label}_{stamp}")
     # Per-arm git-worktree ISOLATION (CFL disjoint write-domain -> no trample). When isolate, the arm
     # runs in its OWN worktree on branch codexwt/<label>_<stamp> (shares .git/objects, own index+HEAD),
     # commits there with full authority, and MAIN merges the branch to main (the single serialized
@@ -168,7 +270,12 @@ def _write_launcher(label: str, stamp: str, prompt_file: Path, model: str,
             f'  WORKDIR="{worktree}"\n'
             f'  echo "WORKTREE {label} {stamp} base=$BASE branch={branch} path={worktree}" >> {EVENTS}\n'
             f'else\n'
-            f'  echo "WORKTREE-FAIL {label} {stamp} — shared-tree fallback (NO isolation)" >> {EVENTS}\n'
+            f'  RC=12\n'
+            f'  echo "WORKTREE-REFUSED {label} {stamp} — isolation setup failed; no shared-tree writer fallback" >> {EVENTS}\n'
+            f'  echo "DONE {label} rc=$RC {stamp} $(date -u +%Y-%m-%dT%H:%M:%SZ) :: isolation setup failed closed" >> {EVENTS}\n'
+            f"  printf 'rc=%s\\nfinished_utc=%s\\nlog=%s\\nlast=%s\\nworktree=%s\\nbranch=%s\\nisolate=1\\n' \"$RC\" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" \"{log}\" \"{last}\" \"{worktree}\" \"{branch}\" > {done}\n"
+            f'  echo "REFUSED: isolated worktree creation failed; shared-tree fallback is forbidden for writer arms"\n'
+            f'  exec bash\n'
             f'fi'
         )
     else:
@@ -184,13 +291,14 @@ mkdir -p {RUNS}
 echo "START {label} {stamp} $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> {EVENTS}
 echo "=== codex delegate '{label}' [{model}/{effort}/{sandbox}] {stamp} ==="
 echo "log:  {log}"
+ORIGINAL_SANDBOX={shlex.quote(sandbox)}
 WORKDIR="{REPO}"
 {isolate_setup}
 cd "$WORKDIR" || cd {REPO} || exit 1
 echo "cwd: $WORKDIR"
 codex exec \\
   --skip-git-repo-check \\
-  --sandbox {sandbox} \\
+  --sandbox "$ORIGINAL_SANDBOX" \\
   -m {model} \\
   -c model_reasoning_effort={effort} \\
   -o {last} \\
@@ -210,7 +318,7 @@ while [ "$RC" -ne 0 ] && [ "$attempt" -lt {_MAX_CAPACITY_RETRIES} ] && \\
   sleep $backoff
   codex exec \\
     --skip-git-repo-check \\
-    --sandbox {sandbox} \\
+    --sandbox "$ORIGINAL_SANDBOX" \\
     -m {model} \\
     -c model_reasoning_effort={effort} \\
     -o {last} \\
@@ -260,6 +368,19 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("--label must not contain spaces")
     RUNS.mkdir(parents=True, exist_ok=True)
 
+    isolate = not args.no_isolate
+    policy_refusal = _launch_policy_refusal(
+        label=args.label,
+        requested_sandbox=args.sandbox,
+        isolate=isolate,
+        prior_sandboxes=_prior_sandboxes(args.label),
+        live_nonisolated_writers=_live_nonisolated_writer_count(),
+    )
+    if policy_refusal is not None:
+        rc, message = policy_refusal
+        print(message)
+        return rc
+
     # De-confliction preflight: surface the live fleet before adding to it, and REFUSE a
     # duplicate-live-label (the over-launch this hardening extincts) unless --force.
     live = _live_labels()
@@ -270,13 +391,14 @@ def main(argv: list[str] | None = None) -> int:
               f"Redirect it via .omx/tmp/codex_inbox/{args.label}.jsonl, or pass --force to run a second.")
         return 3
 
-    # Back-pressure: refuse to launch into a growing drift pile. Arms CANNOT commit (sandbox blocks
-    # .git/objects), so every launch accrues more stranded, un-attributable work in the shared tree.
+    # Back-pressure: the shared-tree writer cap above prevents multi-writer
+    # confounding; this second bound stops even one legacy writer from growing
+    # an already-unreviewable pile.
     pile = _uncommitted_pile_size()
     if pile > _MAX_UNCOMMITTED_PILE and not args.force:
         print(f"REFUSED (back-pressure): {pile} uncommitted files in the shared tree "
-              f"(> {_MAX_UNCOMMITTED_PILE}). Codex arms CANNOT commit (sandbox blocks .git/objects), so "
-              f"launching more ACCRUES drift. Harvest-drain done arms first "
+              f"(> {_MAX_UNCOMMITTED_PILE}). Launching more ACCRUES drift. "
+              f"Harvest-drain done arms first "
               f"(tools/codex_harvest_commit.py --label <L> --stamp <S>), then relaunch — or --force.")
         return 4
 
@@ -295,7 +417,6 @@ def main(argv: list[str] | None = None) -> int:
     # prompt_file is preserved untouched (and recorded in the ledger for provenance).
     INBOX_DIR.mkdir(parents=True, exist_ok=True)
     MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
-    isolate = not args.no_isolate
     worktree = WORKTREE_DIR / f"{args.label}_{stamp}"
     branch = f"codexwt/{args.label}_{stamp}"
     inbox = INBOX_DIR / f"{args.label}.jsonl"

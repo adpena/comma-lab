@@ -718,7 +718,7 @@ class TestTelemetryLiveness:
 
 class TestModule:
     def test_all_gates_registered(self):
-        assert len(cg.CONFOUND_GATES) == 10
+        assert len(cg.CONFOUND_GATES) == 13
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -731,6 +731,9 @@ class TestModule:
             "check_launch_config_authored_in_dsl",
             "check_no_unjustified_magnitude_dismissal",
             "check_no_inert_additive_margin_composition",
+            "check_codex_retry_preserves_original_sandbox_authority",
+            "check_codex_nonisolated_writer_cap",
+            "check_codex_drain_timeout_uses_liveness",
         }
 
     @pytest.mark.parametrize("fn", cg.CONFOUND_GATES, ids=lambda f: f.__name__)
@@ -768,6 +771,10 @@ class TestModule:
             # #405 additive-margin inert composition: live-count 0 (no launch.sh ships an
             # inert AM arm); strict-flip-eligible once the DSL fail-closed + trainer L1 land.
             "check_no_inert_additive_margin_composition": 0,
+            # 2026-07-14 apparatus fix+gate atomic strict landings.
+            "check_codex_retry_preserves_original_sandbox_authority": 0,
+            "check_codex_nonisolated_writer_cap": 0,
+            "check_codex_drain_timeout_uses_liveness": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

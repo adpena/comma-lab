@@ -6382,6 +6382,12 @@ def preflight_all(
         _CONFOUND_STRICT = {
             "check_no_spike_guard_defaults_to_deadlock_mode",
             "check_verdict_pairs_default_is_n600",
+            # 2026-07-14 apparatus incident replay: all three gates execute the
+            # diagnosed counterexample against the exact runtime policy/helper,
+            # their live count is zero in this atomic fix+gate landing.
+            "check_codex_retry_preserves_original_sandbox_authority",
+            "check_codex_nonisolated_writer_cap",
+            "check_codex_drain_timeout_uses_liveness",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(

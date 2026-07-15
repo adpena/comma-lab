@@ -37,11 +37,15 @@ Catalog map:
   #401 check_verdict_pairs_default_is_n600                         (C12)
   #402 check_telemetry_verdict_rows_carry_liveness                 (C6)
   #403 check_launch_config_authored_in_dsl                         (req V, #353)
+  2026-07-14 check_codex_retry_preserves_original_sandbox_authority
+  2026-07-14 check_codex_nonisolated_writer_cap
+  2026-07-14 check_codex_drain_timeout_uses_liveness
 """
 
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import re
 from collections import Counter
@@ -1535,6 +1539,229 @@ def check_no_inert_additive_margin_composition(
     )
 
 
+# ===========================================================================
+# 2026-07-14 apparatus two-landings — delegation/drain confound extinction.
+# These gates are behavior probes, not token checks: they import the exact pure
+# runtime boundary and execute the diagnosed counterexample plus clean controls.
+# ===========================================================================
+
+
+def _load_tool_module(root: Path, filename: str):
+    path = root / "tools" / filename
+    if not path.is_file():
+        return None, f"tools/{filename}: required apparatus helper is missing"
+    name = f"_tac_preflight_{filename.replace('.', '_')}_{abs(hash(path))}"
+    try:
+        spec = importlib.util.spec_from_file_location(name, path)
+        if spec is None or spec.loader is None:
+            return None, f"tools/{filename}: cannot construct import spec"
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module, None
+    except Exception as exc:
+        return None, f"tools/{filename}: behavior probe import failed ({type(exc).__name__}: {exc})"
+
+
+def _main_calls(path: Path, called_name: str) -> bool:
+    text = _read(path)
+    if text is None:
+        return False
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "main":
+            return any(
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Name)
+                and child.func.id == called_name
+                for child in ast.walk(node)
+            )
+    return False
+
+
+def check_codex_retry_preserves_original_sandbox_authority(
+    *, repo_root: str | Path | None = None, strict: bool = False, verbose: bool = True,
+) -> list[str]:
+    """STRICT: a same-label relaunch must refuse any sandbox authority downgrade.
+
+    The behavior probe executes the real incident (danger-full-access ->
+    workspace-write) and two clean controls.  It also proves ``main`` consumes
+    the policy boundary, preventing a correct-but-unwired helper from passing.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    path = root / "tools" / "codex_delegate.py"
+    module, error = _load_tool_module(root, "codex_delegate.py")
+    violations = [error] if error else []
+    policy = getattr(module, "_launch_policy_refusal", None) if module else None
+    if module and not callable(policy):
+        violations.append("tools/codex_delegate.py: _launch_policy_refusal is missing")
+    if callable(policy):
+        common = {
+            "label": "retry_arm",
+            "isolate": True,
+            "live_nonisolated_writers": 0,
+            "nonisolated_writer_cap": 1,
+        }
+        downgrade = policy(
+            requested_sandbox="workspace-write",
+            prior_sandboxes=["danger-full-access"], **common,
+        )
+        same = policy(
+            requested_sandbox="danger-full-access",
+            prior_sandboxes=["danger-full-access"], **common,
+        )
+        upgrade = policy(
+            requested_sandbox="danger-full-access",
+            prior_sandboxes=["workspace-write"], **common,
+        )
+        if not downgrade or downgrade[0] == 0:
+            violations.append(
+                "tools/codex_delegate.py: diagnosed danger-full-access -> workspace-write "
+                "same-label relaunch is not refused"
+            )
+        if same is not None or upgrade is not None:
+            violations.append(
+                "tools/codex_delegate.py: sandbox preservation gate rejects a same/elevated clean control"
+            )
+    if not _main_calls(path, "_launch_policy_refusal"):
+        violations.append(
+            "tools/codex_delegate.py: main() does not call _launch_policy_refusal (unwired guard)"
+        )
+    return _finish(
+        name="check_codex_retry_preserves_original_sandbox_authority",
+        tag="codex-retry-sandbox-authority",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail="diagnosed downgrade refused; same/elevated controls admitted",
+    )
+
+
+def check_codex_nonisolated_writer_cap(
+    *, repo_root: str | Path | None = None, strict: bool = False, verbose: bool = True,
+) -> list[str]:
+    """STRICT: cap live non-isolated writer arms while exempting safe domains."""
+    root = Path(repo_root or REPO_ROOT)
+    path = root / "tools" / "codex_delegate.py"
+    module, error = _load_tool_module(root, "codex_delegate.py")
+    violations = [error] if error else []
+    policy = getattr(module, "_launch_policy_refusal", None) if module else None
+    cap = getattr(module, "_MAX_NONISOLATED_WRITERS", None) if module else None
+    if not isinstance(cap, int) or cap < 1 or cap > 2:
+        violations.append(
+            "tools/codex_delegate.py: _MAX_NONISOLATED_WRITERS must record a small positive cap (1..2)"
+        )
+    if callable(policy) and isinstance(cap, int):
+        common = {
+            "label": "writer",
+            "prior_sandboxes": [],
+            "live_nonisolated_writers": cap,
+            "nonisolated_writer_cap": cap,
+        }
+        writer = policy(requested_sandbox="workspace-write", isolate=False, **common)
+        isolated = policy(requested_sandbox="danger-full-access", isolate=True, **common)
+        readonly = policy(requested_sandbox="read-only", isolate=False, **common)
+        if not writer or writer[0] == 0:
+            violations.append(
+                "tools/codex_delegate.py: at-cap --no-isolate workspace-write arm is not refused"
+            )
+        if isolated is not None or readonly is not None:
+            violations.append(
+                "tools/codex_delegate.py: writer cap does not exempt isolated/read-only clean controls"
+            )
+    elif module:
+        violations.append("tools/codex_delegate.py: callable _launch_policy_refusal is missing")
+    if not _main_calls(path, "_launch_policy_refusal"):
+        violations.append(
+            "tools/codex_delegate.py: main() does not call _launch_policy_refusal (unwired cap)"
+        )
+    source = _read(path) or ""
+    if "shared-tree fallback (NO isolation)" in source or "no shared-tree writer fallback" not in source:
+        violations.append(
+            "tools/codex_delegate.py: worktree setup may fall back to an uncapped shared-tree writer"
+        )
+    return _finish(
+        name="check_codex_nonisolated_writer_cap",
+        tag="codex-nonisolated-writer-cap",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"shared-tree writer cap={cap}; isolated/read-only controls exempt",
+    )
+
+
+def check_codex_drain_timeout_uses_liveness(
+    *, repo_root: str | Path | None = None, strict: bool = False, verbose: bool = True,
+) -> list[str]:
+    """STRICT: a timed-out but progressing arm must not be classified WEDGED."""
+    root = Path(repo_root or REPO_ROOT)
+    path = root / "tools" / "codex_drain_detector.py"
+    module, error = _load_tool_module(root, "codex_drain_detector.py")
+    violations = [error] if error else []
+    classify = getattr(module, "classify_timeout", None) if module else None
+    exit_code = getattr(module, "exit_code_for_status", None) if module else None
+    if callable(classify):
+        baseline = {
+            "arm_s": {"label": "arm", "log_mtime": 100.0, "progress_cursor": 7}
+        }
+        fresh_log = {
+            "arm_s": {"label": "arm", "log_mtime": 995.0, "progress_cursor": 7}
+        }
+        advanced_progress = {
+            "arm_s": {"label": "arm", "log_mtime": 100.0, "progress_cursor": 8}
+        }
+        stale = {
+            "arm_s": {"label": "arm", "log_mtime": 100.0, "progress_cursor": 7}
+        }
+        fresh_status, _ = classify(
+            baseline, fresh_log, now=1000.0, liveness_window_seconds=60.0
+        )
+        progress_status, _ = classify(
+            baseline, advanced_progress, now=1000.0, liveness_window_seconds=60.0
+        )
+        stale_status, _ = classify(
+            baseline, stale, now=1000.0, liveness_window_seconds=60.0
+        )
+        if fresh_status != getattr(module, "HEALTHY_BUT_SLOW", object()):
+            violations.append(
+                "tools/codex_drain_detector.py: recent-log timeout control raises a stuck classification"
+            )
+        if progress_status != getattr(module, "HEALTHY_BUT_SLOW", object()):
+            violations.append(
+                "tools/codex_drain_detector.py: advancing-progress timeout control raises a stuck classification"
+            )
+        if stale_status != getattr(module, "WEDGED", object()):
+            violations.append(
+                "tools/codex_drain_detector.py: genuine stale/no-progress control is not WEDGED"
+            )
+        if not callable(exit_code):
+            violations.append("tools/codex_drain_detector.py: exit_code_for_status is missing")
+        elif exit_code(fresh_status) != 0 or exit_code(progress_status) != 0 or exit_code(stale_status) != 3:
+            violations.append(
+                "tools/codex_drain_detector.py: healthy timeout must exit 0 and WEDGED must exit 3"
+            )
+    elif module:
+        violations.append("tools/codex_drain_detector.py: classify_timeout is missing")
+    if not _main_calls(path, "classify_timeout"):
+        violations.append(
+            "tools/codex_drain_detector.py: main() does not call classify_timeout (unwired liveness gate)"
+        )
+    if not _main_calls(path, "exit_code_for_status"):
+        violations.append(
+            "tools/codex_drain_detector.py: main() does not use exit_code_for_status (unwired alarm policy)"
+        )
+    return _finish(
+        name="check_codex_drain_timeout_uses_liveness",
+        tag="codex-drain-timeout-liveness",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail="fresh-log/progress controls are healthy; stale control is wedged",
+    )
+
+
 # The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
 EIGHTFOLD_GATES = (
     check_significance_keys_canonical,
@@ -1554,4 +1781,7 @@ CONFOUND_GATES = (
     check_launch_config_authored_in_dsl,
     check_no_unjustified_magnitude_dismissal,
     check_no_inert_additive_margin_composition,
+    check_codex_retry_preserves_original_sandbox_authority,
+    check_codex_nonisolated_writer_cap,
+    check_codex_drain_timeout_uses_liveness,
 )
