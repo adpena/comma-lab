@@ -17987,3 +17987,14 @@ Landed main `60895ca783` (3 commits). Report `.omx/research/codex_findings_sweep
   not fake a `fired` event.
 - **Custody**: pointer UNMOVED 0.19108/0.18804 — MEANS only; the C1 byte-closed n600 A/B is OWED to the
   governed launcher after merge.
+
+## FEED-curvelet-crux-correction (2026-07-15, operator: "curvelet math gave wins measured, don't settle for naive/toy, find crux")
+verdict_scope: FORMULATION — the c1_deepmath through-R d_seg 0.505(curvelet)/0.429(shearlet)/0.410(Fourier) is a
+STRIPPED-CONFIG + UNEQUAL-BYTE + UNWIRED-DECODE artifact, NOT a curvelet-family verdict. The curvelet guard
+(train_levelset:4001-4014) REFUSES self_orient/ground-frame/taper (the boundary-PLACEMENT levers) → 0.505 is a
+no-placement artifact (any basis renders a bad partition without placement) + byte-unequal receiver + owed literal-source
+recovery + owed NumPy/MLX/checkpoint/inflate consumers. REAL MEASURED curvelet signal STANDS (#502 e85b0ba7c9): curvelet
+strictly lower N-term rel-err than shearlet than Fourier ~1.20x at EVERY K (n600+n96) — genuine sparse-rep win. CRUX
+(curvelet_optimal_form_crux arm): is the guard OVER-BROAD or a genuine math conflict? Build curvelet to OPTIMAL FORM
+(compose with placement OR reformulate: curvelet-on-post-placement-residual / curvelet-native self-orientation) +
+equal-byte receiver + real decode consumers → FAIR through-R d_seg test of the 1.20x win. Do NOT settle for the toy.
