@@ -77,6 +77,7 @@ C1_OPTIMAL_FORM_EXPECTED_ADDITIONS: tuple[str, ...] = (
     "pose_blind_compute_gate",
     "head_offset_solver",
     "c1_component_wallclock_telemetry",
+    "phase_tail_label_floor_event",
 )
 C1_CURVELET_SLOT_LEVER = "basis_family::windowed_curvelet"
 
@@ -111,6 +112,19 @@ C1_DEEP_MATH_SLOTS: dict[str, dict[str, str]] = {
                 "its optimal form; do not fold the unproven form. Sister gate: no-Fourier-basis "
                 "memory (curvelet opt-in, never a default flip).",
         "unlock": "pass curvelet_optimal_form_receipt=<existing receipt file>",
+    },
+    "adaptive_eps_318": {
+        "status": "SLOT_MECHANISM_FALSIFIED_AT_N600",
+        "cite": "adaptivization ticket adaptive_eps_cfl_edge_tracking_v1 "
+                "(tac.witness_dsl.adaptivization_tickets_20260715): trainer _adaptive_visco_eps + "
+                "--eikonal-viscosity-adaptive is BUILT (default OFF) but INERT without "
+                "--eikonal-viscosity>0 (trainer help: 'Requires --eikonal-viscosity>0'; default 0.0, "
+                "never in a sealed config), and the CFL-edge adaptive CURE is FALSIFIED_MECHANISM at "
+                "n600 (FEED-06g) — --eikonal-weight 0.01 stays the L13 measured anchor. Folding the "
+                "flag today would be the counted-but-inert #417 fake.",
+        "unlock": "the ticket's bounded n24 stability A/B PLUS a sealed viscosity term "
+                  "(--eikonal-viscosity>0 with measured provenance); then fold "
+                  "--eikonal-viscosity-adaptive as a Lever with the A/B receipt",
     },
 }
 
@@ -189,6 +203,35 @@ def _telemetry_lever():
     )
 
 
+def _phase_tail_label_floor_lever():
+    """#507 skeleton-dissolve: T1 phase-advection start EVENT (label_floor sensor).
+
+    Dissolves the last epoch-scripted transition in this config into the event continuation:
+    the T1 term fires on the law-5 floor->phase-tail hand-off (label-smooth stage AND d_seg in
+    the persistence-floor band [0.00496, 0.00700] AND flat — every threshold DERIVED/measured;
+    eq ``label_floor_to_phase_tail_handoff_v1`` + the 2026-07-15 ``domain_refined`` event on
+    ``gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1``), with the sealed epoch 726
+    demoted to the LOUD fail-safe backstop cap (``cap_fired_before_event`` when it fires — a
+    firing cap is falsification-relevant, S5). The sensor READS the trainer's own verdict
+    stream (poison-taxonomy 'sensors read trainer streams'; no recompute). Flag verified
+    against the live trainer parser (never-invent-flags; built this landing).
+
+    # NO_EQUATION_NEEDED: the governing laws are already registered
+    # (label_floor_to_phase_tail_handoff_v1; flicker-floor domain_refined 2026-07-15);
+    # this lever is their trainer realization, not a new law.
+    """
+    from tac.witness_dsl.curriculum_dsl import Lever
+
+    return Lever(
+        "phase_tail_label_floor_event",
+        overrides={"--seg-phase-advect-start-event": "label_floor"},
+        notes=("#507: T1 phase-advection fires on the label_floor sensor (law-5 floor->phase-tail "
+               "hand-off); --seg-phase-advect-start-epoch 726 becomes the fail-safe backstop cap. "
+               "The 3-stage epoch skeleton is dissolved: stage count is an OUTPUT of the event "
+               "continuation, never an input."),
+    )
+
+
 def compile_c1_optimal_form_launch_config(
     gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
     *,
@@ -196,6 +239,7 @@ def compile_c1_optimal_form_launch_config(
     epochs: int = 3000,
     out_dir: str = DEFAULT_OUT_DIR,
     curvelet_optimal_form_receipt: str | Path | None = None,
+    curvelet_ab_arm: bool = False,
 ):
     """Compile the #507 composed C1 optimal-form config (pure / $0; never launches).
 
@@ -203,6 +247,14 @@ def compile_c1_optimal_form_launch_config(
     slot (recorded in the manifest); an EXISTING receipt file folds
     :func:`~tac.witness_dsl.curriculum_dsl.WindowedCurveletBasis`; a missing path
     fails closed.
+
+    ``curvelet_ab_arm`` composes the PAIRED curvelet treatment arm (same seed, same
+    everything, ``--basis windowed_curvelet``) — the RECEIPT PRODUCER for the owed
+    ``curvelet_through_R_dseg_ab`` anchor. This is NOT a fold of the unproven form
+    into the main config (the main config keeps the legacy_fourier_ab_control basis
+    per the no-Fourier-basis doctrine: curvelet opt-in, never a silent flip); it is
+    the explicitly-named opt-in A/B arm that doctrine licenses. Mutually exclusive
+    with a receipt (a receipt means the A/B already ran).
     """
     from tac.witness_autoconfig import _crucible_v7_argv_pairs
     from tac.witness_dsl.curriculum_dsl import (
@@ -218,12 +270,18 @@ def compile_c1_optimal_form_launch_config(
     # Fail-fast typed curvelet SLOT gate (before the expensive parent compile).
     receipt: Path | None = None
     if curvelet_optimal_form_receipt is not None:
+        if curvelet_ab_arm:
+            raise ValueError(
+                f"{PROGRAM_NAME} curvelet REFUSE: curvelet_ab_arm and a receipt are mutually "
+                "exclusive — a receipt means the A/B already ran; fold via the receipt slot.")
         receipt = Path(curvelet_optimal_form_receipt)
         if not receipt.is_file():
             raise ValueError(
                 f"{PROGRAM_NAME} curvelet-slot REFUSE: optimal-form receipt "
                 f"{receipt} does not exist — the unproven curvelet form is never folded "
                 "(operator 2026-07-15; fold only when curvelet_optimal_form_crux lands).")
+    if curvelet_ab_arm and out_dir == DEFAULT_OUT_DIR:
+        out_dir = DEFAULT_OUT_DIR + "_curvelet_arm"
 
     parent = compile_v9_cgauge_ideal_mod19_sR_launch_config(
         gt_cache_path=gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir)
@@ -234,6 +292,7 @@ def compile_c1_optimal_form_launch_config(
         _typed_ideal_lever(PoseBlindComputeGate()),
         _typed_ideal_lever(HeadOffsetSolver(mode="flip_median", tau=1.0)),
         _typed_ideal_lever(_telemetry_lever()),
+        _typed_ideal_lever(_phase_tail_label_floor_lever()),
     )
     expected = tuple(lv.name for lv in parent.typed.levers) + C1_OPTIMAL_FORM_EXPECTED_ADDITIONS
 
@@ -249,6 +308,18 @@ def compile_c1_optimal_form_launch_config(
             "status": "FOLDED_WITH_RECEIPT",
             "receipt_path": str(receipt),
             "receipt_sha256": _file_sha256(receipt),
+        }
+    elif curvelet_ab_arm:
+        additions += (_typed_ideal_lever(WindowedCurveletBasis()),)
+        expected += (C1_CURVELET_SLOT_LEVER,)
+        curvelet_record = {
+            "slot": C1_CURVELET_SLOT_LEVER,
+            "status": "AB_ARM_RECEIPT_PRODUCER",
+            "owed_anchor": "curvelet_through_R_dseg_ab",
+            "pairing": "PAIRED with the legacy_fourier_ab_control main config (same seed, same "
+                       "levers, only --basis + the bank params differ); its n600 through-R "
+                       "no-regression verdict IS the curvelet optimal-form receipt the main "
+                       "config's slot folds on",
         }
 
     purpose = (
@@ -266,7 +337,7 @@ def compile_c1_optimal_form_launch_config(
         "only; LAUNCH = operator-GO. MEANS until a byte-closed n600 exact row."
     )
     typed = parent.typed.model_copy(update={
-        "name": PROGRAM_NAME,
+        "name": PROGRAM_NAME + ("_curvelet_arm" if curvelet_ab_arm else ""),
         "purpose": purpose,
         "out_dir": str(out_dir),
         "levers": tuple(parent.typed.levers) + additions,
@@ -310,7 +381,11 @@ def compile_c1_optimal_form_launch_config(
         "--head-offset-solver": "flip_median",
         "--head-offset-solver-tau": "1.0",
         "--component-wallclock-probe-every": "1",
+        "--seg-phase-advect-start-event": "label_floor",
     }
+    if curvelet_ab_arm:
+        # the arm's single scientific delta MUST actually reach argv (consumed-not-inert).
+        required["--basis"] = "windowed_curvelet"
     mismatches = {
         flag: (pairs.get(flag), want)
         for flag, want in required.items() if pairs.get(flag) != want
@@ -395,6 +470,38 @@ def compile_c1_optimal_form_launch_config(
             **{k: dict(v) for k, v in C1_DEEP_MATH_SLOTS.items()},
             "curvelet_basis": dict(curvelet_record),
         },
+        "flicker_floor_licensing": {
+            "law": "gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1",
+            "verdict_scope": "FORMULATION (label-smooth witnesses only; domain_refined 2026-07-15)",
+            "forbidden_reading": "hard_floor",
+            "licensed_levers_on_in_this_config": [
+                "phase_advection_consistency (T1 0.4; start-event label_floor, backstop 726)",
+                "phase_tail_label_floor_event (the law-5 floor->phase-tail hand-off sensor)",
+            ],
+            "existence_proofs_below_floor": [
+                "phase proof row FEED-ma SIGNAL-A: d_seg 0.00086 (6.2x below), n600",
+                "ancestor bc36 ~6e-4 on the SAME GT (ANCESTOR-VEHICLE existence proof, L18 "
+                "non-transferable as a witness number)",
+            ],
+            "cite": ".omx/research/flicker_floor_formulation_scope_DAG_FEED_20260715.md",
+        },
+        "byte_close_contract": {
+            "tool": "tools/levelset_byte_close_and_eval.py",
+            "phase_carrier": {
+                "flag": "--phase-carrier",
+                "status": "WIRED_DEFAULT_OFF_ON_THE_TOOL",
+                "archive_shape": "#425 phase-residual carrier section "
+                                 "(tac.boundary_math.phase_residual_carrier) — the archive SHAPE "
+                                 "for the phase zero-mode the T1 term trains the trunk to carry",
+                "requires": "--gt-cache with lstars/margins/gt_pose members (the tool fails closed "
+                            "without them; gt_n600.npz custody CLEAR)",
+                "contract": "when this run's phase tail engages (label_floor fires) the byte-close "
+                            "of its checkpoints MUST be run WITH --phase-carrier so the stored "
+                            "section and the trained zero-mode are measured together (a phase-"
+                            "trained trunk byte-closed WITHOUT the carrier under-reports the "
+                            "config's realized S); pre-engage checkpoints byte-close without it.",
+            },
+        },
         "held": True,
         "operator_go_required": True,
         "launch_blockers": [
@@ -433,11 +540,34 @@ def compile_c1_optimal_form_launch_config(
     }
     from tac.witness_autoconfig import CrucibleV7LaunchConfig
 
+    governance = dict(rebound.schedule_governance)
+    governance["--seg-phase-advect-start-event"] = {
+        "class": "event",
+        "sensor": "--seg-phase-advect-start-event",
+        "role": "fires",
+        "rationale": "T1 phase-advection FIRES on the label_floor sensor (tac.witness_control."
+                     "label_floor_detector via event_wirings.label_floor_event): label-smooth stage "
+                     "AND d_seg within the persistence-floor band [0.00496,0.00700] AND flat — the "
+                     "law-5 floor->phase-tail hand-off (label_floor_to_phase_tail_handoff_v1; the "
+                     "flicker floor is the DERIVED switch to the phase tail, never an early-stop "
+                     "green). The sensor reads the trainer's own verdict d_seg stream.",
+    }
+    governance["--seg-phase-advect-start-epoch"] = {
+        "class": "cap",
+        "sensor": "--seg-phase-advect-start-event",
+        "role": "backstops",
+        "rationale": "req-B fail-safe BACKSTOP for the label_floor event: 726 = the terminal-band "
+                     "measured anchor (same anchor family as muon/pose-finish); fires ONLY if the "
+                     "label floor was not reached by 726 (LOUD cap_fired_before_event, S5 — a firing "
+                     "cap means the run never converged to the floor band and the sensor calibration "
+                     "must be revisited).",
+    }
+
     return CrucibleV7LaunchConfig(
         typed=rebound.typed,
         constants_manifest=constants,
         dsl_program_manifest=manifest,
-        schedule_governance=dict(rebound.schedule_governance),
+        schedule_governance=governance,
     )
 
 

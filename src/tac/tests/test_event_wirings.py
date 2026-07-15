@@ -312,8 +312,43 @@ def test_chroma_gate_fires_on_plateau_event():
 
 
 def test_recognised_start_event_sensors():
+    # (#507 skeleton-dissolve 2026-07-15) label_floor joins the recognised set: T1 phase-advection
+    # fires on the law-5 floor->phase-tail hand-off (label_floor_detector over verdict rows).
     assert ew.RECOGNISED_START_EVENT_SENSORS == frozenset(
-        {ew.SENSOR_POWERLAW_MEAT, ew.SENSOR_LANE_NUCLEUS, ew.SENSOR_ANNULUS_PLATEAU})
+        {ew.SENSOR_POWERLAW_MEAT, ew.SENSOR_LANE_NUCLEUS, ew.SENSOR_ANNULUS_PLATEAU,
+         ew.SENSOR_LABEL_FLOOR})
+
+
+def test_label_floor_event_reader_fires_on_floor_band_flat_label_stage():
+    """label_floor_event is a pure wrapper over label_floor_detector.label_floor_reached: fires
+    iff label-smooth stage AND d_seg within [0.00496, 0.00700] AND flat; fail-safe on few rows."""
+    rows = [{"epoch": 700 + i, "d_seg": 0.0053, "seg_form": "l7"} for i in range(4)]
+    ev = ew.label_floor_event(rows)
+    assert ev["sensor"] == ew.SENSOR_LABEL_FLOOR
+    assert ev["fired"] is True and ev["classification"] == "LABEL_FLOOR_REACHED"
+    # still descending => NOT fired
+    desc = [{"epoch": 700 + i, "d_seg": 0.0068 - 0.0004 * i, "seg_form": "l7"} for i in range(4)]
+    assert ew.label_floor_event(desc)["fired"] is False
+    # too few same-stage rows => fail-safe NOT fired (the backstop cap owns the fail-safe)
+    assert ew.label_floor_event(rows[:2])["fired"] is False
+    assert ew.label_floor_event([])["fired"] is False
+    # phase stage (not label-smooth) => already past the floor => NOT fired
+    ph = [{"epoch": 700 + i, "d_seg": 0.0053, "seg_form": "phase_tail"} for i in range(4)]
+    assert ew.label_floor_event(ph)["fired"] is False
+
+
+def test_phase_advect_gate_fires_on_label_floor_event_with_backstop_cap():
+    g = EventBackstopGate("seg_phase_advect", "--seg-phase-advect-start-epoch",
+                          "--seg-phase-advect-start-event", sensor=ew.SENSOR_LABEL_FLOOR, cap=726)
+    rows = [{"epoch": 600 + i, "d_seg": 0.0053, "seg_form": "l7"} for i in range(4)]
+    step = g.update(604, event_fired=ew.label_floor_event(rows)["fired"], sensor_data_epoch=603)
+    assert step.fired_by == "event" and step.just_fired
+    # cap path: sensor never fires => LOUD backstop at 726
+    g2 = EventBackstopGate("seg_phase_advect", "--seg-phase-advect-start-epoch",
+                          "--seg-phase-advect-start-event", sensor=ew.SENSOR_LABEL_FLOOR, cap=726)
+    assert g2.update(725, event_fired=False).start_reached is False
+    step2 = g2.update(726, event_fired=False)
+    assert step2.fired_by == "cap" and step2.telemetry["stage"] == "cap_fired_before_event"
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════

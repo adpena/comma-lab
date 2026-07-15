@@ -81,6 +81,11 @@ RECOGNISED_EVENT_SENSORS: frozenset[str] = frozenset({
     # replacement for the dissolved l7 "formed partition" gate). Its --seg-temporal-screw-start-epoch is
     # the paired backstop cap.
     "--seg-temporal-screw-start-event",   # temporal-screw start <- annulus_frac plateau (formed boundary)
+    # (#507 skeleton-dissolve 2026-07-15) T1 phase-advection fires on the label_floor sensor (the law-5
+    # floor->phase-tail hand-off: label-smooth stage AND d_seg within the persistence-floor band AND
+    # flat — eq label_floor_to_phase_tail_handoff_v1). Its --seg-phase-advect-start-epoch is the
+    # paired backstop cap.
+    "--seg-phase-advect-start-event",     # phase-advection start <- label-smooth persistence floor
     # S6-R4 self-paced τ-advance (operator 2026-07-08): the τ-anneal advance clock. --tau-advance-mode
     # event fires the τ octave-ladder advance on per-band relaxation (powerlaw_meat within the octave);
     # its per-octave --tau-octave-max-dwell is the fail-safe backstop. An EVENT declaration names

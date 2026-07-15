@@ -43,6 +43,7 @@ __all__ = [
     "SENSOR_POWERLAW_MEAT",
     "SENSOR_LANE_NUCLEUS",
     "SENSOR_ANNULUS_PLATEAU",
+    "SENSOR_LABEL_FLOOR",
     "RECOGNISED_START_EVENT_SENSORS",
     "ANNULUS_PLATEAU_REL_EPS",
     "ANNULUS_PLATEAU_DWELL_WINDOWS",
@@ -55,6 +56,7 @@ __all__ = [
     "muon_meat_event",
     "lane_nucleus_event",
     "annulus_plateau_event",
+    "label_floor_event",
     "lane_would_fire_row",
 ]
 
@@ -65,8 +67,15 @@ __all__ = [
 SENSOR_POWERLAW_MEAT = "powerlaw_meat"      # muon <- tau-descent weak-KAM exhaustion (+ REV-B pos.ctrl)
 SENSOR_LANE_NUCLEUS = "lane_nucleus"        # lane-band <- lane-class critical nucleus born + formed
 SENSOR_ANNULUS_PLATEAU = "annulus_plateau"  # seg-chroma <- annulus_frac plateau (formed boundary)
+# (#507 skeleton-dissolve, 2026-07-15) the law-5 floor->phase-tail hand-off: T1 phase-advection
+# fires when the LABEL-SMOOTH descent reaches the temporal-majority persistence floor (the DERIVED
+# regime switch, eq label_floor_to_phase_tail_handoff_v1 + gt_scoredframe_spike_rate_equals_
+# witness_flicker_floor_v1 domain_refined 2026-07-15). Reader: tac.witness_control.
+# label_floor_detector.label_floor_reached over the trainer's OWN verdict rows (poison-law: the
+# sensor READS the stream the trainer already computed — no recompute).
+SENSOR_LABEL_FLOOR = "label_floor"          # seg-phase-advect <- label-smooth persistence floor reached
 RECOGNISED_START_EVENT_SENSORS: frozenset[str] = frozenset({
-    SENSOR_POWERLAW_MEAT, SENSOR_LANE_NUCLEUS, SENSOR_ANNULUS_PLATEAU,
+    SENSOR_POWERLAW_MEAT, SENSOR_LANE_NUCLEUS, SENSOR_ANNULUS_PLATEAU, SENSOR_LABEL_FLOOR,
 })
 
 # ── annulus-plateau detector params (req-T value-provenance: TAGGED, not bare). Anchor: #333
@@ -443,4 +452,34 @@ def annulus_plateau_event(series, *, rel_eps: float = ANNULUS_PLATEAU_REL_EPS,
         "reason": ("annulus_frac plateaued over the dwell window -> formed boundary" if fired else
                    f"rel_slope {rel_slope:.2e} > eps {rel_eps:.2e}" if not plateau_ok else
                    f"dwell {span:.0f} < min_epochs {min_epochs}"),
+    }
+
+
+def label_floor_event(verdict_rows) -> dict:
+    """seg-phase-advect start event: the law-5 floor->phase-tail hand-off (#507 skeleton-dissolve).
+
+    ``verdict_rows`` = the trainer's verdict-stream rows ``{"epoch": int, "d_seg": float,
+    "seg_form": str}`` (READ from the stream the trainer already computed at verdict cadence —
+    the poison-taxonomy 'sensors read trainer streams' law; nothing is recomputed here). Thin,
+    PURE wrapper over :func:`tac.witness_control.label_floor_detector.label_floor_reached` (the
+    #247 costate SENSE organ; every threshold in it is DERIVED/measured — the oracle floor
+    0.005318, the band [0.00496, 0.00700], the calibrated flatness eps). Fires iff the run is
+    (a) in a LABEL-SMOOTH stage, (b) within the persistence-floor band, and (c) FLAT — label
+    descent is exhausted and the remaining descent is APPEARANCE-PHASE (T1's regime).
+    Fail-safe: too few same-stage rows => UNIDENTIFIABLE => NOT fired (the backstop cap owns
+    the fail-safe path). Returns a JSON-ready dict with ``fired``."""
+    from tac.witness_control.label_floor_detector import label_floor_reached
+
+    sig = label_floor_reached(list(verdict_rows or []))
+    return {
+        "sensor": SENSOR_LABEL_FLOOR,
+        "fired": bool(sig.fired()),
+        "classification": sig.classification,
+        "stage": sig.stage,
+        "d_seg_latest": sig.d_seg_latest,
+        "within_floor_band": sig.within_floor_band,
+        "rel_slope_per_ep": sig.rel_slope_per_ep,
+        "flat": sig.flat,
+        "n_stage": sig.n_stage,
+        "reason": sig.reason,
     }

@@ -260,7 +260,7 @@ def _rss_gib() -> float:
 def _verdict_dseg_dpose_chunked(
     seg_cpu: Any, posenet_cpu: Any,
     f0s: list, f1s: list, lstars: list, poses: list, *, vbatch: int,
-    return_realized: bool = False, compute_pose: bool = True,
+    return_realized: bool = False, compute_pose: bool = True, workers: int = 0,
 ) -> tuple[float, float | None] | tuple[float, float | None, list]:
     """(#205 REAL OOM FIX) mean d_seg / d_pose over N pairs, running SegNet/PoseNet in CHUNKS of
     ``vbatch`` instead of one N-wide torch batch.
@@ -7682,6 +7682,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         name="seg_temporal_screw", start_epoch_flag="--seg-temporal-screw-start-epoch",
         start_event_flag="--seg-temporal-screw-start-event", sensor=_ts_start_event,
         cap=int(getattr(args, "seg_temporal_screw_start_epoch", 0)))
+    # (#507 skeleton-dissolve, 2026-07-15) SENSOR->START WIRING #5: T1 phase-advection fires on the
+    # label_floor sensor (law-5 floor->phase-tail hand-off — the DERIVED regime switch of eq
+    # label_floor_to_phase_tail_handoff_v1; the flicker floor is the switch to the phase tail, never
+    # an early-stop green). sensor None (--seg-phase-advect-start-event absent) => EVENT MODE OFF =>
+    # the engage block keeps the incumbent lever_gate_on_at_epoch comparison VERBATIM (see the pa
+    # engage block) => BYTE-IDENTICAL. ON => fires on label_floor_event over the trainer's own
+    # verdict rows (poison-law: sensors READ trainer streams) with the fixed epoch as the LOUD cap.
+    from tac.witness_control.event_wirings import label_floor_event as _label_floor_ev
+    _pa_start_event = getattr(args, "seg_phase_advect_start_event", None)
+    _phase_advect_gate = _EBGate(
+        name="seg_phase_advect", start_epoch_flag="--seg-phase-advect-start-epoch",
+        start_event_flag="--seg-phase-advect-start-event", sensor=_pa_start_event,
+        cap=int(getattr(args, "seg_phase_advect_start_epoch", 0)))
     # S2 REV-B positive control: the LADDER arm windows (birth+hold+anneal, the absolute epoch each
     # arm's scheduled_radius reaches 0). Empty when the LADDER is off => nucleation vacuously complete.
     _ladder_arm_windows: list[int] = []
@@ -7696,7 +7709,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # else the canonical order 0=Road 1=Lane 2=Undrivable 3=Movable 4=MyCar).
     _lane_nucleus_cls = int(_ladder_state["lane_cls"]) if _ladder_state is not None else 1
     # sensor stashes updated at verdict cadence (read at the per-epoch engage block). Advisory only.
-    _wire_sense: dict[str, Any] = {"lane_ev": None, "annulus_series": []}
+    # labelfloor_series: {"epoch","d_seg","seg_form"} rows appended at verdict cadence ONLY when the
+    # phase-advect gate is event-mode (OFF => never appended => byte-identical); bounded trailing
+    # window (the label-floor detector only needs the same-stage tail; muon-style non-persisted).
+    _wire_sense: dict[str, Any] = {"lane_ev": None, "annulus_series": [], "labelfloor_series": []}
     # (CANONICAL RESUME REGISTRY 2026-07-08) the run-scoped registry holding ALL three latching gates.
     # Built ONCE here, right after the gates + _wire_sense are constructed, so BOTH the checkpoint-write
     # (_build_resume_state_arrays) and the resume-restore (below) iterate the SAME set — a gate cannot be
@@ -7705,7 +7721,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # when the chroma gate is event-mode (persists the trailing annulus window for a bit-faithful re-fire).
     from tac.witness_control.resume_registry import build_gate_resume_registry as _build_resume_registry
     _resume_registry = _build_resume_registry(
-        [_muon_gate, _lane_band_gate, _chroma_gate, _temporal_screw_gate], wire_sense=_wire_sense)
+        [_muon_gate, _lane_band_gate, _chroma_gate, _temporal_screw_gate, _phase_advect_gate],
+        wire_sense=_wire_sense)
     # FreSh is immutable after epoch zero, but its selected frequency/bias,
     # spectral receipt, and init overhead are part of the initial condition.
     # Register at the same run-scoped resume surface as every controller so a
@@ -8891,6 +8908,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # auditable byte trace). Non-tail runs simply ignore it.
             history.append(_history_verdict(
                 ep, v, blob["total_quantized_blob_bytes"], s))
+            # (#507) label-floor sensor stream: verdict rows the phase-advect start-event reads
+            # (poison-law: the sensor READS this already-computed verdict, never recomputes).
+            # Event-mode OFF => never appended => byte-identical. Bounded trailing window.
+            if _phase_advect_gate.event_mode:
+                _wire_sense["labelfloor_series"].append(
+                    {"epoch": int(ep), "d_seg": float(v["d_seg"]), "seg_form": str(seg_form)})
+                del _wire_sense["labelfloor_series"][:-128]
             # (#292 build-3) deterministic closed-loop capture (ON only; OFF appends nothing =>
             # byte-identical). Under _verdict_lock; (M2 fix) the decision point joins the PREVIOUS
             # eval's thread first, so this row is ALWAYS visible to the controller that decides at
@@ -11346,7 +11370,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # spike-guard does not trip on the term's engagement step.
             if pa_w > 0.0:
                 _pa_was = pa_gate["on"]
-                pa_gate["on"] = lever_gate_on_at_epoch(pa_w, pa_start, ep)
+                # (#507 skeleton-dissolve) SENSOR->START WIRING #5: with --seg-phase-advect-start-event
+                # set, engagement fires on the label_floor sensor (law-5 floor->phase-tail hand-off)
+                # reading the trainer's OWN verdict rows (labelfloor_series — appended at verdict
+                # cadence; poison-law compliant), with pa_start as the LOUD backstop cap. EVENT MODE
+                # OFF (flag absent) => the incumbent lever_gate_on_at_epoch comparison runs VERBATIM
+                # (not routed through the gate) => BYTE-IDENTICAL including the pa_start<=1 setup-ON
+                # case a cap-only EventBackstopGate would mishandle (cap<=0 = disabled).
+                _pa_fired_by = None
+                if _phase_advect_gate.event_mode:
+                    _lf_rows = _wire_sense["labelfloor_series"]
+                    _pa_event_fired = bool(_label_floor_ev(_lf_rows)["fired"])
+                    _pa_sde = int(_lf_rows[-1]["epoch"]) if _lf_rows else -1
+                    _pstep = _phase_advect_gate.update(
+                        ep, event_fired=_pa_event_fired, sensor_data_epoch=_pa_sde,
+                        sensor_async_pending=_verdict_inflight())
+                    pa_gate["on"] = _pstep.start_reached
+                    _pa_fired_by = _pstep.fired_by
+                    if _pstep.telemetry is not None:
+                        print(json.dumps(_pstep.telemetry), flush=True)
+                else:
+                    pa_gate["on"] = lever_gate_on_at_epoch(pa_w, pa_start, ep)
                 if pa_gate["on"] and not _pa_was:
                     recent_losses.clear()
                     _sps_actual_events["phase_advection_engaged"] = int(ep)
@@ -11354,7 +11398,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
                     print(json.dumps(lever_engage_row(
                         "phase_advection", status="fired", epoch=ep,
-                        via="configured_boundary")), flush=True)
+                        via=(_pa_fired_by or "configured_boundary"))), flush=True)
             # (v7.5 D.9) TERMINAL POSE-FINISH weight resolution — the R1 two-phase (SPEC §D.9). Resolve
             # the EFFECTIVE pose weight for THIS epoch: 0 (pose-blind, d_seg converges on a coherent render)
             # until the MUON switch has fired (_muon_gate.fired == d_seg-converged / powerlaw_meat regime;
@@ -12556,6 +12600,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                              "as a plateau or a 'best')")
                     history.append(_history_verdict(
                         ep, v, blob["total_quantized_blob_bytes"], s))  # (S1-R1) byte trace
+                    # (#507) label-floor sensor stream (sync-verdict twin of the async append;
+                    # event-mode OFF => never appended => byte-identical).
+                    if _phase_advect_gate.event_mode:
+                        _wire_sense["labelfloor_series"].append(
+                            {"epoch": int(ep), "d_seg": float(v["d_seg"]), "seg_form": str(seg_form)})
+                        del _wire_sense["labelfloor_series"][:-128]
                     _record_causal_boundary(
                         epoch=int(ep),
                         boundary_kind="verdict",
@@ -14164,7 +14214,18 @@ def main(argv: list[str] | None = None) -> int:
                     "skipped, providers None, no extra forward).")
     ap.add_argument("--seg-phase-advect-start-epoch", type=int, default=0,
                     help="T1: engage only at ep>=this (0=from ep1). MUST be >= l7 (needs a formed "
-                    "partition + tie field to advect); the engage epoch re-treats the spike-guard.")
+                    "partition + tie field to advect); the engage epoch re-treats the spike-guard. "
+                    "With --seg-phase-advect-start-event set this becomes the fail-safe BACKSTOP CAP.")
+    ap.add_argument("--seg-phase-advect-start-event", type=str, default=None,
+                    choices=["label_floor"],
+                    help="#507 skeleton-dissolve 2026-07-15: fire the T1 phase-advection engagement on "
+                    "the label_floor sensor (tac.witness_control.label_floor_detector — the law-5 "
+                    "floor->phase-tail hand-off: label-smooth stage AND d_seg within the persistence-"
+                    "floor band [0.00496,0.00700] AND flat; eq label_floor_to_phase_tail_handoff_v1). "
+                    "The sensor READS the trainer's own verdict d_seg stream (no recompute); "
+                    "--seg-phase-advect-start-epoch becomes the fail-safe backstop cap (LOUD "
+                    "cap_fired_before_event when it fires). Default None = OFF = byte-identical "
+                    "fixed-epoch gate.")
     ap.add_argument("--seg-phase-advect-classes", type=str, default="0,1,2",
                     help="T1: the GROUND classes the phase-consistency is enforced on (subset of "
                     "{0=Road,1=Lane,2=Undrivable}; the plane homography is wrong for Movable/MyCar).")

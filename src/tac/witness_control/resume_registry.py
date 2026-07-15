@@ -78,6 +78,15 @@ GATE_KEY_PREFIXES: dict[str, str] = {
     # this prefix persists the gate's OWN latched fire-epoch so it does not re-fire / re-clear the
     # spike-guard on resume.
     "seg_temporal_screw": "__tsg_",
+    # (#507 skeleton-dissolve, 2026-07-15) T1 phase-advection EventBackstopGate: fires on the
+    # label_floor sensor (law-5 floor->phase-tail hand-off, eq label_floor_to_phase_tail_handoff_v1)
+    # with --seg-phase-advect-start-epoch as the LOUD backstop cap. Event-mode OFF
+    # (--seg-phase-advect-start-event absent) => state_arrays self-gates to {} => byte-identical
+    # sidecar. The label-floor detector window (>=3 same-stage verdict rows) re-accrues within a few
+    # verdict cadences after a crash-resume — the SAME non-persisted-trajectory discipline as the
+    # muon powerlaw_meat sensor (fail-safe UNIDENTIFIABLE until re-accrued; the cap backstops), so
+    # no history resumable is registered for it.
+    "seg_phase_advect": "__pag_",
 }
 
 # The chroma annulus-plateau detector-history prefix (a SECOND resumable registered alongside the
@@ -122,6 +131,13 @@ DIRECT_CONTROLLER_NAMES: frozenset[str] = frozenset({
     # IDENTICAL conditioning-gate decision. Registered ONLY when actuating (--pose-finish-engage-on
     # sigma_min_plateau + armed two-phase); the OBSERVER path does not register (byte-identical sidecar).
     "pose_finish_conditioning_gate",
+    # (#507 coverage backfill, 2026-07-15) two controllers the wallclock burn-down batch 1
+    # (c219841d8c) registered in the trainer WITHOUT adding here — the exact gap this static set
+    # exists to catch (the coverage test was failing at HEAD). Both are conditional registrations
+    # (autoclip: --grad-clip-mode autoclip only; pose_verdict_gate: its actuating arm only) =>
+    # legacy/default sidecars stay additive + manifest-free.
+    "autoclip_grad_clip",
+    "pose_verdict_gate",
 })
 
 
