@@ -18536,3 +18536,54 @@ annulus and longest end of long tail". Full table:
   information — noted, un-actioned (d_seg is the binding axis, pose solved); (3) reusable method:
   HF ZIP central-directory range-listing + per-member range extraction (429-safe pacing).
 - Closes a corpus-mining detour before it spent anything. MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-adamc (2026-07-15) — AdamC/MuonC research: exact corrections pinned, 3 reconciliation verdicts, predicted-NULL lever landed default-off, MLX-Muon-wd-INERT surfaced
+- **PAPERS (read in full):** Defazio arXiv:2506.02285v2 — steady state ‖g‖/‖x‖ = √(2λ/γ_t) (Van
+  Laarhoven, normalized layers, ⟨g,x⟩=0); decaying γ_t ⇒ tail gradient-norm blow-up + weight-norm
+  collapse; **AdamC = λ̂_t = λ·γ_t/γ_max** (applied decay term ∝ γ_t²/γ_max; Alg.1, normalized
+  layers only; LLM 200B: loss 2.461→2.457, weight norm 6500→2000 vs flat). Chou arXiv:2512.08217
+  generalizes via E⟨θ,u⟩≈0 (⇒ E‖θ‖² = γC/2λ; ScionC). **"MuonC" is NOT a named optimizer in the
+  literature (2026-07 sweep)** — honest referent = Muon + decoupled (Moonlight 2502.16982) +
+  corrected (λγ_t/γ_max) wd; ScionC is the nearest published relative (Muon = spectral Scion subset).
+- **RECONCILIATION (memo .omx/research/adamc_muonc_optimizer_research_20260715.md §4):** assumption
+  fork = their λ 0.05 vs our 1e-4 (500×), norm layers vs NONE, cosine tail vs early window ⇒
+  mechanism strength λ·Σγ_t ≈ 1.8e-4 (n24 ep1-75) / ~1e-2 (n600×3000ep) ≪ their ≳O(1). Verdicts:
+  **maglaw armB reversal DOES-NOT-APPLY-as-mechanism** (but the stationarity FRAME sharpens it:
+  per-param normalize = the "stronger correction (projection)" the paper's conclusion names ⇒ armA
+  durability; AutoClip's trailing percentile = an uncorrected reference to a non-stationary ‖g‖) ·
+  **C0 frac_clipped=1.0 DOES-NOT-APPLY** (12× level mismatch from ep1, not tail growth) ·
+  **Muon finisher CONSISTENT-WITH-A-TWIST**: SOURCE-VERIFIED mlx.optimizers.Muon applies wd
+  COUPLED (g += wd·p BEFORE momentum+NS) ⇒ effectively **INERT** (3-4 orders below C0 gnorm band,
+  NS re-normalizes) ⇒ the finisher has NO weight-norm control; our builder docstring said
+  "Decoupled" — DOC BUG FIXED (muon_finisher_mlx.py).
+- **LANDED (default-off, byte-identical off; tests 11/11 + sibling 100 pass, ruff F clean):**
+  trainer `--weight-decay-corrected` (per-epoch trunk `opt.weight_decay = λ·lr_t/lr_max` after
+  every lr driver; TRUNK-ONLY by construction) · DSL `CorrectedWeightDecay()` factory ·
+  Muon decoupled+corrected wd = `adaptivization_tickets_20260715` ticket `--muon-weight-decay`
+  (NOT wired — scaling the coupled term would be the #417 counted-but-inert fake) · equations leg
+  `adamc_wd_lr_equilibrium_v1` REGISTERED (paper anchor INFERRED_FROM_DOMAIN_LITERATURE +
+  config-derived mechanism-strength anchor VERIFIED_VIA_SOURCE_INSPECTION; local anchor OWED
+  `adamc_null_effect_n24_ab_owed_20260715`).
+- **PREDICTIONS (falsifiable):** P1 AdamC-null (ON/OFF n24 ≥150ep: |Δd_seg| ≤ noise, ‖W‖ traj
+  <0.1% — a NON-null would falsify our effective-decay accounting = bigger finding) · P2
+  armB-reversal = AutoClip percentile trailing a drifting ‖g‖ (frac_clipped rises post-ep25;
+  loggable from existing telemetry) · P3 ($0) Muon-group ‖W‖ monotone growth across finisher
+  checkpoints (promotes the decoupled-Muon-wd ticket if material). **STAGED (do NOT fire; GPU =
+  live r6 chain):** `tools/launch_witness_run.py --config v9_cgauge_ideal_mod19 --gt-cache
+  .../gt_n24.npz --num-pairs 24 --dry-start 3 --dsl-lever CorrectedWeightDecay --out-dir
+  .../levelset_n24_adamc_wdc_<utc>` + same-config control.
+- verdict_scope FORMULATION; [macOS-MLX research-signal] NON-PROMOTABLE. Everything MEANS;
+  **pointer 0.19108 UNMOVED.**
+
+## FEED-commavq-legs (2026-07-15) — triality leg disposition for ee9de95961 [no-triality]
+- `ee9de95961` (commaVQ containment NOT-CONTAINED) is a MEASUREMENT NEGATIVE on a dataset-containment
+  hypothesis — no lever/launch/curriculum was changed and no trainable config touched, so no DSL leg is
+  owed (the hook's vocabulary matcher tripped on prior/curriculum words in the memo prose). DAG leg =
+  FEED-commavq (landed in the same commit). Equations leg: the banked rate BENCHMARK (comma-VQ ~192KB
+  raw / ~48KB GPT-AC per driving minute at sub-scorer quality vs our 177KB full archive) is a
+  REFERENCE-POINT observation on someone else's codec, not an S_τ law of our system — reasoned skip;
+  it lives in the containment memo + the datasets-checked row. MEMORY.md line added (durable negative:
+  never re-check commaVQ; device-era disjointness is the decisive argument). verdict_scope of the
+  negative: FORMULATION (index-10 pose slice + provenance legs) — mooted to corpus level by the
+  ecamera/EON hardware disjointness (Leg A), which is generation-level, not sample-level.
+- MEANS; **pointer 0.19108 UNMOVED.**
