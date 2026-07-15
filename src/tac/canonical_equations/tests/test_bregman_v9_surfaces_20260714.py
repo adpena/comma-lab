@@ -32,6 +32,9 @@ from tac.information_geometry.bregman_v9_surfaces import (
     raw_dual_euclidean_quadratic,
     squared_hessian_quadratic,
 )
+from tac.information_geometry.fisher_natural_trust_region import (
+    fisher_natural_cotangent_trust_region_step,
+)
 
 
 def _fixture() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -117,6 +120,59 @@ def test_fisher_natural_path_calls_typed_linear_solve(monkeypatch) -> None:
     assert len(calls) == 1
     np.testing.assert_array_equal(calls[0][0], hessian)
     np.testing.assert_array_equal(calls[0][1], delta_eta)
+
+
+def test_fisher_natural_trust_region_keeps_interior_step_unscaled() -> None:
+    hessian = np.diag([4.0, 1.0])
+    cotangent = np.array([2.0, 1.0])
+    result = fisher_natural_cotangent_trust_region_step(
+        hessian, cotangent, radius=2.0
+    )
+
+    np.testing.assert_allclose(result.unconstrained_step, [0.5, 1.0])
+    np.testing.assert_allclose(result.step, result.unconstrained_step)
+    assert result.unconstrained_hessian_norm == pytest.approx(np.sqrt(2.0))
+    assert result.realized_hessian_norm == pytest.approx(np.sqrt(2.0))
+    assert result.scale == 1.0
+    assert result.boundary_active is False
+    assert result.solve_residual_linf <= 1.0e-15
+
+
+def test_fisher_natural_trust_region_projects_to_hessian_boundary() -> None:
+    hessian = np.array([[3.0, 0.5], [0.5, 2.0]])
+    cotangent = np.array([4.0, -2.0])
+    radius = 0.25
+    result = fisher_natural_cotangent_trust_region_step(
+        hessian, cotangent, radius=radius
+    )
+
+    expected_direction = np.linalg.solve(hessian, cotangent)
+    expected_norm = np.sqrt(cotangent @ expected_direction)
+    np.testing.assert_allclose(result.step, (radius / expected_norm) * expected_direction)
+    assert result.realized_hessian_norm == pytest.approx(radius, abs=1.0e-14)
+    assert float(result.step @ hessian @ result.step) <= radius**2 + 1.0e-14
+    assert result.scale == pytest.approx(radius / expected_norm)
+    assert result.boundary_active is True
+
+
+def test_fisher_natural_trust_region_zero_cotangent_is_well_defined_at_zero_radius() -> None:
+    result = fisher_natural_cotangent_trust_region_step(
+        np.eye(3), np.zeros(3), radius=0.0
+    )
+
+    np.testing.assert_array_equal(result.step, np.zeros(3))
+    assert result.unconstrained_hessian_norm == 0.0
+    assert result.realized_hessian_norm == 0.0
+    assert result.scale == 1.0
+    assert result.boundary_active is False
+
+
+@pytest.mark.parametrize("radius", [-1.0, np.inf, np.nan, "not-a-radius"])
+def test_fisher_natural_trust_region_rejects_invalid_radius(radius) -> None:
+    with pytest.raises(GeometryValidationError, match="finite non-negative"):
+        fisher_natural_cotangent_trust_region_step(
+            np.eye(2), np.ones(2), radius=radius
+        )
 
 
 @pytest.mark.parametrize(

@@ -111,11 +111,18 @@ def test_basis_metric_interface_is_non_owning() -> None:
     assert "pullback Gram" in interface.required_metric_quantity
 
 
-def test_v9_mod32_basis_ab_is_explicit_typed_and_basis_only() -> None:
+def test_v9_mod32_basis_ab_is_explicit_typed_basis_only_but_not_fire_ready() -> None:
     pair = v9_ideal_mod32_basis_ab_configs(num_pairs=6, epochs=900)
     assert pair.control_basis == "legacy_fourier_ab_control"
     assert pair.treatment_basis == "windowed_curvelet"
     assert pair.differing_flags_excluding_out_dir == ("--basis",)
-    assert pair.status == "PREPARED_NOT_FIRED_OPERATOR_GO_REQUIRED"
+    assert pair.status == "BLOCKED_FAIL_CLOSED_BUILD_THEN_OPERATOR_GO"
+    assert pair.launch_ready is False
+    assert len(pair.composition_blockers) == 3
+    blockers = " ".join(pair.composition_blockers)
+    assert "render_aa=ipe" in blockers
+    assert "dseg-aware taper" in blockers
+    assert "invalidated spatial wave-packet" in blockers
+    assert "literal polar-frequency-wedge" in blockers
     assert pair.control.dsl_levers.count("basis_family::legacy_fourier_ab_control") == 1
     assert pair.treatment.dsl_levers.count("basis_family::windowed_curvelet") == 1
