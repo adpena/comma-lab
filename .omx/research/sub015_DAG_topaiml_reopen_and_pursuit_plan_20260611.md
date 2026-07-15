@@ -18338,3 +18338,23 @@ annulus and longest end of long tail". Full table:
   byte-identical (detected indices non-None there). Pure apparatus (boot survivability of subset
   arms); no lever, no schedule, no measured finding ⇒ no DSL/equations leg owed. Unblocks the
   batch-3 magnitude-law A/B arms. MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-507-r5r6 (2026-07-15) — composed-config dry-start r5 receipt (NOT green) → r6 refire with measured budgets [no-triality]
+- **r5 receipt (MEASURED, dry_start_report.json):** PASS 1 rc=124, epochs=0, boot_ok=False, peak RSS
+  41.854 GiB, wall 3600.6s. NOT a hang: run.log shows the window consumed by the epoch-0 boot
+  diagnostic suite — v0 boot verdict (n600 CPU-torch, ~2556s known wall) + jacobian_basin_t0 over all
+  600 frames + head_offset_solver (flip_median, converged) — i.e. boot ≈3400-4200s exceeds the 3600s
+  pass window (2400 boot + 2×600/ep) by DESIGN COST, not defect. Chain correctly fail-closed rc=6;
+  REAL LAUNCH NOT FIRED. Gates that PASSED at the real config: throughput 406.5ms ≤ 700ms
+  (custom-grouped-backward ACTIVE) · wall-clock projection 7.42d ≤ 8.31d budget · mem preflight ·
+  system admission. peak 41.85 GiB vs preflight-projected 24.48 GiB is a projection-model gap
+  (cf_mx_cache modeled 0.07 GiB vs the ~17 GiB delta observed) — fold into the #294 waterfill model
+  (owed, non-blocking: actual is far under the 108.8 GiB ceiling).
+- **r6 refire (fired 19:08Z, chain pid 91660, $0 local, default-to-fire):** budgets resized FROM the
+  r5 measurement — boot 5400s + 1800s/ep → 9000s/pass; drain-wait correctly sequences behind the 3
+  relaunched n24 maglaw arms (GPU contention lesson). Same governed chain: dry-start GREEN → real
+  governed launch auto-fires; NOT green → stops loudly.
+- Sister recovery this turn: batch-3 arm harvest committed 6dfb43c96b (verdict-parallel-workers LAW
+  eta_8=0.711, 5.686×; CUDA r5 rc=124 max-autotune fix); maglaw arms A/B/C relaunched fresh post-
+  d2cc57dc6e (armC = the fix's in-vivo sentinel); fresh-eyes review arm died with ZERO output —
+  full restart queued post-limit-reset (wakeup armed). Everything MEANS; **pointer 0.19108 UNMOVED.**
