@@ -43,3 +43,9 @@ Phase-2 (GPU, sequential vs C0): S_R · TAPER-off · HORIZON-iso · STEP-iso · 
 Phase-3 (per-ckpt): D18 truncate-k90 · D27b terminal-solve(#341/#396/#400/HeadOffset) · D24a margin-tail RUN · #336 bit-alloc · #311 TropNNC · #140 low-rank pose · #406 apply-pass · byte-close+exact-eval EVERY row that beats 0.19108.
 GO-gated follow: curvelet A/B fire · D1 GPU-verdict · next_launch_all_levers(after INFRA+producers) · Modal exact-eval bank rows(#444/#381).
 Deferral-ledger 114 open (every row has a named trigger — drained as its trigger fires) · duty-to-measure 87 owed · curriculum-pool 45 owed. DRIVER: main re-fires next-in-order on each arm land + fires C0 on INFRA-gate GO; ScheduleWakeup drives GPU-phase convergence checks. NOTHING dropped — this ledger + the deferral/duty/curriculum ledgers are the durable record.
+
+## LIVE STATE 2026-07-15T09:50Z — PHASE-1 C0 BASELINE LAUNCHED
+- C0 `v9_cgauge_ideal_mod19` (CONTROL) GOVERNED-LAUNCHED: run=levelset_n600_witness_20260715T095030Z pid=72377, mem-admit 24.48GiB/108.8 ceiling, throughput 411ms fast-path, wall-clock 7.5d budget-OK, 17 levers fired, shadow-observer live.
+- Readiness gate defers (campaign-designed): HorizonWeightedMargin=phase2_HORIZON-iso, StepNativeActivation=phase2_STEP-iso — both are Phase-2 treatments A/B'd vs THIS control.
+- INFRA-gate arm's key condition (governor ADMITS) empirically satisfied by the launch; SSD/OOM preflight passed. INFRA_gate arm continues (hardening, non-blocking).
+- NEXT: watch C0 convergence (ScheduleWakeup); on converge → Phase-2 treatment A/Bs sequential (S_R · TAPER-off · HORIZON-iso · STEP-iso · curvelet_through_R · genuine_frame). Codex Phase-0 arms auto-notify → disposition+cherry-pick as they land.
