@@ -31,6 +31,8 @@ def test_launcher_has_bounded_retry_loop(tmp_path, monkeypatch):
     assert "codex_retry_checkpoint.py" in body
     assert "RETRY-REFUSED-NO-CHECKPOINT" in body
     assert '--progress-file "$WORKDIR/.omx/state/subagent_progress.jsonl"' in body
+    assert "2>&1 | tee" in body
+    assert "tail -c 400" in body
     assert "resume.prompt" not in body  # compatibility call uses the same small fixture prompt
     assert "sleep $backoff" in body
 
