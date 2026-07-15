@@ -57,14 +57,29 @@ class TorchExecutionPolicy:
     execution_label: str
 
 
-def select_torch_execution_policy(device: Any, *, enable_compile: bool = True) -> TorchExecutionPolicy:
+def select_torch_execution_policy(
+    device: Any, *, enable_compile: bool = True, compile_mode: str | None = None
+) -> TorchExecutionPolicy:
     """Select the fastest safe policy from the actual Torch/device capabilities.
 
     CUDA measurements remain owed: this function reports capabilities and configures no
     scientific parameter. CPU intentionally returns eager fp32 fallbacks.
+
+    ``compile_mode`` is a BACKEND runtime override (never typed-DSL science):
+    ``"off"`` disables compile, ``"default"``/``"max-autotune"`` select the
+    Inductor mode. MEASURED 2026-07-15 (H100 r5 smoke, rc=124): max-autotune's
+    kernel benchmarking consumed the ENTIRE 1440s time-boxed window before one
+    epoch completed — time-boxed smokes need ``"default"``; long runs amortize
+    max-autotune.
     """
     import torch
 
+    if compile_mode not in (None, "off", "default", "max-autotune"):
+        raise ValueError(
+            f"compile_mode must be one of off/default/max-autotune, got {compile_mode!r}"
+        )
+    if compile_mode == "off":
+        enable_compile = False
     dev = torch.device(device)
     if dev.type != "cuda" or not torch.cuda.is_available():
         return TorchExecutionPolicy(
@@ -73,10 +88,15 @@ def select_torch_execution_policy(device: Any, *, enable_compile: bool = True) -
             execution_label="eager_fallback",
         )
     bf16 = bool(getattr(torch.cuda, "is_bf16_supported", lambda: False)())
+    selected_mode = None
+    if enable_compile and hasattr(torch, "compile"):
+        selected_mode = (
+            compile_mode if compile_mode in ("default", "max-autotune") else "max-autotune"
+        )
     return TorchExecutionPolicy(
         device_type="cuda", amp_dtype="bfloat16" if bf16 else "float16",
         grad_scaler=not bf16, tf32=True, cudnn_benchmark=True,
-        compile_mode="max-autotune" if enable_compile and hasattr(torch, "compile") else None,
+        compile_mode=selected_mode,
         cuda_graphs=bool(hasattr(torch.cuda, "CUDAGraph")),
         execution_label="megakernel_candidate" if enable_compile else "eager_fallback",
     )
