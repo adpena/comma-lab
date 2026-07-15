@@ -18587,3 +18587,10 @@ annulus and longest end of long tail". Full table:
   negative: FORMULATION (index-10 pose slice + provenance legs) — mooted to corpus level by the
   ecamera/EON hardware disjointness (Leg A), which is generation-level, not sample-level.
 - MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-adamc-consumers (2026-07-15) — consumer-leg assertion for CorrectedWeightDecay [consumers-generic] [no-triality]
+- The new DSL surface `CorrectedWeightDecay()` (56dbcb72e8) is a standard `Lever` factory: VERIFIED
+  registry-held (`lever_registry.completeness().unmapped` = NONE for `--weight-decay-corrected`) and
+  `describe()`-renderable — fully covered by the generic registry/describe introspection that the
+  costate digest, dashboard, and schedule read-back consume. No bespoke consumer rendering needed;
+  same disposition as ComputeDtypeBf16QCGate earlier today. [consumers-generic]
