@@ -17875,3 +17875,27 @@ no H⁻¹); the DUAL no-solve `Δθᵀg²Δθ` is the SQUARED-Hessian, NOT Fishe
 (canonical_equations) + this DAG FEED ✓ + memo `.omx/research/optimal_metric_unification_derivation_20260714.md`;
 RIPO memory marked registration DONE. OWED (serialized, `witness_dsl` arm-owned): the τ-metric DSL/curriculum
 trainer wire. **means != ends: pointer UNMOVED 0.19108/0.18804.**
+### FEED-shr (2026-07-14) — #502 shearlet half + curvelet-vs-shearlet FAMILY SELECTION MEASURED
+SIGNAL: the curvelet half (FEED-cvl) left the compact-shearlet half + the directional-frame family
+selection OWED. DIAGNOSTIC (opus shearlet arm, `[macOS advisory / not score authority]`): BUILT
+`tac.boundary_math.compact_shearlet_frame` — GENUINE cone-adapted shearlet (parabolic scaling A_j +
+SHEARING S_k + translation, two cones). Certificate PASSES two swap-tests a rotation/Fourier basis
+FAILS: (1) localization span 1.0 vs Fourier 1.5e-7; (2) shear-selectivity via ANCHOR-AXIS INVARIANCE
+(`S_k·(x,0)=(x,0)` ⇒ shear_anchor_dispersion 1e-34 vs a matched-normal ROTATION family 0.006, disc-ratio
+inf) + integer-lattice preservation. #351-tight: the gate reads the REAL forward — monkeypatching the
+steering to rotation FLIPS passes True→False (test-covered). MLX parity 6e-8; 14 tests. MEASURED the
+$0 OMP 3-way capacity probe (`experiments/shearlet_vs_curvelet_vs_fourier_capacity_probe.py`, reuses the
+curvelet harness verbatim; matched 160-col curvelet==shearlet < Fourier 236; seeds 0/1/2; gt_n600+gt_n96).
+**NO-FAKE catch:** an early ASYMMETRIC run (finer-orientation shearlet vs the coarser committed curvelet
+cols192) mislabeled shearlet ~1.08–1.33× ahead; giving BOTH the same finer-orientation optimal form at
+MATCHED budget REVERSED it. VERDICT: **CURVELET WINS** — strictly lower N-term rel-err at EVERY K on both
+caches (n600 K@0.10 F12/C10/S10, curvelet lower rel-err each K; n96 curvelet ahead every K); both
+directional frames beat Fourier ~1.20×. Mechanism: rotation rigidly aligns to the near-straight edge
+tangent; shear distorts the envelope to a parallelogram (worse constant on straight edges — matches
+shearlet lit: same asymptotic rate, integer-lattice is shear's decode-only edge). RESPONSE: build the
+OWED through-R d_seg harness for the CURVELET (winner + wired incumbent); shearlet is a certified,
+decode-cheaper fallback to A/B only if decode cost later binds. Triality: memo
+`.omx/research/shearlet_vs_curvelet_family_selection_20260714.md` ✓; canonical-eq
+`compact_shearlet_parabolic_capacity_v1` registration OWED (serialized behind the island-birth
+`canonical_equations/` arm) + shearlet DSL lever OWED (serialized behind the `witness_dsl` arm). **means
+!= ends: pointer UNMOVED 0.19108/0.18804.**
