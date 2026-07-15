@@ -160,10 +160,11 @@ class EntityRecord:
     reviewed_at: str = ""
     review_pass: str = ""
     notes: str = ""
+    qualified_name_override: str = ""
 
     @property
     def qualified_name(self) -> str:
-        return f"{self.module}::{self.name}"
+        return self.qualified_name_override or f"{self.module}::{self.name}"
 
 
 # ---------------------------------------------------------------------------
@@ -251,12 +252,25 @@ def extract_entities(file_path: Path, *, compute_complexity: bool = True) -> lis
         parts = file_path.relative_to(REPO_ROOT).with_suffix("").parts
         module_name = ".".join(parts)
 
-    return _extract_from_tree(
+    entities = _extract_from_tree(
         tree,
         rel_path,
         module_name,
         compute_complexity=compute_complexity,
     )
+
+    # Python permits rebinding a function or class name later in a module.
+    # The tracker must retain both definitions without violating the DuckDB
+    # primary key.  Preserve the historical name for unique entities and add
+    # a deterministic source-line discriminator only when a name is repeated.
+    counts: dict[str, int] = {}
+    for entity in entities:
+        counts[entity.qualified_name] = counts.get(entity.qualified_name, 0) + 1
+    for entity in entities:
+        base = entity.qualified_name
+        if counts[base] > 1:
+            entity.qualified_name_override = f"{base}@L{entity.start_line}"
+    return entities
 
 
 def _is_reviewable_python_path(rel_path: str) -> bool:

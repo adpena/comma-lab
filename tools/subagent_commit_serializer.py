@@ -108,7 +108,7 @@ Return-code map: 0 ok · 2 fatal/malformed/timeout · 3 concurrent-edit
 (lock-wait) · 4 pre-lock expected-sha mismatch · 5 staged-sha mismatch /
 high-risk-file-missing-sha · 6 base-sha mismatch (absorption) · 7 POST-COMMIT
 HEAD mismatch (clobber) · 8/9 sister-checkpoint ABORT/WAIT · 10 bare-override ·
-11 corrupt-checkpoint.
+11 corrupt-checkpoint · 12 review-gate override attempted on Python.
 
 Behaviour
 ─────────
@@ -861,6 +861,53 @@ def _git_head_sha() -> str | None:
         return None
 
 
+def _review_gate_override_python_targets(
+    files: list[str], *, no_stage: bool
+) -> list[str]:
+    """Return Python targets that make ``REVIEW_GATE_OVERRIDE=1`` illegal.
+
+    The override is reserved for non-code state/document landings.  A mixed
+    Markdown+Python serializer invocation previously inherited the override
+    into the pre-commit hook and silently bypassed review for the Python files
+    (harness failure ``review_gate_override_on_py_commit_20260711``).  Enforce
+    the boundary at the serializer, before staging or lock acquisition.
+
+    ``--no-stage`` callers may omit ``--files``; in that mode inspect the real
+    staged index too so an empty positional file list cannot bypass the guard.
+    """
+    if os.environ.get("REVIEW_GATE_OVERRIDE", "0") != "1":
+        return []
+
+    candidates = set(files)
+    if no_stage:
+        try:
+            proc = subprocess.run(
+                [
+                    "git",
+                    "diff",
+                    "--cached",
+                    "--name-only",
+                    "--diff-filter=ACMR",
+                    "--",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except OSError:
+            # Fail closed: an override with an unreadable staged file set has
+            # no proof that it is non-code.
+            return ["<staged-file-set-unreadable>"]
+        if proc.returncode != 0:
+            return ["<staged-file-set-unreadable>"]
+        candidates.update(
+            line.strip() for line in proc.stdout.splitlines() if line.strip()
+        )
+
+    return sorted(path for path in candidates if Path(path).suffix == ".py")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -1092,6 +1139,30 @@ def main() -> int:
         "patch_mode": bool(args.patch_file),
         "expected_diff_lines_present": bool(args.expected_diff_lines),
     }
+
+    # Harness-failure class fix (2026-07-15): REVIEW_GATE_OVERRIDE is allowed
+    # only for non-code state/doc landings.  The hook itself retains its
+    # operator escape hatch, but the canonical subagent serializer refuses to
+    # carry that escape hatch across any Python target.  Python must pass the
+    # normal review tracker policy.
+    override_python_targets = _review_gate_override_python_targets(
+        files, no_stage=bool(args.no_stage)
+    )
+    if override_python_targets:
+        _append_log({
+            **base_record,
+            "outcome": "review_gate_override_on_python_rejected",
+            "python_targets": override_python_targets,
+        })
+        print(
+            "[subagent-commit-serializer] REFUSED (rc=12): "
+            "REVIEW_GATE_OVERRIDE=1 cannot be used when the commit includes "
+            "Python. Split non-code state/docs into a separate commit or unset "
+            "the override and satisfy the review gate. Python targets: "
+            f"{override_python_targets!r}",
+            file=sys.stderr,
+        )
+        return 12
 
     # FIX-92aba3ca (2026-05-12 Catalog #157): pre-lock-vs-EXPECTED check.
     # If the caller declared --expected-content-sha256 <file>=<sha>, verify

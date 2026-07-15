@@ -79,3 +79,27 @@ def test_extract_entities_can_skip_complexity_walk(tmp_path: Path) -> None:
 
     assert fast[0].complexity == 1
     assert full[0].complexity > fast[0].complexity
+
+
+def test_extract_entities_disambiguates_rebound_module_names(tmp_path: Path) -> None:
+    module_path = tmp_path / "sample.py"
+    module_path.write_text(
+        "def load():\n"
+        "    return 1\n\n"
+        "def load():\n"
+        "    return 2\n",
+        encoding="utf-8",
+    )
+
+    original_root = review_tracker.REPO_ROOT
+    try:
+        review_tracker.REPO_ROOT = tmp_path
+        entities = review_tracker.extract_entities(module_path, compute_complexity=False)
+    finally:
+        review_tracker.REPO_ROOT = original_root
+
+    assert [entity.name for entity in entities] == ["load", "load"]
+    assert [entity.qualified_name for entity in entities] == [
+        "sample::load@L1",
+        "sample::load@L4",
+    ]

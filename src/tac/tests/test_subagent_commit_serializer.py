@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -57,3 +58,28 @@ def test_refresh_real_index_after_temp_commit_clears_stale_status(
     mod._refresh_real_index_after_temp_commit(["f.txt"], repo_root=tmp_path)
 
     assert _git(tmp_path, "status", "--short") == ""
+
+
+def test_review_gate_override_rejects_python_but_allows_state_docs() -> None:
+    mod = _load_module()
+    with mock.patch.dict(os.environ, {"REVIEW_GATE_OVERRIDE": "1"}, clear=False):
+        assert mod._review_gate_override_python_targets(
+            ["notes.md", ".omx/state/ledger.jsonl"], no_stage=False
+        ) == []
+        assert mod._review_gate_override_python_targets(
+            ["notes.md", "tools/fix.py"], no_stage=False
+        ) == ["tools/fix.py"]
+
+
+def test_review_gate_override_no_stage_inspects_real_staged_targets() -> None:
+    mod = _load_module()
+    staged = subprocess.CompletedProcess(
+        args=["git"], returncode=0, stdout="notes.md\nsrc/tac/live.py\n", stderr=""
+    )
+    with (
+        mock.patch.dict(os.environ, {"REVIEW_GATE_OVERRIDE": "1"}, clear=False),
+        mock.patch.object(mod.subprocess, "run", return_value=staged),
+    ):
+        assert mod._review_gate_override_python_targets([], no_stage=True) == [
+            "src/tac/live.py"
+        ]
