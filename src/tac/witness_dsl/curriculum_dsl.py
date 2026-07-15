@@ -1371,6 +1371,8 @@ class Lever:
     overrides: dict = field(default_factory=dict)
     epochs_delta: int = 0
     notes: str = ""
+    lawrefs: dict = field(default_factory=dict, compare=False, repr=False)
+    constant_manifest: dict = field(default_factory=dict, compare=False, repr=False)
 
 
 # ---------------------------------------------------------------------------
@@ -2356,9 +2358,10 @@ def HeadGeometry(
 
 def LadderIslandHomotopy(
     amplify_weight: float = 1.0,
-    movable_r0: float = 2.0, movable_birth_epochs: int = 60, movable_hold_epochs: int = 0,
+    absolute_scale: float = 2.0,
+    movable_birth_epochs: int = 60, movable_hold_epochs: int = 0,
     movable_anneal_epochs: int = 200, movable_lambda_gate: float = 0.0,
-    lane_r0: float = 2.0, lane_birth_epochs: int = 80, lane_hold_epochs: int = 0,
+    lane_birth_epochs: int = 80, lane_hold_epochs: int = 0,
     lane_anneal_epochs: int = 260, lane_lambda_gate: float = 0.0,
     gate_softness: float = 0.5, release_coeff: float = 0.95, sigma_eff: float = 1.5,
     lane_dash_gate: bool = True, max_step_px: float = 1.0, refresh_every: int = 25,
@@ -2396,7 +2399,77 @@ def LadderIslandHomotopy(
     lane arm's release is schedule+dash-phase, so both costate floors are left OPEN at launch — S4-R2).
     STAGGER (S2-REV-A): ``max(birth+hold+anneal) < muon_start`` is asserted by ``WitnessProgram.
     validate`` so an anneal window cannot silently run past the Muon finisher. ``window`` is a
-    warm-start epochs_delta (0 = full-run config lever, the default)."""
+    warm-start epochs_delta (0 = full-run config lever, the default).
+
+    ``absolute_scale`` is the one positive finite radius-scale authoring knob. Lane is the reference
+    class, so ``lane_r0 = absolute_scale``; Movable is resolved from the sealed n96 isoperimetric
+    receipt by ``isoperimetric_birth_weight_scaling_v1``, giving
+    ``movable_r0 = absolute_scale / 8.881199197033954``. Both argv scalars are produced by actual
+    receipt-backed LawRef resolution; the LawRefs and resolution records remain machine-inspectable on
+    the returned Lever and are never stringified into argv. The ratio is DERIVED geometry only: the
+    absolute scale and efficacy remain unmeasured."""
+    scale = float(absolute_scale)
+    if not math.isfinite(scale) or scale <= 0.0:
+        raise ValueError(
+            f"LadderIslandHomotopy: absolute_scale must be finite and > 0, got {absolute_scale!r}"
+        )
+
+    from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
+        ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+        ISLAND_BIRTH_RATIO_RECEIPT_SHA256,
+        ISOPERIMETRIC_BIRTH_WEIGHT_EQUATION_ID,
+    )
+    from tac.witness_dsl.lawref import (
+        LADDER_DERIVED_AT_CONFIG,
+        InputRef,
+        LawRef,
+        resolve,
+    )
+
+    def _radius_lawref(class_extract: str, class_name: str) -> LawRef:
+        anchor_provenance = (
+            "MEASURED frozen-n96 class perimeter/area geometry; content-addressed receipt chains "
+            "to gt_n96.npz source custody"
+        )
+        return LawRef(
+            equation_id=ISOPERIMETRIC_BIRTH_WEIGHT_EQUATION_ID,
+            inputs={
+                "absolute_scale": InputRef.literal(
+                    scale,
+                    "UNMEASURED positive DSL treatment scale; Lane is the reference class",
+                ),
+                "class_p_over_a": InputRef.anchor(
+                    ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+                    class_extract,
+                    f"{anchor_provenance}; class={class_name}",
+                    expected_sha256=ISLAND_BIRTH_RATIO_RECEIPT_SHA256,
+                ),
+                "reference_p_over_a": InputRef.anchor(
+                    ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+                    "classes/lane/p_over_a",
+                    f"{anchor_provenance}; reference=Lane",
+                    expected_sha256=ISLAND_BIRTH_RATIO_RECEIPT_SHA256,
+                ),
+            },
+            ladder_class=LADDER_DERIVED_AT_CONFIG,
+        )
+
+    radius_lawrefs = {
+        "--ladder-lane-r0": _radius_lawref("classes/lane/p_over_a", "Lane"),
+        "--ladder-movable-r0": _radius_lawref("classes/movable/p_over_a", "Movable"),
+    }
+    radius_resolutions = {
+        flag: resolve(lawref, repo_root=_REPO_ROOT)
+        for flag, lawref in radius_lawrefs.items()
+    }
+    lane_r0 = float(radius_resolutions["--ladder-lane-r0"].value)
+    movable_r0 = float(radius_resolutions["--ladder-movable-r0"].value)
+    if not math.isclose(lane_r0, scale, rel_tol=0.0, abs_tol=0.0):
+        raise ValueError(
+            "LadderIslandHomotopy: REFUSE inconsistent Lane reference resolution: "
+            f"lane_r0={lane_r0!r}, absolute_scale={scale!r}"
+        )
+
     return Lever("n323_ladder_island_homotopy",
                  overrides={"--ladder-island-homotopy": True,
                             "--amplify-weight": amplify_weight,
@@ -2419,7 +2492,14 @@ def LadderIslandHomotopy(
                  epochs_delta=window,
                  notes="#323 FULL LADDER island-birth: per-class-λ-gated continuation over the AMPLIFY "
                        "island radius (movable dilation-GO r*(t) release + lane VP-tangent curve-prior); "
-                       "never uniform amplification; realized THROUGH R; advisory until byte-closed")
+                       "Lane/Movable r0 ratio DERIVED from sealed n96 P/A receipt; absolute scale and "
+                       "efficacy UNMEASURED; never uniform amplification; realized THROUGH R; advisory "
+                       "until byte-closed",
+                 lawrefs=radius_lawrefs,
+                 constant_manifest={
+                     flag: resolution.to_dict()
+                     for flag, resolution in radius_resolutions.items()
+                 })
 
 
 def SegFormUnifyTau() -> Lever:

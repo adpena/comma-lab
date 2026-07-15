@@ -383,7 +383,7 @@ _LIVE_V752_SEALED_ARGV = (
     '--ckpt-every', '25', '--stage-checkpoints', '--seg-form-unify-tau', '--tail-cycles-max', '2',
     '--tail-start-epoch', '0', '--tail-cycle-floor-epochs', '387.09', '--tail-dwell-min', '237',
     '--tail-tau-halving', '0.5', '--tail-lr-prop-tau', '1.0', '--tail-stop-marginal-s', '0.0001',
-    '--ladder-island-homotopy', '--ladder-movable-r0', '2.0', '--ladder-movable-birth-epochs', '60',
+    '--ladder-island-homotopy', '--ladder-movable-r0', '0.22519481385666232', '--ladder-movable-birth-epochs', '60',
     '--ladder-movable-hold-epochs', '0', '--ladder-movable-anneal-epochs', '200',
     '--ladder-movable-lambda-gate', '0.0', '--ladder-lane-r0', '2.0', '--ladder-lane-birth-epochs',
     '80', '--ladder-lane-hold-epochs', '0', '--ladder-lane-anneal-epochs', '260',

@@ -322,6 +322,24 @@ def eval_margin_band_satisficing_threshold(inputs: Mapping[str, Any]) -> float:
     )
 
 
+def eval_isoperimetric_birth_weight(inputs: Mapping[str, Any]) -> float:
+    """Resolve the island-birth support radius from sealed per-class ``P/A`` geometry.
+
+    ``absolute_scale`` is the positive UNMEASURED DSL authoring scale; ``class_p_over_a`` and
+    ``reference_p_over_a`` are content-addressed receipt anchors.  The underlying helper validates
+    every input as finite and strictly positive.
+    """
+    from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
+        isoperimetric_birth_weight,
+    )
+
+    return isoperimetric_birth_weight(
+        float(inputs["absolute_scale"]),
+        float(inputs["class_p_over_a"]),
+        float(inputs["reference_p_over_a"]),
+    )
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
@@ -343,6 +361,9 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "cgauge_beta2_window_v1": eval_cgauge_beta2_window,
     # MarginBandSatisficing provenance repair (2026-07-12): DERIVED-LIVE threshold law.
     "margin_band_satisficing_threshold_v1": eval_margin_band_satisficing_threshold,
+    # Island-birth geometry wire (2026-07-15): ratio DERIVED from sealed n96 P/A receipt;
+    # absolute scale remains tunable and efficacy remains owed.
+    "isoperimetric_birth_weight_scaling_v1": eval_isoperimetric_birth_weight,
 }
 
 
@@ -369,6 +390,7 @@ __all__ = [
     "eval_critical_nucleus_release_r_star",
     "eval_forfeit_matched_exit_s_star",
     "eval_hosc_beta_fireband_pin",
+    "eval_isoperimetric_birth_weight",
     "eval_lr_control_denominator",
     "eval_lr_hold_frac_no_hold",
     "eval_margin_band_satisficing_threshold",

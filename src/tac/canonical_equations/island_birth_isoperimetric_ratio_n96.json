@@ -1,0 +1,49 @@
+{
+  "schema": "island_birth_isoperimetric_ratio_measurement.v1",
+  "measurement_utc": "2026-07-15T00:00:00Z",
+  "source": {
+    "path": "experiments/results/mlx_fleet_gt_cache/gt_n96.npz",
+    "size_bytes": 812484058,
+    "sha256": "6aad6600d93a5c25e94207ee411d3b4daf93136b8ea4235b6f7b9d96f04ab104",
+    "array": "lstars"
+  },
+  "extraction_method": {
+    "class_order": "canonical comma10k [Road=0, Lane=1, Undrivable=2, Movable=3, MyCar=4]",
+    "classes": {
+      "lane": 1,
+      "movable": 3
+    },
+    "per_frame_boundary": "count class pixels not surviving a 4-connected cross binary erosion with a constant-false image border",
+    "aggregation": "sum area pixels and boundary pixels across all n96 frames, then compute boundary_pixels / area_pixels"
+  },
+  "classes": {
+    "lane": {
+      "canonical_class_index": 1,
+      "area_pixels": 111081,
+      "boundary_pixels": 84389,
+      "p_over_a": 0.759706880564633
+    },
+    "movable": {
+      "canonical_class_index": 3,
+      "area_pixels": 293859,
+      "boundary_pixels": 25137,
+      "p_over_a": 0.08554102477718906
+    }
+  },
+  "lane_over_movable_p_over_a_ratio": 8.881199197033954,
+  "references": {
+    "measurement_memo": ".omx/research/island_birth_saddle_node_hysteresis_measurement_20260715.md",
+    "dag_feed": {
+      "path": ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md",
+      "lines": "105-111",
+      "statement": "W_birth,c is proportional to (P/A)_c; Lane is approximately 8.9 times Movable; absolute lambda_c/delta remains owed to a live flow sweep."
+    }
+  },
+  "epistemic_status": {
+    "ratio": "DERIVED from MEASURED n96 GT geometry",
+    "absolute_scale": "UNMEASURED and tunable",
+    "efficacy_caveat": "Frozen n96 islands were already present at CE (~75-94% GT) and flat-within-noise, while the mod32cap clean baseline islands were deliberately unborn because lane not-static initialization was a NO-OP and growth losses were OFF. This receipt does not show that firing the lever improves d_seg or score. Frozen data did not confirm a saddle-node or hysteresis; only an operator-authorized live resumed up/down W_birth ramp can measure efficacy and the absolute threshold.",
+    "score_claim": false,
+    "pointer_moved": false
+  }
+}

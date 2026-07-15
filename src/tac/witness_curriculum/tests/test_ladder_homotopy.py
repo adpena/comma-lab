@@ -9,6 +9,11 @@ DSL factory spelling + registry mapping (never-invent-flags).
 """
 from __future__ import annotations
 
+import inspect
+import json
+from itertools import pairwise
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -51,7 +56,7 @@ def test_gate_is_fractional_and_continuous_across_the_soft_band():
     # monotone non-decreasing across the band
     xs = np.linspace(0.05, 0.10, 21)
     ys = [spec.gate_multiplier(float(x)) for x in xs]
-    assert all(b >= a - 1e-12 for a, b in zip(ys, ys[1:], strict=False))
+    assert all(b >= a - 1e-12 for a, b in pairwise(ys))
 
 
 def test_lambda_gate_zero_is_ungated():
@@ -230,11 +235,95 @@ def test_dsl_factory_returns_lever_with_expected_flags():
     assert lv.name == "n323_ladder_island_homotopy"
     assert lv.overrides["--ladder-island-homotopy"] is True
     assert lv.overrides["--amplify-weight"] == 1.0
+    assert lv.overrides["--ladder-lane-r0"] == 2.0
+    assert lv.overrides["--ladder-movable-r0"] == pytest.approx(
+        2.0 / 8.881199197033954, rel=1e-15
+    )
+    assert (
+        lv.overrides["--ladder-lane-r0"] / lv.overrides["--ladder-movable-r0"]
+        == pytest.approx(8.881199197033954, rel=1e-15)
+    )
     # a store-bool flag must be a bool (else compile emits a bad value)
     assert isinstance(lv.overrides["--ladder-lane-dash-gate"], bool)
     for f in ("--ladder-movable-r0", "--ladder-lane-lambda-gate", "--ladder-release-coeff",
               "--ladder-sigma-eff", "--ladder-max-step-px"):
         assert f in lv.overrides
+
+
+def test_dsl_factory_has_one_absolute_scale_knob_and_derives_both_radii():
+    from tac.witness_dsl.curriculum_dsl import LadderIslandHomotopy
+
+    parameters = inspect.signature(LadderIslandHomotopy).parameters
+    assert "absolute_scale" in parameters
+    assert parameters["absolute_scale"].default == 2.0
+    assert "lane_r0" not in parameters
+    assert "movable_r0" not in parameters
+
+    lv = LadderIslandHomotopy(absolute_scale=4.0, amplify_weight=0.75)
+    assert lv.overrides["--ladder-lane-r0"] == 4.0
+    assert lv.overrides["--ladder-movable-r0"] == pytest.approx(
+        4.0 / 8.881199197033954, rel=1e-15
+    )
+    assert lv.overrides["--amplify-weight"] == 0.75
+    for bad in (0.0, -1.0, float("nan"), float("inf"), float("-inf")):
+        with pytest.raises(ValueError, match="absolute_scale must be finite and > 0"):
+            LadderIslandHomotopy(absolute_scale=bad)
+
+
+def test_dsl_factory_resolves_receipt_backed_lawrefs_and_exposes_manifest():
+    from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
+        ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+        ISLAND_BIRTH_RATIO_RECEIPT_SHA256,
+    )
+    from tac.witness_dsl.curriculum_dsl import LadderIslandHomotopy
+    from tac.witness_dsl.lawref import LawRef
+
+    lv = LadderIslandHomotopy()
+    assert set(lv.lawrefs) == {"--ladder-lane-r0", "--ladder-movable-r0"}
+    assert set(lv.constant_manifest) == set(lv.lawrefs)
+    for flag, lawref in lv.lawrefs.items():
+        assert isinstance(lawref, LawRef)
+        assert lawref.inputs["class_p_over_a"].kind == "anchor"
+        assert lawref.inputs["reference_p_over_a"].kind == "anchor"
+        assert lawref.inputs["class_p_over_a"].artifact_path == ISLAND_BIRTH_RATIO_RECEIPT_PATH
+        assert lawref.inputs["class_p_over_a"].expected_sha256 == ISLAND_BIRTH_RATIO_RECEIPT_SHA256
+        manifest = lv.constant_manifest[flag]
+        assert manifest["equation_id"] == "isoperimetric_birth_weight_scaling_v1"
+        assert manifest["fallback_used"] is False
+        assert manifest["value"] == lv.overrides[flag]
+        assert all(row["sha256"] == ISLAND_BIRTH_RATIO_RECEIPT_SHA256
+                   for row in manifest["inputs"] if row["kind"] == "anchor")
+    assert all(not isinstance(value, LawRef) for value in lv.overrides.values())
+
+
+def test_dsl_factory_fails_closed_if_receipt_is_tampered(tmp_path, monkeypatch):
+    from tac.canonical_equations import chan_vese_area_constraint_birth_balance_20260708 as law
+    from tac.witness_dsl.curriculum_dsl import LadderIslandHomotopy
+    from tac.witness_dsl.lawref import LawResolveError
+
+    receipt = json.loads(Path(law.ISLAND_BIRTH_RATIO_RECEIPT_PATH).read_text())
+    receipt["classes"]["movable"]["p_over_a"] = 1.0
+    tampered = tmp_path / "tampered_receipt.json"
+    tampered.write_text(json.dumps(receipt))
+    monkeypatch.setattr(law, "ISLAND_BIRTH_RATIO_RECEIPT_PATH", str(tampered))
+    with pytest.raises(LawResolveError, match="sha256 mismatch"):
+        LadderIslandHomotopy()
+
+
+def test_ladder_default_off_preserves_program_argv_identity():
+    from tac.witness_dsl.curriculum_dsl import BASELINE, LadderIslandHomotopy
+
+    before = BASELINE.compile_trainer_argv()
+    lever = LadderIslandHomotopy()
+    after = BASELINE.compile_trainer_argv()
+    assert after == before
+    for flag in ("--ladder-island-homotopy", "--ladder-lane-r0", "--ladder-movable-r0"):
+        assert flag not in before
+
+    composed = BASELINE.with_lever(lever).compile_trainer_argv()
+    assert "--ladder-island-homotopy" in composed
+    assert str(lever.overrides["--ladder-lane-r0"]) in composed
+    assert str(lever.overrides["--ladder-movable-r0"]) in composed
 
 
 def test_dsl_factory_flags_all_exist_in_trainer_argparse():
@@ -260,3 +349,12 @@ def test_registry_maps_all_ladder_flags():
     # none of the ladder flags remain UNMAPPED by the DSL
     comp = R.completeness()
     assert not [f for f in comp.unmapped if f.startswith("--ladder-")]
+
+
+def test_ladder_is_never_fired_and_duty_to_measure_on_empty_ledger(tmp_path):
+    from tac.witness_dsl.activation_ledger import duty_to_measure, known_levers, never_fired
+
+    empty = tmp_path / "empty_activation_ledger.jsonl"
+    assert "LadderIslandHomotopy" in known_levers()
+    assert "LadderIslandHomotopy" in never_fired(path=empty)
+    assert "LadderIslandHomotopy" in duty_to_measure(path=empty)

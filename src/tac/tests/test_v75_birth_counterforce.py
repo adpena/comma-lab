@@ -9,24 +9,33 @@ means != ends: advisory apparatus; pointer 0.19110 UNMOVED.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+from itertools import pairwise
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
     DEFAULT_AREA_TOLERANCE,
+    ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+    ISLAND_BIRTH_RATIO_RECEIPT_SHA256,
     MEASURED_GT_AREA_N600,
     MEASURED_PART_FRAC_EP125,
     area_constraint_lambda,
     area_penalty,
     build_chan_vese_area_constraint_birth_balance_v1,
+    build_isoperimetric_birth_weight_scaling_v1,
     dominance_at_runaway,
     equilibrium_overshoot,
+    isoperimetric_birth_weight,
 )
 from tac.witness_control.birth_completion import (
     BirthCompletionController,
+    birth_complete,
     birth_completion_restore_from_cfg,
     birth_completion_state_arrays,
-    birth_complete,
     birth_persistence,
     birth_ramp_multiplier,
 )
@@ -35,7 +44,6 @@ from tac.witness_dsl.curriculum_dsl import (
     BirthCompletionEvent,
     logit_adjust_classes_for_basis_regime,
 )
-
 
 # ============================ Lever-1: Chan-Vese area-constraint balance =========================
 
@@ -71,8 +79,10 @@ class TestAreaConstraintBalanceLaw:
 
     def test_penalty_positive_on_overshoot_and_quadratic(self):
         gt = np.array(MEASURED_GT_AREA_N600)
-        m1 = gt.copy(); m1[1] += 0.01
-        m2 = gt.copy(); m2[1] += 0.02
+        m1 = gt.copy()
+        m1[1] += 0.01
+        m2 = gt.copy()
+        m2[1] += 0.02
         p1 = area_penalty(m1, gt, (1,))
         p2 = area_penalty(m2, gt, (1,))
         assert p1 > 0.0
@@ -93,6 +103,66 @@ class TestAreaConstraintBalanceLaw:
         assert eq.equation_id == "chan_vese_area_constraint_birth_balance_v1"
         assert "tac.witness_dsl.curriculum_dsl" in eq.canonical_consumers
         assert len(eq.empirical_anchors) == 2
+
+
+class TestIsoperimetricBirthWeightLaw:
+    def test_exact_ratio_helper_and_validation(self):
+        lane = 0.759706880564633
+        movable = 0.08554102477718906
+        assert isoperimetric_birth_weight(2.0, lane, lane) == 2.0
+        movable_r0 = isoperimetric_birth_weight(2.0, movable, lane)
+        assert movable_r0 == pytest.approx(2.0 / 8.881199197033954, rel=1e-15)
+        for bad in (0.0, -1.0, float("nan"), float("inf")):
+            with pytest.raises(ValueError):
+                isoperimetric_birth_weight(bad, movable, lane)
+
+    def test_receipt_is_content_addressed_and_caveat_is_honest(self):
+        receipt_path = Path(ISLAND_BIRTH_RATIO_RECEIPT_PATH)
+        receipt_bytes = receipt_path.read_bytes()
+        assert hashlib.sha256(receipt_bytes).hexdigest() == ISLAND_BIRTH_RATIO_RECEIPT_SHA256
+        receipt = json.loads(receipt_bytes)
+        caveat = receipt["epistemic_status"]["efficacy_caveat"]
+        assert "already present at CE (~75-94% GT)" in caveat
+        assert "flat-within-noise" in caveat
+        assert "mod32cap clean baseline islands were deliberately unborn" in caveat
+        assert "lane not-static initialization was a NO-OP" in caveat
+        assert "growth losses were OFF" in caveat
+        assert receipt["epistemic_status"]["score_claim"] is False
+
+    def test_equation_anchor_preserves_relative_only_scope(self):
+        eq = build_isoperimetric_birth_weight_scaling_v1()
+        assert eq.equation_id == "isoperimetric_birth_weight_scaling_v1"
+        assert eq.empirical_anchors[0].source_artifact == ISLAND_BIRTH_RATIO_RECEIPT_PATH
+        scope = eq.domain_of_validity["evidence_scope"]
+        assert "no efficacy" in scope and "absolute scale requires" in scope
+
+    def test_lane_over_movable_ratio_resolves_directly_through_lawref(self):
+        from tac.witness_dsl.lawref import LADDER_DERIVED_AT_CONFIG, InputRef, LawRef, resolve
+
+        def anchor(extract: str) -> InputRef:
+            return InputRef.anchor(
+                ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+                extract,
+                "MEASURED-ANCHOR frozen n96 GT perimeter/area geometry",
+                expected_sha256=ISLAND_BIRTH_RATIO_RECEIPT_SHA256,
+            )
+
+        ratio_ref = LawRef(
+            equation_id="isoperimetric_birth_weight_scaling_v1",
+            inputs={
+                "absolute_scale": InputRef.literal(1.0, "dimensionless ratio normalization"),
+                "class_p_over_a": anchor("classes/lane/p_over_a"),
+                "reference_p_over_a": anchor("classes/movable/p_over_a"),
+            },
+            ladder_class=LADDER_DERIVED_AT_CONFIG,
+        )
+        resolution = resolve(ratio_ref)
+        assert resolution.value == pytest.approx(8.881199197033954, rel=1e-15)
+        assert all(
+            row["sha256"] == ISLAND_BIRTH_RATIO_RECEIPT_SHA256
+            for row in resolution.to_dict()["inputs"]
+            if row["kind"] == "anchor"
+        )
 
 
 class TestAreaConstraintDSL:
@@ -171,7 +241,7 @@ class TestBirthRampMultiplier:
 
     def test_ramp_monotone_non_increasing_after_fire(self):
         vals = [birth_ramp_multiplier(100, e, ramp_epochs=50, post_level=0.0) for e in range(100, 200)]
-        assert all(a >= b for a, b in zip(vals, vals[1:]))
+        assert all(a >= b for a, b in pairwise(vals))
 
 
 class TestBirthCompletionController:
@@ -316,9 +386,11 @@ class TestCrucibleV75Compose:
             t = argv[i]
             if t.startswith("--"):
                 if i + 1 < len(argv) and not argv[i + 1].startswith("--"):
-                    pairs[t] = argv[i + 1]; i += 2
+                    pairs[t] = argv[i + 1]
+                    i += 2
                 else:
-                    pairs[t] = True; i += 1
+                    pairs[t] = True
+                    i += 1
             else:
                 i += 1
         return pairs
@@ -346,7 +418,7 @@ class TestCrucibleV75Compose:
     def test_every_emitted_flag_is_declared(self):
         # never-invent-flags: every emitted flag must exist in the trainer argparse (else argparse crash).
         import re
-        src = open("experiments/train_levelset_witness_realized_through_R_mlx.py").read()
+        src = Path("experiments/train_levelset_witness_realized_through_R_mlx.py").read_text()
         declared = set(re.findall(r'add_argument\("(--[a-z0-9-]+)"', src))
         for f in ("--area-constraint-birth", "--area-constraint-birth-force",
                   "--area-constraint-tolerance", "--area-constraint-classes",

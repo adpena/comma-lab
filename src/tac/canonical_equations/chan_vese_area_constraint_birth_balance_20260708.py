@@ -377,18 +377,196 @@ def populate_chan_vese_area_constraint_birth_balance_equation(
     return eq
 
 
+# --- Distinct append-only law: isoperimetric birth-weight scaling (2026-07-15) -----------------
+# This law is intentionally separate from the area-retraction law above.  The existing 51x/14.3x
+# runaway facts describe a precision counter-force; this law describes the DERIVED relative birth
+# support needed to oppose each class's perimeter/area homogenization drain.  Its absolute scale and
+# efficacy remain unmeasured.
+ISOPERIMETRIC_BIRTH_WEIGHT_EQUATION_ID = "isoperimetric_birth_weight_scaling_v1"
+ISLAND_BIRTH_RATIO_RECEIPT_PATH = (
+    "src/tac/canonical_equations/island_birth_isoperimetric_ratio_n96.json"
+)
+ISLAND_BIRTH_RATIO_RECEIPT_SHA256 = (
+    "74129e133869ddaff1f8b4b3198fde4b45ceaffcc5aaa52ef1f18aab59f62ef7"
+)
+ISLAND_BIRTH_MEASUREMENT_MEMO = (
+    ".omx/research/island_birth_saddle_node_hysteresis_measurement_20260715.md"
+)
+ISLAND_BIRTH_DAG_FEED = (
+    ".omx/research/sub015_DAG_exp_linear_reparam_warmstart_20260714.md:105-111"
+)
+
+
+def isoperimetric_birth_weight(
+    absolute_scale: float,
+    class_p_over_a: float,
+    reference_p_over_a: float,
+) -> float:
+    """Return ``absolute_scale * class_p_over_a / reference_p_over_a``.
+
+    The ratio is the DERIVED class geometry law ``W_birth,c proportional to (P/A)_c``.  The
+    ``absolute_scale`` remains an explicitly tunable, UNMEASURED radius scale.  All inputs must be
+    finite and strictly positive so a corrupt receipt or invalid authoring value fails closed.
+    """
+    scale = float(absolute_scale)
+    class_ratio = float(class_p_over_a)
+    reference_ratio = float(reference_p_over_a)
+    for name, value in (
+        ("absolute_scale", scale),
+        ("class_p_over_a", class_ratio),
+        ("reference_p_over_a", reference_ratio),
+    ):
+        if not np.isfinite(value) or value <= 0.0:
+            raise ValueError(f"{name} must be finite and > 0, got {value!r}")
+    return scale * class_ratio / reference_ratio
+
+
+def build_isoperimetric_birth_weight_scaling_v1() -> CanonicalEquation:
+    """Build the relative island-birth support law from the sealed n96 geometry receipt."""
+    geometry_anchor = EmpiricalAnchor(
+        anchor_id="island_birth_isoperimetric_ratio_n96_20260715",
+        measurement_utc="2026-07-15T00:00:00Z",
+        inputs={
+            "receipt": ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+            "receipt_sha256": ISLAND_BIRTH_RATIO_RECEIPT_SHA256,
+            "source": "experiments/results/mlx_fleet_gt_cache/gt_n96.npz",
+            "source_sha256": "6aad6600d93a5c25e94207ee411d3b4daf93136b8ea4235b6f7b9d96f04ab104",
+            "extraction": (
+                "lstars; canonical Lane=1 and Movable=3; boundary pixels are class pixels not "
+                "surviving a 4-connected cross erosion with constant-false border; aggregate n96"
+            ),
+        },
+        predicted_output={
+            "law": "W_birth,c proportional to (P/A)_c",
+            "absolute_scale": "UNMEASURED; remains a positive tunable DSL authoring value",
+        },
+        empirical_output={
+            "lane": {"area": 111081, "boundary": 84389, "p_over_a": 0.759706880564633},
+            "movable": {"area": 293859, "boundary": 25137, "p_over_a": 0.08554102477718906},
+            "lane_over_movable_ratio": 8.881199197033954,
+            "efficacy": "UNMEASURED — ratio is not evidence that firing improves d_seg or score",
+        },
+        residual=0.0,
+        source_artifact=ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+        measurement_method=(
+            "frozen n96 GT geometry extraction; exact counts and source custody are sealed in the "
+            "content-addressed receipt"
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+            reactivation_criteria=(
+                "only an operator-authorized live resumed W_birth up/down ramp may establish "
+                "efficacy or an absolute threshold"
+            ),
+            measurement_axis=_ADVISORY,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
+    return CanonicalEquation(
+        equation_id=ISOPERIMETRIC_BIRTH_WEIGHT_EQUATION_ID,
+        name=(
+            "Isoperimetric island-birth support scaling: class birth weight is proportional to "
+            "the class perimeter/area homogenization drain"
+        ),
+        one_line_summary=(
+            "W_birth,c = W_ref * (P/A)_c / (P/A)_ref; n96 geometry fixes only the relative "
+            "Lane/Movable ratio (8.881199...), while the absolute scale and efficacy remain owed."
+        ),
+        latex_form=(
+            r"W_{\mathrm{birth},c}=W_{\mathrm{ref}}"
+            r"\frac{(P/A)_c}{(P/A)_{\mathrm{ref}}},\qquad"
+            r"\frac{W_{\mathrm{Lane}}}{W_{\mathrm{Movable}}}=8.881199197\ldots"
+        ),
+        python_callable_module_path=(
+            "tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708:"
+            "isoperimetric_birth_weight"
+        ),
+        domain_of_validity={
+            "vehicle": ["softmax_of_sdf_levelset_witness"],
+            "lever": "tac.witness_dsl.curriculum_dsl.LadderIslandHomotopy",
+            "reference_class": "Lane=1",
+            "measurement_axis": ["macOS-CPU advisory", "derived"],
+            "evidence_scope": (
+                "relative per-class geometry only; saddle-node/hysteresis NOT CONFIRMED; no efficacy "
+                "or score claim; absolute scale requires a live resumed up/down ramp"
+            ),
+            "triality": {
+                "dag": ISLAND_BIRTH_DAG_FEED,
+                "dsl": "tac.witness_dsl.curriculum_dsl.LadderIslandHomotopy",
+                "equation": ISOPERIMETRIC_BIRTH_WEIGHT_EQUATION_ID,
+            },
+        },
+        units_in={
+            "absolute_scale": "pixels",
+            "class_p_over_a": "inverse_pixels",
+            "reference_p_over_a": "inverse_pixels",
+        },
+        units_out={"class_birth_radius": "pixels"},
+        empirical_anchors=(geometry_anchor,),
+        predicted_vs_empirical_residual={
+            "relative_ratio_residual": 0.0,
+        },
+        last_calibration_utc="2026-07-15T00:00:00Z",
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
+        canonical_consumers=(
+            "tac.witness_dsl.curriculum_dsl.LadderIslandHomotopy",
+            "tac.witness_dsl.lawref",
+        ),
+        canonical_producers=(
+            ISLAND_BIRTH_MEASUREMENT_MEMO,
+            ISLAND_BIRTH_RATIO_RECEIPT_PATH,
+        ),
+        provenance=build_provenance_for_predicted(
+            model_id="isoperimetric_birth_weight_scaling.v1",
+            inputs_sha256=ISLAND_BIRTH_RATIO_RECEIPT_SHA256,
+            measurement_axis=_PREDICTED,
+            hardware_substrate="apple_m5_max_cpu",
+        ),
+    )
+
+
+def populate_isoperimetric_birth_weight_scaling_equation(
+    *, path=None, lock_path=None, agent: str | None = None, subagent_id: str | None = None,
+) -> CanonicalEquation:
+    """Idempotently append the isoperimetric island-birth ratio law to a registry."""
+    from tac.canonical_equations.registry import register_canonical_equation
+
+    eq = build_isoperimetric_birth_weight_scaling_v1()
+    register_canonical_equation(
+        eq,
+        path=path,
+        lock_path=lock_path,
+        agent=agent,
+        subagent_id=subagent_id,
+        notes=(
+            "isoperimetric island-birth ratio law; Lane/Movable=8.881199... DERIVED from sealed "
+            "n96 GT geometry; absolute scale and efficacy remain unmeasured"
+        ),
+    )
+    return eq
+
+
 __all__ = [
     "AREA_FLOOR",
     "BIRTHED_CLASSES",
     "DEFAULT_AREA_TOLERANCE",
     "DEFAULT_BIRTH_FORCE",
     "EQUATION_ID",
+    "ISLAND_BIRTH_DAG_FEED",
+    "ISLAND_BIRTH_MEASUREMENT_MEMO",
+    "ISLAND_BIRTH_RATIO_RECEIPT_PATH",
+    "ISLAND_BIRTH_RATIO_RECEIPT_SHA256",
+    "ISOPERIMETRIC_BIRTH_WEIGHT_EQUATION_ID",
     "MEASURED_GT_AREA_N600",
     "MEASURED_PART_FRAC_EP125",
     "area_constraint_lambda",
     "area_penalty",
     "build_chan_vese_area_constraint_birth_balance_v1",
+    "build_isoperimetric_birth_weight_scaling_v1",
     "dominance_at_runaway",
     "equilibrium_overshoot",
+    "isoperimetric_birth_weight",
     "populate_chan_vese_area_constraint_birth_balance_equation",
+    "populate_isoperimetric_birth_weight_scaling_equation",
 ]
