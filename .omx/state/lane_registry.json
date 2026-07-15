@@ -78271,6 +78271,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "p0_harvest_held_20260715",
+      "name": "Held harness and DSL hash harvest",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Isolated review-and-harvest branch; no GPU, score, or live-run mutation."
     }
   ],
   "level_rules": {
@@ -78280,5 +78321,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-15T09:54:27Z"
+  "updated_at": "2026-07-15T10:22:34Z"
 }
