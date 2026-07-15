@@ -363,6 +363,11 @@ from tac.canonical_equations.v8_geometric_rate_decomposition_20260709 import (
     build_v8_geometric_rate_decomposition_v1,
     populate_v8_geometric_rate_decomposition_equation,
 )
+from tac.canonical_equations.windowed_curvelet_parabolic_capacity_20260714 import (
+    build_windowed_curvelet_parabolic_capacity_v1,
+    parabolic_sigma_pair,
+    populate_windowed_curvelet_parabolic_capacity_equation,
+)
 from tac.canonical_equations.witness_measured_findings_20260701 import (
     build_all_witness_measured_findings_20260701,
 )
@@ -488,6 +493,7 @@ __all__ = [
     "build_tau_eps_hbar_one_dequantization_two_scales_v1",
     "build_tropnnc_dense_trunk_exact_reduction_empty_v1",
     "build_v8_geometric_rate_decomposition_v1",
+    "build_windowed_curvelet_parabolic_capacity_v1",
     "build_witness_pose_grad_coeff_stability_v1",
     "build_wyner_ziv_decoder_side_posenet_side_information_conditional_entropy_reduction_v1",
     "build_yopo_first_layer_costate_v1",
@@ -563,8 +569,10 @@ __all__ = [
     "populate_step_native_activation_edge_optimality_equation",
     "populate_tropnnc_dense_trunk_exact_reduction_equation",
     "populate_v8_geometric_rate_decomposition_equation",
+    "populate_windowed_curvelet_parabolic_capacity_equation",
     "populate_witness_pose_grad_coeff_stability_equation",
     "populate_yopo_first_layer_costate_v1",
+    "parabolic_sigma_pair",
     "predict_procedural_predictor_plus_residual_correction_savings",
     "predict_wyner_ziv_posenet_side_info_savings",
     "query_equations",
