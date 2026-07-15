@@ -107,6 +107,7 @@ def test_scanner_source_index_candidate_filter_covers_hazard_families(
             python scripts/launch_lightning_batch_job.py exact-eval \
               --required-device cuda
             python tools/x.py --rmote lightning
+            for result in outputs/*.last.txt; do :; done
             find . -name '*.json' -printf '%p\\n'
             read\tpath
             """
@@ -165,6 +166,7 @@ def test_scanner_source_index_candidate_filter_covers_hazard_families(
         "stale_dispatch_authorization_doc",
         "stale_lightning_launcher_flag",
         "zsh_path_special_variable",
+        "zsh_nomatch_optional_glob",
     }
     # The facts pass opens every suffix-matched file once, while the precise
     # scanner should reopen only hazard candidates. Six fixture files means
@@ -265,6 +267,41 @@ def test_scanner_catches_local_find_printf_but_allows_remote_workspace_find(tmp_
     hazards = helper.scan_paths(tmp_path, scan_paths=("scripts",))
     assert len(hazards) == 1
     assert hazards[0].kind == "macos_find_printf"
+
+
+def test_scanner_catches_zsh_nomatch_optional_monitor_globs(tmp_path: Path) -> None:
+    helper = _load_helper()
+    script = tmp_path / "scripts" / "monitor.command"
+    script.parent.mkdir()
+    script.write_text(
+        "for result in artifacts/*.last.txt; do echo $result; done\n"
+        "for ckpt in runs/*stage*.npz; do echo $ckpt; done\n",
+        encoding="utf-8",
+    )
+    hazards = helper.scan_paths(tmp_path, scan_paths=("scripts",))
+    assert [hazard.kind for hazard in hazards] == [
+        "zsh_nomatch_optional_glob",
+        "zsh_nomatch_optional_glob",
+    ]
+
+
+def test_scanner_allows_nullglob_zsh_qualifier_find_and_quoted_literals(tmp_path: Path) -> None:
+    helper = _load_helper()
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    (scripts / "nullglob.zsh").write_text(
+        "setopt null_glob\nfor result in artifacts/*.last.txt; do :; done\n",
+        encoding="utf-8",
+    )
+    (scripts / "qualifier.zsh").write_text(
+        "results=(artifacts/*.last.txt(N))\n",
+        encoding="utf-8",
+    )
+    (scripts / "find.sh").write_text(
+        "find artifacts -name '*.last.txt' -print\nprintf '%s\\n' '*.last.txt'\n",
+        encoding="utf-8",
+    )
+    assert helper.scan_paths(tmp_path, scan_paths=("scripts",)) == []
 
 
 # ── dispatch_local_path_leak metabug class (Lightning catastrophe 2026-05-05) ──

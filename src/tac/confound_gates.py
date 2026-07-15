@@ -49,6 +49,7 @@ import ast
 import importlib.util
 import json
 import re
+import tempfile
 from collections import Counter
 from pathlib import Path
 
@@ -1868,13 +1869,90 @@ def check_codex_retry_preserves_original_sandbox_authority(
         violations.append(
             "tools/codex_delegate.py: main() does not call _launch_policy_refusal (unwired guard)"
         )
+    retry_helper, retry_error = _load_tool_module(root, "codex_retry_checkpoint.py")
+    if retry_error:
+        violations.append(retry_error)
+    latest = getattr(retry_helper, "latest_resumable_checkpoint", None)
+    retry_cap = getattr(module, "_MAX_CAPACITY_RETRIES", None) if module else None
+    if not isinstance(retry_cap, int) or isinstance(retry_cap, bool) or not 1 <= retry_cap <= 2:
+        violations.append(
+            "tools/codex_delegate.py: transient retry cap must be a small positive bound (1..2)"
+        )
+    if callable(latest):
+        with tempfile.TemporaryDirectory() as tmp:
+            progress = Path(tmp) / "progress.jsonl"
+            progress.write_text(
+                '\n'.join(
+                    [
+                        '{"parent_id_or_session":"other","status":"in_progress",'
+                        '"step":99,"next_action":"wrong"}',
+                        '{"parent_id_or_session":"codex_delegate:arm:stamp",'
+                        '"status":"complete","step":1,"next_action":""}',
+                        '{"parent_id_or_session":"codex_delegate:arm:stamp",'
+                        '"status":"in_progress","step":2,"next_action":"continue"}',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            selected = latest(progress, "codex_delegate:arm:stamp")
+            refused = latest(progress, "codex_delegate:missing:stamp")
+        if not isinstance(selected, dict) or selected.get("step") != 2 or refused is not None:
+            violations.append(
+                "tools/codex_retry_checkpoint.py: exact-key resumable checkpoint custody probe failed"
+            )
+    elif retry_helper:
+        violations.append(
+            "tools/codex_retry_checkpoint.py: latest_resumable_checkpoint is missing"
+        )
+    compact = getattr(module, "_write_compact_prompts", None) if module else None
+    launcher_writer = getattr(module, "_write_launcher", None) if module else None
+    if callable(compact) and callable(launcher_writer):
+        old_runs = module.RUNS
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                module.RUNS = tmp_path
+                authority = tmp_path / "wrapped.prompt.txt"
+                authority.write_text("x" * 200_000, encoding="utf-8")
+                entry, resume = compact(
+                    label="arm",
+                    stamp="stamp",
+                    wrapped_prompt=authority,
+                    delegation_key="codex_delegate:arm:stamp",
+                )
+                body = launcher_writer(
+                    "arm", "stamp", entry, "gpt-5.6-sol", "high", "read-only",
+                    tmp_path / "run.log", tmp_path / "last.txt", tmp_path / "done",
+                    False, tmp_path, resume_prompt_file=resume,
+                    delegation_key="codex_delegate:arm:stamp",
+                ).read_text(encoding="utf-8")
+                bounded = entry.stat().st_size < 2_000 and resume.stat().st_size < 2_000
+        finally:
+            module.RUNS = old_runs
+        required = (
+            "codex_retry_checkpoint.py",
+            "--progress-file \"$WORKDIR/.omx/state/subagent_progress.jsonl\"",
+            "RETRY-REFUSED-NO-CHECKPOINT",
+            str(resume),
+            "LANDING-REVIEW-REQUIRED",
+            "review_required=1",
+        )
+        if not bounded or any(token not in body for token in required):
+            violations.append(
+                "tools/codex_delegate.py: compact checkpoint-custodied retry or landing-review guard is missing"
+            )
+    elif module:
+        violations.append(
+            "tools/codex_delegate.py: compact prompt/retry launcher behavior is missing"
+        )
     return _finish(
         name="check_codex_retry_preserves_original_sandbox_authority",
         tag="codex-retry-sandbox-authority",
         violations=violations,
         strict=strict,
         verbose=verbose,
-        ok_detail="diagnosed downgrade refused; same/elevated controls admitted",
+        ok_detail="sandbox preserved; retries bounded, compact, checkpoint-custodied, and review-gated",
     )
 
 
@@ -1921,13 +1999,38 @@ def check_codex_nonisolated_writer_cap(
         violations.append(
             "tools/codex_delegate.py: worktree setup may fall back to an uncapped shared-tree writer"
         )
+    status_module, status_error = _load_tool_module(root, "codex_status.py")
+    if status_error:
+        violations.append(status_error)
+    is_doomed = getattr(status_module, "_is_strand_doomed", None) if status_module else None
+    bucket = getattr(status_module, "_bucket", None) if status_module else None
+    if callable(is_doomed) and callable(bucket):
+        legacy_writer = {"sandbox": "workspace-write"}
+        if not is_doomed(legacy_writer):
+            violations.append(
+                "tools/codex_status.py: pre-CFL writer without isolate custody is not strand-doomed"
+            )
+        if is_doomed({"sandbox": "workspace-write", "isolate": True}) or is_doomed(
+            {"sandbox": "read-only", "isolate": False}
+        ):
+            violations.append(
+                "tools/codex_status.py: strand-doomed retrofit rejects isolated/read-only controls"
+            )
+        if bucket(True, None, None, 0.1, strand_doomed=True) != "STRAND_DOOMED":
+            violations.append(
+                "tools/codex_status.py: live pre-CFL writer is not surfaced as STRAND_DOOMED"
+            )
+    elif status_module:
+        violations.append(
+            "tools/codex_status.py: pre-CFL strand-doomed behavior is missing"
+        )
     return _finish(
         name="check_codex_nonisolated_writer_cap",
         tag="codex-nonisolated-writer-cap",
         violations=violations,
         strict=strict,
         verbose=verbose,
-        ok_detail=f"shared-tree writer cap={cap}; isolated/read-only controls exempt",
+        ok_detail=f"shared-tree writer cap={cap}; pre-CFL writers retrofitted STRAND_DOOMED",
     )
 
 
@@ -1963,11 +2066,12 @@ def check_codex_drain_timeout_uses_liveness(
         stale_status, _ = classify(
             baseline, stale, now=1000.0, liveness_window_seconds=60.0
         )
-        if fresh_status != getattr(module, "HEALTHY_BUT_SLOW", object()):
+        timeout_status = getattr(module, "TIMED_OUT", object())
+        if fresh_status != timeout_status:
             violations.append(
                 "tools/codex_drain_detector.py: recent-log timeout control raises a stuck classification"
             )
-        if progress_status != getattr(module, "HEALTHY_BUT_SLOW", object()):
+        if progress_status != timeout_status:
             violations.append(
                 "tools/codex_drain_detector.py: advancing-progress timeout control raises a stuck classification"
             )
@@ -1975,11 +2079,28 @@ def check_codex_drain_timeout_uses_liveness(
             violations.append(
                 "tools/codex_drain_detector.py: genuine stale/no-progress control is not WEDGED"
             )
+        strand_doomed = {
+            "arm_s": {
+                "label": "arm", "log_mtime": 995.0, "progress_cursor": 8,
+                "strand_doomed": True,
+            }
+        }
+        doomed_status, _ = classify(
+            baseline, strand_doomed, now=1000.0, liveness_window_seconds=60.0
+        )
+        if doomed_status != getattr(module, "WEDGED", object()):
+            violations.append(
+                "tools/codex_drain_detector.py: pre-CFL strand-doomed control is not WEDGED"
+            )
         if not callable(exit_code):
             violations.append("tools/codex_drain_detector.py: exit_code_for_status is missing")
-        elif exit_code(fresh_status) != 0 or exit_code(progress_status) != 0 or exit_code(stale_status) != 3:
+        elif (
+            exit_code(fresh_status) != 2
+            or exit_code(progress_status) != 2
+            or exit_code(stale_status) != 3
+        ):
             violations.append(
-                "tools/codex_drain_detector.py: healthy timeout must exit 0 and WEDGED must exit 3"
+                "tools/codex_drain_detector.py: TIMED_OUT must exit 2 and WEDGED must exit 3"
             )
     elif module:
         violations.append("tools/codex_drain_detector.py: classify_timeout is missing")
@@ -1997,7 +2118,7 @@ def check_codex_drain_timeout_uses_liveness(
         violations=violations,
         strict=strict,
         verbose=verbose,
-        ok_detail="fresh-log/progress controls are healthy; stale control is wedged",
+        ok_detail="all timeouts exit nonzero; stale/strand-doomed controls are wedged",
     )
 
 
