@@ -144,3 +144,14 @@ tests (`test_event_wirings.py` +2, static registry coverage green).
 
 Pointer 0.19108 UNMOVED. Every row above is MEANS until `upstream/evaluate.py` returns a lower
 byte-closed n600 exact row.
+
+## Consumer-leg disposition (triality drift-detector, 2026-07-15 main)
+
+The DSL surfaces added in the #507/#509 landings — `compile_c1_optimal_form*` +
+`compile_c1_optimal_form_curvelet_arm` factories, the `label_floor` 5th EventBackstopGate,
+`AdaptiveGradClip`/`GradNormalizeNone`/`VerdictParallelWorkers`/`LaneBandStaticCache` levers — are
+consumed via the GENERIC introspection surfaces: lever_registry completeness, the schedule-provenance
+readback (verified 12/12 OK through schedule_readback), launch_manifest/dsl_provenance rendering
+(config-name-agnostic), and the governance rows (event=fires / cap=backstops) that the dashboard and
+costate digest render schema-driven. No bespoke consumer code is required for these surfaces; any
+future consumer that renders per-lever custom UI takes it from `describe()`. [consumers-generic]
