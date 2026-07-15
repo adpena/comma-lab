@@ -148,6 +148,9 @@ Queue-wide wiring verdict:
 
 - Harness/review apparatus: `30 passed`; explicit override repro `rc=12`; live process-tree
   `TREE_PRESENT`; clean review scan `128,397` entities / `8,403` files.
+- Receiver cardinality/byte-close closure: `52 passed` in
+  `test_levelset_receiver_harden.py` plus `experiments/tests/test_levelset_byte_close_and_eval.py`;
+  the broader legal-inflate suite passed `10` with `2` platform skips.
 - Top-lever factories/readiness: `82 passed` across taper, Horizon, Step, and launch-readiness tests.
 - Codex capacity retry: `3 passed`.
 - Ruff on all changed Python: clean under the repository's pre-existing serializer exceptions.
