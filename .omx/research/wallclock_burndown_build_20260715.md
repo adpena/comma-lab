@@ -246,3 +246,78 @@ ep2 and spends its first ~43 min in the blocking 600-pair v0 CPU verdict (the 25
 wall, now visible as boot-cost too). First #480 rows land when ep2 completes. NOTE for the
 harvest: ep1's 2582s gross ≈ v0-verdict-dominated, NOT a steady sec/ep; the real_* fields
 exist precisely to decompose this.
+
+---
+
+## 7. THE n600 ATTRIBUTION ROW (harvested) + the operator mem-for-compute fire-now (2026-07-15 ~18:30Z)
+
+### 7a. ep2 attribution (drystart3 pass2, the FIRST #480 real-path row at the real config)
+`experiments/results/levelset_n600_drystart3_telemetry480_20260715/dry_start_resume/witness_component_wallclock.jsonl`
+(pass1's ep1 row was LOST — the dry-start harness SIGTERMs pass1 after ep1 for the resume
+round-trip BEFORE the row flushes; pass2 hit the 3300s pass timeout at ep3's terminating-epoch
+row hold, so ep3's row was withheld too — exactly ONE clean row):
+
+| component | s/ep | share |
+|---|---:|---:|
+| epoch_total (ep2, n600) | **1095.6** | 100% |
+| real_grad_accum (fused vag + eval) | 232.1 | 21.2% |
+| real_optimizer (clip+normalize+opt+EMA) | 14.2 | 1.3% |
+| real_loss_terms + probes + checkpoint | <1.0 | <0.1% |
+| real_verdict_submit | 0 (not invoked ep2) | — |
+| **UNATTRIBUTED remainder** | **848.5** | **77.4%** |
+
+The 63% became a MEASURED 77.4% at ep2. Against C0's post-ep33 steady ~325 s/ep, the 848s is
+consistent with an early-epoch/one-time class (MLX kernel JIT + first-build lazy graphs +
+cache fills) — but ONE row cannot separate warmup vs periodic (jacobian-basin every-4 /
+annulus / event sensors) vs in-loop-gap. **CLOSED STRUCTURALLY: #480 v2 landed 3 disjoint
+epoch SPANS** (`span_pre_loop_s` / `span_accum_loop_s` / `span_epoch_tail_s`; NOT
+real_-prefixed so real_path_sum semantics unchanged) — the next instrumented epochs (the live
+n24 A/B arms emit them at every epoch) classify the remainder mechanically:
+in-loop-gap = span_accum_loop − (grad+opt+terms), tail = sensors/telemetry/verdict region.
+
+### 7b. Operator directive (mem-for-compute fire-now) — actions taken
+Measured headroom: run RSS ~27 GiB of 128 (M1 pass2 peak 33.4); ~78-100 GiB idle.
+1. **Verdict workers**: bench `tools/bench_verdict_parallel_workers.py` IN FLIGHT (w=0/8/6,
+   n600, thread-law pinned, value-equality asserted across arms; receipt →
+   `experiments/results/verdict_parallel_bench_*/receipt.json`). Sizing derivation from
+   headroom: ~5-6 GB/worker ⇒ 8 workers ≈ 48 GB inside the 0.70-safe-frac single-run
+   envelope ⇒ compose `VerdictParallelWorkers(8)` into the NEXT n600 launch once the ÷N
+   receipt lands (lever + wiring already landed; trainer default stays 0 = byte-identical).
+2. **Warmup amortization**: data-gated on the span rows (7a). Candidate artifact classes
+   enumerated: MLX/Metal kernel JIT (process-scoped; macOS system shader cache partially
+   persists — measure before building a custom cache), structured-init (already skipped on
+   resume), gt-cache load (MEASURED 1.9-4.2s — not the burn), cf-feats fill (mem-preflight
+   shows 0.07-3.4 GiB class), lane-band statics (cached, batch 2). Warm-restart ep-time
+   before/after = the owed receipt once spans classify the 848s.
+3. **Complete pinning**: pair-static enumeration = cf_mx feats (cached per pair today —
+   resident pin = the existing cache, already ON), lane-band statics (ON, batch 2), GT
+   skeleton (--cache-gt-skeleton ON), R index maps/weights (fused-R kernel constants —
+   OWED: verify they are built once not per-call), verdict GT argmax/pose targets (loaded
+   once). No new resident pin is justified until a span row shows a pair-static recompute
+   actually burning wall (the lane-band −0.04 s/ep lesson: conversion loci can be tiny).
+4. **Micro-batch**: sequenced AFTER the bf16 QC gate per the directive (preconditions
+   changed; the 1.0-1.07x receipt was unfused fp32).
+
+### 7c. The magnitude-law A/B — LIVE
+Bounded-window mechanics: `--epochs 120` REFUSED (typed feasibility, caps 450-800);
+`--dry-start` capped at 3 ⇒ the arms run as REAL governed launches with a PLANNED CLEAN STOP
+after the ep39 checkpoint (`--ckpt-every 1` ⇒ any stop is resumable; stop command =
+`tools/spawn_durable_daemon.py --stop levelset_witness_levelset_n24_maglaw_arm<X>_20260715`).
+Launch-readiness rungs (HorizonWeightedMargin/StepNativeActivation) DEFERRED with the A/B
+isolation rationale (arms must differ ONLY in the magnitude law). First launch attempt
+crashed all 3 arms at boot: `int(_idet.movable_cls)` TypeError — the island self-detector
+legitimately returns None on a 24-pair subset; FIXED `d2cc57dc6e` (None-guard, n600
+byte-identical). State at memo time: **arm A (incumbent) + arm B (normalize-none+AutoClip)
+LIVE past boot; arm C (normalize-none+fixed-clip) governor-REFUSED on the memory ceiling
+(bench + 2 arms active-growth projection) — bounded governed retry loop armed (6×10 min)**.
+Metric: ep1-39 CE ep_loss descent slope + v0→ep25 verdict d_seg delta (epoch-indexed ⇒
+GPU-contention-immune); arm A also emits the FIRST verdict-epoch `real_verdict_submit_s` +
+`span_*` rows at ep25 (the §A-3 +903s decision datum, batch-3 step 4).
+
+### 7d. Projection (honest)
+**Still ~12.5 days — no receipts have changed sec/ep yet.** Named, instrumented paths down:
+(1) the span rows classify the 848.5s/77.4% remainder (arms emitting now); (2) the verdict
+÷N receipt (bench in flight) → compose workers=8 → verdict-epoch amortization shrinks by
+~1/N; (3) the ep25 submit row decides the async-submit −36 s/ep-class fix; (4) the
+magnitude-law A/B → epochs-to-target (multiplicative; unknown until measured); (5) bf16 QC
+gate → the ~1.5-1.8× estimate-flagged compute ceiling. pointer 0.19108 UNMOVED.
