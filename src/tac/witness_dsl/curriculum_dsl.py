@@ -3413,6 +3413,81 @@ def SegFocalGamma(gamma: float = 2.0, window: int = 100) -> Lever:
                  notes="#301 focal-γ seg loss (down-weight easy pixels toward the flip boundary)")
 
 
+def EikonalStEik(weight: float = 0.05, normalized: bool = True, norm_eps: float = 1e-2,
+                 window: int = 100) -> Lever:  # noqa: N802
+    """#317 StEik directional-divergence eikonal stabilizer (Yang et al. StEik): penalise the
+    normalised unit-normal curvature ``n^T H n = dir_div/(|∇m|^2+eps)`` to suppress the biharmonic
+    re-entry instability the plain viscous ε cannot fully damp. DEFAULT-OFF in the sealed baseline
+    (trainer ``--eikonal-steik-weight`` default 0.0); this Lever engages it (``normalized=True`` =
+    the #317-N build). ``weight`` is the SWEPT intent — its optimum is RUN-GATED (owed: per-lever
+    A/B vs plain EikonalViscosity through the real n600 verdict); the 0.05 default is a starting
+    value, NOT a measured optimum. Requires --eikonal-weight>0 to have effect."""
+    ov: dict = {"--eikonal-steik-weight": float(weight), "--eikonal-steik-norm-eps": float(norm_eps)}
+    if normalized:
+        ov["--eikonal-steik-normalized"] = True
+    return Lever("eikonal_steik",
+                 overrides=ov, epochs_delta=window,
+                 notes="#317 StEik normalized directional-divergence stabilizer (weight RUN-GATED, "
+                       "not a measured optimum)")
+
+
+def EikonalJunctionRelax(relax: float = 0.5, tau: float = 0.5, window: int = 100) -> Lever:  # noqa: N802
+    """θ* STRETCH-1 eikonal junction relaxation: down-weight the |∇m|→1 residual near triple
+    junctions (top2/top3 SDF-gap < ``tau``) where the eikonal constraint is genuinely violated by
+    the multi-class chart. DEFAULT-OFF (trainer ``--eikonal-junction-relax`` default 0.0); a nonzero
+    ``relax`` engages it. ``relax`` is the SWEPT intent — RUN-GATED optimum (owed A/B); 0.5 is a
+    starting value, not a measured optimum. ``tau`` keeps the trainer default 0.5."""
+    return Lever("eikonal_junction_relax",
+                 overrides={"--eikonal-junction-relax": float(relax), "--eikonal-junction-tau": float(tau)},
+                 epochs_delta=window,
+                 notes="θ* STRETCH-1 eikonal junction relaxation (relax RUN-GATED, not a measured optimum)")
+
+
+def CodeNuclearNorm(weight: float = 1e-3, eps: float = 1e-3, ns_iters: int = 25,
+                    window: int = 100) -> Lever:  # noqa: N802
+    """θ* MUST-2 low-rank code regularizer: smoothed nuclear norm ‖C‖_* of the per-pair code matrix
+    (Newton-Schulz matrix-sqrt, ``ns_iters`` iterations, relative smoothing floor ``eps``) to push
+    the per-pair codes onto a low-rank manifold (the intrinsic-dim≈8 prior → cheaper stored code).
+    Sibling of the CodeSpectralEntropy code-regularizer family. DEFAULT-OFF (trainer
+    ``--code-nuclear-weight`` default 0.0); ``weight`` is the SWEPT intent — RUN-GATED optimum
+    (owed A/B); 1e-3 is a starting value, not a measured optimum."""
+    return Lever("code_nuclear_norm",
+                 overrides={"--code-nuclear-weight": float(weight), "--code-nuclear-eps": float(eps),
+                            "--code-nuclear-ns-iters": int(ns_iters)},
+                 epochs_delta=window,
+                 notes="θ* MUST-2 smoothed nuclear-norm low-rank code regularizer (weight RUN-GATED, "
+                       "not a measured optimum)")
+
+
+def SegSpikeReweight(downweight: float = 0.5, coherent_upweight: float = 1.0,
+                     window: int = 100) -> Lever:  # noqa: N802
+    """Flicker-aware per-pixel seg-CE reweight (L85 flicker-floor lever): down-weight SPIKE
+    (single-frame flicker) pixels by ``downweight`` and up-weight COHERENT (temporally-consistent,
+    unstable) boundary pixels by ``coherent_upweight`` — steer capacity off the GT-side sub-pixel
+    advection phase-flicker (the measured d_seg floor cause) and onto the recoverable coherent
+    boundary. DEFAULT-OFF (byte-identical unless ``--seg-spike-reweight`` set); ``downweight`` is the
+    SWEPT intent — RUN-GATED optimum (owed A/B); 0.5 is a starting value, not a measured optimum."""
+    return Lever("seg_spike_reweight",
+                 overrides={"--seg-spike-reweight": True, "--seg-spike-downweight": float(downweight),
+                            "--seg-coherent-upweight": float(coherent_upweight)},
+                 epochs_delta=window,
+                 notes="L85 flicker-aware per-pixel seg-CE reweight (downweight RUN-GATED, not a "
+                       "measured optimum)")
+
+
+def LambdaPreProbe(iters: int = 4, fd_eps: float = 1e-3, window: int = 0) -> Lever:  # noqa: N802
+    """EIK-STAB build-4 preconditioned power-iteration probe: run ``iters`` finite-difference HVP
+    power iterations (relative FD step ``fd_eps``) to estimate the top Hessian eigen-direction of
+    the loss and precondition the eikonal step — a stability diagnostic + preconditioner, not a
+    score term. DEFAULT-OFF (trainer ``--lambda-pre-probe-iters`` default 0); ``iters``>0 engages it.
+    ``iters`` is the SWEPT intent — RUN-GATED (owed A/B); 4 is a starting value, not a measured
+    optimum."""
+    return Lever("lambda_pre_probe",
+                 overrides={"--lambda-pre-probe-iters": int(iters), "--lambda-pre-probe-fd-eps": float(fd_eps)},
+                 epochs_delta=window,
+                 notes="EIK-STAB build-4 FD-HVP power-iteration preconditioner probe (iters RUN-GATED)")
+
+
 def AdamBeta2(beta2: float = 0.99, window: int = 0) -> Lever:
     """#222 Adam β₂ lever (arXiv 2603.02092): sweep β₂ (second-moment decay). The launch-gate
     guard requires β₁<√β₂; window=0 = optimizer-config change, no epoch budget of its own."""
