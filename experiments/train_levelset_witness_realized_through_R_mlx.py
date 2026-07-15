@@ -11208,19 +11208,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # task-408 Q6: a discrete, resume-safe completion row for each
             # configured ladder class (birth + hold + anneal fully elapsed).
             if _ladder_state is not None:
-                _ladder_complete_specs = (
-                    (
-                        "lane", int(_ladder_state["lane_cls"]),
-                        int(args.ladder_lane_birth_epochs)
-                        + int(args.ladder_lane_hold_epochs)
-                        + int(args.ladder_lane_anneal_epochs),
-                    ),
-                    (
-                        "movable", int(_ladder_state["movable_cls"]),
-                        int(args.ladder_movable_birth_epochs)
-                        + int(args.ladder_movable_hold_epochs)
-                        + int(args.ladder_movable_anneal_epochs),
-                    ),
+                # (#509 batch 3 fix, d2cc57dc6e sister-surface sweep) the island self-detector
+                # legitimately returns None for a class absent from a small pair subset (n24: no
+                # movable islands) — SKIP that class's completion row instead of int(None).
+                # n600 byte-identical (both classes detect non-None there).
+                _ladder_complete_specs = tuple(
+                    (_lnm, int(_lcid), _ltot)
+                    for _lnm, _lcid, _ltot in (
+                        (
+                            "lane", _ladder_state["lane_cls"],
+                            int(args.ladder_lane_birth_epochs)
+                            + int(args.ladder_lane_hold_epochs)
+                            + int(args.ladder_lane_anneal_epochs),
+                        ),
+                        (
+                            "movable", _ladder_state["movable_cls"],
+                            int(args.ladder_movable_birth_epochs)
+                            + int(args.ladder_movable_hold_epochs)
+                            + int(args.ladder_movable_anneal_epochs),
+                        ),
+                    )
+                    if _lcid is not None
                 )
                 for _lname, _lcls, _lcomplete_ep in _ladder_complete_specs:
                     if ep >= _lcomplete_ep and _producer_resume.mark_ladder(_lname):
