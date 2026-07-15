@@ -43,6 +43,19 @@
 - Prior lane spend: one 2026-07-12 dispatch `fc-01KXBWNEBFHDKWESRPJ7ECHSD2` rc=13 (GPU-less
   `H100!` bug, since fixed), elapsed 0.0 s → ≈$0 actual. Envelope #381 headroom intact.
 
+## 2b. DISPATCH RECORD (2026-07-15T17:03Z)
+
+- **Fired:** attempt 2, sealed plan `90772392e40ab60fddddddfbb41452f4c4c321b7d927782625ba83164721be19`
+  at HEAD `6d39a7dfc9471b26093e507f99c77ecdc844541d` (clean-main window; siblings landed).
+- **Call ID:** `fc-01KXKBQ1B6NZ0YR7Z7TJB585YT` (H100 stage, detached; child ≤1500 s; CPU preflight
+  passed same-image first; modal app ap-8CVdagVdtREOhPpd4uGiMm).
+- Attempt 1 (17:57:44Z log): refused PRE-SPAWN by the modal-side Catalog #166 clean-head gate —
+  2 mid-flight tracked-state edits (incl. this arm's own claim-row write; lesson: hold ALL tree
+  writes between daemon clean-check and modal-side clean-check). $0 spent; recorded in the modal
+  ledger as `pre_spawn_fatal`.
+- Ceiling $3.296256 persisted against the call ID (`--expected-cost-usd`); envelope #381.
+- Old stop=3 claim row terminated `stale_superseded_by_smokereg_timeout_stop_plan`.
+
 ## 3. Harvest contract (whoever harvests: follow exactly)
 
 1. `.venv/bin/python tools/harvest_modal_calls.py --from-ledger --call-id <call-id> --execute`.
