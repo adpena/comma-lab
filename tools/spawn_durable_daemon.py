@@ -83,6 +83,9 @@ from pathlib import Path
 # CLAUDE.md "Forbidden /tmp paths in any persisted artifact" non-negotiable).
 # --------------------------------------------------------------------------
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+_SRC_DIR = _REPO_ROOT / "src"
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
 # Ensure the tools/ dir is importable so the sibling governor / black-box modules resolve regardless
 # of the caller's sys.path (the admission gate + black-box auto-start must not silently no-op).
 _TOOLS_DIR = Path(__file__).resolve().parent
@@ -519,6 +522,96 @@ def _rationale_is_real(text: str | None) -> bool:
     return low not in {"<rationale>", "<reason>", "placeholder", "tbd", "todo", "n/a"} and len(low) >= 8
 
 
+def _witness_dsl_compile_hash_gate(a: argparse.Namespace, cmd: list[str]) -> int | None:
+    """Governor-side Catalog #406 admission over exact launch artifacts.
+
+    Every command that reaches a witness trainer is in scope.  A raw trainer argv
+    is refused because there is no artifact from which the governor can recompute
+    its DSL origin; ``bash launch.sh`` is admitted only after the provenance,
+    run-manifest, hash header, exact shell argv, #332 bijection, and LawRefs agree.
+    There is intentionally no override and no advisory mode.
+    """
+
+    joined = " ".join(str(token) for token in cmd)
+    witness_token = "train_levelset_witness" in joined or "train_witness" in joined
+    launch_sh: Path | None = None
+    shell_script: Path | None = None
+    for index, token in enumerate(cmd):
+        candidate: Path | None = None
+        if index == 0 and str(token).endswith(".sh"):
+            candidate = Path(token)
+        elif token in ("bash", "sh", "/bin/bash") and index + 1 < len(cmd):
+            following = Path(cmd[index + 1])
+            if not str(following).startswith("-"):
+                candidate = following
+        if candidate is not None:
+            shell_script = candidate
+            if candidate.name == "launch.sh":
+                launch_sh = candidate
+            break
+    if shell_script is not None:
+        if not shell_script.is_file():
+            if launch_sh is None and not witness_token:
+                return None
+            print(
+                f"[durable-daemon] REFUSED rc=8 (Catalog #406): launch artifact missing: {shell_script}",
+                file=sys.stderr,
+            )
+            return 8
+        try:
+            launch_text = shell_script.read_text(encoding="utf-8")
+        except OSError as exc:
+            print(
+                f"[durable-daemon] REFUSED rc=8 (Catalog #406): cannot read {shell_script}: {exc}",
+                file=sys.stderr,
+            )
+            return 8
+        witness_token = witness_token or "train_levelset_witness" in launch_text or "train_witness" in launch_text
+    if not witness_token:
+        return None
+    if shell_script is not None and shell_script.name != "launch.sh":
+        print(
+            "[durable-daemon] REFUSED rc=8 (Catalog #406): witness shell entrypoint "
+            f"{shell_script} is not the canonical launch.sh artifact; no alternate script name "
+            "can bypass DSL provenance recomputation.",
+            file=sys.stderr,
+        )
+        return 8
+    if launch_sh is None:
+        print(
+            "[durable-daemon] REFUSED rc=8 (Catalog #406): hand-authored witness argv "
+            "has no launch.sh/dsl_provenance.json from which the governor can recompute "
+            "dsl_compile_hash. Route through tools/launch_witness_run.py.",
+            file=sys.stderr,
+        )
+        return 8
+    try:
+        from tac.v9_provenance_gates import verify_dsl_provenance_artifacts
+
+        ok, detail = verify_dsl_provenance_artifacts(launch_sh)
+    except Exception as exc:
+        ok, detail = False, f"verifier failure: {type(exc).__name__}: {exc}"
+    if not ok:
+        print(
+            "[durable-daemon] REFUSED rc=8 (Catalog #406 governor DSL admission): "
+            f"{detail}",
+            file=sys.stderr,
+        )
+        return 8
+    match = re.search(
+        r"^#\s*dsl_compile_hash:\s*([0-9a-f]{64})\s*$",
+        launch_sh.read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    if match is None:  # verifier already requires this; keep the carried value explicit.
+        print("[durable-daemon] REFUSED rc=8: missing carried DSL hash", file=sys.stderr)
+        return 8
+    a.dsl_compile_hash = match.group(1)
+    a.dsl_launch_sh = str(launch_sh.resolve())
+    print(f"[durable-daemon] GOVERNOR DSL ADMISSION OK: {detail}")
+    return None
+
+
 def _system_admission_gate(a: argparse.Namespace, cmd: list[str]) -> int | None:
     """SYSTEM-aware admission HARD gate (the P0 crash-prevention). Returns an exit code to ABORT with,
     or None to proceed.
@@ -722,6 +815,13 @@ def _do_start(a: argparse.Namespace) -> int:
         print("error: no command (use: --log L --label NAME -- cmd args)", file=sys.stderr)
         return 2
 
+    # Catalog #406 is the first governor admission rung and is permanently
+    # fail-closed.  Run it on the caller's exact command before safe_run wrapping,
+    # memory admission, reservation, or Popen can obscure the witness argv.
+    refusal = _witness_dsl_compile_hash_gate(a, cmd)
+    if refusal is not None:
+        return refusal
+
     # OOM launch-preflight: refuse to breach the 30 GB free floor (never OOM the
     # machine again). Runs BEFORE any Popen so a refused launch starts nothing.
     refusal = _mem_preflight(a)
@@ -789,6 +889,12 @@ def _do_start(a: argparse.Namespace) -> int:
     # that never reached this gate lacks the marker and is refused when enforce is armed.
     _child_env = dict(os.environ)
     _child_env["TAC_GOVERNED_ADMISSION"] = "1"
+    if getattr(a, "dsl_compile_hash", None):
+        _child_env["TAC_DSL_COMPILE_HASH"] = str(a.dsl_compile_hash)
+        _child_env["TAC_DSL_LAUNCH_SH_PATH"] = str(a.dsl_launch_sh)
+        _child_env["TAC_DSL_PROVENANCE_PATH"] = str(
+            Path(a.dsl_launch_sh).with_name("dsl_provenance.json")
+        )
     try:
         proc = subprocess.Popen(
             cmd,

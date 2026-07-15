@@ -62,7 +62,7 @@ import torch
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
 PREFLIGHT_CLI_TIMING_SCHEMA = "pact.tac_preflight_cli_timing.v1"
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
-_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v4"
+_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v5"
 _PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v3"
 _PUBLIC_PR_PRISTINE_CACHE_VERSION = "public_pr_intake_pristine.v1"
 _NO_MPS_FALLBACK_CLEAN_CACHE_VERSION = "no_mps_fallback_default_clean.v2"
@@ -6470,6 +6470,14 @@ def preflight_all(
         check_v9_fake_claim_guards(strict=False, verbose=verbose)
         check_no_fourier_basis_in_witness_representation(strict=False, verbose=verbose)
         check_evidence_authority_claims_are_custodied(strict=False, verbose=verbose)
+
+        # 2026-07-15 Catalog #406 — the DSL compile hash is a load-bearing
+        # admission prerequisite at BOTH the launcher and governor.  WARN-ONLY
+        # at landing per strict-flip atomicity; the runtime enforcement itself
+        # is already fail-closed rc=8 and cannot be downgraded by this mode.
+        check_launch_and_governor_require_dsl_compile_hash(
+            strict=False, verbose=verbose
+        )
 
         # 2026-07-09 EIGHTFOLD design-philosophy gates (operator "Encode all"):
         # P1 (check_significance_keys_canonical) — every relative-significance store
@@ -86354,6 +86362,207 @@ def check_heavy_witness_trainers_call_admission_guard(
             "check_heavy_witness_trainers_call_admission_guard found "
             f"{len(violations)} violation(s) (#254 P0 admission self-protect):\n  "
             + "\n  ".join(violations))
+    return violations
+
+
+_DSL_HASH_WAIVER_RE = re.compile(
+    r"#\s*DSL_COMPILE_HASH_BYPASS_OK:(?P<reason>.+)$", re.IGNORECASE
+)
+_DSL_HASH_PLACEHOLDERS = {
+    "", "todo", "tbd", "placeholder", "<reason>", "<rationale>", "reason", "rationale",
+}
+
+
+def _dsl_hash_waiver_valid(line: str) -> bool:
+    match = _DSL_HASH_WAIVER_RE.search(line)
+    if match is None:
+        return False
+    reason = match.group("reason").strip()
+    return len(reason) >= 12 and reason.lower() not in _DSL_HASH_PLACEHOLDERS
+
+
+def _ast_named_function(tree: ast.AST, name: str) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    return next(
+        (
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name
+        ),
+        None,
+    )
+
+
+def _ast_call_names(node: ast.AST) -> tuple[str, ...]:
+    names: list[str] = []
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Call):
+            continue
+        func = child.func
+        if isinstance(func, ast.Name):
+            names.append(func.id)
+        elif isinstance(func, ast.Attribute):
+            names.append(func.attr)
+    return tuple(names)
+
+
+def check_launch_and_governor_require_dsl_compile_hash(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """Catalog #406 — statically protect both DSL hash enforcement callsites.
+
+    The check parses the launcher, durable governor, native-dispatch preflight,
+    and trainer admission guard.  It requires the canonical #332-backed builder,
+    exact artifact verifier, rc=8 refusal, and lexical-before-spawn call order.
+    A newly introduced literal raw-witness subprocess is a violation unless its
+    own line carries ``# DSL_COMPILE_HASH_BYPASS_OK:<substantive rationale>``;
+    placeholder waivers do not count.  The production witness path has no waiver.
+    """
+
+    root = Path(repo_root or REPO_ROOT)
+    targets = {
+        "launcher": root / "tools" / "launch_witness_run.py",
+        "governor": root / "tools" / "spawn_durable_daemon.py",
+        "operator": root / "tools" / "operator_authorize.py",
+        "trainer_guard": root / "src" / "tac" / "admission_guard.py",
+    }
+    violations: list[str] = []
+    parsed: dict[str, tuple[str, ast.Module]] = {}
+    for role, path in targets.items():
+        rel = path.relative_to(root).as_posix()
+        if not path.is_file():
+            violations.append(f"{rel}: missing Catalog #406 enforcement surface")
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+            parsed[role] = (text, ast.parse(text, filename=str(path)))
+        except (OSError, SyntaxError) as exc:
+            violations.append(f"{rel}: cannot inspect DSL hash enforcement: {exc}")
+
+    if "launcher" in parsed:
+        text, tree = parsed["launcher"]
+        main = _ast_named_function(tree, "main")
+        writer = _ast_named_function(tree, "write_dsl_compile_artifacts")
+        compiler = _ast_named_function(tree, "compile_dsl_document_for_config")
+        bound_writer = _ast_named_function(tree, "write_dsl_bound_launch")
+        calibration = _ast_named_function(tree, "_run_rss_calibration")
+        dry_start = _ast_named_function(tree, "_run_dry_start")
+        main_calls = _ast_call_names(main) if main else ()
+        writer_calls = _ast_call_names(writer) if writer else ()
+        compiler_calls = _ast_call_names(compiler) if compiler else ()
+        bound_calls = _ast_call_names(bound_writer) if bound_writer else ()
+        calibration_calls = _ast_call_names(calibration) if calibration else ()
+        dry_start_calls = _ast_call_names(dry_start) if dry_start else ()
+        for token, present in (
+            ("compile_dsl_document_for_config", "compile_dsl_document_for_config" in main_calls),
+            (
+                "build_dsl_compile_provenance_document",
+                "build_dsl_compile_provenance_document" in compiler_calls,
+            ),
+            ("write_dsl_compile_artifacts before spawn", "write_dsl_compile_artifacts" in main_calls),
+            ("verify_dsl_provenance_artifacts", "verify_dsl_provenance_artifacts" in writer_calls),
+            (
+                "bound internal launch compile",
+                "compile_dsl_document_for_config" in bound_calls,
+            ),
+            (
+                "bound internal launch artifacts",
+                "write_dsl_compile_artifacts" in bound_calls,
+            ),
+            (
+                "calibration DSL-bound launch",
+                "write_dsl_bound_launch" in calibration_calls,
+            ),
+            ("dry-start DSL-bound launch", "write_dsl_bound_launch" in dry_start_calls),
+            ("dry-start typed Lever", "with_internal_dsl_lever" in dry_start_calls),
+            ("dsl_compile_hash launch.sh header", "dsl_compile_hash=dsl_compile_hash" in text),
+            ("rc=8 refusal", "rc=8 Catalog #406" in text),
+        ):
+            if not present:
+                violations.append(f"tools/launch_witness_run.py: launcher missing {token}")
+        if main is not None:
+            body = ast.get_source_segment(text, main) or ""
+            if body.find("write_dsl_compile_artifacts(") > body.find("sdd.main(") >= 0:
+                violations.append(
+                    "tools/launch_witness_run.py: spawn precedes exact DSL artifact verification"
+                )
+
+    if "governor" in parsed:
+        text, tree = parsed["governor"]
+        start = _ast_named_function(tree, "_do_start")
+        gate = _ast_named_function(tree, "_witness_dsl_compile_hash_gate")
+        start_calls = _ast_call_names(start) if start else ()
+        gate_calls = _ast_call_names(gate) if gate else ()
+        if "_witness_dsl_compile_hash_gate" not in start_calls:
+            violations.append("tools/spawn_durable_daemon.py: _do_start omits DSL governor gate")
+        if "verify_dsl_provenance_artifacts" not in gate_calls:
+            violations.append("tools/spawn_durable_daemon.py: governor does not recompute DSL artifacts")
+        if start is not None:
+            body = ast.get_source_segment(text, start) or ""
+            if body.find("_witness_dsl_compile_hash_gate(") > body.find("subprocess.Popen(") >= 0:
+                violations.append("tools/spawn_durable_daemon.py: Popen precedes DSL governor gate")
+        if "return 8" not in (ast.get_source_segment(text, gate) or "") if gate else True:
+            violations.append("tools/spawn_durable_daemon.py: DSL governor refusal is not rc=8")
+
+    if "operator" in parsed:
+        text, tree = parsed["operator"]
+        native = _ast_named_function(tree, "_native_dispatch_preflight")
+        dsl_native = _ast_named_function(tree, "_native_dispatch_dsl_compile_hash_preflight")
+        if "_native_dispatch_dsl_compile_hash_preflight" not in (_ast_call_names(native) if native else ()):
+            violations.append("tools/operator_authorize.py: native preflight omits DSL hash admission")
+        if "verify_dsl_provenance_artifacts" not in (_ast_call_names(dsl_native) if dsl_native else ()):
+            violations.append("tools/operator_authorize.py: native witness admission does not recompute hash")
+
+    if "trainer_guard" in parsed:
+        text, tree = parsed["trainer_guard"]
+        status = _ast_named_function(tree, "admission_status")
+        dsl_status = _ast_named_function(tree, "dsl_compile_admission_status")
+        dsl_calls = _ast_call_names(dsl_status) if dsl_status else ()
+        if "dsl_compile_admission_status" not in (_ast_call_names(status) if status else ()):
+            violations.append("src/tac/admission_guard.py: trainer admission omits DSL hash check")
+        for needed in ("verify_dsl_provenance_artifacts", "verify_dsl_provenance_document"):
+            if needed not in dsl_calls:
+                violations.append(f"src/tac/admission_guard.py: trainer guard omits {needed}")
+        if "EXIT_DSL_COMPILE_REFUSED = 8" not in text:
+            violations.append("src/tac/admission_guard.py: trainer DSL refusal is not rc=8")
+
+    # Literal raw-witness subprocesses are never an acceptable new sink.  This
+    # catches the obvious bypass class while the function-level checks above
+    # catch dynamic argv sinks.  A reviewed non-launch false positive can carry
+    # a substantive same-line waiver; malformed placeholders remain violations.
+    for role, (text, tree) in parsed.items():
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            sink = (
+                isinstance(func, ast.Attribute)
+                and func.attr in {"Popen", "run", "call", "system"}
+            )
+            if not sink:
+                continue
+            segment = ast.get_source_segment(text, node) or ""
+            if "train_witness" not in segment and "train_levelset_witness" not in segment:
+                continue
+            line = lines[node.lineno - 1] if 0 < node.lineno <= len(lines) else ""
+            if not _dsl_hash_waiver_valid(line):
+                violations.append(
+                    f"{targets[role].relative_to(root).as_posix()}:{node.lineno}: literal "
+                    "raw witness subprocess bypasses DSL hash enforcement; route through the "
+                    "governed artifact verifier or add a substantive same-line waiver"
+                )
+
+    if verbose:
+        print(
+            f"  [catalog-406] check_launch_and_governor_require_dsl_compile_hash: "
+            f"{len(violations)} violation(s)" if violations else
+            "  [catalog-406] check_launch_and_governor_require_dsl_compile_hash: OK"
+        )
+    if strict and violations:
+        raise PreflightError(
+            "check_launch_and_governor_require_dsl_compile_hash found "
+            f"{len(violations)} violation(s) (Catalog #406):\n  " + "\n  ".join(violations)
+        )
     return violations
 
 

@@ -62,6 +62,20 @@ TORCH_TRAIN_RESULT_JSON = "levelset_train_result_torch.json"
 TORCH_TRAJECTORY_JSONL = "levelset_cuda_trajectory.jsonl"
 TORCH_RUN_MANIFEST_JSON = "v9_cgauge_cuda_run_manifest.json"
 
+# ---- launcher-written provenance (the run's ADMISSION inputs) ---------------
+# These three files are one cryptographic unit.  Both the launcher and the
+# governor re-read them from disk before a trainer may spawn; spelling their
+# names anywhere else would recreate the run-artifact drift class this module
+# exists to prevent.
+LAUNCH_SH = "launch.sh"
+DSL_PROVENANCE_JSON = "dsl_provenance.json"
+LAUNCH_MANIFEST_JSON = "launch_manifest.json"
+LAUNCH_PROVENANCE_ARTIFACTS: tuple[str, ...] = (
+    LAUNCH_SH,
+    DSL_PROVENANCE_JSON,
+    LAUNCH_MANIFEST_JSON,
+)
+
 #: Every filename the trainer / checkpoint-retention writes. The drift test asserts
 #: the producer sources emit no ``levelset_*.{npz,json}`` literal outside this set.
 TRAINER_ARTIFACTS: tuple[str, ...] = (
