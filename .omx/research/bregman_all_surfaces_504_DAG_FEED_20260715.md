@@ -1,7 +1,9 @@
 # DAG FEED — task #504 Bregman all-surfaces application
 
-FEED id: `FEED-504-bregman-all-surfaces`  
-Research-only: `true`  
+FEED id: `FEED-504-bregman-all-surfaces`
+
+Research-only: `true`
+
 Pointer moved: `false`
 
 ## New equation nodes

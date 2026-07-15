@@ -1,7 +1,9 @@
 # Codex session summary — task #504
 
-Status: implementation and round-1 review complete; commit pending  
-Pointer: unchanged  
+Status: implementation and round-1 review complete; initial commit `2699c439b6`
+
+Pointer: unchanged
+
 Actuation: none
 
 Landed surfaces:
@@ -22,4 +24,3 @@ Canonical query result: one each for `optimal_metric_unification_v1`,
 Pending owner integration, not claimed here: live V9 affine/Legendre transform
 receipt, full frozen-scorer VJP pullback custody, and real trainer-consumed DSL
 levers for any Bregman trust region or sigma/centroid sweep.
-

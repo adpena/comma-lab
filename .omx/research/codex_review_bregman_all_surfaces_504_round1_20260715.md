@@ -1,6 +1,7 @@
 # Round-1 adversarial review — task #504
 
-Verdict: `PASS_AFTER_FIX`  
+Verdict: `PASS_AFTER_FIX`
+
 Review authority: local deterministic equations/tests only; not score authority
 
 Checklist:
@@ -30,4 +31,3 @@ Checklist:
 Fix applied during review: stable dual KL fallback for finite extreme logits.
 Details live in
 `.omx/research/codex_findings_bregman_all_surfaces_504_20260715_codex.md`.
-

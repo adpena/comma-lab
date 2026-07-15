@@ -1,7 +1,9 @@
 # Codex findings — task #504 Bregman all surfaces
 
-UTC: `2026-07-15T02:08:00Z`  
-Review scope: owned round-1 adversarial review  
+UTC: `2026-07-15T02:08:00Z`
+
+Review scope: owned round-1 adversarial review
+
 Pointer moved: `false`
 
 ## F1 — fixed: finite extreme logits could break the dual closed form

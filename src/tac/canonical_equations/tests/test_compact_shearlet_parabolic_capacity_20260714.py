@@ -119,4 +119,3 @@ def test_live_registry_surfaces_curvelet_shearlet_and_metric_equations_once() ->
     )
     for equation_id in expected:
         assert ids.count(equation_id) == 1
-

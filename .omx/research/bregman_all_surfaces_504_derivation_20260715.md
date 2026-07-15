@@ -1,9 +1,12 @@
 # Task #504 — Bregman application to V9·CGauge surfaces
 
-UTC: `2026-07-15T02:00:00Z`  
-Scope: `$0` equations, invariants, and registry housekeeping only  
+UTC: `2026-07-15T02:00:00Z`
+
+Scope: `$0` equations, invariants, and registry housekeeping only
+
 Pointer: UNMOVED (`0.1910828242 [contest-CPU Linux x86_64]`; the local
-`0.1880443979880752` archive remains non-submission evidence)  
+`0.1880443979880752` archive remains non-submission evidence)
+
 Canonical metric id: `argmax_native_vjp_fidelity_v1`
 
 ## 1. Definition and categorical ground metric
