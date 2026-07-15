@@ -17,7 +17,7 @@ governed run at a time, sequential, each converge→next.
 - [ARM-ISO]     build 3 V9 typed one-delta configs: taper_off / horizon_iso / step_iso + LawRefs+consumers+refusal tests + dry-run  → top-3 levers (78.9/47.3/34.2%)
 - [ARM-BASIS]   genuine_frame 3-arm provenance reseal (sha 6cfa9845) + binding.get verifier fix + D21a blind-coord wire-in (FREE rate lever)
 - [ARM-PROD]    D-A/D-B producers (witness_component_wallclock.v1 + sps hook) + D39 marked-event + reconcile 2 provenance-defects (hosc_beta_end, msafe)
-- [ARM-DERIVE]  #500/#504 H⁻¹ solver build + #302 curriculum-native anneal derive + D38 global gluing typing + D37 rate-law number update
+- [ARM-DERIVE — BUILT / BRANCH-REVIEW-OWED] #500/#504 H⁻¹ solver + #302 witness-native continuation + V9 hosc/msafe reconciliation + D37 refresh/D38 typing + D39 producer + D24a harness. Raw receipt and exact blockers: `codex_findings_arm_derive_solver_provenance_20260715_codex.md`.
 - [#506 dsl_hash_enforcement — LIVE] + consolidation/harness bug fixes (resumable-retry, cap, drain-timeout, zsh-glob, token-chunk)
 - [c1a S_R config — LANDED bdbbf5da17] · [throughput + deepmath integration — LIVE → C1 optimal-form]
 
