@@ -255,9 +255,23 @@ def _append_ledger(row: dict) -> None:
 def _write_launcher(label: str, stamp: str, prompt_file: Path, model: str,
                     effort: str, sandbox: str, log: Path, last: Path,
                     done: Path, isolate: bool = True,
-                    worktree: Path | None = None) -> Path:
+                    worktree: Path | None = None,
+                    allow_network: bool = False) -> Path:
     launcher = RUNS / f"launch_{label}_{stamp}.sh"
     worktree = worktree or (WORKTREE_DIR / f"{label}_{stamp}")
+    # --- codex-contract fix (2026-07-15): an isolated git worktree writes its objects + index to the
+    # SHARED <repo>/.git, which lives OUTSIDE the workspace-write sandbox root (=the worktree dir). So a
+    # workspace-write isolated arm literally CANNOT `git add`/`commit` ("Operation not permitted") and
+    # lands PASS_UNCOMMITTED, forcing main to harvest by hand (bit 4 arms 2026-07-15). Make the shared
+    # git dir a writable_root so isolated arms commit their own work. (danger-full-access already has
+    # full write, so this only matters for workspace-write.) network_access is opt-in per --allow-network
+    # (least-privilege) — needed for Modal-dispatch arms whose sandbox otherwise cannot resolve DNS.
+    _extra_c: list[str] = []
+    if isolate and sandbox == "workspace-write":
+        _extra_c.append(f"-c 'sandbox_workspace_write.writable_roots=[\"{REPO}/.git\"]'")
+    if allow_network and sandbox == "workspace-write":
+        _extra_c.append("-c sandbox_workspace_write.network_access=true")
+    extra_c = ("".join(f" \\\n  {c}" for c in _extra_c))
     # Per-arm git-worktree ISOLATION (CFL disjoint write-domain -> no trample). When isolate, the arm
     # runs in its OWN worktree on branch codexwt/<label>_<stamp> (shares .git/objects, own index+HEAD),
     # commits there with full authority, and MAIN merges the branch to main (the single serialized
@@ -300,7 +314,7 @@ codex exec \\
   --skip-git-repo-check \\
   --sandbox "$ORIGINAL_SANDBOX" \\
   -m {model} \\
-  -c model_reasoning_effort={effort} \\
+  -c model_reasoning_effort={effort}{extra_c} \\
   -o {last} \\
   "$(cat {prompt_file})" \\
   2>&1 | tee {log}
@@ -320,7 +334,7 @@ while [ "$RC" -ne 0 ] && [ "$attempt" -lt {_MAX_CAPACITY_RETRIES} ] && \\
     --skip-git-repo-check \\
     --sandbox "$ORIGINAL_SANDBOX" \\
     -m {model} \\
-    -c model_reasoning_effort={effort} \\
+    -c model_reasoning_effort={effort}{extra_c} \\
     -o {last} \\
     "$(cat {prompt_file})" \\
     2>&1 | tee -a {log}
@@ -359,6 +373,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="run in the shared repo tree (LEGACY) instead of a per-arm git worktree. "
                          "Isolation (default) is the no-trample guarantee — only use --no-isolate for "
                          "a read-only/analysis arm that writes nothing.")
+    ap.add_argument("--allow-network", action="store_true",
+                    help="grant the workspace-write sandbox network access (sandbox_workspace_write."
+                         "network_access=true). Opt-in per arm (least-privilege) — needed for arms that "
+                         "dispatch Modal / hit the network. danger-full-access already has network.")
     ap.add_argument("--no-launch", action="store_true", help="write launcher + ledger but do not osascript-launch")
     ap.add_argument("--force", action="store_true",
                     help="launch even if an arm with this label is already live (de-confliction override)")
@@ -440,7 +458,8 @@ def main(argv: list[str] | None = None) -> int:
     last = RUNS / f"{args.label}_{stamp}.last.txt"
     done = RUNS / f"{args.label}_{stamp}.done"
     launcher = _write_launcher(args.label, stamp, wrapped, args.model,
-                               args.effort, args.sandbox, log, last, done, isolate, worktree)
+                               args.effort, args.sandbox, log, last, done, isolate, worktree,
+                               allow_network=args.allow_network)
 
     _append_ledger({
         "label": args.label, "stamp": stamp, "model": args.model, "effort": args.effort,
