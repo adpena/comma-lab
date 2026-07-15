@@ -17857,3 +17857,21 @@ reopen = a RE-CAPTURE task, NOT a $0 recompute. Triality: memory `[[ripo_categor
 
 ### FEED-cvl-consumer-leg (2026-07-14) — curvelet DSL lever consumer-leg = OWED-to-the-P0-throughR-arm [consumers-generic-pending]
 CONSUMER-LEG STATUS (honest, per the triality consumer-leg detector on 92f650d1c6): the #502 `windowed_curvelet_basis_lever_20260714` is a DEFAULT-OFF lever whose `real_trainer_flags` are `WIRE_STATUS_OWED` → it is NOT yet surfaced by `lever_registry.completeness()` (VERIFIED: curvelet hits NONE), so costate_digest/dashboard do not yet render it. This is the designed OWED state (the trainer `--basis windowed_curvelet` flag does not exist yet), NOT a silent orphan: it is (a) durably recorded here, (b) tracked by the curvelet eq + FEED-cvl, and (c) being RESOLVED by the P0 `curvelet_throughR_p0` codex arm (operator "Build it as p0"), whose owed_wire() completion makes the flag real → completeness() surfaces it → consumers render it generically. When that lands, the consumer leg becomes `[consumers-generic]` (registry-introspection covered). Until then: OWED-to-P0-arm, NOT [consumers-generic] (that would be a false assertion — completeness() does not cover it yet). pointer UNMOVED. [consumers-generic]
+# FEED-optimal-metric-unify-500-20260714 — OPTIMAL METRIC unification (task #500). SIGNAL: operator
+"reachable decision-geometry as fidelity AND training-loss AND curriculum-varying metric" — unify the
+LANDED info-geo pieces into ONE metric. DIAGNOSTIC/DERIVATION ($0, NumPy-fp32 advisory, pointer UNMOVED):
+the single object is `g = ∇²F = diag(p) − p pᵀ` (log-partition/Bregman Hessian of `F=logsumexp` = categorical
+Fisher). THREE reductions, computed not asserted (`src/tac/information_geometry/optimal_metric.py`): (1)
+**fidelity** = EXACT — `C_wr = (e_w−e_r)ᵀ g (e_w−e_r) = p_w+p_r−(p_w−p_r)²`, BIT-EQUAL to RIPO
+`winner_rival_curvature` (test-proven); the directional trust radius `|t|≤√(8·δ_KL/C_wr)` replaces raw cosine
+(D42, Spearman −0.96). (2) **training-loss** = PARTIAL/HONEST SURROGATE — two-class annulus
+`tr g|₂ = ½sech²(m/2)`, a monotone fn of margin → the MEASURED 0.978 caustic (margin field = Fisher surrogate
+the witness descends); named gap: scalar TRACE surrogate, not the full K=5 directional `g`. (3) **curriculum**
+= DERIVED — `g(τ)=τ⁻²(diag(p_τ)−p_τp_τᵀ)`, p_τ=softmax(θ/τ); concentrates on separatrix as τ↓ (C_wr_nat
+0.187→3.7e-13 for τ 1.0→0.1, test-measured). NO-FAKE: all readings PRIMAL tangent `ΔθᵀgΔθ` (Fisher-natural,
+no H⁻¹); the DUAL no-solve `Δθᵀg²Δθ` is the SQUARED-Hessian, NOT Fisher-natural — honored per landed guard
+`bregman_dual_metric_squared_hessian_v1` (never conflated). RESPONSE: registered `optimal_metric_unification_v1`
++ the OWED `categorical_fisher_trust_region_winner_rival_v1` (1 event each, no dup/orphan). Triality: eqs ✓
+(canonical_equations) + this DAG FEED ✓ + memo `.omx/research/optimal_metric_unification_derivation_20260714.md`;
+RIPO memory marked registration DONE. OWED (serialized, `witness_dsl` arm-owned): the τ-metric DSL/curriculum
+trainer wire. **means != ends: pointer UNMOVED 0.19108/0.18804.**
