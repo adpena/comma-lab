@@ -62,7 +62,7 @@ import torch
 DEFAULT_PREFLIGHT_CLI_TIMEOUT_S = 30.0
 PREFLIGHT_CLI_TIMING_SCHEMA = "pact.tac_preflight_cli_timing.v1"
 _PREFLIGHT_CACHE_SCHEMA = "pact.preflight_cache.v1"
-_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v3"
+_PREFLIGHT_ALL_CLEAN_CACHE_VERSION = "preflight_all_clean.v4"
 _PREFLIGHT_DEVELOPER_CLEAN_CACHE_VERSION = "preflight_developer_clean.v3"
 _PUBLIC_PR_PRISTINE_CACHE_VERSION = "public_pr_intake_pristine.v1"
 _NO_MPS_FALLBACK_CLEAN_CACHE_VERSION = "no_mps_fallback_default_clean.v2"
@@ -1397,6 +1397,59 @@ def preflight_check(
 # functions (preflight_all et al.) are defined before invocation. Was a
 # misleading-CLI bug per R38 - operators running `python -m tac.preflight`
 # only got artifact validation, silently skipping all 5 codebase layers.
+
+
+def _run_v9_provenance_gate(
+    gate_name: str, *, repo_root: Path, strict: bool, verbose: bool
+) -> list[str]:
+    """Translate the dedicated V9 gate error into preflight's public error type."""
+
+    from tac import v9_provenance_gates
+
+    gate = getattr(v9_provenance_gates, gate_name)
+    try:
+        return gate(repo_root=repo_root, strict=strict, verbose=verbose)
+    except v9_provenance_gates.V9ProvenanceGateError as exc:
+        raise PreflightError(str(exc)) from exc
+
+
+def check_config_flag_provenance_bijection_complete(
+    repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
+) -> list[str]:
+    """Check the live V9 DSL flag/LawRef/compiler/consumer custody bijection."""
+
+    return _run_v9_provenance_gate(
+        "check_config_flag_provenance_bijection_complete",
+        repo_root=Path(repo_root or Path(__file__).resolve().parents[2]),
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_v9_fake_claim_guards(
+    repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
+) -> list[str]:
+    """Refuse basis, pose, PoseNet, and self-orient fake claims on V9."""
+
+    return _run_v9_provenance_gate(
+        "check_v9_fake_claim_guards",
+        repo_root=Path(repo_root or Path(__file__).resolve().parents[2]),
+        strict=strict,
+        verbose=verbose,
+    )
+
+
+def check_evidence_authority_claims_are_custodied(
+    repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
+) -> list[str]:
+    """Refuse exact-authority language on uncustodied advisory evidence."""
+
+    return _run_v9_provenance_gate(
+        "check_evidence_authority_claims_are_custodied",
+        repo_root=Path(repo_root or Path(__file__).resolve().parents[2]),
+        strict=strict,
+        verbose=verbose,
+    )
 
 
 def preflight_all(
@@ -6393,6 +6446,16 @@ def preflight_all(
             _confound_gate(
                 strict=(_confound_gate.__name__ in _CONFOUND_STRICT), verbose=verbose
             )
+
+        # 2026-07-14 Catalog #332/#351 — V9 provenance is the anti-fake
+        # boundary.  These gates compile the closed V9 factory set, walk the
+        # actual Lever/LawRef/compiler/argparse/consumer graph, and re-evaluate
+        # structured claim custody.  WARN-ONLY until every live V9 flag has one
+        # complete edge chain and all live claim counts are zero; a prior PASS
+        # marker is not authority for the flip.
+        check_config_flag_provenance_bijection_complete(strict=False, verbose=verbose)
+        check_v9_fake_claim_guards(strict=False, verbose=verbose)
+        check_evidence_authority_claims_are_custodied(strict=False, verbose=verbose)
 
         # 2026-07-09 EIGHTFOLD design-philosophy gates (operator "Encode all"):
         # P1 (check_significance_keys_canonical) — every relative-significance store
