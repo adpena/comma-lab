@@ -57,7 +57,8 @@ def test_active_controller_sensor_companions_are_typed_not_parser_defaults(compi
         "--annulus-band": "2.0",
         "--annulus-bottom-k": "0.05",
         "--annulus-plateau-rel-eps": "0.0001",
-        "--annulus-plateau-dwell-windows": "4",
+        # F10 satisfiability law: (dwell-1)*eval_every >= min_epochs => 7 at 25/150
+        "--annulus-plateau-dwell-windows": "7",
         "--annulus-plateau-min-epochs": "150",
         "--curriculum-nucleus-within-flip": "0.5",
         "--curriculum-nucleus-min-part-frac": "0.0",

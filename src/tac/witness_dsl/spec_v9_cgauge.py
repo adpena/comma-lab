@@ -58,7 +58,15 @@ _V9_CGAUGE_DELTA: dict[str, Any] = {
     "--annulus-band": 2.0,
     "--annulus-bottom-k": 0.05,
     "--annulus-plateau-rel-eps": 1e-4,
-    "--annulus-plateau-dwell-windows": 4,
+    # DERIVED from the satisfiability law (fresh-eyes F10, 2026-07-15): the plateau
+    # series gets ONE point per verdict (--eval-every), so the trailing-window span is
+    # (dwell_windows - 1) * eval_every and must cover the measured min-epochs dwell:
+    #   (dwell - 1) * eval_every >= min_epochs  =>  dwell = min_epochs/eval_every + 1
+    # At eval_every=25, min_epochs=150 => dwell=7. The prior value 4 made the event
+    # STRUCTURALLY UNSATISFIABLE (span 75 < 150): seg-chroma-boundary and
+    # temporal-screw could never event-fire and were guaranteed backstop-cap fires.
+    # Enforced fail-closed by _assert_annulus_plateau_satisfiable below.
+    "--annulus-plateau-dwell-windows": 7,
     "--annulus-plateau-min-epochs": 150,
     "--curriculum-nucleus-within-flip": 0.5,
     "--curriculum-nucleus-min-part-frac": 0.0,
@@ -124,9 +132,12 @@ V9_CGAUGE_PROVENANCE: dict[str, dict[str, str]] = {
         "note": "event_wirings ANNULUS_PLATEAU_REL_EPS; calibrated sister of the curriculum plateau band.",
     },
     "--annulus-plateau-dwell-windows": {
-        "value": "4", "rung": "derived_at_config", "form": "SCALAR",
+        "value": "7", "rung": "derived_at_config", "form": "SCALAR",
         "law": "cgauge_master_action_v1",
-        "note": "event_wirings ANNULUS_PLATEAU_DWELL_WINDOWS; four verdict points must hold the plateau.",
+        "note": "DERIVED (F10 satisfiability law): dwell = min_epochs/eval_every + 1 = 150/25 + 1 = 7 "
+                "so the trailing-window span (dwell-1)*eval_every covers the measured 150-epoch "
+                "formed-boundary dwell anchor. Prior 4 was a bare constant that made the event "
+                "structurally unsatisfiable (span 75 < 150).",
     },
     "--annulus-plateau-min-epochs": {
         "value": "150", "rung": "measured_anchor", "form": "SCALAR",
@@ -375,6 +386,39 @@ V9_CGAUGE_PROVENANCE: dict[str, dict[str, str]] = {
 }
 
 
+def _assert_annulus_plateau_satisfiable(flags: dict) -> None:
+    """Fail-CLOSED sensor-geometry gate (fresh-eyes F10, 2026-07-15).
+
+    The annulus-plateau detector consumes one series point per verdict epoch
+    (``--eval-every``) and requires the trailing ``--annulus-plateau-dwell-windows``
+    points to span at least ``--annulus-plateau-min-epochs``. If
+    ``(dwell - 1) * eval_every < min_epochs`` the event can NEVER fire for the whole
+    run — every annulus-gated transition silently degrades to its backstop cap (an
+    epoch-scripted stage in effect, defeating the event-continuation design) while
+    emitting spurious ``cap_fired_before_event`` re-calibration alarms. The schedule
+    provenance gate checks declarations, not satisfiability; this check closes that
+    hole at compile time for every v9-descendant config.
+    """
+    try:
+        dwell = int(flags["--annulus-plateau-dwell-windows"])
+        min_ep = int(flags["--annulus-plateau-min-epochs"])
+        eval_every = int(flags["--eval-every"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "annulus-plateau satisfiability gate: missing/non-numeric sensor geometry "
+            f"flags ({exc!r}) — the compiled config must carry all three explicitly"
+        ) from exc
+    span = (dwell - 1) * eval_every
+    if span < min_ep:
+        raise ValueError(
+            "annulus-plateau event STRUCTURALLY UNSATISFIABLE: trailing-window span "
+            f"(dwell_windows-1)*eval_every = ({dwell}-1)*{eval_every} = {span} < "
+            f"min_epochs {min_ep}. Every annulus-gated transition would be a guaranteed "
+            f"backstop-cap fire. Fix: dwell_windows >= {min_ep // eval_every + 1} at this "
+            f"cadence, or raise eval density."
+        )
+
+
 def derive_v9_cgauge_config(
     gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
     *,
@@ -396,6 +440,7 @@ def derive_v9_cgauge_config(
     merged = {**v752.base, **_V9_CGAUGE_DELTA}
     for rm in _V9_CGAUGE_REMOVE:
         merged.pop(rm, None)
+    _assert_annulus_plateau_satisfiable(merged)
     purpose = (
         "V9 CGauge (Covariant-Gauge witness; vehicle_v9_cgauge_naming_20260711): the "
         "v7.5.2 single covariant trunk (texture trunk DROPPED both axes) + sealed "
