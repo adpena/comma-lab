@@ -1,0 +1,106 @@
+{
+  "schema_version": "c4_mod19_rate_byteclose.v1",
+  "created_at_utc": "2026-07-15T08:37:16Z",
+  "lane_id": "lane_c4_mod19_rate_byteclose_20260715",
+  "scope": {
+    "execution": "LOCAL_ONLY_$0",
+    "score_axis": "[macOS-CPU advisory]",
+    "authority_claimed": false,
+    "paid_dispatch_performed": false,
+    "pointer_mover": false
+  },
+  "verdict": "BLOCKED_NO_ELIGIBLE_WITNESS_CHECKPOINT",
+  "verdict_scope": "INSTANCE: C4 mod19 byte-close in the isolated worktree and connected SSD artifact tier on 2026-07-15",
+  "checkpoint": {
+    "checkpoint_id": null,
+    "checkpoint_path": null,
+    "selection_kind": null,
+    "eligible": false,
+    "target_run_requested": "levelset_packet_20260714T213411Z",
+    "target_run_found": false,
+    "search_roots": [
+      "experiments/results",
+      "/Volumes/VertigoDataTier/pact",
+      "/Volumes/APDataStore/pact"
+    ],
+    "search_result": "No C1/V9 witness levelset_best.json, clean best EMA, or complete stage-EMA checkpoint was present in the allowed worktree or connected SSD tier.",
+    "excluded_artifacts": [
+      {
+        "path": "/Volumes/VertigoDataTier/pact/det_gpu_348_smoke/timing/fused200/levelset_witness_ema_BEST.npz",
+        "sha256": "b7d54b01dd34a553a37f6150628bab2426308e341efcab0c7c865dc48900e7b3",
+        "levelset_best_d_seg": 0.4939778645833333,
+        "epoch": 200,
+        "reason_ineligible": "det_gpu_348_smoke timing/determinism artifact; hidden_dim=32, n_hidden=2, git_sha=unknown, upstream_snapshot_sha256=unknown; it is not a clean C1/V9 witness checkpoint"
+      }
+    ]
+  },
+  "measurements": {
+    "baseline_mod32_archive_bytes_exact": null,
+    "mod19_archive_bytes_exact": null,
+    "delta_bytes_mod19_minus_mod32_exact": null,
+    "rate_delta_s_exact": null,
+    "rate_delta_formula": "25 * (mod19_archive_bytes - baseline_mod32_archive_bytes) / 37545489",
+    "baseline_mod32_d_seg_macos_cpu_advisory": null,
+    "mod19_d_seg_macos_cpu_advisory": null,
+    "baseline_mod32_d_pose_macos_cpu_advisory": null,
+    "mod19_d_pose_macos_cpu_advisory": null,
+    "net_advisory_delta_s_mod19_minus_mod32": null,
+    "why_null": "No eligible checkpoint existed; no archive was built and no decode/evaluation was run. Nulls are intentional NO-FAKE custody, not missing zeroes."
+  },
+  "dsl_leg": {
+    "held": true,
+    "source": "src/tac/witness_dsl/spec_v9_cgauge.py::compile_v9_cgauge_ideal_launch_config",
+    "named_presets": [
+      "v9_cgauge_ideal_mod19",
+      "v9_cgauge_ideal_mod32"
+    ],
+    "matched_family_ab_contract": "scientific argv identical except --mod-dim; output custody paths differ",
+    "mod19_value_provenance": "DERIVED: cgauge_whitney_moddim_v1, Whitney 17 plus gauge margin 2",
+    "efficacy_status": "UNMEASURED on an eligible checkpoint"
+  },
+  "dag_leg": ".omx/research/c4_mod19_rate_byteclose_DAG_FEED_20260715.md",
+  "equations_leg": {
+    "equation_id": "cgauge_whitney_moddim_v1",
+    "authority": "DERIVED chart-capacity rationale only",
+    "does_not_authorize": [
+      "d_seg neutrality",
+      "archive byte reduction",
+      "score improvement"
+    ]
+  },
+  "blockers": [
+    {
+      "id": "C4_BLOCKED_CHECKPOINT_CUSTODY",
+      "detail": "No eligible clean C1/V9 witness checkpoint or complete stage-EMA checkpoint exists in the isolated worktree or connected SSD artifact tier."
+    },
+    {
+      "id": "GIT_OBJECTS_READ_ONLY_SERIALIZER_RC128",
+      "detail": "tools/subagent_commit_serializer.py failed during git add: unable to create temporary file: Operation not permitted; working-tree artifacts remain available for main's harvester."
+    }
+  ],
+  "dependency_tickets": {
+    "checkpoint_producer": "C1-WITNESS-CLEAN-STAGE-EMA-20260715",
+    "contest_cpu_authority": "AUTH-C4-MOD19-LINUX-X86_64-20260715"
+  },
+  "round1_review": {
+    "status": "PASS_HONEST_BLOCKER",
+    "checks": {
+      "archive_byte_counts_exact_from_file_size": "NOT_RUN_AND_NOT_CLAIMED",
+      "d_seg_d_pose_advisory_labeled_not_authority": "PASS_NULL_WITH_AXIS_DECLARED",
+      "checkpoint_identity_named": "PASS_NULL_WITH_EXCLUSION_CUSTODY",
+      "dsl_lever_checked": "PASS",
+      "dag_feed_landed": "PASS",
+      "negative_has_verdict_scope": "PASS",
+      "authority_follow_on_named": "PASS",
+      "c1_checkpoint_dependency_named": "PASS"
+    }
+  },
+  "pointer": {
+    "submittable_score": 0.19108,
+    "borrowed_bank_score": 0.18804,
+    "source": "operator C4 brief",
+    "delta": 0.0,
+    "status": "UNMOVED"
+  },
+  "source_git_head_before_receipt": "acbd8471be1c5b6e353962b5c8c77f46a5216c3f"
+}
