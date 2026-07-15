@@ -363,8 +363,9 @@ RC=${{PIPESTATUS[0]}}
 # token limit. Retry only after proving the exact delegation checkpoint, then pass a compact
 # resume prompt. Fatal errors or missing custody do not retry.
 attempt=0
+ATTEMPT_LOG={shlex.quote(str(log))}
 while [ "$RC" -ne 0 ] && [ "$attempt" -lt {_MAX_CAPACITY_RETRIES} ] && \\
-      grep -qiE '{_TRANSIENT_DEATH_SIGNATURE}' {log}; do
+      grep -qiE '{_TRANSIENT_DEATH_SIGNATURE}' "$ATTEMPT_LOG"; do
   attempt=$((attempt+1))
   python3 "$WORKDIR/tools/codex_retry_checkpoint.py" \\
     --delegation-key {shlex.quote(delegation_key)} \\
@@ -379,6 +380,11 @@ while [ "$RC" -ne 0 ] && [ "$attempt" -lt {_MAX_CAPACITY_RETRIES} ] && \\
   echo "RETRY {label} transient rc=$RC attempt=$attempt/{_MAX_CAPACITY_RETRIES} backoff=${{backoff}}s $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> {EVENTS}
   echo "=== TRANSIENT death (rc=$RC) — re-run $attempt/{_MAX_CAPACITY_RETRIES} in ${{backoff}}s; agent self-resumes from checkpoint ===" | tee -a {log}
   sleep $backoff
+  # Classify only this retry's output on the next loop.  Grepping the
+  # cumulative log would let the original transient signature authorize an
+  # additional retry after a later fatal/non-transient failure.
+  ATTEMPT_LOG={shlex.quote(str(log))}.retry.$attempt
+  : > "$ATTEMPT_LOG"
   codex exec \\
     --skip-git-repo-check \\
     --sandbox "$ORIGINAL_SANDBOX" \\
@@ -386,7 +392,7 @@ while [ "$RC" -ne 0 ] && [ "$attempt" -lt {_MAX_CAPACITY_RETRIES} ] && \\
     -c model_reasoning_effort={effort}{extra_c} \\
     -o {last} \\
     "$(cat {resume_prompt_file})" \\
-    2>&1 | tee -a {log}
+    2>&1 | tee -a {log} "$ATTEMPT_LOG"
   RC=${{PIPESTATUS[0]}}
 done
 # one-line summary from the tail of the final-message file (best-effort, sanitized)

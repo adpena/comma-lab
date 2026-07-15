@@ -37,6 +37,19 @@ def test_launcher_has_bounded_retry_loop(tmp_path, monkeypatch):
     assert "sleep $backoff" in body
 
 
+def test_retry_classification_uses_only_current_attempt_output(tmp_path, monkeypatch):
+    body = _gen_launcher(tmp_path, monkeypatch)
+    # A transient in the initial/cumulative log must not authorize a later
+    # retry after the immediately preceding attempt died with a fatal error.
+    assert "ATTEMPT_LOG=" in body
+    assert "grep -qiE" in body and '"$ATTEMPT_LOG"; do' in body
+    assert ': > "$ATTEMPT_LOG"' in body
+    assert re.search(r'tee -a .* "\$ATTEMPT_LOG"', body) is not None
+    start = body.index('while [ "$RC" -ne 0 ]')
+    retry_condition = body[start:body.index("; do", start)]
+    assert "run.log" not in retry_condition
+
+
 def test_transient_signature_matches_the_real_capacity_error():
     # The exact death string observed in the wild MUST match the retry signature.
     sig = codex_delegate._TRANSIENT_DEATH_SIGNATURE
