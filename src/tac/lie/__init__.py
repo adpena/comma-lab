@@ -35,30 +35,54 @@ Layout
 
 from __future__ import annotations
 
-from . import _se3_numpy, screw_blend, se3, se3_bspline, so3
-from .se3 import (
-    CONVENTION,
-    adjoint_se3,
-    adjoint_T,
-    compose,
-    exp_se3,
-    inverse,
-    left_jacobian_se3,
-    log_se3,
-    make_T,
-    rotation_of,
-    translation_of,
-)
-from .so3 import (
-    exp_so3,
-    left_jacobian_inv_so3,
-    left_jacobian_so3,
-    log_so3,
-    right_jacobian_inv_so3,
-    right_jacobian_so3,
-    skew,
-    unskew,
-)
+import importlib
+
+# Eager: the NumPy-fp32 reference oracle (the authority) has no MLX
+# dependency and is the only surface the CUDA/torch path consumes.
+from . import _se3_numpy
+
+# Lazy (PEP 562): every other submodule imports ``mlx.core`` at module top.
+# MLX is Apple-silicon-only, so an eager import made ``import tac.lie`` (and
+# thus the CUDA pose-carrier attach, 2026-07-15 r2 smoke, rc=1 at 147.9s on
+# H100) impossible on any non-macOS container. Accessing any MLX name below
+# still imports the real submodule on demand — behavior on macOS is unchanged.
+_MLX_SUBMODULES = frozenset({"so3", "se3", "screw_blend", "se3_bspline"})
+_LAZY_EXPORT_OWNERS = {
+    # se3 (MLX)
+    "CONVENTION": "se3",
+    "adjoint_se3": "se3",
+    "adjoint_T": "se3",
+    "compose": "se3",
+    "exp_se3": "se3",
+    "inverse": "se3",
+    "left_jacobian_se3": "se3",
+    "log_se3": "se3",
+    "make_T": "se3",
+    "rotation_of": "se3",
+    "translation_of": "se3",
+    # so3 (MLX)
+    "exp_so3": "so3",
+    "left_jacobian_inv_so3": "so3",
+    "left_jacobian_so3": "so3",
+    "log_so3": "so3",
+    "right_jacobian_inv_so3": "so3",
+    "right_jacobian_so3": "so3",
+    "skew": "so3",
+    "unskew": "so3",
+}
+
+
+def __getattr__(name: str):
+    if name in _MLX_SUBMODULES:
+        return importlib.import_module(f".{name}", __name__)
+    owner = _LAZY_EXPORT_OWNERS.get(name)
+    if owner is not None:
+        return getattr(importlib.import_module(f".{owner}", __name__), name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(set(__all__) | set(globals()))
 
 __all__ = [
     "CONVENTION",
