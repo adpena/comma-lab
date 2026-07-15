@@ -374,6 +374,13 @@ class BasisLeverSpec:
                 "task497 open fresh-start learned-frequency family; compiles existing FINER/SIREN "
                 "surface but carries no n600 basis-win claim"
             )
+        elif self.family is BasisFamily.WINDOWED_CURVELET:
+            overrides = {"--basis": "windowed_curvelet"}
+            notes = (
+                "FEED-cvl-throughR selected windowed-directional frame; trainer MLX/NumPy parity "
+                "and generated inflate receiver op parity are wired; equal-config byte-closed n600 "
+                "realized d_seg remains OWED (operator-GO, PREPARED_NOT_FIRED); no family-win claim"
+            )
         else:
             raise UnsupportedBasisFamily(
                 f"{self.family.value} has no train+generated-inflate op-parity implementation and "
@@ -430,12 +437,20 @@ def inflate_compile_contract(spec: BasisLeverSpec) -> InflateCompileContract:
     lever_argv(lever)
     root = Path(__file__).resolve().parents[3]
     inflate_source = (root / "tools/levelset_byte_close_and_eval.py").read_text()
-    required = ("def _curvelet_B", "def _curvelet_feats")
-    if not all(token in inflate_source for token in required):
-        raise RuntimeError("generated inflate source lost polar-bank regeneration functions")
-    inflate_functions = ("_curvelet_B", "_curvelet_feats")
-    train_functions = ("curvelet_directional_B", "curvelet_feats")
-    regenerated = ("bank_n_scales", "bank_n_orient0", "bank_f0", "bank_base", "bank_n_iso", "max_bank_freq")
+    if spec.family is BasisFamily.WINDOWED_CURVELET:
+        required = ("def _windowed_curvelet_feats", "def _basis_feats")
+        if not all(token in inflate_source for token in required):
+            raise RuntimeError("generated inflate source lost windowed-curvelet regeneration functions")
+        inflate_functions = ("_windowed_curvelet_feats", "_basis_feats")
+        train_functions = ("windowed_curvelet_feats", "mlx_parity_check")
+        regenerated = ("windowed_curvelet_config", "basis_family")
+    else:
+        required = ("def _curvelet_B", "def _curvelet_feats")
+        if not all(token in inflate_source for token in required):
+            raise RuntimeError("generated inflate source lost polar-bank regeneration functions")
+        inflate_functions = ("_curvelet_B", "_curvelet_feats")
+        train_functions = ("curvelet_directional_B", "curvelet_feats")
+        regenerated = ("bank_n_scales", "bank_n_orient0", "bank_f0", "bank_base", "bank_n_iso", "max_bank_freq")
     if spec.family is BasisFamily.SELF_ORIENTED_FOURIER:
         if "def _dir_feats" not in inflate_source:
             raise RuntimeError("generated inflate source lost self-orient feature regeneration")

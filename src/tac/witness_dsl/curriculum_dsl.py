@@ -1909,6 +1909,25 @@ def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,
                  notes="all-class directional tangent basis (was OFF: weight 0)")
 
 
+def WindowedCurveletBasis(window: int = 0) -> Lever:
+    """Select the generated-receiver-sealed windowed-directional coordinate frame.
+
+    Default-off means this factory is absent from ``BASELINE``/``proven_base``; composing the named
+    lever is the explicit treatment.  The factory exists here (rather than only in a side module) so
+    ``lever_registry.completeness`` and the activation-ledger duty queue discover it generically.
+    A byte-closed n600 realized-through-R row is still owed and requires operator GO.
+    """
+    if int(window) < 0:
+        raise ValueError("WindowedCurveletBasis: window must be >= 0")
+    return Lever(
+        "basis_family::windowed_curvelet",
+        overrides={"--basis": "windowed_curvelet"},
+        epochs_delta=int(window),
+        notes=("FEED-cvl-throughR: train+generated-inflate op parity wired; default-off treatment; "
+               "byte-closed n600 realized d_seg A/B OWED (operator-GO, PREPARED_NOT_FIRED)"),
+    )
+
+
 def TextureTrunk(band_hi: float = 8.0, annulus_power: float = 0.0,
                  coeff_scale: float = 0.02, window: int = 0) -> Lever:
     """#395 P0 — the band-designed per-class STATIONARY texture trunk (T of W=(G, ξ, T)).

@@ -16,6 +16,7 @@ runs in ~1s. NO GPU, NO MPS, NO touch of any live run.
 from __future__ import annotations
 
 import importlib.util
+import json
 import struct
 import sys
 import zipfile
@@ -39,7 +40,9 @@ from tac.contest_score import compute_contest_score
 # ---------------------------------------------------------------------------
 # tiny synthetic checkpoint builders
 # ---------------------------------------------------------------------------
-def _tiny_cfg(self_orient: bool, *, n_dir_freqs: int = 2) -> dict:
+def _tiny_cfg(
+    self_orient: bool, *, n_dir_freqs: int = 2, basis: str = "polar_fourier"
+) -> dict:
     cfg = {
         "npz_name": "synthetic.npz",
         "n_classes": 3, "hidden_dim": 4, "n_hidden": 1, "mod_dim": 3, "n_pairs": 2,
@@ -47,8 +50,9 @@ def _tiny_cfg(self_orient: bool, *, n_dir_freqs: int = 2) -> dict:
         "wire_w0": 20.0, "wire_s0": 10.0, "hosc_beta": 4.0, "hosc_omega": 1.0,
         "bank_n_scales": 1, "bank_n_orient0": 2, "bank_f0": 2.0, "bank_base": 2.0, "bank_n_iso": 1,
         "max_bank_freq": None, "render_h": 6, "render_w": 8, "lane_edge_weight": 0.0,
+        "basis": basis,
     }
-    curv_w = lbce._curvelet_feat_width(cfg)
+    curv_w = lbce._basis_feat_width(cfg)
     cfg["in_feat"] = curv_w + (4 * n_dir_freqs if self_orient else 0)
     return cfg
 
@@ -99,6 +103,8 @@ def _write_tiny_npz(ckpt_dir: Path, cfg: dict, params: dict, name: str = "levels
     save["__bank_base"] = cfg["bank_base"]
     save["__bank_n_iso"] = cfg["bank_n_iso"]
     save["__cfg_max_bank_freq"] = -1.0 if cfg["max_bank_freq"] is None else cfg["max_bank_freq"]
+    if cfg.get("basis", "polar_fourier") != "polar_fourier":
+        save["__cfg_basis"] = cfg["basis"]
     save["__render_hw"] = np.asarray([cfg["render_h"], cfg["render_w"]], dtype=np.int64)
     p = ckpt_dir / name
     np.savez(p, **save)
@@ -134,6 +140,17 @@ def test_read_blob_bytes_matches_pack():
     assert pose == b""
     assert lane_b is None  # default-off: no 5th block, grammar identical to pre-Wave-E
     assert "lane_render_band" not in manifest
+
+
+def test_explicit_polar_basis_is_blob_byte_identical_to_legacy_default():
+    cfg = _tiny_cfg(False)
+    params = _tiny_params(cfg, seed=101)
+    explicit = dict(cfg, basis="polar_fourier")
+    legacy = dict(cfg)
+    legacy.pop("basis")
+    blob_legacy, _ = lbce.build_levelset_blob(params, legacy, _so(legacy), None)
+    blob_explicit, _ = lbce.build_levelset_blob(params, explicit, _so(explicit), None)
+    assert blob_explicit == blob_legacy
 
 
 def test_int8_accounting_matches_canonical():
@@ -193,6 +210,15 @@ def test_load_ckpt_roundtrip(tmp_path):
     assert "code" in loaded_params and "out_sdf.weight" in loaded_params
 
 
+def test_load_ckpt_persists_selected_windowed_basis(tmp_path):
+    cfg = _tiny_cfg(False, basis="windowed_curvelet")
+    params = _tiny_params(cfg)
+    _write_tiny_npz(tmp_path, cfg, params)
+    _params, loaded_cfg = lbce._load_levelset_ckpt(tmp_path, None)
+    assert loaded_cfg["basis"] == "windowed_curvelet"
+    assert loaded_cfg["in_feat"] == lbce._basis_feat_width(loaded_cfg)
+
+
 def test_load_ckpt_missing_raises(tmp_path):
     with pytest.raises(FileNotFoundError):
         lbce._load_levelset_ckpt(tmp_path, None)
@@ -240,6 +266,45 @@ def test_bit_exact_gate_non_self_orient(tmp_path):
     assert res["bit_exact"] is True
     assert res["n_frames_differing"] == 0 and res["max_abs_uint8_diff"] == 0
     assert res["frames_compared"] == 4
+
+
+def test_bit_exact_gate_windowed_curvelet(tmp_path):
+    cfg = _tiny_cfg(False, basis="windowed_curvelet")
+    params = _tiny_params(cfg, seed=17)
+    pkt, blob = _build_packet(tmp_path, cfg, params)
+    manifest, *_ = lbce._read_blob_bytes(blob)
+    assert manifest["basis_family"] == "windowed_curvelet"
+    res = lbce.bit_exact_roundtrip_gate(pkt, blob, gate_pairs=2, strict=True)
+    assert res["bit_exact"] is True
+    assert res["n_frames_differing"] == 0 and res["max_abs_uint8_diff"] == 0
+
+
+def test_windowed_curvelet_manifest_mutation_changes_receiver_output(tmp_path):
+    """#417 effect proof: mutating the shipped basis program changes realized uint8 bytes."""
+    cfg = _tiny_cfg(False, basis="windowed_curvelet")
+    params = _tiny_params(cfg, seed=23)
+    blob, _ = lbce.build_levelset_blob(params, cfg, _so(cfg), None)
+    manifest, base_b, code_b, pose_b, lane_b, pcar_b = lbce._read_blob_bytes(blob)
+
+    pkt_a = tmp_path / "original"
+    lbce.assemble_packet(blob, pkt_a)
+    lbce.run_inflate(pkt_a, cfg["n_pairs"], 1)
+    raw_a = (pkt_a / "inflated" / "0.raw").read_bytes()
+
+    mutated_manifest = json.loads(json.dumps(manifest))
+    mutated_manifest["windowed_curvelet_config"]["f0"] = 13.0
+    mutated_manifest["windowed_curvelet_config"]["w0"] = 0.15
+    mutated_blob = lbce._io_pack(
+        json.dumps(mutated_manifest, separators=(",", ":")).encode("utf-8"),
+        base_b, code_b, pose_b, lane_b, pcar_b,
+    )
+    pkt_b = tmp_path / "mutated"
+    lbce.assemble_packet(mutated_blob, pkt_b)
+    parity = lbce.bit_exact_roundtrip_gate(pkt_b, mutated_blob, gate_pairs=1, strict=True)
+    assert parity["bit_exact"] is True  # generated receiver still matches independent oracle
+    lbce.run_inflate(pkt_b, cfg["n_pairs"], 1)
+    raw_b = (pkt_b / "inflated" / "0.raw").read_bytes()
+    assert raw_b != raw_a  # receiver genuinely consumes the curvelet program state through R
 
 
 def test_bit_exact_gate_self_orient(tmp_path):

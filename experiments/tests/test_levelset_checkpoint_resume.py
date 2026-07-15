@@ -39,6 +39,7 @@ def _fake_args(**over):
         n_hidden=4, hidden_dim=96, activation="hosc", chroma=True,
         wire_w0=20.0, wire_s0=10.0, hosc_beta=4.0, hosc_omega=1.0,
         bank_n_scales=4, bank_n_orient0=6, bank_f0=2.0, bank_base=2.0, bank_n_iso=4,
+        basis="polar_fourier",
         max_bank_freq=None, lane_edge_weight=0.0, lane_edge_class=1,
         self_orient=True, n_dir_freqs=2, freq_across=32.0, freq_along=4.0, reorient_every=50,
         w_pose=1.0, curriculum=True, tau_softplus_start_epoch=300, l7_start_epoch=900,
@@ -135,6 +136,19 @@ def test_ema_arrays_max_bank_freq_none_sentinel_and_passthrough():
     cap_out = T._build_ema_checkpoint_arrays(_fake_shadow(), args=_fake_args(max_bank_freq=64.0),
                                              softmax_temp=0.05, render_h=384, render_w=512, epoch=1, in_feat=40)
     assert float(cap_out["__cfg_max_bank_freq"]) == 64.0
+
+
+def test_basis_checkpoint_is_additive_and_default_checkpoint_layout_is_unchanged():
+    default = T._build_ema_checkpoint_arrays(
+        _fake_shadow(), args=_fake_args(), softmax_temp=0.05,
+        render_h=384, render_w=512, epoch=1, in_feat=40,
+    )
+    selected = T._build_ema_checkpoint_arrays(
+        _fake_shadow(), args=_fake_args(basis="windowed_curvelet"), softmax_temp=0.05,
+        render_h=384, render_w=512, epoch=1, in_feat=288,
+    )
+    assert "__cfg_basis" not in default
+    assert str(selected["__cfg_basis"]) == "windowed_curvelet"
 
 
 # --------------------------------------------------------------------------- resume sidecar
@@ -532,6 +546,17 @@ def test_resume_guard_legacy_sidecar_no_spurious_divergence():
     # a pre-#403 sidecar lacks all hardness/head keys -> the guard only checks present keys.
     a = _fake_args(hardness_oversample=0.5, hardness_source="realized", head="etf")
     assert T._resume_lever_divergences({}, a) == []
+
+
+def test_resume_guard_rejects_basis_family_drift():
+    a = _fake_args(basis="windowed_curvelet", self_orient=False)
+    cfg = _cfg_from_arrays(T._build_resume_state_arrays(
+        {"code": np.zeros((6, 32), np.float32)}, {"code": np.zeros((6, 32), np.float32)}, None,
+        args=a, epoch=25, in_feat=288,
+    ))
+    assert str(cfg["__cfg_basis"]) == "windowed_curvelet"
+    div = T._resume_lever_divergences(cfg, _fake_args(basis="polar_fourier", self_orient=False))
+    assert any(d.startswith("basis:") for d in div)
 
 
 def test_resume_guard_hardness_subfields_inert_when_off_both():

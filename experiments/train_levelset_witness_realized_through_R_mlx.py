@@ -96,6 +96,11 @@ from tac.boundary_math.lever_b_levelset_generator import (  # noqa: E402
     quantize_levelset_blob,
     rebuild_per_pair_feats_in_place,
 )
+from tac.boundary_math.windowed_curvelet_frame import (  # noqa: E402
+    WindowedCurveletConfig,
+    mlx_parity_check as windowed_curvelet_mlx_parity_check,
+    windowed_curvelet_feats,
+)
 # MOD-DIM DYNAMICS telemetry (operator 2026-07-08): score-neutral, read-only spectral + per-dim
 # introspection of the per-pair latent (code) table. Pure numpy; emitting a row reads snapshots only
 # (never touches the update path / RNG) => BYTE-IDENTICAL training. See src/tac/boundary_math/mod_dim_dynamics.py.
@@ -738,6 +743,10 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_max_bank_freq"] = np.asarray(-1.0 if args.max_bank_freq is None else float(args.max_bank_freq))
     flat["__cfg_lane_edge_weight"] = np.asarray(float(args.lane_edge_weight))
     flat["__cfg_lane_edge_class"] = np.asarray(int(args.lane_edge_class))
+    # Additive/legacy-compatible: absence means the historical polar-Fourier path.  Do not stamp
+    # the default value so an OFF/default checkpoint retains its pre-P0 byte layout exactly.
+    if str(getattr(args, "basis", "polar_fourier")) != "polar_fourier":
+        flat["__cfg_basis"] = np.asarray(str(args.basis))
     # ---- NEW provenance (additive; closes the self-orient/curriculum trainer-persist gap) ----
     flat["__epoch"] = np.asarray(int(epoch))
     flat["__cfg_in_feat"] = np.asarray(int(in_feat))
@@ -805,6 +814,8 @@ def _build_resume_state_arrays(
     out["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
     out["__cfg_mod_dim"] = np.asarray(args.mod_dim)
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
+    if str(getattr(args, "basis", "polar_fourier")) != "polar_fourier":
+        out["__cfg_basis"] = np.asarray(str(args.basis))
     # S1 structural coordinate-basis identity. The wrapper adds no tensors, so
     # param-key compatibility cannot detect a dropped/changed compander on resume.
     out["__cfg_ground_frame_chart"] = np.asarray(
@@ -1136,6 +1147,7 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
     # (key, current value, is_float) — non-float compared as string (int/bool/str all normalize).
     checks: list[tuple[str, object, bool]] = [
         ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
+        ("__cfg_basis", str(getattr(args, "basis", "polar_fourier")), False),
         ("__cfg_self_orient", int(bool(getattr(args, "self_orient", False))), False),
         ("__cfg_ground_frame_chart",
          int(bool(getattr(args, "ground_frame_chart", False))), False),
@@ -3727,6 +3739,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             key: value for key, value in vars(args).items()
             if key not in {"out_dir", "resume_from"}
         }
+        # Legacy-byte/hash preservation: the new parser default describes the historical path, so
+        # omit it from the causal payload exactly as if the flag did not exist.  The selected family
+        # is material and remains explicitly frozen into the treatment manifest.
+        if str(_causal_treatment_values.get("basis", "polar_fourier")) == "polar_fourier":
+            _causal_treatment_values.pop("basis", None)
         _causal_treatment = causal_freeze_fields(_causal_treatment_values)
         _causal_treatment_sha256 = _causal_sha256(_causal_treatment_values)
 
@@ -3965,6 +3982,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     coords_np = _build_render_coords(render_h, render_w)
 
     # --- FRONT-END: generic curvelet/shearlet bank (byte-closeable, GT-free) ---
+    basis_family = str(getattr(args, "basis", "polar_fourier"))
+    if basis_family == "windowed_curvelet":
+        # P0 scope is the clean equal-config basis A/B.  These consumers currently carry
+        # polar-bank-specific operators or rebuild through a NumPy-only per-pair cache; accepting
+        # them would create a train/decode or NumPy/MLX ambiguity.  Refuse instead of silently
+        # producing a counted-but-inert/partly-consumed basis (#417 receiver bijection).
+        _unsupported_curvelet_combinations = []
+        if bool(getattr(args, "self_orient", False)):
+            _unsupported_curvelet_combinations.append("--self-orient")
+        if bool(getattr(args, "ground_frame_chart", False)):
+            _unsupported_curvelet_combinations.append("--ground-frame-chart")
+        if bool(getattr(args, "dseg_aware_taper", False)):
+            _unsupported_curvelet_combinations.append("--dseg-aware-taper")
+        if str(getattr(args, "render_aa", "none")) != "none":
+            _unsupported_curvelet_combinations.append("--render-aa!=none")
+        if _unsupported_curvelet_combinations:
+            raise ValueError(
+                "--basis windowed_curvelet is currently op-parity sealed only for the isolated "
+                "basis A/B; unsupported combination(s): "
+                + ", ".join(_unsupported_curvelet_combinations)
+            )
     bank = CurveletBankConfig(
         n_scales=args.bank_n_scales, n_orient0=args.bank_n_orient0,
         f0=args.bank_f0, base=args.bank_base, n_iso=args.bank_n_iso,
@@ -3972,7 +4010,40 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # LEVER-2 (stem-Nyquist) cap (default None = no cap = current behavior). Drops curvelet atoms
     # above the SegNet-stem Nyquist (free byte/alias budget; see stem_nyquist_max_freq_*).
     B = curvelet_directional_B(bank, max_freq=args.max_bank_freq)
-    curv_feats_np = curvelet_feats(coords_np, B).astype(np.float32)  # (P, 2*cols)
+    windowed_cfg: WindowedCurveletConfig | None = None
+    coord_feats_windowed_mx = None
+    if basis_family == "polar_fourier":
+        # DO NOT refactor this expression: it is the sealed historical default path.
+        curv_feats_np = curvelet_feats(coords_np, B).astype(np.float32)  # (P, 2*cols)
+    elif basis_family == "windowed_curvelet":
+        windowed_cfg = WindowedCurveletConfig()
+        _basis_parity = windowed_curvelet_mlx_parity_check(windowed_cfg)
+        if not (_basis_parity.get("mlx_available") and _basis_parity.get("within_tol")):
+            raise RuntimeError(
+                "windowed-curvelet MLX forward failed the NumPy-authority parity gate: "
+                f"{_basis_parity}"
+            )
+        curv_feats_np = windowed_curvelet_feats(coords_np, windowed_cfg).astype(np.float32)
+        # The selected training tensor is generated by the MLX mirror itself.  NumPy remains the
+        # deterministic reference for host-side checks and the generated receiver.
+        coord_feats_windowed_mx = windowed_curvelet_feats(
+            mx.array(coords_np), windowed_cfg, xp=mx
+        )
+        print(json.dumps({
+            "stage": "basis_mlx_numpy_parity",
+            "basis": basis_family,
+            "max_abs_diff": float(_basis_parity["max_abs_diff"]),
+            "within_tol": True,
+            "numpy_authority": "tac.boundary_math.windowed_curvelet_frame.windowed_curvelet_feats",
+        }), flush=True)
+    else:  # argparse validates this too; keep an internal fail-closed guard for programmatic calls.
+        raise ValueError(f"unknown --basis family: {basis_family!r}")
+
+    def _basis_feats_np(basis_coords: np.ndarray) -> np.ndarray:
+        if basis_family == "polar_fourier":
+            return curvelet_feats(basis_coords, B).astype(np.float32)
+        assert windowed_cfg is not None
+        return windowed_curvelet_feats(basis_coords, windowed_cfg).astype(np.float32)
     # ── #121 d_seg-AWARE FOURIER-FEATURE AMPLITUDE TAPER (default OFF => this block is a NO-OP =>
     # curv_feats_np unchanged => BYTE-IDENTICAL). When ON: reweight each curvelet column's amplitude
     # by the GT d_seg saliency (top1-top2 argmax MARGIN) field so the coord-INR's spectral prior is
@@ -4068,14 +4139,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if use_gfc:
             # per-pair chart coords -> curvelet feats, recomputed on demand (numpy side; the MLX
             # side caches ONCE via cf_mx_cache — the chart is static, unlike the reorient loop).
-            return curvelet_feats(_input_chart.coords_for_pair_numpy(coords_np, pi), B).astype(np.float32)
+            return _basis_feats_np(_input_chart.coords_for_pair_numpy(coords_np, pi))
         if not use_self_orient:
             return curv_feats_np
         return np.concatenate([curv_feats_np, dir_feats_per_pair[pi]], axis=-1).astype(np.float32)
 
-    print(json.dumps({"stage": "front_end", "curvelet_cols": int(B.shape[1]), "dir_w": int(dir_w),
-                      "in_feat": int(in_feat), "self_orient": use_self_orient,
-                      "front_end": ("curvelet+self_orient" if use_self_orient else "generic-curvelet only")}), flush=True)
+    if basis_family == "polar_fourier":
+        print(json.dumps({"stage": "front_end", "curvelet_cols": int(B.shape[1]), "dir_w": int(dir_w),
+                          "in_feat": int(in_feat), "self_orient": use_self_orient,
+                          "front_end": ("curvelet+self_orient" if use_self_orient else "generic-curvelet only")}), flush=True)
+    else:
+        print(json.dumps({"stage": "front_end", "basis": basis_family,
+                          "basis_atoms": int(curv_feats_np.shape[1] // 2), "dir_w": int(dir_w),
+                          "in_feat": int(in_feat), "self_orient": use_self_orient,
+                          "front_end": basis_family}), flush=True)
 
     # (OPERATOR STANDARD 2026-07-13 "We are standardizing on 1 thread for training") TRAINING-path
     # CPU-torch forwards (teacher/verdict; NEVER auth-eval scoring — upstream/evaluate.py is a
@@ -4229,7 +4306,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "fine_grid": [render_h * aa_ss, render_w * aa_ss],
                           "self_orient_fine_mode": (_aa_fine_mode if use_self_orient else "n/a"),
                           "note": "separate fine-grid render feats; base-grid eikonal/sdf unaffected"}), flush=True)
-    coord_feats_mx = mx.array(curv_feats_np)
+    coord_feats_mx = (
+        mx.array(curv_feats_np)
+        if basis_family == "polar_fourier"
+        else coord_feats_windowed_mx
+    )
+    assert coord_feats_mx is not None
 
     # ── GROUND-FRAME CHART (#194 / §17.1) build — tac.boundary_math.ground_frame_chart. ──
     # v0 fail-closed combinations (coordinate-system consistency; NO-FAKE: refuse a silent hybrid):
@@ -9488,7 +9570,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "saved_size": int(_hp_saved.size), "expected": int(P),
                                   "note": "persisted baseline size mismatch -> recompute stands "
                                   "(defence-in-depth; config guard already checks hardness cfg)"}), flush=True)
-    if args.max_bank_freq is not None:
+    if args.max_bank_freq is not None and basis_family == "polar_fourier":
         from tac.boundary_math.lever_b_levelset_generator import stem_nyquist_max_freq_cycles_per_unit
         nyq = stem_nyquist_max_freq_cycles_per_unit(scorer_w=SEG_W)
         print(json.dumps({"stage": "stem_nyquist", "max_bank_freq": float(args.max_bank_freq),
@@ -12362,7 +12444,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # #205 PROVENANCE (deterministic-reproducibility: git sha + upstream snapshot sha + seed).
         "provenance": {**_run_provenance, "seed": int(args.seed)},
         "render_hw": [render_h, render_w],
-        "front_end": "curvelet" + ("+self_orient" if use_self_orient else ""),
+        "front_end": (
+            "curvelet" + ("+self_orient" if use_self_orient else "")
+            if basis_family == "polar_fourier"
+            else basis_family
+        ),
         "activation": args.activation, "in_feat": int(in_feat),
         "fresh_init": _fresh_state.result_dict(),
         "history": history, "checkpoint": str(ck), "stage_checkpoints": stage_ckpts,
@@ -13020,6 +13106,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bank-f0", type=float, default=2.0)
     ap.add_argument("--bank-base", type=float, default=2.0)
     ap.add_argument("--bank-n-iso", type=int, default=4)
+    ap.add_argument(
+        "--basis",
+        choices=("polar_fourier", "windowed_curvelet"),
+        default="polar_fourier",
+        help=(
+            "select the fixed coordinate basis; polar_fourier is the byte-identical historical "
+            "default, windowed_curvelet selects the deterministic localized frame and requires "
+            "generated-receiver op parity"
+        ),
+    )
     # LEVER-2 (stem-Nyquist rate/anti-alias): cap curvelet-bank freqs (cycles/unit) at the SegNet
     # stem Nyquist (default 64 for SEG_W=512, stem-stride-2). None (default) = no cap = current
     # behavior. The DEFAULT curvelet bank (max 16 cyc/unit) is already sub-Nyquist so this is a

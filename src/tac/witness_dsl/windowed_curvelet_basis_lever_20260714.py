@@ -1,19 +1,17 @@
 # SPDX-License-Identifier: MIT
-"""DSL basis lever for the GENUINELY LOCALIZED windowed-curvelet frame (task #502).
+"""DSL basis lever for the selected windowed-directional frame (task #502).
 
 The DSL must HOLD every designed lever (operator 2026-07-06). This module registers the
 windowed-curvelet frame (``tac.boundary_math.windowed_curvelet_frame``) as a first-class,
-default-OFF DSL basis lever so the next witness arm can A/B it -- WITHOUT touching the hot
-``curriculum_dsl`` module and WITHOUT inventing trainer flags.
+default-OFF DSL basis lever so the next witness arm can A/B it. The nilary
+``curriculum_dsl.WindowedCurveletBasis`` wrapper makes registry/activation consumers discover it;
+both compile through the same typed ``BasisLeverSpec`` and real trainer flag.
 
-STATE (honest): the windowed-curvelet feats are NOT yet implemented in the trainer forward
-or the generated ``inflate.py``. Until that op-parity + a real n600 through-R d_seg receipt
-exist, this lever is BYTE-IDENTICAL: ``compile_lever()`` returns EMPTY overrides (a no-op that
-perturbs no sealed config, changes no archive bytes). It carries the designed
-``WindowedCurveletConfig`` and the measured capacity/localization evidence as metadata, plus an
-explicit OWED-wire list -- so the design is held, queryable, and never orphaned, but no fake
-"active" claim is made (catalog #351: an unlocalized/unwired frame must never carry an active
-label). ``owed_wire()`` names the exact landings needed to make it a real, composable A/B arm.
+STATE (honest): trainer MLX/NumPy parity and generated-inflate op parity are wired behind the real
+``--basis windowed_curvelet`` flag.  The lever is default-OFF because no baseline program composes
+it; calling the factory explicitly returns the ACTIVE treatment.  The only remaining
+``owed_wire()`` row is the operator-GO n600 byte-closed realized-through-R measurement.  No capacity
+probe, receiver advisory, or mask proxy is promoted to a score/family verdict.
 
 means != ends: pointer UNMOVED (0.19108 submittable / 0.18804 bank). The realized d_seg through-R
 is OWED (needs a run; operator-GO / CONTAINMENT).
@@ -29,85 +27,68 @@ from tac.boundary_math.windowed_curvelet_frame import (
     n_atoms,
 )
 from tac.witness_dsl.curriculum_dsl import Lever, real_trainer_flags
+from tac.witness_dsl.optimal_basis_20260714 import BasisFamily, BasisLeverSpec
 
-# Measured evidence (advisory; not score authority) carried as lever metadata so the
-# activation ledger / next arm sees WHY this lever is worth firing.
+# Historical capacity/localization constants retained for API compatibility.  They are upper-bound
+# spatial-dictionary evidence only, not through-R score authority and not a family-win claim.
 LOCALIZATION_ENVELOPE_SPAN = 1.0            # vs polar-Fourier 1.5e-7 (the swap-test margin)
 SPECTRAL_CAPACITY_GAIN = (1.7, 2.0)        # reverse-waterfill B_iso/B_orient (n600)
 SPATIAL_NTERM_CAPACITY_GAIN_N600 = 1.09    # OMP K_fourier/K_curvelet at rel-err<=0.10 (n600)
 
-WIRE_STATUS_OWED = "OWED_TRAIN_INFLATE_OP_PARITY"
+WIRE_STATUS_READY = "TRAIN_INFLATE_OP_PARITY_READY_THROUGHR_OWED"
 
 
 class WindowedCurveletWireNotReady(RuntimeError):
-    """Raised only if a caller forces a non-byte-identical compile before the wire lands."""
+    """Compatibility exception for unsupported custom frame configs."""
 
 
 @dataclass(frozen=True)
 class WindowedCurveletBasisLeverSpec:
-    """Typed, default-OFF windowed-curvelet basis lever.
-
-    Holds the designed ``WindowedCurveletConfig``. ``compile_lever()`` is byte-identical
-    (empty overrides) until the trainer + generated inflate implement windowed-curvelet feats
-    with op-parity. ``enabled`` defaults False; setting it True without the wire raises (there
-    is no honest active compile yet -- the OWED list must be closed first).
-    """
+    """Typed windowed-curvelet treatment; default-off is program composition, not a fake no-op."""
 
     config: WindowedCurveletConfig = field(default_factory=WindowedCurveletConfig)
-    enabled: bool = False
-    wire_status: str = WIRE_STATUS_OWED
+    enabled: bool = True
+    wire_status: str = WIRE_STATUS_READY
 
     def certificate_passes(self) -> bool:
-        """Confirm the held config produces a GENUINELY localized frame (the anti-fake gate)."""
+        """Confirm the held config is spatially localized (not a literal-family claim)."""
         return bool(localization_certificate(self.config).passes)
 
     def compile_lever(self) -> Lever:
-        """Return the DSL Lever. Byte-identical (empty overrides) while the wire is OWED.
-
-        A future arm that lands the trainer/inflate flags flips ``wire_status`` and populates
-        real overrides here; until then composing this lever changes nothing.
-        """
-        if self.enabled and self.wire_status == WIRE_STATUS_OWED:
+        """Compile to the canonical real trainer flag, or an explicit disabled no-op."""
+        if self.config != WindowedCurveletConfig():
             raise WindowedCurveletWireNotReady(
-                "windowed-curvelet feats are not yet wired into the trainer/inflate (op-parity + "
-                "through-R receipt OWED); refusing to compile an 'active' lever. Close owed_wire() "
-                "first, or keep enabled=False for the byte-identical held lever."
+                "custom windowed-curvelet configs are not serialized by the current trainer flag; "
+                "use the sealed default config or extend train+checkpoint+inflate together"
             )
-        overrides: dict = {}  # byte-identical: no sealed-config perturbation, no archive-byte change
+        canonical = BasisLeverSpec(family=BasisFamily.WINDOWED_CURVELET).compile_lever()
+        overrides: dict = dict(canonical.overrides) if self.enabled else {}
         # Guard against any future invented flag sneaking in (never-invent-flags).
         unknown = sorted(set(overrides) - set(real_trainer_flags()))
         if unknown:
             raise RuntimeError(f"windowed-curvelet lever invented trainer flags: {unknown}")
         notes = (
-            f"task502 windowed-curvelet frame (GENUINELY localized; certificate_passes="
-            f"{self.certificate_passes()}); DEFAULT-OFF byte-identical held lever; wire_status="
-            f"{self.wire_status}. Measured (advisory): envelope span {LOCALIZATION_ENVELOPE_SPAN} vs "
-            f"Fourier 1.5e-7; spectral capacity gain {SPECTRAL_CAPACITY_GAIN[0]}-"
-            f"{SPECTRAL_CAPACITY_GAIN[1]}x; spatial OMP N-term ~{SPATIAL_NTERM_CAPACITY_GAIN_N600}x "
-            f"(n600). Realized d_seg through-R OWED. n_atoms={n_atoms(self.config)}."
+            f"task502 selected windowed-directional frame; certificate_passes="
+            f"{self.certificate_passes()}; DEFAULT-OFF by baseline composition; wire_status="
+            f"{self.wire_status}; enabled={self.enabled}. Capacity evidence is UPPER-BOUND-only, "
+            f"not a through-R row. Byte-closed n600 realized d_seg OWED. "
+            f"n_atoms={n_atoms(self.config)}."
         )
         return Lever(name="basis_family::windowed_curvelet", overrides=overrides, notes=notes)
 
     def owed_wire(self) -> tuple[str, ...]:
         """The exact landings needed to make this a REAL, composable, A/B-able basis arm."""
         return (
-            "trainer: add windowed_curvelet_feats forward + a --windowed-curvelet front-end flag "
-            "(register the flag in the DSL real_trainer_flags set -- never invent it inline)",
-            "inflate: add the op-parity windowed-curvelet feats regeneration to "
-            "tools/levelset_byte_close_and_eval.py (deterministic, rule-118 free bank)",
-            "parity: bit-exact numpy<->trainer<->inflate feats check (mlx_parity_check exists for "
-            "the primitive; extend it to the trainer/inflate path)",
-            "measure: real n600 through-R d_seg A/B (curvelet front-end vs polar-Fourier) at "
-            "matched counted bytes -- the ONLY score authority (operator-GO / CONTAINMENT)",
-            "sweep: (w0, width_ratio, aniso, n_scales, n_orient0, n_trans, f0) at optimal form "
-            "before any adopt/kill verdict (optimal-form discipline)",
+            "measure: real n600 byte-closed through-R d_seg A/B (windowed_curvelet vs "
+            "polar_fourier) under the governed launcher -- ONLY score-authority row; "
+            "operator-GO / CONTAINMENT, PREPARED_NOT_FIRED",
         )
 
 
 def windowed_curvelet_basis_lever(
     config: WindowedCurveletConfig | None = None,
 ) -> Lever:
-    """Convenience factory: the default-OFF byte-identical windowed-curvelet DSL lever."""
+    """Convenience factory for the explicit treatment (baseline omission keeps it default-OFF)."""
     spec = WindowedCurveletBasisLeverSpec(config=config or WindowedCurveletConfig())
     return spec.compile_lever()
 
@@ -116,7 +97,7 @@ __all__ = [
     "LOCALIZATION_ENVELOPE_SPAN",
     "SPATIAL_NTERM_CAPACITY_GAIN_N600",
     "SPECTRAL_CAPACITY_GAIN",
-    "WIRE_STATUS_OWED",
+    "WIRE_STATUS_READY",
     "WindowedCurveletBasisLeverSpec",
     "WindowedCurveletWireNotReady",
     "windowed_curvelet_basis_lever",
