@@ -146,6 +146,255 @@ class EvidenceClaim:
     waiver: str | None = None
 
 
+@dataclass(frozen=True)
+class FourierBasisAuditViolation:
+    """One executable Fourier-basis or malformed FFT-tool waiver finding."""
+
+    path: str
+    line: int
+    signature: str
+    line_text: str
+    kind: str
+    rationale: str
+
+
+_FOURIER_BASIS_SIGNATURE_RE = re.compile(
+    r"\b("
+    r"legacy_fourier_ab_control|LegacyFourierABControl|"
+    r"polar_fourier|polar_directional_fourier(?:_[A-Za-z0-9_]+)?|"
+    r"self_oriented_fourier(?:_[A-Za-z0-9_]+)?|"
+    r"directional_fourier(?:_[A-Za-z0-9_]+)?|fourier_features?(?:_[A-Za-z0-9_]+)?|"
+    r"fourier_basis|n_fourier|fourier_sigma|n_dir_freqs|"
+    r"global_polar_directional_fourier_plane_waves"
+    r")\b",
+    re.IGNORECASE,
+)
+_FOURIER_TOKEN_RE = re.compile(r"fourier", re.IGNORECASE)
+_FFT_TOOL_RE = re.compile(
+    r"\b(?:np|numpy|torch|mx|scipy)\.fft\b|"
+    r"\b(?:fft|fft2|ifft|ifft2|rfft|irfft|dct|dctn|idct|idctn)\s*\(",
+    re.IGNORECASE,
+)
+_VALID_FFT_TOOL_WAIVER_RE = re.compile(r"#\s*FFT_TOOL_USE_OK:(?P<reason>.+)$")
+_PLACEHOLDER_WAIVER_RE = re.compile(r"^\s*(?:todo|tbd|placeholder|ok|n/a|none)\s*$", re.IGNORECASE)
+_SOURCE_ROOTS = ("src/tac", "experiments")
+
+
+def _iter_python_sources(root: Path) -> tuple[Path, ...]:
+    paths: list[Path] = []
+    for rel_root in _SOURCE_ROOTS:
+        base = root / rel_root
+        if not base.exists():
+            continue
+        paths.extend(path for path in base.rglob("*.py") if path.is_file())
+    return tuple(sorted(paths))
+
+
+def _docstring_lines(tree: ast.AST) -> set[int]:
+    lines: set[int] = set()
+    for node in ast.walk(tree):
+        body = getattr(node, "body", None)
+        if not body or not isinstance(body, list):
+            continue
+        first = body[0]
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            start = getattr(first, "lineno", None)
+            end = getattr(first, "end_lineno", start)
+            if start is not None and end is not None:
+                lines.update(range(int(start), int(end) + 1))
+    return lines
+
+
+def _pure_comment_lines(source: str) -> set[int]:
+    """Lines whose first non-whitespace token is a comment.
+
+    Inline comments do not make the executable prefix disappear; a previous
+    implementation treated any line containing a COMMENT token as non-code and
+    could therefore hide ``fourier_features(...)  # comment`` from the gate.
+    """
+
+    return {
+        lineno
+        for lineno, line in enumerate(source.splitlines(), start=1)
+        if line.lstrip().startswith("#")
+    }
+
+
+def _non_executable_lines(source: str) -> set[int]:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return _pure_comment_lines(source)
+    return _docstring_lines(tree) | _pure_comment_lines(source)
+
+
+_REPLACEMENT_PROOF_SCOPES = {
+    "src/tac/boundary_math/compact_shearlet_frame.py": frozenset(
+        {
+            ("ClassDef", "ShearletCertificate"),
+            ("FunctionDef", "shearlet_certificate"),
+        }
+    ),
+    "src/tac/boundary_math/windowed_curvelet_frame.py": frozenset(
+        {
+            ("ClassDef", "LocalizationCertificate"),
+            ("FunctionDef", "localization_certificate"),
+        }
+    ),
+}
+_GATE_APPARATUS_SOURCE_PATHS = frozenset(
+    {
+        "src/tac/tests/test_check_pose_basis_fit_kill.py",
+        "src/tac/tests/test_v9_provenance_gates.py",
+        "src/tac/v9_provenance_gates.py",
+    }
+)
+
+
+def _replacement_proof_scope_lines(relative_path: str, source: str) -> set[int]:
+    """Return exact top-level certificate/proof scopes for canonical frame paths.
+
+    The exemption is derived from the parsed AST rather than source annotations.
+    It cannot cover the feature constructors because their names are deliberately
+    absent from the allowlist, and a same-basename file outside the canonical path
+    receives no exemption.
+    """
+
+    scopes = _REPLACEMENT_PROOF_SCOPES.get(relative_path)
+    if scopes is None:
+        return set()
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return set()
+    lines: set[int] = set()
+    for node in tree.body:
+        if (type(node).__name__, getattr(node, "name", None)) not in scopes:
+            continue
+        start = getattr(node, "lineno", None)
+        end = getattr(node, "end_lineno", start)
+        if start is not None and end is not None:
+            lines.update(range(int(start), int(end) + 1))
+    return lines
+
+
+def _gate_apparatus_source(relative_path: str) -> bool:
+    """The signature table is enforcement apparatus, not a witness representation."""
+
+    return relative_path in _GATE_APPARATUS_SOURCE_PATHS
+
+
+def _valid_fft_tool_waiver(line_text: str) -> bool:
+    match = _VALID_FFT_TOOL_WAIVER_RE.search(line_text)
+    if not match:
+        return False
+    reason = match.group("reason").strip()
+    return len(reason) >= 16 and not _PLACEHOLDER_WAIVER_RE.fullmatch(reason)
+
+
+def audit_no_fourier_basis_in_witness_representation(
+    repo_root: Path | None = None,
+    *,
+    paths: Sequence[Path] | None = None,
+) -> list[FourierBasisAuditViolation]:
+    """Pure source audit for executable Fourier witness-basis signatures.
+
+    This intentionally does not ban generic words such as ``frequency``,
+    ``spectral``, ``sin``, or ``cos``.  The strict flip is gated on the
+    operator-GO n600 byte-closed realized-through-R A/B proving that the
+    curvelet treatment has no d_seg regression versus the explicit legacy
+    Fourier A/B control, so the production preflight wrapper is warn-only for
+    now.
+    """
+
+    root = Path(repo_root or _REPO_ROOT).resolve()
+    source_paths = tuple(paths) if paths is not None else _iter_python_sources(root)
+    violations: list[FourierBasisAuditViolation] = []
+    for source_path in source_paths:
+        path = Path(source_path)
+        try:
+            text = path.read_text()
+        except UnicodeDecodeError:
+            text = path.read_text(errors="replace")
+        except OSError:
+            continue
+        if path.is_absolute():
+            try:
+                rel = path.resolve().relative_to(root).as_posix()
+            except ValueError:
+                rel = path.resolve().as_posix()
+        else:
+            rel = path.as_posix()
+        non_exec = _non_executable_lines(text)
+        replacement_proof_scope = _replacement_proof_scope_lines(rel, text)
+        exempt_source = _gate_apparatus_source(rel)
+        for lineno, line_text in enumerate(text.splitlines(), start=1):
+            if lineno in non_exec or exempt_source:
+                continue
+            fft_match = _FFT_TOOL_RE.search(line_text)
+            if fft_match:
+                if "FFT_TOOL_USE_OK:" in line_text and not _valid_fft_tool_waiver(line_text):
+                    violations.append(
+                        FourierBasisAuditViolation(
+                            path=rel,
+                            line=lineno,
+                            signature=fft_match.group(0),
+                            line_text=line_text.strip(),
+                            kind="MALFORMED_FFT_TOOL_WAIVER",
+                            rationale="explicit FFT/DCT/rFFT tool-use waiver lacks a substantive rationale",
+                        )
+                    )
+                elif "FFT_TOOL_USE_OK:" not in line_text:
+                    violations.append(
+                        FourierBasisAuditViolation(
+                            path=rel,
+                            line=lineno,
+                            signature=fft_match.group(0),
+                            line_text=line_text.strip(),
+                            kind="FFT_TOOL_USE_UNWAIVED",
+                            rationale="explicit FFT/DCT/rFFT use must be labeled as a tool transform",
+                        )
+                    )
+            signature_matches = tuple(_FOURIER_BASIS_SIGNATURE_RE.finditer(line_text))
+            if lineno not in replacement_proof_scope:
+                for match in signature_matches:
+                    violations.append(
+                        FourierBasisAuditViolation(
+                            path=rel,
+                            line=lineno,
+                            signature=match.group(1),
+                            line_text=line_text.strip(),
+                            kind="FOURIER_BASIS_SIGNATURE",
+                            rationale="executable witness representation still exposes Fourier-basis semantics",
+                        )
+                    )
+            if not signature_matches:
+                token_match = _FOURIER_TOKEN_RE.search(line_text)
+                if (
+                    token_match
+                    and lineno not in replacement_proof_scope
+                    and not _valid_fft_tool_waiver(line_text)
+                ):
+                    violations.append(
+                        FourierBasisAuditViolation(
+                            path=rel,
+                            line=lineno,
+                            signature=token_match.group(0),
+                            line_text=line_text.strip(),
+                            kind="FOURIER_SEMANTIC_UNWAIVED",
+                            rationale=(
+                                "executable Fourier semantic is not a known basis signature and lacks "
+                                "a substantive FFT-tool waiver"
+                            ),
+                        )
+                    )
+    return violations
+
+
 def _canonical_factories() -> Mapping[str, Any]:
     from tac.witness_dsl.spec_v9_cgauge import (
         compile_v9_cgauge_432_launch_config,
@@ -498,7 +747,7 @@ def collect_live_v9_fake_claims(repo_root: Path | None = None) -> tuple[FakeClai
     """Derive basis/pose/self-orient claims from the live V9 compiled surface."""
 
     from tac.witness_control.pose_verdict_gate import check_pose_verdict_fallback_is_live_or_refused
-    from tac.witness_dsl.spec_v9_cgauge import V9_CGAUGE_432_PROVENANCE, V9_CGAUGE_PROVENANCE
+    from tac.witness_dsl.basis_control import LEGACY_FOURIER_AB_CONTROL, normalize_basis_family
 
     root = Path(repo_root or _REPO_ROOT).resolve()
     basis_source = root / "src/tac/boundary_math/lever_b_levelset_generator.py"
@@ -508,24 +757,27 @@ def collect_live_v9_fake_claims(repo_root: Path | None = None) -> tuple[FakeClai
         and "not spatially localized" in source
     )
     pose_receipt = check_pose_verdict_fallback_is_live_or_refused(gate_on=False)
-    provenance = dict(V9_CGAUGE_PROVENANCE)
-    provenance.update(V9_CGAUGE_432_PROVENANCE)
     claims: list[FakeClaim] = []
     for program_name, factory in _canonical_factories().items():
         launch = factory()
         flags = launch.typed.to_program().flag_dict()
-        curvelet_named_flags = sorted(
-            flag for flag in flags if "curvelet" in str((provenance.get(flag) or {}).get("law", "")).lower()
-        )
+        compiled_basis = normalize_basis_family(flags.get("--basis", LEGACY_FOURIER_AB_CONTROL))
+        localized = compiled_basis == "windowed_curvelet"
         claims.append(
             FakeClaim(
                 claim_id=f"{program_name}:compiled-surface",
                 vehicle=program_name,
-                active_basis_label="curvelet" if curvelet_named_flags else "polar_directional_fourier",
+                active_basis_label=compiled_basis,
                 basis_implementation=(
-                    "global_polar_directional_fourier_plane_waves" if global_fourier_alias else "source-unclassified"
+                    "tac.boundary_math.windowed_curvelet_frame.WindowedCurveletConfig"
+                    if localized
+                    else (
+                        "global_polar_directional_fourier_plane_waves"
+                        if global_fourier_alias
+                        else "source-unclassified"
+                    )
                 ),
-                basis_is_spatially_localized=False if global_fourier_alias else None,
+                basis_is_spatially_localized=True if localized else (False if global_fourier_alias else None),
                 pose_selected=False,
                 d_pose_source=str(pose_receipt.get("score_path_d_pose_source", "live_posenet")),
                 compiled_self_orient=bool(flags.get("--curvelet-self-orient", False)),
@@ -555,6 +807,42 @@ def check_v9_fake_claim_guards(
         print(f"[v9-fake-claims] OK: {len(checked)} live claim surface(s)")
     if strict and violations:
         raise V9ProvenanceGateError("V9 fake claim guard failed:\n" + "\n".join(violations))
+    return violations
+
+
+def check_no_fourier_basis_in_witness_representation(
+    repo_root: Path | None = None,
+    *,
+    strict: bool = False,
+    verbose: bool = True,
+    paths: Sequence[Path] | None = None,
+) -> list[str]:
+    """Warn on Fourier-as-witness-basis until the owed no-regression A/B exists.
+
+    Strict mode is intentionally gated on an operator-GO n600 byte-closed,
+    realized-through-R curvelet-vs-legacy-control verdict proving no d_seg
+    regression.  Today this gate is apparatus only: it reports executable
+    Fourier-basis debt and malformed FFT-tool waivers, but preflight wires it
+    warn-only.
+    """
+
+    findings = audit_no_fourier_basis_in_witness_representation(repo_root, paths=paths)
+    violations = [
+        f"{item.path}:{item.line}: {item.kind} {item.signature!r}: {item.rationale}"
+        for item in findings
+    ]
+    if violations and verbose:
+        print(f"[no-fourier-basis] WARN: {len(violations)} violation(s)")
+        for violation in violations[:_PRINT_LIMIT]:
+            print(f"  - {violation}")
+        if len(violations) > _PRINT_LIMIT:
+            print(f"  - ... {len(violations) - _PRINT_LIMIT} additional violation(s)")
+    elif verbose:
+        print("[no-fourier-basis] OK: no executable Fourier witness-basis signatures")
+    if strict and violations:
+        raise V9ProvenanceGateError(
+            "Fourier witness-basis structural ban is not clean:\n" + "\n".join(violations)
+        )
     return violations
 
 
@@ -664,12 +952,15 @@ __all__ = [
     "EvidenceClaim",
     "FakeClaim",
     "FlagProvenanceBinding",
+    "FourierBasisAuditViolation",
     "V9ProvenanceGateError",
     "audit_config_flag_provenance_bijection",
     "audit_evidence_authority_claims",
+    "audit_no_fourier_basis_in_witness_representation",
     "audit_v9_fake_claims",
     "check_config_flag_provenance_bijection_complete",
     "check_evidence_authority_claims_are_custodied",
+    "check_no_fourier_basis_in_witness_representation",
     "check_v9_fake_claim_guards",
     "collect_live_v9_bijection_snapshots",
     "collect_live_v9_evidence_claims",

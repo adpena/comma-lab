@@ -78148,6 +78148,47 @@
         }
       },
       "notes": "BUILD + local verify only; PREPARED_NOT_FIRED; realized n600 d_seg and exact score OWED operator GO"
+    },
+    {
+      "id": "no_fourier_basis_sweep_20260715T015809Z",
+      "name": "No Fourier basis audit and structural warn gate",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Operator directive: classify all src/tac + experiments Fourier occurrences; retain legacy Fourier A/B control; warn-only gate until curvelet through-R no-regression; no launch/score."
     }
   ],
   "level_rules": {
@@ -78157,5 +78198,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-15T01:24:00Z"
+  "updated_at": "2026-07-15T02:01:22Z"
 }

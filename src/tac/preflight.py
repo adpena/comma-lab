@@ -1439,6 +1439,19 @@ def check_v9_fake_claim_guards(
     )
 
 
+def check_no_fourier_basis_in_witness_representation(
+    repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
+) -> list[str]:
+    """Warn on executable Fourier witness-basis debt until the owed n600 A/B verdict."""
+
+    return _run_v9_provenance_gate(
+        "check_no_fourier_basis_in_witness_representation",
+        repo_root=Path(repo_root or Path(__file__).resolve().parents[2]),
+        strict=strict,
+        verbose=verbose,
+    )
+
+
 def check_evidence_authority_claims_are_custodied(
     repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
 ) -> list[str]:
@@ -6455,6 +6468,7 @@ def preflight_all(
         # marker is not authority for the flip.
         check_config_flag_provenance_bijection_complete(strict=False, verbose=verbose)
         check_v9_fake_claim_guards(strict=False, verbose=verbose)
+        check_no_fourier_basis_in_witness_representation(strict=False, verbose=verbose)
         check_evidence_authority_claims_are_custodied(strict=False, verbose=verbose)
 
         # 2026-07-09 EIGHTFOLD design-philosophy gates (operator "Encode all"):

@@ -24,7 +24,9 @@ def test_manual_antidiagonal_spectrum_is_per_channel_fft_magnitude() -> None:
     coeffs[0, 0, 1] = coeffs[0, 0, 3] = 2.0
     coeffs[0, 1, 0] = coeffs[0, 3, 0] = 3.0
     coeffs[1, 1, 1] = coeffs[1, 3, 3] = 5.0
-    signal = np.fft.ifft2(coeffs, axes=(-2, -1)).real
+    signal = np.fft.ifft2(  # FFT_TOOL_USE_OK:constructs synthetic test fixtures only
+        coeffs, axes=(-2, -1)
+    ).real
 
     np.testing.assert_allclose(fresh_spectrum(signal, 2), [0.5, 0.5])
 
@@ -34,7 +36,7 @@ def test_dc_is_omitted_and_signal_scaling_does_not_change_spectrum() -> None:
     coeffs[0, 0] = 1_000.0  # Must not influence the retained distribution.
     coeffs[0, 1] = 1.0
     coeffs[1, 1] = 3.0
-    signal = np.fft.ifft2(coeffs).real
+    signal = np.fft.ifft2(coeffs).real  # FFT_TOOL_USE_OK:constructs synthetic test fixtures only
 
     expected = np.array([0.25, 0.75])
     np.testing.assert_allclose(fresh_spectrum(signal, 2), expected)
@@ -45,11 +47,11 @@ def test_fresh_selects_exact_spectral_match_and_reports_cdf_l1_distance() -> Non
     target_coeffs = np.zeros((4, 4), dtype=np.complex128)
     target_coeffs[0, 1] = 1.0
     target_coeffs[1, 1] = 3.0
-    target = np.fft.ifft2(target_coeffs).real
+    target = np.fft.ifft2(target_coeffs).real  # FFT_TOOL_USE_OK:constructs synthetic test fixtures only
 
     low_coeffs = np.zeros((4, 4), dtype=np.complex128)
     low_coeffs[0, 1] = 4.0
-    low = np.fft.ifft2(low_coeffs).real
+    low = np.fft.ifft2(low_coeffs).real  # FFT_TOOL_USE_OK:constructs synthetic test fixtures only
 
     selection = select_fresh_configuration(target, {"low": low, "match": target}, 2)
     assert selection.candidate == "match"
@@ -59,7 +61,9 @@ def test_fresh_selects_exact_spectral_match_and_reports_cdf_l1_distance() -> Non
 
 
 def test_fresh_tie_break_is_mapping_order_stable() -> None:
-    target = np.fft.ifft2(np.array([[0.0, 1.0], [0.0, 0.0]])).real
+    target = np.fft.ifft2(  # FFT_TOOL_USE_OK:constructs synthetic test fixtures only
+        np.array([[0.0, 1.0], [0.0, 0.0]])
+    ).real
     # Both candidates are the same spectrum, so strict '<' preserves "first".
     selection = select_fresh_configuration(target, {"first": target, "second": target}, 1)
     assert selection.candidate == "first"

@@ -14,9 +14,11 @@ from tac.v9_provenance_gates import (
     V9ProvenanceGateError,
     audit_config_flag_provenance_bijection,
     audit_evidence_authority_claims,
+    audit_no_fourier_basis_in_witness_representation,
     audit_v9_fake_claims,
     check_config_flag_provenance_bijection_complete,
     check_evidence_authority_claims_are_custodied,
+    check_no_fourier_basis_in_witness_representation,
     check_v9_fake_claim_guards,
     collect_live_v9_bijection_snapshots,
     collect_live_v9_evidence_claims,
@@ -278,9 +280,168 @@ def test_fake_claim_strict_mode_refuses_real_synthesized_violation() -> None:
 def test_live_v9_fake_claim_collector_derives_alias_from_source() -> None:
     claims = collect_live_v9_fake_claims()
     assert len(claims) == 4
-    assert all(claim.active_basis_label == "curvelet" for claim in claims)
+    assert all(claim.active_basis_label == "legacy_fourier_ab_control" for claim in claims)
     assert all(claim.basis_implementation == "global_polar_directional_fourier_plane_waves" for claim in claims)
-    assert len(audit_v9_fake_claims(claims)) == 4
+    assert audit_v9_fake_claims(claims) == []
+
+
+def test_live_v9_fake_claim_collector_labels_selected_curvelet_from_compiled_flag(monkeypatch) -> None:
+    import tac.v9_provenance_gates as gates
+
+    class _Program:
+        @staticmethod
+        def flag_dict():
+            return {"--basis": "windowed_curvelet"}
+
+    class _Typed:
+        @staticmethod
+        def to_program():
+            return _Program()
+
+    class _Launch:
+        typed = _Typed()
+
+    monkeypatch.setattr(gates, "_canonical_factories", lambda: {"curvelet_arm": _Launch})
+    claims = gates.collect_live_v9_fake_claims()
+    assert len(claims) == 1
+    assert claims[0].active_basis_label == "windowed_curvelet"
+    assert claims[0].basis_implementation.endswith("WindowedCurveletConfig")
+    assert claims[0].basis_is_spatially_localized is True
+    assert audit_v9_fake_claims(claims) == []
+
+
+# ---------------------------------------------------------------------------
+# warn-only Fourier structural-ban audit.
+# ---------------------------------------------------------------------------
+
+
+def test_no_fourier_gate_catches_synthesized_witness_source_with_line(tmp_path) -> None:
+    src = tmp_path / "witness.py"
+    src.write_text(
+        "def build():\n"
+        "    return polar_directional_fourier_feats(coords, B)  # executable despite inline comment\n"
+    )
+    violations = audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src])
+    assert len(violations) == 1
+    assert violations[0].line == 2
+    assert violations[0].kind == "FOURIER_BASIS_SIGNATURE"
+    assert "polar_directional_fourier_feats" in violations[0].line_text
+
+
+def test_no_fourier_gate_catches_unregistered_camelcase_fourier_encoder(tmp_path) -> None:
+    src = tmp_path / "witness.py"
+    src.write_text("def build(coords):\n    return NovelFourierEncoding(coords)\n")
+    violations = audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src])
+    assert len(violations) == 1
+    assert violations[0].kind == "FOURIER_SEMANTIC_UNWAIVED"
+
+
+def test_no_fourier_gate_accepts_valid_fft_tool_waiver(tmp_path) -> None:
+    src = tmp_path / "tool.py"
+    src.write_text(
+        "def measure(x):\n"
+        "    return np.fft.fft2(x)  # FFT_TOOL_USE_OK:measures spectrum only; not a decoder basis\n"
+    )
+    assert audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src]) == []
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "return np.fft.fft2(x)\n",
+        "return np.fft.fft2(x)  # FFT_TOOL_USE_OK:TODO\n",
+    ],
+)
+def test_no_fourier_gate_refuses_missing_or_placeholder_fft_waiver(tmp_path, line) -> None:
+    src = tmp_path / "bad_tool.py"
+    src.write_text("def measure(x):\n    " + line)
+    violations = audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src])
+    assert violations
+    assert violations[0].kind in {"FFT_TOOL_USE_UNWAIVED", "MALFORMED_FFT_TOOL_WAIVER"}
+
+
+def test_no_fourier_gate_curvelet_only_source_passes(tmp_path) -> None:
+    src = tmp_path / "curvelet.py"
+    src.write_text("def build():\n    return windowed_curvelet_feats(coords, cfg)\n")
+    assert audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src]) == []
+
+
+def test_no_fourier_gate_replacement_proof_text_does_not_false_positive(tmp_path) -> None:
+    src = tmp_path / "windowed_curvelet_frame.py"
+    src.write_text(
+        "\"\"\"Proof compares against Fourier plane waves without selecting them.\"\"\"\n"
+        "def build():\n"
+        "    return windowed_curvelet_feats(coords, cfg)\n"
+    )
+    assert audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src]) == []
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "certificate_name", "proof_name"),
+    [
+        (
+            "src/tac/boundary_math/windowed_curvelet_frame.py",
+            "LocalizationCertificate",
+            "localization_certificate",
+        ),
+        (
+            "src/tac/boundary_math/compact_shearlet_frame.py",
+            "ShearletCertificate",
+            "shearlet_certificate",
+        ),
+    ],
+)
+def test_no_fourier_gate_exempts_only_exact_canonical_certificate_scope(
+    tmp_path, relative_path, certificate_name, proof_name
+) -> None:
+    src = tmp_path / relative_path
+    src.parent.mkdir(parents=True)
+    src.write_text(
+        f"class {certificate_name}:\n"
+        "    fourier_envelope_span: float\n"
+        "\n"
+        f"def {proof_name}(coords):\n"
+        "    return polar_directional_fourier_feats(coords, B)\n"
+    )
+    assert audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src]) == []
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "feature_name"),
+    [
+        ("src/tac/boundary_math/windowed_curvelet_frame.py", "windowed_curvelet_feats"),
+        ("src/tac/boundary_math/compact_shearlet_frame.py", "compact_shearlet_feats"),
+    ],
+)
+def test_no_fourier_gate_audits_feature_function_at_canonical_replacement_path(
+    tmp_path, relative_path, feature_name
+) -> None:
+    src = tmp_path / relative_path
+    src.parent.mkdir(parents=True)
+    src.write_text(f"def {feature_name}(coords):\n    return fourier_features(coords)\n")
+    violations = audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src])
+    assert len(violations) == 1
+    assert violations[0].kind == "FOURIER_BASIS_SIGNATURE"
+
+
+def test_no_fourier_gate_does_not_exempt_certificate_scope_at_noncanonical_path(tmp_path) -> None:
+    src = tmp_path / "windowed_curvelet_frame.py"
+    src.write_text("def localization_certificate(coords):\n    return fourier_features(coords)\n")
+    violations = audit_no_fourier_basis_in_witness_representation(tmp_path, paths=[src])
+    assert len(violations) == 1
+    assert violations[0].kind == "FOURIER_BASIS_SIGNATURE"
+
+
+def test_no_fourier_gate_strict_raises_but_warn_only_returns(tmp_path) -> None:
+    src = tmp_path / "witness.py"
+    src.write_text("def build():\n    return fourier_features(coords)\n")
+    assert check_no_fourier_basis_in_witness_representation(
+        tmp_path, paths=[src], strict=False, verbose=False
+    )
+    with pytest.raises(V9ProvenanceGateError, match="Fourier witness-basis"):
+        check_no_fourier_basis_in_witness_representation(
+            tmp_path, paths=[src], strict=True, verbose=False
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -395,6 +556,7 @@ def test_preflight_all_wires_all_three_v9_gates_warn_only() -> None:
     expected = {
         "check_config_flag_provenance_bijection_complete",
         "check_v9_fake_claim_guards",
+        "check_no_fourier_basis_in_witness_representation",
         "check_evidence_authority_claims_are_custodied",
     }
     assert expected <= calls.keys()

@@ -89,8 +89,8 @@ def test_coordinate_conversion_matches_empirical_fft() -> None:
     content. This is the guard against the "measured k in camera px, implemented
     w in normalized coords" bug class: if the formula is wrong, this FAILS."""
     h, w = v2.CAMERA_HW
-    fy = np.fft.fftfreq(h)[:, None]
-    fx = np.fft.fftfreq(w)[None, :]
+    fy = np.fft.fftfreq(h)[:, None]  # FFT_TOOL_USE_OK:measures scorer spectral sensitivity
+    fx = np.fft.fftfreq(w)[None, :]  # FFT_TOOL_USE_OK:measures scorer spectral sensitivity
     fmag = np.sqrt(fy**2 + fx**2)
     rng = np.random.default_rng(0)
     # bands away from the lowest annulus (whose center label undershoots the
@@ -98,7 +98,9 @@ def test_coordinate_conversion_matches_empirical_fft() -> None:
     for k in (1, 2, 3, 4):
         band = v2.BandSpec(k, k / 6, (k + 1) / 6, "isotropic")
         field = v2.band_limited_field((h, w, 1), band, rng)[..., 0]
-        power = np.abs(np.fft.fft2(field)) ** 2
+        power = np.abs(  # FFT_TOOL_USE_OK:measures synthetic perturbation power only
+            np.fft.fft2(field)  # FFT_TOOL_USE_OK:measures synthetic perturbation power only
+        ) ** 2
         emp_cyc_per_px = float((fmag * power).sum() / power.sum())
         coords = v2.frequency_coordinates_for_band(band)
         rel_err = abs(coords.camera_cycles_per_pixel - emp_cyc_per_px) / emp_cyc_per_px
@@ -258,7 +260,9 @@ def test_band_limited_field_lives_in_its_annulus() -> None:
     band = v2.BandSpec(2, 0.3, 0.5, "isotropic")
     field = v2.band_limited_field((64, 64, 1), band, np.random.default_rng(0))[..., 0]
     radius = v2.band_radius_grid((64, 64))
-    power = np.abs(np.fft.fft2(field)) ** 2
+    power = np.abs(  # FFT_TOOL_USE_OK:measures synthetic perturbation power only
+        np.fft.fft2(field)  # FFT_TOOL_USE_OK:measures synthetic perturbation power only
+    ) ** 2
     in_band = power[(radius >= band.r_lo) & (radius < band.r_hi)].sum()
     out_band = power[(radius < band.r_lo) | (radius >= band.r_hi)].sum()
     assert in_band > 0

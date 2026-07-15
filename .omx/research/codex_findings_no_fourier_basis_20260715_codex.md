@@ -3,6 +3,9 @@
 **UTC:** 2026-07-15
 **Verdict:** `STRUCTURAL_TRANSITION_BUILT_WARN_ONLY`; strict/default/delete flip `OWED_OPERATOR_GO_N600_BYTE_CLOSED_THROUGHR`.
 **Pointer:** `UNMOVED` (`0.19108` submittable / `0.18804` bank).
+**UTC:** 2026-07-15  
+**Verdict:** `STRUCTURAL_TRANSITION_BUILT_WARN_ONLY`; strict/default/delete flip `OWED_OPERATOR_GO_N600_BYTE_CLOSED_THROUGHR`.  
+**Pointer:** `UNMOVED` (`0.19108` submittable / `0.18804` bank).  
 **Authority:** `$0` source audit and config/apparatus verification only; no training, dispatch, score, or family-selection claim.
 
 ## Exhaustiveness and counts

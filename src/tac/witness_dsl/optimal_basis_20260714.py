@@ -31,6 +31,9 @@ from tac.boundary_math.lever_b_levelset_generator import (
     curvelet_directional_B,
     curvelet_feats,
 )
+from tac.witness_dsl.basis_control import (
+    LEGACY_FOURIER_AB_CONTROL as LEGACY_FOURIER_AB_CONTROL_ID,
+)
 from tac.witness_dsl.curriculum_dsl import (
     Lever,
     build_real_trainer_parser,
@@ -41,6 +44,7 @@ from tac.witness_dsl.curriculum_dsl import (
 class BasisFamily(StrEnum):
     """Stable family IDs; names describe implemented mathematics, not ancestry."""
 
+    LEGACY_FOURIER_AB_CONTROL = LEGACY_FOURIER_AB_CONTROL_ID
     POLAR_DIRECTIONAL_FOURIER = "polar_directional_fourier"
     SELF_ORIENTED_FOURIER = "self_oriented_fourier"
     HYBRID_FOURIER_INTERIOR_CURVELET_BOUNDARY = "hybrid_fourier_interior_curvelet_boundary"
@@ -89,6 +93,17 @@ _NO_DIFFERENT_FRAME_RECEIPT = (
 # No unmeasured percentage is guessed.  Numerical d_seg rows are restricted to
 # the settled owed-16 warm-start cell at ep675.
 _CATALOG = (
+    BasisCandidate(
+        BasisFamily.LEGACY_FOURIER_AB_CONTROL,
+        0,
+        "legacy control only: byte-identical historical global plane-wave computation for owed A/B",
+        "global polar directional Fourier plane waves, selected only as the control arm",
+        "bank regenerated free; learned/video-derived weights counted",
+        "implemented in NumPy, MLX, and generated inflate.py",
+        BasisEvidence.MEASURED_THROUGH_R_N600_FORMULATION,
+        0.004244,
+        "control label for bounded warm-start ep675; no curvelet default or ship claim",
+    ),
     BasisCandidate(
         BasisFamily.HYBRID_FOURIER_INTERIOR_CURVELET_BOUNDARY,
         1,
@@ -303,13 +318,14 @@ class UnsupportedBasisFamily(RuntimeError):
 class BasisLeverSpec:
     """Typed basis-family stage/config parameter.
 
-    ``polar_directional_fourier`` is the measured lower-parameter fallback.
+    ``legacy_fourier_ab_control`` is the explicit control for the owed A/B.
+    ``polar_directional_fourier`` is retained as historical source vocabulary.
     ``self_oriented_fourier`` is retained for scoped reproduction, not selected
     as the winner.  ``siren_finer`` compiles an existing fresh-start family but
     carries no n600 winner claim.  Every genuinely different frame refuses.
     """
 
-    family: BasisFamily = BasisFamily.POLAR_DIRECTIONAL_FOURIER
+    family: BasisFamily = BasisFamily.LEGACY_FOURIER_AB_CONTROL
     bank_n_scales: int = 4
     bank_n_orient0: int = 6
     bank_f0: float = 2.0
@@ -342,10 +358,18 @@ class BasisLeverSpec:
             "--bank-n-iso": self.bank_n_iso,
             "--max-bank-freq": self.max_bank_freq,
         }
-        if self.family is BasisFamily.POLAR_DIRECTIONAL_FOURIER:
-            overrides = {**common, "--self-orient": False}
+        if self.family in (BasisFamily.LEGACY_FOURIER_AB_CONTROL, BasisFamily.POLAR_DIRECTIONAL_FOURIER):
+            overrides = (
+                {**common, "--self-orient": False, "--basis": LEGACY_FOURIER_AB_CONTROL_ID}
+                if self.family is BasisFamily.LEGACY_FOURIER_AB_CONTROL
+                else {**common, "--self-orient": False}
+            )
             notes = (
-                "task497 measured fallback: global polar directional Fourier; owed16 OFF won the "
+                "legacy Fourier A/B control only: historical global plane-wave computation; "
+                "curvelet default/strict flip owed to an operator-GO n600 byte-closed "
+                "realized-through-R no-regression verdict"
+                if self.family is BasisFamily.LEGACY_FOURIER_AB_CONTROL
+                else "task497 measured fallback: global polar directional Fourier; owed16 OFF won the "
                 "bounded warm-start n600 cell with 1536 fewer decoder params; no archive-byte claim"
             )
         elif self.family is BasisFamily.SELF_ORIENTED_FOURIER:
@@ -501,7 +525,76 @@ def basis_metric_interface(family: BasisFamily) -> BasisMetricInterface:
     )
 
 
+@dataclass(frozen=True)
+class BasisABConfigPair:
+    """Pure, launch-shaped V9 ideal-mod32 basis A/B surface; never fires a run."""
+
+    control: Any
+    treatment: Any
+    control_basis: str
+    treatment_basis: str
+    differing_flags_excluding_out_dir: tuple[str, ...]
+    status: str = "PREPARED_NOT_FIRED_OPERATOR_GO_REQUIRED"
+
+
+def _trainer_flag_map(config: Any) -> dict[str, Any]:
+    return dict(config.to_trainer_flags())
+
+
+def v9_ideal_mod32_basis_ab_configs(
+    *,
+    gt_cache_path: str = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    num_pairs: int = 600,
+    epochs: int = 3000,
+    control_out_dir: str = "experiments/results/v9_cgauge_ideal_mod32_legacy_fourier_ab_control_20260715",
+    treatment_out_dir: str = "experiments/results/v9_cgauge_ideal_mod32_windowed_curvelet_20260715",
+) -> BasisABConfigPair:
+    """Return the runnable DSL-authored V9 ideal-mod32 basis A/B pair.
+
+    Both arms explicitly select exactly one basis lever.  Excluding ``--out-dir``,
+    their compiled trainer flags must differ only by ``--basis``.  This function
+    is pure construction: no launch, no training, no score/family verdict.
+    """
+
+    from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_ideal_mod32_launch_config
+
+    control = compile_v9_cgauge_ideal_mod32_launch_config(
+        gt_cache_path=gt_cache_path,
+        num_pairs=num_pairs,
+        epochs=epochs,
+        out_dir=control_out_dir,
+    ).with_dsl_lever_factories("LegacyFourierABControl")
+    treatment = compile_v9_cgauge_ideal_mod32_launch_config(
+        gt_cache_path=gt_cache_path,
+        num_pairs=num_pairs,
+        epochs=epochs,
+        out_dir=treatment_out_dir,
+    ).with_dsl_lever_factories("WindowedCurveletBasis")
+    c_flags = _trainer_flag_map(control)
+    t_flags = _trainer_flag_map(treatment)
+    differing = tuple(
+        sorted(
+            flag
+            for flag in set(c_flags) | set(t_flags)
+            if flag != "--out-dir" and c_flags.get(flag) != t_flags.get(flag)
+        )
+    )
+    if differing != ("--basis",):
+        raise RuntimeError(
+            "V9 ideal-mod32 basis A/B must differ only by --basis excluding --out-dir; "
+            f"got {differing}"
+        )
+    return BasisABConfigPair(
+        control=control,
+        treatment=treatment,
+        control_basis=str(c_flags["--basis"]),
+        treatment_basis=str(t_flags["--basis"]),
+        differing_flags_excluding_out_dir=differing,
+    )
+
+
 __all__ = [
+    "BasisABConfigPair",
     "BasisCandidate",
     "BasisEvidence",
     "BasisFamily",
@@ -515,4 +608,5 @@ __all__ = [
     "basis_metric_interface",
     "inflate_compile_contract",
     "lever_argv",
+    "v9_ideal_mod32_basis_ab_configs",
 ]

@@ -101,6 +101,12 @@ from tac.boundary_math.windowed_curvelet_frame import (  # noqa: E402
     mlx_parity_check as windowed_curvelet_mlx_parity_check,
     windowed_curvelet_feats,
 )
+from tac.witness_dsl.basis_control import (  # noqa: E402
+    LEGACY_FOURIER_AB_CONTROL,
+    is_legacy_fourier_ab_control,
+    normalize_basis_family,
+)
+
 # MOD-DIM DYNAMICS telemetry (operator 2026-07-08): score-neutral, read-only spectral + per-dim
 # introspection of the per-pair latent (code) table. Pure numpy; emitting a row reads snapshots only
 # (never touches the update path / RNG) => BYTE-IDENTICAL training. See src/tac/boundary_math/mod_dim_dynamics.py.
@@ -743,9 +749,9 @@ def _build_ema_checkpoint_arrays(
     flat["__cfg_max_bank_freq"] = np.asarray(-1.0 if args.max_bank_freq is None else float(args.max_bank_freq))
     flat["__cfg_lane_edge_weight"] = np.asarray(float(args.lane_edge_weight))
     flat["__cfg_lane_edge_class"] = np.asarray(int(args.lane_edge_class))
-    # Additive/legacy-compatible: absence means the historical polar-Fourier path.  Do not stamp
-    # the default value so an OFF/default checkpoint retains its pre-P0 byte layout exactly.
-    if str(getattr(args, "basis", "polar_fourier")) != "polar_fourier":
+    # Additive/legacy-compatible: absence means the historical computation now named the legacy
+    # Fourier A/B control. Do not stamp it, so an OFF/default checkpoint keeps its old byte layout.
+    if not is_legacy_fourier_ab_control(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)):
         flat["__cfg_basis"] = np.asarray(str(args.basis))
     # ---- NEW provenance (additive; closes the self-orient/curriculum trainer-persist gap) ----
     flat["__epoch"] = np.asarray(int(epoch))
@@ -814,7 +820,7 @@ def _build_resume_state_arrays(
     out["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
     out["__cfg_mod_dim"] = np.asarray(args.mod_dim)
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
-    if str(getattr(args, "basis", "polar_fourier")) != "polar_fourier":
+    if not is_legacy_fourier_ab_control(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)):
         out["__cfg_basis"] = np.asarray(str(args.basis))
     # S1 structural coordinate-basis identity. The wrapper adds no tensors, so
     # param-key compatibility cannot detect a dropped/changed compander on resume.
@@ -1147,7 +1153,7 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
     # (key, current value, is_float) — non-float compared as string (int/bool/str all normalize).
     checks: list[tuple[str, object, bool]] = [
         ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
-        ("__cfg_basis", str(getattr(args, "basis", "polar_fourier")), False),
+        ("__cfg_basis", normalize_basis_family(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)), False),
         ("__cfg_self_orient", int(bool(getattr(args, "self_orient", False))), False),
         ("__cfg_ground_frame_chart",
          int(bool(getattr(args, "ground_frame_chart", False))), False),
@@ -1276,6 +1282,8 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         if key not in resume_cfg:
             continue
         ckpt = resume_cfg[key]
+        if key == "__cfg_basis":
+            ckpt = normalize_basis_family(ckpt)
         if is_float:
             try:
                 diverged = abs(float(ckpt) - float(cur)) > 1e-6
@@ -3742,7 +3750,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # Legacy-byte/hash preservation: the new parser default describes the historical path, so
         # omit it from the causal payload exactly as if the flag did not exist.  The selected family
         # is material and remains explicitly frozen into the treatment manifest.
-        if str(_causal_treatment_values.get("basis", "polar_fourier")) == "polar_fourier":
+        if is_legacy_fourier_ab_control(
+            _causal_treatment_values.get("basis", LEGACY_FOURIER_AB_CONTROL)
+        ):
             _causal_treatment_values.pop("basis", None)
         _causal_treatment = causal_freeze_fields(_causal_treatment_values)
         _causal_treatment_sha256 = _causal_sha256(_causal_treatment_values)
@@ -3982,7 +3992,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     coords_np = _build_render_coords(render_h, render_w)
 
     # --- FRONT-END: generic curvelet/shearlet bank (byte-closeable, GT-free) ---
-    basis_family = str(getattr(args, "basis", "polar_fourier"))
+    basis_family = normalize_basis_family(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL))
     if basis_family == "windowed_curvelet":
         # P0 scope is the clean equal-config basis A/B.  These consumers currently carry
         # polar-bank-specific operators or rebuild through a NumPy-only per-pair cache; accepting
@@ -4012,7 +4022,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     B = curvelet_directional_B(bank, max_freq=args.max_bank_freq)
     windowed_cfg: WindowedCurveletConfig | None = None
     coord_feats_windowed_mx = None
-    if basis_family == "polar_fourier":
+    if basis_family == LEGACY_FOURIER_AB_CONTROL:
         # DO NOT refactor this expression: it is the sealed historical default path.
         curv_feats_np = curvelet_feats(coords_np, B).astype(np.float32)  # (P, 2*cols)
     elif basis_family == "windowed_curvelet":
@@ -4040,7 +4050,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError(f"unknown --basis family: {basis_family!r}")
 
     def _basis_feats_np(basis_coords: np.ndarray) -> np.ndarray:
-        if basis_family == "polar_fourier":
+        if basis_family == LEGACY_FOURIER_AB_CONTROL:
             return curvelet_feats(basis_coords, B).astype(np.float32)
         assert windowed_cfg is not None
         return windowed_curvelet_feats(basis_coords, windowed_cfg).astype(np.float32)
@@ -4144,10 +4154,12 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             return curv_feats_np
         return np.concatenate([curv_feats_np, dir_feats_per_pair[pi]], axis=-1).astype(np.float32)
 
-    if basis_family == "polar_fourier":
+    if basis_family == LEGACY_FOURIER_AB_CONTROL:
         print(json.dumps({"stage": "front_end", "curvelet_cols": int(B.shape[1]), "dir_w": int(dir_w),
                           "in_feat": int(in_feat), "self_orient": use_self_orient,
-                          "front_end": ("curvelet+self_orient" if use_self_orient else "generic-curvelet only")}), flush=True)
+                          "basis": basis_family,
+                          "front_end": ("legacy_fourier_ab_control+self_orient"
+                                        if use_self_orient else "legacy_fourier_ab_control")}), flush=True)
     else:
         print(json.dumps({"stage": "front_end", "basis": basis_family,
                           "basis_atoms": int(curv_feats_np.shape[1] // 2), "dir_w": int(dir_w),
@@ -4308,7 +4320,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "note": "separate fine-grid render feats; base-grid eikonal/sdf unaffected"}), flush=True)
     coord_feats_mx = (
         mx.array(curv_feats_np)
-        if basis_family == "polar_fourier"
+        if basis_family == LEGACY_FOURIER_AB_CONTROL
         else coord_feats_windowed_mx
     )
     assert coord_feats_mx is not None
@@ -9570,7 +9582,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "saved_size": int(_hp_saved.size), "expected": int(P),
                                   "note": "persisted baseline size mismatch -> recompute stands "
                                   "(defence-in-depth; config guard already checks hardness cfg)"}), flush=True)
-    if args.max_bank_freq is not None and basis_family == "polar_fourier":
+    if args.max_bank_freq is not None and basis_family == LEGACY_FOURIER_AB_CONTROL:
         from tac.boundary_math.lever_b_levelset_generator import stem_nyquist_max_freq_cycles_per_unit
         nyq = stem_nyquist_max_freq_cycles_per_unit(scorer_w=SEG_W)
         print(json.dumps({"stage": "stem_nyquist", "max_bank_freq": float(args.max_bank_freq),
@@ -12445,8 +12457,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         "provenance": {**_run_provenance, "seed": int(args.seed)},
         "render_hw": [render_h, render_w],
         "front_end": (
-            "curvelet" + ("+self_orient" if use_self_orient else "")
-            if basis_family == "polar_fourier"
+            LEGACY_FOURIER_AB_CONTROL + ("+self_orient" if use_self_orient else "")
+            if basis_family == LEGACY_FOURIER_AB_CONTROL
             else basis_family
         ),
         "activation": args.activation, "in_feat": int(in_feat),
@@ -13108,12 +13120,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bank-n-iso", type=int, default=4)
     ap.add_argument(
         "--basis",
-        choices=("polar_fourier", "windowed_curvelet"),
-        default="polar_fourier",
+        type=normalize_basis_family,
+        choices=("legacy_fourier_ab_control", "windowed_curvelet"),
+        default="legacy_fourier_ab_control",
         help=(
-            "select the fixed coordinate basis; polar_fourier is the byte-identical historical "
-            "default, windowed_curvelet selects the deterministic localized frame and requires "
-            "generated-receiver op parity"
+            "select the fixed coordinate basis; legacy_fourier_ab_control is the byte-identical "
+            "historical Fourier A/B control and the deprecated polar_fourier token normalizes to "
+            "it; windowed_curvelet is an explicit treatment gated on a future n600 byte-closed "
+            "realized-through-R no-regression verdict"
         ),
     )
     # LEVER-2 (stem-Nyquist rate/anti-alias): cap curvelet-bank freqs (cycles/unit) at the SegNet
@@ -14521,6 +14535,18 @@ def main(argv: list[str] | None = None) -> int:
                     help="#323 recompute the per-class rungs (and rebuild masks on a rung CHANGE) every N "
                     "epochs (bounds the rebuild cost; a rung changes at most ~r0 times per arm per run).")
     args = ap.parse_args(argv)
+    args.basis = normalize_basis_family(args.basis)
+    if args.basis == LEGACY_FOURIER_AB_CONTROL:
+        print(json.dumps({
+            "stage": "basis_warning",
+            "basis": LEGACY_FOURIER_AB_CONTROL,
+            "authority": "LEGACY_AB_CONTROL_ONLY",
+            "note": (
+                "historical Fourier computation retained only as the explicit A/B control; "
+                "curvelet default/strict flip requires operator-GO n600 byte-closed "
+                "realized-through-R no-d_seg-regression verdict"
+            ),
+        }), flush=True)
     check_pose_verdict_fallback_is_live_or_refused(
         gate_on=bool(args.verdict_pose_gate),
         configured_nonlive_dpose=args.unselected_r1_advisory_dpose,

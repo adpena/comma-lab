@@ -151,6 +151,9 @@ def test_explicit_polar_basis_is_blob_byte_identical_to_legacy_default():
     blob_legacy, _ = lbce.build_levelset_blob(params, legacy, _so(legacy), None)
     blob_explicit, _ = lbce.build_levelset_blob(params, explicit, _so(explicit), None)
     assert blob_explicit == blob_legacy
+    canonical = dict(cfg, basis="legacy_fourier_ab_control")
+    blob_canonical, _ = lbce.build_levelset_blob(params, canonical, _so(canonical), None)
+    assert blob_canonical == blob_legacy
 
 
 def test_int8_accounting_matches_canonical():

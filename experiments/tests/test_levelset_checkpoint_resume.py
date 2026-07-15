@@ -151,6 +151,23 @@ def test_basis_checkpoint_is_additive_and_default_checkpoint_layout_is_unchanged
     assert str(selected["__cfg_basis"]) == "windowed_curvelet"
 
 
+def test_legacy_basis_aliases_share_checkpoint_and_resume_identity():
+    canonical = T._build_ema_checkpoint_arrays(
+        _fake_shadow(), args=_fake_args(basis="legacy_fourier_ab_control"), softmax_temp=0.05,
+        render_h=384, render_w=512, epoch=1, in_feat=40,
+    )
+    old_alias = T._build_ema_checkpoint_arrays(
+        _fake_shadow(), args=_fake_args(basis="polar_fourier"), softmax_temp=0.05,
+        render_h=384, render_w=512, epoch=1, in_feat=40,
+    )
+    assert canonical.keys() == old_alias.keys()
+    assert "__cfg_basis" not in canonical
+    assert T._resume_lever_divergences(
+        {"__cfg_basis": "polar_fourier"},
+        _fake_args(basis="legacy_fourier_ab_control"),
+    ) == []
+
+
 # --------------------------------------------------------------------------- resume sidecar
 def test_resume_arrays_prefix_and_roundtrip(tmp_path):
     live = {"in_proj.weight": np.ones((2, 3), np.float32), "code": np.full((4, 2), 2.0, np.float32)}

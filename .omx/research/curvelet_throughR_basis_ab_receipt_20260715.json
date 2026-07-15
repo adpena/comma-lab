@@ -1,0 +1,21 @@
+{
+  "control_basis": "legacy_fourier_ab_control",
+  "control_factory": "LegacyFourierABControl",
+  "control_out_dir": "experiments/results/v9_cgauge_ideal_mod32_legacy_fourier_ab_control_20260715",
+  "differing_flags_excluding_out_dir": [
+    "--basis"
+  ],
+  "epochs": "3000",
+  "launched": false,
+  "num_pairs": "600",
+  "operator_go_required": true,
+  "payload_sha256": "ead598df0b7034b0647be4fd237e80bca5d51a94ddea06b40c805f80ba11e001",
+  "pointer_moved": false,
+  "schema": "curvelet_throughR_basis_ab.v1",
+  "score_claim": false,
+  "status": "PREPARED_NOT_FIRED_OPERATOR_GO_REQUIRED",
+  "strict_flip_condition": "n600 byte-closed realized-through-R d_seg no-regression verdict for windowed_curvelet versus legacy_fourier_ab_control",
+  "treatment_basis": "windowed_curvelet",
+  "treatment_factory": "WindowedCurveletBasis",
+  "treatment_out_dir": "experiments/results/v9_cgauge_ideal_mod32_windowed_curvelet_20260715"
+}

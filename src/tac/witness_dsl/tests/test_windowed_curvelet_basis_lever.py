@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Tests for the windowed-curvelet DSL basis lever + its canonical equation (task #502).
 
-Key invariants: the baseline/default parser remains polar-Fourier, the explicit treatment compiles
-the real ``--basis windowed_curvelet`` flag, the generated receiver contract is present, registry
-completeness and the activation duty queue surface it, and the equation remains registered.
+Key invariants: the baseline/default computation remains byte-identical under the explicit legacy
+Fourier A/B-control identity, the deprecated ``polar_fourier`` alias normalizes to that identity,
+the explicit treatment compiles the real ``--basis windowed_curvelet`` flag, the generated receiver
+contract is present, registry completeness and the activation duty queue surface it, and the
+equation remains registered.
 """
 from __future__ import annotations
 
@@ -46,7 +48,7 @@ def test_lever_never_invents_trainer_flags():
     assert set(lev.overrides).issubset(set(real_trainer_flags()))
 
 
-def test_explicit_polar_flag_has_same_effective_parser_config_as_default():
+def test_deprecated_polar_alias_has_same_effective_parser_config_as_default():
     parser = build_real_trainer_parser()
     default = vars(parser.parse_args(["--out-dir", "x"]))
     explicit = vars(parser.parse_args(["--out-dir", "x", "--basis", "polar_fourier"]))
@@ -94,10 +96,12 @@ def test_optimal_basis_spec_and_generated_inflate_contract_compile():
 def test_completeness_and_activation_duty_queue_surface_lever(tmp_path):
     factories = lever_factories()
     assert factories["WindowedCurveletBasis"] == frozenset({"--basis"})
+    assert factories["LegacyFourierABControl"] == frozenset({"--basis"})
     report = completeness()
     assert "--basis" in report.mapped
     assert "--basis" not in report.unmapped and "--basis" not in report.stale
     assert "WindowedCurveletBasis" in known_levers()
+    assert "LegacyFourierABControl" in known_levers()
     assert "WindowedCurveletBasis" in duty_to_measure(path=tmp_path / "empty-ledger.jsonl")
 
 

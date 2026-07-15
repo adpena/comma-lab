@@ -37,6 +37,8 @@ from dataclasses import dataclass, field, replace
 from numbers import Integral
 from pathlib import Path
 
+from tac.witness_dsl.basis_control import normalize_basis_family
+
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 TRAINER_REL = "experiments/train_levelset_witness_realized_through_R_mlx.py"
 TRAINER_PATH = _REPO_ROOT / TRAINER_REL
@@ -111,7 +113,11 @@ def build_real_trainer_parser(trainer_path: Path | None = None):
               and node.value.func.value.id == "ap"):
             stmts.append(node)
     stmts.sort(key=lambda n: n.lineno)  # ast.walk order is not source order
-    ns: dict = {"argparse": _argparse, "Path": Path}
+    ns: dict = {
+        "argparse": _argparse,
+        "Path": Path,
+        "normalize_basis_family": normalize_basis_family,
+    }
     exec(compile(_ast.Module(body=stmts, type_ignores=[]), str(path), "exec"), ns)
     ap = ns.get("ap")
     if not isinstance(ap, _argparse.ArgumentParser):
@@ -1925,6 +1931,24 @@ def WindowedCurveletBasis(window: int = 0) -> Lever:
         epochs_delta=int(window),
         notes=("FEED-cvl-throughR: train+generated-inflate op parity wired; default-off treatment; "
                "byte-closed n600 realized d_seg A/B OWED (operator-GO, PREPARED_NOT_FIRED)"),
+    )
+
+
+def LegacyFourierABControl(window: int = 0) -> Lever:
+    """Select the byte-identical historical Fourier computation as A/B control only.
+
+    This is not a ship-default claim. It lets the DSL author the owed
+    curvelet-vs-control n600 through-R A/B without relying on an implicit parser
+    default or the deprecated ``polar_fourier`` token.
+    """
+    if int(window) < 0:
+        raise ValueError("LegacyFourierABControl: window must be >= 0")
+    return Lever(
+        "basis_family::legacy_fourier_ab_control",
+        overrides={"--basis": "legacy_fourier_ab_control"},
+        epochs_delta=int(window),
+        notes=("historical global Fourier plane-wave computation retained only as explicit "
+               "legacy A/B control; no curvelet win or default-ship claim"),
     )
 
 

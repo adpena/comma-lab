@@ -80,7 +80,7 @@ class WindowedCurveletBasisLeverSpec:
         """The exact landings needed to make this a REAL, composable, A/B-able basis arm."""
         return (
             "measure: real n600 byte-closed through-R d_seg A/B (windowed_curvelet vs "
-            "polar_fourier) under the governed launcher -- ONLY score-authority row; "
+            "legacy_fourier_ab_control) under the governed launcher -- ONLY score-authority row; "
             "operator-GO / CONTAINMENT, PREPARED_NOT_FIRED",
         )
 

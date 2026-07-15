@@ -10,12 +10,12 @@ from tac.canonical_equations.optimal_basis_selection_20260714 import (
 from tac.witness_dsl.optimal_basis_20260714 import (
     BasisFamily,
     BasisLeverSpec,
-    UnsupportedBasisFamily,
     audit_legacy_polar_bank,
     basis_catalog,
     basis_metric_interface,
     inflate_compile_contract,
     lever_argv,
+    v9_ideal_mod32_basis_ab_configs,
 )
 
 
@@ -59,15 +59,24 @@ def test_measured_fallback_compiles_only_real_trainer_flags_and_inflate_ops() ->
     assert contract.inflate_functions == ("_curvelet_B", "_curvelet_feats")
 
 
-def test_self_oriented_reproduction_compiles_but_true_frame_refuses() -> None:
+def test_default_basis_spec_is_explicit_legacy_control_without_behavior_loss() -> None:
+    spec = BasisLeverSpec()
+    assert spec.family is BasisFamily.LEGACY_FOURIER_AB_CONTROL
+    overrides = spec.compile_lever().overrides
+    assert overrides["--basis"] == "legacy_fourier_ab_control"
+    assert overrides["--self-orient"] is False
+    assert overrides["--bank-n-scales"] == 4
+
+
+def test_self_oriented_reproduction_and_wired_windowed_treatment_compile() -> None:
     argv = lever_argv(BasisLeverSpec(
         family=BasisFamily.SELF_ORIENTED_FOURIER,
         freq_along=26.0,
     ).compile_lever())
     assert "--self-orient" in argv
     assert argv[argv.index("--freq-along") + 1] == "26.0"
-    with pytest.raises(UnsupportedBasisFamily, match=r"no train\+generated-inflate op-parity"):
-        BasisLeverSpec(family=BasisFamily.WINDOWED_CURVELET).compile_lever()
+    treatment = BasisLeverSpec(family=BasisFamily.WINDOWED_CURVELET).compile_lever()
+    assert treatment.overrides == {"--basis": "windowed_curvelet"}
 
 
 def test_siren_finer_compile_checks_periodic_inflate_activation() -> None:
@@ -100,3 +109,13 @@ def test_basis_metric_interface_is_non_owning() -> None:
     assert interface.provider_module == "tac.scorer_surrogate.vjp_fidelity"
     assert interface.selection_status == "NO-VERDICT_DATA_CUSTODY"
     assert "pullback Gram" in interface.required_metric_quantity
+
+
+def test_v9_mod32_basis_ab_is_explicit_typed_and_basis_only() -> None:
+    pair = v9_ideal_mod32_basis_ab_configs(num_pairs=6, epochs=900)
+    assert pair.control_basis == "legacy_fourier_ab_control"
+    assert pair.treatment_basis == "windowed_curvelet"
+    assert pair.differing_flags_excluding_out_dir == ("--basis",)
+    assert pair.status == "PREPARED_NOT_FIRED_OPERATOR_GO_REQUIRED"
+    assert pair.control.dsl_levers.count("basis_family::legacy_fourier_ab_control") == 1
+    assert pair.treatment.dsl_levers.count("basis_family::windowed_curvelet") == 1

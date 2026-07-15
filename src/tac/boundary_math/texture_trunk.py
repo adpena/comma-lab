@@ -187,7 +187,9 @@ def band_limit_report(h: int, w: int, spec: TextureBandSpec | None = None) -> di
     for j in range(bank.shape[1]):
         img = bank[:, j].reshape(h, w).astype(np.float64)
         img = img - img.mean()
-        F = np.fft.fftshift(np.fft.fft2(img))
+        F = np.fft.fftshift(  # FFT_TOOL_USE_OK:measures texture spectrum only
+            np.fft.fft2(img)  # FFT_TOOL_USE_OK:measures texture spectrum only
+        )
         mag = np.abs(F)
         cy, cx = h // 2, w // 2
         mag[cy, cx] = 0.0
