@@ -78,7 +78,7 @@ tests (`test_event_wirings.py` +2, static registry coverage green).
 | FreSh #448 / FINER++ #310 | EXPLAINED-ISOLATE | `v9_ideal_config_ab_20260713.md`: fresh-start BASIN treatments — "stacking would confound the core"; HELD with no measured number (`v9_missing_signal_constants_audit` §8). Queued as future paired arms, NOT silently off |
 | T2 spike-reweight #274 | OFF (duty-queued) | built default-off; engages the same phase regime T1 owns — measure T1 first (attribution-clean), then A/B T2 |
 | MarginBandSatisficing | ON (w 0.2, m_safe DERIVED 0.0392) | the marginband_satisfice_fix custody values |
-| grad-clip | fixed 0.5 (autoclip AVAILABLE) | autoclip #B-4 landed by burn-down arm; not swept on this vehicle — fold via their A/B, coordinate via inbox |
+| grad-clip | INCUMBENT (fixed 0.5 + per-param normalize) | CORRECTED per burn-down final report (`perparam_normalize_masks_all_norm_clipping_c0_confound_20260715`): C0's clip saturation is INERT — the per-param normalize AFTER clip divides out norm scaling; the effective magnitude law is unit-norm×LR (SignSGD-like), so the lr/12 mechanism reading is REFUTED. The owed measurement is the magnitude-LAW A/B (incumbent vs normalize-none+AutoClip vs normalize-none+fixed, anchor `autoclip_descent_speed_effect_n24_ab_owed_20260715`); this config does NOT touch --grad-clip-mode/--grad-normalize — the incumbent stays until that A/B measures |
 
 ## 4. THEORY→CONFIG TRACEABILITY (6 clusters, consume-or-explain)
 
@@ -112,10 +112,17 @@ tests (`test_event_wirings.py` +2, static registry coverage green).
 4. Adaptive-ε: bounded n24 stability A/B + sealed viscosity term (`adaptive_eps_cfl_edge_tracking_v1` ticket).
 5. FreSh #448 / FINER++ #310 / StepNative: paired basin arms after the core lands its read.
 6. T2 spike-reweight #274 A/B on top of a measured T1.
-7. Trainer speed internals (adaptive_grad_clip sweep, telemetry_producers real_* fields, lane-band
-   cache): OWNED by the wallclock burn-down arm — coordinate via inbox, surfaces untouched here.
+7. Trainer speed internals (adaptive_grad_clip magnitude-law A/B, telemetry_producers real_*
+   fields): OWNED by the wallclock burn-down arm — coordinate via inbox, surfaces untouched here.
    (Their `autoclip_grad_clip`/`pose_verdict_gate` DIRECT_CONTROLLER_NAMES coverage gap was
-   backfilled this landing — the static test was red at HEAD.)
+   backfilled this landing — the static test was red at HEAD.) Lane-band cache CORRECTION (their
+   measurement): the cache saves only −0.04 s/ep — the band cost is intrinsic θ-dependent
+   margin/appearance forwards, NOT static-geometry recompute; the cache stays ON (bit-identical)
+   but is NOT a wall-clock lever — struck from the speed ledger.
+8. Timer-family #406 custody blocker FIXED this landing (`spec_throughput_component_timer_20260713`
+   now derives hosc_beta_end from emitted argv = 3.177 with 10.0 preserved as
+   `inherited_manifest_value_replaced` per #351) — unblocks the bounded short-epoch ticket for the
+   magnitude-law A/B.
 
 Pointer 0.19108 UNMOVED. Every row above is MEANS until `upstream/evaluate.py` returns a lower
 byte-closed n600 exact row.

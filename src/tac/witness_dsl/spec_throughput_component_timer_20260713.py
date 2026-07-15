@@ -229,6 +229,16 @@ def compile_throughput_component_timer_ticket(
         for key, value in rebound.constants_manifest.items()
         if key != "polyak_finisher_start_epoch"
     }
+    # (#507 coordinator fix, 2026-07-15) UNBLOCK the timer family under the #406 DSL-compile-hash
+    # gate: the v752 parent lineage's custodied LawRef still compiles hosc_beta_end=10.0 (the v6.3
+    # pin) while the emitted flag was rephased to 3.177 — the self-recompile catches the mismatch
+    # and refuses rc=8 (wallclock_burndown_build_20260715.md §2c). Apply the SAME argv-as-single-
+    # scalar-owner reconciliation the v9 lineage uses: the emitted argv value wins; the inherited
+    # 10.0 is preserved on the row as ``inherited_manifest_value_replaced`` (the CLAUDE.md #351
+    # historical_non_authorizing custody — history, never authority).
+    from tac.witness_dsl.spec_v9_cgauge import _derive_manifest_from_emitted_argv
+    constants = _derive_manifest_from_emitted_argv(
+        constants, tuple(typed.to_program().compile_trainer_argv()))
     constants["softmax_temp_end"] = {
         "value": 1.0,
         "equation_id": "cross_entropy_is_unified_ltau_at_tau_one_v1",
