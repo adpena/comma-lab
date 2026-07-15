@@ -16,10 +16,12 @@ D36_RECEIPT = (
     "experiments/results/ladder_owed_measurables_20260713/"
     "d36_fiber_completeness_gap_n600.json"
 )
-D37_RECEIPT = (
+D37_PREDECESSOR_RECEIPT = (
     "experiments/results/ladder_owed_measurables_20260713/"
     "d37_flip_conditional_mi_n600.json"
 )
+D37_RECEIPT = ".omx/research/v9_cgauge_symmetry_homotopy_n600_receipt_20260714.json"
+D37_RECEIPT_SHA256 = "60dd6a4837706d100932416cf8fdf77fce0e7c171b1ef58fd3f1154021428308"
 D39_SPEC = ".omx/research/pact_causal_manifest_v1_event_marks_increment_spec_20260713.md"
 
 ARCHIVE_BYTES = 83_430
@@ -37,24 +39,30 @@ D36_NET_SAVING_BITS_AFTER_MODEL = -106_824
 # D37: held-out codelength gain q00-q01.  The gross quantity estimates
 # I(F;C|M,Qxi) on the completed empirical surface; the net quantity charges the
 # explicitly assumed fixed-row table representation.
-D37_MI_GROSS_BITS = 401_322.0305236686
-D37_MI_GROSS_BITS_PER_BOUNDARY_PIXEL = 0.15729594020952903
-D37_MI_NET_BITS = 318_586.0305236686
-D37_MI_NET_CI95_BITS = (306_950.20670964255, 329_649.88063184003)
-D37_PHASE_AWARE_GROSS_BITS = 407_978.0616760214
-D37_PHASE_AWARE_NET_BITS = -44_437.938323978626
-D37_PHASE_AWARE_NET_CI95_BITS = (-55_850.71586275217, -33_431.46576763783)
+D37_MI_GROSS_BITS = 467_373.90888513427
+D37_MI_GROSS_BITS_PER_BOUNDARY_PIXEL = 0.18318460696404312
+D37_MI_TABLE_CHARGE_BYTES = 10_342
+D37_MI_NET_BITS = 384_637.90888513427
+D37_MI_NET_CI95_BITS = (373_674.7586229076, 395_236.54874890414)
+D37_PHASE_AWARE_GROSS_BITS = 464_657.2100251259
+D37_PHASE_AWARE_TABLE_CHARGE_BYTES = 56_552
+D37_PHASE_AWARE_NET_BITS = 12_241.210025125882
+D37_PHASE_AWARE_NET_CI95_BITS = (957.5520005738945, 23_180.749990467913)
+D37_VERDICT = "RESIDUAL_NON_GAUGE_STRUCTURE_DETECTED__M_NOT_SUFFICIENT"
+D37_VERDICT_SCOPE = "FORMULATION x V9_EMA_BEST_N600_EMPIRICAL_SURFACE"
 
 # D38: after explicitly restricting to a fixed regular stratum and typing a
 # strict action groupoid, the semidirect extension splits by h -> (1,h).
 D38_LOCAL_EXTENSION = "K_sigma semidirect H_cov,sigma"
 D38_LOCAL_OBSTRUCTION_CLASS = "neutral"
 D38_LOCAL_IDEAL_TWIST_BITS = 0
-D38_GLOBAL_EXTENSION_STATUS = "NOT-TYPED / overlap-and-gluing audit owed"
+D38_GLOBAL_EXTENSION_STATUS = (
+    "TYPED_SCHEMA / EXACT_ARRAY_INSTANCE_GLUES / GLOBAL_RATE_DESCENT_UNBOUND"
+)
 
 REMAINING_OWED = (
     "exact_packed_class_conditional_contour_AB",
-    "global_Hcov_overlap_gluing_audit",
+    "populate_Hcov_edge_tube_junction_atlas_and_charged_receiver_section",
     "event_marks_telemetry_implementation",
 )
 
@@ -75,7 +83,8 @@ def measured_gap_statement() -> str:
 def d38_split_statement() -> str:
     return (
         "Typed strict fixed-stratum semidirect extension: SPLIT, neutral factor set, "
-        "R_twist^ideal=0; global overlap extension remains NOT-TYPED."
+        "R_twist^ideal=0; global H_cov gluing schema now typed and the exact-array "
+        "instance glues, but action/coefficient/receiver-rate descent remains UNBOUND."
     )
 
 
@@ -83,6 +92,7 @@ __all__ = [
     "D36_CONDITIONAL_GAP_BITS",
     "D37_MI_GROSS_BITS",
     "D37_MI_NET_BITS",
+    "D37_RECEIPT_SHA256",
     "D38_LOCAL_IDEAL_TWIST_BITS",
     "EQUATION_ID",
     "PREDECESSOR_EQUATION_ID",

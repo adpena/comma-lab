@@ -14,20 +14,21 @@ frozen n600 custody + exact hashes
   |
   `-- cached realized-through-R argmax + GT margin/labels + Qxi/Phi completion
         +-- nested q00/q01 conditional codelength [D37]
-        |     +-- positive class-edge gain after coarse table charge
+        |     +-- V9 EMA-best: +384,637.9089 net bits after 10,342 B table
         |           +-- class-pair conditional contour grammar candidate
         |                 +-- exact packed decode + receiver survival A/B
         |                       +-- 0.65 B/surviving-flip gate
         `-- nested q10/q11 phase-aware contrast
-              +-- FAIL current flat table charge; hierarchy/share tables before retry
+              +-- +12,241.2100 net bits after 56,552 B table; sequence still uncharged
 
 rung-1 kernel join + admissible covariance arrows
   +-- restrict to fixed regular stratum
         +-- type strict action groupoid K_sigma semidirect H_cov,sigma [D38]
               +-- canonical section h -> (1,h)
                     +-- local obstruction neutral; ideal local twist bits = 0
-              +-- overlap maps / changing isotropy NOT TYPED
-                    +-- global gluing audit (still owed)
+              +-- H_cov gluing atlas schema TYPED
+                    +-- exact-array quadrant restriction instance GLUES
+                    `-- action/coefficient/cocycle/charged receiver descent UNBOUND
 
 rung-4 priority event partition
   +-- event_mark v1 increment spec [D39]
@@ -53,4 +54,3 @@ chart/action/gluing bytes free. D39 is observability-only.
 5. **Continual learning:** successor equation row consumes the receipts.
 6. **Disambiguators:** raw-vs-conditioned code; class-blind-vs-aware; local-split-vs-global-gluing;
    topology-only-vs-priority-partition events.
-

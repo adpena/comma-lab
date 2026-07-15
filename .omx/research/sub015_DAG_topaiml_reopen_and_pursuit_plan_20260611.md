@@ -17167,13 +17167,16 @@ successor equation `rate_law_ladder_measured_20260713.py` (8 tests, lint clean);
   the ladder's headline budget number banked). BUT the conditional-stream saving 1,903 B does NOT survive
   the 15,256 B predictor charge → **NO codec lever admitted** on current sections (verdict_scope: instance —
   mod32cap shipped int8 code; a future <1,903 B public/compact-section predictor reopens it).
-- **D37 I(F;C|M,ξ) POSITIVE** — class conditioning admitted on the scoped n600 surface, net **+318,586 bits**
-  (95% CI [306,950, 329,650]) after coarse-table charge; phase-aware flat table LOSES 44,438 bits (hierarchy/
-  share tables owed before retry). verdict_scope: formulation — flat-table phase contrast failed, class-edge
-  contour grammar is the live candidate (gated on exact packed decode + receiver survival + 0.65 B/flip).
+- **D37 I(F;C|M,ξ) POSITIVE** — refreshed on the V9 EMA-best n600 surface: net
+  **+384,637.9089 bits** (95% CI [373,674.7586, 395,236.5487]) after the 10,342 B table charge;
+  gross gain 467,373.9089 bits. The phase-aware table is narrowly positive at +12,241.2100 net bits
+  after 56,552 B overhead. verdict_scope: FORMULATION x V9_EMA_BEST_N600_EMPIRICAL_SURFACE — the
+  class-edge sequence remains uncharged, so class-edge contour grammar still requires exact packed
+  decode, receiver survival, and jointly charged or receiver-derived C before any byte claim.
 - **D38 local strict extension SPLIT, R_twist^ideal = 0** (neutral Schreier class on the fixed regular
-  stratum); global overlap/gluing maps NOT-TYPED (still owed). Removes only a local ideal twist term; chart/
-  action/gluing bytes stay charged.
+  stratum); the global H_cov gluing atlas is now TYPED and the exact-array quadrant instance glues.
+  Action/coefficient/cocycle bindings plus a charged receiver section remain UNBOUND. This removes only
+  a local ideal twist term; chart/action/gluing/receiver bytes stay charged.
 - **D39 marked-event manifest increment SPEC'D** — `pact_causal_manifest_v1_event_marks_increment_spec` +
   `TICKET_D39_event_marks_telemetry`; observability-only (event counts → MARKED events, mark = prediction-
   break family); `src/tac/causal_manifest.py` implementation owed.
@@ -17186,11 +17189,13 @@ Deferral ledger D36-D39 flipped CLOSED-MEASURED. Six-hook wire-in in the full FE
   public/compact-section predictor (shared/hierarchical table amortized across pairs); (b) condition on a
   cheaper-to-predict section than the int8 code (e.g. the horizon-poly / ξ section); (c) a learned predictor
   whose OWN bytes are amortized across the whole clip rather than charged per-section.
-- D37 "phase-aware flat table LOSES 44,438 bits" is FORMULATION-scoped (FLAT table). Untested: (a)
-  hierarchical / shared phase tables; (b) the class-pair conditional CONTOUR grammar (the live positive-MI
-  candidate, gated on packed decode + receiver survival + 0.65 B/flip); (c) coarse-to-fine phase residual.
-- D38 "global gluing NOT-TYPED" is OWED, not killed. Untested: type it as a homotopy-coherent DESCENT datum
-  over the per-class-boundary cover (the Bousfield/#483 dig) → derive R_twist^global.
+- D37's refreshed phase-aware flat table is narrowly positive (+12,241.2100 net bits), but this remains
+  FORMULATION-scoped and non-admissible because the context sequence is uncharged. Untested: (a)
+  hierarchical/shared phase tables; (b) receiver-derived or jointly charged class-pair CONTOUR grammar;
+  (c) coarse-to-fine phase residual.
+- D38's global gluing datum is now TYPED at the schema layer and the exact-array restriction instance
+  glues. The action/coefficient/cocycle bindings and charged receiver section remain OWED; no
+  R_twist^global number follows until those fields close.
 - D39 is a SPEC, no negative.
 DSL leg: N/A for these commits — they are MEASUREMENT/GROUNDING, not lever/launch/curriculum changes; the
 owed BUILD candidates (D37 contour grammar, D39 event-marks) are registered in
