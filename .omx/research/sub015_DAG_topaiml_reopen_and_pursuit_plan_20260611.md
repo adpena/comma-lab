@@ -18463,3 +18463,22 @@ annulus and longest end of long tail". Full table:
   (pid 91660, UNTOUCHABLE) stays parked in its drain-wait loop. ONE authorized stop of pids
   64994/64998 (ckpt-every 1 ⇒ resumable) unblocks all three + the chain.
 - Everything MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-509-legs (2026-07-15) — triality leg dispositions for the hook-flagged turn commits [no-triality]
+- `483204a09b` (r5 claim terminal row): pure dual-ledger APPARATUS (claim hygiene per the single-flight
+  policy) — no lever/schedule/finding; no DSL or equations leg owed.
+- `508e40fa66` (r6 pre-fire seal R1-2 fix): telemetry EMISSION-PATH change only — trajectory rows now
+  stdout-mirrored at append time in the TORCH trainer so a timeout-stop smoke returns regime numbers
+  (score-neutral observability, default-on per the "off is a tracked queue" rule; NOT a scientific
+  lever → no DSL Lever owed; the on-disk JSONL/resume invariant unchanged). The Modal docs-facts
+  (timeout=FunctionTimeoutError/no-result · spawn results 7d · H100 $0.001097/s · queue-wait unbilled ·
+  retries=0) are RECORDED with URLs in the #438 campaign ledger — provider facts, not S_τ laws; no
+  equations leg owed. Review SEALED@3 (R1 2 findings fixed, R2-R4 clean).
+- `030d595184` (FEED-509-b3r): is itself the DAG leg; its sister commits carried the other legs —
+  0d1ecd0565 landed the VerdictParallelWorkers derived-default + identity self-check IN the law module
+  + trainer (DSL/lever leg), f36f1720e4 landed ComputeDtypeBf16QCGate as a composable DSL lever + the
+  F5 arming refusal (DSL leg); the workers EQUATION was registered earlier (6dfb43c96b,
+  verdict_parallel_workers_speedup). The maglaw LAW registration is deliberately DEFERRED to armC
+  completion (named anchor autoclip_descent_speed_effect_n24_ab_owed_20260715) — partial A/B data must
+  not register a law; that is the reasoned equations-leg state, not drift.
+- MEANS; **pointer 0.19108 UNMOVED.**
