@@ -5,8 +5,9 @@ $0 config-wiring audit + fold pass; no run, no score, no launch. Verdicts labele
 MEASURED / DERIVED / INFERRED / GUESSED-NEEDS-DERIVATION per the operating manual §5.
 
 ## Headline
-- **Registry unmapped 102 → 83** (coverage 0.744 → 0.792), **stale = 0**, via **6 genuine-orphaned-lever
-  folds** into `curriculum_dsl.py` (19 flags), each verified through the REAL trainer argparse
+- **Registry unmapped 102 → 80** (coverage 0.744 → 0.800), **stale = 0**, via **6 genuine-orphaned-lever
+  folds** (19 flags) + **B3 executed** (`EikonalViscosity` now emits the 3 #320 DERIVED adaptive-ε bounds,
+  byte-identical) into `curriculum_dsl.py`, each verified through the REAL trainer argparse
   (`test_every_composable_lever_parses_through_real_trainer_argparse` green) with every weight/iters
   labeled RUN-GATED (no asserted optimum). Commits `2b3f18a0f5` + `a45b83b4b5`.
 - **Config-generator ↔ launch.sh flag-level reconciliation: PASS.** `stale == []` — the DSL emits
@@ -84,15 +85,15 @@ held-elsewhere(registry-blind) · aggregate · default-off-correct · default-on
 | Bucket | Count | Meaning / representative action |
 |---|---:|---|
 | **FOLDED this turn** | (19) | 6 new `Lever` factories → 102→83 |
-| HELD_ELSEWHERE (registry-blind) | 32 | DSL holds them in sibling modules; registry scans only `curriculum_dsl` → BUILD-TICKET B1 (broaden scan OR migrate canonical holder) |
-| AGGREGATE_HELD | 18 | sub-params of a held curriculum lever (AmplifyIsland shape, PersistenceTopology clDice, EikonalViscosity ca-band/anneal, StoreNothingPoseCarrier geom, LanePrior BUILD-2, AA self-orient cache, LogitAdjust classes, seg-loss stage) — ride the parent; record |
+| HELD_ELSEWHERE (registry-blind) | 29 | DSL holds them in sibling modules; registry scans only `curriculum_dsl` → BUILD-TICKET B1 (broaden scan OR migrate canonical holder). (3 eikonal-visco bounds moved to mapped via B3.) |
+| AGGREGATE_HELD | 18 | sub-params of a held curriculum lever (AmplifyIsland shape, PersistenceTopology clDice, EikonalViscosity ca-band/ca-pairs/anneal, StoreNothingPoseCarrier geom, LanePrior BUILD-2, AA self-orient cache, LogitAdjust classes, seg-loss stage) — ride the parent; record |
 | GENERIC_KNOB | 11 | literature/neutral scalar, no swept intent (`--weight-decay`,`--warmup-epochs`,`--n-hidden`,`--wire-s0/w0`,`--hinge-weight`,`--pose-eps`,`--margin-target-end`,`--muon-momentum/-ns-steps/-weight-decay`) — record, NOT a lever |
 | RESUME_INFRA | 8 | resume/warm-start control-flow + memory/throughput infra (`--resume-*`,`--warm-start-weights-only`,`--mlx-cache-clear-accum`=#205-OOM default-on,`--verdict-subprocess`,`--gpu-reorient`,`--freeze-decoder-fit-codes`) — not swept levers |
 | MODE_BUILD_TICKET | 5 | `--residual-mode`+`--residual-target-npz` (v8 rate MODE, B5); `--score-domain-loss` (default-on guardrail, HNeRV-L6); `--per-group-grad-clip` (C4 confound-fix, FOLD-candidate B6); `--mx-compile` (default-off-correct #356) |
 | NEEDS_DERIVATION | 3 | `--muon-lr` (INHERITED-PR95 → #302); `--l7-mult`,`--l7-threshold` (l7 measured-DEFECT, values moot until witness-native) |
 | RETIRED | 3 | `--verdict-pose-gate`,`--verdict-pose-canary-every` (task-494 retired in V9), `--unselected-r1-advisory-dpose` (deprecated/refused) |
 | OBSERVABILITY_ON | 3 | `--mod-dim-dynamics/-ablation/-ablation-k` DEFAULT-ON score-neutral (correct per "observability defaults on") |
-**New unmapped count: 83** (was 102). Folded 19 / aggregate 18 / held-elsewhere 32 / knob 11 / infra 8 / mode 5 / needs-deriv 3 / retired 3 / obs-on 3.
+**New unmapped count: 80** (was 102). Folded 19 + B3-explicit 3 / aggregate 18 / held-elsewhere 29 / knob 11 / infra 8 / mode 5 / needs-deriv 3 / retired 3 / obs-on 3 = 80 remaining.
 
 ## Build-tickets (terminal designs — buildable as-is by the owning arm)
 - **B1 (registry scope, MY domain — deferred to a dedicated turn, NOT $0-blind):** broaden
@@ -105,10 +106,10 @@ held-elsewhere(registry-blind) · aggregate · default-off-correct · default-on
 - **B2 (env-gated throughput → DSL):** surface `TAC_MLX_CUSTOM_GROUPED_BACKWARD` (and sibling env
   toggles) as observability rows in the DSL/activation-ledger so env-gated winners are not orphaned from
   the "off is a tracked queue" apparatus. Owner: witness_dsl + throughput_authority_policy.
-- **B3 (EikonalViscosity emits derived bounds):** extend the `EikonalViscosity` factory to emit
-  `--eikonal-visco-eps-floor 0.3` / `-eps-upper 0.7` / `-margin-factor 0.5` (the #320 DERIVED bounds,
-  currently riding argparse defaults + held only in gauge.py) so the derived optimum is DSL-explicit.
-  $0, MY domain — deferred only to keep this turn's fold set reviewable; buildable next turn.
+- **B3 (EikonalViscosity emits derived bounds) — ✅ EXECUTED (commit d9b6e5d2ac):** `EikonalViscosity`
+  now emits `--eikonal-visco-eps-floor 0.3` / `-eps-upper 0.7` / `-margin-factor 0.5` (the #320 DERIVED
+  bounds), byte-identical to the argparse defaults → the derived optimum is DSL-explicit; 3 flags
+  moved held-elsewhere→mapped.
 - **B4 (Muon base hyperparams into factory):** extend the non-composable `Muon(start_epoch)` factory to
   accept+emit `--muon-lr/-momentum/-ns-steps/-weight-decay`; route `--muon-lr` to #302 witness-native
   derivation (do NOT hardcode 0.1×lr as optimal — it is INHERITED-PR95). Trainer-side: none (flags exist).
