@@ -64,6 +64,36 @@ def test_self_orient_off_shrinks_cf_cache():
     assert off.projected_peak_gib < on.projected_peak_gib
 
 
+def test_micro_batch_two_adds_custodied_conservative_guard():
+    """B2 is never projected as the B1 serial path merely because the target-n run is owed.
+
+    The guard is DERIVED from the measured #261 complete B4 process peak, not mislabeled as an
+    actual current-V9 B2 n600 RSS measurement.
+    """
+    b1 = wmp.project_peak_rss_gib(
+        num_pairs=600, self_orient=False, micro_batch_pairs=1,
+        verdict_batch=32, total_ram_gib=RAM, safe_frac=0.85)
+    b2 = wmp.project_peak_rss_gib(
+        num_pairs=600, self_orient=False, micro_batch_pairs=2,
+        verdict_batch=32, total_ram_gib=RAM, safe_frac=0.85)
+    assert b1.projected_peak_gib == 24.48
+    assert b2.projected_peak_gib == 30.26
+    assert b2.micro_batch_guard_gib == round(wmp.MICRO_BATCH_EXTRA_PAIR_GUARD_GIB, 2) == 5.78
+    assert "ACTUAL_CURRENT_V9_B2_N600_RSS_UNMEASURED" in wmp.MICRO_BATCH_GUARD_PROVENANCE
+    assert b1.safe and b2.safe
+
+
+def test_micro_batch_nonpositive_refuses():
+    import pytest
+
+    with pytest.raises(ValueError, match="micro_batch_pairs must be >= 1"):
+        wmp.project_peak_rss_gib(num_pairs=600, micro_batch_pairs=0, total_ram_gib=RAM)
+    with pytest.raises(ValueError, match="micro_batch_pairs must be an integer"):
+        wmp.project_peak_rss_gib(num_pairs=600, micro_batch_pairs=1.5, total_ram_gib=RAM)
+    with pytest.raises(ValueError, match="micro_batch_pairs must be an integer"):
+        wmp.project_peak_rss_gib(num_pairs=600, micro_batch_pairs=True, total_ram_gib=RAM)
+
+
 def test_peak_scales_with_num_pairs():
     small = wmp.project_peak_rss_gib(num_pairs=64, verdict_batch=32, total_ram_gib=RAM)
     big = wmp.project_peak_rss_gib(num_pairs=600, verdict_batch=32, total_ram_gib=RAM)
@@ -86,6 +116,7 @@ def test_parse_launch_flags_multiline():
         "  --render-h 384 \\\n"
         "  --render-w 512 \\\n"
         "  --self-orient \\\n"
+        "  --micro-batch-pairs 2 \\\n"
         "  --verdict-batch 32 \\\n"
         "  --mod-dim 32 \\\n"
     )
@@ -94,6 +125,7 @@ def test_parse_launch_flags_multiline():
     assert flags["render_h"] == 384
     assert flags["render_w"] == 512
     assert flags["verdict_batch"] == 32
+    assert flags["micro_batch_pairs"] == 2
     assert flags["self_orient"] is True
 
 

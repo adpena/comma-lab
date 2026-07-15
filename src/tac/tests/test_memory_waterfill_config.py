@@ -54,6 +54,25 @@ def test_no_points_reports_missing_data():
     assert not st.measured and "no curve points" in st.reason
 
 
+def test_duplicate_or_nonfinite_points_fail_closed_to_b1():
+    duplicate = (
+        mwc.CurvePoint(knob="micro_batch", value=1, step_s=1.0, rss_mib=100.0, n_pairs=600),
+        mwc.CurvePoint(knob="micro_batch", value=1, step_s=1.1, rss_mib=101.0, n_pairs=600),
+        mwc.CurvePoint(knob="micro_batch", value=2, step_s=0.9, rss_mib=110.0, n_pairs=600),
+    )
+    st = mwc.assess_micro_batch(duplicate, target_n_pairs=600)
+    assert not st.measured and st.grid == (1,)
+    assert "ambiguous duplicate" in st.reason
+
+    nonfinite = (
+        mwc.CurvePoint(knob="micro_batch", value=1, step_s=1.0, rss_mib=100.0, n_pairs=600),
+        mwc.CurvePoint(knob="micro_batch", value=2, step_s=float("nan"), rss_mib=110.0,
+                       n_pairs=600),
+    )
+    st = mwc.assess_micro_batch(nonfinite, target_n_pairs=600)
+    assert not st.measured and st.grid == (1,)
+
+
 # ── verdict-wall model: labeled [modeled], anchored at the measured vb=32 wall ──────────────────
 def test_verdict_wall_anchor_reproduces_measured():
     assert mwc.verdict_wall_s(32) == mwc.MEASURED_VERDICT_WALL_REF_S
@@ -209,6 +228,43 @@ def test_measured_micro_batch_points_expand_the_grid():
     )
     res = _solve(micro_batch_points=pts)
     assert {c.micro_batch for c in res.candidates} == {1, 4}
+    b1 = next(c for c in res.candidates if c.micro_batch == 1 and c.verdict_batch == 32)
+    b4 = next(c for c in res.candidates if c.micro_batch == 4 and c.verdict_batch == 32)
+    assert b4.projected_peak_gib > b1.projected_peak_gib
+    assert b4.micro_batch_rss_delta_gib >= 4000 / 1024
+    assert b4.micro_batch_throughput_multiplier == round(80.0 / 30.0, 4)
+
+
+def test_split_custody_b2_envelope_is_consumed_and_selected():
+    """Target-n DERIVED RSS and historical measured timing remain separately labeled.
+
+    This is the exact custody shape of the P0 static-only gate: it may establish that B2 fits the
+    memory envelope and exercise the waterfill, but it cannot promote the historical n24 timing to
+    current-V9 wall-clock authority.
+    """
+    points = (
+        mwc.CurvePoint(
+            knob="micro_batch", value=1, step_s=9.17485, rss_mib=24.48 * 1024,
+            rss_n_pairs=600, step_n_pairs=24, contended=False,
+            rss_evidence="DERIVED_STATIC_PREFLIGHT_NOT_ACTUAL_RSS",
+            step_evidence="MEASURED_HISTORICAL_N24_DIAGNOSTIC_NOT_CURRENT_V9_AUTHORITY"),
+        mwc.CurvePoint(
+            knob="micro_batch", value=2, step_s=9.16560, rss_mib=30.26 * 1024,
+            rss_n_pairs=600, step_n_pairs=24, contended=False,
+            rss_evidence="DERIVED_STATIC_PREFLIGHT_NOT_ACTUAL_RSS",
+            step_evidence="MEASURED_HISTORICAL_N24_DIAGNOSTIC_NOT_CURRENT_V9_AUTHORITY"),
+    )
+    res = _solve(
+        self_orient=False, verdict_batch_grid=(32,), micro_batch_points=points)
+    status = next(item for item in res.knob_status if item.name == "micro_batch")
+    assert status.searchable and not status.measured
+    assert "DERIVED_STATIC_PREFLIGHT" in status.reason
+    assert res.best is not None
+    assert res.best.micro_batch == 2
+    assert res.best.projected_peak_gib == 30.26
+    assert res.best.adjusted_peak_gib == 36.56
+    assert res.best.micro_batch_throughput_multiplier == round(9.17485 / 9.16560, 4)
+    assert "NOT_CURRENT_V9_AUTHORITY" in res.best.micro_batch_step_evidence
 
 
 def test_frontier_table_renders_every_candidate_and_labels():

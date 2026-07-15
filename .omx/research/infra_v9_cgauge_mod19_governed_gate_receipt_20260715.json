@@ -1,0 +1,151 @@
+{
+  "authority": {
+    "axis": "[macOS local launch-safety advisory]",
+    "gpu_launched": false,
+    "paid_dispatch_attempted": false,
+    "pointer_moved": false,
+    "score_claim": false,
+    "verdict_scope": "INSTANCE: isolated INFRA worktree, host snapshot, and v9_cgauge_ideal_mod19 C0 launch ticket only; V9 and micro-batch families remain open"
+  },
+  "branch": "codexwt/INFRA_gate_20260715_20260715T092612Z",
+  "config_contract": {
+    "clean_c0": {
+      "config_id": "v9_cgauge_ideal_mod19",
+      "micro_batch_pairs": 1,
+      "note": "The canonical clean control pins B=1. Silently replacing it with B=2 would add the MicroBatch treatment and would no longer be C0.",
+      "self_orient": false,
+      "verdict_batch": 32
+    },
+    "lever_registry": {
+      "--micro-batch-pairs_mapped": true,
+      "factory": "MicroBatch",
+      "stale": false
+    },
+    "waterfill_treatment": {
+      "micro_batch_pairs": 2,
+      "self_orient": false,
+      "status": "MEMORY_ADMITTED_BUT_NOT_THE_CLEAN_C0_CONFIG",
+      "verdict_batch": 32
+    }
+  },
+  "dry_run": {
+    "executed_command": "UV_CACHE_DIR=/tmp/codex_uv_cache PYTHONPATH=src uv run --no-project --with pydantic --with psutil --with pytest -- python tools/launch_witness_run.py --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz --num-pairs 600 --config v9_cgauge_ideal_mod19 --out-dir experiments/results/v9_cgauge_ideal_mod19_20260715 --purpose 'C0 clean governed baseline; no extra levers' --mem-preflight-safe-frac 0.85 --no-dashboard --dry-run",
+    "constants_manifest_generated_at_utc": "2026-07-15T09:53:09Z",
+    "constants_manifest_sha256": "343b576faedf30ea25ac51cefff2c4acc7be70fcbeca36075f12d0a5957adab6",
+    "dsl_config_gate": "PASS",
+    "emitted_flag_validation": "224/224",
+    "gpu_spawned": false,
+    "launch_sh_sha256": "c13fb65f982718890dcaacd398d13befc9f13412f05dc2706d1a28c33024108c",
+    "memory_preflight": "PASS_24.48_GiB",
+    "return_code": 0,
+    "schedule_provenance_gate": "PASS",
+    "system_admission": {
+      "active_jobs": 0,
+      "adaptive_ceiling_gib": 106.5,
+      "baseline_used_gib": 30.2,
+      "decision": "ADMIT",
+      "headroom_gib": 51.8,
+      "projected_system_used_gib": 54.7
+    }
+  },
+  "generated_at_utc": "2026-07-15T09:44:26Z",
+  "git_base_sha": "d878d78b3b83660ed08891d4f885cd1842aaa628",
+  "memory_envelope": {
+    "b1": {
+      "adjusted_peak_gib": 30.78,
+      "micro_batch_guard_gib": 0.0,
+      "projected_peak_gib": 24.48,
+      "safe_ceiling_gib": 108.8,
+      "static_margin_gib": 78.02,
+      "system_admission_snapshot": {
+        "adaptive_ceiling_gib": 106.3,
+        "baseline_used_gib": 30.6,
+        "decision": "ADMIT",
+        "headroom_gib": 51.3,
+        "projected_system_used_gib": 55.0
+      }
+    },
+    "b2": {
+      "actual_current_v9_n600_peak_rss_gib": null,
+      "adjusted_peak_gib": 36.56,
+      "evidence_label": "DERIVED_CONSERVATIVE_CHARGE_FROM_MEASURED_261_B4_N8_PEAK; ACTUAL_CURRENT_V9_B2_N600_RSS_UNMEASURED",
+      "micro_batch_guard_gib": 5.78,
+      "projected_peak_gib": 30.26,
+      "safe_ceiling_gib": 108.8,
+      "static_margin_gib": 72.24,
+      "system_admission_snapshot": {
+        "adaptive_ceiling_gib": 106.3,
+        "baseline_used_gib": 30.6,
+        "decision": "ADMIT",
+        "headroom_gib": 45.5,
+        "projected_system_used_gib": 60.8
+      }
+    },
+    "equation_id": "v9_micro_batch_conservative_launch_memory_guard_v1",
+    "safe_frac": 0.85,
+    "total_ram_gib": 128.0,
+    "waterfill": {
+      "b2_step_speedup_vs_b1": 1.001009,
+      "best_micro_batch_pairs": 2,
+      "best_verdict_batch": 32,
+      "rss_evidence": "DERIVED_STATIC_PREFLIGHT_FROM_MEASURED_261_GUARD_NOT_ACTUAL_RSS",
+      "step_evidence": "MEASURED_HISTORICAL_N24_DIAGNOSTIC_NOT_CURRENT_V9_AUTHORITY"
+    }
+  },
+  "remaining_real_spawn_blockers": [
+    {
+      "blocker": "SAFE_COMPILE_HOST_CERTIFICATE_ABSENT",
+      "detail": "The exact C0 launch emits --safe-compile-regions hosc_activation; a real launch refuses until this host has a fresh .omx/state/mlx_safe_compile_manifest.json.",
+      "exact_command": "PYTHONPATH=src python -m tac.mlx_safe_compile --certify --out .omx/state/mlx_safe_compile_manifest.json",
+      "status": "NO_GO_UNDER_THIS_NO_GPU_ARM"
+    },
+    {
+      "blocker": "GT_N600_CACHE_ABSENT_IN_ISOLATED_WORKTREE_AND_CONNECTED_SSD_SEARCH",
+      "detail": "The dry-run compiles with the declared path but prints gt regen required; a real trainer cannot consume an absent 5 GiB cache.",
+      "exact_command_if_no_custodied_copy_exists": "python tools/build_shared_gt_cache_for_mlx_fleet.py --num-pairs 600 --out-path <selected-storage-root>/gt_n600.npz",
+      "status": "NO_GO_UNTIL_PATH_AND_HASH_ARE_CUSTODIED"
+    }
+  ],
+  "review": {
+    "artifact_consistency_assertions": "16/16 PASS",
+    "changed_file_lint": "PASS",
+    "global_lane_maturity_validation": "REFUSE_110_PREEXISTING_MISSING_HISTORICAL_PATHS_NONE_ON_THIS_LANE",
+    "lane_level": "L1",
+    "round1_findings_fixed": [
+      "POINT-CUSTODY-01",
+      "POINT-VALIDATION-01",
+      "B-INTEGER-01",
+      "STANDALONE-DEPS-01"
+    ],
+    "three_clean_passes": true,
+    "tests": "149 passed, 1 platform skip"
+  },
+  "schema": "pact.v9_governed_launch_gate_receipt.v1",
+  "storage": {
+    "apdatastore": {
+      "status": "VOLUME_MOUNT_MISSING"
+    },
+    "local_fallback": {
+      "blockers": [],
+      "free_bytes": 683652984832,
+      "requested_bytes": 1026048000,
+      "reserve_free_bytes": 42949672960,
+      "selected": true,
+      "status": "PASS_EXPLICIT_LOCAL_OPT_IN",
+      "writable": true
+    },
+    "preferred_vertigo": {
+      "blockers": [
+        "mkdir_failed:PermissionError",
+        "workload_root_missing",
+        "write_probe_failed"
+      ],
+      "exact_non_sudo_command_outside_this_sandbox": "mkdir -p /Volumes/VertigoDataTier/pact/experiments/results/v9_cgauge_ideal_mod19_20260715 && chmod u+rwx /Volumes/VertigoDataTier/pact/experiments/results/v9_cgauge_ideal_mod19_20260715",
+      "free_bytes": 827367661568,
+      "mode_owner": "drwxr-xr-x adpena:staff",
+      "status": "REFUSE_IN_THIS_WORKSPACE_SANDBOX_NOT_OS_OWNER_MISMATCH",
+      "sudo_required_by_observed_ownership": false
+    }
+  },
+  "verdict": "NO_GO_REAL_SPAWN_IN_THIS_WORKTREE: memory governor ADMITS exact C0 B1 and B2 treatment; explicit local storage fallback PASSES; host safe-compile certificate and custodied gt_n600 cache remain required"
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "contended": false,
+    "knob": "micro_batch",
+    "rss_evidence": "DERIVED_STATIC_PREFLIGHT_FROM_MEASURED_261_GUARD_NOT_ACTUAL_RSS",
+    "rss_mib": 25067.52,
+    "rss_n_pairs": 600,
+    "source": "tools/witness_memory_preflight.py; self_orient=false; verdict_batch=32; #261 measured guard provenance",
+    "step_evidence": "MEASURED_HISTORICAL_N24_DIAGNOSTIC_NOT_CURRENT_V9_AUTHORITY",
+    "step_n_pairs": 24,
+    "step_s": 9.17485,
+    "value": 1
+  },
+  {
+    "contended": false,
+    "knob": "micro_batch",
+    "rss_evidence": "DERIVED_STATIC_PREFLIGHT_FROM_MEASURED_261_GUARD_NOT_ACTUAL_RSS",
+    "rss_mib": 30986.24,
+    "rss_n_pairs": 600,
+    "source": "tools/witness_memory_preflight.py; self_orient=false; verdict_batch=32; #261 measured guard provenance",
+    "step_evidence": "MEASURED_HISTORICAL_N24_DIAGNOSTIC_NOT_CURRENT_V9_AUTHORITY",
+    "step_n_pairs": 24,
+    "step_s": 9.165600000000001,
+    "value": 2
+  }
+]

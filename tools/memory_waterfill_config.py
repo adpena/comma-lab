@@ -7,7 +7,7 @@ sole-workload 128 GB box; the constraint is NEVER-CRASH physics (control-plane f
 ~10 GiB spike/model-error margin + no swap-thrash) => single-workload envelope ``safe_frac ~ 0.85``.
 Spare RAM buys THROUGHPUT + CACHES, never capacity (capacity stays geometry-driven, mod-19 Whitney).
 
-This solver turns that policy into a config: given the envelope + the MEASURED per-knob curve
+This solver turns that policy into a config: given the envelope + custodied per-knob curve
 points, it exhaustively enumerates the (micro_batch B, verdict_batch) grid — a TINY discrete space,
 so exhaustive is the honest choice (no fake sophistication) — projects every candidate's peak RSS
 through the REAL preflight projection function (``tools/witness_memory_preflight.project_peak_rss_gib``,
@@ -18,11 +18,11 @@ NO-FAKE discipline on the two knobs:
 
 * **micro_batch B** — curve points are INPUT DATA (the #261 measured rows ship as the provenance-cited
   default set: B1 2.23 s / 5907 MiB and B4 2.19 s / 5918 MiB, n=8, 6 ep, CONTENTION-CONFOUNDED with
-  #205 on the Apple GPU; DAG FEED-03g 2026-07-03). The solver treats the knob as MEASURED only when
-  uncontended points at the TARGET n-pairs scale exist with >= 2 distinct B values. Until then the
-  knob is **UNMEASURED-EXCLUDED** (B pinned to 1 = the byte-identical serial path) and the result
-  says so — it never invents a curve. (#293's batched-seed-co-grad RSS delta is the named pending
-  measurement.)
+  #205 on the Apple GPU; DAG FEED-03g 2026-07-03). The solver unlocks the knob only when unambiguous
+  target-n RSS custody exists for B1 and at least one treatment. RSS may be an explicitly labeled
+  conservative projection; step timing may carry a separately labeled scale. The result preserves
+  both labels and never promotes historical timing to current-V9 authority. Until then the knob is
+  **UNMEASURED-EXCLUDED** (B pinned to 1 = the byte-identical serial path).
 * **verdict_batch** — memory uses the preflight's MEASURED verdict-spike model (floor 6 GiB /
   0.11 GiB/pair, 2026-07-02 ledger). Throughput uses the **verdict-wall ∝ 1/batch approximation,
   labeled [modeled]** everywhere it appears: it assumes per-chunk overhead dominates the chunked
@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -74,6 +75,10 @@ class CurvePoint:
     step_s: float | None = None       # measured median step wall (s)
     rss_mib: float | None = None      # measured peak RSS (MiB) at the point's n_pairs
     n_pairs: int | None = None        # scale the point was measured at
+    rss_n_pairs: int | None = None    # optional split custody: RSS scale (falls back to n_pairs)
+    step_n_pairs: int | None = None   # optional split custody: throughput scale (falls back to n_pairs)
+    rss_evidence: str = ""            # e.g. DERIVED_STATIC_PREFLIGHT / MEASURED_ACTUAL_RSS
+    step_evidence: str = ""           # e.g. MEASURED_HISTORICAL_N24_DIAGNOSTIC
     contended: bool = False           # True => GPU shared with another job (throughput masked)
     source: str = ""                  # provenance cite
 
@@ -115,37 +120,95 @@ DEFAULT_VERDICT_BATCH_GRID: tuple[int, ...] = (8, 16, 32, 64, 128, 256)
 @dataclass(frozen=True)
 class KnobStatus:
     name: str
-    measured: bool
+    measured: bool          # True only when every searched axis carries MEASURED custody
     grid: tuple[int, ...]      # the values the solver may search over
     reason: str
+    searchable: bool = True   # DERIVED target-n RSS may be searchable without becoming measured
+
+
+def _usable_micro_batch_point(point: CurvePoint, *, target_n_pairs: int) -> bool:
+    rss_scale = point.rss_n_pairs if point.rss_n_pairs is not None else point.n_pairs
+    step_scale = point.step_n_pairs if point.step_n_pairs is not None else point.n_pairs
+    try:
+        finite_positive = (
+            point.step_s is not None
+            and math.isfinite(float(point.step_s))
+            and float(point.step_s) > 0.0
+            and point.rss_mib is not None
+            and math.isfinite(float(point.rss_mib))
+            and float(point.rss_mib) > 0.0
+        )
+    except (TypeError, ValueError, OverflowError):
+        finite_positive = False
+    return bool(
+        point.knob == "micro_batch"
+        and not point.contended
+        and isinstance(point.value, int)
+        and not isinstance(point.value, bool)
+        and point.value >= 1
+        and isinstance(rss_scale, int)
+        and not isinstance(rss_scale, bool)
+        and rss_scale == target_n_pairs
+        and (step_scale is None or (
+            isinstance(step_scale, int)
+            and not isinstance(step_scale, bool)
+            and step_scale >= 1
+        ))
+        and finite_positive
+    )
 
 
 def assess_micro_batch(points: tuple[CurvePoint, ...] | list[CurvePoint],
                        *, target_n_pairs: int) -> KnobStatus:
-    """MEASURED iff >=2 distinct-B UNCONTENDED points exist AT the target n-pairs scale (both a
-    throughput curve AND an RSS delta at the real scale are required to size B against the
-    envelope). Anything less => UNMEASURED: pin B=1 (the byte-identical serial path) and say why."""
+    """Admit the B grid iff B1 plus >=1 treatment have target-scale RSS and a custodied step row.
+
+    ``rss_n_pairs`` and ``step_n_pairs`` split two evidence axes that the legacy ``n_pairs`` field
+    accidentally conflated.  Memory MUST be target-n because it is the launch-safety constraint.
+    Throughput may be a separately labeled historical diagnostic; the candidate carries that label
+    and must never be promoted to current-V9 wall-clock authority.  Anything less pins B=1.
+    """
     pts = [p for p in points if p.knob == "micro_batch"]
-    usable = [p for p in pts if (not p.contended) and p.n_pairs == target_n_pairs
-              and p.step_s is not None and p.rss_mib is not None]
+    usable = [p for p in pts if _usable_micro_batch_point(p, target_n_pairs=target_n_pairs)]
     distinct = sorted({p.value for p in usable})
-    if len(distinct) >= 2:
+    duplicates = sorted(value for value in distinct if sum(p.value == value for p in usable) != 1)
+    if len(distinct) >= 2 and 1 in distinct and not duplicates:
+        step_scales = sorted({p.step_n_pairs if p.step_n_pairs is not None else p.n_pairs
+                              for p in usable}, key=lambda x: (-1 if x is None else x))
+        rss_evidence = sorted({p.rss_evidence or MEASURED_TAG for p in usable})
+        step_evidence = sorted({p.step_evidence or MEASURED_TAG for p in usable})
+        fully_measured = all(
+            (not p.rss_evidence or p.rss_evidence.startswith("MEASURED"))
+            and (not p.step_evidence or p.step_evidence.startswith("MEASURED"))
+            for p in usable
+        )
         return KnobStatus(
-            name="micro_batch", measured=True, grid=tuple(distinct),
-            reason=f"{len(usable)} uncontended points at n={target_n_pairs} "
-                   f"(B in {distinct}) {MEASURED_TAG}")
+            name="micro_batch", measured=fully_measured, grid=tuple(distinct), searchable=True,
+            reason=(f"{len(usable)} uncontended target-n={target_n_pairs} RSS points "
+                    f"(B in {distinct}); throughput scales={step_scales}, "
+                    f"rss_evidence={rss_evidence}, step_evidence={step_evidence}"))
     why: list[str] = []
     if not pts:
         why.append("no curve points supplied")
     else:
-        scales = sorted({p.n_pairs for p in pts})
+        scales = sorted(
+            {p.rss_n_pairs if p.rss_n_pairs is not None else p.n_pairs for p in pts},
+            key=lambda value: (value is not None, str(value)),
+        )
         if all(p.contended for p in pts):
             why.append("all points contention-confounded (#261 B1~B4 1.02x under #205 contention)")
         if target_n_pairs not in scales:
             why.append(f"no points at target n={target_n_pairs} (points at n={scales}; "
                        f"n600 RSS delta pending #293)")
+        if 1 not in distinct:
+            why.append("no usable B=1 anchor")
+        if duplicates:
+            why.append(f"ambiguous duplicate points for B={duplicates}")
+        if pts and not usable:
+            why.append("no finite positive uncontended point with target-n RSS custody")
+        elif len(usable) != len(pts):
+            why.append(f"{len(pts) - len(usable)} point(s) unusable under custody validation")
     return KnobStatus(
-        name="micro_batch", measured=False, grid=(1,),
+        name="micro_batch", measured=False, grid=(1,), searchable=False,
         reason="UNMEASURED — excluded (B pinned to 1, the byte-identical serial path): "
                + "; ".join(why))
 
@@ -210,6 +273,12 @@ class Candidate:
     gt_gib: float
     verdict_transient_gib: float
     fixed_overhead_gib: float
+    micro_batch_guard_gib: float
+    micro_batch_rss_delta_gib: float
+    micro_batch_step_s: float | None
+    micro_batch_throughput_multiplier: float
+    micro_batch_rss_evidence: str
+    micro_batch_step_evidence: str
     safe: bool                         # preflight SAFE  AND  adjusted peak <= envelope (conjunction)
     throughput_multiplier: float
     throughput_label: str      # [modeled] / [measured]
@@ -267,7 +336,11 @@ def solve_waterfill(
     vb_status = assess_verdict_batch(verdict_batch_grid)
     notes: list[str] = []
     if not mb_status.measured:
-        notes.append(f"micro_batch knob: {mb_status.reason}")
+        notes.append(
+            "micro_batch knob uses DERIVED/non-promotable custody: " + mb_status.reason
+            if mb_status.searchable
+            else "micro_batch knob excluded: " + mb_status.reason
+        )
     notes.append(
         "verdict-spike calibration (mine 2026-07-04): the preflight's +5.6 component matches only "
         "the verdict-thread STEP; realized per-window spike is +12.3 GiB mean under concurrent "
@@ -284,31 +357,55 @@ def solve_waterfill(
             f"GiB (never-crash physics leg 1) — refusing all candidates")
 
     cands: list[Candidate] = []
+    usable_points = {
+        p.value: p for p in micro_batch_points
+        if _usable_micro_batch_point(p, target_n_pairs=num_pairs)
+    }
+    b1_point = usable_points.get(1) if mb_status.searchable else None
     for b in mb_status.grid:
         for vb in vb_status.grid:
             proj = wmp.project_peak_rss_gib(
                 num_pairs=num_pairs, render_h=render_h, render_w=render_w, in_feat=in_feat,
-                self_orient=self_orient, verdict_batch=vb,
+                self_orient=self_orient, micro_batch_pairs=b, verdict_batch=vb,
                 total_ram_gib=total_ram_gib, safe_frac=safe_frac)
-            # NOTE: no micro-batch RSS term is added — B is only searchable when its RSS delta at
-            # the target scale is MEASURED (assess_micro_batch); with B pinned to 1 the projection
-            # is exactly the preflight's serial-path model. UNMEASURED => never invent.
+            point = usable_points.get(b) if mb_status.searchable else None
+            point_delta = 0.0
+            if point is not None and b1_point is not None:
+                point_delta = max(0.0, (float(point.rss_mib) - float(b1_point.rss_mib)) / 1024.0)
+            # The live preflight charges a conservative #261 absolute-process guard for B>1.  A
+            # target-n measured delta may make that charge larger, never smaller (fail closed).
+            rss_delta = max(float(proj.micro_batch_guard_gib), point_delta)
+            peak = round(proj.projected_peak_gib
+                         + max(0.0, rss_delta - float(proj.micro_batch_guard_gib)), 2)
             spike = realized_verdict_spike_gib(vb)
-            adjusted = round(proj.projected_peak_gib - proj.verdict_transient_gib + spike, 2)
-            mult = throughput_multiplier(
+            adjusted = round(peak - proj.verdict_transient_gib + spike, 2)
+            verdict_mult = throughput_multiplier(
                 vb, baseline_vb=verdict_wall_ref_vb, train_window_s=train_window_s,
                 async_hidden=async_hidden, ref_wall_s=verdict_wall_ref_s,
                 ref_vb=verdict_wall_ref_vb)
-            safe = bool(proj.safe) and floor_ok and (adjusted <= envelope)
+            mb_mult = (float(b1_point.step_s) / float(point.step_s)
+                       if point is not None and b1_point is not None else 1.0)
+            mult = verdict_mult * mb_mult
+            safe = (peak <= envelope) and floor_ok and (adjusted <= envelope)
+            rss_evidence = (point.rss_evidence if point is not None else "")
+            step_evidence = (point.step_evidence if point is not None else "")
             cands.append(Candidate(
                 micro_batch=b, verdict_batch=vb,
-                projected_peak_gib=proj.projected_peak_gib, adjusted_peak_gib=adjusted,
+                projected_peak_gib=peak, adjusted_peak_gib=adjusted,
                 realized_spike_gib=round(spike, 2),
                 cf_cache_gib=proj.cf_cache_gib,
                 gt_gib=proj.gt_gib, verdict_transient_gib=proj.verdict_transient_gib,
-                fixed_overhead_gib=proj.fixed_overhead_gib, safe=safe,
+                fixed_overhead_gib=proj.fixed_overhead_gib,
+                micro_batch_guard_gib=proj.micro_batch_guard_gib,
+                micro_batch_rss_delta_gib=round(rss_delta, 2),
+                micro_batch_step_s=(None if point is None else float(point.step_s)),
+                micro_batch_throughput_multiplier=round(mb_mult, 4),
+                micro_batch_rss_evidence=rss_evidence,
+                micro_batch_step_evidence=step_evidence,
+                safe=safe,
                 throughput_multiplier=round(mult, 4), throughput_label=MODELED_TAG,
                 reason=(proj.reason if floor_ok else "envelope violates control-plane floor")
+                       + f" | micro-batch RSS charge {rss_delta:.2f} GiB ({rss_evidence or 'guard-only'})"
                        + (f" | adjusted (realized-spike) peak {adjusted} GiB"
                           f"{' EXCEEDS envelope' if adjusted > envelope else ''}")))
 
@@ -335,15 +432,17 @@ def format_frontier_table(res: WaterfillResult) -> str:
         lines.append(f"  knob {k.name}: grid={list(k.grid)}  {k.reason}")
     lines.append("  (adj GiB = preflight net - its spike component + REALIZED +12.3 GiB spike "
                  "anchor, mine 2026-07-04; conservative, [modeled] away from vb=32)")
-    hdr = (f"  {'B':>3} {'vbatch':>6} {'peak GiB':>9} {'adj GiB':>8} {'spike':>6} {'cf':>6} "
-           f"{'gt':>5} {'fixed':>5} {'thpt x':>7} {'':10} verdict")
+    hdr = (f"  {'B':>3} {'vbatch':>6} {'peak GiB':>9} {'adj GiB':>8} {'B rss':>6} {'B x':>6} "
+           f"{'spike':>6} {'cf':>6} {'gt':>5} {'fixed':>5} {'thpt x':>7} {'':10} verdict")
     lines.append(hdr)
     for c in res.candidates:
         mark = "SAFE  " if c.safe else "REFUSE"
         star = " <== BEST" if (res.best is not None and c == res.best) else ""
         lines.append(
             f"  {c.micro_batch:>3} {c.verdict_batch:>6} {c.projected_peak_gib:>9.2f} "
-            f"{c.adjusted_peak_gib:>8.2f} {c.realized_spike_gib:>6.2f} {c.cf_cache_gib:>6.2f} "
+            f"{c.adjusted_peak_gib:>8.2f} {c.micro_batch_rss_delta_gib:>6.2f} "
+            f"{c.micro_batch_throughput_multiplier:>6.3f} {c.realized_spike_gib:>6.2f} "
+            f"{c.cf_cache_gib:>6.2f} "
             f"{c.gt_gib:>5.2f} {c.fixed_overhead_gib:>5.1f} {c.throughput_multiplier:>7.3f} "
             f"{c.throughput_label:>10} {mark}{star}")
     if res.best is None:
@@ -360,8 +459,10 @@ def format_frontier_table(res: WaterfillResult) -> str:
 
 
 def load_points_json(path: Path) -> tuple[CurvePoint, ...]:
-    """Load measured curve points from a JSON file: a list of CurvePoint dicts."""
+    """Load custodied curve points from a JSON file: a list of CurvePoint dicts."""
     rows = json.loads(Path(path).read_text())
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        raise ValueError("micro-batch points JSON must be a list of objects")
     return tuple(CurvePoint(**r) for r in rows)
 
 
@@ -383,8 +484,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--verdict-batch-grid", type=str,
                     default=",".join(str(v) for v in DEFAULT_VERDICT_BATCH_GRID))
     ap.add_argument("--micro-batch-points-json", type=str, default=None,
-                    help="JSON file of measured micro-batch CurvePoint rows (default: the #261 "
-                         "measured set, which is honest but insufficient => knob excluded)")
+                    help="JSON file of custodied micro-batch CurvePoint rows. RSS must be target-n "
+                         "and may be a clearly labeled conservative preflight projection; timing "
+                         "may use a separately labeled scale. The default #261 set is honest but "
+                         "insufficient, so the knob remains excluded.")
     ap.add_argument("--train-window-s", type=float, default=MEASURED_TRAIN_WINDOW_S)
     ap.add_argument("--verdict-wall-ref-s", type=float, default=MEASURED_VERDICT_WALL_REF_S)
     ap.add_argument("--verdict-wall-ref-vb", type=int, default=MEASURED_VERDICT_WALL_REF_VB)

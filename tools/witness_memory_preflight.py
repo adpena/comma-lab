@@ -37,13 +37,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import operator
 import os
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from tac import micro_batch_memory_guard as _micro_batch_guard
 from tac.jsonl_store import append_locked_jsonl
+
+# Backward-compatible public names: downstream diagnostics already import constants from this tool.
+MICRO_BATCH_EXTRA_PAIR_GUARD_GIB = _micro_batch_guard.MICRO_BATCH_EXTRA_PAIR_GUARD_GIB
+MICRO_BATCH_GUARD_PROVENANCE = _micro_batch_guard.MICRO_BATCH_GUARD_PROVENANCE
 
 # ── MEASURED constants (2026-07-02 ledger) ─────────────────────────────────────────────────────
 CF_PER_PAIR_GIB_REF = 0.072          # cf_mx_cache active per pair @ REF_PIXELS, REF_IN_FEAT, self-orient
@@ -75,6 +81,7 @@ class MemoryProjection:
     render_w: int
     in_feat: int
     self_orient: bool
+    micro_batch_pairs: int
     verdict_batch: int
     render_aa: str
     aa_supersample: int
@@ -82,6 +89,7 @@ class MemoryProjection:
     cf_cache_gib: float
     gt_gib: float
     verdict_transient_gib: float
+    micro_batch_guard_gib: float
     aa_fine_gib: float
     fixed_overhead_gib: float
     projected_peak_gib: float
@@ -99,6 +107,7 @@ def project_peak_rss_gib(
     render_w: int = 512,
     in_feat: int = REF_IN_FEAT,
     self_orient: bool = True,
+    micro_batch_pairs: int = 1,
     verdict_batch: int = DEFAULT_VERDICT_BATCH,
     render_aa: str = "none",
     aa_supersample: int = 1,
@@ -116,6 +125,16 @@ def project_peak_rss_gib(
     dir-feats (self-orient; ``aa_fine_mode`` full/batch — the trainer's fail-closed default
     "refuse" is projected at FULL-mode cost so a config that would need `full` gates honestly)
     + the ss² fine-grid forward excess."""
+    if isinstance(micro_batch_pairs, bool):
+        raise ValueError("micro_batch_pairs must be an integer >= 1, got bool")
+    try:
+        micro_batch_pairs = operator.index(micro_batch_pairs)
+    except TypeError as exc:
+        raise ValueError(
+            f"micro_batch_pairs must be an integer >= 1, got {micro_batch_pairs!r}"
+        ) from exc
+    if micro_batch_pairs < 1:
+        raise ValueError(f"micro_batch_pairs must be >= 1, got {micro_batch_pairs}")
     pix_ratio = (render_h * render_w) / float(REF_PIXELS)
     feat_ratio = in_feat / float(REF_IN_FEAT)
     per_pair = CF_PER_PAIR_GIB_REF * pix_ratio * feat_ratio
@@ -124,6 +143,7 @@ def project_peak_rss_gib(
     gt = GT_PER_PAIR_GIB * num_pairs
     eff_batch = num_pairs if (verdict_batch is None or verdict_batch <= 0) else min(int(verdict_batch), num_pairs)
     verdict = max(VERDICT_FLOOR_GIB, VERDICT_PER_PAIR_GIB * eff_batch)
+    micro_batch_guard = _micro_batch_guard.micro_batch_guard_gib(micro_batch_pairs)
     # ── P11′ AA-supersample term (T5 recess R3; the F4 false-SAFE class this tool exists to extinct) ──
     aa_fine = 0.0
     ss = max(1, int(aa_supersample))
@@ -137,7 +157,7 @@ def project_peak_rss_gib(
             n_store = num_pairs if aa_fine_mode in ("full", "refuse") else min(AA_FINE_BATCH_CAP, num_pairs)
             aa_fine += per_pair_fine * n_store                     # (b) per-pair fine dir-feats
         aa_fine += RENDER_FWD_GIB_REF * (ss * ss - 1) * pix_ratio  # (c) fine-grid forward EXCESS
-    peak = FIXED_OVERHEAD_GIB + cf_cache + gt + verdict + aa_fine
+    peak = FIXED_OVERHEAD_GIB + cf_cache + gt + verdict + micro_batch_guard + aa_fine
 
     if total_ram_gib is None:
         total_ram_gib = _total_ram_gib()
@@ -152,10 +172,12 @@ def project_peak_rss_gib(
                   f"Reduce --num-pairs, ensure --verdict-batch>0 (got {verdict_batch}), or free RAM.")
     return MemoryProjection(
         num_pairs=num_pairs, render_h=render_h, render_w=render_w, in_feat=in_feat,
-        self_orient=self_orient, verdict_batch=int(verdict_batch or 0),
+        self_orient=self_orient, micro_batch_pairs=micro_batch_pairs,
+        verdict_batch=int(verdict_batch or 0),
         render_aa=str(render_aa), aa_supersample=ss, aa_fine_mode=str(aa_fine_mode),
         cf_cache_gib=round(cf_cache, 2), gt_gib=round(gt, 2),
-        verdict_transient_gib=round(verdict, 2), aa_fine_gib=round(aa_fine, 2),
+        verdict_transient_gib=round(verdict, 2),
+        micro_batch_guard_gib=round(micro_batch_guard, 2), aa_fine_gib=round(aa_fine, 2),
         fixed_overhead_gib=FIXED_OVERHEAD_GIB,
         projected_peak_gib=round(peak, 2), total_ram_gib=round(total_ram_gib, 1),
         safe_frac=safe_frac, safe_ceiling_gib=round(ceiling, 1), safe=safe, reason=reason)
@@ -173,7 +195,8 @@ def _total_ram_gib() -> float:
             return 128.0  # last-resort assumption for this fleet's M5 Max
 
 
-_FLAG_INT = {"--num-pairs", "--render-h", "--render-w", "--verdict-batch", "--mod-dim", "--hidden-dim",
+_FLAG_INT = {"--num-pairs", "--render-h", "--render-w", "--verdict-batch", "--micro-batch-pairs",
+             "--mod-dim", "--hidden-dim",
              # C4 fix: the front-end flags in_feat is derived from (trainer argparse:4785-4799).
              "--bank-n-scales", "--bank-n-orient0", "--bank-n-iso", "--n-dir-freqs",
              # P11′ AA fix: the supersample factor (trainer --aa-supersample).
@@ -306,6 +329,7 @@ def project_from_launch_sh(path: Path, *, safe_frac: float = DEFAULT_SAFE_FRAC,
         render_w=int(flags.get("render_w", 512)),
         in_feat=in_feat,
         self_orient=self_orient,
+        micro_batch_pairs=int(flags.get("micro_batch_pairs", 1)),
         verdict_batch=int(flags.get("verdict_batch", DEFAULT_VERDICT_BATCH)),
         # P11′ AA fix: an ss=2 supersample launch.sh previously projected as if base-grid (the
         # C4 false-SAFE class — P5 verdict F4).
@@ -557,6 +581,10 @@ def main(argv: list[str] | None = None) -> int:
                     "bank/dir flags on the --launch-sh path, else the measured reference "
                     f"{REF_IN_FEAT}). Honored on BOTH paths (C4 fix).")
     ap.add_argument("--verdict-batch", type=int, default=DEFAULT_VERDICT_BATCH)
+    ap.add_argument("--micro-batch-pairs", type=int, default=1,
+                    help="trainer --micro-batch-pairs value. B>1 adds the conservative #261 "
+                         "measured-absolute-peak guard charge per extra pair; this is a DERIVED "
+                         "projection, not actual current-V9 n600 RSS custody")
     ap.add_argument("--no-self-orient", action="store_true")
     # P11′ AA fix (T5 recess R3): the supersample term on the flag path (the --launch-sh path
     # derives these from the emitted flags).
@@ -627,6 +655,7 @@ def main(argv: list[str] | None = None) -> int:
             num_pairs=args.num_pairs, render_h=args.render_h, render_w=args.render_w,
             in_feat=(REF_IN_FEAT if args.in_feat is None else args.in_feat),
             self_orient=not args.no_self_orient,
+            micro_batch_pairs=args.micro_batch_pairs,
             verdict_batch=args.verdict_batch,
             render_aa=args.render_aa, aa_supersample=args.aa_supersample,
             aa_fine_mode=args.aa_self_orient_fine_mode,
@@ -652,10 +681,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[witness-mem-preflight] {tag}: {proj.reason}")
     print(f"  breakdown (GiB): fixed={proj.fixed_overhead_gib} + cf_mx_cache={proj.cf_cache_gib} "
           f"+ gt={proj.gt_gib} + verdict={proj.verdict_transient_gib} "
-          f"+ aa_fine={proj.aa_fine_gib} = peak {proj.projected_peak_gib}")
+          f"+ micro_batch_guard={proj.micro_batch_guard_gib} + aa_fine={proj.aa_fine_gib} "
+          f"= peak {proj.projected_peak_gib}")
     print(f"  config: num_pairs={proj.num_pairs} render={proj.render_h}x{proj.render_w} "
-          f"in_feat={proj.in_feat} self_orient={proj.self_orient} verdict_batch={proj.verdict_batch} "
+          f"in_feat={proj.in_feat} self_orient={proj.self_orient} "
+          f"micro_batch_pairs={proj.micro_batch_pairs} verdict_batch={proj.verdict_batch} "
           f"render_aa={proj.render_aa} ss={proj.aa_supersample} aa_fine_mode={proj.aa_fine_mode}")
+    if proj.micro_batch_pairs > 1:
+        print(f"  micro_batch_guard_provenance: {MICRO_BATCH_GUARD_PROVENANCE}")
 
     admit_refused = False
     if args.system_aware:
