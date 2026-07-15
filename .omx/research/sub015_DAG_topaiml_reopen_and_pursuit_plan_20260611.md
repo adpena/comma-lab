@@ -17855,27 +17855,21 @@ reopen = a RE-CAPTURE task, NOT a $0 recompute. Triality: memory `[[ripo_categor
 (serialized behind the island-birth canonical_eq arm). Sister: `[[dual_metric_no_solve_is_squared_hessian_not_fisher_natural_20260714]]`
 (same NO-FAKE guard family — borrowed convex transfers). **means != ends: pointer UNMOVED 0.19108/0.18804.**
 
-### FEED-shr (2026-07-14) — #502 shearlet half + curvelet-vs-shearlet FAMILY SELECTION MEASURED
-SIGNAL: the curvelet half (FEED-cvl) left the compact-shearlet half + the directional-frame family
-selection OWED. DIAGNOSTIC (opus shearlet arm, `[macOS advisory / not score authority]`): BUILT
-`tac.boundary_math.compact_shearlet_frame` — GENUINE cone-adapted shearlet (parabolic scaling A_j +
-SHEARING S_k + translation, two cones). Certificate PASSES two swap-tests a rotation/Fourier basis
-FAILS: (1) localization span 1.0 vs Fourier 1.5e-7; (2) shear-selectivity via ANCHOR-AXIS INVARIANCE
-(`S_k·(x,0)=(x,0)` ⇒ shear_anchor_dispersion 1e-34 vs a matched-normal ROTATION family 0.006, disc-ratio
-inf) + integer-lattice preservation. #351-tight: the gate reads the REAL forward — monkeypatching the
-steering to rotation FLIPS passes True→False (test-covered). MLX parity 6e-8; 14 tests. MEASURED the
-$0 OMP 3-way capacity probe (`experiments/shearlet_vs_curvelet_vs_fourier_capacity_probe.py`, reuses the
-curvelet harness verbatim; matched 160-col curvelet==shearlet < Fourier 236; seeds 0/1/2; gt_n600+gt_n96).
-**NO-FAKE catch:** an early ASYMMETRIC run (finer-orientation shearlet vs the coarser committed curvelet
-cols192) mislabeled shearlet ~1.08–1.33× ahead; giving BOTH the same finer-orientation optimal form at
-MATCHED budget REVERSED it. VERDICT: **CURVELET WINS** — strictly lower N-term rel-err at EVERY K on both
-caches (n600 K@0.10 F12/C10/S10, curvelet lower rel-err each K; n96 curvelet ahead every K); both
-directional frames beat Fourier ~1.20×. Mechanism: rotation rigidly aligns to the near-straight edge
-tangent; shear distorts the envelope to a parallelogram (worse constant on straight edges — matches
-shearlet lit: same asymptotic rate, integer-lattice is shear's decode-only edge). RESPONSE: build the
-OWED through-R d_seg harness for the CURVELET (winner + wired incumbent); shearlet is a certified,
-decode-cheaper fallback to A/B only if decode cost later binds. Triality: memo
-`.omx/research/shearlet_vs_curvelet_family_selection_20260714.md` ✓; canonical-eq
-`compact_shearlet_parabolic_capacity_v1` registration OWED (serialized behind the island-birth
-`canonical_equations/` arm) + shearlet DSL lever OWED (serialized behind the `witness_dsl` arm). **means
-!= ends: pointer UNMOVED 0.19108/0.18804.**
+# FEED-optimal-metric-unify-500-20260714 — OPTIMAL METRIC unification (task #500). SIGNAL: operator
+"reachable decision-geometry as fidelity AND training-loss AND curriculum-varying metric" — unify the
+LANDED info-geo pieces into ONE metric. DIAGNOSTIC/DERIVATION ($0, NumPy-fp32 advisory, pointer UNMOVED):
+the single object is `g = ∇²F = diag(p) − p pᵀ` (log-partition/Bregman Hessian of `F=logsumexp` = categorical
+Fisher). THREE reductions, computed not asserted (`src/tac/information_geometry/optimal_metric.py`): (1)
+**fidelity** = EXACT — `C_wr = (e_w−e_r)ᵀ g (e_w−e_r) = p_w+p_r−(p_w−p_r)²`, BIT-EQUAL to RIPO
+`winner_rival_curvature` (test-proven); the directional trust radius `|t|≤√(8·δ_KL/C_wr)` replaces raw cosine
+(D42, Spearman −0.96). (2) **training-loss** = PARTIAL/HONEST SURROGATE — two-class annulus
+`tr g|₂ = ½sech²(m/2)`, a monotone fn of margin → the MEASURED 0.978 caustic (margin field = Fisher surrogate
+the witness descends); named gap: scalar TRACE surrogate, not the full K=5 directional `g`. (3) **curriculum**
+= DERIVED — `g(τ)=τ⁻²(diag(p_τ)−p_τp_τᵀ)`, p_τ=softmax(θ/τ); concentrates on separatrix as τ↓ (C_wr_nat
+0.187→3.7e-13 for τ 1.0→0.1, test-measured). NO-FAKE: all readings PRIMAL tangent `ΔθᵀgΔθ` (Fisher-natural,
+no H⁻¹); the DUAL no-solve `Δθᵀg²Δθ` is the SQUARED-Hessian, NOT Fisher-natural — honored per landed guard
+`bregman_dual_metric_squared_hessian_v1` (never conflated). RESPONSE: registered `optimal_metric_unification_v1`
++ the OWED `categorical_fisher_trust_region_winner_rival_v1` (1 event each, no dup/orphan). Triality: eqs ✓
+(canonical_equations) + this DAG FEED ✓ + memo `.omx/research/optimal_metric_unification_derivation_20260714.md`;
+RIPO memory marked registration DONE. OWED (serialized, `witness_dsl` arm-owned): the τ-metric DSL/curriculum
+trainer wire. **means != ends: pointer UNMOVED 0.19108/0.18804.**
