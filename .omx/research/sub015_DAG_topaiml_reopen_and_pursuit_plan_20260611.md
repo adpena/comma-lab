@@ -18424,3 +18424,42 @@ annulus and longest end of long tail". Full table:
   adoption-rule provenance. OWED at r6 harvest: full-config real-loss functional probe (nearly
   free from the run's own outputs). F10 pulled (7d882182e2) before touching surfaces. MEANS;
   **pointer 0.19108 UNMOVED.**
+
+## FEED-509-b3r (2026-07-15) — batch-3 remainder: workers wire-in COMPLETE (0d1ecd0565) + F4/F5 routed fixes (f36f1720e4) + maglaw PARTIAL harvest + n24 span classification
+- **Charter item 1 COMPLETE (0d1ecd0565):** VerdictParallelWorkers default now DERIVED-from-headroom
+  (`derived_verdict_workers`: base 10.66 + w×2.9 GiB ≤ 0.70×available, capped at the MEASURED ladder
+  top w=8 — never a hand count) + the wired trainer path self-checks bit-identity on its FIRST
+  parallel verdict (chunk-0 pool-vs-sequential float-exact; mismatch ⇒ confound_alarm + permanent
+  sequential fallback + full sequential re-run; EXERCISED on real gt_n24, both branches PASS,
+  values float-identical). BONUS: `per_dim_dseg_ablation(workers=)` fans the mdd 19-dim sweep
+  across the same pool (values identical, ordered aggregation, nan semantics preserved; unit-tested).
+- **MEASURED (n24 arms A/B, every-epoch #480 v2 span rows): the spans TILE the epoch exactly**
+  (outside-spans gap = 0.0000s per-row). Steady n24: in-loop gap 0.34-0.36 s/ep (~2%), tail ≈ 0,
+  pre ≈ 0 ⇒ NO steady-state per-epoch warmup-recompute class exists at n24 — **warmup-persistence
+  (charter item 2) verdict: DATA-GATED on the first n600 span row (r6 dry-start emits it); no cache
+  build is justified from n24 data** (the lane-band −0.04 s/ep lesson). THE real burner is the
+  VERDICT EPOCH: ep25 total 647.3s vs ~20s steady — tail 629.8s = verdict 187.4s + mdd-ablation
+  ≈443s (19 dims × k24 render+SegNet) + cadence checkpoints. Both shares now have a built lever
+  (workers pool); mdd speedup receipt OWED at the first workers≥2 verdict epoch.
+- **Maglaw A/B PARTIAL (verdict_scope: FORMULATION, n24, seed 0, ep1-39 window, armC attribution
+  OWED):** v0 d_seg 0.03231 IDENTICAL both arms (clean control); ep25 verdict d_seg armA
+  (per-param+fixed, incumbent) 0.018045 (−44.2%) vs armB (normalize-none+AutoClip) 0.015902
+  (−50.8%); ep1-39 log-loss slope armA −0.02202/ep vs armB −0.02380/ep (+8.1% faster). armB leads
+  BOTH metrics, but armB-vs-armC (normalize-none+fixed) separates lineage-vs-clip-law — **armC
+  relaunch REFUSED twice by system-admission** (active-growth 50 GiB from the live arms; r2 also
+  hit the config-freshness gate working correctly post-d2cc57dc6e). Law registration deferred to
+  armC completion (anchor `autoclip_descent_speed_effect_n24_ab_owed_20260715`).
+- **F5 landed (f36f1720e4):** autoclip×per-param-normalize REFUSED at arming (counted-but-inert
+  #417-shaped; C0 telemetry≠mechanism) + honest mechanism state in all 3 provenance surfaces +
+  `grad_normalize` recorded in the armed row. **F4 landed:** docstring scope → scorer-share-only;
+  SPEC §3 ON/OFF row added (OFF-for-live-chain, duty-queued next compile). **bf16 QC gate
+  FIRE-READY:** `ComputeDtypeBf16QCGate()` zero-arg launcher-composable lever (bf16 + 60-step QC
+  window + full trainer QC-compat set); the bounded n24 QC RUN is blocked on the same admission
+  wall — fire command:
+  `tools/launch_witness_run.py --config v9_cgauge_ideal_mod19 --gt-cache .../gt_n24.npz --num-pairs 24 --dry-start 39 --dsl-lever ComputeDtypeBf16QCGate --out-dir .../levelset_n24_bf16qc_<utc>`.
+- **BLOCKERS (operator/parent decision owed):** arms A/B are PAST their planned ep39 clean stop
+  (memo §7c design) but the stop signal was classifier-DENIED for this subagent (predecessor-launched
+  jobs). While they run: armC + bf16-QC + any trainer launch admission-REFUSE, and the r6 chain
+  (pid 91660, UNTOUCHABLE) stays parked in its drain-wait loop. ONE authorized stop of pids
+  64994/64998 (ckpt-every 1 ⇒ resumable) unblocks all three + the chain.
+- Everything MEANS; **pointer 0.19108 UNMOVED.**
