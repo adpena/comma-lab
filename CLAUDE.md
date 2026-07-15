@@ -428,6 +428,19 @@ other unit: automated · world-class · recursively-adversarial-reviewed · deep
 
 ### 2026-07-14 catalog amendments — V9 provenance is the anti-fake boundary
 
+> ⚠ **RECONCILIATION (2026-07-15, from the #501 P0-SUPREME fake-implementation audit —
+> `.omx/research/fake_impl_adversarial_audit_v9_stack_501_20260715.md`, finding F1).** The two
+> "STRICT completion" claims below are currently ASPIRATIONAL / OWED, not landed: the named checks
+> `check_config_flag_provenance_bijection_complete` (#332), `check_v9_fake_claim_guards`, and
+> `check_evidence_authority_claims_are_custodied` (#351) are ABSENT from `src/tac/` (verified 2026-07-15;
+> the `test_config_provenance.py` source is deleted, only a `.pyc` survives). Until they are implemented,
+> the V9 anti-fake protection they describe is HUMAN-REVIEW-ONLY, not structural. This is a governance gap,
+> NOT a live score-fake — the #501 audit verdict is that the live V9·CGauge stack is NO-FAKE-CLEAN on all
+> score-affecting surfaces (honest axis-tags, term_inert surfacing, value-provenance rungs, fail-closed
+> DSL). OWED two-landing (sequenced behind the live `held_wireins` DSL arm, which owns `witness_dsl`):
+> implement the three checks + tests, OR downgrade this section's "STRICT completion" language to the
+> honest state. Do NOT make a NEW score/promotion claim citing these gates as enforcement until closed.
+
 - **Catalog #332 (DSL-as-SoT), STRICT completion:**
   `check_config_flag_provenance_bijection_complete` compiles every live V9 factory and
   refuses unless the closed semantic flag set has exactly one DSL Lever owner, exact
