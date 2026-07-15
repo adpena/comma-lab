@@ -78232,14 +78232,14 @@
       "notes": "DSL/triality authoring only; no launch or paid dispatch; pointer unmoved"
     },
     {
-      "id": "basis_d21a_prod_20260715",
-      "name": "ARM-BASISPROD genuine-frame provenance, D21a rate, D-A/D-B producers",
-      "phase": 1.0,
+      "id": "lane_infra_governed_launch_gate_20260715",
+      "name": "P0 governed launch storage and memory gate",
+      "phase": 0.0,
       "level": 1,
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": ".omx/research/basis_d21a_prod_DAG_FEED_20260715.md"
+          "evidence": "src/tac/micro_batch_memory_guard.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -78254,8 +78254,49 @@
           "evidence": ""
         },
         "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_witness_memory_preflight.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/infra_v9_cgauge_mod19_governed_gate_DAG_FEED_20260715.md"
+        },
+        "memory_entry": {
           "status": false,
           "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "p0_confound_hardening_20260715",
+      "name": "P0 confound-pass follow-on hardening",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/confound_observability.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_confound_gates.py"
         },
         "three_clean_review": {
           "status": false,
@@ -78270,7 +78311,7 @@
           "evidence": ""
         }
       },
-      "notes": "BUILD+local-verify only; $0; no GPU; no paid dispatch; pointer unchanged; owns prompt-routed source/test/triality surfaces in isolated worktree"
+      "notes": "Local-only score-neutral observability alarms and STRICT static preflight guards; no live C0 access, no launch."
     }
   ],
   "level_rules": {
@@ -78280,5 +78321,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-15T10:26:39Z"
+  "updated_at": "2026-07-15T10:39:38Z"
 }

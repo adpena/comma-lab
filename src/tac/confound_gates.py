@@ -15,11 +15,11 @@ adversarial-review finding gets TWO landings — the fix (sibling trainer/launch
 commits) AND a STRICT preflight check that refuses re-introduction of the bug
 class. This module is the second landing for the confound family.
 
-All six gates land **WARN-ONLY** initially per the CLAUDE.md "Strict-flip
-atomicity rule": the trainer/launcher fixes land in *sibling* commits, so this
-builder cannot guarantee live-count 0 across files it does not own. Each gate's
-docstring names its explicit strict-flip condition. The gates are wired into
-``tac.preflight.preflight_all`` (warn-only) so they run every session.
+The original six gates landed **WARN-ONLY** per the CLAUDE.md "Strict-flip
+atomicity rule": their sibling fixes were not in the same commit. The dated
+2026-07-15 follow-on gates at the end of this module land atomically with their
+fixes at live-count zero and are therefore wired STRICT in
+``tac.preflight.preflight_all``.
 
 Each gate:
   * scans the repo for the anti-pattern signature,
@@ -41,6 +41,9 @@ Catalog map:
   2026-07-14 check_codex_nonisolated_writer_cap
   2026-07-14 check_codex_drain_timeout_uses_liveness
   2026-07-15 check_consolidation_debt_monitor_observability_and_cadence
+  2026-07-15 check_witness_trainers_emit_partial_freeze_alarm
+  2026-07-15 check_witness_verdict_rows_carry_dseg_descent_canary
+  2026-07-15 check_verdict_live_gap_defaults_on_during_ema_warmup
 """
 
 from __future__ import annotations
@@ -2137,6 +2140,159 @@ def check_codex_drain_timeout_uses_liveness(
     )
 
 
+# ===========================================================================
+# 2026-07-15 follow-on — H1/H2/H3 confound self-protection. All three fixes
+# and their gates land atomically at live-count zero, so preflight runs STRICT.
+# ===========================================================================
+
+
+def check_witness_trainers_emit_partial_freeze_alarm(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse a witness trainer with no L1 ``partial_freeze`` open-band alarm."""
+
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    for path in _existing_trainers(root):
+        code = _strip_comments(_read(path) or "")
+        rel = path.relative_to(root).as_posix()
+        alarm_pos = code.find('"partial_freeze"')
+        if alarm_pos < 0:
+            violations.append(f"{rel}: missing typed partial_freeze alarm")
+            continue
+        window = code[max(0, alarm_pos - 1800): alarm_pos + 1200]
+        direct_band = "0.02" in window and "0.5" in window and "accepted_frac" in window
+        helper_band = "is_partial_freeze" in window
+        if not (direct_band or helper_band):
+            violations.append(
+                f"{rel}: partial_freeze alarm is not wired to 0.02 < accepted_frac < 0.5"
+            )
+    helper = root / "src" / "tac" / "confound_observability.py"
+    helper_code = _strip_comments(_read(helper) or "")
+    if helper.is_file() and not all(
+        token in helper_code
+        for token in ("PARTIAL_FREEZE_LO = 0.02", "PARTIAL_FREEZE_HI = 0.5", "< frac <")
+    ):
+        violations.append(f"{helper.relative_to(root).as_posix()}: partial-freeze open band drifted")
+    return _finish(
+        name="check_witness_trainers_emit_partial_freeze_alarm",
+        tag="partial-freeze-alarm",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail="all witness trainers carry the exact open-band alarm",
+    )
+
+
+def check_witness_verdict_rows_carry_dseg_descent_canary(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse missing run-global d_seg canary, row stamps, or L3 clearance."""
+
+    root = Path(repo_root or REPO_ROOT)
+    path = root / TRAINER_REL
+    violations: list[str] = []
+    if path.is_file():
+        code = _strip_comments(_read(path) or "")
+        rel = path.relative_to(root).as_posix()
+        required = (
+            "dseg_descent_canary_setup",
+            "dseg_descent_canary_passed",
+            "dseg_descent_positive_control_registered",
+            "dseg_verdict_clearance",
+            "canary_suite",
+            "verdict_clearance()",
+        )
+        missing = [token for token in required if token not in code]
+        if missing:
+            violations.append(f"{rel}: missing d_seg canary wiring tokens: {', '.join(missing)}")
+        # Definition + setup row + baseline + async + sync verdict paths.
+        if code.count("_dseg_canary_telemetry_fields()") < 5:
+            violations.append(
+                f"{rel}: d_seg canary stamp does not cover setup, baseline, async, and sync rows"
+            )
+    return _finish(
+        name="check_witness_verdict_rows_carry_dseg_descent_canary",
+        tag="dseg-descent-canary",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail="global canary and all verdict row paths are wired",
+    )
+
+
+def check_verdict_live_gap_defaults_on_during_ema_warmup(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse the H2 orphan: live-gap default OFF or no EMA-warmup cadence clock."""
+
+    root = Path(repo_root or REPO_ROOT)
+    path = root / TRAINER_REL
+    violations: list[str] = []
+    if path.is_file():
+        text = _read(path) or ""
+        rel = path.relative_to(root).as_posix()
+        try:
+            tree = ast.parse(text)
+        except SyntaxError as exc:
+            violations.append(f"{rel}: cannot parse trainer: {exc}")
+        else:
+            defaults: list[object] = []
+            for node in ast.walk(tree):
+                if (
+                    isinstance(node, ast.Call)
+                    and _call_is_add_argument(node)
+                    and _first_str_positional(node) == "--verdict-live-gap-every"
+                ):
+                    default_node = next(
+                        (kw.value for kw in node.keywords if kw.arg == "default"), None
+                    )
+                    try:
+                        defaults.append(ast.literal_eval(default_node))
+                    except (TypeError, ValueError):
+                        defaults.append(_MISSING)
+            if defaults != [-1]:
+                violations.append(
+                    f"{rel}: --verdict-live-gap-every must default to -1 auto-warmup, got {defaults!r}"
+                )
+        code = _strip_comments(text)
+        required = (
+            "verdict_live_gap_due(",
+            "ema_warmup_updates(",
+            '_live["ema_updates"] += 1',
+            "VERDICT_LIVE_GAP_AUTO_WARMUP",
+        )
+        missing = [token for token in required if token not in code]
+        if missing:
+            violations.append(f"{rel}: missing live-gap warmup wiring: {', '.join(missing)}")
+        # Definition + async scheduler + sync verdict path.
+        if code.count("_verdict_live_gap_is_due") < 3:
+            violations.append(f"{rel}: live-gap warmup predicate is not wired to async and sync verdicts")
+    dsl = root / "src" / "tac" / "witness_dsl" / "curriculum_dsl.py"
+    dsl_code = _strip_comments(_read(dsl) or "")
+    if dsl.is_file() and not all(
+        token in dsl_code for token in ("def VerdictLiveGap(", '"--verdict-live-gap-every"')
+    ):
+        violations.append(f"{dsl.relative_to(root).as_posix()}: VerdictLiveGap DSL lever is missing")
+    return _finish(
+        name="check_verdict_live_gap_defaults_on_during_ema_warmup",
+        tag="verdict-live-gap-warmup",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail="auto-warmup default, accepted-update clock, and both verdict paths are wired",
+    )
+
+
 # The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
 EIGHTFOLD_GATES = (
     check_significance_keys_canonical,
@@ -2160,4 +2316,7 @@ CONFOUND_GATES = (
     check_codex_nonisolated_writer_cap,
     check_codex_drain_timeout_uses_liveness,
     check_consolidation_debt_monitor_observability_and_cadence,
+    check_witness_trainers_emit_partial_freeze_alarm,
+    check_witness_verdict_rows_carry_dseg_descent_canary,
+    check_verdict_live_gap_defaults_on_during_ema_warmup,
 )

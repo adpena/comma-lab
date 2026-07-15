@@ -6454,6 +6454,11 @@ def preflight_all(
             "check_codex_retry_preserves_original_sandbox_authority",
             "check_codex_nonisolated_writer_cap",
             "check_codex_drain_timeout_uses_liveness",
+            # 2026-07-15 H1/H2/H3 fix+gate atomic landing:
+            # each static anti-pattern count is zero, so strict-flip now.
+            "check_witness_trainers_emit_partial_freeze_alarm",
+            "check_witness_verdict_rows_carry_dseg_descent_canary",
+            "check_verdict_live_gap_defaults_on_during_ema_warmup",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(

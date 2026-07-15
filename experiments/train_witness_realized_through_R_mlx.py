@@ -2570,6 +2570,16 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                     "FROZEN this epoch; verdict/telemetry rows for this epoch are "
                                     "measured on non-stepped weights (liveness stamp).",
                         }), flush=True)
+                    elif _accepted_frac < 0.5:
+                        print(json.dumps({
+                            "stage": "confound_alarm", "alarm": "partial_freeze",
+                            "level": "WARN", "scope": "epoch", "restart": restart_i,
+                            "ep": ep, "accepted_frac": round(_accepted_frac, 4),
+                            "accepted_batches": len(ep_gnorms), "skipped_batches": n_skips_ep,
+                            "note": "0.02 < accepted_frac < 0.5: optimizer is stepping but the "
+                                    "epoch is partially frozen; progress and verdict cadence may "
+                                    "be severely slowed.",
+                        }), flush=True)
                 # Release reclaimable Metal buffer cache between epochs (defensive vs
                 # the 499000 active-buffer cap when many arms share the GPU).
                 mx.clear_cache()

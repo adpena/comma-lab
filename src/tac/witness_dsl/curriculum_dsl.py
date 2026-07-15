@@ -2947,12 +2947,12 @@ def FusedRKernel(window: int = 0) -> Lever:
 def VerdictLiveGap(every: int = 1, window: int = 0) -> Lever:
     """Advisory EMA-vs-live verdict-gap observer (task #408 Q3).
 
-    The trainer default is ``0`` (OFF), so constructing this named Lever is the
-    only DSL route that enables the extra live-weight inference.  Its values are
-    appended to verdict telemetry and never consumed by a controller, optimizer,
-    checkpoint selector, or score pointer.  It is nevertheless a Lever because
-    the extra inference can change execution timing; the activation ledger must
-    therefore keep it in duty-to-measure until fired and measured.
+    The trainer default is ``-1`` (automatic during the two-time-constant EMA
+    warmup only). Constructing this named Lever selects explicit all-run every-Kth
+    verdict observation. Its values are appended to verdict telemetry and never
+    consumed by a controller, optimizer, checkpoint selector, or score pointer.
+    It remains a Lever because the extra inference changes execution timing; the
+    activation ledger must keep explicit all-run use in duty-to-measure.
     """
 
     cadence = int(every)
@@ -2962,8 +2962,9 @@ def VerdictLiveGap(every: int = 1, window: int = 0) -> Lever:
         "verdict_live_gap",
         overrides={"--verdict-live-gap-every": cadence},
         epochs_delta=int(window),
-        notes=("task-408 Q3 default-OFF advisory live-vs-EMA verdict gap; extra inference only; "
-               "never feeds training/controller decisions; duty-to-measure"),
+        notes=("task-408 Q3 explicit all-run advisory live-vs-EMA verdict cadence; trainer "
+               "auto-observes EMA warmup; extra inference only; never feeds training/controller "
+               "decisions; duty-to-measure"),
     )
 
 

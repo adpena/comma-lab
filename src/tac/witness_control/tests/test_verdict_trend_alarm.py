@@ -30,3 +30,5 @@ def test_canary_suite_passes():
     assert res.passed is True, res.reason
     assert res.positive_fired_decoupling is True
     assert res.negative_fired is False
+    assert res.descent_positive_registered is True
+    assert res.verdict_clearance() is True

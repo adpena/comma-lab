@@ -713,13 +713,135 @@ class TestTelemetryLiveness:
 
 
 # ===========================================================================
+# 2026-07-15 follow-on H1/H2/H3 alarm/canary/warmup strict gates
+# ===========================================================================
+
+_PARTIAL_FREEZE_CLEAN = '''
+def alarm(accepted_frac):
+    if accepted_frac <= 0.02:
+        return "frozen"
+    elif accepted_frac < 0.5:
+        return {"stage": "confound_alarm", "alarm": "partial_freeze",
+                "accepted_frac": accepted_frac}
+'''
+
+
+class TestPartialFreezeFollowon:
+    @pytest.mark.parametrize("base", (False, True))
+    def test_clean_exact_band(self, tmp_path, base):
+        _trainer(tmp_path, _PARTIAL_FREEZE_CLEAN, base=base)
+        assert cg.check_witness_trainers_emit_partial_freeze_alarm(
+            repo_root=tmp_path, strict=True, verbose=False
+        ) == []
+
+    def test_missing_alarm_refused(self, tmp_path):
+        _trainer(tmp_path, "def alarm(accepted_frac):\n    return accepted_frac <= 0.02\n")
+        out = cg.check_witness_trainers_emit_partial_freeze_alarm(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+        assert len(out) == 1 and "missing typed partial_freeze" in out[0]
+        with pytest.raises(PreflightError):
+            cg.check_witness_trainers_emit_partial_freeze_alarm(
+                repo_root=tmp_path, strict=True, verbose=False
+            )
+
+    def test_wrong_band_refused(self, tmp_path):
+        _trainer(tmp_path, _PARTIAL_FREEZE_CLEAN.replace("0.5", "0.9"))
+        assert cg.check_witness_trainers_emit_partial_freeze_alarm(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+
+
+_DSEG_CANARY_CLEAN = '''
+def canary_suite():
+    return None
+def verdict_clearance():
+    return True
+def _dseg_canary_telemetry_fields():
+    return {"dseg_descent_canary_passed": True,
+            "dseg_descent_positive_control_registered": True,
+            "dseg_verdict_clearance": verdict_clearance()}
+setup = {"stage": "dseg_descent_canary_setup", **_dseg_canary_telemetry_fields()}
+baseline = {"stage": "verdict", **_dseg_canary_telemetry_fields()}
+async_row = {"stage": "verdict", **_dseg_canary_telemetry_fields()}
+sync_row = {"stage": "verdict", **_dseg_canary_telemetry_fields()}
+'''
+
+
+class TestDsegCanaryFollowon:
+    def test_clean_all_paths(self, tmp_path):
+        _trainer(tmp_path, _DSEG_CANARY_CLEAN)
+        assert cg.check_witness_verdict_rows_carry_dseg_descent_canary(
+            repo_root=tmp_path, strict=True, verbose=False
+        ) == []
+
+    def test_missing_sync_stamp_refused(self, tmp_path):
+        _trainer(tmp_path, _DSEG_CANARY_CLEAN.replace(
+            'sync_row = {"stage": "verdict", **_dseg_canary_telemetry_fields()}\n', ""
+        ))
+        out = cg.check_witness_verdict_rows_carry_dseg_descent_canary(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+        assert any("baseline, async, and sync" in row for row in out)
+        with pytest.raises(PreflightError):
+            cg.check_witness_verdict_rows_carry_dseg_descent_canary(
+                repo_root=tmp_path, strict=True, verbose=False
+            )
+
+
+_LIVE_GAP_CLEAN = '''
+import argparse
+VERDICT_LIVE_GAP_AUTO_WARMUP = -1
+def build():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--verdict-live-gap-every", type=int, default=-1)
+def verdict_live_gap_due():
+    return ema_warmup_updates(0.997)
+def _verdict_live_gap_is_due(ep):
+    return verdict_live_gap_due()
+_live = {"ema_updates": 0}
+_live["ema_updates"] += 1
+async_due = _verdict_live_gap_is_due(ep)
+sync_due = _verdict_live_gap_is_due(ep)
+'''
+
+
+class TestLiveGapWarmupFollowon:
+    def test_clean_auto_warmup(self, tmp_path):
+        _trainer(tmp_path, _LIVE_GAP_CLEAN)
+        assert cg.check_verdict_live_gap_defaults_on_during_ema_warmup(
+            repo_root=tmp_path, strict=True, verbose=False
+        ) == []
+
+    def test_default_off_refused(self, tmp_path):
+        _trainer(tmp_path, _LIVE_GAP_CLEAN.replace("default=-1", "default=0"))
+        out = cg.check_verdict_live_gap_defaults_on_during_ema_warmup(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+        assert any("must default to -1" in row for row in out)
+        with pytest.raises(PreflightError):
+            cg.check_verdict_live_gap_defaults_on_during_ema_warmup(
+                repo_root=tmp_path, strict=True, verbose=False
+            )
+
+    def test_missing_sync_predicate_refused(self, tmp_path):
+        _trainer(tmp_path, _LIVE_GAP_CLEAN.replace(
+            "sync_due = _verdict_live_gap_is_due(ep)\n", ""
+        ))
+        out = cg.check_verdict_live_gap_defaults_on_during_ema_warmup(
+            repo_root=tmp_path, strict=False, verbose=False
+        )
+        assert any("async and sync" in row for row in out)
+
+
+# ===========================================================================
 # module + real-repo smoke
 # ===========================================================================
 
 
 class TestModule:
     def test_all_gates_registered(self):
-        assert len(cg.CONFOUND_GATES) == 14
+        assert len(cg.CONFOUND_GATES) == 17
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -736,7 +858,20 @@ class TestModule:
             "check_codex_nonisolated_writer_cap",
             "check_codex_drain_timeout_uses_liveness",
             "check_consolidation_debt_monitor_observability_and_cadence",
+            "check_witness_trainers_emit_partial_freeze_alarm",
+            "check_witness_verdict_rows_carry_dseg_descent_canary",
+            "check_verdict_live_gap_defaults_on_during_ema_warmup",
         }
+
+    def test_followon_gates_are_strict_flipped_in_preflight_all(self):
+        source = (cg.REPO_ROOT / "src" / "tac" / "preflight.py").read_text(encoding="utf-8")
+        strict_block = source.split("_CONFOUND_STRICT = {", 1)[1].split("}", 1)[0]
+        for name in (
+            "check_witness_trainers_emit_partial_freeze_alarm",
+            "check_witness_verdict_rows_carry_dseg_descent_canary",
+            "check_verdict_live_gap_defaults_on_during_ema_warmup",
+        ):
+            assert name in strict_block
 
     def test_consolidation_debt_gate_is_wired_warn_only_in_preflight_all(self):
         source = (cg.REPO_ROOT / "src" / "tac" / "preflight.py").read_text(encoding="utf-8")
@@ -784,6 +919,9 @@ class TestModule:
             "check_codex_nonisolated_writer_cap": 0,
             "check_codex_drain_timeout_uses_liveness": 0,
             "check_consolidation_debt_monitor_observability_and_cadence": 0,
+            "check_witness_trainers_emit_partial_freeze_alarm": 0,
+            "check_witness_verdict_rows_carry_dseg_descent_canary": 0,
+            "check_verdict_live_gap_defaults_on_during_ema_warmup": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

@@ -146,6 +146,12 @@ from tac.causal_manifest import (  # noqa: E402
     unavailable_artifact as causal_unavailable_artifact,
     utc_now as causal_utc_now,
 )
+from tac.confound_observability import (  # noqa: E402
+    VERDICT_LIVE_GAP_AUTO_WARMUP,
+    ema_warmup_updates,
+    is_partial_freeze,
+    verdict_live_gap_due,
+)
 from tac.jsonl_store import append_locked_jsonl  # noqa: E402
 from tac.optimization.film_polar_chart_spel_mlx import (  # noqa: E402
     RESUME_PREFIX as FILM_POLAR_CHART_RESUME_PREFIX,
@@ -3703,9 +3709,9 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     out_dir = Path(args.out_dir)
     _refuse_tmp(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    # D-A/D-B + task-408 observer state.  Pure telemetry is default ON and
-    # fail-open; the only score-affecting member of the batch is the separately
-    # typed/default-OFF VerdictLiveGap DSL lever below.
+    # D-A/D-B + task-408 observer state. Pure telemetry is default ON and
+    # fail-open. VerdictLiveGap defaults to read-only AUTO during EMA warmup;
+    # the named DSL lever retains explicit all-run cadence semantics.
     _component_wallclock_on = bool(
         getattr(args, "component_wallclock_telemetry", True))
     _component_probe_every = max(
@@ -3717,8 +3723,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _sps_engagement_on = bool(getattr(args, "sps_engagement_telemetry", True))
     _sps_k_pairs = max(1, int(getattr(args, "sps_engagement_k_pairs", 4)))
     _sps_window = max(0, int(getattr(args, "sps_engagement_window", 2)))
-    _verdict_live_gap_every = max(
-        0, int(getattr(args, "verdict_live_gap_every", 0)))
+    _verdict_live_gap_mode = int(getattr(
+        args, "verdict_live_gap_every", VERDICT_LIVE_GAP_AUTO_WARMUP))
+    if _verdict_live_gap_mode < VERDICT_LIVE_GAP_AUTO_WARMUP:
+        raise ValueError("--verdict-live-gap-every must be -1 (auto warmup), 0 (explicit off), "
+                         "or a positive all-run cadence")
     _producer_resume = ProducerResumeState()
     _sps_actual_events: dict[str, int] = {}
     _tail_cycle_start_epoch = {"v": None}
@@ -8227,6 +8236,45 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _pose_gate["det"] = None
             _pose_gate["actuating"] = False
 
+    # H1-F4/H3 L3 GLOBAL d_seg-descent positive control. This pure synthetic
+    # apparatus check runs before baseline_v0 so every verdict row carries the
+    # same run-global clearance classification. It only emits telemetry/alarms.
+    try:
+        from tac.witness_control.verdict_trend_alarm import canary_suite as _dseg_canary_suite
+
+        _dseg_canary = _dseg_canary_suite()
+        _dseg_canary_state = {
+            "dseg_descent_canary_passed": bool(_dseg_canary.passed),
+            "dseg_descent_positive_control_registered": bool(
+                _dseg_canary.descent_positive_registered),
+            "dseg_verdict_clearance": bool(_dseg_canary.verdict_clearance()),
+        }
+        _dseg_canary_reason = str(_dseg_canary.reason)
+    except Exception as exc:
+        _dseg_canary_state = {
+            "dseg_descent_canary_passed": False,
+            "dseg_descent_positive_control_registered": False,
+            "dseg_verdict_clearance": False,
+        }
+        _dseg_canary_reason = f"{type(exc).__name__}: {exc}"
+
+    def _dseg_canary_telemetry_fields() -> dict[str, bool]:
+        """Copy the L3 run-global canary classification into each verdict row."""
+
+        return dict(_dseg_canary_state)
+
+    print(json.dumps({
+        "stage": "dseg_descent_canary_setup", **_dseg_canary_telemetry_fields(),
+        "reason": _dseg_canary_reason,
+        "note": "global deterministic known-effect d_seg descent; read-only L3 apparatus check",
+    }), flush=True)
+    if not bool(_dseg_canary_state["dseg_verdict_clearance"]):
+        print(json.dumps({
+            "stage": "confound_alarm", "alarm": "dseg_descent_canary_failed",
+            "reason": _dseg_canary_reason,
+            "note": "L3 verdict clearance is false; verdicts remain advisory and training is unchanged",
+        }), flush=True)
+
     def _jbasin_active() -> bool:
         return bool(_jbasin_on and not _jbasin_state["disabled"] and _jbasin_cfg is not None)
 
@@ -8666,6 +8714,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                    # Additive presence-gated field (dashboard introspect layer reads by key);
                    # NON-PROMOTABLE regardless of device (CLAUDE.md: MLX/MPS is never a score).
                    "verdict_device": _verdict_device}
+            row.update(_dseg_canary_telemetry_fields())
             if row_extra:
                 row.update({k: round(float(vv), 6) for k, vv in row_extra.items()})
             if isinstance(_pose_gate_m, dict):
@@ -8827,10 +8876,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "(GPU never blocks)"}), flush=True)
             _settle_component_verdict(ep, not_invoked=True)
             return False
-        _live_gap_due = (
-            _verdict_live_gap_every > 0
-            and int(ep) % _verdict_live_gap_every == 0
-        )
+        _live_gap_due = _verdict_live_gap_is_due(ep)
         snap = _capture_verdict_snapshot(
             include_live=_live_gap_due)  # MAIN thread, point-in-time
         if _cl_on:
@@ -9534,6 +9580,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                       # as "no training happened"). accepted_frac is not yet defined (no batch ran).
                       "weights_stepped": False, "accepted_frac": None, "frozen_epoch": False,
                       "verdict_device": str(getattr(args, "verdict_device", "cpu")),
+                      **_dseg_canary_telemetry_fields(),
                       # (2026-07-07) ADDITIVE per-class observability on the baseline row, mirroring
                       # _emit_verdict_row (row-only; popped from v0 so it never reaches history).
                       **({"d_seg_by_class": _per_class_v0.get("d_seg_by_class"),
@@ -10425,7 +10472,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # RUNNING counters for the CURRENT epoch (reset at epoch top); `frac`/`stepped`/`acc`/`skip` snapshot
     # the LAST COMPLETED epoch (what epoch-top rows read). All default to "alive" so a fresh run's first
     # rows are not spuriously flagged.
-    _live: dict[str, Any] = {"ep_acc": 0, "ep_tot": 0, "frac": 1.0, "stepped": True, "acc": 0, "skip": 0}
+    _live: dict[str, Any] = {"ep_acc": 0, "ep_tot": 0, "frac": 1.0, "stepped": True,
+                            "acc": 0, "skip": 0, "ema_updates": 0}
 
     def _live_running_frac(pending_accept: "bool | None" = None) -> float:
         """Accepted-batch fraction SO FAR this epoch (for mid-epoch loss_terms rows).
@@ -10449,6 +10497,27 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         """(C6) Emit a typed confound_alarm telemetry row. Advisory (never halts training); the
         launcher/gates + operator dashboard read these to catch a silent confound going loud."""
         print(json.dumps({"stage": "confound_alarm", "alarm": str(kind), **fields}), flush=True)
+
+    def _verdict_live_gap_is_due(ep: int) -> bool:
+        """Read-only cadence predicate; never consulted by the training/controller path."""
+
+        return verdict_live_gap_due(
+            _verdict_live_gap_mode,
+            epoch=int(ep),
+            ema_updates=int(_live["ema_updates"]),
+            ema_decay=float(ema.decay),
+        )
+
+    print(json.dumps({
+        "stage": "verdict_live_gap_setup",
+        "mode": ("auto_ema_warmup" if _verdict_live_gap_mode == -1
+                 else "explicit_off" if _verdict_live_gap_mode == 0
+                 else "explicit_all_run"),
+        "cadence": (1 if _verdict_live_gap_mode == -1 else _verdict_live_gap_mode),
+        "ema_warmup_updates": int(ema_warmup_updates(float(ema.decay))),
+        "note": "read-only EMA-vs-live telemetry; never feeds loss, optimizer, EMA, controller, "
+                "checkpoint selection, archive, or score",
+    }), flush=True)
 
     def _sg_take_snapshot(ep: int) -> None:
         """Reference-snapshot of the last-good training state (model + EMA + opt [+ seed]).
@@ -12130,6 +12199,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     model.film.weight = stiefel_project_columns(model.film.weight)
                     mx.eval(model.film.weight)
                 ema.update(model)
+                _live["ema_updates"] += 1  # read-only warmup clock; never persisted or actuated
                 mx.eval(list(ema.shadow.values()))
                 # (EIK-STAB build 2) median hygiene: in rollback mode an ACCEPTED-but-spiked batch
                 # must NOT poison the running median (the spike detector's healthy reference).
@@ -12167,6 +12237,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _live["skip"] = int(_live["ep_tot"]) - int(_live["ep_acc"])
             _live["frac"] = float(_live["ep_acc"]) / float(max(int(_live["ep_tot"]), 1))
             _live["stepped"] = bool(_live["ep_acc"] > 0)
+            if int(_live["ep_tot"]) > 0 and is_partial_freeze(float(_live["frac"])):
+                _emit_confound_alarm(
+                    "partial_freeze", level="WARN", ep=ep,
+                    accepted_frac=round(float(_live["frac"]), 4),
+                    accepted_batches=int(_live["acc"]), skipped_batches=int(_live["skip"]),
+                    note="0.02 < accepted_frac < 0.5: optimizer is stepping but this epoch is "
+                    "partially frozen; progress and verdict cadence may be severely slowed",
+                )
             if int(_live["ep_tot"]) > 0 and _live["frac"] < (1.0 - 0.9):  # skip-frac > 0.9
                 _alarm["deadlock_streak"] += 1
                 if _alarm["deadlock_streak"] >= 2:
@@ -12234,8 +12312,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _da_sync_verdict_start_ns = time.perf_counter_ns()
                     v = realized_verdict(ep=int(ep))
                     _live_gap_sync = None
-                    if (_verdict_live_gap_every > 0
-                            and int(ep) % _verdict_live_gap_every == 0):
+                    if _verdict_live_gap_is_due(ep):
                         _live_snap_sync = _capture_verdict_snapshot(include_live=True)
                         _pose_meta_sync = v.get("_pose_gate_telemetry", {})
                         _live_v_sync = _verdict_from_snapshot(
@@ -12275,6 +12352,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "weights_stepped": bool(_live["stepped"]),
                                       "accepted_batches": int(_live["acc"]), "skipped_batches": int(_live["skip"]),
                                       "frozen_epoch": bool(_frozen_ep),
+                                      **_dseg_canary_telemetry_fields(),
                                       # (2026-07-07) ADDITIVE per-class observability, mirroring
                                       # _emit_verdict_row (row-only; never history/result.json).
                                       **({"d_seg_by_class": _per_class_sync.get("d_seg_by_class"),
@@ -13084,10 +13162,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--verdict-batch", type=int, default=32,
                     help="(#205 OOM fix) CPU-scorer verdict inference chunk size (pairs per torch "
                     "batch); 0 = single N-wide batch (pre-fix). Score-neutral (eval-mode BN).")
-    ap.add_argument("--verdict-live-gap-every", type=int, default=0,
-                    help="(task-408 Q3 DSL Lever, default 0=OFF) every Kth verdict, run one extra "
-                    "advisory live-weight inference and append d_seg_live/d_pose_live plus EMA-minus-"
-                    "live gaps. Never feeds training or controller decisions.")
+    ap.add_argument("--verdict-live-gap-every", type=int, default=-1,
+                    help="(task-408 Q3 DSL Lever; default -1=AUTO during the two-time-constant EMA "
+                    "warmup) -1 observes each warmup verdict, 0 is explicit OFF, K>0 observes every "
+                    "Kth verdict for the full run. Appends advisory live-weight/EMA gaps only; never "
+                    "feeds training or controller decisions.")
     ap.add_argument(
         "--verdict-pose-gate",
         action=argparse.BooleanOptionalAction,

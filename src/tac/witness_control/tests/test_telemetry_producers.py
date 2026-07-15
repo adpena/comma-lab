@@ -353,7 +353,7 @@ def test_dsl_telemetry_defaults_on_and_compiles_exact_flags() -> None:
     assert flags["--sps-engagement-k-pairs"] == 4
 
 
-def test_verdict_live_gap_is_named_default_off_dsl_lever() -> None:
+def test_verdict_live_gap_is_named_explicit_all_run_dsl_lever() -> None:
     from tac.witness_dsl.curriculum_dsl import VerdictLiveGap
 
     lever = VerdictLiveGap(every=3)
@@ -377,12 +377,12 @@ def test_trainer_contains_exact_ticket_literals_and_all_three_regions() -> None:
         assert region in text
 
 
-def test_trainer_parser_exposes_default_on_observers_and_off_live_gap() -> None:
+def test_trainer_parser_exposes_default_on_observers_and_auto_warmup_live_gap() -> None:
     root = Path(__file__).resolve().parents[4]
     text = (root / "experiments/train_levelset_witness_realized_through_R_mlx.py").read_text()
     assert '"--component-wallclock-telemetry"' in text
     assert '"--sps-engagement-telemetry"' in text
-    assert '"--verdict-live-gap-every", type=int, default=0' in text
+    assert '"--verdict-live-gap-every", type=int, default=-1' in text
 
 
 def test_da_db_observer_is_registered_in_canonical_resume_registry() -> None:

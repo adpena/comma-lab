@@ -71,6 +71,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
+from tac.confound_observability import is_known_dseg_descent
 from tac.witness_control.costate_estimator import (
     DEFAULT_STALL_REL_EPS,
     slope_with_stderr,
@@ -496,25 +497,42 @@ class VerdictTrendCanaryResult:
     passed: bool
     positive_fired_decoupling: bool     # must be True
     negative_fired: bool                # must be False
+    descent_positive_registered: bool   # must be True: known d_seg descent was recognized
     positive_classification: str
     negative_classification: str
     reason: str
+
+    def verdict_clearance(self) -> bool:
+        """L3 classification clearance; pure/read-only and fail-closed."""
+
+        return bool(
+            self.passed
+            and self.positive_fired_decoupling
+            and self.descent_positive_registered
+            and not self.negative_fired
+        )
 
 
 def canary_suite() -> VerdictTrendCanaryResult:
     """Run the $0 positive + negative controls for the verdict-trend alarm (P4 known-effect canary)."""
     pos = verdict_trend_alarm(synthetic_decoupling_verdicts())
-    neg = verdict_trend_alarm(synthetic_codescending_verdicts())
+    descending_rows = synthetic_codescending_verdicts()
+    neg = verdict_trend_alarm(descending_rows)
     pos_ok = pos.classification == TRAIN_VERDICT_DECOUPLING
     neg_quiet = not neg.fired()
-    passed = pos_ok and neg_quiet
-    reason = ("canary PASS: synthetic decoupling FIRES TRAIN_VERDICT_DECOUPLING and a clean "
-              "co-descending run stays quiet — meter trustworthy"
+    descent_registered = is_known_dseg_descent(
+        tuple(float(row["d_seg"]) for row in descending_rows)
+    )
+    passed = pos_ok and neg_quiet and descent_registered
+    reason = ("canary PASS: synthetic decoupling FIRES TRAIN_VERDICT_DECOUPLING, a known-effect "
+              "d_seg descent is positively registered, and the descending run stays alarm-quiet"
               if passed else
               "canary FAIL: " + ("" if pos_ok else "decoupling positive control did NOT fire; ")
+              + ("" if descent_registered else "known-effect d_seg descent was NOT registered; ")
               + ("" if neg_quiet else "co-descending negative control FIRED (false positive); ")
               + "→ meter UNTRUSTED")
     return VerdictTrendCanaryResult(
         passed=passed, positive_fired_decoupling=pos_ok, negative_fired=neg.fired(),
+        descent_positive_registered=descent_registered,
         positive_classification=pos.classification, negative_classification=neg.classification,
         reason=reason)
