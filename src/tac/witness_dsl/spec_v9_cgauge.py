@@ -70,6 +70,16 @@ _V9_CGAUGE_DELTA: dict[str, Any] = {
     "--jacobian-basin-sigma-floor": 1e-4,
     "--jacobian-basin-f-basin": 1.0,
     "--jacobian-basin-quorum-q": 0.8,
+    # Basis-family custody (2026-07-15 PR95/Fourier/RGB cargo-cult sweep, #508):
+    # the coordinate front-end is the #1 measured lever family and must NOT ride
+    # the trainer argparse default. legacy_fourier_ab_control is the DELIBERATE
+    # A/B-control state per the no-Fourier-basis doctrine (genuine curvelet/
+    # shearlet stay opt-in behind the c1 optimal-form receipt slot until the owed
+    # n600 through-R no-regression A/B); --self-orient False makes the owed-16
+    # refuted directional front-end drop explicit (--no-self-orient) instead of
+    # default-inherited.
+    "--basis": "legacy_fourier_ab_control",
+    "--self-orient": False,
     # Explicit inactive/derived companions are still configuration: omission
     # would silently re-delegate scientific ownership to an argparse default.
     "--seed-anneal-epochs": 0,
@@ -294,6 +304,25 @@ V9_CGAUGE_PROVENANCE: dict[str, dict[str, str]] = {
         "law": "cgauge_curvelet_parabolic_bank_v1",
         "note": "the DEDICATED C2-violation term the parabolic law forces (openpilot "
                 "lane polynomial + comb phase = a polynomial-form value).",
+    },
+    "--basis": {
+        "value": "legacy_fourier_ab_control", "rung": "derived_at_config", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "EXPLICIT basis-family custody (#508 cargo-cult sweep 2026-07-15): the "
+                "legacy directional-Fourier bank stays the deliberate A/B CONTROL per the "
+                "no-Fourier-basis doctrine — a TRACKED, REASONED state, never a silent "
+                "argparse default and never a silent curvelet flip; windowed_curvelet/"
+                "compact_shearlet fold only via the c1 optimal-form receipt slot after "
+                "the owed n600 through-R no-regression A/B.",
+    },
+    "--self-orient": {
+        "value": "False", "rung": "measured_anchor", "form": "SCALAR",
+        "law": "cgauge_master_action_v1",
+        "note": "the owed-16 A/B refuted the self-orient directional front-end on this "
+                "trunk (the v752(self_orient=False) identity); emitted explicitly as "
+                "--no-self-orient so the drop is typed custody, not an argparse-default "
+                "inheritance. NB the -48% label was NEVER a curvelet frame (NO-FAKE "
+                "audit 2026-07-14): it is a self-oriented directional-FOURIER feature.",
     },
     "--adam-beta2": {
         "value": "0.999", "rung": "measured_anchor", "form": "SCALAR",
@@ -758,25 +787,14 @@ def _typed_ideal_lever(lever):
     """Lossless curriculum-DSL Lever -> typed-config adapter."""
     from tac.witness_dsl.typed_config import TypedLever
 
-    declarations = {}
-    for flag, ref in lever.lawrefs.items():
-        declarations[flag] = {
-            "equation_id": ref.equation_id,
-            "ladder_class": ref.ladder_class,
-            "inputs": {
-                name: {
-                    "kind": inp.kind,
-                    "value": inp.value,
-                    "artifact_path": inp.artifact_path,
-                    "extract": inp.extract,
-                    "expected_sha256": inp.expected_sha256,
-                    "config_tags": dict(inp.config_tags),
-                    "max_staleness_days": inp.max_staleness_days,
-                    "provenance": inp.provenance,
-                }
-                for name, inp in ref.inputs.items()
-            },
-        }
+    # Canonical symmetric codec (tac.witness_dsl.lawref) — the same declarations are
+    # decoded back to LawRef objects by TypedLever.to_dsl() on the deserialized path,
+    # so the dsl_compile_hash self-recompile sees identical LawRef custody.
+    from tac.witness_dsl.lawref import lawref_to_declaration
+
+    declarations = {
+        flag: lawref_to_declaration(ref) for flag, ref in lever.lawrefs.items()
+    }
 
     return TypedLever(
         name=lever.name,

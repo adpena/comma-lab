@@ -400,7 +400,10 @@ def lever_priors(attribution: dict | None = None, *, overfit: bool = True) -> di
         "active_geometric_priors": {
             "lane_prior_phi1": "openpilot deg-3 centerline = Road<->Lane separatrix; "
                                "FREE generic geometry; ON",
-            "directional_basis": "self-orient curvelet basis (-48% exponent); ON",
+            "directional_basis": "self-orient directional-FOURIER feats (-48% advisory "
+                                 "exponent; NOT a curvelet frame — NO-FAKE label audit "
+                                 "2026-07-14/#508; genuine curvelet/shearlet = --basis "
+                                 "opt-in); ON",
             "structured_init": "FEED-ef static-core partition init from cached L*; "
                                "rule-118 FREE; ON",
             "palette_anchor": "init palette to per-class mean GT RGB; ON",

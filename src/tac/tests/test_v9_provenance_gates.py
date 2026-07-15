@@ -182,17 +182,26 @@ def test_live_v9_bijection_collector_walks_four_real_factories_deterministically
     # C1a adds the five shared, matched margin-saliency control flags to every
     # ideal program. The treatment-only reachability flag lives in its sibling
     # named config and is checked by the launcher/DSL manifest path.
-    assert [len(snapshot.bindings) for snapshot in first] == [199, 224, 224, 224]
+    # 2026-07-15 #508 cargo-cult sweep: +2 on every program — the basis-family
+    # custody pair (--basis legacy_fourier_ab_control + --no-self-orient) moved
+    # from silent argparse defaults into the typed _V9_CGAUGE_DELTA (the #1 lever
+    # family must not be argparse-owned; no-Fourier-basis doctrine, A/B control).
+    assert [len(snapshot.bindings) for snapshot in first] == [201, 226, 226, 226]
     assert [snapshot.bijection_hash for snapshot in first] == [snapshot.bijection_hash for snapshot in second]
-    taper_flags = (
+    lawref_flags = (
         "--dseg-aware-taper",
         "--dseg-aware-taper-floor",
         "--dseg-aware-taper-scale",
         "--dseg-aware-taper-strength",
+        # 2026-07-15 merge-reconciliation: MarginBandSatisficing's constant_manifest is now
+        # keyed by its emitted --flag (TypedLever validator contract), so the msafe LawRef
+        # custody surfaces here for every ideal program that composes the lever.
+        "--seg-margin-satisfice-msafe",
     )
     assert first[0].lawref_flags == ()
-    assert all(snapshot.lawref_flags == taper_flags for snapshot in first[1:])
-    assert [len(snapshot.compiler_record_flags) for snapshot in first] == [6, 12, 12, 12]
+    assert all(snapshot.lawref_flags == lawref_flags for snapshot in first[1:])
+    # 13 (was 12): the flag-keyed msafe constant_manifest adds its compiler record too.
+    assert [len(snapshot.compiler_record_flags) for snapshot in first] == [6, 13, 13, 13]
 
 
 # ---------------------------------------------------------------------------
