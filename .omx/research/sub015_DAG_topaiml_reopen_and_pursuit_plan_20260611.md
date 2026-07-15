@@ -18358,3 +18358,28 @@ annulus and longest end of long tail". Full table:
   eta_8=0.711, 5.686×; CUDA r5 rc=124 max-autotune fix); maglaw arms A/B/C relaunched fresh post-
   d2cc57dc6e (armC = the fix's in-vivo sentinel); fresh-eyes review arm died with ZERO output —
   full restart queued post-limit-reset (wakeup armed). Everything MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-438-r6wire (2026-07-15) — r5 rc=124 root cause LOCALIZED + compile-mode wire-in LANDED; r6 STAGED-NOT-FIRED (spend tripwire) [no-triality]
+- **r5 postmortem (MEASURED, harvested remote log):** fc-01KXKG3EQV92YZ4PRK1XMWHHCW rc=124 @1451.8s,
+  0 epochs. Boot COMPLETED: parity cosine 0.9999999 → fp-reorder probe PASSED ~80s (adoptable,
+  cosine 0.9999998) → taper/pose_carrier/structured_init (sky IoU 0.976, hood 0.993) → both
+  smoke-regime forced-start caps fired. THEN the FULL-P training-region torch.compile
+  max-autotune benchmarking (AUTOTUNE addmm 1572864-row shapes) ate every remaining second.
+  6dfb43c96b's policy override was correct but UNTHREADED — trainer called
+  select_torch_execution_policy(device) bare (the config-orphan class, caught by grepping the
+  real callsite before refire).
+- **Wire-in landed 5a0107cf72 (9 files, 147 tests, 2×2 review passes):** build_plan
+  torch_compile_mode ('default' default, plan v9, hash-bound) → WITNESS_TORCH_COMPILE_MODE env
+  (modal_train_lane exact-allowlist + value gate) → remote_v9_cgauge_cuda.sh → trainer
+  --torch-compile-mode → policy + compile_identity_probe(mode=) so the adoption probe validates
+  the SAME Inductor artifact training adopts. Plan-only rebuild PROVEN: the env key rides the
+  real dispatch argv.
+- **r6 NOT FIRED — operator spend tripwire:** ledger-measured campaign cumulative ≈ $3.54
+  (148+324+415+1452s H100 @$5/hr) vs $2.19 briefed; timeout-stop r6 always burns its full 1500s
+  window → ~$2.2–2.5 → projected ~$5.7–6.0 > the $5 STOP line. Also blocked at staging by 7
+  sister-dirty files incl. sentinel spec_v9_cgauge.py (launcher fail-closes on dirty worktree).
+  One-command sealed refire staged: .omx/tmp/fire_438_smokereg_r6_daemon.sh (adds
+  compile-mode shape guard + single-flight modal-running-task guard). Claims reconciled
+  (phantom-active r5 campaign row terminal); ledger↔claims↔Modal agree, 0 running tasks.
+  Receipt: .omx/research/cuda_438_smokereg_fire_and_cost_table_20260715.md §6. All MEANS;
+  **pointer 0.19108 UNMOVED.**

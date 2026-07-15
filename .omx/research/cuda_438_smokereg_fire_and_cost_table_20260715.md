@@ -106,3 +106,37 @@ or invoke the torch trainer's `--dsl-config` CPU path).
   leg: no new law (cost-regime apparatus); the flicker/event laws referenced are pre-registered.
 - NON-PROMOTABLE everywhere: `score_claim=false`, `promotion_eligible=false` on every row this
   smoke produces.
+
+## 6. r5 receipt + r6 staging (cuda-smokereg-r6 arm, 2026-07-15 ~19:5xZ)
+
+- **r5 (fc-01KXKG3EQV92YZ4PRK1XMWHHCW) rc=124 @1451.8s, 0 epochs — root cause LOCALIZED from the
+  harvested remote log** (`experiments/results/lane_v9-cgauge-cuda-438-smokereg-r5-20260715_modal/
+  harvested_artifacts/modal_lane_...log`): the boot chain COMPLETED — `cuda_numpy_forward_parity`
+  argmax_equal cosine_phi 0.9999999 → `backend_fp_reorder_probe` PASSED at ~80s (adoptable, cosine
+  0.9999998, max-autotune on the 64-row closure) → dseg_aware_taper → pose_carrier → structured_init
+  (sky IoU 0.976, hood IoU 0.993) → both cap_fired_before_event rows (smoke-regime forced starts
+  WORKING) — then the FULL-P TRAINING-REGION `torch.compile` max-autotune benchmarking
+  (`AUTOTUNE addmm(1572864x96,...)`, thousands of triton_mm variants) consumed every remaining
+  second to the TERM cutoff. The 6dfb43c96b policy override was the right fix but was NOT THREADED:
+  the trainer called `select_torch_execution_policy(device)` bare.
+- **r6 wire-in LANDED (commit 5a0107cf72, 9 files, 147 tests green):** launcher
+  `build_plan(torch_compile_mode="default")` (plan schema v9, hash-bound) →
+  `WITNESS_TORCH_COMPILE_MODE` env (modal_train_lane exact-match allowlist + value gate) →
+  `remote_v9_cgauge_cuda.sh` → trainer `--torch-compile-mode` →
+  `select_torch_execution_policy(compile_mode=...)` AND `compile_identity_probe(mode=...)` (the
+  probe now validates the SAME Inductor artifact training adopts). Plan-only rebuild verified:
+  `WITNESS_TORCH_COMPILE_MODE=default` rides the real dispatch argv (plan_sha
+  3afbe8d267288b9e..., ceiling $3.296256).
+- **r6 NOT FIRED — spend tripwire (MEASURED):** ledger elapsed-billed campaign cumulative
+  ≈ **$3.54** (r2 148s $0.22 + r3 324s $0.49 + r4 415s $0.63 + r5 1452s $2.20, H100 @$5/hr
+  + cpu/mem), vs the ~$2.19 figure in the dispatch briefing. A timeout-stop r6 ALWAYS runs its
+  full 1500s child window by design → realistic ~$2.2–2.5 → projected cumulative ~$5.7–6.0 >
+  the $5 STOP line ("if projected r6 cost would push cumulative past $5, STOP and report").
+  Secondary blocker at staging time: sister agents hold 7 dirty files incl. sentinel
+  `src/tac/witness_dsl/spec_v9_cgauge.py`; the launcher fail-closes on any dirty main worktree.
+- **One-command refire staged (operator GO required):**
+  `nohup bash .omx/tmp/fire_438_smokereg_r6_daemon.sh & disown` — sealed-plan daemon with the
+  r5-daemon guards PLUS `torch_compile_mode=default` field/env shape guard PLUS a single-flight
+  `modal app list` running-task guard. Claims reconciled: phantom-active r5 campaign row
+  terminal-rowed (`failed_rc124_training_region_max_autotune_window_exhausted`); no r6 traces on
+  ledger/claims/Modal at staging.
