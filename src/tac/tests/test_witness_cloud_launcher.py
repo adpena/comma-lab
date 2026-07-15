@@ -49,7 +49,7 @@ def _kwargs(**overrides: object) -> dict[str, object]:
 def test_modal_plan_is_deterministic_sha_bound_and_cost_conservative():
     a = build_plan(**_kwargs())
     b = build_plan(**_kwargs())
-    assert a.schema == "witness_cloud_plan.v8"
+    assert a.schema == "witness_cloud_plan.v9"
     assert a.plan_sha256 == b.plan_sha256
     assert a.lane_id == LANE_ID
     assert a.source_git_head == "a" * 40
@@ -1155,7 +1155,7 @@ def test_remote_driver_only_emits_existing_timing_trainer_flags():
     for flag in (
         "--gt-cache", "--num-pairs", "--epochs", "--out-dir", "--device",
         "--compile-probe", "--stop-after-epochs", "--no-implicit-resume", "--resume-from",
-        "--expected-segnet-sha256", "--expected-posenet-sha256",
+        "--expected-segnet-sha256", "--expected-posenet-sha256", "--torch-compile-mode",
     ):
         assert flag in driver
         assert flag in trainer
@@ -1218,6 +1218,33 @@ def test_smoke_regime_dsl_config_threads_env_and_hash():
     assert smoke.plan_sha256 != baseline.plan_sha256
     overrides = smoke.dispatch_argv[smoke.dispatch_argv.index("--env-overrides") + 1]
     assert "WITNESS_DSL_CONFIG=v9_cgauge_432_smoke_regime" in overrides
+
+
+def test_torch_compile_mode_threads_env_driver_and_hash():
+    """r6 wire-in for the MEASURED 2026-07-15 H100 r5 rc=124 (max-autotune ate
+    the whole 1440s time-boxed window): the smoke launcher must thread
+    compile mode 'default' end-to-end into the trainer."""
+    default_plan = build_plan(**_kwargs())
+    assert default_plan.torch_compile_mode == "default"
+    assert default_plan.environment["WITNESS_TORCH_COMPILE_MODE"] == "default"
+    overrides = default_plan.dispatch_argv[
+        default_plan.dispatch_argv.index("--env-overrides") + 1
+    ]
+    assert "WITNESS_TORCH_COMPILE_MODE=default" in overrides
+    autotune = build_plan(**_kwargs(torch_compile_mode="max-autotune"))
+    assert autotune.environment["WITNESS_TORCH_COMPILE_MODE"] == "max-autotune"
+    assert autotune.plan_sha256 != default_plan.plan_sha256
+    repo = Path(__file__).resolve().parents[3]
+    driver = (repo / "scripts/remote_v9_cgauge_cuda.sh").read_text(encoding="utf-8")
+    assert 'TORCH_COMPILE_MODE="${WITNESS_TORCH_COMPILE_MODE:-}"' in driver
+    assert 'TRAINER_ARGS+=(--torch-compile-mode "$TORCH_COMPILE_MODE")' in driver
+    assert "WITNESS_TORCH_COMPILE_MODE must be empty, off, default, or max-autotune" in driver
+
+
+@pytest.mark.parametrize("value", ("", "reduce-overhead", "DEFAULT", "bogus"))
+def test_plan_refuses_unknown_torch_compile_mode(value):
+    with pytest.raises(ValueError, match="torch_compile_mode"):
+        build_plan(**_kwargs(torch_compile_mode=value))
 
 
 def test_explicit_stop_after_epochs_still_threads_env_and_hash():

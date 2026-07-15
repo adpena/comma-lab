@@ -20,12 +20,14 @@ sys.path.insert(0, str(REPO / "src"))
 
 from tac.deploy.witness_cloud_launcher import (  # noqa: E402
     DEFAULT_DSL_CONFIG,
+    DEFAULT_TORCH_COMPILE_MODE,
     EXACT_H100_GPU,
     POSENET_WEIGHTS,
     RESULTS_VOLUME,
     SEGNET_WEIGHTS,
     TASK438_GT_CACHE_BYTES,
     TASK438_GT_CACHE_SHA256,
+    TORCH_COMPILE_MODES,
     V9_DSL_CONFIGS,
     build_plan,
     render_command,
@@ -737,6 +739,17 @@ def main(argv: list[str] | None = None) -> int:
             "1500-second child timeout is the stop"
         ),
     )
+    ap.add_argument(
+        "--torch-compile-mode",
+        choices=TORCH_COMPILE_MODES,
+        default=DEFAULT_TORCH_COMPILE_MODE,
+        help=(
+            "Backend Inductor mode threaded to the trainer (runtime control, "
+            "never typed-DSL science). MEASURED 2026-07-15 H100 r5 rc=124: "
+            "max-autotune ate the whole time-boxed window; this launcher's "
+            "1500s dispatches default to 'default'"
+        ),
+    )
     ap.add_argument("--resume-from")
     ap.add_argument("--resume-sha256")
     ap.add_argument("--gt-cache-sha256", help="Required exact SHA-256 for custody and staging")
@@ -766,6 +779,7 @@ def main(argv: list[str] | None = None) -> int:
         gt_cache=args.gt_cache, label=args.label, gpu=args.gpu,
         epochs=args.epochs, num_pairs=args.num_pairs,
         dsl_config=args.dsl_config,
+        torch_compile_mode=args.torch_compile_mode,
         stop_after_epochs=args.stop_after_epochs,
         resume_from=args.resume_from,
         resume_sha256=args.resume_sha256,

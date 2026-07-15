@@ -159,6 +159,19 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--verify-only", action="store_true")
     ap.add_argument("--compile-probe", action="store_true")
     ap.add_argument(
+        "--torch-compile-mode",
+        choices=("off", "default", "max-autotune"),
+        default=None,
+        help=(
+            "BACKEND runtime override for the Inductor compile mode (never "
+            "typed-DSL science). MEASURED 2026-07-15 H100 r5 rc=124: "
+            "max-autotune kernel benchmarking consumed the entire 1440s "
+            "time-boxed window before one epoch — time-boxed smokes use "
+            "'default'; long runs amortize max-autotune. Default None keeps "
+            "the policy's own selection."
+        ),
+    )
+    ap.add_argument(
         "--dsl-config",
         choices=V9_DSL_CONFIG_CHOICES,
         default="v9_cgauge_432_launch",
@@ -1073,7 +1086,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.device == "cuda" and not torch.cuda.is_available() and not args.verify_only:
         raise RuntimeError("CUDA requested but unavailable (fail closed; use --verify-only for $0 local proof)")
     device = torch.device("cpu" if args.verify_only else args.device)
-    execution_policy = select_torch_execution_policy(device)
+    execution_policy = select_torch_execution_policy(
+        device, compile_mode=args.torch_compile_mode
+    )
     if device.type == "cuda":
         apply_torch_execution_policy(execution_policy)
     else:
@@ -1098,7 +1113,11 @@ def main(argv: list[str] | None = None) -> int:
         f = torch.as_tensor(feats_np[:64], device=device)
         ci = torch.tensor([0], device=device)
         compile_probe_result = compile_identity_probe(
-            model, f, ci, lambda rgb, phi: rgb.square().mean() + phi.square().mean()
+            model, f, ci, lambda rgb, phi: rgb.square().mean() + phi.square().mean(),
+            # Probe the SAME Inductor mode the training region will adopt so the
+            # r3 adoption rule validates the actual artifact (policy None =>
+            # compile disabled; probe still runs cheaply in 'default').
+            mode=execution_policy.compile_mode or "default",
         )
         print(json.dumps({"stage": "backend_fp_reorder_probe", "backend": str(device),
                           **compile_probe_result}), flush=True)

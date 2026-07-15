@@ -448,6 +448,7 @@ def _validate_v9_env_controls(*, label: str, overrides: dict[str, str]) -> None:
         "WITNESS_OUT_DIR",
         "WITNESS_EPOCHS",
         "WITNESS_DSL_CONFIG",
+        "WITNESS_TORCH_COMPILE_MODE",
         "WITNESS_STOP_AFTER_EPOCHS",
         "WITNESS_CHILD_TIMEOUT_SECONDS",
         "WITNESS_NUM_PAIRS",
@@ -478,6 +479,14 @@ def _validate_v9_env_controls(*, label: str, overrides: dict[str, str]) -> None:
     if overrides["WITNESS_DSL_CONFIG"] not in V9_DSL_CONFIGS:
         raise ValueError(
             f"V9 env WITNESS_DSL_CONFIG must be one of {sorted(V9_DSL_CONFIGS)}"
+        )
+    # Backend-only Inductor mode override; '' lets the trainer policy decide.
+    # MEASURED 2026-07-15 (H100 r5, rc=124): max-autotune ate the whole
+    # time-boxed window — the smoke launcher threads 'default'.
+    if overrides["WITNESS_TORCH_COMPILE_MODE"] not in ("", "off", "default", "max-autotune"):
+        raise ValueError(
+            "V9 env WITNESS_TORCH_COMPILE_MODE must be '', 'off', 'default', "
+            "or 'max-autotune'"
         )
     allowed_stop_values = {""} | {
         str(value) for value in range(1, V9_STOP_AFTER_EPOCHS + 1)

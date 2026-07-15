@@ -55,6 +55,15 @@ DEFAULT_STOP_AFTER_EPOCHS = 3
 # timing evidence, never a science arm.
 V9_DSL_CONFIGS = ("v9_cgauge_432_launch", "v9_cgauge_432_smoke_regime")
 DEFAULT_DSL_CONFIG = "v9_cgauge_432_launch"
+# Backend-only Inductor compile-mode override threaded to the trainer's
+# --torch-compile-mode (runtime control; never typed-DSL science). MEASURED
+# 2026-07-15 (H100 r5 smoke, rc=124): max-autotune's kernel benchmarking on the
+# full-P training region consumed the ENTIRE 1440s time-boxed window before one
+# epoch. This launcher only emits 1500s time-boxed dispatches, so "default" is
+# the correct default here; long runs (a different launcher surface) amortize
+# max-autotune.
+TORCH_COMPILE_MODES = ("off", "default", "max-autotune")
+DEFAULT_TORCH_COMPILE_MODE = "default"
 CHILD_TIMEOUT_SECONDS = 1500
 INVOCATION_TIMEOUT_SECONDS = 1800
 # Canonical Modal GPU string (per https://modal.com/docs/guide/gpu). We use the
@@ -116,6 +125,7 @@ class WitnessCloudPlan:
     epochs: int
     num_pairs: int
     dsl_config: str
+    torch_compile_mode: str
     stop_after_epochs: int | None
     child_timeout_seconds: int
     invocation_timeout_seconds: int
@@ -188,6 +198,7 @@ def build_plan(
     segnet_sha256: str | None = None,
     posenet_sha256: str | None = None,
     dsl_config: str = DEFAULT_DSL_CONFIG,
+    torch_compile_mode: str = DEFAULT_TORCH_COMPILE_MODE,
     stop_after_epochs: int | None = None,
     child_timeout_seconds: float = CHILD_TIMEOUT_SECONDS,
     invocation_timeout_seconds: float = INVOCATION_TIMEOUT_SECONDS,
@@ -225,6 +236,11 @@ def build_plan(
     if dsl_config not in V9_DSL_CONFIGS:
         raise ValueError(
             f"dsl_config must be one of {V9_DSL_CONFIGS}; got {dsl_config!r}"
+        )
+    if torch_compile_mode not in TORCH_COMPILE_MODES:
+        raise ValueError(
+            f"torch_compile_mode must be one of {TORCH_COMPILE_MODES}; "
+            f"got {torch_compile_mode!r}"
         )
     if stop_after_epochs is not None and not (
         1 <= stop_after_epochs <= DEFAULT_STOP_AFTER_EPOCHS
@@ -292,6 +308,7 @@ def build_plan(
             "WITNESS_OUT_DIR": remote_out,
             "WITNESS_EPOCHS": str(epochs),
             "WITNESS_DSL_CONFIG": dsl_config,
+            "WITNESS_TORCH_COMPILE_MODE": torch_compile_mode,
             "WITNESS_STOP_AFTER_EPOCHS": (
                 "" if stop_after_epochs is None else str(stop_after_epochs)
             ),
@@ -356,7 +373,7 @@ def build_plan(
         + custody_blockers
     )
     base: dict[str, object] = {
-        "schema": "witness_cloud_plan.v8",
+        "schema": "witness_cloud_plan.v9",
         "provider": provider,
         "status": contract.status,
         "lane_id": LANE_ID,
@@ -375,6 +392,7 @@ def build_plan(
         "epochs": epochs,
         "num_pairs": num_pairs,
         "dsl_config": dsl_config,
+        "torch_compile_mode": torch_compile_mode,
         "stop_after_epochs": stop_after_epochs,
         "child_timeout_seconds": CHILD_TIMEOUT_SECONDS,
         "invocation_timeout_seconds": INVOCATION_TIMEOUT_SECONDS,
@@ -419,6 +437,8 @@ __all__ = [
     "CUDA_ENV",
     "DEFAULT_DSL_CONFIG",
     "DEFAULT_STOP_AFTER_EPOCHS",
+    "DEFAULT_TORCH_COMPILE_MODE",
+    "TORCH_COMPILE_MODES",
     "EXACT_H100_GPU",
     "H100_GPU_USD_PER_HOUR",
     "INVOCATION_TIMEOUT_SECONDS",

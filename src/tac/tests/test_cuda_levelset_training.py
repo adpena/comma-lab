@@ -277,6 +277,42 @@ def test_compile_adoption_uses_functional_gate_not_gradient_identity(monkeypatch
     assert row["adoptable"]
     assert row["training_loop_bit_identity_waiver"] is True
     assert "grad_max_abs_delta" in row
+    assert row["compile_mode"] == "max-autotune"  # historical default preserved
+
+
+def test_compile_probe_threads_and_validates_mode(monkeypatch):
+    """r5 rc=124 wire-in: the probe must validate the SAME Inductor mode the
+    training region adopts (time-boxed smokes pass 'default')."""
+    cfg = CudaLevelSetConfig(n_pairs=1, in_feat=4, hidden_dim=6, n_hidden=1, mod_dim=3)
+    model = TorchLevelSetWitness.build(cfg, seed=8)
+    feats = torch.randn(11, 4)
+    seen_modes = []
+
+    def fake_compile(fn, **kwargs):
+        seen_modes.append(kwargs.get("mode"))
+        return fn
+
+    monkeypatch.setattr(torch, "compile", fake_compile)
+    row = compile_identity_probe(
+        model, feats, torch.tensor([0]),
+        lambda rgb, phi: rgb.square().mean() + phi.square().mean(),
+        mode="default",
+    )
+    assert row["adoptable"] and row["compile_mode"] == "default"
+    assert seen_modes == ["default", "default"]
+    with pytest.raises(ValueError, match="compile probe mode"):
+        compile_identity_probe(
+            model, feats, torch.tensor([0]),
+            lambda rgb, phi: rgb.square().mean() + phi.square().mean(),
+            mode="off",
+        )
+
+
+def test_execution_policy_compile_mode_override_validation():
+    with pytest.raises(ValueError, match="compile_mode"):
+        select_torch_execution_policy("cpu", compile_mode="bogus")
+    policy = select_torch_execution_policy("cpu", compile_mode="default")
+    assert policy.compile_mode is None  # CPU stays eager regardless of override
 
 
 def test_pose_carrier_forward_survives_bf16_autocast_inputs():

@@ -18,6 +18,7 @@ OUT_DIR="${WITNESS_OUT_DIR:-}"
 EPOCHS="${WITNESS_EPOCHS:-3000}"
 STOP_AFTER_EPOCHS="${WITNESS_STOP_AFTER_EPOCHS:-}"
 DSL_CONFIG="${WITNESS_DSL_CONFIG:-v9_cgauge_432_launch}"
+TORCH_COMPILE_MODE="${WITNESS_TORCH_COMPILE_MODE:-}"
 CHILD_TIMEOUT_SECONDS="${WITNESS_CHILD_TIMEOUT_SECONDS:-}"
 NUM_PAIRS="${WITNESS_NUM_PAIRS:-600}"
 RESUME_FROM="${WITNESS_RESUME_FROM:-}"
@@ -80,6 +81,16 @@ case "$DSL_CONFIG" in
   v9_cgauge_432_launch|v9_cgauge_432_smoke_regime) ;;
   *)
     echo "REFUSED: WITNESS_DSL_CONFIG must be v9_cgauge_432_launch or v9_cgauge_432_smoke_regime; got '$DSL_CONFIG'" >&2
+    exit 66
+    ;;
+esac
+# Backend-only Inductor mode override (never typed-DSL science). MEASURED
+# 2026-07-15 H100 r5 rc=124: max-autotune benchmarking ate the entire 1440s
+# time-boxed window — time-boxed smokes must pass 'default'.
+case "$TORCH_COMPILE_MODE" in
+  ""|off|default|max-autotune) ;;
+  *)
+    echo "REFUSED: WITNESS_TORCH_COMPILE_MODE must be empty, off, default, or max-autotune; got '$TORCH_COMPILE_MODE'" >&2
     exit 66
     ;;
 esac
@@ -208,6 +219,9 @@ TRAINER_ARGS=(
 )
 if [ -n "$STOP_AFTER_EPOCHS" ]; then
   TRAINER_ARGS+=(--stop-after-epochs "$STOP_AFTER_EPOCHS")
+fi
+if [ -n "$TORCH_COMPILE_MODE" ]; then
+  TRAINER_ARGS+=(--torch-compile-mode "$TORCH_COMPILE_MODE")
 fi
 if [ -n "$RESUME_FROM" ]; then
   TRAINER_ARGS+=(--resume-from "$RESUME_FROM")

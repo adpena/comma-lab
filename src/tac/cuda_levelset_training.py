@@ -869,16 +869,28 @@ def forward_parity_against_numpy(model, feats: np.ndarray, code_index: int = 0) 
     }
 
 
-def compile_identity_probe(model, feats, code_indices, loss_fn) -> dict[str, Any]:
+def compile_identity_probe(
+    model, feats, code_indices, loss_fn, *, mode: str = "max-autotune"
+) -> dict[str, Any]:
     """Functional compile-adoption probe with advisory loss/gradient deltas.
 
     Training-loop bit identity is operator-waived. Adoption is therefore based on
     the unchanged score-relevant functional gate: NumPy-fp32 argmax equality and
     ``cosine_phi >= 0.9997``. Loss/gradient deltas remain visible telemetry and are
     never rewritten as exact.
+
+    ``mode`` MUST match the Inductor mode the training region will actually
+    adopt (the probe validates that artifact, not an unrelated one). The
+    historical default stays ``"max-autotune"`` for callers that predate the
+    override; time-boxed smokes pass ``"default"`` (MEASURED 2026-07-15 H100 r5
+    rc=124: max-autotune benchmarking consumed the whole 1440s window).
     """
     import torch
 
+    if mode not in ("default", "reduce-overhead", "max-autotune"):
+        raise ValueError(
+            f"compile probe mode must be one of default/reduce-overhead/max-autotune, got {mode!r}"
+        )
     if not hasattr(torch, "compile"):
         return {"available": False, "adoptable": False, "reason": "torch.compile unavailable"}
 
@@ -895,9 +907,9 @@ def compile_identity_probe(model, feats, code_indices, loss_fn) -> dict[str, Any
 
     eager_loss, eager_grad = run(closure)
     try:
-        compiled = torch.compile(closure, mode="max-autotune", fullgraph=False)
+        compiled = torch.compile(closure, mode=mode, fullgraph=False)
         comp_loss, comp_grad = run(compiled)
-        compiled_forward = torch.compile(model, mode="max-autotune", fullgraph=False)
+        compiled_forward = torch.compile(model, mode=mode, fullgraph=False)
         with torch.no_grad():
             comp_rgb, comp_phi = compiled_forward(feats, code_indices)
     except Exception as exc:  # compiler support is substrate-specific
@@ -941,6 +953,7 @@ def compile_identity_probe(model, feats, code_indices, loss_fn) -> dict[str, Any
     adoptable = bool(argmax_equal and cosine_phi >= 0.9997)
     return {
         "available": True,
+        "compile_mode": mode,
         "loss_max_abs_delta": ldelta,
         "grad_max_abs_delta": gdelta,
         "argmax_equal": argmax_equal,
