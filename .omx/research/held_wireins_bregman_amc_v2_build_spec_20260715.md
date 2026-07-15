@@ -77,10 +77,69 @@ Acceptance:
 
 ## Finding 2: AMC per-row tiered code allocation
 
-This is intentionally deferred until Finding 1 is reviewed and committed. It
-will be a separate coherent commit. The canonical equation id is
-`amc_perrow_tiered_code_bitalloc_v1`; the tool is an existing measurement
-producer, so no DSL Lever is required. `TieredCodeQATLever` remains OWED because
-its two specified trainer flags do not exist. Reactivation requires both a
-competitive witness checkpoint and operator GO to add the train-time flags
-through the typed DSL.
+Objective: register `amc_perrow_tiered_code_bitalloc_v1` as an advisory,
+checkpoint-scoped equation without inventing a train-time lever.
+
+Authority:
+
+- `.omx/research/fable_amc_saliency_codex.md` sections 1, 4-6, and 8
+- `.omx/research/witness_sensitivity_bitalloc_336_20260713.md`
+- `.omx/research/sub015_DAG_cheapen_real95_tilehalo_fp16_20260713.md` lines
+  103-120 (the durable 6/6 byte-identity custody summary)
+
+Required implementation:
+
+1. Add only
+   `src/tac/canonical_equations/amc_perrow_tiered_code_bitalloc_20260714.py`
+   and its test. Do not edit or rebuild
+   `tools/apply_amc_saliency_tiered_bitalloc_witness.py`.
+2. The callable law must encode the exact pair-local SegNet composition:
+   `d_seg(q) = sum_i mismatch_i(q_i) / sum_i pixel_count_i`. Validate finite,
+   integral, non-negative mismatch/pixel counts; refuse empty inputs,
+   mismatched lengths, zero pixels, or mismatches greater than pixels. This law
+   is exact only because each pair's frame-1 code row affects that pair's
+   SegNet row; it does not claim PoseNet or Brotli-rate additivity.
+3. Register two explicit anchors:
+   - 07-13 measured n600 baseline: checkpoint SHA
+     `2599ad8b396af2af220a3bdbeee2ade92f194771ae6ef01a6faa15d39333484c`,
+     GT SHA `cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6`,
+     63,664 measured archive bytes, measured d_seg
+     `0.03365824381510417`, and measured d_pose `151.79642088984443`.
+   - 07-14 tiered response anchor: six tiered archive byte counts are MEASURED;
+     baseline/uniform custody is byte-identical `6/6`; d_seg rows are
+     `DERIVED_EXACT_FROM_MEASURED_PER_PAIR_ROWS`; pairkkt is 52,981 B and
+     0.03152334, AMC saliency is 52,762 B and 0.03401882, random is 52,992 B
+     and 0.03392613, and uniform int4 is 0.03380370. Record the scoped empirical
+     conclusion: response allocation dominates proxy saliency on this
+     `INSTANCE x FORMULATION`; it is not a family theorem.
+4. Axis is exactly
+   `[macOS-CPU advisory; NumPy-fp32 receiver; CPU frozen scorers]`;
+   `score_claim=false`, `promotion_eligible=false`, pointer unchanged, fresh
+   joint n600 d_pose/d_seg and exact contest-CPU transfer OWED. The missing raw
+   result directories in this worktree must not be disguised: provenance and
+   anchor source artifacts are the committed research memos above.
+5. Canonical producer is the existing measurement tool. Canonical consumers
+   are the existing measured reverse-waterfill equation/#157 path and existing
+   byte-allocation surfaces only; every dotted code path must exist.
+6. `TieredCodeQATLever` is explicitly `OWED_NOT_BUILT`; its nonexistent
+   `--code-row-bits-map` and `--code-qat-tiered` flags must appear only as
+   owed-design metadata, never in DSL emission/reference/factory surfaces.
+   Reactivation requires a competitive witness checkpoint plus operator GO to
+   add both train-time flags through the typed DSL.
+7. Tests must cover the exact additive law and all validation failures,
+   anchor labels/numbers/custody, advisory/no-score boundary, explicit
+   population into a temporary registry, live-registry duplicate refusal, tool
+   existence, consumer existence, and absence of the two owed flags from
+   `lever_registry.dsl_referenced_flags()`, `dsl_emitted_flags()`, and
+   `lever_factories()`.
+
+Acceptance:
+
+```bash
+.venv/bin/python -m pytest -q \
+  src/tac/canonical_equations/tests/test_amc_perrow_tiered_code_bitalloc_20260714.py \
+  src/tac/tests/test_lever_registry.py
+.venv/bin/python -m ruff check \
+  src/tac/canonical_equations/amc_perrow_tiered_code_bitalloc_20260714.py \
+  src/tac/canonical_equations/tests/test_amc_perrow_tiered_code_bitalloc_20260714.py
+```
