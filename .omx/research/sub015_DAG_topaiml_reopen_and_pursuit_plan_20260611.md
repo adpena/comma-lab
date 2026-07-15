@@ -17899,3 +17899,21 @@ decode-cheaper fallback to A/B only if decode cost later binds. Triality: memo
 `compact_shearlet_parabolic_capacity_v1` registration OWED (serialized behind the island-birth
 `canonical_equations/` arm) + shearlet DSL lever OWED (serialized behind the `witness_dsl` arm). **means
 != ends: pointer UNMOVED 0.19108/0.18804.**
+
+### FEED-owed-dsl-legs (2026-07-14) — OWED DSL legs for the curvelet/shearlet/optimal-metric landings (serialized, NOT silent)
+Per the triality per-leg detector on the #500/#502/shearlet landings: those commits carry lever/curriculum
+vocabulary but their DSL legs are DELIBERATELY OWED-SERIALIZED, not withheld — the `src/tac/witness_dsl/` dir
+is owned RIGHT NOW by the running `curvelet_throughR_p0` codex arm (I scoped every sibling arm OUT of witness_dsl
+to prevent merge collisions). The OWED DSL wires, each durably tracked here so the drift is recorded not silent:
+- **curvelet basis lever `owed_wire()`** (#502 `windowed_curvelet_basis_lever_20260714`): default-OFF, `real_trainer_flags`
+  = `WIRE_STATUS_OWED`; the P0 `curvelet_throughR_p0` arm COMPLETES this owed_wire (adds the real `--basis
+  windowed_curvelet` flag → `lever_registry.completeness()` surfaces it → costate_digest/dashboard render it). See
+  FEED-cvl-consumer-leg.
+- **shearlet DSL lever** (`compact_shearlet_frame`): OWED — shearlet LOST the family selection (curvelet wins), so
+  its DSL lever is a low-priority fallback wire, registered as a duty-to-measure candidate only if curvelet's
+  through-R d_seg verdict disappoints.
+- **τ-metric DSL/curriculum wire** (#500 `optimal_metric_unification_v1` g(τ)=τ⁻²(...)): OWED — the curriculum-varying
+  metric's trainer/curriculum consumer wire is serialized behind the witness_dsl arm; eq-level `canonical_consumers`
+  already declare the surfaces (ripo trust region, horizon margin, cgauge covariant).
+All three fire cleanly once `curvelet_throughR_p0` lands and frees witness_dsl. Not [no-triality]: these ARE real
+DSL implications, correctly SEQUENCED (owner-domain contention), durably recorded here. pointer UNMOVED. [no-triality]
