@@ -50,6 +50,51 @@ def test_bucket_done_dominates_liveness_race():
     assert codex_status._bucket(True, {"rc": "0"}, "reviewed_committed", 0.1) == "REVIEWED"
 
 
+# ---- STALLED: alive process, frozen log (the 2026-07-16 curvelet hang class) -----------
+def test_bucket_stalled_when_alive_and_log_frozen():
+    # 33h-frozen log on an alive process = the curvelet incident signature
+    assert codex_status._bucket(True, None, None, 0.5, log_stale_h=33.0) == "STALLED"
+    # exactly at the threshold counts (>=)
+    assert codex_status._bucket(
+        True, None, None, 0.5, log_stale_h=codex_status._STALL_AFTER_HOURS) == "STALLED"
+
+
+def test_bucket_running_when_log_fresh_or_unknown():
+    # fresh log ⇒ RUNNING
+    assert codex_status._bucket(True, None, None, 0.5, log_stale_h=0.1) == "RUNNING"
+    # no log yet (early boot) ⇒ RUNNING, never a false STALLED
+    assert codex_status._bucket(True, None, None, 0.05, log_stale_h=None) == "RUNNING"
+
+
+def test_bucket_stalled_never_fires_on_done_or_dead():
+    # DONE marker dominates: a finished arm with an old log is REVIEWED/NEEDS_REVIEW
+    assert codex_status._bucket(
+        False, {"rc": "0"}, None, 1.0, log_stale_h=99.0) == "NEEDS_REVIEW"
+    # dead process with stale log is DIED/STALE by age, not STALLED
+    assert codex_status._bucket(False, None, None, 1.0, log_stale_h=99.0) == "DIED"
+
+
+def test_bucket_strand_doomed_outranks_stalled():
+    # a hung non-isolated writer still surfaces its harder contract violation
+    assert codex_status._bucket(
+        True, None, None, 1.0, strand_doomed=True, log_stale_h=99.0) == "STRAND_DOOMED"
+
+
+def test_log_stale_hours_measures_mtime(tmp_path):
+    import os
+    import time
+    p = tmp_path / "arm.log"
+    p.write_text("x", encoding="utf-8")
+    three_h_ago = time.time() - 3 * 3600
+    os.utime(p, (three_h_ago, three_h_ago))
+    got = codex_status._log_stale_hours(str(p))
+    assert got is not None and 2.9 < got < 3.2
+    # missing / empty path ⇒ None (never a fake staleness)
+    assert codex_status._log_stale_hours(str(tmp_path / "nope.log")) is None
+    assert codex_status._log_stale_hours(None) is None
+    assert codex_status._log_stale_hours("") is None
+
+
 # ---- de-confliction preflight ---------------------------------------------------------
 def test_delegate_refuses_duplicate_live_label(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(codex_delegate, "_live_labels", lambda: ["warmstart_organ_n1_rl"])

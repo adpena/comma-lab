@@ -35,6 +35,14 @@ _TERMINAL_DISPOSITIONS = {"reviewed_committed", "respawned", "closed"}
 # A no-proc/no-marker arm launched within this window DIED (actionable); older =
 # STALE noise (ancient self-tests) suppressed unless --all.
 _STALE_AFTER_HOURS = 6.0
+# An ALIVE arm whose log mtime has not advanced in this window is STALLED (hung
+# stream, 0% CPU) — process-existence is NOT progress. Empirical anchor: the
+# curvelet_optimal_form_crux_20260715 arm sat "RUNNING" for 33h at 0.0% CPU with
+# its log frozen mid-line; the operator caught it by wall-clock intuition because
+# this surface only checked pgrep. Judge by FILE MTIMES (the block-buffered-log
+# lesson): codex streams events continuously, so >2h of zero log writes on a live
+# process is a hang with high confidence, not quiet work.
+_STALL_AFTER_HOURS = 2.0
 
 
 def _alive(label: str, stamp: str) -> bool:
@@ -74,6 +82,25 @@ def _inbox_lines(label: str) -> int:
     return sum(1 for ln in p.read_text(encoding="utf-8", errors="ignore").splitlines() if ln.strip())
 
 
+def _log_stale_hours(log_path: str | None) -> float | None:
+    """Hours since the run's log file last grew (None if no/unreadable log).
+
+    The mtime is the progress signal — never the process table. A live codex
+    writes its event stream continuously; a frozen mtime on an alive process is
+    the stalled-stream hang signature this detector exists for.
+    """
+    if not log_path:
+        return None
+    p = Path(log_path)
+    try:
+        if not p.is_file():
+            return None
+        import time
+        return max(0.0, (time.time() - p.stat().st_mtime) / 3600.0)
+    except OSError:
+        return None
+
+
 def _age_hours(launched_utc: str | None) -> float | None:
     if not launched_utc:
         return None
@@ -99,13 +126,19 @@ def _bucket(
     age_h: float | None,
     *,
     strand_doomed: bool = False,
+    log_stale_h: float | None = None,
 ) -> str:
-    """RUNNING · NEEDS_REVIEW (landed, no terminal disposition) · REVIEWED · DIED (recent
+    """RUNNING · STALLED (alive but log mtime frozen > _STALL_AFTER_HOURS) ·
+    NEEDS_REVIEW (landed, no terminal disposition) · REVIEWED · DIED (recent
     no-proc/no-marker) · STALE (ancient, suppressed by default)."""
     if done:
         return "REVIEWED" if disp in _TERMINAL_DISPOSITIONS else "NEEDS_REVIEW"
     if alive:
-        return "STRAND_DOOMED" if strand_doomed else "RUNNING"
+        if strand_doomed:
+            return "STRAND_DOOMED"
+        if log_stale_h is not None and log_stale_h >= _STALL_AFTER_HOURS:
+            return "STALLED"
+        return "RUNNING"
     if age_h is not None and age_h <= _STALE_AFTER_HOURS:
         return "DIED"
     return "STALE"
@@ -207,7 +240,9 @@ def status_rows(*, classify: bool = False) -> list[dict]:
         disp = dispositions.get((label, stamp))
         age_h = _age_hours(delegation.get("launched_utc"))
         strand_doomed = _is_strand_doomed(delegation)
-        bucket = _bucket(alive, done, disp, age_h, strand_doomed=strand_doomed)
+        log_stale_h = _log_stale_hours(delegation.get("log")) if (alive and not done) else None
+        bucket = _bucket(alive, done, disp, age_h, strand_doomed=strand_doomed,
+                         log_stale_h=log_stale_h)
         row = {
             "label": label,
             "stamp": stamp,
@@ -220,7 +255,8 @@ def status_rows(*, classify: bool = False) -> list[dict]:
             "status": bucket,
             "contract_violation": "nonisolated_writer" if strand_doomed else None,
             "disposition": disp,
-            "inbox_pending": _inbox_lines(label) if bucket in {"RUNNING", "STRAND_DOOMED"} else 0,
+            "log_stale_hours": round(log_stale_h, 2) if log_stale_h is not None else None,
+            "inbox_pending": _inbox_lines(label) if bucket in {"RUNNING", "STRAND_DOOMED", "STALLED"} else 0,
             "rc": (done or {}).get("rc"),
             "finished_utc": (done or {}).get("finished_utc"),
             "launched_utc": delegation.get("launched_utc"),
@@ -267,10 +303,10 @@ def main(argv: list[str] | None = None) -> int:
     from collections import Counter
     counts = Counter(r["status"] for r in rows)
     summary = " · ".join(f"{counts[b]} {b}" for b in
-                         ("STRAND_DOOMED", "RUNNING", "NEEDS_REVIEW", "DIED", "REVIEWED", "STALE") if counts.get(b))
+                         ("STALLED", "STRAND_DOOMED", "RUNNING", "NEEDS_REVIEW", "DIED", "REVIEWED", "STALE") if counts.get(b))
     print(f"codex fleet: {summary or '(none)'}"
           + ("" if args.all else "   [--all for REVIEWED+STALE]"))
-    actionable = {"STRAND_DOOMED", "RUNNING", "NEEDS_REVIEW", "DIED"}
+    actionable = {"STALLED", "STRAND_DOOMED", "RUNNING", "NEEDS_REVIEW", "DIED"}
     shown = [r for r in rows if args.all or r["status"] in actionable]
     for r in shown:
         me = f"{(r.get('model') or '?').split('-')[-1]}/{r.get('effort') or '?'}"
@@ -279,6 +315,9 @@ def main(argv: list[str] | None = None) -> int:
             flag = f"  ⚠ disposition={r.get('disposition') or 'none'} → codex_landing_review_gate"
         elif r["status"] == "STRAND_DOOMED":
             flag = "  ⚠ live non-isolated writer cannot land safely — drain/harvest; do not retry"
+        elif r["status"] == "STALLED":
+            flag = (f"  ⚠ alive but log silent {r.get('log_stale_hours') or '?'}h — hung stream: "
+                    "killpg the pgid, harvest its worktree, relaunch (2026-07-16 curvelet class)")
         elif r["status"] == "DIED":
             flag = "  ⚠ no proc, no DONE marker — investigate/relaunch"
         elif r["status"] == "RUNNING" and r.get("inbox_pending"):
