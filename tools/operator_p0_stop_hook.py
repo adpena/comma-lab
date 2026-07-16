@@ -1,0 +1,340 @@
+#!/usr/bin/env python3
+"""Operator-P0 demand-update — a Claude Code ``Stop`` hook (landing 2 of two).
+
+Operator binding 2026-07-15 (verbatim): "Do we need a hook or gate or something
+to remind you if p0 to survive compaction? That also demands update when
+complete or when new p0 designated."
+
+Fires at the end of each main-agent turn and nags (ONCE per state, warn-grade,
+fail-open — modeled on tools/triality_drift_detector.py) when:
+
+  (A) TOUCHED-WITHOUT-UPDATE — this turn's commits touched a tracked open/
+      in_progress operator-P0 (commit subject names its ``p0_id`` or a bound
+      task ``#NNN``, or a changed file sits under one of its ``watch_paths``)
+      but NO ledger row was appended this window (the ledger is gitignored-by-
+      pattern-but-committed; we compare max ``written_at_utc`` against the
+      marker, which also catches uncommitted appends).
+
+  (B) NEW-DESIGNATION-WITHOUT-ROW — a NEW operator message in this session's
+      transcript designates a P0 (word-bounded "p0" + a directive verb nearby)
+      but no ledger row was appended since. Heuristic is deliberately
+      conservative; scanning is incremental (marker stores per-transcript
+      line offset) so old messages never re-fire.
+
+Escape valve: a commit whose message contains ``[p0-ledger-ok]`` declares the
+window deliberately ledger-neutral (e.g. mechanical chore touching a watch
+path). Never binary — one nag, then allow.
+
+Design invariants (NON-NEGOTIABLE for a Stop hook):
+  * FAIL-OPEN — any error/timeout ⇒ exit 0. Never wedge a session.
+  * LOOP-SAFE — ``stop_hook_active`` + persisted ``last_block_key`` backstop.
+  * EVENT-TRIGGERED — silent when no new commits AND no new transcript lines.
+
+Sister: tools/operator_p0_digest.py (ledger lib + SessionStart/compact digest).
+Not in ``tac`` — Claude-workflow apparatus (CLAUDE.md tac-cleanliness rule).
+"""
+from __future__ import annotations
+
+import datetime
+import importlib.util
+import json
+import os
+import re
+import subprocess
+import sys
+
+MARKER_REL = ".omx/state/operator_p0_stop_marker.json"
+LOG_REL = ".omx/state/operator_p0_stop_hook.log"
+
+SKIP_TOKEN = re.compile(r"\[p0-ledger-ok\]", re.IGNORECASE)
+
+# A NEW operator P0 designation: word-bounded "p0" plus a directive cue within
+# the same message. Conservative on purpose (warn-grade): plain mentions of
+# "P0" in status narration ("the P0 ledger is clean") do not carry a directive
+# verb adjacent, and the ledger-update escape (any append) clears the nag.
+_P0_WORD = re.compile(r"(?<![A-Za-z0-9_])[pP]0(?![A-Za-z0-9])")
+_DIRECTIVE = re.compile(
+    r"\b(?:pursue|must|now|fix|build|launch|elevate\w*|designat\w*|priorit\w*|"
+    r"as\s+p0|treat\w*|aggressively|immediately|non[- ]?negotiab\w*)\b",
+    re.IGNORECASE,
+)
+# Lines that are ABOUT the ledger/apparatus itself (self-reference) stay silent.
+_SELF_REF = re.compile(r"operator_p0|p0[-_ ]ledger|p0[-_ ]digest|p0[-_ ]stop[-_ ]hook",
+                       re.IGNORECASE)
+
+
+def _now() -> str:
+    return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _git(root: str, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", "-C", root, *args], capture_output=True, text=True, timeout=15
+    )
+
+
+def _load_digest_module(root: str):
+    """Import the sibling ledger library (tools/ is not a package)."""
+    path = os.path.join(root, "tools", "operator_p0_digest.py")
+    spec = importlib.util.spec_from_file_location("operator_p0_digest", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return mod
+
+
+# ----------------------------- pure logic (tested) -----------------------------
+def is_opted_out(subjects: list[str]) -> bool:
+    return any(SKIP_TOKEN.search(str(s or "")) for s in subjects)
+
+
+def touched_p0s(rows: list[dict], subjects: list[str], files: list[str]) -> list[str]:
+    """p0_ids of tracked open/in_progress P0s this window's commits touched.
+
+    A P0 counts as touched when (a) a commit subject contains its p0_id, (b) a
+    commit subject contains ``#<task_id>`` for one of its bound task numbers, or
+    (c) a changed file starts with one of its ``watch_paths`` prefixes.
+    """
+    subj_blob = "\n".join(str(s or "") for s in subjects)
+    hit: list[str] = []
+    for row in rows:
+        if row.get("status") not in ("open", "in_progress"):
+            continue
+        pid = str(row.get("p0_id") or "")
+        if not pid:
+            continue
+        if pid and pid in subj_blob:
+            hit.append(pid)
+            continue
+        task_ids = row.get("task_ids") or []
+        if any(re.search(rf"#\s*{re.escape(str(t))}\b", subj_blob) for t in task_ids):
+            hit.append(pid)
+            continue
+        watch = [str(w) for w in (row.get("watch_paths") or []) if str(w).strip()]
+        if watch and any(
+            (f or "").startswith(tuple(watch)) for f in files
+        ):
+            hit.append(pid)
+    return hit
+
+
+def extract_text(message: object) -> str:
+    """Best-effort text of a transcript ``message`` (str or content-block list)."""
+    if isinstance(message, str):
+        return message
+    if isinstance(message, dict):
+        content = message.get("content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    parts.append(str(block.get("text") or ""))
+            return "\n".join(parts)
+    return ""
+
+
+def new_p0_designations(lines: list[str]) -> list[str]:
+    """Snippets of USER (operator) transcript lines that look like NEW P0
+    designations. Tool results / assistant turns / self-referential apparatus
+    talk are excluded."""
+    found: list[str] = []
+    for raw in lines:
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            obj = json.loads(raw)
+        except Exception:
+            continue
+        if not isinstance(obj, dict) or obj.get("type") != "user":
+            continue
+        msg = obj.get("message")
+        role = msg.get("role") if isinstance(msg, dict) else None
+        if role not in (None, "user"):
+            continue
+        # skip synthetic tool-result user turns
+        if (isinstance(msg, dict) and isinstance(msg.get("content"), list)
+                and any(isinstance(b, dict) and b.get("type") == "tool_result"
+                        for b in msg["content"])):
+            continue
+        text = extract_text(msg)
+        if not text or _SELF_REF.search(text):
+            continue
+        for line in text.splitlines():
+            if _P0_WORD.search(line) and _DIRECTIVE.search(line):
+                found.append(line.strip()[:160])
+                break  # one snippet per message
+    return found
+
+
+# ----------------------------- marker + main -----------------------------
+def _read_marker(root: str) -> dict:
+    try:
+        with open(os.path.join(root, MARKER_REL)) as fh:
+            m = json.load(fh)
+            return m if isinstance(m, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_marker(root: str, marker: dict) -> None:
+    try:
+        path = os.path.join(root, MARKER_REL)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump(marker, fh)
+        os.replace(tmp, path)
+    except Exception:
+        pass
+
+
+def _log(root: str, msg: str) -> None:
+    try:
+        with open(os.path.join(root, LOG_REL), "a") as fh:
+            fh.write(f"{_now()} {msg}\n")
+    except Exception:
+        pass
+
+
+def main() -> None:
+    try:
+        raw = sys.stdin.read()
+        inp = json.loads(raw) if raw.strip() else {}
+    except Exception:
+        inp = {}
+    stop_hook_active = bool(inp.get("stop_hook_active"))
+
+    root = inp.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or ""
+    if not root:
+        try:
+            r = _git(".", "rev-parse", "--show-toplevel")
+            root = r.stdout.strip() if r.returncode == 0 else "."
+        except Exception:
+            root = "."
+
+    try:
+        r = _git(root, "rev-parse", "HEAD")
+        if r.returncode != 0:
+            sys.exit(0)
+        head = r.stdout.strip()
+    except Exception:
+        sys.exit(0)
+
+    try:
+        digest = _load_digest_module(root)
+        ledger_max = digest.max_written_utc(root)
+        rows = list(digest.read_ledger(root).values())
+    except Exception:
+        sys.exit(0)  # no ledger lib / unreadable ledger — fail open
+
+    marker = _read_marker(root)
+    last_head = marker.get("last_head")
+    last_ledger_max = str(marker.get("last_ledger_max") or "")
+    block_key = f"{head}:{ledger_max}"
+
+    # First run: initialize, nothing to compare. Baseline the transcript offset
+    # so PRE-EXISTING messages never retro-fire check B (only NEW designations
+    # after the apparatus went live are in scope).
+    if not last_head:
+        offsets: dict = {}
+        t = str(inp.get("transcript_path") or "")
+        if t and os.path.exists(t):
+            try:
+                with open(t, errors="replace") as fh:
+                    offsets[t] = sum(1 for _ in fh)
+            except Exception:
+                pass
+        _write_marker(root, {"last_head": head, "last_ledger_max": ledger_max,
+                             "offsets": offsets, "updated_utc": _now()})
+        sys.exit(0)
+
+    # Loop-safety: already nagged for this exact (head, ledger) state.
+    if stop_hook_active or marker.get("last_block_key") == block_key:
+        marker.update({"last_head": head, "last_ledger_max": ledger_max,
+                       "last_block_key": None, "updated_utc": _now()})
+        _write_marker(root, marker)
+        _log(root, f"allow(already-nagged) head={head[:9]}")
+        sys.exit(0)
+
+    ledger_updated_this_window = ledger_max > last_ledger_max
+
+    # --- window commits ---
+    subjects: list[str] = []
+    files: list[str] = []
+    if last_head != head:
+        try:
+            subjects = [s for s in _git(root, "log", "--format=%s",
+                                        f"{last_head}..{head}").stdout.splitlines()
+                        if s.strip()]
+            files = [f for f in _git(root, "diff", "--name-only",
+                                     f"{last_head}..{head}").stdout.splitlines()
+                     if f.strip()]
+        except Exception:
+            subjects, files = [], []
+
+    # --- check A: touched a tracked P0 without a ledger update ---
+    touched: list[str] = []
+    if subjects and not ledger_updated_this_window and not is_opted_out(subjects):
+        try:
+            touched = touched_p0s(rows, subjects, files)
+        except Exception:
+            touched = []
+
+    # --- check B: new operator-P0 designation without a ledger row ---
+    designations: list[str] = []
+    transcript = str(inp.get("transcript_path") or "")
+    if transcript and os.path.exists(transcript) and not ledger_updated_this_window:
+        try:
+            offsets = marker.get("offsets") or {}
+            start = int(offsets.get(transcript, 0))
+            with open(transcript, errors="replace") as fh:
+                lines = fh.readlines()
+            new_lines = lines[start:]
+            designations = new_p0_designations(new_lines)
+            offsets[transcript] = len(lines)
+            marker["offsets"] = offsets
+        except Exception:
+            designations = []
+
+    if touched or designations:
+        marker.update({"last_block_key": block_key, "updated_utc": _now()})
+        # do NOT advance last_head/last_ledger_max — the fixing append clears it
+        _write_marker(root, marker)
+        _log(root, f"NAG head={head[:9]} touched={touched[:4]} "
+                   f"new_designations={len(designations)}")
+        parts = []
+        if touched:
+            parts.append(
+                "OPERATOR-P0 LEDGER STALE: this turn touched tracked operator-P0(s) "
+                f"{sorted(set(touched))[:4]} but appended NO ledger update. Update each via "
+                ".venv/bin/python tools/operator_p0_digest.py --update <p0_id> "
+                "--status <open|in_progress|complete|superseded> --evidence '<artifact>' "
+                "--next-action '<one line>'. Deliberate no-op: commit token [p0-ledger-ok]."
+            )
+        if designations:
+            parts.append(
+                "NEW OPERATOR-P0 DESIGNATED THIS SESSION with no ledger row: "
+                + " | ".join(f"'{d}'" for d in designations[:2])
+                + " — register it NOW via tools/operator_p0_digest.py --update <new_p0_id> "
+                "--status open --verbatim-ask '<operator words>' --next-action '<first step>' "
+                "so it survives compaction (operator: P0s must never be silently dropped)."
+            )
+        print(json.dumps({"decision": "block", "reason": " ALSO — ".join(parts)}))
+        sys.exit(0)
+
+    marker.update({"last_head": head, "last_ledger_max": ledger_max,
+                   "last_block_key": None, "updated_utc": _now()})
+    _write_marker(root, marker)
+    _log(root, f"allow(clean) head={head[:9]} n={len(subjects)}")
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception:
+        sys.exit(0)  # absolute last-resort fail-open
