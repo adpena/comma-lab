@@ -167,3 +167,28 @@ Recommendation per the doctrine: **c2 first** — it is the train-least path to 
 failure mode (plateau at ~0.0031) hands the baton back to c1 with the basin question measured.
 
 **Pointer 0.19108 UNMOVED — MEANS.**
+
+---
+
+## AMENDMENT 2026-07-16 (GO-chain execution arm; APPEND-ONLY)
+
+1. **Force-3 subpix co-emitted (coordinator directive from the lane-channel completeness verdict,
+   477ec610c5 §5/§7):** T1 is birth-SILENT (mis-force concern REFUTED at the weight level) but the
+   composed phase stage had a MEASURED coverage gap — 26.3% of candidate straddle px (354
+   lane-adjacent px/frame; GT island churn ~50%/step) received NO phase supervision.
+   `TieLocusDisplacement(start_epoch=700)` (the ALREADY-BUILT #360 lever) now co-engages at the
+   single surgical boundary, factory defaults, `pa_flipmass` edge weights (measured
+   `reports/pa_edge_weights.json` present). The λ_RL≈2× per-pair prior + the event-fallback weight
+   variant were NOT folded (duty-to-measure). **Typed hash: `be29562e…` → `994cd28576556098ce7778cd26a9e67684e1040e23bec2e9683559ad0cbec3ef`
+   (91 flags).**
+2. **Gate-surfaced fixes during registration+fire (commits a0d5c5facf, 0c306ebad9, ac805780a3):**
+   (a) dry-start sec/ep now divides by epochs STEPPED THIS PASS (warm-start receipt confound);
+   (b) the six (now seven) positive `--*-start-epoch` triggers are DERIVED via the NEW registered
+   law `warm_start_schedule_reconstruction_v1` (this memo's `class='boundary'` governance rows were
+   not a legal gate form, and no recognised sensor is co-emittable on the warm path — A2);
+   (c) the bench receipt is HASH-MATCHED (a pre-amendment dry-start can never clear the amended
+   config's blocker).
+3. **Rim (A8) physics closed by the operator (specular wet hood, static geometry); the rim-band
+   render/decode lever is UNBUILT — recorded OWED, non-blocking** (`hood_static_component` is
+   standalone; trainer consumes the static core only via init-time `--structured-init`, inert
+   under warm start; hood-tex seed lives on the necessity vehicle).
