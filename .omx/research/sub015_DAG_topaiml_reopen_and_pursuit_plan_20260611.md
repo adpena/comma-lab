@@ -19247,3 +19247,32 @@ Pointer 0.19108 UNMOVED (apparatus + armed measurement; next exact-relevant even
 - AMENDMENT (operator-approved): VerdictLiveGap(every=25) — DERIVED: == --eval-every 25 (probe rides the existing verdict join, marginal ~0) AND > the pipelining bound 22 (restores zero-wait join). Read-only telemetry; score-neutral BY CONSTRUCTION but not cost-neutral — the off-is-a-tracked-queue law's "cadence is a recorded controller decision" clause, now actually recorded. Spec commit 92ba391f90; expected-lever manifest 9→10; typed hash 6c863e71bc → 2d486e3bff (one-flag diff, 91→92 flags, verified in emitted trainer flags).
 - LESSON (constants/telemetry class): score-neutral ≠ cost-neutral; every default-on observability cadence needs a wall-clock cost row (the same telemetry family that was implicated: p0_confound_hardening's EMA-warmup live-gap). The bench gate PAID FOR ITSELF: caught a ~12-day pure-telemetry tax no static review saw.
 - v2 bench chain LIVE: run dir levelset_n600_witness_20260716T211713Z, blocker re-armed for the new hash, all gates re-validated (10-lever manifest OK, admission ADMIT 100.8≤107.1, throughput gate ON~396ms). Expected receipt marginal ~2-3 min/ep → real launch (~1.2d) fires on green under the standing operator GO.
+
+## FEED-delta-bench (2026-07-16) — launcher DELTA-BENCH efficiency lever (apparatus; [no-triality])
+
+- **What landed** (commit d6ad06c4c4): `tools/launch_witness_run.py --dry-start-delta-from <prior_run_dir>` —
+  fail-closed whitelist-gated inheritance of the TRANSFERABLE bounded-bench proofs (boot / memory envelope /
+  throughput) from a prior GREEN `full_config_dry_start` receipt, running a REDUCED bench instead of the full one:
+  a fresh 2-epoch boot + the NEVER-transferable crash-resume round-trip (the resume sidecar embeds the config)
+  + a peak-RSS envelope cross-check (fresh peak > inherited×1.10 ⇒ `green:false`, reason "inherited envelope
+  violated"). Same receipt shape/gate string, so C2_COMPOSED_BENCH_NOT_MEASURED clears on the NEW typed hash.
+- **Mode semantics**: receipt gains `mode:"delta_bench"`, `inherited_from:{path,typed_config_hash,ts,fields:
+  [boot_ok,peak_rss_gib,throughput_gate]}` (PROVENANCE, never re-asserted as measured — NO-FAKE), `delta_flags`
+  (the structural diff), `peak_envelope_ok`; `green` requires ALL fresh proofs. Default no-flag path =
+  full bench, behavior-identical (regression-tested key-set equality on the receipt).
+- **The ONLY door** — `SCORE_NEUTRAL_BENCH_INHERIT_WHITELIST` (read-only telemetry, one WHY comment each):
+  `--verdict-live-gap-every` (EMA-vs-live gap row logged only; never feeds loss/optimizer/EMA/controller) ·
+  `--component-wallclock-probe-every` + `--profile-timing` (timing telemetry, log rows only). Anything else —
+  added/removed/changed base flags, lever weights, a changed trainer entry point (`_argv_head`) — REFUSES rc=7
+  naming the offending flags + "run the full bench". Also refused: empty diff (identical config — reuse the prior
+  receipt), missing/non-green/wrong-gate/cross-config prior, receipt ≥14 days old, unparseable ts, missing prior
+  peak, missing/unreadable manifests (all fail-closed). `--out-dir` is the sole run-identity exclusion;
+  `--resume-from` is config structure and compared.
+- **Why (the saving)**: the 2026-07-16 one-flag score-neutral VerdictLiveGap cadence amendment (spec 92ba391f90,
+  hash 6c863e71bc→2d486e3bff) forced a FULL re-bench ~3-4h (two passes, each ~35-50 min boot incl. throughput gate
+  + baseline verdict) for proofs the prior green receipt already carried. Delta bench: two 2-epoch passes on the
+  same budgets machinery ≈ ~1h; no trainer flag exists to skip the boot baseline verdict (checked — `v0` is
+  unconditional), so per spec none was invented. 27 behavior tests
+  (`src/tac/tests/test_dry_start_delta_bench.py`); 92 existing launcher tests pass unchanged.
+- **MEANS not ends**: apparatus lever (launcher, not a training lever — no DSL Lever). Pointer moves only via
+  `upstream/evaluate.py`; exact pointer UNMOVED by this landing.
