@@ -18907,3 +18907,13 @@ annulus and longest end of long tail". Full table:
   (consumes autoclip_percentile_threshold_v1, inr_weight_norm_radial_ode_v1, lr_control_denominator_v1,
   hosc_beta_fireband_pin_v1 anchors). All [macOS-MLX advisory] NON-PROMOTABLE; MEANS;
   **pointer 0.19108 UNMOVED.**
+
+## FEED-c1-config-audit-leg (2026-07-15) — equations-leg disposition for FEED-c1-config-audit (b453629979) [no-triality]
+- The C1 config differential audit is a CONFIG-VERDICT doc that CONSUMES existing measured anchors, it does
+  not produce a new law: the VerdictParallelWorkers 5.686× win = `verdict_parallel_workers_speedup_20260715`
+  (registered EmpiricalAnchor this session); the grad-clip-"lr/12"-REFUTED correction = the C0 per-param-
+  normalize confound (memory `perparam_normalize_masks_all_norm_clipping_c0_confound_20260715` +
+  FEED-C0H1). No new EmpiricalAnchor to register/refine — the audit's numbers are re-reads of already-
+  anchored measurements. DAG leg = FEED-c1-config-audit (landed). MEMORY = the grad-clip-inert +
+  event-LR/β-coanneal/Polyak-are-live facts are already held (C0 confound memory). Equations-leg = N/A
+  (consume-only). Recorded so the leg is explicit, not silent. Pointer 0.19108 UNMOVED.
