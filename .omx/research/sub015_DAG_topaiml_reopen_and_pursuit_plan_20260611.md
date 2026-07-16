@@ -18734,3 +18734,19 @@ annulus and longest end of long tail". Full table:
   design; no trainer-config changed — tags become Levers only on positive rung) · equations N/A-with-reason
   (design only; CITES FEED-jc, produces no new S_τ law). [no-triality] like FEED-whitebox-inventory.
   Everything MEANS; **pointer 0.19108 UNMOVED · bank 0.18804.**
+
+## FEED-whitebox-adaptivewidth-reconcile (2026-07-15) — operator recall "we have research into some of this already… importance of adaptive width" [no-triality: pointer/routing, no new lever/law]
+- The white-box campaign named "margin-band-weighted spectral/norm penalty on ‖W‖" (cell S2×weight) the
+  #1 unpursued d_seg cell. **Proactive-recall REVERSES "unpursued" → "COMPOSE EXISTING built pieces":**
+  #121 d_seg-aware Fourier taper (BUILT triality Lever `tac.boundary_math.dseg_aware_fourier_taper`,
+  byte-neutral, rule-118 FREE — the per-band adaptive-width vehicle) · SIREN-ω/hosc-β bandwidth (BUILT,
+  FEED-cm/#178/#310: `--siren-omega`/`--hosc-beta[-end/-anneal]`/`--finer-bias-init`) · radial-norm ODE
+  law `inr_weight_norm_radial_ode_v1` (‖W‖ IS the NTK band; target the band edge ‖w‖*=min(k_need,k_R)/ω,
+  penalize ABOVE it — pays bits AND aliases) · WW-PGD spectral projection (#442, verdict_scope: formulation
+  — width-96 trunk, paradigm not falsified).
+- **Net (system intelligence):** the genuine remaining work is the **annulus(#333, ~97% of d_seg) × per-class
+  COUPLING** — extend #121's taper to margin-band-conditional + per-class, aim at the radial-ODE band edge,
+  actuate via WW-PGD; SIREN-ω/hosc-β = the init side. A DSL-Lever extension of an existing Lever + a GPU A/B
+  (launch-gated), NOT a from-scratch build. Reconciliation appended to `.omx/research/whitebox_full_campaign_20260715.md`
+  (commit ad415d187c). Operator also flagged "partial on others as well" → FEED-whitebox-recall-completeness
+  arm sweeping the remaining cells. Pointer 0.19108 UNMOVED (means; routing/anti-re-derivation).
