@@ -15,9 +15,15 @@ THE LAW (the trainer's own warm-start contract, not a new physics claim):
   schedule boundary of the warm run is a FUNCTION of named inputs, never a hand-typed epoch:
 
     * ``config_of_record``      value = C's own launch.sh value        (tau@300, muon@726)
-    * ``run_length_exclusion``  value = run_epochs                     (l7 NEVER runs: start==epochs,
-                                                                        the trainer's documented
-                                                                        exclusion pattern; A3)
+    * ``run_length_exclusion``  value = run_epochs + 1                 (l7 NEVER runs: start=epochs+1.
+                                                                        AMENDED 2026-07-16 by the c2
+                                                                        adversarial review: the trainer
+                                                                        loop is range(start, epochs+1)
+                                                                        INCLUSIVE, so start==epochs RUNS
+                                                                        l7 on the final epoch — the
+                                                                        trainer's own documented
+                                                                        off-by-one; the mod32cap record
+                                                                        parks l7 at 1001/epochs=1000; A3)
     * ``resume_plus_window``    value = resume_epoch + re_anchor_window (the surgical engage
                                                                         boundary: fresh-moment
                                                                         settling ~= 2x the
@@ -58,7 +64,7 @@ def build_warm_start_schedule_reconstruction_v1() -> CanonicalEquation:
         CONFIG_OF_RECORD,
         reactivation_criteria=(
             "config-derivation law; re-derive if the trainer's --anneal-epochs warm-start "
-            "contract or the l7 start==epochs exclusion pattern changes"
+            "contract or the l7 start>epochs (epochs+1) exclusion pattern changes"
         ),
         measurement_axis="[config-of-record source inspection]",
         hardware_substrate="n/a (derivation)",
@@ -76,7 +82,7 @@ def build_warm_start_schedule_reconstruction_v1() -> CanonicalEquation:
             predicted_output={"schedule_continuity": "resume epoch sees the checkpoint's exact "
                                                      "schedule state under --anneal-epochs 1000"},
             empirical_output={"tau_softplus_start_epoch": 300, "muon_start_epoch": 726,
-                              "l7_never_runs_start": 1400, "surgical_engage_epoch": 700,
+                              "l7_never_runs_start": 1401, "surgical_engage_epoch": 700,
                               "pose_finish_backstop": 1000},
             residual=0.0,
             source_artifact=CONFIG_OF_RECORD,
@@ -98,7 +104,7 @@ def build_warm_start_schedule_reconstruction_v1() -> CanonicalEquation:
         latex_form=(
             r"e_{\mathrm{boundary}} = \begin{cases}"
             r" e_{\mathrm{record}} & \text{config-of-record}\\"
-            r" E_{\mathrm{run}} & \text{l7 exclusion (start==epochs)}\\"
+            r" E_{\mathrm{run}} + 1 & \text{l7 exclusion (start=epochs+1)}\\"
             r" e_{\mathrm{resume}} + w_{\mathrm{re-anchor}} & \text{surgical engage}\\"
             r" E_{\mathrm{plant}} & \text{backstop cap}\end{cases}"
         ),
@@ -136,7 +142,7 @@ def build_warm_start_schedule_reconstruction_v1() -> CanonicalEquation:
         canonical_producers=(
             CONFIG_OF_RECORD,
             "experiments/train_levelset_witness_realized_through_R_mlx.py (--anneal-epochs + "
-            "l7 start==epochs contracts)",
+            "l7 start=epochs+1 never-runs contracts; loop is range(start, epochs+1) inclusive)",
         ),
         provenance=provenance,
     )

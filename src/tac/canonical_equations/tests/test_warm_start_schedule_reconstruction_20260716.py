@@ -27,9 +27,14 @@ def test_config_of_record_mode() -> None:
 
 
 def test_run_length_exclusion_mode() -> None:
-    # l7 never-runs: start == epochs (the trainer's documented exclusion pattern; A3).
+    # l7 never-runs: start = epochs + 1 (AMENDED 2026-07-16 by the c2 adversarial review: the
+    # trainer loop is range(start, epochs+1) INCLUSIVE, so start==epochs would RUN l7 on the
+    # final epoch — the trainer's own documented off-by-one; the mod32cap config of record
+    # parks l7 at 1001 with epochs=1000, TRUE never).
     assert eval_warm_start_schedule_reconstruction(
-        {"mode": "run_length_exclusion", "run_epochs": 1400}) == 1400
+        {"mode": "run_length_exclusion", "run_epochs": 1400}) == 1401
+    assert eval_warm_start_schedule_reconstruction(
+        {"mode": "run_length_exclusion", "run_epochs": 1000}) == 1001  # the mod32cap record form
 
 
 def test_resume_plus_window_mode() -> None:

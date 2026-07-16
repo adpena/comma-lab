@@ -82,11 +82,37 @@ def test_feasible_named_configs_pass_at_sealed_budget(config: str) -> None:
     assert cfg is not None
 
 
-def test_fresh_seeded_latent_l7_window_refuses_at_sealed_budget() -> None:
-    with pytest.raises(ValueError, match=r"--l7-start-epoch=1001"):
-        derive_named_config(
-            "fresh_seeded", GT_N24, num_pairs=24, epochs=None, overfit=True
-        )
+def test_fresh_seeded_l7_epochs_plus_one_parking_is_legal() -> None:
+    # (c2 adversarial review 2026-07-16) l7 parked at exactly epochs+1 (1001/epochs=1000) is the
+    # CANONICAL "TRUE never" form — the trainer's loop is range(start, epochs+1) INCLUSIVE, so
+    # ==epochs would run l7 on the final epoch. fresh_seeded's own docstring anticipated this
+    # relax ("a follow-up (the C2/L1 wave) is expected to admit the '>= epochs == never' form").
+    cfg = derive_named_config(
+        "fresh_seeded", GT_N24, num_pairs=24, epochs=None, overfit=True
+    )
+    assert cfg is not None
+
+
+def test_l7_past_epochs_but_not_plus_one_still_refuses() -> None:
+    # Dead-stage protection intact: only the exact epochs+1 parking is exempt; an arbitrary
+    # past-budget l7 value is still a config bug.
+    violations = schedule_epoch_budget_violations({
+        "--curriculum": True,
+        "--epochs": 1000,
+        "--tau-softplus-start-epoch": 300,
+        "--l7-start-epoch": 1005,
+    })
+    assert violations and "--l7-start-epoch=1005" in violations[0]
+
+
+def test_l7_exactly_epochs_plus_one_is_exempt_pure() -> None:
+    violations = schedule_epoch_budget_violations({
+        "--curriculum": True,
+        "--epochs": 1000,
+        "--tau-softplus-start-epoch": 300,
+        "--l7-start-epoch": 1001,
+    })
+    assert all("--l7-start-epoch" not in v for v in violations)
 
 
 @pytest.mark.parametrize(

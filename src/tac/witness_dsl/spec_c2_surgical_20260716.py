@@ -47,10 +47,11 @@ exactly the checkpoint's schedule state and the extension (ep1001-1400) holds th
 end values. ``--epochs 1400`` is the RUN length only.
 
 DEVIATIONS FROM THE CHECKPOINT CONFIG (each provenanced; everything else verbatim):
-* ``--l7-start-epoch == epochs`` (was 1001): l7 is a MEASURED DEFECT (CLAUDE.md capstone:
+* ``--l7-start-epoch == epochs + 1`` (was 1001): l7 is a MEASURED DEFECT (CLAUDE.md capstone:
   "demote it"); a naive epoch-extension to 1400 would have RE-ACTIVATED it at 1001
-  (adverse finding A3 in the memo). start == epochs = the trainer's legitimate
-  "l7 never runs" pattern.
+  (adverse finding A3 in the memo). start = epochs + 1 = the trainer's TRUE
+  "l7 never runs" form (the loop is range(start, epochs+1) INCLUSIVE — start == epochs
+  would run l7 on the final epoch; adversarial-review fix 2026-07-16).
 * ``--w-pose 1.0`` (was 0): the pose-finish phase weight; the trunk phase stays
   pose-blind via the two-phase gate + PoseBlindComputeGate (compute saver).
 * ``--anneal-epochs 1000`` (new): schedule continuity (above).
@@ -198,10 +199,15 @@ def compile_c2_surgical_warm_launch_config(
         "--curriculum": True,
         "--tau-softplus-start-epoch": 300,
         "--tau-softplus-tau": 0.3,
-        # DEVIATION: l7 NEVER runs (measured defect). start == epochs is the trainer's
-        # documented "l7 never runs" pattern (the L1 SEAL-review relax: _seg_form_for_epoch
-        # honors >= epochs as never) AND satisfies the DSL epoch-budget feasibility check.
-        "--l7-start-epoch": int(epochs),
+        # DEVIATION: l7 NEVER runs (measured defect). start = epochs + 1 is the TRUE never-runs
+        # form (adversarial-review fix 2026-07-16): the trainer's epoch loop is
+        # range(start_epoch, epochs+1) INCLUSIVE, so start == epochs RUNS l7 on the final epoch —
+        # the trainer's own documented off-by-one (~L15646: "l7_start == epochs is the L1
+        # off-by-one (l7 WOULD run on the final epoch) — the fresh config uses epochs+1"). The
+        # mod32cap config of record itself parks l7 at 1001 with epochs=1000 ("TRUE never").
+        # The DSL epoch-budget gate now exempts EXACTLY the l7 == epochs+1 parking form
+        # (same-review NARROW class-fix; any other past-budget value still refuses).
+        "--l7-start-epoch": int(epochs) + 1,
         "--muon-start-epoch": 726,
         "--muon-lr": 0.002,
         "--muon-momentum": 0.95,
@@ -377,7 +383,7 @@ def compile_c2_surgical_warm_launch_config(
         "--hosc-beta-end": "4.0",
         "--softmax-temp-end": "0.05",
         "--anneal-epochs": str(ORIGINAL_SCHEDULE_EPOCHS),
-        "--l7-start-epoch": str(int(epochs)),
+        "--l7-start-epoch": str(int(epochs) + 1),
         "--seg-phase-advect-weight": "0.4",
         "--seg-phase-advect-start-epoch": str(SURGICAL_ENGAGE_EPOCH),
         "--seg-margin-satisfice-weight": "0.2",
@@ -516,7 +522,9 @@ def compile_c2_surgical_warm_launch_config(
             "A2 label_floor start-event DEAD on the warm path (band above resume d_seg) — "
             "epoch engage + refusal check; warm-path sensor recalibration OWED",
             "A3 naive epoch-extension would re-activate the l7 defect stage at its old 1001 "
-            "epoch — excluded via l7-start == epochs (the never-runs pattern)",
+            "epoch — excluded via l7-start == epochs + 1 (the TRUE never-runs form; the "
+            "adversarial review 2026-07-16 caught the == epochs off-by-one that would have "
+            "run l7 on the final epoch)",
             "A4 softmax-temp-end 0.05 is BELOW the v9 P-TAU2 knee band [0.191,0.543]; kept "
             "because the checkpoint's weights are conditioned on this schedule (config-"
             "conditional constant, L18) — a tau re-treatment is a separate measured arm",
@@ -613,14 +621,16 @@ def compile_c2_surgical_warm_launch_config(
                     "finding A5)",
         },
         "l7_start_epoch": {
-            "value": int(epochs),
+            "value": int(epochs) + 1,
             "equation_id": _ws_eq,
             "ladder_class": "derived_at_config",
             "fallback_used": False,
             "inputs": {"mode": "run_length_exclusion", "run_epochs": int(epochs)},
-            "note": "l7 NEVER runs (start == epochs, the trainer's documented exclusion "
-                    "pattern); l7 is a measured defect — a naive extension would have re-fired "
-                    "it at the record's 1001 (adverse finding A3)",
+            "note": "l7 NEVER runs (start = epochs + 1, the TRUE never-runs form — the trainer "
+                    "loop is range(start, epochs+1) INCLUSIVE so start==epochs would run l7 on "
+                    "the final epoch; adversarial-review fix 2026-07-16, matching the mod32cap "
+                    "record's own 1001/epochs=1000 parking); l7 is a measured defect — a naive "
+                    "extension would have re-fired it at the record's 1001 (adverse finding A3)",
         },
         "seg_phase_advect_start_epoch": {
             "value": int(SURGICAL_ENGAGE_EPOCH),

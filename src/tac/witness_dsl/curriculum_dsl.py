@@ -214,6 +214,18 @@ def schedule_epoch_budget_violations(
             start_epoch = int(value)
         except (TypeError, ValueError):
             continue  # real argparse/type validation owns malformed values
+        if flag == "--l7-start-epoch" and start_epoch == epochs + 1:
+            # (c2 adversarial review 2026-07-16) l7_start == epochs + 1 is the CANONICAL "l7
+            # NEVER runs" parking form (L1 SEAL-review relax 4bf533cab; l7 is a MEASURED DEFECT
+            # demoted from the default curriculum — the mod32cap config of record AND
+            # fresh_seeded both park it at 1001 with epochs=1000, "TRUE never"). The trainer's
+            # epoch loop is range(start, epochs+1) INCLUSIVE, so l7_start == epochs RUNS l7 on
+            # the final epoch (the trainer's own documented off-by-one at ~L15646) — this gate
+            # refusing the epochs+1 form is what squeezed c2_surgical_warm into that off-by-one.
+            # NARROW exemption: exactly epochs+1 (the deliberate parking convention); any OTHER
+            # value past epochs — and every other stage flag parked past epochs — is still a
+            # dead-stage config bug and stays refused below.
+            continue
         if start_epoch > epochs:
             offenders.append((flag, start_epoch))
     if not offenders:

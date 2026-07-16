@@ -367,7 +367,18 @@ def eval_warm_start_schedule_reconstruction(inputs: Mapping[str, Any]) -> int:
     function of named inputs — ``mode`` selects the derivation:
 
       * ``config_of_record``     -> int(config_of_record_value)   (the checkpoint's launch.sh value)
-      * ``run_length_exclusion`` -> int(run_epochs)                (l7 never-runs: start == epochs)
+      * ``run_length_exclusion`` -> int(run_epochs) + 1            (l7 never-runs: start = epochs+1 —
+                                                                    the trainer's epoch loop is
+                                                                    range(start, epochs+1) INCLUSIVE,
+                                                                    so start == epochs would RUN l7 on
+                                                                    the final epoch [the trainer's own
+                                                                    documented off-by-one]; the mod32cap
+                                                                    config of record parks l7 at 1001
+                                                                    with epochs=1000 — TRUE never.
+                                                                    Amended 2026-07-16 by the c2
+                                                                    adversarial review; the original
+                                                                    registration returned run_epochs
+                                                                    and reproduced the off-by-one.)
       * ``resume_plus_window``   -> resume_epoch + re_anchor_window (the surgical engage boundary)
       * ``original_plant_end``   -> int(original_schedule_epochs)  (the backstop cap at plant end)
     """
@@ -375,7 +386,7 @@ def eval_warm_start_schedule_reconstruction(inputs: Mapping[str, Any]) -> int:
     if mode == "config_of_record":
         return int(inputs["config_of_record_value"])
     if mode == "run_length_exclusion":
-        return int(inputs["run_epochs"])
+        return int(inputs["run_epochs"]) + 1
     if mode == "resume_plus_window":
         return int(inputs["resume_epoch"]) + int(inputs["re_anchor_window"])
     if mode == "original_plant_end":
