@@ -18831,3 +18831,44 @@ annulus and longest end of long tail". Full table:
   `tools/launch_witness_run.py` — is BLOCKED because that launcher is the live #507 run (pid 3997,
   untouchable). Trigger to land the runtime guard + strict-flip this gate: **pid 3997 exits.**
   **Pointer 0.19108 UNMOVED (means).**
+
+## FEED-resume-observability-harden (2026-07-15) — #507 dry-start gate false-negative CURED: resume FIDELITY was never broken, resume OBSERVABILITY was [no-triality: apparatus/means]
+- **The finding (fidelity vs observability).** The #507 dry-start gate (report
+  `experiments/results/levelset_n600_witness_20260715T195923Z/dry_start_report.json`) returned green=false with
+  pass2 `resume_model_source: true, epochs_completed: 11` but `resume_start_epoch: null`. Root cause is
+  OBSERVABILITY, not fidelity: the trainer stores + restores the epoch position bit-faithfully
+  (`__resume_epoch` sidecar key; curriculum `__cfg_*_start_epoch` persisted; `_resume_lever_divergences`
+  fail-closed) — but it NEVER emitted the restored epoch onto the launcher's parse surface (run.log JSONL).
+  The only prior `resume_start_epoch` emission lived inside the CONDITIONAL C16 `seed_anneal_epochs_WARN`
+  row, so a CORRECT resume parsed as null and a correct gate read false. A good launch was blocked by a
+  silent observability gap — the exact "no silent failures" class, in the VERIFIER's own instrument.
+- **Landed (commit 05e6fd8a31):** (1) trainer `_emit_resume_start_epoch_row` — dedicated, UNCONDITIONAL
+  JSONL row `{stage: resume_start_epoch, resume_start_epoch, resume_ckpt_epoch, warm_start_override,
+  resume_from}` emitted right after the epoch position is restored; print-only => training determinism /
+  byte-identity preserved by construction. (2) launcher `parse_dry_start_run_metrics` now also captures
+  `last_ckpt_epoch` (pass-1's last resume-capable checkpoint epoch) + `resume_ckpt_epoch`.
+  (3) `dry_start_resume_ok` TIGHTENED from the weak `rse >= 1` to fail-closed exact-position equality:
+  `resume_start_epoch == resume_ckpt_epoch + 1 == pass-1 last_ckpt_epoch + 1` AND stepped past it — the
+  machine-verifiable bit-faithful round-trip proof; null/0/mismatch now FAIL instead of silently riding.
+  (Pass-1's max-ep `epochs_completed` is deliberately NOT the equality anchor: the SIGTERM crash-sim can
+  land mid-epoch, leaving partial-epoch telemetry past the last written checkpoint.)
+- **Fast $0 test (seconds-scale, PASSED):** `src/tac/tests/test_resume_epoch_observability.py` chains the
+  REAL shipped functions — `_build_resume_state_arrays` (ckpt_epoch=7, curriculum stage fields 311/123/77)
+  → `_atomic_savez` → `_load_resume_state` (epoch==7 restored; stage-position cfg round-trips) →
+  `_resolve_weights_only_warm_start` (start_epoch==8) → `_emit_resume_start_epoch_row` (emitted row:
+  resume_start_epoch=8, resume_ckpt_epoch=7) → launcher `parse_dry_start_run_metrics` on the ACTUAL emitted
+  bytes → `dry_start_resume_ok(p2, p1)` True, plus fail-closed negative controls (wrong-ckpt equality,
+  null-rse pre-fix signature, warm-start override). 18/18 green incl. updated `test_v752_owed_gates.py`.
+  verdict_scope: instance — the only un-exercised link is the multi-hour training loop between checkpoint
+  and crash, which is exactly the heavy dry-start's job.
+- **OWED (deferred by concurrency, task-worthy):** two-landing self-protect preflight gate
+  `check_resume_emits_verifiable_epoch` (refuse a trainer whose resume path lacks an unconditional
+  machine-parseable restored-epoch emission) — NOT landed now because `src/tac/preflight.py` is owned by the
+  sister apparatus arm this session; land it when that arm frees the file. Interim anti-rot pin: the new
+  test's source-structure check (emission must be unconditional at the call site).
+- **BLOCKED (operator-GO required — heavy re-verify):** re-run the governed 2×~9000s full-config dry-start
+  to flip #507 green on the REAL n600 config with the hardened gate. Exact command:
+  `.venv/bin/python tools/launch_witness_run.py --config c1_optimal_form --num-pairs 600 --dry-start 2`
+  (same invocation family as the 20260715T195923Z attempt; NEVER proceeds to the real launch; rc 0 = green).
+  Trigger: operator GO. Stale test `test_inject_extra_flag` (for the #406-deleted `_inject_extra_flag`)
+  removed as a drive-by — it was failing at HEAD. **Pointer 0.19108 UNMOVED (apparatus/means).**
