@@ -298,6 +298,11 @@ from tac.canonical_equations.palette_realization_ceiling_20260710 import (
     build_palette_realization_ceiling_v1,
     populate_palette_realization_ceiling_equation,
 )
+from tac.canonical_equations.perclass_stratum_carrier_taxonomy_20260716 import (
+    build_perclass_stratum_residual_carrier_taxonomy_v1,
+    one_sided_carrier_gain,
+    populate_perclass_stratum_residual_carrier_taxonomy_equation,
+)
 from tac.canonical_equations.powerplay_variant_ii_cost_isomorphism_20260702 import (
     build_powerplay_variant_ii_cost_isomorphism_v1,
     contest_score_as_powerplay_cost,
@@ -519,6 +524,7 @@ __all__ = [
     "build_palette_realization_ceiling_v1",
     "build_powerplay_variant_ii_cost_isomorphism_v1",
     "build_procedural_predictor_plus_residual_correction_savings_v1",
+    "build_perclass_stratum_residual_carrier_taxonomy_v1",
     "build_quadratic_head_chart_subset_solve_gap_v1",
     "build_realization_necessity_preimage_per_stratum_v1",
     "build_resize_exploit_flip_fix_frontier_v1",
@@ -614,6 +620,8 @@ __all__ = [
     "populate_margin_band_satisficing_threshold_equation",
     "populate_onpolicy_input_costate_surrogate_v1",
     "populate_palette_realization_ceiling_equation",
+    "one_sided_carrier_gain",
+    "populate_perclass_stratum_residual_carrier_taxonomy_equation",
     "populate_quadratic_head_chart_subset_solve_gap_equation",
     "populate_realization_necessity_preimage_equation",
     "populate_resize_exploit_flip_fix_frontier_equation",
