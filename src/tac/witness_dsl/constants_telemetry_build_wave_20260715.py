@@ -541,6 +541,20 @@ TRAINER_WIREIN_QUEUE: tuple[dict[str, str], ...] = (
                            "on predicted |d_seg delta| >= detection floor OR stage events)",
         "status": "ticket-only (adaptivization ticket --eval-every; NOT this wave's build)",
     },
+    {
+        "item": "rolling-average rate-proxy telemetry (#408/#404 · operator FEED-ratetelemetry: "
+                "rate is non-monotonic, soft-signal NEVER a kill)",
+        "producer": "tac.witness_control.rate_rolling_telemetry.rate_rolling_row (BUILT this wave)",
+        "trainer_flag": "--rate-rolling-telemetry (BooleanOptionalAction, default TRUE — "
+                        "read-only observability defaults ON per the off-is-orphan rule)",
+        "insertion_point": ("at the verdict emission site adjacent to the weight_norm row: "
+                            "maintain a proxy series (weight_entropy_bits from _we_rate_term_mlx "
+                            "~L6958 + periodic byte-close archive_bytes ~L4191) restored via "
+                            "baseline.proxy_tail on resume; emit rate_rolling_row(ep, series, "
+                            "baseline=...) at verdict cadence; drift_signal INFORMS the costate "
+                            "controller / operator and NEVER halts/reverts/clamps the run"),
+        "status": "queued-behind-dry-start (pid 31576)",
+    },
 )
 
 
@@ -576,6 +590,45 @@ def WeightNormTelemetryRow():  # noqa: N802
                "at verdict cadence (score-neutral read of already-materialized live_np/ema_np; "
                "defaults ON per off-is-orphan). Feeds inr_weight_norm_radial_ode_v1 consumers "
                "(eta_rel pin / row-norm projection / restoring decay — B3d)"),
+    )
+
+
+def RateRollingTelemetry():  # noqa: N802
+    """B0 instrument lever: rolling-average rate-proxy soft-signal rows (defaults ON).
+
+    Operator FEED-ratetelemetry (2026-07-15): rate is NON-MONOTONIC during training,
+    so telemetry reports a rolling mean (not the instantaneous value) + a GRADUATED
+    soft drift signal (WITHIN -> DRIFTING_UP -> SUSTAINED_GROWTH) that INFORMS the
+    costate controller / operator and NEVER kills the run.
+
+    FAIL-CLOSED until the trainer flag lands: the producer is BUILT
+    (tac.witness_control.rate_rolling_telemetry) but the emission site is queued behind
+    the live dry-start (pid 31576) — composing this lever before the trainer wire-in
+    would emit an invented flag, so it raises :class:`TrainerWireInQueued` with the
+    exact insertion point instead. The same call auto-unlocks the moment the flag lands.
+
+    # NO_EQUATION_NEEDED: read-only rate observability; adds no loss term, controller
+    # law, or score value (advisory soft-signal, informs_only=True by construction).
+    """
+    from tac.witness_dsl.curriculum_dsl import Lever
+
+    flag = "--rate-rolling-telemetry"
+    if not _trainer_has_flag(flag):
+        queue_row = TRAINER_WIREIN_QUEUE[-1]
+        raise TrainerWireInQueued(
+            f"RateRollingTelemetry: trainer flag {flag} has not landed — the emission-site "
+            f"wire-in is queued behind the live dry-start (pid {LIVE_DRY_START_PID}). "
+            f"Producer is BUILT ({queue_row['producer']}); insertion point: "
+            f"{queue_row['insertion_point']}"
+        )
+    return Lever(
+        "rate_rolling_telemetry_row",
+        overrides={flag: True},
+        notes=("#408/#404 B0 instrument: rolling-average rate proxy + graduated soft drift "
+               "signal (WITHIN/DRIFTING_UP/SUSTAINED_GROWTH) at verdict cadence (score-neutral; "
+               "defaults ON per off-is-orphan). NEVER kills — informs_only; consistent with the "
+               "spike-guard median-freeze 'never kill on a transient' lesson + guard-never-kills-"
+               "control-plane"),
     )
 
 
@@ -876,6 +929,7 @@ __all__ = [
     "HardcodedWaiverCustody",
     "LIVE_DRY_START_PID",
     "ModDimDynamicsOn",
+    "RateRollingTelemetry",
     "TRAINER_WIREIN_QUEUE",
     "TrainerWireInQueued",
     "VerdictBatch64",

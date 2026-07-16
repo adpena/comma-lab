@@ -182,12 +182,16 @@ def test_manifest_containment_and_contract():
 
 
 def test_trainer_wirein_queue_names_pid_and_insertion_points():
-    assert len(TRAINER_WIREIN_QUEUE) == 3
+    assert len(TRAINER_WIREIN_QUEUE) == 4
     wnt = TRAINER_WIREIN_QUEUE[0]
     assert "31576" in wnt["status"] or "dry-start" in wnt["status"]
     for row in TRAINER_WIREIN_QUEUE:
         assert row["insertion_point"].strip()
         assert row["producer"].strip()
+    # the rate-rolling telemetry producer (#408/#404 FEED-ratetelemetry) is queued
+    rate = TRAINER_WIREIN_QUEUE[-1]
+    assert "rate_rolling" in rate["producer"]
+    assert "31576" in rate["status"] or "dry-start" in rate["status"]
 
 
 def test_evaluator_registration_idempotent():
