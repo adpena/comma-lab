@@ -53,6 +53,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import datetime
 import hmac
 import json
 import os
@@ -915,7 +916,8 @@ def _event_scan_row(d: dict, acc: dict) -> None:
     if st == "confound_alarm" or st == "term_inert":
         kind = d.get("alarm") or d.get("kind") or st
         acc["alarms"].append({"epoch": ep, "kind": str(kind),
-                              "term": d.get("term"), "ts": d.get("ts")})
+                              "term": d.get("term"), "ts": d.get("ts"),
+                              "src": acc.get("src")})
     elif st == "grad_clip_activation":
         acc["clip"] = d                      # latest row wins (per-epoch aggregation)
     elif st == "rate_rolling":
@@ -955,7 +957,12 @@ def _scan_log_events(path: Path, cache: dict) -> dict:
     key = str(path)
     acc = cache.get(key)
     if acc is None:
-        acc = {"pos": 0, "markers": [], "alarms": [], "warm": None, "clip": None, "rate": None}
+        # src = the run this log belongs to (alarm scoping context): the parent dir
+        # name for in-run-dir logs, the log stem for .omx/tmp tee logs.
+        parent = path.parent.name
+        src = parent if parent not in ("tmp", ".omx") else path.stem
+        acc = {"pos": 0, "markers": [], "alarms": [], "warm": None, "clip": None,
+               "rate": None, "src": src}
         cache[key] = acc
     try:
         size = path.stat().st_size
@@ -1046,7 +1053,13 @@ def _chain_state(watched_dir: str | None, liveness: dict, warming: bool,
     pdir = _newest_launch_dir()
     if pdir is None:
         return None
-    is_watched = bool(watched_dir) and str(pdir.resolve()) == str(Path(watched_dir).resolve())
+    # watched may be the dir itself OR a nested active child (dry_start/ under
+    # pipeline-follow) — both mean "the watcher is on this pipeline".
+    is_watched = False
+    if watched_dir:
+        with contextlib.suppress(Exception):
+            wd, pr = Path(watched_dir).resolve(), pdir.resolve()
+            is_watched = (wd == pr) or (pr in wd.parents)
     report = None
     rp = pdir / "dry_start_report.json"
     if rp.is_file():
@@ -1437,8 +1450,12 @@ class LiveState:
         # incremental per-log scan accumulator ({} -> panels absent, conditional rendering).
         self.run_events: dict = {}
         self._evcache: dict = {}   # per-log-path incremental scan state (offset + accumulators)
+        self._verdict_cache: dict = {}  # per-log (mtime,size)->parsed verdict rows (lineage stitch)
         # chain-state strip: bench -> receipt -> launch -> run -> byte-close (None -> hidden).
         self.chain_state: dict | None = None
+        # pipeline-follow (operator round-2): watching a pre-launch pipeline dir whose
+        # real run.log has not fired yet (the c2 bench window). False = normal watcher.
+        self.pipeline_follow: bool = False
         # canonical DSL schedule read-back (PLANNED launch.sh-through-real-argparse
         # + ACTUAL fired-transition evidence). {"ok": False} -> visible fallback.
         self.schedule_readback: dict = {"ok": False, "reason": "not yet derived"}
@@ -1498,6 +1515,27 @@ class LiveState:
                                          preferred_cadence_s=None,
                                          preferred_cadence_source="measured")
 
+    # ---- verdict-parse cache (resume-lineage stitching; operator round-2 fix 3) ----
+    def _parsed_verdicts(self, lg) -> list[dict]:
+        """``rld._parse_verdicts`` behind an (mtime,size)-gated cache. Ancestor arms in a
+        resume chain are FINISHED files — stitching the full lineage (ep0..650 before a
+        warm start) must cost one read total, not a per-5s-tick re-parse of every log.
+        The live arm re-parses only when it actually grew."""
+        try:
+            st = lg.stat()
+            sig = (st.st_mtime, st.st_size)
+        except OSError:
+            return []
+        key = str(lg)
+        hit = self._verdict_cache.get(key)
+        if hit is not None and hit[0] == sig:
+            return hit[1]
+        rows = rld._parse_verdicts(lg)
+        self._verdict_cache[key] = (sig, rows)
+        if len(self._verdict_cache) > 64:      # bound (arm-hop hygiene over long uptimes)
+            self._verdict_cache.pop(next(iter(self._verdict_cache)))
+        return rows
+
     # ---- refresh (sync; called via executor) ----
     def refresh(self, with_witness: bool = True) -> list[dict]:
         """Auto-resolve the freshest arm (auto-latest), walk its RESUME ANCESTRY, and
@@ -1550,9 +1588,55 @@ class LiveState:
             # at boundary collisions since the chain is ordered root..latest).
             chain = _resume_chain_logs(latest)
         self.warming_up = warming
+
+        # PIPELINE-FOLLOW (operator round-2, 2026-07-16): the c2 bench window exposed a
+        # selection split — the chain strip resolved the NEW launch-provenance dir while
+        # the log watcher stayed latched on YESTERDAY'S completed run (its bench telemetry
+        # streams to launcher scratch, so no *.log exists for the glob to find). Per the
+        # refresh law (latest-run zero-manual, STRUCTURE not name): when the newest
+        # launch-provenance dir is NEWER than the watched log's launch and has NOT fired
+        # its real run.log yet, FOLLOW THE PIPELINE — watch its active child (dry_start/
+        # while benching), present ITS identity/config, and never present the superseded
+        # run's numbers as current. Hands off automatically: the real launch writes
+        # run.log into the dir, is_run_dir turns true, and the normal watcher takes over.
+        self.pipeline_follow = False
+        _pipe = None
+        try:
+            # AUTO-LATEST ONLY: a pinned --run-dir (auto_latest=False) is an explicit
+            # operator choice — pipeline-follow never overrides it.
+            _pipe = _newest_launch_dir() if cfg.auto_latest else None
+            if _pipe is not None and not (_pipe / "run.log").exists():
+                pipe_ts = (_pipe / "launch.sh").stat().st_mtime
+                # comparable float: the watched run's own launch.sh mtime (same clock as
+                # pipe_ts); token-parse fallback for tee logs; log mtime as last resort.
+                # NB rld._launch_ts returns a STRING token (YYYYmmddTHHMMSSZ), never compare
+                # it against an mtime float directly.
+                lat_ts = None
+                if latest is not None:
+                    _lls = latest.parent / "launch.sh"
+                    if _lls.is_file():
+                        lat_ts = _lls.stat().st_mtime
+                    else:
+                        tok = rld._launch_ts(latest)
+                        if tok:
+                            with contextlib.suppress(Exception):
+                                lat_ts = datetime.datetime.strptime(
+                                    str(tok), "%Y%m%dT%H%M%SZ").replace(
+                                    tzinfo=datetime.timezone.utc).timestamp()
+                        if lat_ts is None:
+                            lat_ts = latest.stat().st_mtime
+                if latest is None or (lat_ts is not None and pipe_ts > lat_ts):
+                    self.pipeline_follow = True
+        except Exception:
+            self.pipeline_follow = False
+        # the ACTIVE child: dry_start/ while the bench runs; the dir itself otherwise.
+        _pipe_child = None
+        if self.pipeline_follow and _pipe is not None:
+            ds_dir = _pipe / "dry_start"
+            _pipe_child = ds_dir if ds_dir.is_dir() else _pipe
         merged: dict[int, dict] = {}
         for lg in chain:
-            for r in rld._parse_verdicts(lg):
+            for r in self._parsed_verdicts(lg):
                 ep = r.get("epoch")
                 if isinstance(ep, int):
                     merged[ep] = r          # FULL verdict rows (seg_form etc.)
@@ -1592,6 +1676,12 @@ class LiveState:
                 _run_dir = _dsl_resolve_run_dir(latest)
         _cfg_dir = _run_dir if _run_dir is not None else (
             latest.parent if latest is not None else None)
+        # pipeline-follow: identity/config/schedule come from the PIPELINE dir's own
+        # launch.sh — never the superseded run's (the operator saw the dead n24 arm's
+        # objective/n badge presented as current).
+        if self.pipeline_follow and _pipe is not None:
+            _run_dir = _pipe
+            _cfg_dir = _pipe
 
         # CONFIG + CURRICULUM SCHEDULE (full observability): parse the live run's OWN
         # artifacts (launch.sh primary, run.log stages fallback) — generalizable to
@@ -1614,10 +1704,13 @@ class LiveState:
         # d_seg goal lines — DERIVED per run from THE GOAL ladder targets + the run's
         # own measured pose+rate (env/CLI value = explicit override). Conditional:
         # value None -> the line/badge is simply not rendered.
+        # pipeline-follow: goal lines derive from the run's OWN measured pose+rate — a
+        # superseded run's measurements must not label the new run's chart.
+        _goal_rows = [] if self.pipeline_follow else rows_full
         self.goal_info = {
-            "dseg": _derive_goal_info(rows_full, self.pose_blind, cfg.goal_dseg,
+            "dseg": _derive_goal_info(_goal_rows, self.pose_blind, cfg.goal_dseg,
                                       _TARGET_S_T1, _ARCHIVE_NORM_BYTES),
-            "dseg15": _derive_goal_info(rows_full, self.pose_blind, cfg.goal_dseg_15,
+            "dseg15": _derive_goal_info(_goal_rows, self.pose_blind, cfg.goal_dseg_15,
                                         _TARGET_S_T3, _ARCHIVE_NORM_BYTES),
         }
 
@@ -1631,11 +1724,15 @@ class LiveState:
                 # a .omx/tmp tee log's parent is NOT the run dir — resolve the real
                 # out-dir from the log head (the launcher echoes its launch.sh path).
                 _rbd = None
-                if latest is not None and _dsl_resolve_run_dir is not None:
+                if self.pipeline_follow and _pipe is not None:
+                    _rbd = _pipe          # the pipeline dir's own launch.sh schedule
+                elif latest is not None and _dsl_resolve_run_dir is not None:
                     _rbd = _dsl_resolve_run_dir(latest)
                 if _rbd is None and latest is not None:
                     _rbd = latest.parent
-                _rb = _dsl_read_schedule(_rbd, log_paths=[str(p) for p in chain])
+                _rb = _dsl_read_schedule(
+                    _rbd,
+                    log_paths=([] if self.pipeline_follow else [str(p) for p in chain]))
             except Exception:
                 _rb = None
         self.schedule_readback = (
@@ -1670,7 +1767,7 @@ class LiveState:
 
         # liveness + cadence from the LIVE (latest) arm only (the freshest log).
         now = time.time()
-        latest_rows = rld._parse_verdicts(latest) if latest is not None else []
+        latest_rows = self._parsed_verdicts(latest) if latest is not None else []
         # STAGE-AWARE next-verdict cadence: epochs in different stages take different
         # wall time (Muon's Newton–Schulz is slower than CE). Measure per-stage
         # seconds/epoch from the verdict ts and use the CURRENT stage's rate × eval_every,
@@ -1703,6 +1800,37 @@ class LiveState:
         # parse) through the canonical DSL resolver; latest.parent is the fallback.
         self.watched_dir = str(_run_dir) if _run_dir is not None else (
             str(latest.parent) if latest is not None else None)
+
+        # pipeline-follow overrides: watch INTO the active child (dry_start/ while the
+        # bench runs); liveness = freshest artifact mtime in that child (the bench's
+        # stdout streams to launcher scratch — artifacts are its durable heartbeat);
+        # n from the pipeline's OWN config. The superseded run's log no longer speaks
+        # for the header.
+        if self.pipeline_follow and _pipe is not None and _pipe_child is not None:
+            self.watched_dir = str(_pipe_child)
+            self.watched = (_pipe.name + "/" + _pipe_child.name
+                            if _pipe_child != _pipe else _pipe.name)
+            try:
+                _nf = (self.run_config.get("flags") or {}).get("num-pairs")
+                if _nf is not None:
+                    self.n_pairs = int(float(_nf))
+            except (TypeError, ValueError):
+                pass
+            try:
+                _newest = max((f.stat().st_mtime for f in _pipe_child.iterdir()
+                               if f.is_file()), default=None)
+            except OSError:
+                _newest = None
+            _age = (now - _newest) if _newest is not None else None
+            # generous freshness bound: a dry-start pass is wall-clock bounded ~33 min
+            # (its first epoch carries the one-time gt-load + cache build), so artifact
+            # writes can legitimately be ~30 min apart before "stalled" is honest.
+            _kind = ("live" if (_age is not None and _age < 2700.0)
+                     else ("stale" if _age is not None else "missing"))
+            self.liveness = {"kind": _kind, "log_age_s": _age, "verdict_age_s": None,
+                             "cadence_s": None, "calibrating": True, "last_epoch": None,
+                             "bench": True}
+            self.muon_start = None
 
         # costate controller SENSE/DECIDE panel (read-only, advisory, conditional):
         # last shadow-observer row from <run_dir>/costate_shadow.jsonl. Fail-open None.
@@ -1737,10 +1865,16 @@ class LiveState:
         # RUN-IDENTITY row (name + purpose + scope; operator 2026-07-07): declared
         # launch.sh header when present, labelled derived heuristic otherwise.
         try:
+            # pipeline-follow: identity keys on the PIPELINE root (its launch.sh header
+            # carries the declared purpose), not the dry_start child; the superseded
+            # run's resume line must not label the new run.
+            _id_dir = (str(_pipe) if (self.pipeline_follow and _pipe is not None)
+                       else self.watched_dir)
             self.run_identity = _derive_run_identity(
-                self.watched_dir, (self.run_config or {}).get("flags") or {},
+                _id_dir, (self.run_config or {}).get("flags") or {},
                 self.pose_blind,
-                _resume_from_path(latest) if latest is not None else None)
+                (None if self.pipeline_follow else
+                 (_resume_from_path(latest) if latest is not None else None)))
         except Exception:
             self.run_identity = None
 
@@ -1817,6 +1951,14 @@ class LiveState:
                 p.resolve() for p in [*chain, *([latest] if latest is not None else [])]
                 if p is not None))
             accs = [_scan_log_events(p, self._evcache) for p in paths]
+            # per-alarm arm scoping: only alarms from the LIVE arm's own log are "live";
+            # a stitched ANCESTOR's alarms (e.g. mod32cap's ep1 warm-up transient under
+            # the c2 chain) stay historical even while the current run is live.
+            _lat_key = latest.resolve() if latest is not None else None
+            for _p, _acc in zip(paths, accs):
+                _is_live_arm = (_lat_key is not None and _p == _lat_key)
+                for _a in _acc.get("alarms") or []:
+                    _a["live"] = bool(_is_live_arm)
             self.run_events = _merge_run_events(accs)
             # attach the lineage SOURCE to the warm-start origin (chart marker label)
             ws = self.run_events.get("warm_start")
@@ -1838,6 +1980,22 @@ class LiveState:
         except Exception:
             self.chain_state = None
 
+        # pipeline-follow presentation overrides (operator round-2): the superseded run's
+        # trajectory/sensors/events must NEVER present as the pipeline run's current state
+        # (the "1.92 implied-S from the dead n24 arm" complaint). Its alarms are kept but
+        # explicitly HISTORICAL — scoped honestly, not hidden.
+        if self.pipeline_follow:
+            _ev = self.run_events or {}
+            self.run_events = {"markers": [], "warm_start": None, "clip": None,
+                               "rate": None, "alarms": _ev.get("alarms") or [],
+                               "historical": True}
+            self.trajectory = []
+            new_points = []
+            self.sensors = {}
+            self.projection = {"ok": False,
+                               "reason": "pre-launch bench (dry-start) — no verdicts yet"}
+            self.run_info, self.run_info_html = {}, ""
+
         # CURRICULUM POSITION + POSE-DESCENT READINESS truth models (operator 2026-07-10):
         # the curriculum as DERIVED (event triggers + fail-safe caps + mechanism-lane state,
         # never a hardcoded PR95 epoch skeleton) + the unselected full-n600 byte-closed
@@ -1847,7 +2005,8 @@ class LiveState:
         if _dcp is not None:
             try:
                 _flags = (self.run_config or {}).get("flags") or {}
-                _lane_ev = _dcp.read_mechanism_event_states([str(p) for p in chain])
+                _lane_ev = _dcp.read_mechanism_event_states(
+                    [] if self.pipeline_follow else [str(p) for p in chain])
                 if _rb is not None:
                     self.curriculum_panel = _dcp.build_curriculum_panel_model(
                         _rb, _flags, _lane_ev)
@@ -2400,6 +2559,7 @@ class LiveState:
             "sensors": self.sensors or {},             # latest jacobian_basin + loss_terms (LIVE-tab panels)
             "run_events": self.run_events or {},       # c2-era: engage markers / alarms / warm-start / clip / rate
             "chain_state": self.chain_state,           # bench->receipt->launch->run->byte-close (None -> hidden)
+            "pipeline_follow": self.pipeline_follow,   # watching a pre-launch pipeline (bench window)
             "curriculum_panel": self.curriculum_panel or {},  # DERIVED curriculum (events/caps/lanes)
             "pose_readiness": self.pose_readiness or {},      # honest pose state + R1 reference
             # POSE-DEFERRED (masthead honesty): the run has w_pose>0 (NOT pose_blind) but pose descent
@@ -2919,8 +3079,16 @@ font-weight:600;letter-spacing:-.4px}
   justify-content:center;gap:2px;flex:0 0 auto;max-width:34%}
 #tab-live .lv-chainhead b{color:var(--lv-ink2);font-weight:600;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%}
+/* narrow viewports: cells stop squeezing (they collided into "BENCH RECEIPTLAUNCH…"
+   at 390px) and become fixed-width swipeable stops in the strip's own x-scroll */
+@media(max-width:700px){
+  #tab-live .lv-cstep{flex:0 0 auto;min-width:118px;max-width:150px}
+  #tab-live .lv-chainhead{max-width:none;min-width:96px;flex:0 0 auto}
+}
 
-/* 0b · confound-alarm strip — loud by design (the L1 immune layer made visible) */
+/* 0b · confound-alarm strip — loud by design (the L1 immune layer made visible).
+   .histmode = alarms from a NON-LIVE source run: muted amber-grey collapsed summary
+   (honest scoping, never a false live emergency; operator round-2). */
 #tab-live .lv-alarms{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 14px;
   padding:7px 10px;border:1px solid rgba(255,107,107,.4);background:rgba(255,107,107,.07);border-radius:4px}
 #tab-live .lv-alarms .al-k{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;
@@ -2928,6 +3096,18 @@ font-weight:600;letter-spacing:-.4px}
 #tab-live .lv-alarm{font-family:var(--lv-mono);font-size:10.5px;color:#ffb3b3;
   background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);
   border-radius:3px;padding:2px 7px;white-space:nowrap;font-variant-numeric:tabular-nums}
+#tab-live .lv-alarms.histmode{border-color:var(--lv-hair2);background:var(--lv-surf);
+  display:block;padding:0}
+#tab-live .lv-alhist summary{cursor:pointer;list-style:none;padding:7px 10px;
+  font-family:var(--lv-mono);font-size:10px;letter-spacing:.6px;color:var(--lv-mut);
+  text-transform:uppercase;white-space:normal;line-height:1.6}
+#tab-live .lv-alhist summary::-webkit-details-marker{display:none}
+#tab-live .lv-alhist summary b{color:#c9a35c;font-weight:700}
+#tab-live .lv-alhist summary::before{content:"▸ ";color:var(--lv-mut)}
+#tab-live .lv-alhist[open] summary::before{content:"▾ "}
+#tab-live .lv-alhist .alwrap{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 9px}
+#tab-live .lv-alarm.hist{color:#cbb98d;background:rgba(201,163,92,.08);
+  border-color:rgba(201,163,92,.3)}
 
 /* 1 · masthead — big S left, live equation + per-term decomposition right */
 #tab-live .lv-mast{display:grid;grid-template-columns:minmax(0,1fr);gap:14px 26px;
@@ -4914,9 +5094,14 @@ function drawPanel(canvas, key, opt){
     const lab = opt.fmt ? opt.fmt(val) : String(val);
     ctx.textAlign="right";ctx.fillText(lab,x0-6,yy+3);
   });
-  // x ticks — nice integers within the auto-fit range
-  ctx.textAlign="center";ctx.fillStyle="#7d8595";
-  niceTicksWithin(xmin,xmax,5).forEach(e=>{ctx.fillText(fmtInt(e),sx(e),y1+14);});
+  // x ticks — nice integers within the auto-fit range. Skipped while the run has no
+  // points: the placeholder 0..1 domain would render as duplicate "0 0 0 1 1" labels.
+  if(pts.length){
+    ctx.textAlign="center";ctx.fillStyle="#7d8595";
+    const seen={};
+    niceTicksWithin(xmin,xmax,5).forEach(e=>{const t=fmtInt(e);
+      if(seen[t])return;seen[t]=1;ctx.fillText(t,sx(e),y1+14);});
+  }
   // hlines (goals / reference)
   (opt.hlines||[]).forEach(h=>{
     if(h.y==null||(log&&h.y<=0))return;
@@ -4989,13 +5174,29 @@ function drawPanel(canvas, key, opt){
       }
     }
   }
-  // series
+  // series — resume-lineage aware (operator round-2): epochs BEFORE the resume point
+  // (the stitched ancestor run) draw dimmed/desaturated; the current arm draws full.
+  // The amber origin vline above is the resume boundary.
   if(pts.length){
-    ctx.strokeStyle=opt.color;ctx.lineWidth=1.8;ctx.beginPath();
-    pts.forEach((p,i)=>{const X=sx(p[0]),Y=sy(p[1]);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
-    ctx.stroke();
-    ctx.fillStyle=opt.color;
-    pts.forEach(p=>{ctx.beginPath();ctx.arc(sx(p[0]),sy(p[1]),2.6,0,7);ctx.fill();});
+    const oep=(opt.origin&&opt.origin.epoch!=null)?opt.origin.epoch:null;
+    const pre=(oep!=null)?pts.filter(p=>p[0]<oep):[];
+    const post=(oep!=null)?pts.filter(p=>p[0]>=oep):pts;
+    if(pre.length){
+      const seg=post.length?pre.concat([post[0]]):pre;   // bridge to the resume point
+      ctx.strokeStyle=opt.color;ctx.globalAlpha=0.38;ctx.lineWidth=1.4;ctx.beginPath();
+      seg.forEach((p,i)=>{const X=sx(p[0]),Y=sy(p[1]);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+      ctx.stroke();
+      ctx.fillStyle=opt.color;
+      pre.forEach(p=>{ctx.beginPath();ctx.arc(sx(p[0]),sy(p[1]),2.1,0,7);ctx.fill();});
+      ctx.globalAlpha=1;
+    }
+    if(post.length){
+      ctx.strokeStyle=opt.color;ctx.lineWidth=1.8;ctx.beginPath();
+      post.forEach((p,i)=>{const X=sx(p[0]),Y=sy(p[1]);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+      ctx.stroke();
+      ctx.fillStyle=opt.color;
+      post.forEach(p=>{ctx.beginPath();ctx.arc(sx(p[0]),sy(p[1]),2.6,0,7);ctx.fill();});
+    }
     const last=pts[pts.length-1];
     // emphasized endpoint dot
     ctx.beginPath();ctx.arc(sx(last[0]),sy(last[1]),3.4,0,7);ctx.fillStyle=opt.color;ctx.fill();
@@ -5394,19 +5595,38 @@ function renderChain(){
   box.innerHTML=html;
 }
 
-// 0b · CONFOUND ALARMS — conditional red strip (rows exist only when something fired).
+// 0b · CONFOUND ALARMS — scoped honestly (operator round-2): full-red ONLY for alarms on
+// the actively-watched LIVE run; alarms from a stale/completed/superseded run render as a
+// muted collapsed summary with run + epoch + date context, so a historical cold-start
+// transient (gnorm_hijack @ep1 of a finished side run) never reads as a live emergency.
 function renderAlarms(){
   const box=$("lv_alarms"); if(!box)return;
-  const al=(META.run_events&&META.run_events.alarms)||[];
-  if(!al.length){box.classList.add("hide");return;}
+  const RE=META.run_events||{};
+  const al=RE.alarms||[];
+  if(!al.length){box.classList.add("hide");box.classList.remove("histmode");return;}
   box.classList.remove("hide");
-  let html="<span class='al-k'>confound alarms · "+al.length+"</span>";
-  al.slice(-8).forEach(a=>{
-    html+="<span class='lv-alarm'>"+esc(a.kind||"?")+
-      (a.term?(" ["+esc(a.term)+"]"):"")+
-      (a.epoch!=null?(" @ep"+a.epoch):"")+"</span>";
-  });
-  box.innerHTML=html;
+  // an alarm is LIVE only when the watched run is live AND the alarm came from the live
+  // arm's own log — a stitched ancestor's transient stays historical under a live run.
+  const runLive=(RE.historical!==true)&&(LIVE.kind==="live");
+  const liveAl=runLive?al.filter(a=>a.live===true):[];
+  const histAl=al.filter(a=>!(runLive&&a.live===true));
+  const badge=(a,h)=>"<span class='lv-alarm"+(h?" hist":"")+"'>"+esc(a.kind||"?")+
+    (a.term?(" ["+esc(a.term)+"]"):"")+
+    (a.epoch!=null?(" @ep"+a.epoch):"")+
+    (a.src?(" · "+esc(a.src)):"")+
+    (a.ts?(" · "+esc(String(a.ts).slice(0,10))):"")+"</span>";
+  if(liveAl.length){
+    box.classList.remove("histmode");
+    let html="<span class='al-k'>confound alarms · "+liveAl.length+"</span>";
+    liveAl.slice(-8).forEach(a=>{html+=badge(a,false);});
+    if(histAl.length)html+="<span class='lv-alarm hist'>+"+histAl.length+" historical (ancestor arms)</span>";
+    box.innerHTML=html;
+  }else{
+    box.classList.add("histmode");
+    box.innerHTML="<details class='lv-alhist'><summary>confound alarms · "+histAl.length+
+      " · <b>historical</b> — source run not live / ancestor arm</summary><div class='alwrap'>"+
+      histAl.slice(-8).map(a=>badge(a,true)).join("")+"</div></details>";
+  }
 }
 
 // 7 · CURRICULUM POSITION — timeline of stage bands with a marker at the current epoch.
@@ -5652,7 +5872,9 @@ function render(){
   if(_nrm&&META.archive_norm_bytes)_nrm.textContent=META.archive_norm_bytes.toLocaleString("en-US");
   // liveness pill
   const k=LIVE.kind, p=$("pill");
-  if(k==="live"&&!LIVE.calibrating){p.className="pill live";p.textContent="● live";}
+  if(LIVE.bench&&k==="live"){p.className="pill warm";p.textContent="◐ bench in flight";}
+  else if(LIVE.bench&&k==="stale"){p.className="pill stale";p.textContent="⚠ bench stalled";}
+  else if(k==="live"&&!LIVE.calibrating){p.className="pill live";p.textContent="● live";}
   else if(k==="live"&&LIVE.calibrating){p.className="pill warm";p.textContent="◐ warming up";}
   else if(k==="stale"){p.className="pill stale";p.textContent="⚠ stale";}
   else{p.className="pill miss";p.textContent="⚠ no run log";}
@@ -5666,7 +5888,9 @@ function render(){
     else{nb.className="nbadge other";nb.textContent="n="+n;}
   }
   const rd=$("rdinfo"); if(rd){
-    if(!META.run_dir){rd.textContent="resolving run…";}
+    if(META.pipeline_follow){rd.textContent="pipeline "+(META.run_dir||"?")+
+      " · bench (dry-start) in flight — real run not fired yet; watcher follows automatically";}
+    else if(!META.run_dir){rd.textContent="resolving run…";}
     else{rd.textContent="watching "+META.run_dir+(META.warming_up?" · warming up (structured-init, no verdict yet)":"");}
   }
   // LIVE instrument panels (rebuilt 2026-07-09): masthead S-decomposition + per-class +
