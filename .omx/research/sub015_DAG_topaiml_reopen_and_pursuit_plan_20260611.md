@@ -19197,3 +19197,10 @@ Operator: *"additional weight on the lane channel … flatten and factorize agai
 - **Launch-on-green runbook (successor-proof):** dry-start GREEN report (`dry_start_report.json`, gate=full_config_dry_start, config=c2_surgical_warm, green=true) ⇒ the factory self-clears the blocker on recompile ⇒ re-run `tools/launch_witness_run.py --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz --num-pairs 600 --config c2_surgical_warm --label c2_surgical_warm --purpose "<declared>"` (NO --dry-start) ⇒ gate chain re-runs (memory/admission/throughput/spawn-guard) ⇒ durable spawn + activation ledger + shadow observer. Wall-clock projection from the RECEIPT's fixed sec/ep, budget 3.88 d compiled; surface measured numbers either way.
 
 Pointer 0.19108 UNMOVED (means/apparatus + armed measurement).
+
+## FEED-scope-annot (2026-07-16) — verdict_scope declarations for today's negative tokens [no-triality: hygiene]
+- "T1 fights GT births" REFUTED — verdict_scope: formulation — T1 phase_advection_consistency's CURRENT weight construction (birth-silent by construction); other temporal-consistency formulations unexamined.
+- c1 grad-clip-0.5 "poison" re-scoped INERT — verdict_scope: formulation — norm-clip downstream of per-param normalize on the c1 lineage (the C0 normalize-mask confound); magnitude-law A/B remains open.
+- #287 dash-comb REFUTED — verdict_scope: formulation — periodic constant-period comb GENERATOR on THIS video's measured spacing (CV 0.80); ξ-TRANSPORT of existing pattern survives (L73).
+- "cheap SE global attack" REFUTED / naive "RGB only at boundaries" REFUTED / "saddles dominate" REFUTED-in-bytes — scopes already declared inline in their FEED rows (formulation).
+- Flat local luma-bump control-authority inference REFUTED — verdict_scope: formulation — 5×5 flat lane-side luma actuator at RL pixels (0.0029 Δmargin/unit); trained/phase-shaped actuators unaffected.
