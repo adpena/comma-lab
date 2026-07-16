@@ -6545,6 +6545,23 @@ def preflight_all(
         # do NOT strict-flip without a re-design (see the gate docstring).
         check_new_memos_have_evidence_tags(strict=False, verbose=verbose)
 
+        # 2026-07-15 two-landing apparatus wave (three warn-only gates for
+        # incidents that recurred this session; each is the buildable half of a
+        # two-landing debt).
+        #   #511 — stale-base whole-file merge clobber (silent sister-revert over
+        #     the staged diff). WARN-ONLY; strict-flip when a real 3-way-merge
+        #     habit is confirmed + live count stays 0 across a review cycle.
+        #   #513 — Modal single-flight + dual-ledger local consistency. WARN-ONLY;
+        #     strict-flip once the ledgers are reconciled to live count 0 and the
+        #     cloud cross-check step is operator-habitual.
+        #   #512 (preflight half) — retry/respawn helpers that detach-spawn with no
+        #     psutil descendant guard. WARN-ONLY; the runtime cure (a same-out-dir
+        #     guard in tools/launch_witness_run.py) is DEFERRED to post-#507-launch
+        #     (trigger: pid 3997 exits), and the strict-flip lands WITH it.
+        check_no_wholefile_ancestor_revert(strict=False, verbose=verbose)
+        check_modal_single_flight_ledger_consistency(strict=False, verbose=verbose)
+        check_retry_without_descendant_check(strict=False, verbose=verbose)
+
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
                 REPO_ROOT,
@@ -87429,6 +87446,521 @@ def check_new_memos_have_evidence_tags(
         raise PreflightError(
             "check_new_memos_have_evidence_tags found "
             f"{len(violations)} violation(s) (manual §5 evidence-tag discipline):\n  "
+            + "\n  ".join(violations[:10]))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# TASK #511 — whole-file ancestor-revert detector (stale-base merge clobber).
+#
+# Incident (2026-07-15, memory wholefile_stale_base_merge_clobber_class_20260715):
+# a stale-base arm integrated a sister's landing by carrying two src/tac|tools
+# modules WHOLESALE from its pre-landing base, silently REVERTING +703/+380 lines
+# while keeping the consumer -> every witness launch crashed at boot (ImportError),
+# then rc=8 after partial restore. Cost: ~3h of merge archaeology. A real 3-way
+# `git merge` from the common ancestor would have merged cleanly or CONFLICTED
+# LOUDLY; a whole-file copy from a stale base is a SILENT sister-revert.
+#
+# The clobber signature (memory rule 3): a staged post-image of a src/tac|tools
+# module byte-identical to a STRICTLY-OLDER committed version of the same file
+# (an ancestor blob, not HEAD) while the diff from HEAD is a full-file replacement
+# (>~100 lines of churn). STATIC, FAIL-OPEN detector over the staged diff
+# (git diff --cached). WARN-ONLY per the "Strict-flip atomicity rule". Same-line
+# waiver: `# WHOLEFILE_ANCESTOR_REVERT_OK:<rationale>`.
+# ----------------------------------------------------------------------------
+
+_WHOLEFILE_REVERT_SCOPE_PREFIXES: tuple[str, ...] = ("src/tac/", "tools/")
+_WHOLEFILE_REVERT_CHURN_THRESHOLD = 100          # >100 lines of churn from HEAD
+_WHOLEFILE_REVERT_FULL_REPLACE_FRAC = 0.90       # ~all HEAD lines removed
+_WHOLEFILE_REVERT_HISTORY_DEPTH = 40             # file-history commits to scan
+_WHOLEFILE_REVERT_WAIVER_RE = re.compile(
+    r"#\s*WHOLEFILE_ANCESTOR_REVERT_OK:\s*(?!<(?:rationale|reason)>)\S+"
+)
+
+
+def _git_capture(root: Path, args: list[str], *, timeout: int = 10) -> str | None:
+    """Run ``git -C <root> <args>`` fail-open; return stdout on rc==0 else None."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), *args],
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def check_no_wholefile_ancestor_revert(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False,
+) -> list[str]:
+    """WARN-ONLY: flag a STAGED whole-file revert to an ancestor blob (clobber signature).
+
+    The stale-base merge-clobber class (2026-07-15): integrating a parallel arm's
+    work by copying a file WHOLESALE from a stale base silently reverts a sister's
+    committed landing (a real 3-way ``git merge`` would conflict loudly instead).
+    This gate detects the post-image signature over the staged diff:
+
+      * the file is a ``src/tac/`` or ``tools/`` module (where this bit us);
+      * the staged (index) blob differs from HEAD by a full-file replacement
+        (>90% of HEAD lines removed AND >100 lines of churn);
+      * the staged blob is BYTE-IDENTICAL to a STRICTLY-OLDER committed version of
+        the same file (an ancestor blob in the file's own history, not HEAD).
+
+    STATIC + FAIL-OPEN: if git is unavailable, the tree is not a repo, or there is
+    no staged diff, it returns no violations. Intentional rollback is honored via a
+    same-line ``# WHOLEFILE_ANCESTOR_REVERT_OK:<rationale>`` waiver in the file
+    (placeholder literal rejected). WARN-ONLY per the "Strict-flip atomicity rule"
+    (a legitimate revert is rare; the cure is a real 3-way merge, so this surfaces
+    loudly but never blocks). Sister of the CFL serialized-merge discipline
+    (memory coherent_parallelism_is_cfl_codex_worktree_isolation_20260714).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    numstat = _git_capture(root, ["diff", "--cached", "--numstat"])
+    if numstat is None:
+        if verbose:
+            print("  [wholefile-revert] check_no_wholefile_ancestor_revert: "
+                  "OK (no staged diff / git unavailable — fail-open)")
+        return violations
+
+    scanned = 0
+    for line in numstat.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        added_s, deleted_s, path = parts
+        if added_s == "-" or deleted_s == "-":
+            continue  # binary
+        if " => " in path or path.startswith('"'):
+            continue  # rename/quoted-path edge -> skip conservatively
+        if not any(path.startswith(p) for p in _WHOLEFILE_REVERT_SCOPE_PREFIXES):
+            continue
+        try:
+            added, deleted = int(added_s), int(deleted_s)
+        except ValueError:
+            continue
+        churn = added + deleted
+        if churn <= _WHOLEFILE_REVERT_CHURN_THRESHOLD:
+            continue
+
+        head_blob = _git_capture(root, ["rev-parse", f"HEAD:{path}"])
+        staged_blob = _git_capture(root, ["rev-parse", f":{path}"])
+        if head_blob is None or staged_blob is None:
+            continue  # new file (no HEAD version) or unreadable -> skip
+        head_blob, staged_blob = head_blob.strip(), staged_blob.strip()
+        if not head_blob or not staged_blob or head_blob == staged_blob:
+            continue
+
+        head_show = _git_capture(root, ["show", f"HEAD:{path}"])
+        if not head_show:
+            continue
+        head_lines = head_show.count("\n")
+        if head_lines <= 0:
+            continue
+        if deleted < head_lines * _WHOLEFILE_REVERT_FULL_REPLACE_FRAC:
+            continue  # not a full-file replacement -> not the clobber signature
+
+        staged_show = _git_capture(root, ["show", f":{path}"])
+        if staged_show and _WHOLEFILE_REVERT_WAIVER_RE.search(staged_show):
+            continue  # intentional rollback, waived
+
+        hist = _git_capture(
+            root,
+            ["log", f"--max-count={_WHOLEFILE_REVERT_HISTORY_DEPTH}",
+             "--format=%H", "--", path],
+        )
+        scanned += 1
+        if not hist:
+            continue
+        commits = [c for c in hist.split() if c]
+        matched_commit = None
+        for commit in commits[1:]:  # skip commits[0] (the current/HEAD version)
+            blob = _git_capture(root, ["rev-parse", f"{commit}:{path}"])
+            if blob is not None and blob.strip() == staged_blob:
+                matched_commit = commit
+                break
+        if matched_commit is None:
+            continue
+
+        violations.append(
+            f"{path}: staged post-image is BYTE-IDENTICAL to an ancestor blob "
+            f"(commit {matched_commit[:12]}) while the diff from HEAD is a full-file "
+            f"replacement ({deleted} del / {added} add, churn {churn}) — the stale-base "
+            "whole-file merge-clobber signature (a silent sister-revert). Integrate "
+            "parallel arms via a real 3-way `git merge`/`cherry-pick` (conflict-loud), "
+            "never a whole-file copy from a stale base. Intentional rollback: add a "
+            "same-line `# WHOLEFILE_ANCESTOR_REVERT_OK:<rationale>` in the file."
+        )
+
+    if verbose:
+        print(
+            f"  [wholefile-revert] check_no_wholefile_ancestor_revert: "
+            f"{len(violations)} violation(s) ({scanned} candidate file(s) inspected)"
+            if violations else
+            f"  [wholefile-revert] check_no_wholefile_ancestor_revert: OK "
+            f"({scanned} candidate file(s) inspected)")
+    if strict and violations:
+        raise PreflightError(
+            "check_no_wholefile_ancestor_revert found "
+            f"{len(violations)} violation(s) (stale-base whole-file merge clobber):\n  "
+            + "\n  ".join(violations[:10]))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# TASK #513 — Modal single-flight + dual-ledger consistency (local-ledger check).
+#
+# Policy (operator binding 2026-07-15, memory modal_single_flight_dual_ledger_policy_
+# 20260715): ONE Modal job at a time unless explicit operator override; the local
+# ledger (.omx/state/modal_call_id_ledger.jsonl) AND the cross-agent claims file
+# (.omx/state/active_lane_dispatch_claims.md) AND live `modal app list` must AGREE;
+# terminal rows are written to BOTH ledgers same-turn. Dead arms leaving a stale
+# non-terminal ledger/claim row are the duplicate-paid-dispatch breeder.
+#
+# This gate is the LOCAL-only half: it reads the two on-disk ledgers and refuses
+# (a) >1 live (non-terminal) call_id, (b) a live call_id with no matching active
+# claim row, (c) a live call_id whose non-terminal state is older than N hours. It
+# does NOT call `modal` (the cloud cross-check is an operator-runtime step — see
+# docstring) to avoid state surprises. FAIL-OPEN, WARN-ONLY.
+# ----------------------------------------------------------------------------
+
+_MODAL_LEDGER_REL = ".omx/state/modal_call_id_ledger.jsonl"
+_MODAL_CLAIMS_REL = ".omx/state/active_lane_dispatch_claims.md"
+# A ledger row is "live" (non-terminal) if its status/event_type is one of these.
+# Anything else (harvested/failed/timeout/cancelled/completed/pre_spawn_fatal/
+# stopped/error/oom/refused/killed/...) is terminal.
+_MODAL_NON_TERMINAL_STATES: frozenset[str] = frozenset({
+    "dispatched", "active", "running", "spawned", "in_progress", "pending", "queued",
+})
+_MODAL_CLAIM_TERMINAL_TOKENS: tuple[str, ...] = (
+    "failed", "stopped", "completed", "complete", "harvested", "refused", "stale",
+    "cancelled", "canceled", "terminal", "timeout", "timed_out", "error", "killed",
+    "superseded", "oom",
+)
+_MODAL_CLAIM_ACTIVE_TOKENS: tuple[str, ...] = (
+    "active", "dispatched", "running", "spawned",
+)
+
+
+def _modal_parse_iso(value: str | None) -> "_dt.datetime | None":
+    """Parse an ISO-8601 timestamp (optional trailing Z) fail-soft to aware UTC."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = _dt.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=_dt.timezone.utc)
+    return parsed
+
+
+def _modal_row_state(row: Mapping) -> str:
+    state = row.get("status") or row.get("event_type") or ""
+    return str(state).strip().lower()
+
+
+def _modal_active_claim_texts(claims_text: str) -> list[str]:
+    """Return the full text of every ACTIVE (non-terminal) claim table row."""
+    active: list[str] = []
+    for raw in claims_text.splitlines():
+        line = raw.strip()
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 7:
+            continue
+        if cells[0].lower() in ("timestamp_utc", ""):
+            continue  # header
+        if set(cells[0]) <= {"-", ":"}:
+            continue  # separator row
+        status = cells[6].lower() if len(cells) > 6 else ""
+        lowered = line.lower()
+        has_active = any(t in status for t in _MODAL_CLAIM_ACTIVE_TOKENS)
+        has_terminal = any(t in status for t in _MODAL_CLAIM_TERMINAL_TOKENS)
+        if has_active and not has_terminal:
+            active.append(lowered)
+    return active
+
+
+def check_modal_single_flight_ledger_consistency(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+    max_live: int = 1,
+    stale_hours: float = 24.0,
+    now: "_dt.datetime | None" = None,
+) -> list[str]:
+    """WARN-ONLY: enforce Modal single-flight + dual-ledger consistency (local ledgers).
+
+    Per the 2026-07-15 operator binding: at most ONE live Modal job at a time
+    (explicit operator override excepted), and the local call-id ledger must agree
+    with the cross-agent claims file. This gate reads ONLY on-disk ledgers:
+
+      (a) the modal_call_id_ledger has <= ``max_live`` live (non-terminal) call_ids
+          (latest-row-wins per call_id);
+      (b) every live call_id has a matching ACTIVE row in
+          active_lane_dispatch_claims.md (matched by call_id or label);
+      (c) no live call_id has sat non-terminal longer than ``stale_hours`` (a dead
+          arm's stale-active row is the duplicate-paid-dispatch breeder).
+
+    CLOUD CROSS-CHECK IS AN OPERATOR-RUNTIME STEP, not this gate: before ANY Modal
+    dispatch, also verify `modal app list` shows no running tasks (State==stopped
+    apps carry historical Tasks counts and are NOT live). This gate deliberately
+    does NOT call `modal` to avoid state surprises.
+
+    FAIL-OPEN: a missing/empty ledger yields no violations; a missing claims file
+    skips check (b) only. WARN-ONLY per the "Strict-flip atomicity rule". No waiver
+    token — reconcile the ledgers instead. Sister of Modal `.spawn()` HARVEST-OR-LOSE
+    (CLAUDE.md) + task #512 (the local-launcher same-outdir guard, its on-box twin).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    ref_now = now or _dt.datetime.now(_dt.timezone.utc)
+    if ref_now.tzinfo is None:
+        ref_now = ref_now.replace(tzinfo=_dt.timezone.utc)
+
+    ledger_path = root / _MODAL_LEDGER_REL
+    if not ledger_path.is_file():
+        if verbose:
+            print("  [modal-single-flight] check_modal_single_flight_ledger_consistency: "
+                  "OK (no local ledger — fail-open)")
+        return violations
+
+    # Group by call_id, latest-row-wins by written_at_utc (fallback dispatched_at_utc).
+    latest_by_call: dict[str, tuple[_dt.datetime | None, dict]] = {}
+    try:
+        raw_lines = ledger_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return violations
+    for raw in raw_lines:
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            row = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if not isinstance(row, dict):
+            continue
+        call_id = row.get("call_id")
+        if not isinstance(call_id, str) or not call_id:
+            continue
+        ts = _modal_parse_iso(row.get("written_at_utc")) or _modal_parse_iso(
+            row.get("dispatched_at_utc"))
+        prev = latest_by_call.get(call_id)
+        if prev is None:
+            latest_by_call[call_id] = (ts, row)
+            continue
+        prev_ts = prev[0]
+        # Later row wins; rows without a timestamp never displace a timestamped row.
+        if prev_ts is None and ts is not None:
+            latest_by_call[call_id] = (ts, row)
+        elif ts is not None and prev_ts is not None and ts >= prev_ts:
+            latest_by_call[call_id] = (ts, row)
+
+    live: list[tuple[str, _dt.datetime | None, dict]] = []
+    for call_id, (ts, row) in latest_by_call.items():
+        if _modal_row_state(row) in _MODAL_NON_TERMINAL_STATES:
+            live.append((call_id, ts, row))
+
+    # (a) single-flight.
+    if len(live) > max_live:
+        ids = ", ".join(sorted(c for c, _, _ in live))
+        violations.append(
+            f"{_MODAL_LEDGER_REL}: {len(live)} live (non-terminal) Modal call_id(s) "
+            f"> single-flight max {max_live} [{ids}]. Harvest/close all but one before "
+            "any new dispatch (explicit operator override excepted). Concurrent Modal "
+            "jobs breed duplicate paid dispatches.")
+
+    claims_path = root / _MODAL_CLAIMS_REL
+    active_claims: list[str] | None = None
+    if claims_path.is_file():
+        try:
+            active_claims = _modal_active_claim_texts(
+                claims_path.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            active_claims = None
+
+    for call_id, ts, row in live:
+        label = row.get("label")
+        label_l = str(label).strip().lower() if isinstance(label, str) else ""
+        # (b) matching active claim.
+        if active_claims is not None:
+            cid_l = call_id.lower()
+            matched = any(
+                (cid_l in claim) or (label_l and label_l in claim)
+                for claim in active_claims
+            )
+            if not matched:
+                violations.append(
+                    f"{_MODAL_LEDGER_REL}: live call_id {call_id} (label "
+                    f"{label or '<none>'}) has NO matching ACTIVE row in "
+                    f"{_MODAL_CLAIMS_REL} — a live paid job with no cross-agent claim "
+                    "is unreconciled. Append the claim row (dual-ledger at submit) or "
+                    "write the terminal row if it has finished.")
+        # (c) stale non-terminal.
+        if ts is not None:
+            age_hours = (ref_now - ts).total_seconds() / 3600.0
+            if age_hours > stale_hours:
+                violations.append(
+                    f"{_MODAL_LEDGER_REL}: live call_id {call_id} has been "
+                    f"non-terminal for {age_hours:.1f}h (> {stale_hours:.0f}h) with no "
+                    "terminal disposition — a dead arm's stale-active row. Harvest it "
+                    "and write the terminal outcome to BOTH ledgers (single-flight "
+                    "invariant depends on live rows being genuinely live).")
+
+    if verbose:
+        print(
+            f"  [modal-single-flight] check_modal_single_flight_ledger_consistency: "
+            f"{len(violations)} violation(s) ({len(live)} live call_id(s))"
+            if violations else
+            f"  [modal-single-flight] check_modal_single_flight_ledger_consistency: OK "
+            f"({len(live)} live call_id(s))")
+    if strict and violations:
+        raise PreflightError(
+            "check_modal_single_flight_ledger_consistency found "
+            f"{len(violations)} violation(s) (Modal single-flight / dual-ledger):\n  "
+            + "\n  ".join(violations[:10]))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# TASK #512 (preflight half) — retry-without-descendant-check detector.
+#
+# Incident (2026-07-15, memory launcher_buffered_log_not_hung_orphan_spawn_
+# respawn_id_collision_20260715): a launcher's setsid'd trainer was orphaned when
+# the launcher was killed; a naive RETRY then spawned a SECOND trainer into the
+# same out-dir -> three duplicate trainers writing interleaved checkpoints into ONE
+# dir (garbage) + GPU contention. The rule: never (re)spawn a detached process
+# without first enumerating live descendants / same-out-dir writers (psutil), since
+# `pgrep` by short name misses setsid-detached children.
+#
+# The FULL fix — a psutil same-out-dir spawn guard IN tools/launch_witness_run.py —
+# is DEFERRED to post-#507-launch (that launcher is a live untouchable run; trigger
+# to land the runtime guard: pid 3997 exits). THIS is only the STATIC warn-only
+# half: flag retry/respawn helper scripts that perform a DETACHED spawn
+# (setsid/start_new_session) with no nearby descendant-check guard.
+# Same-line waiver: `# RETRY_WITHOUT_DESCENDANT_CHECK_OK:<rationale>`.
+# ----------------------------------------------------------------------------
+
+_RETRY_DESC_SCOPE_DIRS: tuple[str, ...] = ("tools", "scripts")
+_RETRY_DESC_DETACHED_TOKENS: tuple[str, ...] = (
+    "start_new_session=true", "start_new_session = true",
+    "os.setsid", "preexec_fn", "setsid",
+)
+_RETRY_DESC_STRONG_RESPAWN_TOKENS: tuple[str, ...] = (
+    "respawn", "relaunch", "re-launch", "re-spawn",
+)
+# "retry" is a weak signal (HTTP retries etc.) — it only counts as respawn context
+# when the file also mentions a launch/spawn/dispatch/out-dir concept.
+_RETRY_DESC_WEAK_RESPAWN_TOKEN = "retry"
+_RETRY_DESC_LAUNCH_CONTEXT_TOKENS: tuple[str, ...] = (
+    "launch", "spawn", "dispatch", "out_dir", "out-dir", "outdir", "trainer",
+)
+_RETRY_DESC_GUARD_TOKENS: tuple[str, ...] = (
+    "psutil", ".children(", ".cmdline(", "descendant", "process_iter",
+    "same_outdir", "same-outdir", "same_out_dir",
+)
+_RETRY_DESC_WAIVER_RE = re.compile(
+    r"#\s*RETRY_WITHOUT_DESCENDANT_CHECK_OK:\s*(?!<(?:rationale|reason)>)\S+"
+)
+
+
+def check_retry_without_descendant_check(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False,
+) -> list[str]:
+    """WARN-ONLY: flag retry/respawn helpers that detach-spawn without a descendant guard.
+
+    The orphan-spawn duplicate class (2026-07-15): a helper that (re)launches a
+    DETACHED process (``start_new_session=True`` / ``setsid`` / ``preexec_fn``) in a
+    retry/respawn path, without first enumerating live descendants or same-out-dir
+    writers (``psutil`` / ``.children()`` / ``.cmdline()``), can orphan the prior
+    detached process and spawn a duplicate that corrupts a shared out-dir (`pgrep`
+    by short name misses setsid-detached children). This static gate scans
+    ``tools/`` + ``scripts/`` .py files and flags a file that:
+
+      * performs a detached spawn (a detached token present), AND
+      * is a respawn/retry helper (a strong respawn token, OR ``retry`` co-occurring
+        with a launch/spawn/dispatch/out-dir concept), AND
+      * has NO descendant-check guard token anywhere in the file.
+
+    Same-line waiver: ``# RETRY_WITHOUT_DESCENDANT_CHECK_OK:<rationale>`` (placeholder
+    literal rejected). WARN-ONLY per the "Strict-flip atomicity rule".
+
+    DEFERRED SECOND LANDING: the runtime cure — a psutil same-out-dir spawn guard IN
+    ``tools/launch_witness_run.py`` — is BLOCKED while that launcher is the live #507
+    run (pid 3997, untouchable). Trigger to land the runtime guard + strict-flip this
+    gate: pid 3997 exits. Sister of check_modal_single_flight_ledger_consistency (the
+    cloud twin of the same duplicate-spawn class).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for sub in _RETRY_DESC_SCOPE_DIRS:
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.glob("*.py")):
+            if not path.is_file():
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            scanned += 1
+            lowered = text.lower()
+
+            has_detached = any(t in lowered for t in _RETRY_DESC_DETACHED_TOKENS)
+            if not has_detached:
+                continue
+            has_strong = any(t in lowered for t in _RETRY_DESC_STRONG_RESPAWN_TOKENS)
+            has_weak = (
+                _RETRY_DESC_WEAK_RESPAWN_TOKEN in lowered
+                and any(t in lowered for t in _RETRY_DESC_LAUNCH_CONTEXT_TOKENS)
+            )
+            if not (has_strong or has_weak):
+                continue
+            # The waiver token name ("...DESCENDANT_CHECK_OK") itself contains the
+            # guard substring "descendant" — strip it before the guard scan so a
+            # placeholder/waived file cannot self-satisfy the guard check.
+            guard_scan = lowered.replace(
+                "retry_without_descendant_check_ok", "")
+            if any(t in guard_scan for t in _RETRY_DESC_GUARD_TOKENS):
+                continue
+            if _RETRY_DESC_WAIVER_RE.search(text):
+                continue
+
+            rel = path.relative_to(root).as_posix()
+            violations.append(
+                f"{rel}: respawn/retry helper performs a detached spawn "
+                "(setsid/start_new_session/preexec_fn) with NO psutil descendant / "
+                "same-out-dir guard — a naive retry can orphan the prior detached "
+                "process and spawn a DUPLICATE writer into one out-dir (2026-07-15 "
+                "orphan-spawn incident). Enumerate live descendants (psutil "
+                ".children()/.cmdline()) or verify no same-out-dir writer BEFORE "
+                "(re)spawning, or add a `# RETRY_WITHOUT_DESCENDANT_CHECK_OK:"
+                "<rationale>` waiver."
+            )
+
+    if verbose:
+        print(
+            f"  [retry-descendant] check_retry_without_descendant_check: "
+            f"{len(violations)} violation(s) ({scanned} tools/scripts file(s) scanned)"
+            if violations else
+            f"  [retry-descendant] check_retry_without_descendant_check: OK "
+            f"({scanned} tools/scripts file(s) scanned)")
+    if strict and violations:
+        raise PreflightError(
+            "check_retry_without_descendant_check found "
+            f"{len(violations)} violation(s) (retry-without-descendant-check):\n  "
             + "\n  ".join(violations[:10]))
     return violations
 
