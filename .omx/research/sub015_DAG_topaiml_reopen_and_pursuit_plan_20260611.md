@@ -18872,3 +18872,38 @@ annulus and longest end of long tail". Full table:
   (same invocation family as the 20260715T195923Z attempt; NEVER proceeds to the real launch; rc 0 = green).
   Trigger: operator GO. Stale test `test_inject_extra_flag` (for the #406-deleted `_inject_extra_flag`)
   removed as a drive-by — it was failing at HEAD. **Pointer 0.19108 UNMOVED (apparatus/means).**
+
+## FEED-c1-config-audit (2026-07-15) — #507 launch-gating C1 CONFIG DIFFERENTIAL AUDIT: HOLD → #515 A/B battery → c2_optimal_form; full 235-flag X-ray, v752/C0 diffs clean, poison suspects resolved-or-ticketed
+- **Charter:** operator "Are these configs the latest optimal? … check against the last few configs" →
+  escalated to un-orphaning + the COMPLETE X-ray → locked as #515 "fix all poison and do all A/B first
+  prior to launching long run." Memo `.omx/research/c1_config_differential_audit_20260715.md` ($0 static
+  audit; recompiled c1 + v752 live; nothing launched; live dry-start untouched).
+- **Differentials CLEAN:** v752→c1 = 0 flags dropped + 4 reasoned value changes (grad-clip 1.0→0.5
+  AMBER-sealed · mod-dim 32→19 DERIVED · rewarmup 8→14/cosine lever-owned) + 78 lever-owned additions;
+  C0→c1 = exactly the three #507 legs + dwell-windows 4→7 (DERIVED F10 satisfiability) + explicit
+  basis/self-orient typed custody. No unexplained drift; 23-lever fail-closed accounting verified.
+- **WRONG = none live** — grad-clip-0.5 "lr/12 POISON" reading REFUTED on this config (verdict_scope:
+  formulation — clip saturation is INERT under --grad-normalize per-param, the C0 confound memo); naive
+  AutoClip correctly NOT wired (verdict_scope: formulation — maglaw armB reverses post-ep25, lagged
+  norm-target mechanism T4; the percentile-law family stays open via S1/S2/S4 discriminators). Adaptive-ε
+  #318 correctly SLOT (verdict_scope: formulation — CFL-edge cure FALSIFIED_MECHANISM at n600 FEED-06g).
+- **STALE-AUDIT CORRECTIONS (source-verified at trainer HEAD):** event-LR (lr_anneal_fraction,
+  trainer:12216) and β-rung co-anneal (trainer:12139) are LIVE under --tau-advance-mode event — the #510
+  §B-2/§B-3 "BUILT, unwired" rows are stale; Polyak arm is ON in c1 (the §B-9 "off" row stale too).
+- **GENUINELY ORPHANED (all $0, one recompile):** VerdictParallelWorkers(8) (benched 5.686× scorer share,
+  orphaned-by-timing — chain-freeze reason EXPIRED since no real launch fired) · vb 64 (measured
+  never-slower) · --verdict-live-gap-every (confound-H2 Tier-0) · --mod-dim-dynamics (D18 sensor) ·
+  per-tensor ‖W‖ telemetry (optdyn unlock, ~1 h build). Wall-clock budget gate passing on a stale
+  pre-lane-band input (7.46 d shown vs ~12.5 d measured composite vs 8.31 d budget) — re-anchor owed.
+- **VERDICT: HOLD** (dry-start r6 resume_ok=False holds it mechanically anyway) → execute the §8 battery:
+  B0 instruments → B1 magnitude-law ≥150-ep 4-arm (gates ALL — the descent clock) → B2 basis
+  Fourier-vs-curvelet n600 bounded (`curvelet_through_R_dseg_ab`, basis-before-capacity) → B3 ancestor
+  constants (ema/beta2/accum/β_end/taper/eval-every n24 screens; Muon-η_rel + λ_pose as ep726
+  fork-from-checkpoint tails) → B4 burn-down (submit-row decision, bf16 QC+bench). **Cost for operator
+  GO: $0 cloud; ≈6.2 GPU-days full (≈2.2 compressed, basis-provisional); then c2 fires once at the
+  measured optimum.** Winner-sets-flag recipe in memo §8.
+- Triality: DAG=this row · DSL=no lever change (audit; c2 composition recipe named, factories all exist
+  except ‖W‖-telemetry/η_rel-pin/adaptive-width-extension marked BUILD-OWED) · equations=no new law
+  (consumes autoclip_percentile_threshold_v1, inr_weight_norm_radial_ode_v1, lr_control_denominator_v1,
+  hosc_beta_fireband_pin_v1 anchors). All [macOS-MLX advisory] NON-PROMOTABLE; MEANS;
+  **pointer 0.19108 UNMOVED.**
