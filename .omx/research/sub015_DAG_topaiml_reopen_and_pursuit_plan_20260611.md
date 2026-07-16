@@ -18917,3 +18917,35 @@ annulus and longest end of long tail". Full table:
   anchored measurements. DAG leg = FEED-c1-config-audit (landed). MEMORY = the grad-clip-inert +
   event-LR/β-coanneal/Polyak-are-live facts are already held (C0 confound memory). Equations-leg = N/A
   (consume-only). Recorded so the leg is explicit, not silent. Pointer 0.19108 UNMOVED.
+
+## FEED-p0-recovery (2026-07-15) — OPERATOR-P0 ABANDONMENT RECOVERY + the active-enforcement ledger apparatus
+
+**Trigger (operator, furious, verbatim):** *"There have been multiple things I have designated as p0
+you have abandoned because you forgot and silently got distracted and moved on to other things."* +
+escalation: *"Do we need a hook or gate or something to remind you if p0 to survive compaction? That
+also demands update when complete or when new p0 designated."*
+
+**SIGNAL (measured, full memo `.omx/research/operator_p0_abandonment_recovery_20260715.md`):**
+exhaustive evidence-based sweep of 488 harness tasks + DAG + memos + run artifacts found **48 distinct
+operator-P0 directives**: 26 genuinely-complete (artifact-verified) · **8 PENDING-DROPPED/abandoned**
+(#366 joint-pose finishing 7 days · #408 Q1–Q7 telemetry MISSED ITS BOUNDARY — C0 launched without it,
+H2-confirmed · #448 FreSh BUILT-never-fired, C0 launched without it · #444 v9 stage rows never
+byte-closed even at $0 · #452 tube-algebra probe · #485 JEPA dig · #496 M+Adam rate probe · #482's
+named ANE-VJP reactivation) · 7 stalled-in-progress (#497 decisive curvelet A/B owed — also gates the
+no-Fourier strict flip · #449 close-out · #349 CT-2 · #328 phase-2 · #377 remainder · #425 measured
+row · #343) · 7 active 07-15 P0s registered so they cannot silently drop (#507/#509/#511–#515).
+verdict_scope: instance (per-directive status calls, evidence-cited).
+
+**DIAGNOSTIC:** the WRITES>READS root cause (same as FEED-graph-memory): designations lived in chat
+context + an unread 488-row task store; compaction erased them; nothing demanded updates; the task
+checkbox lies (NO-FAKE).
+
+**RESPONSE (two-landing, LANDED):** (1) canonical committed ledger
+`.omx/state/operator_p0_ledger.jsonl` (fcntl-locked, append-only latest-wins, 48 rows seeded, each
+with verbatim_ask + evidence + ONE next action) + `tools/operator_p0_digest.py` wired into the
+**SessionStart hook chain (fires on COMPACT too)** — every fresh/compacted window re-injects the open
+P0s; (2) `tools/operator_p0_stop_hook.py` Stop-hook demand-update (warn-grade fail-open loop-safe,
+triality-detector pattern): nags when a turn touches a tracked P0 without a ledger append, or a NEW
+operator P0 designation appears with no row; `[p0-ledger-ok]` escape valve; 24 tests green.
+Triality home: DAG=this FEED · DSL=N/A (apparatus TOOL, not a Lever — stated) · equations=N/A
+(consume-only). Pointer 0.19108 UNMOVED (means/apparatus — anti-forgetfulness).
