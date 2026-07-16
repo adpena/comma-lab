@@ -19152,3 +19152,10 @@ Pointer 0.19108 UNMOVED (means/design inputs).
 - **GO question:** (1) 3-line launcher registration (launcher untouchable to this landing); (2) bounded --dry-start = receipt producer + resume_ok proof; (3) scheduling vs the live c1 arm (same GPU; recommendation: c2 first — ~1-3 d train-least path; its plateau failure mode hands the baton back to c1 with the basin question measured).
 
 Pointer 0.19108 UNMOVED (means/config).
+
+## FEED-c2-golaunch (2026-07-16) — c2_surgical_warm GO chain rung 1 LANDED [no-triality: launcher registration = DSL-side wiring itself]
+- Operator GO on record (verbatim "proceed with all in the order that Yousfi would... as complete and comprehensive and optimal and close to final end state as possible"). Chain: register → rim-fold check → bounded dry-start (bench receipt + resume_ok) → governed launch → final-end-state closures.
+- Rung 1 DONE: `c2_surgical_warm` registered in tools/launch_witness_run.py (edit-freeze verified lifted first). Config = spec_c2_surgical_20260716, hash be29562e3e..., warm mod32cap ep650, budget 3.88d compiled, measured projection 1.05–3.13d.
+- Rim physics (operator): MyCar rim flicker = specular on wet curved hood ⇒ static-geometry freeze (#139 family) + specular-ξ phase; memory mycar_rim_flicker_specular_wet_hood_static_geometry_20260716. A8 CLOSED.
+- p0_512 note: launcher editable again ⇒ same-outdir spawn guard UNBLOCKED, owed before-or-at the real launch window.
+- Pointer 0.19110-lineage submittable 0.19108 UNMOVED — chain is MEANS until byte-close + exact eval.
