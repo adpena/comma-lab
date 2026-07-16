@@ -192,3 +192,41 @@ failure mode (plateau at ~0.0031) hands the baton back to c1 with the basin ques
    render/decode lever is UNBUILT — recorded OWED, non-blocking** (`hood_static_component` is
    standalone; trainer consumes the static core only via init-time `--structured-init`, inert
    under warm start; hood-tex seed lives on the necessity vehicle).
+
+## AMENDMENT (2026-07-16, seal arm) — F4 CRASH-RESUME RUNBOOK (owed pre-fire; now LANDED)
+
+**The rollback trap (review finding F4, memo `c2_launch_stack_adversarial_review_20260716.md`):**
+the emitted `launch.sh` pins `--resume-from <mod32cap BEST npz> --warm-start-weights-only`. The
+trainer has NO auto-preference for the out_dir's own rolling `levelset_resume_state.npz`, so a
+NAIVE re-run of `launch.sh` after a mid-run crash (a) ROLLS BACK to ep651 (the warm-start plant),
+discarding every epoch the crashed run trained, AND (b) its first rolling checkpoint OVERWRITES
+the crashed run's resume sidecar in the same out_dir — destroying the only recovery point.
+
+**THE ONE CORRECT CRASH-RESUME PROCEDURE (the PASS-2-proven dir-form path).** The launcher has
+NO `--resume-from` CLI flag, and `--extra-trainer-flags "--resume-from …"` would C13-REFUSE as a
+duplicate of the config's pinned flag (VERIFIED against the launcher argparse + the C13 gate at
+`tools/launch_witness_run.py:1992` — never-invent-flags). The recovery is a TRAINER re-invocation
+with exactly ONE value substituted in the crashed run's own `launch.sh`:
+
+```bash
+# after any mid-run crash of the real c2_surgical_warm run (out_dir = the crashed run's dir):
+# 1. copy the crashed run's launch.sh to resume.sh (same dir);
+# 2. change ONLY the --resume-from VALUE:
+#      FROM  experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz
+#      TO    <the crashed run's out_dir>            # DIR form — trainer prefers levelset_resume_state.npz
+#    (trainer contract: --resume-from <dir> "prefers levelset_resume_state.npz", trainer L13380 + L1815;
+#     everything else — flags, out_dir, env exports — stays byte-identical);
+# 3. re-run resume.sh through the normal governed/durable spawn path.
+```
+
+- The DIR form resumes from the run's own rolling sidecar (`levelset_resume_state.npz`,
+  epoch-restored). This exact path is MEASURED-proven by dry-start PASS 2
+  (`dry_start_resume_ok`, run `levelset_n600_witness_20260716T014623Z`).
+- `--warm-start-weights-only` stays (byte-identical edit discipline): on the sidecar it restores
+  weights + epoch and discards optimizer moments — the PASS-2-proven contract (moments-restore is
+  NOT the c2 contract; fresh moments after a crash are the same DE#3 machinery the warm start uses).
+- **NEVER** re-run the pinned `launch.sh` unmodified after a crash, and **NEVER** point
+  `--resume-from` back at the mod32cap BEST npz for a recovery — both are the rollback trap above
+  (roll back to ep651 + first rolling ckpt clobbers the crashed run's resume sidecar).
+- The retry-loop wrapper copies this runbook into the green run dir as
+  `CRASH_RESUME_RUNBOOK.md` so the instruction lives next to the run it protects.
