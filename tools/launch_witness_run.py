@@ -2337,6 +2337,41 @@ def main(argv: list[str] | None = None) -> int:
         return _run_dry_start(args, config, overfit, out_dir, label, extra_flags or None, wmp,
                               projected_peak_gib=projected_peak_gib)
 
+    # (b9) SAME-OUTDIR SPAWN GUARD (p0_512; 3x duplicate-spawn recurrence). psutil cmdline
+    # enumeration: REFUSE the durable spawn when a LIVE process already references this exact
+    # out_dir (a prior spawn of the same run — the duplicate would corrupt the run dir's
+    # checkpoints/telemetry and double the memory footprint the admission gate just budgeted).
+    # Fail-open on psutil absence (the guard must never brick a launch on a probe error).
+    try:
+        import psutil  # local import: probe-only
+
+        _dup_pids = []
+        _needle = str(out_dir)
+        for _p in psutil.process_iter(["pid", "cmdline"]):
+            try:
+                if _p.pid == os.getpid():
+                    continue
+                _cl = " ".join(_p.info.get("cmdline") or ())
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+            if _needle and _needle in _cl and (
+                    "train_levelset_witness" in _cl or "launch.sh" in _cl
+                    or "spawn_durable_daemon" in _cl):
+                _dup_pids.append((_p.pid, _cl[:160]))
+        if _dup_pids:
+            print(f"[launch-witness] ERROR: REFUSING to launch — SAME-OUTDIR SPAWN GUARD "
+                  f"(p0_512): {len(_dup_pids)} live process(es) already reference out_dir "
+                  f"{out_dir}:", file=sys.stderr)
+            for _pid, _cl in _dup_pids:
+                print(f"    pid {_pid}: {_cl}", file=sys.stderr)
+            print("  A duplicate spawn into a live run dir corrupts checkpoints/telemetry. "
+                  "Stop the live process (tools/spawn_durable_daemon.py --stop <label>) or "
+                  "choose a fresh --out-dir.", file=sys.stderr)
+            return 12
+    except ImportError:
+        print("[launch-witness] WARNING: psutil unavailable — same-outdir spawn guard skipped "
+              "(p0_512).", file=sys.stderr)
+
     # (c) LAUNCH durably (spawn_durable_daemon auto-verifies the child survived exec + auto-starts the
     # black box + re-checks the SYSTEM admission gate as a defense-in-depth backstop). We pass the
     # projected peak so the registry records it (the NEXT launch's admission gate sums it) + the
