@@ -1478,10 +1478,24 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
         except OSError as exc:
             print(f"# dry-start WARN: could not persist captured output to {sub / 'run.log'}: {exc!r}")
         m = parse_dry_start_run_metrics(sub / "run.log")
-        gross, marginal = dry_start_sec_per_ep(wall, m["gt_secs"], m["epochs_completed"])
+        # (c2_surgical_warm fix 2026-07-16) sec/ep divides by EPOCHS STEPPED THIS PASS, not the
+        # absolute max epoch number. epochs_completed is the MAX ep row — on a resumed/warm-started
+        # pass (PASS 2 always; PASS 1 too for a warm-start config whose argv carries --resume-from,
+        # e.g. c2_surgical_warm resuming ep651) dividing wall by it under-reports sec/ep by the
+        # resume offset (c2 would have "measured" ~14 s/ep from a 9000 s pass; c1's own PASS 2 row
+        # divided by 11 when it stepped 6). The trainer's UNCONDITIONAL resume_start_epoch row
+        # (FEED-resume-observability-harden) gives the exact offset; a fresh boot has none => count
+        # unchanged.
+        _rse = m.get("resume_start_epoch")
+        if isinstance(_rse, int) and not isinstance(_rse, bool) and m["epochs_completed"] >= _rse:
+            epochs_stepped = m["epochs_completed"] - (_rse - 1)
+        else:
+            epochs_stepped = m["epochs_completed"]
+        gross, marginal = dry_start_sec_per_ep(wall, m["gt_secs"], epochs_stepped)
         return {"dir": str(sub), "rc": rc, "outer_timeout": outer_timeout,
                 "wall_s": round(wall, 1), "pass_timeout_s": round(pass_timeout, 1),
                 "peak_rss_gib": (round(peak_mib / 1024.0, 3) if peak_mib is not None else None),
+                "epochs_stepped_this_pass": epochs_stepped,
                 "sec_per_ep_gross": gross, "sec_per_ep_marginal": marginal, **m}
 
     print(f"# dry-start PASS 1: fresh boot at REAL n={args.num_pairs} config={config!r}, wall-clock bounded "
