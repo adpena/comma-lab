@@ -19276,3 +19276,13 @@ Pointer 0.19108 UNMOVED (apparatus + armed measurement; next exact-relevant even
   (`src/tac/tests/test_dry_start_delta_bench.py`); 92 existing launcher tests pass unchanged.
 - **MEANS not ends**: apparatus lever (launcher, not a training lever — no DSL Lever). Pointer moves only via
   `upstream/evaluate.py`; exact pointer UNMOVED by this landing.
+- **ADDENDUM (2026-07-16, commit f02d4a0977) — boot-side inheritance ([no-triality])**: trainer
+  `--skip-boot-baseline-verdict` (store_true, default-off ⇒ byte-identical) gates ONLY the pre-loop v0
+  baseline-verdict block; consumer audit found NO correctness dependency (history consumers empty-safe;
+  best/closed-loop/nucleus fed by in-loop verdicts only; resume sidecar persists no verdict history) ⇒ no
+  fail-closed mode refusal needed. When skipped an honest `{stage:baseline_verdict_skipped,
+  reason:"delta_bench_inherited_from <hash>"}` row keeps the record complete. Launcher injects the flag
+  ONLY into the delta-bench pass argv (both passes, the launcher-owned TypedLever layer — never full-bench,
+  never real-launch argv); receipt adds `boot_baseline_verdict:"inherited"`. `typed_config_hash` INVARIANT
+  (c2_surgical_warm pinned 2d486e3bff…, test-asserted). Delta passes stop paying the ~25-min/pass inherited
+  boot verdict. 34 tests. MEANS; pointer UNMOVED.
