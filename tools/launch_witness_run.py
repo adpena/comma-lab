@@ -410,7 +410,8 @@ def config_family(cfg) -> str:
                                     "throughput_component_timer_async_20260713",
                                     "throughput_component_timer_solo_20260713",
                                     "c1_optimal_form",
-                                    "c1_optimal_form_curvelet_arm"):
+                                    "c1_optimal_form_curvelet_arm",
+                                    "c2_surgical_warm"):
         return cfg.name
     if getattr(cfg, "crucible_v6", False):
         return "crucible_v6"
@@ -1078,6 +1079,22 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         return compile_c1_optimal_form_launch_config(
             gt_cache, num_pairs=num_pairs,
             curvelet_ab_arm=(config == "c1_optimal_form_curvelet_arm"), **_ek)
+    if config == "c2_surgical_warm":
+        # 2026-07-16 train-least/Kolmogorov doctrine composition (operator GO 2026-07-16):
+        # warm-start the mod32cap EMA-best ep650 trunk (weights-only; d_seg 0.003146 n600
+        # through-R) and train ONLY the two licensed surgical targets — (a) Road-Lane
+        # sub-pixel appearance-phase (T1 #424 + #360 satisficing at ONE engage boundary
+        # ep700) and (b) the joint pose finish (sigma_min_plateau gate, banked-R1 dxi
+        # fallback, backstop ep1000). Everything else SOLVED/SEEDED/DROPPED per the
+        # doctrine ledger (.omx/research/c2_surgical_composition_20260716.md). The factory
+        # carries fail-closed compile-time blockers (checkpoint custody + the
+        # C2_COMPOSED_BENCH_NOT_MEASURED dry-start receipt); the bounded --dry-start is
+        # the receipt producer. Pure compile; LAUNCH remains gate-chain + operator-GO.
+        from tac.witness_dsl.spec_c2_surgical_20260716 import (
+            compile_c2_surgical_warm_launch_config,
+        )
+        return compile_c2_surgical_warm_launch_config(
+            gt_cache, num_pairs=num_pairs, **_ek)
     # fail-LOUD default (seal v7 r1 BLOCKER #1): ONLY proven_base / all_levers ride the derive_config
     # fall-through (all_levers => --all-levers). ANY OTHER name is an unknown config and MUST RAISE —
     # never silently fall through to a proven_base WitnessConfig. That silent fall-through is its own
@@ -1098,7 +1115,7 @@ def _derive_named_config_unchecked(config: str, gt_cache: str, *, num_pairs: int
         f"next_launch_all_levers_20260713, next_launch_all_levers_trimmed_20260713, "
         f"throughput_component_timer_async_20260713, "
         f"throughput_component_timer_solo_20260713, c1_optimal_form, "
-        f"c1_optimal_form_curvelet_arm. "
+        f"c1_optimal_form_curvelet_arm, c2_surgical_warm. "
         f"Add an explicit branch (NEVER "
         f"silently fall through to proven_base).")
 
@@ -1625,7 +1642,8 @@ def main(argv: list[str] | None = None) -> int:
                              "next_launch_all_levers_trimmed_20260713",
                              "throughput_component_timer_async_20260713",
                              "throughput_component_timer_solo_20260713",
-                             "c1_optimal_form", "c1_optimal_form_curvelet_arm"],
+                             "c1_optimal_form", "c1_optimal_form_curvelet_arm",
+                             "c2_surgical_warm"],
                     help="canonical named config resolved from the triality (tac.witness_autoconfig): "
                     "proven_base (attribution-clean baseline; the default when neither --config nor "
                     "--all-levers is given), all_levers (== --all-levers), sealed_205 (the #205 "
