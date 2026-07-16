@@ -73,6 +73,12 @@ SKIP_GAIN_RATIO_MED: Mapping[str, float] = {
 #: MEASURED Lane island persistence stats (s3_dash_geometry.json persistence_by_class).
 LANE_ISLAND_PERSISTENCE_MEDIAN = 0.625
 LANE_ISLAND_FRAC_BELOW_05 = 0.419
+#: MEASURED n600 island-event rates (s4_events_t1_audit.json).  These are upper
+#: bounds under the documented 5%-overlap/interpolation tolerance, not exact
+#: saddle-node identities.  Exported so controller consumers do not copy numbers.
+BIRTHS_PER_FRAMESTEP = 9.43
+DEATHS_PER_FRAMESTEP = 9.50
+INTERIOR_ISLANDS_PER_FRAME = 19.1
 
 
 def perpair_lambda_prior(gain_cc: float, gain_ref: float) -> float:
@@ -221,8 +227,11 @@ def build_lane_gain_chain_composed_v1() -> CanonicalEquation:
 
 
 __all__ = [
+    "BIRTHS_PER_FRAMESTEP",
     "COMPOSED_GAIN_MED",
+    "DEATHS_PER_FRAMESTEP",
     "EQUATION_ID",
+    "INTERIOR_ISLANDS_PER_FRAME",
     "LANE_ISLAND_FRAC_BELOW_05",
     "LANE_ISLAND_PERSISTENCE_MEDIAN",
     "SKIP_GAIN_RATIO_MED",

@@ -1,0 +1,330 @@
+{
+  "actuation": "NONE",
+  "architecture": "V_exact_factorized_residual",
+  "axis": "[macOS advisory] NON-PROMOTABLE",
+  "consumption_audit": [
+    {
+      "decision_change": "writes the ranked recommendation consumed by digest/dashboard",
+      "evidence": [
+        "src/tac/witness_control/shadow_controller.py:877",
+        "tools/costate_observer_loop.py:?",
+        "tools/launch_witness_run.py:1628"
+      ],
+      "last_fired": {
+        "top_action": "WATCH_NO_ACTION",
+        "ts": "2026-07-11T15:31:00Z"
+      },
+      "surface": "shadow_controller estimate/classify/recommend",
+      "verdict": "CONSUMED"
+    },
+    {
+      "decision_change": "axis EV and owed-probe order enter SENSE/DECIDE",
+      "evidence": [
+        "src/tac/witness_control/shadow_controller.py:655",
+        "src/tac/witness_control/shadow_controller.py:671",
+        "src/tac/witness_control/shadow_controller.py:682"
+      ],
+      "last_fired": "every shadow report; missing producer data is explicit available=false",
+      "surface": "producer_bridge + cross-run posterior + duty rank",
+      "verdict": "CONSUMED"
+    },
+    {
+      "decision_change": "enters the existing ranked recommendation path only on BACKTESTED-PASS; unvaried levers remain duty-to-measure",
+      "evidence": [
+        "src/tac/witness_control/shadow_controller.py:692",
+        "src/tac/witness_control/shadow_controller.py:860",
+        "src/tac/witness_control/costate_panel.py:87"
+      ],
+      "last_fired": "verified in-memory on primary run by this receipt",
+      "surface": "exact-factorized rank4 x ker(A) x gain adjoint",
+      "verdict": "CONSUMED"
+    },
+    {
+      "decision_change": "emits a stage-boundary warning row; predicted_dS remains null and actuation NONE",
+      "evidence": [
+        "src/tac/witness_control/shadow_controller.py:819",
+        "tools/ncde_trajectory_probe.py:163"
+      ],
+      "last_fired": "verified in-memory on primary run by this receipt",
+      "surface": "Morse-Smale event prior + #344 NCDE",
+      "verdict": "CONSUMED"
+    },
+    {
+      "decision_change": "the factorized expert is registered for truthful compile, but production authority comes from the shadow-controller integration above",
+      "evidence": [
+        "repo search found derive_costate_agent_v1 consumers only in tests/tooling",
+        "src/tac/witness_dsl/costate_agent_dsl.py:748"
+      ],
+      "last_fired": "test/tool invocation only; no always-on observer call",
+      "surface": "CostateAgent DSL/panel",
+      "verdict": "ORPHANED_FROM_ALWAYS_ON_PRODUCTION"
+    },
+    {
+      "decision_change": "no causal shadow recommendation change",
+      "evidence": [
+        "consumed by lambda_net_backtest/costate_digest, not build_shadow_report",
+        "src/tac/witness_control/regime_dispatch.py:279"
+      ],
+      "last_fired": "digest/backtest only",
+      "surface": "regime_dispatch",
+      "verdict": "INERT_FOR_ALWAYS_ON_RECOMMENDATION"
+    },
+    {
+      "decision_change": "surfaces exact/learned/confidence/recommendation-why provenance",
+      "evidence": [
+        "tools/costate_digest.py:200",
+        "tools/witness_run_introspect.py:389",
+        "tools/dashboard_server.py:5865"
+      ],
+      "last_fired": "on next digest/dashboard refresh; schema verified by tests",
+      "surface": "digest + dashboard",
+      "verdict": "CONSUMED"
+    }
+  ],
+  "created_utc": "2026-07-16T19:48:47Z",
+  "pointer_changed": false,
+  "runs": [
+    {
+      "axis": "[macOS advisory] NON-PROMOTABLE",
+      "backtest": {
+        "architecture": "V_exact_factorized_residual",
+        "axis_tag": "[macOS advisory] NON-PROMOTABLE",
+        "binding_auroc_magnitude_heuristic": 1.0,
+        "binding_auroc_model": 0.82,
+        "forecast_mae_heuristic": 0.003697775590645048,
+        "forecast_mae_model": 0.003245520213149131,
+        "forecast_perclass_mae_heuristic": 0.05788957440217392,
+        "forecast_perclass_mae_model": 0.042535371735850105,
+        "n_intervals": 9,
+        "notes": [
+          "LOO forecast gate: model MAE 0.003246 vs persistence-heuristic 0.003698 (\u0394d_seg units over held-out intervals; BEATS heuristic; LOO trains on future intervals \u2014 look-ahead-advantaged, kept for comparability)",
+          "LOO per-class MAE 0.042535 vs 0.057890",
+          "WALK-FORWARD gate (deployment-faithful, past-only training, 7 folds): model MAE 0.001852 vs heuristic 0.002792 (BEATS heuristic); per-class 0.026641 vs 0.010823",
+          "binding gate: \u03bb-field AUROC 0.82 vs magnitude-heuristic 1.0 on 10 harvest-labeled levers",
+          "labels source: n205_live_telemetry_harvest_for_v9cgauge_20260711.md \u00a74 (MEASURED)",
+          "n=9 intervals \u2014 small-data regime; every fit ridge/L1-regularized; per-lever attribution for co-constant levers is FEATURE-STRUCTURED (PARTIAL tier), not data-identified"
+        ],
+        "passed": true,
+        "passed_walkforward": true,
+        "promotable": false,
+        "score_claim": false,
+        "walkforward_mae_heuristic": 0.002791931483929152,
+        "walkforward_mae_model": 0.00185206618604584,
+        "walkforward_perclass_mae_heuristic": 0.010822510285714293,
+        "walkforward_perclass_mae_model": 0.026641247544718305
+      },
+      "consumed_shadow_decision": {
+        "changed": true,
+        "hamiltonian_current": 0.009460212879005002,
+        "hamiltonian_proposed": 0.003360171677246186,
+        "horizon_epochs": 25,
+        "identified_levers_only": [
+          "area_constraint",
+          "eikonal",
+          "island_amplify",
+          "persistence",
+          "seg",
+          "weight_entropy"
+        ],
+        "predicted_dS": -0.15250103004397036,
+        "predicted_dS_band": [
+          -0.3377076486485544,
+          0.032705588560613646
+        ],
+        "proposed_shares": {
+          "area_constraint": 0.0,
+          "boundary_distance": 0.0,
+          "chroma_boundary": 0.0,
+          "code_nuclear": 0.0,
+          "code_spectral": 0.0,
+          "eik_steik": 0.0,
+          "eikonal": 0.0032092145747935,
+          "horizon_margin": 0.0,
+          "island_amplify": 0.0008731730469353494,
+          "lane_edge": 0.0,
+          "length": 1.0881591720963672e-05,
+          "margin_field_head": 0.0,
+          "margin_saliency": 0.0,
+          "margin_satisfice": 0.0,
+          "persistence": 0.07319761623466879,
+          "pose": 0.0,
+          "rankfloor": 0.0,
+          "seg": 0.6662564270969924,
+          "subpix": 0.0,
+          "temporal_screw": 0.0,
+          "thin_lane": 0.0,
+          "weight_entropy": 0.256452687454889
+        },
+        "unidentified_levers_are_duty_to_measure_not_authority": [
+          "boundary_distance",
+          "chroma_boundary",
+          "code_nuclear",
+          "code_spectral",
+          "eik_steik",
+          "horizon_margin",
+          "lane_edge",
+          "length",
+          "margin_field_head",
+          "margin_saliency",
+          "margin_satisfice",
+          "pose",
+          "rankfloor",
+          "subpix",
+          "temporal_screw",
+          "thin_lane"
+        ],
+        "why": "exact rank-4 head x ker(A)-projected visible support x inverse-gain pair prior; differentiated-GP temporal residual; five-scalar event amplitude admitted only by a past-only inner gate"
+      },
+      "event_advisories": [
+        {
+          "actuation": "NONE",
+          "axis": "[macOS advisory] NON-PROMOTABLE",
+          "eligible_at": "stage boundary only",
+          "kind": "STAGE_BOUNDARY_MORSE_SMALE_NCDE_ADVISORY",
+          "morse_smale": {
+            "axis": "[macOS advisory] NON-PROMOTABLE",
+            "derived": {
+              "critical_lambda_pair": "Road-Lane",
+              "critical_lambda_ratio_vs_other_major_pair_median": 2.0896226415094343,
+              "event_turnover_per_island_step_upper_bound": 0.9910994764397905,
+              "interpretation": "birth/death turnover is a Morse-Smale saddle-node warning proxy; it is not an exact event identity or a fitted optimum"
+            },
+            "measured": {
+              "births_per_framestep_upper_bound": 9.43,
+              "deaths_per_framestep_upper_bound": 9.5,
+              "interior_islands_per_frame": 19.1,
+              "lane_island_frac_below_0_5": 0.419,
+              "lane_island_persistence_median": 0.625
+            },
+            "score_claim": false
+          },
+          "ncde_344": {
+            "actuation": "NONE",
+            "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+            "current_value": -3.2957298717284207,
+            "epoch": 225.0,
+            "eta_handoff_epochs": null,
+            "fire": false,
+            "fit_r2": 0.9969856964487002,
+            "n_fit": 9,
+            "predicted_asymptote": -3.5500930955443555,
+            "predicted_plateau_epochs": 541.2982801330628,
+            "predicted_remaining_descent": 0.2543632238159348,
+            "reason": "NO-FIRE: still descending (remaining_frac=2.4331, eta_handoff=None)",
+            "remaining_descent_frac": 2.4331160108402,
+            "seg_form": "verdict_d_seg",
+            "stable": true,
+            "stage": "ncde_trajectory",
+            "target": "log_d_seg"
+          },
+          "predicted_dS": null,
+          "recommendation": "At the next governed stage boundary, prioritize phase/event-aware duty rows when the Road-Lane critical-lambda prior and NCDE basin warning agree; do not mutate the live config from this advisory.",
+          "score_claim": false,
+          "warning_active": false,
+          "why": "MEASURED low Lane persistence + high birth/death turnover; DERIVED inverse-gain critical pair pressure; #344 supplies trajectory basin timing"
+        }
+      ],
+      "hyperparameter_selection_scope": "POST_HOC_DEVELOPMENT_ON_205; independent compatible trajectory validation owed",
+      "label": "#205_live_v752",
+      "lambda_field_top": [
+        [
+          "horizon_margin",
+          -0.03502233019665916
+        ],
+        [
+          "code_nuclear",
+          0.0
+        ],
+        [
+          "code_spectral",
+          0.0
+        ],
+        [
+          "pose",
+          0.0
+        ],
+        [
+          "rankfloor",
+          0.0
+        ],
+        [
+          "weight_entropy",
+          0.0
+        ],
+        [
+          "seg",
+          2.088655120589896e-18
+        ],
+        [
+          "boundary_distance",
+          2.0886599823710567e-18
+        ]
+      ],
+      "n_intervals": 9,
+      "n_levers": 22,
+      "n_loss_term_rows": 248,
+      "n_verdicts": 10,
+      "recommendation_entered_existing_ranked_path": true,
+      "run_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_v752_baseline_20260710T185913Z",
+      "run_exists": true,
+      "run_log_exists": true,
+      "run_log_sha256_after": "7fdc44d19946121fb18e35060f5146bf1f48dea81c08891f8f4477d42b0bed82",
+      "run_log_sha256_before": "7fdc44d19946121fb18e35060f5146bf1f48dea81c08891f8f4477d42b0bed82",
+      "score_claim": false,
+      "source_bytes_unchanged": true,
+      "status": "BACKTESTED-PASS",
+      "top_shadow_action": "REALLOCATE_LOSS_SHARE_FACTOR_ADVISORY",
+      "verdict_scope": "trajectory-local advisory backtest; no score/pointer/promotion authority"
+    },
+    {
+      "axis": "[macOS advisory] NON-PROMOTABLE",
+      "blockers": [
+        "d_seg_by_class absent"
+      ],
+      "hyperparameter_selection_scope": "POST_HOC_DEVELOPMENT_ON_205; independent compatible trajectory validation owed",
+      "label": "mod32cap",
+      "n_intervals": 0,
+      "n_levers": 17,
+      "n_loss_term_rows": 1000,
+      "n_verdicts": 41,
+      "run_dir": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z",
+      "run_exists": true,
+      "run_log_exists": true,
+      "run_log_sha256_after": "e9ac0b170666d33c743551e7e2b50a76b954ab2f3b7389199cfb1ba825b26a7e",
+      "run_log_sha256_before": "e9ac0b170666d33c743551e7e2b50a76b954ab2f3b7389199cfb1ba825b26a7e",
+      "score_claim": false,
+      "source_bytes_unchanged": true,
+      "status": "UNAVAILABLE_INSUFFICIENT_INTERVAL_SCHEMA",
+      "verdict_scope": "no cross-run inference from #205"
+    },
+    {
+      "axis": "[macOS advisory] NON-PROMOTABLE",
+      "hyperparameter_selection_scope": "POST_HOC_DEVELOPMENT_ON_205; independent compatible trajectory validation owed",
+      "label": "c2:c2_perclass_stratum_20260716",
+      "run_dir": "/Users/adpena/Projects/pact/experiments/results/c2_perclass_stratum_20260716",
+      "run_exists": true,
+      "run_log_exists": false,
+      "run_log_sha256_before": null,
+      "score_claim": false,
+      "status": "PENDING_NO_RUN_LOG",
+      "verdict_scope": "no trajectory inference; harvest again when rows arrive"
+    },
+    {
+      "axis": "[macOS advisory] NON-PROMOTABLE",
+      "hyperparameter_selection_scope": "POST_HOC_DEVELOPMENT_ON_205; independent compatible trajectory validation owed",
+      "label": "c2:c2_witness_own_decomp_20260716",
+      "run_dir": "/Users/adpena/Projects/pact/experiments/results/c2_witness_own_decomp_20260716",
+      "run_exists": true,
+      "run_log_exists": false,
+      "run_log_sha256_before": null,
+      "score_claim": false,
+      "status": "PENDING_NO_RUN_LOG",
+      "verdict_scope": "no trajectory inference; harvest again when rows arrive"
+    }
+  ],
+  "schema": "costate_organ_elevation_backtest.v1",
+  "score_claim": false,
+  "source_root": "/Users/adpena/Projects/pact",
+  "validation_scope": "DEVELOPMENT_SET_PASS for #205 because residual ridge was selected during this build; independent compatible trajectory owed",
+  "verdict_scope": "#205 is the only compatible trajectory currently backtestable; mod32cap lacks interval-aligned d_seg_by_class; c2 rows are pending. No equivalence inferred."
+}

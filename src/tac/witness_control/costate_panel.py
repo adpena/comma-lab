@@ -84,6 +84,9 @@ LENSES: tuple[LensSpec, ...] = (
              "which curved multidim regime CHART is this state on (BSF block-sparse "
              "featurizer geometry)?",
              ("block-subspace-charts", "observatory-attribution"), True),
+    LensSpec("exact_factorized", "V_exact_factorized_residual",
+             "what does the exact head x resize-kernel x composed-gain adjoint recommend?",
+             ("canonical-equations", "ncde-trajectory", "morse-smale-events"), True),
     LensSpec("graph_precedent", "graph_precedent",
              "what does campaign history/structure imply?",
              ("lever-activation-ledger", "graph-memory-recall"), False),
@@ -105,7 +108,8 @@ ROUTING_MODES = ("SINGLE_BEST", "QUESTION_ROUTER", "SELF_ACTIVATION", "COMPONENT
 #: pooled posterior over lens competence (Yao-Pirš-Vehtari-Gelman arXiv 2101.08954),
 #: NOT a trained router and NOT raw train-confidence; the prior favors low complexity).
 LENS_COMPLEXITY = {"flow": 102.0, "pointwise": 332.0, "sequence": 1100.0,
-                   "operator_field": 700.0, "prototype": 220.0, "block_subspace": 280.0}
+                   "operator_field": 700.0, "prototype": 220.0, "block_subspace": 280.0,
+                   "exact_factorized": 5.0}
 #: torch-training lenses (expensive; the spread-gate may skip them — 2607.08046
 #: finding 3: route by the PRE-SET answer-distribution spread; low spread → commit
 #: cheap with no accuracy loss, high spread → pay for the full panel)

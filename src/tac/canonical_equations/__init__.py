@@ -112,6 +112,10 @@ from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 im
     populate_chan_vese_area_constraint_birth_balance_equation,
     populate_isoperimetric_birth_weight_scaling_equation,
 )
+from tac.canonical_equations.hybrid_factorized_costate_adjoint_20260716 import (
+    build_hybrid_exact_factorized_costate_adjoint_v1,
+    populate_hybrid_exact_factorized_costate_adjoint_equation,
+)
 from tac.canonical_equations.chroma_boundary_match_20260709 import (
     build_chroma_boundary_annulus_match_hinge_v1,
     populate_chroma_boundary_annulus_match_equation,
@@ -513,6 +517,7 @@ __all__ = [
     "build_lane_groundframe_xi_transport_no_collapse_v1",
     "build_leverd_flicker_residual_reactivation_economics_v1",
     "build_logit_adjustment_class_prior_law_v1",
+    "build_hybrid_exact_factorized_costate_adjoint_v1",
     "build_margin_band_satisficing_threshold_v1",
     "build_margin_saliency_reachability_replaces_texture_proxy_v1",
     "build_maslov_dequantization_bound_v1",
@@ -618,6 +623,7 @@ __all__ = [
     "populate_horizon_weighted_margin_equation",
     "populate_initial_equations",
     "populate_instant_projected_input_adjoint_v1",
+    "populate_hybrid_exact_factorized_costate_adjoint_equation",
     "populate_isoperimetric_birth_weight_scaling_equation",
     "populate_laguerre_ot_head_offset_equation",
     "populate_lane_band_res_entropy_stage_equation",

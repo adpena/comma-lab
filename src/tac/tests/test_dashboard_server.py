@@ -187,12 +187,29 @@ def test_read_costate_absent_and_present():
                "recommendations": [{"action": "CONTINUE_STAGE",
                                     "predicted_dS": -0.25, "horizon_epochs": 25}],
                "duty_to_measure": [{"lever": "A", "state": "never-fired"},
-                                   {"lever": "B", "state": "measured"}]}
+                                   {"lever": "B", "state": "measured"}],
+               "factorized_adjoint": {
+                   "admission": "BACKTESTED-PASS",
+                   "factorization": {
+                       "exact": {"head_rank": 4,
+                                 "certified_zero_weight_camera_frac": 0.226969},
+                       "derived": {
+                           "road_lane_gain_only_lambda_ratio_vs_other_median": 2.0896}},
+                   "learned_residual": {"n_parameters": 5,
+                                        "amplitude_gate": "ADMITTED_PAST_ONLY_ONE_STEP"},
+                   "validation_scope": "development-set test scope",
+                   "decision": {"predicted_dS": -0.12,
+                                "why": "exact/learned test split"}},
+               "event_advisories": [{"warning_active": False}]}
         (Path(d) / "costate_shadow.jsonl").write_text(json.dumps(row) + "\n")
         c = ds._read_costate(d)
         assert c["ok"] and c["classification"] == "CONVERGING"
         assert c["rec"]["action"] == "CONTINUE_STAGE"
         assert c["duty_owed"] == 2 and c["duty_never_fired"] == 1
+        assert c["factorized_adjoint"]["head_rank"] == 4
+        assert c["factorized_adjoint"]["learned_parameters"] == 5
+        assert c["factorized_adjoint"]["confidence"] == "development-set test scope"
+        assert c["event_advisories"][0]["warning_active"] is False
 
 
 def test_run_identity_conditional_and_provenance():
