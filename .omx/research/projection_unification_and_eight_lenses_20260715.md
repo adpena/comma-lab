@@ -38,6 +38,32 @@ elevated from a lens (§4 #7) to THE frame. NO-FAKE boundary (rule 118): the gen
 ALGORITHM (free); the seed = video-derived LEARNED coordinates (counted) — never smuggle a video-derived table
 into "code."
 
+## 0.1 SHANNON vs KOLMOGOROV = PR95 vs US = the class shift (operator 2026-07-15, originality thesis / NO-FAKE #7)
+> *"The Shannon versus Kolmogorov juxtaposition is the difference between PR95 and us — optimizing for
+> human visual fidelity versus optimizing against the frozen contest information space and what the
+> neural nets actually care about at minimal rate."*
+
+- **PR95 / the HNeRV-leaderboard family = SHANNON on RGB.** It reconstructs a *faithful frame* (human
+  visual fidelity) and lets the scorer derive masks from it; rate = the entropy of the frame
+  representation. It imports the video-codec / ensemble-compression mindset — minimize the description
+  length of the *data*, treating the scorer as a downstream consumer of a good picture.
+- **Us / the witness = KOLMOGOROV on the task space.** We code only what the frozen scorer's decision
+  actually depends on (the argmax partition + 6 pose scalars = the task-sufficient statistic), as the
+  *shortest program* whose fixed point the scorer accepts; rate = the *seed* of the generator. Everything
+  the scorer is invariant to (§8 blind complement) is free by construction.
+- **Why Kolmogorov is the CORRECT measure here, not Shannon:** Shannon entropy is about a SOURCE
+  DISTRIBUTION (an ensemble of videos); Kolmogorov complexity is about a SINGLE OBJECT. The contest is a
+  SINGLE FROZEN INSTANCE — one 0.mkv, one frozen SegNet/PoseNet, one exact R operator — i.e. exactly the
+  regime where single-object complexity is the right yardstick and ensemble entropy is a category error.
+  PR95 optimized the wrong quantity (fidelity, only approximately aligned with the scorer); we optimize
+  the scorer's decision geometry directly, so every byte moves the score and every byte PR95 spends on
+  scorer-invariant RGB is waste.
+- **The class shift is MEASURED, not asserted:** K/H = 0.47 (necessity solver). Half the "data" was never
+  data — it was a consequence of geometry we hadn't yet written as a generator. Understanding the geometry
+  *is* the compression. This is the genuine originality (NO-FAKE #7): not a PR95 recode with a better
+  activation, but a different objective (Kolmogorov single-instance task-space) against a different target
+  (the frozen scorer's information space) than the entire leaderboard family optimized.
+
 ## 0. The claim
 The deep math + geometry are solved: (a) the SegNet head is **rank-4 linear** (`segnet_head_rank4_linear_flipdist_v1`),
 so the argmax is a **fixed hyperplane arrangement**; (b) the argmax partition is a **Laguerre power diagram =
