@@ -386,6 +386,30 @@ def read_controller(run_dir: Path) -> dict | None:
                 break
         probe_q = row.get("probe_queue")
         cls = row.get("classification")
+        factor = row.get("factorized_adjoint")
+        factor_summary = None
+        if isinstance(factor, dict):
+            fac = factor.get("factorization") or {}
+            exact = fac.get("exact") or {}
+            derived = fac.get("derived") or {}
+            learned = factor.get("learned_residual") or {}
+            decision = factor.get("decision") or {}
+            factor_summary = {
+                "architecture": factor.get("architecture"),
+                "admission": factor.get("admission"),
+                "head_rank": exact.get("head_rank"),
+                "zero_weight_camera_frac": exact.get("certified_zero_weight_camera_frac"),
+                "road_lane_lambda_ratio": derived.get(
+                    "road_lane_gain_only_lambda_ratio_vs_other_median"),
+                "learned_parameters": learned.get("n_parameters"),
+                "amplitude_gate": learned.get("amplitude_gate"),
+                "predicted_dS": decision.get("predicted_dS"),
+                "predicted_dS_band": decision.get("predicted_dS_band"),
+                "why": decision.get("why"),
+                "confidence": ((factor.get("recommendation_candidate") or {}).get(
+                    "confidence") or factor.get("validation_scope")),
+            }
+        event_rows = row.get("event_advisories")
         return {
             "ok": True, "ts": row.get("ts"), "epoch": row.get("epoch"),
             "age_s": _age_s(path), "actuation": row.get("actuation"),
@@ -396,6 +420,8 @@ def read_controller(run_dir: Path) -> dict | None:
             "duty_owed": duty_owed, "duty_never_fired": duty_nf, "duty_ranked": duty_ranked,
             "probe_queue": (len(probe_q) if isinstance(probe_q, list) else None),
             "axis_ev": producer,
+            "factorized_adjoint": factor_summary,
+            "event_advisories": (event_rows if isinstance(event_rows, list) else []),
         }
     except Exception:
         return None

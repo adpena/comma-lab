@@ -626,7 +626,8 @@ ARCHITECTURES = ("A_ridge_solve", "B_mlp", "C_gru_path", "D_deeponet", "E_protot
                  "K_perclass_v8", "L_priormean_comma10k", "M_priormean_advb",
                  "N_aniso_coupled", "O_openpilot_geom", "P_priormean_aniso",
                  "Q_priormean_iso", "R_priormean_c10k_scorelaw",
-                 "S_priormean_openpilot", "T_gp_costate_posterior")
+                 "S_priormean_openpilot", "T_gp_costate_posterior",
+                 "V_exact_factorized_residual")
 
 
 def make_model(name: str):
@@ -720,6 +721,11 @@ def make_model(name: str):
         # CLOSED-FORM GP costate posterior (Warnick 2025 §3.3–3.4): differentiated-RBF
         # derivative posterior mean+cov; Ly=Q with L=d/dep; the solve-don't-train candidate
         return GPCostatePosteriorAdjoint()
+    if name == "V_exact_factorized_residual":
+        # Exact SegNet rank-4 head x ker(A) mask x inverse composed-gain prior;
+        # only a five-scalar bounded temporal/event amplitude residual is learned.
+        from tac.witness_control.factorized_adjoint import ExactFactorizedAdjoint
+        return ExactFactorizedAdjoint()
     raise ValueError(f"unknown architecture {name!r}; choose from {ARCHITECTURES}")
 
 
@@ -867,6 +873,8 @@ def backtest(traj: CampaignTrajectory, architecture: str = "D_deeponet",
     for hold in range(1, len(intervals)):        # hold-out needs a predecessor for the heuristic
         train = intervals[:hold] + intervals[hold + 1:]
         model = make_model(architecture)
+        if hasattr(model, "set_score_composition"):
+            model.set_score_composition(comp)
         model.fit(train, phis, seed=seed)
         iv = intervals[hold]
         pred = _predict_interval(model, architecture, iv, traj.lever_names)
@@ -882,6 +890,8 @@ def backtest(traj: CampaignTrajectory, architecture: str = "D_deeponet",
     wf_m, wf_h, wf_pm, wf_ph = [], [], [], []
     for hold in range(2, len(intervals)):
         model = make_model(architecture)
+        if hasattr(model, "set_score_composition"):
+            model.set_score_composition(comp)
         model.fit(intervals[:hold], phis, seed=seed)
         iv = intervals[hold]
         pred = _predict_interval(model, architecture, iv, traj.lever_names)
@@ -899,6 +909,8 @@ def backtest(traj: CampaignTrajectory, architecture: str = "D_deeponet",
     # harvest's own evidence is term magnitude + trend), so this gate is a CONSISTENCY
     # check (necessary, not sufficient); the forecast gate is the discriminating test.
     model = make_model(architecture)
+    if hasattr(model, "set_score_composition"):
+        model.set_score_composition(comp)
     model.fit(intervals, phis, seed=seed)
     field = evaluate_lambda_field(model, traj, comp, intervals,
                                   status="SPECULATIVE-UNTIL-BACKTESTED")

@@ -265,6 +265,13 @@ class ShadowReport:
     # EIG-per-cost ordering under an uninformative prior (cheapest owed lever first). This is the DECIDE
     # ordering of the duty-to-measure queue (invoked, not just listed). NO fabricated ΔS.
     duty_ranked: list[dict] = _dc_field(default_factory=list)
+    # Task #516: the exact-factorized adjoint is part of THIS consumed shadow organ,
+    # not a parallel digest-only controller.  It carries the full backtest gate and
+    # exact/derived/learned provenance even when admission fails.
+    factorized_adjoint: dict | None = None
+    # Morse-Smale + #344 NCDE warnings are stage-boundary advisories only.  They never
+    # mutate a schedule and never manufacture a ΔS.
+    event_advisories: list[dict] = _dc_field(default_factory=list)
 
     def to_row(self) -> dict:
         return {
@@ -282,6 +289,8 @@ class ShadowReport:
             "producer_signals": self.producer_signals,
             "costate_prior": self.costate_prior,
             "duty_ranked": self.duty_ranked,
+            "factorized_adjoint": self.factorized_adjoint,
+            "event_advisories": self.event_advisories,
             "actuation": ACTUATION,
             "axis": AXIS_TAG,
             "pointer": POINTER_NOTE,
@@ -680,6 +689,192 @@ def _duty_ranked() -> list[dict]:
         return []
 
 
+def _factorized_overlay(inputs: RunInputs, horizon_epochs: int) -> dict:
+    """Backtest + DECIDE payload for the exact-factorized arm (read-only, numpy CPU).
+
+    The arm enters the existing recommendation list only after the existing λ-net
+    tri-gate says BACKTESTED-PASS.  A failed/undersampled arm remains visible here
+    with its precise reason, so consumption is auditable without granting authority.
+    """
+    from tac.witness_control.factorized_adjoint import (
+        ARCHITECTURE,
+        AXIS_TAG as FACTOR_AXIS,
+        factorization_provenance,
+        morse_smale_event_prior,
+    )
+
+    out = {
+        "architecture": ARCHITECTURE,
+        "available": False,
+        "admission": "UNAVAILABLE",
+        "factorization": factorization_provenance(),
+        "event_prior": morse_smale_event_prior(),
+        "axis": FACTOR_AXIS,
+        "score_claim": False,
+        "actuation": ACTUATION,
+        "validation_scope": (
+            "DEVELOPMENT_SET_PASS; residual ridge selected on #205; "
+            "independent compatible trajectory owed"),
+    }
+    try:
+        import numpy as np
+
+        from tac.witness_control.control_alphabet import hamiltonian_decide
+        from tac.witness_control.lambda_net import (
+            backtest,
+            build_intervals,
+            fit_score_composition,
+            lever_features,
+            make_model,
+            read_trajectory,
+        )
+
+        traj = read_trajectory(inputs.run_dir, log_name="run.log")
+        intervals = build_intervals(traj)
+        if len(intervals) < 3:
+            out["reason"] = (
+                "need >=3 measured intervals with d_seg_by_class + dense loss_terms; "
+                f"have {len(intervals)}")
+            return out
+        report, field = backtest(traj, architecture=ARCHITECTURE, seed=0)
+        comp = fit_score_composition(traj.verdicts)
+        phis = np.stack([lever_features(n) for n in traj.lever_names])
+        model = make_model(ARCHITECTURE)
+        model.set_score_composition(comp)
+        model.fit(intervals, phis, seed=0)
+        diagnostics = (model.diagnostics.to_dict() if model.diagnostics is not None else None)
+
+        last = intervals[-1]
+        current = {n: float(last.u_mean[j]) for j, n in enumerate(traj.lever_names)}
+        # Never let a feature-structured, never-varied lever authorize a share move.
+        # The full field remains visible as duty-to-measure; DECIDE uses only shares
+        # whose variation was observed in this trajectory.
+        admitted_field = {k: v for k, v in field.per_lever.items()
+                          if field.identified.get(k, False)}
+        decision = hamiltonian_decide(
+            admitted_field, current, budget=0.10, tier=field.status)
+        h_current = float(sum(admitted_field.get(k, 0.0) * v for k, v in current.items()))
+        delta = float((decision.hamiltonian_value - h_current) * horizon_epochs)
+        # Empirical noise floor in the SAME ΔS units.  The backtest MAE is a held-out
+        # Δd_seg interval error; the exact score multiplier is 100.
+        wf_mae = float(report.walkforward_mae_model)
+        noise = 100.0 * wf_mae if math.isfinite(wf_mae) else None
+        band = ([delta - noise, delta + noise] if noise is not None else None)
+        changed = any(abs(decision.proposed_shares.get(k, 0.0) - v) > 1e-12
+                      for k, v in current.items())
+        out.update({
+            "available": True,
+            "admission": ("BACKTESTED-PASS" if report.passed else "BACKTESTED-FAIL"),
+            "backtest": report.to_dict(),
+            "lambda_field": {
+                "epoch": field.epoch,
+                "status": field.status,
+                "ranked": [[k, v] for k, v in field.ranked()],
+                "identified": field.identified,
+            },
+            "learned_residual": diagnostics,
+            "decision": {
+                "proposed_shares": decision.proposed_shares,
+                "hamiltonian_current": h_current,
+                "hamiltonian_proposed": decision.hamiltonian_value,
+                "predicted_dS": delta,
+                "predicted_dS_band": band,
+                "horizon_epochs": horizon_epochs,
+                "changed": changed,
+                "identified_levers_only": sorted(admitted_field),
+                "unidentified_levers_are_duty_to_measure_not_authority": sorted(
+                    k for k in field.per_lever if not field.identified.get(k, False)),
+                "why": (
+                    "exact rank-4 head x ker(A)-projected visible support x inverse-gain "
+                    "pair prior; differentiated-GP temporal residual; five-scalar event "
+                    "amplitude admitted only by a past-only inner gate"),
+            },
+        })
+        if report.passed and changed and math.isfinite(delta) and delta <= 0.0:
+            out["recommendation_candidate"] = {
+                "action": "REALLOCATE_LOSS_SHARE_FACTOR_ADVISORY",
+                "predicted_dS": delta,
+                "predicted_dS_band": band,
+                "horizon_epochs": horizon_epochs,
+                "why": out["decision"]["why"],
+                "evidence": [
+                    "lambda_net BACKTESTED-PASS (LOO + past-only walk-forward + binding AUROC)",
+                    "LawRef segnet_head_rank4_linear_flipdist_v1",
+                    "LawRef realization_necessity_preimage_per_stratum_v1",
+                    "LawRef lane_gain_chain_composed_v1",
+                ],
+                "source_costate": ARCHITECTURE,
+                "proposed_shares": decision.proposed_shares,
+                "confidence": (
+                    "BACKTESTED-PASS on #205 development trajectory; post-hoc residual "
+                    "ridge; independent compatible trajectory owed; advisory only"),
+                "cost": float(horizon_epochs),
+            }
+        return out
+    except Exception as exc:  # fail-open observability, never break the core controller
+        out["reason"] = f"{type(exc).__name__}: {exc}"
+        return out
+
+
+def _event_advisories(inputs: RunInputs, classification: dict | None,
+                      factorized: dict) -> list[dict]:
+    """Fold the measured Morse-Smale prior and #344 NCDE into DECIDE visibility."""
+    prior = factorized.get("event_prior") or {}
+    if not prior:
+        return []
+    ncde = None
+    try:
+        probe = _load_tools_module("ncde_trajectory_probe")
+        ncde_report = probe.run_probe(inputs.run_dir, window=12, emit=False,
+                                      do_backtest=False)
+        ncde = ncde_report.get("verdict_latest_advisory")
+    except Exception as exc:  # noqa: BLE001 - advisory sensor, recorded unavailable
+        ncde = {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+
+    latest = factorized.get("lambda_field", {}).get("epoch")
+    transitions = inputs.stage_rows.get("transitions") or []
+    at_transition = any(isinstance(r, dict) and r.get("epoch") == latest for r in transitions)
+    ncde_fire = bool(isinstance(ncde, dict) and ncde.get("fire"))
+    phase_boundary = ((classification or {}).get("phase_regime") == LABEL_FLOOR_REACHED)
+    warning_active = bool(at_transition or ncde_fire or phase_boundary)
+    return [{
+        "kind": "STAGE_BOUNDARY_MORSE_SMALE_NCDE_ADVISORY",
+        "warning_active": warning_active,
+        "eligible_at": "stage boundary only",
+        "morse_smale": prior,
+        "ncde_344": ncde,
+        "recommendation": (
+            "At the next governed stage boundary, prioritize phase/event-aware duty "
+            "rows when the Road-Lane critical-lambda prior and NCDE basin warning agree; "
+            "do not mutate the live config from this advisory."),
+        "why": (
+            "MEASURED low Lane persistence + high birth/death turnover; DERIVED inverse-"
+            "gain critical pair pressure; #344 supplies trajectory basin timing"),
+        "predicted_dS": None,
+        "score_claim": False,
+        "actuation": ACTUATION,
+        "axis": AXIS_TAG,
+    }]
+
+
+def _merge_factorized_candidate(recs: list[dict], refused: list[dict],
+                                factorized: dict, horizon_epochs: int) -> None:
+    cand = factorized.get("recommendation_candidate")
+    if not isinstance(cand, dict):
+        return
+    pds = cand.get("predicted_dS")
+    if not (isinstance(pds, (int, float)) and math.isfinite(pds)):
+        refused.append({**cand, "refusal_reason": "NON_FINITE factorized predicted ΔS"})
+        return
+    cand["cost"] = candidate_cost(cand, horizon_epochs)
+    cand["predicted_dS_per_cost"] = per_cost_score(float(pds), cand["cost"])
+    if pds > 0.0:
+        refused.append({**cand, "refusal_reason": "NEVER_REGRESS factorized predicted ΔS > 0"})
+    else:
+        recs.append(cand)
+        recs.sort(key=lambda c: c["predicted_dS_per_cost"])
+
+
 def build_shadow_report(inputs: RunInputs,
                         horizon_epochs: int = DEFAULT_HORIZON_EPOCHS) -> ShadowReport:
     """The full shadow pass: state → costates → classification → ranked recommendations."""
@@ -706,6 +901,8 @@ def build_shadow_report(inputs: RunInputs,
     costates.append(rollback_gain(inputs.verdicts))
 
     classification = _classify(inputs)
+    factorized = _factorized_overlay(inputs, horizon_epochs)
+    event_advisories = _event_advisories(inputs, classification, factorized)
     if classification is None and not rows:
         # no data at all: the honest empty report
         return ShadowReport(
@@ -714,9 +911,11 @@ def build_shadow_report(inputs: RunInputs,
             recommendations=[], refused=[],
             probe_queue=[*_probe_queue(costates), {"costate": "ALL_TRAJECTORY_COSTATES", "why_unidentifiable": "no verdict rows in run.log yet", "evidence_gap": ["wait for the first n600 advisory verdict"]}],
             duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs),
-            costate_prior=_costate_prior(), duty_ranked=_duty_ranked())
+            costate_prior=_costate_prior(), duty_ranked=_duty_ranked(),
+            factorized_adjoint=factorized, event_advisories=event_advisories)
 
     recs, refused = _recommendations(inputs, costates, classification, horizon_epochs)
+    _merge_factorized_candidate(recs, refused, factorized, horizon_epochs)
     phase_active = (classification or {}).get("phase_regime") == LABEL_FLOOR_REACHED
     return ShadowReport(
         run_dir=str(inputs.run_dir), as_of_epoch=inputs.as_of_epoch,
@@ -725,7 +924,8 @@ def build_shadow_report(inputs: RunInputs,
         state=state, costates=costates, classification=classification,
         recommendations=recs, refused=refused, probe_queue=_probe_queue(costates),
         duty_to_measure=_duty_to_measure(phase_active), producer_signals=_producer_signals(inputs),
-        costate_prior=_costate_prior(), duty_ranked=_duty_ranked())
+        costate_prior=_costate_prior(), duty_ranked=_duty_ranked(),
+        factorized_adjoint=factorized, event_advisories=event_advisories)
 
 
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:

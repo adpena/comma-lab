@@ -532,10 +532,32 @@ def _read_costate(run_dir: str | None) -> dict | None:
         duty_nf = (sum(1 for d in duty if isinstance(d, dict)
                        and d.get("state") == "never-fired")
                    if isinstance(duty, list) else None)
+        factor = row.get("factorized_adjoint")
+        factor_summary = None
+        if isinstance(factor, dict):
+            fac = factor.get("factorization") or {}
+            factor_summary = {
+                "admission": factor.get("admission"),
+                "head_rank": (fac.get("exact") or {}).get("head_rank"),
+                "zero_weight_camera_frac": (fac.get("exact") or {}).get(
+                    "certified_zero_weight_camera_frac"),
+                "road_lane_lambda_ratio": (fac.get("derived") or {}).get(
+                    "road_lane_gain_only_lambda_ratio_vs_other_median"),
+                "learned_parameters": (factor.get("learned_residual") or {}).get(
+                    "n_parameters"),
+                "amplitude_gate": (factor.get("learned_residual") or {}).get(
+                    "amplitude_gate"),
+                "predicted_dS": (factor.get("decision") or {}).get("predicted_dS"),
+                "why": (factor.get("decision") or {}).get("why"),
+                "confidence": ((factor.get("recommendation_candidate") or {}).get(
+                    "confidence") or factor.get("validation_scope")),
+            }
         return {"ok": True, "epoch": row.get("epoch"),
                 "classification": (str(cls).upper() if cls else None),
                 "rec": rec, "age_s": age_s,
-                "duty_owed": duty_owed, "duty_never_fired": duty_nf}
+                "duty_owed": duty_owed, "duty_never_fired": duty_nf,
+                "factorized_adjoint": factor_summary,
+                "event_advisories": row.get("event_advisories") or []}
     except Exception:
         return None
 
@@ -5841,6 +5863,17 @@ function renderCostate(){
     if(C.probe_queue!=null)dec.push("probe queue <b>"+C.probe_queue+"</b>");
     if(C.axis_ev){const a=C.axis_ev;
       dec.push("axis EV — seg <b>"+sig(a.seg,3)+"</b> · pose <b>"+sig(a.pose,3)+"</b> · rate <b>"+sig(a.rate,3)+"</b>");}
+    if(C.factorized_adjoint){const f=C.factorized_adjoint;
+      dec.push("exact-factorized <b>"+escHtml(f.admission||"?")+"</b> · head rank "+
+        escHtml(String(f.head_rank==null?"?":f.head_rank))+" · ker(A) zero "+
+        (f.zero_weight_camera_frac==null?"?":(100*f.zero_weight_camera_frac).toFixed(1)+"%")+
+        " · λ<sub>Road-Lane</sub> "+(f.road_lane_lambda_ratio==null?"?":sig(f.road_lane_lambda_ratio,3)+"×")+
+        " · learned "+escHtml(String(f.learned_parameters==null?"?":f.learned_parameters))+" scalars");
+      if(f.confidence)dec.push("factorized confidence "+escHtml(f.confidence));
+      if(f.why)dec.push("factorized why "+escHtml(f.why));
+    }
+    if(C.event_advisories&&C.event_advisories.length){const e=C.event_advisories[0];
+      dec.push("Morse-Smale/#344 <b>"+(e.warning_active?"WARNING ACTIVE":"next-boundary watch")+"</b>");}
     if(src.actuation)dec.push("actuation <b>"+escHtml(src.actuation)+"</b> (advisory)");
     if(dec.length)
       cells.push("<div class='cscell'><div class='csk'>DECIDE &middot; duty queue</div><div class='csline'>"+

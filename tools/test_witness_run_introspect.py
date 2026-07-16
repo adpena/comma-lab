@@ -98,6 +98,17 @@ V6_COSTATE = {
     "producer_signals": [
         {"producer": "sensitivity_map.axis_weights",
          "signal": {"seg": 1.0, "pose": 2.71, "rate": 1.0, "mixed": 1.5}}],
+    "factorized_adjoint": {
+        "architecture": "V_exact_factorized_residual", "admission": "BACKTESTED-PASS",
+        "factorization": {
+            "exact": {"head_rank": 4, "certified_zero_weight_camera_frac": 0.226969},
+            "derived": {"road_lane_gain_only_lambda_ratio_vs_other_median": 2.0896}},
+        "learned_residual": {"n_parameters": 5,
+                             "amplitude_gate": "ADMITTED_PAST_ONLY_ONE_STEP"},
+        "validation_scope": "development-set test scope",
+        "decision": {"predicted_dS": -0.12, "predicted_dS_band": [-0.2, -0.04],
+                     "why": "exact/learned test split"}},
+    "event_advisories": [{"warning_active": False, "eligible_at": "stage boundary only"}],
     "recommendations": [],
 }
 
@@ -197,6 +208,11 @@ def test_controller_tail_parse(tmp_path):
     assert c["axis_ev"] == {"seg": 1.0, "pose": 2.71, "rate": 1.0, "mixed": 1.5}
     assert c["duty_owed"] == 3 and c["duty_never_fired"] == 2
     assert c["probe_queue"] == 1
+    assert c["factorized_adjoint"]["admission"] == "BACKTESTED-PASS"
+    assert c["factorized_adjoint"]["head_rank"] == 4
+    assert c["factorized_adjoint"]["learned_parameters"] == 5
+    assert c["factorized_adjoint"]["confidence"] == "development-set test scope"
+    assert c["event_advisories"][0]["warning_active"] is False
     assert "0.19110" in c["pointer"]
 
 

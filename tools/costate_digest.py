@@ -185,6 +185,44 @@ def section_shadow(run_dir: Path | None) -> tuple[list[str], dict | None]:
             lines.append(f"  rec: {r.get('action')} ΔS {pd_s}/{r.get('horizon_epochs')}ep{floor_tag}")
         if not recs:
             lines.append("  rec: (none identifiable)")
+        factor = row.get("factorized_adjoint")
+        if isinstance(factor, dict):
+            fac = factor.get("factorization") or {}
+            exact = fac.get("exact") or {}
+            derived = fac.get("derived") or {}
+            learned = factor.get("learned_residual") or {}
+            decision = factor.get("decision") or {}
+            zero = exact.get("certified_zero_weight_camera_frac")
+            ratio = derived.get("road_lane_gain_only_lambda_ratio_vs_other_median")
+            zero_s = f"{100 * zero:.1f}%" if isinstance(zero, (int, float)) else "?"
+            ratio_s = f"{ratio:.2f}x" if isinstance(ratio, (int, float)) else "?"
+            lines.append(
+                "  factorized-adjoint: " + str(factor.get("admission", "?"))
+                + f" | EXACT head-rank={exact.get('head_rank', '?')} ker(A)-zero={zero_s}"
+                + f" | DERIVED lambda_Road-Lane={ratio_s} other-major median"
+                + f" | LEARNED={learned.get('n_parameters', '?')} shared scalars"
+                + f" ({learned.get('amplitude_gate', 'not-fit')})")
+            confidence = ((factor.get("recommendation_candidate") or {}).get("confidence")
+                          or factor.get("validation_scope"))
+            if confidence:
+                lines.append("  factorized-confidence: " + str(confidence))
+            if decision:
+                pd = decision.get("predicted_dS")
+                pd_s = f"{pd:+.4f}" if isinstance(pd, (int, float)) else "?"
+                lines.append(
+                    f"  factorized-DECIDE: DeltaS {pd_s}/{decision.get('horizon_epochs')}ep; "
+                    + str(decision.get("why", "reason unavailable")))
+        events = row.get("event_advisories") or []
+        if events and isinstance(events[0], dict):
+            e = events[0]
+            ep = ((e.get("morse_smale") or {}).get("derived") or {})
+            ncde = e.get("ncde_344") or {}
+            lines.append(
+                "  event-intelligence: "
+                + ("WARNING ACTIVE" if e.get("warning_active") else "next-boundary watch")
+                + f" | critical pair={ep.get('critical_lambda_pair', '?')}"
+                + f" lambda-ratio={ep.get('critical_lambda_ratio_vs_other_major_pair_median', '?')}"
+                + f" | #344 fire={ncde.get('fire', False)} reason={ncde.get('reason', 'unavailable')}")
         lines.insert(0, head)
         if age is not None and age > _SHADOW_STALE_S:
             lines.append(f"  refresh: .venv/bin/python tools/costate_shadow_report.py --run-dir {run_dir} --write")
