@@ -876,6 +876,250 @@ def _read_sensors(latest_log: Path | None, tail_bytes: int = 524288) -> dict:
     return out
 
 
+# ─────────── c2-era run-event scanner (engage markers · confound alarms · warm-start · clip · rate) ───────────
+# The c2_surgical_warm era made EVENT BOUNDARIES the story: phase-stack engage (ep700), Muon
+# (ep726), event-gated pose finish, warm-start origin (ep651 <- mod32cap). Engage/alarm rows are
+# emitted ONCE at their epoch, so a bounded tail (the _read_sensors pattern) forgets them within
+# hours on a multi-day run. This scanner reads each log INCREMENTALLY (per-path byte offset;
+# O(new bytes) per tick, one full pass when a log is first seen) and ACCUMULATES:
+#   markers  — {epoch,label,stage} engage/transition events -> chart vertical markers
+#   alarms   — {epoch,kind} confound_alarm / term_inert rows -> LIVE-tab alarm strip
+#   warm     — {start_epoch,ckpt_epoch,source} warm-start origin -> chart origin marker
+#   clip     — LATEST grad_clip_activation row (global + per-group frac_clipped)
+#   rate     — LATEST rate_rolling soft-signal row (producer landed; emission site queued —
+#              handled here so the panel lights up the moment the trainer wires it)
+# READ-ONLY + fail-open: any error leaves the accumulated state unchanged.
+_EVENT_SCAN_TOKENS = ('_engage"', '"lever_engage"', '"confound_alarm"', '"muon_finisher_switch"',
+                      '"curriculum_transition_fired"', '"warm_start', '"resume_start_epoch"',
+                      '"grad_clip_activation"', '"rate_rolling"', '"term_inert"')
+_EVENT_SCAN_CHUNK = 8 * 1024 * 1024  # per-tick read bound (a fresh multi-GB log cannot stall a tick)
+
+
+def _engage_label(stage: str) -> str:
+    """seg_phase_advect_engage -> 'phase advect' (short chart-marker label)."""
+    s = stage[:-len("_engage")] if stage.endswith("_engage") else stage
+    for pre in ("seg_", "lane_", "witness_"):
+        if s.startswith(pre) and len(s) > len(pre):
+            s = s[len(pre):]
+            break
+    return s.replace("_", " ")
+
+
+def _event_scan_row(d: dict, acc: dict) -> None:
+    """Classify one parsed stage row into the per-log accumulator (mutates acc)."""
+    st = d.get("stage")
+    if not isinstance(st, str):
+        return
+    ep = d.get("epoch", d.get("ep"))
+    ep = int(ep) if isinstance(ep, (int, float)) else None
+    if st == "confound_alarm" or st == "term_inert":
+        kind = d.get("alarm") or d.get("kind") or st
+        acc["alarms"].append({"epoch": ep, "kind": str(kind),
+                              "term": d.get("term"), "ts": d.get("ts")})
+    elif st == "grad_clip_activation":
+        acc["clip"] = d                      # latest row wins (per-epoch aggregation)
+    elif st == "rate_rolling":
+        acc["rate"] = d                      # latest soft-signal row wins
+    elif st == "warm_start_weights_only":
+        acc["warm"] = {"start_epoch": d.get("start_epoch"), "ckpt_epoch": d.get("ckpt_epoch"),
+                       "mode": "weights-only"}
+    elif st == "resume_start_epoch":
+        w = acc.get("warm") or {}
+        w.setdefault("start_epoch", d.get("resume_start_epoch"))
+        w.setdefault("ckpt_epoch", d.get("resume_ckpt_epoch"))
+        if d.get("warm_start_override"):
+            w.setdefault("mode", "weights-only")
+        acc["warm"] = w
+    elif st == "lever_engage":
+        # only FIRES are chart events — "armed" rows are typed-config state at ep1
+        # (12 of them at boot would bury the real ep700 engage cluster), and inert
+        # engagements are explicitly non-mechanism-bearing.
+        status = d.get("status")
+        if (status is None or status == "fired") and not d.get("inert"):
+            lab = str(d.get("lever") or "lever").replace("_", " ")
+            acc["markers"].append({"epoch": ep, "label": lab, "stage": st,
+                                   "via": d.get("via")})
+    elif st == "muon_finisher_switch":
+        acc["markers"].append({"epoch": ep, "label": "Muon finisher", "stage": st})
+    elif st == "curriculum_transition_fired":
+        lab = str(d.get("to") or d.get("seg_form") or "transition fired")
+        acc["markers"].append({"epoch": ep, "label": lab, "stage": st})
+    elif st.endswith("_engage"):
+        acc["markers"].append({"epoch": ep, "label": _engage_label(st), "stage": st})
+
+
+def _scan_log_events(path: Path, cache: dict) -> dict:
+    """Incremental single-log scan. cache[str(path)] holds {pos, markers, alarms, warm,
+    clip, rate}; only bytes past pos are read each call (full pass on first sight or on
+    truncation/rotation). Returns the accumulator (fail-open: stale state on error)."""
+    key = str(path)
+    acc = cache.get(key)
+    if acc is None:
+        acc = {"pos": 0, "markers": [], "alarms": [], "warm": None, "clip": None, "rate": None}
+        cache[key] = acc
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return acc
+    if size < acc["pos"]:                    # truncated/rotated -> rescan
+        acc.update({"pos": 0, "markers": [], "alarms": [], "warm": None,
+                    "clip": None, "rate": None})
+    if size == acc["pos"]:
+        return acc
+    try:
+        with path.open("rb") as fh:
+            fh.seek(acc["pos"])
+            block = fh.read(min(size - acc["pos"], _EVENT_SCAN_CHUNK))
+        # only advance past COMPLETE lines (a partially-flushed row is re-read next tick)
+        cut = block.rfind(b"\n")
+        if cut < 0:
+            return acc
+        acc["pos"] += cut + 1
+        text = block[:cut + 1].decode("utf-8", "replace")
+    except OSError:
+        return acc
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("{") or not any(t in line for t in _EVENT_SCAN_TOKENS):
+            continue
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+        try:
+            _event_scan_row(d, acc)
+        except Exception:
+            continue
+    return acc
+
+
+def _merge_run_events(accs: list[dict], max_markers: int = 80, max_alarms: int = 16) -> dict:
+    """Merge per-log accumulators (chain order root..latest; later warm/clip/rate wins)."""
+    markers: list[dict] = []
+    alarms: list[dict] = []
+    warm = clip = rate = None
+    for a in accs:
+        markers.extend(a.get("markers") or [])
+        alarms.extend(a.get("alarms") or [])
+        warm = a.get("warm") or warm
+        clip = a.get("clip") or clip
+        rate = a.get("rate") or rate
+    # de-dup markers by (epoch,label); keep epoch order (epochless markers sort first)
+    seen: set = set()
+    uniq = []
+    for m in sorted(markers, key=lambda m: (m.get("epoch") is None, m.get("epoch") or 0)):
+        k = (m.get("epoch"), m.get("label"))
+        if k in seen:
+            continue
+        seen.add(k)
+        uniq.append(m)
+    return {"markers": uniq[-max_markers:], "alarms": alarms[-max_alarms:],
+            "warm_start": warm, "clip": clip, "rate": rate}
+
+
+# ─────────── chain-state strip (bench -> receipt -> launch -> run -> byte-close) ───────────
+def _newest_launch_dir() -> Path | None:
+    """The newest run-FAMILY dir by launch.sh mtime — INDEPENDENT of run.log existence, so a
+    pre-launch bench dir (launch.sh written, dry-start in flight, no run.log yet) is visible
+    on the dashboard BEFORE the real run fires (the c2 pre-launch window). Keys on the
+    launcher-written STRUCTURE (launch.sh + launch_manifest.json), never a name pattern."""
+    best, best_mt = None, -1.0
+    try:
+        for d in Path("experiments/results").iterdir():
+            ls = d / "launch.sh"
+            if not (d.is_dir() and ls.is_file() and (d / "launch_manifest.json").is_file()):
+                continue
+            mt = ls.stat().st_mtime
+            if mt > best_mt:
+                best, best_mt = d, mt
+    except OSError:
+        return None
+    return best
+
+
+def _chain_state(watched_dir: str | None, liveness: dict, warming: bool,
+                 last_epoch: int | None) -> dict | None:
+    """The launch-pipeline position: bench -> receipt -> launch -> run -> byte-close.
+    Reads the NEWEST launch-provenance dir (which may be a pre-launch bench dir the
+    verdict-follower cannot see yet) + dry_start_report.json + run liveness. Every
+    state is DERIVED from on-disk artifacts; fail-open None hides the strip."""
+    pdir = _newest_launch_dir()
+    if pdir is None:
+        return None
+    is_watched = bool(watched_dir) and str(pdir.resolve()) == str(Path(watched_dir).resolve())
+    report = None
+    rp = pdir / "dry_start_report.json"
+    if rp.is_file():
+        with contextlib.suppress(Exception):
+            report = json.loads(rp.read_text())
+    has_bench_dir = (pdir / "dry_start").is_dir()
+    has_run_log = (pdir / "run.log").exists()
+    steps: list[dict] = []
+    # 1 · bench (bounded dry-start on the REAL config)
+    if report is not None:
+        steps.append({"id": "bench", "state": "done", "detail": "dry-start ran"})
+    elif has_bench_dir and not has_run_log:
+        steps.append({"id": "bench", "state": "active", "detail": "dry-start in flight"})
+    elif has_bench_dir:
+        steps.append({"id": "bench", "state": "done", "detail": "dry-start dir"})
+    else:
+        steps.append({"id": "bench", "state": "pending", "detail": "no dry_start yet"})
+    # 2 · receipt (green = boot+step+ckpt+resume at the real n)
+    if report is not None:
+        green = bool(report.get("green"))
+        det = []
+        spm = report.get("sec_per_ep_marginal") or report.get("sec_per_ep_gross")
+        if spm is not None:
+            det.append(f"{float(spm):.0f}s/ep")
+        pk = report.get("peak_rss_gib")
+        if pk is not None:
+            det.append(f"peak {float(pk):.1f}GiB")
+        det.append("resume " + ("ok" if report.get("resume_round_trip_ok") else "FAIL"))
+        steps.append({"id": "receipt", "state": ("done" if green else "failed"),
+                      "detail": ("GREEN · " if green else "RED · ") + " · ".join(det)})
+    else:
+        steps.append({"id": "receipt", "state": "pending", "detail": "awaiting dry_start_report"})
+    # 3 · launch (the real trainer spawned into this dir)
+    steps.append({"id": "launch", "state": ("done" if has_run_log else "pending"),
+                  "detail": ("run.log present" if has_run_log else "not fired")})
+    # 4 · run (liveness of the watched arm — only meaningful once this dir is the watched one)
+    if has_run_log and is_watched:
+        kind = (liveness or {}).get("kind", "?")
+        st = "active" if kind in ("live", "warming") or warming else (
+            "failed" if kind == "stale" else "pending")
+        det = ("warming up" if warming else str(kind)) + (
+            f" · ep{last_epoch}" if last_epoch is not None else "")
+        steps.append({"id": "run", "state": st, "detail": det})
+    elif has_run_log:
+        steps.append({"id": "run", "state": "active", "detail": "started (not the watched arm)"})
+    else:
+        steps.append({"id": "run", "state": "pending", "detail": "—"})
+    # 5 · byte-close (exact-eval archive artifacts in the run dir)
+    bc = None
+    with contextlib.suppress(OSError):
+        for pat in ("*archive*.zip", "byteclose*", "*byte_close*"):
+            hits = list(pdir.glob(pat))
+            if hits:
+                bc = hits[0].name
+                break
+    steps.append({"id": "byteclose", "state": ("done" if bc else "pending"),
+                  "detail": (bc or "pending — pointer moves only through this")})
+    return {"dir": pdir.name, "is_watched": is_watched, "steps": steps,
+            "config_family": _launch_config_family(pdir)}
+
+
+def _launch_config_family(pdir: Path) -> str | None:
+    """The '# tac-config-family:' header from the dir's launch.sh (tiny read)."""
+    try:
+        head = (pdir / "launch.sh").read_text(errors="replace")[:2048]
+    except OSError:
+        return None
+    for ln in head.splitlines():
+        if ln.startswith("# tac-config-family:"):
+            return ln.split(":", 1)[1].strip()
+    return None
+
+
 def _pid_alive(pid: int) -> bool:
     if not pid:
         return False
@@ -1189,6 +1433,12 @@ class LiveState:
         self._introspect_sig: tuple | None = None  # mtime-gate (recompute only on artifact change)
         # RUN-IDENTITY header row (name + purpose chip + scope chip); None -> row absent.
         self.run_identity: dict | None = None
+        # c2-era run events (engage markers / confound alarms / warm-start origin / clip / rate):
+        # incremental per-log scan accumulator ({} -> panels absent, conditional rendering).
+        self.run_events: dict = {}
+        self._evcache: dict = {}   # per-log-path incremental scan state (offset + accumulators)
+        # chain-state strip: bench -> receipt -> launch -> run -> byte-close (None -> hidden).
+        self.chain_state: dict | None = None
         # canonical DSL schedule read-back (PLANNED launch.sh-through-real-argparse
         # + ACTUAL fired-transition evidence). {"ok": False} -> visible fallback.
         self.schedule_readback: dict = {"ok": False, "reason": "not yet derived"}
@@ -1555,6 +1805,38 @@ class LiveState:
             self.sensors = _read_sensors(latest)
         except Exception:
             self.sensors = {}
+
+        # c2-era EVENT SCAN (engage markers · confound alarms · warm-start origin · per-group
+        # clip · rate soft-signal): incremental per-log scan over the FULL chain (root..latest)
+        # so once-only engage/alarm rows survive the whole multi-day run (a bounded tail
+        # forgets them within hours). Fail-open: last-good state on any error.
+        try:
+            # resolve() so a run-dir run.log SYMLINK and its .omx/tmp tee target scan ONCE
+            # (double-scan would duplicate every alarm row).
+            paths = list(dict.fromkeys(
+                p.resolve() for p in [*chain, *([latest] if latest is not None else [])]
+                if p is not None))
+            accs = [_scan_log_events(p, self._evcache) for p in paths]
+            self.run_events = _merge_run_events(accs)
+            # attach the lineage SOURCE to the warm-start origin (chart marker label)
+            ws = self.run_events.get("warm_start")
+            if ws is not None and latest is not None:
+                src = _resume_from_path(latest)
+                if src:
+                    ws.setdefault("source", src)
+        except Exception:
+            pass  # keep the previous accumulated state (never blank a live panel on a race)
+
+        # CHAIN-STATE strip (bench -> receipt -> launch -> run -> byte-close): keyed on the
+        # NEWEST launch-provenance dir, so a pre-launch bench (launch.sh written, no run.log
+        # yet — the c2 pre-launch window) is visible BEFORE the verdict-follower can see it.
+        try:
+            _last_ep = max((r["epoch"] for r in rows_full
+                            if isinstance(r.get("epoch"), int)), default=None)
+            self.chain_state = _chain_state(self.watched_dir, self.liveness,
+                                            self.warming_up, _last_ep)
+        except Exception:
+            self.chain_state = None
 
         # CURRICULUM POSITION + POSE-DESCENT READINESS truth models (operator 2026-07-10):
         # the curriculum as DERIVED (event triggers + fail-safe caps + mechanism-lane state,
@@ -2116,6 +2398,8 @@ class LiveState:
             "archive_norm_bytes": _ARCHIVE_NORM_BYTES,       # rate-term normalizer (client S breakdown)
             "run_info_html": self.run_info_html,       # #205 pre-rendered run-info strip (rld._run_info_html)
             "sensors": self.sensors or {},             # latest jacobian_basin + loss_terms (LIVE-tab panels)
+            "run_events": self.run_events or {},       # c2-era: engage markers / alarms / warm-start / clip / rate
+            "chain_state": self.chain_state,           # bench->receipt->launch->run->byte-close (None -> hidden)
             "curriculum_panel": self.curriculum_panel or {},  # DERIVED curriculum (events/caps/lanes)
             "pose_readiness": self.pose_readiness or {},      # honest pose state + R1 reference
             # POSE-DEFERRED (masthead honesty): the run has w_pose>0 (NOT pose_blind) but pose descent
@@ -2507,6 +2791,59 @@ font-variant-numeric:tabular-nums;letter-spacing:.2px}
 .pill.stale{background:#4a1717;color:#ff9b9b}.pill.miss{background:#3a1f1f;color:#ff9b9b}
 .pill.ws{background:#16263a;color:#7fc0ff}.pill.wsoff{background:#3a2a16;color:#e6b97a}
 
+/* ================================================================= *
+ * META-NAV (operator 2026-07-16): a two-tab navigation layer ABOVE the
+ * whole instrument. Tab 1 "COMMA LAB" = the publication landing page;
+ * Tab 2 "LIVE" = the entire existing dashboard (all its tabs nested
+ * beneath, behavior unchanged). body.meta-lab toggles which world shows.
+ * ================================================================= */
+.metanav{display:flex;gap:2px;align-items:baseline;margin:0 0 10px;padding:10px 0 0}
+.metatab{font-size:12px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;
+  color:var(--faint2);padding:8px 14px 9px;cursor:pointer;user-select:none;
+  border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent}
+.metatab:hover{color:var(--fg2)}
+.metatab.on{color:var(--fg);border-bottom-color:var(--acc)}
+.metasep{flex:1 1 auto;border-bottom:1px solid var(--grid);align-self:flex-end;height:2px}
+/* world toggle: in lab mode, hide every wrap child except the landing + the meta nav */
+body.meta-lab .wrap>*:not(#meta-lab):not(.metanav){display:none}
+body:not(.meta-lab) #meta-lab{display:none}
+
+/* ── landing page (Comma Lab) — editorial register: measured serif prose over the
+     instrument's ground; mono for figures and labels; one accent. It grows into the
+     full writeup (deep math · geometry · topology · scorer dynamics · modeling). ── */
+#meta-lab{--lab-serif:Charter,'Iowan Old Style',Georgia,'Times New Roman',serif;
+  --lab-mono:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospace;
+  max-width:720px;margin:0 auto;padding:14px 2px 40px}
+#meta-lab .lab-kicker{font-family:var(--lab-mono);font-size:10.5px;letter-spacing:2.6px;
+  text-transform:uppercase;color:var(--acc);margin:18px 0 10px}
+#meta-lab h1{font-family:var(--lab-serif);font-size:clamp(30px,6vw,44px);font-weight:600;
+  letter-spacing:-.5px;line-height:1.12;margin:0 0 14px;color:var(--fg)}
+#meta-lab .lab-lede{font-family:var(--lab-serif);font-size:clamp(16px,3.6vw,19px);
+  line-height:1.62;color:var(--fg2);margin:0 0 8px}
+#meta-lab .lab-meta{font-family:var(--lab-mono);font-size:11px;color:var(--muted);
+  margin:14px 0 30px;padding-bottom:16px;border-bottom:1px solid var(--grid);line-height:1.9}
+#meta-lab .lab-meta b{color:var(--fg2);font-weight:600}
+#meta-lab h2{font-family:var(--lab-serif);font-size:clamp(20px,4.4vw,25px);font-weight:600;
+  letter-spacing:-.2px;margin:38px 0 4px;color:var(--fg);line-height:1.25}
+#meta-lab .lab-secno{font-family:var(--lab-mono);font-size:10px;letter-spacing:2px;
+  color:var(--faint2);text-transform:uppercase;display:block;margin:0 0 6px}
+#meta-lab p{font-family:var(--lab-serif);font-size:15.5px;line-height:1.72;color:var(--fg2);margin:10px 0}
+#meta-lab p b{color:var(--fg);font-weight:600}
+#meta-lab .lab-eq{font-family:var(--lab-mono);font-size:12.5px;color:var(--fg);
+  background:var(--panel2);border:1px solid var(--line);border-radius:4px;
+  padding:12px 14px;margin:14px 0;overflow-x:auto;white-space:nowrap;text-align:center}
+#meta-lab .lab-note{font-family:var(--lab-mono);font-size:10.5px;color:var(--muted);
+  border-left:2px solid var(--grid);padding:2px 0 2px 12px;margin:14px 0;line-height:1.7}
+#meta-lab ul{margin:8px 0 8px 2px;padding-left:20px}
+#meta-lab li{font-family:var(--lab-serif);font-size:15px;line-height:1.66;color:var(--fg2);margin:5px 0}
+#meta-lab li b{color:var(--fg);font-weight:600}
+#meta-lab .lab-cta{display:inline-block;font-family:var(--lab-mono);font-size:12px;font-weight:600;
+  letter-spacing:1.2px;text-transform:uppercase;color:var(--acc);border:1px solid rgba(90,176,255,.45);
+  border-radius:4px;padding:10px 18px;margin:26px 0 6px;cursor:pointer;user-select:none}
+#meta-lab .lab-cta:hover{background:rgba(90,176,255,.09)}
+#meta-lab .lab-foot{font-family:var(--lab-mono);font-size:10px;color:var(--faint);
+  margin-top:44px;padding-top:14px;border-top:1px solid var(--grid);line-height:1.9}
+
 /* tabs */
 .tabs{display:flex;gap:4px;margin:16px 0 18px;border-bottom:1px solid var(--grid);
 overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -2555,6 +2892,40 @@ font-weight:600;letter-spacing:-.4px}
 /* uppercase micro-label used across panels */
 #tab-live .lv-k{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--lv-mut);
   font-weight:600;white-space:nowrap}
+
+/* 0 · chain-state strip — bench->receipt->launch->run->byte-close pipeline position.
+   Instrument register: hairline-linked step chips, tabular mono details, semantic states. */
+#tab-live .lv-chain{display:flex;align-items:stretch;gap:0;margin:0 0 14px;overflow-x:auto;
+  scrollbar-width:none;border:1px solid var(--lv-hair);background:var(--lv-surf);border-radius:4px}
+#tab-live .lv-chain::-webkit-scrollbar{display:none}
+#tab-live .lv-cstep{display:flex;flex-direction:column;gap:3px;padding:8px 12px;min-width:0;
+  flex:1 1 0;border-right:1px solid var(--lv-hair);position:relative}
+#tab-live .lv-cstep:last-child{border-right:none}
+#tab-live .lv-cstep .cs-k{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;font-weight:600;
+  color:var(--lv-mut);display:flex;align-items:center;gap:6px;white-space:nowrap}
+#tab-live .lv-cstep .cs-dot{width:7px;height:7px;border-radius:50%;background:#3a4150;flex:0 0 auto}
+#tab-live .lv-cstep.done .cs-dot{background:var(--lv-good)}
+#tab-live .lv-cstep.active .cs-dot{background:var(--lv-acc);box-shadow:0 0 6px rgba(90,176,255,.8)}
+#tab-live .lv-cstep.failed .cs-dot{background:var(--lv-bad)}
+#tab-live .lv-cstep.done .cs-k{color:var(--lv-ink2)}
+#tab-live .lv-cstep.active .cs-k{color:var(--lv-acc)}
+#tab-live .lv-cstep.failed .cs-k{color:var(--lv-bad)}
+#tab-live .lv-cstep .cs-d{font-family:var(--lv-mono);font-size:10px;color:var(--lv-mut);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+#tab-live .lv-chainhead{font-family:var(--lv-mono);font-size:9.5px;color:var(--lv-mut);
+  padding:8px 10px;border-right:1px solid var(--lv-hair);display:flex;flex-direction:column;
+  justify-content:center;gap:2px;flex:0 0 auto;max-width:34%}
+#tab-live .lv-chainhead b{color:var(--lv-ink2);font-weight:600;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%}
+
+/* 0b · confound-alarm strip — loud by design (the L1 immune layer made visible) */
+#tab-live .lv-alarms{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 14px;
+  padding:7px 10px;border:1px solid rgba(255,107,107,.4);background:rgba(255,107,107,.07);border-radius:4px}
+#tab-live .lv-alarms .al-k{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;
+  font-weight:700;color:var(--lv-bad);white-space:nowrap}
+#tab-live .lv-alarm{font-family:var(--lv-mono);font-size:10.5px;color:#ffb3b3;
+  background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);
+  border-radius:3px;padding:2px 7px;white-space:nowrap;font-variant-numeric:tabular-nums}
 
 /* 1 · masthead — big S left, live equation + per-term decomposition right */
 #tab-live .lv-mast{display:grid;grid-template-columns:minmax(0,1fr);gap:14px 26px;
@@ -3276,6 +3647,110 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
 .orccap b,.witcap b,.flowcapline b{color:var(--fg);font-weight:600}
 </style></head>
 <body><div class="wrap">
+<!-- META-NAV (operator 2026-07-16): two-tab layer above the whole instrument.
+     COMMA LAB = the publication landing page (the site's front door; grows into the full
+     writeup). LIVE = the entire existing dashboard, all its tabs nested beneath, unchanged.
+     Deep links: #lab -> landing; #live or #live/<tab> or a bare legacy #<tab> -> LIVE. -->
+<nav class="metanav" role="tablist" aria-label="site sections">
+  <span class="metatab" data-meta="lab" role="tab">Comma Lab</span>
+  <span class="metatab" data-meta="live" role="tab">Live</span>
+  <span class="metasep"></span>
+</nav>
+
+<section id="meta-lab" aria-label="Comma Lab — writeup">
+  <div class="lab-kicker">an open research program</div>
+  <h1>Comma Lab</h1>
+  <p class="lab-lede">Notes on compressing a driving video for a <b>frozen machine judge</b> —
+  the geometry, topology, and dynamics of coding for a fixed pair of neural scorers, built in
+  the open around the comma.ai video-compression challenge and continued past its close as a
+  long-horizon research program.</p>
+  <div class="lab-meta">
+    status <b>working notes · grows over time</b> &middot; live instrument under the
+    <b>LIVE</b> tab &middot; every training number there is advisory; only a byte-closed exact
+    evaluation moves the frontier pointer (<span class="ptrv">&hellip;</span>)
+  </div>
+
+  <span class="lab-secno">§ 1</span>
+  <h2>The problem &amp; the frozen scorer</h2>
+  <p>The task looks like video compression but is not: the receiver is not a human eye, it is a
+  <b>frozen pair of networks</b>. A segmentation U-Net scores only the <b>argmax</b> of its
+  5-class output on the last frame of each pair; a pose network scores 6 ego-motion scalars from
+  a two-frame YUV stack; the third term is the raw archive size:</p>
+  <div class="lab-eq">S&nbsp;=&nbsp;100·d_seg&nbsp;+&nbsp;&radic;(10·d_pose)&nbsp;+&nbsp;25·bytes&nbsp;/&nbsp;37,545,489</div>
+  <p>That makes this an instance of <b>indirect rate–distortion</b> — coding for machines, in
+  the video-coding-for-machines lineage — where the only bits that matter are the ones the
+  frozen judge can see. Pixels the scorer is blind to are free; pixels that flip an argmax at a
+  class boundary are everything. Our early on-ramp came from steganography: content-adaptive
+  embedding costs (UNIWARD) are exactly a detector-informed sensitivity field read in reverse.</p>
+
+  <span class="lab-secno">§ 2</span>
+  <h2>Geometry &amp; topology of the argmax</h2>
+  <p>The argmax of a smooth 5-class field partitions the image into cells whose walls — the
+  <b>separatrices</b> — form a codimension-1 complex. Measured on the real scorer, essentially
+  all of the segmentation distortion lives in a thin annulus around those walls (~97% of d_seg
+  in a few percent of the area); the interior of each cell is flat. In the frozen scorer's
+  <b>Fisher information metric</b> the margin field is an almost-exact surrogate for that
+  geometry (Pearson&nbsp;0.978 measured), so the whole objective becomes boundary geometry: a
+  <b>Morse–Smale complex</b> over the margin field, with lane markings as the thinnest,
+  least-persistent — and therefore hardest — stratum. The final network layer is exactly
+  low-rank linear, so flip distances have a closed form, and the partition itself is a
+  <b>Laguerre / tropical</b> power diagram: store generators, not pixels.</p>
+
+  <span class="lab-secno">§ 3</span>
+  <h2>The four legs</h2>
+  <ul>
+    <li><b>Kolmogorov, not entropy.</b> The decoder ships as a <i>program</i>: generic
+    deterministic structure is free at decode time; only the irreducible video-derived seed is
+    counted. Rate = |shortest program| + |seed|, a compression-as-shortest-program discipline
+    rather than a histogram one.</li>
+    <li><b>Projection.</b> With the geometry solved, fitting is a projection: the witness is the
+    projection of the scene onto the intersection of the argmax, pose, quantization, and byte
+    constraints, taken in the scorer's own metric.</li>
+    <li><b>Realization.</b> The binding limits are physical: uint8 quantization, resize kernels,
+    sub-pixel boundary placement. Many boundary flips are realization-limited, not
+    capacity-limited — precision matters where bytes do not.</li>
+    <li><b>Completeness.</b> Necessity by inversion: for each stratum of the complex, ask what
+    the scorer <i>requires</i> — which bytes go to edges, which precision goes to saddles — and
+    ship nothing else.</li>
+  </ul>
+
+  <span class="lab-secno">§ 4</span>
+  <h2>Modeling the witness</h2>
+  <p>The vehicle is a <b>task-space coordinate INR</b>: a small implicit network trained against
+  the frozen scorer itself — never against RGB fidelity — so its whole capacity is spent on the
+  scorer-relevant manifold. Training runs through the exact evaluation round-trip (resize,
+  uint8, resize) so the gradient sees what the judge sees. The current generation adds
+  <b>phase/advection structure</b>: frame-to-frame appearance is carried by a low-dimensional
+  ego-motion screw and a sub-pixel advection phase, with per-class carriers for the strata the
+  scorer treats differently. Ego-motion is dual-use by construction — the same twist that warps
+  the partition for segmentation <i>is</i> the pose the second network scores.</p>
+
+  <span class="lab-secno">§ 5</span>
+  <h2>Scorer dynamics</h2>
+  <p>Treating the frozen scorer as a physical system pays: margin fields behave like potentials,
+  training follows a level-set flow of the boundary complex, and curriculum boundaries act like
+  continuation parameters — instabilities arrive as bifurcations (island births) that can be
+  anticipated rather than suffered. The scorer's own architecture sets the physics: a stride-2
+  stem means it sees regions, not pixels; its effective receptive field, its squeeze-excitation
+  gates, and its exact resize kernels are all measured and folded into the model of what a byte
+  can buy.</p>
+
+  <span class="lab-secno">§ 6</span>
+  <h2>Results &amp; frontier</h2>
+  <p>Everything in the LIVE instrument is <b>advisory telemetry</b> from local training
+  hardware; a result is real only when an exact, byte-closed archive is scored by the contest
+  evaluator on reference hardware. That number — the frontier pointer, currently
+  <b><span class="ptrv">&hellip;</span></b> — moves only through that gate. The working targets
+  are the sub-0.19 and sub-0.15 lines; the measured rate-dominated floor of the current
+  formulation sits well below both, which is the headroom the program is spending down.</p>
+  <div class="lab-note">methods and mathematics on this page are published freely; the live
+  instrument shows the run of record. Attribution: video-coding-for-machines is the problem's
+  heart; adaptive steganographic cost was the on-ramp; the separatrix / Morse–Smale treatment
+  of a frozen argmax judge is this lab's own line of work.</div>
+  <span class="lab-cta" id="lab_open_live" role="button" tabindex="0">Open the live instrument &rarr;</span>
+  <div class="lab-foot">comma lab &middot; working notes &middot; this page grows with the
+  program — deep math &middot; geometry &middot; topology &middot; scorer dynamics &middot; modeling</div>
+</section>
 <div class="provh" role="note" aria-label="provenance">
   <span class="pf"><span class="pk">authority</span><span class="pv">macOS-MLX &middot; advisory &middot; non-promotable</span></span>
   <span class="pf"><span class="pk">pointer</span><span class="pv"><b class="ptrv">&hellip;</b> &middot; unmoved</span></span>
@@ -3454,6 +3929,15 @@ background:#181b21;border:1px solid var(--line);border-radius:8px;padding:3px 9p
        at a glance on the phone, not scrolled past empty warming-up charts. JS binds by id, so this
        reorder is purely visual. -->
   <div class="lv-runline" id="rdinfo">resolving run&hellip;</div>
+
+  <!-- 0 · CHAIN-STATE STRIP (c2 era) — bench &rarr; receipt &rarr; launch &rarr; run &rarr; byte-close.
+       Keyed on the NEWEST launch-provenance dir, so a pre-launch bench (dry-start in flight,
+       no run.log yet) is visible BEFORE the run fires. CONDITIONAL: hidden with no launch dir. -->
+  <div class="lv-chain hide" id="lv_chain" aria-label="launch pipeline position"></div>
+
+  <!-- 0b · CONFOUND ALARMS — red strip, CONDITIONAL: rendered only when confound_alarm /
+       term_inert rows exist in the run's telemetry (they are LOUD by design; L1 immune layer). -->
+  <div class="lv-alarms hide" id="lv_alarms" aria-label="confound alarms"></div>
 
   <!-- 1 · SCORE DECOMPOSITION MASTHEAD — the live equation, each term's value + its
        contribution to S, dominant term visible at a glance. -->
@@ -4275,13 +4759,60 @@ function activateTab(t){
   if(which==="tri") activateTriality();
   // (2026-07-07) remember the selection so a refresh returns to the same tab.
   try{localStorage.setItem("dash_tab",which);}catch(e){console.debug("dash: localStorage unavailable",e);}
+  // deep link: the inner tab is addressable under the LIVE meta-tab (#live/<tab>).
+  if(!document.body.classList.contains("meta-lab")){
+    try{history.replaceState(null,"","#live/"+which);}catch(e){}
+  }
 }
-// restore the last-selected tab on load (operator 2026-07-07: "stay on their selected tab").
-// Only restores a tab that still EXISTS as a button (hidden tabs fall back to LIVE).
+
+// ---------- META-NAV (operator 2026-07-16): Comma Lab (landing) | LIVE (the instrument) ----------
+function metaActivate(which,updateHash){
+  const lab=(which==="lab");
+  document.body.classList.toggle("meta-lab",lab);
+  document.querySelectorAll(".metatab").forEach(m=>{
+    m.classList.toggle("on",m.dataset.meta===which);
+    m.setAttribute("aria-selected",m.dataset.meta===which?"true":"false");});
+  try{localStorage.setItem("dash_meta",which);}catch(e){}
+  if(updateHash!==false){
+    try{
+      if(lab)history.replaceState(null,"","#lab");
+      else{const cur=document.querySelector(".tab.on");
+        history.replaceState(null,"","#live/"+((cur&&cur.dataset.tab)||"live"));}
+    }catch(e){}
+  }
+  if(!lab)scheduleDraw();  // canvases were display:none (clientWidth 0) — repaint on reveal
+}
+document.querySelectorAll(".metatab").forEach(m=>{
+  m.setAttribute("tabindex","0");
+  m.addEventListener("click",()=>metaActivate(m.dataset.meta));
+  m.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();metaActivate(m.dataset.meta);}});
+});
+(function(){const c=$("lab_open_live");if(c){
+  c.addEventListener("click",()=>metaActivate("live"));
+  c.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();metaActivate("live");}});
+}})();
+
+// ---------- initial routing ----------
+// Priority: explicit hash (deep link) > remembered meta choice > default Comma Lab (front door).
+// Bookmarked legacy tabs (#flow, #oracle, ...) still resolve — under LIVE.
 (function(){
-  let saved=null; try{saved=localStorage.getItem("dash_tab");}catch(e){console.debug("dash: localStorage unavailable",e);}
-  if(saved&&saved!=="live"){
-    const t=document.querySelector('.tab[data-tab="'+saved+'"]');
+  const h=(location.hash||"").replace(/^#/,"");
+  let meta=null, sub=null;
+  if(h==="lab")meta="lab";
+  else if(h==="live")meta="live";
+  else if(h.indexOf("live/")===0){meta="live";sub=h.slice(5);}
+  else if(h&&document.querySelector('.tab[data-tab="'+h.replace(/[^a-z]/g,"")+'"]')){meta="live";sub=h.replace(/[^a-z]/g,"");}
+  if(meta===null){
+    let savedMeta=null; try{savedMeta=localStorage.getItem("dash_meta");}catch(e){}
+    meta=(savedMeta==="live")?"live":"lab";
+  }
+  if(sub===null){
+    let saved=null; try{saved=localStorage.getItem("dash_tab");}catch(e){}
+    if(saved)sub=saved;
+  }
+  metaActivate(meta,false);
+  if(sub&&sub!=="live"){
+    const t=document.querySelector('.tab[data-tab="'+sub+'"]');
     if(t)setTimeout(()=>activateTab(t),0);
   }
 })();
@@ -4394,6 +4925,44 @@ function drawPanel(canvas, key, opt){
     ctx.beginPath();ctx.moveTo(xx,y0);ctx.lineTo(xx,y1);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
     ctx.fillStyle="#d8dde6";ctx.textAlign="left";ctx.fillText(s[1],xx+3,y0+10);
   });
+  // warm-start ORIGIN marker (c2 era): the run's history begins mid-axis (weights-only
+  // warm start off an ancestor checkpoint) — mark the origin with its lineage source.
+  if(opt.origin&&opt.origin.epoch!=null&&opt.origin.epoch>=xmin&&opt.origin.epoch<=xmax){
+    const ox=sx(opt.origin.epoch);
+    ctx.strokeStyle="#e6cf7a";ctx.globalAlpha=0.85;ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.moveTo(ox,y0);ctx.lineTo(ox,y1);ctx.stroke();ctx.globalAlpha=1;
+    ctx.fillStyle="#e6cf7a";ctx.font="9.5px ui-monospace,SFMono-Regular,Menlo,monospace";
+    ctx.textAlign="left";ctx.fillText(opt.origin.label||"warm start",ox+3,y0+22);
+    ctx.font="10px ui-monospace,SFMono-Regular,Menlo,monospace";
+  }
+  // ENGAGE-EVENT markers (c2 era: the event boundaries ARE the story) — teal ticks at the
+  // x-axis + faint vlines; labels staggered on two bottom rows, culled when crowded so a
+  // dense engage cluster (the ep700 phase stack) never turns into overprint.
+  if(opt.events&&opt.events.length){
+    ctx.font="9px ui-monospace,SFMono-Regular,Menlo,monospace";
+    let lastLab=[-1e9,-1e9]; // per-row last label right-edge (2 staggered rows)
+    opt.events.forEach(ev=>{
+      if(ev.epoch==null||ev.epoch<xmin||ev.epoch>xmax)return;
+      const xx=sx(ev.epoch);
+      ctx.strokeStyle="rgba(70,211,160,.55)";ctx.setLineDash([1,3]);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(xx,y0);ctx.lineTo(xx,y1);ctx.stroke();ctx.setLineDash([]);
+      // axis tick triangle
+      ctx.fillStyle="#46d3a0";
+      ctx.beginPath();ctx.moveTo(xx,y1-1);ctx.lineTo(xx-3.4,y1+5);ctx.lineTo(xx+3.4,y1+5);ctx.closePath();ctx.fill();
+      const lab=(ev.label||"")+(ev.epoch!=null?" "+ev.epoch:"");
+      const w=ctx.measureText(lab).width;
+      // pick the first row whose previous label leaves room; drop the label (tick stays) if none
+      let r=-1;
+      if(xx-2>lastLab[0])r=0; else if(xx-2>lastLab[1])r=1;
+      if(r>=0){
+        const yy=y1-6-(r*10);
+        ctx.fillStyle="rgba(126,224,190,.95)";ctx.textAlign="left";
+        ctx.fillText(lab,xx+4,yy);
+        lastLab[r]=xx+4+w;
+      }
+    });
+    ctx.font="10px ui-monospace,SFMono-Regular,Menlo,monospace";
+  }
   // EMA overlay (smoothed) + recent-window linear-regression segment
   if(pts.length>=3){
     const alpha=2/(Math.min(pts.length,10)+1);
@@ -4460,10 +5029,25 @@ function drawAll(){
   const segH=[];
   if(g!=null)segH.push({y:g,label:"sub-0.19  "+sig(g,4),color:"#46d369"});
   if(g15!=null)segH.push({y:g15,label:"sub-0.15  "+sig(g15,4),color:"#ffb454"});
+  // c2-era chart annotations: engage-event markers + the warm-start origin (lineage source).
+  const RE=META.run_events||{};
+  const evs=(RE.markers||[]).filter(m=>m.epoch!=null);
+  let origin=null;
+  const wsrc=RE.warm_start;
+  if(wsrc&&wsrc.start_epoch!=null){
+    let srcLbl="";
+    const rf=wsrc.source||null;
+    if(rf&&String(rf).includes("/")){
+      const parent=String(rf).split("/").slice(-2,-1)[0]||"";
+      srcLbl=" ← "+(parent.replace(/_\d{8}T\d{6}Z$/,"")||"ancestor");
+    }else if(rf){srcLbl=" ← ancestor ckpt";}
+    origin={epoch:wsrc.start_epoch,
+            label:"warm start ep"+wsrc.start_epoch+(wsrc.mode?" ("+wsrc.mode+")":"")+srcLbl};
+  }
   drawPanel($("c_dseg"),"d_seg",{title:"",
     sub:"",color:"#5ab0ff",log:true,fmt:fSg,
     star:star,starGlow:_celebrating,
-    hlines:segH});
+    hlines:segH,events:evs,origin:origin});
   // descent panel meta line (right of the header) — latest / best / goal provenance
   const last=TRAJ.length?TRAJ[TRAJ.length-1]:null;
   const dm=$("lv_dseg_meta");
@@ -4477,6 +5061,7 @@ function drawAll(){
     // #343: the verdict cadence — makes clear the sparse panels are WAITING for the next
     // eval tick (not frozen). Shown here on the primary verdict panel + in the header status.
     if(!last){const w=waitLbl(""); if(w)s.unshift(w);}
+    if(origin)s.push("warm-start @ep"+wsrc.start_epoch);
     const nvh=nextVerdictHint(); if(nvh)s.push(nvh);
     dm.textContent=s.join(" · ")||"log y · auto-fit x";
   }
@@ -4714,6 +5299,34 @@ function renderHealth(){
   strip+=scal("hosc β",(hb!=null?sig(hb,3):"—"));
   strip+=scal("softmax τ",(sx!=null?sig(sx,3):"—"));
   strip+="</div>";
+  // per-group grad-clip activation (c2: --per-group-grad-clip; stage grad_clip_activation,
+  // one aggregation row per epoch) — global frac clipped + the hottest group.
+  const RE=META.run_events||{};
+  if(RE.clip&&RE.clip.global){
+    const g=RE.clip.global, pg=RE.clip.per_group||{};
+    let hot=null;
+    Object.keys(pg).forEach(k=>{const f=pg[k]&&pg[k].frac_clipped;
+      if(f!=null&&(hot==null||f>hot[1]))hot=[k,f];});
+    const gf=g.frac_clipped, gCls=(gf!=null)?(gf<0.2?"ok":(gf<0.8?"wn":"bd")):"";
+    let cstrip="<div class='lv-hscal'>";
+    cstrip+=scal("clip@"+sig(RE.clip.threshold,2),(gf!=null?pct(gf):"—"),gCls);
+    if(hot)cstrip+=scal("hottest group",esc(hot[0])+" "+pct(hot[1]),(hot[1]<0.8?"":"wn"));
+    cstrip+=scal("ep",(RE.clip.epoch!=null?RE.clip.epoch:"—"));
+    cstrip+="</div>";
+    strip+=cstrip;
+  }
+  // rate rolling-average soft-signal (producer landed; renders the moment the trainer
+  // emits stage rate_rolling rows — graduated WITHIN / DRIFTING_UP / SUSTAINED_GROWTH).
+  if(RE.rate){
+    const r=RE.rate, sgn=r.signal||r.state||"—";
+    const rCls=(sgn==="WITHIN")?"ok":(sgn==="DRIFTING_UP"?"wn":(sgn==="SUSTAINED_GROWTH"?"bd":""));
+    let rstrip="<div class='lv-hscal'>";
+    rstrip+=scal("rate signal",esc(String(sgn)),rCls);
+    if(r.rolling_mean!=null)rstrip+=scal("rolling mean",sig(r.rolling_mean,4));
+    if(r.ep!=null||r.epoch!=null)rstrip+=scal("ep",(r.epoch!=null?r.epoch:r.ep));
+    rstrip+="</div>";
+    strip+=rstrip;
+  }
   // nonzero energy terms, largest first
   const terms=lt.terms||{};
   const rows=Object.keys(terms).map(k=>[k,terms[k]]).filter(r=>isFinite(r[1])&&Math.abs(r[1])>1e-9)
@@ -4755,6 +5368,38 @@ function renderSys(last){
   if(ca!=null)html+=gauge("MLX cache",ca,null,"");
   html+="<div class='lv-gauge'><span class='gk'>available</span>"+
     "<span class='lv-gtrack'></span><span class='lv-gv'><b>"+(av!=null?sig(av,4):"—")+"</b> GiB free</span></div>";
+  box.innerHTML=html;
+}
+
+// 0 · CHAIN-STATE STRIP — bench -> receipt -> launch -> run -> byte-close (c2 era).
+const CHAIN_LABELS={bench:"bench",receipt:"receipt",launch:"launch",run:"run",byteclose:"byte-close"};
+function renderChain(){
+  const box=$("lv_chain"); if(!box)return;
+  const cs=META.chain_state;
+  if(!cs||!Array.isArray(cs.steps)||!cs.steps.length){box.classList.add("hide");return;}
+  box.classList.remove("hide");
+  let html="<div class='lv-chainhead'><span>launch pipeline</span><b title='"+esc(cs.dir||"")+"'>"+
+    esc(cs.config_family||cs.dir||"?")+"</b></div>";
+  cs.steps.forEach(s=>{
+    html+="<div class='lv-cstep "+esc(s.state||"pending")+"'>"+
+      "<span class='cs-k'><span class='cs-dot'></span>"+esc(CHAIN_LABELS[s.id]||s.id)+"</span>"+
+      "<span class='cs-d' title='"+esc(s.detail||"")+"'>"+esc(s.detail||"—")+"</span></div>";
+  });
+  box.innerHTML=html;
+}
+
+// 0b · CONFOUND ALARMS — conditional red strip (rows exist only when something fired).
+function renderAlarms(){
+  const box=$("lv_alarms"); if(!box)return;
+  const al=(META.run_events&&META.run_events.alarms)||[];
+  if(!al.length){box.classList.add("hide");return;}
+  box.classList.remove("hide");
+  let html="<span class='al-k'>confound alarms · "+al.length+"</span>";
+  al.slice(-8).forEach(a=>{
+    html+="<span class='lv-alarm'>"+esc(a.kind||"?")+
+      (a.term?(" ["+esc(a.term)+"]"):"")+
+      (a.epoch!=null?(" @ep"+a.epoch):"")+"</span>";
+  });
   box.innerHTML=html;
 }
 
@@ -5022,6 +5667,8 @@ function render(){
   // pose-readiness + training-health + system + schedule. All read the newest verdict
   // point (+ META.sensors for the non-verdict jacobian_basin / loss_terms stages).
   renderMasthead(last);
+  renderChain();
+  renderAlarms();
   renderClasses(last);
   renderPose();
   renderHealth();
