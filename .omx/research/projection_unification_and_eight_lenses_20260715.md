@@ -9,6 +9,35 @@ consolidation survives compaction. Pointer 0.19108 UNMOVED — everything here i
 the exact byte-closed `evaluate.py` row is the only authority (lens 8). Supreme P0:
 `p0_UNIFICATION_projection_preimage_SUPREME_20260715`; facets: `p0_all_lenses_facets_of_unification_20260715`.
 
+## 0.0 THE GUIDING META-QUESTION (operator 2026-07-15 — "must guide all of our work going forward")
+> *"What is the shortest program (not data) whose fixed point is the witness? The projection composition
+> itself is a generator — compile it into inflate.py, store only the irreducible projected coordinates.
+> Kolmogorov, not entropy."*
+
+**This supersedes the "rate floor = entropy of the sufficient statistic" phrasing anywhere below.** The
+witness `w` is NOT data to store — it is the **fixed point** of the projection composition: `w = G(w; seed)`,
+where `G` = the Dykstra projection onto `{argmax ∩ pose-tube ∩ uint8 ∩ cheap}` (rank-4 flip solve + Laguerre-OT
++ ξ-advection). The Dykstra iteration IS a fixed-point map; the witness is its attractor. Therefore:
+
+- **`G` is compiled FREE into inflate.py** (rule 118: arbitrarily complex DETERMINISTIC compute inside the
+  30-min budget is not counted). The generator = the projection program.
+- **We COUNT only `|seed|`** = the irreducible video-derived coordinates `G` cannot derive (the necessity
+  solver's per-stratum minimal preimage that is not itself generatable).
+- **The rate objective is KOLMOGOROV, not Shannon entropy:** `K(witness) = |shortest program| + |seed|`, and
+  `|shortest program|` is FREE. If the sufficient statistic is itself the fixed point of a shorter program
+  (lane band = openpilot polynomial generator + a few coefficients; road palette = one constant; the argmax
+  partition = the Laguerre generator from the cell generators), store the GENERATOR'S seed, not the statistic.
+  `K ≤ H` always, and here `K ≪ H` because the geometry is solved and the generator is short.
+
+**The standing test on EVERY carrier / seed / coordinate, forever:** *"Is this the fixed point of a shorter
+program? If yes, ship the program (free) and only its irreducible seed."* Every per-stratum carrier (§3) is a
+`(generator, seed)` pair: cell → palette-generator + constant; edge → curve/Laguerre-generator + coefficients;
+saddle → tie-locus-generator + point. The rate = `Σ_strata |seed|`; the generators ride free in inflate.py.
+This is the sub-0.15 rate path (the indirect-RD 8-dim statistic is counted; the deterministic expander is free)
+elevated from a lens (§4 #7) to THE frame. NO-FAKE boundary (rule 118): the generator = generic deterministic
+ALGORITHM (free); the seed = video-derived LEARNED coordinates (counted) — never smuggle a video-derived table
+into "code."
+
 ## 0. The claim
 The deep math + geometry are solved: (a) the SegNet head is **rank-4 linear** (`segnet_head_rank4_linear_flipdist_v1`),
 so the argmax is a **fixed hyperplane arrangement**; (b) the argmax partition is a **Laguerre power diagram =
