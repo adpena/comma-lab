@@ -509,6 +509,31 @@ def compile_c2_surgical_warm_launch_config(
             "pose": "R1 dxi section (7.2KB) ships when the conditioning gate never fires "
                     "(DISENGAGED, LOUD); joint-finish dxi otherwise",
         },
+        "value_provenance_notes": {
+            "anneal_epochs": {
+                "value": int(ORIGINAL_SCHEDULE_EPOCHS),
+                "ladder_class": "derived_at_config",
+                "inputs": {"original_run_epochs": 1000,
+                           "contract": "--anneal-epochs docstring: a warm-start arm MUST set this "
+                                       "to the ORIGINAL schedule length so the resume epoch "
+                                       "reproduces the plant"},
+                "note": "schedule continuity for the ep651 warm start; tau/beta/LR hold end "
+                        "values past ep1000. Lives here (not the constants LawRef surface) "
+                        "because no registered ..._vN equation derives it — the #332 gate "
+                        "fail-closes on equation_id None.",
+            },
+            "surgical_engage_epoch": {
+                "value": int(SURGICAL_ENGAGE_EPOCH),
+                "ladder_class": "derived_at_config",
+                "inputs": {"resume_epoch": RESUME_EPOCH,
+                           "re_anchor_window": SURGICAL_ENGAGE_EPOCH - RESUME_EPOCH,
+                           "rationale": "fresh-moment settling window ~= 2x the stage-transition "
+                                        "rewarmup scale before new loss terms engage; label_floor "
+                                        "sensor DEAD on warm path (adverse finding A2)"},
+                "note": "ONE engage boundary for both surgical terms (single spike-guard "
+                        "re-treat); same non-LawRef home as anneal_epochs.",
+            },
+        },
         "held": True,
         "operator_go_required": True,
         "launcher_registration_owed": "tools/launch_witness_run.py --config c2_surgical_warm "
@@ -518,30 +543,86 @@ def compile_c2_surgical_warm_launch_config(
         **evidence,
     })
 
+    # NB (the #332 LawRef gate + the schedule-provenance gate, learned from the 2026-07-16 rc=8 +
+    # NAKED-epoch refusals on the REAL gate chain): every constants-manifest row MUST cite a
+    # registered ``..._vN`` equation, and every emitted positive ``--*-start-epoch`` trigger must
+    # be EVENT / DERIVED / CAP. On this warm path NO recognised event sensor is co-emittable (the
+    # label_floor band is unreachable from resume d_seg ~0.0034 — adverse finding A2), so EVERY
+    # schedule boundary takes the DERIVED form: a constants row citing
+    # ``warm_start_schedule_reconstruction_v1`` (registered 2026-07-16; its evaluator RECOMPUTES
+    # each value from named inputs at gate time, and the config-of-record reads carry the
+    # checkpoint launch.sh SHA as the custody artifact). Non-equation value provenance
+    # (anneal_epochs continuity) lives in ``value_provenance_notes`` on the manifest.
+    _ws_eq = "warm_start_schedule_reconstruction_v1"
+    _record_inputs = lambda v: [  # noqa: E731  (local literal builder, used 2x)
+        {"name": "mode", "value": "config_of_record", "source": "literal"},
+        {"name": "config_of_record_value", "value": int(v),
+         "source": f"{WARM_START_RUN_DIR}/launch.sh",
+         "sha256": "dd7921bce67da7fdb0982c5c951cfbc69156e5092b7a454576d5a4b4acfce94a"},
+    ]
     constants: dict[str, Any] = {
-        "anneal_epochs": {
-            "value": int(ORIGINAL_SCHEDULE_EPOCHS),
+        "tau_softplus_start_epoch": {
+            "value": 300,
+            "equation_id": _ws_eq,
             "ladder_class": "derived_at_config",
-            "equation_id": None,
             "fallback_used": False,
-            "inputs": {"original_run_epochs": 1000,
-                       "contract": "--anneal-epochs docstring: a warm-start arm MUST set this to "
-                                   "the ORIGINAL schedule length so the resume epoch reproduces "
-                                   "the plant"},
-            "note": "schedule continuity for the ep651 warm start; tau/beta/LR hold end values "
-                    "past ep1000",
+            "inputs": _record_inputs(300),
+            "note": "checkpoint lineage stage boundary (config of record, SHA-verified); already "
+                    "PAST at resume ep651 — present for schedule reconstruction, not a new "
+                    "trigger",
         },
-        "surgical_engage_epoch": {
-            "value": int(SURGICAL_ENGAGE_EPOCH),
+        "muon_start_epoch": {
+            "value": 726,
+            "equation_id": _ws_eq,
             "ladder_class": "derived_at_config",
-            "equation_id": None,
             "fallback_used": False,
-            "inputs": {"resume_epoch": RESUME_EPOCH,
-                       "re_anchor_window": SURGICAL_ENGAGE_EPOCH - RESUME_EPOCH,
-                       "rationale": "fresh-moment settling window ~= 2x the stage-transition "
-                                    "rewarmup scale before new loss terms engage; label_floor "
-                                    "sensor DEAD on warm path (adverse finding A2)"},
-            "note": "ONE engage boundary for both surgical terms (single spike-guard re-treat)",
+            "inputs": _record_inputs(726),
+            "note": "the checkpoint's own lineage schedule (726); re-fires 75 ep after resume "
+                    "with phase-shaped gradients; #217 finishing-schedule OPEN (adverse "
+                    "finding A5)",
+        },
+        "l7_start_epoch": {
+            "value": int(epochs),
+            "equation_id": _ws_eq,
+            "ladder_class": "derived_at_config",
+            "fallback_used": False,
+            "inputs": {"mode": "run_length_exclusion", "run_epochs": int(epochs)},
+            "note": "l7 NEVER runs (start == epochs, the trainer's documented exclusion "
+                    "pattern); l7 is a measured defect — a naive extension would have re-fired "
+                    "it at the record's 1001 (adverse finding A3)",
+        },
+        "seg_phase_advect_start_epoch": {
+            "value": int(SURGICAL_ENGAGE_EPOCH),
+            "equation_id": _ws_eq,
+            "ladder_class": "derived_at_config",
+            "fallback_used": False,
+            "inputs": {"mode": "resume_plus_window", "resume_epoch": int(RESUME_EPOCH),
+                       "re_anchor_window": int(SURGICAL_ENGAGE_EPOCH - RESUME_EPOCH)},
+            "note": "surgical engage boundary = resume 651 + ~50 re-anchor (fresh-moment "
+                    "settling ~= 2x the stage-transition rewarmup scale); the label_floor "
+                    "sensor is DEAD on the warm path (band above resume d_seg — A2), so the "
+                    "boundary is DERIVED, not event-fired; warm-path sensor recalibration OWED",
+        },
+        "seg_margin_satisfice_start_epoch": {
+            "value": int(SURGICAL_ENGAGE_EPOCH),
+            "equation_id": _ws_eq,
+            "ladder_class": "derived_at_config",
+            "fallback_used": False,
+            "inputs": {"mode": "resume_plus_window", "resume_epoch": int(RESUME_EPOCH),
+                       "re_anchor_window": int(SURGICAL_ENGAGE_EPOCH - RESUME_EPOCH)},
+            "note": "co-engages with the phase term at the single surgical boundary (one "
+                    "spike-guard re-treat; the trunk partition is already formed)",
+        },
+        "pose_finish_start_epoch": {
+            "value": int(POSE_BACKSTOP_EPOCH),
+            "equation_id": _ws_eq,
+            "ladder_class": "derived_at_config",
+            "fallback_used": False,
+            "inputs": {"mode": "original_plant_end",
+                       "original_schedule_epochs": int(ORIGINAL_SCHEDULE_EPOCHS)},
+            "note": "fail-safe BACKSTOP for the sigma_min_plateau conditioning gate at the "
+                    "original plant end (ep1000 = 300 surgical epochs before run end; a firing "
+                    "cap is LOUD)",
         },
         "head_offset_solver": {
             "value": "flip_median",
@@ -557,53 +638,13 @@ def compile_c2_surgical_warm_launch_config(
         },
     }
 
-    governance: dict[str, Any] = {
-        "--seg-phase-advect-start-epoch": {
-            "class": "boundary",
-            "sensor": None,
-            "role": "fires",
-            "rationale": "surgical engage boundary ep700 (resume 651 + ~50 re-anchor); the "
-                         "label_floor sensor is DEAD on the warm path (its band [0.00496,0.00700] "
-                         "is above resume d_seg ~0.0034) — epoch gate WITH recorded rationale; "
-                         "warm-path sensor recalibration OWED (adverse finding A2)",
-        },
-        "--seg-margin-satisfice-start-epoch": {
-            "class": "boundary",
-            "sensor": None,
-            "role": "fires",
-            "rationale": "co-engages with the phase term at the single surgical boundary "
-                         "(one spike-guard re-treat; partition formed — the trunk is converged)",
-        },
-        "--pose-finish-start-epoch": {
-            "class": "cap",
-            "sensor": "--pose-finish-engage-on",
-            "role": "backstops",
-            "rationale": "fail-safe BACKSTOP for the sigma_min_plateau conditioning gate "
-                         "(ep1000 = 300 surgical epochs before end; a firing cap is LOUD)",
-        },
-        "--muon-start-epoch": {
-            "class": "boundary",
-            "sensor": None,
-            "role": "fires",
-            "rationale": "the checkpoint's own lineage schedule (726); re-fires 75 ep after "
-                         "resume with phase-shaped gradients; #217 finishing-schedule OPEN "
-                         "(adverse finding A5)",
-        },
-        "--l7-start-epoch": {
-            "class": "cap",
-            "sensor": None,
-            "role": "excludes",
-            "rationale": "l7 NEVER runs (start == epochs, the trainer's legitimate exclusion "
-                         "pattern); l7 is a measured defect (adverse finding A3)",
-        },
-        "--tau-softplus-start-epoch": {
-            "class": "boundary",
-            "sensor": None,
-            "role": "fires",
-            "rationale": "checkpoint lineage stage boundary (300); already past at resume ep651 "
-                         "— present for schedule reconstruction, not a new trigger",
-        },
-    }
+    # Schedule governance is EMPTY BY DERIVATION: every emitted positive --*-start-epoch trigger
+    # takes the DERIVED form (a warm_start_schedule_reconstruction_v1 constants row above, which
+    # the schedule-provenance gate classifies FIRST — DERIVED precedes any governance tag). The
+    # EVENT/CAP forms are structurally unavailable on this warm path (no recognised sensor is
+    # co-emittable; label_floor DEAD below resume d_seg — adverse finding A2); the per-boundary
+    # rationales live in the constants rows' notes + the manifest.
+    governance: dict[str, Any] = {}
 
     return CrucibleV7LaunchConfig(
         typed=typed,

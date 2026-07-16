@@ -359,6 +359,32 @@ def eval_v9_scientific_declaration(inputs: Mapping[str, Any]) -> Any:
     return inputs["value"]
 
 
+def eval_warm_start_schedule_reconstruction(inputs: Mapping[str, Any]) -> int:
+    """warm_start_schedule_reconstruction_v1 — recompute a warm-start schedule boundary.
+
+    The law (2026-07-16, c2_surgical_warm): a weights-only warm start MUST reproduce the
+    checkpoint's schedule plant, so every emitted ``--*-start-epoch`` boundary is a total
+    function of named inputs — ``mode`` selects the derivation:
+
+      * ``config_of_record``     -> int(config_of_record_value)   (the checkpoint's launch.sh value)
+      * ``run_length_exclusion`` -> int(run_epochs)                (l7 never-runs: start == epochs)
+      * ``resume_plus_window``   -> resume_epoch + re_anchor_window (the surgical engage boundary)
+      * ``original_plant_end``   -> int(original_schedule_epochs)  (the backstop cap at plant end)
+    """
+    mode = str(inputs.get("mode", "")).strip()
+    if mode == "config_of_record":
+        return int(inputs["config_of_record_value"])
+    if mode == "run_length_exclusion":
+        return int(inputs["run_epochs"])
+    if mode == "resume_plus_window":
+        return int(inputs["resume_epoch"]) + int(inputs["re_anchor_window"])
+    if mode == "original_plant_end":
+        return int(inputs["original_schedule_epochs"])
+    raise EvaluatorError(
+        f"warm_start_schedule_reconstruction_v1: unknown mode {mode!r} (must be one of "
+        "config_of_record | run_length_exclusion | resume_plus_window | original_plant_end)")
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
@@ -394,6 +420,11 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     # LawRef-executable; the mechanism equation lives in
     # autoclip_percentile_grad_clip_20260715 (autoclip_threshold).
     "autoclip_percentile_threshold_v1": eval_v9_scientific_declaration,
+    # Warm-start schedule reconstruction (2026-07-16, c2_surgical_warm): lineage schedule
+    # boundaries are FUNCTIONS of the config of record / run length / resume window / plant
+    # end — the DERIVED form for a warm path where no recognised event sensor is co-emittable
+    # (label_floor DEAD below resume d_seg; adverse finding A2).
+    "warm_start_schedule_reconstruction_v1": eval_warm_start_schedule_reconstruction,
 }
 
 
@@ -429,6 +460,7 @@ __all__ = [
     "eval_tau_end_knee_launch",
     "eval_tau_star_maslov_quantile",
     "eval_v9_scientific_declaration",
+    "eval_warm_start_schedule_reconstruction",
     "get_evaluator",
     "has_evaluator",
     "populate_lawref_evaluators",
