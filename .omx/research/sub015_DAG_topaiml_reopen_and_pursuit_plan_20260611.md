@@ -18750,3 +18750,34 @@ annulus and longest end of long tail". Full table:
   (launch-gated), NOT a from-scratch build. Reconciliation appended to `.omx/research/whitebox_full_campaign_20260715.md`
   (commit ad415d187c). Operator also flagged "partial on others as well" → FEED-whitebox-recall-completeness
   arm sweeping the remaining cells. Pointer 0.19108 UNMOVED (means; routing/anti-re-derivation).
+
+## FEED-whitebox-recall-completeness (2026-07-15) — proactive-recall of ALL whitebox campaign cells: 15-of-17 had prior art [no-triality: anti-re-derivation sweep, no lever/equation changed]
+- **Operator (verbatim):** *"We may have partial on others as well"* — after the S2×weight reconciliation
+  (BUILT #121 taper + SIREN/hosc + radial-ODE + WW-PGD), the SAME "we already built this" is likely true
+  for the OTHER campaign cells. RECALL-COMPLETENESS arm swept each item via `tools/graph_memory_recall.py`
+  (9371-node graph) + `canonical_equations_registry.jsonl` + DSL levers + module-existence checks.
+- **HEADLINE:** of **17 items swept, only 2 are GENUINELY-UNPURSUED and BOTH are ≈0-EV** (b3 deep-BN =
+  smooth-SiLU-cascade close-the-question; S1×weight = self-cancelling). Tally: **BUILT-PRIOR-ART 6 ·
+  MEASURED-PRIOR 3 · DOMINATED/SETTLED 6 · GENUINELY-UNPURSUED 2.** The frozen-oracle exploit surface is
+  **prior-art-saturated**; the campaign's "unpursued/fresh" framing was over-optimistic (same as S2×weight).
+- **3 biggest "already built this" surprises:** (1) **d3** comma2k19 /9,/11 neighbor side-info was banked
+  the SAME DAY by FEED-commavq residue #2, verbatim disposition — a re-record, not a new probe. (2)
+  **S6×spectral** stem-Nyquist penalty (campaign's #2 unpursued convergence cell) is largely REDUNDANT:
+  eq `cgauge_nyquist_bank_frequency_v1` already MEASURED need 25 ≪ 128 cyc/unit → deficit is
+  allocation/convergence NOT a Nyquist wall, and S6⊂S1 (alias⊂R-null); radial-ODE already holds ‖w‖* at
+  the band edge. DOWNGRADED. (3) **S3∩S10 pose-ξ dual-use for d_seg** — the memo repeats "ξ warps partition
+  = pose (dual-use)", but eq `lane_band_source_reparam_measured_resolution_v1` MEASURED the LANE axis
+  DECLINED ξ (ego-predictive REFUTED; ξ=pure-pose); dual-use is chart-dependent (horizon 14.6× pays,
+  ground-frame lane NO-GO — chart-selection law).
+- **Duty re-scopes (system intelligence):** BUILT-PRIOR-ART items become "compose/extend existing" not
+  "new build" — b5 = compose EXISTING Jacobians; f3 = compose BUILT #401; a4 = compose BUILT ξ-warp + new
+  LP; d3 = re-record of FEED-commavq residue (GPU-gated). Free-quant family (a3/f1/f3/P1/S1×S2×S3) kept
+  LOW-EV payload-insurance per §0 FEED-jc, NOT re-elevated.
+- **Genuinely fresh + high-EV on d_seg: NONE.** Only S2×weight (reconciled = compose-existing) + a4-temporal
+  LP (MEDIUM, bounded by label-noise cap ~0.012, likely DOMINATED by analytic-band L71 0.00087) touch the
+  binding axis, and both are compose/extend, not new mechanism. `verdict_scope: formulation — no
+  genuinely-fresh high-EV d_seg lever in the whitebox design-space beyond compose/extend-existing; frozen-
+  oracle exploit surface is prior-art-saturated. NOT a family kill — the compose-existing extensions remain
+  open, launch-gated.`
+- Memo leg: `.omx/research/whitebox_full_campaign_20260715.md` §RECALL-COMPLETENESS (per-item table +
+  tally + 3 surprises). **Pointer 0.19108 UNMOVED (means; anti-re-derivation / system-intelligence).**
