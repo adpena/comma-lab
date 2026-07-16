@@ -1387,6 +1387,191 @@ def dry_start_resume_ok(p2: dict, p1: dict | None = None) -> bool:
     return bool(p2.get("epochs_completed", -1) >= rse)
 
 
+# ─────────────── DELTA-BENCH efficiency lever (operator-directed 2026-07-16) ───────────────
+# A ONE-FLAG score-neutral amendment (e.g. the VerdictLiveGap cadence, 6c863e71bc→2d486e3bff)
+# forced a FULL ~3-4h re-bench even though boot / memory-envelope / throughput proofs from the
+# prior GREEN receipt are transferable. The ONE proof that is NEVER transferable is the
+# crash-resume round-trip (the resume sidecar embeds the config), so the delta bench re-measures
+# it fresh (plus a fresh 2-epoch boot + a peak-RSS cross-check against the inherited envelope)
+# and stamps everything else as PROVENANCE from the prior receipt — never re-asserted as newly
+# measured (NO-FAKE). The whitelist below is the ONLY door; the full bench remains the default.
+
+# The ONLY flags whose structural delta may inherit bench proofs. Each entry is read-only
+# telemetry by construction — it can change what is LOGGED, never the trained bytes.
+SCORE_NEUTRAL_BENCH_INHERIT_WHITELIST = (
+    # read-only EMA-vs-live verdict telemetry cadence; the gap row is logged only — it never
+    # feeds loss/optimizer/EMA/controller, so trained weights + archive bytes are unchanged.
+    "--verdict-live-gap-every",
+    # read-only per-component wall-clock timing telemetry cadence; log rows only — never
+    # touches training numerics.
+    "--component-wallclock-probe-every",
+    # read-only timing telemetry master switch (log rows only; never training numerics).
+    "--profile-timing",
+)
+
+# CONFIG-class constants (value-provenance: operator-directed DELTA-BENCH spec 2026-07-16).
+DELTA_BENCH_EPOCHS = 2                     # fresh boot + resume passes are 2 bounded epochs each
+DELTA_BENCH_MAX_RECEIPT_AGE_DAYS = 14.0    # staleness guard on the inherited receipt
+DELTA_BENCH_PEAK_TOLERANCE_PCT = 10.0      # fresh peak > inherited peak * 1.10 => envelope violated
+
+# Run-identity flags the launcher itself injects per-run (every run dir differs by
+# construction); they are path identity, not config structure, so the structural diff
+# excludes them. Everything else — including --resume-from (a warm-start SOURCE is config
+# structure) — is compared.
+_DELTA_BENCH_RUN_IDENTITY_FLAGS = ("--out-dir",)
+
+
+def parse_argv_flags(argv: list[str]) -> dict[str, tuple]:
+    """Parse a resolved trainer argv into a structural flags dict: ``{flag: ((values,...),...)}``
+    (one inner tuple per occurrence; store_true flags parse as ``((),)``). Leading non-flag
+    tokens (interpreter + trainer script path) land under ``"_argv_head"`` so a changed trainer
+    entry point is a structural — and therefore non-whitelisted — delta. PURE."""
+    flags: dict[str, list[list[str]]] = {}
+    head: list[str] = []
+    cur: list[str] | None = None
+    for tok in argv:
+        t = str(tok)
+        if t.startswith("--"):
+            cur = []
+            flags.setdefault(t, []).append(cur)
+        elif cur is None:
+            head.append(t)
+        else:
+            cur.append(t)
+    out: dict[str, tuple] = {"_argv_head": tuple(head)}
+    for f, groups in flags.items():
+        out[f] = tuple(tuple(g) for g in groups)
+    return out
+
+
+def structural_flag_diff(prior_flags: dict[str, tuple], fresh_flags: dict[str, tuple],
+                         exclude: tuple[str, ...] = _DELTA_BENCH_RUN_IDENTITY_FLAGS,
+                         ) -> dict[str, dict]:
+    """Every added/removed/changed flag between two structural flags dicts, excluding the
+    launcher-injected run-identity flags: ``{flag: {"prior": ..., "fresh": ...}}`` (absent side
+    is ``None``). PURE."""
+    diff: dict[str, dict] = {}
+    for key in sorted(set(prior_flags) | set(fresh_flags)):
+        if key in exclude:
+            continue
+        pv, fv = prior_flags.get(key), fresh_flags.get(key)
+        if pv != fv:
+            diff[key] = {"prior": pv, "fresh": fv}
+    return diff
+
+
+def _manifest_argv(manifest_path: Path) -> list[str] | None:
+    """``resolved_launch_argv`` from a launch_manifest.json, or None (missing/unreadable/empty
+    all collapse to None — the caller fails closed). PURE over the file."""
+    try:
+        m = json.loads(Path(manifest_path).read_text())
+    except (OSError, ValueError):
+        return None
+    argv = m.get("resolved_launch_argv")
+    if not isinstance(argv, list) or not argv:
+        return None
+    return [str(t) for t in argv]
+
+
+def delta_bench_eligibility(prior_run_dir: Path, fresh_manifest_path: Path, config: str,
+                            *, now_utc=None) -> tuple[bool, str, dict]:
+    """Fail-closed eligibility for ``--dry-start-delta-from``. Returns ``(ok, reason, payload)``;
+    every refusal names its cause and the corrective action. ok=True ONLY when ALL of: the prior
+    run dir + its GREEN ``full_config_dry_start`` receipt exist, same config name, receipt
+    younger than the staleness guard, a numeric inherited peak, AND the structural flag diff
+    (prior manifest argv vs fresh manifest argv) is NON-EMPTY with every differing flag in
+    SCORE_NEUTRAL_BENCH_INHERIT_WHITELIST. payload carries the delta_flags + inherited
+    provenance the receipt stamps. PURE over the filesystem inputs."""
+    prior_run_dir = Path(prior_run_dir)
+    if not prior_run_dir.is_dir():
+        return False, (f"prior run dir {prior_run_dir} does not exist on disk — nothing to "
+                       f"inherit; run the full bench (--dry-start N)"), {}
+    rp = prior_run_dir / "dry_start_report.json"
+    if not rp.is_file():
+        return False, (f"prior receipt {rp} not found — nothing to inherit; run the full bench "
+                       f"(--dry-start N)"), {}
+    try:
+        prior = json.loads(rp.read_text())
+    except (OSError, ValueError) as exc:
+        return False, (f"prior receipt {rp} unreadable ({type(exc).__name__}: {exc}) — run the "
+                       f"full bench (--dry-start N)"), {}
+    if prior.get("gate") != "full_config_dry_start":
+        return False, (f"prior receipt gate={prior.get('gate')!r} != 'full_config_dry_start' — "
+                       f"run the full bench (--dry-start N)"), {}
+    if prior.get("green") is not True:
+        return False, ("prior receipt is not green — no bench proofs to inherit; run the full "
+                       "bench (--dry-start N)"), {}
+    if prior.get("config") != config:
+        return False, (f"prior receipt config={prior.get('config')!r} != this config={config!r} "
+                       f"— cross-config inheritance is forbidden; run the full bench "
+                       f"(--dry-start N)"), {}
+    ts = str(prior.get("ts") or "")
+    try:
+        ts_dt = _dt.datetime.strptime(ts, "%Y%m%dT%H%M%SZ").replace(tzinfo=_dt.UTC)
+    except ValueError:
+        return False, (f"prior receipt ts={ts!r} unparseable — staleness unverifiable "
+                       f"(fail-closed); run the full bench (--dry-start N)"), {}
+    now = now_utc if now_utc is not None else _dt.datetime.now(_dt.UTC)
+    age_days = (now - ts_dt).total_seconds() / 86400.0
+    if age_days >= DELTA_BENCH_MAX_RECEIPT_AGE_DAYS:  # spec: age < 14 days (fail-closed at ==)
+        return False, (f"prior receipt is {age_days:.1f} days old (>= "
+                       f"{DELTA_BENCH_MAX_RECEIPT_AGE_DAYS:.0f}-day staleness guard) — run the "
+                       f"full bench (--dry-start N)"), {}
+    inh_peak = prior.get("peak_rss_gib")
+    if not isinstance(inh_peak, (int, float)) or isinstance(inh_peak, bool):
+        return False, ("prior receipt lacks a numeric peak_rss_gib — the inherited-envelope "
+                       "cross-check is impossible; run the full bench (--dry-start N)"), {}
+    prior_argv = _manifest_argv(prior_run_dir / "launch_manifest.json")
+    if prior_argv is None:
+        return False, (f"prior launch_manifest.json resolved_launch_argv missing/unreadable in "
+                       f"{prior_run_dir} — the structural diff is unverifiable (fail-closed); "
+                       f"run the full bench (--dry-start N)"), {}
+    fresh_argv = _manifest_argv(Path(fresh_manifest_path))
+    if fresh_argv is None:
+        return False, (f"fresh launch_manifest.json resolved_launch_argv missing/unreadable at "
+                       f"{fresh_manifest_path} — the structural diff is unverifiable "
+                       f"(fail-closed)"), {}
+    diff = structural_flag_diff(parse_argv_flags(prior_argv), parse_argv_flags(fresh_argv))
+    if not diff:
+        return False, ("structural flag diff is EMPTY: identical config — reuse the prior "
+                       "receipt, no bench needed (the bench blocker clears on the SAME typed "
+                       "hash; the delta bench exists for a whitelisted score-neutral amendment)"), {}
+    offending = sorted(f for f in diff if f not in SCORE_NEUTRAL_BENCH_INHERIT_WHITELIST)
+    if offending:
+        return False, (f"structural flag delta contains NON-whitelisted flag(s): "
+                       f"{', '.join(offending)} — only SCORE_NEUTRAL_BENCH_INHERIT_WHITELIST "
+                       f"({', '.join(SCORE_NEUTRAL_BENCH_INHERIT_WHITELIST)}) may inherit bench "
+                       f"proofs; a score-affecting change cannot inherit — run the full bench "
+                       f"(--dry-start N without --dry-start-delta-from)"), {}
+    payload = {
+        "delta_flags": {k: {"prior": v["prior"], "fresh": v["fresh"]} for k, v in diff.items()},
+        "inherited_peak_rss_gib": float(inh_peak),
+        "inherited_from": {
+            "path": str(prior_run_dir),
+            "typed_config_hash": prior.get("typed_config_hash"),
+            "ts": ts,
+            "fields": ["boot_ok", "peak_rss_gib", "throughput_gate"],
+        },
+    }
+    return True, f"{len(diff)} whitelisted score-neutral flag delta(s)", payload
+
+
+def delta_bench_envelope_ok(inherited_peak_gib: float, fresh_peak_gib,
+                            tolerance_pct: float = DELTA_BENCH_PEAK_TOLERANCE_PCT,
+                            ) -> tuple[bool, str]:
+    """Cross-check the delta run's OWN measured peak against the inherited memory envelope:
+    fresh peak > inherited * (1 + tolerance%) => the inherited envelope no longer describes this
+    config (violated). An unmeasured fresh peak fails closed. PURE."""
+    if not isinstance(fresh_peak_gib, (int, float)) or isinstance(fresh_peak_gib, bool):
+        return False, "fresh peak RSS not measured — envelope cross-check impossible (fail-closed)"
+    limit = float(inherited_peak_gib) * (1.0 + float(tolerance_pct) / 100.0)
+    detail = (f"fresh peak {float(fresh_peak_gib):.3f} GiB vs inherited "
+              f"{float(inherited_peak_gib):.3f} GiB (limit +{tolerance_pct:.0f}% = {limit:.3f} GiB)")
+    if float(fresh_peak_gib) <= limit:
+        return True, f"OK: {detail}"
+    return False, f"inherited envelope violated: {detail}"
+
+
 def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
                    extra_flags: list[str] | None, wmp,
                    projected_peak_gib: float | None = None) -> int:
@@ -1415,7 +1600,25 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
     import subprocess
     import time as _time
 
-    n = int(args.dry_start)
+    # DELTA-BENCH (operator-directed 2026-07-16): fail-closed whitelist-gated inheritance of the
+    # transferable proofs from a prior GREEN receipt; the resume round-trip is NEVER inherited.
+    delta_payload: dict | None = None
+    _delta_from = getattr(args, "dry_start_delta_from", None)
+    if _delta_from:
+        ok, reason, delta_payload = delta_bench_eligibility(
+            Path(_delta_from), out_dir / "launch_manifest.json", config)
+        if not ok:
+            print(f"[launch-witness] ERROR: REFUSING delta bench — {reason}", file=sys.stderr)
+            return 7
+        print(f"# delta bench PERMITTED ({reason}) — inheriting boot/memory-envelope/throughput "
+              f"provenance from {_delta_from}; the resume round-trip + a fresh "
+              f"{DELTA_BENCH_EPOCHS}-epoch boot + the peak-RSS envelope cross-check are MEASURED "
+              f"fresh below (inherited fields are provenance, never re-asserted as measured).")
+        for _fl, _dv in delta_payload["delta_flags"].items():
+            print(f"#   delta flag {_fl}: prior={_dv['prior']} -> fresh={_dv['fresh']}")
+        n = DELTA_BENCH_EPOCHS
+    else:
+        n = int(args.dry_start)
     if not (1 <= n <= 3):
         print(f"[launch-witness] ERROR: --dry-start must be in 1..3 (bounded scope; a longer run is a "
               f"real launch, not a dry-start); got {n}.", file=sys.stderr)
@@ -1535,6 +1738,16 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
     else:
         print("# dry-start PASS 2 SKIPPED (PASS 1 did not boot+step+ckpt).", file=sys.stderr)
 
+    # DELTA-BENCH envelope cross-check: this run's own measured peak must stay inside the
+    # inherited envelope (+ tolerance) or the inheritance itself is invalidated.
+    envelope_ok = True
+    _env_detail = ""
+    if delta_payload is not None:
+        envelope_ok, _env_detail = delta_bench_envelope_ok(
+            delta_payload["inherited_peak_rss_gib"], p1["peak_rss_gib"])
+        print(f"#   delta-bench envelope: {_env_detail} -> envelope_ok={envelope_ok}")
+    green = bool(boot_ok and resume_ok and envelope_ok)
+
     # (coordinator amendment 2026-07-16) record the typed-config hash so a receipt can only
     # clear a bench blocker for the EXACT composed config it measured (the c2 factory
     # hash-matches; a pre-amendment bench must not green-light an amended config). Legacy
@@ -1553,7 +1766,7 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
         "config": config, "num_pairs": args.num_pairs, "dry_start_target_epochs": n,
         "pass_timeout_s": round(pass_timeout, 1),
         "boot_ok": boot_ok, "resume_round_trip_ok": resume_ok,
-        "green": bool(boot_ok and resume_ok),
+        "green": green,
         "peak_rss_gib": p1["peak_rss_gib"],
         "sec_per_ep_gross": p1["sec_per_ep_gross"],
         "sec_per_ep_marginal": p1["sec_per_ep_marginal"],
@@ -1569,13 +1782,46 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
                  "the #385 dual-chain brief. NEVER proceeds to the real launch."),
         "ts": _utc(),
     }
+    if delta_payload is not None:
+        # DELTA-BENCH receipt extension (NO-FAKE: the receipt says which fields are freshly
+        # MEASURED — boot_ok/resume_round_trip_ok/peak_rss_gib/sec_per_ep above, this run —
+        # and which are inherited PROVENANCE from the prior green receipt, never re-measured).
+        report["mode"] = "delta_bench"
+        report["inherited_from"] = delta_payload["inherited_from"]
+        report["delta_flags"] = delta_payload["delta_flags"]
+        report["inherited_peak_rss_gib"] = delta_payload["inherited_peak_rss_gib"]
+        report["peak_envelope_ok"] = envelope_ok
+        report["peak_envelope_detail"] = _env_detail
+        if not envelope_ok:
+            report["green_false_reason"] = "inherited envelope violated"
+        report["note"] = (
+            "DELTA BENCH (operator-directed 2026-07-16): the structural flag delta vs "
+            "inherited_from.path is non-empty and whitelist-only (SCORE_NEUTRAL_BENCH_INHERIT_"
+            "WHITELIST), so boot/memory-envelope/throughput proofs are INHERITED PROVENANCE from "
+            "that prior GREEN full_config_dry_start receipt (inherited_from.fields; NOT re-measured "
+            "here). MEASURED FRESH this run: a bounded 2-epoch boot (boot_ok), the never-"
+            "transferable crash-resume round-trip (resume_round_trip_ok; the resume sidecar embeds "
+            "the config), peak_rss_gib + sec_per_ep, and the peak-envelope cross-check "
+            "(peak_envelope_ok; fresh peak must stay within +"
+            f"{DELTA_BENCH_PEAK_TOLERANCE_PCT:.0f}% of the inherited peak). green requires ALL "
+            "fresh proofs. Same gate string so the composed-bench blocker clears on THIS receipt's "
+            "typed_config_hash. NEVER proceeds to the real launch.")
     (out_dir / "dry_start_report.json").write_text(json.dumps(report, indent=2))
     print(f"[launch-witness] wrote {out_dir / 'dry_start_report.json'}")
     if report["green"]:
+        if delta_payload is not None:
+            print(f"[launch-witness] DELTA BENCH GREEN: fresh boot+step+ckpt+resume+envelope all pass "
+                  f"at REAL n={args.num_pairs} (inherited provenance: {delta_payload['inherited_from']['path']}).")
         print(f"[launch-witness] DRY-START GREEN: boot+step+ckpt+resume all pass at REAL n={args.num_pairs}. "
               f"peak={p1['peak_rss_gib']} GiB, sec/ep(gross~{p1['sec_per_ep_gross']}). "
               f"NOT launching (dry-start exits cleanly).")
         return 0
+    if delta_payload is not None:
+        print(f"[launch-witness] DELTA BENCH FAILED: boot_ok={boot_ok} resume_ok={resume_ok} "
+              f"envelope_ok={envelope_ok}"
+              + ("" if envelope_ok else " (inherited envelope violated)")
+              + f" — inspect {out_dir}/dry_start* run.log before a real launch.", file=sys.stderr)
+        return 6
     print(f"[launch-witness] DRY-START FAILED: boot_ok={boot_ok} resume_ok={resume_ok} — inspect "
           f"{out_dir}/dry_start* run.log before a real launch.", file=sys.stderr)
     return 6
@@ -1846,7 +2092,25 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-start-per-ep-budget-s", type=float, default=90.0,
                     help="(dry-start) conservative per-epoch upper bound (seconds) used to size the "
                     "wall-clock timeout to ~N epochs (default 90; the real n600 anchor is ~42 s/ep).")
+    ap.add_argument("--dry-start-delta-from", default=None, metavar="PRIOR_RUN_DIR",
+                    help="(DELTA-BENCH efficiency lever, operator-directed 2026-07-16) inherit the "
+                    "transferable proofs (boot / memory envelope / throughput) from a PRIOR GREEN "
+                    "dry_start_report.json in PRIOR_RUN_DIR and run a REDUCED 2-epoch bench (fresh "
+                    "boot + the NEVER-transferable crash-resume round-trip + a peak-RSS envelope "
+                    "cross-check) instead of the full bench. PERMITTED ONLY when the structural "
+                    "flag diff vs that prior run is NON-EMPTY and every differing flag is in "
+                    "SCORE_NEUTRAL_BENCH_INHERIT_WHITELIST (read-only telemetry cadence flags); "
+                    "the prior receipt must be green, gate full_config_dry_start, same config, "
+                    "< 14 days old, run dir still on disk. ANYTHING else REFUSES (rc=7) with the "
+                    "offending flags named — the full bench stays the default and the ONLY path "
+                    "for score-affecting changes. Implies --dry-start 2 when --dry-start is unset.")
     args = ap.parse_args(argv)
+
+    # DELTA-BENCH implies the dry-start path (the delta bench IS a dry-start variant); an
+    # explicit --dry-start N still routes here — the delta passes are pinned to 2 epochs.
+    if args.dry_start_delta_from and not args.dry_start:
+        args.dry_start = DELTA_BENCH_EPOCHS
+        print(f"# --dry-start-delta-from implies --dry-start {DELTA_BENCH_EPOCHS} (delta bench)")
 
     # (L5/XC-ii) POLICY-AWARE safe-frac: derive the memory-preflight fraction from the operator
     # memory policy (2026-07-04) unless the CLI pinned it. Printed loud so the fired branch (and
