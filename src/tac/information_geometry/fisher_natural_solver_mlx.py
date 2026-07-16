@@ -60,7 +60,8 @@ def solve_categorical_fisher_natural_step_mlx(
     project_gauge: bool = False,
     minimum_parity: float = MINIMUM_MLX_PARITY,
 ) -> MlxFisherNaturalTrustResult:
-    """Run an MLX float32 quotient solve and fail closed below NumPy parity."""
+    """Run the MLX quotient solve (fp64 CPU-stream assembly+solve, fp32 trust
+    scaling) and fail closed below NumPy parity."""
 
     threshold = float(minimum_parity)
     if not np.isfinite(threshold) or not MINIMUM_MLX_PARITY <= threshold <= 1.0:
@@ -77,25 +78,62 @@ def solve_categorical_fisher_natural_step_mlx(
     )
     mx = _mlx()
     p_np = np.asarray(probabilities, dtype=np.float32)
-    g_np = np.asarray(cotangent, dtype=np.float32)
-    if project_gauge:
-        g_np = centre_cotangent(g_np).astype(np.float32)
     p = mx.array(p_np, dtype=mx.float32)
-    g = mx.array(g_np, dtype=mx.float32)
     k = p_np.shape[-1]
-    basis = mx.array(helmert_zero_sum_basis(k).astype(np.float32), dtype=mx.float32)
-    identity = mx.eye(k - 1, dtype=mx.float32)
-    flat_p = mx.reshape(p, (-1, k))
-    flat_g = mx.reshape(g, (-1, k))
+    # Precision-critical quotient assembly + H^-1 solve run in float64 on the
+    # CPU stream, mirroring the numpy reference (which assembles and solves in
+    # float64 and only casts the FINAL step to fp32).  Two Metal-host MEASURED
+    # facts force this (the arm that landed this adapter had no Metal and its
+    # parity test was skipped): (a) mx.linalg.solve has NO Metal/GPU kernel
+    # (ValueError "not yet supported on the GPU"), so the solve must take a CPU
+    # stream regardless; (b) an all-fp32 assembly+solve lands at max_step_error
+    # 8.9e-5 > the non-lowerable 3e-5 bound (input/assembly rounding, not the
+    # solve — an fp64 solve over fp32 assembly measures identically).  The
+    # trust-radius scaling below stays on the default-device fp32 path; the
+    # non-lowerable parity constants stay untouched; numpy-fp32 remains the
+    # bit-authority.
+    p64_np = np.asarray(probabilities, dtype=np.float64)
+    g64_np = np.asarray(cotangent, dtype=np.float64)
+    if project_gauge:
+        g64_np = centre_cotangent(g64_np)
+    # Every float64 op below is pinned to the CPU stream — MLX float64 has no
+    # GPU support at all ("float64 is not supported on the GPU").
+    flat_p64 = mx.array(p64_np.reshape(-1, k), dtype=mx.float64)
+    flat_g64 = mx.array(g64_np.reshape(-1, k), dtype=mx.float64)
+    basis64 = mx.array(helmert_zero_sum_basis(k), dtype=mx.float64)
+    basis64_t = mx.transpose(basis64, stream=mx.cpu)
+    identity64 = mx.eye(k - 1, dtype=mx.float64, stream=mx.cpu)
     rows = []
-    for index in range(flat_p.shape[0]):
-        row_p = flat_p[index]
-        row_g = flat_g[index]
-        hessian = mx.diag(row_p) - mx.outer(row_p, row_p)
-        reduced = basis.T @ hessian @ basis + float(damping) * identity
-        coordinate = mx.linalg.solve(reduced, -(basis.T @ row_g))
-        rows.append(basis @ coordinate)
+    for index in range(flat_p64.shape[0]):
+        row_p = mx.take(flat_p64, index, axis=0, stream=mx.cpu)
+        row_g = mx.take(flat_g64, index, axis=0, stream=mx.cpu)
+        hessian = mx.subtract(
+            mx.diag(row_p, stream=mx.cpu),
+            mx.outer(row_p, row_p, stream=mx.cpu),
+            stream=mx.cpu,
+        )
+        reduced = mx.add(
+            mx.matmul(
+                mx.matmul(basis64_t, hessian, stream=mx.cpu),
+                basis64,
+                stream=mx.cpu,
+            ),
+            mx.multiply(
+                mx.array(float(damping), dtype=mx.float64), identity64, stream=mx.cpu
+            ),
+            stream=mx.cpu,
+        )
+        rhs = mx.negative(
+            mx.matmul(basis64_t, row_g, stream=mx.cpu), stream=mx.cpu
+        )
+        coordinate = mx.linalg.solve(reduced, rhs, stream=mx.cpu)
+        rows.append(
+            mx.matmul(basis64, coordinate, stream=mx.cpu).astype(
+                mx.float32, stream=mx.cpu
+            )
+        )
     raw = mx.stack(rows, axis=0)
+    flat_p = mx.reshape(p, (-1, k))
     mean = mx.sum(flat_p * raw, axis=-1)
     q_before = mx.maximum(mx.sum(flat_p * raw * raw, axis=-1) - mean * mean, 0.0)
     _, delta_quad = convert_delta_budget(delta, delta_convention)
@@ -141,7 +179,7 @@ def solve_categorical_fisher_natural_step_mlx(
             "maximum_step_absolute_error": maximum_step_error,
             "maximum_quadratic_absolute_error": maximum_q_error,
             "maximum_gauge_error": gauge_error,
-            "update_backend": "mlx_float32_helmert_quotient_linear_solve",
+            "update_backend": "mlx_float64_cpu_helmert_quotient_solve_float32_trust_scale",
             "passed": passed,
         },
     )
