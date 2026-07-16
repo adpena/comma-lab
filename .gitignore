@@ -368,6 +368,12 @@ src/tac.egg-info/
 !.omx/state/codex_to_claude_inbox.jsonl
 !.omx/state/catalog_287_phantom_api_waivers.jsonl
 !.omx/state/probe_outcomes.jsonl
+# Operator-P0 anti-abandonment ledger (operator binding 2026-07-15) — durable
+# append-only latest-wins JSONL; commit the ledger, keep lock/marker/log local.
+!.omx/state/operator_p0_ledger.jsonl
+.omx/state/.operator_p0_ledger.jsonl.lock
+.omx/state/operator_p0_stop_marker.json
+.omx/state/operator_p0_stop_hook.log
 # Harness failure ledger (Weng weakness-mining harvest 2026-07-07) — durable
 # append-only failure-class records with causal-status history; commit the JSONL,
 # keep the lock local.
