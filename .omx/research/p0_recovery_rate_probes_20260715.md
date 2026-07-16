@@ -165,3 +165,9 @@ No law (structural NO-GO).
 bit-allocator: #496 confirms int8 is past the witness RD knee (the bit-allocator's operating floor) ·
 cathedral/autopilot N/A · continual-learning: the P0 ledger rows are updated to complete · probe-
 disambiguator N/A. Pointer UNMOVED — MEANS (abandoned-P0 recovery).
+
+## Reformulation queue (req R — the 4 verdicts are FORMULATION-scoped NO-GO/DOMINATED, NOT family/paradigm kills; each reopener enumerated)
+- **#496 M+Adam DOMINATED** (verdict_scope: formulation — low-precision-TRAINING as a RATE lever on THIS witness at int8's RD knee). Untested formulations / alternatives: M+Adam as a WALL-CLOCK lever (low-precision optimizer state, #509); a different vehicle whose RD knee sits below int8; int4/int3 with a learned outlier channel; the RATE reopens if the basis A/B (#497 curvelet) moves the entropy floor.
+- **#485 JEPA-latent surrogate DOMINATED** (verdict_scope: formulation — value-matching only). Untested formulations / alternatives: a Sobolev/VJP-GATED JEPA that matches the input-Jacobian (not just the value); other cheap-VJP surrogates (operator-fold / low-rank adjoint) — reopens if the 82% backward becomes the binding wall-clock term.
+- **#452 tube-algebra boundary code DOMINATED** (verdict_scope: formulation — component-stream level, defect+gauge overhead). Untested formulations / alternatives: a non-defect analytic-band lane code (openpilot poly, L71); cross-pair boundary dedup without the Z2-gauge label; reopens if the boundary rate becomes binding after d_seg converges.
+- **#482 ANE-VJP NO-GO** (verdict_scope: instance — THIS macOS/ANE OS build, forward-only, zero backward tokens). Untested formulations / alternatives: a future OS build exposing backward-family selectors; the Metal/MPS VJP path (not ANE); forward-only ANE for the frozen-scorer FORWARD (the 78% term) while backward stays CPU-torch — reopens on OS update or a Metal-VJP port.
