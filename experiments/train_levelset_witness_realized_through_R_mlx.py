@@ -106,14 +106,68 @@ from tac.boundary_math.compact_shearlet_frame import (  # noqa: E402
     compact_shearlet_feats,
     mlx_parity_check as compact_shearlet_mlx_parity_check,
 )
+from tac.boundary_math.localized_basis_frames import (  # noqa: E402
+    ATOM_SPECS as LITERAL_CURVELET_ATOM_SPECS,
+    ATOM_SPEC_SHA256 as LITERAL_CURVELET_ATOM_SPEC_SHA256,
+    BASIS_VERSION as LITERAL_CURVELET_BASIS_VERSION,
+    basis_features_mlx as literal_curvelet_feats_mlx,
+    basis_features_numpy as literal_curvelet_feats_numpy,
+    basis_program_taper_config_sha256,
+    literal_basis_program_config,
+    mlx_parity_receipt as literal_curvelet_mlx_parity_receipt,
+)
+from tac.boundary_math.curvelet_placement import (  # noqa: E402
+    apply_orientation_gates_numpy,
+    native_orientation_fixed_point_numpy,
+    orientation_metadata_from_atom_specs,
+    projective_jacobian_numpy,
+    transform_normal_covector_numpy,
+)
 from tac.witness_dsl.basis_control import (  # noqa: E402
     COMPACT_SHEARLET,
     LEGACY_FOURIER_AB_CONTROL,
+    LITERAL_POLAR_CURVELET,
     genuine_frame_compact_shearlet_config,
     genuine_frame_windowed_curvelet_config,
     is_legacy_fourier_ab_control,
     normalize_basis_family,
 )
+
+
+def _literal_basis_program_from_args(args: Any):
+    """Compile the one persisted literal-curvelet operator identity from argv."""
+
+    taper_enabled = bool(getattr(args, "dseg_aware_taper", False))
+    taper_hash = (
+        basis_program_taper_config_sha256(
+            strength=float(getattr(args, "dseg_aware_taper_strength", 1.0)),
+            scale=float(getattr(args, "dseg_aware_taper_scale", 0.0)),
+            floor=float(getattr(args, "dseg_aware_taper_floor", 0.05)),
+        )
+        if taper_enabled
+        else ""
+    )
+    chart_enabled = bool(getattr(args, "ground_frame_chart", False))
+    native_enabled = bool(getattr(args, "literal_curvelet_native_orient", False))
+    aa_mode = str(getattr(args, "render_aa", "none"))
+    return literal_basis_program_config(
+        chart_enabled=chart_enabled,
+        chart_ref_pair=int(getattr(args, "gfc_ref_pair", 0)),
+        chart_regime="ground",
+        chart_s_t=float(getattr(args, "gfc_s_t", -0.003224707899359239)),
+        chart_s_r=float(getattr(args, "gfc_s_r", 0.0)),
+        chart_pitch=float(getattr(args, "gfc_pitch", -0.01)),
+        chart_pose_dependency=("counted_pose_carrier_xi" if chart_enabled else "none"),
+        native_orientation_enabled=native_enabled,
+        native_orientation_kappa=float(getattr(args, "literal_curvelet_kappa", 2.0)),
+        fixed_point_iteration_cap=(
+            int(getattr(args, "literal_curvelet_fixed_point_iters", 6)) if native_enabled else 0
+        ),
+        taper_enabled=taper_enabled,
+        taper_train_config_sha256=taper_hash,
+        aa_mode=("supersample" if aa_mode == "supersample" else aa_mode),
+        aa_factor=(int(getattr(args, "aa_supersample", 1)) if aa_mode == "supersample" else 1),
+    )
 
 # MOD-DIM DYNAMICS telemetry (operator 2026-07-08): score-neutral, read-only spectral + per-dim
 # introspection of the per-pair latent (code) table. Pure numpy; emitting a row reads snapshots only
@@ -911,6 +965,19 @@ def _build_ema_checkpoint_arrays(
     # Fourier A/B control. Do not stamp it, so an OFF/default checkpoint keeps its old byte layout.
     if not is_legacy_fourier_ab_control(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)):
         flat["__cfg_basis"] = np.asarray(str(args.basis))
+    if normalize_basis_family(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)) == LITERAL_POLAR_CURVELET:
+        _basis_program = _literal_basis_program_from_args(args)
+        _basis_program_json = json.dumps(
+            _basis_program.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+        flat["__cfg_basis_program_json"] = np.asarray(_basis_program_json)
+        flat["__cfg_basis_program_sha256"] = np.asarray(_basis_program.canonical_sha256())
+        if _basis_program.taper_enabled:
+            _basis_taper = getattr(args, "_literal_curvelet_taper_vector", None)
+            if _basis_taper is None:
+                raise RuntimeError("literal curvelet taper vector is missing from checkpoint custody")
+            flat["__basis_taper_unfolded"] = np.asarray(_basis_taper, np.float32)
+            flat["__cfg_basis_taper_folded"] = np.asarray(0)
     # ---- NEW provenance (additive; closes the self-orient/curriculum trainer-persist gap) ----
     flat["__epoch"] = np.asarray(int(epoch))
     flat["__cfg_in_feat"] = np.asarray(int(in_feat))
@@ -980,6 +1047,19 @@ def _build_resume_state_arrays(
     out["__cfg_self_orient"] = np.asarray(int(bool(args.self_orient)))
     if not is_legacy_fourier_ab_control(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)):
         out["__cfg_basis"] = np.asarray(str(args.basis))
+    if normalize_basis_family(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)) == LITERAL_POLAR_CURVELET:
+        _basis_program = _literal_basis_program_from_args(args)
+        _basis_program_json = json.dumps(
+            _basis_program.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+        out["__cfg_basis_program_json"] = np.asarray(_basis_program_json)
+        out["__cfg_basis_program_sha256"] = np.asarray(_basis_program.canonical_sha256())
+        if _basis_program.taper_enabled:
+            _basis_taper = getattr(args, "_literal_curvelet_taper_vector", None)
+            if _basis_taper is None:
+                raise RuntimeError("literal curvelet taper vector is missing from resume custody")
+            out["__basis_taper_unfolded"] = np.asarray(_basis_taper, np.float32)
+            out["__cfg_basis_taper_folded"] = np.asarray(0)
     # S1 structural coordinate-basis identity. The wrapper adds no tensors, so
     # param-key compatibility cannot detect a dropped/changed compander on resume.
     out["__cfg_ground_frame_chart"] = np.asarray(
@@ -1335,10 +1415,19 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
     _hbe = getattr(args, "hosc_beta_end", None)
     cur_hbe = -1.0 if _hbe is None else float(_hbe)
     cur_band = int(bool(getattr(args, "lane_render_band", False)))
+    _current_basis = normalize_basis_family(
+        getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)
+    )
+    _basis_program_sha = (
+        _literal_basis_program_from_args(args).canonical_sha256()
+        if _current_basis == LITERAL_POLAR_CURVELET
+        else ""
+    )
     # (key, current value, is_float) — non-float compared as string (int/bool/str all normalize).
     checks: list[tuple[str, object, bool]] = [
         ("__cfg_mod_dim", int(getattr(args, "mod_dim", 0)), False),
         ("__cfg_basis", normalize_basis_family(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL)), False),
+        ("__cfg_basis_program_sha256", _basis_program_sha, False),
         ("__cfg_self_orient", int(bool(getattr(args, "self_orient", False))), False),
         ("__cfg_ground_frame_chart",
          int(bool(getattr(args, "ground_frame_chart", False))), False),
@@ -4261,7 +4350,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
 
     # --- FRONT-END: generic curvelet/shearlet bank (byte-closeable, GT-free) ---
     basis_family = normalize_basis_family(getattr(args, "basis", LEGACY_FOURIER_AB_CONTROL))
-    if basis_family != LEGACY_FOURIER_AB_CONTROL:
+    literal_basis_program = None
+    if basis_family != LITERAL_POLAR_CURVELET and bool(
+        getattr(args, "literal_curvelet_native_orient", False)
+    ):
+        raise ValueError("--literal-curvelet-native-orient requires --basis literal_polar_curvelet")
+    if basis_family == LITERAL_POLAR_CURVELET:
+        literal_basis_program = _literal_basis_program_from_args(args)
+        if bool(getattr(args, "self_orient", False)):
+            raise ValueError(
+                "literal_polar_curvelet uses same-width --literal-curvelet-native-orient; "
+                "the appended --self-orient Fourier bank would break the equal-value A/B"
+            )
+        if literal_basis_program.chart_enabled and not bool(getattr(args, "pose_carrier", False)):
+            raise ValueError(
+                "literal curvelet ground chart requires --pose-carrier so byte-close has the "
+                "counted xi dependency declared by BasisProgramConfig"
+            )
+        if literal_basis_program.native_orientation_enabled and literal_basis_program.aa_mode != "none":
+            raise ValueError(
+                "literal native orientation + post-render supersample is fail-closed in this "
+                "landing: the fine-grid native gates are not receiver-sealed yet; this is a "
+                "composition implementation gap, not a curvelet-family verdict"
+            )
+    elif basis_family != LEGACY_FOURIER_AB_CONTROL:
         # P0 scope is the clean equal-config basis A/B.  These consumers currently carry
         # polar-bank-specific operators or rebuild through a NumPy-only per-pair cache; accepting
         # them would create a train/decode or NumPy/MLX ambiguity.  Refuse instead of silently
@@ -4334,6 +4446,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "within_tol": True,
             "numpy_authority": "tac.boundary_math.compact_shearlet_frame.compact_shearlet_feats",
         }), flush=True)
+    elif basis_family == LITERAL_POLAR_CURVELET:
+        _basis_parity = literal_curvelet_mlx_parity_receipt()
+        if not (_basis_parity.get("status") == "MEASURED_PARITY" and _basis_parity.get("passed")):
+            raise RuntimeError(
+                "literal-polar-curvelet MLX forward failed the NumPy-authority parity gate: "
+                f"{_basis_parity}"
+            )
+        curv_feats_np = literal_curvelet_feats_numpy(coords_np).astype(np.float32)
+        coord_feats_frame_mx = literal_curvelet_feats_mlx(mx.array(coords_np))
+        print(json.dumps({
+            "stage": "basis_mlx_numpy_parity",
+            "basis": basis_family,
+            "basis_version": LITERAL_CURVELET_BASIS_VERSION,
+            "atom_spec_sha256": LITERAL_CURVELET_ATOM_SPEC_SHA256,
+            "basis_program_sha256": literal_basis_program.canonical_sha256(),
+            "max_abs_diff": float(_basis_parity["max_abs_error"]),
+            "within_tol": True,
+            "numpy_authority": "tac.boundary_math.localized_basis_frames.basis_features_numpy",
+        }), flush=True)
     else:  # argparse validates this too; keep an internal fail-closed guard for programmatic calls.
         raise ValueError(f"unknown --basis family: {basis_family!r}")
 
@@ -4343,8 +4474,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         if basis_family == "windowed_curvelet":
             assert windowed_cfg is not None
             return windowed_curvelet_feats(basis_coords, windowed_cfg).astype(np.float32)
-        assert compact_cfg is not None
-        return compact_shearlet_feats(basis_coords, compact_cfg).astype(np.float32)
+        if basis_family == COMPACT_SHEARLET:
+            assert compact_cfg is not None
+            return compact_shearlet_feats(basis_coords, compact_cfg).astype(np.float32)
+        assert basis_family == LITERAL_POLAR_CURVELET
+        return literal_curvelet_feats_numpy(basis_coords).astype(np.float32)
     # ── #121 d_seg-AWARE FOURIER-FEATURE AMPLITUDE TAPER (default OFF => this block is a NO-OP =>
     # curv_feats_np unchanged => BYTE-IDENTICAL). When ON: reweight each curvelet column's amplitude
     # by the GT d_seg saliency (top1-top2 argmax MARGIN) field so the coord-INR's spectral prior is
@@ -4361,6 +4495,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # curv_feats_np, so the tapered base grid would train while an UNTAPERED fine grid renders = a silent
     # train/render mismatch). Fail-closed on that un-wired combination (NO-FAKE: never a silent wrong
     # result) rather than shipping the mismatch; supersample is research-only/launch-excluded anyway.
+    _dat_taper = None
     if bool(getattr(args, "dseg_aware_taper", False)):
         if str(getattr(args, "render_aa", "none")) == "supersample":
             raise SystemExit(
@@ -4385,6 +4520,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             strength=float(getattr(args, "dseg_aware_taper_strength", 1.0)),
             floor=float(getattr(args, "dseg_aware_taper_floor", 0.05)))
         curv_feats_np = apply_dseg_aware_fourier_taper(curv_feats_np, _dat_taper).astype(np.float32)
+        if basis_family == LITERAL_POLAR_CURVELET:
+            args._literal_curvelet_taper_vector = _dat_taper.copy()
         print(json.dumps({"stage": "dseg_aware_taper", "n_cols": int(_dat_taper.shape[0]),
                           "strength": float(getattr(args, "dseg_aware_taper_strength", 1.0)),
                           "scale": ("auto" if _dat_scale <= 0.0 else round(_dat_scale, 6)),
@@ -4393,6 +4530,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "taper_mean": round(float(_dat_taper.mean()), 4),
                           "note": "#121 byte-neutral spectral reallocation by GT margin saliency; "
                           "RE-VALIDATE at convergence (advisory; NON-PROMOTABLE)"}), flush=True)
+    if basis_family != LEGACY_FOURIER_AB_CONTROL:
+        # Re-materialize the selected MLX tensor *after* any train-time taper.
+        # The historical path built it before taper and silently bypassed D_w.
+        coord_feats_frame_mx = mx.array(curv_feats_np)
     in_feat = curv_feats_np.shape[1]
     # SELF-ORIENTATION directional augmentation (byte-closeable; tangent from the witness's OWN
     # argmax, cos 0.89-0.91 vs GT). Recomputed every --reorient-every epochs from the live SDF
@@ -4404,12 +4545,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # so it is reconstructible at decode with NO GT leak (cos 0.89-0.91 vs GT). PER-PAIR feats are
     # concatenated to the shared curvelet feats and threaded through train+verdict (ONE codepath).
     use_self_orient = bool(args.self_orient)
+    use_native_orient = bool(
+        literal_basis_program is not None
+        and literal_basis_program.native_orientation_enabled
+    )
     n_dir_freqs = int(args.n_dir_freqs)
     dir_w = 4 * n_dir_freqs
     if use_self_orient:
         in_feat += dir_w
     # per-pair directional feats (zeros until the first reorient -> ep<reorient = pure curvelet).
     dir_feats_per_pair = [np.zeros((curv_feats_np.shape[0], dir_w), np.float32) for _ in range(P)] if use_self_orient else None
+    native_gates_per_pair: list[np.ndarray | None] = [None] * P
+    _literal_orientation_metadata = (
+        orientation_metadata_from_atom_specs(LITERAL_CURVELET_ATOM_SPECS)
+        if use_native_orient
+        else None
+    )
     # #224 (Wave B) AA-supersample + self-orient FINE dir-feat state (declared here so the render/
     # reorient closures below see run-scope defaults even when AA/self-orient is OFF). Populated only
     # when --render-aa supersample + --self-orient + --aa-self-orient-fine-mode {batch,full}. The base
@@ -4436,14 +4587,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _gfc_chart = None
     _input_chart = None
 
-    def _feats_np_for_pair(pi: int) -> np.ndarray:
+    def _basis_base_np_for_pair(pi: int) -> np.ndarray:
         if use_gfc:
             # per-pair chart coords -> curvelet feats, recomputed on demand (numpy side; the MLX
             # side caches ONCE via cf_mx_cache — the chart is static, unlike the reorient loop).
-            return _basis_feats_np(_input_chart.coords_for_pair_numpy(coords_np, pi))
+            values = _basis_feats_np(_input_chart.coords_for_pair_numpy(coords_np, pi))
+            if _dat_taper is not None:
+                values = np.multiply(values, _dat_taper, dtype=np.float32)
+            return values
+        return curv_feats_np
+
+    def _feats_np_for_pair(pi: int) -> np.ndarray:
+        base = _basis_base_np_for_pair(pi)
+        if use_native_orient:
+            gates = native_gates_per_pair[pi]
+            return base if gates is None else apply_orientation_gates_numpy(base, gates)
         if not use_self_orient:
-            return curv_feats_np
-        return np.concatenate([curv_feats_np, dir_feats_per_pair[pi]], axis=-1).astype(np.float32)
+            return base
+        return np.concatenate([base, dir_feats_per_pair[pi]], axis=-1).astype(np.float32)
 
     if basis_family == LEGACY_FOURIER_AB_CONTROL:
         print(json.dumps({"stage": "front_end", "curvelet_cols": int(B.shape[1]), "dir_w": int(dir_w),
@@ -4599,7 +4760,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
               flush=True)
         from tac.boundary_math.aa_sdf_observation_render import build_supersampled_coords
         _coords_fine = build_supersampled_coords(render_h, render_w, aa_ss)          # (ss^2*P, 2)
-        coord_feats_fine_mx = mx.array(curvelet_feats(_coords_fine, B).astype(np.float32))
+        coord_feats_fine_mx = mx.array(_basis_feats_np(_coords_fine))
         if use_self_orient:
             # opt-in fine self-orient (batch|full). _cf_fine_mx (below) sources per-pair fine dir-feats;
             # rebuilt/invalidated at each reorient. Pre-first-reorient -> zeros -> pure-curvelet fine.
@@ -7855,6 +8016,56 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             mag += float(np.abs(df).mean())
         return mag / max(P, 1)
 
+    def recompute_native_orient(deploy: dict[str, np.ndarray]) -> dict[str, Any]:
+        """Solve the literal curvelet's same-width decoder-native orientation fixed point."""
+
+        if not use_native_orient:
+            return {"mean_abs_gate_delta": 0.0, "converged_pairs": 0, "n_pairs": P}
+        assert literal_basis_program is not None
+        assert _literal_orientation_metadata is not None
+        scale_ids, angles = _literal_orientation_metadata
+        gate_delta = 0.0
+        converged_pairs = 0
+        for pi in range(P):
+            base = _basis_base_np_for_pair(pi)
+            last_argmax: list[np.ndarray | None] = [None]
+
+            def _decode_native(features: np.ndarray) -> np.ndarray:
+                _rgb, phi = _fwd_numpy(deploy, features, deploy["code"][2 * pi + 1])
+                labels = phi.argmax(-1).reshape(render_h, render_w).astype(np.int64)
+                last_argmax[0] = labels
+                return labels
+
+            _normal_transform = None
+            if use_gfc:
+                _jacobian = projective_jacobian_numpy(
+                    coords_np, _gfc_chart.H_chart_norm[pi]
+                )
+
+                def _normal_transform(normals: np.ndarray) -> np.ndarray:
+                    return transform_normal_covector_numpy(normals, _jacobian)
+
+            _placed, gates, receipt = native_orientation_fixed_point_numpy(
+                base,
+                _decode_native,
+                scale_ids,
+                angles,
+                kappa=literal_basis_program.native_orientation_kappa,
+                iteration_cap=literal_basis_program.fixed_point_iteration_cap,
+                normal_transform=_normal_transform,
+            )
+            native_gates_per_pair[pi] = gates
+            gate_delta += float(np.mean(np.abs(gates - 1.0)))
+            converged_pairs += int(receipt.converged)
+            if last_argmax[0] is not None:
+                base_argmax_per_pair[pi] = last_argmax[0].astype(np.int8)
+        return {
+            "mean_abs_gate_delta": gate_delta / max(P, 1),
+            "converged_pairs": converged_pairs,
+            "n_pairs": P,
+            "iteration_cap": literal_basis_program.fixed_point_iteration_cap,
+        }
+
     def _project_shadow_film_np(params_np: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """Put the EMA film leaf on its armed deployment manifold.
 
@@ -9456,7 +9667,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     def _cf_mx(pi: int):
         # per-pair cache path when self-orient OR the ground-frame chart (#194) is on; the shared
         # tensor otherwise (byte-identical default).
-        return coord_feats_mx if not (use_self_orient or use_gfc) else cf_mx_cache[pi]
+        return coord_feats_mx if not (use_self_orient or use_native_orient or use_gfc) else cf_mx_cache[pi]
 
     # #224 (Wave B) FINE self-orient dir-feats (AA-supersample + --self-orient). Recompute from the
     # snapshotted base argmax: NN-upsample to the ss*grid -> fine EDT-tangent -> directional Fourier
@@ -9501,7 +9712,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     _aa_fine_lru.pop(next(iter(_aa_fine_lru)))
         return mx.concatenate([coord_feats_fine_mx, df], axis=-1)
 
-    if use_self_orient or use_gfc:
+    if use_self_orient or use_native_orient or use_gfc:
         # self-orient: rebuilt at every reorient. ground-frame chart (#194): built ONCE (static —
         # the chart is a fixed function of the stored pose table; no epoch churn).
         _rebuild_cf_mx_cache()  # ep<reorient: dir feats are zeros -> pure curvelet iso pass
@@ -12043,6 +12254,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _rebuild_cf_mx_cache()
                 _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
                 print(json.dumps({"stage": "reorient", "epoch": ep, "mean_abs_dir_feat": round(mag, 5)}), flush=True)
+            if use_native_orient and ep > 1 and (ep - 1) % max(args.reorient_every, 1) == 0:
+                ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
+                _native_receipt = recompute_native_orient(int8_dequant_params(ema_np))
+                _rebuild_cf_mx_cache()
+                print(json.dumps({
+                    "stage": "literal_curvelet_native_reorient",
+                    "epoch": ep,
+                    **_native_receipt,
+                }), flush=True)
             # (config-review #4) ANNEAL softmax-temp hi->lo (cosine): start soft (gradients flow,
             # no RGB-level Gibbs) -> end sharp (the SDF partition pinned). Fixing T=0.1 reintroduces
             # Gibbs at the RGB level per deep-math; anneal like the hosc_beta schedule.
@@ -14030,14 +14250,41 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--basis",
         type=normalize_basis_family,
-        choices=("legacy_fourier_ab_control", "windowed_curvelet", "compact_shearlet"),
+        choices=(
+            "legacy_fourier_ab_control",
+            "windowed_curvelet",
+            "compact_shearlet",
+            "literal_polar_curvelet",
+        ),
         default="legacy_fourier_ab_control",
         help=(
             "select the fixed coordinate basis; legacy_fourier_ab_control is the byte-identical "
             "historical Fourier A/B control and the deprecated polar_fourier token normalizes to "
-            "it; windowed_curvelet and compact_shearlet are explicit genuine-frame treatments "
+            "it; literal_polar_curvelet is the content-addressed finite polar-wedge treatment; "
+            "windowed_curvelet and compact_shearlet remain historical explicit frame treatments "
             "gated on a future n600 byte-closed realized-through-R no-regression verdict"
         ),
+    )
+    ap.add_argument(
+        "--literal-curvelet-native-orient",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "same-width decoder-native per-scale orientation gates for literal_polar_curvelet; "
+            "GT-free fixed point, unlike the appended --self-orient Fourier bank"
+        ),
+    )
+    ap.add_argument(
+        "--literal-curvelet-kappa",
+        type=float,
+        default=2.0,
+        help="projective-angle concentration for literal curvelet native orientation gates",
+    )
+    ap.add_argument(
+        "--literal-curvelet-fixed-point-iters",
+        type=int,
+        default=6,
+        help="persisted decoder-native orientation fixed-point iteration cap",
     )
     # LEVER-2 (stem-Nyquist rate/anti-alias): cap curvelet-bank freqs (cycles/unit) at the SegNet
     # stem Nyquist (default 64 for SEG_W=512, stem-stride-2). None (default) = no cap = current

@@ -23,6 +23,7 @@ def test_candidate_catalog_covers_requested_families_without_guessed_dseg() -> N
     rows = {row.family: row for row in basis_catalog()}
     assert set(rows) == set(BasisFamily)
     for family in (
+        BasisFamily.LITERAL_POLAR_CURVELET,
         BasisFamily.WINDOWED_CURVELET,
         BasisFamily.COMPACT_SHEARLET,
         BasisFamily.STEERABLE_GABOR,
@@ -87,6 +88,26 @@ def test_siren_finer_compile_checks_periodic_inflate_activation() -> None:
     assert "periodic_activation" in contract.train_functions
     assert "finer_bias_initialization" in contract.train_functions
     assert "_act" in contract.inflate_functions
+
+
+def test_literal_curvelet_compiles_same_width_native_orientation_receiver_contract() -> None:
+    spec = BasisLeverSpec(family=BasisFamily.LITERAL_POLAR_CURVELET)
+    lever = spec.compile_lever()
+    argv = lever_argv(lever)
+    assert lever.overrides["--basis"] == "literal_polar_curvelet"
+    assert lever.overrides["--self-orient"] is False
+    assert lever.lawrefs["basis_transfer_verdict"] == "curvelet_equal_archive_transfer_v1"
+    assert (
+        lever.runtime_receipt_schemas["basis_transfer_verdict"]
+        == "curvelet_equal_archive_transfer.v1"
+    )
+    assert "--literal-curvelet-native-orient" in argv
+    assert "--literal-curvelet-fixed-point-iters" in argv
+    contract = inflate_compile_contract(spec)
+    assert contract.compiled
+    assert contract.family is BasisFamily.LITERAL_POLAR_CURVELET
+    assert "basis_features_numpy" in contract.inflate_functions
+    assert "native_orientation_fixed_point_numpy" in contract.inflate_functions
 
 
 def test_equal_budget_law_selects_off_and_refuses_missing_archive_custody() -> None:

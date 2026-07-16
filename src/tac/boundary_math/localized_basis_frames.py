@@ -23,7 +23,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, fields
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, Literal
@@ -138,6 +138,173 @@ class InflateBasisContract:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class BasisProgramConfig:
+    """Complete semantic identity of the literal curvelet operator graph.
+
+    Tensor shapes alone cannot distinguish two basis programs.  This record is
+    persisted beside checkpoints and copied into the receiver manifest.  Its
+    canonical hash binds the atom program and every placement operator which
+    can change the decoder input.
+    """
+
+    family: str = FAMILY
+    basis_version: str = BASIS_VERSION
+    atom_spec_sha256: str = field(default_factory=lambda: ATOM_SPEC_SHA256)
+    feature_width: int = FEATURE_WIDTH
+    seed: int = SEED
+    chart_enabled: bool = False
+    chart_ref_pair: int = 0
+    chart_regime: str = "ground"
+    chart_s_t: float = -0.003224707899359239
+    chart_s_r: float = 0.0
+    chart_pitch: float = -0.01
+    chart_pose_dependency: str = "none"
+    native_orientation_enabled: bool = False
+    native_orientation_kappa: float = 2.0
+    fixed_point_iteration_cap: int = 0
+    normal_estimator_version: str = "all_class_boundary_edt_v1"
+    taper_enabled: bool = False
+    taper_train_config_sha256: str = ""
+    deploy_fold_receipt_sha256: str = ""
+    aa_mode: str = "none"
+    aa_factor: int = 1
+
+    def __post_init__(self) -> None:
+        if self.family != FAMILY:
+            raise ValueError(f"basis program family must be {FAMILY!r}")
+        if self.basis_version != BASIS_VERSION:
+            raise ValueError("unknown literal curvelet basis version")
+        if self.atom_spec_sha256 != ATOM_SPEC_SHA256:
+            raise ValueError("literal curvelet atom-spec hash drift")
+        if self.feature_width != FEATURE_WIDTH or self.seed != SEED:
+            raise ValueError("literal curvelet width/seed drift")
+        if self.chart_regime not in {"ground", "rotonly", "identity"}:
+            raise ValueError("chart_regime must be ground, rotonly, or identity")
+        if self.chart_ref_pair < 0:
+            raise ValueError("chart_ref_pair must be non-negative")
+        if self.chart_enabled and self.chart_pose_dependency not in {
+            "counted_pose_carrier_xi",
+            "counted_chart_payload",
+        }:
+            raise ValueError("enabled chart requires an explicitly counted receiver dependency")
+        if not self.chart_enabled and self.chart_pose_dependency != "none":
+            raise ValueError("disabled chart must declare chart_pose_dependency='none'")
+        scalars = (
+            self.chart_s_t,
+            self.chart_s_r,
+            self.chart_pitch,
+            self.native_orientation_kappa,
+        )
+        if not all(math.isfinite(value) for value in scalars):
+            raise ValueError("basis-program numeric fields must be finite")
+        if self.native_orientation_kappa < 0.0:
+            raise ValueError("native_orientation_kappa must be non-negative")
+        if self.fixed_point_iteration_cap < 0:
+            raise ValueError("fixed_point_iteration_cap must be non-negative")
+        if self.native_orientation_enabled and self.fixed_point_iteration_cap < 1:
+            raise ValueError("native orientation requires a positive fixed-point cap")
+        if not self.native_orientation_enabled and self.fixed_point_iteration_cap != 0:
+            raise ValueError("disabled native orientation must have a zero fixed-point cap")
+        if self.aa_mode not in {"none", "supersample"}:
+            raise ValueError("literal curvelet permits only none or post-render supersample AA")
+        if self.aa_factor < 1 or (self.aa_mode == "none" and self.aa_factor != 1):
+            raise ValueError("AA factor must be positive and exactly one when AA is disabled")
+        for name, value in (
+            ("taper_train_config_sha256", self.taper_train_config_sha256),
+            ("deploy_fold_receipt_sha256", self.deploy_fold_receipt_sha256),
+        ):
+            if value:
+                if len(value) != 64:
+                    raise ValueError(f"{name} must be empty or a SHA-256 digest")
+                try:
+                    int(value, 16)
+                except ValueError as exc:
+                    raise ValueError(f"{name} must be empty or a SHA-256 digest") from exc
+        if self.taper_enabled and not self.taper_train_config_sha256:
+            raise ValueError("enabled taper requires a train-config hash")
+        if not self.taper_enabled and (
+            self.taper_train_config_sha256 or self.deploy_fold_receipt_sha256
+        ):
+            raise ValueError("disabled taper cannot carry taper/fold hashes")
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    def canonical_sha256(self) -> str:
+        encoded = json.dumps(
+            self.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> BasisProgramConfig:
+        expected = {field.name for field in fields(cls)}
+        if set(value) != expected:
+            raise ValueError(
+                "basis-program config fields drift: "
+                f"missing={sorted(expected - set(value))}, extra={sorted(set(value) - expected)}"
+            )
+        return cls(**value)
+
+
+def basis_program_taper_config_sha256(*, strength: float, scale: float, floor: float) -> str:
+    """Bind the train-time taper recipe without persisting its GT-derived vector."""
+
+    payload = {
+        "operator": "dseg_aware_fourier_taper_v1",
+        "strength": float(strength),
+        "scale": float(scale),
+        "floor": float(floor),
+    }
+    if not all(math.isfinite(value) for value in payload.values() if isinstance(value, float)):
+        raise ValueError("taper config values must be finite")
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def literal_basis_program_config(
+    *,
+    chart_enabled: bool = False,
+    chart_ref_pair: int = 0,
+    chart_regime: str = "ground",
+    chart_s_t: float = -0.003224707899359239,
+    chart_s_r: float = 0.0,
+    chart_pitch: float = -0.01,
+    chart_pose_dependency: str = "none",
+    native_orientation_enabled: bool = False,
+    native_orientation_kappa: float = 2.0,
+    fixed_point_iteration_cap: int = 0,
+    normal_estimator_version: str = "all_class_boundary_edt_v1",
+    taper_enabled: bool = False,
+    taper_train_config_sha256: str = "",
+    deploy_fold_receipt_sha256: str = "",
+    aa_mode: str = "none",
+    aa_factor: int = 1,
+) -> BasisProgramConfig:
+    """Construct the one authoritative literal-curvelet semantic config."""
+
+    return BasisProgramConfig(
+        chart_enabled=chart_enabled,
+        chart_ref_pair=chart_ref_pair,
+        chart_regime=chart_regime,
+        chart_s_t=chart_s_t,
+        chart_s_r=chart_s_r,
+        chart_pitch=chart_pitch,
+        chart_pose_dependency=chart_pose_dependency,
+        native_orientation_enabled=native_orientation_enabled,
+        native_orientation_kappa=native_orientation_kappa,
+        fixed_point_iteration_cap=fixed_point_iteration_cap,
+        normal_estimator_version=normal_estimator_version,
+        taper_enabled=taper_enabled,
+        taper_train_config_sha256=taper_train_config_sha256,
+        deploy_fold_receipt_sha256=deploy_fold_receipt_sha256,
+        aa_mode=aa_mode,
+        aa_factor=aa_factor,
+    )
 
 
 def _translation_slots(scale: int, orientation: int, *, seed: int = SEED) -> tuple[tuple[int, int], ...]:
@@ -993,6 +1160,7 @@ __all__ = [
     "SCALES",
     "SCALING_COLUMNS",
     "SCALING_WIDTH",
+    "BasisProgramConfig",
     "GenuineFrameProofReceipt",
     "InflateBasisContract",
     "LiteralPolarAtomSpec",
@@ -1005,6 +1173,7 @@ __all__ = [
     "basis_features_numpy",
     "basis_generated_source_sha256",
     "basis_metadata",
+    "basis_program_taper_config_sha256",
     "basis_semantic_sha256",
     "basis_semantic_sha256_from_components",
     "curvelet_frequency_window_numpy",
@@ -1019,6 +1188,7 @@ __all__ = [
     "inflate_compile_contract",
     "inflate_embedded_numpy_source",
     "inflate_numpy_source",
+    "literal_basis_program_config",
     "literal_polar_curvelet_atom_specs",
     "localized_basis_features",
     "localized_basis_features_grid_numpy",

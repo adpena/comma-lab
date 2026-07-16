@@ -33,8 +33,15 @@ from tac.boundary_math.lever_b_levelset_generator import (
     curvelet_directional_B,
     curvelet_feats,
 )
+from tac.canonical_equations.curvelet_equal_archive_transfer_20260716 import (
+    EQUATION_ID as CURVELET_TRANSFER_EQUATION_ID,
+)
+from tac.canonical_equations.curvelet_equal_archive_transfer_20260716 import (
+    RECEIPT_SCHEMA as CURVELET_TRANSFER_RECEIPT_SCHEMA,
+)
 from tac.witness_dsl.basis_control import (
     GENUINE_FRAME_FEATURE_WIDTH,
+    LITERAL_POLAR_CURVELET,
     genuine_frame_compact_shearlet_config,
     genuine_frame_equal_value_budget,
     genuine_frame_windowed_curvelet_config,
@@ -56,6 +63,7 @@ class BasisFamily(StrEnum):
     POLAR_DIRECTIONAL_FOURIER = "polar_directional_fourier"
     SELF_ORIENTED_FOURIER = "self_oriented_fourier"
     HYBRID_FOURIER_INTERIOR_CURVELET_BOUNDARY = "hybrid_fourier_interior_curvelet_boundary"
+    LITERAL_POLAR_CURVELET = LITERAL_POLAR_CURVELET
     WINDOWED_CURVELET = "windowed_curvelet"
     COMPACT_SHEARLET = "compact_shearlet"
     STEERABLE_GABOR = "steerable_gabor"
@@ -111,6 +119,20 @@ _CATALOG = (
         BasisEvidence.MEASURED_THROUGH_R_N600_FORMULATION,
         0.004244,
         "control label for bounded warm-start ep675; no curvelet default or ship claim",
+    ),
+    BasisCandidate(
+        BasisFamily.LITERAL_POLAR_CURVELET,
+        1,
+        "literal parabolic polar wedges with decoder-native normal covectors; isolated exact receiver path built",
+        "80 deterministic real-valued polar-wedge columns with same-width native-orientation gates",
+        "generic atoms/gates regenerated free; learned/video-derived weights and codes counted",
+        "NumPy/MLX kernel parity and generated receiver implemented; chart plus post-render AA composition blocked",
+        BasisEvidence.SOURCE_DERIVED,
+        None,
+        (
+            "isolated kernel/receiver custody only; no real-n600 equal-ZIP through-R receipt; "
+            "full chart-plus-supersampling formulation remains OPEN"
+        ),
     ),
     BasisCandidate(
         BasisFamily.HYBRID_FOURIER_INTERIOR_CURVELET_BOUNDARY,
@@ -345,13 +367,31 @@ class BasisLeverSpec:
     freq_along: float = 8.0
     reorient_every: int = 50
     finer_bias_k: float = 10.0
+    literal_curvelet_native_orient: bool = True
+    literal_curvelet_kappa: float = 2.0
+    literal_curvelet_fixed_point_iters: int = 6
 
     def _validated(self) -> None:
-        for name in ("bank_n_scales", "bank_n_orient0", "bank_n_iso", "n_dir_freqs", "reorient_every"):
+        for name in (
+            "bank_n_scales",
+            "bank_n_orient0",
+            "bank_n_iso",
+            "n_dir_freqs",
+            "reorient_every",
+            "literal_curvelet_fixed_point_iters",
+        ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise ValueError(f"{name} must be a positive integer, got {value!r}")
-        for name in ("bank_f0", "bank_base", "max_bank_freq", "freq_across", "freq_along", "finer_bias_k"):
+        for name in (
+            "bank_f0",
+            "bank_base",
+            "max_bank_freq",
+            "freq_across",
+            "freq_along",
+            "finer_bias_k",
+            "literal_curvelet_kappa",
+        ):
             value = float(getattr(self, name))
             if not math.isfinite(value) or value <= 0.0:
                 raise ValueError(f"{name} must be finite and positive, got {value!r}")
@@ -406,6 +446,22 @@ class BasisLeverSpec:
                 "task497 open fresh-start learned-frequency family; compiles existing FINER/SIREN "
                 "surface but carries no n600 basis-win claim"
             )
+        elif self.family is BasisFamily.LITERAL_POLAR_CURVELET:
+            overrides = {
+                **common,
+                "--self-orient": False,
+                "--basis": LITERAL_POLAR_CURVELET,
+                "--literal-curvelet-native-orient": self.literal_curvelet_native_orient,
+                "--literal-curvelet-kappa": self.literal_curvelet_kappa,
+                "--literal-curvelet-fixed-point-iters": self.literal_curvelet_fixed_point_iters,
+                "--reorient-every": self.reorient_every,
+            }
+            notes = (
+                "task497 literal 80-column polar-wedge kernel with same-width decoder-native "
+                "orientation fixed point; isolated generated-receiver custody only. Arbitrary "
+                "ground-chart and post-render supersampling composition remains fail-closed; no "
+                "n600 equal-ZIP through-R or family-win claim"
+            )
         elif self.family is BasisFamily.WINDOWED_CURVELET:
             overrides = {**common, "--self-orient": False, "--basis": "windowed_curvelet"}
             notes = (
@@ -433,6 +489,16 @@ class BasisLeverSpec:
             name=f"basis_family::{self.family.value}",
             overrides=overrides,
             notes=notes,
+            lawrefs=(
+                {"basis_transfer_verdict": CURVELET_TRANSFER_EQUATION_ID}
+                if self.family is BasisFamily.LITERAL_POLAR_CURVELET
+                else {}
+            ),
+            runtime_receipt_schemas=(
+                {"basis_transfer_verdict": CURVELET_TRANSFER_RECEIPT_SCHEMA}
+                if self.family is BasisFamily.LITERAL_POLAR_CURVELET
+                else {}
+            ),
         )
 
 
@@ -476,7 +542,31 @@ def inflate_compile_contract(spec: BasisLeverSpec) -> InflateCompileContract:
     lever_argv(lever)
     root = Path(__file__).resolve().parents[3]
     inflate_source = (root / "tools/levelset_byte_close_and_eval.py").read_text()
-    if spec.family is BasisFamily.WINDOWED_CURVELET:
+    if spec.family is BasisFamily.LITERAL_POLAR_CURVELET:
+        required = (
+            "literal_curvelet_generated_source",
+            '"curvelet_placement.py"',
+            "def _inflate_source_for_manifest",
+            "def _basis_feats",
+        )
+        if not all(token in inflate_source for token in required):
+            raise RuntimeError("generated inflate source lost literal-curvelet program consumers")
+        inflate_functions = (
+            "basis_features_numpy",
+            "native_orientation_fixed_point_numpy",
+            "_basis_feats",
+        )
+        train_functions = (
+            "basis_features_numpy",
+            "basis_features_mlx",
+            "native_orientation_fixed_point_numpy",
+        )
+        regenerated = (
+            "basis_program_config",
+            "literal_atom_spec",
+            "native_orientation_fixed_point",
+        )
+    elif spec.family is BasisFamily.WINDOWED_CURVELET:
         required = ("def _windowed_curvelet_feats", "def _basis_feats")
         if not all(token in inflate_source for token in required):
             raise RuntimeError("generated inflate source lost windowed-curvelet regeneration functions")

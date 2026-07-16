@@ -17,6 +17,8 @@ from tac.boundary_math.curvelet_placement import (
     apply_orientation_gates_numpy,
     array_sha256,
     fold_taper_into_in_proj_numpy,
+    native_orientation_fixed_point_numpy,
+    normal_covectors_from_argmax_numpy,
     orientation_gates_numpy,
     orientation_metadata_from_atom_specs,
     projective_jacobian_numpy,
@@ -28,6 +30,7 @@ from tac.boundary_math.curvelet_placement import (
     verify_taper_fold_receipt,
     verify_taper_fold_receipt_self_consistency,
 )
+from tac.boundary_math.localized_basis_frames import literal_polar_curvelet_atom_specs
 
 
 def test_identity_chart_preserves_tangent_and_normal():
@@ -141,6 +144,35 @@ def test_orientation_gate_application_changes_only_directional_columns():
     placed = apply_orientation_gates_numpy(features, gates)
     assert np.array_equal(placed[:, :2], features[:, :2])
     assert not np.array_equal(placed[:, 2:], features[:, 2:])
+
+
+def test_native_orientation_fixed_point_is_decoder_only_and_same_width():
+    scales, angles = orientation_metadata_from_atom_specs(literal_polar_curvelet_atom_specs())
+    base = np.ones((9, 80), np.float32)
+    calls: list[np.ndarray] = []
+
+    def decode(features: np.ndarray) -> np.ndarray:
+        calls.append(features.copy())
+        return np.asarray([[0, 0, 1], [0, 1, 1], [2, 2, 1]], dtype=np.int64)
+
+    placed, gates, receipt = native_orientation_fixed_point_numpy(
+        base, decode, scales, angles, kappa=1.5, iteration_cap=4
+    )
+    assert receipt.converged
+    assert receipt.iterations_executed == 2
+    assert placed.shape == gates.shape == base.shape
+    np.testing.assert_array_equal(gates[:, :4], 1.0)
+    assert not np.array_equal(gates[:, 4:], 1.0)
+    assert receipt.argmax_sha256 and receipt.gate_sha256
+    assert len(calls) == 2
+
+
+def test_argmax_normal_covectors_are_deterministic_and_nonzero():
+    labels = np.asarray([[0, 0, 1], [0, 1, 1], [2, 2, 1]], dtype=np.int64)
+    first = normal_covectors_from_argmax_numpy(labels)
+    second = normal_covectors_from_argmax_numpy(labels.copy())
+    np.testing.assert_array_equal(first, second)
+    np.testing.assert_allclose(np.linalg.norm(first, axis=1), 1.0, atol=1e-6)
 
 
 def test_orientation_gates_fail_closed_on_bad_normals_or_metadata():

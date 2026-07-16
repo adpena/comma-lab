@@ -164,6 +164,50 @@ def test_generated_inflate_contract_is_content_addressed_and_executable_source()
     assert lbf.basis_semantic_sha256() == lbf.basis_semantic_sha256()
 
 
+def test_basis_program_config_binds_every_semantic_operator() -> None:
+    taper_hash = lbf.basis_program_taper_config_sha256(strength=1.0, scale=0.0, floor=0.05)
+    config = lbf.literal_basis_program_config(
+        chart_enabled=True,
+        chart_pose_dependency="counted_pose_carrier_xi",
+        native_orientation_enabled=True,
+        native_orientation_kappa=2.5,
+        fixed_point_iteration_cap=6,
+        taper_enabled=True,
+        taper_train_config_sha256=taper_hash,
+        aa_mode="supersample",
+        aa_factor=2,
+    )
+    assert config.feature_width == 80
+    assert config.atom_spec_sha256 == lbf.ATOM_SPEC_SHA256
+    assert lbf.BasisProgramConfig.from_dict(config.to_dict()) == config
+    assert lbf.BasisProgramConfig.from_dict(config.to_dict()).canonical_sha256() == (
+        config.canonical_sha256()
+    )
+    changed = lbf.literal_basis_program_config(
+        chart_enabled=True,
+        chart_pose_dependency="counted_pose_carrier_xi",
+        native_orientation_enabled=True,
+        native_orientation_kappa=2.75,
+        fixed_point_iteration_cap=6,
+        taper_enabled=True,
+        taper_train_config_sha256=taper_hash,
+        aa_mode="supersample",
+        aa_factor=2,
+    )
+    assert changed.canonical_sha256() != config.canonical_sha256()
+
+
+def test_basis_program_config_refuses_unknown_hashes_and_unclosed_chart() -> None:
+    with pytest.raises(ValueError, match="atom-spec hash drift"):
+        lbf.BasisProgramConfig(atom_spec_sha256="0" * 64)
+    with pytest.raises(ValueError, match="counted receiver dependency"):
+        lbf.literal_basis_program_config(chart_enabled=True)
+    with pytest.raises(ValueError, match=r"scalar|permits only"):
+        lbf.literal_basis_program_config(aa_mode="ipe")
+    with pytest.raises(ValueError, match="positive fixed-point cap"):
+        lbf.literal_basis_program_config(native_orientation_enabled=True)
+
+
 def test_mlx_parity_when_available_otherwise_soft_unavailable_receipt() -> None:
     receipt = lbf.mlx_parity_receipt(height=5, width=7)
     assert receipt["authority"] is False

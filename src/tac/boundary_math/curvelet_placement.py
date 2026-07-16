@@ -29,6 +29,7 @@ __all__ = [
     "NUMPY_AUTHORITY_DTYPE",
     "NUMPY_MLX_PARITY_ATOL",
     "CurveletPlacementError",
+    "NativeOrientationFixedPointReceipt",
     "TaperFoldError",
     "TaperFoldParity",
     "TaperFoldReceipt",
@@ -37,10 +38,12 @@ __all__ = [
     "array_sha256",
     "fold_taper_into_in_proj_mlx",
     "fold_taper_into_in_proj_numpy",
+    "native_orientation_fixed_point_numpy",
     "native_orientation_gates_mlx",
     "native_orientation_gates_numpy",
     "normal_covector_to_chart_mlx",
     "normal_covector_to_chart_numpy",
+    "normal_covectors_from_argmax_numpy",
     "orientation_gates_mlx",
     "orientation_gates_numpy",
     "orientation_metadata_from_atom_specs",
@@ -283,6 +286,118 @@ def orientation_gates_numpy(
 
 
 native_orientation_gates_numpy = orientation_gates_numpy
+
+
+def normal_covectors_from_argmax_numpy(argmax_hw: Any) -> np.ndarray:
+    """Derive decoder-native boundary normal covectors from its own argmax.
+
+    This is the receiver-reproducible ``all_class_boundary_edt_v1`` estimator.
+    It deliberately consumes no GT state.  The existing tangent helper is the
+    authority; rotating its tangent ``(tx,ty)`` to ``(ty,-tx)`` yields the
+    corresponding unoriented normal covector.
+    """
+
+    labels = np.asarray(argmax_hw)
+    if labels.ndim != 2 or not np.issubdtype(labels.dtype, np.integer):
+        raise CurveletPlacementError("argmax must be a 2-D integer label array")
+    from scipy import ndimage
+
+    boundary = np.zeros(labels.shape, dtype=bool)
+    boundary[:-1, :] |= labels[:-1, :] != labels[1:, :]
+    boundary[1:, :] |= labels[:-1, :] != labels[1:, :]
+    boundary[:, :-1] |= labels[:, :-1] != labels[:, 1:]
+    boundary[:, 1:] |= labels[:, :-1] != labels[:, 1:]
+    if boundary.any():
+        distance = ndimage.distance_transform_edt(~boundary).astype(np.float32)
+        gy = np.zeros_like(distance)
+        gx = np.zeros_like(distance)
+        gy[1:-1, :] = (distance[2:, :] - distance[:-2, :]) * 0.5
+        gx[:, 1:-1] = (distance[:, 2:] - distance[:, :-2]) * 0.5
+        tangent = np.stack((-gy, gx), axis=-1)
+        norm = np.linalg.norm(tangent, axis=-1, keepdims=True)
+        flat = norm[..., 0] < 1e-6
+        tangent = tangent / np.maximum(norm, 1e-8)
+        tangent[flat] = np.asarray([1.0, 0.0], dtype=np.float32)
+    else:
+        tangent = np.zeros((*labels.shape, 2), dtype=np.float32)
+        tangent[..., 0] = 1.0
+    normal = np.stack((tangent[..., 1], -tangent[..., 0]), axis=-1).astype(
+        NUMPY_AUTHORITY_DTYPE
+    )
+    return normal.reshape(-1, 2)
+
+
+@dataclass(frozen=True)
+class NativeOrientationFixedPointReceipt:
+    version: str
+    iteration_cap: int
+    iterations_executed: int
+    converged: bool
+    argmax_sha256: str
+    gate_sha256: str
+
+
+def native_orientation_fixed_point_numpy(
+    base_features: Any,
+    decode_argmax: Any,
+    scale_ids: Any,
+    angles: Any,
+    *,
+    kappa: float,
+    iteration_cap: int,
+    normal_transform: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, NativeOrientationFixedPointReceipt]:
+    """Run the decoder-native orientation fixed point without GT state.
+
+    ``decode_argmax`` receives the current same-width feature matrix and must
+    return a 2-D integer partition.  The iteration begins with identity gates,
+    stops on consecutive argmax equality, and otherwise returns the gates
+    derived at the declared cap.  ``normal_transform`` optionally maps the
+    frame normal covectors into a pre-composed chart.
+    """
+
+    features0 = np.asarray(base_features, dtype=NUMPY_AUTHORITY_DTYPE)
+    if features0.ndim != 2:
+        raise CurveletPlacementError("base_features must be a 2-D matrix")
+    cap = int(iteration_cap)
+    if cap < 1:
+        raise CurveletPlacementError("iteration_cap must be positive")
+    scales, theta, _groups = _orientation_metadata(scale_ids, angles, -1)
+    if features0.shape[1] != scales.size:
+        raise CurveletPlacementError("basis width does not match orientation metadata")
+    gates = np.ones_like(features0, dtype=NUMPY_AUTHORITY_DTYPE)
+    features = features0.copy()
+    previous: np.ndarray | None = None
+    current: np.ndarray | None = None
+    converged = False
+    executed = 0
+    for _executed in range(1, cap + 1):
+        executed = _executed
+        current = np.asarray(decode_argmax(features))
+        if current.ndim != 2 or not np.issubdtype(current.dtype, np.integer):
+            raise CurveletPlacementError("decode_argmax must return a 2-D integer partition")
+        if current.size != features0.shape[0]:
+            raise CurveletPlacementError("decoded argmax pixel count does not match feature rows")
+        if previous is not None and np.array_equal(current, previous):
+            converged = True
+            break
+        normals = normal_covectors_from_argmax_numpy(current)
+        if normal_transform is not None:
+            normals = np.asarray(normal_transform(normals), dtype=NUMPY_AUTHORITY_DTYPE)
+        gates = orientation_gates_numpy(normals, scales, theta, kappa=kappa)
+        features = apply_orientation_gates_numpy(features0, gates)
+        previous = current.copy()
+    assert current is not None
+    argmax_bytes = np.ascontiguousarray(current.astype("<i8", copy=False)).tobytes()
+    receipt = NativeOrientationFixedPointReceipt(
+        version="literal_curvelet_native_orientation_fixed_point_v1",
+        iteration_cap=cap,
+        iterations_executed=executed,
+        converged=converged,
+        argmax_sha256=hashlib.sha256(argmax_bytes).hexdigest(),
+        gate_sha256=array_sha256(gates),
+    )
+    return features, gates, receipt
 
 
 def apply_orientation_gates_numpy(features: Any, gates: Any) -> np.ndarray:
