@@ -99,6 +99,7 @@ C2_SURGICAL_EXPECTED_LEVERS: tuple[str, ...] = (
     "c2_warm_start_weights_only",
     "phase_advection_consistency",
     "margin_band_satisficing",
+    "tie_locus_displacement",
     "pose_finish_conditioning_gate",
     "pose_blind_compute_gate",
     "head_offset_solver",
@@ -177,6 +178,7 @@ def compile_c2_surgical_warm_launch_config(
         PhaseAdvectionConsistency,
         PoseBlindComputeGate,
         PoseFinishConditioningGate,
+        TieLocusDisplacement,
     )
     from tac.witness_dsl.typed_config import (
         Provenanced,
@@ -290,6 +292,16 @@ def compile_c2_surgical_warm_launch_config(
         warm_start,
         PhaseAdvectionConsistency(weight=0.4, start_epoch=SURGICAL_ENGAGE_EPOCH),
         MarginBandSatisficing(weight=0.2, start_epoch=SURGICAL_ENGAGE_EPOCH),
+        # AMENDMENT (coordinator directive 2026-07-16, lane-channel completeness verdict
+        # 477ec610c5 §5/§7): T1 phase_advection is birth-SILENT but leaves a MEASURED coverage
+        # gap — 26.3% of candidate straddle pixels (354 lane-adjacent px/frame; GT island churn
+        # ~50%/step) get NO phase supervision without Force-3 subpix. Co-emit the ALREADY-BUILT
+        # #360 lever at the SAME single engage boundary (factory-default weight/v_band — the
+        # #360 build's own designed values, no unmeasured constants folded; the λ_RL≈2x per-pair
+        # prior + event-fallback weight variant stay recorded duty-to-measure). pa_flipmass edge
+        # weighting reads the MEASURED reports/pa_edge_weights.json artifact (present; the
+        # factory falls back uniform+LOUD-WARN if absent, never a guess).
+        TieLocusDisplacement(start_epoch=SURGICAL_ENGAGE_EPOCH),
         PoseFinishConditioningGate(backstop_epoch=POSE_BACKSTOP_EPOCH),
         PoseBlindComputeGate(),
         HeadOffsetSolver(mode="flip_median", tau=1.0),
@@ -370,6 +382,9 @@ def compile_c2_surgical_warm_launch_config(
         "--seg-phase-advect-start-epoch": str(SURGICAL_ENGAGE_EPOCH),
         "--seg-margin-satisfice-weight": "0.2",
         "--seg-margin-satisfice-start-epoch": str(SURGICAL_ENGAGE_EPOCH),
+        "--seg-subpix-boundary-weight": "0.3",
+        "--seg-subpix-boundary-start-epoch": str(SURGICAL_ENGAGE_EPOCH),
+        "--seg-subpix-edge-weight-source": "pa_flipmass",
         "--pose-finish-engage-on": "sigma_min_plateau",
         "--pose-finish-start-epoch": str(POSE_BACKSTOP_EPOCH),
         "--w-pose": "1.0",
@@ -406,14 +421,21 @@ def compile_c2_surgical_warm_launch_config(
         f"the warm-start checkpoint {WARM_START_CKPT} must exist (mod32cap EMA-best ep650)",
         blockers, evidence, "warm_start_ckpt_custody")
     receipt_row = None
+    _own_hash = typed.typed_config_hash()
     for rp in sorted(Path("experiments/results").glob("*/dry_start_report.json")):
         try:
             rep = _json.loads(rp.read_text())
         except (OSError, ValueError):
             continue
+        # HASH-MATCH tightening (coordinator amendment 2026-07-16): a receipt clears the
+        # blocker ONLY for the exact composed config it benched — name+green alone would let a
+        # pre-amendment bench green-light an amended config (stale-receipt laundering). A
+        # receipt without a recorded hash (older format) NEVER clears the blocker (fail-closed).
         if (rep.get("gate") == "full_config_dry_start"
-                and str(rep.get("config")) == PROGRAM_NAME and bool(rep.get("green"))):
+                and str(rep.get("config")) == PROGRAM_NAME and bool(rep.get("green"))
+                and str(rep.get("typed_config_hash", "")) == _own_hash):
             receipt_row = {"status": "MEASURED_GREEN", "report": str(rp),
+                           "typed_config_hash": _own_hash,
                            "peak_rss_gib": rep.get("peak_rss_gib"),
                            "sec_per_ep_marginal": rep.get("sec_per_ep_marginal"),
                            "ts": rep.get("ts")}
@@ -422,8 +444,9 @@ def compile_c2_surgical_warm_launch_config(
     else:
         blockers.append({
             "id": "C2_COMPOSED_BENCH_NOT_MEASURED",
-            "detail": "no GREEN full_config_dry_start report exists for config "
-                      f"{PROGRAM_NAME!r} — run the launcher's bounded --dry-start (the receipt "
+            "detail": "no GREEN full_config_dry_start report with typed_config_hash "
+                      f"{_own_hash[:16]}… exists for config {PROGRAM_NAME!r} — run the "
+                      "launcher's bounded --dry-start ON THIS EXACT CONFIG (the receipt "
                       "producer; it also PROVES the warm-start weight-shape load via resume_ok) "
                       "to measure sec/epoch + peak RSS before the real launch",
         })
@@ -454,6 +477,14 @@ def compile_c2_surgical_warm_launch_config(
             "surgical_targets": {
                 "road_lane_appearance_phase": "66.0% of the measured witness residual "
                                               "(witness-own decomp §1); T1 #424 + #360 at ep700",
+                "force3_subpix_straddle_coverage": "AMENDMENT 2026-07-16 (lane-channel "
+                                                   "completeness verdict 477ec610c5): T1 is "
+                                                   "birth-SILENT but 26.3% of candidate straddle "
+                                                   "px (354 lane-adjacent px/frame) get NO phase "
+                                                   "supervision without Force-3 subpix — "
+                                                   "TieLocusDisplacement co-emitted at ep700, "
+                                                   "factory defaults, pa_flipmass edge weights "
+                                                   "(measured artifact present)",
                 "joint_pose_finish": "L68 photometric wall — only joint descent crosses; "
                                      "sigma_min_plateau gate, banked-R1 dxi fallback, "
                                      "backstop ep1000",
@@ -612,6 +643,18 @@ def compile_c2_surgical_warm_launch_config(
                        "re_anchor_window": int(SURGICAL_ENGAGE_EPOCH - RESUME_EPOCH)},
             "note": "co-engages with the phase term at the single surgical boundary (one "
                     "spike-guard re-treat; the trunk partition is already formed)",
+        },
+        "seg_subpix_boundary_start_epoch": {
+            "value": int(SURGICAL_ENGAGE_EPOCH),
+            "equation_id": _ws_eq,
+            "ladder_class": "derived_at_config",
+            "fallback_used": False,
+            "inputs": {"mode": "resume_plus_window", "resume_epoch": int(RESUME_EPOCH),
+                       "re_anchor_window": int(SURGICAL_ENGAGE_EPOCH - RESUME_EPOCH)},
+            "note": "Force-3 subpix co-engages at the SAME surgical boundary (amendment "
+                    "2026-07-16: closes the 26.3% straddle coverage gap the lane-channel "
+                    "completeness verdict measured — T1 alone leaves birth-site straddles "
+                    "phase-unsupervised; 477ec610c5)",
         },
         "pose_finish_start_epoch": {
             "value": int(POSE_BACKSTOP_EPOCH),

@@ -99,7 +99,8 @@ def test_c2_spec_constants_rows_recompute() -> None:
     cfg = compile_c2_surgical_warm_launch_config()
     rows = {k: v for k, v in cfg.constants_manifest.items()
             if isinstance(v, dict) and v.get("equation_id") == EQUATION_ID}
-    assert len(rows) == 6, sorted(rows)
+    # 7 = the six original boundaries + the Force-3 subpix engage (amendment 2026-07-16).
+    assert len(rows) == 7, sorted(rows)
     for key, row in rows.items():
         inputs = row["inputs"]
         if isinstance(inputs, list):  # SHA-custody list form -> {name: value}

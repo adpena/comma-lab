@@ -1535,9 +1535,21 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
     else:
         print("# dry-start PASS 2 SKIPPED (PASS 1 did not boot+step+ckpt).", file=sys.stderr)
 
+    # (coordinator amendment 2026-07-16) record the typed-config hash so a receipt can only
+    # clear a bench blocker for the EXACT composed config it measured (the c2 factory
+    # hash-matches; a pre-amendment bench must not green-light an amended config). Legacy
+    # configs without a typed surface record null (hash-matching factories then fail-closed).
+    try:
+        _cfg_h = derive_named_config(config, args.gt_cache, num_pairs=args.num_pairs,
+                                     epochs=None, overfit=overfit)
+        _typed = getattr(_cfg_h, "typed", None)
+        typed_config_hash = _typed.typed_config_hash() if _typed is not None else None
+    except Exception:
+        typed_config_hash = None
     report = {
         "gate": "full_config_dry_start",
         "owed": "owed-2 / SYNTHESIS §C item 2",
+        "typed_config_hash": typed_config_hash,
         "config": config, "num_pairs": args.num_pairs, "dry_start_target_epochs": n,
         "pass_timeout_s": round(pass_timeout, 1),
         "boot_ok": boot_ok, "resume_round_trip_ok": resume_ok,
