@@ -10177,83 +10177,107 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "resumed_into_finisher": bool(_resume_into_finisher)}), flush=True)
 
     # baseline verdict (epoch 0, or the resumed epoch) -- reflects any restored weights.
-    if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
-        _mm = _mlx_mem_gib(mx)
-        print(json.dumps({"stage": "mem_probe", "phase": "before_v0_verdict", "n_pairs": P,
-                          "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
-                          "mlx_active_gib": round(_mm["active"], 2)}), flush=True)
-    v0 = realized_verdict(ep=int(start_epoch - 1), force_live_pose=True)
-    v0.pop("nucleus_counts", None)  # (#302) baseline verdict: drop per-class counts (float-only row;
-    #                                  readiness telemetry begins at the first in-loop verdict, after
-    #                                  _evt_state exists). No-op when the nucleus feature is OFF.
-    # (SENSE) pop the annulus metrics BEFORE the float-only v0 row spread below. None unless
-    # --annulus-telemetry is ON => byte-identical when absent.
-    _annulus_v0 = v0.pop("annulus", None)
-    # (2026-07-07 crash fix, task #348 discovery) pop the per-class decomposition the SAME way as
-    # _emit_verdict_row does (dict of lists — must not hit the float-only round() spread below, and
-    # must NOT reach history/result.json: observability-only). Without this pop, every fresh launch
-    # with annulus telemetry active (the default) crashed at the baseline_v0 print with
-    # "TypeError: type dict doesn't define __round__ method".
-    _per_class_v0 = v0.pop("per_class", None)
-    # (task-495) the gated pre-loop anchor is deliberately live, but its source/authority label is a
-    # row-only dict and therefore must not flow through the scalar rounding/history paths.
-    _pose_gate_v0 = v0.pop("_pose_gate_telemetry", None)
-    if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
-        _mm = _mlx_mem_gib(mx)
-        print(json.dumps({"stage": "mem_probe", "phase": "after_v0_verdict", "n_pairs": P,
-                          "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
-                          "mlx_active_gib": round(_mm["active"], 2), "d_seg": round(v0["d_seg"], 6),
-                          "d_pose": round(v0["d_pose"], 6)}), flush=True)
-    blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
-    s0 = implied_score_from_verdict(v0["d_seg"], v0["d_pose"], blob["total_quantized_blob_bytes"])
-    print(json.dumps({"stage": "verdict", "epoch": start_epoch - 1, **{k: round(v, 6) for k, v in v0.items()},
-                      "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s0, 4),
-                      # (C6 confound-fix completeness, review R1) liveness stamp on the PRE-LOOP baseline
-                      # verdict: weights_stepped=False + phase="baseline_v0" DISAMBIGUATES this legitimate
-                      # pre-training baseline from a frozen-mid-training deadlock row (both otherwise read
-                      # as "no training happened"). accepted_frac is not yet defined (no batch ran).
-                      "weights_stepped": False, "accepted_frac": None, "frozen_epoch": False,
-                      "verdict_device": str(getattr(args, "verdict_device", "cpu")),
-                      **_dseg_canary_telemetry_fields(),
-                      # (2026-07-07) ADDITIVE per-class observability on the baseline row, mirroring
-                      # _emit_verdict_row (row-only; popped from v0 so it never reaches history).
-                      **({"d_seg_by_class": _per_class_v0.get("d_seg_by_class"),
-                          "flip_share_by_class": _per_class_v0.get("flip_share_by_class")}
-                         if isinstance(_per_class_v0, dict) and "error" not in _per_class_v0 else {}),
-                      **(_pose_gate_v0 if isinstance(_pose_gate_v0, dict) else {}),
-                      "phase": "baseline_v0",
-                      "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                      "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
-    # (SENSE) companion annulus_convergence row for the pre-loop baseline (opt-in; byte-identical when
-    # absent). Pre-loop, single-threaded => no lock needed.
-    if _annulus_v0 is not None:
-        print(json.dumps(_annulus_convergence_row(_annulus_v0, start_epoch - 1, "baseline_v0")), flush=True)
-    # (MOD-DIM DYNAMICS 2026-07-08) pre-loop baseline mod_dim_dynamics row (the random-init/resume
-    # latent geometry — the reference the anneal moves off). DEFAULT ON; fail-open => byte-identical.
-    _mdd_v0 = _mdd_verdict_row({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()},
-                               start_epoch - 1, "baseline_v0", float(model.softmax_temp),
-                               blob.get("code_int8_brotli_bytes", 0))
-    if _mdd_v0 is not None:
-        print(json.dumps(_mdd_v0), flush=True)
-    history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0,
-                    "blob_bytes": blob["total_quantized_blob_bytes"]})  # (S1-R1) byte trace for TAIL stop
-    _record_causal_boundary(
-        epoch=int(start_epoch - 1),
-        boundary_kind="baseline",
-        stage="baseline_v0",
-        outcome_values={
-            "d_seg": float(v0["d_seg"]),
-            "d_pose": float(v0["d_pose"]),
-            "blob_bytes": int(blob["total_quantized_blob_bytes"]),
-            "implied_S": float(s0),
-        },
-        weights_stepped=False,
-        accepted_fraction=None,
-        d_seg_by_class=(
-            _per_class_v0.get("d_seg_by_class")
-            if isinstance(_per_class_v0, dict) and "error" not in _per_class_v0 else None
-        ),
-    )
+    # (DELTA-BENCH boot-side inheritance, operator-directed 2026-07-16) --skip-boot-baseline-verdict
+    # gates ONLY this pre-loop v0 block (~25 min/pass at n600). Consumer-safety audit (2026-07-16):
+    # every ``history`` consumer is empty-safe (the TAIL stop's row filters + ``or None``,
+    # ``history[-1] if history else None``, result.json dump, _causal_sha256 telemetry);
+    # _maybe_preserve_best, the closed-loop decide history, and nucleus/handoff readiness are fed by
+    # IN-LOOP verdicts only (the #302 pop inside this block already declares "readiness telemetry
+    # begins at the first in-loop verdict"); the resume sidecar (_build_resume_state_arrays) persists
+    # NO verdict history — so NO mode needs v0 for correctness and no fail-closed refusal is required.
+    # When skipped, the honest row below keeps the run record complete (never a silently vanished
+    # verdict); the baseline is INHERITED provenance from the prior green bench receipt named by
+    # TAC_BENCH_INHERIT_FROM (set by the launcher's delta-bench passes).
+    if getattr(args, "skip_boot_baseline_verdict", False):
+        print(json.dumps({
+            "stage": "baseline_verdict_skipped", "epoch": int(start_epoch - 1),
+            "reason": ("delta_bench_inherited_from "
+                       + os.environ.get("TAC_BENCH_INHERIT_FROM", "unspecified")),
+            "note": ("boot baseline verdict (v0) SKIPPED by --skip-boot-baseline-verdict: the "
+                     "baseline is inherited PROVENANCE from the named prior GREEN dry_start "
+                     "receipt, NOT measured this run (NO-FAKE separation). Observability-only "
+                     "skip: no history[0] row, no causal 'baseline' boundary; training numerics "
+                     "unchanged."),
+            "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }), flush=True)
+    else:
+        if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
+            _mm = _mlx_mem_gib(mx)
+            print(json.dumps({"stage": "mem_probe", "phase": "before_v0_verdict", "n_pairs": P,
+                              "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
+                              "mlx_active_gib": round(_mm["active"], 2)}), flush=True)
+        v0 = realized_verdict(ep=int(start_epoch - 1), force_live_pose=True)
+        v0.pop("nucleus_counts", None)  # (#302) baseline verdict: drop per-class counts (float-only row;
+        #                                  readiness telemetry begins at the first in-loop verdict, after
+        #                                  _evt_state exists). No-op when the nucleus feature is OFF.
+        # (SENSE) pop the annulus metrics BEFORE the float-only v0 row spread below. None unless
+        # --annulus-telemetry is ON => byte-identical when absent.
+        _annulus_v0 = v0.pop("annulus", None)
+        # (2026-07-07 crash fix, task #348 discovery) pop the per-class decomposition the SAME way as
+        # _emit_verdict_row does (dict of lists — must not hit the float-only round() spread below, and
+        # must NOT reach history/result.json: observability-only). Without this pop, every fresh launch
+        # with annulus telemetry active (the default) crashed at the baseline_v0 print with
+        # "TypeError: type dict doesn't define __round__ method".
+        _per_class_v0 = v0.pop("per_class", None)
+        # (task-495) the gated pre-loop anchor is deliberately live, but its source/authority label is a
+        # row-only dict and therefore must not flow through the scalar rounding/history paths.
+        _pose_gate_v0 = v0.pop("_pose_gate_telemetry", None)
+        if os.environ.get("TAC_MEM_PROBE", "0") not in ("", "0", "false", "False"):
+            _mm = _mlx_mem_gib(mx)
+            print(json.dumps({"stage": "mem_probe", "phase": "after_v0_verdict", "n_pairs": P,
+                              "verdict_batch": int(args.verdict_batch), "rss_gib": round(_rss_gib(), 2),
+                              "mlx_active_gib": round(_mm["active"], 2), "d_seg": round(v0["d_seg"], 6),
+                              "d_pose": round(v0["d_pose"], 6)}), flush=True)
+        blob = quantize_levelset_blob({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
+        s0 = implied_score_from_verdict(v0["d_seg"], v0["d_pose"], blob["total_quantized_blob_bytes"])
+        print(json.dumps({"stage": "verdict", "epoch": start_epoch - 1, **{k: round(v, 6) for k, v in v0.items()},
+                          "blob_bytes": blob["total_quantized_blob_bytes"], "implied_S": round(s0, 4),
+                          # (C6 confound-fix completeness, review R1) liveness stamp on the PRE-LOOP baseline
+                          # verdict: weights_stepped=False + phase="baseline_v0" DISAMBIGUATES this legitimate
+                          # pre-training baseline from a frozen-mid-training deadlock row (both otherwise read
+                          # as "no training happened"). accepted_frac is not yet defined (no batch ran).
+                          "weights_stepped": False, "accepted_frac": None, "frozen_epoch": False,
+                          "verdict_device": str(getattr(args, "verdict_device", "cpu")),
+                          **_dseg_canary_telemetry_fields(),
+                          # (2026-07-07) ADDITIVE per-class observability on the baseline row, mirroring
+                          # _emit_verdict_row (row-only; popped from v0 so it never reaches history).
+                          **({"d_seg_by_class": _per_class_v0.get("d_seg_by_class"),
+                              "flip_share_by_class": _per_class_v0.get("flip_share_by_class")}
+                             if isinstance(_per_class_v0, dict) and "error" not in _per_class_v0 else {}),
+                          **(_pose_gate_v0 if isinstance(_pose_gate_v0, dict) else {}),
+                          "phase": "baseline_v0",
+                          "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                          "axis": "[macOS-CPU advisory] NON-PROMOTABLE"}), flush=True)
+        # (SENSE) companion annulus_convergence row for the pre-loop baseline (opt-in; byte-identical when
+        # absent). Pre-loop, single-threaded => no lock needed.
+        if _annulus_v0 is not None:
+            print(json.dumps(_annulus_convergence_row(_annulus_v0, start_epoch - 1, "baseline_v0")), flush=True)
+        # (MOD-DIM DYNAMICS 2026-07-08) pre-loop baseline mod_dim_dynamics row (the random-init/resume
+        # latent geometry — the reference the anneal moves off). DEFAULT ON; fail-open => byte-identical.
+        _mdd_v0 = _mdd_verdict_row({k: np.asarray(v, np.float32) for k, v in ema.shadow.items()},
+                                   start_epoch - 1, "baseline_v0", float(model.softmax_temp),
+                                   blob.get("code_int8_brotli_bytes", 0))
+        if _mdd_v0 is not None:
+            print(json.dumps(_mdd_v0), flush=True)
+        history.append({"epoch": start_epoch - 1, **v0, "implied_S": s0,
+                        "blob_bytes": blob["total_quantized_blob_bytes"]})  # (S1-R1) byte trace for TAIL stop
+        _record_causal_boundary(
+            epoch=int(start_epoch - 1),
+            boundary_kind="baseline",
+            stage="baseline_v0",
+            outcome_values={
+                "d_seg": float(v0["d_seg"]),
+                "d_pose": float(v0["d_pose"]),
+                "blob_bytes": int(blob["total_quantized_blob_bytes"]),
+                "implied_S": float(s0),
+            },
+            weights_stepped=False,
+            accepted_fraction=None,
+            d_seg_by_class=(
+                _per_class_v0.get("d_seg_by_class")
+                if isinstance(_per_class_v0, dict) and "error" not in _per_class_v0 else None
+            ),
+        )
 
     # (C3 confound fix) STARTUP regularizer-magnitude log: the raw (PRE-weight) scale of each active
     # level-set regularizer on ONE pair, so the eikonal unit-recalibration is auditable and the
@@ -14123,6 +14147,21 @@ def main(argv: list[str] | None = None) -> int:
                     "row (d_seg/d_pose both devices + argmax flip-disagreement count + max |Δd_pose|). "
                     "0 (default) = no anchor (gpu-only monitoring, no positive-control). Observability-"
                     "only; never read into training. NO-OP when --verdict-device cpu.")
+    ap.add_argument("--skip-boot-baseline-verdict", action="store_true",
+                    help="(DELTA-BENCH boot-side inheritance, operator-directed 2026-07-16) SKIP the "
+                    "pre-loop boot-time baseline verdict (v0) + its derived rows (baseline_v0 verdict "
+                    "row, annulus/mod-dim companions, history[0], causal 'baseline' boundary). Intended "
+                    "ONLY for the launcher's delta-bench passes, whose baseline is INHERITED as "
+                    "provenance from a prior GREEN dry_start receipt (~25 min/pass saved). DEFAULT OFF "
+                    "=> byte-identical behavior. Consumer-safety (audited 2026-07-16): every history "
+                    "consumer is empty-safe (TAIL stop row filters, history[-1]-or-None, result.json), "
+                    "_maybe_preserve_best / the closed-loop decide history / nucleus readiness are fed "
+                    "by IN-LOOP verdicts only, and the resume sidecar persists NO verdict history — so "
+                    "no mode NEEDS v0 for correctness and no fail-closed mode refusal is required. When "
+                    "skipped, an honest {stage:baseline_verdict_skipped} row is emitted (reason names "
+                    "the inherited bench receipt via TAC_BENCH_INHERIT_FROM) so the run record never "
+                    "looks like a verdict silently vanished. Training numerics unchanged (the baseline "
+                    "verdict is advisory + observability-only).")
     ap.add_argument("--annulus-telemetry", action=argparse.BooleanOptionalAction, default=True,
                     help="(SENSE, DEFAULT ON — score-neutral read-only observability per CLAUDE.md \"'Off' is "
                     "a tracked queue\"; it only reads the already-computed verdict argmax + logs, changing NO "

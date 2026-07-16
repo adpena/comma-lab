@@ -1616,6 +1616,13 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
               f"fresh below (inherited fields are provenance, never re-asserted as measured).")
         for _fl, _dv in delta_payload["delta_flags"].items():
             print(f"#   delta flag {_fl}: prior={_dv['prior']} -> fresh={_dv['fresh']}")
+        # Boot-side inheritance (operator-directed follow-up 2026-07-16): name the inherited
+        # receipt for the trainer's honest {stage:baseline_verdict_skipped} row. The bench passes'
+        # children inherit this env var; a dry-start NEVER proceeds to the real spawn (by
+        # construction), so it cannot leak into a real launch's environment.
+        os.environ["TAC_BENCH_INHERIT_FROM"] = str(
+            delta_payload["inherited_from"].get("typed_config_hash")
+            or delta_payload["inherited_from"]["path"])
         n = DELTA_BENCH_EPOCHS
     else:
         n = int(args.dry_start)
@@ -1638,6 +1645,15 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
                 "Catalog #406 dry-start received post-DSL trainer flags; compose a typed Lever"
             )
         overrides: dict[str, object] = {"--ckpt-every": 1}
+        if delta_payload is not None:
+            # Boot-side inheritance: BOTH delta passes skip the ~25-min boot baseline verdict —
+            # it is inherited PROVENANCE from the prior green receipt (the trainer emits an honest
+            # baseline_verdict_skipped row naming it). Injected ONLY here, at the bench-pass argv
+            # layer (the same launcher-owned TypedLever the --ckpt-every override rides): NEVER
+            # into the full-bench passes (delta_payload is None) and NEVER into the real-launch
+            # argv (_run_dry_start exits before the durable spawn by construction). The ROOT typed
+            # config — and therefore the receipt's typed_config_hash — is UNCHANGED.
+            overrides["--skip-boot-baseline-verdict"] = True
         if resume_from is not None:
             overrides["--resume-from"] = str(resume_from)
         cfg_b = with_internal_dsl_lever(
@@ -1790,6 +1806,10 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
         report["inherited_from"] = delta_payload["inherited_from"]
         report["delta_flags"] = delta_payload["delta_flags"]
         report["inherited_peak_rss_gib"] = delta_payload["inherited_peak_rss_gib"]
+        # Boot-side inheritance stamp: the passes ran --skip-boot-baseline-verdict, so the boot
+        # baseline verdict on this receipt is INHERITED provenance (prior green receipt), never a
+        # fresh measurement (NO-FAKE separation — same discipline as inherited_from.fields).
+        report["boot_baseline_verdict"] = "inherited"
         report["peak_envelope_ok"] = envelope_ok
         report["peak_envelope_detail"] = _env_detail
         if not envelope_ok:

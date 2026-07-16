@@ -227,8 +227,10 @@ _PASS2_LOG = (
 
 
 def _stub_launcher(monkeypatch, pass_logs, peaks_mib):
-    """Stub compile+launch machinery so _run_dry_start's pass loop runs hermetically."""
+    """Stub compile+launch machinery so _run_dry_start's pass loop runs hermetically.
+    Returns the list of per-pass override dicts handed to with_internal_dsl_lever."""
     calls = {"i": 0}
+    seen_overrides: list[dict] = []
 
     class _Cfg:
         typed = None
@@ -237,6 +239,7 @@ def _stub_launcher(monkeypatch, pass_logs, peaks_mib):
         return _Cfg()
 
     def fake_lever(cfg, *, name, overrides):
+        seen_overrides.append(dict(overrides))
         return cfg
 
     def fake_write(cfg, sub, **kw):
@@ -254,6 +257,7 @@ def _stub_launcher(monkeypatch, pass_logs, peaks_mib):
     monkeypatch.setattr(L, "with_internal_dsl_lever", fake_lever)
     monkeypatch.setattr(L, "write_dsl_bound_launch", fake_write)
     monkeypatch.setattr(subprocess, "run", fake_run)
+    return seen_overrides
 
 
 def _args(**over):
@@ -265,6 +269,7 @@ def _args(**over):
 
 
 def test_delta_receipt_carries_mode_inherited_from_delta_flags(tmp_path, monkeypatch):
+    monkeypatch.setenv("TAC_BENCH_INHERIT_FROM", "sentinel")  # register key for teardown restore
     prior = _write_prior(tmp_path)
     out = _write_fresh_manifest(tmp_path, _fresh_argv(**{"--verdict-live-gap-every": "25"}))
     _stub_launcher(monkeypatch, [_PASS1_LOG, _PASS2_LOG], [2048, 2048])
@@ -280,6 +285,8 @@ def test_delta_receipt_carries_mode_inherited_from_delta_flags(tmp_path, monkeyp
     assert rep["inherited_from"]["fields"] == ["boot_ok", "peak_rss_gib", "throughput_gate"]
     assert "--verdict-live-gap-every" in rep["delta_flags"]
     assert rep["dry_start_target_epochs"] == L.DELTA_BENCH_EPOCHS
+    # Boot-side inheritance stamp lives NEXT TO the inherited_from provenance fields.
+    assert rep["boot_baseline_verdict"] == "inherited"
     # NO-FAKE: the note must say which fields are inherited provenance vs freshly measured
     assert "PROVENANCE" in rep["note"] and "MEASURED FRESH" in rep["note"]
 
@@ -377,6 +384,87 @@ def test_resume_from_is_structural_not_run_identity():
     prior = L.parse_argv_flags(["p", "t.py", "--resume-from", "a.npz"])
     fresh = L.parse_argv_flags(["p", "t.py", "--resume-from", "b.npz"])
     assert "--resume-from" in L.structural_flag_diff(prior, fresh)
+
+
+# ───────────── boot-side inheritance: --skip-boot-baseline-verdict (follow-up directive) ─────────────
+
+_TRAINER_SRC = (_REPO / "experiments" / "train_levelset_witness_realized_through_R_mlx.py").read_text()
+
+
+def test_delta_passes_carry_skip_boot_baseline_verdict_and_env(tmp_path, monkeypatch):
+    """BOTH delta passes get the bare skip flag at the bench-pass argv layer; the inherit-from
+    env names the prior receipt's typed hash for the trainer's honest skipped row."""
+    monkeypatch.setenv("TAC_BENCH_INHERIT_FROM", "sentinel")  # register key for teardown restore
+    prior = _write_prior(tmp_path)
+    out = _write_fresh_manifest(tmp_path, _fresh_argv(**{"--verdict-live-gap-every": "25"}))
+    seen = _stub_launcher(monkeypatch, [_PASS1_LOG, _PASS2_LOG], [2048, 2048])
+    rc = L._run_dry_start(_args(dry_start_delta_from=str(prior)), CONFIG, True, out, "t", None, None)
+    assert rc == 0
+    assert len(seen) == 2  # pass1 + pass2
+    for ov in seen:
+        assert ov.get("--skip-boot-baseline-verdict") is True
+    import os as _os
+    assert _os.environ["TAC_BENCH_INHERIT_FROM"] == "priorhash123"
+
+
+def test_full_bench_passes_do_not_carry_skip_flag(tmp_path, monkeypatch):
+    """Default (no --dry-start-delta-from): NEITHER pass carries the skip flag — the full bench
+    always measures its own boot baseline."""
+    out = tmp_path / "fresh_run"
+    out.mkdir()
+    seen = _stub_launcher(monkeypatch, [_PASS1_LOG, _PASS2_LOG], [2048, 2048])
+    rc = L._run_dry_start(_args(), CONFIG, True, out, "t", None, None)
+    assert rc == 0
+    assert len(seen) == 2
+    for ov in seen:
+        assert "--skip-boot-baseline-verdict" not in ov
+        assert ov.get("--ckpt-every") == 1  # the pre-existing override machinery is intact
+
+
+def test_real_launch_argv_never_carries_skip_flag():
+    """The REAL c2_surgical_warm launch argv (typed compile, no bench lever) must not contain the
+    skip flag — it exists only on the launcher-owned bench-pass lever."""
+    cfg = L.derive_named_config(
+        "c2_surgical_warm", "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        num_pairs=600, epochs=None, overfit=True)
+    flags = list(cfg.to_trainer_flags("REAL_LAUNCH_ARGV_AUDIT"))
+    tokens = {t for pair in flags for t in (pair if isinstance(pair, (list, tuple)) else [pair])}
+    assert "--skip-boot-baseline-verdict" not in tokens
+    assert "--skip-boot-baseline-verdict" not in cfg.to_command("REAL_LAUNCH_ARGV_AUDIT")
+
+
+def test_typed_config_hash_invariance_c2_surgical_warm():
+    """The boot-side inheritance feature must not perturb the typed config surface: the c2 hash
+    is pinned to its pre-feature value (coordinator amendment 2d486e3bff...)."""
+    # NOTE: the gt-cache path STRING is part of the typed surface — the canonical launcher
+    # invocation uses the repo-relative path, which is what the pinned hash was compiled with.
+    cfg = L.derive_named_config(
+        "c2_surgical_warm", "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        num_pairs=600, epochs=None, overfit=True)
+    assert cfg.typed.typed_config_hash() == (
+        "2d486e3bff935949c4018a9b998b621cb439e8000640772aa8abd23dd21d5a8d")
+
+
+def test_trainer_flag_is_store_true_default_off():
+    """Default-off regression at the trainer surface: store_true (no value token, default False)
+    and the v0 gate reads it with a False default (absent-attr safe)."""
+    assert '"--skip-boot-baseline-verdict", action="store_true"' in _TRAINER_SRC
+    assert 'getattr(args, "skip_boot_baseline_verdict", False)' in _TRAINER_SRC
+
+
+def test_trainer_skip_emits_honest_skipped_row():
+    """The skip path must emit the baseline_verdict_skipped row naming the inherited receipt —
+    the run record never looks like a verdict silently vanished."""
+    assert '"stage": "baseline_verdict_skipped"' in _TRAINER_SRC
+    assert '"delta_bench_inherited_from "' in _TRAINER_SRC
+    assert 'os.environ.get("TAC_BENCH_INHERIT_FROM", "unspecified")' in _TRAINER_SRC
+
+
+def test_skip_flag_is_a_legal_boolean_lever_override():
+    """with_internal_dsl_lever compiles a True override to a bare token ONLY for flags the DSL's
+    trainer-argparse scan classifies as boolean — the new flag must be in that set."""
+    from tac.witness_dsl.curriculum_dsl import real_boolean_flags
+    assert "--skip-boot-baseline-verdict" in real_boolean_flags()
 
 
 if __name__ == "__main__":
