@@ -273,12 +273,89 @@ ADAPTIVIZATION_TICKETS: tuple[AdaptivizationTicket, ...] = (
             "counted-but-inert fake), so it is deliberately NOT wired."
         ),
         unlock=(
-            "P3 first ($0): measure Muon-group per-tensor ||W|| growth across existing "
-            "finisher-phase stage checkpoints; if material AND correlated with late-finisher "
-            "d_seg wobble, build the decoupled-wd Muon path in "
-            "tac.optimization.muon_finisher_mlx (subclass or post-step multiplicative shrink), "
-            "then the corrected-lambda A/B at the finisher window; else close as "
-            "measured-immaterial"
+            "P3 RESOLVED 2026-07-15 ($0, memo .omx/research/optimizer_dynamics_followup_20260715"
+            ".md T1 + equation inr_weight_norm_radial_ode_v1): Muon-group norms did NOT random-"
+            "walk-grow — they SHRANK 0.9-28.7% across the mod32cap finisher (film -28.7%), "
+            "GRADIENT-driven (radial:diffusion:wd = 7:1:0.05; mean inward cosine 0.0085). "
+            "Consequence: decoupled shrink-to-zero wd is the WRONG control (adds force in the "
+            "measured drift direction); promotion path is SUPERSEDED by the --muon-lr eta_rel-"
+            "pin / restoring-decay ticket below. This ticket stays open ONLY for the corrected-"
+            "lambda law's bookkeeping value if a decoupled path is ever built for other reasons"
+        ),
+        joint_wallclock_axis="epochs_to_target",
+    ),
+    AdaptivizationTicket(
+        constant="--muon-lr",
+        current_value="2e-3 flat (mod32cap lineage) / --muon-lr-final-frac default 1.0",
+        poison_evidence=(
+            "MEASURED ($0, existing stage checkpoints; memo .omx/research/"
+            "optimizer_dynamics_followup_20260715.md T1, equation inr_weight_norm_radial_ode_v1 "
+            "anchor muon_finisher_norm_shrink_hidden_lr_increase_measured_20260715): the NS "
+            "update norm is weight-independent, so eta_rel = ||u||/||W(t)|| is a STATE variable; "
+            "with flat muon lr the mod32cap finisher ran a hidden per-layer LR INCREASE x1.40 "
+            "(film) / x1.09-1.22 (hidden) as norms shrank — self-accelerating, and it COMPOUNDS "
+            "multiplicatively with any --muon-lr-final-frac anneal (0.1 anneal x 1.4 drift = "
+            "x0.14 net, not x0.10). Also the static sqrt(max(1,n/m)) RMS rule gives film 2.0-2.8x "
+            "the relative step of square hidden layers — a per-layer LR ratio nobody chose. "
+            "||W|| is SPECTRAL content for sin/hosc rows => the drift is also an NTK band shift."
+        ),
+        law=(
+            "hold the CHOSEN invariant (full-pipeline co-design authority 2026-07-15): either "
+            "(a) eta_rel pin — gamma_muon,t per tensor proportional to ||W(t)||/||W(t0)|| "
+            "(relative step stationary), or (b) row-norm projection at ckpt cadence onto the "
+            "designed spectral profile ||w||* = min(k_need, k_R)/omega (band edge at the R "
+            "cutoff — any norm above is strictly dominated: pays bits AND aliases), or (c) "
+            "restoring decay -lambda*(||W||-||W||*)*W-hat. Candidates ranked by the staged A/B, "
+            "not by publication provenance."
+        ),
+        law_source=(
+            "inr_weight_norm_radial_ode_v1 (src/tac/canonical_equations/"
+            "inr_weight_norm_radial_ode_20260715.py) + memo T2/T2'"
+        ),
+        built_implementation="",
+        unlock=(
+            "ONE logging change first (score-neutral, defaults ON): per-tensor ||W|| live+EMA "
+            "telemetry row at verdict cadence (the stream the pin/projection READS — sensors "
+            "read trainer streams, no recompute); then a bounded n24 A/B pin-vs-flat at the "
+            "finisher window through the governed launcher"
+        ),
+        joint_wallclock_axis="epochs_to_target",
+    ),
+    AdaptivizationTicket(
+        constant="--grad-autoclip percentile/window (p=10, w=1000)",
+        current_value="p10, w=1000 steps (AutoClip defaults, arXiv:2007.14469)",
+        poison_evidence=(
+            "MEASURED (armB telemetry, memo .omx/research/optimizer_dynamics_followup_20260715"
+            ".md T4): at n24 accum8 = 3 opt steps/ep, w=1000 steps = 333 EPOCHS of memory — "
+            "history never fills in-window (237/1000 at ep79), so the p10 threshold includes "
+            "ep1-5 gnorms forever. Under the measured DECAYING gnorm (217.9 -> ~3), AutoClip "
+            "p10 became a LAGGED NORM-TARGET (frac_clipped ~= 1.0 by construction; applied step "
+            "== clip_t: 0.5 warmup -> 8.99 spike at ep5 -> floor ~2.55), holding armB's applied "
+            "step 5-18x the stationary arms' — one mechanism explains BOTH the ep25 win "
+            "(-10.35%) and the ep25+ reversal (overshoot/EoS near the sharpening minimum; "
+            "spike-guard and tau-handoff candidates FALSIFIED from the same telemetry: 0 skips, "
+            "temp/beta pinned 1.0)."
+        ),
+        law=(
+            "window in EPOCH units: w_steps = w_ep * steps_per_ep (config-derived, not a raw "
+            "step count); percentile from the pre-registered S2 sweep. Discriminators S1 "
+            "(w in {100,1000,3000}: reversal epoch moves with window memory), S2 (p10 -> p2: "
+            "floor drops toward fixed-clip behavior; one-knob-two-phases), S3 (post-reversal "
+            "d_seg wobble variance), S4 (causal rebase: resume armB@ep75 with fixed-0.5 — "
+            "descent resumes within ~10ep iff the mechanism is ongoing-step-size)"
+        ),
+        law_source=(
+            "inr_weight_norm_radial_ode_v1 domain_of_validity.t4_preregistration + "
+            "autoclip_percentile_threshold_v1 + memo T4"
+        ),
+        built_implementation=(
+            "AutoClip law itself is built (commit c219841d8c); the epoch-unit window + "
+            "percentile sweep arms are NOT wired"
+        ),
+        unlock=(
+            "S4 rebase arm first (~$0, resume existing armB ep75 checkpoint, ~10 ep) when the "
+            "507/r6 chain frees the GPU; then the >=150-ep S1/S2 arms through the governed "
+            "launcher"
         ),
         joint_wallclock_axis="epochs_to_target",
     ),
