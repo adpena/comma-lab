@@ -18594,3 +18594,80 @@ annulus and longest end of long tail". Full table:
   `describe()`-renderable — fully covered by the generic registry/describe introspection that the
   costate digest, dashboard, and schedule read-back consume. No bespoke consumer rendering needed;
   same disposition as ComputeDtypeBf16QCGate earlier today. [consumers-generic]
+
+## FEED-optdyn-followup (2026-07-15) — optimizer-dynamics follow-up: P2/P3 RESOLVED $0, radial-norm law MEASURED+registered, co-design charter applied
+- **Charter:** operator "follow up research based on what that optimizer research revealed" + the
+  full-pipeline co-design authority ("control and engineer the gradient and weights and classes and
+  carriers... however is optimal"). Memo `.omx/research/optimizer_dynamics_followup_20260715.md`;
+  artifacts `experiments/results/optdyn_followup_20260715/` (scripts + JSON, all from EXISTING
+  checkpoints — no run launched, $0).
+- **T1 MEASURED (P3 FALSIFIED, sign inverted):** mod32cap n600 Muon finisher (ep726→1000, flat lr
+  2e-3): Muon-group ‖W‖ SHRANK — film −28.7%, hidden.3 −18.2%, group −15.4% (predicted: random-walk
+  growth). Channel decomposition (film): radial −464 : diffusion +63 : wd −3.3 (7:1:0.05), mean
+  inward cosine 0.0085 ⇒ gradient-driven. **Hidden-LR verdict: the finisher ran an UNCHOSEN
+  per-layer LR INCREASE ×1.40 (film) / ×1.09–1.22 (hidden)** (η_rel=‖u‖/‖W‖ state variable; NS
+  update norm weight-independent; compounds ×-multiplicatively with --muon-lr-final-frac). Head
+  gauge: l7-lineage out_sdf ‖W‖ 16.24→98.58 (**×6.07 = +2.6 UNSCHEDULED sharpening octaves** during
+  Tau — the τ anneal was partially norm-drift in disguise) vs mod32cap ×0.96 (explicit temp schedule
+  delivered it). Adam-v equilibrium check: ‖g‖/‖W‖ measured 0.008–0.10 vs Defazio target 0.447 —
+  4–50× below, never approached (time-constant 5e6 steps ≫ run) ⇒ predicted-null now MEASURED.
+- **T2 LAW (registered `inr_weight_norm_radial_ode_v1`, 3 measured anchors):** d‖W‖²/dt =
+  −2γλ‖W‖² −2γ⟨∇L,W⟩ +γ²E‖u‖²; radial force dominates in our norm-layer-free sin/hosc INR; head
+  gauge κ=‖W_head‖/τ is the only physical sharpness; ‖W‖ IS spectral content (NTK band). CHOSEN
+  invariant (prescriptive, co-design authority): ‖w‖*=min(k_need,k_R)/ω (band edge at R cutoff —
+  above it strictly dominated: pays bits AND aliases), δ*=ε_φ/(ω‖x‖), κ scheduled. Hold-it
+  candidates ticketed: row-norm projection / Muon η_rel pin / restoring decay −λ(‖W‖−‖W‖*)Ŵ /
+  grid-native training (#496 M+Adam, FakeQuantSTE exists).
+- **T3 MEASURED (norm↔rate):** slope 0.17–0.23 bits/octave, r≈0.52 (naive theory 1.0 — tails not
+  bulk); l7 fixed-δ bits/w +3.5%. BYTE channel second-order; FIRST-order = FIDELITY channel
+  (δ=linf/127 grows with norm ⇒ ×2.45 coarser phase resolution on hidden.3 = quantization spectral
+  jitter, a d_seg risk). Co-design proposal routed: `GridNativeWitness` — optimizer+codec share ONE
+  lattice (train on shipping δ*, EMA on-grid, weight_entropy on actual codes — the loss stack
+  already carries weight_entropy live; export=identity).
+- **T4 MECHANISM RESOLVED (P2 answered from existing telemetry):** spike-guard FALSIFIED (0 skips)
+  · τ-handoff FALSIFIED (temp/β pinned 1.0 through ep80) · surviving mechanism = **AutoClip
+  p10/w1000 is a LAGGED NORM-TARGET under decaying gnorm** (frac_clipped≈1.0 by construction;
+  applied step = clip_t: 0.5→8.99@ep5→floor 2.55; w=1000@3steps/ep = 333-ep memory never fills) ⇒
+  armB ran 5–18× the stationary arms' step from ep5 — ONE mechanism explains the ep25 win AND the
+  reversal (overshoot/EoS; d_seg B 0.0159→0.0182→0.0186 vs A monotone →0.0153). Pre-registered
+  discriminators S1 (window sweep) S2 (percentile) S3 (EoS wobble) S4 (causal rebase armB@ep75 with
+  fixed-0.5, ~$0, FIRST to fire when GPU frees).
+- **T5 design note (scope-bounded):** per-class gradient gain g_c (extends #433 per-class-λ) ×
+  v8 per-class carrier bytes b_c = ONE 2-resource KKT waterfill (substitutes; `d_seg_by_class`
+  telemetry exists; allocator routed, not built).
+- **Triality:** DAG=this row · equations=`inr_weight_norm_radial_ode_v1` (registered append-only) ·
+  DSL=adaptivization tickets updated (--muon-weight-decay P3-resolved/superseded; NEW --muon-lr
+  η_rel-pin ticket; NEW --grad-autoclip percentile/window ticket) — tickets not Levers per no-fake
+  (no trainer flags exist yet; the ONE owed logging change: per-tensor ‖W‖ telemetry row, defaults
+  ON, is the named unlock). verdict_scope FORMULATION (mod32cap/l7/v9-maglaw lineages);
+  [macOS-MLX research-signal] NON-PROMOTABLE. Everything MEANS; **pointer 0.19108 UNMOVED.**
+
+## FEED-whitebox-inventory (2026-07-15) — the frozen-oracle exploit TAXONOMY (operator: "tensors and gt all frozen and transparent, many exploits"); full memo `.omx/research/whitebox_exploit_inventory_20260715.md` [research-signal · NON-PROMOTABLE]
+- **Systematic inventory across 6 categories** (input-lattice · scorer-internal · decision-surface · GT
+  transparency · eval-protocol · cross-structure composites), match-vs-FULL-OBJECT discipline. Counts:
+  **DONE 17 · PARTIAL 7 · UNEXPLORED 3 · N/A 2.** The white box is heavily mined — a1 R-nullspace(#391,
+  80.67% invisible) · a2 blind-coord(#401, 22.70%/230,904px) · b1/b2 stem Nyquist alias wall(9.1 cam px)
+  · c1 margin=distance-to-flip(#141, 0.978 Fisher) · c2 tie-corrector(#26) · c4 per-frame EOT-δ CLOSED
+  (DOMINATED, FEED-kv) · c5 sub-pixel-boundary SDF · d1/d4 label-noise seg cap **≈0.012** · e1
+  last-frame-only seg(frame_0 obligation 8.5e-9) · e4 ZIP byte audit(#79) all DONE.
+- **TWO verified NON-exploits (kill fakes):** (1) evaluate.py score line 92 has **NO rounding** — the
+  `:,` is DISPLAY-only, the returned float is full-precision → no "free-byte" rounding band. (2) Exact
+  global **PWL-region solver = N/A** — SegNet SiLU + PoseNet-vision gelu_tanh are SMOOTH (only PoseNet's
+  ReLU head is PWL, and pose is SOLVED). Do not build a SegNet-argmax activation-polytope solver.
+- **3 UNEXPLORED, ranked ΔS/effort vs live V9·CGauge (d_seg binding, rate second, pose solved; all
+  $0/CPU, compose already-built operators):** **P1** joint decision-invisible manifold =
+  `rowspace(R) ∩ {margin>m*} ∩ {|J_pose·δ|<p*}` = the FREE-QUANTIZATION budget for the counted witness
+  payload (RATE lever, highest EV — rate is the sub-0.15 gap; #391+#141+#36 measured separately, never
+  composited) · **P2** SE-gate global-context conditioning price (b4, unmeasured scorer-internal
+  low-dim bottleneck; d_seg, capped ≈0.012) · **P3** temporal flip-hold amortization (f2 — share the
+  boundary-hold cost across pair/neighbors via banked ξ-warp; re-opens the per-frame-DOMINATED FEED-kv
+  corner at the FORMULATION-correct temporal formulation).
+- Routing → duty-to-measure tags `whitebox_free_quantization_budget_composite`(P1) ·
+  `segnet_se_gate_global_context_price`(P2) · `temporal_flip_hold_amortization_ip`(P3). No launch, live
+  507 chain + Modal UNTOUCHED. Compliance: through EXACT frozen scorer+R at compress (README:119),
+  scorer weights never ship, rule-118 generic-only inflate; verdict = n600 byte-closed exact-eval only.
+- **Triality:** DAG=this row · memo=`whitebox_exploit_inventory_20260715.md` · no DSL/equations leg owed
+  (inventory of frozen-oracle structure + probe designs; no lever/curriculum/config changed, no S_τ law
+  produced — the 3 probes register as duty-to-measure tags, becoming Levers only if a probe lands a
+  positive rung). verdict_scope FORMULATION (which frozen-structure exploits are open); everything MEANS;
+  **pointer 0.19108 UNMOVED · bank 0.18804.**
