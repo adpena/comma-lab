@@ -18968,3 +18968,34 @@ The "ANE #482 NO-GO" in FEED-scorerfactor is a REFERENCE to an already-scoped ve
 
 ## FEED-scorerblind (2026-07-15) — the BLIND complement = the RATE side of the same equation (operator: "the pixels and structure the scorer doesn't see is part of this equation too") [no-triality]
 Extended `frozen_scorer_exact_factorization_20260715.md` §8: the kernel of the composed scorer map is the DUAL of §6's seen-structure, and it IS the rate term. Enumerated B1-B7: (B1) camera-res kernel of the shared resize A ~(874·1164−384·512) DOF/ch/frame invisible to BOTH scorers → blind-coord #401 FILL FREE; (B2) argmax-cell interior → ~95% of frame is d_seg-null, only ~4.7% annulus seen → code bulk loosely; (B3) frame_0 seg-null → cheapest pose site; (B4) chroma HF pose-null (2×2 box-avg); (B5) sub-top-1 logits null (only argmax) → code sign-margin not logits; (B6) pose Jacobian null (6 scalars=dxi bank); (B7) uint8 sub-lattice null. THE SYMMETRIC EQUATION: distortion is fixed on the SEEN sufficient statistic (annulus×chroma-plane×6-pose×last-frame), rate is minimized by coding ONLY that statistic + treating the blind complement as free/generic. This is the non-RGB task-space capstone stated as the two sides of ONE factorized equation — distortion="what must be exactly right", rate="what must never cost a byte". Pointer 0.19108 UNMOVED.
+
+## FEED-515build (2026-07-15) — CONSTANTS+TELEMETRY BUILD WAVE landed (#515 BUILD half; operator: "All the constants stuff and unbuilt telemetry and more must be built and measured as well")
+Commit `63b1137a0b` (32 tests green) + memo `.omx/research/constants_telemetry_build_wave_20260715.md`.
+**PART A (constants → DERIVED):** 4 constants now emit DERIVED values via new Lever factories in
+`tac.witness_dsl.constants_telemetry_build_wave_20260715` — `DerivedAdamBeta2` **0.997691** +
+`DerivedEmaDecay` **0.997691** (both = log-midpoint of the #223 Law-4 stationarity sandwich
+[0.98667, 0.9996] @ S=75/T_c=100, evaluator `stationarity_window_log_midpoint_v1`; the EMA
+derivation retires the Quantizr/L18 ancestor literal AS A DERIVATION — incumbent 0.997 is
+in-window near-midpoint, B3a arbitrates) · `DerivedWPoseAtEngage` **0.3941** (=λ_pose/λ_seg at
+banked R1 d_pose 0.001610, `costate_lambda_marginal_ds_v1`; surrogate-calibration caveat recorded;
+B3e fork-from-ep726 arbitrates) · `DerivedEvalEvery` **25 CONFIRMED-DERIVED conditional on
+VPW(8)** (amortization law: with the parallel-verdict instrument the 10% budget derives 19 < the
+25 information floor; WITHOUT VPW it derives 28 — the incumbent was over-budget until the
+instrument; `verdict_cadence_amortization_v1`). 3 more constants verified ALREADY-CURED-LIVE
+(event-LR / β-rung co-anneal / phase-advect@label_floor). 5 constants that genuinely cannot be
+derived carry typed `HardcodedWaiverCustody(reason, owner, rederivation_trigger, battery_arm)`
+rows (muon internals→B3d, hosc-beta-end→B3f, accum-pairs→B3c, grad-clip→B1, ladder-birth→
+derivation-gated) — zero silently-inherited literals remain in scope. **PART B (telemetry):**
+per-tensor ‖W‖ producer BUILT (`tac.witness_control.weight_norm_telemetry`: live/EMA norms +
+rel_from_t0 drift + η_rel read-stream, resume-safe baseline — the optdyn/B3d unlock);
+`WeightNormTelemetryRow()` lever FAIL-CLOSED (`TrainerWireInQueued`, auto-unlocks) until its
+trainer flag lands — wire-in QUEUED behind the pid-31576 dry-start with the exact insertion point
+named (EMA-verdict emit ~L9332, default-ON per off-is-orphan); `VerdictBatch64()` (MEASURED
+never-slower, identity custody @ measured_anchor rung) + `ModDimDynamicsOn()` (explicit custody
+for the argv-silent D18 k90 sensor) BUILT; #408 Q1–Q7 + VerdictLiveGap + VerdictParallelWorkers
+VERIFIED already-built+wired (not rebuilt). **Battery updated:** B3a gains the derived-EMA arm
+(+3.2 h) → n24 battery ≈50–56 h ≈2.1–2.3 GPU-days; full ≈6.3 / compressed ≈2.3 GPU-days, cloud
+$0; `c2_composition_recipe()` machine-readable. No new EmpiricalAnchor (nothing MEASURED — all
+derivations over existing anchors; the battery produces the anchors). Triality: DAG=this FEED ·
+DSL=the 7 factories + custody (same commit) · equations=4 thin evaluators over already-registered
+laws. NO launches, NO trainer edits, live dry-start untouched. MEANS — pointer 0.19108 UNMOVED.
