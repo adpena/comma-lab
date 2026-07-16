@@ -509,8 +509,13 @@ def orientation_gates_mlx(
     for scale in groups:
         index = np.flatnonzero(scales == scale)
         group_theta = mx.asarray(theta[index], dtype=n.dtype)
-        logits = np.float32(kappa) * mx.cos(
-            np.float32(2.0) * (group_theta - normal_angle[..., None])
+        # NOTE: plain Python floats, NOT np.float32 scalars — a leading numpy
+        # scalar hijacks __mul__ and coerces the MLX array to ndarray, breaking
+        # the mx.* calls below (caught on-Metal 2026-07-16 by
+        # test_numpy_mlx_optional_parity; the codex sandbox had no Metal runtime
+        # so its 3x clean passes skipped this test).
+        logits = float(kappa) * mx.cos(
+            2.0 * (group_theta - normal_angle[..., None])
         )
         shift = mx.max(logits, axis=-1, keepdims=True)
         values = mx.exp(logits - shift)
