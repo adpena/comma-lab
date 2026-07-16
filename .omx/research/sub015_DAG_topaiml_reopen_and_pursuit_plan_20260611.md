@@ -18779,5 +18779,55 @@ annulus and longest end of long tail". Full table:
   genuinely-fresh high-EV d_seg lever in the whitebox design-space beyond compose/extend-existing; frozen-
   oracle exploit surface is prior-art-saturated. NOT a family kill — the compose-existing extensions remain
   open, launch-gated.`
+  - untested formulations / alternatives (for the ground-frame-lane-ξ NO-GO + the "prior-art-saturated"
+    verdict, so neither reads as a family kill): (1) horizon-frame ξ transport (MEASURED to PAY 14.6× —
+    the chart-selection law's positive arm; the lane NO-GO is ground-frame-specific, not a ξ-paradigm
+    kill); (2) the S2×weight adaptive-width composition (annulus × per-class taper) — never A/B'd through-R;
+    (3) a4-temporal LP annulus-share — bounded but unmeasured on the live vehicle; (4) any NEW frozen
+    structure surfaced by a future scorer-internal probe (the saturation verdict is over the CURRENTLY
+    enumerated surface, not a proof of non-existence). The saturation is INSTANCE/FORMULATION over today's
+    inventory — a genuinely new exploit or a measured compose-existing win reopens it.
 - Memo leg: `.omx/research/whitebox_full_campaign_20260715.md` §RECALL-COMPLETENESS (per-item table +
   tally + 3 surprises). **Pointer 0.19108 UNMOVED (means; anti-re-derivation / system-intelligence).**
+
+## FEED-511-gate (2026-07-15) — two-landing #511: whole-file ancestor-revert detector (buildable half) [no-triality]
+- **Built (apparatus, MEANS):** `check_no_wholefile_ancestor_revert` in `src/tac/preflight.py`, wired into
+  `preflight_all()` WARN-ONLY. Static + fail-open over `git diff --cached`: flags a staged `src/tac|tools`
+  module whose index blob is byte-identical to a STRICTLY-OLDER committed version (an ancestor blob, not
+  HEAD) while the diff from HEAD is a full-file replacement (>90% of HEAD lines removed, >100 churn) — the
+  stale-base merge-clobber silent-sister-revert signature (memory `wholefile_stale_base_merge_clobber_class_20260715`).
+  Same-line waiver `# WHOLEFILE_ANCESTOR_REVERT_OK:<rationale>` (placeholder rejected). 16 dedicated tests
+  (`src/tac/tests/test_wholefile_ancestor_revert.py`), all green. **Live count 0** (nothing staged reverts an
+  ancestor). Strict-flip condition: real-3-way-merge habit confirmed + live count stays 0 across a review cycle.
+- **SECOND landing (this task): MEMORY.md consolidation** — trimmed 17492→16962 bytes (<17KB target restored,
+  fully-loading), 134 links preserved, no distinct fact deleted (recoverable detail lives in the linked topic
+  files). No blocked half here. **Pointer 0.19108 UNMOVED.**
+
+## FEED-513-gate (2026-07-15) — two-landing #513: Modal single-flight + dual-ledger consistency (local-ledger half) [no-triality]
+- **Built (apparatus, MEANS):** `check_modal_single_flight_ledger_consistency` in `src/tac/preflight.py`,
+  wired WARN-ONLY. Reads ONLY local ledgers (`.omx/state/modal_call_id_ledger.jsonl` +
+  `active_lane_dispatch_claims.md`; deliberately does NOT call `modal` per policy
+  `modal_single_flight_dual_ledger_policy_20260715`). Refuses (a) >1 live (non-terminal, latest-row-wins)
+  call_id, (b) a live call_id with no matching ACTIVE claim row, (c) a live call_id non-terminal older than
+  N hours (default 24). 18 tests (`test_modal_single_flight_ledger.py`), green. **Live count 6** (5 stale
+  non-terminal ledger rows from dead arms + 1 unmatched-claim) — genuine reconciliation debt the warn-only
+  gate now surfaces. Strict-flip condition: ledgers reconciled to live-count 0 + the `modal app list`
+  cloud cross-check is operator-habitual.
+- **BLOCKED SECOND landing:** the cloud-side enforcement (auto cross-check of `modal app list` at dispatch
+  time) is an operator-runtime step, NOT a static gate — documented in the check docstring. Trigger to
+  extend: an operator-run reconciliation habit / a dispatch-wrapper hook. **Pointer 0.19108 UNMOVED.**
+
+## FEED-512-preflight-half (2026-07-15) — two-landing #512: retry-without-descendant-check (static half only) [no-triality]
+- **Built (apparatus, MEANS):** `check_retry_without_descendant_check` in `src/tac/preflight.py`, wired
+  WARN-ONLY. Scans `tools/` + `scripts/` .py for a file that (a) detach-spawns (setsid/start_new_session/
+  preexec_fn), (b) is a respawn/retry helper, (c) has NO psutil descendant / same-out-dir guard — the
+  orphan-spawn duplicate-writer class (memory `launcher_buffered_log_not_hung_orphan_spawn_respawn_id_collision_20260715`).
+  Round-1 self-review caught a real detector bug: the guard token `descendant` collided with the waiver
+  token NAME `RETRY_WITHOUT_DESCENDANT_CHECK_OK` (a waived/placeholder file falsely read as guarded) — fixed
+  by stripping the waiver token before the guard scan. 16 tests (`test_retry_without_descendant_check.py`),
+  green. **Live count 4** (`tools/dashboard_reload.py`, `tools/relaunch_macos_cpu_canvas_sweep_safe.py`,
+  `scripts/launch_lane_on_vastai.py`, `scripts/launch_lane_with_retry.py`).
+- **BLOCKED SECOND landing (runtime cure):** the real fix — a psutil same-out-dir spawn guard IN
+  `tools/launch_witness_run.py` — is BLOCKED because that launcher is the live #507 run (pid 3997,
+  untouchable). Trigger to land the runtime guard + strict-flip this gate: **pid 3997 exits.**
+  **Pointer 0.19108 UNMOVED (means).**
