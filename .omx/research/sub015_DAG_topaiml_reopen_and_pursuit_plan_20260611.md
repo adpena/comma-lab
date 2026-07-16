@@ -18494,7 +18494,8 @@ annulus and longest end of long tail". Full table:
   arms; ep25 d_seg A 0.018045 / B 0.015902 / C 0.017737; log-slopes −0.02202/−0.02380/−0.02247 per
   ep. **Attribution: lineage (C−A) −1.71% ≈ neutral; AutoClip law (B−C) −10.35% carries the win.**
   BONUS overrun (labeled, NOT verdict): armB reverses post-ep25 (ep75 0.018644) while armA descends
-  (0.015325) ⇒ durability un-established; ≥150-ep A/B = the follow-up. verdict_scope FORMULATION.
+  (0.015325) ⇒ durability un-established; ≥150-ep A/B = the follow-up. verdict_scope: formulation —
+  the maglaw 3-arm n24 A/B at this horizon.
 - **bf16 compute-seam QC gate MEASURED: ADMIT** (anchor `bf16_seam_n24_quality_check_measured_20260715`):
   60 steps, median post-normalize cosine 0.992538 (+0.0025 clearance; p10 0.9869 BELOW the bar —
   median law holds, margin small), rel_norm 1.0000 (pinned by per-param normalize by construction —
@@ -18527,8 +18528,8 @@ annulus and longest end of long tail". Full table:
 - **Leg C (pose sweep, measured):** all 3,203 segment-index-10 `pose.npy` (1200×6) range-extracted
   and speed-profile-correlated vs our local comma2k19 GT (mean 31.75 m/s): corr max 0.9431 /
   median 0.0275; 0 pass corr≥0.99; 0 pass joint band+0.95; best in-band candidate REJECTED by
-  high-frequency detrended corr 0.1008. verdict_scope FORMULATION (index-10 slice + corpus
-  provenance; re-cut-index untested but mooted by Leg A).
+  high-frequency detrended corr 0.1008. verdict_scope: formulation — index-10 slice + corpus
+  provenance (re-cut-index untested but mooted by Leg A).
 - **Residue banked:** (1) rate benchmark — comma's own VQ spends 192 KB raw / ~48 KB
   GPT-AC-coded per driving minute at far-below-scorer quality ⇒ corroborates task-space-witness
   parsimony over generic token codecs; (2) the surviving corpus lever is comma2k19
@@ -18572,8 +18573,8 @@ annulus and longest end of long tail". Full table:
   live r6 chain):** `tools/launch_witness_run.py --config v9_cgauge_ideal_mod19 --gt-cache
   .../gt_n24.npz --num-pairs 24 --dry-start 3 --dsl-lever CorrectedWeightDecay --out-dir
   .../levelset_n24_adamc_wdc_<utc>` + same-config control.
-- verdict_scope FORMULATION; [macOS-MLX research-signal] NON-PROMOTABLE. Everything MEANS;
-  **pointer 0.19108 UNMOVED.**
+- verdict_scope: formulation — the AdamC/MuonC literature-transfer question on our sin/hosc INR stack;
+  [macOS-MLX research-signal] NON-PROMOTABLE. Everything MEANS; **pointer 0.19108 UNMOVED.**
 
 ## FEED-commavq-legs (2026-07-15) — triality leg disposition for ee9de95961 [no-triality]
 - `ee9de95961` (commaVQ containment NOT-CONTAINED) is a MEASUREMENT NEGATIVE on a dataset-containment
@@ -18639,7 +18640,8 @@ annulus and longest end of long tail". Full table:
   DSL=adaptivization tickets updated (--muon-weight-decay P3-resolved/superseded; NEW --muon-lr
   η_rel-pin ticket; NEW --grad-autoclip percentile/window ticket) — tickets not Levers per no-fake
   (no trainer flags exist yet; the ONE owed logging change: per-tensor ‖W‖ telemetry row, defaults
-  ON, is the named unlock). verdict_scope FORMULATION (mod32cap/l7/v9-maglaw lineages);
+  ON, is the named unlock). verdict_scope: formulation — the P3 random-walk-growth prediction, the
+  spike-guard and τ-handoff mechanism hypotheses, each on the mod32cap/l7/v9-maglaw lineages measured;
   [macOS-MLX research-signal] NON-PROMOTABLE. Everything MEANS; **pointer 0.19108 UNMOVED.**
 
 ## FEED-whitebox-inventory (2026-07-15) — the frozen-oracle exploit TAXONOMY (operator: "tensors and gt all frozen and transparent, many exploits"); full memo `.omx/research/whitebox_exploit_inventory_20260715.md` [research-signal · NON-PROMOTABLE]
@@ -18669,5 +18671,24 @@ annulus and longest end of long tail". Full table:
 - **Triality:** DAG=this row · memo=`whitebox_exploit_inventory_20260715.md` · no DSL/equations leg owed
   (inventory of frozen-oracle structure + probe designs; no lever/curriculum/config changed, no S_τ law
   produced — the 3 probes register as duty-to-measure tags, becoming Levers only if a probe lands a
-  positive rung). verdict_scope FORMULATION (which frozen-structure exploits are open); everything MEANS;
+  positive rung). verdict_scope: formulation — which frozen-structure exploits are open on the live
+  V9·CGauge vehicle; everything MEANS;
   **pointer 0.19108 UNMOVED · bank 0.18804.**
+
+## FEED-whitebox-full-campaign (2026-07-15) — operator: "All 7 partial and composites should be recorded and explored and pursued along with search across full design space for exploits and optimal across all design dimensions" [no-triality]
+- **Directive absorbed (task #514; memory `full_pipeline_codesign_authority` extension 2):** PARTIAL is
+  a pursue-state, not a resting state. The FEED-whitebox-inventory taxonomy's 7 PARTIALs each get a
+  duty row + designed probe: a3 quantization-dead-zone as a per-section budget · a4 uint8×margin
+  integer flip program at the TEMPORAL formulation (joint min-DL hold-set IP) · b3 deeper-layer BN
+  affine thresholds · b5 joint decision-invisible composite (feeds P1) · c3 Laguerre generators
+  (live in v8, tracked not re-opened) · d3 comma2k19 neighbor-segment train-time side info · f3
+  blind-coord × free-quantization stack.
+- **Composites systematically:** enumerate the k-wise intersection LATTICE over the 17 measured frozen
+  structures (R-nullspace, margin field, pose-Jacobian tube, blind coords, dead-zone, stem alias wall,
+  tie-order, GT label field, …) — the f-category had only 3 pairwise rows; the directive is the full
+  lattice, ranked by predicted joint-invisibility volume × payload relevance.
+- **Full design-space search:** standing cross-product {exploit structure} × {design dimension:
+  gradient · weight · class · carrier · quantizer · temporal · spatial · spectral} — each cell either
+  measured, designed, or marked dominated-with-reason (no silent cells; the match-vs-full-inventory
+  rule applied to the DESIGN space itself). Campaign arm dispatched (Opus). Everything $0/CPU design +
+  recording until a probe earns a byte-closed n600 exact row. **Pointer 0.19108 UNMOVED · bank 0.18804.**
