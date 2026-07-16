@@ -106,6 +106,10 @@ C2_SURGICAL_EXPECTED_LEVERS: tuple[str, ...] = (
     "head_offset_solver",
     "c2_speed_stack",
     "c2_component_wallclock_telemetry",
+    # 2026-07-16 operator-approved wall-clock amendment (dry-start receipt 20260716T203816Z):
+    # explicit live-gap cadence 25 replaces the auto_ema_warmup cadence-1 mode whose ~26-min
+    # per-epoch probe was the measured 1560 s epoch tail. See the VerdictLiveGap lever note.
+    "verdict_live_gap",
 )
 
 #: doctrine dispositions this config does NOT train (the Kolmogorov test applied);
@@ -180,6 +184,7 @@ def compile_c2_surgical_warm_launch_config(
         PoseBlindComputeGate,
         PoseFinishConditioningGate,
         TieLocusDisplacement,
+        VerdictLiveGap,
     )
     from tac.witness_dsl.typed_config import (
         Provenanced,
@@ -311,6 +316,18 @@ def compile_c2_surgical_warm_launch_config(
         PoseFinishConditioningGate(backstop_epoch=POSE_BACKSTOP_EPOCH),
         PoseBlindComputeGate(),
         HeadOffsetSolver(mode="flip_median", tau=1.0),
+        # AMENDMENT (operator-approved 2026-07-16, from the c2 dry-start receipt
+        # 20260716T203816Z): the trainer's auto_ema_warmup live-gap mode runs the EMA-vs-live
+        # probe at CADENCE 1 for the 667-update EMA warmup. MEASURED (witness_component_wallclock
+        # ep651-653): accum loop ~74 s/ep, epoch TAIL ~1560 s/ep = the previous ~26-min probe
+        # blocking at join-before-schedule (the determinism join is correct; cadence 1 is
+        # physically unserviceable — probe issue rate >> service rate). DERIVED cadence 25:
+        # (a) == --eval-every 25 (probe rides the existing verdict, marginal cost ~0), and
+        # (b) > ceil(probe_s/epoch_s) = ceil(1560/74) ~ 22, the pipelining bound that restores
+        # the zero-wait join. Read-only telemetry — score-neutral by construction; this is a
+        # WALL-CLOCK amendment only (score-neutral != cost-neutral; the off-is-a-tracked-queue
+        # law's cadence-is-a-recorded-decision clause, now actually recorded).
+        VerdictLiveGap(every=25),
         speed,
         telemetry,
     )
