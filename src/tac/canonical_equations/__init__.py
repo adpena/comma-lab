@@ -312,6 +312,11 @@ from tac.canonical_equations.quadratic_head_chart_subset_solve_gap_20260707 impo
     populate_quadratic_head_chart_subset_solve_gap_equation,
     subset_solve_net_transfer,
 )
+from tac.canonical_equations.realization_necessity_preimage_20260715 import (
+    build_realization_necessity_preimage_per_stratum_v1,
+    populate_realization_necessity_preimage_equation,
+    stratum_rate_floor_bytes,
+)
 from tac.canonical_equations.registry import (
     CANONICAL_EQUATIONS_REGISTRY_LOCK,
     CANONICAL_EQUATIONS_REGISTRY_PATH,
@@ -515,6 +520,7 @@ __all__ = [
     "build_powerplay_variant_ii_cost_isomorphism_v1",
     "build_procedural_predictor_plus_residual_correction_savings_v1",
     "build_quadratic_head_chart_subset_solve_gap_v1",
+    "build_realization_necessity_preimage_per_stratum_v1",
     "build_resize_exploit_flip_fix_frontier_v1",
     "build_rewarmup_beta2_memory_window_v1",
     "build_roadlane_grating_composition_refuted_v1",
@@ -609,6 +615,7 @@ __all__ = [
     "populate_onpolicy_input_costate_surrogate_v1",
     "populate_palette_realization_ceiling_equation",
     "populate_quadratic_head_chart_subset_solve_gap_equation",
+    "populate_realization_necessity_preimage_equation",
     "populate_resize_exploit_flip_fix_frontier_equation",
     "populate_roadlane_grating_composition_refuted_equation",
     "populate_safe_compile_device_bitidentity_equation",
@@ -638,6 +645,7 @@ __all__ = [
     "smoothing_crossover_ok",
     "store_nothing_marginal_bytes",
     "store_nothing_rate_term",
+    "stratum_rate_floor_bytes",
     "subset_solve_net_transfer",
     "task_rd_dominance_gap",
     "tau_interface_halfwidth",
