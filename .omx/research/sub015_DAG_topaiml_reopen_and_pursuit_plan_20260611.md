@@ -18692,3 +18692,45 @@ annulus and longest end of long tail". Full table:
   measured, designed, or marked dominated-with-reason (no silent cells; the match-vs-full-inventory
   rule applied to the DESIGN space itself). Campaign arm dispatched (Opus). Everything $0/CPU design +
   recording until a probe earns a byte-closed n600 exact row. **Pointer 0.19108 UNMOVED · bank 0.18804.**
+
+## FEED-whitebox-campaign-t1t2t3 (2026-07-15) — task #514 arm DELIVERED: 7 PARTIALs recorded+designed · 45-cell composite lattice · 80-cell design-space cross-product; memo `.omx/research/whitebox_full_campaign_20260715.md` [no-triality]
+- **BINDING RECALL CORRECTION (§0, load-bearing):** the inventory ranked P1(free-quant) #1 on "rate is the
+  gap"; **FEED-jc MEASURED rate is NOT the constraint** (K_machine≈3.2KB, rate 0.0021; sub-0.15 ⟺ d_seg
+  ≤1.23e-3). So the free-quantization family (a3/f1/f3/P1) is DESIGN-ESTIMATE LOW-EV as a standalone rate
+  lever (ΔS_rate ceiling ≈0.001–0.002, and only if the learned residual grows); it is payload-INSURANCE,
+  not a frontier-mover. The campaign axis is d_seg → this arm elevates the d_seg PARTIALs over the rate
+  ones, REVERSING the inventory's rate-first order on measured grounds. verdict_scope: formulation —
+  free-quantization-as-standalone-rate-lever on the current ~3.2KB counted payload is DOMINATED by the
+  measured rate-non-binding result (NOT a family kill; re-enters high-value for a larger learned residual).
+- **T1 — 7 PARTIAL probes designed** (composition·falsification·ΔS-rung·cost; all $0/CPU except d3
+  GPU-gated): a3 `whitebox_quant_deadzone_per_section_budget` · a4 `whitebox_uint8_margin_temporal_flip_ip`
+  (re-opens FEED-kv per-frame corner at TEMPORAL formulation = the inventory P3; the one d_seg-realization
+  probe) · b3 `whitebox_deep_bn_affine_thresholds` (≈0-EV, close-the-question) · b5 `whitebox_joint_
+  decision_invisible_composite` (feeds P1) · c3 `whitebox_laguerre_generators_v8_tracked` (TRACKED-BY-v8
+  #359/#380/#386, NO separate probe — do not duplicate) · d3 `whitebox_comma2k19_neighbor_sideinfo`
+  (legal compress-time side info, GPU-gated) · f3 `whitebox_blindcoord_x_freequant_stack` (INERT on the
+  generator-param vehicle — empty camera-res surface). verdict_scope: formulation — f3-on-the-generator-
+  param-vehicle is INERT because its payload surface (camera-res stored pixels) is ~empty on V9·CGauge;
+  re-activates on any camera-res content-store vehicle.
+- **T2 — composite lattice:** 45 pairwise cells (10 non-dominated→P1/P3/f3; 35 M-or-X-with-scoped-reason) +
+  7 k≥3 composites, no silent cell. Payload-surface compose rule: INPUT invisibility = UNION (S1∪S4∪S5∪S6),
+  DECISION/POSE safety = INTERSECTION (S2∩S7∩S3). Honest headline: exactly ONE composite touches the
+  binding d_seg axis (temporal-boundary-hold/P3); the rest are rate composites bounded LOW by §0 or already
+  live-vehicle structure. verdict_scope: instance — tie-order composites (S7∩*) DOMINATED by the built #26
+  tie-corrector (measure-zero); alias wall (S6⊂S1) DOMINATED as a measured subset of the R null space.
+- **T3 — design-space cross-product** {10 structures}×{gradient·weight·class·carrier·quantizer·temporal·
+  spatial·spectral}=80 cells filled (no silent): ~40 M/live · ~12 D · ~20 X-scoped · ~8 N-scoped. **TOP-3
+  UNPURSUED by ΔS/effort:** (1) **S2×weight** margin-band-weighted spectral/norm penalty — the ONLY top cell
+  on the BINDING d_seg axis not already live (couples ‖W‖=freq-content with #333 annulus; new DSL Lever +
+  GPU A/B) `whitebox_margin_band_weighted_spectral_penalty`; (2) **S6×spectral** stem-Nyquist spectral
+  weight penalty (don't spend capacity on sub-9.1cam-px invisible freqs; convergence/rate)
+  `whitebox_stem_nyquist_spectral_weight_penalty`; (3) **S1×S2×S3** free-quant per-section budget (P1/b5) —
+  $0 payload-insurance for the growing learned residual (LOW direct ΔS, cheapest, enabling).
+- Routing → 9 duty-to-measure tags (7 PARTIAL + 2 new top cells), same path as P1/P2/P3 (memo §Routing +
+  this bullet; become DSL Levers only on a positive byte-closed rung). Live 507 chain + Modal UNTOUCHED; no
+  launch fired. Compliance: through EXACT frozen scorer+R at compress (README:119), weights never ship
+  (README:118), rule-118 generic-only inflate; verdict = n600 byte-closed exact-eval ONLY.
+- **Triality:** DAG=this row · memo=`whitebox_full_campaign_20260715.md` · DSL N/A-with-reason (inventory/
+  design; no trainer-config changed — tags become Levers only on positive rung) · equations N/A-with-reason
+  (design only; CITES FEED-jc, produces no new S_τ law). [no-triality] like FEED-whitebox-inventory.
+  Everything MEANS; **pointer 0.19108 UNMOVED · bank 0.18804.**
