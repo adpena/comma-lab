@@ -11,6 +11,7 @@ from __future__ import annotations
 LEGACY_FOURIER_AB_CONTROL = "legacy_fourier_ab_control"
 WINDOWED_CURVELET = "windowed_curvelet"
 COMPACT_SHEARLET = "compact_shearlet"
+LITERAL_POLAR_CURVELET = "literal_polar_curvelet"
 GENUINE_FRAME_FEATURE_WIDTH = 80
 _LEGACY_ALIASES = frozenset(
     {"polar_fourier", "polar_directional_fourier", LEGACY_FOURIER_AB_CONTROL}
@@ -27,6 +28,8 @@ def normalize_basis_family(value: object) -> str:
         return WINDOWED_CURVELET
     if raw == COMPACT_SHEARLET:
         return COMPACT_SHEARLET
+    if raw == LITERAL_POLAR_CURVELET:
+        return LITERAL_POLAR_CURVELET
     raise ValueError(f"unknown basis family: {raw!r}")
 
 
@@ -76,6 +79,14 @@ def genuine_frame_compact_shearlet_config():
             f"expected={GENUINE_FRAME_FEATURE_WIDTH}, live={feature_width}"
         )
     return config
+
+
+def literal_polar_curvelet_config():
+    """Return the strict, versioned literal polar-wedge program config."""
+
+    from tac.boundary_math.localized_basis_frames import literal_basis_program_config
+
+    return literal_basis_program_config()
 
 
 def genuine_frame_equal_value_budget(*, num_pairs: int, mod_dim: int = 32) -> dict[str, int]:
@@ -130,10 +141,12 @@ __all__ = [
     "COMPACT_SHEARLET",
     "GENUINE_FRAME_FEATURE_WIDTH",
     "LEGACY_FOURIER_AB_CONTROL",
+    "LITERAL_POLAR_CURVELET",
     "WINDOWED_CURVELET",
     "genuine_frame_compact_shearlet_config",
     "genuine_frame_equal_value_budget",
     "genuine_frame_windowed_curvelet_config",
     "is_legacy_fourier_ab_control",
+    "literal_polar_curvelet_config",
     "normalize_basis_family",
 ]

@@ -85,7 +85,7 @@ import struct
 import subprocess
 import sys
 import zipfile
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -124,9 +124,21 @@ from tac.boundary_math.compact_shearlet_frame import (  # noqa: E402
     CompactShearletConfig,
     compact_shearlet_feats,
 )
+from tac.boundary_math.curvelet_placement import (  # noqa: E402
+    fold_taper_into_in_proj_numpy,
+    native_orientation_fixed_point_numpy,
+    orientation_metadata_from_atom_specs,
+)
+from tac.boundary_math.localized_basis_frames import (  # noqa: E402
+    ATOM_SPECS as LITERAL_CURVELET_ATOM_SPECS,
+    BasisProgramConfig,
+    basis_features_numpy as literal_curvelet_feats_numpy,
+    generated_inflate_source as literal_curvelet_generated_source,
+)
 from tac.witness_dsl.basis_control import (  # noqa: E402
     COMPACT_SHEARLET,
     LEGACY_FOURIER_AB_CONTROL,
+    LITERAL_POLAR_CURVELET,
     GENUINE_FRAME_FEATURE_WIDTH,
     genuine_frame_compact_shearlet_config,
     genuine_frame_windowed_curvelet_config,
@@ -447,6 +459,30 @@ def _load_levelset_ckpt(
     cfg["hosc_beta"] = float(raw_cfg.get("__cfg_hosc_beta", 4.0))
     cfg["hosc_omega"] = float(raw_cfg.get("__cfg_hosc_omega", 1.0))
     cfg["basis"] = normalize_basis_family(raw_cfg.get("__cfg_basis", LEGACY_FOURIER_AB_CONTROL))
+    if cfg["basis"] == LITERAL_POLAR_CURVELET:
+        program_json = raw_cfg.get("__cfg_basis_program_json")
+        program_sha = str(raw_cfg.get("__cfg_basis_program_sha256", ""))
+        if not isinstance(program_json, str) or not program_sha:
+            raise ValueError(
+                "literal_polar_curvelet checkpoint lacks BasisProgramConfig JSON/hash custody"
+            )
+        try:
+            program = BasisProgramConfig.from_dict(json.loads(program_json))
+        except (TypeError, json.JSONDecodeError, ValueError) as exc:
+            raise ValueError(f"invalid literal BasisProgramConfig: {exc}") from exc
+        if program.canonical_sha256() != program_sha:
+            raise ValueError("literal BasisProgramConfig canonical SHA-256 mismatch")
+        cfg["basis_program"] = program
+        cfg["basis_program_train_sha256"] = program_sha
+        if program.taper_enabled:
+            if int(raw_cfg.get("__cfg_basis_taper_folded", -1)) != 0:
+                raise ValueError("literal training checkpoint must carry explicitly unfolded taper state")
+            taper = np.asarray(raw_cfg.get("__basis_taper_unfolded", []), dtype=np.float32)
+            if taper.shape != (program.feature_width,):
+                raise ValueError(
+                    "literal taper custody width does not match BasisProgramConfig feature_width"
+                )
+            cfg["basis_taper_unfolded"] = taper
     cfg["bank_n_scales"] = int(raw_cfg.get("__bank_n_scales", 4))
     cfg["bank_n_orient0"] = int(raw_cfg.get("__bank_n_orient0", 6))
     cfg["bank_f0"] = float(raw_cfg.get("__bank_f0", 2.0))
@@ -494,6 +530,8 @@ def _basis_feat_width(cfg: dict[str, Any]) -> int:
         return GENUINE_FRAME_FEATURE_WIDTH
     if family == COMPACT_SHEARLET:
         return GENUINE_FRAME_FEATURE_WIDTH
+    if family == LITERAL_POLAR_CURVELET:
+        return int(cfg["basis_program"].feature_width)
     return _curvelet_feat_width(cfg)
 
 
@@ -639,6 +677,13 @@ def build_levelset_blob(
         # regenerated in inflate.py; only learned coefficients remain counted.
         manifest["basis_family"] = COMPACT_SHEARLET
         manifest["compact_shearlet_config"] = asdict(genuine_frame_compact_shearlet_config())
+    elif normalize_basis_family(cfg.get("basis", LEGACY_FOURIER_AB_CONTROL)) == LITERAL_POLAR_CURVELET:
+        program: BasisProgramConfig = cfg["basis_program_deploy"]
+        if program.taper_enabled and not program.deploy_fold_receipt_sha256:
+            raise ValueError("literal taper deploy program lacks the mandatory fold receipt hash")
+        manifest["basis_family"] = LITERAL_POLAR_CURVELET
+        manifest["basis_program"] = program.to_dict()
+        manifest["basis_program_sha256"] = program.canonical_sha256()
     if blind_coordinate_fill:
         # Rule-118 FREE receiver program.  The measured proof receipt stays outside the counted
         # packet; only this generic activation/law identity is needed to reproduce the decode.
@@ -1531,6 +1576,11 @@ def _basis_feats(coords, m):
         return _windowed_curvelet_feats(coords, m["windowed_curvelet_config"])
     if family == "compact_shearlet":
         return _compact_shearlet_feats(coords, m["compact_shearlet_config"])
+    if family == "literal_polar_curvelet":
+        program = BasisProgramConfig.from_dict(m["basis_program"])
+        if program.canonical_sha256() != m.get("basis_program_sha256"):
+            raise ValueError("literal basis-program manifest SHA-256 mismatch")
+        return basis_features_numpy(coords)
     raise ValueError("unknown basis_family %r" % (family,))
 
 
@@ -2120,7 +2170,29 @@ def _render_pair(pi):
     # Writes the pair's 2 frames to disjoint offsets of the preallocated .raw (POSIX-safe concurrent write).
     m, code, coords, curv, P = _G["m"], _G["code"], _G["coords"], _G["curv"], _G["P"]
     rh, rw, ch, cw = _G["rh"], _G["rw"], _G["ch"], _G["cw"]
-    if m["self_orient"]:
+    _literal_program = None
+    if m.get("basis_family") == "literal_polar_curvelet":
+        _literal_program = BasisProgramConfig.from_dict(m["basis_program"])
+    if _literal_program is not None and _literal_program.native_orientation_enabled:
+        _scale_ids, _angles = orientation_metadata_from_atom_specs(ATOM_SPECS)
+
+        def _decode_native(_features):
+            _h0_native = _in_proj_h0(P, _features, m)
+            _phi_native, _ = _outputs_from_h0(
+                P, _h0_native, code[2 * pi + 1], m, False, feats=_features
+            )
+            return _phi_native.argmax(-1).reshape(rh, rw).astype(np.int64)
+
+        feats, _native_gates, _native_receipt = native_orientation_fixed_point_numpy(
+            curv,
+            _decode_native,
+            _scale_ids,
+            _angles,
+            kappa=_literal_program.native_orientation_kappa,
+            iteration_cap=_literal_program.fixed_point_iteration_cap,
+        )
+        h0 = _in_proj_h0(P, feats, m)
+    elif m["self_orient"]:
         # fixed-point: dir feats from the decoder's OWN frame1 argmax (GT-free, 0 bytes).
         dirf = np.zeros((curv.shape[0], 4 * int(m["n_dir_freqs"])), np.float32)
         prev_am = None; _h0_conv = None  # FEED-ej: cache the converged iter's h0 (== the post-loop h0)
@@ -2252,6 +2324,19 @@ done < "$FILE_LIST"
 # ---------------------------------------------------------------------------
 # packet assembly: archive.zip (0.bin) + inflate.py + inflate.sh
 # ---------------------------------------------------------------------------
+def _inflate_source_for_manifest(manifest: dict[str, Any]) -> str:
+    if manifest.get("basis_family") != LITERAL_POLAR_CURVELET:
+        return _INFLATE_PY
+    # Rule-118 FREE generic source, content-bound by BasisProgramConfig.  The
+    # literal atom program and placement fixed point are prepended so the
+    # contest packet remains package-independent.
+    placement_source = (
+        _REPO / "src" / "tac" / "boundary_math" / "curvelet_placement.py"
+    ).read_text(encoding="utf-8")
+    placement_source = placement_source.replace("from __future__ import annotations\n", "")
+    return literal_curvelet_generated_source() + "\n" + placement_source + "\n" + _INFLATE_PY
+
+
 def assemble_packet(blob: bytes, packet_dir: Path) -> tuple[Path, int]:
     packet_dir.mkdir(parents=True, exist_ok=True)
     zip_path = packet_dir / "archive.zip"
@@ -2260,7 +2345,11 @@ def assemble_packet(blob: bytes, packet_dir: Path) -> tuple[Path, int]:
     info.external_attr = 0o644 << 16
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr(info, blob)
-    (packet_dir / "inflate.py").write_text(_INFLATE_PY)
+    # Parse with the host-side mirror. ``_io_unpack`` exists only inside the
+    # generated receiver string and is intentionally not a module global.
+    manifest = _read_blob_bytes(blob)[0]
+    inflate_source = _inflate_source_for_manifest(manifest)
+    (packet_dir / "inflate.py").write_text(inflate_source)
     sh = packet_dir / "inflate.sh"
     sh.write_text(_INFLATE_SH)
     sh.chmod(0o755)
@@ -2554,6 +2643,7 @@ def numpy_oracle_reference_frames(
     ch, cw = int(manifest["camera_h"]), int(manifest["camera_w"])
     coords = _canon_coords_grid(rh, rw)
     basis_family = normalize_basis_family(manifest.get("basis_family", LEGACY_FOURIER_AB_CONTROL))
+    literal_program: BasisProgramConfig | None = None
     if basis_family == LEGACY_FOURIER_AB_CONTROL:
         B = _canon_curvelet_B(
             manifest["bank_n_scales"], manifest["bank_n_orient0"], manifest["bank_f0"],
@@ -2568,6 +2658,11 @@ def numpy_oracle_reference_frames(
         curv = compact_shearlet_feats(
             coords, CompactShearletConfig(**manifest["compact_shearlet_config"])
         )
+    elif basis_family == LITERAL_POLAR_CURVELET:
+        literal_program = BasisProgramConfig.from_dict(manifest["basis_program"])
+        if literal_program.canonical_sha256() != manifest.get("basis_program_sha256"):
+            raise ValueError("literal basis-program manifest SHA-256 mismatch")
+        curv = literal_curvelet_feats_numpy(coords)
     else:
         raise ValueError(f"unknown basis_family {basis_family!r} in byte-closed manifest")
     lr = manifest.get("lane_render_band")
@@ -2583,7 +2678,26 @@ def numpy_oracle_reference_frames(
     frames: list[np.ndarray] = []
     argmaxes: list[np.ndarray] = []
     for pi in range(n_pairs):
-        if bool(manifest["self_orient"]):
+        if literal_program is not None and literal_program.native_orientation_enabled:
+            scale_ids, angles = orientation_metadata_from_atom_specs(
+                LITERAL_CURVELET_ATOM_SPECS
+            )
+
+            def _decode_native(features: np.ndarray) -> np.ndarray:
+                _rgb, phi = levelset_rgb_forward_numpy(
+                    params, features, code[2 * pi + 1], **fwd_kw
+                )
+                return phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+
+            feats, _gates, _receipt = native_orientation_fixed_point_numpy(
+                curv,
+                _decode_native,
+                scale_ids,
+                angles,
+                kappa=literal_program.native_orientation_kappa,
+                iteration_cap=literal_program.fixed_point_iteration_cap,
+            )
+        elif bool(manifest["self_orient"]):
             ndf = int(manifest["n_dir_freqs"])
             dirf = np.zeros((curv.shape[0], 4 * ndf), np.float32)
             prev_am = None
@@ -3118,6 +3232,50 @@ def run(
             blind_coordinate_receipt
         )
     params, cfg = _load_levelset_ckpt(ckpt_dir, npz_name)
+    basis_deploy_report: dict[str, Any] = {"active": False}
+    if cfg["basis"] == LITERAL_POLAR_CURVELET:
+        program: BasisProgramConfig = cfg["basis_program"]
+        if program.chart_enabled and not pose_carrier:
+            raise ValueError(
+                "literal ground chart requires --pose-carrier: receiver may derive the chart only "
+                "from the counted xi section"
+            )
+        if program.chart_enabled:
+            raise ValueError(
+                "literal ground-chart byte-close is fail-closed: arbitrary-chart evaluation still "
+                "needs a receiver-sealed fast nonuniform transform; the direct sparse evaluator is "
+                "not a viable n600 decode. This is a FORMULATION-COMPOSITION implementation gap, "
+                "not a curvelet-family verdict"
+            )
+        if program.aa_mode != "none" or program.aa_factor != 1:
+            raise ValueError(
+                "literal post-render supersample byte-close is fail-closed until the generated "
+                "receiver applies A_s after the nonlinear renderer"
+            )
+        fold_receipt = None
+        if program.taper_enabled:
+            folded_weight, fold_receipt = fold_taper_into_in_proj_numpy(
+                params["in_proj.weight"], cfg["basis_taper_unfolded"]
+            )
+            params = dict(params)
+            params["in_proj.weight"] = folded_weight
+            program = replace(
+                program, deploy_fold_receipt_sha256=fold_receipt.receipt_sha256
+            )
+        cfg["basis_program_deploy"] = program
+        basis_deploy_report = {
+            "active": True,
+            "family": program.family,
+            "basis_version": program.basis_version,
+            "atom_spec_sha256": program.atom_spec_sha256,
+            "train_program_sha256": cfg["basis_program_train_sha256"],
+            "deploy_program_sha256": program.canonical_sha256(),
+            "taper_fold_receipt": (fold_receipt.to_dict() if fold_receipt is not None else None),
+            "native_orientation": program.native_orientation_enabled,
+            "chart_enabled": program.chart_enabled,
+            "aa_mode": program.aa_mode,
+            "aa_factor": program.aa_factor,
+        }
     n_pairs = int(cfg["n_pairs"])
     so = detect_self_orient(cfg, so_overrides)
     # The exact-eval row needs the FULL packet + ALL 600 pairs inflated on disk.
@@ -3321,6 +3479,7 @@ def run(
         "weights_arm": _arm_label_for_npz(cfg.get("npz_name")),
         "n_pairs_total": n_pairs,
         "self_orient": so,
+        "basis_deploy": basis_deploy_report,
         "config": {k: cfg.get(k) for k in (
             "n_classes", "hidden_dim", "n_hidden", "mod_dim", "activation", "softmax_temp",
             "chroma", "render_h", "render_w", "in_feat", "max_bank_freq", "lane_edge_weight")},
@@ -3341,6 +3500,7 @@ def run(
             "pose_carrier": pose_carrier_report,
             "phase_carrier": phase_carrier_report_out,
             "blind_coordinate_fill": blind_coordinate_report,
+            "basis_deploy": basis_deploy_report,
         },
         "lane_render_band": lane_report,
         "pose_carrier": pose_carrier_report,
