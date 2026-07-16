@@ -44,6 +44,14 @@ from pathlib import Path
 
 DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
 DEFAULT_ARCHIVE_DIR = Path(".omx/state/dispatch_claims_archive")
+DEFAULT_MODAL_LEDGER_PATH = Path(".omx/state/modal_call_id_ledger.jsonl")
+
+# Modal call-id ledger row states that are still "live" (non-terminal). Anything
+# else (harvested/failed/timeout/cancelled/completed/...) is terminal. Mirrors
+# src/tac/preflight.py::_MODAL_NON_TERMINAL_STATES (the static gate's twin).
+_MODAL_LEDGER_NON_TERMINAL_STATES = frozenset({
+    "dispatched", "active", "running", "spawned", "in_progress", "pending", "queued",
+})
 
 # Default for ``--prune --terminal-age-days``: keep terminal rows newer than
 # this; archive older terminal rows. 7 days mirrors the T1-E state-hygiene
@@ -232,6 +240,14 @@ def _validate_claim_inputs(args: argparse.Namespace) -> None:
             raise SystemExit("REFUSING_DISPATCH: --allow-parallel requires --child-of")
         if not args.parallel_reason:
             raise SystemExit("REFUSING_DISPATCH: --allow-parallel requires --parallel-reason")
+    if getattr(args, "override", False) and not (args.notes and args.notes.strip()):
+        # Modal single-flight override must be quoted (operator binding 2026-07-15):
+        # "Concurrent Modal jobs require an EXPLICIT operator override quoted in the
+        # claim notes."
+        raise SystemExit(
+            "REFUSING_DISPATCH: --override (Modal single-flight bypass) requires an "
+            "operator rationale in --notes (the override must be quoted for audit)."
+        )
         _validate_cell("--child-of", args.child_of, allow_space=False)
         parallel_reason = _validate_cell(
             "--parallel-reason", args.parallel_reason, allow_empty=False, allow_space=True
@@ -308,6 +324,38 @@ def _claim_is_stale_nonterminal(
 
 def _is_stale_terminal_status(status: str) -> bool:
     return _is_terminal(status) and status.startswith("stale_")
+
+
+def _is_modal_platform(platform: str) -> bool:
+    """True if a claim's platform is a Modal dispatch surface.
+
+    Matches ``modal`` as a case-insensitive substring so variants like
+    ``modal_t4`` / ``Modal-A100`` / ``modal_cpu`` are all covered.
+    """
+    return "modal" in (platform or "").strip().lower()
+
+
+def _active_modal_claims_across_lanes(
+    existing: list[Claim], *, exclude_job: tuple[str, str]
+) -> list[Claim]:
+    """Latest-row-wins per ``(lane_id, job)``: non-terminal Modal claims on ANY lane.
+
+    Powers the Modal single-flight refusal (operator binding 2026-07-15): at most
+    ONE live Modal job across ALL lanes. Excludes ``exclude_job`` (the
+    ``(lane_id, instance_job_id)`` being re-statused now) so a status update of the
+    SAME job never conflicts with itself.
+    """
+
+    out: list[Claim] = []
+    for key, claim in _latest_claims_by_job(existing).items():
+        if key == exclude_job:
+            continue
+        if not _is_modal_platform(claim.platform):
+            continue
+        if _is_terminal(claim.status):
+            continue
+        out.append(claim)
+    return out
 
 
 def _summarize_claims(
@@ -560,6 +608,39 @@ def _claim(args: argparse.Namespace) -> int:
                     file=sys.stderr,
                 )
             return 3
+
+        # ── Modal single-flight refusal (operator binding 2026-07-15) ──────────
+        # At most ONE live Modal job across ALL lanes. A NEW live Modal claim
+        # (non-terminal status) is refused if any OTHER lane already carries an
+        # active Modal claim, unless --override + an operator rationale in --notes.
+        # Terminal rows (closures) are exempt so a job can always be closed; the
+        # refusal fires before the dry-run reveal so a dry-run surfaces it too.
+        # Sister of the WARN-ONLY static gate check_modal_single_flight_ledger_
+        # consistency (src/tac/preflight.py) — this is the actuation half.
+        if (
+            _is_modal_platform(args.platform)
+            and not is_terminal_new
+            and not args.override
+        ):
+            modal_conflicts = _active_modal_claims_across_lanes(
+                existing,
+                exclude_job=(args.lane_id, args.instance_job_id),
+            )
+            if modal_conflicts:
+                print(
+                    "REFUSING_DISPATCH: Modal single-flight — a live Modal claim "
+                    "already exists on another lane; only ONE Modal job may run at a "
+                    "time (operator binding 2026-07-15). Harvest/close it first, or "
+                    "pass --override with an operator rationale in --notes.",
+                    file=sys.stderr,
+                )
+                for c in modal_conflicts:
+                    print(
+                        f"  {c.timestamp_utc} {c.agent} lane={c.lane_id} "
+                        f"job={c.instance_job_id} status={c.status}",
+                        file=sys.stderr,
+                    )
+                return 5
 
         new_row = _claim_to_row(new_claim)
 
@@ -869,6 +950,130 @@ def _prune(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_live_modal_ledger_calls(ledger_path: Path) -> list[dict]:
+    """Latest-row-wins per call_id; return the non-terminal (live) Modal ledger rows.
+
+    Fail-open: a missing/empty/corrupt ledger yields ``[]``. Mirrors the
+    latest-row-wins semantics of the static gate so the two agree.
+    """
+    if not ledger_path.is_file():
+        return []
+    latest: dict[str, tuple[dt.datetime | None, dict]] = {}
+    for raw in ledger_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            row = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if not isinstance(row, dict):
+            continue
+        call_id = row.get("call_id")
+        if not isinstance(call_id, str) or not call_id:
+            continue
+        ts = _parse_utc(row.get("written_at_utc")) or _parse_utc(row.get("dispatched_at_utc"))
+        prev = latest.get(call_id)
+        if prev is None or (prev[0] is None and ts is not None) or (
+            ts is not None and prev[0] is not None and ts >= prev[0]
+        ):
+            latest[call_id] = (ts, row)
+    live: list[dict] = []
+    for _ts, row in latest.values():
+        state = str(row.get("status") or row.get("event_type") or "").strip().lower()
+        if state in _MODAL_LEDGER_NON_TERMINAL_STATES:
+            live.append(row)
+    return live
+
+
+def _reconcile(args: argparse.Namespace) -> int:
+    """Dual-ledger reconciliation: modal_call_id_ledger.jsonl <-> claims file.
+
+    Operator binding 2026-07-15 (dual-ledger): the local call-id ledger and the
+    cross-agent claims file must AGREE. This is the actuation-side reconciler an
+    operator runs BEFORE any Modal dispatch (the cloud `modal app list` cross-check
+    remains a separate operator-runtime step). Reports:
+
+      (a) live Modal call_ids in the ledger (single-flight: should be <= 1);
+      (b) active Modal claims across all lanes;
+      (c) live ledger call_ids with no matching active claim;
+      (d) active claims with no matching live ledger call_id.
+
+    rc=0 when consistent (<=1 live, both sides reconciled); rc=6 on any mismatch.
+    Read-only — never mutates either ledger.
+    """
+    claims_path: Path = args.claims_path
+    ledger_path: Path = args.modal_ledger
+    text = claims_path.read_text() if claims_path.exists() else HEADER
+    existing = _parse_claims(text)
+    active_modal = _active_modal_claims_across_lanes(existing, exclude_job=("", ""))
+    live_calls = _load_live_modal_ledger_calls(ledger_path)
+
+    def _call_id(row: dict) -> str:
+        return str(row.get("call_id") or "")
+
+    def _label(row: dict) -> str:
+        lbl = row.get("label")
+        return str(lbl).strip().lower() if isinstance(lbl, str) else ""
+
+    problems: list[str] = []
+    if len(live_calls) > 1:
+        ids = ", ".join(sorted(_call_id(r) for r in live_calls))
+        problems.append(f"single-flight: {len(live_calls)} live Modal call_ids > 1 [{ids}]")
+
+    # (c) live ledger rows with no active claim.
+    active_texts = [
+        f"{c.lane_id} {c.instance_job_id} {c.notes}".lower() for c in active_modal
+    ]
+    for row in live_calls:
+        cid = _call_id(row).lower()
+        lbl = _label(row)
+        matched = any((cid and cid in t) or (lbl and lbl in t) for t in active_texts)
+        if not matched:
+            problems.append(
+                f"live ledger call_id {_call_id(row)} (label {row.get('label') or '<none>'}) "
+                "has NO matching active Modal claim"
+            )
+
+    # (d) active claims with no live ledger row.
+    live_tokens = " ".join(
+        f"{_call_id(r)} {_label(r)}" for r in live_calls
+    ).lower()
+    for c in active_modal:
+        job_l = c.instance_job_id.lower()
+        if job_l and job_l not in live_tokens and (not live_calls):
+            problems.append(
+                f"active Modal claim lane={c.lane_id} job={c.instance_job_id} "
+                "has NO live ledger call_id (ledger has zero live rows)"
+            )
+
+    if args.format == "json":
+        out = {
+            "live_modal_call_ids": [_call_id(r) for r in live_calls],
+            "active_modal_claims": [
+                {"lane_id": c.lane_id, "job": c.instance_job_id, "status": c.status}
+                for c in active_modal
+            ],
+            "problems": problems,
+            "consistent": not problems,
+        }
+        print(json.dumps(out, indent=2))
+    else:
+        print(f"MODAL RECONCILE: {len(live_calls)} live ledger call_id(s), "
+              f"{len(active_modal)} active Modal claim(s)")
+        for c in active_modal:
+            print(f"  claim: lane={c.lane_id} job={c.instance_job_id} status={c.status}")
+        for r in live_calls:
+            print(f"  ledger: call_id={_call_id(r)} label={r.get('label') or '<none>'}")
+        if problems:
+            print("PROBLEMS:")
+            for p in problems:
+                print(f"  - {p}")
+        else:
+            print("OK: dual-ledger consistent (single-flight satisfied).")
+    return 6 if problems else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -899,6 +1104,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Short audit reason explaining why this same-lane child can run in parallel.",
     )
     claim_p.add_argument("--force", action="store_true")
+    claim_p.add_argument(
+        "--override",
+        action="store_true",
+        help=(
+            "Bypass the Modal single-flight refusal (a 2nd concurrent live Modal "
+            "claim across ANY lane). Requires an operator rationale quoted in "
+            "--notes (operator binding 2026-07-15). Orthogonal to --force, which "
+            "bypasses only the same-lane conflict refusal."
+        ),
+    )
     claim_p.add_argument("--dry-run", action="store_true")
     claim_p.set_defaults(func=_claim)
     summary_p = sub.add_parser(
@@ -964,6 +1179,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Compatibility alias for --format json.",
     )
     prune_p.set_defaults(func=_prune)
+    reconcile_p = sub.add_parser(
+        "reconcile",
+        help=(
+            "Dual-ledger Modal reconciliation (modal_call_id_ledger.jsonl <-> "
+            "claims file); rc=6 on any single-flight/consistency mismatch"
+        ),
+    )
+    reconcile_p.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
+    reconcile_p.add_argument(
+        "--modal-ledger", type=Path, default=DEFAULT_MODAL_LEDGER_PATH
+    )
+    reconcile_p.add_argument("--format", choices=["text", "json"], default="text")
+    reconcile_p.add_argument(
+        "--json",
+        action="store_const",
+        const="json",
+        dest="format",
+        help="Compatibility alias for --format json.",
+    )
+    reconcile_p.set_defaults(func=_reconcile)
     return parser
 
 
