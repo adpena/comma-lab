@@ -19219,3 +19219,5 @@ Pointer 0.19108 UNMOVED (means/apparatus + armed measurement).
 - **Triality:** DAG=this FEED · DSL=spec+budget-gate edits · equations=`warm_start_schedule_reconstruction_v1` amended law (append-only re-registration).
 
 Pointer 0.19108 UNMOVED (apparatus; the fixed config is un-benched — the NEW-hash dry-start receipt remains the gate).
+
+- FEED-c2-adversarial-review scope note: "retry loop DEAD" = MEASURED process-liveness (instance-level operational fact), not a research verdict. # VERDICT_SCOPE_OK:process-liveness-not-research-verdict

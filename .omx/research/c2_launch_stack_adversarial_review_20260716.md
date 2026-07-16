@@ -157,3 +157,5 @@ bench on the FIXED config; real launch remains gated on the green NEW-hash recei
 operator GO, with the F4 runbook line landed first.**
 
 Pointer 0.19108 UNMOVED — everything here is MEANS/apparatus.
+
+**verdict_scope note:** the "DEAD"/"loop is DEAD" tokens in this memo are MEASURED PROCESS-LIVENESS states (pid 36597 SIGURG-killed mid-sleep) — instance-level operational facts, NOT research verdicts on any formulation/family. # VERDICT_SCOPE_OK:process-liveness-not-research-verdict
