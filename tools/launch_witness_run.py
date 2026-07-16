@@ -1255,15 +1255,22 @@ def _run_rss_calibration(args, config: str, overfit: bool, out_dir: Path, label:
 def parse_dry_start_run_metrics(run_log: Path) -> dict:
     """Parse a bounded dry-start run.log (JSONL, the trainer's own telemetry): the MAX epoch stepped
     (``ep``/``epoch``), the gt-load overhead (``{"stage":"gt","secs":...}``), whether a resume ckpt was
-    written (a ``checkpoint`` row naming a ``resume_latest``), and — on the resume pass — the resume
-    evidence (a ``resume_model_source`` row + a ``resume_start_epoch`` field the trainer emits when it
-    restores from disk). PURE: same file -> same dict. Missing file -> all-absent verdict (never raises).
+    written (a ``checkpoint`` row naming a ``resume_latest``) + the LAST such checkpoint's epoch
+    (``last_ckpt_epoch`` — the exact position a resume must restore), and — on the resume pass — the
+    resume evidence: a ``resume_model_source`` row + the trainer's dedicated, UNCONDITIONAL
+    ``resume_start_epoch`` row (FEED-resume-observability-harden 2026-07-15; carries both
+    ``resume_start_epoch`` and ``resume_ckpt_epoch``). Before that row existed the ONLY
+    ``resume_start_epoch`` emission was inside the conditional C16 seed-anneal WARN, so a CORRECT
+    resume parsed as ``null`` and the gate false-negatived (the 20260715T195923Z report). PURE: same
+    file -> same dict. Missing file -> all-absent verdict (never raises).
     """
     epochs_completed = -1
     gt_secs: float | None = None
     ckpt_written = False
+    last_ckpt_epoch: int | None = None
     resume_source = False
     resume_start_epoch: int | None = None
+    resume_ckpt_epoch: int | None = None
     try:
         text = Path(run_log).read_text()
     except OSError:
@@ -1284,17 +1291,27 @@ def parse_dry_start_run_metrics(run_log: Path) -> dict:
             gt_secs = float(d["secs"])
         if stg == "checkpoint" and d.get("resume_latest"):
             ckpt_written = True
+            ep_ck = d.get("epoch")
+            if isinstance(ep_ck, (int, float)) and not isinstance(ep_ck, bool):
+                # LAST resume-capable checkpoint wins (the rolling levelset_resume_state.npz a
+                # --resume-from restores is overwritten atomically at each of these rows).
+                last_ckpt_epoch = int(ep_ck)
         if stg == "resume_model_source":
             resume_source = True
         rse = d.get("resume_start_epoch")
         if isinstance(rse, (int, float)) and not isinstance(rse, bool):
             resume_start_epoch = int(rse)
+        rce = d.get("resume_ckpt_epoch")
+        if isinstance(rce, (int, float)) and not isinstance(rce, bool):
+            resume_ckpt_epoch = int(rce)
     return {
         "epochs_completed": epochs_completed,
         "gt_secs": gt_secs,
         "checkpoint_written": ckpt_written,
+        "last_ckpt_epoch": last_ckpt_epoch,
         "resume_model_source": resume_source,
         "resume_start_epoch": resume_start_epoch,
+        "resume_ckpt_epoch": resume_ckpt_epoch,
     }
 
 
@@ -1319,13 +1336,38 @@ def dry_start_boot_ok(p: dict) -> bool:
                 and p.get("peak_rss_gib") is not None)
 
 
-def dry_start_resume_ok(p2: dict) -> bool:
-    """PASS-2 resumed from disk (again regardless of the terminal timeout rc): the trainer logged a
-    resume_model_source row AND a positive resume_start_epoch (it actually restored the epoch position),
-    AND stepped at least one more epoch past it (proving the resumed state trains). PURE."""
-    rse = p2.get("resume_start_epoch") or 0
-    return bool(p2.get("resume_model_source") and rse >= 1
-                and p2.get("epochs_completed", -1) >= rse)
+def dry_start_resume_ok(p2: dict, p1: dict | None = None) -> bool:
+    """PASS-2 resumed from disk (again regardless of the terminal timeout rc) — TIGHTENED
+    (FEED-resume-observability-harden 2026-07-15) from the old ``rse >= 1`` to exact-position
+    equality, fail-closed on null/0/mismatch. ALL of:
+
+      1. a ``resume_model_source`` row (weights actually loaded from disk);
+      2. ``resume_start_epoch`` present and >= 1 (null == the epoch position was NOT observably
+         restored — the exact silent-failure the 20260715T195923Z gate false-negatived on, except
+         now null FAILS instead of silently riding a weaker check);
+      3. ``resume_start_epoch == resume_ckpt_epoch + 1`` (internal consistency: the trainer's
+         continuation convention; a warm-start override would violate it and a dry-start never
+         warm-starts);
+      4. when PASS-1 metrics are supplied: ``resume_ckpt_epoch == p1.last_ckpt_epoch`` — PASS 2
+         restored EXACTLY the epoch PASS 1 last checkpointed (the bit-faithful round-trip proof;
+         p1's max-``ep``-row ``epochs_completed`` is NOT used here because the SIGTERM crash-sim can
+         land mid-epoch, leaving a partial epoch's telemetry past the last written checkpoint);
+      5. stepped at least one epoch past the restored position (the resumed state trains).
+
+    PURE."""
+    if not p2.get("resume_model_source"):
+        return False
+    rse = p2.get("resume_start_epoch")
+    if not isinstance(rse, int) or isinstance(rse, bool) or rse < 1:
+        return False  # fail-closed: null/0 => the restored epoch is not machine-verifiable
+    rce = p2.get("resume_ckpt_epoch")
+    if not isinstance(rce, int) or isinstance(rce, bool) or rce + 1 != rse:
+        return False  # fail-closed: restored position must be EXACTLY ckpt_epoch + 1
+    if p1 is not None:
+        p1_ck = p1.get("last_ckpt_epoch")
+        if not isinstance(p1_ck, int) or isinstance(p1_ck, bool) or rce != p1_ck:
+            return False  # fail-closed: PASS 2 must restore the checkpoint PASS 1 wrote
+    return bool(p2.get("epochs_completed", -1) >= rse)
 
 
 def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
@@ -1344,8 +1386,10 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
               (governed, FOREGROUND). safe_run SIGTERMs it at the timeout — the intended bound, which
               DOUBLES as a crash simulation. Capture peak RSS + wall + epochs stepped + a written ckpt.
       PASS 2  RESUME round-trip: relaunch the REAL config --resume-from the PASS-1 dir, same timeout;
-              assert the trainer logs a resume_model_source row + a positive resume_start_epoch (it
-              restored from disk) AND steps past it (the resumed state trains), not a silent fresh start.
+              assert the trainer logs a resume_model_source row + its dedicated resume_start_epoch row
+              with resume_start_epoch == resume_ckpt_epoch + 1 == PASS-1 last_ckpt_epoch + 1 (it
+              restored EXACTLY the checkpoint PASS 1 wrote — fail-closed on null/0/mismatch) AND steps
+              past it (the resumed state trains), not a silent fresh start.
 
     Records peak RSS + sec/ep MEASURED to dry_start_report.json. EXITS cleanly (rc 0 on both passes
     green; rc 6 otherwise) — NEVER proceeds to the real spawn. Route: the SAME governed launcher
@@ -1451,10 +1495,12 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
                 file=sys.stderr,
             )
             return 8
-        resume_ok = dry_start_resume_ok(p2)
+        resume_ok = dry_start_resume_ok(p2, p1)
         print(f"#   PASS 2: rc={p2['rc']} resume_source={p2['resume_model_source']} "
-              f"resume_start_epoch={p2['resume_start_epoch']} epochs={p2['epochs_completed']} "
-              f"-> resume_ok={resume_ok}")
+              f"resume_start_epoch={p2['resume_start_epoch']} "
+              f"resume_ckpt_epoch={p2.get('resume_ckpt_epoch')} "
+              f"(pass1 last_ckpt_epoch={p1.get('last_ckpt_epoch')}) "
+              f"epochs={p2['epochs_completed']} -> resume_ok={resume_ok}")
     else:
         print("# dry-start PASS 2 SKIPPED (PASS 1 did not boot+step+ckpt).", file=sys.stderr)
 

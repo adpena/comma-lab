@@ -30,8 +30,10 @@ def test_parse_dry_start_run_metrics(tmp_path):
     assert m["epochs_completed"] == 2
     assert m["gt_secs"] == 1.5
     assert m["checkpoint_written"] is True
+    assert m["last_ckpt_epoch"] == 1  # the resume-capable checkpoint's exact epoch position
     assert m["resume_model_source"] is False  # no resume row in pass-1 log
     assert m["resume_start_epoch"] is None
+    assert m["resume_ckpt_epoch"] is None
 
 
 def test_parse_dry_start_run_metrics_resume(tmp_path):
@@ -39,13 +41,17 @@ def test_parse_dry_start_run_metrics_resume(tmp_path):
     rl = tmp_path / "run.log"
     rl.write_text("\n".join([
         '{"stage": "resume_model_source", "resume_model_from": "x/levelset_resume_state.npz"}',
-        '{"resume_start_epoch": 3}',
+        # the dedicated FEED-resume-observability-harden row the trainer now emits unconditionally
+        '{"stage": "resume_start_epoch", "resume_start_epoch": 3, "resume_ckpt_epoch": 2,'
+        ' "warm_start_override": false, "resume_from": "x"}',
         '{"stage": "loss_terms", "ep": 4, "total": 0.8}',
         '{"stage": "checkpoint", "epoch": 4, "resume_latest": "levelset_resume_state.npz"}',
     ]))
     m = L.parse_dry_start_run_metrics(rl)
     assert m["resume_model_source"] is True
     assert m["resume_start_epoch"] == 3
+    assert m["resume_ckpt_epoch"] == 2
+    assert m["last_ckpt_epoch"] == 4
     assert m["epochs_completed"] == 4
 
 
@@ -69,17 +75,27 @@ def test_dry_start_boot_and_resume_ok():
     assert L.dry_start_boot_ok(good1) is True
     assert L.dry_start_boot_ok({**good1, "checkpoint_written": False}) is False
     assert L.dry_start_boot_ok({**good1, "epochs_completed": 0}) is False
-    good2 = {"resume_model_source": True, "resume_start_epoch": 3, "epochs_completed": 4}
+    good2 = {"resume_model_source": True, "resume_start_epoch": 3, "resume_ckpt_epoch": 2,
+             "epochs_completed": 4}
     assert L.dry_start_resume_ok(good2) is True
     assert L.dry_start_resume_ok({**good2, "resume_model_source": False}) is False
     assert L.dry_start_resume_ok({**good2, "epochs_completed": 2}) is False  # did not step past resume
+    # TIGHTENED (FEED-resume-observability-harden): fail-closed on null / 0 / internal mismatch —
+    # a correct-but-unobservable resume (resume_start_epoch null) must FAIL, never silently ride.
+    assert L.dry_start_resume_ok({**good2, "resume_start_epoch": None}) is False
+    assert L.dry_start_resume_ok({**good2, "resume_start_epoch": 0, "resume_ckpt_epoch": -1}) is False
+    assert L.dry_start_resume_ok({**good2, "resume_ckpt_epoch": None}) is False
+    assert L.dry_start_resume_ok({**good2, "resume_ckpt_epoch": 3}) is False  # != rse - 1
+    # cross-pass equality: PASS 2 must restore EXACTLY the checkpoint PASS 1 wrote
+    assert L.dry_start_resume_ok(good2, {"last_ckpt_epoch": 2}) is True
+    assert L.dry_start_resume_ok(good2, {"last_ckpt_epoch": 1}) is False   # restored the WRONG ckpt
+    assert L.dry_start_resume_ok(good2, {"last_ckpt_epoch": None}) is False  # p1 ckpt epoch unobservable
 
 
-def test_inject_extra_flag():
-    import launch_witness_run as L
-    assert L._inject_extra_flag([], "--ckpt-every", "1") == ["--ckpt-every", "1"]
-    assert L._inject_extra_flag(["--ckpt-every", "25"], "--ckpt-every", "1") == ["--ckpt-every", "1"]
-    assert L._inject_extra_flag(["--x", "y"], "--ckpt-every", "1") == ["--x", "y", "--ckpt-every", "1"]
+# test_inject_extra_flag REMOVED (2026-07-15, FEED-resume-observability-harden drive-by): it tested
+# launch_witness_run._inject_extra_flag, which the Catalog #406 DSL-lever refactor deleted (dry-start
+# overrides now compose via with_internal_dsl_lever; raw extra flags are REFUSED). The stale test was
+# failing at HEAD (AttributeError) — a test for a removed function, not a regression.
 
 
 # --------------------------------------------------------------------------- observer replay --

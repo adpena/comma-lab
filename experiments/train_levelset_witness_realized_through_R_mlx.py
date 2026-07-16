@@ -1282,6 +1282,29 @@ def _resolve_weights_only_warm_start(
             "start_epoch": _ep, "ckpt_had_opt": ckpt_had_opt}
 
 
+def _emit_resume_start_epoch_row(start_epoch: int, ckpt_epoch: int, *,
+                                 resume_from: str, warm_start_override: bool) -> dict[str, Any]:
+    """(FEED-resume-observability-harden 2026-07-15) The dedicated, UNCONDITIONAL resume-observability
+    row: emitted exactly once per resume, right after the epoch position is restored. OBSERVABILITY,
+    not fidelity — resume was already bit-faithful (``__resume_epoch`` stored + restored); the #507
+    dry-start gate false-negatived because the launcher's parse surface (run.log JSONL) never carried
+    the restored epoch: the ONLY prior ``resume_start_epoch`` emission lived inside the conditional
+    C16 ``seed_anneal_epochs_WARN`` row, so a correct resume reported ``null`` and a GREEN gate read
+    false. A print row is score/byte-neutral by construction (never read into training). Consumed by
+    ``tools/launch_witness_run.py::parse_dry_start_run_metrics`` + ``dry_start_resume_ok`` (which
+    asserts ``resume_start_epoch == resume_ckpt_epoch + 1 == pass-1 last ckpt epoch + 1`` — the
+    machine-verifiable round-trip proof). Pure aside from the print -> unit-tested; returns the row."""
+    row: dict[str, Any] = {
+        "stage": "resume_start_epoch",
+        "resume_start_epoch": int(start_epoch),
+        "resume_ckpt_epoch": int(ckpt_epoch),
+        "warm_start_override": bool(warm_start_override),
+        "resume_from": str(resume_from),
+    }
+    print(json.dumps(row), flush=True)
+    return row
+
+
 def _decoupled_field_incompatibilities(args: Any) -> list[str]:
     """(v8 B1 fail-closed) Levers that assume/mutate the SHARED ``out_sdf`` head and therefore cannot
     compose with ``--decoupled-field`` (which REPLACES out_sdf as the partition provider). Returns the
@@ -9751,6 +9774,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             print(json.dumps({"stage": "warm_start_epoch_override",
                               "from": int(rs["epoch"]) + 1, "to": _ws["start_epoch"]}), flush=True)
         start_epoch = _ws["start_epoch"]
+        # (FEED-resume-observability-harden 2026-07-15) UNCONDITIONAL restored-epoch emission — see
+        # _emit_resume_start_epoch_row. Print-only => training determinism / byte-identity preserved.
+        _emit_resume_start_epoch_row(
+            int(start_epoch), int(rs["epoch"]), resume_from=str(rp),
+            warm_start_override=bool(int(_ws["start_epoch"]) != int(rs["epoch"]) + 1))
         # (C16 confound fix) --seed-anneal-epochs is ABSOLUTE; if the resume START epoch is >= the
         # anneal length the seed compose crutch is fully withdrawn before this run begins. Warn with
         # the REAL start_epoch (the post-parse warn only saw --warm-start-epoch). NOTE: the compose
