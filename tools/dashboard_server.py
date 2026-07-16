@@ -2897,6 +2897,8 @@ font-weight:600;letter-spacing:-.4px}
    Instrument register: hairline-linked step chips, tabular mono details, semantic states. */
 #tab-live .lv-chain{display:flex;align-items:stretch;gap:0;margin:0 0 14px;overflow-x:auto;
   scrollbar-width:none;border:1px solid var(--lv-hair);background:var(--lv-surf);border-radius:4px}
+/* the ID-prefixed display rules above out-specify the global .hide — re-assert it */
+#tab-live .lv-chain.hide,#tab-live .lv-alarms.hide{display:none}
 #tab-live .lv-chain::-webkit-scrollbar{display:none}
 #tab-live .lv-cstep{display:flex;flex-direction:column;gap:3px;padding:8px 12px;min-width:0;
   flex:1 1 0;border-right:1px solid var(--lv-hair);position:relative}
@@ -4780,7 +4782,11 @@ function metaActivate(which,updateHash){
         history.replaceState(null,"","#live/"+((cur&&cur.dataset.tab)||"live"));}
     }catch(e){}
   }
-  if(!lab)scheduleDraw();  // canvases were display:none (clientWidth 0) — repaint on reveal
+  // canvases were display:none (clientWidth 0) — repaint on reveal. Deferred a tick:
+  // metaActivate runs at script-eval time during initial routing, BEFORE the later
+  // `let _drawQueued` declaration scheduleDraw closes over (TDZ -> a #live deep link
+  // would kill the whole script). setTimeout(0) runs after full script evaluation.
+  if(!lab)setTimeout(function(){try{scheduleDraw();}catch(e){console.debug("dash: reveal repaint",e);}},0);
 }
 document.querySelectorAll(".metatab").forEach(m=>{
   m.setAttribute("tabindex","0");
