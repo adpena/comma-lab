@@ -35,14 +35,29 @@ _TERMINAL_DISPOSITIONS = {"reviewed_committed", "respawned", "closed"}
 # A no-proc/no-marker arm launched within this window DIED (actionable); older =
 # STALE noise (ancient self-tests) suppressed unless --all.
 _STALE_AFTER_HOURS = 6.0
-# An ALIVE arm whose log mtime has not advanced in this window is STALLED (hung
-# stream, 0% CPU) — process-existence is NOT progress. Empirical anchor: the
+# An ALIVE arm with NO PROGRESS in this window is STALLED (hung stream, 0% CPU)
+# — process-existence is NOT progress. Empirical anchor: the
 # curvelet_optimal_form_crux_20260715 arm sat "RUNNING" for 33h at 0.0% CPU with
 # its log frozen mid-line; the operator caught it by wall-clock intuition because
-# this surface only checked pgrep. Judge by FILE MTIMES (the block-buffered-log
-# lesson): codex streams events continuously, so >2h of zero log writes on a live
-# process is a hang with high confidence, not quiet work.
-_STALL_AFTER_HOURS = 2.0
+# this surface only checked pgrep.
+#
+# PROGRESS is a COMPOSITE signal (operator design 2026-07-16): log growth OR
+# worktree file writes OR commits within the window. MEASURED basis:
+#   (a) healthy codex logs are continuous heartbeats — both live arms sampled at
+#       log_age=0m; all 10 most-recent completed arms have log-final-mtime ==
+#       done-marker time to the minute (log written to the very end);
+#   (b) the ONLY legitimate log silence is one long tool call that streams
+#       nothing AND writes nothing — the fleet's MEASURED worst case for that
+#       class is the one-time n600 gt-load ≈ 26 min (c2 bench boot, 2026-07-16)
+#       / CPU-torch n600 verdict ≈ 23 min (#495);
+#   (c) long calls that DO write output files are rescued by the worktree-mtime
+#       leg of the composite, so (b) bounds the all-silent case.
+# DERIVED threshold: 2 × the 26-min measured ceiling (safety factor 2 on the
+# slowest legitimate all-silent step). Not a hand-picked constant — re-derive if
+# a slower legitimate no-write compute step enters the fleet's workload.
+_MAX_LEGIT_QUIET_MIN = 26.0  # MEASURED: n600 gt-load, the slowest no-emit no-write step
+_STALL_SAFETY_FACTOR = 2.0
+_STALL_AFTER_HOURS = (_STALL_SAFETY_FACTOR * _MAX_LEGIT_QUIET_MIN) / 60.0  # ≈ 0.87h
 
 
 def _alive(label: str, stamp: str) -> bool:
@@ -101,6 +116,41 @@ def _log_stale_hours(log_path: str | None) -> float | None:
         return None
 
 
+def _worktree_progress_within(worktree: str | None, hours: float) -> bool:
+    """True if the arm's isolated worktree shows ANY progress within `hours`:
+    a commit newer than the cutoff, or any non-.git file written after it.
+
+    This is the composite-progress rescue (operator design 2026-07-16): a long
+    tool call that streams nothing to the log but WRITES artifacts is working,
+    not hung. The file scan stops at the first fresh file (-print -quit); the
+    full-tree worst case only happens on arms that are probably hung anyway.
+    """
+    if not worktree:
+        return False
+    wt = Path(worktree)
+    if not wt.is_dir():
+        return False
+    import subprocess
+    import time
+    cutoff = time.time() - hours * 3600.0
+    try:  # commit leg (cheap)
+        r = subprocess.run(["git", "-C", str(wt), "log", "-1", "--format=%ct"],
+                           capture_output=True, text=True, timeout=10)
+        if r.returncode == 0 and r.stdout.strip() and float(r.stdout.strip()) >= cutoff:
+            return True
+    except Exception:
+        pass
+    try:  # file-write leg (first hit short-circuits)
+        mins = max(1, int(hours * 60))
+        r = subprocess.run(
+            ["find", str(wt), "-path", str(wt / ".git"), "-prune", "-o",
+             "-type", "f", "-newermt", f"-{mins} minutes", "-print", "-quit"],
+            capture_output=True, text=True, timeout=60)
+        return bool(r.stdout.strip())
+    except Exception:
+        return False
+
+
 def _age_hours(launched_utc: str | None) -> float | None:
     if not launched_utc:
         return None
@@ -127,8 +177,10 @@ def _bucket(
     *,
     strand_doomed: bool = False,
     log_stale_h: float | None = None,
+    worktree_progress: bool = False,
 ) -> str:
-    """RUNNING · STALLED (alive but log mtime frozen > _STALL_AFTER_HOURS) ·
+    """RUNNING · STALLED (alive, NO composite progress — log frozen past
+    _STALL_AFTER_HOURS AND no worktree write/commit in that window) ·
     NEEDS_REVIEW (landed, no terminal disposition) · REVIEWED · DIED (recent
     no-proc/no-marker) · STALE (ancient, suppressed by default)."""
     if done:
@@ -136,7 +188,8 @@ def _bucket(
     if alive:
         if strand_doomed:
             return "STRAND_DOOMED"
-        if log_stale_h is not None and log_stale_h >= _STALL_AFTER_HOURS:
+        if (log_stale_h is not None and log_stale_h >= _STALL_AFTER_HOURS
+                and not worktree_progress):
             return "STALLED"
         return "RUNNING"
     if age_h is not None and age_h <= _STALE_AFTER_HOURS:
@@ -241,8 +294,14 @@ def status_rows(*, classify: bool = False) -> list[dict]:
         age_h = _age_hours(delegation.get("launched_utc"))
         strand_doomed = _is_strand_doomed(delegation)
         log_stale_h = _log_stale_hours(delegation.get("log")) if (alive and not done) else None
+        # composite-progress rescue: only consulted when the log leg already
+        # looks stalled (keeps the common healthy path to one stat() call).
+        wt_progress = False
+        if log_stale_h is not None and log_stale_h >= _STALL_AFTER_HOURS:
+            wt_progress = _worktree_progress_within(
+                delegation.get("worktree"), _STALL_AFTER_HOURS)
         bucket = _bucket(alive, done, disp, age_h, strand_doomed=strand_doomed,
-                         log_stale_h=log_stale_h)
+                         log_stale_h=log_stale_h, worktree_progress=wt_progress)
         row = {
             "label": label,
             "stamp": stamp,
@@ -316,8 +375,9 @@ def main(argv: list[str] | None = None) -> int:
         elif r["status"] == "STRAND_DOOMED":
             flag = "  ⚠ live non-isolated writer cannot land safely — drain/harvest; do not retry"
         elif r["status"] == "STALLED":
-            flag = (f"  ⚠ alive but log silent {r.get('log_stale_hours') or '?'}h — hung stream: "
-                    "killpg the pgid, harvest its worktree, relaunch (2026-07-16 curvelet class)")
+            flag = (f"  ⚠ alive, NO progress {r.get('log_stale_hours') or '?'}h (log+worktree+commits "
+                    "all silent) — hung stream: killpg the pgid, harvest its worktree, relaunch "
+                    "(2026-07-16 curvelet class)")
         elif r["status"] == "DIED":
             flag = "  ⚠ no proc, no DONE marker — investigate/relaunch"
         elif r["status"] == "RUNNING" and r.get("inbox_pending"):

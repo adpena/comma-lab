@@ -59,6 +59,43 @@ def test_bucket_stalled_when_alive_and_log_frozen():
         True, None, None, 0.5, log_stale_h=codex_status._STALL_AFTER_HOURS) == "STALLED"
 
 
+def test_stall_threshold_is_derived_not_hand_picked():
+    # threshold = safety_factor × the MEASURED slowest legitimate all-silent
+    # step (n600 gt-load ≈ 26 min). If someone edits the derived value without
+    # updating its measured basis, this fails — constants-are-poison guard.
+    assert codex_status._STALL_AFTER_HOURS == (
+        codex_status._STALL_SAFETY_FACTOR * codex_status._MAX_LEGIT_QUIET_MIN / 60.0)
+    # sanity: derived window comfortably exceeds the measured legit ceiling
+    assert codex_status._STALL_AFTER_HOURS * 60 > codex_status._MAX_LEGIT_QUIET_MIN
+
+
+def test_bucket_composite_progress_rescues_silent_log():
+    # a long tool call that streams nothing but WRITES worktree files / commits
+    # is working, not hung (operator composite design 2026-07-16)
+    assert codex_status._bucket(
+        True, None, None, 0.5, log_stale_h=33.0, worktree_progress=True) == "RUNNING"
+
+
+def test_worktree_progress_detects_fresh_file_and_ignores_stale(tmp_path):
+    import os
+    import subprocess
+    import time
+    wt = tmp_path / "wt"
+    (wt / "sub").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(wt)], check=True)
+    f = wt / "sub" / "out.txt"
+    f.write_text("x", encoding="utf-8")
+    # fresh file ⇒ progress
+    assert codex_status._worktree_progress_within(str(wt), 1.0) is True
+    # age the file beyond the window (and no commits exist) ⇒ no progress
+    old = time.time() - 3 * 3600
+    os.utime(f, (old, old))
+    assert codex_status._worktree_progress_within(str(wt), 1.0) is False
+    # missing worktree ⇒ False, never a rescue
+    assert codex_status._worktree_progress_within(str(tmp_path / "nope"), 1.0) is False
+    assert codex_status._worktree_progress_within(None, 1.0) is False
+
+
 def test_bucket_running_when_log_fresh_or_unknown():
     # fresh log ⇒ RUNNING
     assert codex_status._bucket(True, None, None, 0.5, log_stale_h=0.1) == "RUNNING"
