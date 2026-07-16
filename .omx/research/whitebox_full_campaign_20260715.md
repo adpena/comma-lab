@@ -368,3 +368,15 @@ rule-118 generic-only inflate (no per-frame table smuggled as code); a verdict i
   FEED-jc byte-budget result, does not produce a new law).
 
 **Everything above is MEANS. The submittable pointer is UNMOVED at contest-CPU 0.19108 (bank 0.18804).**
+
+## RECONCILIATION — the top cell (S2×weight) is the convergence of EXISTING adaptive-width research (operator recall 2026-07-15: "we have some research into some of this already… importance of adaptive width")
+
+The campaign named "margin-band-weighted spectral/norm penalty on ‖W‖" as the #1 unpursued d_seg cell. Proactive-recall (graph_memory_recall) shows it is NOT fresh ground — it is where a partly-BUILT adaptive-width thread converges. Prior art (cite, do not re-derive):
+
+- **#121 d_seg-aware Fourier-feature amplitude taper (FEED-dsegtaper) — BUILT as a triality-complete `Lever`** (`tac.boundary_math.dseg_aware_fourier_taper`), byte-neutral, rule-118 FREE, once ranked the #1 duty-to-measure lever (~73% of remaining descent, an OVER-CREDITED proxy per MEMORY L25 — decisive test still owed). This IS per-band adaptive width; it reweights each fixed Fourier coefficient. The campaign's "S2×weight" cell is, concretely, **#121 extended to margin-band-CONDITIONAL / per-class** amplitude — the increment is the annulus/#333 coupling + per-class, not a new mechanism.
+- **SIREN/FINER/WIRE bandwidth levers — BUILT + wired** (FEED-cm/#178): `--siren-omega`(30), `--finer-first-bias-scale`, `--wire-scale`, `--activation`. Bandwidth-at-init is an adaptive-width control already in the trainer.
+- **hosc-β as annealed bandwidth — BUILT** (`--hosc-beta/-end/-anneal/-omega`, #310 FinerBiasInit + StepNativeActivation): tanh(β·sin) sharpness = spectral width; fixed-β diverges, annealed β works (MEMORY caveat). Adaptive width in the curriculum/temporal axis.
+- **radial-norm ODE `inr_weight_norm_radial_ode_v1` — LAW (registered 2026-07-15)**: ‖W‖ IS the NTK band; hold the CHOSEN invariant ‖w‖*=min(k_need,k_R)/ω (band edge at the R cutoff). This is the derivation the S2×weight penalty must target — penalize ‖W‖ ABOVE the band edge (pays bits AND aliases), don't just shrink globally.
+- **WW-PGD spectral projection — DIAGNOSTIC-GATED** (#442, FEED-442-ww-pgd; verdict_scope: formulation — width-96 trunk, HTSR/WW-PGD paradigm NOT falsified): the spectral-projection actuator for exactly this ‖W‖-band control.
+
+**Net (system intelligence):** the S2×weight duty row is re-scoped from "unpursued" to "**COMPOSE the built pieces**": extend #121's taper to margin-band-conditional + per-class, target it at the radial-ODE band edge ‖w‖*, actuate via WW-PGD spectral projection, with SIREN-ω/hosc-β as the init-side bandwidth. The genuinely new work is the **annulus×per-class COUPLING**, not the width control itself. This is a DSL-Lever extension of an existing Lever + a GPU A/B (launch-gated) — NOT a from-scratch build. verdict_scope: n/a (no negative; a re-scope of an open cell). Pointer 0.19108 UNMOVED.
