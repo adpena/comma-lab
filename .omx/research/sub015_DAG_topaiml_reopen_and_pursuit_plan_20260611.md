@@ -18999,3 +18999,7 @@ $0; `c2_composition_recipe()` machine-readable. No new EmpiricalAnchor (nothing 
 derivations over existing anchors; the battery produces the anchors). Triality: DAG=this FEED ·
 DSL=the 7 factories + custody (same commit) · equations=4 thin evaluators over already-registered
 laws. NO launches, NO trainer edits, live dry-start untouched. MEANS — pointer 0.19108 UNMOVED.
+
+## FEED-legdispo (2026-07-15) — DSL-leg disposition for two subagent-landed commits flagged by the drift-detector [no-triality]
+- **p0_513 Modal single-flight refusal + dual-ledger reconciler** (burn-down closer arm): APPARATUS, not a witness lever. It lands dispatch-POLICY enforcement in tools/claim_lane_dispatch.py + the reconciler helper (Modal ONE-job-at-a-time + local↔cloud ledger). No DSL Lever/WitnessProgram/curriculum change — the config-generator is untouched. Disposition [no-triality]: correct leg is dispatch apparatus, not src/tac/witness_dsl.
+- **#515 constants+telemetry BUILD-WAVE memo** (ab289 arm, memo commit 08ad220175): the DSL leg is ALREADY SATISFIED by the SIBLING CODE commit 63b1137a0b, which landed 7 DSL Lever factories in src/tac/witness_dsl (DerivedAdamBeta2 0.997691, DerivedEmaDecay 0.997691, DerivedWPoseAtEngage 0.3941, DerivedEvalEvery 25, VerdictBatch64, ModDimDynamicsOn, HardcodedWaiverCustody) + 32 tests. The memo commit is the durable record; its config-generator changes are in the code sibling. Disposition [no-triality] for the memo: DSL leg consumed by 63b1137a0b. Pointer 0.19108 UNMOVED.
