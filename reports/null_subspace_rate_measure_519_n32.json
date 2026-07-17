@@ -1,0 +1,180 @@
+{
+  "task": "#519 STAGE-1 null-subspace rate measurement",
+  "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "ckpt": "experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz",
+  "epoch": 650,
+  "self_orient_overrides": {
+    "freq_across": 32.0,
+    "freq_along": 8.0,
+    "tau": 4.0,
+    "iters": 4
+  },
+  "leg1_gauge": {
+    "head_form": "phi = out_sdf(h) linear K=5 -> softmax(phi/T) -> @palette (+tex) -> sigmoid",
+    "gauge_direction": "class-constant (all-ones across the 5 rows) of out_sdf.weight/bias",
+    "out_sdf.weight": {
+      "fro_norm": 16.763042379216174,
+      "gauge_component_norm": 8.776461839927277,
+      "gauge_fraction_of_norm": 0.5235602011487402,
+      "gauge_fraction_of_energy": 0.27411528422690934
+    },
+    "out_sdf.bias": {
+      "norm": 2.1809369280426516,
+      "gauge_component_norm": 1.51215553462673,
+      "gauge_fraction_of_norm": 0.693351336842125,
+      "bias_values": [
+        -0.3312340974807739,
+        -2.061633825302124,
+        -0.5458554029464722,
+        -0.23783807456493378,
+        -0.20472116768360138
+      ]
+    },
+    "palette_gauge": {
+      "fro_norm": 8.237110003622377,
+      "channel_mean": [
+        -1.8916801452636718,
+        -2.084757447242737,
+        -2.216725730895996
+      ],
+      "gauge_component_norm": 8.012034807661294,
+      "gauge_fraction_of_norm": 0.9726754655623024,
+      "cancellation_partner": "out_tex.bias += channel_mean (exact, softmax rows sum to 1)"
+    }
+  },
+  "leg3_rate": {
+    "orig": {
+      "total_0bin_bytes": 84126,
+      "base_int8_brotli_bytes": 61842,
+      "code_int8_brotli_bytes": 20355,
+      "delta_total_bytes_vs_orig": 0
+    },
+    "gauge_proj": {
+      "total_0bin_bytes": 84137,
+      "base_int8_brotli_bytes": 61853,
+      "code_int8_brotli_bytes": 20355,
+      "delta_total_bytes_vs_orig": 11
+    },
+    "palette_canon": {
+      "total_0bin_bytes": 84120,
+      "base_int8_brotli_bytes": 61838,
+      "code_int8_brotli_bytes": 20355,
+      "delta_total_bytes_vs_orig": -6
+    },
+    "both_proj": {
+      "total_0bin_bytes": 84137,
+      "base_int8_brotli_bytes": 61855,
+      "code_int8_brotli_bytes": 20355,
+      "delta_total_bytes_vs_orig": 11
+    }
+  },
+  "leg4_frame_identity": {
+    "gauge_proj": {
+      "frames_bit_identical": 0,
+      "frames_total": 64,
+      "max_diff_px_per_frame": 257788,
+      "mean_diff_px_per_frame": 203789.796875,
+      "render_argmax_identical_frames": 0,
+      "argmax_total": 32
+    },
+    "palette_canon": {
+      "frames_bit_identical": 0,
+      "frames_total": 64,
+      "max_diff_px_per_frame": 440604,
+      "mean_diff_px_per_frame": 240188.140625,
+      "render_argmax_identical_frames": 32,
+      "argmax_total": 32
+    },
+    "both_proj": {
+      "frames_bit_identical": 0,
+      "frames_total": 64,
+      "max_diff_px_per_frame": 610741,
+      "mean_diff_px_per_frame": 414372.875,
+      "render_argmax_identical_frames": 0,
+      "argmax_total": 32
+    }
+  },
+  "leg2_projector_self_test": {
+    "max_A_of_ker_residual": 1.654926196081874e-15,
+    "seen_space_blind_fraction": -2.220446049250313e-16,
+    "blind_row_image_blind_fraction": 1.0,
+    "n_exact_blind_rows": 106,
+    "n_exact_blind_cols": 140
+  },
+  "leg2_blind_output": {
+    "n_channel_fields": 48,
+    "ker_dim_fraction_of_camera_space": 0.8067423152232891,
+    "raw_energy_fraction_in_kerA": {
+      "mean": 0.5242467615738868,
+      "min": 0.5234515570949776,
+      "max": 0.525811075144586
+    },
+    "ac_energy_fraction_in_kerA": {
+      "mean": 0.5287885232595196,
+      "min": 0.5258791212268543,
+      "max": 0.5318138883099481
+    }
+  },
+  "leg2_blind_weights": {
+    "pairs": [
+      0,
+      16
+    ],
+    "per_pair": [
+      {
+        "pair": 0,
+        "out_tex_weight_energy_weighted_blind_fraction": 0.5276621111621598,
+        "out_tex_unweighted_mean_blind_fraction": 0.5280027940261367,
+        "out_sdf_weight_energy_weighted_blind_fraction": 0.45228345263262465,
+        "out_sdf_unweighted_mean_blind_fraction": 0.4921508034853646
+      },
+      {
+        "pair": 16,
+        "out_tex_weight_energy_weighted_blind_fraction": 0.5276209929935171,
+        "out_tex_unweighted_mean_blind_fraction": 0.5279703554553576,
+        "out_sdf_weight_energy_weighted_blind_fraction": 0.5502252914142668,
+        "out_sdf_unweighted_mean_blind_fraction": 0.5235887046771567
+      }
+    ],
+    "mean": {
+      "out_tex_weight_energy_weighted_blind_fraction": 0.5276415520778384,
+      "out_tex_unweighted_mean_blind_fraction": 0.5279865747407472,
+      "out_sdf_weight_energy_weighted_blind_fraction": 0.5012543720234457,
+      "out_sdf_unweighted_mean_blind_fraction": 0.5078697540812607
+    },
+    "note": "linearized past uint8 round; Jacobian = d(render)/d(output-layer weight) pushed through bicubic-up then projected against ker(A) \u2014 advisory structural"
+  },
+  "leg4_score": {
+    "orig": {
+      "pairs": 32,
+      "d_seg": 0.0030577977498372397,
+      "d_pose": 143.65831340809427,
+      "d_seg_per_pair_max": 0.0034688313802083335
+    },
+    "gauge_proj": {
+      "pairs": 32,
+      "d_seg": 0.0030530293782552085,
+      "d_pose": 143.61628729244708,
+      "d_seg_per_pair_max": 0.0034840901692708335,
+      "delta_d_seg_vs_orig": -4.76837158203125e-06,
+      "delta_d_pose_vs_orig": -0.0420261156471895
+    },
+    "palette_canon": {
+      "pairs": 32,
+      "d_seg": 0.003051439921061198,
+      "d_pose": 143.417883857451,
+      "d_seg_per_pair_max": 0.0034434000651041665,
+      "delta_d_seg_vs_orig": -6.357828776041522e-06,
+      "delta_d_pose_vs_orig": -0.24042955064328453
+    },
+    "both_proj": {
+      "pairs": 32,
+      "d_seg": 0.0030450820922851562,
+      "d_pose": 143.40250721012006,
+      "d_seg_per_pair_max": 0.0034535725911458335,
+      "delta_d_seg_vs_orig": -1.2715657552083478e-05,
+      "delta_d_pose_vs_orig": -0.2558061979742092
+    }
+  },
+  "elapsed_seconds": 1067.5509140491486
+}
