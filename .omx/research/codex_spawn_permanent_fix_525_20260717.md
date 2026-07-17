@@ -28,7 +28,7 @@ simultaneous, supervisor bash in the SAME pgid survived), pid 81194 (retry.2), a
 |---|---|---|
 | `fix525_survival_probe` (pre-fix path shape) | clean env (`env -i`, NO `CODEX_COMPANION_SESSION_ID`), effort=low, ~10³ tokens, no subagents, detached | **REAPED at 5m24s** — falsifies token/context-volume, compaction, multi_agent_v2, companion-env, and quota hypotheses (rate-limit snapshot showed 5% used) |
 | `csxprobe` (renamed argv[0] symlink to the same binary) | identical otherwise | **SURVIVED >7m12s** — argv-name matching confirmed |
-| detached bash forensics sampler | contains "codex" strings, stdin=/dev/null, no TTY | survived full 10 min — saved by the reaper's own `parse_etime` octal bug (see §4) |
+| detached bash forensics sampler | contains "codex" strings, stdin=/dev/null, no TTY | survived full 10 min — saved by the reaper's own `parse_etime` octal bug (see §4) # MAGNITUDE_DISMISSAL_OK: forensic evidence row (probe survival fact), not a score-effect verdict — no ΔS dismissed |
 | supervisor bash + tee (same pgid as codex) | no `\bcodex\b` argv match (`codex_runs` has `_` = word char) | survived every kill |
 | post-fix probe through the NEW default path | tiny prompt, effort=low, read-only | **alive >8m19s on `ttys001`, ZERO reaper-log mentions** (completion: `sleep 600` payload ran past every prior kill window) |
 
