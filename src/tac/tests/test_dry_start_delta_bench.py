@@ -10,7 +10,6 @@ The default (no-flag) path must remain behavior-identical (regression tests belo
 """
 import json
 import pathlib
-import subprocess
 import sys
 import types
 import datetime as dt
@@ -248,15 +247,17 @@ def _stub_launcher(monkeypatch, pass_logs, peaks_mib):
         launch.write_text("#!/usr/bin/env bash\n")
         return launch, None, None, None
 
-    def fake_run(cmd, capture_output=True, text=True, timeout=None):
+    def fake_launch_pass_child(cmd, timeout_s):
+        # F1: _pass routes through L._launch_pass_child (Popen + graceful TERM-cascade);
+        # the stub mirrors its (rc, stderr+stdout blob, outer_timeout) contract.
         i = calls["i"]
         calls["i"] += 1
-        return _FakeCompleted(pass_logs[i] + f"peak_rss={peaks_mib[i]}MiB\n")
+        return 0, pass_logs[i] + f"peak_rss={peaks_mib[i]}MiB\n", False
 
     monkeypatch.setattr(L, "derive_named_config", fake_derive)
     monkeypatch.setattr(L, "with_internal_dsl_lever", fake_lever)
     monkeypatch.setattr(L, "write_dsl_bound_launch", fake_write)
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(L, "_launch_pass_child", fake_launch_pass_child)
     return seen_overrides
 
 
@@ -322,7 +323,7 @@ def test_delta_refusal_exits_rc7_before_any_pass(tmp_path, monkeypatch, capsys):
 
     def boom(*a, **k):  # no pass may run on a refused delta
         raise AssertionError("a bench pass ran despite the refusal")
-    monkeypatch.setattr(subprocess, "run", boom)
+    monkeypatch.setattr(L, "_launch_pass_child", boom)
     rc = L._run_dry_start(_args(dry_start_delta_from=str(prior)), CONFIG, True, out, "t", None, None)
     assert rc == 7
     err = capsys.readouterr().err
@@ -516,10 +517,14 @@ def test_no_other_default_on_observer_rides_checkpoint_cadence():
     do_periodic) are the mod-dim ablation (bench-disabled) and the default-OFF curvature
     telemetry. A new default-ON rider would re-open the confound — this test names the gate."""
     idx = _TRAINER_SRC.index("if is_transition or do_periodic:")
-    block = _TRAINER_SRC[idx:idx + 600]
+    block = _TRAINER_SRC[idx:idx + 1400]  # F6: widened window (600 could hide a 3rd rider)
     assert "_mdd_ablation_checkpoint(ep, seg_form)" in block
     assert 'getattr(args, "curvature_telemetry", False)' in block  # default-OFF rider
     assert _TRAINER_SRC.count("if is_transition or do_periodic:") == 1
+    # exactly the two known riders inside the widened cadence-gated block prefix (any new
+    # `_x(...)` call before the next top-level comment would surface in review + here)
+    assert block.count("_mdd_ablation_checkpoint(") == 1
+    assert block.count("_emit_curvature_spectrum(") == 1
 
 
 # ───────── parse_ckpt_epoch_tail_s / parse_launch_sh_flag_int / decomposition (pure) ─────────
@@ -685,6 +690,27 @@ def test_progress_file_written_per_pass(tmp_path, monkeypatch):
     assert set(prog["passes"]) == {"dry_start", "dry_start_resume"}
     assert prog["passes"]["dry_start"]["epochs_completed"] >= 1
     assert prog["schema"] == "dry_start_progress.v1"
+
+
+def test_compiled_bench_launch_sh_carries_no_mod_dim_ablation_end_to_end(tmp_path):
+    """F6 (independent review 2026-07-17): the hermetic _stub_launcher would pass even if
+    the DSL's boolean-False rendering broke — prove the fix END-TO-END: the REAL compile of
+    a bench-pass config emits --no-mod-dim-ablation into launch.sh, and the REAL config's
+    launch.sh does NOT carry it."""
+    cfg = L.derive_named_config(
+        "c2_surgical_warm", "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        num_pairs=600, epochs=None, overfit=True)
+    cfg_b = L.with_internal_dsl_lever(
+        cfg, name="catalog406_dry_start_test",
+        overrides={"--ckpt-every": 1, "--mod-dim-ablation": False})
+    launch_b, _, _, _ = L.write_dsl_bound_launch(cfg_b, tmp_path / "bench")
+    text = launch_b.read_text()
+    assert "--no-mod-dim-ablation" in text
+    assert "--ckpt-every 1" in text
+    launch_r, _, _, _ = L.write_dsl_bound_launch(cfg, tmp_path / "real")
+    real_text = launch_r.read_text()
+    assert "--no-mod-dim-ablation" not in real_text
+    assert "--ckpt-every 25" in real_text  # the real cadence the receipt amortizes at
 
 
 def test_canonical_equation_bench_marginal_amortization_matches_runtime_twin():

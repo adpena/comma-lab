@@ -1510,10 +1510,13 @@ def bench_marginal_decomposition(
         extra = max(float(o_med) - float(f_med), 0.0)
         out["ckpt_epoch_extra_s"] = round(extra, 2)
         out["ckpt_epoch_extra_provenance"] = (
-            "MEASURED[one-knob A/B: span_epoch_tail_s median, observer-ON run "
+            "MEASURED[one-knob-ON-THE-TAIL A/B: span_epoch_tail_s median, observer-ON run "
             f"({(observer_tail or {}).get('path')}) minus this bench's observer-OFF tail "
-            f"({(fresh_tail or {}).get('path')}); the knob is --no-mod-dim-ablation; "
-            "observers named in bench_disabled_observers]")
+            f"({(fresh_tail or {}).get('path')}); the tail knob is --no-mod-dim-ablation; "
+            "observers named in bench_disabled_observers. F4 caveat: at the argv level the "
+            "delta bench ALSO differs by --skip-boot-baseline-verdict — that flag is "
+            "boot-only (pre-loop v0 verdict), it never touches epoch tails, so the TAIL "
+            "A/B remains single-knob]")
     elif o_med is None:
         out["ckpt_epoch_extra_provenance"] = (
             "null: no observer-ON tail evidence supplied (--observer-cost-evidence) — the "
@@ -1528,7 +1531,11 @@ def bench_marginal_decomposition(
         out["amortized_sec_per_ep"] = round(amort, 2)
         out["amortized_provenance"] = (
             f"DERIVED[typical + ckpt_epoch_extra_s/real_ckpt_every({real_ckpt_every}); both "
-            "inputs MEASURED above]")
+            "inputs MEASURED above. F5 caveat: a mild UNDERestimate — the short bench "
+            "under-samples eval/verdict-cadence extras the real run pays (the "
+            "--profile-timing R-microbench at eval cadence, mod-dim dynamics SVD at "
+            "verdict cadence, verdict-submit at its own cadence); none of these was "
+            "measured here, so they are EXCLUDED rather than guessed]")
         if isinstance(real_epochs, int) and real_epochs > 0:
             start = resume_start_epoch if (isinstance(resume_start_epoch, int)
                                            and resume_start_epoch >= 1) else 1
@@ -1536,6 +1543,86 @@ def bench_marginal_decomposition(
             out["projected_remaining_epochs"] = remaining
             out["projected_remaining_wall_h"] = round(amort * remaining / 3600.0, 2)
     return out
+
+
+# F1 (independent review 2026-07-17): the in-flight bench pass child (the inner safe_run),
+# visible to the wrapper's SIGTERM handler so an external stop CASCADES to the trainer
+# group instead of orphaning it UNCAPPED. Single-threaded dry-start => a simple holder.
+_ACTIVE_BENCH_CHILD: dict[str, int | None] = {"pid": None}
+
+_CHAIN_MANIFEST = _REPO / ".omx" / "state" / "witness_chain_manifest.jsonl"
+
+
+def _append_chain_manifest(out_dir: Path, config: str, label: str,
+                           manifest_path: Path | None = None) -> None:
+    """F3a (independent review 2026-07-17): self-register the launcher chain {pid, out_dir}
+    so tools/witness_chain_watchdog.py can alarm on a SILENT launcher death even when no
+    registry row resolves the run dir (a v3-waiter-style outer chain carries PRIOR run dirs
+    in its argv — with green receipts — so registry-token resolution is ambiguous-or-wrong;
+    the manifest is ground truth written by the process that KNOWS its out_dir).
+    Best-effort; never raises."""
+    try:
+        import fcntl  # noqa: PLC0415
+        path = manifest_path or _CHAIN_MANIFEST
+        if manifest_path is None and os.environ.get("PYTEST_CURRENT_TEST"):
+            return  # hermetic: never write the LIVE manifest from a test (safe_run parity)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        row = {"schema": "witness_chain_manifest.v1", "ts": _utc(),
+               "launcher_pid": os.getpid(), "out_dir": str(out_dir),
+               "config": config, "label": label}
+        with path.open("a") as fh:
+            fcntl.flock(fh, fcntl.LOCK_EX)
+            fh.write(json.dumps(row) + "\n")
+            fcntl.flock(fh, fcntl.LOCK_UN)
+    except Exception as exc:  # noqa: BLE001
+        print(f"# dry-start WARN: chain-manifest append failed: {exc!r}", file=sys.stderr)
+
+
+def _graceful_kill_child(proc) -> None:
+    """F1: graceful stop of a bench-pass child (the inner safe_run). SIGTERM first — safe_run's
+    _cascade_kill (safe_run.py:368-376, TERM/INT only) then killpg's the TRAINER group and
+    exits — wait for the cascade, SIGKILL only as last resort. A bare SIGKILL (what
+    subprocess.run's kill-on-exception did) bypasses the cascade and orphans the trainer's
+    separate session UNCAPPED at 44-84 GiB — the exact review finding."""
+    import subprocess  # noqa: PLC0415
+    if proc.poll() is not None:
+        return
+    with contextlib.suppress(ProcessLookupError, OSError):
+        os.kill(proc.pid, _sig_mod().SIGTERM)
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        with contextlib.suppress(ProcessLookupError, OSError):
+            proc.kill()
+
+
+def _sig_mod():
+    import signal  # noqa: PLC0415
+    return signal
+
+
+def _launch_pass_child(cmd: list[str], timeout_s: float) -> tuple[int | None, str, bool]:
+    """Run one bench pass child. Returns (rc | None, stderr+stdout blob, outer_timeout).
+    Replaces subprocess.run in _pass (F1): holds the child pid in _ACTIVE_BENCH_CHILD so the
+    wrapper's SIGTERM handler can cascade, and NEVER bare-SIGKILLs the inner safe_run
+    (subprocess.run's kill-on-exception did, bypassing safe_run's TERM-only cascade handler
+    and orphaning the trainer's separate session)."""
+    import subprocess  # noqa: PLC0415
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _ACTIVE_BENCH_CHILD["pid"] = proc.pid
+    try:
+        try:
+            out, err = proc.communicate(timeout=timeout_s)
+            return proc.returncode, (err or "") + (out or ""), False
+        except subprocess.TimeoutExpired:
+            _graceful_kill_child(proc)
+            out, err = proc.communicate()
+            return None, (err or "") + (out or ""), True
+        except BaseException:
+            _graceful_kill_child(proc)  # incl. SystemExit raised by the SIGTERM handler
+            raise
+    finally:
+        _ACTIVE_BENCH_CHILD["pid"] = None
 
 
 def _update_dry_start_progress(out_dir: Path, update: dict) -> None:
@@ -1811,7 +1898,26 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
               file=sys.stderr)
 
     def _on_term(signum, _frame):  # noqa: ANN001
+        # F2 FIRST (independent review 2026-07-17): under the real external-stop cascade
+        # (safe_run._kill_group: TERM -> sleep 0.15 -> KILL) this handler has ~150 ms of
+        # life — write the failure receipt BEFORE anything else (small atomic JSON, ~ms).
+        _write_dry_start_failure_receipt(
+            out_dir, config,
+            RuntimeError("SIGTERM (external stop) — receipt written in-handler (F2), "
+                         "pass child cascaded (F1)"))
+        # F1: cascade the in-flight pass child. SIGTERM to the inner safe_run fires its
+        # _cascade_kill (killpg TRAINER group TERM->KILL, then exit) — without this, the
+        # SystemExit below aborts communicate() and the trainer session would outlive us
+        # (pre-fix subprocess.run even bare-SIGKILLed safe_run, guaranteeing the orphan).
+        pid = _ACTIVE_BENCH_CHILD.get("pid")
+        if pid:
+            with contextlib.suppress(ProcessLookupError, OSError):
+                os.kill(int(pid), _signal.SIGTERM)
         raise SystemExit(9)
+
+    # F3a: self-register this chain (pid + out_dir) for the watchdog BEFORE any pass — a
+    # silent launcher death must alarm as CHAIN_DEAD_NO_RECEIPT, never NO_RUN_DIR rc 0.
+    _append_chain_manifest(out_dir, config, label)
 
     old_term = None
     with contextlib.suppress(ValueError, OSError):  # non-main thread: keep default handling
@@ -1861,7 +1967,6 @@ def _run_dry_start_inner(args, config: str, overfit: bool, out_dir: Path, label:
     green; rc 6 otherwise) — NEVER proceeds to the real spawn. Route: the SAME governed launcher
     machinery (safe_run RSS cap + timeout + admission); no raw-python bypass.
     """
-    import subprocess
     import time as _time
 
     # DELTA-BENCH (operator-directed 2026-07-16): fail-closed whitelist-gated inheritance of the
@@ -1952,12 +2057,10 @@ def _run_dry_start_inner(args, config: str, overfit: bool, out_dir: Path, label:
             "phase": f"{sub_name}_running", "config": config,
             "pass_timeout_s": round(pass_timeout, 1)})
         t0 = _time.perf_counter()
-        outer_timeout = False
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=pass_timeout + 300.0)
-            rc, blob = res.returncode, (res.stderr or "") + (res.stdout or "")
-        except subprocess.TimeoutExpired:
-            outer_timeout, rc, blob = True, None, ""
+        # F1: _launch_pass_child (Popen + graceful TERM-cascade) replaces subprocess.run —
+        # run()'s kill-on-exception bare-SIGKILLed the inner safe_run, bypassing its
+        # _cascade_kill and ORPHANING the trainer session UNCAPPED on a launcher SIGTERM.
+        rc, blob, outer_timeout = _launch_pass_child(cmd, pass_timeout + 300.0)
         wall = _time.perf_counter() - t0
         peak_mib = parse_safe_run_peak_mib(blob)
         # (dry-start FIX 2026-07-10; attempt-1/-3 epochs=-1 root-cause) PERSIST the captured child

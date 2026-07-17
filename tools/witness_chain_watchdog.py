@@ -74,6 +74,49 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def _live_cmdline(pid: int) -> str | None:
+    """The live process's command line via ps -p (kernel truth; empty/dead -> None)."""
+    try:
+        out = subprocess.run(["ps", "-p", str(int(pid)), "-o", "command="],
+                             capture_output=True, text=True, timeout=5).stdout.strip()
+        return out or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _expected_tokens(row_cmd: list) -> list[str]:
+    """Distinctive basenames from the registered argv (for the pid-reuse cross-check)."""
+    toks: list[str] = []
+    for tok in row_cmd or []:
+        base = str(tok).rstrip("/").split("/")[-1]
+        if base.endswith((".py", ".sh")) and base not in toks:
+            toks.append(base)
+    return toks
+
+
+_CHAIN_TOKENS = ("safe_run.py", "launch_witness_run.py", "train_levelset", "launch.sh",
+                 "spawn_durable_daemon.py")
+
+
+def _pid_alive_cmd(pid, expect_tokens: list[str]) -> tuple[bool, str | None]:
+    """F3b (independent review 2026-07-17): bare kill(pid,0) is wrong twice — pid REUSE makes
+    a dead chain read alive forever, and PermissionError->True can mask death. Cross-check
+    the LIVE command line against the registered argv's distinctive tokens; no match => the
+    pid now belongs to someone else => DEAD for this chain's purposes."""
+    if not pid or not _pid_alive(pid):
+        return False, None
+    live = _live_cmdline(pid)
+    if live is None:
+        return False, None
+    if expect_tokens and not any(tok in live for tok in expect_tokens):
+        # exec-chains legitimately REPLACE the registered argv (the v3 waiter bash execs
+        # safe_run -> launcher): accept any known chain token as fallback before declaring
+        # pid-reuse. An UNRELATED process matches neither set => DEAD for this chain.
+        if not any(tok in live for tok in _CHAIN_TOKENS):
+            return False, live  # pid reused by an unrelated process
+    return True, live
+
+
 def _ps_children_map() -> dict[int, list[int]]:
     """ppid -> [pids] from one ``ps`` snapshot (cross-session; no psutil dependency)."""
     out = subprocess.run(["ps", "ax", "-o", "pid=,ppid="], capture_output=True,
@@ -116,13 +159,19 @@ def _run_dir_from_row(row: dict) -> Path | None:
             p = Path(frag) if frag.startswith("/") else _REPO / frag
             if p.is_dir() and p not in candidates:
                 candidates.append(p)
-    # Prefer a dir that IS a launch run dir (carries launch artifacts) — a cmd can also
+    # Keep only dirs that ARE launch run dirs (carry launch artifacts) — a cmd can also
     # mention e.g. the gt-cache dir under experiments/results/, which is NOT the chain's
     # run dir (live-fire finding: the outer row matched mlx_fleet_gt_cache first).
-    for p in candidates:
-        if (p / "launch_manifest.json").exists() or (p / "launch.sh").exists():
-            return p
-    return None  # a token-only fuzzy match (e.g. the gt-cache dir) is NOT the run dir
+    artifact_dirs = [p for p in candidates
+                     if (p / "launch_manifest.json").exists() or (p / "launch.sh").exists()]
+    # F3c (independent review 2026-07-17): a v3-waiter-style argv carries PRIOR run dirs
+    # (--dry-start-delta-from / --observer-cost-evidence) that DO have launch artifacts —
+    # and green receipts — so picking any of them turns a silent death into a false
+    # CHAIN_DEAD_RECEIPTED. Multiple candidates = ambiguous = None; the chain MANIFEST
+    # (written by the launcher, which knows its out_dir) is the authoritative source.
+    if len(artifact_dirs) == 1:
+        return artifact_dirs[0]
+    return None
 
 
 def _newest_mtime(root: Path, max_files: int = 4000) -> float | None:
@@ -142,7 +191,44 @@ def _newest_mtime(root: Path, max_files: int = 4000) -> float | None:
     return newest
 
 
-def scan(stale_s: float = 900.0, registry_path: Path | None = None) -> list[dict]:
+_MANIFEST = _REPO / ".omx" / "state" / "witness_chain_manifest.jsonl"
+_MANIFEST_MAX_AGE_DAYS = 7.0
+
+
+def _manifest_rows(manifest_path: Path | None = None) -> list[dict]:
+    """LAST manifest row per out_dir within the recency window (launcher self-registration,
+    F3a): {launcher_pid, out_dir, config, label, ts}. Missing/unreadable -> []."""
+    if manifest_path is None and os.environ.get("PYTEST_CURRENT_TEST"):
+        return []  # hermetic: never read the LIVE manifest from a test (writer parity)
+    path = manifest_path or _MANIFEST
+    rows: dict[str, dict] = {}
+    try:
+        text = path.read_text()
+    except OSError:
+        return []
+    cutoff = _dt.datetime.now(_dt.UTC) - _dt.timedelta(days=_MANIFEST_MAX_AGE_DAYS)
+    for ln in text.splitlines():
+        ln = ln.strip()
+        if not ln.startswith("{"):
+            continue
+        try:
+            d = json.loads(ln)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if not (isinstance(d, dict) and d.get("out_dir") and d.get("launcher_pid")):
+            continue
+        try:
+            ts = _dt.datetime.strptime(str(d.get("ts")), "%Y%m%dT%H%M%SZ").replace(tzinfo=_dt.UTC)
+            if ts < cutoff:
+                continue
+        except (ValueError, TypeError):
+            pass  # unparseable ts: keep (fail-open for the alarm's sake)
+        rows[str(d["out_dir"])] = d
+    return list(rows.values())
+
+
+def scan(stale_s: float = 900.0, registry_path: Path | None = None,
+         manifest_path: Path | None = None) -> list[dict]:
     try:
         rows = json.loads((registry_path or _REGISTRY).read_text())
     except (OSError, json.JSONDecodeError, ValueError):
@@ -159,7 +245,7 @@ def scan(stale_s: float = 900.0, registry_path: Path | None = None) -> list[dict
         if not _LABEL_RE.search(label):
             continue
         pid = row.get("pid")
-        alive = _pid_alive(pid) if pid else False
+        alive, live_cmd = _pid_alive_cmd(pid, _expected_tokens(row.get("cmd") or []))
         desc = _descendants(pid, kids) if alive else []
         run_dir = _run_dir_from_row(row)
         receipt = bool(run_dir and (run_dir / "dry_start_report.json").exists())
@@ -185,6 +271,32 @@ def scan(stale_s: float = 900.0, registry_path: Path | None = None) -> list[dict
                      if verdict == "RUNNING_QUIET" else
                      "SILENT DEATH: chain gone with no receipt — postmortem before relaunch"
                      if verdict == "CHAIN_DEAD_NO_RECEIPT" else ""),
+        })
+    # F3a: chain-manifest verdicts (launcher self-registration — covers chains whose registry
+    # rows cannot resolve a run dir, e.g. the v3-waiter outer chain; a silent LAUNCHER death
+    # must alarm as CHAIN_DEAD_NO_RECEIPT, never NO_RUN_DIR rc 0).
+    for man in _manifest_rows(manifest_path):
+        out_dir = Path(str(man["out_dir"]))
+        pid = man.get("launcher_pid")
+        alive, live_cmd = _pid_alive_cmd(pid, ["launch_witness_run.py"])
+        receipt = (out_dir / "dry_start_report.json").exists()
+        newest = _newest_mtime(out_dir) if out_dir.is_dir() else None
+        age_s = round(now - newest, 1) if newest else None
+        if alive:
+            fresh = age_s is not None and age_s < stale_s
+            verdict = "RUNNING_HEALTHY" if fresh else "RUNNING_QUIET"
+        elif receipt:
+            verdict = "CHAIN_DEAD_RECEIPTED"
+        else:
+            verdict = "CHAIN_DEAD_NO_RECEIPT"
+        verdicts.append({
+            "ts": _utc(), "source": "manifest", "label": man.get("label"),
+            "pid": pid, "alive": alive, "run_dir": str(out_dir),
+            "newest_file_age_s": age_s, "receipt_exists": receipt, "verdict": verdict,
+            "note": ("SILENT DEATH: launcher gone, no receipt in its self-registered out_dir "
+                     "— postmortem before relaunch" if verdict == "CHAIN_DEAD_NO_RECEIPT"
+                     else "ALIVE despite quiet logs/mtimes — the phantom-death class"
+                     if verdict == "RUNNING_QUIET" else ""),
         })
     return verdicts
 
