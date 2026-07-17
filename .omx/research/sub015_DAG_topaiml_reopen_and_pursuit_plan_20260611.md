@@ -19359,3 +19359,29 @@ Pointer 0.19108 UNMOVED (apparatus + armed measurement; next exact-relevant even
   MIN(psutil, vm_stat) + regression test asserting no scorer load on refusal. Sister:
   [[admission-gate-naive-counts-reclaimable-as-committed]].
 - Pointer 0.19108 UNMOVED (apparatus).
+
+## FEED-lbwatch-0717 (2026-07-17) — upstream leaderboard watch: NO new technique, leaderboard-adds confirmed
+- **SIGNAL (operator):** "Has there been any movement or new submissions on the upstream leaderboard? If so harvest all signal."
+- **MOVEMENT FOUND**: (1) **PR #129** (open, 2026-07-12, ryanli0070 `qlp_exactgrid`) = RESUBMISSION of #127 — archive
+  BYTE-IDENTICAL (SHA 869e666b…, 176,337 B, score unchanged 0.190503 x86-CI / 0.190506 CPU), refactored per Yousfi's
+  code-overlap note to import codec/model from merged `rhnerv_comma` (#112) instead of copying; unused FEC6/base_kind-1
+  path dropped. NO new technique — the exact-grid QAT latent polish + `sigmoid(-margin/τ)` boundary surrogate + fp32-CPU
+  selection discipline were fully banked in `pr112_127_intake_20260710.md` (#412) + FEED lines ~14491–14530. Not yet
+  re-evaluated/merged (bot ack only). (2) **Leaderboard-adds 2026-07-12 (Yousfi)**: #125 hnerv_qlp 0.190946, #127
+  qlp_exactgrid 0.190503, #128 rhnerv_latent_polish 0.187946 all "added to leaderboard". **Public best = 0.187946
+  [contest-CPU] (#128)** — unchanged from our intake; no submission since beats it.
+- **Competitive read (pointer-first, honest):** our SUBMITTABLE pointer 0.19108 [contest-CPU] is **BEHIND public best by
+  +0.0031**; our banked NON-SUBMISSION splice 0.18804 (borrowed PR128-on-PR110, NO-FAKE #7) edges public best by −0.0009
+  but cannot ship as ours. The gap statement is unchanged since 07-12: only the witness line (v9c2 → byte-close → exact
+  row) produces a shippable row that beats 0.187946.
+- **NEW process signal (small but real):** (a) Yousfi adds to leaderboard on EVAL, independent of MERGE — merge requires
+  refactor-to-reuse-merged-code (stated on #127/#128/#125). A future OUR-witness PR gets leaderboard placement on eval
+  regardless of merge; code-overlap hygiene only gates the merge. (b) #128's author got an internship email — the
+  contest remains comma's active recruiting surface. (c) Contest cadence is slow: 1 resubmission in 5 days, no new
+  entrants since #129.
+- **RESPONSE**: no harvest arm dispatched (nothing un-banked to harvest — decision per proactive-recall, verified
+  against `pr112_127_intake_20260710.md` + DAG 14491/14530 before concluding). Upstream snapshot refreshed in the
+  canonical frontier pointer (fetch 2026-07-17T18:00Z, 30 PRs). Watch item: if #129 gets merged or any NEW PR lands
+  sub-0.1879, re-open intake.
+- **Triality**: measurement/watch FEED — DSL leg N/A-BY-TYPE (no lever), equations leg N/A (no new measured law; public
+  scores remain `external` until exact replay per apples-to-apples). Pointer 0.19108 UNMOVED (watch).
