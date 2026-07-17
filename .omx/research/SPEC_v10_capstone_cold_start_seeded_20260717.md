@@ -97,6 +97,10 @@ training budget and the DSL factory refuses it.
 - **STATUS:** measurement DONE; the range(A)-restricted render-target projection layer is task **#520**
   (build owed — named launch-gate input, not aspiration: the DSL factory carries it as a blocker until
   the projection layer exists and is A/B'd at $0).
+- **COMPOSITION (amendment 2026-07-17):** range(A)-restriction and the cell-generator description (§3.0)
+  COMPOSE — both are projections onto the scorer's σ-algebra, of which the Laguerre cell complex is the
+  atom structure: ker(A) removes what the scorer cannot RESOLVE, the generator description removes what
+  the argmax cannot DISTINGUISH within an atom, so the render target is "cells in range(A)", not pixels.
 
 ### P4 — Content-priced coder (fix the #519 Kolmogorov violation)
 - **WHAT:** the archive coder prices CONTENT, not SHAPE — dense int8 pricing (shape-priced) is the measured
@@ -150,6 +154,10 @@ training budget and the DSL factory refuses it.
 - **MACHINERY:** SPEC_v8 #359/#380/#386 carrier modules; `curve_relative_offset_coder`;
   one-sided per-pair band generator terms (0 counted B, measured −29.5% on the palette-vehicle subset)
   [MEASURED, `c2_perclass_stratum_carrier_taxonomy_20260716.md` §4 — subset-ranked, n600 re-measure owed].
+- **GENERATORS-FIRST (amendment 2026-07-17, binding):** P7 carriers are explicitly generators-first per
+  §3.0(2) — for every cell-interior stratum the carrier ships Laguerre GENERATORS (sites/weights) and
+  NEVER a field over pixels (rate ~0.02–0.05 vs 0.118 [ANCHOR]); fields are admitted only where a §3
+  texture certificate exists (annulus luma, hood-tex, dash phase).
 - **STATUS:** kit built (v8 increment-1); composition into the v10 archive grammar is the byte-close item.
 
 ### P8 — Seeds from v9c2's terminal state where Kolmogorov-optimal
@@ -167,6 +175,38 @@ from the exact scorer factorization (`frozen_scorer_exact_factorization_20260715
 inversions (necessity solver, cure-driver VJP, null-subspace, night-wet atlas). **Texture WITHOUT a
 certificate = geometry-only (ξ,R + partition + generated fill).** Where a certificate needs a measurement
 that does not exist, the row names the exact $0 probe — never a guess.
+
+### §3.0 Within-class structure: flat cells (the DERIVATION of every GEOM-ONLY certificate)
+
+**Operator amendment 2026-07-17 (verbatim: "But also remember our findings about within class structure
+and flat and cells").** The GEOM-ONLY interior certificates below are not row-by-row empirical accidents —
+they are ONE derivation, a three-way convergence of independent established findings, and they bind
+**per-CELL, not per-class**:
+
+1. **Fisher-flat interiors (the metric).** The frozen-scorer Fisher metric is FLAT inside class
+   interiors — argmax stable ⇒ zero first-order score sensitivity — with curvature concentrated on the
+   codim-1 separatrix; the margin field IS the Fisher surrogate (Pearson 0.978, MEASURED)
+   [#500 `optimal_metric_unification_v1`; CLAUDE.md §unified level-set flow].
+2. **Cell structure = the rate answer (the geometry).** The argmax partition is a Laguerre/power-diagram
+   cell complex (#284; the τ→0 witness IS tropical — #311 TropNNC is cell-aware). The Kolmogorov-minimal
+   description of an interior is its cell **GENERATORS** (sites/weights), never a field over its pixels:
+   rate ~0.02–0.05 vs 0.118 [ANCHOR, v8 parsimony measure L-v8/#284]. The parsimony win IS this
+   generators-not-fields swap.
+3. **Measured flat-amplitude exhaustion (the dynamics).** The v9c2-line witness-own residual
+   decomposition: 90.6% of residual is 1px edge-FLICKER (Road-Lane 66%), and flat-amplitude carriers are
+   EXHAUSTED — post-hoc RGB on interiors is DEAD [MEASURED,
+   `witness_own_residual_decomposition_v1` / `c2_witness_own_decomp_20260716`] — the empirical proof
+   that interiors carry no recoverable score signal on the trained trunk.
+
+**Binding consequences for the table:** (a) every GEOM-ONLY certificate is a **per-cell** certificate —
+the certified object is the CELL (generators + border profile), transferred to pixels by cell MEMBERSHIP,
+not class label (a class with many transient cells, e.g. Movable, is certified cell-by-cell); (b) an
+interior's necessary content is its `|generators|` seed bytes + its border profile — never per-pixel
+appearance/fields; (c) **the structural EXCEPTION is Lane: necessity-by-inversion shows Lane has NO safe
+interior** [MEASURED, `realization_necessity_preimage_per_stratum_v1` family] — every Lane pixel is
+effectively boundary/annulus (thin-structure cells are all-border), so no Lane row may EVER inherit an
+interior/flat-cell exemption. Metric ∧ geometry ∧ dynamics agree; that convergence, not any single
+measurement, is the derivation behind every GEOM-ONLY verdict below.
 
 Verdict legend: **TEX-CERT** = texture/appearance certified necessary (scoped) · **GEOM-ONLY** = certified
 no-texture · **PRECISION-ONLY** · **PROBE** = named $0 probe owed before seal.
@@ -188,6 +228,42 @@ no-texture · **PRECISION-ONLY** · **PROBE** = named $0 probe owed before seal.
 **Row count: 11. Certificates measured: 8 (rows 1,3,5,6,7,8*,10,11 — row 8 seg-side certified, pose-side
 gated on OQ-1). Named $0 probes owed: 3 (P-1, P-2, P-3).** Row 2 is certified at subset scale and OWNED by
 P-1 for n600 confirmation — counted as probe-gated, not sealed.
+
+### §3.1 Per-row re-check under the flat-cell lens (§3.0) — amendment 2026-07-17
+
+No row CHANGED certificate class; annotations below record how each row reads under the lens:
+
+- **Row 1 (Road/Undriv interiors): STRENGTHENED.** Was justified empirically (B2 blind + border-driven);
+  now DERIVED (Fisher-flat ∧ cell-interior ∧ exhaustion). Certificate re-scoped per-CELL: content =
+  Laguerre generators + palette constant per cell, not a per-class fill rule.
+- **Row 2 (Movable interiors): STRENGTHENED + probe-interaction noted.** Movable is many small TRANSIENT
+  cells (persist 0.865, ξ-transportable) — the per-cell binding matters most here: each object cell
+  carries its own generators + one-sided border profile under ξ-transport; brief cell births/deaths are
+  event handling (§5), not texture. **P-1 interaction:** the n600 re-measure + v9c2-terminal decomp must
+  report PER-CELL (per-object) buckets, not class aggregates, so a failing transient cell cannot be
+  misread as "Movable interiors need texture" (that would violate the cell-membership binding).
+- **Row 3 (hood interior): UNCHANGED (the one certified interior-texture buy).** Consistent with §3.0:
+  the hood is a single STATIC cell whose measured cure (1,759 B, −71%) is border+texture signature the
+  generators cannot produce — the exception that carries its own measured certificate, exactly as the
+  headline principle demands.
+- **Rows 4/5 (rims + annuli): UNCHANGED-CONSISTENT.** Curvature (and hence certified texture) lives on
+  the separatrix — the lens PREDICTS these are the texture-bearing strata; the slope-field one-sidedness
+  is the anisotropic boundary metric read as a carrier rule.
+- **Row 6 (Lane dashes): EXCEPTION MADE EXPLICIT.** Lane has NO safe interior (necessity-by-inversion)
+  — every Lane pixel is boundary/annulus; the row can NEVER inherit an interior/flat-cell exemption.
+  Its phase/gate/small-β certificate is annulus-class content by construction; dash cells are pure
+  birth-death boundary objects (per-dash anchors ARE their generators).
+- **Row 7 (saddles): STRENGTHENED.** Saddles = the cell complex's 0-cells; precision-only follows from
+  the same geometry (tie-locus points are generator-coincidence loci, not content).
+- **Row 8 (frame_0): UNCHANGED** (S1 selection argument is upstream of the cell lens; pose-side still
+  OQ-1).
+- **Row 9 (chroma): STRENGTHENED.** "Per-cell palette is the chroma TRUNK" is §3.0(2) verbatim — the
+  palette constant IS a cell-generator attribute; P-3 decides which SEPARATRICES additionally need
+  chroma.
+- **Row 10 (ker(A)): UNCHANGED-COMPOSING.** See P3 amendment — ker(A) restriction and cell-generator
+  description compose as projections onto the same σ-algebra.
+- **Row 11 (partition geometry): STRENGTHENED.** "Geometry seeds counted" now reads precisely as: the
+  counted seeds ARE the cell generators + edge coefficients; the Laguerre expansion rides free.
 
 ## §4 Seeds inventory (COUNTED vs FREE; rule-118 boundary)
 
@@ -298,7 +374,13 @@ phase·g(x)·small-β; everything else GEOM-ONLY/PRECISION-ONLY/FREE), 3 named $
 COMPLETENESS table: 7 forces present, 6 forbidden-and-excluded. Launch chain: v9c2 completion →
 p0_497 → #518 A/B+merge → probes → clean DSL compile → governed launcher → operator GO.
 OQ-0..6 recorded with per-question consumption points (pose window → P6/frame_0 budget;
-tie-locus → row-7; curvelet → P7). Pointer 0.19108 UNMOVED (means/apparatus — SPEC only).
+tie-locus → row-7; curvelet → P7). OPERATOR AMENDMENT folded same-day (§3.0/§3.1): within-class
+flat-cell derivation — GEOM-ONLY certificates are DERIVED (Fisher-flat #500 ∧ Laguerre-cell #284/#311
+∧ flat-amplitude-exhaustion) and bind PER-CELL not per-class; interiors described by GENERATORS not
+fields (~0.02-0.05 vs 0.118 rate ANCHOR); Lane carries the no-safe-interior exception; range(A)+
+cell-generators compose (σ-algebra atoms, P3); P7 generators-first binding; P-1 upgraded to per-cell
+reporting. All 11 rows re-checked: 0 certificate-class changes.
+Pointer 0.19108 UNMOVED (means/apparatus — SPEC only).
 ```
 
 ## §11 Round-1 adversarial review (own attack — findings + fixes, landed in this document)
