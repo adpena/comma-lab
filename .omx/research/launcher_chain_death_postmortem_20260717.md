@@ -50,3 +50,21 @@ When the live v2 chain completes (~02:17Z) it will write a **GREEN receipt whose
 B1 failure receipts + per-pass progress (real-SIGTERM kill-smoke PASSED) · B2 flush-safe logging (SIGKILL flush-survival smoke PASSED) · B3 durable-spawn marker + harness-child WARN · B4 `tools/witness_chain_watchdog.py` composite liveness (pid tree × run-dir mtimes × receipt; live-fired — reported this very chain ALIVE while its log looked dead) · §C bench-validity fix + decomposition receipt.
 
 **The class-fix lesson:** liveness verdicts must come from a TOOL that composes kernel-truth signals (`witness_chain_watchdog.py`), never from log tails, grep pipelines, or registry status — and a chain must leave receipts (green, failed, or progress) at every exit so silence is itself a signal.
+
+## ADDENDUM (01:30Z) — instrument #2 root-caused: rtk-proxied shell pipelines are LOSSY
+
+Three concrete same-session instances (all MEASURED tonight): (a) `ps ax -o ...,command | grep -E
+"launch_witness_run|safe_run|train_levelset"` returned rc=1 while 4 matching processes ran; (b)
+`ps ax -o rss= | awk '{s+=$1}'` summed 0.5 GiB while one live trainer alone held 44 GiB; (c) a
+`sort -rn | head` top-RSS list showed only low-pid system daemons. Mechanism: the rtk command proxy
+(user-global CLAUDE.md hook) applies ~80-char line truncation and ~200-row result caps to proxied
+pipelines — the ps `command` column is cut BEFORE the tool names (grep can never match) and row caps
+sample the low-pid daemons. Direct `ps -p <pids>` and python-`subprocess` ps (what
+`tools/witness_chain_watchdog.py` uses) were consistently correct. OPERATIONAL RULE (binding): process
+liveness/RSS verdicts NEVER come from shell pipelines in an rtk session — run the watchdog.
+
+Also corrected: the memory-governor REFUSE at 01:0xZ was RIGHT, not an accounting artifact — "used
+62-66 GiB" included the live pass-2 trainer's 44 GiB and "active-growth 27.6 GiB" was that trainer's
+registered growth-to-peak (71.54 − 43.96). The governor was protecting the live chain from a competing
+launch. (The balloon experiment was unnecessary-but-harmless; the 20-GiB cache reclaim it produced did
+not change the correct refusal.)
