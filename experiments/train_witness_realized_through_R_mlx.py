@@ -1137,6 +1137,90 @@ def focal_pixel_weight_mlx(seg_logits, lstar_oh, gamma: float):
     return mx.stop_gradient(fw / (mx.mean(fw) + 1e-8))
 
 
+def fisher_density_pixel_weight_mlx(seg_logits, lstar_oh, gt_margin, blend: float, source: str):
+    """(--fisher-density-weight; SPEC_v10 §13.1 row 2 / §13.4 surface 1, build-wave arm A)
+    Fisher-density per-pixel seg-loss weight from the EXACT registered law
+    ``tr g = (1/2) sech^2(m/2)`` (``fisher_curvature_equals_categorical_fisher_trace_caustic_v1``,
+    ρ=0.978 measured calibration): the local categorical-Fisher trace IS the decision-geometry
+    density, so weighting the per-pixel seg loss by it makes the descent force metric-aware —
+    capacity flows where decisions actually bend (the separatrix), not where the Euclidean loss
+    happens to be large. DISTINCT from focal ``(1-p_y)^gamma``: focal UP-weights confidently-WRONG
+    pixels; the Fisher density DOWN-weights them symmetrically (a confidently-wrong pixel sits in
+    a metrically-flat region — logit motion there buys almost no decision-geometry distance).
+
+    ``source`` (DERIVED, memo arm-A build):
+      * ``"model"`` — m = the LIVE signed top1-top2 margin of the realized ``seg_logits`` (the
+        witness's own decision field). This is the Fisher-NATURAL choice for a TRAINING FORCE:
+        the Fisher metric is the pullback metric AT the current point of the flow, so the
+        density must be evaluated at the current logits, not at a fixed target field.
+      * ``"gt"`` — m = the cached GT margin field (θ-independent). A stationary importance PRIOR
+        (where flips will matter at convergence, i.e. near the GT separatrix), NOT the metric at
+        the current point; shipped for the A/B per the arm-A charter.
+
+    ``blend`` λ ∈ (0, 1]: w = (1-λ)·1 + λ·(tr g / mean(tr g)). λ=1 = the pure Fisher density;
+    the mean-1 renorm conserves the total gradient budget (the focal/l7 idiom) and STOP-GRAD
+    keeps the loss the base form with only the per-pixel budget reallocated. Overflow-stable
+    ``sech^2(x) = 4 e^{-2|x|}/(1+e^{-2|x|})^2`` (even in m ⇒ signed or abs margins identical).
+    Callers gate on blend > 0 so the DEFAULT 0.0 path never builds this graph (byte-identical).
+    Numpy twin: ``tac.witness_control.fisher_annulus.fisher_trace_from_margin``."""
+    import mlx.core as mx
+
+    if source == "model":
+        gt_logit = mx.sum(seg_logits * lstar_oh, axis=-1)          # (1,H,W)
+        runner_up = mx.max(seg_logits + lstar_oh * (-1e9), axis=-1)
+        m = gt_logit - runner_up                                    # live signed margin
+    elif source == "gt":
+        m = gt_margin if gt_margin.ndim == 3 else gt_margin[None]   # (1,H,W) cached GT margin
+    else:
+        raise ValueError(f"fisher_density_source must be 'model' or 'gt', got {source!r}")
+    x = mx.abs(m) * 0.5
+    e = mx.exp(-2.0 * x)                                            # in (0,1], overflow-stable
+    tr = 0.5 * (4.0 * e / mx.square(1.0 + e))                       # (1/2) sech^2(m/2)
+    fw = tr / (mx.mean(tr) + 1e-8)                                  # mean-1 budget conservation
+    w = (1.0 - blend) + blend * fw
+    return mx.stop_gradient(w)
+
+
+def make_seg_logits_natural_grad_mlx(eps: float):
+    """(--head-natural-grad; SPEC_v10 §13.4 surface 2, build-wave arm A) Logit-space natural-
+    gradient preconditioner as a forward-identity / backward-``g⁺`` custom transform.
+
+    The frozen SegNet head is EXACT rank-4 linear (``segnet_head_rank4_linear_flipdist_v1``), so
+    the categorical Fisher in logit space, ``g = diag(p) − p pᵀ`` (rank K−1 = 4, null(g) ⊇
+    span{1} — the softmax gauge direction), has a CLOSED-FORM pseudo-inverse on its range: for
+    cotangents v with Σ_k v_k = 0 (every seg form here is uniform-logit-shift invariant, so its
+    logit cotangent sums to 0 per pixel),
+
+        g⁺ v = v/p − mean_k(v_k/p_k) · 1        (min-norm solution; verify: g(g⁺v) = v)
+
+    — the natural-gradient direction δ̃ = g⁺ δ per pixel, at O(K) per pixel (no solve). Damping
+    ``eps``: divide by (p + eps) so near-degenerate simplex corners (p→0) do not blow up; the
+    numeric gauge component is re-projected out (v ← v − mean(v)) before the division so fp
+    residue in the 1-direction cannot be amplified by 1/p.
+
+    Forward is IDENTITY (bit-identical activations, loss value unchanged); only the BACKWARD pass
+    is preconditioned — the descent direction becomes the Fisher natural gradient of whatever seg
+    loss is active, propagating through the whole witness (the logit cotangent is the single
+    bottleneck all witness params feel). Default-OFF at every call site (flag absent ⇒ this
+    transform is never constructed ⇒ byte-identical graph)."""
+    import mlx.core as mx
+
+    @mx.custom_function
+    def _ng_identity(seg_logits):
+        return seg_logits
+
+    @_ng_identity.vjp
+    def _ng_identity_vjp(primals, cotangent, output):  # noqa: ARG001 (mlx vjp signature)
+        logits = primals if isinstance(primals, mx.array) else primals[0]
+        p = mx.softmax(logits, axis=-1)                              # (1,H,W,K)
+        v = cotangent - mx.mean(cotangent, axis=-1, keepdims=True)   # project out the gauge dir
+        u = v / (p + eps)                                            # damped 1/p
+        u = u - mx.mean(u, axis=-1, keepdims=True)                   # min-norm (Σu=0)
+        return u
+
+    return _ng_identity
+
+
 def _seg_unify_tau_perpixel(seg_logits, lstar_oh, tau):
     """The ONE continuous seg-loss family (witness-native schedule derivation 20260709 §1.2):
 
@@ -1184,6 +1268,10 @@ def make_loss_fn(
     l7_threshold: float = 0.42,
     render_fn=None,
     focal_gamma: float = 0.0,
+    fisher_density_weight: float = 0.0,
+    fisher_density_source: str = "model",
+    head_natural_grad: bool = False,
+    head_natural_grad_eps: float = 1e-3,
 ):
     """Returns loss_fn(model, coord_feats, code0, code1, lstar_oh, margin, pose_tgt,
     w_seg, w_pose, hinge) -> scalar mx loss. Closes over the frozen MLX adapter.
@@ -1217,6 +1305,23 @@ def make_loss_fn(
     from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
 
     _render = render_fn if render_fn is not None else render_through_R_mlx
+
+    # (arm A, SPEC_v10 §13.4) fail-closed build-time validation of the Fisher-actuation levers.
+    if not (0.0 <= float(fisher_density_weight) <= 1.0):
+        raise ValueError(
+            f"fisher_density_weight (blend λ) must be in [0, 1], got {fisher_density_weight!r} — "
+            "λ>1 would make the (1-λ)+λ·fw blend NEGATIVE on flat-metric pixels (a negative "
+            "per-pixel loss weight = a repulsive force; fail closed)")
+    if fisher_density_weight > 0.0 and fisher_density_source not in ("model", "gt"):
+        raise ValueError(
+            f"fisher_density_source must be 'model' or 'gt', got {fisher_density_source!r}")
+    if head_natural_grad and not (float(head_natural_grad_eps) > 0.0):
+        raise ValueError(
+            f"head_natural_grad_eps must be > 0 (damping of 1/p at simplex corners), got "
+            f"{head_natural_grad_eps!r}")
+    # Built ONCE per make_loss_fn (flag OFF => never constructed => byte-identical graph).
+    _ng_transform = (make_seg_logits_natural_grad_mlx(float(head_natural_grad_eps))
+                     if head_natural_grad else None)
 
     def _yuv6_pair_nhwc(f0, f1):
         # f0,f1: (1,H,W,3). Build (1,2,H,W,3) -> yuv6 (1,2,h2,w2,6) -> (1,h2,w2,12).
@@ -1260,6 +1365,12 @@ def make_loss_fn(
         f1 = _render(model, coord_feats, code1, render_h, render_w)
         # Realized seg loss on frame1 (post-R, frozen SegNet).
         seg_logits = adapter.segnet(f1)  # (1,H,W,5)
+        # (--head-natural-grad; DEFAULT OFF => _ng_transform None => this line never runs =>
+        # byte-identical). Forward IDENTITY (loss value + every downstream activation unchanged);
+        # backward preconditions the logit cotangent by the damped closed-form g⁺ of the
+        # categorical Fisher g = diag(p)−ppᵀ — the seg force becomes the Fisher natural gradient.
+        if _ng_transform is not None:
+            seg_logits = _ng_transform(seg_logits)
         # (--seg-focal-gamma; DEFAULT 0.0 => this branch NEVER runs => graph + loss + grads
         # BYTE-IDENTICAL). Focal reweight (1-p_y)^gamma from the REALIZED softmax of the SAME
         # ``seg_logits`` the base form reads (i.e. whatever surface ``render_fn`` composed —
@@ -1270,6 +1381,16 @@ def make_loss_fn(
         if focal_gamma > 0.0:
             _fw_focal = focal_pixel_weight_mlx(seg_logits, lstar_oh, focal_gamma)
             seg_pixel_w = _fw_focal if seg_pixel_w is None else seg_pixel_w * _fw_focal
+        # (--fisher-density-weight; DEFAULT 0.0 => branch never built => byte-identical). The
+        # exact-law sech² Fisher-trace density folded into the SAME multiplicative seg_pixel_w
+        # idiom as focal/spike-reweight (one surface, one composition rule). NOTE composition:
+        # focal and the Fisher density OVERLAP near the boundary but DISAGREE on confidently-
+        # wrong pixels (focal up-weights, Fisher down-weights) — composing both multiplies the
+        # maps; prefer one at a time unless the A/B says otherwise (memo, arm A).
+        if fisher_density_weight > 0.0:
+            _fw_fisher = fisher_density_pixel_weight_mlx(
+                seg_logits, lstar_oh, margin, fisher_density_weight, fisher_density_source)
+            seg_pixel_w = _fw_fisher if seg_pixel_w is None else seg_pixel_w * _fw_fisher
 
         def _live_signed():
             # live per-pixel margin = target_logit - max_competing_logit (the sign-quantity
