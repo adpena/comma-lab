@@ -151,3 +151,6 @@ F5 empirically bounded by the in-bench verdict epoch); the durability wave and g
 tested (175 tests executed green) and source-verified; no mid-flight path can silently kill the run;
 the launch command is durable, correctly resumed, gated, and observable. **PROCEED-WITH-NOTES.**
 Pointer 0.19108 UNMOVED until this run's byte-closed exact row says otherwise.
+
+---
+verdict_scope: n/a — every 'KILL' token above is PROCESS-SIGNAL semantics (the SIGTERM→SIGKILL cascade, the "can anything spuriously KILL the 29h run" inventory, safe_run's group-RSS cap), not a scientific negative verdict; the review's verdict is PROCEED-WITH-NOTES. # VERDICT_SCOPE_OK:process-kill-semantics-not-a-negative-finding
