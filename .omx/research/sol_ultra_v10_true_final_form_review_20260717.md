@@ -1,5 +1,15 @@
 # SOL-ULTRA fresh-eyes review — V10 true-final-form audit (2026-07-17)
 
+<!-- MAIN annotation (consumption fold, not SOL text): verdict_scope declaration for the gate.
+verdict_scope: formulation/implementation/custody — EVERY negative below is one of {FORMULATION (generic-flat-cell
+theorem, w_pose composition, T-implicit-in-trunk), COMPILER IMPLEMENTATION (v10 presence-checker), VEHICLE
+COMPOSITION (fresh-init vs fork laws), IMPLEMENTATION/CUSTODY (structured-init frac mis-scale, range(A) realized
+exactness), CAUSAL/TRAJECTORY (round-6 Force-3/crest reading)}. NONE is a FAMILY or PARADIGM kill: the review
+explicitly does NOT reject the generator-first family, linear blind-subspace removal, local projection/trust-region
+methods, Fisher-native optimization, per-class carriers, or event-continuation. The round-table's 'FALSIFIED'
+tokens are each qualified at their narrowest supported level in-place ('FALSIFIED at generic-flat-cell formulation
+scope', etc.). -->
+
 **Review verdict:** **`NOT_TRUE_FINAL / NOT_LAUNCH_CERTIFYING / SPEC_AND_COMPILER_REWRITE_REQUIRED`**.
 
 **Pointer:** `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**. This review produced no archive, official evaluator row, launch, promotion, or pointer authority. All measurements below are explicitly advisory.
