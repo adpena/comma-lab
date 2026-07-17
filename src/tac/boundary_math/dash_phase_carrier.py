@@ -434,7 +434,14 @@ class DashPhaseConfig:
     tilt_bins: int = 16
     dormant_max_frames: int = 30
     gap_xi: str = "interp"
-    pitch: float = 0.0
+    # pose->xi calibration (encode-side only; the STORED fp16 xi is post-calibration, so the
+    # decoder never sees these). Defaults = the MEASURED grok/advection-memo fit on THIS video
+    # (temporal_advection_stratified_20260715: s_t=-0.00322, s_r=0, pitch=-0.01, fit on the
+    # first 100 transitions Road+Lane) — NOT the raw s_t=1 scale (the PoseNet 6-vec is xi only
+    # up-to-affine; the s_t=1 scale mis-advects, measured in the n20 smoke: gt2 67% vs 20%).
+    s_t: float = -0.00322
+    s_r: float = 0.0
+    pitch: float = -0.01
     include_xi: bool = True  # False when composing with the already-banked dxi section (L68)
 
 
@@ -538,13 +545,19 @@ def encode_dash_phase_carrier(
     cfg: DashPhaseConfig | None = None,
     *,
     geom: GroundHomographyGeom | None = None,
+    telemetry: list[dict[str, Any]] | None = None,
 ) -> tuple[bytes, DashPhaseReport, list[list[DecodedDash]]]:
     """Encode the dash-phase section from cached argmax + per-pair twists.
 
     ``lstars`` (P,H,W) int argmax per scored frame (f1 sequence); ``xi_twists`` (P,6)
     rho-first per-pair ego twists (the dual-use pose ξ). Returns
     ``(section, report, decoded_frames)`` where ``decoded_frames`` is the (verified
-    bit-identical) decoder output — the phase-correct dash states per frame."""
+    bit-identical) decoder output — the phase-correct dash states per frame.
+
+    ``telemetry`` (optional, measurement-only — never coded): appended per-event dicts
+    ``{frame, kind: match|rebirth|birth, track_id, obs_index, pred_rc, obs_rc, dec_rc}``
+    where ``pred_rc`` is the ξ-transport prediction BEFORE the δ correction — the
+    transport-only arm of the recovery A/B."""
     cfg = cfg or DashPhaseConfig()
     lstars = np.asarray(lstars)
     if lstars.ndim != 3:
@@ -622,8 +635,17 @@ def encode_dash_phase_carrier(
                     bw.write_bit(1)
                     alive_bits += 1
                     o = obs[live_match[li]]
+                    pred_c = t.centroid.copy()
                     t.centroid = _write_delta(o, t.centroid, t.tilt)
                     n_matched += 1
+                    if telemetry is not None:
+                        telemetry.append({
+                            "frame": p, "kind": "match", "track_id": t.tid,
+                            "obs_index": live_match[li],
+                            "pred_rc": (float(pred_c[0]), float(pred_c[1])),
+                            "obs_rc": o.centroid_rc,
+                            "dec_rc": (float(t.centroid[0]), float(t.centroid[1])),
+                        })
                     frame_out.append(
                         DecodedDash(t.tid, (float(t.centroid[0]), float(t.centroid[1])), t.tilt, t.area, False)
                     )
@@ -651,10 +673,18 @@ def encode_dash_phase_carrier(
                     b0 = bw.bit_count
                     bw.write_varint(di)
                     rebirth_bits += bw.bit_count - b0 + 1  # flag + index (δ counted in delta_bits)
+                    pred_c = t.centroid.copy()
                     t.centroid = _write_delta(o, t.centroid, t.tilt)
                     t.alive = True
                     t.dormant_for = 0
                     n_rebirths += 1
+                    if telemetry is not None:
+                        telemetry.append({
+                            "frame": p, "kind": "rebirth", "track_id": t.tid, "obs_index": oi,
+                            "pred_rc": (float(pred_c[0]), float(pred_c[1])),
+                            "obs_rc": o.centroid_rc,
+                            "dec_rc": (float(t.centroid[0]), float(t.centroid[1])),
+                        })
                     frame_out.append(
                         DecodedDash(t.tid, (float(t.centroid[0]), float(t.centroid[1])), t.tilt, t.area, True)
                     )
@@ -665,6 +695,12 @@ def encode_dash_phase_carrier(
                     birth_bits += bw.bit_count - b0 + 1
                     tracks.append(_Track(next_tid, dec_c, tilt, area, True))
                     frame_out.append(DecodedDash(next_tid, (float(dec_c[0]), float(dec_c[1])), tilt, area, True))
+                    if telemetry is not None:
+                        telemetry.append({
+                            "frame": p, "kind": "birth", "track_id": next_tid, "obs_index": oi,
+                            "pred_rc": None, "obs_rc": o.centroid_rc,
+                            "dec_rc": (float(dec_c[0]), float(dec_c[1])),
+                        })
                     next_tid += 1
                     n_births += 1
             # (c) age the dormant pool (unreborn only)
@@ -673,12 +709,18 @@ def encode_dash_phase_carrier(
                     t.dormant_for += 1
         else:
             bw.write_varint(len(obs))
-            for o in obs:
+            for oi, o in enumerate(obs):
                 b0 = bw.bit_count
                 dec_c, tilt, area = _write_birth_anchor(o)
                 birth_bits += bw.bit_count - b0
                 tracks.append(_Track(next_tid, dec_c, tilt, area, True))
                 frame_out.append(DecodedDash(next_tid, (float(dec_c[0]), float(dec_c[1])), tilt, area, True))
+                if telemetry is not None:
+                    telemetry.append({
+                        "frame": 0, "kind": "birth", "track_id": next_tid, "obs_index": oi,
+                        "pred_rc": None, "obs_rc": o.centroid_rc,
+                        "dec_rc": (float(dec_c[0]), float(dec_c[1])),
+                    })
                 next_tid += 1
                 n_births += 1
         closed_loop_frames.append(frame_out)
@@ -916,7 +958,7 @@ def dash_phase_carrier_report(
     P = lstars.shape[0]
     xi = np.stack(
         [
-            xi_from_pose_calibration(np.asarray(gt_poses)[p], s_t=1.0, s_r=1.0, pitch=cfg.pitch)
+            xi_from_pose_calibration(np.asarray(gt_poses)[p], s_t=cfg.s_t, s_r=cfg.s_r, pitch=cfg.pitch)
             for p in range(P)
         ]
     )

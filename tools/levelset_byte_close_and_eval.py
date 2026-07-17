@@ -3216,7 +3216,11 @@ def build_dash_phase_carrier_section(
         q_px=float(cfg.get("q_px", 1.0)),
         dormant_max_frames=int(cfg.get("dormant_max_frames", 30)),
         gap_xi=str(cfg.get("gap_xi", "interp")),
-        pitch=float(cfg.get("pitch", 0.0)),
+        # MEASURED advection-memo pose->xi calibration (s_t=-0.00322, s_r=0, pitch=-0.01);
+        # the raw s_t=1 scale mis-advects (n20 smoke: coverage 52% vs 82%).
+        s_t=float(cfg.get("s_t", -0.00322)),
+        s_r=float(cfg.get("s_r", 0.0)),
+        pitch=float(cfg.get("pitch", -0.01)),
         include_xi=bool(cfg.get("include_xi", True)),
     )
     section, rep = dash_phase_carrier_report(np.asarray(z["lstars"])[:P], np.asarray(z["gt_poses"])[:P], dcfg)
@@ -3933,8 +3937,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dash-phase-no-xi", action="store_true",
                     help="dash-phase: omit the fp16 ξ block from the section (compose with the already-"
                          "banked L68 dxi; decoder then takes ξ externally).")
-    ap.add_argument("--dash-phase-pitch", type=float, default=0.0,
-                    help="dash-phase ground-plane pitch for the ξ point-advection (rad).")
+    ap.add_argument("--dash-phase-pitch", type=float, default=-0.01,
+                    help="dash-phase ground-plane pitch for the ξ point-advection (rad; MEASURED "
+                         "advection-memo calibration default -0.01).")
     ap.add_argument("--cross-tensor-codec", type=str, default="off",
                     choices=["off", "auto_lossless"],
                     help="lossless witness joint coder. auto_lossless exhaustively derives 2-D axis "
