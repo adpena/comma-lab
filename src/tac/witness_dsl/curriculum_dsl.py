@@ -4903,7 +4903,14 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
     the in-loss term is per-pair-LOCAL: it reads ONLY pair p's realized ``_signed`` + pair p's
     precomputed target. It therefore fits the incumbent random-permutation per-pair ``value_and_grad``
     with no change (respects #240 verdict-batch chunking + the launcher memory-preflight; no OOM class).
-    ``ref='gt_advected'`` (DEFAULT, READY) is this mode. ``ref='witness_cached'`` (the memo's
+    ``ref='gt_advected'`` (DEFAULT, READY) is this mode. ``ref='gt_advected_with_own_tie_fallback'``
+    is the EVENT-FALLBACK phase supervision force (SPEC_v10 §13.1 row 1; FEED-lane-gain §4b):
+    ``t_ref := where(ref_active, advected_prev_tie, own_gt_tie)`` with
+    ``weight := ann ∧ ground ∧ (ref_active ∨ own_active)`` — advect-where-persistent,
+    target-where-born, covering the MEASURED 26.3% birth/fast-moved straddle coverage gap the
+    transport-only T1 leaves phase-unsupervised (birth-SILENT). STATELESS by construction: NO
+    per-island persistence hold (the memo anti-scope — a hold would fight GT's genuine deaths);
+    same θ-independent per-pair-local containment as T1 (zero batching change). ``ref='witness_cached'`` (the memo's
     fully-differentiable witness-self-consistency formula ``t_wit(p) vs advected t_wit(p-1)``) is
     SPECIFIED but OWED (needs a per-pair stop-grad tie cache OR sequential-pair batching) — the trainer
     fails loud if selected.
@@ -4935,9 +4942,10 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
     if str(gap_xi) not in ("interp", "offline_homography"):
         raise ValueError(
             f"PhaseAdvectionConsistency: gap_xi must be 'interp' or 'offline_homography', got {gap_xi!r}")
-    if str(ref) not in ("gt_advected", "witness_cached"):
+    if str(ref) not in ("gt_advected", "gt_advected_with_own_tie_fallback", "witness_cached"):
         raise ValueError(
-            f"PhaseAdvectionConsistency: ref must be 'gt_advected' or 'witness_cached', got {ref!r}")
+            "PhaseAdvectionConsistency: ref must be 'gt_advected', "
+            f"'gt_advected_with_own_tie_fallback' or 'witness_cached', got {ref!r}")
     return Lever(
         "phase_advection_consistency",
         overrides={"--seg-phase-advect-weight": float(weight),

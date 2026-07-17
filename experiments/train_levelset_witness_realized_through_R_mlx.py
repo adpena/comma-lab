@@ -6016,9 +6016,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _pa_ref_prov: Any = None       # list[mx.array (1,H,W)] f32 ξ-advected GT tie of pair pi-1 (-1 sentinel)
     _pa_dir_prov: Any = None       # list[mx.array (1,H,W)] f32 pair pi's OWN dominant-straddle dir {0,1}
     _pa_wmask_prov: Any = None     # list[mx.array (1,H,W)] f32 annulus∩active-warped-ref weight {0,1}
-    if pa_w > 0.0 and pa_ref_mode not in ("gt_advected", "witness_cached"):
+    if pa_w > 0.0 and pa_ref_mode not in (
+            "gt_advected", "gt_advected_with_own_tie_fallback", "witness_cached"):
         raise ValueError(
-            f"--seg-phase-advect-ref must be 'gt_advected' or 'witness_cached', got {pa_ref_mode!r}")
+            "--seg-phase-advect-ref must be 'gt_advected', 'gt_advected_with_own_tie_fallback' "
+            f"or 'witness_cached', got {pa_ref_mode!r}")
     if pa_w > 0.0 and pa_ref_mode == "witness_cached":
         # SPECIFIED but OWED (do LESS but REAL): the fully-differentiable witness-self-consistency mode
         # needs either a per-pair stop-grad tie-field cache refreshed once/epoch OR a sequential-pair
@@ -7752,6 +7754,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         from tac.boundary_math.phase_primitives import (
             advect_tie_field_numpy as _pp_advect_np,
             cross_scored_frame_xi_interp as _pp_cross_xi,
+            event_fallback_ref_and_weight_numpy as _pp_event_fallback,
             gt_tie_targets_numpy as _pp_gt_tie,
         )
         from tac.boundary_math.warp_real_luma_frame0 import (
@@ -7779,14 +7782,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _pa_dir_prov = []
         _pa_wmask_prov = []
         _pa_n_active = 0
+        # EVENT-FALLBACK channel counters (SPEC_v10 §13.1 row 1; FEED-lane-gain §4b): populated ONLY in
+        # the gt_advected_with_own_tie_fallback ref mode; incumbent modes leave them 0 (byte-identical).
+        _pa_n_advected = 0
+        _pa_n_fallback = 0
+        _pa_fallback_on = pa_ref_mode == "gt_advected_with_own_tie_fallback"
         for pi in range(P):
             _t_p, _d_p, _a_p = _pa_gt_t[pi]                              # pair pi's OWN tie + dir + active
             _ann_p = (np.asarray(gt.margins[pi], np.float32) < pa_band)  # pair pi's annulus
             _ground_p = np.isin(np.asarray(gt.lstars[pi]), list(_pa_sel))  # pair pi ground-class pixels
             if pi == 0:
-                # no previous scored frame => no reference => all-zero weight (no-op for pair 0).
-                _ref = np.full((_pa_H, _pa_W), -1.0, np.float32)
-                _wm = np.zeros((_pa_H, _pa_W), np.float32)
+                # no previous scored frame => no advected reference.
+                _ref_w = np.zeros((_pa_H, _pa_W), np.float32)
+                _ref_active = np.zeros((_pa_H, _pa_W), bool)
             else:
                 # cross screw f1(pi-1) -> f1(pi) (se(3) interp gap).
                 _xi_cross = _pp_cross_xi(_pa_xi_pair[pi - 1], _pa_xi_pair[pi])
@@ -7796,6 +7804,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _ref_w = _pp_advect_np(_val_prev, _xi_cross, _pa_geom)          # (H,W) advected value
                 _act_w = _pp_advect_np(_a_prev.astype(np.float32), _xi_cross, _pa_geom)  # (H,W) advected mask
                 _ref_active = _act_w >= 0.5                                        # post-warp active
+            if _pa_fallback_on:
+                # SPEC_v10 §13.1 row 1 EVENT-FALLBACK: t_ref := where(ref_active, advected, own_gt_tie);
+                # weight := ann ∧ ground ∧ (ref_active ∨ own_active). "Advect-where-persistent,
+                # target-where-born" — covers the MEASURED 26.3% birth/fast-moved straddle coverage gap
+                # (354 lane-adjacent px/frame). STATELESS: NO per-island persistence hold (memo
+                # anti-scope — a hold would fight GT's genuine deaths). Pair 0 gains own-tie coverage.
+                _ref, _wm, _n_adv, _n_fb = _pp_event_fallback(
+                    _t_p, _a_p, _ref_w, _ref_active, _ann_p, _ground_p)
+                _pa_n_advected += _n_adv
+                _pa_n_fallback += _n_fb
+            elif pi == 0:
+                # incumbent: no previous scored frame => all-zero weight (no-op for pair 0).
+                _ref = np.full((_pa_H, _pa_W), -1.0, np.float32)
+                _wm = np.zeros((_pa_H, _pa_W), np.float32)
+            else:
                 _ref = np.where(_ref_active, _ref_w, -1.0).astype(np.float32)
                 # weight = pi annulus AND ground AND a valid warped reference exists.
                 _wm = (_ann_p & _ground_p & _ref_active).astype(np.float32)
@@ -7810,6 +7833,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "start_epoch": int(pa_start), "gap_xi": pa_gap_xi, "ref_mode": pa_ref_mode,
                           "active_px_total": int(_pa_n_active),
                           "active_px_per_frame": round(_pa_n_active / max(P, 1), 1),
+                          # EVENT-FALLBACK channel split (0/0 in incumbent modes — SPEC_v10 §13.1 row 1):
+                          "advected_px_total": int(_pa_n_advected),
+                          "fallback_px_total": int(_pa_n_fallback),
+                          "fallback_px_per_frame": round(_pa_n_fallback / max(P, 1), 1),
                           "note": "T1 cross-pair phase-advection: t_wit(p) -> ξ-advected GT tie of p-1 "
                           "(θ-independent target; per-pair-local; ZERO batching change); composes with "
                           "Force-3 subpix as the shrinkage toward the ξ-advected trajectory; kills the "
@@ -14933,12 +14960,18 @@ def main(argv: list[str] | None = None) -> int:
                     "train-time regularizer target, gap approximation tolerated). 'offline_homography' "
                     "= SPECIFIED but not built (owed next increment; fail-loud).")
     ap.add_argument("--seg-phase-advect-ref", type=str, default="gt_advected",
-                    choices=["gt_advected", "witness_cached"],
+                    choices=["gt_advected", "gt_advected_with_own_tie_fallback", "witness_cached"],
                     help="T1 reference mode. 'gt_advected' (DEFAULT, READY) = the ξ-advected GT tie of "
                     "the previous scored pair (θ-independent target; fits the incumbent batching with "
-                    "zero change). 'witness_cached' = the fully-differentiable witness-self-consistency "
-                    "mode (memo formula t_wit(p) vs advected t_wit(p-1)); SPECIFIED but OWED (needs a "
-                    "per-pair stop-grad tie cache OR sequential-pair batching; fail-loud).")
+                    "zero change). 'gt_advected_with_own_tie_fallback' = the EVENT-FALLBACK phase "
+                    "supervision force (SPEC_v10 §13.1 row 1; FEED-lane-gain §4b): t_ref := "
+                    "where(ref_active, advected_prev_tie, own_gt_tie); weight := ann ∧ ground ∧ "
+                    "(ref_active ∨ own_active). Advect-where-persistent, target-where-born — covers the "
+                    "MEASURED 26.3%% birth/fast-moved straddle coverage gap the transport-only T1 leaves "
+                    "phase-unsupervised (birth-SILENT). STATELESS (no per-island persistence hold — the "
+                    "memo anti-scope). 'witness_cached' = the fully-differentiable witness-self-"
+                    "consistency mode (memo formula t_wit(p) vs advected t_wit(p-1)); SPECIFIED but OWED "
+                    "(needs a per-pair stop-grad tie cache OR sequential-pair batching; fail-loud).")
     # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). One-sided hinge
     # L_sat = w_s * mean_annulus relu(m_safe - m_wit), m_wit = the witness GT-class signed margin
     # (_signed, #141). Frees the interior gradient budget onto the fragile band BY CONSTRUCTION.
