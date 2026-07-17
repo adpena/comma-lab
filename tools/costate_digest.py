@@ -886,6 +886,116 @@ def section_costate_organ(run_dir: Path | None) -> tuple[list[str], dict | None]
     return lines, data
 
 
+def _fm_regime_text(data: dict) -> str:
+    """Best available current-regime text for the FM duty-relevance judgment: the organ
+    dispatch regime → shadow classification → 'unknown'. Pure helper."""
+    organ = data.get("costate_organ") or {}
+    disp = (organ.get("dispatch") or {}) if isinstance(organ, dict) else {}
+    if disp.get("regime"):
+        return str(disp["regime"])
+    shadow = data.get("shadow") or {}
+    cls = (shadow.get("classification") or {}).get("classification") if isinstance(shadow, dict) else None
+    return str(cls) if cls else "unknown"
+
+
+def section_fm_advisory(run_dir: Path | None, data: dict) -> tuple[list[str], dict | None]:
+    """Task #522: the on-device FM (fmtools) ADVISORY sense layer, surfaced as a compact
+    section PRESENT ONLY WHEN THE fmtools VENV EXISTS (⇒ the digest is byte-identical without
+    it). Consumes the ALREADY-COMPUTED digest ``data`` (shadow classification, annulus, duty,
+    failure ledger) so no numeric work is redone; the FM adds a semantic second opinion at the
+    four organ insertion points. ADVISORY ONLY: disagreement is a surfaced diagnostic, never an
+    override; the P8 floor-aware duty order stays the base order. Fail-open (never breaks the
+    digest); each sub-line rendered only when its inputs exist."""
+    try:
+        from tac import fm_advisory as _fm
+
+        if not _fm.available():
+            return [], {"available": False}
+    except Exception as exc:  # import failure ⇒ absent, never a crash
+        return [], {"available": False, "error": type(exc).__name__}
+
+    lines: list[str] = ["fm-advisory (on-device FM · advisory · NON-PROMOTABLE):"]
+    secdata: dict = {"available": True}
+    try:
+        # (a) REGIME supplement — telemetry text from shadow classification + numeric hint from annulus.
+        shadow = data.get("shadow") if isinstance(data.get("shadow"), dict) else None
+        classification = (shadow or {}).get("classification")
+        telemetry_texts: list = []
+        if classification:
+            telemetry_texts.append({k: classification.get(k) for k in ("classification", "phase_regime", "reason")})
+        ann = data.get("annulus") if isinstance(data.get("annulus"), dict) else None
+        hint = _fm.numeric_regime_hint(ann, classification)
+        regime = _fm.regime_supplement(telemetry_texts, numeric_hint=hint) if telemetry_texts else None
+        if regime:
+            secdata["regime"] = regime
+            agree = regime.get("agrees_with_numeric")
+            tag = "AGREE" if agree is True else "DISAGREE" if agree is False else "—"
+            lines.append(
+                f"  regime: fm={regime.get('fm_regime')} vs numeric={regime.get('numeric_hint') or '?'} "
+                f"[{tag}] · {str(regime.get('rationale') or '')[:80]}")
+            if agree is False:
+                lines.append(
+                    f"  ⚠ regime DISAGREEMENT (advisory): FM reads '{regime.get('fm_regime')}' but the "
+                    f"numeric hint is '{regime.get('numeric_hint')}' — re-check per-class dynamics (never an override)")
+        # (b) EVENT-intelligence — notable events from the run.log (reuse the extractor).
+        if run_dir is not None and (run_dir / "run.log").is_file():
+            try:
+                import dashboard_fm_events as _dfe
+
+                evlines = (run_dir / "run.log").read_text(errors="replace").splitlines()
+                events = _dfe.extract_notable_events(evlines, limit=6)
+                ev = _fm.classify_events([e["line"] for e in events]) if events else None
+                if ev:
+                    secdata["events"] = ev
+                    top = next((r for r in ev if r.get("event_class")), None)
+                    lines.append(
+                        f"  events: {sum(1 for r in ev if r.get('event_class'))} classified"
+                        + (f" (e.g. {top.get('event_class')})" if top else ""))
+            except Exception:
+                pass
+        # (c) DUTY-relevance secondary hint — top never-fired duty rows vs current regime.
+        duty = data.get("duty_to_measure") if isinstance(data.get("duty_to_measure"), dict) else None
+        ranked = (duty or {}).get("ranked_top") or []
+        never_fired = [r for r in ranked if r.get("activation_state") == "never-fired"] or ranked
+        rel = _fm.duty_relevance(never_fired, _fm_regime_text(data), top_k=4) if never_fired else None
+        if rel:
+            secdata["duty_relevance"] = rel
+            cells = ", ".join(f"{r['lever']}={r.get('relevance') or '?'}" for r in rel[:4])
+            lines.append(f"  duty-relevance (secondary hint; P8 order unchanged): {cells}")
+        # (d) CONFOUND-alarm classing — recent unresolved failure rows vs known classes.
+        fl = data.get("failure_ledger") if isinstance(data.get("failure_ledger"), dict) else None
+        unresolved = (fl or {}).get("unresolved") or []
+        if unresolved and fl.get("path"):
+            try:
+                import dashboard_fm_events as _dfe
+
+                known = _dfe.known_failure_classes()
+                # recent failure texts from the ledger tail
+                texts: list = []
+                for ln in Path(fl["path"]).read_text(errors="replace").splitlines()[-8:]:
+                    if ln.strip():
+                        try:
+                            row = json.loads(ln)
+                            if isinstance(row, dict) and row.get("event") != "resolution":
+                                texts.append({k: row.get(k) for k in ("failure_id", "symptom", "event", "detail")})
+                        except Exception:
+                            continue
+                conf = _fm.classify_confounds(texts, known) if (texts and known) else None
+                if conf:
+                    secdata["confounds"] = conf
+                    hit = next((r for r in conf if r.get("matched_class")), None)
+                    lines.append(
+                        f"  confound-class: {sum(1 for r in conf if r.get('matched_class'))} matched"
+                        + (f" (e.g. {hit.get('matched_class')})" if hit else ""))
+            except Exception:
+                pass
+    except Exception as exc:  # advisory section never breaks the digest
+        lines.append(f"  fm-advisory: unavailable ({type(exc).__name__})")
+    if len(lines) == 1:
+        lines.append("  (on-device FM present; no classifiable inputs this cycle)")
+    return lines, secdata
+
+
 def section_review_counter() -> tuple[str | None, dict | None]:
     """Open review-counter state (sibling ledger; soft — omit entirely if absent)."""
     row = _last_jsonl_row(_REVIEW_COUNTER) if _REVIEW_COUNTER.exists() else None
@@ -930,8 +1040,21 @@ def section_chain_watchdog() -> tuple[str | None, dict | None]:
         return None, None
 
 
+def _fm_advisory_enabled(session_start: bool) -> bool:
+    """Cost-gate for the #522 FM section (a genuine compute cost: on-device FM subprocesses,
+    ~8s). Per CLAUDE.md "'Off' is a tracked queue": read-only-but-costly telemetry gates on
+    compute cost with a RECORDED reason. Default ON for explicit check-ins (the agent asked);
+    default OFF in the <5s SessionStart hot path. ``COSTATE_FM_ADVISORY`` (1/0) overrides both."""
+    import os
+
+    env = os.environ.get("COSTATE_FM_ADVISORY")
+    if env is not None:
+        return env not in ("0", "", "false", "False")
+    return not session_start  # explicit call → on; session-start → off (protect <5s budget)
+
+
 # ─────────────────────────── assembly ───────────────────────────
-def build_digest() -> tuple[list[str], dict]:
+def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     t0 = time.time()
     lines: list[str] = []
     data: dict = {}
@@ -1019,6 +1142,16 @@ def build_digest() -> tuple[list[str], dict]:
     organ_lines, data["costate_organ"] = section_costate_organ(run_dir)
     lines.extend(organ_lines)
 
+    # Task #522: on-device FM ADVISORY sense layer — PRESENT ONLY WHEN the fmtools venv exists
+    # AND the compute-cost gate is enabled (⇒ byte-identical digest otherwise). Consumes the data
+    # computed above (no numeric rework).
+    if include_fm:
+        fm_lines, data["fm_advisory"] = section_fm_advisory(run_dir, data)
+        lines.extend(fm_lines)
+    else:
+        data["fm_advisory"] = {"available": None, "enabled": False,
+                               "reason": "compute-cost gate (fast path); set COSTATE_FM_ADVISORY=1"}
+
     rc_line, data["review_counter"] = section_review_counter()
     if rc_line:
         lines.append(rc_line)
@@ -1041,7 +1174,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
     try:
-        lines, data = build_digest()
+        lines, data = build_digest(include_fm=_fm_advisory_enabled(args.session_start))
         if args.json:
             print(json.dumps(data, indent=2, sort_keys=True, default=str))
         else:

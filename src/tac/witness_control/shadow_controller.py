@@ -272,6 +272,11 @@ class ShadowReport:
     # Morse-Smale + #344 NCDE warnings are stage-boundary advisories only.  They never
     # mutate a schedule and never manufacture a ΔS.
     event_advisories: list[dict] = _dc_field(default_factory=list)
+    # Task #522: the on-device FM (fmtools) ADVISORY sense layer — {regime supplement (fm_regime
+    # + agreement-with-numeric), event intelligence}. Populated ONLY when the fmtools venv is
+    # present AND build_shadow_report(with_fm_advisory=True); default None ⇒ omitted from to_row
+    # ⇒ byte-identical schema when absent.  ADVISORY ONLY: never feeds a verdict/actuation/score.
+    fm_advisory: dict | None = None
 
     def to_row(self) -> dict:
         return {
@@ -294,6 +299,8 @@ class ShadowReport:
             "actuation": ACTUATION,
             "axis": AXIS_TAG,
             "pointer": POINTER_NOTE,
+            # additive #522 FM advisory: included ONLY when populated (byte-identical when absent).
+            **({"fm_advisory": self.fm_advisory} if self.fm_advisory is not None else {}),
         }
 
 
@@ -875,9 +882,53 @@ def _merge_factorized_candidate(recs: list[dict], refused: list[dict],
         recs.sort(key=lambda c: c["predicted_dS_per_cost"])
 
 
+def _gather_fm_texts(inputs: RunInputs, classification: dict | None) -> tuple[list, list]:
+    """Extract (telemetry_texts, event_texts) for the #522 FM sense layer from RunInputs.
+    Telemetry = the last few verdict rows + the numeric classification (regime input); events
+    = stage transitions + the classification's phase/reason strings (event-intelligence input).
+    Pure gathering; the FM call itself is the advisory (never a decision)."""
+    verdicts = [v for v in inputs.verdicts if isinstance(v, dict)]
+    telemetry_texts: list = []
+    for v in verdicts[-3:]:
+        telemetry_texts.append({k: v.get(k) for k in ("epoch", "d_seg", "d_pose", "seg_form", "ep_loss")})
+    if classification:
+        telemetry_texts.append({k: classification.get(k) for k in ("classification", "phase_regime", "reason")})
+    event_texts: list = []
+    for tr in (inputs.stage_rows.get("transitions") or [])[-4:]:
+        if isinstance(tr, dict):
+            event_texts.append({k: tr.get(k) for k in ("stage", "epoch", "kind")})
+    if classification and classification.get("reason"):
+        event_texts.append({"reason": classification.get("reason"), "epoch": classification.get("epoch")})
+    return telemetry_texts, event_texts
+
+
+def _attach_fm_advisory(report: ShadowReport, inputs: RunInputs) -> None:
+    """Populate report.fm_advisory from the on-device FM sense layer. Fail-open (any error /
+    fmtools absent ⇒ leaves fm_advisory=None ⇒ byte-identical row). ADVISORY ONLY."""
+    try:
+        from tac import fm_advisory as _fm
+
+        if not _fm.available():
+            return
+        telemetry_texts, event_texts = _gather_fm_texts(inputs, report.classification)
+        report.fm_advisory = _fm.shadow_advisory(
+            telemetry_texts=telemetry_texts,
+            event_texts=event_texts,
+            classification=report.classification,
+        )
+    except Exception:  # advisory sense layer never breaks the shadow pass
+        report.fm_advisory = None
+
+
 def build_shadow_report(inputs: RunInputs,
-                        horizon_epochs: int = DEFAULT_HORIZON_EPOCHS) -> ShadowReport:
-    """The full shadow pass: state → costates → classification → ranked recommendations."""
+                        horizon_epochs: int = DEFAULT_HORIZON_EPOCHS,
+                        *, with_fm_advisory: bool = False) -> ShadowReport:
+    """The full shadow pass: state → costates → classification → ranked recommendations.
+
+    ``with_fm_advisory`` (default OFF — a compute-cost subprocess, so a tracked-queue default-off
+    per CLAUDE.md "'Off' is a tracked queue"): when True AND the fmtools venv is present, attach
+    the #522 on-device FM ADVISORY sense layer (regime + event intelligence) to ``fm_advisory``.
+    Byte-identical output when off/absent."""
     state = _state_snapshot(inputs)
     rows = [v for v in inputs.verdicts if isinstance(v.get("d_seg"), (int, float))]
     d_pose_latest = None
@@ -905,7 +956,7 @@ def build_shadow_report(inputs: RunInputs,
     event_advisories = _event_advisories(inputs, classification, factorized)
     if classification is None and not rows:
         # no data at all: the honest empty report
-        return ShadowReport(
+        report = ShadowReport(
             run_dir=str(inputs.run_dir), as_of_epoch=inputs.as_of_epoch,
             epoch_latest=None, state=state, costates=costates, classification=None,
             recommendations=[], refused=[],
@@ -913,11 +964,14 @@ def build_shadow_report(inputs: RunInputs,
             duty_to_measure=_duty_to_measure(), producer_signals=_producer_signals(inputs),
             costate_prior=_costate_prior(), duty_ranked=_duty_ranked(),
             factorized_adjoint=factorized, event_advisories=event_advisories)
+        if with_fm_advisory:
+            _attach_fm_advisory(report, inputs)
+        return report
 
     recs, refused = _recommendations(inputs, costates, classification, horizon_epochs)
     _merge_factorized_candidate(recs, refused, factorized, horizon_epochs)
     phase_active = (classification or {}).get("phase_regime") == LABEL_FLOOR_REACHED
-    return ShadowReport(
+    report = ShadowReport(
         run_dir=str(inputs.run_dir), as_of_epoch=inputs.as_of_epoch,
         epoch_latest=(int(rows[-1]["epoch"]) if rows and
                       isinstance(rows[-1].get("epoch"), (int, float)) else None),
@@ -926,6 +980,9 @@ def build_shadow_report(inputs: RunInputs,
         duty_to_measure=_duty_to_measure(phase_active), producer_signals=_producer_signals(inputs),
         costate_prior=_costate_prior(), duty_ranked=_duty_ranked(),
         factorized_adjoint=factorized, event_advisories=event_advisories)
+    if with_fm_advisory:
+        _attach_fm_advisory(report, inputs)
+    return report
 
 
 def write_shadow_row(run_dir: str | Path, report: ShadowReport) -> Path:
