@@ -175,8 +175,30 @@ _canon_curvelet_B = _tli.curvelet_B
 _canon_curvelet_feats = _tli.curvelet_feats
 _canon_dir_feats = _tli.dir_feats
 
-CAMERA_H, CAMERA_W = 874, 1164
-RATE_DENOM = 37_545_489.0
+# (#328 clip_profile Phase-2, measured-no-regression) per-clip camera/rate constants sourced
+# from the canonical MEASURED SoT tac.clip_profile (cache: .omx/state/clip_profiles/<sha>.json).
+# value-provenance: MEASURED-ANCHOR (clip_profile cache) > HARDCODED-fallback. On 0.mkv the
+# auto-measured values AGREE bit-exactly with the historical literals (asserted in
+# test_clip_profile_rewire_byte_close), so this is BYTE-IDENTICAL; the fallback literals keep
+# the score path standalone-runnable when the profile cache is absent. NOTE: the xi homography
+# below reuses fx for BOTH axes (fx_native == fy_native == 910 on 0.mkv), matching the historical
+# single-_XI_FX form. The lane-IPM v_horizon (174, swept-optimal #327) and lane cam-height (1.2)
+# DISAGREE with the profile (175 median / 1.22) and are DELIBERATELY NOT sourced here — those are
+# the two routed-to-reconciliation discrepancy findings (FEED-clipprofile2), not stale bugs.
+try:
+    from tac.clip_profile import for_video as _cp_for_video
+
+    _CP = _cp_for_video("upstream/videos/0.mkv")
+    CAMERA_H, CAMERA_W = int(_CP.camera.native_h), int(_CP.camera.native_w)
+    RATE_DENOM = float(_CP.video_bytes)
+    _CP_XI_FX = float(_CP.camera.fx_native)
+    _CP_XI_CX = float(_CP.camera.cx_native)
+    _CP_XI_CY = float(_CP.camera.cy_native)
+    _CP_XI_D = float(_CP.device_height_m)
+except Exception:  # standalone fallback (clip_profile cache absent) — documented literals
+    CAMERA_H, CAMERA_W = 874, 1164
+    RATE_DENOM = 37_545_489.0
+    _CP_XI_FX, _CP_XI_CX, _CP_XI_CY, _CP_XI_D = 910.0, 582.0, 437.0, 1.22
 _MAGIC = b"LVLS1\x00"  # level-set softmax-of-SDF carrier v1
 _PCAR_MAGIC = b"PCAR1\x00"  # #205 pose carrier: warp-real-luma frame0 (stored keyframe luma + per-pair homography)
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
@@ -1923,7 +1945,9 @@ def _R(rgb, rh, rw, ch, cw):
 # (parse_xi_payload + homographies_from_xi) -> the shipped inflate derives the SAME H the tool oracle
 # derives, bit-for-bit (bit-exact-gate proven). The 43,200 B redundant stored fp64 H is GONE.
 _ST_BITS = 32; _FULL = 1 << _ST_BITS; _HALF = _FULL >> 1; _QTR = _HALF >> 1; _TQTR = _QTR * 3
-_XI_FX = 910.0; _XI_CX = 582.0; _XI_CY = 437.0; _XI_D = 1.22; _XI_EPS = 1e-6
+# (#328 clip_profile Phase-2) sourced from the module-level profile resolution above
+# (MEASURED-ANCHOR > literal fallback; byte-identical on 0.mkv — 910/582/437/1.22).
+_XI_FX = _CP_XI_FX; _XI_CX = _CP_XI_CX; _XI_CY = _CP_XI_CY; _XI_D = _CP_XI_D; _XI_EPS = 1e-6
 
 
 def _ar_decode(encoded, count, freqs):
