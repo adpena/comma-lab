@@ -532,7 +532,25 @@ def _witness_dsl_compile_hash_gate(a: argparse.Namespace, cmd: list[str]) -> int
     There is intentionally no override and no advisory mode.
     """
 
-    joined = " ".join(str(token) for token in cmd)
+    # Observer/monitor flags carry the trainer NAME as a flag VALUE (e.g. the
+    # dashboard supervisor's ``--training-sig train_levelset_witness``); such a
+    # process only WATCHES a trainer and must not be classified as launching one
+    # (2026-07-17 false-refuse: rc=8 blocked the always-on tunnel supervisor).
+    # Scope stays fail-closed: only the known observer flag's value is excluded.
+    scan_tokens: list[str] = []
+    skip_next = False
+    for token in cmd:
+        text = str(token)
+        if skip_next:
+            skip_next = False
+            continue
+        if text == "--training-sig":
+            skip_next = True
+            continue
+        if text.startswith("--training-sig="):
+            continue
+        scan_tokens.append(text)
+    joined = " ".join(scan_tokens)
     witness_token = "train_levelset_witness" in joined or "train_witness" in joined
     launch_sh: Path | None = None
     shell_script: Path | None = None
