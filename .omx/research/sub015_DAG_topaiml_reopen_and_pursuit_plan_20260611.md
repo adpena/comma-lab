@@ -19286,3 +19286,40 @@ Pointer 0.19108 UNMOVED (apparatus + armed measurement; next exact-relevant even
   never real-launch argv); receipt adds `boot_baseline_verdict:"inherited"`. `typed_config_hash` INVARIANT
   (c2_surgical_warm pinned 2d486e3bff…, test-asserted). Delta passes stop paying the ~25-min/pass inherited
   boot verdict. 34 tests. MEANS; pointer UNMOVED.
+
+### FEED-benchvalid-durability (2026-07-17) — the ckpt-every observer confound + the phantom-death postmortem (p0_launcher_chain_durability_20260717; commit 0860542e42)
+
+- **THE CONFOUND (MEASURED, 3 victims):** the bench wrapper's `--ckpt-every 1` crash-resume lever × the
+  default-ON mod-dim ablation observer (fires at CHECKPOINT cadence, trainer L13379; ~1,540 s/firing on n600 —
+  run 20260716T211713Z `span_epoch_tail_s` ep651–653) ⇒ the bench "measured" ~1,612 s/ep (27 min/ep) for a
+  config whose REAL amortized pace at `--ckpt-every 25` is ~69.4 + 1543/25 ≈ **131 s/ep ≈ 2.2 min/ep**. A bench
+  lever that changes an observer's firing cadence contaminates the measured quantity.
+- **FIX (landed):** bench passes inject `--no-mod-dim-ablation` at the same launcher-owned TypedLever layer as
+  `--ckpt-every 1` (observability-only; consumer gate `_mdd_abl_on` L8698/L9036; crash-resume fidelity
+  unaffected; root `typed_config_hash` 2d486e3bff… UNCHANGED, test-asserted). Receipt gains
+  `bench_marginal_decomposition`: typical = median `epoch_total_s` of the fresh observer-OFF wallclock rows
+  (boot-free MEASURED; the pass marginal is boot-DILUTED — round-1 self-review catch), ckpt-epoch extra = the
+  ONE-KNOB A/B (observer-ON tail − observer-OFF tail, knob named; `--observer-cost-evidence <run_dir>`),
+  amortized = typical + extra/real_ckpt_every (DERIVED; real cadence parsed from the emitted launch.sh).
+  Equation leg: `bench_marginal_amortization_v1` (src/tac/canonical_equations/bench_marginal_amortization_20260717.py).
+  Contamination sweep: the ONLY checkpoint-cadence riders are mod-dim ablation (bench-disabled) + default-OFF
+  curvature telemetry (test-pinned, single gate site).
+- **THE PHANTOM DEATH (postmortem `.omx/research/launcher_chain_death_postmortem_20260717.md`):** the v2 chain
+  (pgid 59278) did NOT die at 23:47Z — pass-1's inner safe_run timeout at 23:47:23.9Z was the INTENDED bound
+  (SAFE_RUN status=timeout exit=124 peak 84009 MiB), pass-2 launched 23:47:25.5Z and was MEASURED alive at
+  01:03Z (trainer pid 67380, R state, 100% CPU, 44 GiB, checkpoints written). The "death" was 3 stacked
+  observability failures: block-buffered daemon log frozen at 5.4K since 21:17:17 (launcher buffer, unflushed
+  while blocked in subprocess.run) + a mis-fired `ps|grep` liveness pipeline + a registry that says "running"
+  unconditionally. Recurrence of memory `launcher_buffered_log_not_hung_orphan…20260715` ⇒ a memory without a
+  TOOL does not stop the misdiagnosis.
+- **DURABILITY LANDED (B1–B4):** B1 failure-receipt guarantee — ANY dry-start exit (exception/SIGTERM/refusal
+  rc) writes `dry_start_report.json` + per-pass `dry_start_progress.json` (real-SIGTERM kill-smoke PASSED);
+  B2 flush-safe logging — sdd child `PYTHONUNBUFFERED=1` + launcher line-buffered stdout (SIGKILL
+  flush-survival smoke PASSED); B3 `TAC_DURABLE_SPAWN` marker + sandboxed-harness-child WARN (sandbox
+  teardown class remains detectable only by consequence); B4 `tools/witness_chain_watchdog.py` — composite
+  liveness (pid tree × run-dir mtimes × receipt presence; rc=2 on CHAIN_DEAD_NO_RECEIPT; live-fired: correctly
+  reported the "dead" chain ALIVE). 52 tests.
+- **⚠ STANDING HAZARD:** the live v2 chain (~02:17Z completion) writes a GREEN receipt whose `sec_per_ep_*`
+  are CONTAMINATED (observer ON) for hash 2d486e3bff… — valid for boot/resume/peak proofs ONLY; the fixed
+  delta re-bench receipt (with the decomposition) supersedes it for all wall-clock decisions.
+- **MEANS not ends:** apparatus + bench validity; pointer 0.19108 UNMOVED (SoT: canonical_frontier_pointer.json).

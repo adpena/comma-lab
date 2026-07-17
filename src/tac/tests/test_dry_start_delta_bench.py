@@ -687,5 +687,30 @@ def test_progress_file_written_per_pass(tmp_path, monkeypatch):
     assert prog["schema"] == "dry_start_progress.v1"
 
 
+def test_canonical_equation_bench_marginal_amortization_matches_runtime_twin():
+    """The equation module (law) and the launcher helper (runtime twin) agree on the c2
+    anchors; the equation refuses un-sourced or non-MEASURED inputs."""
+    from tac.canonical_equations.bench_marginal_amortization_20260717 import (
+        BenchMarginalAmortization, MeasuredSecondsPerEpoch,
+    )
+    m = lambda v, a: MeasuredSecondsPerEpoch(v, a)  # noqa: E731
+    out = BenchMarginalAmortization(
+        typical_sec_per_ep=m(69.0, "fresh bench wallclock"),
+        observer_on_tail_s=m(1543.0, "run 20260716T211713Z span_epoch_tail_s"),
+        observer_off_tail_s=m(2.0, "fresh bench span_epoch_tail_s"),
+        real_ckpt_every=25, real_epochs=1400, resume_start_epoch=651).compose()
+    assert out["amortized_sec_per_ep"] == 69.0 + 1541.0 / 25
+    assert out["projected_remaining_epochs"] == 750
+    d = L.bench_marginal_decomposition(
+        typical_sec_per_ep=69.0, fresh_tail={"n": 1, "median_s": 2.0, "path": "f"},
+        observer_tail={"n": 3, "median_s": 1543.0, "path": "p"},
+        real_ckpt_every=25, real_epochs=1400, resume_start_epoch=651)
+    assert d["amortized_sec_per_ep"] == round(out["amortized_sec_per_ep"], 2)
+    with pytest.raises(ValueError):
+        MeasuredSecondsPerEpoch(69.0, "")  # un-sourced input refused
+    with pytest.raises(ValueError):
+        MeasuredSecondsPerEpoch(69.0, "x", status="ESTIMATED")  # non-MEASURED refused
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
