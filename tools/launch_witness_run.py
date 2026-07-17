@@ -39,6 +39,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as _dt
 import hashlib
 import json
@@ -1387,6 +1388,219 @@ def dry_start_resume_ok(p2: dict, p1: dict | None = None) -> bool:
     return bool(p2.get("epochs_completed", -1) >= rse)
 
 
+# ──────── bench marginal decomposition (p0_launcher_chain_durability_20260717 §C) ────────
+# THE CONFOUND this closes (3 victims; memory bench_lever_contaminates_measured_quantity_
+# ckpt_every_confound_20260717): the bench wrapper injects --ckpt-every 1 (crash-resume
+# fidelity), and the default-ON mod-dim ablation observer fires at CHECKPOINT cadence
+# (trainer L13379) at ~1,540 s/firing — so the bench "measured" ~27 min/ep for a run whose
+# real amortized pace at --ckpt-every 25 is ~2.2 min/ep. Bench passes now run
+# --no-mod-dim-ablation (observability-only; crash-resume fidelity unaffected) and the
+# receipt DECOMPOSES: typical marginal sec/ep (MEASURED, observers off) + checkpoint-epoch
+# observer extra (MEASURED via the one-knob A/B vs a prior observer-ON run) + the
+# REAL-config amortized projection (DERIVED: typical + extra/real_ckpt_every).
+
+def _median(vals: list[float]) -> float:
+    vals = sorted(vals)
+    mid = len(vals) // 2
+    return vals[mid] if len(vals) % 2 == 1 else 0.5 * (vals[mid - 1] + vals[mid])
+
+
+def parse_ckpt_epoch_tail_s(jsonl_path: Path) -> dict:
+    """MEASURED per-epoch decomposition from a run's ``witness_component_wallclock.jsonl``:
+    median/mean/n of ``span_epoch_tail_s`` (the checkpoint-epoch tail the observer rides)
+    plus median ``epoch_total_s`` (the boot-free MEASURED whole-epoch wall — the honest
+    'typical' when the pass wall is boot-diluted). PURE (same file -> same dict);
+    missing/unparsable file -> ``{"n": 0}`` (never raises)."""
+    tails: list[float] = []
+    totals: list[float] = []
+    try:
+        text = Path(jsonl_path).read_text()
+    except OSError:
+        text = ""
+    for ln in text.splitlines():
+        ln = ln.strip()
+        if not ln.startswith("{"):
+            continue
+        try:
+            d = json.loads(ln)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        v = d.get("span_epoch_tail_s")
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v >= 0.0:
+            tails.append(float(v))
+        t = d.get("epoch_total_s")
+        if isinstance(t, (int, float)) and not isinstance(t, bool) and t > 0.0:
+            totals.append(float(t))
+    if not tails and not totals:
+        return {"n": 0, "median_s": None, "mean_s": None,
+                "median_epoch_total_s": None, "path": str(jsonl_path)}
+    return {"n": len(tails),
+            "median_s": round(_median(tails), 2) if tails else None,
+            "mean_s": round(sum(tails) / len(tails), 2) if tails else None,
+            "median_epoch_total_s": round(_median(totals), 2) if totals else None,
+            "path": str(jsonl_path)}
+
+
+def parse_launch_sh_flag_int(launch_sh: Path, flag: str) -> int | None:
+    """Read an integer flag value from an emitted launch.sh (the REAL config artifact —
+    provenance is the file the real spawn would execute, not a guess). PURE; None when
+    absent/unreadable."""
+    try:
+        text = Path(launch_sh).read_text()
+    except OSError:
+        return None
+    m = re.search(rf"(?<![\w-]){re.escape(flag)}[ =](\d+)\b", text)
+    return int(m.group(1)) if m else None
+
+
+def bench_marginal_decomposition(
+    typical_sec_per_ep: float | None,
+    fresh_tail: dict | None,
+    observer_tail: dict | None,
+    real_ckpt_every: int | None,
+    real_epochs: int | None,
+    resume_start_epoch: int | None,
+    disabled_observers: tuple[str, ...] = ("mod_dim_ablation",),
+) -> dict:
+    """PURE decomposition of the bench measurement into the receipt contract fields:
+    (i) typical-epoch marginal seconds (MEASURED this bench, checkpoint-cadence observers
+    disabled); (ii) checkpoint-epoch extra seconds with the observer(s) NAMED — the
+    one-knob A/B ``observer_tail - fresh_tail`` (the ONLY knob differing between the two
+    tail measurements is --no-mod-dim-ablation); (iii) the REAL-config amortized sec/ep +
+    projected remaining wall computed with the REAL --ckpt-every (DERIVED, labeled).
+    Every field carries a provenance label; missing inputs -> null-with-reason, never a
+    fabricated number (NO-FAKE)."""
+    # 'typical' prefers the fresh wallclock rows' median epoch_total_s (boot-free MEASURED
+    # whole-epoch wall) over the pass marginal, which only subtracts gt-load and is therefore
+    # boot-DILUTED on a short pass (round-1 self-review finding: ~1100 s boot / ~14 epochs
+    # would inflate 'typical' ~2x).
+    _fresh_total = (fresh_tail or {}).get("median_epoch_total_s")
+    if isinstance(_fresh_total, (int, float)):
+        typical_val: float | None = float(_fresh_total)
+        typical_prov = ("MEASURED[this bench: median epoch_total_s over the fresh pass's "
+                        "witness_component_wallclock rows (boot-free); --no-mod-dim-ablation "
+                        "injected at the bench-pass lever layer; includes per-epoch checkpoint "
+                        "I/O at the bench's --ckpt-every 1 cadence]")
+    else:
+        typical_val = typical_sec_per_ep
+        typical_prov = ("MEASURED[this bench pass-1 marginal = (wall - gt_load)/epochs — "
+                        "FALLBACK, boot-DILUTED upper bound (no fresh wallclock rows); "
+                        "--no-mod-dim-ablation injected at the bench-pass lever layer]")
+    out: dict = {
+        "schema": "bench_marginal_decomposition.v1",
+        "typical_sec_per_ep": typical_val,
+        "typical_provenance": typical_prov,
+        "pass_marginal_sec_per_ep": typical_sec_per_ep,
+        "bench_disabled_observers": list(disabled_observers),
+        "fresh_ckpt_epoch_tail": fresh_tail,
+        "observer_on_ckpt_epoch_tail": observer_tail,
+        "ckpt_epoch_extra_s": None,
+        "ckpt_epoch_extra_provenance": None,
+        "real_ckpt_every": real_ckpt_every,
+        "real_epochs": real_epochs,
+        "resume_start_epoch": resume_start_epoch,
+        "amortized_sec_per_ep": None,
+        "amortized_provenance": None,
+        "projected_remaining_epochs": None,
+        "projected_remaining_wall_h": None,
+    }
+    f_med = (fresh_tail or {}).get("median_s")
+    o_med = (observer_tail or {}).get("median_s")
+    if isinstance(f_med, (int, float)) and isinstance(o_med, (int, float)):
+        extra = max(float(o_med) - float(f_med), 0.0)
+        out["ckpt_epoch_extra_s"] = round(extra, 2)
+        out["ckpt_epoch_extra_provenance"] = (
+            "MEASURED[one-knob A/B: span_epoch_tail_s median, observer-ON run "
+            f"({(observer_tail or {}).get('path')}) minus this bench's observer-OFF tail "
+            f"({(fresh_tail or {}).get('path')}); the knob is --no-mod-dim-ablation; "
+            "observers named in bench_disabled_observers]")
+    elif o_med is None:
+        out["ckpt_epoch_extra_provenance"] = (
+            "null: no observer-ON tail evidence supplied (--observer-cost-evidence) — the "
+            "amortized projection cannot include the mod-dim observer cost; the REAL run "
+            "still pays it at --ckpt-every cadence")
+    else:
+        out["ckpt_epoch_extra_provenance"] = (
+            "null: this bench produced no witness_component_wallclock tail rows")
+    if (isinstance(typical_val, (int, float)) and out["ckpt_epoch_extra_s"] is not None
+            and isinstance(real_ckpt_every, int) and real_ckpt_every > 0):
+        amort = float(typical_val) + float(out["ckpt_epoch_extra_s"]) / real_ckpt_every
+        out["amortized_sec_per_ep"] = round(amort, 2)
+        out["amortized_provenance"] = (
+            f"DERIVED[typical + ckpt_epoch_extra_s/real_ckpt_every({real_ckpt_every}); both "
+            "inputs MEASURED above]")
+        if isinstance(real_epochs, int) and real_epochs > 0:
+            start = resume_start_epoch if (isinstance(resume_start_epoch, int)
+                                           and resume_start_epoch >= 1) else 1
+            remaining = max(real_epochs - (start - 1), 0)
+            out["projected_remaining_epochs"] = remaining
+            out["projected_remaining_wall_h"] = round(amort * remaining / 3600.0, 2)
+    return out
+
+
+def _update_dry_start_progress(out_dir: Path, update: dict) -> None:
+    """B1 incremental durability: persist per-pass progress ATOMICALLY so a hard kill
+    (SIGKILL / sandbox teardown — the 20260716T211713Z chain death) leaves pass-level
+    evidence even when the final receipt never lands. Best-effort; never raises."""
+    path = Path(out_dir) / "dry_start_progress.json"
+    try:
+        try:
+            doc = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError, ValueError):
+            doc = {"schema": "dry_start_progress.v1", "passes": {}}
+        doc.update({k: v for k, v in update.items() if k != "passes"})
+        if "passes" in update:
+            doc.setdefault("passes", {}).update(update["passes"])
+        doc["updated_utc"] = _utc()
+        tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+        tmp.write_text(json.dumps(doc, indent=2))
+        os.replace(tmp, path)
+    except Exception as exc:  # noqa: BLE001 — progress is best-effort evidence, never a blocker
+        print(f"# dry-start WARN: progress write failed: {exc!r}", file=sys.stderr)
+
+
+def _write_dry_start_failure_receipt(out_dir: Path, config: str, exc: BaseException) -> None:
+    """B1 failure-receipt guarantee (p0_launcher_chain_durability_20260717): a dry-start
+    chain that dies on ANY catchable exit MUST leave dry_start_report.json saying so —
+    never silence. No-op when a receipt already exists (the green/failed paths wrote it).
+    The SIGKILL/sandbox-teardown case is uncatchable by construction; that gap is owned by
+    tools/witness_chain_watchdog.py (chain-dead-without-receipt detection)."""
+    path = Path(out_dir) / "dry_start_report.json"
+    try:
+        if path.exists():
+            return
+        progress: dict | None = None
+        with contextlib.suppress(Exception):
+            progress = json.loads((Path(out_dir) / "dry_start_progress.json").read_text())
+        report = {
+            "gate": "full_config_dry_start",
+            "config": config,
+            "green": False,
+            "status": "failed_infra",
+            "error": f"{type(exc).__name__}: {exc}",
+            "progress": progress,
+            "logs": [str(Path(out_dir) / "dry_start" / "run.log"),
+                     str(Path(out_dir) / "dry_start_resume" / "run.log")],
+            "spawn_context": {
+                "claudecode_env": bool(os.environ.get("CLAUDECODE")),
+                "tac_durable_spawn_env": bool(os.environ.get("TAC_DURABLE_SPAWN")),
+            },
+            "note": ("FAILURE RECEIPT (B1, p0_launcher_chain_durability_20260717): the "
+                     "dry-start chain exited via an exception/SIGTERM before the normal "
+                     "receipt write. green=false; pass-level evidence in 'progress'. A "
+                     "SIGKILL-class death cannot write this receipt — the watchdog "
+                     "(tools/witness_chain_watchdog.py) covers that gap."),
+            "ts": _utc(),
+        }
+        tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+        tmp.write_text(json.dumps(report, indent=2))
+        os.replace(tmp, path)
+        print(f"[launch-witness] wrote FAILURE receipt {path} ({report['error']})",
+              file=sys.stderr)
+    except Exception as w_exc:  # noqa: BLE001 — receipt writing must never mask the original error
+        print(f"[launch-witness] ERROR: failure-receipt write failed: {w_exc!r}", file=sys.stderr)
+
+
 # ─────────────── DELTA-BENCH efficiency lever (operator-directed 2026-07-16) ───────────────
 # A ONE-FLAG score-neutral amendment (e.g. the VerdictLiveGap cadence, 6c863e71bc→2d486e3bff)
 # forced a FULL ~3-4h re-bench even though boot / memory-envelope / throughput proofs from the
@@ -1575,6 +1789,53 @@ def delta_bench_envelope_ok(inherited_peak_gib: float, fresh_peak_gib,
 def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
                    extra_flags: list[str] | None, wmp,
                    projected_peak_gib: float | None = None) -> int:
+    """B1 durability wrapper (p0_launcher_chain_durability_20260717): ANY exit of the
+    dry-start chain — exception, rc path, or catchable signal (SIGTERM) — leaves a
+    dry_start_report.json receipt. The 20260716T211713Z chain died mid-pass-2 with NO
+    receipt anywhere; a chain that dies must leave a receipt saying so, never silence.
+    SIGKILL/sandbox-teardown remains uncatchable — tools/witness_chain_watchdog.py owns
+    that gap. Also WARNS when the spawn context looks like a SANDBOXED harness call (the
+    documented spawn_durable_daemon killer class: sandboxed-launch non-durability)."""
+    import signal as _signal
+
+    if os.environ.get("CLAUDECODE") and not os.environ.get("TAC_DURABLE_SPAWN"):
+        print("[launch-witness] WARN durable-spawn: CLAUDECODE env visible and no "
+              "TAC_DURABLE_SPAWN marker — this dry-start chain appears to run as a DIRECT "
+              "harness child, not via tools/spawn_durable_daemon.py. If the spawning Bash "
+              "call is SANDBOXED, the whole chain dies at sandbox teardown (spawn_durable_"
+              "daemon.py docstring 'SANDBOXED-LAUNCH NON-DURABILITY'; the 20260716T211713Z "
+              "death signature). Launch via spawn_durable_daemon from an unsandboxed shell.",
+              file=sys.stderr)
+
+    def _on_term(signum, _frame):  # noqa: ANN001
+        raise SystemExit(9)
+
+    old_term = None
+    with contextlib.suppress(ValueError, OSError):  # non-main thread: keep default handling
+        old_term = _signal.signal(_signal.SIGTERM, _on_term)
+    try:
+        rc = _run_dry_start_inner(args, config, overfit, out_dir, label,
+                                  extra_flags, wmp, projected_peak_gib=projected_peak_gib)
+        if rc != 0 and not (Path(out_dir) / "dry_start_report.json").exists():
+            # pre-pass refusal rcs (2/7/8) print loudly but historically left NO receipt —
+            # "ANY exit leaves a receipt" includes them.
+            _write_dry_start_failure_receipt(
+                out_dir, config, RuntimeError(f"dry-start refused/failed pre-receipt (rc={rc})"))
+        return rc
+    except BaseException as exc:
+        _write_dry_start_failure_receipt(out_dir, config, exc)
+        if isinstance(exc, KeyboardInterrupt):
+            raise
+        return 9
+    finally:
+        if old_term is not None:
+            with contextlib.suppress(ValueError, OSError):
+                _signal.signal(_signal.SIGTERM, old_term)
+
+
+def _run_dry_start_inner(args, config: str, overfit: bool, out_dir: Path, label: str,
+                   extra_flags: list[str] | None, wmp,
+                   projected_peak_gib: float | None = None) -> int:
     """FULL-CONFIG DRY-START (owed-2 / SYNTHESIS §C item 2). Reached AFTER the whole gate chain has run
     on the REAL n600 config (flag-validate, launch.sh, perf-env, constants, schedule-provenance,
     DSL-config, memory-preflight, safe-compile, system-admission, throughput) — so start-ability of the
@@ -1644,7 +1905,17 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
             raise RuntimeError(
                 "Catalog #406 dry-start received post-DSL trainer flags; compose a typed Lever"
             )
-        overrides: dict[str, object] = {"--ckpt-every": 1}
+        # BENCH-VALIDITY (§C, p0_launcher_chain_durability_20260717): --ckpt-every 1 tests
+        # crash-resume, but the default-ON mod-dim ablation observer fires at CHECKPOINT
+        # cadence (~1,540 s/firing MEASURED, run 20260716T211713Z span_epoch_tail_s) — so
+        # the bench lever CONTAMINATED the measured sec/ep (the 3-victim ckpt-every
+        # confound). Bench passes disable it (observability-only; the trainer gates the
+        # observer at _mdd_abl_on, L8698/L9036 — crash-resume fidelity unaffected); the
+        # receipt's bench_marginal_decomposition reports the observer cost separately and
+        # re-amortizes at the REAL --ckpt-every. NEVER injected into the real-launch argv
+        # (_run_dry_start exits before the durable spawn by construction); the ROOT typed
+        # config — and the receipt's typed_config_hash — is UNCHANGED.
+        overrides: dict[str, object] = {"--ckpt-every": 1, "--mod-dim-ablation": False}
         if delta_payload is not None:
             # Boot-side inheritance: BOTH delta passes skip the ~25-min boot baseline verdict —
             # it is inherited PROVENANCE from the prior green receipt (the trainer emits an honest
@@ -1674,6 +1945,9 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
         if _admission_override_ok(args.admission_override_rationale):
             cmd += ["--admission-override-rationale", args.admission_override_rationale]
         cmd += ["--", "bash", str(launch_b)]
+        _update_dry_start_progress(out_dir, {
+            "phase": f"{sub_name}_running", "config": config,
+            "pass_timeout_s": round(pass_timeout, 1)})
         t0 = _time.perf_counter()
         outer_timeout = False
         try:
@@ -1711,11 +1985,14 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
         else:
             epochs_stepped = m["epochs_completed"]
         gross, marginal = dry_start_sec_per_ep(wall, m["gt_secs"], epochs_stepped)
-        return {"dir": str(sub), "rc": rc, "outer_timeout": outer_timeout,
-                "wall_s": round(wall, 1), "pass_timeout_s": round(pass_timeout, 1),
-                "peak_rss_gib": (round(peak_mib / 1024.0, 3) if peak_mib is not None else None),
-                "epochs_stepped_this_pass": epochs_stepped,
-                "sec_per_ep_gross": gross, "sec_per_ep_marginal": marginal, **m}
+        result = {"dir": str(sub), "rc": rc, "outer_timeout": outer_timeout,
+                  "wall_s": round(wall, 1), "pass_timeout_s": round(pass_timeout, 1),
+                  "peak_rss_gib": (round(peak_mib / 1024.0, 3) if peak_mib is not None else None),
+                  "epochs_stepped_this_pass": epochs_stepped,
+                  "sec_per_ep_gross": gross, "sec_per_ep_marginal": marginal, **m}
+        _update_dry_start_progress(out_dir, {
+            "phase": f"{sub_name}_done", "passes": {sub_name: result}})
+        return result
 
     print(f"# dry-start PASS 1: fresh boot at REAL n={args.num_pairs} config={config!r}, wall-clock bounded "
           f"~{n} epoch(s) (safe_run --timeout {pass_timeout:.0f}s; SIGTERM = intended bound + crash sim)")
@@ -1775,6 +2052,27 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
         typed_config_hash = _typed.typed_config_hash() if _typed is not None else None
     except Exception:
         typed_config_hash = None
+    # §C receipt contract: decompose the measurement (typical / ckpt-epoch extra with the
+    # observer NAMED / REAL-config amortized projection at the real --ckpt-every).
+    _obs_ev = getattr(args, "observer_cost_evidence", None)
+    observer_tail = None
+    if _obs_ev:
+        _cand = [Path(_obs_ev) / "dry_start" / "witness_component_wallclock.jsonl",
+                 Path(_obs_ev) / "witness_component_wallclock.jsonl"]
+        for _c in _cand:
+            observer_tail = parse_ckpt_epoch_tail_s(_c)
+            if observer_tail.get("n", 0) > 0:
+                break
+    fresh_tail = parse_ckpt_epoch_tail_s(
+        Path(p1["dir"]) / "witness_component_wallclock.jsonl")
+    decomposition = bench_marginal_decomposition(
+        typical_sec_per_ep=p1["sec_per_ep_marginal"],
+        fresh_tail=fresh_tail,
+        observer_tail=observer_tail,
+        real_ckpt_every=parse_launch_sh_flag_int(out_dir / "launch.sh", "--ckpt-every"),
+        real_epochs=parse_launch_sh_flag_int(out_dir / "launch.sh", "--epochs"),
+        resume_start_epoch=p1.get("resume_start_epoch"),
+    )
     report = {
         "gate": "full_config_dry_start",
         "owed": "owed-2 / SYNTHESIS §C item 2",
@@ -1786,6 +2084,7 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
         "peak_rss_gib": p1["peak_rss_gib"],
         "sec_per_ep_gross": p1["sec_per_ep_gross"],
         "sec_per_ep_marginal": p1["sec_per_ep_marginal"],
+        "bench_marginal_decomposition": decomposition,
         "pass1": p1, "pass2": p2,
         "note": ("runs the EXACT REAL launch.sh (unmodified real schedule/caps/levers), wall-clock bounded "
                  "to ~N epochs by safe_run --timeout (crucible_v7 pins an atomic 3000-epoch schedule whose "
@@ -1909,6 +2208,14 @@ def _utc() -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # B2 flush-safe logging (p0_launcher_chain_durability_20260717): under the durable-daemon
+    # redirect this process's stdout is a block-buffered FILE — a hard kill (SIGKILL /
+    # sandbox teardown) EATS the buffered tail (the 20260716T211713Z daemon log truncated at
+    # 5.4K mid-history, losing the whole dry-start pass narration). Line-buffer both streams
+    # so every completed line is durable the moment it prints.
+    with contextlib.suppress(Exception):
+        sys.stdout.reconfigure(line_buffering=True)
+        sys.stderr.reconfigure(line_buffering=True)
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--gt-cache", required=True, help="path to the clip's GT cache (e.g. .../gt_n600.npz)")
@@ -2112,6 +2419,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-start-per-ep-budget-s", type=float, default=90.0,
                     help="(dry-start) conservative per-epoch upper bound (seconds) used to size the "
                     "wall-clock timeout to ~N epochs (default 90; the real n600 anchor is ~42 s/ep).")
+    ap.add_argument("--observer-cost-evidence", default=None, metavar="RUN_DIR",
+                    help="(§C bench decomposition) a PRIOR run dir whose dry_start/witness_"
+                    "component_wallclock.jsonl was measured with the checkpoint-cadence "
+                    "observers ON (e.g. the 20260716T211713Z contaminated bench). Its median "
+                    "span_epoch_tail_s minus this bench's observer-OFF tail is the MEASURED "
+                    "one-knob (--no-mod-dim-ablation) checkpoint-epoch observer cost, which "
+                    "the receipt re-amortizes at the REAL --ckpt-every. Optional; without it "
+                    "the amortized projection fields are null-with-reason (never fabricated).")
     ap.add_argument("--dry-start-delta-from", default=None, metavar="PRIOR_RUN_DIR",
                     help="(DELTA-BENCH efficiency lever, operator-directed 2026-07-16) inherit the "
                     "transferable proofs (boot / memory envelope / throughput) from a PRIOR GREEN "

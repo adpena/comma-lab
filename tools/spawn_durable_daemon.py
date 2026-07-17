@@ -889,6 +889,18 @@ def _do_start(a: argparse.Namespace) -> int:
     # that never reached this gate lacks the marker and is refused when enforce is armed.
     _child_env = dict(os.environ)
     _child_env["TAC_GOVERNED_ADMISSION"] = "1"
+    # B2 flush-safe daemon logging (p0_launcher_chain_durability_20260717): the child's
+    # stdout is THIS block-buffered log file; a hard kill (SIGKILL / sandbox teardown) EATS
+    # the unflushed tail — the 20260716T211713Z chain's log truncated at 5.4K mid-history,
+    # destroying the death narrative. Unbuffered python in the whole child tree makes every
+    # completed write durable immediately (telemetry volume is modest; cost negligible).
+    _child_env["PYTHONUNBUFFERED"] = "1"
+    # B3 durable-spawn marker: descendants can PROVE they were launched via this spawner
+    # (launch_witness_run's dry-start warns when a chain runs as a bare harness child).
+    # NOTE this proves the spawner was used, NOT that the invoking shell was unsandboxed —
+    # the sandboxed-launch non-durability class (docstring above) is invisible from inside;
+    # tools/witness_chain_watchdog.py detects the resulting chain-dead-without-receipt.
+    _child_env["TAC_DURABLE_SPAWN"] = "1"
     if getattr(a, "dsl_compile_hash", None):
         _child_env["TAC_DSL_COMPILE_HASH"] = str(a.dsl_compile_hash)
         _child_env["TAC_DSL_LAUNCH_SH_PATH"] = str(a.dsl_launch_sh)

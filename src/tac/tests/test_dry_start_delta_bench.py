@@ -344,7 +344,7 @@ def test_default_path_receipt_shape_unchanged(tmp_path, monkeypatch):
         "gate", "owed", "typed_config_hash", "config", "num_pairs",
         "dry_start_target_epochs", "pass_timeout_s", "boot_ok", "resume_round_trip_ok",
         "green", "peak_rss_gib", "sec_per_ep_gross", "sec_per_ep_marginal",
-        "pass1", "pass2", "note", "ts",
+        "bench_marginal_decomposition", "pass1", "pass2", "note", "ts",
     }
     assert rep["green"] is True
 
@@ -465,6 +465,226 @@ def test_skip_flag_is_a_legal_boolean_lever_override():
     trainer-argparse scan classifies as boolean — the new flag must be in that set."""
     from tac.witness_dsl.curriculum_dsl import real_boolean_flags
     assert "--skip-boot-baseline-verdict" in real_boolean_flags()
+
+
+# ───────── §C bench-validity confound fix + B1 durability (p0_launcher_chain_durability_20260717) ─────────
+
+def test_bench_passes_disable_mod_dim_ablation_full_and_delta(tmp_path, monkeypatch):
+    """THE CONFOUND FIX: every bench pass (full AND delta) carries --mod-dim-ablation False
+    (compiled to --no-mod-dim-ablation) so the checkpoint-cadence observer cannot ride the
+    injected --ckpt-every 1 into the measured sec/ep (the 3-victim ckpt-every confound)."""
+    out = tmp_path / "fresh_run"
+    out.mkdir()
+    seen = _stub_launcher(monkeypatch, [_PASS1_LOG, _PASS2_LOG], [2048, 2048])
+    assert L._run_dry_start(_args(), CONFIG, True, out, "t", None, None) == 0
+    assert len(seen) == 2
+    for ov in seen:
+        assert ov.get("--mod-dim-ablation") is False
+        assert ov.get("--ckpt-every") == 1
+    # delta variant
+    monkeypatch.setenv("TAC_BENCH_INHERIT_FROM", "sentinel")
+    prior = _write_prior(tmp_path)
+    out2 = _write_fresh_manifest(tmp_path, _fresh_argv(**{"--verdict-live-gap-every": "25"}))
+    seen2 = _stub_launcher(monkeypatch, [_PASS1_LOG, _PASS2_LOG], [2048, 2048])
+    assert L._run_dry_start(_args(dry_start_delta_from=str(prior)), CONFIG, True, out2,
+                            "t", None, None) == 0
+    for ov in seen2:
+        assert ov.get("--mod-dim-ablation") is False
+
+
+def test_real_launch_argv_never_carries_no_mod_dim_ablation():
+    """The REAL c2 launch argv (typed compile, no bench lever) must NOT disable the observer —
+    the fix lives ONLY on the launcher-owned bench-pass lever (real runs keep default-ON
+    observability at the real --ckpt-every cadence)."""
+    cfg = L.derive_named_config(
+        "c2_surgical_warm", "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        num_pairs=600, epochs=None, overfit=True)
+    assert "--no-mod-dim-ablation" not in cfg.to_command("REAL_LAUNCH_ARGV_AUDIT")
+
+
+def test_mod_dim_ablation_flag_exists_and_is_consumed():
+    """CONFIG-ORPHAN proof (static leg): the trainer declares --mod-dim-ablation as a
+    BooleanOptionalAction (so --no-mod-dim-ablation exists) AND actually consumes it as the
+    observer gate (grep the consumption sites, don't trust the name)."""
+    assert '"--mod-dim-ablation", action=argparse.BooleanOptionalAction' in _TRAINER_SRC
+    assert '_mdd_abl_on = bool(getattr(args, "mod_dim_ablation", True))' in _TRAINER_SRC
+    assert "if not (_mdd_on and _mdd_abl_on):" in _TRAINER_SRC
+
+
+def test_no_other_default_on_observer_rides_checkpoint_cadence():
+    """CONTAMINATION sweep: the only things gated on the checkpoint write (is_transition or
+    do_periodic) are the mod-dim ablation (bench-disabled) and the default-OFF curvature
+    telemetry. A new default-ON rider would re-open the confound — this test names the gate."""
+    idx = _TRAINER_SRC.index("if is_transition or do_periodic:")
+    block = _TRAINER_SRC[idx:idx + 600]
+    assert "_mdd_ablation_checkpoint(ep, seg_form)" in block
+    assert 'getattr(args, "curvature_telemetry", False)' in block  # default-OFF rider
+    assert _TRAINER_SRC.count("if is_transition or do_periodic:") == 1
+
+
+# ───────── parse_ckpt_epoch_tail_s / parse_launch_sh_flag_int / decomposition (pure) ─────────
+
+def test_parse_ckpt_epoch_tail_median(tmp_path):
+    p = tmp_path / "w.jsonl"
+    p.write_text('{"span_epoch_tail_s": 1500.0}\n'
+                 'not json\n'
+                 '{"span_epoch_tail_s": 1543.2, "epoch": 653}\n'
+                 '{"other": 1}\n'
+                 '{"span_epoch_tail_s": 1600.0}\n')
+    t = L.parse_ckpt_epoch_tail_s(p)
+    assert t["n"] == 3 and t["median_s"] == 1543.2
+    assert t["median_epoch_total_s"] is None  # no epoch_total_s rows in this fixture
+
+
+def test_parse_ckpt_epoch_tail_epoch_total(tmp_path):
+    p = tmp_path / "w.jsonl"
+    p.write_text('{"span_epoch_tail_s": 2.0, "epoch_total_s": 71.4}\n'
+                 '{"span_epoch_tail_s": 2.2, "epoch_total_s": 90.0}\n'
+                 '{"span_epoch_tail_s": 1.8, "epoch_total_s": 69.0}\n')
+    t = L.parse_ckpt_epoch_tail_s(p)
+    assert t["median_epoch_total_s"] == 71.4 and t["median_s"] == 2.0
+
+
+def test_decomposition_typical_prefers_boot_free_epoch_total():
+    """Round-1 self-review finding: the pass marginal is boot-DILUTED (~1100 s boot / ~14
+    epochs ~2x inflates 'typical'); the fresh wallclock rows' median epoch_total_s is the
+    boot-free MEASURED typical and must win when present."""
+    d = L.bench_marginal_decomposition(
+        typical_sec_per_ep=169.0,  # boot-diluted pass marginal
+        fresh_tail={"n": 3, "median_s": 2.0, "median_epoch_total_s": 71.4, "path": "f"},
+        observer_tail={"n": 3, "median_s": 1543.0, "path": "prior"},
+        real_ckpt_every=25, real_epochs=1400, resume_start_epoch=651)
+    assert d["typical_sec_per_ep"] == 71.4
+    assert d["pass_marginal_sec_per_ep"] == 169.0
+    assert "boot-free" in d["typical_provenance"]
+    assert d["amortized_sec_per_ep"] == round(71.4 + 1541.0 / 25, 2)
+
+
+def test_parse_ckpt_epoch_tail_missing_file(tmp_path):
+    t = L.parse_ckpt_epoch_tail_s(tmp_path / "absent.jsonl")
+    assert t["n"] == 0 and t["median_s"] is None
+
+
+def test_parse_launch_sh_flag_int(tmp_path):
+    sh = tmp_path / "launch.sh"
+    sh.write_text("#!/bin/bash\npython t.py --ckpt-every 25 --epochs 1400 --seed 0\n")
+    assert L.parse_launch_sh_flag_int(sh, "--ckpt-every") == 25
+    assert L.parse_launch_sh_flag_int(sh, "--epochs") == 1400
+    assert L.parse_launch_sh_flag_int(sh, "--absent") is None
+    assert L.parse_launch_sh_flag_int(tmp_path / "nope.sh", "--ckpt-every") is None
+
+
+def test_decomposition_amortized_math_c2_numbers():
+    """The c2 receipt contract with tonight's MEASURED anchors: typical ~69 s/ep (observer
+    off), observer-ON tail ~1543 s, fresh tail ~2 s, real cadence 25 -> amortized =
+    69 + (1543-2)/25 = 130.64 s/ep; remaining 1400-(651-1)=750 epochs -> ~27.22 h."""
+    d = L.bench_marginal_decomposition(
+        typical_sec_per_ep=69.0,
+        fresh_tail={"n": 2, "median_s": 2.0, "path": "fresh"},
+        observer_tail={"n": 3, "median_s": 1543.0, "path": "prior"},
+        real_ckpt_every=25, real_epochs=1400, resume_start_epoch=651)
+    assert d["ckpt_epoch_extra_s"] == 1541.0
+    assert d["amortized_sec_per_ep"] == round(69.0 + 1541.0 / 25, 2)
+    assert d["projected_remaining_epochs"] == 750
+    assert d["projected_remaining_wall_h"] == round((69.0 + 1541.0 / 25) * 750 / 3600.0, 2)
+    assert "--no-mod-dim-ablation" in d["ckpt_epoch_extra_provenance"]
+    assert d["bench_disabled_observers"] == ["mod_dim_ablation"]
+
+
+def test_decomposition_null_with_reason_when_no_observer_evidence():
+    d = L.bench_marginal_decomposition(
+        typical_sec_per_ep=69.0, fresh_tail={"n": 1, "median_s": 2.0, "path": "f"},
+        observer_tail=None, real_ckpt_every=25, real_epochs=1400, resume_start_epoch=651)
+    assert d["ckpt_epoch_extra_s"] is None and d["amortized_sec_per_ep"] is None
+    assert "no observer-ON tail evidence" in d["ckpt_epoch_extra_provenance"]
+
+
+def test_receipt_carries_decomposition_end_to_end(tmp_path, monkeypatch):
+    """Integration: green run with observer evidence + fresh tail + real launch.sh -> the
+    receipt's bench_marginal_decomposition carries the amortized projection."""
+    out = tmp_path / "fresh_run"
+    (out / "dry_start").mkdir(parents=True)
+    (out / "launch.sh").write_text("python t.py --ckpt-every 25 --epochs 1400\n")
+    (out / "dry_start" / "witness_component_wallclock.jsonl").write_text(
+        '{"span_epoch_tail_s": 2.0}\n')
+    ev = tmp_path / "prior_contaminated"
+    (ev / "dry_start").mkdir(parents=True)
+    (ev / "dry_start" / "witness_component_wallclock.jsonl").write_text(
+        '{"span_epoch_tail_s": 1543.0}\n')
+    _stub_launcher(monkeypatch, [_PASS1_LOG, _PASS2_LOG], [2048, 2048])
+    rc = L._run_dry_start(_args(observer_cost_evidence=str(ev)), CONFIG, True, out,
+                          "t", None, None)
+    assert rc == 0
+    d = json.loads((out / "dry_start_report.json").read_text())["bench_marginal_decomposition"]
+    assert d["ckpt_epoch_extra_s"] == 1541.0
+    assert d["real_ckpt_every"] == 25 and d["real_epochs"] == 1400
+    assert d["amortized_sec_per_ep"] is not None
+
+
+# ───────────────── B1 failure-receipt guarantee + progress durability ─────────────────
+
+def test_failure_receipt_on_mid_chain_exception(tmp_path, monkeypatch):
+    """A chain that dies mid-pass leaves a FAILURE receipt (the 20260716T211713Z death left
+    NOTHING). Also embeds the per-pass progress evidence."""
+    out = tmp_path / "fresh_run"
+    out.mkdir()
+
+    def boom(*a, **k):
+        raise RuntimeError("simulated mid-pass death")
+    monkeypatch.setattr(L, "_run_dry_start_inner", boom)
+    rc = L._run_dry_start(_args(), CONFIG, True, out, "t", None, None)
+    assert rc == 9
+    rep = json.loads((out / "dry_start_report.json").read_text())
+    assert rep["green"] is False and rep["status"] == "failed_infra"
+    assert "simulated mid-pass death" in rep["error"]
+    assert rep["gate"] == "full_config_dry_start"
+
+
+def test_failure_receipt_on_sigterm_class_systemexit(tmp_path, monkeypatch):
+    out = tmp_path / "fresh_run"
+    out.mkdir()
+
+    def term(*a, **k):
+        raise SystemExit(9)  # what the wrapper's SIGTERM handler raises
+    monkeypatch.setattr(L, "_run_dry_start_inner", term)
+    assert L._run_dry_start(_args(), CONFIG, True, out, "t", None, None) == 9
+    assert json.loads((out / "dry_start_report.json").read_text())["green"] is False
+
+
+def test_failure_receipt_never_clobbers_existing_report(tmp_path, monkeypatch):
+    out = tmp_path / "fresh_run"
+    out.mkdir()
+    (out / "dry_start_report.json").write_text('{"green": true, "sentinel": 1}')
+
+    def boom(*a, **k):
+        raise RuntimeError("late death after receipt")
+    monkeypatch.setattr(L, "_run_dry_start_inner", boom)
+    assert L._run_dry_start(_args(), CONFIG, True, out, "t", None, None) == 9
+    assert json.loads((out / "dry_start_report.json").read_text())["sentinel"] == 1
+
+
+def test_refusal_rc_leaves_receipt(tmp_path, monkeypatch):
+    """rc=7 delta refusal historically left NO receipt; ANY exit now leaves one."""
+    prior = _write_prior(tmp_path)
+    out = _write_fresh_manifest(
+        tmp_path, _fresh_argv(**{"--verdict-live-gap-every": "25", "--seed": "1"}))
+    assert L._run_dry_start(_args(dry_start_delta_from=str(prior)), CONFIG, True, out,
+                            "t", None, None) == 7
+    rep = json.loads((out / "dry_start_report.json").read_text())
+    assert rep["green"] is False and "rc=7" in rep["error"]
+
+
+def test_progress_file_written_per_pass(tmp_path, monkeypatch):
+    """Incremental durability: a hard kill after pass-1 leaves pass-level evidence even
+    without the final receipt."""
+    out = tmp_path / "fresh_run"
+    out.mkdir()
+    _stub_launcher(monkeypatch, [_PASS1_LOG, _PASS2_LOG], [2048, 2048])
+    assert L._run_dry_start(_args(), CONFIG, True, out, "t", None, None) == 0
+    prog = json.loads((out / "dry_start_progress.json").read_text())
+    assert set(prog["passes"]) == {"dry_start", "dry_start_resume"}
+    assert prog["passes"]["dry_start"]["epochs_completed"] >= 1
+    assert prog["schema"] == "dry_start_progress.v1"
 
 
 if __name__ == "__main__":
