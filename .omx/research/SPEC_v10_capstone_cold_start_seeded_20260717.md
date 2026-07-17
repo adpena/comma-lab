@@ -523,3 +523,20 @@ the A/B verdict decides the v10 basis (curvelet adoption vs Fourier retention) �
 in curvelet_takeover_fireable_20260717.md. FIRE = operator-GO sequential at the post-v9c2 boundary,
 ordered per the OLD-FINDINGS-FIRST rule (p0_SUPREME row) alongside the duty-queue top-3. P0 rows:
 p0_curvelet_fourier_replacement_takeover_20260717 + p0_497_basis_cure_decisive_ab.
+
+### §13.8 Arm A landing (2026-07-17): Fisher actuation BUILT + the owed dual-metric gap CLOSED with a NEW measured fact
+Branch `p0_build_fisher_actuation_20260717` (5 commits, 59 tests): Fisher-density seg weight (exact
+sech²(m/2) law, model/gt sources, DERIVED model=Fisher-natural) · rank-4 head natural-gradient
+(forward-identity/backward-g⁺, bitwise OFF-identity proven) · dual-metric harness
+`tools/dual_metric_readback.py` · Fisher-annulus observable — all default-OFF DSL Levers, resume-safe.
+**MEASURED (the §13.4(3) owed read-back, live-c2 BEST ep725, n96, [macOS advisory]): phase_advect vs
+armed seg base = Euclid cos −0.149 · Fisher cos −0.118 · rel-norm 0.627 Euclid / 0.478 Fisher — the
+phase stack is a LARGE (≈½ the seg force), mildly ANTAGONISTIC term at ep725, in BOTH metrics.**
+Reconciliation with the ep701 sps reading (+0.238 Euclid, no-conflict): different epoch + partition —
+at engagement (ep701) the phase force pulled TOWARD the new optimum; by ep725 boundaries had
+repositioned and the force mildly opposes further seg descent. Consistent with the ep750 regression +
+the measured σ_min-erosion coupling (§13.2). v10 CONSEQUENCE (feeds §13.1/§13.2): the phase weight
+(c2 constant 0.4) is a LATE-PHASE annealing/event-gating candidate — hold phase hard while building
+conditioning, relax as seg re-descends; decide by the per-stage A/B, not by constant. Muon×NG
+double-preconditioning flagged open. Sister risk recorded: focal/Fisher-density DISAGREE on
+confidently-wrong pixels — compose at most one of the two per config.
