@@ -128,7 +128,7 @@ class InputRef:
 
     kind: str
     provenance: str
-    value: float | int | None = None
+    value: float | int | str | None = None
     artifact_path: str | None = None
     extract: str | None = None
     expected_sha256: str | None = None
@@ -146,9 +146,16 @@ class InputRef:
             if not isinstance(k, str) or not isinstance(v, str):
                 raise LawRefError("config_tags must map str->str")
         if self.kind == _KIND_LITERAL:
-            if not isinstance(self.value, (int, float)) or isinstance(self.value, bool):
-                raise LawRefError("literal InputRef.value must be int|float (not bool)")
-            if self.value != self.value:  # NaN
+            # str is admitted for VALUE-CUSTODY laws only (#351: the non-derivational
+            # ``dsl_custodied_scalar_identity_v1`` "preserves bool/int/float/string
+            # bytes"): a string trainer-flag value (e.g. ``--activation step_basis``)
+            # has no numeric encoding, and inventing one would be the exact
+            # placeholder-in-canonical-field fake #351 forbids. bools stay rejected
+            # (canonical convention: bools are custodied as int 0/1 — see
+            # ``_v9_scientific_constant_custody``); anchors remain numeric-only.
+            if isinstance(self.value, bool) or not isinstance(self.value, (int, float, str)):
+                raise LawRefError("literal InputRef.value must be int|float|str (not bool)")
+            if isinstance(self.value, float) and self.value != self.value:  # NaN
                 raise LawRefError("literal InputRef.value must not be NaN")
             for bad in ("artifact_path", "extract", "expected_sha256", "max_staleness_days"):
                 if getattr(self, bad) is not None:
@@ -173,7 +180,7 @@ class InputRef:
     @classmethod
     def literal(
         cls,
-        value: float | int,
+        value: float | int | str,
         provenance: str,
         *,
         config_tags: Mapping[str, str] | None = None,
@@ -222,7 +229,7 @@ class LawRef:
     equation_id: str
     inputs: Mapping[str, InputRef]
     ladder_class: str
-    fallback: float | int | None = None
+    fallback: float | int | str | None = None
     fallback_waiver_reason: str = ""
 
     def __post_init__(self) -> None:
@@ -242,8 +249,10 @@ class LawRef:
                 f"ladder_class={self.ladder_class!r} must be one of {sorted(VALID_LADDER_CLASSES)!r}"
             )
         if self.fallback is not None:
-            if isinstance(self.fallback, bool) or not isinstance(self.fallback, (int, float)):
-                raise LawRefError("fallback must be int|float (not bool) or None")
+            # str fallback mirrors the str-literal admission above (value-custody of
+            # string trainer flags under a class-4 hardcoded waiver); bool stays out.
+            if isinstance(self.fallback, bool) or not isinstance(self.fallback, (int, float, str)):
+                raise LawRefError("fallback must be int|float|str (not bool) or None")
             if not self.fallback_waiver_reason.strip():
                 raise LawRefError(
                     "a fallback REQUIRES a non-empty fallback_waiver_reason "
@@ -266,7 +275,7 @@ class ResolvedInputRecord:
 
     name: str
     kind: str
-    value: float | int
+    value: float | int | str
     source: str  # "literal" | artifact_path
     sha256: str | None
     config_tags: Mapping[str, str]
@@ -290,7 +299,7 @@ class ResolvedInputRecord:
 class ResolvedConstant:
     """The compiled value + full provenance of one LawRef resolution."""
 
-    value: float | int
+    value: float | int | str
     equation_id: str
     resolved_inputs: tuple[ResolvedInputRecord, ...]
     resolved_at_utc: str

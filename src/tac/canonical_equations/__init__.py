@@ -174,6 +174,10 @@ from tac.canonical_equations.dseg_aware_fourier_taper_20260709 import (
     build_dseg_aware_fourier_taper_v1,
     populate_dseg_aware_fourier_taper_equation,
 )
+from tac.canonical_equations.dsl_custodied_scalar_identity_20260717 import (
+    build_dsl_custodied_scalar_identity_v1,
+    custodied_scalar_identity,
+)
 from tac.canonical_equations.eikonal_retention_tau_rung_20260713 import (
     build_eikonal_retention_couples_to_tau_rung_v1,
     eikonal_retention_for_rung,
@@ -501,6 +505,7 @@ __all__ = [
     "build_dash_erasure_homogenization_v1",
     "build_defect_network_component_delta_rate_v1",
     "build_dseg_aware_fourier_taper_v1",
+    "build_dsl_custodied_scalar_identity_v1",
     "build_eikonal_retention_couples_to_tau_rung_v1",
     "build_ema_window_pi_group_v1",
     "build_fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
@@ -570,6 +575,7 @@ __all__ = [
     "compact_shearlet_structural_certificate_law",
     "compute_predicted_band_from_posterior",
     "contest_score_as_powerplay_cost",
+    "custodied_scalar_identity",
     "costate_vector",
     "delta_exceeds_floor",
     "eikonal_retention_for_rung",

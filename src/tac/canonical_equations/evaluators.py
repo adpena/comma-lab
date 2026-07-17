@@ -359,6 +359,25 @@ def eval_v9_scientific_declaration(inputs: Mapping[str, Any]) -> Any:
     return inputs["value"]
 
 
+def eval_dsl_custodied_scalar_identity(inputs: Mapping[str, Any]) -> Any:
+    """dsl_custodied_scalar_identity_v1 — NON-DERIVATIONAL value custody (#351/#332).
+
+    Preserves the declared value's bytes (bool-as-int / int / float / string) for
+    MEASURED or WAIVED constants; it CANNOT manufacture scientific authority — the
+    LawRef's ``ladder_class`` records which rung the value actually holds (class-4
+    ``hardcoded_waiver`` for the #332 flag-custody backfill), and the equation is
+    explicitly an identity: value out == value in, no derivation claimed.  Refuses
+    a missing value and non-finite floats (per #351: "non-finite literals ...
+    refuse").
+    """
+    if "value" not in inputs:
+        raise EvaluatorError("dsl_custodied_scalar_identity requires a 'value' input")
+    value = inputs["value"]
+    if isinstance(value, float) and not math.isfinite(value):
+        raise EvaluatorError("dsl_custodied_scalar_identity refuses non-finite values")
+    return value
+
+
 def eval_warm_start_schedule_reconstruction(inputs: Mapping[str, Any]) -> int:
     """warm_start_schedule_reconstruction_v1 — recompute a warm-start schedule boundary.
 
@@ -436,6 +455,11 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     # end — the DERIVED form for a warm path where no recognised event sensor is co-emittable
     # (label_floor DEAD below resume d_seg; adverse finding A2).
     "warm_start_schedule_reconstruction_v1": eval_warm_start_schedule_reconstruction,
+    # #332/#351 flag-custody backfill (2026-07-17): the registered NON-DERIVATIONAL
+    # identity law.  Preserves bool(0/1)/int/float/str value bytes for measured or
+    # waived constants; grants NO derivation authority (ladder_class on the LawRef
+    # records the honest rung — class-4 hardcoded_waiver for generic config knobs).
+    "dsl_custodied_scalar_identity_v1": eval_dsl_custodied_scalar_identity,
 }
 
 
@@ -460,6 +484,7 @@ __all__ = [
     "eval_cgauge_whitney_moddim",
     "eval_conley_absolute_bar",
     "eval_critical_nucleus_release_r_star",
+    "eval_dsl_custodied_scalar_identity",
     "eval_forfeit_matched_exit_s_star",
     "eval_hosc_beta_fireband_pin",
     "eval_isoperimetric_birth_weight",
