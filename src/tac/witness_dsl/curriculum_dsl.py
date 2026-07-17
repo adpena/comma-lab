@@ -2115,6 +2115,50 @@ def PoseFinishBetaAnnealCoupling() -> Lever:
         "context: crest @~ep802 preceded the ep1000 constant (constant measured-suboptimal)")
 
 
+def PoseMarginalWeightLaw(clamp: float | None = None) -> Lever:
+    """SPEC_v10 §13.3 (arm B 2026-07-17): the w_pose(t) DERIVED-WEIGHT LAW —
+    ``w_pose(t) = min(clamp, 5/sqrt(10*d_pose(t)))``, the score's OWN pose marginal
+    (``dS/dd_pose``) as the pose-finish weight, replacing the static ``--w-pose`` constant.
+
+    THE CLAMP IS DERIVED, not tuned: the marginal diverges as d_pose→0; the seg marginal is the
+    constant ``dS/dd_seg = 100``; the two cross at ``d_pose = 2.5e-4`` where the pose marginal
+    equals 100 — so ``clamp = 100.0`` caps the pose weight at the score's own seg exchange rate
+    (law module ``tac.canonical_equations.w_pose_marginal_weight_law_20260717``, eq
+    ``w_pose_marginal_weight_law_v1``; sister of the ``--pose-grad-coeff-max`` divergence guard).
+
+    Consumption point: the POSE-FINISH stage only (the trainer fails loud if the two-phase arm is
+    absent — inert-flag NO-FAKE guard). Updated at VERDICT cadence when a measured d_pose lands
+    (piecewise-constant, never per-step — SPEC_v75 §8 loss-weights-at-boundaries). DEFAULT-OFF;
+    absent ⇒ byte-identical."""
+    from tac.witness_dsl.lawref import LADDER_DERIVED_AT_CONFIG, InputRef, LawRef
+
+    from tac.canonical_equations.w_pose_marginal_weight_law_20260717 import (
+        clamp_from_crossover,
+    )
+
+    c = clamp_from_crossover() if clamp is None else float(clamp)
+    if not (c > 0.0):
+        raise ValueError(f"PoseMarginalWeightLaw: clamp must be > 0, got {clamp!r}")
+    refs = {
+        "--w-pose-marginal-clamp": LawRef(
+            equation_id="w_pose_marginal_weight_law_v1",
+            inputs={"value": InputRef.literal(
+                c,
+                "DERIVED clamp_from_crossover(): pose marginal 5/sqrt(10*d_pose) equals the seg "
+                "marginal dS/dd_seg=100 at d_pose=2.5e-4; cap = the score's own seg exchange rate "
+                "(tac.canonical_equations.w_pose_marginal_weight_law_20260717)")},
+            ladder_class=LADDER_DERIVED_AT_CONFIG,
+        ),
+    }
+    return Lever(
+        "pose_marginal_weight_law",
+        overrides={"--w-pose-marginal-law": True, "--w-pose-marginal-clamp": c},
+        lawrefs=refs,
+        notes="SPEC_v10 §13.3: w_pose(t)=min(clamp,5/sqrt(10*d_pose(t))) — the score's own pose "
+        "marginal as the pose-finish weight; clamp DERIVED at the seg-marginal crossover (100.0); "
+        "verdict-cadence piecewise-constant; requires the two-phase pose finish (fail-loud)")
+
+
 def Muon(start_epoch: int, window: int = 100) -> Lever:
     """A4: Muon finisher from ``start_epoch`` for ``window`` epochs, with moments
     reset at the optimizer-stage transition and tau FROZEN at 0.05 (the run's

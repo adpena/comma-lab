@@ -8347,6 +8347,18 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "(the two-phase arm): with pose co-trained from ep0 the coupling would be an inert flag "
             "(counted-but-inert, NO-FAKE). Arm the two-phase or drop the coupling.")
     _pose_gate_coupling = {"deferred_row_emitted": False}
+    # (SPEC_v10 §13.3; arm B) w_pose(t) marginal-law state: the latest MEASURED d_pose (verdict
+    # cadence) + the last emitted weight (telemetry dedupe). Default-OFF => holder untouched =>
+    # byte-identical. Fail-loud on an inert arm (law without the two-phase finish — NO-FAKE).
+    _w_pose_law_on = bool(getattr(args, "w_pose_marginal_law", False))
+    _w_pose_law_state: dict[str, Any] = {"last_d_pose": None, "last_emitted_w": None}
+    if _w_pose_law_on and _pose_finish_start <= 0:
+        raise ValueError(
+            "--w-pose-marginal-law requires --pose-finish-start-epoch > 0 (the pose-finish stage "
+            "is the law's consumption point); with pose co-trained from ep0 the flag would be "
+            "counted-but-inert (NO-FAKE). Arm the two-phase or drop the law.")
+    if _w_pose_law_on and not (float(getattr(args, "w_pose_marginal_clamp", 100.0)) > 0.0):
+        raise ValueError("--w-pose-marginal-clamp must be > 0")
     if _pose_finish_start > 0:
         print(json.dumps({"stage": "pose_finish_armed", "start_backstop": _pose_finish_start,
                           "w_pose_finish": float(args.w_pose),
@@ -9452,6 +9464,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # auditable byte trace). Non-tail runs simply ignore it.
             history.append(_history_verdict(
                 ep, v, blob["total_quantized_blob_bytes"], s))
+            # (SPEC_v10 §13.3; arm B) w_pose(t) law SENSE: record the latest MEASURED d_pose
+            # (poison-law: reads the verdict the trainer already computed; never recomputes).
+            # OFF => never touched => byte-identical.
+            if _w_pose_law_on and v.get("d_pose") is not None and float(v["d_pose"]) > 0.0:
+                _w_pose_law_state["last_d_pose"] = float(v["d_pose"])
             # (#507) label-floor sensor stream: verdict rows the phase-advect start-event reads
             # (poison-law: the sensor READS this already-computed verdict, never recomputes).
             # Event-mode OFF => never appended => byte-identical. Bounded trailing window.
@@ -12049,7 +12066,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             "completed — held NOT-ELIGIBLE until anneal-complete (SPEC_v10 §13.2 "
                             "event coupling replaces the anneal-epochs==pose-finish-start coincidence)"}),
                             flush=True)
-                _w_pose_now["v"] = float(args.w_pose) if _pose_finish_on["on"] else 0.0
+                # (SPEC_v10 §13.3; arm B) w_pose(t) MARGINAL LAW at the consumption point: while the
+                # pose-finish is ENGAGED and the law is ON, the effective weight is the score's own
+                # marginal min(clamp, 5/sqrt(10*d_pose_latest)) — piecewise-constant (changes ONLY
+                # when a new measured d_pose lands at verdict cadence, never per-step). No measured
+                # d_pose yet => the static --w-pose finish weight (honest fallback). Law OFF
+                # (default) => the incumbent static assignment => BYTE-IDENTICAL.
+                if not _pose_finish_on["on"]:
+                    _w_pose_now["v"] = 0.0
+                elif _w_pose_law_on and _w_pose_law_state["last_d_pose"] is not None:
+                    _w_pose_now["v"] = min(
+                        float(args.w_pose_marginal_clamp),
+                        5.0 / math.sqrt(10.0 * float(_w_pose_law_state["last_d_pose"])))
+                    if _w_pose_law_state["last_emitted_w"] != _w_pose_now["v"]:
+                        _w_pose_law_state["last_emitted_w"] = _w_pose_now["v"]
+                        print(json.dumps({
+                            "stage": "w_pose_marginal_law", "epoch": int(ep),
+                            "d_pose_latest": float(_w_pose_law_state["last_d_pose"]),
+                            "w_pose_effective": float(_w_pose_now["v"]),
+                            "clamp": float(args.w_pose_marginal_clamp),
+                            "clamped": bool(_w_pose_now["v"] >= float(args.w_pose_marginal_clamp)),
+                            "note": "eq w_pose_marginal_weight_law_v1: w=min(clamp,5/sqrt(10*d_pose)); "
+                            "verdict-cadence piecewise-constant (never per-step)"}), flush=True)
+                else:
+                    _w_pose_now["v"] = float(args.w_pose)
                 if _pose_finish_on["on"] and not _pf_was_on:
                     _pose_gate["engaged_epoch"] = int(ep)
                     recent_losses.clear()  # treat as an AdamW->AdamW loss-form boundary (spike-guard re-treat)
@@ -13907,6 +13947,25 @@ def main(argv: list[str] | None = None) -> int:
                     "switch (--muon-start-event, the d_seg-converged coherent-render regime); this epoch "
                     "is the fail-safe BACKSTOP CAP (ep>=this also engages pose). 0 (default) => DISABLED "
                     "=> byte-identical (pose from ep0). Requires --w-pose > 0 (the finish-phase weight).")
+    # (SPEC_v10 §13.3; arm B) w_pose(t) DERIVED-WEIGHT LAW: the score's own pose marginal
+    # dS/dd_pose = 5/sqrt(10*d_pose(t)), clamped at the DERIVED seg-marginal crossover (100.0 =
+    # dS/dd_seg; crossover d_pose = 2.5e-4). Law module:
+    # tac.canonical_equations.w_pose_marginal_weight_law_20260717 (eq w_pose_marginal_weight_law_v1).
+    ap.add_argument(
+        "--w-pose-marginal-law",
+        action=argparse.BooleanOptionalAction, default=False,
+        help="(SPEC_v10 §13.3; arm B) replace the STATIC pose-finish weight --w-pose with the "
+        "score's own marginal w_pose(t)=5/sqrt(10*d_pose(t)) (eq w_pose_marginal_weight_law_v1), "
+        "clamped by --w-pose-marginal-clamp. Consumed ONLY in the pose-finish stage; updated at "
+        "VERDICT cadence when a measured d_pose lands (piecewise-constant, never per-step); falls "
+        "back to --w-pose until the first measured d_pose. Requires --pose-finish-start-epoch > 0 "
+        "(fail-loud otherwise: inert-flag NO-FAKE guard). Default OFF => byte-identical.")
+    ap.add_argument(
+        "--w-pose-marginal-clamp", type=float, default=100.0,
+        help="(SPEC_v10 §13.3) clamp on w_pose(t) as d_pose->0 (the marginal DIVERGES). DERIVED "
+        "default 100.0 = dS/dd_seg (the seg marginal): the pose weight never exceeds the score's "
+        "own seg exchange rate — the marginals cross at d_pose=2.5e-4 where 5/sqrt(10*d_c)=100. "
+        "See tac.canonical_equations.w_pose_marginal_weight_law_20260717.clamp_from_crossover.")
     ap.add_argument(
         "--pose-finish-eligible-on-beta-anneal-complete",
         action=argparse.BooleanOptionalAction, default=False,
