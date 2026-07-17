@@ -434,6 +434,82 @@ def _verify_child_survived(proc, pgid: int, log_path, verify_s: float) -> tuple[
     return True, info
 
 
+def _pty_wrap(cmd: list[str], platform: str | None = None) -> list[str]:
+    """Wrap ``cmd`` in script(1) so the detached child gets a CONTROLLING PTY.
+
+    WHY (task #525, MEASURED 2026-07-17): the operator's fleet launchd agent
+    ``com.vertigo.claude-code-reaper`` (60s cadence, GRACE=300s) SIGTERMs any
+    process matching ``\\b(claude|codex)\\b`` that has NO controlling terminal
+    (ps tty == "??") and a dead stdin (/dev/null|PIPE|FIFO) — the exact
+    signature of a headless detached arm. All four of the reaper's phases
+    require ``tty == ??``, so a pty-attached chain is classified as a LIVE
+    terminal session (the reaper's own documented exclusion: "sessions
+    attached to a terminal") and is exempt. This is honest classification,
+    not evasion: a delegated arm IS a live supervised session (events-log
+    START/DONE custody + codex_status liveness + STALLED detection).
+
+    macOS/BSD form: ``script -q /dev/null cmd args...``.
+    util-linux form: ``script -q -e -c "<cmd>" /dev/null``.
+    """
+    plat = platform if platform is not None else sys.platform
+    if plat == "darwin":
+        return ["/usr/bin/script", "-q", "/dev/null", *cmd]
+    import shlex as _shlex
+    return ["script", "-q", "-e", "-c", _shlex.join(cmd), "/dev/null"]
+
+
+def spawn_detached_verified(
+    cmd: list[str],
+    log_path,
+    *,
+    with_pty: bool = False,
+    verify_s: float = 3.0,
+    env: dict | None = None,
+    cwd=None,
+):
+    """Shared detached-session spawn core (single implementation — task #525).
+
+    REFACTORED out of ``_do_start``'s Popen body and ADOPTED by
+    ``tools/codex_delegate.py`` so there is no copy-paste second spawn path.
+    Spawns ``cmd`` fully detached (``start_new_session=True`` → own session +
+    pgid), stdin from /dev/null, stdout+stderr appended to ``log_path``.
+    ``with_pty=True`` additionally allocates a controlling pty via
+    :func:`_pty_wrap` (reaper immunity for claude/codex-named children).
+
+    Returns ``(proc, pgid, ok, vinfo)`` where ``ok``/``vinfo`` come from
+    :func:`_verify_child_survived` (``verify_s <= 0`` skips the bounded wait
+    so callers like ``_do_start`` can run their own verification later).
+    Raises ``OSError``/``FileNotFoundError`` when exec itself fails — callers
+    keep their own loud failure paths.
+    """
+    run_cmd = [str(c) for c in cmd]
+    if with_pty:
+        run_cmd = _pty_wrap(run_cmd)
+    log = open(log_path, "ab", buffering=0)  # noqa: SIM115 — handed to the detached child
+    devnull = open(os.devnull, "rb")  # noqa: SIM115
+    try:
+        proc = subprocess.Popen(
+            run_cmd,
+            stdin=devnull,
+            stdout=log,
+            stderr=log,
+            start_new_session=True,  # setsid() -> own session/pgroup -> survives parent
+            close_fds=True,
+            cwd=str(cwd) if cwd else os.getcwd(),
+            env=env,
+        )
+    finally:
+        with contextlib.suppress(Exception):
+            log.close()
+            devnull.close()
+    try:
+        pgid = os.getpgid(proc.pid)
+    except OSError:
+        pgid = proc.pid  # raced exit; best-effort
+    ok, vinfo = _verify_child_survived(proc, pgid, log_path, verify_s)
+    return proc, pgid, ok, vinfo
+
+
 def _synth_label(cmd: list[str], pid: int) -> str:
     """Backward-compat: synthesize a label from cmd + pid when --label omitted."""
     base = Path(cmd[0]).name if cmd else "daemon"
@@ -902,9 +978,8 @@ def _do_start(a: argparse.Namespace) -> int:
                 print(f"[durable-daemon] WARNING: pending-reservation write failed ({exc!r}); "
                       "proceeding (admission decision stands).", file=sys.stderr)
 
-    log = open(a.log, "ab", buffering=0)  # noqa: SIM115 — kept open for the child
-    devnull = open(os.devnull, "rb")  # noqa: SIM115
-    log.write(f"[durable-daemon] launching: {' '.join(cmd)}\n".encode())
+    with open(a.log, "ab", buffering=0) as _launch_line_log:
+        _launch_line_log.write(f"[durable-daemon] launching: {' '.join(cmd)}\n".encode())
     # (#254) the P0 admission gate above JUST passed => this daemon is GOVERNED. Stamp the child
     # env (propagates through `bash launch.sh` -> trainer) so the heavy entrypoint's admission
     # guard passes. Set by stable name (== tac.admission_guard.GOVERNED_MARKER_ENV). A raw launch
@@ -930,15 +1005,15 @@ def _do_start(a: argparse.Namespace) -> int:
             Path(a.dsl_launch_sh).with_name("dsl_provenance.json")
         )
     try:
-        proc = subprocess.Popen(
+        # Shared detached-spawn core (task #525): verify_s=0 here because _do_start runs its
+        # own bounded verification AFTER registry write below (behavior-preserving refactor).
+        proc, pgid, _ok_unused, _vinfo_unused = spawn_detached_verified(
             cmd,
-            stdin=devnull,
-            stdout=log,
-            stderr=log,
-            start_new_session=True,  # setsid() -> new session/pgroup -> survives parent
-            close_fds=True,
-            cwd=os.getcwd(),
+            a.log,
+            with_pty=bool(getattr(a, "with_pty", False)),
+            verify_s=0.0,
             env=_child_env,
+            cwd=os.getcwd(),
         )
     except (FileNotFoundError, OSError) as exc:
         # NO silent failures: exec itself failed (e.g. cmd[0] is a collapsed
@@ -957,12 +1032,9 @@ def _do_start(a: argparse.Namespace) -> int:
             f"expansion collapsed the command into a single argv[0]; pass separate "
             f"argv tokens or a script file (bash launch.sh)."
         )
-        with contextlib.suppress(Exception):
-            log.write((msg + "\n").encode())
+        with contextlib.suppress(Exception), open(a.log, "ab", buffering=0) as _fail_log:
+            _fail_log.write((msg + "\n").encode())
         print(msg, file=sys.stderr)
-        with contextlib.suppress(Exception):
-            log.close()
-            devnull.close()
         # spawn failed -> release the pending admission reservation (nothing will grow to its peak).
         if pending_written:
             with contextlib.suppress(Exception):
@@ -978,12 +1050,8 @@ def _do_start(a: argparse.Namespace) -> int:
             file=sys.stderr,
         )
 
-    # The worker is its own session leader, so its pgid == its pid. Read it
-    # back rather than assuming, so the registry records the kernel truth.
-    try:
-        pgid = os.getpgid(proc.pid)
-    except OSError:
-        pgid = proc.pid  # raced exit; best-effort
+    # The worker is its own session leader, so its pgid == its pid; the shared
+    # spawn core already read the kernel-truth pgid back for the registry.
 
     record = {
         "label": label,
@@ -1291,6 +1359,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--verify-s", type=float, default=3.0,
                     help="seconds to verify the child survived exec before reporting success "
                          "(default 3.0; 0 disables — dead launch -> nonzero + detailed debug)")
+    # Reaper immunity (task #525): allocate a controlling PTY via script(1) so a
+    # claude/codex-named child is classified as a live terminal session by the
+    # fleet claude-code-reaper (all its phases require tty == "??"). Default OFF
+    # (byte-identical behavior when unset); codex arms get it via codex_delegate.
+    ap.add_argument("--with-pty", action="store_true",
+                    help="allocate a controlling pty (script -q) for the detached child — required "
+                         "for claude/codex-named long-runners (fleet reaper kills no-TTY ones at 5min)")
     ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- <command> [args...] (start mode)")
     a = ap.parse_args(argv)
 

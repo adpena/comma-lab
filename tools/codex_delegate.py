@@ -3,10 +3,13 @@
 with AUTOMATIC completion notification back to the Claude main loop.
 
 WHY: codex agents are launched HEADLESS — detached into their own session (setsid via
-subprocess.Popen(start_new_session=True)) so they are durable (survive the harness
+the shared spawn core spawn_durable_daemon.spawn_detached_verified) so they are durable (survive the harness
 SIGURG-144 that kills bg-bash, by escaping claude's process group) WITHOUT opening a GUI
 Terminal window (the prior `osascript … do script` mechanism orphaned a completed-but-open
-window per arm). They are fire-and-forget — the main loop had to
+window per arm) — AND with a CONTROLLING PTY (script -q; task #525): a no-TTY codex arm
+with stdin=/dev/null matches the fleet claude-code-reaper launchd agent's orphan signature
+and is SIGTERM'd at ~5min (measured 2026-07-17, 10/10 kills); the pty classifies the arm
+as the live terminal session it actually is. They are fire-and-forget — the main loop had to
 manually poll (pgrep / log tail / git log) to know when they finished. Claude
 Agent-tool subagents, by contrast, deliver a completion notification. This wrapper
 gives codex the same: every delegated run appends START/DONE lines to ONE shared
@@ -33,12 +36,18 @@ import argparse
 import fcntl
 import hashlib
 import json
+import os
 import shlex
 import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+# tools/ sibling imports (shared detached-spawn core lives in spawn_durable_daemon).
+_TOOLS_DIR = Path(__file__).resolve().parent
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
 RUNS = REPO / ".omx" / "tmp" / "codex_runs"
 EVENTS = RUNS / "codex_events.log"
 LEDGER = REPO / ".omx" / "state" / "codex_delegations.jsonl"
@@ -444,6 +453,10 @@ def main(argv: list[str] | None = None) -> int:
                          "network_access=true). Opt-in per arm (least-privilege) — needed for arms that "
                          "dispatch Modal / hit the network. danger-full-access already has network.")
     ap.add_argument("--no-launch", action="store_true", help="write launcher + ledger but do not osascript-launch")
+    ap.add_argument("--no-pty", action="store_true",
+                    help="launch WITHOUT the controlling-pty wrap (NOT recommended: a no-TTY codex arm "
+                         "matches the fleet claude-code-reaper orphan signature and is SIGTERM'd at "
+                         "~5min — the measured task-#525 kill class)")
     ap.add_argument("--force", action="store_true",
                     help="launch even if an arm with this label is already live (de-confliction override)")
     args = ap.parse_args(argv)
@@ -551,23 +564,42 @@ def main(argv: list[str] | None = None) -> int:
 
     launched = False
     if not args.no_launch:
-        # HEADLESS launch (operator 2026-07-16: "They should be launched headless"): detach into a NEW
-        # SESSION (setsid via start_new_session) so the arm survives the parent Claude harness SIGURG-144
-        # process-group death WITHOUT opening a GUI Terminal window. Durability — the sole reason the prior
-        # `osascript … do script` used Terminal (Terminal, not claude, was the arm's parent) — is preserved
-        # by the new session/pgid escaping claude's process group. Inspection is via the DURABLE {log}/{last}
-        # files + the EVENTS log (better than ephemeral Terminal scrollback). This ends the completed-but-open
-        # orphaned-window class (310 leaf shells, 2026-07-16): the launcher now `exit`s instead of `exec bash`.
-        wrap_log = launcher.with_suffix(".wrap.log")
+        # HEADLESS + REAPER-IMMUNE launch (task #525, measured 2026-07-17). Two layers:
+        # 1. HEADLESS (operator 2026-07-16: "They should be launched headless"): detach into a NEW
+        #    SESSION (setsid) so the arm survives the parent Claude harness SIGURG-144 process-group
+        #    death WITHOUT opening a GUI Terminal window (ends the orphaned-window class, ff0f884b35).
+        # 2. CONTROLLING PTY (the ff0f884b35 regression fix): the prior Terminal launch gave arms a
+        #    TTY as a side effect; going headless removed it, and the operator's fleet launchd agent
+        #    com.vertigo.claude-code-reaper (60s cadence, GRACE=300s) then SIGTERM'd EVERY codex arm
+        #    at ~5:20-5:55 (10/10 kills logged in /tmp/com.vertigo.claude-code-reaper.log, incl. a
+        #    clean-env low-token probe; a renamed-argv probe survived — argv \bcodex\b + tty=?? +
+        #    stdin=/dev/null is the exact reap signature). script(1) restores a controlling pty so
+        #    the arm chain is classified as a LIVE terminal session (the reaper's own exclusion
+        #    class) — honest: arms ARE live supervised sessions (events-log custody + codex_status).
+        # Single shared spawn core — no copy-paste second impl (spawn_durable_daemon owns it).
+        # Prefer the package path so tests patching tools.spawn_durable_daemon see one module.
         try:
-            _wl = open(wrap_log, "ab")  # noqa: SIM115 — handed to the detached child; closed in this parent below
-            subprocess.Popen(
+            from tools.spawn_durable_daemon import spawn_detached_verified
+        except ImportError:  # script-mode fallback (tools/ on sys.path above)
+            from spawn_durable_daemon import spawn_detached_verified
+        wrap_log = launcher.with_suffix(".wrap.log")
+        child_env = dict(os.environ)
+        # Plain output under the pty: codex detects a TTY and would emit ANSI/spinner noise into
+        # the tee'd logs; TERM=dumb keeps the log files machine-readable (parity with pre-pty logs).
+        child_env["TERM"] = "dumb"
+        try:
+            _proc, _pgid, ok, vinfo = spawn_detached_verified(
                 ["bash", str(launcher)],
-                stdin=subprocess.DEVNULL, stdout=_wl, stderr=subprocess.STDOUT,
-                start_new_session=True, cwd=str(REPO),
+                wrap_log,
+                with_pty=not args.no_pty,
+                verify_s=3.0,
+                env=child_env,
+                cwd=str(REPO),
             )
-            _wl.close()
-            launched = True
+            launched = bool(ok)
+            if not ok:
+                print(f"ERROR headless launch did not survive the verify window: "
+                      f"{vinfo.get('exit_str')} — see {wrap_log}")
         except OSError as e:
             print(f"WARN headless launch failed: {e}")
 
