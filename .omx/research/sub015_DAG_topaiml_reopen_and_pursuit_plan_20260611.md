@@ -19340,3 +19340,22 @@ Pointer 0.19108 UNMOVED (apparatus + armed measurement; next exact-relevant even
   register on the #406 n600 confirmation); DSL leg n/a (measurement, no lever landed); this FEED = DAG leg.
   Artifacts: tools/null_subspace_rate_measure.py · .omx/research/null_subspace_rate_measure_20260717.md ·
   reports/null_subspace_rate_measure_519_n32.json. Pointer 0.19108 UNMOVED (means/measurement).
+
+## FEED-406prep (2026-07-17) — apply-pass batch harness landed (apparatus; triality-leg disposition recorded)
+- **What landed** (commit 88c9bcc0eb, Opus arm): `tools/witness_applypass_batch.py` — registry-driven
+  per-lever ΔS orchestrator over the frozen-checkpoint POST-HOC transforms (gauge/palette #519 +
+  compose-best), DELEGATING the five pre-built levers to the canonical `tools/witness_apply_pass.py`
+  (anti-duplication honored). Dry-run on donor reproduces #519 leg-3 byte deltas EXACTLY (+11/−6/+11 B).
+  Fire command staged for the post-v9c2 boundary.
+- **Triality disposition (recorded per the drift-gate)**: DSL leg N/A-BY-TYPE — this is measurement
+  APPARATUS on frozen checkpoints, not a training lever/launch/curriculum change; no WitnessProgram or
+  Lever factory is the correct home (the levers it applies are archive-side transforms whose homes are
+  their own modules). Equations leg FORMALIZATION_PENDING (apparatus, no new measured finding; the
+  gauge-precision equation registers on the n600 sign-confirm this harness will produce). This FEED =
+  the DAG leg.
+- **Second-surface confound fix**: the harness's fire-guard initially used `psutil.available`
+  (reclaimable-counting — the SAME class as the 07-16 admission-gate fix) and failed to refuse next to
+  the live trainer; caught in-prep, path killed ≤2 min (trainer unharmed), guard fixed to conservative
+  MIN(psutil, vm_stat) + regression test asserting no scorer load on refusal. Sister:
+  [[admission-gate-naive-counts-reclaimable-as-committed]].
+- Pointer 0.19108 UNMOVED (apparatus).
