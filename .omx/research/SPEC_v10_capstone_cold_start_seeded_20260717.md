@@ -510,3 +510,17 @@ stride-2 skip lever + EMA decay LawRef + shadow-vs-live comparator + ema_decay_f
 Every lever lands as a DSL Lever factory (never a hand trainer flag), tested, with equations-leg registration;
 recursive adversarial review to 3 clean passes gates merge eligibility. This section is the SSoT these arms
 implement against; drift between an arm's landing and this section is a triality violation.
+
+### §13.7 CURVELET / FOURIER-REPLACEMENT — takeover fold (operator 2026-07-17 "Don't forget curvelets")
+The basis question is a FIRST-CLASS member of the §13.5 boundary A/B set, not an afterthought. State:
+branch claude/p0_497_curvelet_matched_bytes_ab_20260717 holds the sealed receiver paths (gap-a
+charted_grid_bilinear_v1 counted receiver-program · gap-b post-render supersample A_s, both
+bit-exact-gated); four codex basis findings memos (curvelet_throughR_p0 · genuine_curvelet_shearlet ·
+no_fourier_basis_sweep · optimal_basis_beyond_fourier) are reconciled by ARM D
+(.omx/tmp/build_wave_20260717/ARM_D_CURVELET.md), which builds the missing fire tool to make the
+matched-COUNTED-bytes curvelet-vs-Fourier through-R d_seg A/B FIREABLE. Standing law: Fourier ban-gate
+WARN-ONLY, curvelet opt-in; the measured 3.2× along-tangent deficit (#497) is the quantity at stake;
+the A/B verdict decides the v10 basis (curvelet adoption vs Fourier retention) — pre-registered criteria
+in curvelet_takeover_fireable_20260717.md. FIRE = operator-GO sequential at the post-v9c2 boundary,
+ordered per the OLD-FINDINGS-FIRST rule (p0_SUPREME row) alongside the duty-queue top-3. P0 rows:
+p0_curvelet_fourier_replacement_takeover_20260717 + p0_497_basis_cure_decisive_ab.
