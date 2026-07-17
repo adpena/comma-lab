@@ -540,3 +540,23 @@ the measured σ_min-erosion coupling (§13.2). v10 CONSEQUENCE (feeds §13.1/§1
 conditioning, relax as seg re-descends; decide by the per-stage A/B, not by constant. Muon×NG
 double-preconditioning flagged open. Sister risk recorded: focal/Fisher-density DISAGREE on
 confidently-wrong pixels — compose at most one of the two per config.
+
+### §13.9 Arm B landing (2026-07-17): forces + triggers BUILT — the missing force exists, the #344 gap is root-caused, the clamp is DERIVED
+Branch `p0_build_forces_triggers_20260717` (5 commits, 57 new tests + regressions green, all default-OFF,
+OFF-path behavior-identical): **(1) event-fallback phase supervision** (§13.1 row 1 CLOSED as a build:
+memo-exact t_ref fallback to own-GT tie at straddle sites, stateless, no persistence-hold per anti-scope)
+— crux-3's missing force now EXISTS; Δd_seg = duty-to-measure #1 at the boundary per-stage A/B.
+**(2) fire-on-crest gate** (`--pose-finish-engage-on sigma_min_crest`) with the LIVE c2 crest (peak
+~ep802) folded in as a regression test anchor. **(3) event couplings**: β-anneal-complete →
+pose-finish-eligible (the §13.2 coincidence dissolved; eligibility-constant measured-suboptimal stated
+in the DSL) + the #344 NCDE event-entry consumer with THREE measured false-negative fixes found
+in-build, and the **fire=unavailable ROOT CAUSE MEASURED**: <8 verdict rows ⇒ silent None omission —
+fixed observer-side (always-structured probe), verified read-only against the live run. λ-critical
+entry NOT built (needs a trainer per-class-λ stream — honest routing, not half-wired). **(4) w_pose(t)
+= 5/√(10·d_pose) law** with the clamp DERIVED (= seg marginal 100 at the crossover d_pose 2.5e-4 — the
+score's own geometry, not a chosen constant), verdict-cadence piecewise-constant, pose-finish-only
+consumption. Phase-weight relaxation deliberately NOT wired (pa_w closure-captured in the compiled
+loss; half-wiring forbidden) — routed to the boundary owner with the ep725 antagonism anchor. Open
+(round-2): detector mode not resume-persisted; ncde BASIN window sensitivity; D4 live/EMA d_pose
+source second-order. P0 consequence: triggers/forces F2+F4+F6 → BUILT-awaiting-measure; lane-crux-3
+TRAIN side complete pending the A/B; #425 STORE leg remains the unbuilt half.
