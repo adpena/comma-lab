@@ -1096,6 +1096,11 @@ def _build_resume_state_arrays(
     out["__cfg_witness_alone_island_loss"] = np.asarray(int(bool(getattr(args, "witness_alone_island_loss", False))))
     out["__cfg_seg_focal_gamma"] = np.asarray(float(getattr(args, "seg_focal_gamma", 0.0)))
     out["__cfg_boundary_distance_weight"] = np.asarray(float(getattr(args, "boundary_distance_weight", 0.0)))
+    # ARM-C #524 lane skip-band lever (loss-only, trajectory-affecting, no param keys — same class as
+    # focal/boundary-distance): persist so a --resume-from that silently drops/changes it fails closed.
+    out["__cfg_lane_skipband_weight"] = np.asarray(float(getattr(args, "lane_skipband_weight", 0.0)))
+    out["__cfg_lane_skipband_dilate"] = np.asarray(int(getattr(args, "lane_skipband_dilate", 2)))
+    out["__cfg_lane_skipband_start_epoch"] = np.asarray(int(getattr(args, "lane_skipband_start_epoch", 0)))
     # (#218) logit-adjustment is loss-only + trajectory-affecting (no param keys) — same class as
     # focal/boundary-distance above: persist so a --resume-from that silently drops/changes it
     # fails closed via _resume_lever_divergences (deterministic-repro).
@@ -1480,6 +1485,10 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # 2026-07-05; loss-only, trajectory-affecting, no param keys — same class as the #300 levers).
         ("__cfg_seg_focal_gamma", float(getattr(args, "seg_focal_gamma", 0.0)), True),
         ("__cfg_boundary_distance_weight", float(getattr(args, "boundary_distance_weight", 0.0)), True),
+        # ARM-C #524 lane skip-band lever (loss-only, trajectory-affecting, no param keys).
+        ("__cfg_lane_skipband_weight", float(getattr(args, "lane_skipband_weight", 0.0)), True),
+        ("__cfg_lane_skipband_dilate", int(getattr(args, "lane_skipband_dilate", 2)), False),
+        ("__cfg_lane_skipband_start_epoch", int(getattr(args, "lane_skipband_start_epoch", 0)), False),
         # (#218) logit-adjustment per-class offset (loss-only, trajectory-affecting, no param keys).
         ("__cfg_logit_adjust_loss_tau", float(getattr(args, "logit_adjust_loss_tau", 0.0)), True),
         # (v7.5 Lever-3) logit-adjust class restriction bitmask (trajectory-affecting; regime coherence).
@@ -3738,7 +3747,8 @@ LOSS_TERM_KEYS: tuple[str, ...] = (
     # #304 item 4 per-term loss telemetry -- the canonical row schema. Order matches total_loss_fn's
     # additive composition: base (seg CE-form + pose sqrt-term) then every stacked lever term.
     "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance", "lane_edge",
-    "margin_saliency", "subpix", "chroma_boundary", "margin_satisfice", "horizon_margin", "temporal_screw",
+    "margin_saliency", "subpix", "chroma_boundary", "lane_skipband",
+    "margin_satisfice", "horizon_margin", "temporal_screw",
     "phase_advect",
     "island_amplify", "area_constraint", "persistence",
     "rankfloor", "code_spectral", "thin_lane", "margin_field_head", "code_nuclear", "weight_entropy",
@@ -5950,6 +5960,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _chroma_gt_prov: Any = None    # list[mx.array (1,H,W,3)] f32, GT BT.601 chroma at (SEG_H,SEG_W)
     _chroma_w_prov: Any = None     # list[mx.array (1,H,W)] f32 annulus weight (margin<band) in {0,1}
 
+    # ARM-C #524 (LANE STRIDE-2 SKIP-BAND; SPEC_v10 §13.1 row 4; DSL LaneSkipBand). Closure constants
+    # (static; ZERO change to the value_and_grad call site). skipband_w=0.0 (default) => the branch is
+    # skipped + providers stay None => BYTE-IDENTICAL (fully additive). DERIVED (fractal memo §5):
+    # supervise the witness render's stride-2 skip DETAIL band SB = D2 - U2(D4) (BT.601 luma / 255)
+    # against GT's SB on the dilated GT-Lane band — the render-side sufficient statistic for the
+    # 16-ch (192,256) skip path that carries 77% of Lane skip-detail flips. Numpy reference authority:
+    # tac.boundary_math.lane_skipband (the MLX branch below must match it; parity-tested).
+    skipband_w = float(getattr(args, "lane_skipband_weight", 0.0))
+    skipband_start = int(getattr(args, "lane_skipband_start_epoch", 0))
+    skipband_dilate = int(getattr(args, "lane_skipband_dilate", 2))
+    skipband_gate = {"on": skipband_start <= 1}
+    _skipband_gt_prov: Any = None  # list[mx.array (1,H/2,W/2)] f32 GT skip-band target ([0,1] luma units)
+    _skipband_w_prov: Any = None   # list[mx.array (1,H/2,W/2)] f32 lane-band mask {0,1} at the skip grid
+
     # P0 FORCE 3 (tie-locus displacement; task #360; DSL TieLocusDisplacement). WRAPS the subpix term
     # above with flip-density edge weighting W_e (source uniform=byte-identical / pa_flipmass=stamped).
     # ref_domain is a decode-consumer provider option (training is post-R => seg384==camera874_dphase for
@@ -6691,6 +6715,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                              _subpix_t_prov is not None) or
                             (chroma_bnd_w > 0.0 and chroma_bnd_gate["on"] and        # LEVER-4c chroma
                              _chroma_gt_prov is not None) or
+                            (skipband_w > 0.0 and skipband_gate["on"] and             # ARM-C #524 skip-band
+                             _skipband_gt_prov is not None) or
                             (ts_w > 0.0 and ts_gate["on"] and                         # P0 FORCE 1 temporal
                              _ts_ann_prov is not None) or
                             (ms_w > 0.0 and ms_gate["on"] and                         # P0 FORCE 2 satisfice
@@ -6855,6 +6881,32 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             L = L + chroma_bnd_w * chroma_bnd_term
             if terms_out is not None:
                 terms_out["chroma_boundary"] = chroma_bnd_w * chroma_bnd_term
+        # ARM-C #524 (LANE STRIDE-2 SKIP-BAND). DERIVED (fractal memo §5 — MEASURED: the final
+        # decoder block is skipless, so ALL sub-stride-4 boundary localization flows through the ONE
+        # 16-ch stride-2 skip at (192,256); its down-up-2x ablation induces flips that are 77%
+        # Road-Lane). The witness render's skip-band detail SB = D2(luma) - U2(D2(D2(luma)))
+        # (BT.601 luma / 255, computed on the SHARED realized through-R frame ``_f1`` — NO 2nd render,
+        # NO SegNet forward) is supervised toward the precomputed GT SB on the dilated GT-Lane band:
+        # masked MSE, mean over the band. Matches tac.boundary_math.lane_skipband.skipband_term_np
+        # (numpy-fp32 reference authority; parity-tested). Default skipband_w=0 => skipped =>
+        # byte-identical. A/B arm (RUN-GATED optimum), NOT a claim. pointer UNMOVED.
+        if skipband_w > 0.0 and skipband_gate["on"] and _skipband_gt_prov is not None:
+            _pi_sb = int(c1) // 2
+            _sb_lum = (0.299 * _f1[..., 0] + 0.587 * _f1[..., 1]
+                       + 0.114 * _f1[..., 2]) / 255.0                    # (1,H,W) [0,1] BT.601 luma
+            _sb_H2, _sb_W2 = _sb_lum.shape[1] // 2, _sb_lum.shape[2] // 2
+            _sb_l2 = mx.mean(_sb_lum.reshape(1, _sb_H2, 2, _sb_W2, 2), axis=(2, 4))   # D2 -> (1,H/2,W/2)
+            _sb_l4 = mx.mean(_sb_l2.reshape(1, _sb_H2 // 2, 2, _sb_W2 // 2, 2),
+                             axis=(2, 4))                                # D4 -> (1,H/4,W/4)
+            _sb_up = mx.repeat(mx.repeat(_sb_l4, 2, axis=1), 2, axis=2)  # U2 -> (1,H/2,W/2)
+            _sb_wit = _sb_l2 - _sb_up                                    # skip DETAIL band
+            _sb_gt = _skipband_gt_prov[_pi_sb]                           # (1,H/2,W/2) stop-grad const
+            _sb_m = _skipband_w_prov[_pi_sb]                             # (1,H/2,W/2) lane band {0,1}
+            skipband_term = (mx.sum(mx.square(_sb_wit - _sb_gt) * _sb_m)
+                             / (mx.sum(_sb_m) + 1e-6))
+            L = L + skipband_w * skipband_term
+            if terms_out is not None:
+                terms_out["lane_skipband"] = skipband_w * skipband_term
         # P0 FORCE 2 (MARGIN-BAND SATISFICING; task #360; DSL MarginBandSatisficing). One-sided hinge on
         # the SHARED realized through-R witness GT-class margin ``_signed`` (m_wit, #141): stop pushing a
         # boundary pixel once it is R-robustly SAFE. L_sat = w_s * mean_annulus relu(m_safe - m_wit).
@@ -7857,6 +7909,45 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "BT.601-luma (luma-invariant) on the SHARED realized _f1; boundary-SHARPENER "
                           "orthogonal to the geometry levers; A/B owed (needs GO); pointer 0.19110 "
                           "UNMOVED"}), flush=True)
+
+    # ARM-C #524 (LANE STRIDE-2 SKIP-BAND) PRECOMPUTE. theta-INDEPENDENT + cheap (pure numpy via the
+    # canonical tac.boundary_math.lane_skipband reference — NO SegNet forward), built INLINE here
+    # (chroma / spike-map style) ONLY when skipband_w>0 => the OFF path is byte-identical. Per pair pi:
+    # (1) resize the CAMERA GT frame gt.gt_f1[pi] to SegNet-input (SEG_H,SEG_W) with the SAME bilinear
+    # SegNet.preprocess_input uses (upstream/modules.py:109) -> the GT frame AS SegNet reads it;
+    # (2) SB target = skip_band_detail(BT.601 luma / 255) at the (192,256) skip grid; (3) lane band =
+    # GT Lane class (comma10k CANONICAL class 1) dilated by --lane-skipband-dilate, max-pooled 2x.
+    # Memory ~ P*(H/2)*(W/2)*4*2 ~= 236 MB at n600 (noted for the launcher memory-preflight).
+    if skipband_w > 0.0:
+        if int(getattr(args, "micro_batch_pairs", 1)) > 1:
+            raise SystemExit(
+                "--lane-skipband-weight > 0 requires --micro-batch-pairs 1: the batched twin does "
+                "not yet carry the lane_skipband term (fail-closed per the counted-but-inert "
+                "NO-FAKE rule; wire the LeverConfig twin before batching this lever).")
+        from tac.boundary_math.lane_skipband import skipband_target_and_mask
+        from tac.optimization.frame1_seg_safe_pose_atoms import _resize_map as _sb_resize_map
+        _sb_segH, _sb_segW = np.asarray(gt.lstars[0]).shape            # (384, 512)
+        _skipband_gt_prov = []
+        _skipband_w_prov = []
+        _sb_n_active = 0
+        for pi in range(P):
+            _cam = np.asarray(gt.gt_f1[pi], np.float32)                # (874,1164,3) camera GT [0,255]
+            _rs = np.stack([_sb_resize_map(_cam[:, :, ch], _sb_segH, _sb_segW)
+                            for ch in range(3)], axis=-1).astype(np.float32)   # (384,512,3)
+            _sb_t, _sb_msk = skipband_target_and_mask(
+                _rs, np.asarray(gt.lstars[pi]), dilate=skipband_dilate, lane_class=1)
+            _sb_n_active += int(_sb_msk.sum())
+            _skipband_gt_prov.append(mx.array(_sb_t[None]))            # (1,H/2,W/2)
+            _skipband_w_prov.append(mx.array(_sb_msk[None]))           # (1,H/2,W/2)
+        print(json.dumps({"stage": "lane_skipband", "active": True, "n_pairs": int(P),
+                          "weight": skipband_w, "dilate": int(skipband_dilate),
+                          "start_epoch": int(skipband_start),
+                          "band_px_total": int(_sb_n_active),
+                          "band_px_per_frame": round(_sb_n_active / max(P, 1), 1),
+                          "note": "ARM-C #524 stride-2 skip-band supervision (fractal memo §5: Lane "
+                          "= 77% of skip-detail flips; SB = D2 - U2(D4) on BT.601 luma; GT-matched "
+                          "on the dilated Lane band); DERIVED lever, RUN-GATED optimum; advisory; "
+                          "pointer UNMOVED"}), flush=True)
 
     # These providers are rebound from None to newly-built lists/geometry after LeverConfig was
     # constructed. Refresh them exactly once before the first value_and_grad invocation; gate/ramp dicts and
@@ -11871,6 +11962,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
                     print(json.dumps(lever_engage_row(
                         "lane_edge", status="fired", epoch=ep, via="configured_boundary")), flush=True)
+            # ARM-C #524 lane skip-band engagement gate + transition RE-TREAT (same discipline as lane).
+            if skipband_w > 0.0:
+                _sb_was = skipband_gate["on"]
+                skipband_gate["on"] = lever_gate_on_at_epoch(skipband_w, skipband_start, ep)
+                if skipband_gate["on"] and not _sb_was:
+                    recent_losses.clear()
+                    print(json.dumps({"stage": "lane_skipband_engage", "epoch": ep,
+                                      "start": skipband_start,
+                                      "note": "spike-guard re-treated (recent_losses cleared)"}), flush=True)
+                    print(json.dumps(lever_engage_row(
+                        "lane_skipband", status="fired", epoch=ep, via="configured_boundary")), flush=True)
             # LEVER-4 margin-saliency engagement gate + transition RE-TREAT (same discipline as lane).
             if msal_w > 0.0:
                 _msal_was = msal_gate["on"]
@@ -14622,6 +14724,26 @@ def main(argv: list[str] | None = None) -> int:
                     help="LEVER-3 OPTIMAL-FORM: engage the lane hinge only at ep>=this (0=from ep1=current "
                     "behavior). Gate to the tau_softplus/l7 margin stage (e.g. 300) to avoid the "
                     "margin-from-scratch-starves-interior failure; the engage epoch re-treats the spike-guard.")
+    # ARM-C #524 (LANE STRIDE-2 SKIP-BAND lever; SPEC_v10 §13.1 row 4; DSL LaneSkipBand). DERIVED from
+    # the frozen-SegNet recursive-fractal factorization §5 (MEASURED: final decoder block skipless =>
+    # ALL sub-stride-4 boundary localization flows through the ONE 16-ch stride-2 skip at (192,256);
+    # destroying its sub-stride-4 detail via down-up 2x induces flips that are 77% Road-Lane — Lane is
+    # THE skip-limited pair). The lever supervises the witness render's stride-2 SKIP-BAND detail
+    # SB = D2 - U2(D2(D2)) (BT.601 luma, [0,1]) against the GT frame's SB on the dilated GT-Lane band —
+    # shaping the Lane-band output to be LEGIBLE to the only channel through which the frozen scorer
+    # localizes Lane boundaries. Numpy reference authority: tac.boundary_math.lane_skipband (parity-
+    # tested). Default 0.0 => branch skipped => BYTE-IDENTICAL. Weight is the SWEPT intent — RUN-GATED
+    # optimum (duty-to-measure A/B), NOT a measured optimum. pointer UNMOVED (means).
+    ap.add_argument("--lane-skipband-weight", type=float, default=0.0,
+                    help="ARM-C #524: weight on the additive Lane skip-band supervision term "
+                    "(masked MSE of the witness render's stride-2 skip detail band vs GT on the "
+                    "dilated GT-Lane band; 0=off=byte-identical).")
+    ap.add_argument("--lane-skipband-start-epoch", type=int, default=0,
+                    help="ARM-C #524: engage the skip-band term only at ep>=this (0=from ep1); the "
+                    "engage epoch re-treats the spike-guard (same discipline as --lane-edge-start-epoch).")
+    ap.add_argument("--lane-skipband-dilate", type=int, default=2,
+                    help="ARM-C #524: Chebyshev dilation radius (full-res px) of the GT Lane class "
+                    "support forming the lane band before 2x max-pool to the (192,256) skip grid.")
     # LEVER-A (FiLM-RANK-FIX, ADDITIVE, ALL DEFAULT-OFF). Attacks the MEASURED per-pair FiLM modulation
     # participation-ratio collapse (3.34@CE -> 1.27@tau -> 1.19@l7: 91.8% of per-pair variation in ONE
     # axis -> the decoder receives ~1 effective per-pair direction -> caps d_seg AND held-out
