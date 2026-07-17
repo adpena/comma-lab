@@ -632,3 +632,51 @@ subpix_boundary, weight_entropy-λ15} vs the armed seg base (trainer-faithful Fo
   table must respect).
 This IS the completeness-table "demanded-by-measured-dynamics" column for the force terms. Standing per-run
 instrument (memory dual-metric-readback) — every long run gets this table.
+
+### §13.13 SOL-ultra TRUE-FINAL-FORM review fold (2026-07-17, rc=0) — the SPEC's "true-final" claim is DOWNGRADED pending 5 fixes
+Source: `.omx/research/sol_ultra_v10_true_final_form_review_20260717.md` (first successful SOL-ultra run of the
+session — validates the reaper/PTY fix; read-only, no launch/paid/pointer authority). Verdict:
+**`NOT_TRUE_FINAL / NOT_LAUNCH_CERTIFYING / SPEC_AND_COMPILER_REWRITE_REQUIRED`**. The strategic direction
+(task-space witnesses · generator-first rate · explicit boundary geometry · train-least · typed gates · exact
+evaluator closure) is AFFIRMED as a paradigm; four premises are unclosed. **None reject a paradigm — all are
+FORMULATION / IMPLEMENTATION / CUSTODY scope.** v10 is UNLAUNCHED ⇒ no live risk; these are pre-launch owed.
+
+Five launch-blocking fixes, each a routed task (consumption-gated per the disposition):
+1. **[#528 launch-safety] `w_pose` SQUARES the contest marginal under `--score-domain-loss`.** ADJUDICATED vs
+   Arm B's built `PoseMarginalWeightLaw` (§13.9): **SOL is mathematically correct.** The inner loss already
+   carries `pose_term=√(10·pose_l)` (`levelset_micro_batch_loss.py:326-329`); multiplying by
+   `w_pose=5/√(10·d_pose)` gives `dL/d(pose_l) ≈ 2.5/d_pose`, not the contest marginal `5/√(10·d_pose)` (which
+   is what you multiply RAW `d_pose` by). Arm B's law is admissible ONLY when the pose term is raw `d_pose`
+   (weight-domain loss); under score-domain loss `w_pose=1` IS the exact objective. Arm B's round-1 tests
+   fake-green'd it (finite-diff of the STANDALONE score derivative + string-search; never the composed loss).
+   FIX: compiler/launcher REFUSE `PoseMarginalWeightLaw AND score_domain_loss`; add a composed-gradient
+   regression test. verdict_scope=COMPOSITION.
+2. **[#529] The v10 "compiler" is a presence-checker, not a compiler** — `hasattr`/`Path.exists` probes fake-pass
+   on empty/stale/adverse/wrong-hash/wrong-axis artifacts; `compile_v10_capstone_launch_config` has NO success
+   path (unconditionally raises `post_gate_fold_owed`), contradicting SPEC:311-324. FIX: emit typed
+   `WitnessProgram`, resolve every LawRef, compile via the canonical constants compiler, parse with the REAL
+   trainer parser, return `(argv, manifest, config_hash)`; every receipt validator REOPENS bytes +
+   SHA/schema/provenance/axis/verdict/coverage/producer-consumer identity (= #332 bijection applied to v10).
+   verdict_scope=COMPILER IMPLEMENTATION.
+3. **[#530] Fresh-init cannot use fork/resume-only birth laws** — SPEC:24-29 says cold init + "never weights",
+   yet P2/P5 depend on `ForkHeadSolve` + `ForkEmaClearance` which REQUIRE `--resume-from` (#518 memo). FIX:
+   split `InitHeadSolve` (cold seeds + fresh head) from the fork-exclusive laws. verdict_scope=VEHICLE COMPOSITION.
+4. **[#531 HIGHEST-IMPACT delta] `T` must be an explicit class-/cell-conditioned quotient residual.** MEASURED:
+   flat realization d_seg=**0.0416** vs textured **0.0048** (8.7×) ⇒ sufficient statistic is at least
+   `W=(G,ξ,T)`, NOT `G` alone (the generic flat-cell/GEOM-ONLY theorem is FALSIFIED at generic-flat-cell scope;
+   nonlocal VJPs move remote decisions). v10 leaves `T` implicit in an undefined counted trunk ⇒ pays TWICE for
+   "solved" geometry. FIX: unique-custody `T`, train ONLY the quotient residual after deterministic
+   `G,ξ,seed,solve,projection` — this IS train-least/Kolmogorov made concrete. verdict_scope=FORMULATION.
+5. **[#532] Two MEASURED probes (real n600 cache, no scorer forward):** (a) the "exact range(A)" consumer is
+   exact ONLY over reals — real `P_A x` Δ=1.71e-13 but **valid uint8 `clip(round)` Δ=62.74** (0.059% out-of-gamut)
+   ⇒ the ker(A)/gauge carrier (p0_null_subspace) needs a lattice-feasible realization proof + scorer-equality
+   receipt before the n600 gauge sign-confirm; the fp64 projector theorem is INTACT, only "realized exactness"
+   falsified. (b) `identify_static_hood_class` returns class 4 (hood, correct) but CANNOT be the sky detector,
+   and its `frac_of_frame` (139.4, 3.51, …) is mis-scaled by frame-count ⇒ structured-init readiness is
+   fake-green; fix normalization + build a distinct sky/static-top detector. verdict_scope=IMPLEMENTATION/CUSTODY.
+
+Recursive-round bonus (independent CONFIRMATION of this session's own corrections): SOL round 6 FALSIFIED the
+post-ep725 "Force-3 + clean pose-crest" reading — a no-Force-3 control has the SAME cold-Muon fingerprint, and
+later σ_min telemetry oscillates/rebounds. This matches the session's F1-confound → cold-Muon attribution and
+the crest-is-oscillation correction — two independent adversarial arms converging is the strongest evidence we
+have that those reads are right.
