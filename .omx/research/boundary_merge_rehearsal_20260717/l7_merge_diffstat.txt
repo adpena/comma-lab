@@ -1,0 +1,17 @@
+Merge branch 'codexwt/l7_default_failloud_budget_eventlaw_20260715T152116Z' into rehearsal/boundary_merge_20260717
+
+ ...t_failloud_budget_eventlaw_anchor_20260715.json |  27 +++
+ ...failloud_budget_eventlaw_build_spec_20260715.md |  89 +++++++
+ .omx/state/lane_maturity_audit.log                 |   1 +
+ .omx/state/lane_registry.json                      |  41 ++++
+ ...rain_levelset_witness_realized_through_R_mlx.py |  45 +++-
+ ...event_conditional_wall_clock_budget_20260715.py | 114 +++++++++
+ .../local_acceleration/scorer_throughput_gate.py   | 270 +++++++++++++++++++--
+ src/tac/tests/test_crucible_v7_config.py           |  19 +-
+ .../test_curriculum_epoch_budget_guard_20260713.py |   4 +-
+ src/tac/tests/test_scorer_throughput_gate.py       |  77 ++++++
+ src/tac/tests/test_seg_form_unify_tau.py           |  34 +++
+ .../test_wallclock_default_on_perfenv_guard.py     |  36 ++-
+ src/tac/witness_autoconfig.py                      |   8 +-
+ tools/launch_witness_run.py                        |  36 ++-
+ 14 files changed, 744 insertions(+), 57 deletions(-)

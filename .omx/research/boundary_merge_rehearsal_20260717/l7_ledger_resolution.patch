@@ -1,0 +1,61 @@
+diff --git a/.omx/state/lane_maturity_audit.log b/.omx/state/lane_maturity_audit.log
+index 21c4023406..9b8306942a 100644
+--- a/.omx/state/lane_maturity_audit.log
++++ b/.omx/state/lane_maturity_audit.log
+@@ -6545,3 +6545,4 @@
+ {"after_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \".omx/research/costate_organ_elevation_20260716.md\", \"status\": true}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"src/tac/tests/test_costate_factorized_adjoint.py\", \"status\": true}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"lane_costate_organ_elevation_20260716\", \"lane_class\": \"advisory_controller\", \"level\": 1, \"name\": \"Costate organ exact-factorized elevation\", \"notes\": \"Task #516 exact-factorized costate organ; advisory-only; #205 scalar/binding backtest pass; per-class WF loses; mod32cap schema unavailable; c2 pending.\", \"phase\": 0.0, \"research_only\": true}", "args": {"evidence": "src/tac/tests/test_costate_factorized_adjoint.py", "gate": "strict_preflight", "lane_id": "lane_costate_organ_elevation_20260716"}, "before_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \".omx/research/costate_organ_elevation_20260716.md\", \"status\": true}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"\", \"status\": false}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"lane_costate_organ_elevation_20260716\", \"lane_class\": \"advisory_controller\", \"level\": 1, \"name\": \"Costate organ exact-factorized elevation\", \"notes\": \"Task #516 exact-factorized costate organ; advisory-only; #205 scalar/binding backtest pass; per-class WF loses; mod32cap schema unavailable; c2 pending.\", \"phase\": 0.0, \"research_only\": true}", "command": "mark", "timestamp": "2026-07-16T19:45:50Z"}
+ {"after_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \".omx/research/costate_organ_elevation_20260716.md\", \"status\": true}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"src/tac/tests/test_costate_factorized_adjoint.py\", \"status\": true}, \"three_clean_review\": {\"evidence\": \".omx/research/costate_organ_elevation_20260716.md\", \"status\": true}}, \"id\": \"lane_costate_organ_elevation_20260716\", \"lane_class\": \"advisory_controller\", \"level\": 1, \"name\": \"Costate organ exact-factorized elevation\", \"notes\": \"Task #516 exact-factorized costate organ; advisory-only; #205 scalar/binding backtest pass; per-class WF loses; mod32cap schema unavailable; c2 pending.\", \"phase\": 0.0, \"research_only\": true}", "args": {"evidence": ".omx/research/costate_organ_elevation_20260716.md", "gate": "three_clean_review", "lane_id": "lane_costate_organ_elevation_20260716"}, "before_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \".omx/research/costate_organ_elevation_20260716.md\", \"status\": true}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"src/tac/tests/test_costate_factorized_adjoint.py\", \"status\": true}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"lane_costate_organ_elevation_20260716\", \"lane_class\": \"advisory_controller\", \"level\": 1, \"name\": \"Costate organ exact-factorized elevation\", \"notes\": \"Task #516 exact-factorized costate organ; advisory-only; #205 scalar/binding backtest pass; per-class WF loses; mod32cap schema unavailable; c2 pending.\", \"phase\": 0.0, \"research_only\": true}", "command": "mark", "timestamp": "2026-07-16T19:59:28Z"}
+ {"after_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \"\", \"status\": false}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"\", \"status\": false}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"curvelet_optimal_form_crux_20260715\", \"level\": 0, \"name\": \"Curvelet optimal-form placement and equal-byte through-R\", \"notes\": \"\", \"phase\": 0.0}", "args": {"lane_id": "curvelet_optimal_form_crux_20260715", "name": "Curvelet optimal-form placement and equal-byte through-R", "notes": "", "phase": 0.0}, "before_state": "null", "command": "add-lane", "timestamp": "2026-07-16T19:30:14Z"}
++{"after_state": "{\"gates\": {\"contest_cpu\": {\"evidence\": \"\", \"status\": false}, \"contest_cuda\": {\"evidence\": \"\", \"status\": false}, \"deploy_runbook\": {\"evidence\": \"\", \"status\": false}, \"impl_complete\": {\"evidence\": \"\", \"status\": false}, \"memory_entry\": {\"evidence\": \"\", \"status\": false}, \"real_archive_empirical\": {\"evidence\": \"\", \"status\": false}, \"strict_preflight\": {\"evidence\": \"\", \"status\": false}, \"three_clean_review\": {\"evidence\": \"\", \"status\": false}}, \"id\": \"l7_default_failloud_budget_eventlaw\", \"level\": 0, \"name\": \"L7 fail-loud default and event-conditional budget law\", \"notes\": \"Delegated isolated-worktree implementation; MAIN landing review required. No launch authority.\", \"phase\": 1.0}", "args": {"lane_id": "l7_default_failloud_budget_eventlaw", "name": "L7 fail-loud default and event-conditional budget law", "notes": "Delegated isolated-worktree implementation; MAIN landing review required. No launch authority.", "phase": 1.0}, "before_state": "null", "command": "add-lane", "timestamp": "2026-07-15T15:24:58Z"}
+diff --git a/.omx/state/lane_registry.json b/.omx/state/lane_registry.json
+index 47ef37dd0a..b92d0ba15d 100644
+--- a/.omx/state/lane_registry.json
++++ b/.omx/state/lane_registry.json
+@@ -78648,6 +78648,47 @@
+         }
+       },
+       "notes": ""
++    },
++    {
++      "id": "l7_default_failloud_budget_eventlaw",
++      "name": "L7 fail-loud default and event-conditional budget law",
++      "phase": 1.0,
++      "level": 0,
++      "gates": {
++        "impl_complete": {
++          "status": false,
++          "evidence": ""
++        },
++        "real_archive_empirical": {
++          "status": false,
++          "evidence": ""
++        },
++        "contest_cuda": {
++          "status": false,
++          "evidence": ""
++        },
++        "contest_cpu": {
++          "status": false,
++          "evidence": ""
++        },
++        "strict_preflight": {
++          "status": false,
++          "evidence": ""
++        },
++        "three_clean_review": {
++          "status": false,
++          "evidence": ""
++        },
++        "memory_entry": {
++          "status": false,
++          "evidence": ""
++        },
++        "deploy_runbook": {
++          "status": false,
++          "evidence": ""
++        }
++      },
++      "notes": "Delegated isolated-worktree implementation; MAIN landing review required. No launch authority."
+     }
+   ],
+   "level_rules": {

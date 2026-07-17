@@ -1,0 +1,43 @@
+[
+  {
+    "id": "l7_default_failloud_budget_eventlaw",
+    "name": "L7 fail-loud default and event-conditional budget law",
+    "phase": 1.0,
+    "level": 0,
+    "gates": {
+      "impl_complete": {
+        "status": false,
+        "evidence": ""
+      },
+      "real_archive_empirical": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cuda": {
+        "status": false,
+        "evidence": ""
+      },
+      "contest_cpu": {
+        "status": false,
+        "evidence": ""
+      },
+      "strict_preflight": {
+        "status": false,
+        "evidence": ""
+      },
+      "three_clean_review": {
+        "status": false,
+        "evidence": ""
+      },
+      "memory_entry": {
+        "status": false,
+        "evidence": ""
+      },
+      "deploy_runbook": {
+        "status": false,
+        "evidence": ""
+      }
+    },
+    "notes": "Delegated isolated-worktree implementation; MAIN landing review required. No launch authority."
+  }
+]
