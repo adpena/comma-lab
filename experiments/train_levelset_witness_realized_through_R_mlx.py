@@ -8357,6 +8357,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             "--w-pose-marginal-law requires --pose-finish-start-epoch > 0 (the pose-finish stage "
             "is the law's consumption point); with pose co-trained from ep0 the flag would be "
             "counted-but-inert (NO-FAKE). Arm the two-phase or drop the law.")
+    # (SOL v10 review A2-C1 / SPEC_v10 §13.13) COMPILE-REFUSE the law + score-domain loss.
+    # The marginal w = 5/sqrt(10*d_pose) IS the exact dS/dd_pose — the weight you apply to a RAW
+    # d_pose loss term so that dL/dd_pose = w*1 = the contest marginal. But under
+    # --score-domain-loss the pose term is ALREADY sqrt(10*d_pose) (the exact score contribution),
+    # so multiplying it by the marginal gives dL/dd_pose = w * d(sqrt(10*d_pose))/dd_pose =
+    # (5/sqrt(10*d_pose))^2 = 2.5/d_pose — the contest marginal SQUARED, not the marginal. Under
+    # score-domain loss the exact objective is w_pose = 1 (the sqrt term is already the score). The
+    # marginal law is admissible ONLY with weight-domain loss (--no-score-domain-loss, a raw-d_pose
+    # term). Fail-closed here (the launch path) before any training rides the squared gradient.
+    if _w_pose_law_on and bool(getattr(args, "score_domain_loss", True)):
+        raise ValueError(
+            "--w-pose-marginal-law is INCOMPATIBLE with --score-domain-loss (default ON). Under "
+            "score-domain loss the pose term is ALREADY sqrt(10*d_pose) (the exact score "
+            "contribution); multiplying it by the marginal 5/sqrt(10*d_pose) SQUARES the contest "
+            "marginal (dL/dd_pose ~ (5/sqrt(10*d_pose))^2 = 2.5/d_pose, NOT the contest "
+            "5/sqrt(10*d_pose)). Under score-domain loss the exact objective is --w-pose 1 (the "
+            "sqrt term IS the score). The marginal law is admissible ONLY with weight-domain loss "
+            "(--no-score-domain-loss, a raw-d_pose term) where dL/dd_pose = w_pose*1 = the contest "
+            "marginal. Either pass --no-score-domain-loss OR drop --w-pose-marginal-law and use a "
+            "static --w-pose. (SOL v10 review A2-C1; SPEC_v10 §13.13.)")
     if _w_pose_law_on and not (float(getattr(args, "w_pose_marginal_clamp", 100.0)) > 0.0):
         raise ValueError("--w-pose-marginal-clamp must be > 0")
     if _pose_finish_start > 0:

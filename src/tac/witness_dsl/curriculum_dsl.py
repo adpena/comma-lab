@@ -2129,7 +2129,16 @@ def PoseMarginalWeightLaw(clamp: float | None = None) -> Lever:
     Consumption point: the POSE-FINISH stage only (the trainer fails loud if the two-phase arm is
     absent — inert-flag NO-FAKE guard). Updated at VERDICT cadence when a measured d_pose lands
     (piecewise-constant, never per-step — SPEC_v75 §8 loss-weights-at-boundaries). DEFAULT-OFF;
-    absent ⇒ byte-identical."""
+    absent ⇒ byte-identical.
+
+    ⚠ INCOMPATIBLE with score-domain loss (SOL v10 review A2-C1; SPEC_v10 §13.13). The marginal
+    ``w = 5/sqrt(10*d_pose)`` is the exact ``dS/dd_pose`` — the weight for a RAW-``d_pose`` (weight-
+    domain) loss term, where ``dL/dd_pose = w*1`` = the contest marginal. Under ``--score-domain-loss``
+    (trainer default ON) the pose term is ALREADY ``sqrt(10*d_pose)`` (the exact score contribution),
+    so applying this weight yields ``dL/dd_pose = (5/sqrt(10*d_pose))^2`` = the marginal SQUARED. The
+    trainer (the fail-closed launch authority) REFUSES ``--w-pose-marginal-law`` together with
+    ``--score-domain-loss``; this law is admissible ONLY with ``--no-score-domain-loss``. Under
+    score-domain loss the exact objective is a static ``--w-pose 1`` (the sqrt term IS the score)."""
     from tac.witness_dsl.lawref import LADDER_DERIVED_AT_CONFIG, InputRef, LawRef
 
     from tac.canonical_equations.w_pose_marginal_weight_law_20260717 import (

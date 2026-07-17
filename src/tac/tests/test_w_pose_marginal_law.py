@@ -109,3 +109,59 @@ def test_trainer_consumes_law_at_pose_finish_and_fail_louds_inert_arm():
     assert "--w-pose-marginal-law requires --pose-finish-start-epoch > 0" in src
     # telemetry row for observability (verdict-cadence piecewise-constant updates)
     assert '"stage": "w_pose_marginal_law"' in src
+
+
+# ── SOL v10 review A2-C1: the COMPOSED-gradient bug + the compile-refuse guard ── #
+#
+# The prior tests finite-difference the STANDALONE marginal against S_pose(d)=sqrt(10*d) — they
+# NEVER differentiate the COMPOSED training loss w_pose*pose_term. That gap let the law compose
+# WRONGLY with --score-domain-loss (default ON), where pose_term is ALREADY sqrt(10*d_pose), so
+# the marginal weight squares the contest marginal. These tests differentiate the REAL composed
+# loss in BOTH loss domains and assert the launch-path fail-closed refuse.
+
+def _composed_grad(pose_term_fn, w_pose_fn, d, h_rel=1e-6):
+    """Central finite-difference of dL/dd_pose where L(d) = w_pose(d) * pose_term(d),
+    with w_pose held at its d-VALUE (piecewise-constant at verdict cadence — NOT differentiated,
+    matching the trainer's `_w_pose_now` holder)."""
+    w = w_pose_fn(d)
+    h = d * h_rel
+    return w * (pose_term_fn(d + h) - pose_term_fn(d - h)) / (2 * h)
+
+
+def test_composed_gradient_score_domain_plus_law_SQUARES_the_marginal():
+    """SCORE-DOMAIN loss (pose_term = sqrt(10*d)) * marginal law = the marginal SQUARED (the BUG)."""
+    score_domain_term = lambda d: math.sqrt(10.0 * d)  # noqa: E731
+    for d in (1e-3, 1e-2, 1e-1):
+        # unclamped region (d > crossover 2.5e-4) so w_pose == the raw marginal
+        composed = _composed_grad(score_domain_term, w_pose_marginal, d)
+        contest_marginal = w_pose_marginal(d)           # = 5/sqrt(10*d) = dS/dd_pose
+        assert composed == pytest.approx(contest_marginal ** 2, rel=1e-4)  # SQUARED
+        assert composed != pytest.approx(contest_marginal, rel=1e-2)       # NOT the marginal
+        # concretely = 2.5/d
+        assert composed == pytest.approx(2.5 / d, rel=1e-4)
+
+
+def test_composed_gradient_score_domain_correct_objective_is_w_pose_one():
+    """Under score-domain loss the EXACT objective is w_pose=1 (the sqrt term IS the score)."""
+    score_domain_term = lambda d: math.sqrt(10.0 * d)  # noqa: E731
+    for d in (1e-3, 1e-2, 1e-1):
+        composed_w1 = _composed_grad(score_domain_term, lambda _d: 1.0, d)
+        assert composed_w1 == pytest.approx(w_pose_marginal(d), rel=1e-4)  # == the contest marginal
+
+
+def test_composed_gradient_weight_domain_plus_law_IS_the_contest_marginal():
+    """WEIGHT-DOMAIN loss (pose_term = raw d) * marginal law = the contest marginal (CORRECT)."""
+    weight_domain_term = lambda d: d  # noqa: E731  (raw d_pose loss term)
+    for d in (1e-3, 1e-2, 1e-1):
+        composed = _composed_grad(weight_domain_term, w_pose_marginal, d)
+        assert composed == pytest.approx(w_pose_marginal(d), rel=1e-4)  # dL/dd = w*1 = marginal
+
+
+def test_trainer_compile_refuses_law_plus_score_domain_loss():
+    """The launch-path (trainer) MUST fail-closed on --w-pose-marginal-law + --score-domain-loss."""
+    src = _TRAINER.read_text(errors="ignore")
+    # the guard reads the flag AND score_domain_loss, and refuses
+    assert 'getattr(args, "score_domain_loss"' in src
+    assert "INCOMPATIBLE with --score-domain-loss" in src
+    assert "SQUARES the contest" in src  # split across line-continuation literals in the trainer
+    assert "SOL v10 review A2-C1" in src
