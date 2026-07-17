@@ -35,11 +35,17 @@ Internal rules for the public body (binding):
   bytes, on 1:1 contest hardware (Linux x86_64 for CPU; T4-class for CUDA). macOS/M5 CPU rows are
   `[macOS-CPU advisory]` and are FORBIDDEN in the body. Reference the CI axis explicitly (Yousfi's bot
   evals on x86 `ubuntu-latest`, `device: cpu`).
-- CITATION POLICY (operator 2026-07-17): cite ONLY what we actually use. Every submission since #95
-  builds on its work, so the public credits are: the contest scaffold, @AaronLeslie138's #95 (the
-  acknowledged root), @Quantizr's #55/#56 (the stored-target concept we draw on), and commaai's own
-  openpilot/comma10k priors. Do NOT cite later submissions (#125/#127/#128/#129 etc.) unless we
-  specifically use their code — we don't, and no claim is made about them in either direction.
+- CITATION POLICY (operator 2026-07-17, refined): cite ONLY what we actually use.
+  * @AaronLeslie138's #95 is credited as a PIVOT POINT, not an ancestor: it showed what a tiny
+    learned decoder could do here and revealed the limits of its own approach; our model, objective,
+    architecture, and curriculum were then developed originally from a different formulation. Do not
+    frame us as "building on" #95 — every OTHER submission does; we ship none of its code or design.
+  * @Quantizr's #55/#56: the stored-target conditioning concept we genuinely draw on — keep.
+  * commaai's own scaffold + openpilot/comma10k priors — keep.
+  * Do NOT cite later submissions (#125/#127/#128/#129 etc.) unless we SPECIFICALLY use their code.
+  * BYTE-SHAVING (conditional): at byte-close we may or may not adopt others' byte-shaving methods
+    depending on how the tests go. IF adopted (their code/method used), add the specific credit at
+    fill time; if not adopted, cite nothing. This is a `${...}`-gated decision, not a default credit.
   Keep the tone plain and concrete — an engineer explaining, not an abstract.
 
 ## Why this draft exists now (process signal from #125/#127/#128/#129, 2026-07-12)
@@ -175,9 +181,13 @@ OMIT this sentence entirely.}
 Lineage & credit (full list in `THIRD_PARTY_NOTICES.md`):
 - Contest scaffold (unchanged): `upstream/evaluate.py`, the frozen SegNet/PoseNet, the `inflate.sh`
   convention.
-- Ideas we learned from (no code or weights reused): the staged-curriculum + EMA discipline of
-  @AaronLeslie138's #95, the root every submission since builds on; @Quantizr's #55/#56
-  stored-target/FiLM conditioning concept.
+- What we learned from (no code or weights reused): @AaronLeslie138's #95 was the pivot point — it
+  showed what a tiny learned decoder can do here, and studying it (including where its approach tops
+  out) is what pushed us to develop our own model, objective, architecture, and curriculum from a
+  different formulation. @Quantizr's #55/#56 stored-target conditioning is the one design concept we
+  directly adapted.
+${IF_BYTE_SHAVING_ADOPTED_AT_PACKAGING: add one bullet crediting the specific byte-shaving
+method/code actually used, with its PR/author; OMIT entirely if none adopted.}
 - Train-time priors only (never shipped, never counted): openpilot lane/camera geometry and comma10k
   class conventions.
 - No code, weights, latents, or archive sections from any merged or open submission are included.
