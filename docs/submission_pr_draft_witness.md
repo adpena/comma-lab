@@ -25,11 +25,16 @@ Internal rules for the public body (binding):
   `Co-Authored-By: Claude` + a `Claude-Session:` URL if not stripped).
 - No private paths, fleet IPs, provider names, or `.omx`/internal task-number internals in the body.
   Links only to the hosted release asset + (optionally) a sanitized public writeup.
-- Every score in the body is recomputed from `upstream/evaluate.py` component output on the EXACT
-  hosted archive bytes, on 1:1 contest hardware (Linux x86_64 for CPU; T4-class for CUDA). macOS/M5
-  CPU rows are `[macOS-CPU advisory]` and are FORBIDDEN in the body. Report full precision on both
-  axes; NEVER the rounded 2-dp `final_score`. Reference the CI axis explicitly (Yousfi's bot evals on
-  x86 `ubuntu-latest`, `device: cpu`).
+- The `report.txt` field is the LITERAL `upstream/evaluate.py` output block, verbatim (the
+  `=== Evaluation results over 600 samples ===` header + the exact component labels + the
+  `Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = …` line) — this is what every
+  accepted PR (#95/#101/#102/#103/#128) pastes. Then add ONE full-precision recompute line beneath it.
+- Every score is recomputed from `upstream/evaluate.py` component output on the EXACT hosted archive
+  bytes, on 1:1 contest hardware (Linux x86_64 for CPU; T4-class for CUDA). macOS/M5 CPU rows are
+  `[macOS-CPU advisory]` and are FORBIDDEN in the body. Reference the CI axis explicitly (Yousfi's bot
+  evals on x86 `ubuntu-latest`, `device: cpu`).
+- Credit lineage with @-handles (ecosystem norm): @AaronLeslie138 (#95), @Quantizr (#55/#56),
+  @ryanli0070 (#127/#129). Keep the tone plain and concrete — an engineer explaining, not an abstract.
 
 ## Why this draft exists now (process signal from #125/#127/#128/#129, 2026-07-12)
 
@@ -114,56 +119,62 @@ levelset_taskspace_witness
 # upload zipped `archive.zip`
 Hosted as a release asset (`curl -L` works):
 ${RELEASE_ASSET_URL}
-
-SHA-256 `${ARCHIVE_SHA256}`, ${ARCHIVE_BYTES} bytes, single ZIP member `0.bin` (${ZIP_METHOD}).
+sha256:${ARCHIVE_SHA256}, ${ARCHIVE_BYTES} bytes, single ZIP member `${ZIP_MEMBER}` (${ZIP_METHOD}).
+Rebuilt byte-for-byte by `compress.sh` (the build asserts the member and archive SHA-256).
 
 # report.txt
 ```
-${PASTE FULL report.txt FROM upstream/evaluate.py ON THE EXACT HOSTED BYTES — CPU AXIS}
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: ${DPOSE}
+  Average SegNet Distortion: ${DSEG}
+  Submission file size: ${ARCHIVE_BYTES} bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: ${RATE}
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = ${SCORE_2DP}
 ```
-Full precision (recomputed from the printed components): `${WITNESS_BYTECLOSED_CPU}` on Linux x86_64
-CPU (seg `${DSEG}`, pose `${DPOSE}`, rate `${RATE}`); T4 CUDA: `${SCORE_CUDA}`.
-(`evaluate.py` prints 2 dp; the numbers above are the full-precision recompute on the exact bytes.)
+Exact score from the CPU report components: `${WITNESS_BYTECLOSED_CPU}` (Linux x86_64 /
+`ubuntu-latest` CPU). T4 CUDA (tuning axis): `${SCORE_CUDA}`.
 
 # does your submission require gpu for evaluation (inflation)?
-no — inflate is CPU-only (device pinned to CPU; same-host deterministic; cross-host reproducible via
-the fp64 forward path). Deps: ${VERIFY_FINAL_DEPS — the audited set, e.g. numpy, brotli, torch, scipy;
-all installed by the packet}. Inflation completes in ${INFLATE_MINUTES} min on a contest-class CPU
-runner (measured on the shipped fp64 packet).
+no — inflation is CPU-only (device pinned to CPU; deterministic on a given host, and reproducible
+across hosts via the fp64 forward). Deps: ${VERIFY_FINAL_DEPS — the audited set, e.g. numpy, brotli,
+torch, scipy}, all installed by the packet. Inflation runs in ${INFLATE_MINUTES} min on the contest
+CPU runner.
 
 # did you include the compression script? and want it to be merged?
-yes — `compress.sh` rebuilds `archive.zip` byte-for-byte (seeded + deterministic: single recorded
-seed, same inputs → same bytes). The training/optimization pipeline is described below. The submission
-shares no code with previously merged submissions (new decoder family, own archive grammar and
-coders) — verified by a code diff against the merged submissions.
+yes — `compress.sh` rebuilds `archive.zip` byte-for-byte (seeded, deterministic; same inputs → same
+bytes) and asserts the archive SHA-256. Please merge if accepted. It's a new decoder family with its
+own archive grammar and coders, so it shares no code with previously merged submissions (verified by
+a code diff).
 
 # is this submission competitive or innovative? explain why
-Innovative. This is not an HNeRV/NeRV descendant. The decoder is a task-space "level-set witness" — a
-small coordinate-INR trained only against the frozen scorers (no full-RGB reconstruction objective),
-so it spends its bytes on the SegNet segmentation boundary and the pose-relevant image structure
-rather than on pixel fidelity. Everything deterministic and generic lives in `inflate.py` (free per
-the rules); `archive.zip` carries only the learned payload: the INR weights, the per-pair ego motion
-ξ (quantized + entropy-coded, ~${DXI_BYTES} B), and small per-class seeds. Training runs through the
-exact inflate chain (bicubic→874×1164, uint8 straight-through, exact packing grid), so the optimizer
-sees exactly what ships. The boundary objective is a margin-based surrogate derived from the level-set
-formulation (a smooth argmax-flip fraction with annealed temperature); PRs #127/#129 use a related
-`sigmoid(-margin/τ)` boundary surrogate, which we credit. Pose is not reconstructed from pixels: the
-render is conditioned on the stored ξ, in the spirit of #55/#56's stored-target conditioning.
-${IF_AND_ONLY_IF the measured witness CI row beats the re-verified CI leaderboard best, ADD one
-sentence: "It is also competitive: CPU ${WITNESS_BYTECLOSED_CPU} (x86 CI axis) vs the current
-leaderboard best ${CI_BEST} (#N, x86 CI). Otherwise OMIT this sentence."}
+Innovative. It isn't an HNeRV/NeRV variant. The decoder is a small coordinate network (an INR) trained
+only against the two frozen scorers — no RGB reconstruction loss at all — so it spends its bytes on the
+SegNet class boundary and the pose-relevant image structure instead of on picture quality. All the
+generic, deterministic code lives in `inflate.py` (free per the rules); `archive.zip` holds only the
+learned payload: the network weights, the per-pair ego motion `ξ` (quantized + entropy-coded,
+~${DXI_BYTES} B), and a few small per-class seeds. Training runs through the exact inflate chain
+(bicubic→874×1164, uint8 straight-through, the real packing grid), so what the optimizer sees is
+exactly what ships. The boundary loss is a margin-based surrogate from the level-set formulation;
+@ryanli0070's #127/#129 use a related `sigmoid(-margin/τ)` boundary loss, which we credit. Pose isn't
+reconstructed from pixels — the render is conditioned on the stored `ξ`, in the spirit of @Quantizr's
+#55/#56 stored-target conditioning.
+${IF the measured witness CI row beats the re-verified CI leaderboard best, ADD: "It is also
+competitive: ${WITNESS_BYTECLOSED_CPU} (x86 CI) vs the leaderboard best ${CI_BEST} (#N)." OTHERWISE
+OMIT this sentence entirely.}
 
 # additional comments
-Lineage & attribution (full list in `THIRD_PARTY_NOTICES.md`):
-- Contest scaffold: `upstream/evaluate.py`, frozen SegNet/PoseNet, `inflate.sh` convention (commaai).
-- Conceptual lessons (no code or weights reused): the PR #95 family's staged-curriculum + EMA
-  discipline (#95/#100/#101); #55/#56 stored-target/FiLM conditioning concept; a related boundary
-  surrogate in #127/#129 (credited above).
+Lineage & credit (full list in `THIRD_PARTY_NOTICES.md`):
+- Contest scaffold (unchanged): `upstream/evaluate.py`, the frozen SegNet/PoseNet, the `inflate.sh`
+  convention.
+- Ideas we learned from (no code or weights reused): the staged-curriculum + EMA discipline of
+  @AaronLeslie138's #95 line (#95/#98/#101); @Quantizr's #55/#56 stored-target/FiLM conditioning; a
+  related boundary surrogate in @ryanli0070's #127/#129 (credited above).
 - Train-time priors only (never shipped, never counted): openpilot lane/camera geometry and comma10k
-  class conventions (commaai's own public stack).
+  class conventions.
 - No code, weights, latents, or archive sections from any merged or open submission are included.
-Reproduction: `compress.sh` (deterministic, seeded); evaluation is the canonical
-`archive.zip -> inflate.sh -> upstream/evaluate.py` path on CPU.
+Reproduce: `compress.sh` (deterministic, seeded); evaluate via the standard
+`archive.zip → inflate.sh → upstream/evaluate.py` path on CPU.
 ${OPTIONAL_WRITEUP_URL}
 ````
 
