@@ -1540,7 +1540,8 @@ def bench_marginal_decomposition(
 
 def _update_dry_start_progress(out_dir: Path, update: dict) -> None:
     """B1 incremental durability: persist per-pass progress ATOMICALLY so a hard kill
-    (SIGKILL / sandbox teardown — the 20260716T211713Z chain death) leaves pass-level
+    (SIGKILL / sandbox teardown — or the 20260716T211713Z receipt-less-for-hours
+    phantom-death ambiguity) leaves pass-level
     evidence even when the final receipt never lands. Best-effort; never raises."""
     path = Path(out_dir) / "dry_start_progress.json"
     try:
@@ -1791,8 +1792,10 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
                    projected_peak_gib: float | None = None) -> int:
     """B1 durability wrapper (p0_launcher_chain_durability_20260717): ANY exit of the
     dry-start chain — exception, rc path, or catchable signal (SIGTERM) — leaves a
-    dry_start_report.json receipt. The 20260716T211713Z chain died mid-pass-2 with NO
-    receipt anywhere; a chain that dies must leave a receipt saying so, never silence.
+    dry_start_report.json receipt. Anchor: the 20260716T211713Z chain ran RECEIPT-LESS for
+    hours mid-pass and was misdiagnosed as dead (phantom death — buffered log + misfired
+    ps|grep; postmortem .omx/research/launcher_chain_death_postmortem_20260717.md); with
+    receipts + progress files + the watchdog, silence is a SIGNAL instead of ambiguity.
     SIGKILL/sandbox-teardown remains uncatchable — tools/witness_chain_watchdog.py owns
     that gap. Also WARNS when the spawn context looks like a SANDBOXED harness call (the
     documented spawn_durable_daemon killer class: sandboxed-launch non-durability)."""
@@ -1803,8 +1806,8 @@ def _run_dry_start(args, config: str, overfit: bool, out_dir: Path, label: str,
               "TAC_DURABLE_SPAWN marker — this dry-start chain appears to run as a DIRECT "
               "harness child, not via tools/spawn_durable_daemon.py. If the spawning Bash "
               "call is SANDBOXED, the whole chain dies at sandbox teardown (spawn_durable_"
-              "daemon.py docstring 'SANDBOXED-LAUNCH NON-DURABILITY'; the 20260716T211713Z "
-              "death signature). Launch via spawn_durable_daemon from an unsandboxed shell.",
+              "daemon.py docstring 'SANDBOXED-LAUNCH NON-DURABILITY'). Launch via "
+              "spawn_durable_daemon from an unsandboxed shell.",
               file=sys.stderr)
 
     def _on_term(signum, _frame):  # noqa: ANN001
