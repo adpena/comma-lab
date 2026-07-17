@@ -5396,6 +5396,198 @@ def HeadOffsetSolver(mode: str = "ot_newton", tau: float = 1.0) -> Lever:
     )
 
 
+def ResumeLRWarmup(beta2: float = 0.999, steps_per_epoch: int = 75, c: float = 2.0,
+                   floor: float = 0.1, shape: str = "linear") -> Lever:
+    """p0_resume_warmup_geometry_20260717 item 2 (#518): beta2-DERIVED LR-rewarmup window.
+
+    The window length resolves through the canonical law ``adam_v_variance_warmup_length_v1``
+    (``warmup_epochs = ceil(c/(1-beta2)/steps_per_epoch)``; RAdam variance-rectification
+    rationale, arXiv 1908.03265): with fresh/reset AdamW moments the early steps are
+    quasi-isotropic (v~=0), so the LR ramp must SPAN the second-moment memory ``1/(1-beta2)``
+    steps — ``c=1`` reproduces the sister bound ``rewarmup_beta2_memory_window_v1`` exactly;
+    ``c~=2`` (default) is the conservative multiple. The config-of-record constant 8 (mod32cap/
+    c2 launch.sh — UNDER the c=1 bound, the sister law's "cert8_satisfies: false" anchor) is
+    preserved as the LawRef FALLBACK on the value-provenance ladder (DERIVED > CONFIG).
+
+    Trainer legs: ``--stage-transition-rewarmup-epochs/-floor/-shape`` consumed by
+    ``_stage_rewarmup_factor`` at every registered boundary — the item-1 widened resume
+    trigger, the curriculum/tau-octave boundaries, and the item-6a pose-engage boundary.
+    ADDITIVE lever: not part of any sealed spec (the live c2 spec keeps its compiled hash);
+    composing it OVERRIDES the config constant with the derived value. c2 defaults:
+    steps_per_epoch = 75 (600 pairs / accum 8, the MEASURED run value) => 27 epochs.
+    means != ends: config-derivation law; pointer moves only through exact eval."""
+    if not 0.0 < float(beta2) < 1.0:
+        raise ValueError(f"ResumeLRWarmup: beta2 must be in (0,1), got {beta2!r}")
+    if int(steps_per_epoch) <= 0:
+        raise ValueError(f"ResumeLRWarmup: steps_per_epoch must be > 0, got {steps_per_epoch!r}")
+    if not float(c) > 0.0:
+        raise ValueError(f"ResumeLRWarmup: c must be > 0, got {c!r}")
+    if not 0.0 <= float(floor) <= 1.0:
+        raise ValueError(f"ResumeLRWarmup: floor must be in [0,1], got {floor!r}")
+    if str(shape) not in ("linear", "cosine"):
+        raise ValueError(f"ResumeLRWarmup: shape must be linear|cosine, got {shape!r}")
+    from tac.canonical_equations.adam_v_variance_warmup_20260717 import (
+        CONFIG_OF_RECORD_REWARMUP_EPOCHS,
+        adam_v_variance_warmup_epochs,
+    )
+    from tac.witness_dsl.lawref import LADDER_DERIVED_AT_CONFIG, InputRef, LawRef
+
+    epochs = int(adam_v_variance_warmup_epochs(float(beta2), int(steps_per_epoch), c=float(c)))
+    ref = LawRef(
+        equation_id="adam_v_variance_warmup_length_v1",
+        inputs={
+            "beta2": InputRef.literal(
+                float(beta2), "AdamW beta2 (trainer default 0.999 / --adam-beta2)"),
+            "steps_per_epoch": InputRef.literal(
+                int(steps_per_epoch),
+                "MEASURED optimizer steps/epoch = ceil(pairs/accum) (c2: 600/8 = 75; the "
+                "sister law's run-2 anchor value)"),
+            "c": InputRef.literal(
+                float(c), "conservative multiple of the 1/(1-beta2) memory (RAdam rationale; "
+                          "c=1 == the sister rewarmup_beta2_memory_window_v1 bound)"),
+        },
+        ladder_class=LADDER_DERIVED_AT_CONFIG,
+        fallback=int(CONFIG_OF_RECORD_REWARMUP_EPOCHS),
+        fallback_waiver_reason=(
+            "config-of-record CONFIG-rung constant 8 (mod32cap/c2 launch.sh "
+            "--stage-transition-rewarmup-epochs 8) — value-provenance ladder DERIVED > CONFIG; "
+            "the 8 sits UNDER the c=1 memory bound (sister anchor cert8_satisfies=false)"),
+    )
+    return Lever(
+        "resume_lr_rewarmup",
+        overrides={"--stage-transition-rewarmup-epochs": epochs,
+                   "--stage-transition-rewarmup-floor": float(floor),
+                   "--stage-transition-rewarmup-shape": str(shape)},
+        lawrefs={"--stage-transition-rewarmup-epochs": ref},
+        notes=(f"#518 item 2: beta2-derived LR-rewarmup window ({epochs} ep = "
+               f"ceil({c}/(1-{beta2})/{steps_per_epoch})) via adam_v_variance_warmup_length_v1; "
+               "config-of-record 8 preserved as the LawRef fallback (DERIVED > CONFIG)"),
+    )
+
+
+def PoseEngageWPoseRamp() -> Lever:
+    """p0_resume_warmup_geometry_20260717 item 6b (#518): cosine w_pose ramp-in at pose engage.
+
+    The in-loop ``pose_finish_engage`` flips ``_w_pose_now`` 0 -> full w_pose as a STEP — a
+    stiff term landing FULL-WEIGHT on AdamW moments trained without it (the H5-F3 level-shift
+    class the C11 resume stiff-drift detector catches at RESUME but never sees in-loop, at
+    ~ep1000 on the c2 plant). Trainer leg: ``--pose-engage-wpose-ramp`` cosine-ramps w_pose
+    over ``--stage-transition-rewarmup-epochs`` from the engage epoch (the same window the
+    item-6a boundary registration anchors the LR ramp to). DEFAULT OFF trainer-side => the
+    incumbent step is byte-identical; this lever is the tracked ON state (duty-to-measure:
+    never-fired until an A/B run consumes it)."""
+    return Lever(
+        "pose_engage_wpose_ramp",
+        overrides={"--pose-engage-wpose-ramp": True},
+        notes="#518 item 6b: cosine w_pose 0->full over the rewarmup window from pose-engage "
+              "(kills the stiff-step-onto-cold-moments H5-F3 class at the ~ep1000 boundary); "
+              "pairs with the item-6a last_boundary_epoch registration (LR ramp at engage)",
+    )
+
+
+def ForkHeadSolve(mode: str = "flip_median", tau: float = 1.0, freeze_epochs: int = 0) -> Lever:
+    """p0_resume_warmup_geometry_20260717 item 3 (#518): APPLIED head solve at a warm-start fork.
+
+    Runs the EXISTING #288/#386 rank-4 head machinery
+    (:func:`tac.boundary_math.laguerre_logit_offset.solve_head_offsets`) on the RESTORED
+    weights BEFORE the first training step and APPLIES the solved zero-sum b* to the LIVE
+    ``out_sdf.bias`` AND the EMA shadow — unlike the advisory :func:`HeadOffsetSolver` (which
+    folds into a deploy COPY and never mutates the run). The pre-loop v0 verdict immediately
+    after the solve is the MEASURED receipt (the item-5 schedule positioning runs first, so phi
+    is computed at the checkpoint's true tau/beta). ``freeze_epochs > 0`` zeroes the out_sdf
+    gradients for N epochs from the resume start so the solved offsets survive the cold-moment
+    transient. Trainer legs: ``--fork-head-solve {off,menon,ot_newton,flip_weighted,
+    flip_median}`` + ``--fork-head-solve-tau`` + ``--fork-head-freeze-epochs``; requires
+    ``--resume-from`` (fail-closed). VERDICT SCOPE inherited from #288: ot_newton area-matching
+    MEASURED-worse at mod32cap ep650 (FORMULATION); flip_median (default here) is S1's
+    Hamming-optimal per-edge median — the n600 gate is the arbiter. Default OFF trainer-side =>
+    byte-identical; duty-to-measure until fired."""
+    if str(mode) not in ("menon", "ot_newton", "flip_weighted", "flip_median"):
+        raise ValueError(
+            f"ForkHeadSolve: mode must be menon/ot_newton/flip_weighted/flip_median, got {mode!r}")
+    if not (float(tau) > 0.0):
+        raise ValueError(f"ForkHeadSolve: tau must be > 0, got {tau!r}")
+    if int(freeze_epochs) < 0:
+        raise ValueError(f"ForkHeadSolve: freeze_epochs must be >= 0, got {freeze_epochs!r}")
+    return Lever(
+        "fork_head_solve",
+        overrides={"--fork-head-solve": str(mode),
+                   "--fork-head-solve-tau": float(tau),
+                   "--fork-head-freeze-epochs": int(freeze_epochs)},
+        notes="#518 item 3: solved Laguerre head offsets APPLIED to live+EMA out_sdf.bias at "
+              "the warm-start fork (v0 verdict = measured receipt); optional out_sdf grad "
+              "freeze through the transient; byte-free (bias already counted)",
+    )
+
+
+def MarginStepCap(cap: float, window: int = -1) -> Lever:
+    """p0_resume_warmup_geometry_20260717 item 4 (#518): per-group ||dW|| trust-region cap.
+
+    Caps the APPLIED per-GROUP update norm at ``cap`` per accepted step, ACTIVE ONLY inside
+    the post-boundary ramp window (``window`` epochs; -1 => the LR-rewarmup window). Geometry:
+    the SegNet head is EXACT rank-4 linear with flip distance d = |m|/||dW||
+    (``segnet_head_rank4_linear_flipdist_v1``) and the margin field IS the Fisher surrogate
+    (0.978) — a step is flip-safe when ||dW|| stays below the margin scale. NO cached
+    margin-field surface is consulted at runtime (none is cached at the update site); the cap
+    is PARAMETERIZED — derive it from the run's measured margin telemetry (e.g. a low quantile
+    of |m| over the boundary annulus divided by the head-normal scale) and record the
+    derivation with the run. Trainer legs: ``--margin-step-cap`` + ``--margin-step-cap-window``
+    (post-update per-group projection w = w_pre + dW*cap/||dW||, before Stiefel re-projection +
+    EMA). Default OFF trainer-side => byte-identical; duty-to-measure until fired."""
+    if not (float(cap) > 0.0):
+        raise ValueError(f"MarginStepCap: cap must be > 0, got {cap!r}")
+    return Lever(
+        "margin_step_cap",
+        overrides={"--margin-step-cap": float(cap),
+                   "--margin-step-cap-window": int(window)},
+        notes="#518 item 4: per-group ||dW|| trust-region projection during the ramp window "
+              "(flip d=|m|/||dW|| rank-4 head law; cold-Adam quasi-isotropic steps bounded)",
+    )
+
+
+def ForkEmaClearance() -> Lever:
+    """p0_resume_warmup_geometry_20260717 item 7 (#518): post-fork EMA clearance window.
+
+    At a warm-start fork the EMA shadow restarts as a POINT MASS at the restored weights;
+    verdicts inside the first ``ema_warmup_updates(decay)`` shadow updates (~1/(1-decay) ~ 333
+    at 0.997) score a transient blend, not a settled shadow. Trainer leg:
+    ``--fork-ema-clearance`` suppresses BEST-banking inside the window (verdicts still emitted,
+    stamped ``ema_warmup: true``) — extends the existing ``ema_warmup_updates`` machinery
+    (telemetry-gating only before this) into a banking gate. Default OFF trainer-side =>
+    byte-identical; duty-to-measure until fired. Residual (honest): event detectors that
+    consume ``history`` are NOT yet warmup-filtered — rows are stamped, filtering is a named
+    follow-up."""
+    return Lever(
+        "fork_ema_clearance",
+        overrides={"--fork-ema-clearance": True},
+        notes="#518 item 7: BEST-banking suppressed + verdict rows stamped ema_warmup=true "
+              "inside the post-fork shadow warmup window (~1/(1-decay) updates)",
+    )
+
+
+def WarmStartRestoreBoundaryState() -> Lever:
+    """p0_resume_warmup_geometry_20260717 item 8 partial (#518): boundary-state at the fork.
+
+    MEASURED at the c2 fork (run 20260717T113932Z run.log): ``"hardness_restored": false`` —
+    the warm-start path intentionally SKIPS the persisted ``__hardness_prob`` oversample
+    baseline (the #403 restore is gated off under warm-start/lever-drift), so the fork
+    re-seeded the oversample distribution. RNG streams restore UNCONDITIONALLY when the source
+    carries ``__rng_*`` keys (the c2 ``"np_global_restored": false`` was a KEYLESS SOURCE —
+    the fork resumed from an EMA-BEST npz, which persists no run state). Trainer leg:
+    ``--warm-start-restore-boundary-state`` opts BACK IN to the hardness baseline under a
+    warm-start when the source has it. Default OFF trainer-side => incumbent warm-start
+    semantics (byte-identical). Residual (honest): BEST/deploy npz checkpoints still do NOT
+    carry the boundary-state keys (the async snapshot threading needed to add them race-free
+    is a named follow-up), so a fork from a BEST npz has nothing to restore regardless."""
+    return Lever(
+        "warm_start_restore_boundary_state",
+        overrides={"--warm-start-restore-boundary-state": True},
+        notes="#518 item 8 (partial): restore the persisted hardness-oversample baseline under "
+              "a warm-start fork when the source sidecar carries it; RNG keys already restore "
+              "unconditionally when present",
+    )
+
+
 def FinerBiasInit(k: float = 10.0, window: int = 0) -> Lever:
     """FEED-07b lever #2's BUILD half (#310, 2026-07-07): FINER++ variable-periodic FIRST-LAYER
     bias init (FINER arXiv 2312.02434 / FINER++ arXiv 2407.19434) — ``in_proj.bias ~ U(-k, k)``

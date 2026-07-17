@@ -1400,6 +1400,8 @@ def _decoupled_field_incompatibilities(args: Any) -> list[str]:
         incompat.append("--margin-field-head-weight>0 (margin-field head rides the shared out_sdf)")
     if str(getattr(args, "head_offset_solver", "off")) != "off":
         incompat.append("--head-offset-solver!=off (folds into out_sdf.bias)")
+    if str(getattr(args, "fork_head_solve", "off")) != "off":
+        incompat.append("--fork-head-solve!=off (mutates out_sdf.bias at the fork)")
     return incompat
 
 
@@ -3977,7 +3979,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     import mlx.core as mx
     import mlx.nn as nn
     import mlx.optimizers as optim
-    from mlx.utils import tree_flatten, tree_map
+    from mlx.utils import tree_flatten, tree_map, tree_unflatten
 
     from tac.local_acceleration.mlx_scorer_adapters import (
         load_mlx_distortion_scorer_adapter_from_upstream,
@@ -9159,6 +9161,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # LOST (the gap that forced a manual ep725 snapshot worse than the ep700 best). Per-ARM scope
     # (each out_dir tracks its own best); the campaign compares arm-bests across arms.
     _best: dict[str, Any] = {"d_seg": float("inf"), "ep": None, "path": None}
+    # (p0_resume_warmup_geometry_20260717 item 7) FORK EMA CLEARANCE state: {"until": N>0} arms the
+    # post-fork BEST-banking suppression + verdict ema_warmup stamp (set in the resume block when
+    # --fork-ema-clearance + a re-treatment fork). {"until": 0} (default / fresh start / flag off)
+    # => every consumer gate is inert => byte-identical.
+    _fork_ema_clearance: dict[str, Any] = {"until": 0, "warned": False}
     # (#292 build-3) CLOSED-LOOP LEVER CONTROL. _cl_on gates the ENTIRE feature: OFF (default; the
     # #205 path) => no verdict capture, no bump, no early-stop, no sidecar keys => BYTE-IDENTICAL.
     # _cl_verdicts is the deterministic IN-MEMORY capture of (epoch, seg_form, d_seg, ep_loss) the
@@ -9328,6 +9335,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                    # Additive presence-gated field (dashboard introspect layer reads by key);
                    # NON-PROMOTABLE regardless of device (CLAUDE.md: MLX/MPS is never a score).
                    "verdict_device": _verdict_device}
+            # (p0_resume_warmup_geometry_20260717 item 7) ADDITIVE ema_warmup stamp: True while the
+            # post-fork EMA shadow is inside its warmup window (a transient blend of the fork point
+            # mass) — readers (dashboards, event detectors, BEST audits) must not treat such rows
+            # as settled-shadow evidence. Absent unless --fork-ema-clearance armed the window.
+            if int(_fork_ema_clearance["until"]) > 0 and _lv is not None and "ema_updates" in _lv:
+                row["ema_warmup"] = bool(
+                    int(_lv["ema_updates"]) < int(_fork_ema_clearance["until"]))
             row.update(_dseg_canary_telemetry_fields())
             if row_extra:
                 row.update({k: round(float(vv), 6) for k, vv in row_extra.items()})
@@ -9443,7 +9457,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _emit_handoff_readiness(_ncounts, ep, seg_form)
 
     def _maybe_preserve_best(d_seg: float, ep: int, shadow_np_proj: dict[str, np.ndarray],
-                             softmax_temp: float, hosc_beta: float) -> None:
+                             softmax_temp: float, hosc_beta: float,
+                             ema_updates: "int | None" = None) -> None:
         """Preserve the EMA SHADOW that achieved a NEW best realized-through-R d_seg, as a DEPLOY
         npz (shadow + cfg) -> byte-close-ready AND warm-startable (resume seeds live<-shadow).
 
@@ -9452,6 +9467,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         point-in-time snapshot; sync: the current shadow) -> the preserved artifact is EXACTLY what
         produced the score (no drift). Atomic (tmp+os.replace). Thread-safe: holds _verdict_lock,
         and only one async verdict is in flight at a time, so best writes never race."""
+        # (p0_resume_warmup_geometry_20260717 item 7) FORK EMA CLEARANCE gate: inside the post-fork
+        # shadow-warmup window the EMA is still a transient blend of the fork point mass — a
+        # verdict there must not be banked as BEST (it would poison warm-start lineage selection).
+        # Inert unless armed (until>0) AND the caller threads its snapshot ema_updates.
+        if (int(_fork_ema_clearance["until"]) > 0 and ema_updates is not None
+                and int(ema_updates) < int(_fork_ema_clearance["until"])):
+            if not _fork_ema_clearance["warned"]:
+                _fork_ema_clearance["warned"] = True
+                print(json.dumps({
+                    "stage": "fork_ema_clearance_best_suppressed", "epoch": int(ep),
+                    "d_seg": round(float(d_seg), 6), "ema_updates": int(ema_updates),
+                    "until_ema_updates": int(_fork_ema_clearance["until"]),
+                    "note": "item 7: BEST-banking suppressed during the post-fork EMA warmup "
+                            "window (first suppression only; later ones are silent)"}), flush=True)
+            return
         with _verdict_lock:
             if not _is_new_best(d_seg, _best["d_seg"]):  # finite + strictly-better only
                 return
@@ -9547,7 +9577,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # HARDENING: preserve the best EMA shadow from the SAME snapshot the verdict scored
                 # (snap["ema_np"] is the point-in-time Stiefel-projected shadow; cfg from the snap).
                 _maybe_preserve_best(v["d_seg"], ep, snap["ema_np"],
-                                     snap["softmax_temp"], snap["hosc_beta"])
+                                     snap["softmax_temp"], snap["hosc_beta"],
+                                     ema_updates=_lv_snap.get("ema_updates"))
                 _settle_component_verdict(
                     ep, elapsed_ns=time.perf_counter_ns() - _da_verdict_start_ns)
                 with _verdict_lock:
@@ -9971,8 +10002,33 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                               "trained WITHOUT them (H5-F3 level shift). LR re-warmup routes the entry "
                               "when --stage-transition-rewarmup-epochs>0; per-term weight ramp NOT applied "
                               "(needs base-schedule machinery -- see launcher)."}), flush=True)
-            if _retreatment and int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0) > 0:
-                _resume_lr_rewarmup_boundary = int(_ws["start_epoch"])
+        # (p0_resume_warmup_geometry_20260717 item 1) WIDENED TRIGGER: register the resume LR
+        # re-warmup boundary on ANY re-treatment resume (the `_retreatment` predicate alone —
+        # --warm-start-weights-only / --resume-allow-lever-drift), NOT only when a stiff term was
+        # added. MEASURED gap (c2 run 20260717T113932Z): the weights-only fork (fresh AdamW, cold
+        # moments) entered ep651 at FULL scheduled LR because no stiff-drift row fired — pose-gate
+        # smoothed sigma_min 0.0025->0.0084 (3.4x) settling only by ep674 (~23 ep transient). Cold
+        # Adam's early steps are quasi-isotropic (v~=0) => energy into separatrix-normal directions
+        # (segnet_head_rank4_linear_flipdist_v1: flip d = |m|/||dw||). The EXISTING ramp machinery
+        # (_stage_rewarmup_factor via last_boundary_epoch) softens the entry. BYTE-IDENTITY: plain
+        # continuation resumes (_retreatment False) and --stage-transition-rewarmup-epochs 0 are
+        # UNCHANGED; the prior stiff-only path is a strict subset of this trigger.
+        if _retreatment and int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0) > 0:
+            _resume_lr_rewarmup_boundary = int(_ws["start_epoch"])
+            _rlw_reason = ("stiff_term_drift" if _stiff_added
+                           else ("warm_start_weights_only"
+                                 if bool(getattr(args, "warm_start_weights_only", False))
+                                 else "lever_drift_retreatment"))
+            print(json.dumps({
+                "stage": "resume_lr_rewarmup",
+                "boundary_epoch": int(_ws["start_epoch"]),
+                "rewarmup_epochs": int(args.stage_transition_rewarmup_epochs),
+                "floor": float(args.stage_transition_rewarmup_floor),
+                "shape": str(args.stage_transition_rewarmup_shape),
+                "reason": _rlw_reason,
+                "note": "resume-boundary LR re-warmup ANCHORED (item-1 widened trigger): the "
+                        "scheduled LR ramps floor->1 over the window so the re-treatment entry "
+                        "(fresh/cold AdamW moments) is not hit at full LR"}), flush=True)
         ema_src = rs["ema"] if rs["ema"] else rs["live"]
         for k in list(ema.shadow.keys()):
             if k in ema_src:
@@ -9990,6 +10046,32 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _emit_resume_start_epoch_row(
             int(start_epoch), int(rs["epoch"]), resume_from=str(rp),
             warm_start_override=bool(int(_ws["start_epoch"]) != int(rs["epoch"]) + 1))
+        # (#517 fold; p0_resume_warmup_geometry_20260717 item 5) POSITION the schedule-consumed
+        # model state to the RESUME epoch — mirror of the lambda_pre probe pattern ("mirror the
+        # loop's per-epoch schedule application"). CONFIRMED gap: the pre-loop v0 verdict's
+        # deploy render (_fwd_numpy) reads float(model.softmax_temp) + float(model.hosc_beta),
+        # which at this point still hold the BOOT constants (tau_start=1.0 / beta_start=1.0) —
+        # a resumed v0 therefore verdicts a PHANTOM soft-render of the restored weights (c2 fork:
+        # the ep651 plant is tau~0.216 / beta~3.177). The loop re-applies these per-epoch at the
+        # first epoch top, so training numerics are UNCHANGED; only the v0 verdict (and the
+        # resume reorient below, which also reads model.hosc_beta under --gpu-reorient) now see
+        # the checkpoint's true schedule state. Fresh starts (start_epoch == 1) skip =>
+        # BYTE-IDENTICAL. seg_form is loss-side only (not consumed by the verdict render); it is
+        # reported for the record, mirroring the probe.
+        if int(start_epoch) > 1:
+            _v0_ep = int(start_epoch)
+            model.softmax_temp = _softmax_temp_for_epoch(_v0_ep, args)
+            _v0_beta = _hosc_beta_for_epoch(_v0_ep, args)
+            if _v0_beta is not None:
+                model.hosc_beta = _v0_beta
+            print(json.dumps({
+                "stage": "baseline_v0_schedule_positioned", "epoch": _v0_ep,
+                "softmax_temp": round(float(model.softmax_temp), 6),
+                "hosc_beta": (round(float(_v0_beta), 6) if _v0_beta is not None else None),
+                "seg_form": str(_seg_form_for_epoch(_v0_ep, args)),
+                "note": "resume: model tau/beta positioned to the resume epoch BEFORE the pre-loop "
+                        "v0 verdict (lambda_pre-probe mirror; #517). The epoch loop re-applies the "
+                        "schedule at each epoch top => training trajectory unchanged."}), flush=True)
         # (C16 confound fix) --seed-anneal-epochs is ABSOLUTE; if the resume START epoch is >= the
         # anneal length the seed compose crutch is fully withdrawn before this run begins. Warn with
         # the REAL start_epoch (the post-parse warn only saw --warm-start-epoch). NOTE: the compose
@@ -10175,6 +10257,64 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         print(json.dumps({"stage": "resume", "from": str(rp), "resumed_epoch": int(rs["epoch"]),
                           "start_epoch": start_epoch, "restored_opt": restored_opt,
                           "resumed_into_finisher": bool(_resume_into_finisher)}), flush=True)
+        # (p0_resume_warmup_geometry_20260717 item 7) FORK EMA CLEARANCE arm: at a warm-start fork
+        # the shadow restarts as a point mass at the restored weights; suppress BEST-banking (and
+        # stamp verdict rows ema_warmup=true) until the shadow has ema_warmup_updates(decay)
+        # updates behind it (~1/(1-decay) ~ 333 at 0.997). DEFAULT OFF => dict stays {until:0} =>
+        # every gate below is inert => byte-identical.
+        if bool(getattr(args, "fork_ema_clearance", False)) and _retreatment:
+            _fork_ema_clearance["until"] = int(ema_warmup_updates(float(ema.decay)))
+            print(json.dumps({
+                "stage": "fork_ema_clearance_armed",
+                "until_ema_updates": int(_fork_ema_clearance["until"]),
+                "ema_decay": float(ema.decay),
+                "note": "item 7: BEST-banking suppressed + verdict rows carry ema_warmup=true "
+                        "until the post-fork shadow has cleared its warmup window"}), flush=True)
+
+    # (p0_resume_warmup_geometry_20260717 item 3) FORK HEAD-SOLVE: at a warm-start fork, run the
+    # #288/#386 rank-4 head machinery (tac.boundary_math.laguerre_logit_offset.solve_head_offsets)
+    # on the RESTORED weights BEFORE the first training step and APPLY b* to the LIVE
+    # out_sdf.bias AND the EMA shadow — unlike the advisory --head-offset-solver (which folds into
+    # a deploy COPY), this lever MUTATES the deployed head; the pre-loop v0 verdict immediately
+    # below is the MEASURED receipt of the solve (item-5 schedule positioning already ran, so phi
+    # is computed at the checkpoint's true tau/beta). FAIL-CLOSED: exceptions propagate (a
+    # half-applied solve is worse than a refused one). Default off => byte-identical.
+    _fhs_mode = str(getattr(args, "fork_head_solve", "off"))
+    if _fhs_mode != "off":
+        if not args.resume_from:
+            raise ValueError("--fork-head-solve requires --resume-from "
+                             "(it solves on RESTORED weights at a warm-start fork).")
+        from tac.boundary_math.laguerre_logit_offset import solve_head_offsets  # noqa: PLC0415
+        _fhs_lst = [np.asarray(gt.lstars[pi], np.int64) for pi in vpairs]
+        _fhs_masses = np.bincount(
+            np.concatenate([m.reshape(-1) for m in _fhs_lst]), minlength=5).astype(np.float64)
+        _fhs_ema_np = _project_shadow_film_np(
+            {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()})
+        _fhs_deploy = int8_dequant_params(_fhs_ema_np)
+        _fhs_phi = np.concatenate(
+            [np.asarray(_fwd_numpy(_fhs_deploy, _feats_np_for_pair(pi),
+                                   _fhs_deploy["code"][2 * pi + 1])[1],
+                        np.float64).reshape(-1, 5) for pi in vpairs], axis=0)
+        _fhs_gt = np.concatenate([m.reshape(-1) for m in _fhs_lst])
+        _fhs_b, _fhs_info = solve_head_offsets(
+            _fhs_mode, priors=_fhs_masses, phi=_fhs_phi, target_masses=_fhs_masses,
+            gt=_fhs_gt, tau=float(getattr(args, "fork_head_solve_tau", 1.0)))
+        _fhs_b32 = mx.array(np.asarray(_fhs_b, np.float32))
+        model.out_sdf.bias = model.out_sdf.bias + _fhs_b32
+        mx.eval(model.out_sdf.bias)
+        ema.shadow["out_sdf.bias"] = ema.shadow["out_sdf.bias"] + _fhs_b32
+        mx.eval(ema.shadow["out_sdf.bias"])
+        print(json.dumps({
+            "stage": "fork_head_solve", "mode": _fhs_mode,
+            "tau": float(getattr(args, "fork_head_solve_tau", 1.0)),
+            "offsets": {int(c): round(float(_fhs_b[c]), 4) for c in range(5)},
+            "converged": bool(_fhs_info.get("converged", 0.0)),
+            "iters": int(_fhs_info.get("iters", 0.0)),
+            "freeze_epochs": int(getattr(args, "fork_head_freeze_epochs", 0)),
+            "applied_to": ["model.out_sdf.bias", "ema.shadow[out_sdf.bias]"],
+            "note": "item 3: solved head offsets APPLIED to live+EMA at the fork; the v0 verdict "
+                    "below is the measured receipt (byte-free: out_sdf.bias is already counted)"}),
+            flush=True)
 
     # baseline verdict (epoch 0, or the resumed epoch) -- reflects any restored weights.
     # (DELTA-BENCH boot-side inheritance, operator-directed 2026-07-16) --skip-boot-baseline-verdict
@@ -10374,9 +10514,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         # re-treatment recomputes from the resumed state, matching the F2 divergence-guard bypass). The
         # config-divergence guard (above, at resume) already fail-closes if the hardness config differs,
         # so a length mismatch here is defence-in-depth only.
+        # (p0_resume_warmup_geometry_20260717 item 8, partial) --warm-start-restore-boundary-state
+        # OPTS BACK IN to the persisted hardness baseline under a warm-start/lever-drift
+        # re-treatment (MEASURED at the c2 fork: "hardness_restored": false — the fork re-seeded
+        # the oversample distribution). Default OFF => the incumbent skip stands (byte-identical).
         if (resume_cfg is not None and "__hardness_prob" in resume_cfg
-                and not (bool(getattr(args, "resume_allow_lever_drift", False))
-                         or bool(getattr(args, "warm_start_weights_only", False)))):
+                and (bool(getattr(args, "warm_start_restore_boundary_state", False))
+                     or not (bool(getattr(args, "resume_allow_lever_drift", False))
+                             or bool(getattr(args, "warm_start_weights_only", False))))):
             _hp_saved = np.asarray(resume_cfg["__hardness_prob"], np.float64).reshape(-1)
             if _hp_saved.size == P and float(_hp_saved.sum()) > 0.0:
                 hardness_prob = _hp_saved / _hp_saved.sum()
@@ -11108,6 +11253,20 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # block detected an added stiff term + retreatment + a configured re-warmup window.
     if _resume_lr_rewarmup_boundary is not None:
         last_boundary_epoch = int(_resume_lr_rewarmup_boundary)
+    # (p0_resume_warmup_geometry_20260717 item 3) fork head-FREEZE window: zero the out_sdf group's
+    # gradients for the first N epochs after the resume start so the solved fork offsets are not
+    # immediately washed out by the cold-moment transient. None (default: --fork-head-freeze-epochs
+    # 0 or fresh start) => the loop gate below is inert => byte-identical.
+    _fhs_freeze_until: "int | None" = None
+    # (item 4) MARGIN STEP CAP telemetry state (fires counter + per-epoch row throttle).
+    _msc_state: dict[str, Any] = {"fires": 0, "last_row_ep": None}
+    if args.resume_from and int(getattr(args, "fork_head_freeze_epochs", 0) or 0) > 0:
+        _fhs_freeze_until = int(start_epoch) + int(args.fork_head_freeze_epochs)
+        print(json.dumps({
+            "stage": "fork_head_freeze_armed", "from_epoch": int(start_epoch),
+            "until_epoch": int(_fhs_freeze_until),
+            "note": "item 3: out_sdf gradients zeroed for the freeze window (solved fork offsets "
+                    "protected through the transient)"}), flush=True)
     # (EIK-STAB build 2; sweep lever #3 + #304) spike-guard MODE dispatch. "legacy" =>
     # _sg_guard is None => every guard branch below is skipped and _sg_state["lr_scale"] stays 1.0
     # (never multiplied in) => BYTE-IDENTICAL to the pre-build trainer (selectable for the A/B but
@@ -11978,6 +12137,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 if _pose_finish_on["on"] and not _pf_was_on:
                     _pose_gate["engaged_epoch"] = int(ep)
                     recent_losses.clear()  # treat as an AdamW->AdamW loss-form boundary (spike-guard re-treat)
+                    # (p0_resume_warmup_geometry_20260717 item 6a) CONFIRMED boundary gap: this
+                    # engage cleared recent_losses (spike-guard re-treat) but never registered
+                    # last_boundary_epoch, so the LR re-warmup machinery (_stage_rewarmup_factor)
+                    # never saw the w_pose 0->full step boundary. Register it exactly like the
+                    # curriculum/tau-octave boundaries (guard `not muon_switched`, mirroring the
+                    # stage-boundary treatment's guard: the finisher owns its own LRs and the base
+                    # LR schedule block is gated off there). DEFAULT-SAFE:
+                    # --stage-transition-rewarmup-epochs 0 => last_boundary_epoch is set but the
+                    # gated factor returns EXACTLY 1.0 => BIT-IDENTICAL.
+                    if not muon_switched:
+                        last_boundary_epoch = ep
                     if _pose_gate_mode == "sigma_min_plateau":
                         _engage_via = "sigma_min_plateau" if _cond_fired else "backstop_fail_safe"
                     else:
@@ -11990,6 +12160,29 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                       "render); spike-guard re-treated (recent_losses cleared)"}), flush=True)
                     print(json.dumps(lever_engage_row(
                         "pose_finish", status="fired", epoch=ep, via=_engage_via)), flush=True)
+                # (p0_resume_warmup_geometry_20260717 item 6b) OPTIONAL cosine w_pose ramp-in over
+                # the rewarmup window from the engage epoch: without it _w_pose_now flips 0->full
+                # as a STEP — a stiff term landing FULL-WEIGHT on moments trained without it (the
+                # same H5-F3 level-shift class as the C11 resume stiff-drift). Placed AFTER the
+                # engage block so engaged_epoch is set on the engage epoch for BOTH gate paths
+                # (sigma_min_plateau sets it earlier; muon/backstop sets it in the block above).
+                # DEFAULT OFF (--pose-engage-wpose-ramp absent) => the step is BYTE-IDENTICAL.
+                if (_pose_finish_on["on"]
+                        and bool(getattr(args, "pose_engage_wpose_ramp", False))
+                        and int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0) > 0
+                        and int(_pose_gate.get("engaged_epoch", -1)) >= 0):
+                    _pwr_n = int(args.stage_transition_rewarmup_epochs)
+                    _pwr_d = int(ep) - int(_pose_gate["engaged_epoch"])
+                    if 0 <= _pwr_d < _pwr_n:
+                        _pwr_f = float(0.5 * (1.0 - np.cos(np.pi * (_pwr_d + 1) / _pwr_n)))
+                        _w_pose_now["v"] *= _pwr_f
+                        if _pwr_d == 0:
+                            print(json.dumps({
+                                "stage": "pose_engage_wpose_ramp", "epoch": int(ep),
+                                "ramp_epochs": _pwr_n, "factor_ep0": round(_pwr_f, 6),
+                                "w_pose_full": float(args.w_pose),
+                                "note": "cosine w_pose ramp-in engaged (item 6b); reaches full "
+                                        "w_pose at engage+ramp_epochs"}), flush=True)
                 # (owed-1 DISENGAGED alarm, SYNTHESIS §A.4 Repair 4) at the FINAL epoch: if the conditioning
                 # gate was requested but pose never engaged, fire the LOUD pose-DISENGAGED alarm (shipped
                 # banked R1). Never silent.
@@ -12272,12 +12465,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           flush=True)
             # SELF-ORIENT reorient cadence (fixed-point): recompute per-pair directional feats from
             # the EMA deploy argmax every --reorient-every epochs (skip ep1: argmax is random).
-            if use_self_orient and ep > 1 and (ep - 1) % max(args.reorient_every, 1) == 0:
+            # (p0_resume_warmup_geometry_20260717 item 9) RAMP-END forced reorient: with
+            # --reorient-every 50 and an LR-rewarmup window of ~8-27 epochs, post-transient
+            # training would otherwise run against the boundary-frozen chart (fork: the chart from
+            # the RESTORED weights' argmax) for up to ~50-window epochs. Force ONE recompute at the
+            # exact ramp-end epoch (boundary + rewarmup_epochs). DEFAULT-SAFE:
+            # --stage-transition-rewarmup-epochs 0 OR no boundary => _ramp_end_reorient False =>
+            # the cadence condition is BYTE-IDENTICAL to the incumbent.
+            _ramp_end_reorient = bool(
+                last_boundary_epoch is not None
+                and int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0) > 0
+                and ep == int(last_boundary_epoch) + int(args.stage_transition_rewarmup_epochs))
+            if use_self_orient and ep > 1 and (
+                    (ep - 1) % max(args.reorient_every, 1) == 0 or _ramp_end_reorient):
                 ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
                 mag = recompute_self_orient(int8_dequant_params(ema_np))
                 _rebuild_cf_mx_cache()
                 _rebuild_fine_dir_cache()  # AA fine self-orient (no-op unless --aa-self-orient-fine-mode)
-                print(json.dumps({"stage": "reorient", "epoch": ep, "mean_abs_dir_feat": round(mag, 5)}), flush=True)
+                print(json.dumps({"stage": "reorient", "epoch": ep, "mean_abs_dir_feat": round(mag, 5),
+                                  **({"ramp_end_forced": True} if _ramp_end_reorient else {})}), flush=True)
             if use_native_orient and ep > 1 and (ep - 1) % max(args.reorient_every, 1) == 0:
                 ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
                 _native_receipt = recompute_native_orient(int8_dequant_params(ema_np))
@@ -12948,6 +13154,24 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         print(f"[compute-dtype] QC row write failed: {_qc_err}", flush=True)
                     _cdt_qc_done += 1
                     clipped = _qc_ref_clipped  # fp32 REFERENCE trajectory under QC
+                # (p0_resume_warmup_geometry_20260717 item 3) fork head-FREEZE: zero the out_sdf
+                # group's gradients inside the freeze window (the solved fork offsets survive the
+                # cold-moment transient). Inert unless armed => byte-identical.
+                if (_fhs_freeze_until is not None and ep < _fhs_freeze_until
+                        and isinstance(clipped, dict) and "out_sdf" in clipped):
+                    clipped["out_sdf"] = tree_map(lambda g: mx.zeros_like(g), clipped["out_sdf"])
+                # (p0_resume_warmup_geometry_20260717 item 4) MARGIN STEP CAP pre-snapshot: inside
+                # the post-boundary ramp window only (window = --margin-step-cap-window, or the LR
+                # rewarmup window when -1), capture the pre-update params so the APPLIED per-group
+                # ||dW|| can be capped after the update. 0.0 cap (default) => inert => byte-identical.
+                _msc_cap = float(getattr(args, "margin_step_cap", 0.0) or 0.0)
+                _msc_active = False
+                if _msc_cap > 0.0 and last_boundary_epoch is not None:
+                    _msc_win = int(getattr(args, "margin_step_cap_window", -1))
+                    if _msc_win < 0:
+                        _msc_win = int(getattr(args, "stage_transition_rewarmup_epochs", 0) or 0)
+                    _msc_active = bool(0 <= ep - int(last_boundary_epoch) < _msc_win)
+                _msc_pre = dict(tree_flatten(model.trainable_parameters())) if _msc_active else None
                 _film_polar_grad = None
                 _film_polar_lr = None
                 if _film_polar_state is not None and _film_polar_state.initialized:
@@ -12978,6 +13202,51 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         learning_rate=float(_film_polar_lr),
                         ema_decay=float(ema.decay),
                     )
+                # (p0_resume_warmup_geometry_20260717 item 4) MARGIN STEP CAP projection: cap the
+                # APPLIED per-GROUP update norm ||dW||_2 at --margin-step-cap by rescaling the
+                # realized delta (w = w_pre + dW * cap/||dW||) — a trust-region projection on the
+                # actual step (grad-clip cannot bound this: Adam's preconditioner rescales the
+                # clipped gradient). Geometry: flip distance d = |m|/||dW|| (rank-4 head law), and
+                # cold-Adam early steps are quasi-isotropic (v~=0) => un-capped boundary-normal
+                # energy. Runs BEFORE the Stiefel projection (which re-projects film.weight onto
+                # the manifold afterwards) and BEFORE ema.update (the shadow averages the capped
+                # weight). Window-gated + default-off => byte-identical.
+                if _msc_active and _msc_pre is not None:
+                    _msc_post = dict(tree_flatten(model.trainable_parameters()))
+                    _msc_sq: dict[str, float] = {}
+                    _msc_delta: dict[str, tuple[Any, Any]] = {}
+                    for _mk, _mnew in _msc_post.items():
+                        _mold = _msc_pre.get(_mk)
+                        if _mold is None:
+                            continue
+                        _md = _mnew - _mold
+                        _msc_delta[_mk] = (_mold, _md)
+                        _mg = _mk.split(".", 1)[0]
+                        _msc_sq[_mg] = _msc_sq.get(_mg, 0.0) + float(mx.sum(_md * _md))
+                    _msc_upd: list[tuple[str, Any]] = []
+                    _msc_capped: dict[str, float] = {}
+                    for _mg, _sq in _msc_sq.items():
+                        _mn = float(_sq) ** 0.5
+                        if np.isfinite(_mn) and _mn > _msc_cap:
+                            _msc_capped[_mg] = _mn
+                            _msc_scale = _msc_cap / _mn
+                            for _mk, (_mold, _md) in _msc_delta.items():
+                                if _mk.split(".", 1)[0] == _mg:
+                                    _msc_upd.append((_mk, _mold + _md * _msc_scale))
+                    if _msc_upd:
+                        model.update(tree_unflatten(_msc_upd))
+                        mx.eval(model.parameters())
+                        _msc_state["fires"] += 1
+                        if _msc_state["last_row_ep"] != ep:
+                            _msc_state["last_row_ep"] = ep
+                            print(json.dumps({
+                                "stage": "margin_step_cap", "epoch": int(ep),
+                                "cap": _msc_cap,
+                                "capped_groups": {g: round(n, 6) for g, n in _msc_capped.items()},
+                                "fires_total": int(_msc_state["fires"]),
+                                "note": "item 4: per-group ||dW|| trust-region projection applied "
+                                        "(first fire this epoch; later fires this epoch are "
+                                        "silent)"}), flush=True)
                 mx.eval(model.parameters(), opt.state)
                 _live["ep_acc"] += 1  # (C6 liveness) an ACCEPTED (weight-stepping) accum-batch
                 # #224 (5) SEED CONTAINMENT step: shield the seed grad (defend the seeded islands from
@@ -13241,7 +13510,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                         v["d_seg"], ep,
                         _project_shadow_film_np({k: np.asarray(vv, np.float32)
                                                  for k, vv in ema.shadow.items()}),
-                        float(model.softmax_temp), float(model.hosc_beta))
+                        float(model.softmax_temp), float(model.hosc_beta),
+                        ema_updates=int(_live["ema_updates"]))
                     _settle_component_verdict(
                         ep, elapsed_ns=time.perf_counter_ns() - _da_sync_verdict_start_ns)
             # (JACOBIAN BASIN T1) authoritative σ_min conditioning of J_ξ on a stratified k-pair subsample,
@@ -15404,6 +15674,50 @@ def main(argv: list[str] | None = None) -> int:
                     "the m/v moments are zeroed (stale momentum through a loss-landscape change is the "
                     "FEED-ft#3 tau-jump root cause). Default OFF => bit-identical. No-op during the "
                     "Muon finisher (it already re-inits a fresh optimizer).")
+    # ---- p0_resume_warmup_geometry_20260717 (#518) resume/boundary-geometry levers. All default
+    # OFF/0 => byte-identical; DSL owners: ResumeLRWarmup / PoseEngageWPoseRamp / ForkHeadSolve /
+    # MarginStepCap / ForkEmaClearance in tac.witness_dsl.curriculum_dsl.
+    ap.add_argument("--pose-engage-wpose-ramp", action=argparse.BooleanOptionalAction, default=False,
+                    help="(item 6b) cosine-ramp w_pose 0->full over --stage-transition-rewarmup-epochs "
+                    "from the pose_finish engage epoch instead of the incumbent STEP (the H5-F3 "
+                    "stiff-term-onto-cold-moments class). Default OFF => the step (byte-identical).")
+    ap.add_argument("--fork-head-solve",
+                    choices=["off", "menon", "ot_newton", "flip_weighted", "flip_median"], default="off",
+                    help="(item 3) at a warm-start fork: run the #288/#386 Laguerre head-offset solve "
+                    "on the RESTORED weights BEFORE the first training step and APPLY the solved b* to "
+                    "the live out_sdf.bias AND the EMA shadow (unlike the advisory --head-offset-solver, "
+                    "this MUTATES the deployed head; the pre-loop v0 verdict right after is the measured "
+                    "receipt). Requires --resume-from; default off => byte-identical.")
+    ap.add_argument("--fork-head-solve-tau", type=float, default=1.0,
+                    help="(item 3) temperature for the fork head solve (menon prior scale).")
+    ap.add_argument("--fork-head-freeze-epochs", type=int, default=0,
+                    help="(item 3) freeze the out_sdf head (zero its gradients) for N epochs from the "
+                    "resume start so the solved offsets are not immediately washed out by the cold-"
+                    "moment transient. 0 (default) => no freeze (byte-identical).")
+    ap.add_argument("--margin-step-cap", type=float, default=0.0,
+                    help="(item 4) trust-region cap on the per-GROUP applied update norm ||dW||_2 per "
+                    "accepted step, ACTIVE ONLY inside the LR-rewarmup window after a registered "
+                    "boundary. Reference scale: the rank-4 head law flip d = |m|/||dW|| (eq "
+                    "segnet_head_rank4_linear_flipdist_v1) — a step is flip-safe when ||dW|| stays "
+                    "below the margin scale; no cached margin-field surface is consulted (the cap is "
+                    "PARAMETERIZED; derive it from the run's measured margin telemetry). 0.0 (default) "
+                    "=> OFF (byte-identical).")
+    ap.add_argument("--margin-step-cap-window", type=int, default=-1,
+                    help="(item 4) cap window in epochs after the boundary; -1 (default) => use "
+                    "--stage-transition-rewarmup-epochs (the LR ramp window).")
+    ap.add_argument("--fork-ema-clearance", action=argparse.BooleanOptionalAction, default=False,
+                    help="(item 7) at a warm-start fork the EMA shadow restarts as a point mass at the "
+                    "restored weights; when ON, BEST-banking is suppressed for the first "
+                    "ema_warmup_updates(decay) shadow updates (~1/(1-decay)) and verdict rows carry "
+                    "ema_warmup=true, so a transient-window shadow is never banked as BEST. Default "
+                    "OFF => byte-identical.")
+    ap.add_argument("--warm-start-restore-boundary-state", action=argparse.BooleanOptionalAction,
+                    default=False,
+                    help="(item 8, partial) under --warm-start-weights-only ALSO restore the hardness "
+                    "oversample baseline (__hardness_prob) when the source sidecar carries it (the "
+                    "warm-start default intentionally recomputes; RNG streams are already restored "
+                    "unconditionally when the keys exist). Default OFF => incumbent warm-start "
+                    "semantics (byte-identical).")
     # ---- R-7 finisher 2 (Polyak/Ruppert TAIL AVERAGING). Default-OFF => byte-identical (the averager
     # is never constructed / registered when --polyak-finisher-arm is absent). When armed, a UNIFORM
     # tail mean of the live iterates over the finishing window is maintained ALONGSIDE the EMA shadow

@@ -396,6 +396,26 @@ def eval_warm_start_schedule_reconstruction(inputs: Mapping[str, Any]) -> int:
         "config_of_record | run_length_exclusion | resume_plus_window | original_plant_end)")
 
 
+def eval_adam_v_variance_warmup_length(inputs: Mapping[str, Any]) -> int:
+    """adam_v_variance_warmup_length_v1 — beta2-derived LR-rewarmup window (epochs).
+
+    warmup_epochs = ceil(c/(1-beta2) / steps_per_epoch); c defaults to 2 (RAdam
+    variance-rectification rationale); c=1 reproduces the sister memory bound
+    ``rewarmup_beta2_memory_window_v1`` exactly. Registered 2026-07-17
+    (p0_resume_warmup_geometry item 2); consumed by the ResumeLRWarmup DSL lever.
+    """
+    from tac.canonical_equations.adam_v_variance_warmup_20260717 import (
+        DEFAULT_C,
+        adam_v_variance_warmup_epochs,
+    )
+
+    return adam_v_variance_warmup_epochs(
+        float(inputs["beta2"]),
+        int(inputs["steps_per_epoch"]),
+        c=float(inputs.get("c", DEFAULT_C)),
+    )
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
@@ -436,6 +456,10 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     # end — the DERIVED form for a warm path where no recognised event sensor is co-emittable
     # (label_floor DEAD below resume d_seg; adverse finding A2).
     "warm_start_schedule_reconstruction_v1": eval_warm_start_schedule_reconstruction,
+    # Adam second-moment variance warmup length (2026-07-17, p0_resume_warmup_geometry item 2):
+    # the beta2-DERIVED LR-rewarmup window the ResumeLRWarmup DSL lever resolves through
+    # (c=1 == the sister rewarmup_beta2_memory_window_v1 bound; c~=2 default, RAdam rationale).
+    "adam_v_variance_warmup_length_v1": eval_adam_v_variance_warmup_length,
 }
 
 
@@ -454,6 +478,7 @@ __all__ = [
     "LAWREF_BUILTIN_EVALUATORS",
     "EvaluatorError",
     "EvaluatorNotRegisteredError",
+    "eval_adam_v_variance_warmup_length",
     "eval_adaptive_eps_saturation_alarm",
     "eval_cgauge_beta2_window",
     "eval_cgauge_parabolic_along_tangent",
