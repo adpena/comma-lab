@@ -136,16 +136,15 @@ Rebuilt byte-for-byte by `compress.sh` (the build asserts the member and archive
   Submission file size: ${ARCHIVE_BYTES} bytes
   Original uncompressed size: 37,545,489 bytes
   Compression Rate: ${RATE}
-  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = ${SCORE_2DP}
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = ${FINAL_SCORE_AS_PRINTED}
 ```
 Exact score from the CPU report components: `${WITNESS_BYTECLOSED_CPU}` (Linux x86_64 /
 `ubuntu-latest` CPU). T4 CUDA (tuning axis): `${SCORE_CUDA}`.
 
 # does your submission require gpu for evaluation (inflation)?
 no — inflation is CPU-only (device pinned to CPU; deterministic on a given host, and reproducible
-across hosts via the fp64 forward). Deps: ${VERIFY_FINAL_DEPS — the audited set, e.g. numpy, brotli,
-torch, scipy}, all installed by the packet. Inflation runs in ${INFLATE_MINUTES} min on the contest
-CPU runner.
+across hosts via the fp64 forward). Deps: ${AUDITED_DEP_LIST}, all installed by the packet.
+Inflation runs in ${INFLATE_MINUTES} min on the contest CPU runner.
 
 # did you include the compression script? and want it to be merged?
 yes — `compress.sh` rebuilds `archive.zip` byte-for-byte (seeded, deterministic; same inputs → same
@@ -174,8 +173,9 @@ Lineage & credit (full list in `THIRD_PARTY_NOTICES.md`):
 - Contest scaffold (unchanged): `upstream/evaluate.py`, the frozen SegNet/PoseNet, the `inflate.sh`
   convention.
 - Ideas we learned from (no code or weights reused): the staged-curriculum + EMA discipline of
-  @AaronLeslie138's #95 line (#95/#98/#101); @Quantizr's #55/#56 stored-target/FiLM conditioning; a
-  related boundary surrogate in @ryanli0070's #127/#129 (credited above).
+  @AaronLeslie138's #95 (the HNeRV root) and the #98/#101 line built on it; @Quantizr's #55/#56
+  stored-target/FiLM conditioning; a related boundary surrogate in @ryanli0070's #127/#129
+  (credited above).
 - Train-time priors only (never shipped, never counted): openpilot lane/camera geometry and comma10k
   class conventions.
 - No code, weights, latents, or archive sections from any merged or open submission are included.
