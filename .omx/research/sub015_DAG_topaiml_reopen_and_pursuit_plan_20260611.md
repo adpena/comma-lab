@@ -19385,3 +19385,17 @@ Pointer 0.19108 UNMOVED (apparatus + armed measurement; next exact-relevant even
   sub-0.1879, re-open intake.
 - **Triality**: measurement/watch FEED — DSL leg N/A-BY-TYPE (no lever), equations leg N/A (no new measured law; public
   scores remain `external` until exact replay per apples-to-apples). Pointer 0.19108 UNMOVED (watch).
+
+## FEED-reaper525 (2026-07-17) — APPARATUS root-cause: the codex-arm kill class was OUR OWN fleet reaper (TTY exclusion); PTY-by-default fix VERIFIED [no-triality]
+Task #525 (Arm E, commits e4adec609b/3aff1db54f/f3366e3a2f/74ac1dc2b1, 51/51 tests): the ~5-7min rc=143
+deaths that killed 10/10 codex arms today (incl. 5 attempts of the sol_ultra v10 review arm) were
+`com.vertigo.claude-code-reaper` (launchd, 60s, GRACE=300s) reaping TTY-less `\b(claude|codex)\b`
+processes — caught in ITS OWN log, pid/age custody. The 2026-07-16 headless-launch change removed the
+Terminal TTY that had accidentally protected 150 prior arms. Discriminator probes: clean-env reaped
+@5m24s; renamed-argv survived; supervisor immune (word-boundary). Fix: shared detached-spawn core +
+PTY wrap (script -q), codex arms PTY-by-default, --job-class reader admission lane (≤4GB, preflight-only,
+#370 pattern), warn-only reaper-immunity gate. VERIFIED: probe completed rc=0 @10m17s (vs ≤5m55s kills);
+SOL ultra review arm relaunched on the path and running. Ledger classes daemon_5min + sigurg-codex-surface
+RESOLVED (the daemon_5min erraticism was the reaper's parse_etime octal bug). Memory:
+reaper_tty_kills_were_the_harness_kill_class_20260717. OPERATOR-OWED: fleet-repo reaper patch (octal
+10#$m + governed-arm exclusion) — outside this repo's mutation frontier. Pointer 0.19108 UNMOVED (means).
