@@ -437,3 +437,76 @@ Pointer 0.19108 UNMOVED (means/apparatus — SPEC only).
 
 **Pointer 0.19108 UNMOVED — this SPEC is MEANS.** The v10 program exists to land a byte-closed
 `upstream/evaluate.py` n600 exact row below it, then toward sub-0.15.
+
+## §13 SESSION FOLD 2026-07-17B — triggers/forces review · Fisher actuation · EMA law · dual-metric discipline (SSoT per operator: "All of this should be reflected in the v10 spec we need a single source of truth")
+
+Source authority: operator directives 2026-07-17 (triggers/forces review "all p0 regardless of severity" ·
+"We are not fully leveraging fisher" · "EMA calibration is p0 too" · dual-metric "both are informative stop
+forgetting that" · "Build all unbuilt now"). P0 ledger rows: p0_triggers_forces_review_all_findings_20260717 ·
+p0_fisher_full_leverage_20260717 · p0_ema_calibration_20260717 · p0_boundary_merge_queue_post_v9c2_20260717.
+Tasks #524/#525. Measured basis: live c2 run 20260717T113932Z telemetry (per-class verdicts ep650–800,
+sps_gradient_role ep701, jacobian_basin ep786–798, ema_warmup_updates=667) + launch.sh flag extraction +
+FEED-lane-gain (event-fallback missing) + segnet_recursive_fractal (skip-limited) + FEED-we-conflict
+(Euclid-vs-Fisher sign flip). Everything below is MEASURED or DERIVED unless marked.
+
+### §13.1 Completeness-table amendments (extends §5 — forces the measured dynamics demand)
+| force | demanded by (measured) | v10 disposition |
+|---|---|---|
+| event-fallback phase supervision | 26.3% straddle sites uncovered; phase stack transport-only, birth-SILENT (FEED-lane-gain); Lane per-class FLAT ~0.237 through Force-3 while flip-share fell | BUILD (wave arm B), default-OFF DSL lever; Δd_seg duty-to-measure at the c2 per-stage A/B |
+| Fisher-density seg-loss weight w(x)=sech²(m/2) | the EXACT registered Fisher law (tr g=½sech²(m/2), ρ0.978); current satisfice/subpix use empirical flip-mass proxies | BUILD (wave arm A), default-OFF; $0 A/B on cached ckpt |
+| per-class-pair σ_cc′ anisotropic tension (#382, BUILT) | Γ-limit demands per-pair σ; live scalar length-weight 0.001 is the MCF-lane-erasure term; Lane 0.2368 stuck consistent | COMPOSE into the v10 config (no rebuild); scalar length term demoted where σ_cc′ active |
+| Lane stride-2 skip lever | Lane flips 77% limited by the 16-ch stride-2 skip path (fractal factorization); verified UNBUILT 2026-07-17 | BUILD (wave arm C, #524), default-OFF; targets the dominant per-class residual |
+
+### §13.2 Trigger laws — constants dissolve into event-continuation (extends §2/§6)
+- **Force-entry triggers**: fixed-epoch co-engagement (c2's phase_advect+satisfice+subpix all @ep700) is a
+  stage-skeleton constant; it confounded attribution (ep750 Road-concentrated +50% tax spans BOTH Force-3
+  settling AND ep726 cold-Muon entry). v10: per-force event triggers (d_seg slope-flatten OR λ-critical via
+  the #344 NCDE hit→solve detector — currently fire=unavailable, MUST be wired), staggered engagement for
+  attribution.
+- **Pose-finish gate**: sigma_min_plateau is the right event CLASS (and reads LIVE weights — verified immune
+  to EMA lag); v10 adds the fire-on-crest alternative (σ_min slope sign-change = conditioning peak; live c2
+  measured σ_min 0.0010→0.0068 still climbing +15%/ep at ep798) and puts flat_rel_band 0.0003 / hysteresis 3
+  / settle 3 on the provenance ladder (currently bare).
+- **Coupling not coincidence**: anneal-epochs(1000) == pose-finish-start(1000) is two constants agreeing;
+  v10 expresses it as the event coupling β-anneal-complete → pose-finish-eligible.
+- **Trigger observable**: convergence/engagement events read Fisher-mass-in-annulus (the decision-geometry
+  observable), not raw Euclidean d_seg slope.
+
+### §13.3 Constants → LawRefs (extends §9)
+- **ema_decay**: MEASURED — 0.997/update × 1 update/epoch (full-batch accum) ⇒ τ≈333 EPOCHS; declared
+  warmup 2/(1−d)=667 updates ≈ ep1318 on a 1400-ep run (the shadow spends the whole run inside warmup;
+  ~64% warm-start seed @ep800; EMA−live −0.00095 @ep775). The 0.997 provenance (Quantizr per-step minibatch)
+  does NOT transfer to the deterministic full-batch regime (noise-averaging rationale vanishes). v10 LawRef:
+  decay derived from (updates_per_run, measured update noise); finisher horizon via the BUILT never-fired
+  --ema-decay-finisher lever (SWA-style). Mechanics verified SOUND — this is calibration, not a bug.
+- **w_pose**: 1.0 → w_pose(t) = 5/√(10·d_pose(t)) — the exact score marginal (the score's own derivative).
+- **Muon entry**: --muon-warm-start-momentum / --muon-lr-final-frac default-OFF cold entry is the measured
+  #269 gap; v10 default = warm-start momentum + LR-anneal ON, pending the #270 per-stage A/B verdict.
+
+### §13.4 Fisher actuation — measurement → actuator across 6 surfaces (p0_fisher_full_leverage)
+(1) TRAINING FORCE: the §13.1 Fisher-density weight (arm A). (2) OPTIMIZER: head-space natural gradient is
+CLOSED-FORM CHEAP because the head is exact rank-4 linear — composes with #423 Hessian-preconditioned
+head-offset + #518 fork head-SOLVE (arm A). (3) TELEMETRY: dual-metric read-backs — every load-bearing
+gradient alignment/conflict claim reports Euclidean cosine AND Fisher cosine AND rel-norm (the decisive
+quantity); measured anchor: sign FLIP on the same pair (−0.00105 Euclid vs +0.0435 Fisher, FEED-we-conflict);
+the sps global_cosine is EUCLIDEAN-only; Fisher read-back of phase_advect OWED (arm A harness).
+(4) RATE/PRECISION: Fisher-sensitivity bit-alloc (#157/#336) + ker(A)/gauge 22% int8-scale coarsening (#519)
+— BUILT, applied in the #406 post-run batch. (5) TRIGGERS: §13.2 Fisher-mass-in-annulus observable.
+(6) AVERAGING/SELECTION: decision-geometry-aware checkpoint averaging/selection, joint with the §13.3 EMA law.
+
+### §13.5 Terminal measurement gates (extends §6 — each gate = an artifact)
+- **Shadow-vs-live byte-close A/B** at terminal + per-stage checkpoints (arm C comparator) — ship the winner;
+  decides the §13.3 EMA question empirically.
+- **Fisher read-back of phase_advect** on a cached checkpoint (arm A harness) — closes the owed dual-metric gap.
+- **Boundary A/B set**: Muon warm-start (#270) · event-fallback Δd_seg · the duty-queue top-3
+  (DsegAwareTaper 78.9% / HorizonWeightedMargin 47.3% / StepNativeActivation 34.2% of remaining descent —
+  the apparatus's own top-ranked unfired levers, fired BEFORE lower-ranked new work).
+
+### §13.6 Realization — the 2026-07-17 build wave (all default-OFF, live run untouched, merge at post-v9c2 boundary)
+Arm A `p0_build_fisher_actuation_20260717`: Fisher-density weight lever + rank-4 head natural-gradient lever +
+dual-metric read-back harness. Arm B `p0_build_forces_triggers_20260717`: event-fallback phase supervision +
+fire-on-crest gate option + event-coupling triggers + w_pose(t) law. Arm C `p0_build_skiplever_ema_20260717`:
+stride-2 skip lever + EMA decay LawRef + shadow-vs-live comparator + ema_decay_finisher duty registration.
+Every lever lands as a DSL Lever factory (never a hand trainer flag), tested, with equations-leg registration;
+recursive adversarial review to 3 clean passes gates merge eligibility. This section is the SSoT these arms
+implement against; drift between an arm's landing and this section is a triality violation.
