@@ -4163,6 +4163,88 @@ def SegSpikeReweight(downweight: float = 0.5, coherent_upweight: float = 1.0,
                        "measured optimum)")
 
 
+def EmaDecayCalibrated(updates_per_run: int, target_seed_fraction: float | None = 0.01,
+                       warmup_fraction: float | None = None, window: int = 0) -> Lever:  # noqa: N802
+    """ARM-C p0_ema_calibration (SPEC_v10 §13.3): ``--ema-decay`` DERIVED from RUN GEOMETRY via
+    the registered law ``ema_decay_run_geometry_v1`` (LawRef-resolved at DSL-compile time —
+    value-provenance rung ``derived_at_config``). Exactly ONE of ``target_seed_fraction``
+    (d = eps**(1/U): pin the weight the initial shadow seed retains at run end) or
+    ``warmup_fraction`` (d = 1 - 2/(phi*U): pin the run fraction where the 2/(1-d) warmup
+    completes) selects the inversion. The incumbent 0.997 is a Quantizr per-step-minibatch
+    provenance that does NOT transfer to the 1-update/epoch full-batch regime (MEASURED on the
+    live c2 run: warmup 667 updates ~ ep1318/1400; ~64% warm-start seed @ep800). NOT composing
+    this Lever leaves the trainer default 0.997 untouched (byte-identical default path). The
+    d_seg effect of the calibrated decay is RUN-GATED (shadow-vs-live byte-close A/B decides,
+    SPEC_v10 §13.5)."""
+    from tac.witness_dsl.lawref import (
+        LADDER_DERIVED_AT_CONFIG,
+        InputRef,
+        LawRef,
+        resolve,
+    )
+    if (target_seed_fraction is None) == (warmup_fraction is None):
+        raise ValueError(
+            "EmaDecayCalibrated: exactly ONE of target_seed_fraction / warmup_fraction must be "
+            "set (the law inverts for d from one pinned quantity)")
+    u = int(updates_per_run)
+    if target_seed_fraction is not None:
+        mode_code, mode_name = 1, "decay_from_seed_fraction"
+        quantity = {"target_seed_fraction": InputRef.literal(
+            float(target_seed_fraction),
+            "ARM-C ema calibration: pinned terminal seed fraction eps (d = eps**(1/U))")}
+    else:
+        mode_code, mode_name = 2, "decay_from_warmup_fraction"
+        quantity = {"warmup_fraction": InputRef.literal(
+            float(warmup_fraction),
+            "ARM-C ema calibration: pinned warmup completion fraction phi (d = 1 - 2/(phi*U))")}
+    ref = LawRef(
+        equation_id="ema_decay_run_geometry_v1",
+        inputs={
+            "mode": InputRef.literal(
+                mode_code, f"mode code {mode_code} == {mode_name} (numeric-literal encoding)"),
+            "updates_per_run": InputRef.literal(
+                u, "run geometry: optimizer updates in the averaging window "
+                   "(full-batch accum => 1/epoch)"),
+            **quantity,
+        },
+        ladder_class=LADDER_DERIVED_AT_CONFIG,
+    )
+    rc = resolve(ref, repo_root=_REPO_ROOT)
+    d = float(rc.value)
+    if not 0.0 < d < 1.0:
+        raise ValueError(f"EmaDecayCalibrated: resolved decay {d} outside (0,1) — check inputs")
+    return Lever("ema_decay_calibrated",
+                 overrides={"--ema-decay": d},
+                 epochs_delta=window,
+                 lawrefs={"--ema-decay": ref},
+                 constant_manifest={"--ema-decay": rc.to_dict()},
+                 notes=f"ema_decay DERIVED from run geometry ({mode_name}, U={u}) via "
+                       f"ema_decay_run_geometry_v1 -> {d:.6f}; incumbent 0.997 provenance does "
+                       "not transfer to full-batch (SPEC_v10 §13.3); effect RUN-GATED")
+
+
+def EmaDecayFinisher(decay: float = 0.999, start_epoch: int | None = None,
+                     window: int = 0) -> Lever:  # noqa: N802
+    """THETA* TIER-2 MUST-3 / SPEC_v10 §13.3: the BUILT wider-finisher EMA (SWA-style late-
+    oscillation averaging). From the resolved finisher-start epoch onward the EMA update uses
+    this WIDER decay (averages the late oscillation into a flat-basin center). DEFAULT-OFF in
+    the trainer (``--ema-decay-finisher`` default None = bit-identical to --ema-decay
+    everywhere); this Lever engages it. ``start_epoch`` None falls back to the trainer's
+    ``--muon-start-epoch`` (the natural finisher boundary; the trainer fail-closes when
+    neither is set). ``decay`` is the SWEPT intent — RUN-GATED optimum (owed A/B); 0.999 is a
+    starting value, NOT a measured optimum. NEVER-FIRED as of 2026-07-17 (registered in the
+    activation/duty ledger via tools/register_ema_finisher_duty.py so the costate SENSE layer
+    surfaces it — the 'off is a tracked queue' discipline)."""
+    ov: dict = {"--ema-decay-finisher": float(decay)}
+    if start_epoch is not None:
+        ov["--ema-decay-finisher-start-epoch"] = int(start_epoch)
+    return Lever("ema_decay_finisher",
+                 overrides=ov,
+                 epochs_delta=window,
+                 notes="THETA* MUST-3 SWA-style wider-finisher EMA (decay RUN-GATED, not a "
+                       "measured optimum; start falls back to --muon-start-epoch)")
+
+
 def LaneSkipBand(weight: float = 0.05, dilate: int = 2, start_epoch: int = 0,
                  window: int = 100) -> Lever:  # noqa: N802
     """ARM-C #524 (SPEC_v10 §13.1 row 4): Lane stride-2 SKIP-BAND supervision. DERIVED from the
