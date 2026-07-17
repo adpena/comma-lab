@@ -142,9 +142,9 @@ def _newest_mtime(root: Path, max_files: int = 4000) -> float | None:
     return newest
 
 
-def scan(stale_s: float = 900.0) -> list[dict]:
+def scan(stale_s: float = 900.0, registry_path: Path | None = None) -> list[dict]:
     try:
-        rows = json.loads(_REGISTRY.read_text())
+        rows = json.loads((registry_path or _REGISTRY).read_text())
     except (OSError, json.JSONDecodeError, ValueError):
         return [{"verdict": "REGISTRY_UNREADABLE", "ts": _utc()}]
     if not isinstance(rows, list):
