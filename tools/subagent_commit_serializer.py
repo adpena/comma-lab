@@ -176,6 +176,53 @@ except ImportError:
 LOCK_PATH = REPO_ROOT / ".omx/state/.commit-lock"
 LOG_PATH = REPO_ROOT / ".omx/state/commit-serializer.log"
 
+
+def _resolve_effective_repo_root(explicit: str | None = None) -> Path:
+    """Resolve the repo root to operate on — WORKTREE-AWARE (FIX 2026-07-17).
+
+    The module-level ``REPO_ROOT`` is derived from THIS FILE's location, i.e. the
+    MAIN checkout. But a subagent may run the serializer from inside a git
+    WORKTREE (separate working tree + index, shared object store). Operating on
+    the main checkout from there silently stages the MAIN copy of the file, not
+    the worktree copy — so the caller's post-edit ``--expected-content-sha256``
+    never matches (rc=4) even though nothing actually raced, and a legitimate
+    worktree commit is impossible via the serializer. Resolve the root the caller
+    actually intends, in priority order:
+
+      1. explicit ``--repo-root``
+      2. ``$SUBAGENT_SERIALIZER_REPO_ROOT``
+      3. ``git rev-parse --show-toplevel`` from CWD (picks the worktree)
+      4. this file's checkout (back-compat fallback — unchanged behaviour when
+         run from the main checkout, and when git is unavailable)
+
+    A worktree has its OWN index, so operating on it preserves the
+    anti-commit-swap guarantee: the race the lock protects against is PER-INDEX,
+    and two commits to different working trees never share an index. A linked
+    worktree's ``.git`` is a FILE (a ``gitdir:`` pointer), not a dir, so
+    ``.exists()`` validates both the main checkout and a worktree.
+    """
+    for cand in (explicit, os.environ.get("SUBAGENT_SERIALIZER_REPO_ROOT")):
+        if cand:
+            p = Path(cand).resolve()
+            if (p / ".git").exists():
+                return p
+    # Auto-detect the working tree containing CWD (the worktree case).
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=Path.cwd(), capture_output=True, text=True,
+            check=False, timeout=10,
+        )
+        if out.returncode == 0:
+            top = out.stdout.strip()
+            if top:
+                p = Path(top).resolve()
+                if (p / ".git").exists():
+                    return p
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return REPO_ROOT
+
 # Canonical Co-Authored-By trailer (FIX-3 2026-05-08).
 CO_AUTHOR_TRAILER = (
     "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
@@ -908,7 +955,7 @@ def _review_gate_override_python_targets(
     return sorted(path for path in candidates if Path(path).suffix == ".py")
 
 
-def main() -> int:
+def main(rebind_root: bool = False) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -948,6 +995,15 @@ def main() -> int:
         "--label", default=os.environ.get("SUBAGENT_LABEL", "anonymous"),
         help="Subagent label for log forensics (default: $SUBAGENT_LABEL or "
              "'anonymous').",
+    )
+    parser.add_argument(
+        "--repo-root", default=None,
+        help="Repo/worktree root to operate on (WORKTREE-AWARE FIX 2026-07-17). "
+             "Default: auto-detect from CWD via `git rev-parse --show-toplevel`, "
+             "so running from inside a git WORKTREE commits into THAT worktree "
+             "(its own index) instead of silently staging the main checkout's "
+             "copy. Falls back to this file's checkout when git is unavailable. "
+             "Also settable via $SUBAGENT_SERIALIZER_REPO_ROOT.",
     )
     parser.add_argument(
         "--no-co-author", action="store_true",
@@ -1067,6 +1123,26 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+
+    # WORKTREE-AWARE FIX (2026-07-17): resolve the EFFECTIVE repo root from the
+    # caller's CWD (or --repo-root / env) and rebind the module globals that
+    # every downstream git op, lock, log, temp-index, and content-hash reads.
+    # Without this the serializer always operated on the MAIN checkout (root
+    # derived from __file__), so a commit attempted from inside a git worktree
+    # silently staged main's copy of the file and the caller's post-edit
+    # --expected-content-sha256 could never match (spurious rc=4). A worktree
+    # has its own index, so per-working-tree locking preserves the anti-swap
+    # guarantee (the race is per-index).
+    #
+    # Rebind ONLY on the real CLI entry path (`rebind_root=True`, set by the
+    # __main__ guard). In-process callers (tests that patch REPO_ROOT to a
+    # throwaway repo and call main() directly) pass rebind_root=False so their
+    # patched globals are respected — cwd-auto-detect must not clobber them.
+    if rebind_root:
+        global REPO_ROOT, LOCK_PATH, LOG_PATH
+        REPO_ROOT = _resolve_effective_repo_root(args.repo_root)
+        LOCK_PATH = REPO_ROOT / ".omx/state/.commit-lock"
+        LOG_PATH = REPO_ROOT / ".omx/state/commit-serializer.log"
 
     # FIX-CLOBBER (2026-07-08 Catalog #405): patch-file (intent-manifest) mode.
     # When --patch-file is set the working tree is NOT the source of truth; the
@@ -1720,4 +1796,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(rebind_root=True))
