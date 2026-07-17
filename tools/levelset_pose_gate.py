@@ -206,7 +206,7 @@ def run(args) -> dict:
     so_over = {"freq_across": 32.0, "freq_along": 4.0, "tau": 4.0, "iters": 4}
     so = lbc.detect_self_orient(cfg, so_over)
     blob, _bd = lbc.build_levelset_blob(params, cfg, so, None)
-    manifest, _b, _c, _p = lbc._read_blob_bytes(blob)
+    manifest, _b, _c, _p, _lane_band, _pose_carrier = lbc._read_blob_bytes(blob)
     n_pairs_total = int(cfg["n_pairs"])
     render_h, render_w = int(cfg["render_h"]), int(cfg["render_w"])
     camera_h, camera_w = lbc.CAMERA_H, lbc.CAMERA_W
