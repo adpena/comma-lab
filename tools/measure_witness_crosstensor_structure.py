@@ -85,8 +85,8 @@ def _pack_chart(
     use_base_permutation: bool,
     use_code_delta: bool,
 ) -> bytes:
-    bm, bb, bcoder, bpose, blane, bpcar = bc._read_blob_bytes(baseline_blob)
-    cm, cb, ccoder, _cpose, _clane, _cpcar = bc._read_blob_bytes(candidate_blob)
+    bm, bb, bcoder, bpose, blane, bpcar, _bchart = bc._read_blob_bytes(baseline_blob)  # (#497) 7th chart block: mechanical unpack update
+    cm, cb, ccoder, _cpose, _clane, _cpcar, _cchart = bc._read_blob_bytes(candidate_blob)
     manifest = dict(bm)
     if use_base_permutation or use_code_delta:
         manifest["xcodec"] = {

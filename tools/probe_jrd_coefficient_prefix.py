@@ -784,7 +784,7 @@ def load_byte_close_module():
 def parse_blob(lbc: Any, blob: bytes) -> BlobParts:
     import brotli
 
-    manifest, base_b, code_b, pose, lane_band, pose_carrier = lbc._read_blob_bytes(blob)
+    manifest, base_b, code_b, pose, lane_band, pose_carrier, _chart = lbc._read_blob_bytes(blob)  # (#497) 7th chart block: mechanical unpack update
     return BlobParts(
         manifest=manifest,
         base_raw=brotli.decompress(base_b),
@@ -824,7 +824,7 @@ def exact_pair_cap_blob(lbc: Any, full_blob: bytes, *, eval_pairs: int = EVAL_PA
 
     import brotli
 
-    manifest, base_b, code_b, pose, lane_b, pcar_b = lbc._read_blob_bytes(full_blob)
+    manifest, base_b, code_b, pose, lane_b, pcar_b, _chart = lbc._read_blob_bytes(full_blob)
     original_manifest = copy.deepcopy(manifest)
     n_pairs = int(manifest["n_pairs"])
     if eval_pairs <= 0 or eval_pairs > n_pairs:
@@ -876,7 +876,7 @@ def exact_pair_cap_blob(lbc: Any, full_blob: bytes, *, eval_pairs: int = EVAL_PA
         lane_cap,
         pcar_cap,
     )
-    reparsed, _base2, code2, _pose2, _lane2, _pcar2 = lbc._read_blob_bytes(capped)
+    reparsed, _base2, code2, _pose2, _lane2, _pcar2, _chart2 = lbc._read_blob_bytes(capped)
     roundtrip_code_raw = brotli.decompress(code2)
     proof = {
         "eval_pairs": eval_pairs,
@@ -931,7 +931,7 @@ def scorer_measurement(lbc: Any, *, raw_path: Path, gt: Any, segnet: Any, posene
 
 
 def oracle_receiver_check(lbc: Any, *, capped_blob: bytes, raw_path: Path) -> dict[str, Any]:
-    manifest, params, code, lane_pairs, pose_carrier = lbc._dequant_blob(capped_blob)
+    manifest, params, code, lane_pairs, pose_carrier, _chart = lbc._dequant_blob(capped_blob)
     reference, _argmax = lbc.numpy_oracle_reference_frames(
         params,
         code,

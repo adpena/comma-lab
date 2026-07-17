@@ -56,7 +56,7 @@ def _minimal_lvls1(tool, base=b"BASE", code=b"CODE", manifest=None) -> bytes:
 # --------------------------------------------------------------------------- #
 def test_read_blob_bytes_happy_path(tool):
     blob = _minimal_lvls1(tool)
-    man, base, code, pose, lane, pcar = tool._read_blob_bytes(blob)
+    man, base, code, pose, lane, pcar, chart = tool._read_blob_bytes(blob)  # (#497) 7th chart block: mechanical unpack update
     assert base == b"BASE" and code == b"CODE"
     assert lane is None and pcar is None
 
@@ -89,8 +89,10 @@ def test_inflate_read_blob_trailing_fails_closed(inflate_ns, tool, tmp_path):
 def test_inflate_read_blob_happy_path(inflate_ns, tool, tmp_path):
     p = tmp_path / "0.bin"
     p.write_bytes(_minimal_lvls1(tool))
-    m, base, code, pose, lane, pcar = inflate_ns["_read_blob"](str(p))
+    # (#497) 7th chart block: mechanical unpack update
+    m, base, code, pose, lane, pcar, chart = inflate_ns["_read_blob"](str(p))
     assert base == b"BASE" and code == b"CODE"
+    assert lane is None and pcar is None and chart is None
 
 
 def test_inflate_dequant_happy_and_exact(inflate_ns):

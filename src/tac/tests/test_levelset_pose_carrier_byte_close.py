@@ -82,13 +82,14 @@ def test_io_pack_default_off_byte_identical_and_read_back():
     mj = json.dumps(m, separators=(",", ":")).encode()
     pcar = b"PCARBLOB"
     packed_on = L._io_pack(mj, base, code, None, None, pcar)
-    man, b2, c2, p2, lane2, pc2 = L._read_blob_bytes(packed_on)
-    assert lane2 is None and pc2 == pcar and b2 == base and c2 == code
+    # (#497 gap-a landed the 7th optional chart block -> 7-tuple; mechanical unpack update only)
+    man, b2, c2, p2, lane2, pc2, ch2 = L._read_blob_bytes(packed_on)
+    assert lane2 is None and pc2 == pcar and b2 == base and c2 == code and ch2 is None
     # OFF path: 4 blocks only -> reading a no-flag manifest yields both trailing None
     m_off = {"x": 1}
     packed_noflag = L._io_pack(json.dumps(m_off).encode(), base, code, None, None, None)
-    _man, _b, _c, _p, lane3, pc3 = L._read_blob_bytes(packed_noflag)
-    assert lane3 is None and pc3 is None
+    _man, _b, _c, _p, lane3, pc3, ch3 = L._read_blob_bytes(packed_noflag)
+    assert lane3 is None and pc3 is None and ch3 is None
     assert packed_off.startswith(L._MAGIC)
 
 

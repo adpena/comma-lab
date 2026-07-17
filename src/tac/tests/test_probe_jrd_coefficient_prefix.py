@@ -68,7 +68,8 @@ class FakeLbc:
             pcar = blob[offset : offset + size]
             offset += size
         assert offset == len(blob)
-        return manifest, chunks[1], chunks[2], chunks[3], lane, pcar
+        # (#497) mirror the real 7-tuple API (chart block unused by this probe's fixtures)
+        return manifest, chunks[1], chunks[2], chunks[3], lane, pcar, None
 
 
 @pytest.fixture(scope="module")
@@ -95,7 +96,7 @@ def _simple_blob(tool: ModuleType) -> tuple[bytes, bytes]:
 def test_exact_pair_cap_preserves_code_prefix_and_scale(tool: ModuleType) -> None:
     blob, code_raw = _simple_blob(tool)
     capped, proof = tool.exact_pair_cap_blob(FakeLbc, blob, eval_pairs=1)
-    manifest, _base, code_b, _pose, _lane, _pcar = FakeLbc._read_blob_bytes(capped)
+    manifest, _base, code_b, _pose, _lane, _pcar, _chart = FakeLbc._read_blob_bytes(capped)
     assert manifest["n_pairs"] == 1
     assert manifest["code_shape"] == [2, 2]
     assert manifest["code_scale"] == 0.125

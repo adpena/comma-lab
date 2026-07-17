@@ -549,7 +549,7 @@ def run(args) -> dict:
     params, cfg = lbc._load_levelset_ckpt(ckpt_dir, args.npz_name)
     so = lbc.detect_self_orient(cfg, {"freq_across": 32.0, "freq_along": 4.0, "tau": 4.0, "iters": 4})
     blob, _bd = lbc.build_levelset_blob(params, cfg, so, None)
-    manifest, _b, _c, _p, _lane, _pc = lbc._read_blob_bytes(blob)
+    manifest, _b, _c, _p, _lane, _pc, _chart = lbc._read_blob_bytes(blob)  # (#497) 7th chart block: mechanical unpack update
     n_total = int(cfg["n_pairs"])
     n_pairs = min(int(args.n_pairs), n_total)
     camera_h, camera_w = lbc.CAMERA_H, lbc.CAMERA_W

@@ -109,7 +109,8 @@ def _dequantized_oracle_inputs(tool: ModuleType, ckpt_dir: Path):
     cfg["basis_program_deploy"] = cfg["basis_program"]  # taper off -> deploy == train program
     so = tool.detect_self_orient(cfg, {})
     blob, _manifest = tool.build_levelset_blob(params, cfg, so, None)
-    m, base_b, code_b, _pose, _lane, _pcar = tool._read_blob_bytes(blob)
+    # (#497 gap-a landed the 7th optional chart block -> 7-tuple; mechanical unpack update only)
+    m, base_b, code_b, _pose, _lane, _pcar, _chart = tool._read_blob_bytes(blob)
     params_d = tool._decode_base_params(m, base_b)
     code_d = tool._decode_code(m, code_b)
     return blob, m, params_d, code_d

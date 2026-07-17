@@ -84,7 +84,7 @@ def _byteclose_arms(
     )
     blob, build_report = B.build_levelset_blob(fp32, cfg, so, None)
     archive_path, archive_bytes = B.assemble_packet(blob, packet_dir)
-    manifest, parsed, parsed_code, lane_pairs, pose_carrier = B._dequant_blob(blob)
+    manifest, parsed, parsed_code, lane_pairs, pose_carrier, _chart = B._dequant_blob(blob)  # (#497) 7th chart block: mechanical unpack update
     if lane_pairs is not None or pose_carrier is not None:
         raise ValueError("plain v7.5.2 gap probe unexpectedly decoded a lane/pose carrier")
     parsed["code"] = parsed_code
