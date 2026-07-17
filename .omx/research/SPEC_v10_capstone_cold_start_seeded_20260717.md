@@ -609,3 +609,26 @@ every-seed-byte-consumed refusal. **MEASURED (n600, [macOS-CPU advisory]):**
   (refines lens-5: transport codes identity, the phase seed codes position).
 Crux-3 status: TRAIN legs (B) + STORE leg (G) both BUILT; the joint through-R A/B at the boundary is the
 remaining decisive measurement. Wave COMPLETE: arms A/B/C/D/E/F/G all landed.
+
+### §13.12 Fisher TRAJECTORY force-map (2026-07-17, Arm A commit 18eea72738) — the per-epoch evidence, and the finish-compression go/no-go ANSWERED
+16-row dual-metric table across {seed-ep650, ep725-BEST, ep726-stage, ep800} × {phase_advect, margin_satisfice,
+subpix_boundary, weight_entropy-λ15} vs the armed seg base (trainer-faithful Force-2/3 replicas incl. pa_flipmass;
+[macOS advisory, n96, EMA-shadow states, NON-PROMOTABLE). MEASURED:
+- **Phase sign-flip at engagement CONFIRMED across the trajectory:** Fisher cos +0.17 → −0.12, rel-norm
+  2.0 → 0.48 → 0.29 — the force is large-and-aligned at engagement, then flips antagonistic and shrinks as
+  boundaries settle. Pins the §13.8 single-point read to a trajectory (answers "when did it flip" = at/just-after
+  engagement). Late-phase anneal/event-gate (§13.2/§13.9) is the correct v10 form.
+- **weight_entropy finish-crossover ANSWERED (the rate-question go/no-go):** rel-norm at ep800 = 0.153 Euclid /
+  0.061 Fisher. Euclid has CROSSED the ~0.1 binding threshold; **Fisher has NOT** → per the dual-metric
+  discipline, GATE finish-phase compression ON THE FISHER read (still sub-threshold ⇒ do NOT turn weight_entropy
+  on yet; re-check at the c2 terminal/finish where d_seg is nearer the floor). This is the measured answer to the
+  rate-forcing soft-spot.
+- **subpix_boundary** is ≈half the seg force and the MOST Fisher-antagonistic term — flag for the boundary A/B
+  (its byte-free d_seg value must beat its antagonism cost).
+- **margin_satisfice** subdominant, with a standing Euclid/Fisher SIGN FLIP (the exact both-metrics discipline
+  case — neither cosine alone is the verdict).
+- **Fisher noise floor MEASURED:** ep725≡ep726 are bit-identical checkpoints, so their |Δcos| ≤ 0.036 is the
+  harness noise floor — any trajectory cosine change below that is not signal (a calibration the completeness
+  table must respect).
+This IS the completeness-table "demanded-by-measured-dynamics" column for the force terms. Standing per-run
+instrument (memory dual-metric-readback) — every long run gets this table.
