@@ -560,3 +560,23 @@ loss; half-wiring forbidden) — routed to the boundary owner with the ep725 ant
 (round-2): detector mode not resume-persisted; ncde BASIN window sensitivity; D4 live/EMA d_pose
 source second-order. P0 consequence: triggers/forces F2+F4+F6 → BUILT-awaiting-measure; lane-crux-3
 TRAIN side complete pending the A/B; #425 STORE leg remains the unbuilt half.
+
+### §13.10 Arm C landing (2026-07-17): skip lever BUILT+BINDS with a MEASURED 10× deficit · EMA law VALIDATED · shadow-vs-live FIRST DATA
+Branch `p0_build_skiplever_ema_20260717` (5 commits, 77 tests). **(1) Lane skip-band lever (#524, crux-1):**
+numpy-fp32 reference SB = D2 − U2(D4) on BT.601 luma (the stride-2 skip passband derived from the
+factorization), FD-verified closed-form adjoint, default-0.0 byte-identical, DSL `LaneSkipBand`.
+**Bindingness MEASURED (n24 real mod32cap render): BINDS (term 1.55e-3, grad>0) and the witness carries
+only 1.68e-4 skip-band lane energy vs GT 1.70e-3 — a live ~10× DEFICIT**, quantifying crux-1's mechanism
+on OUR render: the witness under-supplies exactly the band SegNet's decisive Lane path reads. Δd_seg =
+boundary A/B. **(2) EMA decay law (§13.3 → VALIDATED):** `ema_decay_run_geometry_v1` REGISTERED with 2
+anchors — the warmup-667 executable cross-check AND seed-fraction 0.6391@ep800 vs the SPEC's derived
+~64% (residual 9e-4: the §13.3 arithmetic is now an anchored equation, not prose). `EmaDecayCalibrated`
+LawRef-resolves --ema-decay; `EmaDecayFinisher` duty REGISTERED on the main ledger (orphan cured).
+**(3) Shadow-vs-live comparator + FIRST MEASURED ROWS (mod32cap ep1000, n96, [macOS advisory]):**
+d_seg EMA 0.003976 vs live 0.004884 — **EMA wins by 18.6%** on the meaningful axis at a converged-basin
+checkpoint (composite-S ranking pose-blind on that w_pose=0 ckpt — tool banners it; caveat recorded).
+First real datum for the §13.5 ship-the-winner gate; the c2 terminal comparison remains the decisive one.
+Open (round-2): micro-batch twin routing for the lever (fail-closed, live family B=1 unaffected);
+1-epoch ON smoke; feature-space (16-ch stem) upgrade path if the band form under-delivers; pose-aware
+comparator ranking; idempotent duty re-registration post-merge. Wave status: build arms A/B/C ALL LANDED;
+G (#425 store leg) building; boundary merge queue += this branch.
