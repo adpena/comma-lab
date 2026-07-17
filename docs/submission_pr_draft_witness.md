@@ -12,8 +12,10 @@ current measured state it is expected FALSE (see the score reality below). Do no
 do not let it launder a means (the method) into achieved goal-progress.
 
 **Score reality at draft time (do not delete — it gates the competitive claim):** our SUBMITTABLE
-pointer is 0.19108 [contest-CPU], which is WORSE than the public best 0.187946. The only corpus
-number below 0.187946 is the banked 0.18804 splice (PR128-on-PR110) — that is BORROWED substrate,
+pointer is 0.19108 [contest-CPU], which is WORSE than the public best 0.187946 (#128 author-local;
+~0.187961 on the x86 CI bot — use the CI number for the actual competitive comparison, per the Final
+Gate; either way 0.19108 loses). The only corpus number below the public best is the banked 0.18804
+splice (PR128-on-PR110) — that is BORROWED substrate,
 explicitly NON-SUBMISSION per NO-FAKE #7, and MUST NEVER appear as the witness's score. A submittable
 witness row below 0.187946 does not exist yet; it is produced only by the v9c2 → byte-close → dual
 exact-eval step still ahead. Until that row exists and is measured, this submission is innovative-only.
@@ -58,6 +60,10 @@ SHA — never asserted from the template.
 
 - [ ] **Byte-close on the FINAL checkpoint:** `tools/levelset_byte_close_and_eval.py` full n600,
       archive bytes frozen, SHA-256 recorded.
+- [ ] **`compress.sh` reproduces byte-for-byte (the public claim is gated, not asserted):** run
+      `compress.sh` from scratch in a clean checkout and confirm the rebuilt `archive.zip` SHA-256
+      equals `${ARCHIVE_SHA256}`. The body claims "same inputs → same bytes" and merge is a goal
+      (maintainer-checked) — this must be VERIFIED, not asserted.
 - [ ] **All score components recomputed from THIS archive SHA** via `upstream/evaluate.py` — seg,
       pose, rate each from the printed components of a run on the exact hosted bytes. FORBID copying
       any component (esp. d_pose) from a prior/banked run (the #205 lesson: the naive pose carrier's
@@ -191,7 +197,7 @@ Three-way classification: **OURS** (original, no public prior art) · **INDEPEND
 | ξ pose coder (`xi_pose_coder`, derive-H) | OURS | #257; sidecar-SHAPED, joint-descent VALUES |
 | Curriculum (event-gated witness-native) | OURS | derived from level-set energy (#302/#430); PR95 staging = ancestral lesson only |
 | Boundary surrogate (level-set margin) | INDEPENDENT-CONVERGENT | related `sigmoid(-margin/τ)` in #127/#129; credit them, claim no priority |
-| Exact-chain training (train/pack-gap closure) | INDEPENDENT-CONVERGENT | our eval_roundtrip discipline is a long-standing CLAUDE.md non-negotiable (datable); #125/#127/#129 exact-grid framing is comparable — credit, no priority claim |
+| Exact-chain training (train/pack-gap closure) | INDEPENDENT-CONVERGENT | our eval_roundtrip discipline is a long-standing CLAUDE.md non-negotiable; #125/#127/#129 exact-grid framing is comparable — credit, no priority claim |
 | Stored-pose conditioning CONCEPT | BORROWED (concept) | Quantizr #55/#56 concept; our implementation + joint descent |
 | openpilot/comma10k priors | BORROWED (commaai public) | train-time only, rule-118 free side |
 | Scorers/eval harness | BORROWED (contest upstream) | unmodified (pinned snapshot) |
