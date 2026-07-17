@@ -53,7 +53,7 @@ band instead of on interior pixels that SegNet already labels stably.
 Pose is not reconstructed from pixels. The 6 pose values per pair are driven
 by a stored per-pair ego motion `ξ` (quantized, entropy-coded, ~${DXI_BYTES} B
 total), and the render is **conditioned** on the stored `ξ` — in the spirit of
-@Quantizr's #55/#56 stored-target conditioning. The conditioning is trained by
+@Quantizr's #55 stored-target conditioning. The conditioning is trained by
 joint descent with the boundary objective (the render consumes `ξ` during
 training, not as a post-hoc correction), so the shipped frames carry the
 photometric structure PoseNet needs to reproduce the stored motion.
