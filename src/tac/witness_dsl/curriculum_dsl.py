@@ -2093,6 +2093,28 @@ def PoseFinishConditioningGate(
                  "sign-change peak); ships banked R1 if never/degenerate/untrusted (never blocks)")
 
 
+def PoseFinishBetaAnnealCoupling() -> Lever:
+    """SPEC_v10 §13.2 "coupling not coincidence" (arm B 2026-07-17): the β-ANNEAL-COMPLETE →
+    POSE-FINISH-ELIGIBLE event coupling. The c2 config's ``anneal-epochs(1000) ==
+    pose-finish-start(1000)`` is two constants AGREEING; this lever expresses the encoded intent
+    as the EVENT — pose-finish may not engage (by ANY signal: muon / σ_min gate / backstop) before
+    the β/τ anneal SCHEDULE completes (ep >= --anneal-epochs, fallback --epochs).
+
+    MEASURED context [live c2 run 20260717T113932Z, advisory]: the σ_min conditioning CREST landed
+    at ~ep802 — BEFORE the constant eligibility epoch (1000) — so the constant is measured-
+    SUBOPTIMAL on that run (an event-derived gate could have engaged at the measured optimum).
+    Composes with ``PoseFinishConditioningGate(engage_mode=...)``: the gate supplies the ENGAGE
+    signal, this coupling supplies the ELIGIBILITY floor. Requires the two-phase arm
+    (``--pose-finish-start-epoch > 0``; the trainer fails loud on an inert arm). DEFAULT-OFF;
+    absent ⇒ byte-identical."""
+    return Lever(
+        "pose_finish_beta_anneal_coupling",
+        overrides={"--pose-finish-eligible-on-beta-anneal-complete": True},
+        notes="SPEC_v10 §13.2: beta-anneal-complete -> pose-finish-eligible event coupling "
+        "(replaces the anneal-epochs==pose-finish-start constants coincidence); measured live-c2 "
+        "context: crest @~ep802 preceded the ep1000 constant (constant measured-suboptimal)")
+
+
 def Muon(start_epoch: int, window: int = 100) -> Lever:
     """A4: Muon finisher from ``start_epoch`` for ``window`` epochs, with moments
     reset at the optimizer-stage transition and tau FROZEN at 0.05 (the run's
@@ -4890,6 +4912,7 @@ def TieLocusDisplacement(
 def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-dive); DSL keyword-cased
     weight: float = 0.0, start_epoch: int = 0, classes: str = "0,1,2", band: float = 2.0,
     gap_xi: str = "interp", ref: str = "gt_advected", window: int = 0,
+    start_event: str | None = None,
 ) -> Lever:
     """T1 — CROSS-PAIR PHASE-ADVECTION CONSISTENCY (flicker deep-dive design memo
     ``.omx/research/flicker_transform_geometry_term_design_20260710.md`` §4 T1). DEFAULT-OFF.
@@ -4955,6 +4978,11 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
     if str(gap_xi) not in ("interp", "offline_homography"):
         raise ValueError(
             f"PhaseAdvectionConsistency: gap_xi must be 'interp' or 'offline_homography', got {gap_xi!r}")
+    if start_event is not None and str(start_event) not in ("label_floor", "ncde_dseg"):
+        raise ValueError(
+            "PhaseAdvectionConsistency: start_event must be None, 'label_floor' (law-5 floor->phase-"
+            "tail hand-off) or 'ncde_dseg' (SPEC_v10 §13.2 per-force event entry — the #344 NCDE "
+            f"d_seg slope-flatten/basin), got {start_event!r}")
     if str(ref) not in ("gt_advected", "gt_advected_with_own_tie_fallback", "witness_cached"):
         raise ValueError(
             "PhaseAdvectionConsistency: ref must be 'gt_advected', "
@@ -4966,7 +4994,9 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
                    "--seg-phase-advect-classes": str(classes),
                    "--seg-phase-advect-band": float(band),
                    "--seg-phase-advect-gap-xi": str(gap_xi),
-                   "--seg-phase-advect-ref": str(ref)},
+                   "--seg-phase-advect-ref": str(ref),
+                   **({"--seg-phase-advect-start-event": str(start_event)}
+                      if start_event is not None else {})},
         epochs_delta=window,
         notes=("T1 cross-pair phase-advection consistency (t_wit(p) -> ξ-advected GT tie of p-1; "
                "composes Force-1's A_ξ ∘ Force-3's tie coordinate on the cross-pair scored-frame "

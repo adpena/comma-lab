@@ -8186,6 +8186,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # engage block) => BYTE-IDENTICAL. ON => fires on label_floor_event over the trainer's own
     # verdict rows (poison-law: sensors READ trainer streams) with the fixed epoch as the LOUD cap.
     from tac.witness_control.event_wirings import label_floor_event as _label_floor_ev
+    from tac.witness_control.event_wirings import ncde_dseg_event as _ncde_dseg_ev
     _pa_start_event = getattr(args, "seg_phase_advect_start_event", None)
     _phase_advect_gate = _EBGate(
         name="seg_phase_advect", start_epoch_flag="--seg-phase-advect-start-epoch",
@@ -8332,9 +8333,26 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _pose_finish_start = int(getattr(args, "pose_finish_start_epoch", 0))
     _w_pose_now = {"v": float(args.w_pose)}
     _pose_finish_on = {"on": False}
+    # (SPEC_v10 §13.2 "coupling not coincidence"; arm B) β-ANNEAL-COMPLETE -> POSE-FINISH-ELIGIBLE
+    # event coupling. anneal-epochs(1000) == pose-finish-start(1000) in the c2 config is two constants
+    # AGREEING; this expresses the intent as the EVENT: pose-finish may not engage (by ANY signal —
+    # muon / σ_min gate / backstop) before the anneal SCHEDULE (β/τ, denominator --anneal-epochs,
+    # fallback --epochs) has completed. Default OFF => byte-identical. Fail-loud on an inert arm
+    # (coupling without a two-phase pose finish is counted-but-inert — NO-FAKE).
+    _pf_beta_coupling = bool(getattr(args, "pose_finish_eligible_on_beta_anneal_complete", False))
+    _pf_anneal_complete_ep = int(getattr(args, "anneal_epochs", None) or args.epochs)
+    if _pf_beta_coupling and _pose_finish_start <= 0:
+        raise ValueError(
+            "--pose-finish-eligible-on-beta-anneal-complete requires --pose-finish-start-epoch > 0 "
+            "(the two-phase arm): with pose co-trained from ep0 the coupling would be an inert flag "
+            "(counted-but-inert, NO-FAKE). Arm the two-phase or drop the coupling.")
+    _pose_gate_coupling = {"deferred_row_emitted": False}
     if _pose_finish_start > 0:
         print(json.dumps({"stage": "pose_finish_armed", "start_backstop": _pose_finish_start,
                           "w_pose_finish": float(args.w_pose),
+                          "beta_anneal_coupling": bool(_pf_beta_coupling),
+                          "anneal_complete_epoch": (int(_pf_anneal_complete_ep)
+                                                    if _pf_beta_coupling else None),
                           "note": "v7.5 D.9 R1 two-phase: pose-blind until d_seg converges (muon switch), "
                           "then terminal joint pose-descent; SUPERSEDES co-train-pose-from-ep0"}), flush=True)
 
@@ -11943,7 +11961,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _pa_fired_by = None
                 if _phase_advect_gate.event_mode:
                     _lf_rows = _wire_sense["labelfloor_series"]
-                    _pa_event_fired = bool(_label_floor_ev(_lf_rows)["fired"])
+                    # (SPEC_v10 §13.2 per-force event entry) sensor DISPATCH: 'label_floor' (incumbent)
+                    # or 'ncde_dseg' (#344 d_seg slope-flatten/basin) — both READ the same trainer-own
+                    # verdict stream (poison-law), both fail-safe to the backstop cap.
+                    if _pa_start_event == "ncde_dseg":
+                        _pa_event_fired = bool(_ncde_dseg_ev(_lf_rows)["fired"])
+                    else:
+                        _pa_event_fired = bool(_label_floor_ev(_lf_rows)["fired"])
                     _pa_sde = int(_lf_rows[-1]["epoch"]) if _lf_rows else -1
                     _pstep = _phase_advect_gate.update(
                         ep, event_fired=_pa_event_fired, sensor_data_epoch=_pa_sde,
@@ -12009,6 +12033,22 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             n_points=(_pg_det.n_points if _pg_det is not None else 0))), flush=True)
                 else:  # 'muon' incumbent — BYTE-IDENTICAL
                     _pose_finish_on["on"] = bool(_muon_gate.fired) or (ep >= _pose_finish_start)
+                # (SPEC_v10 §13.2 "coupling not coincidence") β-anneal-complete -> pose-finish-eligible:
+                # with the coupling ON, an engage signal (muon / σ_min gate / backstop) arriving BEFORE
+                # the anneal schedule completes is DEFERRED (held not-eligible) — LOUD once. OFF (default)
+                # => this branch never runs => byte-identical.
+                if _pf_beta_coupling and _pose_finish_on["on"] and ep < _pf_anneal_complete_ep:
+                    _pose_finish_on["on"] = False
+                    if not _pose_gate_coupling["deferred_row_emitted"]:
+                        _pose_gate_coupling["deferred_row_emitted"] = True
+                        print(json.dumps({
+                            "stage": "pose_finish_coupling_deferred", "epoch": int(ep),
+                            "anneal_complete_epoch": int(_pf_anneal_complete_ep),
+                            "engage_mode": _pose_gate_mode,
+                            "note": "pose-finish engage signal arrived BEFORE the β/τ anneal schedule "
+                            "completed — held NOT-ELIGIBLE until anneal-complete (SPEC_v10 §13.2 "
+                            "event coupling replaces the anneal-epochs==pose-finish-start coincidence)"}),
+                            flush=True)
                 _w_pose_now["v"] = float(args.w_pose) if _pose_finish_on["on"] else 0.0
                 if _pose_finish_on["on"] and not _pf_was_on:
                     _pose_gate["engaged_epoch"] = int(ep)
@@ -13868,6 +13908,15 @@ def main(argv: list[str] | None = None) -> int:
                     "is the fail-safe BACKSTOP CAP (ep>=this also engages pose). 0 (default) => DISABLED "
                     "=> byte-identical (pose from ep0). Requires --w-pose > 0 (the finish-phase weight).")
     ap.add_argument(
+        "--pose-finish-eligible-on-beta-anneal-complete",
+        action=argparse.BooleanOptionalAction, default=False,
+        help="(SPEC_v10 §13.2 'coupling not coincidence'; arm B) EVENT COUPLING: pose-finish may not "
+        "engage (by ANY signal — muon / sigma_min gate / backstop) before the β/τ anneal SCHEDULE "
+        "completes (ep >= --anneal-epochs, fallback --epochs). Replaces the c2 anneal-epochs(1000) == "
+        "pose-finish-start(1000) two-constants coincidence with the event it encodes. Requires "
+        "--pose-finish-start-epoch > 0 (fail-loud otherwise: inert-flag NO-FAKE guard). Default OFF "
+        "=> byte-identical.")
+    ap.add_argument(
         "--pose-training-compute-gate",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -14953,12 +15002,17 @@ def main(argv: list[str] | None = None) -> int:
                     "partition + tie field to advect); the engage epoch re-treats the spike-guard. "
                     "With --seg-phase-advect-start-event set this becomes the fail-safe BACKSTOP CAP.")
     ap.add_argument("--seg-phase-advect-start-event", type=str, default=None,
-                    choices=["label_floor"],
+                    choices=["label_floor", "ncde_dseg"],
                     help="#507 skeleton-dissolve 2026-07-15: fire the T1 phase-advection engagement on "
                     "the label_floor sensor (tac.witness_control.label_floor_detector — the law-5 "
                     "floor->phase-tail hand-off: label-smooth stage AND d_seg within the persistence-"
                     "floor band [0.00496,0.00700] AND flat; eq label_floor_to_phase_tail_handoff_v1). "
-                    "The sensor READS the trainer's own verdict d_seg stream (no recompute); "
+                    "'ncde_dseg' (SPEC_v10 §13.2 per-force event entry; arm B) fires on the #344 "
+                    "linear-NCDE d_seg hit->solve instead: BASIN (predicted remaining within-stage "
+                    "descent spent) OR HANDOFF (d_seg slope-flatten predicted within the horizon) — "
+                    "tac.witness_control.event_wirings.ncde_dseg_event over the SAME trainer verdict "
+                    "stream (NO-FAKE guarded: unstable/low-r2 fits never fire). "
+                    "Both sensors READ the trainer's own verdict d_seg stream (no recompute); "
                     "--seg-phase-advect-start-epoch becomes the fail-safe backstop cap (LOUD "
                     "cap_fired_before_event when it fires). Default None = OFF = byte-identical "
                     "fixed-epoch gate.")

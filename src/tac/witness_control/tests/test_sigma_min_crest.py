@@ -161,3 +161,30 @@ def test_trainer_argparse_declares_crest_choice():
     assert m is not None and "sigma_min_crest" in m.group(1)
     # the engage/alarm paths dispatch on the sigma-mode tuple, not a single string equality
     assert "_pose_gate_sigma_modes" in src
+
+
+# ── LIVE MEASURED ANCHOR [live c2 run 20260717T113932Z, advisory] ──────────── #
+_LIVE_C2_SIGMA_MIN = [
+    # smoothed σ_min gate-row series ep786→810 (READ-ONLY run.log): rise to the ~ep802 PEAK
+    # (0.0097) then decisive decline (latest rel-slope −0.1246/ep, stderr 0.0187 ≈ 6.6σ).
+    (786, 0.0010), (794, 0.0064), (798, 0.0064), (802, 0.0097), (806, 0.0057), (810, 0.0034),
+]
+_LIVE_C2_EXTRAP = [
+    # labeled EXTRAPOLATION (not measured): the measured decline rate continued 3 more gate rows,
+    # only to give the hysteresis machinery its confirmation window.
+    (814, 0.0021), (818, 0.0013), (822, 0.0008),
+]
+
+
+def test_live_c2_crest_hysteresis_discipline_then_fire():
+    """On the 6 MEASURED points the crest is real but hysteresis (3 windows) is not yet met —
+    the detector correctly waits; with the measured decline continued (extrapolated, labeled),
+    it FIRES. The plateau detector NEVER fires on either (a crest-then-decline trajectory never
+    presents 'flat' — measured live: consecutive_flat 0/3 on the run)."""
+    v_measured = smp.run_detector_on_series(_LIVE_C2_SIGMA_MIN, mode=smp.MODE_CREST)
+    assert not v_measured.fired()          # hysteresis discipline: no premature fire
+    full = _LIVE_C2_SIGMA_MIN + _LIVE_C2_EXTRAP
+    v_full = smp.run_detector_on_series(full, mode=smp.MODE_CREST)
+    assert v_full.classification == smp.CREST_FIRED
+    # the plateau mode never fires on the crest-then-decline shape (the live F4 signature):
+    assert not smp.run_detector_on_series(full, mode=smp.MODE_PLATEAU).fired()
