@@ -247,7 +247,7 @@ Three-way classification: **OURS** (original, no public prior art) · **INDEPEND
 | Curriculum (event-gated witness-native) | BORROWED-BASE, ADAPTED | staging started from #95's published schedule as base (credited publicly per operator 2026-07-17); stages rederived/adapted to the level-set energy (#302/#430) — the gates, events, and values are ours |
 | Boundary surrogate (level-set margin) | INDEPENDENT-CONVERGENT | related `sigmoid(-margin/τ)` exists in public PRs (#127/#129); per the citation policy we neither cite nor claim priority publicly — no code used, no comparison raised |
 | Exact-chain training (train/pack-gap closure) | INDEPENDENT-CONVERGENT | our eval_roundtrip discipline is a long-standing CLAUDE.md non-negotiable; comparable exact-grid framing exists publicly (#125/#127/#129) — internal record only, not cited publicly |
-| Stored-pose conditioning CONCEPT | BORROWED (concept) | Quantizr #55/#56 concept; our implementation + joint descent |
+| Stored-pose conditioning CONCEPT | BORROWED (concept) | Quantizr #55 concept; our implementation + joint descent |
 | openpilot/comma10k priors | BORROWED (commaai public) | train-time only, rule-118 free side |
 | Scorers/eval harness | BORROWED (contest upstream) | unmodified (pinned snapshot) |
 
