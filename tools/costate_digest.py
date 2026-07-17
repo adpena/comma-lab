@@ -902,6 +902,34 @@ def section_review_counter() -> tuple[str | None, dict | None]:
         return None, None
 
 
+def section_chain_watchdog() -> tuple[str | None, dict | None]:
+    """B4 chain-liveness SENSE row (p0_launcher_chain_durability_20260717): the LAST scan
+    appended by tools/witness_chain_watchdog.py. Surfaces CHAIN_DEAD_NO_RECEIPT loudly (the
+    silent-death alarm) and RUNNING_QUIET informatively (alive despite quiet logs — the
+    20260716 phantom-death class). Fail-open; None when no scans exist yet."""
+    try:
+        row = _last_jsonl_row(_REPO / ".omx" / "state" / "witness_chain_watchdog.jsonl")
+        if not row or not isinstance(row.get("verdicts"), list):
+            return None, None
+        verdicts = [v for v in row["verdicts"] if isinstance(v, dict)]
+        dead = [v for v in verdicts if v.get("verdict") == "CHAIN_DEAD_NO_RECEIPT"]
+        quiet = [v for v in verdicts if v.get("verdict") == "RUNNING_QUIET"]
+        if dead:
+            labels = ", ".join(str(v.get("label")) for v in dead)
+            line = (f"chain-watchdog: ALARM CHAIN_DEAD_NO_RECEIPT [{labels}] — silent death; "
+                    f"postmortem before relaunch (scan {row.get('ts')})")
+        elif quiet:
+            line = (f"chain-watchdog: {len(quiet)} chain(s) ALIVE-but-quiet (buffered logs "
+                    f"!= death; scan {row.get('ts')}) — judge by tools/witness_chain_watchdog.py")
+        elif verdicts:
+            line = f"chain-watchdog: {len(verdicts)} chain(s) healthy (scan {row.get('ts')})"
+        else:
+            return None, None
+        return line, {"scan_ts": row.get("ts"), "verdicts": verdicts}
+    except Exception:  # noqa: BLE001 — SENSE row must never break the digest
+        return None, None
+
+
 # ─────────────────────────── assembly ───────────────────────────
 def build_digest() -> tuple[list[str], dict]:
     t0 = time.time()
@@ -948,6 +976,10 @@ def build_digest() -> tuple[list[str], dict]:
 
     fl_line, data["failure_ledger"] = section_failure_ledger()
     lines.append(fl_line or "failure-ledger: none yet (sibling SENSE input pending)")
+
+    wd_line, data["chain_watchdog"] = section_chain_watchdog()
+    if wd_line:
+        lines.append(wd_line)
 
     dl_line, data["deferral_ledger"] = section_deferral_ledger()
     if dl_line:
