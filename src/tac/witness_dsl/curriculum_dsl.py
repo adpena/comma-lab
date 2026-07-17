@@ -2190,6 +2190,56 @@ def CompactShearletBasis(window: int = 0) -> Lever:
     )
 
 
+def LiteralPolarCurveletBasis(
+    window: int = 0,
+    native_orient: bool = True,
+    kappa: float = 2.0,
+    fixed_point_iters: int = 6,
+) -> Lever:
+    """Select the literal finite polar-frequency-wedge curvelet frame (p0_497 treatment).
+
+    The genuine Candes-Donoho-style dictionary recovered by the curvelet crux
+    (``tac.boundary_math.localized_basis_frames``, family ``literal_polar_curvelet``,
+    80 columns: 4 scaling + 76 directional; atom-spec-hash sealed by
+    ``BasisProgramConfig``). Same-width decoder-native orientation gating is the
+    selected mechanism (SPEC ``curvelet_optimal_form_crux_20260715_SPEC.md``): it
+    gates the existing 80 columns instead of appending a directional Fourier bank,
+    so learned tensor shapes match the ``legacy_fourier_ab_control`` arm exactly
+    (equal-value precondition of the matched-COUNTED-BYTES A/B).
+
+    Composition seals honored by trainer + byte-close (fail-closed, NOT this
+    factory's job to bypass): scalar Fourier IPE is invalid for the literal family
+    (``--render-aa`` is forced to ``none`` here — the sealed base config carries
+    ``ipe``, which the literal trainer refuses); native orientation currently
+    refuses ``--render-aa supersample`` until the fine-grid native gates are
+    receiver-sealed; the ground chart refuses until its counted receiver program
+    lands. Default-off treatment; the byte-closed n600 realized-through-R
+    matched-bytes A/B row is OWED (operator-GO, PREPARED_NOT_FIRED).
+    """
+    if int(window) < 0:
+        raise ValueError("LiteralPolarCurveletBasis: window must be >= 0")
+    if not (float(kappa) > 0.0):
+        raise ValueError("LiteralPolarCurveletBasis: kappa must be > 0")
+    if int(fixed_point_iters) <= 0:
+        raise ValueError("LiteralPolarCurveletBasis: fixed_point_iters must be > 0")
+    return Lever(
+        "basis_family::literal_polar_curvelet",
+        overrides={
+            "--basis": "literal_polar_curvelet",
+            "--self-orient": False,  # appended dir-bank would break the equal-value A/B (trainer refuses)
+            "--render-aa": "none",   # scalar IPE fail-closed for the literal family (SPEC); base cfg has ipe
+            "--literal-curvelet-native-orient": bool(native_orient),
+            "--literal-curvelet-kappa": float(kappa),
+            "--literal-curvelet-fixed-point-iters": int(fixed_point_iters),
+        },
+        epochs_delta=int(window),
+        notes=("p0_497 basis-cure treatment: literal polar-curvelet + same-width native "
+               "orientation; equal learned shapes vs control; matched-COUNTED-BYTES n600 "
+               "realized d_seg A/B OWED (operator-GO, PREPARED_NOT_FIRED; equal-byte law "
+               "tools/curvelet_equal_byte_ab_receipt.py)"),
+    )
+
+
 def LegacyFourierABControl(window: int = 0) -> Lever:
     """Select the byte-identical historical Fourier computation as A/B control only.
 
