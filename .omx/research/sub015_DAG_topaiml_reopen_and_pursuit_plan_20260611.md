@@ -19323,3 +19323,20 @@ Pointer 0.19108 UNMOVED (apparatus + armed measurement; next exact-relevant even
   are CONTAMINATED (observer ON) for hash 2d486e3bff… — valid for boot/resume/peak proofs ONLY; the fixed
   delta re-bench receipt (with the decomposition) supersedes it for all wall-clock decisions.
 - **MEANS not ends:** apparatus + bench validity; pointer 0.19108 UNMOVED (SoT: canonical_frontier_pointer.json).
+
+## FEED-519 (2026-07-17) — null-subspace measure: gauge is a PRECISION lever, not a rate lever; ker(A) = capacity signal
+- **SIGNAL** (MEASURED, donor mod32cap ep650 EMA BEST, commit 1dbdfff7ea, [macOS-CPU advisory] NON-PROMOTABLE): gauge
+  (class-constant) component = 52.36% of out_sdf.weight norm / 69.34% bias / 97.27% of palette norm (night-video DC);
+  decoded-frame energy in ker(A) of the shared resize = 52.4–52.9% (projector exact, residual 1.65e-15, blind 22.6969%).
+- **DIAGNOSTIC**: projecting null components out is RATE-NEUTRAL through the real int8+brotli blob (+11 B / −6 B) —
+  dense fixed-shape int8 prices tensor SHAPE, not content ("bytes for null DOF" hypothesis REFUTED, INSTANCE scope).
+  Real mechanism: gauge inflates max|W| → 22.3% coarser int8 scale → 25.0% higher quantization error on score-relevant
+  W⊥. Measured Δd_seg of gauge+palette canonicalization: −1.27e-5 at n32 (advisory; n600 extension gate honestly NOT
+  met → no n600 fired; sign unconfirmed at n600).
+- **RESPONSE**: (a) gauge/palette canonicalize-pre-quantization → #406 apply-pass batch (n600 byte-close eval confirms
+  sign there, ~free precision if it holds); (b) ker(A): half the render is scorer-invisible → range(A)-restricted
+  render targets = v8/v9 carrier design input (#359/#380), NOT a blob-rate lever (no camera-res section stored).
+- **Triality**: equations leg DEFERRED with recorded `# FORMALIZATION_PENDING` (single checkpoint + advisory subset —
+  register on the #406 n600 confirmation); DSL leg n/a (measurement, no lever landed); this FEED = DAG leg.
+  Artifacts: tools/null_subspace_rate_measure.py · .omx/research/null_subspace_rate_measure_20260717.md ·
+  reports/null_subspace_rate_measure_519_n32.json. Pointer 0.19108 UNMOVED (means/measurement).
