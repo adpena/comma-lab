@@ -47,7 +47,7 @@ for _p in (str(REPO), str(REPO / "src"), str(REPO / "upstream"), str(REPO / "exp
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-SUPPORTED_TERMS = ("seg", "pose", "weight_entropy", "phase_advect")
+SUPPORTED_TERMS = ("seg", "pose", "weight_entropy", "phase_advect", "margin_satisfice", "subpix")
 
 
 def _flatten_grad_tree(tree):
@@ -108,6 +108,21 @@ def main() -> None:
     # weight-entropy params.
     ap.add_argument("--we-lambda", type=float, default=15.0)
     ap.add_argument("--we-sigma", type=float, default=0.2)
+    # margin-satisfice params (defaults = the c2 launch flags; Force-2 #360).
+    ap.add_argument("--ms-weight", type=float, default=0.2)
+    ap.add_argument("--ms-msafe", type=float, default=0.039180326461791926)
+    ap.add_argument("--ms-band", type=float, default=2.0)
+    # subpix boundary-placement params (defaults = the c2 launch flags; Force-3 #360).
+    ap.add_argument("--subpix-weight", type=float, default=0.3)
+    ap.add_argument("--subpix-band", type=float, default=1.0)
+    ap.add_argument("--subpix-eps", type=float, default=1e-6)
+    ap.add_argument("--subpix-ew-path", default="reports/pa_edge_weights.json",
+                    help="P0 FORCE-3 W_e flip-mass edge-weight artifact (pa_flipmass; the c2 "
+                    "launch's --seg-subpix-edge-weight-path). Missing file FAILS LOUD (no silent "
+                    "uniform downgrade in a measurement tool).")
+    ap.add_argument("--state-label", default="",
+                    help="free-text state annotation for the output row (e.g. 'EMA-BEST-ep725', "
+                    "'warm-start-seed-ep650-live-init')")
     # self-orient reconstruction.
     ap.add_argument("--so-fixed-point-iters", type=int, default=2)
     ap.add_argument("--fd-h", type=float, default=0.5,
@@ -325,9 +340,99 @@ def main() -> None:
         _bits, rate = weight_entropy_rate_term_mlx(m, sigma=args.we_sigma)
         return args.we_lambda * rate
 
+    def _signed_for(m, pi):
+        """Realized live signed margin (1,H,W) — the trainer's shared ``_signed``."""
+        f1 = render_through_R_mlx(m, mx.array(feats_np_for_pair(pi)), 2 * pi + 1,
+                                  render_h, render_w)
+        seg_logits = adapter.segnet(f1)
+        oh = _oh(pi)
+        gt_logit = mx.sum(seg_logits * oh, axis=-1)
+        runner_up = mx.max(seg_logits + oh * (-1e9), axis=-1)
+        return gt_logit - runner_up
+
+    def ms_term(m, pi):
+        # P0 FORCE 2 (trainer block @ ms_w>0): one-sided relu(m_safe - m_wit) on the
+        # theta-independent GT-margin annulus (|GT margin| < band), mean over annulus px.
+        ann = mx.array((np.asarray(gt.margins[pi], np.float32) < args.ms_band)
+                       .astype(np.float32)[None])                       # (1,H,W)
+        signed = _signed_for(m, pi)
+        hinge = mx.maximum(args.ms_msafe - signed, 0.0) * ann
+        return args.ms_weight * (mx.sum(hinge) / (mx.sum(ann) + 1e-6))
+
+    _sx_cache: dict = {}
+
+    def _subpix_providers(pi: int):
+        """The trainer's theta-independent genuine-V straddle precompute (t, dir, W_e map),
+        replicated verbatim from the subpix_w>0 block (dominant = shallower partner margin,
+        ties -> right; W_e from the pa_flipmass artifact — FAIL LOUD if missing)."""
+        if pi in _sx_cache:
+            return _sx_cache[pi]
+        _we_p = Path(args.subpix_ew_path)
+        if not _we_p.is_absolute():
+            _we_p = REPO / args.subpix_ew_path
+        if not _we_p.is_file():
+            raise SystemExit(f"subpix W_e artifact missing: {_we_p} (fail loud; pass "
+                             "--subpix-ew-path to the pa_flipmass artifact)")
+        we_mat = np.asarray(json.loads(_we_p.read_text())["W_e"], dtype=np.float32)
+        assert we_mat.shape == (5, 5), f"W_e shape {we_mat.shape} != (5,5)"
+        lst = np.asarray(gt.lstars[pi], np.int64)
+        mg = np.asarray(gt.margins[pi], np.float32)
+        H, W = lst.shape
+        eps = args.subpix_eps
+        band = args.subpix_band
+        dh = lst[:, :-1] != lst[:, 1:]
+        mph, mqh = mg[:, :-1], mg[:, 1:]
+        th = mph / (mph + mqh + eps)
+        vh = dh & (mph < band) & (mqh < band)
+        dv = lst[:-1, :] != lst[1:, :]
+        mpv, mqv = mg[:-1, :], mg[1:, :]
+        tv = mpv / (mpv + mqv + eps)
+        vv = dv & (mpv < band) & (mqv < band)
+        has_r = np.zeros((H, W), bool); has_r[:, :W - 1] = vh
+        qr = np.full((H, W), np.inf, np.float32); qr[:, :W - 1] = mqh
+        tr = np.zeros((H, W), np.float32); tr[:, :W - 1] = th
+        has_d = np.zeros((H, W), bool); has_d[:H - 1, :] = vv
+        qd = np.full((H, W), np.inf, np.float32); qd[:H - 1, :] = mqv
+        td = np.zeros((H, W), np.float32); td[:H - 1, :] = tv
+        pick_r = has_r & (~has_d | (qr <= qd))
+        pick_d = has_d & (~has_r | (qd < qr))
+        t_full = np.full((H, W), -1.0, np.float32)
+        dir_full = np.zeros((H, W), np.float32)
+        t_full[pick_r] = tr[pick_r]; dir_full[pick_r] = 0.0
+        t_full[pick_d] = td[pick_d]; dir_full[pick_d] = 1.0
+        act = pick_r | pick_d
+        cb_r = np.zeros_like(lst); cb_r[:, :-1] = lst[:, 1:]
+        cb_d = np.zeros_like(lst); cb_d[:-1, :] = lst[1:, :]
+        c_b = np.where(dir_full < 0.5, cb_r, cb_d)
+        wmap = np.zeros((H, W), np.float32)
+        if act.any():
+            ai, aj = np.nonzero(act)
+            wmap[ai, aj] = we_mat[lst[ai, aj], c_b[ai, aj]]
+        prov = (mx.array(t_full[None]), mx.array(dir_full[None]), mx.array(wmap[None]))
+        _sx_cache.clear()
+        _sx_cache[pi] = prov
+        return prov
+
+    def subpix_term(m, pi):
+        # LEVER-4b / P0 FORCE 3 (trainer block @ subpix_w>0): supervise the witness realized
+        # margin ratio t_wit = Mw[p]/(Mw[p]+Mw[q]) toward the GT t on genuine-V straddles,
+        # W_e-weighted mean (pa_flipmass armed in c2).
+        t_tgt, dir_m, ew = _subpix_providers(pi)
+        signed = _signed_for(m, pi)
+        active = (t_tgt >= 0.0).astype(signed.dtype)
+        mw = mx.maximum(signed, 0.0)
+        m_right = mx.pad(mw[:, :, 1:], [(0, 0), (0, 0), (0, 1)])
+        m_down = mx.pad(mw[:, 1:, :], [(0, 0), (0, 1), (0, 0)])
+        mq = mx.where(dir_m < 0.5, m_right, m_down)
+        t_wit = mw / (mw + mq + args.subpix_eps)
+        t_ref = mx.maximum(t_tgt, 0.0)
+        sq = mx.square(t_wit - t_ref) * active
+        return args.subpix_weight * (mx.sum(sq * ew) / (mx.sum(active * ew) + 1e-6))
+
     term_fns = {"seg": seg_term, "pose": pose_term, "phase_advect": phase_term,
-                "weight_entropy": we_term}
-    pair_dependent = {"seg": True, "pose": True, "phase_advect": True, "weight_entropy": False}
+                "weight_entropy": we_term, "margin_satisfice": ms_term, "subpix": subpix_term}
+    pair_dependent = {"seg": True, "pose": True, "phase_advect": True, "weight_entropy": False,
+                      "margin_satisfice": True, "subpix": True}
 
     n_eu = min(args.pairs, n_all)
     eu_idx = np.linspace(0, n_all - 1, n_eu).astype(int).tolist()
@@ -437,7 +542,7 @@ def main() -> None:
     fisher_conflict_b = max(0.0, -fi_num) / (np.sqrt(fi_bb) + 1e-300)
 
     result = {
-        "checkpoint": str(ck), "epoch": epoch,
+        "checkpoint": str(ck), "epoch": epoch, "state_label": args.state_label,
         "term_a": args.term_a, "term_b": args.term_b,
         "n_pairs_euclid": n_eu, "n_pairs_fisher": n_fi, "n_all": n_all,
         "seg_form": args.seg_form, "tau": args.tau, "w_seg": args.w_seg,
