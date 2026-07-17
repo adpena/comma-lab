@@ -1,0 +1,361 @@
+{
+  "tool": "levelset_byte_close_and_eval",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "promotion_claim": false,
+  "utc": "2026-07-16T03:11:34Z",
+  "ckpt_dir": "/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/v9_bc",
+  "npz_name": "levelset_witness_ema_mlx.npz",
+  "weights_arm": "ema",
+  "n_pairs_total": 600,
+  "self_orient": {
+    "self_orient": false,
+    "curvelet_feat_width": 80,
+    "dir_w": 0
+  },
+  "config": {
+    "n_classes": 5,
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 19,
+    "activation": "hosc",
+    "softmax_temp": 0.9070129221891566,
+    "chroma": true,
+    "render_h": 384,
+    "render_w": 512,
+    "in_feat": 80,
+    "max_bank_freq": 64.0,
+    "lane_edge_weight": 0.0
+  },
+  "byte_close": {
+    "n_params": 83975,
+    "manifest_bytes": 1902,
+    "base_int8_brotli_bytes": 46033,
+    "code_int8_brotli_bytes": 18557,
+    "pose_sidecar_bytes": 0,
+    "lane_band_counted_bytes": 0,
+    "pose_carrier_counted_bytes": 0,
+    "magic_and_prefixes_bytes": 22,
+    "total_0bin_bytes": 66514,
+    "canonical_quantize_blob_bytes": 64590,
+    "accounting_matches_canonical": true,
+    "cross_tensor_codec": {
+      "active": false,
+      "base_permutation": null,
+      "code_transform": null,
+      "quantized_state_lossless_by_construction": true
+    },
+    "archive_zip_bytes": 65797,
+    "zip_container_overhead_bytes": -717,
+    "rate": 0.0017524608615431803,
+    "rate_term": 0.043811521538579506,
+    "rate_denom_bytes": 37545489,
+    "archive_zip_sha256": "a1d13d756c12a026c929744cdd126b5836cff50fa69cf723276b81f8a7290f04",
+    "free_vs_counted": {
+      "FREE_rule118": "curvelet bank (5 scalars) + self-orient directional feats (decoder-own-argmax fixed point) -- generic algorithm, 0 bytes",
+      "COUNTED": "in_proj/film/hidden.*/out_sdf/out_tex/palette weights + per-frame code (int8+brotli, the learned video-derived payload)"
+    },
+    "pose_sidecar": "off (level-set witness carries pose in per-(pair,frame) codes/texture; train --w-pose>0. A stored sidecar adds COUNTED bytes the scorer never reads -> does NOT lower realized d_pose).",
+    "lane_render_band": {
+      "active": false
+    },
+    "pose_carrier": {
+      "active": false
+    },
+    "phase_carrier": {
+      "active": true,
+      "n_frames": 6,
+      "classes": [
+        0,
+        1,
+        2
+      ],
+      "q_step": 0.015625,
+      "residual_scheme": "zlib9",
+      "total_residual_count": 13222,
+      "per_frame_class_counts": [
+        [
+          1171,
+          638,
+          456
+        ],
+        [
+          1121,
+          645,
+          464
+        ],
+        [
+          1082,
+          564,
+          471
+        ],
+        [
+          1098,
+          609,
+          460
+        ],
+        [
+          1132,
+          581,
+          462
+        ],
+        [
+          1172,
+          638,
+          458
+        ]
+      ],
+      "section_bytes": 10682,
+      "xi_amortized_residual_bytes": 10276,
+      "raw_tie_residual_bytes": 9874,
+      "amortization_ratio": 1.0407129835932754,
+      "mean_abs_residual_q": 15.43994857056421,
+      "max_abs_residual_q": 64,
+      "tie_recon_rmse_px": 0.06568384971028116,
+      "reconstruction_bit_identical": true,
+      "counted_rate_term_contribution": 0.007112705337251034,
+      "recovered_d_seg": null,
+      "recovered_d_seg_status": "OWED_through_R_n600_AB (intrinsic bytes MEASURED; d_seg NOT claimed, NO-FAKE)",
+      "source_gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n6.npz",
+      "rule_118_boundary": {
+        "COUNTED (archive.zip)": "the quantized per-pair phase RESIDUAL (video-derived; the part xi-transport cannot predict)",
+        "FREE (inflate.py)": "the xi-transport warp A_xi + tie-coordinate extraction (generic algorithm) + the DECODER-DERIVABLE straddle mask (the witness's own rendered partition)",
+        "no_gt_no_scorer_shipped": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship"
+      }
+    },
+    "blind_coordinate_fill": {
+      "active": false
+    }
+  },
+  "lane_render_band": {
+    "active": false
+  },
+  "pose_carrier": {
+    "active": false
+  },
+  "phase_carrier": {
+    "active": true,
+    "n_frames": 6,
+    "classes": [
+      0,
+      1,
+      2
+    ],
+    "q_step": 0.015625,
+    "residual_scheme": "zlib9",
+    "total_residual_count": 13222,
+    "per_frame_class_counts": [
+      [
+        1171,
+        638,
+        456
+      ],
+      [
+        1121,
+        645,
+        464
+      ],
+      [
+        1082,
+        564,
+        471
+      ],
+      [
+        1098,
+        609,
+        460
+      ],
+      [
+        1132,
+        581,
+        462
+      ],
+      [
+        1172,
+        638,
+        458
+      ]
+    ],
+    "section_bytes": 10682,
+    "xi_amortized_residual_bytes": 10276,
+    "raw_tie_residual_bytes": 9874,
+    "amortization_ratio": 1.0407129835932754,
+    "mean_abs_residual_q": 15.43994857056421,
+    "max_abs_residual_q": 64,
+    "tie_recon_rmse_px": 0.06568384971028116,
+    "reconstruction_bit_identical": true,
+    "counted_rate_term_contribution": 0.007112705337251034,
+    "recovered_d_seg": null,
+    "recovered_d_seg_status": "OWED_through_R_n600_AB (intrinsic bytes MEASURED; d_seg NOT claimed, NO-FAKE)",
+    "source_gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n6.npz",
+    "rule_118_boundary": {
+      "COUNTED (archive.zip)": "the quantized per-pair phase RESIDUAL (video-derived; the part xi-transport cannot predict)",
+      "FREE (inflate.py)": "the xi-transport warp A_xi + tie-coordinate extraction (generic algorithm) + the DECODER-DERIVABLE straddle mask (the witness's own rendered partition)",
+      "no_gt_no_scorer_shipped": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship"
+    }
+  },
+  "blind_coordinate_fill": {
+    "active": false
+  },
+  "pose_carrier_keyframe_accounting": null,
+  "pose_carrier_confirmation": {
+    "checked": false
+  },
+  "inflate": {
+    "inflate_stdout": "inflated 1200 frames (600 pairs) -> /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260716T030739Z/inflated/0.raw [1200x874x1164x3 uint8] (18 workers)",
+    "eval_pairs": 600,
+    "n_frames_emitted": 1200,
+    "raw_path": "/Users/adpena/Projects/pact/experiments/results/levelset_packet_20260716T030739Z/inflated/0.raw",
+    "raw_bytes": 3662409600,
+    "expected_bytes": 3662409600,
+    "full_output_shape_ok": true,
+    "storage_preflight": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/levelset_packet_20260716T030739Z/inflated",
+      "free_bytes": 672838791168,
+      "expected_raw_bytes": 3662409600,
+      "required_bytes": 3845530080,
+      "safety_margin": 1.05,
+      "ok": true
+    },
+    "frame_layout": "(1200, 874, 1164, 3) uint8 [f0,f1 per pair]"
+  },
+  "bit_exact_roundtrip_gate": {
+    "checked": false
+  },
+  "parity_on_inflated_frames": {
+    "skipped": true
+  },
+  "exact_eval_upstream_evaluate": {
+    "ran": false
+  },
+  "contest_cpu_eval_cmd": ".venv/bin/python experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260716T030739Z/archive.zip --inflate-sh /Users/adpena/Projects/pact/experiments/results/levelset_packet_20260716T030739Z/inflate.sh --device cpu  # [contest-CPU] authoritative ONLY on Linux x86_64 (Modal CPU); macOS-local = advisory",
+  "packet_dir": "(deleted; pass --keep-packet to retain archive+inflate for the exact-eval row)",
+  "self_orient_parity_caveat": "n/a (no self-orient)",
+  "checkpoint_trained_n600": true,
+  "this_run_scored_full_600": false,
+  "contest_ready_note": "checkpoint n_pairs==600 -> full 1200-frame .raw is producible (checkpoint-level); this_run_scored_full_600 says whether THIS invocation's parity scored all 600 pairs (skip-parity/max-pairs runs did NOT)",
+  "decode_memory_tier": {
+    "name": "decode_cpu_16gb",
+    "contest": true,
+    "bit_exact_contract": true,
+    "eval_device": "cpu",
+    "inflate_env": {
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "note": "contest 4-core/16GB CPU eval runner; bit-exact (fp64/CPU-torch-R/1-thread BLAS); all host cores (bit-identical regardless of count); ~10-15min n600 g384."
+  },
+  "receiver_env": {
+    "decode_path_versions": {
+      "python": "3.13.12",
+      "numpy": "1.26.4",
+      "torch": "2.12.1",
+      "brotli": "1.2.0",
+      "scipy": "1.17.1",
+      "constriction": "N/A (level-set receiver uses a pure-stdlib arithmetic \u03be coder (_ar_decode), not constriction)"
+    },
+    "host": {
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "machine": "arm64",
+      "processor": "arm",
+      "is_contest_linux_x86_64": false
+    },
+    "authority_forward": "numpy-fp32 reference (tac.boundary_math.lever_b_levelset_generator.levelset_rgb_forward_numpy; fp64 default) -- the deterministic verdict; torch is NOT the authority.",
+    "cross_host_bit_identity": "The only torch op on the decode path is _R = torch.nn.functional.interpolate(mode='bicubic'), whose LSBs can vary across CPU microarch/BLAS (advisory PR128 \u00a78.2). This tool emits NO portable sha256-of-.raw authority claim; the .raw is verified PER HOST via the --verify-bit-exact round-trip gate. CPU and CUDA are separate evidence axes."
+  },
+  "dedup_audit": {
+    "n_frames": 4,
+    "roles": {
+      "road": 0,
+      "lane": 1,
+      "undriv": 2,
+      "movable": 3,
+      "mycar": 4
+    },
+    "ledger_rows": [
+      "horizon_resid",
+      "lane_resid",
+      "movable_fp",
+      "hood_region",
+      "road_mycar_sep"
+    ],
+    "pairs": [
+      {
+        "row_a": "hood_region",
+        "row_b": "road_mycar_sep",
+        "shared_px_total": 2019,
+        "overlap_bytes_double_counted": 442,
+        "S_double_counted": 0.0002943096572799997
+      },
+      {
+        "row_a": "horizon_resid",
+        "row_b": "movable_fp",
+        "shared_px_total": 59,
+        "overlap_bytes_double_counted": 148,
+        "S_double_counted": 9.854712506208135e-05
+      },
+      {
+        "row_a": "lane_resid",
+        "row_b": "movable_fp",
+        "shared_px_total": 22,
+        "overlap_bytes_double_counted": 95,
+        "S_double_counted": 6.325660054660628e-05
+      },
+      {
+        "row_a": "horizon_resid",
+        "row_b": "lane_resid",
+        "shared_px_total": 15,
+        "overlap_bytes_double_counted": 70,
+        "S_double_counted": 4.6610126718551995e-05
+      },
+      {
+        "row_a": "lane_resid",
+        "row_b": "road_mycar_sep",
+        "shared_px_total": 6,
+        "overlap_bytes_double_counted": 56,
+        "S_double_counted": 3.728810137484159e-05
+      },
+      {
+        "row_a": "horizon_resid",
+        "row_b": "hood_region",
+        "shared_px_total": 0,
+        "overlap_bytes_double_counted": 0,
+        "S_double_counted": 0.0
+      },
+      {
+        "row_a": "horizon_resid",
+        "row_b": "road_mycar_sep",
+        "shared_px_total": 0,
+        "overlap_bytes_double_counted": 0,
+        "S_double_counted": 0.0
+      },
+      {
+        "row_a": "lane_resid",
+        "row_b": "hood_region",
+        "shared_px_total": 0,
+        "overlap_bytes_double_counted": 0,
+        "S_double_counted": 0.0
+      },
+      {
+        "row_a": "movable_fp",
+        "row_b": "hood_region",
+        "shared_px_total": 0,
+        "overlap_bytes_double_counted": 0,
+        "S_double_counted": 0.0
+      },
+      {
+        "row_a": "movable_fp",
+        "row_b": "road_mycar_sep",
+        "shared_px_total": 0,
+        "overlap_bytes_double_counted": 0,
+        "S_double_counted": 0.0
+      }
+    ],
+    "axis_label": "[macOS-CPU advisory \u00b7 NON-PROMOTABLE]",
+    "note": "shared px = pixels held by BOTH rows -> reconstructible from either -> a byte that cannot name ONE geometric home (operator no-duplicate-data binding 2026-07-09). [clause-A per-run derivability audit; report-only, score-neutral, no archive mutation \u2014 P1 one-fact-one-store-one-key]",
+    "source_gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n6.npz",
+    "n_frames_audited": 4
+  }
+}
