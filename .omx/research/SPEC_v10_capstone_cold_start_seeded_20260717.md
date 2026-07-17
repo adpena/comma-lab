@@ -517,8 +517,7 @@ branch claude/p0_497_curvelet_matched_bytes_ab_20260717 holds the sealed receive
 charted_grid_bilinear_v1 counted receiver-program · gap-b post-render supersample A_s, both
 bit-exact-gated); four codex basis findings memos (curvelet_throughR_p0 · genuine_curvelet_shearlet ·
 no_fourier_basis_sweep · optimal_basis_beyond_fourier) are reconciled by ARM D
-(.omx/tmp/build_wave_20260717/ARM_D_CURVELET.md), which builds the missing fire tool to make the
-matched-COUNTED-bytes curvelet-vs-Fourier through-R d_seg A/B FIREABLE. Standing law: Fourier ban-gate
+(.omx/tmp/build_wave_20260717/ARM_D_CURVELET.md), which VERIFIED the matched-COUNTED-bytes curvelet-vs-Fourier through-R d_seg A/B FIREABLE (2026-07-17 landing, commit 50d12d3382 + memo curvelet_takeover_fireable_20260717.md: fire tool PRE-EXISTED on the branch — the earlier 'missing fire tool' premise was WRONG, absent from main only pending post-c2 merge; both arms governed dry-run PASS rc=0, config diff = exactly the basis lever, receiver custody rule-118-clean, 142 tests green; fire sequence + pre-registered verdict criteria in the memo §5, sequential-only per the memory guard). Standing law: Fourier ban-gate
 WARN-ONLY, curvelet opt-in; the measured 3.2× along-tangent deficit (#497) is the quantity at stake;
 the A/B verdict decides the v10 basis (curvelet adoption vs Fourier retention) — pre-registered criteria
 in curvelet_takeover_fireable_20260717.md. FIRE = operator-GO sequential at the post-v9c2 boundary,
