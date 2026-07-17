@@ -6561,6 +6561,11 @@ def preflight_all(
         check_no_wholefile_ancestor_revert(strict=False, verbose=verbose)
         check_modal_single_flight_ledger_consistency(strict=False, verbose=verbose)
         check_retry_without_descendant_check(strict=False, verbose=verbose)
+        #   #513 (surface half) — Modal `.spawn()` dispatch surfaces must route
+        #     through the pre-spawn runtime guard (tac.deploy.modal.single_flight.
+        #     assert_modal_single_flight). WARN-ONLY; strict-flip when live count
+        #     stays 0 across a review cycle.
+        check_modal_dispatch_single_flight(strict=False, verbose=verbose)
 
         if codebase_cache_token is not None:
             _store_preflight_all_clean_cache(
@@ -87961,6 +87966,128 @@ def check_retry_without_descendant_check(
         raise PreflightError(
             "check_retry_without_descendant_check found "
             f"{len(violations)} violation(s) (retry-without-descendant-check):\n  "
+            + "\n  ".join(violations[:10]))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# TASK #513 — Modal single-flight dispatch-SURFACE routing (static half #2).
+#
+# Sister of check_modal_single_flight_ledger_consistency (ledger STATE) and of
+# the runtime guard tac.deploy.modal.single_flight.assert_modal_single_flight
+# (the pre-spawn refusal every dispatch entry point calls). This gate closes
+# the remaining structural hole: a NEW Modal dispatch surface that calls
+# ``.spawn()`` WITHOUT routing through the runtime guard would re-open the
+# duplicate-paid-dispatch breeder silently. Scans the top-level dispatch dirs
+# for Modal-importing .py files with a real ``.spawn(`` CALL and refuses any
+# such file that never calls ``assert_modal_single_flight``.
+#
+# Same-line waiver: ``# MODAL_SINGLE_FLIGHT_OK:<rationale>`` (placeholder
+# literal rejected). WARN-ONLY per the "Strict-flip atomicity rule";
+# strict-flip when live count stays 0 across a review cycle.
+# ----------------------------------------------------------------------------
+
+_MSF_SCOPE_DIRS: tuple[str, ...] = (
+    "experiments",
+    "tools",
+    "scripts",
+    "src/tac/deploy/modal",
+)
+_MSF_GUARD_TOKEN = "assert_modal_single_flight"
+_MSF_SPAWN_RE = re.compile(r"\.\s*spawn\s*\(")
+_MSF_WAIVER_RE = re.compile(
+    r"#\s*MODAL_SINGLE_FLIGHT_OK:\s*(?!<(?:rationale|reason)>)\S+"
+)
+# Files that legitimately mention/implement the pattern without dispatching.
+_MSF_EXEMPT_BASENAMES: frozenset[str] = frozenset({
+    "single_flight.py",
+})
+
+
+def _msf_line_is_real_spawn_call(line: str) -> bool:
+    """True when the line looks like an actual Modal ``.spawn(...)`` CALL.
+
+    Filters out prose/docstring/comment mentions: comment lines, backtick-quoted
+    `` `.spawn()` `` references, and empty-paren ``.spawn()`` mentions (real
+    dispatch calls pass arguments or open a multi-line paren).
+    """
+    stripped = line.strip()
+    if stripped.startswith("#"):
+        return False
+    match = _MSF_SPAWN_RE.search(line)
+    if not match:
+        return False
+    if "`" in line[: match.start() + 1]:
+        return False  # backtick-quoted prose reference
+    rest = line[match.end():].lstrip()
+    if rest.startswith(")"):
+        return False  # `.spawn()` empty-paren prose mention
+    return True
+
+
+def check_modal_dispatch_single_flight(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False,
+) -> list[str]:
+    """WARN-ONLY: every Modal ``.spawn()`` dispatch surface routes through the guard.
+
+    A top-level .py file under the dispatch dirs (experiments/ tools/ scripts/
+    src/tac/deploy/modal/) that imports ``modal`` AND performs a real
+    ``.spawn(`` call MUST call
+    ``tac.deploy.modal.single_flight.assert_modal_single_flight`` before the
+    spawn (operator binding 2026-07-15: ONE Modal job at a time; triple-surface
+    check before fire). Same-line waiver ``# MODAL_SINGLE_FLIGHT_OK:<rationale>``
+    (placeholder literal rejected). Test files are out of scope.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for sub in _MSF_SCOPE_DIRS:
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.glob("*.py")):
+            if not path.is_file():
+                continue
+            name = path.name
+            if name in _MSF_EXEMPT_BASENAMES or name.startswith("test_"):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            scanned += 1
+            if "import modal" not in text and "from modal" not in text:
+                continue
+            has_guard = _MSF_GUARD_TOKEN in text
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                if not _msf_line_is_real_spawn_call(line):
+                    continue
+                if _MSF_WAIVER_RE.search(line):
+                    continue
+                if has_guard:
+                    continue
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}:{lineno}: Modal `.spawn()` dispatch NOT routed through "
+                    "the #513 single-flight runtime guard — call "
+                    "tac.deploy.modal.single_flight.assert_modal_single_flight("
+                    "label=..., lane_id=...) BEFORE .spawn() (operator binding "
+                    "2026-07-15: ONE Modal job at a time; triple-surface check "
+                    "before fire), or add a same-line `# MODAL_SINGLE_FLIGHT_OK:"
+                    "<rationale>` waiver."
+                )
+
+    if verbose:
+        print(
+            f"  [modal-single-flight] check_modal_dispatch_single_flight: "
+            f"{len(violations)} violation(s) ({scanned} dispatch-surface file(s) scanned)"
+            if violations else
+            f"  [modal-single-flight] check_modal_dispatch_single_flight: OK "
+            f"({scanned} dispatch-surface file(s) scanned)")
+    if strict and violations:
+        raise PreflightError(
+            "check_modal_dispatch_single_flight found "
+            f"{len(violations)} violation(s) (modal-spawn-without-single-flight-guard):\n  "
             + "\n  ".join(violations[:10]))
     return violations
 

@@ -854,6 +854,12 @@ def main(
             else "active_modal_hdm8_postfilter_sweep_running"
         ),
     )
+    # #513 SINGLE-FLIGHT pre-spawn guard (operator binding 2026-07-15): refuse
+    # when ANY live Modal work exists (call-id ledger / claims file / live
+    # `modal app list`); operator-override escape via env
+    # TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE (quote it in the claim notes).
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    assert_modal_single_flight(label="modal_hdm8_postfilter_sweep", lane_id=lane_id)
     if detach:
         try:
             call = run_hdm8_postfilter_sweep_t4.spawn(*call_args)

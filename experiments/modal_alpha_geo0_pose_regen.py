@@ -1220,6 +1220,12 @@ def main(
         "n_frames": N_FRAMES,
     }
 
+    # #513 SINGLE-FLIGHT pre-spawn guard (operator binding 2026-07-15): refuse
+    # when ANY live Modal work exists (call-id ledger / claims file / live
+    # `modal app list`); operator-override escape via env
+    # TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE (quote it in the claim notes).
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    assert_modal_single_flight(label="alpha_geo0_pose_regen", lane_id="")
     call = run_alpha_geo0_pose_regen_t4.spawn(
         candidate_bytes,
         candidate_sha,

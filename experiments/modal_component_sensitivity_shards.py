@@ -525,6 +525,12 @@ def main(
     except Exception:  # pragma: no cover
         _register_call_id = None  # type: ignore[assignment]
 
+    # #513 SINGLE-FLIGHT pre-spawn guard (operator binding 2026-07-15): refuse
+    # when ANY live Modal work exists (call-id ledger / claims file / live
+    # `modal app list`); operator-override escape via env
+    # TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE (quote it in the claim notes).
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    assert_modal_single_flight(label=label, lane_id=f"lane_component_sensitivity_{label}")
     call_ids: dict[int, str] = {}
     for shard_index in selected:
         call = fn.spawn(

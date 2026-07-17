@@ -1354,6 +1354,12 @@ def main(
             spec=claim_spec,
             status="active_modal_auth_eval_spawning" if detach else "active_modal_auth_eval_running",
         )
+    # #513 SINGLE-FLIGHT pre-spawn guard (operator binding 2026-07-15): refuse
+    # when ANY live Modal work exists (call-id ledger / claims file / live
+    # `modal app list`); operator-override escape via env
+    # TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE (quote it in the claim notes).
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    assert_modal_single_flight(label="modal_auth_eval", lane_id=lane_id)
     if detach:
         try:
             call = auth_eval_fn.spawn(*call_args)

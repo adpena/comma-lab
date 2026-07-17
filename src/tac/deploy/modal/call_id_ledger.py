@@ -1219,6 +1219,23 @@ def update_call_id_outcome(
 
     appended = _append_event_locked(record, path=path, lock_path=lock_path)
 
+    # #513 dual-ledger terminality (operator binding 2026-07-15): a TERMINAL
+    # outcome row whose cross-agent claims-file row is still ACTIVE is the
+    # duplicate-paid-dispatch breeder — emit a LOUD stderr blocker in the same
+    # turn so the observer appends the terminal claim row NOW. Fail-quiet
+    # wrapper: the ledger write already succeeded; the blocker is a downstream
+    # observability surface and must never propagate.
+    try:
+        from tac.deploy.modal.single_flight import (
+            emit_dual_ledger_terminality_blocker_if_needed,
+        )
+
+        emit_dual_ledger_terminality_blocker_if_needed(
+            record=record, ledger_path=path,
+        )
+    except Exception:
+        pass
+
     # Catalog #343 DX auto-update wire-in: every harvested outcome with a
     # numeric score auto-refreshes the canonical frontier pointer so
     # operator-facing surfaces never drift from canonical state. Fail-quiet
@@ -1236,7 +1253,7 @@ def update_call_id_outcome(
             score_axis=score_axis,
             archive_sha256=archive_sha256,
         )
-    except Exception:  # noqa: BLE001 — fail-quiet per the contract
+    except Exception:
         pass
 
     return appended

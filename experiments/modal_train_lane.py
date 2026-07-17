@@ -2994,6 +2994,18 @@ def main(
         # The sole GPU allocation point is deliberately below local policy,
         # custody, CPU preflight, duplicate protection, and canonical claim.
         invocation_options["gpu"] = requested_modal_gpu
+    # #513 SINGLE-FLIGHT pre-spawn guard (operator binding 2026-07-15): refuse
+    # when ANY live Modal work exists (call-id ledger / claims file / live
+    # `modal app list`); operator-override escape via env
+    # TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE (quote it in the claim notes).
+    # Release the local dispatch guard on refusal so the fcntl lock never
+    # outlives a refused dispatch.
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    try:
+        assert_modal_single_flight(label=label, lane_id=resolved_lane_id)
+    except BaseException:
+        _release_local_dispatch_guard(dispatch_guard_fh)
+        raise
     try:
         fn_call = fn.with_options(**invocation_options).spawn(
             lane_script,

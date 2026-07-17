@@ -350,6 +350,12 @@ def main(
     run_eval: bool = True,
 ):
     """Spawn the run, record the call_id (HARVEST OR LOSE), print harvest command."""
+    # #513 SINGLE-FLIGHT pre-spawn guard (operator binding 2026-07-15): refuse
+    # when ANY live Modal work exists (call-id ledger / claims file / live
+    # `modal app list`); operator-override escape via env
+    # TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE (quote it in the claim notes).
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    assert_modal_single_flight(label=run_id, lane_id=LANE_ID)
     fc = click_polish_run.spawn(
         n_pairs=n_pairs, max_rounds=max_rounds, sweep_deltas=sweep_deltas,
         wall_clock_cap_s=wall_clock_cap_s, run_id=run_id, run_eval=run_eval,

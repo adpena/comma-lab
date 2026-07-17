@@ -198,6 +198,12 @@ def main(num_pairs: int = 600):
     """Spawn detached, save the call_id (HARVEST-OR-LOSE), exit in seconds."""
     from tac.deploy.modal.auth_eval import function_call_id
 
+    # #513 SINGLE-FLIGHT pre-spawn guard (operator binding 2026-07-15): refuse
+    # when ANY live Modal work exists (call-id ledger / claims file / live
+    # `modal app list`); operator-override escape via env
+    # TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE (quote it in the claim notes).
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    assert_modal_single_flight(label="ot_offset_n600", lane_id="")
     fn_call = run_ot_offset_n600.spawn(num_pairs=num_pairs)
     call_id = function_call_id(fn_call)
     sentinel = Path("experiments/results/ot_offset_n600_modal_20260709")

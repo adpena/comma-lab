@@ -1212,6 +1212,12 @@ def main(
             "(see .omx/state/active_lane_dispatch_claims.md)."
         )
 
+    # #513 SINGLE-FLIGHT pre-spawn guard (operator binding 2026-07-15): refuse
+    # when ANY live Modal work exists (call-id ledger / claims file / live
+    # `modal app list`); operator-override escape via env
+    # TAC_MODAL_SINGLE_FLIGHT_FORCE_RATIONALE (quote it in the claim notes).
+    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    assert_modal_single_flight(label=instance_job_id, lane_id="track1_phase_a4_charm_50k_toy")
     # ---- Spawn the Modal function (DETACHED) -----------------------------
     try:
         call = run_phase_a4_t4.spawn(
