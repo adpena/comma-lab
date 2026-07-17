@@ -35,8 +35,12 @@ Internal rules for the public body (binding):
   bytes, on 1:1 contest hardware (Linux x86_64 for CPU; T4-class for CUDA). macOS/M5 CPU rows are
   `[macOS-CPU advisory]` and are FORBIDDEN in the body. Reference the CI axis explicitly (Yousfi's bot
   evals on x86 `ubuntu-latest`, `device: cpu`).
-- Credit lineage with @-handles (ecosystem norm): @AaronLeslie138 (#95), @Quantizr (#55/#56),
-  @ryanli0070 (#127/#129). Keep the tone plain and concrete — an engineer explaining, not an abstract.
+- CITATION POLICY (operator 2026-07-17): cite ONLY what we actually use. Every submission since #95
+  builds on its work, so the public credits are: the contest scaffold, @AaronLeslie138's #95 (the
+  acknowledged root), @Quantizr's #55/#56 (the stored-target concept we draw on), and commaai's own
+  openpilot/comma10k priors. Do NOT cite later submissions (#125/#127/#128/#129 etc.) unless we
+  specifically use their code — we don't, and no claim is made about them in either direction.
+  Keep the tone plain and concrete — an engineer explaining, not an abstract.
 
 ## Why this draft exists now (process signal from #125/#127/#128/#129, 2026-07-12)
 
@@ -161,9 +165,8 @@ learned payload: the network weights, the per-pair ego motion `ξ` (quantized + 
 ~${DXI_BYTES} B), and a few small per-class seeds. Training runs through the exact inflate chain
 (bicubic→874×1164, uint8 straight-through, the real packing grid), so what the optimizer sees is
 exactly what ships. The boundary loss is a margin-based surrogate from the level-set formulation;
-@ryanli0070's #127/#129 use a related `sigmoid(-margin/τ)` boundary loss, which we credit. Pose isn't
-reconstructed from pixels — the render is conditioned on the stored `ξ`, in the spirit of @Quantizr's
-#55/#56 stored-target conditioning.
+Pose isn't reconstructed from pixels — the render is conditioned on the stored `ξ`, in the spirit of
+@Quantizr's #55/#56 stored-target conditioning.
 ${IF the measured witness CI row beats the re-verified CI leaderboard best, ADD: "It is also
 competitive: ${WITNESS_BYTECLOSED_CPU} (x86 CI) vs the leaderboard best ${CI_BEST} (#N)." OTHERWISE
 OMIT this sentence entirely.}
@@ -173,9 +176,8 @@ Lineage & credit (full list in `THIRD_PARTY_NOTICES.md`):
 - Contest scaffold (unchanged): `upstream/evaluate.py`, the frozen SegNet/PoseNet, the `inflate.sh`
   convention.
 - Ideas we learned from (no code or weights reused): the staged-curriculum + EMA discipline of
-  @AaronLeslie138's #95 (the HNeRV root) and the #98/#101 line built on it; @Quantizr's #55/#56
-  stored-target/FiLM conditioning; a related boundary surrogate in @ryanli0070's #127/#129
-  (credited above).
+  @AaronLeslie138's #95, the root every submission since builds on; @Quantizr's #55/#56
+  stored-target/FiLM conditioning concept.
 - Train-time priors only (never shipped, never counted): openpilot lane/camera geometry and comma10k
   class conventions.
 - No code, weights, latents, or archive sections from any merged or open submission are included.
@@ -196,8 +198,8 @@ Three-way classification: **OURS** (original, no public prior art) · **INDEPEND
 | Archive grammar (length-prefixed monolithic sections) | OURS | own layout; brotli entropy backend (public lib) |
 | ξ pose coder (`xi_pose_coder`, derive-H) | OURS | #257; sidecar-SHAPED, joint-descent VALUES |
 | Curriculum (event-gated witness-native) | OURS | derived from level-set energy (#302/#430); PR95 staging = ancestral lesson only |
-| Boundary surrogate (level-set margin) | INDEPENDENT-CONVERGENT | related `sigmoid(-margin/τ)` in #127/#129; credit them, claim no priority |
-| Exact-chain training (train/pack-gap closure) | INDEPENDENT-CONVERGENT | our eval_roundtrip discipline is a long-standing CLAUDE.md non-negotiable; #125/#127/#129 exact-grid framing is comparable — credit, no priority claim |
+| Boundary surrogate (level-set margin) | INDEPENDENT-CONVERGENT | related `sigmoid(-margin/τ)` exists in public PRs (#127/#129); per the citation policy we neither cite nor claim priority publicly — no code used, no comparison raised |
+| Exact-chain training (train/pack-gap closure) | INDEPENDENT-CONVERGENT | our eval_roundtrip discipline is a long-standing CLAUDE.md non-negotiable; comparable exact-grid framing exists publicly (#125/#127/#129) — internal record only, not cited publicly |
 | Stored-pose conditioning CONCEPT | BORROWED (concept) | Quantizr #55/#56 concept; our implementation + joint descent |
 | openpilot/comma10k priors | BORROWED (commaai public) | train-time only, rule-118 free side |
 | Scorers/eval harness | BORROWED (contest upstream) | unmodified (pinned snapshot) |
