@@ -1603,7 +1603,15 @@ class LiveState:
                         warming = True
         if warming:
             latest = run_latest
-            chain = [run_latest]              # its own (0) verdicts — never a foreign trajectory
+            # WARM-UP LINEAGE (p0_343 live test, 2026-07-17): a warming run that RESUMED
+            # off an ancestor checkpoint declares its ancestry in its OWN run.log
+            # ({"stage":"resume","from":...}) — stitch that chain NOW so the ep0..fork
+            # ancestor trajectory renders (dimmed, pre-origin) during the long
+            # pre-first-verdict window (the c2 v0 verdict alone is ~20+ min) instead of
+            # a blank chart. A root run has no resume line, so the walk degrades to
+            # [run_latest] — still never a FOREIGN trajectory (only the run's own
+            # declared ancestry is followed, never verdict_latest).
+            chain = _resume_chain_logs(run_latest)
         else:
             latest = verdict_latest
             # FULL trajectory across the warm-start chain (de-dup by epoch; later arm wins
@@ -1657,10 +1665,21 @@ class LiveState:
             ds_dir = _pipe / "dry_start"
             _pipe_child = ds_dir if ds_dir.is_dir() else _pipe
         merged: dict[int, dict] = {}
-        for lg in chain:
+        for _ci, lg in enumerate(chain):
+            # FORK CLIP (p0_343 live test, 2026-07-17): a warm start forks the ancestor
+            # at its ckpt epoch — the ancestor's rows AT/AFTER the successor's resume
+            # start_epoch are its DISCARDED post-fork future (mod32cap ran to ep1000 but
+            # the c2 arm forked at ep650), and rendering them bright would present a
+            # superseded run's numbers as current. Clip each ancestor arm at its
+            # successor's resume boundary; the live (last) arm is never clipped.
+            cutoff = None
+            if _ci + 1 < len(chain):
+                _se = _resume_start_epoch(chain[_ci + 1])
+                if isinstance(_se, int):
+                    cutoff = _se
             for r in self._parsed_verdicts(lg):
                 ep = r.get("epoch")
-                if isinstance(ep, int):
+                if isinstance(ep, int) and (cutoff is None or ep < cutoff):
                     merged[ep] = r          # FULL verdict rows (seg_form etc.)
         # RAW rows feed the run-info collectors (per-stage slopes + the monitor-replay
         # closed-loop lane both need seg_form, which _slim drops — passing slimmed rows
@@ -6537,9 +6556,20 @@ function renderWitness(){
     return;
   }
   if(hdr){
-    hdr.innerHTML="the <b>"+W.n_pairs_shown+" hardest &amp; most-diverse pairs</b> of the n600 drive "+
+    // CKPT PROVENANCE (p0_343 live test, 2026-07-17): the payload always carried
+    // ckpt_dir but the header never rendered it — a just-launched run has no
+    // checkpoint yet, so the panel latches on the PREVIOUS run's ckpt and, unlabeled,
+    // presented a superseded run's ep/d_seg as current. Name the source dir and flag
+    // it stale whenever it differs from the live watched run dir.
+    const wdir=W.ckpt_dir?String(W.ckpt_dir).replace(/\/+$/,"").split("/").pop():null;
+    const rdir=(META&&META.run_dir)?String(META.run_dir).replace(/\/+$/,"").split("/").pop():null;
+    const stale=!!(wdir&&rdir&&wdir!==rdir);
+    hdr.innerHTML=(stale?"<span style='color:#e6cf7a'>PREVIOUS-RUN checkpoint — the live run has "+
+        "no checkpoint yet (first ckpt lands on its first --ckpt-every save)</span> · ":"")+
+      "the <b>"+W.n_pairs_shown+" hardest &amp; most-diverse pairs</b> of the n600 drive "+
       "(spread across the segment, labelled by failure mode) · from BEST checkpoint @ epoch <b>"+
-      (W.epoch!=null?W.epoch:"?")+"</b> · mean realized d_seg over the selection <b>"+sig(W.mean_dseg,5)+
+      (W.epoch!=null?W.epoch:"?")+"</b>"+(wdir?" of <b>"+escHtml(wdir)+"</b>":"")+
+      " · mean realized d_seg over the selection <b>"+sig(W.mean_dseg,5)+
       "</b> · rendered in "+sig(W.render_secs,3)+"s · built "+escHtml(W.built_at_utc||"")+" · "+
       escHtml(W.authority||"");
   }
