@@ -968,10 +968,23 @@ def _emitted_order(flag_dict: Mapping[str, Any], argv: Sequence[str]) -> tuple[s
 
 
 def _provenance_table_for_program(program_name: str) -> dict[str, Mapping[str, Any]]:
-    """Return the existing V9 value-provenance table for one canonical spec."""
+    """Return the V9 value-provenance table for one canonical spec.
 
-    from tac.witness_dsl.spec_v9_cgauge import V9_CGAUGE_432_PROVENANCE, V9_CGAUGE_PROVENANCE
+    The COMPLETE per-flag table is authored on the DSL side
+    (``spec_v9_cgauge.attach_flag_custody`` registers it at factory compile);
+    this gate READS it — it never synthesizes provenance of its own.  Unknown
+    program names fall back to the curated static tables (test fixtures).
+    """
 
+    from tac.witness_dsl.spec_v9_cgauge import (
+        V9_CGAUGE_432_PROVENANCE,
+        V9_CGAUGE_PROVENANCE,
+        v9_flag_provenance_table,
+    )
+
+    complete = v9_flag_provenance_table(program_name)
+    if complete is not None:
+        return dict(complete)
     provenance: dict[str, Mapping[str, Any]] = dict(V9_CGAUGE_PROVENANCE)
     if program_name == "v9_cgauge_432":
         provenance.update(V9_CGAUGE_432_PROVENANCE)
@@ -1186,25 +1199,34 @@ def audit_config_flag_provenance_bijection(
         bindings = snapshot.bindings
         flags = tuple(binding.flag for binding in bindings)
         flag_set = set(flags)
+        # Run-local identity flags (--out-dir/...) are NON-SEMANTIC by this
+        # module's own volatility law: their values are placeholdered in every
+        # canonical payload (``canonicalize_resolved_argv`` /
+        # ``_canonical_bijection_payload``), so demanding a scientific Lever
+        # owner + LawRef for a per-launch run directory would be provenance
+        # theater — and ownership of a volatile value would shadow legitimate
+        # derived-config out_dir changes.  Token/type/order custody still
+        # applies; only the semantic ownership edges are exempt.
+        semantic_set = flag_set - _VOLATILE_ARGV_VALUE_FLAGS
         if len(flags) != len(flag_set):
             violations.append(f"{prefix}: duplicate semantic flags")
         if flags != snapshot.semantic_order:
             violations.append(f"{prefix}: binding order differs from semantic flag order")
         if snapshot.emitted_order != snapshot.semantic_order:
             violations.append(f"{prefix}: compiled argv flags are missing, stale, or reordered")
-        if set(snapshot.lawref_flags) != flag_set:
+        if set(snapshot.lawref_flags) - _VOLATILE_ARGV_VALUE_FLAGS != semantic_set:
             violations.append(
-                f"{prefix}: LawRef coverage mismatch {_coverage_detail(flag_set, set(snapshot.lawref_flags))}"
+                f"{prefix}: LawRef coverage mismatch {_coverage_detail(semantic_set, set(snapshot.lawref_flags))}"
             )
-        if set(snapshot.compiler_record_flags) != flag_set:
+        if set(snapshot.compiler_record_flags) - _VOLATILE_ARGV_VALUE_FLAGS != semantic_set:
             violations.append(
                 f"{prefix}: compiler-record coverage mismatch "
-                f"{_coverage_detail(flag_set, set(snapshot.compiler_record_flags))}"
+                f"{_coverage_detail(semantic_set, set(snapshot.compiler_record_flags))}"
             )
-        if set(snapshot.provenance_flags) != flag_set:
+        if set(snapshot.provenance_flags) - _VOLATILE_ARGV_VALUE_FLAGS != semantic_set:
             violations.append(
                 f"{prefix}: provenance-table coverage mismatch "
-                f"{_coverage_detail(flag_set, set(snapshot.provenance_flags))}"
+                f"{_coverage_detail(semantic_set, set(snapshot.provenance_flags))}"
             )
         for binding in bindings:
             bp = f"{prefix}:{binding.flag}"
@@ -1222,6 +1244,8 @@ def audit_config_flag_provenance_bijection(
                     f"{bp}: raw/runtime mismatch {binding.raw_type}={binding.raw_value!r} "
                     f"!= {binding.runtime_type}={binding.runtime_value!r}"
                 )
+            if binding.flag in _VOLATILE_ARGV_VALUE_FLAGS:
+                continue  # run-local identity: no semantic ownership edges required
             if len(binding.lever_owners) != 1:
                 violations.append(f"{bp}: expected exactly one Lever owner, got {binding.lever_owners}")
             if len(binding.lawref_equation_ids) != 1 or not binding.lawref_equation_ids[0]:

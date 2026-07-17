@@ -192,7 +192,10 @@ def test_432_expected_levers_include_t1_and_pose_gate(launch_432) -> None:
     from tac.witness_dsl.spec_v9_cgauge import V9_CGAUGE_432_EXPECTED_LEVERS
 
     got = tuple(launch_432.dsl_levers)
-    assert sorted(got) == sorted(V9_CGAUGE_432_EXPECTED_LEVERS)
+    # 2026-07-17 #332 backfill: the launch config additionally composes the
+    # value-neutral v9_flag_custody_rollup AFTER the expected-lever gate ran.
+    assert sorted(got) == sorted(
+        (*V9_CGAUGE_432_EXPECTED_LEVERS, "v9_flag_custody_rollup"))
     assert "phase_advection_consistency" in got
     assert "pose_finish_conditioning_gate" in got
 
