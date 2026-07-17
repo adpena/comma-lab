@@ -188,6 +188,132 @@ def new_p0_designations(lines: list[str]) -> list[str]:
     return found
 
 
+# ---------------------- already-registered coverage filter (CLASS 3 fix) ----------------------
+# Empirical false-positive (2026-07-17, NAG new_designations=1 while the P0s were ALREADY in the
+# ledger): the designation demand fired without checking existing rows' ``verbatim_ask``. The
+# operator experiences "register it NOW" for a P0 they already registered. Fix: drop a designation
+# demand when an existing ledger row's verbatim_ask COVERS it. Coverage is a semantic-similarity
+# judgment: deterministic token-containment is the AUTHORITY (always available, unit-tested); an
+# fmtools advisory (subprocess, graceful-degrade) may CORROBORATE in the gray band but is NEVER the
+# sole gate and NEVER a block. Fail-closed bias: covered only when confidently covered; uncertain
+# or FM-absent ⇒ still demand.
+_COVER_STOPWORDS = frozenset((
+    "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "we", "should", "be", "is",
+    "are", "our", "all", "this", "that", "it", "as", "with", "at", "by", "so", "if", "i", "you",
+    "make", "sure", "also", "against", "very", "p0", "operator", "must", "now",
+))
+_COVER_STRONG = 0.60   # deterministic containment ⇒ covered outright
+_COVER_GRAY = 0.40     # [gray, strong) ⇒ consult the FM advisory as a corroborator (never sole)
+
+
+def _cover_tokens(text: str) -> set[str]:
+    toks = re.findall(r"[a-z0-9]+", str(text).lower())
+    return {t for t in toks if len(t) >= 3 and t not in _COVER_STOPWORDS}
+
+
+def _containment(designation_tokens: set[str], ask_tokens: set[str]) -> float:
+    """Fraction of the designation's meaningful tokens present in the ask (directional)."""
+    if not designation_tokens:
+        return 0.0
+    return len(designation_tokens & ask_tokens) / len(designation_tokens)
+
+
+def _best_containment(designation: str, rows: list[dict]) -> tuple[float, str]:
+    """Best token-containment of ``designation`` against any ledger row's verbatim_ask."""
+    d = _cover_tokens(designation)
+    best = 0.0
+    best_ask = ""
+    for r in rows:
+        ask = str(r.get("verbatim_ask") or "")
+        if not ask:
+            continue
+        c = _containment(d, _cover_tokens(ask))
+        if c > best:
+            best, best_ask = c, ask
+    return best, best_ask
+
+
+_FM_COVER_SCRIPT = r'''
+import asyncio, json, sys
+try:
+    import apple_fm_sdk as fm
+    from fmtools import local_extract
+except Exception:
+    print("{}"); raise SystemExit(0)
+
+@fm.generable()
+class Cover:
+    covered: bool = fm.guide(description="True iff the registered ask already covers the directive.")
+
+@local_extract(Cover, retries=1, instructions=(
+    "You judge whether a REGISTERED operator ask already covers a newly-detected operator "
+    "directive (i.e. they are the same request). Answer covered=true ONLY when the registered "
+    "ask clearly encompasses the directive; otherwise covered=false."))
+async def _check(pair_text: str) -> Cover:
+    """(instructions above)"""
+
+async def _main():
+    try:
+        pair = json.load(sys.stdin)
+    except Exception:
+        print("{}"); return
+    try:
+        r = await _check(f"DIRECTIVE: {pair.get('directive','')[:600]}\nREGISTERED ASK: {pair.get('ask','')[:600]}")
+        print(json.dumps({"covered": bool(getattr(r, "covered", False))}))
+    except Exception:
+        print("{}")
+
+asyncio.run(_main())
+'''
+
+
+def _fm_python() -> str | None:
+    for cand in (os.environ.get("VERDICT_SCOPE_FM_PYTHON"),
+                 os.environ.get("DASH_FM_PYTHON"),
+                 os.path.expanduser("~/Projects/fmtools/.venv/bin/python")):
+        if cand and os.path.exists(cand):
+            return cand
+    return None
+
+
+def _fm_covered(directive: str, ask: str, timeout: int = 15) -> bool:
+    """fmtools advisory: does ``ask`` cover ``directive``? Fail-silent False on absence/timeout —
+    advisory by construction, NEVER the sole gate (only consulted in the gray band + corroborated
+    by a nonzero deterministic overlap)."""
+    fm_py = _fm_python()
+    if not fm_py:
+        return False
+    try:
+        proc = subprocess.run(
+            [fm_py, "-c", _FM_COVER_SCRIPT],
+            input=json.dumps({"directive": directive, "ask": ask}),
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if proc.returncode != 0:
+            return False
+        out = json.loads(proc.stdout.strip() or "{}")
+        return bool(out.get("covered")) if isinstance(out, dict) else False
+    except Exception:
+        return False
+
+
+def designation_already_covered(designation: str, rows: list[dict], *, use_fm: bool = True) -> bool:
+    """True iff an existing ledger row's verbatim_ask already covers ``designation`` (so demanding
+    re-registration would be the CLASS-3 false-positive). Deterministic token-containment is the
+    authority; the FM advisory only corroborates in the gray band and never decides alone."""
+    d = _cover_tokens(designation)
+    if len(d) < 3:
+        # Too few meaningful tokens to judge similarity — fail-closed (still demand).
+        return False
+    best, best_ask = _best_containment(designation, rows)
+    if best >= _COVER_STRONG:
+        return True
+    if use_fm and best >= _COVER_GRAY and best_ask:
+        # FM is consulted ONLY with a nonzero deterministic corroboration (never sole gate).
+        return _fm_covered(designation, best_ask)
+    return False
+
+
 # ----------------------------- marker + main -----------------------------
 def _read_marker(root: str) -> dict:
     try:
@@ -313,6 +439,12 @@ def main() -> None:
                 lines = fh.readlines()
             new_lines = lines[start:]
             designations = new_p0_designations(new_lines)
+            # CLASS-3 fix: drop designations already covered by an existing ledger row's
+            # verbatim_ask (do not demand re-registration of an already-registered P0).
+            if designations:
+                designations = [
+                    d for d in designations if not designation_already_covered(d, rows)
+                ]
             offsets[transcript] = len(lines)
             marker["offsets"] = offsets
         except Exception:

@@ -981,6 +981,16 @@ def build_digest() -> tuple[list[str], dict]:
     if wd_line:
         lines.append(wd_line)
 
+    # CLASS-4 (2026-07-17): surface subagent arms that registered but never advanced then went
+    # silent (a SPEC_v10 arm died at ~15 tokens with no work, human-visible only). Detect-only.
+    try:
+        from tools.subagent_liveness import digest_line as _zwa_line
+        zwa_line, data["zero_work_arms"] = _zwa_line()
+        if zwa_line:
+            lines.append(zwa_line)
+    except Exception as _exc:  # never let the detector break the digest
+        data["zero_work_arms"] = {"error": type(_exc).__name__}
+
     dl_line, data["deferral_ledger"] = section_deferral_ledger()
     if dl_line:
         lines.append(dl_line)
