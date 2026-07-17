@@ -1,5 +1,5 @@
 <!-- DRAFT — placeholders must be filled from measured artifacts; see docs/submission_pr_draft_witness.md Final Gate. -->
-<!-- This file becomes submissions/levelset_taskspace_witness/method.md at packaging. -->
+<!-- This file becomes submissions/taskspace_witness/method.md at packaging. -->
 
 # How this submission works
 
@@ -14,7 +14,10 @@ not picture quality. All the generic, deterministic code (the coordinate
 transform, the network forward, the rasterization, the entropy decoder) lives
 in `inflate.py`, which is free under the rules; `archive.zip` carries only the
 learned payload: the network weights, the per-pair ego motion `ξ` (quantized
-and entropy-coded, ~${DXI_BYTES} B), and a few small per-class seeds.
+and entropy-coded, ~${DXI_BYTES} B), and a few small per-class seeds. The
+framing is Kolmogorov rather than Shannon: `inflate.py` is the program, and
+`archive.zip` is the shortest seed we could find for it — compression here
+means shortening the program's input, not rate-distortion coding of pixels.
 
 ## 2. Training through the exact inflate chain
 
@@ -27,7 +30,9 @@ lose score to. The scorers are evaluated on the round-tripped frames, the same
 way `evaluate.py` will see them.
 
 Training is staged: ${CURRICULUM_SUMMARY — one sentence per stage, filled from
-the final training config; no internal stage names}. Weights are tracked with
+the final training config; no internal stage names}. The stage structure
+started from PR #95's published schedule as a base and was adapted
+stage-by-stage to what the level-set objective needs. Weights are tracked with
 an EMA shadow and the shadow is what ships.
 
 ## 3. The boundary objective

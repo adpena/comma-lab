@@ -1,5 +1,5 @@
 <!-- DRAFT — placeholders must be filled from measured artifacts; see docs/submission_pr_draft_witness.md Final Gate. -->
-<!-- This file becomes submissions/levelset_taskspace_witness/THIRD_PARTY_NOTICES.md at packaging. -->
+<!-- This file becomes submissions/taskspace_witness/THIRD_PARTY_NOTICES.md at packaging. -->
 
 # Third-party notices
 
@@ -22,15 +22,16 @@ submission builds on, uses at train time, or depends on at inflate time.
 - **PR #95 — `hnerv_muon` (@AaronLeslie138)**: the pivot point. It showed what
   a tiny learned decoder can do on this problem — and studying it, including
   where its approach tops out, is what pushed us to develop our own model,
-  objective, architecture, and curriculum from a different formulation. We
-  reuse none of its code or architecture (this is not an HNeRV/NeRV variant).
+  objective, and architecture from a different formulation. We reuse none of
+  its code or architecture (this is not an HNeRV/NeRV variant); our training
+  schedule did start from #95's published staging as a base, adapted
+  stage-by-stage to the level-set objective.
   https://github.com/commaai/comma_video_compression_challenge/pull/95
-- **PR #55 / #56 — (@Quantizr)**: the stored-target / FiLM-conditioning
+- **PR #55 — `quantizr` (@Quantizr)**: the stored-target / FiLM-conditioning
   concept — conditioning the render on small stored per-pair values rather
   than reconstructing them from pixels. Our pose handling follows that
   concept; the implementation and the training (joint descent) are our own.
   https://github.com/commaai/comma_video_compression_challenge/pull/55
-  https://github.com/commaai/comma_video_compression_challenge/pull/56
 
 ## Train-time-only priors (commaai public stack) — never shipped, never counted
 
