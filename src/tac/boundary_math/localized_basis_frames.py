@@ -50,6 +50,17 @@ PER_SCALE_DIRECTIONAL_BUDGETS = (4, 16, 56)
 TRANSLATION_LATTICE_RADIUS = 0.75
 COORD_CHUNK = 2048
 WINDOW_TOKEN = "cos4_polar_radial_angular_periodized_v2"
+# Sealed charted-evaluation semantics (p0_497 gap (a)). The direct sparse trigonometric
+# evaluator is n600-PROHIBITIVE per pair at FREQUENCY_LATTICE_RADIUS=160; the SEALED fast
+# program is: fine inclusive grid feats ONCE (alias-summed inverse FFT) + per-pair
+# border-clamped bilinear gather at the homography-charted coordinates. The bilinear
+# program IS the semantics (declared, versioned, hashed via BasisProgramConfig) — the
+# delta vs the pure sparse polynomial is a DECLARED approximation, not an error bar.
+CHART_EVAL_SEMANTICS_NONE = "none"
+CHART_EVAL_SEMANTICS_BILINEAR = "charted_grid_bilinear_v1"
+# fp32 sign-preserving projective z guard — MUST stay bit-equal to
+# tac.boundary_math.ground_frame_chart._EPS_Z (pinned by parity test).
+_CHART_EPS_Z = 1e-8
 
 # Historical custody is retained only to make accidental relabelling detectable.
 LOST_SOURCE_SHA256_NON_AUTHORIZING = (
@@ -162,6 +173,8 @@ class BasisProgramConfig:
     chart_s_r: float = 0.0
     chart_pitch: float = -0.01
     chart_pose_dependency: str = "none"
+    chart_eval_semantics: str = CHART_EVAL_SEMANTICS_NONE
+    chart_fine_factor: int = 2
     native_orientation_enabled: bool = False
     native_orientation_kappa: float = 2.0
     fixed_point_iteration_cap: int = 0
@@ -192,6 +205,27 @@ class BasisProgramConfig:
             raise ValueError("enabled chart requires an explicitly counted receiver dependency")
         if not self.chart_enabled and self.chart_pose_dependency != "none":
             raise ValueError("disabled chart must declare chart_pose_dependency='none'")
+        if self.chart_enabled:
+            if self.chart_eval_semantics != CHART_EVAL_SEMANTICS_BILINEAR:
+                raise ValueError(
+                    "enabled chart requires the sealed fast evaluator "
+                    f"chart_eval_semantics={CHART_EVAL_SEMANTICS_BILINEAR!r} "
+                    "(the direct sparse transform is n600-prohibitive; a legacy config "
+                    "missing this key honestly REFUSES here rather than silently "
+                    "re-meaning the checkpoint)"
+                )
+            if not isinstance(self.chart_fine_factor, int) or isinstance(
+                self.chart_fine_factor, bool
+            ) or self.chart_fine_factor < 1:
+                raise ValueError("chart_fine_factor must be an integer >= 1")
+        else:
+            if self.chart_eval_semantics != CHART_EVAL_SEMANTICS_NONE:
+                raise ValueError("disabled chart must declare chart_eval_semantics='none'")
+            if self.chart_fine_factor != 2:
+                raise ValueError(
+                    "disabled chart must keep the inert default chart_fine_factor=2 "
+                    "(a dead DOF would silently perturb the canonical hash)"
+                )
         scalars = (
             self.chart_s_t,
             self.chart_s_r,
@@ -239,13 +273,22 @@ class BasisProgramConfig:
         ).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 
+    # Fields that MAY be absent in a persisted dict (added 2026-07-17, p0_497 gap (a));
+    # they default per the dataclass. Back-compat is honest-by-validation: a legacy
+    # ENABLED-chart dict missing chart_eval_semantics defaults to "none" and therefore
+    # REFUSES in __post_init__ (an enabled chart cannot silently acquire new semantics);
+    # a legacy DISABLED-chart dict loads unchanged.
+    _FROM_DICT_OPTIONAL_FIELDS = frozenset({"chart_eval_semantics", "chart_fine_factor"})
+
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> BasisProgramConfig:
         expected = {field.name for field in fields(cls)}
-        if set(value) != expected:
+        missing = expected - set(value) - cls._FROM_DICT_OPTIONAL_FIELDS
+        extra = set(value) - expected
+        if missing or extra:
             raise ValueError(
                 "basis-program config fields drift: "
-                f"missing={sorted(expected - set(value))}, extra={sorted(set(value) - expected)}"
+                f"missing={sorted(missing)}, extra={sorted(extra)}"
             )
         return cls(**value)
 
@@ -275,6 +318,8 @@ def literal_basis_program_config(
     chart_s_r: float = 0.0,
     chart_pitch: float = -0.01,
     chart_pose_dependency: str = "none",
+    chart_eval_semantics: str = CHART_EVAL_SEMANTICS_NONE,
+    chart_fine_factor: int = 2,
     native_orientation_enabled: bool = False,
     native_orientation_kappa: float = 2.0,
     fixed_point_iteration_cap: int = 0,
@@ -295,6 +340,8 @@ def literal_basis_program_config(
         chart_s_r=chart_s_r,
         chart_pitch=chart_pitch,
         chart_pose_dependency=chart_pose_dependency,
+        chart_eval_semantics=chart_eval_semantics,
+        chart_fine_factor=chart_fine_factor,
         native_orientation_enabled=native_orientation_enabled,
         native_orientation_kappa=native_orientation_kappa,
         fixed_point_iteration_cap=fixed_point_iteration_cap,
@@ -705,6 +752,144 @@ def localized_basis_features_grid_numpy(height: int, width: int) -> np.ndarray:
             np.float32
         )
     return out
+
+
+def _precompose_coords_numpy(coords: np.ndarray, H_norm: np.ndarray) -> np.ndarray:
+    """VERBATIM op-for-op local copy of ``ground_frame_chart.precompose_coords_numpy``.
+
+    The generated receiver embeds THIS module's source (stdlib+numpy only), so it cannot
+    import ``tac.boundary_math.ground_frame_chart``. Bit-equality with the original is
+    pinned by ``test_charted_literal_evaluator.py`` — any drift there is a train/decode
+    semantic fork and must fail the parity test, not ship silently. Identity fast-path
+    returns the INPUT ARRAY UNCHANGED; projective divide uses the sign-preserving
+    ``_CHART_EPS_Z`` guard (no inf/nan)."""
+    coords = np.asarray(coords, dtype=np.float32)
+    if coords.ndim != 2 or coords.shape[1] != 2:
+        raise ValueError(f"coords must be (N, 2); got {coords.shape}")
+    H64 = np.asarray(H_norm, dtype=np.float64)
+    if H64.shape != (3, 3):
+        raise ValueError(f"H_norm must be (3, 3); got {H64.shape}")
+    if np.array_equal(H64, np.eye(3)):
+        return coords
+    H = H64.astype(np.float32)
+    x, y = coords[:, 0], coords[:, 1]
+    xw = H[0, 0] * x + H[0, 1] * y + H[0, 2]
+    yw = H[1, 0] * x + H[1, 1] * y + H[1, 2]
+    zw = H[2, 0] * x + H[2, 1] * y + H[2, 2]
+    z = np.where(
+        np.abs(zw) < _CHART_EPS_Z,
+        np.where(zw >= 0.0, _CHART_EPS_Z, -_CHART_EPS_Z).astype(np.float32),
+        zw,
+    )
+    return np.stack([xw / z, yw / z], axis=-1).astype(np.float32)
+
+
+def charted_grid_bilinear_features_numpy(
+    fine_feats: np.ndarray, fine_h: int, fine_w: int, coords_charted: np.ndarray
+) -> np.ndarray:
+    """SEALED ``charted_grid_bilinear_v1`` gather: border-clamped fp32 bilinear sampling.
+
+    ``fine_feats`` is the ``(fine_h*fine_w, 80)`` fp32 row-major inclusive-grid feature
+    table (computed ONCE via :func:`localized_basis_features_grid_numpy` — the fast FFT
+    path — and shared across all pairs). ``coords_charted`` are the (N, 2) fp32
+    homography-charted normalized coordinates.
+
+    Declared op order (the program IS the semantics):
+      * map x∈[-1,1] → u = (x+1)·0.5·(Wf−1) and y → v = (y+1)·0.5·(Hf−1), in fp32;
+      * CLAMP u,v to the borders — out-of-box charted points take the edge value
+        (declared; the homography pullback can leave the [-1,1]² box);
+      * u0=floor(u), u1=min(u0+1, Wf−1), wu=u−u0 (same for v), all fp32;
+      * value = (1−wv)·((1−wu)·f00 + wu·f01) + wv·((1−wu)·f10 + wu·f11), fp32.
+
+    Deterministic, vectorized, transcendental-free — n600-viable where the direct
+    sparse evaluator (radius-160 wedges) is prohibitive."""
+    fine_h, fine_w = int(fine_h), int(fine_w)
+    if fine_h < 2 or fine_w < 2:
+        raise ValueError("fine grid dims must be >= 2")
+    table = np.asarray(fine_feats, dtype=np.float32)
+    if table.shape != (fine_h * fine_w, FEATURE_WIDTH):
+        raise ValueError(
+            f"fine_feats must be ({fine_h * fine_w}, {FEATURE_WIDTH}); got {table.shape}"
+        )
+    xy = np.asarray(coords_charted, dtype=np.float32)
+    if xy.ndim != 2 or xy.shape[1] != 2:
+        raise ValueError(f"coords_charted must be (N, 2); got {xy.shape}")
+    if not np.all(np.isfinite(xy)):
+        raise ValueError("coords_charted must be finite")
+    half = np.float32(0.5)
+    one = np.float32(1.0)
+    u = (xy[:, 0] + one) * half * np.float32(fine_w - 1)
+    v = (xy[:, 1] + one) * half * np.float32(fine_h - 1)
+    u = np.clip(u, np.float32(0.0), np.float32(fine_w - 1))
+    v = np.clip(v, np.float32(0.0), np.float32(fine_h - 1))
+    u0 = np.floor(u).astype(np.int64)
+    v0 = np.floor(v).astype(np.int64)
+    u1 = np.minimum(u0 + 1, fine_w - 1)
+    v1 = np.minimum(v0 + 1, fine_h - 1)
+    wu = (u - u0.astype(np.float32))[:, None]
+    wv = (v - v0.astype(np.float32))[:, None]
+    grid = table.reshape(fine_h, fine_w, FEATURE_WIDTH)
+    f00 = grid[v0, u0]
+    f01 = grid[v0, u1]
+    f10 = grid[v1, u0]
+    f11 = grid[v1, u1]
+    top = (one - wu) * f00 + wu * f01
+    bottom = (one - wu) * f10 + wu * f11
+    return ((one - wv) * top + wv * bottom).astype(np.float32)
+
+
+def charted_fine_feats_cache_numpy(
+    program: BasisProgramConfig, height: int, width: int
+) -> np.ndarray:
+    """The ONCE-computed fine-grid feature table for the sealed charted evaluator."""
+    if not program.chart_enabled:
+        raise ValueError("fine feats cache is only defined for an enabled chart")
+    if program.chart_eval_semantics != CHART_EVAL_SEMANTICS_BILINEAR:
+        raise ValueError(
+            f"unknown chart_eval_semantics {program.chart_eval_semantics!r}"
+        )
+    factor = int(program.chart_fine_factor)
+    return localized_basis_features_grid_numpy(factor * int(height), factor * int(width))
+
+
+def charted_pair_feats_numpy(
+    program: BasisProgramConfig,
+    height: int,
+    width: int,
+    H_chart_norm_row: np.ndarray,
+    fine_feats_cache: np.ndarray,
+) -> np.ndarray:
+    """Per-pair charted features under the SEALED ``charted_grid_bilinear_v1`` program.
+
+    Reference-pair contract: when ``H_chart_norm_row`` is EXACTLY ``np.eye(3)``
+    (bit-equal — mirroring the precompose identity fast-path) the return is the BASE
+    inclusive-grid features via :func:`basis_features_numpy` — i.e. the reference pair
+    evaluates the exact uncharted program, not a resampled approximation. Every other
+    pair precomposes the base grid through the homography (local verbatim precompose)
+    and bilinear-samples the shared fine-grid table."""
+    if not program.chart_enabled:
+        raise ValueError("charted_pair_feats_numpy requires an enabled chart")
+    if program.chart_eval_semantics != CHART_EVAL_SEMANTICS_BILINEAR:
+        raise ValueError(
+            f"unknown chart_eval_semantics {program.chart_eval_semantics!r}"
+        )
+    height, width = int(height), int(width)
+    H64 = np.asarray(H_chart_norm_row, dtype=np.float64)
+    if H64.shape != (3, 3):
+        raise ValueError(f"H_chart_norm_row must be (3, 3); got {H64.shape}")
+    if np.array_equal(H64, np.eye(3)):
+        return basis_features_numpy(inclusive_grid_coords(height, width))
+    factor = int(program.chart_fine_factor)
+    fine_h, fine_w = factor * height, factor * width
+    cache = np.asarray(fine_feats_cache, dtype=np.float32)
+    if cache.shape != (fine_h * fine_w, FEATURE_WIDTH):
+        raise ValueError(
+            f"fine_feats_cache must be ({fine_h * fine_w}, {FEATURE_WIDTH}); "
+            f"got {cache.shape}"
+        )
+    base_coords = inclusive_grid_coords(height, width)
+    charted = _precompose_coords_numpy(base_coords, H64)
+    return charted_grid_bilinear_features_numpy(cache, fine_h, fine_w, charted)
 
 
 def localized_basis_features_mlx(coords: Any) -> Any:
@@ -1176,6 +1361,11 @@ __all__ = [
     "basis_program_taper_config_sha256",
     "basis_semantic_sha256",
     "basis_semantic_sha256_from_components",
+    "CHART_EVAL_SEMANTICS_BILINEAR",
+    "CHART_EVAL_SEMANTICS_NONE",
+    "charted_fine_feats_cache_numpy",
+    "charted_grid_bilinear_features_numpy",
+    "charted_pair_feats_numpy",
     "curvelet_frequency_window_numpy",
     "deterministic_atom_specs",
     "direction_angles",

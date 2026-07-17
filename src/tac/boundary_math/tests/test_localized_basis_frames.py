@@ -169,6 +169,8 @@ def test_basis_program_config_binds_every_semantic_operator() -> None:
     config = lbf.literal_basis_program_config(
         chart_enabled=True,
         chart_pose_dependency="counted_pose_carrier_xi",
+        chart_eval_semantics=lbf.CHART_EVAL_SEMANTICS_BILINEAR,
+        chart_fine_factor=2,
         native_orientation_enabled=True,
         native_orientation_kappa=2.5,
         fixed_point_iteration_cap=6,
@@ -186,6 +188,8 @@ def test_basis_program_config_binds_every_semantic_operator() -> None:
     changed = lbf.literal_basis_program_config(
         chart_enabled=True,
         chart_pose_dependency="counted_pose_carrier_xi",
+        chart_eval_semantics=lbf.CHART_EVAL_SEMANTICS_BILINEAR,
+        chart_fine_factor=2,
         native_orientation_enabled=True,
         native_orientation_kappa=2.75,
         fixed_point_iteration_cap=6,

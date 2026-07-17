@@ -1,0 +1,53 @@
+{
+ "schema": "charted_grid_bilinear_v1_receipt.v1",
+ "semantics": "SEALED-AS-PROGRAM: the bilinear program IS the sealed semantics; the delta vs the pure sparse polynomial is a DECLARED approximation, not an error bar on the A/B",
+ "grid": [
+  384,
+  512
+ ],
+ "chart_fine_factor": 2,
+ "fine_cache_seconds_once": 1.44,
+ "per_pair_seconds_measured": 0.0428,
+ "n600_seconds_EXTRAPOLATED": 27.1,
+ "direct_sparse_seconds_for_2000_points_measured": 4.33,
+ "direct_sparse_n600_fullgrid_seconds_EXTRAPOLATED_prohibitive": 255139.0,
+ "accuracy_vs_direct_2000pts": {
+  "max_abs": 3.2700217366218567,
+  "mean_abs": 0.00038893138182486976,
+  "p99_abs": 0.0008006878639571714,
+  "max_abs_scaling_cols": 0.9505841732025146,
+  "max_abs_directional_cols": 3.2700217366218567
+ },
+ "homography_probe": [
+  [
+   1.0,
+   0.004,
+   0.012
+  ],
+  [
+   0.0,
+   1.0,
+   -0.008
+  ],
+  [
+   0.006,
+   -0.004,
+   1.0
+  ]
+ ],
+ "labels": "MEASURED except fields marked EXTRAPOLATED; [macOS-CPU advisory]; non-promotable",
+ "accuracy_decomposition_2000pts": {
+  "inbox": {
+   "n": 1981,
+   "max_abs": 0.44344329833984375,
+   "mean_abs": 0.00024767515310223373,
+   "p99_abs": 0.0007566958735696967
+  },
+  "outbox_declared_clamp": {
+   "n": 19,
+   "max_abs": 3.2700217366218567,
+   "mean_abs": 0.015116751860748127
+  }
+ },
+ "outbox_note": "out-of-[-1,1]^2 charted points take the DECLARED border-clamp value; the large max_abs lives ENTIRELY there (Q1 is zero outside the box, directional atoms continue periodically \u2014 the clamp is the sealed semantics, shared bit-for-bit by trainer and receiver, so it cancels in the A/B by construction)"
+}
