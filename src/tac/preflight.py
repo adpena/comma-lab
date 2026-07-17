@@ -88124,6 +88124,11 @@ def check_modal_dispatch_single_flight(
 # ----------------------------------------------------------------------------
 
 _CODEX_FINDINGS_CONSUMPTION_WAIVER = "CODEX_FINDINGS_CONSUMPTION_WAIVED:"
+# The consumption-audit memo family (codex_findings_consumption_audit_*.md) is
+# the canonical ADJUDICATION surface for this bug class — it shares the
+# codex_findings_ filename prefix (charter-named path) but is a CONSUMER, not a
+# producer: excluded from the producer scan, included in the consumer scans.
+_CODEX_FINDINGS_AUDIT_PREFIX = "codex_findings_consumption_audit"
 _CODEX_FINDINGS_FRESH_SECONDS = 3 * 24 * 3600  # 3-day routing grace window
 _CODEX_FINDINGS_MIN_LABEL_LEN = 4  # shorter labels are unmatchable substrings
 # consumer content scan is bounded to recently-touched research files:
@@ -88174,7 +88179,9 @@ def _codex_findings_label_consumed(
     try:
         for f in research_dir.iterdir():
             fname = f.name
-            if fname.startswith(("codex_findings_", "codex_session_summary_")):
+            if fname.startswith(
+                ("codex_findings_", "codex_session_summary_")
+            ) and not fname.startswith(_CODEX_FINDINGS_AUDIT_PREFIX):
                 continue
             if needle in fname.lower():
                 return f"filename:{fname}"
@@ -88215,7 +88222,9 @@ def _codex_findings_label_consumed(
             fname = f.name
             if fname == self_name or not fname.endswith(".md"):
                 continue
-            if fname.startswith(("codex_findings_", "codex_session_summary_")):
+            if fname.startswith(
+                ("codex_findings_", "codex_session_summary_")
+            ) and not fname.startswith(_CODEX_FINDINGS_AUDIT_PREFIX):
                 continue
             try:
                 if now - f.stat().st_mtime > _CODEX_FINDINGS_CONSUMER_MTIME_WINDOW_SECONDS:
@@ -88261,6 +88270,8 @@ def check_codex_findings_memos_consumed(
 
     if research_dir.is_dir():
         for memo in sorted(research_dir.glob("codex_findings_*.md")):
+            if memo.name.startswith(_CODEX_FINDINGS_AUDIT_PREFIX):
+                continue  # the adjudication memo family is a consumer, not a producer
             try:
                 age = now_ts - memo.stat().st_mtime
             except OSError:

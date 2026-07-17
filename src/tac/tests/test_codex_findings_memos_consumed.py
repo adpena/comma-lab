@@ -168,3 +168,19 @@ def test_default_now_is_wallclock(tmp_path):
     os.utime(p, (time.time() - 60, time.time() - 60))
     v = check_codex_findings_memos_consumed(repo_root=tmp_path)
     assert len(v) == 1
+
+
+# ---- consumption-audit memo family carve-out --------------------------------
+def test_audit_memo_family_not_scanned_as_producer(tmp_path):
+    research, _ = _mk_repo(tmp_path)
+    _write(research / "codex_findings_consumption_audit_20260717.md",
+           "# audit memo — adjudication surface, not a findings memo\n")
+    assert check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW) == []
+
+
+def test_audit_memo_content_counts_as_consumer(tmp_path):
+    research, _ = _mk_repo(tmp_path)
+    _write(research / "codex_findings_audited_arm_20260717_codex.md", "# findings\n")
+    _write(research / "codex_findings_consumption_audit_20260717.md",
+           "ORPHAN routed: audited_arm -> reactivation route recorded here\n")
+    assert check_codex_findings_memos_consumed(repo_root=tmp_path, now=NOW) == []

@@ -61,10 +61,13 @@ version is the new preflight gate (RESOLUTION).
 |---|---|---|---|
 | 1 | `codex_findings_harvest_held_catalog406_20260715_codex.md` | **HIGH** — the exhaustive, per-factory/per-flag identity map of all **3,884** residuals blocking the Catalog #406/#332 strict flip (899 for v9_cgauge_432 + 995×3 for the ideal/core factories: missing Lever owner / LawRef / compiler-record / provenance-rung / runtime-receipt edges, + 6 named compiler/LawRef disagreements + stale provenance key `schedule`), plus PASS verdicts on harness sources A/B | **ROUTE (recorded here, this is the consumption decision):** the CLAUDE.md 2026-07-15 reconciliation already declares the strict flip OWED; this memo's §"Required backfill before strict flip" IS the actionable worklist for that owed item. Whoever executes the #332/#406 backfill MUST start from this memo — do NOT re-derive the 3,884-tuple map. Standing reminder = the new preflight gate (nags until routed/flipped); no separate task created (would duplicate the CLAUDE.md OWED row). |
 
-No other Tier-1 orphans. (Also verified: the memo has NO disposition row at all — the arm's
-landing itself slipped the review gate; the delegation exists in
-`.omx/state/codex_delegations.jsonl` but the ledger never dispositioned it. Both gate holes are
-what the RESOLUTION two-landing closes.)
+No other Tier-1 orphans. (Correction from deeper custody tracing: the arm WAS
+custody-dispositioned — under its delegation label `p0_harvest_held_20260715` /
+stamp `20260715T101441Z`, reviewed_committed at 40041e587f + f4e4a2b62c ("9 commits merged
+--no-ff; code already reconciled on main") — while the memo it wrote carries a DIFFERENT label
+(`harvest_held_catalog406`) and its findings reached zero decision surfaces. That is the purest
+possible instance of the bug class: full custody, zero consumption. A fresh disposition row with
+`--consumed-by` pointing at THIS memo was appended 2026-07-17 as the durable receipt.)
 
 ### CONSUMED-VIA-RECOVERY (4) — the proven orphan class, since recovered by operator memory
 
