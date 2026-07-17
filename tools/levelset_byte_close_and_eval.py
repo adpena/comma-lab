@@ -3184,6 +3184,79 @@ def build_phase_carrier_section(
     return section, report
 
 
+def build_dash_phase_carrier_section(
+    gt_cache: str | None, n_pairs: int, cfg: dict[str, Any],
+) -> tuple[bytes, dict[str, Any]]:
+    """Build the #425 DASH-phase carrier section (curve-domain per-dash δ(s) codec).
+
+    The store-side complement of the raster #359 carrier: lane dash TRACKS (ξ-advected,
+    world-frame dormant-pool rebirth) + per-dash curve-relative (δs, δn) residuals coded
+    with the prior-derived canonical Huffman code (measured jitter prior 40/72/80/20).
+    Returns ``(section_bytes, report)``. NO-FAKE: a missing cache/keys raises; the encoder
+    runs the full decoder and refuses on any mismatch. ``cfg`` keys mirror
+    ``tac.boundary_math.dash_phase_carrier.DashPhaseConfig``."""
+    from tac.boundary_math.dash_phase_carrier import DashPhaseConfig, dash_phase_carrier_report
+
+    if not gt_cache:
+        raise ValueError("--dash-phase-carrier requires --gt-cache (lstars/gt_poses). NO-FAKE: "
+                         "refusing to fabricate the dash payload.")
+    cp = Path(gt_cache)
+    if not cp.exists():
+        raise FileNotFoundError(f"--gt-cache {cp} not found (dash-phase-carrier needs lstars/gt_poses).")
+    z = np.load(cp, allow_pickle=False)
+    for req in ("lstars", "gt_poses"):
+        if req not in z.files:
+            raise ValueError(f"gt cache {cp} lacks {req!r} (dash-phase-carrier needs cached argmax+poses).")
+    P = int(min(int(n_pairs), int(z["lstars"].shape[0])))
+    dcfg = DashPhaseConfig(
+        lane_class=int(cfg.get("lane_class", 1)),
+        min_area=int(cfg.get("min_area", 3)),
+        border_px=int(cfg.get("border_px", 6)),
+        match_radius_px=float(cfg.get("match_radius_px", 6.0)),
+        q_px=float(cfg.get("q_px", 1.0)),
+        dormant_max_frames=int(cfg.get("dormant_max_frames", 30)),
+        gap_xi=str(cfg.get("gap_xi", "interp")),
+        pitch=float(cfg.get("pitch", 0.0)),
+        include_xi=bool(cfg.get("include_xi", True)),
+    )
+    section, rep = dash_phase_carrier_report(np.asarray(z["lstars"])[:P], np.asarray(z["gt_poses"])[:P], dcfg)
+    rate_term_contribution = _cscore.rate_term(len(section))
+    report = {
+        "active": True,
+        "n_frames": rep.n_frames,
+        "section_bytes": rep.section_bytes,
+        "section_bytes_excl_xi": rep.section_bytes_excl_xi,
+        "xi_bytes_in_section": rep.xi_bytes,
+        "n_tracks_total": rep.n_tracks_total,
+        "n_matched": rep.n_matched,
+        "n_births": rep.n_births,
+        "n_rebirths": rep.n_rebirths,
+        "n_deaths": rep.n_deaths,
+        "blink_back_fraction": rep.blink_back_fraction,
+        "esc_rate": rep.esc_rate,
+        "expected_bits_per_dash_prior": rep.expected_bits_per_dash_prior,
+        "measured_bits_per_matched_dash": rep.measured_bits_per_matched_dash,
+        "symbol_histogram": rep.symbol_histogram,
+        "mean_abs_delta_px": rep.mean_abs_delta_px,
+        "prior_code_delta_bytes": rep.prior_code_delta_bytes,
+        "zlib9_delta_stream_bytes": rep.zlib9_delta_stream_bytes,
+        "reconstruction_bit_identical": rep.reconstruction_bit_identical,
+        "counted_rate_term_contribution": rate_term_contribution,
+        "recovered_d_seg": None,
+        "recovered_d_seg_status": ("label_space_lane_layer_via_tools/measure_dash_phase_carrier_n600.py; "
+                                   "through-R d_seg OWED (NO-FAKE — bytes measured, d_seg not claimed)"),
+        "source_gt_cache": str(cp),
+        "rule_118_boundary": {
+            "COUNTED (archive.zip)": "dash anchors + alive/event bits + (δs, δn) residual symbols + the "
+                                     "header code-lengths table (+ fp16 ξ unless composed with the L68 dxi)",
+            "FREE (inflate.py)": "the ξ point-advection homography + the canonical Huffman decoder (generic "
+                                 "given header lengths) + the downstream dash rasterizer",
+            "no_gt_no_scorer_shipped": "no GT mask, no SegNet/PoseNet weights, no per-pixel table ship",
+        },
+    }
+    return section, report
+
+
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
@@ -3208,6 +3281,8 @@ def run(
     pose_carrier_xi_override: np.ndarray | None = None,  # #238: ship the TRAINED ξ_eff (xi_stored+dxi)
     phase_carrier: bool = False,  # #359 phase-residual carrier (store-half of the flicker reframe)
     phase_carrier_cfg: dict[str, Any] | None = None,
+    dash_phase_carrier: bool = False,  # #425 curve-domain per-dash δ(s) phase codec (STORE leg)
+    dash_phase_carrier_cfg: dict[str, Any] | None = None,
     cross_tensor_codec: bool = False,
     blind_coordinate_fill: bool = False,
     blind_coordinate_receipt: Path | None = None,
@@ -3373,6 +3448,28 @@ def run(
               f"bit_identical={phase_carrier_report_out['reconstruction_bit_identical']}; "
               f"recovered_d_seg={phase_carrier_report_out['recovered_d_seg_status']}  {_AUTHORITY}", flush=True)
 
+    # #425 DASH-PHASE CARRIER (curve-domain per-dash δ(s) codec — the STORE leg of lane-crux-3).
+    # Same NO-FAKE staging as #359: SELECTABLE build+measure, byte-identical when off; the label-space
+    # lane-layer recovery lives in tools/measure_dash_phase_carrier_n600.py; through-R d_seg OWED.
+    dash_phase_carrier_report_out: dict[str, Any] = {"active": False}
+    if dash_phase_carrier:
+        _dash_section, dash_phase_carrier_report_out = build_dash_phase_carrier_section(
+            gt_cache, n_pairs, dash_phase_carrier_cfg or {})
+        print(f"[dash-phase-carrier] ACTIVE (#425 curve-domain δ(s)): "
+              f"section={dash_phase_carrier_report_out['section_bytes']} B "
+              f"(excl-ξ {dash_phase_carrier_report_out['section_bytes_excl_xi']} B, "
+              f"tracks={dash_phase_carrier_report_out['n_tracks_total']}, "
+              f"matched={dash_phase_carrier_report_out['n_matched']}, "
+              f"births={dash_phase_carrier_report_out['n_births']}, "
+              f"rebirths={dash_phase_carrier_report_out['n_rebirths']}, "
+              f"blink_back={dash_phase_carrier_report_out['blink_back_fraction']:.3f}, "
+              f"bits/dash={dash_phase_carrier_report_out['measured_bits_per_matched_dash']:.2f} "
+              f"vs prior {dash_phase_carrier_report_out['expected_bits_per_dash_prior']:.2f}, "
+              f"rate_term += {dash_phase_carrier_report_out['counted_rate_term_contribution']:.6f}); "
+              f"bit_identical={dash_phase_carrier_report_out['reconstruction_bit_identical']}; "
+              f"recovered_d_seg={dash_phase_carrier_report_out['recovered_d_seg_status']}  {_AUTHORITY}",
+              flush=True)
+
     blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest,
                                           pose_carrier_bytes, pose_carrier_manifest,
                                           cross_tensor_codec=cross_tensor_codec,
@@ -3509,6 +3606,7 @@ def run(
         "lane_render_band": lane_report,
         "pose_carrier": pose_carrier_report,
         "phase_carrier": phase_carrier_report_out,
+        "dash_phase_carrier": dash_phase_carrier_report_out,
         "blind_coordinate_fill": blind_coordinate_report,
         "pose_carrier_keyframe_accounting": (
             None if keyframe_accounting is None else {
@@ -3821,6 +3919,22 @@ def main(argv: list[str] | None = None) -> int:
                     help="phase-carrier annulus band |margin| < band (the flip-prone straddle set).")
     ap.add_argument("--phase-carrier-pitch", type=float, default=0.0,
                     help="phase-carrier ground-plane pitch for the xi-transport warp (rad).")
+    # #425 DASH-PHASE CARRIER (curve-domain per-dash δ(s) codec). OFF by default -> byte-identical.
+    ap.add_argument("--dash-phase-carrier", action="store_true",
+                    help="#425 dash-phase carrier: track lane dashes by ξ-transport and STORE per-dash "
+                         "curve-relative (δs, δn) residuals (prior-derived Huffman) + birth/death/rebirth "
+                         "event codes. Needs --gt-cache. OFF by default (byte-identical when off).")
+    ap.add_argument("--dash-phase-match-radius", type=float, default=6.0,
+                    help="dash-phase track match radius in px (default 6).")
+    ap.add_argument("--dash-phase-q-px", type=float, default=1.0,
+                    help="dash-phase centroid/residual quantization step in px (default 1).")
+    ap.add_argument("--dash-phase-dormant-max", type=int, default=30,
+                    help="dash-phase dormant-pool horizon in frames for world-frame rebirth (default 30).")
+    ap.add_argument("--dash-phase-no-xi", action="store_true",
+                    help="dash-phase: omit the fp16 ξ block from the section (compose with the already-"
+                         "banked L68 dxi; decoder then takes ξ externally).")
+    ap.add_argument("--dash-phase-pitch", type=float, default=0.0,
+                    help="dash-phase ground-plane pitch for the ξ point-advection (rad).")
     ap.add_argument("--cross-tensor-codec", type=str, default="off",
                     choices=["off", "auto_lossless"],
                     help="lossless witness joint coder. auto_lossless exhaustively derives 2-D axis "
@@ -3958,6 +4072,14 @@ def main(argv: list[str] | None = None) -> int:
             "residual_scheme": args.phase_carrier_scheme,
             "annulus_band": args.phase_carrier_band,
             "pitch": args.phase_carrier_pitch,
+        },
+        dash_phase_carrier=args.dash_phase_carrier,  # #425
+        dash_phase_carrier_cfg={
+            "match_radius_px": args.dash_phase_match_radius,
+            "q_px": args.dash_phase_q_px,
+            "dormant_max_frames": args.dash_phase_dormant_max,
+            "include_xi": not args.dash_phase_no_xi,
+            "pitch": args.dash_phase_pitch,
         },
         cross_tensor_codec=(args.cross_tensor_codec == "auto_lossless"),
         blind_coordinate_fill=args.blind_coordinate_fill,
