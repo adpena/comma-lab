@@ -264,10 +264,35 @@ def _cmd_disposition(args: argparse.Namespace) -> int:
     if args.status in {"closed"} and not args.reason:
         print("ERROR: closed requires --reason", file=sys.stderr)
         return 2
+    # DISPOSITION != CONSUMPTION (operator 2026-07-17, memory
+    # codex_findings_disposition_is_not_consumption_bug_class_20260717): a
+    # "reviewed"/"closed" stamp without a NAMED CONSUMER let findings rot
+    # unrouted (proven: the 4-arm curvelet/Fourier basis cluster). Terminal
+    # dispositions now REQUIRE --consumed-by naming the artifact that absorbed
+    # (or knowingly rejected, with a recorded decision) the arm's findings:
+    # a task id (#NNN), P0 ledger row id, DAG FEED tag, spec section, DSL
+    # lever, memo path, or commit sha. `none:<reason>` is the explicit
+    # nothing-to-consume escape (pure-mechanical arms) — it must carry a real
+    # reason, so silence is impossible. respawned/held_entangled are exempt
+    # (custody continues elsewhere).
+    consumed_by = getattr(args, "consumed_by", None)
+    if args.status in {"reviewed_committed", "closed"} and not consumed_by:
+        print(
+            "ERROR: reviewed_committed/closed require --consumed-by "
+            "<task#|p0-row|DAG-FEED|spec-section|lever|memo-path|commit-sha|none:<reason>> "
+            "— a disposition stamp is custody, not consumption; name where the "
+            "findings were routed (or none:<reason> if genuinely nothing to route).",
+            file=sys.stderr)
+        return 2
+    if consumed_by and consumed_by.strip().lower() in {"none", "none:", "n/a", "tbd", "<reason>"}:
+        print("ERROR: --consumed-by none requires a reason: none:<why nothing to route>",
+              file=sys.stderr)
+        return 2
     row = {
         "label": args.label, "stamp": args.stamp, "status": args.status,
         "commit": args.commit, "respawn": args.respawn,
         "reason": args.reason, "blocked_by": blocked_by,
+        "consumed_by": consumed_by,
         "by": "cli",
     }
     append_disposition(row)
@@ -434,6 +459,11 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--reason", default=None)
     d.add_argument("--blocked-by", default=None,
                    help="comma-separated LIVE arm labels (held_entangled)")
+    d.add_argument("--consumed-by", default=None, dest="consumed_by",
+                   help="REQUIRED for reviewed_committed/closed: the artifact that "
+                        "absorbed the arm's findings (task#/P0-row/DAG-FEED/spec-section/"
+                        "lever/memo-path/commit-sha) or none:<reason>. Disposition is "
+                        "custody; this field is CONSUMPTION.")
 
     sub.add_parser("status", help="print landed-vs-dispositioned status")
 
