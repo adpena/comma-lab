@@ -6528,6 +6528,16 @@ def preflight_all(
         # "Strict-flip atomicity rule" (live count 0 at landing; future-facing).
         check_default_off_decision_table_consumed(strict=False, verbose=verbose)
 
+        # 2026-07-17 codex findings-memo consumption gate (ARM F; operator:
+        # "What other findings memos were landed that nobody consumed? That is
+        # a super poisonous bug class"). Read-path sister of the landing-review
+        # gate's --consumed-by write-path requirement: flags fresh
+        # codex_findings_*.md memos whose arm label appears in NO consumer
+        # surface (DAG FEED / consumed_by receipt / P0 row / recent research
+        # content). WARN-ONLY per the Strict-flip atomicity rule (routing is a
+        # judgment surface; the gate nags, the agent routes).
+        check_codex_findings_memos_consumed(strict=False, verbose=verbose)
+
         # 2026-07-07 harvest-engineered prompting gates (operator: "Save and
         # engineer all those patterns as standard behaviors and gates").
         # (1) reasoning-echo refusal-storm prevention across prompt surfaces
@@ -88088,6 +88098,226 @@ def check_modal_dispatch_single_flight(
         raise PreflightError(
             "check_modal_dispatch_single_flight found "
             f"{len(violations)} violation(s) (modal-spawn-without-single-flight-guard):\n  "
+            + "\n  ".join(violations[:10]))
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Codex findings-memo consumption gate (ARM F consumption audit, 2026-07-17).
+#
+# THE BUG CLASS (operator 2026-07-17: "What other findings memos were landed
+# that nobody consumed? That is a super poisonous bug class"): a codex arm
+# lands `.omx/research/codex_findings_<label>_*.md`, the landing-review gate
+# stamps a CUSTODY disposition (reviewed_committed/closed), and the memo's
+# FINDINGS never reach any decision surface — no DAG FEED, no task/P0 row, no
+# spec section, no DSL lever, no audit memo. Proven orphan: the 4-arm
+# curvelet/Fourier basis cluster (rc=0 REVIEWED, findings unconsumed until
+# operator memory caught it); worst instance: the 52.6K Catalog-#406 backfill
+# worklist memo with ZERO consumers.
+#
+# Two-landing sister of tools/codex_landing_review_gate.py's --consumed-by
+# requirement (the WRITE-path fix); this gate is the READ-path detector: it
+# flags FRESH findings memos (younger than the grace window) whose arm label
+# appears in NO consumer surface. WARN-ONLY by design at landing (Strict-flip
+# atomicity rule; consumption routing is a judgment surface — the gate nags,
+# the human/agent routes).
+# ----------------------------------------------------------------------------
+
+_CODEX_FINDINGS_CONSUMPTION_WAIVER = "CODEX_FINDINGS_CONSUMPTION_WAIVED:"
+_CODEX_FINDINGS_FRESH_SECONDS = 3 * 24 * 3600  # 3-day routing grace window
+_CODEX_FINDINGS_MIN_LABEL_LEN = 4  # shorter labels are unmatchable substrings
+# consumer content scan is bounded to recently-touched research files:
+_CODEX_FINDINGS_CONSUMER_MTIME_WINDOW_SECONDS = 30 * 24 * 3600
+
+
+def _codex_findings_arm_label(filename: str) -> str:
+    """``codex_findings_<label>_<stamp>[_codex].md`` → ``<label>``.
+
+    The stamp is a ``2026MMDD`` date optionally followed by ``THHMMSS[Z]``.
+    Mirrors the labels used by tools/codex_delegate + the landing ledger."""
+    name = filename
+    if name.startswith("codex_findings_"):
+        name = name[len("codex_findings_"):]
+    name = re.sub(r"\.md$", "", name)
+    name = re.sub(r"_codex$", "", name)
+    name = re.sub(r"_2026[01]\d{3}(T\d{4,6}Z?)?$", "", name)
+    return name
+
+
+def _codex_findings_label_consumed(
+    label: str,
+    *,
+    research_dir: Path,
+    state_dir: Path,
+    self_name: str,
+    now: float,
+) -> str | None:
+    """Return a short consumer citation if ``label`` appears in any consumer
+    surface, else None. Consumer surfaces (cheap → expensive):
+
+      1. a NON-codex research artifact whose FILENAME carries the label (the
+         canonical ``<label>_DAG_FEED_<date>.md`` companion route);
+      2. a landing-ledger disposition row whose ``consumed_by`` field is set
+         and whose label matches (the write-path fix's receipt);
+      3. the operator-P0 ledger content;
+      4. CONTENT of recently-modified non-codex research .md files (covers the
+         main DAG FEED blocks, build specs, audit memos, spec sections).
+
+    NOTE (classification honesty): a content hit is a NECESSARY-not-sufficient
+    consumption signal — this gate detects total orphanhood (zero surfaces),
+    it does not adjudicate cited-vs-consumed. That adjudication lives in the
+    audit memo discipline (a FEED that mentions-but-defers WITH a named reason
+    is consumption; a bare mention is not)."""
+    needle = label.lower()
+
+    # 1. filename route (DAG FEED companions, build specs, sub015 per-arm DAGs)
+    try:
+        for f in research_dir.iterdir():
+            fname = f.name
+            if fname.startswith(("codex_findings_", "codex_session_summary_")):
+                continue
+            if needle in fname.lower():
+                return f"filename:{fname}"
+    except OSError:
+        pass
+
+    # 2. landing-ledger consumed_by receipts
+    ledger = state_dir / "codex_landing_ledger.jsonl"
+    if ledger.is_file():
+        try:
+            for line in ledger.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                row_label = str(row.get("label") or "").lower()
+                if not row.get("consumed_by"):
+                    continue
+                if row_label.startswith(needle) or needle.startswith(row_label):
+                    return f"ledger-consumed-by:{row.get('consumed_by')}"
+        except OSError:
+            pass
+
+    # 3. operator-P0 ledger content
+    p0 = state_dir / "operator_p0_ledger.jsonl"
+    if p0.is_file():
+        try:
+            if needle in p0.read_text(encoding="utf-8", errors="ignore").lower():
+                return "p0-ledger"
+        except OSError:
+            pass
+
+    # 4. content of recently-touched non-codex research files (main DAG etc.)
+    try:
+        for f in research_dir.iterdir():
+            fname = f.name
+            if fname == self_name or not fname.endswith(".md"):
+                continue
+            if fname.startswith(("codex_findings_", "codex_session_summary_")):
+                continue
+            try:
+                if now - f.stat().st_mtime > _CODEX_FINDINGS_CONSUMER_MTIME_WINDOW_SECONDS:
+                    continue
+                if needle in f.read_text(encoding="utf-8", errors="ignore").lower():
+                    return f"content:{fname}"
+            except OSError:
+                continue
+    except OSError:
+        pass
+
+    return None
+
+
+def check_codex_findings_memos_consumed(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+    now: float | None = None,
+    fresh_seconds: int = _CODEX_FINDINGS_FRESH_SECONDS,
+) -> list[str]:
+    """WARN-ONLY: flag fresh codex findings memos with ZERO consumer surfaces.
+
+    Scans ``.omx/research/codex_findings_*.md`` whose mtime is within
+    ``fresh_seconds`` (default 3 days — the routing grace window) and whose arm
+    label appears in NO consumer surface (see ``_codex_findings_label_consumed``).
+
+    Waiver: a line containing ``CODEX_FINDINGS_CONSUMPTION_WAIVED:<rationale>``
+    inside the memo itself (non-placeholder rationale required — a memo whose
+    findings are genuinely nothing-to-route says so IN the memo, auditable).
+
+    Rule chain on failure: operator 2026-07-17 disposition≠consumption directive
+    → tools/codex_landing_review_gate.py --consumed-by (write path) → THIS gate
+    (read path) → fix = route the findings (DAG FEED / task# / P0 row / spec § /
+    DSL lever / audit-memo decision) or add the in-memo waiver."""
+    root = Path(repo_root or REPO_ROOT)
+    research_dir = root / ".omx" / "research"
+    state_dir = root / ".omx" / "state"
+    now_ts = float(now if now is not None else time.time())
+    violations: list[str] = []
+    scanned = 0
+
+    if research_dir.is_dir():
+        for memo in sorted(research_dir.glob("codex_findings_*.md")):
+            try:
+                age = now_ts - memo.stat().st_mtime
+            except OSError:
+                continue
+            if age > fresh_seconds:
+                continue
+            label = _codex_findings_arm_label(memo.name)
+            if len(label) < _CODEX_FINDINGS_MIN_LABEL_LEN:
+                continue  # unmatchable substring; warn-only gate stays quiet
+            scanned += 1
+            try:
+                text = memo.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                text = ""
+            waiver_ok = False
+            for line in text.splitlines():
+                if _CODEX_FINDINGS_CONSUMPTION_WAIVER in line:
+                    rationale = line.split(
+                        _CODEX_FINDINGS_CONSUMPTION_WAIVER, 1)[1].strip()
+                    if rationale and rationale.lower() not in {
+                        "<rationale>", "<reason>", "tbd", "todo", "n/a", "none",
+                    }:
+                        waiver_ok = True
+                        break
+            if waiver_ok:
+                continue
+            consumer = _codex_findings_label_consumed(
+                label,
+                research_dir=research_dir,
+                state_dir=state_dir,
+                self_name=memo.name,
+                now=now_ts,
+            )
+            if consumer is None:
+                rel = memo.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}: arm label '{label}' appears in NO consumer surface "
+                    "(no DAG FEED companion / consumed_by ledger receipt / P0 row "
+                    "/ recent research-memo content) — landed findings nobody "
+                    "consumed is the poisonous orphan class (operator 2026-07-17). "
+                    "Fix: route the findings (DAG FEED memo, task#/P0 row, spec §, "
+                    "DSL lever, or an audit-memo decision naming this arm) OR add "
+                    f"a `{_CODEX_FINDINGS_CONSUMPTION_WAIVER}<rationale>` line "
+                    "inside the memo."
+                )
+
+    if verbose:
+        print(
+            f"  [codex-findings-consumed] check_codex_findings_memos_consumed: "
+            f"{len(violations)} violation(s) ({scanned} fresh memo(s) scanned)"
+            if violations else
+            f"  [codex-findings-consumed] check_codex_findings_memos_consumed: OK "
+            f"({scanned} fresh memo(s) scanned)")
+    if strict and violations:
+        raise PreflightError(
+            "check_codex_findings_memos_consumed found "
+            f"{len(violations)} violation(s) (landed-findings-nobody-consumed):\n  "
             + "\n  ".join(violations[:10]))
     return violations
 
