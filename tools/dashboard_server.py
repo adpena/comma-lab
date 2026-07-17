@@ -2303,7 +2303,7 @@ class LiveState:
     def _free_gib(self) -> float | None:
         try:
             import psutil
-            return psutil.virtual_memory().available / (1024 ** 3)
+            return psutil.virtual_memory().available / (1024 ** 3)  # RAW_VM_BASIS_OK:dashboard telemetry display, not a refuse/admit guard
         except Exception:
             return None
 

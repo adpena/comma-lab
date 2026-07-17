@@ -468,7 +468,6 @@ def extract_flips(args) -> tuple[Path, dict]:
     existing). Returns (cache_dir, extraction_report)."""
     import brotli
     import levelset_byte_close_and_eval as bc
-    import psutil
     import torch
 
     from tac.boundary_math.analytic_lane_render_band import (
@@ -555,7 +554,13 @@ def extract_flips(args) -> tuple[Path, dict]:
         f = cache / f"flips_{pi:04d}.npz"
         if f.exists():
             continue
-        avail_mb = psutil.virtual_memory().available // 1048576
+        # CLASS-1 fix: reclaimable-aware basis (raw psutil .available over-trusts dirty inactive anon).
+        try:
+            from tools.mem_basis import conservative_free_gib
+        except Exception:
+            from mem_basis import conservative_free_gib  # type: ignore
+        _gib = conservative_free_gib(default=float("inf"))
+        avail_mb = (1 << 40) if _gib == float("inf") else int(_gib * 1024)
         if avail_mb < int(args.mem_floor_mb):
             print(f"[#307] MEM-GUARD: available {avail_mb}MB < floor {args.mem_floor_mb}MB — "
                   "exiting resumable (rc=7); relaunch to continue.", flush=True)

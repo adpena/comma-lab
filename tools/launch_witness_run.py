@@ -3074,18 +3074,26 @@ def main(argv: list[str] | None = None) -> int:
     try:
         import psutil  # local import: probe-only
 
+        # CLASS-2 fix (mirrors #406): classify against the OBSERVER-STRIPPED cmdline so a monitor
+        # carrying ``--training-sig train_levelset_witness`` that also references this out_dir is not
+        # misclassified as a duplicate SPAWN. Raw trainer/launch argv is still caught.
+        try:
+            from tools.argv_role import strip_observer_flag_values
+        except Exception:
+            from argv_role import strip_observer_flag_values  # type: ignore
         _dup_pids = []
         _needle = str(out_dir)
+        _launch_tokens = ("train_levelset_witness", "launch.sh", "spawn_durable_daemon")
         for _p in psutil.process_iter(["pid", "cmdline"]):
             try:
                 if _p.pid == os.getpid():
                     continue
-                _cl = " ".join(_p.info.get("cmdline") or ())
+                _raw = _p.info.get("cmdline") or ()
+                _cl = " ".join(_raw)
+                _scan = " ".join(strip_observer_flag_values(list(_raw)))
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
-            if _needle and _needle in _cl and (
-                    "train_levelset_witness" in _cl or "launch.sh" in _cl
-                    or "spawn_durable_daemon" in _cl):
+            if _needle and _needle in _cl and any(tok in _scan for tok in _launch_tokens):
                 _dup_pids.append((_p.pid, _cl[:160]))
         if _dup_pids:
             print(f"[launch-witness] ERROR: REFUSING to launch — SAME-OUTDIR SPAWN GUARD "

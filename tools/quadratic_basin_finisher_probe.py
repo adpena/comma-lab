@@ -110,9 +110,12 @@ def choose_subset_pairs(n: int, k: int, seed: int) -> list[int]:
 
 
 def ram_floor_ok(floor_gib: float = RAM_FLOOR_GIB) -> tuple[bool, float]:
-    import psutil
-
-    avail = psutil.virtual_memory().available / 2**30
+    # CLASS-1 fix: reclaimable-aware basis (raw psutil .available over-trusts dirty inactive anon).
+    try:
+        from tools.mem_basis import conservative_free_gib
+    except Exception:
+        from mem_basis import conservative_free_gib  # type: ignore
+    avail = conservative_free_gib(default=float("inf"))
     return avail >= floor_gib, avail
 
 

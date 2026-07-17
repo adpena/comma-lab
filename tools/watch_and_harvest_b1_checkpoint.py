@@ -369,11 +369,22 @@ def heartbeat_reports_train_exit(heartbeat_path: Path) -> bool:
 
 
 def free_memory_gb() -> float | None:
-    """Best-effort available system memory in GiB (psutil; macOS-friendly)."""
+    """Best-effort available system memory in GiB (reclaimable-aware; macOS-friendly)."""
+    # CLASS-1 fix: reclaimable-aware basis (raw psutil .available over-trusts dirty inactive anon).
+    try:
+        try:
+            from tools.mem_basis import conservative_free_gib
+        except Exception:
+            from mem_basis import conservative_free_gib  # type: ignore
+        cf = conservative_free_gib(default=float("nan"))
+        if cf == cf:
+            return cf
+    except Exception:
+        pass
     try:
         import psutil  # type: ignore
 
-        return float(psutil.virtual_memory().available) / (1024.0**3)
+        return float(psutil.virtual_memory().available) / (1024.0**3)  # RAW_VM_BASIS_OK:last-resort fallback after canonical conservative_free_gib
     except Exception:
         # Fallback: macOS vm_stat page-based estimate.
         try:

@@ -83,10 +83,13 @@ LUMA_HAT = LUMA / np.linalg.norm(LUMA)
 
 
 def _free_gib() -> float:
+    # CLASS-1 fix: reclaimable-aware basis (raw psutil .available over-trusts dirty inactive anon).
     try:
-        import psutil
-
-        return psutil.virtual_memory().available / 2**30
+        try:
+            from tools.mem_basis import conservative_free_gib
+        except Exception:
+            from mem_basis import conservative_free_gib  # type: ignore
+        return conservative_free_gib(default=float("inf"))
     except Exception:
         return float("inf")
 

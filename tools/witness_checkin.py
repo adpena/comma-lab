@@ -174,7 +174,7 @@ def collect_status(run_dir: Path, proc: dict | None, stale_after_s: float) -> di
     try:
         import psutil
 
-        status["free_mem_gib"] = round(psutil.virtual_memory().available / 2**30, 1)
+        status["free_mem_gib"] = round(psutil.virtual_memory().available / 2**30, 1)  # RAW_VM_BASIS_OK:telemetry-only status field, not a refuse/admit guard
     except Exception:
         status["free_mem_gib"] = None
 

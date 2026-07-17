@@ -79,10 +79,17 @@ def derived_verdict_workers(
     least memory risk; 0/1 sequential is composed by NOT composing the lever, per the
     off-is-orphan rule). Deterministic given ``available_gib``."""
     if available_gib is None:
+        # CLASS-1 fix: reclaimable-aware basis — raw psutil .available over-trusts dirty inactive
+        # anon; over-trusting here would size TOO MANY workers and OOM the box.
         try:
-            import psutil  # noqa: PLC0415
-
-            available_gib = float(psutil.virtual_memory().available) / 2**30
+            try:
+                from tools.mem_basis import conservative_free_gib  # noqa: PLC0415
+            except Exception:
+                from mem_basis import conservative_free_gib  # type: ignore # noqa: PLC0415
+            cf = conservative_free_gib(default=float("nan"))
+            if cf != cf:  # NaN → measurement unavailable → conservative floor
+                return 2
+            available_gib = cf
         except Exception:
             return 2
     base_gib = PEAK_RSS_GIB - SIZED_WORKERS * MARGINAL_GB_PER_WORKER

@@ -161,9 +161,16 @@ def _free_gib() -> float:
     to a 74.6 GiB trainer), so trusting it alone would run the OOM-heavy scorer path
     against the live P0 trainer. Take the smaller reading. NaN only if BOTH fail."""
     readings: list[float] = []
+    # CLASS-1 fix: prefer the reclaimable-aware canonical basis (governor kernel-queue decomposition),
+    # kept inside the conservative MIN below so this SAFETY REFUSE guard still errs toward refusing.
     try:
-        import psutil  # type: ignore
-        readings.append(float(psutil.virtual_memory().available) / (1024 ** 3))
+        try:
+            from tools.mem_basis import conservative_free_gib
+        except Exception:
+            from mem_basis import conservative_free_gib  # type: ignore
+        cf = conservative_free_gib(default=float("nan"))
+        if cf == cf:  # not NaN
+            readings.append(cf)
     except Exception:
         pass
     vm = _vm_stat_free_gib()

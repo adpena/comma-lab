@@ -2293,6 +2293,180 @@ def check_verdict_live_gap_defaults_on_during_ema_warmup(
     )
 
 
+def _python_source_files(root: Path) -> list[Path]:
+    """tools/*.py + src/tac/**/*.py (the memory-guard surface), skipping the canonical
+    accounting modules + tests + this gate module itself."""
+    out: list[Path] = []
+    tools = root / "tools"
+    if tools.is_dir():
+        out.extend(sorted(tools.glob("*.py")))
+    srctac = root / "src" / "tac"
+    if srctac.is_dir():
+        out.extend(sorted(srctac.glob("**/*.py")))
+    skip = {
+        (root / "tools" / "mem_basis.py"),
+        (root / "tools" / "system_memory_governor.py"),
+        (root / "src" / "tac" / "confound_gates.py"),
+    }
+    return [p for p in out if p not in skip and "/tests/" not in p.as_posix()]
+
+
+def _vm_safety_attr_nodes(tree: ast.AST) -> list[ast.Attribute]:
+    """``psutil.virtual_memory().{available,used,free}`` attribute accesses (the reclaimable-blind
+    safety-basis pattern). ``.total`` is EXCLUDED — it is a denominator, never a refuse/admit basis."""
+    found: list[ast.Attribute] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Attribute) or node.attr not in {"available", "used", "free"}:
+            continue
+        base = node.value
+        if (
+            isinstance(base, ast.Call)
+            and isinstance(base.func, ast.Attribute)
+            and base.func.attr == "virtual_memory"
+        ):
+            found.append(node)
+    return found
+
+
+def check_no_raw_virtual_memory_safety_basis(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """CLASS 1 (bug-class sweep 2026-07-17) — refuse ``psutil.virtual_memory().{available,used,free}``
+    as a memory safety basis outside the canonical reclaimable-aware helper (``tools/mem_basis.py``)
+    / accounting (``tools/system_memory_governor.py``).
+
+    Bug class (operator P0; sisters ``admission_gate_naive_counts_reclaimable_as_committed_20260716``
+    + ``tunnel_always_up_supervisor_canonical_20260717``): on macOS ``.available`` = free + inactive
+    counts DIRTY ANON parked in the inactive queue as available (measured 57.3 GiB "available" vs
+    13.7 GiB truly reclaimable-without-swap next to the live trainer) → refuse/admit guards
+    UNDER-protect; ``.used`` counts reclaimable file-cache as committed → over-refuse an idle box.
+    Route guards through ``tools.mem_basis.conservative_free_gib`` / ``true_committed_gib``.
+
+    ``.total`` is EXCLUDED (denominator, not a safety basis). Same-line waiver
+    ``# RAW_VM_BASIS_OK:<rationale>`` for telemetry-only display / last-resort fallbacks.
+
+    WARN-ONLY at landing (live-count 0 after the sweep; ``preflight_all`` calls it warn-only per
+    the Strict-flip atomicity rule — not yet in ``_CONFOUND_STRICT``)."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    for path in _python_source_files(root):
+        text = _read(path)
+        if not text or "virtual_memory" not in text:
+            continue
+        scanned += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        lines = text.splitlines()
+        rel = path.relative_to(root).as_posix()
+        for node in _vm_safety_attr_nodes(tree):
+            line_text = lines[node.lineno - 1] if 0 <= node.lineno - 1 < len(lines) else ""
+            if _waiver_present(line_text, "RAW_VM_BASIS_OK"):
+                continue
+            violations.append(
+                f"{rel}:{node.lineno}: raw psutil.virtual_memory().{node.attr} as a memory safety "
+                f"basis (reclaimable-blind on macOS). Route through "
+                f"tools.mem_basis.conservative_free_gib / true_committed_gib, or add a same-line "
+                f"`# RAW_VM_BASIS_OK:<rationale>` waiver (telemetry / last-resort fallback)."
+            )
+    return _finish(
+        name="check_no_raw_virtual_memory_safety_basis",
+        tag="raw-vm-safety-basis",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"{scanned} source file(s) scanned",
+    )
+
+
+_CLASS2_TRAINER_TOKENS = ("train_levelset_witness", "train_witness")
+_CLASS2_DECISION_TOKENS = (
+    "killpg", "os.kill", "sys.exit", "SystemExit", "return 12", "return 1",
+    "refuse", "REFUS", "pkill",
+)
+_CLASS2_EXCLUSION_MARKERS = (
+    "strip_observer_flag_values", "argv_role", "--training-sig", "OBSERVER_ROLE_OK",
+    "TRAINING_SIG",
+)
+
+
+def check_process_guard_excludes_observer_flag_values(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """CLASS 2 (bug-class sweep 2026-07-17) — a fail-closed process guard that classifies a live
+    process by TRAINER-TOKEN presence in its joined cmdline AND makes a refuse/kill decision must
+    exclude OBSERVER flag values (``--training-sig <trainer-name>``) first.
+
+    Bug class (sisters #406 rc=8 supervisor false-refuse + p0_512 same-outdir guard): observers carry
+    the trainer NAME as a flag VALUE, so ``trainer_token in " ".join(cmdline)`` misclassifies a
+    monitor as a launch → refuses the always-on tunnel / a legit launch. Cure = structural
+    ``tools.argv_role.strip_observer_flag_values`` before the token test (raw trainer argv still
+    caught). FM role-classification, where used, is an advisory tiebreaker ON TOP of this — never a
+    replacement.
+
+    Function-scoped: flags a FunctionDef whose body (a) enumerates cmdlines (``process_iter`` or
+    ``cmdline`` + ``.join``), (b) tests a trainer-token literal, (c) makes a decision
+    (kill/exit/refuse), and (d) carries no exclusion marker (``strip_observer_flag_values`` /
+    ``argv_role`` / ``--training-sig`` handling / ``TRAINING_SIG`` / ``# OBSERVER_ROLE_OK:<why>``).
+
+    WARN-ONLY at landing (live-count 0 after the #512 fix; not in ``_CONFOUND_STRICT``)."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    scanned = 0
+    tools = root / "tools"
+    files = sorted(tools.glob("*.py")) if tools.is_dir() else []
+    for path in files:
+        if path.name in {"argv_role.py"}:
+            continue
+        text = _read(path)
+        if not text or "cmdline" not in text and "process_iter" not in text:
+            continue
+        if not any(tok in text for tok in _CLASS2_TRAINER_TOKENS):
+            continue
+        scanned += 1
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        lines = text.splitlines()
+        rel = path.relative_to(root).as_posix()
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            span = "\n".join(lines[node.lineno - 1: (node.end_lineno or node.lineno)])
+            classifies = ("process_iter" in span) or ("cmdline" in span and ".join" in span)
+            if not classifies:
+                continue
+            if not any(tok in span for tok in _CLASS2_TRAINER_TOKENS):
+                continue
+            if not any(d in span for d in _CLASS2_DECISION_TOKENS):
+                continue
+            if any(e in span for e in _CLASS2_EXCLUSION_MARKERS):
+                continue
+            violations.append(
+                f"{rel}:{node.lineno}: {node.name}() classifies a process by trainer-token in its "
+                f"joined cmdline AND makes a refuse/kill decision without excluding observer flag "
+                f"values. Strip via tools.argv_role.strip_observer_flag_values (mirrors #406/#512), "
+                f"or add a `# OBSERVER_ROLE_OK:<rationale>` waiver."
+            )
+    return _finish(
+        name="check_process_guard_excludes_observer_flag_values",
+        tag="observer-flag-exclusion",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=f"{scanned} candidate guard file(s) scanned",
+    )
+
+
 # The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
 EIGHTFOLD_GATES = (
     check_significance_keys_canonical,
@@ -2319,4 +2493,6 @@ CONFOUND_GATES = (
     check_witness_trainers_emit_partial_freeze_alarm,
     check_witness_verdict_rows_carry_dseg_descent_canary,
     check_verdict_live_gap_defaults_on_during_ema_warmup,
+    check_no_raw_virtual_memory_safety_basis,
+    check_process_guard_excludes_observer_flag_values,
 )

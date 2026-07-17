@@ -110,9 +110,11 @@ MIN_FREE_GIB = 20.0
 
 def _free_gib() -> float:
     try:
-        import psutil
-
-        return psutil.virtual_memory().available / 2**30
+        try:
+            from tools.mem_basis import conservative_free_gib
+        except Exception:
+            from mem_basis import conservative_free_gib  # type: ignore
+        return conservative_free_gib(default=float("inf"))
     except Exception:
         return float("inf")
 

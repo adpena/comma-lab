@@ -144,7 +144,6 @@ def main() -> None:
     args = ap.parse_args()
 
     import levelset_byte_close_and_eval as bc
-    import psutil
     import torch
     from apply_sensitivity_bitalloc_witness import _brotli_bytes, _realize_alloc
     from measure_contour_string_flip_coding import (
@@ -166,7 +165,13 @@ def main() -> None:
     deadline = (t_start + float(args.chunk_seconds)) if float(args.chunk_seconds) > 0 else None
 
     def _mem_guard() -> None:
-        avail = psutil.virtual_memory().available // 1048576
+        # CLASS-1 fix: reclaimable-aware basis (raw psutil .available over-trusts dirty inactive anon).
+        try:
+            from tools.mem_basis import conservative_free_gib
+        except Exception:
+            from mem_basis import conservative_free_gib  # type: ignore
+        _gib = conservative_free_gib(default=float("inf"))
+        avail = (1 << 40) if _gib == float("inf") else int(_gib * 1024)
         if avail < int(args.mem_floor_mb):
             print(f"[#336-pc] MEM-GUARD: available {avail}MB < floor {args.mem_floor_mb}MB — "
                   "aborting clean (P0: never endanger the live trainer).", flush=True)

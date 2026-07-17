@@ -38,7 +38,7 @@ run_one_guarded() {
   local MON=$!
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) monitor pgid $MON (floor ${FLOOR_MB}MB, pairs ${PAIRS})" | tee -a "$GUARD_LOG"
   while kill -0 "$MON" 2>/dev/null; do
-    AVAIL=$(.venv/bin/python -c "import psutil;print(psutil.virtual_memory().available//1048576)" 2>/dev/null || echo 99999)
+    AVAIL=$(.venv/bin/python -c "from tools.mem_basis import conservative_free_gib as f; g=f(default=float('inf'));print(99999 if g==float('inf') else int(g*1024))" 2>/dev/null || echo 99999)
     if [ "$AVAIL" -lt "$FLOOR_MB" ]; then
       echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) WATCHDOG: avail ${AVAIL}MB < ${FLOOR_MB}MB — killing monitor group -$MON to protect the box" | tee -a "$GUARD_LOG"
       kill -9 -- "-$MON" 2>/dev/null
@@ -47,7 +47,7 @@ run_one_guarded() {
     sleep 4
   done
   wait "$MON" 2>/dev/null
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) monitor tick done; avail now $(.venv/bin/python -c 'import psutil;print(psutil.virtual_memory().available//1048576)')MB" | tee -a "$GUARD_LOG"
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) monitor tick done; avail now $(.venv/bin/python -c 'from tools.mem_basis import conservative_free_gib as f; g=f(default=float('inf'));print(99999 if g==float('inf') else int(g*1024))')MB" | tee -a "$GUARD_LOG"
 }
 
 if [ "$ONCE" = "1" ]; then

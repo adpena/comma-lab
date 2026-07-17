@@ -84,7 +84,7 @@ def memory_telemetry_fields() -> dict[str, float]:
         import psutil
 
         out["rss_gib"] = round(psutil.Process().memory_info().rss / _GIB, 3)
-        out["sys_avail_gib"] = round(psutil.virtual_memory().available / _GIB, 2)
+        out["sys_avail_gib"] = round(psutil.virtual_memory().available / _GIB, 2)  # RAW_VM_BASIS_OK:telemetry-only verdict field, not a refuse/admit guard
     except Exception:
         pass
     try:
