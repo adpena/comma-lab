@@ -2052,6 +2052,7 @@ def PoseDecouple(window: int = 100) -> Lever:
 
 def PoseFinishConditioningGate(
     backstop_epoch: int | None = None, w_pose: float | None = None,
+    engage_mode: str = "sigma_min_plateau",
 ) -> Lever:
     """owed-1 (SYNTHESIS_v3_v752 §A.4, A-1 FIX): engage the TERMINAL pose-finish on the SEALED d_seg-
     CONDITIONING event — a scale-free ROLLING-SLOPE plateau of the DE-NOISED σ_min(J_ξ) conditioning
@@ -2063,8 +2064,19 @@ def PoseFinishConditioningGate(
     the finish weight ``--w-pose`` (else the program's pose config supplies them). The σ_min sensor
     ``--jacobian-basin-telemetry`` (default ON) is the gate's ONLY σ_min source and MUST stay ON. A
     degenerate/canary-fail/never-fired gate ships the banked R1 dxi (DISENGAGED, LOUD alarm) — NEVER
-    blocks (SYNTHESIS §A.4 Repair 2b/4). Detector: ``tac.witness_control.sigma_min_plateau``."""
-    ov: dict = {"--pose-finish-engage-on": "sigma_min_plateau"}
+    blocks (SYNTHESIS §A.4 Repair 2b/4). Detector: ``tac.witness_control.sigma_min_plateau``.
+
+    ``engage_mode`` (SPEC_v10 §13.2): ``'sigma_min_plateau'`` (DEFAULT — the SEALED rolling-slope
+    plateau) or ``'sigma_min_crest'`` (fire-on-crest: the smoothed σ_min slope SIGN-CHANGE = the
+    conditioning PEAK, hysteresis-held; same sensor/de-noise/guard machinery + banked-R1 fallback
+    contract. Live c2 anchor: σ_min 0.0010→0.0068 still climbing +15%/ep at ep798 — a plateau gate
+    keeps waiting while a crest gate arms the moment conditioning stops improving)."""
+    if str(engage_mode) not in ("sigma_min_plateau", "sigma_min_crest"):
+        raise ValueError(
+            "PoseFinishConditioningGate: engage_mode must be 'sigma_min_plateau' or "
+            f"'sigma_min_crest', got {engage_mode!r} ('muon' is the incumbent default, not a "
+            "conditioning gate — omit this lever for it)")
+    ov: dict = {"--pose-finish-engage-on": str(engage_mode)}
     if backstop_epoch is not None:
         if int(backstop_epoch) <= 0:
             raise ValueError(
@@ -2076,8 +2088,9 @@ def PoseFinishConditioningGate(
             raise ValueError("PoseFinishConditioningGate: w_pose must be > 0 (the finish-phase weight)")
         ov["--w-pose"] = float(w_pose)
     return Lever("pose_finish_conditioning_gate", overrides=ov,
-                 notes="owed-1: pose-finish engages on the rolling-slope de-noised σ_min plateau (A-1 "
-                 "fix); ships banked R1 if never/degenerate/untrusted (never blocks)")
+                 notes="owed-1: pose-finish engages on the de-noised σ_min conditioning event "
+                 f"({engage_mode}; plateau=A-1 sealed rolling-slope, crest=SPEC_v10 §13.2 slope "
+                 "sign-change peak); ships banked R1 if never/degenerate/untrusted (never blocks)")
 
 
 def Muon(start_epoch: int, window: int = 100) -> Lever:
