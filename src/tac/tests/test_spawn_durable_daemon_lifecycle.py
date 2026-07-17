@@ -95,7 +95,12 @@ def _spawn_dummy(SDD_mod, tmp_path, label: str):
     child_pid_file = tmp_path / f"{label}.{time.time_ns()}.pids"
     os.environ["CHILD_PID_FILE"] = str(child_pid_file)
     try:
-        argv = ["--log", str(log), "--label", label, "--", sys.executable, "-c", _DUMMY_WORKER]
+        # --skip-admission-gate: these tests exercise killpg/registry custody, NOT admission —
+        # the designed infra bypass keeps them hermetic vs LIVE machine memory state (2026-07-16:
+        # the reclaimable-aware committed basis correctly refuses ANY spawn while a ~100 GiB-committed
+        # bench runs, which is the gate working, not a lifecycle regression).
+        argv = ["--skip-admission-gate", "--log", str(log), "--label", label,
+                "--", sys.executable, "-c", _DUMMY_WORKER]
         rc = SDD_mod.main(argv)
         assert rc == 0
         assert _wait_file_nonempty(child_pid_file, timeout=8.0), "dummy worker never wrote its pids"
@@ -280,7 +285,8 @@ def test_start_without_label_synthesizes(isolated_registry, tmp_path):
     log = tmp_path / "nolabel.log"
     pids = []
     try:
-        rc = SDD.main(["--log", str(log), "--", sys.executable, "-c", "import time\nwhile True: time.sleep(0.2)"])
+        rc = SDD.main(["--skip-admission-gate", "--log", str(log),
+                       "--", sys.executable, "-c", "import time\nwhile True: time.sleep(0.2)"])
         assert rc == 0
         rows = SDD._load_registry()
         assert len(rows) == 1

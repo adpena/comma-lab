@@ -831,3 +831,215 @@ def test_stale_pending_reservation_not_counted():
     rows = [_pending_row("crashed_launcher", proj=50.0, age_s=9999.0, now=gov.time.time())]
     jobs = gov.list_tracked_jobs(samples={}, registry_rows=rows)
     assert [j for j in jobs if j.label == "crashed_launcher"] == []
+
+
+# ── reclaimable-aware committed accounting (2026-07-16 admission false-refuse fix) ──────────────
+# Memory anchor: admission_gate_naive_counts_reclaimable_as_committed_20260716. The legacy basis
+# ``used = total - (free+inactive)`` counted ~9 GiB of reclaimable file cache as committed on an
+# IDLE box and refused an empirically-green 82 GiB bench (ran GREEN twice, no jetsam). The fix
+# gates on TRUE committed = wired + compressor + non-purgeable anonymous.
+
+# Captured 2026-07-16 IDLE state (the false-refuse night; 128 GiB M5 Max, Terminal+Tailscale only):
+# free 76.8 / active 21.1 / inactive 13.8 / speculative 7.4 / wired 5.7 / compressed 1.9 GiB,
+# file-backed 21.5 / purgeable 0.5; anonymous = active+inactive+spec - file (EXACT kernel identity).
+_IDLE_20260716 = dict(
+    page_size=16384, total_bytes=137438953472,
+    vm_free_pages=5033165, vm_active_pages=1382810, vm_inactive_pages=904397,
+    vm_speculative_pages=484966, vm_wired_pages=373555, vm_compressor_pages=124518,
+    vm_throttled_pages=0,
+    vm_purgeable_pages=32768, vm_file_backed_pages=1409024,
+    vm_anonymous_pages=1382810 + 904397 + 484966 - 1409024,   # = 1363149 (identity-exact)
+    sysctl_free_pages=5033165, mempressure_total_bytes=137438953472,
+    psutil_available_bytes=(5033165 + 904397) * 16384,        # psutil == free+inactive on macOS
+)
+
+# Live-captured ANON-HEAVY state (2026-07-16, 63.6 GiB trainer running): the committed basis must
+# be MORE conservative than legacy here (dirty anon in the INACTIVE queue is NOT reclaimable).
+_ANON_HEAVY_20260716 = dict(
+    page_size=16384, total_bytes=137438953472,
+    vm_free_pages=132865, vm_active_pages=3703200, vm_inactive_pages=3704096,
+    vm_speculative_pages=1380, vm_wired_pages=646616, vm_compressor_pages=115875,
+    vm_throttled_pages=0,
+    vm_purgeable_pages=16888, vm_file_backed_pages=1865616, vm_anonymous_pages=5543060,
+    sysctl_free_pages=132865, mempressure_total_bytes=137438953472,
+    psutil_available_bytes=(132865 + 3704096) * 16384,
+)
+
+
+def _snap_from_acct(a, *, pressure=1, swap=0.0):
+    """Mirror read_system_memory_snapshot's acct->snapshot copy for hermetic fixed-counter tests."""
+    return gov.SystemMemorySnapshot(
+        total_gib=a.total_gib, available_gib=a.available_gib, used_gib=a.used_gib,
+        free_gib=a.free_gib, wired_gib=a.wired_gib, compressor_gib=a.compressor_gib,
+        swap_used_gib=swap, pressure_level=pressure, load1=0.0, load5=0.0, load15=0.0,
+        available_primary_gib=a.available_primary_gib, closure_gib=a.closure_gib,
+        closure_ok=a.closure_ok, cross_validated=a.cross_validated,
+        discrepancy_gib=a.discrepancy_gib, fail_safe=a.fail_safe,
+        validation_notes=a.validation_notes,
+        available_reclaimable_gib=a.available_reclaimable_gib,
+        used_committed_gib=a.used_committed_gib, reclaimable_ok=a.reclaimable_ok,
+        anonymous_gib=a.anonymous_gib, file_backed_gib=a.file_backed_gib,
+        purgeable_gib=a.purgeable_gib)
+
+
+def test_reclaimable_accounting_idle_snapshot_exact():
+    """(proof a, accounting layer) The idle 2026-07-16 counters reconcile to TRUE committed
+    ~27.9 GiB / reclaimable available ~98.8 GiB — vs the legacy basis's used 37.4 that counted
+    ~9 GiB of reclaimable cache as pinned."""
+    a = gov.reconcile_memory_accounting(**_IDLE_20260716)
+    assert a.closure_ok and a.cross_validated and not a.fail_safe
+    assert a.reclaimable_ok
+    assert abs(a.available_primary_gib - 90.6) < 0.05     # legacy free+inactive
+    assert abs(a.used_gib - 37.4) < 0.05                  # legacy used (the naive over-refuse basis)
+    assert abs(a.used_committed_gib - 29.2) < 0.10        # TRUE committed + unaccounted gap
+    assert abs(a.available_reclaimable_gib - 98.8) < 0.10
+    # the reclaimable estimate never exceeds physical reality (non-wired, non-compressor RAM):
+    assert a.available_reclaimable_gib <= a.total_gib - a.wired_gib - a.compressor_gib
+
+
+def test_reclaimable_idle_admits_the_82gib_bench_that_ran_green():
+    """(proof a) The EXACT false-refuse scenario: projected_new 71.54 GiB (the c2 delta-bench that
+    ran GREEN twice + live tonight with no jetsam) on the idle box ADMITS under the committed
+    basis — and the same snapshot REFUSES under the legacy basis (pinning the bug we fixed)."""
+    a = gov.reconcile_memory_accounting(**_IDLE_20260716)
+    ctx = gov.live_admission_decision(projected_new_gib=71.54, snapshot=_snap_from_acct(a), jobs=[])
+    assert ctx.decision.admit, ctx.decision.reason
+    assert ctx.decision.headroom_after_gib > 0
+    # regression contrast: the legacy used-basis arithmetic reproduces tonight's refusal
+    # (projected ~108.9 vs ceiling ~102.9 — the log's "EXCEEDS adaptive ceiling by ~6 GiB").
+    legacy_ceiling = gov.compute_adaptive_ceiling(
+        total_gib=a.total_gib, used_gib=a.used_gib, tracked_current_gib=0.0, sole_workload=True)
+    legacy = gov.admission_decision(projected_new_gib=71.54, system_used_gib=a.used_gib,
+                                    active_growth_headroom_gib=0.0, ceiling=legacy_ceiling)
+    assert not legacy.admit
+    assert 4.0 < -legacy.headroom_after_gib < 8.0   # ~6 GiB over, as logged on the false-refuse night
+
+
+def test_reclaimable_genuinely_full_still_refuses_82gib():
+    """(proof b — the NON-NEGOTIABLE safety direction) TRUE committed ~99 GiB: an 82 GiB job MUST
+    refuse under the committed basis (physically impossible: 99+82 > 128)."""
+    full = dict(
+        page_size=16384, total_bytes=137438953472,
+        vm_free_pages=262144, vm_active_pages=3932160, vm_inactive_pages=2621440,
+        vm_speculative_pages=589824, vm_wired_pages=655360, vm_compressor_pages=327680,
+        vm_throttled_pages=0,
+        vm_purgeable_pages=65536, vm_file_backed_pages=1572864,
+        vm_anonymous_pages=3932160 + 2621440 + 589824 - 1572864,   # 85 GiB anon
+        sysctl_free_pages=262144, mempressure_total_bytes=137438953472,
+        psutil_available_bytes=(262144 + 2621440) * 16384,
+    )
+    a = gov.reconcile_memory_accounting(**full)
+    assert a.reclaimable_ok and not a.fail_safe
+    assert abs(a.used_committed_gib - 99.0) < 0.05
+    assert abs(a.available_reclaimable_gib - 29.0) < 0.05
+    ctx = gov.live_admission_decision(projected_new_gib=82.0, snapshot=_snap_from_acct(a), jobs=[])
+    assert not ctx.decision.admit
+    assert ctx.decision.projected_system_used_gib > a.total_gib   # physically impossible request
+    # even the most permissive legal floor cannot admit it:
+    floor_min = gov.ABS_MIN_SAFETY_FLOOR_GIB
+    assert a.used_committed_gib + 82.0 > a.total_gib - floor_min
+
+
+def test_reclaimable_fail_safe_snapshot_still_refuses():
+    """(proof c) An accounting-validation failure (wrong page size -> closure blowout) forces
+    REFUSE through the live admission path even when the arithmetic would fit."""
+    # (c1) catastrophic parse failure (wrong page size): available slashed -> arithmetic refuse.
+    bad = dict(_IDLE_20260716)
+    bad["page_size"] = 4096
+    a = gov.reconcile_memory_accounting(**bad)
+    assert a.fail_safe
+    ctx = gov.live_admission_decision(projected_new_gib=1.0, snapshot=_snap_from_acct(a), jobs=[])
+    assert not ctx.decision.admit
+    # (c2) modest cross-check failure where the arithmetic WOULD fit: the fail_safe flag alone
+    # forces the refusal (the explicit FAIL-SAFE branch).
+    bad2 = dict(_IDLE_20260716)
+    bad2["sysctl_free_pages"] = bad2["vm_free_pages"] - 500_000
+    a2 = gov.reconcile_memory_accounting(**bad2)
+    assert a2.fail_safe
+    ctx2 = gov.live_admission_decision(projected_new_gib=1.0, snapshot=_snap_from_acct(a2), jobs=[])
+    assert not ctx2.decision.admit
+    assert "FAIL-SAFE" in ctx2.decision.reason
+
+
+def test_reclaimable_anon_heavy_is_MORE_conservative_than_legacy():
+    """No blanket over-admit: on the live anon-heavy capture (63.6 GiB trainer resident) the
+    committed basis reports MORE used than legacy — dirty anonymous pages sitting in the INACTIVE
+    queue were being credited as free by free+inactive; they are not (they need swap to evict)."""
+    a = gov.reconcile_memory_accounting(**_ANON_HEAVY_20260716)
+    assert a.reclaimable_ok and not a.fail_safe
+    assert a.used_committed_gib > a.used_gib + 20.0     # measured: ~97.2 vs ~69.5
+    assert a.available_reclaimable_gib < a.available_gib
+    assert a.available_reclaimable_gib <= a.total_gib - a.wired_gib - a.compressor_gib
+
+
+def test_reclaimable_fallback_when_counters_missing_is_legacy_bit_identical():
+    """Old kernels / hand-built snapshots without Anonymous/File-backed counters keep the legacy
+    basis EXACTLY (reclaimable_ok False; committed fields mirror the legacy values)."""
+    a = gov.reconcile_memory_accounting(**_SNAP)
+    assert not a.reclaimable_ok
+    assert a.used_committed_gib == a.used_gib
+    assert a.available_reclaimable_gib == a.available_gib
+    assert a.closure_ok and not a.fail_safe   # and it is NOT a validation failure
+
+
+def test_reclaimable_queue_identity_violation_falls_back_loudly():
+    """A broken anon/file parse (identity |anon+file - queues| > tol) DISABLES the generous basis
+    (falls back to legacy, loud note) without poisoning the validated legacy accounting."""
+    bad = dict(_IDLE_20260716)
+    bad["vm_anonymous_pages"] = bad["vm_anonymous_pages"] + 655360   # +10 GiB parse corruption
+    a = gov.reconcile_memory_accounting(**bad)
+    assert not a.reclaimable_ok
+    assert a.used_committed_gib == a.used_gib
+    assert any("reclaimable accounting DISABLED" in n for n in a.validation_notes)
+    assert not a.fail_safe   # legacy basis remains validated -> gate stays usable, conservatively
+
+
+def test_reclaimable_fail_safe_reduces_generous_available_too():
+    """When a cross-check fails, the discrepancy reduction applies to the reclaimable figure as
+    well — fail-safe never leaves the generous number un-penalized."""
+    bad = dict(_IDLE_20260716)
+    bad["sysctl_free_pages"] = bad["vm_free_pages"] - 500_000   # ~7.6 GiB free-page disagreement
+    a = gov.reconcile_memory_accounting(**bad)
+    assert a.fail_safe
+    good = gov.reconcile_memory_accounting(**_IDLE_20260716)
+    assert a.available_reclaimable_gib < good.available_reclaimable_gib - 5.0
+
+
+def test_live_admission_uses_committed_basis_only_when_validated():
+    """The switch point: two snapshots identical except reclaimable_ok flip the 71.54 GiB verdict
+    (validated committed basis ADMITS; unvalidated falls back to the legacy REFUSE)."""
+    a = gov.reconcile_memory_accounting(**_IDLE_20260716)
+    snap_ok = _snap_from_acct(a)
+    snap_fallback = gov.SystemMemorySnapshot(**{**{
+        f: getattr(snap_ok, f) for f in snap_ok.__dataclass_fields__}, "reclaimable_ok": False})
+    admit = gov.live_admission_decision(projected_new_gib=71.54, snapshot=snap_ok, jobs=[])
+    refuse = gov.live_admission_decision(projected_new_gib=71.54, snapshot=snap_fallback, jobs=[])
+    assert admit.decision.admit
+    assert not refuse.decision.admit
+    assert admit.decision.system_used_gib < refuse.decision.system_used_gib
+
+
+def test_default_snapshot_fields_keep_legacy_behavior():
+    """Hand-built snapshots (older tests / callers) default reclaimable_ok=False -> the admission
+    path is bit-identical to the legacy basis (never consumes the 0.0 committed defaults)."""
+    snap = gov.SystemMemorySnapshot(
+        total_gib=128.0, available_gib=90.0, used_gib=38.0, free_gib=70.0, wired_gib=6.0,
+        compressor_gib=2.0, swap_used_gib=0.0, pressure_level=1, load1=0.0, load5=0.0, load15=0.0)
+    assert snap.reclaimable_ok is False
+    ctx = gov.live_admission_decision(projected_new_gib=10.0, snapshot=snap, jobs=[])
+    assert ctx.decision.system_used_gib == 38.0   # legacy used, NOT the 0.0 default
+
+
+def test_governed_descendant_excluded_from_tracked_current_sum():
+    """(phantom-baseline fix) A governed descendant's subtree RSS is already inside its registered
+    parent's group RSS: counting both clamped baseline to 0 and UNDER-derived the floor (measured
+    live 2026-07-16: wrapper 63.56 + trainer 63.56 = 127.17 GiB tracked on a 71 GiB-used box)."""
+    parent = _job("saferun_wrapper", pid=83774, peak=71.54, rss=63.56)
+    child = gov.TrackedJob(
+        label="pid83775", pid=83775, pgid=83775, cmd="python train_levelset_witness.py",
+        priority=50, projected_peak_gib=63.56, current_rss_gib=63.56, paused=False,
+        throttle_eligible=False, own_group_leader=True, governed_descendant=True)
+    assert gov.sum_tracked_current_gib([parent, child]) == pytest.approx(63.56)
+    assert gov.sum_tracked_current_gib([parent]) == pytest.approx(63.56)
+    assert child.to_json()["governed_descendant"] is True
+    assert parent.governed_descendant is False   # default: registered rows are never descendants

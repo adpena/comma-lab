@@ -213,6 +213,10 @@ def test_killpg_custody_pgid_cascades_to_wrapped_inner_arm(tmp_path, monkeypatch
     a = SimpleNamespace(
         cmd=["--", "/bin/sleep", "300"],
         log=str(log), label="cascade_test", skip_mem_preflight=True,
+        # skip_admission_gate: this test exercises killpg CUSTODY, not admission — the designed
+        # infra bypass keeps it hermetic vs live machine memory state (the committed-basis gate
+        # correctly refuses any spawn while a ~100 GiB bench runs).
+        skip_admission_gate=True,
         min_free_gb=0.0, projected_gb=0.0, rss_cap_mb=4000, walltime_cap_s=120,
     )
     wrapper_pid = wrapper_pgid = inner = None

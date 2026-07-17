@@ -697,8 +697,13 @@ def main(argv: list[str] | None = None) -> int:
             d = ctx.decision
             atag = "ADMIT" if d.admit else "REFUSE"
             print(f"[system-admission] {atag}: {d.reason}")
-            print(f"  system: total={ctx.snapshot.total_gib:.0f}GiB used={ctx.snapshot.used_gib:.1f}GiB "
-                  f"available={ctx.snapshot.available_gib:.1f}GiB ceiling={ctx.ceiling.adaptive_ceiling_gib:.1f}GiB "
+            _basis = "committed" if ctx.snapshot.reclaimable_ok else "legacy"
+            _used = (ctx.snapshot.used_committed_gib if ctx.snapshot.reclaimable_ok
+                     else ctx.snapshot.used_gib)
+            print(f"  system: total={ctx.snapshot.total_gib:.0f}GiB used[{_basis}]={_used:.1f}GiB "
+                  f"reclaimable_avail={ctx.snapshot.available_reclaimable_gib:.1f}GiB "
+                  f"legacy_used={ctx.snapshot.used_gib:.1f}GiB "
+                  f"ceiling={ctx.ceiling.adaptive_ceiling_gib:.1f}GiB "
                   f"budget={ctx.ceiling.training_budget_gib:.1f}GiB active_jobs={len(ctx.active_jobs)}")
             admit_refused = not d.admit
         except Exception as exc:  # governor unavailable => fail-open on the SYSTEM axis (per-run still gates)

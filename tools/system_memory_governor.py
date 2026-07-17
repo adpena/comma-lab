@@ -22,11 +22,16 @@ THE THREE THINGS THIS ADDS (all SYSTEM-wide, job-type-BLIND — the ceiling is o
 
   2. **Admission control** (``admission_decision`` — a HARD PREVENT gate): before a launch, REFUSE if
      ``current_system_used + (active jobs' remaining growth to peak) + this run's projected peak >
-     adaptive_ceiling``. ``current_system_used`` is the REAL vm_stat used (counts EVERY consumer:
-     OS + control-plane + training + byte-close + inflate + bsdtar + probes), so the gate is
-     job-type-blind — exactly the SUM-over-128 gap that crashed us. This is a PREVENT gate, not a
-     report: the launcher exits nonzero and starts NOTHING (override only via an operator-quoted
-     rationale).
+     adaptive_ceiling``. ``current_system_used`` is the reclaimable-aware TRUE-COMMITTED used
+     (2026-07-16 fix: ``wired + compressor + non-purgeable anonymous`` — file-backed cache /
+     speculative / purgeable pages the OS evicts under pressure are NOT counted as committed; the
+     legacy ``total - (free+inactive)`` basis counted ~9 GiB of reclaimable cache as pinned and
+     false-refused an empirically-green 82 GiB bench on an idle box, while ALSO crediting dirty
+     anonymous pages in the inactive queue as free on a loaded box — wrong in both directions).
+     It still counts EVERY real consumer (OS + control-plane + training + byte-close + inflate +
+     bsdtar + probes), so the gate is job-type-blind — exactly the SUM-over-128 gap that crashed
+     us. This is a PREVENT gate, not a report: the launcher exits nonzero and starts NOTHING
+     (override only via an operator-quoted rationale).
 
   3. **Dynamic throttle** (``decide_governor_action`` + ``select_throttle_target``): the black-box
      daemon (``tools/memory_blackbox.py``) evaluates pressure each sample; under WARN (available <
@@ -181,6 +186,32 @@ CLOSURE_TOL_GIB = 4.0            # |partition_sum - total| above this => parse e
                                  #  parse would blow this out by ~100 GiB, so 4 GiB catches real bugs)
 XVALIDATE_TOL_GIB = 3.0          # cross-source disagreement above this => fail safe
 FREE_PAGE_XCHECK_TOL_GIB = 2.0   # |vm_stat free - sysctl vm.page_free_count| (in GiB) tolerance
+# ── reclaimable-aware committed accounting (2026-07-16 admission false-refuse fix) ───────────────
+# WHY (operator P0, memory `admission_gate_naive_counts_reclaimable_as_committed_20260716`): the
+# legacy decision basis ``used = total - (free + inactive)`` counts RECLAIMABLE memory (file-backed
+# cache resident in the ACTIVE queue, speculative read-ahead, purgeable pages) as if it were
+# committed. On a genuinely idle 128 GiB box (TRUE committed ~28.7 GiB) it reported used=37.6 and
+# REFUSED an empirically-green 82 GiB bench (projected 109 > ceiling 102.9). The OS EVICTS those
+# pages under pressure — a new allocation does NOT stack on top of them.
+#
+# The reclaimable-aware basis uses the kernel's own queue decomposition (vm_stat exposes it
+# directly): ``File-backed pages + Anonymous pages == active + inactive + speculative`` (an EXACT
+# kernel identity, verified live 2026-07-16: 1865616 + 5543060 == 3703200 + 3704096 + 1380).
+#   TRUE committed  = wired + compressor + (anonymous - purgeable)   # needs swap to evict
+#   reclaimable avail = free + file_backed + purgeable               # OS evicts w/o swap
+# This is CORRECT IN BOTH DIRECTIONS: more generous on a file-cache-heavy idle box (kills the
+# false refuse) and MORE CONSERVATIVE on an anon-heavy loaded box (dirty anonymous pages sitting
+# in the INACTIVE queue are NOT free — the legacy free+inactive basis wrongly credited them).
+# Validation (replaces nothing; ADDS): (1) the queue identity above within tolerance — a broken
+# anon/file parse falls back to the legacy conservative basis (never trusted silently); (2) a
+# one-sided bound: reclaimable available may never exceed total - wired - compressor (claiming
+# wired/compressor as reclaimable is a parse bug). The existing one-sided psutil overcount check
+# stays on the CONSERVATIVE free+inactive figure (psutil computes the same quantity — same-value
+# two-source validation); the generous reclaimable figure is validated by (1)+(2) instead.
+# NOTE kern.memorystatus_level was evaluated and REJECTED as the authority: it reports
+# ~(total - wired - compressor)/total (measured 90% while an anon-heavy 63 GiB trainer ran),
+# i.e. it treats swap-evictable anonymous memory as available — too generous for a crash gate.
+RECLAIM_QUEUE_IDENTITY_TOL_GIB = 2.0   # |anon+file - (active+inactive+speculative)| tolerance
 _GIB = 1024.0 ** 3
 
 # ── admission enforcement mode (trust requirement #4: ADVISORY until independent review) ─────────
@@ -692,13 +723,26 @@ class MemoryAccounting:
     discrepancy_gib: float        # worst cross-source disagreement observed
     fail_safe: bool               # True => a validation check failed => treat memory as scarcer / refuse
     validation_notes: tuple[str, ...]
+    # ── reclaimable-aware committed accounting (2026-07-16; see the constants-block rationale) ──
+    # ADMISSION decision basis when ``reclaimable_ok``: available that the OS can actually free
+    # without swap (free + file_backed + purgeable) and its complement (TRUE committed used =
+    # wired + compressor + non-purgeable anonymous + the unaccounted closure gap, conservatively).
+    # On fallback (missing counters / identity violation / bound violation) these EQUAL the legacy
+    # available_gib / used_gib and ``reclaimable_ok`` is False.
+    available_reclaimable_gib: float = 0.0
+    used_committed_gib: float = 0.0
+    reclaimable_ok: bool = False
+    anonymous_gib: float = 0.0
+    file_backed_gib: float = 0.0
+    purgeable_gib: float = 0.0
 
 
 @dataclass(frozen=True)
 class SystemMemorySnapshot:
     total_gib: float
-    available_gib: float   # free + inactive (conservative reclaimable; fail-safe-adjusted)
-    used_gib: float        # total - available (THE TRUTH: OS + control-plane + ALL our jobs)
+    available_gib: float   # free + inactive (LEGACY basis; throttle/pressure paths + fallback)
+    used_gib: float        # total - available (LEGACY basis; the admission gate anchors on
+                           # used_committed_gib below when reclaimable_ok — 2026-07-16 fix)
     free_gib: float        # strict Pages free
     wired_gib: float
     compressor_gib: float
@@ -715,6 +759,15 @@ class SystemMemorySnapshot:
     discrepancy_gib: float = 0.0
     fail_safe: bool = False
     validation_notes: tuple = ()
+    # ── reclaimable-aware committed accounting (2026-07-16 admission-gate fix) ──
+    # The ADMISSION decision basis when ``reclaimable_ok`` (defaults keep hand-built snapshots on
+    # the legacy basis): see MemoryAccounting + the RECLAIM_QUEUE_IDENTITY_TOL_GIB constants block.
+    available_reclaimable_gib: float = 0.0
+    used_committed_gib: float = 0.0
+    reclaimable_ok: bool = False
+    anonymous_gib: float = 0.0
+    file_backed_gib: float = 0.0
+    purgeable_gib: float = 0.0
 
     def to_json(self) -> dict:
         return {k: (round(v, 3) if isinstance(v, float) else v) for k, v in asdict(self).items()}
@@ -802,6 +855,11 @@ def _read_vm_stat_counters() -> dict[str, int]:
         "throttled": _grab("Pages throttled"),
         "wired": _grab("Pages wired down"),
         "compressor": _grab("Pages occupied by compressor"),
+        # Reclaimable-aware committed accounting inputs (2026-07-16 fix). On kernels whose vm_stat
+        # lacks these labels _grab returns 0 and the accounting FALLS BACK to the legacy basis.
+        "purgeable": _grab("Pages purgeable"),
+        "file_backed": _grab("File-backed pages"),
+        "anonymous": _grab("Anonymous pages"),
     }
 
 
@@ -840,12 +898,16 @@ def reconcile_memory_accounting(
     vm_wired_pages: int,
     vm_compressor_pages: int,
     vm_throttled_pages: int = 0,
+    vm_purgeable_pages: int = 0,
+    vm_file_backed_pages: int = 0,
+    vm_anonymous_pages: int = 0,
     sysctl_free_pages: int | None = None,
     mempressure_total_bytes: int | None = None,
     psutil_available_bytes: int | None = None,
     closure_tol_gib: float = CLOSURE_TOL_GIB,
     xvalidate_tol_gib: float = XVALIDATE_TOL_GIB,
     free_page_tol_gib: float = FREE_PAGE_XCHECK_TOL_GIB,
+    reclaim_identity_tol_gib: float = RECLAIM_QUEUE_IDENTITY_TOL_GIB,
 ) -> MemoryAccounting:
     """Reconcile + VALIDATE memory accounting from raw kernel counters. PURE — unit-tested against
     fixed captured snapshots so a parse bug (wrong page size / wrong field / CPU-vs-memory confusion)
@@ -917,19 +979,65 @@ def reconcile_memory_accounting(
         notes.append(f"FAIL-SAFE: available reduced {available_primary_gib:.2f} -> {available_gib:.2f} GiB")
     used_gib = max(0.0, total_gib - available_gib)
 
+    # ── reclaimable-aware committed accounting (2026-07-16 admission false-refuse fix) ──────────
+    # See the RECLAIM_QUEUE_IDENTITY_TOL_GIB constants block for the full derivation + validation
+    # rationale. Fallback (counters missing / identity violated / bound violated) = the legacy
+    # conservative basis above, LOUDLY noted — the generous figure is never trusted unvalidated.
+    active_gib = vm_active_pages * ps / _GIB
+    speculative_gib = vm_speculative_pages * ps / _GIB
+    anonymous_gib = vm_anonymous_pages * ps / _GIB
+    file_backed_gib = vm_file_backed_pages * ps / _GIB
+    purgeable_gib = vm_purgeable_pages * ps / _GIB
+    reclaimable_ok = False
+    available_reclaimable_gib = available_gib
+    used_committed_gib = used_gib
+    if vm_anonymous_pages > 0 or vm_file_backed_pages > 0:
+        queue_gib = active_gib + inactive_gib + speculative_gib
+        identity_dev_gib = abs((anonymous_gib + file_backed_gib) - queue_gib)
+        committed_gib = wired_gib + compressor_gib + max(0.0, anonymous_gib - purgeable_gib)
+        # Conservative min of the two derivations: the direct reclaimable sum vs total-minus-
+        # committed (they differ by the unaccounted closure gap, which we charge as USED).
+        reclaim_raw = min(free_gib + file_backed_gib + purgeable_gib,
+                          max(0.0, total_gib - committed_gib), total_gib)
+        nonwired_bound_gib = total_gib - wired_gib - compressor_gib
+        if identity_dev_gib > reclaim_identity_tol_gib:
+            notes.append(
+                f"reclaimable accounting DISABLED: queue identity |anon {anonymous_gib:.2f} + file "
+                f"{file_backed_gib:.2f} - queues {queue_gib:.2f}| = {identity_dev_gib:.2f} GiB > "
+                f"{reclaim_identity_tol_gib} GiB (anon/file parse suspected) — legacy free+inactive basis")
+        elif reclaim_raw > nonwired_bound_gib + xvalidate_tol_gib:
+            notes.append(
+                f"reclaimable accounting DISABLED: reclaimable {reclaim_raw:.2f} GiB exceeds "
+                f"total - wired - compressor = {nonwired_bound_gib:.2f} GiB + {xvalidate_tol_gib} "
+                f"(overcount bug) — legacy free+inactive basis")
+        else:
+            reclaimable_ok = True
+            if fail_safe:
+                reclaim_raw = max(0.0, reclaim_raw - discrepancy_gib)
+            available_reclaimable_gib = reclaim_raw
+            used_committed_gib = max(0.0, total_gib - reclaim_raw)
+    # else: counters absent (older kernel / hand-built snapshot) — benign fallback to the legacy
+    # basis, signalled by ``reclaimable_ok=False`` (notes are reserved for validation FAILURES so a
+    # clean legacy snapshot still reconciles with zero notes).
+
     return MemoryAccounting(
         total_gib=total_gib, available_gib=available_gib, available_primary_gib=available_primary_gib,
         used_gib=used_gib, free_gib=free_gib, wired_gib=wired_gib, compressor_gib=compressor_gib,
         closure_gib=closure_gib, closure_ok=closure_ok, cross_validated=cross_validated,
         discrepancy_gib=discrepancy_gib, fail_safe=fail_safe, validation_notes=tuple(notes),
+        available_reclaimable_gib=available_reclaimable_gib, used_committed_gib=used_committed_gib,
+        reclaimable_ok=reclaimable_ok, anonymous_gib=anonymous_gib, file_backed_gib=file_backed_gib,
+        purgeable_gib=purgeable_gib,
     )
 
 
 def read_system_memory_snapshot() -> SystemMemorySnapshot:
     """Live SYSTEM-wide memory snapshot: programmatic kernel counters (vm_stat page counts + sysctl
     page size + hw.memsize) reconciled + VALIDATED (closure + cross-validation) via the pure
-    ``reconcile_memory_accounting``, then annotated with pressure / swap / load. ``used_gib`` is the
-    TRUTH the admission gate anchors on (job-type-blind, fail-safe-adjusted)."""
+    ``reconcile_memory_accounting``, then annotated with pressure / swap / load. The admission gate
+    anchors on ``used_committed_gib`` (reclaimable-aware TRUE committed; job-type-blind,
+    fail-safe-adjusted) when ``reclaimable_ok``, else the legacy ``used_gib``; the throttle /
+    pressure paths keep the legacy ``available_gib`` basis."""
     ps = page_size_bytes()
     counters = _read_vm_stat_counters()
     total_bytes = int(round(total_ram_gib() * _GIB))
@@ -939,6 +1047,9 @@ def read_system_memory_snapshot() -> SystemMemorySnapshot:
         vm_inactive_pages=counters["inactive"], vm_speculative_pages=counters["speculative"],
         vm_wired_pages=counters["wired"], vm_compressor_pages=counters["compressor"],
         vm_throttled_pages=counters.get("throttled", 0),
+        vm_purgeable_pages=counters.get("purgeable", 0),
+        vm_file_backed_pages=counters.get("file_backed", 0),
+        vm_anonymous_pages=counters.get("anonymous", 0),
         sysctl_free_pages=_read_sysctl_free_pages(),
         mempressure_total_bytes=_read_memory_pressure_total_bytes(),
         psutil_available_bytes=_read_psutil_available_bytes(),
@@ -957,6 +1068,10 @@ def read_system_memory_snapshot() -> SystemMemorySnapshot:
         closure_gib=acct.closure_gib, closure_ok=acct.closure_ok, cross_validated=acct.cross_validated,
         discrepancy_gib=acct.discrepancy_gib, fail_safe=acct.fail_safe,
         validation_notes=acct.validation_notes,
+        available_reclaimable_gib=acct.available_reclaimable_gib,
+        used_committed_gib=acct.used_committed_gib, reclaimable_ok=acct.reclaimable_ok,
+        anonymous_gib=acct.anonymous_gib, file_backed_gib=acct.file_backed_gib,
+        purgeable_gib=acct.purgeable_gib,
     )
 
 
@@ -1368,6 +1483,11 @@ class TrackedJob:
     paused: bool
     throttle_eligible: bool
     own_group_leader: bool
+    # A ps-only candidate whose ancestor chain reaches a REGISTERED running job. Its subtree RSS is
+    # ALREADY inside the parent's group RSS (2026-07-16 fix: counting both inflated tracked_current
+    # by the full trainer RSS — measured live: wrapper 63.56 + trainer 63.56 = 127.17 GiB tracked on
+    # a 71 GiB-used box, clamping baseline to 0 and UNDER-deriving the safety floor).
+    governed_descendant: bool = False
 
     @property
     def growth_headroom_gib(self) -> float:
@@ -1379,6 +1499,7 @@ class TrackedJob:
             "priority": self.priority, "projected_peak_gib": round(self.projected_peak_gib, 2),
             "current_rss_gib": round(self.current_rss_gib, 2), "paused": self.paused,
             "throttle_eligible": self.throttle_eligible, "own_group_leader": self.own_group_leader,
+            "governed_descendant": self.governed_descendant,
         }
 
 
@@ -1592,6 +1713,7 @@ def list_tracked_jobs(
             label=label, pid=pid, pgid=_mg._sample_pgid(s), cmd=cmd, priority=priority,
             projected_peak_gib=proj_peak, current_rss_gib=current_rss, paused=paused,
             throttle_eligible=eligible, own_group_leader=own_leader,
+            governed_descendant=governed_desc,
         ))
 
     # (review-fix CRITICAL C, read side) Count FRESH pending admission reservations as tracked
@@ -1643,7 +1765,11 @@ def sum_active_growth_headroom_gib(
 
 
 def sum_tracked_current_gib(jobs: Sequence[TrackedJob]) -> float:
-    return float(sum(j.current_rss_gib for j in jobs))
+    """Sum of tracked jobs' CURRENT group RSS, excluding governed DESCENDANTS — a descendant's
+    subtree RSS is already inside its registered parent's group RSS, so counting both double-counts
+    the workload, clamps ``baseline = used - tracked`` to 0, and UNDER-derives the safety floor
+    (anti-conservative; measured live 2026-07-16: 127.17 GiB tracked on a 71 GiB-used box)."""
+    return float(sum(j.current_rss_gib for j in jobs if not j.governed_descendant))
 
 
 # ─────────────────────────── throttle target selection (pure) ───────────────────────────
@@ -2205,14 +2331,23 @@ def live_admission_decision(
     sole_workload = not any(
         float(j.projected_peak_gib) >= HEAVY_MIN_PROJECTED_GIB for j in jobs
     )
+    # ADMISSION decision basis (2026-07-16 fix): the reclaimable-aware TRUE-committed used, so the
+    # gate is equivalent to ``projected_new + active_growth <= reclaimable_available - floor``.
+    # Fallback to the legacy free+inactive basis when the reclaimable figures were not validated
+    # (missing counters / identity or bound violation / hand-built snapshot) — never trust the
+    # generous figure unvalidated. The throttle/watchdog paths (classify_pressure on
+    # ``available_gib``) deliberately keep the legacy conservative basis — this fix is scoped to
+    # ADMISSION accounting only.
+    used_for_admission = (snapshot.used_committed_gib if snapshot.reclaimable_ok
+                          else snapshot.used_gib)
     ceiling = compute_adaptive_ceiling(
-        total_gib=snapshot.total_gib, used_gib=snapshot.used_gib,
+        total_gib=snapshot.total_gib, used_gib=used_for_admission,
         tracked_current_gib=sum_tracked_current_gib(jobs),
         floor_override_gib=floor_override_gib, floor_mode=floor_mode,
         sole_workload=sole_workload,
     )
     decision = admission_decision(
-        projected_new_gib=projected_new_gib, system_used_gib=snapshot.used_gib,
+        projected_new_gib=projected_new_gib, system_used_gib=used_for_admission,
         active_growth_headroom_gib=sum_active_growth_headroom_gib(jobs), ceiling=ceiling,
         fail_safe=snapshot.fail_safe,
     )
@@ -2281,8 +2416,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.ceiling:
         snap = read_system_memory_snapshot()
         jobs = list_tracked_jobs()
+        # Same ADMISSION basis as live_admission_decision (reclaimable-aware committed used).
         ceiling = compute_adaptive_ceiling(
-            total_gib=snap.total_gib, used_gib=snap.used_gib,
+            total_gib=snap.total_gib,
+            used_gib=(snap.used_committed_gib if snap.reclaimable_ok else snap.used_gib),
             tracked_current_gib=sum_tracked_current_gib(jobs),
             floor_override_gib=floor_override, floor_mode=args.safety_floor_mode)
         print(json.dumps({

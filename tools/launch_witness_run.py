@@ -2960,8 +2960,11 @@ def main(argv: list[str] | None = None) -> int:
             ctx = wmp.system_aware_admission(projected_peak_gib)
             d = ctx.decision
             print(f"# system-admission: {'ADMIT' if d.admit else 'REFUSE'} — {d.reason}")
-            print(f"#   total={ctx.snapshot.total_gib:.0f} used={ctx.snapshot.used_gib:.1f} "
-                  f"available={ctx.snapshot.available_gib:.1f} ceiling={ctx.ceiling.adaptive_ceiling_gib:.1f} "
+            _basis = "committed" if ctx.snapshot.reclaimable_ok else "legacy"
+            print(f"#   total={ctx.snapshot.total_gib:.0f} used[{_basis}]="
+                  f"{(ctx.snapshot.used_committed_gib if ctx.snapshot.reclaimable_ok else ctx.snapshot.used_gib):.1f} "
+                  f"reclaimable_avail={ctx.snapshot.available_reclaimable_gib:.1f} "
+                  f"legacy_used={ctx.snapshot.used_gib:.1f} ceiling={ctx.ceiling.adaptive_ceiling_gib:.1f} "
                   f"budget={ctx.ceiling.training_budget_gib:.1f} active_jobs={len(ctx.active_jobs)} "
                   f"fail_safe={ctx.snapshot.fail_safe} GiB")
             if not d.admit and not args.dry_run:
