@@ -2149,7 +2149,17 @@ def _setup(src):
     params = _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"], m.get("xcodec"))
     code = _decode_code_q(brotli.decompress(code_b), m["code_shape"], m.get("xcodec")).astype(np.float32) * float(m["code_scale"])
     rh, rw, ch, cw = int(m["render_h"]), int(m["render_w"]), int(m["camera_h"]), int(m["camera_w"])
-    coords = _coords(rh, rw)
+    # (#497 gap-b) literal post-render supersample A_s -- SEALED semantics Y = R[A_s G(Phi(X_s))]:
+    # the WHOLE feature program + nonlinear render run on the FINE (ss*rh, ss*rw) grid; A_s = exact
+    # ss x ss box average AFTER the renderer, BEFORE lane compositing and BEFORE R (compose-at-base).
+    # ss=1 => bit-identical to the point-sampled path (same coords/curv; _aa_down is identity).
+    aa_ss = 1
+    if m.get("basis_family") == "literal_polar_curvelet":
+        _bp = m.get("basis_program") or {}
+        if _bp.get("aa_mode") == "supersample":
+            aa_ss = int(_bp.get("aa_factor", 1))
+    gh, gw = rh * aa_ss, rw * aa_ss
+    coords = _coords(gh, gw)  # fine grid == build_supersampled_coords(rh, rw, ss) bit-exact
     curv = _basis_feats(coords, m)
     P = {k: np.asarray(v, _FDT) for k, v in params.items()}  # convert once; _FDT=float64 default (bit-identical), float32 = FEED-ek opt-in fast mode
     # #224 Wave E: parse the OPTIONAL lane render-band (per-pair coords + hdr) -> per-pair coverage
@@ -2162,7 +2172,20 @@ def _setup(src):
     if m.get("pose_carrier") is not None and pcar_b is not None:
         pcar = _pcar_parse(pcar_b)
     _G.update(m=m, code=code, coords=coords, curv=curv, P=P, rh=rh, rw=rw, ch=ch, cw=cw,
+              gh=gh, gw=gw, aa_ss=aa_ss,
               framebytes=ch * cw * 3, dst=None, lane_pairs=lane_pairs, lane_hdr=lane_hdr, pcar=pcar)
+
+
+def _aa_down(x_flat, rh, rw, ss):
+    # (#497) A_s: exact ss x ss box average, op-for-op the oracle's box_downsample_np call (the
+    # reshape below is a VIEW composing to the same 6-D strides; mean over (2,4) is the identical
+    # ufunc on the identical buffer -> bit-identical oracle/receiver). ss=1 => identity (same object).
+    if ss == 1:
+        return x_flat
+    x2 = x_flat if x_flat.ndim == 2 else x_flat[:, None]
+    c = x2.shape[-1]
+    flat = x2.reshape(1, rh, ss, rw, ss, c).mean(axis=(2, 4)).reshape(rh * rw, c)
+    return flat if x_flat.ndim == 2 else flat.reshape(rh * rw)
 
 
 def _render_pair(pi):
@@ -2170,6 +2193,7 @@ def _render_pair(pi):
     # Writes the pair's 2 frames to disjoint offsets of the preallocated .raw (POSIX-safe concurrent write).
     m, code, coords, curv, P = _G["m"], _G["code"], _G["coords"], _G["curv"], _G["P"]
     rh, rw, ch, cw = _G["rh"], _G["rw"], _G["ch"], _G["cw"]
+    gh, gw, aa_ss = _G["gh"], _G["gw"], _G["aa_ss"]  # #497: fine grid dims (== rh, rw at ss=1)
     _literal_program = None
     if m.get("basis_family") == "literal_polar_curvelet":
         _literal_program = BasisProgramConfig.from_dict(m["basis_program"])
@@ -2181,7 +2205,7 @@ def _render_pair(pi):
             _phi_native, _ = _outputs_from_h0(
                 P, _h0_native, code[2 * pi + 1], m, False, feats=_features
             )
-            return _phi_native.argmax(-1).reshape(rh, rw).astype(np.int64)
+            return _phi_native.argmax(-1).reshape(gh, gw).astype(np.int64)
 
         feats, _native_gates, _native_receipt = native_orientation_fixed_point_numpy(
             curv,
@@ -2200,7 +2224,7 @@ def _render_pair(pi):
             feats = np.concatenate([curv, dirf], axis=-1)
             _h0_it = _in_proj_h0(P, feats, m)
             phi, _ = _outputs_from_h0(P, _h0_it, code[2 * pi + 1], m, False, feats=feats)
-            am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+            am = phi.argmax(-1).reshape(gh, gw).astype(np.int64)  # #497: grid dims (fine when ss>1)
             if prev_am is not None and np.array_equal(am, prev_am):
                 _h0_conv = _h0_it  # converged: feats frozen from here -> this h0 IS the final h0 (bit-exact reuse)
                 break  # argmax fixed point: dirf would not change -> remaining iters are no-ops
@@ -2230,7 +2254,8 @@ def _render_pair(pi):
         if fk == 0 and pcar is not None and pi < int(pcar["hdr"]["n_pairs"]):
             if pcar["hdr"].get("pose_carrier_mode") == "store_nothing":
                 _phi0, rgb0 = _outputs_from_h0(P, h0, code[2 * pi + 0], m, True, feats=feats)
-                src0 = _R(rgb0, rh, rw, ch, cw).astype(np.float64)  # witness frame0 render, camera-native
+                # #497: A_s (fine render -> base) BEFORE R; identity at ss=1.
+                src0 = _R(_aa_down(rgb0, rh, rw, aa_ss), rh, rw, ch, cw).astype(np.float64)
                 frame = _pcar_warp_f0(src0, pcar["H"][pi], ch, cw)
             else:
                 frame = _pcar_frame0(pcar, pi, ch, cw)
@@ -2238,9 +2263,15 @@ def _render_pair(pi):
             continue
         if band:
             _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True, feats=feats)
+            # #497 sealed order: A_s integrates rgb/lane_rgb/margin to BASE first, then the
+            # uncertainty mask + composite run at base (cov is base-rasterized). Identity at ss=1.
+            rgb = _aa_down(rgb, rh, rw, aa_ss)
+            lane_rgb = _aa_down(lane_rgb, rh, rw, aa_ss)
+            margin = _aa_down(margin, rh, rw, aa_ss)
             rgb = _lane_composite(rgb, lane_rgb, cov_flat, margin, lane_hdr)
         else:
             _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, feats=feats)
+            rgb = _aa_down(rgb, rh, rw, aa_ss)  # #497: A_s after the renderer; identity at ss=1.
         frame = _R(rgb, rh, rw, ch, cw)
         frames.append(_maybe_blind_coordinate_fill(frame, m).tobytes())
     fb = _G["framebytes"]
@@ -2631,18 +2662,48 @@ def numpy_oracle_reference_frames(
     numpy-fp32 oracle (``levelset_rgb_forward_numpy`` / ``levelset_band_forward_numpy``) + the
     canonical FREE-table regen (``torch_levelset_inflate`` numpy helpers) + the reference R. This is
     the independent authority the shipped inflate.py must match bit-for-bit. Returns (frames
-    [2*n_pairs uint8 arrays, f0,f1 per pair], final_frame_argmax [render-res int argmax per pair]).
+    [2*n_pairs uint8 arrays, f0,f1 per pair], final_frame_argmax [grid-res int argmax per pair —
+    the FINE (ss*rh, ss*rw) grid when literal aa supersample is active, else render-res]).
 
     The self-orient fixed point mirrors the shipped inflate EXACTLY. When ``manifest`` carries the
     ``lane_render_band`` cfg AND ``lane_pairs`` (the deserialized per-pair ``LaneLine`` lists), the
     CANONICAL render-band (``rasterize_lane_coverage_range_dependent`` + ``composite_band_on_render``
     + ``witness_uncertainty_mask``) is composited over each frame BEFORE R -- so the bit-exact gate
     proves the shipped inflate's inline band == this canonical band. ``params``/``code`` are the
-    int8-DEQUANTIZED values read back from the byte-closed blob (both sides render the SAME weights)."""
+    int8-DEQUANTIZED values read back from the byte-closed blob (both sides render the SAME weights).
+
+    (#497 gap-b) literal post-render supersample A_s — SEALED semantics ``Y = R[A_s G(Phi(X_s))]``:
+    the WHOLE feature program (curvelet feats + self-orient dir feats / native orientation fixed
+    point, argmax included) and the nonlinear render run on the FINE ``(ss*rh, ss*rw)`` grid; A_s is
+    the exact ``ss x ss`` box average applied AFTER the renderer to rgb / lane_rgb / margin, BEFORE
+    lane compositing + uncertainty masking (compose-at-base, #220) and BEFORE R. Lane coverage stays
+    rasterized at the BASE grid. ``A_1 = identity`` (ss=1 is bit-identical to the point-sampled
+    path: same coords, same feats, ``_aa_down`` returns its input unchanged)."""
     rh, rw = int(manifest["render_h"]), int(manifest["render_w"])
     ch, cw = int(manifest["camera_h"]), int(manifest["camera_w"])
-    coords = _canon_coords_grid(rh, rw)
     basis_family = normalize_basis_family(manifest.get("basis_family", LEGACY_FOURIER_AB_CONTROL))
+    aa_ss = 1
+    if basis_family == LITERAL_POLAR_CURVELET:
+        _bp_dict = manifest.get("basis_program") or {}
+        if _bp_dict.get("aa_mode") == "supersample":
+            aa_ss = int(_bp_dict.get("aa_factor", 1))
+    gh, gw = rh * aa_ss, rw * aa_ss
+    coords = _canon_coords_grid(gh, gw)
+
+    def _aa_down(x_flat: np.ndarray) -> np.ndarray:
+        # A_s box average, op-for-op ``aa_sdf_observation_render.box_downsample_np`` (the reshapes
+        # are views of the same buffer; the mean over axes (2,4) is the identical ufunc call the
+        # shipped inflate's inline ``_aa_down`` performs -> bit-identical between oracle + receiver).
+        if aa_ss == 1:
+            return x_flat
+        from tac.boundary_math.aa_sdf_observation_render import box_downsample_np
+
+        x2 = x_flat if x_flat.ndim == 2 else x_flat[:, None]
+        flat = box_downsample_np(x2.reshape(1, gh, gw, x2.shape[-1]), aa_ss).reshape(
+            rh * rw, x2.shape[-1]
+        )
+        return flat if x_flat.ndim == 2 else flat.reshape(rh * rw)
+
     literal_program: BasisProgramConfig | None = None
     if basis_family == LEGACY_FOURIER_AB_CONTROL:
         B = _canon_curvelet_B(
@@ -2687,7 +2748,10 @@ def numpy_oracle_reference_frames(
                 _rgb, phi = levelset_rgb_forward_numpy(
                     params, features, code[2 * pi + 1], **fwd_kw
                 )
-                return phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+                # (#497 gap-b) argmax at the feature GRID dims (fine when aa supersample is on);
+                # unreachable while the native+supersample byte-close gate refuses, kept
+                # grid-correct so the sealed semantics is one formula for every path.
+                return phi.argmax(-1).reshape(gh, gw).astype(np.int64)
 
             feats, _gates, _receipt = native_orientation_fixed_point_numpy(
                 curv,
@@ -2704,7 +2768,7 @@ def numpy_oracle_reference_frames(
             for _ in range(int(manifest["so_iters"])):
                 feats = np.concatenate([curv, dirf], axis=-1)
                 _rgb, phi = levelset_rgb_forward_numpy(params, feats, code[2 * pi + 1], **fwd_kw)
-                am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+                am = phi.argmax(-1).reshape(gh, gw).astype(np.int64)  # #497: grid dims (fine when ss>1)
                 if prev_am is not None and np.array_equal(am, prev_am):
                     break  # argmax fixed point -> dirf frozen -> remaining iters no-ops (== shipped)
                 dirf = _canon_dir_feats(
@@ -2730,7 +2794,8 @@ def numpy_oracle_reference_frames(
             if fk == 0 and pose_carrier is not None:
                 if pose_carrier_mode(pose_carrier) == "store_nothing":
                     rgb0, _phi0 = levelset_rgb_forward_numpy(params, feats, code[2 * pi + 0], **fwd_kw)
-                    src0 = _torch_R_reference(rgb0, rh, rw, ch, cw).astype(np.float64)
+                    # #497: A_s (fine render -> base) BEFORE R; identity at ss=1.
+                    src0 = _torch_R_reference(_aa_down(rgb0), rh, rw, ch, cw).astype(np.float64)
                     frame = pose_carrier_frame0_from_source(pose_carrier, pi, src0)
                 else:
                     frame = pose_carrier_frame0(pose_carrier, pi)
@@ -2739,15 +2804,20 @@ def numpy_oracle_reference_frames(
             if cov is not None:
                 rgb, phi, lane_rgb, margin = levelset_band_forward_numpy(
                     params, feats, code[2 * pi + fk], lane_cls=lane_cfg.lane_cls, **fwd_kw)
+                # #497 sealed order: A_s footprint-integrates rgb/lane_rgb/margin to the BASE grid
+                # FIRST, then the uncertainty mask + composite run at base (compose-at-base, #220).
+                # Coverage ``cov`` is rasterized at base already. Identity at ss=1.
+                rgb, lane_rgb, margin = _aa_down(rgb), _aa_down(lane_rgb), _aa_down(margin)
                 um = (witness_uncertainty_mask(margin, tau=lane_cfg.u_mask_tau, eps=lane_cfg.u_mask_eps)
                       if lane_cfg.u_mask_enabled else None)
                 rgb = composite_band_on_render(rgb, lane_rgb, cov, um, lane_cfg.weight)
             else:
                 rgb, phi = levelset_rgb_forward_numpy(params, feats, code[2 * pi + fk], **fwd_kw)
+                rgb = _aa_down(rgb)  # #497: A_s after the nonlinear renderer; identity at ss=1.
             frame = _torch_R_reference(rgb, rh, rw, ch, cw)
             frames.append(_blind_coordinate_reference(frame, manifest))
             if fk == 1:
-                argmaxes.append(phi.argmax(-1).reshape(rh, rw).astype(np.int64))
+                argmaxes.append(phi.argmax(-1).reshape(gh, gw).astype(np.int64))
     return frames, argmaxes
 
 
@@ -3247,10 +3317,27 @@ def run(
                 "not a viable n600 decode. This is a FORMULATION-COMPOSITION implementation gap, "
                 "not a curvelet-family verdict"
             )
-        if program.aa_mode != "none" or program.aa_factor != 1:
+        # (#497 gap-b CLOSED) literal post-render supersample IS receiver-sealed: the shipped
+        # inflate + the numpy oracle both run the whole feature program + nonlinear render on the
+        # FINE (ss*rh, ss*rw) grid and apply A_s (exact ss x ss box average) AFTER the renderer,
+        # BEFORE lane compositing and BEFORE R (compose-at-base, #220 sealed semantics; A_1 =
+        # identity by construction). Proof authority: bit_exact_roundtrip_gate at aa_factor=2.
+        if program.native_orientation_enabled and program.aa_mode != "none":
             raise ValueError(
-                "literal post-render supersample byte-close is fail-closed until the generated "
-                "receiver applies A_s after the nonlinear renderer"
+                "literal native orientation + post-render supersample byte-close is fail-closed: "
+                "the trainer refuses this combination (fine-grid native gates are not "
+                "trainer-sealed yet), so no checkpoint exists to prove train/decode identity. "
+                "Composition implementation gap, not a curvelet-family verdict"
+            )
+        if program.aa_mode != "none" and any(str(k).startswith("tex_trunk.") for k in params):
+            # The #395 texture-trunk Gabor bank is regenerated at the BASE (render_h, render_w) grid
+            # inside the receiver forward, but supersample renders at the FINE grid -> the bank/soft
+            # shapes would mismatch. Narrow honest gap (bank-at-fine-grid not receiver-sealed), not a
+            # curvelet-family verdict.
+            raise ValueError(
+                "literal post-render supersample + texture trunk (tex_trunk.*) byte-close is "
+                "fail-closed: the receiver regenerates the trunk bank at the BASE grid while "
+                "supersample renders at the FINE grid. Composition implementation gap"
             )
         fold_receipt = None
         if program.taper_enabled:
