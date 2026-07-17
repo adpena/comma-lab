@@ -4163,6 +4163,31 @@ def SegSpikeReweight(downweight: float = 0.5, coherent_upweight: float = 1.0,
                        "measured optimum)")
 
 
+def LaneSkipBand(weight: float = 0.05, dilate: int = 2, start_epoch: int = 0,
+                 window: int = 100) -> Lever:  # noqa: N802
+    """ARM-C #524 (SPEC_v10 §13.1 row 4): Lane stride-2 SKIP-BAND supervision. DERIVED from the
+    frozen-SegNet recursive-fractal factorization §5 (MEASURED: the final decoder block is
+    skipless, so ALL sub-stride-4 boundary localization flows through the ONE 16-ch stride-2 skip
+    at (192,256); ablating its sub-stride-4 detail via down-up 2x induces flips that are 77%
+    Road-Lane — Lane is THE skip-limited pair). The lever supervises the witness render's skip
+    DETAIL band ``SB = D2 - U2(D2(D2))`` (BT.601 luma/255, on the SHARED realized through-R frame)
+    toward the GT frame's SB on the dilated GT-Lane band — shaping the Lane-band output to be
+    LEGIBLE to the only channel through which the frozen scorer localizes Lane boundaries.
+    Numpy reference authority: ``tac.boundary_math.lane_skipband`` (MLX twin parity-tested).
+    DEFAULT-OFF in the trainer (``--lane-skipband-weight`` default 0.0; byte-identical); this
+    Lever engages it. ``weight`` is the SWEPT intent — RUN-GATED optimum (duty-to-measure A/B);
+    0.05 is a starting value, NOT a measured optimum. Requires --micro-batch-pairs 1 (the trainer
+    fail-closes otherwise; the batched twin does not yet carry the term)."""
+    return Lever("lane_skipband",
+                 overrides={"--lane-skipband-weight": float(weight),
+                            "--lane-skipband-dilate": int(dilate),
+                            "--lane-skipband-start-epoch": int(start_epoch)},
+                 epochs_delta=window,
+                 notes="ARM-C #524 stride-2 skip-band Lane supervision (DERIVED from the fractal "
+                       "factorization §5 skip-ablation measurement; weight RUN-GATED, not a "
+                       "measured optimum)")
+
+
 def SpikeGuardRollback(frac: float = 0.5, lr_cut: float = 0.5, max_rollbacks: int = 8,
                        window: int = 20, spike_factor: float = 5.0) -> Lever:  # noqa: N802
     """Spike-guard stability actuator in ROLLBACK mode (the CLAUDE.md confound-fix). The prior
