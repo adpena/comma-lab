@@ -2,8 +2,11 @@
 """codex_delegate.py — canonical wrapper for delegating a task to a codex agent
 with AUTOMATIC completion notification back to the Claude main loop.
 
-WHY: codex agents launched via osascript Terminal windows are durable (survive the
-harness SIGURG-144 that kills bg-bash) but fire-and-forget — the main loop had to
+WHY: codex agents are launched HEADLESS — detached into their own session (setsid via
+subprocess.Popen(start_new_session=True)) so they are durable (survive the harness
+SIGURG-144 that kills bg-bash, by escaping claude's process group) WITHOUT opening a GUI
+Terminal window (the prior `osascript … do script` mechanism orphaned a completed-but-open
+window per arm). They are fire-and-forget — the main loop had to
 manually poll (pgrep / log tail / git log) to know when they finished. Claude
 Agent-tool subagents, by contrast, deliver a completion notification. This wrapper
 gives codex the same: every delegated run appends START/DONE lines to ONE shared
@@ -17,7 +20,7 @@ USAGE (launch):
         --label frozen_segnet \
         --prompt-file .omx/tmp/codex_runs/frozen_segnet_analysis.prompt.txt \
         [--model gpt-5.6-sol] [--effort ultra] [--sandbox danger-full-access] \
-        [--no-launch]   # write the launcher + ledger row but do not osascript-launch
+        [--no-launch]   # write the launcher + ledger row but do not launch (headless)
 
     # then ONCE per session, arm the notifier (Claude Monitor tool, persistent):
     #   tail -n +1 -f .omx/tmp/codex_runs/codex_events.log | grep --line-buffered '^DONE'
@@ -335,15 +338,16 @@ def _write_launcher(label: str, stamp: str, prompt_file: Path, model: str,
             f'  echo "DONE {label} rc=$RC {stamp} $(date -u +%Y-%m-%dT%H:%M:%SZ) :: isolation setup failed closed" >> {EVENTS}\n'
             f"  printf 'rc=%s\\nfinished_utc=%s\\nlog=%s\\nlast=%s\\nworktree=%s\\nbranch=%s\\nisolate=1\\n' \"$RC\" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" \"{log}\" \"{last}\" \"{worktree}\" \"{branch}\" > {done}\n"
             f'  echo "REFUSED: isolated worktree creation failed; shared-tree fallback is forbidden for writer arms"\n'
-            f'  exec bash\n'
+            f'  exit $RC\n'
             f'fi'
         )
     else:
         isolate_setup = '# --no-isolate: running in the shared repo tree (legacy; use for read-only arms only)'
     # The launcher: (worktree isolate ->) run codex, tee to log, capture final message via -o, then on
     # exit append a DONE line (with a one-line summary from the tail of `last`) to the shared events log
-    # + write a per-run .done marker recording the worktree/branch for main to merge. `exec bash` keeps
-    # the Terminal window open for inspection AFTER the notification has fired.
+    # + write a per-run .done marker recording the worktree/branch for main to merge. The launcher then
+    # `exit`s cleanly (headless — see the Popen start_new_session launch in main); it no longer `exec bash`
+    # to hold a Terminal window open (that orphaned a completed-but-open window per arm). Inspect via {last}/{log}.
     launcher.write_text(
         f"""#!/bin/bash
 set +e
@@ -408,8 +412,8 @@ echo "LANDING-REVIEW-REQUIRED {label} {stamp}" >> {EVENTS}
 printf 'rc=%s\\nfinished_utc=%s\\nlog=%s\\nlast=%s\\nworktree=%s\\nbranch=%s\\nisolate=%s\\nreview_required=1\\n' "$RC" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "{log}" "{last}" "{worktree if isolate else ''}" "{branch if isolate else ''}" "{'1' if isolate else '0'}" > {done}
 echo ""
 echo "=== codex delegate '{label}' exited rc=$RC — DONE appended; MAIN: harvest+merge worktree branch to main ==="
-echo "(window kept open; review {last})"
-exec bash
+echo "(headless; review {last} / {log})"
+exit $RC
 """,
         encoding="utf-8",
     )
@@ -547,11 +551,25 @@ def main(argv: list[str] | None = None) -> int:
 
     launched = False
     if not args.no_launch:
-        osa = f'tell application "Terminal"\n    do script "bash {launcher}"\nend tell'
-        r = subprocess.run(["osascript", "-e", osa], capture_output=True, text=True)
-        launched = r.returncode == 0
-        if not launched:
-            print(f"WARN osascript launch failed rc={r.returncode}: {r.stderr.strip()[:200]}")
+        # HEADLESS launch (operator 2026-07-16: "They should be launched headless"): detach into a NEW
+        # SESSION (setsid via start_new_session) so the arm survives the parent Claude harness SIGURG-144
+        # process-group death WITHOUT opening a GUI Terminal window. Durability — the sole reason the prior
+        # `osascript … do script` used Terminal (Terminal, not claude, was the arm's parent) — is preserved
+        # by the new session/pgid escaping claude's process group. Inspection is via the DURABLE {log}/{last}
+        # files + the EVENTS log (better than ephemeral Terminal scrollback). This ends the completed-but-open
+        # orphaned-window class (310 leaf shells, 2026-07-16): the launcher now `exit`s instead of `exec bash`.
+        wrap_log = launcher.with_suffix(".wrap.log")
+        try:
+            _wl = open(wrap_log, "ab")  # noqa: SIM115 — handed to the detached child; closed in this parent below
+            subprocess.Popen(
+                ["bash", str(launcher)],
+                stdin=subprocess.DEVNULL, stdout=_wl, stderr=subprocess.STDOUT,
+                start_new_session=True, cwd=str(REPO),
+            )
+            _wl.close()
+            launched = True
+        except OSError as e:
+            print(f"WARN headless launch failed: {e}")
 
     print(json.dumps({
         "delegated": args.label, "launched": launched, "launcher": str(launcher),

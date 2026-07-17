@@ -37,6 +37,16 @@ def test_launcher_has_bounded_retry_loop(tmp_path, monkeypatch):
     assert "sleep $backoff" in body
 
 
+def test_launcher_is_headless_no_window_keeper(tmp_path, monkeypatch):
+    # HEADLESS invariant (2026-07-16): the launcher must EXIT cleanly on completion, never
+    # `exec bash` (which held a GUI Terminal window open forever = the orphaned-window class).
+    body = _gen_launcher(tmp_path, monkeypatch)
+    assert "exec bash" not in body, "launcher must not exec bash (orphans a completed window)"
+    assert "exit $RC" in body, "launcher must exit cleanly with codex's return code"
+    # The isolation-failure branch must also exit, not hold a window.
+    assert body.count("exit $RC") >= 2
+
+
 def test_retry_classification_uses_only_current_attempt_output(tmp_path, monkeypatch):
     body = _gen_launcher(tmp_path, monkeypatch)
     # A transient in the initial/cumulative log must not authorize a later
