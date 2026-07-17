@@ -184,14 +184,17 @@ def test_manifest_containment_and_contract():
 def test_trainer_wirein_queue_names_pid_and_insertion_points():
     assert len(TRAINER_WIREIN_QUEUE) == 4
     wnt = TRAINER_WIREIN_QUEUE[0]
+    # the weight_norm telemetry row remains queued behind the live dry-start.
     assert "31576" in wnt["status"] or "dry-start" in wnt["status"]
     for row in TRAINER_WIREIN_QUEUE:
         assert row["insertion_point"].strip()
         assert row["producer"].strip()
-    # the rate-rolling telemetry producer (#408/#404 FEED-ratetelemetry) is queued
+    # the rate-rolling telemetry producer (#408/#404 FEED-ratetelemetry) is now LANDED on the
+    # p0_328_408 merge-window branch (trainer flag + emission + resume wired; merges post-v9c2).
     rate = TRAINER_WIREIN_QUEUE[-1]
     assert "rate_rolling" in rate["producer"]
-    assert "31576" in rate["status"] or "dry-start" in rate["status"]
+    assert "landed" in rate["status"].lower()
+    assert "p0_328_408" in rate["status"]
 
 
 def test_evaluator_registration_idempotent():

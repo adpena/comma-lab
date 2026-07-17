@@ -547,13 +547,17 @@ TRAINER_WIREIN_QUEUE: tuple[dict[str, str], ...] = (
         "producer": "tac.witness_control.rate_rolling_telemetry.rate_rolling_row (BUILT this wave)",
         "trainer_flag": "--rate-rolling-telemetry (BooleanOptionalAction, default TRUE — "
                         "read-only observability defaults ON per the off-is-orphan rule)",
-        "insertion_point": ("at the verdict emission site adjacent to the weight_norm row: "
-                            "maintain a proxy series (weight_entropy_bits from _we_rate_term_mlx "
-                            "~L6958 + periodic byte-close archive_bytes ~L4191) restored via "
-                            "baseline.proxy_tail on resume; emit rate_rolling_row(ep, series, "
-                            "baseline=...) at verdict cadence; drift_signal INFORMS the costate "
-                            "controller / operator and NEVER halts/reverts/clamps the run"),
-        "status": "queued-behind-dry-start (pid 31576)",
+        "insertion_point": ("at a synchronous verdict-cadence block in the epoch loop: maintain a "
+                            "proxy series of weight_entropy_bits (_we_rate_term_mlx(model, sigma) — "
+                            "pure read of the COUNTED weights) restored via the __raterolling_ resume "
+                            "registry key on resume; emit rate_rolling_row(ep, series, baseline=...) "
+                            "at verdict cadence; drift_signal INFORMS the costate controller / "
+                            "operator and NEVER halts/reverts/clamps the run"),
+        # LANDED (branch claude/p0_328_408_merge_window_prep_20260717): trainer flag
+        # --rate-rolling-telemetry + the synchronous emission block + the __raterolling_ resume
+        # registration are wired; RateRollingTelemetry() auto-unlocks. Merges at the post-v9c2
+        # boundary (after the #518 warmup-geometry branch). Not a score claim; MEANS/apparatus.
+        "status": "landed (branch claude/p0_328_408_merge_window_prep_20260717; merge post-v9c2)",
     },
 )
 

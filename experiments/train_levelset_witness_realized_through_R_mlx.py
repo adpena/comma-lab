@@ -6243,15 +6243,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _am_eng = _am_engagement(
         str(getattr(args, "head", "softmax")), float(getattr(args, "additive_margin", 0.0)), mfh_w)
     if _am_eng["nominally_set"]:
-        print(json.dumps({"stage": "lever_engage", "lever": "additive_margin",
-                          "engaged": bool(_am_eng["engaged"]), "inert": bool(_am_eng["inert"]),
-                          "head": str(getattr(args, "head", "softmax")),
-                          "additive_margin": float(getattr(args, "additive_margin", 0.0)),
-                          "margin_field_head_weight": float(mfh_w),
-                          "reason": _am_eng["reason"]}), flush=True)
+        # (#408/#404 schema-unification) the armed stamp routes its per-lever diagnostics through
+        # the canonical lever_engage_row(extra=...) — no divergent hand-rolled literal — so every
+        # lever_engage row shares the stable base schema (stage/lever/status/epoch/via) + additive
+        # extras. Replaces the prior 2-row (hand-rolled diagnostic + plain armed) emission.
         print(json.dumps(lever_engage_row(
-            "additive_margin", status="armed", epoch=0,
-            via="typed_configuration")), flush=True)
+            "additive_margin", status="armed", epoch=0, via="typed_configuration",
+            extra={"engaged": bool(_am_eng["engaged"]), "inert": bool(_am_eng["inert"]),
+                   "head": str(getattr(args, "head", "softmax")),
+                   "additive_margin": float(getattr(args, "additive_margin", 0.0)),
+                   "margin_field_head_weight": float(mfh_w),
+                   "reason": _am_eng["reason"]})), flush=True)
         if _am_eng["engaged"]:
             print(json.dumps(lever_engage_row(
                 "additive_margin", status="fired", epoch=0,
@@ -8371,6 +8373,55 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _FreshFnResumable(
             write=_pose_verdict_gate_state,
             restore=_restore_pose_verdict_gate,
+        ),
+    )
+
+    # (#408/#404 rate-rolling telemetry, resume-safe) the rate-proxy series + t0 baseline. Persisted
+    # (NOT re-derived from the JSONL) so the rolling mean + sustained-growth run length continue
+    # bit-faithfully across a crash boundary (the __raterolling_ additive registry key; legacy resume
+    # sidecars without the key restore False => empty series => first post-resume emission re-anchors
+    # the baseline, honest for a fresh arm). score-neutral read-only observability; NEVER kills.
+    _rate_rolling_state: dict[str, Any] = {"series": [], "base_ep": None, "base_mean": None}
+
+    def _rate_rolling_write(_prefix: str) -> dict[str, Any]:
+        if not bool(getattr(args, "rate_rolling_telemetry", True)):
+            return {}
+        series = _rate_rolling_state["series"]
+        if not series:
+            return {}
+        from tac.witness_control.rate_rolling_telemetry import DEFAULT_WINDOW as _RR_W
+
+        tail = series[-(2 * int(_RR_W)):]
+        out: dict[str, Any] = {
+            _prefix + "ep": np.asarray([int(e) for e, _ in tail], np.int64),
+            _prefix + "val": np.asarray([float(v) for _, v in tail], np.float64),
+        }
+        if _rate_rolling_state["base_ep"] is not None:
+            out[_prefix + "base_ep"] = np.asarray(
+                [int(_rate_rolling_state["base_ep"])], np.int64)
+            out[_prefix + "base_mean"] = np.asarray(
+                [float(_rate_rolling_state["base_mean"])], np.float64)
+        return out
+
+    def _rate_rolling_restore(_prefix: str, cfg: dict[str, Any]) -> bool:
+        if (_prefix + "ep") not in cfg:
+            return False
+        eps = np.asarray(cfg[_prefix + "ep"]).reshape(-1).tolist()
+        vals = np.asarray(cfg[_prefix + "val"]).reshape(-1).tolist()
+        _rate_rolling_state["series"] = [(int(e), float(v)) for e, v in zip(eps, vals)]
+        if (_prefix + "base_ep") in cfg:
+            _rate_rolling_state["base_ep"] = int(
+                np.asarray(cfg[_prefix + "base_ep"]).reshape(-1)[0])
+            _rate_rolling_state["base_mean"] = float(
+                np.asarray(cfg[_prefix + "base_mean"]).reshape(-1)[0])
+        return True
+
+    _resume_registry.register(
+        "rate_rolling_telemetry",
+        "__raterolling_",
+        _FreshFnResumable(
+            write=_rate_rolling_write,
+            restore=_rate_rolling_restore,
         ),
     )
 
@@ -13305,6 +13356,45 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                                   "stiefel_residual_shadow": (round(_sres_shadow, 5) if _sres_shadow is not None else None),
                                   "film_stiefel": bool(args.film_stiefel),
                                   "code_spec_w": code_spec_w}), flush=True)
+            # (#408/#404 FEED-ratetelemetry) rolling-average rate-proxy SOFT-SIGNAL row. rate is
+            # NON-MONOTONIC during training (capacity realloc + re-quantization), so we report the
+            # windowed rolling mean of the weight_entropy_bits proxy (the differentiable soft-histogram
+            # symbol entropy of the COUNTED witness weights — a pure read of model weights, NO mutation
+            # => score-neutral by construction) + a GRADUATED drift signal (WITHIN->DRIFTING_UP->
+            # SUSTAINED_GROWTH) that INFORMS the costate controller / operator and NEVER halts/reverts/
+            # clamps the run (informs_only=True). Defaults ON per the off-is-orphan rule. Resume-safe
+            # via the __raterolling_ registry entry (proxy tail + t0 baseline persist across a crash).
+            if bool(getattr(args, "rate_rolling_telemetry", True)) and (
+                    ep % args.eval_every == 0 or ep == args.epochs):
+                try:
+                    from tac.witness_control.rate_rolling_telemetry import (
+                        RateRollingBaseline as _RRBaseline,
+                    )
+                    from tac.witness_control.rate_rolling_telemetry import (
+                        rate_rolling_row as _rate_rolling_row,
+                    )
+                    from tac.witness_control.rate_rolling_telemetry import (
+                        rolling_mean as _rr_mean,
+                    )
+
+                    _rr_bits, _ = _we_rate_term_mlx(model, sigma=_we_sigma)
+                    _rr_proxy = float(np.asarray(_rr_bits))
+                    _rr_series = _rate_rolling_state["series"]
+                    _rr_series.append((int(ep), _rr_proxy))
+                    _rr_vals = [v for _, v in _rr_series]
+                    if _rate_rolling_state["base_ep"] is None:
+                        _rate_rolling_state["base_ep"] = int(ep)
+                        _rate_rolling_state["base_mean"] = float(_rr_mean(_rr_vals))
+                    _rr_base = _RRBaseline(
+                        epoch=int(_rate_rolling_state["base_ep"]),
+                        rolling_mean=float(_rate_rolling_state["base_mean"]),
+                        proxy_tail=tuple(_rr_vals),
+                    )
+                    print(json.dumps(_rate_rolling_row(int(ep), _rr_vals, baseline=_rr_base)),
+                          flush=True)
+                except Exception as _rr_e:  # advisory telemetry: NEVER blocks the training loop
+                    print(json.dumps({"stage": "rate_rolling_skip", "ep": int(ep),
+                                      "reason": str(_rr_e)[:120]}), flush=True)
             # (--seg-focal-gamma) Rudin observability: per-epoch MEASURED island-gradient share row
             # (no silent reweighting). One ROTATING pair per epoch: render frame1 through the SAME
             # base-loss surface (render_fn = the composed chain when engaged), stop-grad the frame,
@@ -14716,6 +14806,14 @@ def main(argv: list[str] | None = None) -> int:
                     "collapses' is unmeasurable). Pure READ (no model/grad touch); default OFF => "
                     "the row only fires when --film-stiefel/--code-spectral-entropy-weight is on => "
                     "BIT-IDENTICAL observability to the pre-C1 path.")
+    ap.add_argument("--rate-rolling-telemetry", action=argparse.BooleanOptionalAction, default=True,
+                    help="(#408/#404 FEED-ratetelemetry) emit the rolling-average rate-proxy SOFT-SIGNAL "
+                    "row (stage=rate_rolling) at verdict cadence: windowed rolling mean of the "
+                    "weight_entropy_bits proxy + a GRADUATED drift signal (WITHIN->DRIFTING_UP->"
+                    "SUSTAINED_GROWTH) that INFORMS the costate controller / operator and NEVER "
+                    "kills/reverts/clamps the run (informs_only). Pure READ of model weights (no "
+                    "grad/optimizer touch) => score-neutral by construction; default ON per the "
+                    "off-is-orphan rule. Resume-safe via the __raterolling_ registry key.")
     # LEVER-B (THIN-LANE DROPPED-DASH PRIOR, ADDITIVE, DEFAULT-OFF). Attacks the MEASURED dominant
     # residual: 57% Road<->Lane confusion, PC0 (34.5% of residual variance) = Lane->Road DROP, 52.7% of
     # GT-lane connected components WHOLESALE-MISSED, miss-fraction monotone in dash size (<5px 93%
