@@ -236,3 +236,37 @@ def test_hook_stop_hook_active_allows():
     )
     assert p.returncode == 0
     assert '"decision": "block"' not in p.stdout
+
+
+# ---- 2026-07-17 false-positive class: system-injected user-role turns ----
+def test_new_designation_silent_on_task_notification_summary():
+    # EMPIRICAL: fired 3x in one hour — a subagent NAME containing "P0 ... fix"
+    # inside a <task-notification> summary matched word+directive every heartbeat.
+    lines = [_user_line(
+        "<task-notification>\n<task-id>aa0eb99795e</task-id>\n"
+        '<summary>Agent "P0 launcher durability + bench validity fix" finished</summary>\n'
+        "</task-notification>")]
+    assert hook.new_p0_designations(lines) == []
+
+
+def test_new_designation_silent_on_stop_hook_feedback_turn():
+    lines = [_user_line(
+        "Stop hook feedback:\nNEW OPERATOR-P0 DESIGNATED THIS SESSION with no "
+        "ledger row: 'fix the P0 launch now' — register it NOW")]
+    assert hook.new_p0_designations(lines) == []
+
+
+def test_new_designation_silent_on_system_reminder_block():
+    lines = [_user_line(
+        "<system-reminder>\nrecalled memory: pursue the p0 launch immediately\n"
+        "</system-reminder>")]
+    assert hook.new_p0_designations(lines) == []
+
+
+def test_new_designation_survives_alongside_stripped_block():
+    # REAL operator words in the same turn as an injected block still fire.
+    lines = [_user_line(
+        "<system-reminder>ambient context noise</system-reminder>\n"
+        "Treat the receipt watchdog as p0 immediately")]
+    hits = hook.new_p0_designations(lines)
+    assert len(hits) == 1 and "watchdog" in hits[0]

@@ -61,6 +61,19 @@ _DIRECTIVE = re.compile(
 # Lines that are ABOUT the ledger/apparatus itself (self-reference) stay silent.
 _SELF_REF = re.compile(r"operator_p0|p0[-_ ]ledger|p0[-_ ]digest|p0[-_ ]stop[-_ ]hook",
                        re.IGNORECASE)
+# System-INJECTED regions inside user-role turns are NOT operator words. Empirical
+# false-positive class (2026-07-17, fired 3x in one hour): a task-notification whose
+# <summary> carried a subagent NAME containing "P0 ... fix" ("P0 launcher durability +
+# bench validity fix") matched _P0_WORD+_DIRECTIVE on every heartbeat. Strip tagged
+# blocks wholesale and drop hook-feedback turns before scanning.
+_SYSTEM_BLOCK = re.compile(
+    r"<task-notification>.*?</task-notification>"
+    r"|<system-reminder>.*?</system-reminder>"
+    r"|<command-[a-z-]+>.*?</command-[a-z-]+>"
+    r"|<local-command-[a-z-]+>.*?</local-command-[a-z-]+>",
+    re.DOTALL | re.IGNORECASE,
+)
+_HOOK_FEEDBACK_PREFIX = re.compile(r"^\s*Stop hook feedback:", re.IGNORECASE)
 
 
 def _now() -> str:
@@ -159,7 +172,14 @@ def new_p0_designations(lines: list[str]) -> list[str]:
                         for b in msg["content"])):
             continue
         text = extract_text(msg)
-        if not text or _SELF_REF.search(text):
+        if not text:
+            continue
+        # System-injected user-role turns are not operator words: hook feedback
+        # turns are skipped whole; tagged notification/reminder blocks stripped.
+        if _HOOK_FEEDBACK_PREFIX.match(text):
+            continue
+        text = _SYSTEM_BLOCK.sub("", text)
+        if not text.strip() or _SELF_REF.search(text):
             continue
         for line in text.splitlines():
             if _P0_WORD.search(line) and _DIRECTIVE.search(line):
