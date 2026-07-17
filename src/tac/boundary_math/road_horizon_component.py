@@ -191,8 +191,13 @@ def classify_segnet_regions(
         maj = (counts[c] / n) >= 0.5
         rr = np.where(maj)[0]
         span = (int(rr.min()), int(rr.max())) if rr.size else (-1, -1)
+        # frac_of_frame = mean per-frame AREA FRACTION in [0,1]. counts[c] is the per-pixel
+        # frame-COUNT (0..n), so counts[c].mean() = n * area_fraction; divide by n (sister of the
+        # hood_static_component fix, SOL v10 review probe 2). The road/lane VERDICTS here are
+        # argmax over frac_of_frame (lines below), INVARIANT to the ×n scaling, so this is a
+        # value/diagnostic correction only — no decision changes.
         ev.append(RegionEvidence(
-            cls=c, static_iou=iou, frac_of_frame=float(counts[c].mean()),
+            cls=c, static_iou=iou, frac_of_frame=float(counts[c].mean() / n),
             top_share=tshare, bottom_share=bshare, mid_share=mshare,
             n_lane_lines=int(lane_lines_by_cls[c]), maj_row_span=span,
         ))

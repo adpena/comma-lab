@@ -120,7 +120,12 @@ def identify_static_hood_class(
         span = (int(rr.min()), int(rr.max())) if rr.size else (-1, -1)
         tot = int(counts[c].sum())
         bshare = float(counts[c][bottom].sum() / tot) if tot else 0.0
-        ev.append(HoodClassEvidence(cls=c, static_iou=iou, frac_of_frame=float(counts[c].mean() / 1.0),
+        # frac_of_frame = mean per-frame AREA FRACTION in [0,1]. counts[c] is the per-pixel
+        # frame-COUNT (0..n), so counts[c].mean() = n * area_fraction; divide by n. (The prior
+        # `/ 1.0` left it n*-scaled: SOL v10 probe measured 152.6 where 0.254 was intended. The
+        # hood VERDICT is unaffected — it scores on bottom_share*static_iou, not frac_of_frame —
+        # but the returned/printed diagnostic was wrong by n. SOL v10 review probe 2.)
+        ev.append(HoodClassEvidence(cls=c, static_iou=iou, frac_of_frame=float(counts[c].mean() / n),
                                     bottom_share=bshare, maj_row_span=span))
     # hood = highest (bottom_share * static_iou) score among classes whose majority sits low
     scored = sorted(ev, key=lambda e: e.bottom_share * e.static_iou, reverse=True)

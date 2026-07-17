@@ -72,6 +72,19 @@ def test_identify_hood_at_different_index():
     assert cls == 1  # detection is data-driven, not hardcoded to 4
 
 
+def test_frac_of_frame_is_area_fraction_in_unit_interval():
+    """SOL v10 review probe 2 regression: frac_of_frame is a per-frame AREA FRACTION in [0,1],
+    NOT the n-scaled per-pixel frame-count (the prior `/1.0` gave n*frac, e.g. 152.6 not 0.254).
+    Every class's frac_of_frame must be in [0,1] and — since each pixel has exactly one class
+    per frame — they must sum to ~1 across classes. Frame-count-independent."""
+    for n in (7, 20, 61):  # invariant to frame count (the exact axis of the bug)
+        L = _synthetic_lstars(n=n, hood_cls=4)
+        _, ev = identify_static_hood_class(L, n_classes=5)
+        fracs = [e.frac_of_frame for e in ev]
+        assert all(0.0 <= f <= 1.0 for f in fracs), f"n={n}: frac out of [0,1]: {fracs}"
+        assert sum(fracs) == pytest.approx(1.0, abs=1e-9), f"n={n}: class fracs sum={sum(fracs)}"
+
+
 # --------------------------- compute_static_hood_mask ---------------------------
 def test_majority_mask_shape_and_dtype():
     L = _synthetic_lstars(hood_cls=4)

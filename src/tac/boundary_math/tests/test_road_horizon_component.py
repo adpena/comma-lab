@@ -97,6 +97,20 @@ def test_region_evidence_top_bottom_shares():
     assert by[roles.sky].static_iou > 0.5     # sky near-static
 
 
+def test_frac_of_frame_is_area_fraction_in_unit_interval():
+    """SOL v10 review probe 2 regression (sister of the hood_static fix): frac_of_frame is a
+    per-frame AREA FRACTION in [0,1], NOT the n-scaled per-pixel frame-count. Every class's
+    frac must be in [0,1] and sum to ~1 across classes, invariant to frame count. The role
+    VERDICTS (road/lane argmax over frac) are unaffected by the ×n scaling, so this guards the
+    diagnostic VALUE the prior `counts[c].mean()` (no /n) got wrong."""
+    for n in (2, 6, 33):
+        L = _synthetic_scene(n=n)
+        roles = classify_segnet_regions(L, n_classes=5)
+        fracs = [e.frac_of_frame for e in roles.evidence]
+        assert all(0.0 <= f <= 1.0 for f in fracs), f"n={n}: frac out of [0,1]: {fracs}"
+        assert sum(fracs) == pytest.approx(1.0, abs=1e-9), f"n={n}: class fracs sum={sum(fracs)}"
+
+
 # ---------------------------------------------------------------------------
 # horizon line model
 # ---------------------------------------------------------------------------
