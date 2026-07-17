@@ -1560,12 +1560,21 @@ def _append_chain_manifest(out_dir: Path, config: str, label: str,
     registry row resolves the run dir (a v3-waiter-style outer chain carries PRIOR run dirs
     in its argv — with green receipts — so registry-token resolution is ambiguous-or-wrong;
     the manifest is ground truth written by the process that KNOWS its out_dir).
-    Best-effort; never raises."""
+    Best-effort; never raises.
+
+    D1 (independent review 2026-07-17): manifest-path resolution precedence is
+    explicit-arg > TAC_CHAIN_MANIFEST_PATH env > live default. An EXECUTION PROOF (a real
+    kill against a real chain) sets the env to a scratch manifest so it NEVER pollutes the
+    live one (the pytest-only guard did not cover execution proofs — 3 scratchpad rows leaked
+    into the live manifest and would false-alarm CHAIN_DEAD_NO_RECEIPT once the scratch GC'd)."""
     try:
         import fcntl  # noqa: PLC0415
-        path = manifest_path or _CHAIN_MANIFEST
-        if manifest_path is None and os.environ.get("PYTEST_CURRENT_TEST"):
-            return  # hermetic: never write the LIVE manifest from a test (safe_run parity)
+        _env_path = os.environ.get("TAC_CHAIN_MANIFEST_PATH")
+        path = manifest_path or (Path(_env_path) if _env_path else _CHAIN_MANIFEST)
+        # hermetic: a unit test (no explicit path, no env override) never writes the LIVE
+        # manifest. An execution proof sets TAC_CHAIN_MANIFEST_PATH => writes its scratch file.
+        if manifest_path is None and not _env_path and os.environ.get("PYTEST_CURRENT_TEST"):
+            return
         path.parent.mkdir(parents=True, exist_ok=True)
         row = {"schema": "witness_chain_manifest.v1", "ts": _utc(),
                "launcher_pid": os.getpid(), "out_dir": str(out_dir),

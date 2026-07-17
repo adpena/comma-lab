@@ -172,5 +172,43 @@ def test_launcher_appends_chain_manifest(tmp_path):
     assert row["out_dir"].endswith("outdir")
 
 
+def test_manifest_deleted_out_dir_reads_no_run_dir_not_alarm(tmp_path):
+    """D1b: a self-registered out_dir that was DELETED (GC'd scratch proof) reads NO_RUN_DIR,
+    never CHAIN_DEAD_NO_RECEIPT — a missing dir never held a real chain to die."""
+    gone = tmp_path / "runs" / "deleted_scratch"  # never created
+    man = tmp_path / "manifest.jsonl"
+    man.write_text(json.dumps({"schema": "witness_chain_manifest.v1", "ts": "20260717T010000Z",
+                               "launcher_pid": 2**22 + 9999, "out_dir": str(gone),
+                               "label": "scratch_proof"}) + "\n")
+    v = W.scan(registry_path=_registry(tmp_path, []), manifest_path=man)
+    assert len(v) == 1 and v[0]["verdict"] == "NO_RUN_DIR"
+
+
+def test_env_override_manifest_path_read(tmp_path, monkeypatch):
+    """D1a: TAC_CHAIN_MANIFEST_PATH redirects the reader off the live manifest (proof
+    isolation) even without an explicit manifest_path arg."""
+    out = tmp_path / "runs" / "x"
+    out.mkdir(parents=True)
+    scratch = tmp_path / "scratch_manifest.jsonl"
+    scratch.write_text(json.dumps({"schema": "witness_chain_manifest.v1",
+                                   "ts": "20260717T010000Z", "launcher_pid": 2**22 + 5,
+                                   "out_dir": str(out), "label": "p"}) + "\n")
+    monkeypatch.setenv("TAC_CHAIN_MANIFEST_PATH", str(scratch))
+    v = W.scan(registry_path=_registry(tmp_path, []))
+    assert any(r.get("source") == "manifest" and r["run_dir"] == str(out) for r in v)
+
+
+def test_env_override_manifest_path_write(tmp_path, monkeypatch):
+    """D1a: an execution proof sets TAC_CHAIN_MANIFEST_PATH -> _append_chain_manifest writes
+    the SCRATCH file, never the live one (even under PYTEST the env override wins)."""
+    import launch_witness_run as L
+    scratch = tmp_path / "scratch.jsonl"
+    monkeypatch.setenv("TAC_CHAIN_MANIFEST_PATH", str(scratch))
+    L._append_chain_manifest(tmp_path / "od", "c2_surgical_warm", "proof")
+    assert scratch.exists()
+    row = json.loads(scratch.read_text().strip())
+    assert row["out_dir"].endswith("od")
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

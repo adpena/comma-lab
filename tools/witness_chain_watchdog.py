@@ -198,9 +198,10 @@ _MANIFEST_MAX_AGE_DAYS = 7.0
 def _manifest_rows(manifest_path: Path | None = None) -> list[dict]:
     """LAST manifest row per out_dir within the recency window (launcher self-registration,
     F3a): {launcher_pid, out_dir, config, label, ts}. Missing/unreadable -> []."""
-    if manifest_path is None and os.environ.get("PYTEST_CURRENT_TEST"):
+    _env_path = os.environ.get("TAC_CHAIN_MANIFEST_PATH")
+    if manifest_path is None and not _env_path and os.environ.get("PYTEST_CURRENT_TEST"):
         return []  # hermetic: never read the LIVE manifest from a test (writer parity)
-    path = manifest_path or _MANIFEST
+    path = manifest_path or (Path(_env_path) if _env_path else _MANIFEST)
     rows: dict[str, dict] = {}
     try:
         text = path.read_text()
@@ -279,12 +280,19 @@ def scan(stale_s: float = 900.0, registry_path: Path | None = None,
         out_dir = Path(str(man["out_dir"]))
         pid = man.get("launcher_pid")
         alive, live_cmd = _pid_alive_cmd(pid, ["launch_witness_run.py"])
-        receipt = (out_dir / "dry_start_report.json").exists()
-        newest = _newest_mtime(out_dir) if out_dir.is_dir() else None
+        out_dir_exists = out_dir.is_dir()
+        receipt = out_dir_exists and (out_dir / "dry_start_report.json").exists()
+        newest = _newest_mtime(out_dir) if out_dir_exists else None
         age_s = round(now - newest, 1) if newest else None
         if alive:
             fresh = age_s is not None and age_s < stale_s
             verdict = "RUNNING_HEALTHY" if fresh else "RUNNING_QUIET"
+        elif not out_dir_exists:
+            # D1b (independent review 2026-07-17): the self-registered out_dir was DELETED
+            # (a GC'd scratch proof, or an operator cleanup) — there is nothing to alarm ON.
+            # A missing dir is NOT a silent death (no run artifacts => never had a real chain
+            # here to die); read NO_RUN_DIR, never CHAIN_DEAD_NO_RECEIPT.
+            verdict = "NO_RUN_DIR"
         elif receipt:
             verdict = "CHAIN_DEAD_RECEIPTED"
         else:
