@@ -3407,7 +3407,11 @@ def run(
 
     parity: dict[str, Any] = {"skipped": True}
     if not skip_parity:
-        parity = parity_on_inflated(Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, n_pairs)
+        # GT-load count is the EVAL subset (eval_pairs), NOT the full checkpoint n_pairs: parity
+        # only scores P = min(eval_pairs, gt.n_pairs) pairs, and a capped --max-pairs smoke must not
+        # demand an n_pairs-sized GT cache (else a 32-pair smoke fails against gt_n96). For a full
+        # eval (max_pairs=None) eval_pairs == n_pairs, so this is behaviour-identical there.
+        parity = parity_on_inflated(Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, inflate_info["eval_pairs"])
         d_seg = parity["d_seg_realized_on_inflated"]
         d_pose = parity["d_pose_realized_on_inflated"]
         # canonical tac.contest_score helpers (no hand-rolled formula; the old path carried a
@@ -3432,7 +3436,7 @@ def run(
     pose_carrier_confirmation: dict[str, Any] = {"checked": False}
     if pose_carrier and pose_carrier_bytes is not None and not skip_parity:
         pose_carrier_confirmation = pose_carrier_confirm(
-            Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, n_pairs,
+            Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, inflate_info["eval_pairs"],
             pose_carrier_bytes, blob=blob)
         pose_carrier_confirmation["checked"] = True
         pc_c = pose_carrier_confirmation
