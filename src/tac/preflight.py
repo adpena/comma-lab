@@ -6511,6 +6511,15 @@ def preflight_all(
         # break surfaces loudly but never blocks an unrelated pipeline).
         check_operating_manual_pointer_integrity(strict=False, verbose=verbose)
 
+        # 2026-07-17 task #525 codex spawn-kill self-protection: codex-exec spawn
+        # paths must route through the reaper-immune pty core
+        # (spawn_durable_daemon.spawn_detached_verified) — a no-TTY codex spawn is
+        # SIGTERM'd at ~5min by the fleet claude-code-reaper launchd agent
+        # (MEASURED 2026-07-17: 10/10 arm kills at 5m18-5m55, reaper-log custody).
+        # WARN-ONLY per the Strict-flip atomicity rule (live count 0 at landing;
+        # future spawn paths are the target class).
+        check_codex_exec_spawn_paths_are_reaper_immune(strict=False, verbose=verbose)
+
         # 2026-07-09 v7.5/v8 SPEC anti-rot (#362): the two crucible SPECs are the
         # canonical resume surface named by CLAUDE.md's v7.5/v8 VEHICLE LINE
         # section; a silent deletion/rename/gut-rewrite is a campaign-level signal
@@ -86678,6 +86687,88 @@ def check_operating_manual_pointer_integrity(
         raise PreflightError(
             "check_operating_manual_pointer_integrity found "
             f"{len(violations)} violation(s) (operating-manual anti-rot):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+# Task #525 (2026-07-17): codex-exec spawn paths must ride the reaper-immune core.
+# ROOT CAUSE (MEASURED): the operator fleet launchd agent com.vertigo.claude-code-reaper
+# (60s cadence, GRACE=300s) SIGTERMs any \b(claude|codex)\b process with no controlling
+# terminal (ps tty == "??") and dead stdin — the exact signature of a headless detached
+# arm. The 2026-07-16 headless-launch change (ff0f884b35) removed the Terminal TTY that
+# had incidentally protected 150 prior arms; every codex arm then died rc=143 at
+# ~5m18-5m55 (10/10 kills logged in /tmp/com.vertigo.claude-code-reaper.log, including a
+# clean-env low-token probe; a renamed-argv probe survived). The immune path is
+# tools/spawn_durable_daemon.spawn_detached_verified(with_pty=True) — script(1) allocates
+# a controlling pty so the arm chain is classified as the live terminal session it is.
+_CODEX_SPAWN_IMMUNE_MARKER = "spawn_detached_verified"
+_CODEX_SPAWN_WAIVER = "# CODEX_SPAWN_REAPER_IMMUNE_OK:"
+_CODEX_SPAWN_SCAN_DIRS = ("tools", "scripts", "experiments")
+
+
+def check_codex_exec_spawn_paths_are_reaper_immune(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """WARN-ONLY (task #525): flag codex-exec spawn paths outside the immune path.
+
+    A Python file under tools/ scripts/ experiments/ that both (a) builds a
+    ``codex exec`` invocation and (b) launches processes itself
+    (subprocess.Popen / os.spawn / osascript) must either route the launch
+    through the shared reaper-immune core
+    (``spawn_durable_daemon.spawn_detached_verified``) or carry a same-line
+    waiver ``# CODEX_SPAWN_REAPER_IMMUNE_OK:<rationale>`` (placeholder
+    rationales rejected). Otherwise the spawned codex process has no
+    controlling terminal and the fleet claude-code-reaper SIGTERMs it at ~5min
+    (the measured 2026-07-17 kill class this gate self-protects against).
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    for rel_dir in _CODEX_SPAWN_SCAN_DIRS:
+        base = root / rel_dir
+        if not base.is_dir():
+            continue
+        for py in sorted(base.rglob("*.py")):
+            rel = py.relative_to(root).as_posix()
+            if "/tests/" in rel or rel.startswith("tests/") or "_intake_" in rel:
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if "codex exec" not in text:
+                continue
+            launches = ("subprocess.Popen" in text or "os.spawn" in text
+                        or "osascript" in text)
+            if not launches:
+                continue
+            if _CODEX_SPAWN_IMMUNE_MARKER in text:
+                continue
+            waiver_ok = False
+            for ln in text.splitlines():
+                if _CODEX_SPAWN_WAIVER in ln:
+                    rationale = ln.split(_CODEX_SPAWN_WAIVER, 1)[1].strip()
+                    if rationale and rationale not in ("<rationale>", "<reason>"):
+                        waiver_ok = True
+                        break
+            if waiver_ok:
+                continue
+            violations.append(
+                f"{rel}: builds a 'codex exec' invocation and spawns processes but does "
+                f"not route through {_CODEX_SPAWN_IMMUNE_MARKER} (the reaper-immune pty "
+                "core in tools/spawn_durable_daemon.py). A no-TTY codex spawn is "
+                "SIGTERM'd at ~5min by the fleet claude-code-reaper (measured task #525). "
+                f"Route the spawn through the shared core or add a same-line "
+                f"'{_CODEX_SPAWN_WAIVER}<rationale>' waiver.")
+    if verbose:
+        print(
+            f"  [codex-spawn-immune] check_codex_exec_spawn_paths_are_reaper_immune: "
+            f"{len(violations)} violation(s)"
+            if violations else
+            "  [codex-spawn-immune] check_codex_exec_spawn_paths_are_reaper_immune: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_codex_exec_spawn_paths_are_reaper_immune found "
+            f"{len(violations)} violation(s) (task #525 codex spawn-kill class):\n  "
             + "\n  ".join(violations))
     return violations
 
