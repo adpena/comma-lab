@@ -580,3 +580,32 @@ Open (round-2): micro-batch twin routing for the lever (fail-closed, live family
 1-epoch ON smoke; feature-space (16-ch stem) upgrade path if the band form under-delivers; pose-aware
 comparator ranking; idempotent duty re-registration post-merge. Wave status: build arms A/B/C ALL LANDED;
 G (#425 store leg) building; boundary merge queue += this branch.
+
+### §13.11 Arm G landing (2026-07-17): #425 phase-carrier STORE leg BUILT + n600 MEASURED — object-domain coding pays, the event stream is the new rate crux
+Branch `p0_build_phase_carrier_425_20260717` (5 commits, 49 tests, equation
+`dash_phase_carrier_rate_blinkback_prior_divergence_v1` REGISTERED). Curve-domain per-dash δ(s) codec:
+ξ-advected world tracks, prior-derived canonical Huffman, explicit birth/death/REBIRTH events with a
+dormant world-anchor pool, byte-close `--dash-phase-carrier` section, NO-FAKE bit-identity +
+every-seed-byte-consumed refusal. **MEASURED (n600, [macOS-CPU advisory]):**
+- **Rate 29,958 B excl-ξ = 11.3× UNDER the naive lane raster (338,523 B)** — the OBJECT-DOMAIN
+  reactivation of the raster jitter-bound negative (amortization 0.71<1) is CONFIRMED: coding dashes as
+  world objects beats coding pixels. BUT **16.6× OVER the 0.9–1.8 KB per-dash-anchor budget** — the gap
+  is the alive/rebirth EVENT STREAM; that budget implicitly assumed a FREE visibility generator
+  (persistence-class prediction of which dashes are visible per frame). The visibility generator is now
+  THE named rate crux for this carrier (rule-118-free candidate: deterministic persistence classes).
+- **Blink-back 0.787** — first measurement of the lane-memo §4 open item (79% of reappearances re-anchor
+  dormant world tracks): the rebirth/dormant-pool design is justified by the data.
+- **Prior-transfer NEGATIVE (honest, formulation-scoped):** the site-level jitter prior does NOT
+  transfer to dash centroids (pre-registered 4.53 bits/dash → realized 9.58; iid prior code loses to
+  zlib9 by 20%). Cures named in the equation's reactivation criteria: dash-level measured prior in the
+  header + per-track context coding.
+- **Calibration DISCOVERY with cure-adjacency:** raw s_t=1 pose→ξ (the #359 convention) mis-advects;
+  fitted (s_t=−0.00322, pitch=−0.01) lifts transport coverage 52%→87% and cuts the section 24%.
+  **Sister flag: #359's ξ_amort=1.041 is plausibly the SAME bug — re-measure owed** (a per-class-carrier
+  economics number may improve for free).
+- **Recovery (label-space, honestly scoped; through-R d_seg on c2 ep725 EMA = OWED at the boundary):**
+  phase-correct centroids 0.38 px mean (100% ≤1px); lane XOR 0.749 vs persist 1.129 (−34%);
+  transport-only is WORSE than persist — **ξ's value here is WORLD IDENTITY for events, not the warp**
+  (refines lens-5: transport codes identity, the phase seed codes position).
+Crux-3 status: TRAIN legs (B) + STORE leg (G) both BUILT; the joint through-R A/B at the boundary is the
+remaining decisive measurement. Wave COMPLETE: arms A/B/C/D/E/F/G all landed.
