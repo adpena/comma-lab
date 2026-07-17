@@ -158,3 +158,79 @@ SPEC_v10 §13 (SSoT branch) · `.omx/research/weight_entropy_gradient_conflict_n
 `experiments/test_focal_boundary_levers.py` (lever test template) · live run `launch.sh` + BEST.npz cfg ·
 `tac.boundary_math.phase_primitives` + trainer phase-advect precompute (provider reconstruction) ·
 CLAUDE.md non-negotiables (EMA/byte-identity/no-invent-flags/serializer/confound L3).
+
+## §TRAJECTORY — force-evolution map across the c2 checkpoint trajectory (operator follow-on 2026-07-17 "run fishers against full telemetry")
+
+**All rows: n96 evenly-spaced pairs, both legs; [macOS-MLX research-signal] / [macOS advisory] NON-PROMOTABLE;
+term weights as armed in c2 (phase 0.4 · satisfice 0.2 · subpix 0.3 with pa_flipmass W_e) except weight_entropy
+= the λ=15 COUNTERFACTUAL (the lever is OFF in this run — this is the finish-crossover probe). Armed seg base =
+tau_softplus τ=0.3, w_seg=100. Raw rows: `.omx/research/dual_metric_traj_20260717/*.json`.**
+
+**Checkpoint inventory (honest):** the run dir preserves EMA-shadow deploy artifacts only. MEASURED states:
+`seed_ep650` = ancestor mod32cap EMA BEST — bit-exactly the c2 LIVE INIT at ep651 (`--warm-start-weights-only`);
+`ep725_BEST` = EMA BEST; `ep726_stage` = stageMuonStart ckpt — **MEASURED bit-identical params to ep725_BEST**
+(max abs diff 0.0; metadata-only difference), so it is a REPEATABILITY CONTROL, not an independent point;
+`ep800_roll` = the rolling EMA pinned at ep800 (copied before read; the file is overwritten every 25 ep).
+The directive's live-weights preference could NOT be honored: no plain live-weight artifact exists — live weights
+live only inside `levelset_resume_state.npz` under the `liveP__*` resume schema, which my loader does not read;
+per the no-loader-adaptation constraint those states were SKIPPED, not force-fitted. Context (cited, SPEC §13.3):
+EMA−live −0.00095 @ep775 — small but nonzero; the ep750/ep775 periodic saves do not exist as distinct files.
+Forces phase/satisfice/subpix engaged at ep700; at seed_ep650 their rows are the PRE-ENGAGEMENT counterfactual
+(what the force WOULD do at that state).
+
+| state | term vs armed seg | Euclid cos | Fisher cos | rel-norm E | rel-norm F | verdict E/F |
+|---|---|---|---|---|---|---|
+| seed_ep650 (live init) | phase_advect | +0.0427 | +0.1725 | 4.76 | 1.98 | orthog/synerg |
+| seed_ep650 (live init) | margin_satisfice | +0.5042 | +0.0747 | 0.0746 | 0.113 | synerg/synerg |
+| seed_ep650 (live init) | subpix | +0.1366 | +0.0055 | 1.05 | 0.88 | synerg/orthog |
+| seed_ep650 (live init) | weight_entropy λ15 | −0.0051 | −0.1598 | 0.271 | 0.0908 | orthog/antago |
+| ep725_BEST (EMA) | phase_advect | −0.1494 | −0.1178 | 0.627 | 0.478 | antago/antago |
+| ep725_BEST (EMA) | margin_satisfice | +0.1875 | −0.3208 | 0.054 | 0.0664 | synerg/antago |
+| ep725_BEST (EMA) | subpix | −0.0627 | −0.4291 | 0.493 | 0.627 | antago/antago |
+| ep725_BEST (EMA) | weight_entropy λ15 | +0.0219 | +0.0663 | 0.25 | 0.0893 | orthog/synerg |
+| ep726_stage (≡ep725 wts) | phase_advect | −0.1494 | −0.1227 | 0.627 | 0.483 | antago/antago |
+| ep726_stage (≡ep725 wts) | margin_satisfice | +0.1875 | −0.3284 | 0.054 | 0.0657 | synerg/antago |
+| ep726_stage (≡ep725 wts) | subpix | −0.0627 | −0.4649 | 0.493 | 0.631 | antago/antago |
+| ep726_stage (≡ep725 wts) | weight_entropy λ15 | +0.0219 | +0.0630 | 0.25 | 0.0918 | orthog/synerg |
+| ep800_roll (EMA) | phase_advect | −0.0590 | −0.1158 | 0.344 | 0.289 | antago/antago |
+| ep800_roll (EMA) | margin_satisfice | +0.5055 | −0.1407 | 0.0438 | 0.0652 | synerg/antago |
+| ep800_roll (EMA) | subpix | +0.2156 | −0.1301 | 0.215 | 0.235 | synerg/antago |
+| ep800_roll (EMA) | weight_entropy λ15 | −0.0115 | +0.0049 | 0.153 | 0.0612 | orthog/orthog |
+
+**Fisher-leg noise floor (MEASURED, from the bit-identical ep725/ep726 pair):** the Euclid leg is
+reproducible to the displayed precision; the Fisher leg (MLX-GPU JVP + FD forwards) varies by |Δcos| ≤ 0.036
+(subpix −0.4291 vs −0.4649) and |Δrel| ≤ 0.005 on IDENTICAL weights — read Fisher differences smaller than
+~0.04 as noise.
+
+**Reading 1 — the phase sign flip (MEASURED).** At the pre-engagement live init the phase force is weakly
+synergistic with seg (Fisher cos +0.17) and DOMINANT in size (rel-norm 4.8 E / 2.0 F — an unadapted tie field
+generates an enormous would-be gradient). By the first armed state (ep725; force live since ep700) it has
+flipped to mild antagonism (−0.12 F) at ≈half the seg force (0.48 F), and by ep800 its share decays further
+(0.29 F) with the antagonism persisting. The flip therefore happened during the ep700–725 engagement descent
+itself: once the tie field adapts, the term becomes the designed shrinkage counter-force rather than a
+co-mover, and it is relaxing toward equilibrium rather than growing.
+
+**Reading 2 — satisfice stays subdominant; subpix does NOT (and is the top dual-metric disagreement)
+(MEASURED).** Satisfice holds rel-norm 0.04–0.11 in both metrics at every state — a genuinely small trim
+force — but it is the strongest standing sign-flip instance: Euclid calls it synergistic (+0.19…+0.51) while
+Fisher calls it antagonistic (−0.14…−0.33) at every armed state, the FEED-we-conflict lesson recurring on a
+live armed force. Subpix at ep725 is a HALF-SEG-SIZED force (rel 0.49 E / 0.63 F) and the most
+Fisher-antagonistic term measured (−0.43 F); by ep800 it decays to 0.22/0.24 and splits sign (+0.22 E /
+−0.13 F). Its Euclid−Fisher gap (up to 0.37 in cos) is the largest of any term — decisions about Force-3
+weights should be made in the Fisher column only.
+
+**Reading 3 — the weight_entropy finish-crossover (MEASURED, counterfactual λ=15).** At the latest state
+(ep800) rel-norm = 0.153 Euclid / 0.061 Fisher, vs 0.00186 Euclid at the ep25 strong-signal anchor
+(FEED-we-conflict, n600) — ~80× growth, exactly the mechanistically-predicted late-regime rise. The EUCLID
+reading has already crossed the ~0.1 binding threshold, but the FISHER (decision-geometry authority) reading
+sits at 0.061 — below threshold with ~1.6× headroom, and orthogonal (cos +0.005). Verdict for the event-gated
+compression design: arming finish-phase weight_entropy at ep800-class states is NOT yet Fisher-binding (safe
+by the authority metric, borderline by Euclid); the event-gate should monitor the FISHER rel-norm against the
+0.1 criterion. Non-monotonicity note: the seed state shows a HIGHER Euclid rel-norm (0.271) than ep800 —
+rel-norm depends on the seg force's own magnitude (which grew as satisfice/subpix/phase re-energized the
+armed base), so the crossover is not a clean monotone clock; gate on the measured ratio, not on epoch.
+
+**Scope caveats (unchanged from §d3 + two new):** EMA-shadow states only (live-weight states skipped, above);
+n96; self-orient decode-style reconstruction; single run. NEW: (a) seed-state rows use the c2-armed term
+parameters against an ancestor-trained state — valid as the c2 launch counterfactual, not as an
+ancestor-run property; (b) weight_entropy rows are a counterfactual force (λ=15 lever OFF in-run).

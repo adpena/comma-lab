@@ -1,0 +1,41 @@
+{
+  "checkpoint": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z/levelset_witness_ema_BEST.npz",
+  "epoch": 650,
+  "state_label": "warm-start-seed-ep650-ancestor-EMA-eq-c2-live-init-ep651",
+  "term_a": "phase_advect",
+  "term_b": "seg",
+  "n_pairs_euclid": 96,
+  "n_pairs_fisher": 96,
+  "n_all": 600,
+  "seg_form": "tau_softplus",
+  "tau": 0.3,
+  "w_seg": 100.0,
+  "pa_weight": 0.4,
+  "pa_band": 2.0,
+  "self_orient_reconstruction": "decode_style_fixed_point_2iters",
+  "term_values": {
+    "a": 0.04911063704639673,
+    "b": 0.24042167980223894
+  },
+  "euclid_baseline": {
+    "cos_a_b": 0.04265928783757657,
+    "rel_norm_a_over_b": 4.758455197352773,
+    "pcgrad_conflict_of_b": 0.0,
+    "dot_a_b": 0.010532664625555249,
+    "verdict": "orthogonal"
+  },
+  "fisher_authority": {
+    "cos_a_b": 0.17250275335721324,
+    "rel_norm_a_over_b": 1.976424364695766,
+    "pcgrad_conflict_of_b": 0.0,
+    "inner_a_b": 914491.5832748418,
+    "norm2_a": 10477649.84220773,
+    "norm2_b": 2682276.1146555594,
+    "verdict": "synergistic"
+  },
+  "axis_tag": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "note": "SPEC_v10 \u00a713.4(3) dual-metric read-back; advisory n<600 subset; pointer UNMOVED"
+}
