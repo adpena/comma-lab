@@ -22,8 +22,28 @@ This module is BOTH:
 
 Disposition states (terminal unless noted):
   * ``reviewed_committed`` — reviewed + landed via the serializer (commit sha).
+                             REQUIRES ``--consumed-by`` (see below).
   * ``respawned``          — a follow-on arm was launched (respawn label).
   * ``closed``             — reviewed + intentionally not committed (reason).
+                             REQUIRES ``--consumed-by`` (see below).
+
+CONSUMPTION POINTER (operator 2026-07-17 — "What other findings memos were
+landed that nobody consumed? That is a super poisonous bug class"): a
+``reviewed_committed`` / ``closed`` disposition is a CUSTODY state (the arm's
+working-tree bytes were handled) — it says NOTHING about whether the arm's
+FINDINGS were routed into a decision surface. The proven orphan class: 4 basis
+arms rc=0 REVIEWED with findings unconsumed until operator memory caught it.
+Therefore terminal review dispositions REQUIRE ``--consumed-by
+<artifact-path-or-task#>`` — the DAG FEED memo / task# / P0 row / spec § /
+DSL lever / audit memo that RECORDS A DECISION about the findings (routing,
+absorption, or a named-reason rejection all count; a bare filename mention
+does not). ``none:<reason>`` is the explicit nothing-to-consume escape for
+pure-mechanical arms (bare ``none``/``n/a``/``tbd`` refused). ``held_entangled``
+/ ``respawned`` are exempt (non-terminal / the respawn IS the route). Old
+ledger rows without the field are unchanged (backwards-compatible; enforcement
+is at the CLI write path only). Sister warn-only preflight surface:
+``tac.preflight.check_codex_findings_memos_consumed`` flags fresh
+``codex_findings_*.md`` memos with no consumer surface at all.
   * ``held_entangled``     — NOT terminal: the commit is blocked because named
                              LIVE arms are still editing the shared files; carries
                              ``blocked_by`` arm labels. AUTO-RE-SURFACES to pending
@@ -49,7 +69,8 @@ USAGE:
   .venv/bin/python tools/codex_landing_review_gate.py status
   .venv/bin/python tools/codex_landing_review_gate.py disposition \
       --label optimal_metric_p0_build_surrogate_followons --stamp 20260714T123447Z \
-      --status reviewed_committed --commit <sha> --reason "harvested 2 rows"
+      --status reviewed_committed --commit <sha> --reason "harvested 2 rows" \
+      --consumed-by ".omx/research/optimal_metric_p0_surrogate_followons_DAG_FEED_20260714.md"
   .venv/bin/python tools/codex_landing_review_gate.py disposition \
       --label some_arm --stamp <stamp> --status held_entangled \
       --blocked-by arm_a,arm_b --reason "shares trainer.py with live arms"

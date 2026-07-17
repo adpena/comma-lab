@@ -133,3 +133,90 @@ def test_state_partitions():
     assert {"reviewed_committed", "respawned", "closed"} == G.TERMINAL_STATES
     assert "held_entangled" in G.NONTERMINAL_STATES
     assert G.VALID_STATES == G.TERMINAL_STATES | G.NONTERMINAL_STATES
+
+
+# ---- --consumed-by enforcement (DISPOSITION != CONSUMPTION, 2026-07-17) ----
+# Terminal review dispositions (reviewed_committed / closed) are CUSTODY states;
+# they must ALSO name the artifact that absorbed (or knowingly rejected, with a
+# recorded decision) the arm's findings. Proven orphan class: the 4-arm
+# curvelet/Fourier basis cluster (rc=0 REVIEWED, findings unconsumed).
+
+def _disposition_args(status, *, consumed_by=None, blocked_by=None, reason="r"):
+    import argparse
+    return argparse.Namespace(
+        label="arm_x", stamp="S1", status=status, commit=None, respawn=None,
+        reason=reason, blocked_by=blocked_by, consumed_by=consumed_by)
+
+
+@pytest.fixture()
+def _ledger(tmp_path, monkeypatch):
+    ledger = tmp_path / "ledger.jsonl"
+    monkeypatch.setattr(G, "LEDGER", ledger)
+    return ledger
+
+
+@pytest.mark.parametrize("status", ["reviewed_committed", "closed"])
+def test_terminal_disposition_without_consumed_by_refused(_ledger, status):
+    rc = G._cmd_disposition(_disposition_args(status))
+    assert rc == 2
+    assert not _ledger.exists()  # refused BEFORE any ledger write
+
+
+@pytest.mark.parametrize("placeholder", ["none", "None", "N/A", "tbd", "<reason>"])
+def test_placeholder_consumed_by_refused(_ledger, placeholder):
+    rc = G._cmd_disposition(
+        _disposition_args("reviewed_committed", consumed_by=placeholder))
+    assert rc == 2
+    assert not _ledger.exists()
+
+
+def test_consumed_by_recorded_in_ledger_row(_ledger):
+    rc = G._cmd_disposition(_disposition_args(
+        "reviewed_committed",
+        consumed_by=".omx/research/arm_x_DAG_FEED_20260717.md"))
+    assert rc == 0
+    rows = G._read_jsonl(_ledger)
+    assert len(rows) == 1
+    assert rows[0]["consumed_by"] == ".omx/research/arm_x_DAG_FEED_20260717.md"
+    assert rows[0]["status"] == "reviewed_committed"
+
+
+def test_none_with_reason_escape_accepted(_ledger):
+    rc = G._cmd_disposition(_disposition_args(
+        "closed", consumed_by="none:pure-mechanical arm; no findings emitted"))
+    assert rc == 0
+    rows = G._read_jsonl(_ledger)
+    assert rows[0]["consumed_by"].startswith("none:")
+
+
+def test_respawned_exempt_from_consumed_by(_ledger):
+    rc = G._cmd_disposition(_disposition_args("respawned"))
+    assert rc == 0
+    assert G._read_jsonl(_ledger)[0]["status"] == "respawned"
+
+
+def test_held_entangled_exempt_from_consumed_by(_ledger):
+    rc = G._cmd_disposition(
+        _disposition_args("held_entangled", blocked_by="live_arm"))
+    assert rc == 0
+    row = G._read_jsonl(_ledger)[0]
+    assert row["status"] == "held_entangled"
+    assert row["blocked_by"] == ["live_arm"]
+
+
+def test_old_rows_without_consumed_by_still_terminal(tmp_path):
+    # Backwards compatibility: pre-2026-07-17 ledger rows lack consumed_by and
+    # MUST still clear pending (enforcement is at the CLI write path only).
+    d = _deleg("arm_old", "S0", tmp=tmp_path)
+    disp = {("arm_old", "S0"): {
+        "label": "arm_old", "stamp": "S0", "status": "reviewed_committed"}}
+    assert G.compute_pending([d], disp, alive_fn=lambda a, s: False) == []
+
+
+def test_cli_parser_accepts_consumed_by(_ledger):
+    rc = G.main([
+        "disposition", "--label", "arm_x", "--stamp", "S1",
+        "--status", "reviewed_committed", "--commit", "abc123",
+        "--consumed-by", "task#999"])
+    assert rc == 0
+    assert G._read_jsonl(_ledger)[0]["consumed_by"] == "task#999"
