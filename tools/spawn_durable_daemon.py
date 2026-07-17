@@ -706,6 +706,46 @@ def _witness_dsl_compile_hash_gate(a: argparse.Namespace, cmd: list[str]) -> int
     return None
 
 
+_READER_CLASS_MAX_PROJECTED_GIB = 4.0
+_READER_CLASS_MAX_RSS_CAP_MB = 4096
+
+
+def _reader_class_refusal(a: argparse.Namespace) -> tuple[int, str] | None:
+    """Fail-closed validation of the DECLARED reader/control-plane job class (task #525).
+
+    WHY: the SUM-over-RAM training admission model refuses a ~2GB codex/reader
+    control-plane job while a 60GiB trainer runs — but such small readers are
+    exactly the class the #370 control-plane exemption pattern exists for. A
+    ``--job-class reader`` declaration buys a preflight-only admission lane, but
+    ONLY with an explicit small envelope: a declared projected peak ≤ 4 GiB AND
+    a runtime ``--rss-cap-mb`` ≤ 4096 (safe_run enforces the envelope at
+    runtime, so a mislabeled trainer cannot ride the reader lane past 4GB).
+    Returns ``(exit_code, message)`` to refuse, or ``None`` when valid /
+    not a reader job.
+    """
+    if getattr(a, "job_class", "training") != "reader":
+        return None
+    proj = getattr(a, "projected_peak_gib", None)
+    if proj is None:
+        return (7, "REFUSED (--job-class reader): reader jobs must DECLARE their envelope — "
+                   f"pass --projected-peak-gib <= {_READER_CLASS_MAX_PROJECTED_GIB} "
+                   "(the declared projection is recorded in the daemon registry).")
+    if float(proj) > _READER_CLASS_MAX_PROJECTED_GIB:
+        return (7, f"REFUSED (--job-class reader): projected peak {float(proj):.1f}GiB exceeds the "
+                   f"reader-class ceiling {_READER_CLASS_MAX_PROJECTED_GIB}GiB. A job this large is "
+                   "not a reader/control-plane job — use the default training class (full "
+                   "SUM-over-RAM admission) instead.")
+    rss_cap = getattr(a, "rss_cap_mb", None)
+    if not rss_cap:
+        return (7, "REFUSED (--job-class reader): reader jobs must enforce their envelope at "
+                   f"runtime — pass --rss-cap-mb <= {_READER_CLASS_MAX_RSS_CAP_MB} (safe_run "
+                   "wraps the job so it cannot outgrow the declared reader envelope).")
+    if int(rss_cap) > _READER_CLASS_MAX_RSS_CAP_MB:
+        return (7, f"REFUSED (--job-class reader): --rss-cap-mb {int(rss_cap)} exceeds the "
+                   f"reader-class ceiling {_READER_CLASS_MAX_RSS_CAP_MB}MiB.")
+    return None
+
+
 def _system_admission_gate(a: argparse.Namespace, cmd: list[str]) -> int | None:
     """SYSTEM-aware admission HARD gate (the P0 crash-prevention). Returns an exit code to ABORT with,
     or None to proceed.
@@ -718,6 +758,19 @@ def _system_admission_gate(a: argparse.Namespace, cmd: list[str]) -> int | None:
     --admission-override-rationale. Protection infra (black-box/guard/governor) is auto-exempt.
     """
     if getattr(a, "skip_admission_gate", False) or _is_protection_infra_cmd(cmd):
+        return None
+    if getattr(a, "job_class", "training") == "reader":
+        # DECLARED reader/control-plane lane (task #525; mirrors the #370 control-plane
+        # exemption): the SUM-over-RAM TRAINING admission model is skipped — the OOM
+        # free-floor preflight (_mem_preflight) has already run, the ≤4GiB envelope was
+        # validated fail-closed by _reader_class_refusal, and safe_run enforces
+        # --rss-cap-mb at runtime. The declaration + reason are recorded in the registry.
+        print(
+            "[durable-daemon] ADMISSION: job-class=reader — preflight-only lane "
+            f"(projected_peak={float(getattr(a, 'projected_peak_gib', 0.0)):.1f}GiB "
+            f"rss_cap={int(getattr(a, 'rss_cap_mb', 0))}MiB; SUM-over-RAM training "
+            "admission skipped per the #370 control-plane exemption pattern)."
+        )
         return None
     try:
         import system_memory_governor as gov  # tools/ on sys.path
@@ -920,8 +973,22 @@ def _do_start(a: argparse.Namespace) -> int:
     if refusal is not None:
         return refusal
 
+    # Reader-class declaration validation (task #525): fail-closed BEFORE any
+    # preflight so a mislabeled/undeclared reader job starts nothing.
+    reader_refusal = _reader_class_refusal(a)
+    if reader_refusal is not None:
+        rc, message = reader_refusal
+        print(f"[durable-daemon] {message}", file=sys.stderr)
+        return rc
+    if getattr(a, "job_class", "training") == "reader":
+        # The validated reader envelope IS the projection: the free-floor preflight
+        # must not charge the 25GB training default against a declared ≤4GiB reader
+        # (that phantom projection would re-create the exact refusal this class fixes).
+        a.projected_gb = float(a.projected_peak_gib)
+
     # OOM launch-preflight: refuse to breach the 30 GB free floor (never OOM the
     # machine again). Runs BEFORE any Popen so a refused launch starts nothing.
+    # ALWAYS on — the reader class skips only the SUM-over-RAM training model.
     refusal = _mem_preflight(a)
     if refusal is not None:
         return refusal
@@ -1072,6 +1139,17 @@ def _do_start(a: argparse.Namespace) -> int:
     _prio = getattr(a, "priority", None)
     if _prio is not None:
         record["priority"] = int(_prio)
+    # Reader-class custody (task #525): record the declared class + the reason the
+    # SUM-over-RAM training admission was skipped, so the governor/status readers
+    # can see WHY this job bypassed the training model (queryable, never silent).
+    if getattr(a, "job_class", "training") == "reader":
+        record["job_class"] = "reader"
+        record["admission_class_reason"] = (
+            "declared reader/control-plane job: preflight-only admission "
+            f"(envelope projected<={_READER_CLASS_MAX_PROJECTED_GIB}GiB, "
+            f"rss_cap<={_READER_CLASS_MAX_RSS_CAP_MB}MiB enforced by safe_run; "
+            "#370 control-plane exemption pattern)"
+        )
     try:
         _register_daemon(record)
         # Promote/replace semantics: _register_daemon upserts by label, so when the final label
@@ -1366,6 +1444,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--with-pty", action="store_true",
                     help="allocate a controlling pty (script -q) for the detached child — required "
                          "for claude/codex-named long-runners (fleet reaper kills no-TTY ones at 5min)")
+    # DECLARED job class (task #525): 'reader' = small control-plane/reader job
+    # (codex reader arms, log watchers) admitted on the OOM free-floor preflight
+    # ONLY (the SUM-over-RAM training model would refuse a 2GB reader while a
+    # 60GiB trainer runs). Fail-closed envelope: requires an explicit
+    # --projected-peak-gib <= 4 AND --rss-cap-mb <= 4096 (runtime-enforced).
+    ap.add_argument("--job-class", choices=["training", "reader"], default="training",
+                    help="admission class: 'training' (default; full SUM-over-RAM admission) or "
+                         "'reader' (control-plane/reader lane: preflight-only, requires declared "
+                         "--projected-peak-gib <= 4 and --rss-cap-mb <= 4096)")
     ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- <command> [args...] (start mode)")
     a = ap.parse_args(argv)
 
