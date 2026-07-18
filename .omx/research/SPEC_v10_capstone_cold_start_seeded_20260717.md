@@ -770,3 +770,18 @@ must still EMIT a legal render — bake into internal geometry + seed + generato
   MEASURED verdict here on the arm's return. Memories `[[solve-the-right-problem-is-right-coordinates-at-every-level-kolmogorov]]`
   + `[[post-hoc-stored-corrections-dead-joint-descent-or-constrained-solve-required]]`. Sisters #531 (T=quotient
   residual), #524 (16-ch stride-2 skip), #503 (recursive-fractal-optimal), #500 (Fisher metric).
+
+### §14.8 THE LEVEL THE SCORE SEES (framing principle — operator 2026-07-18, the WHY of §14.7)
+The campaign alternately worked TOO LOW and TOO HIGH; the score's level is now pinned. `d_seg` = argmax
+disagreement RATE over the partition; `d_pose` = the ξ twist; `bytes` = the seed. So the score reads: **spatial =
+the CELL/region** (bounded by separatrices, meeting at tie-loci), **temporal = the ξ twist**, **rate = the seed**.
+- **TOO LOW = the PIXEL** (per-pixel flip coders, sub-pixel placement, per-pixel phase min-norm) — below the argmax
+  region resolution; sub-pixel/sub-margin detail is invisible; fights the ERF. (The phase-probe strawman was here.)
+- **TOO HIGH = the RGB FRAME / whole render / weight-blob** (full-RGB, PR95 full-frame, decoder-for-good-frames) —
+  above the partition; pays capacity+bytes for the RGB coordinate the argmax projects away. (Full-RGB/bc36 rate wall
+  + the bc20↔bc36 trilemma were a capacity argument at the malformed RGB level.)
+- **THE RIGHT LEVEL = the argmax partition as a Morse-Smale/hyperplane CELL COMPLEX** — the cell, the separatrix,
+  the tie-locus, the ξ twist. §14.7 IS this level made mechanical: represent (native MS complex) · control
+  (FiLM/hyperplane at the boundary) · code (seed = MDL of the complex) · render = free pullback. v10's job is to
+  hold EVERY lever at this level — never slip a rung to pixel (too low) or frame (too high). Memory
+  `[[solve-the-right-problem-is-right-coordinates-at-every-level-kolmogorov]]` §LEVEL.
