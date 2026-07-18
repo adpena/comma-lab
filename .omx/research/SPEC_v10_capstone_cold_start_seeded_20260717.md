@@ -888,3 +888,44 @@ Kolmogorov sweep `solve_the_right_problem_kolmogorov_sweep_20260718`) land two B
     `pool × channel → R-D curve (bytes ↦ d_seg)`, and v10 waterfills marginal ΔS/byte across cells. Memory
     `[[opportunity-pools-non-additive-and-rate-distortion-reachable]]` + `[[kolmogorov-program-technique-roles-and-gradient-control-surgical-targeting]]`
     (the five roles: generate-free / seed-counted / solve / project / train-residual; gradient control aims role-5).
+
+### §14.11 THE INVERSE-SOLVE CRUX + COMPLETENESS (operator 2026-07-18, "this feels like a crux" + "completeness is very important")
+v10's OBJECTIVE, stated correctly for the first time: the contest = ONE **constrained MDL minimization**
+`min |description(payload)| s.t. Forward(payload) ∈ FeasibleSet`, `Forward = scorer∘A∘decode`, `FeasibleSet =
+{argmax=L*} ∩ {pose≈P*} ∩ {uint8} ∩ {decode<30min}`. **The witness IS the inverse of the flattened+factorized
+off-eval scorer.** Memory `[[campaign-is-a-constrained-mdl-inverse-solve]]`.
+- **WHAT INVERTS closed-form (SOLVE role) vs the ONE residual (TRAIN role):** rank-4 head → WINNER-CELL POLYTOPE
+  (fidelity→FEASIBILITY, the decisive relaxation — satisficing-margin, not CE→0); resize A → affine preimage +
+  FREE ker(A) 22.7%; pose → STORE 6 scalars+FiLM (never invert PoseNet); deep conv → NOT closed-form but a FIXED
+  forward map — optimize the payload THROUGH it (TTO #350), never invert (preimage = a PL polytope UNION,
+  intractable to ENUMERATE, located by descent).
+- **SUPERIOR PARAMETRIZATION = POWER-DIAGRAM (sharpens §14.7 to INVERTIBLE + VIDEO-FED):** the head hyperplanes ⇒
+  the partition IS a power/Laguerre diagram; DOF = GENERATORS; init from the GT partition (video-fed); invertible
+  both ways (generators↔cells); store generators not INR weights. Separates the invertible TARGET from the
+  conv-feasibility REALIZATION (coord-INR fuses them). This is the v10 witness representation of choice.
+- **COMPLETENESS — the 4th leg, operator-EMPHASIZED. The witness must carry a TERM PER FACTOR of the ten-factor
+  score, not just invert argmax. RANKED MISSING TERMS (fold each into v10):** (1) **d_seg↔d_pose COUPLING through
+  shared A** [deepest — the true inverse is a JOINT seg-pose solve, not two separable ones; #535]. (2) **chroma**
+  (RGB-seg + YUV6-pose; witness luma-dominant; #276). (3) **camera-res sub-pixel/AA** (the uint8-floor-cracking
+  DOF; #149). (4) **uint8-lattice feasibility IN the objective** (not real-then-round; #532). (5) **frame_0
+  seg-freedom** (a free frame for pose/rate). (6) **ker(A)/blind-coordinate as FREE rate** (#401/#519/#520).
+  (7) **the joint 3-axis waterfill** (#536). A v10 that omits a term is incomplete BY CONSTRUCTION.
+- **CRACK THE CONV WALL BY CHANGING FORM (intractability is form-specific):** tropical→power-diagram (exact);
+  **Cole-Hopf/entropic-OT/Sinkhorn = the needle-mover** (softmax=Cole-Hopf-of-argmax, tau=vanishing-viscosity ⇒
+  fast solve/initializer replacing slow descent; caveat: exact only for quadratic H); SDP-relax (warm-start);
+  curvelet-sparse (boundary); KKT-dual (=waterfill). **Fourier is CARGO-CULTED (operator) — curvelet/tropical/
+  entropic are the replacements; do NOT propose Fourier.** Arm `alternative_forms_conv_wall_20260718` live.
+- **HYBRID OF FORMS (operator 2026-07-18) — the forms are NOT exclusive; use EACH where it is the natural/
+  solvable representation of its factor:** tropical/power-diagram for the head/partition TARGET (exact argmax
+  structure) · Cole-Hopf/entropic-OT for the smoothed FLOW/training (fast solve/initializer) · curvelet for the
+  BOUNDARY residual (sparse recovery) · SDP for the feasible-set WARM-START · KKT-dual for the RATE allocation
+  (the waterfill). And each MISSING TERM lives in the form where it is solvable: coupling → dual/joint-Jacobian;
+  chroma → channel; camera-res → AA-coverage; ker(A) → null-space; uint8 → lattice-projection. **This IS the
+  recursive-fractal-optimal representation (#503, optimal-per-dimension) applied to FORMS — the hybrid is
+  COMPLETENESS realized form-by-form: one form per factor, composed.** The composition law is the constrained-MDL
+  objective (they all read/write the same payload + feasible set).
+- **v10 OBJECTIVE (replaces PR95 CE-then-compress), falsifiable:** feasibility-not-fidelity (satisficing-margin) ·
+  range(A)-restricted · description-length joint from step 0 · pose stored. Plus the sharpest fork: direct
+  payload-TTO through the fixed scorer (#350) vs long INR training. STATUS: design objective; the pool×channel /
+  MDL / alternative-forms arms + #536 waterfill measure the pieces. Equations leg = FORMALIZATION_PENDING (register
+  the crux laws with proper evaluators). Pointer 0.19108 UNMOVED (this is the objective, not a score claim).
