@@ -32,4 +32,11 @@ regexes = [
     # research-memo prose ("no optimizer/RNG/live/EMA state") — not a credential;
     # held the 2026-07-18 campaign-review push as generic-api-key:236 (verified benign).
     '''optimizer/RNG/live/EMA''',
+    # File-custody digests in measurement/research JSONs (checkpoint_sha256, gt_cache_sha256,
+    # upstream_source_sha256, git_head) — SHA-256/git integrity hashes, NOT credentials. The
+    # generic-api-key entropy rule mis-matches 64/40-hex digests. Length-anchored so ONLY exact
+    # SHA-256 (64-hex) and git (40-hex) shapes are exempt; the Tailscale fleet-IP rule + every
+    # other rule still fire on these files. Held the 2026-07-18 completeness-coupling push.
+    '''\b[0-9a-f]{64}\b''',
+    '''\b[0-9a-f]{40}\b''',
 ]
