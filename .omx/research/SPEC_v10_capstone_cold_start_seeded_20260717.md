@@ -752,6 +752,17 @@ must still EMIT a legal render — bake into internal geometry + seed + generato
   tropical/Laguerre power diagram (#284/#311). Make that the witness's NATIVE representation (its cells = the
   scorer's cells); the SEED = the cell-membership/partition (video-derived, COUNTED); the render = the free
   generator decode (rule-118). This IS the non-RGB task-space thesis: spend bytes on the partition, not the pixels.
+- **MORSE-SMALE = the DUAL of the channel hyperplane arrangement (operator 2026-07-18); the witness is PERFECTLY
+  SUITED.** The channel-space hyperplane arrangement (scorer decision geometry) and the witness's SPATIAL
+  Morse-Smale complex are TWO descriptions of the SAME argmax partition. Witness field φ → features f(φ(x)); the
+  boundary is where (W_c−W_c′)·f(φ(x))=0 ⇒ the witness's LEVEL-SET SEPARATRICES ARE THE PULLBACK of the channel
+  hyperplanes. MS 1-skeleton = separatrices; MS cells = argmax/Laguerre cells; MS critical points (codim-2 triple
+  points) = the TIE-LOCI (#360 tie-locus force + #315 critical-nucleus). The witness's entire DOF is separatrix
+  placement = hyperplane-crossing control — its native representation ALREADY IS a Morse-Smale complex (no bolt-on).
+  SEED = the MS complex (cells + adjacency-graph + critical points), MDL-coded; FiLM moving f along W_c−W_c′ edits
+  ONE cell boundary collateral-free. Reuse #180 (MS partition codec) / #365 (MS-stratified parallax) / #369 (MS
+  separatrix sidecar) / #284/#311 (tropical/Laguerre) — do NOT re-derive. Empirical: how compactly does the MS
+  complex code the n600 argmax partition vs the weight blob? (folds into the running arm's Part-2).
 - **Falls out of {task-space level-set witness × channels × upstream modules}** (operator 2026-07-18): the witness
   is the scorer's argmax partition re-expressed in the channels the frozen modules define, counting only the seed.
 - **STATUS: design direction, NOT yet MEASURED-to-pay.** Empirical gate = the collateral-coupling/FiLM channel-space
