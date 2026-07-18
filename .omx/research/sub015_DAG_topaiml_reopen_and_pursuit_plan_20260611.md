@@ -19399,3 +19399,47 @@ SOL ultra review arm relaunched on the path and running. Ledger classes daemon_5
 RESOLVED (the daemon_5min erraticism was the reaper's parse_etime octal bug). Memory:
 reaper_tty_kills_were_the_harness_kill_class_20260717. OPERATOR-OWED: fleet-repo reaper patch (octal
 10#$m + governed-arm exclusion) — outside this repo's mutation frontier. Pointer 0.19108 UNMOVED (means).
+
+## FEED-dupSoT-0718 (2026-07-18) — APPARATUS: NAME-ANCHORED-SEARCH / duplicate-SoT bug class structurally extincted (naming-independent registry + all-refs content gate)
+- **SIGNAL (operator 2026-07-18, verbatim):** "You searched, but you searched for what you would have
+  named it. You didn't do an exhaustive search." An agent globbed for the v10 spec under its OWN naming
+  convention (`*optimal_cold_start_capstone*`), missed the canonical
+  `SPEC_v10_capstone_cold_start_seeded_20260717.md` on the UNMERGED branch
+  `claude/p0_521_spec_v10_capstone_20260717`, and created a duplicate (deleted). Root cause is NOT
+  "searched main not branches" — it is NAME-ANCHORED SEARCH: a filename glob from the searcher's own
+  convention is structurally blind to same-content docs under other names / on other refs. Memory:
+  `vehicle_naming_v9c_warm_lineage_v10_reserved_capstone_20260718.md`. **Two prior sisters, same
+  orphan-generator family:** the config-orphan confound
+  ([[config_orphan_confound_permanent_fix_lever_registry_20260706]] — a designed lever invisible unless
+  someone remembers its flag) and velocity-driven orphaning
+  ([[velocity_driven_orphaning_the_deepest_signal_loss_meta_bug]] — signal lost because the apparatus,
+  not the human, must hold the memory). All three cured the same way: a machine-held,
+  naming/memory-independent index the apparatus consults BEFORE acting.
+- **DIAGNOSTIC (measured while building):** the fix path itself surfaced 4 real defects caught by
+  round-1 self-review + tests running against the LIVE tree: (1) `.lstrip("./")` char-class mangling
+  (`.omx/…`→`omx/…`) produced 4 registry false positives; (2) `git grep -E 'spec[_\-. ]?v…'` is an
+  invalid POSIX-ERE bracket range — rc=128 swallowed → the content leg was silently INERT (the exact
+  fake-fix class the task forbids; now replaced by an exhaustive `git cat-file --batch` first-heading
+  scan of every unique md blob on every ref — no grep pattern to get wrong, 1.2s live); (3) md-comment
+  `-->` tails defeated placeholder-waiver rejection; (4) heading identity needed SPEC↔vehicle-token
+  ADJACENCY (measured false positive: `# v7.5 OPTIMAL-FORM ACTUATION SPEC`, a companion checklist).
+- **RESPONSE (landed, $0 apparatus):** (a) `tools/canonical_doc_registry.py` +
+  `.omx/state/canonical_doc_registry.json` — naming-INDEPENDENT registry of canonical SoT docs (9
+  entries, every path+branch VERIFIED via git cat-file/fs at registration: SPEC_v10 + naming charter on
+  their branch; SPEC_v75/v7.5.2/v8/v8.1, operating manual, frontier pointer (untracked live-state), the
+  DAG on main). `lookup(concept)` matches by concept tags AND a real `git grep --all-match` of concept
+  tokens across ALL refs (`git for-each-ref refs/heads refs/remotes`, deduped by commit) + the working
+  tree incl. untracked; `check_before_create(proposal)` is the pre-create dedup (CLI `check` exits 2 on
+  match). (b) Preflight gate `check_no_duplicate_canonical_spec_across_refs`
+  (`src/tac/confound_gates.py`, wired into `preflight_all` via CONFOUND_GATES, WARN-ONLY per strict-flip
+  atomicity; live count MEASURED 0 at 1.2s): refuses a spec-shaped doc whose vehicle already has a spec
+  at a different path on ANY ref (name leg + exhaustive first-heading content-family leg) or in the
+  registry; `# DUPLICATE_SOT_OK:<rationale>` waiver, placeholder rejected. (c) 24 new behavior tests
+  (`src/tac/tests/test_canonical_doc_registry_and_dup_sot_gate.py`) incl. the headline behaviors: lookup
+  finds SPEC_v10 from "cold start seeded capstone" (words ≠ filename), content search finds a doc on an
+  unmerged branch whose filename shares no query token, the gate catches a cross-branch duplicate AND a
+  duplicate whose filename never says SPEC; plus fix-forward registration of the two 2026-07-17
+  sweep gates in `test_confound_gates.py` (pre-existing failures, bounds MEASURED 0). 167/167 green.
+- **Triality disposition:** apparatus — DSL leg N/A-BY-TYPE (no training lever; the registry is a doc-SoT
+  index, deliberately NOT a parallel lever registry); equations leg N/A (no measured law; process
+  discipline). This FEED = the DAG leg. Pointer 0.19108 UNMOVED (apparatus).
