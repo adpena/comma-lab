@@ -64,12 +64,23 @@ EQUATION_ID = "witness_realization_lsb_regime_v1"
 AXIS = "[macOS-CPU advisory] frozen CPU-torch fp32; real live EMA checkpoint"
 MEMO = ".omx/research/factorized_costate_organ_upgrades_20260717.md"
 
-#: MEASURED 2026-07-17 (live run, rolling EMA ep900; 24 stride-25 pairs; 125 VJP px).
+#: MEASURED 2026-07-17 (live run, rolling EMA ep900; 24 stride-25 pairs).
+#: aggregate at the 125-px sample (first pass); the 305-px pass reads 0.4346 (both MIXED).
 MEASURED_SUB_LSB_FRAC_MASS_WEIGHTED_EP900 = 0.3617450991512582
 MEASURED_SUB_LSB_FRAC_UNWEIGHTED_EP900 = 0.368
 MEASURED_PER_PAIR_SUB_LSB_EP900 = {
     "Road->Lane": 0.184, "Lane->Road": 0.517, "Road->Undrivable": 0.600,
     "Movable->Road": 0.143, "Undrivable->Road": 1.000,
+}
+#: MEASURED per-class (GT class = under-served) 2026-07-17, 305 VJP px pass — the
+#: decision-critical split (operator addition). Lane MIXED (majority gradient-limited /
+#: recoverable); Movable realization-limited (unborn-island representation gap).
+MEASURED_PER_CLASS_SUB_LSB_EP900 = {
+    "Road": {"sub_lsb": 0.466, "regime": "mixed", "flips": 7226},
+    "Lane": {"sub_lsb": 0.281, "regime": "mixed", "flips": 5807},
+    "Undrivable": {"sub_lsb": 0.647, "regime": "realization_limited", "flips": 2401},
+    "Movable": {"sub_lsb": 0.533, "regime": "realization_limited", "flips": 1765},
+    "MyCar": {"sub_lsb": 0.413, "regime": "mixed", "flips": 895},
 }
 
 
@@ -107,6 +118,11 @@ def build_witness_realization_lsb_regime_v1() -> CanonicalEquation:
                 "terminal_solve_admissible": False,
                 "d_seg_sample": 0.003834618462456597,
                 "per_pair_sub_lsb": dict(MEASURED_PER_PAIR_SUB_LSB_EP900),
+                "per_class_sub_lsb_305px": {k: v["sub_lsb"]
+                                            for k, v in MEASURED_PER_CLASS_SUB_LSB_EP900.items()},
+                "per_class_regime_305px": {k: v["regime"]
+                                           for k, v in MEASURED_PER_CLASS_SUB_LSB_EP900.items()},
+                "decision_number_lane_realization_limited_frac": 0.281,
                 "road_lane_a_max_med_lsb": 1.599,
             },
             residual=0.0,
@@ -186,6 +202,7 @@ def populate_witness_realization_lsb_regime_equation(
 
 __all__ = [
     "EQUATION_ID",
+    "MEASURED_PER_CLASS_SUB_LSB_EP900",
     "MEASURED_PER_PAIR_SUB_LSB_EP900",
     "MEASURED_SUB_LSB_FRAC_MASS_WEIGHTED_EP900",
     "MEASURED_SUB_LSB_FRAC_UNWEIGHTED_EP900",

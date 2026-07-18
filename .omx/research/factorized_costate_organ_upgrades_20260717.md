@@ -8,7 +8,23 @@ Axis of every number here: `[macOS-CPU advisory] NON-PROMOTABLE`, `score_claim=f
 Live run touched: `experiments/results/levelset_n600_witness_20260717T113932Z/` — READ-ONLY
 (only npz/log reads; all writes land in `.omx/state` / `.omx/research`).
 
-## What landed (3 modules + 1 tool + digest wiring + 2 canonical equations + 59 tests)
+## Operator additions (2026-07-17) folded in
+
+* **ADDITION 1 — per-class split**: module B now emits the realization-vs-gradient
+  classification + sub-LSB fraction SEPARATELY per GT class (5-class table below); the digest
+  regime line surfaces the Lane/Movable cells. THE decision number (Lane sub-LSB 0.281 → MIXED
+  → majority-recoverable) is in the measured table below.
+* **ADDITION 2(a) — standing telemetry NOW**: the per-class split lands as a standing row in
+  `.omx/state/witness_realization_regime.jsonl` each time B runs and is surfaced in the costate
+  digest (read-only, no manual pull; works on the sacred live run). Run-dir artifacts are NOT
+  written (the run dir is SACRED); `.omx/state` is the durable queryable surface.
+* **ADDITION 2(b) — native verdict field (QUEUED, NOT applied)**: the trainer edit carrying
+  `realization_regime_by_class` alongside `d_seg_by_class` in every verdict row is specified,
+  ready-to-apply, in `.omx/research/QUEUED_EDIT_native_verdict_perclass_realization_regime_20260717.md`.
+  It is score-neutral observability (defaults ON, cadence-gated). NOT applied because the
+  trainer file is imported by the LIVE run — **flagged for merge at the post-c2 boundary.**
+
+## What landed (3 modules + 1 tool + digest wiring + 2 canonical equations + 62 tests)
 
 * **Shared core** `src/tac/witness_control/factorized_features.py` — the EXACT shared resize
   operator A as a closed-form tap table (torch-bilinear align_corners=False convention;
@@ -48,18 +64,32 @@ Live run touched: `experiments/results/levelset_n600_witness_20260717T113932Z/` 
 ## MEASURED rows (2026-07-17/18, live c2 run)
 
 **B — the operator's live "run ~16h to ep1400 vs cut to terminal solve" input** (rolling EMA
-shadow `__epoch=900`, 24 stride-25 pairs, 125 stratified VJP pixels over 18,094 flips,
-sample d_seg 0.003835; deterministic — two independent runs bit-identical):
+shadow `__epoch=900`, 24 stride-25 pairs, 305 stratified VJP pixels over 18,094 flips,
+sample d_seg 0.003835; deterministic — bit-identical across independent runs):
 
-* `sub_lsb_frac_mass_weighted = 0.3617` (unweighted 0.368) → **regime MIXED**;
-  `terminal_solve_admissible = False` at the majority convention. ~64% of the remaining
-  flip mass still has ≥LSB min-norm amplitude paths → **more training can still realize the
-  majority of what remains; the terminal SOLVE is not yet the forced move.**
-* Per-stratum structure (the actionable decomposition): erased lanes `Road->Lane` (largest
-  stratum, 5,780/18,094) are amplitude-OPEN (sub-LSB 0.18, a_max med 1.60 LSB); spurious
-  lanes `Lane->Road` 0.52 sub-LSB (a_max med 0.41); `Undrivable->Road` 1.00 sub-LSB
-  (a_max med 0.155) — a realization-limited pocket that training will NOT clear; consistent
-  with the flicker/phase line (phase, not amplitude, is the cure there).
+* **AGGREGATE**: `sub_lsb_frac_mass_weighted = 0.4346` → **regime MIXED**;
+  `terminal_solve_admissible = False` at the majority convention. The majority of the
+  remaining flip mass still has ≥LSB min-norm amplitude paths → the terminal SOLVE is not
+  yet the forced move.
+
+* **PER-CLASS split (GT class = the UNDER-SERVED class; operator ADDITION 1 — the number that
+  decides ~16h to ep1400):**
+
+  | GT class | sub-LSB frac | regime | remaining flips | interpretation |
+  |---|---|---|---|---|
+  | Road | 0.466 | mixed | 7,226 | (Road is near-solved at 0.66% d_seg; these are its residual edges) |
+  | **Lane** | **0.281** | **MIXED** | **5,807** | **72% GRADIENT-limited → RECOVERABLE by more training; ~16h to ep1400 IS worth it for Lane** |
+  | Undrivable | 0.647 | realization_limited | 2,401 | majority sub-LSB — amplitude training won't clear it |
+  | **Movable** | **0.533** | **realization_limited** | **1,765** | **majority sub-LSB → NOT a dynamics story: the unborn-island REPRESENTATION gap (birth lever, not more epochs)** |
+  | MyCar | 0.413 | mixed | 895 | (MyCar solved at 0.06%; residual) |
+
+  **THE decision number: Lane's realization-limited fraction is 0.281 — Lane (the dominant
+  remaining d_seg, 22.5% within-class) is MAJORITY gradient-limited (72% recoverable).** The
+  ~28% sub-LSB Lane pocket ≈ the irreducible GT-flicker floor (night-wet, degraded markings,
+  low-persistence dashes) the phase line already names. Movable's 0.533 realization-limited
+  reading independently confirms the operator's framing: Movable is a representation/unborn-
+  island gap, NOT amplitude-recoverable — routing to a birth lever, not more training.
+  (Lane was also kicked by the ep726 Muon-start; this VJP is on the ep900 EMA, post-kick.)
 
 **A — measured ranking** (12 stride-50-pair snapshot beside the ep900 verdict; self-calibrated
 ε=0.0593): `lane_edge`/`thin_lane` 4.20e-4 first-order d_seg marginal > `horizon_margin`/
