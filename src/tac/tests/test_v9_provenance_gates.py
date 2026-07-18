@@ -563,7 +563,12 @@ def test_live_v9_f6_receipt_is_reaudited_as_advisory_not_trusted_as_pass_marker(
     assert audit_evidence_authority_claims(claims) == []
 
 
-def test_preflight_all_wires_all_three_v9_gates_warn_only() -> None:
+def test_preflight_all_v9_gate_wiring_post_strict_flip_20260718() -> None:
+    """STRICT-FLIP 2026-07-18 (#332/#351): the two claim-custody gates measured
+    live-count-0 on main and flipped to STRICT; the bijection gate (LawRef/
+    compiler/provenance-custody backfill still 3862 live on main) and the Fourier
+    gate (owed curvelet-through-R n600 A/B) stay WARN-ONLY. This test encodes the
+    exact post-flip wiring so a future accidental flip/unflip is caught."""
     from tac import preflight
 
     tree = ast.parse(inspect.getsource(preflight.preflight_all))
@@ -572,14 +577,17 @@ def test_preflight_all_wires_all_three_v9_gates_warn_only() -> None:
         for node in ast.walk(tree)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
     }
-    expected = {
-        "check_config_flag_provenance_bijection_complete",
+    strict_now = {
         "check_v9_fake_claim_guards",
-        "check_no_fourier_basis_in_witness_representation",
         "check_evidence_authority_claims_are_custodied",
     }
-    assert expected <= calls.keys()
-    assert all(calls[name].get("strict") is False for name in expected)
+    warn_only = {
+        "check_config_flag_provenance_bijection_complete",
+        "check_no_fourier_basis_in_witness_representation",
+    }
+    assert (strict_now | warn_only) <= calls.keys()
+    assert all(calls[name].get("strict") is True for name in strict_now)
+    assert all(calls[name].get("strict") is False for name in warn_only)
 
 
 def test_preflight_public_wrapper_translates_strict_gate_error(monkeypatch) -> None:

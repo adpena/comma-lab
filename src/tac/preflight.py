@@ -6471,10 +6471,19 @@ def preflight_all(
         # structured claim custody.  WARN-ONLY until every live V9 flag has one
         # complete edge chain and all live claim counts are zero; a prior PASS
         # marker is not authority for the flip.
+        # STRICT-FLIP 2026-07-18 (#332/#351, per the Strict-flip atomicity rule):
+        # the two claim-custody gates measured live-count-0 on main and pass
+        # strict without raising, so they flip to STRICT now (a prior PASS marker
+        # is not the authority — this is a fresh live re-measurement: fake-claim
+        # guards 0, evidence-authority custody 0). The bijection gate stays
+        # WARN-ONLY: its ~200-flag LawRef/compiler/provenance-custody backfill is
+        # still 3862 live on main (reproduced-to-0 only on a worktree branch, not
+        # merged) — flipping it strict would refuse every launch. The Fourier gate
+        # stays WARN-ONLY by design pending the owed curvelet-through-R n600 A/B.
         check_config_flag_provenance_bijection_complete(strict=False, verbose=verbose)
-        check_v9_fake_claim_guards(strict=False, verbose=verbose)
+        check_v9_fake_claim_guards(strict=True, verbose=verbose)
         check_no_fourier_basis_in_witness_representation(strict=False, verbose=verbose)
-        check_evidence_authority_claims_are_custodied(strict=False, verbose=verbose)
+        check_evidence_authority_claims_are_custodied(strict=True, verbose=verbose)
 
         # 2026-07-15 Catalog #406 — the DSL compile hash is a load-bearing
         # admission prerequisite at BOTH the launcher and governor.  WARN-ONLY
