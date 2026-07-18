@@ -789,3 +789,27 @@ the CELL/region** (bounded by separatrices, meeting at tie-loci), **temporal = t
   (FiLM/hyperplane at the boundary) · code (seed = MDL of the complex) · render = free pullback. v10's job is to
   hold EVERY lever at this level — never slip a rung to pixel (too low) or frame (too high). Memory
   `[[solve-the-right-problem-is-right-coordinates-at-every-level-kolmogorov]]` §LEVEL.
+
+### §14.9 INTRINSIC COMPLEXITY (design philosophy — operator 2026-07-18, the floor-reality beneath §14.7/14.8)
+§14.7 (channels) and §14.8 (level) are HOW/WHERE we work; §14.9 is WHETHER the floor we hit is real. Every floor in
+this problem is the **INTRINSIC (Kolmogorov) complexity of the object the score sees** — the argmax PARTITION (its
+Morse-Smale cell complex) + the ξ twist — and nothing about any REPRESENTATION (RGB frame, weight blob, pixels) can
+lower it or should raise it. Extrinsic complexity (params/bytes a given decoder happens to spend) is fixable
+overhead; intrinsic is fixed by the video × the frozen scorer.
+- **RATE floor = intrinsic complexity of {partition + ξ} = the Kolmogorov SEED length** (generator free, rule 118).
+  "Count only the seed," "code the MS complex not the weight blob" (§14.7), and "rate floor = intrinsic complexity"
+  are ONE number. Today's archive pays EXTRINSIC overhead above it.
+- **DISTORTION floor = intrinsic irreducible complexity** = the genuinely unresolvable part of the partition (the
+  GT-oracle flicker floor, RE-SCOPED per `[[flicker-floor-not-hard...]]`). d_seg cannot go below the intrinsic
+  noise; every residual flip ABOVE it is a representation failure (wrong level/coordinates, §14.8), NOT a limit.
+- **CAPACITY = match the partition's intrinsic complexity, not the frame's.** The bc20↔bc36 trilemma DISSOLVES: bc20
+  under-capacity vs the *partition's* intrinsic complexity, bc36 over-rate vs it — both argued in extrinsic RGB
+  units. The DOF to fit is the ~8-dim lane manifold + boundary geometry, not RGB's.
+- **THE DIAGNOSTIC (binding on every v10 wall-verdict):** at any wall, FIRST separate **intrinsic (a real floor —
+  respect it)** from **extrinsic (a representation artifact — fixable by §14.7/14.8 right-level/right-coordinates)**.
+  Concrete estimator = the **MDL of the Morse-Smale complex over n600** — that IS the intrinsic-complexity number;
+  compare it to today's weight-blob bytes to size the extrinsic waste. (Folds into the running arm's Part-2 MS-code
+  measurement.)
+- **STATUS: design philosophy, registered as P13 candidate alongside the eightfold/twelve.** Memory
+  `[[intrinsic-complexity-design-philosophy]]` (sister of §14.7/14.8 + `[[projection-unification-and-eight-lenses]]`
+  + `[[train-least-surgical-kolmogorov-projection-realization-doctrine]]`).
