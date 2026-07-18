@@ -47,7 +47,9 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import re
 import socket
+import sys
 import urllib.error
 import urllib.request
 import uuid
@@ -397,6 +399,76 @@ def _anchor_from_serialized(serialized: Mapping[str, Any]) -> AnchorRecord | Non
     )
 
 
+def _checkpoint_maturity_refusal(anchor: AnchorRecord | None) -> str | None:
+    """Refusal reason if this anchor's provenance names a non-``_prod`` VEHICLE checkpoint.
+
+    Per the ``tac.checkpoint_maturity`` convention (operator 2026-07-18): a
+    ``_dev`` (or vehicle-shaped-but-untagged) checkpoint's exact row may be
+    banked + labeled but MUST NOT move the canonical frontier pointer. Scans
+    the anchor's lane_id + source_path + known extra name fields, per PATH
+    SEGMENT, through ``pointer_promotion_verdict``. Legacy pre-convention
+    names (no vehicle token) pass — refusing them would clobber the standing
+    frontier anchors. Returns ``None`` when promotion is allowed.
+    """
+
+    if anchor is None:
+        return None
+    from tac.checkpoint_maturity import pointer_promotion_verdict
+
+    names: list[str] = []
+    if anchor.lane_id:
+        names.append(str(anchor.lane_id))
+    if anchor.source_path:
+        names.append(str(anchor.source_path))
+    for key in ("lane_id", "run_dir", "checkpoint", "checkpoint_path", "bank_dir", "source_run_dir"):
+        value = anchor.extra.get(key)
+        if isinstance(value, str) and value:
+            names.append(value)
+    for name in names:
+        for segment in re.split(r"[\\/]", name):
+            if not segment:
+                continue
+            allowed, reason = pointer_promotion_verdict(segment)
+            if not allowed:
+                return reason
+    return None
+
+
+def _gate_axis_anchor(
+    candidate: AnchorRecord | None,
+    prior: AnchorRecord | None,
+    *,
+    axis_label: str,
+) -> tuple[AnchorRecord | None, dict[str, Any] | None]:
+    """Fail-closed maturity gate for ONE axis anchor.
+
+    Returns ``(anchor_to_use, refusal_record_or_None)``. On refusal the PRIOR
+    pointer anchor is kept (the pointer is untouched for that axis) and a loud
+    stderr message + machine-readable refusal record are emitted — the dev row
+    stays banked/labeled in canonical state but never becomes the pointer.
+    """
+
+    reason = _checkpoint_maturity_refusal(candidate)
+    if reason is None:
+        return candidate, None
+    assert candidate is not None
+    refusal = {
+        "axis": axis_label,
+        "refused_score": float(candidate.score),
+        "refused_archive_sha256": candidate.archive_sha256,
+        "refused_lane_id": candidate.lane_id,
+        "reason": reason,
+        "action": "pointer untouched for this axis (prior anchor kept); "
+        "promote by renaming/re-banking the checkpoint lineage to _prod with operator GO",
+    }
+    print(
+        f"[checkpoint-maturity] REFUSED pointer promotion on {axis_label}: {reason} "
+        f"(score={candidate.score}); pointer untouched — dev rows are banked, never promoted.",
+        file=sys.stderr,
+    )
+    return prior, refusal
+
+
 def refresh_canonical_frontier_from_local_state(
     *,
     repo_root: Path | str = ".",
@@ -436,6 +508,26 @@ def refresh_canonical_frontier_from_local_state(
     if prior is None and write:
         prior = load_canonical_frontier_pointer_lenient(repo_root=repo_root_path)
 
+    # Checkpoint-maturity gate (fail-closed; tac.checkpoint_maturity): a
+    # candidate anchor whose provenance names a _dev / untagged-vehicle
+    # checkpoint NEVER becomes the pointer anchor — the prior anchor is kept
+    # and the refusal is recorded in refresh_provenance.
+    maturity_refusals: list[dict[str, Any]] = []
+    cpu_anchor, cpu_refusal = _gate_axis_anchor(
+        cpu_anchor,
+        prior.our_local_frontier_contest_cpu if prior is not None else None,
+        axis_label="contest_cpu",
+    )
+    if cpu_refusal is not None:
+        maturity_refusals.append(cpu_refusal)
+    cuda_anchor, cuda_refusal = _gate_axis_anchor(
+        cuda_anchor,
+        prior.our_local_frontier_contest_cuda if prior is not None else None,
+        axis_label="contest_cuda",
+    )
+    if cuda_refusal is not None:
+        maturity_refusals.append(cuda_refusal)
+
     upstream_snapshot = None
     upstream_snapshot_at = None
     pr_number = submitted_pr_number_for_current_frontier
@@ -461,6 +553,7 @@ def refresh_canonical_frontier_from_local_state(
             "refresher_pid": os.getpid(),
             "refresher_host": socket.gethostname(),
             "scan_stats": payload.get("scan_stats"),
+            "checkpoint_maturity_refusals": maturity_refusals,
         },
     )
 
@@ -630,6 +723,9 @@ def refresh_canonical_frontier_from_upstream_leaderboard(
             "upstream_fetch_status": fetch_status,
             "upstream_fetch_error": snapshot.get("fetch_error"),
             "scan_stats": pointer.refresh_provenance.get("scan_stats"),
+            "checkpoint_maturity_refusals": pointer.refresh_provenance.get(
+                "checkpoint_maturity_refusals", []
+            ),
         },
     )
 

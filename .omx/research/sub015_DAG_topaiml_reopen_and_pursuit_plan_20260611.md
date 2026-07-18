@@ -19444,3 +19444,24 @@ reaper_tty_kills_were_the_harness_kill_class_20260717. OPERATOR-OWED: fleet-repo
 - **Triality disposition:** apparatus — DSL leg N/A-BY-TYPE (no training lever; the registry is a doc-SoT
   index, deliberately NOT a parallel lever registry); equations leg N/A (no measured law; process
   discipline). This FEED = the DAG leg. Pointer 0.19108 UNMOVED (apparatus).
+## FEED-maturity (2026-07-18) — APPARATUS: `_dev`/`_prod` checkpoint-maturity axis (orthogonal to VEHICLE) + fail-closed pointer-promotion gate [no-triality]
+Operator ask 2026-07-18: "accept dev and prod checkpoints so we can keep iterating on v9c3 and keep them
+if/when we run v10 — just naming conventions, underscore dev or prod." BUILT (minimal: convention + parse
+helper + TWO respect-points, no registry/state-file): `src/tac/checkpoint_maturity.py` —
+`parse_checkpoint_maturity` → (vehicle, maturity∈{dev,prod,unknown}); `is_pointer_promotable` STRICT (True
+ONLY explicit `_prod`); `pointer_promotion_verdict` (dev REFUSED · vehicle-untagged REFUSED safe-side ·
+legacy non-vehicle names GRANDFATHERED so the standing frontier anchors are not clobbered);
+`bank_dir_name` (`<vehicle>_<dev|prod>_<label>_<date>`) + `assert_bank_dir_writable` (prod bank dirs
+IMMUTABLE — dev never clobbers prod; distinct names ⇒ coexist). Respect-point B is STRUCTURAL:
+`tac.canonical_frontier_pointer.refresh_canonical_frontier_from_local_state` gates every candidate anchor
+(`_gate_axis_anchor` — on refusal the PRIOR anchor is kept, loud stderr, refusal recorded in
+`refresh_provenance.checkpoint_maturity_refusals`); covers ALL production write routes (CLI local,
+CLI --update-upstream, dispatch auto-refresh — each passes/loads a prior for fallback). MEASURED: 28/28
+tests green (worktree PYTHONPATH, worktree modules confirmed); preview refresh on real repo state →
+refusals=[] and anchors unchanged (CPU 0.18804 sha 196acd18… / CUDA 0.20533) — gate inert on standing
+state, fires only on `_dev`/vehicle-untagged provenance. Live run `levelset_n600_witness_20260717T113932Z`
+(v9c2) NOT renamed — implicitly dev by the untagged-vehicle default going forward. SPEC_v10 §14 fold text
+in `.omx/research/handoff_spec_v10_sec14_checkpoint_maturity_fold_20260718.md` (branch
+`claude/p0_521_spec_v10_capstone_20260717` is checked out in another worktree — fold owed to main).
+Triality: DSL leg N/A-BY-TYPE (naming convention, not a score-lever); equations leg N/A (no measured law).
+Memory: `checkpoint_maturity_dev_prod_axis_orthogonal_to_vehicle_20260718`. Pointer 0.19108 UNMOVED (apparatus).
