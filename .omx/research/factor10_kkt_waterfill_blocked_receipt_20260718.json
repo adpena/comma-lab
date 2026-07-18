@@ -1,0 +1,185 @@
+{
+  "schema": "factor10_kkt_waterfill.blocked_receipt.v1",
+  "observed_utc": "2026-07-18T12:12:20Z",
+  "task_id": "task536_kkt_three_axis_waterfill_20260718",
+  "lane_id": "pool_channel_rd_harness_20260718",
+  "authority": {
+    "measurement_axis": "no_scientific_measurement",
+    "score_claim": false,
+    "promotable": false,
+    "launch_performed": false,
+    "cost_usd": 0,
+    "verdict_scope": "IMPLEMENTATION_CUSTODY_AND_GOVERNED_EXECUTION_CONTRACT",
+    "main_landing_review_required": true
+  },
+  "source_custody": {
+    "harness": {
+      "path": "tools/pool_channel_jacobian_rd_harness.py",
+      "sha256": "82251f79b9ffde2b83d69b14fd939506ed23eecf3d74b6d937d6fb38db8e0fa7"
+    },
+    "defensive_bank_ema": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+      "bytes": 460448,
+      "sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+      "read_only": true
+    },
+    "gt_n600": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "bytes": 5078017610,
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "read_only": true
+    },
+    "gt_n96": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n96.npz",
+      "bytes": 812484058,
+      "sha256": "6aad6600d93a5c25e94207ee411d3b4daf93136b8ea4235b6f7b9d96f04ab104",
+      "read_only": true
+    },
+    "c2_stop_ledger": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/STOP_LEDGER_20260718.md",
+      "bytes": 783,
+      "sha256": "2cb06e8d68321dea5ba7851efbd9048f52f35f7f61c44ab6b02dc0a80597d754",
+      "reported_stop_epoch": 1100,
+      "read_only": true
+    },
+    "c2_resume_state": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_resume_state.npz",
+      "bytes": 1555952,
+      "sha256": "f94347356f7da39972a3f2596846e2713a9f96d9b2274fa803664f43e6e37bf8",
+      "read_only": true
+    },
+    "c2_process_probe": {
+      "pid_from_stop_ledger": 13780,
+      "observed_utc": "2026-07-18T12:26:15Z",
+      "kill_zero_command": "kill -0 13780",
+      "kill_zero_exit_code": 1,
+      "kill_zero_output": "zsh:kill:1: kill 13780 failed: no such process",
+      "lsof_cwd_command": "lsof -a -p 13780 -d cwd",
+      "lsof_cwd_exit_code": 1,
+      "lsof_cwd_output": "",
+      "result": "MEASURED_PID_NOT_ALIVE"
+    },
+    "frozen_segnet_weights_sha256_expected_by_harness": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "governor_preflight": {
+    "command": "/Users/adpena/Projects/pact/.venv/bin/python tools/system_memory_governor.py --admit --projected-gib 25",
+    "exit_code": 0,
+    "status": "MEASURED_ADMIT",
+    "projected_new_gib": 25.0,
+    "system_used_gib": 26.346,
+    "projected_system_used_gib": 51.346,
+    "adaptive_ceiling_gib": 108.468,
+    "headroom_after_gib": 57.122,
+    "memory_accounting_fail_safe": false,
+    "note": "Admission is necessary but not sufficient; no process was launched."
+  },
+  "lane_claim_attempt": {
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "instance_job_id": "pool_channel_rd_n600_measure_20260718T1210Z",
+    "active_row_sha256": "21f422166146446ceb6fe395a3ee6a0d088f4d5148379804eba82f9781a7b5a3",
+    "terminal_row_sha256": "5202d00704dba4935b6bad58234b8017336fc271198ae2521ac04551e7ca3182",
+    "terminal_status": "refused_main_boundary_and_component_hooks",
+    "active_after_terminal_row": false,
+    "note": "This is branch-local coordination history. It is not falsely presented as the canonical MAIN claim required by the harness."
+  },
+  "measure_preflight_attempt": {
+    "observed_utc": "2026-07-18T12:26:32Z",
+    "cwd": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_kkt_waterfill_20260718_20260718T115607Z",
+    "command": "/Users/adpena/Projects/pact/.venv/bin/python tools/pool_channel_jacobian_rd_harness.py measure --operator-go --output-dir experiments/results/pool_channel_rd_n600_20260718T1210Z --pair-count 600 --segnet-batch-size 32",
+    "exit_code": 2,
+    "status": "REFUSED",
+    "blocker": "BLOCKED_GOVERNED_CLAIM_RECEIPT_REQUIRED",
+    "captured_combined_output": "{\"schema\": \"pool_channel_jacobian_rd.v1\", \"status\": \"REFUSED\", \"blocker\": \"BLOCKED_GOVERNED_CLAIM_RECEIPT_REQUIRED\"}\n",
+    "resolved_output_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_kkt_waterfill_20260718_20260718T115607Z/experiments/results/pool_channel_rd_n600_20260718T1210Z",
+    "output_absence_probe_command": "test -e /Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_kkt_waterfill_20260718_20260718T115607Z/experiments/results/pool_channel_rd_n600_20260718T1210Z",
+    "output_absence_probe_observed_utc": "2026-07-18T12:28:41Z",
+    "output_absence_probe_exit_code": 1,
+    "output_created": false,
+    "scorer_forward_executed": false,
+    "scorer_forward_classification": "DERIVED_FROM_SOURCE_REFUSAL_PRECEDES_SCORER_LOAD",
+    "source_order_evidence": "governed receipt refusal at harness lines 2203-2206 precedes scorer load/forward setup at lines 2275 and 2283 for harness SHA above"
+  },
+  "blocking_findings": [
+    {
+      "id": "CANONICAL_AUTHORITY_OUTSIDE_DELEGATED_WRITE_SCOPE",
+      "classification": "DERIVED_FROM_SOURCE_AND_DELEGATION_AUTHORITY",
+      "verdict_scope": "GOVERNED_EXECUTION_INSTANCE",
+      "detail": "The harness resolves the canonical data root to /Users/adpena/Projects/pact and requires a claim ledger there plus operator authorization under that root. The delegated worktree contract forbids touching MAIN. A shadow worktree root would not be canonical and was not fabricated."
+    },
+    {
+      "id": "EXACT_PATH_AND_RESIZE_INTERVENTIONS_ABSENT",
+      "classification": "DERIVED_FROM_SOURCE",
+      "verdict_scope": "CURRENT_HARNESS_FORMULATION",
+      "detail": "Even after a valid authority wrapper, measure marks path_split_status=BLOCKED_EXACT_SKIP_DEEP_HOOK and resize_split_status=BLOCKED_FULL_ORTHOGONAL_RANGE_KERNEL_INTERVENTION, sets finding_eligible=false, and unconditionally refuses after full-path geometry."
+    },
+    {
+      "id": "GOVERNED_RESUME_LEASE_DEADLOCK",
+      "classification": "DERIVED_FROM_SOURCE",
+      "verdict_scope": "CURRENT_HARNESS_RESUME_CONTRACT",
+      "detail": "The predecessor receipt expires after one hour, while the immutable run_contract embeds the claim-receipt path and SHA. Refreshing the lease changes that SHA; retaining it fails freshness. Thus a long n600 run cannot satisfy both renewable execution authority and byte-identical resume custody."
+    },
+    {
+      "id": "NO_THREE_AXIS_BYTE_CLOSED_CURVES",
+      "classification": "MEASURED_ABSENCE_AFTER_FAIL_CLOSED_PREFLIGHT",
+      "verdict_scope": "TASK_536_OPERATING_POINT",
+      "detail": "No Seg, Pose, or counted-rate R-D points were produced on one receiver-closed artifact, so neither marginal equality nor an implied minimum score is identifiable."
+    },
+    {
+      "id": "NO_POSE_OR_KKT_CONSUMER_IN_HARNESS",
+      "classification": "DERIVED_FROM_SOURCE",
+      "verdict_scope": "CURRENT_HARNESS_FORMULATION",
+      "detail": "The real measurement chain imports SegNet only. admit-rd is explicitly d_seg-component authority, no PoseNet marginal is measured, no candidate archive generator exists, and no three-axis KKT solver is implemented."
+    },
+    {
+      "id": "TERMINAL_CLAIM_EXPORT_TAXONOMY_DRIFT",
+      "classification": "MEASURED_HELPER_INCONSISTENCY",
+      "verdict_scope": "ACTIVE_CLAIM_EXPORT_HELPER",
+      "detail": "claim_lane_dispatch treats the newest refused_* row as terminal, but export_active_lane_claim_json recognizes only the literal refused_dispatch token and can export refused_main_boundary_and_component_hooks as active. That export is non-authorizing and was not used."
+    }
+  ],
+  "named_confound_hunt": {
+    "question": "Is G_act cross-pixel collateral Gram or only the local final head?",
+    "source_level_result": "The harness continuous sub-bin formulation uses stacked-spatial full render/R/frozen-SegNet rows and explicitly rejects local-head substitution.",
+    "deployable_lattice_positive_control": "The byte-closed plus/minus one-bin surface records rendered changes but does not run those lattice variants through SegNet logits; deployable byte-closed G_act therefore remains unmeasured.",
+    "empirical_positive_control_status": "BLOCKED_NOT_EXECUTED",
+    "finding_eligible": false,
+    "verdict_scope": "FORMULATION_INSPECTION_ONLY"
+  },
+  "non_additivity": {
+    "required_global_geometry": "sum_i trace(K_i^2)",
+    "forbidden_global_geometry": "trace((sum_i K_i)^2)",
+    "pools": [
+      "A_road_lane_edge_near",
+      "B_saddle",
+      "C_remainder"
+    ],
+    "pool_rule": "exclusive_saddle_first_never_sum_isolated_ceilings"
+  },
+  "kkt_candidate": {
+    "objective": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "exact_discrete_move_rule": "for every feasible receiver-closed archive move m, delta_S(m)=100*delta_d_seg+delta_sqrt(10*d_pose)+(25/37545489)*delta_B; admit a move only if delta_S(m)<0, and a discrete local optimum has delta_S(m)>=0 for every feasible neighboring move",
+    "general_active_lever_continuous_relaxation": "-[100*d(d_seg)/d(b_j) + (5/sqrt(10*d_pose))*d(d_pose)/d(b_j)] = (25/37545489)*d(B)/d(b_j)",
+    "convexified_subgradient_condition": "at an active interior point, zero belongs to the subgradient of the relaxed distortion-score term plus (25/37545489) times the subgradient of B; equivalently the rate price lies between the negative one-sided distortion-score slopes",
+    "inactive_lower_bound_condition": "in the continuous relaxation, for b_j at its lower bound the forward derivative d(S)/d(b_j) is greater than or equal to zero",
+    "saturated_upper_bound_condition": "in the continuous relaxation, for b_j at its upper bound the backward derivative d(S)/d(b_j) is less than or equal to zero",
+    "separable_axis_special_case": "if d(d_pose)/d(b_seg)=0, d(d_seg)/d(b_pose)=0, and d(B)/d(b_seg)=d(B)/d(b_pose)=1, then -100*d(d_seg)/d(b_seg) = -(5/sqrt(10*d_pose))*d(d_pose)/d(b_pose) = 25/37545489",
+    "calculus_provenance": "DERIVED_CONTINUOUS_RELAXATION_FROM_SCORE_OBJECTIVE_NOT_EXACT_DISCRETE_AUTHORITY",
+    "separable_applicability": "ASSUMED_AWAITING_BYTE_CLOSED_CURVE_VERIFICATION",
+    "boundary_condition": "d_seg>0 and d_pose>0; the raw-d_pose score marginal diverges as d_pose approaches zero",
+    "status": "UNSOLVED_MISSING_BYTE_CLOSED_CURVES",
+    "operating_point": null,
+    "implied_min_score": null,
+    "implied_min_score_vs_0_19108": null
+  },
+  "rd_curves": [],
+  "scientific_cells_expected": 48,
+  "scientific_cells_measured": 0,
+  "pointer": {
+    "current_contest_cpu_snapshot_score": 0.1880443979880752,
+    "current_contest_cpu_snapshot_archive_sha256": "196acd18e4ca10a3ab0d826436aa46014a44cba8a55eb4abf9931876cc7e98b5",
+    "canonical_pointer_snapshot_sha256": "baae2644d135dd800a729d589c674dcb3bb8d15c50d05d8ead484052da7a101b",
+    "prompt_reference_score": 0.19108,
+    "pointer_delta": 0,
+    "pointer_mutated": false
+  }
+}

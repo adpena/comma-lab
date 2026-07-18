@@ -1,0 +1,57 @@
+{
+  "schema": "factor10_kkt_waterfill.fresh_eyes_review.v1",
+  "completed_utc": "2026-07-18T12:41:23Z",
+  "scope": "BLOCKER_RECEIPT_AND_CANONICAL_STATE_LANDING_ONLY",
+  "scientific_apparatus_l3_claim": false,
+  "lane_maturity_gate_advanced": false,
+  "counter_reset_events": [
+    {
+      "reviewer": "/root/inspect_factor10_state",
+      "verdict": "FINDINGS",
+      "fixes": [
+        "general joint-lever KKT separated from the separable-axis special case",
+        "zero-scorer work relabeled derived and PID/output custody made explicit",
+        "canonical-root conflict relabeled derived from source and delegation authority"
+      ]
+    },
+    {
+      "reviewer": "/root/inspect_factor10_state",
+      "verdict": "FINDINGS",
+      "fixes": [
+        "exact receiver-closed finite-move score rule made authority",
+        "differential KKT relabeled continuous or convexified relaxation",
+        "lower-bound, upper-bound, and subgradient conditions added"
+      ]
+    }
+  ],
+  "clean_sequence_after_last_reset": [
+    {
+      "pass": 1,
+      "reviewer": "/root/inspect_factor10_harness",
+      "verdict": "CLEAN"
+    },
+    {
+      "pass": 2,
+      "reviewer": "/root/inspect_factor10_state",
+      "verdict": "CLEAN"
+    },
+    {
+      "pass": 3,
+      "reviewer": "/root/inspect_factor10_state/math_check",
+      "verdict": "CLEAN"
+    }
+  ],
+  "reviewed_sha256": {
+    ".omx/research/canonical_equation_candidates_factor10_kkt_waterfill_20260718.jsonl": "990dd2b276c354491ce5d959647ca034b62bdd9a874de59ac42dffb2c31fb565",
+    ".omx/research/codex_premise_falsification_factor10_kkt_waterfill_20260718T121220Z_codex.md": "ff7203b5389f7a158baa03eb5fde88f3404a5e48d7400c8d8d70eba1bafbdefc",
+    ".omx/research/factor10_kkt_waterfill_DAG_FEED_20260718.md": "e6582afd9ab62098b6dbf7b5fd13ef5dc97a192d0aef2d2ee47f442900f62d4e",
+    ".omx/research/factor10_kkt_waterfill_blocked_receipt_20260718.json": "87da1331a56886548971823fbaded37567dfa123e43d63e23f12ee65dc786a42",
+    ".omx/research/inverse_solve_completeness_matrix_20260718.md": "d61aa13d1b908bbebcb4911387b0d90e312892412fed22f27f3bf358dc200eed",
+    ".omx/state/active_lane_dispatch_claims.md": "e2fcb02af9c476124386d7e29258e1a27f638bcfc202fd0f9d5b8947ef9ef7c2",
+    ".omx/state/canonical_task_status.jsonl": "426093feb1c7cccdc6f46ff455d2b43cb66774bcaa8becf8191861c32467bdb4",
+    ".omx/state/lane_maturity_audit.log": "f30407f7b96b4e48ad4da85e54a306fb73724e1ea2cf34c91c4bbc1bc071f31e",
+    ".omx/state/lane_registry.json": "62ae8a37ca1a403966d3bdf9af649cabe7f0aa0d6492404dd47923c4b6f3eab4"
+  },
+  "result": "THREE_CLEAN_PASSES_ON_FROZEN_BLOCKER_LANDING",
+  "note": "This review certifies the honesty and internal consistency of the blocked landing. It does not certify the missing 48-cell apparatus, a measured Gram, an R-D curve, a KKT solution, or a score result."
+}
