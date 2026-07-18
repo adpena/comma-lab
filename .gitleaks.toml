@@ -25,3 +25,11 @@ paths = [
     '''src/tac/tests/test_auto_push_main\.py''',
     '''\.gitleaks\.toml''',
 ]
+# Surgical secret-value exemptions: benign prose tokens that the generic-api-key
+# rule mis-matches as slash-delimited keys. These exempt ONLY the exact matched
+# string — every file stays fully scanned by the fleet-IP rule and all others.
+regexes = [
+    # research-memo prose ("no optimizer/RNG/live/EMA state") — not a credential;
+    # held the 2026-07-18 campaign-review push as generic-api-key:236 (verified benign).
+    '''optimizer/RNG/live/EMA''',
+]
