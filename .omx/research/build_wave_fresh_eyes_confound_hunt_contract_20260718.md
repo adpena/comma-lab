@@ -40,3 +40,28 @@ fractal-optimal (P1-P12). No arm's SELF-review is the verdict.
 Each wave drives the confound count DOWN; a residual confound that survives fresh-eyes + positive-control +
 recursive passes is either fixed (two-landing) or named as a tracked open confound (never silently trusted).
 The apparatus points its skepticism at its own measuring instrument, recursively, toward zero.
+
+## NEGATIVE / SO-SO RESULTS DISCIPLINE (operator 2026-07-18: "be skeptical, audit, ALLERGIC to binary interpretations or killing whole families because of naive/toy — you've STILL been doing that")
+**RECURRENCE THIS SESSION (owned, not deflected): I promoted instance-results to terminal/family verdicts 3×
+— (1) "ep725 deploy-artifact" → "run not resumable" (corrected: runs DO resume); (2) "R1" → "pose SOLVED/done"
+(corrected: R1 is an arbitrary point, pose is the LARGEST lever); (3) strawman phase probe → "post-hoc phase
+DEAD" §14.6 (corrected: formulation-scoped, efficacy UNTESTED). The apparatus (verdict-scope ladder,
+forbidden-premature-kill, #498 naive→binary→NO-GO) EXISTS; the failure is not APPLYING it first.**
+
+**BINDING on EVERY returning arm result — the MANDATORY first move on any negative/so-so, BEFORE any verdict:**
+1. **VERDICT-SCOPE LADDER FIRST** (`[[verdict-scope-ladder-formulation-level-one-failure-not-family-dead]]`):
+   a negative falsifies the INSTANCE < FORMULATION < FAMILY < PARADIGM — default to the NARROWEST scope
+   (instance/formulation). A naive/toy/one-config negative NEVER kills a family or paradigm. Filename/verdict
+   uses the scoped level; NO "DEAD/KILL/NO-GO" on a family without research-exhaustion + council consensus.
+2. **AUDIT THE NEGATIVE ITSELF** — is the result a CONFOUND (naive/toy, wrong-form, wrong-apparatus, surrogate-
+   not-exact, invalid-measuring-state)? Skeptic the negative as hard as a positive. A negative from a toy
+   FALSIFIES THE TOY, not the paradigm.
+3. **ADVERSARIALLY OVERTURN before accepting** (`[[not-pessimistic-first-results-adversarial-deepmath-oss-against-negatives]]`):
+   deep-math + OSS the negative — what config/form/level would make it work? Only accept the negative after a
+   genuine attempt to overturn it fails.
+4. **HYBRID-FORM RE-ASSIGNMENT** (operator 2026-07-18): a form/lever that is "so-so" or "fails" ALONE is likely
+   the WRONG FORM FOR THAT FACTOR, not useless — RE-ASSIGN it to the factor where it is the natural
+   representation (per SPEC §14.11 hybrid-of-forms), do NOT discard it. A form negative ≠ the form is dead;
+   it is placed wrong.
+5. **DEFAULT VERDICT for a one-config/so-so return = DEFERRED-pending-<named-config/form/level>**, not KILLED.
+   Reactivation criteria pinned. The optimal-recursive-fractal target is reached by re-forming, not by pruning.
