@@ -841,7 +841,11 @@ class TestLiveGapWarmupFollowon:
 
 class TestModule:
     def test_all_gates_registered(self):
-        assert len(cg.CONFOUND_GATES) == 17
+        # 17 -> 20 on 2026-07-18: registers the two 2026-07-17 bug-class-sweep
+        # gates (raw-vm basis + observer-flag exclusion; added to the tuple by
+        # a sibling arm without updating this test — pre-existing failure,
+        # fixed forward here) + the NAME-ANCHORED-SEARCH duplicate-SoT gate.
+        assert len(cg.CONFOUND_GATES) == 20
         names = {fn.__name__ for fn in cg.CONFOUND_GATES}
         assert names == {
             "check_no_spike_guard_defaults_to_deadlock_mode",
@@ -861,6 +865,9 @@ class TestModule:
             "check_witness_trainers_emit_partial_freeze_alarm",
             "check_witness_verdict_rows_carry_dseg_descent_canary",
             "check_verdict_live_gap_defaults_on_during_ema_warmup",
+            "check_no_raw_virtual_memory_safety_basis",
+            "check_process_guard_excludes_observer_flag_values",
+            "check_no_duplicate_canonical_spec_across_refs",
         }
 
     def test_followon_gates_are_strict_flipped_in_preflight_all(self):
@@ -922,6 +929,13 @@ class TestModule:
             "check_witness_trainers_emit_partial_freeze_alarm": 0,
             "check_witness_verdict_rows_carry_dseg_descent_canary": 0,
             "check_verdict_live_gap_defaults_on_during_ema_warmup": 0,
+            # 2026-07-17 bug-class-sweep gates (bounds backfilled 2026-07-18;
+            # both MEASURED at live-count 0 on the real tree).
+            "check_no_raw_virtual_memory_safety_basis": 0,
+            "check_process_guard_excludes_observer_flag_values": 0,
+            # 2026-07-18 NAME-ANCHORED-SEARCH duplicate-SoT gate (live 0 at
+            # landing: all working-tree specs registered at their own paths).
+            "check_no_duplicate_canonical_spec_across_refs": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

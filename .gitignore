@@ -39,6 +39,7 @@ fleet.local.toml
 !.omx/state/lane_maturity_audit.log
 .omx/state/lane_maturity.lock
 !.omx/state/canonical_task_status.jsonl
+!.omx/state/canonical_doc_registry.json
 !.omx/state/active_lane_dispatch_claims.md
 .omx/state/vastai_active_instances.json
 .omx/state/instance_setup_first_seen.json
@@ -353,6 +354,8 @@ src/tac.egg-info/
 .omx/state/*.json
 .omx/state/**/*.json
 !.omx/state/artifact_classification_allowlist.json
+# 2026-07-18 — committed canonical doc registry (NAME-ANCHORED-SEARCH / duplicate-SoT apparatus)
+!.omx/state/canonical_doc_registry.json
 # Catalog #185 scope extension — committed strict-gate violation-count baseline manifest
 !.omx/state/strict_gate_violation_baseline.json
 .omx/state/*.jsonl
