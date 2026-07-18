@@ -65,3 +65,21 @@ forbidden-premature-kill, #498 naive→binary→NO-GO) EXISTS; the failure is no
    it is placed wrong.
 5. **DEFAULT VERDICT for a one-config/so-so return = DEFERRED-pending-<named-config/form/level>**, not KILLED.
    Reactivation criteria pinned. The optimal-recursive-fractal target is reached by re-forming, not by pruning.
+
+## THE EINSTEIN LAW (operator 2026-07-18, HIGHEST — above the negative-results mechanics; the spirit that makes them real)
+"Negatives are very useful signal, but NEVER assign in and of themselves that a difficult task is INTRACTABLE.
+If Einstein gave up so easily he would never have written down general relativity. Einstein is our inspiration:
+imaginative, in love with reality and its description, utterly obsessed and devoted, with NO CONCEPT of 'no' or
+of something being impossible."
+- **"Intractable" is NEVER a property of the problem — only of the FORM currently chosen.** A negative =
+  "this attempt, in this form, at this level, did not land" — signal to CHANGE form/coordinates/level (SRP +
+  the hybrid-of-forms), NOT a verdict on possibility. My own recurring phrase "intractable to enumerate" is
+  CORRECTED: always "intractable to enumerate IN THE VERTEX FORM; solvable in the tropical/entropic/dual form."
+  Never let "intractable/impossible/dead/wall" stand alone — it must carry "in this form" + the next form to try.
+- **Negatives are FUEL, not brakes.** Each is information about where the current representation fails →
+  imagine the representation in which it doesn't. Devotion = keep re-forming until reality is described, not
+  keep pruning until nothing is left.
+- This is the SPIRIT behind verdict-scope + adversarial-overturn + hybrid-reassign: not procedure for its own
+  sake, but the refusal to accept "no" from a form. Bind on EVERY returning result and EVERY wall this campaign
+  ever hits. Memory `[[not-pessimistic-first-results-adversarial-deepmath-oss-against-negatives]]` (the spirit
+  now named after its patron).
