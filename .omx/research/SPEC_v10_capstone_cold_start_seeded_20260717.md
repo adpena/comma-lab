@@ -813,3 +813,57 @@ overhead; intrinsic is fixed by the video × the frozen scorer.
 - **STATUS: design philosophy, registered as P13 candidate alongside the eightfold/twelve.** Memory
   `[[intrinsic-complexity-design-philosophy]]` (sister of §14.7/14.8 + `[[projection-unification-and-eight-lenses]]`
   + `[[train-least-surgical-kolmogorov-projection-realization-doctrine]]`).
+
+### §14.10 OPPORTUNITY POOLS ARE NON-ADDITIVE + the $0 gate sprint (operator-APPROVED 2026-07-18)
+Two convergent SOL-ultra arms (coupling/FiLM `collateral_coupling_geometry_and_film_flicker_sidecar_20260718`;
+Kolmogorov sweep `solve_the_right_problem_kolmogorov_sweep_20260718`) land two BINDING corrections for v10:
+- **[DERIVED] The remaining d_seg opportunity is STRATIFIED into EXCLUSIVE pools that MUST NEVER be summed.**
+  Measured/derived on the banked bank (summary-rounded, `[macOS-CPU advisory]`): total ceiling `T≈0.3146 S`;
+  Road-Lane edge+near `A≈0.208 S`; saddle `B≈0.002 S`; remainder `C=T−A−B≈0.1046 S`. **Phase, FiLM,
+  head-offset, and local-boundary levers ALL draw from `A`** — writing their ΔS as additive is a means-as-ends
+  inflation of headroom. Every v10 lever ΔS is **opportunity-bound-unless-MEASURED**; the SPEC must attribute
+  each lever to its pool and never sum within a pool. (Supersedes any additive lever-stack arithmetic.)
+- **[INFERRED→MEASURE] The FiLM-flicker sidecar (§14.2 form) is the right direction but UNMEASURED.** Current
+  witness FiLM is per-pair spatially-broadcast — NOT implemented as frozen-head channel control, and no
+  isomorphism / collateral-free property is established (§14.7 stays UNMEASURED). The right form = a
+  class-pair/cell/separatrix-LOCAL residual FiLM + MS-pullback seed, train-side, joint-descent values.
+- **THE $0 GATE SPRINT (the approved next step; v10c1 is gated behind it — NOT v9c3, which stays off):**
+  (1) **FiLM pullback/collateral harness** — build the $0 read-only harness that measures, through the REAL
+  render→A→SegNet uint8 pullback on real n600, whether a coherent channel-space (rank-4, pair-normal-aligned)
+  control hits Road-Lane targets COLLATERAL-FREE, and how much of pool `A` is reachable coherently vs the
+  per-pixel-independent 0. This is the §14.5(b)/§14.7 admission receipt (topology + collateral-locality). The
+  arms' memos carry the exact spec; SACRED c2 read-only, memory-governed/queued.
+  (2) close #529 (compiler real success path), #530 (split InitHeadSolve from fork/resume-only ForkHeadSolve),
+  #531 (T = explicit class/cell-conditioned quotient residual, trained ONLY after G,ξ,seed,solve,projection);
+  (3) birth-before-phase enforcement (§14.2 order law); (4) state-persistence + counted-seed custody + exact
+  byte-close/parse-back. Then — and only then — v10c1 (cold-start) on operator-GO. Memories
+  `[[post-hoc-stored-corrections-dead-joint-descent-required-law]]` + `[[solve-the-right-problem-is-right-coordinates-at-every-level-kolmogorov]]`;
+  tasks #535 (FiLM) + #531 (quotient residual). Pointer 0.19108 UNMOVED (this is the gate, not a score claim).
+- **THE POOLS DECOMPOSE BY CHANNEL AND TO INTRINSIC LEVEL — the same split twice (operator 2026-07-18).**
+  Yes, each pool `A/B/C` breaks down along TWO unified axes, and the FiLM pullback harness's REQUIRED OUTPUT
+  is exactly this decomposition (per pool × per channel-direction → {intrinsic floor, extrinsic ceiling,
+  collateral}):
+  - **BY CHANNEL (mechanism / WHERE the debt lives).** The head is EXACT rank-4 (MEASURED centered singulars
+    (3.128, 2.154, 2.025, 1.796, 0)), so every pool's flips are hyperplane crossings whose normals live in ONE
+    shared 4-dim channel subspace — the ten pair-normals are NOT ten independent controls (ten normals in 4-D
+    ⇒ coupled; this IS the non-additivity's mechanism). Pool `A` (Road-Lane) further splits by feature path:
+    **77% stride-2-skip-legible / 23% deep-trunk** (MEASURED n16). Intersect the resize: the channel component
+    of a flip landing in **ker(A) (22.7% scorer-invisible)** is unreachable; range(A) (~52% blind-complement)
+    carries the visible part. So: project each pool onto the 4 head-singular directions × {skip, deep} ×
+    {range(A), ker(A)} — a small, exact, MEASURABLE channel attribution.
+  - **TO INTRINSIC OPTIMAL COMPLEXITY (ceiling / HOW MUCH is real).** §14.9 applied per pool: pool = intrinsic
+    (Kolmogorov floor — GT-flicker/label-noise band + sub-uint8-LSB realization; IRREDUCIBLE) + extrinsic
+    (representation-fixable; the ONLY harvestable part). Pool `A`'s intrinsic floor is bounded below by the
+    DERIVED Lane realization floor 0.00046–0.00093 (18–36× sub-LSB) and the formulation-scoped GT-flicker
+    0.005318 — so a LARGE fraction of the 0.208 S "pool A" is likely intrinsic (unreachable); only extrinsic_A
+    is the true ceiling. Writing 0.208 S as harvestable is the same over-read as summing levers.
+  - **THE UNIFICATION (why one instrument gives both).** The channel decomposition IS how you MEASURE the
+    intrinsic/extrinsic split: a pool-component is INTRINSIC iff it lands in {ker(A) ∪ sub-uint8-LSB ∪
+    GT-flicker-band}, EXTRINSIC iff reachable by a coherent range(A)-supported, uint8-realizable, rank-4-channel
+    control. The `G_act` channel Gram (render→R→frozen-SegNet) the coupling arm named measures precisely this.
+    Harness OUTPUT contract (upgraded): a table `pool × channel-direction → (intrinsic_floor, extrinsic_ceiling,
+    collateral_cost)`, on real n600, so v10 spends FiLM/head/phase capacity ONLY on the pool×channel cells whose
+    extrinsic ceiling is nonzero AND collateral-free. This is the non-inflated, decomposed opportunity map —
+    the true form of the §14.5(b)/§14.7 admission receipt. Anchors `[[frozen-scorer-exact-factorization]]` +
+    `[[segnet-recursive-fractal-factorization]]` (rank-4 head, skip-77%) + `[[null-subspace-rate-measure]]`
+    (ker(A) 22.7%) + `[[intrinsic-complexity-design-philosophy]]` (the per-pool intrinsic/extrinsic diagnostic).
