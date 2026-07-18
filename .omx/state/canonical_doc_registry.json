@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "purpose": "Naming-INDEPENDENT registry of canonical single-source-of-truth documents. Root cause extincted: NAME-ANCHORED SEARCH (operator 2026-07-18: 'You searched, but you searched for what you would have named it.'). Every canonical_path+branch below was VERIFIED (git cat-file / filesystem) at registration. Consumers: tools/canonical_doc_registry.py (lookup/check_before_create) + tac.confound_gates.check_no_duplicate_canonical_spec_across_refs.",
+  "updated_utc": "2026-07-18T00:00:00Z",
+  "entries": [
+    {
+      "doc_id": "spec_v10_capstone_cold_start_seeded",
+      "concept_tags": [
+        "spec", "v10", "capstone", "cold start", "cold-start", "seeded",
+        "from scratch", "from-scratch", "kolmogorov optimal program",
+        "final capstone vehicle", "witness", "structured init"
+      ],
+      "canonical_path": ".omx/research/SPEC_v10_capstone_cold_start_seeded_20260717.md",
+      "branch": "claude/p0_521_spec_v10_capstone_20260717",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": "v10",
+      "one_line": "THE canonical v10 capstone spec (682+ lines, §0-§14) — cold start on a fully seeded Kolmogorov-optimal program; lives on its UNMERGED branch (why main-scoped search missed it); fold v10 design into IT, never a new file."
+    },
+    {
+      "doc_id": "vehicle_naming_charter_v10",
+      "concept_tags": [
+        "vehicle naming", "naming resolution", "charter", "v10", "v9c",
+        "v9c2", "v9c3", "capstone declaration", "naming lock"
+      ],
+      "canonical_path": ".omx/research/vehicle_naming_resolution_v10_capstone_20260717.md",
+      "branch": "claude/p0_521_spec_v10_capstone_20260717",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": null,
+      "one_line": "Operator naming SoT: v9c2=live warm run, v9c3=ep725 restart (still warm lineage), v10=RESERVED final capstone whose first run is the from-scratch cold start."
+    },
+    {
+      "doc_id": "spec_v75_optimal_single_trunk",
+      "concept_tags": [
+        "spec", "v7.5", "v75", "optimal single trunk", "crucible",
+        "launch vehicle", "operating contract", "sealed constants",
+        "owed-before-launch chain"
+      ],
+      "canonical_path": ".omx/research/t5_crucible/SPEC_v75_optimal_single_trunk_20260708.md",
+      "branch": "main",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": "v7.5",
+      "one_line": "SPEC v7.5 — optimal single trunk crucible vehicle; §8 THE OPERATING CONTRACT binds every agent."
+    },
+    {
+      "doc_id": "spec_v752",
+      "concept_tags": [
+        "spec", "v7.5.2", "v752", "crucible2", "terminal joint pose finish",
+        "conditioning gate", "single trunk descendant"
+      ],
+      "canonical_path": ".omx/research/t5_crucible2/SPEC_v752_20260709.md",
+      "branch": "main",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": "v7.5.2",
+      "one_line": "SPEC v7.5.2 — crucible2 descendant of the v7.5 trunk (terminal joint pose-finish realization)."
+    },
+    {
+      "doc_id": "spec_v8_perclass_decomposition",
+      "concept_tags": [
+        "spec", "v8", "per-class", "perclass", "decomposition",
+        "edge-centric", "carriers", "tropical argmax",
+        "merge diff correct", "chroma-first"
+      ],
+      "canonical_path": ".omx/research/SPEC_v8_perclass_decomposition_20260708.md",
+      "branch": "main",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": "v8",
+      "one_line": "SPEC v8 — edge-centric per-class carriers + scorer-rule reconciliation (v7.5-first gating)."
+    },
+    {
+      "doc_id": "spec_v81",
+      "concept_tags": [
+        "spec", "v8.1", "v81", "crucible3", "per-class decomposition refinement"
+      ],
+      "canonical_path": ".omx/research/t5_crucible3/SPEC_v8.1_20260709.md",
+      "branch": "main",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": "v8.1",
+      "one_line": "SPEC v8.1 — crucible3 refinement of the v8 per-class decomposition line."
+    },
+    {
+      "doc_id": "operating_manual_craft_handoff",
+      "concept_tags": [
+        "operating manual", "craft handoff", "review discipline",
+        "measured derived inferred assumed", "ten mistakes",
+        "senior model handoff"
+      ],
+      "canonical_path": "docs/operating_manual_craft_handoff.md",
+      "branch": "main",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": null,
+      "one_line": "Operator-commissioned craft handoff — binds every agent/subagent; cite in review/build subagent prompts."
+    },
+    {
+      "doc_id": "canonical_frontier_pointer",
+      "concept_tags": [
+        "frontier pointer", "canonical frontier", "exact score",
+        "contest score sot", "pointer-only", "leaderboard"
+      ],
+      "canonical_path": ".omx/state/canonical_frontier_pointer.json",
+      "branch": "main",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": null,
+      "untracked_live_state": true,
+      "one_line": "Machine-readable SoT for our local frontier + public leaderboard scores (pointer-only rule); gitignored LIVE_STATE — exists on the primary checkout, refreshed via tools/refresh_canonical_frontier.py."
+    },
+    {
+      "doc_id": "sub015_dag_work_graph",
+      "concept_tags": [
+        "dag", "work graph", "feed", "trajectory", "sub-0.15",
+        "topaiml reopen", "pursuit plan", "triality dag leg"
+      ],
+      "canonical_path": ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+      "branch": "main",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": null,
+      "one_line": "THE canonical work-graph DAG (triality DAG leg) — every FEED block appends here; never a parallel DAG file."
+    }
+  ]
+}

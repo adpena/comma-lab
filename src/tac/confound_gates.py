@@ -44,6 +44,8 @@ Catalog map:
   2026-07-15 check_witness_trainers_emit_partial_freeze_alarm
   2026-07-15 check_witness_verdict_rows_carry_dseg_descent_canary
   2026-07-15 check_verdict_live_gap_defaults_on_during_ema_warmup
+  2026-07-18 check_no_duplicate_canonical_spec_across_refs (NAME-ANCHORED-SEARCH
+             / duplicate-SoT class; sister tool tools/canonical_doc_registry.py)
 """
 
 from __future__ import annotations
@@ -52,6 +54,7 @@ import ast
 import importlib.util
 import json
 import re
+import subprocess
 import tempfile
 from collections import Counter
 from pathlib import Path
@@ -2467,6 +2470,364 @@ def check_process_guard_excludes_observer_flag_values(
     )
 
 
+# ===========================================================================
+# 2026-07-18 — NAME-ANCHORED-SEARCH / duplicate-SoT gate
+# ===========================================================================
+
+_SPEC_NAME_RE = re.compile(r"(?i)^spec[_\-. ]?v(\d[\d.]*[a-z]?\d*)")
+# Heading identity requires SPEC and the vehicle token to be ADJACENT (either
+# order, separators only) — '# SPEC_v10 — ...' / '# SPEC — v7.5 ...' / '# v8
+# SPEC' claim to BE the vehicle spec; a qualified title like '# v7.5
+# OPTIMAL-FORM ACTUATION SPEC' (a companion checklist, measured false-positive
+# 2026-07-18) does not.
+_SPEC_HEADING_ADJ_RE = re.compile(
+    r"(?i)\bspec\b[\s:_\-—–.]*v(\d[\d.]*[a-z]?\d*)"
+    r"|v(\d[\d.]*[a-z]?\d*)[\s:_\-—–.]*\bspec\b"
+)
+_DUP_SOT_WAIVER = "DUPLICATE_SOT_OK"
+_DUP_SOT_MAX_BLOB_BYTES = 1_000_000  # skip huge md (e.g. the 2.9MB DAG) in blob fetch
+
+
+def _norm_vehicle_key(raw: str) -> str:
+    """Normalize a vehicle token so 'v7.5' == 'v75' == '7.5' -> '75'."""
+    return re.sub(r"[^0-9a-z]", "", raw.lower().lstrip("v"))
+
+
+def _dup_git(args: list[str], cwd: Path) -> str:
+    """git plumbing for the duplicate-SoT gate ('' on error/no-match)."""
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return proc.stdout if proc.returncode == 0 else ""
+
+
+def _dup_waiver_ok(text: str) -> bool:
+    """Markdown-aware ``# DUPLICATE_SOT_OK:<rationale>`` waiver check.
+
+    Docs carry the waiver inside HTML comments (``<!-- # DUPLICATE_SOT_OK:why
+    -->``); strip a trailing ``-->`` before the placeholder-rationale test so
+    the literal ``<rationale>`` placeholder cannot self-waive."""
+    rx = re.compile(r"#[ \t]*" + re.escape(_DUP_SOT_WAIVER) + r":[ \t]*(\S.*)")
+    for m in rx.finditer(text):
+        rationale = m.group(1)
+        if rationale.rstrip().endswith("-->"):
+            rationale = rationale.rstrip()[:-3]
+        if _rationale_ok(rationale):
+            return True
+    return False
+
+
+def _dup_first_heading(blob: str) -> str:
+    for ln in blob.splitlines()[:40]:
+        if ln.lstrip().startswith("#"):
+            return ln
+    return ""
+
+
+def _dup_batch_heading_keys(root: Path, oids: list[str]) -> dict[str, str | None]:
+    """oid -> first-heading vehicle key for many blobs via ONE
+    ``git cat-file --batch`` stream (blobs over the size cap map to None)."""
+    result: dict[str, str | None] = {}
+    if not oids:
+        return result
+    try:
+        proc = subprocess.Popen(
+            ["git", "cat-file", "--batch"],
+            cwd=str(root),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        assert proc.stdin is not None and proc.stdout is not None
+        stdin_payload = ("\n".join(oids) + "\n").encode()
+        out, _ = proc.communicate(input=stdin_payload, timeout=300)
+    except (OSError, subprocess.TimeoutExpired, AssertionError):
+        return dict.fromkeys(oids)
+    pos = 0
+    for oid in oids:
+        nl = out.find(b"\n", pos)
+        if nl < 0:
+            result[oid] = None
+            continue
+        header = out[pos:nl].decode("utf-8", "replace").split()
+        pos = nl + 1
+        if len(header) != 3 or header[1] != "blob":
+            # "<oid> missing" — no trailing content record.
+            result[oid] = None
+            continue
+        try:
+            size = int(header[2])
+        except ValueError:
+            result[oid] = None
+            continue
+        body = out[pos: pos + size]
+        pos += size + 1  # skip the record's trailing newline
+        if size > _DUP_SOT_MAX_BLOB_BYTES:
+            result[oid] = None
+            continue
+        head_text = body[:4096].decode("utf-8", "replace")
+        result[oid] = _dup_heading_vehicle_key(_dup_first_heading(head_text))
+    return result
+
+
+def _dup_heading_vehicle_key(heading: str) -> str | None:
+    """The vehicle key a spec-shaped FIRST HEADING claims, else None.
+
+    A heading is spec-shaped when the literal token 'SPEC' sits ADJACENT to a
+    v<digits> vehicle token (either order) — this is the CONTENT identity test
+    that makes the gate immune to the creator's filename choice."""
+    m = _SPEC_HEADING_ADJ_RE.search(heading)
+    if not m:
+        return None
+    return _norm_vehicle_key(m.group(1) or m.group(2) or "")
+
+
+def check_no_duplicate_canonical_spec_across_refs(
+    *,
+    repo_root: str | Path | None = None,
+    registry_path: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    max_refs: int = 64,
+) -> list[str]:
+    """NAME-ANCHORED-SEARCH / duplicate-SoT gate (2026-07-18) — refuses a repo
+    state that carries a canonical-spec-shaped doc for a vehicle that ALREADY
+    has a same-vehicle spec at a DIFFERENT path on ANY git ref or in the
+    canonical doc registry.
+
+    ROOT CAUSE this extincts (operator 2026-07-18, verbatim): "You searched,
+    but you searched for what you would have named it. You didn't do an
+    exhaustive search." An agent globbed for the v10 spec under its OWN naming
+    convention (``*optimal_cold_start_capstone*``), missed the canonical
+    ``SPEC_v10_capstone_cold_start_seeded_20260717.md`` on the UNMERGED branch
+    ``claude/p0_521_spec_v10_capstone_20260717``, and created a duplicate.
+    Name-anchored, main-scoped search is structurally blind to same-content
+    docs under other names / on other branches. Memory:
+    ``vehicle_naming_v9c_warm_lineage_v10_reserved_capstone_20260718.md``.
+    Sisters: the config-orphan confound
+    (``[[config_orphan_confound_permanent_fix_lever_registry_20260706]]``) +
+    velocity-driven orphaning
+    (``[[velocity_driven_orphaning_the_deepest_signal_loss_meta_bug]]``).
+
+    Mechanics (NOT name-anchored, NOT main-only — by construction):
+      * scope: working-tree ``.omx/research/**/*.md`` whose BASENAME is
+        spec-shaped (``SPEC_v<N>...``) — each extracts a normalized vehicle key
+        (v7.5 == v75);
+      * registry leg: ``.omx/state/canonical_doc_registry.json`` entries with
+        the same vehicle key whose ``canonical_path`` differs -> duplicate;
+      * all-refs NAME leg: ``git for-each-ref refs/heads refs/remotes`` deduped
+        by commit, then ``git ls-tree -r <commit> -- .omx/research`` — a
+        spec-named doc with the same key at a different path -> duplicate;
+      * all-refs CONTENT-FAMILY leg: EVERY md blob under ``.omx/research`` on
+        EVERY ref is inspected (one ``git cat-file --batch`` stream over the
+        unique blob OIDs); a doc whose FIRST HEADING claims the same vehicle
+        (``SPEC`` + ``v<key>``) at a different path -> duplicate REGARDLESS of
+        its filename (this is the leg a name-anchored glob can never perform,
+        and it is exhaustive by construction — no grep pattern to get wrong);
+      * working-tree leg: two on-disk spec docs sharing one vehicle key ->
+        duplicate.
+
+    Waiver: ``# DUPLICATE_SOT_OK:<rationale>`` inside the doc (non-placeholder
+    rationale per Catalog #287). Pre-create dedup lives in
+    ``tools/canonical_doc_registry.py`` (``check_before_create``); this gate is
+    the second landing per "Bugs must be permanently fixed AND self-protected
+    against".
+
+    WARN-ONLY at landing per the Strict-flip atomicity rule (live count 0 at
+    landing — the strict flip is owed once a full-refs sweep re-confirms 0 on
+    the primary checkout)."""
+    root = Path(repo_root or REPO_ROOT)
+    research = root / ".omx" / "research"
+    violations: list[str] = []
+
+    wt_specs: list[tuple[Path, str]] = []
+    if research.is_dir():
+        for p in sorted(research.rglob("*.md")):
+            m = _SPEC_NAME_RE.match(p.name)
+            if m:
+                wt_specs.append((p, _norm_vehicle_key(m.group(1))))
+    if not wt_specs:
+        return _finish(
+            name="check_no_duplicate_canonical_spec_across_refs",
+            tag="duplicate-sot-across-refs",
+            violations=violations,
+            strict=strict,
+            verbose=verbose,
+            ok_detail="no spec-shaped docs in working tree",
+        )
+
+    reg_path = Path(
+        registry_path
+        if registry_path is not None
+        else root / ".omx" / "state" / "canonical_doc_registry.json"
+    )
+    reg_entries: list[dict] = []
+    if reg_path.is_file():
+        try:
+            data = json.loads(reg_path.read_text(encoding="utf-8"))
+            rows = data.get("entries", []) if isinstance(data, dict) else data
+            reg_entries = [r for r in rows if isinstance(r, dict)]
+        except (OSError, ValueError):
+            reg_entries = []
+
+    # ALL refs (heads + remotes), deduped by commit object — the structural
+    # cure for main-scoped search.
+    commits: list[tuple[str, str]] = []
+    seen_sha: set[str] = set()
+    for line in _dup_git(
+        [
+            "for-each-ref",
+            "--format=%(objectname) %(refname:short)",
+            "refs/heads",
+            "refs/remotes",
+        ],
+        root,
+    ).splitlines():
+        parts = line.split(maxsplit=1)
+        if len(parts) == 2 and parts[0] not in seen_sha:
+            seen_sha.add(parts[0])
+            commits.append((parts[0], parts[1]))
+            if len(commits) >= max_refs:
+                break
+
+    # Enumerate every md doc under .omx/research on every unique ref commit
+    # (path + blob oid), then compute each UNIQUE blob's first-heading vehicle
+    # key via ONE streamed `git cat-file --batch` pass. This makes the
+    # content leg EXHAUSTIVE (every blob inspected — no grep pattern to get
+    # silently wrong; an earlier grep-based leg died on a POSIX-ERE '\-'
+    # "invalid character range" and was caught by
+    # test_content_family_catch_without_spec_filename) while staying fast:
+    # identical bytes shared across the 20+ refs are read exactly once.
+    ref_entries_by_sha: dict[str, list[tuple[str, str]]] = {}
+    for sha, _refname in commits:
+        entries: list[tuple[str, str]] = []
+        out = _dup_git(["ls-tree", "-r", sha, "--", ".omx/research"], root)
+        for ln in out.splitlines():
+            # format: <mode> <type> <oid>\t<path>
+            meta, _, path = ln.partition("\t")
+            if not path.endswith(".md"):
+                continue
+            parts = meta.split()
+            if len(parts) == 3 and parts[1] == "blob":
+                entries.append((path, parts[2]))
+        ref_entries_by_sha[sha] = entries
+
+    unique_oids: list[str] = []
+    seen_oid: set[str] = set()
+    for entries in ref_entries_by_sha.values():
+        for _path, oid in entries:
+            if oid not in seen_oid:
+                seen_oid.add(oid)
+                unique_oids.append(oid)
+    heading_key_by_oid = _dup_batch_heading_keys(root, unique_oids)
+
+    # Working-tree pairwise duplicates (two on-disk specs, one vehicle).
+    by_key: dict[str, list[str]] = {}
+    for p, key in wt_specs:
+        by_key.setdefault(key, []).append(p.relative_to(root).as_posix())
+    for key, paths in by_key.items():
+        if len(paths) > 1:
+            waived = []
+            for rp in paths:
+                text = _read(root / rp) or ""
+                if _dup_waiver_ok(text):
+                    waived.append(rp)
+            live = [rp for rp in paths if rp not in waived]
+            if len(live) > 1:
+                violations.append(
+                    f"{live[1]}: duplicate canonical spec for vehicle v{key} — "
+                    f"{live[0]} already exists in the working tree. Rule chain: "
+                    f"NAME-ANCHORED-SEARCH bug class -> one spec per vehicle -> "
+                    f"fold into the existing doc (tools/canonical_doc_registry.py "
+                    f"check '<name>') or add `# DUPLICATE_SOT_OK:<rationale>`."
+                )
+
+    for doc_path, key in wt_specs:
+        rel = doc_path.relative_to(root).as_posix()
+        text = _read(doc_path) or ""
+        if _dup_waiver_ok(text):
+            continue
+        flagged: set[str] = set()
+
+        # Registry leg.
+        for e in reg_entries:
+            veh = e.get("vehicle")
+            if not veh or e.get("status", "active") != "active":
+                continue
+            if _norm_vehicle_key(str(veh)) != key:
+                continue
+            cpath = str(e.get("canonical_path", "")).strip()
+            if cpath.startswith("./"):
+                cpath = cpath[2:]
+            if cpath and cpath != rel and cpath not in flagged:
+                flagged.add(cpath)
+                violations.append(
+                    f"{rel}: duplicate canonical spec for vehicle v{key} — the "
+                    f"canonical doc registry names {cpath} (branch "
+                    f"{e.get('branch', '?')}) as the SoT. Rule chain: "
+                    f"NAME-ANCHORED-SEARCH bug class -> registry is naming-"
+                    f"independent -> fold this content into the registered "
+                    f"canonical doc on its branch, or supersede it IN the "
+                    f"registry, or add `# DUPLICATE_SOT_OK:<rationale>`."
+                )
+
+        # All-refs legs.
+        for sha, refname in commits:
+            for path, oid in ref_entries_by_sha.get(sha, []):
+                if path == rel or path in flagged:
+                    continue
+                base = path.rsplit("/", 1)[-1]
+                m = _SPEC_NAME_RE.match(base)
+                if m and _norm_vehicle_key(m.group(1)) == key:
+                    # NAME leg: spec-named doc, same key, different path.
+                    flagged.add(path)
+                    violations.append(
+                        f"{rel}: duplicate canonical spec for vehicle v{key} — "
+                        f"{path} exists on ref {refname}. Rule chain: NAME-"
+                        f"ANCHORED-SEARCH bug class -> search ALL refs before "
+                        f"creating -> fold into the doc on {refname}, or add "
+                        f"`# DUPLICATE_SOT_OK:<rationale>`."
+                    )
+                    continue
+                if m:
+                    continue  # spec-named but a different vehicle
+                # CONTENT-FAMILY leg: the doc's first heading claims the same
+                # vehicle even though its filename never says SPEC_v<key>.
+                # Normalized-key equality is the decisive test: '8' != '81'
+                # (v8 never absorbs v8.1) while '75' == '75' (v7.5 == v75).
+                if heading_key_by_oid.get(oid) != key:
+                    continue
+                flagged.add(path)
+                violations.append(
+                    f"{rel}: duplicate canonical spec for vehicle v{key} — "
+                    f"{path} on ref {refname} CLAIMS the same vehicle in its "
+                    f"spec heading (content-family match; its filename does "
+                    f"not say SPEC_v{key}). Rule chain: NAME-ANCHORED-SEARCH "
+                    f"bug class -> content/concept search, not filename glob "
+                    f"-> fold into the doc on {refname}, or add "
+                    f"`# DUPLICATE_SOT_OK:<rationale>`."
+                )
+
+    return _finish(
+        name="check_no_duplicate_canonical_spec_across_refs",
+        tag="duplicate-sot-across-refs",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"{len(wt_specs)} working-tree spec doc(s) x {len(commits)} unique "
+            f"ref commit(s) searched by name+content"
+        ),
+    )
+
+
 # The two automatable eightfold gates (P1 + P4), for the preflight wire-in + tests.
 EIGHTFOLD_GATES = (
     check_significance_keys_canonical,
@@ -2495,4 +2856,5 @@ CONFOUND_GATES = (
     check_verdict_live_gap_defaults_on_during_ema_warmup,
     check_no_raw_virtual_memory_safety_basis,
     check_process_guard_excludes_observer_flag_values,
+    check_no_duplicate_canonical_spec_across_refs,
 )
