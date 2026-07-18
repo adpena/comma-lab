@@ -1,0 +1,466 @@
+{
+  "actual_response": {
+    "by_support_fraction": [
+      {
+        "arm_scores": {
+          "joint_plus": {
+            "d_pose": 126.5577974319458,
+            "d_seg": 0.0031655628990847617
+          },
+          "pose_minus": {
+            "d_pose": 129.04776859283447,
+            "d_seg": 0.0031649271841160953
+          },
+          "pose_plus": {
+            "d_pose": 126.55671501159668,
+            "d_seg": 0.003168106049997732
+          },
+          "seg_minus": {
+            "d_pose": 127.83858489990234,
+            "d_seg": 0.003302892029751092
+          },
+          "seg_plus": {
+            "d_pose": 127.80473613739014,
+            "d_seg": 0.003082275390625
+          }
+        },
+        "baseline": {
+          "d_pose": 127.82099628448486,
+          "d_seg": 0.003166834532748908
+        },
+        "camera_lsb": 1,
+        "central_secant_response_2x2": [
+          [
+            -0.0001103083195630461,
+            1.5894329408183694e-06
+          ],
+          [
+            -0.016924381256103516,
+            -1.2455267906188965
+          ]
+        ],
+        "cross_response_ratios": {
+          "pose_change_per_abs_seg_change_under_seg_direction": -192.29318895998182,
+          "seg_change_per_abs_pose_change_under_pose_direction": 1.0057233909029792e-06
+        },
+        "joint_plus_delta": {
+          "d_pose": -1.2631988525390625,
+          "d_seg": -1.2716336641460657e-06
+        },
+        "measured_direction_classification": {
+          "joint_direction": {
+            "quality": "MEASURED_HELP",
+            "target_delta": -0.1772267761307944,
+            "target_metric": "100*d_seg+sqrt(10*d_pose)"
+          },
+          "pose_direction": {
+            "cross_d_seg_effect": "MEASURED_HARM",
+            "quality": "MEASURED_HELP",
+            "target_delta": -1.2642812728881836,
+            "target_metric": "d_pose"
+          },
+          "seg_direction": {
+            "cross_d_pose_effect": "MEASURED_HELP",
+            "quality": "MEASURED_HELP",
+            "target_delta": -8.45591421239078e-05,
+            "target_metric": "d_seg"
+          }
+        },
+        "one_sided_response_2x2": [
+          [
+            -8.45591421239078e-05,
+            1.2715172488242388e-06
+          ],
+          [
+            -0.016260147094726562,
+            -1.2642812728881836
+          ]
+        ],
+        "realized_lsb_counts": {
+          "joint_plus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 4888,
+            "realized_changed": 4888
+          },
+          "pose_minus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 4888,
+            "realized_changed": 4888
+          },
+          "pose_plus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 4888,
+            "realized_changed": 4888
+          },
+          "seg_minus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 4888,
+            "realized_changed": 4888
+          },
+          "seg_plus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 4888,
+            "realized_changed": 4888
+          }
+        },
+        "support_fraction": 0.0001
+      },
+      {
+        "arm_scores": {
+          "joint_plus": {
+            "d_pose": 117.81935977935791,
+            "d_seg": 0.0031534830923192203
+          },
+          "pose_minus": {
+            "d_pose": 132.2953863143921,
+            "d_seg": 0.0031655628990847617
+          },
+          "pose_plus": {
+            "d_pose": 117.80911827087402,
+            "d_seg": 0.0031782786536496133
+          },
+          "seg_minus": {
+            "d_pose": 127.84882926940918,
+            "d_seg": 0.004329681396484375
+          },
+          "seg_plus": {
+            "d_pose": 127.79618740081787,
+            "d_seg": 0.003639856935478747
+          }
+        },
+        "baseline": {
+          "d_pose": 127.82099628448486,
+          "d_seg": 0.003166834532748908
+        },
+        "camera_lsb": 1,
+        "central_secant_response_2x2": [
+          [
+            -0.00034491223050281405,
+            6.357877282425761e-06
+          ],
+          [
+            -0.026320934295654297,
+            -7.243134021759033
+          ]
+        ],
+        "cross_response_ratios": {
+          "pose_change_per_abs_seg_change_under_seg_direction": -52.447587099086036,
+          "seg_change_per_abs_pose_change_under_pose_direction": 1.143054368535806e-06
+        },
+        "joint_plus_delta": {
+          "d_pose": -10.001636505126953,
+          "d_seg": -1.33514404296875e-05
+        },
+        "measured_direction_classification": {
+          "joint_direction": {
+            "quality": "MEASURED_HELP",
+            "target_delta": -1.4285726984284253,
+            "target_metric": "100*d_seg+sqrt(10*d_pose)"
+          },
+          "pose_direction": {
+            "cross_d_seg_effect": "MEASURED_HARM",
+            "quality": "MEASURED_HELP",
+            "target_delta": -10.01187801361084,
+            "target_metric": "d_pose"
+          },
+          "seg_direction": {
+            "cross_d_pose_effect": "UNINFORMATIVE_DIRECTION",
+            "quality": "UNINFORMATIVE_DIRECTION",
+            "target_delta": 0.0004730224027298391,
+            "target_metric": "d_seg"
+          }
+        },
+        "one_sided_response_2x2": [
+          [
+            0.0004730224027298391,
+            1.1444120900705457e-05
+          ],
+          [
+            -0.024808883666992188,
+            -10.01187801361084
+          ]
+        ],
+        "realized_lsb_counts": {
+          "joint_plus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 48840,
+            "realized_changed": 48840
+          },
+          "pose_minus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 48840,
+            "realized_changed": 48840
+          },
+          "pose_plus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 48840,
+            "realized_changed": 48840
+          },
+          "seg_minus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 48840,
+            "realized_changed": 48840
+          },
+          "seg_plus": {
+            "boundary_clipped": 0,
+            "nonzero_requested": 48840,
+            "realized_changed": 48840
+          }
+        },
+        "support_fraction": 0.001
+      }
+    ],
+    "evidence_label": "B32_DUPLICATE_LAST_SUBSET_ADVISORY",
+    "last_batch_padding": "duplicate-last then discard padded outputs",
+    "native_or_full_n600_comparable": false,
+    "perturbation": "top-absolute-gradient one-camera-LSB uint8 sign direction; frame0 held fixed",
+    "perturbation_surface": "shared_frame1_only",
+    "scorer_batch_size": 32
+  },
+  "axis": "[macOS-CPU advisory]",
+  "captured_at_utc": "2026-07-18T08:06:29.197770+00:00",
+  "decode": {
+    "device": "cpu",
+    "dtype": "fp32",
+    "manifest": {
+      "activation": "hosc",
+      "bank_base": 2.0,
+      "bank_f0": 2.0,
+      "bank_n_iso": 4,
+      "bank_n_orient0": 6,
+      "bank_n_scales": 4,
+      "camera_h": 874,
+      "camera_w": 1164,
+      "chroma": true,
+      "hidden_dim": 96,
+      "hosc_beta": 3.174174174174174,
+      "hosc_omega": 1.0,
+      "max_bank_freq": 64.0,
+      "n_dir_freqs": 4,
+      "n_hidden": 4,
+      "n_pairs": 8,
+      "render_h": 384,
+      "render_w": 512,
+      "self_orient": true,
+      "so_freq_across": 32.0,
+      "so_freq_along": 8.0,
+      "so_iters": 4,
+      "so_tau": 4.0,
+      "softmax_temp": 0.21682465292832676,
+      "wire_s0": 10.0,
+      "wire_w0": 20.0
+    },
+    "path": "tac.local_acceleration.torch_levelset_inflate.decode_levelset_torch"
+  },
+  "evidence_labels": {
+    "contest_score": "NOT_MEASURED",
+    "finite_response": "B32_DUPLICATE_LAST_SUBSET_ADVISORY",
+    "smooth_gram": "B1_LOCAL_DERIVED"
+  },
+  "evidence_status": "MEASURED_ADVISORY_SUBSET",
+  "execution_custody": {
+    "argv": [
+      "experiments/measure_shared_resize_seg_pose_coupling_20260718.py",
+      "--checkpoint",
+      "/Users/adpena/Projects/pact/experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+      "--gt-cache",
+      "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "--upstream",
+      "/Users/adpena/Projects/pact/upstream",
+      "--output",
+      ".omx/research/completeness_coupling_joint_solve_measurement_20260718.json",
+      "--n-sample",
+      "8",
+      "--seed",
+      "538",
+      "--support-fractions",
+      "0.0001,0.001",
+      "--so-tau",
+      "4",
+      "--so-iters",
+      "4"
+    ],
+    "config": {
+      "n_sample": 8,
+      "seed": 538,
+      "so_iters": 4,
+      "so_tau": 4.0,
+      "support_fractions": [
+        0.0001,
+        0.001
+      ],
+      "torch_deterministic_algorithms": true,
+      "torch_num_threads": 1
+    },
+    "git_head": "6d2d905cecd5c4d8dd08752769a813869b33d2c7",
+    "input_bytes": {
+      "checkpoint": 460448,
+      "evaluate_py": 6005,
+      "frame_utils_py": 9345,
+      "gt_cache": 5078017610,
+      "modules_py": 8322,
+      "posenet": 55835560,
+      "segnet": 38502892
+    },
+    "upstream_source_paths": {
+      "evaluate_py": "/Users/adpena/Projects/pact/upstream/evaluate.py",
+      "frame_utils_py": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+      "modules_py": "/Users/adpena/Projects/pact/upstream/modules.py"
+    },
+    "upstream_source_sha256": {
+      "evaluate_py": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+      "frame_utils_py": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+      "modules_py": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    }
+  },
+  "gt_target_custody": {
+    "cache_vs_rederived": {
+      "pose_max_abs": 1.33514404296875e-05,
+      "pose_mismatched_elements": 44,
+      "pose_mse": 7.051369037280875e-12,
+      "pose_total_elements": 48,
+      "seg_mismatch_fraction": 0.0,
+      "seg_mismatched_pixels": 0,
+      "seg_total_pixels": 1572864
+    },
+    "last_batch_padding": "duplicate-last then discard padded outputs",
+    "scorer_batch_size": 32,
+    "source_members": [
+      "gt_f0.npy",
+      "gt_f1.npy"
+    ],
+    "targets_used": "rederived_from_gt_frames"
+  },
+  "input_custody": {
+    "checkpoint_n_pairs": 600,
+    "checkpoint_path": "/Users/adpena/Projects/pact/experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+    "checkpoint_payload": {
+      "base_inr_only": true,
+      "carrier_absent": true,
+      "checkpoint_key_count": 59,
+      "checkpoint_key_manifest_sha256": "ba7acdb825a2d12213c6ae517a68ecb566d7ba852109007e5a8723d05be7d063",
+      "detected_carrier_keys": []
+    },
+    "checkpoint_sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "gt_cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "posenet_path": "/Users/adpena/Projects/pact/upstream/models/posenet.safetensors",
+    "posenet_sha256": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "segnet_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "n_pairs_total": 600,
+  "paid_dispatch": false,
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "research_only": true,
+  "sacred_c2_mutated": false,
+  "sample": {
+    "method": "deterministic_cyclic_stride",
+    "n_of_600": 8,
+    "pair_ids": [
+      50,
+      125,
+      200,
+      275,
+      350,
+      425,
+      500,
+      575
+    ],
+    "seed": 538
+  },
+  "schema": "shared_resize_joint_coupling_measurement.v2",
+  "score_claim": false,
+  "shared_A": {
+    "camera_hw": [
+      874,
+      1164
+    ],
+    "operator": "torch.nn.functional.interpolate(mode=bilinear,align_corners=False)",
+    "pose_yuv6_clone_max_abs": 0.0,
+    "scorer_hw": [
+      384,
+      512
+    ],
+    "seg_pose_operator_identical": true,
+    "seg_preprocess_tensor_equal": true
+  },
+  "smooth_coupling": {
+    "aggregation": "product-render sample-mean Gram: sum_i inner_product(g_i,g'_i)/n^2",
+    "evidence_label": "B1_LOCAL_DERIVED",
+    "full_pair_context": {
+      "joint_costate_coefficients": {
+        "lambda_pose": 0.13985207202716476,
+        "lambda_seg": 100.0
+      },
+      "joint_costate_norm2": 0.00020972950804308413,
+      "normalized_overlap": 0.002982135677261322,
+      "raw_gram_2x2": [
+        [
+          1.8304522611187202e-11,
+          1.3205035884200633e-09
+        ],
+        [
+          1.3205035884200633e-09,
+          0.01071188662899658
+        ]
+      ],
+      "score_priced_gram_2x2": [
+        [
+          1.8304522611187202e-07,
+          1.8467516295985223e-08
+        ],
+        [
+          1.8467516295985223e-08,
+          0.0002095095277843803
+        ]
+      ]
+    },
+    "pose_gradient_frame0_share": 0.6432439266262499,
+    "primary_surface": "shared_frame1",
+    "seg_gradient_frame0_norm2": 0.0,
+    "seg_row_label": "B1_LOCAL_DERIVED winner-rival zero-margin hinge; NOT exact d_seg",
+    "shared_frame1": {
+      "joint_costate_coefficients": {
+        "lambda_pose": 0.13985207202716476,
+        "lambda_seg": 100.0
+      },
+      "joint_costate_norm2": 7.496458318122321e-05,
+      "normalized_overlap": 0.004992744642171348,
+      "raw_gram_2x2": [
+        [
+          1.8304522611187202e-11,
+          1.3205035467867e-09
+        ],
+        [
+          1.3205035467867e-09,
+          0.003821571845037397
+        ]
+      ],
+      "score_priced_gram_2x2": [
+        [
+          1.8304522611187202e-07,
+          1.846751571373401e-08
+        ],
+        [
+          1.846751571373401e-08,
+          7.474460292368387e-05
+        ]
+      ]
+    },
+    "smooth_pose_loss_mean": 127.82096099853516,
+    "smooth_seg_loss_mean": 0.0007830923423171043
+  },
+  "timings_seconds": {
+    "total": 326.94222033396363
+  },
+  "trainer_activation": false,
+  "verdict_scope": "INSTANCE x real n600-trained EMA checkpoint x labeled deterministic subset x macOS CPU frozen-scorer formulation; structural shared-A coupling plus subset finite secants only, not a family/paradigm or contest-authority verdict",
+  "versions": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12",
+    "torch": "2.12.1"
+  }
+}
