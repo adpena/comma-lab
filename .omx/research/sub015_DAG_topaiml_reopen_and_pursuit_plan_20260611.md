@@ -19399,3 +19399,30 @@ SOL ultra review arm relaunched on the path and running. Ledger classes daemon_5
 RESOLVED (the daemon_5min erraticism was the reaper's parse_etime octal bug). Memory:
 reaper_tty_kills_were_the_harness_kill_class_20260717. OPERATOR-OWED: fleet-repo reaper patch (octal
 10#$m + governed-arm exclusion) — outside this repo's mutation frontier. Pointer 0.19108 UNMOVED (means).
+
+## FEED-424gate (2026-07-18) — $0 phase-stack-efficacy probe (SPEC_v10 §14.5(b) DECISIVE gate): post-hoc DEAD, train-side/joint-solve OPEN; the wall is COLLATERAL COUPLING, not sub-LSB
+- **SIGNAL** (MEASURED, banked v9c2 EMA ep725 sha b0a431e9…, n24 stride sample, through the REAL decode → uint8 →
+  frozen CPU-torch SegNet, [macOS-CPU advisory] NON-PROMOTABLE): firing the phase stack at organ-B's `Road->Lane`
+  strata with full GT-oracle aiming (min-norm margin-crossing realization of the #424 GT-tie target) INCREASES
+  d_seg at every scale arm: 0.003004 → 0.004703 (**Δ +56.6%** @s1.05) / +107.0% @s1.5 / +161.1% @s2.0. Composed
+  fixes DO realize (70.9–86.1% of 1,500 treated px; 88% gross stratum recovery) but collateral runs 11.8–22.4×
+  the fixes, 2/3 of it `Lane->Road` OVERSHOOT. Isolation arm (150 single-pixel treatments): own-fix rate **6%**,
+  14% round away entirely, net +0.47 flips/px — alone inert, composed overshoots.
+- **DIAGNOSTIC**: both §14.2 premises CONFIRMED — 96.7% of `Road->Lane` flips lie ON the GT phase band
+  (phase-addressable) and the stratum is amplitude-OPEN (organ-B validated; only 26.5% sub-LSB-pred, a_max med
+  1.22). The verdict sharpens B's reading: **amplitude-OPEN ≠ amplitude-harvestable** — SegNet integrates over
+  its ERF, so per-pixel phase moves cannot be set independently; the binding wall at `Road->Lane` is CROSS-PIXEL
+  COLLATERAL COUPLING, not uint8 rounding. verdict_scope: FORMULATION (per-pixel min-norm amplitude family,
+  post-hoc on frozen frames); NOT closed: train-side joint descent (#424/#360, collateral priced by the loss),
+  constrained joint SOLVE (#341/#342 Dykstra projection), coherent per-dash phase warps (#425 curve-domain —
+  §13.11's −34% label-space recovery, through-R still owed).
+- **RESPONSE**: v10 §14.2 stage stands ONLY as a TRAINING stage (or terminal constrained SOLVE) — any "store
+  phase, apply at inflate" rate plan is ruled out (echo of L68 pose: sidecar-SHAPED bytes need joint-descent
+  VALUES; here the wall is coupling, not photometrics). Headroom REAL: `Road->Lane` = 36.5% of remaining flip
+  mass, ~0.0011 d_seg if harvested collateral-free — training must win the COLLATERAL trade, not the amplitude.
+  Curriculum ORDER (birth-before-phase) untouched (mode measured, not ordering).
+- **Triality**: equations leg `# FORMALIZATION_PENDING: single-checkpoint n24-stride advisory measurement —
+  register the collateral-coupling law when the train-side/joint-solve n600 A/B lands`; DSL leg n/a (measurement,
+  no lever). Artifacts: tools/probe_phase_stack_efficacy_road_lane.py ·
+  .omx/research/phase_stack_efficacy_probe_v10_gate_20260718.md ·
+  experiments/results/phase_stack_efficacy_probe_20260718/road_lane_n24.json. Pointer 0.19108 UNMOVED (means).
