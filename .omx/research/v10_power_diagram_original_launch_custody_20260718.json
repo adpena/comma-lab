@@ -1,0 +1,79 @@
+{
+  "schema": "v10_power_diagram_original_governed_launch_custody.v1",
+  "created_utc": "2026-07-18T13:42:10Z",
+  "task_id": "task-543-v10-power-diagram-byteclose-20260718",
+  "lane_id": "v10_power_diagram_byteclose_20260718",
+  "authority": {
+    "launch_custody_only": true,
+    "contest_score_authority": false,
+    "through_r_authority": false,
+    "receiver_authority": false,
+    "promotion_eligible": false,
+    "pointer_move_authorized": false
+  },
+  "durable_registry_source": {
+    "path_at_harvest": ".omx/state/durable_daemons.json",
+    "bytes_at_harvest": 1188,
+    "sha256_at_harvest": "4f1fb8374bc1cf689c75cab28fcaa92df8272abf0ce0ac6a633de5c4bea237fd",
+    "row_evidence_label": "MEASURED_DURABLE_GOVERNED_REGISTRY_ROW",
+    "row": {
+      "cmd": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "tools/measure_v10_power_diagram_generator_byteclose.py",
+        "--upstream-root",
+        "/Users/adpena/Projects/pact/upstream",
+        "--gt-cache",
+        "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "--feature-cache-dir",
+        "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features",
+        "--output",
+        "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/.omx/research/v10_power_diagram_byteclose_receipt_20260718.json",
+        "--torch-threads",
+        "6",
+        "--torch-interop-threads",
+        "18"
+      ],
+      "cwd": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z",
+      "label": "saferun_v10_pdw_headfeat_n600_pid83602",
+      "log": "",
+      "pgid": 83624,
+      "pid": 83624,
+      "projected_peak_gib": 12.0,
+      "started_utc": "2026-07-18T12:57:37.024134+00:00",
+      "status": "stopped",
+      "stopped_reason": "safe_run_exit_ok",
+      "stopped_utc": "2026-07-18T12:59:53.016044+00:00"
+    }
+  },
+  "safe_run_wrapper": {
+    "repo_path": "tools/safe_run.py",
+    "sha256": "a951ab7ec3baef5137f18472698a58b9f9864902f63f33bd7bbfa89294e3766b"
+  },
+  "outer_wrapper_parameters": {
+    "evidence_label": "TRANSCRIPT_DERIVED_UNRECEIPTED",
+    "exact_outer_argv_available": false,
+    "rss_cap_mib": 12288,
+    "timeout_seconds": 2400,
+    "projected_peak_gib": 12.0,
+    "scope_note": "projected_peak_gib is independently present in the embedded governed-registry row; rss cap and timeout survive only in the agent tool transcript and are not promoted to machine-authority exact argv"
+  },
+  "terminal_observation": {
+    "evidence_label": "MEASURED_ACTIVE_LANE_CLAIM",
+    "claim_path": ".omx/state/active_lane_dispatch_claims.md",
+    "job_id": "v10_pdw_headfeat_n600_20260718T1258Z",
+    "status": "failed_positive_control",
+    "elapsed_seconds": 136.09,
+    "peak_rss_mib": 3141,
+    "blocked_frame": 195,
+    "power_target_mismatch_count": 1,
+    "cpu_torch_forward_mismatch_count": 0
+  },
+  "interpretation": {
+    "inner_argv_is_exact_registry_custody": true,
+    "outer_argv_is_exact": false,
+    "stopped_reason_means_wrapper_cleanup_completed_not_scientific_success": true,
+    "new_reproduction_receipt_required_for_detailed_frame195_cause": false,
+    "new_reproduction_receipt": ".omx/research/v10_power_diagram_frame195_diagnostic_20260718.json",
+    "new_reproduction_receipt_sha256": "65d97194c6298a5502d0fcc792ee2fe3bf05599c69f1130d64c270dec5ec36ee"
+  }
+}
