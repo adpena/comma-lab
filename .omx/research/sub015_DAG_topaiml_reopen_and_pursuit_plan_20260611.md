@@ -19491,3 +19491,55 @@ Memory: `checkpoint_maturity_dev_prod_axis_orthogonal_to_vehicle_20260718`. Poin
   no lever). Artifacts: tools/probe_phase_stack_efficacy_road_lane.py ·
   .omx/research/phase_stack_efficacy_probe_v10_gate_20260718.md ·
   experiments/results/phase_stack_efficacy_probe_20260718/road_lane_n24.json. Pointer 0.19108 UNMOVED (means).
+
+
+## FEED-invcrux (2026-07-18) — THE INVERSE-SOLVE CRUX + COMPLETENESS (operator "this feels like a crux" + "completeness is very important")
+**SIGNAL→UNIFICATION→CONSEQUENCE. Advisory deep-math; pointer 0.19108 UNMOVED (means).** Memories:
+`[[campaign-is-a-constrained-mdl-inverse-solve]]` · `[[opportunity-pools-non-additive-and-rate-distortion-reachable]]` ·
+`[[kolmogorov-program-technique-roles-and-gradient-control-surgical-targeting]]` ·
+`[[post-hoc-stored-corrections-dead-joint-descent-or-constrained-solve-required]]` ·
+`[[solve-the-right-problem-is-right-coordinates-at-every-level-kolmogorov]]` · `[[intrinsic-complexity-design-philosophy]]`.
+
+- **THE OBJECT:** the contest = ONE constrained MDL minimization `min |description(payload)| s.t. Forward(payload)∈FeasibleSet`,
+  `Forward=scorer∘A∘decode`, `FeasibleSet={argmax=L*}∩{pose≈P*}∩{uint8}∩{decode<30min}`. Feed the video→GT targets L*,P*→
+  inverse-solve the min-description archive→the optimal. The witness = the inverse of the flattened+factorized off-eval scorer.
+- **WHAT INVERTS (SOLVE, closed-form) vs NOT (TRAIN residual):** rank-4 head→WINNER-CELL POLYTOPE (fidelity→FEASIBILITY, the
+  decisive relaxation; #47). resize A→affine preimage + free ker(A) 22.7% (#49/#519/#520). pose→STORE 6 scalars+FiLM (never
+  invert PoseNet). deep conv (ERF~85px)→NOT closed-form; but it is a FIXED forward map — optimize the payload THROUGH it (TTO/
+  projected-grad, #350), never invert. Preimage EXISTS (PL ⇒ polytope UNION) but intractable to ENUMERATE ⇒ locate by descent.
+- **SUPERIOR PARAMETRIZATION = POWER-DIAGRAM, not coord-INR (§14.7 sharpened INVERTIBLE+VIDEO-FED):** head hyperplanes ⇒
+  partition IS a power/Laguerre diagram; DOF = GENERATORS; init from GT partition (video-fed); INVERTIBLE both ways
+  (generators↔cells); store generators not INR weights (v8 ~0.02-0.05 vs 0.118; #284/#311). Coord-INR = non-invertible generic
+  approximator that fuses target+realization; power-diagram SEPARATES them (invertible target + conv-feasibility residual).
+- **COMPLETENESS CHECK (operator-EMPHASIZED, 4th leg) — the witness was built as the inverse of ONE factor (argmax) while the
+  score is a PRODUCT OF TEN. RANKED MISSING TERMS:** (1) **d_seg↔d_pose COUPLING through shared A** [deepest — score looks
+  separable, forward couples; true inverse is a JOINT solve; #535 measures it]. (2) **chroma** (RGB-seg + YUV6-pose; witness
+  luma-dominant; #276). (3) **camera-res sub-pixel/AA** (the uint8-floor-cracking DOF; #149). (4) **uint8-lattice feasibility IN
+  the objective** (not real-then-round; #532). (5) **frame_0 seg-freedom** (a whole free frame for pose/rate). (6) **ker(A)/
+  blind-coordinate as FREE rate** (#401/#519). (7) **joint waterfill across the 3 terms** (#536). Complete witness = invertible
+  power-diagram + a TERM PER FACTOR.
+- **CRACK THE CONV WALL BY CHANGING FORM (intractability is form-specific):** tropical/max-plus→ONE tropical polynomial =
+  power diagram (exact). **Cole-Hopf/entropic-OT/Sinkhorn = THE needle-mover** (softmax logsumexp_ε IS Cole-Hopf-of-argmax;
+  tau_softplus IS ε→0 vanishing-viscosity; viscous-HJ(quadratic H)→heat-equation Gaussian-convolution; constrained-match→
+  Sinkhorn matrix-scaling ⇒ FAST solve/initializer replacing slow descent; CAVEAT non-quadratic terms ⇒ dominant-part only).
+  SDP-relax→convex warm-start. curvelet-sparse→boundary sparse-recovery. KKT-dual→the waterfill. **META-METHOD:** a wall that
+  says "intractable" is a signal to CHANGE FORM, not accept a floor. **NOTE: Fourier is CARGO-CULTED (operator) — the forms
+  above (curvelet/tropical/entropic) are the non-cargo-cult replacements; do NOT propose Fourier.**
+- **MDL = the form-SELECTOR** (the parametrization IS the optimization variable; it is simultaneously rate+prior+regularizer+
+  search-space+half-the-constraint). **WATERFILL = KKT solution of the Jacobian-Lagrangian against ALL dims; λ*=the costate.**
+- **REACHABILITY/FLOOR:** nothing unreachable in DISTORTION (deterministic targets: camera-res+AA cracks uint8-LSB, range(A) not
+  ker(A), exact-partition cracks flicker). The ONE intrinsic floor = RATE = `K`=Kolmogorov(partition+ξ), UNMEASURED; two-sided
+  bracket `MDL(MS)≤K≤first-(0,0)-close`. S_floor 0.118 PROVISIONAL; true optimum = 3-axis JOINT waterfill (NEITHER d_seg=0 NOR
+  d_pose=0; pose √-marginal explodes near 0). **METHOD:** solve to (0,0) at min-rate first (measure K; `S(0,0)=25K/N`, sub-0.15
+  by rate alone iff K<~225KB), then REVERSE-waterfill.
+- **R1 IS ARBITRARY** (not the pose floor) ⇒ pose is likely the LARGEST √-lever (0.127→~0.018 ≈ ΔS 0.109); resume the R1 run as
+  the pose trainer (#366). **5 ROLES + GRADIENT CONTROL** (generate-free/seed/solve/project/train-residual; costate·Fisher·
+  margin-gating·FiLM·coherence aim role-5). **RESUMABILITY:** runs DO resume (full-state resume_state); gaps = periodic-intra-
+  stage preservation + graceful resume-round re-anchoring (#537).
+- **v10 OBJECTIVE CONSEQUENCE:** feasibility-not-fidelity (satisficing-margin, not CE→0) + range(A)-restricted + joint-min-
+  description + stored-pose — REPLACING PR95 CE-then-compress. Falsifiable A/Bs pre-registered.
+- **ARMS LIVE ($0, sacred c2 read-only):** pool_channel_rd_harness (#535, measures the coupling+chroma Jacobian curves) ·
+  mdl_ms_complex_K_lower_bound (#536 leg, K lower bound) · alternative_forms_conv_wall (Cole-Hopf PoC).
+- **TRIALITY status:** memories ✓ (6). **equations leg = FORMALIZATION_PENDING** (owed: register constrained-MDL-inverse +
+  waterfill=KKT-Jacobian-Lagrangian + logsumexp=Cole-Hopf-of-argmax + non-additivity, with PROPER evaluators — a task, NOT faked
+  inline). **DSL leg = pending-build** (the objective change becomes DSL levers when v10 builds them). SPEC_v10 §14.6-14.11 ✓.
