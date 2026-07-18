@@ -680,3 +680,50 @@ post-ep725 "Force-3 + clean pose-crest" reading — a no-Force-3 control has the
 later σ_min telemetry oscillates/rebounds. This matches the session's F1-confound → cold-Muon attribution and
 the crest-is-oscillation correction — two independent adversarial arms converging is the strongest evidence we
 have that those reads are right.
+
+## §14 SESSION FOLD 2026-07-18 — naming lock · curriculum-ORDER law · v9c2 disposition · organ-B localization · decision framework
+
+**Operator SSoT directive stands: all of this lives in THIS doc.** Pointer `0.19108` UNMOVED — design only.
+
+### §14.1 VEHICLE NAMING LOCK (operator 2026-07-18 — extends the naming charter)
+- **v9c2** = the live warm-start run (`levelset_n600_witness_20260717T113932Z`).
+- **v9c3** = a restart from v9c2's ep725 best WITH corrected events (#270 warm-Muon + #518 resume-warmup
+  geometry). STILL the warm-start lineage — NOT v10. This is the cheap de-risk of the resume-event confound.
+- **v10** = the FINAL capstone vehicle, RESERVED. **Its first run is the from-scratch cold-start** (this doc).
+  No warm-start ever wears the v10 name.
+
+### §14.2 CURRICULUM-ORDER LAW: island-birth BEFORE the phase stack (operator 2026-07-18)
+The v10 stage order is **cold-start → seed (P1) → trunk conditioning → ISLAND-BIRTH (lane curve-prior #291 +
+movable dilation-GO #323, per-class-λ homotopy #300/#323) → PHASE-STACK flicker-conditioning (#424/#425 +
+illumination-cone two-transport) → pose joint finish (P6) → terminal SOLVE on realization-locked pockets.**
+DERIVED law: **you cannot condition the flicker of an island that is not yet born** — the phase carrier aimed at a
+stratum needs that stratum to exist. Born first, then match its GT flicker. This makes the flicker floor
+(0.005318) engineerable, not hard (it binds only a smoother-than-GT witness). Extends §2 (P5/P7) with the
+explicit ORDER; the phase stack is a curriculum STAGE, not a bolt-on.
+
+### §14.3 v9c2 disposition = DIAGNOSTIC + defensive bank (do NOT grind to ep1400)
+MEASURED this session: v9c2 has a STRUCTURAL ceiling — Movable 3.4% is unborn BY DESIGN (mod32cap island-birth
+OFF), Lane 22.5% was Muon-kicked at ep726 (the resume-event confound: absolute-epoch Muon fired 75ep after a
+cold-AdamW resume). **EMA-masking finding:** the shipped EMA reads 0.0039 but LIVE weights are 0.0048 and NOT
+recovering — the EMA is flattered by its ~333-ep window still remembering the pre-kick ep700-725 state
+(`ema−live` widened −0.00026@725 → −0.00089@900). Grinding to ep1400 is negative-EV (EMA drifts UP as it forgets
+ep725). ACTION: snapshot v9c2's best EMA as a lossless defensive bank; v9c2 is the diagnostic that FEEDS v10,
+not the optimal vehicle. Law: `[[warm-start-resume-must-adapt-events-to-resume-epoch-and-geometry]]`.
+
+### §14.4 Organ-B realization localization (MEASURED, merged to main — the phase-stack aiming input)
+The factorized costate organ (A+B+C) landed on main (real range(A) tap-table max-abs 2.5e-14; ker(A) zero-marginal
+a tested theorem). Module B on the live EMA ep900: **sub-LSB fraction 0.3617 → regime MIXED** (terminal-solve not
+yet forced; ~64% amplitude-open on the EMA — but re-read on LIVE per §14.3). Per-stratum: `Road→Lane` is
+amplitude-OPEN (trainable — the phase-stack target), `Lane→Road`/`Undrivable→Road` are realization-locked pockets
+(→ terminal SOLVE). ker(A) 22.6% of residual energy is FREE unexploited carrier (P3/#520). B is the localizer that
+AIMS §14.2's phase stack. Equations `witness_realization_lsb_regime_v1` + `factorized_duty_marginal_projected_v1`.
+
+### §14.5 DECISION FRAMEWORK (how to proceed — not a foregone v10 launch)
+Order, each gated: **(a)** snapshot v9c2 best (defensive bank) → **(b)** cheap de-risking measurements: the
+DECISIVE gate is the **$0 phase-stack-efficacy probe** (fire the phase carrier at B's `Road→Lane` strata on the
+v9c2 EMA, through-R n600, measure Δd_seg — does conditioning the flicker actually move d_seg?); optional v9c3
+(ep725-restart-fixed-events, tests resume-event recovery); island-birth movable-birth cost → **(c)** complete v10
+design (#529 compiler real-success + #530 Init≠Fork + #531 T-quotient-residual + the resume-event self-protect
+gate) → **(d)** fire v10 cold-start ONLY when (b) confirms the levers pay AND (c) is complete AND compute is free.
+If the phase-stack probe comes back FLAT, that is decisive too — redesign §14.2 before the expensive v10 commit.
+This is MVP-first: measure v10's assumed levers on the cheap substrate before the multi-day cold-start.
