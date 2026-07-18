@@ -1,0 +1,299 @@
+{
+  "ait_contract": {
+    "carrier_description_object_custody": "carrier_description_object=(S,xi_quantized); xi_quantized is a carrier-side description object and is not an output of evaluator E",
+    "classical_morse_smale_claim": false,
+    "conditional_relation": "K_U(T | D) <= |c(T)| + O_U(1)",
+    "evaluator_target_custody": "T_E=(S,P), where S is the frozen SegNet argmax partition and P is the cached frozen-PoseNet output",
+    "evidence_label": "DERIVED",
+    "measured_object": "digital frozen-scorer argmax cell complex",
+    "measurement_orientation": "an emitted code length is a declared-family upper bound, never a numeric universal-complexity lower bound",
+    "unconditional_relation": "K_U(T) <= K_U(D) + |c(T)| + O_U(1)"
+  },
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "declared_family_combined_with_xi": {
+    "combined_bytes": 262483,
+    "evidence_label": "DERIVED",
+    "interpretation": "declared-code-family upper bound on exact cached partition plus the existing lossy xi section; not an exact-witness archive",
+    "pose_zero_distortion": false,
+    "rate_term": {
+      "byte_count": 262483,
+      "decimal": "0.174776655592366902",
+      "exact_fraction": "6562075/37545489"
+    },
+    "receiver_closed_rgb_witness": false,
+    "seg_partition_exact": true,
+    "seg_payload_bytes": 255288,
+    "xi_section_bytes": 7195
+  },
+  "exact_zero_distortion_receiver_closed": false,
+  "execution_allowed_or_used": false,
+  "execution_guardrails": {
+    "evidence_label": "MEASURED",
+    "live_run_access": false,
+    "provider_or_gpu_dispatch": false,
+    "render": false,
+    "scorer_call": false,
+    "training": false
+  },
+  "frontier_pointer_delta": "NONE",
+  "frozen_target_audit": {
+    "canonical_class_order": [
+      "Road",
+      "Lane",
+      "Undrivable",
+      "Movable",
+      "MyCar"
+    ],
+    "canonical_class_order_evidence_label": "INPUT_CONTRACT_AND_SEMANTIC_HASH_CUSTODY",
+    "class_order_source": "frozen tool contract; ids are cache values 0..4",
+    "evidence_label": "MEASURED",
+    "gt_poses": {
+      "canonical_serialization": "raw C-order values, dtype <f8, no NPY header",
+      "canonical_serialization_sha256": "bee5821eeb892ad430878946dfcdf365e1a14202efb7cd1af2b019d75da0f481",
+      "semantic_custody": "cached frozen-PoseNet target coordinates; diagnostic only; not temporal xi",
+      "shape": [
+        600,
+        6
+      ],
+      "storage_dtype": "float64"
+    },
+    "lstars": {
+      "expected_semantic_class_label_serialization_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+      "maximum": 4,
+      "minimum": 0,
+      "per_class_pixel_counts": [
+        {
+          "class_id": 0,
+          "class_name": "Road",
+          "pixels": 27407046
+        },
+        {
+          "class_id": 1,
+          "class_name": "Lane",
+          "pixels": 690639
+        },
+        {
+          "class_id": 2,
+          "class_name": "Undrivable",
+          "pixels": 58413281
+        },
+        {
+          "class_id": 3,
+          "class_name": "Movable",
+          "pixels": 1460325
+        },
+        {
+          "class_id": 4,
+          "class_name": "MyCar",
+          "pixels": 29993509
+        }
+      ],
+      "semantic_class_label_serialization": "raw C-order class ids, dtype |u1, no NPY header",
+      "semantic_class_label_serialization_sha256": "f2c8be94774780bda718adf337900403a8533b6ffa1352b5aae19e200a005557",
+      "semantic_sha256_matches": true,
+      "shape": [
+        600,
+        384,
+        512
+      ],
+      "storage_dtype": "int64",
+      "storage_preserving_canonical_serialization": "raw C-order values, dtype <i8, no NPY header",
+      "storage_preserving_canonical_serialization_sha256": "bf1d0e5c7e2ef1b3c38ce6cd51ec827169ac13a02c675638b7bd97344a089ec4",
+      "total_pixels": 117964800
+    }
+  },
+  "inputs": {
+    "cache": {
+      "expected_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "file_bytes": 5078017610,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "sha256_matches": true,
+      "zip_member_access": "ZIP_STORED read-only memmap"
+    },
+    "evidence_label": "MEASURED",
+    "necessity_summary": {
+      "dseg_geo": {
+        "evidence_label": "MEASURED",
+        "value": "0.0"
+      },
+      "dseg_real": {
+        "evidence_label": "MEASURED",
+        "value": "0.04538490295410156"
+      },
+      "eps_key": "0.0",
+      "evidence_label": "MEASURED",
+      "file_bytes": 6418,
+      "inner_contour_stream_bytes": {
+        "bytes": 457528,
+        "description": "Brotli-q11 inner coordinate stream",
+        "evidence_label": "MEASURED"
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/necessity_dseg_calibration_20260715/summary.json",
+      "post_brotli_shared_edge_estimate_bytes": {
+        "bytes": 228764,
+        "description": "arithmetic /2 estimate; not an emitted decoder-closed code",
+        "evidence_label": "DERIVED"
+      },
+      "sha256": "ef4b835f86ac77dd64db96b50c56b699412ed0b55cff1f30d6488469d2dcf972"
+    },
+    "xi_receipt": {
+      "evidence_label": "MEASURED",
+      "file_bytes": 11547,
+      "n_pairs": 600,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/mdl_ms_complex_K_lower_bound_20260718_20260718T055655Z/reports/r1_dxi_238/n600_shipdxi.json",
+      "realized_d_pose": "0.0016095471538913576",
+      "self_contained_xi_section_bytes": 7195,
+      "semantic_custody": "quantized temporal xi section; lossy and distinct from cached gt_poses",
+      "sha256": "45fb86119d8ba0f8ce3415b17f2bcae3cc50ad497c654479ceac0ac88196b0da",
+      "xi_payload_bytes": 6634,
+      "xi_q_levels": 4096
+    }
+  },
+  "intended_digital_complex_model": {
+    "blockers": [
+      "no complete self-delimiting contour decoder or framing",
+      "division after nonlinear Brotli is not an emitted shared-edge codec",
+      "cached argmax cells are not proven classical Morse-Smale cells",
+      "palette witness has measured nonzero realized Seg distortion",
+      "temporal-xi section has measured nonzero realized Pose distortion"
+    ],
+    "evidence_label": "DERIVED",
+    "is_archive": false,
+    "is_lossless_zero_distortion_custody": false,
+    "is_universal_complexity_numeric_lower_bound": false,
+    "optimistic_total": {
+      "bytes": 235974,
+      "continuous_ceiling_gap_bytes": "10701.066",
+      "evidence_label": "DERIVED",
+      "formula": "228764 + 15 + 7195",
+      "integer_ceiling_gap_bytes": 10702,
+      "interpretation": "above-threshold inherited code family; does not prove universal complexity is above the threshold",
+      "rate_term": {
+        "byte_count": 235974,
+        "decimal": "0.157125400604051262",
+        "exact_fraction": "5899350/37545489"
+      }
+    },
+    "segmentation_split": {
+      "adjacency_charge": {
+        "assumption": "adjacency is derived from a fully parseable edge-incidence graph",
+        "bytes": 0,
+        "evidence_label": "INFERRED",
+        "validated_on_current_stream": false
+      },
+      "digital_junction_tie_locus_charge": {
+        "assumption": "digital junctions and tie loci are derived as curve intersections; their precision is charged to edge seeds",
+        "bytes": 0,
+        "evidence_label": "INFERRED",
+        "validated_on_current_stream": false
+      },
+      "generic_decoder_generator_charge": {
+        "assumption": "the generic decoder and generator are uncounted rule-118 code",
+        "assumption_authority": "RULE_118_CONTRACT",
+        "counted_bytes": 0,
+        "evidence_label": "INFERRED",
+        "validated_on_current_stream": false
+      },
+      "inherited_palette_cell_label_charge_bytes": {
+        "bytes": 15,
+        "evidence_label": "INFERRED"
+      },
+      "inner_contour_stream_bytes": {
+        "bytes": 457528,
+        "evidence_label": "MEASURED"
+      },
+      "optimistic_seg_bytes": {
+        "bytes": 228779,
+        "evidence_label": "DERIVED"
+      },
+      "post_brotli_shared_edge_estimate_bytes": {
+        "bytes": 228764,
+        "evidence_label": "DERIVED"
+      },
+      "zero_marginal_assumption_custody": "NOT VALIDATED: the current contour inner stream is neither framed nor parse-back closed, so adjacency, junction/tie-locus, and generic-decoder zero-marginal assumptions do not have receiver-closure evidence"
+    },
+    "temporal_xi_split": {
+      "entropy_payload_bytes": {
+        "bytes": 6634,
+        "evidence_label": "MEASURED"
+      },
+      "realized_d_pose": {
+        "evidence_label": "MEASURED",
+        "value": "0.0016095471538913576"
+      },
+      "self_contained_section_bytes": {
+        "bytes": 7195,
+        "evidence_label": "MEASURED"
+      }
+    }
+  },
+  "lane_id": "lane_mdl_ms_complex_k_lower_bound_20260718",
+  "lossless_seg_declared_family": {
+    "bytes_per_frame": 425.48,
+    "claim_class": "DECLARED-CODE-FAMILY UPPER BOUND; exact partition payload; non-promotable",
+    "codec": "context_partition_codec CPC1 temporal",
+    "evidence_label": "MEASURED",
+    "full_payload_decode_run": false,
+    "full_payload_exactness_basis": "emitted lossless codec contract plus existing whole-stack codec tests; this invocation decoded only the separately encoded deterministic prefix",
+    "header_bytes": 22,
+    "model_bytes": 442,
+    "n_frames": 600,
+    "payload_bytes": 255288,
+    "payload_sha256": "db0a925c666edc1e5124ee4dcf4fe2f0c66ee22140939bd78ebfac0410c9f4a4",
+    "prefix_roundtrip": {
+      "bit_exact": true,
+      "evidence_label": "MEASURED",
+      "frames": 2,
+      "payload_bytes": 1335,
+      "payload_sha256": "b8e64421972f6afe52a5a5e6d03150445bab73630687af52eef49fcd0a912c8a"
+    },
+    "rate_term": {
+      "byte_count": 255288,
+      "decimal": "0.169985800424652879",
+      "exact_fraction": "6382200/37545489"
+    },
+    "shape": [
+      384,
+      512
+    ],
+    "stream_bytes": 254824
+  },
+  "promotion_claim": false,
+  "provenance": {
+    "evidence_label": "MEASURED",
+    "execution": "cached local CPU only; no scorer/render/training/provider/live-run access",
+    "git_head_before_landing": "5119af53a07140311249eee85054baa4886d85ec",
+    "tool_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/mdl_ms_complex_K_lower_bound_20260718_20260718T055655Z/tools/measure_mdl_ms_complex_k_lower_bound.py",
+    "tool_sha256": "5b63909992b2eaf6c5c822d9651066f30c735cba28f3e4bd61178cf89217e5be"
+  },
+  "requested_claim_verdict": "FALSIFIED_AT_CLAIM_LEVEL",
+  "research_only": true,
+  "schema": "mdl_digital_cell_complex_code_length_audit_v1",
+  "score_claim": false,
+  "strict_rate_ceiling": {
+    "continuous_ceiling_decimal": "225272.934",
+    "continuous_ceiling_exact_fraction": "112636467/500",
+    "evidence_label": "DERIVED",
+    "formula": "B < (3 * 37545489) / 500",
+    "largest_integer_bytes_strictly_below": 225272,
+    "rate_at_225272": {
+      "byte_count": 225272,
+      "decimal": "0.149999378087737784",
+      "exact_fraction": "5631800/37545489"
+    },
+    "rate_at_225273": {
+      "byte_count": 225273,
+      "decimal": "0.150000043946690906",
+      "exact_fraction": "5631825/37545489"
+    }
+  },
+  "target_pose_lossless_diagnostic": {
+    "evidence_label": "MEASURED",
+    "reason": "cached gt_poses are not temporal xi and are not a receiver",
+    "status": "NOT_RUN_OPTIONAL"
+  },
+  "top_level_outcome_evidence_label": "DERIVED",
+  "universal_k_numeric_lower_bound": "TRIVIAL_ONLY",
+  "universal_k_threshold_verdict": "INCONCLUSIVE"
+}
