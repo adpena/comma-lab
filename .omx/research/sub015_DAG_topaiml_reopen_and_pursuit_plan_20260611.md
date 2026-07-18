@@ -19418,7 +19418,8 @@ reaper_tty_kills_were_the_harness_kill_class_20260717. OPERATOR-OWED: fleet-repo
 - **DIAGNOSTIC (measured while building):** the fix path itself surfaced 4 real defects caught by
   round-1 self-review + tests running against the LIVE tree: (1) `.lstrip("./")` char-class mangling
   (`.omx/…`→`omx/…`) produced 4 registry false positives; (2) `git grep -E 'spec[_\-. ]?v…'` is an
-  invalid POSIX-ERE bracket range — rc=128 swallowed → the content leg was silently INERT (the exact
+  invalid POSIX-ERE bracket range — rc=128 swallowed → the content leg was silently INERT (verdict_scope:
+  formulation — the invalid-ERE-bracket `git grep` search formulation only, CURED same-round; the exact
   fake-fix class the task forbids; now replaced by an exhaustive `git cat-file --batch` first-heading
   scan of every unique md blob on every ref — no grep pattern to get wrong, 1.2s live); (3) md-comment
   `-->` tails defeated placeholder-waiver rejection; (4) heading identity needed SPEC↔vehicle-token
