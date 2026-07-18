@@ -929,3 +929,43 @@ off-eval scorer.** Memory `[[campaign-is-a-constrained-mdl-inverse-solve]]`.
   payload-TTO through the fixed scorer (#350) vs long INR training. STATUS: design objective; the pool×channel /
   MDL / alternative-forms arms + #536 waterfill measure the pieces. Equations leg = FORMALIZATION_PENDING (register
   the crux laws with proper evaluators). Pointer 0.19108 UNMOVED (this is the objective, not a score claim).
+
+### §14.12 v10 BUILD MANIFEST + LAUNCH-READINESS (operator 2026-07-18 anti-signal-loss sweep)
+Single authoritative map so no component hides: component -> task -> memory -> status. v10 is NOT launch-ready
+until every row is built/measured/folded or a reasoned N/A. (Mem abbrev: MDL=campaign-is-a-constrained-mdl-
+inverse-solve, POOL=opportunity-pools-non-additive-and-rate-distortion-reachable, ROLES=kolmogorov-program-
+technique-roles, IC=intrinsic-complexity, KER=null-subspace-rate-measure.)
+
+| Component | Task | Mem | Status |
+|---|---|---|---|
+| Constrained-MDL inverse-solve objective | #541 | MDL | arm live |
+| Constructive inverse-solve harness (payload-TTO through fixed scorer) | #541 | MDL | arm live |
+| Power-diagram witness representation (invertible, video-fed) | #539 | MDL | arm live |
+| Completeness term-per-factor matrix | #538 | MDL | arm live |
+| - seg<->pose COUPLING (shared A, deepest) | #538/#535 | MDL | arm live |
+| - chroma | #276/#538 | MDL | measured->fold |
+| - camera-res sub-pixel/AA | #149/#538 | - | measured->fold |
+| - uint8-lattice feasibility in objective | #532/#538 | MDL | measured->fold |
+| - frame_0 seg-freedom | #538 | MDL | design |
+| - ker(A)/blind-coordinate free rate | #519/#520/#538 | KER | measured->fold |
+| - joint 3-axis waterfill | #536 | POOL | arm live |
+| Alternative-forms HYBRID + Cole-Hopf fast-solve (Fourier=cargo-cult) | #542 | MDL | arm live |
+| MDL(MS)=K lower bound | #536 | IC | arm live |
+| pool x channel Jacobian R-D harness | #535 | POOL | arm live |
+| Non-additivity + reachability + joint-optimum (S_floor provisional) | #536 | POOL | recorded |
+| 5 roles + gradient control | (DSL pending-build) | ROLES | recorded |
+| Pose: R1 arbitrary->largest lever; resume R1 run as trainer | #366 | POOL | recorded, op-GO |
+| v10 RECEIVER: witness inflate/decode + byte-close (rate accounting) | #543 | - | design |
+| v10 compiler blockers (real success / Init-vs-Fork / quotient residual) | #529/#530/#531 | - | boundary-gated |
+| Resumability: intra-stage preserve + graceful resume + guard | #537 | - | pending |
+| Equations-leg registration (crux laws, proper evaluators) | #540 | - | after-arms (needs anchors) |
+| Objective: feasibility-not-fidelity + range(A) + joint-min-desc + stored-pose | (DSL pending-build) | MDL | design |
+
+**REVIEW GATE (binding on all rows):** fresh-eyes recursive-adversarial + confound-hunt + NEGATIVE-RESULTS +
+THE EINSTEIN LAW ('intractable' is a property of the FORM not the problem; negatives are FUEL; verdict-scope ->
+audit-negative -> adversarially-overturn -> hybrid-reassign -> DEFERRED-not-KILLED; NO family-kill on naive/toy)
+per `.omx/research/build_wave_fresh_eyes_confound_hunt_contract_20260718.md`.
+**LAUNCH-READINESS (all before any heavy v10 training GO):** every manifest row built/folded; #529/#530/#531
+closed; birth-before-phase (14.2); REAL phase-efficacy test (14.5b); resumability #537; receiver+byte-close #543;
+exact byte-close/parse-back; every equations-leg law registered. Firing before these = the naive-launch anti-
+pattern. Pointer 0.19108 UNMOVED (manifest, not a score claim).
