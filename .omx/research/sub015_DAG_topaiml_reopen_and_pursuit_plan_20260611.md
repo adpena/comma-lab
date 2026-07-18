@@ -19543,3 +19543,22 @@ Memory: `checkpoint_maturity_dev_prod_axis_orthogonal_to_vehicle_20260718`. Poin
 - **TRIALITY status:** memories ✓ (6). **equations leg = FORMALIZATION_PENDING** (owed: register constrained-MDL-inverse +
   waterfill=KKT-Jacobian-Lagrangian + logsumexp=Cole-Hopf-of-argmax + non-additivity, with PROPER evaluators — a task, NOT faked
   inline). **DSL leg = pending-build** (the objective change becomes DSL levers when v10 builds them). SPEC_v10 §14.6-14.11 ✓.
+
+## FEED-eq540a (2026-07-18) — EQUATIONS LEG, first partial payment: factor-2 uint8-lattice feasibility law RATIFIED [triality:equations]
+- **What landed (commit bce6010c17):** the v10 uint8-lattice arm's staged candidate
+  `bounded_uint8_resize_preimage_cell_feasibility_v1` is now RATIFIED into the LIVE canonical_equations registry (733→734), with a
+  real evaluator (`bounded_cell_feasibility_certificate` → `solve_bounded_integer_block`, the exact gcd-pruned Diophantine search)
+  + 5 tests (known-feasible witness · proven-infeasible · out-of-range · honest-scope · registers).
+- **The law:** exact uint8 realization of a disjoint rational resize target is a bounded 4-var Diophantine feasibility problem
+  `∃ z∈{0..255}⁴: cᵀz=T`, followed by independent hard decoded-uint8 winner-cell acceptance. This is the equations-leg statement of
+  completeness-matrix **factor 2** (the load-bearing MISSING term: real-solve+clip(round) breaks argmax feasibility Δ≈63, the
+  Diophantine IFF realizes exact d_seg=0.0 on the lattice).
+- **HONESTY (why this is not a fake / not a premature score claim):** the FEASIBILITY PREDICATE is deterministic exact math (resize
+  supports VERIFIED_VIA_SOURCE_INSPECTION from modules.py) → registerable now. The RATE / d_seg SCORE claims (full-n600 realization
+  + receiver-closure + byte accounting) stay BYTE_CLOSE_GATED — the equation ships NO empirical anchor and NO score/promotion flag;
+  the n6 receipt + full-n600 byte-close is the recalibration trigger (A2 feature-cache + #543 receiver unblock it).
+- **TRIALITY status now:** equations leg = 1-of-4 crux laws paid (factor-2 ✓). Still OWED (still FORMALIZATION_PENDING, a task not
+  faked inline): rate-law-ladder full byte-close anchor · power-diagram generator law · KKT-waterfill=Jacobian-Lagrangian law. DSL
+  leg = pending-build (unchanged). #540 → in_progress.
+- **QUADRALITY sync:** queue (this FEED + report) · triality[equations ✓ / dag ✓ this block / dsl pending] · tasks (#540 in_progress
+  w/ progress note) · spec (SPEC_v10 §14.7-14.9 already carry the factor-2 lattice statement; no main-doc change owed).
