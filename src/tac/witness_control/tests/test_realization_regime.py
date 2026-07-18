@@ -22,6 +22,7 @@ from tac.witness_control.realization_regime import (
     REALIZATION_LIMITED_MIN_FRAC,
     RealizationRegimeResult,
     classify_fraction,
+    format_per_class_cells,
     format_regime_line,
     latest_regime_row,
     min_norm_crossing_max_coord,
@@ -225,6 +226,68 @@ def test_result_row_schema_and_non_promotable_markers():
     assert row["score_claim"] is False and "advisory" in row["axis_tag"]
     assert row["thresholds"]["sub_lsb_max_coord"] == 0.5
     assert "min-norm" in row["convention"]
+    assert "per_class" in row  # per-class split field present
+
+
+def test_per_class_split_rolls_up_by_gt_class():
+    """All 5 GT classes present; sampled classes carry a fraction+regime consistent with
+    classify_fraction; unsampled classes read None/'unsampled' (labels are the REAL chain's
+    — the margin guard forbids relabeling, so structure is asserted on the natural output)."""
+    net = _RealTinyScorer()
+    snap = _real_chain_snapshot(net, n_px=40, seed=21)
+    res = vjp_sub_lsb_over_snapshot(snap, net, n_pixels=40, seed=0)
+    assert set(res.per_class) == {"Road", "Lane", "Undrivable", "Movable", "MyCar"}
+    any_sampled = False
+    for _c, d in res.per_class.items():
+        if d["n_pixels_vjp"] > 0:
+            any_sampled = True
+            f = d["sub_lsb_frac_mass_weighted"]
+            assert 0.0 <= f <= 1.0
+            assert d["regime"] == classify_fraction(f)
+            assert d["terminal_solve_admissible"] == (classify_fraction(f) == "realization_limited")
+            assert d["n_flips_total"] >= d["n_flips_sampled_strata"] > 0
+        else:
+            assert d["regime"] == "unsampled" and d["sub_lsb_frac_mass_weighted"] is None
+    assert any_sampled
+    # the GT class of every flip contributes to exactly its own class's total mass
+    from tac.witness_control.factorized_features import parse_oriented_key
+    for gname_i, gname in enumerate(("Road", "Lane", "Undrivable", "Movable", "MyCar")):
+        expect_mass = sum(v["n_flips"] for k, v in res.per_pair.items()
+                          if parse_oriented_key(k)[1] == gname_i)
+        assert res.per_class[gname]["n_flips_total"] == expect_mass
+
+
+def test_per_class_mass_weighting_matches_hand_rollup():
+    net = _RealTinyScorer()
+    snap = _real_chain_snapshot(net, n_px=24, seed=31)
+    res = vjp_sub_lsb_over_snapshot(snap, net, n_pixels=24, seed=0)
+    from tac.witness_control.factorized_features import parse_oriented_key
+    for gname_i, gname in enumerate(("Road", "Lane", "Undrivable", "Movable", "MyCar")):
+        contrib = [(k, v) for k, v in res.per_pair.items()
+                   if parse_oriented_key(k)[1] == gname_i and v.get("n_sampled", 0) > 0]
+        if not contrib:
+            assert res.per_class[gname]["sub_lsb_frac_mass_weighted"] is None
+            continue
+        mass = sum(v["n_flips"] for _k, v in contrib)
+        expect = sum(v["sub_lsb_frac"] * v["n_flips"] / mass for _k, v in contrib)
+        assert res.per_class[gname]["sub_lsb_frac_mass_weighted"] == pytest.approx(expect, rel=1e-9)
+
+
+def test_format_per_class_cells_and_line():
+    per_class = {
+        "Lane": {"sub_lsb_frac_mass_weighted": 0.62, "regime": "realization_limited"},
+        "Movable": {"sub_lsb_frac_mass_weighted": 0.10, "regime": "gradient_limited"},
+    }
+    cells = format_per_class_cells(per_class)
+    assert "Lane 62% (REALZ-LIM)" in cells and "Movable 10% (GRAD-LIM)" in cells
+    line = format_regime_line({"ema_epoch": 900, "sub_lsb_frac_mass_weighted": 0.36,
+                               "regime": "mixed", "terminal_solve_admissible": False,
+                               "per_class": per_class})
+    assert "per-class:" in line and "Lane 62%" in line
+    # missing per_class -> no per-class segment, no crash
+    assert "per-class:" not in format_regime_line({"ema_epoch": 1, "regime": "mixed",
+                                                   "sub_lsb_frac_mass_weighted": 0.3,
+                                                   "terminal_solve_admissible": False})
 
 
 def test_latest_regime_row_roundtrip_and_prefix_filter(tmp_path):

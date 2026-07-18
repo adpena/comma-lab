@@ -50,11 +50,13 @@ import numpy as np
 
 from tac.witness_control.factorized_features import (
     AXIS_TAG,
+    CLASS_NAMES,
     SCORER_HW,
     MarginSnapshot,
     load_frozen_segnet_cpu,
     locked_append_jsonl,
     oriented_key,
+    parse_oriented_key,
     snapshot_witness_margins,
     utc_stamp,
 )
@@ -142,6 +144,7 @@ class RealizationRegimeResult:
     regime: str
     terminal_solve_admissible: bool
     d_seg_sample: float
+    per_class: dict = field(default_factory=dict)   # by GT class name (the decision-critical split)
     per_pair: dict = field(default_factory=dict)
     convention: str = (
         "min-norm crossing displacement max-coordinate < 0.5 uint8-LSB "
@@ -164,6 +167,7 @@ class RealizationRegimeResult:
             "regime": self.regime,
             "terminal_solve_admissible": self.terminal_solve_admissible,
             "d_seg_sample": self.d_seg_sample,
+            "per_class": self.per_class,
             "per_pair": self.per_pair,
             "convention": self.convention,
             "thresholds": {
@@ -265,6 +269,46 @@ def vjp_sub_lsb_over_snapshot(
         n_samp_total += r["n_sampled"]
 
     regime = classify_fraction(mass_frac)
+
+    # PER-CLASS rollup (operator-directed 2026-07-17): the decision-critical split.  A flip
+    # pixel's GT class g is the UNDER-SERVED class (exactly what verdict d_seg_by_class[g]
+    # measures — of GT-g pixels, the fraction the witness gets wrong).  Roll the oriented-pair
+    # strata up by GT class, mass-weighting each contributing pair by its own flip count, so
+    # per_class[g].sub_lsb_frac tells us how much of class g's remaining error is
+    # realization-limited (irreducible -> terminal SOLVE) vs gradient-limited (recoverable).
+    per_class: dict = {}
+    for gi, gname in enumerate(CLASS_NAMES):
+        # total flip mass INTO this GT class (all pairs, sampled or not) for context
+        total_mass_g = sum(
+            v["n_flips"] for key, v in per_pair_rows.items() if parse_oriented_key(key)[1] == gi
+        )
+        contrib = [(key, v) for key, v in per_pair_rows.items()
+                   if parse_oriented_key(key)[1] == gi and v.get("n_sampled", 0) > 0]
+        sampled_mass = sum(v["n_flips"] for _k, v in contrib)
+        if sampled_mass > 0:
+            frac_g = sum(v["sub_lsb_frac"] * v["n_flips"] / sampled_mass for _k, v in contrib)
+            n_samp_g = sum(v["n_sampled"] for _k, v in contrib)
+            n_sub_g = sum(v["n_sub_lsb"] for _k, v in contrib)
+            per_class[gname] = {
+                "sub_lsb_frac_mass_weighted": float(frac_g),
+                "regime": classify_fraction(frac_g),
+                "terminal_solve_admissible": classify_fraction(frac_g) == "realization_limited",
+                "n_flips_total": int(total_mass_g),
+                "n_flips_sampled_strata": int(sampled_mass),
+                "n_pixels_vjp": int(n_samp_g),
+                "n_sub_lsb": int(n_sub_g),
+            }
+        else:
+            per_class[gname] = {
+                "sub_lsb_frac_mass_weighted": None,
+                "regime": "unsampled",
+                "terminal_solve_admissible": None,
+                "n_flips_total": int(total_mass_g),
+                "n_flips_sampled_strata": 0,
+                "n_pixels_vjp": 0,
+                "n_sub_lsb": 0,
+            }
+
     return RealizationRegimeResult(
         run_ref=snapshot.run_ref,
         ema_epoch=snapshot.ema_epoch,
@@ -277,6 +321,7 @@ def vjp_sub_lsb_over_snapshot(
         regime=regime,
         terminal_solve_admissible=(regime == "realization_limited"),
         d_seg_sample=snapshot.d_seg_sample,
+        per_class=per_class,
         per_pair=per_pair_rows,
     )
 
@@ -305,16 +350,36 @@ def classify_realization_regime(
     return res
 
 
+def _pct(v) -> str:
+    return f"{100 * v:.0f}%" if isinstance(v, (int, float)) else "?"
+
+
+def format_per_class_cells(per_class: dict, classes: tuple[str, ...] = ("Lane", "Movable")) -> str:
+    """Per-class sub-LSB cells (default: the two classes carrying the remaining d_seg).
+    Each cell: ``Class sub-LSB% (regime)``.  Pure formatter."""
+    cells = []
+    for c in classes:
+        d = per_class.get(c) or {}
+        reg = str(d.get("regime", "?"))
+        tag = {"realization_limited": "REALZ-LIM", "gradient_limited": "GRAD-LIM",
+               "mixed": "mixed", "unsampled": "unsampled"}.get(reg, reg)
+        cells.append(f"{c} {_pct(d.get('sub_lsb_frac_mass_weighted'))} ({tag})")
+    return " · ".join(cells)
+
+
 def format_regime_line(row: dict, age_s: float | None = None) -> str:
-    """Digest line (pure formatter).  Crisp: the fraction, the regime, the actuation."""
+    """Digest line (pure formatter).  Crisp: aggregate fraction + the PER-CLASS split (the
+    decision-critical Lane/Movable numbers) + the actuation."""
     frac = row.get("sub_lsb_frac_mass_weighted")
-    frac_s = f"{100 * frac:.0f}%" if isinstance(frac, (int, float)) else "?"
     reg = str(row.get("regime", "?")).upper()
     adm = row.get("terminal_solve_admissible")
     act = ("terminal SOLVE #341/#342 admissible — more epochs cannot realize the majority"
            if adm else "keep training (amplitude path still open)")
-    head = (f"realization-regime: ema ep{row.get('ema_epoch', '?')} — {frac_s} of remaining "
-            f"flip mass needs sub-LSB moves -> {reg} ({act})")
+    head = (f"realization-regime: ema ep{row.get('ema_epoch', '?')} — agg {_pct(frac)} of "
+            f"remaining flip mass sub-LSB -> {reg} ({act})")
+    pc = row.get("per_class")
+    if isinstance(pc, dict) and pc:
+        head += " | per-class: " + format_per_class_cells(pc)
     if age_s is not None:
         head += f" [{age_s / 3600:.1f}h old]"
     return head + " [advisory NON-PROMOTABLE]"
@@ -379,6 +444,7 @@ __all__ = [
     "RealizationRegimeResult",
     "classify_fraction",
     "classify_realization_regime",
+    "format_per_class_cells",
     "format_regime_line",
     "latest_regime_row",
     "min_norm_crossing_max_coord",

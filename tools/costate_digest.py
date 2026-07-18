@@ -530,7 +530,8 @@ def section_factorized_sense(run_dir: Path | None) -> tuple[list[str], dict | No
             lines.append(line)
             data["realization_regime"] = {
                 k: rrow.get(k) for k in ("run_ref", "ema_epoch", "sub_lsb_frac_mass_weighted",
-                                         "regime", "terminal_solve_admissible", "n_pixels_vjp")
+                                         "regime", "terminal_solve_admissible", "n_pixels_vjp",
+                                         "per_class")
             }
     except Exception as exc:
         lines.append(f"realization-regime: unavailable ({type(exc).__name__})")
