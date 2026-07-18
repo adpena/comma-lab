@@ -734,9 +734,13 @@ This is MVP-first: measure v10's assumed levers on the cheap substrate before th
   coherent codec). Its "+56.6%→+161% coupling wall" is SUBSTANTIALLY a strawman artifact of the wrong
   (per-pixel-independent) formulation. VALID: the diagnosis (96.7% Road→Lane flips ARE phase errors on the GT
   band; stratum amplitude-open). RETRACTED: any efficacy verdict — conditioning + real coherent codec UNTESTED.
-  **§14.2 phase-stage is train-side/constrained-solve ONLY; the #425 store-and-apply RATE plan is RULED OUT**
-  (post-hoc-stored corrections dead; only JOINT descent or constrained SOLVE crosses — pose L68 + phase, one law).
-  Cure = FiLM-conditioned joint-trained sidecar (Quantizr-pose-analog). Memo `phase_stack_efficacy_probe_v10_gate_20260718.md`.
+  **§14.2 phase-stage EFFICACY IS UNTESTED — the §14.5 n600 gate remains OPEN** (campaign meta-review
+  2026-07-18 correction; supersedes the earlier "train-side ONLY / #425 RULED OUT" wording, which over-read
+  the strawman). Neither #424 conditioning-in-loop NOR the real #425 coherent per-pair/per-dash codec (through
+  its actual receiver) has been tested. The strawman does NOT establish "post-hoc dead" for PHASE — only the
+  POSE leg (L68, 5 formulations, photometric) is measured-dead; the phase leg is OPEN. The FiLM-conditioned
+  joint-trained sidecar is the leading DESIGN HYPOTHESIS, not a proven cure. OWED = the real train-side +
+  #425-receiver n600 test. Memo `phase_stack_efficacy_probe_v10_gate_20260718.md` + campaign review.
 - **`_dev`/`_prod` maturity axis** (orthogonal to vehicle): dev iterates freely + is non-pointer-promotable by a
   structural guard; prod exact rows only move the frontier. v9c3=dev signal-harvest, v10=prod capstone. (Merged
   to main; helper `tac.checkpoint_maturity`.)
