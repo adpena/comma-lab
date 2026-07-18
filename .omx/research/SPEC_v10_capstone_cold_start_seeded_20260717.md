@@ -867,3 +867,24 @@ Kolmogorov sweep `solve_the_right_problem_kolmogorov_sweep_20260718`) land two B
     the true form of the §14.5(b)/§14.7 admission receipt. Anchors `[[frozen-scorer-exact-factorization]]` +
     `[[segnet-recursive-fractal-factorization]]` (rank-4 head, skip-77%) + `[[null-subspace-rate-measure]]`
     (ker(A) 22.7%) + `[[intrinsic-complexity-design-philosophy]]` (the per-pool intrinsic/extrinsic diagnostic).
+  - **REACHABILITY CORRECTION (operator 2026-07-18, "nothing is unreachable if we spend sufficient bytes the
+    right way") — supersedes the word "unreachable" above.** Correct: NOTHING is unreachable in DISTORTION.
+    `d_seg,d_pose → 0` are BOTH reachable because every "floor" is a DETERMINISTIC target of the frozen scorer,
+    not stochastic noise: the uint8-LSB floor is cracked by camera-res (874×1164) sub-pixel placement + AA
+    coverage (#149; the PROJECT role); ker(A) is a coordinate you don't spend in, not a target you miss (place
+    via range(A)); GT-flicker is a frozen deterministic function — reproduce the partition exactly → d_seg=0.
+    So the ONE true intrinsic floor is RATE = the Kolmogorov complexity of {partition+ξ} (§14.9), NOT distortion.
+    Read the "intrinsic" column above as **RATE-DOMINATED** (costs more bytes than the 100·Δd_seg it buys on S),
+    NOT "unreachable." Each pool×channel cell is therefore a **RATE-DISTORTION curve** (bytes-to-close vs
+    d_seg-bought); the non-additivity IS the waterfill (marginal ΔS/byte diminishes within a pool — the second
+    lever attacks the residual the first left, at a worse byte-price). **The joint optimum is the 3-axis KKT
+    waterfill where marginal ΔS/byte equalizes across seg-spend, pose-spend, AND rate — NEITHER d_seg=0 NOR
+    d_pose=0** (pose's marginal `5/√(10·d_pose)` explodes near 0 ⇒ optimal d_pose small-but-nonzero). **S_floor
+    ≈0.118 is PROVISIONAL** (a rate-dominated derivation at an assumed operating point, "may be off slightly or
+    more" — operator 2026-07-18), NOT the measured joint optimum. OWED: measure per-axis marginal ΔS/byte for
+    BOTH seg and pose at real byte-closed operating points through the actual `upstream/evaluate.py`, then solve
+    the seg-vs-pose-vs-rate waterfill (operating-point-dependent; pose overtakes seg below pose_avg≈2.5e-4).
+    Harness OUTPUT upgraded again:
+    `pool × channel → R-D curve (bytes ↦ d_seg)`, and v10 waterfills marginal ΔS/byte across cells. Memory
+    `[[opportunity-pools-non-additive-and-rate-distortion-reachable]]` + `[[kolmogorov-program-technique-roles-and-gradient-control-surgical-targeting]]`
+    (the five roles: generate-free / seed-counted / solve / project / train-residual; gradient control aims role-5).
