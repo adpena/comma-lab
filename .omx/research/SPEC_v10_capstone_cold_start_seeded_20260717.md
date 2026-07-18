@@ -727,3 +727,35 @@ design (#529 compiler real-success + #530 Init≠Fork + #531 T-quotient-residual
 gate) → **(d)** fire v10 cold-start ONLY when (b) confirms the levers pay AND (c) is complete AND compute is free.
 If the phase-stack probe comes back FLAT, that is decisive too — redesign §14.2 before the expensive v10 commit.
 This is MVP-first: measure v10's assumed levers on the cheap substrate before the multi-day cold-start.
+
+### §14.6 CONFIRMED CORRECTIONS (2026-07-18 — fold as we confirm, operator SoT discipline)
+- **Phase-stack efficacy (the §14.5(b) gate) RETURNED — but MIS-TESTED (operator caught).** The probe applied a
+  PER-PIXEL-INDEPENDENT min-norm post-hoc displacement (neither #424 conditioning-in-loop nor the real #425
+  coherent codec). Its "+56.6%→+161% coupling wall" is SUBSTANTIALLY a strawman artifact of the wrong
+  (per-pixel-independent) formulation. VALID: the diagnosis (96.7% Road→Lane flips ARE phase errors on the GT
+  band; stratum amplitude-open). RETRACTED: any efficacy verdict — conditioning + real coherent codec UNTESTED.
+  **§14.2 phase-stage is train-side/constrained-solve ONLY; the #425 store-and-apply RATE plan is RULED OUT**
+  (post-hoc-stored corrections dead; only JOINT descent or constrained SOLVE crosses — pose L68 + phase, one law).
+  Cure = FiLM-conditioned joint-trained sidecar (Quantizr-pose-analog). Memo `phase_stack_efficacy_probe_v10_gate_20260718.md`.
+- **`_dev`/`_prod` maturity axis** (orthogonal to vehicle): dev iterates freely + is non-pointer-promotable by a
+  structural guard; prod exact rows only move the frontier. v9c3=dev signal-harvest, v10=prod capstone. (Merged
+  to main; helper `tac.checkpoint_maturity`.)
+
+### §14.7 CHANNEL/HYPERPLANE-NATIVE WITNESS (design direction — operator 2026-07-18, empirically gated on the running arm)
+Operator Q "should we bake Channels or Hyperplane into the witness?" → **BOTH, two layers of one object**, with
+the render-legality constraint (the contest scores a DECODED IMAGE through the real frozen scorer, so the witness
+must still EMIT a legal render — bake into internal geometry + seed + generator, NEVER skip the scorer):
+- **CHANNELS → the witness HEAD + FiLM conditioning + LOSS.** Trainable/control coordinates = the scorer's
+  per-class-weight channel basis (move along `W_c−W_c′`); loss = hyperplane-margin. Train + steer in the scorer's
+  OWN decision coordinates ⇒ conditioning is collateral-free (FiLM = channel op, cannot per-pixel-overshoot).
+- **HYPERPLANE → the witness REPRESENTATION + SEED.** The argmax partition IS a rank-4 hyperplane arrangement =
+  tropical/Laguerre power diagram (#284/#311). Make that the witness's NATIVE representation (its cells = the
+  scorer's cells); the SEED = the cell-membership/partition (video-derived, COUNTED); the render = the free
+  generator decode (rule-118). This IS the non-RGB task-space thesis: spend bytes on the partition, not the pixels.
+- **Falls out of {task-space level-set witness × channels × upstream modules}** (operator 2026-07-18): the witness
+  is the scorer's argmax partition re-expressed in the channels the frozen modules define, counting only the seed.
+- **STATUS: design direction, NOT yet MEASURED-to-pay.** Empirical gate = the collateral-coupling/FiLM channel-space
+  arm (is channel/hyperplane control collateral-free? how much Road→Lane d_seg is reachable coherently?). Fold the
+  MEASURED verdict here on the arm's return. Memories `[[solve-the-right-problem-is-right-coordinates-at-every-level-kolmogorov]]`
+  + `[[post-hoc-stored-corrections-dead-joint-descent-or-constrained-solve-required]]`. Sisters #531 (T=quotient
+  residual), #524 (16-ch stride-2 skip), #503 (recursive-fractal-optimal), #500 (Fisher metric).
