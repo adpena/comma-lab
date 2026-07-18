@@ -982,3 +982,121 @@ organ trajectory record: 9 intervals; walk-forward winner E_prototype_bregman; r
  "winner_walkforward": "E_prototype_bregman"
 }
 ```
+## FEED-426-organ-20260718T015252Z run=levelset_n600_witness_20260717T113932Z#factorized-ep900
+organ trajectory record: 0 intervals; walk-forward winner n/a; regimes none. Every number [macOS advisory] NON-PROMOTABLE; the organ is MEANS (#426; graph-memory indexes this block into regime nodes).
+
+```json
+{
+ "axis_tag": "[macOS-CPU advisory] NON-PROMOTABLE",
+ "ema_epoch": 725,
+ "flipdist_feat_q_by_pair": {
+  "Lane->Movable": {
+   "0.1": 0.0429806877081014,
+   "0.5": 0.07681558636141025,
+   "0.9": 0.11065048501471912
+  },
+  "Lane->MyCar": {
+   "0.1": 0.0516582436662829,
+   "0.5": 0.0516582436662829,
+   "0.9": 0.0516582436662829
+  },
+  "Lane->Road": {
+   "0.1": 0.005773842983115574,
+   "0.5": 0.03462262374372263,
+   "0.9": 0.09755535786766481
+  },
+  "Movable->Lane": {
+   "0.1": 0.035602242565226434,
+   "0.5": 0.06421647049228182,
+   "0.9": 0.5827421079349542
+  },
+  "Movable->Road": {
+   "0.1": 0.00894607774746167,
+   "0.5": 0.054841378689784726,
+   "0.9": 0.15699054658372424
+  },
+  "Movable->Undrivable": {
+   "0.1": 0.007488204764413413,
+   "0.5": 0.05049541218298596,
+   "0.9": 0.15834123604328393
+  },
+  "MyCar->Lane": {
+   "0.1": 0.0007507160251959194,
+   "0.5": 0.043824261053432026,
+   "0.9": 0.1582494984631215
+  },
+  "MyCar->Road": {
+   "0.1": 0.011934996091944892,
+   "0.5": 0.061515519006415345,
+   "0.9": 0.16305768335592724
+  },
+  "Road->Lane": {
+   "0.1": 0.010091022633312022,
+   "0.5": 0.06013733207380322,
+   "0.9": 0.17365967808208857
+  },
+  "Road->Movable": {
+   "0.1": 0.00894573738103331,
+   "0.5": 0.06004987647953201,
+   "0.9": 0.19489077789130307
+  },
+  "Road->MyCar": {
+   "0.1": 0.009019467394365181,
+   "0.5": 0.059330265094524395,
+   "0.9": 0.14191541125285217
+  },
+  "Road->Undrivable": {
+   "0.1": 0.009579799616914086,
+   "0.5": 0.0533426064513996,
+   "0.9": 0.1647438203986107
+  },
+  "Undrivable->Movable": {
+   "0.1": 0.01066664976079854,
+   "0.5": 0.05714802699921006,
+   "0.9": 0.22677195290683985
+  },
+  "Undrivable->Road": {
+   "0.1": 0.010393803894840509,
+   "0.5": 0.053919433722763595,
+   "0.9": 0.15665288158419682
+  }
+ },
+ "generated_at": "20260718T015252Z",
+ "kind": "factorized_features_v1",
+ "lambda_validation": {
+  "adjoint_derived_road_lane_ratio": 2.0896226415094343,
+  "note": "independent compatible trajectory for the #516 factorized-adjoint validation (per-pair measured flip-distance/margin series)"
+ },
+ "n_intervals": 0,
+ "prototypes": [],
+ "run_ref": "levelset_n600_witness_20260717T113932Z#factorized-ep900",
+ "sample": {
+  "d_seg_sample": 0.002994537353515625,
+  "n_flips": 7065,
+  "pair_indices": [
+   0,
+   50,
+   100,
+   150,
+   200,
+   250,
+   300,
+   350,
+   400,
+   450,
+   500,
+   550
+  ]
+ },
+ "score_claim": false,
+ "verdict_d_seg": 0.003891,
+ "verdict_epoch": 900,
+ "visible_blind_energy": {
+  "ker_zero_weight_frac": 0.22696926089315625,
+  "n_pairs": 12,
+  "residual_energy_visible_frac_mean": 0.7737533436806139,
+  "residual_energy_visible_frac_min": 0.7718068083958651
+ }
+}
+```
+

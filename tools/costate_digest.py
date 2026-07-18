@@ -470,6 +470,74 @@ def section_duty_to_measure(term_current: dict[str, float] | None = None) -> tup
         return f"duty-to-measure: unavailable ({type(exc).__name__}: {exc})", None
 
 
+def section_factorized_sense(run_dir: Path | None) -> tuple[list[str], dict | None]:
+    """Factorized SENSE rows (organ upgrades A+B, 2026-07-17): the exact rank-4/ker(A)
+    duty ranking recomputed from the latest persisted margin snapshot (an ALTERNATIVE
+    beside the statistical duty line — never a replacement), and the realization-vs-
+    gradient regime read (sub-LSB fraction of remaining flip mass -> terminal-SOLVE
+    admissibility).  Reads ONLY the .omx/state ledgers written by
+    tools/costate_live_ingest.py / tac.witness_control.realization_regime (no decode or
+    SegNet work at SessionStart — protects the <5s budget).  Read-only, score-neutral ->
+    defaults ON; fail-open (omit on any error); staleness surfaced on each line."""
+    lines: list[str] = []
+    data: dict = {}
+    prefix = run_dir.name if run_dir is not None else None
+    try:
+        from tac.witness_control.factorized_duty_ranking import (
+            format_factorized_duty_line,
+            rank_levers_from_summary_row,
+        )
+
+        snap_path = _REPO / ".omx" / "state" / "witness_factorized_snapshot.jsonl"
+        row = None
+        if snap_path.is_file():
+            for ln in snap_path.read_text(errors="replace").splitlines():
+                if not ln.strip():
+                    continue
+                try:
+                    cand = json.loads(ln)
+                except Exception:
+                    continue
+                if isinstance(cand, dict) and (prefix is None or str(cand.get("run_ref", "")).startswith(prefix)):
+                    row = cand
+        if row:
+            ranked = rank_levers_from_summary_row(row)
+            age = None
+            try:
+                age = max(0.0, time.time() - snap_path.stat().st_mtime)
+            except Exception:
+                pass
+            lines.append(format_factorized_duty_line(ranked, ema_epoch=row.get("ema_epoch"), age_s=age))
+            data["factorized_duty"] = {"ranked_top": ranked[:6], "snapshot_row_ref": row.get("run_ref"),
+                                       "ema_epoch": row.get("ema_epoch"), "n_flips": row.get("n_flips")}
+    except Exception as exc:
+        lines.append(f"factorized-duty: unavailable ({type(exc).__name__})")
+    try:
+        from tac.witness_control.realization_regime import REGIME_JSONL, format_regime_line, latest_regime_row
+
+        rrow = latest_regime_row(run_prefix=prefix)
+        if rrow is None and prefix is not None:
+            rrow = latest_regime_row()  # fall back to the newest row, still labeled by run_ref
+        if rrow:
+            age = None
+            try:
+                age = max(0.0, time.time() - Path(REGIME_JSONL).stat().st_mtime)
+            except Exception:
+                pass
+            line = format_regime_line(rrow, age_s=age)
+            if prefix is not None and not str(rrow.get("run_ref", "")).startswith(prefix):
+                line += f" (from run {rrow.get('run_ref')})"
+            lines.append(line)
+            data["realization_regime"] = {
+                k: rrow.get(k) for k in ("run_ref", "ema_epoch", "sub_lsb_frac_mass_weighted",
+                                         "regime", "terminal_solve_admissible", "n_pixels_vjp",
+                                         "per_class")
+            }
+    except Exception as exc:
+        lines.append(f"realization-regime: unavailable ({type(exc).__name__})")
+    return lines, (data or None)
+
+
 def _pool_marker(r: dict) -> str:
     """DSL-leg marker per pool row: '' = held by a DSL Lever factory · ~ = NOT a single-flag lever
     (tool-side / vehicle-level / unbuilt, carries dsl_na_reason). Mirrors the duty-line vocabulary."""
@@ -1091,6 +1159,11 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     # P8 floor-aware: feed the live run's MEASURED current d_seg (annulus SENSE) so at-floor levers rank ~0.
     duty_line, data["duty_to_measure"] = section_duty_to_measure(_live_term_current(data.get("annulus")))
     lines.append(duty_line)
+
+    # A+B (2026-07-17): exact-factorized duty ranking (ALTERNATIVE beside the statistical
+    # line above) + the realization-vs-gradient regime read — from persisted ledgers only.
+    fact_lines, data["factorized_sense"] = section_factorized_sense(run_dir)
+    lines.extend(fact_lines)
 
     # #403 P0: the curriculum-candidate pool (ANY form) as a tracked costate class, beside the lever queue.
     cpool_line, data["curriculum_pool"] = section_curriculum_pool()
