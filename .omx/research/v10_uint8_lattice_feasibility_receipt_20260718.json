@@ -1,0 +1,1547 @@
+{
+  "aggregate": {
+    "arms": {
+      "clip_round_minimum_norm": {
+        "d_seg": 0.00044080946180555556,
+        "max_abs_A_residual": 63.824981689453125,
+        "mean_abs_A_residual_pair_mean": 0.19547035220297582,
+        "mismatched_pixels": 520,
+        "per_class": {
+          "0": {
+            "d_seg": 0.0008624614575968788,
+            "mismatched_pixels": 233,
+            "target_pixels": 270157
+          },
+          "1": {
+            "d_seg": 0.005584905660377358,
+            "mismatched_pixels": 37,
+            "target_pixels": 6625
+          },
+          "2": {
+            "d_seg": 0.00028606797860620186,
+            "mismatched_pixels": 168,
+            "target_pixels": 587273
+          },
+          "3": {
+            "d_seg": 0.004976101617233025,
+            "mismatched_pixels": 76,
+            "target_pixels": 15273
+          },
+          "4": {
+            "d_seg": 1.997868939797549e-05,
+            "mismatched_pixels": 6,
+            "target_pixels": 300320
+          }
+        },
+        "total_pixels": 1179648
+      },
+      "exact_uint8_lattice_candidate": {
+        "d_seg": 0.0,
+        "max_abs_A_residual": 8.526512829121202e-14,
+        "mean_abs_A_residual_pair_mean": 8.610869164522594e-16,
+        "mismatched_pixels": 0,
+        "per_class": {
+          "0": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 270157
+          },
+          "1": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 6625
+          },
+          "2": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 587273
+          },
+          "3": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 15273
+          },
+          "4": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 300320
+          }
+        },
+        "total_pixels": 1179648
+      },
+      "real_minimum_norm_preimage": {
+        "d_seg": 8.477105034722222e-07,
+        "max_abs_A_residual": 8.526512829121202e-14,
+        "mean_abs_A_residual_pair_mean": 1.4677185914152231e-15,
+        "mismatched_pixels": 1,
+        "per_class": {
+          "0": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 270157
+          },
+          "1": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 6625
+          },
+          "2": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 587273
+          },
+          "3": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "target_pixels": 15273
+          },
+          "4": {
+            "d_seg": 3.3297815663292486e-06,
+            "mismatched_pixels": 1,
+            "target_pixels": 300320
+          }
+        },
+        "total_pixels": 1179648
+      }
+    },
+    "clip_failed_cell_holds": {
+      "candidate_holds": 520,
+      "candidate_regressions_on_clip_held_cells": 0,
+      "clip_failed_cells": 520,
+      "hold_fraction": 1.0
+    },
+    "exact_search": {
+      "aggregate_statuses": [
+        "FEASIBLE_EXACT"
+      ],
+      "budget_blocks": 0,
+      "certified_exact_frames": 6,
+      "decoded_frames_with_exact_numerator_equality": 6,
+      "exact_blocks": 3538944,
+      "exact_candidate_blocks": 3538944,
+      "heuristic_blocks": 0,
+      "max_abs_decoded_numerator_residual": 0,
+      "nodes_visited": 24355043,
+      "nonzero_decoded_numerator_residual_cells": 0,
+      "proven_affine_infeasible_blocks": 0
+    }
+  },
+  "authority": {
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "pointer_moved": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "subset_non_promotable": true,
+    "verdict_scope": "selected real n600-cache pairs, frozen CPU SegNet, uint8 frame1/A factor only; no PoseNet, receiver archive, contest CPU/CUDA, or full-n600 claim"
+  },
+  "axis": "[macOS-CPU advisory subset]",
+  "configuration": {
+    "camera_hw": [
+      874,
+      1164
+    ],
+    "cpu_threads": 1,
+    "input_hashes": {
+      "gt_n600_npz_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "measurement_tool_sha256": "51103ef9a97f52da0ec2f7bf370f55ee54ae1746238e7cd69d6c92d8ed40327a",
+      "segnet_safetensors_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+      "solver_module_sha256": "5039902d8de519f74065dfcc39812d2d7f2336602c537009374e122ebca79e2b",
+      "upstream_frame_utils_py_sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+      "upstream_modules_py_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    "m_safe": 0.039180326461791926,
+    "max_nodes_per_block": 4096,
+    "output_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_uint8_lattice_20260718_20260718T115550Z/.omx/research/v10_uint8_lattice_feasibility_receipt_20260718.json",
+    "pair_ids": [
+      90,
+      175,
+      277,
+      381,
+      424,
+      573
+    ],
+    "schema": "v10_uint8_lattice_feasibility_state.v1",
+    "scorer_hw": [
+      384,
+      512
+    ],
+    "seed": 20260718,
+    "selection_policy": "all-600 equal temporal strata; fragility=mean(cached margin<m_safe); alternating within-stratum 0.25/0.75 quantile; deterministic pair-index tie break; no candidate outcome peeking",
+    "sidecar_path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.u8lfs",
+    "stage_dir": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages",
+    "state_path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.state.json"
+  },
+  "confound_controls": {
+    "named_confound": "soft margin improvement masquerading as a real argmax-cell flip after uint8/resize/parse-back",
+    "negative_control": {
+      "PASS": true,
+      "control": "synthetic always-false hard oracle with no proposals",
+      "expected": "STALLED_UNKNOWN",
+      "observed": "STALLED_UNKNOWN",
+      "scope": "hard-oracle admission plumbing only; not a frozen-SegNet infeasibility claim"
+    },
+    "positive_control": {
+      "PASS": true,
+      "cache_disagree_pixels": 0,
+      "control": "source uint8 serialized/parsed through U8LF then scored in the same frozen-SegNet run",
+      "source_parseback_frame_and_argmax_equal_all_pairs": true
+    },
+    "primary_verdict_surface": "hard target-vs-predicted argmax only; no soft hinge is admitted"
+  },
+  "custody": {
+    "command": "tools/measure_uint8_lattice_feasibility.py --sample-pairs 6 --output .omx/research/v10_uint8_lattice_feasibility_receipt_20260718.json --sidecar /Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.u8lfs --state /Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.state.json --stage-dir /Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages --cpu-threads 1 --max-nodes-per-block 4096",
+    "executed_scorer_module_paths": {
+      "frame_utils": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+      "modules": "/Users/adpena/Projects/pact/upstream/modules.py"
+    },
+    "executed_scorer_paths_match_hashed_inputs": true,
+    "frontier_surfaces_after": {
+      "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json": {
+        "bytes": 12299,
+        "exists": true,
+        "sha256": "baae2644d135dd800a729d589c674dcb3bb8d15c50d05d8ead484052da7a101b"
+      },
+      "/Users/adpena/Projects/pact/reports/latest.md": {
+        "bytes": 93518,
+        "exists": true,
+        "sha256": "2c8e987723e68c7b7efcf058776c4052fc4b8990cab733194a7f9923350c291d"
+      }
+    },
+    "frontier_surfaces_before": {
+      "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json": {
+        "bytes": 12299,
+        "exists": true,
+        "sha256": "baae2644d135dd800a729d589c674dcb3bb8d15c50d05d8ead484052da7a101b"
+      },
+      "/Users/adpena/Projects/pact/reports/latest.md": {
+        "bytes": 93518,
+        "exists": true,
+        "sha256": "2c8e987723e68c7b7efcf058776c4052fc4b8990cab733194a7f9923350c291d"
+      }
+    },
+    "frontier_surfaces_unchanged": true,
+    "git_head": "cb1733373e8dcc3e217284b973a07916e85751ec",
+    "input_hashes": {
+      "gt_n600_npz_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+      "measurement_tool_sha256": "51103ef9a97f52da0ec2f7bf370f55ee54ae1746238e7cd69d6c92d8ed40327a",
+      "segnet_safetensors_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+      "solver_module_sha256": "5039902d8de519f74065dfcc39812d2d7f2336602c537009374e122ebca79e2b",
+      "upstream_frame_utils_py_sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+      "upstream_modules_py_sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    },
+    "sacred_metadata_after": {
+      "entries": 18,
+      "exists": true,
+      "metadata_sha256": "0bdc3e39c5eac970625f91e6803b1bb33330e412514b78ce35dab2c4c351842c"
+    },
+    "sacred_metadata_before": {
+      "entries": 18,
+      "exists": true,
+      "metadata_sha256": "0bdc3e39c5eac970625f91e6803b1bb33330e412514b78ce35dab2c4c351842c"
+    },
+    "sacred_metadata_unchanged_during_measurement": true,
+    "sacred_result_root": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z",
+    "seed": 20260718,
+    "storage_preflight": {
+      "PASS": true,
+      "same_filesystem_device": true,
+      "sidecar": {
+        "PASS": true,
+        "filesystem_anchor": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718",
+        "filesystem_device": 16777242,
+        "free_bytes_before": 824820822016,
+        "raw_frame_bytes": 3052008,
+        "required_free_bytes": 104519392,
+        "waterfall_order": [
+          "/Volumes/VertigoDataTier/pact",
+          "/Volumes/APDataStore/pact"
+        ]
+      },
+      "stage_dir": {
+        "PASS": true,
+        "filesystem_anchor": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718",
+        "filesystem_device": 16777242,
+        "free_bytes_before": 824820822016,
+        "raw_frame_bytes": 3052008,
+        "required_free_bytes": 104519392,
+        "waterfall_order": [
+          "/Volumes/VertigoDataTier/pact",
+          "/Volumes/APDataStore/pact"
+        ]
+      }
+    },
+    "tool_write_paths_are_disjoint_from_sacred_root": true
+  },
+  "environment": {
+    "determinism_environment": {
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "PYTHONHASHSEED": "0",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    },
+    "machine": "arm64",
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12",
+    "segnet_preprocess_input_batch_geometry": [
+      1,
+      2,
+      3,
+      874,
+      1164
+    ],
+    "torch": "2.12.1",
+    "torch_device": "cpu",
+    "torch_threads": 1
+  },
+  "labels": {
+    "DERIVED": [
+      "disjoint block separation and exact rational bounded-Diophantine certificates"
+    ],
+    "INFERRED": [
+      "subset behavior may indicate factor-2 feasibility but cannot establish n600/archive adoption"
+    ],
+    "MEASURED": [
+      "same-run frozen-SegNet source/candidate argmax",
+      "decoded-uint8 d_seg and per-class d_seg",
+      "A residuals, exact-search counters/nodes, payload bytes/hashes, runtimes"
+    ]
+  },
+  "pair_rows": [
+    {
+      "arms": {
+        "clip_round_minimum_norm": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": false,
+            "max_abs_numerator_residual": 49431960,
+            "nonzero_numerator_residual_cells": 581022
+          },
+          "projection": {
+            "max_abs_A_residual": 62.855987548828125,
+            "mean_abs_A_residual": 0.1964918365184631
+          },
+          "realization": "clip(round(B(y))) uint8 baseline",
+          "seg": {
+            "d_seg": 0.0004069010416666667,
+            "mismatched_pixels": 80,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0004399375288709003,
+                "mismatched_pixels": 20,
+                "target_pixels": 45461
+              },
+              "1": {
+                "d_seg": 0.009018036072144289,
+                "mismatched_pixels": 9,
+                "target_pixels": 998
+              },
+              "2": {
+                "d_seg": 0.0003481858493174533,
+                "mismatched_pixels": 34,
+                "target_pixels": 97649
+              },
+              "3": {
+                "d_seg": 0.006396588486140725,
+                "mismatched_pixels": 15,
+                "target_pixels": 2345
+              },
+              "4": {
+                "d_seg": 3.987638321204267e-05,
+                "mismatched_pixels": 2,
+                "target_pixels": 50155
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "exact_uint8_lattice_candidate": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": true,
+            "max_abs_numerator_residual": 0,
+            "nonzero_numerator_residual_cells": 0
+          },
+          "projection": {
+            "max_abs_A_residual": 5.684341886080802e-14,
+            "mean_abs_A_residual": 9.908959564741496e-16
+          },
+          "realization": "durable U8LF stage payload parse-back uint8",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 45461
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 998
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 97649
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 2345
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50155
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "real_minimum_norm_preimage": {
+          "projection": {
+            "max_abs_A_residual": 8.526512829121202e-14,
+            "mean_abs_A_residual": 1.686755808267894e-15
+          },
+          "realization": "non-uint8 float diagnostic; not shippable",
+          "seg": {
+            "d_seg": 5.086263020833333e-06,
+            "mismatched_pixels": 1,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 45461
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 998
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 97649
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 2345
+              },
+              "4": {
+                "d_seg": 1.9938191606021334e-05,
+                "mismatched_pixels": 1,
+                "target_pixels": 50155
+              }
+            },
+            "total_pixels": 196608
+          }
+        }
+      },
+      "candidate_stage": {
+        "decoded_equals_hidden_source": false,
+        "decoded_frame_sha256": "1580356b233683ebe985deec34a1343d382bffbf1fbef15db5101a673ce1b168",
+        "path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages/pair_0090.u8lf",
+        "payload_bytes": 1949237,
+        "payload_sha256": "8e3aa596e0d00b119674a8d16216e89013051e0a6dbc8dc4b92e204ee956bd4a"
+      },
+      "clip_failed_cell_holds": {
+        "candidate_holds": 80,
+        "candidate_regressions_on_clip_held_cells": 0,
+        "clip_failed_cells": 80,
+        "hold_fraction": 1.0
+      },
+      "float_vs_exact_rational_A_max_abs": 5.684341886080802e-14,
+      "lattice_diagnostics": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "exact_candidate_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_projection_discrepancy": 5.684341886080802e-14,
+        "mean_projection_discrepancy": 9.908959564741496e-16,
+        "nodes_visited": 4160666,
+        "out_of_gamut_before_bounded_solve": 1048,
+        "proven_affine_infeasible_blocks": 0
+      },
+      "minimum_norm_real_preimage_sha256": "54e262785e4834a8eb837e4522a0c9ba7b139ab36d1e172283675ba907b52fef",
+      "pair_id": 90,
+      "pair_runtime_seconds": 13.444576832931489,
+      "positive_source_parseback_control": {
+        "PASS": true,
+        "frame_bytes_equal": true,
+        "hard_argmax_equal": true,
+        "payload_sha256": "4510a152677ae58715f47e0937e6d23ec226e06ddccafbbb0c7a45cda544fbc1"
+      },
+      "solver_input_contract": {
+        "inputs": [
+          "target scorer plane y",
+          "exact integer numerator plane for y",
+          "minimum-norm real preimage B(y)"
+        ],
+        "source_frame_passed_to_solver": false,
+        "target_was_formed_before_target-only_solver_boundary": true
+      },
+      "source_cache_selfcheck_disagree_pixels": 0,
+      "source_frame_sha256": "fcf8dee0c5dfc3418eea58b1d48ac2986fdd8a4dedec1dd176a79da0c55b6a7e",
+      "target_common_denominator": 786432,
+      "target_integer_numerators_sha256": "5405bff45d1898114dfe45bb17acbc8756c1f7deb664035fd763bc9f56927ff0",
+      "target_scorer_plane_sha256": "b0c70f80fea767a375f5255b10755a8b2856344c116c6fbedb89aef0d22a8fbf"
+    },
+    {
+      "arms": {
+        "clip_round_minimum_norm": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": false,
+            "max_abs_numerator_residual": 49884672,
+            "nonzero_numerator_residual_cells": 577031
+          },
+          "projection": {
+            "max_abs_A_residual": 63.431640625,
+            "mean_abs_A_residual": 0.1809360786617078
+          },
+          "realization": "clip(round(B(y))) uint8 baseline",
+          "seg": {
+            "d_seg": 0.0005594889322916666,
+            "mismatched_pixels": 110,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0009074018061616903,
+                "mismatched_pixels": 42,
+                "target_pixels": 46286
+              },
+              "1": {
+                "d_seg": 0.0033472803347280333,
+                "mismatched_pixels": 4,
+                "target_pixels": 1195
+              },
+              "2": {
+                "d_seg": 0.0005928106378846881,
+                "mismatched_pixels": 58,
+                "target_pixels": 97839
+              },
+              "3": {
+                "d_seg": 0.004098360655737705,
+                "mismatched_pixels": 4,
+                "target_pixels": 976
+              },
+              "4": {
+                "d_seg": 3.9751947845444425e-05,
+                "mismatched_pixels": 2,
+                "target_pixels": 50312
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "exact_uint8_lattice_candidate": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": true,
+            "max_abs_numerator_residual": 0,
+            "nonzero_numerator_residual_cells": 0
+          },
+          "projection": {
+            "max_abs_A_residual": 5.684341886080802e-14,
+            "mean_abs_A_residual": 8.198036992178134e-16
+          },
+          "realization": "durable U8LF stage payload parse-back uint8",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 46286
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 1195
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 97839
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 976
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50312
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "real_minimum_norm_preimage": {
+          "projection": {
+            "max_abs_A_residual": 8.526512829121202e-14,
+            "mean_abs_A_residual": 1.3991381720525786e-15
+          },
+          "realization": "non-uint8 float diagnostic; not shippable",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 46286
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 1195
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 97839
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 976
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50312
+              }
+            },
+            "total_pixels": 196608
+          }
+        }
+      },
+      "candidate_stage": {
+        "decoded_equals_hidden_source": false,
+        "decoded_frame_sha256": "93664c2a86c64737447fadbf65ced336badaf92b35ab9d3b3034730123d68885",
+        "path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages/pair_0175.u8lf",
+        "payload_bytes": 1866478,
+        "payload_sha256": "577f3c1d76793999a882f26fd1bbce9ff98cbad68dc0d27b18d090343b1355e8"
+      },
+      "clip_failed_cell_holds": {
+        "candidate_holds": 110,
+        "candidate_regressions_on_clip_held_cells": 0,
+        "clip_failed_cells": 110,
+        "hold_fraction": 1.0
+      },
+      "float_vs_exact_rational_A_max_abs": 5.684341886080802e-14,
+      "lattice_diagnostics": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "exact_candidate_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_projection_discrepancy": 5.684341886080802e-14,
+        "mean_projection_discrepancy": 8.198036992178134e-16,
+        "nodes_visited": 3985203,
+        "out_of_gamut_before_bounded_solve": 611,
+        "proven_affine_infeasible_blocks": 0
+      },
+      "minimum_norm_real_preimage_sha256": "a0bcac3c58f17cda3cda8944524758f71c58f8de159fa078252a251e6e6df857",
+      "pair_id": 175,
+      "pair_runtime_seconds": 13.117705791024491,
+      "positive_source_parseback_control": {
+        "PASS": true,
+        "frame_bytes_equal": true,
+        "hard_argmax_equal": true,
+        "payload_sha256": "796b2ae00a157ffeaeac3bfc7812c006f80398fe049da7e11995b2ba0263a11c"
+      },
+      "solver_input_contract": {
+        "inputs": [
+          "target scorer plane y",
+          "exact integer numerator plane for y",
+          "minimum-norm real preimage B(y)"
+        ],
+        "source_frame_passed_to_solver": false,
+        "target_was_formed_before_target-only_solver_boundary": true
+      },
+      "source_cache_selfcheck_disagree_pixels": 0,
+      "source_frame_sha256": "e4b08b981eba3eb5dfc7fc0119d3ea934eb0b2c2b59d45430f827208f87de339",
+      "target_common_denominator": 786432,
+      "target_integer_numerators_sha256": "4440076e937fc3990d48886011ea87dfe6e59f5ddaa451489b2ab99f2a3794ac",
+      "target_scorer_plane_sha256": "2daaa9e3d0e688e01fe1333f774992d8808cb5776f99d5fa17dc3eec0d6dee2f"
+    },
+    {
+      "arms": {
+        "clip_round_minimum_norm": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": false,
+            "max_abs_numerator_residual": 50056760,
+            "nonzero_numerator_residual_cells": 575254
+          },
+          "projection": {
+            "max_abs_A_residual": 63.65046183268231,
+            "mean_abs_A_residual": 0.167327462695539
+          },
+          "realization": "clip(round(B(y))) uint8 baseline",
+          "seg": {
+            "d_seg": 0.00017801920572916666,
+            "mismatched_pixels": 35,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0005404821100421576,
+                "mismatched_pixels": 25,
+                "target_pixels": 46255
+              },
+              "1": {
+                "d_seg": 0.009248554913294798,
+                "mismatched_pixels": 8,
+                "target_pixels": 865
+              },
+              "2": {
+                "d_seg": 2.0352919626320395e-05,
+                "mismatched_pixels": 2,
+                "target_pixels": 98266
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 789
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50433
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "exact_uint8_lattice_candidate": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": true,
+            "max_abs_numerator_residual": 0,
+            "nonzero_numerator_residual_cells": 0
+          },
+          "projection": {
+            "max_abs_A_residual": 5.684341886080802e-14,
+            "mean_abs_A_residual": 7.587474679593927e-16
+          },
+          "realization": "durable U8LF stage payload parse-back uint8",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 46255
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 865
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 98266
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 789
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50433
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "real_minimum_norm_preimage": {
+          "projection": {
+            "max_abs_A_residual": 5.684341886080802e-14,
+            "mean_abs_A_residual": 1.2807599909867925e-15
+          },
+          "realization": "non-uint8 float diagnostic; not shippable",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 46255
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 865
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 98266
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 789
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50433
+              }
+            },
+            "total_pixels": 196608
+          }
+        }
+      },
+      "candidate_stage": {
+        "decoded_equals_hidden_source": false,
+        "decoded_frame_sha256": "79b5b7d72af2d0f755a30a721cb1a2164436c0b0572ea81b1b9bb9407e1aa514",
+        "path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages/pair_0277.u8lf",
+        "payload_bytes": 1865835,
+        "payload_sha256": "071d4480a692566dd442cf9d40ab15246f25ee0562574d7015baf356904f4d21"
+      },
+      "clip_failed_cell_holds": {
+        "candidate_holds": 35,
+        "candidate_regressions_on_clip_held_cells": 0,
+        "clip_failed_cells": 35,
+        "hold_fraction": 1.0
+      },
+      "float_vs_exact_rational_A_max_abs": 5.684341886080802e-14,
+      "lattice_diagnostics": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "exact_candidate_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_projection_discrepancy": 5.684341886080802e-14,
+        "mean_projection_discrepancy": 7.587474679593927e-16,
+        "nodes_visited": 4019021,
+        "out_of_gamut_before_bounded_solve": 312,
+        "proven_affine_infeasible_blocks": 0
+      },
+      "minimum_norm_real_preimage_sha256": "cf65ce248009782deb9f03433c1d398adcba238e5e88ba8ce9653d1baf1266f6",
+      "pair_id": 277,
+      "pair_runtime_seconds": 13.167877082945779,
+      "positive_source_parseback_control": {
+        "PASS": true,
+        "frame_bytes_equal": true,
+        "hard_argmax_equal": true,
+        "payload_sha256": "b2a9f68c960191d39040d68182033a3d8f84dd4f376233afaa4ccf66beae401c"
+      },
+      "solver_input_contract": {
+        "inputs": [
+          "target scorer plane y",
+          "exact integer numerator plane for y",
+          "minimum-norm real preimage B(y)"
+        ],
+        "source_frame_passed_to_solver": false,
+        "target_was_formed_before_target-only_solver_boundary": true
+      },
+      "source_cache_selfcheck_disagree_pixels": 0,
+      "source_frame_sha256": "8c368322d90179ca8149de397752a06be7f6a9ec79db24715fafc3cb1e050db6",
+      "target_common_denominator": 786432,
+      "target_integer_numerators_sha256": "b25ec110862467acc2053446e1a9e857920ec7131b955af8c93ba98a02483175",
+      "target_scorer_plane_sha256": "2fb7e7c39a134511afae8fd58d9ccafe2de4651ed099445df8193e751a2981fc"
+    },
+    {
+      "arms": {
+        "clip_round_minimum_norm": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": false,
+            "max_abs_numerator_residual": 48904832,
+            "nonzero_numerator_residual_cells": 575346
+          },
+          "projection": {
+            "max_abs_A_residual": 62.185709635416714,
+            "mean_abs_A_residual": 0.17848265188297746
+          },
+          "realization": "clip(round(B(y))) uint8 baseline",
+          "seg": {
+            "d_seg": 0.0004374186197916667,
+            "mismatched_pixels": 86,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0009846484357516896,
+                "mismatched_pixels": 44,
+                "target_pixels": 44686
+              },
+              "1": {
+                "d_seg": 0.0025591810620601407,
+                "mismatched_pixels": 4,
+                "target_pixels": 1563
+              },
+              "2": {
+                "d_seg": 0.0003518295134700442,
+                "mismatched_pixels": 35,
+                "target_pixels": 99480
+              },
+              "3": {
+                "d_seg": 0.003432494279176201,
+                "mismatched_pixels": 3,
+                "target_pixels": 874
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50005
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "exact_uint8_lattice_candidate": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": true,
+            "max_abs_numerator_residual": 0,
+            "nonzero_numerator_residual_cells": 0
+          },
+          "projection": {
+            "max_abs_A_residual": 5.684341886080802e-14,
+            "mean_abs_A_residual": 8.031652250669247e-16
+          },
+          "realization": "durable U8LF stage payload parse-back uint8",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 44686
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 1563
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 99480
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 874
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50005
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "real_minimum_norm_preimage": {
+          "projection": {
+            "max_abs_A_residual": 5.684341886080802e-14,
+            "mean_abs_A_residual": 1.3607078858807247e-15
+          },
+          "realization": "non-uint8 float diagnostic; not shippable",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 44686
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 1563
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 99480
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 874
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 50005
+              }
+            },
+            "total_pixels": 196608
+          }
+        }
+      },
+      "candidate_stage": {
+        "decoded_equals_hidden_source": false,
+        "decoded_frame_sha256": "3d0c176cffc7e9ed4127d69410867f2be661e41bd466b56f9b9e0d683f3f9919",
+        "path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages/pair_0381.u8lf",
+        "payload_bytes": 1867479,
+        "payload_sha256": "d33d270672814a4512f8e8cda0b1e1e1fc7b3d3c8a12bc5e78fbb8ebe22bc5c7"
+      },
+      "clip_failed_cell_holds": {
+        "candidate_holds": 86,
+        "candidate_regressions_on_clip_held_cells": 0,
+        "clip_failed_cells": 86,
+        "hold_fraction": 1.0
+      },
+      "float_vs_exact_rational_A_max_abs": 5.684341886080802e-14,
+      "lattice_diagnostics": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "exact_candidate_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_projection_discrepancy": 5.684341886080802e-14,
+        "mean_projection_discrepancy": 8.031652250669247e-16,
+        "nodes_visited": 4066955,
+        "out_of_gamut_before_bounded_solve": 589,
+        "proven_affine_infeasible_blocks": 0
+      },
+      "minimum_norm_real_preimage_sha256": "2bc14ee972aa8eb5f7d2dbc68fdc910f69cdb6c080d2ac7664edabed3004cbcf",
+      "pair_id": 381,
+      "pair_runtime_seconds": 13.396166375139728,
+      "positive_source_parseback_control": {
+        "PASS": true,
+        "frame_bytes_equal": true,
+        "hard_argmax_equal": true,
+        "payload_sha256": "5fef7fe39c822ea177aeb861c678364aaa8b3411415bd443679d279f63cac898"
+      },
+      "solver_input_contract": {
+        "inputs": [
+          "target scorer plane y",
+          "exact integer numerator plane for y",
+          "minimum-norm real preimage B(y)"
+        ],
+        "source_frame_passed_to_solver": false,
+        "target_was_formed_before_target-only_solver_boundary": true
+      },
+      "source_cache_selfcheck_disagree_pixels": 0,
+      "source_frame_sha256": "fc72ab60b85710789f8592a1b25cb5e43d9c69e0d990fe568b270a681b3fd900",
+      "target_common_denominator": 786432,
+      "target_integer_numerators_sha256": "5c4f7ae9a3389a1dda62060a5ed1c9b64d787f83c12e07d1fe07d0e25adf2ec7",
+      "target_scorer_plane_sha256": "f9b82e11195be294d97d7f5f806a20daa93ce150270ca8f9df53b90c6173c0e6"
+    },
+    {
+      "arms": {
+        "clip_round_minimum_norm": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": false,
+            "max_abs_numerator_residual": 49507296,
+            "nonzero_numerator_residual_cells": 578728
+          },
+          "projection": {
+            "max_abs_A_residual": 62.9517822265625,
+            "mean_abs_A_residual": 0.22666516748291482
+          },
+          "realization": "clip(round(B(y))) uint8 baseline",
+          "seg": {
+            "d_seg": 0.000579833984375,
+            "mismatched_pixels": 114,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0015302907552434963,
+                "mismatched_pixels": 68,
+                "target_pixels": 44436
+              },
+              "1": {
+                "d_seg": 0.01125,
+                "mismatched_pixels": 9,
+                "target_pixels": 800
+              },
+              "2": {
+                "d_seg": 6.118390863202978e-05,
+                "mismatched_pixels": 6,
+                "target_pixels": 98065
+              },
+              "3": {
+                "d_seg": 0.008727477477477477,
+                "mismatched_pixels": 31,
+                "target_pixels": 3552
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 49755
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "exact_uint8_lattice_candidate": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": true,
+            "max_abs_numerator_residual": 0,
+            "nonzero_numerator_residual_cells": 0
+          },
+          "projection": {
+            "max_abs_A_residual": 8.526512829121202e-14,
+            "mean_abs_A_residual": 8.850306152429862e-16
+          },
+          "realization": "durable U8LF stage payload parse-back uint8",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 44436
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 800
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 98065
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 3552
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 49755
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "real_minimum_norm_preimage": {
+          "projection": {
+            "max_abs_A_residual": 8.526512829121202e-14,
+            "mean_abs_A_residual": 1.5239373593966923e-15
+          },
+          "realization": "non-uint8 float diagnostic; not shippable",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 44436
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 800
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 98065
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 3552
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 49755
+              }
+            },
+            "total_pixels": 196608
+          }
+        }
+      },
+      "candidate_stage": {
+        "decoded_equals_hidden_source": false,
+        "decoded_frame_sha256": "f9e0283f52aa772fe3542dc4e66c4aaf78adfd09a1dc2b3c19a0287c964703a9",
+        "path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages/pair_0424.u8lf",
+        "payload_bytes": 1892668,
+        "payload_sha256": "2a12b93d5427ca55daa2a6dd90bfa094dc215b1d62436b73fa393d95c9e75739"
+      },
+      "clip_failed_cell_holds": {
+        "candidate_holds": 114,
+        "candidate_regressions_on_clip_held_cells": 0,
+        "clip_failed_cells": 114,
+        "hold_fraction": 1.0
+      },
+      "float_vs_exact_rational_A_max_abs": 5.684341886080802e-14,
+      "lattice_diagnostics": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "exact_candidate_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_projection_discrepancy": 8.526512829121202e-14,
+        "mean_projection_discrepancy": 8.850306152429862e-16,
+        "nodes_visited": 4063627,
+        "out_of_gamut_before_bounded_solve": 1682,
+        "proven_affine_infeasible_blocks": 0
+      },
+      "minimum_norm_real_preimage_sha256": "d0f8e64d4e39481c6e8bf1d52e96a4fd04083dac17d213851200dd621ca9cb37",
+      "pair_id": 424,
+      "pair_runtime_seconds": 13.488958791829646,
+      "positive_source_parseback_control": {
+        "PASS": true,
+        "frame_bytes_equal": true,
+        "hard_argmax_equal": true,
+        "payload_sha256": "16dcd142b50156b704f00547d1d13ce5066c631b7f7673a37fe837bea847ce11"
+      },
+      "solver_input_contract": {
+        "inputs": [
+          "target scorer plane y",
+          "exact integer numerator plane for y",
+          "minimum-norm real preimage B(y)"
+        ],
+        "source_frame_passed_to_solver": false,
+        "target_was_formed_before_target-only_solver_boundary": true
+      },
+      "source_cache_selfcheck_disagree_pixels": 0,
+      "source_frame_sha256": "0b0068c0840dc8b87b6f4f17c766aa755cd0ecefc1b200071dc4cb923a0333c4",
+      "target_common_denominator": 786432,
+      "target_integer_numerators_sha256": "c7dec6fea18549b17dd30427a91e3f462bba3f26f0c0e9ca196837aad8adddb8",
+      "target_scorer_plane_sha256": "089fb8960ff374ea73f02d617bbe77cb2bddef1e51506f6c70781b6b2ba6d83d"
+    },
+    {
+      "arms": {
+        "clip_round_minimum_norm": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": false,
+            "max_abs_numerator_residual": 50194008,
+            "nonzero_numerator_residual_cells": 576969
+          },
+          "projection": {
+            "max_abs_A_residual": 63.824981689453125,
+            "mean_abs_A_residual": 0.22291891597625282
+          },
+          "realization": "clip(round(B(y))) uint8 baseline",
+          "seg": {
+            "d_seg": 0.0004831949869791667,
+            "mismatched_pixels": 95,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0007900913252620082,
+                "mismatched_pixels": 34,
+                "target_pixels": 43033
+              },
+              "1": {
+                "d_seg": 0.0024916943521594683,
+                "mismatched_pixels": 3,
+                "target_pixels": 1204
+              },
+              "2": {
+                "d_seg": 0.00034384312417946525,
+                "mismatched_pixels": 33,
+                "target_pixels": 95974
+              },
+              "3": {
+                "d_seg": 0.003413982484785513,
+                "mismatched_pixels": 23,
+                "target_pixels": 6737
+              },
+              "4": {
+                "d_seg": 4.027386226339106e-05,
+                "mismatched_pixels": 2,
+                "target_pixels": 49660
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "exact_uint8_lattice_candidate": {
+          "integer_projection": {
+            "common_denominator": 786432,
+            "exact_numerator_equality": true,
+            "max_abs_numerator_residual": 0,
+            "nonzero_numerator_residual_cells": 0
+          },
+          "projection": {
+            "max_abs_A_residual": 5.684341886080802e-14,
+            "mean_abs_A_residual": 9.088785347522901e-16
+          },
+          "realization": "durable U8LF stage payload parse-back uint8",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 43033
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 1204
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 95974
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 6737
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 49660
+              }
+            },
+            "total_pixels": 196608
+          }
+        },
+        "real_minimum_norm_preimage": {
+          "projection": {
+            "max_abs_A_residual": 8.526512829121202e-14,
+            "mean_abs_A_residual": 1.555012331906657e-15
+          },
+          "realization": "non-uint8 float diagnostic; not shippable",
+          "seg": {
+            "d_seg": 0.0,
+            "mismatched_pixels": 0,
+            "per_class": {
+              "0": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 43033
+              },
+              "1": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 1204
+              },
+              "2": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 95974
+              },
+              "3": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 6737
+              },
+              "4": {
+                "d_seg": 0.0,
+                "mismatched_pixels": 0,
+                "target_pixels": 49660
+              }
+            },
+            "total_pixels": 196608
+          }
+        }
+      },
+      "candidate_stage": {
+        "decoded_equals_hidden_source": false,
+        "decoded_frame_sha256": "0f545c646a8ca06999b99c82febb4b7028abc4609ba40ccedc34e0747c4208fd",
+        "path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages/pair_0573.u8lf",
+        "payload_bytes": 1904888,
+        "payload_sha256": "cf92bb2617cbaa1bb97a8dd837269a53f465fd533118e12874be759c4805d92a"
+      },
+      "clip_failed_cell_holds": {
+        "candidate_holds": 95,
+        "candidate_regressions_on_clip_held_cells": 0,
+        "clip_failed_cells": 95,
+        "hold_fraction": 1.0
+      },
+      "float_vs_exact_rational_A_max_abs": 5.684341886080802e-14,
+      "lattice_diagnostics": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "exact_candidate_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_projection_discrepancy": 5.684341886080802e-14,
+        "mean_projection_discrepancy": 9.088785347522901e-16,
+        "nodes_visited": 4059571,
+        "out_of_gamut_before_bounded_solve": 1516,
+        "proven_affine_infeasible_blocks": 0
+      },
+      "minimum_norm_real_preimage_sha256": "9d228a405a05bf396a1d23b0aaf84cc6a9a971f8ecf75c47034ff4078e3c466e",
+      "pair_id": 573,
+      "pair_runtime_seconds": 13.356217000167817,
+      "positive_source_parseback_control": {
+        "PASS": true,
+        "frame_bytes_equal": true,
+        "hard_argmax_equal": true,
+        "payload_sha256": "41d545bb7063e8e064689016ebacb8279b0799e88402d58f97577df89ca8df71"
+      },
+      "solver_input_contract": {
+        "inputs": [
+          "target scorer plane y",
+          "exact integer numerator plane for y",
+          "minimum-norm real preimage B(y)"
+        ],
+        "source_frame_passed_to_solver": false,
+        "target_was_formed_before_target-only_solver_boundary": true
+      },
+      "source_cache_selfcheck_disagree_pixels": 0,
+      "source_frame_sha256": "47c8859d34a6bf5107614e23ec358528d92b4d6efa3586a52cbe4328bfd1168c",
+      "target_common_denominator": 786432,
+      "target_integer_numerators_sha256": "0f512b1ec86b5597011c8f1ce66643cd26f90c1107b9a933eae260c8a436481d",
+      "target_scorer_plane_sha256": "5eb84b40eda15504f0b9aee05342262e9667626676aac71984ac4c5766cbe6c5"
+    }
+  ],
+  "remaining_blockers": [
+    "full n600 governed scorer replay",
+    "PoseNet/both-frame interaction",
+    "complete receiver archive and inflate custody",
+    "contest-CPU and contest-CUDA exact evaluation",
+    "independent MAIN landing review"
+  ],
+  "resumability": {
+    "all_per_pair_stages_preserved": true,
+    "completed_pairs": [
+      90,
+      175,
+      277,
+      381,
+      424,
+      573
+    ],
+    "config_sha256": "8445d47bc2d36a63d788b886934b351fc7cc58023fc631c8392f99fb84b585d3",
+    "next_pair": null,
+    "prior_completed_pairs_rederived": 0,
+    "schema": "v10_uint8_lattice_feasibility_state.v1",
+    "state_path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.state.json",
+    "state_sha256": "eed75a62a169ddc8e6324b4a61eb7f1f1929deae4729f0506e9492bf7c4ad1a8",
+    "stored_pair_metric_fields_reused": false
+  },
+  "runtime_seconds": 83.11827645800076,
+  "schema": "v10_uint8_lattice_feasibility_receipt.v1",
+  "selection": {
+    "known_n6_recomputed_without_candidate_outcome_peeking": true,
+    "policy": "all-600 equal temporal strata; fragility=mean(cached margin<m_safe); alternating within-stratum 0.25/0.75 quantile; deterministic pair-index tie break; no candidate outcome peeking",
+    "rows": [
+      {
+        "class_histogram": [
+          45461,
+          998,
+          97649,
+          2345,
+          50155
+        ],
+        "fragility_fraction_margin_below_m_safe": 0.0009816487630208333,
+        "pair_id": 90,
+        "temporal_stratum": [
+          0,
+          100
+        ]
+      },
+      {
+        "class_histogram": [
+          46286,
+          1195,
+          97839,
+          976,
+          50312
+        ],
+        "fragility_fraction_margin_below_m_safe": 0.001220703125,
+        "pair_id": 175,
+        "temporal_stratum": [
+          100,
+          200
+        ]
+      },
+      {
+        "class_histogram": [
+          46255,
+          865,
+          98266,
+          789,
+          50433
+        ],
+        "fragility_fraction_margin_below_m_safe": 0.0009206136067708334,
+        "pair_id": 277,
+        "temporal_stratum": [
+          200,
+          300
+        ]
+      },
+      {
+        "class_histogram": [
+          44686,
+          1563,
+          99480,
+          874,
+          50005
+        ],
+        "fragility_fraction_margin_below_m_safe": 0.0011088053385416667,
+        "pair_id": 381,
+        "temporal_stratum": [
+          300,
+          400
+        ]
+      },
+      {
+        "class_histogram": [
+          44436,
+          800,
+          98065,
+          3552,
+          49755
+        ],
+        "fragility_fraction_margin_below_m_safe": 0.0010426839192708333,
+        "pair_id": 424,
+        "temporal_stratum": [
+          400,
+          500
+        ]
+      },
+      {
+        "class_histogram": [
+          43033,
+          1204,
+          95974,
+          6737,
+          49660
+        ],
+        "fragility_fraction_margin_below_m_safe": 0.0013376871744791667,
+        "pair_id": 573,
+        "temporal_stratum": [
+          500,
+          600
+        ]
+      }
+    ]
+  },
+  "sidecar": {
+    "bytes": 11346894,
+    "cleanup_policy": "preserve all per-pair stage payloads; they are measurement evidence, not scratch",
+    "frame_count": 6,
+    "honest_name": "incremental uint8 lattice feasibility sidecar; NOT a contest archive",
+    "parse_back_all_frame_hashes_match": true,
+    "path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.u8lfs",
+    "preserved_stage_dir": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_20260718/candidate_n6_landing.stages",
+    "sha256": "e54162d4689a420c5dc5bca63069f0b6ddd6839c10af57e6d0873c8eeb4d9c31"
+  },
+  "written_at_utc": "2026-07-18T14:46:32.454090+00:00"
+}

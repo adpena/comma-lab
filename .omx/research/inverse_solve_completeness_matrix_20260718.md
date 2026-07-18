@@ -14,9 +14,10 @@ requirement expands to eleven auditable leaves because factor 3 has two distinct
 uses of the same resize: camera-resolution preimage control (3a) and the joint
 Seg/Pose coupling through shared `A` (3b). The current tree has useful primitives
 for most factors, but no row satisfies the strict completion certificate below.
-In particular, uint8 feasibility and the joint three-axis waterfill are missing
-as consumed V10 terms, and this lane's coupling policy is deliberately advisory
-and argv-inert.
+In particular, a uint8 feasibility primitive now exists only as an advisory
+local sidecar solve, while the joint three-axis waterfill remains missing. The
+uint8 primitive is not a consumed V10 term, and this lane's coupling policy is
+deliberately advisory and argv-inert.
 
 `HAVE`, `MISSING`, and `FOLDED` below describe **term disposition**, not launch
 readiness:
@@ -38,7 +39,7 @@ does not pass.
 | factor | exact forward/score role | term that must exist | owner / settled authority | disposition now | strict certificate | literal remaining blocker |
 |---|---|---|---|---|---|---|
 | 1 | payload `decode -> (frame_0, frame_1)` | deterministic generator plus counted-seed custody and receiver parse-back | V10 generator/receiver; `.omx/research/frozen_scorer_exact_factorization_20260715.md` §0 | `FOLDED` | `PARTIAL` | No V10 payload compiler emits and parses back one receiver-closed, resume-certified program with every video-derived seed byte counted. |
-| 2 | camera RGB must lie on the finite uint8 lattice before either scorer | bounded lattice/preimage feasibility inside the solve, not real-valued solve followed by rounding | Task #532; SOL true-final review A1-C2 | `MISSING` | `FAIL-AS-EXACT-CONSUMER` | The current real projector preserves `A` in fp64, while valid `clip(round(.))` produced a measured max scorer-plane discrepancy of `62.74`; a lattice-feasible realization plus exact scorer receipt is owed. |
+| 2 | camera RGB must lie on the finite uint8 lattice before either scorer | bounded lattice/preimage feasibility inside the solve, not real-valued solve followed by rounding | Task #532; `.omx/research/v10_uint8_lattice_feasibility_receipt_20260718.json` (`665ce8ecd789...`) | `HAVE` (advisory local primitive; not V10-consumed) | `PARTIAL` | The selected n6 decoded-uint8/frozen-Seg receipt solved all 3,538,944 affine blocks exactly and recovered all 520 clip-round Seg failures, but its 11,346,894-byte sidecar is not a receiver/archive rate win; full n600, Pose/both-frame interaction, receiver closure, contest axes, adoption, and MAIN review remain owed. |
 | 3a | camera `(874,1164)` to scorer `(384,512)` through bilinear `A` | camera-resolution subpixel placement and antialias-coverage solve | Task #149; frozen factorization §6.1 | `HAVE` | `PARTIAL` | The camera-resolution actuator is not compiled/consumed in V10 with a uint8-realized n600 interaction receipt against both scorers. |
 | 3b | **the same `A` feeds both frozen scorers** | joint Seg/Pose pullback term and score-derived coupling price | Task #538 (this lane); framework-normalized equation candidate `shared_resize_joint_coupling_through_a_v1` | `HAVE` (advisory, argv-inert) | `PARTIAL` | Honest subset coupling is measured locally, but no live trainer consumer, resume state, full-n600 receipt, byte-close archive, or contest-axis adoption exists. |
 | 4 | Seg reads RGB; Pose reads BT.601 YUV6 with full luma phases and box-averaged chroma | luma/chroma-coordinate term with joint Seg/Pose guard | Tasks #276/#535; `ChromaBoundaryMatch`; `rgb_at_boundaries_20260715`; `posenet_luma_chroma_asymmetry_20260710` | `HAVE` | `PARTIAL` | Existing channel primitives are not jointly compiled/consumed with factor 3b and lack a receiver-closed n600 interaction/adoption receipt. |
@@ -105,7 +106,7 @@ no trainer argv and cannot grant launch or promotion authority.
 - DSL: `shared_resize_joint_coupling_measurement.v2` and
   `shared_resize_joint_coupling_policy.v2` are argv-inert advisory surfaces;
   the distinct future completeness manifest remains
-  `inverse_solve_completeness_manifest.v2` and fail-closed.
+  `inverse_solve_completeness_manifest.v1` and fail-closed.
 - DAG: `.omx/research/completeness_coupling_joint_solve_DAG_FEED_20260718.md`.
 - Equation: candidate `shared_resize_joint_coupling_through_a_v1`; it does not
   claim a live registry/adoption state. The capital-`A` spelling from the task
@@ -150,98 +151,3 @@ no trainer argv and cannot grant launch or promotion authority.
 - `.omx/research/frame0_chromahf_dofs_20260710.md`.
 - `.omx/research/null_subspace_rate_measure_20260717.md`.
 - Relevant canonical-equation and typed-DSL source surfaces named in the table.
-
-## 2026-07-18 V10 compiler / receiver v2 local structural delta
-
-Verdict scope: `V10 COMPILER / RECEIVER / BYTE-CUSTODY STRUCTURAL CERTIFICATE`.
-Authority axis: `[local-CPU structural/non-score]`. Pointer delta: `0`.
-
-This dated append supersedes only the local compiler/receiver blocker wording
-above; it does not alter the sealed forward-factor semantics. It changes no
-row to `COMPLETE` and grants no launch, score, adoption, or promotion authority.
-The local compiler's `launch_ready` is exactly `false`.
-
-### Exact paid-route correction
-
-The v2 compiler has seven video-derived paid sections, all counted and
-semantically consumed once:
-
-| instruction | exact factor custody | dated structural effect |
-|---|---|---|
-| `CountedGenerator` | `1` | generator and counted seed are one atomic range |
-| `Frame0PoseSixCarrier` | `7,8` | named frame-0/Pose-six consumer exists |
-| `InitHeadSolve` | `6` | named cold-only head consumer exists |
-| `SharedResizePreimage` | `3a,3b` | both leaves share one exact byte range and one consumer |
-| `RgbYuv6Projection` | `4` | named RGB/BT.601/YUV6 consumer exists |
-| `BlindFillRateGrammar` | `9` | named blind-fill/rate consumer exists |
-| `QuotientResidualT` | `5` only | terminal quotient consumer exists |
-
-Factors `2` and `10` own no section, no byte range, and no receipt. Their rows
-remain `MISSING`, their `consumer_id` remains `BLOCKED`, and their measurement
-and interaction receipts remain absent.
-
-### Factor 1
-
-Disposition remains `FOLDED`; strict certificate remains `PARTIAL`.
-`src/tac/witness_dsl/v10_compiler_receiver.py` emits one canonical counted v2
-program. Factor 1 atomically includes generator inputs and seed bytes in one
-reopened range; no separate free-seed section exists. The parser binds the
-range/hash to the frozen route, the semantic receiver consumes it once, and a
-canonical prefix checkpoint is authenticated by deterministic prefix replay.
-Interrupted/resumed local output is byte-identical to uninterrupted output.
-
-The earlier literal compiler/parse-back blocker is closed only at this local
-structural-reference level. Production renderer parity, archive custody,
-uint8-realized scorer interaction, exact contest-CPU/CUDA replay, and adoption
-remain owed.
-
-### Factor 5
-
-Disposition remains `FOLDED`; strict certificate remains `PARTIAL`.
-`QuotientResidualT` owns factor `5` only. It is terminal, declares exact
-class/cell routes, depends on all six predecessor sections, owns one disjoint
-parameter group, and freezes all six predecessor parameter groups. Its exact
-quotient base is `{1,3a,3b,4,6,7,8,9}`. The factor receipt binds the reopened
-factor-5 section SHA and the frozen receiver consumption-receipt SHA.
-
-This is unique structural custody, not evidence that `T` identifies the true
-production residual, improves either frozen scorer, survives uint8/resize, or
-earns bytes. Those numerical and evaluator-facing claims remain owed.
-
-### Effect on factors 3a/3b/4/6/7/8/9
-
-Only the absence of a structural consumer grammar is unblocked:
-
-- factors `3a/3b` route together through one `SharedResizePreimage` range;
-- factor `4` routes through semantic `RgbYuv6Projection` with integer
-  BT.601/YUV6 output;
-- factor `6` routes through cold-only `InitHeadSolve`;
-- factors `7/8` route together through `Frame0PoseSixCarrier`;
-- factor `9` routes through `BlindFillRateGrammar`.
-
-These leaves remain `HAVE/PARTIAL`. None is newly measured, adopted,
-`COMPLETE`, score-authoritative, or launch-ready. They still owe the production
-interaction, byte-close, authority-axis, and adoption receipts named in the
-sealed rows.
-
-### #332 and Round-1 honesty
-
-Canonical typed self-recompile/hash provenance is required, but the separate
-strict repository-wide #332 audit is preserved as
-`dsl_bijection_complete` plus `dsl_bijection_violations`. The Boolean may be
-false with explicit debt; neither value can turn `launch_ready` true.
-
-Round 1 rejected the earlier six-route/wrong-factor draft, the factor-5
-multi-owner claim, the implied clean #332 bijection, and temporary equation
-custody. The corrected route table above and tracked candidate-only equations
-at `.omx/research/v10_compiler_receiver_equation_candidates_20260718.jsonl`
-resolve those documentation confounds. The corrected controls additionally
-refuse a counted-but-semantically- or decoded-frame-inert section, seed bytes
-that reach neither generated frame, a paid zero `T` residual, and double
-ownership of one frame/index residual. Handler/shared-semantic source digests,
-canonical checkpoint base64, and cumulative prefix+suffix resume receipts close
-the later custody findings. This is not an independent fresh-eyes clean pass,
-and MAIN landing review remains required.
-
-**MEASURED local verification:** `60 passed`; Ruff F/E9/I, `py_compile`, and
-`git diff --check` were clean. No launch or score measurement occurred.
