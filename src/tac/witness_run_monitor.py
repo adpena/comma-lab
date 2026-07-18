@@ -129,7 +129,11 @@ def build_monitor_command(
 # stage). ``re.escape`` on literals; the two regex markers used verbatim.
 _ORDERED_CATEGORIES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("failure", re.compile("|".join(re.escape(p) for p in FAILURE_PATTERNS))),
-    ("confound_alarm", re.compile("|".join(re.escape(p) for p in CONFOUND_ALARM_PATTERNS))),
+    ("confound_alarm", re.compile("|".join(
+        # frozen_epoch is a benign per-verdict field ("frozen_epoch": false); the ALARM
+        # emits it as a value/kind, never as ": false" — so exclude that literal form.
+        r'frozen_epoch(?!"?\s*:\s*false)' if p == "frozen_epoch" else re.escape(p)
+        for p in CONFOUND_ALARM_PATTERNS))),
     ("pose_gate_fired", re.compile(_FIRED_TRUE)),
     ("verdict", re.compile(r'"stage": ?"verdict(_async_done)?"')),
     ("checkpoint", re.compile(r'"stage": ?"checkpoint"|stage_ckpt')),
