@@ -19868,10 +19868,16 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
 - **THE CAMPAIGN READING (decisive):** the secants clear break-even so massively BECAUSE the
   whole residual-description family sits megabytes/pair from optimal — the KKT-selected point
   (1.77MB/pair ≈ 1.06GB n600) is ~12,700× the 83,838B full-n600 witness-generator reference.
-  Three independent families (exact #541, banded #549, coarsened THIS) now agree: residual
-  descriptions are RATE-DEAD; **generator amortization is the single open rate axis** — the v10
-  carrier (#539/#553 gauge-fixed generators) is not one option among several, it is the only
-  measured path.
+  Three independent measurement waves (exact #541, banded #549, coarsened THIS) now agree:
+  residual descriptions are RATE-DEAD. verdict_scope: FORMULATION-union — the five MEASURED
+  formulations (exact-plane residuals over copy/affine6/smooth predictors; positive-band
+  residuals; margin-abandonment / bit-plane-truncation / stride-subsample coarsenings, all vs
+  the generated-fill predictor, brotli-Q11/zstd-19 coders, n24-n48 real pairs). NOT
+  paradigm-level: learned-transform residuals, motion-compensated/richer predictors, and
+  context-model coders are UNTESTED formulations (the arm's own scoping). Within measured
+  support, **generator amortization is the single open rate axis** — the v10 carrier
+  (#539/#553 gauge-fixed generators) is the only measured path, and any residual-family
+  reopen must first beat the ~336KB/pair predictor floor by orders of magnitude.
 - **POSE LAW intermediate regime MEASURED (anchor #4 appended):** inactivity is plane-proximity-
   conditional exactly as `pose_plane_proximity_corollary_v1` states — margin family 96/96
   inactive → precision-2/3 six per-pair crossover violations (3.0e-4..5.8e-4) → spatial 48/48
