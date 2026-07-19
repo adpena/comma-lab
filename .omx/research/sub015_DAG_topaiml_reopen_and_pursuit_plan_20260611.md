@@ -19562,3 +19562,21 @@ Memory: `checkpoint_maturity_dev_prod_axis_orthogonal_to_vehicle_20260718`. Poin
   leg = pending-build (unchanged). #540 → in_progress.
 - **QUADRALITY sync:** queue (this FEED + report) · triality[equations ✓ / dag ✓ this block / dsl pending] · tasks (#540 in_progress
   w/ progress note) · spec (SPEC_v10 §14.7-14.9 already carry the factor-2 lattice statement; no main-doc change owed).
+
+## FEED-lattice-pose-solved (2026-07-19)
+SIGNAL: operator "we need to scale it up and figure out what the rate looks like... Pose is the big one.
+Everything is reachable." DIAGNOSTIC (all MEASURED, [macOS-CPU advisory n6], pointer 0.19108 UNMOVED):
+(1) POSE SOLVED by the factor-2 exact lattice realization — upstream PoseNet resizes FIRST with the SAME
+bilinear A then yuv6 (modules.py:71-75), so pinning A(frame) to numerator equality gives d_pose mean
+9.3e-10 + d_seg 0.0 through the FULL DistortionNet on n6 (pairs 90/175/277/381/424/573). One realization,
+both scorers. Receipt blocker 2 answered for frame1-substitution. (2) RATE: direct-solved-frame payload
+DEAD (brotli-Q11 1.70MB/frame, ~1.1× WORSE than source; n600→rate term 680). Composition law: payload =
+compact ŷ-description (the shared 384×512 scorer-input plane), lattice solve FREE at decode (rule-118);
+all uint8/R-survival error = 0 by construction; witness ⊕ solve = witness render realized EXACTLY.
+(3) The #536 waterfill COLLAPSES: seg+pose are one axis (fidelity of shared ŷ); R-D object =
+bytes(ŷ-desc) vs joint (d_seg,d_pose) through the free solve. (4) n600 replay IN FLIGHT (50×12-pair
+chunked receipts, tool cap respected; chunk-00 = 1 fp32 tie-pixel, d_seg 4.2e-7, all blocks exact — the
+#543 frame-195 class, the honest exact-through-fp32 noise floor). RESPONSE: #547 (n600+pose) in flight ·
+#548 (ŷ R-D rows) queued · #543 receiver-arithmetic declaration next · memo
+v10_lattice_rate_verdict_and_composition_20260719.md. Triality home: SPEC_v10 §3 row 8 (pose-side gate) +
+§4 seeds + completeness factor 2/7 rows. means/apparatus — pointer UNMOVED.
