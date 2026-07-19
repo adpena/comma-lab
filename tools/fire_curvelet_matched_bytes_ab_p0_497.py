@@ -56,20 +56,11 @@ ARMS = {
 }
 
 
-def _c2_status() -> dict:
-    """The live c2 run must be COMPLETE (or absent) before either arm fires."""
-    candidates = [
-        REPO / "experiments" / "results" / C2_RUN_DIR_NAME,
-        Path("/Users/adpena/Projects/pact/experiments/results") / C2_RUN_DIR_NAME,
-    ]
-    run_dir = next((c for c in candidates if c.exists()), None)
-    if run_dir is None:
-        return {"present": False, "quiescent": True, "note": "c2 run dir not found (absent or archived)"}
-    newest = max((p.stat().st_mtime for p in run_dir.rglob("*") if p.is_file()), default=0.0)
-    age = time.time() - newest
-    # trainer liveness: any process whose cmdline mentions the run dir (psutil-first per
-    # the launcher-buffered-log lesson: never judge by log tails).
-    alive = []
+def _live_pids_matching(*needles: str) -> tuple[list[int], bool]:
+    """PIDs whose cmdline mentions any needle; (pids, inspection_ok). FAIL-CLOSED:
+    ANY inspection failure (not just ImportError — e.g. PermissionError in a sandbox)
+    returns inspection_ok=False so callers refuse instead of assuming quiescence."""
+    pids: list[int] = []
     try:
         import psutil  # type: ignore
 
@@ -78,16 +69,38 @@ def _c2_status() -> dict:
                 cl = " ".join(proc.info.get("cmdline") or [])
             except Exception:
                 continue
-            if C2_RUN_DIR_NAME in cl:
-                alive.append(proc.info["pid"])
-    except ImportError:
-        pass  # age-based check still applies; psutil is in the project venv
+            if any(n in cl for n in needles):
+                pids.append(proc.info["pid"])
+        return pids, True
+    except Exception:  # ImportError, PermissionError, AccessDenied wrapper classes, ...
+        return pids, False
+
+
+def _c2_status() -> dict:
+    """The live c2 run must be COMPLETE before either arm fires. FAIL-CLOSED: an
+    ABSENT run dir or a failed liveness inspection is NOT quiescence — the explicit
+    operator override (--skip-c2-gate WITH --operator-go) is the only bypass."""
+    candidates = [
+        REPO / "experiments" / "results" / C2_RUN_DIR_NAME,
+        Path("/Users/adpena/Projects/pact/experiments/results") / C2_RUN_DIR_NAME,
+    ]
+    run_dir = next((c for c in candidates if c.exists()), None)
+    alive, inspect_ok = _live_pids_matching(C2_RUN_DIR_NAME)
+    if run_dir is None:
+        return {"present": False, "quiescent": False, "liveness_inspection_ok": inspect_ok,
+                "trainer_pids_alive": alive,
+                "note": "c2 run dir not found — FAIL-CLOSED (archived-or-moved must be "
+                        "confirmed by the operator via --skip-c2-gate + --operator-go)"}
+    newest = max((p.stat().st_mtime for p in run_dir.rglob("*") if p.is_file()), default=0.0)
+    age = time.time() - newest
     return {
         "present": True,
         "run_dir": str(run_dir),
         "newest_file_age_s": int(age),
         "trainer_pids_alive": alive,
-        "quiescent": (not alive) and age >= QUIESCENT_SECONDS,
+        "liveness_inspection_ok": inspect_ok,
+        # inspection failure => cannot prove no trainer is alive => NOT quiescent.
+        "quiescent": inspect_ok and (not alive) and age >= QUIESCENT_SECONDS,
     }
 
 
@@ -117,13 +130,31 @@ def main() -> int:
                     help="Explicit operator override of the c2-completion gate (NOT the admission gate).")
     args = ap.parse_args()
 
+    if args.skip_c2_gate and not args.operator_go:
+        print("REFUSE: --skip-c2-gate is an operator override and requires --operator-go.",
+              flush=True)
+        return 5
+
     c2 = _c2_status()
     print(json.dumps({"stage": "c2_gate", **c2}, indent=2), flush=True)
     if not c2["quiescent"] and not args.skip_c2_gate:
-        print("REFUSE: live c2 run is not complete/quiescent. The A/B is QUEUED behind it "
+        print("REFUSE: live c2 run is not complete/quiescent (or its dir/liveness could "
+              "not be verified — FAIL-CLOSED). The A/B is QUEUED behind it "
               "(memory: two n600 arms cannot coexist with c2 under the admission gate).",
               flush=True)
         return 3
+
+    # Arm mutual exclusion (the two ~63-75 GiB arms are strictly sequential): refuse
+    # while ANY live process references either arm's out_dir.
+    arm_pids, arm_inspect_ok = _live_pids_matching(
+        *(spec["out_dir"] for spec in ARMS.values()))
+    if arm_pids or not arm_inspect_ok:
+        print(json.dumps({"stage": "arm_mutex", "pids": arm_pids,
+                          "liveness_inspection_ok": arm_inspect_ok}), flush=True)
+        print("REFUSE: an A/B arm process is alive (or liveness could not be verified — "
+              "FAIL-CLOSED). Arms run strictly sequentially; wait for completion.",
+              flush=True)
+        return 4
 
     dry = _launch_argv(args.arm, dry_run=True)
     print(json.dumps({"stage": "dry_run", "argv": dry}), flush=True)

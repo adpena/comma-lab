@@ -1,0 +1,27 @@
+{
+  "containment": "compiles/static only; zero launches; pointer UNMOVED",
+  "measured_at_head": "679e78ab0352d7a1efbcf2368d49c86f7360d000",
+  "schema": "duty_ticket_revision_summary.v1",
+  "tickets": [
+    {
+      "off_hash": "c49087ce7077c9abe3f8c06dafe85a909b6867da3319ac5c33a4d2ad24fbcb1d",
+      "on_hash": "8ac7b6cd816f4d21d42c477fa9abd0c21904425cbf14dccd5ac627c150565137",
+      "ticket": "02_horizon_weighted_margin",
+      "verdict": "READY-FOR-GAUNTLET"
+    },
+    {
+      "off_hash": "8c0e962064e4587741f6b24851b0d9f7ebcfd0c38553a73604260ca05dfdaad8",
+      "on_hash": "028bd07d738ab4f21a68d8c38abcbcec9f611228507e2e13a2a4b78a6aef4b56",
+      "ticket": "03_step_native_activation",
+      "verdict": "READY-FOR-GAUNTLET"
+    },
+    {
+      "ticket": "01_dseg_aware_taper",
+      "verdict": "CANNOT-RESOLVE(ep725-fork) / RE-SCOPED-TO-FRESH-RUN (fresh pair full-compile BLOCKED by pre-existing V9-432 LawRef defect)"
+    },
+    {
+      "ticket": "04_curvelet_matched_bytes_p0_497",
+      "verdict": "READY-FOR-GAUNTLET(fresh-arms; wrapper fail-closed repairs landed) with NAMED OWED items"
+    }
+  ]
+}
