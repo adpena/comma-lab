@@ -1,11 +1,11 @@
 # V10 frozen-space surprises: adversarial source re-derivation
 
-Date: 2026-07-19 UTC  
-Task: #564  
-Lane: `lane_v10_frozen_space_surprises_20260719`  
-Status: `research_only=true`; source review and exact `$0` probes only  
-Axis: source-derived plus explicitly tagged `[Darwin-arm64 CPU advisory]` inherited measurements  
-Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**  
+Date: 2026-07-19 UTC
+Task: #564
+Lane: `lane_v10_frozen_space_surprises_20260719`
+Status: `research_only=true`; source review and exact `$0` probes only
+Axis: source-derived plus explicitly tagged `[Darwin-arm64 CPU advisory]` inherited measurements
+Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**
 Authority: no launch, paid dispatch, contest score, promotion, submission, or pointer authority; MAIN landing review is mandatory
 
 ## Verdict
