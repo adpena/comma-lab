@@ -1,0 +1,171 @@
+{
+  "authority": {
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "verdict_scope": "ep725 byte-closed frame1 yhat preparation on selected real pairs; no contest axis"
+  },
+  "axis": "[macOS-CPU advisory n24] NON-PROMOTABLE",
+  "checkpoint": {
+    "bytes": 460448,
+    "epoch": 725,
+    "n_pairs": 600,
+    "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_witness_ema_BEST.npz",
+    "render_hw": [
+      384,
+      512
+    ],
+    "sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "weights_arm": "EMA BEST ep725 (explicit; live arm not used)"
+  },
+  "full_archive": {
+    "actual_full_n600_archive": true,
+    "archive_zip_bytes": 83838,
+    "archive_zip_sha256": "149fefd097c1fa85c4afb6cb2d8ab20311035d7ba8063f1e72137b843a9b89f3",
+    "blob_bytes": 84536,
+    "blob_sha256": "f0c3e648f00f52e48c7be98997fb7dd57c2e5a607ed385846931af68f88cc78c",
+    "breakdown": {
+      "accounting_matches_canonical": true,
+      "base_int8_brotli_bytes": 61598,
+      "canonical_quantize_blob_bytes": 82608,
+      "code_int8_brotli_bytes": 21010,
+      "cross_tensor_codec": {
+        "active": false,
+        "base_permutation": null,
+        "code_transform": null,
+        "quantized_state_lossless_by_construction": true
+      },
+      "lane_band_counted_bytes": 0,
+      "magic_and_prefixes_bytes": 22,
+      "manifest_bytes": 1906,
+      "n_params": 111095,
+      "pose_carrier_counted_bytes": 0,
+      "pose_sidecar_bytes": 0,
+      "total_0bin_bytes": 84536
+    },
+    "bytes_per_pair_derived": 139.73,
+    "inflate_py_sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224",
+    "inflate_sh_sha256": "ca878d7faa7a417207715f1391461e37cb86c3e38b275f06a248411d28409001",
+    "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/archive.zip",
+    "rate_term_actual": 0.0558242829118566
+  },
+  "no_hidden_sidecar": {
+    "PASS": true,
+    "full_archive_is_counted": true,
+    "raw_is_measurement_scratch_on_SSD_not_a_counted_payload": true,
+    "witness_target_source": "frame1 bytes emitted by shipped inflate.py from the selected exact code rows"
+  },
+  "sacred": {
+    "after": {
+      "entries": 18,
+      "exists": true,
+      "metadata_sha256": "0bdc3e39c5eac970625f91e6803b1bb33330e412514b78ce35dab2c4c351842c"
+    },
+    "before": {
+      "entries": 18,
+      "exists": true,
+      "metadata_sha256": "0bdc3e39c5eac970625f91e6803b1bb33330e412514b78ce35dab2c4c351842c"
+    },
+    "root": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z",
+    "unchanged": true
+  },
+  "schema": "yhat_rd_ladder_witness_prepare.v1",
+  "selected_decode": {
+    "bit_exact_roundtrip": {
+      "bit_exact": true,
+      "frames_compared": 4,
+      "gate_pairs": 2,
+      "max_abs_uint8_diff": 0,
+      "n_frames_differing": 0,
+      "proves": "shipped inflate.py bit-identically implements the canonical generator on the int8-dequantized checkpoint (argmax the score reads is byte-determined)",
+      "reference": "tac.boundary_math.lever_b_levelset_generator.levelset_rgb_forward_numpy (numpy-fp32 oracle) + canonical FREE-table regen + reference R"
+    },
+    "frame_layout": "(48,874,1164,3) uint8, selected-pair order",
+    "raw_bytes": 146496384,
+    "raw_path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/selected_n24_packet/inflated/0.raw",
+    "raw_sha256": "3ffe6e11d672b3278c8d78ac2c562468d4fdffe97dc71777068b464fad9e57a8",
+    "receiver_runtime": {
+      "eval_pairs": 24,
+      "expected_bytes": 146496384,
+      "frame_layout": "(48, 874, 1164, 3) uint8 [f0,f1 per pair]",
+      "full_output_shape_ok": true,
+      "inflate_stdout": "inflated 48 frames (24 pairs) -> /Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/selected_n24_packet/inflated/0.raw [48x874x1164x3 uint8] (18 workers)",
+      "n_frames_emitted": 48,
+      "raw_bytes": 146496384,
+      "raw_path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/selected_n24_packet/inflated/0.raw",
+      "storage_preflight": {
+        "expected_raw_bytes": 146496384,
+        "free_bytes": 821676486656,
+        "ok": true,
+        "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/selected_n24_packet/inflated",
+        "required_bytes": 153821203,
+        "safety_margin": 1.05
+      }
+    },
+    "storage_preflight": {
+      "expected_raw_bytes": 146496384,
+      "free_bytes": 821676552192,
+      "ok": true,
+      "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/selected_n24_packet/inflated",
+      "required_bytes": 153821203,
+      "safety_margin": 1.05
+    }
+  },
+  "selected_packet": {
+    "archive_zip_bytes": 63876,
+    "archive_zip_sha256": "463ab22df796930c5614d20cfd1e71219463c8afe7d7afe4660e38f56ba8de7b",
+    "blob_bytes": 64588,
+    "blob_sha256": "ce2b066311690835b3f7f5cf4e85bcab5fa796379713ce489b88e18000e7e2b8",
+    "inflate_py_sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224",
+    "inflate_sh_sha256": "ca878d7faa7a417207715f1391461e37cb86c3e38b275f06a248411d28409001",
+    "measurement_only": true,
+    "not_the_counted_rung_B_rate": true,
+    "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/selected_n24_packet/archive.zip"
+  },
+  "selection": {
+    "code_scale_unchanged": 0.012243044736710194,
+    "pair_ids": [
+      0,
+      50,
+      100,
+      150,
+      200,
+      250,
+      300,
+      350,
+      400,
+      450,
+      500,
+      550,
+      10,
+      60,
+      110,
+      160,
+      210,
+      260,
+      310,
+      360,
+      410,
+      460,
+      510,
+      560
+    ],
+    "requantized": false,
+    "selected_dequant_code_sha256": "c9cf888cf9aa9f542ca87564fbf23ac5bce69ee1406d21d71d2f1b258c13685b",
+    "selection": "exact int8 code-row slice from the full archive stream",
+    "source_quantized_code_sha256": "4b9ea647a1299458c7e6650acdca4be92a75c96e7c5a98961d4a409692e8087e"
+  },
+  "self_orient": {
+    "curvelet_feat_width": 80,
+    "dir_w": 16,
+    "freq_across": 32.0,
+    "freq_along": 8.0,
+    "iters": 4,
+    "n_dir_freqs": 4,
+    "self_orient": true,
+    "source": "persisted checkpoint fields plus explicit decoder iteration/tau",
+    "tau": 4.0
+  },
+  "written_at_utc": "2026-07-19T05:14:43.441740+00:00"
+}

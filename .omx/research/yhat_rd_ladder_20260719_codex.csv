@@ -1,0 +1,5 @@
+rung,description_encoding,quant_levels,pair_count,bytes_per_pair,n600_bytes,n600_byte_status,rate_term_n600,d_seg_mean,d_pose_mean,plane_mean_abs_vs_source,plane_rmse_vs_source,infeasible_blocks,repair_cells,receiver_runtime_seconds_per_pair
+source_exact_i32,i32_numerator,0,24,1572789.9166666667,943673950.0,DERIVED linear extrapolation from measured disjoint chunks,628.3537484356642,2.11927632183991e-07,1.1439564826009122e-09,0.0,0.0,0,0,11.834332901072534
+witness_byteclosed_i32,i32_numerator,0,24,139.73,83838,MEASURED actual archive,0.0558242829118566,0.0034554799591811993,63.03106689453125,18.420144150549557,25.044687792267666,0,0,12.403446251827214
+witness_q6_u8,u8_plane,64,24,257814.04166666666,154688425.0,DERIVED linear extrapolation from measured disjoint chunks,103.00067273061752,0.003548092325218022,63.606825828552246,18.39793169276967,25.08179663352702,0,0,12.383519758528564
+witness_q4_u8,u8_plane,16,24,109648.0,65788800.0,DERIVED linear extrapolation from measured disjoint chunks,43.80606149516391,0.00551689993396091,64.02375952402751,19.094081298599054,25.580229768196663,0,0,12.349063656360764

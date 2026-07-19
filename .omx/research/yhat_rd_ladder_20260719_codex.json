@@ -1,0 +1,209 @@
+{
+  "authority": {
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "verdict_scope": "n24 frame1-yhat R-D ladder with source-frame0 policy; no contest or full two-plane claim"
+  },
+  "axis": "[macOS-CPU advisory n24] NON-PROMOTABLE",
+  "byteclosed_witness_direct_baseline": {
+    "d_pose_mean": 63.0309157371521,
+    "d_seg_mean": 0.003455691873872032,
+    "role": "interaction baseline before alternate exact lattice realization"
+  },
+  "existing_n600_context_not_rerun": {
+    "derived_n600_bytes": 1020000000,
+    "derived_rate_term": 680.0,
+    "mean_bytes_per_frame": 1700000,
+    "measured_formulation": "Brotli-Q11 arbitrary/minimum-norm solved camera frames",
+    "source": ".omx/research/v10_lattice_rate_verdict_and_composition_20260719.md lines 19-35",
+    "verdict": "DEAD",
+    "verdict_scope": "direct-solved-camera-frame-as-payload formulation only; compact yhat family OPEN"
+  },
+  "no_hidden_sidecar_review": {
+    "PASS": true,
+    "frame0_caveat": "source frame0 is an explicit external diagnostic policy, not silently counted or claimed contest-complete",
+    "source_and_quantized_rungs": "every counted chunk is a complete parseable plane container; codec parse-back exact",
+    "witness_rung": "actual full archive.zip counted; selected raw is measurement-only and hash-bound to shipped inflate.py"
+  },
+  "pair_count": 24,
+  "pair_ids": [
+    0,
+    10,
+    50,
+    60,
+    100,
+    110,
+    150,
+    160,
+    200,
+    210,
+    250,
+    260,
+    300,
+    310,
+    350,
+    360,
+    400,
+    410,
+    450,
+    460,
+    500,
+    510,
+    550,
+    560
+  ],
+  "remaining_blockers": [
+    "compact frame0 yhat description and joint two-plane packet",
+    "full n600 measurement for direct plane descriptions",
+    "receiver-integrated descriptor decode plus exact contest CPU/CUDA replay",
+    "independent MAIN landing review"
+  ],
+  "rows": [
+    {
+      "d_pose_mean": 1.1439564826009122e-09,
+      "d_seg_mean": 2.11927632183991e-07,
+      "description_encoding": "i32_numerator",
+      "frame0_policy": "source gt_f0; external diagnostic policy; not contest-complete",
+      "lattice": {
+        "budget_blocks": 0,
+        "exact_blocks": 14155776,
+        "heuristic_blocks": 0,
+        "nonzero_realized_numerator_error_cells": 0,
+        "proven_affine_infeasible_blocks": 0,
+        "target_repair_cells": 0
+      },
+      "pair_count": 24,
+      "plane_mean_abs_vs_source": 0.0,
+      "plane_rmse_vs_source": 0.0,
+      "primary_rate": {
+        "actual_counted_bytes": 37746958,
+        "actual_pair_count": 24,
+        "basis": "sum of actual independent chunk Brotli-Q11 complete-plane containers",
+        "bytes_per_pair": 1572789.9166666667,
+        "n600_byte_status": "DERIVED linear extrapolation from measured disjoint chunks",
+        "n600_bytes": 943673950.0,
+        "rate_term_n600": 628.3537484356642
+      },
+      "quant_levels": 0,
+      "receiver_runtime_seconds_per_pair": 11.834332901072534,
+      "rung": "source_exact_i32",
+      "secondary_direct_plane_rate": {
+        "actual_brotli_q11_chunk_bytes": 37746958,
+        "actual_zstd_19_chunk_bytes": 41138237
+      }
+    },
+    {
+      "d_pose_mean": 63.03106689453125,
+      "d_seg_mean": 0.0034554799591811993,
+      "description_encoding": "i32_numerator",
+      "frame0_policy": "source gt_f0; external diagnostic policy; not contest-complete",
+      "lattice": {
+        "budget_blocks": 0,
+        "exact_blocks": 14155776,
+        "heuristic_blocks": 0,
+        "nonzero_realized_numerator_error_cells": 0,
+        "proven_affine_infeasible_blocks": 0,
+        "target_repair_cells": 0
+      },
+      "pair_count": 24,
+      "plane_mean_abs_vs_source": 18.420144150549557,
+      "plane_rmse_vs_source": 25.044687792267666,
+      "primary_rate": {
+        "actual_counted_bytes": 83838,
+        "basis": "actual full-n600 ep725 byte-closed witness archive.zip",
+        "bytes_per_pair": 139.73,
+        "n600_byte_status": "MEASURED actual archive",
+        "n600_bytes": 83838,
+        "rate_term_n600": 0.0558242829118566
+      },
+      "quant_levels": 0,
+      "receiver_runtime_seconds_per_pair": 12.403446251827214,
+      "rung": "witness_byteclosed_i32",
+      "secondary_direct_plane_rate": {
+        "actual_brotli_q11_chunk_bytes": 42051900,
+        "actual_zstd_19_chunk_bytes": 45188817
+      }
+    },
+    {
+      "d_pose_mean": 63.606825828552246,
+      "d_seg_mean": 0.003548092325218022,
+      "description_encoding": "u8_plane",
+      "frame0_policy": "source gt_f0; external diagnostic policy; not contest-complete",
+      "lattice": {
+        "budget_blocks": 0,
+        "exact_blocks": 14155776,
+        "heuristic_blocks": 0,
+        "nonzero_realized_numerator_error_cells": 0,
+        "proven_affine_infeasible_blocks": 0,
+        "target_repair_cells": 0
+      },
+      "pair_count": 24,
+      "plane_mean_abs_vs_source": 18.39793169276967,
+      "plane_rmse_vs_source": 25.08179663352702,
+      "primary_rate": {
+        "actual_counted_bytes": 6187537,
+        "actual_pair_count": 24,
+        "basis": "sum of actual independent chunk Brotli-Q11 complete-plane containers",
+        "bytes_per_pair": 257814.04166666666,
+        "n600_byte_status": "DERIVED linear extrapolation from measured disjoint chunks",
+        "n600_bytes": 154688425.0,
+        "rate_term_n600": 103.00067273061752
+      },
+      "quant_levels": 64,
+      "receiver_runtime_seconds_per_pair": 12.383519758528564,
+      "rung": "witness_q6_u8",
+      "secondary_direct_plane_rate": {
+        "actual_brotli_q11_chunk_bytes": 6187537,
+        "actual_zstd_19_chunk_bytes": 6096559
+      }
+    },
+    {
+      "d_pose_mean": 64.02375952402751,
+      "d_seg_mean": 0.00551689993396091,
+      "description_encoding": "u8_plane",
+      "frame0_policy": "source gt_f0; external diagnostic policy; not contest-complete",
+      "lattice": {
+        "budget_blocks": 0,
+        "exact_blocks": 14155776,
+        "heuristic_blocks": 0,
+        "nonzero_realized_numerator_error_cells": 0,
+        "proven_affine_infeasible_blocks": 0,
+        "target_repair_cells": 0
+      },
+      "pair_count": 24,
+      "plane_mean_abs_vs_source": 19.094081298599054,
+      "plane_rmse_vs_source": 25.580229768196663,
+      "primary_rate": {
+        "actual_counted_bytes": 2631552,
+        "actual_pair_count": 24,
+        "basis": "sum of actual independent chunk Brotli-Q11 complete-plane containers",
+        "bytes_per_pair": 109648.0,
+        "n600_byte_status": "DERIVED linear extrapolation from measured disjoint chunks",
+        "n600_bytes": 65788800.0,
+        "rate_term_n600": 43.80606149516391
+      },
+      "quant_levels": 16,
+      "receiver_runtime_seconds_per_pair": 12.349063656360764,
+      "rung": "witness_q4_u8",
+      "secondary_direct_plane_rate": {
+        "actual_brotli_q11_chunk_bytes": 2631552,
+        "actual_zstd_19_chunk_bytes": 2491067
+      }
+    }
+  ],
+  "schema": "yhat_rd_ladder_table.v1",
+  "source_receipts": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/yhat_rd_ladder_20260719_20260719T044512Z/.omx/research/yhat_rd_ladder_chunk_a_20260719_codex.json",
+      "sha256": "b2d35d864bda323be75805b1d4ae9f0299cddb620cbc067b8723f65001f906cf"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/yhat_rd_ladder_20260719_20260719T044512Z/.omx/research/yhat_rd_ladder_chunk_b_20260719_codex.json",
+      "sha256": "349d977bac463976a658b0696753f11324a6cfdb00791c9aafcaa86804c0ea65"
+    }
+  ],
+  "witness_prepare_sha256": "350f38e53bba79f5b282b6726ca47a958f27f5759b612f9ffa984fd523486625",
+  "written_at_utc": "2026-07-19T05:41:06.624594+00:00"
+}
