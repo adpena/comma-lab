@@ -78856,6 +78856,47 @@
       },
       "notes": "Local CPU advisory VJP custody and positive-band range-coordinate measurement; no archive or score authority; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "resumability_537_20260719",
+      "name": "Task 537 resumability seal path",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_levelset_checkpoint_save_path_preflight.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #537 implementation and strict preflight complete; mandatory real n24 crash-resume receipt BLOCKED_ENVIRONMENT_NO_METAL_DEVICE; MAIN rerun and landing review required."
     }
   ],
   "level_rules": {

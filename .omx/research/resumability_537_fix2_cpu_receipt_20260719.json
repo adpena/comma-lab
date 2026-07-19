@@ -1,0 +1,37 @@
+{
+  "all_pass": false,
+  "authority": "LOCAL_DURABILITY_PROOF_ONLY",
+  "axis": "macOS-MLX local environment; not contest CPU/CUDA",
+  "checkpoint_files": [],
+  "cleanup": {
+    "base_preserved": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/resumability_537_fix_20260719_20260719T082320Z/experiments/results/resumability_537_fix2_cpu_20260719",
+    "policy": "failure-preserve for exact blocker custody",
+    "source_gt_deleted": false
+  },
+  "created_utc": "2026-07-19T08:36:15.073965+00:00",
+  "dsl_artifact_hashes": {
+    "control_a/dsl_provenance.json": "86077c00cac2df697f80f28005c515a1e73cdd7646078590a7bd9482e65ebe65",
+    "control_a/launch.sh": "1df3de5e72e00b0ef6afcef57bac379632308e6dccc18f2b1498ad7fd1f18fd1",
+    "control_a/launch_manifest.json": "5d014b330b5211d0020b032a7642b0f20d2a899b7dd160b126a11bf6e88b86af",
+    "control_b/dsl_provenance.json": "2f4a123328ddb508f7ae52161d1a04ccebb27cd7887ada340c484a648aa6fe3a",
+    "control_b/launch.sh": "d64da9090c282287ad5fd209cf7a45b8765a2682c14f16321fcc507c65330151",
+    "control_b/launch_manifest.json": "af7a4a5640541c78a7b625d118a2d56db3c010eebbb646724920d1dd83ea56c5",
+    "crash/dsl_provenance.json": "e74af09e6d3c412d72b22ed45f4dcd8e7a7eda8dcfc96066c12ffa62104cb3f1",
+    "crash/launch.sh": "66fd452b8e5364ec4984b4101835253bdb687a1ad209e2a05e176fffd63146a7",
+    "crash/launch_manifest.json": "5fac3ca4e29ac44a3800d4c7cc7dc5999c45706bc6c473e0446d5f71add8d8b8"
+  },
+  "error": "RuntimeError('control A failed rc=1\\n{\"stage\": \"basis_warning\", \"basis\": \"legacy_fourier_ab_control\", \"authority\": \"LEGACY_AB_CONTROL_ONLY\", \"note\": \"historical Fourier computation retained only as the explicit A/B control; curvelet default/strict flip requires operator-GO n600 byte-closed realized-through-R no-d_seg-regression verdict\"}\\n[admission-guard] admission OK (governed) for \\'train_levelset_witness_realized_through_R_mlx\\'; DSL compile admission OK for \\'train_levelset_witness_realized_through_R_mlx\\': dsl_compile_hash=cae212eadf128a83961cb3528f6d81eef6a4df159397b7df74f119d62776246c spec_id=\\'resumability_537_real_n24\\'\\n\\nTraceback (most recent call last):\\n  File \"/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/resumability_537_fix_20260719_20260719T082320Z/experiments/train_levelset_witness_realized_through_R_mlx.py\", line 17488, in <module>\\n    raise SystemExit(main())\\n                     ~~~~^^\\n  File \"/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/resumability_537_fix_20260719_20260719T082320Z/experiments/train_levelset_witness_realized_through_R_mlx.py\", line 17480, in main\\n    result = run_train(args)\\n  File \"/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/resumability_537_fix_20260719_20260719T082320Z/experiments/train_levelset_witness_realized_through_R_mlx.py\", line 4280, in run_train\\n    import mlx.nn as nn\\n  File \"/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/resumability_537_fix_20260719_20260719T082320Z/.venv/lib/python3.13/site-packages/mlx/nn/__init__.py\", line 4, in <module>\\n    from mlx.nn.layers import *\\n  File \"/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/resumability_537_fix_20260719_20260719T082320Z/.venv/lib/python3.13/site-packages/mlx/nn/layers/__init__.py\", line 3, in <module>\\n    from mlx.nn.layers.activations import (\\n    ...<52 lines>...\\n    )\\n  File \"/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/resumability_537_fix_20260719_20260719T082320Z/.venv/lib/python3.13/site-packages/mlx/nn/layers/activations.py\", line 19, in <module>\\n    @partial(mx.compile, shapeless=True)\\n     ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nRuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.\\nException ignored in atexit callback <nanobind.nb_func object at 0x10b2569b0>:\\nRuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.\\n')",
+  "exact_blocker": "MLX initialization reported no Metal device before any checkpoint was written",
+  "frontier_pointer_mutated": false,
+  "input": {
+    "bytes": 5078017610,
+    "gt_cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "mlx_device": "cpu",
+    "num_pairs": 24,
+    "seed": 537
+  },
+  "next_action": "MAIN must rerun this exact probe on the Metal-capable host",
+  "schema": "tac.resumability_537_real_crash_resume.v2",
+  "score_claim": false,
+  "status": "BLOCKED_ENVIRONMENT_NO_METAL_DEVICE"
+}

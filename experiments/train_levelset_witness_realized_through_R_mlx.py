@@ -44,6 +44,7 @@ import json
 import math
 import os
 import platform
+import re
 import sys
 import threading
 import time
@@ -889,6 +890,53 @@ _RESUME_OPT_PREFIX = "optP__"
 # _load_resume_state routes them to their own dict (never polluting the model param restore). Only ever
 # present when --polyak-finisher-arm is set + it has observed => an un-armed run is byte-identical.
 _RESUME_POLYAK_PREFIX = "polyakM__"
+_RESUME_SEMANTIC_SCHEMA = "levelset_full_state.v2"
+_RESUME_RNG_KEYS = (
+    "__rng_np_algo", "__rng_np_keys", "__rng_np_pos",
+    "__rng_np_has_gauss", "__rng_np_cached_gauss",
+)
+_LEGACY_EVENT_PREFIXES = (
+    "__mg_", "__lbg_", "__scg_", "__tsg_", "__pag_", "__evt_",
+    "__posegate_", "__dtp_event_mark_",
+)
+_PERIODIC_EMA_RE = re.compile(r"^levelset_periodic_ema_(?P<stage>[A-Za-z0-9_]+)_ep(?P<epoch>[0-9]+)\.npz$")
+_PERIODIC_RESUME_RE = re.compile(r"^levelset_periodic_resume_(?P<stage>[A-Za-z0-9_]+)_ep(?P<epoch>[0-9]+)\.npz$")
+
+
+def _periodic_checkpoint_names(stage_tag: str, epoch: int) -> tuple[str, str]:
+    """Return the distinct, retention-scoped periodic EMA/resume pair names."""
+    stage = re.sub(r"[^A-Za-z0-9_]+", "_", str(stage_tag)).strip("_") or "stage_unknown"
+    ep = int(epoch)
+    if ep < 0:
+        raise ValueError(f"periodic checkpoint epoch must be >= 0, got {ep}")
+    return (
+        f"levelset_periodic_ema_{stage}_ep{ep}.npz",
+        f"levelset_periodic_resume_{stage}_ep{ep}.npz",
+    )
+
+
+def _prune_periodic_checkpoints(out_dir: Path, stage_tag: str, retain: int) -> list[str]:
+    """Keep the newest ``retain`` periodic pairs for one stage.
+
+    Only files in the new ``levelset_periodic_{ema,resume}_<stage>_ep<N>.npz`` grammar are
+    candidates. Rolling aliases, stage-boundary/final names, BEST, Polyak, and unknown files are
+    outside the grammar and therefore immune.
+    """
+    keep = int(retain)
+    if keep <= 0:
+        raise ValueError(f"ckpt retention must be > 0, got {retain!r}")
+    stage = re.sub(r"[^A-Za-z0-9_]+", "_", str(stage_tag)).strip("_") or "stage_unknown"
+    by_epoch: dict[int, list[Path]] = {}
+    for path in Path(out_dir).iterdir():
+        match = _PERIODIC_EMA_RE.match(path.name) or _PERIODIC_RESUME_RE.match(path.name)
+        if match is not None and match.group("stage") == stage:
+            by_epoch.setdefault(int(match.group("epoch")), []).append(path)
+    removed: list[str] = []
+    for epoch in sorted(by_epoch)[:-keep]:
+        for path in by_epoch[epoch]:
+            path.unlink()
+            removed.append(path.name)
+    return sorted(removed)
 
 
 def _atomic_savez(path: Path, arrays: dict[str, np.ndarray]) -> Path:
@@ -1057,6 +1105,7 @@ def _build_resume_state_arrays(
     recent_losses: "list[float] | None" = None, provenance: dict[str, Any] | None = None,
     resume_registry: "Any" = None, hardness_prob: "np.ndarray | None" = None,
     fresh_state: FreShInitState | None = None,
+    resume_stage: str | None = None,
 ) -> dict[str, np.ndarray]:
     """The resume-state sidecar contents (NOT byte-close-read): prefixed live / EMA / optimizer
     tensors + epoch + light cfg provenance. MLX-free (caller converts mx->np)."""
@@ -1071,6 +1120,8 @@ def _build_resume_state_arrays(
             out[_RESUME_OPT_PREFIX + k] = np.asarray(v)
     out["__resume_epoch"] = np.asarray(int(epoch))
     out["__resume_has_opt"] = np.asarray(int(has_opt))
+    out["__resume_semantic_schema"] = np.asarray(_RESUME_SEMANTIC_SCHEMA)
+    out["__resume_stage"] = np.asarray(str(resume_stage or "epoch_position_only"))
     out["__cfg_n_hidden"] = np.asarray(args.n_hidden)
     out["__cfg_hidden_dim"] = np.asarray(args.hidden_dim)
     out["__cfg_mod_dim"] = np.asarray(args.mod_dim)
@@ -1333,6 +1384,34 @@ def _build_resume_state_arrays(
     # cap-fallback / cl pending-reconcile -- remains at its correctly-ordered inline site.)
     if resume_registry is not None:
         out.update(resume_registry.state_arrays())
+    event_keys = sorted(
+        key for key in out if key == "__resume_registry_manifest"
+        or any(key.startswith(prefix) for prefix in _LEGACY_EVENT_PREFIXES)
+    )
+    active_event_flags = sorted(set(
+        name for name in (
+            "muon_start_event", "lane_band_start_event",
+            "seg_chroma_boundary_start_event", "seg_temporal_screw_start_event",
+            "seg_phase_advect_start_event", "pose_finish_engage_on",
+        )
+        if str(getattr(args, name, None) or "none") not in ("none", "muon")
+    ) | {
+        name for name in (
+            "curriculum_event_triggered", "birth_completion_event", "closed_loop_control",
+        ) if bool(getattr(args, name, False))
+    } | ({"tau_advance_mode"} if str(getattr(args, "tau_advance_mode", "clock")) == "event" else set()))
+    if active_event_flags and not event_keys:
+        raise RuntimeError(
+            "active event controller(s) produced no persisted event state: "
+            + ", ".join(active_event_flags)
+        )
+    out["__resume_event_ledger_json"] = np.asarray(json.dumps({
+        "schema": "levelset_resume_event_ledger.v1",
+        "stage": str(resume_stage or "epoch_position_only"),
+        "persisted_keys": event_keys,
+        "active_event_flags": active_event_flags,
+        "inactive_explicit": not bool(active_event_flags),
+    }, sort_keys=True, separators=(",", ":")))
     if fresh_state is not None and fresh_state.enabled:
         out.update(fresh_checkpoint_cfg_arrays(fresh_state, args=args))
     # ---- PROVENANCE (git sha + upstream snapshot sha; cost ZERO archive bytes -- the resume sidecar
@@ -1375,6 +1454,172 @@ def _load_resume_state(npz_path: Path) -> dict[str, Any]:
     return {
         "live": live, "ema": ema, "opt": opt, "polyak": polyak,
         "epoch": epoch, "has_opt": bool(int(cfg.get("__resume_has_opt", 0))), "cfg": cfg,
+    }
+
+
+def _validate_resume_state_for_continuation(
+    rs: dict[str, Any], *, warm_start_weights_only: bool,
+) -> dict[str, Any]:
+    """Fail closed when a normal continuation lacks any trajectory-state semantic leg.
+
+    A deliberate weights-only re-treatment is the sole escape from optimizer/RNG/event continuity.
+    Pre-v2 full sidecars remain admissible only when their concrete keys directly evidence every leg;
+    the returned compatibility row is printed by the caller so the legacy decision is never silent.
+    """
+    cfg = dict(rs.get("cfg") or {})
+    if not rs.get("live"):
+        raise ValueError("resume checkpoint missing required live weights")
+    if warm_start_weights_only:
+        return {
+            "stage": "resume_state_custody", "treatment_kind": "warm_start_weights_only",
+            "continuity_required": False, "compatibility": "explicit_re_treatment",
+        }
+
+    missing: list[str] = []
+    if not rs.get("ema"):
+        missing.append("ema_shadow")
+    if not bool(rs.get("has_opt")) or not rs.get("opt"):
+        missing.append("optimizer_moments")
+    rng_missing = [key for key in _RESUME_RNG_KEYS if key not in cfg]
+    if rng_missing:
+        missing.append("rng_state:" + ",".join(rng_missing))
+    if "__resume_epoch" not in cfg:
+        missing.append("stage_epoch_position:__resume_epoch")
+
+    schema = str(cfg.get("__resume_semantic_schema", ""))
+    if schema == _RESUME_SEMANTIC_SCHEMA:
+        if "__resume_stage" not in cfg:
+            missing.append("stage_epoch_position:__resume_stage")
+        if "__resume_event_ledger_json" not in cfg:
+            missing.append("event_state:__resume_event_ledger_json")
+        else:
+            try:
+                ledger = json.loads(str(cfg["__resume_event_ledger_json"]))
+                active = list(ledger.get("active_event_flags") or [])
+                persisted = list(ledger.get("persisted_keys") or [])
+                inactive_explicit = bool(ledger.get("inactive_explicit", False))
+                if active and not persisted:
+                    missing.append("event_state:active_without_persisted_keys")
+                if not active and not inactive_explicit:
+                    missing.append("event_state:inactive_not_explicit")
+            except (TypeError, ValueError, json.JSONDecodeError):
+                missing.append("event_state:malformed_ledger")
+        compatibility = "native_v2"
+    else:
+        # Legacy full-state artifacts predate the semantic manifest. Accept only direct event-ledger
+        # evidence (the sacred layout carries __posegate_* and __dtp_event_mark_* custody) and emit a
+        # loud compatibility row. Merely having weights/epoch is not enough.
+        legacy_event_keys = sorted(
+            key for key in cfg if key == "__resume_registry_manifest"
+            or any(key.startswith(prefix) for prefix in _LEGACY_EVENT_PREFIXES)
+        )
+        if not legacy_event_keys:
+            missing.append("event_state:legacy_direct_keys")
+        compatibility = "legacy_semantic_keys"
+
+    if missing:
+        raise ValueError(
+            "normal crash continuation requires complete full-state custody; missing semantic leg(s): "
+            + "; ".join(missing)
+            + ". Use --warm-start-weights-only only for an intentional fresh-state re-treatment."
+        )
+    return {
+        "stage": "resume_state_custody",
+        "treatment_kind": "bit_faithful_continuation",
+        "continuity_required": True,
+        "compatibility": compatibility,
+        "legacy_compatibility": compatibility == "legacy_semantic_keys",
+    }
+
+
+def _validate_optimizer_restore_keysets(
+    checkpoint_keys: "set[str] | list[str] | tuple[str, ...]",
+    runtime_keys: "set[str] | list[str] | tuple[str, ...]",
+) -> None:
+    """Refuse a partial optimizer restore; subset replacement is a silent cold-start."""
+    saved = set(checkpoint_keys)
+    live = set(runtime_keys)
+    missing = sorted(live - saved)
+    extra = sorted(saved - live)
+    if missing or extra:
+        raise ValueError(
+            "optimizer-state keyset mismatch; partial restore is not bit-faithful "
+            f"(missing_runtime_keys={missing[:8]}, extra_checkpoint_keys={extra[:8]})"
+        )
+
+
+_WARM_START_EVENT_ANCHORS = (
+    "muon_start_epoch",
+    "pose_finish_start_epoch",
+    "lane_band_start_epoch",
+    "seg_chroma_boundary_start_epoch",
+    "seg_temporal_screw_start_epoch",
+    "seg_phase_advect_start_epoch",
+)
+
+
+def _reanchor_resume_round(
+    args: Any, *, checkpoint_epoch: int, warm_start_weights_only: bool,
+) -> dict[str, Any]:
+    """Rebase intentional re-treatment event caps onto the restored round and current geometry.
+
+    Normal continuation is an identity operation: its persisted event ledger remains authoritative.
+    For a weights-only round, donor absolute caps are discarded. Every active backstop is re-armed at
+    the restored start epoch plus the derived Adam second-moment window, which also replaces any
+    hand-entered LR rewarmup length.
+    """
+    start_epoch = (
+        int(getattr(args, "warm_start_epoch", -1))
+        if int(getattr(args, "warm_start_epoch", -1)) >= 0
+        else int(checkpoint_epoch) + 1
+    )
+    old = {name: getattr(args, name, None) for name in _WARM_START_EVENT_ANCHORS}
+    old["stage_transition_rewarmup_epochs"] = int(
+        getattr(args, "stage_transition_rewarmup_epochs", 0) or 0)
+    if not warm_start_weights_only:
+        return {
+            "stage": "resume_round_reanchor", "treatment_kind": "bit_faithful_continuation",
+            "resume_epoch": start_epoch, "derived_window": 0, "old_anchors": old,
+            "new_anchors": dict(old), "changed": False,
+        }
+
+    from tac.canonical_equations.adam_v_variance_warmup_20260717 import (
+        DEFAULT_C, adam_v_variance_warmup_epochs,
+    )
+
+    steps_per_epoch = max(
+        1, math.ceil(int(getattr(args, "num_pairs", 1)) / int(getattr(args, "accum_pairs", 1)))
+    )
+    window = int(adam_v_variance_warmup_epochs(
+        float(getattr(args, "adam_beta2", 0.999)), steps_per_epoch, c=DEFAULT_C,
+    ))
+    new: dict[str, Any] = {}
+    for name in _WARM_START_EVENT_ANCHORS:
+        value = old[name]
+        if value is None or int(value) <= 0:
+            new[name] = value
+            continue
+        # The donor value is an absolute epoch and is therefore not a valid offset in the new round.
+        # Re-arm each active backstop only after the geometry-derived settle window.
+        new[name] = start_epoch + window
+        setattr(args, name, new[name])
+    new["stage_transition_rewarmup_epochs"] = window
+    args.stage_transition_rewarmup_epochs = window
+    return {
+        "stage": "resume_round_reanchor",
+        "schema": "levelset_resume_round_reanchor.v1",
+        "treatment_kind": "warm_start_weights_only",
+        "resume_epoch": start_epoch,
+        "checkpoint_epoch": int(checkpoint_epoch),
+        "derived_window": window,
+        "geometry": {
+            "law": "adam_v_variance_warmup_length_v1",
+            "beta2": float(getattr(args, "adam_beta2", 0.999)),
+            "steps_per_epoch": steps_per_epoch,
+        },
+        "old_anchors": old,
+        "new_anchors": new,
+        "changed": new != old,
     }
 
 
@@ -10126,7 +10371,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         shadow_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
         live_np = {k: np.asarray(v, np.float32) for k, v in tree_flatten(model.parameters())}
         opt_np: dict[str, np.ndarray] = {}
-        try:  # best-effort: optimizer moments accelerate resume but a fresh AdamW re-warms in steps.
+        try:  # snapshot errors become a checkpoint refusal in _do_checkpoint below.
             for k, v in tree_flatten(opt.state):
                 arr = np.asarray(v)
                 if arr.dtype.kind in "fiub":
@@ -10139,12 +10384,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         epoch: int,
         *,
         stage_tag: str | None = None,
+        periodic_stage_tag: str | None = None,
         causal_boundary_kind: str | None = None,
         causal_stage: str | None = None,
     ) -> dict[str, Any]:
         _da_checkpoint_start_ns = time.perf_counter_ns()
         _da_checkpoint_clock = _component_clock
         shadow_np, live_np, opt_np = _snapshot_numpy_state()
+        if not opt_np:
+            raise RuntimeError(
+                "refusing to write a full-state checkpoint without optimizer moments"
+            )
         # (review Med1) the BYTE-CLOSE deploy npz ships the EMA shadow; re-project its film.weight onto
         # Stiefel so the shipped artifact is ON-MANIFOLD (PR(M)=PR(cov code) holds for what ships). The
         # RESUME sidecar keeps the UN-projected shadow (bit-faithful continuous resume). No-op unless
@@ -10173,7 +10423,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # SAME per-pair oversample allocation a continuous run used (None when the lever is off ->
             # key absent -> byte-identical). Closure-captures the loop-scope hardness_prob (bound at the
             # loop-start precompute, always before any checkpoint fires).
-            hardness_prob=hardness_prob)
+            hardness_prob=hardness_prob,
+            resume_stage=str(causal_stage or stage_tag or periodic_stage_tag or "unknown"))
         # (R-7 finisher 2) merge the Polyak running-mean (heavy fp64) into the SAME atomic resume savez
         # as its scalar sentinel (registry) => no cross-file desync. {} unless armed+observed => the
         # sidecar is byte-identical for an un-armed run.
@@ -10210,6 +10461,14 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 polyak_pres = f"levelset_polyak_{stage_tag}_ep{epoch}.npz"
                 _atomic_savez(out_dir / polyak_pres, polyak_arrays)
                 written["polyak_preserved"] = polyak_pres
+        if periodic_stage_tag is not None:
+            ema_periodic, resume_periodic = _periodic_checkpoint_names(periodic_stage_tag, epoch)
+            _atomic_savez(out_dir / ema_periodic, ema_arrays)
+            _atomic_savez(out_dir / resume_periodic, resume_arrays)
+            written["ema_periodic"] = ema_periodic
+            written["resume_periodic"] = resume_periodic
+            written["periodic_pruned"] = _prune_periodic_checkpoints(
+                out_dir, periodic_stage_tag, int(args.ckpt_retain_per_stage))
         _causal_resume_name = str(written.get("resume_preserved", written["resume_latest"]))
         _record_causal_boundary(
             epoch=int(epoch),
@@ -10226,7 +10485,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         return written
 
     # ---- RESUME restore (FEED-dz; --resume-from None => fresh start => behavior UNCHANGED). Loads
-    # decoder + per-pair codes (live) + EMA shadow + optimizer (best-effort) + the epoch position;
+    # decoder + per-pair codes (live) + EMA shadow + optimizer + the epoch position;
     # self-orient dir feats are regenerated from the restored EMA argmax (not stored -> no GB bloat).
     start_epoch = 1
     resume_cfg: dict[str, Any] | None = None  # FEED-fm FIX-1: holds the sidecar cfg for the RNG
@@ -10247,6 +10506,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         resume_cfg = rs["cfg"]
         if not rs["live"]:
             raise ValueError(f"--resume-from {rp} has no live/param tensors (NO-FAKE: cannot resume).")
+        print(json.dumps(_validate_resume_state_for_continuation(
+            rs,
+            warm_start_weights_only=bool(getattr(args, "warm_start_weights_only", False)),
+        )), flush=True)
         # (DE#3 clean warm-start) --warm-start-weights-only: take ONLY the trained weights; DISCARD the
         # checkpoint's optimizer moments (=> fresh AdamW) here so the has_opt restore below is skipped
         # EVEN when the sidecar carries optP__ (the poisoned-resume trap: a DEADLOCKED resume_state has
@@ -10602,16 +10865,17 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             try:
                 opt.init(model.trainable_parameters())
                 flat_state = dict(tree_flatten(opt.state))
+                _validate_optimizer_restore_keysets(set(rs["opt"]), set(flat_state))
                 for k in list(flat_state.keys()):
-                    if k in rs["opt"]:
-                        flat_state[k] = mx.array(rs["opt"][k])
+                    flat_state[k] = mx.array(rs["opt"][k])
                 opt.state = tree_unflatten(list(flat_state.items()))
                 mx.eval(opt.state)
                 restored_opt = True
-            except Exception as e:  # best-effort: a fresh AdamW re-warms its moments in a few steps.
-                print(json.dumps({"stage": "resume_opt_warn",
-                                  "note": f"optimizer-state restore failed ({type(e).__name__}: {e}); "
-                                  "continuing with fresh AdamW moments (best-effort)"}), flush=True)
+            except Exception as e:
+                raise RuntimeError(
+                    "optimizer-state restore failed during normal continuation; refusing to "
+                    f"cold-start moments ({type(e).__name__}: {e})"
+                ) from e
         if use_self_orient:
             ema_np = {k: np.asarray(v, np.float32) for k, v in ema.shadow.items()}
             mag = recompute_self_orient(int8_dequant_params(ema_np))
@@ -14101,7 +14365,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 stage_ckpts.append(w)
                 print(json.dumps({"stage": "checkpoint", "kind": "stage_transition", **w}), flush=True)
             elif do_periodic:
-                w = _do_checkpoint(ep, causal_stage=str(seg_form))
+                w = _do_checkpoint(
+                    ep,
+                    periodic_stage_tag=_stage_tag(seg_form) + ("_muon" if muon_switched else ""),
+                    causal_stage=str(seg_form),
+                )
                 print(json.dumps({"stage": "checkpoint", "kind": "intra_stage", **w}), flush=True)
             # (MOD-DIM DYNAMICS 2026-07-08, cut 3) per-dim d_seg zero-ablation attribution at CHECKPOINT
             # cadence (heavier => governor-gated + skip-logged inside the helper). AFTER the checkpoint
@@ -14344,9 +14612,12 @@ def main(argv: list[str] | None = None) -> int:
     # save+preserve a checkpoint at the end of each stage": per-stage PRESERVED ckpts default ON;
     # --ckpt-every adds intra-stage rolling saves (crash window). --resume-from continues a run.
     ap.add_argument("--ckpt-every", type=int, default=0,
-                    help="save the rolling EMA+resume checkpoint every N epochs (0=off; per-stage + final "
-                    "saves always happen). Set e.g. 100 to bound a crash/OOM to <=N epochs of loss "
-                    "and enable early byte-close during a multi-day run.")
+                    help="save rolling aliases plus a distinct stage+epoch EMA/full-state pair every "
+                    "N epochs (0=off; per-stage + final saves always happen). Set e.g. 100 to bound "
+                    "a crash/OOM to <=N epochs of loss and enable early byte-close.")
+    ap.add_argument("--ckpt-retain-per-stage", type=int, default=3,
+                    help="retain the newest M distinct periodic EMA/full-state pairs per stage "
+                    "(default 3; must be >0). Stage-boundary/final/BEST/rolling names are immune.")
     ap.add_argument("--stage-checkpoints", action=argparse.BooleanOptionalAction, default=True,
                     help="save a PRESERVED, stage-encoded, byte-close-loadable ckpt at every curriculum "
                     "stage transition + at the final epoch (default ON; --no-stage-checkpoints only for "
@@ -16661,6 +16932,17 @@ def main(argv: list[str] | None = None) -> int:
                     help="when to project the render target (post_render | every_step); "
                     "only consulted when --range-a-projection is set.")
     args = ap.parse_args(argv)
+    if int(args.ckpt_retain_per_stage) <= 0:
+        ap.error("--ckpt-retain-per-stage must be > 0")
+    # Rebase intentional warm-start event caps BEFORE run_train constructs any EventBackstopGate.
+    # Normal continuation never enters this block and therefore preserves its restored anchors.
+    if args.resume_from and bool(getattr(args, "warm_start_weights_only", False)):
+        _reanchor_rs = _load_resume_state(_resolve_resume_path(Path(args.resume_from)))
+        print(json.dumps(_reanchor_resume_round(
+            args,
+            checkpoint_epoch=int(_reanchor_rs["epoch"]),
+            warm_start_weights_only=True,
+        )), flush=True)
     # ── P3/#520 guarded arm-and-validate hook (default-OFF => never runs => byte-identical). ──
     # When enabled, fail-closed: reproduce the #519 projector self-test and refuse to arm if the
     # exact projector residual regresses. Records the cadence to run provenance. The score-moving

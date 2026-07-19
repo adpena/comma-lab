@@ -1,0 +1,38 @@
+{
+  "all_pass": true,
+  "assertions": {
+    "legacy_full_state_passes": true,
+    "mutated_missing_optimizer_refuses": true,
+    "source_copy_hash_matches": true,
+    "source_hash_unchanged": true
+  },
+  "authority": "READ_ONLY_LAYOUT_COMPATIBILITY_PROOF",
+  "cleanup": {
+    "policy": "success-only copied scratch",
+    "scratch_deleted": true
+  },
+  "compatibility_row": {
+    "compatibility": "legacy_semantic_keys",
+    "continuity_required": true,
+    "legacy_compatibility": true,
+    "stage": "resume_state_custody",
+    "treatment_kind": "bit_faithful_continuation"
+  },
+  "copy": {
+    "sha256": "f94347356f7da39972a3f2596846e2713a9f96d9b2274fa803664f43e6e37bf8"
+  },
+  "created_utc": "2026-07-19T07:27:41.226468+00:00",
+  "frontier_pointer_mutated": false,
+  "mutated_copy": {
+    "removed_semantic_leg": "optimizer_moments",
+    "sha256": "f6acdd78c37f4a191402512760946913f68ee9d0302151291994f06073058fd3"
+  },
+  "refusal": "normal crash continuation requires complete full-state custody; missing semantic leg(s): optimizer_moments. Use --warm-start-weights-only only for an intentional fresh-state re-treatment.",
+  "schema": "tac.resumability_537_sacred_layout_replay.v1",
+  "score_claim": false,
+  "source": {
+    "bytes": 1555952,
+    "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_resume_state.npz",
+    "sha256": "f94347356f7da39972a3f2596846e2713a9f96d9b2274fa803664f43e6e37bf8"
+  }
+}

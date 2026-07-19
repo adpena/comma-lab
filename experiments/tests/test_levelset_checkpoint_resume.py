@@ -18,6 +18,7 @@ All MLX-free (the helpers operate on numpy dicts; the caller does the mx->np con
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -585,3 +586,161 @@ def test_resume_guard_hardness_subfields_inert_when_off_both():
     a2 = _fake_args(hardness_oversample=0.0, hardness_source="margin", head="etf")
     div = T._resume_lever_divergences(cfg, a2)
     assert not any("hardness_source" in d for d in div)
+
+
+# --------------------------------------------------------------------------- Task #537 seal path
+def _complete_native_resume_state():
+    cfg = {
+        "__resume_semantic_schema": T._RESUME_SEMANTIC_SCHEMA,
+        "__resume_epoch": 25,
+        "__resume_stage": "ce",
+        "__resume_event_ledger_json": json.dumps({
+            "schema": "levelset_resume_event_ledger.v1",
+            "active_event_flags": [],
+            "persisted_keys": [],
+            "inactive_explicit": True,
+        }),
+        "__rng_np_algo": "MT19937",
+        "__rng_np_keys": [0] * 624,
+        "__rng_np_pos": 0,
+        "__rng_np_has_gauss": 0,
+        "__rng_np_cached_gauss": 0.0,
+    }
+    return {
+        "live": {"code": np.ones((2, 2), np.float32)},
+        "ema": {"code": np.ones((2, 2), np.float32)},
+        "opt": {"step": np.asarray(1)},
+        "has_opt": True,
+        "epoch": 25,
+        "cfg": cfg,
+    }
+
+
+def test_periodic_names_are_stage_and_epoch_distinct():
+    assert T._periodic_checkpoint_names("stageCE", 25) == (
+        "levelset_periodic_ema_stageCE_ep25.npz",
+        "levelset_periodic_resume_stageCE_ep25.npz",
+    )
+    assert T._periodic_checkpoint_names("stageCE", 50) != T._periodic_checkpoint_names(
+        "stageCE", 25)
+
+
+def test_periodic_retention_is_per_stage_and_boundary_immune(tmp_path):
+    for stage in ("stageCE", "stageTau"):
+        for epoch in (10, 20, 30):
+            for name in T._periodic_checkpoint_names(stage, epoch):
+                (tmp_path / name).write_bytes(b"periodic")
+    protected = {
+        "levelset_resume_state.npz",
+        "levelset_witness_ema_mlx.npz",
+        "levelset_resume_stageCE_ep10.npz",
+        "levelset_ckpt_stageCE_ep10.npz",
+        "levelset_witness_ema_BEST.npz",
+        "levelset_periodic_resume_stageCE_latest.npz",
+    }
+    for name in protected:
+        (tmp_path / name).write_bytes(b"protected")
+
+    removed = T._prune_periodic_checkpoints(tmp_path, "stageCE", retain=2)
+    assert removed == [
+        "levelset_periodic_ema_stageCE_ep10.npz",
+        "levelset_periodic_resume_stageCE_ep10.npz",
+    ]
+    assert all((tmp_path / name).exists() for name in protected)
+    assert all((tmp_path / name).exists() for name in T._periodic_checkpoint_names("stageTau", 10))
+
+
+@pytest.mark.parametrize(
+    ("leg", "mutate", "match"),
+    [
+        ("live", lambda rs: rs.update(live={}), "live weights"),
+        ("ema", lambda rs: rs.update(ema={}), "ema_shadow"),
+        ("optimizer", lambda rs: rs.update(opt={}, has_opt=False), "optimizer_moments"),
+        ("rng", lambda rs: rs["cfg"].pop("__rng_np_keys"), "rng_state"),
+        ("event", lambda rs: rs["cfg"].pop("__resume_event_ledger_json"), "event_state"),
+        ("stage", lambda rs: rs["cfg"].pop("__resume_stage"), "stage_epoch_position"),
+    ],
+)
+def test_normal_resume_refuses_each_missing_semantic_leg(leg, mutate, match):
+    del leg
+    rs = _complete_native_resume_state()
+    mutate(rs)
+    with pytest.raises(ValueError, match=match):
+        T._validate_resume_state_for_continuation(rs, warm_start_weights_only=False)
+
+
+def test_native_resume_guard_accepts_complete_state():
+    row = T._validate_resume_state_for_continuation(
+        _complete_native_resume_state(), warm_start_weights_only=False)
+    assert row["compatibility"] == "native_v2"
+    assert row["treatment_kind"] == "bit_faithful_continuation"
+
+
+def test_legacy_full_state_requires_and_reports_direct_event_evidence():
+    rs = _complete_native_resume_state()
+    rs["cfg"].pop("__resume_semantic_schema")
+    rs["cfg"].pop("__resume_stage")
+    rs["cfg"].pop("__resume_event_ledger_json")
+    rs["cfg"]["__posegate_engaged_epoch"] = 23
+    rs["cfg"]["__dtp_event_mark_resume_keys_json"] = "[]"
+    row = T._validate_resume_state_for_continuation(rs, warm_start_weights_only=False)
+    assert row["legacy_compatibility"] is True
+
+    rs["cfg"].pop("__posegate_engaged_epoch")
+    rs["cfg"].pop("__dtp_event_mark_resume_keys_json")
+    with pytest.raises(ValueError, match="legacy_direct_keys"):
+        T._validate_resume_state_for_continuation(rs, warm_start_weights_only=False)
+
+
+def test_weights_only_is_the_explicit_state_drop_escape():
+    rs = {"live": {"code": np.ones((1,), np.float32)}, "cfg": {}}
+    row = T._validate_resume_state_for_continuation(rs, warm_start_weights_only=True)
+    assert row["continuity_required"] is False
+    with pytest.raises(ValueError):
+        T._validate_resume_state_for_continuation(rs, warm_start_weights_only=False)
+
+
+def test_optimizer_restore_keyset_must_be_exact_not_partial():
+    T._validate_optimizer_restore_keysets({"step", "m.weight", "v.weight"},
+                                          {"step", "m.weight", "v.weight"})
+    with pytest.raises(ValueError, match="partial restore is not bit-faithful"):
+        T._validate_optimizer_restore_keysets({"step", "m.weight"},
+                                              {"step", "m.weight", "v.weight"})
+    with pytest.raises(ValueError, match="extra_checkpoint_keys"):
+        T._validate_optimizer_restore_keysets({"step", "m.weight", "v.weight", "stale"},
+                                              {"step", "m.weight", "v.weight"})
+
+
+def test_exact_continuation_reanchor_is_identity():
+    args = _fake_args(
+        warm_start_epoch=-1, num_pairs=24, accum_pairs=8, adam_beta2=0.999,
+        stage_transition_rewarmup_epochs=8, muon_start_epoch=726,
+        pose_finish_start_epoch=1000, lane_band_start_epoch=300,
+        seg_chroma_boundary_start_epoch=0, seg_temporal_screw_start_epoch=0,
+        seg_phase_advect_start_epoch=0,
+    )
+    row = T._reanchor_resume_round(
+        args, checkpoint_epoch=650, warm_start_weights_only=False)
+    assert row["changed"] is False
+    assert row["old_anchors"] == row["new_anchors"]
+    assert args.muon_start_epoch == 726
+
+
+def test_warm_retreatment_reanchors_events_to_current_geometry():
+    args = _fake_args(
+        warm_start_epoch=-1, num_pairs=24, accum_pairs=8, adam_beta2=0.999,
+        stage_transition_rewarmup_epochs=8, muon_start_epoch=726,
+        pose_finish_start_epoch=1000, lane_band_start_epoch=300,
+        seg_chroma_boundary_start_epoch=0, seg_temporal_screw_start_epoch=0,
+        seg_phase_advect_start_epoch=0,
+    )
+    row = T._reanchor_resume_round(
+        args, checkpoint_epoch=650, warm_start_weights_only=True)
+    assert row["derived_window"] == 667  # ceil(2/(1-.999)/(24/8))
+    assert row["resume_epoch"] == 651
+    assert args.muon_start_epoch == 1318
+    assert args.pose_finish_start_epoch == 1318
+    assert args.lane_band_start_epoch == 1318
+    assert args.stage_transition_rewarmup_epochs == 667
+    assert row["old_anchors"]["muon_start_epoch"] == 726
+    assert row["new_anchors"]["muon_start_epoch"] == 1318
