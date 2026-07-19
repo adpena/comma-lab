@@ -20135,3 +20135,11 @@ frame-195. verdict_scope: durability-sync unit; no new measurement, no score cla
 - **Edges in:** FEED-M2 · SPEC_v10 §ADDENDUM STEP 1/2 · f32_receiver_arithmetic law · bounded_uint8_resize_preimage_cell_feasibility_v1.
 - **Edges out:** d_B-attack arm (bounded-uint8 Diophantine HARD_ACCEPT preimage → drive d_B→0 → in-box point ≤477.8 B/pair, d_seg ≤3.39e-4), dispatched to codex sol xhigh in parallel with M1 glue rebuild.
 - **Pointer:** 0.19108 [contest-CPU] UNMOVED. MEANS (realization-axis characterization + roadmap correction).
+
+## FEED-STEP2-CONVERGENCE (2026-07-19) — both arms converge: PDW2 spatial receiver is the binding unit
+- **Node:** M1 (build) + pdw1 (measure) DONE rc=0, findings CONVERGE. Sequencing lesson recorded ([[measurement-first-gates-expensive-build-judge-arms-by-output]]): the $0 pdw1 measure should have GATED the M1 build.
+- **pdw1 MEASURED (macOS-CPU advisory, formulation-scoped):** EV-ranked flip waterfill → **k=0 flips pay their rent** (n24 first-segment marginal 4.89e-8 < rate-waterline 6.66e-7; n48 confirm marginal 9.42e-9 < waterline; d_B=0.008070/0.008124, residual 38077/76669). ⇒ the **sparse-patch / per-flip d_B-attack is DOMINATED** (verdict_scope: FORMULATION — the exact solved laws worked; the answer is "don't fix per-flip"). Findings on branch codexwt/pdw1_dB_attack_step2 (143765d34b); 304,975-line n24 receipt kept OFF main (SSD, disk-hygiene).
+- **M1 MERGED to main (d95a132fa5):** resumable band-trainer + strict byte-close receiver + active DSL Lever; fail-closes on the missing **PDW2 coefficients→spatial pullback in the #543 receiver** + the EV field.
+- **CONVERGENCE:** both name the SAME binding next unit → **build the counted PDW2 (138B gauge-fixed generator packet) → coefficients→spatial-partition receiver, through-R equivalent** (consumption discipline #417). Then n600 Seg/Pose + contest-axis replay. This supersedes the per-flip d_B-attack.
+- **Edges out:** task #576 (PDW2 spatial receiver, binding). **Edges in:** FEED-M2recon+STEP2 · M1 merge · pdw1 verdict · SPEC_v10 §ADDENDUM STEP 2/3.
+- **Pointer:** 0.19108 [contest-CPU] UNMOVED. MEANS (measurement gated the build; binding unit identified).
