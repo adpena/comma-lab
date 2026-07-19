@@ -11,7 +11,9 @@ import pytest
 
 from tac.optimization.uint8_lattice_feasibility import DisjointResizeOperator
 from tac.witness_dsl.v10_production_receiver import (
+    DESCRIPTION_FRAME0_POLICY_ID,
     MEMBER_NAME,
+    PREDICTOR_RESIDUAL_Y_CODEC_ID,
     PREFIX,
     RESIDUAL_RECORD,
     SECTION_LENGTH,
@@ -19,6 +21,7 @@ from tac.witness_dsl.v10_production_receiver import (
     ProductionReceiverError,
     build_packet,
     build_production_archive,
+    decode_y_plane_pair,
     decode_y_planes,
     inflate_archive,
     parse_packet,
@@ -118,6 +121,55 @@ def test_brotli_y_codec_roundtrips_exact_decoded_bytes() -> None:
     np.testing.assert_array_equal(decode_y_planes(packet), _planes())
 
 
+def test_predictor_residual_codec_roundtrips_typed_two_plane_description() -> None:
+    frame0 = np.flip(_planes(), axis=2).copy()
+    frame1 = _planes()
+    packet = parse_packet(
+        build_packet(
+            frame1,
+            frame0_y_planes=frame0,
+            camera_height=CAMERA_H,
+            camera_width=CAMERA_W,
+            y_codec_id=PREDICTOR_RESIDUAL_Y_CODEC_ID,
+            predictor_modes=[
+                "previous-plane-copy.v1",
+                "affine6-q12.v1",
+                "spatial-smooth-121.v1",
+                "previous-plane-copy.v1",
+            ],
+        )
+    )
+    assert packet.header["frame0_policy_id"] == DESCRIPTION_FRAME0_POLICY_ID
+    pair = decode_y_plane_pair(packet)
+    np.testing.assert_array_equal(pair.frame0, frame0)
+    np.testing.assert_array_equal(pair.frame1, frame1)
+    # Legacy helper remains frame-1-only.
+    np.testing.assert_array_equal(decode_y_planes(packet), frame1)
+    section = packet.section("y_description")
+    assert section.video_derived is True
+    assert section.decoded_byte_length == frame0.nbytes + frame1.nbytes
+    assert packet.header["video_derived_payload_bytes"] == sum(
+        len(item.payload) for item in packet.sections if item.video_derived
+    )
+
+
+def test_legacy_codec_refuses_predictor_only_arguments() -> None:
+    with pytest.raises(ProductionReceiverError, match="legacy y codecs refuse"):
+        build_packet(
+            _planes(),
+            frame0_y_planes=_planes(),
+            camera_height=CAMERA_H,
+            camera_width=CAMERA_W,
+        )
+    with pytest.raises(ProductionReceiverError, match="requires frame0_y_planes"):
+        build_packet(
+            _planes(),
+            camera_height=CAMERA_H,
+            camera_width=CAMERA_W,
+            y_codec_id=PREDICTOR_RESIDUAL_Y_CODEC_ID,
+        )
+
+
 def test_archive_is_deterministic_single_member_and_manifest_is_write_once(
     tmp_path: Path,
 ) -> None:
@@ -179,6 +231,44 @@ def test_double_decode_has_exact_expected_raw_and_identical_tree_hashes(
         np.testing.assert_array_equal(frame0, frame1)
         numerators, denominator = operator.apply_numerators(frame1)
         np.testing.assert_array_equal(numerators, y_plane.astype(np.int64) * denominator)
+
+
+def test_predictor_archive_inflates_distinct_exact_frame0_and_frame1_planes(tmp_path: Path) -> None:
+    frame0_planes = np.flip(_planes(), axis=1).copy()
+    frame1_planes = _planes()
+    archive_dir = tmp_path / "predictor-archive"
+    built = build_production_archive(
+        frame1_planes,
+        frame0_y_planes=frame0_planes,
+        archive_path=archive_dir / "archive.zip",
+        camera_height=CAMERA_H,
+        camera_width=CAMERA_W,
+        y_codec_id=PREDICTOR_RESIDUAL_Y_CODEC_ID,
+        predictor_modes="spatial-smooth-121.v1",
+    )
+    parsed = parse_packet(_packet_from_archive(built.archive_path))
+    assert parsed.header["counted_section_payload_bytes"] == sum(len(section.payload) for section in parsed.sections)
+    result = inflate_archive(archive_dir, tmp_path / "predictor-out", _names(tmp_path))
+    assert result.raw_path is not None
+    raw = result.raw_path.read_bytes()
+    frame_bytes = CAMERA_H * CAMERA_W * 3
+    operator = DisjointResizeOperator.build(
+        camera_h=CAMERA_H,
+        camera_w=CAMERA_W,
+        scorer_h=SCORER_H,
+        scorer_w=SCORER_W,
+    )
+    for pair_index in range(len(frame1_planes)):
+        offset = pair_index * frame_bytes * 2
+        frame0 = np.frombuffer(raw[offset : offset + frame_bytes], dtype=np.uint8).reshape(CAMERA_H, CAMERA_W, 3)
+        frame1 = np.frombuffer(raw[offset + frame_bytes : offset + 2 * frame_bytes], dtype=np.uint8).reshape(
+            CAMERA_H, CAMERA_W, 3
+        )
+        numerator0, denominator0 = operator.apply_numerators(frame0)
+        numerator1, denominator1 = operator.apply_numerators(frame1)
+        assert denominator0 == denominator1
+        np.testing.assert_array_equal(numerator0, frame0_planes[pair_index].astype(np.int64) * denominator0)
+        np.testing.assert_array_equal(numerator1, frame1_planes[pair_index].astype(np.int64) * denominator1)
 
 
 def test_interrupted_prefix_resumes_after_revalidating_stages(tmp_path: Path) -> None:
