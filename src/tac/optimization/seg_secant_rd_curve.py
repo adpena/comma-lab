@@ -64,6 +64,8 @@ def default_operating_points() -> tuple[OperatingPoint, ...]:
         OperatingPoint("precision_drop1", "precision_truncation", "drop_low_bits", 1),
         OperatingPoint("precision_drop2", "precision_truncation", "drop_low_bits", 2),
         OperatingPoint("precision_drop3", "precision_truncation", "drop_low_bits", 3),
+        OperatingPoint("spatial_stride8", "spatial_subsample", "sample_stride", 8),
+        OperatingPoint("spatial_stride16", "spatial_subsample", "sample_stride", 16),
     )
 
 
@@ -162,6 +164,63 @@ def truncate_preimage_residual_precision(
         "changed_camera_fraction": float(np.mean(changed)),
         "residual_coefficients": "signed camera-preimage residual versus generated predictor",
         "rounding": "magnitude truncation toward zero",
+    }
+
+
+def spatial_subsample_preimage_residual(
+    source: np.ndarray,
+    predictor: np.ndarray,
+    *,
+    sample_stride: int,
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    """Sample a camera residual grid and reconstruct it by separable bilinear interpolation.
+
+    Endpoint rows/columns are always included, so the sample geometry and
+    interpolation domain are deterministic for any positive stride.  The
+    returned signed-int16 sample grid is the counted frame-1 description; the
+    caller verifies its codec parse-back separately.
+    """
+
+    src, pred = _uint8_pair(source, predictor)
+    if (
+        isinstance(sample_stride, bool)
+        or int(sample_stride) != sample_stride
+        or sample_stride <= 0
+    ):
+        raise SegSecantError("sample_stride must be a positive integer")
+    stride = int(sample_stride)
+    ys = np.unique(np.append(np.arange(0, src.shape[0], stride), src.shape[0] - 1))
+    xs = np.unique(np.append(np.arange(0, src.shape[1], stride), src.shape[1] - 1))
+    delta = src.astype(np.int16) - pred.astype(np.int16)
+    samples = np.ascontiguousarray(delta[np.ix_(ys, xs, np.arange(src.shape[2]))])
+
+    full_x = np.arange(src.shape[1])
+    full_y = np.arange(src.shape[0])
+    horizontal = np.empty((ys.size, src.shape[1], src.shape[2]), dtype=np.float64)
+    for sample_row in range(ys.size):
+        for channel in range(src.shape[2]):
+            horizontal[sample_row, :, channel] = np.interp(
+                full_x, xs, samples[sample_row, :, channel]
+            )
+    upsampled = np.empty(src.shape, dtype=np.float64)
+    for column in range(src.shape[1]):
+        for channel in range(src.shape[2]):
+            upsampled[:, column, channel] = np.interp(
+                full_y, ys, horizontal[:, column, channel]
+            )
+    reconstructed_i16 = pred.astype(np.int16) + np.rint(upsampled).astype(np.int16)
+    clipped_values = int(np.count_nonzero((reconstructed_i16 < 0) | (reconstructed_i16 > 255)))
+    reconstructed = np.clip(reconstructed_i16, 0, 255).astype(np.uint8)
+    return reconstructed, samples, {
+        "sample_stride": stride,
+        "sample_shape": list(samples.shape),
+        "sample_count": int(samples.size),
+        "sample_sha256": hashlib.sha256(samples.view(np.uint8)).hexdigest(),
+        "sample_dtype": str(samples.dtype),
+        "interpolation": "separable float64 numpy.interp then ties-to-even np.rint",
+        "endpoint_rows_columns_included": True,
+        "clipped_camera_values": clipped_values,
+        "counted_frame1_description": "signed int32 encoding of sampled camera-preimage residual",
     }
 
 
@@ -376,6 +435,7 @@ __all__ = [
     "default_operating_points",
     "margin_ordered_abandonment",
     "measure_parseback_payload",
+    "spatial_subsample_preimage_residual",
     "summarize_per_class",
     "truncate_preimage_residual_precision",
 ]

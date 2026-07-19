@@ -11,18 +11,20 @@ from tac.optimization.seg_secant_rd_curve import (
     default_operating_points,
     margin_ordered_abandonment,
     measure_parseback_payload,
+    spatial_subsample_preimage_residual,
     summarize_per_class,
     truncate_preimage_residual_precision,
 )
 
 
-def test_default_grid_has_two_families_and_seven_unique_points() -> None:
+def test_default_grid_has_three_families_and_nine_unique_points() -> None:
     points = default_operating_points()
-    assert len(points) == 7
-    assert len({point.point_id for point in points}) == 7
+    assert len(points) == 9
+    assert len({point.point_id for point in points}) == 9
     assert {point.family for point in points} == {
         "margin_abandonment",
         "precision_truncation",
+        "spatial_subsample",
     }
 
 
@@ -86,6 +88,29 @@ def test_precision_truncation_refuses_invalid_depth(bits: object) -> None:
     frame = np.zeros((1, 1, 1), dtype=np.uint8)
     with pytest.raises(SegSecantError):
         truncate_preimage_residual_precision(frame, frame, drop_low_bits=bits)  # type: ignore[arg-type]
+
+
+def test_spatial_subsample_reconstructs_affine_residual_exactly() -> None:
+    yy, xx = np.mgrid[:5, :7]
+    predictor = np.full((5, 7, 1), 100, dtype=np.uint8)
+    residual = (2 * yy + 3 * xx)[..., None].astype(np.uint8)
+    source = predictor + residual
+    result, samples, telemetry = spatial_subsample_preimage_residual(
+        source, predictor, sample_stride=2
+    )
+    np.testing.assert_array_equal(result, source)
+    np.testing.assert_array_equal(samples, residual[::2, ::2])
+    assert telemetry["sample_shape"] == [3, 4, 1]
+    assert telemetry["clipped_camera_values"] == 0
+
+
+@pytest.mark.parametrize("stride", [0, -1, 1.5, True])
+def test_spatial_subsample_refuses_invalid_stride(stride: object) -> None:
+    frame = np.zeros((2, 2, 1), dtype=np.uint8)
+    with pytest.raises(SegSecantError):
+        spatial_subsample_preimage_residual(  # type: ignore[arg-type]
+            frame, frame, sample_stride=stride
+        )
 
 
 def test_both_payload_codecs_parse_back_exactly() -> None:

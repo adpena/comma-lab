@@ -44,6 +44,7 @@ from tac.optimization.seg_secant_rd_curve import (  # noqa: E402
     default_operating_points,
     margin_ordered_abandonment,
     measure_parseback_payload,
+    spatial_subsample_preimage_residual,
     summarize_per_class,
     truncate_preimage_residual_precision,
 )
@@ -395,12 +396,31 @@ def measure(args: argparse.Namespace) -> dict[str, Any]:
                 verdict, predicted, _rival = _hard_verdict(
                     segnet, posenet, torch, source0, candidate1, labels, target_pose
                 )
+            elif point.family == "spatial_subsample":
+                candidate1, sampled_residual, transform = spatial_subsample_preimage_residual(
+                    source1,
+                    predictor1,
+                    sample_stride=int(point.parameter_value),
+                )
+                verdict, predicted, _rival = _hard_verdict(
+                    segnet, posenet, torch, source0, candidate1, labels, target_pose
+                )
             else:  # pragma: no cover - fixed preregistered table
                 raise SegSecantError(f"unknown point family: {point.family}")
             chosen_num1, chosen_den1 = operator.apply_numerators(candidate1)
             if chosen_den1 != den1:
                 raise SegSecantError("candidate/source numerator denominator mismatch")
-            frame1_rate = measure_parseback_payload(chosen_num1, predictor_num1)
+            if point.family == "spatial_subsample":
+                frame1_rate = measure_parseback_payload(
+                    sampled_residual.astype(np.int64),
+                    np.zeros_like(sampled_residual, dtype=np.int64),
+                )
+                frame1_payload_coordinates = (
+                    "sampled signed camera-preimage residual; fixed-stride bilinear expansion"
+                )
+            else:
+                frame1_rate = measure_parseback_payload(chosen_num1, predictor_num1)
+                frame1_payload_coordinates = "full scorer-numerator residual"
             hard_d_pose = float(verdict["d_pose"])
             stage_payload = {
                 "schema": STAGE_SCHEMA,
@@ -422,6 +442,8 @@ def measure(args: argparse.Namespace) -> dict[str, Any]:
                 "rate": {
                     "frame0": frame0_rate,
                     "frame1": frame1_rate,
+                    "frame0_payload_coordinates": "full scorer-numerator residual",
+                    "frame1_payload_coordinates": frame1_payload_coordinates,
                     "brotli_q11_bytes": int(
                         frame0_rate["brotli_q11"]["bytes"]
                         + frame1_rate["brotli_q11"]["bytes"]
