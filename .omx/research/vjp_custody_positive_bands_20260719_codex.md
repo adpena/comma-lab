@@ -1,10 +1,10 @@
 # VJP custody, positive anisotropic bands, and rung-E rate points
 
-**Date:** 2026-07-19 UTC  
-**Axis:** `[Darwin-arm64 CPU advisory] NON-PROMOTABLE`  
+**Date:** 2026-07-19 UTC
+**Axis:** `[Darwin-arm64 CPU advisory] NON-PROMOTABLE`
 **Authority:** build + local measurement only; no launch, paid compute, contest score,
-promotion, or pointer authority.  
-**Pointer:** `0.1910828242 [contest-CPU]` **UNMOVED**.  
+promotion, or pointer authority.
+**Pointer:** `0.1910828242 [contest-CPU]` **UNMOVED**.
 **Verdict scope:** 24 selected unique pairs from the real frozen `gt_n600.npz` cache;
 native-float32 CPU-Torch SegNet/PoseNet hard oracle. No receiver-closed archive,
 contest-Linux CPU, contest-CUDA, or score claim. `research_only=true` until those
