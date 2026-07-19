@@ -116,3 +116,50 @@ measured object from upstream modules.py. The remaining work is engineering the 
 Triality: equations-leg = this memo + `pose_plane_proximity_corollary_v1` + band law + rank-4 head law
 · DAG = FEED-pose-falls-out (cross-ref this memo) · DSL = no new lever (design SoT for #541's
 objective/constraints). launch_ready unchanged; MEANS toward the exact row.
+
+---
+
+## 2026-07-19 fresh-eyes verification corrections (append-only; original text above preserved)
+
+Source: delegated adversarial verification
+`.omx/research/spec_v10_reconciliation_and_kkt_verify_20260719_fable.md` (findings V-2..V-6; every check
+re-derived from primary artifacts). The derivation's skeleton STANDS; the following statements above are
+corrected in place of being re-cited:
+
+1. **§4 "costs at most a rank-6 adjustment, O(6) numbers, not O(N) bytes" — over-strong as a BYTE claim
+   (V-2).** The pose constraint restricts 6 DOF (sound). But a decode-side rank-6 expansion `δ = Jᵀc`
+   would need the rows of `J` — PoseNet-derived (no scorers at inflate) AND evaluated at the source plane
+   (video-derived ⇒ COUNTED at 6×N scale if shipped). The correction is therefore 6 DOF applied at ENCODE
+   time; its BYTE cost through the description grammar is an OPEN EMPIRICAL quantity = the `bytes(τ_pose)`
+   curve the VJP arm owes. Read "O(6) numbers" as a DOF statement only.
+2. **§4 "μ = 0 at the optimum ... generically" — genericity is unearned (V-3).** Seg-driven residuals
+   concentrate on the annulus (MEASURED 96.9%) and PoseNet Jacobian rows also concentrate on structured
+   content — two edge-concentrated objects are not in general position. The near-source measured rows
+   (5.35e-10..1.14e-9) are the trivial r→0 limit (they instantiate continuity, not J-orthogonality of
+   seg-shaped residuals); the only measured large-r row (c2 witness, RMSE 25) had d_pose 63 — a huge
+   J-projection. Pose inactivity at IN-BAND solutions is a PRE-REGISTERED FALSIFIABLE PREDICTION
+   (`pose_plane_proximity_corollary_v1`), decided by the bindingness harvest — not a theorem instance.
+3. **§3 "exactly the per-channel box inner-approximation of this half-space system" — drop "exactly"
+   (V-4).** The implemented box budgets, per pixel, only that pixel's own 3 channels against its own
+   hyperplane. The true constraint at p couples its receptive field (MEASURED ERF r50≈85px): simultaneous
+   in-box perturbations of many pixels can accumulate at p beyond its diagonal budget. The box is the
+   inner approximation of each single-pixel DIAGONAL slab; JOINT validity across the ~10⁵ overlapping
+   constraints is measured only by the positive-band bindingness/repair-rate harvest; the frozen hard
+   oracle stays the sole authority. Also: `Lip_local` is CONFIGURED custody, not yet measured — no
+   positive-band operating point exists (the #549 run measured only the zero-band control), and pair-125
+   (1 native-f32 flip at ZERO perturbation, d_seg 5.09e-6) shows the fp32 ULP-tie floor beneath the
+   linear model at every band scale (the f32 admissibility law is load-bearing).
+   Margin-scale corroboration (MEASURED, gt_n600): median margin 5.89, annulus fractions 2.67% < 1.0 /
+   0.28% < 0.1 — bytes DO concentrate on a few % of pixels, as complementary slackness predicts.
+4. **§6 "this is a CONVEX program" — one more quarantine item (V-5).** Besides (a) the Lipschitz radius
+   and (b) the hard-oracle check, add (c): the description variables are quantized/integer (`Q(·)`,
+   integer numerators) — the LP/QP claim holds for the continuous relaxation; the integer/repair leg is
+   combinatorial and lives with the oracle.
+5. **§4 "the #536 KKT waterfill is effectively TWO-term" — conditional, not settled (V-6).** 2-term
+   PENDING the bindingness harvest (item 2); if pose binds it re-enters as a low-dimensional (rank-≤6)
+   third term whose byte price is MEASURED per item 1, never assumed.
+
+Everything else re-derived and VERIFIED (V-8): N/2N arithmetic · dS closure + 2.5e-4 crossover · SVs +
+‖Δw‖ ≤ 4.01 · 96.9% source · ker(A)~52% · 1.70 MB/frame rate-death · 83,838 B rung · chroma 2×2-box.
+Related arithmetic fix (V-1, lives in the law module / SPEC / DAG, not this memo): the slack from
+5.35e-10 to the 2.5e-4 crossover is **~5.7 orders of magnitude**, not "~9 orders."

@@ -1,8 +1,23 @@
 {
   "version": 1,
   "purpose": "Naming-INDEPENDENT registry of canonical single-source-of-truth documents. Root cause extincted: NAME-ANCHORED SEARCH (operator 2026-07-18: 'You searched, but you searched for what you would have named it.'). Every canonical_path+branch below was VERIFIED (git cat-file / filesystem) at registration. Consumers: tools/canonical_doc_registry.py (lookup/check_before_create) + tac.confound_gates.check_no_duplicate_canonical_spec_across_refs.",
-  "updated_utc": "2026-07-18T00:00:00Z",
+  "updated_utc": "2026-07-19T00:00:00Z",
   "entries": [
+    {
+      "doc_id": "spec_v10_capstone_reconciled",
+      "concept_tags": [
+        "spec", "v10", "capstone", "reconciled", "ssot successor",
+        "shared scorer plane", "yhat", "y-hat", "lattice", "kkt",
+        "flattened lagrangian", "pose plane proximity", "seal path",
+        "launch readiness manifest", "cold start", "kolmogorov optimal program"
+      ],
+      "canonical_path": ".omx/research/SPEC_v10_capstone_RECONCILED_20260719.md",
+      "branch": "main",
+      "status": "active",
+      "superseded_by": null,
+      "vehicle": "v10",
+      "one_line": "THE live v10 SSoT (2026-07-19 successor, tasks #521/#540): base SPEC §0-§15 folded with lattice composition + n600 closure, f32/pose-proximity laws, corrected KKT derivation, #543 receiver + #548 ladder, 9-step seal path + launch_ready=false manifest; fold v10 design into IT, never a new file."
+    },
     {
       "doc_id": "spec_v10_capstone_cold_start_seeded",
       "concept_tags": [
@@ -11,11 +26,11 @@
         "final capstone vehicle", "witness", "structured init"
       ],
       "canonical_path": ".omx/research/SPEC_v10_capstone_cold_start_seeded_20260717.md",
-      "branch": "claude/p0_521_spec_v10_capstone_20260717",
-      "status": "active",
-      "superseded_by": null,
+      "branch": "main",
+      "status": "superseded",
+      "superseded_by": "spec_v10_capstone_reconciled",
       "vehicle": "v10",
-      "one_line": "THE canonical v10 capstone spec (682+ lines, §0-§14) — cold start on a fully seeded Kolmogorov-optimal program; lives on its UNMERGED branch (why main-scoped search missed it); fold v10 design into IT, never a new file."
+      "one_line": "HISTORICAL base v10 capstone spec (§0-§15; merged to main 2026-07-19); superseded by SPEC_v10_capstone_RECONCILED_20260719.md which carries the per-section supersession map — do not fold new design here."
     },
     {
       "doc_id": "vehicle_naming_charter_v10",

@@ -19659,3 +19659,46 @@ ellipsoid, compressibility objective vs free predictor): pose inactivity is a CO
 (~10⁵ seg constraints vs 6 pose numbers; μ=0 generically, worst case a rank-6 correction), bytes
 concentrate on the active-set annulus (matches the measured 96.9%), the #536 waterfill is effectively
 2-term, and chroma is pose-cheap by the measured 2×2-box structure. Solvable, not intractable.
+
+## FEED-v10-reconciled (2026-07-19) — SPEC_v10 RECONCILED SSoT landed (#521/#540) + KKT-derivation fresh-eyes corrections
+
+**Pointer 0.19108 [contest-CPU] UNMOVED — reconciliation + verification are MEANS.** Fable arm; MAIN
+landing review required.
+
+- **SIGNAL (verification, all re-derived from primary artifacts —
+  `spec_v10_reconciliation_and_kkt_verify_20260719_fable.md`):** the flattened-Lagrangian/KKT
+  derivation's skeleton VERIFIED (coordinates · dS closure · 2.5e-4 crossover · SVs/‖Δw‖ · 96.9%
+  annulus source · ker(A)~52% · rate-death/83,838B rungs all check). Five defects found + FIXED:
+  **(V-1) "~9 orders of slack" is an ARITHMETIC ERROR — measured slack 2.5e-4/5.35e-10 = 4.7e5 ≈ 5.7
+  orders** (propagated to the pose-law module ×3, SPEC §15, FEED-pose-falls-out above, and the
+  registry row's embedded summary — module/SPEC corrected; **registry-row re-emit OWED to MAIN**);
+  (V-2) "rank-6 pose correction = O(6) numbers not O(N) bytes" is a DOF statement only — decode-side
+  Jᵀ expansion needs PoseNet-derived video-derived rows (forbidden/counted), so the byte cost is the
+  open bytes(τ_pose) curve; (V-3) "μ=0 generically" is unearned genericity — seg residuals and J rows
+  are both edge-concentrated; the near-source rows are the trivial r→0 limit and the only large-r row
+  (c2, RMSE 25) had d_pose 63 ⇒ pose inactivity at in-band solutions stays a PRE-REGISTERED
+  falsifiable prediction for the bindingness harvest; (V-4) the per-channel band box is the inner
+  approximation of each single-pixel DIAGONAL slab (ERF r50≈85px cross-pixel coupling unbounded;
+  Lip_local configured-not-measured; pair-125 fp32 floor) — hard oracle stays sole authority; NEW
+  MEASURED corroboration: gt_n600 margins median 5.89, annulus 2.67%<1.0 / 0.28%<0.1 (complementary
+  slackness confirmed); (V-5) convexity quarantine gains item (c) integer/quantized description
+  variables; (V-6) "waterfill effectively 2-term" is CONDITIONAL on V-3, pending bindingness.
+  KKT memo corrected append-only; pose-law module edited (behavior unchanged, labels honest:
+  regime thresholds are ASSUMED design radii; constants are per-row means, per-pair max 3.69e-9).
+- **DIAGNOSTIC:** nothing in the corrections changes the strategy (solve-near-source +
+  residual-vs-predictor; pose expected slack); they move four claims from THEOREM to
+  OPEN-EMPIRICAL-PRE-REGISTERED — making the running VJP-custody arm's bindingness maps +
+  bytes(τ_pose) curve THE decisive owed measurements.
+- **RESPONSE (#521/#540 owed → LANDED):** `.omx/research/SPEC_v10_capstone_RECONCILED_20260719.md`
+  is the single self-consistent v10 SSoT: base SPEC §0–§15 folded with the lattice composition law +
+  n600 closure (d_seg 9.664e-7 ULP-class), f32 receiver-arithmetic + pose plane-proximity laws,
+  corrected KKT program (§R2), landed #543 receiver + #548 ladder (§R4), per-section SUPERSESSION MAP
+  (§R5: P3→range-only counting; P6→plane-proximity family split; §6/§14.12→9-step seal path/manifest;
+  everything else STANDS or STANDS-SCOPED), 9-step seal path with statuses (§R6: steps 1-2 closed at
+  their measured scopes, 3-4 partial, 5-9 owed), and the launch-readiness manifest with
+  **launch_ready=false** (§R7). Old SPEC carries a dated SUPERSEDED pointer (body unmutated);
+  canonical-doc registry updated (spec_v10_capstone_reconciled active; cold_start_seeded superseded,
+  branch corrected to main).
+
+Triality: equations leg = corrected law module + KKT appendix (+ owed registry re-emit) · DSL leg =
+no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=false; no score claim.

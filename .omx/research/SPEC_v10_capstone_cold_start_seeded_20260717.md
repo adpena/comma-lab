@@ -1,3 +1,15 @@
+> **SUPERSEDED (2026-07-19): this document is HISTORY, not the live SSoT.** The single self-consistent
+> successor is **`.omx/research/SPEC_v10_capstone_RECONCILED_20260719.md`** (tasks #521/#540; canonical-doc
+> registry `spec_v10_capstone_reconciled`). It folds this SPEC §0–§15 with the lattice composition law +
+> n600 closure, the registered f32 receiver-arithmetic and pose plane-proximity laws, the corrected
+> flattened-Lagrangian/KKT derivation, the landed #543 receiver + #548 ŷ R-D ladder, and the 9-step seal
+> path — and carries the per-section SUPERSESSION MAP (§R5) saying which parts of THIS file still stand.
+> Known corrections to this file's body (preserved unmutated below per append-only discipline): §15's
+> "~9 orders of slack" is an arithmetic error — the measured slack to the 2.5e-4 crossover is **~5.7
+> orders of magnitude** (verification memo `spec_v10_reconciliation_and_kkt_verify_20260719_fable.md`
+> V-1); §15's "pose falls out" is a pre-registered prediction pending the bindingness harvest (V-3).
+> Fold all future v10 design into the RECONCILED file, never this one.
+
 # SPEC_v10 — THE CAPSTONE: cold start on a fully seeded, Kolmogorov-optimal program (2026-07-17)
 
 **Charter (operator verbatim, naming SoT `.omx/research/vehicle_naming_resolution_v10_capstone_20260717.md`):**
