@@ -2052,6 +2052,7 @@ def PoseDecouple(window: int = 100) -> Lever:
 
 def PoseFinishConditioningGate(
     backstop_epoch: int | None = None, w_pose: float | None = None,
+    engage_mode: str = "sigma_min_plateau",
 ) -> Lever:
     """owed-1 (SYNTHESIS_v3_v752 §A.4, A-1 FIX): engage the TERMINAL pose-finish on the SEALED d_seg-
     CONDITIONING event — a scale-free ROLLING-SLOPE plateau of the DE-NOISED σ_min(J_ξ) conditioning
@@ -2063,8 +2064,19 @@ def PoseFinishConditioningGate(
     the finish weight ``--w-pose`` (else the program's pose config supplies them). The σ_min sensor
     ``--jacobian-basin-telemetry`` (default ON) is the gate's ONLY σ_min source and MUST stay ON. A
     degenerate/canary-fail/never-fired gate ships the banked R1 dxi (DISENGAGED, LOUD alarm) — NEVER
-    blocks (SYNTHESIS §A.4 Repair 2b/4). Detector: ``tac.witness_control.sigma_min_plateau``."""
-    ov: dict = {"--pose-finish-engage-on": "sigma_min_plateau"}
+    blocks (SYNTHESIS §A.4 Repair 2b/4). Detector: ``tac.witness_control.sigma_min_plateau``.
+
+    ``engage_mode`` (SPEC_v10 §13.2): ``'sigma_min_plateau'`` (DEFAULT — the SEALED rolling-slope
+    plateau) or ``'sigma_min_crest'`` (fire-on-crest: the smoothed σ_min slope SIGN-CHANGE = the
+    conditioning PEAK, hysteresis-held; same sensor/de-noise/guard machinery + banked-R1 fallback
+    contract. Live c2 anchor: σ_min 0.0010→0.0068 still climbing +15%/ep at ep798 — a plateau gate
+    keeps waiting while a crest gate arms the moment conditioning stops improving)."""
+    if str(engage_mode) not in ("sigma_min_plateau", "sigma_min_crest"):
+        raise ValueError(
+            "PoseFinishConditioningGate: engage_mode must be 'sigma_min_plateau' or "
+            f"'sigma_min_crest', got {engage_mode!r} ('muon' is the incumbent default, not a "
+            "conditioning gate — omit this lever for it)")
+    ov: dict = {"--pose-finish-engage-on": str(engage_mode)}
     if backstop_epoch is not None:
         if int(backstop_epoch) <= 0:
             raise ValueError(
@@ -2076,8 +2088,84 @@ def PoseFinishConditioningGate(
             raise ValueError("PoseFinishConditioningGate: w_pose must be > 0 (the finish-phase weight)")
         ov["--w-pose"] = float(w_pose)
     return Lever("pose_finish_conditioning_gate", overrides=ov,
-                 notes="owed-1: pose-finish engages on the rolling-slope de-noised σ_min plateau (A-1 "
-                 "fix); ships banked R1 if never/degenerate/untrusted (never blocks)")
+                 notes="owed-1: pose-finish engages on the de-noised σ_min conditioning event "
+                 f"({engage_mode}; plateau=A-1 sealed rolling-slope, crest=SPEC_v10 §13.2 slope "
+                 "sign-change peak); ships banked R1 if never/degenerate/untrusted (never blocks)")
+
+
+def PoseFinishBetaAnnealCoupling() -> Lever:
+    """SPEC_v10 §13.2 "coupling not coincidence" (arm B 2026-07-17): the β-ANNEAL-COMPLETE →
+    POSE-FINISH-ELIGIBLE event coupling. The c2 config's ``anneal-epochs(1000) ==
+    pose-finish-start(1000)`` is two constants AGREEING; this lever expresses the encoded intent
+    as the EVENT — pose-finish may not engage (by ANY signal: muon / σ_min gate / backstop) before
+    the β/τ anneal SCHEDULE completes (ep >= --anneal-epochs, fallback --epochs).
+
+    MEASURED context [live c2 run 20260717T113932Z, advisory]: the σ_min conditioning CREST landed
+    at ~ep802 — BEFORE the constant eligibility epoch (1000) — so the constant is measured-
+    SUBOPTIMAL on that run (an event-derived gate could have engaged at the measured optimum).
+    Composes with ``PoseFinishConditioningGate(engage_mode=...)``: the gate supplies the ENGAGE
+    signal, this coupling supplies the ELIGIBILITY floor. Requires the two-phase arm
+    (``--pose-finish-start-epoch > 0``; the trainer fails loud on an inert arm). DEFAULT-OFF;
+    absent ⇒ byte-identical."""
+    return Lever(
+        "pose_finish_beta_anneal_coupling",
+        overrides={"--pose-finish-eligible-on-beta-anneal-complete": True},
+        notes="SPEC_v10 §13.2: beta-anneal-complete -> pose-finish-eligible event coupling "
+        "(replaces the anneal-epochs==pose-finish-start constants coincidence); measured live-c2 "
+        "context: crest @~ep802 preceded the ep1000 constant (constant measured-suboptimal)")
+
+
+def PoseMarginalWeightLaw(clamp: float | None = None) -> Lever:
+    """SPEC_v10 §13.3 (arm B 2026-07-17): the w_pose(t) DERIVED-WEIGHT LAW —
+    ``w_pose(t) = min(clamp, 5/sqrt(10*d_pose(t)))``, the score's OWN pose marginal
+    (``dS/dd_pose``) as the pose-finish weight, replacing the static ``--w-pose`` constant.
+
+    THE CLAMP IS DERIVED, not tuned: the marginal diverges as d_pose→0; the seg marginal is the
+    constant ``dS/dd_seg = 100``; the two cross at ``d_pose = 2.5e-4`` where the pose marginal
+    equals 100 — so ``clamp = 100.0`` caps the pose weight at the score's own seg exchange rate
+    (law module ``tac.canonical_equations.w_pose_marginal_weight_law_20260717``, eq
+    ``w_pose_marginal_weight_law_v1``; sister of the ``--pose-grad-coeff-max`` divergence guard).
+
+    Consumption point: the POSE-FINISH stage only (the trainer fails loud if the two-phase arm is
+    absent — inert-flag NO-FAKE guard). Updated at VERDICT cadence when a measured d_pose lands
+    (piecewise-constant, never per-step — SPEC_v75 §8 loss-weights-at-boundaries). DEFAULT-OFF;
+    absent ⇒ byte-identical.
+
+    ⚠ INCOMPATIBLE with score-domain loss (SOL v10 review A2-C1; SPEC_v10 §13.13). The marginal
+    ``w = 5/sqrt(10*d_pose)`` is the exact ``dS/dd_pose`` — the weight for a RAW-``d_pose`` (weight-
+    domain) loss term, where ``dL/dd_pose = w*1`` = the contest marginal. Under ``--score-domain-loss``
+    (trainer default ON) the pose term is ALREADY ``sqrt(10*d_pose)`` (the exact score contribution),
+    so applying this weight yields ``dL/dd_pose = (5/sqrt(10*d_pose))^2`` = the marginal SQUARED. The
+    trainer (the fail-closed launch authority) REFUSES ``--w-pose-marginal-law`` together with
+    ``--score-domain-loss``; this law is admissible ONLY with ``--no-score-domain-loss``. Under
+    score-domain loss the exact objective is a static ``--w-pose 1`` (the sqrt term IS the score)."""
+    from tac.witness_dsl.lawref import LADDER_DERIVED_AT_CONFIG, InputRef, LawRef
+
+    from tac.canonical_equations.w_pose_marginal_weight_law_20260717 import (
+        clamp_from_crossover,
+    )
+
+    c = clamp_from_crossover() if clamp is None else float(clamp)
+    if not (c > 0.0):
+        raise ValueError(f"PoseMarginalWeightLaw: clamp must be > 0, got {clamp!r}")
+    refs = {
+        "--w-pose-marginal-clamp": LawRef(
+            equation_id="w_pose_marginal_weight_law_v1",
+            inputs={"value": InputRef.literal(
+                c,
+                "DERIVED clamp_from_crossover(): pose marginal 5/sqrt(10*d_pose) equals the seg "
+                "marginal dS/dd_seg=100 at d_pose=2.5e-4; cap = the score's own seg exchange rate "
+                "(tac.canonical_equations.w_pose_marginal_weight_law_20260717)")},
+            ladder_class=LADDER_DERIVED_AT_CONFIG,
+        ),
+    }
+    return Lever(
+        "pose_marginal_weight_law",
+        overrides={"--w-pose-marginal-law": True, "--w-pose-marginal-clamp": c},
+        lawrefs=refs,
+        notes="SPEC_v10 §13.3: w_pose(t)=min(clamp,5/sqrt(10*d_pose(t))) — the score's own pose "
+        "marginal as the pose-finish weight; clamp DERIVED at the seg-marginal crossover (100.0); "
+        "verdict-cadence piecewise-constant; requires the two-phase pose finish (fail-loud)")
 
 
 def Muon(start_epoch: int, window: int = 100) -> Lever:
@@ -4926,6 +5014,7 @@ def TieLocusDisplacement(
 def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-dive); DSL keyword-cased
     weight: float = 0.0, start_epoch: int = 0, classes: str = "0,1,2", band: float = 2.0,
     gap_xi: str = "interp", ref: str = "gt_advected", window: int = 0,
+    start_event: str | None = None,
 ) -> Lever:
     """T1 — CROSS-PAIR PHASE-ADVECTION CONSISTENCY (flicker deep-dive design memo
     ``.omx/research/flicker_transform_geometry_term_design_20260710.md`` §4 T1). DEFAULT-OFF.
@@ -4952,7 +5041,14 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
     the in-loss term is per-pair-LOCAL: it reads ONLY pair p's realized ``_signed`` + pair p's
     precomputed target. It therefore fits the incumbent random-permutation per-pair ``value_and_grad``
     with no change (respects #240 verdict-batch chunking + the launcher memory-preflight; no OOM class).
-    ``ref='gt_advected'`` (DEFAULT, READY) is this mode. ``ref='witness_cached'`` (the memo's
+    ``ref='gt_advected'`` (DEFAULT, READY) is this mode. ``ref='gt_advected_with_own_tie_fallback'``
+    is the EVENT-FALLBACK phase supervision force (SPEC_v10 §13.1 row 1; FEED-lane-gain §4b):
+    ``t_ref := where(ref_active, advected_prev_tie, own_gt_tie)`` with
+    ``weight := ann ∧ ground ∧ (ref_active ∨ own_active)`` — advect-where-persistent,
+    target-where-born, covering the MEASURED 26.3% birth/fast-moved straddle coverage gap the
+    transport-only T1 leaves phase-unsupervised (birth-SILENT). STATELESS by construction: NO
+    per-island persistence hold (the memo anti-scope — a hold would fight GT's genuine deaths);
+    same θ-independent per-pair-local containment as T1 (zero batching change). ``ref='witness_cached'`` (the memo's
     fully-differentiable witness-self-consistency formula ``t_wit(p) vs advected t_wit(p-1)``) is
     SPECIFIED but OWED (needs a per-pair stop-grad tie cache OR sequential-pair batching) — the trainer
     fails loud if selected.
@@ -4984,9 +5080,15 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
     if str(gap_xi) not in ("interp", "offline_homography"):
         raise ValueError(
             f"PhaseAdvectionConsistency: gap_xi must be 'interp' or 'offline_homography', got {gap_xi!r}")
-    if str(ref) not in ("gt_advected", "witness_cached"):
+    if start_event is not None and str(start_event) not in ("label_floor", "ncde_dseg"):
         raise ValueError(
-            f"PhaseAdvectionConsistency: ref must be 'gt_advected' or 'witness_cached', got {ref!r}")
+            "PhaseAdvectionConsistency: start_event must be None, 'label_floor' (law-5 floor->phase-"
+            "tail hand-off) or 'ncde_dseg' (SPEC_v10 §13.2 per-force event entry — the #344 NCDE "
+            f"d_seg slope-flatten/basin), got {start_event!r}")
+    if str(ref) not in ("gt_advected", "gt_advected_with_own_tie_fallback", "witness_cached"):
+        raise ValueError(
+            "PhaseAdvectionConsistency: ref must be 'gt_advected', "
+            f"'gt_advected_with_own_tie_fallback' or 'witness_cached', got {ref!r}")
     return Lever(
         "phase_advection_consistency",
         overrides={"--seg-phase-advect-weight": float(weight),
@@ -4994,7 +5096,9 @@ def PhaseAdvectionConsistency(  # T1 cross-pair phase-advection (flicker deep-di
                    "--seg-phase-advect-classes": str(classes),
                    "--seg-phase-advect-band": float(band),
                    "--seg-phase-advect-gap-xi": str(gap_xi),
-                   "--seg-phase-advect-ref": str(ref)},
+                   "--seg-phase-advect-ref": str(ref),
+                   **({"--seg-phase-advect-start-event": str(start_event)}
+                      if start_event is not None else {})},
         epochs_delta=window,
         notes=("T1 cross-pair phase-advection consistency (t_wit(p) -> ξ-advected GT tie of p-1; "
                "composes Force-1's A_ξ ∘ Force-3's tie coordinate on the cross-pair scored-frame "

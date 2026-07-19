@@ -835,8 +835,16 @@ def _event_advisories(inputs: RunInputs, classification: dict | None,
         ncde_report = probe.run_probe(inputs.run_dir, window=12, emit=False,
                                       do_backtest=False)
         ncde = ncde_report.get("verdict_latest_advisory")
+        if ncde is None:
+            # (arm B 2026-07-17 observer fix) belt-and-suspenders for an older probe: never store
+            # None — the digest would print the diagnostic-free "fire=False reason=unavailable"
+            # (MEASURED on the live c2 run: 6 verdict rows => the key was silently omitted).
+            ncde = {"available": False, "fire": False,
+                    "reason": (f"probe emitted no verdict_latest_advisory "
+                               f"(verdict_points={ncde_report.get('verdict_points')}, "
+                               f"n_rows={ncde_report.get('n_rows')})")}
     except Exception as exc:  # noqa: BLE001 - advisory sensor, recorded unavailable
-        ncde = {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+        ncde = {"available": False, "fire": False, "reason": f"{type(exc).__name__}: {exc}"}
 
     latest = factorized.get("lambda_field", {}).get("epoch")
     transitions = inputs.stage_rows.get("transitions") or []

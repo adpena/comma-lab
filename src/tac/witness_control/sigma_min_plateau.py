@@ -83,6 +83,16 @@ PLATEAU_FIRED = "PLATEAU_FIRED"              # de-noised σ_min stopped trending
 NOT_PLATEAUED = "NOT_PLATEAUED"              # still trending / not enough consecutive flat windows
 DEGENERATE_GUARD_TRIPPED = "DEGENERATE_GUARD_TRIPPED"   # cannot distinguish plateau from oscillation → ship banked R1
 INSUFFICIENT_DATA = "INSUFFICIENT_DATA"      # fewer than settle_window + hysteresis - 1 points
+# ── crest sentinels (SPEC_v10 §13.2 fire-on-crest alternative; arm B 2026-07-17) ──
+CREST_FIRED = "CREST_FIRED"                  # a RESOLVED rising phase, then slope sign-change held for hysteresis
+NOT_CRESTED = "NOT_CRESTED"                  # no resolved rising phase yet / still rising / hysteresis unmet
+
+#: engage-detector modes: 'plateau' (the SEALED incumbent) / 'crest' (smoothed σ_min slope
+#: SIGN-CHANGE = conditioning peak; SPEC_v10 §13.2 — live c2 anchor: σ_min 0.0010→0.0068 still
+#: climbing +15%/ep at ep798, so a plateau gate keeps waiting while a crest gate fires the moment
+#: conditioning stops improving after a genuine rising phase).
+MODE_PLATEAU = "plateau"
+MODE_CREST = "crest"
 
 #: the resume-registry key prefix for the detector's persisted state (must start with '__').
 RESUME_PREFIX = "__posegate_"
@@ -143,7 +153,9 @@ class SigmaMinPlateauVerdict:
     evidence: tuple[str, ...]
 
     def fired(self) -> bool:
-        return self.classification == PLATEAU_FIRED
+        # PLATEAU_FIRED (incumbent) or CREST_FIRED (SPEC_v10 §13.2 fire-on-crest) — both are the
+        # ENGAGE signal; which one a run can produce is fixed by the detector's single mode.
+        return self.classification in (PLATEAU_FIRED, CREST_FIRED)
 
     def should_ship_banked_r1(self) -> bool:
         """True when the signal is DEGENERATE (guard tripped) — the caller ships the banked R1 dxi and
@@ -318,6 +330,143 @@ def evaluate_plateau(
         evidence=ev)
 
 
+def evaluate_crest(
+    eps: Sequence[float], smins: Sequence[float], cfg: SigmaMinPlateauConfig,
+    *, latched_fired_epoch: int = -1, sigma_star: float | None = None,
+) -> SigmaMinPlateauVerdict:
+    """The FIRE-ON-CREST detector (SPEC_v10 §13.2; PURE): smoothed σ_min ROLLING-SLOPE SIGN-CHANGE
+    = the conditioning PEAK, with hysteresis.
+
+    Fires when BOTH hold on the EMA-smoothed series (same de-noise + window machinery as the sealed
+    plateau detector — no new constants):
+
+      1. a RESOLVED RISING phase was seen in some earlier window (rel-slope > ``flat_rel_band`` AND
+         the fitted slope's rel-stderr <= the slope, i.e. the rise is real, not noise) — so a series
+         that was never improving cannot crest-fire (distinct from the plateau detector, which DOES
+         fire on flat-from-start);
+      2. the last ``hysteresis`` consecutive windows all read NON-RISING (rel-slope <= band — the
+         slope sign has changed / stopped being positive; a DECLINING post-peak series still fires,
+         which is exactly the crest semantics: the peak has passed).
+
+    NOISE GUARD (derived, one-sided; reuses the flat band): the LATEST window must be resolved
+    non-rising — ``rel_slope + rel_stderr <= band``. If the upper confidence bound cannot rule out a
+    rising slope, the signal is DEGENERATE → ship banked R1 (never fire on noise), mirroring the
+    plateau guard's contract. Deterministic: same series -> same verdict.
+    """
+    eps = [float(e) for e in eps]
+    raw = [float(s) for s in smins]
+    n = len(raw)
+    latched = latched_fired_epoch is not None and latched_fired_epoch >= 0
+
+    if latched:
+        sm = ema_smooth(raw, cfg.ema_span) if raw else []
+        return SigmaMinPlateauVerdict(
+            classification=CREST_FIRED, n_points=n, settle_window=cfg.settle_window,
+            hysteresis=cfg.hysteresis, consecutive_flat=cfg.hysteresis,
+            latest_rel_slope_per_ep=None, latest_rel_stderr_per_ep=None,
+            flat_rel_band=cfg.flat_rel_band, smoothed_sigma_min_latest=(sm[-1] if sm else None),
+            epoch_latest=(int(eps[-1]) if eps else None), latched_fired_epoch=int(latched_fired_epoch),
+            sigma_star_advisory=sigma_star,
+            reason=f"pose-finish crest gate LATCHED at ep{latched_fired_epoch} (monotone engagement)",
+            evidence=(f"latched crest fire @ep{latched_fired_epoch}; σ_min series now {n} points",))
+
+    # need enough points for the trailing hysteresis windows PLUS at least one earlier window that
+    # could carry the rising phase (one extra slide) — derived from the same window machinery.
+    min_points = cfg.min_points + 1
+    if n < min_points:
+        return SigmaMinPlateauVerdict(
+            classification=INSUFFICIENT_DATA, n_points=n, settle_window=cfg.settle_window,
+            hysteresis=cfg.hysteresis, consecutive_flat=0, latest_rel_slope_per_ep=None,
+            latest_rel_stderr_per_ep=None, flat_rel_band=cfg.flat_rel_band,
+            smoothed_sigma_min_latest=(ema_smooth(raw, cfg.ema_span)[-1] if raw else None),
+            epoch_latest=(int(eps[-1]) if eps else None), latched_fired_epoch=None,
+            sigma_star_advisory=sigma_star,
+            reason=(f"only {n} σ_min point(s); crest needs >= {min_points} "
+                    f"(settle_window {cfg.settle_window} + hysteresis {cfg.hysteresis} - 1 + 1 "
+                    "pre-crest window) — wait/densify"),
+            evidence=(f"{n} σ_min points, crest min_points={min_points}",))
+
+    sm = ema_smooth(raw, cfg.ema_span)
+    w = int(cfg.settle_window)
+    band = float(cfg.flat_rel_band)
+
+    # rolling rel-slopes at EVERY window end position (windows slide by one; end index w-1 .. n-1).
+    slopes: list[tuple[int, float, float | None]] = []   # (end_idx, rel_slope, rel_stderr)
+    for end in range(w - 1, n):
+        lo = end - w + 1
+        rel_slope, rel_stderr = _rel_slope_and_stderr(eps[lo:end + 1], sm[lo:end + 1])
+        slopes.append((end, rel_slope, rel_stderr))
+
+    # trailing `hysteresis` windows = the crest-hold candidates; everything BEFORE them may carry
+    # the rising phase.
+    trailing = slopes[-int(cfg.hysteresis):]
+    earlier = slopes[:-int(cfg.hysteresis)]
+    rising_seen = any(
+        (rs > band) and (se is not None) and (se <= rs) for _, rs, se in earlier)
+    latest_end, latest_rel_slope, latest_rel_stderr = trailing[-1]
+
+    consecutive_nonrising = 0
+    for _, rs, _se in reversed(trailing):
+        if rs <= band:
+            consecutive_nonrising += 1
+        else:
+            break
+
+    # one-sided resolution guard on the LATEST window: upper bound must not admit a rising slope.
+    guard_degenerate = (latest_rel_stderr is None) or (latest_rel_slope + latest_rel_stderr > band
+                                                       and latest_rel_slope <= band)
+
+    ev = (
+        f"n={n} σ_min points; EMA span {cfg.ema_span}; latest de-noised σ_min={sm[-1]:.6g}"
+        f"@ep{int(eps[-1])}",
+        f"rising phase resolved earlier: {rising_seen} "
+        f"(needs rel-slope > {band:.1e} with rel-stderr <= slope in a pre-crest window)",
+        f"latest-window rel-slope {latest_rel_slope:+.2e}/ep, rel-stderr "
+        f"{('%.2e' % latest_rel_stderr) if latest_rel_stderr is not None else 'undefined'}; "
+        f"consecutive non-rising windows = {consecutive_nonrising}/{cfg.hysteresis}",
+    )
+
+    if guard_degenerate:
+        return SigmaMinPlateauVerdict(
+            classification=DEGENERATE_GUARD_TRIPPED, n_points=n, settle_window=cfg.settle_window,
+            hysteresis=cfg.hysteresis, consecutive_flat=consecutive_nonrising,
+            latest_rel_slope_per_ep=latest_rel_slope, latest_rel_stderr_per_ep=latest_rel_stderr,
+            flat_rel_band=band, smoothed_sigma_min_latest=sm[-1], epoch_latest=int(eps[-1]),
+            latched_fired_epoch=None, sigma_star_advisory=sigma_star,
+            reason=("CREST NOISE GUARD tripped: the latest window's slope upper confidence bound "
+                    f"(rel-slope {latest_rel_slope:+.2e} + rel-stderr "
+                    f"{('%.2e' % latest_rel_stderr) if latest_rel_stderr is not None else 'undefined'}) "
+                    f"cannot rule out a rising slope (> band {band:.1e}) — CANNOT distinguish a crest "
+                    "from oscillation. FALL BACK to ship-banked-R1 (never fire on a degenerate signal)."),
+            evidence=ev)
+
+    if rising_seen and consecutive_nonrising >= int(cfg.hysteresis):
+        return SigmaMinPlateauVerdict(
+            classification=CREST_FIRED, n_points=n, settle_window=cfg.settle_window,
+            hysteresis=cfg.hysteresis, consecutive_flat=consecutive_nonrising,
+            latest_rel_slope_per_ep=latest_rel_slope, latest_rel_stderr_per_ep=latest_rel_stderr,
+            flat_rel_band=band, smoothed_sigma_min_latest=sm[-1], epoch_latest=int(eps[-1]),
+            latched_fired_epoch=None, sigma_star_advisory=sigma_star,
+            reason=(f"σ_min CRESTED: a resolved rising phase, then non-rising slope for "
+                    f"{consecutive_nonrising} >= {cfg.hysteresis} consecutive settle windows — the "
+                    "conditioning PEAK has passed (slope sign-change). ENGAGE pose-finish."),
+            evidence=ev)
+
+    if not rising_seen:
+        reason = ("not crested: NO resolved rising phase yet (crest requires conditioning to have "
+                  "genuinely IMPROVED before the sign-change — flat-from-start never crest-fires)")
+    else:
+        reason = (f"not crested: only {consecutive_nonrising}/{cfg.hysteresis} consecutive non-rising "
+                  f"windows (latest rel-slope {latest_rel_slope:+.2e}/ep vs band {band:.1e}) — σ_min "
+                  "still rising (conditioning still improving)")
+    return SigmaMinPlateauVerdict(
+        classification=NOT_CRESTED, n_points=n, settle_window=cfg.settle_window,
+        hysteresis=cfg.hysteresis, consecutive_flat=consecutive_nonrising,
+        latest_rel_slope_per_ep=latest_rel_slope, latest_rel_stderr_per_ep=latest_rel_stderr,
+        flat_rel_band=band, smoothed_sigma_min_latest=sm[-1], epoch_latest=int(eps[-1]),
+        latched_fired_epoch=None, sigma_star_advisory=sigma_star, reason=reason, evidence=ev)
+
+
 # --------------------------------------------------------------------------- #
 # The stateful detector (Resumable — persists the σ_min series + the fire latch).
 # --------------------------------------------------------------------------- #
@@ -331,11 +480,17 @@ class SigmaMinPlateauDetector:
 
     def __init__(self, cfg: SigmaMinPlateauConfig,
                  *, c_pose_grad_cap: float = 25.0, delta_seg: float = 0.5,
-                 lambda_min_f: float | None = None) -> None:
+                 lambda_min_f: float | None = None, mode: str = MODE_PLATEAU) -> None:
         probs = cfg.validate()
         if probs:
             raise ValueError("; ".join(probs))
+        if str(mode) not in (MODE_PLATEAU, MODE_CREST):
+            raise ValueError(
+                f"SigmaMinPlateauDetector: mode must be {MODE_PLATEAU!r} or {MODE_CREST!r}, got {mode!r}")
         self.cfg = cfg
+        #: which event class this detector fires on: 'plateau' (sealed incumbent, DEFAULT — the
+        #: OFF-path is byte-identical) or 'crest' (SPEC_v10 §13.2 fire-on-crest). One mode per run.
+        self.mode = str(mode)
         self._eps: list[int] = []
         self._smins: list[float] = []
         self._fired_epoch: int = -1
@@ -364,9 +519,11 @@ class SigmaMinPlateauDetector:
         return sigma_star_advisory(self._c, self._delta_seg, self._lambda_min_f)
 
     def verdict(self) -> SigmaMinPlateauVerdict:
-        """PURE evaluation over the current series + latch (reports LATCHED if already fired)."""
-        return evaluate_plateau(self._eps, self._smins, self.cfg,
-                                latched_fired_epoch=self._fired_epoch, sigma_star=self._sigma_star())
+        """PURE evaluation over the current series + latch (reports LATCHED if already fired).
+        Dispatches on the detector's single ``mode`` (plateau incumbent / crest §13.2)."""
+        _eval = evaluate_crest if self.mode == MODE_CREST else evaluate_plateau
+        return _eval(self._eps, self._smins, self.cfg,
+                     latched_fired_epoch=self._fired_epoch, sigma_star=self._sigma_star())
 
     def latch_if_fired(self, epoch: int) -> bool:
         """If the current verdict fires AND we are not yet latched, latch at ``epoch`` and return True.
@@ -493,14 +650,59 @@ def synthetic_rising_series(
 
 def run_detector_on_series(
     series: Sequence[tuple[int, float]], cfg: SigmaMinPlateauConfig | None = None,
+    *, mode: str = MODE_PLATEAU,
 ) -> SigmaMinPlateauVerdict:
     """Feed a full (epoch, σ_min) series through a fresh detector and return the FINAL verdict (no
     latching — the un-latched classification the series earns on its own)."""
     cfg = cfg or SigmaMinPlateauConfig()
-    det = SigmaMinPlateauDetector(cfg)
+    det = SigmaMinPlateauDetector(cfg, mode=mode)
     for ep, s in series:
         det.observe(int(ep), float(s))
     return det.verdict()
+
+
+def synthetic_rise_then_decline_series(
+    n_rise: int = 10, n_decline: int = 10, peak: float = 0.06, ep_step: int = 4,
+) -> list[tuple[int, float]]:
+    """A clean rise-to-PEAK-then-DECLINE σ_min curve (the crest POSITIVE control): the plateau
+    detector correctly never fires on it (the tail is trending DOWN, not flat), but the crest
+    detector MUST (the sign-change is the event). Deterministic (no noise)."""
+    out: list[tuple[int, float]] = []
+    ep = 0
+    for i in range(int(n_rise)):
+        out.append((ep, float(peak) * (i + 1) / float(n_rise)))
+        ep += int(ep_step)
+    for i in range(int(n_decline)):
+        out.append((ep, float(peak) * (1.0 - 0.4 * (i + 1) / float(n_decline))))
+        ep += int(ep_step)
+    return out
+
+
+def crest_canary_suite(cfg: SigmaMinPlateauConfig | None = None) -> CanaryResult:
+    """$0 canary controls for the FIRE-ON-CREST mode (SPEC_v10 §13.2), mirroring
+    :func:`canary_suite`'s contract: NEGATIVE (a still-RISING σ_min — the live c2 signature — must
+    NOT crest-fire) + POSITIVE (a clean rise-then-decline peak MUST crest-fire). FAIL ⇒ the crest
+    gate is UNTRUSTED ⇒ ship-banked-R1 DISENGAGED (never fire on an untrusted instrument)."""
+    cfg = cfg or SigmaMinPlateauConfig()
+    neg = run_detector_on_series(synthetic_rising_series(), cfg, mode=MODE_CREST)
+    pos = run_detector_on_series(synthetic_rise_then_decline_series(), cfg, mode=MODE_CREST)
+    negative_fired = neg.fired()
+    positive_fired = pos.fired()
+    passed = (not negative_fired) and positive_fired
+    reason = ("crest canary PASS: rising σ_min does NOT crest-fire and a rise-then-decline peak "
+              "DOES — detector trustworthy"
+              if passed else
+              "crest canary FAIL: " + (
+                  "rising σ_min CREST-FIRED (false positive) " if negative_fired else "") + (
+                  "rise-then-decline peak did NOT crest-fire (false negative) "
+                  if not positive_fired else "")
+              + "→ gate UNTRUSTED → ship-banked-R1 DISENGAGED")
+    return CanaryResult(
+        passed=passed, negative_fired=negative_fired, positive_fired=positive_fired,
+        negative_classification=neg.classification, positive_classification=pos.classification,
+        reason=reason,
+        evidence=(f"negative(rising)={neg.classification} [{neg.reason[:80]}]",
+                  f"positive(rise-then-decline)={pos.classification} [{pos.reason[:80]}]"))
 
 
 def canary_suite(cfg: SigmaMinPlateauConfig | None = None) -> CanaryResult:
@@ -681,9 +883,11 @@ __all__ = [
     "W_SETTLE_CEIL", "DEFAULT_EMA_SPAN", "DEFAULT_FLAT_REL_BAND", "DEFAULT_SETTLE_WINDOW",
     "DEFAULT_HYSTERESIS", "RESUME_PREFIX",
     "PLATEAU_FIRED", "NOT_PLATEAUED", "DEGENERATE_GUARD_TRIPPED", "INSUFFICIENT_DATA",
+    "CREST_FIRED", "NOT_CRESTED", "MODE_PLATEAU", "MODE_CREST",
     "SigmaMinPlateauConfig", "SigmaMinPlateauVerdict", "SigmaMinPlateauDetector",
-    "ema_smooth", "sigma_star_advisory", "evaluate_plateau",
+    "ema_smooth", "sigma_star_advisory", "evaluate_plateau", "evaluate_crest",
     "CanaryResult", "synthetic_plateau_series", "synthetic_rising_series",
+    "synthetic_rise_then_decline_series", "crest_canary_suite",
     "run_detector_on_series", "canary_suite", "load_sigma_min_series_from_jsonl",
     "gate_observer_row", "disengaged_alarm_row", "format_gate_line", "scan_run_for_pose_gate",
 ]

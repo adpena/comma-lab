@@ -6061,9 +6061,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _pa_ref_prov: Any = None       # list[mx.array (1,H,W)] f32 ξ-advected GT tie of pair pi-1 (-1 sentinel)
     _pa_dir_prov: Any = None       # list[mx.array (1,H,W)] f32 pair pi's OWN dominant-straddle dir {0,1}
     _pa_wmask_prov: Any = None     # list[mx.array (1,H,W)] f32 annulus∩active-warped-ref weight {0,1}
-    if pa_w > 0.0 and pa_ref_mode not in ("gt_advected", "witness_cached"):
+    if pa_w > 0.0 and pa_ref_mode not in (
+            "gt_advected", "gt_advected_with_own_tie_fallback", "witness_cached"):
         raise ValueError(
-            f"--seg-phase-advect-ref must be 'gt_advected' or 'witness_cached', got {pa_ref_mode!r}")
+            "--seg-phase-advect-ref must be 'gt_advected', 'gt_advected_with_own_tie_fallback' "
+            f"or 'witness_cached', got {pa_ref_mode!r}")
     if pa_w > 0.0 and pa_ref_mode == "witness_cached":
         # SPECIFIED but OWED (do LESS but REAL): the fully-differentiable witness-self-consistency mode
         # needs either a per-pair stop-grad tie-field cache refreshed once/epoch OR a sequential-pair
@@ -7799,6 +7801,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         from tac.boundary_math.phase_primitives import (
             advect_tie_field_numpy as _pp_advect_np,
             cross_scored_frame_xi_interp as _pp_cross_xi,
+            event_fallback_ref_and_weight_numpy as _pp_event_fallback,
             gt_tie_targets_numpy as _pp_gt_tie,
         )
         from tac.boundary_math.warp_real_luma_frame0 import (
@@ -7826,14 +7829,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         _pa_dir_prov = []
         _pa_wmask_prov = []
         _pa_n_active = 0
+        # EVENT-FALLBACK channel counters (SPEC_v10 §13.1 row 1; FEED-lane-gain §4b): populated ONLY in
+        # the gt_advected_with_own_tie_fallback ref mode; incumbent modes leave them 0 (byte-identical).
+        _pa_n_advected = 0
+        _pa_n_fallback = 0
+        _pa_fallback_on = pa_ref_mode == "gt_advected_with_own_tie_fallback"
         for pi in range(P):
             _t_p, _d_p, _a_p = _pa_gt_t[pi]                              # pair pi's OWN tie + dir + active
             _ann_p = (np.asarray(gt.margins[pi], np.float32) < pa_band)  # pair pi's annulus
             _ground_p = np.isin(np.asarray(gt.lstars[pi]), list(_pa_sel))  # pair pi ground-class pixels
             if pi == 0:
-                # no previous scored frame => no reference => all-zero weight (no-op for pair 0).
-                _ref = np.full((_pa_H, _pa_W), -1.0, np.float32)
-                _wm = np.zeros((_pa_H, _pa_W), np.float32)
+                # no previous scored frame => no advected reference.
+                _ref_w = np.zeros((_pa_H, _pa_W), np.float32)
+                _ref_active = np.zeros((_pa_H, _pa_W), bool)
             else:
                 # cross screw f1(pi-1) -> f1(pi) (se(3) interp gap).
                 _xi_cross = _pp_cross_xi(_pa_xi_pair[pi - 1], _pa_xi_pair[pi])
@@ -7843,6 +7851,21 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _ref_w = _pp_advect_np(_val_prev, _xi_cross, _pa_geom)          # (H,W) advected value
                 _act_w = _pp_advect_np(_a_prev.astype(np.float32), _xi_cross, _pa_geom)  # (H,W) advected mask
                 _ref_active = _act_w >= 0.5                                        # post-warp active
+            if _pa_fallback_on:
+                # SPEC_v10 §13.1 row 1 EVENT-FALLBACK: t_ref := where(ref_active, advected, own_gt_tie);
+                # weight := ann ∧ ground ∧ (ref_active ∨ own_active). "Advect-where-persistent,
+                # target-where-born" — covers the MEASURED 26.3% birth/fast-moved straddle coverage gap
+                # (354 lane-adjacent px/frame). STATELESS: NO per-island persistence hold (memo
+                # anti-scope — a hold would fight GT's genuine deaths). Pair 0 gains own-tie coverage.
+                _ref, _wm, _n_adv, _n_fb = _pp_event_fallback(
+                    _t_p, _a_p, _ref_w, _ref_active, _ann_p, _ground_p)
+                _pa_n_advected += _n_adv
+                _pa_n_fallback += _n_fb
+            elif pi == 0:
+                # incumbent: no previous scored frame => all-zero weight (no-op for pair 0).
+                _ref = np.full((_pa_H, _pa_W), -1.0, np.float32)
+                _wm = np.zeros((_pa_H, _pa_W), np.float32)
+            else:
                 _ref = np.where(_ref_active, _ref_w, -1.0).astype(np.float32)
                 # weight = pi annulus AND ground AND a valid warped reference exists.
                 _wm = (_ann_p & _ground_p & _ref_active).astype(np.float32)
@@ -7857,6 +7880,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                           "start_epoch": int(pa_start), "gap_xi": pa_gap_xi, "ref_mode": pa_ref_mode,
                           "active_px_total": int(_pa_n_active),
                           "active_px_per_frame": round(_pa_n_active / max(P, 1), 1),
+                          # EVENT-FALLBACK channel split (0/0 in incumbent modes — SPEC_v10 §13.1 row 1):
+                          "advected_px_total": int(_pa_n_advected),
+                          "fallback_px_total": int(_pa_n_fallback),
+                          "fallback_px_per_frame": round(_pa_n_fallback / max(P, 1), 1),
                           "note": "T1 cross-pair phase-advection: t_wit(p) -> ξ-advected GT tie of p-1 "
                           "(θ-independent target; per-pair-local; ZERO batching change); composes with "
                           "Force-3 subpix as the shrinkage toward the ξ-advected trajectory; kills the "
@@ -8206,6 +8233,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # engage block) => BYTE-IDENTICAL. ON => fires on label_floor_event over the trainer's own
     # verdict rows (poison-law: sensors READ trainer streams) with the fixed epoch as the LOUD cap.
     from tac.witness_control.event_wirings import label_floor_event as _label_floor_ev
+    from tac.witness_control.event_wirings import ncde_dseg_event as _ncde_dseg_ev
     _pa_start_event = getattr(args, "seg_phase_advect_start_event", None)
     _phase_advect_gate = _EBGate(
         name="seg_phase_advect", start_epoch_flag="--seg-phase-advect-start-epoch",
@@ -8352,9 +8380,58 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _pose_finish_start = int(getattr(args, "pose_finish_start_epoch", 0))
     _w_pose_now = {"v": float(args.w_pose)}
     _pose_finish_on = {"on": False}
+    # (SPEC_v10 §13.2 "coupling not coincidence"; arm B) β-ANNEAL-COMPLETE -> POSE-FINISH-ELIGIBLE
+    # event coupling. anneal-epochs(1000) == pose-finish-start(1000) in the c2 config is two constants
+    # AGREEING; this expresses the intent as the EVENT: pose-finish may not engage (by ANY signal —
+    # muon / σ_min gate / backstop) before the anneal SCHEDULE (β/τ, denominator --anneal-epochs,
+    # fallback --epochs) has completed. Default OFF => byte-identical. Fail-loud on an inert arm
+    # (coupling without a two-phase pose finish is counted-but-inert — NO-FAKE).
+    _pf_beta_coupling = bool(getattr(args, "pose_finish_eligible_on_beta_anneal_complete", False))
+    _pf_anneal_complete_ep = int(getattr(args, "anneal_epochs", None) or args.epochs)
+    if _pf_beta_coupling and _pose_finish_start <= 0:
+        raise ValueError(
+            "--pose-finish-eligible-on-beta-anneal-complete requires --pose-finish-start-epoch > 0 "
+            "(the two-phase arm): with pose co-trained from ep0 the coupling would be an inert flag "
+            "(counted-but-inert, NO-FAKE). Arm the two-phase or drop the coupling.")
+    _pose_gate_coupling = {"deferred_row_emitted": False}
+    # (SPEC_v10 §13.3; arm B) w_pose(t) marginal-law state: the latest MEASURED d_pose (verdict
+    # cadence) + the last emitted weight (telemetry dedupe). Default-OFF => holder untouched =>
+    # byte-identical. Fail-loud on an inert arm (law without the two-phase finish — NO-FAKE).
+    _w_pose_law_on = bool(getattr(args, "w_pose_marginal_law", False))
+    _w_pose_law_state: dict[str, Any] = {"last_d_pose": None, "last_emitted_w": None}
+    if _w_pose_law_on and _pose_finish_start <= 0:
+        raise ValueError(
+            "--w-pose-marginal-law requires --pose-finish-start-epoch > 0 (the pose-finish stage "
+            "is the law's consumption point); with pose co-trained from ep0 the flag would be "
+            "counted-but-inert (NO-FAKE). Arm the two-phase or drop the law.")
+    # (SOL v10 review A2-C1 / SPEC_v10 §13.13) COMPILE-REFUSE the law + score-domain loss.
+    # The marginal w = 5/sqrt(10*d_pose) IS the exact dS/dd_pose — the weight you apply to a RAW
+    # d_pose loss term so that dL/dd_pose = w*1 = the contest marginal. But under
+    # --score-domain-loss the pose term is ALREADY sqrt(10*d_pose) (the exact score contribution),
+    # so multiplying it by the marginal gives dL/dd_pose = w * d(sqrt(10*d_pose))/dd_pose =
+    # (5/sqrt(10*d_pose))^2 = 2.5/d_pose — the contest marginal SQUARED, not the marginal. Under
+    # score-domain loss the exact objective is w_pose = 1 (the sqrt term is already the score). The
+    # marginal law is admissible ONLY with weight-domain loss (--no-score-domain-loss, a raw-d_pose
+    # term). Fail-closed here (the launch path) before any training rides the squared gradient.
+    if _w_pose_law_on and bool(getattr(args, "score_domain_loss", True)):
+        raise ValueError(
+            "--w-pose-marginal-law is INCOMPATIBLE with --score-domain-loss (default ON). Under "
+            "score-domain loss the pose term is ALREADY sqrt(10*d_pose) (the exact score "
+            "contribution); multiplying it by the marginal 5/sqrt(10*d_pose) SQUARES the contest "
+            "marginal (dL/dd_pose ~ (5/sqrt(10*d_pose))^2 = 2.5/d_pose, NOT the contest "
+            "5/sqrt(10*d_pose)). Under score-domain loss the exact objective is --w-pose 1 (the "
+            "sqrt term IS the score). The marginal law is admissible ONLY with weight-domain loss "
+            "(--no-score-domain-loss, a raw-d_pose term) where dL/dd_pose = w_pose*1 = the contest "
+            "marginal. Either pass --no-score-domain-loss OR drop --w-pose-marginal-law and use a "
+            "static --w-pose. (SOL v10 review A2-C1; SPEC_v10 §13.13.)")
+    if _w_pose_law_on and not (float(getattr(args, "w_pose_marginal_clamp", 100.0)) > 0.0):
+        raise ValueError("--w-pose-marginal-clamp must be > 0")
     if _pose_finish_start > 0:
         print(json.dumps({"stage": "pose_finish_armed", "start_backstop": _pose_finish_start,
                           "w_pose_finish": float(args.w_pose),
+                          "beta_anneal_coupling": bool(_pf_beta_coupling),
+                          "anneal_complete_epoch": (int(_pf_anneal_complete_ep)
+                                                    if _pf_beta_coupling else None),
                           "note": "v7.5 D.9 R1 two-phase: pose-blind until d_seg converges (muon switch), "
                           "then terminal joint pose-descent; SUPERSEDES co-train-pose-from-ep0"}), flush=True)
 
@@ -8856,12 +8933,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     _pose_gate: dict = {"det": None, "actuating": False, "trusted": True,
                         "engaged_epoch": (0 if _pose_finish_start <= 0 else -1),
                         "armed": _pose_finish_start > 0}
-    _pose_gate_requested = (_pose_gate_mode == "sigma_min_plateau") and (_pose_finish_start > 0)
+    # 'sigma_min_crest' (SPEC_v10 §13.2) rides the SAME σ_min-gate machinery as 'sigma_min_plateau';
+    # the detector's mode selects the event class (plateau vs slope-sign-change crest).
+    _pose_gate_sigma_modes = ("sigma_min_plateau", "sigma_min_crest")
+    _pose_gate_requested = (_pose_gate_mode in _pose_gate_sigma_modes) and (_pose_finish_start > 0)
     if _pose_gate_requested and not _jbasin_on:
         # engage-on σ_min but NO σ_min source (telemetry off / setup-failed) => gate can never fire =>
         # DISENGAGED (ship banked R1). LOUD (SYNTHESIS §A.4 Repair 5: MUST NOT pass --no-jacobian-...).
         print(json.dumps({"stage": "confound_alarm", "alarm": "pose_finish_gate_no_sigma_source",
-                          "note": "--pose-finish-engage-on sigma_min_plateau but jacobian-basin telemetry "
+                          "note": f"--pose-finish-engage-on {_pose_gate_mode} but jacobian-basin telemetry "
                           "is OFF => NO σ_min source => the conditioning gate can never fire => DISENGAGED "
                           "(ships banked R1; pose engages only via the --pose-finish-start-epoch backstop)",
                           "axis": "[macOS-MLX advisory] NON-PROMOTABLE"}), flush=True)
@@ -8872,14 +8952,19 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             _smp_probs = _smp_cfg.validate()
             if _smp_probs:
                 raise ValueError("; ".join(_smp_probs))
+            _pg_mode = (_smp.MODE_CREST if _pose_gate_mode == "sigma_min_crest"
+                        else _smp.MODE_PLATEAU)  # observer default stays plateau (byte-identical rows)
             _pg_det = _smp.SigmaMinPlateauDetector(
                 _smp_cfg, c_pose_grad_cap=float(getattr(args, "pose_grad_coeff_max", 25.0)),
-                delta_seg=0.5, lambda_min_f=None)  # δ_seg=0.5 amber MEASURED-ANCHOR; λ_min(F) probe OFF launch path (σ* advisory)
+                delta_seg=0.5, lambda_min_f=None,  # δ_seg=0.5 amber MEASURED-ANCHOR; λ_min(F) probe OFF launch path (σ* advisory)
+                mode=_pg_mode)
             _pose_gate["det"] = _pg_det
             _pose_gate["actuating"] = _pose_gate_requested
             # $0 CANARY controls (SYNTHESIS §A.4 Repair 2): NEGATIVE (rising σ_min must-not-fire) +
-            # SYNTHETIC-positive (clean plateau must-fire). Fail => gate UNTRUSTED => ship banked R1.
-            _pg_canary = _smp.canary_suite(_smp_cfg)
+            # SYNTHETIC-positive (clean plateau / rise-then-decline crest must-fire), per the selected
+            # mode. Fail => gate UNTRUSTED => ship banked R1.
+            _pg_canary = (_smp.crest_canary_suite(_smp_cfg) if _pg_mode == _smp.MODE_CREST
+                          else _smp.canary_suite(_smp_cfg))
             _pose_gate["trusted"] = bool(_pg_canary.passed)
             if _pose_gate["actuating"]:
                 _resume_registry.register("pose_finish_conditioning_gate", _smp.RESUME_PREFIX, _pg_det)
@@ -9507,6 +9592,11 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
             # auditable byte trace). Non-tail runs simply ignore it.
             history.append(_history_verdict(
                 ep, v, blob["total_quantized_blob_bytes"], s))
+            # (SPEC_v10 §13.3; arm B) w_pose(t) law SENSE: record the latest MEASURED d_pose
+            # (poison-law: reads the verdict the trainer already computed; never recomputes).
+            # OFF => never touched => byte-identical.
+            if _w_pose_law_on and v.get("d_pose") is not None and float(v["d_pose"]) > 0.0:
+                _w_pose_law_state["last_d_pose"] = float(v["d_pose"])
             # (#507) label-floor sensor stream: verdict rows the phase-advect start-event reads
             # (poison-law: the sensor READS this already-computed verdict, never recomputes).
             # Event-mode OFF => never appended => byte-identical. Bounded trailing window.
@@ -12161,7 +12251,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 _pa_fired_by = None
                 if _phase_advect_gate.event_mode:
                     _lf_rows = _wire_sense["labelfloor_series"]
-                    _pa_event_fired = bool(_label_floor_ev(_lf_rows)["fired"])
+                    # (SPEC_v10 §13.2 per-force event entry) sensor DISPATCH: 'label_floor' (incumbent)
+                    # or 'ncde_dseg' (#344 d_seg slope-flatten/basin) — both READ the same trainer-own
+                    # verdict stream (poison-law), both fail-safe to the backstop cap.
+                    if _pa_start_event == "ncde_dseg":
+                        _pa_event_fired = bool(_ncde_dseg_ev(_lf_rows)["fired"])
+                    else:
+                        _pa_event_fired = bool(_label_floor_ev(_lf_rows)["fired"])
                     _pa_sde = int(_lf_rows[-1]["epoch"]) if _lf_rows else -1
                     _pstep = _phase_advect_gate.update(
                         ep, event_fired=_pa_event_fired, sensor_data_epoch=_pa_sde,
@@ -12199,7 +12295,7 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # (SPEC_v752 §183-187). Decision logic is the PURE unit-tested
                 # tac.witness_control.sigma_min_plateau.resolve_pose_finish_engage.
                 _cond_fired = False
-                if _pose_gate_mode == "sigma_min_plateau":
+                if _pose_gate_mode in _pose_gate_sigma_modes:
                     _pg_det = _pose_gate["det"]
                     if (_pose_gate["actuating"] and _pose_gate["trusted"]
                             and _pg_det is not None):
@@ -12227,7 +12323,46 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                             n_points=(_pg_det.n_points if _pg_det is not None else 0))), flush=True)
                 else:  # 'muon' incumbent — BYTE-IDENTICAL
                     _pose_finish_on["on"] = bool(_muon_gate.fired) or (ep >= _pose_finish_start)
-                _w_pose_now["v"] = float(args.w_pose) if _pose_finish_on["on"] else 0.0
+                # (SPEC_v10 §13.2 "coupling not coincidence") β-anneal-complete -> pose-finish-eligible:
+                # with the coupling ON, an engage signal (muon / σ_min gate / backstop) arriving BEFORE
+                # the anneal schedule completes is DEFERRED (held not-eligible) — LOUD once. OFF (default)
+                # => this branch never runs => byte-identical.
+                if _pf_beta_coupling and _pose_finish_on["on"] and ep < _pf_anneal_complete_ep:
+                    _pose_finish_on["on"] = False
+                    if not _pose_gate_coupling["deferred_row_emitted"]:
+                        _pose_gate_coupling["deferred_row_emitted"] = True
+                        print(json.dumps({
+                            "stage": "pose_finish_coupling_deferred", "epoch": int(ep),
+                            "anneal_complete_epoch": int(_pf_anneal_complete_ep),
+                            "engage_mode": _pose_gate_mode,
+                            "note": "pose-finish engage signal arrived BEFORE the β/τ anneal schedule "
+                            "completed — held NOT-ELIGIBLE until anneal-complete (SPEC_v10 §13.2 "
+                            "event coupling replaces the anneal-epochs==pose-finish-start coincidence)"}),
+                            flush=True)
+                # (SPEC_v10 §13.3; arm B) w_pose(t) MARGINAL LAW at the consumption point: while the
+                # pose-finish is ENGAGED and the law is ON, the effective weight is the score's own
+                # marginal min(clamp, 5/sqrt(10*d_pose_latest)) — piecewise-constant (changes ONLY
+                # when a new measured d_pose lands at verdict cadence, never per-step). No measured
+                # d_pose yet => the static --w-pose finish weight (honest fallback). Law OFF
+                # (default) => the incumbent static assignment => BYTE-IDENTICAL.
+                if not _pose_finish_on["on"]:
+                    _w_pose_now["v"] = 0.0
+                elif _w_pose_law_on and _w_pose_law_state["last_d_pose"] is not None:
+                    _w_pose_now["v"] = min(
+                        float(args.w_pose_marginal_clamp),
+                        5.0 / math.sqrt(10.0 * float(_w_pose_law_state["last_d_pose"])))
+                    if _w_pose_law_state["last_emitted_w"] != _w_pose_now["v"]:
+                        _w_pose_law_state["last_emitted_w"] = _w_pose_now["v"]
+                        print(json.dumps({
+                            "stage": "w_pose_marginal_law", "epoch": int(ep),
+                            "d_pose_latest": float(_w_pose_law_state["last_d_pose"]),
+                            "w_pose_effective": float(_w_pose_now["v"]),
+                            "clamp": float(args.w_pose_marginal_clamp),
+                            "clamped": bool(_w_pose_now["v"] >= float(args.w_pose_marginal_clamp)),
+                            "note": "eq w_pose_marginal_weight_law_v1: w=min(clamp,5/sqrt(10*d_pose)); "
+                            "verdict-cadence piecewise-constant (never per-step)"}), flush=True)
+                else:
+                    _w_pose_now["v"] = float(args.w_pose)
                 if _pose_finish_on["on"] and not _pf_was_on:
                     _pose_gate["engaged_epoch"] = int(ep)
                     recent_losses.clear()  # treat as an AdamW->AdamW loss-form boundary (spike-guard re-treat)
@@ -12242,8 +12377,8 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                     # gated factor returns EXACTLY 1.0 => BIT-IDENTICAL.
                     if not muon_switched:
                         last_boundary_epoch = ep
-                    if _pose_gate_mode == "sigma_min_plateau":
-                        _engage_via = "sigma_min_plateau" if _cond_fired else "backstop_fail_safe"
+                    if _pose_gate_mode in _pose_gate_sigma_modes:
+                        _engage_via = _pose_gate_mode if _cond_fired else "backstop_fail_safe"
                     else:
                         _engage_via = "muon" if bool(_muon_gate.fired) else "backstop_fail_safe"
                     print(json.dumps({"stage": "pose_finish_engage", "epoch": ep,
@@ -12280,13 +12415,15 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 # (owed-1 DISENGAGED alarm, SYNTHESIS §A.4 Repair 4) at the FINAL epoch: if the conditioning
                 # gate was requested but pose never engaged, fire the LOUD pose-DISENGAGED alarm (shipped
                 # banked R1). Never silent.
-                if (_pose_gate_mode == "sigma_min_plateau" and ep >= int(args.epochs)
+                if (_pose_gate_mode in _pose_gate_sigma_modes and ep >= int(args.epochs)
                         and not _pose_finish_on["on"]):
                     from tac.witness_control import sigma_min_plateau as _smp  # noqa: PLC0415
                     _pg = _pose_gate.get("det")
                     print(json.dumps(_smp.disengaged_alarm_row(
                         ep,
-                        reason=("conditioning gate never fired (σ_min never plateaued)"
+                        reason=(("conditioning gate never fired (σ_min never plateaued)"
+                                 if _pose_gate_mode == "sigma_min_plateau"
+                                 else "conditioning gate never fired (σ_min never crested)")
                                 if _pose_gate["trusted"] else "gate untrusted (canary/setup) — disengaged"),
                         canary_passed=bool(_pose_gate["trusted"]),
                         n_points=(_pg.n_points if _pg is not None else 0))), flush=True)
@@ -14233,6 +14370,34 @@ def main(argv: list[str] | None = None) -> int:
                     "switch (--muon-start-event, the d_seg-converged coherent-render regime); this epoch "
                     "is the fail-safe BACKSTOP CAP (ep>=this also engages pose). 0 (default) => DISABLED "
                     "=> byte-identical (pose from ep0). Requires --w-pose > 0 (the finish-phase weight).")
+    # (SPEC_v10 §13.3; arm B) w_pose(t) DERIVED-WEIGHT LAW: the score's own pose marginal
+    # dS/dd_pose = 5/sqrt(10*d_pose(t)), clamped at the DERIVED seg-marginal crossover (100.0 =
+    # dS/dd_seg; crossover d_pose = 2.5e-4). Law module:
+    # tac.canonical_equations.w_pose_marginal_weight_law_20260717 (eq w_pose_marginal_weight_law_v1).
+    ap.add_argument(
+        "--w-pose-marginal-law",
+        action=argparse.BooleanOptionalAction, default=False,
+        help="(SPEC_v10 §13.3; arm B) replace the STATIC pose-finish weight --w-pose with the "
+        "score's own marginal w_pose(t)=5/sqrt(10*d_pose(t)) (eq w_pose_marginal_weight_law_v1), "
+        "clamped by --w-pose-marginal-clamp. Consumed ONLY in the pose-finish stage; updated at "
+        "VERDICT cadence when a measured d_pose lands (piecewise-constant, never per-step); falls "
+        "back to --w-pose until the first measured d_pose. Requires --pose-finish-start-epoch > 0 "
+        "(fail-loud otherwise: inert-flag NO-FAKE guard). Default OFF => byte-identical.")
+    ap.add_argument(
+        "--w-pose-marginal-clamp", type=float, default=100.0,
+        help="(SPEC_v10 §13.3) clamp on w_pose(t) as d_pose->0 (the marginal DIVERGES). DERIVED "
+        "default 100.0 = dS/dd_seg (the seg marginal): the pose weight never exceeds the score's "
+        "own seg exchange rate — the marginals cross at d_pose=2.5e-4 where 5/sqrt(10*d_c)=100. "
+        "See tac.canonical_equations.w_pose_marginal_weight_law_20260717.clamp_from_crossover.")
+    ap.add_argument(
+        "--pose-finish-eligible-on-beta-anneal-complete",
+        action=argparse.BooleanOptionalAction, default=False,
+        help="(SPEC_v10 §13.2 'coupling not coincidence'; arm B) EVENT COUPLING: pose-finish may not "
+        "engage (by ANY signal — muon / sigma_min gate / backstop) before the β/τ anneal SCHEDULE "
+        "completes (ep >= --anneal-epochs, fallback --epochs). Replaces the c2 anneal-epochs(1000) == "
+        "pose-finish-start(1000) two-constants coincidence with the event it encodes. Requires "
+        "--pose-finish-start-epoch > 0 (fail-loud otherwise: inert-flag NO-FAKE guard). Default OFF "
+        "=> byte-identical.")
     ap.add_argument(
         "--pose-training-compute-gate",
         action=argparse.BooleanOptionalAction,
@@ -14251,11 +14416,16 @@ def main(argv: list[str] | None = None) -> int:
     # (='muon'); registered in the DSL as PoseFinishConditioningGate. Requires --pose-finish-start-epoch>0
     # (the two-phase arm) + --jacobian-basin-telemetry ON (the σ_min source).
     ap.add_argument("--pose-finish-engage-on", type=str, default="muon",
-                    choices=["muon", "sigma_min_plateau"],
+                    choices=["muon", "sigma_min_plateau", "sigma_min_crest"],
                     help="owed-1 (SYNTHESIS §A.4): the pose-finish ENGAGE event. 'muon' (default, "
                     "byte-identical incumbent) co-fires with the muon switch; 'sigma_min_plateau' fires on "
                     "a rolling-slope plateau of the de-noised σ_min(J_ξ) conditioning series (ships banked "
-                    "R1 + LOUD disengaged alarm if it never fires — never blocks).")
+                    "R1 + LOUD disengaged alarm if it never fires — never blocks). 'sigma_min_crest' "
+                    "(SPEC_v10 §13.2 fire-on-crest) fires on the smoothed σ_min slope SIGN-CHANGE (the "
+                    "conditioning PEAK: a resolved rising phase then non-rising for hysteresis windows) — "
+                    "same sensor/de-noise/guard machinery, same banked-R1 fallback contract; live c2 "
+                    "anchor: σ_min still climbing +15%%/ep at ep798 so plateau waits while crest arms at "
+                    "the peak.")
     ap.add_argument("--score-domain-loss", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--pose-eps", type=float, default=1e-2)
     # (#146 AMBER deep-unroll stability, tac.witness_stability) bound the score-domain pose gradient
@@ -15322,12 +15492,17 @@ def main(argv: list[str] | None = None) -> int:
                     "partition + tie field to advect); the engage epoch re-treats the spike-guard. "
                     "With --seg-phase-advect-start-event set this becomes the fail-safe BACKSTOP CAP.")
     ap.add_argument("--seg-phase-advect-start-event", type=str, default=None,
-                    choices=["label_floor"],
+                    choices=["label_floor", "ncde_dseg"],
                     help="#507 skeleton-dissolve 2026-07-15: fire the T1 phase-advection engagement on "
                     "the label_floor sensor (tac.witness_control.label_floor_detector — the law-5 "
                     "floor->phase-tail hand-off: label-smooth stage AND d_seg within the persistence-"
                     "floor band [0.00496,0.00700] AND flat; eq label_floor_to_phase_tail_handoff_v1). "
-                    "The sensor READS the trainer's own verdict d_seg stream (no recompute); "
+                    "'ncde_dseg' (SPEC_v10 §13.2 per-force event entry; arm B) fires on the #344 "
+                    "linear-NCDE d_seg hit->solve instead: BASIN (predicted remaining within-stage "
+                    "descent spent) OR HANDOFF (d_seg slope-flatten predicted within the horizon) — "
+                    "tac.witness_control.event_wirings.ncde_dseg_event over the SAME trainer verdict "
+                    "stream (NO-FAKE guarded: unstable/low-r2 fits never fire). "
+                    "Both sensors READ the trainer's own verdict d_seg stream (no recompute); "
                     "--seg-phase-advect-start-epoch becomes the fail-safe backstop cap (LOUD "
                     "cap_fired_before_event when it fires). Default None = OFF = byte-identical "
                     "fixed-epoch gate.")
@@ -15344,12 +15519,18 @@ def main(argv: list[str] | None = None) -> int:
                     "train-time regularizer target, gap approximation tolerated). 'offline_homography' "
                     "= SPECIFIED but not built (owed next increment; fail-loud).")
     ap.add_argument("--seg-phase-advect-ref", type=str, default="gt_advected",
-                    choices=["gt_advected", "witness_cached"],
+                    choices=["gt_advected", "gt_advected_with_own_tie_fallback", "witness_cached"],
                     help="T1 reference mode. 'gt_advected' (DEFAULT, READY) = the ξ-advected GT tie of "
                     "the previous scored pair (θ-independent target; fits the incumbent batching with "
-                    "zero change). 'witness_cached' = the fully-differentiable witness-self-consistency "
-                    "mode (memo formula t_wit(p) vs advected t_wit(p-1)); SPECIFIED but OWED (needs a "
-                    "per-pair stop-grad tie cache OR sequential-pair batching; fail-loud).")
+                    "zero change). 'gt_advected_with_own_tie_fallback' = the EVENT-FALLBACK phase "
+                    "supervision force (SPEC_v10 §13.1 row 1; FEED-lane-gain §4b): t_ref := "
+                    "where(ref_active, advected_prev_tie, own_gt_tie); weight := ann ∧ ground ∧ "
+                    "(ref_active ∨ own_active). Advect-where-persistent, target-where-born — covers the "
+                    "MEASURED 26.3%% birth/fast-moved straddle coverage gap the transport-only T1 leaves "
+                    "phase-unsupervised (birth-SILENT). STATELESS (no per-island persistence hold — the "
+                    "memo anti-scope). 'witness_cached' = the fully-differentiable witness-self-"
+                    "consistency mode (memo formula t_wit(p) vs advected t_wit(p-1)); SPECIFIED but OWED "
+                    "(needs a per-pair stop-grad tie cache OR sequential-pair batching; fail-loud).")
     # P0 FORCE 2 (margin-band satisficing; task #360; DSL MarginBandSatisficing). One-sided hinge
     # L_sat = w_s * mean_annulus relu(m_safe - m_wit), m_wit = the witness GT-class signed margin
     # (_signed, #141). Frees the interior gradient budget onto the fragile band BY CONSTRUCTION.

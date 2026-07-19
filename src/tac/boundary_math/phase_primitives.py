@@ -267,3 +267,58 @@ def phase_advection_weighted_mse_mlx(t_wit: Any, t_ref: Any, weight: Any, eps: f
 
     sq = mx.square(t_wit - t_ref) * weight
     return mx.sum(sq) / (mx.sum(weight) + eps)
+
+
+# --------------------------------------------------------------------------- #
+# 4. the EVENT-FALLBACK target composer (FEED-lane-gain §4b; SPEC_v10 §13.1)   #
+# --------------------------------------------------------------------------- #
+def event_fallback_ref_and_weight_numpy(
+    t_own: np.ndarray, own_active: np.ndarray,
+    ref_advected: np.ndarray, ref_active: np.ndarray,
+    annulus: np.ndarray, ground: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, int, int]:
+    """The event-fallback phase target/weight — "advect-where-persistent, target-where-born".
+
+    The MEASURED gap this closes (FEED-lane-gain §4b, n600 T1 audit): T1's incumbent weight
+    ``ann ∧ ground ∧ ref_active`` is birth-SILENT — 26.3% of candidate straddle pixels
+    (601/frame; 354 lane-adjacent) receive NO T1 supervision because a birth/fast-moved site
+    has no advected reference. This composer implements the memo's exact amendment::
+
+        t_ref  := where(ref_active, advected_prev_tie, own_gt_tie)
+        weight := ann ∧ ground ∧ (ref_active ∨ own_active)
+
+    as a FALLBACK, NOT as gating advection off: wherever a valid ξ-advected reference
+    exists it is kept verbatim (the transport channel is untouched); ONLY the uncovered
+    own-tie-active sites (births + fast-moved structure) gain supervision, toward pair p's
+    OWN GT tie. STATELESS by construction — there is NO per-island persistence hold and no
+    cross-epoch memory (the memo's anti-scope: a persistence hold would fight GT's genuine
+    deaths; the fallback target is θ-independent and per-pair-local exactly like T1's).
+
+    Args (all (H,W)): ``t_own`` f32 own GT tie (−1 sentinel), ``own_active`` bool own-tie
+    active mask, ``ref_advected`` f32 warped previous-pair tie VALUE (defined where
+    ``ref_active``), ``ref_active`` bool valid-warped-reference mask, ``annulus`` bool,
+    ``ground`` bool. For pair 0 pass ``ref_active`` all-False (no previous scored frame):
+    the fallback then supervises pair 0's own-tie sites (the incumbent mode leaves pair 0
+    a no-op).
+
+    Returns ``(t_ref, weight, n_advected, n_fallback)``: ``t_ref`` (H,W) f32 with −1
+    sentinel outside the weight support; ``weight`` (H,W) f32 in {0,1};
+    ``n_advected``/``n_fallback`` the supervised-pixel counts per channel (telemetry —
+    the fallback share is the memo's 26.3% coverage gap, now covered).
+    """
+    to, _ = _as_hw(t_own)
+    ao, _ = _as_hw(own_active)
+    rv, _ = _as_hw(ref_advected)
+    ra, _ = _as_hw(ref_active)
+    ann, _ = _as_hw(annulus)
+    gnd, _ = _as_hw(ground)
+    ao = ao.astype(bool)
+    ra = ra.astype(bool)
+    base = ann.astype(bool) & gnd.astype(bool)
+    adv = base & ra                       # transport channel (incumbent, verbatim)
+    fb = base & ao & ~ra                  # event-fallback channel (births/fast-moved only)
+    t_ref = np.full(to.shape, -1.0, np.float32)
+    t_ref[adv] = rv.astype(np.float32)[adv]
+    t_ref[fb] = to.astype(np.float32)[fb]
+    weight = (adv | fb).astype(np.float32)
+    return t_ref, weight, int(adv.sum()), int(fb.sum())

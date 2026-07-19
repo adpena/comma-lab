@@ -193,7 +193,19 @@ def run_probe(
             report["dense_latest"] = wf[-1].ncde.to_dict()
 
     # verdict: the SCORE-relevant d_seg hit->solve (the #341 basin consumer).
-    if verdict is not None:
+    # (arm B 2026-07-17, SPEC_v10 §13.2 observer fix) verdict_latest_advisory is ALWAYS emitted:
+    # previously a sparse verdict stream (< 8 rows — MEASURED on the live c2 run: 6 rows at 25-ep
+    # cadence => verdict_points=0) or a degenerate latest window silently OMITTED the key, so the
+    # shadow controller stored ncde_344=None and the costate digest printed the diagnostic-free
+    # "#344 fire=False reason=unavailable". Structured unavailability replaces silence.
+    if verdict is None:
+        n_v = sum(1 for r in rows if r.get("stage") == "verdict")
+        report["verdict_latest_advisory"] = {
+            "available": False, "fire": False,
+            "reason": (f"insufficient verdict rows for the NCDE path: {n_v} usable 'verdict' "
+                       "rows < 8 (sparse verdict cadence) — wait for more verdict rows"),
+        }
+    else:
         vwin = min(window, verdict.n)
         if verdict.n >= max(8, vwin):
             vwf = fit_sliding_windows(
@@ -208,6 +220,25 @@ def run_probe(
                 report["verdict_latest_advisory"] = vwf[-1].verdict.to_row(
                     vwf[-1].end_epoch, stage="verdict_d_seg"
                 )
+                report["verdict_latest_advisory"]["available"] = True
+            elif vwf:
+                report["verdict_latest_advisory"] = {
+                    "available": False, "fire": False,
+                    "reason": ("latest verdict window carries no hit->solve verdict "
+                               "(detector raised on the fitted NCDE) — instrument-degenerate"),
+                }
+            else:
+                report["verdict_latest_advisory"] = {
+                    "available": False, "fire": False,
+                    "reason": ("no verdict window admitted a non-degenerate NCDE fit "
+                               f"({verdict.n} points, window {vwin}) — instrument-degenerate"),
+                }
+        else:
+            report["verdict_latest_advisory"] = {
+                "available": False, "fire": False,
+                "reason": (f"verdict path too short for a window fit: {verdict.n} < "
+                           f"max(8, {vwin})"),
+            }
 
     report["n_advisories"] = len(advisories)
     report["n_fires"] = sum(1 for a in advisories if a.get("fire"))

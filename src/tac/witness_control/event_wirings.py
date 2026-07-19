@@ -44,6 +44,7 @@ __all__ = [
     "SENSOR_LANE_NUCLEUS",
     "SENSOR_ANNULUS_PLATEAU",
     "SENSOR_LABEL_FLOOR",
+    "SENSOR_NCDE_DSEG",
     "RECOGNISED_START_EVENT_SENSORS",
     "ANNULUS_PLATEAU_REL_EPS",
     "ANNULUS_PLATEAU_DWELL_WINDOWS",
@@ -57,6 +58,7 @@ __all__ = [
     "lane_nucleus_event",
     "annulus_plateau_event",
     "label_floor_event",
+    "ncde_dseg_event",
     "lane_would_fire_row",
 ]
 
@@ -74,8 +76,10 @@ SENSOR_ANNULUS_PLATEAU = "annulus_plateau"  # seg-chroma <- annulus_frac plateau
 # label_floor_detector.label_floor_reached over the trainer's OWN verdict rows (poison-law: the
 # sensor READS the stream the trainer already computed — no recompute).
 SENSOR_LABEL_FLOOR = "label_floor"          # seg-phase-advect <- label-smooth persistence floor reached
+SENSOR_NCDE_DSEG = "ncde_dseg"              # per-force event entry <- #344 NCDE d_seg slope-flatten/basin (SPEC_v10 §13.2)
 RECOGNISED_START_EVENT_SENSORS: frozenset[str] = frozenset({
     SENSOR_POWERLAW_MEAT, SENSOR_LANE_NUCLEUS, SENSOR_ANNULUS_PLATEAU, SENSOR_LABEL_FLOOR,
+    SENSOR_NCDE_DSEG,
 })
 
 # ── annulus-plateau detector params (req-T value-provenance: TAGGED, not bare). Anchor: #333
@@ -483,3 +487,88 @@ def label_floor_event(verdict_rows) -> dict:
         "n_stage": sig.n_stage,
         "reason": sig.reason,
     }
+
+
+def ncde_dseg_event(verdict_rows, *, window: int = 12) -> dict:
+    """Per-force event-entry sensor: the #344 linear-NCDE d_seg hit->solve (SPEC_v10 §13.2).
+
+    ``verdict_rows`` = the trainer's OWN verdict-stream rows ``{"epoch": int, "d_seg": float, ...}``
+    (poison-law: sensors READ trainer streams, never recompute). Builds the 1-state
+    ``[log d_seg]`` path (control m=0 — the sensor runs INSIDE the trainer where the schedule is
+    the trainer's own; no exogenous driver needed for the slope-flatten/basin verdict), fits the
+    #344 LinearNCDE on the trailing ``window`` rows, and evaluates ``detect_hit_solve``:
+
+      * BASIN fire  = predicted remaining within-stage descent spent (first-order descent done);
+      * HANDOFF fire = the #315 plateau-slope predicted within the horizon (d_seg slope-flatten).
+
+    Either fire ⇒ ``fired=True`` (the force's event entry). NO-FAKE guarded: an unstable / low-r2
+    fit NEVER fires (instrument-invalid). Fail-safe: < max(8, minimum-fit) rows or a degenerate fit
+    ⇒ ``fired=False`` with the measured reason (the fixed-epoch backstop cap owns the fail-safe
+    path, exactly like ``label_floor_event``). Returns a JSON-ready dict with ``fired``.
+    """
+    import math as _math
+
+    import numpy as _np
+
+    from tac.witness_control.ncde_trajectory import (
+        HitSolveConfig,
+        LinearNCDE,
+        TelemetryPath,
+        detect_hit_solve,
+    )
+
+    rows = [r for r in list(verdict_rows or [])
+            if isinstance(r, dict) and r.get("epoch") is not None and r.get("d_seg") is not None]
+    seen: set[int] = set()
+    eps: list[float] = []
+    st: list[list[float]] = []
+    for r in rows:
+        ep = int(r["epoch"])
+        ds = float(r["d_seg"])
+        if ep in seen or ds <= 0.0 or not _math.isfinite(ds):
+            continue
+        seen.add(ep)
+        eps.append(float(ep))
+        # LINEAR d_seg state (not log): exponential approach x(t) -> x_inf obeys the EXACTLY-linear
+        # ODE dx/dt = a*(x - x_inf) = a*x + c, so the linear-NCDE chart is MATCHED in linear space
+        # (a log chart makes the same dynamics nonlinear and the r2 guard refuses the fit).
+        st.append([ds])
+    order = _np.argsort(eps)
+    n = len(eps)
+    base = {"sensor": SENSOR_NCDE_DSEG, "n_rows": n, "window": int(window)}
+    if n < 8:
+        return {**base, "fired": False, "fire": False,
+                "reason": f"insufficient verdict rows: {n} < 8 (verdict cadence sparse) — backstop owns"}
+    lo = max(0, n - int(window))
+    _e = _np.array(eps)[order][lo:]
+    _x = _np.array(st)[order][lo:]
+    # LEVEL-NORMALIZE the window (x / mean(x)): the linear ODE is scale-invariant, but the fit's
+    # ridge (calibrated for O(1) states) crushes an O(1e-3) d_seg coefficient -> r2~0 false
+    # NO-FIRE (measured on a clean saturating series). Normalization keeps the dynamics linear,
+    # makes remaining_descent_frac/eta scale-free, and restores a resolvable fit.
+    _lvl = float(_np.mean(_x)) or 1.0
+    path = TelemetryPath(
+        epochs=_e, state=_x / _lvl, control=_np.zeros((n - lo, 0)),
+        state_names=("d_seg_over_window_mean",), control_names=())
+    # CADENCE-SCALE the #315 hand-off criterion: HitSolveConfig.plateau_slope_eps (1e-4) is a
+    # PER-EPOCH rel-slope; the NCDE predicts in dt-sized steps (dt = the verdict cadence, ~25 ep
+    # here), so the per-STEP threshold is eps_per_epoch * dt (and the horizon must admit >= 4
+    # prediction steps). DERIVED unit conversion, not a new constant.
+    _cad = float(_np.median(_np.diff(_e))) if n - lo >= 2 else 1.0
+    _cad = _cad if _cad > 0 else 1.0
+    _cfg = HitSolveConfig(target_state="d_seg_over_window_mean",
+                          plateau_slope_eps=1e-4 * _cad,
+                          handoff_horizon_epochs=max(50.0, 4.0 * _cad))
+    try:
+        ncde = LinearNCDE.fit(path)
+        verdict = detect_hit_solve(ncde, path.state[-1], _np.zeros(0), _cfg)
+    except (ValueError, _np.linalg.LinAlgError) as exc:
+        return {**base, "fired": False, "fire": False,
+                "reason": f"fit degenerate ({type(exc).__name__}: {exc}) — backstop owns"}
+    return {**base, "fired": bool(verdict.fire), "fire": bool(verdict.fire),
+            "reason": verdict.reason, "fit_r2": verdict.fit_r2, "stable": verdict.stable,
+            "remaining_descent_frac": verdict.remaining_descent_frac,
+            "eta_handoff_epochs": verdict.eta_handoff_epochs,
+            "window_mean_d_seg": _lvl,
+            "predicted_asymptote_d_seg": (float(verdict.predicted_asymptote) * _lvl
+                                          if verdict.predicted_asymptote is not None else None)}
