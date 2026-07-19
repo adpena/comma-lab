@@ -226,6 +226,10 @@ eval_image = (
         "experiments/contest_auth_eval.py",
         remote_path=str(REMOTE_REPO / "experiments/contest_auth_eval.py"),
     )
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver adapter entrypoint; all imports live in the tac package mounted via add_local_python_source
+        "tools/measure_v10_two_plane_receiver_timing.py",
+        remote_path=str(REMOTE_REPO / "tools/measure_v10_two_plane_receiver_timing.py"),
+    )
     .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
     .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
     # REGRESSION FIX 2026-06-09 (pr110pp_r1): commit 826cc63ab set
