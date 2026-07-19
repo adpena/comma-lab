@@ -694,7 +694,7 @@ def section_deferral_ledger() -> tuple[str | None, dict | None]:
 # legacy row into one phantom "?" class (unresolvable, since a None fid never resolves) AND
 # hides genuinely-open legacy items behind that phantom. These helpers make the reader read
 # the real state without mutating any historical row (append-only provenance preserved).
-_LEDGER_CLASS_KEYS = ("failure_id", "failure_class", "class", "bug_class")
+_LEDGER_CLASS_KEYS = ("failure_id", "failure_class", "class", "bug_class", "class_id")
 _LEDGER_RESOLVED_EVENTS = {"resolution", "resolved", "self_protected"}
 _LEDGER_RESOLVED_STATUS = {"resolved", "closed", "fixed"}
 
