@@ -63,11 +63,29 @@ import numpy as np
 
 # IPM / camera constants (scorer resolution 512x384; src/tac/camera.py CONFIRMED).
 # Small-angle flat-ground IPM (FEED-dj): forward = H*fy/(v - v_h); lateral = -(u-cx)*forward/fx.
-_FX = 400.3
-_FY = 399.5
-_CX = 256.0
-_CAM_H = 1.2          # camera height (m)
-_V_HORIZON = 174.0    # VANISHING_POINT y (scorer rows); 188 is the IPM-optimal sweep value (FEED-dj)
+#
+# (#328 clip_profile Phase-2, measured-no-regression) the SCORER intrinsics _FX/_FY/_CX are
+# sourced from the canonical MEASURED SoT tac.clip_profile (cache: .omx/state/clip_profiles/
+# <sha>.json). value-provenance: MEASURED-ANCHOR (profile cache) > HARDCODED-fallback. On 0.mkv
+# the auto-measured scorer intrinsics AGREE bit-exactly with the historical literals (asserted in
+# test_clip_profile_rewire_lane_sdf), so this is BYTE-IDENTICAL to the trainer byte path; the
+# fallback literals keep the module standalone-importable when the profile cache is absent.
+# DELIBERATELY NOT sourced: _CAM_H (1.2, lane-IPM value) and _V_HORIZON (174, swept-optimal #327)
+# DISAGREE with the profile (1.22 / 175 median) — the two routed-to-reconciliation discrepancy
+# findings (FEED-clipprofile2), NOT stale bugs; switching them would change the IPM geometry.
+try:
+    from tac.clip_profile import for_video as _cp_for_video
+
+    _CP = _cp_for_video("upstream/videos/0.mkv")
+    _FX = float(_CP.camera.fx_scorer)
+    _FY = float(_CP.camera.fy_scorer)
+    _CX = float(_CP.camera.cx_scorer)
+except Exception:  # standalone fallback (clip_profile cache absent) — documented literals
+    _FX = 400.3
+    _FY = 399.5
+    _CX = 256.0
+_CAM_H = 1.2          # camera height (m) — NOT profile-sourced (1.2-vs-1.22 reconciliation pending)
+_V_HORIZON = 174.0    # VANISHING_POINT y (scorer rows); 174 is the n600-swept optimum (#327), NOT the profile median 175
 _SEG_H = 384
 _SEG_W = 512
 

@@ -714,17 +714,34 @@ def ladder_birth_complete_row(
 
 
 def lever_engage_row(
-    lever: str, *, status: str, epoch: int, via: str
+    lever: str, *, status: str, epoch: int, via: str,
+    extra: "Mapping[str, Any] | None" = None,
 ) -> dict[str, Any]:
+    """Canonical ``lever_engage`` telemetry row (single schema source).
+
+    ``extra`` (#408/#404 schema-unification) folds per-lever diagnostic fields (e.g. the
+    additive-margin ``engaged`` / ``inert`` / config values) into the SAME canonical row so
+    no emitter hand-rolls a divergent ``{"stage": "lever_engage", ...}`` literal. The canonical
+    keys (stage/lever/status/epoch/via) are AUTHORITATIVE and cannot be overridden by ``extra``
+    (a reserved-key collision raises), so the base schema is stable while extras are additive.
+    """
     if status not in {"armed", "fired", "complete"}:
         raise ValueError(f"invalid lever engagement status {status!r}")
-    return {
+    row: dict[str, Any] = {
         "stage": "lever_engage",
         "lever": str(lever),
         "status": status,
         "epoch": int(epoch),
         "via": str(via),
     }
+    if extra:
+        _reserved = set(row)
+        for k, v in extra.items():
+            if k in _reserved:
+                raise ValueError(
+                    f"lever_engage_row: extra key {k!r} collides with a reserved canonical field")
+            row[k] = v
+    return row
 
 
 __all__ = [
