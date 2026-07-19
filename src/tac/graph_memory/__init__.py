@@ -24,6 +24,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from .build import REPO_ROOT, build_graph, corpus_mtime
+from .manifest import (
+    CompletenessWarning,
+    SourceManifest,
+    SourceSnapshot,
+    build_source_manifest,
+    check_completeness,
+    load_latest_manifest,
+    manifest_path,
+    publish_and_check,
+)
 from .model import Edge, Graph, Node
 from .obsidian_export import export_obsidian
 from .query_tools import (
@@ -47,6 +57,7 @@ from .recall import (
 )
 
 __all__ = [
+    "CompletenessWarning",
     "Edge",
     "Graph",
     "LensedReconstruction",
@@ -54,9 +65,16 @@ __all__ = [
     "QueryHit",
     "QueryResult",
     "Reconstruction",
+    "SourceManifest",
+    "SourceSnapshot",
     "build_graph",
+    "build_source_manifest",
     "cache_paths",
+    "check_completeness",
     "export_obsidian",
+    "load_latest_manifest",
+    "manifest_path",
+    "publish_and_check",
     "format_human",
     "format_human_lensed",
     "load_or_build",
@@ -118,6 +136,14 @@ def load_or_build(*, rebuild: bool = False) -> Graph:
         graph.save(nodes_path, edges_path)
     except OSError:
         pass  # cache is best-effort; the in-memory graph is still usable
+    # P0-1 (#569): publish the source manifest alongside the cache and run the
+    # warn-only completeness check vs the previous manifest, so a silent
+    # required-source collapse (the 07-19 worktree bug) becomes a loud stderr
+    # diff. Best-effort: never let manifest bookkeeping break recall.
+    try:
+        publish_and_check(graph)
+    except Exception:
+        pass
     return graph
 
 
