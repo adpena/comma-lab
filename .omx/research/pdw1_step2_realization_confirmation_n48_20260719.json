@@ -1,0 +1,519 @@
+{
+ "authority": {
+  "axis": "[macOS-CPU advisory]",
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "promotion_eligible": false,
+  "research_only": true,
+  "score_claim": false
+ },
+ "base_n24_receipt": {
+  "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/pdw1_dB_attack_step2_20260719T192712Z/.omx/research/pdw1_step2_realization_receipt_20260719.json",
+  "sha256": "0ea81f25f0a0f2771c8ba183318af150a3b1e689e9da9a86f9b17f9a8fb15114"
+ },
+ "command": "TAC_UPSTREAM_DIR=/Users/adpena/Projects/pact/upstream PYTHONPATH=src /Users/adpena/Projects/pact/.venv/bin/python programmatic build_step2_preimage_attack(pair_count=48)",
+ "determinism": {
+  "rng_used": false,
+  "torch_threads": 1
+ },
+ "driver": {
+  "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/pdw1_dB_attack_step2_20260719T192712Z/experiments/pdw1_fp32_realization_first_inbox_point.py",
+  "sha256": "dab429db4f96861cf8a5fc38098801be5807123c0130aa694abbe0a5c757fcd0"
+ },
+ "git_head": "5549ad06569462ad58e75109ba9c07fbf14507a4",
+ "phase_c2_larger_subset_confirmation": {
+  "attack_d_B": 0.008124139573838975,
+  "base_hard_oracle_flip_px": 76669,
+  "baseline_d_B": 0.008124139573838975,
+  "byte_custody": {
+   "archive_total_not_claimed": true,
+   "pdw1p_base_section_bytes_n600_projected": 497079,
+   "pdw1p_base_section_bytes_n_subset": 39782,
+   "pdw1p_base_sha256": "f00d0081e5c44b586e7e96c2c3d10caa055d9386ac97ba606b60ad53fec7a2a7",
+   "pdw1p_parseback_identical": true,
+   "receiver_order": "expand integer plane -> realize factor2 -> apply strict PDW1FX1 sparse patch",
+   "selected_patch_parseback_identical": true,
+   "selected_patch_section_bytes_n_subset": 0,
+   "selected_patch_sha256": null,
+   "selected_total_sections_bytes_n600_projected": 497079,
+   "source_reference_needed_at_receiver": false
+  },
+  "carrier_basis": {
+   "diagnostic_patch_basis": "sparse camera-value records",
+   "reason": "the patch measures realization and rate only; any promoted residual/carrier must use the registered curvelet/shearlet basis and close Pose",
+   "status": "NOT_ADMITTED"
+  },
+  "classification": "NAMED_EV_RANKED_HARD_ORACLE_RESIDUAL_AFTER_RATE_WATERLINE",
+  "d_A": 0.0,
+  "d_A_contract_labels_vs_lstar_mismatch_px": 0,
+  "delta_d_B": 0.0,
+  "ev_ranker": {
+   "canonical_flip_frontier": {
+    "cheap": 55212,
+    "costed": 15359,
+    "free": 0,
+    "unreachable": 6098
+   },
+   "eligible_resize_edge_band_cells": 70571,
+   "equations": [
+    "realization_necessity_preimage_per_stratum_v1",
+    "resize_exploit_flip_fix_frontier_v1",
+    "segnet_head_rank4_linear_flipdist_v1",
+    "frozen_scorer_fisher_curvature_margin_colocation_v1",
+    "fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
+    "flip_margin_step_law_v1",
+    "witness_measured_reverse_waterfill_v1",
+    "meta_lagrangian_dual_solver_per_axis_kkt_residual_v1"
+   ],
+   "excluded_interior_cells": 6098,
+   "fisher_trace_max": 0.4999999999936051,
+   "fisher_trace_min": 0.0006440288650923566,
+   "policy": "refuse annulus_dist>8 (#149); rank remaining flips by exact margin/(rank4_pair_norm*local_resize_footprint_l2), stable cheapest-first",
+   "resize_camera_cost_quantiles": {
+    "0.0": 3.275456141011838e-06,
+    "0.1": 0.018801669354813828,
+    "0.5": 0.11776900128918087,
+    "0.9": 1.0346377913286195,
+    "1.0": 5.20048507849359
+   }
+  },
+  "gate": {
+   "hard_oracle_d_seg_in_box": false,
+   "max_d_seg": 0.000339,
+   "max_total_bytes": 264320,
+   "selected_sections_n600_projected_in_box": false,
+   "subset_section_gate_pass": false,
+   "success": false,
+   "success_blockers": [
+    "no exact n600 archive total",
+    "PDW2 spatial receiver absent",
+    "Pose delta unmeasured",
+    "contest CPU/CUDA authority absent"
+   ]
+  },
+  "hard_oracle_residual_px": 76669,
+  "inner_jacobian_secant": {
+   "admissible_integer_repair_cells": 21838,
+   "full_reference_probe_cells": 70571,
+   "full_reference_probe_hard_accept_cells": 21884,
+   "outer_qp_status": "EXACT_BLOCK_DIAGONAL_DISJOINT_SUPPORTS; joint hard-oracle replay retains inner-network collateral authority",
+   "outer_support_overlap": 0,
+   "quantization_dead_cells": 46,
+   "safety_fraction": 0.125
+  },
+  "label": "MEASURED_STEP2_EV_RANKED_SECANT_INTEGER_REPAIR",
+  "n_pairs": 48,
+  "pdw2_consumability": {
+   "blocker": "PDW2 receipt explicitly says spatial_receiver_present=false; counting its 133-byte head packet as the spatial base would be a rate fake",
+   "gauge_receipt": "/Users/adpena/Projects/pact/.omx/research/pdw2_gauge_packet_probe_20260719_receipt.json",
+   "gauge_receipt_sha256": "eac796b86ee5081a6d5fb97441966c0d621a60b8dae193c35dfda603df12c5ad",
+   "margin_packet_brotli_bytes": 133,
+   "pdw2_packet_used_as_rate_base": false,
+   "repair_stage_codec_neutral_post_realization": true,
+   "spatial_receiver_present": false
+  },
+  "peak_rss_bytes": 6128975872,
+  "per_pair": [
+   {
+    "attack_hard_oracle_mismatch_px": 3631,
+    "attacked_frame_sha256": "b063d8c60d00756e571c49c46e7d9be92653bc6b25ec92c11bd1c3f865f368cb",
+    "baseline_hard_oracle_mismatch_px": 3631,
+    "net_fixed_px": 0,
+    "pair": 0
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1340,
+    "attacked_frame_sha256": "584c06a6956233e7187660c7b2f0781ad2b8f7ebbdd35a86881008d56fb264c3",
+    "baseline_hard_oracle_mismatch_px": 1340,
+    "net_fixed_px": 0,
+    "pair": 1
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 2399,
+    "attacked_frame_sha256": "c6e1d1370461507a1ab85f963ff1ed6d0af4295abc4005ba7291f48ffa04747f",
+    "baseline_hard_oracle_mismatch_px": 2399,
+    "net_fixed_px": 0,
+    "pair": 2
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1952,
+    "attacked_frame_sha256": "abd3f5b4d545ae05b57c700fb73ef99010609b22589e494581aa1b0490926637",
+    "baseline_hard_oracle_mismatch_px": 1952,
+    "net_fixed_px": 0,
+    "pair": 3
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1384,
+    "attacked_frame_sha256": "11fe5de7ed9ecd7a84d26617ad7427757a6f548e8caa958e30cc35682e5a3616",
+    "baseline_hard_oracle_mismatch_px": 1384,
+    "net_fixed_px": 0,
+    "pair": 4
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1248,
+    "attacked_frame_sha256": "21f9f3e21f70bfde3177a984dcbc11ffb468f3440a194d3bd575ca1d0709f050",
+    "baseline_hard_oracle_mismatch_px": 1248,
+    "net_fixed_px": 0,
+    "pair": 5
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1266,
+    "attacked_frame_sha256": "28801b5dbd428e58cace3759bf842536ecd3902450ca2df541c298856037cbc2",
+    "baseline_hard_oracle_mismatch_px": 1266,
+    "net_fixed_px": 0,
+    "pair": 6
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1736,
+    "attacked_frame_sha256": "a2ff6ccb92ebb54e8cf46b1e49c87f05aaf09dd82bd80122d80293d7b623925b",
+    "baseline_hard_oracle_mismatch_px": 1736,
+    "net_fixed_px": 0,
+    "pair": 7
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 3989,
+    "attacked_frame_sha256": "f7f9473d6cf8da52052abb00e623dc881625ea2d85c6d939e2e5bfd77fe25221",
+    "baseline_hard_oracle_mismatch_px": 3989,
+    "net_fixed_px": 0,
+    "pair": 8
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1232,
+    "attacked_frame_sha256": "acbcfbbda7a90e1778efbd2e1197a25e7c72306d2a327c86f0aef499b9507a66",
+    "baseline_hard_oracle_mismatch_px": 1232,
+    "net_fixed_px": 0,
+    "pair": 9
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1155,
+    "attacked_frame_sha256": "032390cff7c794c0e208cf8065db3509afe793273911433305525176df762fea",
+    "baseline_hard_oracle_mismatch_px": 1155,
+    "net_fixed_px": 0,
+    "pair": 10
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1102,
+    "attacked_frame_sha256": "e5375c28a1a8a7dc522f06d3cec13fc5dc5a57afbda8df42210934e610fd8848",
+    "baseline_hard_oracle_mismatch_px": 1102,
+    "net_fixed_px": 0,
+    "pair": 11
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1284,
+    "attacked_frame_sha256": "dfa4a23eb1e7a29c7ecf5b1ef7da5b8f0059fa3daf64e82c671b4e5b39c9ebdd",
+    "baseline_hard_oracle_mismatch_px": 1284,
+    "net_fixed_px": 0,
+    "pair": 12
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1363,
+    "attacked_frame_sha256": "02cd654838e70b9f571fe4e4e651d14d1484191f069a7b283e9a70053151dec9",
+    "baseline_hard_oracle_mismatch_px": 1363,
+    "net_fixed_px": 0,
+    "pair": 13
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1166,
+    "attacked_frame_sha256": "24907a5d5fe13fb76494facb247382570dcb1fe4dbeb99e14ffa7b2204e2ea3f",
+    "baseline_hard_oracle_mismatch_px": 1166,
+    "net_fixed_px": 0,
+    "pair": 14
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1123,
+    "attacked_frame_sha256": "f0cf9d4ac9dd01083dce510c0b4d8d33caba305ce632c3dc1aac65d3b66c41e9",
+    "baseline_hard_oracle_mismatch_px": 1123,
+    "net_fixed_px": 0,
+    "pair": 15
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1741,
+    "attacked_frame_sha256": "18c8d216d8591b481d37ce32b947ebd7b7f42534ffe662f17d8407b1ca1ec0c2",
+    "baseline_hard_oracle_mismatch_px": 1741,
+    "net_fixed_px": 0,
+    "pair": 16
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1458,
+    "attacked_frame_sha256": "17d6ca01966e985be247fec1beee9fc4f30679e4a0a3c53fab3c4a71ece435df",
+    "baseline_hard_oracle_mismatch_px": 1458,
+    "net_fixed_px": 0,
+    "pair": 17
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1185,
+    "attacked_frame_sha256": "ab64b808ec320a91bdccfaeae181907de5ae2504571388753b24b09c88f708cd",
+    "baseline_hard_oracle_mismatch_px": 1185,
+    "net_fixed_px": 0,
+    "pair": 18
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1100,
+    "attacked_frame_sha256": "0e8209c096b75115ee455e95793e8342c09a754ed02d9e4ba824b1a4b4330195",
+    "baseline_hard_oracle_mismatch_px": 1100,
+    "net_fixed_px": 0,
+    "pair": 19
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1427,
+    "attacked_frame_sha256": "c1144508f529224d1c5d483e8f8479e41b6eb617d9c904c294006a30cb5b796c",
+    "baseline_hard_oracle_mismatch_px": 1427,
+    "net_fixed_px": 0,
+    "pair": 20
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1495,
+    "attacked_frame_sha256": "083a2cd1e32289337fc868460ea21e466ca76e23e73c592ac891558d405b130e",
+    "baseline_hard_oracle_mismatch_px": 1495,
+    "net_fixed_px": 0,
+    "pair": 21
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1220,
+    "attacked_frame_sha256": "fa16534699e3aef8c21d977bcbc4a7cc3060914e4fbad7b64f19af2c9af028e4",
+    "baseline_hard_oracle_mismatch_px": 1220,
+    "net_fixed_px": 0,
+    "pair": 22
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1081,
+    "attacked_frame_sha256": "ee21834c8fab7ac8941bd11278f46e45e851b7691539cb6741167ba6d926c39e",
+    "baseline_hard_oracle_mismatch_px": 1081,
+    "net_fixed_px": 0,
+    "pair": 23
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1171,
+    "attacked_frame_sha256": "9a4486cb0eb7921cdd4fa2e11db9891dea4fd8d24f97091ad332746d006f13f5",
+    "baseline_hard_oracle_mismatch_px": 1171,
+    "net_fixed_px": 0,
+    "pair": 24
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1580,
+    "attacked_frame_sha256": "c747ccfdfc44e9b07cdabe8d099882ecf1ebb7dc8660f712a846ef3587d3ff2a",
+    "baseline_hard_oracle_mismatch_px": 1580,
+    "net_fixed_px": 0,
+    "pair": 25
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1585,
+    "attacked_frame_sha256": "4f7eac597f2b8d2c2a69421b957f85d1622e89a7f8648a41cceee9c88d1eb2ce",
+    "baseline_hard_oracle_mismatch_px": 1585,
+    "net_fixed_px": 0,
+    "pair": 26
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1177,
+    "attacked_frame_sha256": "6976e596052f7c1c0f368737aaac7a8d9d8f6b4c954eee4ff24fd2f50551cf34",
+    "baseline_hard_oracle_mismatch_px": 1177,
+    "net_fixed_px": 0,
+    "pair": 27
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1318,
+    "attacked_frame_sha256": "2e7bc0ab03a67be8ff281261f3c8557fdcef827bad6916d3582a934a0865f3a7",
+    "baseline_hard_oracle_mismatch_px": 1318,
+    "net_fixed_px": 0,
+    "pair": 28
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1223,
+    "attacked_frame_sha256": "62164d0ef86617eaf908c8e50962841e9a8bdef7b05273960ada7b13da97786f",
+    "baseline_hard_oracle_mismatch_px": 1223,
+    "net_fixed_px": 0,
+    "pair": 29
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1706,
+    "attacked_frame_sha256": "89c448eb57353ebe3668c03b19013f904818d3d816c0a3f7a0748f9adaf5781c",
+    "baseline_hard_oracle_mismatch_px": 1706,
+    "net_fixed_px": 0,
+    "pair": 30
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1143,
+    "attacked_frame_sha256": "f808ed1d2cf9eb74c1d635f509f41914caf2801c011f807efb4a1667ed842473",
+    "baseline_hard_oracle_mismatch_px": 1143,
+    "net_fixed_px": 0,
+    "pair": 31
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1282,
+    "attacked_frame_sha256": "dfa76afe82f407e05bce6e472a7fc2373604016d0b4bd3df7ddd285f08cb0663",
+    "baseline_hard_oracle_mismatch_px": 1282,
+    "net_fixed_px": 0,
+    "pair": 32
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1310,
+    "attacked_frame_sha256": "1b294bc9e44839022eb2b0239b79431a949dfa444130f2df22093e58f889ae10",
+    "baseline_hard_oracle_mismatch_px": 1310,
+    "net_fixed_px": 0,
+    "pair": 33
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1687,
+    "attacked_frame_sha256": "19b47bcd06c5d2436581ea74ea506276c161c25547aa2562f4cd08951f20b3db",
+    "baseline_hard_oracle_mismatch_px": 1687,
+    "net_fixed_px": 0,
+    "pair": 34
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1446,
+    "attacked_frame_sha256": "7ae4e7bafec26cfbf19e10a351276c4035a319d1f65bf1b1ab36ee6c5fdc2e4c",
+    "baseline_hard_oracle_mismatch_px": 1446,
+    "net_fixed_px": 0,
+    "pair": 35
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1211,
+    "attacked_frame_sha256": "bdaed783d642568321a742ced094d9d6c239ad1e4d18ea7c34911f1148782f63",
+    "baseline_hard_oracle_mismatch_px": 1211,
+    "net_fixed_px": 0,
+    "pair": 36
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1539,
+    "attacked_frame_sha256": "7da2d29bff5f475358ca704ab5b62414e444c7e3ad5abc34d1c23b1bd32f41ce",
+    "baseline_hard_oracle_mismatch_px": 1539,
+    "net_fixed_px": 0,
+    "pair": 37
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1507,
+    "attacked_frame_sha256": "591e407bd2e7e15a8a4bd004650cf4e5e90b707feb9f61814c3019accfb46802",
+    "baseline_hard_oracle_mismatch_px": 1507,
+    "net_fixed_px": 0,
+    "pair": 38
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1530,
+    "attacked_frame_sha256": "d211a498e8c96f17629bbc9502948235dd7036052aa693e991e62fa95eb7f496",
+    "baseline_hard_oracle_mismatch_px": 1530,
+    "net_fixed_px": 0,
+    "pair": 39
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1190,
+    "attacked_frame_sha256": "911da064eb5ef52f3e3aa0d8a5e022525cd1a794aa3215c81635bd6dfdbc5c22",
+    "baseline_hard_oracle_mismatch_px": 1190,
+    "net_fixed_px": 0,
+    "pair": 40
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1279,
+    "attacked_frame_sha256": "182486f7847f7d2a082ceb4933632025035ba366c46372bf3363788e94d42fc1",
+    "baseline_hard_oracle_mismatch_px": 1279,
+    "net_fixed_px": 0,
+    "pair": 41
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1510,
+    "attacked_frame_sha256": "62cfc9b7f0722b1d7115decde920222209da0904805bae22b2a21d905b469b32",
+    "baseline_hard_oracle_mismatch_px": 1510,
+    "net_fixed_px": 0,
+    "pair": 42
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1908,
+    "attacked_frame_sha256": "98f2af6974c34de5c788c4cfc60bdee09b2cdcaf881e39c0a129e7b463c79945",
+    "baseline_hard_oracle_mismatch_px": 1908,
+    "net_fixed_px": 0,
+    "pair": 43
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 3510,
+    "attacked_frame_sha256": "9126cf06d766b4e779a4ef8927b3420e409b05e5cf1ede0777674cd8ef91ff6a",
+    "baseline_hard_oracle_mismatch_px": 3510,
+    "net_fixed_px": 0,
+    "pair": 44
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1542,
+    "attacked_frame_sha256": "f49ecbac5fc8ad87ae68148f79b18f7117cfbd4e9b427f8d71956a97b3c3024b",
+    "baseline_hard_oracle_mismatch_px": 1542,
+    "net_fixed_px": 0,
+    "pair": 45
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 1905,
+    "attacked_frame_sha256": "6671a8534d7c6d9f3d0c39be289841b45856c3fad3c39d5261f679b9ff47fd68",
+    "baseline_hard_oracle_mismatch_px": 1905,
+    "net_fixed_px": 0,
+    "pair": 46
+   },
+   {
+    "attack_hard_oracle_mismatch_px": 3333,
+    "attacked_frame_sha256": "8beb2fa947a919c45ae21586a94fbdc4eaff637ff192794fc10a0d99153bc3da",
+    "baseline_hard_oracle_mismatch_px": 3333,
+    "net_fixed_px": 0,
+    "pair": 47
+   }
+  ],
+  "residual": {
+   "cells_canonical_json_sha256": "c2ebcfc2d181add08cc8c6d2e5f904714add15c81bae56ac6460e19a839fe1eb",
+   "cells_omitted_from_confirmation_receipt": true,
+   "count": 76669,
+   "diophantine_infeasible_cells": [],
+   "diophantine_note": "This target-changing repair writes valid uint8 camera blocks directly. The exact-pre-rounded-Y affine equation is not the hard-accept predicate; its separate one-pair canary found zero affine-infeasible blocks.",
+   "reason_counts": {
+    "FULL_REFERENCE_PROBE_NOT_HARD_ACCEPT_OR_UINT8_DEAD": 48733,
+    "INTERIOR_OR_NONRESIZE_NECESSITY_ZERO_149_WALL": 6098,
+    "STOPPED_AT_MEASURED_RATE_WATERLINE": 21838
+   }
+  },
+  "reverse_waterfill": {
+   "caveat": "coarse measured prefix curve; n600 patch bytes are a labeled linear projection until an exact n600 section is materialized",
+   "rows": [
+    {
+     "collateral_new_px_upper_bound": 0,
+     "d_B": 0.008124139573838975,
+     "hard_oracle_mismatch_px": 76669,
+     "net_fixed_px": 0,
+     "parseback_identical": true,
+     "patch_records": 0,
+     "patch_section_bytes_n600_projected": 0,
+     "patch_section_bytes_n_subset": 0,
+     "patch_sha256": null,
+     "ranked_cells": 0,
+     "seg_plus_rate_no_pose": 1.1433984599429134,
+     "targeted_fixed_px": 0,
+     "total_sections_bytes_n600_projected": 497079,
+     "total_sections_bytes_n_subset": 39782
+    },
+    {
+     "adjacent_marginal_seg_score_per_projected_byte": 9.421797237727529e-09,
+     "adjacent_segment_clears_rate_waterline": false,
+     "collateral_new_px_upper_bound": 0,
+     "d_B": 0.008123821682400174,
+     "hard_oracle_mismatch_px": 76666,
+     "net_fixed_px": 3,
+     "parseback_identical": true,
+     "patch_records": 83,
+     "patch_section_bytes_n600_projected": 3374,
+     "patch_section_bytes_n_subset": 292,
+     "patch_sha256": "ee59d3b08f1bd4bbfaadfa76578164cf266e84969b6fa114fd3d28f39c54771c",
+     "ranked_cells": 8,
+     "seg_plus_rate_no_pose": 1.1456132789068674,
+     "stop_after_this_row": true,
+     "targeted_fixed_px": 3,
+     "total_sections_bytes_n600_projected": 500453,
+     "total_sections_bytes_n_subset": 40074
+    }
+   ],
+   "score_rate_waterline_per_byte": 6.658589531221714e-07,
+   "selected_ranked_cells": 0,
+   "selection_metric": "100*d_B + 25*n600_projected_section_bytes/37_545_489; pose unmeasured"
+  },
+  "verdict_scope": "FORMULATION x SUBSET",
+  "wall_seconds": 33.849
+ },
+ "runtime": {
+  "numpy": "1.26.4",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "python": "3.13.12"
+ },
+ "schema": "pdw1_step2_realization_larger_subset_confirmation.v1",
+ "utc": "2026-07-19T20:13:58Z",
+ "wrapper_wall_seconds": 51.032
+}
