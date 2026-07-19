@@ -271,3 +271,214 @@ def build_pose_plane_proximity_law_v1() -> CanonicalEquation:
         ),
         provenance=_prov(SOURCE_MEMO),
     )
+
+
+# ======================================================================
+# SUCCESSOR (append-only, 2026-07-19 Task #570; never mutate the corollary
+# above). Source: #564 surprise review §1/§2 — the frozen Pose term is ONE
+# global pooled Euclidean L2 ball, NOT 600 per-pair caps, and the 2.5e-4
+# "binding crossover" is a coordinate-derivative identity, not a feasibility
+# wall. DERIVED exactly from upstream/modules.py:82-84 (per-pair MSE q_i =
+# ||e_i||^2/6) + upstream/evaluate.py:81-92 (global pool D_pose = (1/N) sum_i
+# q_i; S_pose = sqrt(10*D_pose)). At N=600 this collapses to the native error
+# norm S_pose(e) = ||e||_2 / sqrt(360), whose gradient has CONSTANT norm
+# 1/sqrt(360) = 0.05270462766947299 away from e=0 (the 1/sqrt(D) blow-up of
+# the D-coordinate derivative cancels the O(||e||) MSE gradient). No score /
+# promotion claim; this successor re-expresses the frozen Pose term for the
+# v10 C4/C9 objective (one global dual, per-pair telemetry as diagnostic).
+# ======================================================================
+
+EQUATION_ID_POOLED = "pose_global_norm_pooled_dual_v1"
+_POOLED_UTC = "2026-07-19T18:30:00Z"
+INV_SQRT_360 = 0.05270462766947299  # = 1/sqrt(360); S_pose per unit ||e||_2 at N=600
+POSE_BIND_CROSSOVER_DPOSE = 2.5e-4  # coordinate-derivative identity, NOT a wall
+
+
+def pose_global_norm_pooled_dual(
+    per_pair_q: list[float],
+    *,
+    tau_dpose: float = POSE_BIND_CROSSOVER_DPOSE,
+    n_pairs: int = 600,
+) -> dict[str, Any]:
+    """Frozen Pose term as ONE pooled global-norm constraint + the two feasible sets.
+
+    ``per_pair_q[i]`` is the frozen per-pair MSE ``q_i = ||e_i||_2^2 / 6``
+    (modules.py:82-84). The evaluator pools these into the single global mean
+    ``D_pose = (1/N) sum_i q_i`` and scores ``S_pose = sqrt(10*D_pose)`` — which
+    at ``n_pairs=600`` equals the native error norm ``||e||_2 / sqrt(360)``.
+
+    Returns the score term plus BOTH feasibility verdicts so the v10 C4/C9
+    objective can drop the 600 per-pair vetoes for the one pooled dual the
+    evaluator actually implements:
+
+      * ``pooled_feasible`` — ``D_pose < tau_dpose`` (the frozen score-term
+        sublevel set: one ball ``sum_i ||e_i||^2 <= 6*N*tau`` in R^(6N)).
+      * ``per_pair_veto_feasible`` — ``all(q_i < tau_dpose)`` (the strictly
+        stricter C4 rule; a strict SUBSET that prohibits cross-pair allocation
+        the score explicitly allows).
+
+    The per-pair marginal ``dS_pose/dq_i = sqrt(10)/(2*N*sqrt(D_pose))`` (= 1/6
+    at N=600, D=2.5e-4) is returned as the diagnostic; the 2.5e-4 crossover is
+    the D-coordinate derivative identity (``5/sqrt(10*D)=100``), NOT a
+    feasibility boundary. Advisory design classifier, never a score.
+    """
+
+    N = int(n_pairs)
+    if N <= 0:
+        raise ValueError("n_pairs must be > 0")
+    if not per_pair_q:
+        raise ValueError("per_pair_q must be non-empty")
+    if any(q < 0 for q in per_pair_q):
+        raise ValueError("per_pair_q entries are MSE magnitudes (>= 0)")
+    if tau_dpose <= 0:
+        raise ValueError("tau_dpose must be > 0")
+    d_pose = sum(per_pair_q) / N
+    s_pose = math.sqrt(10.0 * d_pose)
+    e_norm = math.sqrt(6.0 * N * d_pose)  # ||e||_2 from the pooled mean
+    marginal = math.sqrt(10.0) / (2.0 * N * math.sqrt(d_pose)) if d_pose > 0 else math.inf
+    return {
+        "d_pose_pooled": d_pose,
+        "s_pose": s_pose,
+        # Native-norm identity: sqrt(10*D_pose) == ||e||_2 / sqrt(6*N)
+        # (== ||e||_2 / sqrt(360) at N=600). Both computed; equal by algebra.
+        "s_pose_via_global_norm": e_norm * math.sqrt(10.0 / (6.0 * N)),
+        "global_norm_coeff_at_n600": INV_SQRT_360,
+        "pooled_feasible": d_pose < tau_dpose,
+        "per_pair_veto_feasible": all(q < tau_dpose for q in per_pair_q),
+        "per_pair_marginal_dS_dq": marginal,
+        "pose_bind_crossover_is_coordinate_identity": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
+def build_pose_global_norm_pooled_law_v1() -> CanonicalEquation:
+    """Successor to pose_plane_proximity_corollary_v1: the frozen Pose term is a
+    single global L2 ball (pooled dual), and 2.5e-4 is a coordinate identity."""
+
+    def _prov(path: str):
+        return build_provenance_for_research_sidecar(
+            sidecar_path=path,
+            reactivation_criteria=(
+                "any exact recomposition that re-ranks candidates under the "
+                "pooled Pose dual vs the per-pair veto appends an anchor; a MAIN "
+                "review that locates an executable per-pair-cap consumer with a "
+                "separate operator/axis-robustness authority reopens the "
+                "optional typed tail-risk guard (default OFF)."
+            ),
+            measurement_axis="[macOS-CPU advisory]",
+            hardware_substrate="macos_arm64",
+            captured_at_utc=_POOLED_UTC,
+        )
+
+    # DERIVED identity anchor: S_pose = sqrt(10*D_pose) == ||e||/sqrt(360) at N=600.
+    anchor_identity = EmpiricalAnchor(
+        anchor_id="pose_global_norm_identity_20260719",
+        measurement_utc=_POOLED_UTC,
+        inputs={
+            "source": "upstream/modules.py:82-84 (per-pair MSE) + evaluate.py:81-92 (pool+score)",
+            "n_pairs": 600,
+            "identity": "sqrt(10*D_pose) == ||e||_2 / sqrt(6*N); at N=600 == ||e||_2/sqrt(360)",
+        },
+        predicted_output="gradient of S_pose(e) has constant norm 1/sqrt(360) away from e=0",
+        empirical_output=(
+            f"1/sqrt(360) = {INV_SQRT_360}; the 1/sqrt(D) D-coordinate blow-up cancels "
+            "the O(||e||) MSE gradient -> 2.5e-4 is a coordinate-derivative identity, "
+            "not a feasibility wall"
+        ),
+        residual=0.0,  # exact algebraic identity (source-derived)
+        source_artifact=".omx/research/v10_frozen_space_surprises_20260719_codex.md",
+        measurement_method="frozen-source linear/differential algebra (fp64 verification)",
+        provenance=_prov(".omx/research/v10_frozen_space_surprises_20260719_codex.md"),
+        empirical_verification_status="VERIFIED_VIA_SOURCE_INSPECTION",
+    )
+    # MEASURED recomposition witness: pooled dual admits lower-objective
+    # allocations the per-pair veto rejects. Both are rate-dead (n600-scaled
+    # CONDITIONAL range-payload; NOT viable archives) — a gate-logic witness only.
+    anchor_recompose = EmpiricalAnchor(
+        anchor_id="pooled_vs_perpair_veto_recomposition_20260719",
+        measurement_utc=_POOLED_UTC,
+        inputs={
+            "custodied_rows": ".omx/research/seg_secant_rd_curve_n24_20260719_v2.json (n24 precision drops)",
+            "tau_dpose": POSE_BIND_CROSSOVER_DPOSE,
+            "byte_model": "n600-scaled CONDITIONAL range-payload (brotli_q11 B/pair * 600 / 37,545,489)",
+        },
+        predicted_output=(
+            "per-pair veto is STRICTLY stricter than the frozen score term -> it can "
+            "reject a lower-objective allocation whose global D_pose is feasible"
+        ),
+        empirical_output=(
+            "CONFIRMED: drop-1 S=707.575004098 (D=3.87e-5, 0 viol, veto-PASS); "
+            "drop-2 S=524.636100821 (D=7.53e-5, 2 viol, veto-REJECT, pooled-FEASIBLE); "
+            "drop-3 S=457.546999260 (D=1.42e-4, 4 viol, veto-REJECT, pooled-FEASIBLE); "
+            "drop-3 lower than veto-admitted drop-1 by 250.02800483805515. Pooled dual "
+            "admits drop-2/drop-3 (both global D<2.5e-4) that the veto rejects. Rate-dead "
+            "(hundreds) -> gate-logic witness, NOT viable archives / not a contest score"
+        ),
+        residual=250.02800483805515,  # score gap drop-1 - drop-3 (the veto's suppressed objective)
+        source_artifact=".omx/research/seg_secant_rd_curve_n24_20260719_v2.json",
+        measurement_method=(
+            "$0 pure recomposition of custodied per-pair D_pose/d_seg/conditional-byte rows "
+            "(no scorer re-run); [macOS-CPU advisory] conditional payload"
+        ),
+        provenance=_prov(".omx/research/task570_pose_law_successor_and_probes_20260719.md"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
+    return CanonicalEquation(
+        equation_id=EQUATION_ID_POOLED,
+        name="frozen Pose term is one pooled global L2 ball, not 600 per-pair caps",
+        one_line_summary=(
+            "S_pose(e)=||e||/sqrt(360) at N=600 (one pooled dual); per-pair 2.5e-4 "
+            "cap is a coordinate-derivative identity, strictly stricter than the score"
+        ),
+        latex_form=(
+            r"S_{\mathrm{pose}}(e)=\sqrt{10\,D_{\mathrm{pose}}}"
+            r"=\|e\|_2\big/\sqrt{6N}\ \xrightarrow{N=600}\ \|e\|_2/\sqrt{360};\quad"
+            r"D_{\mathrm{pose}}=\tfrac1N\sum_i \|e_i\|_2^2/6;\ "
+            r"\nabla S_{\mathrm{pose}}\ \text{has const norm } 1/\sqrt{360}"
+        ),
+        python_callable_module_path=(
+            "tac.canonical_equations.pose_plane_proximity_law_20260719:"
+            "pose_global_norm_pooled_dual"
+        ),
+        domain_of_validity={
+            "scorers": "frozen PoseNet, per-pair MSE pooled to one global mean (evaluate.py:81-92)",
+            "claim_type": "v10 C4/C9 Pose objective/dual reformulation (advisory, source-derived)",
+            "supersedes_prose": (
+                "the '600 per-pair q_i<2.5e-4 caps' reading of pose_plane_proximity_"
+                "corollary_v1 / C4 / C9 / #536 — the evaluator has ONE global pool"
+            ),
+            "verdict_scope": (
+                "identity is source-derived (paradigm); recomposition witness is n24 "
+                "instance-scoped and rate-dead (gate-logic only, NOT a viable archive)"
+            ),
+        },
+        units_in={
+            "per_pair_q": "per-pair MSE ||e_i||^2/6 (pose units^2)",
+            "tau_dpose": "d_pose (1/6-mean MSE)",
+            "n_pairs": "count",
+        },
+        units_out={
+            "s_pose": "score-law pose contribution",
+            "d_pose_pooled": "d_pose (1/6-mean MSE)",
+            "per_pair_marginal_dS_dq": "score per unit q_i",
+        },
+        empirical_anchors=(anchor_identity, anchor_recompose),
+        predicted_vs_empirical_residual={
+            "global_norm_identity": 0.0,
+            "pooled_vs_veto_gap_score": 250.02800483805515,
+        },
+        last_calibration_utc=_POOLED_UTC,
+        next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
+        canonical_consumers=(
+            "SPEC_v10 C4 Pose objective (one global norm/dual, not 600 caps)",
+            "SPEC_v10 C9 KKT (one shared Pose lambda, per-pair telemetry as diagnostic)",
+            "tools/measure_joint_seg_pose_rate.py (pooled tau sizing)",
+        ),
+        canonical_producers=(
+            ".omx/research/v10_frozen_space_surprises_20260719_codex.md",
+            ".omx/research/seg_secant_rd_curve_n24_20260719_v2.json",
+            ".omx/research/task570_pose_law_successor_and_probes_20260719.md",
+        ),
+        provenance=_prov(".omx/research/v10_frozen_space_surprises_20260719_codex.md"),
+    )

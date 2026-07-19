@@ -87,3 +87,33 @@ now stated as the two sides of one factorized equation.
 - #514 whitebox full campaign: §6 is the frozen-structure inventory the composite lattice enumerates over.
 - Metal VJP (DONE, `metal_grouped_conv_backward` ~18× + `metal_fused_r_operator` transpose-VJP): differentiates N_seg/N_pose + the A adjoint — the engine that makes §6.1/6.4 measurable at n600.
 - Every ∂/∂pixel or ∂margin/∂chroma claim goes through the real N via mx.vjp / the Metal VJP, verdict through the real byte-closed decode.
+
+## Correction (2026-07-19, Task #570 / #564 surprise review §4) — APPEND-ONLY, history preserved
+
+**The §5 claim "CHROMA PLANE = span{U-row, V-row} = the 2D orthogonal complement of ℓ"
+(line 49) and the §6.4 "project the SegNet margin-Jacobian ... onto span{U-row,V-row}"
+(line 56) are FALSE and are corrected here.** The original §5/§6 text above is preserved
+verbatim per Catalog #110/#113 APPEND-ONLY discipline; this section supersedes only the
+specific U/V ⇔ ker(ℓ) identification.
+
+MEASURED exact linear algebra (fp64; source `upstream/frame_utils.py:60-62`; fixture
+`src/tac/tests/test_yuv6_analysis_covectors_vs_primal_luma_null_20260719.py`):
+
+- `ℓ = (0.299, 0.587, 0.114)`, `u = (−0.299,−0.587,0.886)/1.772`, `v = (0.701,−0.587,−0.114)/1.402`.
+- `u·(1,1,1) = 0` and `v·(1,1,1) = 0` ⟹ **span{u,v} = (1,1,1)^⊥** (the gray-axis orthogonal plane).
+- `ℓ·u = −0.18790406320541758`, `ℓ·v = −0.10553922967189727` ⟹ **span{u,v} ≠ ker(ℓ)**.
+- Principal angle between span{u,v} and ker(ℓ) = **30.27914784°**; spectral norm of the
+  projector difference ‖P_{uv} − P_{ker(ℓ)}‖₂ = **0.504213367**. `[ℓ,u,v]` is full rank 3.
+
+**What this changes:** the U/V *analysis covectors* are NOT an orthonormal *primal*
+displacement basis for "the chroma plane", and they are NOT the orthogonal complement of
+the luma direction. A primal luma-preserving RGB displacement must satisfy `ℓ·δ_rgb = 0`
+(e.g. `(1, −0.299/0.587, 0)` and `(0, −0.114/0.587, 1)`); mapping an analysis gradient into
+Y/U/V requires the full matrix dual/Gram solve. The active energy split in
+`tools/c2_perclass_stratum_carrier_analysis.py` (lines 345-374, `gl = gr @ LUMA_HAT`) is a
+VALID **Euclidean span{ℓ}/ker(ℓ)** diagnostic — it just must NOT be relabeled "U/V" or
+"chroma sensitivity". Any prior conclusion inferred specifically from the "U/V" / "chroma
+sensitivity" label (not from literal channel-necessity ablation) must be reinterpreted as an
+`ℓ`/`ker(ℓ)` Euclidean split. This does NOT reopen the exact 2×2 Pose-visibility law (§5.5/§6.5)
+or channel-necessity rows measured by literal ablation. `0.504213367` is a worst-case
+unit-sensitivity attribution bound, NOT a 50.4% byte/score prediction. Pointer 0.19108 UNMOVED.
