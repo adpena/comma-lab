@@ -27,6 +27,40 @@ _EXACT_LANGUAGE_RE = re.compile(
     r"\bpointer\s+(?:moved|improved)\b|\[contest-(?:CPU|CUDA)\])",
     re.IGNORECASE,
 )
+# Negation tokens that turn an exact-authority phrase into a DISCLAIMER
+# ("not authoritative", "no exact score claim") rather than a CLAIM of exact
+# authority. The "only/just/merely" negative-lookahead keeps the "not only
+# authoritative" idiom (which ASSERTS authority) classified as a claim, so the
+# fix can never hide a real exact-authority claim (NO-FAKE-safe direction).
+_NEGATION_RE = re.compile(
+    r"\b(?:no|not|never|non|without|neither|nor|zero|false|n't)\b"
+    r"(?!\s+(?:only|just|merely))",
+    re.IGNORECASE,
+)
+
+
+def _language_claims_exact_authority(language: str) -> bool:
+    """True iff LANGUAGE asserts exact/contest authority. A matched phrase whose
+    clause (delimited by ``; . — \\n``) contains a preceding negation is a
+    DISCLAIMER, not a claim — so a legitimate advisory row that explicitly
+    disclaims authority ("not authoritative; no exact score claim — advisory
+    only") no longer trips the custody requirement (review F2 2026-07-18: the
+    plain regex.search false-refused a legitimate negated advisory claim, which
+    on a strict gate could refuse a legitimate launch). A NON-negated match in
+    ANY clause still returns True, so real exact-authority claims are unaffected;
+    the structured ``requested_exact_authority`` / ``score_claim`` booleans are
+    still honored by the caller regardless of language."""
+    if not language:
+        return False
+    for m in _EXACT_LANGUAGE_RE.finditer(language):
+        prefix = language[: m.start()]
+        boundary = max((prefix.rfind(ch) for ch in ";.\n—"), default=-1)
+        clause = prefix[boundary + 1:]
+        if not _NEGATION_RE.search(clause):
+            return True  # a NON-negated exact-authority assertion = a real claim
+    return False
+
+
 _ADVISORY_AXES = {"mps", "mlx", "macos-cpu advisory", "advisory", "proxy", "synthetic"}
 _CONTEST_AXES = {"contest-cpu", "contest-cuda"}
 _RUNG_ALIASES = {
@@ -1454,7 +1488,7 @@ def audit_evidence_authority_claims(claims: Iterable[EvidenceClaim]) -> list[str
     violations: list[str] = []
     for claim in claims:
         axis = claim.evidence_axis.strip().lower()
-        language_requests_exact = bool(_EXACT_LANGUAGE_RE.search(claim.language))
+        language_requests_exact = _language_claims_exact_authority(claim.language)
         requests_exact = language_requests_exact or claim.requested_exact_authority or claim.score_claim
         waiver_ok = _valid_advisory_waiver(claim.waiver)
         if claim.waiver and not waiver_ok:

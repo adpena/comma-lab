@@ -510,6 +510,58 @@ def test_evidence_authority_refuses_advisory_axes(axis) -> None:
     assert any("axis=" in violation for violation in violations)
 
 
+# Review F2 (2026-07-18): a legitimate advisory claim that explicitly DISCLAIMS
+# authority ("not authoritative; no exact score claim") must NOT be treated as an
+# exact-authority claim — the plain regex.search false-refused it, which on a
+# strict gate could refuse a legitimate launch.
+@pytest.mark.parametrize(
+    ("language", "claims"),
+    [
+        ("not authoritative; no exact score claim — advisory only", False),
+        ("this run is not authoritative and makes no exact score claim", False),
+        ("no [contest-CPU] promotion here, advisory only", False),
+        ("plain advisory macOS-MLX research signal", False),
+        # Real assertions still detected:
+        ("authoritative exact score, pointer moved", True),
+        ("advisory only; [contest-CPU] promotion-grade result", True),
+        # NO-FAKE-safe idiom guard: "not only X" ASSERTS X.
+        ("not only authoritative but exact", True),
+    ],
+)
+def test_language_claims_exact_authority_negation_aware(language, claims) -> None:
+    from tac.v9_provenance_gates import _language_claims_exact_authority
+
+    assert _language_claims_exact_authority(language) is claims
+
+
+def test_evidence_authority_negated_advisory_language_passes() -> None:
+    """F2 end-to-end: a legit advisory row that disclaims authority is NOT
+    refused (the false-positive that could block a legitimate launch)."""
+    claim = _clean_evidence(
+        language="not authoritative; no exact score claim — advisory only",
+        evidence_axis="macOS-CPU advisory",
+        requested_exact_authority=False,
+        score_claim=False,
+        promotion_claim=False,
+        evaluator=None,
+    )
+    assert audit_evidence_authority_claims([claim]) == []
+
+
+def test_evidence_authority_structured_score_claim_refused_despite_negated_language() -> None:
+    """The fix touches LANGUAGE detection only: an explicit structured
+    score_claim=True on advisory evidence is STILL refused even when the prose
+    disclaims authority — the booleans remain authoritative (NO-FAKE)."""
+    claim = _clean_evidence(
+        language="not authoritative; advisory only",
+        evidence_axis="mps",
+        score_claim=True,
+        promotion_claim=False,
+        evaluator=None,
+    )
+    assert audit_evidence_authority_claims([claim])
+
+
 @pytest.mark.parametrize(
     ("changes", "needle"),
     [
