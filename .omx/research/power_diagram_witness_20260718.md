@@ -188,3 +188,43 @@ relabels that negative; it builds the distinct frozen-head **channel-space targe
 - `spatial K lower bound = NO_VERDICT`; `renderer / through-R / Seg / Pose / score = NOT RUN, NO AUTHORITY`.
   Pointer `0.1910828242 [contest-CPU Linux x86_64]` remains **UNMOVED**. MAIN landing review is required before
   any shared-DAG or canonical-equation registration.
+
+## PROPOSED_PENDING_MAIN_REVIEW — PDW2 as a yhat-description inner certificate
+
+This append-only consumer proposal comes from `lane_yhat_native_generator_20260719`. It does not
+change the PDW1 result above and does not land PDW2 code on this branch.
+
+Sibling commit `edf47756ba629e079a2a63233bf8f0293cf85f3d` reports a strict gauge-fixed PDW2
+format with these measured target-only anchors:
+
+| form | coefficients | raw | Brotli q11 | retained semantics |
+|---|---:|---:|---:|---|
+| PDW2 margin-preserving | 20 float32 | `138 B` | `133 B` | relative affine margins |
+| PDP2 partition-only | 19 scalars | `134 B` | `122 B` | positive-scale partition quotient only |
+
+Both forms pass canonical parse/re-encode and the frame-195 native-float32 tie fixture. Both remain
+`TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT`: neither supplies the spatial/RGB pullback, compact yhat
+generator, exact camera receiver, through-`R` score, or archive.
+
+The proposed `YhatNativeDescription.v1` consumer places PDW2/PDP2 inside the **counted** compact
+description, ahead of video-fitted generator weights/codes/seeds and any residual. Generic PDW2
+parse/evaluation code is rule-118-free; every video-selected coefficient byte, fitted parameter,
+section header/hash, and archive byte is counted. Margin-preserving PDW2 is required when generator
+losses or reconstruction use margin magnitude. PDP2 cannot silently replace it because positive
+scale quotienting discards that magnitude.
+
+Proposed receiver path:
+
+```text
+PDW2/PDP2 + counted generator state -> deterministic yhat expander -> two RGB scorer planes
+                                     -> exact camera preimage -> exact A replay
+```
+
+PoseNet consumes both expanded RGB planes through RGB-to-YUV6, while SegNet consumes frame 1. A
+partition certificate alone therefore cannot justify dropping frame 0, chroma, or luma/Pose debt.
+
+**No-duplication boundary:** the PDW2 sibling owns packet codec and receiver arithmetic; the
+yhat-native arm owns only the consumer contract, exact plane/preimage measurement, and default-OFF
+policy. MAIN must review and merge `edf47756ba629e079a2a63233bf8f0293cf85f3d` before any production
+consumer imports the format. No shared DAG, equation anchor, activation, score, or pointer change is
+authorized by this proposal.
