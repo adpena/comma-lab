@@ -34,10 +34,13 @@ if str(_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_ROOT / "src"))
 
 from tac.graph_memory import (  # noqa: E402
+    build_source_manifest,
     cache_paths,
+    check_completeness,
     export_obsidian,
     format_human,
     format_human_lensed,
+    load_latest_manifest,
     load_or_build,
     query_by_decision,
     query_by_entity,
@@ -70,6 +73,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--rebuild", action="store_true", help="rebuild the graph cache from source")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--stats", action="store_true", help="print graph node/edge counts and exit")
+    ap.add_argument("--manifest", action="store_true",
+                    help="print the source/completeness manifest (per-source node "
+                         "counts + warn-only diff vs the last published manifest) and exit")
     ap.add_argument("--tool", choices=sorted(_TOOLS), default=None,
                     help="run a typed query-tool over the positional query (increment-2)")
     ap.add_argument("--export-obsidian", nargs="?", const="", default=None, metavar="PATH",
@@ -98,6 +104,33 @@ def main(argv: list[str] | None = None) -> int:
     graph = load_or_build(rebuild=args.rebuild)
     if args.rebuild:
         save_graph(graph)
+
+    if args.manifest:
+        manifest = build_source_manifest(graph)
+        prev = load_latest_manifest()
+        findings = check_completeness(prev, manifest)
+        if args.json:
+            print(json.dumps({
+                "manifest": manifest.to_dict(),
+                "completeness_warnings": [w.to_dict() for w in findings],
+            }, indent=2, ensure_ascii=False))
+        else:
+            print(f"source manifest: {manifest.node_count} nodes, "
+                  f"{manifest.edge_count} edges  (git {manifest.git_rev[:9] or '?'})")
+            for s in manifest.sources:
+                flag = "REQUIRED" if s.required else "optional"
+                warn = "  <-- COLLAPSED" if (s.required and s.exists and s.nodes_emitted == 0) else ""
+                print(f"  [{flag:>8}] {s.name:<14} "
+                      f"units={s.units_present:<6} nodes={s.nodes_emitted:<6} "
+                      f"exists={s.exists} {s.skip_reason}{warn}")
+            if findings:
+                print("\nCOMPLETENESS WARNINGS (warn-only, vs last published manifest):")
+                for w in findings:
+                    src = f" [{w.source}]" if w.source else ""
+                    print(f"  ! {w.kind}{src}: {w.detail}")
+            else:
+                print("\ncompleteness: OK (no drop vs last published manifest)")
+        return 0
 
     if args.export_obsidian is not None:
         out = Path(args.export_obsidian) if args.export_obsidian else None
