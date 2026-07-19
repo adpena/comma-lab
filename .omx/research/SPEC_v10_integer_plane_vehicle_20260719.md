@@ -793,9 +793,16 @@ or labeled DERIVED. Pointer **0.19108 [contest-CPU] UNMOVED**. Pointers to memos
   (STEP 2 realization + STEP 3 generator), not declared closed. verdict_scope: the M2 measurement is exact for
   the pre-rounded-Y target ONLY; the realization/target-selection family is LIVE. [magnitude-ok — the correction
   is a scope/target reconciliation against the measured prior corpus, not an eyeball dismissal of M2's numbers]
-- **STEP 2 (live, PDW1 realization):** freeze CPU-Torch fp32 as the single PDW1 receiver arithmetic → close
-  frame-195 → first measured in-box (bytes, d_seg) point via minimum-generator LP (Aurenhammer) + flip-slack
-  weight quantization. **Gate:** a point at ≤477.8 B/pair with d_seg ≤3.39e-4, OR the named dominating error term.
+- **STEP 2 (PDW1 realization — PARTLY MEASURED, `pdw1_fp32_realization_receipt_20260719.json`):** frame-195
+  authority **CLOSED** (Phase B: fp32 first-max contract `pdw1-native-f32-power-first-max.v1` resolves the exact
+  class-0/1 tie at px(195,112,214) to class 0 == L*). Phase C **named the dominating error term**: `d_A = 0.0`
+  (contract labels ARE exactly L* — encoding/bytes perfect) but `d_B = 0.008069` (38,077 px) = the **REALIZATION
+  gap** — the realized uint8 frame re-scored through the real R+SegNet flips argmax (Road→Lane 28.1%,
+  Movable→Road 16%). So the 23.8×-over-need d_seg is 100% realization, 0% encoding — the empirical confirmation
+  of "realization not bytes is binding." **The path to in-box is now sharp:** apply the identified-optimal
+  preimage (`bounded_uint8_resize_preimage_cell_feasibility_v1` HARD_ACCEPT — choose the uint8 cell whose
+  *re-scored* argmax == L*) to drive `d_B → 0`. **Gate:** a point at ≤477.8 B/pair with d_seg ≤3.39e-4
+  (in-box), via the d_B-attack arm (dispatched, parallel with M1). [advisory macOS-CPU; pointer UNMOVED]
 - **STEP 3 (live, M1, operator GO):** first C2 banded-around-source generator n600 row → fills the 4-order
   (bytes,d_seg) hole from the cheap end. Target zone **60–85 KB total at d_seg ≤~1e-3**. **Gate:** byte-closed
   row through the production receiver + hard oracle.
