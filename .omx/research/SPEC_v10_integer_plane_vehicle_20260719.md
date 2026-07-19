@@ -717,3 +717,80 @@ drifts, the distinction between `repeat-frame1` timing and two-plane structural 
 free-versus-counted grammar, the operator-native `U4`/pair-margin and immutable-VJP binding, the
 channel-resolved KKT ledger, and every C0–C11 falsifier before merging. Merge of this SPEC does not
 authorize C1 execution, training, paid work, or any pointer change.
+
+---
+
+## §ADDENDUM 2026-07-19-B — capstone proven · family closed · budget box · description-axis pivot · ROADMAP
+
+Append-only (no section above rewritten). Durability sync of the day's landed facts; every number MEASURED
+or labeled DERIVED. Pointer **0.19108 [contest-CPU] UNMOVED**. Pointers to memos; numbers inline.
+
+- **(A) Capstone spine PROVEN** (`v10_capstone_first_byteclosed_row_20260719.md`). predictor-residual-u8.v1
+  archive 409,526,925 B (sha e4cd154f…) → OFFICIAL upstream/evaluate.py n600 --device cpu seed 1234:
+  **S=272.73, d_seg 1.5196e-4, d_pose 1.0184e-4, rate 272.687**. Measured TWICE bit-identical: macOS-CPU
+  advisory AND [contest-CPU] Modal Linux x86_64 (fc-01KXXRAR7341QCJ6XWKV4S3QCW). Cross-host determinism of
+  the C1 receiver spine PROVEN; inflate **215.8 s / 1800 s** (§6 C1 canonical-full-evaluate receipt now
+  satisfied). score_claim=false — rate-dead spine, not a candidate; any compact §5 payload inherits this decode.
+- **(B) Plane-storage family CLOSED** (`v10_ratecrush_phase1_20260719.md`). Exact-plane lossless storage
+  RATE-DEAD at FAMILY scope: 5 codec families within 1.9× of the ~334 KB/pair floor (#541 n48) vs the box —
+  ~700× over. JXL e9 best rung implied S=168.71, KEPT as donor. This retires the §5.1 "store the residual"
+  reading of the intrinsic-complexity cut: the cut must buy STRUCTURE (generator + slack), not per-pixel residual.
+- **(C) THE BUDGET BOX** (`generator_description_crux_synthesis_20260719.md` §0; extends §7.1 ceilings).
+  S<0.19108 at capstone distortion (pose≈0) ⇒ TOTAL ≤ **264,320 B (440.5 B/pair)**; the HONEST box at the
+  MEASURED spine distortions ≤ **~216,300 B (~360 B/pair)**; the box WIDENS 216→264 KB iff the fp32-preimage
+  pose noise (1.02e-4 → 0.0319 S) is killed (M2). # FORMALIZATION_PENDING: budget-box constants are arithmetic
+  on the §7 score law + seg_rate_breakeven_v1 — no new equation.
+- **(D) Description-axis pivot: 9-family map, composed stack, binding blocker** (crux memo §1–2). Composed
+  best-case stack **~65–130 KB TOTAL (108–217 B/pair) + unmeasured repair term** = 2–4× under the box on RATE.
+  Binding blocker = a **4-order empty hole** in the measured (bytes, d_seg) curve (140 B/pair @ 3.455e-3 ↔ 1.77
+  MB/pair @ 1.63e-4); for in-box descriptions (PDW1 306 B; MS-contour ~236 KB) **bytes are NOT binding —
+  REALIZATION is** (frame-195 fp32 authority; absent receiver grammar). Non-additive pools: elements must enter
+  as seeds/conditioning INSIDE the joint solve (two post-hoc composition failures forbid composition-after).
+- **(E) Survey adoptions folded into the §5/§C description ladder** (`generator_description_online_survey_20260719.md`).
+  ADOPT: Aurenhammer min-generator LP · kinetic regular-triangulation event grammar (~2-3 B/gen/frame, temporal)
+  · geogram BSD SDOT + voro++ cross-check · Schuster-Katsaggelos operational-R-D DP (retargeted to d_seg) ·
+  Rissanen MDL stop-rule · margin-aware flip-slack weight quantization (OURS). TEST: ξ-keyed temporal delta w/
+  MPEG-4 INTER-CAE ~40-50% (#574) · Apollonius/anisotropic cells ε^(-1/2)→ε^(-1/3) · SAD fitter. Originality
+  double-confirmed (NO-FAKE #7): no era's codec is task-lossy vs a frozen known argmax.
+
+### The M1/M2/M3 measurement ladder (owners)
+
+- **M1** — C2 banded-generator n600 row (owner: operator-GO launch; tooling `integer_plane_emitter.py` built,
+  228 tests + margin-band law + #543 receiver + `levelset_byte_close_and_eval.py`) → first mid-curve point.
+- **M2** — tie-aware preimage selector A/B on the officially-scored spine (~200-400 LOC inside the factor-2
+  lattice solve) → ~0.047 S distortion recovery at ZERO payload bytes, converts the 216 KB honest box into the
+  264 KB operator box.
+- **M3** — stratum-seed-INSIDE-the-solve A/B (Road-Lane generator swap on n24, Wave-F coder landed + #549
+  solver) → composed-stack admissibility against the 0.2503 B/pair-per-1e-6 break-even (does pool-competition
+  eat it?).
+
+### ROADMAP TO S<0.19108 (and toward sub-0.15) — the causal chain, gates, owners
+
+- **STEP 0 (DONE, proven):** C1 receiver spine — official evaluator loop closed, cross-host bit-identical,
+  inflate 215.8s/1800s. Any compact payload inherits this decode path.
+- **STEP 1 (live, M2):** kill the fp32-preimage noise via tie-aware preimage selection → recovers ~0.047 S at
+  0 bytes → widens the budget box 216→264 KB total. **Gate:** 3-arm A/B reproduces the d_seg ~9.66e-7 class.
+- **STEP 2 (live, PDW1 realization):** freeze CPU-Torch fp32 as the single PDW1 receiver arithmetic → close
+  frame-195 → first measured in-box (bytes, d_seg) point via minimum-generator LP (Aurenhammer) + flip-slack
+  weight quantization. **Gate:** a point at ≤477.8 B/pair with d_seg ≤3.39e-4, OR the named dominating error term.
+- **STEP 3 (live, M1, operator GO):** first C2 banded-around-source generator n600 row → fills the 4-order
+  (bytes,d_seg) hole from the cheap end. Target zone **60–85 KB total at d_seg ≤~1e-3**. **Gate:** byte-closed
+  row through the production receiver + hard oracle.
+- **STEP 4 (designed, #574):** ξ-keyed temporal amortization — kinetic event grammar (~2-3 B/gen/frame) or
+  INTER-CAE fallback per class — multiplies whichever single-frame point wins (published precedent 40-50%).
+  **Gate:** fires on the Step-2/3 point landing.
+- **STEP 5 (the composed row):** assemble the stack INSIDE the joint solve (two measured post-hoc failures
+  forbid composition-after) — banded generator base + Road-Lane seed-in-solve + PDW2 head packet (133 B) +
+  tie-aware preimage + KKT band-slack repair — measured as ONE byte-closed row through upstream/evaluate.py.
+  **Projection** from the synthesis: 65–130 KB total ⇒ rate term 0.043–0.087 ⇒ **S ≈ 0.06–0.14 IF distortion
+  holds at capstone grade** — i.e. the composed row is a candidate not just for sub-0.19108 but for SUB-0.15
+  DIRECTLY. This is a **projection, not a claim** (NO-FAKE #8), under two explicit conditionals: (1) distortion
+  holds through composition; (2) realization closes (frame-195 authority + receiver grammar).
+- **STEP 6 (authority):** dual-axis exact eval on the composed archive → pointer move.
+
+**Failure-routing:** if STEP 2's d_seg blows out on curved Road-Lane → Apollonius/anisotropic cells (survey
+P4); if STEP 3 misses the target zone → the dominating-byte-term diagnosis (crux §2, dense residual vs frame-0
+bootstrap) routes the next unit.
+
+**Today's honest position:** pointer 0.19108 UNMOVED; everything above is the measured path, with three of six
+steps live.

@@ -20006,3 +20006,77 @@ adjoint); the frozen resize A (modules.py:73,109) with its exact adjoint / facto
 ker-range split / preimage-fp32 lever is the pivotal surgical instrument; C9's KKT axes extend with
 intervention-point. verdict_scope: spec-composition + reconciliation unit; no new measurement, no
 score claim.
+
+## FEED-v10-capstone-and-description-pivot (2026-07-19) — quadrality durability sync of the day's landed facts; pointer 0.19108 [contest-CPU] UNMOVED
+
+Consolidated transcription (no re-derivation) of already-measured 2026-07-19 facts, one line each with
+its number + memo pointer. This is the DAG leg of the same-turn quadrality sync (DAG↔DSL↔equations↔TASKS).
+
+**A. Capstone spine PROVEN — first byte-closed v10 archive through the OFFICIAL evaluator, measured TWICE
+bit-identical** (`v10_capstone_first_byteclosed_row_20260719.md`). predictor-residual-u8.v1 archive
+409,526,925 B (sha e4cd154f…, packet 0.bin aa1dbb5e…) → unmodified upstream/evaluate.py n600 --device cpu
+seed 1234: **S=272.73, d_seg 1.5196e-4, d_pose 1.0184e-4, rate 272.687** (99.98% of S). macOS-CPU advisory
+AND [contest-CPU] Modal Linux x86_64 (fc-01KXXRAR7341QCJ6XWKV4S3QCW) — BIT-IDENTICAL → cross-host
+determinism of the C1 receiver spine PROVEN; inflate 215.8s/1800s (C1 canonical-full-evaluate receipt
+satisfied). score_claim=false (rate-dead spine, not a candidate); any compact payload inherits this decode.
+
+**B. Plane-storage family CLOSED — exact-plane lossless storage RATE-DEAD at FAMILY scope**
+(`v10_ratecrush_phase1_20260719.md`). 5 codec families (brotli/zstd/lzma ranks · JXL · WebP · FFV1 ·
+x264/x265) within 1.9× of the ~334 KB/pair conditional floor (#541 n48) vs the ~286,682 B TOTAL box —
+~700× over. JXL e9 best rung implied S=168.71, KEPT as donor codec (byte-exact decode wired). temporal
+prediction LOSES (verdict_scope: formulation). verdict_scope: family for the exact-plane storage class.
+
+**C. THE BUDGET BOX (operator derivation, re-verified arithmetically)** (`generator_description_crux_synthesis_20260719.md`
+§0). S<0.19108 at capstone distortion (d_seg 1.52e-4, pose≈0) ⇒ TOTAL ≤ **264,320 B (440.5 B/pair)**;
+honest box at the MEASURED spine distortions ≤ ~216,300 B (~360 B/pair); the box WIDENS 216→264 KB iff the
+fp32-preimage pose noise (1.02e-4 → 0.0319 S) is killed (M2). # FORMALIZATION_PENDING already waived in the
+memos: budget-box constants = direct arithmetic on the registered score law + seg_rate_breakeven_v1 (150.18
+B/1e-6 d_seg) — NO new equation registered (anti-duplicate-SoT; cross-ref only).
+
+**D. The 9-family ranked map + composed stack + THE binding blocker** (same crux memo §1–2). Ranked map of
+9 description families; composed best-case stack **~65–130 KB TOTAL (108–217 B/pair) + unmeasured repair
+term** = 2–4× under the box on RATE. THE binding blocker: a **4-order-of-magnitude empty hole** in the
+measured (bytes, d_seg) curve — between 140 B/pair @ d_seg 3.455e-3 (#548 rung B generator) and 1.77 MB/pair
+@ 1.63e-4 (secant residual). For the in-box descriptions (PDW1 306 B; MS-contour ~236 KB) **bytes are NOT
+binding — REALIZATION is**: (a) frame-195 fp32-vs-fp64 boundary-label authority blocker; (b) absent
+receiver grammar expanding coefficients → uint8 preimage. Non-additive-pools: Road-Lane is ONE competing
+pool; two measured post-hoc composition failures forbid composition-after-the-fact.
+
+**E. Survey adoptions folded into the description ladder** (`generator_description_online_survey_20260719.md`
++ PDW §). ADOPT: Aurenhammer minimum-generator LP · kinetic regular-triangulation event grammar (~2-3
+B/gen/frame, temporal format) · geogram BSD SDOT fitter + voro++ cross-check · Schuster-Katsaggelos
+operational-R-D DP framing (retargeted to d_seg) · Rissanen MDL stop-rule · margin-aware weight
+quantization via flip-predicate slack (**OURS, no prior art**). TEST: ξ-keyed temporal delta w/ MPEG-4
+INTER-CAE precedent ~40-50% (#574) · Apollonius/anisotropic cells (ε^(-1/2)→ε^(-1/3)) · SAD differentiable
+fitter. Originality DOUBLE-CONFIRMED (NO-FAKE #7): no era's codec is task-lossy vs a frozen KNOWN argmax.
+
+**F. Duty A/B adversarial gauntlet (#563)** (`duty_ab_gauntlet_verdicts_20260719.md`). 02 HorizonWeightedMargin
+CLEARED · 03 StepNativeActivation CLEARED (both: full_dsl_compile_hashes reproduced byte-exact at MAIN HEAD;
+levers traced to real L=L+… loss sites, not markers; F1/F2 threshold-provenance refinements folded, non-
+blocking) · 04 curvelet REFUSED-for-launch (3 named defects; verdict_scope: instance — launch-readiness of
+THIS revision, NOT the curvelet family or #497 basis question). 02/03 may proceed to launch-prep (CONTAINMENT:
+register→dry-start→operator-GO), 04 does not enter the launch list.
+
+**G. #570 laws (already landed by their authoring arms — sync cross-ref, NOT re-registered here):**
+pose_global_norm_pooled_dual_v1 registered (`task570_pose_law_successor_and_probes_20260719.md`);
+GF(257) BM raw-section KILLED (verdict_scope: formulation); B16/B8 float-closure REFUTED (formulation;
+argmax is batch-closed); f32_receiver_arithmetic_exactness_admissibility_v1 4th anchor =
+official_evaluate_py_n600_byteclosed_capstone_20260719 (ALREADY appended by the capstone arm — verified
+present in-registry, not duplicated by this sync).
+
+**DSL leg (honest close):** NO new levers were created today — the description-axis work is payload/receiver
+grammar (power-diagram/generator/temporal), NOT trainer levers; the only DSL surface touched is the #563
+duty A/B config `src/tac/witness_dsl/spec_v9c3_duty_ab_20260719.py` (already committed on MAIN, hashes
+reproduced in F). The DSL SoT therefore holds with zero drift this landing.
+
+**Equations leg (this sync):** appended ONE EmpiricalAnchor `exact_plane_storage_rate_dead_family_20260719`
+to `realization_necessity_preimage_per_stratum_v1` (the rate-dead family verdict B). Budget box: no equation
+(FORMALIZATION_PENDING, cross-ref seg_rate_breakeven_v1). f32 official n600 anchor: already present (G).
+
+**TASKS/ledgers leg:** current on MAIN — cross-ref codex-landing ids #572–#575 (the day's landed arms:
+capstone spine, rate-crush, description-crux, survey/#574 temporal, gauntlet). No ledger edit owed.
+
+**Edges out (owed, the measurement ladder — see SPEC_v10 §ADDENDUM 2026-07-19-B ROADMAP):** M1 C2
+banded-generator n600 row (operator GO) → first mid-curve point in the 4-order hole; M2 tie-aware preimage
+A/B → ~0.047 S distortion recovery at 0 bytes → widens box 216→264 KB; PDW1 fp32 realization → close
+frame-195. verdict_scope: durability-sync unit; no new measurement, no score claim; pointer 0.19108 UNMOVED.
