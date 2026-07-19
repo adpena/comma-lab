@@ -19946,3 +19946,26 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   VEHICLE question (train-time size-in-loss), not a CODER question — which converges exactly with
   the #559 ŷ-native reformulation (the next vehicle is where both land). Subsumes the #154
   weight-entropy queue at measurement level.
+
+## FEED-yhat-native-measured (2026-07-19) — #559 landed; the wave is COMPLETE; the composed next-vehicle picture is fully measured
+
+- **EQUIVALENCE (MEASURED, n24 both planes):** exact rational scorer-plane replay 28,311,552/
+  28,311,552 samples, 0 failures — ŷ-native is scorer-lossless at the rational layer for ANY
+  generator. Native-fp32 oracle: NOT bit-identical (7 argmax flips of 28.3M px; Δd_seg −2.1e-7)
+  — the f32/preimage law's ULP class, recorded not rounded away.
+- **THE ADVERSE FINDING (the honest launch-shape discipline working):** the arbitrary-rational
+  two-plane preimage receiver MEASURES 25.7 s/pair → DERIVED **249 min at n600 = 8.3× over the
+  30-min budget**. The factor-2 INTEGER receiver comparator projects 3.775 min — but that ABI is
+  narrower (integer planes, repeat-frame1). ŷ-native = sound optimization coordinate + packaging
+  spine, NOT yet a production decoder. verdict_scope: the measured arbitrary-rational
+  implementation + donor-derived fractional planes; the integer-plane child is OPEN.
+- **THE CHILD PATH (the next vehicle, where everything converges):** learn TWO INDEPENDENTLY
+  DESCRIBED INTEGER-uint8 scorer planes — integer planes make the fast receiver ABI applicable
+  (3.8-min class), kill the fractional-preimage cost, and are exactly where the #558 size-in-loss
+  survivor + PDW2 certificates + int8/brotli-ceiling coding land. Alternative child: a much
+  faster exact rational receiver (Rust/kernel work).
+- **WAVE SUMMARY (all 5 arms of the operator's representation/reformulation/packaging/rate GO
+  now measured):** certificates 138/133B GATE-PASS (#553) · coding ceiling closed both ways
+  (#557/#558, survivor = next-vehicle size-in-loss, knee 4.1e-4) · shape = ŷ-native spine with
+  the integer-plane child named (#559) · secant/waterfill live (#536 candidate). The composed
+  v10 next-vehicle spec is now assemblable from MEASURED parts only.
