@@ -19748,3 +19748,22 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
 - **CAMPAIGN STATE:** KKT program fully instrumented; pose axis closed (inactive); exact-plane
   residual family rate-dead (FEED-predictor-floor); ONE open axis remains: bytes(compact generator
   + band slack). The v10 carrier build IS that axis.
+
+## FEED-resumability-proven (2026-07-19) — #537 CLOSED; seal-path step 7 DONE
+
+- **CPU-locked bit-identity proof: 13/13 PASS** (`probe537_cpu_20260719_receipt.json`):
+  control-twice fully deterministic; SIGKILL at ep3 → resume → live weights, EMA shadow,
+  optimizer moments, RNG, event ledger, stage position ALL bit-identical; exact continuation
+  (not re-anchored); periodic per-stage checkpoints byte-close-loadable under distinct
+  stage-encoded filenames with bounded retention. State restoration is PROVEN.
+- **GPU adjudication (fix2 Metal receipt):** resumed-vs-control sits BELOW the measured D6
+  host floor on every aggregate (live/EMA 0.0083 vs floor 0.0102; optimizer 0.0185 vs 0.0212)
+  with all discrete state bit-identical — resume adds NO error beyond the established MLX-GPU
+  cross-process non-determinism (D6). The per-key single-sample envelope is structurally
+  unpassable (P(all 28 keys within one control-pair delta) ≈ 0.5^28 ≈ 4e-9) — a test-design
+  artifact, not a resume defect; acceptance = CPU bit-identity (authority) + GPU
+  below-host-floor aggregates.
+- **Seal-path state:** step 1 CLOSED (n600 lattice) · 2 closed-at-n24 (#548) · pose axis
+  CLOSED (#549 bindingness) · exact-residual family rate-dead (#541) · **step 7 CLOSED
+  (this)** · open: Seg-secant curve (arm live) → #536 waterfill → steps 8-9 (GO-gated exact
+  replay → SEAL).
