@@ -4072,7 +4072,20 @@ class CrucibleV7LaunchConfig:
                 )
             )
             manifest["cli_appended_lever_factories"] = list(prior + cli_factories)
-        return replace(self, typed=typed, dsl_program_manifest=manifest)
+        # #332 custody coherence (2026-07-17): a rebind composes levers AFTER the
+        # factory attached flag custody, so any class-4 identity custody record
+        # whose flag the new lever overrides must be regenerated from the ACTUAL
+        # composed value (single scalar-value owner = emitted argv) — else the
+        # #406 document recompile refuses the stale pin.  No-op for configs
+        # without identity custody records.
+        from tac.witness_dsl.spec_v9_cgauge import refresh_identity_custody_records
+
+        constants = refresh_identity_custody_records(
+            self.constants_manifest, typed.to_program().flag_dict()
+        )
+        return replace(
+            self, typed=typed, dsl_program_manifest=manifest, constants_manifest=constants
+        )
 
     def with_dsl_lever_factories(self, *factory_names: str):
         """Compose zero-argument Lever factories through the typed DSL surface."""

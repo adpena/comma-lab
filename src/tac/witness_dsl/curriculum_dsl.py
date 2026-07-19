@@ -1782,6 +1782,33 @@ class WitnessProgram(ScheduleDisplay):
                     f"TYPE-INCOMPATIBLE OVERRIDE: {flag} is boolean-action (takes no value) but "
                     f"the override is {val!r}; compile would emit '{flag} {val}' which the "
                     "trainer argparse rejects (unrecognized arguments)")
+        # #332 CUSTODY COMPOSITION LAW (2026-07-17): a flag-custody rollup Lever
+        # (spec_v9_cgauge.attach_flag_custody) is VALUE-NEUTRAL by contract — it
+        # re-asserts already-composed values purely to carry ownership/LawRef/
+        # receipt custody.  If a derived config mutates ``base``/``out_dir``
+        # AFTER custody was attached, the rollup's overrides would silently
+        # shadow the mutation (levers compose last).  Refuse LOUDLY instead:
+        # composing WITH vs WITHOUT the custody lever(s) must yield an
+        # identical flag_dict, else the caller must strip_flag_custody() first
+        # and re-attach after its mutations.
+        custody_levers = [lv for lv in self.levers
+                          if str(lv.name).startswith("v9_flag_custody")]
+        if custody_levers:
+            stripped = replace(
+                self,
+                levers=tuple(lv for lv in self.levers
+                             if not str(lv.name).startswith("v9_flag_custody")))
+            with_custody = fd
+            without_custody = stripped.flag_dict()
+            if with_custody != without_custody:
+                _sentinel = object()
+                drifted = sorted(
+                    k for k in set(with_custody) | set(without_custody)
+                    if with_custody.get(k, _sentinel) != without_custody.get(k, _sentinel))
+                problems.append(
+                    "CUSTODY NON-NEUTRAL: the v9_flag_custody rollup shadows post-custody "
+                    f"mutations on {drifted[:6]} — strip_flag_custody() before mutating "
+                    "base/out_dir and re-attach custody at the end (spec_v9_cgauge)")
         # CONFIG-BUILD-TIME RUNNABILITY: an enabled curriculum whose effective
         # stage caps lie beyond this run's epoch budget would produce a false
         # verdict (the stage can never engage).  Use the real parser defaults so

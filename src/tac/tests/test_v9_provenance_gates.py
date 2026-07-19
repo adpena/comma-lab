@@ -188,20 +188,22 @@ def test_live_v9_bijection_collector_walks_four_real_factories_deterministically
     # family must not be argparse-owned; no-Fourier-basis doctrine, A/B control).
     assert [len(snapshot.bindings) for snapshot in first] == [201, 226, 226, 226]
     assert [snapshot.bijection_hash for snapshot in first] == [snapshot.bijection_hash for snapshot in second]
-    lawref_flags = (
-        "--dseg-aware-taper",
-        "--dseg-aware-taper-floor",
-        "--dseg-aware-taper-scale",
-        "--dseg-aware-taper-strength",
-        # 2026-07-15 merge-reconciliation: MarginBandSatisficing's constant_manifest is now
-        # keyed by its emitted --flag (TypedLever validator contract), so the msafe LawRef
-        # custody surfaces here for every ideal program that composes the lever.
-        "--seg-margin-satisfice-msafe",
-    )
-    assert first[0].lawref_flags == ()
-    assert all(snapshot.lawref_flags == lawref_flags for snapshot in first[1:])
-    # 13 (was 12): the flag-keyed msafe constant_manifest adds its compiler record too.
-    assert [len(snapshot.compiler_record_flags) for snapshot in first] == [6, 13, 13, 13]
+    # 2026-07-17 #332 flag-custody backfill: the ownership graph is COMPLETE for
+    # every live factory — LawRef / compiler-record / provenance coverage each
+    # equal the semantic flag set exactly, and the full audit returns ZERO
+    # residuals.  (Before the backfill these pinned the deficit: 432 had no
+    # LawRef coverage at all and only 6 compiler records.)
+    from tac.v9_provenance_gates import _VOLATILE_ARGV_VALUE_FLAGS
+
+    for snapshot in first:
+        semantic = sorted(
+            binding.flag for binding in snapshot.bindings
+            if binding.flag not in _VOLATILE_ARGV_VALUE_FLAGS
+        )
+        assert sorted(snapshot.lawref_flags) == semantic
+        assert sorted(snapshot.compiler_record_flags) == semantic
+        assert sorted(snapshot.provenance_flags) == semantic
+    assert audit_config_flag_provenance_bijection(first) == []
 
 
 # ---------------------------------------------------------------------------

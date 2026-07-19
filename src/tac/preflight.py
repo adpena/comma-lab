@@ -86501,12 +86501,29 @@ def check_launch_and_governor_require_dsl_compile_hash(
         bound_writer = _ast_named_function(tree, "write_dsl_bound_launch")
         calibration = _ast_named_function(tree, "_run_rss_calibration")
         dry_start = _ast_named_function(tree, "_run_dry_start")
+        # 2026-07-17: the B1 durability wrapper split the dry-start chain into
+        # ``_run_dry_start`` (receipt/signal wrapper) + ``_run_dry_start_inner``
+        # (the pass bodies that actually compile the DSL-bound launch).  The
+        # enforcement surface is the UNION of both — with the structural
+        # requirement (below) that the wrapper still delegates to the inner
+        # function, so the DSL-bound tokens cannot satisfy the gate from an
+        # orphaned helper nothing calls.
+        dry_start_inner = _ast_named_function(tree, "_run_dry_start_inner")
         main_calls = _ast_call_names(main) if main else ()
         writer_calls = _ast_call_names(writer) if writer else ()
         compiler_calls = _ast_call_names(compiler) if compiler else ()
         bound_calls = _ast_call_names(bound_writer) if bound_writer else ()
         calibration_calls = _ast_call_names(calibration) if calibration else ()
-        dry_start_calls = _ast_call_names(dry_start) if dry_start else ()
+        dry_start_calls = tuple(_ast_call_names(dry_start)) if dry_start else ()
+        if dry_start_inner is not None:
+            if dry_start is not None and "_run_dry_start_inner" not in dry_start_calls:
+                violations.append(
+                    "tools/launch_witness_run.py: _run_dry_start does not delegate to "
+                    "_run_dry_start_inner (orphaned dry-start body)"
+                )
+            dry_start_calls = tuple(dry_start_calls) + tuple(
+                _ast_call_names(dry_start_inner)
+            )
         for token, present in (
             ("compile_dsl_document_for_config", "compile_dsl_document_for_config" in main_calls),
             (

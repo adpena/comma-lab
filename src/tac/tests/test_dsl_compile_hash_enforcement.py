@@ -446,7 +446,10 @@ def test_internal_smoke_delta_is_typed_lever_and_writes_valid_binding(tmp_path: 
     bindings = {
         row["flag"]: row for row in document["bijection_manifest"]["bindings"]
     }
-    assert bindings["--ckpt-every"]["lever_owners"] == ["catalog406_test_resume"]
+    # 2026-07-17 #332 backfill: --ckpt-every is now ALSO owned by the value-neutral
+    # v9_flag_custody_rollup; the launcher-composed lever stays the LAST owner
+    # (levers compose last, later wins) — the delta remains DSL-authored.
+    assert bindings["--ckpt-every"]["lever_owners"][-1] == "catalog406_test_resume"
     assert bindings["--resume-from"]["lever_owners"] == ["catalog406_test_resume"]
 
 

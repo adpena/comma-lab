@@ -529,17 +529,23 @@ V9_CGAUGE_432_PROVENANCE: dict[str, dict[str, str]] = {
                 "factory AND composed) so it rides the expected-active-levers "
                 "manifest — built-but-not-composed extinction (advisory P0-1).",
     },
-    "schedule": {
-        "value": "state-gated cascade (see V9_CGAUGE_432_CASCADE_REALIZATION)",
-        "rung": "derived_at_config", "form": "SELF_DERIVING",
-        "law": "costate_lambda_marginal_ds_v1",
-        "note": "#430 coherent schedule: gates fire on wired trainer sensors "
-                "(lane_nucleus / annulus_plateau / powerlaw_meat / sigma_min_plateau "
-                "/ tau-event / birth-completion) with epoch values demoted to "
-                "fail-safe BACKSTOP caps — the trainer-native realization of the "
-                "measured-winning selective-intervention shape (2607.08716 + the "
-                "#430 backtest, −27.4% ∫d_seg·dep on the WF-winning replay model).",
-    },
+}
+
+# RE-HOMED 2026-07-17 (#332 coverage fix): the WHOLE-SCHEDULE provenance row is
+# not a per-flag row — keyed as "schedule" inside V9_CGAUGE_432_PROVENANCE it was
+# a STALE key against the semantic flag set (the bijection gate's provenance
+# table must equal the flag set exactly).  The information is preserved verbatim
+# here as a named non-flag constant.
+V9_CGAUGE_432_SCHEDULE_PROVENANCE: dict[str, str] = {
+    "value": "state-gated cascade (see V9_CGAUGE_432_CASCADE_REALIZATION)",
+    "rung": "derived_at_config", "form": "SELF_DERIVING",
+    "law": "costate_lambda_marginal_ds_v1",
+    "note": "#430 coherent schedule: gates fire on wired trainer sensors "
+            "(lane_nucleus / annulus_plateau / powerlaw_meat / sigma_min_plateau "
+            "/ tau-event / birth-completion) with epoch values demoted to "
+            "fail-safe BACKSTOP caps — the trainer-native realization of the "
+            "measured-winning selective-intervention shape (2607.08716 + the "
+            "#430 backtest, −27.4% ∫d_seg·dep on the WF-winning replay model).",
 }
 
 # The #430 CASCADE_STAGES → trainer-flag realization map (the witness-DSL compile
@@ -678,6 +684,7 @@ def compile_v9_cgauge_432_launch_config(
     num_pairs: int = 600,
     epochs: int = 3000,
     out_dir: str = "experiments/results/__v9_cgauge_432__",
+    flag_custody: bool = True,
 ):
     """The launcher-facing #432 cfg — the ONE object satisfying the duck-typed cfg
     protocol ``tools/launch_witness_run.py`` consumes (mirrors
@@ -781,6 +788,12 @@ def compile_v9_cgauge_432_launch_config(
             "compiled from the flicker-floor law's placement + the muon-cap co-anchor, "
             "never hand-typed independently."),
     }
+    if flag_custody:
+        # #332 DSL-as-complete-SoT: complete the per-flag custody chain LAST (the
+        # composed program is final here).  Byte-neutral (asserted inside).
+        typed, constants = attach_flag_custody(
+            typed, constants, program_name="v9_cgauge_432")
+        dsl_manifest["typed_config_hash"] = typed.typed_config_hash()
     return CrucibleV7LaunchConfig(
         typed=typed,
         constants_manifest=constants,
@@ -833,8 +846,13 @@ def compile_v9_cgauge_432_smoke_regime_config(
     )
     from tac.witness_dsl.typed_config import build_launch_manifest
 
+    # flag_custody=False: this variant mutates base flags (forced backstop starts)
+    # AFTER wrapping — a custody rollup would (a) shadow the forced values and
+    # (b) trip this function's base-vs-lever ambiguity refusal.  NON-PROMOTABLE
+    # timing config; the #332 custody chain is scoped to the audited factory set.
     base_compiled = compile_v9_cgauge_432_launch_config(
-        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        flag_custody=False,
     )
     typed = base_compiled.typed
     # A forced flag may live in ``typed.base`` (lane_band / chroma_boundary) OR
@@ -1044,6 +1062,7 @@ def compile_v9_cgauge_ideal_launch_config(
     mod_dim: int = 19,
     program_name: str = "v9_cgauge_truly_optimal_core",
     with_reachability: bool = False,
+    flag_custody: bool = True,
 ):
     """Compile the held event-native V9 core or either matched family A/B arm.
 
@@ -1072,8 +1091,13 @@ def compile_v9_cgauge_ideal_launch_config(
     )
     from tac.witness_dsl.typed_config import build_launch_manifest
 
+    # flag_custody=False: this factory mutates base (--mod-dim / --micro-batch-pairs /
+    # --verdict-pairs) AFTER wrapping; the #332 custody chain is completed on ITS OWN
+    # final composed program below (a 432 rollup here would shadow the base updates —
+    # the composition law WitnessProgram.validate enforces).
     wrapped = compile_v9_cgauge_432_launch_config(
-        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir)
+        gt_cache_path, num_pairs=num_pairs, epochs=epochs, out_dir=out_dir,
+        flag_custody=False)
     typed = wrapped.typed
 
     taper = DsegAwareTaper(
@@ -1090,10 +1114,12 @@ def compile_v9_cgauge_ideal_launch_config(
     # The new trainer actuator owns λ_k = λ_0 + (λ_N-λ_0)k/N on the persisted event
     # τ rung and primes λ BEFORE assigning the lower τ.  Values are the settled V9
     # retention transition (0.01 -> 0.05), not the older F0 constant-hold rescue.
+    # NOTE (#332 single-owner law, 2026-07-17): --seg-form-unify-tau is OWNED by the
+    # inherited ``seg_form_unify_tau`` Lever (value True, identical); re-asserting it
+    # here made the flag dual-owned (a bijection violation) without changing the argv.
     eik_hold = Lever(
         "unified_tau_eikonal_hold",
         overrides={
-            "--seg-form-unify-tau": True,
             "--tau-advance-mode": "event",
             "--eikonal-weight": 0.01,
             "--eikonal-weight-end": 0.05,
@@ -1187,7 +1213,7 @@ def compile_v9_cgauge_ideal_launch_config(
     }
     if mismatches:
         raise ValueError(f"{program_name} actuation/custody REFUSE: {mismatches}")
-    for flag in ("--stage-checkpoints", "--closed-loop-control"):
+    for flag in ("--stage-checkpoints", "--closed-loop-control", "--seg-form-unify-tau"):
         if flag not in emitted_pairs:
             raise ValueError(f"{program_name} required Boolean actuator missing: {flag}")
     reachability_emitted = "--margin-saliency-reachability" in emitted_pairs
@@ -1227,7 +1253,13 @@ def compile_v9_cgauge_ideal_launch_config(
     })
     constants = _derive_manifest_from_emitted_argv(wrapped.constants_manifest, argv)
     constants = _merge_lever_constant_manifests(constants, tuple(typed.to_program().levers))
-    constants["eikonal_retention_tau_rung"] = {
+    # #332 coverage fix (2026-07-17): the tau-rung retention record documents an
+    # ACTUATOR (not a semantic flag), and the S_R selector record is only a real
+    # compiler record when --margin-saliency-reachability is actually EMITTED.
+    # Non-flag rows in constants_manifest are STALE compiler-record coverage for
+    # the bijection gate; the actuator record therefore rides the DSL program
+    # manifest, and the selector record is gated on emission.
+    manifest["eikonal_retention_tau_rung"] = {
         "value": {"base": 0.01, "end": 0.05},
         "equation_id": "eikonal_retention_couples_to_tau_rung_v1",
         "ladder_class": "derived_at_config",
@@ -1235,20 +1267,25 @@ def compile_v9_cgauge_ideal_launch_config(
         "inputs": {"actuator": "persisted TauAdvanceController.rung", "fraction": "k/N"},
         "note": "retention is primed before each lower-tau model assignment",
     }
-    constants["margin_saliency_reachability"] = {
-        "value": bool(with_reachability),
-        "equation_id": V9_CGAUGE_IDEAL_SR_EQUATION_ID,
-        "ladder_class": "derived_at_config",
-        "fallback_used": False,
-        "inputs": {
-            "control": "exp(-margin/tau)",
-            "treatment_multiplier": "normalized cached through-R S_R",
-            "micro_batch_pairs": 1,
-        },
-        "note": "C1 treatment selector; PREPARED_NOT_FIRED and no score authority",
-    }
+    if with_reachability:
+        constants["margin_saliency_reachability"] = {
+            "value": True,
+            "equation_id": V9_CGAUGE_IDEAL_SR_EQUATION_ID,
+            "ladder_class": "derived_at_config",
+            "fallback_used": False,
+            "inputs": {
+                "control": "exp(-margin/tau)",
+                "treatment_multiplier": "normalized cached through-R S_R",
+                "micro_batch_pairs": 1,
+            },
+            "note": "C1 treatment selector; PREPARED_NOT_FIRED and no score authority",
+        }
     if float(constants["hosc_beta_end"]["value"]) != float(emitted_pairs["--hosc-beta-end"]):
         raise ValueError("hosc_beta_end constants manifest does not match compiled DSL argv")
+    if flag_custody:
+        typed, constants = attach_flag_custody(
+            typed, constants, program_name=str(program_name))
+        manifest["typed_config_hash"] = typed.typed_config_hash()
     return CrucibleV7LaunchConfig(
         typed=typed,
         constants_manifest=constants,
@@ -1279,6 +1316,11 @@ def compile_v9_cgauge_ideal_mod19_sR_launch_config(**kwargs):
     kwargs.setdefault("program_name", "v9_cgauge_ideal_mod19_sR")
     kwargs.setdefault("out_dir", "experiments/results/v9_cgauge_ideal_mod19_sR_20260715")
     kwargs["with_reachability"] = True
+    # flag_custody defaults OFF here: the sR config is the LIVE c1/c2 lineage
+    # parent (spec_c1_optimal_form / spec_c2_surgical mutate out_dir/name after
+    # wrapping); the #332 custody rollup is scoped to the closed audited factory
+    # set and must never risk shadowing the live lineage's derived mutations.
+    kwargs.setdefault("flag_custody", False)
     return compile_v9_cgauge_ideal_launch_config(**kwargs)
 
 
@@ -1486,6 +1528,509 @@ def _compile_v9_cgauge_iso_launch_config(
         dsl_program_manifest=manifest,
         schedule_governance=dict(wrapped.schedule_governance),
     )
+
+
+# ===========================================================================
+# 2026-07-17 — #332 FLAG-CUSTODY BACKFILL ENGINE (DSL-as-complete-SoT)
+#
+# Catalog #332 requires every semantic flag of the closed live V9 factory set to
+# carry the full custody chain: exactly one Lever owner + exactly one
+# Lever.constant_refs LawRef + exactly one canonical compiler record (same
+# equation_id) + a value-provenance rung + exactly one runtime receipt schema.
+# ``attach_flag_custody`` completes that chain on the FINAL composed program of a
+# factory, HONESTLY (NO-FAKE #4/#6):
+#   * a flag whose canonical compiler record already cites a REAL derivation law
+#     (hosc_beta_fireband_pin_v1 / tau_end_knee_launch_v1 / ...) gets a LawRef
+#     reconstructed FROM that record — same equation_id, same inputs — never a
+#     fabricated new derivation;
+#   * every other flag is custodied through the registered NON-DERIVATIONAL
+#     identity law ``dsl_custodied_scalar_identity_v1`` as an explicit class-4
+#     ``hardcoded_waiver`` with typed :class:`HardcodedWaiverCustody` — value
+#     bytes preserved, ZERO scientific authority claimed.  An honest class-4
+#     waiver is CORRECT for a generic config knob; a fabricated derivation would
+#     be the fake this backfill exists to prevent.
+#
+# COMPOSITION LAW (enforced by ``WitnessProgram.validate``): the custody rollup
+# Lever is VALUE-NEUTRAL — composing it never changes the program's flag_dict.
+# A derived config that mutates ``base``/``out_dir`` AFTER custody would be
+# silently shadowed by the rollup's overrides, so it must either compile its
+# parent with ``flag_custody=False`` or ``strip_flag_custody`` first; the
+# validate() guard turns any miss into a LOUD refusal instead of silent drift.
+# ===========================================================================
+
+V9_FLAG_CUSTODY_LEVER = "v9_flag_custody_rollup"
+DSL_IDENTITY_EQUATION_ID = "dsl_custodied_scalar_identity_v1"
+V9_FLAG_RECEIPT_SCHEMA = "v9_config_compile.v1"
+
+# program_name -> the COMPLETE per-flag value-provenance table (rung per flag),
+# registered by attach_flag_custody at factory-compile time and consumed by
+# tac.v9_provenance_gates._provenance_table_for_program.  The table lives on the
+# DSL side (this module) — the gate READS it; it never synthesizes its own.
+_V9_FLAG_PROVENANCE_REGISTRY: dict[str, dict[str, dict]] = {}
+
+# Per-program curated --mod-dim provenance for the ideal family (the 432 row in
+# V9_CGAUGE_432_PROVENANCE is 432-specific; the family A/B arms differ honestly).
+_V9_IDEAL_MOD_DIM_PROVENANCE: dict[str, dict[str, dict[str, str]]] = {
+    "v9_cgauge_ideal_mod32": {
+        "--mod-dim": {
+            "value": "32", "rung": "measured_anchor", "form": "SCALAR",
+            "law": "cgauge_whitney_moddim_v1",
+            "note": "family A/B CONTROL arm: the incumbent measured anchor (the #205 banked "
+                    "mod-32 baseline is the control); the DERIVED Whitney value 19 is the "
+                    "treatment arm (cgauge_whitney_moddim_v1).",
+        },
+    },
+}
+for _name in ("v9_cgauge_truly_optimal_core", "v9_cgauge_ideal_mod19", "v9_cgauge_ideal_mod19_sR"):
+    _V9_IDEAL_MOD_DIM_PROVENANCE[_name] = {
+        "--mod-dim": dict(V9_CGAUGE_432_PROVENANCE["--mod-dim"]),
+    }
+
+
+def _curated_flag_provenance_for(program_name: str) -> dict[str, dict]:
+    """Curated (reviewed) provenance rows applicable to ``program_name``."""
+    table: dict[str, dict] = dict(V9_CGAUGE_PROVENANCE)
+    if program_name == "v9_cgauge_432":
+        table.update(V9_CGAUGE_432_PROVENANCE)
+    else:
+        # The T1 phase-advection weight derivation (Law-5) is program-independent
+        # within the V9 family; --mod-dim is per-arm (control vs derived treatment).
+        table["--seg-phase-advect-weight"] = dict(
+            V9_CGAUGE_432_PROVENANCE["--seg-phase-advect-weight"])
+        table.update(_V9_IDEAL_MOD_DIM_PROVENANCE.get(program_name, {}))
+    return table
+
+
+def v9_flag_provenance_table(program_name: str) -> dict[str, dict] | None:
+    """Return the COMPLETE per-flag provenance table for a canonical V9 program.
+
+    Compiles the owning factory on first use (attach_flag_custody registers the
+    table as a compile side effect).  Returns ``None`` for unknown program names
+    so callers can fall back to the curated static tables.
+    """
+    if program_name in _V9_FLAG_PROVENANCE_REGISTRY:
+        return dict(_V9_FLAG_PROVENANCE_REGISTRY[program_name])
+    factories = {
+        "v9_cgauge_432": compile_v9_cgauge_432_launch_config,
+        "v9_cgauge_truly_optimal_core": compile_v9_cgauge_ideal_launch_config,
+        "v9_cgauge_ideal_mod19": compile_v9_cgauge_ideal_mod19_launch_config,
+        "v9_cgauge_ideal_mod32": compile_v9_cgauge_ideal_mod32_launch_config,
+    }
+    factory = factories.get(program_name)
+    if factory is None:
+        return None
+    factory()
+    table = _V9_FLAG_PROVENANCE_REGISTRY.get(program_name)
+    return dict(table) if table is not None else None
+
+
+def _constants_key_flag(key: str) -> str:
+    key = str(key)
+    return key if key.startswith("--") else "--" + key.replace("_", "-")
+
+
+def _custody_scalar(value):
+    """bool -> int 0/1 (the canonical LawRef convention); int/float/str pass through."""
+    return int(value) if isinstance(value, bool) else value
+
+
+def _flag_custody_waiver(flag: str, value, program_name: str):
+    """Typed class-4 custody for one inherited config knob (honest, uniform)."""
+    from tac.witness_dsl.constants_telemetry_build_wave_20260715 import (
+        HardcodedWaiverCustody,
+    )
+
+    return HardcodedWaiverCustody(
+        constant=flag,
+        value=str(value),
+        reason=(
+            f"#332 flag-custody backfill ({program_name}): value inherited from the sealed "
+            "crucible_v752 / V9 spec compile (ladder-placed at sealing per SPEC_v75 / "
+            "SYNTHESIS_v3); no per-flag executable derivation or content-hashed measured "
+            "anchor is registered for THIS flag yet, so the value is custodied through the "
+            "non-derivational identity law as an explicit class-4 hardcoded waiver — value "
+            "bytes preserved, no scientific authority claimed."
+        ),
+        owner="tac.witness_dsl.spec_v9_cgauge.attach_flag_custody",
+        rederivation_trigger=(
+            "registering an executable derivation law (or a content-hashed measured anchor) "
+            "for this flag retires the waiver; the LawRef then cites the real equation."
+        ),
+        battery_arm="#332 strict-flip live-count-0 backfill queue (catalog406_332 worklist)",
+    )
+
+
+def _identity_custody(flag: str, value, program_name: str):
+    """(LawRef, compiler-record row) — class-4 identity value custody for one flag."""
+    from tac.canonical_equations.evaluators import populate_lawref_evaluators
+    from tac.witness_dsl.lawref import (
+        LADDER_HARDCODED_WAIVER,
+        InputRef,
+        LawRef,
+        resolve,
+    )
+
+    populate_lawref_evaluators()
+    waiver = _flag_custody_waiver(flag, value, program_name)
+    scalar = _custody_scalar(value)
+    from pathlib import Path
+
+    ref = LawRef(
+        equation_id=DSL_IDENTITY_EQUATION_ID,
+        inputs={"value": InputRef.literal(scalar, provenance=waiver.reason)},
+        ladder_class=LADDER_HARDCODED_WAIVER,
+        fallback=scalar,
+        fallback_waiver_reason=waiver.reason,
+    )
+    record = resolve(ref, {}, repo_root=Path(__file__).resolve().parents[3]).to_dict()
+    record["waiver_custody"] = {
+        "constant": waiver.constant,
+        "value": waiver.value,
+        "reason": waiver.reason,
+        "owner": waiver.owner,
+        "rederivation_trigger": waiver.rederivation_trigger,
+        "battery_arm": waiver.battery_arm,
+    }
+    return ref, record
+
+
+def _lawref_from_compiler_record(flag: str, record: dict):
+    """Reconstruct the OWNING LawRef from an existing canonical compiler record.
+
+    Same equation_id + same resolved inputs as the record — the DSL-side custody
+    pointer to a derivation that ALREADY exists.  Never invents a new equation.
+    """
+    import json as _json
+
+    from tac.witness_dsl.lawref import (
+        LADDER_DERIVED_AT_CONFIG,
+        LADDER_HARDCODED_WAIVER,
+        VALID_LADDER_CLASSES,
+        InputRef,
+        LawRef,
+    )
+
+    equation_id = str(record.get("equation_id") or "")
+    if not equation_id:
+        raise ValueError(f"compiler record for {flag} has no equation_id")
+    raw_inputs = record.get("inputs")
+    rows: list[dict] = []
+    if isinstance(raw_inputs, list):
+        rows = [dict(row) for row in raw_inputs if isinstance(row, dict)]
+    elif isinstance(raw_inputs, dict):
+        rows = [{"name": name, "value": val} for name, val in raw_inputs.items()]
+    inputs: dict[str, InputRef] = {}
+    for row in rows:
+        name = str(row.get("name") or "")
+        if not name:
+            continue
+        val = row.get("value")
+        if isinstance(val, bool):
+            val = int(val)
+        if not isinstance(val, (int, float, str)):
+            # non-scalar record input: keep its exact JSON bytes as the custody
+            # literal; the record itself remains the resolution authority.
+            val = _json.dumps(val, sort_keys=True, default=str)
+        provenance = str(
+            row.get("provenance")
+            or f"canonical compiler record input for {flag} ({equation_id})"
+        )
+        inputs[name] = InputRef.literal(val, provenance)
+    if not inputs:
+        inputs = {
+            "value": InputRef.literal(
+                _custody_scalar(record.get("value")),
+                f"canonical compiler record value for {flag} ({equation_id})",
+            )
+        }
+    ladder = str(record.get("ladder_class") or LADDER_DERIVED_AT_CONFIG)
+    if ladder not in VALID_LADDER_CLASSES:
+        raise ValueError(
+            f"compiler record for {flag} carries unknown ladder_class {ladder!r}")
+    fallback = None
+    fallback_reason = ""
+    if ladder == LADDER_HARDCODED_WAIVER:
+        fallback = _custody_scalar(record.get("value"))
+        fallback_reason = str(record.get("note") or "compiler-record hardcoded waiver")
+    return LawRef(
+        equation_id=equation_id,
+        inputs=inputs,
+        ladder_class=ladder,
+        fallback=fallback,
+        fallback_waiver_reason=fallback_reason,
+    )
+
+
+def refresh_identity_custody_records(constants: dict, flag_dict: dict) -> dict:
+    """Re-align class-4 identity custody records with a re-composed program.
+
+    A LATER composed Lever (a launcher-owned dry-start delta, a ``--dsl-lever``
+    factory, an ISO treatment) legitimately overrides a flag the #332 custody
+    rollup carries.  The flag's identity record must then record the ACTUAL
+    emitted value (single scalar-value owner = emitted argv), regenerated
+    through the same honest identity resolution — never left pinning a stale
+    value the #406 document recompile would refuse.  No-op for configs without
+    identity custody records (legacy paths stay byte-identical).
+    """
+    out = {
+        key: (dict(val) if isinstance(val, dict) else val)
+        for key, val in dict(constants or {}).items()
+    }
+    for key, rec in out.items():
+        if not (isinstance(rec, dict) and rec.get("equation_id") == DSL_IDENTITY_EQUATION_ID):
+            continue
+        flag = _constants_key_flag(key)
+        if flag not in flag_dict:
+            continue
+        composed = flag_dict[flag]
+        recorded = rec.get("value")
+        if isinstance(composed, bool) and isinstance(recorded, int):
+            matched = int(composed) == recorded
+        else:
+            matched = composed == recorded
+        if matched:
+            continue
+        _ref, fresh = _identity_custody(flag, composed, "recomposed_launch_config")
+        fresh["note"] = (
+            "identity custody refreshed after later-Lever composition: the composed "
+            "argv is the single scalar-value owner; the prior value was replaced by "
+            "the composing Lever (see expected_active_levers)."
+        )
+        # NOT ``inherited_manifest_value_replaced``: that key redirects the #406
+        # LawRef recompute to the OLD value, while this record's fresh inputs
+        # resolve to the NEW one.  Historical, non-authorizing context only.
+        fresh["prior_custody_value_historical_non_authorizing"] = recorded
+        out[key] = fresh
+    return out
+
+
+def strip_flag_custody(typed):
+    """Remove the #332 custody rollup Lever so a derived config may mutate base."""
+    levers = tuple(
+        lever for lever in typed.levers
+        if not str(lever.name).startswith("v9_flag_custody")
+    )
+    if len(levers) == len(typed.levers):
+        return typed
+    return typed.model_copy(update={"levers": levers})
+
+
+def attach_flag_custody(typed, constants: dict, *, program_name: str):
+    """Complete the #332 per-flag custody chain on a FINAL composed program.
+
+    Returns ``(typed', constants')`` where every semantic flag has exactly one
+    Lever owner, exactly one LawRef, exactly one canonical compiler record with
+    the SAME equation_id, one runtime receipt schema, and a registered
+    value-provenance rung.  BYTE-NEUTRAL by construction: the compiled trainer
+    argv is asserted identical before/after (fail-closed).
+    """
+    from tac.v9_provenance_gates import _VOLATILE_ARGV_VALUE_FLAGS
+    from tac.witness_dsl.lawref import lawref_to_declaration
+    from tac.witness_dsl.typed_config import TypedLever
+
+    typed = strip_flag_custody(typed)
+    program = typed.to_program()
+    fd = program.flag_dict()
+    argv_before = tuple(program.compile_trainer_argv())
+    # Run-local identity flags (--out-dir/...) are NON-SEMANTIC per the gate's
+    # volatility law: no ownership/LawRef/record custody (owning a per-launch
+    # value would shadow legitimate derived-config out_dir changes).
+    semantic_fd = {
+        flag: value for flag, value in fd.items()
+        if flag not in _VOLATILE_ARGV_VALUE_FLAGS
+    }
+
+    # Existing canonical compiler records keyed by semantic flag.
+    wrapper_records: dict[str, dict] = {}
+    for key, rec in dict(constants).items():
+        if isinstance(rec, dict) and rec.get("equation_id"):
+            flag = _constants_key_flag(key)
+            if flag in semantic_fd:
+                wrapper_records[flag] = rec
+    lever_manifest_flags = {
+        flag for lever in typed.levers for flag in lever.constant_manifest
+    }
+
+    new_constants = {
+        key: (dict(val) if isinstance(val, dict) else val)
+        for key, val in constants.items()
+    }
+    lawref_equation_by_flag: dict[str, str] = {}
+
+    def _custody_for(flag: str):
+        """(LawRef, identity-record-or-None) with honest source election."""
+        record = wrapper_records.get(flag)
+        if record is not None:
+            return _lawref_from_compiler_record(flag, record), None
+        return _identity_custody(flag, fd[flag], program_name)
+
+    def _install_record(flag: str, record: dict) -> None:
+        key = flag.removeprefix("--").replace("-", "_")
+        prior = new_constants.get(key)
+        if isinstance(prior, dict) and prior.get("equation_id") not in (
+            None, record.get("equation_id"),
+        ):
+            raise ValueError(
+                f"{program_name}: constants row {key} already cites "
+                f"{prior.get('equation_id')!r}; refusing to shadow it")
+        new_constants[key] = record
+
+    # 1) Extend EXISTING owning levers whose flags lack LawRef/receipt custody.
+    new_levers: list = []
+    owner_counts: dict[str, int] = {}
+    for lever in typed.levers:
+        lawrefs = dict(lever.lawrefs)
+        declarations = dict(lever.lawref_declarations)
+        receipts = dict(lever.runtime_receipt_schemas)
+        changed = False
+        for flag in lever.overrides:
+            owner_counts[flag] = owner_counts.get(flag, 0) + 1
+            if flag not in lawrefs and flag not in declarations:
+                ref, record = _custody_for(flag)
+                lawrefs[flag] = ref
+                declarations[flag] = lawref_to_declaration(ref)
+                changed = True
+                if record is not None:
+                    if flag in lever_manifest_flags:
+                        raise ValueError(
+                            f"{program_name}: {lever.name} owns {flag} with a "
+                            "constant_manifest record but no LawRef — refusing to "
+                            "add a second (identity) record; author the real LawRef")
+                    _install_record(flag, record)
+                lawref_equation_by_flag[flag] = ref.equation_id
+            else:
+                existing = lawrefs.get(flag)
+                lawref_equation_by_flag[flag] = str(
+                    getattr(existing, "equation_id", None)
+                    or declarations.get(flag, {}).get("equation_id", ""))
+            if not receipts.get(flag):
+                receipts[flag] = V9_FLAG_RECEIPT_SCHEMA
+                changed = True
+        new_levers.append(
+            lever.model_copy(update={
+                "lawrefs": lawrefs,
+                "lawref_declarations": declarations,
+                "runtime_receipt_schemas": receipts,
+            }) if changed else lever
+        )
+
+    # 2) ONE custody rollup Lever owns every remaining (unowned) flag.
+    unowned = [flag for flag in semantic_fd if flag not in owner_counts]
+    rollup_lawrefs: dict = {}
+    rollup_declarations: dict = {}
+    rollup_receipts: dict = {}
+    for flag in unowned:
+        ref, record = _custody_for(flag)
+        rollup_lawrefs[flag] = ref
+        rollup_declarations[flag] = lawref_to_declaration(ref)
+        rollup_receipts[flag] = V9_FLAG_RECEIPT_SCHEMA
+        if record is not None:
+            _install_record(flag, record)
+        lawref_equation_by_flag[flag] = ref.equation_id
+        owner_counts[flag] = 1
+    rollup = TypedLever(
+        name=V9_FLAG_CUSTODY_LEVER,
+        overrides={flag: fd[flag] for flag in unowned},
+        notes=(
+            "#332 flag-custody rollup (2026-07-17): VALUE-NEUTRAL ownership of every "
+            "flag no scientific Lever owns.  Each flag carries either the LawRef of "
+            "its existing canonical compiler record or an honest class-4 "
+            "hardcoded-waiver identity custody (dsl_custodied_scalar_identity_v1). "
+            "Composing this lever never changes the compiled argv (enforced by "
+            "WitnessProgram.validate + the attach-time byte-identity assert)."
+        ),
+        lawrefs=rollup_lawrefs,
+        lawref_declarations=rollup_declarations,
+        runtime_receipt_schemas=rollup_receipts,
+    )
+    typed2 = typed.model_copy(update={"levers": (*new_levers, rollup)})
+
+    # 3) Fail-closed byte-identity + DSL validation.
+    program2 = typed2.to_program()
+    argv_after = tuple(program2.compile_trainer_argv())
+    if argv_after != argv_before:
+        raise ValueError(
+            f"{program_name}: attach_flag_custody changed the compiled argv — "
+            "custody must be value-neutral (this is a bug, refuse)")
+    violations = program2.validate()
+    if violations:
+        raise ValueError(
+            f"{program_name}: custody-completed program failed validate: "
+            f"{violations[:4]}")
+
+    # 4) The COMPLETE per-flag provenance table (curated rows win; auto rows are
+    #    honest: record ladder_class where a real record exists, class-4 otherwise).
+    curated = _curated_flag_provenance_for(program_name)
+    table: dict[str, dict] = {}
+    for flag in semantic_fd:
+        row = curated.get(flag)
+        if row is not None:
+            table[flag] = dict(row)
+            continue
+        record = wrapper_records.get(flag)
+        if record is None:
+            key = flag.removeprefix("--").replace("-", "_")
+            candidate = new_constants.get(key)
+            if isinstance(candidate, dict) and candidate.get("equation_id"):
+                record = candidate
+        if record is None:
+            for lever in typed2.levers:
+                lever_record = lever.constant_manifest.get(flag)
+                if isinstance(lever_record, dict) and lever_record.get("equation_id"):
+                    record = lever_record
+                    break
+        equation_id = str((record or {}).get("equation_id") or DSL_IDENTITY_EQUATION_ID)
+        rung = str((record or {}).get("ladder_class") or "hardcoded_waiver")
+        row = {
+            "value": str(fd[flag]),
+            "rung": rung,
+            "form": "SCALAR",
+            "law": equation_id,
+            "note": (
+                "#332 auto-custody row: value carried by the non-derivational identity "
+                "law under an explicit class-4 hardcoded waiver (see the flag's LawRef "
+                "waiver custody) — no derivation claimed."
+                if equation_id == DSL_IDENTITY_EQUATION_ID
+                else "#332 auto-custody row: rung mirrors the flag's canonical compiler "
+                     "record (the real resolution authority)."
+            ),
+        }
+        table[flag] = row
+
+    # 5) Cheap local self-check of the #332 edge set (the gate remains authority).
+    problems: list[str] = []
+    record_flags: set[str] = set()
+    for key, rec in new_constants.items():
+        if isinstance(rec, dict) and rec.get("equation_id"):
+            flag = _constants_key_flag(key)
+            record_flags.add(flag)
+            if flag not in fd:
+                problems.append(f"stale compiler record {key} -> {flag} not in flag set")
+    for lever in typed2.levers:
+        for flag, rec in lever.constant_manifest.items():
+            if isinstance(rec, dict) and rec.get("equation_id"):
+                record_flags.add(flag)
+    for flag in semantic_fd:
+        if owner_counts.get(flag) != 1:
+            problems.append(f"{flag}: {owner_counts.get(flag, 0)} Lever owners")
+        if not lawref_equation_by_flag.get(flag):
+            problems.append(f"{flag}: no LawRef custody")
+        if flag not in record_flags:
+            problems.append(f"{flag}: no canonical compiler record")
+        if table.get(flag, {}).get("rung") not in (
+            "measured_anchor", "derived_at_config", "derived_live", "hardcoded_waiver",
+        ):
+            problems.append(f"{flag}: invalid provenance rung")
+    if problems:
+        raise ValueError(
+            f"{program_name}: attach_flag_custody self-check failed "
+            f"({len(problems)}): {problems[:6]}")
+
+    # Register the COMPLETE table only after every fail-closed check passed, so a
+    # refused attach can never leave a stale per-program provenance entry behind.
+    _V9_FLAG_PROVENANCE_REGISTRY[program_name] = table
+
+    return typed2, new_constants
 
 
 def compile_v9_cgauge_432_taper_off_launch_config(**kwargs):
