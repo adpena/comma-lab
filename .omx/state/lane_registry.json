@@ -78689,6 +78689,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "production_receiver_543_20260719",
+      "name": "Production receiver/archive factor-2 deterministic uint8 pairs",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/witness_dsl/v10_production_receiver.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/production_receiver_543_byteclose_receipt_20260719.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_v10_production_receiver.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/state/review_counter.jsonl"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -78698,5 +78739,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-19T03:45:32Z"
+  "updated_at": "2026-07-19T05:47:21Z"
 }

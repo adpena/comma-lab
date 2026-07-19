@@ -21,9 +21,11 @@ from tac.optimization.uint8_lattice_feasibility import (
     RepairStatus,
     Uint8LatticeError,
     parse_uint8_frame,
+    realize_factor2_uint8_scorer_plane,
     repair_with_hard_oracle,
     serialize_uint8_frame,
     solve_bounded_integer_block,
+    verify_factor2_uint8_scorer_plane,
 )
 
 
@@ -70,6 +72,47 @@ def test_disjoint_operator_ab_identity_and_bounded_continuous_preimage() -> None
     assert np.min(bounded) >= 0.0
     assert np.max(bounded) <= 255.0
     np.testing.assert_allclose(operator.apply(bounded), target, atol=2e-9)
+
+
+def test_factor2_constant_support_realization_is_integer_exact_and_canonical() -> None:
+    operator = _operator()
+    target = np.arange(3 * 4 * 3, dtype=np.uint8).reshape(3, 4, 3) * 7
+    frame = realize_factor2_uint8_scorer_plane(operator, target)
+    proof = verify_factor2_uint8_scorer_plane(operator, frame, target)
+    numerators, denominator = operator.apply_numerators(frame)
+    np.testing.assert_array_equal(numerators, target.astype(np.int64) * denominator)
+    assert proof.numerator_exact is True
+    assert proof.certified_exact is True
+    assert proof.numerator_equal_values == target.size
+    assert proof.canonical_equal_values == frame.size
+    assert proof.owned_camera_values + proof.unowned_camera_values == frame.size
+
+
+def test_factor2_realization_zeros_every_unowned_camera_coordinate() -> None:
+    operator = _operator()
+    target = np.full((3, 4, 1), 173, dtype=np.uint8)
+    frame = operator.realize_factor2_uint8(target)
+    owned = np.zeros((operator.camera_h, operator.camera_w), dtype=bool)
+    for row_support in operator.row_supports:
+        for col_support in operator.col_supports:
+            owned[np.ix_(row_support.indices, col_support.indices)] = True
+    assert np.all(frame[owned] == 173)
+    assert np.all(frame[~owned] == 0)
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        np.zeros((3, 4, 1), dtype=np.int16),
+        np.zeros((3, 4, 0), dtype=np.uint8),
+        np.zeros((4, 4, 1), dtype=np.uint8),
+    ],
+)
+def test_factor2_realization_refuses_dtype_channel_and_geometry_drift(
+    target: np.ndarray,
+) -> None:
+    with pytest.raises(Uint8LatticeError, match="factor-2 scorer plane"):
+        _operator().realize_factor2_uint8(target)
 
 
 def test_minimum_norm_real_preimage_refuses_finite_input_that_overflows_output() -> None:

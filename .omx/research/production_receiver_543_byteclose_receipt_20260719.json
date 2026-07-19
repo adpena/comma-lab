@@ -1,0 +1,161 @@
+{
+  "schema": "production_receiver_543_byteclose_receipt.v1",
+  "task_id": 543,
+  "lane_id": "production_receiver_543_20260719",
+  "measured_at_utc": "2026-07-19T05:35:00Z",
+  "verdict": "MEASURED_STRUCTURAL_BYTECLOSE_PASS_NON_SCORE",
+  "verdict_scope": "raw-uint8-y codec, repeat-frame1 policy, real factor-2 pairs 0..11, macOS CPU structural axis only",
+  "authority_axis": "macOS-CPU structural/non-score",
+  "git_base_sha": "73ca467086c8ead4907c26a97773f52500aeacbb",
+  "pointer": {
+    "value": 0.1910828242,
+    "axis": "contest-CPU",
+    "status": "UNMOVED"
+  },
+  "authorization": {
+    "launch_ready": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "paid_dispatch": false,
+    "evaluator_invoked": false
+  },
+  "runtime": {
+    "host": "Primary.local",
+    "hardware": "Apple M5 Max",
+    "os": "macOS 26.4 build 25E246",
+    "python": "3.13.12",
+    "numpy": "1.26.4",
+    "brotli": "1.2.0",
+    "rng_used": false,
+    "seed": null,
+    "scorer_loaded": false,
+    "torch_loaded_by_receiver": false,
+    "mlx_or_mps_used": false
+  },
+  "input": {
+    "label": "MEASURED",
+    "path": "/Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/input/real_yhat_n12.npy",
+    "sha256": "39c8e255fd27b89f5fab35f71c25a74de2d674b66b5c713684eab3f593f2d48b",
+    "bytes": 7078016,
+    "shape": [12, 384, 512, 3],
+    "dtype": "uint8",
+    "pair_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "manifest_path": "/Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/input/real_yhat_n12_manifest.json",
+    "manifest_sha256": "5536fd558af2e767d6ebf214c4e9c719a6f954b052c14b6e61754d11062afcc6",
+    "selection": "real completed n600 factor-2 chunk 00 pairs 0..11; exact source-stage and yhat hashes are bound in the manifest"
+  },
+  "code_custody": {
+    "src/tac/optimization/uint8_lattice_feasibility.py": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17",
+    "src/tac/witness_dsl/v10_production_receiver.py": "ae86cf137a5b6d0f0e355a3a91e68f2ae01dec0806f658d3e75d90f3459307dd",
+    "src/tac/witness_dsl/v10_compiler_receiver.py": "2696baea62288baef2a34d9bc9229353cf10f848b69f7a4347a3107573b1265e",
+    "tools/build_v10_production_archive.py": "aa9546d43969d573f83effa4f5a2d4b52ccf26044a59c95c115de8d751640cad",
+    "tools/inflate_v10_production_archive.py": "22901f2c9e77d542f7cf443d4a9ffa01ddcd574fc7b109f0a936f59c58d57e57"
+  },
+  "archive": {
+    "label": "MEASURED",
+    "path": "/Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/archive_raw_v2/archive.zip",
+    "sha256": "a151ccd8e0dee2e2229fa5048689499ad3dbf1f5ba041917c4aa9459c8e5e997",
+    "bytes": 7079287,
+    "member": "0.bin",
+    "member_compression": "ZIP_STORED",
+    "packet_sha256": "6aa02fc6ca8b9688efb0296a429a28cc6c234d788dcc5641ac0369c39d613f20",
+    "packet_bytes": 7079179,
+    "manifest_sha256": "1b6cdddca2e56e3c82913ab2c43b7de1ce8ad51a1c12eb13ae6f6496846e7525",
+    "counted_section_payload_bytes": 7077888,
+    "video_derived_payload_bytes": 7077888,
+    "sections": [
+      {
+        "section_id": "y_description",
+        "codec_id": "raw-uint8-y",
+        "byte_length": 7077888,
+        "sha256": "9393433164ec04b6c92fb54498f0e6e1ce33820380cb72a852bb32cc372e6361",
+        "decoded_byte_length": 7077888,
+        "decoded_sha256": "9393433164ec04b6c92fb54498f0e6e1ce33820380cb72a852bb32cc372e6361",
+        "video_derived": true
+      },
+      {
+        "section_id": "frame0_policy",
+        "codec_id": "repeat-frame1",
+        "byte_length": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "decoded_byte_length": 0,
+        "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "video_derived": false
+      }
+    ],
+    "storage_preflight": {
+      "label": "MEASURED",
+      "required_bytes": 8129084,
+      "passed": true
+    }
+  },
+  "decode_runs": [
+    {
+      "label": "MEASURED",
+      "id": "decode_c_v2",
+      "elapsed_real_seconds": 4.53,
+      "user_seconds": 0.83,
+      "system_seconds": 0.06,
+      "raw_path": "/Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/decode_c_v2/levelset_n600_witness_20260717T113932Z.raw",
+      "raw_bytes": 73248192,
+      "raw_sha256": "9ebe5e4f16434aa0eaafb9f2710fe1755d67e02f4c0bd9def4606b89b1e827b7",
+      "tree_sha256": "e452c5b7722c3df7d057df5fbb307d071829de85198af8375f0c0a8aafd8e29e",
+      "inflate_manifest_sha256": "e3e8ba6e563c2c6c96e19290302aad6fb1692c9a70bcf62ff46b7d0ff454eee9",
+      "pair_stages_preserved": 12,
+      "numerator_values_verified": 14155776
+    },
+    {
+      "label": "MEASURED",
+      "id": "decode_d_v2",
+      "elapsed_real_seconds": 4.5,
+      "user_seconds": 0.8,
+      "system_seconds": 0.05,
+      "raw_path": "/Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/decode_d_v2/levelset_n600_witness_20260717T113932Z.raw",
+      "raw_bytes": 73248192,
+      "raw_sha256": "9ebe5e4f16434aa0eaafb9f2710fe1755d67e02f4c0bd9def4606b89b1e827b7",
+      "tree_sha256": "e452c5b7722c3df7d057df5fbb307d071829de85198af8375f0c0a8aafd8e29e",
+      "inflate_manifest_sha256": "e3e8ba6e563c2c6c96e19290302aad6fb1692c9a70bcf62ff46b7d0ff454eee9",
+      "pair_stages_preserved": 12,
+      "numerator_values_verified": 14155776
+    }
+  ],
+  "independent_parse_back": {
+    "label": "MEASURED",
+    "raw_byte_cmp_equal": true,
+    "raw_sha_equal": true,
+    "tree_sha_equal": true,
+    "frame0_frame1_equal_values_per_decode": 36624096,
+    "frame0_frame1_expected_values_per_decode": 36624096,
+    "exact_A_frame_equals_y_values_per_decode": 14155776,
+    "expected_A_frame_equals_y_values_per_decode": 14155776,
+    "exact_pair_count": 12,
+    "frames_per_pair": 2,
+    "camera_shape": [874, 1164, 3],
+    "scorer_shape": [384, 512, 3]
+  },
+  "full_n600_projection": {
+    "label": "DERIVED",
+    "basis": "slower measured n12 decode wall time multiplied by 600/12; no full-n600 receiver run",
+    "scale_factor": 50,
+    "projected_elapsed_seconds": 226.5,
+    "projected_elapsed_minutes": 3.775,
+    "thirty_minute_budget_seconds": 1800,
+    "projected_budget_headroom_factor": 7.947019867549669,
+    "projected_raw_bytes": 3662409600,
+    "projected_stage_plus_raw_preflight_bytes": 7325867776,
+    "projected_raw_y_payload_bytes": 353894400,
+    "raw_y_payload_vs_37545489_reference_ratio": 9.425750187991959,
+    "warning": "DERIVED runtime and byte scaling only; raw-y is structurally valid but not byte-competitive and does not authorize promotion"
+  },
+  "commands": {
+    "test": "PATH=/Users/adpena/Projects/pact/.venv/bin:$PATH PYTHONPATH=src python3 -m pytest -q src/tac/tests/test_v10_production_receiver.py src/tac/tests/test_v10_compiler_receiver.py src/tac/tests/test_uint8_lattice_feasibility.py",
+    "build": "PATH=/Users/adpena/Projects/pact/.venv/bin:$PATH PYTHONPATH=src python3 tools/build_v10_production_archive.py --y-npy /Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/input/real_yhat_n12.npy --archive-dir /Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/archive_raw_v2 --camera-height 874 --camera-width 1164 --y-codec raw-uint8-y",
+    "decode_template": "env PATH=/Users/adpena/Projects/pact/.venv/bin:$PATH PYTHONPATH=src /usr/bin/time -p python3 tools/inflate_v10_production_archive.py /Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/archive_raw_v2 <decode_root> /Volumes/VertigoDataTier/pact/evidence/production_receiver_543_20260719/input/video_names_n12.txt"
+  },
+  "remaining_blockers": [
+    "raw-uint8-y payload scales to approximately 353.9 MB at n600 and is not byte-competitive",
+    "witness-y-stub remains an explicit typed refusal rather than a codec implementation",
+    "factor 10 remains missing in the structural V10 compiler",
+    "no contest-CPU or contest-CUDA exact evaluator replay was authorized or performed"
+  ]
+}

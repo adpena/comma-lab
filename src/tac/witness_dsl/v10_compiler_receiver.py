@@ -20,9 +20,21 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable, Mapping, Sequence
 
+import numpy as np
+
+from tac.optimization.uint8_lattice_feasibility import (
+    DisjointResizeOperator,
+    Uint8LatticeError,
+    realize_factor2_uint8_scorer_plane,
+    verify_factor2_uint8_scorer_plane,
+)
+
 from tac.witness_dsl.curriculum_dsl import build_real_trainer_parser
 from tac.witness_dsl.lawref import lawref_to_declaration, resolve
 from tac.witness_dsl.typed_config import TypedWitnessConfig
+from tac.witness_dsl.v10_production_receiver import (
+    RECEIVER_CONTRACT_ID as FACTOR2_RECEIVER_CONTRACT_ID,
+)
 
 MAGIC = b"TACV10P\x00"
 VERSION = 2
@@ -35,11 +47,10 @@ COMPLETENESS_SCHEMA = "inverse_solve_completeness_manifest.v2"
 ROUTE_REGISTRY_SCHEMA = "v10_route_registry.v2"
 HANDLER_REGISTRY_SCHEMA = "v10_handler_registry.v2"
 HANDLER_REGISTRY_VERSION = 2
-
 FROZEN_FACTOR_IDS = ("1", "2", "3a", "3b", "4", "5", "6", "7", "8", "9", "10")
-IMPLEMENTED_FACTOR_IDS = ("1", "3a", "3b", "4", "5", "6", "7", "8", "9")
-MISSING_FACTOR_IDS = ("2", "10")
-QUOTIENT_BASE_FACTOR_IDS = ("1", "3a", "3b", "4", "6", "7", "8", "9")
+IMPLEMENTED_FACTOR_IDS = ("1", "2", "3a", "3b", "4", "5", "6", "7", "8", "9")
+MISSING_FACTOR_IDS = ("10",)
+QUOTIENT_BASE_FACTOR_IDS = ("1", "2", "3a", "3b", "4", "6", "7", "8", "9")
 
 _SECTION_FIELDS = (
     "section_id",
@@ -199,6 +210,7 @@ def canonical_semantic_payload(value: Mapping[str, Any]) -> bytes:
 
 class InstructionKind(str, Enum):
     COUNTED_GENERATOR = "CountedGenerator"
+    FACTOR2_INTEGER_SCORER_PLANE = "Factor2IntegerScorerPlane"
     FRAME0_POSE_SIX_CARRIER = "Frame0PoseSixCarrier"
     INIT_HEAD_SOLVE = "InitHeadSolve"
     SHARED_RESIZE_PREIMAGE = "SharedResizePreimage"
@@ -245,6 +257,16 @@ FROZEN_ROUTES = (
         "counted_generator_v2",
         "generator_seed.parameters",
         ("frame0_rgb", "frame1_rgb", "seed_bytes"),
+    ),
+    RouteSpec(
+        InstructionKind.FACTOR2_INTEGER_SCORER_PLANE,
+        "factor2_integer_scorer_plane",
+        ("2",),
+        "production_archive_builder",
+        "receiver.factor2_integer_scorer_plane",
+        "factor2_integer_scorer_plane_v1",
+        "factor2.scorer_plane",
+        ("y_uint8", "camera_shape", "scorer_shape", "receiver_contract_id"),
     ),
     RouteSpec(
         InstructionKind.FRAME0_POSE_SIX_CARRIER,
@@ -427,7 +449,7 @@ def _validate_sections(sections: Sequence[Section]) -> tuple[Section, ...]:
         raise V10Refusal("sections must be a sequence of Section objects")
     ordered = tuple(sections)
     if len(ordered) != len(FROZEN_ROUTES):
-        raise V10Refusal("cold V10 requires the exact seven-instruction sequence")
+        raise V10Refusal("cold V10 requires the exact frozen instruction sequence")
     if any(not isinstance(section, Section) for section in ordered):
         raise V10Refusal("every V10 section must be a Section object")
 
@@ -457,7 +479,7 @@ def _validate_sections(sections: Sequence[Section]) -> tuple[Section, ...]:
                 f"instruction {route.kind.value} route metadata drift: {', '.join(drift)}"
             )
         if section.apply_order != index:
-            raise V10Refusal("section apply_order must be exactly 0..6 in wire order")
+            raise V10Refusal("section apply_order must be exactly contiguous in wire order")
         if section.owned_parameter_groups != (route.owned_parameter_group,):
             raise V10Refusal(
                 f"instruction {route.kind.value} requires its exact disjoint parameter group"
@@ -492,6 +514,7 @@ def _validate_sections(sections: Sequence[Section]) -> tuple[Section, ...]:
 
     if tuple(factor for route in FROZEN_ROUTES for factor in route.factor_ids) != (
         "1",
+        "2",
         "7",
         "8",
         "6",
@@ -505,7 +528,7 @@ def _validate_sections(sections: Sequence[Section]) -> tuple[Section, ...]:
     if seen_factors != set(IMPLEMENTED_FACTOR_IDS):
         raise V10Refusal("implemented section factor set differs from the frozen seal")
     if seen_factors & set(MISSING_FACTOR_IDS):
-        raise V10Refusal("missing factors 2/10 cannot own a paid section")
+        raise V10Refusal("missing factor 10 cannot own a paid section")
     return ordered
 
 
@@ -569,7 +592,7 @@ def _validate_header(header: Any, header_bytes: bytes) -> list[dict[str, Any]]:
     rows = header["sections"]
     count = header["section_count"]
     if type(count) is not int or count != len(FROZEN_ROUTES):
-        raise V10Refusal("V10 section_count must be the exact integer seven")
+        raise V10Refusal("V10 section_count must equal the frozen route count")
     if not isinstance(rows, list) or len(rows) != count:
         raise V10Refusal("V10 section count mismatch")
     return rows
@@ -824,6 +847,81 @@ def _generator_handler(
     return _handled(output, ("frame0_rgb", "frame1_rgb", "seed_bytes"), payload)
 
 
+def _factor2_integer_scorer_plane_handler(
+    state: Mapping[str, Any], _metadata: Mapping[str, Any], payload: bytes
+) -> HandlerResult:
+    doc = _decode_semantic(
+        payload,
+        {"y_uint8", "camera_shape", "scorer_shape", "receiver_contract_id"},
+    )
+    if doc["receiver_contract_id"] != FACTOR2_RECEIVER_CONTRACT_ID:
+        raise V10Refusal("factor-2 receiver contract id drift")
+    camera_shape = _list_of_ints(
+        doc["camera_shape"], "camera_shape", nonempty=True, minimum=1
+    )
+    scorer_shape = _list_of_ints(
+        doc["scorer_shape"], "scorer_shape", nonempty=True, minimum=1
+    )
+    if len(camera_shape) != 3 or len(scorer_shape) != 3:
+        raise V10Refusal("factor-2 camera/scorer shapes must be exact HWC triplets")
+    if camera_shape[2] != 3 or scorer_shape[2] != 3:
+        raise V10Refusal("factor-2 structural route requires exactly three RGB channels")
+    if (
+        camera_shape[0] > 4096
+        or camera_shape[1] > 4096
+        or scorer_shape[0] > 2048
+        or scorer_shape[1] > 2048
+    ):
+        raise V10Refusal("factor-2 camera/scorer geometry exceeds production bounds")
+    y_values = _list_of_ints(
+        doc["y_uint8"], "y_uint8", nonempty=True, minimum=0, maximum=255
+    )
+    expected_y_values = scorer_shape[0] * scorer_shape[1] * scorer_shape[2]
+    if len(y_values) != expected_y_values:
+        raise V10Refusal("factor-2 y_uint8 length differs from scorer geometry")
+    try:
+        operator = DisjointResizeOperator.build(
+            camera_h=camera_shape[0],
+            camera_w=camera_shape[1],
+            scorer_h=scorer_shape[0],
+            scorer_w=scorer_shape[1],
+        )
+        y_plane = np.asarray(y_values, dtype=np.uint8).reshape(scorer_shape)
+        frame = realize_factor2_uint8_scorer_plane(operator, y_plane)
+        proof = verify_factor2_uint8_scorer_plane(operator, frame, y_plane)
+    except Uint8LatticeError as exc:
+        raise V10Refusal("factor-2 production geometry or realization refused") from exc
+    if not proof.certified_exact:
+        raise V10Refusal("factor-2 structural realization failed exact verification")
+    output = dict(state)
+    structural_frame = _state_frame(state, "frame1_rgb")
+    realized_hash = _sha256(frame.tobytes(order="C"))
+    realized_digest = bytes.fromhex(realized_hash)
+    output["frame1_rgb"] = [
+        realized_digest[index % len(realized_digest)]
+        for index in range(len(structural_frame))
+    ]
+    output["factor2_realization"] = {
+        "receiver_contract_id": FACTOR2_RECEIVER_CONTRACT_ID,
+        "camera_shape": camera_shape,
+        "scorer_shape": scorer_shape,
+        "y_sha256": _sha256(y_plane.tobytes(order="C")),
+        "frame_sha256": realized_hash,
+        "denominator": proof.denominator,
+        "numerator_values_verified": proof.numerator_equal_values,
+        "canonical_values_verified": proof.canonical_equal_values,
+        "certified_exact": True,
+        "launch_ready": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    return _handled(
+        output,
+        ("y_uint8", "camera_shape", "scorer_shape", "receiver_contract_id"),
+        payload,
+    )
+
+
 def _frame0_pose_handler(
     state: Mapping[str, Any], _metadata: Mapping[str, Any], payload: bytes
 ) -> HandlerResult:
@@ -1000,6 +1098,7 @@ def _quotient_handler(
 _SEALED_HANDLER_REGISTRY: Mapping[str, Handler] = MappingProxyType(
     {
         "counted_generator_v2": _generator_handler,
+        "factor2_integer_scorer_plane_v1": _factor2_integer_scorer_plane_handler,
         "frame0_pose_six_carrier_v1": _frame0_pose_handler,
         "init_head_solve_v2": _init_head_handler,
         "shared_resize_preimage_v1": _shared_resize_handler,
@@ -1030,6 +1129,10 @@ _HANDLER_SHARED_SEMANTIC_COMPONENTS = MappingProxyType(
         "_clip_byte": _clip_byte,
         "_bt601_triplet": _bt601_triplet,
         "_yuv6": _yuv6,
+        "DisjointResizeOperator": DisjointResizeOperator,
+        "Uint8LatticeError": Uint8LatticeError,
+        "realize_factor2_uint8_scorer_plane": realize_factor2_uint8_scorer_plane,
+        "verify_factor2_uint8_scorer_plane": verify_factor2_uint8_scorer_plane,
     }
 )
 HANDLER_SHARED_SEMANTICS_SHA256 = _sha256(
@@ -1891,6 +1994,7 @@ __all__ = [
     "CHECKPOINT_SCHEMA",
     "COMPLETENESS_SCHEMA",
     "DEFAULT_HANDLERS",
+    "FACTOR2_RECEIVER_CONTRACT_ID",
     "FROZEN_FACTOR_IDS",
     "FROZEN_HANDLER_REGISTRY",
     "FROZEN_ROUTES",

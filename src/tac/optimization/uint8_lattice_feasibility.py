@@ -106,6 +106,20 @@ class LatticeFrameResult:
         return self.diagnostics.aggregate_status
 
 
+@dataclass(frozen=True)
+class Factor2ExactVerification:
+    """Exact proof for the canonical disjoint-support uint8 realization."""
+
+    scorer_values: int
+    owned_camera_values: int
+    unowned_camera_values: int
+    numerator_equal_values: int
+    canonical_equal_values: int
+    denominator: int
+    numerator_exact: bool
+    certified_exact: bool
+
+
 @dataclass(frozen=True, order=True)
 class IntegerMove:
     row: int
@@ -340,6 +354,116 @@ class DisjointResizeOperator:
                 coefficients = np.outer(rs.numerators, cs.numerators).astype(np.int64)
                 out[oi, oj] = np.tensordot(coefficients, block, axes=((0, 1), (0, 1)))
         return (out[:, :, 0] if squeeze else out), denominator
+
+    def realize_factor2_uint8(self, target: np.ndarray) -> np.ndarray:
+        """Return the canonical exact uint8 preimage for an integer scorer plane.
+
+        Each scorer value owns a disjoint camera-space support.  Assigning the
+        target byte to every tap in that support is exact because the tap
+        coefficients sum to the common denominator.  Camera coordinates not
+        owned by any support remain zero.  This path is integer-only and does
+        not consult a source frame, preference, scorer, or floating-point
+        arithmetic.
+        """
+
+        y = _factor2_uint8_target(target, self.scorer_h, self.scorer_w)
+        out = np.zeros((self.camera_h, self.camera_w, y.shape[2]), dtype=np.uint8)
+        uniform = _uniform_support_arrays(self.row_supports, self.col_supports)
+        if uniform is not None:
+            row_indices, col_indices, _weights = uniform
+            if row_indices.shape[1] > 2 or col_indices.shape[1] > 2:
+                raise Uint8LatticeError("factor-2 support exceeds two taps")
+            if any(
+                sum(support.numerators) != support.denominator
+                for support in (*self.row_supports, *self.col_supports)
+            ):
+                raise Uint8LatticeError(
+                    "factor-2 support coefficients do not sum to the denominator"
+                )
+            if (
+                np.unique(row_indices).size != row_indices.size
+                or np.unique(col_indices).size != col_indices.size
+            ):
+                raise Uint8LatticeError("factor-2 camera supports overlap")
+            # The certified factor-2 geometry has uniform disjoint supports.
+            # Four whole-plane assignments replace one Python iteration per
+            # scorer pixel while preserving the exact canonical support fill.
+            for row_offset in range(row_indices.shape[1]):
+                for col_offset in range(col_indices.shape[1]):
+                    out[
+                        row_indices[:, row_offset, None],
+                        col_indices[None, :, col_offset],
+                        :,
+                    ] = y
+            return out if np.asarray(target).ndim == 3 else out[:, :, 0]
+
+        owned = np.zeros((self.camera_h, self.camera_w), dtype=bool)
+        for oi, row_support in enumerate(self.row_supports):
+            if len(row_support.indices) > 2:
+                raise Uint8LatticeError("factor-2 row support exceeds two taps")
+            for oj, col_support in enumerate(self.col_supports):
+                if len(col_support.indices) > 2:
+                    raise Uint8LatticeError("factor-2 column support exceeds two taps")
+                if sum(row_support.numerators) != row_support.denominator or sum(
+                    col_support.numerators
+                ) != col_support.denominator:
+                    raise Uint8LatticeError(
+                        "factor-2 support coefficients do not sum to the denominator"
+                    )
+                index = np.ix_(row_support.indices, col_support.indices)
+                if np.any(owned[index]):
+                    raise Uint8LatticeError("factor-2 camera supports overlap")
+                owned[index] = True
+                out[np.ix_(row_support.indices, col_support.indices, range(y.shape[2]))] = (
+                    y[oi, oj]
+                )
+        return out if np.asarray(target).ndim == 3 else out[:, :, 0]
+
+    def verify_factor2_uint8(
+        self, frame: np.ndarray, target: np.ndarray
+    ) -> Factor2ExactVerification:
+        """Verify numerator equality and the deterministic canonical feasible point."""
+
+        y = _factor2_uint8_target(target, self.scorer_h, self.scorer_w)
+        raw_frame = np.asarray(frame)
+        canonical = self.realize_factor2_uint8(y)
+        if raw_frame.ndim == 2:
+            raw_frame_3d = raw_frame[:, :, None]
+        elif raw_frame.ndim == 3:
+            raw_frame_3d = raw_frame
+        else:
+            raise Uint8LatticeError("factor-2 frame must have shape (H,W) or (H,W,C)")
+        if raw_frame_3d.dtype != np.uint8 or raw_frame_3d.shape != canonical.shape:
+            raise Uint8LatticeError(
+                "factor-2 frame must be uint8 with the operator camera geometry"
+            )
+        numerators, denominator = self.apply_numerators(raw_frame_3d)
+        expected = y.astype(np.int64) * denominator
+        canonical_equal = raw_frame_3d == canonical
+        numerator_equal = numerators == expected
+        owned = np.any(canonical != 0, axis=2)
+        # A target byte of zero makes owned and unowned coordinates
+        # indistinguishable from values alone, so derive ownership from geometry.
+        owned.fill(False)
+        uniform = _uniform_support_arrays(self.row_supports, self.col_supports)
+        if uniform is not None:
+            row_indices, col_indices, _weights = uniform
+            owned[np.ix_(np.unique(row_indices), np.unique(col_indices))] = True
+        else:
+            for row_support in self.row_supports:
+                for col_support in self.col_supports:
+                    owned[np.ix_(row_support.indices, col_support.indices)] = True
+        certified = bool(np.all(numerator_equal) and np.all(canonical_equal))
+        return Factor2ExactVerification(
+            scorer_values=int(y.size),
+            owned_camera_values=int(np.count_nonzero(owned) * y.shape[2]),
+            unowned_camera_values=int(np.count_nonzero(~owned) * y.shape[2]),
+            numerator_equal_values=int(np.count_nonzero(numerator_equal)),
+            canonical_equal_values=int(np.count_nonzero(canonical_equal)),
+            denominator=int(denominator),
+            numerator_exact=bool(np.all(numerator_equal)),
+            certified_exact=certified,
+        )
 
     def minimum_norm_real_preimage(self, target: np.ndarray) -> np.ndarray:
         y = _target_3d(target, self.scorer_h, self.scorer_w)
@@ -728,6 +852,26 @@ def solve_bounded_integer_block(
     )
 
 
+def realize_factor2_uint8_scorer_plane(
+    operator: DisjointResizeOperator, target: np.ndarray
+) -> np.ndarray:
+    """Public functional form of :meth:`DisjointResizeOperator.realize_factor2_uint8`."""
+
+    if not isinstance(operator, DisjointResizeOperator):
+        raise Uint8LatticeError("factor-2 realization requires DisjointResizeOperator")
+    return operator.realize_factor2_uint8(target)
+
+
+def verify_factor2_uint8_scorer_plane(
+    operator: DisjointResizeOperator, frame: np.ndarray, target: np.ndarray
+) -> Factor2ExactVerification:
+    """Public functional form of :meth:`DisjointResizeOperator.verify_factor2_uint8`."""
+
+    if not isinstance(operator, DisjointResizeOperator):
+        raise Uint8LatticeError("factor-2 verification requires DisjointResizeOperator")
+    return operator.verify_factor2_uint8(frame, target)
+
+
 def repair_with_hard_oracle(
     frame: np.ndarray,
     operator: DisjointResizeOperator,
@@ -1021,6 +1165,23 @@ def _target_3d(target: np.ndarray, height: int, width: int) -> np.ndarray:
     ):
         raise Uint8LatticeError("target shape/value does not match scorer plane")
     return y
+
+
+def _factor2_uint8_target(target: np.ndarray, height: int, width: int) -> np.ndarray:
+    raw = np.asarray(target)
+    if raw.dtype != np.uint8:
+        raise Uint8LatticeError("factor-2 scorer plane must have exact uint8 dtype")
+    if raw.ndim == 2:
+        y = raw[:, :, None]
+    elif raw.ndim == 3:
+        y = raw
+    else:
+        raise Uint8LatticeError("factor-2 scorer plane must have shape (H,W) or (H,W,C)")
+    if y.shape[:2] != (height, width) or y.shape[2] < 1:
+        raise Uint8LatticeError(
+            "factor-2 scorer plane must match scorer geometry with nonempty channels"
+        )
+    return np.ascontiguousarray(y)
 
 
 def _camera_3d(frame: np.ndarray, height: int, width: int, channels: int) -> np.ndarray:
