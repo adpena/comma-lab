@@ -234,6 +234,10 @@ eval_image = (
         "tools/tool_bootstrap.py",
         remote_path=str(REMOTE_REPO / "tools/tool_bootstrap.py"),
     )
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver transitive tools/ import (AST closure verified 2026-07-19: exactly {tool_bootstrap, measure_uint8_lattice_feasibility})
+        "tools/measure_uint8_lattice_feasibility.py",
+        remote_path=str(REMOTE_REPO / "tools/measure_uint8_lattice_feasibility.py"),
+    )
     .add_local_python_source("comma_lab")  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver imports comma_lab.storage_tiers (same package-source pattern as tac; the 2026-06-09 whole-src-mount poison does NOT apply to add_local_python_source)
     .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
     .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
