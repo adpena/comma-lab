@@ -16,8 +16,14 @@ Extends tools/necessity_dseg_calibration.py (b625194009): at its measured min-S 
           $0, numpy-only (no SegNet forward).
   sens    Margin-deficit VJP at DISAGREEING pixels of the palette render through the
           REAL frozen SegNet (incl. exact bilinear resize): decompose the cure gradient
-          onto luma BT.601 vs chroma (orthogonal complement = span{U,V} boundary basis)
+          onto luma BT.601 (span{ell}) vs its Euclidean orthogonal complement ker(ell)
           vs spatial locality/side/coherence -> which driver the carrier must supply.
+          NOTE (corrected 2026-07-19, Task #570 / #564 §4): this active split is the
+          Euclidean span{ell}/ker(ell) split (lines 345-374, `gl = gr @ LUMA_HAT`), NOT
+          a U/V analysis-covector split. span{U-row,V-row} = (1,1,1)^perp differs from
+          ker(ell) by a 30.27914784 deg principal angle (projector distance 0.504213367),
+          so this output must NOT be relabeled "U/V" or "chroma sensitivity". See the
+          fixture src/tac/tests/test_yuv6_analysis_covectors_vs_primal_luma_null_20260719.py.
   smoke   Generator-variant + oracle-seed feasibility on a stride subset (LABELLED
           n<600): one-sided vs symmetric boundary-contrast band (0 B), blur (0 B),
           GT-texture oracles (counted bytes, brotli): global ds16 / Movable-crop /
