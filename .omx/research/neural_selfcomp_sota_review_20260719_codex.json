@@ -1,0 +1,120 @@
+{
+  "schema": "neural_selfcomp.sota_review.v1",
+  "written_at_utc": "2026-07-19T11:23:52Z",
+  "authority": {
+    "research_only": true,
+    "axis": "[macOS-CPU advisory n24] NON-PROMOTABLE",
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "launch_or_dispatch": false,
+    "score_claim": false,
+    "main_landing_review_required": true
+  },
+  "artifacts": [
+    {
+      "path": ".omx/research/neural_selfcomp_sota_20260719_codex.md",
+      "bytes": 25414,
+      "sha256": "47e26f9e0f1d9a97ae9c57487f015cb32634cad1e9f5a883c58d49c34d677e74"
+    },
+    {
+      "path": ".omx/research/neural_selfcomp_deepcabac_measurement_20260719_codex.json",
+      "bytes": 10238,
+      "sha256": "34d3d940d9b5dffc9b4944aa706790dfaa72563322e7fd5953f9d0a94e8e36cb"
+    }
+  ],
+  "external_evidence": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/neural_selfcomp_20260719/deepcabac_receiver/receiver_measurement.json",
+      "sha256": "03c3bb8499589204abd5433d2d40cf06c678838fb0903175cde0ab79f47d65c3"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/neural_selfcomp_20260719/deepcabac_receiver/build_receipt.json",
+      "sha256": "65489555641369b0d79770d1e04921499bba9d1dcf5100ede944783809e1103d"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/neural_selfcomp_20260719/deepcabac_receiver/full_n600/archive.zip",
+      "bytes": 85274,
+      "sha256": "5e3398e8588b2ea5dc7967f82af7cee0bc0ce34329c9cabc26ae019305e3c92e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/neural_selfcomp_20260719/deepcabac_receiver/selected_n24/archive.zip",
+      "bytes": 65310,
+      "sha256": "a31603df5f5f4c4c123928ec2f8feb1b120ceb3ff4ec82f75ff53eaaef24d9bc"
+    }
+  ],
+  "contract_checks": {
+    "authority_file_read_and_sha_verified": true,
+    "claude_and_agents_full_preread": true,
+    "operating_manual_cited": true,
+    "four_required_families_covered": true,
+    "ranked_crosswalk_has_required_columns": true,
+    "consumers_539_553_496_242_154_mapped": true,
+    "rule_118_split_explicit_per_proposal": true,
+    "size_in_loss_equation_and_default_off_mlx_dsl_spec": true,
+    "best_receiver_complete_family2_oss_justified": true,
+    "actual_full_n600_archive_bytes_measured": true,
+    "fresh_selected_n24_archive_parseback": true,
+    "all_24_receiver_pairs_byte_identical_to_scored_control": true,
+    "combined_inner_stream_delta_not_promoted_to_archive_score": true,
+    "rec_zero_cost_pilot_specified": true,
+    "estimate_only_rows_labeled": true,
+    "every_negative_scoped": true,
+    "sibling_classical_ownership_preserved": true,
+    "sacred_donor_unchanged": true,
+    "triality_and_system_wire_in_present": true,
+    "main_review_requirement_present": true
+  },
+  "measurement_rederivation": {
+    "canonical_full_archive_bytes": 83838,
+    "deepcabac_full_archive_bytes": 85274,
+    "delta_bytes": 1436,
+    "derived_rate_score_delta": 0.0009561734566834381,
+    "formula": "25 * (85274 - 83838) / 37545489",
+    "selected_n24_raw_bytes": 146496384,
+    "selected_n24_raw_sha256": "3ffe6e11d672b3278c8d78ac2c562468d4fdffe97dc71777068b464fad9e57a8",
+    "receiver_runs": 3,
+    "repeat_and_control_byte_identity": true,
+    "donor_sha256_before_after": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef"
+  },
+  "review_rounds": [
+    {
+      "round": 1,
+      "result": "BLOCKED_REPAIRED",
+      "findings": [
+        "No receiver-closed DeepCABAC archive in the first draft",
+        "Inner-stream delta had been converted to a score delta",
+        "NeuroQuant commit prefix was mistyped"
+      ],
+      "repairs": [
+        "Built deterministic full-n600 and selected-n24 DeepCABAC-base archives",
+        "Fresh-extracted selected-n24 packet decoded three times with complete raw byte identity",
+        "Rate delta now uses actual full archive.zip bytes",
+        "Combined base+code stream delta is explicitly section-only with null score",
+        "NeuroQuant pin corrected to 4d787f6"
+      ]
+    },
+    {
+      "round": 2,
+      "result": "CLEAN",
+      "findings": [],
+      "residual_non_blocking": [
+        "The built DeepCABAC decoder is macOS arm64 CPython 3.13 only; Linux x86_64 parity remains promotion-blocking and is disclosed."
+      ]
+    }
+  ],
+  "validation": {
+    "json_parse": "PASS",
+    "numeric_assertions": "PASS",
+    "external_hash_and_size_assertions": "PASS",
+    "git_diff_check": "PASS",
+    "lane_target_research_only": true,
+    "lane_registry_global_validate": "PREEXISTING_FAILURES_110_MISSING_HISTORICAL_EVIDENCE_PATHS; no target-lane inconsistency observed",
+    "self_review_round_count": 2,
+    "max_review_rounds": 5
+  },
+  "sibling_baseline": {
+    "owner": "arith_selfcomp_rate_coders",
+    "manifest_available_at_review": false,
+    "disposition": "Do not duplicate; MAIN review must reconcile sibling final classical-coder row if it lands."
+  },
+  "final_verdict": "KEEP canonical int8+Brotli for this donor; receiver-closed DeepCABAC base codec is +1436 archive bytes and exact n24 output, scoped to macOS arm64; learned priors and REC remain open behind named gates."
+}

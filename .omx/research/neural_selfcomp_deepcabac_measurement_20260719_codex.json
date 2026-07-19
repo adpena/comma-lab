@@ -1,0 +1,215 @@
+{
+  "schema": "neural_selfcomp.deepcabac_donor_measurement.v1",
+  "written_at_utc": "2026-07-19T11:22:00Z",
+  "research_only": true,
+  "authority": {
+    "axis": "[macOS-CPU advisory n24] NON-PROMOTABLE",
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "pointer_moved": false,
+    "score_claim": false,
+    "launch_authority": false,
+    "verdict_scope": "Receiver-closed DeepCABAC recoding of the canonical ep725 mod32cap int8 base-weight section, plus section-level code-stream measurement. This tests one concrete DeepCABAC instance, not learned entropy models as a family."
+  },
+  "rate_object": {
+    "vehicle": "v10 level-set witness generator",
+    "counted_payload_sections": [
+      "witness base weights",
+      "per-pair mod32 codes",
+      "gauge-fixed packet scalars when present",
+      "dxi and phase sections when present"
+    ],
+    "measured_sections": {
+      "receiver_closed": [
+        "witness base weights"
+      ],
+      "section_level_only": [
+        "per-pair mod32 codes"
+      ]
+    },
+    "not_present_in_measured_archive": [
+      "gauge-fixed packet scalars",
+      "dxi sections",
+      "phase sections"
+    ]
+  },
+  "donor": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_witness_ema_BEST.npz",
+    "sha256_before": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "sha256_after": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "bytes": 460448,
+    "epoch": 725,
+    "n_pairs": 600,
+    "mod_dim": 32,
+    "sacred_read_only": true,
+    "unchanged": true
+  },
+  "source_snapshots": {
+    "nncodec": {
+      "url": "https://github.com/fraunhoferhhi/nncodec",
+      "commit": "0e3dcd2961701572d253f175754c09952a4b44c7"
+    },
+    "deepcabac": {
+      "url": "https://github.com/fraunhoferhhi/DeepCABAC",
+      "commit": "6a1346875abf1d8d0a45cbe7bcdedeac167cd3cd",
+      "wheel_sha256": "350d6ef35eab2b8201aad9068ffb9df7f70f058dea87000d86da4d2c7058828c"
+    }
+  },
+  "quantized_state": {
+    "grid": "canonical symmetric int8 per tensor",
+    "base_tensors": 17,
+    "base_symbols": 72695,
+    "code_symbols": 38400,
+    "deepcabac_lambda": 0.0,
+    "deepcabac_interval": 1.0,
+    "deepcabac_stepsize": 1.0
+  },
+  "canonical_brotli_control": {
+    "full_n600_archive_zip_bytes": 83838,
+    "full_n600_archive_zip_sha256": "149fefd097c1fa85c4afb6cb2d8ab20311035d7ba8063f1e72137b843a9b89f3",
+    "blob_bytes": 84536,
+    "manifest_bytes": 1906,
+    "base_int8_brotli_bytes": 61598,
+    "code_int8_brotli_bytes": 21010,
+    "magic_and_prefixes_bytes": 22,
+    "base_plus_code_bytes": 82608,
+    "accounting_matches_canonical": true,
+    "source_receipt": ".omx/research/yhat_rd_ladder_witness_prepare_20260719_codex.json"
+  },
+  "deepcabac_measurement": {
+    "base": {
+      "bytes": 63007,
+      "sha256": "16667e4f402116899afe8ef85ae6e8250efb4d38d797a991e8c16088d36c1b8f",
+      "repeat_sha256": "16667e4f402116899afe8ef85ae6e8250efb4d38d797a991e8c16088d36c1b8f",
+      "repeat_byte_identical": true,
+      "decoded_quantized_state_exact": true,
+      "encode_seconds_runs": [
+        0.011547582922503352,
+        0.011594416107982397
+      ],
+      "decode_seconds_runs": [
+        0.006362959044054151,
+        0.006473832996562123
+      ]
+    },
+    "codes": {
+      "bytes": 35950,
+      "sha256": "8b62db3b1a1e69cde9439cb0558a5507f7a97469f894a690a7abf7b0c26df6d8",
+      "repeat_sha256": "8b62db3b1a1e69cde9439cb0558a5507f7a97469f894a690a7abf7b0c26df6d8",
+      "repeat_byte_identical": true,
+      "decoded_quantized_state_exact": true,
+      "encode_seconds_runs": [
+        0.0060208330396562815,
+        0.005931291030719876
+      ],
+      "decode_seconds_runs": [
+        0.003342375159263611,
+        0.003364000003784895
+      ]
+    },
+    "syntax_shape_and_step_sideinfo_included": true,
+    "counted_learned_model_overhead_bytes": 0
+  },
+  "receiver_closed_archive": {
+    "full_n600": {
+      "canonical_archive_zip_bytes": 83838,
+      "deepcabac_base_archive_zip_bytes": 85274,
+      "deepcabac_base_archive_zip_sha256": "5e3398e8588b2ea5dc7967f82af7cee0bc0ce34329c9cabc26ae019305e3c92e",
+      "archive_delta_bytes_measured": 1436,
+      "archive_rate_score_delta_derived": 0.0009561734566834381,
+      "canonical_blob_bytes": 84536,
+      "deepcabac_blob_bytes": 85981,
+      "deepcabac_blob_sha256": "ae4def08b80edde4f39133099d51def7ce664ced2a70e0870698ee84b3342ac5",
+      "blob_delta_bytes_measured": 1445,
+      "manifest_bytes": 1942,
+      "manifest_delta_bytes": 36,
+      "base_stream_delta_bytes": 1409,
+      "code_codec": "canonical Brotli",
+      "score_formula": "25 * 1436 / 37545489; actual deterministic archive.zip bytes"
+    },
+    "selected_n24": {
+      "canonical_archive_zip_bytes": 63876,
+      "deepcabac_archive_zip_bytes": 65310,
+      "deepcabac_archive_zip_sha256": "a31603df5f5f4c4c123928ec2f8feb1b120ceb3ff4ec82f75ff53eaaef24d9bc",
+      "archive_delta_bytes_measured": 1434,
+      "fresh_archive_extraction": true,
+      "extracted_blob_sha256": "c0c285e1833a0cfed7c792741eb73fb9c7fdb7a79f80e5c7587f3f8550831349",
+      "receiver_runs": 3,
+      "all_receiver_runs_byte_identical": true,
+      "receiver_output_bytes": 146496384,
+      "receiver_output_sha256": "3ffe6e11d672b3278c8d78ac2c562468d4fdffe97dc71777068b464fad9e57a8",
+      "canonical_output_byte_identical": true,
+      "timed_run_real_seconds": 14.89,
+      "workers": 18
+    },
+    "receiver": {
+      "inflate_sha256": "edce95a9c2eca9034cba72c39906d1d3bd0f7d62312d5a1327058d1cf0b94c0b",
+      "generic_decoder_binary_sha256": "474c8a0f588754357156e4f4b72361cf2ed79788745e54f0f56e54245c378e06",
+      "generic_decoder_binary_rule118": "FREE and outside archive.zip",
+      "platform": "macOS arm64 CPython 3.13",
+      "linux_x86_64_portability": "UNMEASURED; promotion-blocking"
+    }
+  },
+  "matched_realized_through_R": {
+    "reason": "A freshly extracted selected-n24 DeepCABAC-base archive was decoded three times. Every complete 146496384-byte receiver output was byte-identical to the separately scored canonical selected-n24 receiver output, so frozen scorer inputs and outputs are identical.",
+    "pair_count": 24,
+    "d_seg_mean": 0.003455691873872032,
+    "d_pose_mean": 63.0309157371521,
+    "receiver_bit_exact_gate_pairs": 24,
+    "receiver_max_abs_uint8_diff": 0,
+    "source_receipts": [
+      ".omx/research/yhat_rd_ladder_witness_prepare_20260719_codex.json",
+      ".omx/research/yhat_rd_ladder_20260719_codex.json"
+    ],
+    "scope": "Receiver-closed interaction row: selected n24 frame1-yhat with source-frame0 diagnostic policy, not a full two-plane contest score."
+  },
+  "comparison": {
+    "base_stream_delta_vs_brotli_bytes_measured": 1409,
+    "base_stream_delta_vs_brotli_percent_derived": 2.2874119289587322,
+    "full_archive_base_only_delta_bytes_measured": 1436,
+    "full_archive_base_only_score_delta_derived": 0.0009561734566834381,
+    "code_stream_delta_vs_brotli_bytes_measured_section_only": 14940,
+    "combined_stream_delta_vs_two_brotli_streams_bytes_measured_section_only": 16349,
+    "combined_stream_delta_vs_two_brotli_streams_percent_derived_section_only": 19.791061398411777,
+    "combined_stream_score_delta": null,
+    "combined_stream_score_delta_reason": "No receiver-closed archive with DeepCABAC on both base and code was assembled; do not convert this inner-stream delta to contest rate.",
+    "score_formula": "25 * actual archive.zip delta_bytes / 37545489; positive is worse; receiver output exact"
+  },
+  "entropy_ceiling_diagnostic": {
+    "base_global_iid_entropy_bits_per_symbol_measured": 6.838867487711816,
+    "base_global_iid_floor_bytes_derived": 62143.93400240131,
+    "brotli_bytes_below_global_iid_floor_derived": 545.934002401307,
+    "deepcabac_bytes_above_global_iid_floor_derived": 863.0659975986928,
+    "interpretation": "Canonical per-tensor Brotli exploits non-iid/local structure well enough to beat the single global-iid entropy estimate. This DeepCABAC instance is not coder-ceiling evidence for learned conditional priors; such a prior must beat 61598 base bytes after all counted fitted-prior overhead."
+  },
+  "rule_118": {
+    "free": [
+      "generic DeepCABAC decoder implementation",
+      "video-independent decoder architecture and fixed arithmetic tables"
+    ],
+    "counted": [
+      "coded weight and code streams",
+      "stream syntax, tensor shapes, quantization steps, and any fitted probability parameters",
+      "all future video-fitted priors, hyperpriors, side information, packet scalars, dxi, and phase values"
+    ]
+  },
+  "evidence_custody": {
+    "root": "/Volumes/VertigoDataTier/pact/evidence/neural_selfcomp_20260719/deepcabac_donor",
+    "measurement_json_sha256": "de0ad569d850f98a358105ecf559bf16292b750bdf1508d778955856b4230d8b",
+    "base_stream_sha256": "16667e4f402116899afe8ef85ae6e8250efb4d38d797a991e8c16088d36c1b8f",
+    "code_stream_sha256": "8b62db3b1a1e69cde9439cb0558a5507f7a97469f894a690a7abf7b0c26df6d8",
+    "bulk_on_ssd": true,
+    "receiver_root": "/Volumes/VertigoDataTier/pact/evidence/neural_selfcomp_20260719/deepcabac_receiver",
+    "receiver_measurement_sha256": "03c3bb8499589204abd5433d2d40cf06c678838fb0903175cde0ab79f47d65c3",
+    "receiver_build_receipt_sha256": "65489555641369b0d79770d1e04921499bba9d1dcf5100ede944783809e1103d",
+    "receiver_builder_sha256": "962b59431440a39ca9d7643d0bdc789d3203c378d63c421d94344ca38d2a9678",
+    "local_bulk_created": false
+  },
+  "sibling_baseline": {
+    "owner": "arith_selfcomp_rate_coders",
+    "scope": "classical coders and PR56 block-FP baseline",
+    "status_at_write": "IN_FLIGHT; no landing manifest available",
+    "comparison_policy": "Do not duplicate. MAIN landing review must reconcile this measured row against the sibling's final int8-plus-coder row when available."
+  },
+  "verdict": "DOMINATED_MEASURED_RECEIVER_CLOSED_INSTANCE",
+  "verdict_scope": "DeepCABAC lambda=0, interval=1 lossless base-weight recoding of this donor: full n600 archive rate is measured and selected-n24 receiver output is exact on macOS arm64. It does not reject Linux-portable builds, NNCodec transforms, learned conditional priors, joint training, REC, or another vehicle."
+}
