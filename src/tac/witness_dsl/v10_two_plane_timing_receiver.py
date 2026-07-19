@@ -30,6 +30,12 @@ from typing import Any
 
 import numpy as np
 
+from tac.codec.v10_jxl_plane_codec import (
+    CODEC_ID as JXL_PLANE_Y_CODEC_ID,
+)
+from tac.codec.v10_jxl_plane_codec import (
+    decode_payload as decode_jxl_plane_payload,
+)
 from tac.codec.v10_predictor_residual import decode_predictor_residual
 from tac.optimization.uint8_lattice_feasibility import (
     DisjointResizeOperator,
@@ -366,8 +372,8 @@ def reserialize_parsed_packet(packet: ParsedProductionPacket) -> bytes:
 
 def _validate_packet(packet: ParsedProductionPacket) -> None:
     header = packet.header
-    if header.get("y_codec_id") != PREDICTOR_RESIDUAL_Y_CODEC_ID:
-        raise TwoPlaneTimingReceiverError("C1 requires predictor-residual-u8.v1")
+    if header.get("y_codec_id") not in (PREDICTOR_RESIDUAL_Y_CODEC_ID, JXL_PLANE_Y_CODEC_ID):
+        raise TwoPlaneTimingReceiverError("C1 requires predictor-residual-u8.v1 or jxl-lossless-plane.v1")
     if header.get("frame0_policy_id") != DESCRIPTION_FRAME0_POLICY_ID:
         raise TwoPlaneTimingReceiverError("C1 requires description-frame0.v1")
     if header.get("residual_codec_id") is not None or len(packet.sections) != 2:
@@ -1021,10 +1027,14 @@ def timed_inflate_two_plane_archive(
     parse_seconds = _positive_elapsed(parse_start)
 
     expansion_start = time.monotonic()
+    y_codec_id = packet.header.get("y_codec_id")
     try:
-        expanded = decode_predictor_residual(packet.section("y_description").payload)
+        if y_codec_id == JXL_PLANE_Y_CODEC_ID:
+            expanded = decode_jxl_plane_payload(packet.section("y_description").payload)
+        else:
+            expanded = decode_predictor_residual(packet.section("y_description").payload)
     except Exception as exc:
-        raise TwoPlaneTimingReceiverError("predictor description expansion refused") from exc
+        raise TwoPlaneTimingReceiverError("y description expansion refused") from exc
     y0, y1 = _validate_targets(
         expanded.frame0,
         expanded.frame1,
