@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "bytes": 2177,
+      "path": "adjudication.json",
+      "sha256": "3cde51b407366574b067a3203a1a546709e24a1780aa601d860c67368b202663"
+    },
+    {
+      "bytes": 2469,
+      "path": "verdict_card.md",
+      "sha256": "cab5338be4fd992fbdaa60d0f482921d9b76f2938246f26bc900962c700977c3"
+    }
+  ],
+  "schema": "duty_ticket_revision_manifest.v1"
+}

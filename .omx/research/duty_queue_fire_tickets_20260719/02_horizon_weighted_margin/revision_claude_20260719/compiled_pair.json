@@ -1,0 +1,1390 @@
+{
+  "admissibility": {
+    "positive_control_sentinels": [
+      "resume_lr_rewarmup row: boundary_epoch=726, rewarmup_epochs=27, reason in {warm_start_weights_only, lever_drift_retreatment} (deterministic known-fire; absent => instrument untrusted, NO verdict)",
+      "baseline_v0_schedule_positioned row pre-v0 carrying tau/beta at resume-epoch schedule values (#517): control beta 3.1772, step-ON beta 6.0801",
+      "ON arms: lever_engage status=fired row for the treatment lever at its boundary (hwm: horizon_margin @753; step: activation schedule live from 726)",
+      "hwm ON: horizon_margin_boundary_receipt.json exists with resolved_weight > 0 (schema hwm_v9_stage_share_boundary.v1)"
+    ],
+    "preconditions_both_arms": [
+      "run completes through ep1000 (crash => --resume-from continue, never a partial-window verdict); per-stage + every-25-ep checkpoints preserved",
+      "ep_loss > 0 at every epoch in the verdict window (frozen-epoch alarm clear)",
+      "no spike_deadlock / gnorm_hijack / term_domination confound_alarm rows in the window",
+      "verdict rows carry ema_warmup=false inside the verdict windows (ForkEmaClearance stamps; window starts >=22 ep past the ep753 boundary, >=49 ep past resume \u2014 shadow matured, ~3675 updates >> 333)",
+      "argv custody: the realized launch.sh pair diff equals EXACTLY the signed one-lever delta (plus --out-dir); any other diff voids the pair",
+      "arms run SEQUENTIALLY on the same host (projected peak 67.6 GiB each; never concurrent with each other or any other n600 run)"
+    ],
+    "schema": "duty_ab_verdict_admissibility.v1"
+  },
+  "arms": {
+    "off": {
+      "arm": "off",
+      "constants_manifest": {
+        "l7_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": {
+            "mode": "run_length_exclusion",
+            "run_epochs": 1000
+          },
+          "ladder_class": "derived_at_config",
+          "note": "l7 NEVER runs (epochs+1 parking form; l7 is a measured defect)",
+          "value": 1001
+        },
+        "seg_margin_satisfice_msafe": {
+          "emitted_flag": "--seg-margin-satisfice-msafe",
+          "equation_id": "margin_band_satisficing_threshold_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {},
+              "kind": "anchor",
+              "name": "delta_r",
+              "provenance": "MEASURED p95 uint8-at-camera SegNet-margin perturbation over the annulus; tools/measure_delta_R_noise_floor.py -> reports/delta_R_noise_floor.json",
+              "sha256": "a9e57041ff0e252527396136311daec0735a93f9143fbfa9e341c4074ed53c4e",
+              "source": "/Users/adpena/Projects/pact/.claude/worktrees/agent-a6ec775e68da05eaf/reports/delta_R_noise_floor.json",
+              "staleness_days": null,
+              "value": 0.019590163230895963
+            },
+            {
+              "config_tags": {},
+              "kind": "literal",
+              "name": "headroom",
+              "provenance": "DERIVED-AT-CONFIG R-survival multiplier; default is the smallest integer covering the measured full-R annulus p95",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 2.0
+            }
+          ],
+          "ladder_class": "derived_live",
+          "resolved_at": "2026-07-19T17:08:14Z",
+          "single_value_owner": "dsl_lever:margin_band_satisficing",
+          "value": 0.039180326461791926,
+          "warnings": []
+        },
+        "seg_margin_satisfice_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "name": "mode",
+              "source": "literal",
+              "value": "config_of_record"
+            },
+            {
+              "name": "config_of_record_value",
+              "sha256": "eecbb745e7f7fefbfd9c62c7eb5f16b590e1c49cc10d07ffc8ca6ef96c4fc1ed",
+              "source": "experiments/results/levelset_n600_witness_20260717T113932Z/launch.sh",
+              "value": 700
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "note": "config of record; PAST at resume (see phase row)",
+          "value": 700
+        },
+        "seg_phase_advect_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "name": "mode",
+              "source": "literal",
+              "value": "config_of_record"
+            },
+            {
+              "name": "config_of_record_value",
+              "sha256": "eecbb745e7f7fefbfd9c62c7eb5f16b590e1c49cc10d07ffc8ca6ef96c4fc1ed",
+              "source": "experiments/results/levelset_n600_witness_20260717T113932Z/launch.sh",
+              "value": 700
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "note": "config of record; PAST at resume 726 => active from the fork start in BOTH arms (the loss the trunk trained under ep700-725)",
+          "value": 700
+        },
+        "seg_subpix_boundary_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "name": "mode",
+              "source": "literal",
+              "value": "config_of_record"
+            },
+            {
+              "name": "config_of_record_value",
+              "sha256": "eecbb745e7f7fefbfd9c62c7eb5f16b590e1c49cc10d07ffc8ca6ef96c4fc1ed",
+              "source": "experiments/results/levelset_n600_witness_20260717T113932Z/launch.sh",
+              "value": 700
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "note": "config of record; PAST at resume (see phase row)",
+          "value": 700
+        },
+        "tau_softplus_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "name": "mode",
+              "source": "literal",
+              "value": "config_of_record"
+            },
+            {
+              "name": "config_of_record_value",
+              "sha256": "eecbb745e7f7fefbfd9c62c7eb5f16b590e1c49cc10d07ffc8ca6ef96c4fc1ed",
+              "source": "experiments/results/levelset_n600_witness_20260717T113932Z/launch.sh",
+              "value": 300
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "note": "lineage stage boundary (config of record); already PAST at resume 726 \u2014 schedule reconstruction, not a new trigger",
+          "value": 300
+        },
+        "warm_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": {
+            "checkpoint_best_epoch_custody": "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_best.json sha256 66950d15bf8575eb4bae28c39c0276b0960f8e14364ed45da24b30b960f27d9e epoch 725 (resume = 725 + 1)",
+            "mode": "resume_plus_window",
+            "re_anchor_window": 0,
+            "resume_epoch": 726
+          },
+          "ladder_class": "derived_at_config",
+          "note": "resume metadata (not a curriculum stage): explicit fork epoch = banked BEST epoch 725 + 1, pinned so the fork is self-documenting and deterministic regardless of npz epoch-key presence",
+          "value": 726
+        }
+      },
+      "dsl_program_manifest": {
+        "adverse_findings_surfaced": [
+          "AF1 (v9c2 launch.sh header, verbatim adjudication): HorizonWeightedMargin 'measured WEAK by #141/#169 (dS ceiling 0.012-0.024; residual d_seg is label-noise not reconstruction)' \u2014 the A/B is the instrument that converts this prior into a measured verdict; power: the ceiling is ~5-10x the derived paired noise threshold (see ticket thresholds)",
+          "AF2 (v9c2 launch.sh header): StepNativeActivation 'adjudicated at the c2 crucible seal to annealed-hosc ... step-native is the alternative arm for the NEXT fresh arm' \u2014 the ep725 fork measures a DIFFERENT estimand (sharpen a TRAINED trunk from ep726) than the fresh-arm disposition (train under the sharper endpoint from ep0); both are recorded, neither is silently substituted for the other",
+          "AF3 (measured): the donor run's Muon at ep726 regressed Lane and stuck the pose gate \u2014 this fork OMITS Muon entirely (pure-AdamW plant)",
+          "AF4 (estimand): the composer-declared step delta '3.177 -> 8.0' is the V9 mod19 LawRef custody surface; the c2/mod32 vehicle's flag value is 4.0 (config of record) \u2014 the realized one-flag contrast here is beta-end 4.0 -> 8.0. DERIVED consistency: beta(726) on the control schedule = 1 + 3*(725/999) = 3.1772 \u2014 the '3.177 sealed endpoint' IS the schedule value at the fork epoch; the treatment repositions beta(726) to 1 + 7*(725/999) = 6.0801 (#517 positions both pre-v0; the v0 verdict is the immediate-response receipt)",
+          "AF5 (schedule realization, measured): the donor run FROZE beta at 3.1772 from ep726 (FEED-fm Muon freeze) and never realized the 3.177->4.0 tail; these Muon-free arms anneal it live under AdamW \u2014 shared by both arms, one-flag contrast preserved"
+        ],
+        "arm": "off",
+        "compiled_at_utc": "2026-07-19T17:08:14.467893+00:00",
+        "dsl_module": "tac.witness_dsl.typed_config",
+        "duty_ticket": "02_horizon_weighted_margin",
+        "expected_active_levers": [
+          "FEED_07b_step_native_activation",
+          "c2_component_wallclock_telemetry",
+          "c2_speed_stack",
+          "fork_ema_clearance",
+          "head_offset_solver",
+          "margin_band_satisficing",
+          "phase_advection_consistency",
+          "pose_blind_compute_gate",
+          "resume_lr_rewarmup",
+          "tie_locus_displacement",
+          "v9c3_warm_fork_ep725_weights_only",
+          "verdict_live_gap"
+        ],
+        "flag_fingerprint": "2c377a568bb39b507a350f6b40fb0f9e8f0bf13f5f160ce8aaf793e3ed096811",
+        "flag_names": [
+          "--accum-pairs",
+          "--activation",
+          "--anneal-epochs",
+          "--async-verdict",
+          "--cache-gt-skeleton",
+          "--chroma",
+          "--ckpt-every",
+          "--component-wallclock-probe-every",
+          "--component-wallclock-telemetry",
+          "--curriculum",
+          "--eikonal-weight",
+          "--ema-decay",
+          "--epochs",
+          "--eval-every",
+          "--fork-ema-clearance",
+          "--freq-across",
+          "--freq-along",
+          "--fused-r-kernel",
+          "--grad-clip",
+          "--gt-cache",
+          "--head-offset-solver",
+          "--head-offset-solver-tau",
+          "--hidden-dim",
+          "--hosc-beta",
+          "--hosc-beta-anneal",
+          "--hosc-beta-end",
+          "--hosc-omega",
+          "--l7-start-epoch",
+          "--length-weight",
+          "--max-bank-freq",
+          "--mlx-device",
+          "--mod-dim",
+          "--n-dir-freqs",
+          "--n-hidden",
+          "--num-pairs",
+          "--out-dir",
+          "--palette-anchor",
+          "--per-group-grad-clip",
+          "--pose-training-compute-gate",
+          "--profile-timing",
+          "--render-h",
+          "--render-w",
+          "--reorient-every",
+          "--resume-from",
+          "--safe-compile-regions",
+          "--score-domain-loss",
+          "--seed",
+          "--seg-margin-satisfice-band",
+          "--seg-margin-satisfice-delta-r",
+          "--seg-margin-satisfice-headroom",
+          "--seg-margin-satisfice-msafe",
+          "--seg-margin-satisfice-start-epoch",
+          "--seg-margin-satisfice-weight",
+          "--seg-phase-advect-band",
+          "--seg-phase-advect-classes",
+          "--seg-phase-advect-gap-xi",
+          "--seg-phase-advect-ref",
+          "--seg-phase-advect-start-epoch",
+          "--seg-phase-advect-weight",
+          "--seg-subpix-boundary-start-epoch",
+          "--seg-subpix-boundary-v-band",
+          "--seg-subpix-boundary-weight",
+          "--seg-subpix-edge-weight-path",
+          "--seg-subpix-edge-weight-source",
+          "--seg-subpix-ref-domain",
+          "--self-orient",
+          "--siren-init",
+          "--softmax-temp-end",
+          "--softmax-temp-start",
+          "--stage-checkpoints",
+          "--stage-transition-reset-moments",
+          "--stage-transition-rewarmup-epochs",
+          "--stage-transition-rewarmup-floor",
+          "--stage-transition-rewarmup-shape",
+          "--structured-init",
+          "--structured-init-include-lane",
+          "--tau-softplus-start-epoch",
+          "--tau-softplus-tau",
+          "--verdict-anchor-every",
+          "--verdict-batch",
+          "--verdict-device",
+          "--verdict-live-gap-every",
+          "--verdict-pairs",
+          "--verdict-pose-gate",
+          "--w-pose",
+          "--w-seg",
+          "--warm-start-epoch",
+          "--warm-start-weights-only"
+        ],
+        "fork_contract": {
+          "checkpoint": "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+          "checkpoint_bytes": 460448,
+          "checkpoint_sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+          "mode": "weights-only (fresh AdamW; EMA shadow load; re-seeded guard; explicit --warm-start-epoch 726)",
+          "no_clean_pre_muon_resume_exists": "the bank npz is a 59-key EMA deploy snapshot with NO optimizer/RNG/event state (campaign meta-review 2026-07-18) \u2014 fresh-state fork is the only honest form",
+          "resume_epoch": 726
+        },
+        "held": true,
+        "launch_blockers": [
+          {
+            "detail": "no GREEN full_config_dry_start receipt with typed_config_hash 9169f422bb6c9018\u2026 exists for 'v9c3_duty_hwm_off' \u2014 run the launcher's bounded --dry-start ON THIS EXACT CONFIG (it also PROVES the warm-fork weight-shape load via resume_ok) before the real launch",
+            "id": "V9C3_COMPOSED_BENCH_NOT_MEASURED"
+          }
+        ],
+        "launcher_registration_owed": "tools/launch_witness_run.py --config v9c3_duty_hwm_off (3-line registration at GO time, the c2 pattern)",
+        "open_518_items": {
+          "fork_head_solve": "OFF in BOTH arms \u2014 never-fired lever; firing it inside a duty A/B would add a second unmeasured mechanism (its own duty row)",
+          "margin_step_cap": "OFF in BOTH arms \u2014 the measured cap does not exist (never-fired; #518 R5); deriving it from the OFF twin's rewarmup-window margin/update-norm telemetry is the named unlock",
+          "warm_start_restore_boundary_state": "OFF \u2014 the bank npz is keyless (nothing to restore; #518 item 8 residual R4)"
+        },
+        "operator_go_required": true,
+        "paired_off_twin": "v9c3_duty_hwm_off",
+        "program_name": "v9c3_duty_hwm_off",
+        "resume_event_reanchor": {
+          "lr_rewarmup": "ResumeLRWarmup: 27 ep beta2-derived window (overrides the config-of-record 8; DERIVED > CONFIG)",
+          "muon": "OMITTED (no --muon-start-epoch): donor's absolute ep726 Muon is the MEASURED confound engine (Lane 0.213->0.238 kick, stuck pose gate); pure-AdamW measurement plant; #217 finishing-schedule stays OPEN",
+          "pose": "pose-blind (--w-pose 0, compute gates kept, conditioning gate NOT composed): reproduces the trunk's realized ep700-725 loss physics and removes arm-divergent sigma_min_plateau engagement from the window",
+          "ramp_end_reorient": "#518 item 9: automatic when a rewarmup window is set",
+          "tau_beta_segform_pre_v0": "#517/#518 item 5: automatic for start_epoch > 1 \u2014 the v0 verdict reads the true resume-epoch schedule values"
+        },
+        "schema": "dsl_program_manifest.v1",
+        "typed_config_hash": "9169f422bb6c901811b168fa299b8c4954e4d7ac0cd39489ddd120d58a00f29e",
+        "typed_validated": true,
+        "verdict_windows": {
+          "note": "step ticket: the treatment is active from resume 726; the 726-753 rewarmup transient is reported separately (response receipt), the paired verdict windows start post-rewarmup",
+          "primary": {
+            "epochs": [
+              753,
+              853
+            ],
+            "verdict_points": [
+              775,
+              800,
+              825,
+              850
+            ]
+          },
+          "secondary": {
+            "epochs": [
+              753,
+              1000
+            ],
+            "verdict_points": [
+              775,
+              800,
+              825,
+              850,
+              875,
+              900,
+              925,
+              950,
+              975,
+              1000
+            ]
+          },
+          "treatment_boundary_epoch": 753
+        },
+        "warm_fork_ckpt_custody": {
+          "bytes": 460448,
+          "path": "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+          "status": "CLEAR"
+        }
+      },
+      "full_dsl_compile_hash": "c49087ce7077c9abe3f8c06dafe85a909b6867da3319ac5c33a4d2ad24fbcb1d",
+      "governed_launch_command": ".venv/bin/python tools/launch_witness_run.py --config v9c3_duty_hwm_off --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz --num-pairs 600 --out-dir /Volumes/VertigoDataTier/pact/experiments/results/v9c3_dev_duty_hwm_off_n600_seed0 [REQUIRES: launcher registration (owed, 3-line c2 pattern) + green --dry-start receipt + operator GO; the launcher owns safe_run/governor/memory-preflight wraps]",
+      "out_dir": "/Volumes/VertigoDataTier/pact/experiments/results/v9c3_dev_duty_hwm_off_n600_seed0",
+      "program": "v9c3_duty_hwm_off",
+      "resolved_argv": [
+        ".venv/bin/python",
+        "experiments/train_levelset_witness_realized_through_R_mlx.py",
+        "--seed",
+        "0",
+        "--async-verdict",
+        "--eval-every",
+        "25",
+        "--verdict-pairs",
+        "0",
+        "--curriculum",
+        "--tau-softplus-start-epoch",
+        "300",
+        "--tau-softplus-tau",
+        "0.3",
+        "--l7-start-epoch",
+        "1001",
+        "--w-seg",
+        "100",
+        "--w-pose",
+        "0.0",
+        "--score-domain-loss",
+        "--mod-dim",
+        "32",
+        "--hidden-dim",
+        "96",
+        "--n-hidden",
+        "4",
+        "--siren-init",
+        "--softmax-temp-start",
+        "1.0",
+        "--softmax-temp-end",
+        "0.05",
+        "--self-orient",
+        "--n-dir-freqs",
+        "4",
+        "--freq-across",
+        "32",
+        "--freq-along",
+        "8",
+        "--reorient-every",
+        "50",
+        "--max-bank-freq",
+        "64",
+        "--chroma",
+        "--palette-anchor",
+        "--eikonal-weight",
+        "0",
+        "--length-weight",
+        "0.001",
+        "--render-h",
+        "384",
+        "--render-w",
+        "512",
+        "--accum-pairs",
+        "8",
+        "--grad-clip",
+        "1.0",
+        "--per-group-grad-clip",
+        "--ema-decay",
+        "0.997",
+        "--structured-init",
+        "--structured-init-include-lane",
+        "--ckpt-every",
+        "25",
+        "--stage-checkpoints",
+        "--stage-transition-reset-moments",
+        "--anneal-epochs",
+        "1000",
+        "--verdict-device",
+        "cpu",
+        "--verdict-anchor-every",
+        "0",
+        "--num-pairs",
+        "600",
+        "--epochs",
+        "1000",
+        "--gt-cache",
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "--out-dir",
+        "<OUT_DIR>",
+        "--mlx-device",
+        "gpu",
+        "--resume-from",
+        "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+        "--warm-start-weights-only",
+        "--warm-start-epoch",
+        "726",
+        "--stage-transition-rewarmup-epochs",
+        "27",
+        "--stage-transition-rewarmup-floor",
+        "0.1",
+        "--stage-transition-rewarmup-shape",
+        "linear",
+        "--fork-ema-clearance",
+        "--activation",
+        "hosc",
+        "--hosc-beta",
+        "1.0",
+        "--hosc-beta-end",
+        "4.0",
+        "--hosc-beta-anneal",
+        "linear",
+        "--hosc-omega",
+        "1.0",
+        "--seg-phase-advect-weight",
+        "0.4",
+        "--seg-phase-advect-start-epoch",
+        "700",
+        "--seg-phase-advect-classes",
+        "0,1,2",
+        "--seg-phase-advect-band",
+        "2.0",
+        "--seg-phase-advect-gap-xi",
+        "interp",
+        "--seg-phase-advect-ref",
+        "gt_advected",
+        "--seg-margin-satisfice-weight",
+        "0.2",
+        "--seg-margin-satisfice-msafe",
+        "0.039180326461791926",
+        "--seg-margin-satisfice-delta-r",
+        "0.019590163230895963",
+        "--seg-margin-satisfice-headroom",
+        "2.0",
+        "--seg-margin-satisfice-start-epoch",
+        "700",
+        "--seg-margin-satisfice-band",
+        "2.0",
+        "--seg-subpix-boundary-weight",
+        "0.3",
+        "--seg-subpix-boundary-start-epoch",
+        "700",
+        "--seg-subpix-boundary-v-band",
+        "1.0",
+        "--seg-subpix-edge-weight-source",
+        "pa_flipmass",
+        "--seg-subpix-edge-weight-path",
+        "reports/pa_edge_weights.json",
+        "--seg-subpix-ref-domain",
+        "seg384",
+        "--pose-training-compute-gate",
+        "--verdict-pose-gate",
+        "--head-offset-solver",
+        "flip_median",
+        "--head-offset-solver-tau",
+        "1.0",
+        "--verdict-live-gap-every",
+        "25",
+        "--fused-r-kernel",
+        "--cache-gt-skeleton",
+        "--verdict-batch",
+        "32",
+        "--safe-compile-regions",
+        "hosc_activation",
+        "--component-wallclock-telemetry",
+        "--component-wallclock-probe-every",
+        "1",
+        "--profile-timing"
+      ],
+      "resolved_argv_sha256": "bb2525fff4b61585803c1e3ae6897152091ea6c176960f3c1d64214e343beae5",
+      "schedule_gate": {
+        "rc": 0,
+        "verdicts": 6,
+        "violations": []
+      },
+      "typed_config_hash": "9169f422bb6c901811b168fa299b8c4954e4d7ac0cd39489ddd120d58a00f29e"
+    },
+    "on": {
+      "arm": "on",
+      "constants_manifest": {
+        "l7_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": {
+            "mode": "run_length_exclusion",
+            "run_epochs": 1000
+          },
+          "ladder_class": "derived_at_config",
+          "note": "l7 NEVER runs (epochs+1 parking form; l7 is a measured defect)",
+          "value": 1001
+        },
+        "seg_horizon_margin_hi": {
+          "emitted_flag": "--seg-horizon-margin-hi",
+          "equation_id": "horizon_weighted_margin_hinge_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {
+                "vehicle": "v9_cgauge_ideal_mod19"
+              },
+              "kind": "literal",
+              "name": "value",
+              "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-hi",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 0.5
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "resolved_at": "2026-07-19T17:08:15Z",
+          "single_value_owner": "dsl_lever:horizon_weighted_margin",
+          "value": 0.5,
+          "warnings": []
+        },
+        "seg_horizon_margin_lo": {
+          "emitted_flag": "--seg-horizon-margin-lo",
+          "equation_id": "horizon_weighted_margin_hinge_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {
+                "vehicle": "v9_cgauge_ideal_mod19"
+              },
+              "kind": "literal",
+              "name": "value",
+              "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-lo",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 0.3
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "resolved_at": "2026-07-19T17:08:15Z",
+          "single_value_owner": "dsl_lever:horizon_weighted_margin",
+          "value": 0.3,
+          "warnings": []
+        },
+        "seg_horizon_margin_start_epoch": {
+          "emitted_flag": "--seg-horizon-margin-start-epoch",
+          "equation_id": "horizon_weighted_margin_hinge_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {
+                "vehicle": "v9_cgauge_ideal_mod19"
+              },
+              "kind": "literal",
+              "name": "value",
+              "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-start-epoch",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 753
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "resolved_at": "2026-07-19T17:08:15Z",
+          "single_value_owner": "dsl_lever:horizon_weighted_margin",
+          "value": 753,
+          "warnings": []
+        },
+        "seg_horizon_margin_target": {
+          "emitted_flag": "--seg-horizon-margin-target",
+          "equation_id": "horizon_weighted_margin_hinge_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {
+                "vehicle": "v9_cgauge_ideal_mod19"
+              },
+              "kind": "literal",
+              "name": "value",
+              "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-target",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 0.5
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "resolved_at": "2026-07-19T17:08:15Z",
+          "single_value_owner": "dsl_lever:horizon_weighted_margin",
+          "value": 0.5,
+          "warnings": []
+        },
+        "seg_horizon_margin_weight": {
+          "emitted_flag": "--seg-horizon-margin-weight",
+          "equation_id": "horizon_weighted_margin_hinge_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {
+                "vehicle": "v9_cgauge_ideal_mod19"
+              },
+              "kind": "literal",
+              "name": "value",
+              "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-weight",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 0.15
+            }
+          ],
+          "ladder_class": "derived_live",
+          "resolved_at": "2026-07-19T17:08:15Z",
+          "single_value_owner": "dsl_lever:horizon_weighted_margin",
+          "value": 0.15,
+          "warnings": []
+        },
+        "seg_horizon_row_hi": {
+          "emitted_flag": "--seg-horizon-row-hi",
+          "equation_id": "horizon_weighted_margin_hinge_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {
+                "vehicle": "v9_cgauge_ideal_mod19"
+              },
+              "kind": "literal",
+              "name": "value",
+              "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-row-hi",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 288
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "resolved_at": "2026-07-19T17:08:15Z",
+          "single_value_owner": "dsl_lever:horizon_weighted_margin",
+          "value": 288,
+          "warnings": []
+        },
+        "seg_horizon_row_lo": {
+          "emitted_flag": "--seg-horizon-row-lo",
+          "equation_id": "horizon_weighted_margin_hinge_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {
+                "vehicle": "v9_cgauge_ideal_mod19"
+              },
+              "kind": "literal",
+              "name": "value",
+              "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-row-lo",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 96
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "resolved_at": "2026-07-19T17:08:15Z",
+          "single_value_owner": "dsl_lever:horizon_weighted_margin",
+          "value": 96,
+          "warnings": []
+        },
+        "seg_margin_satisfice_msafe": {
+          "emitted_flag": "--seg-margin-satisfice-msafe",
+          "equation_id": "margin_band_satisficing_threshold_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "config_tags": {},
+              "kind": "anchor",
+              "name": "delta_r",
+              "provenance": "MEASURED p95 uint8-at-camera SegNet-margin perturbation over the annulus; tools/measure_delta_R_noise_floor.py -> reports/delta_R_noise_floor.json",
+              "sha256": "a9e57041ff0e252527396136311daec0735a93f9143fbfa9e341c4074ed53c4e",
+              "source": "/Users/adpena/Projects/pact/.claude/worktrees/agent-a6ec775e68da05eaf/reports/delta_R_noise_floor.json",
+              "staleness_days": null,
+              "value": 0.019590163230895963
+            },
+            {
+              "config_tags": {},
+              "kind": "literal",
+              "name": "headroom",
+              "provenance": "DERIVED-AT-CONFIG R-survival multiplier; default is the smallest integer covering the measured full-R annulus p95",
+              "sha256": null,
+              "source": "literal",
+              "staleness_days": null,
+              "value": 2.0
+            }
+          ],
+          "ladder_class": "derived_live",
+          "resolved_at": "2026-07-19T17:08:15Z",
+          "single_value_owner": "dsl_lever:margin_band_satisficing",
+          "value": 0.039180326461791926,
+          "warnings": []
+        },
+        "seg_margin_satisfice_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "name": "mode",
+              "source": "literal",
+              "value": "config_of_record"
+            },
+            {
+              "name": "config_of_record_value",
+              "sha256": "eecbb745e7f7fefbfd9c62c7eb5f16b590e1c49cc10d07ffc8ca6ef96c4fc1ed",
+              "source": "experiments/results/levelset_n600_witness_20260717T113932Z/launch.sh",
+              "value": 700
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "note": "config of record; PAST at resume (see phase row)",
+          "value": 700
+        },
+        "seg_phase_advect_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "name": "mode",
+              "source": "literal",
+              "value": "config_of_record"
+            },
+            {
+              "name": "config_of_record_value",
+              "sha256": "eecbb745e7f7fefbfd9c62c7eb5f16b590e1c49cc10d07ffc8ca6ef96c4fc1ed",
+              "source": "experiments/results/levelset_n600_witness_20260717T113932Z/launch.sh",
+              "value": 700
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "note": "config of record; PAST at resume 726 => active from the fork start in BOTH arms (the loss the trunk trained under ep700-725)",
+          "value": 700
+        },
+        "seg_subpix_boundary_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "name": "mode",
+              "source": "literal",
+              "value": "config_of_record"
+            },
+            {
+              "name": "config_of_record_value",
+              "sha256": "eecbb745e7f7fefbfd9c62c7eb5f16b590e1c49cc10d07ffc8ca6ef96c4fc1ed",
+              "source": "experiments/results/levelset_n600_witness_20260717T113932Z/launch.sh",
+              "value": 700
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "note": "config of record; PAST at resume (see phase row)",
+          "value": 700
+        },
+        "tau_softplus_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": [
+            {
+              "name": "mode",
+              "source": "literal",
+              "value": "config_of_record"
+            },
+            {
+              "name": "config_of_record_value",
+              "sha256": "eecbb745e7f7fefbfd9c62c7eb5f16b590e1c49cc10d07ffc8ca6ef96c4fc1ed",
+              "source": "experiments/results/levelset_n600_witness_20260717T113932Z/launch.sh",
+              "value": 300
+            }
+          ],
+          "ladder_class": "derived_at_config",
+          "note": "lineage stage boundary (config of record); already PAST at resume 726 \u2014 schedule reconstruction, not a new trigger",
+          "value": 300
+        },
+        "warm_start_epoch": {
+          "equation_id": "warm_start_schedule_reconstruction_v1",
+          "fallback_used": false,
+          "inputs": {
+            "checkpoint_best_epoch_custody": "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_best.json sha256 66950d15bf8575eb4bae28c39c0276b0960f8e14364ed45da24b30b960f27d9e epoch 725 (resume = 725 + 1)",
+            "mode": "resume_plus_window",
+            "re_anchor_window": 0,
+            "resume_epoch": 726
+          },
+          "ladder_class": "derived_at_config",
+          "note": "resume metadata (not a curriculum stage): explicit fork epoch = banked BEST epoch 725 + 1, pinned so the fork is self-documenting and deterministic regardless of npz epoch-key presence",
+          "value": 726
+        }
+      },
+      "dsl_program_manifest": {
+        "adverse_findings_surfaced": [
+          "AF1 (v9c2 launch.sh header, verbatim adjudication): HorizonWeightedMargin 'measured WEAK by #141/#169 (dS ceiling 0.012-0.024; residual d_seg is label-noise not reconstruction)' \u2014 the A/B is the instrument that converts this prior into a measured verdict; power: the ceiling is ~5-10x the derived paired noise threshold (see ticket thresholds)",
+          "AF2 (v9c2 launch.sh header): StepNativeActivation 'adjudicated at the c2 crucible seal to annealed-hosc ... step-native is the alternative arm for the NEXT fresh arm' \u2014 the ep725 fork measures a DIFFERENT estimand (sharpen a TRAINED trunk from ep726) than the fresh-arm disposition (train under the sharper endpoint from ep0); both are recorded, neither is silently substituted for the other",
+          "AF3 (measured): the donor run's Muon at ep726 regressed Lane and stuck the pose gate \u2014 this fork OMITS Muon entirely (pure-AdamW plant)",
+          "AF4 (estimand): the composer-declared step delta '3.177 -> 8.0' is the V9 mod19 LawRef custody surface; the c2/mod32 vehicle's flag value is 4.0 (config of record) \u2014 the realized one-flag contrast here is beta-end 4.0 -> 8.0. DERIVED consistency: beta(726) on the control schedule = 1 + 3*(725/999) = 3.1772 \u2014 the '3.177 sealed endpoint' IS the schedule value at the fork epoch; the treatment repositions beta(726) to 1 + 7*(725/999) = 6.0801 (#517 positions both pre-v0; the v0 verdict is the immediate-response receipt)",
+          "AF5 (schedule realization, measured): the donor run FROZE beta at 3.1772 from ep726 (FEED-fm Muon freeze) and never realized the 3.177->4.0 tail; these Muon-free arms anneal it live under AdamW \u2014 shared by both arms, one-flag contrast preserved"
+        ],
+        "arm": "on",
+        "compiled_at_utc": "2026-07-19T17:08:15.207642+00:00",
+        "dsl_module": "tac.witness_dsl.typed_config",
+        "duty_ticket": "02_horizon_weighted_margin",
+        "expected_active_levers": [
+          "FEED_07b_step_native_activation",
+          "c2_component_wallclock_telemetry",
+          "c2_speed_stack",
+          "fork_ema_clearance",
+          "head_offset_solver",
+          "horizon_weighted_margin",
+          "margin_band_satisficing",
+          "phase_advection_consistency",
+          "pose_blind_compute_gate",
+          "resume_lr_rewarmup",
+          "tie_locus_displacement",
+          "v9c3_warm_fork_ep725_weights_only",
+          "verdict_live_gap"
+        ],
+        "flag_fingerprint": "a9e561ecd5c54a1f7f2900f4735d0bd9c3aea0c0339f8e26369f5c808648dc5f",
+        "flag_names": [
+          "--accum-pairs",
+          "--activation",
+          "--anneal-epochs",
+          "--async-verdict",
+          "--cache-gt-skeleton",
+          "--chroma",
+          "--ckpt-every",
+          "--component-wallclock-probe-every",
+          "--component-wallclock-telemetry",
+          "--curriculum",
+          "--eikonal-weight",
+          "--ema-decay",
+          "--epochs",
+          "--eval-every",
+          "--fork-ema-clearance",
+          "--freq-across",
+          "--freq-along",
+          "--fused-r-kernel",
+          "--grad-clip",
+          "--gt-cache",
+          "--head-offset-solver",
+          "--head-offset-solver-tau",
+          "--hidden-dim",
+          "--hosc-beta",
+          "--hosc-beta-anneal",
+          "--hosc-beta-end",
+          "--hosc-omega",
+          "--l7-start-epoch",
+          "--length-weight",
+          "--max-bank-freq",
+          "--mlx-device",
+          "--mod-dim",
+          "--n-dir-freqs",
+          "--n-hidden",
+          "--num-pairs",
+          "--out-dir",
+          "--palette-anchor",
+          "--per-group-grad-clip",
+          "--pose-training-compute-gate",
+          "--profile-timing",
+          "--render-h",
+          "--render-w",
+          "--reorient-every",
+          "--resume-from",
+          "--safe-compile-regions",
+          "--score-domain-loss",
+          "--seed",
+          "--seg-horizon-margin-derived-live",
+          "--seg-horizon-margin-hi",
+          "--seg-horizon-margin-lo",
+          "--seg-horizon-margin-start-epoch",
+          "--seg-horizon-margin-target",
+          "--seg-horizon-margin-weight",
+          "--seg-horizon-row-hi",
+          "--seg-horizon-row-lo",
+          "--seg-margin-satisfice-band",
+          "--seg-margin-satisfice-delta-r",
+          "--seg-margin-satisfice-headroom",
+          "--seg-margin-satisfice-msafe",
+          "--seg-margin-satisfice-start-epoch",
+          "--seg-margin-satisfice-weight",
+          "--seg-phase-advect-band",
+          "--seg-phase-advect-classes",
+          "--seg-phase-advect-gap-xi",
+          "--seg-phase-advect-ref",
+          "--seg-phase-advect-start-epoch",
+          "--seg-phase-advect-weight",
+          "--seg-subpix-boundary-start-epoch",
+          "--seg-subpix-boundary-v-band",
+          "--seg-subpix-boundary-weight",
+          "--seg-subpix-edge-weight-path",
+          "--seg-subpix-edge-weight-source",
+          "--seg-subpix-ref-domain",
+          "--self-orient",
+          "--siren-init",
+          "--softmax-temp-end",
+          "--softmax-temp-start",
+          "--stage-checkpoints",
+          "--stage-transition-reset-moments",
+          "--stage-transition-rewarmup-epochs",
+          "--stage-transition-rewarmup-floor",
+          "--stage-transition-rewarmup-shape",
+          "--structured-init",
+          "--structured-init-include-lane",
+          "--tau-softplus-start-epoch",
+          "--tau-softplus-tau",
+          "--verdict-anchor-every",
+          "--verdict-batch",
+          "--verdict-device",
+          "--verdict-live-gap-every",
+          "--verdict-pairs",
+          "--verdict-pose-gate",
+          "--w-pose",
+          "--w-seg",
+          "--warm-start-epoch",
+          "--warm-start-weights-only"
+        ],
+        "fork_contract": {
+          "checkpoint": "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+          "checkpoint_bytes": 460448,
+          "checkpoint_sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+          "mode": "weights-only (fresh AdamW; EMA shadow load; re-seeded guard; explicit --warm-start-epoch 726)",
+          "no_clean_pre_muon_resume_exists": "the bank npz is a 59-key EMA deploy snapshot with NO optimizer/RNG/event state (campaign meta-review 2026-07-18) \u2014 fresh-state fork is the only honest form",
+          "resume_epoch": 726
+        },
+        "held": true,
+        "launch_blockers": [
+          {
+            "detail": "no GREEN full_config_dry_start receipt with typed_config_hash 77cabaa0d796765f\u2026 exists for 'v9c3_duty_hwm_on' \u2014 run the launcher's bounded --dry-start ON THIS EXACT CONFIG (it also PROVES the warm-fork weight-shape load via resume_ok) before the real launch",
+            "id": "V9C3_COMPOSED_BENCH_NOT_MEASURED"
+          }
+        ],
+        "launcher_registration_owed": "tools/launch_witness_run.py --config v9c3_duty_hwm_on (3-line registration at GO time, the c2 pattern)",
+        "open_518_items": {
+          "fork_head_solve": "OFF in BOTH arms \u2014 never-fired lever; firing it inside a duty A/B would add a second unmeasured mechanism (its own duty row)",
+          "margin_step_cap": "OFF in BOTH arms \u2014 the measured cap does not exist (never-fired; #518 R5); deriving it from the OFF twin's rewarmup-window margin/update-norm telemetry is the named unlock",
+          "warm_start_restore_boundary_state": "OFF \u2014 the bank npz is keyless (nothing to restore; #518 item 8 residual R4)"
+        },
+        "operator_go_required": true,
+        "paired_off_twin": "v9c3_duty_hwm_off",
+        "program_name": "v9c3_duty_hwm_on",
+        "resume_event_reanchor": {
+          "lr_rewarmup": "ResumeLRWarmup: 27 ep beta2-derived window (overrides the config-of-record 8; DERIVED > CONFIG)",
+          "muon": "OMITTED (no --muon-start-epoch): donor's absolute ep726 Muon is the MEASURED confound engine (Lane 0.213->0.238 kick, stuck pose gate); pure-AdamW measurement plant; #217 finishing-schedule stays OPEN",
+          "pose": "pose-blind (--w-pose 0, compute gates kept, conditioning gate NOT composed): reproduces the trunk's realized ep700-725 loss physics and removes arm-divergent sigma_min_plateau engagement from the window",
+          "ramp_end_reorient": "#518 item 9: automatic when a rewarmup window is set",
+          "tau_beta_segform_pre_v0": "#517/#518 item 5: automatic for start_epoch > 1 \u2014 the v0 verdict reads the true resume-epoch schedule values"
+        },
+        "schema": "dsl_program_manifest.v1",
+        "typed_config_hash": "77cabaa0d796765fe0519b3c6510ce15bcb2d0d0daa1bd115a2f2936357d8bc1",
+        "typed_validated": true,
+        "verdict_windows": {
+          "note": "step ticket: the treatment is active from resume 726; the 726-753 rewarmup transient is reported separately (response receipt), the paired verdict windows start post-rewarmup",
+          "primary": {
+            "epochs": [
+              753,
+              853
+            ],
+            "verdict_points": [
+              775,
+              800,
+              825,
+              850
+            ]
+          },
+          "secondary": {
+            "epochs": [
+              753,
+              1000
+            ],
+            "verdict_points": [
+              775,
+              800,
+              825,
+              850,
+              875,
+              900,
+              925,
+              950,
+              975,
+              1000
+            ]
+          },
+          "treatment_boundary_epoch": 753
+        },
+        "warm_fork_ckpt_custody": {
+          "bytes": 460448,
+          "path": "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+          "status": "CLEAR"
+        }
+      },
+      "full_dsl_compile_hash": "8ac7b6cd816f4d21d42c477fa9abd0c21904425cbf14dccd5ac627c150565137",
+      "governed_launch_command": ".venv/bin/python tools/launch_witness_run.py --config v9c3_duty_hwm_on --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz --num-pairs 600 --out-dir /Volumes/VertigoDataTier/pact/experiments/results/v9c3_dev_duty_hwm_on_n600_seed0 [REQUIRES: launcher registration (owed, 3-line c2 pattern) + green --dry-start receipt + operator GO; the launcher owns safe_run/governor/memory-preflight wraps]",
+      "out_dir": "/Volumes/VertigoDataTier/pact/experiments/results/v9c3_dev_duty_hwm_on_n600_seed0",
+      "program": "v9c3_duty_hwm_on",
+      "resolved_argv": [
+        ".venv/bin/python",
+        "experiments/train_levelset_witness_realized_through_R_mlx.py",
+        "--seed",
+        "0",
+        "--async-verdict",
+        "--eval-every",
+        "25",
+        "--verdict-pairs",
+        "0",
+        "--curriculum",
+        "--tau-softplus-start-epoch",
+        "300",
+        "--tau-softplus-tau",
+        "0.3",
+        "--l7-start-epoch",
+        "1001",
+        "--w-seg",
+        "100",
+        "--w-pose",
+        "0.0",
+        "--score-domain-loss",
+        "--mod-dim",
+        "32",
+        "--hidden-dim",
+        "96",
+        "--n-hidden",
+        "4",
+        "--siren-init",
+        "--softmax-temp-start",
+        "1.0",
+        "--softmax-temp-end",
+        "0.05",
+        "--self-orient",
+        "--n-dir-freqs",
+        "4",
+        "--freq-across",
+        "32",
+        "--freq-along",
+        "8",
+        "--reorient-every",
+        "50",
+        "--max-bank-freq",
+        "64",
+        "--chroma",
+        "--palette-anchor",
+        "--eikonal-weight",
+        "0",
+        "--length-weight",
+        "0.001",
+        "--render-h",
+        "384",
+        "--render-w",
+        "512",
+        "--accum-pairs",
+        "8",
+        "--grad-clip",
+        "1.0",
+        "--per-group-grad-clip",
+        "--ema-decay",
+        "0.997",
+        "--structured-init",
+        "--structured-init-include-lane",
+        "--ckpt-every",
+        "25",
+        "--stage-checkpoints",
+        "--stage-transition-reset-moments",
+        "--anneal-epochs",
+        "1000",
+        "--verdict-device",
+        "cpu",
+        "--verdict-anchor-every",
+        "0",
+        "--num-pairs",
+        "600",
+        "--epochs",
+        "1000",
+        "--gt-cache",
+        "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+        "--out-dir",
+        "<OUT_DIR>",
+        "--mlx-device",
+        "gpu",
+        "--resume-from",
+        "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+        "--warm-start-weights-only",
+        "--warm-start-epoch",
+        "726",
+        "--stage-transition-rewarmup-epochs",
+        "27",
+        "--stage-transition-rewarmup-floor",
+        "0.1",
+        "--stage-transition-rewarmup-shape",
+        "linear",
+        "--fork-ema-clearance",
+        "--activation",
+        "hosc",
+        "--hosc-beta",
+        "1.0",
+        "--hosc-beta-end",
+        "4.0",
+        "--hosc-beta-anneal",
+        "linear",
+        "--hosc-omega",
+        "1.0",
+        "--seg-phase-advect-weight",
+        "0.4",
+        "--seg-phase-advect-start-epoch",
+        "700",
+        "--seg-phase-advect-classes",
+        "0,1,2",
+        "--seg-phase-advect-band",
+        "2.0",
+        "--seg-phase-advect-gap-xi",
+        "interp",
+        "--seg-phase-advect-ref",
+        "gt_advected",
+        "--seg-margin-satisfice-weight",
+        "0.2",
+        "--seg-margin-satisfice-msafe",
+        "0.039180326461791926",
+        "--seg-margin-satisfice-delta-r",
+        "0.019590163230895963",
+        "--seg-margin-satisfice-headroom",
+        "2.0",
+        "--seg-margin-satisfice-start-epoch",
+        "700",
+        "--seg-margin-satisfice-band",
+        "2.0",
+        "--seg-subpix-boundary-weight",
+        "0.3",
+        "--seg-subpix-boundary-start-epoch",
+        "700",
+        "--seg-subpix-boundary-v-band",
+        "1.0",
+        "--seg-subpix-edge-weight-source",
+        "pa_flipmass",
+        "--seg-subpix-edge-weight-path",
+        "reports/pa_edge_weights.json",
+        "--seg-subpix-ref-domain",
+        "seg384",
+        "--pose-training-compute-gate",
+        "--verdict-pose-gate",
+        "--head-offset-solver",
+        "flip_median",
+        "--head-offset-solver-tau",
+        "1.0",
+        "--verdict-live-gap-every",
+        "25",
+        "--fused-r-kernel",
+        "--cache-gt-skeleton",
+        "--verdict-batch",
+        "32",
+        "--safe-compile-regions",
+        "hosc_activation",
+        "--component-wallclock-telemetry",
+        "--component-wallclock-probe-every",
+        "1",
+        "--profile-timing",
+        "--seg-horizon-margin-weight",
+        "0.15",
+        "--seg-horizon-margin-target",
+        "0.5",
+        "--seg-horizon-margin-lo",
+        "0.3",
+        "--seg-horizon-margin-hi",
+        "0.5",
+        "--seg-horizon-row-lo",
+        "96",
+        "--seg-horizon-row-hi",
+        "288",
+        "--seg-horizon-margin-start-epoch",
+        "753",
+        "--seg-horizon-margin-derived-live"
+      ],
+      "resolved_argv_sha256": "cb39bef2cb2344531281bce24d5833122709e9ac3601c49a6b2024a52dca3614",
+      "schedule_gate": {
+        "rc": 0,
+        "verdicts": 7,
+        "violations": []
+      },
+      "typed_config_hash": "77cabaa0d796765fe0519b3c6510ce15bcb2d0d0daa1bd115a2f2936357d8bc1"
+    }
+  },
+  "checkpoint_custody": {
+    "bytes": 460448,
+    "d_seg": 0.003457972208658854,
+    "epoch": 725,
+    "path": "experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+    "sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef"
+  },
+  "measured_at_head": "679e78ab0352d7a1efbcf2368d49c86f7360d000",
+  "memory_preflight": {
+    "note": "static projection at the real arm parameters; the launcher re-runs this + the dry-start bench (MEASURED authority) at GO time",
+    "rc": 0,
+    "stdout": [
+      "[witness-mem-preflight] SAFE: projected peak 67.6 GiB <= safe ceiling 89.6 GiB (70% of 128 GiB)",
+      "  breakdown (GiB): fixed=15.0 + cf_mx_cache=43.2 + gt=3.41 + verdict=6.0 + micro_batch_guard=0.0 + aa_fine=0.0 = peak 67.61",
+      "  config: num_pairs=600 render=384x512 in_feat=88 self_orient=True micro_batch_pairs=1 verdict_batch=32 render_aa=none ss=1 aa_fine_mode=refuse"
+    ]
+  },
+  "one_lever_delta": true,
+  "receipt_paths": {
+    "dry_start_receipt": "<run>/dry_start_report.json (typed-hash-matched GREEN required; currently an open launch blocker)",
+    "hwm_boundary_receipt": "<out_dir>/horizon_margin_boundary_receipt.json (schema hwm_v9_stage_share_boundary.v1; emitted by the trainer at the ep753 derived-live scan)",
+    "v0_response_receipt": "run.log baseline_v0_schedule_positioned + the launcher baseline_v0_d_seg/_d_pose extraction (#518 item 5b)"
+  },
+  "schema": "duty_ticket_revision.v1",
+  "signed_argv_delta_off_to_on": {
+    "--seg-horizon-margin-derived-live": [
+      null,
+      true
+    ],
+    "--seg-horizon-margin-hi": [
+      null,
+      "0.5"
+    ],
+    "--seg-horizon-margin-lo": [
+      null,
+      "0.3"
+    ],
+    "--seg-horizon-margin-start-epoch": [
+      null,
+      "753"
+    ],
+    "--seg-horizon-margin-target": [
+      null,
+      "0.5"
+    ],
+    "--seg-horizon-margin-weight": [
+      null,
+      "0.15"
+    ],
+    "--seg-horizon-row-hi": [
+      null,
+      "288"
+    ],
+    "--seg-horizon-row-lo": [
+      null,
+      "96"
+    ]
+  },
+  "thresholds": {
+    "instrument": "n600 advisory verdict d_seg (EMA shadow, frozen CPU scorer) [macOS-MLX research-signal] \u2014 NOT a score axis; byte-close + exact eval OWED before any promotion claim",
+    "ncde_note": "the composer's NCDE response-time was UNTRUSTED (R^2=0.06020 < 0.5, on log_total not d_seg) \u2014 windows here are cadence floors sized against direct paired verdict noise instead",
+    "noise_provenance": {
+      "caveat": "iid-noise-on-smooth-trend assumption; single-trajectory; the sqrt(2) paired scaling is an independence UPPER bound (paired same-seed arms share common-mode noise, which only shrinks it)",
+      "estimator": "second-difference: sigma = sqrt(mean(d2^2)/6); robust variant median(|d2|)/(0.6745*sqrt(6)); the LARGER is used",
+      "series": [
+        [
+          750,
+          0.004294
+        ],
+        [
+          775,
+          0.004236
+        ],
+        [
+          800,
+          0.004164
+        ],
+        [
+          825,
+          0.004122
+        ],
+        [
+          850,
+          0.004008
+        ],
+        [
+          875,
+          0.003975
+        ],
+        [
+          900,
+          0.003891
+        ],
+        [
+          925,
+          0.003847
+        ],
+        [
+          950,
+          0.003789
+        ],
+        [
+          975,
+          0.003762
+        ],
+        [
+          1000,
+          0.003708
+        ],
+        [
+          1025,
+          0.003693
+        ],
+        [
+          1050,
+          0.003664
+        ],
+        [
+          1075,
+          0.003628
+        ]
+      ],
+      "series_source": "experiments/results/levelset_n600_witness_20260717T113932Z/run.log (read-only), verdict rows ep750-1075",
+      "sigma_per_point_plain": 1.695336741378143e-05,
+      "sigma_per_point_robust": 1.876307932450707e-05,
+      "sigma_per_point_used": 1.876307932450707e-05
+    },
+    "power_context": {
+      "hwm": "adverse prior (v9c2 launch.sh header): dS ceiling 0.012-0.024 => d_seg ceiling 1.2e-4..2.4e-4 = 4.7x..9.4x h95(k=4) \u2014 a >=21% capture of the LOW ceiling is detectable",
+      "step": "no measured prior effect size (never-fired lever); the design detects |delta d_seg| >= h95(k=4) (~0.74% of trunk d_seg 0.003458)"
+    },
+    "rules": {
+      "FIRED-HURTS": "mean(primary delta) >= +h95(k=4) (secondary confirmation same as PAYS, opposite sign)",
+      "FIRED-NEUTRAL": "|mean| < h95 on BOTH windows",
+      "FIRED-PAYS": "mean(primary delta) <= -h95(k=4); confirm sign holds on the secondary mean (|secondary| >= h95(k=10) with the same sign)",
+      "INDETERMINATE": "primary and secondary disagree in sign at threshold \u2014 report both, no verdict; extension arm required",
+      "derivation_note": "1.959963985 = 95% two-sided standard-normal quantile; no round-number constants (constants-are-poison)",
+      "metric": "delta(ep) = d_seg_ON(ep) - d_seg_OFF(ep) on paired verdict rows"
+    },
+    "schema": "duty_ab_preregistered_thresholds.v1",
+    "windows": {
+      "primary": {
+        "h95_dseg": 2.600382339851305e-05,
+        "k": 4,
+        "verdict_epochs": [
+          775,
+          800,
+          825,
+          850
+        ]
+      },
+      "secondary": {
+        "h95_dseg": 1.644626196241632e-05,
+        "k": 10,
+        "verdict_epochs": [
+          775,
+          800,
+          825,
+          850,
+          875,
+          900,
+          925,
+          950,
+          975,
+          1000
+        ]
+      }
+    }
+  },
+  "ticket": "02_horizon_weighted_margin",
+  "verdict": "READY-FOR-GAUNTLET"
+}

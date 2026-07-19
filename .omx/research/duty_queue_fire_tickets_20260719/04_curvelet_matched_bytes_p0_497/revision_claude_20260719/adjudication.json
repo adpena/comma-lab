@@ -1,0 +1,22 @@
+{
+  "adjudication": {
+    "ep725_fork_applicability": "INVALID for a basis lever: LiteralPolarCurveletBasis changes the first-layer feature map the trained weights are conditioned on (same structural class as the taper \u2014 the F2 resume-divergence guard's basis-change class); the existing FRESH 3000-ep paired arms are the CORRECT vehicle, so the composer's 'no warm-start/resume input' gap is ADJUDICATED not-a-defect (fresh arms need no #518 binding).",
+    "one_factor": "the contrast is one-LEVER (a single --dsl-lever token); the lever internally bundles basis + native-orient + AA behavior \u2014 verdict_scope at fire time is the COMPOSITE lever, never 'curvelet basis alone'; within-bundle attribution requires follow-up arms."
+  },
+  "measured_at_head": "679e78ab0352d7a1efbcf2368d49c86f7360d000",
+  "owed_items_named": [
+    "enforced equal-byte completion chain (curvelet_equal_byte_ab_receipt.py match -> inflate both -> finalize) is documented but still not REFUSED-on-skip by any gate \u2014 the finalize tool remains the enforcement surface to land",
+    "telemetry beyond front_end for the treatment lever (lever_engage term-share binding) \u2014 flag-presence is not engagement proof",
+    "current governed dry receipts + arm checkpoints do not exist yet (arms PREPARED_NOT_FIRED)"
+  ],
+  "schema": "duty_ticket_revision.v1",
+  "ticket": "04_curvelet_matched_bytes_p0_497",
+  "verdict": "READY-FOR-GAUNTLET(fresh-arms; wrapper fail-closed repairs landed) with NAMED OWED items",
+  "wrapper_repairs_landed": [
+    "absent c2 run dir now FAIL-CLOSED (quiescent=False; explicit override required instead of silently treating missing-as-quiescent)",
+    "liveness inspection failure (psutil import OR runtime error, e.g. PermissionError) now FAIL-CLOSED (quiescent=False, liveness_unknown=true) instead of only catching ImportError",
+    "--skip-c2-gate now requires --operator-go (an override is an operator act)",
+    "arm mutual exclusion: refuses to dry-run/fire while ANY process references either arm out_dir (the two arms are never concurrent)"
+  ],
+  "wrapper_sha256_after_repair": "5c04b3a65aac3aaebe773765c0d9b55ec101d4e2c73375b7e4d5916774ae7789"
+}
