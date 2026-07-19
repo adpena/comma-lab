@@ -19702,3 +19702,23 @@ landing review required.
 
 Triality: equations leg = corrected law module + KKT appendix (+ owed registry re-emit) · DSL leg =
 no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=false; no score claim.
+
+## FEED-predictor-floor+preimage-fp32 (2026-07-19) — #541 landed; the exact-plane family is rate-dead; preimage choice is an fp32 lever
+
+- **SIGNAL (#541, n48 real, actual coder bytes, merged):** best free predictor (spatial-smooth-121)
+  costs ~16.1MB/n48 production-conditional (~336KB/pair; DERIVED ~201MB n600) for the EXACT-plane
+  residual description — the zero-band exact-uint8-plane family is **RATE-DEAD** across
+  copy/affine6/smooth (verdict_scope: formulation; compact-generator/positive-band families OPEN).
+  Rung-E n48 archive (31.87MB) builds→parses→inflates→realizes with all 56,623,104 numerators exact.
+- **NEW MECHANISM (MAIN review finding):** rung-E hard oracle measured d_seg 1.23e-4 / d_pose 5.04e-5
+  DESPITE exact numerators — 1,165 flips over 48 pairs = 24.3 px/pair vs the n600 replay's 0.19
+  px/pair (127×), all pairs nonzero. Same exact rational plane, different uint8 PREIMAGES: the scorer
+  computes the resize in native fp32 from the camera frame, so preimage choice perturbs fp32 rounding.
+  **Preimage selection is itself an fp32-noise lever** — extends
+  `f32_receiver_arithmetic_exactness_admissibility_v1` (anchor-append owed); band/solver design must
+  either pick tie-aware preimages or absorb ~1e-4-class fp32 noise in the bands.
+- **#537 adjudication state:** fixed probe measured the D6 host floor (two GPU controls: live/EMA
+  max_abs 0.0102, optimizer 0.0212); resumed-vs-control sits BELOW the floor on every aggregate
+  (0.0083/0.0185) with ALL discrete state (RNG/events/stage) bit-identical; per-key single-sample
+  envelope is structurally unpassable (P(all 28 keys pass) ≈ 0.5^28). CPU-locked bit-identity proof
+  RUNNING = the state-restoration authority; merge on its verdict.
