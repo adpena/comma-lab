@@ -1,0 +1,44 @@
+{
+  "config_sha256": "56c1ad9cd556ea2821ecb276d25aca20273aa9baa539d7642050b986d95571df",
+  "frame0_y_sha256": "1111a0e4d21addf15bb0254a34b2f157cd5042881936b8848efeb268f92abd28",
+  "frame1_y_sha256": "ac9395b4882ff3b6c5dc794e937ae9da49a9639fafd0cc0e712fb9999115bb8a",
+  "labels_sha256": "9685551a7213dd4767f7bda4d5f220073e67b9641c17ce30f483ee5a26ceb8c4",
+  "margins_sha256": "43df47d6f82d725b325b14a3959b6ded8e3e2631071807c3e83ad828f85f26fa",
+  "modes": [
+    {
+      "descriptor_bytes": 0,
+      "descriptor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "previous-plane-copy.v1",
+      "parseback_exact": true,
+      "payload_sha256": "4da42d952de0a5047a0512e20034585bac8057c3f7143ae47789fe3c56a2a76e",
+      "residual_abs_sum": 2425237,
+      "residual_bytes": 1179648,
+      "residual_nonzero_values": 517448,
+      "residual_sha256": "de1d1562c9f8f92a2cec4c792639c48a0e1d4c523ef79334faf1e530adf1d0d0"
+    },
+    {
+      "descriptor_bytes": 24,
+      "descriptor_sha256": "566bd0ee68a1e0e51c4f76200f86557eee4b01e2dccfd78bb69021630fbbdb8f",
+      "mode": "affine6-q12.v1",
+      "parseback_exact": true,
+      "payload_sha256": "1e8189514f56275ee1018c94a42f3a62ba2d6fb63be51dc4542f4b67e4d1ea03",
+      "residual_abs_sum": 2378348,
+      "residual_bytes": 1179648,
+      "residual_nonzero_values": 517132,
+      "residual_sha256": "ed44881af851c5e5694a655aaff2a72d1fdfd97767d7a66a13c0489db52c50fa"
+    },
+    {
+      "descriptor_bytes": 0,
+      "descriptor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "spatial-smooth-121.v1",
+      "parseback_exact": true,
+      "payload_sha256": "c5e666d05b0e211ab51efb3f504ffb18f1e17fbbe1f11efaa3a0d785df95de16",
+      "residual_abs_sum": 2222324,
+      "residual_bytes": 1179648,
+      "residual_nonzero_values": 518140,
+      "residual_sha256": "266ac82bc84345ce5d28e831072f52bb9138c23e67d3da8ff26093bf28e1a4e7"
+    }
+  ],
+  "pair_id": 44,
+  "schema": "v10_free_predictor_floor_pair_stage.v1"
+}

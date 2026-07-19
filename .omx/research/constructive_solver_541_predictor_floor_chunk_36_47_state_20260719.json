@@ -1,0 +1,64 @@
+{
+  "completed_pair_ids": [
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47
+  ],
+  "config": {
+    "brotli": {
+      "quality": 11,
+      "version": "1.2.0"
+    },
+    "cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "camera_hw": [
+      874,
+      1164
+    ],
+    "codec_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/constructive_solver_541_20260719_20260719T070402Z/src/tac/codec/v10_predictor_residual.py",
+    "codec_sha256": "fec4d269efbd3efc334af7623b8b6d95778d91706b5550362b8cacae60014ec0",
+    "pair_ids": [
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47
+    ],
+    "predictor_modes": [
+      "previous-plane-copy.v1",
+      "affine6-q12.v1",
+      "spatial-smooth-121.v1"
+    ],
+    "rounding": "exact integer numerator, nonnegative round-half-up to uint8",
+    "schema": "v10_free_predictor_floor_state.v1",
+    "scorer_hw": [
+      384,
+      512
+    ],
+    "tool_sha256": "8b19bbf79f9aae68c405204541e31d3bb1d86e7b08bc4031a7dfc074d61c37b3",
+    "zstd": {
+      "binary": "/opt/homebrew/bin/zstd",
+      "level": 19,
+      "threads": 1,
+      "version": "*** Zstandard CLI (64-bit) v1.5.7, by Yann Collet ***"
+    }
+  },
+  "config_sha256": "56c1ad9cd556ea2821ecb276d25aca20273aa9baa539d7642050b986d95571df",
+  "schema": "v10_free_predictor_floor_state.v1"
+}
