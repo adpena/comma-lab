@@ -19651,3 +19651,11 @@ via inverse solve from better conditioned and solved dseg."* CONFIRMED by our ow
 Triality: equations leg = the existing marginal crossover law (d_pose*=2.5e-4, CLAUDE.md §SegNet-vs-
 PoseNet operating point) + anisotropic band law (joint_seg_pose_rate); DSL leg = no new lever (design
 input to #541/#549 objectives); this FEED = DAG leg.
+
+FEED-pose-falls-out ADDENDUM (2026-07-19): the reframe is now DERIVED, not just measured —
+`.omx/research/v10_flattened_lagrangian_kkt_derivation_20260719.md` writes the whole v10 game as ONE
+first-order-convex program against upstream modules.py (per-pixel seg hyperplanes ∩ ONE 6-dim pose
+ellipsoid, compressibility objective vs free predictor): pose inactivity is a CODIMENSION theorem
+(~10⁵ seg constraints vs 6 pose numbers; μ=0 generically, worst case a rank-6 correction), bytes
+concentrate on the active-set annulus (matches the measured 96.9%), the #536 waterfill is effectively
+2-term, and chroma is pose-cheap by the measured 2×2-box structure. Solvable, not intractable.
