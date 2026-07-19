@@ -166,4 +166,3 @@ No owner may edit the two forbidden live-arm files, the sacred tree,
    formulation/instance scope. Pointer delta remains zero.
 8. At most five self-review rounds. MAIN independently reviews the branch
    before any landing, promotion, launch, or score interpretation.
-

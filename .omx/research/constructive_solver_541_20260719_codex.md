@@ -1,10 +1,10 @@
 # Task #541 constructive solver and free-predictor floor
 
-Date: 2026-07-19 UTC  
-Lane: `constructive_solver_541_20260719`  
-Status: `research_only=true`  
-Axis: `[Darwin-arm64 CPU advisory real-cache n48] NON-PROMOTABLE`  
-Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**  
+Date: 2026-07-19 UTC
+Lane: `constructive_solver_541_20260719`
+Status: `research_only=true`
+Axis: `[Darwin-arm64 CPU advisory real-cache n48] NON-PROMOTABLE`
+Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**
 Authority: isolated local build and $0 advisory measurement only; no launch,
 paid dispatch, contest score, promotion, submission, or pointer authority.
 MAIN landing review is required.
