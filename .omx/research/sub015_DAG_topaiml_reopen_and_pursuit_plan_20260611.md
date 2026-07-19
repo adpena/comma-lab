@@ -19810,3 +19810,31 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   becomes a compile refusal; 4-assertion associativity/resume falsifier defined.
 - Ranks 3-6 = $0-gated proposals (resume-protocol continuity bar, monitor cursor custody, lens
   notation for VJP custody, authority wrapper for regime dispatch); rank-7 = honest REJECT.
+
+## FEED-spd-momentum-crosswalk (2026-07-19) — #552 landed; two wasted experiments AVOIDED, one typed spec routed
+
+- **#496 rate-lever verdict: REJECT (formulation-scoped).** Optimizer factors are unshipped state —
+  changing their precision changes memory traffic/wall-clock, never archive bytes. The measured
+  prior stands (int8+brotli 52.6KB = 6.54 b/param at iid entropy; int5 QAT +9.5% d_seg only;
+  sensitivity waterfill ΔS +0.114). The surviving hypothesis is CONVERGENCE-BASIN (a better basin
+  → better post-quantization witness) — routed to the #509 wall-clock/convergence owner as a
+  typed DEFAULT-OFF Kronecker-GNC spec (h2 quadratic update as correctness control, linear I+N
+  only as measured treatment w/ factor-condition refusal; 5-step gate: NumPy-fp32 byte-identical
+  authority → MLX-fp32 parity ≥0.9997 no-CPU-fallback → compiler-emitted single-difference n24
+  negative filter → full facet report → n600 confirmation through parse-back/R). NOT a fifth
+  #496 arm.
+- **Head A/B NOT OWED (saved):** the current HeadNaturalGradient's exact categorical-Fisher
+  quotient pseudoinverse G(p)^+v = v/p − mean(v/p)1 is O(K), constant-state, solve-free and
+  captures the EXACT per-pixel metric; a dense 4×4 GNC factor loses on every cost row and only
+  approximates an aggregate covariance. Reopening gate: measured analytic-damping instability OR
+  nonstationary aggregate covariance OR measured O(K) bottleneck.
+- **Muon relationship SETTLED:** Muon (NS5 polar/Stiefel) and GNC (SPD affine-invariant) act on
+  different manifolds with different invariants — "Muon is natural gradient" is a false
+  equivalence. LEGAL composition = product chart W=QH (Muon/SPEL on Q, SPD normal-coordinate
+  momentum on H) as a future SEPARATE arm (FilmPolarSPDNormalMomentum, gate defined); serial
+  same-momentum composition is UNIDENTIFIED (NS5 discards the singular magnitudes GNC introduces)
+  — do not compose on the same matrix.
+- **Structure discipline:** measure gradient covariance FIRST; diagonal/block-diagonal controls
+  before Kronecker; the paper's "structured" menu is a specific subgroup list, not arbitrary
+  covariances. Source custody: released code is PyTorch-CUDA with NO autocast policy — MLX/
+  low-precision parity is NOT evidenced by the paper (INFERRED-feasible only).
