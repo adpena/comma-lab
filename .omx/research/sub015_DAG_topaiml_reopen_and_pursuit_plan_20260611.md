@@ -19854,3 +19854,28 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
 - **SURVIVOR 2 (→ #539/#553 gauge fixtures):** DERIVED finite criterion — adjacent gauge
   quotients compose only when the inter-level map preserves the gauge subgroup/image. A
   1-categorical statement that computes; folds into the PDW2 fixture gate, no new lane.
+
+## FEED-seg-secant-measured (2026-07-19) — #536 UNLOCKED; the residual family is rate-dead from a THIRD side; generator amortization is THE axis, now measured from every direction
+
+- **THE SECANT EXISTS (n24 real, 9 points, 3 families):** d_seg spans 1.86e-5 (margin m*=0.01,
+  2.22MB/pair) → 1.63e-4 (precision drop-1, 1.77MB/pair) → 2.1e-2 (spatial stride-8, 1.14MB/pair).
+  Full hard-oracle facets per row (d_seg + d_pose + per-class + brotli/zstd parse-back bytes +
+  repair counts); dominated segments retained with negative ratios.
+- **WATERFILL FLIPS:** solve_measured_waterfill returns MEASURED_SECANT_KKT_CANDIDATE — interior
+  point between margin_m0p3 and precision_drop1, marginal gap 4.1e-12 score/global-byte. The
+  load-bearing sign: coarsening pays iff bytes_saved/Δd_seg > 150,181,956 global B/unit
+  (`seg_rate_breakeven_v1`); every admitted secant clears it by 10×–200,000×.
+- **THE CAMPAIGN READING (decisive):** the secants clear break-even so massively BECAUSE the
+  whole residual-description family sits megabytes/pair from optimal — the KKT-selected point
+  (1.77MB/pair ≈ 1.06GB n600) is ~12,700× the 83,838B full-n600 witness-generator reference.
+  Three independent families (exact #541, banded #549, coarsened THIS) now agree: residual
+  descriptions are RATE-DEAD; **generator amortization is the single open rate axis** — the v10
+  carrier (#539/#553 gauge-fixed generators) is not one option among several, it is the only
+  measured path.
+- **POSE LAW intermediate regime MEASURED (anchor #4 appended):** inactivity is plane-proximity-
+  conditional exactly as `pose_plane_proximity_corollary_v1` states — margin family 96/96
+  inactive → precision-2/3 six per-pair crossover violations (3.0e-4..5.8e-4) → spatial 48/48
+  violated at d_pose 0.85-1.02 (the far-generator regime). The unrestricted all-rows reading is
+  refuted (instance scope); the selected KKT segment is 120/120 inactive.
+- **Per-class:** Lane most distortion-sensitive at every point (7.1e-4 conditional at finest →
+  0.42 at stride-8) — the Lane-fragility corpus extended to the description-coarseness axis.
