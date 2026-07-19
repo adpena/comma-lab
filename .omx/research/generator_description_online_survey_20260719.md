@@ -255,3 +255,163 @@ residuals instead of 600 independent fits. **Integration:** lane-poly AR coder +
 - Semi-discrete OT — NeurIPS 2024 (proceedings 2d950a2c…) ; inverse Laguerre — ESAIM:M2AN 59 (2025) 841–871 ; distributed Voronoi SDOT — arXiv 2406.04192 ; higher-dim power diagrams — arXiv 2106.14730 ; OT for ML learners — arXiv 2505.06589
 - Hierarchical SVG Tokenization — arXiv 2604.05072 ; VectorArk — arXiv 2605.24398 ; SVGFusion — arXiv 2412.10437 ; NS Program Synthesis — PLDI 2025 / arXiv 2508.15750
 - Prior in-tree: `carrier_sota_online_survey_20260611`, `lane_coeff_tracking_denoising_optimal_survey_20260702` (MapTRv2 + Coding-for-Machines RD 2305.17295 logged)
+
+---
+
+# PDW EXTENSION — power diagrams / Laguerre-Voronoi AS THE REPRESENTATION (operator extension 2026-07-19)
+
+Appended pass, same year-blind discipline (Dirichlet 1850 → 2026). Datums priced against: **440 B/pair box ·
+306 B PDW1 · ≤138 B PDW2**. Advisory only; pointer UNMOVED.
+
+## PDW-Q1 — OSS: production-grade minimum-generator fit + exact cell assignment
+
+Strongest sources:
+- **geogram (Bruno Lévy, Inria; `github.com/BrunoLevy/geogram`)** — **3-clause BSD**. `GEO::OptimalTransportMap`
+  = semi-discrete OT (Newton on Laguerre-cell masses); power diagrams via regular triangulation with
+  **arithmetic filters + expansions for EXACT predicate signs** (determinism-friendly: exact combinatorial
+  structure, fp coordinates). The reference production SDOT/power-diagram stack.
+- **pysdot (Mérigot lineage; damped-Newton Laguerre/SDOT)** — Python front-end for damped-Newton semi-discrete
+  OT; license not confirmed in this pass — **check repo LICENSE before vendoring**.
+- **CGAL `Regular_triangulation_2/3`** — the exact-predicate gold standard for power diagrams — but **GPL v3**
+  (GeometryFactory commercial alternative): **licensing-hostile to vendoring**; use as cross-check oracle only.
+- **voro++ (Rycroft, LBNL)** — **modified-BSD**; "radical Voronoi" = power diagram for polydisperse spheres;
+  cell-by-cell computation, 3D-oriented; fine for assignment cross-checks, no OT fitting.
+- **MATLAB-SDOT (Bourne)** + **distributed Voronoi SDOT (2406.04192)** + **GPU 3D Voronoi/power construction
+  (arXiv 2605.06408)** — scale-out references.
+
+The NUMBER: geogram/CGAL both give **exact combinatorial cell assignment** (filtered exact predicates) —
+i.e. a bit-stable partition given identical fp inputs — which is precisely the property our fp32 C1 receiver
+contract needs on the ENCODE side (receiver stays ours).
+
+**VERDICT: ADOPT geogram (BSD, exact predicates, SDOT built-in) as the offline fitting engine; voro++ as a
+cheap independent assignment cross-check; SKIP CGAL (GPL) except as a non-vendored oracle; pysdot pending
+license check.** **Integration:** power-diagram payload builder — geogram Newton-SDOT produces the
+minimum-generator fit (feeds survey-main #1); crosswalk its exact cell assignment against the C1 fp32
+receiver on all 600 pairs (any disagreement = a receiver-contract bug found for free).
+
+## PDW-Q2 — Lossy approximation theory: generator count vs error; anisotropic/Apollonius extensions
+
+Strongest sources:
+- **Optimal Power Diagrams via function approximation** (Computer-Aided Design 2018, S0010448518302094) —
+  fits power diagrams to minimize piecewise approximation energy; the "lossy Aurenhammer" in practice
+  (no closed-form generator-vs-error curve, but an operational minimizer).
+- **Anisotropic power diagrams for polycrystal modelling: curved grains via optimal transport**
+  (Comp. Mat. Sci. 2024, S092702562400538X) — **APDs: per-cell anisotropic metric ⇒ CURVED boundaries at
+  fixed generator count**, fitted by fast OT with prescribed cell volumes. The strongest published evidence
+  that **anisotropy buys curvature cheaper than more generators**.
+- **Apollonius (additively weighted) diagrams** — hyperbolic-arc boundaries from +1 scalar/site;
+  **Möbius diagrams** — circle-arc boundaries (both classical; CGAL has Apollonius_graph_2).
+- **Cohen/DeVore adaptive anisotropic piecewise-polynomial approximation theory (1101.1321/1555/1587)** —
+  the rate law: for a curved boundary (C² edge), ISOTROPIC cells need **N ∝ ε^(−1/2)** cells for Hausdorff
+  error ε along the edge, ANISOTROPIC elements achieve the same with **N ∝ ε^(−1/3)** (classic anisotropic
+  gain) — the theory floor under "how many generators."
+
+The NUMBER: no paper publishes a direct generator-count-vs-Hausdorff curve for power diagrams on arbitrary
+5-class partitions (**thin — the curve we'd cite does not exist; we'd have to measure our own**). The usable
+law is the anisotropic-approximation exponent gap (ε^(−1/2) → ε^(−1/3)) + the 2024 APD demonstration that
+curved grains fit at fixed generator count.
+
+**VERDICT: TEST anisotropic power diagrams (per-cell 2×2 metric, +2–3 scalars/generator) on the Road–Lane
+curved edges; SKIP Möbius (receiver cost, marginal over APD); Apollonius = cheapest curvature knob
+(+1 scalar/site) to try FIRST.** **Integration:** PDW2 packet — where the fit currently spends extra
+generators tracing lane curvature, one additively-weighted or anisotropic generator may replace several
+isotropic ones; net B/pair change = (params added × quantized bits) − (generators removed × ~3 scalars).
+Decision rule straight from the exponent gap: curvature-dominated cells favor APD, straight edges favor
+plain power cells (digital-straightness already cheap).
+
+## PDW-Q3 — Power diagrams fitted to images/segmentations in practice
+
+Strongest sources:
+- **Power-SLIC (arXiv 2012.11772)** — generalized **balanced power diagrams** as superpixels; piecewise
+  **degree-2 boundaries**; beats diagram baselines on boundary recall / undersegmentation / **"compression
+  quality"**; SLIC-competitive speed. The published existence proof that power cells track natural-image
+  (incl. road-scene BSDS/KITTI-style) boundaries well at low cell counts.
+- **Soft Anisotropic Diagrams (SAD, arXiv 2604.21984)** — differentiable additively-weighted ANISOTROPIC
+  diagrams with per-site temperature; Adam + densify/prune; **Kodak 46.0 dB PSNR at 2.2 s encode (vs 28 s
+  Image-GS); beats Image-GS + Instant-NGP at matched bitrate.** The SOTA differentiable-diagram fitter.
+- **Lloyd/CVT (1982) + capacity-constrained diagrams (Balzer et al. 2009) + blue-noise stippling** — the
+  classical generator-placement family; capacity constraints = our per-cell area targets.
+- **Superpixel-Wasserstein (2601.17071)**, Rooted Spanning Superpixels (IJCV 2020) — adjacent baselines.
+
+The NUMBER: SAD's 46 dB@Kodak is human-fidelity (over-provisioned for us); Power-SLIC runs at typical
+superpixel counts (~100–1000 cells/image) for full natural-image boundary recall — our regime (5-class
+argmax, 52% ker(A)-invisible) needs FAR fewer cells, consistent with our ≤138 B (~a few dozen generators).
+No published (generator, fidelity) table on road scenes at our tolerance — **thin on exact numbers; rich on
+machinery.**
+
+**VERDICT: ADOPT the SAD fitting recipe (gradient-weighted init → Adam → densification/pruning, soft-argmax
+temperature annealed → hard cells) as the PDW2 fitter upgrade path alongside the exact OT solve; TEST
+Power-SLIC's balanced-power-diagram init as the warm start.** **Integration:** power-diagram payload builder
+— SAD-style densify/prune IS the MDL add-generator gate (survey-main #4) made differentiable; anneal soft→hard
+so the shipped packet is exact-hard cells for the C1 receiver.
+
+## PDW-Q4 — Dynamic/temporal power diagrams (feeds ξ-keyed temporal unit #574)
+
+Strongest sources:
+- **Kinetic Voronoi/Delaunay classics** (Guibas et al.; Fu–Lee 1991; Albers et al. IJCGA 1998) — moving
+  sites ⇒ diagram changes CONTINUOUSLY except at discrete **topological events** (regular-triangulation flip
+  events for power diagrams, via the same R^(d+1) lifting). Event-count bounds: **near-cubic O(n²λ_s(n))**
+  general; **O(n³/²α(n))-ish for constant-velocity lines** (s=4); each event handled in **O(log n)**.
+- **Kinetic VD under polygonal distance (1404.4851, DCG 2015)**; **Kinetic geodesic VD (SIAM JDM 2021 /
+  2002.05910)** — modern kinetic-event machinery.
+- Power-diagram specifics: weights ride the SAME lifting (a moving weight = a vertically moving lifted
+  point), so **kinetic regular triangulation** covers generator+weight advection with the identical
+  flip-event grammar.
+
+The NUMBER: between events the cell complex is **combinatorially CONSTANT** — advecting generators by the
+ego-screw ξ preserves cell topology exactly until a flip event; events are **local (one flip), detectable by
+one predicate sign change, and O(log n) to process**. With our n ≈ tens of generators, events per pair are
+few — the temporal-residual grammar is: {per-generator Δ(site,weight) residuals} + {sparse explicit flip
+records at events (cell birth/death = insert/delete in the regular triangulation)}.
+
+**VERDICT: ADOPT the kinetic-regular-triangulation event grammar as the PDW temporal-residual format.**
+This is the missing piece of survey-main #2 (#574): ξ-advect generators (free, decoder-side), AR-code tiny
+site/weight residuals, and spend explicit bytes ONLY at flip events (birth/death), which the encoder detects
+exactly via the lifted predicate. **Integration:** ξ-keyed temporal unit — the residual stream is
+{continuous: quantized Δgenerator} ∪ {discrete: flip-event tokens}; guarantees decoder-side topology
+continuity between events by construction.
+
+## PDW-Q5 — Coding/quantization of generator parameters (bits-per-generator floors)
+
+Strongest sources:
+- **Touma–Gotsman (GI 1998)** — vertex coordinates uniformly quantized (typically **8–12 bits/coord**) +
+  **parallelogram prediction** + entropy coding; connectivity ~**2 (up to 4–10) bits/vertex**. The canonical
+  "coordinates+topology" codec.
+- **Google Draco (`google/draco`, Apache-2.0)** — production mesh/point-cloud codec: kd-tree + quantization
+  + prediction + rANS entropy; same recipe.
+- **Angle-Analyzer (Desbrun et al.)**, spherical-partition quantization — geometry-codec variants.
+
+The NUMBER: mesh-codec floors are **~10–20 bits/vertex TOTAL** (geometry after prediction + connectivity) at
+12-bit quantization. Our generator = (x, y, w): at 10-bit x/y + 8-bit w with a ξ-motion predictor (Q4), the
+residual entropy should land **≈2–3 B/generator/frame, keyframe ≈3–4 B/generator** — consistent with PDW2
+≤138 B ≈ a few dozen generators/pair. No prior art quantizes power-diagram WEIGHTS specifically (**thin**);
+the transferable law is prediction-then-entropy, and one PDW-specific fact the mesh codecs lack: **weights
+have gauge slack** (adding a constant to all weights, and any weight change that doesn't cross a flip
+predicate, leaves cells INVARIANT) — quantize w to the coarsest step that provably crosses no flip event
+(same predicate as Q4), i.e. margin-aware weight quantization for free.
+
+**VERDICT: ADOPT Draco-style predict+quantize+rANS for the generator stream (Apache-2.0, or reimplement the
+3-scalar case trivially in C1); ADOPT the gauge/flip-slack weight-quantization rule (ours — no prior art).**
+**Integration:** power-diagram payload AR coder — keyframe absolute (TG-style), inter frames ξ-predicted
+residual (Q4 grammar), weight step sized by the flip-predicate margin.
+
+## PDW ranked adoption (priced vs 440 B/pair · 306 B PDW1 · ≤138 B PDW2)
+
+| # | Import | Source | Buys | Verdict | Integration |
+|---|--------|--------|------|---------|-------------|
+| P1 | **Kinetic regular-triangulation event grammar** (ξ-advect generators; bytes only at flip events) | Guibas/Albers kinetic VD; 1404.4851; lifted-predicate flips | THE temporal-residual format for #574: topology-continuous decode between events; residuals ≈2–3 B/gen/frame → biggest B/pair cut on the PDW stream | **ADOPT** | ξ-keyed temporal unit + C1 receiver (flip tokens) |
+| P2 | **geogram Newton-SDOT (BSD) as offline min-generator fitter + voro++ cross-check** | BrunoLevy/geogram; voro++ | Production exact-predicate fit machinery for survey-main #1; free receiver-contract crosswalk on 600 pairs | **ADOPT** | power-diagram payload builder (offline) |
+| P3 | **Margin-aware weight quantization via flip-predicate slack** (+ Draco-style predict+rANS) | ours (no prior art) + Touma–Gotsman/Draco | Coarsest safe weight step = fewer bits/generator with ZERO d_seg risk (provably no cell change) | **ADOPT** | generator AR coder in the PDW packet |
+| P4 | **Additively-weighted (Apollonius) → anisotropic power cells for curved Road–Lane edges** | CGAL Apollonius (concept); APD polycrystal 2024; ε^(−1/2)→ε^(−1/3) anisotropic law | Curvature at +1 (Apollonius) or +2–3 (APD) scalars/generator vs several extra isotropic generators; targets the 61% Road–Lane term | **TEST** | PDW2 packet cell-type variant + C1 receiver arc support |
+| P5 | **SAD densify/prune differentiable fitter (soft→hard anneal) with Power-SLIC balanced init** | 2604.21984; 2012.11772 | Gradient path to minimum generator count when the exact OT solve plateaus; densify/prune = differentiable MDL gate | **TEST** | power-diagram payload builder (fitter v2) |
+
+Thin spots, stated plainly: (Q2) no published generator-count-vs-error curve for arbitrary multi-class
+partitions — we must measure our own; (Q3) no (generator, fidelity) table on road scenes at task tolerance;
+(Q5) no prior art on power-diagram weight quantization — P3 is ours.
+
+## PDW sources
+- geogram — github.com/BrunoLevy/geogram (3-clause BSD; GEO::OptimalTransportMap) ; voro++ (modified BSD, LBNL) ; CGAL Regular_triangulation (GPLv3/commercial) ; pysdot (damped-Newton SDOT; license unverified) ; MATLAB-SDOT (DPBourne) ; GPU 3D Voronoi/power — arXiv 2605.06408 ; MadVoro — arXiv 2502.14825
+- Optimal Power Diagrams via function approximation — CAD 2018 (S0010448518302094) ; Anisotropic power diagrams for polycrystal modelling — Comp. Mat. Sci. 2024 (S092702562400538X) ; Cohen/DeVore anisotropic approximation — arXiv 1101.1321 / 1101.1555 / 1101.1587 ; CGAL Apollonius_graph_2 ; Möbius diagrams (Boissonnat–Karavelas)
+- Power-SLIC — arXiv 2012.11772 ; Soft Anisotropic Diagrams — arXiv 2604.21984 ; Lloyd 1982 / CVT ; capacity-constrained diagrams (Balzer 2009) ; superpixel-Wasserstein — arXiv 2601.17071
+- Kinetic VD: Guibas et al.; Albers–Guibas–Mitchell–Roos IJCGA 1998 (O(n²λ_s(n)) events, O(log n)/event) ; kinetic VD under polygonal distances — arXiv 1404.4851 / DCG 2015 ; kinetic geodesic VD — arXiv 2002.05910 / SIAM JDM 2021
+- Touma–Gotsman GI 1998 ; Google Draco (Apache-2.0) ; Angle-Analyzer (Desbrun et al.)
