@@ -73,6 +73,7 @@ class IntervalFrameResult:
     band_radius_numerators: np.ndarray
     binding_map: np.ndarray
     telemetry: IntervalSolveTelemetry
+    conservative_exact_source_numerator_fallback_map: np.ndarray | None = None
 
 
 def derive_margin_rgb_band(margins: np.ndarray, config: MarginBandConfig) -> np.ndarray:
@@ -105,6 +106,8 @@ def derive_hyperplane_channel_band(
     unit_head_normal_pullback_rgb: np.ndarray,
     pair_norms: np.ndarray,
     config: MarginBandConfig,
+    *,
+    local_lipschitz_field: np.ndarray | None = None,
 ) -> HyperplaneBand:
     """Derive an anisotropic inner box of each active hyperplane slab.
 
@@ -112,7 +115,10 @@ def derive_hyperplane_channel_band(
     real-scorer VJP is the RGB pullback of the *unit* winner/rival head normal.
     Channel radius ``d/(3*|q_c|)`` guarantees the axis box lies inside
     ``|<q,delta_rgb>| <= d`` by the triangle inequality.  A zero pullback
-    component is unconstrained and clipped by ``max_rgb_radius``.
+    component is unconstrained and clipped by ``max_rgb_radius``.  When a
+    measured field is supplied, the exact stored decomposition
+    ``g_y = Lip_local * q`` replaces the legacy configured scalar.  Omitting
+    the field preserves the original scalar behavior exactly.
     """
 
     margin = np.asarray(margins, dtype=np.float64)
@@ -130,7 +136,20 @@ def derive_hyperplane_channel_band(
     if config.scale < 0 or config.max_rgb_radius < 0 or config.local_lipschitz <= 0:
         raise JointSolveError("invalid hyperplane band configuration")
     distance = config.scale * margin / norms
-    denominator = 3.0 * np.abs(pullback) * config.local_lipschitz
+    if local_lipschitz_field is None:
+        local_lipschitz: float | np.ndarray = config.local_lipschitz
+    else:
+        local_lipschitz = np.asarray(local_lipschitz_field, dtype=np.float64)
+        if (
+            local_lipschitz.shape != margin.shape
+            or not np.isfinite(local_lipschitz).all()
+            or np.any(local_lipschitz < 0)
+        ):
+            raise JointSolveError(
+                "measured local Lipschitz field must be finite nonnegative HxW"
+            )
+        local_lipschitz = local_lipschitz[:, :, None]
+    denominator = 3.0 * np.abs(pullback) * local_lipschitz
     with np.errstate(divide="ignore", invalid="ignore"):
         radii = np.where(denominator > 0, distance[:, :, None] / denominator, config.max_rgb_radius)
     radii = np.minimum(radii, config.max_rgb_radius)
@@ -183,12 +202,17 @@ def solve_interval_frame(
     *,
     predictor: np.ndarray,
     max_nodes_per_block: int = 4096,
+    conservative_exact_source_numerator_fallback: bool = False,
 ) -> IntervalFrameResult:
-    """Pick the reachable in-band scorer point nearest a declared predictor.
+    """Pick an exact reachable in-band scorer point toward a declared predictor.
 
     Every selected numerator is solved exactly on the uint8 lattice.  The
     returned binding map uses 0=slack, 1=lower band, 2=upper band.  A budgeted
-    or infeasible block fails closed; it is never silently accepted.
+    or infeasible block fails closed; it is never silently accepted.  The
+    keyword-only conservative exact source-numerator fallback is disabled by
+    default.  When enabled, and only after the predictor-target solve proves
+    ``INFEASIBLE_EXHAUSTIVE``, the bounded exact solver retries the source
+    numerator with the same predictor-derived preferred values.
     """
 
     src = np.asarray(source_numerators)
@@ -215,6 +239,11 @@ def solve_interval_frame(
     radius = np.floor(band * int(common_denominator) + 1e-12).astype(np.int64)
     chosen = np.empty_like(src, dtype=np.int64)
     binding = np.zeros(src.shape, dtype=np.uint8)
+    fallback_map = (
+        np.zeros(src.shape, dtype=np.uint8)
+        if conservative_exact_source_numerator_fallback
+        else None
+    )
     out = pred.copy()
     exact = repaired = budget = numerator_shift = 0
 
@@ -228,12 +257,6 @@ def solve_interval_frame(
                 rad = int(radius[oi, oj, ch])
                 lo, hi = max(0, center - rad), min(max_sum, center + rad)
                 target_integer = _nearest_reachable(int(pred_num[oi, oj, ch]), lo, hi, modulus)
-                chosen[oi, oj, ch] = target_integer
-                if target_integer == lo and lo != hi:
-                    binding[oi, oj, ch] = 1
-                elif target_integer == hi and lo != hi:
-                    binding[oi, oj, ch] = 2
-                numerator_shift += abs(target_integer - center)
                 idx = np.ix_(rs.indices, cs.indices, (ch,))
                 preferred = pred[idx].reshape(-1).astype(np.float64)
                 solved = solve_bounded_integer_block(
@@ -244,11 +267,36 @@ def solve_interval_frame(
                     preferred=preferred,
                     max_nodes=int(max_nodes_per_block),
                 )
+                used_fallback = False
+                if (
+                    conservative_exact_source_numerator_fallback
+                    and solved.status is BlockSolveStatus.INFEASIBLE_EXHAUSTIVE
+                ):
+                    solved = solve_bounded_integer_block(
+                        coefficients,
+                        int(common_denominator),
+                        center / int(common_denominator),
+                        target_integer=center,
+                        preferred=preferred,
+                        max_nodes=int(max_nodes_per_block),
+                    )
+                    target_integer = center
+                    used_fallback = True
                 if solved.status is BlockSolveStatus.NOT_FOUND_BUDGET:
                     budget += 1
                     raise JointSolveError(f"integer repair exhausted node budget at block {(oi, oj, ch)}")
                 if solved.status is not BlockSolveStatus.FEASIBLE_EXACT:
                     raise JointSolveError(f"interval block is not certified exact: {solved.status}")
+                chosen[oi, oj, ch] = target_integer
+                if used_fallback:
+                    assert fallback_map is not None
+                    fallback_map[oi, oj, ch] = 1
+                else:
+                    if target_integer == lo and lo != hi:
+                        binding[oi, oj, ch] = 1
+                    elif target_integer == hi and lo != hi:
+                        binding[oi, oj, ch] = 2
+                    numerator_shift += abs(target_integer - center)
                 values = np.asarray(solved.values, dtype=np.uint8)
                 out[idx] = values.reshape(len(rs.indices), len(cs.indices), 1)
                 exact += 1
@@ -275,6 +323,7 @@ def solve_interval_frame(
             budget_blocks=budget, target_numerator_l1_shift=numerator_shift,
             maximum_projection_error=error, binding_counts=counts,
         ),
+        conservative_exact_source_numerator_fallback_map=fallback_map,
     )
 
 
