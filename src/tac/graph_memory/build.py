@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 from .model import Edge, Graph, Node
@@ -70,8 +71,31 @@ def _clean(text: str, cap: int) -> str:
     return text[:cap]
 
 
+def _canonical_repo_root() -> Path:
+    """Resolve the CANONICAL repo root even from a linked git worktree.
+
+    In a linked worktree ``REPO_ROOT`` is the worktree path, whose Claude
+    memory slug does not exist -> ``parse_memory_files`` silently returned 0
+    and the graph collapsed (MEASURED 9,704/32,156 -> 3,157/4,856 nodes/edges;
+    the #566 crosswalk's P0 finding, 2026-07-19). Worktrees share the main
+    repo's git common dir; its parent is the canonical root.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "rev-parse", "--path-format=absolute",
+             "--git-common-dir"],
+            capture_output=True, text=True, timeout=10, check=True,
+        ).stdout.strip()
+        common = Path(out)
+        if common.name == ".git":
+            return common.parent
+    except (OSError, subprocess.SubprocessError, ValueError):
+        pass
+    return REPO_ROOT
+
+
 def _memory_dir() -> Path:
-    slug = str(REPO_ROOT).replace("/", "-")
+    slug = str(_canonical_repo_root()).replace("/", "-")
     return Path.home() / ".claude" / "projects" / slug / "memory"
 
 
