@@ -414,6 +414,70 @@ def eval_adam_v_variance_warmup_length(inputs: Mapping[str, Any]) -> int:
         int(inputs["steps_per_epoch"]),
         c=float(inputs.get("c", DEFAULT_C)),
     )
+def eval_ema_decay_run_geometry(inputs: Mapping[str, Any]) -> float:
+    """ema_decay_run_geometry_v1 — the EMA decay LAW from run geometry (ARM-C, SPEC_v10 §13.3).
+
+    The incumbent 0.997/update is a Quantizr per-step-minibatch provenance that does NOT
+    transfer to the deterministic full-batch regime (1 update/epoch: the noise-averaging
+    rationale vanishes; MEASURED on the live c2 run: warmup 2/(1-d)=667 updates ~ ep1318 of a
+    1400-ep run — the shadow spends the whole run inside warmup; ~64% warm-start seed @ep800).
+    The LAW: the exact geometric identities of a constant-decay EMA over ``U`` updates,
+
+        seed_fraction   eps = d**U           (weight the initial shadow seed retains)
+        warmup_updates  W   = 2/(1-d)        (the registered two-time-constant warmup)
+        warmup_fraction phi = W/U = 2/((1-d)*U)
+
+    inverted for the quantity the config wants (``mode`` selects):
+
+      * ``decay_from_seed_fraction``   -> d = eps**(1/U)      (pin the terminal seed weight)
+      * ``decay_from_warmup_fraction`` -> d = 1 - 2/(phi*U)   (pin where warmup completes)
+      * ``warmup_fraction_from_decay`` -> phi = 2/((1-d)*U)   (audit an incumbent decay)
+      * ``seed_fraction_from_decay``   -> eps = d**U          (audit an incumbent decay)
+
+    Exact closed forms (no approximation); fail-closed on out-of-domain inputs.
+    ``mode`` accepts the string name OR the numeric code 1..4 (in the listed order) because
+    LawRef literal inputs are numeric-only — the DSL lever passes the code.
+    """
+    _MODE_CODES = {1: "decay_from_seed_fraction", 2: "decay_from_warmup_fraction",
+                   3: "warmup_fraction_from_decay", 4: "seed_fraction_from_decay"}
+    mode_raw = inputs.get("mode", "")
+    if isinstance(mode_raw, (int, float)) and not isinstance(mode_raw, bool):
+        mode = _MODE_CODES.get(int(mode_raw), f"<invalid code {mode_raw}>")
+    else:
+        mode = str(mode_raw).strip()
+    u = int(inputs["updates_per_run"])
+    if u <= 0:
+        raise EvaluatorError(f"ema_decay_run_geometry_v1: updates_per_run must be > 0, got {u}")
+    if mode == "decay_from_seed_fraction":
+        eps = float(inputs["target_seed_fraction"])
+        if not 0.0 < eps < 1.0:
+            raise EvaluatorError(
+                f"ema_decay_run_geometry_v1: target_seed_fraction must be in (0,1), got {eps}")
+        return float(eps ** (1.0 / u))
+    if mode == "decay_from_warmup_fraction":
+        phi = float(inputs["warmup_fraction"])
+        if phi <= 0.0:
+            raise EvaluatorError(
+                f"ema_decay_run_geometry_v1: warmup_fraction must be > 0, got {phi}")
+        if phi * u <= 2.0:
+            raise EvaluatorError(
+                f"ema_decay_run_geometry_v1: warmup_fraction*updates_per_run must exceed 2 "
+                f"(got {phi * u:.3f}) — otherwise d <= 0 (no valid EMA decay)")
+        return float(1.0 - 2.0 / (phi * u))
+    if mode == "warmup_fraction_from_decay":
+        d = float(inputs["ema_decay"])
+        if not 0.0 <= d < 1.0:
+            raise EvaluatorError(f"ema_decay_run_geometry_v1: ema_decay must be in [0,1), got {d}")
+        return float(2.0 / ((1.0 - d) * u))
+    if mode == "seed_fraction_from_decay":
+        d = float(inputs["ema_decay"])
+        if not 0.0 <= d < 1.0:
+            raise EvaluatorError(f"ema_decay_run_geometry_v1: ema_decay must be in [0,1), got {d}")
+        return float(d ** u)
+    raise EvaluatorError(
+        f"ema_decay_run_geometry_v1: unknown mode {mode!r} (must be one of "
+        "decay_from_seed_fraction | decay_from_warmup_fraction | warmup_fraction_from_decay | "
+        "seed_fraction_from_decay)")
 
 
 # Canonical equation_id -> evaluator for the built-in laws.
@@ -460,6 +524,10 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     # the beta2-DERIVED LR-rewarmup window the ResumeLRWarmup DSL lever resolves through
     # (c=1 == the sister rewarmup_beta2_memory_window_v1 bound; c~=2 default, RAdam rationale).
     "adam_v_variance_warmup_length_v1": eval_adam_v_variance_warmup_length,
+    # EMA decay from run geometry (2026-07-17, ARM-C / p0_ema_calibration; SPEC_v10 §13.3):
+    # decay DERIVED from (updates_per_run, target seed fraction / warmup fraction) — the
+    # Quantizr 0.997 per-step provenance does not transfer to the full-batch regime.
+    "ema_decay_run_geometry_v1": eval_ema_decay_run_geometry,
 }
 
 

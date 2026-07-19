@@ -13,7 +13,7 @@ from typing import Any
 
 LOSS_TERM_KEYS: tuple[str, ...] = (
     "seg", "pose", "eikonal", "length", "eik_steik", "boundary_distance",
-    "lane_edge", "margin_saliency", "subpix", "chroma_boundary",
+    "lane_edge", "margin_saliency", "subpix", "chroma_boundary", "lane_skipband",
     "margin_satisfice", "horizon_margin", "temporal_screw", "phase_advect", "island_amplify",
     "area_constraint", "persistence", "rankfloor", "code_spectral",
     "thin_lane", "margin_field_head", "code_nuclear", "weight_entropy",
