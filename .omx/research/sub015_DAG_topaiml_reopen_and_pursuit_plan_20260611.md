@@ -19792,3 +19792,21 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
 - Chernoff/Jensen ambiguity = PROBE_NOT_ALLOCATE (prioritizer only, no radius→byte conversion
   without calibration); Bregman-ball coreset = lower-priority with mandatory full recheck;
   pyBregMan = test fixtures only, never a production/inflate dependency.
+
+## FEED-poly-crosswalk (2026-07-19) — #551 landed; Poly = typed interface vocabulary, NOT authority; rank-1 feeds the sharp-edge program
+
+- **Verdict (DERIVED, page-cited):** polynomial functors transfer as a TYPED VOCABULARY for
+  mode-dependent interfaces (positions=what a mode exposes, directions=admissible replies) and
+  backward reply routing (lens = forward position map + backward direction maps, composing
+  contravariantly) — and NOTHING stronger. 5 explicit NO-TRANSFER verdicts: no event-loss proof,
+  no autodiff/VJP correctness, no fp32/uint8 commutation proof, no organ-authority arbitration
+  from products, no numeric re-anchor from comonoid laws.
+- **Rank-1 (routed as #555, sharp-edge family):** LandingDiffManifest typed receipt —
+  completion-status and landing-completeness are DIFFERENT MODES; flattening them into one "done"
+  bit permits silent loss of untracked deliverables (the exact class the disposition-at-done-marker
+  memory recorded). Gate fails closed on incomplete base→head coverage.
+- **Rank-2 (routed to the #517 debt):** curriculum as a small state category with an EXPLICIT
+  per-lever ReanchorScope{ABSOLUTE|FIRED_TAU_RELATIVE|STAGE_LOCAL} — mixed implicit interpretation
+  becomes a compile refusal; 4-assertion associativity/resume falsifier defined.
+- Ranks 3-6 = $0-gated proposals (resume-protocol continuity bar, monitor cursor custody, lens
+  notation for VJP custody, authority wrapper for regime dispatch); rank-7 = honest REJECT.
