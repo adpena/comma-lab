@@ -1,10 +1,11 @@
 # Grid LSTM crosswalk against the v10 integer-plane vehicle
 
-Date: 2026-07-19 UTC  
-Task: `#562`  
-Lane: `grid_lstm_crosswalk_20260719`  
-Status: `research_only=true`; paper-to-Pact crosswalk; no build or execution  
-Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**  
+- Date: 2026-07-19 UTC
+- Task: `#562`
+- Lane: `grid_lstm_crosswalk_20260719`
+- Status: `research_only=true`; paper-to-Pact crosswalk; no build or execution
+- Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**
+
 Authority: no launch, paid dispatch, contest score, promotion, submission, or
 pointer authority. This isolated-branch artifact requires **MAIN landing
 review**.
@@ -310,4 +311,5 @@ Self-review: round 1 reconciled the paper equations and six experiments against
 the exact local factors. Round 2 incorporated the MAIN total-runtime correction
 and removed the naive sequential-CPU rejection. Round 3 corrected priority-axis
 scheduling, tied/untied parameter scaling, and the limit on exact layer
-parallelism. The five-round ceiling is respected.
+parallelism. Round 4 normalized the memo metadata so the final branch diff is
+whitespace-clean. The five-round ceiling is respected.
