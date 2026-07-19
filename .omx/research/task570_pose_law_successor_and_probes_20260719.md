@@ -58,6 +58,8 @@ NOT a 50.4% byte/score prediction. Does not reopen the exact 2×2 Pose-visibilit
 
 ## 3. GF(257) Berlekamp-Massey shortest-recurrence coder — standalone raw-section KILLED
 
+verdict_scope: formulation — ONLY the standalone raw-section BM packet on the donor int8 code tensor (L=300=N/2 field-random on all 64 streams; 43,280 B ≥ 20,518 B, loses 2.11×). The BM family/theorem and other tensors are NOT killed.
+
 Donor `levelset_witness_ema_BEST.npz` (= `experiments/results/perclass_bitalloc_witness_20260710/mod32cap_ep650_BEST.npz`,
 SHA-256 `6dd28a6e29…`); `code` tensor (1200,32) fp32 → int8 at scale `0.012484688311815262`
 (clip ±127) reproduces the custodied tensor SHA-256 `29dca0a738…` exactly. Injective map
@@ -76,6 +78,8 @@ loses by 2.11×, so no framed/repacked variant can win. The BM theorem, the wide
 other donor tensors are NOT killed. Confirms memo §5's low-confidence prediction (`mean(L)≈N/2=300`).
 
 ## 4. B16/B8 official-tail batch-closure — EXACT float closure REFUTED (advisory)
+
+verdict_scope: formulation — the claim "scorer float outputs are bit-identical across B8-standalone vs first-8-of-B16 batch geometry on Darwin-arm64 CPU-torch fp32" is refuted by direct measurement (Seg logits max|Δ|=6.771e-05, Pose first-6 max|Δ|=3.815e-06 ≠ 0). The SCORED Seg quantity (argmax→d_seg) remains batch-closed (0/1,572,864 mismatches); d_pose is not. Not a family/paradigm negative — the cure is structural (preserve the literal 37×B16+B8 geometry in any cache), and the CUDA axis is unmeasured.
 
 Frozen `DistortionNet` (SegNet EfficientNet-B2 + PoseNet FastViT-T12) loaded from
 `upstream/models/{segnet,posenet}.safetensors`, CPU-torch native fp32, 1-thread deterministic.

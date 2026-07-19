@@ -161,3 +161,15 @@ to kill the fake-marker hypothesis. R2: hunted the noise-basis confound (within-
 between-run metric under MLX D6) — real, named F1 with a pre-registerable null-window fix, not a
 config-invalidator. Confirmed the V9_432 blocker refuses only 432 by live reproduction. Clean on
 the checks run.
+
+## Scope clarification (Stop-hook repair, 2026-07-19)
+
+The ticket-04 REFUSED-for-launch verdict is **defect-based, not magnitude-based**
+(verdict_scope: instance — launch-readiness of THIS ticket revision only, not the curvelet
+family or the #497 basis question). The three named defects are structural launch-safety
+gaps (equal-byte chain not gate-enforced → rate-axis confound risk; no green dry receipt;
+treatment engagement unproven), each with a named fix already in the ticket's OWED list.
+Relative significance of the underlying lever is UNCHANGED and large: the #497 curvelet A/B
+targets the measured 3.2× along-tangent frequency deficit feeding Lane d_seg, and Lane flips
+are ~19% of total d_seg flip mass at the current operating point — this refusal defers the
+measurement until its confound gaps close; it does not downgrade the lever.
