@@ -5,6 +5,7 @@ import pytest
 
 from tac.optimization.seg_secant_rd_curve import (
     BREAK_EVEN_BYTES_PER_DSEG,
+    CONTEST_PAIR_COUNT,
     SegSecantError,
     adjacent_seg_secants,
     default_operating_points,
@@ -124,21 +125,26 @@ def test_secant_sign_accepts_distortion_only_above_byte_saving_break_even() -> N
             "point_id": "cheap_to_prevent",
             "family": "margin",
             "d_seg": 1e-6,
-            "brotli_q11_bytes_per_pair": 900.0,
+            "brotli_q11_bytes_per_pair": 999.9,
         },
         {
             "point_id": "expensive_to_prevent",
             "family": "precision",
             "d_seg": 1e-6,
-            "brotli_q11_bytes_per_pair": 800.0,
+            "brotli_q11_bytes_per_pair": 999.7,
         },
     ]
     rows = adjacent_seg_secants(points, codec_key="brotli_q11_bytes_per_pair")
     by_family = {row["family"]: row for row in rows}
     assert BREAK_EVEN_BYTES_PER_DSEG == 150_181_956.0
-    assert by_family["margin"]["bytes_saved_per_unit_d_seg"] == 100_000_000.0
+    assert CONTEST_PAIR_COUNT == 600
+    assert by_family["margin"]["n600_equivalent_bytes_saved_per_unit_d_seg"] == pytest.approx(
+        60_000_000.0
+    )
     assert by_family["margin"]["accept_higher_d_seg_improves_two_term_score"] is False
-    assert by_family["precision"]["bytes_saved_per_unit_d_seg"] == 200_000_000.0
+    assert by_family["precision"]["n600_equivalent_bytes_saved_per_unit_d_seg"] == pytest.approx(
+        180_000_000.0
+    )
     assert by_family["precision"]["accept_higher_d_seg_improves_two_term_score"] is True
 
 

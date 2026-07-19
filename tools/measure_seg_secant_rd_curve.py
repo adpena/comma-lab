@@ -37,6 +37,7 @@ from tac.optimization.joint_seg_pose_rate import (  # noqa: E402
 )
 from tac.optimization.seg_secant_rd_curve import (  # noqa: E402
     BREAK_EVEN_BYTES_PER_DSEG,
+    CONTEST_PAIR_COUNT,
     OperatingPoint,
     SegSecantError,
     adjacent_seg_secants,
@@ -546,14 +547,24 @@ def compose(receipts: Sequence[Path], output: Path) -> dict[str, Any]:
         measured_points, codec_key="zstd_19_bytes_per_pair"
     )
     seg_curve = [
-        {"bytes": point["brotli_q11_bytes_per_pair"], "distortion": point["d_seg"]}
+        {
+            "bytes": point["brotli_q11_bytes_per_pair"] * CONTEST_PAIR_COUNT,
+            "distortion": point["d_seg"],
+        }
         for point in measured_points
     ]
     pose_curve = [
-        {"bytes": point["brotli_q11_bytes_per_pair"], "distortion": point["d_pose"]}
+        {
+            "bytes": point["brotli_q11_bytes_per_pair"] * CONTEST_PAIR_COUNT,
+            "distortion": point["d_pose"],
+        }
         for point in measured_points
     ]
     waterfill = solve_measured_waterfill(seg_curve, pose_curve)
+    waterfill["bytes_basis"] = (
+        "DERIVED n600-equivalent conditional payload = measured mean bytes/pair * 600; "
+        "not measured archive.zip bytes"
+    )
     pose_violations = sum(point["pose_violation_count"] for point in delivered)
     pose_observations = len(unique_pairs) * len(delivered)
     pose_inactive = sum(point["pose_inactive_count"] for point in delivered)
@@ -566,6 +577,10 @@ def compose(receipts: Sequence[Path], output: Path) -> dict[str, Any]:
             {"path": str(path.resolve()), "sha256": _sha256_file(path.resolve())}
             for path in receipts
         ],
+        "composer_tool_sha256": _sha256_file(Path(__file__).resolve()),
+        "composer_module_sha256": _sha256_file(
+            SRC / "tac/optimization/seg_secant_rd_curve.py"
+        ),
         "unique_pair_count": len(unique_pairs),
         "unique_pair_ids": unique_pairs,
         "observation_count": len(rows),
@@ -575,6 +590,10 @@ def compose(receipts: Sequence[Path], output: Path) -> dict[str, Any]:
         "adjacent_seg_secants": {
             "break_even_bytes_per_unit_d_seg": BREAK_EVEN_BYTES_PER_DSEG,
             "break_even_bytes_per_1e_minus_6_d_seg": BREAK_EVEN_BYTES_PER_DSEG * 1e-6,
+            "contest_pair_count": CONTEST_PAIR_COUNT,
+            "break_even_bytes_per_pair_per_1e_minus_6_d_seg": (
+                BREAK_EVEN_BYTES_PER_DSEG / CONTEST_PAIR_COUNT * 1e-6
+            ),
             "objective_sign": (
                 "for a move to higher d_seg and fewer bytes, accept the distortion iff "
                 "bytes_saved/delta_d_seg exceeds break-even"

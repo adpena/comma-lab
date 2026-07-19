@@ -21,6 +21,7 @@ from typing import Any
 import numpy as np
 
 BREAK_EVEN_BYTES_PER_DSEG = 100.0 * 37_545_489.0 / 25.0
+CONTEST_PAIR_COUNT = 600
 
 
 class SegSecantError(ValueError):
@@ -288,6 +289,7 @@ def adjacent_seg_secants(
     points: Sequence[Mapping[str, Any]],
     *,
     codec_key: str,
+    population_pairs: int = CONTEST_PAIR_COUNT,
 ) -> list[dict[str, Any]]:
     """Derive adjacent within-family byte-saving/Seg-distortion secants.
 
@@ -298,6 +300,12 @@ def adjacent_seg_secants(
 
     if codec_key not in {"brotli_q11_bytes_per_pair", "zstd_19_bytes_per_pair"}:
         raise SegSecantError("unknown aggregate codec key")
+    if (
+        isinstance(population_pairs, bool)
+        or int(population_pairs) != population_pairs
+        or population_pairs <= 0
+    ):
+        raise SegSecantError("population_pairs must be a positive integer")
     grouped: dict[str, list[Mapping[str, Any]]] = {}
     reference = [point for point in points if point.get("family") == "reference"]
     if len(reference) > 1:
@@ -320,7 +328,8 @@ def adjacent_seg_secants(
             bytes_saved = float(low[codec_key]) - float(high[codec_key])
             if delta_dseg <= 0 or bytes_saved <= 0:
                 continue
-            ratio = bytes_saved / delta_dseg
+            per_pair_ratio = bytes_saved / delta_dseg
+            global_ratio = per_pair_ratio * int(population_pairs)
             out.append(
                 {
                     "family": family,
@@ -329,13 +338,29 @@ def adjacent_seg_secants(
                     "higher_distortion_point": str(high["point_id"]),
                     "delta_d_seg": delta_dseg,
                     "bytes_saved_per_pair": bytes_saved,
-                    "bytes_saved_per_unit_d_seg": ratio,
-                    "bytes_saved_per_1e_minus_6_d_seg": ratio * 1e-6,
+                    "bytes_saved_per_pair_per_unit_d_seg": per_pair_ratio,
+                    "bytes_saved_per_pair_per_1e_minus_6_d_seg": per_pair_ratio
+                    * 1e-6,
+                    "population_pairs": int(population_pairs),
+                    "n600_equivalent_bytes_saved": bytes_saved * int(population_pairs),
+                    "n600_equivalent_bytes_saved_per_unit_d_seg": global_ratio,
+                    "n600_equivalent_bytes_saved_per_1e_minus_6_d_seg": global_ratio
+                    * 1e-6,
                     "break_even_bytes_per_unit_d_seg": BREAK_EVEN_BYTES_PER_DSEG,
-                    "accept_higher_d_seg_improves_two_term_score": ratio
+                    "break_even_bytes_per_pair_per_1e_minus_6_d_seg": (
+                        BREAK_EVEN_BYTES_PER_DSEG / int(population_pairs) * 1e-6
+                    ),
+                    "accept_higher_d_seg_improves_two_term_score": global_ratio
                     > BREAK_EVEN_BYTES_PER_DSEG,
                     "derived_two_term_delta_score": 100.0 * delta_dseg
-                    - 25.0 * bytes_saved / 37_545_489.0,
+                    - 25.0
+                    * bytes_saved
+                    * int(population_pairs)
+                    / 37_545_489.0,
+                    "normalization": (
+                        "measured mean bytes/pair multiplied by the declared contest "
+                        "population before applying the global archive-byte score term"
+                    ),
                     "verdict_scope": "measured adjacent within-family secant only",
                 }
             )
@@ -344,6 +369,7 @@ def adjacent_seg_secants(
 
 __all__ = [
     "BREAK_EVEN_BYTES_PER_DSEG",
+    "CONTEST_PAIR_COUNT",
     "OperatingPoint",
     "SegSecantError",
     "adjacent_seg_secants",
