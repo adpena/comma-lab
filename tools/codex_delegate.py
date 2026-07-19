@@ -26,7 +26,7 @@ USAGE (launch):
         [--no-launch]   # write the launcher + ledger row but do not launch (headless)
 
     # then ONCE per session, arm the notifier (Claude Monitor tool, persistent):
-    #   tail -n +1 -f .omx/tmp/codex_runs/codex_events.log | grep --line-buffered '^DONE'
+    #   tail -n 0 -f .omx/tmp/codex_runs/codex_events.log | grep --line-buffered '^DONE'
 
 STATUS:  .venv/bin/python tools/codex_status.py
 """
@@ -237,7 +237,10 @@ _TRANSIENT_DEATH_SIGNATURE = (
 )
 
 # The one-line notifier the main loop arms once (printed on launch for convenience).
-NOTIFIER_CMD = f"tail -n +1 -f {EVENTS} | grep --line-buffered '^DONE'"
+# -n 0: new events ONLY. `-n +1` on this long-lived shared log replays the
+# ENTIRE fleet history as fresh 'events' into any monitor that arms it
+# (2026-07-19 incident). Historical rows are for reading, not watching.
+NOTIFIER_CMD = f"tail -n 0 -f {EVENTS} | grep --line-buffered '^DONE'"
 
 
 def _utc() -> str:

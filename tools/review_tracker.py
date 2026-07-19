@@ -1098,6 +1098,31 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
                 f"non-negotiable.",
                 file=sys.stderr,
             )
+        elif suffix == ".py" and (REPO_ROOT / normalized).exists():
+            # New-file blind spot (2026-07-19 incident): a freshly merged .py
+            # is invisible to the tracker until a scan runs, so mark-file
+            # no-ops with rc=1 AND the commit gate cannot enforce anything on
+            # entities it never ingested. Auto-ingest via the canonical
+            # incremental scan and retry ONCE so marks on new files land.
+            print(
+                f"NOTICE: '{file_path}' not yet ingested — running incremental "
+                f"scan, then retrying the mark.",
+                file=sys.stderr,
+            )
+            con.close()
+            cmd_scan(full=False)
+            con = _init_db()
+            rows = con.execute(
+                "SELECT qualified_name FROM entities WHERE file_path LIKE ?",
+                [f"%{normalized}%"]
+            ).fetchall()
+            if not rows:
+                print(
+                    f"ERROR: incremental scan did not ingest '{file_path}' — "
+                    f"the file may sit outside the tracked source directories. "
+                    f"Nothing was marked.",
+                    file=sys.stderr,
+                )
         else:
             print(
                 f"NOTICE: no entities in tracker matching '{file_path}'. "
@@ -1106,8 +1131,9 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
                 f"file was added. Try: python tools/review_tracker.py scan",
                 file=sys.stderr,
             )
-        con.close()
-        return 1
+        if not rows:
+            con.close()
+            return 1
 
     if dry_run:
         print(f"DRY RUN: would mark {len(rows)} entities in '{file_path}' as '{status}'")

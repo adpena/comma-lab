@@ -1,1 +1,3 @@
 src/tac/packet_compiler/golden_vectors/*.bin binary
+.omx/state/lane_maturity_audit.log merge=union
+.omx/state/lane_registry.json merge=lanereg
