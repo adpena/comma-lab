@@ -1289,6 +1289,15 @@ def parse_dry_start_run_metrics(run_log: Path) -> dict:
     resume_source = False
     resume_start_epoch: int | None = None
     resume_ckpt_epoch: int | None = None
+    # (p0_resume_warmup_geometry_20260717 item 5b) the FORK VERDICT: the trainer's pre-loop
+    # baseline_v0 row measures the restored weights (post item-5 schedule positioning, post any
+    # --fork-head-solve). The 2026-07-17 receipt measured TIMING only — the measured-scored-
+    # quantity gap; these additive fields close it. None when the pass skipped the v0 verdict
+    # (--skip-boot-baseline-verdict) or never reached it.
+    baseline_v0_d_seg: float | None = None
+    baseline_v0_d_pose: float | None = None
+    baseline_v0_implied_s: float | None = None
+    baseline_v0_skipped_reason: str | None = None
     try:
         text = Path(run_log).read_text()
     except OSError:
@@ -1316,6 +1325,15 @@ def parse_dry_start_run_metrics(run_log: Path) -> dict:
                 last_ckpt_epoch = int(ep_ck)
         if stg == "resume_model_source":
             resume_source = True
+        if stg == "verdict" and d.get("phase") == "baseline_v0":
+            if isinstance(d.get("d_seg"), (int, float)):
+                baseline_v0_d_seg = float(d["d_seg"])
+            if isinstance(d.get("d_pose"), (int, float)):
+                baseline_v0_d_pose = float(d["d_pose"])
+            if isinstance(d.get("implied_S"), (int, float)):
+                baseline_v0_implied_s = float(d["implied_S"])
+        if stg == "baseline_verdict_skipped":
+            baseline_v0_skipped_reason = str(d.get("reason", "skipped"))
         rse = d.get("resume_start_epoch")
         if isinstance(rse, (int, float)) and not isinstance(rse, bool):
             resume_start_epoch = int(rse)
@@ -1330,6 +1348,13 @@ def parse_dry_start_run_metrics(run_log: Path) -> dict:
         "resume_model_source": resume_source,
         "resume_start_epoch": resume_start_epoch,
         "resume_ckpt_epoch": resume_ckpt_epoch,
+        # (item 5b) the fork verdict — the measured scored quantity of the restored state; the
+        # receipt spreads this dict, so a resume pass now records WHAT it forked from, not just
+        # how fast it ran. None-valued when skipped/not-reached (reason field says which).
+        "baseline_v0_d_seg": baseline_v0_d_seg,
+        "baseline_v0_d_pose": baseline_v0_d_pose,
+        "baseline_v0_implied_S": baseline_v0_implied_s,
+        "baseline_v0_skipped_reason": baseline_v0_skipped_reason,
     }
 
 
