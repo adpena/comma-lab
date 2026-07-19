@@ -19885,3 +19885,18 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   refuted (instance scope); the selected KKT segment is 120/120 inactive.
 - **Per-class:** Lane most distortion-sensitive at every point (7.1e-4 conditional at finest →
   0.42 at stride-8) — the Lane-fragility corpus extended to the description-coarseness axis.
+
+## FEED-pdw2-measured (2026-07-19) — #553 GATE PASS; the gauge law's constructions land at exactly the predicted bytes; stop rule honored
+
+- **MEASURED (receipt eac796b8..):** PDW2 margin-preserving **138 raw / 133 brotli** (all 20 fp32
+  coefficients, zero shipped tie bytes) and PDP2 partition-only **134 raw / 122 brotli** — exactly
+  the `segnet_head_affine_gauge_quotient_v1` DERIVED constructions (anchor 2 appended). Strict
+  parse-back byte-identical; frame-195 EXACT fp32 tie reproduced with NO video-specific exception.
+- **Load-bearing wire-contract finding:** naive zero-reference decoding breaks the frame-195 tie
+  by an ULP; the deterministic ZERO-SUM gauge reconstruction (multiply → ordered reduction → bias
+  → pair-subtract → first-max) is part of the format contract — receiver arithmetic is spec, not
+  implementation detail (the f32-law discipline applied at the certificate layer).
+- **Honest framing kept:** 338→138 = 200B target-rate equivalence ≈ 1.33e-6 d_seg — NOT archive
+  savings; TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT until a spatial receiver measures through R.
+  **STOP RULE FIRED as designed:** no further certificate polishing — the open axis is the
+  feature/RGB pullback, which is precisely the live yhat_native_generator arm (#559).
