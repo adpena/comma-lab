@@ -1168,6 +1168,19 @@ def _open_existing_archive(archive_path: Path) -> bytes:
         raise PredictorFloorError("existing rung-E archive cannot be parsed") from exc
 
 
+def _completed_inflate_raw_path(inflate_result: Any) -> Path:
+    """Close the typed production-receiver completion seam before scoring."""
+
+    try:
+        completed = inflate_result.completed
+        raw_path = inflate_result.raw_path
+    except AttributeError as exc:
+        raise PredictorFloorError("rung-E inflate result schema drift") from exc
+    if type(completed) is not bool or not completed or not isinstance(raw_path, Path):
+        raise PredictorFloorError("rung-E inflate did not complete")
+    return raw_path
+
+
 def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
     """Build, inflate, exact-verify, and hard-score one n48 production archive."""
 
@@ -1284,11 +1297,10 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
     _write_once_or_equal(names_path, b"v10-rung-e.mp4\n")
     inflated_root = output_root / "inflated"
     inflate_result = inflate_archive(output_root, inflated_root, names_path)
-    if not inflate_result.complete or inflate_result.raw_path is None:
-        raise PredictorFloorError("rung-E inflate did not complete")
-    numerator_proof = _verify_inflated_planes(inflate_result.raw_path, inputs)
+    inflated_raw_path = _completed_inflate_raw_path(inflate_result)
+    numerator_proof = _verify_inflated_planes(inflated_raw_path, inputs)
     hard_oracle = score_inflated_raw(
-        inflate_result.raw_path,
+        inflated_raw_path,
         pair_ids=N48_PAIRS,
         cache_path=args.cache,
         upstream=args.upstream,

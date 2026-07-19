@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
@@ -327,6 +328,17 @@ def test_ephemeral_policy_only_cleans_narrow_temp_tree(tmp_path: Path) -> None:
 
     with pytest.raises(measure.PredictorFloorError, match="system temporary root"):
         measure._ephemeral_output_root(Path("/Users/adpena/Projects/pact/pact-rung-e-unsafe"))
+
+
+def test_rung_e_completion_seam_uses_production_completed_field(tmp_path: Path) -> None:
+    raw_path = tmp_path / "inflated.raw"
+    result = SimpleNamespace(completed=True, raw_path=raw_path)
+    assert measure._completed_inflate_raw_path(result) == raw_path
+
+    with pytest.raises(measure.PredictorFloorError, match="schema drift"):
+        measure._completed_inflate_raw_path(SimpleNamespace(complete=True, raw_path=raw_path))
+    with pytest.raises(measure.PredictorFloorError, match="did not complete"):
+        measure._completed_inflate_raw_path(SimpleNamespace(completed=False, raw_path=raw_path))
 
 
 def test_cli_has_measure_compose_and_rung_e_subcommands() -> None:
