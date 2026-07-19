@@ -108,3 +108,16 @@ reachable; the only question is the rate price (opportunity-pools law, proof ins
 **n600 scale-up note:** chunk-00 (pairs 0-11) shows 1 mismatched pixel (d_seg 4.2e-7) with ALL blocks
 exact — the fp32 tie-pixel class (same class as #543 frame-195). This is the honest noise floor of
 exact-through-fp32; record per-chunk, never round away.
+
+## n600 REPLAY COMPLETE (2026-07-19, 50/50 chunks) — receipt blocker 1 CLOSED
+
+MEASURED `[macOS-CPU advisory n600]`: exact-lattice realization over ALL 600 pairs →
+**114 mismatched pixels / 117,964,800** = **full-n600 d_seg 9.663899739583e-7**, max |A residual|
+8.527e-14 (plane equality exact everywhere; every mismatch is the fp32 ULP-tie class per
+`f32_receiver_arithmetic_exactness_admissibility_v1`). Per-class mismatches: Road 61 / Lane 13 /
+Undrivable 12 / Movable 10 / MyCar 18. The clip(round) minimum-norm comparator: 42,817 mismatches
+(d_seg 3.63e-4 — 376× worse; the realization SOLVER is what buys exactness, not rounding).
+d_seg score contribution at exact realization: 100·9.66e-7 ≈ 0.0001. Aggregate receipt:
+`/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_n600_20260719/aggregate_n600_receipt.json`
+(sha256 of all 50 chunk receipts embedded). Remaining #547 scope: n600 pose interaction rides the
+#548 ladder (rung measurement includes d_pose along the ladder).
