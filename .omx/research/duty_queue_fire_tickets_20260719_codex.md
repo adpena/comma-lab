@@ -1,7 +1,9 @@
 # Duty-Queue Fire Tickets — Sealed Blocked Handoff
 
-Date: 2026-07-19  
-Lane: `duty_queue_fire_tickets_20260719`  
+Date: 2026-07-19
+
+Lane: `duty_queue_fire_tickets_20260719`
+
 Authority SHA-256: `c8718f7d30b38d639d635b53578b4271a37986205ac2da0c1d7bc7fbd3cc6aa0`
 
 ## Verdict first
@@ -156,7 +158,8 @@ training/byte-close/score products.
 
 ## Durable artifacts and verification
 
-Root summary SHA-256: `e5573f9936e6f171367191f584796f028ea690f268eaf43755c0548d3a73241f`  
+Root summary SHA-256: `e5573f9936e6f171367191f584796f028ea690f268eaf43755c0548d3a73241f`
+
 Root manifest SHA-256: `ec3c06a86f9b75bf12f2e1950997ab0a3efd779d50f2c0e7b8c7264b6b22c2e9`
 
 Each ticket contains `launch.sh`, blocked compiled/audited config, provenance, a real refusal

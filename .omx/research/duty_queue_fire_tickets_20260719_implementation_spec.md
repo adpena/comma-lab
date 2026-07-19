@@ -1,8 +1,11 @@
 # Duty-Queue Fire Tickets — Implementation Specification
 
-Date: 2026-07-19  
-Lane: `duty_queue_fire_tickets_20260719`  
-Authority: delegated prompt SHA-256 `c8718f7d30b38d639d635b53578b4271a37986205ac2da0c1d7bc7fbd3cc6aa0`  
+Date: 2026-07-19
+
+Lane: `duty_queue_fire_tickets_20260719`
+
+Authority: delegated prompt SHA-256 `c8718f7d30b38d639d635b53578b4271a37986205ac2da0c1d7bc7fbd3cc6aa0`
+
 Execution authority: **NEVER LAUNCH**; build, inspect, and dry-verify only.
 
 ## Objective

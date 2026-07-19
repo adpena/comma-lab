@@ -4,8 +4,8 @@
   "reviewer": "curvelet_497_audit",
   "reviewer_is_materializer_author": false,
   "required_consecutive_clean_passes": 3,
-  "consecutive_clean_passes": 3,
-  "status": "SEALED_THREE_CONSECUTIVE_CLEAN_PASSES",
+  "consecutive_clean_passes": 0,
+  "status": "ESCALATED_TO_MAIN_AFTER_POST_SEAL_DOC_FORMAT_FIX",
   "counter_rule": "Any finding or production-artifact fix resets the consecutive-clean counter to zero.",
   "passes": [
     {
@@ -84,6 +84,19 @@
       }
     }
   ],
+  "post_seal_change": {
+    "classification": "NON_SEMANTIC_DOC_FORMAT_ONLY",
+    "files": [
+      ".omx/research/duty_queue_fire_tickets_20260719_codex.md",
+      ".omx/research/duty_queue_fire_tickets_20260719_implementation_spec.md"
+    ],
+    "reason": "A post-commit base-diff check found six Markdown hard-break spaces reported as trailing whitespace; they were replaced with blank-line paragraph separators.",
+    "production_logic_changed": false,
+    "counter_after": 0,
+    "counter_rule_applied": "Any production-artifact byte change resets the consecutive-clean counter, including docs-only formatting.",
+    "additional_local_review": "NOT_RUN: five-round delegated self-review cap exhausted.",
+    "disposition": "Mandatory MAIN landing review must review the current bytes; prior passes remain historical evidence only."
+  },
   "launch_authorized": false,
   "main_landing_review_required": true
 }
