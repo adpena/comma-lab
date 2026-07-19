@@ -79247,6 +79247,52 @@
       "notes": "research_only=true; advisory literature/OSS crosswalk; donor read-only; no launch, score, pointer, or classical-coder ownership; sibling arith_selfcomp_rate_coders owns classical baselines.",
       "research_only": true,
       "lane_class": "research_survey"
+    },
+    {
+      "id": "lane_yhat_native_generator_20260719",
+      "name": "Yhat-native generator reformulation",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/yhat_native_generator_20260719_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/yhat_native_generator_20260719_receipt.json"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Default-OFF yhat-native policy plus n24 exact-rational two-plane measurement; frozen oracle not bit-identical; arbitrary-rational n600 projection 249.075 min exceeds runtime budget; distinct two-plane integer runtime, compact generator, archive, contest axes, and MAIN review remain owed.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN reviews this branch and PDW2 commit edf47756ba629e079a2a63233bf8f0293cf85f3d",
+        "integer-yhat scorer-debt A/B or faster exact rational receiver is selected"
+      ]
     }
   ],
   "level_rules": {

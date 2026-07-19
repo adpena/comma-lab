@@ -1,0 +1,165 @@
+{
+  "schema": "pact.yhat_native_generator_receipt.v1",
+  "aggregate_stage_mtime_utc": "2026-07-19T12:03:57Z",
+  "revision": 2,
+  "lane_id": "lane_yhat_native_generator_20260719",
+  "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "verdict_scope": "n=24 supplied real pairs; exact rational scorer-plane replay and frozen CPU oracle under the recorded receiver arithmetic only; no compact generator, archive, contest CPU/CUDA, launch, promotion, score, or pointer authority",
+  "authority": {
+    "research_only": true,
+    "archive_authority": false,
+    "contest_cpu_authority": false,
+    "contest_cuda_authority": false,
+    "launch_or_paid_dispatch_authorized": false,
+    "promotion_eligible": false,
+    "score_authority": false,
+    "pointer_before": "0.1910828242 [contest-CPU Linux x86_64]",
+    "pointer_after": "0.1910828242 [contest-CPU Linux x86_64]",
+    "pointer_delta": 0.0
+  },
+  "measurement": {
+    "command": "/Users/adpena/Projects/pact/.venv/bin/python tools/measure_yhat_native_equivalence.py --evidence-root /Volumes/VertigoDataTier/pact/evidence/yhat_native_20260719/revision2 --cpu-threads 1 --max-nodes-per-block 4096",
+    "git_commit_at_measurement": "e8c9973d6a4f09d26eae5840e2c33c8b1ca9a747",
+    "seed": 20260719,
+    "cpu_threads": 1,
+    "max_nodes_per_block": 4096,
+    "pair_ids": [
+      0,
+      10,
+      50,
+      60,
+      100,
+      110,
+      150,
+      160,
+      200,
+      210,
+      250,
+      260,
+      300,
+      310,
+      350,
+      360,
+      400,
+      410,
+      450,
+      460,
+      500,
+      510,
+      550,
+      560
+    ],
+    "binding_sha256": "85556128a423f1a6dc9d58c9fa6fec585cc607eab61fe53dfaab267c61ed9fe5",
+    "measurement_tool_sha256": "9415111aa173c0fc910c8c4b4da26dee5d209543f603cd334abf8b70b783ed36",
+    "receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/yhat_native_20260719/revision2/receipt.json",
+      "bytes": 62332,
+      "sha256": "1ad1cf84672c696b46f62ca8586bb29d5c70f55de5803902b6c37666e5b85c0f"
+    },
+    "state": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/yhat_native_20260719/revision2/state.json",
+      "bytes": 7287,
+      "sha256": "f3c2873baf7fcc5e6dc1c23a747197a3e49caf477a958ac357773acdfbdf093e"
+    },
+    "aggregate_stage": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/yhat_native_20260719/revision2/stages/aggregate_verification.json",
+      "bytes": 62332,
+      "sha256": "1ad1cf84672c696b46f62ca8586bb29d5c70f55de5803902b6c37666e5b85c0f"
+    },
+    "resume_verification": {
+      "command": "/Users/adpena/Projects/pact/.venv/bin/python tools/measure_yhat_native_equivalence.py --evidence-root /Volumes/VertigoDataTier/pact/evidence/yhat_native_20260719/revision2 --cpu-threads 1 --max-nodes-per-block 4096 --resume",
+      "completed_pairs_reused": 24,
+      "receipt_state_and_aggregate_hashes_unchanged": true
+    }
+  },
+  "result": {
+    "classification": "EXACT_RATIONAL_PLANE_NATIVE_F32_ULP_CLASS",
+    "classification_counts": {
+      "EXACT_RATIONAL_PLANE_NATIVE_F32_ULP_CLASS": 24
+    },
+    "n_pairs": 24,
+    "exact_blocks": 28311552,
+    "exact_samples": 28311552,
+    "exact_failures": 0,
+    "bit_identical_pairs": 0,
+    "segnet_argmax_disagreements": 7,
+    "direct_mean": {
+      "d_seg": 0.03724628016546679,
+      "d_pose": 129.43778800964355
+    },
+    "yhat_native_mean": {
+      "d_seg": 0.03724606840599639,
+      "d_pose": 129.43754800160727
+    },
+    "mean_delta_yhat_minus_direct": {
+      "d_seg": -2.1175947040319443e-7,
+      "d_pose": -0.000240008036286099
+    },
+    "surface_maxima": {
+      "scorer_input_posenet_yuv6": {
+        "max_abs_delta": 0.009283065795898438,
+        "max_native_f32_ulp": 9728
+      },
+      "scorer_input_segnet_rgb": {
+        "max_abs_delta": 0.010009765625,
+        "max_native_f32_ulp": 19584
+      },
+      "posenet_scored_output": {
+        "max_abs_delta": 0.00015163421630859375,
+        "max_native_f32_ulp": 18560
+      },
+      "segnet_logits": {
+        "max_abs_delta": 0.0018863677978515625,
+        "max_native_f32_ulp": 1925542652
+      }
+    }
+  },
+  "runtime": {
+    "observed_total_seconds": 621.8934431669768,
+    "observed_solve_seconds_sum": 597.7790400451049,
+    "observed_solve_seconds_mean_per_plane": 12.453730000939686,
+    "observed_pair_seconds_mean": 25.723899251810508,
+    "derived_n600_arbitrary_rational_preimage_seconds": 14944.476001127623,
+    "derived_n600_arbitrary_rational_preimage_minutes": 249.07460001879372,
+    "derived_projection_within_30_minutes": false,
+    "full_n600_decode_measured": false,
+    "full_decoder_boundary": "NOT_PROVEN_GENERIC_EXPANDER_PACKAGING_AND_IO_OWED",
+    "projection_provenance": "DERIVED_FROM_N24_MEAN_TWO_PLANE_SOLVE_RUNTIME"
+  },
+  "custody": {
+    "sacred_run_root": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z",
+    "sacred_snapshot_before_sha256": "0bdc3e39c5eac970625f91e6803b1bb33330e412514b78ce35dab2c4c351842c",
+    "sacred_snapshot_after_sha256": "0bdc3e39c5eac970625f91e6803b1bb33330e412514b78ce35dab2c4c351842c",
+    "sacred_snapshot_entries": 18,
+    "donor_frames_sha256": "3ffe6e11d672b3278c8d78ac2c562468d4fdffe97dc71777068b464fad9e57a8",
+    "donor_checkpoint_sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "storage_preflight_sha256": "d5bd70284143deac2146a6ad88d6bd6d8ba38aee7aa492b6a1377e648b791880",
+    "cleanup_manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/yhat_native_20260719/revision2/cleanup_manifest.json",
+      "bytes": 4563,
+      "sha256": "c612e6104207768900fccb91344ac074a7e9e88147f4e38e752a970095a2b4a8",
+      "status": "NO_BULK_CREATED_NO_DELETION_REQUIRED"
+    },
+    "run_journal": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/yhat_native_20260719/revision2/run_journal.jsonl",
+      "bytes": 2206,
+      "sha256": "83773f2de4234740a7e631ecc2110ac20d9b3898579dac6f9e2f001c771bd3c2"
+    },
+    "historical_revision1": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/yhat_native_20260719/receipt.json",
+      "bytes": 62313,
+      "sha256": "33d57cdafab92790e832f9601c467d5fcadc1ff5839dd6a1761d70a1f74645e5",
+      "authority": "historical_only_revision2_binds_committed_source_bytes"
+    }
+  },
+  "open_gates": [
+    "compact_yhat_description_and_deterministic_expander",
+    "two_distinct_integer_yhat_plane_scorer_debt_and_runtime_or_faster_exact_rational_receiver",
+    "measured_full_n600_decode_below_30_minutes",
+    "exact_archive_parse_back",
+    "same_archive_contest_cpu_replay",
+    "same_archive_contest_cuda_replay",
+    "MAIN_review_of_this_branch_and_PDW2_dependency_edf47756ba629e079a2a63233bf8f0293cf85f3d"
+  ]
+}

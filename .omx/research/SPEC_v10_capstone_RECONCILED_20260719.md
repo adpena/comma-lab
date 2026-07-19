@@ -228,3 +228,115 @@ row on both contest axes may be compared against 0.1910828242.
 
 **Pointer 0.1910828242 UNMOVED — this SPEC is MEANS.** The reconciled program exists to land a
 byte-closed `upstream/evaluate.py` n600 exact row below it, then toward sub-0.15.
+
+## §R9 PROPOSED_PENDING_MAIN_REVIEW — yhat-native generator and receiver fold (2026-07-19)
+
+This section is an append-only proposed correction from
+`lane_yhat_native_generator_20260719`. It has no authority until MAIN reviews and accepts the branch.
+It specifically narrows §R1.1-3, §R4, and the corresponding supersession rows; it does not silently
+rewrite their historical evidence.
+
+### §R9.1 Measured equivalence boundary
+
+The new n24 real-pair measurement solved and replayed both scorer planes with exact rational
+numerator equality on `28,311,552 / 28,311,552` samples and zero failures. All 24 pairs classify as
+`EXACT_RATIONAL_PLANE_NATIVE_F32_ULP_CLASS`; none is bit-identical through the frozen CPU oracle, and
+there are seven SegNet argmax disagreements. Mean yhat-minus-direct deltas were
+`Delta d_seg=-2.1175947040319443e-7` and `Delta d_pose=-0.000240008036286099` on the
+`[macOS-CPU advisory] NON-PROMOTABLE` axis. Receipt SHA-256:
+`1ad1cf84672c696b46f62ca8586bb29d5c70f55de5803902b6c37666e5b85c0f` (revision 2, binding the
+tool bytes proposed for this branch).
+
+**Proposed correction to §R1.1/§R1.3:** the scorers share the same spatial resize geometry and
+frame-1 plane, but PoseNet consumes a temporal pair `(yhat_f0, yhat_f1)` while SegNet consumes only
+`yhat_f1`. One exact realization is required per independently described plane. A single
+repeat-frame1 realization does not buy general two-plane Pose closure.
+
+**Proposed correction to §R1.2:** exact rational plane realization is demonstrated for the supplied
+feasible planes under the recorded receiver arithmetic. “Exact plane” must not be promoted to
+bit-identical frozen-oracle output; `f32_receiver_arithmetic_exactness_admissibility_v1` remains
+load-bearing.
+
+### §R9.2 Runtime correction: integer and arbitrary-rational receivers are different lanes
+
+- The §R4 `3.8 min` derivation belongs only to the fast factor-2 **integer-yhat repeat-frame1**
+  receiver: n12 wall `4.53 s` for one integer frame-1 plane realized once and copied, linearly
+  derived n600 `3.775 min`. It does not measure two independently described Pose planes.
+- The new arbitrary-rational exact receiver measured `597.7790400451 s` of solve work across n24,
+  `12.4537300009 s` per plane on average. Its n600 two-plane projection is
+  `14,944.4760011276 s = 249.0746000188 min`.
+- Therefore this implementation on the supplied feasible donor-derived fractional planes has a
+  derived n600 projection beyond the 30-minute boundary before generic expansion, packaging, and
+  output I/O. Full n600 decode remains unmeasured.
+
+**Proposed correction to §R1.2/§R4:** “realization solved and free” is scoped to the integer-yhat
+factor-2 domain, its declared arithmetic, and the measured repeat-frame1 arrangement. A fractional
+yhat generator must either (a) learn two independently described integer-uint8 scorer planes and
+measure the induced Seg/Pose debt plus two-plane runtime, or (b) use a substantially faster exact
+rational solver. Neither child is presently closed.
+
+### §R9.3 Representation correction and proposed head
+
+The incumbent ep725 trunk already evaluates its MLP on the `384x512` grid. A yhat-native head does
+not reduce MLP sample count by the camera/scorer coordinate ratio
+`(874*1164)/(384*512)=5.1744384765625`. It instead declares the existing three-channel head output to
+be the scorer plane, removing the differentiable bicubic-upsample, camera uint8/STE, and bilinear
+downsample from the training coordinate. Contest decode still owes camera `874x1164` uint8 output
+through an exact receiver.
+
+Proposed training semantics:
+
+```text
+G_theta(z)_f0,f1 in R^(384x512x3)
+  -> SegNet(frame1)
+  -> PoseNet(rgb_to_yuv6(frame0, frame1))
+
+decode: compact z -> deterministic NumPy-fp32 G -> yhat -> exact receiver P -> camera uint8
+        with exact A(P(yhat)) replay
+```
+
+Initial trunk, codes, FiLM, output head, SDF/palette/carrier state, chroma, EMA, curriculum stages,
+and resume checkpoints stay structurally available. Camera-space AA/noise/`ker(A)` terms become
+no-op or must be re-derived; Seg, Pose, counted-rate pressure, EMA, and stage-boundary persistence
+remain. This is a design, not a trainer landing.
+
+### §R9.4 Proposed counted description and PDW2 dependency
+
+`YhatNativeDescription.v1` is the proposed strict packaging spine:
+
+```text
+counted description -> strict canonical parse/re-encode -> deterministic NumPy-fp32 expander
+                    -> ordered two-plane yhat -> exact receiver -> camera uint8 -> exact A replay
+```
+
+Its header binds version, source/runtime hashes, float32 order/arithmetic, geometry, pair count,
+seed, canonical section order/lengths/hashes, and expanded two-plane hash. Counted sections include
+PDW2/PDP2 target payload, learned/video-fitted weights, pair/frame codes, fitted seeds/scales/palettes
+and entropy parameters, residuals, framing/hashes, and archive overhead. Free rule-118 material is
+only generic code/operations, fixed non-video priors, PDW2 evaluation code, the lattice algorithm,
+camera assembly, and generic coder code. Any scorer-derived shipped payload counts; scorer weights
+and GT tables remain forbidden.
+
+Sibling PDW2 commit `edf47756ba629e079a2a63233bf8f0293cf85f3d` supplies the proposed inner
+certificate: margin-preserving `138` raw / `133` Brotli-q11 bytes (20 float32 coefficients) and
+partition-only `134` raw / `122` Brotli-q11 bytes (19 scalars). It remains
+`TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT`; MAIN must review that commit before integration.
+
+### §R9.5 Chroma/Pose and readiness disposition
+
+PoseNet consumes both RGB planes after RGB-to-YUV6; SegNet consumes frame 1. Neither frame nor
+chroma can be deleted by a Seg-only argument, and integer projection is a new scorer-debt A/B rather
+than an exact reparameterization of the fractional incumbent. Direct dense yhat remains rate-dead.
+
+The n24 receipt gate is closed in the default-OFF `YhatNativeGeneratorPolicy`; receiver/archive
+gates remain owed. The policy and keyword-only DSL factory add no argv, epoch, launch, score,
+promotion, or pointer authority. Proposed DAG:
+
+```text
+compact description -> deterministic expander -> integer-fast OR exact-rational receiver
+                    -> exact replay -> archive parse-back -> separate contest CPU/CUDA
+```
+
+Open leaves: compact generator, receiver-choice A/B, full n600 measured decode below 30 minutes,
+archive parse-back, same-byte contest-CPU, same-byte contest-CUDA, MAIN review. The pointer remains
+`0.1910828242 [contest-CPU Linux x86_64]`.

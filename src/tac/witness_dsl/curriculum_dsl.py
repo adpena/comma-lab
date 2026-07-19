@@ -36,8 +36,12 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from numbers import Integral
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tac.witness_dsl.basis_control import normalize_basis_family
+
+if TYPE_CHECKING:
+    from tac.witness_dsl.yhat_native_generator_policy import YhatNativeGeneratorPolicy
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 TRAINER_REL = "experiments/train_levelset_witness_realized_through_R_mlx.py"
@@ -2069,6 +2073,24 @@ BASELINE = WitnessProgram(
 # ---------------------------------------------------------------------------
 # Lever library (the A/B campaign, as composable DSL fragments)
 # ---------------------------------------------------------------------------
+def YhatNativeGenerator(*, policy: YhatNativeGeneratorPolicy) -> Lever:
+    """Default-OFF yhat-native measurement leg; deliberately not bare-name composable."""
+
+    from tac.witness_dsl.yhat_native_generator_policy import YhatNativeGeneratorPolicy
+
+    if not isinstance(policy, YhatNativeGeneratorPolicy):
+        raise TypeError("YhatNativeGenerator requires a YhatNativeGeneratorPolicy")
+    policy.compile_contract()
+    return Lever(
+        "YhatNativeGenerator",
+        overrides={},
+        epochs_delta=0,
+        notes="argv-inert default-OFF policy; n24 receipt closed; receiver/archive gates owed",
+        lawrefs={},
+        constant_manifest={},
+    )
+
+
 def PoseDecouple(window: int = 100) -> Lever:
     """A5: drop pose from the loss (w-pose=0) to free decoder capacity for d_seg —
     a TRADE (d_pose worsens; pose is carried in-frame, NOT sidecar-able, per the
