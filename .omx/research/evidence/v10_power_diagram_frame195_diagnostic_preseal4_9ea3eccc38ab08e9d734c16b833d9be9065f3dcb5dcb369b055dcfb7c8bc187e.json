@@ -1,0 +1,277 @@
+{
+  "authority": {
+    "checkpoint_aggregate_label": "MEASURED_PRESERVED_STATE",
+    "cleanup_performed": false,
+    "n600_rerun": false,
+    "new_run_label": "MEASURED_REPRODUCTION",
+    "one_frame_one_pixel_only": true,
+    "promotion_eligible": false,
+    "receiver_authority": false,
+    "score_authority": false,
+    "ssd_write_performed": false,
+    "through_r_authority": false
+  },
+  "current_sources": {
+    "diagnostic": {
+      "bytes": 20998,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/diagnose_v10_power_diagram_frame195.py",
+      "sha256": "595aa3792d1a4c54ef89b9be756c007829f04fc2d03b3c4b821c3fa3c10c809c"
+    },
+    "harvester": {
+      "bytes": 41831,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/harvest_v10_power_diagram_blocked_prefix.py",
+      "sha256": "d52a4bda1b08fe1326d3a86c38da92d3f1e09af4aec22b52475c4b74115c796f"
+    },
+    "read_only_evidence": {
+      "bytes": 15353,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/v10_power_diagram_blocked_evidence.py",
+      "sha256": "fe78ef1bc42d95f85ef4155f9b8e043c283012c96dfb4a2265969680ded428b1"
+    }
+  },
+  "custody": {
+    "checkpoint": {
+      "bytes": 4940,
+      "device": 16777242,
+      "inode": 1235030,
+      "mtime_ns": 1784379592762764331,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features/extraction_progress.json",
+      "sha256": "58656d231af5c63b12b3594d8eeeeccf0b2d0f25c09154ef3ef6da759e1fce4b"
+    },
+    "current_tombstone": {
+      "bytes": 1365,
+      "device": 16777234,
+      "inode": 361323826,
+      "mtime_ns": 1784382500576588129,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/measure_v10_power_diagram_generator_byteclose.py",
+      "sha256": "fb7114017c735c3ad38f4e4b81a60653910a9ed49dafa47ac47dd42fce05ce76"
+    },
+    "factorized_features_loader": {
+      "bytes": 21277,
+      "device": 16777234,
+      "inode": 361242050,
+      "mtime_ns": 1784375761477563173,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/src/tac/witness_control/factorized_features.py",
+      "sha256": "3c720fc6d81ebbf1779b8370fb5c17b545b609fc39fdf62176b2d17e35edefaf"
+    },
+    "feature_cache": {
+      "bytes": 1887436928,
+      "device": 16777242,
+      "inode": 1234831,
+      "mtime_ns": 1784379592083166848,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features/quotient_features.f32.npy",
+      "sha256": "59e96781aa1bac153bc8bb277cecdbd4b4e98fdfd41f50aa2294537b90390944"
+    },
+    "gt_cache": {
+      "bytes": 5078017610,
+      "device": 16777234,
+      "inode": 347098802,
+      "mtime_ns": 1782452047551634134,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "historical_container": {
+      "bytes": 16187,
+      "device": 16777234,
+      "inode": 361327935,
+      "mtime_ns": 1784384362230878552,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/.omx/research/evidence/measure_v10_power_diagram_generator_byteclose_be094a1540a94bf51aa98706b6d4515eec150bb569380f69b308ed66556cd7c9.source.gz",
+      "sha256": "ee13d263b51f210fe7fd7bbfc6a21099260189573fce80715c0d69df0f2ef329"
+    },
+    "historical_manifest": {
+      "bytes": 1130,
+      "device": 16777234,
+      "inode": 361323825,
+      "mtime_ns": 1784384379897851179,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/.omx/research/evidence/measure_v10_power_diagram_generator_byteclose_be094a1540a94bf51aa98706b6d4515eec150bb569380f69b308ed66556cd7c9.manifest.json",
+      "sha256": "5873ad1f2145402a63a53f114f2845cd80f04c6458d4082366bb6f91b2e7b274"
+    },
+    "power_diagram_witness": {
+      "bytes": 47035,
+      "device": 16777234,
+      "inode": 361235535,
+      "mtime_ns": 1784375760940912051,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/src/tac/boundary_math/power_diagram_witness.py",
+      "sha256": "ad428490bb47496c6446853665101a40915ff1a8491bd55f4dc294d7d0df0f38"
+    },
+    "segnet_model": {
+      "bytes": 38502892,
+      "device": 16777234,
+      "inode": 77229717,
+      "mtime_ns": 1776117031391521542,
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "upstream_frame_utils": {
+      "bytes": 9345,
+      "device": 16777234,
+      "inode": 77229711,
+      "mtime_ns": 1776117020121695677,
+      "path": "/Users/adpena/Projects/pact/upstream/frame_utils.py",
+      "sha256": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90"
+    },
+    "upstream_modules": {
+      "bytes": 8322,
+      "device": 16777234,
+      "inode": 77229724,
+      "mtime_ns": 1776117031515589036,
+      "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+      "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    }
+  },
+  "exact_inner_argv": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/diagnose_v10_power_diagram_frame195.py",
+    "--checkpoint",
+    "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features/extraction_progress.json",
+    "--feature-cache",
+    "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features/quotient_features.f32.npy",
+    "--gt-cache",
+    "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "--upstream-root",
+    "/Users/adpena/Projects/pact/upstream",
+    "--historical-container",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/.omx/research/evidence/measure_v10_power_diagram_generator_byteclose_be094a1540a94bf51aa98706b6d4515eec150bb569380f69b308ed66556cd7c9.source.gz",
+    "--historical-manifest",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/.omx/research/evidence/measure_v10_power_diagram_generator_byteclose_be094a1540a94bf51aa98706b6d4515eec150bb569380f69b308ed66556cd7c9.manifest.json",
+    "--current-tombstone",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/measure_v10_power_diagram_generator_byteclose.py",
+    "--wrapper-launcher",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/safe_run.py",
+    "--wrapper-timeout-seconds",
+    "1200",
+    "--wrapper-memory-limit-mb",
+    "6144",
+    "--torch-threads",
+    "6",
+    "--torch-interop-threads",
+    "18",
+    "--output",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/.omx/research/v10_power_diagram_frame195_diagnostic_20260718.json"
+  ],
+  "frozen_target": {
+    "label": "MEASURED_REPRODUCTION",
+    "pdw1_bytes": 362,
+    "pdw1_hex": "50445731050004000a0000000000010002000300040076e0343fd7abd23ee1c8aa3e5467673e2895a2bfd7abd23ee1c8aa3e5467673eaea5363ebd0247bfe1c8aa3e5467673ef8033f3e385a88bd62db74bf5467673ec37d4b3e8845ac3c021f35bd546767bfc14195be1f02543fad2942be21b22abe2ba938be0000010000000200000003000000040001000200010003000100040002000300020004000300040063057dc00000000000000000000000000a3787bf542c18c00000000000000000781f85bf65c274bfe91f25c000000000050182bf7ee747bfc16c41bf94a010c0de693940542c18c00000000000000000a7753a4065c274bfe91f25c000000000e0043c407ee747bfc16c41bf94a010c0a0e4853c76f7b53fe91f25c000000000a8c0263de964cc3fc16c41bf94a010c0b09cc73c9a6b333e7289e93f94a010c0407ab53bd980093e8c9a4abdf622aa3d07d5033ed44961bd52cb9e3d7c273cbe78bd51bd1eb8073e",
+    "pdw1_sha256": "f2178e123c12cc062812a93f046174b7d5716df2edba0545733cad1c09795758",
+    "quotient_rank": 4,
+    "singular_values": [
+      3.1283763256270123,
+      2.154271387270261,
+      2.0247078698575063,
+      1.7962638356537006,
+      3.7304048124016814e-16
+    ],
+    "strict_parseback_byte_identical": true
+  },
+  "outer_wrapper_custody": {
+    "label": "OPERATOR_SUPPLIED_NOT_INNER_RUNTIME_MEASUREMENT",
+    "launcher": {
+      "bytes": 19764,
+      "device": 16777234,
+      "inode": 361244198,
+      "mtime_ns": 1784375761665064163,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/safe_run.py",
+      "sha256": "a951ab7ec3baef5137f18472698a58b9f9864902f63f33bd7bbfa89294e3766b"
+    },
+    "memory_limit_mb": 6144,
+    "original_governed_run_limits_claimed": false,
+    "timeout_seconds": 1200
+  },
+  "preserved_checkpoint_state": {
+    "blocked_reason": "positive-control blocker at canonical frame 195: frozen-head power mismatches=1, CPU-Torch forward mismatches=0",
+    "cpu_torch_forward_mismatch_count": 0,
+    "label": "MEASURED_PRESERVED_STATE",
+    "next_canonical_frame": 195,
+    "power_target_mismatch_count": 1,
+    "sample_count": 38338560
+  },
+  "reproduction": {
+    "cached_lstar": 0,
+    "cpu_torch": {
+      "argmax": 0,
+      "logits": [
+        4.86811637878418,
+        4.8681159019470215,
+        -8.735725402832031,
+        -5.273322105407715,
+        -8.2166748046875
+      ],
+      "winner_margin": 4.76837158203125e-07
+    },
+    "frame": 195,
+    "generic_f64_power": {
+      "argmax": 1,
+      "scores": [
+        6.278331686308114,
+        6.278331939086382,
+        -7.325506601351081,
+        -3.8631060746993837,
+        -6.806458881886535
+      ],
+      "winner_margin": 2.527782676509105e-07
+    },
+    "label": "MEASURED_REPRODUCTION",
+    "native_f32_power": {
+      "argmax": 0,
+      "scores": [
+        6.278331756591797,
+        6.278331756591797,
+        -7.325506210327148,
+        -3.8631062507629395,
+        -6.806458473205566
+      ],
+      "winner_margin": 0.0
+    },
+    "pixel_x": 112,
+    "pixel_y": 214,
+    "rank4_quotient": [
+      0.0014007954159751534,
+      5.777266502380371,
+      1.7700754404067993,
+      3.2382075786590576
+    ],
+    "serialized_target_parity_uncertainty": {
+      "boundary_exactness": "NO_GENERAL_VERDICT_WITHIN_F32_TIE_UNCERTAINTY",
+      "exact_on_samples": true,
+      "f32_tie_uncertain_count": 1,
+      "label": "MEASURED_NUMERICAL_PARITY_NOT_BOUNDARY_THEOREM",
+      "max_pair_score_error": 5.370738822563226e-07,
+      "minimum_affine_winner_margin": 2.3471462995416914e-07,
+      "mismatch_count": 0,
+      "sample_agreement": 1.0,
+      "sample_count": 1
+    },
+    "ties_and_disagreement": {
+      "generic_exact_top_tie": false,
+      "generic_vs_native_disagree": true,
+      "generic_vs_torch_disagree": true,
+      "native_exact_top_tie": true,
+      "native_vs_torch_disagree": false
+    }
+  },
+  "runtime": {
+    "batch_size": 1,
+    "camera_size": [
+      1164,
+      874
+    ],
+    "deterministic_algorithms": true,
+    "device": "cpu",
+    "dtype": "torch.float32",
+    "numpy_version": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "segnet_model_input_size": [
+      512,
+      384
+    ],
+    "torch_config_sha256": "606e3853213dea3faabc6d58b66ed7e419ee4452a6d53c2b27495a2ecc4e07a7",
+    "torch_interop_threads_effective": 18,
+    "torch_interop_threads_requested": 18,
+    "torch_threads_effective": 6,
+    "torch_threads_requested": 6,
+    "torch_version": "2.12.1"
+  },
+  "schema": "v10_power_diagram_frame195_diagnostic.v1",
+  "status": "MEASURED_REPRODUCTION_FRAME195_DIAGNOSTIC"
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "v10_power_diagram_historical_source_container.v2",
+  "historical_checkpoint_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/v10_power_diagram_byteclose_20260718_20260718T115559Z/tools/measure_v10_power_diagram_generator_byteclose.py",
+  "container_repo_path": ".omx/research/evidence/measure_v10_power_diagram_generator_byteclose_be094a1540a94bf51aa98706b6d4515eec150bb569380f69b308ed66556cd7c9.source.gz",
+  "container_bytes": 16187,
+  "container_sha256": "ee13d263b51f210fe7fd7bbfc6a21099260189573fce80715c0d69df0f2ef329",
+  "compression": {
+    "format": "gzip",
+    "level": 9,
+    "mtime": 0,
+    "original_filename_embedded": false,
+    "validation": "IN_MEMORY_DECOMPRESSION_ONLY"
+  },
+  "decompressed_bytes": 62907,
+  "decompressed_sha256": "be094a1540a94bf51aa98706b6d4515eec150bb569380f69b308ed66556cd7c9",
+  "reason": "Preserve exact checkpoint-pinned source bytes in a deterministic non-source container while retiring unsafe executable cleanup-certificate behavior.",
+  "status": "INERT_NON_SOURCE_GZIP_HISTORICAL_EVIDENCE_NON_AUTHORIZING",
+  "executable": false,
+  "authorizing": false
+}
