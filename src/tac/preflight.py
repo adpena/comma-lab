@@ -6520,6 +6520,12 @@ def preflight_all(
         # break surfaces loudly but never blocks an unrelated pipeline).
         check_operating_manual_pointer_integrity(strict=False, verbose=verbose)
 
+        # Crosswalk A1 (2026-07-19): the harness failure ledger must stay on the canonical
+        # FailureEventV2 schema — no unknown lifecycle shapes, no un-migrated legacy classes.
+        # WARN-ONLY at landing (a stale/partial-migration ledger is signal-loss risk, not a
+        # blocker); strict-flip owed once the live ledger is verified fully migrated.
+        check_harness_failure_ledger_v2_hygiene(strict=False, verbose=verbose)
+
         # 2026-07-17 task #525 codex spawn-kill self-protection: codex-exec spawn
         # paths must route through the reaper-immune pty core
         # (spawn_durable_daemon.spawn_detached_verified) — a no-TTY codex spawn is
@@ -86718,6 +86724,76 @@ def check_operating_manual_pointer_integrity(
         raise PreflightError(
             "check_operating_manual_pointer_integrity found "
             f"{len(violations)} violation(s) (operating-manual anti-rot):\n  "
+            + "\n  ".join(violations))
+    return violations
+
+
+def check_harness_failure_ledger_v2_hygiene(
+    *, repo_root: Path | str | None = None, strict: bool = False, verbose: bool = False
+) -> list[str]:
+    """WARN-ONLY schema-hygiene gate for the harness failure ledger (crosswalk A1).
+
+    The ledger (``.omx/state/harness_failure_ledger.jsonl``) accumulated rows across
+    incompatible writer generations. ``tac.harness_failure_ledger`` V2 makes the schema
+    canonical (one ``class_id`` key, typed ``event_kind``/``resolution_state``). This gate
+    refuses two rot directions:
+      1. an UNKNOWN lifecycle shape — a V2 row whose ``event_kind`` or ``resolution_state``
+         is not in the canonical vocabulary (a future writer drifting the schema);
+      2. a MIGRATION-OWED class — a legacy (non-V2) semantic class with no canonical V2
+         projection (run ``tools/migrate_harness_failure_ledger_v2.py --apply``).
+
+    WARN-ONLY by design: a stale/partially-migrated ledger is a signal-loss risk, not a
+    reason to block an unrelated pipeline. Soft-fails to OK when the ledger or the module is
+    absent (the gate never fabricates a violation from a missing surface)."""
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    ledger = root / ".omx" / "state" / "harness_failure_ledger.jsonl"
+    if not ledger.is_file():
+        if verbose:
+            print("  [failure-ledger-v2] check_harness_failure_ledger_v2_hygiene: "
+                  "OK (no ledger)")
+        return violations
+    try:
+        from tac import harness_failure_ledger as _hfl
+    except Exception as exc:  # noqa: BLE001 — a missing module must not break preflight
+        if verbose:
+            print(f"  [failure-ledger-v2] module unavailable ({exc}); skipped")
+        return violations
+
+    rows = _hfl.load_raw_rows(ledger)
+    valid_kinds = set(_hfl.EVENT_KINDS_V2)
+    valid_states = set(_hfl.RESOLUTION_STATES)
+    for r in rows:
+        if r.get("schema") != _hfl.SCHEMA_VERSION_V2:
+            continue
+        ek = r.get("event_kind")
+        rs = r.get("resolution_state")
+        if ek not in valid_kinds:
+            violations.append(
+                f"V2 row class_id={r.get('class_id')!r}: unknown event_kind {ek!r} "
+                f"(expected one of {sorted(valid_kinds)}).")
+        if rs and rs not in valid_states:
+            violations.append(
+                f"V2 row class_id={r.get('class_id')!r}: unknown resolution_state {rs!r} "
+                f"(expected one of {sorted(valid_states)}).")
+
+    owed = [p.class_id for p in _hfl.project_legacy_rows_to_v2(rows)]
+    if owed:
+        violations.append(
+            f"{len(owed)} legacy semantic class(es) lack a canonical V2 projection: "
+            f"{sorted(owed)[:5]}{'...' if len(owed) > 5 else ''} — run "
+            "tools/migrate_harness_failure_ledger_v2.py --apply (append-only).")
+
+    if verbose:
+        print(
+            f"  [failure-ledger-v2] check_harness_failure_ledger_v2_hygiene: "
+            f"{len(violations)} violation(s)"
+            if violations else
+            "  [failure-ledger-v2] check_harness_failure_ledger_v2_hygiene: OK")
+    if strict and violations:
+        raise PreflightError(
+            "check_harness_failure_ledger_v2_hygiene found "
+            f"{len(violations)} violation(s) (harness-ledger schema hygiene):\n  "
             + "\n  ".join(violations))
     return violations
 
