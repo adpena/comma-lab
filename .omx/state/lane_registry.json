@@ -79121,6 +79121,48 @@
       },
       "notes": "Local CPU advisory n24 Seg-secant range-payload measurement; nine d_seg>0 rows across three families; spatial endpoints are Pose-infeasible; receiver/archive and contest axes absent; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "lane_arith_selfcomp_rate_coders_20260719",
+      "name": "Arithmetic and self-compression rate coders",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/arith_selfcomp_rate_coders_20260719_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_arith_selfcomp_rate_coders.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local advisory implementation complete; exact residual payload rederivation and matched block-FP n>=24 d_seg remain owed; no score/promotion authority; MAIN review required.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -79130,5 +79172,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-19T07:11:04Z"
+  "updated_at": "2026-07-19T11:21:40Z"
 }
