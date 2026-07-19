@@ -2224,6 +2224,34 @@ def DirectionalBasis(weight: float = 0.5, start_epoch: int = 300,
                  notes="all-class directional tangent basis (was OFF: weight 0)")
 
 
+def RangeAProjection(cadence: str = "post_render") -> Lever:
+    """P3/#520 (SPEC_v10): arm the render-target range(A) projection — restrict the render
+    to the frozen scorers' sigma-algebra (drop ker(A), the MEASURED ~52% scorer-invisible
+    render energy, #519 ``null_subspace_rate_measure``).  DEFAULT-OFF duty-to-measure lever:
+    the trainer flag ``--range-a-projection`` defaults off (byte-identity); composing this
+    lever turns it on for the A/B.
+
+    ``cadence`` ∈ {"post_render","every_step"} — project once after the render, or the loss
+    render each step.  The exact projector is ``tac.boundary_math.range_a_projection``
+    (self-test residual max|A(X-PX)| = 1.65e-15, reproduced from #519).  A byte-closed n600
+    realized-through-R row is OWED (operator-GO, PREPARED_NOT_FIRED); the score EFFECT is
+    measurement-gated (SPEC_v10 launch-gate chain).  The factory is here (not only in a side
+    module) so ``lever_registry.completeness`` + the activation-ledger duty queue discover it
+    generically.
+    """
+    if cadence not in ("post_render", "every_step"):
+        raise ValueError(
+            f"RangeAProjection: cadence must be post_render|every_step; got {cadence!r}")
+    return Lever(
+        "range_a_projection",
+        overrides={"--range-a-projection": True,
+                   "--range-a-projection-cadence": cadence},
+        notes=("P3/#520 render-target range(A) restriction; default-off duty-to-measure; "
+               "projector residual 1.65e-15 (null_subspace_rate_measure #519); "
+               "n600 realized-through-R row OWED (operator-GO, PREPARED_NOT_FIRED)"),
+    )
+
+
 def WindowedCurveletBasis(window: int = 0) -> Lever:
     """Select the generated-receiver-sealed windowed-directional coordinate frame.
 

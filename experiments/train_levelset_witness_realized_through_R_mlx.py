@@ -16648,7 +16648,43 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--ladder-refresh-every", type=int, default=25,
                     help="#323 recompute the per-class rungs (and rebuild masks on a rung CHANGE) every N "
                     "epochs (bounds the rebuild cost; a rung changes at most ~r0 times per arm per run).")
+    # P3/#520 (SPEC_v10) — range(A) render-target projection. DEFAULT-OFF duty-to-measure
+    # lever (DSL: curriculum_dsl.RangeAProjection). Default False => byte-identity (the guarded
+    # arm-hook below is skipped entirely). The exact projector lives in
+    # tac.boundary_math.range_a_projection; its render-loop consumption folds at v10 launch.
+    ap.add_argument("--range-a-projection", action=argparse.BooleanOptionalAction, default=False,
+                    help="P3/#520: restrict the render target to range(A) (drop ker(A), the ~52%% "
+                    "scorer-invisible render energy, #519). DEFAULT OFF (byte-identical); arming "
+                    "validates the exact projector + records the cadence into run provenance.")
+    ap.add_argument("--range-a-projection-cadence", type=str, default="post_render",
+                    choices=("post_render", "every_step"),
+                    help="when to project the render target (post_render | every_step); "
+                    "only consulted when --range-a-projection is set.")
     args = ap.parse_args(argv)
+    # ── P3/#520 guarded arm-and-validate hook (default-OFF => never runs => byte-identical). ──
+    # When enabled, fail-closed: reproduce the #519 projector self-test and refuse to arm if the
+    # exact projector residual regresses. Records the cadence to run provenance. The score-moving
+    # render-loop consumption is a v10-fold decision (SPEC_v10 P3), gated on measurement.
+    if bool(getattr(args, "range_a_projection", False)):
+        from tac.boundary_math import range_a_projection as _rap
+        _rap_st = _rap.projector_self_test()
+        if not _rap_st["matches_reference"]:
+            raise _rap.RangeAProjectionError(
+                "range(A) projector self-test FAILED (residual "
+                f"{_rap_st['max_A_of_ker_residual']:.3e} > {_rap.KER_RESIDUAL_CEILING:.0e}); "
+                "refusing to arm P3/#520 — rule chain: SPEC_v10 P3 fail-closed -> exact-operator "
+                "invariant -> NO-FAKE (never arm a lever whose primitive does not verify).")
+        print(json.dumps({
+            "stage": "range_a_projection_armed",
+            "cadence": str(getattr(args, "range_a_projection_cadence", "post_render")),
+            "projector_ker_residual": _rap_st["max_A_of_ker_residual"],
+            "n_exact_blind_rows": _rap_st["n_exact_blind_rows"],
+            "n_exact_blind_cols": _rap_st["n_exact_blind_cols"],
+            "authority": "PREPARED_NOT_FIRED",
+            "note": ("P3/#520 render-target range(A) restriction ARMED; projector verified against "
+                     "#519. Render-loop consumption folds at v10 launch (measurement-gated); "
+                     "score EFFECT owed via byte-closed n600 realized-through-R row."),
+        }), flush=True)
     args.basis = normalize_basis_family(args.basis)
     if args.basis == LEGACY_FOURIER_AB_CONTROL:
         print(json.dumps({
