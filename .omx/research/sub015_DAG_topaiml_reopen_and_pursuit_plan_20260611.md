@@ -19838,3 +19838,19 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   before Kronecker; the paper's "structured" menu is a specific subgroup list, not arbitrary
   covariances. Source custody: released code is PyTorch-CUDA with NO autocast policy — MLX/
   low-precision parity is NOT evidenced by the paper (INFERRED-feasible only).
+
+## FEED-categorical-spectrum (2026-07-19) — #554 landed; strict bar held; 2 honest no-transfers + 2 narrow survivors
+
+- **NO-TRANSFER (as pre-declared under the strict bar, #483 prior CONFIRMED):** (1) the
+  stabilization pattern C_n ≅ End(X_{n+1}) vs our residual/correction towers is ANALOGY only —
+  the sources (Kern 2410.02578, Masuda 2605.03114) are structure/equivalence results with no
+  norm, cost, or computable stop criterion; the measured non-additive-pools law + the 150.18 B
+  per 1e-6 d_seg break-even REMAIN the only stopping rules. Routed nowhere. (2) D38 descent:
+  categorical spectra are strictly upstream generality — none of the missing cover/restriction/
+  coherence data.
+- **SURVIVOR 1 (#452 amended):** the tube-algebra probe gains a typed-composition falsifier —
+  only operators on the SAME defect space compose (Benjamin-Lam-Luo direct-sum case); the
+  boundary-code composition step must encode this as a typed refusal.
+- **SURVIVOR 2 (→ #539/#553 gauge fixtures):** DERIVED finite criterion — adjacent gauge
+  quotients compose only when the inter-level map preserves the gauge subgroup/image. A
+  1-categorical statement that computes; folds into the PDW2 fixture gate, no new lane.
