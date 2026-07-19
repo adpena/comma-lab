@@ -168,6 +168,34 @@ The tiny-`tau={1e-8,1e-7}` grid completed before the later operator reframe and
 is retained only as historical calibration. It is not used by the final wide
 composition or waterfill verdict.
 
+## Post-measurement preimage-rounding gate
+
+The final inbox recheck routed a newer high-priority #541 result after this
+lane's measurements and first commit. That result is **operator-routed
+MEASURED evidence, not independently remeasured here**: under exact rational
+scorer-plane equality, predictor-optimal uint8 preimages produced 24.3 native
+fp32 Seg mismatches/pair (`d_seg=1.23e-4`), versus 0.19 mismatches/pair for the
+replay preimage. Thus preimage choice perturbs the frozen native-fp32 resize and
+is part of the authority surface; range-coordinate equality alone is not
+receiver equivalence.
+
+This does not invalidate the 96 accepted rows above. This lane scored each
+actual camera-space realization through the full frozen hard oracle, rejected
+every mismatched proposal, and recorded `d_seg=0` for every accepted row. It
+does further restrict interpretation: the measured numerator-residual bytes
+cannot be promoted into receiver bytes, and future predictor-optimal preimage
+realization must either treat approximately `1e-4` as the empirical Seg floor
+or add a tie-aware preimage selector. The final `tau_pose={1e-4,2.5e-4}` grid
+already avoids chasing the newly discouraged sub-`5e-5` region.
+
+The required receiver gate is now explicit: bind a preimage-policy ID; compare
+replay, predictor-optimal, and tie-aware candidates through native-fp32 resize
+and frozen SegNet; persist mismatch counts and selected-preimage custody; and
+admit receiver/archive evidence only after parse-back reproduces the selected
+hard-oracle result. Until then, `ker(A)_payload_bytes=0` is a range-coordinate
+measurement convention, not proof that a free generated preimage is
+authority-equivalent.
+
 ## Receipts
 
 The composed receipt binds all eight exact-tool-hash source receipts, 96 rows,
@@ -269,7 +297,9 @@ remote provider, or paid substrate was modified.
   `[contest-CUDA]`; axis parity is unmeasured.
 - Measured bytes are scorer-numerator residual bytes, not receiver parse-back
   `archive.zip` bytes. Receiver closure, archive custody, and exact contest eval
-  are absent.
+  are absent. #541 further shows that exact rational-plane equality does not
+  close native-fp32 preimage choice; the receiver still owes the explicit
+  preimage-rounding gate above.
 - The aggregate Seg field VJP is a first-order proposal surface, not complete
   independent per-cell nonlinear custody.
 - The four admitted Seg observations are flat at `d_seg=0`; a traceable Seg
@@ -297,4 +327,5 @@ these advisory range bytes into archive or contest-score evidence.
 `docs/operating_manual_craft_handoff.md`; the three research/source authorities
 named above; real `gt_n600.npz`; VJP/binding/measurement SSD artifacts; lane,
 task, and progress state; per-arm inbox including the 2026-07-19T06:27:52Z
-operator reframe; fleet broadcast inbox.
+operator reframe and the final 2026-07-19T08:49:48Z #541 preimage-rounding
+directive; fleet broadcast inbox.
