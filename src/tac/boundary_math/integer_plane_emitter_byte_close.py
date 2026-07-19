@@ -40,6 +40,9 @@ from tac.boundary_math.integer_plane_emitter import (
     numpy_uint8,
     realize_all_factor2,
 )
+from tac.boundary_math.pdw2_spatial_receiver import (
+    PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY,
+)
 from tac.boundary_math.power_diagram_witness import (
     TARGET_COMPARISON_VERDICT,
     decode_pdw2,
@@ -432,7 +435,7 @@ def archive_receipt(parsed: ParsedCountedArchive) -> dict[str, Any]:
         "repair_video_payload_counted": parsed.repair is not None,
         "pdw2_video_target_payload_counted": True,
         "pdw2_spatial_receiver_consumed": False,
-        "pdw2_promotion_blocker": ("#553 gauge-fixed target has no scorer-free spatial/RGB pullback in #543"),
+        "pdw2_promotion_blocker": PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY,
         "ema_authority": parsed.manifest["authority"] == "ema",
         "score_claim": False,
     }

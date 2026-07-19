@@ -1,0 +1,78 @@
+{
+  "schema": "codex_round1_adversarial_review.v1",
+  "task_id": 576,
+  "review_scope": "All new Task #576 Python surfaces, minimal integer-plane integration, real n24/n600 receipts, and authority labels",
+  "review_status": "ROUND1_COMPLETE_FINDINGS_FIXED_REVIEW_AGAIN_ON_MAIN",
+  "findings": [
+    {
+      "id": "R1-1",
+      "severity": "critical",
+      "finding": "The first dispatched packet validator raised TypeError on every valid packet.",
+      "resolution": "Removed the invalid constructor call; strict decode plus canonical re-encode equality is now the only acceptance path.",
+      "regression": "test_receiver_decodes_packet_and_field_contracts_and_responds_with_hashes"
+    },
+    {
+      "id": "R1-2",
+      "severity": "critical",
+      "finding": "The first non-identifiability witness could select two vectors assigned to the same class and had an invalid fallback reshape.",
+      "resolution": "Bounded deterministic search retains one representative per distinct class and broadcasts only after two classes exist.",
+      "regression": "test_packet_only_nonidentifiability_witness_and_canaries"
+    },
+    {
+      "id": "R1-3",
+      "severity": "high",
+      "finding": "Whole-array finiteness checks and hashing contradicted the n600 streaming contract.",
+      "resolution": "Validation, field hashing, uint16 label hashing, counts, and receiver arithmetic now run pair-by-pair. Read-only memmap pages receive best-effort MADV_DONTNEED after consumption.",
+      "regression": "test_nonfinite_field_refuses_at_the_exact_streamed_pair"
+    },
+    {
+      "id": "R1-4",
+      "severity": "high",
+      "finding": "The first label hash cast uint16 class IDs to uint8, permitting hash collisions outside the current five-class fixture.",
+      "resolution": "Partition hashes use canonical little-endian uint16 label bytes.",
+      "regression": "n24 and n600 deterministic replay hashes"
+    },
+    {
+      "id": "R1-5",
+      "severity": "high",
+      "finding": "The first pass omitted the executable probe and integer-plane blocker integration.",
+      "resolution": "Added the bounded probe and routed the exact blocker into the byte-close receipt without enabling receiver_consumed.",
+      "regression": "57-test focused suite plus real probe"
+    },
+    {
+      "id": "R1-6",
+      "severity": "medium",
+      "finding": "The first equation mislabeled local evidence as contest CPU and carried no empirical anchor.",
+      "resolution": "Relabeled macOS-CPU advisory, attached the measured n600 blocker anchor, and registered it through the locked helper.",
+      "regression": "test_nonidentifiability_law_builds_focuses_on_blocker_scope"
+    }
+  ],
+  "positive_canaries": {
+    "sealed_packet_sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+    "coefficient_mutation_delta_f32": 1.0,
+    "mismatch_pixels_n24": 108,
+    "n600_partition_sha256": "7b4558bccf58194e2274ee70e0086a48bd925685963b363db0bc6df13863d870",
+    "n600_replay_bit_identical": true
+  },
+  "negative_canaries": {
+    "deleted_packet_refused": true,
+    "wrong_dtype_refused": true,
+    "wrong_geometry_refused": true,
+    "nonfinite_pair_refused_with_pair_index": true,
+    "through_r_authority_remains_false": true,
+    "d_seg": null,
+    "d_pose": null
+  },
+  "checks": {
+    "pytest": "57 passed in 2.54s",
+    "ruff": "All checks passed",
+    "py_compile": "passed",
+    "real_n600_replay": "packet, field, partition hash, counts, and mutation canary equal"
+  },
+  "remaining_main_review": [
+    "Re-run the focused tests and n24 probe from the base-to-head diff.",
+    "Verify the binary packet and receipt hashes.",
+    "Confirm no quotient-space label result is described as RGB through-R or score authority.",
+    "Review append-only equation, DAG, task, and lane rows before merge."
+  ]
+}

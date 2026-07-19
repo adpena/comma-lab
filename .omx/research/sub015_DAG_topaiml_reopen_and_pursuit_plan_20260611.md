@@ -20143,3 +20143,30 @@ frame-195. verdict_scope: durability-sync unit; no new measurement, no score cla
 - **CONVERGENCE:** both name the SAME binding next unit → **build the counted PDW2 (138B gauge-fixed generator packet) → coefficients→spatial-partition receiver, through-R equivalent** (consumption discipline #417). Then n600 Seg/Pose + contest-axis replay. This supersedes the per-flip d_B-attack.
 - **Edges out:** task #576 (PDW2 spatial receiver, binding). **Edges in:** FEED-M2recon+STEP2 · M1 merge · pdw1 verdict · SPEC_v10 §ADDENDUM STEP 2/3.
 - **Pointer:** 0.19108 [contest-CPU] UNMOVED. MEANS (measurement gated the build; binding unit identified).
+
+## FEED-PDW2-SPATIAL-RECEIVER-576 (2026-07-19) — coefficients consumed; packet-only through-R claim blocked
+
+- **Node:** Task #576 built the smallest honest scorer-free PDW2 receiver. The sealed 138-byte
+  packet plus an explicit `float32 [N,384,512,4]` quotient field deterministically emits spatial
+  native-fp32 first-max labels and content hashes. It never imports a scorer and never labels this
+  quotient result as RGB through-R authority.
+- **MEASURED [macOS-CPU advisory]:** real read-only quotient memmap n24 then n600. n600 field SHA
+  `cb6c28b4...6317`, label SHA `7b4558bc...d870`, counts
+  `[8980186,224892,98568848,429289,9761585]`, 12.32 s. Independent replay reproduced packet,
+  field, labels, counts, and mutation canary bit-identically. A canonical `+1.0` float32 mutation
+  of the first relative coefficient changed 108/4,718,592 n24 cells: real consumption proven.
+- **Exact blocker:** `PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY`. Same packet maps constant
+  fields `(-4,0,0,0)` and `(0,0,0,0)` to distinct classes 1 and 2. Packet bytes therefore cannot
+  identify an arbitrary video partition. The 1.887 GB real quotient memmap is not counted state;
+  no counted spatial generator or scorer-free RGB/camera pullback exists. `d_seg=null`,
+  `d_pose=null`; hard CPU Torch oracle correctly not run; pointer unchanged.
+- **verdict_scope:** FORMULATION — closes only packet-only spatial generation. The broader
+  packet + counted spatial generator + scorer-free RGB pullback family remains OPEN.
+- **Edges in:** FEED-STEP2-CONVERGENCE · #553 packet format receipt · M1 #575 exact blocker ·
+  SPEC_v10 STEP 2/3.
+- **Edges out:** compile counted rank-4 spatial generator -> compile scorer-free uint8/RGB pullback
+  -> byte-close n600 -> exact contest-CPU/CUDA. Any later residual obeys Fisher/margin ranking,
+  inner-Jacobian secant/QP, curvelet/shearlet basis, SE(3) xi pose factorization, and KKT stop.
+- **Triality:** DSL N/A (no trainer lever/config); equation
+  `pdw2_coefficient_only_spatial_nonidentifiability_v1` registered with n600 anchor; DAG = this
+  FEED. Pointer `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**. MAIN review/merge required.
