@@ -749,9 +749,15 @@ or labeled DERIVED. Pointer **0.19108 [contest-CPU] UNMOVED**. Pointers to memos
 - **(D) Description-axis pivot: 9-family map, composed stack, binding blocker** (crux memo §1–2). Composed
   best-case stack **~65–130 KB TOTAL (108–217 B/pair) + unmeasured repair term** = 2–4× under the box on RATE.
   Binding blocker = a **4-order empty hole** in the measured (bytes, d_seg) curve (140 B/pair @ 3.455e-3 ↔ 1.77
-  MB/pair @ 1.63e-4); for in-box descriptions (PDW1 306 B; MS-contour ~236 KB) **bytes are NOT binding —
-  REALIZATION is** (frame-195 fp32 authority; absent receiver grammar). Non-additive pools: elements must enter
-  as seeds/conditioning INSIDE the joint solve (two post-hoc composition failures forbid composition-after).
+  MB/pair @ 1.63e-4); for in-box descriptions (**PDW2 gauge-fixed generator-only packet 138 B partition / 142 B
+  margin** = the cheapest measured, frame-195 receiver PASS; PDW1 306 B; MS-contour ~236 KB) **bytes are NOT
+  binding — REALIZATION is** (frame-195 fp32 authority; absent receiver grammar). **PDW2's OPEN half is the SAME
+  receiver problem as STEP 2's d_B-attack:** its verdict is `TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT`
+  (`pdw2_gauge_packet_probe_20260719_receipt.json`, `through_r_authority: false`) — the 138 B gauge-fixed
+  coefficients need a receiver that expands them into the spatial partition (a channel feature field) and is
+  through-R equivalent (consumption discipline #417). So PDW2 (rate frontier, ~1/3 of PDW1's raw) and the STEP-2
+  realization CLOSE TOGETHER through one shared receiver. Non-additive pools: elements must enter as
+  seeds/conditioning INSIDE the joint solve (two post-hoc composition failures forbid composition-after).
 - **(E) Survey adoptions folded into the §5/§C description ladder** (`generator_description_online_survey_20260719.md`).
   ADOPT: Aurenhammer min-generator LP · kinetic regular-triangulation event grammar (~2-3 B/gen/frame, temporal)
   · geogram BSD SDOT + voro++ cross-check · Schuster-Katsaggelos operational-R-D DP (retargeted to d_seg) ·
