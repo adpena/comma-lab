@@ -19900,3 +19900,26 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   savings; TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT until a spatial receiver measures through R.
   **STOP RULE FIRED as designed:** no further certificate polishing — the open axis is the
   feature/RGB pullback, which is precisely the live yhat_native_generator arm (#559).
+
+## FEED-entropy-ceiling-answered (2026-07-19) — #557 landed; int8+brotli is an ENTROPY ceiling; block-FP 1.005 bpp baseline set
+
+- **THE OPERATOR'S ARITHMETIC-CODING QUESTION, MEASURED (weight side):** context/spatial
+  arithmetic coding does NOT beat brotli on our real quantized weights — brotli 63,394B (base) /
+  20,518B (pair-code) vs IID-arithmetic 66,322/35,989, with spatial context models 1.42×
+  (repo) and 1.51× (constriction) WORSE than IID. The #496 int8+brotli≈iid-entropy result is an
+  **ENTROPY ceiling, not a coder ceiling** — no exploitable spatial weight structure beyond what
+  brotli captures. verdict_scope: these concrete spatial sign/magnitude context models (left/up
+  same-channel), NOT arithmetic/context coding as a family; the LEARNED-model attack on the same
+  ceiling belongs to the live neural_selfcomp arm (#558).
+- **Self-compression CLASSICAL baseline (rate-domain):** ternary shared-exponent block-FP + LZMA
+  = **1.0050497 bits/param** over all 111,095 donor params (block=32, threshold 0.25; matches the
+  Selfcomp-lineage ~1.017 preregistration within 0.012). A potential ~6.5× rate cut vs int8's
+  6.54 bpp — **NOT admissible** until matched realized-through-R d_seg at n≥24 (the owed
+  admissibility gate; routed to the #558 comparison frame).
+- **Packet entropy row:** PDW1 338 raw → 271 zstd-19 / 286 brotli (~20%); PDW2's 133-brotli row
+  already dominates (parallel-arm timing artifact honestly disclosed, no fabricated row).
+- **Honest blocker (de-prioritized):** settled secant receipts omit raw payload bytes → residual-
+  side novel-coder ratios not fabricated; regenerable via the secant tool IF the residual family
+  ever reopens — which sits below the ~336KB/pair reopen bar regardless, so this row is
+  WONT-PURSUE-unless-reopen. Brotli smallest among complete coders at all 10 points; the #536
+  waterfill verdict is unchanged.
