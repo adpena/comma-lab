@@ -1,0 +1,110 @@
+{
+  "schema": "pdw2_spatial_receiver_blocker_receipt.v1",
+  "task_id": 576,
+  "lane_id": "pdw2_spatial_receiver_576",
+  "status": "MEASURED_COEFFICIENT_CONSUMPTION_BLOCKED_BEFORE_THROUGH_R",
+  "blocker_id": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+  "verdict_scope": "The 138-byte packet alone cannot identify an arbitrary spatial partition. The broader packet plus counted spatial generator plus scorer-free RGB pullback family remains open.",
+  "authority": {
+    "measurement_axis": "[macOS-CPU advisory]",
+    "hardware_substrate": "macos_arm64",
+    "through_r_authority": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "d_seg": null,
+    "d_pose": null,
+    "pointer_before": "0.1910828242 [contest-CPU Linux x86_64]",
+    "pointer_after": "0.1910828242 [contest-CPU Linux x86_64]",
+    "pointer_delta": 0.0
+  },
+  "packet": {
+    "path": ".omx/research/pdw2_spatial_receiver_576_measurement/pdw2_margin_packet_138b.pdw2",
+    "raw_bytes": 138,
+    "raw_sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+    "brotli_quality": 11,
+    "brotli_bytes": 133,
+    "brotli_sha256": "e5b14699d682c8d6fd0291bb7f2874eede1c4e5788e09c612604d00f9a134704",
+    "raw_rate_term_25B_over_N": 0.00009188853553085965,
+    "brotli_rate_term_25B_over_N": 0.00008855924076524879,
+    "packet_to_partition_consumed": true,
+    "source_diagnostic": ".omx/research/v10_power_diagram_frame195_diagnostic_20260718.json",
+    "source_diagnostic_sha256": "65d97194c6298a5502d0fcc792ee2fe3bf05599c69f1130d64c270dec5ec36ee"
+  },
+  "quotient_field": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features/quotient_features.f32.npy",
+    "file_bytes": 1887436928,
+    "allocated_disk": "585M",
+    "file_sha256": "59e96781aa1bac153bc8bb277cecdbd4b4e98fdfd41f50aa2294537b90390944",
+    "tensor_shape": [600, 384, 512, 4],
+    "dtype": "float32",
+    "tensor_content_sha256": "cb6c28b42bf61c0a713f9464c3128a2b0a417c12ee7e784db4a98a956c6e6317",
+    "read_only_memmap": true
+  },
+  "n24": {
+    "pair_count": 24,
+    "pixel_count": 4718592,
+    "field_sha256": "240d09bbe8854b4eb4bd87703ab14d46bdd3d2bcd9a04633eb5fc1471dc4cd62",
+    "partition_labels_sha256": "a49962d8ae318410661b78999a999b77c3af07ff463695a39cdb7b04addebae2",
+    "partition_label_counts_by_class_0_to_4": [1077102, 29883, 2330251, 72381, 1208975],
+    "wall_seconds": 0.92,
+    "ru_maxrss_bytes": 164495360,
+    "macos_peak_memory_footprint_bytes": 71582296,
+    "probe_sha256": "5e6e9c0dc6177b78e2cc719770b072429add3676a3e908faa1c931d79583f61e"
+  },
+  "n600": {
+    "pair_count": 600,
+    "pixel_count": 117964800,
+    "partition_labels_sha256": "7b4558bccf58194e2274ee70e0086a48bd925685963b363db0bc6df13863d870",
+    "partition_label_counts_by_class_0_to_4": [8980186, 224892, 98568848, 429289, 9761585],
+    "wall_seconds": 12.32,
+    "ru_maxrss_bytes": 1976549376,
+    "macos_peak_memory_footprint_bytes": 72566608,
+    "mapped_page_eviction_applied": true,
+    "probe_path": ".omx/research/pdw2_spatial_receiver_576_measurement/n600_probe.json",
+    "probe_sha256": "a22cdf309b77903bcf6269920d14095588e9b3b57617bf9359abe6b2d06af671"
+  },
+  "deterministic_replay": {
+    "packet_sha256_equal": true,
+    "field_sha256_equal": true,
+    "partition_labels_sha256_equal": true,
+    "partition_label_counts_equal": true,
+    "mutation_canary_equal": true,
+    "wall_seconds": 11.9,
+    "ru_maxrss_bytes": 1976778752,
+    "macos_peak_memory_footprint_bytes": 72795984,
+    "probe_path": ".omx/research/pdw2_spatial_receiver_576_measurement/n600_probe_replay.json",
+    "probe_sha256": "c0d6f2eff616a952b112b86328f63409fe8ad8adc44510d5ec64dd599ed69997"
+  },
+  "coefficient_consumption_canary": {
+    "mutation": "first relative coefficient plus 1.0 float32, canonical re-encode",
+    "evaluated_pairs": 24,
+    "mutation_observed": true,
+    "mismatch_pixels": 108,
+    "mismatch_fraction": 0.00002288818359375
+  },
+  "packet_only_nonidentifiability_witness": {
+    "same_packet": true,
+    "feature_vector_a": [-4.0, 0.0, 0.0, 0.0],
+    "class_a": 1,
+    "feature_vector_b": [0.0, 0.0, 0.0, 0.0],
+    "class_b": 2,
+    "native_float32_first_max_arithmetic": true
+  },
+  "through_r_debt": {
+    "counted_spatial_generator_present": false,
+    "scorer_free_rgb_camera_pullback_present": false,
+    "exact_archive_bytes_present": false,
+    "hard_cpu_torch_oracle_run": false,
+    "reason": "Quotient labels are not decoded RGB bytes and cannot be passed through the frozen SegNet/PoseNet evaluator. Running an oracle would fabricate authority for a target-only object."
+  },
+  "measurement": {
+    "captured_at_utc": "2026-07-19T20:54:44Z",
+    "git_base": "dc50a3427dd060a0c04e1cd6595bd207f6c407c0",
+    "branch": "codexwt/pdw2_spatial_receiver_576_20260719T202816Z",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python_version": "3.13.12",
+    "numpy_version": "1.26.4",
+    "receiver_source_sha256": "4529334aea55436041ca19208d26d64c07640b30a432fb4a3ebccdc5ae7a9a7c",
+    "probe_source_sha256": "f4ff9e491bd8fe50b033aa7bf6d1d4644fb0bce882735a865fa2338473f16d97"
+  }
+}

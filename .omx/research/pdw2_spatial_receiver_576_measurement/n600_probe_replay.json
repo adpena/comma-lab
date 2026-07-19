@@ -1,0 +1,98 @@
+{
+  "schema": "pdw2_spatial_receiver_probe.v1",
+  "pdw2_packet_sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+  "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+  "packet_to_partition_consumed": true,
+  "coefficient_only_through_r_equivalent": false,
+  "through_r_authority": false,
+  "d_seg": null,
+  "d_pose": null,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pair_caps": [
+    600
+  ],
+  "pair_cap_receipts": [
+    {
+      "pair_cap": 600,
+      "pair_count": 600,
+      "field_sha256": "cb6c28b42bf61c0a713f9464c3128a2b0a417c12ee7e784db4a98a956c6e6317",
+      "partition_shape": [
+        600,
+        384,
+        512
+      ],
+      "partition_labels_sha256": "7b4558bccf58194e2274ee70e0086a48bd925685963b363db0bc6df13863d870",
+      "partition_label_counts": [
+        8980186,
+        224892,
+        98568848,
+        429289,
+        9761585
+      ],
+      "mapped_page_eviction_applied": true
+    }
+  ],
+  "witness": {
+    "schema": "pdw2_coefficient_only_nonidentifiability_witness.v1",
+    "pdw2_packet_sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+    "packet_to_partition_consumed": true,
+    "coefficient_only_through_r_equivalent": false,
+    "through_r_authority": false,
+    "coefficient_only_persisted_witness_verified": true,
+    "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+    "witness_point": {
+      "pair": 0,
+      "row": 0,
+      "col": 0,
+      "geometry": [
+        384,
+        512,
+        4
+      ]
+    },
+    "witness_feature_vectors": {
+      "feature_vector_a": [
+        -4.0,
+        -0.0,
+        -0.0,
+        -0.0
+      ],
+      "feature_vector_b": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "class_a": 1,
+      "class_b": 2
+    },
+    "class_ids": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "d_seg": null,
+    "d_pose": null,
+    "score_claim": false,
+    "promotion_eligible": false
+  },
+  "packet_mutation_canary": {
+    "schema": "pdw2_spatial_receiver_packet_mutation_canary.v1",
+    "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+    "packet_to_partition_consumed": true,
+    "coefficient_only_through_r_equivalent": false,
+    "through_r_authority": false,
+    "mutation_observed": true,
+    "mismatch_pixels": 108,
+    "mismatch_pairs_total": 2.288818359375e-05,
+    "d_seg": null,
+    "d_pose": null,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "mutation_delta": 1.0
+  },
+  "peak_rss_bytes": 1976778752
+}
