@@ -635,6 +635,38 @@ _PROTECTED_APPEND_DOC_MARKERS: tuple[str, ...] = (
 # well below a factor-block clobber (dozens). Escape via override flag.
 _PROTECTED_DOC_SHRINK_LINES = 8
 
+# Rationales REJECTED as placeholder stubs for --allow-shared-doc-shrink: the
+# override must carry a REAL reason, not a filler token (review F1 2026-07-18:
+# `--allow-shared-doc-shrink TODO` slipped past). Lowercased comparison.
+_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "", "<rationale>", "<reason>", "rationale", "reason", "tbd", "todo",
+    "fixme", "xxx", "wip", "n/a", "na", "none", "null", "-", ".", "?",
+})
+
+
+def _staged_touched_files(env: dict, *, diff_filter: str | None = None) -> list[str]:
+    """Paths the temp index differs from HEAD on — i.e. what a --patch-file patch
+    actually staged. In patch mode the caller passes no --files, so the harvest
+    guards must run against THIS set instead (review F1 2026-07-18: patch-mode
+    bypassed both the gitignore and protected-doc-shrink guards).
+
+    ``diff_filter='A'`` restricts to ADDED paths (the gitignore guard only cares
+    about newly-introduced ignored bulk, never modifications to tracked files).
+    Fail-open: any git error returns [] so the guard never breaks a real commit.
+    """
+    cmd = ["git", "diff", "--cached", "--name-only"]
+    if diff_filter:
+        cmd.append(f"--diff-filter={diff_filter}")
+    try:
+        proc = subprocess.run(
+            cmd, cwd=REPO_ROOT, env=env, capture_output=True, text=True, check=False,
+        )
+    except OSError:
+        return []
+    if proc.returncode != 0:
+        return []
+    return [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
+
 
 def _is_protected_append_doc(relpath: str) -> bool:
     return any(m in relpath for m in _PROTECTED_APPEND_DOC_MARKERS)
@@ -666,12 +698,75 @@ def _protected_append_doc_shrink_check(files: list[str], env: dict) -> dict[str,
             cwd=REPO_ROOT, env=env, capture_output=True, text=True, check=False,
         )
         if staged.returncode != 0:
-            # Not staged (shouldn't happen post-add) — skip rather than block.
+            # Staged blob ABSENT while HEAD has it = the protected doc is being
+            # DELETED (or fully removed from the index). Deletion is the MAXIMAL
+            # clobber — treat as staged_lines=0 and flag UNCONDITIONALLY (even a
+            # tiny <threshold doc), so the override is required rather than the
+            # deletion silently allowed (review F1 2026-07-18: --files deletion
+            # and patch-mode deletion both bypassed this by hitting `continue`).
+            hits[f] = (head_lines, 0)
             continue
         staged_lines = staged.stdout.count("\n")
         if head_lines - staged_lines >= _PROTECTED_DOC_SHRINK_LINES:
             hits[f] = (head_lines, staged_lines)
     return hits
+
+
+def _refuse_gitignored(ignored: list[str], record: dict) -> int | None:
+    """rc=13 refusal for gitignored paths about to be committed (a single one
+    aborts the WHOLE `git add` silently). Returns 13 to refuse, None if clean.
+    Shared by the --files pre-lock check and the --patch-file post-apply check
+    so both staging surfaces are guarded identically (review F1 2026-07-18)."""
+    if not ignored:
+        return None
+    _append_log({**record, "outcome": "gitignored_files_in_commit_refused",
+                 "ignored_files": ignored})
+    print(
+        "[subagent-commit-serializer] REFUSED (rc=13): "
+        f"{len(ignored)} file(s) about to be committed are gitignored — a single "
+        "gitignored path aborts the WHOLE `git add` silently (only a git hint, "
+        "no named culprit; incident 2026-07-18 'committing N files' with HEAD "
+        "unmoved). Remove them; bulk / rebuildable artifacts belong on the SSD "
+        f"cold-store, not git. Gitignored: {ignored!r}",
+        file=sys.stderr,
+    )
+    return 13
+
+
+def _refuse_protected_doc_shrink(
+    shrinks: dict, override_raw: str | None, record: dict,
+) -> int | None:
+    """rc=14 refusal for a protected-append-doc whole-file clobber (net line loss
+    OR deletion off a stale base). Returns 14 to refuse, None to allow (logged).
+    A REAL --allow-shared-doc-shrink rationale downgrades to allow; a placeholder
+    stub is rejected. Shared by the --files and --patch-file staging paths so a
+    patch can no longer clobber a protected doc unguarded (review F1 2026-07-18)."""
+    if not shrinks:
+        return None
+    shrink_detail = {f: {"head_lines": h, "staged_lines": s}
+                     for f, (h, s) in shrinks.items()}
+    override = (override_raw or "").strip()
+    if override.lower() in _PLACEHOLDER_RATIONALES:
+        _append_log({**record, "outcome": "protected_append_doc_clobber_refused",
+                     "shrinks": shrink_detail})
+        print(
+            "[subagent-commit-serializer] REFUSED (rc=14): the staged version of "
+            f"a PROTECTED APPEND doc lost >={_PROTECTED_DOC_SHRINK_LINES} lines "
+            "(or was deleted) vs HEAD — the whole-file-clobber-off-a-stale-base "
+            "signature (2026-07-18 completeness-matrix incident wiped a sibling "
+            "arm's factor edits). Re-base with a 3-way `git merge-file -p <yours> "
+            "<base> HEAD:<f> > <f>` (0 conflict markers) so both writers' rows "
+            "survive. If the shrink is INTENTIONAL (consolidation) pass "
+            "--allow-shared-doc-shrink '<real reason>'. "
+            + "; ".join(f"{f}: HEAD={h} lines -> staged={s} lines"
+                        for f, (h, s) in shrinks.items()),
+            file=sys.stderr,
+        )
+        return 14
+    _append_log({**record, "outcome": "protected_append_doc_shrink_allowed",
+                 "allow_shared_doc_shrink_rationale": override,
+                 "shrinks": shrink_detail})
+    return None
 
 
 def _hash_staged_files(files: list[str], env: dict) -> dict[str, str]:
@@ -1360,24 +1455,9 @@ def main(rebind_root: bool = False) -> int:
     # rebuildable artifacts belong on the SSD cold-store, not in git). Skipped
     # in patch mode (--files is derived from the patch, not staged directly).
     if not args.no_stage and not args.patch_file:
-        ignored = _check_ignored_files(files)
-        if ignored:
-            _append_log({
-                **base_record,
-                "outcome": "gitignored_files_in_commit_refused",
-                "ignored_files": ignored,
-            })
-            print(
-                "[subagent-commit-serializer] REFUSED (rc=13): "
-                f"{len(ignored)} file(s) in --files are gitignored — a single "
-                "gitignored path aborts the WHOLE `git add` silently (only a "
-                "git hint, no named culprit; incident 2026-07-18 'committing N "
-                "files' with HEAD unmoved). Remove them from --files; bulk / "
-                "rebuildable artifacts belong on the SSD cold-store, not git. "
-                f"Gitignored: {ignored!r}",
-                file=sys.stderr,
-            )
-            return 13
+        rc13 = _refuse_gitignored(_check_ignored_files(files), base_record)
+        if rc13 is not None:
+            return rc13
 
     # FIX-92aba3ca (2026-05-12 Catalog #157): pre-lock-vs-EXPECTED check.
     # If the caller declared --expected-content-sha256 <file>=<sha>, verify
@@ -1747,6 +1827,27 @@ def main(rebind_root: bool = False) -> int:
                     file=sys.stderr,
                 )
                 return rc
+            # PERMANENT FIX (review F1 2026-07-18): patch-mode harvest guards.
+            # `git apply --cached` stages regardless of .gitignore and can
+            # shrink/delete a protected append doc, and the --files guards above
+            # never run in patch mode (no --files). Run the SAME guards against
+            # the patch's touched files — ADDED paths for the gitignore check,
+            # all touched paths for the shrink/deletion clobber check — reading
+            # staged content from THIS temp index.
+            _patch_ctx = {**base_record, "wait_seconds": wait_seconds,
+                          "temp_index": temp_index_path}
+            rc13 = _refuse_gitignored(
+                _check_ignored_files(_staged_touched_files(env, diff_filter="A")),
+                _patch_ctx,
+            )
+            if rc13 is not None:
+                return rc13
+            rc14 = _refuse_protected_doc_shrink(
+                _protected_append_doc_shrink_check(_staged_touched_files(env), env),
+                args.allow_shared_doc_shrink, _patch_ctx,
+            )
+            if rc14 is not None:
+                return rc14
         elif not args.no_stage:
             rc, msg = _git_add(files, env)
             if rc != 0:
@@ -1766,53 +1867,14 @@ def main(rebind_root: bool = False) -> int:
             # the caller declares an intentional shrink via
             # --allow-shared-doc-shrink <rationale>. The RIGHT fix is a 3-way
             # `git merge-file`, which this guard's message points the caller to.
-            shrinks = _protected_append_doc_shrink_check(files, env)
-            if shrinks:
-                override = (args.allow_shared_doc_shrink or "").strip()
-                placeholder = override.lower() in {
-                    "", "<rationale>", "<reason>", "rationale", "reason", "tbd",
-                }
-                if placeholder:
-                    _append_log({
-                        **base_record,
-                        "outcome": "protected_append_doc_clobber_refused",
-                        "wait_seconds": wait_seconds,
-                        "shrinks": {
-                            f: {"head_lines": h, "staged_lines": s}
-                            for f, (h, s) in shrinks.items()
-                        },
-                        "temp_index": temp_index_path,
-                    })
-                    print(
-                        "[subagent-commit-serializer] REFUSED (rc=14): the "
-                        "staged version of a PROTECTED APPEND doc lost "
-                        f">={_PROTECTED_DOC_SHRINK_LINES} lines vs HEAD — the "
-                        "whole-file-clobber-off-a-stale-base signature "
-                        "(2026-07-18 completeness-matrix incident wiped a "
-                        "sibling arm's factor edits). Re-base with a 3-way "
-                        "`git merge-file -p <yours> <base> HEAD:<f> > <f>` (0 "
-                        "conflict markers) so both writers' rows survive. If "
-                        "the shrink is INTENTIONAL (consolidation) pass "
-                        "--allow-shared-doc-shrink '<real reason>'. "
-                        + "; ".join(
-                            f"{f}: HEAD={h} lines -> staged={s} lines"
-                            for f, (h, s) in shrinks.items()
-                        ),
-                        file=sys.stderr,
-                    )
-                    return 14
-                # Intentional shrink declared with a real rationale — log + allow.
-                _append_log({
-                    **base_record,
-                    "outcome": "protected_append_doc_shrink_allowed",
-                    "wait_seconds": wait_seconds,
-                    "allow_shared_doc_shrink_rationale": override,
-                    "shrinks": {
-                        f: {"head_lines": h, "staged_lines": s}
-                        for f, (h, s) in shrinks.items()
-                    },
-                    "temp_index": temp_index_path,
-                })
+            rc14 = _refuse_protected_doc_shrink(
+                _protected_append_doc_shrink_check(files, env),
+                args.allow_shared_doc_shrink,
+                {**base_record, "wait_seconds": wait_seconds,
+                 "temp_index": temp_index_path},
+            )
+            if rc14 is not None:
+                return rc14
 
             # Catalog #405 hunk-attribution WARN (never refuses): if the caller
             # hinted --expected-diff-lines, compare the actually-staged diff

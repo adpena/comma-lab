@@ -336,6 +336,186 @@ def test_new_protected_doc_not_on_head_commits_fine(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Review F1 (2026-07-18): the 4 BYPASSES the fresh-eyes review found — the
+# guards only ran on the --files staging path (`not patch_mode`) and skipped
+# deletions, and the placeholder set missed 'TODO'. These pin the closures.
+# ---------------------------------------------------------------------------
+
+def _make_head_patch(repo: Path, patch_name: str) -> Path:
+    """Build a HEAD-based unified-diff patch from the CURRENT working-tree state
+    (force-staging even gitignored files), then restore the index to HEAD so the
+    patch is the only carrier of the change. Mirrors how a real --patch-file
+    caller regenerates a patch against HEAD."""
+    assert _git(repo, "add", "-f", "-A").returncode == 0
+    diff = _git(repo, "diff", "--cached", "HEAD")
+    assert diff.returncode == 0, diff.stderr
+    patch = repo / patch_name
+    patch.write_text(diff.stdout)
+    _git(repo, "reset", "-q")  # unstage; the patch now owns the change
+    return patch
+
+
+def test_patch_mode_gitignored_add_refused_rc13(tmp_path: Path) -> None:
+    """BYPASS 1: `git apply --cached` stages regardless of .gitignore, so a patch
+    that ADDS a gitignored bulk file slipped past the --files-only rc=13 guard.
+    The patch-mode guard now refuses it."""
+    repo = tmp_path / "repo"
+    _make_throwaway_repo(repo)
+    (repo / "storage_plan.json").write_text('{"bulk": true}\n')  # gitignored
+    patch = _make_head_patch(repo, "add_ignored.patch")
+    before = _head(repo)
+    mod = _load_module()
+    with _Patched(mod, repo):
+        rc = _run_main(mod, [
+            "--message", "patch that adds a gitignored bulk file",
+            "--patch-file", str(patch),
+            "--no-sister-checkpoint-check",
+            "--label", "patch_gitignore_refuse",
+        ])
+        outcomes = _log_outcomes(mod)
+    assert rc == 13, "patch-mode gitignored add must be refused with rc=13"
+    assert _head(repo) == before, "HEAD must NOT move on refusal"
+    assert "gitignored_files_in_commit_refused" in outcomes
+
+
+def test_patch_mode_protected_doc_shrink_refused_rc14(tmp_path: Path) -> None:
+    """BYPASS 2: a patch that SHRINKS a protected append doc off a stale base
+    skipped the --files-only rc=14 guard. The patch-mode guard now refuses it."""
+    repo = tmp_path / "repo"
+    _make_throwaway_repo(repo)
+    rel = ".omx/research/inverse_solve_completeness_matrix_20260718.md"
+    _seed_protected_doc(repo, rel, 40)
+    (repo / rel).write_text("".join(f"row {i}\n" for i in range(10)))  # -30
+    patch = _make_head_patch(repo, "shrink_matrix.patch")
+    before = _head(repo)
+    mod = _load_module()
+    with _Patched(mod, repo):
+        rc = _run_main(mod, [
+            "--message", "patch that clobbers the matrix off a stale base",
+            "--patch-file", str(patch),
+            "--no-sister-checkpoint-check",
+            "--label", "patch_matrix_clobber",
+        ])
+        outcomes = _log_outcomes(mod)
+    assert rc == 14, "patch-mode protected-doc shrink must be refused with rc=14"
+    assert _head(repo) == before, "HEAD must NOT move on refusal"
+    assert "protected_append_doc_clobber_refused" in outcomes
+
+
+def test_files_deletion_of_protected_doc_refused_rc14(tmp_path: Path) -> None:
+    """BYPASS 3: deleting a protected append doc via --files hit the shrink
+    check's staged-absent `continue` and was silently allowed. Deletion is the
+    MAXIMAL clobber — it now refuses with rc=14 (override still available)."""
+    repo = tmp_path / "repo"
+    _make_throwaway_repo(repo)
+    rel = "docs/sub015_DAG_topaiml_reopen.md"
+    _seed_protected_doc(repo, rel, 40)
+    before = _head(repo)
+    (repo / rel).unlink()  # delete the protected doc
+    mod = _load_module()
+    with _Patched(mod, repo):
+        rc = _run_main(mod, [
+            "--message", "delete the DAG doc",
+            "--files", rel,
+            "--no-sister-checkpoint-check",
+            "--label", "dag_delete",
+        ])
+        outcomes = _log_outcomes(mod)
+    assert rc == 14, "deletion of a protected append doc must be refused with rc=14"
+    assert _head(repo) == before, "HEAD must NOT move on refusal"
+    assert "protected_append_doc_clobber_refused" in outcomes
+
+
+def test_files_deletion_of_protected_doc_allowed_with_rationale(tmp_path: Path) -> None:
+    """The deletion refusal is overridable: a real --allow-shared-doc-shrink
+    rationale lets a deliberate removal through (retirement/consolidation)."""
+    repo = tmp_path / "repo"
+    _make_throwaway_repo(repo)
+    rel = "docs/sub015_DAG_topaiml_reopen.md"
+    _seed_protected_doc(repo, rel, 40)
+    before = _head(repo)
+    (repo / rel).unlink()
+    mod = _load_module()
+    with _Patched(mod, repo):
+        rc = _run_main(mod, [
+            "--message", "retire the superseded DAG doc",
+            "--files", rel,
+            "--allow-shared-doc-shrink", "retiring the superseded 2026 DAG doc",
+            "--no-sister-checkpoint-check",
+            "--label", "dag_retire",
+        ])
+        outcomes = _log_outcomes(mod)
+    assert rc == 0, "declared intentional deletion must commit"
+    assert _head(repo) != before
+    assert "protected_append_doc_shrink_allowed" in outcomes
+
+
+def test_patch_mode_normal_change_still_commits(tmp_path: Path) -> None:
+    """CRITICAL positive case: a legit patch (new normal file, no gitignored add,
+    no protected-doc shrink) must STILL commit rc=0 — the new patch-mode guards
+    must not false-positive and brick the intent-manifest path."""
+    repo = tmp_path / "repo"
+    _make_throwaway_repo(repo)
+    (repo / "normal_note.md").write_text("a perfectly ordinary note\nline two\n")
+    patch = _make_head_patch(repo, "normal.patch")
+    before = _head(repo)
+    mod = _load_module()
+    with _Patched(mod, repo):
+        rc = _run_main(mod, [
+            "--message", "patch that adds an ordinary tracked file",
+            "--patch-file", str(patch),
+            "--no-sister-checkpoint-check",
+            "--label", "patch_normal_ok",
+        ])
+    assert rc == 0, "a legit patch-mode commit must succeed (no false-positive)"
+    assert _head(repo) != before, "HEAD must advance on a real patch commit"
+
+
+def test_patch_mode_protected_doc_append_still_commits(tmp_path: Path) -> None:
+    """A patch that GROWS a protected append doc (the common case) must commit —
+    the patch-mode shrink guard fires only on a net line LOSS, never an append."""
+    repo = tmp_path / "repo"
+    _make_throwaway_repo(repo)
+    rel = "x_DAG_FEED_2026.md"
+    _seed_protected_doc(repo, rel, 20)
+    (repo / rel).write_text("".join(f"row {i}\n" for i in range(35)))  # +15
+    patch = _make_head_patch(repo, "append_feed.patch")
+    before = _head(repo)
+    mod = _load_module()
+    with _Patched(mod, repo):
+        rc = _run_main(mod, [
+            "--message", "patch that appends DAG FEED rows",
+            "--patch-file", str(patch),
+            "--no-sister-checkpoint-check",
+            "--label", "patch_feed_append",
+        ])
+    assert rc == 0, "a patch-mode append to a protected doc must succeed"
+    assert _head(repo) != before
+
+
+def test_todo_placeholder_rationale_refused(tmp_path: Path) -> None:
+    """BYPASS 4: 'TODO' (and fixme/xxx/wip/none/...) are placeholder stubs, not a
+    real reason — they must NOT satisfy the --allow-shared-doc-shrink escape."""
+    repo = tmp_path / "repo"
+    _make_throwaway_repo(repo)
+    rel = ".omx/research/inverse_solve_completeness_matrix_20260718.md"
+    _seed_protected_doc(repo, rel, 40)
+    (repo / rel).write_text("".join(f"row {i}\n" for i in range(10)))
+    mod = _load_module()
+    with _Patched(mod, repo):
+        rc = _run_main(mod, [
+            "--message", "clobber with a TODO placeholder rationale",
+            "--files", rel,
+            "--allow-shared-doc-shrink", "TODO",
+            "--no-sister-checkpoint-check",
+            "--label", "todo_placeholder_refuse",
+        ])
+        outcomes = _log_outcomes(mod)
+    assert rc == 14, "'TODO' placeholder must NOT waive the guard"
+    assert "protected_append_doc_clobber_refused" in outcomes
+
+
+# ---------------------------------------------------------------------------
 # Unit-level: the helper predicates.
 # ---------------------------------------------------------------------------
 
