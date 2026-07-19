@@ -186,6 +186,39 @@ def build_pose_plane_proximity_law_v1() -> CanonicalEquation:
         provenance=_prov(SOURCE_MEMO),
         empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
     )
+    anchor_intermediate = EmpiricalAnchor(
+        anchor_id="intermediate_regime_measured_secant_curve_20260719",
+        measurement_utc="2026-07-19T10:11:42Z",
+        inputs={
+            "corpus": "n24 real pairs x 9 coarsening points (margin/precision/spatial families)",
+            "coarseness_axis": (
+                "description fidelity = plane proximity (coarser residual -> farther plane)"
+            ),
+        },
+        predicted_output=(
+            "law: pose free NEAR source, destroyed FAR; intermediate UNMEASURED — "
+            "coarsening should raise d_pose monotonically toward the crossover then past it"
+        ),
+        empirical_output=(
+            "MEASURED, mechanism CONFIRMED: margin family (nearest source) 96/96 inactive "
+            "(d_pose 1.8e-8..8.4e-7); precision drop-1 24/24 inactive (3.9e-5); precision "
+            "drop-2/3 = 6 per-pair crossover VIOLATIONS (3.03e-4..5.84e-4 vs 2.5e-4); "
+            "spatial stride-8/16 (farthest plane) 48/48 violated, mean d_pose 0.85-1.02 = "
+            "far-generator regime. Unrestricted all-in-band-rows inactivity REFUTED at n24 "
+            "instance scope; pose inactivity is PLANE-PROXIMITY-CONDITIONAL exactly as the "
+            "law states — the selected KKT segment (margin_m0p3<->precision_drop1) is "
+            "120/120 inactive"
+        ),
+        residual=5.84e-4,
+        source_artifact=".omx/research/seg_secant_rd_curve_n24_20260719_v2.json",
+        measurement_method=(
+            "full native-fp32 CPU-Torch hard oracle per pair/point; reachable uint8 "
+            "preimages via generated-predictor block replacement / bit-plane truncation / "
+            "stride-sampled reconstruction; merge c6b798f146"
+        ),
+        provenance=_prov(".omx/research/seg_secant_rd_curve_n24_20260719_v2.json"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="pose is a corollary of plane proximity to source",
@@ -206,15 +239,20 @@ def build_pose_plane_proximity_law_v1() -> CanonicalEquation:
         domain_of_validity={
             "scorers": "frozen SegNet + PoseNet, shared bilinear A (modules.py:71-75)",
             "claim_type": "v10 carrier-design regime classifier (advisory)",
-            "unmeasured": "intermediate plane-RMSE regime — the bytes(tau_pose) curve",
+            "intermediate_regime": (
+                "MEASURED 2026-07-19 (secant 9-point curve, n24): monotone toward the "
+                "crossover then past it — see anchor intermediate_regime_measured_"
+                "secant_curve_20260719; bytes(tau_pose) full curve still owed at n600"
+            ),
             "verdict_scope": (
                 "far-generator anchor is instance-scoped (c2-witness-as-"
-                "generator); near-source regime spans 3 independent rows"
+                "generator); near-source regime spans 3 independent rows; "
+                "intermediate regime measured at n24 instance scope"
             ),
         },
         units_in={"plane_rmse_vs_source": "uint8 plane units (0..255)"},
         units_out={"regime": "categorical", "predicted_dpose_band": "d_pose (1/6-mean MSE)"},
-        empirical_anchors=(anchor_near, anchor_bindingness, anchor_far),
+        empirical_anchors=(anchor_near, anchor_bindingness, anchor_far, anchor_intermediate),
         predicted_vs_empirical_residual={
             "near_source_dpose_max": NEAR_SOURCE_DPOSE_MAX,
             "far_plane_dpose": FAR_PLANE_DPOSE,

@@ -143,6 +143,35 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
         provenance=_prov(SOURCE_MEMO, _UTC),
         empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
     )
+    anchor_preimage = EmpiricalAnchor(
+        anchor_id="preimage_dependent_fp32_resize_noise_20260719",
+        measurement_utc="2026-07-19T09:00:00Z",
+        inputs={
+            "row": "#541 rung-E degenerate zero-band, n48 real pairs, all 56,623,104 numerators exact",
+            "preimage_policy": "predictor-optimal uint8 preimages (spatial-smooth-121 residual path)",
+            "reference": "n600 replay preimage policy: 0.19 mismatched px/pair (d_seg 9.66e-7)",
+        },
+        predicted_output=(
+            "exactness admissibility: exact numerators => scorer-plane equality => "
+            "d_seg at ULP-tie floor"
+        ),
+        empirical_output=(
+            "VIOLATED at the preimage layer: d_seg 1.2345e-4 / d_pose 5.0416e-5 — "
+            "1,165 flips over 48 pairs = 24.3 px/pair, 127x the replay policy. "
+            "MECHANISM: the scorer computes the resize in native fp32 FROM THE CAMERA "
+            "FRAME; different uint8 preimages of the identical rational plane perturb "
+            "fp32 rounding differently. Preimage choice is an fp32-noise lever; "
+            "~1e-4-class d_seg is the floor under predictor-optimal preimages."
+        ),
+        residual=1.2345e-4,
+        source_artifact=".omx/research/yhat_native_generator_20260719_codex.md",
+        measurement_method=(
+            "rung-E archive build->parse->inflate->realize->full hard oracle "
+            "(merge 305abdbd17)"
+        ),
+        provenance=_prov(".omx/research/yhat_native_generator_20260719_codex.md", "2026-07-19T09:00:00Z"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="f32 receiver-arithmetic exactness admissibility",
@@ -164,7 +193,7 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
         domain_of_validity={
             "scorer": "frozen SegNet argmax, native float32 CPU-Torch semantics",
             "claim_type": "d_seg exactness / bit-identity verdicts",
-            "instances_measured": ["frame_195", "pair_125"],
+            "instances_measured": ["frame_195", "pair_125", "rung_E_n48_preimage_policy"],
             "verdict_scope": (
                 "instance-anchored law; the ULP class floor recalibrates as the "
                 "max over measured instances"
@@ -175,7 +204,7 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
             "ulp_class_margin": "logit units",
         },
         units_out={"admissible": "bool", "basis": "categorical"},
-        empirical_anchors=(anchor_frame195, anchor_pair125),
+        empirical_anchors=(anchor_frame195, anchor_pair125, anchor_preimage),
         predicted_vs_empirical_residual={
             "frame195_margin": FRAME_195_MARGIN,
             "pair125_dseg": PAIR_125_DSEG,
