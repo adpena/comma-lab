@@ -1,0 +1,682 @@
+{
+  "authority": {
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "verdict_scope": "48 real pairs and four independently compressed n12 streams only"
+  },
+  "axis": "[Darwin-arm64 CPU advisory real-cache n48] NON-PROMOTABLE",
+  "best_predictor": {
+    "conditional_zstd_19_bytes": 16873868,
+    "mode": "spatial-smooth-121.v1",
+    "production_brotli_q11_archive_section_bytes": 31872098,
+    "selection_rule": "minimum production inner-Brotli-Q11 archive-section bytes; direct conditional zstd-19 then registry order break ties"
+  },
+  "cache_custody": {
+    "bytes": 5078017610,
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "exact_canonical_chunks": [
+    [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    [
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    [
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35
+    ],
+    [
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47
+    ]
+  ],
+  "labels": {
+    "DERIVED": [
+      "n48 sums and best-mode ordering"
+    ],
+    "INFERRED": [],
+    "MEASURED": [
+      "four actual n12 codec/compressor receipts"
+    ]
+  },
+  "modes": [
+    {
+      "attribution": {
+        "class": [
+          {
+            "class_id": 0,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 3119062,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 14069128,
+              "stream_count": 4,
+              "zstd_19_bytes": 3348069
+            },
+            "selected_pixels": 2147560
+          },
+          {
+            "class_id": 1,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 172118,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1546108,
+              "stream_count": 4,
+              "zstd_19_bytes": 202710
+            },
+            "selected_pixels": 60390
+          },
+          {
+            "class_id": 2,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 8409101,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 29190658,
+              "stream_count": 4,
+              "zstd_19_bytes": 9083193
+            },
+            "selected_pixels": 4667815
+          },
+          {
+            "class_id": 3,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 295511,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 2039944,
+              "stream_count": 4,
+              "zstd_19_bytes": 351264
+            },
+            "selected_pixels": 142696
+          },
+          {
+            "class_id": 4,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 4589367,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 15696106,
+              "stream_count": 4,
+              "zstd_19_bytes": 4847808
+            },
+            "selected_pixels": 2418723
+          }
+        ],
+        "margin": [
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 87864,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1334536,
+              "stream_count": 4,
+              "zstd_19_bytes": 105140
+            },
+            "margin_bin": "[0,.1)",
+            "selected_pixels": 25128
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 124350,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1407508,
+              "stream_count": 4,
+              "zstd_19_bytes": 143450
+            },
+            "margin_bin": "[.1,.25)",
+            "selected_pixels": 37290
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 190616,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1556200,
+              "stream_count": 4,
+              "zstd_19_bytes": 216017
+            },
+            "margin_bin": "[.25,.5)",
+            "selected_pixels": 62072
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 313431,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1884400,
+              "stream_count": 4,
+              "zstd_19_bytes": 357987
+            },
+            "margin_bin": "[.5,1)",
+            "selected_pixels": 116772
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 463286,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 2335876,
+              "stream_count": 4,
+              "zstd_19_bytes": 526267
+            },
+            "margin_bin": "[1,2)",
+            "selected_pixels": 192018
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 15629138,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 55207192,
+              "stream_count": 4,
+              "zstd_19_bytes": 16530948
+            },
+            "margin_bin": "[2,inf)",
+            "selected_pixels": 9003904
+          }
+        ]
+      },
+      "conditional_representation": {
+        "decoded_descriptor_plus_residual_bytes": 56623104,
+        "direct_global_coder_ab": {
+          "all_decompression_verified": true,
+          "brotli_q11_bytes": 16390330,
+          "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+          "raw_bytes": 56623104,
+          "stream_count": 4,
+          "zstd_19_bytes": 17356549
+        },
+        "production_brotli_q11_bytes": 16414411
+      },
+      "full_representation": {
+        "all_parseback_decompression_verified": true,
+        "production_brotli_q11_archive_section_bytes": 32171488,
+        "production_stream_count": 4,
+        "secondary_double_compression_diagnostic": {
+          "all_decompression_verified": true,
+          "brotli_q11_bytes": 32171600,
+          "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+          "raw_bytes": 32171488,
+          "stream_count": 4,
+          "zstd_19_bytes": 32172272
+        }
+      },
+      "mode": "previous-plane-copy.v1",
+      "pair_count": 48,
+      "prediction": {
+        "residual_abs_sum": 111364934,
+        "residual_nonzero_values": 24263715,
+        "residual_values": 28311552
+      }
+    },
+    {
+      "attribution": {
+        "class": [
+          {
+            "class_id": 0,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 3131971,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 14069128,
+              "stream_count": 4,
+              "zstd_19_bytes": 3323829
+            },
+            "selected_pixels": 2147560
+          },
+          {
+            "class_id": 1,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 171431,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1546108,
+              "stream_count": 4,
+              "zstd_19_bytes": 203558
+            },
+            "selected_pixels": 60390
+          },
+          {
+            "class_id": 2,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 8436298,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 29190658,
+              "stream_count": 4,
+              "zstd_19_bytes": 8936037
+            },
+            "selected_pixels": 4667815
+          },
+          {
+            "class_id": 3,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 297269,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 2039944,
+              "stream_count": 4,
+              "zstd_19_bytes": 345792
+            },
+            "selected_pixels": 142696
+          },
+          {
+            "class_id": 4,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 4509933,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 15696106,
+              "stream_count": 4,
+              "zstd_19_bytes": 4763113
+            },
+            "selected_pixels": 2418723
+          }
+        ],
+        "margin": [
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 88385,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1334536,
+              "stream_count": 4,
+              "zstd_19_bytes": 103795
+            },
+            "margin_bin": "[0,.1)",
+            "selected_pixels": 25128
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 124038,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1407508,
+              "stream_count": 4,
+              "zstd_19_bytes": 142761
+            },
+            "margin_bin": "[.1,.25)",
+            "selected_pixels": 37290
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 187493,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1556200,
+              "stream_count": 4,
+              "zstd_19_bytes": 214815
+            },
+            "margin_bin": "[.25,.5)",
+            "selected_pixels": 62072
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 312014,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1884400,
+              "stream_count": 4,
+              "zstd_19_bytes": 357340
+            },
+            "margin_bin": "[.5,1)",
+            "selected_pixels": 116772
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 459668,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 2335876,
+              "stream_count": 4,
+              "zstd_19_bytes": 522197
+            },
+            "margin_bin": "[1,2)",
+            "selected_pixels": 192018
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 15592607,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 55207192,
+              "stream_count": 4,
+              "zstd_19_bytes": 16653830
+            },
+            "margin_bin": "[2,inf)",
+            "selected_pixels": 9003904
+          }
+        ]
+      },
+      "conditional_representation": {
+        "decoded_descriptor_plus_residual_bytes": 56624256,
+        "direct_global_coder_ab": {
+          "all_decompression_verified": true,
+          "brotli_q11_bytes": 16360410,
+          "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+          "raw_bytes": 56624256,
+          "stream_count": 4,
+          "zstd_19_bytes": 17251044
+        },
+        "production_brotli_q11_bytes": 16344819
+      },
+      "full_representation": {
+        "all_parseback_decompression_verified": true,
+        "production_brotli_q11_archive_section_bytes": 32101896,
+        "production_stream_count": 4,
+        "secondary_double_compression_diagnostic": {
+          "all_decompression_verified": true,
+          "brotli_q11_bytes": 32102008,
+          "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+          "raw_bytes": 32101896,
+          "stream_count": 4,
+          "zstd_19_bytes": 32102677
+        }
+      },
+      "mode": "affine6-q12.v1",
+      "pair_count": 48,
+      "prediction": {
+        "residual_abs_sum": 108370411,
+        "residual_nonzero_values": 24311706,
+        "residual_values": 28311552
+      }
+    },
+    {
+      "attribution": {
+        "class": [
+          {
+            "class_id": 0,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 3141680,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 14069128,
+              "stream_count": 4,
+              "zstd_19_bytes": 3352259
+            },
+            "selected_pixels": 2147560
+          },
+          {
+            "class_id": 1,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 172924,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1546108,
+              "stream_count": 4,
+              "zstd_19_bytes": 203044
+            },
+            "selected_pixels": 60390
+          },
+          {
+            "class_id": 2,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 8239803,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 29190658,
+              "stream_count": 4,
+              "zstd_19_bytes": 8699185
+            },
+            "selected_pixels": 4667815
+          },
+          {
+            "class_id": 3,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 295969,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 2039944,
+              "stream_count": 4,
+              "zstd_19_bytes": 340867
+            },
+            "selected_pixels": 142696
+          },
+          {
+            "class_id": 4,
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 4429885,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 15696106,
+              "stream_count": 4,
+              "zstd_19_bytes": 4632164
+            },
+            "selected_pixels": 2418723
+          }
+        ],
+        "margin": [
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 89807,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1334536,
+              "stream_count": 4,
+              "zstd_19_bytes": 104421
+            },
+            "margin_bin": "[0,.1)",
+            "selected_pixels": 25128
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 125248,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1407508,
+              "stream_count": 4,
+              "zstd_19_bytes": 143095
+            },
+            "margin_bin": "[.1,.25)",
+            "selected_pixels": 37290
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 187882,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1556200,
+              "stream_count": 4,
+              "zstd_19_bytes": 215863
+            },
+            "margin_bin": "[.25,.5)",
+            "selected_pixels": 62072
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 316092,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 1884400,
+              "stream_count": 4,
+              "zstd_19_bytes": 358909
+            },
+            "margin_bin": "[.5,1)",
+            "selected_pixels": 116772
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 463752,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 2335876,
+              "stream_count": 4,
+              "zstd_19_bytes": 523673
+            },
+            "margin_bin": "[1,2)",
+            "selected_pixels": 192018
+          },
+          {
+            "counted_streams": {
+              "all_decompression_verified": true,
+              "brotli_q11_bytes": 15267765,
+              "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+              "raw_bytes": 55207192,
+              "stream_count": 4,
+              "zstd_19_bytes": 16444179
+            },
+            "margin_bin": "[2,inf)",
+            "selected_pixels": 9003904
+          }
+        ]
+      },
+      "conditional_representation": {
+        "decoded_descriptor_plus_residual_bytes": 56623104,
+        "direct_global_coder_ab": {
+          "all_decompression_verified": true,
+          "brotli_q11_bytes": 16037540,
+          "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+          "raw_bytes": 56623104,
+          "stream_count": 4,
+          "zstd_19_bytes": 16873868
+        },
+        "production_brotli_q11_bytes": 16115021
+      },
+      "full_representation": {
+        "all_parseback_decompression_verified": true,
+        "production_brotli_q11_archive_section_bytes": 31872098,
+        "production_stream_count": 4,
+        "secondary_double_compression_diagnostic": {
+          "all_decompression_verified": true,
+          "brotli_q11_bytes": 31872207,
+          "composition": "sum of four independently parseable, actually compressed canonical chunk streams",
+          "raw_bytes": 31872098,
+          "stream_count": 4,
+          "zstd_19_bytes": 31872873
+        }
+      },
+      "mode": "spatial-smooth-121.v1",
+      "pair_count": 48,
+      "prediction": {
+        "residual_abs_sum": 102556724,
+        "residual_nonzero_values": 24431486,
+        "residual_values": 28311552
+      }
+    }
+  ],
+  "pair_count": 48,
+  "pair_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47
+  ],
+  "research_only": true,
+  "schema": "v10_free_predictor_floor_n48.v1",
+  "source_receipts": [
+    {
+      "bytes": 38627,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/constructive_solver_541_20260719_20260719T070402Z/.omx/research/constructive_solver_541_predictor_floor_chunk_00_11_20260719.json",
+      "sha256": "390b757db01c2fd0215d660067f406934cd0d9466eba6e64e7ed9f91eac8527a"
+    },
+    {
+      "bytes": 38646,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/constructive_solver_541_20260719_20260719T070402Z/.omx/research/constructive_solver_541_predictor_floor_chunk_12_23_20260719.json",
+      "sha256": "4ef9ca4e50acfa11a8c15b7843dac2097ba7d62eb55103c1d627e6554aac6382"
+    },
+    {
+      "bytes": 38646,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/constructive_solver_541_20260719_20260719T070402Z/.omx/research/constructive_solver_541_predictor_floor_chunk_24_35_20260719.json",
+      "sha256": "36994916ea3cefbc2bd15a3fceada9709d7fdb36fab2c98dda316df7fb881ba5"
+    },
+    {
+      "bytes": 38646,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/constructive_solver_541_20260719_20260719T070402Z/.omx/research/constructive_solver_541_predictor_floor_chunk_36_47_20260719.json",
+      "sha256": "0c1768b674d5d3530692c922f28d458fc49303d82d0ba291992e0c09d59d4a05"
+    }
+  ],
+  "written_at_utc": "2026-07-19T08:18:13.694368+00:00"
+}

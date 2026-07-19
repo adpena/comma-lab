@@ -24,6 +24,15 @@ from typing import Any
 
 import numpy as np
 
+from tac.codec.v10_predictor_residual import (
+    CODEC_ID as PREDICTOR_RESIDUAL_Y_CODEC_ID,
+)
+from tac.codec.v10_predictor_residual import (
+    PredictorMode,
+    PredictorResidualError,
+    decode_predictor_residual,
+    encode_predictor_residual,
+)
 from tac.optimization.uint8_lattice_feasibility import (
     DisjointResizeOperator,
     Uint8LatticeError,
@@ -45,8 +54,10 @@ RECEIVER_CONTRACT_ID = "factor2-disjoint-half-pixel-uint8.v1"
 TIE_POLICY_ID = "native-cpu-torch-f32-first-max-class-index.v1"
 ARITHMETIC_ID = "integer-only-support-fill-after-native-f32-encode-selection.v1"
 FRAME0_POLICY_ID = "repeat-frame1"
+DESCRIPTION_FRAME0_POLICY_ID = "description-frame0.v1"
+FRAME0_POLICY_IDS = frozenset({FRAME0_POLICY_ID, DESCRIPTION_FRAME0_POLICY_ID})
 RESIDUAL_CODEC_ID = "sparse-int16-le.v1"
-Y_CODEC_IDS = frozenset({"raw-uint8-y", "brotli-y", "witness-y-stub"})
+Y_CODEC_IDS = frozenset({"raw-uint8-y", "brotli-y", "witness-y-stub", PREDICTOR_RESIDUAL_Y_CODEC_ID})
 SECTION_ORDER = ("y_description", "frame0_policy", "quotient_residual")
 
 MAX_HEADER_BYTES = 1 << 20
@@ -155,6 +166,14 @@ class InflateResult:
     storage_preflight: Mapping[str, Any]
 
 
+@dataclass(frozen=True)
+class DecodedYPlanePair:
+    """Typed scorer-plane pair returned by the closed production grammar."""
+
+    frame0: np.ndarray
+    frame1: np.ndarray
+
+
 @dataclass(frozen=True, order=True)
 class QuotientResidualUpdate:
     pair_index: int
@@ -229,6 +248,8 @@ def _encode_y(raw: bytes, codec_id: str) -> bytes:
         return bytes(_brotli().compress(raw, quality=11))
     if codec_id == "witness-y-stub":
         return raw
+    if codec_id == PREDICTOR_RESIDUAL_Y_CODEC_ID:
+        raise ProductionReceiverError("predictor-residual requires typed two-plane encoding")
     raise ProductionReceiverError(f"unknown y codec id {codec_id!r}")
 
 
@@ -242,6 +263,12 @@ def _decode_y(section: ProductionSection) -> bytes:
             decoded = bytes(_brotli().decompress(section.payload))
         except Exception as exc:
             raise ProductionReceiverError("brotli-y decompression failed") from exc
+    elif section.codec_id == PREDICTOR_RESIDUAL_Y_CODEC_ID:
+        try:
+            pair = decode_predictor_residual(section.payload)
+        except PredictorResidualError as exc:
+            raise ProductionReceiverError("predictor-residual y payload refused") from exc
+        decoded = pair.frame0.tobytes(order="C") + pair.frame1.tobytes(order="C")
     else:
         raise ProductionReceiverError(f"unknown y codec id {section.codec_id!r}")
     if len(decoded) != section.decoded_byte_length or _sha256(decoded) != section.decoded_sha256:
@@ -380,6 +407,10 @@ def build_packet(
     camera_height: int,
     camera_width: int,
     y_codec_id: str = "raw-uint8-y",
+    frame0_y_planes: np.ndarray | None = None,
+    predictor_modes: PredictorMode | str | int | Sequence[PredictorMode | str | int] | None = None,
+    predictor_descriptors: Sequence[bytes] | None = None,
+    predictor_pair_ids: Sequence[int] | None = None,
     quotient_residual: np.ndarray | Sequence[QuotientResidualUpdate] | None = None,
 ) -> bytes:
     """Build canonical ``0.bin`` bytes from exact uint8 scorer planes."""
@@ -407,21 +438,50 @@ def build_packet(
         }
     )
 
-    y_raw = y.tobytes(order="C")
+    if y_codec_id == PREDICTOR_RESIDUAL_Y_CODEC_ID:
+        if frame0_y_planes is None:
+            raise ProductionReceiverError("predictor-residual y codec requires frame0_y_planes")
+        frame0 = np.asarray(frame0_y_planes)
+        if frame0.dtype != np.uint8 or frame0.shape != y.shape:
+            raise ProductionReceiverError("frame0_y_planes must match exact uint8 frame1 geometry")
+        frame0 = np.ascontiguousarray(frame0)
+        try:
+            y_payload = encode_predictor_residual(
+                frame0,
+                y,
+                modes=PredictorMode.PREVIOUS_PLANE_COPY if predictor_modes is None else predictor_modes,
+                descriptors=predictor_descriptors,
+                pair_ids=predictor_pair_ids,
+            )
+        except PredictorResidualError as exc:
+            raise ProductionReceiverError("predictor-residual y encoding refused") from exc
+        y_raw = frame0.tobytes(order="C") + y.tobytes(order="C")
+        frame0_policy_id = DESCRIPTION_FRAME0_POLICY_ID
+    else:
+        if (
+            frame0_y_planes is not None
+            or predictor_modes is not None
+            or predictor_descriptors is not None
+            or predictor_pair_ids is not None
+        ):
+            raise ProductionReceiverError("legacy y codecs refuse predictor-only two-plane arguments")
+        y_raw = y.tobytes(order="C")
+        y_payload = _encode_y(y_raw, y_codec_id)
+        frame0_policy_id = FRAME0_POLICY_ID
     if len(y_raw) > MAX_DECODED_PLANE_BYTES:
         raise ProductionReceiverError("decoded y plane bytes exceed the cap")
     sections = [
         ProductionSection(
             "y_description",
             y_codec_id,
-            _encode_y(y_raw, y_codec_id),
+            y_payload,
             len(y_raw),
             _sha256(y_raw),
             True,
         ),
         ProductionSection(
             "frame0_policy",
-            FRAME0_POLICY_ID,
+            frame0_policy_id,
             b"",
             0,
             _sha256(b""),
@@ -471,7 +531,7 @@ def build_packet(
         "receiver_contract_id": RECEIVER_CONTRACT_ID,
         "tie_policy_id": TIE_POLICY_ID,
         "arithmetic_id": ARITHMETIC_ID,
-        "frame0_policy_id": FRAME0_POLICY_ID,
+        "frame0_policy_id": frame0_policy_id,
         "y_codec_id": y_codec_id,
         "residual_codec_id": residual_codec_id,
         "launch_ready": False,
@@ -538,7 +598,7 @@ def parse_packet(packet_bytes: bytes, *, max_packet_bytes: int = MAX_PACKET_BYTE
         header["receiver_contract_id"] != RECEIVER_CONTRACT_ID
         or header["tie_policy_id"] != TIE_POLICY_ID
         or header["arithmetic_id"] != ARITHMETIC_ID
-        or header["frame0_policy_id"] != FRAME0_POLICY_ID
+        or header["frame0_policy_id"] not in FRAME0_POLICY_IDS
     ):
         raise ProductionReceiverError("receiver/arithmetic/tie/frame0 policy declaration drift")
     if header["y_codec_id"] not in Y_CODEC_IDS:
@@ -552,6 +612,15 @@ def parse_packet(packet_bytes: bytes, *, max_packet_bytes: int = MAX_PACKET_BYTE
         "decoded y bytes",
         maximum=MAX_DECODED_PLANE_BYTES,
     )
+    if header["y_codec_id"] == PREDICTOR_RESIDUAL_Y_CODEC_ID:
+        if expected_y_bytes > MAX_DECODED_PLANE_BYTES // 2:
+            raise ProductionReceiverError("decoded two-plane y bytes exceed the cap")
+        expected_y_bytes *= 2
+        expected_frame0_policy_id = DESCRIPTION_FRAME0_POLICY_ID
+    else:
+        expected_frame0_policy_id = FRAME0_POLICY_ID
+    if header["frame0_policy_id"] != expected_frame0_policy_id:
+        raise ProductionReceiverError("y codec and frame0 policy declaration disagree")
     rows = header["sections"]
     section_count = _exact_int(header["section_count"], "section_count", minimum=2, maximum=3)
     if not isinstance(rows, list) or len(rows) != section_count:
@@ -619,13 +688,22 @@ def parse_packet(packet_bytes: bytes, *, max_packet_bytes: int = MAX_PACKET_BYTE
     ):
         raise ProductionReceiverError("y section codec/shape/authority drift")
     if (
-        policy_section.codec_id != FRAME0_POLICY_ID
+        policy_section.codec_id != expected_frame0_policy_id
         or policy_section.payload != b""
         or policy_section.decoded_byte_length != 0
         or policy_section.decoded_sha256 != _sha256(b"")
         or policy_section.video_derived is not False
     ):
         raise ProductionReceiverError("frame0 policy must be the generic zero-byte policy")
+    if y_section.codec_id == PREDICTOR_RESIDUAL_Y_CODEC_ID:
+        try:
+            decoded_pair = decode_predictor_residual(y_section.payload)
+        except PredictorResidualError as exc:
+            raise ProductionReceiverError("predictor-residual y payload parse-back refused") from exc
+        expected_shape = (pair_count, scorer_h, scorer_w, channels)
+        if decoded_pair.frame0.shape != expected_shape or decoded_pair.frame1.shape != expected_shape:
+            raise ProductionReceiverError("predictor-residual payload/header geometry drift")
+        _decode_y(y_section)
     if section_count == 3:
         residual = sections[2]
         if (
@@ -647,15 +725,30 @@ def parse_packet(packet_bytes: bytes, *, max_packet_bytes: int = MAX_PACKET_BYTE
     return ParsedProductionPacket(packet_bytes, _sha256(packet_bytes), header, tuple(sections))
 
 
-def decode_y_planes(packet: ParsedProductionPacket) -> np.ndarray:
-    """Expand the charged y description without loading or importing a scorer."""
+def decode_y_plane_pair(packet: ParsedProductionPacket) -> DecodedYPlanePair:
+    """Expand both charged scorer planes without importing a scorer."""
 
     if not isinstance(packet, ParsedProductionPacket):
-        raise ProductionReceiverError("decode_y_planes requires a parsed production packet")
+        raise ProductionReceiverError("decode_y_plane_pair requires a parsed production packet")
     _, _, scorer_h, scorer_w, channels = _validate_geometry(packet.header)
     pair_count = packet.header["pair_count"]
-    decoded = _decode_y(packet.section("y_description"))
-    return np.frombuffer(decoded, dtype=np.uint8).reshape(pair_count, scorer_h, scorer_w, channels).copy()
+    section = packet.section("y_description")
+    decoded = _decode_y(section)
+    shape = (pair_count, scorer_h, scorer_w, channels)
+    plane_bytes = pair_count * scorer_h * scorer_w * channels
+    if section.codec_id == PREDICTOR_RESIDUAL_Y_CODEC_ID:
+        frame0 = np.frombuffer(decoded[:plane_bytes], dtype=np.uint8).reshape(shape).copy()
+        frame1 = np.frombuffer(decoded[plane_bytes:], dtype=np.uint8).reshape(shape).copy()
+    else:
+        frame1 = np.frombuffer(decoded, dtype=np.uint8).reshape(shape).copy()
+        frame0 = frame1.copy()
+    return DecodedYPlanePair(frame0=frame0, frame1=frame1)
+
+
+def decode_y_planes(packet: ParsedProductionPacket) -> np.ndarray:
+    """Return frame-1 scorer planes, preserving the legacy public contract."""
+
+    return decode_y_plane_pair(packet).frame1
 
 
 def _decode_residuals(
@@ -763,9 +856,7 @@ def _read_archive_packet(archive_path: Path) -> tuple[bytes, str, int]:
                 or info.compress_size != info.file_size
                 or info.flag_bits & 0x1
             ):
-                raise ProductionReceiverError(
-                    "0.bin must be bounded, unencrypted, and stored without ZIP compression"
-                )
+                raise ProductionReceiverError("0.bin must be bounded, unencrypted, and stored without ZIP compression")
             packet_bytes = archive.read(info)
     except (OSError, zipfile.BadZipFile, RuntimeError) as exc:
         raise ProductionReceiverError("archive.zip cannot be reopened exactly") from exc
@@ -822,6 +913,10 @@ def build_production_archive(
     camera_height: int,
     camera_width: int,
     y_codec_id: str = "raw-uint8-y",
+    frame0_y_planes: np.ndarray | None = None,
+    predictor_modes: PredictorMode | str | int | Sequence[PredictorMode | str | int] | None = None,
+    predictor_descriptors: Sequence[bytes] | None = None,
+    predictor_pair_ids: Sequence[int] | None = None,
     quotient_residual: np.ndarray | Sequence[QuotientResidualUpdate] | None = None,
     manifest_path: Path | str | None = None,
 ) -> ArchiveBuildResult:
@@ -838,6 +933,10 @@ def build_production_archive(
         camera_height=camera_height,
         camera_width=camera_width,
         y_codec_id=y_codec_id,
+        frame0_y_planes=frame0_y_planes,
+        predictor_modes=predictor_modes,
+        predictor_descriptors=predictor_descriptors,
+        predictor_pair_ids=predictor_pair_ids,
         quotient_residual=quotient_residual,
     )
     parsed = parse_packet(packet_bytes)
@@ -963,22 +1062,29 @@ def _pair_state(
     archive_sha256: str,
     pair_index: int,
     stage_payload: bytes,
-    y_plane: np.ndarray,
+    frame0_y_plane: np.ndarray,
+    frame1_y_plane: np.ndarray,
     numerator_values: int,
+    frame0_is_described: bool,
 ) -> bytes:
-    return _canonical_json(
-        {
-            "schema": PAIR_STATE_SCHEMA,
-            "packet_sha256": packet_sha256,
-            "archive_sha256": archive_sha256,
-            "pair_index": pair_index,
-            "stage_bytes": len(stage_payload),
-            "stage_sha256": _sha256(stage_payload),
-            "y_plane_sha256": _sha256(np.ascontiguousarray(y_plane).tobytes()),
-            "numerator_values_verified": numerator_values,
-            "receiver_contract_id": RECEIVER_CONTRACT_ID,
-        }
-    )
+    state = {
+        "schema": PAIR_STATE_SCHEMA,
+        "packet_sha256": packet_sha256,
+        "archive_sha256": archive_sha256,
+        "pair_index": pair_index,
+        "stage_bytes": len(stage_payload),
+        "stage_sha256": _sha256(stage_payload),
+        "y_plane_sha256": _sha256(np.ascontiguousarray(frame1_y_plane).tobytes()),
+        "numerator_values_verified": numerator_values,
+        "receiver_contract_id": RECEIVER_CONTRACT_ID,
+    }
+    # Preserve byte-identical legacy resume state.  The additive two-plane
+    # policy binds both independent targets because frame 0 is no longer an
+    # implied copy of frame 1.
+    if frame0_is_described:
+        state["frame0_y_plane_sha256"] = _sha256(np.ascontiguousarray(frame0_y_plane).tobytes())
+        state["frame1_y_plane_sha256"] = _sha256(np.ascontiguousarray(frame1_y_plane).tobytes())
+    return _canonical_json(state)
 
 
 def inflate_archive(
@@ -996,7 +1102,7 @@ def inflate_archive(
     raw_path = _safe_output_path(output_root, video_name)
     packet_bytes, archive_sha, _archive_bytes = _read_archive_packet(archive_root / "archive.zip")
     packet = parse_packet(packet_bytes)
-    y_planes = decode_y_planes(packet)
+    y_pair = decode_y_plane_pair(packet)
     residuals = _decode_residuals(packet)
     pair_count = int(packet.header["pair_count"])
     if stop_after_pairs is None:
@@ -1020,10 +1126,17 @@ def inflate_archive(
     preserved = 0
     for pair_index in range(limit):
         residual = None if residuals is None else residuals[pair_index]
-        frame1, numerator_values = realize_pair_frame1(packet, y_planes[pair_index], residual=residual)
-        if packet.header["frame0_policy_id"] != FRAME0_POLICY_ID:
+        frame1, frame1_numerator_values = realize_pair_frame1(packet, y_pair.frame1[pair_index], residual=residual)
+        if packet.header["frame0_policy_id"] == FRAME0_POLICY_ID:
+            frame0 = frame1.copy()
+            numerator_values = frame1_numerator_values * 2
+            state_numerator_values = frame1_numerator_values
+        elif packet.header["frame0_policy_id"] == DESCRIPTION_FRAME0_POLICY_ID:
+            frame0, frame0_numerator_values = realize_pair_frame1(packet, y_pair.frame0[pair_index])
+            numerator_values = frame0_numerator_values + frame1_numerator_values
+            state_numerator_values = numerator_values
+        else:  # parse_packet already closes this registry; retain local defense.
             raise ProductionReceiverError("unsupported frame0 policy")
-        frame0 = frame1.copy()
         stage_payload = frame0.tobytes(order="C") + frame1.tobytes(order="C")
         if len(stage_payload) != pair_stage_bytes:
             raise ProductionReceiverError("pair stage raw byte count drift")
@@ -1032,8 +1145,10 @@ def inflate_archive(
             archive_sha256=archive_sha,
             pair_index=pair_index,
             stage_payload=stage_payload,
-            y_plane=y_planes[pair_index],
-            numerator_values=numerator_values,
+            frame0_y_plane=y_pair.frame0[pair_index],
+            frame1_y_plane=y_pair.frame1[pair_index],
+            numerator_values=state_numerator_values,
+            frame0_is_described=packet.header["frame0_policy_id"] == DESCRIPTION_FRAME0_POLICY_ID,
         )
         stage_path = stage_root / f"pair-{pair_index:06d}.bin"
         state_path = stage_root / f"pair-{pair_index:06d}.json"
@@ -1042,7 +1157,7 @@ def inflate_archive(
         # Reopen both preserved legs before allowing progress to the next pair.
         if stage_path.read_bytes() != stage_payload or state_path.read_bytes() != state_payload:
             raise ProductionReceiverError("pair stage/state failed immediate parse-back")
-        numerator_values_verified += numerator_values * 2
+        numerator_values_verified += numerator_values
         preserved += 1
 
     if limit < pair_count:
@@ -1148,13 +1263,16 @@ def inflate_archive(
 
 __all__ = [
     "ARITHMETIC_ID",
+    "DESCRIPTION_FRAME0_POLICY_ID",
     "FRAME0_POLICY_ID",
+    "FRAME0_POLICY_IDS",
     "INFLATE_MANIFEST_SCHEMA",
     "MAGIC",
     "MANIFEST_SCHEMA",
     "MEMBER_NAME",
     "PACKET_SCHEMA",
     "PAIR_STATE_SCHEMA",
+    "PREDICTOR_RESIDUAL_Y_CODEC_ID",
     "PREFIX",
     "RECEIVER_CONTRACT_ID",
     "RESIDUAL_RECORD",
@@ -1162,6 +1280,7 @@ __all__ = [
     "TIE_POLICY_ID",
     "VERSION",
     "ArchiveBuildResult",
+    "DecodedYPlanePair",
     "InflateResult",
     "ParsedProductionPacket",
     "ProductionReceiverError",
@@ -1169,6 +1288,7 @@ __all__ = [
     "QuotientResidualUpdate",
     "build_packet",
     "build_production_archive",
+    "decode_y_plane_pair",
     "decode_y_planes",
     "inflate_archive",
     "parse_packet",

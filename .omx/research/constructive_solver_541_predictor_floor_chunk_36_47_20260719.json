@@ -1,0 +1,1055 @@
+{
+  "authority": {
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "verdict_scope": "selected real n600-cache pairs and production predictor codec; no contest score or family kill"
+  },
+  "axis": "[Darwin-arm64 CPU advisory real-cache subset] NON-PROMOTABLE",
+  "cache_custody": {
+    "bytes": 5078017610,
+    "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+  },
+  "config": {
+    "brotli": {
+      "quality": 11,
+      "version": "1.2.0"
+    },
+    "cache_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "camera_hw": [
+      874,
+      1164
+    ],
+    "codec_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/constructive_solver_541_20260719_20260719T070402Z/src/tac/codec/v10_predictor_residual.py",
+    "codec_sha256": "fec4d269efbd3efc334af7623b8b6d95778d91706b5550362b8cacae60014ec0",
+    "pair_ids": [
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47
+    ],
+    "predictor_modes": [
+      "previous-plane-copy.v1",
+      "affine6-q12.v1",
+      "spatial-smooth-121.v1"
+    ],
+    "rounding": "exact integer numerator, nonnegative round-half-up to uint8",
+    "schema": "v10_free_predictor_floor_state.v1",
+    "scorer_hw": [
+      384,
+      512
+    ],
+    "tool_sha256": "8b19bbf79f9aae68c405204541e31d3bb1d86e7b08bc4031a7dfc074d61c37b3",
+    "zstd": {
+      "binary": "/opt/homebrew/bin/zstd",
+      "level": 19,
+      "threads": 1,
+      "version": "*** Zstandard CLI (64-bit) v1.5.7, by Yann Collet ***"
+    }
+  },
+  "config_sha256": "56c1ad9cd556ea2821ecb276d25aca20273aa9baa539d7642050b986d95571df",
+  "labels": {
+    "DERIVED": [
+      "conditional descriptor+residual rate",
+      "round-half-up exact-operator y0/y1"
+    ],
+    "INFERRED": [],
+    "MEASURED": [
+      "exact cache-derived uint8 scorer planes",
+      "actual Brotli quality-11 bytes with decompression",
+      "actual zstd level-19 bytes with decompression",
+      "packed-mask class and margin attribution streams"
+    ]
+  },
+  "modes": [
+    {
+      "attribution": {
+        "class": [
+          {
+            "class_id": 0,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 821894,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "b01895d6d0417656ef099d0945715bd99901c715674675acfb6ce6418eaa5b5d"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 3506914,
+              "raw_sha256": "8dd6da775b34ce0926758d376685bb5e6086b20f5ac700c5a0dc641b5fc2673c",
+              "zstd_19": {
+                "bytes": 887575,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "3f9010b7634a9d570dda03f42799e78a07690c77a7085b8a1b4b241a9dd684e8"
+              }
+            },
+            "selected_pixels": 535162
+          },
+          {
+            "class_id": 1,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 42440,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "854a17c62ab8be173bbc1c4bd4a685eb56b2c2f4220a1c77e318e882116c16a9"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 385084,
+              "raw_sha256": "12276dcb50bd69756a911ef228e36108068517d1af323ae1446bce43a8bd7b75",
+              "zstd_19": {
+                "bytes": 50617,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "64b16e231152e45ca717f67deb8995ece4b3071d4ad1a2ba7a5125c187db8dde"
+              }
+            },
+            "selected_pixels": 14857
+          },
+          {
+            "class_id": 2,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 2183072,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "f1dfd73bb57a8871c05a89656540774ea16d06d8f36db7a7bf8f7d98f1745760"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 7312348,
+              "raw_sha256": "64c75176821c0362f8e3469653080d05b42b5a2fabe2ebb908df54e5b5a49052",
+              "zstd_19": {
+                "bytes": 2322561,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "97f9fbf5714359839bf69e5882e189153dfab078c76caa22438424b160fc2a8b"
+              }
+            },
+            "selected_pixels": 1169401
+          },
+          {
+            "class_id": 3,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 72787,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "f2b21c19c63a4f784bb31ac337f66de5598d0b21c324071a951ef3024b365f7b"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 511072,
+              "raw_sha256": "ce836e686d3c74d2c7441da2b2e09086b36e05f8587f4365790b81073094d1cb",
+              "zstd_19": {
+                "bytes": 82267,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "d41573d3f8c311f386ad3cffc8a825232be449ab821312bbbf2f4cea30462c88"
+              }
+            },
+            "selected_pixels": 35855
+          },
+          {
+            "class_id": 4,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 1165996,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "7d2300c434b265b25b300b182c09712bb5416ec900d8bc566018ddab01bcff33"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 3920068,
+              "raw_sha256": "a7513f4ee08ec4cbe5406b4d13e00e2660fbfdb509946db25d6e2de701366d53",
+              "zstd_19": {
+                "bytes": 1238566,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "37cd4019a2d4b2a4e0b6587bf71166755b0b0366b05eb0f48ad4b70bbd02d214"
+              }
+            },
+            "selected_pixels": 604021
+          }
+        ],
+        "margin": [
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 21783,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "1ffa82703052323b2156e5ea884ce090f48a541a02565a59ca15025d88707e65"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 332764,
+              "raw_sha256": "b32334246526ec7ac9ac808f49e63c3869bbd3c3c29cb94060ab201f408e6536",
+              "zstd_19": {
+                "bytes": 25640,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "9dbedd368899f7cb9d9798cff0ff88e722447949623da789c3db2c29744f852a"
+              }
+            },
+            "lower_inclusive": 0.0,
+            "margin_bin": "[0,.1)",
+            "selected_pixels": 6137,
+            "upper_exclusive": 0.1
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 30892,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "2002ff047b1b21ebb19c67c485bc2458e422378f79750e2ec4120e856ef8ce11"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 350410,
+              "raw_sha256": "95b57b8a9676104a1f2a19e1d5d08528d036aee21bf1f3e4310b816cfaac8928",
+              "zstd_19": {
+                "bytes": 35190,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "5c032ad9b25d0943df954ffe47c5066f1169fbe442ee671d80e6c079e9740db9"
+              }
+            },
+            "lower_inclusive": 0.1,
+            "margin_bin": "[.1,.25)",
+            "selected_pixels": 9078,
+            "upper_exclusive": 0.25
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 46488,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "bc868f74c221470c6dbdb5ef0b771422bdc80b40233e090c7d50c80e7d09b542"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 385204,
+              "raw_sha256": "bbfc2dd853a7640288bec85ad9253388af6b9a468853b64bbc00fc9a206a0654",
+              "zstd_19": {
+                "bytes": 52524,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "3f8bd945448e9a02d7251016096385765166b239297a4e56f6a332e919b68937"
+              }
+            },
+            "lower_inclusive": 0.25,
+            "margin_bin": "[.25,.5)",
+            "selected_pixels": 14877,
+            "upper_exclusive": 0.5
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 76160,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "1313b9f48dfa8afd24c2ae634079f4b2daf0b784f088d4fabd4f0146d1fc7712"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 467350,
+              "raw_sha256": "c6baaeced7b4cf0af79fd25b58baccbb015a7bef34cd0580aa6f3da6f954aa75",
+              "zstd_19": {
+                "bytes": 88886,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "4daf1971b6d050604202339a1013e16b837bd39fac248d33f061d59e7e02e477"
+              }
+            },
+            "lower_inclusive": 0.5,
+            "margin_bin": "[.5,1)",
+            "selected_pixels": 28568,
+            "upper_exclusive": 1.0
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 113102,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "7d4af748a5db67396f4594f09dae6d4370cd308896a2d7f8ad960da4d469bd41"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 570700,
+              "raw_sha256": "831a0f6998445d72ee574c6d78c8b00e1b53c2513f619eb238cd1c259cc7aee7",
+              "zstd_19": {
+                "bytes": 128819,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "3d6893709560da4a05e522c0c8bcce0c4407725ecab076f18ac4795b9adb3d94"
+              }
+            },
+            "lower_inclusive": 1.0,
+            "margin_bin": "[1,2)",
+            "selected_pixels": 45793,
+            "upper_exclusive": 2.0
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 4069643,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "b68a466f9c5a83756b142042e7d5528f6457e20c1e8df4586ce6fccb97f6f170"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 13825000,
+              "raw_sha256": "6f0f14c66b2b6bbd80d67fba7faba0c3977f87a68c9580b89b21e65cdbb7f003",
+              "zstd_19": {
+                "bytes": 4300672,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "9bd88c52cb0bda090b866ac64f1d34fb043dc66d8fd0d58d96faee18be5d6237"
+              }
+            },
+            "lower_inclusive": 2.0,
+            "margin_bin": "[2,inf)",
+            "selected_pixels": 2254843,
+            "upper_exclusive": null
+          }
+        ]
+      },
+      "conditional_representation": {
+        "decoded_descriptor_plus_residual_bytes": 14155776,
+        "definition": "descriptor + inner-Brotli-Q11 residual bytes conditioned on decoded frame0, mode, and geometry",
+        "direct_global_coder_ab": {
+          "brotli_q11": {
+            "bytes": 4255464,
+            "codec": "brotli",
+            "level": 11,
+            "sha256": "ec9a286b085ca795c3d9c2b04222d6d5b2f937ccf5819bf3dce8ea3707d254b1"
+          },
+          "decompression_verified": true,
+          "raw_bytes": 14155776,
+          "raw_sha256": "4e152c7890013384239ceb62ea25fea31d504661e1cfc8b927e6dc887458faef",
+          "zstd_19": {
+            "bytes": 4491691,
+            "codec": "zstd",
+            "level": 19,
+            "sha256": "66e587ba8ca7d2795def4e6e7eef3a6b1fbdade7f8df0505527602f8c424e8dc"
+          }
+        },
+        "production_brotli_q11_bytes": 4232539
+      },
+      "full_representation": {
+        "accounting": {
+          "bootstrap_brotli_q11_bytes": 3971155,
+          "decoded_bootstrap_bytes": 7077888,
+          "decoded_residual_bytes": 14155776,
+          "descriptor_bytes": 0,
+          "framing_bytes": 1804,
+          "residual_brotli_q11_bytes": 4232539
+        },
+        "definition": "complete production predictor payload with inner Brotli-Q11 frame0/residual content pricing",
+        "production_counted_stream": {
+          "bytes": 8205498,
+          "codec": "predictor-residual-u8.v1 / brotli-q11.v1",
+          "parseback_decompression_verified": true,
+          "sha256": "3be325860611c8ca67a197fdf82bfd3306f0f271e24742c03a47a8d530c89d6b"
+        },
+        "secondary_double_compression_diagnostic": {
+          "brotli_q11": {
+            "bytes": 8205526,
+            "codec": "brotli",
+            "level": 11,
+            "sha256": "2fd0c74397ec5484399e860f985d0fe258a2ddc7e47507fa179fd223542f0f8e"
+          },
+          "decompression_verified": true,
+          "raw_bytes": 8205498,
+          "raw_sha256": "3be325860611c8ca67a197fdf82bfd3306f0f271e24742c03a47a8d530c89d6b",
+          "zstd_19": {
+            "bytes": 8205697,
+            "codec": "zstd",
+            "level": 19,
+            "sha256": "7c922e25b754efe79c9985729dc1f6d51b94109b889bf8999d7524c599262531"
+          }
+        }
+      },
+      "mode": "previous-plane-copy.v1",
+      "pair_count": 12,
+      "prediction": {
+        "residual_abs_sum": 28835764,
+        "residual_nonzero_values": 6199134,
+        "residual_values": 7077888
+      },
+      "production_parseback_exact": true
+    },
+    {
+      "attribution": {
+        "class": [
+          {
+            "class_id": 0,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 828876,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "2ef2641d8eb43bc3088980fdc874f6c1ce9b3078035c949f6e9b7acce0ec87dd"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 3506914,
+              "raw_sha256": "77c9839d5b1af1337a582b65d05243fa6ea0876b5c30cf8788a7587cfe421716",
+              "zstd_19": {
+                "bytes": 871812,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "83b495018192d029e48189a1214b2d3bcfe4bfab34971b44a78978aeb4a0334a"
+              }
+            },
+            "selected_pixels": 535162
+          },
+          {
+            "class_id": 1,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 42226,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "8ab49ed8abe4d2d9c01ad684f5435a5077eaba66288fdb87f11bb36bdc73110c"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 385084,
+              "raw_sha256": "9514f476e83433d5c3ed0bfaee5c0db2ef2f7e1d9c229a4b9c4ab9ecea2a0c97",
+              "zstd_19": {
+                "bytes": 51555,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "8e0c6d96d745d135a95f7bbf3c5da23fc0af6c9190581fad9a0e148f95177bd3"
+              }
+            },
+            "selected_pixels": 14857
+          },
+          {
+            "class_id": 2,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 2176356,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "cc347c994f4579e355494584b3e445b6e5377d38dc8f6a656cd6b9e59c6c2c62"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 7312348,
+              "raw_sha256": "a9e68d0c48d4386eb840a4162e9d77242e92da14ce8213b0bac9d42548607a00",
+              "zstd_19": {
+                "bytes": 2305453,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "4ddb819538801558ce7a8e5fa4e95f73da631509eeb31184de7cca3aa874ab04"
+              }
+            },
+            "selected_pixels": 1169401
+          },
+          {
+            "class_id": 3,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 72922,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "5d83fb123aac194ca4cc4629da424d10ce8861dccdd779bb811e1edafc3100c8"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 511072,
+              "raw_sha256": "a9af12f1e5aca3c09ed4b19e14d66e9779fdb32f22fea7a279428f4e36cb1cea",
+              "zstd_19": {
+                "bytes": 82268,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "7e63f6d313f3910e01d6b96f876aa3d1ade55ac3c706a9d53bc3243087a09939"
+              }
+            },
+            "selected_pixels": 35855
+          },
+          {
+            "class_id": 4,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 1148672,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "d7a0a2deef1ccb10b8f582981743057b51f97b8bede640500508beb56599016c"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 3920068,
+              "raw_sha256": "40be969d5d2b46b8dbc929f234d76dfa93dc9093e339696f6cac500bf5f103f3",
+              "zstd_19": {
+                "bytes": 1226766,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "24b4653a8bb3dfcb2451e19465a1caeda4d3c8f3e853cd3a24cddbf83a914139"
+              }
+            },
+            "selected_pixels": 604021
+          }
+        ],
+        "margin": [
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 21297,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "0f66f9a89512e6662238167923e63a38daec75af25187997b64577f5947097e7"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 332764,
+              "raw_sha256": "9b124875bb4c28b225e2de692b2b8b3f35c8328a5538e8860798063196fffc92",
+              "zstd_19": {
+                "bytes": 25767,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "220d15faa787dfb6b624ac1f6738e0456303f2094aa2dffe8e4b92b6b3b87ee6"
+              }
+            },
+            "lower_inclusive": 0.0,
+            "margin_bin": "[0,.1)",
+            "selected_pixels": 6137,
+            "upper_exclusive": 0.1
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 30739,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "191331f0fd9112dd83e98d8d103d49405668f039708a24b63ad1897ed8d5375f"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 350410,
+              "raw_sha256": "6666bc933c6feef5e38bcf0177189cee1c8825beb680b553cc0fa2dddd3c1d3c",
+              "zstd_19": {
+                "bytes": 35185,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "ef43956f45732fef926eaca3473548b0a0a15c83d9aad22da9e32de7b8570c73"
+              }
+            },
+            "lower_inclusive": 0.1,
+            "margin_bin": "[.1,.25)",
+            "selected_pixels": 9078,
+            "upper_exclusive": 0.25
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 46259,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "b232b282ec3fa217ab465fca96bbcabdc784055d013898fd3b512478b706b698"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 385204,
+              "raw_sha256": "718df969917cd57db9c534848ea959956b6e6f31401c15aad51d04df4b184b67",
+              "zstd_19": {
+                "bytes": 52312,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "c301b8750b3163cf50dcbc69afea2bd98ec91718cbb3da14bb4c320b8d351c75"
+              }
+            },
+            "lower_inclusive": 0.25,
+            "margin_bin": "[.25,.5)",
+            "selected_pixels": 14877,
+            "upper_exclusive": 0.5
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 77923,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "c3bcc644af35500193ded1c44acdc9d811b9ca3b5f9b9ea2d579cbc07bfcd417"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 467350,
+              "raw_sha256": "904b99a6791cc9eeb03df39156d437b0081135e0c987748acfb123dbc2b8b060",
+              "zstd_19": {
+                "bytes": 88628,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "589cc4c7d4ec07523c41b5a249f26e1ac48b7b6d7027402201b1624279cce461"
+              }
+            },
+            "lower_inclusive": 0.5,
+            "margin_bin": "[.5,1)",
+            "selected_pixels": 28568,
+            "upper_exclusive": 1.0
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 112595,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "387453d571064ab405eaba0151bb714129702c5dfd42f47cbf0253bafcec9c2a"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 570700,
+              "raw_sha256": "ef84bbb79ae94256ccb785cc34f1f7f54e7f541df1e76882ea8327bb1ed06f7f",
+              "zstd_19": {
+                "bytes": 127201,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "f32a33c7ad22926909bcab9c784668725ac688058c4fc4c31c09f632bf2fbf8a"
+              }
+            },
+            "lower_inclusive": 1.0,
+            "margin_bin": "[1,2)",
+            "selected_pixels": 45793,
+            "upper_exclusive": 2.0
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 4059899,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "892050f2e27888edaa9d0c628399fd7ec607e98952aab0f61fbd1ec676b649b6"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 13825000,
+              "raw_sha256": "4b27d52b96b2f49837c155f757c5e7da9e3aec9d034537296660b76bc9ec58c3",
+              "zstd_19": {
+                "bytes": 4466703,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "30f7482334907d25af379e242bdda7522f794b0501b40c01d103c40870ff0cb9"
+              }
+            },
+            "lower_inclusive": 2.0,
+            "margin_bin": "[2,inf)",
+            "selected_pixels": 2254843,
+            "upper_exclusive": null
+          }
+        ]
+      },
+      "conditional_representation": {
+        "decoded_descriptor_plus_residual_bytes": 14156064,
+        "definition": "descriptor + inner-Brotli-Q11 residual bytes conditioned on decoded frame0, mode, and geometry",
+        "direct_global_coder_ab": {
+          "brotli_q11": {
+            "bytes": 4256449,
+            "codec": "brotli",
+            "level": 11,
+            "sha256": "41f160030e1307212b03895d2e30dc612e38c0597ff1f6873922c7d6e2a31419"
+          },
+          "decompression_verified": true,
+          "raw_bytes": 14156064,
+          "raw_sha256": "10f60f2cd57b36ae27cc501f1e281e5a45d03413acdce9816c4d987be558b97a",
+          "zstd_19": {
+            "bytes": 4464265,
+            "codec": "zstd",
+            "level": 19,
+            "sha256": "93fd3bf2e8ef5c7e7780d8c11e746d518c227cd7dd815bbac4db477af54f357b"
+          }
+        },
+        "production_brotli_q11_bytes": 4215142
+      },
+      "full_representation": {
+        "accounting": {
+          "bootstrap_brotli_q11_bytes": 3971155,
+          "decoded_bootstrap_bytes": 7077888,
+          "decoded_residual_bytes": 14155776,
+          "descriptor_bytes": 288,
+          "framing_bytes": 1804,
+          "residual_brotli_q11_bytes": 4214854
+        },
+        "definition": "complete production predictor payload with inner Brotli-Q11 frame0/residual content pricing",
+        "production_counted_stream": {
+          "bytes": 8188101,
+          "codec": "predictor-residual-u8.v1 / brotli-q11.v1",
+          "parseback_decompression_verified": true,
+          "sha256": "187e3914513a8e353a8c0ab4bd88732ed185a86488bbec7a4d990dc058e42a7d"
+        },
+        "secondary_double_compression_diagnostic": {
+          "brotli_q11": {
+            "bytes": 8188129,
+            "codec": "brotli",
+            "level": 11,
+            "sha256": "6481d4f1a90d834e9fa08e402a4460cba41c655f4bbeac0229bb549f3a24aa12"
+          },
+          "decompression_verified": true,
+          "raw_bytes": 8188101,
+          "raw_sha256": "187e3914513a8e353a8c0ab4bd88732ed185a86488bbec7a4d990dc058e42a7d",
+          "zstd_19": {
+            "bytes": 8188300,
+            "codec": "zstd",
+            "level": 19,
+            "sha256": "7f582f573fce45dd35f7b01530b20d5b93053971635d69d6cf32d21f2038fdc1"
+          }
+        }
+      },
+      "mode": "affine6-q12.v1",
+      "pair_count": 12,
+      "prediction": {
+        "residual_abs_sum": 28311674,
+        "residual_nonzero_values": 6194536,
+        "residual_values": 7077888
+      },
+      "production_parseback_exact": true
+    },
+    {
+      "attribution": {
+        "class": [
+          {
+            "class_id": 0,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 815730,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "1764db59f374ea1ab1b90307f3a8368fc6dab59946b0be8c6b346a920e10ae9f"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 3506914,
+              "raw_sha256": "20a18f27dd2d32f7bf847a681b9026b7fa3fed5e95525e48d6a52d2658a4194c",
+              "zstd_19": {
+                "bytes": 864159,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "c627c9758855ce5787008d3db3d2b1a43305e23d42060f05507eb2fe3ccfde02"
+              }
+            },
+            "selected_pixels": 535162
+          },
+          {
+            "class_id": 1,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 42572,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "88ae5abebfcb7438b8fb8a23693079db9ace1abaeaa0a4111a513231c0ebe159"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 385084,
+              "raw_sha256": "013bb5cd4a53eb981143ef90d0c88bb6d72ff297b4f05d26bf74594a6527d0eb",
+              "zstd_19": {
+                "bytes": 50490,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "83cffbbd1c0ba5b64b1bf31e58aeacc8408795a0e92ca6c02706f64476f5f045"
+              }
+            },
+            "selected_pixels": 14857
+          },
+          {
+            "class_id": 2,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 2125011,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "43959a04edf54e6f4da8cdc7c120706fd4e0bf5932558449b14a376228758c03"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 7312348,
+              "raw_sha256": "4515dc39e2c0bf1e30b13ac63b7d08feaf12d459ca4871d14c54617d241f7440",
+              "zstd_19": {
+                "bytes": 2225081,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "23ab87f2054e9b9457a47a70d4b7ccbe8c98b8d891985d3b3a5aaf9647a8352b"
+              }
+            },
+            "selected_pixels": 1169401
+          },
+          {
+            "class_id": 3,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 73259,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "a6fcf57732ad390f42693f03578fe7667125740819ccb35b371752a5b9de1dbd"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 511072,
+              "raw_sha256": "a9cd8fe7d18d83c420eea770fec17e170fbaa5ec596cffed210112bad85232e1",
+              "zstd_19": {
+                "bytes": 85136,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "f7cb82f451a8b5b4afacf86626b1cb57ac21595673d6d3dd3919a3302bc90318"
+              }
+            },
+            "selected_pixels": 35855
+          },
+          {
+            "class_id": 4,
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 1116852,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "29d10ba28b9b0a4ca824b803292fe1133dc2c49f061ed140f6a2f017a432eea7"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 3920068,
+              "raw_sha256": "daf8b0c8e31adb427782ca4d5d3df7ae437e0509574671a103921797741fdbeb",
+              "zstd_19": {
+                "bytes": 1177159,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "5cadc94783fa997bf8f49746997d30489b534e7a62dd76984c84d6a395c5787d"
+              }
+            },
+            "selected_pixels": 604021
+          }
+        ],
+        "margin": [
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 22317,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "43cb2717be588069beb1f7434b1c278f810d9dac9373e8a8e7a5a169a8a47f70"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 332764,
+              "raw_sha256": "11938c3b6e27d82c275e42cd42a5a6a0c29b04fd3dd851ba2dbb25d851cf49e9",
+              "zstd_19": {
+                "bytes": 25804,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "ae76d85ee669a7fe02f197d3c4823e48f70720d4fd4a6bb942fe6c755ea8b088"
+              }
+            },
+            "lower_inclusive": 0.0,
+            "margin_bin": "[0,.1)",
+            "selected_pixels": 6137,
+            "upper_exclusive": 0.1
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 30935,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "346aa34c88a7065489da51fc2a8d1f0f233a769b903d7a217e9419664a83bb6c"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 350410,
+              "raw_sha256": "7c49221e95224901d03149b11a690ace2a241b64bff893a3626662cb813995ab",
+              "zstd_19": {
+                "bytes": 35091,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "58548638e40252c803650d1efcf348bb202b903419835df30ccd7f616f482f8d"
+              }
+            },
+            "lower_inclusive": 0.1,
+            "margin_bin": "[.1,.25)",
+            "selected_pixels": 9078,
+            "upper_exclusive": 0.25
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 45314,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "f08acb5e9f9dd835a458a004ee9b3cd85eed8d8d19914560094f9672730fb580"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 385204,
+              "raw_sha256": "4e9d4197cdaaf9e09a447063343faedcc8538fa8c0c87cff8c081a7659f4a6e4",
+              "zstd_19": {
+                "bytes": 52495,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "f8790c5066a797931b8f2c22958575e7649055c909f14b36e1002923e862321a"
+              }
+            },
+            "lower_inclusive": 0.25,
+            "margin_bin": "[.25,.5)",
+            "selected_pixels": 14877,
+            "upper_exclusive": 0.5
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 76954,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "e27933681b1b67d32c4e0e9eef927d51d9ed1719daba3dfcb66accdbb99c5984"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 467350,
+              "raw_sha256": "a3e103b109359b4dcdbad57064a2ef6822e03896ca121f9685daf11ddafac7d4",
+              "zstd_19": {
+                "bytes": 88851,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "f4df0d956f548c802221ae33dd0543f1b39c548ec7e001805da98534e2bd2692"
+              }
+            },
+            "lower_inclusive": 0.5,
+            "margin_bin": "[.5,1)",
+            "selected_pixels": 28568,
+            "upper_exclusive": 1.0
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 112498,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "8c8173071f9c5dc46f476411ada92eaf530da08dec966cc04c20e1dbbc8bff02"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 570700,
+              "raw_sha256": "6ed5f5bc461bcefee9553fae9250f8cd79bbe8796b1604bfa37905cbca811f50",
+              "zstd_19": {
+                "bytes": 126492,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "ee801f31796379511beeb41b1fd136e6fcb275dc60526024f0a14e360e43d099"
+              }
+            },
+            "lower_inclusive": 1.0,
+            "margin_bin": "[1,2)",
+            "selected_pixels": 45793,
+            "upper_exclusive": 2.0
+          },
+          {
+            "counted_stream": {
+              "brotli_q11": {
+                "bytes": 3953638,
+                "codec": "brotli",
+                "level": 11,
+                "sha256": "7f59018720fcc9dc22ca6f77e14967ad47a23960c5d5584b700eba370dfa8732"
+              },
+              "decompression_verified": true,
+              "raw_bytes": 13825000,
+              "raw_sha256": "c0c76702bf09c340e8422843662c70d4fcf38ab62896ceb2c3ed5ed9c267711f",
+              "zstd_19": {
+                "bytes": 4339642,
+                "codec": "zstd",
+                "level": 19,
+                "sha256": "394f3a28b94e33c2ea7f7530e6172b269e346a8c17562171a69a0a2f31bc65d8"
+              }
+            },
+            "lower_inclusive": 2.0,
+            "margin_bin": "[2,inf)",
+            "selected_pixels": 2254843,
+            "upper_exclusive": null
+          }
+        ]
+      },
+      "conditional_representation": {
+        "decoded_descriptor_plus_residual_bytes": 14155776,
+        "definition": "descriptor + inner-Brotli-Q11 residual bytes conditioned on decoded frame0, mode, and geometry",
+        "direct_global_coder_ab": {
+          "brotli_q11": {
+            "bytes": 4124474,
+            "codec": "brotli",
+            "level": 11,
+            "sha256": "7cf6e5f8981de30824dab2a751c1333a8989a23e03c4f0224fbbcfb70491a34c"
+          },
+          "decompression_verified": true,
+          "raw_bytes": 14155776,
+          "raw_sha256": "c2d74d9e1b6759000c72f4cd024b090c3474586583f339552f12050a4152c71d",
+          "zstd_19": {
+            "bytes": 4323936,
+            "codec": "zstd",
+            "level": 19,
+            "sha256": "51a336e8f969dcc09c74f9b5e9851fc3a79629ee9e9132f53354fdcc61f0e9da"
+          }
+        },
+        "production_brotli_q11_bytes": 4122031
+      },
+      "full_representation": {
+        "accounting": {
+          "bootstrap_brotli_q11_bytes": 3971155,
+          "decoded_bootstrap_bytes": 7077888,
+          "decoded_residual_bytes": 14155776,
+          "descriptor_bytes": 0,
+          "framing_bytes": 1804,
+          "residual_brotli_q11_bytes": 4122031
+        },
+        "definition": "complete production predictor payload with inner Brotli-Q11 frame0/residual content pricing",
+        "production_counted_stream": {
+          "bytes": 8094990,
+          "codec": "predictor-residual-u8.v1 / brotli-q11.v1",
+          "parseback_decompression_verified": true,
+          "sha256": "34747fe1591db4f9d7e2bc10d68779902a5a5cb103d3801c84b32fb7982e4712"
+        },
+        "secondary_double_compression_diagnostic": {
+          "brotli_q11": {
+            "bytes": 8095018,
+            "codec": "brotli",
+            "level": 11,
+            "sha256": "16b279ca64faa977104cb399367db67d6cd37c171042866efed11f79a6d48f1d"
+          },
+          "decompression_verified": true,
+          "raw_bytes": 8094990,
+          "raw_sha256": "34747fe1591db4f9d7e2bc10d68779902a5a5cb103d3801c84b32fb7982e4712",
+          "zstd_19": {
+            "bytes": 8095186,
+            "codec": "zstd",
+            "level": 19,
+            "sha256": "0e86926f421b60d1d81a15360d6c3155a0cb25ea62790cd79a89efaf8a8ddc29"
+          }
+        }
+      },
+      "mode": "spatial-smooth-121.v1",
+      "pair_count": 12,
+      "prediction": {
+        "residual_abs_sum": 26366556,
+        "residual_nonzero_values": 6203115,
+        "residual_values": 7077888
+      },
+      "production_parseback_exact": true
+    }
+  ],
+  "pair_count": 12,
+  "pair_ids": [
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47
+  ],
+  "research_only": true,
+  "resumability": {
+    "per_pair_stages_preserved": true,
+    "resume_rederives_frozen_inputs": true,
+    "stage_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/constructive_solver_541_20260719_20260719T070402Z/.omx/research/constructive_solver_541_predictor_floor_chunk_36_47_stages_20260719",
+    "state": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/constructive_solver_541_20260719_20260719T070402Z/.omx/research/constructive_solver_541_predictor_floor_chunk_36_47_state_20260719.json"
+  },
+  "sacred_tree": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z",
+    "snapshot": {
+      "entries": 18,
+      "exists": true,
+      "metadata_sha256": "0bdc3e39c5eac970625f91e6803b1bb33330e412514b78ce35dab2c4c351842c"
+    },
+    "unchanged": true
+  },
+  "schema": "v10_free_predictor_floor_chunk.v1",
+  "written_at_utc": "2026-07-19T08:17:59.186539+00:00"
+}
