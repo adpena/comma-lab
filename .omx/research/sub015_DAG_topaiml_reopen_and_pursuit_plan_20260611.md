@@ -19722,3 +19722,29 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   (0.0083/0.0185) with ALL discrete state (RNG/events/stage) bit-identical; per-key single-sample
   envelope is structurally unpassable (P(all 28 keys pass) ≈ 0.5^28). CPU-locked bit-identity proof
   RUNNING = the state-restoration authority; merge on its verdict.
+
+## FEED-vjp-custody-bindingness-confirmed (2026-07-19) — #549 landed; pose axis EMPIRICALLY CLOSED; bands work; Seg curve still degenerate
+
+- **THE HEADLINE (pre-registered → MEASURED):** the KKT derivation's μ=0 prediction is CONFIRMED —
+  **96/96 hard-oracle Pose constraints inactive/slack** at declared τ_pose across 4 wide-band
+  operating points (Seg scales 1e-4/1e-3 × τ_pose 1e-4/2.5e-4) on the n24 corpus, with **d_seg=0 at
+  every accepted row** (repair ≤9 levels). Measured d_pose 7.67e-6..2.52e-5 — all ≥10× under the
+  2.5e-4 binding crossover. Pose falls out of solved seg, as the operator reframed. Law
+  `pose_plane_proximity_corollary_v1` re-emitted with the bindingness anchor (registry 3 anchors).
+- **Custody CLOSED:** 24 immutable per-pair VJP sidecars (3.64GB, SSD tier): Seg active-field VJP
+  g_y (384,512,3) + camera pullback g_x=A^T g_y with DERIVED Lipschitz field (Lip range
+  0.0020..21.9, zero count 0); PoseNet-6 Jacobian J_y (6,2,384,512,3) + J_x custody. A^T residual 0;
+  Seg FD rel-err 6.8e-6; unit-normal max err 1.5e-7. Frozen-source hashes in every manifest.
+- **Bands BUY rate (first positive point):** Seg 1e-4 / τ 2.5e-4 = 1.4746MB/pair brotli-Q11
+  residual, **−37.61%** vs same-pair tiny-τ calibration — range-coordinate residual bytes, NOT
+  archive bytes. Note the non-monotonicity: WIDER Seg bands (1e-3) cost MORE (1.81-1.90MB/pair,
+  40 repairs vs 9) — repair traffic dominates the slack gain at these scales.
+- **Waterfill honestly INCONCLUSIVE_FLAT_OR_NOISY (instance scope):** all four hard-admitted Seg
+  points have identical d_seg=0 → no measured Seg secant → no non-null KKT allocation forced. The
+  #536 waterfill needs operating points that TRADE d_seg>0 for bytes (wider/asymmetric bands or
+  coarser description) to trace the seg-rate curve.
+- **96 content-hashed bindingness maps** (23.8MB): all 56,623,104 Seg radius channels positive;
+  frame-0 46% slack / frame-1 91.6% slack — frame-1's slack dominance is the amortization surface.
+- **CAMPAIGN STATE:** KKT program fully instrumented; pose axis closed (inactive); exact-plane
+  residual family rate-dead (FEED-predictor-floor); ONE open axis remains: bytes(compact generator
+  + band slack). The v10 carrier build IS that axis.

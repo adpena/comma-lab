@@ -9,8 +9,11 @@ plane barely moves inside a neighborhood of the source plane. Consequences:
 
 1. A well-conditioned SOLVED d_seg (plane inside seg margin-bands around the
    SOURCE plane) carries pose essentially for free — the pose constraint is
-   predicted INACTIVE at in-band solutions (pre-registered for the VJP/#549
-   bindingness harvest).
+   CONFIRMED INACTIVE at in-band solutions (pre-registered 2026-07-19 AM for
+   the VJP/#549 bindingness harvest; MEASURED same day: 96/96 hard-oracle
+   Pose constraints inactive/slack across 4 wide-band operating points on the
+   n24 corpus, d_pose 7.7e-6..2.5e-5 at Seg scales 1e-4..1e-3 — merge
+   6704c3857c, .omx/research/vjp_custody_positive_bands_20260719_codex.md).
 2. A generator whose plane is FAR from source (the c2 witness: seg-only
    trained, plane RMSE ~25/255) destroys pose REGARDLESS of its d_seg — the
    yhat-ladder rung-B d_pose~63 was a GENERATOR artifact (verdict_scope:
@@ -136,6 +139,34 @@ def build_pose_plane_proximity_law_v1() -> CanonicalEquation:
         provenance=_prov(SOURCE_MEMO),
         empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
     )
+    anchor_bindingness = EmpiricalAnchor(
+        anchor_id="bindingness_harvest_pose_inactive_96of96_20260719",
+        measurement_utc="2026-07-19T08:51:50Z",
+        inputs={
+            "corpus": "n24 real pairs, 4 wide-band operating points (96 rows)",
+            "seg_scales": [1e-4, 1e-3],
+            "tau_pose": [1e-4, 2.5e-4],
+            "plane_rmse_vs_source": "in-band (positive Seg radii, all 56,623,104 channels)",
+        },
+        predicted_output=(
+            "pre-registered: pose constraint inactive at in-band solutions "
+            "(codimension argument, KKT derivation §5)"
+        ),
+        empirical_output=(
+            "CONFIRMED: 96/96 hard-oracle Pose constraints inactive/slack at "
+            "declared tau_pose; d_seg=0 every accepted row; measured d_pose "
+            "7.67e-6..2.52e-5 (all >=10x under the 2.5e-4 crossover)"
+        ),
+        residual=2.521975392375284e-5,
+        source_artifact=".omx/research/vjp_custody_positive_bands_20260719_codex.md",
+        measurement_method=(
+            "96 content-hashed bindingness NPZ sidecars; frozen hard oracle "
+            "(native-fp32 CPU-torch SegNet/PoseNet) as sole admission authority; "
+            "repair<=9 levels per row"
+        ),
+        provenance=_prov(".omx/research/vjp_custody_positive_bands_20260719_codex.md"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
     anchor_far = EmpiricalAnchor(
         anchor_id="far_generator_plane_destroys_pose_20260719",
         measurement_utc=_UTC,
@@ -183,7 +214,7 @@ def build_pose_plane_proximity_law_v1() -> CanonicalEquation:
         },
         units_in={"plane_rmse_vs_source": "uint8 plane units (0..255)"},
         units_out={"regime": "categorical", "predicted_dpose_band": "d_pose (1/6-mean MSE)"},
-        empirical_anchors=(anchor_near, anchor_far),
+        empirical_anchors=(anchor_near, anchor_bindingness, anchor_far),
         predicted_vs_empirical_residual={
             "near_source_dpose_max": NEAR_SOURCE_DPOSE_MAX,
             "far_plane_dpose": FAR_PLANE_DPOSE,
