@@ -1106,6 +1106,7 @@ def compose_chunks(args: argparse.Namespace) -> dict[str, Any]:
                     "repair_cells",
                     "receiver_runtime_seconds_per_pair",
                 ),
+                lineterminator="\n",
             )
             writer.writeheader()
             for row in table_rows:

@@ -130,6 +130,7 @@ def test_compose_requires_disjoint_n24_and_emits_table_and_csv(tmp_path: Path) -
     assert [row["rung"] for row in table["rows"]] == list(RUNG_ORDER)
     assert output.is_file()
     assert csv_path.is_file()
+    assert b"\r\n" not in csv_path.read_bytes()
 
 
 def test_compose_refuses_overlap_and_witness_mismatch(tmp_path: Path) -> None:

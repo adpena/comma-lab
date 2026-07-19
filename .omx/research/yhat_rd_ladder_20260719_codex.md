@@ -1,10 +1,10 @@
 # Compact y-hat rate-distortion ladder — Task #548
 
-Date: 2026-07-19 UTC  
-Lane: `lane_yhat_rd_ladder_20260719`  
-Status: `research_only=true`  
-Axis: `[macOS-CPU advisory n24] NON-PROMOTABLE`  
-Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**  
+Date: 2026-07-19 UTC
+Lane: `lane_yhat_rd_ladder_20260719`
+Status: `research_only=true`
+Axis: `[macOS-CPU advisory n24] NON-PROMOTABLE`
+Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**
 Authority: local MEASURE only; no launch, paid dispatch, score, promotion, or pointer authority
 
 ## Verdict
@@ -25,7 +25,7 @@ two-plane packet and not a contest score.
 
 ## Machine-readable result
 
-Primary table: `.omx/research/yhat_rd_ladder_20260719_codex.json`  
+Primary table: `.omx/research/yhat_rd_ladder_20260719_codex.json`
 CSV: `.omx/research/yhat_rd_ladder_20260719_codex.csv`
 
 | rung | counted-rate basis | actual bytes measured | bytes/pair | n600 bytes | n600 rate term | mean d_seg | mean d_pose |
@@ -111,7 +111,7 @@ from the first successful stage and excluded from deterministic scientific equal
 | chunk A receipt | `b2d35d864bda323be75805b1d4ae9f0299cddb620cbc067b8723f65001f906cf` |
 | chunk B receipt | `349d977bac463976a658b0696753f11324a6cfdb00791c9aafcaa86804c0ea65` |
 | composed JSON table | `74e04312e90330d1a4c03e49db5090b134c4cf5894ffd78165dd576ab5c796e3` |
-| composed CSV table | `0c52c27e037f08e61f6d7654ecff9ffdf3f5214516965f76c3427b9c4597081a` |
+| composed CSV table | `6c01c83b4e6da8d6c6b87d478f95ecd35156f4293b01a348dd1e403b4c77f256` |
 
 ## Labels, triality, and consumers
 
