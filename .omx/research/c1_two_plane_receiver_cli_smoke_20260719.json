@@ -1,0 +1,76 @@
+{
+  "authority": {
+    "axis": "test-only local CPU fixture",
+    "contest_budget_verdict": false,
+    "n600_measurement": false,
+    "promotion_eligible": false,
+    "score_claim": false,
+    "test_only_small_fixture": true
+  },
+  "commands": [
+    ".venv/bin/python - $SMOKE_ROOT  # construct deterministic six-pair 4x4-to-2x2 NumPy fixture",
+    "PATH=$REPO/.venv/bin:$PATH PYTHONPATH=src:. python3 tools/measure_v10_two_plane_receiver_timing.py prepare --cache $SMOKE_ROOT/fixture.npz --work-root $SMOKE_ROOT/work --receipt $SMOKE_ROOT/work/prepare.json --requested-storage-bytes 1 --test-only-small-fixture --pair-count 6 --camera-height 4 --camera-width 4 --scorer-height 2 --scorer-width 2",
+    "PATH=$REPO/.venv/bin:$PATH PYTHONPATH=src:. python3 tools/measure_v10_two_plane_receiver_timing.py inflate --prepare-receipt $SMOKE_ROOT/work/prepare.json --output-dir $SMOKE_ROOT/decoded-serial --receipt $SMOKE_ROOT/timing-serial.json --workers 1 --test-only-small-fixture",
+    "PATH=$REPO/.venv/bin:$PATH PACT_REPO_ROOT=$REPO PYTHON=$REPO/.venv/bin/python PYTHONPATH=$REPO/src:$REPO $SMOKE_ROOT/work/inflate.sh $SMOKE_ROOT/work/archive_input $SMOKE_ROOT/non-sibling-output/decoded $SMOKE_ROOT/work/video_names.txt"
+  ],
+  "executed": true,
+  "generated_artifacts": {
+    "archive": {
+      "bytes": 2559,
+      "sha256": "a2e3529ed2e58dd4afc16bebe43c20d5a7fb26a137f7f549fbc1425a6367aa02"
+    },
+    "cache": {
+      "bytes": 1996,
+      "sha256": "a3018e7e1a12c2f54800b4baa48b7ab9ae261fcd319c68b0e14ea12d2bcea032"
+    },
+    "contest_adapter": {
+      "bytes": 980,
+      "mode": "0755",
+      "sha256": "c56b7c1bd61a0b58cbc33b0335d0719a873f59b33724fc2b57ba1cf5a0f08c0f"
+    },
+    "contest_raw": {
+      "bytes": 576,
+      "sha256": "eb3e20200ddd44695db95885e1bc338e327516e03db047e69af1db2dde90a7e9"
+    },
+    "contest_wrapper": {
+      "bytes": 6717,
+      "sha256": "7441efd7e329cd687d83d48123266e3eb682b6fa23e9be7e23a25cba1373c773"
+    },
+    "prepare_receipt": {
+      "bytes": 3524,
+      "sha256": "5cae6df6e4cffe4363b59ecb2a7ff97f4680807f937182bf6ad8ea8255c24a07"
+    },
+    "serial_nested_receiver_receipt": {
+      "bytes": 4756,
+      "sha256": "a49da0429fbfc9155de90b6f1d03ab864eda83e8421548b2cd4876b59dc0c716"
+    },
+    "serial_raw": {
+      "bytes": 576,
+      "sha256": "eb3e20200ddd44695db95885e1bc338e327516e03db047e69af1db2dde90a7e9"
+    },
+    "serial_wrapper": {
+      "bytes": 6595,
+      "sha256": "d1b932a8c96952bef0d1860e598613e3ee99b148b2263247e78effbeb390261f"
+    }
+  },
+  "host": {
+    "machine": "arm64",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "thread_environment": "all recorded thread-control variables unset"
+  },
+  "identity": {
+    "archive_input_kind": "extracted_0_bin",
+    "contest_adapter_from_arbitrary_cwd": true,
+    "contest_raw_equals_serial_raw": true,
+    "non_sibling_output_completed": true
+  },
+  "runtime_custody": {
+    "code_commit_after_smoke": "e2e8a5e55e74a993708f4a085ba0b2a3ebef0081",
+    "post_commit_remote_checkout_reproduces_sources": true,
+    "smoke_executed_before_source_commit": true,
+    "smoke_receipts_correctly_marked_remote_checkout_reproduces_sources": false
+  },
+  "schema": "c1_two_plane_receiver_cli_smoke.v1",
+  "verdict_scope": "Executable ABI and byte identity on a six-pair tiny fixture only; no n600, timing-budget, scorer, MLX, or contest authority."
+}

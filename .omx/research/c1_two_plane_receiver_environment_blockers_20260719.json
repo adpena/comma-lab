@@ -1,0 +1,45 @@
+{
+  "authority": {
+    "contest_budget_verdict": false,
+    "parallel_timing_measured": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "generated_at_utc": "2026-07-19T15:50:59Z",
+  "mlx_metal": {
+    "axis": "[macOS-MLX research-signal] NON-PROMOTABLE",
+    "blocker_class": "BLOCKED_HOST_METAL_DEVICE_UNAVAILABLE",
+    "host_custody_refusal": "MLX runtime has no usable Metal execution device: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+    "metal_usable": false,
+    "parity_executed": false,
+    "runtime_installed": true
+  },
+  "process_pool": {
+    "axis": "local sandbox capability probe",
+    "blocker_class": "BLOCKED_HOST_PROCESS_POOL_SEMAPHORE_CUSTODY",
+    "command": ".venv/bin/python -",
+    "error": "PermissionError: [Errno 1] Operation not permitted",
+    "implementation_path_present": true,
+    "inline_executor_test_is_measurement": false,
+    "parallel_timing_executed": false,
+    "python_source": "from concurrent.futures import ProcessPoolExecutor\ntry:\n    with ProcessPoolExecutor(max_workers=4) as pool:\n        print(list(pool.map(abs, [-1, -2, -3, -4])))\nexcept BaseException as exc:\n    print(type(exc).__name__ + ': ' + str(exc))\n",
+    "worker_count_requested": 4
+  },
+  "schema": "c1_two_plane_receiver_environment_blockers.v1",
+  "source_custody": {
+    "commit": "e2e8a5e55e74a993708f4a085ba0b2a3ebef0081",
+    "measurement_tool_sha256": "2950ba48bbba0c6be5db57158a651dcdc2403bf8498605c39a8bdd2d0b595d01",
+    "measurement_tool_tests_sha256": "8b39559e99d8bd46ba62df3d96285e7afd9d74cf842eac78f523bac309d4652c",
+    "receiver_sha256": "f7ce598e067874813fcabc5b8767d368c4fae8e38c3af29fdff3868004b84b85",
+    "receiver_tests_sha256": "5463375e6c9cc58eca9d33cf39ce7f08110571ee0cb0905d739ce839ca202a4c",
+    "remote_checkout_reproduces_sources": true
+  },
+  "verification": {
+    "combined_focused_tests": 76,
+    "diff_check": "PASS",
+    "py_compile": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS"
+  },
+  "verdict_scope": "These host refusals block local process-pool timing and MLX parity only. They do not falsify the deterministic CPU receiver and do not authorize a contest timing claim."
+}
