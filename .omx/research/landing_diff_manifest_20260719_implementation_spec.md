@@ -1,7 +1,7 @@
 # Task #555 implementation spec — LandingDiffManifest
 
-Date: 2026-07-19  
-Lane: `lane_landing_diff_manifest_20260719` (L0 / phase 1)  
+Date: 2026-07-19
+Lane: `lane_landing_diff_manifest_20260719` (L0 / phase 1)
 Authority: verified delegated prompt SHA-256
 `6e734799f232172cb6e8e3c2b3c8c5a9c9bf58d71bc2fd97dc8f08d0b950d025`.
 

@@ -1,9 +1,9 @@
 # LandingDiffManifest — task #555 landing memo
 
-**Date:** 2026-07-19  
-**Lane:** `lane_landing_diff_manifest_20260719`  
+**Date:** 2026-07-19
+**Lane:** `lane_landing_diff_manifest_20260719`
 **Verdict scope:** apparatus-only MEANS; no launch, paid dispatch, archive,
-score, pointer, or promotion authority.  
+score, pointer, or promotion authority.
 **Consumer:** task #555 and the required independent MAIN landing review.
 
 ## Verdict
@@ -44,7 +44,10 @@ and `.omx/research/landing_diff_manifest_retro_yhat_native_20260719.json`.
 - **MEASURED:** 69 tests passed across the new manifest tests, landing-gate
   regression suite, and consolidation-debt seam test.
 - **MEASURED:** Ruff, `py_compile`, and `git diff --check` passed on every
-  touched Python surface.
+  touched Python surface. (MAIN review correction 2026-07-19: the markdown
+  deliverables carried trailing whitespace at landing — the arm's 5-round cap
+  fired before a sixth fix round; stripped at MAIN review, `git diff --check`
+  now clean repo-wide on this landing.)
 - The new/extended behavioral tests cover positive, negative, waiver, strict,
   migration warning, rename, delete, forced gitignored add, empty diff,
   deterministic rebuild, consumer custody, malformed receipt, and tamper
