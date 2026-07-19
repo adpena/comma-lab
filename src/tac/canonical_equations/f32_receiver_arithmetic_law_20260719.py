@@ -172,6 +172,38 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
         provenance=_prov(".omx/research/yhat_native_generator_20260719_codex.md", "2026-07-19T09:00:00Z"),
         empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
     )
+    anchor_official_n600 = EmpiricalAnchor(
+        anchor_id="official_evaluate_py_n600_byteclosed_capstone_20260719",
+        measurement_utc="2026-07-19T16:57:00Z",
+        inputs={
+            "row": (
+                "first byte-closed v10 capstone: archive.zip 409,526,925 B "
+                "(sha e4cd154f79a3...) -> inflate.sh -> exact factor-2 receiver -> "
+                "UNMODIFIED upstream/evaluate.py --device cpu, 600 samples, seed 1234"
+            ),
+            "preimage_policy": "predictor-residual-u8.v1 exact planes (C1 prepare custody)",
+            "reference": "predicted class from anchor_preimage: ~1.2e-4 d_seg",
+        },
+        predicted_output=(
+            "preimage-fp32 noise class ~1.2e-4 d_seg through the official scorer "
+            "(same rational plane, different uint8 camera preimage)"
+        ),
+        empirical_output=(
+            "CONFIRMED through the OFFICIAL evaluator at n600: d_seg 0.00015196 / "
+            "d_pose 0.00010184; S = 272.73 with rate 10.90748678 carrying 99.98% of S. "
+            "First official-evaluator confirmation of the preimage-fp32 noise class; "
+            "distortion total 0.047 is below the 0.19108 frontier's ~0.073 distortion "
+            "budget at the exact-plane endpoint. [macOS-CPU advisory, NON-PROMOTABLE]"
+        ),
+        residual=1.5196e-4,
+        source_artifact=".omx/research/v10_capstone_first_byteclosed_row_20260719.md",
+        measurement_method=(
+            "official upstream/evaluate.py --device cpu on the byte-closed C1 archive "
+            "(capstone_eval/report.txt)"
+        ),
+        provenance=_prov(".omx/research/v10_capstone_first_byteclosed_row_20260719.md", "2026-07-19T16:57:00Z"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="f32 receiver-arithmetic exactness admissibility",
@@ -204,7 +236,7 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
             "ulp_class_margin": "logit units",
         },
         units_out={"admissible": "bool", "basis": "categorical"},
-        empirical_anchors=(anchor_frame195, anchor_pair125, anchor_preimage),
+        empirical_anchors=(anchor_frame195, anchor_pair125, anchor_preimage, anchor_official_n600),
         predicted_vs_empirical_residual={
             "frame195_margin": FRAME_195_MARGIN,
             "pair125_dseg": PAIR_125_DSEG,
