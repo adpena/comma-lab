@@ -578,6 +578,42 @@ def format_curriculum_pool_line(summary: dict, top_n: int = _DUTY_TOP_N) -> str:
     return line
 
 
+def section_dsl_orphan_flags() -> tuple[str | None, dict | None]:
+    """Surface the DSL-orphan debt (task #332): trainer argparse flags the DSL
+    does not yet hold as a Lever factory, per lever_registry.completeness().unmapped.
+
+    Per the "off is a tracked queue, never a forgotten default" non-negotiable +
+    "DSL HOLDS every designed lever": completeness() ALREADY computes this, but it
+    was only consumed by witness_autoconfig / convene — NOT surfaced in the
+    always-shown digest, so the debt was queryable-if-you-remember, not a tracked
+    queue. This SENSE row makes it visible + ranked-able so the controller
+    remembers and the operator never has to. Read-only, score-neutral, fail-open.
+
+    NOTE (anti-fake): this only COUNTS + names the debt; it does NOT auto-stub the
+    flags (a generic knob is a lever only WITH swept intent — blind N-by-hand
+    stubbing is the anti-pattern the discipline forbids). The fold path is the
+    per-lever emit_stub_lever, done as designed, not from this row."""
+    try:
+        from tac.witness_dsl import lever_registry as _lr
+
+        comp = _lr.completeness()
+        unmapped = getattr(comp, "unmapped", None)
+        if unmapped is None and isinstance(comp, dict):
+            unmapped = comp.get("unmapped")
+        if not unmapped:
+            return None, None
+        sample = list(unmapped)[:6]
+        line = (
+            f"dsl-orphan ({len(unmapped)} trainer flag(s) NOT held by a DSL Lever "
+            f"— #332 SoT debt; fold per-lever via emit_stub_lever ONLY with swept "
+            f"intent, never N-by-hand): " + ", ".join(sample)
+            + (f" (+{len(unmapped) - len(sample)} more)" if len(unmapped) > len(sample) else "")
+        )
+        return line, {"unmapped_count": len(unmapped), "unmapped_sample": sample}
+    except Exception as exc:  # fail-open: a SENSE row must never break the digest
+        return f"dsl-orphan: unavailable ({type(exc).__name__})", None
+
+
 def section_curriculum_pool() -> tuple[str | None, dict | None]:
     """The CURRICULUM-CANDIDATE POOL as a tracked costate class (task #403; P0 orphan-class binding
     2026-07-10). A curriculum candidate in ANY form (stage / loss / init / preconditioning / data-order
@@ -1169,6 +1205,10 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
     cpool_line, data["curriculum_pool"] = section_curriculum_pool()
     if cpool_line:
         lines.append(cpool_line)
+
+    dslorphan_line, data["dsl_orphan"] = section_dsl_orphan_flags()
+    if dslorphan_line:
+        lines.append(dslorphan_line)
 
     fl_line, data["failure_ledger"] = section_failure_ledger()
     lines.append(fl_line or "failure-ledger: none yet (sibling SENSE input pending)")
