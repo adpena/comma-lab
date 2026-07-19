@@ -481,6 +481,27 @@ discipline as scores). A second timed invocation is reproducibility evidence, re
 separately, never added to the contest runtime. The 3.775-minute projection is an optimistic
 inflate-only control datum: it never included `T_scoring` and is not a two-plane forecast.
 
+**HARDWARE EXPLOITATION (operator 2026-07-19: "we can fully leverage and exploit the hardware
+available ... CPU and GPU cuda and multiprocessing and threading and async, anything within the
+contest rules").** The receiver is NOT constrained to a single-threaded CPU process. Per
+`upstream/README.md:113` the INSTANCE CHOICE IS OURS: declaring a GPU requirement buys a T4
+(26 GB RAM, 16 GB VRAM, CUDA); otherwise a 4-core/16 GB CPU instance. Within the 30-minute total,
+multiprocessing, threading, async I/O, and CUDA are all legal. Design consequences (binding on
+C1/C2/C11):
+- the 600 pairs are embarrassingly parallel — the baseline CPU receiver uses a 4-worker
+  process pool (deterministic: per-pair outputs are independent; assembly order fixed);
+- the factor-2 preimage solve is EXACT INTEGER arithmetic — it is CUDA-parallelizable
+  DETERMINISTICALLY (integer ops carry no accumulation-order drift; the fp32 hazard lives in
+  float paths only, which the receiver does not execute). A T4 lattice-solve path is therefore
+  a legal, bit-exact throughput lever, subject to the C1 measurement discipline;
+- `T_scoring` itself depends on the instance choice (T4 scoring pass vs 4-core CPU scoring
+  pass) — the instance decision is made from MEASURED totals on both instance classes, not
+  assumed. C1's receipt reports the single-worker baseline AND the exploited configuration
+  actually intended for the contest run, per stage, on each candidate instance class;
+- determinism remains the hard constraint: any parallel schedule must produce byte-identical
+  output across runs and hosts (double-decode identity is already a C1 pass condition).
+
+
 ## 7. Byte-budget derivation and one shared KKT
 
 **Frozen line optimized against:** exact Pose/Seg distortions at
