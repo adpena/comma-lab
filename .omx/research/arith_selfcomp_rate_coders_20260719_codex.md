@@ -1,9 +1,9 @@
 # Arithmetic/Selfcomp rate coders: measured local audit
 
-Date: 2026-07-19 UTC  
-Lane: `lane_arith_selfcomp_rate_coders_20260719`  
-Status: `research_only=true`; **PARTIAL / fail-closed blockers retained**  
-Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**  
+Date: 2026-07-19 UTC
+Lane: `lane_arith_selfcomp_rate_coders_20260719`
+Status: `research_only=true`; **PARTIAL / fail-closed blockers retained**
+Pointer: `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**
 Authority: isolated local build and read-only measurement. No launch, paid
 dispatch, contest score, promotion, submission, inflate dependency, or pointer
 authority. MAIN landing review is required.
@@ -152,9 +152,9 @@ run byte changed.
 Self-review: round 1 fixed the donor section classifier, complete matrix/vector
 spatial transforms, and zstd CLI fallback. Round 2 added entropy coding to the
 classical block-FP comparison, preserved the residual payload blocker, and
-made the late MAIN classical-only boundary machine-readable. Further clean
-test/lint/diff and receipt-custody passes follow before commit; maximum five
-rounds is respected.
+made the late MAIN classical-only boundary machine-readable. Round 3 validated
+receipt custody and round 4 removed Markdown-only diff-check findings. The
+maximum five rounds is respected.
 
 ## STORES CONSULTED
 

@@ -1,7 +1,7 @@
 # Arithmetic and self-compression rate coders: implementation spec
 
-Date: 2026-07-19  
-Lane: `lane_arith_selfcomp_rate_coders_20260719`  
+Date: 2026-07-19
+Lane: `lane_arith_selfcomp_rate_coders_20260719`
 Authority: delegated local build/measure only; no launch, paid dispatch, score,
 promotion, or pointer authority
 
@@ -111,4 +111,3 @@ module, shared ledgers, `CLAUDE.md`, `AGENTS.md`, or reports.
 - No new mandatory runtime dependency; no modification outside owned files.
 - Implementation does not commit. The parent session reviews, measures, writes
   the final memo/receipt, and commits.
-
