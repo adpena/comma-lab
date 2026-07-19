@@ -19597,3 +19597,30 @@ refusal (frame-195 class); final native-f32 hard-oracle repair is mandatory in a
 positive anisotropic bands → measure real bytes(τ_pose)/bytes(seg-band) curves → #536 KKT. Receipts:
 `joint_seg_pose_inverse_solve_receipt_{chunkA,chunkB2,n24}_20260719.json`; memo
 `joint_seg_pose_inverse_solve_20260719_codex.md`. Pointer 0.19108 UNMOVED (means/instrument).
+
+## FEED-yhat-ladder+receiver (2026-07-19) — #548 DECISIVE rungs + #543 production receiver MERGED
+
+**Pointer 0.19108 [contest-CPU] UNMOVED — both rows are MEANS.** Arms merged fb9d6dda60 (#548) +
+edbd6951b4 (#543); dispositions reviewed_committed; worktrees/branches pruned.
+
+- **SIGNAL (#548, n24 chunked, [macOS-CPU advisory] NON-PROMOTABLE):** 4-rung ŷ R-D ladder, all
+  56,623,104 block solves FEASIBLE_EXACT (zero repairs). **Rung B (witness-as-ŷ): 83,838 actual bytes
+  = the full-n600 ep725 byte-closed archive (n600 rate term 0.0558) and the exact lattice realization
+  REPRODUCES the witness's advisory d_seg 0.003455** — survival/R walls are 0 BY CONSTRUCTION for any
+  ŷ-generator (the composition law's promise, now measured). Direct complete-plane payloads rate-DEAD:
+  source-exact ŷ = 628.35 n600 rate term (verdict_scope: formulation — the direct-plane FAMILY, not
+  compact descriptions). Rung A reproduces the f32 ULP surface at n24 (d_seg 2.12e-7, d_pose 1.14e-9).
+- **DIAGNOSTIC:** the game is now PURELY bytes(compact ŷ-generator) vs its (d_seg, d_pose): seg
+  contribution of the c2 witness ŷ = 100·0.003455 = 0.346 (vs pointer 0.191 total) → the witness
+  generator needs ~4× better d_seg at similar rate, OR a residual-vs-generator payload (the #549
+  predictor-residual objective). POSE INTERACTION DEBT NAMED: source-f0 × witness-f1 → d_pose ≈ 63
+  (frame1-only diagnostic; witness frames are not pose-shaped) — joint (f0,f1) treatment is mandatory,
+  exactly the #549 joint-solve + VJP-custody objective.
+- **RESPONSE:** (1) #543 production receiver LANDED: scorer-free deterministic factor-2 archive+inflate,
+  12-pair byte-close proof (double-decode tree-hash equal, 14,155,776/14,155,776 exact numerators),
+  factor-2 promoted in the v10 compiler (MISSING = factor-10 only); DERIVED n600 decode 3.8 min = 7.9×
+  headroom vs the 30-min budget. (2) The remaining #536 KKT waterfill consumes these rungs + the VJP
+  arm's positive-band points (arm still running). launch_ready=false; no score/promotion claim.
+
+Triality: DSL leg = Factor2IntegerScorerPlane counted instruction (arm-landed) · equations leg =
+composition law + f32 receiver-arithmetic law (registered 2026-07-19) · this FEED = DAG leg.
