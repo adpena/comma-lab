@@ -33,6 +33,14 @@ from tac.codec.v10_predictor_residual import (
     decode_predictor_residual,
     encode_predictor_residual,
 )
+from tac.codec.v10_jxl_plane_codec import (
+    CODEC_ID as JXL_PLANE_Y_CODEC_ID,
+)
+from tac.codec.v10_jxl_plane_codec import (
+    JxlPlaneCodecError,
+    decode_payload as decode_jxl_plane_payload,
+    encode_pairs as encode_jxl_plane_pairs,
+)
 from tac.optimization.uint8_lattice_feasibility import (
     DisjointResizeOperator,
     Uint8LatticeError,
@@ -57,7 +65,9 @@ FRAME0_POLICY_ID = "repeat-frame1"
 DESCRIPTION_FRAME0_POLICY_ID = "description-frame0.v1"
 FRAME0_POLICY_IDS = frozenset({FRAME0_POLICY_ID, DESCRIPTION_FRAME0_POLICY_ID})
 RESIDUAL_CODEC_ID = "sparse-int16-le.v1"
-Y_CODEC_IDS = frozenset({"raw-uint8-y", "brotli-y", "witness-y-stub", PREDICTOR_RESIDUAL_Y_CODEC_ID})
+Y_CODEC_IDS = frozenset(
+    {"raw-uint8-y", "brotli-y", "witness-y-stub", PREDICTOR_RESIDUAL_Y_CODEC_ID, JXL_PLANE_Y_CODEC_ID}
+)
 SECTION_ORDER = ("y_description", "frame0_policy", "quotient_residual")
 
 MAX_HEADER_BYTES = 1 << 20
@@ -250,6 +260,8 @@ def _encode_y(raw: bytes, codec_id: str) -> bytes:
         return raw
     if codec_id == PREDICTOR_RESIDUAL_Y_CODEC_ID:
         raise ProductionReceiverError("predictor-residual requires typed two-plane encoding")
+    if codec_id == JXL_PLANE_Y_CODEC_ID:
+        raise ProductionReceiverError("jxl-lossless-plane requires typed two-plane encoding")
     raise ProductionReceiverError(f"unknown y codec id {codec_id!r}")
 
 
@@ -269,6 +281,12 @@ def _decode_y(section: ProductionSection) -> bytes:
         except PredictorResidualError as exc:
             raise ProductionReceiverError("predictor-residual y payload refused") from exc
         decoded = pair.frame0.tobytes(order="C") + pair.frame1.tobytes(order="C")
+    elif section.codec_id == JXL_PLANE_Y_CODEC_ID:
+        try:
+            planes = decode_jxl_plane_payload(section.payload)
+        except JxlPlaneCodecError as exc:
+            raise ProductionReceiverError("jxl-lossless-plane y payload refused") from exc
+        decoded = planes.frame0.tobytes(order="C") + planes.frame1.tobytes(order="C")
     else:
         raise ProductionReceiverError(f"unknown y codec id {section.codec_id!r}")
     if len(decoded) != section.decoded_byte_length or _sha256(decoded) != section.decoded_sha256:
@@ -412,6 +430,8 @@ def build_packet(
     predictor_descriptors: Sequence[bytes] | None = None,
     predictor_pair_ids: Sequence[int] | None = None,
     quotient_residual: np.ndarray | Sequence[QuotientResidualUpdate] | None = None,
+    jxl_effort: int = 9,
+    jxl_workers: int = 1,
 ) -> bytes:
     """Build canonical ``0.bin`` bytes from exact uint8 scorer planes."""
 
@@ -455,6 +475,27 @@ def build_packet(
             )
         except PredictorResidualError as exc:
             raise ProductionReceiverError("predictor-residual y encoding refused") from exc
+        y_raw = frame0.tobytes(order="C") + y.tobytes(order="C")
+        frame0_policy_id = DESCRIPTION_FRAME0_POLICY_ID
+    elif y_codec_id == JXL_PLANE_Y_CODEC_ID:
+        if frame0_y_planes is None:
+            raise ProductionReceiverError("jxl-lossless-plane y codec requires frame0_y_planes")
+        if predictor_modes is not None or predictor_descriptors is not None:
+            raise ProductionReceiverError("jxl-lossless-plane refuses predictor mode/descriptor arguments")
+        frame0 = np.asarray(frame0_y_planes)
+        if frame0.dtype != np.uint8 or frame0.shape != y.shape:
+            raise ProductionReceiverError("frame0_y_planes must match exact uint8 frame1 geometry")
+        frame0 = np.ascontiguousarray(frame0)
+        try:
+            y_payload = encode_jxl_plane_pairs(
+                frame0,
+                y,
+                pair_ids=None if predictor_pair_ids is None else [int(p) for p in predictor_pair_ids],
+                effort=jxl_effort,
+                workers=jxl_workers,
+            )
+        except JxlPlaneCodecError as exc:
+            raise ProductionReceiverError("jxl-lossless-plane y encoding refused") from exc
         y_raw = frame0.tobytes(order="C") + y.tobytes(order="C")
         frame0_policy_id = DESCRIPTION_FRAME0_POLICY_ID
     else:
@@ -612,7 +653,7 @@ def parse_packet(packet_bytes: bytes, *, max_packet_bytes: int = MAX_PACKET_BYTE
         "decoded y bytes",
         maximum=MAX_DECODED_PLANE_BYTES,
     )
-    if header["y_codec_id"] == PREDICTOR_RESIDUAL_Y_CODEC_ID:
+    if header["y_codec_id"] in (PREDICTOR_RESIDUAL_Y_CODEC_ID, JXL_PLANE_Y_CODEC_ID):
         if expected_y_bytes > MAX_DECODED_PLANE_BYTES // 2:
             raise ProductionReceiverError("decoded two-plane y bytes exceed the cap")
         expected_y_bytes *= 2
@@ -704,6 +745,15 @@ def parse_packet(packet_bytes: bytes, *, max_packet_bytes: int = MAX_PACKET_BYTE
         if decoded_pair.frame0.shape != expected_shape or decoded_pair.frame1.shape != expected_shape:
             raise ProductionReceiverError("predictor-residual payload/header geometry drift")
         _decode_y(y_section)
+    elif y_section.codec_id == JXL_PLANE_Y_CODEC_ID:
+        try:
+            decoded_planes = decode_jxl_plane_payload(y_section.payload)
+        except JxlPlaneCodecError as exc:
+            raise ProductionReceiverError("jxl-lossless-plane y payload parse-back refused") from exc
+        expected_shape = (pair_count, scorer_h, scorer_w, channels)
+        if decoded_planes.frame0.shape != expected_shape or decoded_planes.frame1.shape != expected_shape:
+            raise ProductionReceiverError("jxl-lossless-plane payload/header geometry drift")
+        _decode_y(y_section)
     if section_count == 3:
         residual = sections[2]
         if (
@@ -736,7 +786,7 @@ def decode_y_plane_pair(packet: ParsedProductionPacket) -> DecodedYPlanePair:
     decoded = _decode_y(section)
     shape = (pair_count, scorer_h, scorer_w, channels)
     plane_bytes = pair_count * scorer_h * scorer_w * channels
-    if section.codec_id == PREDICTOR_RESIDUAL_Y_CODEC_ID:
+    if section.codec_id in (PREDICTOR_RESIDUAL_Y_CODEC_ID, JXL_PLANE_Y_CODEC_ID):
         frame0 = np.frombuffer(decoded[:plane_bytes], dtype=np.uint8).reshape(shape).copy()
         frame1 = np.frombuffer(decoded[plane_bytes:], dtype=np.uint8).reshape(shape).copy()
     else:
@@ -919,6 +969,8 @@ def build_production_archive(
     predictor_pair_ids: Sequence[int] | None = None,
     quotient_residual: np.ndarray | Sequence[QuotientResidualUpdate] | None = None,
     manifest_path: Path | str | None = None,
+    jxl_effort: int = 9,
+    jxl_workers: int = 1,
 ) -> ArchiveBuildResult:
     """Build deterministic ``archive.zip`` plus a write-once byte manifest."""
 
@@ -938,6 +990,8 @@ def build_production_archive(
         predictor_descriptors=predictor_descriptors,
         predictor_pair_ids=predictor_pair_ids,
         quotient_residual=quotient_residual,
+        jxl_effort=jxl_effort,
+        jxl_workers=jxl_workers,
     )
     parsed = parse_packet(packet_bytes)
     archive_bytes = _zip_bytes(packet_bytes)
