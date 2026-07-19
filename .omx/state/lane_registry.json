@@ -78943,6 +78943,52 @@
       "reactivation_criteria": [
         "MAIN reviews ranked consumers and approves a separate $0 adoption probe"
       ]
+    },
+    {
+      "id": "categorical_spectrum_crosswalk_20260719",
+      "name": "Categorical-spectrum crosswalk",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/categorical_spectrum_crosswalk_20260719_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Research-only operator drop #554; pointer authority absent; $0 crosswalk only.",
+      "research_only": true,
+      "lane_class": "research",
+      "reactivation_criteria": [
+        "MAIN reviews memo and approves either named zero-dollar falsifier"
+      ]
     }
   ],
   "level_rules": {
@@ -78952,5 +78998,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-19T07:11:04Z"
+  "updated_at": "2026-07-19T10:03:02Z"
 }
