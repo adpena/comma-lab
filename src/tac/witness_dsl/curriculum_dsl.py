@@ -2094,28 +2094,51 @@ def YhatNativeGenerator(*, policy: YhatNativeGeneratorPolicy) -> Lever:
 
 
 def IntegerPlaneEmitter(*, policy: IntegerPlaneEmitterPolicy) -> Lever:
-    """Default-OFF C2 vehicle contract; deliberately argv-inert and non-nilary."""
+    """Typed C2 policy lever for the dedicated band trainer.
+
+    The compatibility mode is deliberately argv-inert. ``BANDED_TRAINING``
+    emits only flags owned by the dedicated C2 parser; it is therefore not
+    composable into the level-set ``BASELINE`` program.
+    """
 
     from tac.witness_dsl.integer_plane_emitter_policy import (
+        BANDED_TRAINING_RECEIPT_SCHEMA,
         POLICY_CONTRACT_RECEIPT_KEY,
         IntegerPlaneEmitterPolicy,
+        PolicyMode,
     )
 
     if not isinstance(policy, IntegerPlaneEmitterPolicy):
         raise TypeError("IntegerPlaneEmitter requires an IntegerPlaneEmitterPolicy")
     contract = policy.compile_contract()
+    active = policy.mode is PolicyMode.BANDED_TRAINING
+    overrides = (
+        {
+            "--integer-plane-emitter-mode": policy.mode.value,
+            "--integer-plane-emitter-basis": policy.basis.value,
+            "--integer-plane-emitter-policy-sha256": contract["policy_sha256"],
+        }
+        if active
+        else {}
+    )
+    receipts = (
+        {"--integer-plane-emitter-policy-sha256": BANDED_TRAINING_RECEIPT_SCHEMA}
+        if active
+        else {}
+    )
     return Lever(
         "IntegerPlaneEmitter",
-        overrides={},
+        overrides=overrides,
         epochs_delta=0,
         notes=(
-            "argv-inert default-OFF C2 emitter; basis="
+            ("argv-effective dedicated C2 band trainer; " if active else "argv-inert default-OFF C2 emitter; ")
+            + "basis="
             f"{contract['basis']}; policy_sha256={contract['policy_sha256']}; "
-            "future __ipe_ resume hooks not registered"
+            "launch/score/promotion/pointer authority sealed false"
         ),
         lawrefs={},
         constant_manifest={},
-        runtime_receipt_schemas={},
+        runtime_receipt_schemas=receipts,
         policy_contracts={POLICY_CONTRACT_RECEIPT_KEY: contract},
     )
 
