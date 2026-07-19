@@ -1,7 +1,7 @@
 # Task #543 production receiver/archive implementation spec
 
-Date: 2026-07-19  
-Lane: `production_receiver_543_20260719`  
+Date: 2026-07-19
+Lane: `production_receiver_543_20260719`
 Authority: delegated operator GO to build only; no launch, paid dispatch, score,
 submission, or frontier-pointer authority. `launch_ready=false` is invariant.
 

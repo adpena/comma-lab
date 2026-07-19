@@ -1,10 +1,10 @@
 # Task #543 production receiver/archive landing
 
-Date: 2026-07-19  
-Lane: `production_receiver_543_20260719`  
-Verdict: **MEASURED STRUCTURAL BYTE-CLOSE PASS — NON-SCORE, NON-PROMOTABLE**  
-Authority axis: `[macOS-CPU structural/non-score]`  
-Frontier pointer: `0.1910828242 [contest-CPU]` **UNMOVED**  
+Date: 2026-07-19
+Lane: `production_receiver_543_20260719`
+Verdict: **MEASURED STRUCTURAL BYTE-CLOSE PASS — NON-SCORE, NON-PROMOTABLE**
+Authority axis: `[macOS-CPU structural/non-score]`
+Frontier pointer: `0.1910828242 [contest-CPU]` **UNMOVED**
 Launch state: `launch_ready=false`; no paid dispatch, evaluator, submission, or
 pointer mutation was authorized or performed.
 
