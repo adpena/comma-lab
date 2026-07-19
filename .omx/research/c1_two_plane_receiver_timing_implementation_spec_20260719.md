@@ -1,8 +1,8 @@
 # C1 two-independent-plane receiver timing — implementation specification
 
-Date: 2026-07-19 UTC  
-Lane: `lane_c1_two_plane_receiver_timing_20260719`  
-Task: #561 / SPEC_v10 §8 C1  
+Date: 2026-07-19 UTC
+Lane: `lane_c1_two_plane_receiver_timing_20260719`
+Task: #561 / SPEC_v10 §8 C1
 Authority: local train-free BUILD + MEASURE only; MAIN landing review required
 
 ## Outcome
