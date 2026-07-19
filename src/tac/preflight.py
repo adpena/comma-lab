@@ -6481,9 +6481,9 @@ def preflight_all(
         # merged) — flipping it strict would refuse every launch. The Fourier gate
         # stays WARN-ONLY by design pending the owed curvelet-through-R n600 A/B.
         check_config_flag_provenance_bijection_complete(strict=False, verbose=verbose)
-        check_v9_fake_claim_guards(strict=True, verbose=verbose)
+        check_v9_fake_claim_guards(strict=True, verbose=verbose)  # CLAUDE_MD_ENTRY_OK: canonically documented in CLAUDE.md V9 §2026-07-14 amendment (Catalog #351 LawRef/value custody); strict since 3afe37ddbe at measured live-count-0; standalone numbered catalog row deferred
         check_no_fourier_basis_in_witness_representation(strict=False, verbose=verbose)
-        check_evidence_authority_claims_are_custodied(strict=True, verbose=verbose)
+        check_evidence_authority_claims_are_custodied(strict=True, verbose=verbose)  # CLAUDE_MD_ENTRY_OK: canonically documented in CLAUDE.md V9 §2026-07-14 amendment (Catalog #351 LawRef/value custody); strict since 3afe37ddbe at measured live-count-0; standalone numbered catalog row deferred
 
         # 2026-07-15 Catalog #406 — the DSL compile hash is a load-bearing
         # admission prerequisite at BOTH the launcher and governor.  WARN-ONLY
@@ -6564,8 +6564,8 @@ def preflight_all(
         # review F2, 2026-07-07): both verified strict-clean at flip time (live
         # count 0) per the "Strict-flip atomicity rule" — the warn-only landing
         # should have flipped in the original batch.
-        check_no_reasoning_echo_instructions(strict=True, verbose=verbose)
-        check_subagent_contract_module_integrity(strict=True, verbose=verbose)
+        check_no_reasoning_echo_instructions(strict=True, verbose=verbose)  # CLAUDE_MD_ENTRY_OK: canonically documented in CLAUDE.md "Standard subagent contract" §2026-07-07 (STRICT round-2 flip); standalone numbered catalog row deferred
+        check_subagent_contract_module_integrity(strict=True, verbose=verbose)  # CLAUDE_MD_ENTRY_OK: canonically documented in CLAUDE.md "Standard subagent contract" §2026-07-07 (STRICT round-2 flip); standalone numbered catalog row deferred
 
         # 2026-07-07 operating-manual §5 evidence-tag discipline for NEW research
         # memos (dated >= 2026-07-08; zero retroactive noise). WARN-ONLY BY DESIGN
