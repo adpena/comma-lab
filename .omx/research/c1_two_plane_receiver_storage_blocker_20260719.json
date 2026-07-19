@@ -1,0 +1,52 @@
+{
+  "authority": {
+    "contest_budget_verdict": false,
+    "dispatch_attempted": false,
+    "launch_ready": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "blocker": {
+    "class": "BLOCKED_ENVIRONMENT_SSD_WRITE_CUSTODY",
+    "details": [
+      "selected_workload_root_missing",
+      "selected_workload_root_mismatch",
+      "mkdir_failed:PermissionError",
+      "workload_root_missing",
+      "write_probe_failed"
+    ],
+    "effect": "The mandated full-n600 serial and four-worker bulk materializations were not started; local-disk substitution is forbidden."
+  },
+  "generated_at_utc": "2026-07-19T14:25:09Z",
+  "probe": {
+    "create_requested": true,
+    "expected_workload_root": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719",
+    "policy_id": "operator_storage_waterfall.v1",
+    "requested_bytes": 25769803776,
+    "tool": "tools/plan_experiment_storage.py",
+    "workload_subdir": "evidence/c1_two_plane_receiver_20260719"
+  },
+  "schema": "c1_two_plane_receiver_storage_blocker.v1",
+  "source_custody": {
+    "canonical_n600_cache_bytes": 5078017610,
+    "canonical_n600_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "expected_emitted_raw_bytes_per_decode": 3662409600,
+    "expected_numerator_values": 707788800,
+    "expected_y0_raw_c_sha256": "5e86e419cdd5bd41c9482cabc78cf27cec22281098b64c715d91f1f067d11566",
+    "expected_y1_raw_c_sha256": "6a731946e3d9de82089c90de9784c5a5bc72c607c963fb6f79dac16f00ac89bc"
+  },
+  "storage_observation": {
+    "eligible": false,
+    "exists": true,
+    "free_bytes": 816407822336,
+    "local_disk_enabled": false,
+    "reserve_free_bytes": 42949672960,
+    "root": "/Volumes/VertigoDataTier/pact",
+    "selected_root": null,
+    "selected_tier": null,
+    "total_bytes": 2000189177856,
+    "usable_bytes": 773458149376,
+    "workload_root_exists": false,
+    "writable": false
+  }
+}
