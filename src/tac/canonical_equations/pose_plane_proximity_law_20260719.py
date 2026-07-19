@@ -16,13 +16,21 @@ plane barely moves inside a neighborhood of the source plane. Consequences:
    yhat-ladder rung-B d_pose~63 was a GENERATOR artifact (verdict_scope:
    instance), never a family property of the inverse solve.
 3. Marginal slack is enormous: pose only binds at d_pose ~ 2.5e-4 (crossover
-   of d(sqrt(10*d))/dd = 5/sqrt(10*d) with seg's constant-100 marginal) — ~9
-   orders above the ~5e-10 measured at solved planes.
+   of d(sqrt(10*d))/dd = 5/sqrt(10*d) with seg's constant-100 marginal) —
+   ~5.7 orders of magnitude above the ~5e-10 measured at solved planes
+   (2.5e-4 / 5.35e-10 = 4.7e5; the earlier "~9 orders" wording was an
+   arithmetic error, corrected 2026-07-19 per the fresh-eyes verification
+   spec_v10_reconciliation_and_kkt_verify_20260719_fable.md V-1).
 
-MEASURED anchors span the mechanism: near-source planes 5.35e-10..1.14e-9;
-far-off-source plane 63. NO score/promotion claim; this law constrains v10
-CARRIER DESIGN (solve near source + residual-vs-predictor bytes; do NOT spend
-training-side forces making a far-off generator "pose-shaped").
+MEASURED anchors span the mechanism: near-source planes 5.35e-10..1.14e-9
+(per-row MEANS at plane RMSE ~= 0; observed per-pair maxima 3.69e-9 n6 pair
+424 and 2.04e-9 #549 — inside the x10 predicted band); far-off-source plane
+63. Regime THRESHOLDS (rmse<1.0 near / rmse>=12.52 far) are ASSUMED design
+radii — pre-registered falsifiable predictions, NOT measured regime edges;
+measured support sits at rmse~=0 and rmse~=25 only. NO score/promotion claim;
+this law constrains v10 CARRIER DESIGN (solve near source +
+residual-vs-predictor bytes; do NOT spend training-side forces making a
+far-off generator "pose-shaped").
 """
 
 from __future__ import annotations
@@ -43,7 +51,7 @@ DAG_FEED = ".omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md
 _UTC = "2026-07-19T07:10:00Z"
 
 # MEASURED regime endpoints (plane RMSE in uint8 units vs source; d_pose 1/6-mean).
-NEAR_SOURCE_DPOSE_MAX = 1.14e-9   # rung A source-exact (worst of the 3 solved rows)
+NEAR_SOURCE_DPOSE_MAX = 1.14e-9   # worst of the 3 solved-row MEANS (rung A); per-pair max observed 3.69e-9
 FAR_PLANE_RMSE = 25.044688        # c2-witness yhat rung B
 FAR_PLANE_DPOSE = 63.031066895    # its measured d_pose
 POSE_BIND_CROSSOVER = 2.5e-4      # d_pose where pose marginal 5/sqrt(10 d) = seg's 100
@@ -58,9 +66,12 @@ def pose_regime_from_plane_proximity(
 
     Returns the design verdict the v10 carrier search consumes: planes solved
     inside seg margin-bands around the source (``seg_band_solved=True``, small
-    RMSE) sit in the POSE_FREE regime (measured 5.35e-10..1.14e-9, ~9 orders
-    below the 2.5e-4 binding crossover); planes far from source sit in
-    POSE_DESTROYED regardless of their d_seg (measured 63 at RMSE 25). The
+    RMSE) sit in the POSE_FREE regime (measured 5.35e-10..1.14e-9 at plane
+    RMSE ~= 0, ~5.7 orders of magnitude below the 2.5e-4 binding crossover;
+    the <1.0 RMSE radius is an ASSUMED pre-registered design radius — the
+    measurements sit at rmse~=0); planes far from source sit in POSE_DESTROYED
+    regardless of their d_seg (measured 63 at RMSE 25; the >=0.5*FAR threshold
+    is likewise ASSUMED interpolation from that single instance). The
     intermediate region is UNMEASURED — the bytes(tau_pose) curve the VJP arm
     owes. Advisory design classifier, never a score.
     """
@@ -149,7 +160,7 @@ def build_pose_plane_proximity_law_v1() -> CanonicalEquation:
         name="pose is a corollary of plane proximity to source",
         one_line_summary=(
             "d_pose tracks plane proximity to source, not compression: "
-            "in-band solved planes 5e-10..1e-9 (9 orders under the 2.5e-4 "
+            "in-band solved planes 5e-10..1e-9 (~5.7 orders under the 2.5e-4 "
             "crossover); plane RMSE-25 off source gives 63 at any d_seg."
         ),
         latex_form=(
