@@ -1,0 +1,41 @@
+{
+  "checkpoint": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_witness_ema_BEST.npz",
+  "epoch": 725,
+  "state_label": "EMA-BEST-ep725-deploy-shadow",
+  "term_a": "subpix",
+  "term_b": "seg",
+  "n_pairs_euclid": 96,
+  "n_pairs_fisher": 96,
+  "n_all": 600,
+  "seg_form": "tau_softplus",
+  "tau": 0.3,
+  "w_seg": 100.0,
+  "pa_weight": 0.4,
+  "pa_band": 2.0,
+  "self_orient_reconstruction": "decode_style_fixed_point_2iters",
+  "term_values": {
+    "a": 0.03482851772181069,
+    "b": 0.24175809898103276
+  },
+  "euclid_baseline": {
+    "cos_a_b": -0.06274485603638036,
+    "rel_norm_a_over_b": 0.4925305423421865,
+    "pcgrad_conflict_of_b": 0.007791931625972391,
+    "dot_a_b": -0.0019646218598173117,
+    "verdict": "ANTAGONISTIC"
+  },
+  "fisher_authority": {
+    "cos_a_b": -0.42909466108527733,
+    "rel_norm_a_over_b": 0.626748623687702,
+    "pcgrad_conflict_of_b": 497.18579004389267,
+    "inner_a_b": -919159.5745660207,
+    "norm2_a": 1342552.2397589046,
+    "norm2_b": 3417782.4513666797,
+    "verdict": "ANTAGONISTIC"
+  },
+  "axis_tag": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "note": "SPEC_v10 \u00a713.4(3) dual-metric read-back; advisory n<600 subset; pointer UNMOVED"
+}

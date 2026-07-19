@@ -1,0 +1,41 @@
+{
+  "checkpoint": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_ckpt_stageMuonStart_ep726.npz",
+  "epoch": 726,
+  "state_label": "EMA-stage-ckpt-ep726-MuonStart-boundary",
+  "term_a": "weight_entropy",
+  "term_b": "seg",
+  "n_pairs_euclid": 96,
+  "n_pairs_fisher": 96,
+  "n_all": 600,
+  "seg_form": "tau_softplus",
+  "tau": 0.3,
+  "w_seg": 100.0,
+  "pa_weight": 0.4,
+  "pa_band": 2.0,
+  "self_orient_reconstruction": "decode_style_fixed_point_2iters",
+  "term_values": {
+    "a": 0.9350133538246155,
+    "b": 0.24175809898103276
+  },
+  "euclid_baseline": {
+    "cos_a_b": 0.021869897721550277,
+    "rel_norm_a_over_b": 0.25045134468790226,
+    "pcgrad_conflict_of_b": 0.0,
+    "dot_a_b": 0.0003482072709516717,
+    "verdict": "orthogonal"
+  },
+  "fisher_authority": {
+    "cos_a_b": 0.06300528923763592,
+    "rel_norm_a_over_b": 0.09179260682353654,
+    "pcgrad_conflict_of_b": 0.0,
+    "inner_a_b": 19442.194760906048,
+    "norm2_a": 28325.395551210615,
+    "norm2_b": 3361712.555124879,
+    "verdict": "synergistic"
+  },
+  "axis_tag": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "note": "SPEC_v10 \u00a713.4(3) dual-metric read-back; advisory n<600 subset; pointer UNMOVED"
+}

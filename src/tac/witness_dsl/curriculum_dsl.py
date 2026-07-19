@@ -4101,6 +4101,55 @@ def SegFocalGamma(gamma: float = 2.0, window: int = 100) -> Lever:
                  notes="#301 focal-γ seg loss (down-weight easy pixels toward the flip boundary)")
 
 
+def FisherDensityWeight(blend: float = 1.0, source: str = "model", window: int = 100) -> Lever:  # noqa: N802
+    """SPEC_v10 §13.1 row 2 / §13.4(1) (build-wave arm A): Fisher-density per-pixel seg-loss
+    weight from the EXACT registered law ``tr g = ½·sech²(m/2)``
+    (``fisher_curvature_equals_categorical_fisher_trace_caustic_v1``, ρ=0.978) — the seg descent
+    force made metric-aware (capacity flows where decisions bend, the separatrix). ``blend`` λ ∈
+    (0,1] mixes uniform→pure-Fisher; mean-1 stop-grad renorm conserves the gradient budget.
+    ``source``: 'model' = the metric at the CURRENT live logits (DERIVED Fisher-natural for a
+    training force) · 'gt' = the cached GT-margin stationary prior (the A/B arm). DEFAULT-OFF in
+    the trainer (0.0 = byte-identical); ``blend`` is the SWEPT intent — RUN-GATED optimum (owed
+    $0 cached-ckpt A/B), 1.0 is the pure-law form, not a measured optimum. COMPOSITION: same
+    multiplicative seg_pixel_w surface as SegFocalGamma — they overlap on the boundary but
+    DISAGREE on confidently-wrong pixels (focal up-weights, Fisher down-weights); prefer one.
+    Fail-closed vs --micro-batch-pairs>1 (not routed into the batched twin)."""
+    if not (0.0 < float(blend) <= 1.0):
+        raise ValueError(f"FisherDensityWeight blend must be in (0, 1], got {blend!r}")
+    if source not in ("model", "gt"):
+        raise ValueError(f"FisherDensityWeight source must be 'model' or 'gt', got {source!r}")
+    return Lever("fisher_density_weight",
+                 overrides={"--fisher-density-weight": float(blend),
+                            "--fisher-density-source": str(source)},
+                 epochs_delta=window,
+                 notes="arm A §13.4(1): exact-law sech² Fisher-trace seg reweight (blend RUN-GATED, "
+                       "not a measured optimum; source model=Fisher-natural / gt=stationary-prior A/B)")
+
+
+def HeadNaturalGradient(eps: float = 1e-3, window: int = 100) -> Lever:  # noqa: N802
+    """SPEC_v10 §13.4(2) (build-wave arm A): logit-space NATURAL-GRADIENT preconditioning of the
+    seg force. The frozen SegNet head is EXACT rank-4 linear
+    (``segnet_head_rank4_linear_flipdist_v1``) ⇒ the categorical Fisher g = diag(p)−ppᵀ has a
+    CLOSED-FORM damped pseudo-inverse g⁺v = v/(p+eps) − mean_k (O(K)/px, no solve); the trainer
+    applies it as a forward-identity/backward-g⁺ transform on the seg logits, so the descent
+    direction of EVERY witness param becomes the Fisher natural gradient of the active seg form.
+    COMPOSES with (does not duplicate) --head-offset-solver / #423 Hessian head-offset (periodic
+    closed-form SOLVE of out_sdf.bias at checkpoints) and the #518 fork head-SOLVE (head weights
+    solved per stage): those act on HEAD PARAMS at discrete events; this preconditions the
+    PER-STEP direction through the logit bottleneck. DEFAULT-OFF (flag absent = byte-identical);
+    ``eps`` is the damping at simplex corners — RUN-GATED optimum (owed $0 cached-ckpt A/B).
+    Fail-closed vs --micro-batch-pairs>1 (not routed into the batched twin)."""
+    if not (float(eps) > 0.0):
+        raise ValueError(f"HeadNaturalGradient eps must be > 0, got {eps!r}")
+    return Lever("head_natural_grad",
+                 overrides={"--head-natural-grad": True,
+                            "--head-natural-grad-eps": float(eps)},
+                 epochs_delta=window,
+                 notes="arm A §13.4(2): closed-form g⁺ logit natural gradient (eps RUN-GATED, not a "
+                       "measured optimum; composes with #423 head-offset + #518 head-SOLVE — "
+                       "per-step direction vs discrete-event head-param solves)")
+
+
 def EikonalStEik(weight: float = 0.05, normalized: bool = True, norm_eps: float = 1e-2,
                  window: int = 100) -> Lever:  # noqa: N802
     """#317 StEik directional-divergence eikonal stabilizer (Yang et al. StEik): penalise the

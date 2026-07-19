@@ -1,0 +1,41 @@
+{
+  "checkpoint": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_ckpt_stageMuonStart_ep726.npz",
+  "epoch": 726,
+  "state_label": "EMA-stage-ckpt-ep726-MuonStart-boundary",
+  "term_a": "subpix",
+  "term_b": "seg",
+  "n_pairs_euclid": 96,
+  "n_pairs_fisher": 96,
+  "n_all": 600,
+  "seg_form": "tau_softplus",
+  "tau": 0.3,
+  "w_seg": 100.0,
+  "pa_weight": 0.4,
+  "pa_band": 2.0,
+  "self_orient_reconstruction": "decode_style_fixed_point_2iters",
+  "term_values": {
+    "a": 0.03482851772181069,
+    "b": 0.24175809898103276
+  },
+  "euclid_baseline": {
+    "cos_a_b": -0.06274501974698456,
+    "rel_norm_a_over_b": 0.4925305710474359,
+    "pcgrad_conflict_of_b": 0.007791952530016866,
+    "dot_a_b": -0.001964627160627308,
+    "verdict": "ANTAGONISTIC"
+  },
+  "fisher_authority": {
+    "cos_a_b": -0.46490584963914416,
+    "rel_norm_a_over_b": 0.6314453778959044,
+    "pcgrad_conflict_of_b": 538.7200531509894,
+    "inner_a_b": -988611.1048343171,
+    "norm2_a": 1342753.4051652253,
+    "norm2_b": 3367632.4462007326,
+    "verdict": "ANTAGONISTIC"
+  },
+  "axis_tag": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "note": "SPEC_v10 \u00a713.4(3) dual-metric read-back; advisory n<600 subset; pointer UNMOVED"
+}

@@ -1,0 +1,41 @@
+{
+  "checkpoint": "/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/traj_ckpts/ema_rolling_pinned.npz",
+  "epoch": 800,
+  "state_label": "EMA-rolling-ep800-latest-pinned-copy",
+  "term_a": "weight_entropy",
+  "term_b": "seg",
+  "n_pairs_euclid": 96,
+  "n_pairs_fisher": 96,
+  "n_all": 600,
+  "seg_form": "tau_softplus",
+  "tau": 0.3,
+  "w_seg": 100.0,
+  "pa_weight": 0.4,
+  "pa_band": 2.0,
+  "self_orient_reconstruction": "decode_style_fixed_point_2iters",
+  "term_values": {
+    "a": 0.9383805394172668,
+    "b": 0.30942546715959907
+  },
+  "euclid_baseline": {
+    "cos_a_b": -0.011484064271179104,
+    "rel_norm_a_over_b": 0.15283649765204832,
+    "pcgrad_conflict_of_b": 0.0007041216437527035,
+    "dot_a_b": -0.0002824702386961911,
+    "verdict": "orthogonal"
+  },
+  "fisher_authority": {
+    "cos_a_b": 0.0048864029548012855,
+    "rel_norm_a_over_b": 0.061226224826272976,
+    "pcgrad_conflict_of_b": 0.0,
+    "inner_a_b": 1368.4420720143085,
+    "norm2_a": 17146.46596645367,
+    "norm2_b": 4574036.837902722,
+    "verdict": "orthogonal"
+  },
+  "axis_tag": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "note": "SPEC_v10 \u00a713.4(3) dual-metric read-back; advisory n<600 subset; pointer UNMOVED"
+}

@@ -1096,6 +1096,14 @@ def _build_resume_state_arrays(
     out["__cfg_witness_alone_island_loss"] = np.asarray(int(bool(getattr(args, "witness_alone_island_loss", False))))
     out["__cfg_seg_focal_gamma"] = np.asarray(float(getattr(args, "seg_focal_gamma", 0.0)))
     out["__cfg_boundary_distance_weight"] = np.asarray(float(getattr(args, "boundary_distance_weight", 0.0)))
+    # (arm A Fisher actuation) loss-only, trajectory-affecting, no param keys — same class as
+    # focal/boundary-distance above: persist so a --resume-from that silently drops/changes them
+    # fails closed (deterministic-repro). source persisted as an int code (model=0, gt=1).
+    out["__cfg_fisher_density_weight"] = np.asarray(float(getattr(args, "fisher_density_weight", 0.0)))
+    out["__cfg_fisher_density_source_gt"] = np.asarray(
+        int(str(getattr(args, "fisher_density_source", "model")) == "gt"))
+    out["__cfg_head_natural_grad"] = np.asarray(int(bool(getattr(args, "head_natural_grad", False))))
+    out["__cfg_head_natural_grad_eps"] = np.asarray(float(getattr(args, "head_natural_grad_eps", 1e-3)))
     # (#218) logit-adjustment is loss-only + trajectory-affecting (no param keys) — same class as
     # focal/boundary-distance above: persist so a --resume-from that silently drops/changes it
     # fails closed via _resume_lever_divergences (deterministic-repro).
@@ -1482,6 +1490,13 @@ def _resume_lever_divergences(resume_cfg: dict[str, Any], args: Any) -> list[str
         # 2026-07-05; loss-only, trajectory-affecting, no param keys — same class as the #300 levers).
         ("__cfg_seg_focal_gamma", float(getattr(args, "seg_focal_gamma", 0.0)), True),
         ("__cfg_boundary_distance_weight", float(getattr(args, "boundary_distance_weight", 0.0)), True),
+        # (arm A Fisher actuation) loss-only trajectory-affecting levers (same class as focal);
+        # legacy-compatible: only checked when PRESENT in the sidecar (pre-arm-A sidecars lack them).
+        ("__cfg_fisher_density_weight", float(getattr(args, "fisher_density_weight", 0.0)), True),
+        ("__cfg_fisher_density_source_gt",
+         int(str(getattr(args, "fisher_density_source", "model")) == "gt"), False),
+        ("__cfg_head_natural_grad", int(bool(getattr(args, "head_natural_grad", False))), False),
+        ("__cfg_head_natural_grad_eps", float(getattr(args, "head_natural_grad_eps", 1e-3)), True),
         # (#218) logit-adjustment per-class offset (loss-only, trajectory-affecting, no param keys).
         ("__cfg_logit_adjust_loss_tau", float(getattr(args, "logit_adjust_loss_tau", 0.0)), True),
         # (v7.5 Lever-3) logit-adjust class restriction bitmask (trajectory-affecting; regime coherence).
@@ -5796,6 +5811,30 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
     # #300 routing below is UNTOUCHED). Calibrated gamma* comes from
     # experiments/probe_focal_gamma_calibration.py (measured, never guessed).
     focal_gamma = float(getattr(args, "seg_focal_gamma", 0.0))
+    # (arm A Fisher actuation; SPEC_v10 §13.4 surfaces 1-2). DEFAULT 0.0/False => make_loss_fn
+    # branches never built => byte-identical. Fail-closed vs the micro-batch twin (the batched
+    # LeverConfig does not route these yet — joins the STILL-fail-closed list at #313).
+    fisher_w = float(getattr(args, "fisher_density_weight", 0.0))
+    fisher_src = str(getattr(args, "fisher_density_source", "model"))
+    head_ng = bool(getattr(args, "head_natural_grad", False))
+    head_ng_eps = float(getattr(args, "head_natural_grad_eps", 1e-3))
+    if fisher_w > 0.0 and int(getattr(args, "micro_batch_pairs", 1)) > 1:
+        raise ValueError(
+            "--fisher-density-weight is not supported with --micro-batch-pairs>1 (the batched "
+            "twin's LeverConfig does not route the Fisher-density weight yet; fail closed rather "
+            "than silently diverge from the serial path).")
+    if head_ng and int(getattr(args, "micro_batch_pairs", 1)) > 1:
+        raise ValueError(
+            "--head-natural-grad is not supported with --micro-batch-pairs>1 (the batched twin "
+            "does not route the logit-cotangent preconditioner yet; fail closed).")
+    if fisher_w > 0.0 or head_ng:
+        print(json.dumps({"stage": "fisher_actuation", "fisher_density_weight": fisher_w,
+                          "fisher_density_source": (fisher_src if fisher_w > 0.0 else "n/a"),
+                          "head_natural_grad": head_ng,
+                          "head_natural_grad_eps": (head_ng_eps if head_ng else None),
+                          "note": "SPEC_v10 §13.4 surfaces 1-2 (arm A): exact-law sech2 Fisher "
+                          "density seg reweight + closed-form g+ logit natural gradient; "
+                          "advisory; pointer UNMOVED"}), flush=True)
     # (#218 BUILD, FEED-07b lever #3) LOGIT-ADJUSTMENT per-class offset (Menon et al. 2021,
     # arXiv 2007.07314 — the textbook ZERO-BYTE rare-class cure). TRAINING-time LOSS surface ONLY:
     # the frozen-SegNet logits base_loss reads get ``logits_c += tau * log(prior_c)`` with priors
@@ -5851,6 +5890,10 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         l7_threshold=args.l7_threshold,
         render_fn=render_fn,
         focal_gamma=focal_gamma,
+        fisher_density_weight=fisher_w,
+        fisher_density_source=fisher_src,
+        head_natural_grad=head_ng,
+        head_natural_grad_eps=head_ng_eps,
     )
     _pose_training_compute_gate_on = bool(
         getattr(args, "pose_training_compute_gate", False)
@@ -15459,6 +15502,38 @@ def main(argv: list[str] | None = None) -> int:
                     "0.0 (DEFAULT) => branch never built => byte-identical. Emits a per-epoch "
                     "{'stage':'focal','island_grad_share':...} observability row when >0. Routed into "
                     "the micro-batch twin through the shared focal callable.")
+    # FISHER-ACTUATION levers (SPEC_v10 §13.1 row 2 + §13.4 surfaces 1-2; build-wave arm A
+    # p0_build_fisher_actuation_20260717; BUILT default-OFF, READY, NOT deployed — $0 A/B on a
+    # cached ckpt is the pre-registered next gate, never auto-fired here).
+    ap.add_argument("--fisher-density-weight", type=float, default=0.0,
+                    help="SPEC_v10 §13.1: Fisher-density per-pixel seg-loss weight from the EXACT "
+                    "registered law tr g = (1/2) sech^2(m/2) (fisher_curvature_equals_categorical_"
+                    "fisher_trace_caustic_v1, rho=0.978). Value = blend λ in [0,1]: w = (1-λ) + "
+                    "λ·(tr g / mean tr g), STOP-GRAD + mean-1 (budget conserved, reallocated to "
+                    "where decisions bend). Folded into the SAME multiplicative seg_pixel_w idiom "
+                    "as --seg-focal-gamma (composes; but focal and Fisher DISAGREE on confidently-"
+                    "wrong pixels — prefer one). 0.0 (DEFAULT) => branch never built => "
+                    "byte-identical.")
+    ap.add_argument("--fisher-density-source", type=str, default="model",
+                    choices=("model", "gt"),
+                    help="Margin field the Fisher density is evaluated on: 'model' (DERIVED "
+                    "Fisher-natural for a training force: the metric at the CURRENT logits — the "
+                    "live signed top1-top2 margin) or 'gt' (the cached GT margin field: a "
+                    "stationary importance PRIOR near the GT separatrix; the A/B arm).")
+    ap.add_argument("--head-natural-grad", action="store_true", default=False,
+                    help="SPEC_v10 §13.4(2): logit-space NATURAL-GRADIENT preconditioning of the "
+                    "seg force. Forward identity; backward multiplies the logit cotangent by the "
+                    "damped closed-form pseudo-inverse g⁺ of the categorical Fisher g = "
+                    "diag(p)-pp^T (exact rank-4; g⁺v = v/(p+eps) - mean_k, O(K)/px, no solve). "
+                    "COMPOSES with --head-offset-solver (#423: a periodic closed-form SOLVE of "
+                    "the witness out_sdf bias at checkpoints) and the #518 head-SOLVE fork (head "
+                    "WEIGHTS solved per stage): those act on the HEAD PARAMS at discrete events; "
+                    "this lever preconditions the PER-STEP descent DIRECTION of every witness "
+                    "param through the logit bottleneck — different surface, no duplicate "
+                    "mechanism. OFF (DEFAULT) => transform never constructed => byte-identical.")
+    ap.add_argument("--head-natural-grad-eps", type=float, default=1e-3,
+                    help="Damping eps for the g⁺ division 1/(p+eps) at simplex corners (p->0). "
+                    "Must be > 0 when --head-natural-grad is set (fail-closed).")
     # (#218 BUILD, FEED-07b lever #3) class-prior LOGIT ADJUSTMENT (Menon et al. 2021).
     ap.add_argument("--logit-adjust-loss-tau", type=float, default=0.0,
                     help="#218/FEED-07b: class-prior logit adjustment (Menon et al. 2021, arXiv "

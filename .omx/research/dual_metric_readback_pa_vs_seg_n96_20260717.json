@@ -1,0 +1,40 @@
+{
+  "checkpoint": "/Users/adpena/Projects/pact/experiments/results/levelset_n600_witness_20260717T113932Z/levelset_witness_ema_BEST.npz",
+  "epoch": 725,
+  "term_a": "phase_advect",
+  "term_b": "seg",
+  "n_pairs_euclid": 96,
+  "n_pairs_fisher": 96,
+  "n_all": 600,
+  "seg_form": "tau_softplus",
+  "tau": 0.3,
+  "w_seg": 100.0,
+  "pa_weight": 0.4,
+  "pa_band": 2.0,
+  "self_orient_reconstruction": "decode_style_fixed_point_2iters",
+  "term_values": {
+    "a": 0.04628658799144129,
+    "b": 0.24175809898103276
+  },
+  "euclid_baseline": {
+    "cos_a_b": -0.1494359485156952,
+    "rel_norm_a_over_b": 0.6274798919676849,
+    "pcgrad_conflict_of_b": 0.023642245361613533,
+    "dot_a_b": -0.005961046954316528,
+    "verdict": "ANTAGONISTIC"
+  },
+  "fisher_authority": {
+    "cos_a_b": -0.11775252262549697,
+    "rel_norm_a_over_b": 0.4784867527946213,
+    "pcgrad_conflict_of_b": 104.1526143042479,
+    "inner_a_b": -192530.798772158,
+    "norm2_a": 782347.8823501405,
+    "norm2_b": 3417118.771901747,
+    "verdict": "ANTAGONISTIC"
+  },
+  "axis_tag": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "note": "SPEC_v10 \u00a713.4(3) dual-metric read-back; advisory n<600 subset; pointer UNMOVED"
+}
