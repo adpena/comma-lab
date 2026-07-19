@@ -1,0 +1,45 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "input_fidelity": {
+    "all_fp32_exact": true,
+    "max_abs_over_pairs": 0.0,
+    "mean_abs_over_pairs": 0.0,
+    "n_pairs": 24,
+    "total_nonzero_values": 0
+  },
+  "input_fidelity_secs": 0.7543880939483643,
+  "operator_geometry": {
+    "camera": [
+      874,
+      1164
+    ],
+    "denominator": 786432,
+    "scorer": [
+      384,
+      512
+    ]
+  },
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "roadmap_step": "M2 / STEP 1 \u2014 tie-aware preimage selector A/B",
+  "score_claim": false,
+  "scorer_forward_ab": {
+    "S_pose_recovery": 0.0,
+    "S_seg_recovery": 0.0,
+    "S_total_recovery": 0.0,
+    "canonical": {
+      "d_pose": 4.8883228953873946e-05,
+      "d_seg": 0.00012376573386063683
+    },
+    "n_pairs": 24,
+    "secs": 66.31153512001038,
+    "tie_all_numerator_exact": true,
+    "tie_all_optimal_certificate": true,
+    "tie_aware": {
+      "d_pose": 4.8883228953873946e-05,
+      "d_seg": 0.00012376573386063683
+    },
+    "tie_frames_differ_in_taps": 0
+  },
+  "spine": "officially-scored exact-plane C1 receiver (realize_factor2_uint8 canonical support-fill)",
+  "verdict": "M2 LEVER IS A NO-OP ON THE EXACT-PLANE SPINE (formulation-scoped). Canonical support-fill preimage is fp32-EXACT (0 preimage noise) over all 24 pairs => tie-aware selection recovers 0 S at 0 bytes. The officially-scored distortion is PLANE-QUANTIZATION (Y=round(exact_resize(gt)) vs the unrounded reference), not preimage noise; it is recoverable only by a PAYLOAD change (sub-uint8 plane precision), never by 0-byte preimage selection. The 216->264 KB budget-box widening does NOT reproduce; the honest box stands."
+}

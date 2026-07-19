@@ -204,6 +204,49 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
         provenance=_prov(".omx/research/v10_capstone_first_byteclosed_row_20260719.md", "2026-07-19T16:57:00Z"),
         empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
     )
+    anchor_canonical_fp32_exact = EmpiricalAnchor(
+        anchor_id="canonical_support_fill_preimage_is_fp32_exact_m2_20260719",
+        measurement_utc="2026-07-19T20:00:00Z",
+        inputs={
+            "row": (
+                "roadmap M2 tie-aware preimage A/B on the officially-scored C1 "
+                "spine (production receiver realize_factor2_uint8, v10_production_"
+                "receiver.py:842); n600 input-fidelity + n24 scorer-forward"
+            ),
+            "preimage_policy": "canonical support-fill (every camera tap in a block set to that block's target byte y)",
+            "resize_oracle": "REAL torch fp32 F.interpolate((384,512),bilinear) — the exact upstream/modules.py call",
+            "refines_anchor": "preimage_dependent_fp32_resize_noise_20260719 (predictor-optimal policy, ~1e-4 floor)",
+        },
+        predicted_output=(
+            "M2 premise: preimage-fp32 noise ~1e-4-class is recoverable at 0 bytes "
+            "by tie-aware preimage selection => widen the budget box 216->264 KB"
+        ),
+        empirical_output=(
+            "FALSIFIED (formulation-scoped): the CANONICAL support-fill preimage is "
+            "fp32-EXACT — max|A_fp32(canonical)-Y|=0.0 with 0 nonzero over ALL 600 "
+            "pairs (117,964,800 scorer values); tie-aware selection returns canonical "
+            "with an OPTIMALITY CERTIFICATE and n24 scorer-forward d_seg/d_pose are "
+            "BIT-IDENTICAL to canonical (S recovery = 0.0). The ~1e-4 floor is a "
+            "property of predictor-optimal/clip-round preimages, NOT canonical; the "
+            "production receiver already uses canonical, so the byte-closed capstone "
+            "distortion (anchor official_evaluate_py_n600: d_seg 1.52e-4, d_pose "
+            "1.02e-4) is PLANE-QUANTIZATION (Y=round(exact_resize(gt)) vs the "
+            "unrounded scorer reference), recoverable only by a PAYLOAD change "
+            "(sub-uint8 plane precision), never by 0-byte preimage selection. "
+            "The 216->264 KB budget-box widening does NOT reproduce; the honest box "
+            "stands. [macOS-CPU advisory, NON-PROMOTABLE, pointer 0.19108 UNMOVED]"
+        ),
+        residual=0.0,
+        source_artifact="reports/tie_aware_preimage_ab_receipt_n600_fidelity.json",
+        measurement_method=(
+            "tools/measure_tie_aware_preimage_ab.py: canonical/tie-aware camera "
+            "preimages through the real torch fp32 resize + frozen CPU SegNet argmax "
+            "/ PoseNet MSE vs GT references (upstream/evaluate.py-consistent); "
+            "byte-identity preserved (numerator equality asserted)"
+        ),
+        provenance=_prov("reports/tie_aware_preimage_ab_receipt_n24.json", "2026-07-19T20:00:00Z"),
+        empirical_verification_status="VERIFIED_VIA_EMPIRICAL_ANCHOR",
+    )
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name="f32 receiver-arithmetic exactness admissibility",
@@ -236,7 +279,13 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
             "ulp_class_margin": "logit units",
         },
         units_out={"admissible": "bool", "basis": "categorical"},
-        empirical_anchors=(anchor_frame195, anchor_pair125, anchor_preimage, anchor_official_n600),
+        empirical_anchors=(
+            anchor_frame195,
+            anchor_pair125,
+            anchor_preimage,
+            anchor_official_n600,
+            anchor_canonical_fp32_exact,
+        ),
         predicted_vs_empirical_residual={
             "frame195_margin": FRAME_195_MARGIN,
             "pair125_dseg": PAIR_125_DSEG,
@@ -247,6 +296,8 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
             "tools/measure_joint_seg_pose_rate.py",
             "src/tac/witness_dsl/v10_compiler_receiver.py (production successor, #543)",
             "tools/measure_uint8_lattice_feasibility.py",
+            "tools/measure_tie_aware_preimage_ab.py",
+            "src/tac/optimization/tie_aware_preimage.py",
         ),
         canonical_producers=(
             ".omx/research/v10_power_diagram_frame195_diagnostic_20260718.json",

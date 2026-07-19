@@ -1,0 +1,45 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "input_fidelity": {
+    "all_fp32_exact": true,
+    "max_abs_over_pairs": 0.0,
+    "mean_abs_over_pairs": 0.0,
+    "n_pairs": 600,
+    "total_nonzero_values": 0
+  },
+  "input_fidelity_secs": 18.889105796813965,
+  "operator_geometry": {
+    "camera": [
+      874,
+      1164
+    ],
+    "denominator": 786432,
+    "scorer": [
+      384,
+      512
+    ]
+  },
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "roadmap_step": "M2 / STEP 1 \u2014 tie-aware preimage selector A/B",
+  "score_claim": false,
+  "scorer_forward_ab": {
+    "S_pose_recovery": NaN,
+    "S_seg_recovery": NaN,
+    "S_total_recovery": NaN,
+    "canonical": {
+      "d_pose": NaN,
+      "d_seg": NaN
+    },
+    "n_pairs": 0,
+    "secs": 9.5367431640625e-07,
+    "tie_all_numerator_exact": true,
+    "tie_all_optimal_certificate": true,
+    "tie_aware": {
+      "d_pose": NaN,
+      "d_seg": NaN
+    },
+    "tie_frames_differ_in_taps": 0
+  },
+  "spine": "officially-scored exact-plane C1 receiver (realize_factor2_uint8 canonical support-fill)",
+  "verdict": "tie-aware recovered S=nan through the real decode; canonical was NOT fp32-exact on all pairs \u2014 inspect input_fidelity."
+}
