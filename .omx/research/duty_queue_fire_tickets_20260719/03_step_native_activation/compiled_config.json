@@ -1,0 +1,339 @@
+{
+  "argv_authority": "NONE",
+  "common_readiness": {
+    "blockers": [
+      "BLOCKED: the treatment changes the live c2 HOSC endpoint/schedule at ep725; no matching resume receipt repositions v0 and activation geometry or proves a response window.",
+      "BLOCKED: no dedicated ep725 v9c3 typed composer is selected by this materializer.",
+      "BLOCKED: #518 MarginStepCap must be derived from measured provenance, never configured as prose or a float.",
+      "OPEN: BEST boundary plus exact optimizer/RNG state is not established by checkpoint bytes alone.",
+      "BLOCKED: beta2 relaxation, response time, predicted term share, and measured NCDE/costate noise are not joined.",
+      "OPEN: the paired OFF twin has not yet proven identical checkpoint/cadence/RNG/data-order custody.",
+      "OPEN: no live telemetry proves ep_loss > 0.",
+      "OPEN: no armed-run receipt proves the spike guard is active.",
+      "OPEN: no live lever_engage and term-share telemetry exists.",
+      "OPEN: no verdict receipt establishes live-vs-EMA source and EMA-lag handling.",
+      "OPEN: no resume-event reanchor receipt exists.",
+      "OPEN: static declaration cannot prove a fresh n600 ordering/projection.",
+      "BLOCKED: powered NCDE/costate measurement window is unjoined.",
+      "OPEN: positive-control sentinel has not been emitted by an arm."
+    ],
+    "checkpoint_custody": {
+      "best_metadata": {
+        "d_seg": 0.003457972208658854,
+        "epoch": 725,
+        "path": "levelset_witness_ema_BEST.npz",
+        "ts": "2026-07-17T16:25:51Z"
+      },
+      "best_metadata_exact": true,
+      "blocker": "Path/hash custody does not prove the required BEST boundary, optimizer/RNG state, or paired-arm comparability.",
+      "bytes": 460448,
+      "expected_bytes": 460448,
+      "expected_d_seg": 0.003457972208658854,
+      "expected_epoch": 725,
+      "expected_sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+      "path": "/Users/adpena/Projects/pact/experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+      "requested_identity": "v9c2 BEST EMA epoch 725",
+      "sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+      "sidecar_hashes": {
+        "PROVENANCE.md": "80422b7f88fd31abbe9362e95d9e0b95ac6136084c254739c1f2f19b33df9d42",
+        "levelset_best.json": "66950d15bf8575eb4bae28c39c0276b0960f8e14364ed45da24b30b960f27d9e"
+      },
+      "status": "VERIFIED_EXPECTED"
+    },
+    "config_freshness": {
+      "exact_cadence_obligations": "identical eval/observer/checkpoint cadence required; no paired receipt",
+      "status": "RC6_REQUIRED_BLOCKED"
+    },
+    "full_launch_readiness": "BLOCKED",
+    "geometry_518": {
+      "beta2_rewarm": "DERIVED_PROVISIONAL: 27 epochs / 2025 optimizer steps; 8-vs-27 A/B owed",
+      "fork_head_solve": "WIRED_DEFAULT_OFF",
+      "margin_step_cap": "WIRED_DEFAULT_OFF_MEASURED_CAP_ABSENT",
+      "resume_event_boundary_persistence": "PARTIAL",
+      "sources": {
+        "governor_daemon": {
+          "path": "tools/spawn_durable_daemon.py",
+          "sha256": "26bcad63211c6a7c872c42ca0877617d995e707a7419738b5f97135bb28b528e"
+        },
+        "launcher": {
+          "path": "tools/launch_witness_run.py",
+          "sha256": "05fddae253afac7ef6242f26d1e82219ea93b363d7391ad7b17b59c32e65202d"
+        },
+        "operator_authorize": {
+          "path": "tools/operator_authorize.py",
+          "sha256": "3429cd2829ebdc9067a6a72b4dc0d2ee833791fe93492e3b0eb6de0c984aefd4"
+        },
+        "readiness_gate": {
+          "path": "tools/witness_launch_readiness_gate.py",
+          "sha256": "30cb6152833d979b3cf58029ff3dc18d407d7078b16080a3195fd54029e25a0f"
+        },
+        "safe_run": {
+          "path": "tools/safe_run.py",
+          "sha256": "a951ab7ec3baef5137f18472698a58b9f9864902f63f33bd7bbfa89294e3766b"
+        }
+      },
+      "v0_positioning": "OPEN"
+    },
+    "memory": {
+      "base_n600_gib": 71.54,
+      "per_arm_projection": "ABSENT_BLOCKED",
+      "safe_ceiling_gib": 89.6
+    },
+    "requirements": {
+      "best_boundary_and_rng_state": "OPEN: BEST boundary plus exact optimizer/RNG state is not established by checkpoint bytes alone.",
+      "dedicated_ep725_v9c3_typed_composer": "BLOCKED: no dedicated ep725 v9c3 typed composer is selected by this materializer.",
+      "ep_loss_gt_zero": "OPEN: no live telemetry proves ep_loss > 0.",
+      "identical_checkpoint_cadence_rng_data_order": "OPEN: the paired OFF twin has not yet proven identical checkpoint/cadence/RNG/data-order custody.",
+      "lever_engage_and_term_share": "OPEN: no live lever_engage and term-share telemetry exists.",
+      "live_vs_ema_verdict": "OPEN: no verdict receipt establishes live-vs-EMA source and EMA-lag handling.",
+      "margin_step_cap_measured_cap": "BLOCKED: #518 MarginStepCap must be derived from measured provenance, never configured as prose or a float.",
+      "n600_only": "OPEN: static declaration cannot prove a fresh n600 ordering/projection.",
+      "positive_control_sentinel": "OPEN: positive-control sentinel has not been emitted by an arm.",
+      "powered_ncde_costate_window": "BLOCKED: powered NCDE/costate measurement window is unjoined.",
+      "powered_slope_threshold_joins": "BLOCKED: beta2 relaxation, response time, predicted term share, and measured NCDE/costate noise are not joined.",
+      "resume_event_reanchor": "OPEN: no resume-event reanchor receipt exists.",
+      "safe_run_containment": "VERIFIED_STATIC",
+      "spike_guard": "OPEN: no armed-run receipt proves the spike guard is active.",
+      "ticket_specific_warm_start_compatibility": "BLOCKED: the treatment changes the live c2 HOSC endpoint/schedule at ep725; no matching resume receipt repositions v0 and activation geometry or proves a response window."
+    },
+    "verdict_thresholds": {
+      "FIRED-HURTS": "UNSEALED/BLOCKED",
+      "FIRED-NEUTRAL": "UNSEALED/BLOCKED",
+      "FIRED-PAYS": "UNSEALED/BLOCKED",
+      "missing_join": "beta2 + lever response time + predicted share + paired NCDE/costate noise",
+      "non_authorizing_context": {
+        "costate_slope_s_per_ep": -0.0001280414014,
+        "half_width_25ep": 0.0006305742,
+        "half_width_s_per_ep": 2.5222969e-05,
+        "ncde_r2": 0.0602
+      }
+    }
+  },
+  "compile_state": "BLOCKED_BEFORE_FULL_COMPILE",
+  "created_utc": "2026-07-19T15:01:05Z",
+  "duty_share_requested": "34.2%",
+  "full_dsl_compile_hash": null,
+  "full_dsl_compile_hash_blocker": "No dedicated ep725 v9c3 typed composer and #518/power joins are available; argv has no authority.",
+  "historical_iso_status": "NOT_SELECTED_FOR_LAUNCH: the existing fresh mod19/3000-epoch ISO is not an ep725 c2/#518 weights-only fork",
+  "paired_off_twin": {
+    "banked_control": "NONCOMPARABLE_WITHOUT_IDENTICAL_518_BYTE_LEVEL_PROOF",
+    "required": true,
+    "selection": "FRESH_PAIRED_OFF_TWIN"
+  },
+  "schema": "duty_queue_fire_ticket.v1",
+  "status": "BLOCKED",
+  "ticket_id": "03_step_native_activation",
+  "treatment": {
+    "canonical_treatment_delta_hash": "c26f9e49bc23224a01a7b03f0fe6c17a89847acd43e1acaa719151b16c4e1748",
+    "factory_resolution": {
+      "bare_registry_lever_name": "FEED_07b_step_native_activation",
+      "declared_lever_role": "TREATMENT",
+      "imported": true,
+      "module": "tac.witness_dsl.curriculum_dsl",
+      "resolved_through": "tac.witness_dsl.lever_registry.resolve_composable_lever",
+      "scientific_delta_uses_explicit_existing_iso_arguments": true,
+      "signed_operation": "REPLACE_TREATMENT_LEVER_ENDPOINT"
+    },
+    "factory_source": {
+      "line": 5423,
+      "path": "src/tac/witness_dsl/curriculum_dsl.py",
+      "signature": "(beta_start: 'float' = 1.0, beta_end: 'float' = 8.0, anneal: 'str' = 'linear', window: 'int' = 100, *, basis: 'str' = 'annealed_hosc', omega: 'float' = 1.0, finer_bias_init: 'bool' = False, finer_bias_k: 'float' = 10.0, scientific_declaration: 'bool' = False) -> 'Lever'"
+    },
+    "trainer_surface": {
+      "consumer_source_hits": [
+        {
+          "line": 1168,
+          "needle": "hosc_beta_end",
+          "source": "experiments/train_levelset_witness_realized_through_R_mlx.py"
+        }
+      ],
+      "override_flags_accepted": {
+        "--hosc-beta-end": true
+      },
+      "status": "VERIFIED_STATIC",
+      "trainer": "experiments/train_levelset_witness_realized_through_R_mlx.py",
+      "trainer_sha256": "cb1ac057c76bba2dde8d8d55b21e4f584a1907de1f806fab904b17c694bb2695"
+    },
+    "treatment_activity": "DECLARED_TYPED_ENDPOINT_REPLACEMENT",
+    "treatment_delta": {
+      "control_config": "v9_cgauge_ideal_mod19",
+      "declaration_source": "src/tac/witness_dsl/spec_v9_cgauge.py::compile_v9_cgauge_432_step_iso_launch_config",
+      "declared_lever_role": "TREATMENT",
+      "duty_to_measure_percent": 34.2,
+      "factory": "StepNativeActivation",
+      "kind": "WitnessProgram.SignedLeverContrast",
+      "lever_declaration": {
+        "constant_manifest": {
+          "--hosc-beta": {
+            "equation_id": "step_native_activation_edge_optimality_v1",
+            "fallback_used": false,
+            "inputs": [
+              {
+                "config_tags": {
+                  "vehicle": "v9_cgauge_ideal_mod19"
+                },
+                "kind": "literal",
+                "name": "value",
+                "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-beta",
+                "sha256": null,
+                "source": "literal",
+                "staleness_days": null,
+                "value": 1.0
+              }
+            ],
+            "ladder_class": "derived_at_config",
+            "value": 1.0,
+            "warnings": []
+          },
+          "--hosc-beta-end": {
+            "equation_id": "step_native_activation_edge_optimality_v1",
+            "fallback_used": false,
+            "inputs": [
+              {
+                "config_tags": {
+                  "vehicle": "v9_cgauge_ideal_mod19"
+                },
+                "kind": "literal",
+                "name": "value",
+                "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-beta-end",
+                "sha256": null,
+                "source": "literal",
+                "staleness_days": null,
+                "value": 8.0
+              }
+            ],
+            "ladder_class": "derived_at_config",
+            "value": 8.0,
+            "warnings": []
+          },
+          "--hosc-omega": {
+            "equation_id": "step_native_activation_edge_optimality_v1",
+            "fallback_used": false,
+            "inputs": [
+              {
+                "config_tags": {
+                  "vehicle": "v9_cgauge_ideal_mod19"
+                },
+                "kind": "literal",
+                "name": "value",
+                "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-omega",
+                "sha256": null,
+                "source": "literal",
+                "staleness_days": null,
+                "value": 1.0
+              }
+            ],
+            "ladder_class": "derived_at_config",
+            "value": 1.0,
+            "warnings": []
+          }
+        },
+        "epochs_delta": 0,
+        "factory": "StepNativeActivation",
+        "factory_arguments": {
+          "anneal": "linear",
+          "basis": "annealed_hosc",
+          "beta_end": 8.0,
+          "beta_start": 1.0,
+          "finer_bias_init": false,
+          "omega": 1.0,
+          "scientific_declaration": true,
+          "window": 0
+        },
+        "kind": "WitnessProgram.Lever",
+        "lawrefs": {
+          "--hosc-beta": {
+            "equation_id": "step_native_activation_edge_optimality_v1",
+            "fallback": null,
+            "fallback_waiver_reason": "",
+            "inputs": {
+              "value": {
+                "artifact_path": null,
+                "config_tags": {
+                  "vehicle": "v9_cgauge_ideal_mod19"
+                },
+                "expected_sha256": null,
+                "extract": null,
+                "kind": "literal",
+                "max_staleness_days": null,
+                "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-beta",
+                "value": 1.0
+              }
+            },
+            "ladder_class": "derived_at_config"
+          },
+          "--hosc-beta-end": {
+            "equation_id": "step_native_activation_edge_optimality_v1",
+            "fallback": null,
+            "fallback_waiver_reason": "",
+            "inputs": {
+              "value": {
+                "artifact_path": null,
+                "config_tags": {
+                  "vehicle": "v9_cgauge_ideal_mod19"
+                },
+                "expected_sha256": null,
+                "extract": null,
+                "kind": "literal",
+                "max_staleness_days": null,
+                "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-beta-end",
+                "value": 8.0
+              }
+            },
+            "ladder_class": "derived_at_config"
+          },
+          "--hosc-omega": {
+            "equation_id": "step_native_activation_edge_optimality_v1",
+            "fallback": null,
+            "fallback_waiver_reason": "",
+            "inputs": {
+              "value": {
+                "artifact_path": null,
+                "config_tags": {
+                  "vehicle": "v9_cgauge_ideal_mod19"
+                },
+                "expected_sha256": null,
+                "extract": null,
+                "kind": "literal",
+                "max_staleness_days": null,
+                "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-omega",
+                "value": 1.0
+              }
+            },
+            "ladder_class": "derived_at_config"
+          }
+        },
+        "lever_name": "FEED_07b_step_native_activation",
+        "notes": "#310 step-native chart via hosc beta-anneal (annealed_hosc: beta 1.0->8.0 @omega 1.0, FINER False; beta->inf = step limit; NEVER fixed-beta \u2014 anneal only); L-inf-at-edge optimality; duty-to-measure #2, #310 sweep owed",
+        "overrides": {
+          "--activation": "hosc",
+          "--hosc-beta": 1.0,
+          "--hosc-beta-anneal": "linear",
+          "--hosc-beta-end": 8.0,
+          "--hosc-omega": 1.0
+        },
+        "runtime_receipt_schemas": {
+          "--activation": "v9_config_compile.v1",
+          "--hosc-beta": "v9_config_compile.v1",
+          "--hosc-beta-anneal": "v9_config_compile.v1",
+          "--hosc-beta-end": "v9_config_compile.v1",
+          "--hosc-omega": "v9_config_compile.v1"
+        }
+      },
+      "one_lever_delta": true,
+      "operation": "REPLACE_TREATMENT_LEVER_ENDPOINT",
+      "schema": "typed_treatment_delta.v2",
+      "signed_argv_diff": {
+        "--hosc-beta-end": [
+          "3.177",
+          "8.0"
+        ]
+      },
+      "treatment_config": "v9_cgauge_432_step_iso",
+      "volatile_resolution_metadata_omitted": [
+        "resolved_at"
+      ]
+    },
+    "treatment_delta_count": 1
+  }
+}

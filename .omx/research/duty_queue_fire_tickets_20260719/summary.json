@@ -1,0 +1,40 @@
+{
+  "all_status": "BLOCKED",
+  "created_utc": "2026-07-19T15:01:05Z",
+  "main_source_custody": {
+    "path": "main_source_custody.json",
+    "sha256": "b5003f59201638b8e0cb1e1b7eb24900a184e48235e389aadea51986919c5c40",
+    "status": "VERIFIED_SNAPSHOT"
+  },
+  "schema": "duty_queue_fire_ticket_summary.v1",
+  "ticket_order": [
+    "01_dseg_aware_taper",
+    "02_horizon_weighted_margin",
+    "03_step_native_activation",
+    "04_curvelet_matched_bytes_p0_497"
+  ],
+  "tickets": [
+    {
+      "status": "BLOCKED",
+      "ticket_id": "01_dseg_aware_taper",
+      "treatment_delta_hash": "13df7b9396dba63df0699183fd6c000f30989a14b75f5108d13579be40ec8f43"
+    },
+    {
+      "status": "BLOCKED",
+      "ticket_id": "02_horizon_weighted_margin",
+      "treatment_delta_hash": "eb51f3e9747f25f43fe4e5fa918ba4b17e5cd0155da3bd10bc15717ed279c197"
+    },
+    {
+      "status": "BLOCKED",
+      "ticket_id": "03_step_native_activation",
+      "treatment_delta_hash": "c26f9e49bc23224a01a7b03f0fe6c17a89847acd43e1acaa719151b16c4e1748"
+    },
+    {
+      "status": "BLOCKED",
+      "ticket_id": "04_curvelet_matched_bytes_p0_497",
+      "treatment_delta_hash": null
+    }
+  ],
+  "trainer_governed_launches_executed": 0,
+  "wrappers_executed": 4
+}

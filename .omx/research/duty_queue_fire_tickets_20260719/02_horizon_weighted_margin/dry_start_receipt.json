@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "compile_state": "BLOCKED_BEFORE_FULL_COMPILE",
+    "launch_script_has_no_trainer_or_subprocess": true
+  },
+  "expected_refusal_exit_code": 6,
+  "launch_ready": false,
+  "refusal_wrapper_executed": true,
+  "returncode": 6,
+  "schema": "duty_ticket_dry_start_receipt.v1",
+  "scope": "materializer_integrity",
+  "stderr": "",
+  "stdout": "REFUSE: 02_horizon_weighted_margin is a non-authorizing duty-ticket package.\nNo trainer command is present; satisfy compiled-config and custody blockers first.\n",
+  "ticket_id": "02_horizon_weighted_margin",
+  "trainer_or_governed_launch_executed": false,
+  "verdict": "GREEN_STATIC_REFUSAL"
+}

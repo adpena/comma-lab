@@ -1,0 +1,77 @@
+{
+  "arm_cli_detected": true,
+  "blockers": [
+    "Static source audit cannot prove both arm inputs/checkpoints are current and comparable.",
+    "No current compiled-config freshness receipt is available to this materializer.",
+    "This delegated lane may not invoke either real arm or its governed dry-run."
+  ],
+  "c2_gate_exception_scope": "ImportError_only",
+  "c2_run_dir_gate_declared": true,
+  "config_declared": true,
+  "epoch_semantics": "PURE_COMPILE_RECORDS_FRESH_3000_EPOCH_ARMS",
+  "expected_source_sha256": "cdfb05f4dbd0fc825cd6729f8bd2f71a47e1780af5164702213b00e575311bac",
+  "geometry_518_binding_detected": false,
+  "governed_config_freshness_receipt": "ABSENT",
+  "governed_launcher_dry_run_detected": true,
+  "import_closure": {
+    "__future__": true,
+    "argparse": true,
+    "json": true,
+    "pathlib": true,
+    "psutil": true,
+    "subprocess": true,
+    "sys": true,
+    "time": true
+  },
+  "imports": [
+    "__future__",
+    "argparse",
+    "json",
+    "pathlib",
+    "psutil",
+    "subprocess",
+    "sys",
+    "time"
+  ],
+  "lever_telemetry_scope": "front_end_only",
+  "one_factor_status": "BLOCKED: treatment changes basis plus AA/native-render behavior",
+  "operator_go_gate_detected": true,
+  "pure_compile_evidence": {
+    "arms": {
+      "control": {
+        "dsl_compile_hash": "be96e7498b2f63d208187231d1f36c9b31a96dad1fd009b48dde9f147e35826a",
+        "epochs": 3000,
+        "num_pairs": 600,
+        "resolved_argv_hash": "421a2855f20de332a184b85ac844124613743dae1d218852579da5fa8ea055d5",
+        "resolved_argv_hash_semantic": "sha256(canonical compact JSON of dsl_document.resolved_argv)",
+        "schedule_rc6": 0,
+        "schedule_verdict_count": 11,
+        "schedule_violation_count": 0,
+        "typed_config_hash": "36ee86bb385cffbdbd34d763676227d93c566ebc876e2017f2c1d9c63e630e6a"
+      },
+      "treatment": {
+        "dsl_compile_hash": "7ed4982087f723495ac8f8f2e41f6ac655655dab87749dd18bd294a24ce709a2",
+        "epochs": 3000,
+        "num_pairs": 600,
+        "resolved_argv_hash": "4697f58c55a51ace52473ed02ac2d9230212ef5b814ae0cf27d41e6393d6e450",
+        "resolved_argv_hash_semantic": "sha256(canonical compact JSON of dsl_document.resolved_argv)",
+        "schedule_rc6": 0,
+        "schedule_verdict_count": 11,
+        "schedule_violation_count": 0,
+        "typed_config_hash": "3de19c82df8ceb9b052b17d9ce063696d2fcc9d57114930c82d8c5d4ac978b26"
+      }
+    },
+    "classification": "MEASURED_AT_CURRENT_HEAD_PURE_PRODUCTION_EQUIVALENT",
+    "method": "derive_named_config + with_dsl_lever_factories + with_purpose + compile_dsl_document_for_config + schedule gate"
+  },
+  "pure_schedule_rc6_clean": true,
+  "resume_from_flag_detected": false,
+  "sequential_equal_byte_finalizer": "DOCUMENTED_BUT_NOT_ENFORCED_BY_WRAPPER",
+  "skip_c2_gate_present": true,
+  "source": "tools/fire_curvelet_matched_bytes_ab_p0_497.py",
+  "source_present": true,
+  "source_sha256": "cdfb05f4dbd0fc825cd6729f8bd2f71a47e1780af5164702213b00e575311bac",
+  "source_sha256_matches_expected": true,
+  "status": "BLOCKED",
+  "warm_start_checkpoint_input": "ABSENT"
+}

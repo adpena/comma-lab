@@ -1,0 +1,344 @@
+{
+  "authority_input_sha256_comparisons": [
+    {
+      "authority": "curriculum_dsl",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "9602f5794462f0a89a2800091d894157c9475b3c38c66927158a89c793e6900c"
+      },
+      "main_sha256": "9602f5794462f0a89a2800091d894157c9475b3c38c66927158a89c793e6900c",
+      "match": true,
+      "path": "src/tac/witness_dsl/curriculum_dsl.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "9602f5794462f0a89a2800091d894157c9475b3c38c66927158a89c793e6900c"
+      },
+      "source_sha256": "9602f5794462f0a89a2800091d894157c9475b3c38c66927158a89c793e6900c"
+    },
+    {
+      "authority": "spec_v9_cgauge",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "e9d27aa680daa742f004c4c118a7bad8791dc8806fbb3269417e230de668bca9"
+      },
+      "main_sha256": "e9d27aa680daa742f004c4c118a7bad8791dc8806fbb3269417e230de668bca9",
+      "match": true,
+      "path": "src/tac/witness_dsl/spec_v9_cgauge.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "e9d27aa680daa742f004c4c118a7bad8791dc8806fbb3269417e230de668bca9"
+      },
+      "source_sha256": "e9d27aa680daa742f004c4c118a7bad8791dc8806fbb3269417e230de668bca9"
+    },
+    {
+      "authority": "lever_registry",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "506abeab714cfe4baef8078ab2121654f4f600c3f4cd1500a00055bca54aa3c4"
+      },
+      "main_sha256": "506abeab714cfe4baef8078ab2121654f4f600c3f4cd1500a00055bca54aa3c4",
+      "match": true,
+      "path": "src/tac/witness_dsl/lever_registry.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "506abeab714cfe4baef8078ab2121654f4f600c3f4cd1500a00055bca54aa3c4"
+      },
+      "source_sha256": "506abeab714cfe4baef8078ab2121654f4f600c3f4cd1500a00055bca54aa3c4"
+    },
+    {
+      "authority": "trainer",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "cb1ac057c76bba2dde8d8d55b21e4f584a1907de1f806fab904b17c694bb2695"
+      },
+      "main_sha256": "cb1ac057c76bba2dde8d8d55b21e4f584a1907de1f806fab904b17c694bb2695",
+      "match": true,
+      "path": "experiments/train_levelset_witness_realized_through_R_mlx.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "cb1ac057c76bba2dde8d8d55b21e4f584a1907de1f806fab904b17c694bb2695"
+      },
+      "source_sha256": "cb1ac057c76bba2dde8d8d55b21e4f584a1907de1f806fab904b17c694bb2695"
+    },
+    {
+      "authority": "ticket_497_fire_script",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "cdfb05f4dbd0fc825cd6729f8bd2f71a47e1780af5164702213b00e575311bac"
+      },
+      "main_sha256": "cdfb05f4dbd0fc825cd6729f8bd2f71a47e1780af5164702213b00e575311bac",
+      "match": true,
+      "path": "tools/fire_curvelet_matched_bytes_ab_p0_497.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "cdfb05f4dbd0fc825cd6729f8bd2f71a47e1780af5164702213b00e575311bac"
+      },
+      "source_sha256": "cdfb05f4dbd0fc825cd6729f8bd2f71a47e1780af5164702213b00e575311bac"
+    },
+    {
+      "authority": "governed_launcher",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "05fddae253afac7ef6242f26d1e82219ea93b363d7391ad7b17b59c32e65202d"
+      },
+      "main_sha256": "05fddae253afac7ef6242f26d1e82219ea93b363d7391ad7b17b59c32e65202d",
+      "match": true,
+      "path": "tools/launch_witness_run.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "05fddae253afac7ef6242f26d1e82219ea93b363d7391ad7b17b59c32e65202d"
+      },
+      "source_sha256": "05fddae253afac7ef6242f26d1e82219ea93b363d7391ad7b17b59c32e65202d"
+    },
+    {
+      "authority": "durable_daemon",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "26bcad63211c6a7c872c42ca0877617d995e707a7419738b5f97135bb28b528e"
+      },
+      "main_sha256": "26bcad63211c6a7c872c42ca0877617d995e707a7419738b5f97135bb28b528e",
+      "match": true,
+      "path": "tools/spawn_durable_daemon.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "26bcad63211c6a7c872c42ca0877617d995e707a7419738b5f97135bb28b528e"
+      },
+      "source_sha256": "26bcad63211c6a7c872c42ca0877617d995e707a7419738b5f97135bb28b528e"
+    },
+    {
+      "authority": "operator_authorize",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "3429cd2829ebdc9067a6a72b4dc0d2ee833791fe93492e3b0eb6de0c984aefd4"
+      },
+      "main_sha256": "3429cd2829ebdc9067a6a72b4dc0d2ee833791fe93492e3b0eb6de0c984aefd4",
+      "match": true,
+      "path": "tools/operator_authorize.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "3429cd2829ebdc9067a6a72b4dc0d2ee833791fe93492e3b0eb6de0c984aefd4"
+      },
+      "source_sha256": "3429cd2829ebdc9067a6a72b4dc0d2ee833791fe93492e3b0eb6de0c984aefd4"
+    },
+    {
+      "authority": "safe_run",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "a951ab7ec3baef5137f18472698a58b9f9864902f63f33bd7bbfa89294e3766b"
+      },
+      "main_sha256": "a951ab7ec3baef5137f18472698a58b9f9864902f63f33bd7bbfa89294e3766b",
+      "match": true,
+      "path": "tools/safe_run.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "a951ab7ec3baef5137f18472698a58b9f9864902f63f33bd7bbfa89294e3766b"
+      },
+      "source_sha256": "a951ab7ec3baef5137f18472698a58b9f9864902f63f33bd7bbfa89294e3766b"
+    },
+    {
+      "authority": "readiness_gate",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "30cb6152833d979b3cf58029ff3dc18d407d7078b16080a3195fd54029e25a0f"
+      },
+      "main_sha256": "30cb6152833d979b3cf58029ff3dc18d407d7078b16080a3195fd54029e25a0f",
+      "match": true,
+      "path": "tools/witness_launch_readiness_gate.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "30cb6152833d979b3cf58029ff3dc18d407d7078b16080a3195fd54029e25a0f"
+      },
+      "source_sha256": "30cb6152833d979b3cf58029ff3dc18d407d7078b16080a3195fd54029e25a0f"
+    },
+    {
+      "authority": "beta2_admissible_window_equation",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "8644e5cc21c2752fc1a681bc8a32410744bb90315538782e72d237d26db9d121"
+      },
+      "main_sha256": "8644e5cc21c2752fc1a681bc8a32410744bb90315538782e72d237d26db9d121",
+      "match": true,
+      "path": "src/tac/canonical_equations/cgauge_parametrization_optima_20260711.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "8644e5cc21c2752fc1a681bc8a32410744bb90315538782e72d237d26db9d121"
+      },
+      "source_sha256": "8644e5cc21c2752fc1a681bc8a32410744bb90315538782e72d237d26db9d121"
+    },
+    {
+      "authority": "beta2_rewarmup_length_equation",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "98fcbb25f3c23626b05a1233ea16a9a71984c513793b9948a9f5af78904f0e4f"
+      },
+      "main_sha256": "98fcbb25f3c23626b05a1233ea16a9a71984c513793b9948a9f5af78904f0e4f",
+      "match": true,
+      "path": "src/tac/canonical_equations/adam_v_variance_warmup_20260717.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "98fcbb25f3c23626b05a1233ea16a9a71984c513793b9948a9f5af78904f0e4f"
+      },
+      "source_sha256": "98fcbb25f3c23626b05a1233ea16a9a71984c513793b9948a9f5af78904f0e4f"
+    },
+    {
+      "authority": "ncde_module",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "01ceb6a898ff8575df31933b44da943dbed8b50069860be04ee5466dd2a1fe06"
+      },
+      "main_sha256": "01ceb6a898ff8575df31933b44da943dbed8b50069860be04ee5466dd2a1fe06",
+      "match": true,
+      "path": "src/tac/witness_control/ncde_trajectory.py",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "01ceb6a898ff8575df31933b44da943dbed8b50069860be04ee5466dd2a1fe06"
+      },
+      "source_sha256": "01ceb6a898ff8575df31933b44da943dbed8b50069860be04ee5466dd2a1fe06"
+    },
+    {
+      "authority": "ticket_518_memo",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "9fcf19501bb20b67bb8cdfd83c866aee8d29435c3f893d75b8b8ede91167de42"
+      },
+      "main_sha256": "9fcf19501bb20b67bb8cdfd83c866aee8d29435c3f893d75b8b8ede91167de42",
+      "match": true,
+      "path": ".omx/research/p0_resume_warmup_geometry_build_20260717.md",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "9fcf19501bb20b67bb8cdfd83c866aee8d29435c3f893d75b8b8ede91167de42"
+      },
+      "source_sha256": "9fcf19501bb20b67bb8cdfd83c866aee8d29435c3f893d75b8b8ede91167de42"
+    },
+    {
+      "authority": "frontier_pointer",
+      "main_exists": true,
+      "main_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "2c8e987723e68c7b7efcf058776c4052fc4b8990cab733194a7f9923350c291d"
+      },
+      "main_sha256": "2c8e987723e68c7b7efcf058776c4052fc4b8990cab733194a7f9923350c291d",
+      "match": true,
+      "path": "reports/latest.md",
+      "source_exists": true,
+      "source_head_blob": {
+        "error": null,
+        "resolved": true,
+        "returncode": 0,
+        "sha256": "2c8e987723e68c7b7efcf058776c4052fc4b8990cab733194a7f9923350c291d"
+      },
+      "source_sha256": "2c8e987723e68c7b7efcf058776c4052fc4b8990cab733194a7f9923350c291d"
+    }
+  ],
+  "created_utc_snapshot_label": "2026-07-19T15:01:05Z",
+  "main_descends_from_source_head": true,
+  "main_head": {
+    "error": null,
+    "resolved": true,
+    "returncode": 0,
+    "sha": "e7b35814a8eea576fdc45119773ec8d9e3f89bac"
+  },
+  "main_source_repo": "/Users/adpena/Projects/pact",
+  "merge_base_is_ancestor": {
+    "main_head": "e7b35814a8eea576fdc45119773ec8d9e3f89bac",
+    "result": "SOURCE_IS_ANCESTOR_OF_MAIN",
+    "returncode": 0,
+    "source_head": "920fda3e5a847cd800b0a8aed19eb12356275f3e"
+  },
+  "mismatches": [],
+  "schema": "main_source_custody.v1",
+  "source_worktree": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/duty_queue_fire_tickets_20260719_20260719T141356Z",
+  "source_worktree_head": {
+    "error": null,
+    "resolved": true,
+    "returncode": 0,
+    "sha": "920fda3e5a847cd800b0a8aed19eb12356275f3e"
+  },
+  "status": "VERIFIED_SNAPSHOT"
+}
