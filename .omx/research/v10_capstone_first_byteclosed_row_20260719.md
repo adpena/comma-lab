@@ -56,3 +56,16 @@ is the known rate-dead exact-plane endpoint, chosen to prove the spine, not to d
 - f32_receiver_arithmetic law: official-evaluator n600 anchor appended (this landing).
 - #571: the counted-base C2 byte-close drops into `capstone_submission/` unchanged.
 - Operator GO decision: Modal contest-CPU run of THIS archive = C1 CLOSE + first [contest-CPU] v10 row.
+
+## [contest-CPU] receipt (2026-07-19, Modal Linux x86_64, fc-01KXXRAR7341QCJ6XWKV4S3QCW)
+
+Official upstream/evaluate.py, 600 samples, --device cpu, seed 1234, on the EXACT archive bytes
+(sha e4cd154f…): **d_seg 0.00015196 · d_pose 0.00010184 · rate 10.90748678 · S = 272.73** —
+BIT-IDENTICAL to the macOS-CPU advisory row. Cross-host deterministic reproducibility of the
+C1 receiver spine is PROVEN (same archive → same distortions, Darwin-arm64 and Linux-x86_64).
+Inflate wall: **215.8 s** of the 1800 s budget (the C1 compose verdict's owed canonical
+full-evaluate receipt — now satisfied). `score_claim=false, promotion_eligible=false` — this
+remains a rate-dead SPINE receipt, not a submission candidate; the campaign has pivoted to the
+generator-description axis (see v10_ratecrush_phase1_20260719.md). Harvest custody:
+/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/
+(preflight, validation, contest_auth_eval.json, report.txt, provenance, manifest, logs).
