@@ -1,11 +1,17 @@
 # SPD-submanifold momentum crosswalk (#552)
 
-**Date:** 2026-07-19  
-**Lane:** `spd_submanifold_momentum_20260719` (L0, `research_only=true`)  
-**Authority:** operator drop, [arXiv:2302.09738](https://arxiv.org/abs/2302.09738)  
-**Author implementation inspected:** [yorkerlin/StructuredNGD-DL](https://github.com/yorkerlin/StructuredNGD-DL), commit `288b20cae250dd1b0f885133130139ec17023326`  
-**Score authority:** none; no launch, archive, score, or pointer mutation  
-**Pointer delta:** `0.1910828242 [contest-CPU]` **UNMOVED — MEANS**  
+**Date:** 2026-07-19
+
+**Lane:** `spd_submanifold_momentum_20260719` (L0, `research_only=true`)
+
+**Authority:** operator drop, [arXiv:2302.09738](https://arxiv.org/abs/2302.09738)
+
+**Author implementation inspected:** [yorkerlin/StructuredNGD-DL](https://github.com/yorkerlin/StructuredNGD-DL), commit `288b20cae250dd1b0f885133130139ec17023326`
+
+**Score authority:** none; no launch, archive, score, or pointer mutation
+
+**Pointer delta:** `0.1910828242 [contest-CPU]` **UNMOVED — MEANS**
+
 **Landing authority:** this memo and its lane-registry row require independent MAIN review before landing or implementation.
 
 ## Executive verdict
