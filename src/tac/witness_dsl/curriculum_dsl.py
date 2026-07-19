@@ -41,6 +41,7 @@ from typing import TYPE_CHECKING
 from tac.witness_dsl.basis_control import normalize_basis_family
 
 if TYPE_CHECKING:
+    from tac.witness_dsl.integer_plane_emitter_policy import IntegerPlaneEmitterPolicy
     from tac.witness_dsl.yhat_native_generator_policy import YhatNativeGeneratorPolicy
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -1523,6 +1524,7 @@ class Lever:
     lawrefs: dict = field(default_factory=dict, compare=False, repr=False)
     constant_manifest: dict = field(default_factory=dict, compare=False, repr=False)
     runtime_receipt_schemas: dict = field(default_factory=dict, compare=False, repr=False)
+    policy_contracts: dict = field(default_factory=dict, compare=False, repr=False)
 
     @property
     def constant_refs(self) -> dict:
@@ -2088,6 +2090,33 @@ def YhatNativeGenerator(*, policy: YhatNativeGeneratorPolicy) -> Lever:
         notes="argv-inert default-OFF policy; n24 receipt closed; receiver/archive gates owed",
         lawrefs={},
         constant_manifest={},
+    )
+
+
+def IntegerPlaneEmitter(*, policy: IntegerPlaneEmitterPolicy) -> Lever:
+    """Default-OFF C2 vehicle contract; deliberately argv-inert and non-nilary."""
+
+    from tac.witness_dsl.integer_plane_emitter_policy import (
+        POLICY_CONTRACT_RECEIPT_KEY,
+        IntegerPlaneEmitterPolicy,
+    )
+
+    if not isinstance(policy, IntegerPlaneEmitterPolicy):
+        raise TypeError("IntegerPlaneEmitter requires an IntegerPlaneEmitterPolicy")
+    contract = policy.compile_contract()
+    return Lever(
+        "IntegerPlaneEmitter",
+        overrides={},
+        epochs_delta=0,
+        notes=(
+            "argv-inert default-OFF C2 emitter; basis="
+            f"{contract['basis']}; policy_sha256={contract['policy_sha256']}; "
+            "future __ipe_ resume hooks not registered"
+        ),
+        lawrefs={},
+        constant_manifest={},
+        runtime_receipt_schemas={},
+        policy_contracts={POLICY_CONTRACT_RECEIPT_KEY: contract},
     )
 
 

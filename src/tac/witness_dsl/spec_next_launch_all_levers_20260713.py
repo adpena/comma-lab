@@ -26,7 +26,11 @@ from tac.witness_dsl.curriculum_dsl import (
     SafeCompileRegions,
 )
 from tac.witness_dsl.spec_v9_cgauge import compile_v9_cgauge_ideal_mod19_launch_config
-from tac.witness_dsl.typed_config import TypedLever, build_launch_manifest
+from tac.witness_dsl.typed_config import (
+    TypedLever,
+    build_launch_manifest,
+    typed_lever_from_dsl,
+)
 
 PROGRAM_NAME = "next_launch_all_levers_20260713"
 DEFAULT_OUT_DIR = "experiments/results/next_launch_all_levers_ticket_20260713"
@@ -105,12 +109,7 @@ def excluded_levers_for_variant(variant: str) -> dict[str, str]:
 def _typed(lever: Lever) -> TypedLever:
     """Lossless curriculum-DSL Lever -> typed-config adapter."""
 
-    return TypedLever(
-        name=lever.name,
-        overrides=dict(lever.overrides),
-        epochs_delta=int(lever.epochs_delta),
-        notes=str(lever.notes),
-    )
+    return typed_lever_from_dsl(lever)
 
 
 def _observer_telemetry() -> TypedLever:

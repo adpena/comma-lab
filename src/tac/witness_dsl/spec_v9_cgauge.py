@@ -708,7 +708,7 @@ def compile_v9_cgauge_432_launch_config(
         PhaseAdvectionConsistency,
         PoseFinishConditioningGate,
     )
-    from tac.witness_dsl.typed_config import TypedLever, build_launch_manifest
+    from tac.witness_dsl.typed_config import build_launch_manifest, typed_lever_from_dsl
     from tac.witness_stability import AMBER as _AMBER
 
     typed = derive_v9_cgauge_432_config(
@@ -719,7 +719,11 @@ def compile_v9_cgauge_432_launch_config(
     # are value-identical, so composition cannot drift the argv).
     _t1 = PhaseAdvectionConsistency(weight=0.4, start_epoch=726)
     _updates: dict = {
-        "levers": (*tuple(typed.levers), TypedLever(name=_gate.name, overrides=dict(_gate.overrides), epochs_delta=_gate.epochs_delta, notes=_gate.notes), TypedLever(name=_t1.name, overrides=dict(_t1.overrides), epochs_delta=_t1.epochs_delta, notes=_t1.notes)),
+        "levers": (
+            *tuple(typed.levers),
+            typed_lever_from_dsl(_gate),
+            typed_lever_from_dsl(_t1),
+        ),
         # amber HELD from the #205 launch (SPEC §1.1 explicit values — the arm must
         # not silently differ from the control on stability):
         "base": {**typed.base,
@@ -974,26 +978,9 @@ V9_CGAUGE_IDEAL_EXCLUSIONS: dict[str, str] = {
 
 def _typed_ideal_lever(lever):
     """Lossless curriculum-DSL Lever -> typed-config adapter."""
-    # Canonical symmetric codec (tac.witness_dsl.lawref) — the same declarations are
-    # decoded back to LawRef objects by TypedLever.to_dsl() on the deserialized path,
-    # so the dsl_compile_hash self-recompile sees identical LawRef custody.
-    from tac.witness_dsl.lawref import lawref_to_declaration
-    from tac.witness_dsl.typed_config import TypedLever
+    from tac.witness_dsl.typed_config import typed_lever_from_dsl
 
-    declarations = {
-        flag: lawref_to_declaration(ref) for flag, ref in lever.lawrefs.items()
-    }
-
-    return TypedLever(
-        name=lever.name,
-        overrides=dict(lever.overrides),
-        epochs_delta=int(lever.epochs_delta),
-        notes=str(lever.notes),
-        lawrefs=dict(lever.lawrefs),
-        lawref_declarations=declarations,
-        constant_manifest=dict(lever.constant_manifest),
-        runtime_receipt_schemas=dict(lever.runtime_receipt_schemas),
-    )
+    return typed_lever_from_dsl(lever)
 
 
 def _derive_manifest_from_emitted_argv(constants: dict, argv: tuple[str, ...]) -> dict:

@@ -64,6 +64,7 @@ __all__ = [
     "TypedStage",
     "TypedRegularizer",
     "TypedLever",
+    "typed_lever_from_dsl",
     "TypedWitnessConfig",
     "TypedConfigError",
     "PROGRAM_MANIFEST_SCHEMA",
@@ -372,6 +373,7 @@ class TypedLever(BaseModel):
     lawref_declarations: dict[str, dict] = Field(default_factory=dict)
     constant_manifest: dict[str, dict] = Field(default_factory=dict, exclude=True, repr=False)
     runtime_receipt_schemas: dict[str, str] = Field(default_factory=dict)
+    policy_contracts: dict[str, dict] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _override_flags(self) -> "TypedLever":
@@ -414,7 +416,38 @@ class TypedLever(BaseModel):
             lawrefs=lawrefs,
             constant_manifest=dict(self.constant_manifest),
             runtime_receipt_schemas=dict(self.runtime_receipt_schemas),
+            policy_contracts=dict(self.policy_contracts),
         )
+
+
+def typed_lever_from_dsl(lever: Lever) -> TypedLever:
+    """Losslessly adapt one curriculum :class:`Lever` to ``TypedLever``.
+
+    This is the canonical Lever -> TypedLever boundary.  Adapter call sites must
+    not hand-copy only the argv fields: LawRefs, their deterministic declaration
+    twins, resolved constant manifests, runtime receipt schemas, and policy-only
+    contracts are all part of the lever's custody even when they are argv-inert.
+    """
+
+    if not isinstance(lever, Lever):
+        raise TypeError(f"lever must be curriculum_dsl.Lever, got {type(lever)!r}")
+    from copy import deepcopy
+
+    from tac.witness_dsl.lawref import lawref_to_declaration
+
+    return TypedLever(
+        name=str(lever.name),
+        overrides=dict(lever.overrides),
+        epochs_delta=int(lever.epochs_delta),
+        notes=str(lever.notes),
+        lawrefs=dict(lever.lawrefs),
+        lawref_declarations={
+            flag: lawref_to_declaration(ref) for flag, ref in lever.lawrefs.items()
+        },
+        constant_manifest=deepcopy(lever.constant_manifest),
+        runtime_receipt_schemas=dict(lever.runtime_receipt_schemas),
+        policy_contracts=deepcopy(lever.policy_contracts),
+    )
 
 
 # ---------------------------------------------------------------------------

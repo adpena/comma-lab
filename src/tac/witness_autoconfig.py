@@ -1760,8 +1760,8 @@ def _attach_dsl_program_manifest(cfg: "WitnessConfig", *, program_name: str, d6:
     """
     from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
     from tac.witness_dsl.typed_config import (
-        Provenanced,
         ProvenanceClass,
+        Provenanced,
         TypedAnneal,
         TypedRegularizer,
         TypedStage,
@@ -2440,6 +2440,7 @@ def _build_crucible_v7(
     """Internal builder: construct the v7 ``TypedWitnessConfig`` + return the v6 baseline it
     reuses. Returns ``(typed, v6_cfg, v6_flags)``. Shared by :func:`derive_crucible_v7_config`
     and :func:`compile_crucible_v7_config` so v6 is derived ONCE."""
+    from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
     from tac.witness_dsl.curriculum_dsl import (
         AreaConstraintBirth,
         BirthCompletionEvent,
@@ -2453,15 +2454,14 @@ def _build_crucible_v7(
         logit_adjust_classes_for_basis_regime,
         persistence_classes_for_basis_regime,
     )
-    from tac.local_acceleration.scorer_throughput_gate import derive_wall_clock_budget_days
     from tac.witness_dsl.typed_config import (
-        Provenanced,
         ProvenanceClass,
+        Provenanced,
         TypedAnneal,
-        TypedLever,
         TypedRegularizer,
         TypedStage,
         TypedWitnessConfig,
+        typed_lever_from_dsl,
     )
 
     _PC = ProvenanceClass
@@ -2572,9 +2572,8 @@ def _build_crucible_v7(
     base.pop("--structured-init-include-lane", None)
 
     # (3) the composable v7 levers (DSL Lever factories -> TypedLever; the DSL stays the emitter).
-    def _typed_lever(lev) -> "TypedLever":
-        return TypedLever(name=lev.name, overrides=dict(lev.overrides),
-                          epochs_delta=lev.epochs_delta, notes=lev.notes)
+    def _typed_lever(lev):
+        return typed_lever_from_dsl(lev)
 
     # (operator APPROVED 2026-07-08, seal v7 r1 R-1) enable the crucible's own Arm-A basis lever:
     # DirectionalBasisRebalance(lane_offloaded) — the DERIVED two-regime along-tangent rebalance
@@ -3147,7 +3146,7 @@ def compile_crucible_v752_launch_config(
     means != ends: a MEANS (a launch config). Only a byte-closed n600 exact row < 0.19110 moves the
     pointer 0.19110."""
     from tac.witness_dsl.curriculum_dsl import PoseFinishConditioningGate
-    from tac.witness_dsl.typed_config import TypedLever, build_launch_manifest
+    from tac.witness_dsl.typed_config import build_launch_manifest, typed_lever_from_dsl
 
     # the v752 typed config (self-orient per the arg) + its OWN dsl_program_manifest fingerprint.
     typed = derive_crucible_v752_config(
@@ -3159,8 +3158,8 @@ def compile_crucible_v752_launch_config(
     _gate = PoseFinishConditioningGate()
     _updates: dict = {
         "levers": tuple(typed.levers) + (
-            TypedLever(name=_gate.name, overrides=dict(_gate.overrides),
-                       epochs_delta=_gate.epochs_delta, notes=_gate.notes),),
+            typed_lever_from_dsl(_gate),
+        ),
     }
     if amber:
         # (OI-5 realization, operator elevation 2026-07-10; coordinator directive: compose the SPEC
@@ -3420,11 +3419,10 @@ def derive_crucible_v753_config(
         logit_adjust_classes_for_basis_regime,
         persistence_classes_for_basis_regime,
     )
-    from tac.witness_dsl.typed_config import TypedLever
+    from tac.witness_dsl.typed_config import typed_lever_from_dsl
 
-    def _typed_lever(lev) -> "TypedLever":
-        return TypedLever(name=lev.name, overrides=dict(lev.overrides),
-                          epochs_delta=lev.epochs_delta, notes=lev.notes)
+    def _typed_lever(lev):
+        return typed_lever_from_dsl(lev)
 
     # Δ1 — the branch. self_orient ON iff trunk_basis=='on'. Inherit the matching sealed v7.5.2 config
     # (self_orient=False is the GO'd OFF-arm; True keeps the directional front-end for the ON-arm).
@@ -4091,28 +4089,10 @@ class CrucibleV7LaunchConfig:
         """Compose zero-argument Lever factories through the typed DSL surface."""
 
         from tac.witness_dsl.lever_registry import resolve_composable_lever
-        from tac.witness_dsl.typed_config import TypedLever
+        from tac.witness_dsl.typed_config import typed_lever_from_dsl
 
         resolved = tuple(resolve_composable_lever(name) for name in factory_names)
-        typed_levers = tuple(
-            TypedLever(
-                name=lever.name,
-                overrides=dict(lever.overrides),
-                epochs_delta=lever.epochs_delta,
-                notes=lever.notes,
-                lawrefs=dict(lever.lawrefs),
-                lawref_declarations={
-                    flag: {
-                        "equation_id": ref.equation_id,
-                        "ladder_class": ref.ladder_class,
-                    }
-                    for flag, ref in lever.lawrefs.items()
-                },
-                constant_manifest=dict(lever.constant_manifest),
-                runtime_receipt_schemas=dict(lever.runtime_receipt_schemas),
-            )
-            for lever in resolved
-        )
+        typed_levers = tuple(typed_lever_from_dsl(lever) for lever in resolved)
         typed = self.typed.model_copy(
             update={"levers": tuple(self.typed.levers) + typed_levers}
         )

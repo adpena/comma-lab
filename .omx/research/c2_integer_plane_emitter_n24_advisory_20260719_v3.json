@@ -1,0 +1,724 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory, untrained]",
+    "contest_score_computed": false,
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "promotion_authority": false,
+    "score_claim": false,
+    "training": false,
+    "verdict_scope": "fresh untrained C2 emitter on bounded real-cache hard-oracle rows only"
+  },
+  "code": {
+    "git_head": "81bd22ace28c3b754b797d8fa9b3bde8e0e5eb88",
+    "git_status_sha256": "d7af6a7defa58cf2257f9bf33ac47837648cf38ab7dcb06d82c2f364b0d13d25",
+    "git_worktree_dirty": true,
+    "source_files": {
+      "canonical_kernels": {
+        "path": "src/tac/framework_agnostic/canonical_kernels.py",
+        "sha256": "2019bc0efb1026f15f868d3959e21b365fd04c19e2e4b134b4f807012499ae95"
+      },
+      "integer_lattice_solver": {
+        "path": "src/tac/optimization/uint8_lattice_feasibility.py",
+        "sha256": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17"
+      },
+      "integer_plane_emitter": {
+        "path": "src/tac/boundary_math/integer_plane_emitter.py",
+        "sha256": "0f09e527aaaea1e4665bbfc91178d9e4217e56f9f9c13e3c1d110252e05e8367"
+      },
+      "measurement_tool": {
+        "path": "tools/measure_c2_integer_plane_emitter.py",
+        "sha256": "22c94766959f1e0016a3ab584c2150ee11483d1ce75d561d5215f0a1c951299c"
+      },
+      "mlx_roundtrip_contract": {
+        "path": "src/tac/local_acceleration/pr95_hnerv_mlx_contract.py",
+        "sha256": "13851df1ebe005ee0a18e5540842bd60721feb6f9bbdba32b1b2c538d37748c6"
+      },
+      "mlx_roundtrip_primitives": {
+        "path": "src/tac/local_acceleration/pr95_hnerv_mlx_training.py",
+        "sha256": "92f3050fd738624716bff024ccb287f39780a71b9f4f67cd6ac873efef2a6054"
+      },
+      "mlx_roundtrip_runtime": {
+        "path": "src/tac/local_acceleration/pr95_hnerv_mlx.py",
+        "sha256": "cb8fdc994385ea4c851624cd4356ef4b2bc20987ac6af92af6cbd86bd8ce408c"
+      },
+      "mlx_scorer_adapter": {
+        "path": "src/tac/local_acceleration/mlx_scorer_adapters.py",
+        "sha256": "fedcea220e7077e67d957096ad93fc911166c3d791709ac58bb67cf759fad849"
+      },
+      "mlx_scorer_profile": {
+        "path": "src/tac/local_acceleration/mlx_renderer_prefilter_profile.py",
+        "sha256": "fd3e837ebfee641a21b3cfa4404a5431aca6854f5d64835aa9688c19c362e73e"
+      },
+      "mlx_torch_scorer_parity": {
+        "path": "src/tac/local_acceleration/mlx_scorer_torch_parity.py",
+        "sha256": "5f7fef8c628517ec2f5d6df548788fa295469c1c9dbed5125de94adcaf69f4a5"
+      },
+      "npy_memmap_loader": {
+        "path": "tools/measure_uint8_lattice_feasibility.py",
+        "sha256": "51103ef9a97f52da0ec2f7bf370f55ee54ae1746238e7cd69d6c92d8ed40327a"
+      },
+      "scorer_loader": {
+        "path": "src/tac/scorer.py",
+        "sha256": "0714b263d8d683af28c7e9eea88a7eb2308934eff7c2a389ce9ccc8b452b3bc5"
+      },
+      "uint8_ste": {
+        "path": "src/tac/quantization.py",
+        "sha256": "12f07cb3ac737933900e4e72dbe40053fc194e43b6021399faa2970d9ff6f4b6"
+      },
+      "vjp_custody_validator": {
+        "path": "src/tac/optimization/vjp_custody.py",
+        "sha256": "09b73fc6896e10a777e31fefca21eb873eb483e7e2a1874ff59aac1ecc8db45f"
+      }
+    }
+  },
+  "emitter": {
+    "capacity_signature": {
+      "code_parameters": 48,
+      "head_parameters": 12,
+      "pair_count": 6,
+      "plane_count": 2,
+      "residual_width": 4,
+      "topology_sha256": "228b24e1159779aedf74f423ab72f74c7987d12dc0a2acf2952bff649ee9fc3b",
+      "total_parameters": 60
+    },
+    "capacity_signature_sha256": "f4f2763941c520285897f7e3f8101ec9c12310a5d0659871ad1f86b7cdfc4a0e",
+    "cross_pair_autoregression": false,
+    "learned_state": "quotient residual only; fresh deterministic init; untrained",
+    "pair_parallel": true,
+    "quotient_residual_sha256": "97e69d4a062cd0f4e36cb50c7f0ad98955075287e0deb94a6ef9fe708332e68d",
+    "seed": 20260719,
+    "structured_state_sha256": "e47865c7845a921740fd379a14aac27bf04ab5aac347ccd2cf0776d70f613f7d"
+  },
+  "geometry": {
+    "camera_hwc": [
+      874,
+      1164,
+      3
+    ],
+    "planes_per_pair": 2,
+    "scorer_hwc": [
+      384,
+      512,
+      3
+    ]
+  },
+  "inputs": {
+    "cache": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "scorer_hashes": {
+      "frame_utils.py": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+      "modules.py": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "posenet.safetensors": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+      "segnet.safetensors": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "upstream": "/Users/adpena/Projects/pact/experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
+    "vjp_custody": {
+      "candidate_admission": false,
+      "contract": "explicit-two-manifest-frozen-n24",
+      "decoder_serialization": false,
+      "manifests": [
+        {
+          "candidate_admission": false,
+          "decoder_serialization": false,
+          "manifest": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_010_024_composed/manifest.json",
+          "manifest_sha256": "3d1218a52ededc4b347ae94c5c2bf58d06d70dd8f530bec67bf9cab36ee00694",
+          "selected_sidecars": [
+            {
+              "bytes": 151780075,
+              "custody_json_rechecked": true,
+              "embedded_pair_id_rechecked": true,
+              "hash_rechecked": true,
+              "pair_id": 0,
+              "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0000.vjp.npz",
+              "role": "encode-only proposal metadata; never decoder payload or admission",
+              "sha256": "f2daa9139afbe41f4f6fd7960573db15fe6da0af6ad12f28f26df6e0440d3af6",
+              "tensor_bytes_rehashed": true,
+              "tensor_hashes": {
+                "cached_margin": "9ec4e74441538fa9667ab94843006c1ca2cc4eec8a49516ba2142c88f61bcd65",
+                "head_pair_norms": "2d430faa3cb44f477181002f6ad35f4a7aa5e549751fd689c1f5c73253fd7ae7",
+                "native_margin": "207631a2365fdc9e281bb4c4cb06ef2091ce030414ae5093d66ecb2e9ddbd8c6",
+                "pose_j_x": "6ac80aa8f72c98fa816573d9e9444e0a451da72f1968ca3bda1bd9c439d58384",
+                "pose_j_y": "54f864c8928f2dab0ef55464ab4f92a77dfef13aa56b0dc2a9a0f4822e2da3fa",
+                "rival": "0f58f7e5135c4cdc97abcdc1432c53c93010a035eebd47e771af4fd9a20bfb8a",
+                "seg_g_x": "7eb43cd80e5aa3ab9e15f942c7d3c19a29b13532ae45a8e0adece106c5fc0e07",
+                "seg_g_y": "382349d7906a43325c4d88db45245f409acf87a157fc6c800cd7c4a020be380a",
+                "seg_local_lipschitz": "ede6edea89923508ce3e3adbecee7efe3c29ec13ada3331e2316a75f3b33c77d",
+                "seg_q": "c0796e415a6ed54ec2c7e6639adc1e3cdf92aa3bc546860631880df255ec6570",
+                "winner": "18482737df252ba814a8fb7a4b12abf622a5fbd327bd6fe764918106b14ae502"
+              }
+            },
+            {
+              "bytes": 151750895,
+              "custody_json_rechecked": true,
+              "embedded_pair_id_rechecked": true,
+              "hash_rechecked": true,
+              "pair_id": 1,
+              "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0001.vjp.npz",
+              "role": "encode-only proposal metadata; never decoder payload or admission",
+              "sha256": "40755713f89da4aa841a3056d6250c7f976362aa0ce96e8c638646a1a4f6e9f9",
+              "tensor_bytes_rehashed": true,
+              "tensor_hashes": {
+                "cached_margin": "7c6d9a46966959f4f299a1f1d8e6a7244c49c2fb79d337a01d8fa4e3fefd102d",
+                "head_pair_norms": "7a6dfaca6cced154603fb49493d6eff1cbaa8aae690f15c131feb30319fde1b2",
+                "native_margin": "e40cd9686abfd0268c787b22ffbbe3ede8c779cf813bc7b315ee323d12a85827",
+                "pose_j_x": "ebe7e6f669f2784e614446640b4b031e86fa3a90dd882d0a6fccb4cbc47594f2",
+                "pose_j_y": "efd53707eab9666c6b7625ca16ee662c22cfcdbdeb25fff76e86eba37647f4e0",
+                "rival": "3ecf38bc6e40de77b83ff1b2caa3b1a825d07ad482a80b2007f25b1679518bd8",
+                "seg_g_x": "c2fb8080ab33b55333c2deb1c06bdfd3a5f6819aab13be95d03ad03736f60b28",
+                "seg_g_y": "d80358cc47e1192ad2c078374f28ad7fd51a8b592cd0e18e102d9464ea2cd691",
+                "seg_local_lipschitz": "fd6aef4ec547664c7ec1da14e973defa63bfd3d80fae7f412845e762af41b734",
+                "seg_q": "f35cf79dbaf14380d88fff54737866b1d9500580b79e37b6a4634ea90314940a",
+                "winner": "2e569ac53ebcc85d0554754f2d27e8e170db23f35bc6c18987d7647304d5b11d"
+              }
+            },
+            {
+              "bytes": 151751312,
+              "custody_json_rechecked": true,
+              "embedded_pair_id_rechecked": true,
+              "hash_rechecked": true,
+              "pair_id": 2,
+              "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0002.vjp.npz",
+              "role": "encode-only proposal metadata; never decoder payload or admission",
+              "sha256": "ecbc7f6c3c1a7998006a6c0ff2197a4244af0bf0bc0d2c69b5846c8a2de1b2d6",
+              "tensor_bytes_rehashed": true,
+              "tensor_hashes": {
+                "cached_margin": "59ccb83063cb91e3af07342c58ef9573c0d02cc724e1ffd635bd0cd0f62c9e9f",
+                "head_pair_norms": "998b552253676595d9d8a360418715e6d7ac27845663aaf2f0462f22d444d1e6",
+                "native_margin": "2d963af12e14e038fa23c80c6cd61255ec5b8248bc8740fee6a8f67d48d401c9",
+                "pose_j_x": "5d3561715583e7568d0a2e8416ab5c8a8be5b872aa3aaca50def2444ed25542e",
+                "pose_j_y": "5aca19da4c7465a0960f268ab81597226a4e6a541401a080e52d27665c73f638",
+                "rival": "5be91020dbdaf86c85d3faa5a6ac5b417a300cd88f203241bacde1af3bce9c03",
+                "seg_g_x": "5eb1e5bd3426d1a0b18a3112590ab0c30e1348cb3688af0ba8b7c5c267aef9cc",
+                "seg_g_y": "dd9328e91ff48ac370b977e5bec9b21ca015284bbd1bad82ce1c99a68bfdfa4c",
+                "seg_local_lipschitz": "1dd58564c638d31978bda8d3a1d0a7e480b0035c71fa8e07ced4d86e9b898f1a",
+                "seg_q": "5f307676dca1c5c8d371b440175268c3a505fd00bfa8836040bc134f210f7cae",
+                "winner": "aa089979ebe923b31367a64386cfaf7d6a5650061549185790e0da9ab5b8a2be"
+              }
+            },
+            {
+              "bytes": 151744158,
+              "custody_json_rechecked": true,
+              "embedded_pair_id_rechecked": true,
+              "hash_rechecked": true,
+              "pair_id": 3,
+              "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0003.vjp.npz",
+              "role": "encode-only proposal metadata; never decoder payload or admission",
+              "sha256": "a50af7b546e8041428d7394c595ca80798a01c63a2e066a7e1811a11ef2ab474",
+              "tensor_bytes_rehashed": true,
+              "tensor_hashes": {
+                "cached_margin": "d255ecda6a531bf587d4bdc906cee74dc85ac4be0077d0a4a6c4634ea05d34bd",
+                "head_pair_norms": "17f06db148aca6fa873f4513a120644c8214c3358d8586bed978ccbd6eb44f9d",
+                "native_margin": "b616aed0a96734ada63219c5e8b5f05b039382bf3e3caf4e8c123fad21600980",
+                "pose_j_x": "5b5124dc533fca903733b7b73f224ee0aaaa6a5d72f0286ff939a34e81678ba8",
+                "pose_j_y": "4e8c25692f9b24c1af92587af3953e920f59469481beace8c5643abb24f2592c",
+                "rival": "4bdf85ad700925fb0b2eeb4b647099c6492631232637b5f0a59c9495a8cebb54",
+                "seg_g_x": "00aba44ec64df9483561e16a35072467fa58e90b1dc84548d9ba72f92a6ec1b7",
+                "seg_g_y": "f39f978a88a569f99d6c448b2cced79da60f57aaec90127459b31e94cebbfa4e",
+                "seg_local_lipschitz": "fa8a763095263c42426d370f5d8e25ec80d0b1a678c376d0972c27feb7df7ece",
+                "seg_q": "d32bfa14e4531a2e7e8ab6fe10783d42fe5be4f2988825a4d88e977b77f68f9a",
+                "winner": "225d1e36916069f820a19aaa7b18dc19096eba758a715d62269acf1389196ac5"
+              }
+            },
+            {
+              "bytes": 151755735,
+              "custody_json_rechecked": true,
+              "embedded_pair_id_rechecked": true,
+              "hash_rechecked": true,
+              "pair_id": 4,
+              "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0004.vjp.npz",
+              "role": "encode-only proposal metadata; never decoder payload or admission",
+              "sha256": "2e7f41248c2c9e7965649ac538d0d841e92f154fae1cdec07024accdcdb0d92f",
+              "tensor_bytes_rehashed": true,
+              "tensor_hashes": {
+                "cached_margin": "2dfb7bc8a2507b3478a2f51f3bf446d6120c5b6d95d833c64f795aa9e52c4863",
+                "head_pair_norms": "9d4b320cf436b4a5aa6290142d54f73ccd98146d189c3066ca9b3f1e31ee24e2",
+                "native_margin": "b3a891efa2eccc4d1dd8088ae7e2cafedee6384ae21bb8e9d90211847940d3bb",
+                "pose_j_x": "e1ea78e005bbd1c3eade3e589a9f7f6b1e2b59f5e31b97be77d8e99f8d5a76d6",
+                "pose_j_y": "3afce295267a0d8b0c9b538cd70bb27b2432cd5ef7cff30f41ec4bf409ecb583",
+                "rival": "d0dd7509ce5eaa40977c5c423a8ce012983c881070863a1491b649ac96920b04",
+                "seg_g_x": "294da932037bb5867f76cfea38746d6003e4de0be780c46f6b54885891764ca9",
+                "seg_g_y": "e1060aafc26594c9e0cff222553eda59a3d277d31dda6e88cde4fe42e8a5f165",
+                "seg_local_lipschitz": "eddde052c78e218ba16ae736a9e6930ab0745c6a0d3ba61f8327e6d4b27e8371",
+                "seg_q": "a1fd6784716744b18eda2b89fe553c69b874c4fb1f77966f931c963d84dfb9ee",
+                "winner": "5bcabc971d6210983025b8003e6222a943a85c245cf6fed6b0a577c782c3eab5"
+              }
+            },
+            {
+              "bytes": 151773188,
+              "custody_json_rechecked": true,
+              "embedded_pair_id_rechecked": true,
+              "hash_rechecked": true,
+              "pair_id": 5,
+              "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0005.vjp.npz",
+              "role": "encode-only proposal metadata; never decoder payload or admission",
+              "sha256": "71dd3bf501a8487c23c74bf9e4a74017f99ff33a1720f9172c4493ba25411a82",
+              "tensor_bytes_rehashed": true,
+              "tensor_hashes": {
+                "cached_margin": "62c45b699a552c0e869738a439a25d63cb05cfa584a56fc02e500e43a8736c9f",
+                "head_pair_norms": "4b0b5091b27704f7527bec91b8bf3c4965d02b2971286aa2ea0a86bd01437ec1",
+                "native_margin": "82d0bbc993d97b7dea17707ecdb476255b890127850a280661a1a7bd76b319c4",
+                "pose_j_x": "abc965e2d6a95d03b5ab244fc83921171427afb5b1692ee1e198bda42e1b8299",
+                "pose_j_y": "4526f1bdb42a80401db4fa25ff9df567b919ebed289c524f572726c304d81537",
+                "rival": "3684ebc71471c4235638895f04fe57886407326e63ea776fabd92fe9a0c2c54f",
+                "seg_g_x": "f0c953b4c1c8a698cd2f38653f6d925126be393aa4083513e53036a1802d6edb",
+                "seg_g_y": "616284f4084cecd53e6c72612a698a2f636cb8e78cfb9a0be33cf09c4f0efb64",
+                "seg_local_lipschitz": "3c085897b9a548bbf1591099eadaf713eecf7855f786a70fd9b43053e0fbe7d3",
+                "seg_q": "8052ed2ce62fddf8446c23394fa6cb58bae6680e72b4aeb7374322df9000585b",
+                "winner": "f4a07e48ffd9fcc4d3efcda36040a0f533828151436f1c5ab5bf11be8a087bdc"
+              }
+            }
+          ]
+        },
+        {
+          "candidate_admission": false,
+          "decoder_serialization": false,
+          "manifest": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_012_017_019_023_025_composed/manifest.json",
+          "manifest_sha256": "200e8cfa375cbdb8154777156441ae6adadf33e75668c86cc52b816f79488e94",
+          "selected_sidecars": []
+        }
+      ],
+      "selected_sidecars": [
+        {
+          "bytes": 151780075,
+          "custody_json_rechecked": true,
+          "embedded_pair_id_rechecked": true,
+          "hash_rechecked": true,
+          "pair_id": 0,
+          "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0000.vjp.npz",
+          "role": "encode-only proposal metadata; never decoder payload or admission",
+          "sha256": "f2daa9139afbe41f4f6fd7960573db15fe6da0af6ad12f28f26df6e0440d3af6",
+          "tensor_bytes_rehashed": true,
+          "tensor_hashes": {
+            "cached_margin": "9ec4e74441538fa9667ab94843006c1ca2cc4eec8a49516ba2142c88f61bcd65",
+            "head_pair_norms": "2d430faa3cb44f477181002f6ad35f4a7aa5e549751fd689c1f5c73253fd7ae7",
+            "native_margin": "207631a2365fdc9e281bb4c4cb06ef2091ce030414ae5093d66ecb2e9ddbd8c6",
+            "pose_j_x": "6ac80aa8f72c98fa816573d9e9444e0a451da72f1968ca3bda1bd9c439d58384",
+            "pose_j_y": "54f864c8928f2dab0ef55464ab4f92a77dfef13aa56b0dc2a9a0f4822e2da3fa",
+            "rival": "0f58f7e5135c4cdc97abcdc1432c53c93010a035eebd47e771af4fd9a20bfb8a",
+            "seg_g_x": "7eb43cd80e5aa3ab9e15f942c7d3c19a29b13532ae45a8e0adece106c5fc0e07",
+            "seg_g_y": "382349d7906a43325c4d88db45245f409acf87a157fc6c800cd7c4a020be380a",
+            "seg_local_lipschitz": "ede6edea89923508ce3e3adbecee7efe3c29ec13ada3331e2316a75f3b33c77d",
+            "seg_q": "c0796e415a6ed54ec2c7e6639adc1e3cdf92aa3bc546860631880df255ec6570",
+            "winner": "18482737df252ba814a8fb7a4b12abf622a5fbd327bd6fe764918106b14ae502"
+          }
+        },
+        {
+          "bytes": 151750895,
+          "custody_json_rechecked": true,
+          "embedded_pair_id_rechecked": true,
+          "hash_rechecked": true,
+          "pair_id": 1,
+          "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0001.vjp.npz",
+          "role": "encode-only proposal metadata; never decoder payload or admission",
+          "sha256": "40755713f89da4aa841a3056d6250c7f976362aa0ce96e8c638646a1a4f6e9f9",
+          "tensor_bytes_rehashed": true,
+          "tensor_hashes": {
+            "cached_margin": "7c6d9a46966959f4f299a1f1d8e6a7244c49c2fb79d337a01d8fa4e3fefd102d",
+            "head_pair_norms": "7a6dfaca6cced154603fb49493d6eff1cbaa8aae690f15c131feb30319fde1b2",
+            "native_margin": "e40cd9686abfd0268c787b22ffbbe3ede8c779cf813bc7b315ee323d12a85827",
+            "pose_j_x": "ebe7e6f669f2784e614446640b4b031e86fa3a90dd882d0a6fccb4cbc47594f2",
+            "pose_j_y": "efd53707eab9666c6b7625ca16ee662c22cfcdbdeb25fff76e86eba37647f4e0",
+            "rival": "3ecf38bc6e40de77b83ff1b2caa3b1a825d07ad482a80b2007f25b1679518bd8",
+            "seg_g_x": "c2fb8080ab33b55333c2deb1c06bdfd3a5f6819aab13be95d03ad03736f60b28",
+            "seg_g_y": "d80358cc47e1192ad2c078374f28ad7fd51a8b592cd0e18e102d9464ea2cd691",
+            "seg_local_lipschitz": "fd6aef4ec547664c7ec1da14e973defa63bfd3d80fae7f412845e762af41b734",
+            "seg_q": "f35cf79dbaf14380d88fff54737866b1d9500580b79e37b6a4634ea90314940a",
+            "winner": "2e569ac53ebcc85d0554754f2d27e8e170db23f35bc6c18987d7647304d5b11d"
+          }
+        },
+        {
+          "bytes": 151751312,
+          "custody_json_rechecked": true,
+          "embedded_pair_id_rechecked": true,
+          "hash_rechecked": true,
+          "pair_id": 2,
+          "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0002.vjp.npz",
+          "role": "encode-only proposal metadata; never decoder payload or admission",
+          "sha256": "ecbc7f6c3c1a7998006a6c0ff2197a4244af0bf0bc0d2c69b5846c8a2de1b2d6",
+          "tensor_bytes_rehashed": true,
+          "tensor_hashes": {
+            "cached_margin": "59ccb83063cb91e3af07342c58ef9573c0d02cc724e1ffd635bd0cd0f62c9e9f",
+            "head_pair_norms": "998b552253676595d9d8a360418715e6d7ac27845663aaf2f0462f22d444d1e6",
+            "native_margin": "2d963af12e14e038fa23c80c6cd61255ec5b8248bc8740fee6a8f67d48d401c9",
+            "pose_j_x": "5d3561715583e7568d0a2e8416ab5c8a8be5b872aa3aaca50def2444ed25542e",
+            "pose_j_y": "5aca19da4c7465a0960f268ab81597226a4e6a541401a080e52d27665c73f638",
+            "rival": "5be91020dbdaf86c85d3faa5a6ac5b417a300cd88f203241bacde1af3bce9c03",
+            "seg_g_x": "5eb1e5bd3426d1a0b18a3112590ab0c30e1348cb3688af0ba8b7c5c267aef9cc",
+            "seg_g_y": "dd9328e91ff48ac370b977e5bec9b21ca015284bbd1bad82ce1c99a68bfdfa4c",
+            "seg_local_lipschitz": "1dd58564c638d31978bda8d3a1d0a7e480b0035c71fa8e07ced4d86e9b898f1a",
+            "seg_q": "5f307676dca1c5c8d371b440175268c3a505fd00bfa8836040bc134f210f7cae",
+            "winner": "aa089979ebe923b31367a64386cfaf7d6a5650061549185790e0da9ab5b8a2be"
+          }
+        },
+        {
+          "bytes": 151744158,
+          "custody_json_rechecked": true,
+          "embedded_pair_id_rechecked": true,
+          "hash_rechecked": true,
+          "pair_id": 3,
+          "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0003.vjp.npz",
+          "role": "encode-only proposal metadata; never decoder payload or admission",
+          "sha256": "a50af7b546e8041428d7394c595ca80798a01c63a2e066a7e1811a11ef2ab474",
+          "tensor_bytes_rehashed": true,
+          "tensor_hashes": {
+            "cached_margin": "d255ecda6a531bf587d4bdc906cee74dc85ac4be0077d0a4a6c4634ea05d34bd",
+            "head_pair_norms": "17f06db148aca6fa873f4513a120644c8214c3358d8586bed978ccbd6eb44f9d",
+            "native_margin": "b616aed0a96734ada63219c5e8b5f05b039382bf3e3caf4e8c123fad21600980",
+            "pose_j_x": "5b5124dc533fca903733b7b73f224ee0aaaa6a5d72f0286ff939a34e81678ba8",
+            "pose_j_y": "4e8c25692f9b24c1af92587af3953e920f59469481beace8c5643abb24f2592c",
+            "rival": "4bdf85ad700925fb0b2eeb4b647099c6492631232637b5f0a59c9495a8cebb54",
+            "seg_g_x": "00aba44ec64df9483561e16a35072467fa58e90b1dc84548d9ba72f92a6ec1b7",
+            "seg_g_y": "f39f978a88a569f99d6c448b2cced79da60f57aaec90127459b31e94cebbfa4e",
+            "seg_local_lipschitz": "fa8a763095263c42426d370f5d8e25ec80d0b1a678c376d0972c27feb7df7ece",
+            "seg_q": "d32bfa14e4531a2e7e8ab6fe10783d42fe5be4f2988825a4d88e977b77f68f9a",
+            "winner": "225d1e36916069f820a19aaa7b18dc19096eba758a715d62269acf1389196ac5"
+          }
+        },
+        {
+          "bytes": 151755735,
+          "custody_json_rechecked": true,
+          "embedded_pair_id_rechecked": true,
+          "hash_rechecked": true,
+          "pair_id": 4,
+          "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0004.vjp.npz",
+          "role": "encode-only proposal metadata; never decoder payload or admission",
+          "sha256": "2e7f41248c2c9e7965649ac538d0d841e92f154fae1cdec07024accdcdb0d92f",
+          "tensor_bytes_rehashed": true,
+          "tensor_hashes": {
+            "cached_margin": "2dfb7bc8a2507b3478a2f51f3bf446d6120c5b6d95d833c64f795aa9e52c4863",
+            "head_pair_norms": "9d4b320cf436b4a5aa6290142d54f73ccd98146d189c3066ca9b3f1e31ee24e2",
+            "native_margin": "b3a891efa2eccc4d1dd8088ae7e2cafedee6384ae21bb8e9d90211847940d3bb",
+            "pose_j_x": "e1ea78e005bbd1c3eade3e589a9f7f6b1e2b59f5e31b97be77d8e99f8d5a76d6",
+            "pose_j_y": "3afce295267a0d8b0c9b538cd70bb27b2432cd5ef7cff30f41ec4bf409ecb583",
+            "rival": "d0dd7509ce5eaa40977c5c423a8ce012983c881070863a1491b649ac96920b04",
+            "seg_g_x": "294da932037bb5867f76cfea38746d6003e4de0be780c46f6b54885891764ca9",
+            "seg_g_y": "e1060aafc26594c9e0cff222553eda59a3d277d31dda6e88cde4fe42e8a5f165",
+            "seg_local_lipschitz": "eddde052c78e218ba16ae736a9e6930ab0745c6a0d3ba61f8327e6d4b27e8371",
+            "seg_q": "a1fd6784716744b18eda2b89fe553c69b874c4fb1f77966f931c963d84dfb9ee",
+            "winner": "5bcabc971d6210983025b8003e6222a943a85c245cf6fed6b0a577c782c3eab5"
+          }
+        },
+        {
+          "bytes": 151773188,
+          "custody_json_rechecked": true,
+          "embedded_pair_id_rechecked": true,
+          "hash_rechecked": true,
+          "pair_id": 5,
+          "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_011/pair_0005.vjp.npz",
+          "role": "encode-only proposal metadata; never decoder payload or admission",
+          "sha256": "71dd3bf501a8487c23c74bf9e4a74017f99ff33a1720f9172c4493ba25411a82",
+          "tensor_bytes_rehashed": true,
+          "tensor_hashes": {
+            "cached_margin": "62c45b699a552c0e869738a439a25d63cb05cfa584a56fc02e500e43a8736c9f",
+            "head_pair_norms": "4b0b5091b27704f7527bec91b8bf3c4965d02b2971286aa2ea0a86bd01437ec1",
+            "native_margin": "82d0bbc993d97b7dea17707ecdb476255b890127850a280661a1a7bd76b319c4",
+            "pose_j_x": "abc965e2d6a95d03b5ab244fc83921171427afb5b1692ee1e198bda42e1b8299",
+            "pose_j_y": "4526f1bdb42a80401db4fa25ff9df567b919ebed289c524f572726c304d81537",
+            "rival": "3684ebc71471c4235638895f04fe57886407326e63ea776fabd92fe9a0c2c54f",
+            "seg_g_x": "f0c953b4c1c8a698cd2f38653f6d925126be393aa4083513e53036a1802d6edb",
+            "seg_g_y": "616284f4084cecd53e6c72612a698a2f636cb8e78cfb9a0be33cf09c4f0efb64",
+            "seg_local_lipschitz": "3c085897b9a548bbf1591099eadaf713eecf7855f786a70fd9b43053e0fbe7d3",
+            "seg_q": "8052ed2ce62fddf8446c23394fa6cb58bae6680e72b4aeb7374322df9000585b",
+            "winner": "f4a07e48ffd9fcc4d3efcda36040a0f533828151436f1c5ab5bf11be8a087bdc"
+          }
+        }
+      ]
+    },
+    "vjp_custody_timing": {
+      "scope": "both frozen-n24 manifest hashes/source hashes plus every selected sidecar file hash, embedded pair/custody_json, tensor byte/hash, shape/finiteness, active-arrangement, and VJP-factorization recheck",
+      "seconds": 2.7553800421301275
+    }
+  },
+  "mlx_metal_iteration": {
+    "blocker": "RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+    "device": "Device(gpu, 0)",
+    "exact_numpy_parity": "NOT_MEASURED",
+    "fast_path_claim": false,
+    "metal_device_ready": false,
+    "status": "BLOCKED_ENVIRONMENT_NO_METAL",
+    "timing": {
+      "completed_iterations": 0,
+      "iteration_scope": "NOT_EXECUTED",
+      "median_seconds_per_pair_iteration": null,
+      "p95_seconds_per_pair_iteration": null,
+      "setup_scope": "MLX import, default-device, and one-array evaluation probe",
+      "setup_seconds": 0.016609459184110165,
+      "total_seconds": null
+    }
+  },
+  "mode": "n24-advisory",
+  "numpy_torch_authority": {
+    "factor2_plane_proofs": [
+      {
+        "camera_frame_sha256": "6b09cbbf0b88e99cb7fa4c8c3aee35cac55bc47997a1ef6e894764e94b110e16",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 0,
+        "plane_index": 0,
+        "realized_numerator_sha256": "d7ac4f0c1e0baa897da1c2bf72d9fab11169a306f255b418e672caff0e1503f9",
+        "target_numerator_sha256": "d7ac4f0c1e0baa897da1c2bf72d9fab11169a306f255b418e672caff0e1503f9",
+        "target_plane_sha256": "f73447388c104f417b0300f7b0439aa5ed3b690b7a2ff5603d4487696634467a"
+      },
+      {
+        "camera_frame_sha256": "f0c1c4e5862353871e4e45950faba875bdbb084e8ff783d6c5476a6591e07979",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 0,
+        "plane_index": 1,
+        "realized_numerator_sha256": "58867dd4e258b0e86595f88506fb6f5b322d155f5d4f26212c9268b8f53243fc",
+        "target_numerator_sha256": "58867dd4e258b0e86595f88506fb6f5b322d155f5d4f26212c9268b8f53243fc",
+        "target_plane_sha256": "6a59fca2999844554754a69a3f4587eb903e348790f9868dad440e03f6138443"
+      },
+      {
+        "camera_frame_sha256": "69ba1e6fef24ea45577f814c1f446dd2304793f056bedd57aa505d4399bd3af7",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 1,
+        "plane_index": 0,
+        "realized_numerator_sha256": "a8d033b93bd32d01b011d1408b03b32adc7f207cf18ceee3c95466ed5f84add4",
+        "target_numerator_sha256": "a8d033b93bd32d01b011d1408b03b32adc7f207cf18ceee3c95466ed5f84add4",
+        "target_plane_sha256": "c33a26cf342c1216b16c18b6ea826d5a3bba570e2431e2362442ba7604525aad"
+      },
+      {
+        "camera_frame_sha256": "5739bc479c675b8a8fe0bdd428c9320696fde696b63659480412b2f014f621b2",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 1,
+        "plane_index": 1,
+        "realized_numerator_sha256": "b3560d48fbd47b50c126f09b4bf84cf9ae387b3c75b2e61c246e4b846c9079a3",
+        "target_numerator_sha256": "b3560d48fbd47b50c126f09b4bf84cf9ae387b3c75b2e61c246e4b846c9079a3",
+        "target_plane_sha256": "5ba5d95527b71c4c3eadbf8f62b01e8e6337e5155ba76995cce85e20ab80ad64"
+      },
+      {
+        "camera_frame_sha256": "fd3ea4130f61ebdecf4a93ccbdec35197ce4185309844f5b8b40021528f6d5b4",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 2,
+        "plane_index": 0,
+        "realized_numerator_sha256": "a0c587afb1931ab94c88d9a61fb73b8102c84060ef46f71b139baf3196b9e9ce",
+        "target_numerator_sha256": "a0c587afb1931ab94c88d9a61fb73b8102c84060ef46f71b139baf3196b9e9ce",
+        "target_plane_sha256": "e7e117e87405d9e4dca08cc13be0a49de08f814334a81a5fdeefad9efa7f2271"
+      },
+      {
+        "camera_frame_sha256": "47750317b6b7a7adb3e822e2616d4960eac1e3a65674dc079d45c426dcb3e09c",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 2,
+        "plane_index": 1,
+        "realized_numerator_sha256": "1bd772c7bd8d6d1a76c6cbd8df5e2e9bb8152c722970ff4177050fe2812da2e3",
+        "target_numerator_sha256": "1bd772c7bd8d6d1a76c6cbd8df5e2e9bb8152c722970ff4177050fe2812da2e3",
+        "target_plane_sha256": "8b10bce911aa4411479e0cbf71da4c295d558afec99bd0f3367a3075f8bc6827"
+      },
+      {
+        "camera_frame_sha256": "468c43ff3218d1ad1f9778831043dd8b73ea02515030112e731fdbe32d6b6432",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 3,
+        "plane_index": 0,
+        "realized_numerator_sha256": "1b41f1010be3532344a96cf1b862a7cde54ad9067e558a626f2700540439e269",
+        "target_numerator_sha256": "1b41f1010be3532344a96cf1b862a7cde54ad9067e558a626f2700540439e269",
+        "target_plane_sha256": "3af0fbecf767f603e0e35c5da7584f0ab8be2546276d67b7457bd5c03c46cda9"
+      },
+      {
+        "camera_frame_sha256": "1a6720c5e5f6bcf1b1c6f6c60772315b812be5115250d732edd0bf9c83cf79cb",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 3,
+        "plane_index": 1,
+        "realized_numerator_sha256": "c63e32b8457c07e5e19ba12cb95863ca7b5ef8d776021e3940c33c2687b25dfe",
+        "target_numerator_sha256": "c63e32b8457c07e5e19ba12cb95863ca7b5ef8d776021e3940c33c2687b25dfe",
+        "target_plane_sha256": "b5c64eea1faea55cac3f3fea7677455366dc26ed590089584d67a0c4559bf645"
+      },
+      {
+        "camera_frame_sha256": "47065cce6d73649c1dff682d2978e1db257747a7c7a552ab9e0af8aeab22f273",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 4,
+        "plane_index": 0,
+        "realized_numerator_sha256": "884409771867778b11f6d9909a033c7b644e4cd7b4b88d07e516449387f303dc",
+        "target_numerator_sha256": "884409771867778b11f6d9909a033c7b644e4cd7b4b88d07e516449387f303dc",
+        "target_plane_sha256": "28ffc0c2812b14e51ad9e4f475159b8d43e601b65253ec253a53abc1f82d804b"
+      },
+      {
+        "camera_frame_sha256": "379df7fe168fe1a7231ee17ac3d3b5fde4635df65203b76f98ad4c0195fb409f",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 4,
+        "plane_index": 1,
+        "realized_numerator_sha256": "f143dff6d87408b5eaf20ca9bbe294489fce9ac3628ae49a77f4715e3afbcfae",
+        "target_numerator_sha256": "f143dff6d87408b5eaf20ca9bbe294489fce9ac3628ae49a77f4715e3afbcfae",
+        "target_plane_sha256": "c5c30724cc8b5012be98b50b9e6e3ec60fe24defaba35c66582d9f420a74b577"
+      },
+      {
+        "camera_frame_sha256": "2b0d8c92b98121bc2a52b57a2e127bc76707683250af39a4fc1b18906dbe2452",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 5,
+        "plane_index": 0,
+        "realized_numerator_sha256": "0abbef98ff308f704da3f65420233392eeeb60b9b4062ba8a74628cc2e624324",
+        "target_numerator_sha256": "0abbef98ff308f704da3f65420233392eeeb60b9b4062ba8a74628cc2e624324",
+        "target_plane_sha256": "687f280c05427557b1dcf3519469bbf9689439200c6842e1ec4622f99449e675"
+      },
+      {
+        "camera_frame_sha256": "ba805bc54be6068965e17b3331a313ab4f27f65cac337fdadbeb98d2b439db66",
+        "denominator": 786432,
+        "exact": true,
+        "max_abs_numerator_error": 0,
+        "pair_id": 5,
+        "plane_index": 1,
+        "realized_numerator_sha256": "6a23b8db0ae619183913e35237e39914b34f8a6f839405269737410a887fade7",
+        "target_numerator_sha256": "6a23b8db0ae619183913e35237e39914b34f8a6f839405269737410a887fade7",
+        "target_plane_sha256": "625acda3aad7a577ee73ceef558f3ebab13163d26fb1baae3666b37b055d7bb4"
+      }
+    ],
+    "pairs": [
+      {
+        "emitted_pair_sha256": "7247de6dfa68f10743338a59d04da9e8aeac5e028b9b697f69bba6e1245279ed",
+        "hard_oracle": {
+          "d_pose": 1.0095048310176935e-05,
+          "d_seg": 0.00014750163245480508
+        },
+        "pair_id": 0,
+        "realized_camera_pair_sha256": "24ed335f0ae86cc37fa3652fe89f0a595353a92991185c3f260356c153a662dc",
+        "runtime_seconds": 1.1315210838802159,
+        "source_f0_sha256": "3afa2e8f58a65805a1d2daacefd0af7781206fd97f00d3a4a5de6a2e8a3e0bff",
+        "source_f1_sha256": "9ea8383b641d8f08c6e117edc1b2134c614c2c06776ea0beed8ea6bee2664ce1"
+      },
+      {
+        "emitted_pair_sha256": "41bc7e522ec384cd97fe097615b68a51c66c3764c35fe9de52d7918f4c3ccbd0",
+        "hard_oracle": {
+          "d_pose": 8.270287071354687e-05,
+          "d_seg": 0.0001068115234375
+        },
+        "pair_id": 1,
+        "realized_camera_pair_sha256": "388106c471101d8496416316069d14952e092f83eb299ae23501910d2be00e5b",
+        "runtime_seconds": 1.460703292163089,
+        "source_f0_sha256": "87b6a77f1e00220ebe932e126d39c9a0d50942fc038da3eacbbe6052850d03db",
+        "source_f1_sha256": "81070d378d9f2d62f93934437f0c0b8aa6b2bc0c483da57a876c48697c86b623"
+      },
+      {
+        "emitted_pair_sha256": "a790d1a61b5596f579b325ff060b1a46acdc19c00be1ca8bfbd401b4a5dacac0",
+        "hard_oracle": {
+          "d_pose": 3.944482887163758e-05,
+          "d_seg": 9.663899982115254e-05
+        },
+        "pair_id": 2,
+        "realized_camera_pair_sha256": "88af247af53ac6b20339136f8e56c81e45fca55835b58f42a2792c3bf241129c",
+        "runtime_seconds": 1.391773666953668,
+        "source_f0_sha256": "f61921b7c0e568d701b87489ac2dc04cd76e01cc8f088775a34e1ef1dcb2ad43",
+        "source_f1_sha256": "c4ba1460b3879345b193fd221bbd66792172baee68b11a69738aa07d2bf5e44f"
+      },
+      {
+        "emitted_pair_sha256": "4f2a406680870bf471366f6ef46f33dc26ed6e679b10f7390dba429190288bf4",
+        "hard_oracle": {
+          "d_pose": 1.833780152082909e-05,
+          "d_seg": 0.00012715657067019492
+        },
+        "pair_id": 3,
+        "realized_camera_pair_sha256": "93d346fb6a071271c47a25c9073158d075e0f6420071d8aa79091dc06afe4250",
+        "runtime_seconds": 1.0598599170334637,
+        "source_f0_sha256": "cdd090dbd15730f4f64fbcae2eb207baefea19ac22c2b443f13dc785bc95fbcc",
+        "source_f1_sha256": "d7e643b070d9b52a7453edc86f358b8a4d49efd4fa712ce5444053aac48a3a86"
+      },
+      {
+        "emitted_pair_sha256": "11c8480659147cf2dde9417fe29e94fa4bf7dc338a64d8f0a7201e9b1cd304d3",
+        "hard_oracle": {
+          "d_pose": 2.6017334675998427e-05,
+          "d_seg": 0.000152587890625
+        },
+        "pair_id": 4,
+        "realized_camera_pair_sha256": "52b50116966f9a9886f4e42c74edebe7f80e8876a5f5bab0a663fe1a22067f73",
+        "runtime_seconds": 1.0915013328194618,
+        "source_f0_sha256": "47235246d8a2a0d6d4c2af265d0ba7c1bfebacd2e366382bb582f6af2f15fe4e",
+        "source_f1_sha256": "85b2e5d79c11b7a88a22fac0e9798ba5c427b9da69707f2e7c041cf248807f84"
+      },
+      {
+        "emitted_pair_sha256": "6c92810e452cb9b4f077296c4bedb3f0844a7aca34330fbc43a75a87730da8ee",
+        "hard_oracle": {
+          "d_pose": 9.811602467379998e-06,
+          "d_seg": 7.62939453125e-05
+        },
+        "pair_id": 5,
+        "realized_camera_pair_sha256": "da874c2b70e368de05d2071c1c375d749c1c5947e3fcc9ace6c3a9e4fa626b16",
+        "runtime_seconds": 1.0604340839199722,
+        "source_f0_sha256": "d9de1ce3183d13ea8c49be4ca59bdab6efb9fee4ee4bcaf3d644469f069594fc",
+        "source_f1_sha256": "1255e5d1d8a5071099faefa8a13ce24ef47085b5096c882c1a243be39d1019a7"
+      }
+    ],
+    "status": "MEASURED_ADVISORY_UNTRAINED",
+    "timing": {
+      "completed_iterations": 6,
+      "iteration_scope": "per pair: one source-pair frozen DistortionNet forward (PoseNet+SegNet), two exact factor-2 camera realizations, one candidate-pair DistortionNet forward, and hard d_seg/d_pose reductions",
+      "median_seconds_per_pair_iteration": 1.1115112083498389,
+      "p95_seconds_per_pair_iteration": 1.4434708858607337,
+      "setup_scope": "cache SHA/geometry validation, frozen CPU-Torch scorer load, exact source-plane projection, and one pair-parallel untrained emitter expansion",
+      "setup_seconds": 2.9640339999459684,
+      "total_seconds": 10.18379716691561
+    }
+  },
+  "receiver_expansion": {
+    "cross_pair_autoregression": false,
+    "pair_parallel": true,
+    "plane_parallel": true,
+    "receiver_targets": [
+      "4-core CPU pool",
+      "contest CUDA/T4"
+    ]
+  },
+  "runtime": {
+    "cpu_threads": 4,
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+  },
+  "schema": "c2_integer_plane_emitter_measurement.v3",
+  "selection": {
+    "completed_hard_oracle_rows": 6,
+    "completed_pair_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "frozen_n24_pair_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      24,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      19,
+      20,
+      21,
+      22,
+      23,
+      25
+    ],
+    "minimum_hard_oracle_rows": 6
+  },
+  "written_at_utc": "2026-07-19T15:38:59.581378+00:00"
+}
