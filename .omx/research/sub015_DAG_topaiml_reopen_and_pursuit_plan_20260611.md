@@ -19923,3 +19923,26 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   ever reopens — which sits below the ~336KB/pair reopen bar regardless, so this row is
   WONT-PURSUE-unless-reopen. Brotli smallest among complete coders at all 10 points; the #536
   waterfill verdict is unchanged.
+
+## FEED-neural-selfcomp (2026-07-19) — #558 landed; the entropy ceiling holds against LEARNED codecs too; one neural survivor, precisely scoped
+
+- **THE STRONGEST-FORM CEILING RESULT (MEASURED, receiver-closed):** DeepCABAC/NNCodec — the best
+  receiver-complete learned weight codec runnable today — produced a REAL archive of 85,274B
+  base-only vs our canonical 83,838B (**+1,436B WORSE**), verified end-to-end (146,496,384
+  extracted bytes exact, matched d_seg 0.0034556919). With #557's hand-context rejection, the
+  int8+brotli entropy ceiling now stands against BOTH attack classes. verdict_scope: the measured
+  DeepCABAC config; NVRC-class learned priors remain OPEN but their official OSS receiver path is
+  TODO — not receiver-complete today.
+- **THE ONE NEURAL SURVIVOR (rank-1, future-vehicle only):** size-in-loss self-compression
+  (Csefalvay-Imber) as a default-OFF JOINT-training arm on a wider/NEW vehicle — with the DERIVED
+  admission knee: deleting the ENTIRE 61,598B base buys only 0.0410 score, so any pose-neutral
+  Δd_seg must stay < 4.1e-4 for even total deletion to pay; current #496/#242 evidence fails that
+  knee on the ep725 vehicle. Concrete MLX quantizer/loss spec delivered (→ #242/#496/#154).
+- **Also routed:** REC/COMBINER $0 integer-lattice pilot (cross-host bit-identity + <30min p99
+  decode gates — the family's rule-118 accounting is genuinely different: generic prior+sampler
+  FREE, only ~KL bits counted); NeuroQuant gated by the measured +0.11353 waterfill prior;
+  LotteryCodec/C3/WaLLoC/diffusion = new-vehicle rows with honest UNKNOWN bytes.
+- **OPERATING VERDICT:** keep int8+brotli for the ep725 generator payload; the neural upside is a
+  VEHICLE question (train-time size-in-loss), not a CODER question — which converges exactly with
+  the #559 ŷ-native reformulation (the next vehicle is where both land). Subsumes the #154
+  weight-entropy queue at measurement level.
