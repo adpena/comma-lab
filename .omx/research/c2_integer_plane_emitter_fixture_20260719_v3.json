@@ -1,0 +1,124 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory, untrained]",
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "promotion_authority": false,
+    "score_claim": false,
+    "training": false
+  },
+  "code": {
+    "git_head": "81bd22ace28c3b754b797d8fa9b3bde8e0e5eb88",
+    "git_status_sha256": "0e0f403f83404b94d54d41313d0e7b6a0fbac6becefedef6e94be8f457565e9b",
+    "git_worktree_dirty": true,
+    "source_files": {
+      "integer_lattice_solver": {
+        "path": "src/tac/optimization/uint8_lattice_feasibility.py",
+        "sha256": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17"
+      },
+      "integer_plane_emitter": {
+        "path": "src/tac/boundary_math/integer_plane_emitter.py",
+        "sha256": "0f09e527aaaea1e4665bbfc91178d9e4217e56f9f9c13e3c1d110252e05e8367"
+      },
+      "measurement_tool": {
+        "path": "tools/measure_c2_integer_plane_emitter.py",
+        "sha256": "22c94766959f1e0016a3ab584c2150ee11483d1ce75d561d5215f0a1c951299c"
+      },
+      "npy_memmap_loader": {
+        "path": "tools/measure_uint8_lattice_feasibility.py",
+        "sha256": "51103ef9a97f52da0ec2f7bf370f55ee54ae1746238e7cd69d6c92d8ed40327a"
+      },
+      "uint8_ste": {
+        "path": "src/tac/quantization.py",
+        "sha256": "12f07cb3ac737933900e4e72dbe40053fc194e43b6021399faa2970d9ff6f4b6"
+      }
+    }
+  },
+  "mlx_metal_iteration": {
+    "blocker": "RuntimeError: [metal::load_device] No Metal device available. This typically occurs in headless, sandboxed, or virtualized macOS sessions where the GPU is not accessible.",
+    "device": "Device(gpu, 0)",
+    "exact_numpy_parity": "NOT_MEASURED",
+    "fast_path_claim": false,
+    "metal_device_ready": false,
+    "status": "BLOCKED_ENVIRONMENT_NO_METAL",
+    "timing": {
+      "completed_iterations": 0,
+      "iteration_scope": "NOT_EXECUTED",
+      "median_seconds_per_pair_iteration": null,
+      "p95_seconds_per_pair_iteration": null,
+      "setup_scope": "MLX import, default-device, and one-array evaluation probe",
+      "setup_seconds": 0.004399124998599291,
+      "total_seconds": null
+    }
+  },
+  "mode": "fixture",
+  "proof": {
+    "all_factor2_numerators_exact": true,
+    "all_ten_pair_margins": 10,
+    "basis_ab_build_invariant": {
+      "capacity_equal": true,
+      "claim_scope": "build invariant only; no objective efficacy or score claim",
+      "emitted_bytes_equal": true,
+      "independent_state_objects": true,
+      "raw_arm_emitted_sha256": "ac317fcdc19b738a6681b0f8fcb193d38aa8c86bf84ad59eee7bdde160a83b9d",
+      "raw_arm_objective": "raw_centered",
+      "raw_capacity_sha256": "8e01e5b5abd76520c7d5c89eeb1820c82e33997ad1a5ee9976915846a6b3832d",
+      "u4_arm_emitted_sha256": "ac317fcdc19b738a6681b0f8fcb193d38aa8c86bf84ad59eee7bdde160a83b9d",
+      "u4_arm_objective": "sign_fixed_u4_pair_margin",
+      "u4_capacity_sha256": "8e01e5b5abd76520c7d5c89eeb1820c82e33997ad1a5ee9976915846a6b3832d"
+    },
+    "camera_pair_sha256": "26938740b564476758ffb20db0bc74c7f4a1f1f3f3eb983251a85c8b4e729d17",
+    "capacity_signature": {
+      "code_parameters": 8,
+      "head_parameters": 12,
+      "pair_count": 1,
+      "plane_count": 2,
+      "residual_width": 4,
+      "topology_sha256": "228b24e1159779aedf74f423ab72f74c7987d12dc0a2acf2952bff649ee9fc3b",
+      "total_parameters": 20
+    },
+    "capacity_signature_sha256": "8e01e5b5abd76520c7d5c89eeb1820c82e33997ad1a5ee9976915846a6b3832d",
+    "fixed_capacity_basis_ab": true,
+    "frozen_segnet_head_file_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "in_range_gradient_nonzero": true,
+    "lattice_rows": [
+      {
+        "camera_sha256": "b07338003061648e1b03219bd1476186fea3ca0b0214f3ea770bd4397d77de86",
+        "certified_exact": true,
+        "denominator": 786432,
+        "numerator_equal_values": 589824,
+        "numerator_exact": true,
+        "pair_index": 0,
+        "plane_index": 0,
+        "scorer_sha256": "0519d65740a9ccc9e38abd6ef00ca5181271ac9b0d90186e1e0e546e9a8f3b64",
+        "scorer_values": 589824
+      },
+      {
+        "camera_sha256": "91514043ee2cf9520bb838184da9baecc564af2232fcad1ab94a01d36399be9a",
+        "certified_exact": true,
+        "denominator": 786432,
+        "numerator_equal_values": 589824,
+        "numerator_exact": true,
+        "pair_index": 0,
+        "plane_index": 1,
+        "scorer_sha256": "5bb9d75d1ad19c275601d6d38de3b6039df547c92a2f3f281c22305e9af50a59",
+        "scorer_values": 589824
+      }
+    ],
+    "numpy_bytes_sha256": "ac317fcdc19b738a6681b0f8fcb193d38aa8c86bf84ad59eee7bdde160a83b9d",
+    "numpy_torch_bytes_equal": true,
+    "planes_distinct": true,
+    "saturated_gradient_zero": true,
+    "sigma_division": false,
+    "torch_bytes_sha256": "ac317fcdc19b738a6681b0f8fcb193d38aa8c86bf84ad59eee7bdde160a83b9d",
+    "u4_singular_values": [
+      3.128376325627011,
+      2.1542713872702617,
+      2.024707869857505,
+      1.796263835653701
+    ]
+  },
+  "runtime_seconds": 0.6257455828599632,
+  "schema": "c2_integer_plane_emitter_measurement.v3",
+  "seed": 20260719,
+  "written_at_utc": "2026-07-19T15:38:41.473303+00:00"
+}
