@@ -19624,3 +19624,30 @@ edbd6951b4 (#543); dispositions reviewed_committed; worktrees/branches pruned.
 
 Triality: DSL leg = Factor2IntegerScorerPlane counted instruction (arm-landed) · equations leg =
 composition law + f32 receiver-arithmetic law (registered 2026-07-19) · this FEED = DAG leg.
+
+## FEED-pose-falls-out (2026-07-19, operator reframe) — the d_pose~63 was a GENERATOR artifact; pose is a corollary of a well-conditioned solved d_seg
+
+**Operator verbatim:** *"that was run against a messed up dseg and pose falls out better possibly even
+via inverse solve from better conditioned and solved dseg."* CONFIRMED by our own measured rows:
+
+- SIGNAL (all MEASURED, advisory NON-PROMOTABLE): plane-near-source ⇒ pose free. Rung A source-exact
+  d_pose 1.14e-9 · n6 composition 9.3e-10 · #549 zero-band joint control 5.35e-10. The d_pose≈63 row
+  used the c2 witness ŷ at **RMSE 25 / mean|err| 18.4 off the source plane** (seg-only-trained,
+  edge-flicker-degraded carrier = the "messed-up d_seg") — a GENERATOR artifact, verdict_scope:
+  instance (c2-witness-as-generator), NOT a family property.
+- LAW (marginal): pose binds only at d_pose ≈ 2.5e-4 (crossover with seg's constant-100 marginal;
+  contribution 0.05) — ~9 orders of slack above the solved rows' 5e-10. Seg margin-bands confine ŷ to
+  ‖Δŷ‖ ≲ margin/Lip of source; pose (smooth global 6-dim functional of the SAME plane) barely moves
+  inside that neighborhood ⇒ in the inverse-solve family the pose constraint is expected INACTIVE at
+  the solution.
+- REFRAME (binding on v10 carrier design): "make the witness pose-shaped" was c2-lineage thinking
+  (training-side photometry repair of a bad generator). v10 statement: **solve ŷ within seg
+  margin-bands AROUND THE SOURCE plane, pay bytes only for residual-vs-free-predictor; pose falls
+  out.** The VJP-custody band geometry is therefore the whole rate game.
+- RESPONSE (demanded of the running VJP/#549 harvest): (1) constraint-bindingness maps — verify pose
+  slack/inactive; (2) bytes(τ_pose) curve — how wide can bands go before pose ever binds; (3) rung-E:
+  inverse-solve-chosen ŷ (joint f0,f1, predictor-residual objective) = the first non-toy payload rung.
+
+Triality: equations leg = the existing marginal crossover law (d_pose*=2.5e-4, CLAUDE.md §SegNet-vs-
+PoseNet operating point) + anisotropic band law (joint_seg_pose_rate); DSL leg = no new lever (design
+input to #541/#549 objectives); this FEED = DAG leg.
