@@ -686,6 +686,67 @@ def section_deferral_ledger() -> tuple[str | None, dict | None]:
         return f"deferral-ledger: unavailable ({type(exc).__name__}: {exc})", None
 
 
+# Schema-tolerant failure-ledger parsing. The ledger accumulated rows across several
+# writer generations: the canonical harness_failure.v1 (failure_id + event=="resolution"),
+# and older shapes using a bare "class"/"failure_class" key with terminal markers like
+# event=="self_protected", status=="resolved", or a populated "resolution" field. A reader
+# that keys only on failure_id and only recognises event=="resolution" collapses every
+# legacy row into one phantom "?" class (unresolvable, since a None fid never resolves) AND
+# hides genuinely-open legacy items behind that phantom. These helpers make the reader read
+# the real state without mutating any historical row (append-only provenance preserved).
+_LEDGER_CLASS_KEYS = ("failure_id", "failure_class", "class", "bug_class")
+_LEDGER_RESOLVED_EVENTS = {"resolution", "resolved", "self_protected"}
+_LEDGER_RESOLVED_STATUS = {"resolved", "closed", "fixed"}
+
+
+def _ledger_class_key(row: dict) -> str:
+    """First populated class-identifier across writer generations, else '?'."""
+    for k in _LEDGER_CLASS_KEYS:
+        v = row.get(k)
+        if v:
+            return str(v)
+    return "?"
+
+
+def _ledger_row_is_resolution(row: dict) -> bool:
+    """True if this row is a terminal/resolved marker under ANY writer generation.
+
+    ``event`` is AUTHORITATIVE when present: the canonical v1 schema uses ``event``
+    for lifecycle (opened/diagnosis/resolution), and a non-terminal v1 row may carry
+    a ``resolution`` field describing the PLANNED fix — so the status/resolution-field
+    fallbacks fire only for legacy rows that omit ``event`` entirely (else an
+    ``event='opened'`` row with a resolution field would be falsely marked resolved).
+    """
+    event = str(row.get("event") or "").strip().lower()
+    if event:
+        return event in _LEDGER_RESOLVED_EVENTS
+    for field in ("status", "causal_status"):
+        if str(row.get(field) or "").strip().lower() in _LEDGER_RESOLVED_STATUS:
+            return True
+    res = row.get("resolution")
+    if isinstance(res, str) and res.strip():
+        return True
+    return False
+
+
+def _summarize_failure_ledger(rows: list[dict]) -> dict:
+    """Pure summary (class-count / unresolved / recurrent) over ledger rows.
+
+    unresolved = classes whose LATEST row is not a resolution marker.
+    recurrent  = classes with >=2 non-resolution rows.
+    Schema-tolerant so no writer generation produces a phantom '?' class.
+    """
+    by_id: dict[str, list[dict]] = {}
+    for r in rows:
+        if isinstance(r, dict):
+            by_id.setdefault(_ledger_class_key(r), []).append(r)
+    unresolved = sorted(k for k, evs in by_id.items() if not _ledger_row_is_resolution(evs[-1]))
+    recurrent = sorted(
+        k for k, evs in by_id.items() if sum(1 for e in evs if not _ledger_row_is_resolution(e)) >= 2
+    )
+    return {"classes": len(by_id), "unresolved": unresolved, "recurrent": recurrent}
+
+
 def section_failure_ledger() -> tuple[str | None, dict | None]:
     """Sibling SENSE input (soft: the ledger may not exist yet). Glob-matched so the
     sibling's chosen filename is picked up without a code change here."""
@@ -705,21 +766,20 @@ def section_failure_ledger() -> tuple[str | None, dict | None]:
                     continue
         if not rows:
             return None, None
-        # per failure_id: unresolved = latest event is not a resolution; recurrence = seen 2+ times
-        by_id: dict[str, list[dict]] = {}
-        for r in rows:
-            by_id.setdefault(str(r.get("failure_id") or "?"), []).append(r)
-        unresolved = sorted(fid for fid, evs in by_id.items() if evs[-1].get("event") != "resolution")
-        recurrent = sorted(
-            fid for fid, evs in by_id.items() if sum(1 for e in evs if e.get("event") != "resolution") >= 2
-        )
+        # Schema-tolerant summary: class-key falls back across writer generations and the
+        # resolved-signal recognises event/status/resolution markers, so no legacy row
+        # collapses into a phantom "?" class (see _summarize_failure_ledger).
+        summary = _summarize_failure_ledger(rows)
+        classes = summary["classes"]
+        unresolved = summary["unresolved"]
+        recurrent = summary["recurrent"]
         line = (
-            f"failure-ledger ({path.name}): {len(by_id)} class(es), "
+            f"failure-ledger ({path.name}): {classes} class(es), "
             f"{len(unresolved)} unresolved, {len(recurrent)} recurrent"
         )
         if unresolved:
             line += f"; open: {', '.join(unresolved[:3])}"
-        return line, {"path": str(path), "classes": len(by_id), "unresolved": unresolved, "recurrent": recurrent}
+        return line, {"path": str(path), "classes": classes, "unresolved": unresolved, "recurrent": recurrent}
     except Exception:
         return None, None
 
