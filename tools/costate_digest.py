@@ -729,13 +729,44 @@ def _ledger_row_is_resolution(row: dict) -> bool:
     return False
 
 
+def _summarize_failure_ledger_v2(rows: list[dict]) -> dict | None:
+    """Canonical summary from the typed FailureEventV2 rows, when present.
+
+    Once ``tools/migrate_harness_failure_ledger_v2.py --apply`` has run, every semantic
+    class carries one ``harness_failure.v2`` row with a TYPED ``resolution_state`` — the
+    reader no longer has to coalesce heterogeneous key names or infer closure from prose.
+    Returns None when no V2 rows exist yet (fall back to the schema-tolerant path below).
+    """
+    if not any(isinstance(r, dict) and r.get("schema") == "harness_failure.v2" for r in rows):
+        return None
+    try:
+        from tac import harness_failure_ledger as _hfl  # local import: soft dependency
+    except Exception:
+        return None
+    latest: dict[str, dict] = {}
+    for r in rows:
+        if isinstance(r, dict) and r.get("schema") == "harness_failure.v2" and r.get("class_id"):
+            latest[str(r["class_id"])] = r  # rows are append-ordered; last wins
+    resolved = set(_hfl.RESOLVED_STATES)
+    unresolved = sorted(k for k, r in latest.items() if r.get("resolution_state") == "OPEN")
+    not_closed = sorted(k for k, r in latest.items() if r.get("resolution_state") not in resolved)
+    recurrent = sorted(k for k, r in latest.items() if int(r.get("recurrence_count") or 0) >= 1)
+    return {"classes": len(latest), "unresolved": unresolved,
+            "not_closed": not_closed, "recurrent": recurrent, "schema": "v2"}
+
+
 def _summarize_failure_ledger(rows: list[dict]) -> dict:
     """Pure summary (class-count / unresolved / recurrent) over ledger rows.
 
-    unresolved = classes whose LATEST row is not a resolution marker.
-    recurrent  = classes with >=2 non-resolution rows.
+    Prefers the canonical V2 typed summary when V2 rows exist. Otherwise falls back to the
+    schema-tolerant legacy path:
+      unresolved = classes whose LATEST row is not a resolution marker.
+      recurrent  = classes with >=2 non-resolution rows.
     Schema-tolerant so no writer generation produces a phantom '?' class.
     """
+    v2 = _summarize_failure_ledger_v2(rows)
+    if v2 is not None:
+        return v2
     by_id: dict[str, list[dict]] = {}
     for r in rows:
         if isinstance(r, dict):
