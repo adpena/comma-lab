@@ -19969,3 +19969,40 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   (#557/#558, survivor = next-vehicle size-in-loss, knee 4.1e-4) · shape = ŷ-native spine with
   the integer-plane child named (#559) · secant/waterfill live (#536 candidate). The composed
   v10 next-vehicle spec is now assemblable from MEASURED parts only.
+
+## FEED-integer-plane-spec-landed (2026-07-19)
+
+**#560 LANDED + MERGED (merge of 4db3b50a43): `.omx/research/SPEC_v10_integer_plane_vehicle_20260719.md`**
+— the wave-convergence spec composed ONLY from the five 07-19 measured arms. All FOUR operator
+bindings folded into the body (verified at review): modules.py per-stage frozen-line column (§3 map)
+· intrinsic-complexity cut (§5.1 per-field deletion test) · pose-is-2×2 block lattice (§3.1/§4.3/§7.3)
+· WEIGHT-level channels/hyperplanes/weights/bases (§3.2: U4 singular frame, 10 pair-hyperplane margin
+constraints, channel-resolved KKT axes, immutable-VJP custody; correctly re-scoped the 76.87% Lane
+skip statistic and the 52% ker(A) energy as priors, not gains). Owed-before-build chain = falsifiable
+charters C0–C11 (§8); completeness table §9 honest (DESIGN-ONLY/MISSING labels). Byte ceilings
+re-derived and verified (225,272 / 150,181 / 201,422 conditional B_max rows). Verdict: SPEC COMPOSED;
+NOT BUILD-READY; pointer 0.19108 [contest-CPU] UNMOVED — means, not end.
+
+**C0 CLOSED same-turn (commit 135462d577):** the arm's two authority drifts confirmed and reconciled —
+pose_plane_proximity_corollary_v1 builder now emits 4 anchors (added the measured intermediate-regime
+secant anchor; stale `unmeasured` domain field replaced by the measured intermediate_regime entry) and
+f32_receiver_arithmetic_exactness_admissibility_v1 builder now emits 3 anchors (added the
+preimage-fp32 resize-noise anchor, d_seg 1.2345e-4 / 127× replay class). Registry re-registered
+append-only; newest rows agree with builders; history untouched. Next chain unit: **C1** — two
+distinct-plane receiver ABI + full-n600 timing receipt (the 3.775-min projection is measured ONLY for
+one-plane + repeat-frame1; both invocations must individually clear 1800 s).
+
+**TWO NEW OPERATOR BINDINGS (07-19, folded into the C-chain; durable memory
+`train_least_surgical_kolmogorov_projection_realization_doctrine_20260716.md` UPDATE section):**
+(1) *"we want to train nothing if possible"* — solve-before-train as a falling rule on every C-chain
+stage: the train-free alternative (lattice solve · projection · seeded generator · predictor+residual)
+must be MEASURED insufficient before learned capacity is admitted; measured state: realization +
+certificates already train-free; pure coarsened train-free descriptions rate-dead (1.77 MB/pair secant
+KKT) = the measured justification for the ONE trained component (C2 emitter, quotient-residual-only
+per #531). (2) *"remember the resizing in upstream — we can surgically target anything, anywhere, at
+any point in the process"* — intervention-point is an allocation axis: camera-plane pre-A (#149) ·
+scorer plane ŷ (#559) · head margins (PDW2) · waterfilled individual flips (#391 exact composite-R
+adjoint); the frozen resize A (modules.py:73,109) with its exact adjoint / factor-2 lattice /
+ker-range split / preimage-fp32 lever is the pivotal surgical instrument; C9's KKT axes extend with
+intervention-point. verdict_scope: spec-composition + reconciliation unit; no new measurement, no
+score claim.
