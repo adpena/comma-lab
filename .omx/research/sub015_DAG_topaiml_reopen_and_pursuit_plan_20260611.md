@@ -19581,3 +19581,19 @@ chunked receipts, tool cap respected; chunk-00 = 1 fp32 tie-pixel, d_seg 4.2e-7,
 #548 (ŷ R-D rows) queued · #543 receiver-arithmetic declaration next · memo
 v10_lattice_rate_verdict_and_composition_20260719.md. Triality home: SPEC_v10 §3 row 8 (pose-side gate) +
 §4 seeds + completeness factor 2/7 rows. means/apparatus — pointer UNMOVED.
+
+## FEED-joint-solve-instrument (2026-07-19)
+
+**#549 arm landed (merge b9f68370c7 → main).** MEASURED `[macOS-CPU advisory n24]`: joint (z0,z1)
+solver with margin-band seg cone + global 6-dim pose constraint, zero-band control hard-oracle exact
+BOTH scorers (d_seg 0, mean d_pose 5.352e-10) — frame-0 now a solve variable (receipt blocker 2
+closed at n24). Range-coordinate payload at zero band still rate-dead: 2,337,608 B/pair brotli-Q11
+(verdict_scope: instance — the zero-band/exact operating point only; band-relaxed family OPEN).
+Waterfill verdict INCONCLUSIVE_FLAT_OR_NOISY (instance scope, 1 admissible operating point); the
+analytic d_pose=2.5e-4 crossover remains DERIVED not selected. Pair-125: exact rational A equality
+still yielded ONE native-fp32 argmax mismatch (d_seg 5.09e-6) — arithmetic-sensitive single-cell
+refusal (frame-195 class); final native-f32 hard-oracle repair is mandatory in any receiver.
+**NEXT (named build):** custodied winner/rival SegNet VJP sidecar + PoseNet-6 Jacobian → open the
+positive anisotropic bands → measure real bytes(τ_pose)/bytes(seg-band) curves → #536 KKT. Receipts:
+`joint_seg_pose_inverse_solve_receipt_{chunkA,chunkB2,n24}_20260719.json`; memo
+`joint_seg_pose_inverse_solve_20260719_codex.md`. Pointer 0.19108 UNMOVED (means/instrument).
