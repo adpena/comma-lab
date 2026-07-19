@@ -1,0 +1,123 @@
+{
+  "authority": {
+    "archive_authority": false,
+    "launch_or_paid_dispatch_authorized": false,
+    "measurement_axis": "[byte-anchor]",
+    "pointer_after": "0.1910828242 [contest-CPU Linux x86_64]",
+    "pointer_delta": 0.0,
+    "promotion_eligible": false,
+    "research_only": true,
+    "score_authority": false,
+    "target_realization_verdict": "TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT",
+    "through_r_authority": false
+  },
+  "frame195_gate": {
+    "diagnostic_sha256": "65d97194c6298a5502d0fcc792ee2fe3bf05599c69f1130d64c270dec5ec36ee",
+    "diagnostic_source": ".omx/research/v10_power_diagram_frame195_diagnostic_20260718.json",
+    "input_pdw1_sha256": "f2178e123c12cc062812a93f046174b7d5716df2edba0545733cad1c09795758",
+    "margin_packet": {
+      "argmax": 0,
+      "class0_score_f32": 7.366013050079346,
+      "class1_score_f32": 7.366013050079346,
+      "class_0_1_exact_tie": true,
+      "pair_0_1_receiver_difference_f32": 0.0,
+      "raw_bytes": 142,
+      "raw_sha256": "2d234ec902592f082eb9207f4b9bccb40c84d8df3205cb5408d675d0962ed0a9"
+    },
+    "partition_packet": {
+      "argmax": 0,
+      "class0_score_f32": 1.8631844520568848,
+      "class1_score_f32": 1.8631844520568848,
+      "class_0_1_exact_tie": true,
+      "pair_0_1_receiver_difference_f32": 0.0,
+      "raw_bytes": 138,
+      "raw_sha256": "2e5fd8404a116fa58b4e254297263c6491861977483bf22b935b21b903f71129"
+    },
+    "point_rank4_f32": [
+      0.0014007954159751534,
+      5.777266502380371,
+      1.7700754404067993,
+      3.2382075786590576
+    ],
+    "receiver_verdict": "PASS_NATIVE_F32_ZERO_SUM_GAUGE_EXACT_TIE_FIRST_CLASS_WINS",
+    "video_specific_exception": false
+  },
+  "gate_results": {
+    "1_fixed_reference_relative_affine_coefficients": "PASS_20_F32_MARGIN_AND_19_F32_PARTITION",
+    "2_tie_loci_derived_after_parseback": "PASS_ZERO_TIE_LOCUS_BYTES_SHIPPED",
+    "3_ordinary_and_frame195_receiver_parity": "PASS",
+    "4_strict_roundtrip_and_malformed_trailing_refusal": "PASS",
+    "5_target_only_boundary": "PASS_TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT"
+  },
+  "inputs": {
+    "adjacency": [
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [0, 4],
+      [1, 2],
+      [1, 3],
+      [1, 4],
+      [2, 3],
+      [3, 4]
+    ],
+    "class_count": 5,
+    "frozen_head_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "n600_pdw1_bytes": 338,
+    "n600_pdw1_sha256": "84a49d802dc5bd9c416013fd71bc6f08655a2f3c23c249374469a4dc4d8ee275",
+    "quotient_rank": 4
+  },
+  "measurement": {
+    "brotli_version": "1.2.0",
+    "git_base": "9f83d519e83d3018d0c9efab53fd42ebc78b277c",
+    "measurement_utc": "2026-07-19T10:39:11Z",
+    "numpy_version": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python_version": "3.13.12",
+    "reproduction_command_location": ".omx/research/pdw2_gauge_packet_probe_20260719_codex.md#reproduction",
+    "source_sha256": {
+      "codec": "4dcd9a61f9cfda499d2ff51691c5c5663e1137dbf1b4c803ce2ab73f4c001a63",
+      "fixtures": "83f430504223a7ed0a2e159bfb71fa600b639c7e59c7f4936711bcdd32cb408b"
+    }
+  },
+  "packets": {
+    "margin_preserving": {
+      "brotli_decompress_then_strict_parseback_byte_identical": true,
+      "brotli_quality": 11,
+      "brotli_quality11_bytes": 133,
+      "brotli_quality11_sha256": "e5b14699d682c8d6fd0291bb7f2874eede1c4e5788e09c612604d00f9a134704",
+      "coefficient_count_f32": 20,
+      "lossy_coefficient_quantization": false,
+      "raw_bytes": 138,
+      "raw_sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+      "tie_locus_bytes_shipped": 0
+    },
+    "partition_only_positive_scale_quotient": {
+      "brotli_decompress_then_strict_parseback_byte_identical": true,
+      "brotli_quality": 11,
+      "brotli_quality11_bytes": 122,
+      "brotli_quality11_sha256": "a0498e8a1e52c7e04abb0b638aee34d0b3c639bdbe75d2a33c244145d8400868",
+      "coefficient_count_f32": 19,
+      "lossy_coefficient_quantization": false,
+      "margin_magnitudes_preserved": false,
+      "raw_bytes": 134,
+      "raw_sha256": "c42be295ac47ca1b33efafeb7c33259a6ae8806477ac5060cbb20a299f25b874",
+      "tie_locus_bytes_shipped": 0
+    }
+  },
+  "receiver_arithmetic": {
+    "accumulation_dtype": "native float32",
+    "evaluation_order": "decode fixed-reference rows; reconstruct deterministic zero-sum common-affine gauge in float32; multiply/reduce/add in float32; numpy first-max tie policy",
+    "naive_reference_zero_dot_product_admitted": false,
+    "reference_class": "first canonical class id",
+    "tie_certificate": "normals and offsets derived after parseback; receiver pair verdict is subtraction of declared class scores because finite-precision quotient/evaluation do not commute"
+  },
+  "schema": "pdw2_gauge_packet_probe.v1",
+  "status": "MEASURED_FORMAT_GATE_PASS_STOP_SPATIAL_RECEIVER_ABSENT",
+  "stop_rule": {
+    "next_open_axis": "legal feature-field/RGB pullback parsed back and measured through R",
+    "packet_polish_authorized": false,
+    "spatial_receiver_present": false,
+    "verdict_scope": "PACKET_FORMAT_AND_DECLARED_F32_RECEIVER_ONLY_FAMILY_OPEN"
+  }
+}

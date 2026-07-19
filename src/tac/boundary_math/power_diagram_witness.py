@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Frozen-head power-diagram targets and strict ``PDW1`` custody.
+"""Frozen-head power-diagram targets and strict ``PDW1``/``PDW2`` custody.
 
 The affine/power identity is exact in real arithmetic before the mandatory
 float32 target serialization.  ``PDW1`` is byte-close and canonical, but its
@@ -12,7 +12,7 @@ Labels without paired channel features are therefore rejected by the inverse.
 
 Authority labels used by the receipts are intentionally literal:
 
-* affine/head conversion and ``PDW1`` parse-back are ``DERIVED``;
+* affine/head conversion and ``PDW1``/``PDW2`` parse-back are ``DERIVED``;
 * cache statistics and file sizes/hashes are ``MEASURED``;
 * renderer, through-R, Seg, Pose, score, and spatial-K claims are absent.
 """
@@ -33,6 +33,11 @@ import numpy as np
 
 PDW1_MAGIC: Final = b"PDW1"
 PDW1_HEADER: Final = struct.Struct("<4sHHI")
+PDW2_MAGIC: Final = b"PDW2"
+PDW2_PARTITION_MAGIC: Final = b"PDP2"
+PDW2_HEADER: Final = struct.Struct("<4sHHI")
+PDW2_MARGIN_MODE: Final = "MARGIN_PRESERVING"
+PDW2_PARTITION_MODE: Final = "PARTITION_ONLY_POSITIVE_SCALE_QUOTIENT"
 TARGET_COMPARISON_VERDICT: Final = "TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT"
 
 
@@ -147,6 +152,38 @@ class DescriptionLengthReceipt:
     archive_saving_claim: bool = False
 
 
+@dataclass(frozen=True)
+class GaugeFixedAffineTarget:
+    """Reference-class affine differences with derived tie certificates.
+
+    The first canonical class id is the fixed reference.  Its affine row is
+    exactly zero in the quotient; ``relative_coefficients`` stores the other
+    ``K-1`` rows as ``[a_1, ..., a_rank, b]`` float32 values.  Tie loci are
+    derived after parse-back and are never serialized.
+
+    ``PARTITION_ONLY_POSITIVE_SCALE_QUOTIENT`` additionally fixes the largest
+    absolute coefficient to ``+/-1`` and records its index/sign in the header.
+    It preserves only the argmax partition, not margin magnitudes.
+    """
+
+    class_ids: np.ndarray
+    relative_coefficients: np.ndarray
+    adjacency: tuple[tuple[int, int], ...]
+    tie_normals: np.ndarray
+    tie_offsets: np.ndarray
+    mode: str = PDW2_MARGIN_MODE
+    scale_pivot: int | None = None
+    verdict: str = TARGET_COMPARISON_VERDICT
+
+    @property
+    def n_classes(self) -> int:
+        return int(self.class_ids.size)
+
+    @property
+    def rank(self) -> int:
+        return int(self.relative_coefficients.shape[1] - 1)
+
+
 def _as_finite_matrix(value: np.ndarray, *, name: str) -> np.ndarray:
     out = np.asarray(value, dtype=np.float64)
     if out.ndim < 2:
@@ -161,6 +198,137 @@ def _canonical_zero_f32(value: np.ndarray) -> np.ndarray:
     out = np.asarray(value, dtype="<f4").copy()
     out[out == 0] = 0.0  # canonical positive zero
     return out
+
+
+def _pdw2_tie_loci(
+    class_ids: np.ndarray,
+    relative_coefficients: np.ndarray,
+    adjacency: tuple[tuple[int, int], ...],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Derive affine tie loci using the declared native-float32 arithmetic."""
+
+    n_classes = int(class_ids.size)
+    rank = int(relative_coefficients.shape[1] - 1)
+    full = np.zeros((n_classes, rank + 1), dtype="<f4")
+    full[1:] = relative_coefficients
+    class_index = {int(class_id): index for index, class_id in enumerate(class_ids)}
+    normals = np.empty((len(adjacency), rank), dtype="<f4")
+    offsets = np.empty(len(adjacency), dtype="<f4")
+    for edge_index, (class_i, class_j) in enumerate(adjacency):
+        i, j = class_index[class_i], class_index[class_j]
+        normals[edge_index] = np.subtract(full[j, :-1], full[i, :-1], dtype=np.float32)
+        offsets[edge_index] = np.subtract(full[j, -1], full[i, -1], dtype=np.float32)
+    return _canonical_zero_f32(normals), _canonical_zero_f32(offsets)
+
+
+def _build_gauge_fixed_target(
+    class_ids: np.ndarray,
+    relative_coefficients: np.ndarray,
+    adjacency: tuple[tuple[int, int], ...],
+    *,
+    mode: str,
+    scale_pivot: int | None,
+) -> GaugeFixedAffineTarget:
+    coefficients = _canonical_zero_f32(relative_coefficients)
+    normals, offsets = _pdw2_tie_loci(class_ids, coefficients, adjacency)
+    return GaugeFixedAffineTarget(
+        class_ids=class_ids,
+        relative_coefficients=coefficients,
+        adjacency=adjacency,
+        tie_normals=normals,
+        tie_offsets=offsets,
+        mode=mode,
+        scale_pivot=scale_pivot,
+    )
+
+
+def make_gauge_fixed_affine_target(
+    affine_weight: np.ndarray,
+    affine_bias: np.ndarray,
+    *,
+    class_ids: Sequence[int] | None = None,
+    adjacency: Iterable[tuple[int, int]] | None = None,
+    partition_only: bool = False,
+) -> GaugeFixedAffineTarget:
+    """Quotient affine rows by a fixed reference class in native float32.
+
+    No lossy coefficient quantization is performed.  The optional
+    ``partition_only`` mode removes one further positive common-scale degree
+    of freedom and therefore does not preserve margin magnitudes.
+    """
+
+    rows = np.asarray(affine_weight, dtype=np.float32)
+    bias = np.asarray(affine_bias, dtype=np.float32)
+    if (
+        rows.ndim != 2
+        or not 2 <= rows.shape[0] <= 0xFFFF
+        or not 1 <= rows.shape[1] <= 0xFFFF
+    ):
+        raise PowerDiagramWitnessError("affine_weight must have shape (K, rank), K >= 2, rank >= 1")
+    if bias.shape != (rows.shape[0],) or not np.isfinite(rows).all() or not np.isfinite(bias).all():
+        raise PowerDiagramWitnessError("affine rows/bias must be finite with one bias per class")
+    if class_ids is None:
+        ids = np.arange(rows.shape[0], dtype="<u2")
+    else:
+        raw_values = tuple(class_ids)
+        if any(
+            isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer))
+            for value in raw_values
+        ):
+            raise PowerDiagramWitnessError("class ids must be lossless integers")
+        raw_ids = tuple(int(value) for value in raw_values)
+        if len(raw_ids) != rows.shape[0] or any(value < 0 or value > 0xFFFF for value in raw_ids):
+            raise PowerDiagramWitnessError("class ids must match K and fit uint16")
+        if tuple(sorted(set(raw_ids))) != raw_ids:
+            raise PowerDiagramWitnessError("class ids must be strictly increasing")
+        ids = np.asarray(raw_ids, dtype="<u2")
+    edges = (
+        tuple((int(ids[i]), int(ids[j])) for i in range(ids.size) for j in range(i + 1, ids.size))
+        if adjacency is None
+        else canonical_adjacency(adjacency, ids)
+    )
+    relative_weight = np.subtract(rows[1:], rows[0], dtype=np.float32)
+    relative_bias = np.subtract(bias[1:], bias[0], dtype=np.float32)
+    coefficients = np.concatenate((relative_weight, relative_bias[:, None]), axis=1).astype("<f4", copy=False)
+    mode = PDW2_MARGIN_MODE
+    scale_pivot: int | None = None
+    if partition_only:
+        flat = coefficients.reshape(-1)
+        pivot = int(np.argmax(np.abs(flat)))
+        scale = np.float32(abs(float(flat[pivot])))
+        if not math.isfinite(float(scale)) or scale == 0:
+            raise PowerDiagramWitnessError("partition-only scale quotient requires a nonzero affine difference")
+        normalized = np.divide(flat, scale, dtype=np.float32)
+        coefficients = _canonical_zero_f32(normalized.reshape(coefficients.shape))
+        scale_pivot = int(np.argmax(np.abs(coefficients.reshape(-1))))
+        mode = PDW2_PARTITION_MODE
+    target = _build_gauge_fixed_target(
+        ids,
+        coefficients,
+        edges,
+        mode=mode,
+        scale_pivot=scale_pivot,
+    )
+    _validate_gauge_fixed_target(target)
+    return target
+
+
+def pdw1_to_pdw2(target: PowerDiagramTarget, *, partition_only: bool = False) -> GaugeFixedAffineTarget:
+    """Convert canonical PDW1 sites/weights to an additive gauge-fixed target."""
+
+    _validate_canonical_target(target)
+    sites = np.asarray(target.sites, dtype=np.float32)
+    weights = np.asarray(target.weights, dtype=np.float32)
+    affine_weight = np.multiply(sites, np.float32(2.0), dtype=np.float32)
+    squared_norm = np.sum(np.multiply(sites, sites, dtype=np.float32), axis=1, dtype=np.float32)
+    affine_bias = np.subtract(weights, squared_norm, dtype=np.float32)
+    return make_gauge_fixed_affine_target(
+        affine_weight,
+        affine_bias,
+        class_ids=tuple(int(value) for value in target.class_ids),
+        adjacency=target.adjacency,
+        partition_only=partition_only,
+    )
 
 
 def sha256_file(path: str | Path, *, chunk_bytes: int = 1 << 20) -> str:
@@ -979,6 +1147,203 @@ def decode_pdw1(payload: bytes | bytearray | memoryview) -> PowerDiagramTarget:
     return target
 
 
+def _validate_gauge_fixed_target(target: GaugeFixedAffineTarget) -> None:
+    ids = np.asarray(target.class_ids)
+    if ids.ndim != 1 or ids.size < 2 or ids.size > 0xFFFF or ids.dtype != np.dtype("<u2"):
+        raise PowerDiagramWitnessError("PDW2 class ids must use canonical little-endian uint16")
+    ids_tuple = tuple(int(value) for value in ids)
+    if tuple(sorted(set(ids_tuple))) != ids_tuple:
+        raise PowerDiagramWitnessError("PDW2 class ids must be strictly increasing")
+    coefficients = np.asarray(target.relative_coefficients)
+    if coefficients.dtype != np.dtype("<f4"):
+        raise PowerDiagramWitnessError("PDW2 coefficients must use canonical little-endian float32")
+    if coefficients.ndim != 2 or coefficients.shape[0] != ids.size - 1 or coefficients.shape[1] < 2:
+        raise PowerDiagramWitnessError("PDW2 coefficient shape must be (K-1, rank+1)")
+    if not np.isfinite(coefficients).all():
+        raise PowerDiagramWitnessError("PDW2 coefficients contain non-finite values")
+    if np.any((coefficients == 0) & np.signbit(coefficients)):
+        raise PowerDiagramWitnessError("negative zero in PDW2 coefficients is noncanonical")
+    canonical_edges = canonical_adjacency(target.adjacency, ids_tuple)
+    if canonical_edges != target.adjacency:
+        raise PowerDiagramWitnessError("PDW2 adjacency is not sorted and unique")
+    expected_normals, expected_offsets = _pdw2_tie_loci(ids, coefficients, canonical_edges)
+    normals = np.asarray(target.tie_normals)
+    offsets = np.asarray(target.tie_offsets)
+    if normals.dtype != np.dtype("<f4") or offsets.dtype != np.dtype("<f4"):
+        raise PowerDiagramWitnessError("PDW2 derived tie loci must use little-endian float32")
+    if normals.shape != expected_normals.shape or offsets.shape != expected_offsets.shape:
+        raise PowerDiagramWitnessError("PDW2 derived tie-locus shape is inconsistent")
+    if not np.isfinite(normals).all() or not np.isfinite(offsets).all():
+        raise PowerDiagramWitnessError("PDW2 derived tie loci contain non-finite values")
+    if np.any((normals == 0) & np.signbit(normals)) or np.any((offsets == 0) & np.signbit(offsets)):
+        raise PowerDiagramWitnessError("negative zero in PDW2 derived tie loci is noncanonical")
+    if not np.array_equal(normals, expected_normals) or not np.array_equal(offsets, expected_offsets):
+        raise PowerDiagramWitnessError("PDW2 derived tie loci are inconsistent with coefficients")
+    if target.verdict != TARGET_COMPARISON_VERDICT:
+        raise PowerDiagramWitnessError("PDW2 target/realization verdict boundary is noncanonical")
+    if target.mode == PDW2_MARGIN_MODE:
+        if target.scale_pivot is not None:
+            raise PowerDiagramWitnessError("margin-preserving PDW2 must not declare a scale pivot")
+    elif target.mode == PDW2_PARTITION_MODE:
+        flat = coefficients.reshape(-1)
+        expected_pivot = int(np.argmax(np.abs(flat)))
+        if target.scale_pivot != expected_pivot or abs(float(flat[expected_pivot])) != 1.0:
+            raise PowerDiagramWitnessError("partition-only PDW2 scale pivot is noncanonical")
+        if expected_pivot > 0x7FFF or len(canonical_edges) > 0xFFFF:
+            raise PowerDiagramWitnessError("partition-only PDW2 metadata exceeds header capacity")
+    else:
+        raise PowerDiagramWitnessError("unknown PDW2 mode")
+
+
+def encode_pdw2(target: GaugeFixedAffineTarget) -> bytes:
+    """Encode strict gauge-fixed bytes; tie loci remain derived and unshipped."""
+
+    _validate_gauge_fixed_target(target)
+    n_classes, rank, n_edges = target.n_classes, target.rank, len(target.adjacency)
+    coefficients = np.asarray(target.relative_coefficients, dtype="<f4").reshape(-1)
+    magic = PDW2_MAGIC
+    metadata = n_edges
+    if target.mode == PDW2_PARTITION_MODE:
+        magic = PDW2_PARTITION_MAGIC
+        if target.scale_pivot is None:  # already refused by validation; retain fail-closed locality
+            raise PowerDiagramWitnessError("partition-only PDW2 scale pivot is missing")
+        pivot = target.scale_pivot
+        sign_bit = 1 if coefficients[pivot] < 0 else 0
+        metadata = n_edges | (pivot << 16) | (sign_bit << 31)
+        coefficients = np.delete(coefficients, pivot)
+    chunks = [PDW2_HEADER.pack(magic, n_classes, rank, metadata)]
+    chunks.append(np.asarray(target.class_ids, dtype="<u2").tobytes(order="C"))
+    chunks.append(coefficients.astype("<f4", copy=False).tobytes(order="C"))
+    edge_array = np.asarray(target.adjacency, dtype="<u2").reshape(n_edges, 2)
+    chunks.append(edge_array.tobytes(order="C"))
+    return b"".join(chunks)
+
+
+def decode_pdw2(payload: bytes | bytearray | memoryview) -> GaugeFixedAffineTarget:
+    """Strictly decode PDW2/PDP2 and derive tie loci under native float32."""
+
+    view = memoryview(payload)
+    if len(view) < PDW2_HEADER.size:
+        raise PowerDiagramWitnessError("truncated PDW2 header")
+    magic, n_classes, rank, metadata = PDW2_HEADER.unpack_from(view)
+    if magic not in (PDW2_MAGIC, PDW2_PARTITION_MAGIC):
+        raise PowerDiagramWitnessError("bad PDW2 magic")
+    if n_classes < 2 or rank < 1:
+        raise PowerDiagramWitnessError("invalid PDW2 counts")
+    coefficient_count = (n_classes - 1) * (rank + 1)
+    scale_pivot: int | None = None
+    mode = PDW2_MARGIN_MODE
+    if magic == PDW2_PARTITION_MAGIC:
+        n_edges = metadata & 0xFFFF
+        scale_pivot = (metadata >> 16) & 0x7FFF
+        if scale_pivot >= coefficient_count:
+            raise PowerDiagramWitnessError("invalid partition-only PDW2 scale pivot")
+        serialized_coefficient_count = coefficient_count - 1
+        mode = PDW2_PARTITION_MODE
+    else:
+        n_edges = metadata
+        serialized_coefficient_count = coefficient_count
+    if n_edges > n_classes * (n_classes - 1) // 2:
+        raise PowerDiagramWitnessError("invalid PDW2 edge count")
+    expected = PDW2_HEADER.size + 2 * n_classes + 4 * serialized_coefficient_count + 4 * n_edges
+    if len(view) != expected:
+        relation = "truncated" if len(view) < expected else "trailing"
+        raise PowerDiagramWitnessError(f"{relation} PDW2 bytes")
+    offset = PDW2_HEADER.size
+
+    def take(dtype: str, count: int) -> np.ndarray:
+        nonlocal offset
+        dt = np.dtype(dtype)
+        size = dt.itemsize * count
+        result = np.frombuffer(view[offset : offset + size], dtype=dt, count=count).copy()
+        offset += size
+        return result
+
+    ids = take("<u2", n_classes)
+    serialized_coefficients = take("<f4", serialized_coefficient_count)
+    if scale_pivot is None:
+        flat = serialized_coefficients
+    else:
+        pivot_value = np.float32(-1.0 if metadata >> 31 else 1.0)
+        flat = np.insert(serialized_coefficients, scale_pivot, pivot_value).astype("<f4", copy=False)
+    if np.any((flat == 0) & np.signbit(flat)):
+        raise PowerDiagramWitnessError("negative zero in PDW2 coefficients is noncanonical")
+    coefficients = flat.reshape(n_classes - 1, rank + 1)
+    edge_values = take("<u2", n_edges * 2).reshape(n_edges, 2)
+    edges = tuple((int(edge[0]), int(edge[1])) for edge in edge_values)
+    target = _build_gauge_fixed_target(
+        ids,
+        coefficients,
+        edges,
+        mode=mode,
+        scale_pivot=scale_pivot,
+    )
+    _validate_gauge_fixed_target(target)
+    if encode_pdw2(target) != bytes(view):
+        raise PowerDiagramWitnessError("PDW2 bytes are not canonical")
+    return target
+
+
+def gauge_fixed_scores_f32(points: np.ndarray, target: GaugeFixedAffineTarget) -> np.ndarray:
+    """Evaluate the declared PDW2 receiver arithmetic.
+
+    The fixed-reference rows are reconstructed into a deterministic zero-sum
+    common-affine gauge before scoring.  Every subtraction, reduction,
+    multiplication, and addition is float32.  This ordering is part of the
+    wire contract because quotienting and finite-precision evaluation do not
+    commute at ULP-class ties.
+    """
+
+    _validate_gauge_fixed_target(target)
+    values = np.asarray(points, dtype=np.float32)
+    if values.ndim < 1 or values.shape[-1] != target.rank or not np.isfinite(values).all():
+        raise PowerDiagramWitnessError("PDW2 points must be finite with final dimension target.rank")
+    relative = np.zeros((target.n_classes, target.rank + 1), dtype="<f4")
+    relative[1:] = target.relative_coefficients
+    reference = np.negative(
+        np.divide(
+            np.sum(relative[1:], axis=0, dtype=np.float32),
+            np.float32(target.n_classes),
+            dtype=np.float32,
+        ),
+        dtype=np.float32,
+    )
+    affine = np.add(relative, reference, dtype=np.float32)
+    products = np.multiply(values[..., None, :], affine[:, :-1], dtype=np.float32)
+    dots = np.sum(products, axis=-1, dtype=np.float32)
+    return np.add(dots, affine[:, -1], dtype=np.float32)
+
+
+def gauge_fixed_assign_f32(points: np.ndarray, target: GaugeFixedAffineTarget) -> np.ndarray:
+    """Assign class ids using PDW2 native-float32 scores and first-max ties."""
+
+    return target.class_ids[np.argmax(gauge_fixed_scores_f32(points, target), axis=-1)]
+
+
+def gauge_fixed_pair_tie_value_f32(
+    points: np.ndarray,
+    target: GaugeFixedAffineTarget,
+    class_i: int,
+    class_j: int,
+) -> np.ndarray:
+    """Evaluate one post-parseback pair difference in receiver float32.
+
+    The stored-free normal/offset arrays remain the algebraically derived tie
+    certificate.  At ULP-class cases, evaluating that collapsed affine form
+    can differ from subtracting the two declared receiver scores, so the wire
+    verdict uses the latter operation ordering.
+    """
+
+    i, j = sorted((int(class_i), int(class_j)))
+    try:
+        target.adjacency.index((i, j))
+    except ValueError as exc:
+        raise PowerDiagramWitnessError("requested pair is not in PDW2 adjacency") from exc
+    class_index = {int(value): index for index, value in enumerate(target.class_ids)}
+    scores = gauge_fixed_scores_f32(points, target)
+    return np.subtract(scores[..., class_index[j]], scores[..., class_index[i]], dtype=np.float32)
+
+
 def compare_target_to_realizations(
     target: PowerDiagramTarget | bytes,
     realization_paths: Sequence[str | Path],
@@ -1010,10 +1375,16 @@ fit_generators_from_partition = fit_power_diagram_from_paired_features
 
 __all__ = [
     "PDW1_MAGIC",
+    "PDW2_HEADER",
+    "PDW2_MAGIC",
+    "PDW2_MARGIN_MODE",
+    "PDW2_PARTITION_MAGIC",
+    "PDW2_PARTITION_MODE",
     "TARGET_COMPARISON_VERDICT",
     "DescriptionLengthReceipt",
     "F32ParityReceipt",
     "FileSizeReceipt",
+    "GaugeFixedAffineTarget",
     "HeadPowerDiagram",
     "InverseFitReceipt",
     "PowerDiagramTarget",
@@ -1024,18 +1395,25 @@ __all__ = [
     "canonical_row_difference_basis",
     "compare_target_to_realizations",
     "decode_pdw1",
+    "decode_pdw2",
     "encode_pdw1",
+    "encode_pdw2",
     "fit_generators_from_partition",
     "fit_power_diagram_from_labels",
     "fit_power_diagram_from_paired_features",
+    "gauge_fixed_assign_f32",
+    "gauge_fixed_pair_tie_value_f32",
+    "gauge_fixed_scores_f32",
     "generator_to_cells",
     "initialize_video_fed_target",
     "is_co_maximum_tie",
+    "make_gauge_fixed_affine_target",
     "make_power_diagram_target",
     "measure_f32_target_parity",
     "observed_four_neighbour_adjacency",
     "open_stored_npy_memmap",
     "pair_tie_value",
+    "pdw1_to_pdw2",
     "power_assign",
     "power_distances",
     "power_scores",

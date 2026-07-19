@@ -15,21 +15,31 @@ import pytest
 
 from tac.boundary_math.power_diagram_witness import (
     PDW1_HEADER,
+    PDW2_HEADER,
+    PDW2_MARGIN_MODE,
+    PDW2_PARTITION_MODE,
     TARGET_COMPARISON_VERDICT,
     PowerDiagramWitnessError,
     affine_head_to_power_diagram,
     compare_target_to_realizations,
     decode_pdw1,
+    decode_pdw2,
     encode_pdw1,
+    encode_pdw2,
     fit_power_diagram_from_labels,
     fit_power_diagram_from_paired_features,
+    gauge_fixed_assign_f32,
+    gauge_fixed_pair_tie_value_f32,
+    gauge_fixed_scores_f32,
     initialize_video_fed_target,
     is_co_maximum_tie,
+    make_gauge_fixed_affine_target,
     make_power_diagram_target,
     measure_f32_target_parity,
     observed_four_neighbour_adjacency,
     open_stored_npy_memmap,
     pair_tie_value,
+    pdw1_to_pdw2,
     power_assign,
     project_channel_features,
     read_frozen_segmentation_head,
@@ -383,6 +393,149 @@ def test_pdw1_rejects_corruption_and_every_trailing_byte(mutation: str) -> None:
     expected = "negative zero" if mutation == "negative_zero" else None
     with pytest.raises(PowerDiagramWitnessError, match=expected):
         decode_pdw1(payload)
+
+
+def _five_class_nine_edge_target(*, partition_only: bool = False):
+    weight = np.array(
+        [
+            [-1.25, 0.5, 0.25, -0.75],
+            [0.75, -0.25, 1.0, 0.5],
+            [2.0, 1.0, -0.5, 0.25],
+            [-0.5, -1.5, 0.75, 1.25],
+            [1.25, 0.25, -1.0, -0.5],
+        ],
+        dtype=np.float32,
+    )
+    bias = np.array([0.1, -0.2, 0.3, -0.4, 0.5], dtype=np.float32)
+    adjacency = tuple((i, j) for i in range(5) for j in range(i + 1, 5) if (i, j) != (3, 4))
+    return make_gauge_fixed_affine_target(
+        weight,
+        bias,
+        adjacency=adjacency,
+        partition_only=partition_only,
+    )
+
+
+def test_pdw2_measures_138_margin_bytes_and_134_partition_bytes() -> None:
+    margin = _five_class_nine_edge_target()
+    partition = _five_class_nine_edge_target(partition_only=True)
+    margin_bytes = encode_pdw2(margin)
+    partition_bytes = encode_pdw2(partition)
+    assert len(margin_bytes) == 138
+    assert len(partition_bytes) == 134
+    assert decode_pdw2(margin_bytes).mode == PDW2_MARGIN_MODE
+    assert decode_pdw2(partition_bytes).mode == PDW2_PARTITION_MODE
+    assert encode_pdw2(decode_pdw2(margin_bytes)) == margin_bytes
+    assert encode_pdw2(decode_pdw2(partition_bytes)) == partition_bytes
+    assert decode_pdw2(margin_bytes).verdict == TARGET_COMPARISON_VERDICT
+    assert decode_pdw2(partition_bytes).verdict == TARGET_COMPARISON_VERDICT
+
+
+def test_pdw2_reproduces_pdw1_ordinary_random_and_small_direction_parity() -> None:
+    rng = np.random.default_rng(20260718)
+    weight = rng.normal(size=(5, 11))
+    bias = rng.normal(size=5)
+    features = rng.normal(size=(400, 11))
+    head = affine_head_to_power_diagram(weight, bias)
+    points = project_channel_features(features, head.quotient_basis)
+    pdw2 = decode_pdw2(encode_pdw2(pdw1_to_pdw2(head.target)))
+    np.testing.assert_array_equal(gauge_fixed_assign_f32(points, pdw2), power_assign(points, head.target))
+
+    small_head = affine_head_to_power_diagram(
+        np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1e-11]]),
+        np.zeros(3),
+    )
+    small_feature = np.array([[0.0, 1e12]])
+    small_point = project_channel_features(small_feature, small_head.quotient_basis)
+    small_pdw2 = decode_pdw2(encode_pdw2(pdw1_to_pdw2(small_head.target)))
+    np.testing.assert_array_equal(
+        gauge_fixed_assign_f32(small_point, small_pdw2),
+        power_assign(small_point, small_head.target),
+    )
+
+
+def test_pdw2_gauge_composition_is_a_fixture_assertion() -> None:
+    weight = np.array(
+        [[-1.0, 0.5], [0.25, 1.0], [1.5, -0.75]],
+        dtype=np.float32,
+    )
+    bias = np.array([-0.5, 0.25, 1.0], dtype=np.float32)
+    common_affine = np.array([2.0, -4.0], dtype=np.float32)
+    common_bias = np.float32(8.0)
+    base = make_gauge_fixed_affine_target(weight, bias)
+    composed = make_gauge_fixed_affine_target(weight + common_affine, bias + common_bias)
+    assert encode_pdw2(base) == encode_pdw2(composed)
+    np.testing.assert_array_equal(base.tie_normals, composed.tie_normals)
+    np.testing.assert_array_equal(base.tie_offsets, composed.tie_offsets)
+
+
+def test_pdw2_exact_frame195_native_f32_tie_after_parseback() -> None:
+    pdw1_hex = (
+        "50445731050004000a0000000000010002000300040076e0343fd7abd23ee1c8aa3e5467673e"
+        "2895a2bfd7abd23ee1c8aa3e5467673eaea5363ebd0247bfe1c8aa3e5467673ef8033f3e385a"
+        "88bd62db74bf5467673ec37d4b3e8845ac3c021f35bd546767bfc14195be1f02543fad2942be"
+        "21b22abe2ba938be000001000000020000000300000004000100020001000300010004000200"
+        "0300020004000300040063057dc00000000000000000000000000a3787bf542c18c000000000"
+        "00000000781f85bf65c274bfe91f25c000000000050182bf7ee747bfc16c41bf94a010c0de69"
+        "3940542c18c00000000000000000a7753a4065c274bfe91f25c000000000e0043c407ee747bf"
+        "c16c41bf94a010c0a0e4853c76f7b53fe91f25c000000000a8c0263de964cc3fc16c41bf94a0"
+        "10c0b09cc73c9a6b333e7289e93f94a010c0407ab53bd980093e8c9a4abdf622aa3d07d5033e"
+        "d44961bd52cb9e3d7c273cbe78bd51bd1eb8073e"
+    )
+    point = np.array([[0.0014007954, 5.7772665, 1.7700754, 3.2382076]], dtype=np.float32)
+    pdw1 = decode_pdw1(bytes.fromhex(pdw1_hex))
+    assert hashlib.sha256(bytes.fromhex(pdw1_hex)).hexdigest() == (
+        "f2178e123c12cc062812a93f046174b7d5716df2edba0545733cad1c09795758"
+    )
+    for partition_only in (False, True):
+        pdw2 = decode_pdw2(encode_pdw2(pdw1_to_pdw2(pdw1, partition_only=partition_only)))
+        naive_reference_zero = np.add(
+            np.sum(
+                np.multiply(point, pdw2.relative_coefficients[0, :-1], dtype=np.float32),
+                axis=-1,
+                dtype=np.float32,
+            ),
+            pdw2.relative_coefficients[0, -1],
+            dtype=np.float32,
+        )
+        assert float(naive_reference_zero[0]) > 0.0  # the naive ordering flips to class 1
+        scores = gauge_fixed_scores_f32(point, pdw2)
+        assert scores[0, 0] == scores[0, 1]
+        assert int(gauge_fixed_assign_f32(point, pdw2)[0]) == 0
+        assert float(gauge_fixed_pair_tie_value_f32(point, pdw2, 0, 1)[0]) == 0.0
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["magic", "truncated", "trailer", "nan", "edge", "negative_zero", "partition_pivot"],
+)
+def test_pdw2_rejects_malformed_and_every_trailing_byte(mutation: str) -> None:
+    target = _five_class_nine_edge_target()
+    if mutation == "partition_pivot":
+        partition = _five_class_nine_edge_target(partition_only=True)
+        payload = bytearray(encode_pdw2(partition))
+        magic, k, rank, metadata = PDW2_HEADER.unpack_from(payload)
+        bad_metadata = (metadata & 0x8000FFFF) | (((k - 1) * (rank + 1)) << 16)
+        PDW2_HEADER.pack_into(payload, 0, magic, k, rank, bad_metadata)
+    else:
+        payload = bytearray(encode_pdw2(target))
+        coefficient_start = PDW2_HEADER.size + 2 * target.n_classes
+        edge_start = coefficient_start + 4 * target.relative_coefficients.size
+        if mutation == "magic":
+            payload[0] ^= 0xFF
+        elif mutation == "truncated":
+            del payload[-1]
+        elif mutation == "trailer":
+            payload.extend(b"x")
+        elif mutation == "nan":
+            payload[coefficient_start : coefficient_start + 4] = struct.pack("<f", float("nan"))
+        elif mutation == "edge":
+            payload[edge_start : edge_start + 4] = struct.pack("<HH", 1, 0)
+        else:
+            payload[coefficient_start : coefficient_start + 4] = struct.pack("<f", -0.0)
+    expected = "negative zero" if mutation == "negative_zero" else None
+    with pytest.raises(PowerDiagramWitnessError, match=expected):
+        decode_pdw2(payload)
 
 
 def test_description_comparator_is_target_only_and_makes_no_score_or_k_claim(
