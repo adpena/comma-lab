@@ -7,6 +7,8 @@ testing style: the load-bearing classification lives in module functions.
 from __future__ import annotations
 
 import importlib.util
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -141,11 +143,32 @@ def test_state_partitions():
 # recorded decision) the arm's findings. Proven orphan class: the 4-arm
 # curvelet/Fourier basis cluster (rc=0 REVIEWED, findings unconsumed).
 
-def _disposition_args(status, *, consumed_by=None, blocked_by=None, reason="r"):
+
+def _disposition_args(
+    status,
+    *,
+    consumed_by=None,
+    blocked_by=None,
+    reason="r",
+    landing_manifest=None,
+    landing_manifest_strict=False,
+    landing_manifest_waiver=None,
+):
     import argparse
+
     return argparse.Namespace(
-        label="arm_x", stamp="S1", status=status, commit=None, respawn=None,
-        reason=reason, blocked_by=blocked_by, consumed_by=consumed_by)
+        label="arm_x",
+        stamp="S1",
+        status=status,
+        commit=None,
+        respawn=None,
+        reason=reason,
+        blocked_by=blocked_by,
+        consumed_by=consumed_by,
+        landing_manifest=landing_manifest,
+        landing_manifest_strict=landing_manifest_strict,
+        landing_manifest_waiver=landing_manifest_waiver,
+    )
 
 
 @pytest.fixture()
@@ -220,3 +243,135 @@ def test_cli_parser_accepts_consumed_by(_ledger):
         "--consumed-by", "task#999"])
     assert rc == 0
     assert G._read_jsonl(_ledger)[0]["consumed_by"] == "task#999"
+
+
+# ---- typed BASE..HEAD landing manifest integration (task #555) -------------
+def _git(repo: Path, *args: str) -> str:
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "Landing Gate Test",
+        "GIT_AUTHOR_EMAIL": "gate@example.invalid",
+        "GIT_COMMITTER_NAME": "Landing Gate Test",
+        "GIT_COMMITTER_EMAIL": "gate@example.invalid",
+    }
+    proc = subprocess.run(["git", "-C", str(repo), *args], env=env, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout.strip()
+
+
+@pytest.fixture()
+def _manifest_repo(tmp_path, monkeypatch):
+    from tac.landing_diff_manifest import build_manifest, write_manifest
+
+    repo = tmp_path / "manifest_repo"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    (repo / "seed.txt").write_text("seed\n", encoding="utf-8")
+    _git(repo, "add", "seed.txt")
+    _git(repo, "commit", "-m", "base")
+    base = _git(repo, "rev-parse", "HEAD")
+    (repo / "changed.txt").write_text("changed\n", encoding="utf-8")
+    _git(repo, "add", "changed.txt")
+    _git(repo, "commit", "-m", "head")
+    head = _git(repo, "rev-parse", "HEAD")
+    monkeypatch.setattr(G, "REPO", repo)
+
+    def make(declarations, name="manifest.json"):
+        manifest = build_manifest(repo, base, head, declarations)
+        path = tmp_path / name
+        write_manifest(path, manifest)
+        return path, manifest
+
+    return make
+
+
+def test_terminal_missing_manifest_warns_and_records_migration_debt(_ledger, capsys):
+    rc = G._cmd_disposition(_disposition_args("reviewed_committed", consumed_by="task#555"))
+    assert rc == 0
+    row = G._read_jsonl(_ledger)[0]
+    assert row["landing_diff_manifest"]["mode"] == "warn"
+    assert row["landing_diff_manifest"]["blockers"] == ["landing_diff_manifest_missing"]
+    assert "WARN-ONLY" in capsys.readouterr().err
+
+
+def test_terminal_missing_manifest_strict_refuses_before_append(_ledger):
+    rc = G._cmd_disposition(
+        _disposition_args("reviewed_committed", consumed_by="task#555", landing_manifest_strict=True)
+    )
+    assert rc == 2
+    assert not _ledger.exists()
+
+
+def test_incomplete_manifest_warn_only_appends_blocker_summary(_ledger, _manifest_repo, capsys):
+    path, manifest = _manifest_repo({})
+    assert not manifest.complete
+    rc = G._cmd_disposition(_disposition_args("closed", consumed_by="task#555", landing_manifest=str(path)))
+    assert rc == 0
+    row = G._read_jsonl(_ledger)[0]
+    assert row["landing_diff_manifest"]["path_count"] == 1
+    assert row["landing_diff_manifest"]["blockers"] == ["unaccounted_path"]
+    assert row["landing_diff_manifest"]["blocker_details"][0]["path"] == "changed.txt"
+    warning = capsys.readouterr().err
+    assert "WARN-ONLY" in warning
+    assert "unaccounted_path:changed.txt" in warning
+
+
+def test_incomplete_manifest_strict_refuses(_ledger, _manifest_repo):
+    path, _ = _manifest_repo({})
+    rc = G._cmd_disposition(
+        _disposition_args("closed", consumed_by="task#555", landing_manifest=str(path), landing_manifest_strict=True)
+    )
+    assert rc == 2
+    assert not _ledger.exists()
+
+
+def test_real_same_line_waiver_allows_strict_and_is_recorded(_ledger, _manifest_repo):
+    path, _ = _manifest_repo({})
+    rationale = "historical arm predates typed receipts; task#555 retains the measured debt"
+    rc = G._cmd_disposition(
+        _disposition_args(
+            "closed",
+            consumed_by="task#555",
+            landing_manifest=str(path),
+            landing_manifest_strict=True,
+            landing_manifest_waiver=rationale,
+        )
+    )
+    assert rc == 0
+    evidence = G._read_jsonl(_ledger)[0]["landing_diff_manifest"]
+    assert evidence["waiver"] == rationale
+    assert evidence["blockers"] == ["unaccounted_path"]
+
+
+@pytest.mark.parametrize("waiver", ["todo", "<rationale>", "n/a"])
+def test_placeholder_manifest_waiver_refuses(_ledger, waiver):
+    rc = G._cmd_disposition(
+        _disposition_args(
+            "closed", consumed_by="task#555", landing_manifest_strict=True, landing_manifest_waiver=waiver
+        )
+    )
+    assert rc == 2
+    assert not _ledger.exists()
+
+
+def test_complete_verified_manifest_passes_strict(_ledger, _manifest_repo):
+    path, manifest = _manifest_repo({"changed.txt": "merged"})
+    assert manifest.complete
+    rc = G._cmd_disposition(
+        _disposition_args(
+            "reviewed_committed", consumed_by="task#555", landing_manifest=str(path), landing_manifest_strict=True
+        )
+    )
+    assert rc == 0
+    evidence = G._read_jsonl(_ledger)[0]["landing_diff_manifest"]
+    assert evidence["valid"] is True
+    assert evidence["complete"] is True
+    assert evidence["blockers"] == []
+    assert len(evidence["receipt_sha256"]) == 64
+    assert evidence["tracked_diff_sha256"] == manifest.tracked_diff_sha256
+
+
+def test_respawned_remains_manifest_exempt(_ledger):
+    rc = G._cmd_disposition(_disposition_args("respawned"))
+    assert rc == 0
+    assert G._read_jsonl(_ledger)[0]["landing_diff_manifest"] is None

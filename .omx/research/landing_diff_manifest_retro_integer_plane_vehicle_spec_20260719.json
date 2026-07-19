@@ -1,0 +1,47 @@
+{
+  "base_sha": "99ca1f1b1362788c82bc281e4e7d2e997e50d905",
+  "blockers": [
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/research/SPEC_v10_integer_plane_vehicle_20260719.md"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/research/integer_plane_vehicle_spec_20260719_codex.md"
+    }
+  ],
+  "complete": false,
+  "generator": "tac.landing_diff_manifest.v1",
+  "head_sha": "4db3b50a437a606b824124cd91a8a668fa9c98cf",
+  "path_count": 2,
+  "paths": [
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": true,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "a63a14197774e464c66f8b56917278d98052e7426b7fc604fb44cef896f4b126",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/research/SPEC_v10_integer_plane_vehicle_20260719.md",
+      "reason": null
+    },
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": true,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "14e3de23f6d96bcc578027da2c4bfa8b9ae353fe43fbfa406fe7f9e364e21359",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/research/integer_plane_vehicle_spec_20260719_codex.md",
+      "reason": null
+    }
+  ],
+  "schema": "pact.landing_diff_manifest.v1",
+  "tracked_diff_sha256": "9d333180e436783a746bc7b113734b67cd96f700040342edcb6d106e6c42ecf4"
+}

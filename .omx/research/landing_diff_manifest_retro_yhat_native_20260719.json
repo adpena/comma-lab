@@ -1,0 +1,217 @@
+{
+  "base_sha": "e8c9973d6a4f09d26eae5840e2c33c8b1ca9a747",
+  "blockers": [
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/research/SPEC_v10_capstone_RECONCILED_20260719.md"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/research/power_diagram_witness_20260718.md"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/research/yhat_native_generator_20260719_codex.md"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/research/yhat_native_generator_20260719_implementation_spec.md"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/research/yhat_native_generator_20260719_receipt.json"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/state/lane_maturity_audit.log"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": ".omx/state/lane_registry.json"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": "src/tac/tests/test_measure_yhat_native_equivalence.py"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": "src/tac/witness_dsl/curriculum_dsl.py"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": "src/tac/witness_dsl/tests/test_yhat_native_generator_policy.py"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": "src/tac/witness_dsl/yhat_native_generator_policy.py"
+    },
+    {
+      "code": "unaccounted_path",
+      "detail": "changed path lacks a disposition",
+      "path": "tools/measure_yhat_native_equivalence.py"
+    }
+  ],
+  "complete": false,
+  "generator": "tac.landing_diff_manifest.v1",
+  "head_sha": "632343535f8ac0785ea6f1f6d2f3892cfb0c8923",
+  "path_count": 12,
+  "paths": [
+    {
+      "base_sha256": "ed9e00c7a308b9932d0b066ab4d55dda702454a97a19b6cc1e233c93c81cfc9a",
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": true,
+      "git_status": "M",
+      "gitignored_at_head": false,
+      "head_sha256": "99abd24395b4c21bf465228316be470412a29a3014257379f740f1bd38b0b85e",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/research/SPEC_v10_capstone_RECONCILED_20260719.md",
+      "reason": null
+    },
+    {
+      "base_sha256": "fef95e0e3055736aa1b7c1cbd004db7d5fec4c1b1afbd3b2fae438e35377a8ae",
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": true,
+      "git_status": "M",
+      "gitignored_at_head": false,
+      "head_sha256": "213ff0b1c28b6428b0a489e0cc6a8b15c97a92e409bb637ff8b64e7765c259ec",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/research/power_diagram_witness_20260718.md",
+      "reason": null
+    },
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": true,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "5ccfe96b84e8096ffc36e42cbdd9584bec5cbaaa300394a3f9bf66f57f8d95dd",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/research/yhat_native_generator_20260719_codex.md",
+      "reason": null
+    },
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": true,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "1991cfcd8b82594bc9c778687b392fde86bb49508f01f67281f29663146f791f",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/research/yhat_native_generator_20260719_implementation_spec.md",
+      "reason": null
+    },
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": false,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "ade3d7a7e2b0d9fb4d4b709b52b7c61011613cfac52cf5873f40e8fd6bdf3103",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/research/yhat_native_generator_20260719_receipt.json",
+      "reason": null
+    },
+    {
+      "base_sha256": "12b439a38a803713f611e74b3a55ef11a6482f7a558634cdb43596c32377c895",
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": false,
+      "git_status": "M",
+      "gitignored_at_head": false,
+      "head_sha256": "0ab82c42c8046b4ee02e3fc4af1dff656c7fa917db2c05c5f48da3f1d3637635",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/state/lane_maturity_audit.log",
+      "reason": null
+    },
+    {
+      "base_sha256": "9d1a0a16e8d62f346ed15e25781df572128e2d6e4238a05b17cf927247baafbb",
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": false,
+      "git_status": "M",
+      "gitignored_at_head": false,
+      "head_sha256": "89dbd3d115ad9ca00ec6f5402a225f719b5122ca28d549445807421d92b9ade4",
+      "named_consumer": null,
+      "old_path": null,
+      "path": ".omx/state/lane_registry.json",
+      "reason": null
+    },
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": false,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "b30b34fff39ec1158c62fd6fb371833699638a00add0e504e25aac1c73dcc012",
+      "named_consumer": null,
+      "old_path": null,
+      "path": "src/tac/tests/test_measure_yhat_native_equivalence.py",
+      "reason": null
+    },
+    {
+      "base_sha256": "ee590f58ed1bbc1f8486c8ea5276308fb85258f1a7304a562ad0f5559a77c1e4",
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": false,
+      "git_status": "M",
+      "gitignored_at_head": false,
+      "head_sha256": "9602f5794462f0a89a2800091d894157c9475b3c38c66927158a89c793e6900c",
+      "named_consumer": null,
+      "old_path": null,
+      "path": "src/tac/witness_dsl/curriculum_dsl.py",
+      "reason": null
+    },
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": false,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "e45c4f644d95ed82621fa2f6be0e06a6ed927b8b285826b955fc7669f4e2bda2",
+      "named_consumer": null,
+      "old_path": null,
+      "path": "src/tac/witness_dsl/tests/test_yhat_native_generator_policy.py",
+      "reason": null
+    },
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": false,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "86e4eac1641ffe1f4c1323450c9420093c9e04ec668c41e58ee4b3f8dcff2fa5",
+      "named_consumer": null,
+      "old_path": null,
+      "path": "src/tac/witness_dsl/yhat_native_generator_policy.py",
+      "reason": null
+    },
+    {
+      "base_sha256": null,
+      "disposition": "UNACCOUNTED",
+      "findings_or_memo": false,
+      "git_status": "A",
+      "gitignored_at_head": false,
+      "head_sha256": "9415111aa173c0fc910c8c4b4da26dee5d209543f603cd334abf8b70b783ed36",
+      "named_consumer": null,
+      "old_path": null,
+      "path": "tools/measure_yhat_native_equivalence.py",
+      "reason": null
+    }
+  ],
+  "schema": "pact.landing_diff_manifest.v1",
+  "tracked_diff_sha256": "46542f1c022f4e65370cf44f904c9259649cad36f941552d57b43b18964f986d"
+}
