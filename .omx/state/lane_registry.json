@@ -78856,6 +78856,52 @@
       },
       "notes": "Local CPU advisory VJP custody and positive-band range-coordinate measurement; no archive or score authority; MAIN review required.",
       "research_only": true
+    },
+    {
+      "id": "nielsen_infogeo_crosswalk_20260719",
+      "name": "Nielsen information-geometry crosswalk",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/nielsen_infogeo_crosswalk_20260719_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #550; research and routing only; no launch, score, promotion, or pointer authority; MAIN landing review required.",
+      "research_only": true,
+      "lane_class": "research",
+      "reactivation_criteria": [
+        "MAIN reviews ranked consumers and approves a separate $0 adoption probe"
+      ]
     }
   ],
   "level_rules": {
@@ -78865,5 +78911,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-19T07:11:04Z"
+  "updated_at": "2026-07-19T09:32:43Z"
 }
