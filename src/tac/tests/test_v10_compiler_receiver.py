@@ -25,6 +25,7 @@ from tac.witness_dsl.typed_config import (
 )
 from tac.witness_dsl.v10_compiler_receiver import (
     CHECKPOINT_SCHEMA,
+    FACTOR2_RECEIVER_CONTRACT_ID,
     FROZEN_FACTOR_IDS,
     FROZEN_HANDLER_REGISTRY,
     FROZEN_ROUTES,
@@ -127,6 +128,12 @@ def _semantic_bodies(*, quotient_delta: int = 1, seed_bytes: list[int] | None = 
             "frame0_rgb": [10, 20, 30, 40, 50, 60],
             "frame1_rgb": [12, 22, 32, 42, 52, 62],
             "seed_bytes": list(seed_bytes or [1, 2, 3]),
+        },
+        "factor2_integer_scorer_plane_v1": {
+            "y_uint8": list(range(3 * 4 * 3)),
+            "camera_shape": [7, 9, 3],
+            "scorer_shape": [3, 4, 3],
+            "receiver_contract_id": FACTOR2_RECEIVER_CONTRACT_ID,
         },
         "frame0_pose_six_carrier_v1": {
             "frame0_delta": [1, 0, -1, 2, 0, -2],
@@ -351,6 +358,13 @@ def test_exact_paid_instruction_order_and_frozen_routes_are_pinned() -> None:
             "receiver.counted_generator",
         ),
         (
+            "Factor2IntegerScorerPlane",
+            ("2",),
+            "factor2_integer_scorer_plane_v1",
+            "production_archive_builder",
+            "receiver.factor2_integer_scorer_plane",
+        ),
+        (
             "Frame0PoseSixCarrier",
             ("7", "8"),
             "frame0_pose_six_carrier_v1",
@@ -393,8 +407,8 @@ def test_exact_paid_instruction_order_and_frozen_routes_are_pinned() -> None:
             "receiver.quotient_residual_T",
         ),
     ]
-    assert IMPLEMENTED_FACTOR_IDS == ("1", "3a", "3b", "4", "5", "6", "7", "8", "9")
-    assert MISSING_FACTOR_IDS == ("2", "10")
+    assert IMPLEMENTED_FACTOR_IDS == ("1", "2", "3a", "3b", "4", "5", "6", "7", "8", "9")
+    assert MISSING_FACTOR_IDS == ("10",)
     assert set(HANDLER_IMPLEMENTATION_SHA256S) == {
         route.encoding for route in FROZEN_ROUTES
     }
@@ -413,8 +427,31 @@ def test_valid_fixture_compiles_and_exposes_canonical_332_audit_without_authoriz
     assert type(result.dsl_bijection_complete) is bool
     build_real_trainer_parser().parse_args(list(result.trainer_argv[2:]))
     assert result.resume_replay_equal is True
+    factor2_receipt = next(
+        receipt
+        for receipt in result.receiver_receipts
+        if receipt["section_id"] == "factor2_integer_scorer_plane"
+    )
+    assert factor2_receipt["consumption_count"] == 1
+    assert factor2_receipt["authoritative_handler"] is True
+    assert "2" in result.implemented_factor_ids
+    assert "2" not in result.missing_factor_ids
+    assert result.missing_factor_ids == ("10",)
     assert result.launch_ready is False
     assert result.score_claim is False and result.promotion_eligible is False
+
+
+def test_factor2_route_refuses_oversized_geometry_as_v10_refusal() -> None:
+    bodies = _semantic_bodies()
+    bodies["factor2_integer_scorer_plane_v1"]["camera_shape"] = [4097, 9, 3]
+    with pytest.raises(V10Refusal, match="exceeds production bounds"):
+        receive_payload_program(
+            build_payload_program(
+                _sections(bodies=bodies),
+                typed_config_hash="a" * 64,
+                argv_sha256="b" * 64,
+            )
+        )
 
 
 def test_program_and_receiver_are_deterministic() -> None:
@@ -474,9 +511,9 @@ def test_false_factor_map_and_factorless_or_extra_sections_refuse() -> None:
         )
     with pytest.raises(V10Refusal, match="factor_ids cannot be empty"):
         replace(sections[0], factor_ids=())
-    with pytest.raises(V10Refusal, match="seven-instruction"):
+    with pytest.raises(V10Refusal, match="frozen instruction"):
         build_payload_program(
-            [*sections, replace(sections[-1], apply_order=7)],
+            [*sections, replace(sections[-1], apply_order=len(sections))],
             typed_config_hash="a" * 64,
             argv_sha256="b" * 64,
         )
@@ -557,7 +594,7 @@ def test_shared_resize_factors_share_one_range_and_full_wire_counts_it_once() ->
     range_3b = proof["factor_ranges"]["3b"]
     assert range_3a == range_3b
     assert range_3a["section_id"] == "shared_resize_preimage"
-    assert proof["unique_payload_range_count"] == 7
+    assert proof["unique_payload_range_count"] == len(FROZEN_ROUTES)
     assert proof["payload_bytes"] == sum(len(section.payload) for section in fixture.sections)
     assert proof["counted_video_derived_payload_bytes"] == proof["payload_bytes"]
 
@@ -569,7 +606,7 @@ def test_all_program_bytes_are_contiguous_owned_and_consumed_once() -> None:
     assert proof["all_program_bytes_counted"] and proof["no_unowned_wire_bytes"]
     assert proof["contiguous"] and proof["no_gaps"] and proof["no_overlaps"]
     assert proof["no_trailing_bytes"]
-    assert len(fixture.receiver.receipts) == 7
+    assert len(fixture.receiver.receipts) == len(FROZEN_ROUTES)
     assert all(receipt["consumption_count"] == 1 for receipt in fixture.receiver.receipts)
     assert all(receipt["authoritative_handler"] is True for receipt in fixture.receiver.receipts)
     assert all(
@@ -597,21 +634,23 @@ def _mutated_bodies(index: int) -> dict[str, dict[str, Any]]:
     if index == 0:
         body["frame0_rgb"][0] += 1
     elif index == 1:
-        body["pose_six"][5] += 1
+        body["y_uint8"][0] += 1
     elif index == 2:
-        body["head_bias"][0] += 1
+        body["pose_six"][5] += 1
     elif index == 3:
-        body["weights"][0] += 1
+        body["head_bias"][3] += 1
     elif index == 4:
-        body["rgb_bias"][0] += 1
+        body["weights"][0] += 1
     elif index == 5:
+        body["rgb_bias"][0] += 1
+    elif index == 6:
         body["rate_tokens"][0] += 1
     else:
         body["updates"][0]["delta"] += 1
     return bodies
 
 
-@pytest.mark.parametrize("section_index", range(7))
+@pytest.mark.parametrize("section_index", range(len(FROZEN_ROUTES)))
 def test_each_section_has_a_real_semantic_mutation(section_index: int) -> None:
     config = _config()
     before_sections = _sections()
@@ -898,7 +937,7 @@ def test_checkpoint_exact_keyset_schema_and_types_refuse(mutate, pattern: str) -
 def test_checkpoint_rejects_noncanonical_base64_pad_bits() -> None:
     fixture = _fixture()
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-    for stop_after in range(7):
+    for stop_after in range(len(FROZEN_ROUTES)):
         payload = receive_payload_program(
             fixture.program, stop_after=stop_after
         ).checkpoint.to_bytes()
@@ -1091,10 +1130,10 @@ def test_folded_factor_refuses_adverse_or_wrong_axis_evidence(kwargs, pattern: s
 
 def test_missing_factor_cannot_claim_consumer_or_receipt() -> None:
     fixture = _fixture()
-    factor_two_index = FROZEN_FACTOR_IDS.index("2")
+    missing_factor_index = FROZEN_FACTOR_IDS.index("10")
     false_clear = list(fixture.rows)
-    false_clear[factor_two_index] = replace(
-        false_clear[factor_two_index],
+    false_clear[missing_factor_index] = replace(
+        false_clear[missing_factor_index],
         consumer_id=FROZEN_ROUTES[0].consumer_id,
         disposition="HAVE",
         strict_certificate="PARTIAL",
