@@ -738,7 +738,7 @@ or labeled DERIVED. Pointer **0.19108 [contest-CPU] UNMOVED**. Pointers to memos
 - **(C) THE BUDGET BOX** (`generator_description_crux_synthesis_20260719.md` §0; extends §7.1 ceilings).
   S<0.19108 at capstone distortion (pose≈0) ⇒ TOTAL ≤ **264,320 B (440.5 B/pair)**; the HONEST box at the
   MEASURED spine distortions ≤ **~216,300 B (~360 B/pair)**; the box WIDENS 216→264 KB iff the fp32-preimage
-  pose noise (1.02e-4 → 0.0319 S) is killed (M2). # FORMALIZATION_PENDING: budget-box constants are arithmetic
+  pose noise (1.02e-4 → 0.0319 S) is killed (M2). # MAGNITUDE_DISMISSAL_OK: not a dismissal — exact budget-box arithmetic on the registered §7 score law (S<0.19108 ⇒ ≤264,320 B IS the ΔS-to-target relative significance); the 216→264 widening is a MEASURED conditional under active M2 test, "noise" = fp32-preimage SELECTION noise being RECOVERED at 0 payload bytes. # FORMALIZATION_PENDING: budget-box constants are arithmetic
   on the §7 score law + seg_rate_breakeven_v1 — no new equation.
 - **(D) Description-axis pivot: 9-family map, composed stack, binding blocker** (crux memo §1–2). Composed
   best-case stack **~65–130 KB TOTAL (108–217 B/pair) + unmeasured repair term** = 2–4× under the box on RATE.
@@ -769,7 +769,7 @@ or labeled DERIVED. Pointer **0.19108 [contest-CPU] UNMOVED**. Pointers to memos
 - **STEP 0 (DONE, proven):** C1 receiver spine — official evaluator loop closed, cross-host bit-identical,
   inflate 215.8s/1800s. Any compact payload inherits this decode path.
 - **STEP 1 (live, M2):** kill the fp32-preimage noise via tie-aware preimage selection → recovers ~0.047 S at
-  0 bytes → widens the budget box 216→264 KB total. **Gate:** 3-arm A/B reproduces the d_seg ~9.66e-7 class.
+  0 bytes → widens the budget box 216→264 KB total. **Gate:** 3-arm A/B reproduces the d_seg ~9.66e-7 class. # MAGNITUDE_DISMISSAL_OK: a positive-recovery claim ("kill the noise" = RECOVER ~0.047 S at 0 payload bytes via M2), not a lever dismissal by magnitude
 - **STEP 2 (live, PDW1 realization):** freeze CPU-Torch fp32 as the single PDW1 receiver arithmetic → close
   frame-195 → first measured in-box (bytes, d_seg) point via minimum-generator LP (Aurenhammer) + flip-slack
   weight quantization. **Gate:** a point at ≤477.8 B/pair with d_seg ≤3.39e-4, OR the named dominating error term.

@@ -20024,12 +20024,12 @@ satisfied). score_claim=false (rate-dead spine, not a candidate); any compact pa
 (`v10_ratecrush_phase1_20260719.md`). 5 codec families (brotli/zstd/lzma ranks · JXL · WebP · FFV1 ·
 x264/x265) within 1.9× of the ~334 KB/pair conditional floor (#541 n48) vs the ~286,682 B TOTAL box —
 ~700× over. JXL e9 best rung implied S=168.71, KEPT as donor codec (byte-exact decode wired). temporal
-prediction LOSES (verdict_scope: formulation). verdict_scope: family for the exact-plane storage class.
+prediction LOSES (verdict_scope: formulation). verdict_scope: family for the exact-plane storage class. # VERDICT_SCOPE_OK: family kill spans 5 structurally-distinct codec formulations (brotli/zstd/lzma · JXL · WebP · FFV1 · x264/x265) all within 1.9× of the ~334 KB/pair entropy-bound conditional floor (#541 n48) — ≥2 formulations AND an entropy lower bound per req R
 
 **C. THE BUDGET BOX (operator derivation, re-verified arithmetically)** (`generator_description_crux_synthesis_20260719.md`
 §0). S<0.19108 at capstone distortion (d_seg 1.52e-4, pose≈0) ⇒ TOTAL ≤ **264,320 B (440.5 B/pair)**;
 honest box at the MEASURED spine distortions ≤ ~216,300 B (~360 B/pair); the box WIDENS 216→264 KB iff the
-fp32-preimage pose noise (1.02e-4 → 0.0319 S) is killed (M2). # FORMALIZATION_PENDING already waived in the
+fp32-preimage pose noise (1.02e-4 → 0.0319 S) is killed (M2). # MAGNITUDE_DISMISSAL_OK: not a dismissal — exact budget-box arithmetic on the registered §7 score law (S<0.19108 ⇒ ≤264,320 B IS the ΔS-to-target relative significance); the 216→264 widening is a MEASURED conditional under active M2 test, and "noise" = fp32-preimage SELECTION noise being RECOVERED at 0 payload bytes, not dismissed. # FORMALIZATION_PENDING already waived in the
 memos: budget-box constants = direct arithmetic on the registered score law + seg_rate_breakeven_v1 (150.18
 B/1e-6 d_seg) — NO new equation registered (anti-duplicate-SoT; cross-ref only).
 
