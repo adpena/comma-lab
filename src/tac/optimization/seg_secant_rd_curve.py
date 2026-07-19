@@ -350,11 +350,13 @@ def adjacent_seg_secants(
     codec_key: str,
     population_pairs: int = CONTEST_PAIR_COUNT,
 ) -> list[dict[str, Any]]:
-    """Derive adjacent within-family byte-saving/Seg-distortion secants.
+    """Derive every positive-distortion adjacent within-family Seg secant.
 
     A distortion-increasing move is score-favorable exactly when its saved
     bytes per unit ``d_seg`` exceed ``BREAK_EVEN_BYTES_PER_DSEG``.  This sign is
     derived directly from the contest objective, not inferred from prose.
+    Non-saving adjacent moves are retained with a negative byte-saving ratio so
+    dominated/non-monotonic measured rows cannot disappear from the curve.
     """
 
     if codec_key not in {"brotli_q11_bytes_per_pair", "zstd_19_bytes_per_pair"}:
@@ -385,7 +387,7 @@ def adjacent_seg_secants(
         for low, high in itertools.pairwise(ordered):
             delta_dseg = float(high["d_seg"]) - float(low["d_seg"])
             bytes_saved = float(low[codec_key]) - float(high[codec_key])
-            if delta_dseg <= 0 or bytes_saved <= 0:
+            if delta_dseg <= 0:
                 continue
             per_pair_ratio = bytes_saved / delta_dseg
             global_ratio = per_pair_ratio * int(population_pairs)
@@ -397,6 +399,9 @@ def adjacent_seg_secants(
                     "higher_distortion_point": str(high["point_id"]),
                     "delta_d_seg": delta_dseg,
                     "bytes_saved_per_pair": bytes_saved,
+                    "byte_saving_direction": (
+                        "saving" if bytes_saved > 0 else "higher_distortion_uses_more_bytes"
+                    ),
                     "bytes_saved_per_pair_per_unit_d_seg": per_pair_ratio,
                     "bytes_saved_per_pair_per_1e_minus_6_d_seg": per_pair_ratio
                     * 1e-6,

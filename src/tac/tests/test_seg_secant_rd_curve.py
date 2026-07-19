@@ -173,7 +173,7 @@ def test_secant_sign_accepts_distortion_only_above_byte_saving_break_even() -> N
     assert by_family["precision"]["accept_higher_d_seg_improves_two_term_score"] is True
 
 
-def test_secants_skip_flat_or_non_saving_rows() -> None:
+def test_secants_skip_flat_and_retain_non_saving_dominated_rows() -> None:
     points = [
         {
             "point_id": "source",
@@ -194,4 +194,10 @@ def test_secants_skip_flat_or_non_saving_rows() -> None:
             "zstd_19_bytes_per_pair": 110.0,
         },
     ]
-    assert adjacent_seg_secants(points, codec_key="zstd_19_bytes_per_pair") == []
+    rows = adjacent_seg_secants(points, codec_key="zstd_19_bytes_per_pair")
+    assert len(rows) == 1
+    assert rows[0]["family"] == "precision"
+    assert rows[0]["bytes_saved_per_pair"] == -10.0
+    assert rows[0]["byte_saving_direction"] == "higher_distortion_uses_more_bytes"
+    assert rows[0]["accept_higher_d_seg_improves_two_term_score"] is False
+    assert rows[0]["derived_two_term_delta_score"] > 0

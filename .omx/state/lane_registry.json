@@ -78896,7 +78896,7 @@
           "evidence": ""
         }
       },
-      "notes": "Local CPU advisory n24 Seg-secant range-payload measurement; seven d_seg>0 rows; receiver/archive and contest axes absent; MAIN review required.",
+      "notes": "Local CPU advisory n24 Seg-secant range-payload measurement; nine d_seg>0 rows across three families; spatial endpoints are Pose-infeasible; receiver/archive and contest axes absent; MAIN review required.",
       "research_only": true
     }
   ],
@@ -78907,5 +78907,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-19T09:45:56Z"
+  "updated_at": "2026-07-19T10:05:40Z"
 }

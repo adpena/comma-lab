@@ -11,12 +11,14 @@ is required.
 
 ## Verdict
 
-**MEASURED:** the zero-Seg face is open. Seven deliberately lossy operating
-points on the same 24 real pairs all have `d_seg>0`. They span two distinct
-families: four VJP-native-margin abandonment thresholds and three residual
-precision truncations. Every row measures full native-float32 CPU-Torch SegNet
-and PoseNet, five per-class Seg distortions, actual Brotli-Q11 and zstd-19
-payload bytes after exact parse-back, and explicit repair/reject counts.
+**MEASURED:** the zero-Seg face is open. Nine deliberately lossy operating
+points on the same 24 real pairs all have `d_seg>0`. They span three distinct
+families: four VJP-native-margin abandonment thresholds, three residual
+precision truncations, and two fixed-stride spatial residual subsamples. The
+measured range extends from `1.8649631e-5` through `2.1361881e-2` `d_seg`.
+Every row measures full native-float32 CPU-Torch SegNet and PoseNet, five
+per-class Seg distortions, actual Brotli-Q11 and zstd-19 payload bytes after
+exact parse-back, and explicit repair/reject counts.
 
 **DERIVED:** after correctly converting measured mean bytes/pair to the global
 600-pair byte term, every emitted adjacent saving secant exceeds the KKT
@@ -34,12 +36,13 @@ a mean bytes/pair curve is `0.25030326 bytes/pair per 1e-6 d_seg`.
 `4.142214713626108e-12` score/global-byte. This is a conditional
 n600-equivalent range-payload allocation, not an archive optimum.
 
-**MEASURED Pose qualification:** Pose is inactive/slack in `162/168` delivered
-pair/point observations, not all 168. The six violations are confined to
-precision depths 2 and 3. Both endpoints selected by #536 (`margin_m0p3` and
-`precision_drop1`) have `0/48` Pose violations, so Pose is inactive on the
-selected measured segment only. The unrestricted all-row inactivity hypothesis
-is refuted at this n24 instance scope.
+**MEASURED Pose qualification:** Pose is inactive/slack in `162/216` delivered
+pair/point observations, not all 216. Six violations are confined to precision
+depths 2 and 3; all 48 spatial-subsample observations violate the crossover.
+Both endpoints selected by #536 (`margin_m0p3` and `precision_drop1`) have
+`0/48` Pose violations, so Pose is inactive on the selected measured segment
+only. The unrestricted all-row inactivity hypothesis is decisively refuted at
+this n24 instance scope.
 
 `verdict_scope`: these are selected real-cache n24, range-coordinate payload
 measurements under a concrete camera-preimage policy. They are not receiver-
@@ -63,12 +66,21 @@ repair/reject count; neither family filters back to `d_seg=0`.
 | `precision_drop1` | drop 1 low bit | 1,770,993.33 | 1,991,528.79 | 1.6276042e-4 | 3.8682648e-5 | 768 | 0/0 |
 | `precision_drop2` | drop 2 low bits | 1,313,066.92 | 1,480,862.88 | 1.8246969e-4 | 7.5275306e-5 | 861 | 0/0 |
 | `precision_drop3` | drop 3 low bits | 1,145,117.33 | 1,290,867.29 | 1.7399258e-4 | 1.4154703e-4 | 821 | 0/0 |
+| `spatial_stride8` | stride-8 samples | 1,139,842.04 | 1,281,615.46 | 2.1361881e-2 | 8.4976319e-1 | 100,798 | 0/0 |
+| `spatial_stride16` | stride-16 samples | 1,119,166.46 | 1,259,914.33 | 7.5492859e-3 | 1.0206029 | 35,622 | 0/0 |
 
 The source reference is **MEASURED** at 2,222,946.21 Brotli bytes/pair,
 2,502,807.96 zstd bytes/pair, `d_seg=0`, `d_pose=0`. Precision-drop 3 has fewer
 bytes and lower mean `d_seg` than drop 2, but worse mean Pose; it therefore
 dominates drop 2 only on the two-term Seg/rate projection, not on the full
 three-term objective.
+
+The spatial family counts the fixed-grid signed int32 frame-1 camera residual
+samples that its deterministic separable bilinear reconstruction consumes;
+frame 0 retains the same full counted numerator residual as every other point.
+Stride 16 dominates stride 8 on the Seg/rate projection in this sample (fewer
+bytes and lower `d_seg`), while both are grossly Pose-infeasible. These rows are
+coverage and constraint evidence, not allocator-admissible endpoints.
 
 ## Adjacent Seg secants and break-even sign
 
@@ -83,8 +95,9 @@ prevention is worthwhile below the threshold and not worthwhile above it. This
 re-derived sign is load-bearing; reversing it reverses every admit decision.
 
 The table reports n600-equivalent global bytes saved per `1e-6 d_seg`, derived
-as measured mean bytes/pair times 600. All emitted adjacent secants favor
-accepting the higher distortion on this conditional range-payload surface.
+as measured mean bytes/pair times 600. Negative values are retained explicitly:
+they mean the higher-distortion point also uses more bytes and is dominated on
+the Seg/rate projection.
 
 | adjacent move | Brotli B / `1e-6` | zstd B / `1e-6` | versus 150.182 B threshold |
 |---|---:|---:|---|
@@ -94,10 +107,13 @@ accepting the higher distortion on this conditional range-payload surface.
 | `margin_m0p1` -> `margin_m0p3` | 258,499.584 | 299,580.826 | above; accept higher `d_seg` |
 | source -> `precision_drop1` | 1,666,079.078 | 1,884,779.520 | above; accept higher `d_seg` |
 | `precision_drop1` -> `precision_drop3` | 33,433,058.339 | 37,427,951.871 | above; accept higher `d_seg` |
+| `precision_drop3` -> `precision_drop2` | -11,887,283.405 | -13,447,674.593 | dominated; reject higher `d_seg` |
+| source -> `spatial_stride16` | 87,725.894 | 98,782.347 | above; accept higher `d_seg` on Seg/rate only; Pose rejects |
+| `spatial_stride16` -> `spatial_stride8` | -898.119 | -942.667 | dominated; reject higher `d_seg` |
 
-No saving secant is emitted from precision-drop 3 to drop 2 because drop 2 has
-both more bytes and higher mean `d_seg`; its distinct Pose behavior remains in
-the full measured table.
+The two dominated adjacent segments are emitted with negative byte-saving
+ratios and false admit verdicts; they are not silently discarded from the
+machine curve.
 
 ## Per-class Seg result
 
@@ -113,6 +129,8 @@ Conditional `d_seg` uses the real GT pixels of each comma10k class
 | `precision_drop1` | 2.82704e-4 | 4.091017e-3 | 4.2027e-5 | 9.56036e-4 | 1.45497e-4 |
 | `precision_drop2` | 3.50590e-4 | 4.361497e-3 | 6.0467e-5 | 1.011459e-3 | 1.16563e-4 |
 | `precision_drop3` | 3.57100e-4 | 5.240559e-3 | 4.7601e-5 | 9.28325e-4 | 8.5975e-5 |
+| `spatial_stride8` | 2.080850e-2 | 4.167765e-1 | 6.93009e-4 | 2.829036e-1 | 3.642456e-2 |
+| `spatial_stride16` | 7.876652e-3 | 2.543192e-1 | 2.550752e-3 | 1.770745e-2 | 1.025420e-2 |
 
 Lane is the most distortion-sensitive class at every measured point. This is a
 measurement on this n24 corpus, not a universal class-order theorem.
@@ -127,12 +145,16 @@ The hard inactivity test is literal `d_pose < 2.5e-4` per pair/point.
   `3.0283153e-4`;
 - precision drop-3: `20/24` inactive, pair 12 `5.8410417e-4`, pair 15
   `4.2018269e-4`, pair 22 `4.8707774e-4`, pair 23 `5.4366025e-4`.
+- spatial stride-8 and stride-16: `0/48` inactive; all 48 pair/point
+  observations violate the threshold.
 
-Mean `d_pose` stays below the crossover at every aggregate point, but averaging
-does not erase the six hard pair-level violations. The scoped correct verdict
-is therefore: Pose is inactive for margin abandonment and precision drop-1,
-including the selected #536 segment; it is not inactive over the whole
-precision family.
+Mean `d_pose` stays below the crossover for the margin and precision aggregate
+points, but averaging does not erase their six hard pair-level violations. The
+spatial aggregate means (`0.8497632`, `1.0206029`) are themselves far above the
+crossover. The scoped correct verdict is therefore: Pose is inactive for
+margin abandonment and precision drop-1, including the selected #536 segment;
+it is not inactive over the whole precision family, and it binds decisively for
+this spatial family.
 
 ## Construction and custody
 
@@ -151,7 +173,11 @@ Margin abandonment replaces complete low-margin disjoint resize blocks with
 their generated-predictor blocks, so every result is a concrete reachable
 uint8 preimage. Precision truncation drops low bit-planes from the signed
 camera-preimage residual toward zero, then recomputes the exact range
-numerators. The counted payload is only the signed int32 numerator residual;
+numerators. Spatial subsampling retains a fixed grid (including image
+endpoints) of signed camera residual values and reconstructs with deterministic
+separable float64 linear interpolation plus nearest-integer rounding. The
+counted payload is only the signed int32 numerator residual, except at those
+spatial frame-1 points where it is the signed int32 sampled camera residual;
 camera/null-space bytes are not claimed free in a receiver archive. This is a
 range-coordinate convention until a decoder grammar reproduces the chosen
 preimage and parse-back closes on shipped bytes.
@@ -165,20 +191,24 @@ refusals; they are not silently replaced inside a measurement chunk.
 ## Durable receipts
 
 - Chunk A receipt:
-  `/Volumes/VertigoDataTier/pact/evidence/seg_secant_20260719/chunk_000_010_024_v1/receipt.json`,
-  SHA-256 `48bd168cbc856c03e2c6f7f358e51be732a91609610e2c6c51e600adcbe0f927`.
+  `/Volumes/VertigoDataTier/pact/evidence/seg_secant_20260719/chunk_000_010_024_v2/receipt.json`,
+  SHA-256 `91d810b438d8dd5a5f0b49401a13b523c059b39985b5fa697de2e22f0294b2ef`.
 - Chunk B receipt:
-  `/Volumes/VertigoDataTier/pact/evidence/seg_secant_20260719/chunk_012_017_019_023_025_v1/receipt.json`,
-  SHA-256 `e27e11e9ac6180634d2eaaeb89e6c6506f11da26fe8325312efd777a9f880a3f`.
+  `/Volumes/VertigoDataTier/pact/evidence/seg_secant_20260719/chunk_012_017_019_023_025_v2/receipt.json`,
+  SHA-256 `284c288e977d157f0c40ce45c3ef965b56a44f70cee55546d48430411ee78c64`.
 - Machine-readable n24 curve:
-  `.omx/research/seg_secant_rd_curve_n24_20260719.json`, SHA-256
-  `7dba18dc37ee7ca6b7ae07c2aa4fc1eb72cd9dce024c97b6df7ae121c402cacc`.
+  `.omx/research/seg_secant_rd_curve_n24_20260719_v2.json`, SHA-256
+  `28940965904e9238668de6350785ef0e12348275b64fab83b22901726b0d1f85`.
 
 Both raw receipts bind the exact executed tool hash
-`36eec6668e5a044e7153b4f57ae7be44c8cda8a698022fe3349e2c4c37c7cb39`
+`1f1e45c92ee0eab8d4d92c9078e8b5cc6237328bfec0f60bdadf54ce9656ea4d`
 and module hash
-`90c11cdfc6ae3b46084ee0d59fe6fe4a603aaa76da749764d169444320492189`,
-which re-derive exactly from commit `ac604dd71e`.
+`4035f337c49d05f38fa8e5ecef186cbaf12f52c1c8f55b85639bb8c726c31e30`,
+which re-derive exactly from commit `90b61279b0`.
+
+The earlier seven-point v1 receipts and
+`.omx/research/seg_secant_rd_curve_n24_20260719.json` remain a valid measured
+subset but are **SUPERSEDED as the delivered curve** by the v2 receipts above.
 
 The first composition used mean bytes/pair directly in the global score term.
 It is **INVALID for derived secant/KKT normalization**, though its raw measured
@@ -191,29 +221,33 @@ SHA-256 `a4d367fa841a294b30d09d383ba912dbfcc78b0da1278da722684d47384a6986`.
 1. **Round 1 — findings fixed before n24:** real pair-0 smoke found that the
    custody loader incorrectly required a full-manifest pair list and hashed a
    cast int64 winner instead of the custodied int8 bytes. Both bugs were fixed;
-   the smoke then measured all seven positive-Seg points with exact codec
+   the smoke then measured all seven initial positive-Seg points with exact codec
    parse-back.
 2. **Round 2 — critical normalization finding fixed:** review caught that
    mean bytes/pair had been inserted directly into the global archive-byte
    score term. The first composition was invalidated and preserved; code now
    multiplies by the declared 600-pair population before break-even and #536.
-3. **Round 3 — clean custody pass:** 192 unique immutable stages, 768 codec
+3. **Round 3 — coverage finding fixed:** the initial seven-point maximum
+   (`1.8246969e-4`) did not reach the requested approximate `1e-2` range. The
+   fixed-stride spatial family was added and measured through `2.1361881e-2`,
+   with its Pose failure retained rather than filtered away.
+4. **Round 4 — clean custody pass:** 240 unique immutable stages, 960 codec
    parse-backs (two frames times two codecs), source-receipt hashes, stage
-   hashes/configs, and 2,943 aggregate versus per-class mismatches all
-   revalidated exactly.
-4. **Round 4 — clean authority pass:** raw executed source hashes re-derived
-   from commit `ac604dd71e`; both chunks report the sacred result tree unchanged;
-   no source pair, VJP sidecar, upstream file, live run, or pointer was changed.
-5. **Round 5 — clean code/regression pass:** 168 focused and composed tests
-   pass; Ruff, `py_compile`, CLI help, and `git diff --check` pass. Review
-   tracker marks all three Python files reviewed.
+   hashes/configs, and 139,363 aggregate versus per-class mismatches all
+   revalidated exactly. Both chunks report the sacred result tree unchanged.
+5. **Round 5 — clean authority/code pass:** raw executed source hashes
+   re-derived from commit `90b61279b0`; no source pair, VJP sidecar, upstream
+   file, live run, or pointer changed. The final authority comparison also made
+   the two dominated adjacent secants explicit instead of suppressing them.
+   All 173 focused/composed tests pass; Ruff, `py_compile`, CLI help, diff
+   checks, and 100% review-tracker marks for all three Python files pass.
 
 ## Triality and system integration
 
 - **Equations:** the adjacent finite-difference secants, global/per-pair byte
   normalization, exact break-even, and #536 KKT candidate are executable in
   `tac.optimization.seg_secant_rd_curve`.
-- **DAG/evidence:** two resumable chunk receipts, 192 immutable stages, and the
+- **DAG/evidence:** two resumable chunk receipts, 240 immutable stages, and the
   composed machine JSON are the durable evidence chain.
 - **DSL/control:** no trainer or launch lever was added. This is a
   `research_only` measurement surface, so inventing a trainer flag would be a
@@ -225,8 +259,9 @@ SHA-256 `a4d367fa841a294b30d09d383ba912dbfcc78b0da1278da722684d47384a6986`.
   planning, but no dispatch is authorized because receiver/archive and contest
   axes remain absent.
 - **Continual learning:** the machine curve and regression tests make the
-  zero-face unlock and the 600x normalization reusable; the six Pose violations
-  prevent future all-row inactivity claims.
+  zero-face unlock and the 600x normalization reusable; the 54 Pose violations
+  prevent future all-row inactivity claims and identify spatial subsampling as
+  Pose-bound on this measured instance.
 
 This work follows `docs/operating_manual_craft_handoff.md`: each claim is
 labeled by how it was obtained, the negative is scoped, the arithmetic is
@@ -242,6 +277,8 @@ re-derived from primary bytes, and the pointer delta is stated literally.
 - Native macOS CPU advisory is neither contest-Linux x86_64 CPU nor contest-CUDA.
 - Precision depths 2–3 violate the Pose crossover on six pair/point instances;
   any allocator using them must add a Pose guard/repair and remeasure its bytes.
+- Both spatial endpoints violate the Pose crossover on every measured pair;
+  their Seg/rate secants are therefore non-admissible for the joint objective.
 - The non-null #536 result is an adjacent measured candidate, not a continuous
   optimum or promotion authorization.
 
@@ -252,7 +289,7 @@ MAIN must review the isolated branch before merge. Review emphasis:
 (b) signed truncation-toward-zero and exact recomputed numerator custody;
 (c) actual Brotli/zstd parse-back and immutable resume stages; (d) the 600-pair
 normalization and break-even sign; (e) per-class mismatch aggregation; (f) the
-six Pose violations versus the narrower zero-violation selected segment; and
+54 Pose violations versus the narrower zero-violation selected segment; and
 (g) strict separation of range payload, receiver/archive bytes, and contest
 score authority.
 
