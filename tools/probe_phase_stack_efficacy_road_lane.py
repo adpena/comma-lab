@@ -86,9 +86,9 @@ GT_CACHE_DEFAULT = Path(
 
 
 def _refuse_if_low_ram(min_free_gib: float) -> float:
-    import psutil
+    from tools.mem_basis import conservative_free_gib
 
-    avail = psutil.virtual_memory().available / 2**30
+    avail = conservative_free_gib()
     if avail < min_free_gib:
         raise SystemExit(
             f"REFUSE: available RAM {avail:.1f} GiB < floor {min_free_gib:.1f} GiB "

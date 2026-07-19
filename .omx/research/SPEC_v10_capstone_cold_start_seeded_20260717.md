@@ -1,4 +1,5 @@
 > **SUPERSEDED (2026-07-19): this document is HISTORY, not the live SSoT.** The single self-consistent
+<!-- # DUPLICATE_SOT_OK: HISTORICAL base v10 capstone (registry status=superseded, superseded_by=spec_v10_capstone_reconciled); retained per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE — not a live SoT; waiver added 2026-07-19 at MAIN drift-fix -->
 > successor is **`.omx/research/SPEC_v10_capstone_RECONCILED_20260719.md`** (tasks #521/#540; canonical-doc
 > registry `spec_v10_capstone_reconciled`). It folds this SPEC §0–§15 with the lattice composition law +
 > n600 closure, the registered f32 receiver-arithmetic and pose plane-proximity laws, the corrected

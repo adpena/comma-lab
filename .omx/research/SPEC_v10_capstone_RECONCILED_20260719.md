@@ -1,4 +1,5 @@
 # SPEC_v10 — RECONCILED SSoT (2026-07-19): the capstone as ONE constrained program on the shared scorer plane
+<!-- # DUPLICATE_SOT_OK: THE live v10 base SSoT (registry doc_id spec_v10_capstone_reconciled, status=active); coexists BY DESIGN with the registered additive successor SECTION spec_v10_integer_plane_vehicle (which supersedes only stale prose in §§R2/R3/R6/R7) and the registered-superseded historical cold_start doc; waiver added 2026-07-19 at MAIN drift-fix -->
 
 **This document is the single self-consistent successor of
 `.omx/research/SPEC_v10_capstone_cold_start_seeded_20260717.md` (§0–§15)** — the reconciliation the

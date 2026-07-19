@@ -1,4 +1,5 @@
 # SPEC_v10 reconciliation + KKT-derivation fresh-eyes verification (2026-07-19, Fable arm)
+<!-- # DUPLICATE_SOT_OK: fresh-eyes VERIFICATION MEMO of the v10 spec (reconciliation + KKT arithmetic re-check), not a canonical spec — its filename/heading matches the spec-shape pattern only because it reviews one; waiver added 2026-07-19 at MAIN drift-fix -->
 
 **Role:** delegated fresh-eyes adversarial verification (Task 1) + reconciled-SPEC assembly (#521/#540 owed, Task 2).
 **Authority:** read/derive/fix-artifacts only — no launch, paid dispatch, score, promotion, or pointer authority.

@@ -1,4 +1,5 @@
 # SPEC v10 integer-plane vehicle — measured-parts successor section
+<!-- # DUPLICATE_SOT_OK: additive successor SECTION to spec_v10_capstone_reconciled (registered relation in canonical_doc_registry); per §1 it supersedes ONLY the stale status prose in reconciled §§R2/R3/R6/R7 — both docs are intentionally canonical for vehicle v10; registered 2026-07-19 at MAIN review of the #567/#566 drift finding -->
 
 **Date:** 2026-07-19
 **Vehicle ID:** `v10.integer-plane.two-independent-planes.v0`
