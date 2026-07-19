@@ -20080,3 +20080,11 @@ capstone spine, rate-crush, description-crux, survey/#574 temporal, gauntlet). N
 banded-generator n600 row (operator GO) → first mid-curve point in the 4-order hole; M2 tie-aware preimage
 A/B → ~0.047 S distortion recovery at 0 bytes → widens box 216→264 KB; PDW1 fp32 realization → close
 frame-195. verdict_scope: durability-sync unit; no new measurement, no score claim; pointer 0.19108 UNMOVED.
+
+## FEED-m1-launch-blocked (2026-07-19) — M1/STEP3 C2 banded-generator n600: NOT FIREABLE from main
+- **Node:** M1 launch respawn (task #575, predecessor died on Fable credits, worktree auto-cleaned). Verdict: HARD STOP — no launch fired, no dispatch spent.
+- **Finding (MEASURED by grep @ HEAD 34d4948721):** the C2 banded-around-source generator run is gated on integration CODE that is not on main (lost with the worktree), NOT a reconstructable config. (1) NO trainer consumes the emitter — only `curriculum_dsl.py` holds the default-OFF `IntegerPlaneEmitter` Lever (argv-inert, compiles baseline-identical); (2) NO band-training loop (advisory harness runs UNTRAINED, source-derived un-rate-counted base); (3) NO emitter byte-close (measure tool = fixture/advisory only; `levelset_byte_close_and_eval.py` = 0 emitter refs, targets `lever_b_levelset_generator`). Matches crux_synthesis §3.1 "glue ≈ trainer config + band loss (~300–600 LOC)" + build-memo blocker #3 "the current smoke is not byte-closed".
+- **Forbidden shortcuts (NO-FAKE):** firing the levelset coord-INR trainer instead (wrong vehicle; margin lever measured WEAK #141/#169, DEFERRED in last run's launch.sh) = fake M1; citing the advisory's un-counted base as a byte-closed row = rate fake.
+- **Edges in:** crux_synthesis_20260719 M1 edge-out · c2_integer_plane_emitter_build_20260719_codex blocker #3 · SPEC_v10 §ADDENDUM STEP 3.
+- **Edges out (owed):** build-arm to land band-training loop + effective `IntegerPlaneEmitterPolicy` wiring + emitter byte-close adapter (resumable+per-stage-ckpt P0), then re-attempt governed launch. Recovery spec: `m1_c2_banded_generator_launch_blocker_and_recovery_spec_20260719.md`.
+- **Pointer:** 0.19108 [contest-CPU] UNMOVED. This unit is MEANS (signal-recovery).
