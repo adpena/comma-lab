@@ -19570,7 +19570,8 @@ Everything is reachable." DIAGNOSTIC (all MEASURED, [macOS-CPU advisory n6], poi
 bilinear A then yuv6 (modules.py:71-75), so pinning A(frame) to numerator equality gives d_pose mean
 9.3e-10 + d_seg 0.0 through the FULL DistortionNet on n6 (pairs 90/175/277/381/424/573). One realization,
 both scorers. Receipt blocker 2 answered for frame1-substitution. (2) RATE: direct-solved-frame payload
-DEAD (brotli-Q11 1.70MB/frame, ~1.1× WORSE than source; n600→rate term 680). Composition law: payload =
+DEAD (verdict_scope: formulation — the arbitrary/min-norm feasible point stored as a raw-frame payload;
+the feasibility family + MDL-steered point selection remain OPEN) (brotli-Q11 1.70MB/frame, ~1.1× WORSE than source; n600→rate term 680). Composition law: payload =
 compact ŷ-description (the shared 384×512 scorer-input plane), lattice solve FREE at decode (rule-118);
 all uint8/R-survival error = 0 by construction; witness ⊕ solve = witness render realized EXACTLY.
 (3) The #536 waterfill COLLAPSES: seg+pose are one axis (fidelity of shared ŷ); R-D object =

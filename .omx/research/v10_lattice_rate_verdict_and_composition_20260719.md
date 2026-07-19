@@ -13,6 +13,9 @@ receiver, no contest axis.
 
 ## NEW MEASURED (2026-07-19): the direct-frame rate is DEAD
 
+verdict_scope: formulation — the arbitrary/min-norm feasible point stored as a raw-frame payload only;
+the exact-feasibility family and MDL-steered point selection in the feasible set remain OPEN.
+
 brotli-Q11 on the n6 exact-solved uint8 frames (874×1164×3) vs the source frames
 (same coder), per pair:
 
