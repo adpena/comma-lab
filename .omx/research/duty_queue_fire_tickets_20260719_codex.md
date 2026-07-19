@@ -181,8 +181,11 @@ Verification completed before review:
 - `git diff --check`: passed.
 
 Independent fresh-eyes seal evidence is recorded separately in
-`.omx/research/duty_queue_fire_tickets_20260719_review_receipt.json`. Absence of three
-consecutive clean passes is itself a landing blocker.
+`.omx/research/duty_queue_fire_tickets_20260719_review_receipt.json`. Historical passes 3–5
+were consecutive CLEAN, but a later docs-only whitespace cleanup changed production-artifact
+bytes and therefore reset the strict counter to zero. The five-round delegated cap is exhausted;
+MAIN must review the current bytes. Absence of three current consecutive clean passes is itself
+a landing blocker.
 
 ## Operating-manual disposition and triality
 
