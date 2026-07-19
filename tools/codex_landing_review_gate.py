@@ -70,6 +70,7 @@ USAGE:
   .venv/bin/python tools/codex_landing_review_gate.py disposition \
       --label optimal_metric_p0_build_surrogate_followons --stamp 20260714T123447Z \
       --status reviewed_committed --commit <sha> --reason "harvested 2 rows" \
+      --landing-manifest .omx/research/optimal_metric_landing_manifest.json \
       --consumed-by ".omx/research/optimal_metric_p0_surrogate_followons_DAG_FEED_20260714.md"
   .venv/bin/python tools/codex_landing_review_gate.py disposition \
       --label some_arm --stamp <stamp> --status held_entangled \
@@ -101,6 +102,23 @@ VALID_STATES = TERMINAL_STATES | NONTERMINAL_STATES
 # nudges, but the STRICT preflight guard gives this grace before it REFUSES, so a
 # just-landed arm main is actively harvesting does not trip a hard block.
 STALE_GRACE_SECONDS = 900  # 15 minutes
+
+_PLACEHOLDER_WAIVERS = frozenset(
+    {
+        "",
+        "none",
+        "n/a",
+        "na",
+        "tbd",
+        "todo",
+        "fixme",
+        "<reason>",
+        "<rationale>",
+        "reason",
+        "rationale",
+        "waiver",
+    }
+)
 
 
 def _utcnow() -> str:
@@ -273,6 +291,88 @@ def append_disposition(row: dict) -> None:
 # ---------------------------------------------------------------------------
 # CLI subcommands
 # ---------------------------------------------------------------------------
+def _real_waiver(value: str | None) -> bool:
+    return bool(value and value.strip().lower() not in _PLACEHOLDER_WAIVERS)
+
+
+def _landing_manifest_evidence(args: argparse.Namespace) -> tuple[list[str], dict]:
+    """Load and re-derive a terminal landing receipt.
+
+    Returns human-readable issues plus the small ledger payload.  Import is
+    local so Stop-hook mode keeps its existing fail-open startup surface.
+    """
+    manifest_path = getattr(args, "landing_manifest", None)
+    if not manifest_path:
+        return ["landing_diff_manifest_missing"], {
+            "path": None,
+            "receipt_sha256": None,
+            "mode": "strict" if getattr(args, "landing_manifest_strict", False) else "warn",
+            "valid": False,
+            "complete": False,
+            "path_count": None,
+            "base_sha": None,
+            "head_sha": None,
+            "tracked_diff_sha256": None,
+            "blockers": ["landing_diff_manifest_missing"],
+            "blocker_details": [{
+                "code": "landing_diff_manifest_missing",
+                "path": None,
+                "detail": "terminal disposition has no typed BASE..HEAD receipt",
+            }],
+        }
+
+    src = REPO / "src"
+    if str(src) not in sys.path:
+        sys.path.insert(0, str(src))
+    manifest_digest = None
+    try:
+        from tac.landing_diff_manifest import (  # pylint: disable=import-outside-toplevel
+            LandingDiffManifestError,
+            load_manifest_bytes,
+            verify_manifest,
+        )
+
+        manifest_file = Path(manifest_path)
+        if not manifest_file.is_absolute():
+            manifest_file = REPO / manifest_file
+        manifest_bytes = manifest_file.read_bytes()
+        manifest_digest = hashlib.sha256(manifest_bytes).hexdigest()
+        manifest = load_manifest_bytes(manifest_bytes, label=f"landing manifest {manifest_file}")
+        verification = verify_manifest(REPO, manifest)
+        all_blockers = [*manifest.blockers, *verification]
+        blocker_codes = [blocker.code for blocker in all_blockers]
+        issues = [f"{blocker.code}:{blocker.path or '<manifest>'}" for blocker in all_blockers]
+        return issues, {
+            "path": str(manifest_path),
+            "receipt_sha256": manifest_digest,
+            "mode": "strict" if getattr(args, "landing_manifest_strict", False) else "warn",
+            "valid": not verification,
+            "complete": manifest.complete and not verification,
+            "path_count": len(manifest.paths),
+            "base_sha": manifest.base_sha,
+            "head_sha": manifest.head_sha,
+            "tracked_diff_sha256": manifest.tracked_diff_sha256,
+            "blockers": blocker_codes,
+            "blocker_details": [blocker.to_dict() for blocker in all_blockers],
+        }
+    except (LandingDiffManifestError, OSError, ValueError) as exc:
+        issue = f"landing_diff_manifest_invalid:{type(exc).__name__}:{exc}"
+        return [issue], {
+            "path": str(manifest_path),
+            "receipt_sha256": manifest_digest,
+            "mode": "strict" if getattr(args, "landing_manifest_strict", False) else "warn",
+            "valid": False,
+            "complete": False,
+            "path_count": None,
+            "base_sha": None,
+            "head_sha": None,
+            "tracked_diff_sha256": None,
+            "blockers": [issue],
+            "blocker_details": [{"code": "landing_diff_manifest_invalid",
+                                 "path": None, "detail": issue}],
+        }
+
+
 def _cmd_disposition(args: argparse.Namespace) -> int:
     if args.status not in VALID_STATES:
         print(f"ERROR: --status must be one of {sorted(VALID_STATES)}", file=sys.stderr)
@@ -309,11 +409,33 @@ def _cmd_disposition(args: argparse.Namespace) -> int:
         print("ERROR: --consumed-by none requires a reason: none:<why nothing to route>",
               file=sys.stderr)
         return 2
+    manifest_evidence = None
+    manifest_waiver = getattr(args, "landing_manifest_waiver", None)
+    if manifest_waiver and not _real_waiver(manifest_waiver):
+        print("ERROR: --landing-manifest-waiver requires a real rationale", file=sys.stderr)
+        return 2
+    if args.status in {"reviewed_committed", "closed"}:
+        manifest_issues, manifest_evidence = _landing_manifest_evidence(args)
+        if manifest_issues:
+            joined = ", ".join(manifest_issues)
+            if getattr(args, "landing_manifest_strict", False) and not manifest_waiver:
+                print(
+                    "ERROR: landing diff manifest STRICT refusal before disposition: " + joined,
+                    file=sys.stderr,
+                )
+                return 2
+            prefix = "WAIVED" if manifest_waiver else "WARN-ONLY"
+            print(
+                f"{prefix}: landing diff manifest has {len(manifest_issues)} issue(s): {joined}",
+                file=sys.stderr,
+            )
+        manifest_evidence["waiver"] = manifest_waiver
     row = {
         "label": args.label, "stamp": args.stamp, "status": args.status,
         "commit": args.commit, "respawn": args.respawn,
         "reason": args.reason, "blocked_by": blocked_by,
         "consumed_by": consumed_by,
+        "landing_diff_manifest": manifest_evidence,
         "by": "cli",
     }
     append_disposition(row)
@@ -485,6 +607,19 @@ def main(argv: list[str] | None = None) -> int:
                         "absorbed the arm's findings (task#/P0-row/DAG-FEED/spec-section/"
                         "lever/memo-path/commit-sha) or none:<reason>. Disposition is "
                         "custody; this field is CONSUMPTION.")
+    d.add_argument("--landing-manifest", default=None, help="typed BASE..HEAD LandingDiffManifest JSON receipt")
+    d.add_argument(
+        "--landing-manifest-strict",
+        action="store_true",
+        help="refuse terminal disposition when the receipt is missing, invalid, "
+        "or incomplete (default is migration WARN-ONLY)",
+    )
+    d.add_argument(
+        "--landing-manifest-waiver",
+        default=None,
+        help="same-command real rationale allowing known manifest blockers; "
+        "the rationale and blockers are recorded in the ledger",
+    )
 
     sub.add_parser("status", help="print landed-vs-dispositioned status")
 
