@@ -969,3 +969,24 @@ per `.omx/research/build_wave_fresh_eyes_confound_hunt_contract_20260718.md`.
 closed; birth-before-phase (14.2); REAL phase-efficacy test (14.5b); resumability #537; receiver+byte-close #543;
 exact byte-close/parse-back; every equations-leg law registered. Firing before these = the naive-launch anti-
 pattern. Pointer 0.19108 UNMOVED (manifest, not a score claim).
+
+## §15 ADDENDUM (2026-07-19, operator reframe CONFIRMED — binds carrier design; folds FEED-pose-falls-out)
+
+**Pose is a COROLLARY of plane proximity, not an axis** (law `pose_plane_proximity_corollary_v1`,
+registered with the measured regime endpoints: solved-in-band planes d_pose 5.35e-10..1.14e-9; the
+c2-witness plane at RMSE 25 off source d_pose 63 — generator artifact, verdict_scope: instance).
+Binding consequences on §14:
+
+1. **Carrier statement (supersedes "pose-shape the generator"):** solve ŷ within seg margin-bands
+   AROUND THE SOURCE plane; pay bytes only for the residual vs a rule-118-free decode-side predictor.
+   Pose falls out (~9 orders of slack to the 2.5e-4 binding crossover). Training-side pose forces on a
+   far-off-source generator are the WRONG lever for the v10 family (they remain c2-lineage diagnostics).
+2. **§14.2 (birth-before-phase / FiLM flicker sidecar):** the pose-analog sidecar is only needed IF the
+   carrier is a far-from-source generator; under the solve-near-source statement it is expected
+   unnecessary — decide on the VJP/#549 bindingness harvest (pre-registered: pose constraint INACTIVE
+   at in-band solutions).
+3. **Rate game = band geometry:** the VJP-custody anisotropic bands around the source plane
+   (`r_channel = min(r_max, d_feat/(3·Lip_local·|q_channel|))`) ARE the v10 rate axis; the #536 KKT
+   waterfill runs on bytes(band-scale) with τ_pose swept wide (up to ~2.5e-4), not tiny.
+4. **Receiver (§#543, landed):** factor-2 production receiver consumes this unchanged — the archive
+   carries the compact ŷ-description (residual-vs-predictor); realization + pose both free at decode.
