@@ -1,9 +1,10 @@
-"""Typed, default-OFF contract for the C2 integer-plane emitter.
+"""Typed contract for the C2 integer-plane emitter and band trainer.
 
-This module deliberately owns no trainer flag.  It describes the build-only C2
-vehicle, resolves the measured U4 head constants, and provides a standalone
-checkpoint envelope for the future trainer integration.  The eventual live
-controller hooks are reserved under ``__ipe_`` but are not registered here.
+The historical build-only mode remains explicitly inactive.  The distinct
+``BANDED_TRAINING`` mode is argv-effective in the dedicated C2 trainer while
+remaining sealed against launch, payment, score, promotion, and pointer
+authority.  Both modes share the same fixed-capacity emitter and checkpoint
+envelope.
 """
 
 from __future__ import annotations
@@ -50,6 +51,7 @@ MEASURED_U4_SINGULAR_VALUES = (
 FUTURE_RESUME_HOOK_PREFIX = "__ipe_"
 CHECKPOINT_SCHEMA = "integer_plane_emitter_stage_checkpoint.v1"
 POLICY_CONTRACT_RECEIPT_KEY = "c2_integer_plane_emitter_policy_contract"
+BANDED_TRAINING_RECEIPT_SCHEMA = "c2_integer_plane_banded_training_receipt.v1"
 
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
 _SAFE_COMPONENT_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,95}")
@@ -84,9 +86,7 @@ def _verify_published_checkpoint_target(
     expected_stat: os.stat_result,
     payload: bytes,
 ) -> None:
-    open_flags = (
-        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-    )
+    open_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:
         target_fd = os.open(target, open_flags)
     except OSError as exc:
@@ -95,12 +95,8 @@ def _verify_published_checkpoint_target(
         ) from exc
     try:
         opened_stat = os.fstat(target_fd)
-        if not stat.S_ISREG(opened_stat.st_mode) or _stat_identity(
-            opened_stat
-        ) != _stat_identity(expected_stat):
-            raise IntegerPlaneEmitterCheckpointError(
-                f"published checkpoint target has unexpected identity: {target}"
-            )
+        if not stat.S_ISREG(opened_stat.st_mode) or _stat_identity(opened_stat) != _stat_identity(expected_stat):
+            raise IntegerPlaneEmitterCheckpointError(f"published checkpoint target has unexpected identity: {target}")
         with os.fdopen(target_fd, "rb") as target_handle:
             target_fd = -1
             recovered = target_handle.read()
@@ -119,9 +115,7 @@ def _verify_published_checkpoint_target(
         or after_read_stat.st_size != opened_stat.st_size
         or after_read_stat.st_mtime_ns != opened_stat.st_mtime_ns
     ):
-        raise IntegerPlaneEmitterCheckpointError(
-            f"published checkpoint target changed during verification: {target}"
-        )
+        raise IntegerPlaneEmitterCheckpointError(f"published checkpoint target changed during verification: {target}")
     try:
         final_lstat = target.lstat()
     except OSError as exc:
@@ -178,9 +172,7 @@ def _verify_or_remove_checkpoint_target(
             raise cleanup_exc from exc
         if isinstance(exc, IntegerPlaneEmitterCheckpointError):
             raise
-        raise IntegerPlaneEmitterCheckpointError(
-            f"published checkpoint target verification failed: {target}"
-        ) from exc
+        raise IntegerPlaneEmitterCheckpointError(f"published checkpoint target verification failed: {target}") from exc
 
 
 def _publish_checkpoint_link(
@@ -239,8 +231,7 @@ def _publish_checkpoint_link(
             payload=payload,
         )
         raise IntegerPlaneEmitterCheckpointError(
-            "published checkpoint is verified, but source cleanup was refused because "
-            f"the source disappeared: {source}"
+            f"published checkpoint is verified, but source cleanup was refused because the source disappeared: {source}"
         ) from exc
     if (
         not stat.S_ISREG(source_lstat.st_mode)
@@ -289,9 +280,7 @@ def _publish_checkpoint_link(
             expected_stat=expected_stat,
             payload=payload,
         )
-        raise IntegerPlaneEmitterCheckpointError(
-            f"checkpoint source removal could not be synced: {directory}"
-        ) from exc
+        raise IntegerPlaneEmitterCheckpointError(f"checkpoint source removal could not be synced: {directory}") from exc
     _verify_or_remove_checkpoint_target(
         target,
         directory,
@@ -312,6 +301,13 @@ class STEMode(StrEnum):
     """The only C2 receiver-compatible straight-through mode."""
 
     SATURATION_AWARE_UINT8 = "saturation_aware_uint8"
+
+
+class PolicyMode(StrEnum):
+    """Compatibility-OFF and the sole active integration mode."""
+
+    INACTIVE_BUILD_ONLY = "inactive_build_only"
+    BANDED_TRAINING = "banded_training"
 
 
 def _canonical_json(value: Any) -> bytes:
@@ -353,9 +349,7 @@ def _require_f32_tensor_payload(
 ) -> tuple[int, ...]:
     tensor = _require_nonempty_mapping(value, field)
     if set(tensor) != {"dtype", "shape", "data"}:
-        raise IntegerPlaneEmitterCheckpointError(
-            f"{field} must contain exactly dtype, shape, and data"
-        )
+        raise IntegerPlaneEmitterCheckpointError(f"{field} must contain exactly dtype, shape, and data")
     if tensor["dtype"] != "float32":
         raise IntegerPlaneEmitterCheckpointError(f"{field}.dtype must be float32")
     shape = tensor["shape"]
@@ -366,13 +360,9 @@ def _require_f32_tensor_payload(
     shape_tuple = tuple(shape)
     if variable_leading_dim:
         if len(shape_tuple) != len(expected_tail) + 1 or shape_tuple[1:] != expected_tail:
-            raise IntegerPlaneEmitterCheckpointError(
-                f"{field}.shape must be [N,{','.join(map(str, expected_tail))}]"
-            )
+            raise IntegerPlaneEmitterCheckpointError(f"{field}.shape must be [N,{','.join(map(str, expected_tail))}]")
     elif shape_tuple != expected_tail:
-        raise IntegerPlaneEmitterCheckpointError(
-            f"{field}.shape must be {list(expected_tail)}"
-        )
+        raise IntegerPlaneEmitterCheckpointError(f"{field}.shape must be {list(expected_tail)}")
     data = tensor["data"]
     if not isinstance(data, list):
         raise IntegerPlaneEmitterCheckpointError(f"{field}.data must be a flat list")
@@ -383,18 +373,14 @@ def _require_f32_tensor_payload(
         )
     for item in data:
         if isinstance(item, bool) or not isinstance(item, (int, float)) or not math.isfinite(item):
-            raise IntegerPlaneEmitterCheckpointError(
-                f"{field}.data must contain only finite numeric values"
-            )
+            raise IntegerPlaneEmitterCheckpointError(f"{field}.data must contain only finite numeric values")
     return shape_tuple
 
 
 def _validate_residual_state(value: Any, field: str, residual_width: int) -> int:
     state = _require_nonempty_mapping(value, field)
     if set(state) != {"pair_plane_codes", "shared_rgb_head"}:
-        raise IntegerPlaneEmitterCheckpointError(
-            f"{field} must contain exactly pair_plane_codes and shared_rgb_head"
-        )
+        raise IntegerPlaneEmitterCheckpointError(f"{field} must contain exactly pair_plane_codes and shared_rgb_head")
     code_shape = _require_f32_tensor_payload(
         state["pair_plane_codes"],
         field=f"{field}.pair_plane_codes",
@@ -435,21 +421,18 @@ def _validate_policy_contract(contract: Any) -> Mapping[str, Any]:
     }
     missing = sorted(required - set(doc))
     if missing:
-        raise IntegerPlaneEmitterCheckpointError(
-            f"policy_contract missing required fields: {missing}"
-        )
+        raise IntegerPlaneEmitterCheckpointError(f"policy_contract missing required fields: {missing}")
     _require_sha256(doc["policy_sha256"], "policy_contract.policy_sha256")
     _require_sha256(doc["capacity_signature"], "policy_contract.capacity_signature")
     try:
         basis = BasisMode(doc["basis"])
+        # Historical build-only contracts predate the active trainer mode.  An
+        # absent mode is therefore the legacy, argv-inert policy, not drift.
+        mode = PolicyMode(doc.get("mode", PolicyMode.INACTIVE_BUILD_ONLY.value))
     except (TypeError, ValueError) as exc:
-        raise IntegerPlaneEmitterCheckpointError("policy_contract basis is unknown") from exc
-    expected = IntegerPlaneEmitterPolicy(basis=basis).compile_contract()
-    drifted = sorted(
-        field
-        for field in set(doc) | set(expected)
-        if doc.get(field) != expected.get(field)
-    )
+        raise IntegerPlaneEmitterCheckpointError("policy_contract basis or mode is unknown") from exc
+    expected = IntegerPlaneEmitterPolicy(basis=basis, mode=mode).compile_contract()
+    drifted = sorted(field for field in set(doc) | set(expected) if doc.get(field) != expected.get(field))
     if drifted:
         raise IntegerPlaneEmitterCheckpointError(
             "policy_contract differs from the sealed compiled C2 policy: " + ", ".join(drifted)
@@ -489,7 +472,7 @@ def u4_lawrefs() -> Mapping[str, LawRef]:
 
 @dataclass(frozen=True, slots=True)
 class IntegerPlaneEmitterPolicy:
-    """Build-only C2 policy with a typed fixed-capacity basis choice.
+    """C2 policy with a typed fixed-capacity basis and activation mode.
 
     ``basis`` may select either arm, while every capacity-bearing field remains
     the same.  All authority fields are sealed false and expansion is explicitly
@@ -497,6 +480,7 @@ class IntegerPlaneEmitterPolicy:
     """
 
     basis: BasisMode = BasisMode.RAW_CENTERED
+    mode: PolicyMode = PolicyMode.INACTIVE_BUILD_ONLY
     ste: STEMode = STEMode.SATURATION_AWARE_UINT8
     residual_width: int = RESIDUAL_WIDTH
     camera_hw: tuple[int, int] = CAMERA_HW
@@ -504,12 +488,12 @@ class IntegerPlaneEmitterPolicy:
     plane_count: int = PLANE_COUNT
     channels: int = CHANNELS
     capacity_locked: bool = True
-    basis_verdict_state: str = "UNRESOLVED_BUILD_ONLY"
+    basis_verdict_state: str | None = None
     pair_parallel_expansion: bool = True
     cross_pair_autoregression: bool = False
-    score_affecting_enabled: bool = False
+    score_affecting_enabled: bool | None = None
     research_only: bool = True
-    trainer_activation: bool = False
+    trainer_activation: bool | None = None
     launch: bool = False
     paid_dispatch: bool = False
     score_claim: bool = False
@@ -520,31 +504,43 @@ class IntegerPlaneEmitterPolicy:
     lane_id: str = LANE_ID
 
     def __post_init__(self) -> None:
+        active = self.mode is PolicyMode.BANDED_TRAINING
+        if self.basis_verdict_state is None:
+            object.__setattr__(
+                self,
+                "basis_verdict_state",
+                "UNRESOLVED_BANDED_TRAINING" if active else "UNRESOLVED_BUILD_ONLY",
+            )
+        if self.score_affecting_enabled is None:
+            object.__setattr__(self, "score_affecting_enabled", active)
+        if self.trainer_activation is None:
+            object.__setattr__(self, "trainer_activation", active)
         self.validate()
 
     def validate(self) -> None:
         if not isinstance(self.basis, BasisMode):
             raise IntegerPlaneEmitterPolicyError("basis must be a BasisMode")
+        if not isinstance(self.mode, PolicyMode):
+            raise IntegerPlaneEmitterPolicyError("mode must be a PolicyMode")
         if self.ste is not STEMode.SATURATION_AWARE_UINT8:
             raise IntegerPlaneEmitterPolicyError("STE mode is sealed to saturation_aware_uint8")
         if not isinstance(self.residual_width, int) or isinstance(self.residual_width, bool):
             raise IntegerPlaneEmitterPolicyError("residual_width must be an integer")
         if self.residual_width != RESIDUAL_WIDTH:
-            raise IntegerPlaneEmitterPolicyError(
-                "residual_width is capacity-locked until the basis verdict resolves"
-            )
+            raise IntegerPlaneEmitterPolicyError("residual_width is capacity-locked until the basis verdict resolves")
+        active = self.mode is PolicyMode.BANDED_TRAINING
         expected = {
             "camera_hw": CAMERA_HW,
             "scorer_hw": SCORER_HW,
             "plane_count": PLANE_COUNT,
             "channels": CHANNELS,
             "capacity_locked": True,
-            "basis_verdict_state": "UNRESOLVED_BUILD_ONLY",
+            "basis_verdict_state": ("UNRESOLVED_BANDED_TRAINING" if active else "UNRESOLVED_BUILD_ONLY"),
             "pair_parallel_expansion": True,
             "cross_pair_autoregression": False,
-            "score_affecting_enabled": False,
+            "score_affecting_enabled": active,
             "research_only": True,
-            "trainer_activation": False,
+            "trainer_activation": active,
             "launch": False,
             "paid_dispatch": False,
             "score_claim": False,
@@ -556,9 +552,7 @@ class IntegerPlaneEmitterPolicy:
         }
         changed = [key for key, value in expected.items() if getattr(self, key) != value]
         if changed:
-            raise IntegerPlaneEmitterPolicyError(
-                "integer-plane policy sealed field changed: " + ", ".join(changed)
-            )
+            raise IntegerPlaneEmitterPolicyError("integer-plane policy sealed field changed: " + ", ".join(changed))
 
     def capacity_signature(self) -> str:
         """Hash capacity only; intentionally exclude the A/B basis identity."""
@@ -590,18 +584,11 @@ class IntegerPlaneEmitterPolicy:
             raise IntegerPlaneEmitterPolicyError(f"unknown authority request: {unknown}")
         attempted = sorted(name for name, value in requested_authority.items() if value)
         if attempted:
-            raise IntegerPlaneEmitterPolicyError(
-                "integer-plane build policy cannot authorize " + ", ".join(attempted)
-            )
+            raise IntegerPlaneEmitterPolicyError("integer-plane build policy cannot authorize " + ", ".join(attempted))
 
         refs = _u4_lawrefs()
-        declarations = {
-            name: lawref_to_declaration(ref) for name, ref in sorted(refs.items())
-        }
-        declaration_hashes = {
-            name: _sha256(_canonical_json(declaration))
-            for name, declaration in declarations.items()
-        }
+        declarations = {name: lawref_to_declaration(ref) for name, ref in sorted(refs.items())}
+        declaration_hashes = {name: _sha256(_canonical_json(declaration)) for name, declaration in declarations.items()}
         resolution: dict[str, Any] = {}
         values: list[float] = []
         target_tags = {"frozen_segnet_sha256": FROZEN_SEGNET_SHA256}
@@ -647,6 +634,11 @@ class IntegerPlaneEmitterPolicy:
             "resume_hook_status": "FUTURE_ONLY_NOT_REGISTERED",
             "future_resume_hook_prefix": FUTURE_RESUME_HOOK_PREFIX,
         }
+        if self.mode is PolicyMode.BANDED_TRAINING:
+            # Additive active-mode fields keep the historical default policy
+            # hash and checkpoint contracts byte-identical.
+            hash_basis["mode"] = self.mode.value
+            hash_basis["runtime_receipt_schema"] = BANDED_TRAINING_RECEIPT_SCHEMA
         return {
             **hash_basis,
             "policy_sha256": _sha256(_canonical_json(hash_basis)),
@@ -723,10 +715,9 @@ class IntegerPlaneEmitterStageCheckpoint:
         ):
             _require_sha256(getattr(self, field), field)
         policy_contract = _validate_policy_contract(self.policy_contract)
-        if self.config_sha256 != policy_contract["policy_sha256"]:
-            raise IntegerPlaneEmitterCheckpointError(
-                "config_sha256 must equal policy_contract.policy_sha256"
-            )
+        active = policy_contract.get("mode") == PolicyMode.BANDED_TRAINING.value
+        if not active and self.config_sha256 != policy_contract["policy_sha256"]:
+            raise IntegerPlaneEmitterCheckpointError("config_sha256 must equal policy_contract.policy_sha256")
         if self.fixed_capacity_signature != policy_contract["capacity_signature"]:
             raise IntegerPlaneEmitterCheckpointError(
                 "fixed_capacity_signature must equal policy_contract.capacity_signature"
@@ -749,27 +740,15 @@ class IntegerPlaneEmitterStageCheckpoint:
         live_pair_count = _validate_residual_state(
             self.live_residual_parameters, "live_residual_parameters", residual_width
         )
-        ema_pair_count = _validate_residual_state(
-            self.ema_shadow, "ema_shadow", residual_width
-        )
+        ema_pair_count = _validate_residual_state(self.ema_shadow, "ema_shadow", residual_width)
         if live_pair_count != ema_pair_count:
-            raise IntegerPlaneEmitterCheckpointError(
-                "live_residual_parameters and ema_shadow pair counts differ"
-            )
+            raise IntegerPlaneEmitterCheckpointError("live_residual_parameters and ema_shadow pair counts differ")
         if self.next_pair > live_pair_count:
-            raise IntegerPlaneEmitterCheckpointError(
-                "next_pair exceeds checkpoint residual pair count"
-            )
+            raise IntegerPlaneEmitterCheckpointError("next_pair exceeds checkpoint residual pair count")
         optimizer_state = _require_nonempty_mapping(self.optimizer_state, "optimizer_state")
         optimizer_step = optimizer_state.get("step")
-        if (
-            not isinstance(optimizer_step, int)
-            or isinstance(optimizer_step, bool)
-            or optimizer_step < 0
-        ):
-            raise IntegerPlaneEmitterCheckpointError(
-                "optimizer_state.step must be a nonnegative integer"
-            )
+        if not isinstance(optimizer_step, int) or isinstance(optimizer_step, bool) or optimizer_step < 0:
+            raise IntegerPlaneEmitterCheckpointError("optimizer_state.step must be a nonnegative integer")
         _require_nonempty_mapping(self.rng_state, "rng_state")
         _canonical_json(self._body())
         for field in (
@@ -854,9 +833,7 @@ class IntegerPlaneEmitterStageCheckpoint:
             except FileNotFoundError:
                 pass
             else:
-                raise IntegerPlaneEmitterCheckpointError(
-                    f"checkpoint path already exists; overwrite refused: {target}"
-                )
+                raise IntegerPlaneEmitterCheckpointError(f"checkpoint path already exists; overwrite refused: {target}")
             stale = sorted(root.glob(f".{target.name}.tmp.*"))
             if len(stale) > 1:
                 raise IntegerPlaneEmitterCheckpointError(
@@ -870,15 +847,11 @@ class IntegerPlaneEmitterStageCheckpoint:
                     raise IntegerPlaneEmitterCheckpointError(
                         f"stale checkpoint temporary cannot be inspected: {prior}"
                     ) from exc
-                if stat.S_ISLNK(prior_lstat.st_mode) or not stat.S_ISREG(
-                    prior_lstat.st_mode
-                ):
+                if stat.S_ISLNK(prior_lstat.st_mode) or not stat.S_ISREG(prior_lstat.st_mode):
                     raise IntegerPlaneEmitterCheckpointError(
                         f"stale checkpoint temporary must be a non-symlink regular file: {prior}"
                     )
-                open_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(
-                    os, "O_NOFOLLOW", 0
-                )
+                open_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
                 try:
                     prior_fd = os.open(prior, open_flags)
                 except OSError as exc:
@@ -899,8 +872,7 @@ class IntegerPlaneEmitterStageCheckpoint:
                         recovered = prior_handle.read()
                         if recovered != payload:
                             raise IntegerPlaneEmitterCheckpointError(
-                                "stale checkpoint temporary differs from requested bytes: "
-                                f"{prior}"
+                                f"stale checkpoint temporary differs from requested bytes: {prior}"
                             )
                         # Recovery promotes bytes written by a prior process. Sync
                         # that exact open regular file before publishing its second
@@ -917,8 +889,7 @@ class IntegerPlaneEmitterStageCheckpoint:
                     ) from exc
                 if (
                     not stat.S_ISREG(final_lstat.st_mode)
-                    or (final_lstat.st_dev, final_lstat.st_ino)
-                    != (opened_stat.st_dev, opened_stat.st_ino)
+                    or (final_lstat.st_dev, final_lstat.st_ino) != (opened_stat.st_dev, opened_stat.st_ino)
                     or final_lstat.st_size != opened_stat.st_size
                     or final_lstat.st_mtime_ns != opened_stat.st_mtime_ns
                 ):
@@ -940,9 +911,7 @@ class IntegerPlaneEmitterStageCheckpoint:
                 os.fsync(handle.fileno())
                 opened_stat = os.fstat(handle.fileno())
                 if not stat.S_ISREG(opened_stat.st_mode):
-                    raise IntegerPlaneEmitterCheckpointError(
-                        f"fresh checkpoint temporary is not a regular file: {tmp}"
-                    )
+                    raise IntegerPlaneEmitterCheckpointError(f"fresh checkpoint temporary is not a regular file: {tmp}")
             return _publish_checkpoint_link(
                 tmp,
                 target,
@@ -953,6 +922,7 @@ class IntegerPlaneEmitterStageCheckpoint:
 
 
 __all__ = [
+    "BANDED_TRAINING_RECEIPT_SCHEMA",
     "CAMERA_HW",
     "CHANNELS",
     "CHECKPOINT_SCHEMA",
@@ -974,6 +944,7 @@ __all__ = [
     "IntegerPlaneEmitterPolicy",
     "IntegerPlaneEmitterPolicyError",
     "IntegerPlaneEmitterStageCheckpoint",
+    "PolicyMode",
     "STEMode",
     "u4_lawrefs",
 ]

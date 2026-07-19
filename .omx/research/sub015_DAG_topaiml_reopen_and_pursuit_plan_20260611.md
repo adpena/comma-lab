@@ -20087,4 +20087,31 @@ frame-195. verdict_scope: durability-sync unit; no new measurement, no score cla
 - **Forbidden shortcuts (NO-FAKE):** firing the levelset coord-INR trainer instead (wrong vehicle; margin lever measured WEAK #141/#169, DEFERRED in last run's launch.sh) = fake M1; citing the advisory's un-counted base as a byte-closed row = rate fake.
 - **Edges in:** crux_synthesis_20260719 M1 edge-out · c2_integer_plane_emitter_build_20260719_codex blocker #3 · SPEC_v10 §ADDENDUM STEP 3.
 - **Edges out (owed):** build-arm to land band-training loop + effective `IntegerPlaneEmitterPolicy` wiring + emitter byte-close adapter (resumable+per-stage-ckpt P0), then re-attempt governed launch. Recovery spec: `m1_c2_banded_generator_launch_blocker_and_recovery_spec_20260719.md`.
+
+### FEED-M1-C2-GLUE-REBUILD — 2026-07-19 — Task #575 bounded control pass, fire blocked
+
+- **Node:** isolated rebuild lands argv-effective `IntegerPlaneEmitterPolicy` -> exact
+  dedicated streamed trainer -> distinct atomic warmup/band-fit/rate-polish checkpoints
+  -> counted strict archive -> exact factor-2 parse-back -> capped real hard-oracle.
+- **MEASURED [macOS-CPU prefix n6, non-score]:** pre/post `d_seg`
+  `0.003132290323264897 -> 0.003132290323264897`, `d_pose`
+  `150.166140238444 -> 150.166140238444`, archive `94,344 -> 94,352` bytes;
+  `Delta=(0,0,+8 B)`, 9 steps, 8 checkpoints, peak RSS 580,861,952 B.
+- **PDW2 edge:** canonical #553 margin packet 138 B / SHA
+  `93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568`
+  is counted and strict-parse-backed but training-only. #543 factor-2 lattice is reused;
+  its missing scorer-free channel-target -> spatial/RGB pullback keeps
+  `TARGET_ONLY_VS_REALIZATION_NON_EQUIVALENT` and blocks receiver authority.
+- **Surgical EV edge:** positive admission requires 38,077 Fisher-margin-ranked
+  candidates, necessity/resize/Lane/channel factors, corrected inner-Jacobian
+  first-order+secant+QP prediction, KKT stop at `25/37,545,489`, curvelet/shearlet
+  carrier, and one SE(3) xi pose factorization. Unselected pixels are unconstrained;
+  blanket fixing refuses.
+- **Exact blockers:** no real full-n600 positive anisotropic band/EV artifact; no PDW2
+  spatial consumer; no receiver-bound curvelet/shearlet carrier; gauge identity remains
+  not model-factorized. Governed materializer rc=6. Task #575 stays blocked.
+- **Triality:** DSL = active exact-parser-consumed lever; equations = existing measured
+  Fisher/necessity/resize/flip/curvelet/xi/KKT/master-action laws consumed, none
+  re-registered; DAG = this FEED. Pointer `0.1910828242 [contest-CPU Linux x86_64]`
+  **UNMOVED**. MAIN review/merge is mandatory before any landing authority.
 - **Pointer:** 0.19108 [contest-CPU] UNMOVED. This unit is MEANS (signal-recovery).

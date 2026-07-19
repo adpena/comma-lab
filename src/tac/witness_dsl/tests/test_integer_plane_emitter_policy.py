@@ -24,6 +24,7 @@ from tac.witness_dsl.integer_plane_emitter_policy import (
     IntegerPlaneEmitterPolicy,
     IntegerPlaneEmitterPolicyError,
     IntegerPlaneEmitterStageCheckpoint,
+    PolicyMode,
     STEMode,
     u4_lawrefs,
 )
@@ -121,9 +122,7 @@ def test_basis_arms_share_exact_capacity_but_have_distinct_policy_identity() -> 
         ({"cross_pair_autoregression": True}, "cross_pair_autoregression"),
     ],
 )
-def test_invalid_or_receiver_serial_policy_variants_fail_closed(
-    change: dict[str, object], match: str
-) -> None:
+def test_invalid_or_receiver_serial_policy_variants_fail_closed(change: dict[str, object], match: str) -> None:
     with pytest.raises(IntegerPlaneEmitterPolicyError, match=match):
         IntegerPlaneEmitterPolicy(**change)  # type: ignore[arg-type]
 
@@ -226,9 +225,7 @@ def test_canonical_typed_lever_adapter_preserves_every_custody_surface() -> None
     )
     typed = typed_lever_from_dsl(source)
     assert typed.lawrefs == source.lawrefs
-    assert typed.lawref_declarations == {
-        flag: lawref_to_declaration(ref) for flag, ref in source.lawrefs.items()
-    }
+    assert typed.lawref_declarations == {flag: lawref_to_declaration(ref) for flag, ref in source.lawrefs.items()}
     assert typed.constant_manifest == source.constant_manifest
     assert typed.runtime_receipt_schemas == source.runtime_receipt_schemas
     assert typed.policy_contracts == source.policy_contracts
@@ -268,12 +265,32 @@ def test_factory_refuses_missing_or_wrong_policy() -> None:
 
 def test_registry_and_activation_surfaces_track_required_policy_factory(tmp_path: Path) -> None:
     assert "IntegerPlaneEmitter" in lever_factories()
-    assert lever_factories()["IntegerPlaneEmitter"] == frozenset()
+    assert lever_factories()["IntegerPlaneEmitter"] == frozenset(
+        {
+            "--integer-plane-emitter-mode",
+            "--integer-plane-emitter-basis",
+            "--integer-plane-emitter-policy-sha256",
+        }
+    )
     assert "IntegerPlaneEmitter" in known_levers()
     assert "IntegerPlaneEmitter" in duty_to_measure(path=tmp_path / "activation.jsonl")
     assert "IntegerPlaneEmitter" not in name_composable_levers()
     with pytest.raises(ValueError, match="requires explicit args"):
         resolve_composable_lever("IntegerPlaneEmitter")
+
+
+def test_active_policy_is_argv_effective_while_legacy_policy_stays_inert() -> None:
+    inactive = IntegerPlaneEmitter(policy=IntegerPlaneEmitterPolicy())
+    active_policy = IntegerPlaneEmitterPolicy(mode=PolicyMode.BANDED_TRAINING)
+    active = IntegerPlaneEmitter(policy=active_policy)
+    assert inactive.overrides == {}
+    assert inactive.runtime_receipt_schemas == {}
+    assert active.overrides == {
+        "--integer-plane-emitter-mode": "banded_training",
+        "--integer-plane-emitter-basis": "raw_centered",
+        "--integer-plane-emitter-policy-sha256": active_policy.compile_contract()["policy_sha256"],
+    }
+    assert set(active.runtime_receipt_schemas) == {"--integer-plane-emitter-policy-sha256"}
 
 
 def test_checkpoint_roundtrip_is_canonical_and_complete() -> None:
@@ -352,9 +369,7 @@ def test_checkpoint_write_is_atomic_and_never_overwrites(tmp_path: Path) -> None
     assert not tuple(tmp_path.glob("*.reserve"))
 
 
-def test_checkpoint_publish_resumes_exact_crash_temporary(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_checkpoint_publish_resumes_exact_crash_temporary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import tac.witness_dsl.integer_plane_emitter_policy as module
 
     checkpoint = _checkpoint()
@@ -566,9 +581,7 @@ def test_checkpoint_hash_inputs_cannot_be_empty_placeholders() -> None:
         ("capacity_signature", "a" * 64, "sealed compiled"),
     ],
 )
-def test_checkpoint_policy_contract_drift_is_refused(
-    field: str, replacement: object, match: str
-) -> None:
+def test_checkpoint_policy_contract_drift_is_refused(field: str, replacement: object, match: str) -> None:
     contract = dict(IntegerPlaneEmitterPolicy().compile_contract())
     contract[field] = replacement
     with pytest.raises(IntegerPlaneEmitterCheckpointError, match=match):
@@ -589,9 +602,7 @@ def test_checkpoint_policy_contract_drift_is_refused(
         ),
     ],
 )
-def test_checkpoint_config_capacity_and_basis_cross_bindings(
-    change: dict[str, object], match: str
-) -> None:
+def test_checkpoint_config_capacity_and_basis_cross_bindings(change: dict[str, object], match: str) -> None:
     change = dict(change)
     if "policy_contract" in change:
         contract = change["policy_contract"]
