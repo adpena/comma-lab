@@ -1,0 +1,59 @@
+{
+  "advisory": "[macOS-numpy advisory . NON-PROMOTABLE]",
+  "generated": "2026-07-19T03:00:08Z",
+  "verdict_pairs": 600,
+  "num_pairs": 600,
+  "stride": 1,
+  "so_iters": 4,
+  "ck_stats": {
+    "c2best": {
+      "d_seg": 0.003512725830078125,
+      "n_wrong": 414378,
+      "total_px": 117964800,
+      "per_class": {
+        "0": {
+          "gt_px": 27407046,
+          "wrong_px": 138542,
+          "disagree": 0.005054977468202885
+        },
+        "1": {
+          "gt_px": 690639,
+          "wrong_px": 148880,
+          "disagree": 0.21556848078373797
+        },
+        "2": {
+          "gt_px": 58413281,
+          "wrong_px": 52708,
+          "disagree": 0.0009023290439720378
+        },
+        "3": {
+          "gt_px": 1460325,
+          "wrong_px": 52218,
+          "disagree": 0.0357577936418263
+        },
+        "4": {
+          "gt_px": 29993509,
+          "wrong_px": 22030,
+          "disagree": 0.0007344922529738017
+        }
+      },
+      "flip_mass": {
+        "0": 0.33433724763380296,
+        "1": 0.359285483302685,
+        "2": 0.12719787247392478,
+        "3": 0.126015377264237,
+        "4": 0.05316401932535028
+      },
+      "annulus_frac_of_wrong": 0.9683984188349768
+    }
+  },
+  "ck_meta": {
+    "c2best": {
+      "softmax_temp": 0.21682465292832676,
+      "epoch": 725,
+      "mean_iters": 4.0
+    }
+  },
+  "transitions": [],
+  "png_paths": []
+}

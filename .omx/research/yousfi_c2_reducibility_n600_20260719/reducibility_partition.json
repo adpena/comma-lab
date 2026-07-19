@@ -1,0 +1,157 @@
+{
+  "vehicle": "levelset_witness_c2 (correct-vehicle; NOT torch_vehicle reducibility tool)",
+  "n_pairs": 600,
+  "d_seg": 0.003512725830078125,
+  "S_seg_contribution": 0.3512725830078125,
+  "n_flip_px": 414378,
+  "total_px": 117964800,
+  "reducible_over_gt_margin_tau": [
+    {
+      "gt_margin_tau": 0.0,
+      "reducible_flip_frac": 0.99999758674447,
+      "reducible_flip_count": 414377,
+      "dS_headroom_if_all_fixed": -0.35127173529730904
+    },
+    {
+      "gt_margin_tau": 0.1,
+      "reducible_flip_frac": 0.6781030846232184,
+      "reducible_flip_count": 280991,
+      "dS_headroom_if_all_fixed": -0.2381990220811632
+    },
+    {
+      "gt_margin_tau": 0.25,
+      "reducible_flip_frac": 0.38824454966238553,
+      "reducible_flip_count": 160880,
+      "dS_headroom_if_all_fixed": -0.1363796657986111
+    },
+    {
+      "gt_margin_tau": 0.5,
+      "reducible_flip_frac": 0.1696132516687662,
+      "reducible_flip_count": 70284,
+      "dS_headroom_if_all_fixed": -0.059580485026041664
+    },
+    {
+      "gt_margin_tau": 1.0,
+      "reducible_flip_frac": 0.048455757786368965,
+      "reducible_flip_count": 20079,
+      "dS_headroom_if_all_fixed": -0.01702117919921875
+    },
+    {
+      "gt_margin_tau": 2.0,
+      "reducible_flip_frac": 0.017703642567896943,
+      "reducible_flip_count": 7336,
+      "dS_headroom_if_all_fixed": -0.006218804253472222
+    },
+    {
+      "gt_margin_tau": 4.0,
+      "reducible_flip_frac": 0.0007794815361819402,
+      "reducible_flip_count": 323,
+      "dS_headroom_if_all_fixed": -0.00027381049262152775
+    },
+    {
+      "gt_margin_tau": 8.0,
+      "reducible_flip_frac": 0.0,
+      "reducible_flip_count": 0,
+      "dS_headroom_if_all_fixed": -0.0
+    }
+  ],
+  "cheap_carrier_over_witness_margin_band": [
+    {
+      "witness_margin_band": 0.05,
+      "cheap_reachable_frac": 0.15584321561472858,
+      "cheap_reachable_count": 64578,
+      "dS_if_all_cheap_fixed": -0.054743448893229164
+    },
+    {
+      "witness_margin_band": 0.1,
+      "cheap_reachable_frac": 0.29158883917582495,
+      "cheap_reachable_count": 120828,
+      "dS_if_all_cheap_fixed": -0.10242716471354167
+    },
+    {
+      "witness_margin_band": 0.25,
+      "cheap_reachable_frac": 0.597488283644402,
+      "cheap_reachable_count": 247586,
+      "dS_if_all_cheap_fixed": -0.2098812527126736
+    },
+    {
+      "witness_margin_band": 0.5,
+      "cheap_reachable_frac": 0.8556969723296121,
+      "cheap_reachable_count": 354582,
+      "dS_if_all_cheap_fixed": -0.3005828857421875
+    },
+    {
+      "witness_margin_band": 1.0,
+      "cheap_reachable_frac": 0.9810776633894657,
+      "cheap_reachable_count": 406537,
+      "dS_if_all_cheap_fixed": -0.34462568495008683
+    },
+    {
+      "witness_margin_band": 2.0,
+      "cheap_reachable_frac": 0.998836810834552,
+      "cheap_reachable_count": 413896,
+      "dS_if_all_cheap_fixed": -0.3508639865451389
+    }
+  ],
+  "per_class_flip_mass": {
+    "Road": {
+      "flip_count": 138542,
+      "flip_mass_frac": 0.33433724763380296,
+      "reducible_at_tau0p5_count": 28066,
+      "reducible_at_tau0p5_frac_of_class": 0.20258116672200488
+    },
+    "Lane": {
+      "flip_count": 148880,
+      "flip_mass_frac": 0.359285483302685,
+      "reducible_at_tau0p5_count": 30238,
+      "reducible_at_tau0p5_frac_of_class": 0.20310317033852768
+    },
+    "Undrivable": {
+      "flip_count": 52708,
+      "flip_mass_frac": 0.12719787247392478,
+      "reducible_at_tau0p5_count": 3249,
+      "reducible_at_tau0p5_frac_of_class": 0.06164149654701374
+    },
+    "Movable": {
+      "flip_count": 52218,
+      "flip_mass_frac": 0.126015377264237,
+      "reducible_at_tau0p5_count": 8531,
+      "reducible_at_tau0p5_frac_of_class": 0.16337278333141828
+    },
+    "MyCar": {
+      "flip_count": 22030,
+      "flip_mass_frac": 0.05316401932535028,
+      "reducible_at_tau0p5_count": 200,
+      "reducible_at_tau0p5_frac_of_class": 0.009078529278256923
+    }
+  },
+  "gt_image_margin_pctiles_at_flip": {
+    "1": 0.0025990200042724614,
+    "5": 0.013262712955474855,
+    "10": 0.027171611785888672,
+    "25": 0.07394587993621826,
+    "50": 0.18057823181152344,
+    "75": 0.3779250383377075,
+    "90": 0.6840687274932858,
+    "95": 0.9827878654003129,
+    "99": 2.655345139503474
+  },
+  "witness_render_margin_pctiles_at_flip": {
+    "1": -1.1704780316352843,
+    "5": -0.7532540559768677,
+    "10": -0.5873610496520996,
+    "25": -0.3679664134979248,
+    "50": -0.19424176216125488,
+    "75": -0.08399569988250732,
+    "90": -0.031182289123535156,
+    "95": -0.015117502212524447,
+    "99": -0.0029957485198974787
+  },
+  "form_routing_hybrid_formulations": {
+    "cheap_carrier_head_QP": "flips with witness-render margin in (-band,0): already just outside a WIDE cone -> the exact rank-4 head QP / a 1-nudge carrier lands them (tropical/max-plus is EXACT here, affine head). Cheapest bytes.",
+    "capacity_exact_lattice_solve_plus_repair": "flips at healthy GT-image margin BUT very-negative witness margin: the witness DROPPED a robust feature (target cone wide, we're far out). NOT descent-dominated -- within the active linear region scorer.A is AFFINE, so the winner-cell preimage is an exact polytope and the uint8-lattice point is an EXACT bounded Diophantine solve per 2x2 RGB block (factor-2 #532: n6 measured 3,538,944 blocks FEASIBLE_EXACT, all 520 clip-round Seg failures recovered). Only the curved-SiLU/region coupling (quotient T, #531) needs the Cole-Hopf-initialized short full-loss repair (alternative_forms_conv_wall_20260718). NOT a from-scratch crawl.",
+    "at_floor_skip": "flips at near-zero GT-image margin: SegNet self-tie, the cone is a SLIVER. Rate-dominated / label-noise -> DO NOT spend bytes (opportunity_pools: 'unreachable' = rate-dominated)."
+  },
+  "NON_ADDITIVE_POOLS_CAVEAT": "per_class_flip_mass is POOL-structured (Road-Lane = pool A competes). Same-pool levers COMPETE -> do NOT sum the per-pool dS headrooms as if additive (opportunity_pools_non_additive_rate_distortion_reachable). The 3-axis KKT waterfill (#536) is the correct joint, NOT a sum.",
+  "note": "REDUCIBLE = flip at healthy GT-image margin (wide target cone; a better decoder/carrier lands it). AT-FLOOR = flip near SegNet self-tie (sliver cone; rate-dominated). CHEAP = witness-render margin in (-band,0), one head-QP nudge from feasible. dS headroom is vs the seg term; pointer is 0.19108 [contest-CPU]. Feeds #536 (KKT) + #543 (receiver)."
+}

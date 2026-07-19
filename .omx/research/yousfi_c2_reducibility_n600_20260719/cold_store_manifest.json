@@ -1,0 +1,33 @@
+{
+  "certified_at_utc": "2026-07-19T05:20:00Z",
+  "policy": "CLAUDE.md certify-or-block lossless cold-store move",
+  "moved": [
+    {
+      "original_path": ".omx/research/yousfi_c2_reducibility_n600_20260719/_gt_argmax_subset.npy",
+      "bytes": 117964928,
+      "sha256": "22cfd9d880aa10ba48d59478aef65ddbe47f34e907c227b67955330656af6b7e",
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/evidence/yousfi_c2_reducibility_n600_20260719/_gt_argmax_subset.npy",
+      "rebuildable_reason": "derived arrays: GT argmax/band subsets re-derivable from experiments/results/mlx_fleet_gt_cache/gt_n600.npz; maps_c2best.npz re-renderable from the c2 ep725 EMA checkpoint via the deploy-faithful fp32 one-codepath render recorded in partition.py + render.log",
+      "command": "see partition.py + render.log in the same directory (committed)",
+      "false_authority_flags": "[macOS-numpy advisory . NON-PROMOTABLE]; score_claim=false"
+    },
+    {
+      "original_path": ".omx/research/yousfi_c2_reducibility_n600_20260719/_gt_band_subset.npy",
+      "bytes": 117964928,
+      "sha256": "853cc546f27150466ce5341d3a995141b3b015c3f99166bc087ac46c05d43326",
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/evidence/yousfi_c2_reducibility_n600_20260719/_gt_band_subset.npy",
+      "rebuildable_reason": "derived arrays: GT argmax/band subsets re-derivable from experiments/results/mlx_fleet_gt_cache/gt_n600.npz; maps_c2best.npz re-renderable from the c2 ep725 EMA checkpoint via the deploy-faithful fp32 one-codepath render recorded in partition.py + render.log",
+      "command": "see partition.py + render.log in the same directory (committed)",
+      "false_authority_flags": "[macOS-numpy advisory . NON-PROMOTABLE]; score_claim=false"
+    },
+    {
+      "original_path": ".omx/research/yousfi_c2_reducibility_n600_20260719/maps_c2best.npz",
+      "bytes": 589827932,
+      "sha256": "a00db9a07562d8fa94a5bfc9a57ed3ecd78a715b2d99f5a681843caaaf91d09f",
+      "cold_store_destination": "/Volumes/VertigoDataTier/pact/evidence/yousfi_c2_reducibility_n600_20260719/maps_c2best.npz",
+      "rebuildable_reason": "derived arrays: GT argmax/band subsets re-derivable from experiments/results/mlx_fleet_gt_cache/gt_n600.npz; maps_c2best.npz re-renderable from the c2 ep725 EMA checkpoint via the deploy-faithful fp32 one-codepath render recorded in partition.py + render.log",
+      "command": "see partition.py + render.log in the same directory (committed)",
+      "false_authority_flags": "[macOS-numpy advisory . NON-PROMOTABLE]; score_claim=false"
+    }
+  ]
+}
