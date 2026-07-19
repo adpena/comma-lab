@@ -76,3 +76,15 @@ flip mass Road 33%/Lane 36% — consistent with the established carrier-line dec
 operator_p0_ledger (merge-queue row → complete) · lane/branch blob custody via git · canonical
 equations registry (strict-load ×4) · review-tracker · state review
 `.omx/research/v10_capstone_state_review_20260719_codex.md` (dedup owed-list honored).
+
+## Post-commit hook triage: magnitude-dismissal detector (FALSE POSITIVE, audited)
+
+The Stop-hook flagged merged branch commit `88287bbc6` ("dual-metric read-back harness … advisory
+non-promotable"). Audit: the commit body (2 lines) contains NO verdict and NO dismissal language
+(grep for weak/negligible/noise/small/defer/downgrade/orphan/kill: zero hits) — "advisory
+non-promotable" is the MANDATORY false-authority label, not a magnitude dismissal, and the tool was
+MERGED to main (the opposite of orphaned). The only deferrals this turn, both evidence-based not
+magnitude-based: (1) 2 EMA-law test failures deferred with a NAMED measured cause
+(IsADirectoryError — test anchors a path inside the sacred run dir; pre-existing arm coupling);
+(2) shared-fidelity KKT law registration deferred pending the VJP arm's measured curve points
+(honest evidence status). verdict_scope: instance (this one hook firing). [magnitude-ok]
