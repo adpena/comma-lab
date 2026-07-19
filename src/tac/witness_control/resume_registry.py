@@ -138,6 +138,9 @@ DIRECT_CONTROLLER_NAMES: frozenset[str] = frozenset({
     # legacy/default sidecars stay additive + manifest-free.
     "autoclip_grad_clip",
     "pose_verdict_gate",
+    # (#408/#404) rolling rate telemetry carries a series and baseline across a crash; the trainer
+    # registers it directly under __raterolling_, so static custody must acknowledge it too.
+    "rate_rolling_telemetry",
 })
 
 

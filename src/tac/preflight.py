@@ -6589,6 +6589,11 @@ def preflight_all(
         check_no_wholefile_ancestor_revert(strict=False, verbose=verbose)
         check_modal_single_flight_ledger_consistency(strict=False, verbose=verbose)
         check_retry_without_descendant_check(strict=False, verbose=verbose)
+        # Task #537 resumability seal: a rolling periodic full-state alias is useful for compatibility,
+        # but it must be paired with a distinct stage+epoch preservation path. WARN-ONLY because this
+        # is a static source-shape guard; runtime/unit coverage proves the retention semantics.
+        check_levelset_checkpoint_save_paths_preserve_periodic_full_state(
+            strict=False, verbose=verbose)
         #   #513 (surface half) — Modal `.spawn()` dispatch surfaces must route
         #     through the pre-spawn runtime guard (tac.deploy.modal.single_flight.
         #     assert_modal_single_flight). WARN-ONLY; strict-flip when live count
@@ -88447,6 +88452,60 @@ def check_codex_findings_memos_consumed(
             "check_codex_findings_memos_consumed found "
             f"{len(violations)} violation(s) (landed-findings-nobody-consumed):\n  "
             + "\n  ".join(violations[:10]))
+    return violations
+
+
+def check_levelset_checkpoint_save_paths_preserve_periodic_full_state(
+    *,
+    trainer_path: Path | str | None = None,
+    source_text: str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Warn when the live level-set trainer can overwrite periodic full state without preservation.
+
+    This intentionally checks a narrow source contract: a rolling ``levelset_resume_state.npz`` write
+    must coexist with stage+epoch periodic EMA and resume filename grammars, and both distinct paths
+    must be passed to the atomic writer. Runtime retention behavior is covered by focused unit tests.
+    """
+    if source_text is not None and trainer_path is not None:
+        raise ValueError("pass trainer_path or source_text, not both")
+    path = Path(trainer_path) if trainer_path is not None else (
+        REPO_ROOT / "experiments" / "train_levelset_witness_realized_through_R_mlx.py")
+    if source_text is None:
+        try:
+            source_text = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            violations = [f"{path}: unable to read level-set trainer: {exc}"]
+            if strict:
+                raise PreflightError(violations[0]) from exc
+            return violations
+
+    rolling_full_state = bool(re.search(
+        r"_atomic_savez\s*\([^\n]*levelset_resume_state\.npz", source_text))
+    required_fragments = {
+        "periodic EMA stage+epoch grammar": "levelset_periodic_ema_{stage}_ep{ep}.npz",
+        "periodic resume stage+epoch grammar": "levelset_periodic_resume_{stage}_ep{ep}.npz",
+        "atomic periodic EMA write": "_atomic_savez(out_dir / ema_periodic, ema_arrays)",
+        "atomic periodic resume write": "_atomic_savez(out_dir / resume_periodic, resume_arrays)",
+    }
+    missing = [label for label, fragment in required_fragments.items() if fragment not in source_text]
+    violations: list[str] = []
+    if rolling_full_state and missing:
+        violations.append(
+            f"{path}: rolling periodic full-state alias can overwrite prior state without the "
+            "required distinct stage+epoch preservation path; missing " + ", ".join(missing)
+        )
+    if verbose:
+        print(
+            "  [levelset-checkpoint-save-paths] "
+            + (f"{len(violations)} violation(s)" if violations else "OK")
+        )
+    if strict and violations:
+        raise PreflightError(
+            "check_levelset_checkpoint_save_paths_preserve_periodic_full_state found "
+            f"{len(violations)} violation(s):\n  " + "\n  ".join(violations)
+        )
     return violations
 
 
