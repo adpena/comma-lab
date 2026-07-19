@@ -1,0 +1,45 @@
+{
+  "files": [
+    {
+      "bytes": 3104,
+      "path": "audited_config.json",
+      "sha256": "4822bf951c3c2b7d768017fc388f420070f3a990ee9944fcfddb40bb28ddcb2f"
+    },
+    {
+      "bytes": 9819,
+      "path": "compiled_config.json",
+      "sha256": "319586380d5c49a948f670fcb0703e57adf46703b8bad1a99c8e5fd7ca852e8f"
+    },
+    {
+      "bytes": 1789,
+      "path": "confound_self_audit.json",
+      "sha256": "93522f4288ff51b7c61df4424547ef2cc5fd7341a0415c33dd1a30202bb40375"
+    },
+    {
+      "bytes": 1824,
+      "path": "confound_self_audit.md",
+      "sha256": "a16dc48d52971c364730b08219b068be8aac206045b04269149b706696b98269"
+    },
+    {
+      "bytes": 665,
+      "path": "dry_start_receipt.json",
+      "sha256": "96721b9ed178e65c960b8f6b2b7c2f0bdae7ca2c2627e4fa7f69f08b06112bff"
+    },
+    {
+      "bytes": 243,
+      "path": "launch.sh",
+      "sha256": "a5b1def7164e88a07a3ebcd173f685404024afaeba9c31eae721a711fd8c2d13"
+    },
+    {
+      "bytes": 1752,
+      "path": "provenance.json",
+      "sha256": "0cc7cc035064d5b70828b1a6d08debda270c1152f4a52ea1d16910489396648a"
+    },
+    {
+      "bytes": 1527,
+      "path": "verdict_card.md",
+      "sha256": "b7db0aa7735b84e71c0961c1c4b412b8f87302d453a4bbb3c52118c9cbb0c505"
+    }
+  ],
+  "schema": "duty_ticket_artifact_manifest.v1"
+}

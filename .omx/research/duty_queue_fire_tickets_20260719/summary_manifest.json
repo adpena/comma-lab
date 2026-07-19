@@ -1,0 +1,190 @@
+{
+  "files": [
+    {
+      "bytes": 18034,
+      "path": "01_dseg_aware_taper/compiled_config.json",
+      "sha256": "658de3a2c5aef862140a23d1277e0a19ea6a1e83bab8d21294393f46938250d5"
+    },
+    {
+      "bytes": 2060,
+      "path": "01_dseg_aware_taper/confound_self_audit.json",
+      "sha256": "f8efac5444e75ca81223dfd71afc4c2bbcc58698ad85d1bb32c387d81222248c"
+    },
+    {
+      "bytes": 2095,
+      "path": "01_dseg_aware_taper/confound_self_audit.md",
+      "sha256": "20248142b253d24dabb51cb1dd339e466edd0e7cb105372751a97bb7f46724cf"
+    },
+    {
+      "bytes": 639,
+      "path": "01_dseg_aware_taper/dry_start_receipt.json",
+      "sha256": "4a6d8e3e36ad6350545f06a838c1dd16df336b8824af2fa52fedfc266526e691"
+    },
+    {
+      "bytes": 230,
+      "path": "01_dseg_aware_taper/launch.sh",
+      "sha256": "4d80ea4d7d3a6dff265e5b7eba997c8378cd08f64d867fcc850850396c4f1aa4"
+    },
+    {
+      "bytes": 1968,
+      "path": "01_dseg_aware_taper/provenance.json",
+      "sha256": "9044041c9b014d408b2566608e3080621c85c05d429524648cb76c5ad1bdb086"
+    },
+    {
+      "bytes": 7929,
+      "path": "01_dseg_aware_taper/typed_treatment_delta.json",
+      "sha256": "079999ba7f99fabf60fd5b8c4a8ed13f33e1957d69960afbcaff6cf6fcc83e78"
+    },
+    {
+      "bytes": 1521,
+      "path": "01_dseg_aware_taper/verdict_card.md",
+      "sha256": "882d602c8a5fab6286be33cb0d92f16b9d92b81d24961aca29f9ccc5a1b3b37e"
+    },
+    {
+      "bytes": 211,
+      "path": "01_dseg_aware_taper/witness_program.json",
+      "sha256": "7c2b35e238a1fdfcefc717abc673ad6d648b1a54b3a8a4fe74e60c0430fdfa22"
+    },
+    {
+      "bytes": 25617,
+      "path": "02_horizon_weighted_margin/compiled_config.json",
+      "sha256": "d201f50af56a23584a4646e4076505675ce9bb1618264e9deb926112293bc882"
+    },
+    {
+      "bytes": 2000,
+      "path": "02_horizon_weighted_margin/confound_self_audit.json",
+      "sha256": "c8696722c8511e9537bb4435e76254b7e24ef2aea4acc4831db18c38b6d484b6"
+    },
+    {
+      "bytes": 2035,
+      "path": "02_horizon_weighted_margin/confound_self_audit.md",
+      "sha256": "57bc93e5faf9b6b23c0b873d5be1796ecd7e2020978d8c76d2e38d9370f82990"
+    },
+    {
+      "bytes": 653,
+      "path": "02_horizon_weighted_margin/dry_start_receipt.json",
+      "sha256": "93dbf1fe9f65d20af91453a476bf2a02b21ace4d72af5994142df5ecc4a7c3a8"
+    },
+    {
+      "bytes": 237,
+      "path": "02_horizon_weighted_margin/launch.sh",
+      "sha256": "89401da9ad0ae15a91651e31e3d1efe36db492b48fa5ff4bcac315e0fa36de81"
+    },
+    {
+      "bytes": 1975,
+      "path": "02_horizon_weighted_margin/provenance.json",
+      "sha256": "d321991042fd2c306a5a684c361710f652ee59fa71d31959a4024a15ccdd47a9"
+    },
+    {
+      "bytes": 13944,
+      "path": "02_horizon_weighted_margin/typed_treatment_delta.json",
+      "sha256": "57dc3dcffc4f4871ac5894e685eb8c6b2d741557696562d9517625a363754982"
+    },
+    {
+      "bytes": 1429,
+      "path": "02_horizon_weighted_margin/verdict_card.md",
+      "sha256": "0e3e4a43f0a0699817aff95efe5929d45e0485c9401d56351fdc2d958ae812d1"
+    },
+    {
+      "bytes": 211,
+      "path": "02_horizon_weighted_margin/witness_program.json",
+      "sha256": "7c2b35e238a1fdfcefc717abc673ad6d648b1a54b3a8a4fe74e60c0430fdfa22"
+    },
+    {
+      "bytes": 15610,
+      "path": "03_step_native_activation/compiled_config.json",
+      "sha256": "9dfacaa2ffd95666aabdc854ba0495833f2065922a57af7cf13c78ff36b94b50"
+    },
+    {
+      "bytes": 2011,
+      "path": "03_step_native_activation/confound_self_audit.json",
+      "sha256": "719201a4749c50a18a24d922ed4e99a1b49c72a61202a1658faa2fbe00e2688c"
+    },
+    {
+      "bytes": 2046,
+      "path": "03_step_native_activation/confound_self_audit.md",
+      "sha256": "76054660b722006d9cbdc3d56a544366d15eba4e9d14cc5253299c5d65d00c6e"
+    },
+    {
+      "bytes": 651,
+      "path": "03_step_native_activation/dry_start_receipt.json",
+      "sha256": "15f67e0aaad85fa5473fca80e336a9d37435bd0e72ec5e106ff6700f2fe1123a"
+    },
+    {
+      "bytes": 236,
+      "path": "03_step_native_activation/launch.sh",
+      "sha256": "0a990efb2c6fc3005e79e492d697077d46d5db64183be06a7a0fb5aa9a7c135b"
+    },
+    {
+      "bytes": 1974,
+      "path": "03_step_native_activation/provenance.json",
+      "sha256": "75bb4d08ac9acee09dfbe50a8d67280380e0736fee7c4b4e3dfc27b7a3885778"
+    },
+    {
+      "bytes": 6279,
+      "path": "03_step_native_activation/typed_treatment_delta.json",
+      "sha256": "da110d47760aac2750589677eddf9d6be1b939df47ea2c280c56a7a27d25ba12"
+    },
+    {
+      "bytes": 1438,
+      "path": "03_step_native_activation/verdict_card.md",
+      "sha256": "5734e9a2a8368b5120d582786fa02e94fef61a45083482b49daa2ee4db90abf1"
+    },
+    {
+      "bytes": 211,
+      "path": "03_step_native_activation/witness_program.json",
+      "sha256": "7c2b35e238a1fdfcefc717abc673ad6d648b1a54b3a8a4fe74e60c0430fdfa22"
+    },
+    {
+      "bytes": 3104,
+      "path": "04_curvelet_matched_bytes_p0_497/audited_config.json",
+      "sha256": "4822bf951c3c2b7d768017fc388f420070f3a990ee9944fcfddb40bb28ddcb2f"
+    },
+    {
+      "bytes": 9819,
+      "path": "04_curvelet_matched_bytes_p0_497/compiled_config.json",
+      "sha256": "319586380d5c49a948f670fcb0703e57adf46703b8bad1a99c8e5fd7ca852e8f"
+    },
+    {
+      "bytes": 1789,
+      "path": "04_curvelet_matched_bytes_p0_497/confound_self_audit.json",
+      "sha256": "93522f4288ff51b7c61df4424547ef2cc5fd7341a0415c33dd1a30202bb40375"
+    },
+    {
+      "bytes": 1824,
+      "path": "04_curvelet_matched_bytes_p0_497/confound_self_audit.md",
+      "sha256": "a16dc48d52971c364730b08219b068be8aac206045b04269149b706696b98269"
+    },
+    {
+      "bytes": 665,
+      "path": "04_curvelet_matched_bytes_p0_497/dry_start_receipt.json",
+      "sha256": "96721b9ed178e65c960b8f6b2b7c2f0bdae7ca2c2627e4fa7f69f08b06112bff"
+    },
+    {
+      "bytes": 243,
+      "path": "04_curvelet_matched_bytes_p0_497/launch.sh",
+      "sha256": "a5b1def7164e88a07a3ebcd173f685404024afaeba9c31eae721a711fd8c2d13"
+    },
+    {
+      "bytes": 1752,
+      "path": "04_curvelet_matched_bytes_p0_497/provenance.json",
+      "sha256": "0cc7cc035064d5b70828b1a6d08debda270c1152f4a52ea1d16910489396648a"
+    },
+    {
+      "bytes": 1527,
+      "path": "04_curvelet_matched_bytes_p0_497/verdict_card.md",
+      "sha256": "b7db0aa7735b84e71c0961c1c4b412b8f87302d453a4bbb3c52118c9cbb0c505"
+    },
+    {
+      "bytes": 12276,
+      "path": "main_source_custody.json",
+      "sha256": "b5003f59201638b8e0cb1e1b7eb24900a184e48235e389aadea51986919c5c40"
+    },
+    {
+      "bytes": 1234,
+      "path": "summary.json",
+      "sha256": "e5573f9936e6f171367191f584796f028ea690f268eaf43755c0548d3a73241f"
+    }
+  ],
+  "schema": "duty_ticket_artifact_manifest.v1"
+}

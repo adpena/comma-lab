@@ -1,0 +1,226 @@
+{
+  "control_config": "v9_cgauge_ideal_mod19",
+  "declaration_source": "src/tac/witness_dsl/spec_v9_cgauge.py::compile_v9_cgauge_432_taper_off_launch_config",
+  "declared_lever_role": "CONTROL",
+  "duty_to_measure_percent": 78.9,
+  "factory": "DsegAwareTaper",
+  "kind": "WitnessProgram.SignedLeverContrast",
+  "lever_declaration": {
+    "constant_manifest": {
+      "--dseg-aware-taper": {
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, positive floor 0.05; rank-1 78.9% treatment removes this whole Lever; declaration=--dseg-aware-taper",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 1
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 1,
+        "warnings": []
+      },
+      "--dseg-aware-taper-floor": {
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, positive floor 0.05; rank-1 78.9% treatment removes this whole Lever; declaration=--dseg-aware-taper-floor",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 0.05
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 0.05,
+        "warnings": []
+      },
+      "--dseg-aware-taper-scale": {
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, positive floor 0.05; rank-1 78.9% treatment removes this whole Lever; declaration=--dseg-aware-taper-scale",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 0.0
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 0.0,
+        "warnings": []
+      },
+      "--dseg-aware-taper-strength": {
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, positive floor 0.05; rank-1 78.9% treatment removes this whole Lever; declaration=--dseg-aware-taper-strength",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 1.0
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 1.0,
+        "warnings": []
+      }
+    },
+    "epochs_delta": 0,
+    "factory": "DsegAwareTaper",
+    "factory_arguments": {
+      "floor": 0.05,
+      "scale": 0.0,
+      "scientific_declaration": true,
+      "strength": 1.0
+    },
+    "kind": "WitnessProgram.Lever",
+    "lawrefs": {
+      "--dseg-aware-taper": {
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, positive floor 0.05; rank-1 78.9% treatment removes this whole Lever; declaration=--dseg-aware-taper",
+            "value": 1
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--dseg-aware-taper-floor": {
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, positive floor 0.05; rank-1 78.9% treatment removes this whole Lever; declaration=--dseg-aware-taper-floor",
+            "value": 0.05
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--dseg-aware-taper-scale": {
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, positive floor 0.05; rank-1 78.9% treatment removes this whole Lever; declaration=--dseg-aware-taper-scale",
+            "value": 0.0
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--dseg-aware-taper-strength": {
+        "equation_id": "dseg_aware_fourier_taper_reweight_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 TAPER control declaration: enabled 1, strength 1, AUTO scale 0, positive floor 0.05; rank-1 78.9% treatment removes this whole Lever; declaration=--dseg-aware-taper-strength",
+            "value": 1.0
+          }
+        },
+        "ladder_class": "derived_at_config"
+      }
+    },
+    "lever_name": "dseg_aware_taper",
+    "notes": "#121 d_seg-aware Fourier-feature amplitude taper (byte-neutral spectral reallocation by GT margin saliency; RE-VALIDATE at convergence)",
+    "overrides": {
+      "--dseg-aware-taper": true,
+      "--dseg-aware-taper-floor": 0.05,
+      "--dseg-aware-taper-scale": 0.0,
+      "--dseg-aware-taper-strength": 1.0
+    },
+    "runtime_receipt_schemas": {
+      "--dseg-aware-taper": "v9_config_compile.v1",
+      "--dseg-aware-taper-floor": "v9_config_compile.v1",
+      "--dseg-aware-taper-scale": "v9_config_compile.v1",
+      "--dseg-aware-taper-strength": "v9_config_compile.v1"
+    }
+  },
+  "one_lever_delta": true,
+  "operation": "REMOVE_COMPLETE_CONTROL_LEVER",
+  "schema": "typed_treatment_delta.v2",
+  "signed_argv_diff": {
+    "--dseg-aware-taper": [
+      null,
+      "<ABSENT>"
+    ],
+    "--dseg-aware-taper-floor": [
+      "0.05",
+      "<ABSENT>"
+    ],
+    "--dseg-aware-taper-scale": [
+      "0.0",
+      "<ABSENT>"
+    ],
+    "--dseg-aware-taper-strength": [
+      "1.0",
+      "<ABSENT>"
+    ]
+  },
+  "treatment_config": "v9_cgauge_432_taper_off",
+  "volatile_resolution_metadata_omitted": [
+    "resolved_at"
+  ]
+}

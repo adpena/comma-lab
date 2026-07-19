@@ -1,0 +1,10 @@
+{
+  "argv": null,
+  "full_dsl_compile_hash": null,
+  "missing_joins": [
+    "dedicated_ep725_v9c3_typed_composer",
+    "#518 geometry",
+    "powered slope thresholds"
+  ],
+  "status": "UNMATERIALIZED/BLOCKED"
+}

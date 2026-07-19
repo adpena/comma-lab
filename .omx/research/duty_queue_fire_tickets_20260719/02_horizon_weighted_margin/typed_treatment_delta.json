@@ -1,0 +1,379 @@
+{
+  "control_config": "v9_cgauge_ideal_mod19",
+  "declaration_source": "src/tac/witness_dsl/spec_v9_cgauge.py::compile_v9_cgauge_432_horizon_iso_launch_config",
+  "declared_lever_role": "TREATMENT",
+  "duty_to_measure_percent": 47.3,
+  "factory": "HorizonWeightedMargin",
+  "kind": "WitnessProgram.SignedLeverContrast",
+  "lever_declaration": {
+    "constant_manifest": {
+      "--seg-horizon-margin-hi": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-hi",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 0.5
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 0.5,
+        "warnings": []
+      },
+      "--seg-horizon-margin-lo": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-lo",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 0.3
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 0.3,
+        "warnings": []
+      },
+      "--seg-horizon-margin-start-epoch": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-start-epoch",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 726
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 726,
+        "warnings": []
+      },
+      "--seg-horizon-margin-target": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-target",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 0.5
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 0.5,
+        "warnings": []
+      },
+      "--seg-horizon-margin-weight": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-weight",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 0.15
+          }
+        ],
+        "ladder_class": "derived_live",
+        "value": 0.15,
+        "warnings": []
+      },
+      "--seg-horizon-row-hi": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-row-hi",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 288
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 288,
+        "warnings": []
+      },
+      "--seg-horizon-row-lo": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-row-lo",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 96
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 96,
+        "warnings": []
+      }
+    },
+    "epochs_delta": 0,
+    "factory": "HorizonWeightedMargin",
+    "factory_arguments": {
+      "margin_hi": 0.5,
+      "margin_lo": 0.3,
+      "row_hi": 288,
+      "row_lo": 96,
+      "scientific_declaration": true,
+      "stage_share_derived_live": true,
+      "start_epoch": 726,
+      "target": 0.5,
+      "weight": 0.15,
+      "window": 0
+    },
+    "kind": "WitnessProgram.Lever",
+    "lawrefs": {
+      "--seg-horizon-margin-hi": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-hi",
+            "value": 0.5
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--seg-horizon-margin-lo": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-lo",
+            "value": 0.3
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--seg-horizon-margin-start-epoch": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-start-epoch",
+            "value": 726
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--seg-horizon-margin-target": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-target",
+            "value": 0.5
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--seg-horizon-margin-weight": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-margin-weight",
+            "value": 0.15
+          }
+        },
+        "ladder_class": "derived_live"
+      },
+      "--seg-horizon-row-hi": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-row-hi",
+            "value": 288
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--seg-horizon-row-lo": {
+        "equation_id": "horizon_weighted_margin_hinge_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 HORIZON isolation declaration: rank-2 47.3%; requested 15% single-force share resolves at the frozen n600 boundary via w_h=(0.15/0.85)*L_o/max(L_h,eps); declaration=--seg-horizon-row-lo",
+            "value": 96
+          }
+        },
+        "ladder_class": "derived_at_config"
+      }
+    },
+    "lever_name": "horizon_weighted_margin",
+    "notes": "v7.5 B.5 #169 horizon-weighted margin (one-sided relu(m_target - m_wit) on the SHARED _signed, STRATIFIED to horizon rows [96,288) AND GT-margin [0.30,0.50]); pushes ONLY the reducible confident-GT band, EXCLUDES the <lo irreducible label-noise; 0-byte SHARED-structure; A/B arm NOT a claim (oracle ceiling dS~0.024); advisory until byte-close",
+    "overrides": {
+      "--seg-horizon-margin-derived-live": true,
+      "--seg-horizon-margin-hi": 0.5,
+      "--seg-horizon-margin-lo": 0.3,
+      "--seg-horizon-margin-start-epoch": 726,
+      "--seg-horizon-margin-target": 0.5,
+      "--seg-horizon-margin-weight": 0.15,
+      "--seg-horizon-row-hi": 288,
+      "--seg-horizon-row-lo": 96
+    },
+    "runtime_receipt_schemas": {
+      "--seg-horizon-margin-derived-live": "hwm_v9_stage_share_boundary.v1",
+      "--seg-horizon-margin-hi": "hwm_v9_stage_share_boundary.v1",
+      "--seg-horizon-margin-lo": "hwm_v9_stage_share_boundary.v1",
+      "--seg-horizon-margin-start-epoch": "hwm_v9_stage_share_boundary.v1",
+      "--seg-horizon-margin-target": "hwm_v9_stage_share_boundary.v1",
+      "--seg-horizon-margin-weight": "hwm_v9_stage_share_boundary.v1",
+      "--seg-horizon-row-hi": "hwm_v9_stage_share_boundary.v1",
+      "--seg-horizon-row-lo": "hwm_v9_stage_share_boundary.v1"
+    }
+  },
+  "one_lever_delta": true,
+  "operation": "ADD_TREATMENT_LEVER",
+  "schema": "typed_treatment_delta.v2",
+  "signed_argv_diff": {
+    "--seg-horizon-margin-derived-live": [
+      "<ABSENT>",
+      null
+    ],
+    "--seg-horizon-margin-hi": [
+      "<ABSENT>",
+      "0.5"
+    ],
+    "--seg-horizon-margin-lo": [
+      "<ABSENT>",
+      "0.3"
+    ],
+    "--seg-horizon-margin-start-epoch": [
+      "<ABSENT>",
+      "726"
+    ],
+    "--seg-horizon-margin-target": [
+      "<ABSENT>",
+      "0.5"
+    ],
+    "--seg-horizon-margin-weight": [
+      "<ABSENT>",
+      "0.15"
+    ],
+    "--seg-horizon-row-hi": [
+      "<ABSENT>",
+      "288"
+    ],
+    "--seg-horizon-row-lo": [
+      "<ABSENT>",
+      "96"
+    ]
+  },
+  "treatment_config": "v9_cgauge_432_horizon_iso",
+  "volatile_resolution_metadata_omitted": [
+    "resolved_at"
+  ]
+}

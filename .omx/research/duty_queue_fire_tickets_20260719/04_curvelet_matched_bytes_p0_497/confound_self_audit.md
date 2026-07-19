@@ -1,0 +1,27 @@
+# Confound self-audit
+
+```json
+{
+  "banked_control": "NONCOMPARABLE_UNLESS_BYTE_LEVEL_PROOF_OF_IDENTICAL_518_RECIPE",
+  "checks": {
+    "best_boundary_and_rng_state": "OPEN: BEST boundary plus exact optimizer/RNG state is not established by checkpoint bytes alone.",
+    "dedicated_ep725_v9c3_typed_composer": "BLOCKED: no dedicated ep725 v9c3 typed composer is selected by this materializer.",
+    "ep_loss_gt_zero": "OPEN: no live telemetry proves ep_loss > 0.",
+    "identical_checkpoint_cadence_rng_data_order": "OPEN: the paired OFF twin has not yet proven identical checkpoint/cadence/RNG/data-order custody.",
+    "lever_engage_and_term_share": "OPEN: no live lever_engage and term-share telemetry exists.",
+    "live_vs_ema_verdict": "OPEN: no verdict receipt establishes live-vs-EMA source and EMA-lag handling.",
+    "margin_step_cap_measured_cap": "BLOCKED: #518 MarginStepCap must be derived from measured provenance, never configured as prose or a float.",
+    "n600_only": "OPEN: static declaration cannot prove a fresh n600 ordering/projection.",
+    "positive_control_sentinel": "OPEN: positive-control sentinel has not been emitted by an arm.",
+    "powered_ncde_costate_window": "BLOCKED: powered NCDE/costate measurement window is unjoined.",
+    "powered_slope_threshold_joins": "BLOCKED: beta2 relaxation, response time, predicted term share, and measured NCDE/costate noise are not joined.",
+    "resume_event_reanchor": "OPEN: no resume-event reanchor receipt exists.",
+    "safe_run_containment": "VERIFIED_STATIC",
+    "spike_guard": "OPEN: no armed-run receipt proves the spike guard is active."
+  },
+  "conclusion": "No full A/B launch is authorized by static package generation.",
+  "paired_off_twin_required": true,
+  "schema": "duty_ticket_confound_self_audit.v1",
+  "verdict": "BLOCKED"
+}
+```

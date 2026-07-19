@@ -1,0 +1,179 @@
+{
+  "control_config": "v9_cgauge_ideal_mod19",
+  "declaration_source": "src/tac/witness_dsl/spec_v9_cgauge.py::compile_v9_cgauge_432_step_iso_launch_config",
+  "declared_lever_role": "TREATMENT",
+  "duty_to_measure_percent": 34.2,
+  "factory": "StepNativeActivation",
+  "kind": "WitnessProgram.SignedLeverContrast",
+  "lever_declaration": {
+    "constant_manifest": {
+      "--hosc-beta": {
+        "equation_id": "step_native_activation_edge_optimality_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-beta",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 1.0
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 1.0,
+        "warnings": []
+      },
+      "--hosc-beta-end": {
+        "equation_id": "step_native_activation_edge_optimality_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-beta-end",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 8.0
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 8.0,
+        "warnings": []
+      },
+      "--hosc-omega": {
+        "equation_id": "step_native_activation_edge_optimality_v1",
+        "fallback_used": false,
+        "inputs": [
+          {
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "kind": "literal",
+            "name": "value",
+            "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-omega",
+            "sha256": null,
+            "source": "literal",
+            "staleness_days": null,
+            "value": 1.0
+          }
+        ],
+        "ladder_class": "derived_at_config",
+        "value": 1.0,
+        "warnings": []
+      }
+    },
+    "epochs_delta": 0,
+    "factory": "StepNativeActivation",
+    "factory_arguments": {
+      "anneal": "linear",
+      "basis": "annealed_hosc",
+      "beta_end": 8.0,
+      "beta_start": 1.0,
+      "finer_bias_init": false,
+      "omega": 1.0,
+      "scientific_declaration": true,
+      "window": 0
+    },
+    "kind": "WitnessProgram.Lever",
+    "lawrefs": {
+      "--hosc-beta": {
+        "equation_id": "step_native_activation_edge_optimality_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-beta",
+            "value": 1.0
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--hosc-beta-end": {
+        "equation_id": "step_native_activation_edge_optimality_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-beta-end",
+            "value": 8.0
+          }
+        },
+        "ladder_class": "derived_at_config"
+      },
+      "--hosc-omega": {
+        "equation_id": "step_native_activation_edge_optimality_v1",
+        "fallback": null,
+        "fallback_waiver_reason": "",
+        "inputs": {
+          "value": {
+            "artifact_path": null,
+            "config_tags": {
+              "vehicle": "v9_cgauge_ideal_mod19"
+            },
+            "expected_sha256": null,
+            "extract": null,
+            "kind": "literal",
+            "max_staleness_days": null,
+            "provenance": "V9 STEP isolation declaration: rank-3 34.2%; annealed HOSC beta 1->8 is a distinct treatment from the sealed event endpoint 3.177; declaration=--hosc-omega",
+            "value": 1.0
+          }
+        },
+        "ladder_class": "derived_at_config"
+      }
+    },
+    "lever_name": "FEED_07b_step_native_activation",
+    "notes": "#310 step-native chart via hosc beta-anneal (annealed_hosc: beta 1.0->8.0 @omega 1.0, FINER False; beta->inf = step limit; NEVER fixed-beta \u2014 anneal only); L-inf-at-edge optimality; duty-to-measure #2, #310 sweep owed",
+    "overrides": {
+      "--activation": "hosc",
+      "--hosc-beta": 1.0,
+      "--hosc-beta-anneal": "linear",
+      "--hosc-beta-end": 8.0,
+      "--hosc-omega": 1.0
+    },
+    "runtime_receipt_schemas": {
+      "--activation": "v9_config_compile.v1",
+      "--hosc-beta": "v9_config_compile.v1",
+      "--hosc-beta-anneal": "v9_config_compile.v1",
+      "--hosc-beta-end": "v9_config_compile.v1",
+      "--hosc-omega": "v9_config_compile.v1"
+    }
+  },
+  "one_lever_delta": true,
+  "operation": "REPLACE_TREATMENT_LEVER_ENDPOINT",
+  "schema": "typed_treatment_delta.v2",
+  "signed_argv_diff": {
+    "--hosc-beta-end": [
+      "3.177",
+      "8.0"
+    ]
+  },
+  "treatment_config": "v9_cgauge_432_step_iso",
+  "volatile_resolution_metadata_omitted": [
+    "resolved_at"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "created_utc": "2026-07-19T15:01:05Z",
+  "main_repo_checkpoint_custody": {
+    "best_metadata": {
+      "d_seg": 0.003457972208658854,
+      "epoch": 725,
+      "path": "levelset_witness_ema_BEST.npz",
+      "ts": "2026-07-17T16:25:51Z"
+    },
+    "best_metadata_exact": true,
+    "blocker": "Path/hash custody does not prove the required BEST boundary, optimizer/RNG state, or paired-arm comparability.",
+    "bytes": 460448,
+    "expected_bytes": 460448,
+    "expected_d_seg": 0.003457972208658854,
+    "expected_epoch": 725,
+    "expected_sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "path": "/Users/adpena/Projects/pact/experiments/results/banks/v9c2_defensive_bank_20260718/levelset_witness_ema_BEST.npz",
+    "requested_identity": "v9c2 BEST EMA epoch 725",
+    "sha256": "b0a431e9259cd3c54ae53b677076823f36e096b27eb0d9ba74ed7c54c9113cef",
+    "sidecar_hashes": {
+      "PROVENANCE.md": "80422b7f88fd31abbe9362e95d9e0b95ac6136084c254739c1f2f19b33df9d42",
+      "levelset_best.json": "66950d15bf8575eb4bae28c39c0276b0960f8e14364ed45da24b30b960f27d9e"
+    },
+    "status": "VERIFIED_EXPECTED"
+  },
+  "main_source_custody": {
+    "created_utc_snapshot_label": "2026-07-19T15:01:05Z",
+    "main_head": "e7b35814a8eea576fdc45119773ec8d9e3f89bac",
+    "path": "../main_source_custody.json",
+    "schema": "main_source_custody.v1",
+    "sha256": "b5003f59201638b8e0cb1e1b7eb24900a184e48235e389aadea51986919c5c40",
+    "source_worktree_head": "920fda3e5a847cd800b0a8aed19eb12356275f3e",
+    "status": "VERIFIED_SNAPSHOT"
+  },
+  "repository": {
+    "root": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/duty_queue_fire_tickets_20260719_20260719T141356Z",
+    "trainer_sha256": "cb1ac057c76bba2dde8d8d55b21e4f584a1907de1f806fab904b17c694bb2695"
+  },
+  "schema": "duty_ticket_provenance.v1",
+  "ticket_id": "02_horizon_weighted_margin",
+  "treatment_delta_hash": "eb51f3e9747f25f43fe4e5fa918ba4b17e5cd0155da3bd10bc15717ed279c197"
+}

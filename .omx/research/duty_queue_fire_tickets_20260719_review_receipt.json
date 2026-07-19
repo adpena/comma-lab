@@ -1,0 +1,102 @@
+{
+  "schema": "duty_queue_fire_tickets_review_receipt.v1",
+  "lane_id": "duty_queue_fire_tickets_20260719",
+  "reviewer": "curvelet_497_audit",
+  "reviewer_is_materializer_author": false,
+  "required_consecutive_clean_passes": 3,
+  "consecutive_clean_passes": 0,
+  "status": "ESCALATED_TO_MAIN_AFTER_POST_SEAL_DOC_FORMAT_FIX",
+  "counter_rule": "Any finding or production-artifact fix resets the consecutive-clean counter to zero.",
+  "passes": [
+    {
+      "pass": 1,
+      "verdict": "NOT_CLEAN",
+      "clean_counter_after": 0,
+      "findings": [
+        "The handoff cited this independent-review receipt before it existed.",
+        "The handoff's current-MAIN equivalence claim lacked a durable commit and per-file hash receipt."
+      ],
+      "disposition": "FIXED: receipt materialized; MAIN source-custody now seals commit ancestry and four-way SHA-256 identity across checkout bytes and exact HEAD blobs for 15 enumerated authority inputs. Production artifacts regenerated; counter remains reset before the next pass.",
+      "fix_evidence": {
+        "custody_path": ".omx/research/duty_queue_fire_tickets_20260719/main_source_custody.json",
+        "custody_sha256": "b5003f59201638b8e0cb1e1b7eb24900a184e48235e389aadea51986919c5c40",
+        "custody_status": "VERIFIED_SNAPSHOT",
+        "main_snapshot_head": "e7b35814a8eea576fdc45119773ec8d9e3f89bac"
+      }
+    },
+    {
+      "pass": 2,
+      "verdict": "NOT_CLEAN",
+      "clean_counter_after": 0,
+      "findings": [
+        "Ticket 1 reversed the canonical 78.9% contrast: the serialized enabled DsegAwareTaper declaration belongs to the ON control, while the treatment removes the complete Lever."
+      ],
+      "disposition": "FIXED: typed treatment schema v2 now stores an explicit signed control-to-treatment contrast. Ticket 1 is REMOVE_COMPLETE_CONTROL_LEVER with declared_lever_role CONTROL; tests assert every affected flag is absent from treatment. All packages regenerated; counter reset.",
+      "fix_evidence": {
+        "ticket": "01_dseg_aware_taper",
+        "signed_delta_sha256": "13df7b9396dba63df0699183fd6c000f30989a14b75f5108d13579be40ec8f43",
+        "operation": "REMOVE_COMPLETE_CONTROL_LEVER",
+        "declared_lever_role": "CONTROL"
+      }
+    },
+    {
+      "pass": 3,
+      "verdict": "CLEAN",
+      "clean_counter_after": 1,
+      "findings": [],
+      "scope": "Full post-fix candidate: signed contrasts, 42 package files, custody, blockers, confounds, #497, refusal wrappers, handoff, and tests.",
+      "evidence": {
+        "rederived_signed_contrasts": "taper remove four; horizon add eight; step beta-end 3.177->8.0",
+        "relevant_pytest": "113 passed",
+        "ruff": "clean",
+        "git_diff_check": "clean",
+        "wrapper_results": "rc6 x4; no launch path"
+      }
+    },
+    {
+      "pass": 4,
+      "verdict": "CLEAN",
+      "clean_counter_after": 2,
+      "findings": [],
+      "scope": "Second consecutive full-candidate seal with receipt-counter integrity and drift checks.",
+      "evidence": {
+        "production_hashes": "unchanged from pass 3",
+        "signed_contrasts": "taper remove four; horizon add eight; step beta-end 3.177->8.0",
+        "focused_pytest": "4 passed",
+        "ruff_and_diff": "clean",
+        "artifact_files": "42 parsed and manifests matched",
+        "wrapper_results": "rc6 x4; no launch authority"
+      }
+    },
+    {
+      "pass": 5,
+      "verdict": "CLEAN",
+      "clean_counter_after": 3,
+      "findings": [],
+      "scope": "Final consecutive seal of the frozen production candidate.",
+      "evidence": {
+        "signed_contrasts": "taper remove four; horizon add eight; step beta-end 3.177->8.0",
+        "focused_pytest": "4 passed",
+        "ruff_and_diff": "clean",
+        "artifact_files": "42 parsed and manifests matched",
+        "wrapper_results": "rc6 x4; no launch path",
+        "authority_inputs": "15 undrifted"
+      }
+    }
+  ],
+  "post_seal_change": {
+    "classification": "NON_SEMANTIC_DOC_FORMAT_ONLY",
+    "files": [
+      ".omx/research/duty_queue_fire_tickets_20260719_codex.md",
+      ".omx/research/duty_queue_fire_tickets_20260719_implementation_spec.md"
+    ],
+    "reason": "A post-commit base-diff check found six Markdown hard-break spaces reported as trailing whitespace; they were replaced with blank-line paragraph separators.",
+    "production_logic_changed": false,
+    "counter_after": 0,
+    "counter_rule_applied": "Any production-artifact byte change resets the consecutive-clean counter, including docs-only formatting.",
+    "additional_local_review": "NOT_RUN: five-round delegated self-review cap exhausted.",
+    "disposition": "Mandatory MAIN landing review must review the current bytes; prior passes remain historical evidence only."
+  },
+  "launch_authorized": false,
+  "main_landing_review_required": true
+}
