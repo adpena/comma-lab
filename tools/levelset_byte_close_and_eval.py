@@ -128,11 +128,15 @@ from tac.boundary_math.curvelet_placement import (  # noqa: E402
     fold_taper_into_in_proj_numpy,
     native_orientation_fixed_point_numpy,
     orientation_metadata_from_atom_specs,
+    projective_jacobian_numpy,
+    transform_normal_covector_numpy,
 )
 from tac.boundary_math.localized_basis_frames import (  # noqa: E402
     ATOM_SPECS as LITERAL_CURVELET_ATOM_SPECS,
     BasisProgramConfig,
     basis_features_numpy as literal_curvelet_feats_numpy,
+    charted_fine_feats_cache_numpy,
+    charted_pair_feats_numpy,
     generated_inflate_source as literal_curvelet_generated_source,
 )
 from tac.witness_dsl.basis_control import (  # noqa: E402
@@ -505,6 +509,28 @@ def _load_levelset_ckpt(
                     "literal taper custody width does not match BasisProgramConfig feature_width"
                 )
             cfg["basis_taper_unfolded"] = taper
+        if program.chart_enabled:
+            # (#497 gap-a) COUNTED-CHART-PAYLOAD custody: the quantized startup pose table +
+            # scales the trainer built its chart from (build_from_xi on the DEQUANTIZED values).
+            # Byte-close ships these as the counted 7th section; missing custody = the chart the
+            # receiver would rebuild is UNDEFINED -> fail closed (NO-FAKE).
+            _cq = raw_cfg.get("__chart_pose_q")
+            _cs = raw_cfg.get("__chart_pose_scales")
+            if _cq is None or _cs is None:
+                raise ValueError(
+                    "literal chart_enabled checkpoint lacks __chart_pose_q/__chart_pose_scales "
+                    "custody (the counted chart payload) -- cannot byte-close a chart the "
+                    "receiver cannot rebuild (NO-FAKE fail-closed)."
+                )
+            chart_q = np.asarray(_cq, dtype=np.int16)
+            chart_scales = np.asarray(_cs, dtype=np.float32)
+            if chart_q.ndim != 2 or chart_q.shape[1] != 6 or chart_scales.shape != (6,):
+                raise ValueError(
+                    f"literal chart custody has wrong shapes: q {chart_q.shape}, "
+                    f"scales {chart_scales.shape} (expected (P,6) int16 + (6,) fp32)"
+                )
+            cfg["chart_pose_q"] = chart_q
+            cfg["chart_pose_scales"] = chart_scales
     cfg["bank_n_scales"] = int(raw_cfg.get("__bank_n_scales", 4))
     cfg["bank_n_orient0"] = int(raw_cfg.get("__bank_n_orient0", 6))
     cfg["bank_f0"] = float(raw_cfg.get("__bank_f0", 2.0))
@@ -689,6 +715,7 @@ def build_levelset_blob(
         "so_iters": int(so.get("iters", 0)),
         "has_pose_sidecar": bool(pose_sidecar is not None),
     }
+    chart_payload_bytes: bytes | None = None  # #497 gap-a: set only by the literal chart branch
     if normalize_basis_family(cfg.get("basis", LEGACY_FOURIER_AB_CONTROL)) == "windowed_curvelet":
         # Generic, video-free receiver program state (rule 118 FREE).  Emitted only for the selected
         # treatment so a polar/default packet retains its historical manifest bytes exactly.
@@ -706,6 +733,21 @@ def build_levelset_blob(
         manifest["basis_family"] = LITERAL_POLAR_CURVELET
         manifest["basis_program"] = program.to_dict()
         manifest["basis_program_sha256"] = program.canonical_sha256()
+        if program.chart_enabled:
+            # (#497 gap-a) the COUNTED chart payload (7th block): quantized startup pose table +
+            # scales. Manifest flag gates the READ; chart CONFIG rides basis_program (no scalar
+            # duplication -> the flag carries only what the parser needs, honest minimal rate).
+            _chart_q = cfg.get("chart_pose_q")
+            _chart_scales = cfg.get("chart_pose_scales")
+            if _chart_q is None or _chart_scales is None:
+                raise ValueError(
+                    "literal chart_enabled blob build lacks chart_pose_q/scales custody "
+                    "(loader should have refused earlier; NO-FAKE fail-closed)."
+                )
+            chart_payload_bytes = _chart_payload_bytes(
+                np.asarray(_chart_q, np.int16), np.asarray(_chart_scales, np.float32)
+            )
+            manifest["chart_payload"] = {"n_pairs": int(np.asarray(_chart_q).shape[0])}
     if blind_coordinate_fill:
         # Rule-118 FREE receiver program.  The measured proof receipt stays outside the counted
         # packet; only this generic activation/law identity is needed to reproduce the decode.
@@ -737,7 +779,8 @@ def build_levelset_blob(
     if pose_carrier_bytes is not None and pose_carrier_manifest is not None:
         manifest["pose_carrier"] = pose_carrier_manifest
     mj = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
-    out = _io_pack(mj, base_brotli, code_brotli, pose_sidecar, lane_band_bytes, pose_carrier_bytes)
+    out = _io_pack(mj, base_brotli, code_brotli, pose_sidecar, lane_band_bytes, pose_carrier_bytes,
+                   chart_payload_bytes)
     # cross-check our accounting against the canonical quantize_levelset_blob (same int8 grammar).
     # #238: the base blob is INR-only (pose_carrier.* live in the pose-carrier SECTION, not base), so
     # cross-check against the canonical on the SAME INR-only param set (else the check spuriously fails).
@@ -751,8 +794,10 @@ def build_levelset_blob(
         "pose_sidecar_bytes": (len(pose_sidecar) if pose_sidecar else 0),
         "lane_band_counted_bytes": (len(lane_band_bytes) if lane_band_bytes else 0),
         "pose_carrier_counted_bytes": (len(pose_carrier_bytes) if pose_carrier_bytes else 0),
+        "chart_payload_counted_bytes": (len(chart_payload_bytes) if chart_payload_bytes else 0),
         "magic_and_prefixes_bytes": (len(_MAGIC) + 16 + (4 if lane_band_bytes is not None else 0)
-                                     + (4 if pose_carrier_bytes is not None else 0)),
+                                     + (4 if pose_carrier_bytes is not None else 0)
+                                     + (4 if chart_payload_bytes is not None else 0)),
         "total_0bin_bytes": len(out),
         "canonical_quantize_blob_bytes": int(canon["total_quantized_blob_bytes"]),
         "accounting_matches_canonical": bool(
@@ -825,26 +870,65 @@ def _encode_code_brotli(q: np.ndarray, manifest: dict[str, Any]) -> bytes:
 def _io_pack(
     manifest: bytes, base: bytes, code: bytes, pose: bytes | None,
     lane_band: bytes | None = None, pose_carrier: bytes | None = None,
+    chart: bytes | None = None,
 ) -> bytes:
-    """Pack the LVLS1 blob. The 5th ``lane_band`` block (#224 Wave E) and the 6th
-    ``pose_carrier`` block (#205 warp-real-luma frame0) are OPTIONAL and appended, in that order,
-    ONLY when non-None -> absent both, the output is BYTE-IDENTICAL to the pre-Wave-E 4-block
-    grammar (the default-off guarantee). Trailing blocks are gated at READ time by the manifest
-    flags (``lane_render_band`` / ``pose_carrier``), so the reader knows how many trailing blocks
-    to expect -- NEVER by a bare ``off < len(raw)`` (which would misread a lone pose_carrier block
-    as lane). ``lane_band`` = the COUNTED lane manifold coords; ``pose_carrier`` = the COUNTED
-    real-luma keyframe payload + per-pair homography (rule 118: keyframe COUNTED, warp decoder FREE)."""
+    """Pack the LVLS1 blob. The 5th ``lane_band`` block (#224 Wave E), the 6th
+    ``pose_carrier`` block (#205 warp-real-luma frame0), and the 7th ``chart`` block (#497 gap-a:
+    the COUNTED chart payload — quantized int16 (P,6) startup pose table + fp32 (6,) scales) are
+    OPTIONAL and appended, in that order, ONLY when non-None -> absent all, the output is
+    BYTE-IDENTICAL to the pre-Wave-E 4-block grammar (the default-off guarantee). Trailing blocks
+    are gated at READ time by the manifest flags (``lane_render_band`` / ``pose_carrier`` /
+    ``chart_payload``), so the reader knows how many trailing blocks to expect -- NEVER by a bare
+    ``off < len(raw)`` (which would misread a lone pose_carrier block as lane). ``lane_band`` = the
+    COUNTED lane manifold coords; ``pose_carrier`` = the COUNTED real-luma keyframe payload +
+    per-pair homography (rule 118: keyframe COUNTED, warp decoder FREE); ``chart`` = the COUNTED
+    video-derived table the ground chart is rebuilt from (rule 118: the chart MATH — expmap /
+    plane-motion / homography composition — is FREE generic code; only the q/scales bytes count)."""
 
     buf = bytearray()
     buf += _MAGIC
     for chunk in (manifest, base, code, (pose or b"")):
         buf += struct.pack("<I", len(chunk))
         buf += chunk
-    for opt in (lane_band, pose_carrier):
+    for opt in (lane_band, pose_carrier, chart):
         if opt is not None:
             buf += struct.pack("<I", len(opt))
             buf += opt
     return bytes(buf)
+
+
+# ---------------------------------------------------------------------------
+# #497 gap-a: COUNTED chart payload (7th optional block) serialize / parse.
+#   The literal ground chart MUST be a counted receiver program: the trainer built its chart
+#   from the quantize->dequantize round-tripped startup pose table (counted_chart_payload —
+#   NOT counted_pose_carrier_xi: the carrier's xi_eff = xi_stored + TRAINED dxi does not exist
+#   at ep0, so the chart binds its OWN payload). This section ships exactly that table:
+#   q int16 (P,6) little-endian + scales fp32 (6,) little-endian. The receiver dequantizes
+#   op-for-op ``xi_pose_coder.dequantize_xi`` (q.astype(f8) * scales.astype(f8)) and rebuilds
+#   the identical fp64 homography chain -> trainer chart == receiver chart bit-for-bit.
+# ---------------------------------------------------------------------------
+def _chart_payload_bytes(q: np.ndarray, scales: np.ndarray) -> bytes:
+    q = np.asarray(q)
+    scales = np.asarray(scales)
+    if q.ndim != 2 or q.shape[1] != 6 or q.dtype != np.int16:
+        raise ValueError(f"chart payload q must be int16 (P,6); got {q.dtype} {q.shape}")
+    if scales.shape != (6,) or scales.dtype != np.float32:
+        raise ValueError(f"chart payload scales must be fp32 (6,); got {scales.dtype} {scales.shape}")
+    # explicit little-endian on the wire (host-portable; np.frombuffer '<i2'/'<f4' on read).
+    return q.astype("<i2", copy=False).tobytes() + scales.astype("<f4", copy=False).tobytes()
+
+
+def _parse_chart_payload(chart_b: bytes, n_pairs: int) -> dict[str, np.ndarray]:
+    n_pairs = int(n_pairs)
+    expected = n_pairs * 6 * 2 + 6 * 4
+    if len(chart_b) != expected:
+        raise ValueError(
+            f"chart payload is {len(chart_b)} B != expected {expected} B for n_pairs={n_pairs} "
+            "(int16 (P,6) + fp32 (6,)) -- fail closed (NO-FAKE)."
+        )
+    q = np.frombuffer(chart_b[: n_pairs * 12], dtype="<i2").reshape(n_pairs, 6)
+    scales = np.frombuffer(chart_b[n_pairs * 12:], dtype="<f4")
+    return {"q": q.astype(np.int16, copy=False), "scales": scales.astype(np.float32, copy=False)}
 
 
 # ---------------------------------------------------------------------------
@@ -1395,21 +1479,25 @@ def _read_blob(path):
         blk, off = _take(raw, off, n); out.append(blk)
     m = json.loads(out[0].decode("utf-8"))
     # Optional trailing blocks are gated by the MANIFEST flags (NOT bare off<len): 5th = lane band
-    # (#224 Wave E), 6th = pose carrier (#205). A lone pose-carrier block must NOT be misread as lane.
-    lane_b = pcar_b = None
+    # (#224 Wave E), 6th = pose carrier (#205), 7th = chart payload (#497 gap-a: quantized int16
+    # (P,6) startup pose table + fp32 (6,) scales -- the COUNTED table the ground chart derives from).
+    lane_b = pcar_b = chart_b = None
     if m.get("lane_render_band") is not None:
         (n,) = struct.unpack_from("<I", raw, off); off += 4
         lane_b, off = _take(raw, off, n)
     if m.get("pose_carrier") is not None:
         (n,) = struct.unpack_from("<I", raw, off); off += 4
         pcar_b, off = _take(raw, off, n)
+    if m.get("chart_payload") is not None:
+        (n,) = struct.unpack_from("<I", raw, off); off += 4
+        chart_b, off = _take(raw, off, n)
     # #402 EXACT CONSUMPTION: the LVLS1 grammar must consume the WHOLE blob. Trailing bytes are a
     # truncation/format-mismatch/tamper signal -- fail closed, never silently ignore (advisory PR128
     # §8.2: "Section range streams are not required to be consumed exactly. Trailing words can be ignored.").
     if off != len(raw):
         raise ValueError("LVLS1 blob has %d unconsumed trailing byte(s) (off=%d len=%d) -- refusing to "
                          "decode a non-exact stream (NO-FAKE fail-closed)." % (len(raw) - off, off, len(raw)))
-    return m, out[1], out[2], out[3], lane_b, pcar_b
+    return m, out[1], out[2], out[3], lane_b, pcar_b, chart_b
 
 
 def _dequant(blob, order, shapes, scales, xcodec=None):
@@ -2162,6 +2250,76 @@ def _maybe_blind_coordinate_fill(frame, manifest):
     return _blind_coordinate_fill(frame)
 
 
+# --- #497 gap-a: COUNTED-CHART-PAYLOAD ground chart (rule-118 FREE math, counted q/scales). ---
+# VERBATIM op-for-op inline of tac.boundary_math.ground_frame_chart.{_expmap_so3, plane_motion_step,
+# GroundFrameChart.build} with the canonical camera constants inlined as literals (parity-pinned
+# BIT-EXACT vs GroundFrameChart.build_from_xi by test_literal_chart_byte_close.py -- any constant
+# or op-order drift there is a train/decode semantic fork and must fail that test, never ship).
+# The per-pair charted features then come from the SEALED charted_grid_bilinear_v1 evaluator
+# (charted_pair_feats_numpy -- embedded module source), the fast receiver program that replaces
+# the n600-prohibitive direct sparse transform.
+_CH_FX = 910.0; _CH_FY = 910.0; _CH_CX = 582.0; _CH_CY = 437.0
+_CH_NW = 1164.0; _CH_NH = 874.0; _CH_D = 1.22
+
+
+def _ch_expmap(omega):
+    # op-for-op ground_frame_chart._expmap_so3 (Rodrigues axis-angle -> rotation, fp64).
+    theta = float(np.linalg.norm(omega))
+    K = np.array([[0.0, -omega[2], omega[1]],
+                  [omega[2], 0.0, -omega[0]],
+                  [-omega[1], omega[0], 0.0]], dtype=np.float64)
+    if theta < 1e-12:
+        return np.eye(3) + K
+    return (np.eye(3)
+            + (np.sin(theta) / theta) * K
+            + ((1.0 - np.cos(theta)) / (theta * theta)) * (K @ K))
+
+
+def _ch_step(pose6, s_t, s_r, pitch, regime):
+    # op-for-op ground_frame_chart.plane_motion_step (ground: M = R - t n^T / d).
+    if regime == "identity":
+        return np.eye(3, dtype=np.float64)
+    pose6 = np.asarray(pose6, dtype=np.float64).reshape(-1)
+    R = _ch_expmap(s_r * np.array([pose6[3], pose6[4], pose6[5]], dtype=np.float64))
+    if regime == "rotonly":
+        return R
+    t = s_t * np.array([pose6[2], pose6[1], pose6[0]], dtype=np.float64)
+    n = np.array([0.0, -np.cos(pitch), -np.sin(pitch)], dtype=np.float64)
+    return R - np.outer(t, n) / _CH_D
+
+
+def _chart_H_norm(xi, ref, s_t, s_r, pitch, regime, h, w):
+    # op-for-op GroundFrameChart.build: incremental ref->t composition (fp64), exact identity at ref.
+    xi = np.asarray(xi, dtype=np.float64)
+    P = int(xi.shape[0]); ref = int(ref)
+    sx = float(w) / _CH_NW; sy = float(h) / _CH_NH
+    Kp = np.array([[_CH_FX * sx, 0.0, _CH_CX * sx],
+                   [0.0, _CH_FY * sy, _CH_CY * sy],
+                   [0.0, 0.0, 1.0]], dtype=np.float64)
+    A = np.array([[(w - 1) / 2.0, 0.0, (w - 1) / 2.0],
+                  [0.0, (h - 1) / 2.0, (h - 1) / 2.0],
+                  [0.0, 0.0, 1.0]], dtype=np.float64)
+    Ainv = np.linalg.inv(A)
+    Kinv = np.linalg.inv(Kp)
+    H_fwd = np.empty((P, 3, 3), dtype=np.float64)
+    H_chart = np.empty((P, 3, 3), dtype=np.float64)
+    M_up = np.eye(3, dtype=np.float64)
+    for t in range(ref, P):
+        if t > ref:
+            M_up = _ch_step(xi[t], s_t, s_r, pitch, regime) @ M_up
+        H_fwd[t] = np.eye(3) if t == ref else Kp @ M_up @ Kinv
+    M_dn = np.eye(3, dtype=np.float64)
+    for t in range(ref - 1, -1, -1):
+        M_dn = M_dn @ _ch_step(xi[t + 1], s_t, s_r, pitch, regime)
+        H_fwd[t] = Kp @ np.linalg.inv(M_dn) @ Kinv
+    for t in range(P):
+        if t == ref:
+            H_chart[t] = np.eye(3, dtype=np.float64)
+        else:
+            H_chart[t] = Ainv @ np.linalg.inv(H_fwd[t]) @ A
+    return H_chart
+
+
 _G = {}
 
 
@@ -2169,11 +2327,21 @@ def _setup(src):
     # per-worker (spawn) / inherited-then-reset (fork) setup: dequant params + regen the FREE curvelet
     # bank + coords. Deterministic + identical across workers -> bit-exact. ~150ms, amortized over the
     # worker's pairs. Same op order as the serial main -> identical output.
-    m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob(src)
+    m, base_b, code_b, _pose, lane_b, pcar_b, chart_b = _read_blob(src)
     params = _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"], m.get("xcodec"))
     code = _decode_code_q(brotli.decompress(code_b), m["code_shape"], m.get("xcodec")).astype(np.float32) * float(m["code_scale"])
     rh, rw, ch, cw = int(m["render_h"]), int(m["render_w"]), int(m["camera_h"]), int(m["camera_w"])
-    coords = _coords(rh, rw)
+    # (#497 gap-b) literal post-render supersample A_s -- SEALED semantics Y = R[A_s G(Phi(X_s))]:
+    # the WHOLE feature program + nonlinear render run on the FINE (ss*rh, ss*rw) grid; A_s = exact
+    # ss x ss box average AFTER the renderer, BEFORE lane compositing and BEFORE R (compose-at-base).
+    # ss=1 => bit-identical to the point-sampled path (same coords/curv; _aa_down is identity).
+    aa_ss = 1
+    if m.get("basis_family") == "literal_polar_curvelet":
+        _bp = m.get("basis_program") or {}
+        if _bp.get("aa_mode") == "supersample":
+            aa_ss = int(_bp.get("aa_factor", 1))
+    gh, gw = rh * aa_ss, rw * aa_ss
+    coords = _coords(gh, gw)  # fine grid == build_supersampled_coords(rh, rw, ss) bit-exact
     curv = _basis_feats(coords, m)
     P = {k: np.asarray(v, _FDT) for k, v in params.items()}  # convert once; _FDT=float64 default (bit-identical), float32 = FEED-ek opt-in fast mode
     # #224 Wave E: parse the OPTIONAL lane render-band (per-pair coords + hdr) -> per-pair coverage
@@ -2185,8 +2353,41 @@ def _setup(src):
     pcar = None
     if m.get("pose_carrier") is not None and pcar_b is not None:
         pcar = _pcar_parse(pcar_b)
+    # #497 gap-a: parse the OPTIONAL counted chart payload -> rebuild the ground chart ONCE
+    # (fp64 homography chain from the DEQUANTIZED table, op-for-op the trainer's build_from_xi)
+    # + the ONCE-computed fine feats table for the sealed charted_grid_bilinear_v1 evaluator.
+    chart_H = chart_fine = chart_prog = None
+    if m.get("chart_payload") is not None and chart_b is not None:
+        _cn = int(m["chart_payload"]["n_pairs"])
+        _exp = _cn * 12 + 24
+        if len(chart_b) != _exp:
+            raise ValueError("chart payload is %d B != expected %d B (int16 (P,6) + fp32 (6,)) "
+                             "-- fail closed (NO-FAKE)." % (len(chart_b), _exp))
+        _cq = np.frombuffer(chart_b[:_cn * 12], dtype="<i2").reshape(_cn, 6)
+        _cs = np.frombuffer(chart_b[_cn * 12:], dtype="<f4")
+        # op-for-op xi_pose_coder.dequantize_xi: q(f8) * scales(f8).
+        _xi_dq = np.asarray(_cq, dtype=np.float64) * np.asarray(_cs, dtype=np.float64)
+        chart_prog = BasisProgramConfig.from_dict(m["basis_program"])
+        chart_H = _chart_H_norm(
+            _xi_dq, chart_prog.chart_ref_pair, chart_prog.chart_s_t, chart_prog.chart_s_r,
+            chart_prog.chart_pitch, chart_prog.chart_regime, rh, rw)
+        chart_fine = charted_fine_feats_cache_numpy(chart_prog, rh, rw)
     _G.update(m=m, code=code, coords=coords, curv=curv, P=P, rh=rh, rw=rw, ch=ch, cw=cw,
+              gh=gh, gw=gw, aa_ss=aa_ss,
+              chart_H=chart_H, chart_fine=chart_fine, chart_prog=chart_prog,
               framebytes=ch * cw * 3, dst=None, lane_pairs=lane_pairs, lane_hdr=lane_hdr, pcar=pcar)
+
+
+def _aa_down(x_flat, rh, rw, ss):
+    # (#497) A_s: exact ss x ss box average, op-for-op the oracle's box_downsample_np call (the
+    # reshape below is a VIEW composing to the same 6-D strides; mean over (2,4) is the identical
+    # ufunc on the identical buffer -> bit-identical oracle/receiver). ss=1 => identity (same object).
+    if ss == 1:
+        return x_flat
+    x2 = x_flat if x_flat.ndim == 2 else x_flat[:, None]
+    c = x2.shape[-1]
+    flat = x2.reshape(1, rh, ss, rw, ss, c).mean(axis=(2, 4)).reshape(rh * rw, c)
+    return flat if x_flat.ndim == 2 else flat.reshape(rh * rw)
 
 
 def _render_pair(pi):
@@ -2194,9 +2395,19 @@ def _render_pair(pi):
     # Writes the pair's 2 frames to disjoint offsets of the preallocated .raw (POSIX-safe concurrent write).
     m, code, coords, curv, P = _G["m"], _G["code"], _G["coords"], _G["curv"], _G["P"]
     rh, rw, ch, cw = _G["rh"], _G["rw"], _G["ch"], _G["cw"]
+    gh, gw, aa_ss = _G["gh"], _G["gw"], _G["aa_ss"]  # #497: fine grid dims (== rh, rw at ss=1)
     _literal_program = None
     if m.get("basis_family") == "literal_polar_curvelet":
         _literal_program = BasisProgramConfig.from_dict(m["basis_program"])
+    # (#497 gap-a) per-pair base features: charted (sealed charted_grid_bilinear_v1; identity ref
+    # pair = exact uncharted grid) when the chart payload is active, else the shared static bank.
+    _chart_H = _G.get("chart_H")
+    if _chart_H is not None:
+        base = charted_pair_feats_numpy(
+            _G["chart_prog"], rh, rw, _chart_H[pi], _G["chart_fine"]
+        )
+    else:
+        base = curv
     if _literal_program is not None and _literal_program.native_orientation_enabled:
         _scale_ids, _angles = orientation_metadata_from_atom_specs(ATOM_SPECS)
 
@@ -2205,37 +2416,47 @@ def _render_pair(pi):
             _phi_native, _ = _outputs_from_h0(
                 P, _h0_native, code[2 * pi + 1], m, False, feats=_features
             )
-            return _phi_native.argmax(-1).reshape(rh, rw).astype(np.int64)
+            return _phi_native.argmax(-1).reshape(gh, gw).astype(np.int64)
+
+        # (#497 gap-a) chart x native: normal COVECTORS transform through J^-T (embedded
+        # curvelet_placement ops) -- op-for-op the trainer + tool oracle chart branch.
+        _normal_transform = None
+        if _chart_H is not None:
+            _jac = projective_jacobian_numpy(coords, _chart_H[pi])
+
+            def _normal_transform(_normals):
+                return transform_normal_covector_numpy(_normals, _jac)
 
         feats, _native_gates, _native_receipt = native_orientation_fixed_point_numpy(
-            curv,
+            base,
             _decode_native,
             _scale_ids,
             _angles,
             kappa=_literal_program.native_orientation_kappa,
             iteration_cap=_literal_program.fixed_point_iteration_cap,
+            normal_transform=_normal_transform,
         )
         h0 = _in_proj_h0(P, feats, m)
     elif m["self_orient"]:
         # fixed-point: dir feats from the decoder's OWN frame1 argmax (GT-free, 0 bytes).
-        dirf = np.zeros((curv.shape[0], 4 * int(m["n_dir_freqs"])), np.float32)
+        dirf = np.zeros((base.shape[0], 4 * int(m["n_dir_freqs"])), np.float32)
         prev_am = None; _h0_conv = None  # FEED-ej: cache the converged iter's h0 (== the post-loop h0)
         for _ in range(int(m["so_iters"])):
-            feats = np.concatenate([curv, dirf], axis=-1)
+            feats = np.concatenate([base, dirf], axis=-1)
             _h0_it = _in_proj_h0(P, feats, m)
             phi, _ = _outputs_from_h0(P, _h0_it, code[2 * pi + 1], m, False, feats=feats)
-            am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+            am = phi.argmax(-1).reshape(gh, gw).astype(np.int64)  # #497: grid dims (fine when ss>1)
             if prev_am is not None and np.array_equal(am, prev_am):
                 _h0_conv = _h0_it  # converged: feats frozen from here -> this h0 IS the final h0 (bit-exact reuse)
                 break  # argmax fixed point: dirf would not change -> remaining iters are no-ops
             dirf = _dir_feats(coords, am, m["n_dir_freqs"], m["so_freq_along"], m["so_freq_across"], m["so_tau"])
             prev_am = am
-        feats = np.concatenate([curv, dirf], axis=-1)
+        feats = np.concatenate([base, dirf], axis=-1)
         # FEED-ej: on the early-break `feats` is unchanged from the converged iter -> reuse its h0
         # (bit-exact: identical feats -> identical _in_proj_h0). No convergence -> recompute (as before).
         h0 = _h0_conv if _h0_conv is not None else _in_proj_h0(P, feats, m)
     else:
-        feats = curv
+        feats = base
         h0 = _in_proj_h0(P, feats, m)  # shared across the pair's 2 frames (identical feats)
     lane_pairs, lane_hdr = _G.get("lane_pairs"), _G.get("lane_hdr")
     band = lane_pairs is not None and pi < len(lane_pairs)
@@ -2254,7 +2475,8 @@ def _render_pair(pi):
         if fk == 0 and pcar is not None and pi < int(pcar["hdr"]["n_pairs"]):
             if pcar["hdr"].get("pose_carrier_mode") == "store_nothing":
                 _phi0, rgb0 = _outputs_from_h0(P, h0, code[2 * pi + 0], m, True, feats=feats)
-                src0 = _R(rgb0, rh, rw, ch, cw).astype(np.float64)  # witness frame0 render, camera-native
+                # #497: A_s (fine render -> base) BEFORE R; identity at ss=1.
+                src0 = _R(_aa_down(rgb0, rh, rw, aa_ss), rh, rw, ch, cw).astype(np.float64)
                 frame = _pcar_warp_f0(src0, pcar["H"][pi], ch, cw)
             else:
                 frame = _pcar_frame0(pcar, pi, ch, cw)
@@ -2262,9 +2484,15 @@ def _render_pair(pi):
             continue
         if band:
             _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True, feats=feats)
+            # #497 sealed order: A_s integrates rgb/lane_rgb/margin to BASE first, then the
+            # uncertainty mask + composite run at base (cov is base-rasterized). Identity at ss=1.
+            rgb = _aa_down(rgb, rh, rw, aa_ss)
+            lane_rgb = _aa_down(lane_rgb, rh, rw, aa_ss)
+            margin = _aa_down(margin, rh, rw, aa_ss)
             rgb = _lane_composite(rgb, lane_rgb, cov_flat, margin, lane_hdr)
         else:
             _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, feats=feats)
+            rgb = _aa_down(rgb, rh, rw, aa_ss)  # #497: A_s after the renderer; identity at ss=1.
         frame = _R(rgb, rh, rw, ch, cw)
         frames.append(_maybe_blind_coordinate_fill(frame, m).tobytes())
     fb = _G["framebytes"]
@@ -2426,7 +2654,7 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
     if eval_pairs < n_pairs_total:
         import brotli
 
-        man, base_b, code_b, pose_b, lane_b, pcar_b = _read_blob_bytes(src_bin.read_bytes())
+        man, base_b, code_b, pose_b, lane_b, pcar_b, chart_b = _read_blob_bytes(src_bin.read_bytes())
         code = _decode_code(man, code_b)
         code_cap = code[: 2 * eval_pairs]
         qc, sc = _int8_symmetric(code_cap)
@@ -2445,9 +2673,24 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
         if pcar_b is not None and man.get("pose_carrier") is not None:
             pcar_cap = _cap_pose_carrier(pcar_b, eval_pairs)
             man["pose_carrier"] = {**man["pose_carrier"], "n_pairs": eval_pairs}
+        # #497 gap-a: cap the chart payload to eval_pairs. Valid because the chart's incremental
+        # composition H_fwd[t] depends only on poses[ref+1..t]: slicing the FIRST eval_pairs rows
+        # preserves every kept pair's homography EXACTLY (scales are per-channel over the FULL
+        # table and ship unchanged -> kept rows dequantize to identical values). ref must survive.
+        chart_cap = None
+        if chart_b is not None and man.get("chart_payload") is not None:
+            _cp = _parse_chart_payload(chart_b, int(man["chart_payload"]["n_pairs"]))
+            _ref = int((man.get("basis_program") or {}).get("chart_ref_pair", 0))
+            if _ref >= eval_pairs:
+                raise ValueError(
+                    f"chart cap: ref_pair {_ref} >= eval_pairs {eval_pairs} -- the capped decode "
+                    "would lose the identity reference pair (fail closed)."
+                )
+            chart_cap = _chart_payload_bytes(_cp["q"][:eval_pairs], _cp["scales"])
+            man["chart_payload"] = {**man["chart_payload"], "n_pairs": eval_pairs}
         mj = json.dumps(man, separators=(",", ":")).encode()
         capped = _io_pack(mj, base_b, _encode_code_brotli(qc, man),
-                          pose_b or None, lane_cap, pcar_cap)
+                          pose_b or None, lane_cap, pcar_cap, chart_cap)
         src_bin.write_bytes(capped)
 
     dst_raw = inflated_dir / "0.raw"
@@ -2507,21 +2750,27 @@ def parity_on_inflated(raw_path: Path, eval_pairs: int, gt_cache: str | None, nu
 
 
 def _dequant_blob(blob: bytes) -> tuple[dict[str, Any], dict[str, np.ndarray], np.ndarray,
-                                        list[list[Any]] | None, dict[str, Any] | None]:
+                                        list[list[Any]] | None, dict[str, Any] | None,
+                                        dict[str, np.ndarray] | None]:
     """Dequant (int8 -> fp32*scale) the base params + code from a LVLS1 blob, EXACTLY as the shipped
     inflate does (the numpy-fp32 oracle authority uses the SAME dequantized weights). Returns
-    (manifest, params, code, lane_pairs|None, pose_carrier_parsed|None). Used by store_nothing's
-    ``pose_carrier_confirm`` to regenerate the witness-render frame0 authority (no stored keyframe)."""
+    (manifest, params, code, lane_pairs|None, pose_carrier_parsed|None, chart_payload|None); the
+    chart payload is the #497 gap-a counted table {"q": int16 (P,6), "scales": fp32 (6,)}. Used by
+    store_nothing's ``pose_carrier_confirm`` to regenerate the witness-render frame0 authority."""
     import brotli
 
-    m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob_bytes(blob)
+    m, base_b, code_b, _pose, lane_b, pcar_b, chart_b = _read_blob_bytes(blob)
     params = _decode_base_params(m, base_b)
     code = _decode_code(m, code_b)
     lane_pairs: list[list[Any]] | None = None
     if lane_b is not None and m.get("lane_render_band") is not None:
         lane_pairs, _hdr = deserialize_lane_band_any(brotli.decompress(lane_b))
     pcar_parsed = parse_pose_carrier(pcar_b) if (pcar_b is not None and m.get("pose_carrier") is not None) else None
-    return m, params, code, lane_pairs, pcar_parsed
+    chart_parsed = (
+        _parse_chart_payload(chart_b, int(m["chart_payload"]["n_pairs"]))
+        if (chart_b is not None and m.get("chart_payload") is not None) else None
+    )
+    return m, params, code, lane_pairs, pcar_parsed, chart_parsed
 
 
 def pose_carrier_confirm(
@@ -2565,8 +2814,9 @@ def pose_carrier_confirm(
                 "store_nothing pose_carrier_confirm needs the LVLS1 blob to regenerate the "
                 "witness-render frame0 authority (the frame0 source is the FREE INR render, not a "
                 "stored keyframe). NO-FAKE: refusing to fabricate the authority.")
-        m, params, code, lane_pairs, pc_oracle = _dequant_blob(blob)
-        oracle_frames, _am = numpy_oracle_reference_frames(params, code, m, P, lane_pairs, pose_carrier=pc_oracle)
+        m, params, code, lane_pairs, pc_oracle, chart_oracle = _dequant_blob(blob)
+        oracle_frames, _am = numpy_oracle_reference_frames(
+            params, code, m, P, lane_pairs, pose_carrier=pc_oracle, chart_payload=chart_oracle)
         auth_f0 = [np.asarray(oracle_frames[2 * pi]) for pi in range(P)]
         # store_nothing ceiling = (real f0, warp(real f0, H)) -- the keyframe-INDEPENDENT reference
         # (matches measure_warp_dpose_through_R), NOT warp(witness render) which is non-photoreal.
@@ -2650,23 +2900,54 @@ def _blind_coordinate_reference(
 def numpy_oracle_reference_frames(
     params: dict[str, np.ndarray], code: np.ndarray, manifest: dict[str, Any], n_pairs: int,
     lane_pairs: list[list[Any]] | None = None, pose_carrier: dict[str, Any] | None = None,
+    chart_payload: dict[str, np.ndarray] | None = None,
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """Regenerate the FULL uint8 camera frames for the first ``n_pairs`` pairs via the CANONICAL
     numpy-fp32 oracle (``levelset_rgb_forward_numpy`` / ``levelset_band_forward_numpy``) + the
     canonical FREE-table regen (``torch_levelset_inflate`` numpy helpers) + the reference R. This is
     the independent authority the shipped inflate.py must match bit-for-bit. Returns (frames
-    [2*n_pairs uint8 arrays, f0,f1 per pair], final_frame_argmax [render-res int argmax per pair]).
+    [2*n_pairs uint8 arrays, f0,f1 per pair], final_frame_argmax [grid-res int argmax per pair —
+    the FINE (ss*rh, ss*rw) grid when literal aa supersample is active, else render-res]).
 
     The self-orient fixed point mirrors the shipped inflate EXACTLY. When ``manifest`` carries the
     ``lane_render_band`` cfg AND ``lane_pairs`` (the deserialized per-pair ``LaneLine`` lists), the
     CANONICAL render-band (``rasterize_lane_coverage_range_dependent`` + ``composite_band_on_render``
     + ``witness_uncertainty_mask``) is composited over each frame BEFORE R -- so the bit-exact gate
     proves the shipped inflate's inline band == this canonical band. ``params``/``code`` are the
-    int8-DEQUANTIZED values read back from the byte-closed blob (both sides render the SAME weights)."""
+    int8-DEQUANTIZED values read back from the byte-closed blob (both sides render the SAME weights).
+
+    (#497 gap-b) literal post-render supersample A_s — SEALED semantics ``Y = R[A_s G(Phi(X_s))]``:
+    the WHOLE feature program (curvelet feats + self-orient dir feats / native orientation fixed
+    point, argmax included) and the nonlinear render run on the FINE ``(ss*rh, ss*rw)`` grid; A_s is
+    the exact ``ss x ss`` box average applied AFTER the renderer to rgb / lane_rgb / margin, BEFORE
+    lane compositing + uncertainty masking (compose-at-base, #220) and BEFORE R. Lane coverage stays
+    rasterized at the BASE grid. ``A_1 = identity`` (ss=1 is bit-identical to the point-sampled
+    path: same coords, same feats, ``_aa_down`` returns its input unchanged)."""
     rh, rw = int(manifest["render_h"]), int(manifest["render_w"])
     ch, cw = int(manifest["camera_h"]), int(manifest["camera_w"])
-    coords = _canon_coords_grid(rh, rw)
     basis_family = normalize_basis_family(manifest.get("basis_family", LEGACY_FOURIER_AB_CONTROL))
+    aa_ss = 1
+    if basis_family == LITERAL_POLAR_CURVELET:
+        _bp_dict = manifest.get("basis_program") or {}
+        if _bp_dict.get("aa_mode") == "supersample":
+            aa_ss = int(_bp_dict.get("aa_factor", 1))
+    gh, gw = rh * aa_ss, rw * aa_ss
+    coords = _canon_coords_grid(gh, gw)
+
+    def _aa_down(x_flat: np.ndarray) -> np.ndarray:
+        # A_s box average, op-for-op ``aa_sdf_observation_render.box_downsample_np`` (the reshapes
+        # are views of the same buffer; the mean over axes (2,4) is the identical ufunc call the
+        # shipped inflate's inline ``_aa_down`` performs -> bit-identical between oracle + receiver).
+        if aa_ss == 1:
+            return x_flat
+        from tac.boundary_math.aa_sdf_observation_render import box_downsample_np
+
+        x2 = x_flat if x_flat.ndim == 2 else x_flat[:, None]
+        flat = box_downsample_np(x2.reshape(1, gh, gw, x2.shape[-1]), aa_ss).reshape(
+            rh * rw, x2.shape[-1]
+        )
+        return flat if x_flat.ndim == 2 else flat.reshape(rh * rw)
+
     literal_program: BasisProgramConfig | None = None
     if basis_family == LEGACY_FOURIER_AB_CONTROL:
         B = _canon_curvelet_B(
@@ -2689,6 +2970,40 @@ def numpy_oracle_reference_frames(
         curv = literal_curvelet_feats_numpy(coords)
     else:
         raise ValueError(f"unknown basis_family {basis_family!r} in byte-closed manifest")
+    # ── (#497 gap-a) COUNTED-CHART-PAYLOAD ground chart ────────────────────────────────────────
+    # The oracle rebuilds the chart EXACTLY as the trainer did: dequantize the shipped q/scales
+    # (op-for-op xi_pose_coder.dequantize_xi) -> GroundFrameChart.build_from_xi (fp64) -> per-pair
+    # charted feats via the SEALED charted_grid_bilinear_v1 evaluator (identity ref pair = exact
+    # uncharted program). The shipped inflate inlines the SAME builder (parity-pinned by test) and
+    # the SAME evaluator (embedded module source) -> trainer == oracle == receiver by construction.
+    _chart = None
+    _chart_fine_cache = None
+    if literal_program is not None and literal_program.chart_enabled:
+        if chart_payload is None:
+            raise ValueError(
+                "literal chart_enabled oracle needs the counted chart payload (q/scales) -- "
+                "the chart may only derive from counted receiver state (NO-FAKE fail-closed).")
+        if aa_ss != 1:
+            raise ValueError("chart x supersample is trainer-refused; no such checkpoint exists")
+        from tac.boundary_math.ground_frame_chart import ChartCalibration, GroundFrameChart
+        from tac.boundary_math.xi_pose_coder import dequantize_xi
+
+        _q = np.asarray(chart_payload["q"], np.int16)
+        if _q.shape[0] < n_pairs:
+            raise ValueError(
+                f"chart payload has {_q.shape[0]} pairs < requested n_pairs {n_pairs}")
+        _chart = GroundFrameChart.build_from_xi(
+            dequantize_xi(_q, np.asarray(chart_payload["scales"], np.float32)),
+            ref_pair=int(literal_program.chart_ref_pair),
+            calib=ChartCalibration(
+                s_t=float(literal_program.chart_s_t),
+                s_r=float(literal_program.chart_s_r),
+                pitch=float(literal_program.chart_pitch),
+            ),
+            grid_hw=(rh, rw),
+            regime=str(literal_program.chart_regime),
+        )
+        _chart_fine_cache = charted_fine_feats_cache_numpy(literal_program, rh, rw)
     lr = manifest.get("lane_render_band")
     band_on = bool(lr is not None and lane_pairs is not None)
     lane_cfg = render_config_from_header({**lr, "pairs": []}) if band_on else None
@@ -2702,6 +3017,14 @@ def numpy_oracle_reference_frames(
     frames: list[np.ndarray] = []
     argmaxes: list[np.ndarray] = []
     for pi in range(n_pairs):
+        # (#497 gap-a) per-pair base features: charted (sealed bilinear program; identity ref pair
+        # = exact uncharted grid) when the chart is active, else the shared static bank.
+        if _chart is not None:
+            base = charted_pair_feats_numpy(
+                literal_program, rh, rw, _chart.H_chart_norm[pi], _chart_fine_cache
+            )
+        else:
+            base = curv
         if literal_program is not None and literal_program.native_orientation_enabled:
             scale_ids, angles = orientation_metadata_from_atom_specs(
                 LITERAL_CURVELET_ATOM_SPECS
@@ -2711,24 +3034,38 @@ def numpy_oracle_reference_frames(
                 _rgb, phi = levelset_rgb_forward_numpy(
                     params, features, code[2 * pi + 1], **fwd_kw
                 )
-                return phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+                # (#497 gap-b) argmax at the feature GRID dims (fine when aa supersample is on);
+                # unreachable while the native+supersample byte-close gate refuses, kept
+                # grid-correct so the sealed semantics is one formula for every path.
+                return phi.argmax(-1).reshape(gh, gw).astype(np.int64)
+
+            # (#497 gap-a) chart x native: normal COVECTORS transform through J^-T (SPEC
+            # tangent-vector/normal-covector covariance) -- op-for-op the trainer's
+            # recompute_native_orient chart branch.
+            _normal_transform = None
+            if _chart is not None:
+                _jac = projective_jacobian_numpy(coords, _chart.H_chart_norm[pi])
+
+                def _normal_transform(normals: np.ndarray) -> np.ndarray:
+                    return transform_normal_covector_numpy(normals, _jac)
 
             feats, _gates, _receipt = native_orientation_fixed_point_numpy(
-                curv,
+                base,
                 _decode_native,
                 scale_ids,
                 angles,
                 kappa=literal_program.native_orientation_kappa,
                 iteration_cap=literal_program.fixed_point_iteration_cap,
+                normal_transform=_normal_transform,
             )
         elif bool(manifest["self_orient"]):
             ndf = int(manifest["n_dir_freqs"])
-            dirf = np.zeros((curv.shape[0], 4 * ndf), np.float32)
+            dirf = np.zeros((base.shape[0], 4 * ndf), np.float32)
             prev_am = None
             for _ in range(int(manifest["so_iters"])):
-                feats = np.concatenate([curv, dirf], axis=-1)
+                feats = np.concatenate([base, dirf], axis=-1)
                 _rgb, phi = levelset_rgb_forward_numpy(params, feats, code[2 * pi + 1], **fwd_kw)
-                am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+                am = phi.argmax(-1).reshape(gh, gw).astype(np.int64)  # #497: grid dims (fine when ss>1)
                 if prev_am is not None and np.array_equal(am, prev_am):
                     break  # argmax fixed point -> dirf frozen -> remaining iters no-ops (== shipped)
                 dirf = _canon_dir_feats(
@@ -2736,9 +3073,9 @@ def numpy_oracle_reference_frames(
                     float(manifest["so_freq_across"]), float(manifest["so_tau"]),
                 )
                 prev_am = am
-            feats = np.concatenate([curv, dirf], axis=-1)
+            feats = np.concatenate([base, dirf], axis=-1)
         else:
-            feats = curv
+            feats = base
         cov = None
         if band_on and pi < len(lane_pairs):
             cov = rasterize_lane_coverage_range_dependent(
@@ -2754,7 +3091,8 @@ def numpy_oracle_reference_frames(
             if fk == 0 and pose_carrier is not None:
                 if pose_carrier_mode(pose_carrier) == "store_nothing":
                     rgb0, _phi0 = levelset_rgb_forward_numpy(params, feats, code[2 * pi + 0], **fwd_kw)
-                    src0 = _torch_R_reference(rgb0, rh, rw, ch, cw).astype(np.float64)
+                    # #497: A_s (fine render -> base) BEFORE R; identity at ss=1.
+                    src0 = _torch_R_reference(_aa_down(rgb0), rh, rw, ch, cw).astype(np.float64)
                     frame = pose_carrier_frame0_from_source(pose_carrier, pi, src0)
                 else:
                     frame = pose_carrier_frame0(pose_carrier, pi)
@@ -2763,15 +3101,20 @@ def numpy_oracle_reference_frames(
             if cov is not None:
                 rgb, phi, lane_rgb, margin = levelset_band_forward_numpy(
                     params, feats, code[2 * pi + fk], lane_cls=lane_cfg.lane_cls, **fwd_kw)
+                # #497 sealed order: A_s footprint-integrates rgb/lane_rgb/margin to the BASE grid
+                # FIRST, then the uncertainty mask + composite run at base (compose-at-base, #220).
+                # Coverage ``cov`` is rasterized at base already. Identity at ss=1.
+                rgb, lane_rgb, margin = _aa_down(rgb), _aa_down(lane_rgb), _aa_down(margin)
                 um = (witness_uncertainty_mask(margin, tau=lane_cfg.u_mask_tau, eps=lane_cfg.u_mask_eps)
                       if lane_cfg.u_mask_enabled else None)
                 rgb = composite_band_on_render(rgb, lane_rgb, cov, um, lane_cfg.weight)
             else:
                 rgb, phi = levelset_rgb_forward_numpy(params, feats, code[2 * pi + fk], **fwd_kw)
+                rgb = _aa_down(rgb)  # #497: A_s after the nonlinear renderer; identity at ss=1.
             frame = _torch_R_reference(rgb, rh, rw, ch, cw)
             frames.append(_blind_coordinate_reference(frame, manifest))
             if fk == 1:
-                argmaxes.append(phi.argmax(-1).reshape(rh, rw).astype(np.int64))
+                argmaxes.append(phi.argmax(-1).reshape(gh, gw).astype(np.int64))
     return frames, argmaxes
 
 
@@ -2785,7 +3128,7 @@ def bit_exact_roundtrip_gate(
     import brotli
 
     # dequant the blob EXACTLY as the shipped inflate does (int8 -> fp32 * scale).
-    m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob_bytes(blob)
+    m, base_b, code_b, _pose, lane_b, pcar_b, chart_b = _read_blob_bytes(blob)
     params = _decode_base_params(m, base_b)
     code = _decode_code(m, code_b)
     n_pairs_total = int(m["n_pairs"])
@@ -2818,10 +3161,24 @@ def bit_exact_roundtrip_gate(
         pcar_cap = _cap_pose_carrier(pcar_b, gp)
         pose_carrier_oracle = parse_pose_carrier(pcar_cap)
         man["pose_carrier"] = {**m["pose_carrier"], "n_pairs": gp}
+    # #497 gap-a: carry the chart payload through the gp-capped repack (slice rows; H for kept
+    # pairs is EXACT because the incremental composition only reads poses[ref+1..t]).
+    chart_cap = None
+    chart_oracle = None
+    if chart_b is not None and m.get("chart_payload") is not None:
+        _cp = _parse_chart_payload(chart_b, int(m["chart_payload"]["n_pairs"]))
+        _ref = int((m.get("basis_program") or {}).get("chart_ref_pair", 0))
+        if _ref >= gp:
+            raise ValueError(
+                f"bit-exact gate: chart ref_pair {_ref} >= gate_pairs {gp} -- capped decode would "
+                "lose the identity reference pair (raise gate_pairs or lower ref_pair).")
+        chart_cap = _chart_payload_bytes(_cp["q"][:gp], _cp["scales"])
+        chart_oracle = {"q": _cp["q"][:gp], "scales": _cp["scales"]}
+        man["chart_payload"] = {**m["chart_payload"], "n_pairs": gp}
     mj = json.dumps(man, separators=(",", ":")).encode()
     capped_bin = gate_root / "gate.bin"
     capped_bin.write_bytes(_io_pack(
-        mj, base_b, _encode_code_brotli(qc, man), None, lane_b_cap, pcar_cap))
+        mj, base_b, _encode_code_brotli(qc, man), None, lane_b_cap, pcar_cap, chart_cap))
     gate_raw = gate_root / "gate.raw"
     proc = subprocess.run(
         [sys.executable, str(packet_dir / "inflate.py"), str(capped_bin), str(gate_raw)],
@@ -2842,7 +3199,8 @@ def bit_exact_roundtrip_gate(
         ref_params[name] = params[name]
     ref_code = (qc.astype(np.float32) * sc).reshape(code_cap.shape)
     ref_frames, ref_argmax = numpy_oracle_reference_frames(
-        ref_params, ref_code, man, gp, lane_pairs_cap, pose_carrier=pose_carrier_oracle)
+        ref_params, ref_code, man, gp, lane_pairs_cap, pose_carrier=pose_carrier_oracle,
+        chart_payload=chart_oracle)
 
     max_abs = 0
     all_equal = True
@@ -2878,11 +3236,11 @@ def bit_exact_roundtrip_gate(
 
 def _read_blob_bytes(
     blob: bytes,
-) -> tuple[dict[str, Any], bytes, bytes, bytes, bytes | None, bytes | None]:
+) -> tuple[dict[str, Any], bytes, bytes, bytes, bytes | None, bytes | None, bytes | None]:
     """Parse an in-memory LVLS1 blob (same grammar as the shipped inflate._read_blob). Returns
-    (manifest, base, code, pose, lane_band|None, pose_carrier|None). Trailing optional blocks are
-    gated by the MANIFEST flags (lane_render_band / pose_carrier), NOT a bare off<len -- so a lone
-    pose_carrier block is not misread as lane. Default-off -> both trailing are None."""
+    (manifest, base, code, pose, lane_band|None, pose_carrier|None, chart|None). Trailing optional
+    blocks are gated by the MANIFEST flags (lane_render_band / pose_carrier / chart_payload), NOT a
+    bare off<len -- so a lone pose_carrier block is not misread as lane. Default-off -> all None."""
     assert blob[: len(_MAGIC)] == _MAGIC, "bad level-set magic"
 
     def _take(o: int, n: int) -> tuple[bytes, int]:  # #402 fail-closed exact slice (short => raise)
@@ -2907,11 +3265,15 @@ def _read_blob_bytes(
     if manifest.get("pose_carrier") is not None:
         (n,) = struct.unpack_from("<I", blob, off); off += 4
         pose_carrier, off = _take(off, n)
+    chart: bytes | None = None  # #497 gap-a: 7th optional block, gated by manifest["chart_payload"]
+    if manifest.get("chart_payload") is not None:
+        (n,) = struct.unpack_from("<I", blob, off); off += 4
+        chart, off = _take(off, n)
     # #402 EXACT CONSUMPTION (mirrors the shipped inflate._read_blob): trailing bytes fail closed.
     if off != len(blob):
         raise ValueError(f"LVLS1 blob has {len(blob) - off} unconsumed trailing byte(s) "
                          f"(off={off} len={len(blob)}) -- refusing a non-exact stream (NO-FAKE).")
-    return manifest, out[1], out[2], out[3], lane_band, pose_carrier
+    return manifest, out[1], out[2], out[3], lane_band, pose_carrier, chart
 
 
 # ---------------------------------------------------------------------------
@@ -3338,22 +3700,47 @@ def run(
     basis_deploy_report: dict[str, Any] = {"active": False}
     if cfg["basis"] == LITERAL_POLAR_CURVELET:
         program: BasisProgramConfig = cfg["basis_program"]
-        if program.chart_enabled and not pose_carrier:
+        # (#497 gap-a CLOSED for counted_chart_payload) the literal ground chart is now a COUNTED
+        # RECEIVER PROGRAM: the quantized startup pose table + scales ship as the 7th blob section;
+        # trainer, oracle, and shipped inflate all rebuild the chart via build_from_xi on the SAME
+        # dequantized values and evaluate per-pair feats via the SEALED charted_grid_bilinear_v1
+        # evaluator (the fast receiver path that replaces the n600-prohibitive direct sparse
+        # transform). Proof authority: bit_exact_roundtrip_gate with a NONTRIVIAL chart.
+        if program.chart_enabled and program.chart_pose_dependency != "counted_chart_payload":
             raise ValueError(
-                "literal ground chart requires --pose-carrier: receiver may derive the chart only "
-                "from the counted xi section"
+                "literal ground-chart byte-close supports ONLY chart_pose_dependency="
+                "'counted_chart_payload' (the chart's OWN quantized pose-table section). The "
+                "'counted_pose_carrier_xi' dependency is structurally unsatisfiable for a "
+                "startup-static chart: the carrier's xi_eff = xi_stored + TRAINED dxi does not "
+                "exist at ep0. Composition scope, not a curvelet-family verdict"
             )
-        if program.chart_enabled:
+        if program.chart_enabled and program.aa_mode != "none":
             raise ValueError(
-                "literal ground-chart byte-close is fail-closed: arbitrary-chart evaluation still "
-                "needs a receiver-sealed fast nonuniform transform; the direct sparse evaluator is "
-                "not a viable n600 decode. This is a FORMULATION-COMPOSITION implementation gap, "
-                "not a curvelet-family verdict"
+                "literal ground chart + post-render supersample byte-close is fail-closed: the "
+                "trainer refuses --ground-frame-chart with --render-aa != none, so no checkpoint "
+                "exists to prove train/decode identity. Composition implementation gap"
             )
-        if program.aa_mode != "none" or program.aa_factor != 1:
+        # (#497 gap-b CLOSED) literal post-render supersample IS receiver-sealed: the shipped
+        # inflate + the numpy oracle both run the whole feature program + nonlinear render on the
+        # FINE (ss*rh, ss*rw) grid and apply A_s (exact ss x ss box average) AFTER the renderer,
+        # BEFORE lane compositing and BEFORE R (compose-at-base, #220 sealed semantics; A_1 =
+        # identity by construction). Proof authority: bit_exact_roundtrip_gate at aa_factor=2.
+        if program.native_orientation_enabled and program.aa_mode != "none":
             raise ValueError(
-                "literal post-render supersample byte-close is fail-closed until the generated "
-                "receiver applies A_s after the nonlinear renderer"
+                "literal native orientation + post-render supersample byte-close is fail-closed: "
+                "the trainer refuses this combination (fine-grid native gates are not "
+                "trainer-sealed yet), so no checkpoint exists to prove train/decode identity. "
+                "Composition implementation gap, not a curvelet-family verdict"
+            )
+        if program.aa_mode != "none" and any(str(k).startswith("tex_trunk.") for k in params):
+            # The #395 texture-trunk Gabor bank is regenerated at the BASE (render_h, render_w) grid
+            # inside the receiver forward, but supersample renders at the FINE grid -> the bank/soft
+            # shapes would mismatch. Narrow honest gap (bank-at-fine-grid not receiver-sealed), not a
+            # curvelet-family verdict.
+            raise ValueError(
+                "literal post-render supersample + texture trunk (tex_trunk.*) byte-close is "
+                "fail-closed: the receiver regenerates the trunk bank at the BASE grid while "
+                "supersample renders at the FINE grid. Composition implementation gap"
             )
         fold_receipt = None
         if program.taper_enabled:
@@ -3376,6 +3763,12 @@ def run(
             "taper_fold_receipt": (fold_receipt.to_dict() if fold_receipt is not None else None),
             "native_orientation": program.native_orientation_enabled,
             "chart_enabled": program.chart_enabled,
+            "chart_pose_dependency": program.chart_pose_dependency,
+            "chart_eval_semantics": program.chart_eval_semantics,
+            "chart_fine_factor": program.chart_fine_factor,
+            "chart_payload_pairs": (
+                int(np.asarray(cfg["chart_pose_q"]).shape[0]) if program.chart_enabled else 0
+            ),
             "aa_mode": program.aa_mode,
             "aa_factor": program.aa_factor,
         }

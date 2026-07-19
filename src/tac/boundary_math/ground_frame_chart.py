@@ -334,6 +334,61 @@ class GroundFrameChart:
             },
         )
 
+    @staticmethod
+    def build_from_xi(
+        xi_dq: np.ndarray,
+        *,
+        ref_pair: int = 0,
+        calib: ChartCalibration | None = None,
+        grid_hw: tuple[int, int],
+        regime: str = "ground",
+        K: np.ndarray | None = None,
+    ) -> "GroundFrameChart":
+        """COUNTED-RECEIVER-PROGRAM chart entry: build from the DEQUANTIZED decoded pose table.
+
+        ``xi_dq`` MUST be the (P, 6) DEQUANTIZED table exactly as the receiver's payload parse
+        returns it (quantize → dequantize round-tripped), NOT the raw GT float pose table. That is
+        what makes the chart reproducible BIT-FOR-BIT at decode: trainer and generated receiver
+        both feed the same dequantized values through the same fp64 homography composition, so
+        ``H_chart_norm`` is identical on both sides by construction (p0_497 gap (a); SPEC
+        "Ground chart at decode MUST derive from counted receiver state").
+
+        The math is exactly :meth:`build` (thin delegation — one composition path, no fork). The
+        distinction is PROVENANCE, recorded in the chart's ``provenance`` block: a chart built
+        here declares its pose source as a counted receiver payload. A quantize→dequantize
+        round-trip CHANGES the homographies vs raw GT poses (pinned by test), so silently feeding
+        GT floats here would be a train/decode mismatch — callers own that discipline; this entry
+        documents + stamps it.
+        """
+        xi_dq = np.asarray(xi_dq, dtype=np.float64)
+        if xi_dq.ndim != 2 or xi_dq.shape[1] < 6:
+            raise GroundFrameChartError(f"xi_dq must be (P, 6); got {xi_dq.shape}")
+        chart = GroundFrameChart.build(
+            xi_dq, ref_pair=ref_pair, calib=calib, grid_hw=grid_hw, regime=regime, K=K
+        )
+        provenance = dict(chart.provenance)
+        provenance.update(
+            {
+                "builder": (
+                    "tac.boundary_math.ground_frame_chart.GroundFrameChart.build_from_xi"
+                ),
+                "pose_source": "counted_receiver_payload_dequantized",
+                "counted_dependency_note": (
+                    "xi_dq is the quantize->dequantize round-tripped pose table the receiver "
+                    "decodes from its counted payload section; NOT the raw GT float table"
+                ),
+            }
+        )
+        return GroundFrameChart(
+            ref_pair=chart.ref_pair,
+            regime=chart.regime,
+            grid_hw=chart.grid_hw,
+            calib=chart.calib,
+            H_fwd_pix=chart.H_fwd_pix,
+            H_chart_norm=chart.H_chart_norm,
+            provenance=provenance,
+        )
+
     def coords_for_pair_numpy(self, coords: np.ndarray, pair_idx: int) -> np.ndarray:
         """Frame-``pair_idx`` normalized render coords → ground(ref)-frame coords (fp32 ref)."""
         return precompose_coords_numpy(coords, self.H_chart_norm[int(pair_idx)])

@@ -703,7 +703,7 @@ def _measure_runtime_candidate(
 def _chunk_blob(bc, blob: bytes, start: int, stop: int) -> bytes:
     import brotli
 
-    manifest, base_b, code_b, pose_b, lane_b, pcar_b = bc._read_blob_bytes(blob)
+    manifest, base_b, code_b, pose_b, lane_b, pcar_b, _chart_b = bc._read_blob_bytes(blob)  # (#497) 7th chart block: mechanical unpack update
     if pose_b or lane_b or pcar_b:
         raise ValueError("chunked final seal supports the plain #406 witness packet only")
     q = np.frombuffer(brotli.decompress(code_b), dtype=np.int8).reshape(manifest["code_shape"])

@@ -110,9 +110,13 @@ from tac.boundary_math.localized_basis_frames import (  # noqa: E402
     ATOM_SPECS as LITERAL_CURVELET_ATOM_SPECS,
     ATOM_SPEC_SHA256 as LITERAL_CURVELET_ATOM_SPEC_SHA256,
     BASIS_VERSION as LITERAL_CURVELET_BASIS_VERSION,
+    CHART_EVAL_SEMANTICS_BILINEAR as LBF_CHART_EVAL_BILINEAR,
+    CHART_EVAL_SEMANTICS_NONE as LBF_CHART_EVAL_NONE,
     basis_features_mlx as literal_curvelet_feats_mlx,
     basis_features_numpy as literal_curvelet_feats_numpy,
     basis_program_taper_config_sha256,
+    charted_fine_feats_cache_numpy,
+    charted_pair_feats_numpy,
     literal_basis_program_config,
     mlx_parity_receipt as literal_curvelet_mlx_parity_receipt,
 )
@@ -157,7 +161,19 @@ def _literal_basis_program_from_args(args: Any):
         chart_s_t=float(getattr(args, "gfc_s_t", -0.003224707899359239)),
         chart_s_r=float(getattr(args, "gfc_s_r", 0.0)),
         chart_pitch=float(getattr(args, "gfc_pitch", -0.01)),
-        chart_pose_dependency=("counted_pose_carrier_xi" if chart_enabled else "none"),
+        # (p0_497 gap (a), 2026-07-17) counted_chart_payload, NOT counted_pose_carrier_xi:
+        # the carrier's xi_eff = xi_stored + TRAINED dxi does not exist at startup (the chart
+        # + per-pair feats cache are static from ep0), so the chart binds to its OWN quantized
+        # pose-table payload (quantize->dequantize round-trip of the startup pose table,
+        # persisted as __chart_pose_q/__chart_pose_scales custody) that the receiver ships as
+        # a counted section and decodes to the IDENTICAL dequantized table (build_from_xi).
+        chart_pose_dependency=("counted_chart_payload" if chart_enabled else "none"),
+        chart_eval_semantics=(
+            LBF_CHART_EVAL_BILINEAR if chart_enabled else LBF_CHART_EVAL_NONE
+        ),
+        chart_fine_factor=(
+            int(getattr(args, "literal_chart_fine_factor", 2)) if chart_enabled else 2
+        ),
         native_orientation_enabled=native_enabled,
         native_orientation_kappa=float(getattr(args, "literal_curvelet_kappa", 2.0)),
         fixed_point_iteration_cap=(
@@ -978,6 +994,20 @@ def _build_ema_checkpoint_arrays(
                 raise RuntimeError("literal curvelet taper vector is missing from checkpoint custody")
             flat["__basis_taper_unfolded"] = np.asarray(_basis_taper, np.float32)
             flat["__cfg_basis_taper_folded"] = np.asarray(0)
+        if _basis_program.chart_enabled:
+            # (p0_497 gap (a)) COUNTED-CHART-PAYLOAD custody: the quantized pose table + scales
+            # the chart was built from (build_from_xi on the DEQUANTIZED values). Byte-close
+            # ships these as the counted chart section; the receiver decodes the identical
+            # table -> identical chart. Additive `__`-prefixed keys (loader ignores unknowns).
+            _chart_q = getattr(args, "_literal_chart_pose_q", None)
+            _chart_scales = getattr(args, "_literal_chart_pose_scales", None)
+            if _chart_q is None or _chart_scales is None:
+                raise RuntimeError(
+                    "literal chart pose payload (quantized table + scales) is missing from "
+                    "checkpoint custody"
+                )
+            flat["__chart_pose_q"] = np.asarray(_chart_q, np.int16)
+            flat["__chart_pose_scales"] = np.asarray(_chart_scales, np.float32)
     # ---- NEW provenance (additive; closes the self-orient/curriculum trainer-persist gap) ----
     flat["__epoch"] = np.asarray(int(epoch))
     flat["__cfg_in_feat"] = np.asarray(int(in_feat))
@@ -4389,7 +4419,13 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "literal_polar_curvelet uses same-width --literal-curvelet-native-orient; "
                 "the appended --self-orient Fourier bank would break the equal-value A/B"
             )
-        if literal_basis_program.chart_enabled and not bool(getattr(args, "pose_carrier", False)):
+        if (
+            literal_basis_program.chart_enabled
+            and literal_basis_program.chart_pose_dependency == "counted_pose_carrier_xi"
+            and not bool(getattr(args, "pose_carrier", False))
+        ):
+            # (p0_497 gap (a)) only the xi dependency needs the carrier; the literal chart now
+            # declares counted_chart_payload (its OWN quantized pose-table section) instead.
             raise ValueError(
                 "literal curvelet ground chart requires --pose-carrier so byte-close has the "
                 "counted xi dependency declared by BasisProgramConfig"
@@ -4613,12 +4649,25 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
         )
     _gfc_chart = None
     _input_chart = None
+    _literal_chart_fine_cache = None  # (p0_497) ONCE-computed fine grid for the sealed evaluator
 
     def _basis_base_np_for_pair(pi: int) -> np.ndarray:
         if use_gfc:
-            # per-pair chart coords -> curvelet feats, recomputed on demand (numpy side; the MLX
-            # side caches ONCE via cf_mx_cache — the chart is static, unlike the reorient loop).
-            values = _basis_feats_np(_input_chart.coords_for_pair_numpy(coords_np, pi))
+            if basis_family == LITERAL_POLAR_CURVELET:
+                # (p0_497 gap (a)) SEALED charted_grid_bilinear_v1: the direct sparse literal
+                # evaluator is n600-prohibitive per pair (lattice radius 160); the sealed
+                # program bilinear-samples the ONCE-computed fine grid at the homography-
+                # charted coords. Trainer and generated receiver run the SAME function from
+                # the SAME embedded module source -> identical charted evaluation.
+                values = charted_pair_feats_numpy(
+                    literal_basis_program, render_h, render_w,
+                    _gfc_chart.H_chart_norm[int(pi)], _literal_chart_fine_cache,
+                )
+            else:
+                # per-pair chart coords -> curvelet feats, recomputed on demand (numpy side; the
+                # MLX side caches ONCE via cf_mx_cache — the chart is static, unlike the reorient
+                # loop).
+                values = _basis_feats_np(_input_chart.coords_for_pair_numpy(coords_np, pi))
             if _dat_taper is not None:
                 values = np.multiply(values, _dat_taper, dtype=np.float32)
             return values
@@ -4833,13 +4882,53 @@ def run_train(args: argparse.Namespace) -> dict[str, Any]:
                 "--ground-frame-chart + --structured-init requires --gfc-ref-pair 0 (the pretrain "
                 "uses pair-0 feats; only chart[ref] is the exact identity).")
         from tac.boundary_math.ground_frame_chart import ChartCalibration, GroundFrameChart
-        _gfc_chart = GroundFrameChart.build(
-            np.stack([np.asarray(gt.gt_poses[pi], np.float64) for pi in range(P)]),
-            ref_pair=int(args.gfc_ref_pair),
-            calib=ChartCalibration(s_t=float(args.gfc_s_t), s_r=float(args.gfc_s_r),
-                                   pitch=float(args.gfc_pitch)),
-            grid_hw=(render_h, render_w),
+        _gfc_pose_table = np.stack(
+            [np.asarray(gt.gt_poses[pi], np.float64).reshape(-1)[:6] for pi in range(P)]
         )
+        _gfc_calib = ChartCalibration(s_t=float(args.gfc_s_t), s_r=float(args.gfc_s_r),
+                                      pitch=float(args.gfc_pitch))
+        if basis_family == LITERAL_POLAR_CURVELET:
+            # (p0_497 gap (a)) COUNTED-CHART-PAYLOAD build: quantize->dequantize the startup
+            # pose table (deterministic; identical on resume) and build the chart from the
+            # DEQUANTIZED values via build_from_xi — exactly what the generated receiver will
+            # decode from the shipped payload, so trainer chart == receiver chart bit-for-bit.
+            # The quantized table + scales are stashed for checkpoint custody (persisted as
+            # __chart_pose_q/__chart_pose_scales; byte-close ships them as the counted section).
+            if use_margin_compander:
+                raise ValueError(
+                    "--margin-companded-ground-chart is fail-closed for "
+                    "--basis literal_polar_curvelet: the compander is a nonlinear coordinate "
+                    "map, not a homography row, so the sealed charted_grid_bilinear_v1 "
+                    "receiver program cannot reproduce it (composition gap, not a family "
+                    "verdict). Run the literal chart arm without the compander.")
+            from tac.boundary_math.xi_pose_coder import dequantize_xi, quantize_xi
+            _chart_pose_q, _chart_pose_scales = quantize_xi(_gfc_pose_table)
+            args._literal_chart_pose_q = _chart_pose_q
+            args._literal_chart_pose_scales = _chart_pose_scales
+            _gfc_chart = GroundFrameChart.build_from_xi(
+                dequantize_xi(_chart_pose_q, _chart_pose_scales),
+                ref_pair=int(args.gfc_ref_pair),
+                calib=_gfc_calib,
+                grid_hw=(render_h, render_w),
+            )
+            _t_cache = time.time()
+            _literal_chart_fine_cache = charted_fine_feats_cache_numpy(
+                literal_basis_program, render_h, render_w
+            )
+            print(json.dumps({
+                "stage": "literal_chart_fine_cache",
+                "fine_factor": int(literal_basis_program.chart_fine_factor),
+                "shape": list(_literal_chart_fine_cache.shape),
+                "seconds": round(time.time() - _t_cache, 2),
+                "note": "ONCE-computed fast-FFT fine grid for sealed charted_grid_bilinear_v1",
+            }), flush=True)
+        else:
+            _gfc_chart = GroundFrameChart.build(
+                _gfc_pose_table,
+                ref_pair=int(args.gfc_ref_pair),
+                calib=_gfc_calib,
+                grid_hw=(render_h, render_w),
+            )
         _input_chart = _gfc_chart
         if use_margin_compander:
             from tac.boundary_math.inverse_depth_compander import MarginCompandedGroundChart
@@ -14999,6 +15088,18 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=6,
         help="persisted decoder-native orientation fixed-point iteration cap",
+    )
+    ap.add_argument(
+        "--literal-chart-fine-factor",
+        type=int,
+        default=2,
+        help=(
+            "fine-grid factor for the SEALED charted_grid_bilinear_v1 evaluator "
+            "(literal_polar_curvelet + --ground-frame-chart): fine feats are computed ONCE "
+            "on the (factor*H, factor*W) inclusive grid via the fast FFT path, then each "
+            "pair's charted coords bilinear-sample that table (the direct sparse transform "
+            "is n600-prohibitive at lattice radius 160). Persisted in BasisProgramConfig."
+        ),
     )
     # LEVER-2 (stem-Nyquist rate/anti-alias): cap curvelet-bank freqs (cycles/unit) at the SegNet
     # stem Nyquist (default 64 for SEG_W=512, stem-stride-2). None (default) = no cap = current
