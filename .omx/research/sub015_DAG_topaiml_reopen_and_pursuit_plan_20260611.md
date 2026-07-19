@@ -19767,3 +19767,28 @@ no new lever (compiler #529 unchanged) · this FEED = DAG leg. launch_ready=fals
   CLOSED (#549 bindingness) · exact-residual family rate-dead (#541) · **step 7 CLOSED
   (this)** · open: Seg-secant curve (arm live) → #536 waterfill → steps 8-9 (GO-gated exact
   replay → SEAL).
+
+## FEED-nielsen-crosswalk (2026-07-19) — #550 landed; the head IS a power diagram, gauge kills 59% of PDW1's bytes (DERIVED)
+
+- **HEADLINE (DERIVED, exact in the channel quotient):** the frozen rank-4 max-of-affine head is
+  literally a first-type Bregman/power diagram (Nielsen-Boissonnat-Nock): l_i(z)=a_i·z+b_i ↔
+  weighted sites s_i=a_i/2, ω_i=b_i+‖s_i‖². Gauge freedom (add any affine u·z+v to all scores)
+  removes d+1=5 DOF → margin-preserving description = (K-1)(d+1)=20 scalars; +1 scale for
+  partition-only = 19 DOF. Applied to the MEASURED PDW1 packet (338B): the 180 tie-locus bytes are
+  DETERMINISTIC functions of sites/weights/edges → constructions 158B (drop ties) / 138B
+  (reference-class gauge, margin-preserving) / 134B (partition-only). Routed as #553 ($0 PDW2
+  format probe, 5-condition gate incl. frame-195 near-tie reproduction; stop rule: the open rate
+  axis is the spatial pullback, not certificate bytes).
+- **Dual-metric resolution (#536 schema):** natural/expectation coordinates are TWO CHARTS of one
+  geometry (dη=H dθ) — neither Euclid nor Fisher prices bytes alone; Euclid reads optimizer
+  coordinates, Fisher reads scorer decision effect, and ONLY receiver-closed Δbytes/ΔS secants
+  price the waterfill. The measured cosine sign flip is expected-informative, not contradictory.
+  4-predictor calibration gate defined on the pending secant moves.
+- **Charter correction (source-inspected):** the measured repairs 9→41 are hard-oracle proposal
+  retries after nonlinear native-fp32 evaluation, NOT Dykstra iterations (the inner projection is
+  analytic per-pixel; Dykstra fires only vs the Pose ellipsoid, linear-active 4/96). Reordering
+  projections is low-EV for the repair growth; per-row telemetry gate defined before any
+  algorithm change.
+- Chernoff/Jensen ambiguity = PROBE_NOT_ALLOCATE (prioritizer only, no radius→byte conversion
+  without calibration); Bregman-ball coreset = lower-priority with mandatory full recheck;
+  pyBregMan = test fixtures only, never a production/inflate dependency.
