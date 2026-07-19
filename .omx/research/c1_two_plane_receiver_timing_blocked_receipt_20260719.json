@@ -1,0 +1,78 @@
+{
+  "authority": {
+    "contest_budget_verdict": false,
+    "official_evaluation_measured": false,
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "provider_dispatch_attempted": false,
+    "score_claim": false
+  },
+  "blocked_stage": "storage_preflight_before_materialization",
+  "code_custody": {
+    "commit": "e2e8a5e55e74a993708f4a085ba0b2a3ebef0081",
+    "measurement_tool_sha256": "2950ba48bbba0c6be5db57158a651dcdc2403bf8498605c39a8bdd2d0b595d01",
+    "measurement_tool_tests_sha256": "8b39559e99d8bd46ba62df3d96285e7afd9d74cf842eac78f523bac309d4652c",
+    "receiver_sha256": "f7ce598e067874813fcabc5b8767d368c4fae8e38c3af29fdff3868004b84b85",
+    "receiver_tests_sha256": "5463375e6c9cc58eca9d33cf39ce7f08110571ee0cb0905d739ce839ca202a4c",
+    "remote_checkout_reproduces_sources": true
+  },
+  "completed": false,
+  "cuda_workload": {
+    "label": "DERIVED_UNMEASURED_CUDA_WORKLOAD",
+    "numerator_values": 707788800,
+    "output_bytes": 3662409600,
+    "seconds": null,
+    "uniform_2x2_tap_products": 2831155200
+  },
+  "expected_n600_workload": {
+    "camera_shape_per_frame": [874, 1164, 3],
+    "numerator_values": 707788800,
+    "pair_count": 600,
+    "planes_per_pair": 2,
+    "raw_output_bytes": 3662409600,
+    "scorer_plane_shape": [384, 512, 3]
+  },
+  "frozen_inputs": {
+    "cache_bytes": 5078017610,
+    "cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "y0_sha256": "5e86e419cdd5bd41c9482cabc78cf27cec22281098b64c715d91f1f067d11566",
+    "y1_sha256": "6a731946e3d9de82089c90de9784c5a5bc72c607c963fb6f79dac16f00ac89bc"
+  },
+  "hard_oracle_pair_ids": [90, 175, 277, 381, 424, 573],
+  "missing_measurements": [
+    "full-n600 serial receiver component timing",
+    "first fresh full-n600 four-worker receiver component timing",
+    "second fresh full-n600 four-worker receiver component timing",
+    "parallel double-decode byte identity",
+    "six-real-pair native-fp32 SegNet/PoseNet hard oracle",
+    "M5 Max MLX/Metal parity and local timing",
+    "full official contest evaluation timing"
+  ],
+  "n600_measurement_started": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "review": {
+    "main_landing_review_required": true,
+    "round_5_finding": "Self-attested calibration evidence could authorize a contest verdict.",
+    "round_5_followup": "Production compose now rejects every caller calibration path and defaults CLOSE until canonical inner full-evaluate receipt validation exists.",
+    "self_review_rounds": 5,
+    "sixth_review_performed": false
+  },
+  "schema": "c1_two_plane_receiver_timing_blocked_receipt.v1",
+  "status": "BLOCKED_ENVIRONMENT_SSD_WRITE_CUSTODY",
+  "storage_preflight": {
+    "exact_required_root": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/",
+    "receipt_path": ".omx/research/c1_two_plane_receiver_storage_blocker_20260719.json",
+    "receipt_sha256": "39c22f7ca08900dd3cefae3035e6c326a3982c61905b1aca3c6b87e0650a6383",
+    "requested_bytes": 25769803776,
+    "selected_ssd_free_bytes": 816407822336,
+    "selected_ssd_usable_bytes": 773458149376,
+    "substitute_storage_used": false
+  },
+  "timing_verdict": {
+    "budget_seconds": 1800,
+    "class": "CLOSE -> MODAL_MEASUREMENT_OWED",
+    "label": "DEFAULT_UNMEASURED",
+    "reason": "No admissible paired local/full-official calibration exists and no C1 n600 local row exists.",
+    "verdict_scope": "The 1800-second constant applies to inflate plus scoring on contest hardware; this blocked receipt does not adjudicate it."
+  }
+}
