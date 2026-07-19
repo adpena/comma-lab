@@ -1,0 +1,179 @@
+{
+  "byteclosed_witness_direct_distortion": {
+    "d_pose": 44.346343994140625,
+    "d_seg": 0.0035552978515625
+  },
+  "byteclosed_witness_f1_sha256": "bf570c5814c47bd4872e65c326b047e1a956ac5775a0ff9eebaec41edd6bb55b",
+  "config_sha256": "6c63611eb9c0906ab7ba01e00230683214605371b5c08884f575669e84efd29e",
+  "pair_id": 200,
+  "pair_runtime_seconds": 52.822329374961555,
+  "rungs": {
+    "source_exact_i32": {
+      "candidate_frame1_sha256": "d78a01788e4f6d8a5b808d187c050a8047fa6eca7f328fba7d02413113955843",
+      "description": {
+        "denominator": 786432,
+        "encoding": "i32_numerator",
+        "payload_bytes": 2359352,
+        "payload_sha256": "46150683911bb57b36775bc5344bafc821a23c23bf489772cc41bbad0a3d6c71",
+        "quant_levels": 0
+      },
+      "distortionnet": {
+        "d_pose": 1.6396849433775174e-09,
+        "d_seg": 0.0
+      },
+      "frame0_policy": "source gt_f0; external diagnostic policy; zero counted bytes; not contest-complete",
+      "lattice": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_abs_realized_numerator_error": 0,
+        "nonzero_realized_numerator_error_cells": 0,
+        "proven_affine_infeasible_blocks": 0,
+        "target_numerator_repair_l1": 0,
+        "target_repair_cells": 0
+      },
+      "pair_id": 200,
+      "rung": "source_exact_i32",
+      "runtime_seconds": {
+        "full_distortionnet": 0.35256658401340246,
+        "lattice_solve": 11.713355832966045,
+        "pair_rung_total": 12.159381082979962
+      },
+      "shared_plane_error_vs_source": {
+        "max_abs": 0.0,
+        "mean_abs": 0.0,
+        "rmse": 0.0
+      },
+      "target_integer_numerators_sha256": "80c326962f7add261dff19ec56bb98caf0b0ba11264a72b3a9fa31680cd74b8c",
+      "target_plane_sha256": "8d1bd9075a1f8ca6ce063f73d97cb487c1375bd461d74ffcc32dec957bba1365"
+    },
+    "witness_byteclosed_i32": {
+      "candidate_frame1_sha256": "db65f4016662536fad3ef0640360e9e7985ca41abb59c87df53d65d0bc43a112",
+      "description": {
+        "denominator": 786432,
+        "encoding": "i32_numerator",
+        "payload_bytes": 2359352,
+        "payload_sha256": "05ac5ca7399e4b3499933af1ede9614a91c271e19857c439b770e7a9e9d867d4",
+        "quant_levels": 0
+      },
+      "distortionnet": {
+        "d_pose": 44.34663391113281,
+        "d_seg": 0.0035552978515625
+      },
+      "frame0_policy": "source gt_f0; external diagnostic policy; zero counted bytes; not contest-complete",
+      "lattice": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_abs_realized_numerator_error": 0,
+        "nonzero_realized_numerator_error_cells": 0,
+        "proven_affine_infeasible_blocks": 0,
+        "target_numerator_repair_l1": 0,
+        "target_repair_cells": 0
+      },
+      "pair_id": 200,
+      "rung": "witness_byteclosed_i32",
+      "runtime_seconds": {
+        "full_distortionnet": 0.3673264589160681,
+        "lattice_solve": 12.663991582812741,
+        "pair_rung_total": 13.12324066599831
+      },
+      "shared_plane_error_vs_source": {
+        "max_abs": 244.40030924479166,
+        "mean_abs": 18.024323197875038,
+        "rmse": 23.598366003412266
+      },
+      "target_integer_numerators_sha256": "05c5ba283e61d7ebbc5e6261fc4bfd0c3ad099ba56722608a6882aed1cd3c0ec",
+      "target_plane_sha256": "9debd95045d5acfdfa91a0b55e638c53c16f19e4063bfddc2b830f269ad6b98a"
+    },
+    "witness_q4_u8": {
+      "candidate_frame1_sha256": "7361ca4ff86153ca436b3c9e63bfc2fd1d2b992537d11f7f2dcfb10b2195ea2c",
+      "description": {
+        "denominator": 786432,
+        "encoding": "u8_plane",
+        "payload_bytes": 589880,
+        "payload_sha256": "c3c46f2f86c08fc062bc8c9152af8ab6f6dea7f5a555aceb3683265c387b954e",
+        "quant_levels": 16
+      },
+      "distortionnet": {
+        "d_pose": 41.26728057861328,
+        "d_seg": 0.0061238608323037624
+      },
+      "frame0_policy": "source gt_f0; external diagnostic policy; zero counted bytes; not contest-complete",
+      "lattice": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_abs_realized_numerator_error": 0,
+        "nonzero_realized_numerator_error_cells": 0,
+        "proven_affine_infeasible_blocks": 0,
+        "target_numerator_repair_l1": 0,
+        "target_repair_cells": 0
+      },
+      "pair_id": 200,
+      "rung": "witness_q4_u8",
+      "runtime_seconds": {
+        "full_distortionnet": 0.5811744169332087,
+        "lattice_solve": 12.467741625150666,
+        "pair_rung_total": 13.144038915866986
+      },
+      "shared_plane_error_vs_source": {
+        "max_abs": 249.5867716471354,
+        "mean_abs": 18.72471772989741,
+        "rmse": 24.17898541474878
+      },
+      "target_integer_numerators_sha256": "0c5264f688e34792d3f0029accad9c4b7e703768df82b5c353ef8d709ded3e1f",
+      "target_plane_sha256": "44c2c688bd5a51099a3efcb46d03261443d8e8bda00e8cf48ee89bf6b7a3707c"
+    },
+    "witness_q6_u8": {
+      "candidate_frame1_sha256": "71012933f1c000c165374ee0cc18fd285472bb56753807cb7482eb93b8681bd2",
+      "description": {
+        "denominator": 786432,
+        "encoding": "u8_plane",
+        "payload_bytes": 589880,
+        "payload_sha256": "583bf4576c3e74587fb9da57ce9ea73e806fa0bd997e71cd7e3ce1621682e5ce",
+        "quant_levels": 64
+      },
+      "distortionnet": {
+        "d_pose": 44.29032516479492,
+        "d_seg": 0.0037333171349018812
+      },
+      "frame0_policy": "source gt_f0; external diagnostic policy; zero counted bytes; not contest-complete",
+      "lattice": {
+        "aggregate_status": "FEASIBLE_EXACT",
+        "budget_blocks": 0,
+        "certified_exact": true,
+        "exact_blocks": 589824,
+        "heuristic_blocks": 0,
+        "max_abs_realized_numerator_error": 0,
+        "nonzero_realized_numerator_error_cells": 0,
+        "proven_affine_infeasible_blocks": 0,
+        "target_numerator_repair_l1": 0,
+        "target_repair_cells": 0
+      },
+      "pair_id": 200,
+      "rung": "witness_q6_u8",
+      "runtime_seconds": {
+        "full_distortionnet": 0.6730531251523644,
+        "lattice_solve": 12.469329750165343,
+        "pair_rung_total": 13.233886334113777
+      },
+      "shared_plane_error_vs_source": {
+        "max_abs": 245.5867716471354,
+        "mean_abs": 17.970924620344135,
+        "rmse": 23.616173840576476
+      },
+      "target_integer_numerators_sha256": "11221ba46a994073d1141296ffcdfcd886c2d2b83cb370b0f423e2c8b356163d",
+      "target_plane_sha256": "5ea70e5d03008135972ce6200e19fe49dc964f97d5bae340e5d25009935c30e2"
+    }
+  },
+  "schema": "yhat_rd_ladder_pair_stage.v1",
+  "source_f0_sha256": "de8741c4a1a3a849a16e10c1228c9b5731fdfb593caef42c68cd63c2df9eafb6",
+  "source_f1_sha256": "ab6e7a0bd241b789b4d9ef4bde965795ffff2f1a202c14c085500ed1ca3fcac3"
+}

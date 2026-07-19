@@ -1,0 +1,50 @@
+{
+  "completed_pairs": [
+    10,
+    60,
+    110,
+    160,
+    210,
+    260,
+    310,
+    360,
+    410,
+    460,
+    510,
+    560
+  ],
+  "config": {
+    "cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "cpu_threads": 4,
+    "distortionnet_batch_size": 1,
+    "distortionnet_pair_geometry": "one [1,2,874,1164,3] uint8 pair per frozen forward",
+    "frame0_policy": "source gt_f0",
+    "max_nodes_per_block": 4096,
+    "pairs": [
+      10,
+      60,
+      110,
+      160,
+      210,
+      260,
+      310,
+      360,
+      410,
+      460,
+      510,
+      560
+    ],
+    "rungs": [
+      "source_exact_i32",
+      "witness_byteclosed_i32",
+      "witness_q6_u8",
+      "witness_q4_u8"
+    ],
+    "schema": "yhat_rd_ladder_chunk_state.v1",
+    "witness_raw_sha256": "3ffe6e11d672b3278c8d78ac2c562468d4fdffe97dc71777068b464fad9e57a8",
+    "witness_receipt_sha256": "350f38e53bba79f5b282b6726ca47a958f27f5759b612f9ffa984fd523486625"
+  },
+  "config_sha256": "5c61cdf1e15c1a53b6f40524074dc99c130352c11f9b6172ff2331dc5b3aaa89",
+  "next_pair": null,
+  "schema": "yhat_rd_ladder_chunk_state.v1"
+}
