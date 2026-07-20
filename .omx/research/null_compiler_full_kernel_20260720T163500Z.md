@@ -1,9 +1,9 @@
 # Full shared-resize null-compiler closure — 2026-07-20
 
-Authority: `codex_delegate:null_compiler_fix:20260720T160856Z`  
-Lane: `lane_null_compiler_full_kernel_20260720`  
-Schema: `resize_null_preimage_full_kernel.v1`  
-Verdict scope: one SHA-pinned real fixture frame plus the exact structural law  
+Authority: `codex_delegate:null_compiler_fix:20260720T160856Z`
+Lane: `lane_null_compiler_full_kernel_20260720`
+Schema: `resize_null_preimage_full_kernel.v1`
+Verdict scope: one SHA-pinned real fixture frame plus the exact structural law
 Status: `research_only=true`; `score_claim=false`; `promotion_eligible=false`
 
 ## Outcome
