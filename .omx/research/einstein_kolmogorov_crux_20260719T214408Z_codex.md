@@ -247,11 +247,14 @@ blocker, not evidence against the unmeasured families.
 The operator's later INTER-CAE connection was weighed as advisory. Its shape grammar is
 structurally compatible with the proposed `G` leg and its INTER predictor could reuse
 `xi`, but the existing intake supplies a literature prior, not a measured residual on the
-settled scorer-plane bank. The measured n12 result says the immediate wall is a compact
-two-plane predictor/program, including texture/Pose obligations, at roughly 0.24 MB.
-Building a shape coder before a bank-bound residual and receiver-consumption contract
-exist would not answer that gate, so this run records `WATCH_NOT_SELECTED`, not a family
-negative. No new MPEG-4 search or measurement was repeated.
+settled scorer-plane bank. The primary blocker is
+`NO_COMPLETE_N600_ARCHIVE_WITHIN_TOTAL_SCORE_BYTE_CAP`: no complete n600 archive has
+closed all fixed runtime, archive-framing, texture, and Pose obligations inside the
+applicable total cap. Compact prediction is only one rate subproblem after those fixed
+costs are debited. Building a shape coder before a bank-bound residual and
+receiver-consumption contract exist would not answer that gate, so this run records
+`WATCH_NOT_SELECTED`, not a family negative. No new MPEG-4 search or measurement was
+repeated.
 
 ## 2. Constructive minimum-description program
 
@@ -260,9 +263,13 @@ negative. No new MPEG-4 search or measurement was repeated.
 1. A versioned manifest with dimensions, deterministic seed, grammar version, and
    hashes of the generic decoder contracts.
 2. `G_0`, a first-pair power-diagram/contour description plus its necessary
-   receiver-evaluated spatial field.  Temporal pairs use `xi`-warped prediction and an
-   arithmetic-coded INTER-CAE-style boundary correction.  Birth/death side information
-   is charged; no source-derived fact is hidden in code.
+   receiver-evaluated spatial field. Temporal pairs use `xi`-warped prediction plus a
+   generic, versioned boundary-residual coder interface selected only by measured exact
+   action per byte through the production receiver. Birth/death side information is
+   charged; no source-derived fact is hidden in code. MPEG-4 INTER-CAE remains an
+   advisory candidate behind this interface and is not selected unless a custodied,
+   bank-bound residual measurement beats the alternatives under the same byte and
+   receiver-consumption contract.
 3. `xi`, quantized with a self-derived tolerance: choose the coarsest quantizer whose
    exact PoseNet replay remains within the score-optimal pose tube.  The same `xi`
    transports `G`; it is not duplicated in a second temporal predictor.
@@ -614,14 +621,20 @@ rate subproblem after debiting all fixed runtime/archive/Pose overhead. A counte
 arbitrary-numerator codec remains secondary only if the joint interval-solver
 representation is selected.
 
-The authoritative v3 receipt closes the crash window between durable receipt write and
-certified scratch cleanup: the immutable precleanup receipt plus durable control and
-precision-drop stage receipts precede deletion, and the final successor records
-cross-version cleanup custody. `--resume --ephemeral-output` revalidates the receipt,
-prepared bank, live tool/codec/receiver hashes, and remaining arm bytes before cleanup,
-and is idempotent after cleanup. Its strict byte cap uses `ceil(bound)-1` plus exact
-objective bracketing, so equality with the pointer is correctly excluded. The preserved
-v1 and v2 receipts are historical only.
+The authoritative v3 receipt remains scientifically authoritative: its immutable
+precleanup receipt plus durable control and precision-drop stage receipts precede the
+successfully completed cleanup, and its immutable final successor records historical
+cross-version cleanup custody. V3 was generated before the new per-file
+`cleanup_manifest` state machine, so it does **not** prove resumability from a partial
+recursive deletion. For every future pending cleanup, the repaired tool requires
+manifest-bound validation and deletion of each file and can resume only from deterministic
+per-file deletion boundaries by revalidating every survivor against the immutable
+precleanup manifest. The exact historical v3 final is accepted read-only only
+under its frozen `5758418c0e`/tool tuple and only when the output root is absent; this
+compatibility path cannot authorize deletion. A pending legacy receipt without a
+cleanup manifest is refused and cannot delete any output. V3's strict byte cap uses
+`ceil(bound)-1` plus exact objective bracketing, so equality with the pointer is
+correctly excluded. The preserved v1 and v2 receipts are historical only.
 
 The cleanup review also found a class defect: the validator treated a production
 receiver `.raw` output as though it had to be an `.mp4` artifact. The class fix codifies

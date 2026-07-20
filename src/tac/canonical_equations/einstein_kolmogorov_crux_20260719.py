@@ -38,6 +38,16 @@ SOURCE_FRONTIER_MAGNITUDE = ".omx/research/einstein_kolmogorov_frontier_magnitud
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BANKED_AB_V3_PATH = ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json"
 BANKED_AB_V3_SHA256 = "9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a"
+RUNG_E_PATH = ".omx/research/constructive_solver_541_rung_e_n48_20260719.json"
+RUNG_E_SHA256 = "d966e066bfd24deb0f7ad1fda865337ed2f108c03c93244c24dd592ac69682a9"
+TRADE_CELLS_PATH = ".omx/research/seg_secant_rd_curve_n24_20260719_v2.json"
+TRADE_CELLS_SHA256 = "28940965904e9238668de6350785ef0e12348275b64fab83b22901726b0d1f85"
+JOINT_INVERSE_PATH = ".omx/research/joint_seg_pose_inverse_solve_receipt_n24_20260719.json"
+JOINT_INVERSE_SHA256 = "7a6fdbdfb8f6084a6fd79bb0a63490335b22ae308774032fff7471bb4281e3e9"
+EXACT_LATTICE_PATH = (
+    "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_n600_20260719/aggregate_n600_receipt.json"
+)
+EXACT_LATTICE_SHA256 = "1509431e2f06963a0d711819d6fcee131fe44599d997ef137dbf4b352f2f2e60"
 BANKED_AB_SUPERSEDED = (
     {
         "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720.json",
@@ -62,6 +72,48 @@ C1_CONTEST_CPU_VALIDATION_PATH = (
     "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/"
     "harvest_fc01KXXRAR/modal_cpu_auth_eval_validation.json"
 )
+EXPECTED_SOURCE_RECEIPTS = {
+    C1_ARCHIVE_PATH: {
+        "sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+        "bytes": 409_526_925,
+    },
+    C1_CONTEST_CPU_EVAL_PATH: {
+        "sha256": "4ef77cc58c4232fc0bfa76f02c74ceb6c258e064707522a4b510e9fe06495e99",
+    },
+    C1_CONTEST_CPU_VALIDATION_PATH: {
+        "sha256": "7230903c6fdad0474ccc4470160fa9dda36ddcd06af3ba5a8c454cfe4d414196",
+    },
+    RUNG_E_PATH: {"sha256": RUNG_E_SHA256},
+    BANKED_AB_V3_PATH: {"sha256": BANKED_AB_V3_SHA256},
+    TRADE_CELLS_PATH: {"sha256": TRADE_CELLS_SHA256},
+    JOINT_INVERSE_PATH: {"sha256": JOINT_INVERSE_SHA256},
+    EXACT_LATTICE_PATH: {"sha256": EXACT_LATTICE_SHA256},
+}
+EXPECTED_EXACT_ARCHIVE_ROW_IDS = {
+    "c1_solved_distortion_n600_contest_cpu",
+    "v10_rung_e_exact_two_plane_n48_local",
+    "banked_n12_exact_receiver_control",
+    "banked_n12_scorer_plane_precision_drop1",
+}
+EXPECTED_INVERSE_ROW_IDS = {
+    "factor2_exact_lattice_frame1_n600",
+    "joint_zero_band_n24",
+}
+C1_SOURCE_PROJECTION = {
+    "pair_count": 600,
+    "archive_bytes": 409_526_925,
+    "archive_sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+    "d_seg": 0.00015196,
+    "d_pose": 0.00010184,
+}
+EXACT_LATTICE_SOURCE_PROJECTION = {
+    "pair_count": 600,
+    "d_seg": 9.663899739583334e-7,
+    "d_pose": None,
+    "archive_bytes": None,
+    "exact_action": None,
+    "frontier_relevant_distortion": True,
+}
 
 
 class InfeasibleByteBudgetError(ValueError):
@@ -367,11 +419,55 @@ def _validate_source_receipts(payload: dict) -> dict[str, dict]:
     paths = [row.get("path") for row in rows]
     if any(not isinstance(path, str) for path in paths) or len(set(paths)) != len(paths):
         raise ValueError("frontier-magnitude source-receipt paths must be unique strings")
+    if set(paths) != set(EXPECTED_SOURCE_RECEIPTS):
+        raise ValueError("frontier-magnitude source-receipt set drifted")
     by_path: dict[str, dict] = {}
     for index, row in enumerate(rows):
+        expected = EXPECTED_SOURCE_RECEIPTS[row["path"]]
+        if row.get("sha256") != expected["sha256"] or ("bytes" in expected and row.get("bytes") != expected["bytes"]):
+            raise ValueError(f"source_receipts[{index}] frozen declaration drifted")
         _validate_artifact_row(row, label=f"source_receipts[{index}]", portable_absolute=True)
         by_path[row["path"]] = row
     return by_path
+
+
+def _rows_by_exact_id(rows: object, *, expected_ids: set[str], label: str) -> dict[str, dict]:
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ValueError(f"{label} must be a list of mappings")
+    point_ids = [row.get("point_id") for row in rows]
+    if any(not isinstance(point_id, str) or not point_id for point_id in point_ids):
+        raise ValueError(f"{label} point IDs must be non-empty strings")
+    if len(set(point_ids)) != len(point_ids):
+        raise ValueError(f"{label} point IDs must be unique")
+    if set(point_ids) != expected_ids:
+        raise ValueError(f"{label} row set drifted")
+    return {row["point_id"]: row for row in rows}
+
+
+def _load_json_source(
+    source_rows: dict[str, dict],
+    *,
+    source_path: str,
+    label: str,
+) -> dict | None:
+    source_row = source_rows.get(source_path)
+    if not isinstance(source_row, dict):
+        raise ValueError(f"{label} source receipt is absent")
+    path = _resolve_source_path(source_path)
+    if not path.is_file():
+        if Path(source_path).is_absolute() and source_row.get("portable_if_absent") is True:
+            return None
+        raise ValueError(f"{label} source artifact is absent")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} source payload must be a mapping")
+    return payload
+
+
+def _require_source_projection(row: dict, expected: dict, *, label: str) -> None:
+    drifted = [key for key, value in expected.items() if row.get(key) != value]
+    if drifted:
+        raise ValueError(f"{label} drifted from source receipt fields: {', '.join(drifted)}")
 
 
 def _decimal_action(*, d_seg: Decimal, d_pose: Decimal, archive_bytes: int) -> Decimal:
@@ -412,6 +508,7 @@ def _validate_c1_source_custody(bank: dict, *, source_rows: dict[str, dict]) -> 
     validation_source = source_rows.get(C1_CONTEST_CPU_VALIDATION_PATH)
     if not all(isinstance(row, dict) for row in (archive_source, eval_source, validation_source)):
         raise ValueError("C1 archive/evaluation source receipts are incomplete")
+    _require_source_projection(bank, C1_SOURCE_PROJECTION, label="C1 chart row")
     if (
         bank.get("archive_bytes") != archive_source.get("bytes")
         or bank.get("archive_sha256") != archive_source.get("sha256")
@@ -480,11 +577,21 @@ def _validate_c1_rounded_interval(bank: dict, *, target: float) -> None:
         d_pose=bank.get("d_pose"),
         archive_bytes=bank.get("archive_bytes"),
     )
+    expected_seg_term = SEGMENTATION_WEIGHT * bank["d_seg"]
+    expected_pose_term = math.sqrt(POSE_RADICAND_WEIGHT * bank["d_pose"])
+    expected_rate_term = RATE_WEIGHT * bank["archive_bytes"] / RATE_DENOMINATOR_BYTES
     if not math.isclose(
         center_action,
         bank.get("derived_action_point_estimate_from_reported_centers"),
         rel_tol=0.0,
         abs_tol=1e-12,
+    ) or any(
+        not math.isclose(actual, expected, rel_tol=0.0, abs_tol=1e-12)
+        for actual, expected in (
+            (bank.get("derived_seg_term_from_reported_center"), expected_seg_term),
+            (bank.get("derived_pose_term_from_reported_center"), expected_pose_term),
+            (bank.get("rate_term_from_exact_archive_bytes"), expected_rate_term),
+        )
     ):
         raise ValueError("C1 reported-center action arithmetic drift")
     action_interval = bank.get("derived_action_interval_from_rounded_components")
@@ -527,6 +634,184 @@ def _validate_c1_rounded_interval(bank: dict, *, target: float) -> None:
         or cap.get("scope") != "total archive.zip bytes, not a predictor-only budget"
     ):
         raise ValueError("C1 total-archive cap interval drift")
+    if bank.get("frontier_relevant_distortion") is not frontier_feasible_at_zero_pose_and_rate(
+        d_seg=bank["d_seg"], target_action=target
+    ) or bank.get("inside_pointer_byte_box") is not (bank["archive_bytes"] <= cap_min):
+        raise ValueError("C1 frontier relevance/byte-box classification drift")
+
+
+def _validate_rung_e_source(row: dict, *, source_rows: dict[str, dict], target: float) -> None:
+    receipt = _load_json_source(source_rows, source_path=RUNG_E_PATH, label="rung-E")
+    if receipt is None:
+        raise ValueError("repository-local rung-E receipt cannot be portable-only")
+    archive = receipt.get("archive")
+    hard_oracle = receipt.get("hard_oracle")
+    pair_ids = receipt.get("pair_ids")
+    oracle_pairs = hard_oracle.get("pairs") if isinstance(hard_oracle, dict) else None
+    if (
+        receipt.get("schema") != "v10_free_predictor_floor_rung_e.v1"
+        or not isinstance(archive, dict)
+        or not isinstance(hard_oracle, dict)
+        or not isinstance(pair_ids, list)
+        or not isinstance(oracle_pairs, list)
+        or len(pair_ids) != len(oracle_pairs)
+        or len(set(pair_ids)) != len(pair_ids)
+    ):
+        raise ValueError("rung-E source receipt structure drifted")
+    projected_bytes = (archive["bytes"] * 600 + len(pair_ids) - 1) // len(pair_ids)
+    _require_source_projection(
+        row,
+        {
+            "pair_count": len(pair_ids),
+            "archive_bytes": archive["bytes"],
+            "archive_sha256": archive["sha256"],
+            "d_seg": hard_oracle["mean_d_seg"],
+            "d_pose": hard_oracle["mean_d_pose"],
+            "strict_bytes_to_beat_pointer_at_measured_distortion": maximum_byte_budget(
+                target_action=target,
+                d_seg=hard_oracle["mean_d_seg"],
+                d_pose=hard_oracle["mean_d_pose"],
+            ),
+            "frontier_relevant_distortion": frontier_feasible_at_zero_pose_and_rate(
+                d_seg=hard_oracle["mean_d_seg"],
+                target_action=target,
+            ),
+            "derived_n600_linear_archive_bytes": projected_bytes,
+            "derived_n600_action_at_unchanged_mean_distortion": contest_action(
+                d_seg=hard_oracle["mean_d_seg"],
+                d_pose=hard_oracle["mean_d_pose"],
+                archive_bytes=projected_bytes,
+            ),
+        },
+        label="rung-E chart row",
+    )
+
+
+def _validate_trade_source(
+    chart_points: object,
+    *,
+    source_rows: dict[str, dict],
+) -> dict[str, dict]:
+    receipt = _load_json_source(source_rows, source_path=TRADE_CELLS_PATH, label="trade-cells")
+    if receipt is None:
+        raise ValueError("repository-local trade-cells receipt cannot be portable-only")
+    measured_points = receipt.get("measured_points")
+    if receipt.get("schema") != "seg_secant_rd_curve_composed.v1" or not isinstance(measured_points, list):
+        raise ValueError("trade-cells source receipt structure drifted")
+    source_by_id = _rows_by_exact_id(
+        measured_points,
+        expected_ids={
+            "source_reference",
+            "margin_m0p01",
+            "margin_m0p03",
+            "margin_m0p1",
+            "margin_m0p3",
+            "precision_drop1",
+            "precision_drop2",
+            "precision_drop3",
+            "spatial_stride8",
+            "spatial_stride16",
+        },
+        label="trade-cells source",
+    )
+    chart_by_id = _rows_by_exact_id(
+        chart_points,
+        expected_ids=set(source_by_id),
+        label="trade-cells chart",
+    )
+    for point_id, source in source_by_id.items():
+        _require_source_projection(
+            chart_by_id[point_id],
+            {
+                "point_id": source["point_id"],
+                "family": source["family"],
+                "d_seg": source["d_seg"],
+                "d_pose": source["d_pose"],
+                "measured_mean_payload_bytes_per_pair": source["brotli_q11_bytes_per_pair"],
+                "pose_violation_count": source["pose_violation_count"],
+            },
+            label=f"trade-cells chart row {point_id}",
+        )
+    return chart_by_id
+
+
+def _validate_inverse_sources(
+    chart_rows: object,
+    *,
+    source_rows: dict[str, dict],
+    target: float,
+) -> dict[str, dict]:
+    by_id = _rows_by_exact_id(
+        chart_rows,
+        expected_ids=EXPECTED_INVERSE_ROW_IDS,
+        label="exact inverse nonarchive chart",
+    )
+    lattice_row = by_id["factor2_exact_lattice_frame1_n600"]
+    _require_source_projection(
+        lattice_row,
+        EXACT_LATTICE_SOURCE_PROJECTION,
+        label="exact-lattice inverse chart row",
+    )
+    lattice = _load_json_source(source_rows, source_path=EXACT_LATTICE_PATH, label="exact-lattice")
+    if lattice is not None:
+        exact_lattice = lattice.get("exact_lattice")
+        if not isinstance(exact_lattice, dict) or lattice.get("pairs") != 600:
+            raise ValueError("exact-lattice source receipt structure drifted")
+        receipt_projection = {
+            "pair_count": lattice["pairs"],
+            "d_seg": exact_lattice["d_seg"],
+            "d_pose": None,
+            "archive_bytes": None,
+            "exact_action": None,
+            "frontier_relevant_distortion": frontier_feasible_at_zero_pose_and_rate(
+                d_seg=exact_lattice["d_seg"],
+                target_action=target,
+            ),
+        }
+        _require_source_projection(
+            EXACT_LATTICE_SOURCE_PROJECTION,
+            receipt_projection,
+            label="frozen exact-lattice source projection",
+        )
+    joint = _load_json_source(source_rows, source_path=JOINT_INVERSE_PATH, label="joint inverse")
+    if joint is None:
+        raise ValueError("repository-local joint inverse receipt cannot be portable-only")
+    curves = joint.get("measured_curves")
+    if joint.get("schema") != "joint_seg_pose_inverse_rate_composed.v1" or not isinstance(curves, list):
+        raise ValueError("joint inverse source receipt structure drifted")
+    if len(curves) != 1 or not isinstance(curves[0], dict):
+        raise ValueError("joint inverse source receipt must contain exactly one measured curve")
+    source = curves[0]
+    projected_bytes = _project_integral_population_bytes(
+        mean_bytes_per_pair=source["bytes"],
+        pair_count=600,
+    )
+    _require_source_projection(
+        by_id["joint_zero_band_n24"],
+        {
+            "pair_count": source["pair_count"],
+            "measured_mean_payload_bytes_per_pair": source["bytes"],
+            "d_seg": source["d_seg"],
+            "d_pose": source["d_pose"],
+            "derived_n600_payload_bytes": projected_bytes,
+            "derived_action_on_declared_payload_scope": contest_action(
+                d_seg=source["d_seg"],
+                d_pose=source["d_pose"],
+                archive_bytes=projected_bytes,
+            ),
+            "strict_bytes_to_beat_pointer_at_measured_distortion": maximum_byte_budget(
+                target_action=target,
+                d_seg=source["d_seg"],
+                d_pose=source["d_pose"],
+            ),
+            "frontier_relevant_distortion": frontier_feasible_at_zero_pose_and_rate(
+                d_seg=source["d_seg"],
+                target_action=target,
+            ),
+        },
+        label="joint inverse chart row",
+    )
+    return by_id
 
 
 def _validate_banked_v3_receipt(*, source_rows: dict[str, dict], chart_rows: dict[str, dict]) -> None:
@@ -687,10 +972,11 @@ def validate_frontier_magnitude_chart(
     target = _nonnegative_real(pointer.get("score"), "pointer.score")
     source_rows = _validate_source_receipts(payload)
 
-    archive_rows = payload.get("exact_archive_rows")
-    if not isinstance(archive_rows, list):
-        raise ValueError("frontier-magnitude chart lacks exact archive rows")
-    by_id = {row.get("point_id"): row for row in archive_rows if isinstance(row, dict)}
+    by_id = _rows_by_exact_id(
+        payload.get("exact_archive_rows"),
+        expected_ids=EXPECTED_EXACT_ARCHIVE_ROW_IDS,
+        label="exact archive chart",
+    )
     bank = by_id.get("c1_solved_distortion_n600_contest_cpu")
     rung_e = by_id.get("v10_rung_e_exact_two_plane_n48_local")
     banked_control = by_id.get("banked_n12_exact_receiver_control")
@@ -699,6 +985,7 @@ def validate_frontier_magnitude_chart(
         raise ValueError("frontier-magnitude chart lacks an exact receiver control/treatment row")
     _validate_c1_source_custody(bank, source_rows=source_rows)
     _validate_c1_rounded_interval(bank, target=target)
+    _validate_rung_e_source(rung_e, source_rows=source_rows, target=target)
     _validate_banked_v3_receipt(source_rows=source_rows, chart_rows=by_id)
     rung_projected_bytes = _nonnegative_bytes(
         rung_e.get("derived_n600_linear_archive_bytes"), "rung_e.derived_n600_linear_archive_bytes"
@@ -777,9 +1064,9 @@ def validate_frontier_magnitude_chart(
 
     trade = payload.get("trade_cells_curve")
     points = trade.get("points") if isinstance(trade, dict) else None
-    if not isinstance(points, list) or len(points) != 10:
-        raise ValueError("frontier-magnitude chart requires all ten settled trade-cells points")
-    trade_by_id = {point.get("point_id"): point for point in points if isinstance(point, dict)}
+    trade_by_id = _validate_trade_source(points, source_rows=source_rows)
+    if not isinstance(points, list):  # Kept explicit for static narrowing after fail-closed validation.
+        raise ValueError("frontier-magnitude chart lacks trade-cells points")
     for point in points:
         if not isinstance(point, dict):
             raise ValueError("trade-cells points must be mappings")
@@ -807,6 +1094,12 @@ def validate_frontier_magnitude_chart(
     lead = trade_by_id.get("precision_drop1")
     if not isinstance(lead, dict) or lead.get("pose_violation_count") != 0:
         raise ValueError("frontier-magnitude trade-cells lead must retain the pose-clean control")
+
+    _validate_inverse_sources(
+        payload.get("exact_inverse_nonarchive_rows"),
+        source_rows=source_rows,
+        target=target,
+    )
 
     gap = payload.get("exact_production_gap")
     if (

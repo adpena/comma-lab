@@ -28,6 +28,7 @@ import math
 import os
 import platform
 import shutil
+import stat
 import struct
 import subprocess
 import sys
@@ -38,7 +39,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import pairwise
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import brotli
@@ -74,6 +75,7 @@ SCHEMA_RUNG_E = "v10_free_predictor_floor_rung_e.v2"
 SCHEMA_RUNG_E_STAGE = "v10_free_predictor_floor_rung_e_stage.v1"
 SCHEMA_BANKED_AB = "v10_free_predictor_floor_banked_ab.v2"
 SCHEMA_BANKED_AB_STAGE = "v10_free_predictor_floor_banked_ab_stage.v1"
+SCHEMA_EPHEMERAL_CLEANUP = "v10_ephemeral_cleanup_manifest.v1"
 PREPARED_CHUNK_SCHEMA = "v10_two_plane_receiver_prepare_chunk.v1"
 SCHEMA_ATTRIBUTION = "v10_predictor_attribution_stream.v1"
 POINTER = "0.1910828242 [contest-CPU Linux x86_64] UNMOVED"
@@ -127,6 +129,12 @@ SCORER_RUNTIME_DISTRIBUTIONS = (
 CLEANUP_COMPATIBLE_PREDECESSOR_TOOL_SHA256S = frozenset(
     {"45e6539f0f9906a547cecf068949d73e439a03000ff4616aa07cdcb0a36e2cbc"}
 )
+FROZEN_HISTORICAL_BANKED_CLEANUP = {
+    "git_head": "5758418c0e56d2bffbc1e313aa0f0ef71d215439",
+    "tool_sha256": "00470f4a2cc21829c3c91d929824b18b53c20e055fd8372d1b43f370ff7253ca",
+    "precleanup_tool_sha256": "45e6539f0f9906a547cecf068949d73e439a03000ff4616aa07cdcb0a36e2cbc",
+    "cross_version_cleanup_only": True,
+}
 
 _ATTR_MAGIC = b"V10ATTR1"
 _ATTR_PREFIX = struct.Struct("<8sHBBIHHH")
@@ -264,6 +272,18 @@ def _git_head() -> str:
     return value
 
 
+def _git_file_sha256(revision: str, relative_path: str) -> str:
+    completed = subprocess.run(
+        ["git", "show", f"{revision}:{relative_path}"],
+        cwd=REPO,
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        raise PredictorFloorError("historical cleanup source commit is unavailable")
+    return _sha256_bytes(completed.stdout)
+
+
 def _is_relative_to(path: Path, root: Path) -> bool:
     try:
         path.relative_to(root)
@@ -291,7 +311,10 @@ def _durable_path(path: Path, field: str, *, require_ssd: bool = False, allow_lo
 def _ephemeral_output_root(path: Path) -> Path:
     """Admit only one narrowly named temporary rung-E tree for certified cleanup."""
 
-    resolved = path.expanduser().resolve()
+    expanded = path.expanduser()
+    if expanded.is_symlink():
+        raise PredictorFloorError("ephemeral rung-E output may not be a symlink")
+    resolved = expanded.resolve()
     temp_roots = {
         Path(tempfile.gettempdir()).resolve(),
         Path("/tmp").resolve(),
@@ -302,8 +325,6 @@ def _ephemeral_output_root(path: Path) -> Path:
         raise PredictorFloorError("ephemeral rung-E output must be a child of the system temporary root")
     if not resolved.name.startswith("pact-rung-e-"):
         raise PredictorFloorError("ephemeral rung-E output basename must start with 'pact-rung-e-'")
-    if resolved.is_symlink():
-        raise PredictorFloorError("ephemeral rung-E output may not be a symlink")
     return resolved
 
 
@@ -328,17 +349,200 @@ def _ephemeral_storage_preflight(path: Path, pair_count: int) -> dict[str, Any]:
     return {"required_bytes": required, "free_bytes": free, "passed": True}
 
 
-def _cleanup_ephemeral_output(path: Path) -> None:
+def _cleanup_relative_path(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise PredictorFloorError(f"{label} path is malformed")
+    pure = PurePosixPath(value)
+    if pure.is_absolute() or pure.as_posix() != value or any(part in {"", ".", ".."} for part in pure.parts):
+        raise PredictorFloorError(f"{label} path is not one canonical relative path")
+    return value
+
+
+def _scan_ephemeral_tree(path: Path, *, require_marker: bool) -> tuple[list[str], list[dict[str, Any]]]:
+    """Snapshot only regular files and real directories without following links."""
+
     validated = _ephemeral_output_root(path)
-    if validated.exists():
-        if not validated.is_dir() or validated.is_symlink():
-            raise PredictorFloorError("ephemeral cleanup target is not one exact real directory")
-        marker = validated / _EPHEMERAL_MARKER_NAME
-        if not marker.is_file() or marker.read_bytes() != _EPHEMERAL_MARKER_BYTES:
-            raise PredictorFloorError("ephemeral cleanup target lacks the exact ownership marker")
-        shutil.rmtree(validated)
-    if validated.exists():
-        raise PredictorFloorError("ephemeral rung-E cleanup did not remove its exact output tree")
+    if not validated.exists() or not validated.is_dir() or validated.is_symlink():
+        raise PredictorFloorError("ephemeral cleanup target is not one exact real directory")
+    directories: list[str] = []
+    artifacts: list[dict[str, Any]] = []
+    for current, directory_names, file_names in os.walk(validated, topdown=True, followlinks=False):
+        directory_names.sort()
+        file_names.sort()
+        current_path = Path(current)
+        for name in directory_names:
+            directory = current_path / name
+            mode = directory.lstat().st_mode
+            if not stat.S_ISDIR(mode) or directory.is_symlink():
+                raise PredictorFloorError(f"ephemeral cleanup tree contains a non-directory link: {directory}")
+            directories.append(directory.relative_to(validated).as_posix())
+        for name in file_names:
+            artifact = current_path / name
+            metadata = artifact.lstat()
+            if not stat.S_ISREG(metadata.st_mode) or artifact.is_symlink():
+                raise PredictorFloorError(f"ephemeral cleanup tree contains a non-regular artifact: {artifact}")
+            artifacts.append(
+                {
+                    "path": artifact.relative_to(validated).as_posix(),
+                    "bytes": metadata.st_size,
+                    "sha256": _sha256_file(artifact),
+                }
+            )
+    directories.sort()
+    artifacts.sort(key=lambda row: row["path"])
+    marker_rows = [row for row in artifacts if row["path"] == _EPHEMERAL_MARKER_NAME]
+    if require_marker and (
+        len(marker_rows) != 1
+        or marker_rows[0]["bytes"] != len(_EPHEMERAL_MARKER_BYTES)
+        or marker_rows[0]["sha256"] != _sha256_bytes(_EPHEMERAL_MARKER_BYTES)
+    ):
+        raise PredictorFloorError("ephemeral cleanup target lacks the exact ownership marker")
+    return directories, artifacts
+
+
+def _build_ephemeral_cleanup_manifest(path: Path) -> dict[str, Any]:
+    """Certify every scratch entry before the immutable precleanup receipt lands."""
+
+    validated = _ephemeral_output_root(path)
+    directories, artifacts = _scan_ephemeral_tree(validated, require_marker=True)
+    manifest: dict[str, Any] = {
+        "schema": SCHEMA_EPHEMERAL_CLEANUP,
+        "output_root_identity_sha256": _ephemeral_output_identity(validated),
+        "directories": directories,
+        "artifacts": artifacts,
+    }
+    manifest["manifest_sha256"] = _sha256_bytes(_canonical(manifest))
+    return manifest
+
+
+def _validate_ephemeral_cleanup_manifest(
+    value: Any,
+    path: Path,
+) -> tuple[set[str], dict[str, Mapping[str, Any]]]:
+    """Validate the immutable allowlist independently of current scratch state."""
+
+    if not isinstance(value, Mapping) or set(value) != {
+        "schema",
+        "output_root_identity_sha256",
+        "directories",
+        "artifacts",
+        "manifest_sha256",
+    }:
+        raise PredictorFloorError("ephemeral cleanup manifest is absent or malformed")
+    validated = _ephemeral_output_root(path)
+    unsigned = {key: value[key] for key in value if key != "manifest_sha256"}
+    if (
+        value.get("schema") != SCHEMA_EPHEMERAL_CLEANUP
+        or value.get("output_root_identity_sha256") != _ephemeral_output_identity(validated)
+        or value.get("manifest_sha256") != _sha256_bytes(_canonical(unsigned))
+    ):
+        raise PredictorFloorError("ephemeral cleanup manifest identity or digest drifted")
+    raw_directories = value.get("directories")
+    raw_artifacts = value.get("artifacts")
+    if not isinstance(raw_directories, list) or not isinstance(raw_artifacts, list):
+        raise PredictorFloorError("ephemeral cleanup manifest entries are malformed")
+    directories = {_cleanup_relative_path(directory, "ephemeral cleanup directory") for directory in raw_directories}
+    if len(directories) != len(raw_directories):
+        raise PredictorFloorError("ephemeral cleanup manifest repeats a directory")
+    artifacts: dict[str, Mapping[str, Any]] = {}
+    for raw_row in raw_artifacts:
+        if not isinstance(raw_row, Mapping) or set(raw_row) != {"path", "bytes", "sha256"}:
+            raise PredictorFloorError("ephemeral cleanup artifact row is malformed")
+        relative = _cleanup_relative_path(raw_row.get("path"), "ephemeral cleanup artifact")
+        size = raw_row.get("bytes")
+        digest = raw_row.get("sha256")
+        if (
+            relative in artifacts
+            or relative in directories
+            or isinstance(size, bool)
+            or not isinstance(size, int)
+            or size < 0
+            or not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise PredictorFloorError("ephemeral cleanup artifact custody is malformed")
+        artifacts[relative] = raw_row
+    marker = artifacts.get(_EPHEMERAL_MARKER_NAME)
+    if (
+        marker is None
+        or marker.get("bytes") != len(_EPHEMERAL_MARKER_BYTES)
+        or marker.get("sha256") != _sha256_bytes(_EPHEMERAL_MARKER_BYTES)
+    ):
+        raise PredictorFloorError("ephemeral cleanup manifest lacks the exact ownership marker")
+    return directories, artifacts
+
+
+def _validate_cleanup_artifact(path: Path, row: Mapping[str, Any]) -> None:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or path.is_symlink()
+        or metadata.st_size != row.get("bytes")
+        or _sha256_file(path) != row.get("sha256")
+    ):
+        raise PredictorFloorError(f"surviving ephemeral cleanup artifact drifted: {path}")
+
+
+def _unlink_certified_cleanup_artifact(path: Path, row: Mapping[str, Any]) -> None:
+    """Revalidate one manifest-bound file immediately before deterministic deletion."""
+
+    _validate_cleanup_artifact(path, row)
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        # A previous cleanup invocation may already have removed this exact row.
+        return
+
+
+def _cleanup_ephemeral_output(path: Path, manifest: Mapping[str, Any]) -> None:
+    """Resume a certified cleanup from any per-file deletion boundary."""
+
+    validated = _ephemeral_output_root(path)
+    expected_directories, expected_artifacts = _validate_ephemeral_cleanup_manifest(manifest, validated)
+    if validated.is_symlink():
+        raise PredictorFloorError("ephemeral cleanup target may not become a symlink")
+    if not validated.exists():
+        return
+    actual_directories, actual_rows = _scan_ephemeral_tree(validated, require_marker=False)
+    actual_artifacts = {row["path"]: row for row in actual_rows}
+    unexpected_directories = set(actual_directories) - expected_directories
+    unexpected_artifacts = set(actual_artifacts) - set(expected_artifacts)
+    if unexpected_directories or unexpected_artifacts:
+        raise PredictorFloorError("ephemeral cleanup tree contains unexpected uncustodied entries")
+    # Validate every survivor before deleting any more. A mutated survivor must
+    # fail closed even when earlier certified artifacts are already absent.
+    for relative, actual in actual_artifacts.items():
+        expected = expected_artifacts[relative]
+        if actual.get("bytes") != expected.get("bytes") or actual.get("sha256") != expected.get("sha256"):
+            raise PredictorFloorError(f"surviving ephemeral cleanup artifact drifted: {validated / relative}")
+    deletion_order = sorted(
+        expected_artifacts,
+        key=lambda relative: (relative == _EPHEMERAL_MARKER_NAME, relative),
+    )
+    for relative in deletion_order:
+        artifact = validated.joinpath(*PurePosixPath(relative).parts)
+        if artifact.exists() or artifact.is_symlink():
+            _unlink_certified_cleanup_artifact(artifact, expected_artifacts[relative])
+    for relative in sorted(expected_directories, key=lambda value: (-len(PurePosixPath(value).parts), value)):
+        directory = validated.joinpath(*PurePosixPath(relative).parts)
+        if directory.is_symlink():
+            raise PredictorFloorError(f"ephemeral cleanup directory became a symlink: {directory}")
+        try:
+            directory.rmdir()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise PredictorFloorError(f"ephemeral cleanup directory is not safely empty: {directory}") from exc
+    try:
+        validated.rmdir()
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise PredictorFloorError("ephemeral cleanup root is not safely empty") from exc
 
 
 def _tree_snapshot(root: Path) -> dict[str, Any]:
@@ -1379,14 +1583,11 @@ def _distribution_tree_custody(distribution_name: str) -> dict[str, Any]:
     for relative in sorted(files, key=str):
         path = Path(distribution.locate_file(relative)).resolve()
         if not path.is_file():
-            raise PredictorFloorError(
-                f"scorer runtime distribution file is absent: {distribution_name}:{relative}"
-            )
+            raise PredictorFloorError(f"scorer runtime distribution file is absent: {distribution_name}:{relative}")
         size = path.stat().st_size
         digest = _sha256_file(path)
         tree.update(
-            json.dumps([str(relative), size, digest], separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-            + b"\n"
+            json.dumps([str(relative), size, digest], separators=(",", ":"), ensure_ascii=True).encode("utf-8") + b"\n"
         )
         total_bytes += size
         file_count += 1
@@ -1423,9 +1624,7 @@ def _scorer_runtime_custody(upstream: Path, torch: Any) -> dict[str, Any]:
     python_executable = Path(sys.executable).resolve()
     if not python_executable.is_file():
         raise PredictorFloorError("hard-oracle Python executable is absent")
-    distributions = {
-        name: _distribution_tree_custody(name) for name in SCORER_RUNTIME_DISTRIBUTIONS
-    }
+    distributions = {name: _distribution_tree_custody(name) for name in SCORER_RUNTIME_DISTRIBUTIONS}
     return files | {
         "torch_version": str(torch.__version__),
         "device": "cpu",
@@ -1758,6 +1957,32 @@ def _validate_scorer_custody(custody: Mapping[str, Any]) -> None:
         raise PredictorFloorError("hard-oracle Torch version custody is inconsistent")
 
 
+def _validate_frozen_historical_banked_cleanup(
+    lifecycle: Mapping[str, Any],
+    output_root: Path,
+) -> None:
+    """Admit exactly the committed v3 final, never a legacy pending deletion."""
+
+    cleanup = lifecycle.get("cleanup_execution_custody")
+    rebuildable = lifecycle.get("rebuildable_from")
+    if (
+        lifecycle.get("cleanup_completed") is not True
+        or lifecycle.get("cleanup_status") != "complete"
+        or "cleanup_manifest" in lifecycle
+        or output_root.exists()
+        or not isinstance(cleanup, Mapping)
+        or dict(cleanup) != FROZEN_HISTORICAL_BANKED_CLEANUP
+        or not isinstance(rebuildable, Mapping)
+        or rebuildable.get("tool_sha256") != FROZEN_HISTORICAL_BANKED_CLEANUP["precleanup_tool_sha256"]
+        or _git_file_sha256(
+            FROZEN_HISTORICAL_BANKED_CLEANUP["git_head"],
+            "tools/measure_v10_free_predictor_floor.py",
+        )
+        != FROZEN_HISTORICAL_BANKED_CLEANUP["tool_sha256"]
+    ):
+        raise PredictorFloorError("legacy banked A/B cleanup is not the frozen complete v3 tuple")
+
+
 def _validate_banked_receipt_common(
     receipt: Mapping[str, Any],
     *,
@@ -1780,6 +2005,10 @@ def _validate_banked_receipt_common(
         or lifecycle.get("output_root_identity_sha256") != _ephemeral_output_identity(output_root)
     ):
         raise PredictorFloorError("existing banked A/B receipt violates immutable lifecycle custody")
+    if "cleanup_manifest" in lifecycle:
+        _validate_banked_cleanup_manifest(receipt, output_root)
+    else:
+        _validate_frozen_historical_banked_cleanup(lifecycle, output_root)
     custody = load_prepared_chunk(args.prepared_manifest)
     rebuildable = lifecycle.get("rebuildable_from")
     live_tool_sha256 = _sha256_file(Path(__file__).resolve())
@@ -1834,6 +2063,35 @@ def _validate_banked_scratch(receipt: Mapping[str, Any], output_root: Path) -> N
             raise PredictorFloorError(f"banked A/B {arm_id} scratch differs from its durable receipt")
 
 
+def _validate_banked_cleanup_manifest(receipt: Mapping[str, Any], output_root: Path) -> Mapping[str, Any]:
+    lifecycle = receipt.get("artifact_lifecycle")
+    arms = receipt.get("arms")
+    if not isinstance(lifecycle, Mapping) or not isinstance(arms, Mapping):
+        raise PredictorFloorError("banked A/B cleanup manifest lacks receipt custody")
+    manifest = lifecycle.get("cleanup_manifest")
+    _, artifacts = _validate_ephemeral_cleanup_manifest(manifest, output_root)
+    for arm_id in ("control", "precision_drop"):
+        arm = arms.get(arm_id)
+        if not isinstance(arm, Mapping):
+            raise PredictorFloorError("banked A/B cleanup manifest lacks an arm")
+        archive = arm.get("archive")
+        inflated = arm.get("inflated")
+        archive_row = artifacts.get(f"{arm_id}/archive.zip")
+        raw_row = artifacts.get(f"{arm_id}/inflated/v10-banked-ab-{arm_id}.raw")
+        if (
+            not isinstance(archive, Mapping)
+            or not isinstance(inflated, Mapping)
+            or not isinstance(archive_row, Mapping)
+            or archive_row.get("bytes") != archive.get("bytes")
+            or archive_row.get("sha256") != archive.get("sha256")
+            or not isinstance(raw_row, Mapping)
+            or raw_row.get("bytes") != inflated.get("bytes")
+            or raw_row.get("sha256") != inflated.get("sha256")
+        ):
+            raise PredictorFloorError(f"banked A/B {arm_id} cleanup manifest differs from receipt custody")
+    return manifest
+
+
 def _finalize_banked_cleanup(
     receipt: Mapping[str, Any],
     *,
@@ -1841,9 +2099,8 @@ def _finalize_banked_cleanup(
     receipt_path: Path,
     output_root: Path,
 ) -> dict[str, Any]:
-    if output_root.exists():
-        _validate_banked_scratch(receipt, output_root)
-        _cleanup_ephemeral_output(output_root)
+    cleanup_manifest = _validate_banked_cleanup_manifest(receipt, output_root)
+    _cleanup_ephemeral_output(output_root, cleanup_manifest)
     final = json.loads(json.dumps(receipt, allow_nan=False))
     lifecycle = final["artifact_lifecycle"]
     lifecycle["cleanup_completed"] = True
@@ -1865,7 +2122,14 @@ def _finalize_banked_cleanup(
     return final
 
 
-def _validate_cleanup_execution_custody(lifecycle: Mapping[str, Any]) -> None:
+def _validate_cleanup_execution_custody(
+    lifecycle: Mapping[str, Any],
+    *,
+    historical_banked_output_root: Path | None = None,
+) -> None:
+    if historical_banked_output_root is not None and "cleanup_manifest" not in lifecycle:
+        _validate_frozen_historical_banked_cleanup(lifecycle, historical_banked_output_root)
+        return
     cleanup = lifecycle.get("cleanup_execution_custody")
     rebuildable = lifecycle.get("rebuildable_from")
     if not isinstance(cleanup, Mapping) or not isinstance(rebuildable, Mapping):
@@ -1876,8 +2140,7 @@ def _validate_cleanup_execution_custody(lifecycle: Mapping[str, Any]) -> None:
         cleanup.get("git_head") != _git_head()
         or cleanup.get("tool_sha256") != live_tool_sha256
         or cleanup.get("precleanup_tool_sha256") != predecessor_tool_sha256
-        or cleanup.get("cross_version_cleanup_only")
-        is not (predecessor_tool_sha256 != live_tool_sha256)
+        or cleanup.get("cross_version_cleanup_only") is not (predecessor_tool_sha256 != live_tool_sha256)
     ):
         raise PredictorFloorError("final cleanup execution custody drifted")
 
@@ -1899,7 +2162,7 @@ def _resume_banked_ab_postreceipt_cleanup(args: argparse.Namespace, receipt_path
         predecessor = lifecycle.get("precleanup_receipt")
         if lifecycle.get("cleanup_completed") is not True or not isinstance(predecessor, Mapping):
             raise PredictorFloorError("existing banked A/B final receipt lacks immutable cleanup closure")
-        _validate_cleanup_execution_custody(lifecycle)
+        _validate_cleanup_execution_custody(lifecycle, historical_banked_output_root=output_root)
         if _validate_preserved_file(predecessor, "banked A/B precleanup receipt") != precleanup_path.resolve():
             raise PredictorFloorError("banked A/B final receipt points at the wrong predecessor")
         if output_root.exists():
@@ -2085,13 +2348,16 @@ def run_banked_ab(args: argparse.Namespace) -> dict[str, Any]:
                 "hard_oracle_custody": scorer_custody,
             },
             "cleanup_rule": (
-                "immutable redacted precleanup receipt and durable stage receipts precede deletion of only the "
-                "identity-bound marker-owned pact-rung-e-* temp tree; a write-once final successor binds the predecessor"
+                "immutable redacted precleanup receipt binds every scratch file by relative path, bytes, and SHA-256; "
+                "cleanup validates all survivors, deletes one certified artifact at a time, safely prunes only manifest "
+                "directories, and a write-once final successor binds the predecessor"
             ),
         },
         "research_only": True,
     }
     if args.ephemeral_output:
+        receipt["artifact_lifecycle"]["cleanup_manifest"] = _build_ephemeral_cleanup_manifest(output_root)
+        _validate_banked_cleanup_manifest(receipt, output_root)
         _write_json_once(precleanup_path, receipt)
         return _finalize_banked_cleanup(
             receipt,
@@ -2124,6 +2390,7 @@ def _validate_rung_e_receipt_common(
         or lifecycle.get("output_root_identity_sha256") != _ephemeral_output_identity(output_root)
     ):
         raise PredictorFloorError("existing rung-E receipt violates immutable lifecycle custody")
+    _validate_rung_e_cleanup_manifest(receipt, output_root)
     rebuildable = lifecycle.get("rebuildable_from")
     composed_path = _durable_path(args.composed_receipt, "rung-E composed receipt")
     if not isinstance(rebuildable, Mapping) or (
@@ -2165,6 +2432,30 @@ def _validate_rung_e_scratch(receipt: Mapping[str, Any], output_root: Path) -> N
         raise PredictorFloorError("rung-E scratch differs from its durable receipt")
 
 
+def _validate_rung_e_cleanup_manifest(receipt: Mapping[str, Any], output_root: Path) -> Mapping[str, Any]:
+    lifecycle = receipt.get("artifact_lifecycle")
+    archive = receipt.get("archive")
+    inflated = receipt.get("inflated")
+    if not isinstance(lifecycle, Mapping):
+        raise PredictorFloorError("rung-E cleanup manifest lacks receipt custody")
+    manifest = lifecycle.get("cleanup_manifest")
+    _, artifacts = _validate_ephemeral_cleanup_manifest(manifest, output_root)
+    archive_row = artifacts.get("archive.zip")
+    raw_row = artifacts.get("inflated/v10-rung-e.raw")
+    if (
+        not isinstance(archive, Mapping)
+        or not isinstance(inflated, Mapping)
+        or not isinstance(archive_row, Mapping)
+        or archive_row.get("bytes") != archive.get("bytes")
+        or archive_row.get("sha256") != archive.get("sha256")
+        or not isinstance(raw_row, Mapping)
+        or raw_row.get("bytes") != inflated.get("raw_bytes")
+        or raw_row.get("sha256") != inflated.get("raw_sha256")
+    ):
+        raise PredictorFloorError("rung-E cleanup manifest differs from receipt custody")
+    return manifest
+
+
 def _finalize_rung_e_cleanup(
     receipt: Mapping[str, Any],
     *,
@@ -2172,9 +2463,8 @@ def _finalize_rung_e_cleanup(
     receipt_path: Path,
     output_root: Path,
 ) -> dict[str, Any]:
-    if output_root.exists():
-        _validate_rung_e_scratch(receipt, output_root)
-        _cleanup_ephemeral_output(output_root)
+    cleanup_manifest = _validate_rung_e_cleanup_manifest(receipt, output_root)
+    _cleanup_ephemeral_output(output_root, cleanup_manifest)
     final = json.loads(json.dumps(receipt, allow_nan=False))
     lifecycle = final["artifact_lifecycle"]
     lifecycle["cleanup_completed"] = True
@@ -2458,13 +2748,16 @@ def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
                 "hard_oracle_custody": scorer_custody,
             },
             "cleanup_rule": (
-                "immutable redacted precleanup receipt and durable stage receipt precede deletion of only the "
-                "identity-bound marker-owned pact-rung-e-* temp tree; a write-once final successor binds the predecessor"
+                "immutable redacted precleanup receipt binds every scratch file by relative path, bytes, and SHA-256; "
+                "cleanup validates all survivors, deletes one certified artifact at a time, safely prunes only manifest "
+                "directories, and a write-once final successor binds the predecessor"
             ),
         },
         "research_only": True,
     }
     if ephemeral:
+        receipt["artifact_lifecycle"]["cleanup_manifest"] = _build_ephemeral_cleanup_manifest(output_root)
+        _validate_rung_e_cleanup_manifest(receipt, output_root)
         _write_json_once(precleanup_path, receipt)
         return _finalize_rung_e_cleanup(
             receipt,

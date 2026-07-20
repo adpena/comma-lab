@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+import tac.canonical_equations.einstein_kolmogorov_crux_20260719 as crux_equation
 from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
     EQUATION_ID,
     SOURCE_FRONTIER_MAGNITUDE,
@@ -180,7 +181,7 @@ def test_frontier_chart_refuses_nonexistent_local_source_receipt(tmp_path: Path)
     payload["source_receipts"][3]["sha256"] = "0" * 64
     chart_path = tmp_path / "fake-source-chart.json"
     chart_path.write_text(json.dumps(payload))
-    with pytest.raises(ValueError, match="source artifact is absent"):
+    with pytest.raises(ValueError, match="source-receipt set drifted"):
         validate_frontier_magnitude_chart(chart_path)
 
 
@@ -193,6 +194,169 @@ def test_frontier_chart_refuses_banked_v3_content_mismatch(tmp_path: Path) -> No
     chart_path = tmp_path / "banked-drift-chart.json"
     chart_path.write_text(json.dumps(payload))
     with pytest.raises(ValueError, match="drifted from banked v3 arm control"):
+        validate_frontier_magnitude_chart(chart_path)
+
+
+def test_frontier_chart_refuses_self_consistent_forged_rung_e_values(tmp_path: Path) -> None:
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    row = next(
+        row for row in payload["exact_archive_rows"] if row["point_id"] == "v10_rung_e_exact_two_plane_n48_local"
+    )
+    row["d_seg"] = row["d_seg"] * 2
+    row["seg_term"] = 100 * row["d_seg"]
+    row["derived_n600_action_at_unchanged_mean_distortion"] = contest_action(
+        d_seg=row["d_seg"],
+        d_pose=row["d_pose"],
+        archive_bytes=row["derived_n600_linear_archive_bytes"],
+    )
+    row["strict_bytes_to_beat_pointer_at_measured_distortion"] = maximum_byte_budget(
+        target_action=payload["pointer"]["score"],
+        d_seg=row["d_seg"],
+        d_pose=row["d_pose"],
+    )
+    chart_path = tmp_path / "forged-rung-e-chart.json"
+    chart_path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="rung-E chart row drifted from source receipt fields: d_seg"):
+        validate_frontier_magnitude_chart(chart_path)
+
+
+def test_frontier_chart_refuses_self_consistent_forged_precision_drop1_values(tmp_path: Path) -> None:
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    row = next(row for row in payload["trade_cells_curve"]["points"] if row["point_id"] == "precision_drop1")
+    row["d_pose"] = row["d_pose"] * 2
+    row["derived_action_on_declared_payload_scope"] = contest_action(
+        d_seg=row["d_seg"],
+        d_pose=row["d_pose"],
+        archive_bytes=row["derived_n600_payload_bytes"],
+    )
+    chart_path = tmp_path / "forged-precision-drop1-chart.json"
+    chart_path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match=r"trade-cells chart row precision_drop1 drifted.*d_pose"):
+        validate_frontier_magnitude_chart(chart_path)
+
+
+def test_frontier_chart_refuses_arbitrary_replacement_inverse_row(tmp_path: Path) -> None:
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    payload["exact_inverse_nonarchive_rows"][1] = {
+        "point_id": "arbitrary_inverse_replacement",
+        "pair_count": 24,
+        "d_seg": 0.0,
+        "d_pose": 0.0,
+    }
+    chart_path = tmp_path / "replacement-inverse-chart.json"
+    chart_path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="exact inverse nonarchive chart row set drifted"):
+        validate_frontier_magnitude_chart(chart_path)
+
+
+def test_frontier_chart_refuses_extra_exact_archive_row(tmp_path: Path) -> None:
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    extra = dict(payload["exact_archive_rows"][1])
+    extra["point_id"] = "unreceipted_extra_exact_archive"
+    payload["exact_archive_rows"].append(extra)
+    chart_path = tmp_path / "extra-exact-archive-chart.json"
+    chart_path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="exact archive chart row set drifted"):
+        validate_frontier_magnitude_chart(chart_path)
+
+
+def _unmount_absolute_sources(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    original_resolver = crux_equation._resolve_source_path
+
+    def resolve_with_unmounted_absolute_sources(value: str) -> Path:
+        if Path(value).is_absolute():
+            return tmp_path / "unmounted" / Path(value).name
+        return original_resolver(value)
+
+    monkeypatch.setattr(crux_equation, "_resolve_source_path", resolve_with_unmounted_absolute_sources)
+
+
+def test_frontier_chart_retains_frozen_absolute_declarations_when_sources_are_unmounted(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _unmount_absolute_sources(monkeypatch, tmp_path)
+    chart = validate_frontier_magnitude_chart()
+    assert len(chart["source_receipts"]) == 8
+    assert {row["point_id"] for row in chart["exact_inverse_nonarchive_rows"]} == {
+        "factor2_exact_lattice_frame1_n600",
+        "joint_zero_band_n24",
+    }
+
+
+def test_unmounted_absolute_sources_refuse_self_consistent_forged_c1_row(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _unmount_absolute_sources(monkeypatch, tmp_path)
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    bank = next(
+        row for row in payload["exact_archive_rows"] if row["point_id"] == "c1_solved_distortion_n600_contest_cpu"
+    )
+    bank["d_seg"] *= 2
+    lower_seg, upper_seg = crux_equation._rounded_component_interval(bank["d_seg"], decimal_places=8)
+    lower_pose, upper_pose = crux_equation._rounded_component_interval(bank["d_pose"], decimal_places=8)
+    bank["rounded_component_intervals"]["d_seg"]["lower"] = str(lower_seg)
+    bank["rounded_component_intervals"]["d_seg"]["upper"] = str(upper_seg)
+    bank["derived_seg_term_from_reported_center"] = 100 * bank["d_seg"]
+    bank["derived_action_point_estimate_from_reported_centers"] = contest_action(
+        d_seg=bank["d_seg"],
+        d_pose=bank["d_pose"],
+        archive_bytes=bank["archive_bytes"],
+    )
+    bank["derived_action_interval_from_rounded_components"]["lower"] = str(
+        crux_equation._decimal_action(
+            d_seg=lower_seg,
+            d_pose=lower_pose,
+            archive_bytes=bank["archive_bytes"],
+        )
+    )
+    bank["derived_action_interval_from_rounded_components"]["upper"] = str(
+        crux_equation._decimal_action(
+            d_seg=upper_seg,
+            d_pose=upper_pose,
+            archive_bytes=bank["archive_bytes"],
+        )
+    )
+    cap_min = crux_equation._decimal_strict_byte_budget(
+        target=crux_equation.Decimal(str(payload["pointer"]["score"])),
+        d_seg=upper_seg,
+        d_pose=upper_pose,
+    )
+    cap_max = crux_equation._decimal_strict_byte_budget(
+        target=crux_equation.Decimal(str(payload["pointer"]["score"])),
+        d_seg=lower_seg,
+        d_pose=lower_pose,
+    )
+    cap = bank["derived_strict_total_archive_cap"]
+    cap["point_estimate_from_reported_centers"] = maximum_byte_budget(
+        target_action=payload["pointer"]["score"],
+        d_seg=bank["d_seg"],
+        d_pose=bank["d_pose"],
+    )
+    cap["interval_bytes"] = [cap_min, cap_max]
+    cap["guaranteed_safe_cap_bytes"] = cap_min
+    chart_path = tmp_path / "unmounted-forged-c1-chart.json"
+    chart_path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="C1 chart row drifted from source receipt fields: d_seg"):
+        validate_frontier_magnitude_chart(chart_path)
+
+
+def test_unmounted_absolute_sources_refuse_forged_factor2_lattice_row(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _unmount_absolute_sources(monkeypatch, tmp_path)
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    row = next(
+        row
+        for row in payload["exact_inverse_nonarchive_rows"]
+        if row["point_id"] == "factor2_exact_lattice_frame1_n600"
+    )
+    row["d_seg"] *= 2
+    chart_path = tmp_path / "unmounted-forged-lattice-chart.json"
+    chart_path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="exact-lattice inverse chart row drifted from source receipt fields: d_seg"):
         validate_frontier_magnitude_chart(chart_path)
 
 

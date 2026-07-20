@@ -203,3 +203,14 @@ Cleanup class defect: the validator incorrectly required the production receiver
 to resemble an `.mp4`, while this receiver's canonical output is `.raw`. The class fix
 codifies the canonical `.raw` output path in both banked and rung-E cleanup validators
 and their fixtures while retaining exact bytes/SHA-256 custody.
+
+Cleanup provenance boundary: authoritative v3 remains scientifically authoritative and
+binds its immutable precleanup/final successor plus historical cross-version custody for
+the successfully completed cleanup. It predates the per-file `cleanup_manifest` state
+machine and does not prove resume from a partial recursive deletion. All future pending
+cleanups require manifest-bound per-file validation/deletion and may resume only at
+deterministic per-file deletion boundaries after revalidating every survivor against the
+immutable precleanup manifest. The exact historical v3 final is accepted
+read-only only under its frozen `5758418c0e`/tool tuple when the output root is absent;
+that compatibility path cannot delete. A pending legacy manifest-less receipt is
+refused and cannot delete any output.

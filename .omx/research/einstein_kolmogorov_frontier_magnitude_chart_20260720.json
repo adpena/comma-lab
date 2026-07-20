@@ -349,7 +349,7 @@
     "secondary_blocker": "MISSING_ARBITRARY_NUMERATOR_PLANE_CODEC",
     "secondary_blocker_condition": "applies only if the joint interval-solver arbitrary-numerator representation is selected",
     "denominator_multiple_control": "the matched banked n12 A/B proves exact serialization and inflation for uint8 scorer-plane positive-band treatments; it does not serialize arbitrary non-divisible interval-solver numerators",
-    "current_zero_cost_status": "frontier-magnitude exact receiver, matched positive-band receiver, and direct-RGB controls are measured; the exact matched treatment saves 14.81% archive bytes but violates the pointer on distortion alone and both arms remain more than three orders of magnitude above the total-archive cap"
+    "current_zero_cost_status": "frontier-magnitude exact receiver, matched positive-band receiver, and direct-RGB controls are measured; the exact matched n12 treatment saves 14.81% of measured n12 archive bytes but violates the pointer on distortion alone; only the DERIVED ceil-linear n600 archive-byte projections (394,926,700 B control and 336,428,500 B treatment), not the measured n12 archives, are more than three orders of magnitude above the recorded 216,221 B guaranteed-safe C1 total-archive cap, and the control projection is likewise more than three orders above its separate 243,943 B advisory-distortion cap; those projections are neither measured n600 archives nor scores"
   },
   "n600_trade_cells_launch_eligible": false,
   "pointer_delta": 0.0,

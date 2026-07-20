@@ -487,6 +487,7 @@ def test_banked_ab_resume_closes_postreceipt_cleanup_window(tmp_path: Path, monk
             },
         },
     }
+    receipt["artifact_lifecycle"]["cleanup_manifest"] = measure._build_ephemeral_cleanup_manifest(output_root)
     measure._write_json_once(precleanup_path, receipt)
     precleanup_bytes = precleanup_path.read_bytes()
     args = argparse.Namespace(
@@ -506,9 +507,132 @@ def test_banked_ab_resume_closes_postreceipt_cleanup_window(tmp_path: Path, monk
     assert resumed["artifact_lifecycle"]["cleanup_completed"] is True
     assert resumed["artifact_lifecycle"]["precleanup_receipt"]["sha256"] == hashlib.sha256(precleanup_bytes).hexdigest()
     assert resumed["artifact_lifecycle"]["cleanup_execution_custody"]["cross_version_cleanup_only"] is True
+    assert resumed["artifact_lifecycle"]["cleanup_manifest"] == receipt["artifact_lifecycle"]["cleanup_manifest"]
+    assert resumed["arms"] == receipt["arms"]
     assert precleanup_path.read_bytes() == precleanup_bytes
     assert not output_root.exists()
     assert measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path) == resumed
+
+
+def _legacy_banked_cleanup_case(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    name: str,
+    complete: bool,
+    cleanup_overrides: dict[str, Any] | None = None,
+) -> tuple[argparse.Namespace, Path, dict[str, Any]]:
+    output_root = tmp_path / f"pact-rung-e-{name}"
+    monkeypatch.setattr(
+        measure,
+        "load_prepared_chunk",
+        lambda _path: SimpleNamespace(manifest_sha256="prepared-manifest-sha"),
+    )
+    scorer_custody = _fake_scorer_custody(tmp_path, monkeypatch, prefix=name)
+    stage_rows: dict[str, Any] = {}
+    for stage_id in ("control", "precision-drop"):
+        stage_path = tmp_path / f"{name}-{stage_id}.json"
+        stage_path.write_text(json.dumps({"stage_id": stage_id}))
+        stage_rows[stage_id] = {
+            "path": str(stage_path),
+            "bytes": stage_path.stat().st_size,
+            "sha256": measure._sha256_file(stage_path),
+        }
+    receipt_path = tmp_path / f"{name}.json"
+    precleanup_path = measure._precleanup_receipt_path(receipt_path)
+    precleanup_path.write_text(json.dumps({"legacy": name}, sort_keys=True) + "\n")
+    cleanup = dict(measure.FROZEN_HISTORICAL_BANKED_CLEANUP)
+    cleanup.update(cleanup_overrides or {})
+    lifecycle: dict[str, Any] = {
+        "ephemeral_output": True,
+        "retained": False,
+        "cleanup_completed": complete,
+        "cleanup_status": "complete" if complete else "pending",
+        "output_root_identity_sha256": measure._ephemeral_output_identity(output_root),
+        "durable_stage_receipts": stage_rows,
+        "rebuildable_from": {
+            "prepared_manifest_sha256": "prepared-manifest-sha",
+            "tool_sha256": measure.FROZEN_HISTORICAL_BANKED_CLEANUP["precleanup_tool_sha256"],
+            "codec_sha256": measure._sha256_file(measure.SRC / "tac/codec/v10_predictor_residual.py"),
+            "receiver_sha256": measure._sha256_file(measure.SRC / "tac/witness_dsl/v10_production_receiver.py"),
+            "lattice_sha256": measure._sha256_file(measure.SRC / "tac/optimization/uint8_lattice_feasibility.py"),
+            "hard_oracle_custody": scorer_custody,
+        },
+    }
+    if complete:
+        lifecycle["cleanup_execution_custody"] = cleanup
+        lifecycle["precleanup_receipt"] = {
+            "path": str(precleanup_path),
+            "bytes": precleanup_path.stat().st_size,
+            "sha256": measure._sha256_file(precleanup_path),
+        }
+    receipt = {
+        "schema": measure.SCHEMA_BANKED_AB,
+        "supersedes": list(measure.SUPERSEDED_BANKED_AB_RECEIPTS),
+        "authority": {"score_claim": False, "promotion_eligible": False, "pointer_moved": False},
+        "research_only": True,
+        "hard_oracle_custody": scorer_custody,
+        "artifact_lifecycle": lifecycle,
+    }
+    args = argparse.Namespace(
+        resume=True,
+        ephemeral_output=True,
+        output_root=output_root,
+        prepared_manifest=tmp_path / "unused.json",
+    )
+    return args, receipt_path, receipt
+
+
+def test_known_v3_legacy_final_remains_idempotently_valid(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    args, receipt_path, receipt = _legacy_banked_cleanup_case(
+        tmp_path,
+        monkeypatch,
+        name="known-v3-final",
+        complete=True,
+    )
+    measure._write_json_once(receipt_path, receipt)
+    assert measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path) == receipt
+    assert measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path) == receipt
+    assert not args.output_root.exists()
+
+
+def test_unknown_legacy_final_cleanup_tuple_is_rejected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    args, receipt_path, receipt = _legacy_banked_cleanup_case(
+        tmp_path,
+        monkeypatch,
+        name="unknown-v3-final",
+        complete=True,
+        cleanup_overrides={"tool_sha256": "0" * 64},
+    )
+    measure._write_json_once(receipt_path, receipt)
+    with pytest.raises(measure.PredictorFloorError, match="frozen complete v3 tuple"):
+        measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    assert not args.output_root.exists()
+
+
+def test_pending_legacy_precleanup_without_manifest_cannot_delete(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    args, receipt_path, receipt = _legacy_banked_cleanup_case(
+        tmp_path,
+        monkeypatch,
+        name="pending-legacy-no-manifest",
+        complete=False,
+    )
+    precleanup_path = measure._precleanup_receipt_path(receipt_path)
+    precleanup_path.unlink()
+    measure._write_json_once(precleanup_path, receipt)
+    with pytest.raises(measure.PredictorFloorError, match="frozen complete v3 tuple"):
+        measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    assert not receipt_path.exists()
+    assert not args.output_root.exists()
 
 
 def test_banked_arm_resume_recovers_archive_before_manifest_crash(
@@ -554,9 +678,7 @@ def test_banked_arm_resume_recovers_archive_before_manifest_crash(
     assert resumed == first
 
 
-def test_rung_e_resume_closes_cleanup_with_immutable_successor(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_rung_e_resume_closes_cleanup_with_immutable_successor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     output_root = tmp_path / "pact-rung-e-rung-postreceipt"
     raw_path = output_root / "inflated" / "v10-rung-e.raw"
     raw_path.parent.mkdir(parents=True)
@@ -610,6 +732,7 @@ def test_rung_e_resume_closes_cleanup_with_immutable_successor(
             },
         },
     }
+    receipt["artifact_lifecycle"]["cleanup_manifest"] = measure._build_ephemeral_cleanup_manifest(output_root)
     precleanup_path = measure._precleanup_receipt_path(receipt_path)
     measure._write_json_once(precleanup_path, receipt)
     precleanup_bytes = precleanup_path.read_bytes()
@@ -672,7 +795,10 @@ def test_ephemeral_policy_only_cleans_narrow_temp_tree(tmp_path: Path) -> None:
     target.mkdir()
     (target / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
     (target / "archive.zip").write_bytes(b"ephemeral")
-    measure._cleanup_ephemeral_output(target)
+    manifest = measure._build_ephemeral_cleanup_manifest(target)
+    measure._cleanup_ephemeral_output(target, manifest)
+    assert not target.exists()
+    measure._cleanup_ephemeral_output(target, manifest)
     assert not target.exists()
 
     unsafe = tmp_path / "unrelated-name"
@@ -680,7 +806,7 @@ def test_ephemeral_policy_only_cleans_narrow_temp_tree(tmp_path: Path) -> None:
     sentinel = unsafe / "preserve.bin"
     sentinel.write_bytes(b"keep")
     with pytest.raises(measure.PredictorFloorError, match="basename"):
-        measure._cleanup_ephemeral_output(unsafe)
+        measure._build_ephemeral_cleanup_manifest(unsafe)
     assert sentinel.read_bytes() == b"keep"
 
     unowned = tmp_path / "pact-rung-e-unowned"
@@ -688,11 +814,179 @@ def test_ephemeral_policy_only_cleans_narrow_temp_tree(tmp_path: Path) -> None:
     unowned_sentinel = unowned / "preserve.bin"
     unowned_sentinel.write_bytes(b"keep")
     with pytest.raises(measure.PredictorFloorError, match="ownership marker"):
-        measure._cleanup_ephemeral_output(unowned)
+        measure._build_ephemeral_cleanup_manifest(unowned)
     assert unowned_sentinel.read_bytes() == b"keep"
 
     with pytest.raises(measure.PredictorFloorError, match="system temporary root"):
         measure._ephemeral_output_root(Path("/Users/adpena/Projects/pact/pact-rung-e-unsafe"))
+
+    symlink_target = tmp_path / "pact-rung-e-symlink-target"
+    symlink_target.mkdir()
+    (symlink_target / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
+    symlink_path = tmp_path / "pact-rung-e-symlink"
+    symlink_path.symlink_to(symlink_target, target_is_directory=True)
+    with pytest.raises(measure.PredictorFloorError, match="may not be a symlink"):
+        measure._build_ephemeral_cleanup_manifest(symlink_path)
+    assert symlink_target.is_dir()
+
+
+def _certified_cleanup_tree(
+    tmp_path: Path,
+    name: str,
+) -> tuple[Path, dict[str, Any], dict[str, Any]]:
+    output_root = tmp_path / name
+    output_root.mkdir()
+    (output_root / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
+    arms: dict[str, Any] = {}
+    for arm_id in ("control", "precision_drop"):
+        arm_root = output_root / arm_id
+        nested = arm_root / "inflated"
+        nested.mkdir(parents=True)
+        archive_path = arm_root / "archive.zip"
+        raw_path = nested / f"v10-banked-ab-{arm_id}.raw"
+        archive_path.write_bytes(f"archive-{arm_id}".encode())
+        (arm_root / "stage.json").write_bytes(f"stage-{arm_id}".encode())
+        raw_path.write_bytes(f"raw-{arm_id}".encode())
+        arms[arm_id] = {
+            "archive": {"bytes": archive_path.stat().st_size, "sha256": measure._sha256_file(archive_path)},
+            "inflated": {"bytes": raw_path.stat().st_size, "sha256": measure._sha256_file(raw_path)},
+        }
+    return output_root, measure._build_ephemeral_cleanup_manifest(output_root), arms
+
+
+@pytest.mark.parametrize("deleted_before_interrupt", [1, 3])
+def test_manifest_cleanup_resumes_after_per_artifact_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    deleted_before_interrupt: int,
+) -> None:
+    output_root, manifest, arms = _certified_cleanup_tree(
+        tmp_path,
+        f"pact-rung-e-partial-{deleted_before_interrupt}",
+    )
+    precleanup_path = tmp_path / f"partial-{deleted_before_interrupt}.precleanup.json"
+    receipt_path = tmp_path / f"partial-{deleted_before_interrupt}.json"
+    receipt = {
+        "arms": arms,
+        "artifact_lifecycle": {
+            "cleanup_completed": False,
+            "cleanup_status": "pending",
+            "cleanup_manifest": manifest,
+            "rebuildable_from": {"tool_sha256": measure._sha256_file(Path(measure.__file__).resolve())},
+        },
+    }
+    measure._write_json_once(precleanup_path, receipt)
+    precleanup_bytes = precleanup_path.read_bytes()
+    original_unlink = measure._unlink_certified_cleanup_artifact
+    deleted: list[Path] = []
+
+    def interrupt_after_boundary(path: Path, row: dict[str, Any]) -> None:
+        if len(deleted) == deleted_before_interrupt:
+            raise RuntimeError("simulated cleanup interruption")
+        original_unlink(path, row)
+        deleted.append(path)
+
+    monkeypatch.setattr(measure, "_unlink_certified_cleanup_artifact", interrupt_after_boundary)
+    with pytest.raises(RuntimeError, match="simulated cleanup interruption"):
+        measure._finalize_banked_cleanup(
+            receipt,
+            precleanup_path=precleanup_path,
+            receipt_path=receipt_path,
+            output_root=output_root,
+        )
+    assert len(deleted) == deleted_before_interrupt
+    assert all(not path.exists() for path in deleted)
+    assert precleanup_path.read_bytes() == precleanup_bytes
+    assert not receipt_path.exists()
+
+    monkeypatch.setattr(measure, "_unlink_certified_cleanup_artifact", original_unlink)
+    final = measure._finalize_banked_cleanup(
+        receipt,
+        precleanup_path=precleanup_path,
+        receipt_path=receipt_path,
+        output_root=output_root,
+    )
+    assert final["artifact_lifecycle"]["cleanup_completed"] is True
+    assert final["artifact_lifecycle"]["cleanup_status"] == "complete"
+    assert final["artifact_lifecycle"]["cleanup_manifest"] == manifest
+    assert final["arms"] == arms
+    assert precleanup_path.read_bytes() == precleanup_bytes
+    assert not output_root.exists()
+
+
+def test_manifest_cleanup_blocks_mutated_survivor_after_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output_root, manifest, _arms = _certified_cleanup_tree(tmp_path, "pact-rung-e-mutated-survivor")
+    original_unlink = measure._unlink_certified_cleanup_artifact
+    deleted: list[Path] = []
+
+    def interrupt_after_one(path: Path, row: dict[str, Any]) -> None:
+        if deleted:
+            raise RuntimeError("simulated cleanup interruption")
+        original_unlink(path, row)
+        deleted.append(path)
+
+    monkeypatch.setattr(measure, "_unlink_certified_cleanup_artifact", interrupt_after_one)
+    with pytest.raises(RuntimeError, match="simulated cleanup interruption"):
+        measure._cleanup_ephemeral_output(output_root, manifest)
+    monkeypatch.setattr(measure, "_unlink_certified_cleanup_artifact", original_unlink)
+    survivor = output_root / "control" / "stage.json"
+    assert survivor.is_file()
+    survivor.write_bytes(b"mutated")
+    with pytest.raises(measure.PredictorFloorError, match="surviving ephemeral cleanup artifact drifted"):
+        measure._cleanup_ephemeral_output(output_root, manifest)
+    assert survivor.read_bytes() == b"mutated"
+
+
+def test_manifest_cleanup_blocks_unexpected_uncustodied_survivor(tmp_path: Path) -> None:
+    output_root, manifest, _arms = _certified_cleanup_tree(tmp_path, "pact-rung-e-unexpected-survivor")
+    unexpected = output_root / "control" / "uncustodied.bin"
+    unexpected.write_bytes(b"preserve")
+    with pytest.raises(measure.PredictorFloorError, match="unexpected uncustodied entries"):
+        measure._cleanup_ephemeral_output(output_root, manifest)
+    assert unexpected.read_bytes() == b"preserve"
+    assert (output_root / "control" / "archive.zip").read_bytes() == b"archive-control"
+
+
+def test_banked_cleanup_manifest_is_bound_to_scientific_receipt(tmp_path: Path) -> None:
+    output_root, manifest, arms = _certified_cleanup_tree(tmp_path, "pact-rung-e-receipt-binding")
+    receipt = {"arms": arms, "artifact_lifecycle": {"cleanup_manifest": manifest}}
+    receipt["arms"]["control"]["archive"]["sha256"] = "0" * 64
+    with pytest.raises(measure.PredictorFloorError, match="cleanup manifest differs from receipt custody"):
+        measure._validate_banked_cleanup_manifest(receipt, output_root)
+    assert (output_root / "control" / "archive.zip").read_bytes() == b"archive-control"
+
+
+def test_banked_finalize_accepts_fully_absent_certified_root_after_crash(tmp_path: Path) -> None:
+    output_root, manifest, arms = _certified_cleanup_tree(tmp_path, "pact-rung-e-absent-after-cleanup")
+    precleanup_path = tmp_path / "absent.precleanup.json"
+    receipt_path = tmp_path / "absent.json"
+    receipt = {
+        "arms": arms,
+        "artifact_lifecycle": {
+            "cleanup_completed": False,
+            "cleanup_status": "pending",
+            "cleanup_manifest": manifest,
+            "rebuildable_from": {"tool_sha256": measure._sha256_file(Path(measure.__file__).resolve())},
+        },
+    }
+    measure._write_json_once(precleanup_path, receipt)
+    precleanup_bytes = precleanup_path.read_bytes()
+    measure._cleanup_ephemeral_output(output_root, manifest)
+    assert not output_root.exists()
+    assert not receipt_path.exists()
+
+    final = measure._finalize_banked_cleanup(
+        receipt,
+        precleanup_path=precleanup_path,
+        receipt_path=receipt_path,
+        output_root=output_root,
+    )
+    assert final["artifact_lifecycle"]["cleanup_completed"] is True
+    assert receipt_path.is_file()
+    assert precleanup_path.read_bytes() == precleanup_bytes
 
 
 def test_rung_e_completion_seam_uses_production_completed_field(tmp_path: Path) -> None:
