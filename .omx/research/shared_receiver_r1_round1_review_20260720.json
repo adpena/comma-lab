@@ -1,0 +1,32 @@
+{
+  "schema": "shared_receiver_r1_round1_review.v1",
+  "reviewer": "gpt-5.6-sol-high",
+  "review_mode": "fresh-eyes read-only authority and correctness review",
+  "initial_verdict": "FAIL",
+  "initial_findings": [
+    "caller-authored candidate and custody JSON could confer MEASURED_IN_BOX without executing a trusted evaluator",
+    "the canonical equation could HARD_ACCEPT caller-supplied booleans",
+    "dense ZIP producer custody omitted argv, git, Python/zipfile/zlib hashes and environment",
+    "the memo prematurely claimed a serializer receipt",
+    "the first corrected shared receipt retained a stale dense-input size and SHA"
+  ],
+  "fixes_verified": [
+    "candidate and custody JSON are rejected and R1 success remains unconditionally false",
+    "the canonical equation reports structural predicates but always refuses with trusted_contest_cpu_verifier_wired=false",
+    "dense producer captures runtime custody before artifact creation and scopes reproducibility to the bound runtime",
+    "current dense evidence is preserved with explicit regeneration-authority blocker because original argv and environment were not captured",
+    "shared receipt was regenerated with expected exit 6 and binds the corrected dense receipt at 3595 bytes and SHA-256 244f1272036417a348b8947d679fca065a4dd99fae785b2d5b6922c7cdfaf376",
+    "latest canonical registry row binds shared receipt SHA-256 bfab2db427c060de98e0fb6233fe3b8c95002fa6c8e5ad7bdb32710877b1cba0 and authority_available=false"
+  ],
+  "final_verdict": "PASS",
+  "remaining_landing_blockers": [],
+  "verification": {
+    "focused_pytest": "29 passed",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "git_diff_check": "PASS",
+    "dense_zip_sha256": "d594fd6194d1482cb641cb640dd236b31d962420183811646d01dd6927276132",
+    "dense_zip_crc": "PASS"
+  },
+  "procedural_remainder_at_review": "serializer commit and terminal lane-claim update"
+}

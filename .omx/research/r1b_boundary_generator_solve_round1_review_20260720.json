@@ -1,0 +1,52 @@
+{
+  "changes_required": [
+    {
+      "finding": "The initial control receipt still named the full null projector as absent after the dependency landed.",
+      "resolution": "Imported and consumed the full-kernel compiler, replaced the stale blocker with the production Jacobian and archive-integration blockers, and recorded source and consumer commits."
+    },
+    {
+      "finding": "A full-kernel frame coder size could be misread as final carrier or archive-byte authority.",
+      "resolution": "Made the memo, receipt, and DAG explicitly distinguish bounded frame-level MDL selection from counted compact replay and exact ZIP authority."
+    },
+    {
+      "finding": "The inherited one-frame selector timing makes naive per-frame decode-time search non-admissible at n600.",
+      "resolution": "Added the compact-replay/runtime blocker, preserved the 34.7690-second measured input and the 20,861.4-second 600-frame derived diagnostic, and required receiver runtime at or below 1,800 seconds."
+    },
+    {
+      "finding": "Full-kernel geometry or selection failure must occur before any hard-oracle callback can provide apparent authority.",
+      "resolution": "The solve now checks exact geometry, translates compiler failures to fail-closed solve errors, reverifies exact projection after selection, and includes a regression test proving geometry refusal precedes the oracle."
+    }
+  ],
+  "final_review": {
+    "authority_laundering_found": false,
+    "correctness_blocker_found": false,
+    "pointer_mutation": false,
+    "promotion_authorized": false,
+    "verdict": "PASS_SCOPED_L0_CONTROL_BLOCKER"
+  },
+  "initial_review": {
+    "verdict": "FAIL_FIX_REQUIRED"
+  },
+  "lane_id": "r1b_boundary_generator_solve_20260720T161946Z",
+  "model": "gpt-5.6-sol",
+  "reasoning_effort": "high",
+  "review_scope": [
+    "boundary packet and no-Fourier enforcement",
+    "corrected QP and ERM containment",
+    "full-kernel placement before hard oracle",
+    "n600 receipt and gate arithmetic",
+    "axis and candidate/control labeling",
+    "byte and runtime authority boundaries",
+    "lane and pointer honesty"
+  ],
+  "schema": "r1b_boundary_generator_solve_bounded_review.v1",
+  "verification": {
+    "focused_tests_passed": 55,
+    "git_diff_check": "PASS",
+    "json_parse": "PASS",
+    "py_compile": "PASS",
+    "review_tracker_clean_passes_after_final_python_diff": 2,
+    "ruff": "PASS"
+  },
+  "verdict_scope": "implementation and exact existing C2 n600 control receipt only; no production R1b candidate, contest score, family negative, or promotion claim"
+}
