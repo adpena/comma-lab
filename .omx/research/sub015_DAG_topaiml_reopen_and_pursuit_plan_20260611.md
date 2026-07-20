@@ -20287,3 +20287,22 @@ gate never fired — no inverse-driver claim.
   1px of the boundary) + necessity geometry (1.66% camera support) name ONE coordinate — the sparse
   boundary-displacement/active-set carrier — now attacked by r1b (generator side) and r2b (decision-
   stream side) with null_compiler_fix (22.70%→80.67% kernel) shrinking the charged set for both.
+
+### FEED-R1R2-MEASURED-VERDICTS-20260720 — AMENDMENT (verdict-scope tokens + triality-leg record)
+
+- verdict_scope: formulation — R2 "RATE-DEAD" applies to the DIRECT carry-every-source-numerator
+  preimage-section formulation ONLY (not target selection, not the bounded-uint8 family, not the v10
+  plane descriptor).
+- verdict_scope: formulation — R1 "priced dead" applies to exactly three formulations (dense-fp32
+  ambient field · PDW1 per-pair label/fill carrier · n48 EV-ranked sparse-prefix post-hoc repair);
+  NOT the shared-receiver family, NOT the boundary-displacement carrier (which the measurement NAMES
+  as live).
+- **Equations-leg record (drift-gate):** the measured laws are REGISTERED as EmpiricalAnchors on the
+  arm branches — R2 commit 78636bb610 carries the m2 target-selection recovery equation anchor
+  (0.04710838 S / 70,748.29 B break-even / 18,483×); R1 commit 754a43b58a carries
+  `shared_receiver_counted_spatial_hard_oracle_admission_v1` (the fail-closed admission law) + the
+  boundary-concentration decomposition receipt; probes commit 14bbca8317 carries the sparsemax
+  0.97333 two-route receipt. Main-side `src/tac/canonical_equations/` registration/verification of
+  these rows is OWED AT #582 BATCH RECONCILE (tracked there as the merge acceptance criterion — the
+  corrected 216,223 B cap constant + boundary-concentration law + recovery law must each resolve to
+  exactly ONE registered anchor, no duplicates). Not silent: this line is the tracking record.
