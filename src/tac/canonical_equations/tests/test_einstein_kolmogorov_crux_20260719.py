@@ -17,6 +17,7 @@ from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
     contest_action,
     derive_research_only_decision,
     fixed_byte_palette_delta,
+    inclusive_maximum_byte_budget,
     maximum_byte_budget,
     populate_einstein_kolmogorov_crux_action_rate_contract_v1,
 )
@@ -34,7 +35,15 @@ from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
 def test_authority_derived_byte_cap_examples(target: float, d_pose: float, expected: int) -> None:
     # Values are formula examples from the design memo, not a tournament result.
     budget = maximum_byte_budget(target_action=target, d_seg=1.5196e-4, d_pose=d_pose)
-    assert abs(budget - expected) <= 1
+    assert budget == expected
+
+
+def test_strict_and_inclusive_byte_caps_diverge_at_exact_equality() -> None:
+    target = 25 / 37_545_489
+    assert inclusive_maximum_byte_budget(target_action=target, d_seg=0.0, d_pose=0.0) == 1
+    assert maximum_byte_budget(target_action=target, d_seg=0.0, d_pose=0.0) == 0
+    assert contest_action(d_seg=0.0, d_pose=0.0, archive_bytes=0) < target
+    assert contest_action(d_seg=0.0, d_pose=0.0, archive_bytes=1) == target
 
 
 def test_action_and_budget_are_monotone() -> None:

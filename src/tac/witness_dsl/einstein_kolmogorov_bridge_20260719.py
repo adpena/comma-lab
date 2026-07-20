@@ -13,12 +13,12 @@ from dataclasses import MISSING, asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "einstein_kolmogorov_xi_bridge_config.v2"
+SCHEMA = "einstein_kolmogorov_xi_bridge_config.v3"
 EXPECTED_N_PAIRS = 600
 DIAGNOSTIC_MAX_PAIRS = 24
 DIAGNOSTIC_MODE = "diagnostic"
 GOVERNED_FULL_MODE = "governed_full"
-OPERATOR_AUTHORIZATION_PREFIX = "OPERATOR-GO:"
+LANE_ID = "lane_einstein_kolmogorov_crux_20260719"
 DXI_SCALE = 1.0
 POSE_CARRIER_S_T = 0.16
 POSE_CARRIER_S_R = 0.0
@@ -74,6 +74,13 @@ class EinsteinKolmogorovXiBridgeConfig:
     result_json_path: str
     max_pairs: int = DIAGNOSTIC_MAX_PAIRS
     execution_mode: str = DIAGNOSTIC_MODE
+    operator_authorization_path: str | None = None
+    operator_authorization_sha256: str | None = None
+    governed_claim_job_id: str | None = None
+    governed_claim_platform: str | None = None
+    declared_max_cost_usd: float | None = None
+    # Historical v2 receipts carried these fields.  V3 can retain them as
+    # non-authorizing provenance, but neither field is execution authority.
     operator_authorization_token: str | None = None
     declared_minimum_free_bytes: int | None = None
     failure_manifest_path: str | None = None
@@ -113,6 +120,27 @@ class EinsteinKolmogorovXiBridgeConfig:
                 self,
                 "failure_manifest_path",
                 _absolute(str(self.failure_manifest_path), "failure_manifest_path"),
+            )
+        if (self.operator_authorization_path is None) != (self.operator_authorization_sha256 is None):
+            raise EinsteinKolmogorovBridgeConfigError(
+                "operator authorization path and SHA-256 must be supplied together"
+            )
+        if self.operator_authorization_path is not None:
+            object.__setattr__(
+                self,
+                "operator_authorization_path",
+                _absolute(
+                    str(self.operator_authorization_path),
+                    "operator_authorization_path",
+                ),
+            )
+            object.__setattr__(
+                self,
+                "operator_authorization_sha256",
+                _sha256(
+                    str(self.operator_authorization_sha256),
+                    "operator_authorization_sha256",
+                ),
             )
         if (self.backend_resume_receipt_path is None) != (self.backend_resume_receipt_sha256 is None):
             raise EinsteinKolmogorovBridgeConfigError(
@@ -172,7 +200,17 @@ class EinsteinKolmogorovXiBridgeConfig:
                 )
             if self.operator_authorization_token is not None:
                 raise EinsteinKolmogorovBridgeConfigError(
-                    "diagnostic mode must not carry an operator authorization token"
+                    "diagnostic mode must not carry legacy operator authorization tokens"
+                )
+            if self.operator_authorization_path is not None:
+                raise EinsteinKolmogorovBridgeConfigError(
+                    "diagnostic mode must not carry a full-run operator authorization"
+                )
+            if self.governed_claim_job_id is not None or self.governed_claim_platform is not None:
+                raise EinsteinKolmogorovBridgeConfigError("diagnostic mode must not carry a governed dispatch claim")
+            if self.declared_max_cost_usd is not None:
+                raise EinsteinKolmogorovBridgeConfigError(
+                    "diagnostic mode must not carry a full-run cost authorization"
                 )
             if self.backend_resume_receipt_path is not None:
                 raise EinsteinKolmogorovBridgeConfigError(
@@ -181,15 +219,32 @@ class EinsteinKolmogorovXiBridgeConfig:
         elif self.execution_mode == GOVERNED_FULL_MODE:
             if self.max_pairs != EXPECTED_N_PAIRS:
                 raise EinsteinKolmogorovBridgeConfigError("governed_full mode requires max_pairs=600")
-            token = self.operator_authorization_token
-            if token is not None and (
-                not isinstance(token, str)
-                or not token.startswith(OPERATOR_AUTHORIZATION_PREFIX)
-                or not token.removeprefix(OPERATOR_AUTHORIZATION_PREFIX).strip()
-            ):
+            if self.operator_authorization_token is not None:
                 raise EinsteinKolmogorovBridgeConfigError(
-                    "operator_authorization_token must be OPERATOR-GO:<durable-reference>"
+                    "legacy OPERATOR-GO prefixes are not authorization; governed_full requires "
+                    "a committed, hash-bound operator authorization file"
                 )
+            if self.operator_authorization_path is None:
+                raise EinsteinKolmogorovBridgeConfigError(
+                    "governed_full requires operator_authorization_path and SHA-256"
+                )
+            auth_path = Path(self.operator_authorization_path)
+            auth_root = _REPO_ROOT / ".omx" / "research" / "operator_authorizations"
+            if not _is_within(auth_path, auth_root) or auth_path.suffix != ".json":
+                raise EinsteinKolmogorovBridgeConfigError(
+                    "operator_authorization_path must be a JSON file under canonical "
+                    ".omx/research/operator_authorizations"
+                )
+            for field in ("governed_claim_job_id", "governed_claim_platform"):
+                value = getattr(self, field)
+                if not isinstance(value, str) or not value.strip() or value != value.strip():
+                    raise EinsteinKolmogorovBridgeConfigError(f"governed_full requires non-empty canonical {field}")
+            if (
+                isinstance(self.declared_max_cost_usd, bool)
+                or not isinstance(self.declared_max_cost_usd, (int, float))
+                or not 0.0 <= float(self.declared_max_cost_usd) < float("inf")
+            ):
+                raise EinsteinKolmogorovBridgeConfigError("governed_full requires finite declared_max_cost_usd >= 0")
         else:
             raise EinsteinKolmogorovBridgeConfigError(
                 f"execution_mode must be {DIAGNOSTIC_MODE!r} or {GOVERNED_FULL_MODE!r}"

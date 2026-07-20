@@ -1,0 +1,540 @@
+{
+  "admission_scope": "SEG_ONLY_COMPONENT_DIAGNOSTIC; Pose is unmeasured and component bytes are not total archive bytes; this row cannot select or reject a joint-S family",
+  "axis": "[macOS-CPU advisory]",
+  "base_git_head": "8eee0e3becdabbfe2f38246ad014678bb11f1e8e",
+  "checkpoint_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoint.json",
+  "config": {
+    "camera_height": 874,
+    "camera_width": 1164,
+    "checkpoint_every_pairs": 1,
+    "family": "baseline",
+    "gain_alpha": 0.602,
+    "gt_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n24.npz",
+    "gt_sha256": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
+    "iterations": 0,
+    "label_min_run": 0,
+    "lower_bound": 0,
+    "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global",
+    "packet_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/global/candidate.pdw1p.bin",
+    "packet_sha256": "3a9c95f6005c51c2b27bf36b627d99673ca4c9cdfea24e18e9b15590bcb16f60",
+    "pair_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "schema": "einstein_kolmogorov_crux_config.v1",
+    "scorer_authority": "singleton_cpu_torch_segnet",
+    "scorer_height": 384,
+    "scorer_width": 512,
+    "seed": 20260719,
+    "segnet_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "target_first_displacement": 1.0,
+    "upper_bound": 255,
+    "upstream_path": "/Users/adpena/Projects/pact/upstream"
+  },
+  "config_fingerprint": "72440b3ce6d7e0697ecb0411f2d143c9d0254fea0d3c1c20d34afc88043d5173",
+  "d_seg": 0.007899814181857638,
+  "dspsa_iteration_checkpoints": [],
+  "family": "baseline",
+  "hard_mismatch_px": 37276,
+  "implementation_fingerprints": {
+    "canonical_action": "d2629dce2dd1e520cef8f9537868fc7a09e57a545a0df85cf1c940c1effa4944",
+    "canonical_equation_schema": "2d3c40f7006cfd60fa973cb6f874826e76ae6785f29ff859dae5ebcfdfb23e3d",
+    "frozen_segnet_loader": "3c720fc6d81ebbf1779b8370fb5c17b545b609fc39fdf62176b2d17e35edefaf",
+    "optimization": "2fb614184b6cf8e8461644e98994a0a2c4402c4bc7ee3b98c6afc124001170ab",
+    "pdw1_codec": "ea3456a36f300bde3a6924d7c8d0fcacb92675904e7f68ba56bc3862e7c4b4d9",
+    "probe": "db5cfe46c35ca18d1ce0847165edc3d7e4d4f13b42874d0a37219d8280cd81b7",
+    "provenance_builders": "51a493b42aa724fe4b1ca2cb4fc02c08941b2c0f3828a05a4db6f3e904fe95b7",
+    "realization_necessity_equation": "c8b673c6865ba723f16417860bc4ea136541824578570b2a1f411d7317005cb7",
+    "segnet_head_equation": "bce50545bba699f1968742c3a4aff70a6eadbad16768c9d92c047952524c4af9",
+    "typed_dsl": "ef476cb5d6a734c0e4d04498c32e4124bccab917e6cf9a83c59c22062aa017cc",
+    "uint8_lattice_realization": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17",
+    "upstream_modules": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+  },
+  "input_fingerprints": {
+    "gt": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
+    "packet": "3a9c95f6005c51c2b27bf36b627d99673ca4c9cdfea24e18e9b15590bcb16f60",
+    "segnet": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "label_mutations": 0,
+  "packet": {
+    "candidate_bytes": 19859,
+    "candidate_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/candidate.pdw1p.bin",
+    "candidate_sha256": "3a9c95f6005c51c2b27bf36b627d99673ca4c9cdfea24e18e9b15590bcb16f60",
+    "length_identity": true,
+    "source_bytes": 19859,
+    "strict_encode_decode_reencode_identity": true,
+    "strict_parseback": true
+  },
+  "pairs": [
+    {
+      "d_seg": 0.012090047200520834,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 2377,
+      "pair": 0
+    },
+    {
+      "d_seg": 0.006876627604166667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1352,
+      "pair": 1
+    },
+    {
+      "d_seg": 0.006256103515625,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1230,
+      "pair": 2
+    },
+    {
+      "d_seg": 0.006983439127604167,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1373,
+      "pair": 3
+    },
+    {
+      "d_seg": 0.006490071614583333,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1276,
+      "pair": 4
+    },
+    {
+      "d_seg": 0.006098429361979167,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1199,
+      "pair": 5
+    },
+    {
+      "d_seg": 0.006022135416666667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1184,
+      "pair": 6
+    },
+    {
+      "d_seg": 0.008982340494791666,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1766,
+      "pair": 7
+    },
+    {
+      "d_seg": 0.019068400065104168,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 3749,
+      "pair": 8
+    },
+    {
+      "d_seg": 0.006708780924479167,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1319,
+      "pair": 9
+    },
+    {
+      "d_seg": 0.005833943684895833,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1147,
+      "pair": 10
+    },
+    {
+      "d_seg": 0.006245930989583333,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1228,
+      "pair": 11
+    },
+    {
+      "d_seg": 0.006968180338541667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1370,
+      "pair": 12
+    },
+    {
+      "d_seg": 0.008473714192708334,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1666,
+      "pair": 13
+    },
+    {
+      "d_seg": 0.007024129231770833,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1381,
+      "pair": 14
+    },
+    {
+      "d_seg": 0.005666097005208333,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1114,
+      "pair": 15
+    },
+    {
+      "d_seg": 0.0136566162109375,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 2685,
+      "pair": 16
+    },
+    {
+      "d_seg": 0.008544921875,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1680,
+      "pair": 17
+    },
+    {
+      "d_seg": 0.006724039713541667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1322,
+      "pair": 18
+    },
+    {
+      "d_seg": 0.005686442057291667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1118,
+      "pair": 19
+    },
+    {
+      "d_seg": 0.00811767578125,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1596,
+      "pair": 20
+    },
+    {
+      "d_seg": 0.009073893229166666,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1784,
+      "pair": 21
+    },
+    {
+      "d_seg": 0.0061187744140625,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1203,
+      "pair": 22
+    },
+    {
+      "d_seg": 0.005884806315104167,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1157,
+      "pair": 23
+    }
+  ],
+  "pointer_delta": "UNMOVED",
+  "promotion_eligible": false,
+  "reproducibility_closure": {
+    "base_git_head": "8eee0e3becdabbfe2f38246ad014678bb11f1e8e",
+    "runtime": {
+      "brotli": {
+        "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/brotli.py",
+        "module_sha256": "813610bf0d74a6998d7b47d912e8892c3896e6eac19cb7b22575e04fc294b63f",
+        "version": "1.2.0"
+      },
+      "numpy": {
+        "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/numpy/__init__.py",
+        "module_sha256": "22cd1535fa14d74ef6f457cca149ffdc80875f460be313b8f895273f78bc402e",
+        "version": "1.26.4"
+      },
+      "platform": {
+        "machine": "arm64",
+        "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+        "processor": "arm",
+        "release": "25.4.0",
+        "system": "Darwin",
+        "version": "Darwin Kernel Version 25.4.0: Thu Mar 19 19:33:50 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6050"
+      },
+      "python": {
+        "cache_tag": "cpython-313",
+        "executable": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+        "executable_sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41",
+        "implementation": "CPython",
+        "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+      },
+      "safetensors": {
+        "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/safetensors/__init__.py",
+        "module_sha256": "92c988289b8c225a92f25e487ad5d7a1eb7e326eec0fedfc6b75e6f04d85e32f",
+        "version": "0.8.0"
+      },
+      "threads": {
+        "environment": {
+          "MKL_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1"
+        },
+        "torch_num_interop_threads": 18,
+        "torch_num_threads": 1
+      },
+      "torch": {
+        "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/torch/__init__.py",
+        "module_sha256": "d9dfff4b75d46e4c75572200a3466b70231d05b0318e38ac1bd121789165fb49",
+        "version": "2.12.1"
+      }
+    },
+    "schema": "einstein_kolmogorov_reproducibility_closure.v2",
+    "sources": {
+      "canonical_action": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/canonical_equations/einstein_kolmogorov_crux_20260719.py",
+        "sha256": "d2629dce2dd1e520cef8f9537868fc7a09e57a545a0df85cf1c940c1effa4944"
+      },
+      "canonical_equation_schema": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/canonical_equations/equation.py",
+        "sha256": "2d3c40f7006cfd60fa973cb6f874826e76ae6785f29ff859dae5ebcfdfb23e3d"
+      },
+      "frozen_segnet_loader": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/witness_control/factorized_features.py",
+        "sha256": "3c720fc6d81ebbf1779b8370fb5c17b545b609fc39fdf62176b2d17e35edefaf"
+      },
+      "optimization": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/optimization/einstein_kolmogorov_crux.py",
+        "sha256": "2fb614184b6cf8e8461644e98994a0a2c4402c4bc7ee3b98c6afc124001170ab"
+      },
+      "pdw1_codec": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/codec/pdw1_plane_codec.py",
+        "sha256": "ea3456a36f300bde3a6924d7c8d0fcacb92675904e7f68ba56bc3862e7c4b4d9"
+      },
+      "probe": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/tools/probe_einstein_kolmogorov_crux.py",
+        "sha256": "db5cfe46c35ca18d1ce0847165edc3d7e4d4f13b42874d0a37219d8280cd81b7"
+      },
+      "provenance_builders": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/provenance/builders.py",
+        "sha256": "51a493b42aa724fe4b1ca2cb4fc02c08941b2c0f3828a05a4db6f3e904fe95b7"
+      },
+      "realization_necessity_equation": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/canonical_equations/realization_necessity_preimage_20260715.py",
+        "sha256": "c8b673c6865ba723f16417860bc4ea136541824578570b2a1f411d7317005cb7"
+      },
+      "segnet_head_equation": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/canonical_equations/segnet_head_rank4_flipdist_20260715.py",
+        "sha256": "bce50545bba699f1968742c3a4aff70a6eadbad16768c9d92c047952524c4af9"
+      },
+      "typed_dsl": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/witness_dsl/einstein_kolmogorov_crux_20260719.py",
+        "sha256": "ef476cb5d6a734c0e4d04498c32e4124bccab917e6cf9a83c59c22062aa017cc"
+      },
+      "uint8_lattice_realization": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/optimization/uint8_lattice_feasibility.py",
+        "sha256": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17"
+      },
+      "upstream_modules": {
+        "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+        "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+      }
+    }
+  },
+  "research_only": true,
+  "runtime": {
+    "brotli": {
+      "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/brotli.py",
+      "module_sha256": "813610bf0d74a6998d7b47d912e8892c3896e6eac19cb7b22575e04fc294b63f",
+      "version": "1.2.0"
+    },
+    "numpy": {
+      "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/numpy/__init__.py",
+      "module_sha256": "22cd1535fa14d74ef6f457cca149ffdc80875f460be313b8f895273f78bc402e",
+      "version": "1.26.4"
+    },
+    "platform": {
+      "machine": "arm64",
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "processor": "arm",
+      "release": "25.4.0",
+      "system": "Darwin",
+      "version": "Darwin Kernel Version 25.4.0: Thu Mar 19 19:33:50 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6050"
+    },
+    "python": {
+      "cache_tag": "cpython-313",
+      "executable": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+      "executable_sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41",
+      "implementation": "CPython",
+      "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+    },
+    "safetensors": {
+      "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/safetensors/__init__.py",
+      "module_sha256": "92c988289b8c225a92f25e487ad5d7a1eb7e326eec0fedfc6b75e6f04d85e32f",
+      "version": "0.8.0"
+    },
+    "threads": {
+      "environment": {
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": "1"
+      },
+      "torch_num_interop_threads": 18,
+      "torch_num_threads": 1
+    },
+    "torch": {
+      "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/torch/__init__.py",
+      "module_sha256": "d9dfff4b75d46e4c75572200a3466b70231d05b0318e38ac1bd121789165fb49",
+      "version": "2.12.1"
+    }
+  },
+  "schema": "einstein_kolmogorov_crux_receipt.v2",
+  "score_claim": false,
+  "score_with_pose_zero_for_local_ordering_only": 0.803204711135817,
+  "stage_checkpoints": [
+    {
+      "pair": 0,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0000.json",
+      "sha256": "ee2b375001fdb0cbe6ef4d06df97ef347f763e2696baf6fc9b0cf901016d173d"
+    },
+    {
+      "pair": 1,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0001.json",
+      "sha256": "57b32587c5451aaacae1c5a52ab02e2562df66e3992f62c15e6b62a69f2696d9"
+    },
+    {
+      "pair": 2,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0002.json",
+      "sha256": "4989fa94c04bb0f26540d9102c044c5bab224e5a7e04795927aa0f9de6255762"
+    },
+    {
+      "pair": 3,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0003.json",
+      "sha256": "be5005586bc7fc7bc081140118e5e81188920bc971f9601cd492c5a16fce8aee"
+    },
+    {
+      "pair": 4,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0004.json",
+      "sha256": "dda55f8179421ac2d0f0cdc957d99dc2e559846b163cb122ab4b34ddc6b509f4"
+    },
+    {
+      "pair": 5,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0005.json",
+      "sha256": "a71bf3420354563c8d6fe072bff7a3b8177d2dcd2a97da8da7ae5c64add75e08"
+    },
+    {
+      "pair": 6,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0006.json",
+      "sha256": "97fa06b2993b1a7a983cab7bc674cb8b7064cf0e7e9ed074ec8f05b1ff1545cf"
+    },
+    {
+      "pair": 7,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0007.json",
+      "sha256": "e116d0d358f5a1ba96c9124f2658f6b7ad01c2795057f751d7d6f0b361e1a86f"
+    },
+    {
+      "pair": 8,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0008.json",
+      "sha256": "14df180c149fa896b4efaf1e591aeeecb49e89ac2badd2b7347d44211d7c94f6"
+    },
+    {
+      "pair": 9,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0009.json",
+      "sha256": "5d13f53fa0947999cceac764a7062a2d30141140472c29c945b8dcc8d0c60b72"
+    },
+    {
+      "pair": 10,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0010.json",
+      "sha256": "8caa60688229cfaf7950e9b16f13b6439aea775373f61ae873a5d09b54bbdd6b"
+    },
+    {
+      "pair": 11,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0011.json",
+      "sha256": "e586dab0c4a02b6ad8cf370ffe5c486cc4027f193c7dfca1aa281dea7ccfd7ab"
+    },
+    {
+      "pair": 12,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0012.json",
+      "sha256": "d3e192348670d75f8e667f8a256d732d36ac25c97cee16dcf60ec97ed9d4a6a8"
+    },
+    {
+      "pair": 13,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0013.json",
+      "sha256": "6de5d56f6d9df4e212e840d1fc447b438d4a05a36991f0809288570bf90c6836"
+    },
+    {
+      "pair": 14,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0014.json",
+      "sha256": "5197643cdb46daf5ffd6e020caafc1f0e5bf1f822174750014ef21588c2ade09"
+    },
+    {
+      "pair": 15,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0015.json",
+      "sha256": "a257c88c811fc4677d8a63473d34f5110bd85c44622613b2f3648f6cf363dddf"
+    },
+    {
+      "pair": 16,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0016.json",
+      "sha256": "2b50918cd841c149ba7aa7b3555f4269c1bda6341fc599c7f2e315a27ed02e6f"
+    },
+    {
+      "pair": 17,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0017.json",
+      "sha256": "3dd7a8c6d033f6263ae3b97e292de9e1040bbef3759667278a40a7a5aac46c29"
+    },
+    {
+      "pair": 18,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0018.json",
+      "sha256": "bb5ccdb74fc3a1bb5737de91c50152dbb58641dc024da02124e8181dd08619d2"
+    },
+    {
+      "pair": 19,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0019.json",
+      "sha256": "3c320a041dd985d25d5194da38a7855f1e11ddc0c559c4c7a681b77c3cb94b81"
+    },
+    {
+      "pair": 20,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0020.json",
+      "sha256": "793f209ce45ec0e71fd64f8ca5ab686e62d274403b7c882a65fed1d0a697deaf"
+    },
+    {
+      "pair": 21,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0021.json",
+      "sha256": "fb41fb19b2b703e2ee2a073acdf07b4e22a7063abad3796d95c36b76886646ba"
+    },
+    {
+      "pair": 22,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0022.json",
+      "sha256": "e6ff19e9489510f49f1c7f1c5c5e4c840c174ac8a69a645a4fd8821fd1a6cae6"
+    },
+    {
+      "pair": 23,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/checkpoints/pair_0023.json",
+      "sha256": "b6c2b11aa847fef9d8d61d9de08b96a3c98bc01c855194654ec8647a8b78d8b5"
+    }
+  ],
+  "verdict_scope": "n24 SegNet-only PDW1 component arm; no compact pose stream or archive"
+}

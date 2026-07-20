@@ -171,6 +171,14 @@ from tac.boundary_math import xi_pose_coder as _xip  # noqa: E402  (#257 store-n
 from tac.boundary_math import witness_crosstensor_codec as _wxc  # noqa: E402  (lossless joint weight/code storage)
 from tac import witness_run_artifacts as _wra  # noqa: E402  (canonical run-artifact filename CONTRACT)
 from tac.through_r.blind_coordinate import apply_blind_fill  # noqa: E402  (#401/D21a FREE fill)
+from tac.codec.levelset_palette_residual import (  # noqa: E402
+    EKPR1_APPLICATION,
+    EKPR1_CODEC,
+    apply_palette_residual,
+    cap_palette_residual,
+    decode_palette_residual,
+    validate_palette_residual_binding,
+)
 
 # canonical FREE-table regen fns (rule-118 curvelet bank + self-orient dir feats) — the bit-exact
 # oracle reference reuses these so the gate compares against the SAME free tables the inflate uses.
@@ -622,10 +630,11 @@ def build_levelset_blob(
     pose_carrier_bytes: bytes | None = None, pose_carrier_manifest: dict[str, Any] | None = None,
     cross_tensor_codec: bool = False,
     blind_coordinate_fill: bool = False,
+    palette_residual_bytes: bytes | None = None,
 ) -> tuple[bytes, dict[str, Any]]:
     """Layout: magic | u32 manifest_len | manifest_json | u32 base_brotli_len | base_brotli |
-            u32 code_brotli_len | code_brotli | u32 pose_len | pose_sidecar
-            [| u32 lane_len | lane_band(optional, #224 Wave E COUNTED lane manifold coords)].
+            u32 code_brotli_len | code_brotli | u32 pose_len | pose_sidecar |
+            manifest-gated lane/pose-carrier/chart/EKPR1 optional blocks.
     base = int8(all params except code) concat -> ONE brotli stream (== quantize_levelset_blob);
     code = int8(code) -> a SECOND brotli stream. The curvelet bank + the lane COVERAGE raster are
     NOT stored (free, rule 118); only the lane MANIFOLD COORDS (``lane_band_bytes``) are counted.
@@ -684,6 +693,15 @@ def build_levelset_blob(
     base_brotli = brotli.compress(base_raw, quality=11)
     code_brotli = brotli.compress(code_raw, quality=11)
 
+    parsed_palette_residual = (
+        decode_palette_residual(
+            palette_residual_bytes,
+            expected_n_pairs=int(cfg["n_pairs"]),
+            expected_n_classes=int(cfg["n_classes"]),
+        )
+        if palette_residual_bytes is not None
+        else None
+    )
     manifest = {
         "format_version": 1,
         "n_pairs": int(cfg["n_pairs"]),
@@ -778,9 +796,11 @@ def build_levelset_blob(
     # knows to expect the trailing block); default-off -> byte-identical to the pre-#205 grammar.
     if pose_carrier_bytes is not None and pose_carrier_manifest is not None:
         manifest["pose_carrier"] = pose_carrier_manifest
+    if parsed_palette_residual is not None:
+        manifest["palette_residual"] = parsed_palette_residual.manifest
     mj = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
     out = _io_pack(mj, base_brotli, code_brotli, pose_sidecar, lane_band_bytes, pose_carrier_bytes,
-                   chart_payload_bytes)
+                   chart_payload_bytes, palette_residual_bytes)
     # cross-check our accounting against the canonical quantize_levelset_blob (same int8 grammar).
     # #238: the base blob is INR-only (pose_carrier.* live in the pose-carrier SECTION, not base), so
     # cross-check against the canonical on the SAME INR-only param set (else the check spuriously fails).
@@ -795,9 +815,13 @@ def build_levelset_blob(
         "lane_band_counted_bytes": (len(lane_band_bytes) if lane_band_bytes else 0),
         "pose_carrier_counted_bytes": (len(pose_carrier_bytes) if pose_carrier_bytes else 0),
         "chart_payload_counted_bytes": (len(chart_payload_bytes) if chart_payload_bytes else 0),
+        "palette_residual_counted_bytes": (
+            len(palette_residual_bytes) if palette_residual_bytes is not None else 0
+        ),
         "magic_and_prefixes_bytes": (len(_MAGIC) + 16 + (4 if lane_band_bytes is not None else 0)
                                      + (4 if pose_carrier_bytes is not None else 0)
-                                     + (4 if chart_payload_bytes is not None else 0)),
+                                     + (4 if chart_payload_bytes is not None else 0)
+                                     + (4 if palette_residual_bytes is not None else 0)),
         "total_0bin_bytes": len(out),
         "canonical_quantize_blob_bytes": int(canon["total_quantized_blob_bytes"]),
         "accounting_matches_canonical": bool(
@@ -871,14 +895,16 @@ def _io_pack(
     manifest: bytes, base: bytes, code: bytes, pose: bytes | None,
     lane_band: bytes | None = None, pose_carrier: bytes | None = None,
     chart: bytes | None = None,
+    palette_residual: bytes | None = None,
 ) -> bytes:
     """Pack the LVLS1 blob. The 5th ``lane_band`` block (#224 Wave E), the 6th
     ``pose_carrier`` block (#205 warp-real-luma frame0), and the 7th ``chart`` block (#497 gap-a:
     the COUNTED chart payload — quantized int16 (P,6) startup pose table + fp32 (6,) scales) are
-    OPTIONAL and appended, in that order, ONLY when non-None -> absent all, the output is
+    followed by the optional 8th ``palette_residual`` EKPR1 block. They are appended, in that
+    order, ONLY when non-None -> absent all, the output is
     BYTE-IDENTICAL to the pre-Wave-E 4-block grammar (the default-off guarantee). Trailing blocks
     are gated at READ time by the manifest flags (``lane_render_band`` / ``pose_carrier`` /
-    ``chart_payload``), so the reader knows how many trailing blocks to expect -- NEVER by a bare
+    ``chart_payload`` / ``palette_residual``), so the reader knows how many trailing blocks to expect -- NEVER by a bare
     ``off < len(raw)`` (which would misread a lone pose_carrier block as lane). ``lane_band`` = the
     COUNTED lane manifold coords; ``pose_carrier`` = the COUNTED real-luma keyframe payload +
     per-pair homography (rule 118: keyframe COUNTED, warp decoder FREE); ``chart`` = the COUNTED
@@ -890,7 +916,7 @@ def _io_pack(
     for chunk in (manifest, base, code, (pose or b"")):
         buf += struct.pack("<I", len(chunk))
         buf += chunk
-    for opt in (lane_band, pose_carrier, chart):
+    for opt in (lane_band, pose_carrier, chart, palette_residual):
         if opt is not None:
             buf += struct.pack("<I", len(opt))
             buf += opt
@@ -1459,6 +1485,10 @@ _FDT = np.float32 if _FP32 else np.float64
 MAGIC = b"LVLS1\x00"
 PCAR_MAGIC = b"PCAR1\x00"  # #205 warp-real-luma pose carrier (stored keyframe luma + per-pair homography)
 XIP_MAGIC = b"XIP2"        # #257 store-nothing ξ payload (quantized + coded ego twist)
+EKPR_MAGIC = b"EKPR1\x00"
+EKPR_VERSION = 1
+EKPR_APPLICATION = "frame1_phi_argmax_pre_aa_lane_r_add_clip_uint8_domain"
+EKPR_HEADER = struct.Struct("<6sBIHBBI")
 
 
 def _take(raw, off, n):
@@ -1470,7 +1500,45 @@ def _take(raw, off, n):
     return raw[off:end], end
 
 
-def _read_blob(path):
+def _ekpr_parse(blob, n_pairs, n_classes, manifest_entry):
+    if len(blob) < EKPR_HEADER.size:
+        raise ValueError("EKPR1 truncated header")
+    magic, version, npairs, nclasses, channels, dtype_code, payload_len = EKPR_HEADER.unpack_from(blob)
+    if magic != EKPR_MAGIC:
+        raise ValueError("bad EKPR1 magic")
+    if version != EKPR_VERSION:
+        raise ValueError("unsupported EKPR1 version")
+    if npairs != n_pairs or nclasses != n_classes or channels != 3:
+        raise ValueError("EKPR1 shape does not match LVLS1")
+    if dtype_code != 1:
+        raise ValueError("EKPR1 dtype is not signed-int8")
+    expected_payload = int(npairs) * int(nclasses) * 3
+    if payload_len != expected_payload:
+        raise ValueError("EKPR1 payload length field does not match shape")
+    expected_total = EKPR_HEADER.size + expected_payload
+    if len(blob) < expected_total:
+        raise ValueError("EKPR1 truncated payload")
+    if len(blob) > expected_total:
+        raise ValueError("EKPR1 has unconsumed trailing bytes")
+    expected_manifest = {
+        "codec": "EKPR1",
+        "version": EKPR_VERSION,
+        "shape": [int(npairs), int(nclasses), 3],
+        "dtype": "int8",
+        "application": EKPR_APPLICATION,
+    }
+    if manifest_entry != expected_manifest:
+        raise ValueError("LVLS1 palette_residual manifest/section mismatch")
+    return np.frombuffer(blob, dtype=np.int8, offset=EKPR_HEADER.size).reshape(npairs, nclasses, 3)
+
+
+def _ekpr_apply(rgb, phi, residuals, pair_index):
+    labels = phi.argmax(-1)
+    delta = residuals[pair_index, labels].astype(rgb.dtype, copy=False)
+    return np.clip(rgb + delta, 0.0, 255.0).astype(rgb.dtype, copy=False)
+
+
+def _read_blob_full(path):
     raw = open(path, "rb").read()
     assert raw[:len(MAGIC)] == MAGIC, "bad level-set magic"
     off = len(MAGIC); out = []
@@ -1481,7 +1549,7 @@ def _read_blob(path):
     # Optional trailing blocks are gated by the MANIFEST flags (NOT bare off<len): 5th = lane band
     # (#224 Wave E), 6th = pose carrier (#205), 7th = chart payload (#497 gap-a: quantized int16
     # (P,6) startup pose table + fp32 (6,) scales -- the COUNTED table the ground chart derives from).
-    lane_b = pcar_b = chart_b = None
+    lane_b = pcar_b = chart_b = palette_b = None
     if m.get("lane_render_band") is not None:
         (n,) = struct.unpack_from("<I", raw, off); off += 4
         lane_b, off = _take(raw, off, n)
@@ -1491,13 +1559,26 @@ def _read_blob(path):
     if m.get("chart_payload") is not None:
         (n,) = struct.unpack_from("<I", raw, off); off += 4
         chart_b, off = _take(raw, off, n)
+    if m.get("palette_residual") is not None:
+        if off + 4 > len(raw):
+            raise ValueError("palette_residual manifest is present without EKPR1 section")
+        (n,) = struct.unpack_from("<I", raw, off); off += 4
+        palette_b, off = _take(raw, off, n)
+        _ekpr_parse(palette_b, int(m["n_pairs"]), int(m["n_classes"]), m["palette_residual"])
     # #402 EXACT CONSUMPTION: the LVLS1 grammar must consume the WHOLE blob. Trailing bytes are a
     # truncation/format-mismatch/tamper signal -- fail closed, never silently ignore (advisory PR128
     # §8.2: "Section range streams are not required to be consumed exactly. Trailing words can be ignored.").
     if off != len(raw):
         raise ValueError("LVLS1 blob has %d unconsumed trailing byte(s) (off=%d len=%d) -- refusing to "
                          "decode a non-exact stream (NO-FAKE fail-closed)." % (len(raw) - off, off, len(raw)))
-    return m, out[1], out[2], out[3], lane_b, pcar_b, chart_b
+    return m, out[1], out[2], out[3], lane_b, pcar_b, chart_b, palette_b
+
+
+def _read_blob(path):
+    # Compatibility wrapper for existing parser callers. The full parser still validates and
+    # exactly consumes EKPR1; receiver setup uses _read_blob_full to retain its bytes.
+    m, base_b, code_b, pose_b, lane_b, pcar_b, chart_b, _palette_b = _read_blob_full(path)
+    return m, base_b, code_b, pose_b, lane_b, pcar_b, chart_b
 
 
 def _dequant(blob, order, shapes, scales, xcodec=None):
@@ -2327,7 +2408,7 @@ def _setup(src):
     # per-worker (spawn) / inherited-then-reset (fork) setup: dequant params + regen the FREE curvelet
     # bank + coords. Deterministic + identical across workers -> bit-exact. ~150ms, amortized over the
     # worker's pairs. Same op order as the serial main -> identical output.
-    m, base_b, code_b, _pose, lane_b, pcar_b, chart_b = _read_blob(src)
+    m, base_b, code_b, _pose, lane_b, pcar_b, chart_b, palette_b = _read_blob_full(src)
     params = _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"], m.get("xcodec"))
     code = _decode_code_q(brotli.decompress(code_b), m["code_shape"], m.get("xcodec")).astype(np.float32) * float(m["code_scale"])
     rh, rw, ch, cw = int(m["render_h"]), int(m["render_w"]), int(m["camera_h"]), int(m["camera_w"])
@@ -2372,10 +2453,16 @@ def _setup(src):
             _xi_dq, chart_prog.chart_ref_pair, chart_prog.chart_s_t, chart_prog.chart_s_r,
             chart_prog.chart_pitch, chart_prog.chart_regime, rh, rw)
         chart_fine = charted_fine_feats_cache_numpy(chart_prog, rh, rw)
+    palette_residual = None
+    if m.get("palette_residual") is not None and palette_b is not None:
+        palette_residual = _ekpr_parse(
+            palette_b, int(m["n_pairs"]), int(m["n_classes"]), m["palette_residual"]
+        )
     _G.update(m=m, code=code, coords=coords, curv=curv, P=P, rh=rh, rw=rw, ch=ch, cw=cw,
               gh=gh, gw=gw, aa_ss=aa_ss,
               chart_H=chart_H, chart_fine=chart_fine, chart_prog=chart_prog,
-              framebytes=ch * cw * 3, dst=None, lane_pairs=lane_pairs, lane_hdr=lane_hdr, pcar=pcar)
+              framebytes=ch * cw * 3, dst=None, lane_pairs=lane_pairs, lane_hdr=lane_hdr, pcar=pcar,
+              palette_residual=palette_residual)
 
 
 def _aa_down(x_flat, rh, rw, ss):
@@ -2484,6 +2571,8 @@ def _render_pair(pi):
             continue
         if band:
             _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True, feats=feats)
+            if fk == 1 and _G.get("palette_residual") is not None:
+                rgb = _ekpr_apply(rgb, _phi, _G["palette_residual"], pi)
             # #497 sealed order: A_s integrates rgb/lane_rgb/margin to BASE first, then the
             # uncertainty mask + composite run at base (cov is base-rasterized). Identity at ss=1.
             rgb = _aa_down(rgb, rh, rw, aa_ss)
@@ -2492,6 +2581,8 @@ def _render_pair(pi):
             rgb = _lane_composite(rgb, lane_rgb, cov_flat, margin, lane_hdr)
         else:
             _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, feats=feats)
+            if fk == 1 and _G.get("palette_residual") is not None:
+                rgb = _ekpr_apply(rgb, _phi, _G["palette_residual"], pi)
             rgb = _aa_down(rgb, rh, rw, aa_ss)  # #497: A_s after the renderer; identity at ss=1.
         frame = _R(rgb, rh, rw, ch, cw)
         frames.append(_maybe_blind_coordinate_fill(frame, m).tobytes())
@@ -2577,16 +2668,37 @@ done < "$FILE_LIST"
 # packet assembly: archive.zip (0.bin) + inflate.py + inflate.sh
 # ---------------------------------------------------------------------------
 def _inflate_source_for_manifest(manifest: dict[str, Any]) -> str:
+    receiver_source = _INFLATE_PY
+    if manifest.get("palette_residual") is not None:
+        # EKPR1 is the first optional receiver path whose focused oracle executes the
+        # complete shipped source on a tiny fixture. Bind the already-canonical clip
+        # profile into that fresh interpreter. Keep the legacy-absent source byte-identical.
+        receiver_source = receiver_source.replace(
+            "# SPDX-License-Identifier: MIT\n",
+            "# SPDX-License-Identifier: MIT\n"
+            f"_CP_XI_FX = {float(_CP_XI_FX)!r}\n"
+            f"_CP_XI_CX = {float(_CP_XI_CX)!r}\n"
+            f"_CP_XI_CY = {float(_CP_XI_CY)!r}\n"
+            f"_CP_XI_D = {float(_CP_XI_D)!r}\n",
+            1,
+        )
     if manifest.get("basis_family") != LITERAL_POLAR_CURVELET:
-        return _INFLATE_PY
-    # Rule-118 FREE generic source, content-bound by BasisProgramConfig.  The
-    # literal atom program and placement fixed point are prepended so the
-    # contest packet remains package-independent.
-    placement_source = (
-        _REPO / "src" / "tac" / "boundary_math" / "curvelet_placement.py"
-    ).read_text(encoding="utf-8")
-    placement_source = placement_source.replace("from __future__ import annotations\n", "")
-    return literal_curvelet_generated_source() + "\n" + placement_source + "\n" + _INFLATE_PY
+        return receiver_source
+    else:
+        # Rule-118 FREE generic source, content-bound by BasisProgramConfig.  The
+        # literal atom program and placement fixed point are prepended so the
+        # contest packet remains package-independent.
+        placement_source = (
+            _REPO / "src" / "tac" / "boundary_math" / "curvelet_placement.py"
+        ).read_text(encoding="utf-8")
+        placement_source = placement_source.replace("from __future__ import annotations\n", "")
+        return (
+            literal_curvelet_generated_source()
+            + "\n"
+            + placement_source
+            + "\n"
+            + receiver_source
+        )
 
 
 def assemble_packet(blob: bytes, packet_dir: Path) -> tuple[Path, int]:
@@ -2654,7 +2766,9 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
     if eval_pairs < n_pairs_total:
         import brotli
 
-        man, base_b, code_b, pose_b, lane_b, pcar_b, chart_b = _read_blob_bytes(src_bin.read_bytes())
+        man, base_b, code_b, pose_b, lane_b, pcar_b, chart_b, palette_b = _read_blob_bytes_full(
+            src_bin.read_bytes()
+        )
         code = _decode_code(man, code_b)
         code_cap = code[: 2 * eval_pairs]
         qc, sc = _int8_symmetric(code_cap)
@@ -2688,9 +2802,13 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
                 )
             chart_cap = _chart_payload_bytes(_cp["q"][:eval_pairs], _cp["scales"])
             man["chart_payload"] = {**man["chart_payload"], "n_pairs": eval_pairs}
+        palette_cap = None
+        if palette_b is not None and man.get("palette_residual") is not None:
+            palette_cap = cap_palette_residual(palette_b, eval_pairs)
+            man["palette_residual"] = decode_palette_residual(palette_cap).manifest
         mj = json.dumps(man, separators=(",", ":")).encode()
         capped = _io_pack(mj, base_b, _encode_code_brotli(qc, man),
-                          pose_b or None, lane_cap, pcar_cap, chart_cap)
+                          pose_b or None, lane_cap, pcar_cap, chart_cap, palette_cap)
         src_bin.write_bytes(capped)
 
     dst_raw = inflated_dir / "0.raw"
@@ -2901,6 +3019,7 @@ def numpy_oracle_reference_frames(
     params: dict[str, np.ndarray], code: np.ndarray, manifest: dict[str, Any], n_pairs: int,
     lane_pairs: list[list[Any]] | None = None, pose_carrier: dict[str, Any] | None = None,
     chart_payload: dict[str, np.ndarray] | None = None,
+    palette_residual: np.ndarray | None = None,
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """Regenerate the FULL uint8 camera frames for the first ``n_pairs`` pairs via the CANONICAL
     numpy-fp32 oracle (``levelset_rgb_forward_numpy`` / ``levelset_band_forward_numpy``) + the
@@ -3101,6 +3220,10 @@ def numpy_oracle_reference_frames(
             if cov is not None:
                 rgb, phi, lane_rgb, margin = levelset_band_forward_numpy(
                     params, feats, code[2 * pi + fk], lane_cls=lane_cfg.lane_cls, **fwd_kw)
+                if fk == 1 and palette_residual is not None:
+                    rgb = apply_palette_residual(
+                        rgb, phi, palette_residual, pair_index=pi
+                    )
                 # #497 sealed order: A_s footprint-integrates rgb/lane_rgb/margin to the BASE grid
                 # FIRST, then the uncertainty mask + composite run at base (compose-at-base, #220).
                 # Coverage ``cov`` is rasterized at base already. Identity at ss=1.
@@ -3110,6 +3233,10 @@ def numpy_oracle_reference_frames(
                 rgb = composite_band_on_render(rgb, lane_rgb, cov, um, lane_cfg.weight)
             else:
                 rgb, phi = levelset_rgb_forward_numpy(params, feats, code[2 * pi + fk], **fwd_kw)
+                if fk == 1 and palette_residual is not None:
+                    rgb = apply_palette_residual(
+                        rgb, phi, palette_residual, pair_index=pi
+                    )
                 rgb = _aa_down(rgb)  # #497: A_s after the nonlinear renderer; identity at ss=1.
             frame = _torch_R_reference(rgb, rh, rw, ch, cw)
             frames.append(_blind_coordinate_reference(frame, manifest))
@@ -3128,7 +3255,7 @@ def bit_exact_roundtrip_gate(
     import brotli
 
     # dequant the blob EXACTLY as the shipped inflate does (int8 -> fp32 * scale).
-    m, base_b, code_b, _pose, lane_b, pcar_b, chart_b = _read_blob_bytes(blob)
+    m, base_b, code_b, _pose, lane_b, pcar_b, chart_b, palette_b = _read_blob_bytes_full(blob)
     params = _decode_base_params(m, base_b)
     code = _decode_code(m, code_b)
     n_pairs_total = int(m["n_pairs"])
@@ -3175,10 +3302,17 @@ def bit_exact_roundtrip_gate(
         chart_cap = _chart_payload_bytes(_cp["q"][:gp], _cp["scales"])
         chart_oracle = {"q": _cp["q"][:gp], "scales": _cp["scales"]}
         man["chart_payload"] = {**m["chart_payload"], "n_pairs": gp}
+    palette_cap = None
+    palette_oracle = None
+    if palette_b is not None and m.get("palette_residual") is not None:
+        palette_cap = cap_palette_residual(palette_b, gp)
+        palette_oracle = decode_palette_residual(palette_cap).residuals
+        man["palette_residual"] = decode_palette_residual(palette_cap).manifest
     mj = json.dumps(man, separators=(",", ":")).encode()
     capped_bin = gate_root / "gate.bin"
     capped_bin.write_bytes(_io_pack(
-        mj, base_b, _encode_code_brotli(qc, man), None, lane_b_cap, pcar_cap, chart_cap))
+        mj, base_b, _encode_code_brotli(qc, man), None, lane_b_cap, pcar_cap, chart_cap,
+        palette_cap))
     gate_raw = gate_root / "gate.raw"
     proc = subprocess.run(
         [sys.executable, str(packet_dir / "inflate.py"), str(capped_bin), str(gate_raw)],
@@ -3200,7 +3334,7 @@ def bit_exact_roundtrip_gate(
     ref_code = (qc.astype(np.float32) * sc).reshape(code_cap.shape)
     ref_frames, ref_argmax = numpy_oracle_reference_frames(
         ref_params, ref_code, man, gp, lane_pairs_cap, pose_carrier=pose_carrier_oracle,
-        chart_payload=chart_oracle)
+        chart_payload=chart_oracle, palette_residual=palette_oracle)
 
     max_abs = 0
     all_equal = True
@@ -3234,13 +3368,23 @@ def bit_exact_roundtrip_gate(
     return result
 
 
-def _read_blob_bytes(
+def _read_blob_bytes_full(
     blob: bytes,
-) -> tuple[dict[str, Any], bytes, bytes, bytes, bytes | None, bytes | None, bytes | None]:
+) -> tuple[
+    dict[str, Any],
+    bytes,
+    bytes,
+    bytes,
+    bytes | None,
+    bytes | None,
+    bytes | None,
+    bytes | None,
+]:
     """Parse an in-memory LVLS1 blob (same grammar as the shipped inflate._read_blob). Returns
-    (manifest, base, code, pose, lane_band|None, pose_carrier|None, chart|None). Trailing optional
-    blocks are gated by the MANIFEST flags (lane_render_band / pose_carrier / chart_payload), NOT a
-    bare off<len -- so a lone pose_carrier block is not misread as lane. Default-off -> all None."""
+    (manifest, base, code, pose, lane_band|None, pose_carrier|None, chart|None,
+    palette_residual|None). Trailing optional blocks are gated by the MANIFEST flags
+    (lane_render_band / pose_carrier / chart_payload / palette_residual), NOT a bare off<len -- so a
+    lone pose_carrier block is not misread as lane. Default-off -> all None."""
     assert blob[: len(_MAGIC)] == _MAGIC, "bad level-set magic"
 
     def _take(o: int, n: int) -> tuple[bytes, int]:  # #402 fail-closed exact slice (short => raise)
@@ -3269,11 +3413,37 @@ def _read_blob_bytes(
     if manifest.get("chart_payload") is not None:
         (n,) = struct.unpack_from("<I", blob, off); off += 4
         chart, off = _take(off, n)
+    palette_residual: bytes | None = None
+    if manifest.get("palette_residual") is not None:
+        if off + 4 > len(blob):
+            raise ValueError("palette_residual manifest is present without EKPR1 section")
+        (n,) = struct.unpack_from("<I", blob, off)
+        off += 4
+        palette_residual, off = _take(off, n)
+        validate_palette_residual_binding(
+            manifest["palette_residual"],
+            palette_residual,
+            expected_n_pairs=int(manifest["n_pairs"]),
+            expected_n_classes=int(manifest["n_classes"]),
+        )
     # #402 EXACT CONSUMPTION (mirrors the shipped inflate._read_blob): trailing bytes fail closed.
     if off != len(blob):
         raise ValueError(f"LVLS1 blob has {len(blob) - off} unconsumed trailing byte(s) "
                          f"(off={off} len={len(blob)}) -- refusing a non-exact stream (NO-FAKE).")
-    return manifest, out[1], out[2], out[3], lane_band, pose_carrier, chart
+    return manifest, out[1], out[2], out[3], lane_band, pose_carrier, chart, palette_residual
+
+
+def _read_blob_bytes(
+    blob: bytes,
+) -> tuple[dict[str, Any], bytes, bytes, bytes, bytes | None, bytes | None, bytes | None]:
+    """Compatibility view of :func:`_read_blob_bytes_full`.
+
+    EKPR1 is still parsed, bound, and exactly consumed; legacy callers that do
+    not render it retain the historical seven-element tuple.
+    """
+
+    manifest, base, code, pose, lane, pcar, chart, _palette = _read_blob_bytes_full(blob)
+    return manifest, base, code, pose, lane, pcar, chart
 
 
 # ---------------------------------------------------------------------------
@@ -3676,6 +3846,7 @@ def run(
     cross_tensor_codec: bool = False,
     blind_coordinate_fill: bool = False,
     blind_coordinate_receipt: Path | None = None,
+    palette_residual_path: Path | None = None,
     verify_bit_exact: bool = False,
     bit_exact_pairs: int = 2,
     bit_exact_strict: bool = True,
@@ -3773,6 +3944,27 @@ def run(
             "aa_factor": program.aa_factor,
         }
     n_pairs = int(cfg["n_pairs"])
+    palette_residual_bytes: bytes | None = None
+    palette_residual_report: dict[str, Any] = {"active": False}
+    if palette_residual_path is not None:
+        section_path = Path(palette_residual_path)
+        if not section_path.is_file():
+            raise FileNotFoundError(f"--palette-residual-section does not exist: {section_path}")
+        palette_residual_bytes = section_path.read_bytes()
+        parsed_palette = decode_palette_residual(
+            palette_residual_bytes,
+            expected_n_pairs=n_pairs,
+            expected_n_classes=int(cfg["n_classes"]),
+        )
+        palette_residual_report = {
+            "active": True,
+            "codec": EKPR1_CODEC,
+            "source_path": str(section_path),
+            "section_bytes": len(palette_residual_bytes),
+            "sha256": hashlib.sha256(palette_residual_bytes).hexdigest(),
+            "shape": list(parsed_palette.residuals.shape),
+            "application": EKPR1_APPLICATION,
+        }
     so = detect_self_orient(cfg, so_overrides)
     # The exact-eval row needs the FULL packet + ALL 600 pairs inflated on disk.
     if run_exact_eval:
@@ -3894,7 +4086,8 @@ def run(
     blob, breakdown = build_levelset_blob(params, cfg, so, pose_bytes, lane_band_bytes, lane_manifest,
                                           pose_carrier_bytes, pose_carrier_manifest,
                                           cross_tensor_codec=cross_tensor_codec,
-                                          blind_coordinate_fill=blind_coordinate_fill)
+                                          blind_coordinate_fill=blind_coordinate_fill,
+                                          palette_residual_bytes=palette_residual_bytes)
     if not cross_tensor_codec and not breakdown["accounting_matches_canonical"]:
         print(f"[WARN] byte-close accounting (base={breakdown['base_int8_brotli_bytes']}, "
               f"code={breakdown['code_int8_brotli_bytes']}) != canonical quantize_levelset_blob "
@@ -4021,12 +4214,14 @@ def run(
             "lane_render_band": lane_report,
             "pose_carrier": pose_carrier_report,
             "phase_carrier": phase_carrier_report_out,
+            "palette_residual": palette_residual_report,
             "blind_coordinate_fill": blind_coordinate_report,
             "basis_deploy": basis_deploy_report,
         },
         "lane_render_band": lane_report,
         "pose_carrier": pose_carrier_report,
         "phase_carrier": phase_carrier_report_out,
+        "palette_residual": palette_residual_report,
         "dash_phase_carrier": dash_phase_carrier_report_out,
         "blind_coordinate_fill": blind_coordinate_report,
         "pose_carrier_keyframe_accounting": (
@@ -4381,6 +4576,16 @@ def main(argv: list[str] | None = None) -> int:
             "and exactly zero max differences; mandatory when --blind-coordinate-fill is active"
         ),
     )
+    ap.add_argument(
+        "--palette-residual-section",
+        type=Path,
+        default=None,
+        help=(
+            "optional strict EKPR1 signed-int8 [n_pairs,n_classes,RGB] section. Applies only to "
+            "frame1 after generator RGB via phi.argmax, before AA/lane/R. Section pair count must "
+            "exactly match the checkpoint; a partial n24 section cannot attach to n600."
+        ),
+    )
     # #224 Wave E: decode-consistent analytic-lane RENDER-BAND (fork B). OFF by default -> byte-identical.
     # Fits per-pair lane manifold coords from --gt-cache (COUNTED), reproduces the coverage+composite
     # in inflate (FREE, rule 118) so the band is a REAL (non-phantom) score. Closes R5_BLOCK.
@@ -4506,6 +4711,7 @@ def main(argv: list[str] | None = None) -> int:
         cross_tensor_codec=(args.cross_tensor_codec == "auto_lossless"),
         blind_coordinate_fill=args.blind_coordinate_fill,
         blind_coordinate_receipt=args.blind_coordinate_receipt,
+        palette_residual_path=args.palette_residual_section,
         verify_bit_exact=args.verify_bit_exact,
         bit_exact_pairs=args.bit_exact_pairs,
         bit_exact_strict=not args.no_bit_exact_strict,

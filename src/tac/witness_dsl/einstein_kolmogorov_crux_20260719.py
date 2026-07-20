@@ -24,6 +24,10 @@ FAMILY_NAMES = frozenset(
     }
 )
 SCHEMA = "einstein_kolmogorov_crux_config.v1"
+DIAGNOSTIC_MAX_PAIRS = 24
+DIAGNOSTIC_MAX_ITERATIONS = 32
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_DIAGNOSTIC_OUTPUT_ROOT = _REPO_ROOT / ".omx" / "research"
 
 
 class EinsteinKolmogorovConfigError(ValueError):
@@ -41,6 +45,14 @@ def _sha256(value: str, name: str) -> str:
     if len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
         raise EinsteinKolmogorovConfigError(f"{name} must be a lowercase SHA-256 hex digest")
     return value
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(root.resolve(strict=False))
+    except ValueError:
+        return False
+    return True
 
 
 @dataclass(frozen=True)
@@ -100,8 +112,20 @@ class EinsteinKolmogorovCruxConfig:
             raise EinsteinKolmogorovConfigError("pair_indices must be a non-empty sorted unique tuple")
         if any(isinstance(pair, bool) or not isinstance(pair, int) or pair < 0 for pair in self.pair_indices):
             raise EinsteinKolmogorovConfigError("pair_indices must contain non-negative integers")
+        if len(self.pair_indices) > DIAGNOSTIC_MAX_PAIRS or self.pair_indices[-1] >= DIAGNOSTIC_MAX_PAIRS:
+            raise EinsteinKolmogorovConfigError(
+                f"this DSL is diagnostic-only and permits only pair indices 0..{DIAGNOSTIC_MAX_PAIRS - 1}"
+            )
+        if not _is_within(Path(self.output_dir), _DIAGNOSTIC_OUTPUT_ROOT):
+            raise EinsteinKolmogorovConfigError(
+                f"diagnostic output_dir must remain under {_DIAGNOSTIC_OUTPUT_ROOT}; heavy/full output is forbidden"
+            )
         if self.iterations < 0 or self.checkpoint_every_pairs != 1:
             raise EinsteinKolmogorovConfigError("iterations must be >=0 and checkpoint_every_pairs must be exactly 1")
+        if self.iterations > DIAGNOSTIC_MAX_ITERATIONS:
+            raise EinsteinKolmogorovConfigError(
+                f"diagnostic iterations must be <= {DIAGNOSTIC_MAX_ITERATIONS}; full work requires a governed lane"
+            )
         if self.family in {"coordinate", "coordinate_warm_start", "dspsa"} and self.iterations == 0:
             raise EinsteinKolmogorovConfigError("coordinate search families and dspsa require iterations > 0")
         if self.family == "label_run_simplify":
@@ -133,6 +157,12 @@ class EinsteinKolmogorovCruxConfig:
     @property
     def fingerprint(self) -> str:
         return hashlib.sha256(self.to_json().encode("utf-8")).hexdigest()
+
+    @property
+    def execution_class(self) -> Literal["bounded_diagnostic_only"]:
+        """Non-serialized structural classification; this DSL can never launch full work."""
+
+        return "bounded_diagnostic_only"
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> EinsteinKolmogorovCruxConfig:

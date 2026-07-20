@@ -14,14 +14,20 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
-SCORE_BYTES_NORMALIZER = 37_545_489
-RATE_SCORE_PER_BYTE = 25.0 / SCORE_BYTES_NORMALIZER
+from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
+    RATE_DENOMINATOR_BYTES,
+    RATE_WEIGHT,
+    contest_action,
+)
+
+SCORE_BYTES_NORMALIZER = RATE_DENOMINATOR_BYTES
+RATE_SCORE_PER_BYTE = RATE_WEIGHT / SCORE_BYTES_NORMALIZER
 
 
 def score(*, d_seg: float, d_pose: float, archive_bytes: int) -> float:
-    if d_seg < 0.0 or d_pose < 0.0 or archive_bytes < 0:
-        raise ValueError("score inputs must be non-negative")
-    return 100.0 * d_seg + math.sqrt(10.0 * d_pose) + RATE_SCORE_PER_BYTE * archive_bytes
+    """Consume the canonical contest-action implementation."""
+
+    return contest_action(d_seg=d_seg, d_pose=d_pose, archive_bytes=archive_bytes)
 
 
 def score_delta(*, before: tuple[float, float, int], after: tuple[float, float, int]) -> float:
@@ -37,9 +43,33 @@ def admit_candidate(
     before_mismatches: int | None = None,
     after_mismatches: int | None = None,
 ) -> bool:
-    if before[2] == after[2] and before_mismatches is not None and after_mismatches is not None:
-        return after_mismatches < before_mismatches
+    """Admit only a measured strict improvement in the full contest action.
+
+    Mismatch counts are accepted for audit display, but never override Pose or
+    total-byte evidence.
+    """
+
+    if (before_mismatches is None) != (after_mismatches is None):
+        raise ValueError("before_mismatches and after_mismatches must be supplied together")
     return score_delta(before=before, after=after) < 0.0
+
+
+def admit_seg_only_component_diagnostic(
+    *, before_mismatches: int, after_mismatches: int, before_component_bytes: int, after_component_bytes: int
+) -> bool:
+    """Rank a Seg-only diagnostic without pretending it is joint-S admission."""
+
+    for value, field in (
+        (before_mismatches, "before_mismatches"),
+        (after_mismatches, "after_mismatches"),
+        (before_component_bytes, "before_component_bytes"),
+        (after_component_bytes, "after_component_bytes"),
+    ):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{field} must be a non-negative integer")
+    if before_component_bytes != after_component_bytes:
+        raise ValueError("Seg-only diagnostic admission requires identical component bytes")
+    return after_mismatches < before_mismatches
 
 
 def marginal_beats_waterline(*, non_rate_score_improvement: float, added_bytes: int) -> bool:

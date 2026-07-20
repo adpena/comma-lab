@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import json
 import os
 import platform
@@ -27,7 +28,7 @@ sys.path.insert(0, str(REPO / "src"))
 from tac.codec.pdw1_plane_codec import Pdw1PlanePayload, decode_pdw1p, encode_pdw1p, expand_scorer_plane  # noqa: E402
 from tac.optimization.einstein_kolmogorov_crux import (  # noqa: E402
     DSPSAState,
-    admit_candidate,
+    admit_seg_only_component_diagnostic,
     coordinate_candidates,
     dspsa_perturbation,
     project_theta,
@@ -45,15 +46,20 @@ from tac.witness_dsl.einstein_kolmogorov_crux_20260719 import EinsteinKolmogorov
 
 SCHEMA = "einstein_kolmogorov_crux_receipt.v2"
 CHECKPOINT_SCHEMA = "einstein_kolmogorov_crux_checkpoint.v2"
-CLOSURE_SCHEMA = "einstein_kolmogorov_reproducibility_closure.v1"
+CLOSURE_SCHEMA = "einstein_kolmogorov_reproducibility_closure.v2"
 _SOURCE_NAMES = frozenset(
     {
         "probe",
         "typed_dsl",
         "optimization",
+        "canonical_action",
+        "canonical_equation_schema",
+        "provenance_builders",
         "pdw1_codec",
         "uint8_lattice_realization",
         "frozen_segnet_loader",
+        "realization_necessity_equation",
+        "segnet_head_equation",
         "upstream_modules",
     }
 )
@@ -80,9 +86,16 @@ def _implementation_source_paths(config: EinsteinKolmogorovCruxConfig) -> dict[s
         "probe": Path(__file__).resolve(),
         "typed_dsl": REPO / "src/tac/witness_dsl/einstein_kolmogorov_crux_20260719.py",
         "optimization": REPO / "src/tac/optimization/einstein_kolmogorov_crux.py",
+        "canonical_action": REPO / "src/tac/canonical_equations/einstein_kolmogorov_crux_20260719.py",
+        "canonical_equation_schema": REPO / "src/tac/canonical_equations/equation.py",
+        "provenance_builders": REPO / "src/tac/provenance/builders.py",
         "pdw1_codec": REPO / "src/tac/codec/pdw1_plane_codec.py",
         "uint8_lattice_realization": REPO / "src/tac/optimization/uint8_lattice_feasibility.py",
         "frozen_segnet_loader": REPO / "src/tac/witness_control/factorized_features.py",
+        "realization_necessity_equation": (
+            REPO / "src/tac/canonical_equations/realization_necessity_preimage_20260715.py"
+        ),
+        "segnet_head_equation": REPO / "src/tac/canonical_equations/segnet_head_rank4_flipdist_20260715.py",
         "upstream_modules": Path(config.upstream_path) / "modules.py",
     }
 
@@ -106,19 +119,42 @@ def _base_git_head() -> str:
     return head
 
 
+def _distribution_state(distribution: str, module: Any) -> dict[str, Any]:
+    module_path = Path(module.__file__).resolve()
+    return {
+        "version": importlib.metadata.version(distribution),
+        "module_path": str(module_path),
+        "module_sha256": _sha256_file(module_path),
+    }
+
+
 def _runtime_state(torch_module: Any) -> dict[str, Any]:
+    import brotli
+    import safetensors
+
+    numpy_path = Path(np.__file__).resolve()
+    torch_path = Path(torch_module.__file__).resolve()
+    executable = Path(sys.executable).resolve()
     return {
         "python": {
             "version": sys.version,
             "implementation": platform.python_implementation(),
-            "executable": str(Path(sys.executable).resolve()),
+            "executable": str(executable),
+            "executable_sha256": _sha256_file(executable),
             "cache_tag": sys.implementation.cache_tag,
         },
-        "numpy": {"version": np.__version__, "module_path": str(Path(np.__file__).resolve())},
+        "numpy": {
+            "version": np.__version__,
+            "module_path": str(numpy_path),
+            "module_sha256": _sha256_file(numpy_path),
+        },
         "torch": {
             "version": torch_module.__version__,
-            "module_path": str(Path(torch_module.__file__).resolve()),
+            "module_path": str(torch_path),
+            "module_sha256": _sha256_file(torch_path),
         },
+        "brotli": _distribution_state("Brotli", brotli),
+        "safetensors": _distribution_state("safetensors", safetensors),
         "platform": {
             "platform": platform.platform(),
             "system": platform.system(),
@@ -163,12 +199,22 @@ def _validate_reproducibility_closure(closure: Any) -> None:
         if not isinstance(digest, str) or len(digest) != 64 or set(digest) - set("0123456789abcdef"):
             raise ValueError("reproducibility source digest must be lowercase SHA-256")
     runtime = closure.get("runtime")
-    if not isinstance(runtime, dict) or set(runtime) != {"python", "numpy", "torch", "platform", "threads"}:
+    if not isinstance(runtime, dict) or set(runtime) != {
+        "python",
+        "numpy",
+        "torch",
+        "brotli",
+        "safetensors",
+        "platform",
+        "threads",
+    }:
         raise ValueError("reproducibility closure has incomplete runtime state")
     expected_runtime_keys = {
-        "python": {"version", "implementation", "executable", "cache_tag"},
-        "numpy": {"version", "module_path"},
-        "torch": {"version", "module_path"},
+        "python": {"version", "implementation", "executable", "executable_sha256", "cache_tag"},
+        "numpy": {"version", "module_path", "module_sha256"},
+        "torch": {"version", "module_path", "module_sha256"},
+        "brotli": {"version", "module_path", "module_sha256"},
+        "safetensors": {"version", "module_path", "module_sha256"},
         "platform": {"platform", "system", "release", "version", "machine", "processor"},
         "threads": {"torch_num_threads", "torch_num_interop_threads", "environment"},
     }
@@ -556,11 +602,11 @@ def _coordinate_search(
             measured = _evaluate_fill(
                 labels=labels, fills=trial, pair=pair, lstar=lstar, operator=operator, segnet=segnet
             )
-            if admit_candidate(
-                before=(before["d_seg"], 0.0, 0),
-                after=(measured["d_seg"], 0.0, 0),
+            if admit_seg_only_component_diagnostic(
                 before_mismatches=before["mismatch_px"],
                 after_mismatches=measured["mismatch_px"],
+                before_component_bytes=len(encode_pdw1p(Pdw1PlanePayload(labels=labels, fills=fills))),
+                after_component_bytes=len(encode_pdw1p(Pdw1PlanePayload(labels=labels, fills=trial))),
             ):
                 fills = trial
                 current = list(candidate)
@@ -791,6 +837,10 @@ def run(config: EinsteinKolmogorovCruxConfig) -> dict[str, Any]:
         "hard_mismatch_px": mismatch_total,
         "label_mutations": int((labels != source_labels).sum()),
         "score_with_pose_zero_for_local_ordering_only": score(d_seg=d_seg, d_pose=0.0, archive_bytes=actual_bytes),
+        "admission_scope": (
+            "SEG_ONLY_COMPONENT_DIAGNOSTIC; Pose is unmeasured and component bytes are not total archive bytes; "
+            "this row cannot select or reject a joint-S family"
+        ),
         "checkpoint_path": str(checkpoint),
         "pointer_delta": "UNMOVED",
     }

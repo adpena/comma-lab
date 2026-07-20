@@ -6,9 +6,11 @@ research_only: `true`
 axis: `[macOS-CPU advisory]`  
 pointer: `0.1910828242 [contest-CPU Linux x86_64]`, **UNMOVED**
 
-Status: **CURRENT MEASUREMENT, REVIEW PENDING.** Every n24 node below was replayed
-from committed source `889d32db399709aca475c3c6120c81f189dd4b81` with a complete
-source/runtime closure. Recursive clean-pass count remains zero.
+Status: **CURRENT MEASUREMENT, REVIEW PENDING.** The source/global/scoped-Seg
+terminal triplet was replayed from base commit
+`8eee0e3becdabbfe2f38246ad014678bb11f1e8e` with v2 source/runtime closure and
+reproduced the historical bytes and metrics. Nonterminal construction receipts retain
+their disclosed historical v1 closure. Recursive clean-pass count remains zero.
 
 ## Executable state transition
 
@@ -26,9 +28,9 @@ frozen scorer rate-distortion cover and exact factor-2 R preimage
                 +--> source 38,077 mismatches                    [MEASURED]
                 +--> zero 2,388,341 mismatches                   [negative canary]
                 +--> global 37,276 mismatches                    [positive control]
-                +--> coordinate-12 32,509 mismatches             [dominated]
+                +--> coordinate-12 32,509 mismatches             [Seg-partial parent]
                 +--> projected DSPSA-32 28,039 mismatches       [parent]
-                +--> DSPSA-32 -> coordinate-12 26,795            [winner]
+                +--> DSPSA-32 -> coordinate-12 26,795            [Seg-only incumbent]
                               |
                               +--> 19,859 B, strict parse-back, factor-2 exact
                               +--> final fingerprinted singleton replay
@@ -36,11 +38,12 @@ frozen scorer rate-distortion cover and exact factor-2 R preimage
                 |
                 +--> lossy row-run topology 2/3/4               [distinct family]
                         +--> rung 2: 36,876 mismatches, 19,371 B [improves source]
-                        +--> winner+rung2: 27,521, 19,371 B      [graft rejected]
-                        +--> Delta S_local = +0.0150610065       [waterline]
+                        +--> incumbent+rung2: 27,521, 19,371 B   [partial worse]
+                        +--> Delta S_seg+component-rate=+0.0150610065
+                        +--> Pose + total archive bytes          [UNMEASURED]
 ```
 
-The measured winner reduces hard mismatches by 11,282 (29.6294%) from the source and
+The measured Seg-only incumbent reduces hard mismatches by 11,282 (29.6294%) from the source and
 10,481 (28.1173%) from the global-palette control at **zero packet-byte delta**. The
 local pose-zero action value `0.5810833665` is ordering arithmetic only: the component
 does not contain a compact frame-0/Pose stream and is not a full archive.
@@ -70,10 +73,11 @@ used. Verdict scope: `BLOCKED_LOCAL_FILESYSTEM_POLICY`, then
    anchor. Fisher/margin/secant-QP ordering remains `BLOCKED_INPUT_CUSTODY`; no Euclidean
    proxy was silently promoted.
 2. **Pareto constraint:** every admission uses
-   `S=100*d_seg+sqrt(10*d_pose)+25*B/37_545_489`; zero-rate palette moves require a
-   strict hard-mismatch decrease, while lossy-label moves use actual encoded bytes and
-   are rejected when their distortion cost exceeds rate savings. The canonical equation
-   module refuses infeasible byte caps and unequal-byte fixed-palette deltas.
+   `S=100*d_seg+sqrt(10*d_pose)+25*B/37_545_489`. Fixed-component-byte palette moves
+   have an explicit Seg-only diagnostic admission; they cannot invoke the full-action
+   helper without Pose. Lossy-label rows use actual component bytes but remain partial
+   until Pose and total archive bytes are measured. The canonical equation module uses
+   the strict `ceil(x)-1` byte cap and refuses infeasible caps.
 3. **Bit allocator:** fill substitutions cost zero added bytes; label-run rungs expose a
    measured topology-rate curve. Any later residual must
    be receiver-bound curvelet/shearlet and pass the registered reverse-waterfill
@@ -82,11 +86,18 @@ used. Verdict scope: `BLOCKED_LOCAL_FILESYSTEM_POLICY`, then
    writable SSD evidence custody, and contest-axis evaluation are required before
    promotion.
 5. **Continual learning:** the typed aggregate receipt records the whole component
-   tournament, deterministic replay, heterogeneous cross-family inventory, exact
-   blockers, Bregman disposition, and pointer non-delta.
+   tournament, closure-v2 terminal replay, content-addressed evidence bundles,
+   heterogeneous cross-family inventory, exact blockers, Bregman disposition, and
+   pointer non-delta.
 6. **Probe disambiguator:** source/zero/global/coordinate/DSPSA/hybrid and lossy-label
-   rungs are executable interpretations. The hard oracle plus actual bytes, not a proxy
-   ranking, select the fixed-label hybrid and reject the topology graft.
+   rungs are executable interpretations. The hard Seg oracle plus actual component bytes
+   selects only a scoped Seg-only incumbent; Pose and total archive bytes are required
+   before either family can be admitted or rejected under joint action.
+7. **Information-model lower-bound guard:** any positive instance `K`-floor must declare
+   the primary class, target map, metric, and allowed evaluations, then supply a
+   contest-specific counting/entropy or adversarial indistinguishability construction;
+   otherwise record `UNKNOWN`. Colbrook--Mezic--Stepanenko (2026) motivates this guard
+   but proves no contest byte bound.
 
 ## Triality
 
@@ -105,9 +116,12 @@ Pointer delta: **NONE**. No new full-n600 in-box archive was produced. The settl
 `d_pose=0.0016095472`, implied `S=0.6415553932`; its packet was already deleted and it
 is not relabeled as this lane's result.
 
-The next zero-cost gate requires both writable canonical SSD custody and a content-bound
-resume contract for the n600 byte-close backend. The downstream LVLS1/archive receiver
-must then consume every counted field through `R`, with mutation canaries against
-counted-but-inert payload. Contest-CPU Linux evaluation remains downstream of a
+The downstream LVLS1/archive receiver now contains the optional `EKPR1` section, strict
+manifest binding, inline/NumPy consumption before AA/lane/R, mutation canaries, and
+cap/repack wiring. It correctly refuses attaching the n24 residual to an n600 stream;
+the real n600 payload remains owed. The next zero-cost execution gate requires writable
+canonical SSD custody, committed hash-bound authorization, a live matching lane claim,
+the governed-admission marker, and an executable resume ABI in the n600 byte-close
+backend. Declarative resume receipts do not authorize execution. Contest-CPU Linux evaluation remains downstream of a
 byte-closed full archive; no paid dispatch is armed because paid evaluation is not yet
 the sole remaining step.

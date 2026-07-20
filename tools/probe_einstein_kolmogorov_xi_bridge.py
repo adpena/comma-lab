@@ -12,12 +12,16 @@ typed mode and requires an explicit operator authorization reference.
 from __future__ import annotations
 
 import argparse
+import ast
 import errno
 import hashlib
+import importlib.util
 import json
 import os
 import platform
+import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -31,13 +35,15 @@ from numpy.lib import format as npformat
 from tac.witness_dsl import einstein_kolmogorov_bridge_20260719 as config_contract
 from tac.witness_dsl.einstein_kolmogorov_bridge_20260719 import EinsteinKolmogorovXiBridgeConfig
 
-RECEIPT_SCHEMA = "einstein_kolmogorov_xi_bridge_receipt.v2"
+RECEIPT_SCHEMA = "einstein_kolmogorov_xi_bridge_receipt.v3"
 HASH_RECEIPT_SCHEMA = "einstein_kolmogorov_xi_bridge_hash_receipt.v1"
 FAILURE_MANIFEST_SCHEMA = "einstein_kolmogorov_xi_bridge_failure.v1"
-BACKEND_RESUME_RECEIPT_SCHEMA = "levelset_byte_close_resume_contract.v1"
+OPERATOR_AUTHORIZATION_SCHEMA = "einstein_kolmogorov_xi_bridge_operator_authorization.v1"
+BACKEND_RESUME_ABI_SCHEMA = "levelset_byte_close_resume_abi_verification.v1"
 AUTHORITY = "[macOS-CPU advisory] diagnostic-only"
-FULL_AUTHORITY = "[macOS-CPU advisory] governed-full n600; NON-PROMOTABLE"
+FULL_AUTHORITY = "[macOS-CPU advisory] governed-full n600 after executable resume verification; NON-PROMOTABLE"
 R1_CALIBRATION_RECEIPT = "reports/r1_dxi_238/n600_shipdxi.json"
+_COST_TOKEN_RE = re.compile(r"(?:^|[;\s])(?:cost=\$|cost_usd=)([0-9]+(?:\.[0-9]+)?)(?:[;\s]|$)")
 
 
 class BridgeValidationError(ValueError):
@@ -113,54 +119,203 @@ def _is_within(path: Path, root: Path) -> bool:
     return True
 
 
-def _require_execution_authorization(config: EinsteinKolmogorovXiBridgeConfig) -> None:
-    if config.execution_mode != config_contract.GOVERNED_FULL_MODE:
-        return
-    if config.operator_authorization_token is None:
+def _committed_file_bytes(path: Path) -> bytes:
+    """Read exactly the bytes committed at HEAD for a repo-contained path."""
+
+    root = config_contract._REPO_ROOT.resolve(strict=False)
+    try:
+        relative = path.resolve(strict=False).relative_to(root).as_posix()
+    except ValueError as exc:
+        raise BridgeAuthorizationError(f"operator authorization is outside repository root: {path}") from exc
+    completed = subprocess.run(
+        ["git", "-C", str(root), "show", f"HEAD:{relative}"],
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.decode("utf-8", errors="replace").strip()
         raise BridgeAuthorizationError(
-            "governed_full n600 execution refused: missing typed "
-            "operator_authorization_token=OPERATOR-GO:<durable-reference>"
+            f"operator authorization must already be committed at HEAD; git could not read {relative}: {detail}"
         )
+    return completed.stdout
 
 
-def _require_full_backend_resume_contract(config: EinsteinKolmogorovXiBridgeConfig) -> dict[str, Any]:
-    """Require a hash-bound stage-resume contract before any governed-full backend."""
+def _require_execution_authorization(
+    config: EinsteinKolmogorovXiBridgeConfig,
+) -> dict[str, Any]:
+    if config.execution_mode != config_contract.GOVERNED_FULL_MODE:
+        return {"required": False, "verified": False}
+    if config.operator_authorization_path is None or config.operator_authorization_sha256 is None:
+        raise BridgeAuthorizationError(
+            "governed_full n600 execution refused: missing committed, hash-bound operator authorization"
+        )
+    path = Path(config.operator_authorization_path)
+    auth_root = (config_contract._REPO_ROOT / ".omx" / "research" / "operator_authorizations").resolve(strict=False)
+    if not _is_within(path.resolve(strict=False), auth_root) or path.suffix != ".json":
+        raise BridgeAuthorizationError(
+            "operator authorization must be JSON under canonical .omx/research/operator_authorizations"
+        )
+    try:
+        working_bytes = path.read_bytes()
+    except OSError as exc:
+        raise BridgeAuthorizationError(f"cannot read operator authorization {path}: {exc}") from exc
+    measured = hashlib.sha256(working_bytes).hexdigest()
+    if measured != config.operator_authorization_sha256:
+        raise BridgeAuthorizationError(
+            "operator authorization SHA-256 mismatch: "
+            f"expected {config.operator_authorization_sha256}, measured {measured}"
+        )
+    committed_bytes = _committed_file_bytes(path)
+    committed_sha = hashlib.sha256(committed_bytes).hexdigest()
+    if committed_bytes != working_bytes or committed_sha != measured:
+        raise BridgeAuthorizationError("operator authorization working-tree bytes differ from committed HEAD bytes")
+    try:
+        payload = json.loads(working_bytes)
+    except json.JSONDecodeError as exc:
+        raise BridgeAuthorizationError(f"operator authorization is not valid JSON: {exc}") from exc
+    required = {
+        "schema": OPERATOR_AUTHORIZATION_SCHEMA,
+        "authorized": True,
+        "lane_id": config_contract.LANE_ID,
+        "execution_mode": config_contract.GOVERNED_FULL_MODE,
+        "max_pairs": config_contract.EXPECTED_N_PAIRS,
+        "max_cost_usd": float(config.declared_max_cost_usd),
+        "claim": {
+            "instance_job_id": config.governed_claim_job_id,
+            "platform": config.governed_claim_platform,
+        },
+        "inputs": {
+            "generator_npz_sha256": config.generator_npz_sha256,
+            "donor_r1_npz_sha256": config.donor_r1_npz_sha256,
+            "gt_cache_sha256": config.gt_cache_sha256,
+        },
+        "backend_path": "tools/levelset_byte_close_and_eval.py",
+    }
+    if not isinstance(payload, dict) or any(payload.get(key) != value for key, value in required.items()):
+        raise BridgeAuthorizationError(
+            "operator authorization does not exactly bind lane, mode, n600 cost ceiling, "
+            "governed claim, input hashes, and backend"
+        )
+    for key in ("authorization_id", "authorized_by", "authorized_utc"):
+        if not isinstance(payload.get(key), str) or not payload[key].strip():
+            raise BridgeAuthorizationError(f"operator authorization lacks non-empty {key}")
+    return {
+        "required": True,
+        "verified": True,
+        "path": str(path),
+        "sha256": measured,
+        "bytes": len(working_bytes),
+        "authorization_id": payload["authorization_id"],
+        "bindings": required,
+    }
+
+
+def _require_governed_execution_context(
+    config: EinsteinKolmogorovXiBridgeConfig,
+    *,
+    env: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Require both the governed child marker and a current canonical claim."""
 
     if config.execution_mode != config_contract.GOVERNED_FULL_MODE:
         return {"required": False, "verified": False}
-    if config.backend_resume_receipt_path is None or config.backend_resume_receipt_sha256 is None:
-        raise BridgeResumabilityError(
-            "governed_full n600 backend refused: no hash-bound resume receipt; the backend must "
-            "prove resume-from-disk and preserved atomic per-stage checkpoints"
+    from tac.admission_guard import GOVERNED_MARKER_ENV
+    from tools import claim_lane_dispatch
+
+    effective_env = os.environ if env is None else env
+    if (effective_env.get(GOVERNED_MARKER_ENV, "") or "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        raise BridgeAuthorizationError(
+            "governed_full n600 execution refused: missing active TAC_GOVERNED_ADMISSION marker; "
+            "direct in-process/raw execution is forbidden"
         )
-    receipt_path = Path(config.backend_resume_receipt_path)
-    custody = _require_file(
-        receipt_path,
-        config.backend_resume_receipt_sha256,
-        "full backend resume receipt",
-    )
+    claims_path = config_contract._REPO_ROOT / ".omx" / "state" / "active_lane_dispatch_claims.md"
     try:
-        payload = json.loads(receipt_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise BridgeResumabilityError(f"invalid full backend resume receipt: {exc}") from exc
+        claims = claim_lane_dispatch._parse_claims(claims_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise BridgeAuthorizationError(f"cannot read canonical governed claim ledger: {exc}") from exc
+    latest = claim_lane_dispatch._latest_claims_by_job(claims).get(
+        (config_contract.LANE_ID, str(config.governed_claim_job_id))
+    )
+    if latest is None or claim_lane_dispatch._is_terminal(latest.status):
+        raise BridgeAuthorizationError("governed_full n600 execution refused: no active canonical lane dispatch claim")
+    if latest.platform != config.governed_claim_platform:
+        raise BridgeAuthorizationError("governed_full claim platform does not match the hash-bound authorization")
+    claim_utc = claim_lane_dispatch._parse_utc(latest.timestamp_utc)
+    if claim_utc is None or claim_lane_dispatch._claim_age_hours(claim_lane_dispatch._utc_now(), latest) > 24.0:
+        raise BridgeAuthorizationError(
+            "governed_full n600 execution refused: canonical claim is malformed or older than 24h"
+        )
+    cost_match = _COST_TOKEN_RE.search(latest.notes)
+    if cost_match is None or float(cost_match.group(1)) != float(config.declared_max_cost_usd):
+        raise BridgeAuthorizationError("governed_full claim notes must bind cost=$<usd> equal to declared_max_cost_usd")
+    return {
+        "required": True,
+        "verified": True,
+        "marker_env": GOVERNED_MARKER_ENV,
+        "claim_ledger_path": str(claims_path),
+        "claim": latest.__dict__,
+    }
+
+
+def _require_full_backend_resume_abi(config: EinsteinKolmogorovXiBridgeConfig) -> dict[str, Any]:
+    """Execute the live backend's resume verifier; declarative receipts have no authority."""
+
+    if config.execution_mode != config_contract.GOVERNED_FULL_MODE:
+        return {"required": False, "verified": False}
     backend_path = config_contract._REPO_ROOT / "tools/levelset_byte_close_and_eval.py"
+    try:
+        source = backend_path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(backend_path))
+    except (OSError, SyntaxError) as exc:
+        raise BridgeResumabilityError(f"cannot inspect live full backend resume ABI: {exc}") from exc
+    exports_verifier = any(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "verify_resume_abi"
+        for node in tree.body
+    )
+    legacy = {
+        "provided": config.backend_resume_receipt_path is not None,
+        "accepted_as_authority": False,
+        "reason": "caller-authored declarative resume receipts cannot prove executable resume",
+    }
+    if not exports_verifier:
+        raise BridgeResumabilityError(
+            "governed_full n600 backend refused: live backend exports no executable "
+            "verify_resume_abi; fabricated/declarative resume receipts are non-authorizing"
+        )
+    spec = importlib.util.spec_from_file_location("_ek_full_backend_resume_verifier", backend_path)
+    if spec is None or spec.loader is None:
+        raise BridgeResumabilityError("cannot load live full backend resume verifier")
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+        verification = module.verify_resume_abi()
+    except BaseException as exc:
+        raise BridgeResumabilityError(f"live backend resume ABI verification failed: {exc}") from exc
     required = {
-        "schema": BACKEND_RESUME_RECEIPT_SCHEMA,
-        "resumable_from_disk": True,
+        "schema": BACKEND_RESUME_ABI_SCHEMA,
+        "verified": True,
+        "checkpoint_roundtrip_executed": True,
+        "resume_roundtrip_executed": True,
         "per_stage_checkpoints_preserved": True,
         "atomic_checkpoint_publish": True,
-        "backend_path": str(backend_path.resolve()),
         "backend_sha256": _sha256_file(backend_path),
     }
-    if not isinstance(payload, dict) or any(payload.get(key) != value for key, value in required.items()):
+    if not isinstance(verification, dict) or any(verification.get(key) != value for key, value in required.items()):
         raise BridgeResumabilityError(
-            "full backend resume receipt does not bind the live backend with resumable-from-disk, "
-            "preserved per-stage, atomic checkpoint guarantees"
+            "live backend resume ABI verifier did not prove executable checkpoint+resume roundtrips"
         )
-    for key in ("resume_entrypoint", "checkpoint_artifact_pattern"):
-        if not isinstance(payload.get(key), str) or not payload[key].strip():
-            raise BridgeResumabilityError(f"full backend resume receipt lacks non-empty {key}")
-    return {"required": True, "verified": True, "custody": custody, "contract": payload}
+    return {
+        "required": True,
+        "verified": True,
+        "backend_path": str(backend_path.resolve()),
+        "verification": verification,
+        "legacy_receipt": legacy,
+    }
 
 
 def _storage_waterfall_preflight(
@@ -533,13 +688,14 @@ def _write_backend_failure_manifest(
 
 def execute(config: EinsteinKolmogorovXiBridgeConfig) -> dict[str, Any]:
     """Validate custody, invoke the existing receiver once, and write one receipt."""
-    # Authorization is intentionally the first executable gate: a missing GO
-    # cannot probe output writability, create a temporary file, or touch backend state.
-    _require_execution_authorization(config)
+    # Full-mode authority, governed admission, and the backend's executable resume
+    # proof intentionally precede all output probes and all large input reads.
+    authorization = _require_execution_authorization(config)
+    governed_context = _require_governed_execution_context(config)
+    resume_contract = _require_full_backend_resume_abi(config)
     _refuse_existing_outputs(config)
     storage_preflight = _storage_waterfall_preflight(config)
     _preflight_packet_parent_writable(config)
-    resume_contract = _require_full_backend_resume_contract(config)
     generator_path = Path(config.generator_npz_path)
     generator_custody = _require_file(generator_path, config.generator_npz_sha256, "generator checkpoint npz")
     donor_custody = _require_file(Path(config.donor_r1_npz_path), config.donor_r1_npz_sha256, "donor R1 npz")
@@ -597,7 +753,9 @@ def execute(config: EinsteinKolmogorovXiBridgeConfig) -> dict[str, Any]:
         "donor_r1": donor_custody,
         "gt_cache": gt_custody,
         "r1_calibration_receipt": r1_calibration,
-        "backend_resume_contract": resume_contract,
+        "operator_authorization": authorization,
+        "governed_execution_context": governed_context,
+        "backend_resume_abi": resume_contract,
     }
     try:
         nested_report = _run_levelset(**run_kwargs)
@@ -652,7 +810,8 @@ def execute(config: EinsteinKolmogorovXiBridgeConfig) -> dict[str, Any]:
         "donor_math": donor_math,
         "nested_levelset_report": nested_report,
         "verdict_scope": (
-            "bounded local full-archive cross-check of a generator plus separately trained R1 xi; "
+            "diagnostic or governed local full-archive cross-check of a generator plus separately "
+            "trained R1 xi; historical v2 declarative resume receipts carry no execution authority; "
             "not evidence that the checkpoints co-adapted and not promotion authority"
         ),
     }

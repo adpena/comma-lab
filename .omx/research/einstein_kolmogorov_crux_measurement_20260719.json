@@ -1,6 +1,6 @@
 {
   "schema": "einstein_kolmogorov_crux_measurement.v2",
-  "utc": "2026-07-19T23:48:34Z",
+  "utc": "2026-07-20T00:34:00Z",
   "lane_id": "lane_einstein_kolmogorov_crux_20260719",
   "authority": "[macOS-CPU advisory] n24 singleton CPU-Torch SegNet hard-R",
   "research_only": true,
@@ -11,8 +11,8 @@
   "overall_lane_status": "IMPLEMENTATION_INCOMPLETE",
   "verdict_scope": "complete n24 PDW1 component tournament only; no compact pose stream, no full n600 archive, and no contest-axis score",
   "labels": {
-    "MEASURED": "hard mismatch count, d_seg, candidate component bytes and hashes, parse-back, factor-2 certificate, label mutations, and runtime closure on named receipts",
-    "DERIVED": "relative reductions, pose-zero ordering actions, fixed-byte deltas, rate tradeoffs, and score-law byte caps",
+    "MEASURED": "hard mismatch count, d_seg, candidate component bytes and hashes, parse-back, factor-2 certificate, label mutations, and the named receipt closure; source/global/scoped-Seg-winner terminal replays have v2 source/runtime closure, while nonterminal historical tournament receipts retain the disclosed v1 limitation",
+    "DERIVED": "relative Seg reductions, pose-zero partial-action arithmetic, component-byte tradeoffs, and score-law byte caps",
     "SPECULATIVE": "generalization from this n24 component to a full generator quotient, a full archive, or sub-0.15"
   },
   "inputs": {
@@ -36,24 +36,50 @@
     "scorer_batch_geometry": "singleton"
   },
   "reproducibility_closure": {
-    "base_git_head": "889d32db399709aca475c3c6120c81f189dd4b81",
-    "validation_receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/validate_hybrid_final/receipt.json",
-    "validation_receipt_sha256": "a42127719b75d9c051d78f3fd771a00eb51816286f1d76bb2f9987fd417061cd",
+    "schema": "einstein_kolmogorov_reproducibility_closure.v2",
+    "base_git_head": "8eee0e3becdabbfe2f38246ad014678bb11f1e8e",
+    "scope": "terminal source/global/scoped-Seg-winner triplet; same candidate bytes and metrics as the historical tournament",
+    "source_receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/source/receipt.json",
+    "source_receipt_sha256": "60f4d8941931c58c256f859984de19fbc1521242e96c2b5718ff1eda27989043",
+    "global_receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/receipt.json",
+    "global_receipt_sha256": "2d9b767fce296b5449b02e856d12dd549a626e606557231fb7159a6c053039a0",
+    "validation_receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/hybrid/receipt.json",
+    "validation_receipt_sha256": "258200c1ecfb08748645f7e69e62a3197cab848b57ff4b50dcc456ed7595b638",
     "python": "3.13.12",
+    "python_executable_sha256": "70db9c86354ca8b7c6e3a2c73cb623e05dc03d87452727af36675bfe04ba6c41",
     "numpy": "1.26.4",
     "torch": "2.12.1",
+    "brotli": "1.2.0",
+    "safetensors": "0.8.0",
     "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
     "machine": "arm64",
     "torch_num_threads": 1,
-    "implementation_fingerprints": {
-      "probe": "644ba9885422262f2907f6b70fcd5a9595a0902121a3b2577b75f0ec67b7f50f",
-      "typed_dsl": "b83616bf48c8a3ce530ac6a121923c8d0283e03ccb1a6c5ffa68adec77849721",
-      "optimization": "3cb5207ae711ce0a2288f528637bf117001c349e12429cfc48b78ee6581ecdad",
-      "pdw1_codec": "ea3456a36f300bde3a6924d7c8d0fcacb92675904e7f68ba56bc3862e7c4b4d9",
-      "uint8_lattice_realization": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17",
-      "frozen_segnet_loader": "3c720fc6d81ebbf1779b8370fb5c17b545b609fc39fdf62176b2d17e35edefaf",
-      "upstream_modules": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+    "source_fingerprint_count": 12,
+    "historical_nonterminal_receipts": "BASE_COMMIT_PARTIAL_CLOSURE_DISCLOSED: v1 omitted the canonical action/equation/provenance/law sources and Brotli/safetensors module custody; they remain evidence for candidate construction, not terminal closure authority",
+    "evidence_bundle": {
+      "manifest_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_closure_v2_20260720.evidence.6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3/manifest.json",
+      "bundle_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_closure_v2_20260720.evidence.6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3/bundle.evidence.bundle",
+      "tree_sha256": "6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3",
+      "bundle_sha256": "d40686bac2a511f1f3903e96198798ec49e27fbf425b1fdf2654416f651663f9",
+      "file_count": 81,
+      "payload_bytes": 1373763
     }
+  },
+  "evidence_custody": {
+    "status": "CONTENT_ADDRESSED_BUNDLES_STAGED_FOR_MAIN_LANDING",
+    "full_tournament_bundle": {
+      "manifest_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_runs_final_20260719.evidence.7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6/manifest.json",
+      "bundle_path": ".omx/research/evidence_bundles/einstein_kolmogorov_crux_runs_final_20260719.evidence.7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6/bundle.evidence.bundle",
+      "tree_sha256": "7b408d1cd9dd4f2bf4952fe1ed5370a81f820920b77529942095ee906b03bde6",
+      "file_manifest_sha256": "f99e2e15c155f3c35e1b775cb7b7060d1b15299359b51c3e7d45129924d3e560",
+      "bundle_sha256": "e488da3083645f10e26e58b8e8703239fe2fe3e4706070963ef46ae10e54517a",
+      "file_count": 1638,
+      "payload_bytes": 26210105,
+      "restore_check": "PASS_BYTE_IDENTICAL_DIFF_RQ"
+    },
+    "closure_v2_bundle_tree_sha256": "6edb77687219aedbdcdc4e67b425e2ad81fef8d40a9d1e48d89440aa2c7bddb3",
+    "source_trees_retained": true,
+    "source_deleted": false
   },
   "tournament": [
     {
@@ -64,8 +90,8 @@
       "hard_mismatch_px": 38077,
       "candidate_bytes": 19859,
       "candidate_sha256": "8d66286c722e9202d77b54bcdf06942496641bad20ff9632c785800b53a0a02d",
-      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/validate_source_final/receipt.json",
-      "receipt_sha256": "ab5f4cec038e209d3430db996a5169189662b612cb16c39873f13c7059319c3c"
+      "receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/source/receipt.json",
+      "receipt_sha256": "60f4d8941931c58c256f859984de19fbc1521242e96c2b5718ff1eda27989043"
     },
     {
       "arm": "zero_palette",
@@ -87,8 +113,8 @@
       "candidate_bytes": 19859,
       "candidate_sha256": "3a9c95f6005c51c2b27bf36b627d99673ca4c9cdfea24e18e9b15590bcb16f60",
       "construction_receipt_sha256": "827eb1f07e3f5cdbcbc393b9937134673a1da749066299b6d97bc13f3a90d32a",
-      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/validate_global_final/receipt.json",
-      "receipt_sha256": "5c9a1910eecb0de6e4b85128781a2a5fbf9305a5709059028001686bd31fa9f1"
+      "receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/global/receipt.json",
+      "receipt_sha256": "2d9b767fce296b5449b02e856d12dd549a626e606557231fb7159a6c053039a0"
     },
     {
       "arm": "coordinate_3",
@@ -145,7 +171,7 @@
     {
       "arm": "dspsa32_then_coordinate12",
       "family": "fixed_label_palette",
-      "status": "MEASURED_SCOPED_WINNER_FINAL_VALIDATED",
+      "status": "MEASURED_SCOPED_SEG_ONLY_WINNER_FINAL_VALIDATED",
       "d_seg": 0.0056786007351345485,
       "hard_mismatch_px": 26795,
       "accepted_coordinate_moves": 245,
@@ -155,13 +181,13 @@
       "strict_encode_decode_reencode_identity": true,
       "factor2_certified_exact_all_pairs": true,
       "construction_receipt_sha256": "0ea5fb0b61007f86b4d54f23f4e8c2d8734d10c73d65a02813d4aa8ec326323c",
-      "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/validate_hybrid_final/receipt.json",
-      "receipt_sha256": "a42127719b75d9c051d78f3fd771a00eb51816286f1d76bb2f9987fd417061cd"
+      "receipt": ".omx/research/einstein_kolmogorov_crux_closure_v2_20260720/hybrid/receipt.json",
+      "receipt_sha256": "258200c1ecfb08748645f7e69e62a3197cab848b57ff4b50dcc456ed7595b638"
     },
     {
       "arm": "label_run_2_source_fills",
       "family": "lossy_label_topology",
-      "status": "MEASURED_RATE_DISTORTION_IMPROVEMENT_VS_SOURCE_BUT_DOMINATED_BY_SCOPED_WINNER",
+      "status": "MEASURED_SEG_RATE_PARTIAL_IMPROVEMENT_VS_SOURCE_JOINT_POSE_UNRESOLVED",
       "d_seg": 0.007815043131510416,
       "hard_mismatch_px": 36876,
       "label_mutations": 323,
@@ -174,7 +200,7 @@
     {
       "arm": "label_run_3_source_fills",
       "family": "lossy_label_topology",
-      "status": "MEASURED_DOMINATED",
+      "status": "MEASURED_SEG_RATE_PARTIAL_ROW_JOINT_POSE_UNRESOLVED",
       "d_seg": 0.00799560546875,
       "hard_mismatch_px": 37728,
       "label_mutations": 1355,
@@ -186,7 +212,7 @@
     {
       "arm": "label_run_4_source_fills",
       "family": "lossy_label_topology",
-      "status": "MEASURED_NEGATIVE_RUNG",
+      "status": "MEASURED_SEG_RATE_PARTIAL_NEGATIVE_RUNG_JOINT_POSE_UNRESOLVED",
       "d_seg": 0.010709762573242188,
       "hard_mismatch_px": 50535,
       "label_mutations": 2996,
@@ -198,21 +224,21 @@
     {
       "arm": "hybrid_winner_then_label_run_2",
       "family": "lossy_label_topology_plus_optimized_palette",
-      "status": "MEASURED_GRAFT_REJECTED_BY_ACTION_WATERLINE",
+      "status": "MEASURED_SEG_RATE_PARTIAL_GRAFT_WORSE_JOINT_POSE_UNRESOLVED",
       "d_seg": 0.0058324601915147566,
       "hard_mismatch_px": 27521,
       "label_mutations": 323,
       "candidate_bytes": 19371,
       "candidate_sha256": "504692a6ba2b00da3840ff2d342fda84d3492d453b2bb1faf637502c77898fbf",
       "pose_zero_ordering_action": 0.5961443729324053,
-      "action_delta_vs_fixed_label_winner": 0.015061006468897298,
+      "seg_rate_partial_action_delta_vs_fixed_label_winner": 0.015061006468897298,
       "receipt": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719/hybrid_label_run_2/receipt.json",
       "receipt_sha256": "4b5381074ff1c4cca6a47e059d9f118afee15be0ae7ae7c741cb957c56a54cac"
     },
     {
       "arm": "hybrid_winner_then_label_run_3",
       "family": "lossy_label_topology_plus_optimized_palette",
-      "status": "MEASURED_GRAFT_REJECTED",
+      "status": "MEASURED_SEG_RATE_PARTIAL_GRAFT_WORSE_JOINT_POSE_UNRESOLVED",
       "d_seg": 0.0078377193874783,
       "hard_mismatch_px": 36983,
       "label_mutations": 1355,
@@ -224,7 +250,7 @@
     {
       "arm": "hybrid_winner_then_label_run_4",
       "family": "lossy_label_topology_plus_optimized_palette",
-      "status": "MEASURED_GRAFT_STRONGLY_REJECTED",
+      "status": "MEASURED_SEG_RATE_PARTIAL_GRAFT_WORSE_JOINT_POSE_UNRESOLVED",
       "d_seg": 0.06743261549207899,
       "hard_mismatch_px": 318187,
       "label_mutations": 2996,
@@ -240,9 +266,9 @@
     "mismatch_reduction_vs_global": 10481,
     "relative_reduction_vs_global": 0.2811728726258182,
     "added_packet_bytes": 0,
-    "fixed_byte_action_delta_vs_source": -0.2390967475043403,
-    "fixed_byte_action_delta_vs_global": -0.22212134467230896,
-    "pose_assumption_for_delta": "unchanged and unmeasured; cancels algebraically",
+    "seg_only_partial_action_delta_vs_source": -0.2390967475043403,
+    "seg_only_partial_action_delta_vs_global": -0.22212134467230896,
+    "pose_status_for_delta": "unmeasured; it does not cancel because palette changes affect PoseNet frame1",
     "pose_zero_action_for_local_ordering_only": 0.581083366463508,
     "pose_zero_value_is_not_a_contest_score": true
   },
@@ -255,12 +281,12 @@
     {
       "chart": "PDW1_fixed_label_palette",
       "scope": "fresh n24 component hard-R tournament",
-      "disposition": "scoped winner measured; not a full archive"
+      "disposition": "scoped Seg-only winner measured; joint Pose/total-archive admission unresolved"
     },
     {
       "chart": "PDW1_lossy_label_topology",
       "scope": "fresh n24 component hard-R rungs and graft",
-      "disposition": "minimum-run 2 improves source rate-distortion, but its graft is dominated by the fixed-label winner"
+      "disposition": "minimum-run 2 improves the Seg-plus-component-rate partial objective; no joint family selection without Pose and total archive bytes"
     },
     {
       "chart": "PDW2_quotient_power_packet",

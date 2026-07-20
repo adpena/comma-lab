@@ -10,6 +10,7 @@ from tac.optimization.einstein_kolmogorov_crux import (
     RATE_SCORE_PER_BYTE,
     DSPSAState,
     admit_candidate,
+    admit_seg_only_component_diagnostic,
     coordinate_candidates,
     dspsa_perturbation,
     marginal_beats_waterline,
@@ -20,6 +21,7 @@ from tac.optimization.einstein_kolmogorov_crux import (
     wang_corners,
     wang_dspsa_step,
 )
+from tac.witness_dsl import einstein_kolmogorov_crux_20260719 as crux_config_module
 from tac.witness_dsl.einstein_kolmogorov_crux_20260719 import (
     EinsteinKolmogorovConfigError,
     EinsteinKolmogorovCruxConfig,
@@ -44,7 +46,7 @@ def _config(**changes: object) -> EinsteinKolmogorovCruxConfig:
         "segnet_path": "/inputs/upstream/models/segnet.safetensors",
         "segnet_sha256": "c" * 64,
         "upstream_path": "/inputs/upstream",
-        "output_dir": "/outputs/run-a",
+        "output_dir": str(Path(__file__).parents[1] / ".omx" / "research" / "test-run-a"),
         "pair_indices": (0, 1),
         "family": "dspsa",
         "seed": 7,
@@ -63,10 +65,17 @@ def _fake_closure(probe) -> dict[str, object]:
                 "version": "3.test",
                 "implementation": "CPython",
                 "executable": "/python",
+                "executable_sha256": "a" * 64,
                 "cache_tag": "cpython-test",
             },
-            "numpy": {"version": "test", "module_path": "/numpy/__init__.py"},
-            "torch": {"version": "test", "module_path": "/torch/__init__.py"},
+            "numpy": {"version": "test", "module_path": "/numpy/__init__.py", "module_sha256": "b" * 64},
+            "torch": {"version": "test", "module_path": "/torch/__init__.py", "module_sha256": "c" * 64},
+            "brotli": {"version": "test", "module_path": "/brotli.py", "module_sha256": "d" * 64},
+            "safetensors": {
+                "version": "test",
+                "module_path": "/safetensors/__init__.py",
+                "module_sha256": "e" * 64,
+            },
             "platform": {
                 "platform": "test",
                 "system": "test",
@@ -105,6 +114,9 @@ def test_config_round_trip_has_stable_fingerprint() -> None:
         ({"checkpoint_every_pairs": 2}, "exactly 1"),
         ({"target_first_displacement": 2.0}, "frozen at exactly 1.0"),
         ({"label_min_run": 2}, "active only"),
+        ({"pair_indices": (24,)}, "diagnostic-only"),
+        ({"iterations": 33}, "iterations must be"),
+        ({"output_dir": "/outputs/run-a"}, "diagnostic output_dir"),
     ],
 )
 def test_config_refuses_implicit_or_nondeterministic_contract(changes: dict[str, object], message: str) -> None:
@@ -188,11 +200,36 @@ def test_projection_and_coordinate_candidates_respect_bounds() -> None:
     assert all(all(0 <= value <= 255 for value in item) for item in candidates)
 
 
-def test_zero_byte_admission_requires_strict_hard_mismatch_improvement() -> None:
+def test_full_admission_never_lets_seg_mismatches_override_pose() -> None:
     before = (0.10, 0.0, 100)
-    after = (0.09, 0.0, 100)
-    assert admit_candidate(before=before, after=after, before_mismatches=10, after_mismatches=9)
-    assert not admit_candidate(before=before, after=after, before_mismatches=10, after_mismatches=10)
+    assert not admit_candidate(
+        before=before,
+        after=(0.09, 1.0, 100),
+        before_mismatches=10,
+        after_mismatches=9,
+    )
+    assert admit_candidate(
+        before=before,
+        after=(0.09, 0.0, 100),
+        before_mismatches=10,
+        after_mismatches=9,
+    )
+
+
+def test_seg_only_component_diagnostic_is_explicit_and_fixed_byte() -> None:
+    assert admit_seg_only_component_diagnostic(
+        before_mismatches=10,
+        after_mismatches=9,
+        before_component_bytes=100,
+        after_component_bytes=100,
+    )
+    with pytest.raises(ValueError, match="identical component bytes"):
+        admit_seg_only_component_diagnostic(
+            before_mismatches=10,
+            after_mismatches=9,
+            before_component_bytes=100,
+            after_component_bytes=99,
+        )
 
 
 def test_score_waterline_is_exactly_the_rate_term() -> None:
@@ -302,9 +339,14 @@ def test_implementation_fingerprints_are_complete_sha256_values(tmp_path: Path) 
         "probe",
         "typed_dsl",
         "optimization",
+        "canonical_action",
+        "canonical_equation_schema",
+        "provenance_builders",
         "pdw1_codec",
         "uint8_lattice_realization",
         "frozen_segnet_loader",
+        "realization_necessity_equation",
+        "segnet_head_equation",
         "upstream_modules",
     }
     assert all(len(value) == 64 and set(value) <= set("0123456789abcdef") for value in fingerprints.values())
@@ -441,10 +483,13 @@ def test_dspsa_projects_warm_start_and_all_incumbents_to_narrow_bounds() -> None
     assert int(fills.max()) <= 103
 
 
-def test_terminal_dspsa_iteration_checkpoint_resumes_without_re_evaluation(tmp_path: Path) -> None:
+def test_terminal_dspsa_iteration_checkpoint_resumes_without_re_evaluation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import numpy as np
 
     probe = _probe_module()
+    monkeypatch.setattr(crux_config_module, "_DIAGNOSTIC_OUTPUT_ROOT", tmp_path)
     config = _config(pair_indices=(0,), iterations=2, output_dir=str(tmp_path))
     source = np.zeros((1, 5, 3), dtype=np.uint8)
     best = tuple([3] * 15)
@@ -520,11 +565,14 @@ def test_terminal_dspsa_iteration_checkpoint_resumes_without_re_evaluation(tmp_p
         probe._resume_or_initial(config, latest, source, expected_closure=closure)
 
 
-def test_resume_refuses_source_mutation_without_checkpoint_mutation(tmp_path: Path) -> None:
+def test_resume_refuses_source_mutation_without_checkpoint_mutation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import numpy as np
     import torch
 
     probe = _probe_module()
+    monkeypatch.setattr(crux_config_module, "_DIAGNOSTIC_OUTPUT_ROOT", tmp_path)
     upstream = tmp_path / "upstream"
     upstream.mkdir()
     modules = upstream / "modules.py"
@@ -574,15 +622,48 @@ def test_final_receipt_fields_bind_complete_reproducibility_closure(tmp_path: Pa
         "probe",
         "optimization",
         "typed_dsl",
+        "canonical_action",
+        "canonical_equation_schema",
+        "provenance_builders",
         "pdw1_codec",
         "uint8_lattice_realization",
         "frozen_segnet_loader",
+        "realization_necessity_equation",
+        "segnet_head_equation",
         "upstream_modules",
     }
-    assert set(closure["runtime"]) == {"python", "numpy", "torch", "platform", "threads"}
+    assert set(closure["runtime"]) == {
+        "python",
+        "numpy",
+        "torch",
+        "brotli",
+        "safetensors",
+        "platform",
+        "threads",
+    }
     assert fields["runtime"] == closure["runtime"]
     assert fields["base_git_head"] == closure["base_git_head"]
     assert all("checkpoint" not in name and "receipt" not in name for name in closure["sources"])
+
+
+def test_runtime_distribution_mutation_refuses_resume(tmp_path: Path) -> None:
+    import copy
+
+    import torch
+
+    probe = _probe_module()
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    (upstream / "modules.py").write_text("class SegNet: pass\n", encoding="utf-8")
+    config = _config(
+        upstream_path=str(upstream),
+        segnet_path=str(upstream / "models" / "segnet.safetensors"),
+    )
+    closure = probe._reproducibility_closure(config, torch_module=torch)
+    mutated = copy.deepcopy(closure)
+    mutated["runtime"]["brotli"]["module_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="closure changed"):
+        probe._require_current_closure(config, torch_module=torch, expected=mutated)
 
 
 def test_finalization_reuses_checkpoint_source_runtime_package_closure(
@@ -597,6 +678,7 @@ def test_finalization_reuses_checkpoint_source_runtime_package_closure(
     from tac.codec.pdw1_plane_codec import Pdw1PlanePayload, encode_pdw1p
 
     probe = _probe_module()
+    monkeypatch.setattr(crux_config_module, "_DIAGNOSTIC_OUTPUT_ROOT", tmp_path)
     upstream = tmp_path / "upstream"
     models = upstream / "models"
     models.mkdir(parents=True)

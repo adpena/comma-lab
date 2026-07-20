@@ -8,10 +8,12 @@ pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED
 review_status: fresh-eyes-reviewed(0); first recursive round found class defects and reset the seal  
 verdict_scope: CONSTRUCTIVE-DESIGN plus complete n24 palette/lossy-label component probe; end-to-end archive still blocked
 
-> **CURRENT MEASUREMENT, NOT YET A VERDICT SEAL.** Every numeric n24 row below was
-> replayed after the reproducibility-closure and projected-bound class fixes from
-> committed source `889d32db399709aca475c3c6120c81f189dd4b81`. Recursive clean-pass
-> review is still pending, so the clean count remains zero.
+> **CURRENT MEASUREMENT, NOT YET A VERDICT SEAL.** The source/global/scoped-Seg
+> terminal triplet was freshly replayed under reproducibility closure v2 from base
+> commit `8eee0e3becdabbfe2f38246ad014678bb11f1e8e`; it reproduced the candidate bytes
+> and metrics. Nonterminal construction receipts retain their historical v1 closure
+> and are explicitly non-authoritative for terminal runtime closure. Recursive
+> clean-pass review is still pending, so the clean count remains zero.
 
 ## Answer first
 
@@ -40,14 +42,16 @@ those bytes does not change packet length.  The existing direct-plane positive c
 replaced per-pair source means with one global `5 x RGB` table and reduced n24 hard
 mismatches from `38,077` to `37,276` (`d_B 0.0080695682 -> 0.0078998142`) at the same
 19,859-byte packet size.  The receiver-closed, resumable within-family tournament built
-below selected projected middle-point DSPSA-32 followed by coordinate-12: `26,795` mismatches,
+below selected, under the explicitly Seg-only fixed-component-byte ordering, projected
+middle-point DSPSA-32 followed by coordinate-12: `26,795` mismatches,
 `d_seg=0.0056786007351345485`, the same 19,859 bytes, strict parse-back, and exact
 factor-2 realization on all 24 pairs.  A final fully fingerprinted replay reproduced
 the candidate and metrics.  A separate lossy-topology family proved that short-run
 simplification can exchange distortion for rate (`36,876` mismatches, 19,371 B at rung
-2), but grafting it onto the fill winner raised the local action by `0.0150610065` and
-was rejected.  These numbers are not a score and do not include a compact pose-closed
-frame-0 stream.
+2). Grafting it onto the fill incumbent raises the **Seg-plus-component-rate partial**
+action by `0.0150610065`; that does not reject the joint family because frame-1 changes
+can change PoseNet and neither Pose nor total archive bytes were measured. These numbers
+are not a score and do not include a compact pose-closed frame-0 stream.
 
 ## Stores consulted
 
@@ -68,10 +72,15 @@ survey cluster and its `p_suff`, d_seg, and pose receipts;
 code and receipts; the exact scorer factorization; and the canonical-equation sources
 named below.  Deliberately not consumed as authority: the retracted terminal finding,
 invalidated round-1 curvelet ranks, MPS scores, or any memo number that could be cheaply
-re-derived from code/bytes.  External fresh intake was restricted to the two primary
-SPSA/DSPSA sources below and Frank Nielsen's full 41-page *Short stories on Bregman
-divergences* deck, after loading prior #504/#550/#552, because the anti-re-research
-ledger already covers the broad codec and geometry families.  The external Claude memory ledger is outside this
+re-derived from code/bytes. External fresh intake began with the two primary SPSA/DSPSA
+sources below and Frank Nielsen's full 41-page *Short stories on Bregman divergences*
+deck, after loading prior #504/#550/#552, because the anti-re-research ledger already
+covers the broad codec and geometry families. A later operator-routed intake fully
+checked Colbrook--Mezic--Stepanenko (2026), including its 36-page supplement, and
+classified it as a lower-bound information-model guard rather than a codec lever; the
+durable disposition is in
+`papers_checked_colbrook_adversarial_dynamical_systems_20260720.md`. The external
+Claude memory ledger is outside this
 worktree's write authority, so the new-paper intake is durably recorded here for MAIN
 to mirror rather than silently attempting an out-of-scope write.
 
@@ -147,16 +156,16 @@ scopes and cannot be ranked as if they were a sealed same-input A/B:
 | family/chart | receiver-closed evidence | honest disposition |
 |---|---|---|
 | direct counted payload -> RGB (`yhat` rung B) | **MEASURED** 83,838-byte full archive; fresh n24 diagnostic `d_seg=0.0034556919`, `d_pose=63.0309157` | Direct-generator and lossy-cell control: it bypasses explicit `Q/G` labels, but Pose makes it noncompetitive and the row is n24 diagnostic only |
-| explicit fixed labels + palette (PDW1) | **MEASURED here** 19,859-byte n24 component; winner `d_seg=0.0056786007`; Pose unmeasured | Within-family palette probe complete; not a full archive |
-| lossy row-run topology (PDW1) | **MEASURED here** source-fill rung 2: 19,371 B, `d_seg=0.0078150431`; graft on optimized fills worsens local action | Genuine rate--distortion control, but dominated by the fixed-label scoped winner |
+| explicit fixed labels + palette (PDW1) | **MEASURED here** 19,859-byte n24 component; scoped Seg-only incumbent `d_seg=0.0056786007`; Pose unmeasured | Within-family Seg diagnostic complete; not a full archive or joint-action selection |
+| lossy row-run topology (PDW1) | **MEASURED here** source-fill rung 2: 19,371 B, `d_seg=0.0078150431`; graft on optimized fills worsens the Seg-plus-component-rate partial ordering | Genuine rate--distortion control; joint disposition remains unresolved without Pose and total archive bytes |
 | quotient/power packet (PDW2) | **MEASURED** 138 raw / 133 Brotli bytes and consumed; spatially non-identifying | Formulation-scoped blocker until a decoder-computable field/pullback exists |
 | `xi` temporal/Pose chart (settled R1) | **MEASURED prior** full-n600 macOS advisory: 89,772 B, `d_seg=0.0045491197`, `d_pose=0.0016095472` | In-box control, not a new result; packet bytes were deleted by the settled run |
 | curvelet/shearlet residual chart | **MEASURED prior** saved-OFF n600 through-R basis rows, but equal scalar support rather than equal bytes | Not archive-rankable; receiver-bound target inverse and exact bytes remain absent |
 | MPEG-4 INTER-CAE / arithmetic self-compression | prior literature and local rate evidence only | Open design family; no new receiver-closed row in this lane |
 | Bregman/Fisher dual chart | full Nielsen deck plus #504/#550/#552 and exact code derivation | Exact quadratic `R`-fiber projection and already-measured global-centroid control; no categorical pullback or byte theorem (§3.1) |
 
-There is consequently **no defensible cross-family winner**.  The only new selected winner
-is inside the fixed-label PDW1 palette family.  The full multi-family and new full-n600
+There is consequently **no defensible cross-family winner**. The only new ordering is a
+scoped Seg-only incumbent inside the fixed-label PDW1 palette family. The full multi-family and new full-n600
 mandates remain unmet because the first executable `xi` composition fails the mandatory
 SSD custody preflight before loading the backend; the failure is a local execution-surface
 blocker, not evidence against the unmeasured families.
@@ -198,9 +207,11 @@ blocker, not evidence against the unmeasured families.
 ### Control laws (no TBD knobs)
 
 - **Loss:** `S=100*d_seg + sqrt(10*d_pose) + 25*B/37_545_489`.
-- **Byte cap:** for target `S_t`,
-  `B_max=floor((S_t-100*d_seg-sqrt(10*d_pose))*37_545_489/25)`; refuse if the
-  parenthesis is non-positive.
+- **Strict byte cap:** for target `S_t`, let
+  `x=(S_t-100*d_seg-sqrt(10*d_pose))*37_545_489/25`; then
+  `B_max=ceil(x)-1`, with an exact action recheck, because admission requires
+  `S<S_t`. `floor(x)` is only the inclusive `S<=S_t` cap and is wrong when `x`
+  is integral. Refuse if the parenthesis is non-positive.
 - **Admission:** accept a change iff exact replay gives
   `Delta S = 100 Delta d_seg + Delta sqrt(10 d_pose) + 25 Delta B/N < 0`.
 - **Stop:** stop a rate-bearing family when its marginal non-rate improvement per byte
@@ -254,10 +265,13 @@ endpoint is the joint Seg/Pose/rate KKT waterline measured on full exact `S`, an
 opportunities must not be added.  The compact counted `xi` and receiver-bound `T` byte
 totals remain UNKNOWN until a full n600 archive is built and parsed back.
 
-## 3. Honest K-floor argument
+## 3. Honest K-floor argument: the numerical floor is UNKNOWN
 
 Kolmogorov complexity supplies the correct objective but not a computable certificate
-for this particular instance.  The only honest two-sided statement is:
+for this particular instance. **This work proves no positive numerical instance floor.**
+With `M` and the source distribution unmeasured, the only unconditional numeric lower
+bound available here is the trivial `K>=0`; it is not useful for promotion. The honest
+statements are therefore an executable program upper bound plus conditional theorems:
 
 - **MEASURED:** the existing direct-generator archive has `archive_bytes=83,838` and the
   cited SHA-256/diagnostic receipt.
@@ -265,7 +279,7 @@ for this particular instance.  The only honest two-sided statement is:
   program, so its exact archive length plus the fixed interpreter constant upper-bounds
   the description length of the witness it generates.  The 83,838-byte archive therefore
   bounds its own decoded low-fidelity scorer view, not the desired low-distortion cover.
-- **CONDITIONAL lower bound:** after quotienting decoder-free symmetries, a decoder that
+- **CONDITIONAL theorem, not an instance measurement:** after quotienting decoder-free symmetries, a decoder that
   must distinguish `M` admissible scorer cells requires `ceil(log2 M)` bits in the worst
   case.  Under a declared quotient source model, average prefix length is bounded below
   by its conditional entropy.  The edge-transition, birth/death, texture-choice, and
@@ -276,9 +290,11 @@ for this particular instance.  The only honest two-sided statement is:
   bijection, so `K(eta)=K(theta)+O(1)`.  Dual coordinates do not lower the instance floor
   by themselves.  Only quotienting a real invariance or a measured quantization/entropy
   gain can lower counted bytes; Task #550's 20/19-scalar construction is a gauge quotient.
-- **UNKNOWN instance floor:** neither `M` for the realized target family nor the
+- **UNKNOWN instance floor / no lower-bound certificate:** neither `M` for the realized target family nor the
   algorithmic randomness deficiency of this one video has been measured.  No exact
-  `K(target)` or proof of global minimality is asserted.
+  `K(target)`, positive numerical lower bound, approximation ratio, or proof of global
+  minimality is asserted. The 83,838-byte program is only an upper bound for its own
+  decoded witness and must not be described as Kolmogorov-complete.
 
 The algorithmic-information definition follows A. N. Kolmogorov, 1965, *Three
 approaches to the quantitative definition of information*, Problems of Information
@@ -294,7 +310,26 @@ It is not itself a lower bound.  The residual gap above the conditional floor li
 duplicated temporal description, full spatial label maps, non-necessary cell interiors,
 and texture values that do not buy a receiver-closed margin.
 
-### 3.1 Bregman scope: exact R-fiber projection, not scorer-cell projection
+### 3.1 Information-model guard from adversarial dynamical systems
+
+Colbrook, Mezic, and Stepanenko (2026), *Adversarial dynamical systems characterize
+when data-driven learning succeeds or fails*, Nature Communications 17:5397, DOI
+`10.1038/s41467-026-74220-8`, was checked from the primary article and full supplement.
+Its proofs begin with an explicit computational problem (primary class, target map,
+metric, and evaluation set), and establish negative results by constructing systems
+that finite allowed evaluations cannot distinguish although the target changes.
+
+That theorem does **not** transfer as a contest byte lower bound: here the receiver and
+finite scorer are known, the target is minimum legal program length rather than Koopman
+spectrum, and no analogous indistinguishable-witness construction has been supplied.
+The transferable rule is narrower and now binding on this memo: a positive instance
+`K`-floor must name all four information-model elements and supply a contest-specific
+counting/entropy or sudden-change construction. Otherwise the floor is `UNKNOWN`.
+The same separation explains why the n24 Seg-only component evidence cannot select an
+n600 joint family whose Pose and full-archive observations were never evaluated. This
+is a methodological guard, not a new actuator, score, or dispatch authorization.
+
+### 3.2 Bregman scope: exact R-fiber projection, not scorer-cell projection
 
 For each disjoint resize block let `a_j>0`, `sum_j a_j=1`, and define
 `F_R(x)=1/2 sum_j a_j ||x_j||^2`, with a positive quadratic term on unowned
@@ -358,7 +393,7 @@ Tournament order and falsifiers:
 | global 5xRGB palette | positive control | reject direct-plane claim if hard-R replay does not improve |
 | exact `+/-1` coordinate descent | deterministic local control | stop a sweep after zero accepted moves |
 | projected DSPSA | fresh discrete-search arm | reject if best-so-far is worse, bounds fail, or same seed diverges |
-| lossy label run 2/3/4 | separate topology/rate family | measure actual bytes; reject any graft that raises exact ordering action |
+| lossy label run 2/3/4 | separate topology/rate family | measure actual component bytes; record partial ordering only until Pose and total archive bytes close joint action |
 | Fisher/secant-QP palette | optimal-form follow-on | blocked until logits/inner-Jacobian custody is emitted in-run |
 | shearlet/curvelet residual | structured residual follow-on | blocked until receiver-bound bytes and target-boundary inverse exist |
 
@@ -383,12 +418,19 @@ Promotion chain after a positive n24 result:
    official `upstream/evaluate.py` on contest-CPU Linux x86_64;
 5. only then compare to 0.1910828242 or claim an in-box full witness.
 
-Step 2 remains blocked by the missing optimized-fill/residual section in LVLS1.  A typed
-cross-checkpoint xi bridge closes the pose-composition call surface, but governed n600
+Step 2 now has a fail-closed native LVLS1 hook: optional `EKPR1` signed-int8
+`[pair,class,RGB]` residuals are strictly bound to the manifest and applied by
+`phi.argmax` to frame 1 before AA/lane/R in both the inline receiver and NumPy oracle.
+Legacy-absent output is byte-identical, mutation canaries prove consumption, and the cap
+path repacks the section. The measured n24 tensor is deliberately refused by the n600
+receiver, so no full candidate has been grafted and the real n600 residual payload is
+still owed. A typed cross-checkpoint xi bridge closes the pose-composition call surface, but governed n600
 execution failed before loading its 5.08 GB GT cache because this sandbox cannot write
 the mandatory SSD evidence tier.  Even with filesystem access, the backend now refuses
-until a hash-bound contract proves resume-from-disk and preserved atomic per-stage
-checkpoints.  These are execution-surface blockers, not xi-family negatives.  Zero-cost
+unless a committed hash-bound operator authorization, governed-admission marker, live
+matching lane claim, and executable backend resume ABI prove checkpoint/resume roundtrip
+and preserved atomic per-stage checkpoints. Declarative resume JSON is non-authorizing.
+These are execution-surface blockers, not xi-family negatives. Zero-cost
 local full work is authorized; only paid dispatch remains operator-GO gated.  The pointer
 is unchanged.
 
@@ -405,32 +447,37 @@ pair; DSPSA also preserved every integer iteration.
 | source means | 38,077 | 0.008069568210 | 19,859 | final fingerprinted control |
 | zero palette | 2,388,341 | 0.506155437893 | 19,859 | negative canary passed |
 | global palette | 37,276 | 0.007899814182 | 19,859 | final fingerprinted positive control |
-| coordinate-3 | 35,807 | 0.007588492499 | 19,859 | dominated/cap-limited |
-| coordinate-12 | 32,509 | 0.006889555189 | 19,859 | dominated |
+| coordinate-3 | 35,807 | 0.007588492499 | 19,859 | worse Seg-only partial ordering; cap-limited |
+| coordinate-12 | 32,509 | 0.006889555189 | 19,859 | worse Seg-only partial ordering |
 | projected middle-point DSPSA-8 | 30,667 | 0.006499184502 | 19,859 | repeated byte-for-byte |
 | projected middle-point DSPSA-32 | 28,039 | 0.005942238702 | 19,859 | hybrid parent |
-| DSPSA-32 then coordinate-12 | **26,795** | **0.005678600735** | **19,859** | winner; final fingerprinted replay |
-| label-run 2, source fills | 36,876 | 0.007815043132 | 19,371 | improves source rate--distortion; dominated by winner |
-| label-run 3, source fills | 37,728 | 0.007995605469 | 18,419 | dominated |
+| DSPSA-32 then coordinate-12 | **26,795** | **0.005678600735** | **19,859** | scoped Seg-only incumbent; closure-v2 replay |
+| label-run 2, source fills | 36,876 | 0.007815043132 | 19,371 | improves Seg-plus-component-rate partial ordering vs source; joint unresolved |
+| label-run 3, source fills | 37,728 | 0.007995605469 | 18,419 | partial row; joint unresolved |
 | label-run 4, source fills | 50,535 | 0.010709762573 | 17,207 | negative rung |
-| winner then label-run 2 | 27,521 | 0.005832460192 | 19,371 | graft rejected: `Delta S_local=+0.0150610065` |
+| scoped incumbent then label-run 2 | 27,521 | 0.005832460192 | 19,371 | partial graft is worse: `Delta S_seg+component-rate=+0.0150610065`; joint unresolved |
 
-The winner removes 11,282 errors (29.6294%) from the source and 10,481 (28.1173%)
-from the global control with zero additional packet bytes.  Its fixed-byte action delta
-relative to the source is `-0.2390967475`; Pose cancels algebraically but remains
-unmeasured.  The pose-zero value `0.5810833665` is therefore local ordering arithmetic,
-not a contest score.  The lossy-label rung demonstrates the operator-directed joint-RD
-move, but its best graft pays more Seg score than its 488-byte rate saving buys, so the
-exact component waterline rejects it rather than banking a rate budget.
+The scoped Seg-only incumbent removes 11,282 errors (29.6294%) from the source and
+10,481 (28.1173%) from the global control with zero additional component bytes. Its
+Seg-only partial-action delta relative to the source is `-0.2390967475`. **Pose does not
+cancel:** changing frame 1 can change the two-frame PoseNet output. The pose-zero value
+`0.5810833665` is therefore local ordering arithmetic, not a contest score. The
+lossy-label rung demonstrates the operator-directed rate--distortion move, but its best
+graft pays more Seg term than its 488-byte component-rate saving buys. This establishes
+only a worse partial ordering; it neither admits nor rejects the joint family.
 
 No new full-n600 in-box point was produced.  The existing settled R1 89,772-byte
 macOS-CPU advisory row remains a control, not this lane's result.  The attempted xi
 composition created neither packet nor receipt: the strict SSD preflight raised
 `PacketOutputFilesystemCustodyError(classification=permission_denied)` and no bulky
-local/tmp fallback was used.  A separate read-only receipt reverified all three input
-hashes, including the 5,078,017,610-byte GT cache.  Exact custody and the heterogeneous cross-family evidence inventory are
-in `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json`; the executable
-state transition is in `einstein_kolmogorov_crux_DAG_FEED_20260719.md`.
+local/tmp fallback was used. A separate read-only receipt reverified all three input
+hashes, including the 5,078,017,610-byte GT cache. The full 1,638-file,
+26,210,105-byte tournament tree and the 81-file closure-v2 terminal replay are now
+content-addressed, verified bundles staged for MAIN landing; the former passed a real
+byte-identical restore check. Exact custody and the heterogeneous cross-family evidence
+inventory are in `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json`;
+the executable state transition is in
+`einstein_kolmogorov_crux_DAG_FEED_20260719.md`.
 
 ## Triality / system-intelligence wiring
 

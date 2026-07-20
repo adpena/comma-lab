@@ -66,12 +66,9 @@ def contest_action(*, d_seg: float | int, d_pose: float | int, archive_bytes: in
     )
 
 
-def maximum_byte_budget(*, target_action: float | int, d_seg: float | int, d_pose: float | int) -> int:
-    """Return the greatest integral byte count satisfying the target action.
+def inclusive_maximum_byte_budget(*, target_action: float | int, d_seg: float | int, d_pose: float | int) -> int:
+    """Return the greatest byte count whose action is at most ``target_action``."""
 
-    Raises rather than returning a misleading negative budget when the measured
-    non-rate terms already exceed ``target_action``.
-    """
     target = _nonnegative_real(target_action, "target_action")
     measured_seg = _nonnegative_real(d_seg, "d_seg")
     measured_pose = _nonnegative_real(d_pose, "d_pose")
@@ -79,7 +76,39 @@ def maximum_byte_budget(*, target_action: float | int, d_seg: float | int, d_pos
     slack = target - non_rate
     if slack < 0.0:
         raise InfeasibleByteBudgetError("target action is infeasible before the rate term")
-    return math.floor(slack * RATE_DENOMINATOR_BYTES / RATE_WEIGHT)
+    candidate = math.floor(slack * RATE_DENOMINATOR_BYTES / RATE_WEIGHT)
+    while candidate >= 0 and contest_action(d_seg=measured_seg, d_pose=measured_pose, archive_bytes=candidate) > target:
+        candidate -= 1
+    while contest_action(d_seg=measured_seg, d_pose=measured_pose, archive_bytes=candidate + 1) <= target:
+        candidate += 1
+    return candidate
+
+
+def maximum_byte_budget(*, target_action: float | int, d_seg: float | int, d_pose: float | int) -> int:
+    """Return the greatest integral byte count that *strictly beats* a target.
+
+    The strict integer ceiling is ``ceil(x) - 1``, not ``floor(x)`` at an
+    equality boundary. The final comparisons use :func:`contest_action` so
+    binary floating-point roundoff cannot silently admit an equal-score byte.
+    """
+
+    target = _nonnegative_real(target_action, "target_action")
+    measured_seg = _nonnegative_real(d_seg, "d_seg")
+    measured_pose = _nonnegative_real(d_pose, "d_pose")
+    non_rate = SEGMENTATION_WEIGHT * measured_seg + math.sqrt(POSE_RADICAND_WEIGHT * measured_pose)
+    slack = target - non_rate
+    if slack <= 0.0:
+        raise InfeasibleByteBudgetError("target action cannot be strictly beaten before the rate term")
+    candidate = math.ceil(slack * RATE_DENOMINATOR_BYTES / RATE_WEIGHT) - 1
+    while (
+        candidate >= 0 and contest_action(d_seg=measured_seg, d_pose=measured_pose, archive_bytes=candidate) >= target
+    ):
+        candidate -= 1
+    while contest_action(d_seg=measured_seg, d_pose=measured_pose, archive_bytes=candidate + 1) < target:
+        candidate += 1
+    if candidate < 0:
+        raise InfeasibleByteBudgetError("target action cannot be strictly beaten with any non-negative byte count")
+    return candidate
 
 
 def fixed_byte_palette_delta(
@@ -261,7 +290,7 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
         ),
         latex_form=(
             r"S=100D_{seg}+\sqrt{10D_{pose}}+25B/37545489,\quad "
-            r"B_{max}=\left\lfloor(S_t-100D_{seg}-\sqrt{10D_{pose}})37545489/25\right\rfloor"
+            r"B^{<}_{max}=\left\lceil(S_t-100D_{seg}-\sqrt{10D_{pose}})37545489/25\right\rceil-1"
         ),
         python_callable_module_path=("tac.canonical_equations.einstein_kolmogorov_crux_20260719:contest_action"),
         domain_of_validity={
@@ -325,6 +354,7 @@ __all__ = [
     "contest_action",
     "derive_research_only_decision",
     "fixed_byte_palette_delta",
+    "inclusive_maximum_byte_budget",
     "maximum_byte_budget",
     "populate_einstein_kolmogorov_crux_action_rate_contract_v1",
 ]

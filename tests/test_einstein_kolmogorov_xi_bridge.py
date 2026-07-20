@@ -3,6 +3,7 @@ from __future__ import annotations
 import errno
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -55,6 +56,7 @@ def _config(
     inputs: dict[str, Path],
     **overrides: Any,
 ) -> EinsteinKolmogorovXiBridgeConfig:
+    valid_full_governance = bool(overrides.pop("valid_full_governance", False))
     ssd_root = tmp_path / "ssd"
     ssd_root.mkdir(exist_ok=True)
     repo_root = tmp_path / "repo"
@@ -81,6 +83,47 @@ def _config(
         "max_pairs": 7,
     }
     values.update(overrides)
+    if valid_full_governance:
+        values.update(
+            {
+                "execution_mode": config_module.GOVERNED_FULL_MODE,
+                "max_pairs": 600,
+                "governed_claim_job_id": "ek-xi-full-fixture",
+                "governed_claim_platform": "local",
+                "declared_max_cost_usd": 0.0,
+            }
+        )
+        authorization = repo_root / ".omx/research/operator_authorizations/ek_xi_fixture.json"
+        authorization.parent.mkdir(parents=True, exist_ok=True)
+        authorization.write_text(
+            json.dumps(
+                {
+                    "schema": bridge.OPERATOR_AUTHORIZATION_SCHEMA,
+                    "authorization_id": "fixture-authorization",
+                    "authorized": True,
+                    "authorized_by": "fixture-operator",
+                    "authorized_utc": "2026-07-19T00:00:00Z",
+                    "lane_id": config_module.LANE_ID,
+                    "execution_mode": config_module.GOVERNED_FULL_MODE,
+                    "max_pairs": 600,
+                    "max_cost_usd": 0.0,
+                    "claim": {
+                        "instance_job_id": "ek-xi-full-fixture",
+                        "platform": "local",
+                    },
+                    "inputs": {
+                        "generator_npz_sha256": values["generator_npz_sha256"],
+                        "donor_r1_npz_sha256": values["donor_r1_npz_sha256"],
+                        "gt_cache_sha256": values["gt_cache_sha256"],
+                    },
+                    "backend_path": "tools/levelset_byte_close_and_eval.py",
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        values["operator_authorization_path"] = str(authorization)
+        values["operator_authorization_sha256"] = _sha(authorization)
     return EinsteinKolmogorovXiBridgeConfig(**values)
 
 
@@ -292,34 +335,17 @@ def test_governed_full_missing_authorization_refuses_before_any_output_or_backen
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     inputs = _write_inputs(tmp_path)
-    config = _config(
-        tmp_path,
-        monkeypatch,
-        inputs,
-        execution_mode=config_module.GOVERNED_FULL_MODE,
-        max_pairs=600,
-    )
-    monkeypatch.setattr(
-        bridge,
-        "_refuse_existing_outputs",
-        lambda *_args: pytest.fail("authorization must precede output inspection"),
-    )
-    monkeypatch.setattr(
-        bridge,
-        "_storage_waterfall_preflight",
-        lambda *_args: pytest.fail("authorization must precede storage preflight"),
-    )
-    monkeypatch.setattr(
-        bridge,
-        "_run_levelset",
-        lambda **_kwargs: pytest.fail("backend must not start without authorization"),
-    )
-
-    with pytest.raises(bridge.BridgeAuthorizationError, match="missing typed"):
-        bridge.execute(config)
-    assert not Path(config.packet_output_dir).exists()
-    assert not Path(config.result_json_path).exists()
-    assert not Path(str(config.failure_manifest_path)).exists()
+    with pytest.raises(EinsteinKolmogorovBridgeConfigError, match="requires operator_authorization_path"):
+        _config(
+            tmp_path,
+            monkeypatch,
+            inputs,
+            execution_mode=config_module.GOVERNED_FULL_MODE,
+            max_pairs=600,
+            governed_claim_job_id="job",
+            governed_claim_platform="local",
+            declared_max_cost_usd=0.0,
+        )
 
 
 def test_free_space_refusal_occurs_before_writability_probe_input_load_or_backend(
@@ -354,30 +380,151 @@ def test_free_space_refusal_occurs_before_writability_probe_input_load_or_backen
     assert not Path(config.result_json_path).exists()
 
 
-def test_governed_full_requires_hash_bound_resume_contract_before_input_load_or_backend(
+def test_forged_operator_go_prefix_is_not_authorization(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    inputs = _write_inputs(tmp_path)
+    with pytest.raises(EinsteinKolmogorovBridgeConfigError, match="legacy OPERATOR-GO prefixes"):
+        _config(
+            tmp_path,
+            monkeypatch,
+            inputs,
+            valid_full_governance=True,
+            operator_authorization_token="OPERATOR-GO:forged",
+        )
+
+
+def test_hash_bound_but_wrongly_scoped_authorization_refuses_before_inputs_or_backend(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     inputs = _write_inputs(tmp_path)
-    config = _config(
-        tmp_path,
-        monkeypatch,
-        inputs,
-        execution_mode=config_module.GOVERNED_FULL_MODE,
-        max_pairs=600,
-        operator_authorization_token="OPERATOR-GO:test-receipt",
-    )
+    config = _config(tmp_path, monkeypatch, inputs, valid_full_governance=True)
+    authorization = Path(str(config.operator_authorization_path))
+    payload = json.loads(authorization.read_text(encoding="utf-8"))
+    payload["max_cost_usd"] = 5.0
+    authorization.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    config = replace(config, operator_authorization_sha256=_sha(authorization))
+    monkeypatch.setattr(bridge, "_committed_file_bytes", lambda _path: authorization.read_bytes())
     monkeypatch.setattr(
         bridge,
         "_require_file",
-        lambda *_args, **_kwargs: pytest.fail("input loading must follow resume-contract gate"),
+        lambda *_args, **_kwargs: pytest.fail("input loading must follow authorization binding"),
     )
     monkeypatch.setattr(
         bridge,
         "_run_levelset",
-        lambda **_kwargs: pytest.fail("backend must not run without resume contract"),
+        lambda **_kwargs: pytest.fail("backend must not run after forged authorization"),
     )
 
-    with pytest.raises(bridge.BridgeResumabilityError, match="no hash-bound resume receipt"):
+    with pytest.raises(bridge.BridgeAuthorizationError, match="does not exactly bind"):
+        bridge.execute(config)
+    assert not Path(config.packet_output_dir).exists()
+    assert not Path(config.result_json_path).exists()
+
+
+def test_governed_full_missing_admission_marker_refuses_before_inputs_or_backend(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inputs = _write_inputs(tmp_path)
+    config = _config(tmp_path, monkeypatch, inputs, valid_full_governance=True)
+    monkeypatch.setattr(
+        bridge,
+        "_require_execution_authorization",
+        lambda *_args, **_kwargs: {"required": True, "verified": True},
+    )
+    monkeypatch.setattr(
+        bridge,
+        "_require_file",
+        lambda *_args, **_kwargs: pytest.fail("input loading must follow governed admission"),
+    )
+    monkeypatch.setattr(
+        bridge,
+        "_run_levelset",
+        lambda **_kwargs: pytest.fail("backend must not run without governed admission"),
+    )
+    monkeypatch.delenv("TAC_GOVERNED_ADMISSION", raising=False)
+    with pytest.raises(bridge.BridgeAuthorizationError, match="direct in-process/raw execution"):
+        bridge.execute(config)
+    assert not Path(config.packet_output_dir).exists()
+    assert not Path(config.result_json_path).exists()
+
+
+def test_governed_full_missing_active_claim_refuses_before_inputs_or_backend(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inputs = _write_inputs(tmp_path)
+    config = _config(tmp_path, monkeypatch, inputs, valid_full_governance=True)
+    claims = config_module._REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True, exist_ok=True)
+    claims.write_text("# Active lane dispatch claims\n\n## Claims (newest first)\n", encoding="utf-8")
+    monkeypatch.setattr(
+        bridge,
+        "_require_execution_authorization",
+        lambda *_args, **_kwargs: {"required": True, "verified": True},
+    )
+    monkeypatch.setenv("TAC_GOVERNED_ADMISSION", "1")
+    monkeypatch.setattr(
+        bridge,
+        "_require_file",
+        lambda *_args, **_kwargs: pytest.fail("input loading must follow active claim gate"),
+    )
+    monkeypatch.setattr(
+        bridge,
+        "_run_levelset",
+        lambda **_kwargs: pytest.fail("backend must not run without active claim"),
+    )
+
+    with pytest.raises(bridge.BridgeAuthorizationError, match="no active canonical lane dispatch claim"):
+        bridge.execute(config)
+    assert not Path(config.packet_output_dir).exists()
+    assert not Path(config.result_json_path).exists()
+
+
+def test_fabricated_resume_receipt_cannot_replace_executable_backend_abi(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inputs = _write_inputs(tmp_path)
+    fake_receipt = tmp_path / "fabricated_resume.json"
+    fake_receipt.write_text(
+        json.dumps(
+            {
+                "schema": "levelset_byte_close_resume_contract.v1",
+                "resumable_from_disk": True,
+                "per_stage_checkpoints_preserved": True,
+                "atomic_checkpoint_publish": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = _config(
+        tmp_path,
+        monkeypatch,
+        inputs,
+        valid_full_governance=True,
+        backend_resume_receipt_path=str(fake_receipt),
+        backend_resume_receipt_sha256=_sha(fake_receipt),
+    )
+    monkeypatch.setattr(
+        bridge,
+        "_require_execution_authorization",
+        lambda *_args, **_kwargs: {"required": True, "verified": True},
+    )
+    monkeypatch.setattr(
+        bridge,
+        "_require_governed_execution_context",
+        lambda *_args, **_kwargs: {"required": True, "verified": True},
+    )
+    monkeypatch.setattr(config_module, "_REPO_ROOT", Path(__file__).parents[1])
+    monkeypatch.setattr(
+        bridge,
+        "_require_file",
+        lambda *_args, **_kwargs: pytest.fail("input loading must follow executable resume ABI gate"),
+    )
+    monkeypatch.setattr(
+        bridge,
+        "_run_levelset",
+        lambda **_kwargs: pytest.fail("backend must not execute without resume ABI"),
+    )
+
+    with pytest.raises(bridge.BridgeResumabilityError, match="exports no executable verify_resume_abi"):
         bridge.execute(config)
     assert not Path(config.packet_output_dir).exists()
     assert not Path(config.result_json_path).exists()
@@ -430,8 +577,7 @@ def test_hash_verification_emits_command_bound_evidence_without_backend_or_stora
         tmp_path,
         monkeypatch,
         inputs,
-        execution_mode=config_module.GOVERNED_FULL_MODE,
-        max_pairs=600,
+        valid_full_governance=True,
     )
     monkeypatch.setattr(
         bridge,
