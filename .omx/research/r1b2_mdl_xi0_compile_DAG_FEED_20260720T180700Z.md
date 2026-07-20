@@ -22,7 +22,7 @@
 
 ## Reactivation predicate
 
-Reactivate only for a terminal no-refusal n600 VJP campaign and all three strict producer manifests: rank-4 first-order+realized secants, receiver-search-free full-kernel compact replay, and coordinate-zero-only xi. Then run the compiler, parse back exact bytes, measure decode time, and invoke the inherited n600 hard oracle; do not reactivate for another partial prefix, target-only PDW2, unit/synthetic rows, or the settled control.
+Reactivate only for a terminal no-refusal n600 VJP campaign and all three strict producer manifests: rank-4 first-order+realized secants, receiver-search-free full-kernel compact replay, and coordinate-zero-only xi. The measured frame-0 saturated-kernel/LLL lattice sieve may order full-kernel proposals as a preprocessing candidate, but it is lower-bound-only and must remain behind the exact bounded-intersection numerator, coder, and hard-oracle gates. Then run the compiler, parse back exact bytes, measure decode time, and invoke the inherited n600 hard oracle; do not reactivate for another partial prefix, target-only PDW2, unit/synthetic rows, or the settled control.
 
 ## Triality disposition
 
