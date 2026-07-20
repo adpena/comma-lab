@@ -6,6 +6,7 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-07-20T16:27:04Z | codex:gpt-5.6-sol-high | r1b_boundary_generator_solve_20260720T161946Z | local | r1b_boundary_generator_solve_20260720T161946Z |  | build | $0 local joint boundary-generator and hard-oracle solve; no paid dispatch or training; MAIN review required |
 | 2026-07-20T16:14:36Z | codex:gpt-5.6-sol-high | lane_r1_shared_receiver_20260720T151631Z | local | r1_shared_receiver_20260720T151631Z |  | completed_measured_formulation_blocker | R1 local $0 landing complete pending serializer: exact dense section 561502227 B, scoped blocker SHARED_RECEIVER_COUNTED_SPATIAL_HARD_ORACLE_INTERSECTION_EMPTY, Sol-high final PASS, pointer unchanged, MAIN review required |
 | 2026-07-20T15:20:25Z | codex:gpt-5.6-sol-xhigh | lane_r1_shared_receiver_20260720T151631Z | local | r1_shared_receiver_20260720T151631Z |  | build | $0 local BUILD and verification only; no paid dispatch or training; shared PDW2 plus d_B receiver, MAIN review required |
 | 2026-07-19T19:59:32Z | codex:m1_glue_rebuild | lane_m1_c2_banded_generator_glue_rebuild_20260719 | local_macos_cpu | m1_c2_glue_rebuild_local_20260719T190054Z |  | refused_full_fire_missing_receiver_ev_curvelet | Bounded n6 zero-control completed; full n600 fire refused. Exact blockers in rebuild receipt. No paid dispatch, score, promotion, or pointer mutation; MAIN review required. |
