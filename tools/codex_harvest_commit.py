@@ -2,9 +2,11 @@
 """codex_harvest_commit.py — MAIN-side harvest + review + commit of a codex arm's diff.
 
 WHY (the drift-accrual root cause, failure_id codex_workspace_write_sandbox_blocks_git_objects
-_20260712, status OPEN): a codex arm launched with `--sandbox workspace-write` CANNOT write
-`.git/objects`, so its `git add/commit` fails rc=128 — the arm finishes green but its work is
-UNCOMMITTED. With N concurrent arms sharing ONE working tree, their diffs intermingle into an
+_20260712, status RESOLVED-AT-SOURCE 2026-07-20 — codex_delegate now promotes `--sandbox
+workspace-write` -> `danger-full-access`, so no commit-capable arm is FS-starved; this harvest
+path is RETAINED as defense-in-depth + the MAIN-side review gate): a codex arm launched with
+`--sandbox workspace-write` historically COULD NOT write `.git/objects`, so its `git add/commit`
+failed rc=128 — the arm finished green but its work was UNCOMMITTED. With N concurrent arms sharing ONE working tree, their diffs intermingle into an
 un-attributable pile (293 files by 2026-07-14) and the non-negotiable landing-review is defeated
 (nothing is committed to review; `held_entangled` churn replaces the real follow-up).
 
