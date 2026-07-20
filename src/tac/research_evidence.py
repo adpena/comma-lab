@@ -126,6 +126,40 @@ def _require_within(path: Path, parent: Path, *, label: str) -> None:
         raise EvidenceSealError(f"{label} must be inside repository root: {path}") from exc
 
 
+def _validate_destination_before_mutation(
+    path: Path | str,
+    *,
+    repo_root: Path,
+    label: str,
+) -> Path:
+    """Resolve and contain a destination without creating any path component."""
+    candidate = Path(os.path.abspath(os.fspath(path)))
+    cursor = candidate
+    missing_components: list[str] = []
+    while not cursor.exists():
+        if cursor.is_symlink():
+            raise EvidenceSealError(f"{label} must not contain a symbolic-link component: {cursor}")
+        parent = cursor.parent
+        if parent == cursor:
+            raise EvidenceSealError(f"{label} has no existing ancestor: {candidate}")
+        missing_components.append(cursor.name)
+        cursor = parent
+
+    current = Path(cursor.anchor)
+    for component in cursor.parts[1:]:
+        current /= component
+        if current.is_symlink():
+            raise EvidenceSealError(f"{label} must not contain a symbolic-link component: {current}")
+    if not cursor.is_dir():
+        raise EvidenceSealError(f"{label} nearest existing ancestor must be a directory: {cursor}")
+
+    resolved_ancestor = cursor.resolve(strict=True)
+    _require_within(resolved_ancestor, repo_root, label=f"{label} nearest existing ancestor")
+    resolved_destination = resolved_ancestor.joinpath(*reversed(missing_components)).resolve(strict=False)
+    _require_within(resolved_destination, repo_root, label=label)
+    return resolved_destination
+
+
 def _validate_relative_path(path: PurePosixPath | str) -> str:
     raw = str(path)
     candidate = PurePosixPath(raw)
@@ -329,19 +363,21 @@ def _fsync_directory(path: Path) -> None:
 
 
 def _output_directory(output_dir: Path | str, *, repo_root: Path, source: Path) -> Path:
-    candidate = Path(output_dir)
-    if candidate.is_symlink():
-        raise EvidenceSealError(f"output directory must not be a symbolic link: {candidate}")
-    candidate.mkdir(parents=True, exist_ok=True)
-    resolved = _resolved(candidate, label="output directory")
-    if not resolved.is_dir():
-        raise EvidenceSealError(f"output directory must be a directory: {resolved}")
-    _require_within(resolved, repo_root, label="output directory")
+    resolved = _validate_destination_before_mutation(
+        output_dir,
+        repo_root=repo_root,
+        label="output directory",
+    )
     try:
         resolved.relative_to(source)
     except ValueError:
-        return resolved
-    raise EvidenceSealError("output directory must not be inside evidence source")
+        pass
+    else:
+        raise EvidenceSealError("output directory must not be inside evidence source")
+    if resolved.exists() and not resolved.is_dir():
+        raise EvidenceSealError(f"output directory must be a directory: {resolved}")
+    resolved.mkdir(parents=True, exist_ok=True)
+    return _resolved(resolved, label="output directory")
 
 
 def seal_research_evidence(
@@ -394,17 +430,20 @@ def restore_bundle(bundle: Path | str, destination: Path | str, *, repo_root: Pa
     root = _resolved(repo_root, label="repository root")
     bundle_path = _resolved(bundle, label="bundle")
     manifest = verify_bundle(bundle_path, repo_root=root)
-    target = Path(destination)
-    if target.is_symlink() or target.exists():
-        raise EvidenceSealError(f"refusing to overwrite restore destination: {target}")
-    parent = target.parent
+    final_target = _validate_destination_before_mutation(
+        destination,
+        repo_root=root,
+        label="restore destination",
+    )
+    if final_target.is_symlink() or final_target.exists():
+        raise EvidenceSealError(f"refusing to overwrite restore destination: {final_target}")
+    parent = final_target.parent
     parent.mkdir(parents=True, exist_ok=True)
     parent = _resolved(parent, label="restore destination parent")
-    _require_within(parent, root, label="restore destination")
-    final_target = parent / target.name
-    if final_target.exists():
+    final_target = parent / final_target.name
+    if final_target.is_symlink() or final_target.exists():
         raise EvidenceSealError(f"refusing to overwrite restore destination: {final_target}")
-    stage_dir = Path(tempfile.mkdtemp(prefix=f".{target.name}.restore-", dir=parent))
+    stage_dir = Path(tempfile.mkdtemp(prefix=f".{final_target.name}.restore-", dir=parent))
     try:
         with _open_bundle(bundle_path) as archive:
             members = archive.getmembers()[1:]

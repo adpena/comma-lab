@@ -25,7 +25,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -38,12 +38,32 @@ from tac.witness_dsl.einstein_kolmogorov_bridge_20260719 import EinsteinKolmogor
 RECEIPT_SCHEMA = "einstein_kolmogorov_xi_bridge_receipt.v3"
 HASH_RECEIPT_SCHEMA = "einstein_kolmogorov_xi_bridge_hash_receipt.v1"
 FAILURE_MANIFEST_SCHEMA = "einstein_kolmogorov_xi_bridge_failure.v1"
-OPERATOR_AUTHORIZATION_SCHEMA = "einstein_kolmogorov_xi_bridge_operator_authorization.v1"
+OPERATOR_AUTHORIZATION_SCHEMA = "einstein_kolmogorov_xi_bridge_operator_authorization.v2"
 BACKEND_RESUME_ABI_SCHEMA = "levelset_byte_close_resume_abi_verification.v1"
 AUTHORITY = "[macOS-CPU advisory] diagnostic-only"
 FULL_AUTHORITY = "[macOS-CPU advisory] governed-full n600 after executable resume verification; NON-PROMOTABLE"
 R1_CALIBRATION_RECEIPT = "reports/r1_dxi_238/n600_shipdxi.json"
 _COST_TOKEN_RE = re.compile(r"(?:^|[;\s])(?:cost=\$|cost_usd=)([0-9]+(?:\.[0-9]+)?)(?:[;\s]|$)")
+_AUTHORIZATION_MAX_WINDOW = timedelta(hours=24)
+_AUTHORIZATION_SIGNED_FIELDS = (
+    "schema",
+    "authorization_id",
+    "approver",
+    "authorized",
+    "operator_directive_verbatim",
+    "operator_directive_sha256",
+    "issued_utc",
+    "expires_utc",
+    "lane_id",
+    "execution_mode",
+    "max_pairs",
+    "max_cost_usd",
+    "claim",
+    "inputs",
+    "backend_path",
+)
+_AUTHORIZATION_KEYS = frozenset((*_AUTHORIZATION_SIGNED_FIELDS, "signature_hex"))
+_PLACEHOLDER_DIRECTIVE_TOKENS = frozenset({"todo", "tbd", "placeholder", "operator-go", "approved"})
 
 
 class BridgeValidationError(ValueError):
@@ -140,6 +160,134 @@ def _committed_file_bytes(path: Path) -> bytes:
     return completed.stdout
 
 
+def _canonical_operator_authorization_bytes(payload: dict[str, Any]) -> bytes:
+    """Return the complete v2 authorization payload covered by Ed25519."""
+
+    missing = [field for field in _AUTHORIZATION_SIGNED_FIELDS if field not in payload]
+    if missing:
+        raise BridgeAuthorizationError(f"operator authorization lacks signed fields: {missing}")
+    signed = {field: payload[field] for field in _AUTHORIZATION_SIGNED_FIELDS}
+    return json.dumps(
+        signed,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
+def _parse_authorization_utc(value: Any, *, field: str) -> datetime:
+    if not isinstance(value, str) or not value.strip() or value != value.strip():
+        raise BridgeAuthorizationError(f"operator authorization {field} must be a non-empty ISO-8601 string")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise BridgeAuthorizationError(f"operator authorization {field} is not valid ISO-8601") from exc
+    if parsed.tzinfo is None:
+        raise BridgeAuthorizationError(f"operator authorization {field} must be timezone-aware")
+    return parsed.astimezone(UTC)
+
+
+def _verify_signed_operator_authorization(
+    payload: Any,
+    *,
+    required_bindings: dict[str, Any],
+    now_utc: datetime | None = None,
+) -> dict[str, Any]:
+    """Verify identity, signature, scope, directive, and time for one GO.
+
+    A committed memo establishes custody only. Execution authority requires a
+    detached Ed25519 signature from an approver registered in the canonical
+    Lane-C trust root; the matching private key remains outside the repository.
+    """
+
+    if not isinstance(payload, dict):
+        raise BridgeAuthorizationError("operator authorization root must be a JSON object")
+    if payload.get("schema") != OPERATOR_AUTHORIZATION_SCHEMA:
+        raise BridgeAuthorizationError(
+            "operator authorization schema v2 with Ed25519 signature is required; "
+            "v1/self-authored authorization JSON is non-authorizing"
+        )
+    if set(payload) != _AUTHORIZATION_KEYS:
+        missing = sorted(_AUTHORIZATION_KEYS - set(payload))
+        extra = sorted(set(payload) - _AUTHORIZATION_KEYS)
+        raise BridgeAuthorizationError(f"operator authorization key set mismatch: missing={missing}, extra={extra}")
+    for field in (
+        "authorization_id",
+        "approver",
+        "operator_directive_verbatim",
+        "operator_directive_sha256",
+        "issued_utc",
+        "expires_utc",
+        "signature_hex",
+    ):
+        if (
+            not isinstance(payload[field], str)
+            or not payload[field].strip()
+            or payload[field] != payload[field].strip()
+        ):
+            raise BridgeAuthorizationError(f"operator authorization lacks canonical non-empty {field}")
+
+    signature_hex = payload["signature_hex"]
+    if len(signature_hex) != 128 or set(signature_hex) - set("0123456789abcdef"):
+        raise BridgeAuthorizationError("operator authorization signature_hex must be 128 lowercase hex characters")
+    try:
+        from tac.lane_c_compliance import (
+            TrustRootMalformed,
+            TrustRootMissing,
+            load_trust_root,
+            trust_root_path,
+        )
+
+        trust_root = load_trust_root(config_contract._REPO_ROOT)
+    except (TrustRootMissing, TrustRootMalformed) as exc:
+        raise BridgeAuthorizationError(
+            "operator authorization trust root is unavailable or malformed; refusing governed execution"
+        ) from exc
+    approver = payload["approver"]
+    public_key = trust_root.get(approver)
+    if public_key is None:
+        raise BridgeAuthorizationError(
+            f"operator authorization approver {approver!r} is not registered in "
+            f"{trust_root_path(config_contract._REPO_ROOT)}"
+        )
+    try:
+        public_key.verify(
+            bytes.fromhex(signature_hex),
+            _canonical_operator_authorization_bytes(payload),
+        )
+    except Exception as exc:
+        raise BridgeAuthorizationError("operator authorization Ed25519 signature is invalid") from exc
+
+    directive = payload["operator_directive_verbatim"]
+    directive_digest = hashlib.sha256(directive.encode("utf-8")).hexdigest()
+    if directive_digest != payload["operator_directive_sha256"]:
+        raise BridgeAuthorizationError("operator authorization directive SHA-256 mismatch")
+    if directive.casefold() in _PLACEHOLDER_DIRECTIVE_TOKENS:
+        raise BridgeAuthorizationError("operator authorization directive is a placeholder, not verbatim authority")
+
+    issued = _parse_authorization_utc(payload["issued_utc"], field="issued_utc")
+    expires = _parse_authorization_utc(payload["expires_utc"], field="expires_utc")
+    now = datetime.now(UTC) if now_utc is None else now_utc.astimezone(UTC)
+    if expires <= issued or expires - issued > _AUTHORIZATION_MAX_WINDOW:
+        raise BridgeAuthorizationError("operator authorization validity window must be positive and at most 24 hours")
+    if not issued <= now <= expires:
+        raise BridgeAuthorizationError("operator authorization is future-dated or expired")
+
+    if any(payload.get(key) != value for key, value in required_bindings.items()):
+        raise BridgeAuthorizationError(
+            "operator authorization does not exactly bind lane, mode, n600 cost ceiling, "
+            "governed claim, input hashes, and backend"
+        )
+    return {
+        "authorization_id": payload["authorization_id"],
+        "approver": approver,
+        "operator_directive_sha256": directive_digest,
+        "issued_utc": payload["issued_utc"],
+        "expires_utc": payload["expires_utc"],
+        "signature_hex": signature_hex,
+    }
+
+
 def _require_execution_authorization(
     config: EinsteinKolmogorovXiBridgeConfig,
 ) -> dict[str, Any]:
@@ -191,21 +339,14 @@ def _require_execution_authorization(
         },
         "backend_path": "tools/levelset_byte_close_and_eval.py",
     }
-    if not isinstance(payload, dict) or any(payload.get(key) != value for key, value in required.items()):
-        raise BridgeAuthorizationError(
-            "operator authorization does not exactly bind lane, mode, n600 cost ceiling, "
-            "governed claim, input hashes, and backend"
-        )
-    for key in ("authorization_id", "authorized_by", "authorized_utc"):
-        if not isinstance(payload.get(key), str) or not payload[key].strip():
-            raise BridgeAuthorizationError(f"operator authorization lacks non-empty {key}")
+    verified = _verify_signed_operator_authorization(payload, required_bindings=required)
     return {
         "required": True,
         "verified": True,
         "path": str(path),
         "sha256": measured,
         "bytes": len(working_bytes),
-        "authorization_id": payload["authorization_id"],
+        **verified,
         "bindings": required,
     }
 

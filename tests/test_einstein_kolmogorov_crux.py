@@ -57,6 +57,20 @@ def _config(**changes: object) -> EinsteinKolmogorovCruxConfig:
 
 
 def _fake_closure(probe) -> dict[str, object]:
+    def distribution_state(distribution: str, digest_character: str) -> dict[str, object]:
+        return {
+            "schema": probe.DISTRIBUTION_INVENTORY_SCHEMA,
+            "distribution": distribution,
+            "version": "test",
+            "inventory_sha256": digest_character * 64,
+            "file_count": 2,
+            "total_bytes": 100,
+            "native_file_count": 1,
+            "native_total_bytes": 80,
+            "module_path": f"/{distribution}/__init__.py",
+            "module_sha256": digest_character * 64,
+        }
+
     return {
         "schema": probe.CLOSURE_SCHEMA,
         "sources": {name: {"path": f"/source/{name}.py", "sha256": "d" * 64} for name in sorted(probe._SOURCE_NAMES)},
@@ -68,13 +82,16 @@ def _fake_closure(probe) -> dict[str, object]:
                 "executable_sha256": "a" * 64,
                 "cache_tag": "cpython-test",
             },
-            "numpy": {"version": "test", "module_path": "/numpy/__init__.py", "module_sha256": "b" * 64},
-            "torch": {"version": "test", "module_path": "/torch/__init__.py", "module_sha256": "c" * 64},
-            "brotli": {"version": "test", "module_path": "/brotli.py", "module_sha256": "d" * 64},
-            "safetensors": {
-                "version": "test",
-                "module_path": "/safetensors/__init__.py",
-                "module_sha256": "e" * 64,
+            "numpy": distribution_state("numpy", "b"),
+            "torch": distribution_state("torch", "c"),
+            "brotli": distribution_state("Brotli", "d"),
+            "safetensors": distribution_state("safetensors", "e"),
+            "environment_lock": {
+                "schema": probe.ENVIRONMENT_LOCK_SCHEMA,
+                "kind": "uv.lock",
+                "path": "/repo/uv.lock",
+                "sha256": "f" * 64,
+                "bytes": 100,
             },
             "platform": {
                 "platform": "test",
@@ -638,12 +655,48 @@ def test_final_receipt_fields_bind_complete_reproducibility_closure(tmp_path: Pa
         "torch",
         "brotli",
         "safetensors",
+        "environment_lock",
         "platform",
         "threads",
     }
     assert fields["runtime"] == closure["runtime"]
     assert fields["base_git_head"] == closure["base_git_head"]
     assert all("checkpoint" not in name and "receipt" not in name for name in closure["sources"])
+    for name in ("numpy", "torch", "brotli", "safetensors"):
+        inventory = closure["runtime"][name]
+        assert inventory["file_count"] > 0
+        assert inventory["total_bytes"] > 0
+        assert len(inventory["inventory_sha256"]) == 64
+        assert "files" not in inventory
+    assert closure["runtime"]["torch"]["native_file_count"] > 0
+    assert closure["runtime"]["environment_lock"]["path"].endswith("/uv.lock")
+
+
+def test_closure_validation_requires_inventory_aggregates_and_environment_lock() -> None:
+    import copy
+
+    probe = _probe_module()
+    closure = _fake_closure(probe)
+
+    missing_inventory_field = copy.deepcopy(closure)
+    missing_inventory_field["runtime"]["torch"].pop("total_bytes")
+    with pytest.raises(ValueError, match="runtime state is malformed"):
+        probe._validate_reproducibility_closure(missing_inventory_field)
+
+    malformed_inventory_digest = copy.deepcopy(closure)
+    malformed_inventory_digest["runtime"]["numpy"]["inventory_sha256"] = "not-a-sha256"
+    with pytest.raises(ValueError, match="inventory digest"):
+        probe._validate_reproducibility_closure(malformed_inventory_digest)
+
+    missing_environment_lock = copy.deepcopy(closure)
+    missing_environment_lock["runtime"].pop("environment_lock")
+    with pytest.raises(ValueError, match="incomplete runtime state"):
+        probe._validate_reproducibility_closure(missing_environment_lock)
+
+    malformed_lock_digest = copy.deepcopy(closure)
+    malformed_lock_digest["runtime"]["environment_lock"]["sha256"] = "not-a-sha256"
+    with pytest.raises(ValueError, match="environment lock digest"):
+        probe._validate_reproducibility_closure(malformed_lock_digest)
 
 
 def test_runtime_distribution_mutation_refuses_resume(tmp_path: Path) -> None:
@@ -661,9 +714,67 @@ def test_runtime_distribution_mutation_refuses_resume(tmp_path: Path) -> None:
     )
     closure = probe._reproducibility_closure(config, torch_module=torch)
     mutated = copy.deepcopy(closure)
-    mutated["runtime"]["brotli"]["module_sha256"] = "0" * 64
+    mutated["runtime"]["brotli"]["inventory_sha256"] = "0" * 64
     with pytest.raises(ValueError, match="closure changed"):
         probe._require_current_closure(config, torch_module=torch, expected=mutated)
+
+
+def test_non_entrypoint_distribution_file_mutation_changes_closure_and_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sys
+    import types
+
+    import torch
+
+    probe = _probe_module()
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    (upstream / "modules.py").write_text("class SegNet: pass\n", encoding="utf-8")
+    config = _config(
+        upstream_path=str(upstream),
+        segnet_path=str(upstream / "models" / "segnet.safetensors"),
+    )
+    fake_distribution_root = tmp_path / "site-packages"
+    native_file = fake_distribution_root / "_brotli.cpython-test.so"
+    entrypoint = fake_distribution_root / "brotli.py"
+    fake_distribution_root.mkdir()
+    native_file.write_bytes(b"native-binary-v1")
+    entrypoint.write_text("__version__ = 'test'\n", encoding="utf-8")
+
+    class FakePackagePath:
+        def __init__(self, relative_path: str) -> None:
+            self.relative_path = relative_path
+
+        def __str__(self) -> str:
+            return self.relative_path
+
+        def locate(self) -> Path:
+            return fake_distribution_root / self.relative_path
+
+    class FakeDistribution:
+        version = "test"
+        files = (FakePackagePath("_brotli.cpython-test.so"), FakePackagePath("brotli.py"))
+
+    real_distribution = probe.importlib.metadata.distribution
+
+    def distribution(name: str):
+        return FakeDistribution() if name == "Brotli" else real_distribution(name)
+
+    fake_brotli_module = types.ModuleType("brotli")
+    fake_brotli_module.__file__ = str(entrypoint)
+    monkeypatch.setitem(sys.modules, "brotli", fake_brotli_module)
+    monkeypatch.setattr(probe.importlib.metadata, "distribution", distribution)
+    original_closure = probe._reproducibility_closure(config, torch_module=torch)
+    original_brotli = original_closure["runtime"]["brotli"]
+    assert original_brotli["native_file_count"] == 1
+    assert original_brotli["native_total_bytes"] == len(b"native-binary-v1")
+
+    native_file.write_bytes(b"native-binary-v2-is-different")
+    mutated_closure = probe._reproducibility_closure(config, torch_module=torch)
+    assert mutated_closure["runtime"]["brotli"]["inventory_sha256"] != original_brotli["inventory_sha256"]
+    with pytest.raises(ValueError, match="closure changed"):
+        probe._require_current_closure(config, torch_module=torch, expected=original_closure)
 
 
 def test_finalization_reuses_checkpoint_source_runtime_package_closure(
@@ -731,8 +842,8 @@ def test_finalization_reuses_checkpoint_source_runtime_package_closure(
     checkpoint = json.loads((tmp_path / "run" / "checkpoint.json").read_text())
     stage = json.loads((tmp_path / "run" / "checkpoints" / "pair_0000.json").read_text())
     closure = receipt["reproducibility_closure"]
-    assert receipt["schema"] == "einstein_kolmogorov_crux_receipt.v2"
-    assert checkpoint["schema"] == "einstein_kolmogorov_crux_checkpoint.v2"
+    assert receipt["schema"] == "einstein_kolmogorov_crux_receipt.v3"
+    assert checkpoint["schema"] == "einstein_kolmogorov_crux_checkpoint.v3"
     assert checkpoint["reproducibility_closure"] == closure
     assert stage["reproducibility_closure"] == closure
     assert receipt["implementation_fingerprints"] == {name: item["sha256"] for name, item in closure["sources"].items()}

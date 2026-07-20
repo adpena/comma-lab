@@ -7,12 +7,22 @@
   "promotion_eligible": false,
   "score_claim": false,
   "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
-  "scoped_completion": "n24_fixed_label_palette_and_lossy_label_component_probe_complete",
+  "scoped_completion": "n24_fixed_label_palette_and_lossy_label_realization_wall_characterization_complete",
   "overall_lane_status": "IMPLEMENTATION_INCOMPLETE",
   "verdict_scope": "complete n24 PDW1 component tournament only; no compact pose stream, no full n600 archive, and no contest-axis score",
+  "operating_point_correction": {
+    "receipt": ".omx/research/einstein_kolmogorov_operating_point_correction_20260720.json",
+    "verdict": "WRONG_OPERATING_POINT_WALL_CHARACTERIZATION",
+    "target_action": 0.1910828242,
+    "d_seg_ratio_vs_solved_bank": 37.36904932307547,
+    "seg_term": 0.5678600735134548,
+    "seg_term_exceeds_pointer_by": 0.37677724931345485,
+    "frontier_feasible_even_at_zero_pose_zero_bytes": false,
+    "n600_explicit_target_launch_eligible": false
+  },
   "labels": {
     "MEASURED": "hard mismatch count, d_seg, candidate component bytes and hashes, parse-back, factor-2 certificate, label mutations, and the named receipt closure; source/global/scoped-Seg-winner terminal replays have v2 source/runtime closure, while nonterminal historical tournament receipts retain the disclosed v1 limitation",
-    "DERIVED": "relative Seg reductions, pose-zero partial-action arithmetic, component-byte tradeoffs, and score-law byte caps",
+    "DERIVED": "relative Seg reductions, pose-zero partial-action arithmetic, component-byte tradeoffs, score-law byte caps, and the proof that this operating point cannot beat the pointer even at zero Pose and zero bytes",
     "SPECULATIVE": "generalization from this n24 component to a full generator quotient, a full archive, or sub-0.15"
   },
   "inputs": {
@@ -356,13 +366,17 @@
     "bulky_local_or_tmp_fallback_used": false,
     "input_hashes_reverified_read_only": true,
     "downstream_resume_contract_present": false,
-    "future_backend_launch_fail_closed_on_missing_resume_contract": true
+    "future_backend_launch_fail_closed_on_missing_resume_contract": true,
+    "authorization_schema": "einstein_kolmogorov_xi_bridge_operator_authorization.v2",
+    "authorization_requires_allowlisted_ed25519_signature": true,
+    "authorization_trust_root_present": false,
+    "committed_json_alone_is_authority": false
   },
   "in_box_verdict": {
     "new_full_n600_archive_produced": false,
     "new_measured_in_box_point": false,
     "existing_settled_in_box_control_preserved": true,
-    "reason": "the scoped winner is a complete 19859-byte n24 component packet, not a full n600 two-frame archive; the governed xi bridge refused at canonical SSD write custody and also requires an explicit backend resume contract",
+    "reason": "the 19859-byte n24 component is an explicit-target realization-wall characterization whose Seg term alone exceeds the pointer; it is not a launch predecessor or full n600 two-frame archive. Any next chart must compose from the solved-distortion bank. The governed xi bridge also refuses without SSD custody, executable resume ABI, and signed operator authorization.",
     "sub_0_15_reached": false,
     "pointer_moved": false
   }

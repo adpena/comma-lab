@@ -17,6 +17,7 @@ from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
     contest_action,
     derive_research_only_decision,
     fixed_byte_palette_delta,
+    frontier_feasible_at_zero_pose_and_rate,
     inclusive_maximum_byte_budget,
     maximum_byte_budget,
     populate_einstein_kolmogorov_crux_action_rate_contract_v1,
@@ -53,6 +54,16 @@ def test_action_and_budget_are_monotone() -> None:
     assert maximum_byte_budget(target_action=0.2, d_seg=0.001, d_pose=0.0) > maximum_byte_budget(
         target_action=0.19, d_seg=0.001, d_pose=0.0
     )
+
+
+def test_wrong_operating_point_fails_seg_only_frontier_necessity_gate() -> None:
+    pointer = 0.1910828242
+    assert frontier_feasible_at_zero_pose_and_rate(d_seg=0.00015196, target_action=pointer)
+    assert not frontier_feasible_at_zero_pose_and_rate(
+        d_seg=0.0056786007351345485,
+        target_action=pointer,
+    )
+    assert pointer < 100 * 0.0056786007351345485
 
 
 @pytest.mark.parametrize(
@@ -111,10 +122,13 @@ def test_hash_bound_canonical_equation_builds_from_frozen_measurement() -> None:
     assert equation.domain_of_validity["anchor_measurement_sha256"] == (equation.provenance.source_sha256)
     assert equation.domain_of_validity["research_only"] is True
     assert equation.domain_of_validity["promotion_eligible"] is False
+    assert equation.domain_of_validity["n600_explicit_target_launch_eligible"] is False
     assert len(equation.empirical_anchors) == 1
     anchor = equation.empirical_anchors[0]
     assert anchor.provenance.source_sha256 == equation.provenance.source_sha256
     assert anchor.empirical_output["winner_hard_mismatch_px"] < (anchor.empirical_output["source_hard_mismatch_px"])
+    assert anchor.empirical_output["winner_frontier_feasible_at_zero_pose_zero_rate"] is False
+    assert anchor.empirical_output["operating_point_verdict"] == "WRONG_OPERATING_POINT_WALL_CHARACTERIZATION"
     assert anchor.empirical_output["full_archive_or_contest_score_claim"] is False
 
 

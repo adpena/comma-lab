@@ -10,7 +10,12 @@ Status: **CURRENT MEASUREMENT, REVIEW PENDING.** The source/global/scoped-Seg
 terminal triplet was replayed from base commit
 `8eee0e3becdabbfe2f38246ad014678bb11f1e8e` with v2 source/runtime closure and
 reproduced the historical bytes and metrics. Nonterminal construction receipts retain
-their disclosed historical v1 closure. Recursive clean-pass count remains zero.
+their disclosed historical v1 closure. Future checkpoints/receipts use closure v3,
+which binds full installed-distribution inventories plus `uv.lock`; historical v2
+receipts are not retroactively upgraded. Recursive clean-pass count remains zero.
+Operator correction `2026-07-20T01:03:29Z` reclassifies the n24 result as an
+explicit-target realization-wall characterization: it is not a frontier operating
+point and cannot precede an n600 launch.
 
 ## Executable state transition
 
@@ -23,7 +28,7 @@ frozen scorer rate-distortion cover and exact factor-2 R preimage
         |       +--> xi temporal/Pose carrier                    [existing R1 control]
         |       +--> receiver-active fill/residual T             [this n24 build]
         |
-        +--> typed n24 PDW1 component tournament
+        +--> typed n24 PDW1 component tournament              [WALL CHARACTERIZATION]
                 |
                 +--> source 38,077 mismatches                    [MEASURED]
                 +--> zero 2,388,341 mismatches                   [negative canary]
@@ -34,7 +39,8 @@ frozen scorer rate-distortion cover and exact factor-2 R preimage
                               |
                               +--> 19,859 B, strict parse-back, factor-2 exact
                               +--> final fingerprinted singleton replay
-                              +--> n24 component only; no score claim
+                              +--> 100*d_seg=0.567860 > pointer [INFEASIBLE AT ZERO POSE/RATE]
+                              +--> n24 component only; no score/launch claim
                 |
                 +--> lossy row-run topology 2/3/4               [distinct family]
                         +--> rung 2: 36,876 mismatches, 19,371 B [improves source]
@@ -46,7 +52,10 @@ frozen scorer rate-distortion cover and exact factor-2 R preimage
 The measured Seg-only incumbent reduces hard mismatches by 11,282 (29.6294%) from the source and
 10,481 (28.1173%) from the global-palette control at **zero packet-byte delta**. The
 local pose-zero action value `0.5810833665` is ordering arithmetic only: the component
-does not contain a compact frame-0/Pose stream and is not a full archive.
+does not contain a compact frame-0/Pose stream and is not a full archive. Relative to
+the banked v10 capstone `d_seg=0.00015196`, this `d_seg` is `37.369x` worse; its Seg
+term alone exceeds the pointer by `0.3767772493`. This makes the row a measured wall,
+not progress toward the frontier.
 
 ## Crux and disposition
 
@@ -119,9 +128,13 @@ is not relabeled as this lane's result.
 The downstream LVLS1/archive receiver now contains the optional `EKPR1` section, strict
 manifest binding, inline/NumPy consumption before AA/lane/R, mutation canaries, and
 cap/repack wiring. It correctly refuses attaching the n24 residual to an n600 stream;
-the real n600 payload remains owed. The next zero-cost execution gate requires writable
-canonical SSD custody, committed hash-bound authorization, a live matching lane claim,
-the governed-admission marker, and an executable resume ABI in the n600 byte-close
-backend. Declarative resume receipts do not authorize execution. Contest-CPU Linux evaluation remains downstream of a
+the explicit-target row is now categorically ineligible for n600 scaling. The next
+zero-cost build gate starts from the solved-distortion v10 capstone mechanism and must
+produce a measured byte-closed `(bytes, d_seg, projected S)` point at frontier-relevant
+magnitude before any launch request. After that, execution additionally requires writable
+canonical SSD custody, an Ed25519-signed v2 authorization from the canonical trust root,
+a live matching lane claim, the governed-admission marker, and an executable resume ABI
+in the n600 byte-close backend. The trust root is currently absent; committed JSON and
+declarative resume receipts do not authorize execution. Contest-CPU Linux evaluation remains downstream of a
 byte-closed full archive; no paid dispatch is armed because paid evaluation is not yet
 the sole remaining step.

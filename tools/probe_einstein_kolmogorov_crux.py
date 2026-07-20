@@ -44,9 +44,11 @@ from tac.optimization.uint8_lattice_feasibility import (  # noqa: E402
 from tac.witness_control.factorized_features import load_frozen_segnet_cpu  # noqa: E402
 from tac.witness_dsl.einstein_kolmogorov_crux_20260719 import EinsteinKolmogorovCruxConfig  # noqa: E402
 
-SCHEMA = "einstein_kolmogorov_crux_receipt.v2"
-CHECKPOINT_SCHEMA = "einstein_kolmogorov_crux_checkpoint.v2"
-CLOSURE_SCHEMA = "einstein_kolmogorov_reproducibility_closure.v2"
+SCHEMA = "einstein_kolmogorov_crux_receipt.v3"
+CHECKPOINT_SCHEMA = "einstein_kolmogorov_crux_checkpoint.v3"
+CLOSURE_SCHEMA = "einstein_kolmogorov_reproducibility_closure.v3"
+DISTRIBUTION_INVENTORY_SCHEMA = "installed_distribution_inventory.v1"
+ENVIRONMENT_LOCK_SCHEMA = "environment_lock_identity.v1"
 _SOURCE_NAMES = frozenset(
     {
         "probe",
@@ -70,6 +72,14 @@ _THREAD_ENV_NAMES = (
     "VECLIB_MAXIMUM_THREADS",
     "NUMEXPR_NUM_THREADS",
 )
+_DISTRIBUTION_NAMES = {
+    "numpy": "numpy",
+    "torch": "torch",
+    "brotli": "Brotli",
+    "safetensors": "safetensors",
+}
+_NATIVE_LIBRARY_SUFFIXES = (".so", ".dylib", ".dll", ".pyd", ".a", ".lib")
+_FILE_DIGEST_CACHE: dict[str, tuple[tuple[int, int, int, int, int], str]] = {}
 
 
 def _sha256_file(path: Path) -> str:
@@ -78,6 +88,31 @@ def _sha256_file(path: Path) -> str:
         for block in iter(lambda: handle.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _stat_signature(path: Path) -> tuple[int, int, int, int, int]:
+    stat = path.stat()
+    return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+
+
+def _cached_file_identity(path: Path) -> tuple[str, tuple[int, int, int, int, int]]:
+    """Hash file bytes once per stable filesystem identity within this process."""
+    path = path.resolve()
+    before = _stat_signature(path)
+    cached = _FILE_DIGEST_CACHE.get(str(path))
+    if cached is not None and cached[0] == before:
+        return cached[1], before
+    digest = _sha256_file(path)
+    after = _stat_signature(path)
+    if after != before:
+        raise RuntimeError(f"file changed while hashing reproducibility inventory: {path}")
+    _FILE_DIGEST_CACHE[str(path)] = (after, digest)
+    return digest, after
+
+
+def _is_native_library(distribution_path: str) -> bool:
+    name = distribution_path.rsplit("/", 1)[-1].lower()
+    return any(name.endswith(suffix) or f"{suffix}." in name for suffix in _NATIVE_LIBRARY_SUFFIXES)
 
 
 def _implementation_source_paths(config: EinsteinKolmogorovCruxConfig) -> dict[str, Path]:
@@ -120,11 +155,57 @@ def _base_git_head() -> str:
 
 
 def _distribution_state(distribution: str, module: Any) -> dict[str, Any]:
+    """Bind every installed file in a distribution without expanding the receipt."""
+    installed = importlib.metadata.distribution(distribution)
+    files = installed.files
+    if not files:
+        raise RuntimeError(f"installed distribution has no canonical file inventory: {distribution}")
+
+    entries: list[dict[str, Any]] = []
+    seen_paths: set[str] = set()
+    observed_files: list[tuple[Path, tuple[int, int, int, int, int]]] = []
+    native_file_count = 0
+    native_total_bytes = 0
+    for package_path in sorted(files, key=str):
+        relative_path = str(package_path).replace("\\", "/")
+        if not relative_path or relative_path.startswith("/") or relative_path in seen_paths:
+            raise RuntimeError(f"malformed installed distribution path for {distribution}: {relative_path!r}")
+        seen_paths.add(relative_path)
+        installed_path = Path(package_path.locate()).resolve()
+        if not installed_path.is_file():
+            raise RuntimeError(f"installed distribution file missing for {distribution}: {relative_path}")
+        digest, signature = _cached_file_identity(installed_path)
+        size = signature[2]
+        observed_files.append((installed_path, signature))
+        entries.append(
+            {
+                "path": relative_path,
+                "bytes": size,
+                "sha256": digest,
+            }
+        )
+        if _is_native_library(relative_path):
+            native_file_count += 1
+            native_total_bytes += size
+
+    if any(_stat_signature(path) != signature for path, signature in observed_files):
+        raise RuntimeError(f"installed distribution changed while inventorying: {distribution}")
     module_path = Path(module.__file__).resolve()
+    if module_path not in {path for path, _signature in observed_files}:
+        raise RuntimeError(f"imported module is outside installed distribution inventory: {distribution}")
+    module_sha256, _module_signature = _cached_file_identity(module_path)
+    inventory_bytes = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return {
-        "version": importlib.metadata.version(distribution),
+        "schema": DISTRIBUTION_INVENTORY_SCHEMA,
+        "distribution": distribution,
+        "version": installed.version,
+        "inventory_sha256": hashlib.sha256(inventory_bytes).hexdigest(),
+        "file_count": len(entries),
+        "total_bytes": sum(entry["bytes"] for entry in entries),
+        "native_file_count": native_file_count,
+        "native_total_bytes": native_total_bytes,
         "module_path": str(module_path),
-        "module_sha256": _sha256_file(module_path),
+        "module_sha256": module_sha256,
     }
 
 
@@ -132,9 +213,11 @@ def _runtime_state(torch_module: Any) -> dict[str, Any]:
     import brotli
     import safetensors
 
-    numpy_path = Path(np.__file__).resolve()
-    torch_path = Path(torch_module.__file__).resolve()
     executable = Path(sys.executable).resolve()
+    environment_lock = (REPO / "uv.lock").resolve()
+    if not environment_lock.is_file():
+        raise RuntimeError("environment lock missing: uv.lock")
+    lock_sha256, lock_signature = _cached_file_identity(environment_lock)
     return {
         "python": {
             "version": sys.version,
@@ -143,18 +226,17 @@ def _runtime_state(torch_module: Any) -> dict[str, Any]:
             "executable_sha256": _sha256_file(executable),
             "cache_tag": sys.implementation.cache_tag,
         },
-        "numpy": {
-            "version": np.__version__,
-            "module_path": str(numpy_path),
-            "module_sha256": _sha256_file(numpy_path),
+        "numpy": _distribution_state(_DISTRIBUTION_NAMES["numpy"], np),
+        "torch": _distribution_state(_DISTRIBUTION_NAMES["torch"], torch_module),
+        "brotli": _distribution_state(_DISTRIBUTION_NAMES["brotli"], brotli),
+        "safetensors": _distribution_state(_DISTRIBUTION_NAMES["safetensors"], safetensors),
+        "environment_lock": {
+            "schema": ENVIRONMENT_LOCK_SCHEMA,
+            "kind": "uv.lock",
+            "path": str(environment_lock),
+            "sha256": lock_sha256,
+            "bytes": lock_signature[2],
         },
-        "torch": {
-            "version": torch_module.__version__,
-            "module_path": str(torch_path),
-            "module_sha256": _sha256_file(torch_path),
-        },
-        "brotli": _distribution_state("Brotli", brotli),
-        "safetensors": _distribution_state("safetensors", safetensors),
         "platform": {
             "platform": platform.platform(),
             "system": platform.system(),
@@ -205,16 +287,62 @@ def _validate_reproducibility_closure(closure: Any) -> None:
         "torch",
         "brotli",
         "safetensors",
+        "environment_lock",
         "platform",
         "threads",
     }:
         raise ValueError("reproducibility closure has incomplete runtime state")
     expected_runtime_keys = {
         "python": {"version", "implementation", "executable", "executable_sha256", "cache_tag"},
-        "numpy": {"version", "module_path", "module_sha256"},
-        "torch": {"version", "module_path", "module_sha256"},
-        "brotli": {"version", "module_path", "module_sha256"},
-        "safetensors": {"version", "module_path", "module_sha256"},
+        "numpy": {
+            "schema",
+            "distribution",
+            "version",
+            "inventory_sha256",
+            "file_count",
+            "total_bytes",
+            "native_file_count",
+            "native_total_bytes",
+            "module_path",
+            "module_sha256",
+        },
+        "torch": {
+            "schema",
+            "distribution",
+            "version",
+            "inventory_sha256",
+            "file_count",
+            "total_bytes",
+            "native_file_count",
+            "native_total_bytes",
+            "module_path",
+            "module_sha256",
+        },
+        "brotli": {
+            "schema",
+            "distribution",
+            "version",
+            "inventory_sha256",
+            "file_count",
+            "total_bytes",
+            "native_file_count",
+            "native_total_bytes",
+            "module_path",
+            "module_sha256",
+        },
+        "safetensors": {
+            "schema",
+            "distribution",
+            "version",
+            "inventory_sha256",
+            "file_count",
+            "total_bytes",
+            "native_file_count",
+            "native_total_bytes",
+            "module_path",
+            "module_sha256",
+        },
+        "environment_lock": {"schema", "kind", "path", "sha256", "bytes"},
         "platform": {"platform", "system", "release", "version", "machine", "processor"},
         "threads": {"torch_num_threads", "torch_num_interop_threads", "environment"},
     }
@@ -223,6 +351,47 @@ def _validate_reproducibility_closure(closure: Any) -> None:
         for name, keys in expected_runtime_keys.items()
     ):
         raise ValueError("reproducibility closure runtime state is malformed")
+    for runtime_name, distribution_name in _DISTRIBUTION_NAMES.items():
+        inventory = runtime[runtime_name]
+        if inventory["schema"] != DISTRIBUTION_INVENTORY_SCHEMA or inventory["distribution"] != distribution_name:
+            raise ValueError("reproducibility closure distribution inventory identity is malformed")
+        if not isinstance(inventory["version"], str) or not inventory["version"]:
+            raise ValueError("reproducibility closure distribution version is malformed")
+        digest = inventory["inventory_sha256"]
+        if not isinstance(digest, str) or len(digest) != 64 or set(digest) - set("0123456789abcdef"):
+            raise ValueError("reproducibility closure distribution inventory digest is malformed")
+        module_digest = inventory["module_sha256"]
+        if (
+            not isinstance(module_digest, str)
+            or len(module_digest) != 64
+            or set(module_digest) - set("0123456789abcdef")
+        ):
+            raise ValueError("reproducibility closure distribution module digest is malformed")
+        if not isinstance(inventory["module_path"], str) or not Path(inventory["module_path"]).is_absolute():
+            raise ValueError("reproducibility closure distribution module path must be absolute")
+        counts = (
+            inventory["file_count"],
+            inventory["total_bytes"],
+            inventory["native_file_count"],
+            inventory["native_total_bytes"],
+        )
+        if any(type(value) is not int or value < 0 for value in counts) or inventory["file_count"] == 0:
+            raise ValueError("reproducibility closure distribution inventory counts are malformed")
+        if (
+            inventory["native_file_count"] > inventory["file_count"]
+            or inventory["native_total_bytes"] > inventory["total_bytes"]
+        ):
+            raise ValueError("reproducibility closure native inventory exceeds full inventory")
+    environment_lock = runtime["environment_lock"]
+    if environment_lock["schema"] != ENVIRONMENT_LOCK_SCHEMA or environment_lock["kind"] != "uv.lock":
+        raise ValueError("reproducibility closure environment lock identity is malformed")
+    if not isinstance(environment_lock["path"], str) or not Path(environment_lock["path"]).is_absolute():
+        raise ValueError("reproducibility closure environment lock path must be absolute")
+    lock_digest = environment_lock["sha256"]
+    if not isinstance(lock_digest, str) or len(lock_digest) != 64 or set(lock_digest) - set("0123456789abcdef"):
+        raise ValueError("reproducibility closure environment lock digest is malformed")
+    if type(environment_lock["bytes"]) is not int or environment_lock["bytes"] <= 0:
+        raise ValueError("reproducibility closure environment lock size is malformed")
     thread_environment = runtime["threads"]["environment"]
     if not isinstance(thread_environment, dict) or set(thread_environment) != set(_THREAD_ENV_NAMES):
         raise ValueError("reproducibility closure thread environment is incomplete")

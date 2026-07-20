@@ -5,6 +5,7 @@ These fixtures are tiny local build checks, not score evidence.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import struct
@@ -223,7 +224,9 @@ def _tiny_literal_checkpoint(tmp_path: Path) -> Path:
     return ckpt
 
 
-def test_optional_section_is_legacy_identical_and_receiver_oracle_bit_exact(tool: ModuleType, tmp_path: Path) -> None:
+def test_optional_section_absent_blob_matches_pre_ekpr_golden_and_receiver_oracle_is_bit_exact(
+    tool: ModuleType, tmp_path: Path
+) -> None:
     ckpt = _tiny_literal_checkpoint(tmp_path)
     params, cfg = tool._load_levelset_ckpt(ckpt, "levelset_witness_ema.npz")
     cfg["basis_program_deploy"] = cfg["basis_program"]
@@ -231,7 +234,10 @@ def test_optional_section_is_legacy_identical_and_receiver_oracle_bit_exact(tool
     legacy, _ = tool.build_levelset_blob(params, cfg, so, None)
     explicit_absent, _ = tool.build_levelset_blob(params, cfg, so, None, palette_residual_bytes=None)
     assert legacy == explicit_absent
-    assert tool._inflate_source_for_manifest({"basis_family": "legacy_fourier_ab_control"}) == tool._INFLATE_PY
+    # Golden from 8eee0e3bec, before EKPR landed. The absent *LVLS1 payload*
+    # remains byte-identical; the shipped receiver source intentionally grows
+    # to parse EKPR and is not claimed to be source-byte-identical.
+    assert hashlib.sha256(legacy).hexdigest() == "7e3d094fdbb319c7d21bc91b2cfa9977a05b2253ec9a8881f9ca7230fb9fce7d"
 
     residual = np.full((_N_PAIRS, _N_CLASSES, 3), 64, dtype=np.int8)
     section = encode_palette_residual(residual)

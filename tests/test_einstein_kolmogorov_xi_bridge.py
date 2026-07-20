@@ -4,6 +4,7 @@ import errno
 import hashlib
 import json
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -21,6 +22,46 @@ from tools import probe_einstein_kolmogorov_xi_bridge as bridge
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _test_private_key():
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    return Ed25519PrivateKey.from_private_bytes(b"\x19" * 32)
+
+
+def _write_test_trust_root(repo_root: Path, *, approver: str = "fixture-operator") -> None:
+    from cryptography.hazmat.primitives import serialization
+
+    public = (
+        _test_private_key()
+        .public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+    )
+    path = repo_root / ".omx/state/lane_c_compliance_attestations/trust_root_pubkeys.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                approver: {
+                    "pubkey_hex": public.hex(),
+                    "comment": "test-only key",
+                    "registered_at": "2026-07-19T00:00:00Z",
+                }
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _sign_authorization(payload: dict[str, Any]) -> dict[str, Any]:
+    signed = dict(payload)
+    signed["signature_hex"] = _test_private_key().sign(bridge._canonical_operator_authorization_bytes(signed)).hex()
+    return signed
 
 
 def _write_inputs(
@@ -93,31 +134,39 @@ def _config(
                 "declared_max_cost_usd": 0.0,
             }
         )
+        _write_test_trust_root(repo_root)
         authorization = repo_root / ".omx/research/operator_authorizations/ek_xi_fixture.json"
         authorization.parent.mkdir(parents=True, exist_ok=True)
+        now = datetime.now(UTC)
+        directive = "Run this exact zero-cost local Einstein-Kolmogorov xi n600 treatment."
         authorization.write_text(
             json.dumps(
-                {
-                    "schema": bridge.OPERATOR_AUTHORIZATION_SCHEMA,
-                    "authorization_id": "fixture-authorization",
-                    "authorized": True,
-                    "authorized_by": "fixture-operator",
-                    "authorized_utc": "2026-07-19T00:00:00Z",
-                    "lane_id": config_module.LANE_ID,
-                    "execution_mode": config_module.GOVERNED_FULL_MODE,
-                    "max_pairs": 600,
-                    "max_cost_usd": 0.0,
-                    "claim": {
-                        "instance_job_id": "ek-xi-full-fixture",
-                        "platform": "local",
-                    },
-                    "inputs": {
-                        "generator_npz_sha256": values["generator_npz_sha256"],
-                        "donor_r1_npz_sha256": values["donor_r1_npz_sha256"],
-                        "gt_cache_sha256": values["gt_cache_sha256"],
-                    },
-                    "backend_path": "tools/levelset_byte_close_and_eval.py",
-                },
+                _sign_authorization(
+                    {
+                        "schema": bridge.OPERATOR_AUTHORIZATION_SCHEMA,
+                        "authorization_id": "fixture-authorization",
+                        "approver": "fixture-operator",
+                        "authorized": True,
+                        "operator_directive_verbatim": directive,
+                        "operator_directive_sha256": hashlib.sha256(directive.encode()).hexdigest(),
+                        "issued_utc": (now - timedelta(minutes=1)).isoformat().replace("+00:00", "Z"),
+                        "expires_utc": (now + timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
+                        "lane_id": config_module.LANE_ID,
+                        "execution_mode": config_module.GOVERNED_FULL_MODE,
+                        "max_pairs": 600,
+                        "max_cost_usd": 0.0,
+                        "claim": {
+                            "instance_job_id": "ek-xi-full-fixture",
+                            "platform": "local",
+                        },
+                        "inputs": {
+                            "generator_npz_sha256": values["generator_npz_sha256"],
+                            "donor_r1_npz_sha256": values["donor_r1_npz_sha256"],
+                            "gt_cache_sha256": values["gt_cache_sha256"],
+                        },
+                        "backend_path": "tools/levelset_byte_close_and_eval.py",
+                    }
+                ),
                 sort_keys=True,
             ),
             encoding="utf-8",
@@ -414,10 +463,104 @@ def test_hash_bound_but_wrongly_scoped_authorization_refuses_before_inputs_or_ba
         lambda **_kwargs: pytest.fail("backend must not run after forged authorization"),
     )
 
-    with pytest.raises(bridge.BridgeAuthorizationError, match="does not exactly bind"):
+    with pytest.raises(bridge.BridgeAuthorizationError, match="signature is invalid"):
         bridge.execute(config)
     assert not Path(config.packet_output_dir).exists()
     assert not Path(config.result_json_path).exists()
+
+
+def test_valid_registered_ed25519_authorization_verifies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    inputs = _write_inputs(tmp_path)
+    config = _config(tmp_path, monkeypatch, inputs, valid_full_governance=True)
+    authorization = Path(str(config.operator_authorization_path))
+    monkeypatch.setattr(bridge, "_committed_file_bytes", lambda _path: authorization.read_bytes())
+
+    receipt = bridge._require_execution_authorization(config)
+
+    assert receipt["verified"] is True
+    assert receipt["approver"] == "fixture-operator"
+    assert len(receipt["signature_hex"]) == 128
+    assert len(receipt["operator_directive_sha256"]) == 64
+
+
+def test_v1_self_authored_json_is_custody_not_execution_authority(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inputs = _write_inputs(tmp_path)
+    config = _config(tmp_path, monkeypatch, inputs, valid_full_governance=True)
+    authorization = Path(str(config.operator_authorization_path))
+    payload = json.loads(authorization.read_text(encoding="utf-8"))
+    payload["schema"] = "einstein_kolmogorov_xi_bridge_operator_authorization.v1"
+    payload["authorized_by"] = "untrusted-agent"
+    payload["authorized_utc"] = "2999-01-01T00:00:00Z"
+    authorization.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    config = replace(config, operator_authorization_sha256=_sha(authorization))
+    monkeypatch.setattr(bridge, "_committed_file_bytes", lambda _path: authorization.read_bytes())
+
+    with pytest.raises(bridge.BridgeAuthorizationError, match="schema v2"):
+        bridge._require_execution_authorization(config)
+
+
+def test_missing_or_empty_trust_root_refuses_signed_authorization(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inputs = _write_inputs(tmp_path)
+    config = _config(tmp_path, monkeypatch, inputs, valid_full_governance=True)
+    authorization = Path(str(config.operator_authorization_path))
+    trust_root = config_module._REPO_ROOT / ".omx/state/lane_c_compliance_attestations/trust_root_pubkeys.json"
+    monkeypatch.setattr(bridge, "_committed_file_bytes", lambda _path: authorization.read_bytes())
+
+    trust_root.unlink()
+    with pytest.raises(bridge.BridgeAuthorizationError, match="trust root"):
+        bridge._require_execution_authorization(config)
+
+    trust_root.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(bridge.BridgeAuthorizationError, match="not registered"):
+        bridge._require_execution_authorization(config)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ({"operator_directive_verbatim": "placeholder"}, "placeholder"),
+        ({"operator_directive_sha256": "0" * 64}, "directive SHA-256"),
+        (
+            {
+                "issued_utc": "2026-07-19T00:00:00Z",
+                "expires_utc": "2026-07-21T00:00:01Z",
+            },
+            "at most 24 hours",
+        ),
+        (
+            {
+                "issued_utc": "2999-01-01T00:00:00Z",
+                "expires_utc": "2999-01-01T01:00:00Z",
+            },
+            "future-dated or expired",
+        ),
+    ],
+)
+def test_signed_authorization_directive_and_time_policy_fail_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mutation: dict[str, str],
+    message: str,
+) -> None:
+    inputs = _write_inputs(tmp_path)
+    config = _config(tmp_path, monkeypatch, inputs, valid_full_governance=True)
+    authorization = Path(str(config.operator_authorization_path))
+    payload = json.loads(authorization.read_text(encoding="utf-8"))
+    payload.update(mutation)
+    if "operator_directive_verbatim" in mutation and "operator_directive_sha256" not in mutation:
+        payload["operator_directive_sha256"] = hashlib.sha256(
+            payload["operator_directive_verbatim"].encode()
+        ).hexdigest()
+    authorization.write_text(json.dumps(_sign_authorization(payload), sort_keys=True), encoding="utf-8")
+    config = replace(config, operator_authorization_sha256=_sha(authorization))
+    monkeypatch.setattr(bridge, "_committed_file_bytes", lambda _path: authorization.read_bytes())
+
+    with pytest.raises(bridge.BridgeAuthorizationError, match=message):
+        bridge._require_execution_authorization(config)
 
 
 def test_governed_full_missing_admission_marker_refuses_before_inputs_or_backend(

@@ -66,6 +66,18 @@ def contest_action(*, d_seg: float | int, d_pose: float | int, archive_bytes: in
     )
 
 
+def frontier_feasible_at_zero_pose_and_rate(*, d_seg: float | int, target_action: float | int) -> bool:
+    """Necessary frontier gate using the Seg term alone.
+
+    ``False`` is a hard impossibility result: non-negative Pose and rate terms
+    cannot rescue the row. ``True`` is only necessary, never sufficient.
+    """
+
+    measured_seg = _nonnegative_real(d_seg, "d_seg")
+    target = _nonnegative_real(target_action, "target_action")
+    return SEGMENTATION_WEIGHT * measured_seg < target
+
+
 def inclusive_maximum_byte_budget(*, target_action: float | int, d_seg: float | int, d_pose: float | int) -> int:
     """Return the greatest byte count whose action is at most ``target_action``."""
 
@@ -228,6 +240,20 @@ def _load_scoped_measurement(path: str | Path) -> tuple[dict, dict, dict]:
         raise ValueError("fixed-label palette anchor requires identical packet bytes")
     if winner["hard_mismatch_px"] >= source["hard_mismatch_px"]:
         raise ValueError("measured scoped winner must strictly improve the in-run source control")
+    correction = payload.get("operating_point_correction")
+    if not isinstance(correction, dict):
+        raise ValueError("measurement lacks the operating-point correction")
+    if correction.get("verdict") != "WRONG_OPERATING_POINT_WALL_CHARACTERIZATION":
+        raise ValueError("measurement operating-point verdict is not fail-closed")
+    target_action = _nonnegative_real(correction.get("target_action"), "operating_point.target_action")
+    measured_feasible = frontier_feasible_at_zero_pose_and_rate(
+        d_seg=winner["d_seg"],
+        target_action=target_action,
+    )
+    if measured_feasible or correction.get("frontier_feasible_even_at_zero_pose_zero_bytes") is not False:
+        raise ValueError("measurement operating point must fail the Seg-only frontier necessity gate")
+    if correction.get("n600_explicit_target_launch_eligible") is not False:
+        raise ValueError("infeasible explicit-target operating point must not authorize n600 scaling")
     return payload, source, winner
 
 
@@ -237,6 +263,7 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
     """Build the hash-bound, research-only canonical equation and n24 anchor."""
 
     payload, source, winner = _load_scoped_measurement(measurement_path)
+    correction = payload["operating_point_correction"]
     measurement_path_str = str(measurement_path)
     measured_utc = str(payload["utc"])
     provenance = build_provenance_for_research_sidecar(
@@ -261,6 +288,7 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
         },
         predicted_output={
             "fixed_byte_palette_winner_strictly_improves_source": True,
+            "winner_frontier_feasible_at_zero_pose_zero_rate": False,
             "full_archive_or_contest_score_claim": False,
         },
         empirical_output={
@@ -270,6 +298,10 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
             "winner_d_seg": winner["d_seg"],
             "winner_candidate_bytes": winner["candidate_bytes"],
             "winner_candidate_sha256": winner["candidate_sha256"],
+            "winner_seg_term": SEGMENTATION_WEIGHT * winner["d_seg"],
+            "target_action": correction["target_action"],
+            "winner_frontier_feasible_at_zero_pose_zero_rate": False,
+            "operating_point_verdict": correction["verdict"],
             "full_archive_or_contest_score_claim": False,
         },
         residual=0.0,
@@ -300,6 +332,8 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
             "research_only": True,
             "promotion_eligible": False,
             "full_archive_claim": False,
+            "operating_point_verdict": correction["verdict"],
+            "n600_explicit_target_launch_eligible": False,
         },
         units_in={
             "d_seg": "fraction",
@@ -354,6 +388,7 @@ __all__ = [
     "contest_action",
     "derive_research_only_decision",
     "fixed_byte_palette_delta",
+    "frontier_feasible_at_zero_pose_and_rate",
     "inclusive_maximum_byte_budget",
     "maximum_byte_budget",
     "populate_einstein_kolmogorov_crux_action_rate_contract_v1",

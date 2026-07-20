@@ -74,3 +74,51 @@ def test_restore_recreates_full_tree_and_refuses_overwrite(tmp_path: Path) -> No
             assert original.read_bytes() == (destination / original.relative_to(source)).read_bytes()
     with pytest.raises(EvidenceSealError, match="refusing to overwrite"):
         restore_bundle(sealed.bundle_path, destination, repo_root=tmp_path)
+
+
+def test_external_seal_path_is_rejected_without_creating_directories(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    source = _write_tree(repo_root)
+    external_parent = tmp_path / "external-seal"
+    destination = external_parent / "nested" / "sealed"
+
+    with pytest.raises(EvidenceSealError, match="inside repository root"):
+        seal_research_evidence(source, output_dir=destination, repo_root=repo_root)
+
+    assert not external_parent.exists()
+
+
+def test_external_restore_path_is_rejected_without_creating_directories(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    source = _write_tree(repo_root)
+    sealed = seal_research_evidence(source, output_dir=repo_root / "sealed", repo_root=repo_root)
+    external_parent = tmp_path / "external-restore"
+    destination = external_parent / "nested" / "restored"
+
+    with pytest.raises(EvidenceSealError, match="inside repository root"):
+        restore_bundle(sealed.bundle_path, destination, repo_root=repo_root)
+
+    assert not external_parent.exists()
+
+
+def test_symlink_components_are_rejected_before_seal_or_restore_mutation(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    source = _write_tree(repo_root)
+    sealed = seal_research_evidence(source, output_dir=repo_root / "sealed", repo_root=repo_root)
+    external = tmp_path / "external"
+    external.mkdir()
+    escape = repo_root / "escape"
+    escape.symlink_to(external, target_is_directory=True)
+
+    seal_destination = escape / "seal-parent" / "sealed"
+    with pytest.raises(EvidenceSealError, match="symbolic-link component"):
+        seal_research_evidence(source, output_dir=seal_destination, repo_root=repo_root)
+    assert not (external / "seal-parent").exists()
+
+    restore_destination = escape / "restore-parent" / "restored"
+    with pytest.raises(EvidenceSealError, match="symbolic-link component"):
+        restore_bundle(sealed.bundle_path, restore_destination, repo_root=repo_root)
+    assert not (external / "restore-parent").exists()

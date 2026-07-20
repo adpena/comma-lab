@@ -2672,7 +2672,9 @@ def _inflate_source_for_manifest(manifest: dict[str, Any]) -> str:
     if manifest.get("palette_residual") is not None:
         # EKPR1 is the first optional receiver path whose focused oracle executes the
         # complete shipped source on a tiny fixture. Bind the already-canonical clip
-        # profile into that fresh interpreter. Keep the legacy-absent source byte-identical.
+        # profile into that fresh interpreter. The absent LVLS1 payload remains
+        # byte-identical to the pre-EKPR payload; receiver source bytes intentionally
+        # grow to implement the optional parser and consumer.
         receiver_source = receiver_source.replace(
             "# SPDX-License-Identifier: MIT\n",
             "# SPDX-License-Identifier: MIT\n"

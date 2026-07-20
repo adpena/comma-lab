@@ -14,6 +14,13 @@ verdict_scope: CONSTRUCTIVE-DESIGN plus complete n24 palette/lossy-label compone
 > and metrics. Nonterminal construction receipts retain their historical v1 closure
 > and are explicitly non-authoritative for terminal runtime closure. Recursive
 > clean-pass review is still pending, so the clean count remains zero.
+> This landing upgrades all future checkpoints and receipts to closure v3, which
+> inventories every installed NumPy, Torch, Brotli, and safetensors distribution file
+> (including native libraries) and binds `uv.lock`; it does not retroactively relabel
+> the historical closure-v2 replay.
+> The operator's 2026-07-20T01:03:29Z correction additionally classifies the
+> n24 row as a **wall characterization, not a frontier operating point**. Its Seg
+> term alone is already above the pointer, so it cannot authorize n600 scaling.
 
 ## Answer first
 
@@ -36,7 +43,7 @@ supplies only the winner-rival margin needed where a flat cell cannot survive th
 nonlinear SegNet trunk.  A direct counted-payload-to-RGB decoder is a co-equal chart and
 is not required to expose `G`, `xi`, `T`, or exact target labels.
 
-**THE COMPLETED SCOPED UNIT (MEASURED through hard R):** the PDW1 packet already spends
+**THE COMPLETED SCOPED WALL CHARACTERIZATION (MEASURED through hard R):** the PDW1 packet already spends
 15 raw fill bytes per pair.  Changing
 those bytes does not change packet length.  The existing direct-plane positive control
 replaced per-pair source means with one global `5 x RGB` table and reduced n24 hard
@@ -52,6 +59,18 @@ simplification can exchange distortion for rate (`36,876` mismatches, 19,371 B a
 action by `0.0150610065`; that does not reject the joint family because frame-1 changes
 can change PoseNet and neither Pose nor total archive bytes were measured. These numbers
 are not a score and do not include a compact pose-closed frame-0 stream.
+
+**THE CORRECTED OPERATING-POINT VERDICT (DERIVED from measured rows):** the scoped
+incumbent's `d_seg=0.005678600735` is `37.369x` the solved v10 capstone bank
+`d_seg=0.00015196`. More decisively, its Seg term alone is `0.5678600735`, already
+`0.3767772493` above the `0.1910828242` pointer even at zero Pose and zero bytes.
+It is therefore mathematically incapable of moving the frontier. The capstone archive
+was re-hashed this session as
+`e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42`
+(409,526,925 bytes). The next chart must compose from that solved-distortion receiver
+mechanism and spend distortion for rate; it must not scale this cheap broken-distortion
+corner. The machine-readable correction is
+`einstein_kolmogorov_operating_point_correction_20260720.json`.
 
 ## Stores consulted
 
@@ -156,7 +175,7 @@ scopes and cannot be ranked as if they were a sealed same-input A/B:
 | family/chart | receiver-closed evidence | honest disposition |
 |---|---|---|
 | direct counted payload -> RGB (`yhat` rung B) | **MEASURED** 83,838-byte full archive; fresh n24 diagnostic `d_seg=0.0034556919`, `d_pose=63.0309157` | Direct-generator and lossy-cell control: it bypasses explicit `Q/G` labels, but Pose makes it noncompetitive and the row is n24 diagnostic only |
-| explicit fixed labels + palette (PDW1) | **MEASURED here** 19,859-byte n24 component; scoped Seg-only incumbent `d_seg=0.0056786007`; Pose unmeasured | Within-family Seg diagnostic complete; not a full archive or joint-action selection |
+| explicit fixed labels + palette (PDW1) | **MEASURED here** 19,859-byte n24 component; scoped Seg-only incumbent `d_seg=0.0056786007`; Pose unmeasured | Realization-wall characterization only; Seg term `0.56786` already exceeds the pointer, so n600 scaling is prohibited |
 | lossy row-run topology (PDW1) | **MEASURED here** source-fill rung 2: 19,371 B, `d_seg=0.0078150431`; graft on optimized fills worsens the Seg-plus-component-rate partial ordering | Genuine rate--distortion control; joint disposition remains unresolved without Pose and total archive bytes |
 | quotient/power packet (PDW2) | **MEASURED** 138 raw / 133 Brotli bytes and consumed; spatially non-identifying | Formulation-scoped blocker until a decoder-computable field/pullback exists |
 | `xi` temporal/Pose chart (settled R1) | **MEASURED prior** full-n600 macOS advisory: 89,772 B, `d_seg=0.0045491197`, `d_pose=0.0016095472` | In-box control, not a new result; packet bytes were deleted by the settled run |
@@ -407,32 +426,40 @@ The n24 **palette plus lossy-label component** tournament is complete at $0.  It
 a common-scale full-archive tournament and its output is a component candidate: it has
 no compact pose-compatible frame 0 and covers only 24 pairs.
 
-Promotion chain after a positive n24 result:
+Corrected promotion chain after the operating-point review:
 
-1. rerun the same receiver-closed palette law on all 600 pairs with preserved per-pair
-   checkpoints and exact batch/runtime custody;
-2. compile the chosen palette/structured residual into the 83,838-byte generator
-   receiver rather than shipping PDW1's full label maps;
-3. add the compact `xi` frame-0/frame-1 pose stream and measure exact PoseNet;
-4. build `archive.zip`, parse it back, run byte-identical inflate twice, and measure
+1. start from the banked v10 solved-distortion archive/receiver mechanism, preserving
+   its exact lattice realization and scorer-plane capability;
+2. introduce a decode-to-RGB/trade-cells rate lever inside that mechanism and measure a
+   bounded byte-closed row as `(bytes, d_seg, projected S)`, with Pose scope explicit;
+3. refuse n600 while the Seg term alone exceeds the pointer; require frontier-magnitude
+   `d_seg` near the bank or a byte-closed exact-action trajectory below `0.1910828242`;
+4. only after that gate, add/retain the compact `xi` frame-0/frame-1 Pose stream, scale
+   with preserved per-stage checkpoints, and measure exact PoseNet;
+5. build `archive.zip`, parse it back, run byte-identical inflate twice, and measure
    official `upstream/evaluate.py` on contest-CPU Linux x86_64;
-5. only then compare to 0.1910828242 or claim an in-box full witness.
+6. only then compare to 0.1910828242 or claim an in-box full witness.
 
 Step 2 now has a fail-closed native LVLS1 hook: optional `EKPR1` signed-int8
 `[pair,class,RGB]` residuals are strictly bound to the manifest and applied by
 `phi.argmax` to frame 1 before AA/lane/R in both the inline receiver and NumPy oracle.
-Legacy-absent output is byte-identical, mutation canaries prove consumption, and the cap
-path repacks the section. The measured n24 tensor is deliberately refused by the n600
+The absent **LVLS1 payload** matches the pre-EKPR golden bytes; receiver source bytes
+intentionally grow to implement the parser and consumer. Mutation canaries prove
+consumption, and the cap path repacks the section. The measured n24 tensor is deliberately refused by the n600
 receiver, so no full candidate has been grafted and the real n600 residual payload is
 still owed. A typed cross-checkpoint xi bridge closes the pose-composition call surface, but governed n600
 execution failed before loading its 5.08 GB GT cache because this sandbox cannot write
-the mandatory SSD evidence tier.  Even with filesystem access, the backend now refuses
-unless a committed hash-bound operator authorization, governed-admission marker, live
+the mandatory SSD evidence tier. Even with filesystem access, the backend now refuses
+unless a committed hash-bound **Ed25519-signed v2** operator authorization from an
+allowlisted trust-root approver, governed-admission marker, live
 matching lane claim, and executable backend resume ABI prove checkpoint/resume roundtrip
 and preserved atomic per-stage checkpoints. Declarative resume JSON is non-authorizing.
-These are execution-surface blockers, not xi-family negatives. Zero-cost
-local full work is authorized; only paid dispatch remains operator-GO gated.  The pointer
-is unchanged.
+The trust root is currently absent, so committed JSON is custody only and execution
+fails closed even after the resume ABI lands.
+These are execution-surface blockers, not xi-family negatives. The operator directed
+zero-cost local pursuit, but the executable full-run gate remains closed until its
+separate signed authorization exists; paid dispatch remains operator-GO gated. The
+pointer is unchanged.
 
 ## 6. Build and measurement result
 
@@ -466,6 +493,12 @@ lossy-label rung demonstrates the operator-directed rate--distortion move, but i
 graft pays more Seg term than its 488-byte component-rate saving buys. This establishes
 only a worse partial ordering; it neither admits nor rejects the joint family.
 
+The later operating-point audit supersedes any headline interpretation of that local
+improvement: `0.005678600735 / 0.00015196 = 37.369`. Since `100*d_seg=0.5678600735`
+before Pose or rate, this chart is infeasible against the pointer even with both other
+terms set to zero. It characterizes the explicit-target realization wall; it is not a
+candidate or a launch predecessor.
+
 No new full-n600 in-box point was produced.  The existing settled R1 89,772-byte
 macOS-CPU advisory row remains a control, not this lane's result.  The attempted xi
 composition created neither packet nor receipt: the strict SSD preflight raised
@@ -476,6 +509,8 @@ hashes, including the 5,078,017,610-byte GT cache. The full 1,638-file,
 content-addressed, verified bundles staged for MAIN landing; the former passed a real
 byte-identical restore check. Exact custody and the heterogeneous cross-family evidence
 inventory are in `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json`;
+the corrected bank-vs-wall comparison is in
+`.omx/research/einstein_kolmogorov_operating_point_correction_20260720.json`;
 the executable state transition is in
 `einstein_kolmogorov_crux_DAG_FEED_20260719.md`.
 
