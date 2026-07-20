@@ -2,8 +2,10 @@
 
 `2026-07-20T18:24:04Z` · `research_only=true` · `$0 local` · no training/provider dispatch · no promotion authority
 
-Authority: `codex_delegate:latticesieve_crosswalk:20260720T180654Z`  
-Verdict scope: mechanism crosswalk plus one SHA-pinned frame-0 basis-reachability measurement  
+Authority: `codex_delegate:latticesieve_crosswalk:20260720T180654Z`
+
+Verdict scope: mechanism crosswalk plus one SHA-pinned frame-0 basis-reachability measurement
+
 Pointer delta: **none** — `0.19108 [contest-CPU]` remains unchanged
 
 ## Outcome
