@@ -203,6 +203,7 @@ except Exception:  # standalone fallback (clip_profile cache absent) — documen
     CAMERA_H, CAMERA_W = 874, 1164
     RATE_DENOM = 37_545_489.0
     _CP_XI_FX, _CP_XI_CX, _CP_XI_CY, _CP_XI_D = 910.0, 582.0, 437.0, 1.22
+_XI_CAMERA_CONTRACT_MARKER = "# __EMIT_HASH_BOUND_XI_CAMERA_CONTRACT__"
 _MAGIC = b"LVLS1\x00"  # level-set softmax-of-SDF carrier v1
 _PCAR_MAGIC = b"PCAR1\x00"  # #205 pose carrier: warp-real-luma frame0 (stored keyframe luma + per-pair homography)
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
@@ -391,6 +392,65 @@ def receiver_env_manifest() -> dict[str, Any]:
             "tool emits NO portable sha256-of-.raw authority claim; the .raw is verified PER HOST via "
             "the --verify-bit-exact round-trip gate. CPU and CUDA are separate evidence axes."),
     }
+
+
+def xi_receiver_camera_contract() -> dict[str, Any]:
+    """Return the canonical, hash-bound camera constants emitted into ``inflate.py``.
+
+    ``_INFLATE_PY`` is a raw source template, so module globals are not in scope when
+    the shipped receiver executes.  Keep the clip-profile values in one canonical JSON
+    string and bind that exact string before materializing the four runtime constants.
+    The values are generic receiver mechanism (rule 118), not video-derived payload.
+    """
+
+    values = {
+        "cx": float(_CP_XI_CX),
+        "cy": float(_CP_XI_CY),
+        "device_height_m": float(_CP_XI_D),
+        "fx_native": float(_CP_XI_FX),
+    }
+    canonical_json = json.dumps(values, sort_keys=True, separators=(",", ":"))
+    return {
+        "schema": "xi_receiver_camera_contract.v1",
+        "values": values,
+        "canonical_json": canonical_json,
+        "canonical_json_sha256": hashlib.sha256(canonical_json.encode("ascii")).hexdigest(),
+        "source": "tac.clip_profile.for_video(upstream/videos/0.mkv) with documented fallback",
+        "counted_payload_bytes": 0,
+    }
+
+
+def _render_hash_bound_xi_camera_contract() -> str:
+    contract = xi_receiver_camera_contract()
+    canonical_json = contract["canonical_json"]
+    digest = contract["canonical_json_sha256"]
+    return "\n".join(
+        (
+            f"_XI_CAMERA_CONTRACT_JSON = {canonical_json!r}",
+            f"_XI_CAMERA_CONTRACT_SHA256 = {digest!r}",
+            "if hashlib.sha256(_XI_CAMERA_CONTRACT_JSON.encode('ascii')).hexdigest() != _XI_CAMERA_CONTRACT_SHA256:",
+            "    raise RuntimeError('xi camera contract hash mismatch')",
+            "_xi_camera_contract = json.loads(_XI_CAMERA_CONTRACT_JSON)",
+            "_CP_XI_FX = float(_xi_camera_contract['fx_native'])",
+            "_CP_XI_CX = float(_xi_camera_contract['cx'])",
+            "_CP_XI_CY = float(_xi_camera_contract['cy'])",
+            "_CP_XI_D = float(_xi_camera_contract['device_height_m'])",
+            "del _xi_camera_contract",
+        )
+    )
+
+
+def _bind_xi_camera_contract(inflate_template: str) -> str:
+    marker_count = inflate_template.count(_XI_CAMERA_CONTRACT_MARKER)
+    if marker_count != 1:
+        raise RuntimeError(
+            "inflate source must contain exactly one xi camera-contract marker; "
+            f"found {marker_count}"
+        )
+    return inflate_template.replace(
+        _XI_CAMERA_CONTRACT_MARKER,
+        _render_hash_bound_xi_camera_contract(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1445,7 +1505,7 @@ _INFLATE_PY = r'''#!/usr/bin/env python3
 import os
 for _tv in ("VECLIB_MAXIMUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
     os.environ.setdefault(_tv, "1")  # 1-thread BLAS/worker (set BEFORE numpy import); user-overridable
-import sys, json, struct, math, multiprocessing as mp
+import sys, json, struct, math, hashlib, multiprocessing as mp
 from bisect import bisect_right as _bisect_right  # #257 ξ arithmetic decoder (pure stdlib)
 import numpy as np
 import brotli
@@ -2035,6 +2095,7 @@ def _R(rgb, rh, rw, ch, cw):
 _ST_BITS = 32; _FULL = 1 << _ST_BITS; _HALF = _FULL >> 1; _QTR = _HALF >> 1; _TQTR = _QTR * 3
 # (#328 clip_profile Phase-2) sourced from the module-level profile resolution above
 # (MEASURED-ANCHOR > literal fallback; byte-identical on 0.mkv — 910/582/437/1.22).
+# __EMIT_HASH_BOUND_XI_CAMERA_CONTRACT__
 _XI_FX = _CP_XI_FX; _XI_CX = _CP_XI_CX; _XI_CY = _CP_XI_CY; _XI_D = _CP_XI_D; _XI_EPS = 1e-6
 
 
@@ -2549,6 +2610,7 @@ def main():
 if __name__ == "__main__":
     main()
 '''
+_INFLATE_PY = _bind_xi_camera_contract(_INFLATE_PY)
 
 _INFLATE_SH = """#!/usr/bin/env bash
 # Level-set inflate launcher. Produces <OUTPUT_DIR>/<base>.raw = flat uint8 (N,874,1164,3).
@@ -4011,6 +4073,9 @@ def run(
             "zip_container_overhead_bytes": zip_bytes - breakdown["total_0bin_bytes"],
             "rate": rate, "rate_term": rate_term, "rate_denom_bytes": int(RATE_DENOM),
             "archive_zip_sha256": hashlib.sha256(zip_path.read_bytes()).hexdigest(),
+            "inflate_py_bytes": (packet_dir / "inflate.py").stat().st_size,
+            "inflate_py_sha256": hashlib.sha256((packet_dir / "inflate.py").read_bytes()).hexdigest(),
+            "xi_receiver_camera_contract": xi_receiver_camera_contract(),
             "free_vs_counted": {
                 "FREE_rule118": "curvelet bank (5 scalars) + self-orient directional feats "
                                 "(decoder-own-argmax fixed point) -- generic algorithm, 0 bytes",
