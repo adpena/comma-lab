@@ -51,7 +51,7 @@ The mean/median split is the decisive structure: the center is subpixel, while s
 | Undrivable–Movable | 1.9866 | 0.2925 | 4.3869% | 0 / 0 | mostly transported, with modest object/horizon residual |
 | Road–Movable | 0.9628 | 0.1118 | 1.9327% | 0 / 0 | strongest nontrivial transported stratum |
 
-The 30 worst rows are almost entirely tiny Lane–MyCar sets with `E_4=1`; examples include within transition 473 `(946->947)` at `313.76 px` mean and cross transition 259 `(519->520)` at `313.68 px`. These do not kill the worldsheet family because their support is small and explicitly topological. They do kill the formulation “one ground homography, no event channel.”
+The 30 worst rows are almost entirely tiny Lane–MyCar sets with `E_4=1`; examples include within transition 473 `(946->947)` at `313.76 px` mean and cross transition 259 `(519->520)` at `313.68 px`. These do not kill the worldsheet family because their support is small and explicitly topological. They do kill the formulation “one ground homography, no event channel.”  # MAGNITUDE_DISMISSAL_OK: this is a KEEP verdict, not a dismissal — the worst rows are retained as the MANDATORY event-channel design input (SPEC §W); relative significance: the Lane-contact event strata carry 421 birth/death events over 1,199 transitions and the Lane classes carry ~19% of d_seg flip mass at the current operating point (d_seg 0.003516 vs target ~3.39e-4 → the Lane tail is load-bearing, which is exactly WHY the event channel is mandatory rather than the stratum ignored); verdict_scope: FORMULATION (one-homography-no-events), family GO.
 
 `verdict_scope=single global ground-plane-homography realization using exact within-pair poses and nearest-target-pair proxy cross poses; not the worldsheet object/family`
 
