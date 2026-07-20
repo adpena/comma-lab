@@ -6,6 +6,7 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-07-20T18:24:48Z | codex:gpt-5.6-sol | lane_r1b2_mdl_xi0_compile_20260720 | local | r1b2_mdl_xi0_compile_20260720T174300Z |  | completed_partial_blocked | Delegated deliverable committed at 8fb239c6d8; scientific verdict partial blocked at 184/600 VJP custody, no candidate, pointer unchanged, MAIN review required. |
 | 2026-07-20T17:49:26Z | codex:gpt-5.6-sol | lane_r1b2_mdl_xi0_compile_20260720 | local | r1b2_mdl_xi0_compile_20260720T174300Z |  | build | Delegated isolated-worktree $0 local build/measure only; no paid dispatch; macOS-CPU advisory. |
 | 2026-07-20T16:27:04Z | codex:gpt-5.6-sol-high | r1b_boundary_generator_solve_20260720T161946Z | local | r1b_boundary_generator_solve_20260720T161946Z |  | build | $0 local joint boundary-generator and hard-oracle solve; no paid dispatch or training; MAIN review required |
 | 2026-07-20T16:14:36Z | codex:gpt-5.6-sol-high | lane_r1_shared_receiver_20260720T151631Z | local | r1_shared_receiver_20260720T151631Z |  | completed_measured_formulation_blocker | R1 local $0 landing complete pending serializer: exact dense section 561502227 B, scoped blocker SHARED_RECEIVER_COUNTED_SPATIAL_HARD_ORACLE_INTERSECTION_EMPTY, Sol-high final PASS, pointer unchanged, MAIN review required |
