@@ -48,6 +48,7 @@ from tac.boundary_math.power_diagram_witness import (
     decode_pdw2,
     encode_pdw2,
 )
+from tac.boundary_math.shared_receiver_admission import BLOCKER_ID as SHARED_RECEIVER_BLOCKER_ID
 from tac.witness_dsl.integer_plane_emitter_policy import (
     IntegerPlaneEmitterStageCheckpoint,
     PolicyMode,
@@ -196,8 +197,10 @@ def build_counted_archive(
 
     if pdw2_role != PDW2_ROLE:
         raise C2ByteCloseError(
-            "PDW2 receiver-consumed authority refused: #553 is target-only and the scorer-free "
-            "spatial/RGB pullback is not implemented by the #543 factor-2 receiver"
+            "PDW2 receiver-consumed authority refused: "
+            f"{SHARED_RECEIVER_BLOCKER_ID}; #553 is target-only and the scorer-free "
+            "spatial/RGB pullback plus n600 hard-oracle admission are not implemented "
+            "by the #543 factor-2 receiver"
         )
     try:
         pdw2 = bytes(pdw2_packet)
