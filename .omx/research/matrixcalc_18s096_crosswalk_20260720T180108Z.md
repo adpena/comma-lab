@@ -1,9 +1,9 @@
 # MIT 18.S096 matrix-calculus crosswalk into Pact
 
-**UTC:** 2026-07-20T18:01:08Z  
-**Lane:** `lane_matrixcalc_18s096_crosswalk_20260720` (`L0`, `research_only=true`)  
-**Authority:** read/analyze/write only; `$0`; no training, scorer actuation, archive mutation, or dispatch  
-**Pointer:** `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**  
+**UTC:** 2026-07-20T18:01:08Z
+**Lane:** `lane_matrixcalc_18s096_crosswalk_20260720` (`L0`, `research_only=true`)
+**Authority:** read/analyze/write only; `$0`; no training, scorer actuation, archive mutation, or dispatch
+**Pointer:** `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**
 **Landing:** isolated worktree; independent **MAIN landing review is required**
 
 ## Verdict first
