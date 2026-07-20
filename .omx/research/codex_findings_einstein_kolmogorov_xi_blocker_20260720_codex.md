@@ -1,10 +1,15 @@
 # Einstein--Kolmogorov xi blocker: rate passes, residual cells fail
 
-UTC: 2026-07-20T07:30:48Z  
-lane_id: `lane_einstein_kolmogorov_crux_v2_20260720`  
-deliverable: **B -- measured, formulation-scoped xi blocker**  
-research_only: true  
-pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED  
+UTC: 2026-07-20T07:30:48Z
+
+lane_id: `lane_einstein_kolmogorov_crux_v2_20260720`
+
+deliverable: **B -- measured, formulation-scoped xi blocker**
+
+research_only: true
+
+pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED
+
 promotion_claim: false
 
 ## Answer first
