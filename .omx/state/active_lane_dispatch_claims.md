@@ -6,6 +6,7 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-07-20T16:30:10Z | codex:gpt-5.6-sol | regmax_family_probes | macos_cpu_local | regmax_family_probes_20260720T160907Z |  | completed_local_probe_n_a | Completed three preregistered bounded probes: full n600 target characterization measured; all terminal matched receiver verdicts N-A; no score or pointer change |
 | 2026-07-20T16:16:48Z | codex:gpt-5.6-sol | regmax_family_probes | macos_cpu_local | regmax_family_probes_20260720T160907Z |  | active_local_cpu_probe | Local zero-dollar bounded probe arm; no paid dispatch, no evaluator score, pointer unchanged |
 | 2026-07-19T19:59:32Z | codex:m1_glue_rebuild | lane_m1_c2_banded_generator_glue_rebuild_20260719 | local_macos_cpu | m1_c2_glue_rebuild_local_20260719T190054Z |  | refused_full_fire_missing_receiver_ev_curvelet | Bounded n6 zero-control completed; full n600 fire refused. Exact blockers in rebuild receipt. No paid dispatch, score, promotion, or pointer mutation; MAIN review required. |
 | 2026-07-19T19:07:05Z | codex:m1_glue_rebuild | lane_m1_c2_banded_generator_glue_rebuild_20260719 | local_macos_cpu | m1_c2_glue_rebuild_local_20260719T190054Z |  | active_local_build_no_heavy_launch | Task #575 integration-glue rebuild only: band trainer, effective DSL policy consumption, counted byte-close adapter, bounded n600-shape smoke. No governed n600 training launch, paid dispatch, score, promotion, or pointer authority. MAIN landing review required. |

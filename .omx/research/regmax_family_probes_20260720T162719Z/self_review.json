@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "all_receipts_canonical_json": true,
+    "all_receipts_falsifier_evaluated_false": true,
+    "all_receipts_hard_accepts_null": true,
+    "all_receipts_oracle_calls_null": true,
+    "all_receipts_same_coder_bytes_null": true,
+    "all_receipts_verdict_n_a": true,
+    "focused_tests": "4 passed",
+    "independent_margin_ge_1_count": 114818787,
+    "receipt_margin_ge_1_count": 114818787,
+    "ruff": "All checks passed"
+  },
+  "method": "One bounded independent pass: re-read the raw fp16 n600 logits; count top1-top2 >= 1 without calling the probe implementation; compare against the sparsemax receipt; parse and canonical-reencode all three receipts; verify N-A/null terminal authority fields; rerun focused tests and ruff.",
+  "result": "CLEAN",
+  "schema": "regmax_family_probe_self_review.v1",
+  "scope": "single bounded post-measurement self-review; not a MAIN landing review"
+}

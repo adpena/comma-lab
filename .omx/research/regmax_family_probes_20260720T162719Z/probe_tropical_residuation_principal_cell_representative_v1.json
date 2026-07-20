@@ -1,0 +1,64 @@
+{
+  "axis": "[macOS-CPU advisory] target-cache analysis; no score authority",
+  "blockers": [
+    "missing canonical registration aurenhammer_min_generator_lp_v1",
+    "missing canonical registration rank4_principal_cell_inequality_fixture_v1"
+  ],
+  "candidate_bytes_same_coder": null,
+  "created_at_utc": "2026-07-20T16:27:19Z",
+  "exact_oracle_calls": null,
+  "falsifier": "FALSIFIED if the gauge-fixed principal representative changes the hard cell, is longer after the same coder, or requires uncounted state.",
+  "falsifier_evaluated": false,
+  "git_head": "35ef3613caf2c1bfa765c1529fc3d648396e6e2e",
+  "hard_accepts": null,
+  "hard_cpu_torch_oracle": {
+    "authority": "terminal HARD_ACCEPT only after decoded uint8 candidate parse-back",
+    "invoked": false,
+    "reason": "no receiver candidate exists without the missing registered surfaces"
+  },
+  "inputs": {
+    "hard_labels": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8",
+      "sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68"
+    },
+    "logits": {
+      "bytes": 1179648000,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16",
+      "sha256": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52"
+    },
+    "registry": {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/regmax_family_probes_20260720T160907Z/.omx/state/canonical_equations_registry.jsonl",
+      "sha256": "32156d4105fee668c047176a618d6c1b3ba6a4af3e6ced8273fd93bb9889d6d1"
+    },
+    "scale": 1.0,
+    "shape": [
+      600,
+      5,
+      384,
+      512
+    ]
+  },
+  "partial_measurement": {
+    "reason": "The branch has the exact rank-4 head law but no registered A,b principal-cell fixture and no Aurenhammer same-coder comparator. Constructing either here would redesign the preregistered probe.",
+    "status": "NOT_RUN_NO_MATCHED_COMPARATOR"
+  },
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "probe_id": "probe_tropical_residuation_principal_cell_representative_v1",
+  "promotion_eligible": false,
+  "registered_surface_presence": {
+    "aurenhammer_comparator": false,
+    "preimage_adapter": false,
+    "principal_cell_fixture": false,
+    "valid_cell_prototypes": false
+  },
+  "runtime": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "schema": "regmax_family_probe_receipt.v1",
+  "score_claim": false,
+  "verdict": "N-A",
+  "verdict_scope": "matched preregistered formulation on this branch"
+}
