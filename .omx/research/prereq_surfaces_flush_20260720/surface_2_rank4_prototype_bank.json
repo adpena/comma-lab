@@ -1,0 +1,39 @@
+{
+  "affine_bias_sha256": "623dc41948d9479c0f2b23dbb174c850b79c4988f4ff482780532d71a7697d46",
+  "affine_weight_sha256": "44a33ca5b57a452affa98e5686c6cccfab72b7309c48d7911bc14bd4e4714675",
+  "authority": "REAL_FROZEN_WEIGHTS_LOCAL_STRUCTURAL_READINESS",
+  "canonical_equation": "segnet_head_rank4_linear_flipdist_v1",
+  "class_count": 5,
+  "consumer": "regmax_probe3_and_r1b_opportunistic_reuse",
+  "frozen_head": "segmentation_head.0.weight (5,16,3,3) + bias (5,)",
+  "frozen_weights_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+  "frozen_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+  "gauge": "PDW2_REFERENCE_CLASS_AFFINE_GAUGE",
+  "pdw2_packet_bytes": 142,
+  "pdw2_packet_sha256": "756d5a70893ce23d6b1929807e5a0efadf50b2ed68527ed2c4029eadd98b6467",
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "promotion_eligible": false,
+  "prototype_labels": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "prototype_margins": [
+    0.9999999403953552,
+    0.9999999403953552,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "prototype_sha256": "5ce0458949acb1cde21022aef7bf642b4491ddb03d1ab66838866b20cb7b162f",
+  "quotient_basis_sha256": "36c759c6fadcb60d73d18b411707dc207b28d90f404f77f6417238d9f824e2f5",
+  "rank": 4,
+  "rank4_reconstruction_maxabs_fp32": 2.9802322387695312e-08,
+  "reference_class": 0,
+  "required_margin": 1.0,
+  "schema": "rank4_valid_cell_prototypes_v1",
+  "score_claim": false,
+  "sealed_rank4_reconstruction_fp32_floor": 5.960464477539063e-08
+}

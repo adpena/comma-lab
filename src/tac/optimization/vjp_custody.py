@@ -20,8 +20,13 @@ import numpy as np
 
 MANIFEST_SCHEMA = "vjp_custody_manifest.v1"
 PAIR_SCHEMA = "vjp_custody_pair.v1"
+NATIVE_REFRESH_PAIR_SCHEMA = "vjp_custody_pair_native_refresh.v1"
 RECEIVER_ARITHMETIC = "native_float32_cpu_torch"
 ACTIVE_ARRANGEMENT = "cached_winner_native_rival"
+NATIVE_REFRESH_ARRANGEMENT = "fresh_native_winner_native_rival"
+ACTIVE_ARRANGEMENTS = frozenset((ACTIVE_ARRANGEMENT, NATIVE_REFRESH_ARRANGEMENT))
+CACHE_VERIFIED_WINNER_SOURCE = "cached_lstars_verified_against_fresh_native_fp32_logits"
+NATIVE_REFRESH_WINNER_SOURCE = "fresh_native_fp32_logits_not_cached"
 REPRESENTATION = "solver_scorer_plane_y_with_camera_adjoint_x"
 CAMERA_HW = (874, 1164)
 SCORER_HW = (384, 512)
@@ -272,6 +277,7 @@ def compute_pair_derivatives(
     segnet: Any,
     posenet: Any,
     torch: Any,
+    refresh_native_winner: bool = False,
 ) -> dict[str, Any]:
     """Compute real frozen scorer VJPs for one camera-frame pair."""
 
@@ -280,9 +286,9 @@ def compute_pair_derivatives(
     from tac.differentiable_eval_roundtrip import differentiable_rgb_to_yuv6
 
     f0, f1 = np.asarray(frame0), np.asarray(frame1)
-    winner = np.asarray(cached_winner, dtype=np.int64)
+    cached_winner_array = np.asarray(cached_winner, dtype=np.int64)
     margin = np.asarray(cached_margin, dtype=np.float32)
-    camera_hw, scorer_hw = f0.shape[:2], winner.shape
+    camera_hw, scorer_hw = f0.shape[:2], cached_winner_array.shape
     if f0.shape != (*camera_hw, 3) or f1.shape != f0.shape or f0.dtype != np.uint8 or f1.dtype != np.uint8:
         raise VJPCustodyError("producer frames must be same-shape camera uint8 HWC")
     if scorer_hw != SCORER_HW or camera_hw != CAMERA_HW:
@@ -299,11 +305,13 @@ def compute_pair_derivatives(
         raise VJPCustodyError(f"unexpected SegNet logits shape: {tuple(logits.shape)}")
     native_winner_t = logits[0].argmax(dim=0)
     native_winner = native_winner_t.detach().cpu().numpy().astype(np.int64)
-    if not np.array_equal(native_winner, winner):
-        mismatch = int(np.count_nonzero(native_winner != winner))
+    winner_mismatch = int(np.count_nonzero(native_winner != cached_winner_array))
+    if winner_mismatch and not refresh_native_winner:
         raise VJPCustodyError(
-            f"pair {pair_id} active arrangement incompatible: cached/native winner mismatch pixels={mismatch}"
+            f"pair {pair_id} active arrangement incompatible: "
+            f"cached/native winner mismatch pixels={winner_mismatch}"
         )
+    winner = native_winner if refresh_native_winner else cached_winner_array
     masked = logits[0].detach().clone()
     masked.scatter_(0, native_winner_t.unsqueeze(0), -torch.inf)
     rival_t = masked.argmax(dim=0)
@@ -339,7 +347,7 @@ def compute_pair_derivatives(
         "mean_abs": float(np.mean(margin_abs)),
         "allclose_rtol_1e-4_atol_1e-5": bool(np.allclose(native_margin, margin, rtol=1e-4, atol=1e-5)),
     }
-    if not margin_agreement["allclose_rtol_1e-4_atol_1e-5"]:
+    if not margin_agreement["allclose_rtol_1e-4_atol_1e-5"] and not refresh_native_winner:
         raise VJPCustodyError(f"pair {pair_id} cached/native margin agreement failed: {margin_agreement}")
 
     scalar = (native_margin_t / norms_t).sum(dtype=torch.float64)
@@ -428,7 +436,7 @@ def compute_pair_derivatives(
         for y, x in seed_points
     ]
 
-    return {
+    result = {
         "pair_id": int(pair_id),
         "winner": winner.astype(np.int8),
         "rival": rival.astype(np.int8),
@@ -445,8 +453,10 @@ def compute_pair_derivatives(
             "head_kernel_shape": list(head_weight.shape),
             "unit_head_normal_max_error": unit_normal_max_error,
             "seed_class_and_sign_review": seed_sign_review,
-            "cached_native_winner_agreement": True,
+            "cached_native_winner_agreement": winner_mismatch == 0,
+            "cached_native_winner_mismatch_pixels": winner_mismatch,
             "cached_native_margin_agreement": margin_agreement,
+            "native_refresh_authorized": bool(refresh_native_winner),
             "seg_directional_fd": {
                 "epsilon": epsilon,
                 "finite_difference": finite_difference,
@@ -457,20 +467,32 @@ def compute_pair_derivatives(
             "pose_yuv6_forward_max_abs": pose_forward_max_abs,
             "pose_A_transpose_max_abs_residual": pose_adjoint_residual,
         },
+        "pair_schema": NATIVE_REFRESH_PAIR_SCHEMA if refresh_native_winner else PAIR_SCHEMA,
+        "active_arrangement": (
+            NATIVE_REFRESH_ARRANGEMENT if refresh_native_winner else ACTIVE_ARRANGEMENT
+        ),
+        "winner_source": (
+            NATIVE_REFRESH_WINNER_SOURCE if refresh_native_winner else CACHE_VERIFIED_WINNER_SOURCE
+        ),
     }
+    if refresh_native_winner:
+        result["cached_winner"] = cached_winner_array.astype(np.int8)
+    return result
 
 
 def pair_metadata(arrays: dict[str, Any], hashes: dict[str, str]) -> dict[str, Any]:
-    tensor_keys = (
+    tensor_keys = [
         "winner", "rival", "cached_margin", "native_margin", "head_pair_norms",
         "seg_g_y", "seg_g_x", "seg_q", "seg_local_lipschitz", "pose_j_y", "pose_j_x",
-    )
+    ]
+    if "cached_winner" in arrays:
+        tensor_keys.append("cached_winner")
     return {
-        "schema": PAIR_SCHEMA,
+        "schema": arrays.get("pair_schema", PAIR_SCHEMA),
         "pair_id": int(arrays["pair_id"]),
         "receiver_arithmetic": RECEIVER_ARITHMETIC,
-        "active_arrangement": ACTIVE_ARRANGEMENT,
-        "winner_source": "cached_lstars_verified_against_fresh_native_fp32_logits",
+        "active_arrangement": arrays.get("active_arrangement", ACTIVE_ARRANGEMENT),
+        "winner_source": arrays.get("winner_source", CACHE_VERIFIED_WINNER_SOURCE),
         "rival_source": "fresh_native_fp32_logits_highest_nonwinner_not_cached",
         "representation": REPRESENTATION,
         "source_hashes": hashes,
@@ -537,17 +559,23 @@ def _load_pair(
             "head_pair_norms", "seg_g_y", "seg_g_x", "seg_q", "seg_local_lipschitz",
             "pose_j_y", "pose_j_x",
         }
+        if "custody_json" not in data.files:
+            raise VJPCustodyError("pair sidecar lacks custody metadata")
+        metadata = json.loads(str(np.asarray(data["custody_json"]).reshape(())))
+        if metadata.get("schema") == NATIVE_REFRESH_PAIR_SCHEMA:
+            required.add("cached_winner")
         missing = required.difference(data.files)
         if missing:
             raise VJPCustodyError(f"pair sidecar lacks keys: {sorted(missing)}")
-        metadata = json.loads(str(np.asarray(data["custody_json"]).reshape(())))
         values = {key: np.asarray(data[key]).copy() for key in required - {"custody_json"}}
     pair_id = int(np.asarray(values.pop("pair_id")).reshape(()))
     if pair_id != int(row["pair_id"]) or metadata.get("pair_id") != pair_id:
         raise VJPCustodyError("pair id differs across manifest, NPZ, and custody metadata")
-    if metadata.get("schema") != PAIR_SCHEMA:
+    pair_schema = metadata.get("schema")
+    if pair_schema not in {PAIR_SCHEMA, NATIVE_REFRESH_PAIR_SCHEMA}:
         raise VJPCustodyError("pair custody schema mismatch")
-    if metadata.get("winner_source") != "cached_lstars_verified_against_fresh_native_fp32_logits":
+    winner_source = metadata.get("winner_source")
+    if winner_source not in {CACHE_VERIFIED_WINNER_SOURCE, NATIVE_REFRESH_WINNER_SOURCE}:
         raise VJPCustodyError("pair winner source declaration mismatch")
     if metadata.get("rival_source") != "fresh_native_fp32_logits_highest_nonwinner_not_cached":
         raise VJPCustodyError("pair rival source declaration mismatch")
@@ -568,6 +596,8 @@ def _load_pair(
         "pose_j_y": (np.dtype("float32"), (6, 2, *scorer_hw, 3)),
         "pose_j_x": (np.dtype("float32"), (6, 2, *camera_hw, 3)),
     }
+    if pair_schema == NATIVE_REFRESH_PAIR_SCHEMA:
+        expected["cached_winner"] = (np.dtype("int8"), scorer_hw)
     for key, (dtype, shape) in expected.items():
         value = values[key]
         declared = metadata.get("tensors", {}).get(key, {})
@@ -587,8 +617,22 @@ def _load_pair(
         or np.any(values["head_pair_norms"] <= 0)
     ):
         raise VJPCustodyError(f"pair {pair_id} active arrangement is invalid")
-    if not np.allclose(values["cached_margin"], values["native_margin"], rtol=1e-4, atol=1e-5):
-        raise VJPCustodyError(f"pair {pair_id} cached/native margin agreement failed")
+    checks = metadata.get("checks", {})
+    if pair_schema == PAIR_SCHEMA:
+        if metadata.get("active_arrangement") != ACTIVE_ARRANGEMENT:
+            raise VJPCustodyError("cached pair active-arrangement declaration mismatch")
+        if winner_source != CACHE_VERIFIED_WINNER_SOURCE:
+            raise VJPCustodyError("cached pair winner-source declaration mismatch")
+        if not np.allclose(values["cached_margin"], values["native_margin"], rtol=1e-4, atol=1e-5):
+            raise VJPCustodyError(f"pair {pair_id} cached/native margin agreement failed")
+    else:
+        if metadata.get("active_arrangement") != NATIVE_REFRESH_ARRANGEMENT:
+            raise VJPCustodyError("native-refresh active-arrangement declaration mismatch")
+        if winner_source != NATIVE_REFRESH_WINNER_SOURCE or checks.get("native_refresh_authorized") is not True:
+            raise VJPCustodyError("native-refresh authorization/source declaration mismatch")
+        mismatch = int(np.count_nonzero(values["cached_winner"] != values["winner"]))
+        if checks.get("cached_native_winner_mismatch_pixels") != mismatch:
+            raise VJPCustodyError("native-refresh cached/native winner mismatch custody failed")
     rebuilt = values["seg_local_lipschitz"][..., None] * values["seg_q"]
     if not np.allclose(rebuilt, values["seg_g_y"], rtol=2e-6, atol=2e-7):
         raise VJPCustodyError(f"pair {pair_id} Seg VJP factorization failed")
@@ -629,12 +673,13 @@ def load_vjp_manifest(
     expected_common = {
         "schema": MANIFEST_SCHEMA,
         "receiver_arithmetic": RECEIVER_ARITHMETIC,
-        "active_arrangement": ACTIVE_ARRANGEMENT,
         "representation": REPRESENTATION,
     }
     for key, expected in expected_common.items():
         if manifest.get(key) != expected:
             raise VJPCustodyError(f"VJP manifest {key} mismatch")
+    if manifest.get("active_arrangement") not in ACTIVE_ARRANGEMENTS:
+        raise VJPCustodyError("VJP manifest active_arrangement mismatch")
     claimed_manifest_hash = manifest.get("manifest_content_sha256")
     actual_manifest_hash = hashlib.sha256(
         canonical_json({key: value for key, value in manifest.items() if key != "manifest_content_sha256"})

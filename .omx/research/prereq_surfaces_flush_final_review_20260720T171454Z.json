@@ -1,0 +1,59 @@
+{
+  "authority": "bounded Sol-high base-to-branch implementation and custody review; local non-score",
+  "base_commit": "8680c8e4f6ed2fe4186be7d9e60ebb9459183cc7",
+  "branch_head_reviewed": "5180cf79014e6ae9d149e5cb26cacfea626fb6bb",
+  "findings": [
+    {
+      "disposition": "fixed",
+      "id": "R1",
+      "severity": "high",
+      "summary": "same-coder comparator originally lacked a generic external-candidate serialization boundary"
+    },
+    {
+      "disposition": "fixed",
+      "id": "R2",
+      "severity": "critical",
+      "summary": "M1 readiness could not rely on a coincidental count match without a hash-verified measured Fisher EV ordering artifact"
+    },
+    {
+      "disposition": "fixed",
+      "id": "R3",
+      "severity": "medium",
+      "summary": "surface-1 frozen anchor counts were restated instead of derived from the pinned receipt"
+    },
+    {
+      "disposition": "fixed",
+      "id": "R4",
+      "severity": "high",
+      "summary": "live candidate JSON could race between parsing and later path hashing; the audit now hashes the exact parsed byte snapshot"
+    },
+    {
+      "disposition": "blocked_fail_closed",
+      "id": "R5",
+      "severity": "critical",
+      "summary": "surface 4 has only 24 of 600 pair-local VJP custody records and no hashed 38077-candidate measured Fisher EV ordering"
+    }
+  ],
+  "git_evidence": {
+    "coauthor_trailer_count": 0,
+    "diff_check": "clean",
+    "worktree": "clean"
+  },
+  "manifest_sha256": "4a8330e79353cfd45dd3c7580c55013a878b6e72fb3e242223c82a0dc03f766f",
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "reviewed_at_utc": "2026-07-20T17:14:54Z",
+  "schema": "prereq_surfaces_flush_final_review.v1",
+  "score_claim": false,
+  "surface_verdicts": {
+    "surface_1": "READY_LOCAL_STRUCTURAL_INTERFACE_FRESH_PROBE_ORACLE_OWED",
+    "surface_2": "READY_REAL_FROZEN_WEIGHT_RANK4_BANK",
+    "surface_3": "READY_GENERIC_SAME_CODER_COMPARATOR",
+    "surface_4": "BLOCKED_NO_ARTIFACT_EMITTED"
+  },
+  "test_evidence": {
+    "focused_pytest_passed": 114,
+    "py_compile": "clean",
+    "ruff": "clean"
+  },
+  "verdict": "PASS_THREE_READY_ONE_EXACTLY_BLOCKED_MAIN_LANDING_REVIEW_REQUIRED"
+}

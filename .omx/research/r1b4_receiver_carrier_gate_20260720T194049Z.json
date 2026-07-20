@@ -1,0 +1,18 @@
+{
+  "blocker": "R1B4_RECEIVER_CONTRACT_CARRIER_OVERHEAD_EXCEEDS_1852",
+  "conditional_carrier_limit_bytes": 1852,
+  "fixture_carrier_delta_bytes": 2114,
+  "fixture_carrier_excess_bytes": 262,
+  "fixture_scope": "deterministic_typed_receiver_compile_fixture",
+  "measurement_receipt": {
+    "path": ".omx/research/r1b4_receiver_actuator_20260720T195512Z.json",
+    "sha256": "ae1c4314f4232f34512a363cf98c23cf64771738fd1f871098e83747e042a0b7"
+  },
+  "output_admitted": false,
+  "production_compile_status": "REFUSED_FAIL_CLOSED",
+  "receiver_smoke_determinism_proof_preserved": true,
+  "schema": "r1b4_receiver_carrier_gate.v1",
+  "score_claim": false,
+  "test_command": ".venv/bin/pytest -q src/tac/optimization/tests/test_r1b2_mdl_xi0_compile.py::test_typed_receiver_fixture_refuses_production_carrier_overhead",
+  "test_fixture_custody": "fixed ZIP member timestamps, permissions, compression, payloads, and production 384x512 scorer geometry; production cap unchanged"
+}

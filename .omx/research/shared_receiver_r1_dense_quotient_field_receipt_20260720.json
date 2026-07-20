@@ -1,0 +1,67 @@
+{
+  "schema": "dense_quotient_field_zip_measurement.v1",
+  "evidence_label": "MEASURED_EXACT_ZIP_SECTION_BYTES_NOT_CONTEST_ARCHIVE",
+  "formulation_scope": "explicit dense float32 quotient-feature field only",
+  "source_path": "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features/quotient_features.f32.npy",
+  "source_bytes": 1887436928,
+  "source_sha256": "59e96781aa1bac153bc8bb277cecdbd4b4e98fdfd41f50aa2294537b90390944",
+  "output_zip_path": "/Volumes/VertigoDataTier/pact/evidence/shared_receiver_r1_20260720/dense_quotient_field.zip",
+  "zip_bytes": 561502227,
+  "zip_sha256": "d594fd6194d1482cb641cb640dd236b31d962420183811646d01dd6927276132",
+  "member_name": "quotient_features.f32.npy",
+  "member_uncompressed_bytes": 1887436928,
+  "member_compressed_bytes": 561502059,
+  "compression": "zip_deflate9_deterministic_metadata_zip64",
+  "zip_crc_test": "PASS",
+  "storage_preflight": {
+    "free_bytes_before": 786703781888,
+    "required_free_bytes": 2887436928,
+    "passed": true
+  },
+  "wall_seconds": 28.12027370906435,
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "original_machine_receipt_sha256": "5ce9cdb90bbe792da05928f9438b0e468063e13587462ac0dce748bcf0ce703e",
+  "producer_custody": {
+    "capture_status": "POSTHOC_SUPPLEMENT_ORIGINAL_ARGV_NOT_CAPTURED_AT_PRODUCTION",
+    "certify_or_block": "BLOCK_CROSS_RUNTIME_REPRODUCTION_UNPROVEN_KEEP_BYTES",
+    "reconstructed_command_argv_not_authority": [
+      "python3",
+      "tools/measure_dense_quotient_section.py",
+      "--source",
+      "/Volumes/VertigoDataTier/pact/experiments/results/v10_power_diagram_byteclose_20260718/n600_rank4_features/quotient_features.f32.npy",
+      "--output-zip",
+      "/Volumes/VertigoDataTier/pact/evidence/shared_receiver_r1_20260720/dense_quotient_field.zip",
+      "--receipt",
+      "/Volumes/VertigoDataTier/pact/evidence/shared_receiver_r1_20260720/dense_quotient_field_receipt.json",
+      "--required-source-sha256",
+      "59e96781aa1bac153bc8bb277cecdbd4b4e98fdfd41f50aa2294537b90390944"
+    ],
+    "git_head": "f1061e02483973203d95676542af62f60af6c996",
+    "producer_tool_sha256_at_production": "de111771f77c62d0bc2f460a778f5e7a9756d4c491ff944c8d27f2ad465f9661",
+    "python": {
+      "implementation": "CPython",
+      "version": "3.14.6",
+      "executable_path": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+      "executable_sha256": "b502cb4c5b46b8d4192ec6bcb600ce8922f1afc396fcf646e8765c6eba74a0bf",
+      "zipfile_path": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/zipfile/__init__.py",
+      "zipfile_sha256": "adb6f48ee990b42cabfc665d910992c5a30cee31d5d50d846e18e0e45c6a3f31"
+    },
+    "zlib": {
+      "compiled_version": "1.2.12",
+      "runtime_version": "1.2.12",
+      "binary_path": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload/zlib.cpython-314-darwin.so",
+      "binary_sha256": "31544d8b0865b5b0892bc5e5e1d5ae2e554024498843e5b76126add06f276b40"
+    },
+    "environment_posthoc_snapshot": {
+      "LANG": "en_US.UTF-8",
+      "LC_ALL": "C.UTF-8",
+      "PYTHONHASHSEED": null,
+      "SOURCE_DATE_EPOCH": null,
+      "TZ": null
+    },
+    "reproducibility_scope": "exact existing bytes are SHA-256 and CRC verified; byte-identical regeneration is not certified because original argv and environment were not captured at production"
+  },
+  "through_r_authority": false,
+  "score_claim": false,
+  "promotion_eligible": false
+}

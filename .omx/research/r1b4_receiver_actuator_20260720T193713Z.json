@@ -1,0 +1,798 @@
+{
+  "actuator_interpretation": {
+    "adoption_authority": "hard-oracle row only; no proxy adoption",
+    "grounding": "dim0 target dominant and frame0 seg-free; exact PoseNet coordinate-to-warp calibration absent",
+    "mapping": "generic integer horizontal translation with edge replication",
+    "status": "R1B4_XI0_TARGET_TO_FRAME0_POSE_ACTUATOR_UNDERDETERMINED"
+  },
+  "argv": [
+    "tools/measure_r1b4_receiver_smoke.py",
+    "--artifact-root",
+    "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z",
+    "--output",
+    ".omx/research/r1b4_receiver_actuator_20260720T193713Z.json",
+    "--pair-cap",
+    "2",
+    "--decode-workers",
+    "1",
+    "--cpu-threads",
+    "1"
+  ],
+  "authority": {
+    "axis": "[macOS-CPU capped hard-oracle advisory]",
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "promotion_eligible": false,
+    "research_only": true,
+    "score_claim": false
+  },
+  "captured_at_utc": "2026-07-20T19:38:30.864475Z",
+  "cleanup": {
+    "certify_or_block": true,
+    "deletion_action": "success_only_after_this_receipt_fsync",
+    "rows": [
+      {
+        "bytes": 12208032,
+        "cold_store_destination": null,
+        "delete_after_measurement_receipt_fsync": true,
+        "false_authority_flags": {
+          "promotion_eligible": false,
+          "scope": "prefix_n2_receiver_smoke",
+          "score_claim": false
+        },
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/discovery.raw",
+        "reason": "success-only scorer/decode input reproducible from hash-bound archive, receiver, and decoder",
+        "sha256": "a4756f6dc468a65357459d8a565cb9dba7c8c1a2b9bf0df44e617382081f3b82"
+      },
+      {
+        "bytes": 12208032,
+        "cold_store_destination": null,
+        "delete_after_measurement_receipt_fsync": true,
+        "false_authority_flags": {
+          "promotion_eligible": false,
+          "scope": "prefix_n2_receiver_smoke",
+          "score_claim": false
+        },
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/determinism_first.raw",
+        "reason": "success-only scorer/decode input reproducible from hash-bound archive, receiver, and decoder",
+        "sha256": "a4756f6dc468a65357459d8a565cb9dba7c8c1a2b9bf0df44e617382081f3b82"
+      },
+      {
+        "bytes": 12208032,
+        "cold_store_destination": null,
+        "delete_after_measurement_receipt_fsync": true,
+        "false_authority_flags": {
+          "promotion_eligible": false,
+          "scope": "prefix_n2_receiver_smoke",
+          "score_claim": false
+        },
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/determinism_second.raw",
+        "reason": "success-only scorer/decode input reproducible from hash-bound archive, receiver, and decoder",
+        "sha256": "a4756f6dc468a65357459d8a565cb9dba7c8c1a2b9bf0df44e617382081f3b82"
+      },
+      {
+        "bytes": 12208032,
+        "cold_store_destination": null,
+        "delete_after_measurement_receipt_fsync": true,
+        "false_authority_flags": {
+          "promotion_eligible": false,
+          "scope": "prefix_n2_receiver_smoke",
+          "score_claim": false
+        },
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/control.raw",
+        "reason": "success-only scorer/decode input reproducible from hash-bound archive, receiver, and decoder",
+        "sha256": "ba80ec829ba4801cdb09aaa9002e4ea45a5c8e13913b8c5be457f16648eb6a9c"
+      }
+    ],
+    "schema": "r1b4_receiver_smoke_raw_cleanup.v1"
+  },
+  "hard_oracle": {
+    "axis": "[macOS-CPU capped hard-oracle advisory]",
+    "batch_geometry": "per-pair smoke; not n600 batch16 authority",
+    "cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "candidate": {
+      "d_pose": 134.981689453125,
+      "d_seg": 0.00333404541015625,
+      "pose_component": 36.73985430743092,
+      "seg_component": 0.333404541015625
+    },
+    "control": {
+      "d_pose": 158.02999877929688,
+      "d_seg": 0.00333404541015625,
+      "pose_component": 39.752987155595854,
+      "seg_component": 0.333404541015625
+    },
+    "cpu_threads": 1,
+    "delta": {
+      "d_pose": -23.048309326171875,
+      "d_seg": 0.0,
+      "pose_component": -3.013132848164936,
+      "seg_component": 0.0
+    },
+    "per_pair": [
+      {
+        "candidate": {
+          "d_pose": 128.16172790527344,
+          "d_seg": 0.0034637451171875
+        },
+        "control": {
+          "d_pose": 154.89649963378906,
+          "d_seg": 0.0034637451171875
+        },
+        "pair_index": 0
+      },
+      {
+        "candidate": {
+          "d_pose": 141.80165100097656,
+          "d_seg": 0.003204345703125
+        },
+        "control": {
+          "d_pose": 161.1634979248047,
+          "d_seg": 0.003204345703125
+        },
+        "pair_index": 1
+      }
+    ],
+    "scope": "receiver_smoke_prefix_n2_non_n600_non_promotion",
+    "score_claim": false,
+    "scorer_hashes": {
+      "frame_utils.py": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+      "modules.py": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "posenet.safetensors": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+      "segnet.safetensors": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "seed": 1234
+  },
+  "hard_oracle_seconds": 8.763948791893199,
+  "inputs": {
+    "base_archive": {
+      "bytes": 94344,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/pre_archive.zip",
+      "sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539"
+    },
+    "base_decoder": {
+      "bytes": 56814,
+      "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+      "sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224"
+    },
+    "cache": {
+      "bytes": 5078017610,
+      "path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+      "sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+    },
+    "vjp_campaign": {
+      "bytes": 34276,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/campaign_receipt.json",
+      "sha256": "dad3135abe4ef5b9f4ba51aa89e1b91dd1a4c42146614dcca88889521f12eaf6"
+    },
+    "xi0": {
+      "bytes": 1500,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b3_producers_20260720T185300Z/xi0.xi0",
+      "sha256": "1b3c72fbe1df7209533a0e92e368fc65253bcb55cbe7196e921502ceb757e58a"
+    }
+  },
+  "l3_l4": {
+    "blockers": [
+      "VJP_CAMPAIGN_NOT_TERMINAL_COMPLETE_N600",
+      "VJP_COMPLETED_PAIR_COUNT_565_NOT_600",
+      "VJP_MISSING_PAIR_IDS_PRESENT",
+      "VJP_REFUSED_PAIR_IDS_PRESENT"
+    ],
+    "completed_pair_count": 565,
+    "missing_pair_count": 35,
+    "missing_pair_ids": [
+      11,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      277,
+      278,
+      279,
+      280,
+      482,
+      483,
+      484,
+      514,
+      515,
+      516,
+      517,
+      518,
+      519,
+      520,
+      532,
+      574,
+      575,
+      576,
+      577,
+      578,
+      579,
+      580
+    ],
+    "no_l3_assembly_attempted": true,
+    "refused_pair_ids": [
+      11,
+      245,
+      277,
+      482,
+      514,
+      532,
+      574
+    ],
+    "status": "BLOCKED_FAIL_CLOSED",
+    "vjp_status": "IN_PROGRESS_OR_SCOPED_BLOCKED"
+  },
+  "receiver_smoke": {
+    "archive_delta_bytes_vs_control": 3316,
+    "boundary_role": "typed_zero_receiver_smoke_section_noncandidate",
+    "build": {
+      "archive": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/r1b4_receiver_smoke_unsealed.zip",
+      "archive_bytes": 97625,
+      "archive_sha256": "284416c9d91faebc5f2889242a5ae66320ee38ce4879033e8e4990941ef34c85",
+      "artifact_role": "receiver_smoke_only",
+      "output_assertion_status": "unsealed",
+      "replay_entry_count": 0,
+      "xi0_value_count": 600
+    },
+    "control_decode": {
+      "archive_bytes_full": 94344,
+      "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+      "base_decoder_stdout_tail": "inflated 4 frames (2 pairs) -> /Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_control/c2_byte_close_e9l21hqg/base.raw [4x874x1164x3 uint8] (1 workers)\n",
+      "canonical_numpy_scorer_sha256": "03374e1563113cfac7656454b2b5770266295257226f78237fa4ac13852ca50d",
+      "decoded_raw": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/control.raw",
+      "decoded_raw_bytes_capped": 12208032,
+      "decoded_raw_sha256": "ba80ec829ba4801cdb09aaa9002e4ea45a5c8e13913b8c5be457f16648eb6a9c",
+      "factor2_exact": true,
+      "logical_pair_count": 600,
+      "numpy_decode_equal": true,
+      "pair_cap": 2,
+      "parse_back_scorer_sha256": "03374e1563113cfac7656454b2b5770266295257226f78237fa4ac13852ca50d",
+      "schema": "c2_integer_plane_byte_close_receipt.v1",
+      "scope": "capped_non_n600_non_score",
+      "score_claim": false,
+      "section_accounting": {
+        "accounted_archive_bytes": 94344,
+        "archive": "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/pre_archive.zip",
+        "archive_bytes": 94344,
+        "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+        "base_video_payload_counted": true,
+        "compressed_section_bytes": 93772,
+        "ema_authority": true,
+        "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+        "pdw2_spatial_receiver_consumed": false,
+        "pdw2_video_target_payload_counted": true,
+        "repair_video_payload_counted": false,
+        "residual_video_payload_counted": true,
+        "schema": "c2_integer_plane_counted_archive.v1",
+        "score_claim": false,
+        "sections": [
+          {
+            "compressed_bytes": 83730,
+            "name": "0.bin",
+            "sha256": "f0c3e648f00f52e48c7be98997fb7dd57c2e5a607ed385846931af68f88cc78c",
+            "uncompressed_bytes": 84536
+          },
+          {
+            "compressed_bytes": 1036,
+            "name": "ipe_manifest.json",
+            "sha256": "838fe8f7db96599e396e0595747e045074f57394902b4183f3fa036aba9121a0",
+            "uncompressed_bytes": 1857
+          },
+          {
+            "compressed_bytes": 105,
+            "name": "seg_head_target.pdw2",
+            "sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+            "uncompressed_bytes": 138
+          },
+          {
+            "compressed_bytes": 8874,
+            "name": "ipe_codes.f16",
+            "sha256": "b43c4ff506cd7ec4825e1379dad2701e23702f1b359c9e06bc932f21482bb73e",
+            "uncompressed_bytes": 9600
+          },
+          {
+            "compressed_bytes": 27,
+            "name": "ipe_quotient_residual_head.f16",
+            "sha256": "c5d39370644c7b16ccd6e09e4d92a1a6980073baad29214bdb530dca290e647d",
+            "uncompressed_bytes": 24
+          }
+        ],
+        "zip_overhead_bytes": 572
+      }
+    },
+    "determinism_first": {
+      "archive": {
+        "artifact_role": "receiver_smoke_only",
+        "bytes": 97660,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/r1b4_receiver_smoke_sealed.zip",
+        "sha256": "94ac091aa1946958377ecf82f34468e2f5aec2ac784cb7fdb30d06a27d8c2b5f"
+      },
+      "base_archive": {
+        "bytes": 94344,
+        "decoder_path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+        "decoder_sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224",
+        "sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539"
+      },
+      "base_decode": {
+        "archive_bytes_full": 94344,
+        "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+        "base_decoder_stdout_tail": "inflated 4 frames (2 pairs) -> /Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_first/r1b4_receiver_k06rukd3/c2_byte_close_z8zavnkx/base.raw [4x874x1164x3 uint8] (1 workers)\n",
+        "canonical_numpy_scorer_sha256": "03374e1563113cfac7656454b2b5770266295257226f78237fa4ac13852ca50d",
+        "decoded_raw": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_first/r1b4_receiver_k06rukd3/base.raw",
+        "decoded_raw_bytes_capped": 12208032,
+        "decoded_raw_sha256": "ba80ec829ba4801cdb09aaa9002e4ea45a5c8e13913b8c5be457f16648eb6a9c",
+        "factor2_exact": true,
+        "logical_pair_count": 600,
+        "numpy_decode_equal": true,
+        "pair_cap": 2,
+        "parse_back_scorer_sha256": "03374e1563113cfac7656454b2b5770266295257226f78237fa4ac13852ca50d",
+        "schema": "c2_integer_plane_byte_close_receipt.v1",
+        "scope": "capped_non_n600_non_score",
+        "score_claim": false,
+        "section_accounting": {
+          "accounted_archive_bytes": 94344,
+          "archive": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_first/r1b4_receiver_k06rukd3/base.zip",
+          "archive_bytes": 94344,
+          "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+          "base_video_payload_counted": true,
+          "compressed_section_bytes": 93772,
+          "ema_authority": true,
+          "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+          "pdw2_spatial_receiver_consumed": false,
+          "pdw2_video_target_payload_counted": true,
+          "repair_video_payload_counted": false,
+          "residual_video_payload_counted": true,
+          "schema": "c2_integer_plane_counted_archive.v1",
+          "score_claim": false,
+          "sections": [
+            {
+              "compressed_bytes": 83730,
+              "name": "0.bin",
+              "sha256": "f0c3e648f00f52e48c7be98997fb7dd57c2e5a607ed385846931af68f88cc78c",
+              "uncompressed_bytes": 84536
+            },
+            {
+              "compressed_bytes": 1036,
+              "name": "ipe_manifest.json",
+              "sha256": "838fe8f7db96599e396e0595747e045074f57394902b4183f3fa036aba9121a0",
+              "uncompressed_bytes": 1857
+            },
+            {
+              "compressed_bytes": 105,
+              "name": "seg_head_target.pdw2",
+              "sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+              "uncompressed_bytes": 138
+            },
+            {
+              "compressed_bytes": 8874,
+              "name": "ipe_codes.f16",
+              "sha256": "b43c4ff506cd7ec4825e1379dad2701e23702f1b359c9e06bc932f21482bb73e",
+              "uncompressed_bytes": 9600
+            },
+            {
+              "compressed_bytes": 27,
+              "name": "ipe_quotient_residual_head.f16",
+              "sha256": "c5d39370644c7b16ccd6e09e4d92a1a6980073baad29214bdb530dca290e647d",
+              "uncompressed_bytes": 24
+            }
+          ],
+          "zip_overhead_bytes": 572
+        }
+      },
+      "decode_limit_pass": true,
+      "decode_limit_seconds": 1800.0,
+      "decode_seconds": 12.045319416094571,
+      "decoded": {
+        "assertion_status": "sealed",
+        "assertion_verified": true,
+        "atomic_promotion": true,
+        "bytes": 12208032,
+        "pair_cap": 2,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/determinism_first.raw",
+        "sha256": "a4756f6dc468a65357459d8a565cb9dba7c8c1a2b9bf0df44e617382081f3b82"
+      },
+      "receiver_search_invocations": 0,
+      "schema": "r1b4_receiver_decode_receipt.v1",
+      "score_claim": false,
+      "section_consumption": {
+        "boundary_coordinate.bgj": {
+          "changed_bytes": 0,
+          "changed_pairs": 0,
+          "factor2_exact": true,
+          "frame_indices": [
+            1
+          ]
+        },
+        "full_kernel_replay.r1k": {
+          "changed_bytes": 0,
+          "effective_entries": 0,
+          "selected_entries_executed_prefix": 0,
+          "selected_entries_full_archive": 0,
+          "zero_selection_admitted": true
+        },
+        "r1b2_manifest.json": {
+          "final_output_assertion_applied": true,
+          "policy_applied": true,
+          "policy_sha256": "c4dfe6f94874459f1a2bbeb588c7021ec65af8ebd4349c4bdaf4cd0291b66bfb"
+        },
+        "xi0.xi0": {
+          "changed_bytes": 5146308,
+          "changed_pairs": 2,
+          "decoded_value_count": 600,
+          "executed_shifts": [
+            3,
+            4
+          ],
+          "frame_indices": [
+            0
+          ]
+        }
+      },
+      "success_scratch_cleanup": {
+        "base_raw_bytes": 12208032,
+        "base_raw_sha256": "ba80ec829ba4801cdb09aaa9002e4ea45a5c8e13913b8c5be457f16648eb6a9c",
+        "delete_only_after_receiver_receipt_fsync": true,
+        "rebuildable_from_hash_bound_archive_and_decoder": true,
+        "temporary_root": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_first/r1b4_receiver_k06rukd3"
+      }
+    },
+    "determinism_second": {
+      "archive": {
+        "artifact_role": "receiver_smoke_only",
+        "bytes": 97660,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/r1b4_receiver_smoke_sealed.zip",
+        "sha256": "94ac091aa1946958377ecf82f34468e2f5aec2ac784cb7fdb30d06a27d8c2b5f"
+      },
+      "base_archive": {
+        "bytes": 94344,
+        "decoder_path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+        "decoder_sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224",
+        "sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539"
+      },
+      "base_decode": {
+        "archive_bytes_full": 94344,
+        "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+        "base_decoder_stdout_tail": "inflated 4 frames (2 pairs) -> /Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_second/r1b4_receiver_y62z6yjv/c2_byte_close_ytogouny/base.raw [4x874x1164x3 uint8] (1 workers)\n",
+        "canonical_numpy_scorer_sha256": "03374e1563113cfac7656454b2b5770266295257226f78237fa4ac13852ca50d",
+        "decoded_raw": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_second/r1b4_receiver_y62z6yjv/base.raw",
+        "decoded_raw_bytes_capped": 12208032,
+        "decoded_raw_sha256": "ba80ec829ba4801cdb09aaa9002e4ea45a5c8e13913b8c5be457f16648eb6a9c",
+        "factor2_exact": true,
+        "logical_pair_count": 600,
+        "numpy_decode_equal": true,
+        "pair_cap": 2,
+        "parse_back_scorer_sha256": "03374e1563113cfac7656454b2b5770266295257226f78237fa4ac13852ca50d",
+        "schema": "c2_integer_plane_byte_close_receipt.v1",
+        "scope": "capped_non_n600_non_score",
+        "score_claim": false,
+        "section_accounting": {
+          "accounted_archive_bytes": 94344,
+          "archive": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_second/r1b4_receiver_y62z6yjv/base.zip",
+          "archive_bytes": 94344,
+          "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+          "base_video_payload_counted": true,
+          "compressed_section_bytes": 93772,
+          "ema_authority": true,
+          "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+          "pdw2_spatial_receiver_consumed": false,
+          "pdw2_video_target_payload_counted": true,
+          "repair_video_payload_counted": false,
+          "residual_video_payload_counted": true,
+          "schema": "c2_integer_plane_counted_archive.v1",
+          "score_claim": false,
+          "sections": [
+            {
+              "compressed_bytes": 83730,
+              "name": "0.bin",
+              "sha256": "f0c3e648f00f52e48c7be98997fb7dd57c2e5a607ed385846931af68f88cc78c",
+              "uncompressed_bytes": 84536
+            },
+            {
+              "compressed_bytes": 1036,
+              "name": "ipe_manifest.json",
+              "sha256": "838fe8f7db96599e396e0595747e045074f57394902b4183f3fa036aba9121a0",
+              "uncompressed_bytes": 1857
+            },
+            {
+              "compressed_bytes": 105,
+              "name": "seg_head_target.pdw2",
+              "sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+              "uncompressed_bytes": 138
+            },
+            {
+              "compressed_bytes": 8874,
+              "name": "ipe_codes.f16",
+              "sha256": "b43c4ff506cd7ec4825e1379dad2701e23702f1b359c9e06bc932f21482bb73e",
+              "uncompressed_bytes": 9600
+            },
+            {
+              "compressed_bytes": 27,
+              "name": "ipe_quotient_residual_head.f16",
+              "sha256": "c5d39370644c7b16ccd6e09e4d92a1a6980073baad29214bdb530dca290e647d",
+              "uncompressed_bytes": 24
+            }
+          ],
+          "zip_overhead_bytes": 572
+        }
+      },
+      "decode_limit_pass": true,
+      "decode_limit_seconds": 1800.0,
+      "decode_seconds": 12.12592575000599,
+      "decoded": {
+        "assertion_status": "sealed",
+        "assertion_verified": true,
+        "atomic_promotion": true,
+        "bytes": 12208032,
+        "pair_cap": 2,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/determinism_second.raw",
+        "sha256": "a4756f6dc468a65357459d8a565cb9dba7c8c1a2b9bf0df44e617382081f3b82"
+      },
+      "receiver_search_invocations": 0,
+      "schema": "r1b4_receiver_decode_receipt.v1",
+      "score_claim": false,
+      "section_consumption": {
+        "boundary_coordinate.bgj": {
+          "changed_bytes": 0,
+          "changed_pairs": 0,
+          "factor2_exact": true,
+          "frame_indices": [
+            1
+          ]
+        },
+        "full_kernel_replay.r1k": {
+          "changed_bytes": 0,
+          "effective_entries": 0,
+          "selected_entries_executed_prefix": 0,
+          "selected_entries_full_archive": 0,
+          "zero_selection_admitted": true
+        },
+        "r1b2_manifest.json": {
+          "final_output_assertion_applied": true,
+          "policy_applied": true,
+          "policy_sha256": "c4dfe6f94874459f1a2bbeb588c7021ec65af8ebd4349c4bdaf4cd0291b66bfb"
+        },
+        "xi0.xi0": {
+          "changed_bytes": 5146308,
+          "changed_pairs": 2,
+          "decoded_value_count": 600,
+          "executed_shifts": [
+            3,
+            4
+          ],
+          "frame_indices": [
+            0
+          ]
+        }
+      },
+      "success_scratch_cleanup": {
+        "base_raw_bytes": 12208032,
+        "base_raw_sha256": "ba80ec829ba4801cdb09aaa9002e4ea45a5c8e13913b8c5be457f16648eb6a9c",
+        "delete_only_after_receiver_receipt_fsync": true,
+        "rebuildable_from_hash_bound_archive_and_decoder": true,
+        "temporary_root": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_second/r1b4_receiver_y62z6yjv"
+      }
+    },
+    "deterministic_equal_output_bytes": true,
+    "discovery_decode": {
+      "archive": {
+        "artifact_role": "receiver_smoke_only",
+        "bytes": 97625,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/r1b4_receiver_smoke_unsealed.zip",
+        "sha256": "284416c9d91faebc5f2889242a5ae66320ee38ce4879033e8e4990941ef34c85"
+      },
+      "base_archive": {
+        "bytes": 94344,
+        "decoder_path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+        "decoder_sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224",
+        "sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539"
+      },
+      "base_decode": {
+        "archive_bytes_full": 94344,
+        "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+        "base_decoder_stdout_tail": "inflated 4 frames (2 pairs) -> /Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_discovery/r1b4_receiver_kwaz9rl0/c2_byte_close_w1954b6m/base.raw [4x874x1164x3 uint8] (1 workers)\n",
+        "canonical_numpy_scorer_sha256": "03374e1563113cfac7656454b2b5770266295257226f78237fa4ac13852ca50d",
+        "decoded_raw": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_discovery/r1b4_receiver_kwaz9rl0/base.raw",
+        "decoded_raw_bytes_capped": 12208032,
+        "decoded_raw_sha256": "ba80ec829ba4801cdb09aaa9002e4ea45a5c8e13913b8c5be457f16648eb6a9c",
+        "factor2_exact": true,
+        "logical_pair_count": 600,
+        "numpy_decode_equal": true,
+        "pair_cap": 2,
+        "parse_back_scorer_sha256": "03374e1563113cfac7656454b2b5770266295257226f78237fa4ac13852ca50d",
+        "schema": "c2_integer_plane_byte_close_receipt.v1",
+        "scope": "capped_non_n600_non_score",
+        "score_claim": false,
+        "section_accounting": {
+          "accounted_archive_bytes": 94344,
+          "archive": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_discovery/r1b4_receiver_kwaz9rl0/base.zip",
+          "archive_bytes": 94344,
+          "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+          "base_video_payload_counted": true,
+          "compressed_section_bytes": 93772,
+          "ema_authority": true,
+          "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+          "pdw2_spatial_receiver_consumed": false,
+          "pdw2_video_target_payload_counted": true,
+          "repair_video_payload_counted": false,
+          "residual_video_payload_counted": true,
+          "schema": "c2_integer_plane_counted_archive.v1",
+          "score_claim": false,
+          "sections": [
+            {
+              "compressed_bytes": 83730,
+              "name": "0.bin",
+              "sha256": "f0c3e648f00f52e48c7be98997fb7dd57c2e5a607ed385846931af68f88cc78c",
+              "uncompressed_bytes": 84536
+            },
+            {
+              "compressed_bytes": 1036,
+              "name": "ipe_manifest.json",
+              "sha256": "838fe8f7db96599e396e0595747e045074f57394902b4183f3fa036aba9121a0",
+              "uncompressed_bytes": 1857
+            },
+            {
+              "compressed_bytes": 105,
+              "name": "seg_head_target.pdw2",
+              "sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+              "uncompressed_bytes": 138
+            },
+            {
+              "compressed_bytes": 8874,
+              "name": "ipe_codes.f16",
+              "sha256": "b43c4ff506cd7ec4825e1379dad2701e23702f1b359c9e06bc932f21482bb73e",
+              "uncompressed_bytes": 9600
+            },
+            {
+              "compressed_bytes": 27,
+              "name": "ipe_quotient_residual_head.f16",
+              "sha256": "c5d39370644c7b16ccd6e09e4d92a1a6980073baad29214bdb530dca290e647d",
+              "uncompressed_bytes": 24
+            }
+          ],
+          "zip_overhead_bytes": 572
+        }
+      },
+      "decode_limit_pass": true,
+      "decode_limit_seconds": 1800.0,
+      "decode_seconds": 15.312299499986693,
+      "decoded": {
+        "assertion_status": "unsealed",
+        "assertion_verified": false,
+        "atomic_promotion": true,
+        "bytes": 12208032,
+        "pair_cap": 2,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/discovery.raw",
+        "sha256": "a4756f6dc468a65357459d8a565cb9dba7c8c1a2b9bf0df44e617382081f3b82"
+      },
+      "receiver_search_invocations": 0,
+      "schema": "r1b4_receiver_decode_receipt.v1",
+      "score_claim": false,
+      "section_consumption": {
+        "boundary_coordinate.bgj": {
+          "changed_bytes": 0,
+          "changed_pairs": 0,
+          "factor2_exact": true,
+          "frame_indices": [
+            1
+          ]
+        },
+        "full_kernel_replay.r1k": {
+          "changed_bytes": 0,
+          "effective_entries": 0,
+          "selected_entries_executed_prefix": 0,
+          "selected_entries_full_archive": 0,
+          "zero_selection_admitted": true
+        },
+        "r1b2_manifest.json": {
+          "final_output_assertion_applied": true,
+          "policy_applied": true,
+          "policy_sha256": "c4dfe6f94874459f1a2bbeb588c7021ec65af8ebd4349c4bdaf4cd0291b66bfb"
+        },
+        "xi0.xi0": {
+          "changed_bytes": 5146308,
+          "changed_pairs": 2,
+          "decoded_value_count": 600,
+          "executed_shifts": [
+            3,
+            4
+          ],
+          "frame_indices": [
+            0
+          ]
+        }
+      },
+      "success_scratch_cleanup": {
+        "base_raw_bytes": 12208032,
+        "base_raw_sha256": "ba80ec829ba4801cdb09aaa9002e4ea45a5c8e13913b8c5be457f16648eb6a9c",
+        "delete_only_after_receiver_receipt_fsync": true,
+        "rebuildable_from_hash_bound_archive_and_decoder": true,
+        "temporary_root": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/scratch_discovery/r1b4_receiver_kwaz9rl0"
+      }
+    },
+    "receiver_search_invocations": 0,
+    "replay_role": "strict_zero_selection_replay_consumer_smoke",
+    "seal": {
+      "archive": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/r1b4_receiver_smoke_sealed.zip",
+      "archive_bytes": 97660,
+      "archive_sha256": "94ac091aa1946958377ecf82f34468e2f5aec2ac784cb7fdb30d06a27d8c2b5f",
+      "decoded_bytes": 12208032,
+      "decoded_sha256": "a4756f6dc468a65357459d8a565cb9dba7c8c1a2b9bf0df44e617382081f3b82",
+      "status": "sealed"
+    },
+    "sealed_archive": {
+      "bytes": 97660,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z/r1b4_receiver_smoke_sealed.zip",
+      "sha256": "94ac091aa1946958377ecf82f34468e2f5aec2ac784cb7fdb30d06a27d8c2b5f"
+    },
+    "xi0_role": "real_banked_600_value_coordinate_zero_payload"
+  },
+  "runtime": {
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "total_seconds": 61.759422707837075
+  },
+  "schema": "r1b4_receiver_smoke_measurement.v1",
+  "settled_n600_carrier_absent_control_not_remeasured": {
+    "archive_bytes": 94344,
+    "d_pose": 127.36588287353516,
+    "d_seg": 0.003515794640406966,
+    "scope": "settled n600 row; distinct from capped smoke comparison",
+    "score": 36.10275630841103
+  },
+  "source_custody": {
+    "files": {
+      "r1b2_compiler": {
+        "bytes": 45032,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/r1b4_receiver_actuator_20260720T190615Z/src/tac/optimization/r1b2_mdl_xi0_compile.py",
+        "sha256": "0962aad256f9be20c12a291c969e71a71f4314b5b88650ad7413f6378051a94c"
+      },
+      "r1b3_xi0_codec": {
+        "bytes": 23411,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/r1b4_receiver_actuator_20260720T190615Z/src/tac/optimization/r1b3_producer_preflight.py",
+        "sha256": "982f72648a773c9417c6ca69ac96c39b940acfbc8611cd5c16b8db6a614d1ba5"
+      },
+      "receiver": {
+        "bytes": 38866,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/r1b4_receiver_actuator_20260720T190615Z/src/tac/boundary_math/r1b4_section_receiver.py",
+        "sha256": "a1e2e99bf3891c5bcb46ba63ce5f13b0bbbda67d37515d07c665e9fea27baff6"
+      },
+      "tool": {
+        "bytes": 18123,
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/r1b4_receiver_actuator_20260720T190615Z/tools/measure_r1b4_receiver_smoke.py",
+        "sha256": "10b44e5144b74a51c5e3c8b632084b5ed9d87ffb0c84ae578e7282564fea4b96"
+      }
+    },
+    "git_dirty_paths": [
+      " M src/tac/optimization/r1b2_mdl_xi0_compile.py",
+      " M src/tac/optimization/tests/test_r1b2_mdl_xi0_compile.py",
+      "?? src/tac/boundary_math/r1b4_section_receiver.py",
+      "?? src/tac/boundary_math/tests/test_r1b4_section_receiver.py",
+      "?? tools/measure_r1b4_receiver_smoke.py"
+    ],
+    "git_head": "868e3e0db48abbcace9a078aba80c8f05541942e"
+  },
+  "storage_preflight": {
+    "free_bytes": 697034182656,
+    "ok": true,
+    "raw_bytes_each": 12208032,
+    "required_free_bytes": 140357056,
+    "root": "/Volumes/VertigoDataTier/pact/evidence/r1b4_receiver_smoke_20260720T193713Z",
+    "tier": "VertigoDataTier"
+  },
+  "stores_consulted": [
+    "committed r1b4 build spec",
+    "exact C2 control archive and pinned decoder",
+    "banked r1b3 xi0 payload",
+    "live read-only VJP campaign receipt",
+    "frozen hard-oracle cache and scorer sources"
+  ],
+  "verdict": "MEASURED_RECEIVER_SMOKE_XI0_ACTUATOR_UNDERDETERMINED_L3_BLOCKED",
+  "verdict_scope": "exact prefix n2 receiver-smoke archive on macOS CPU only; not n600, not an R1b2 boundary candidate, no pose-actuator family negative, no score/promotion claim"
+}

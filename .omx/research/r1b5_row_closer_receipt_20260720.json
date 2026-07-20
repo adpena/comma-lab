@@ -1,0 +1,205 @@
+{
+  "schema": "r1b5_row_closer_receipt.v1",
+  "captured_at_utc": "2026-07-20T21:10:00Z",
+  "verdict": "PARTIAL_EXACT_R1B5_ROW_BLOCKED_AT_PRODUCTION_SECANT_AND_REPLAY",
+  "verdict_scope": "VJP campaign closure, encoder-side Fisher ordering, exact resize-support coupling audit, n8 conditioned xi0 calibration, and exact carrier byte accounting only; no compiled candidate, no n600 candidate decode, no contest CPU/CUDA score, and no family negative",
+  "authority": {
+    "axis": "[macOS-CPU advisory] plus byte-accounting custody",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true,
+    "pointer": "0.19108 [contest-CPU] UNMOVED"
+  },
+  "control": {
+    "archive_bytes": 94344,
+    "d_seg": 0.003515794640406966,
+    "d_pose": 127.36588287353516,
+    "score": 36.10275630841103,
+    "candidate_d_seg_gate": 0.000339,
+    "task_cap_bytes_per_pair": 477.8,
+    "fixed_c1_cap_bytes": 216222
+  },
+  "vjp_custody": {
+    "status": "COMPLETE_N600",
+    "completed_pairs": 600,
+    "missing_pair_ids": [],
+    "refused_pair_ids": [],
+    "fresh_native_preregistered_pairs": [11, 245, 277, 482, 514, 532, 574],
+    "unexpected_refusal_isolated_and_recovered": 484,
+    "campaign_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/campaign_receipt.json",
+      "sha256": "11d441acec2640f607e87514e35c9244c9d8dfec617a810b2c9763b2e116d284"
+    },
+    "launch_manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/launch_r1b5_20260720T2030Z/launch_manifest.json",
+      "sha256": "bdb1ede93a4c82afdc0b2b8e3f6c703b235d02bcde62a4bd91bf0dfeb615df34"
+    },
+    "terminal_compile_full_sidecar_rehash": "DEFERRED_FAIL_CLOSED_UNTIL_CHEAPER_PRODUCER_INPUTS_PRESENT"
+  },
+  "fisher_ev": {
+    "population": "PDW1_n24_realization_mismatches_exact_38077",
+    "candidate_count": 38077,
+    "metric": "0.5*sech(margin/2)^2 with winner-rival flip distance",
+    "ordering_policy": "necessity/edge then resize support then flip distance then Fisher trace then pair-native head norm",
+    "stratum_counts": {
+      "road_lane_edge": 14538,
+      "other_edge": 11643,
+      "nonedge": 11896
+    },
+    "vjp_arrangement_match_count": 33886,
+    "vjp_arrangement_mismatch_count": 4191,
+    "ordering_artifact": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/fisher_ev/fisher_ev_ordering_38077.jsonl.br",
+      "bytes": 2225887,
+      "uncompressed_bytes": 7241772,
+      "sha256": "765457d424eaf1de7e05ed8703853175ef415bd3f19fb00137a74a29de52ae00"
+    },
+    "receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/fisher_ev/receipt.json",
+      "sha256": "0d2b1a103f4830bc70ec9dbe10a3c18a710e980f968a2c0d424d4f7bb2cbce97"
+    },
+    "rate_admission": "BLOCKED_PENDING_REALIZED_BACKBONE_SECANTS_AND_EXACT_PREFIX_BYTE_MARGINALS"
+  },
+  "coupling_operator": {
+    "population": "R2b_n600_moderate_margin_exact_16319",
+    "resize_support_taps_per_cell": 4,
+    "component_count": 16319,
+    "component_size_histogram": {
+      "1": 16319
+    },
+    "largest_component": 1,
+    "surrogate_grouping_used": false,
+    "group_vs_singleton_covariance": "NOT_APPLICABLE_EXACT_SINGLETON_LOCAL_RESIZE_PARTITION",
+    "interpretation": "align_corners=False downsampling supports are disjoint at this geometry; the predicted path-like local resize components are falsified for this population, while wider EfficientNet coupling still requires realized secants"
+  },
+  "xi0_calibration": {
+    "conditioning": "fit against decoded frame0 plus exact source frame1; receiver transfer holds decoded control frame1 byte-identical",
+    "train_pairs": [0, 1, 2, 3],
+    "heldout_pairs": [4, 5, 6, 7],
+    "batch_geometry": "B8 advisory; n600 authority remains literal 37xB16+B8",
+    "selected_prefix_policy": {
+      "kind": "scalar",
+      "gain": -0.36,
+      "realized_prefix_shifts": [-12, -12, -12, -12, -12, -12, -12, -12]
+    },
+    "conditioned_heldout_d_pose": {
+      "control": 14.342111557754551,
+      "existing_affine": 16.56408124987515,
+      "fitted_affine": 11.137396754684323,
+      "fitted_scalar": 9.920594574848938
+    },
+    "receiver_transfer_n8": {
+      "control_d_pose": 150.92694261133784,
+      "fitted_scalar_d_pose": 126.46005768077403,
+      "control_d_seg": 0.0031541188557942705,
+      "fitted_scalar_d_seg": 0.0031541188557942705,
+      "per_pair_seg_output_equal_hard_assertion": true
+    },
+    "pose_dim0_error_share": "greater than 0.9999 on the held-out conditioned rows",
+    "secant_not_derivative": true,
+    "receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/xi0_calibration/receipt.json",
+      "sha256": "8fb2058d9f71ab6b27909757755cd44d352bcd0b0117cf40dd9563b264fe4fbf"
+    },
+    "production_admission": "BLOCKED_ON_REAL_SEG_CORRECT_N600_STATE_AND_CONTEST_AXIS_PARITY"
+  },
+  "carrier": {
+    "typed_fixture": {
+      "carrier_bytes": 2114,
+      "limit_bytes": 1852,
+      "excess_bytes": 262,
+      "fixed_cost_if_xi0_were_free_bytes": 1865,
+      "minimum_non_xi0_reduction_bytes": 13
+    },
+    "banked_xi0_zero_boundary_reference": {
+      "carrier_bytes": 3223,
+      "excess_bytes": 1371,
+      "compressed_sections": {
+        "manifest": 1070,
+        "boundary": 395,
+        "replay": 179,
+        "xi0": 1135,
+        "zip_structure": 444
+      }
+    },
+    "direct_int8_shift_projection": {
+      "shift_histogram": {
+        "-13": 1,
+        "-12": 145,
+        "-11": 440,
+        "-10": 13,
+        "-8": 1
+      },
+      "body_bytes": 600,
+      "raw_deflate_bytes": 100,
+      "lossless_relative_to_selected_scalar_actuator": true
+    },
+    "compact_binary_v2_projection": {
+      "carrier_bytes": 1273,
+      "headroom_bytes": 579,
+      "parse_back": false,
+      "receiver_bound": false,
+      "admissible": false
+    },
+    "receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/carrier_audit/receipt.json",
+      "sha256": "1efa17c7422d710709c7386364675df424abfa44abd183960bed7b87b5c9a7da"
+    }
+  },
+  "terminal_compile": {
+    "receipt": {
+      "path": ".omx/research/r1b5_r1b2_compile_gate_20260720.json",
+      "sha256": "d1fd50e8f1dc3feec43d23d39dd1e3773a2e3e7f643b9ca308f0417086d36acd"
+    },
+    "candidate_archive": null,
+    "candidate_archive_gate_pass": null,
+    "candidate_d_seg_gate_pass": null,
+    "candidate_decode_gate_pass": null,
+    "blockers": [
+      "VJP_FULL_SIDECAR_REHASH_DEFERRED_UNTIL_PRODUCER_INPUTS_PRESENT",
+      "R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT",
+      "R1B2_FULL_KERNEL_MDL_SELECTION_AND_COMPACT_REPLAY_ABSENT"
+    ]
+  },
+  "scorer_native_contract": {
+    "hyperplanes": "rank-4 winner-rival normals and signed margins",
+    "channels": "exact upstream bilinear RGB-to-YUV6 PoseNet preprocess; frame0 is Seg-free",
+    "basis": "windowed curvelet/shearlet carrier only; no Fourier promotion",
+    "weights_and_gradients": "pair-native VJP arrangement, never reused across activation states",
+    "resize": "exact four-tap align_corners=False supports and ker(A) zero-fidelity priority",
+    "receiver_compliance": "no scorer weights at decode and no video-derived code tables"
+  },
+  "downstream_solve_contract": {
+    "ordering": [
+      "hold or close Seg boundary state",
+      "solve winner-rival hyperplane constraints",
+      "target max-min-margin Chebyshev center of argmax cell intersect pose tube intersect uint8 box",
+      "apply xi0 frame0 pose finish",
+      "assert per-pair d_seg invariance",
+      "reverse-waterfill exact byte marginals until rate break-even"
+    ],
+    "local_resize_coupling": "singleton exact solves for the audited 16319-cell population",
+    "backbone_coupling": "typed realized component secants required; a secant is not a derivative",
+    "intrinsic_structures": "38077 compact ordering rows, 16319-cell union-find, rank-4 GEMV, tiny per-cell atoms; no ambient dense mask"
+  },
+  "tests": {
+    "final_combined_targeted": 42,
+    "vjp_and_compiler_targeted": 31,
+    "fisher_targeted": 4,
+    "xi0_targeted": 3,
+    "carrier_targeted": 3,
+    "terminal_compiler_targeted": 12,
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "review_tracker": "two clean passes for every changed Python file"
+  },
+  "commits": [
+    "d9227d184f",
+    "eb6541d31e",
+    "42f7c9a018",
+    "417d673b7f",
+    "6aeb9ba1a0",
+    "212ff1747a"
+  ],
+  "pointer_delta": "none"
+}

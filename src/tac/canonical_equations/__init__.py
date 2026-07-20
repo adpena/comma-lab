@@ -335,6 +335,11 @@ from tac.canonical_equations.realization_necessity_preimage_20260715 import (
     populate_realization_necessity_preimage_equation,
     stratum_rate_floor_bytes,
 )
+from tac.canonical_equations.resize_full_kernel_structure_20260720 import (
+    build_separable_resize_full_kernel_direct_sum_v1,
+    full_resize_kernel_direct_sum,
+    populate_separable_resize_full_kernel_direct_sum_equation,
+)
 from tac.canonical_equations.registry import (
     CANONICAL_EQUATIONS_REGISTRY_LOCK,
     CANONICAL_EQUATIONS_REGISTRY_PATH,
@@ -545,6 +550,7 @@ __all__ = [
     "flat_band_gain_on_witness",
     "build_realization_necessity_preimage_per_stratum_v1",
     "build_resize_exploit_flip_fix_frontier_v1",
+    "build_separable_resize_full_kernel_direct_sum_v1",
     "build_rewarmup_beta2_memory_window_v1",
     "build_roadlane_grating_composition_refuted_v1",
     "build_safe_compile_hosc_device_bitidentity_v1",
@@ -583,6 +589,7 @@ __all__ = [
     "focal_region_share",
     "focal_weight_ratio",
     "freq_along_for_regime",
+    "full_resize_kernel_direct_sum",
     "gap13_minus_gap12_min",
     "get_equation_by_id",
     "get_evaluator",
@@ -645,6 +652,7 @@ __all__ = [
     "populate_witness_own_residual_decomposition_equation",
     "populate_realization_necessity_preimage_equation",
     "populate_resize_exploit_flip_fix_frontier_equation",
+    "populate_separable_resize_full_kernel_direct_sum_equation",
     "populate_roadlane_grating_composition_refuted_equation",
     "populate_safe_compile_device_bitidentity_equation",
     "populate_segnet_exact_forward_cpu_thread_control_v1",
