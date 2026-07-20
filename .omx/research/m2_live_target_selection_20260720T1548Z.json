@@ -1,0 +1,122 @@
+{
+  "schema": "m2_live_target_selection_receipt.v1",
+  "utc": "2026-07-20T15:48:00Z",
+  "lane_id": "lane_v10_m2_live_target_selection_20260720",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+  "verdict_scope": "n600 direct exact-numerator target realization; the rounded-Y spine cannot derive source fractions without charged payload",
+  "git_base_sha": "f1061e02483973203d95676542af62f60af6c996f",
+  "command": [
+    "/Users/adpena/Projects/pact/.venv/bin/python",
+    "tools/measure_m2_live_target_selection.py",
+    "--gt-cache",
+    "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "--out-dir",
+    "/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z",
+    "--chunk-pairs",
+    "12",
+    "--brotli-quality",
+    "5",
+    "--resume",
+    "--evaluate-py",
+    "/Users/adpena/Projects/pact/upstream/evaluate.py",
+    "--device=cpu via wrapper",
+    "--seed=1234 via wrapper"
+  ],
+  "source_custody": {
+    "gt_cache_bytes": 5078017610,
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "pair_count": 600,
+    "frame_count": 1200,
+    "camera_hw": [874, 1164],
+    "scorer_hw": [384, 512]
+  },
+  "capstone_baseline": {
+    "archive_bytes": 409526925,
+    "d_seg": 0.00015196,
+    "d_pose": 0.00010184,
+    "nonrate_score": 0.04710838004286111,
+    "score_rounded": 272.73
+  },
+  "candidate": {
+    "archive_bytes": 1717172741,
+    "archive_sha256": "0fee1b74b315f368cec8f009b8d1aec91b03972e70aa299b60d25338f25cfb6b",
+    "inflated_raw_bytes": 3662409600,
+    "inflated_raw_sha256": "a7192f9387856c849d406a322a08ff77080502751ac200cc63fe80a704989dd5",
+    "d_seg": 0.0,
+    "d_pose": 0.0,
+    "nonrate_score": 0.0,
+    "rate_term": 1143.3948436521896,
+    "score_rounded": 1143.39,
+    "official_cpu_report": "/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z/official_cpu_report.txt"
+  },
+  "measured_triple_vs_capstone": {
+    "delta_d_seg": -0.00015196,
+    "delta_d_pose": -0.00010184,
+    "delta_bytes": 1307645816
+  },
+  "target_selection_recovery": {
+    "nonrate_score_recovered": 0.04710838004286111,
+    "break_even_extra_bytes": 70748.28658828246,
+    "actual_extra_bytes": 1307645816,
+    "actual_over_break_even_ratio": 18483.0
+  },
+  "min_description_section_effect": {
+    "brotli_quality": 5,
+    "section_bytes_before": 1989784190,
+    "section_bytes_after": 1717131154,
+    "section_bytes_delta": -272653036,
+    "fraction_freed": 0.13702643601766681,
+    "archive_overhead_bytes": 41587,
+    "winner_decomposition": {
+      "horizontal_predictor": {"chunks": 41, "pairs": 492, "bytes_freed": 221963112},
+      "constant": {"chunks": 6, "pairs": 72, "bytes_freed": 33760257},
+      "neighbor_mean": {"chunks": 3, "pairs": 36, "bytes_freed": 16929667},
+      "vertical_predictor": {"chunks": 0, "pairs": 0, "bytes_freed": 0}
+    }
+  },
+  "geometry_decomposition": {
+    "full_linear_nullity_fraction": 0.8067423152232891,
+    "implemented_integer_exact_null_mask_fraction": 0.22696926089315625,
+    "integer_null_changed_camera_values": 725830931,
+    "resize_numerator_values": 707788800,
+    "resize_numerator_mismatches": 0,
+    "encode_vs_realize": {"d_A": 0.0, "d_B": 0.0}
+  },
+  "hard_oracle_decomposition": {
+    "seg_reference_pixels_by_class": {
+      "0": 27407046,
+      "1": 690639,
+      "2": 58413281,
+      "3": 1460325,
+      "4": 29993509
+    },
+    "seg_flips_by_source_class": {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0},
+    "seg_reference_pixels_by_abs_margin_stratum": {
+      "[0e+00,1e-06)": 3,
+      "[1e-06,1e-05)": 33,
+      "[1e-05,1e-04)": 299,
+      "[1e-04,1e-03)": 3018,
+      "[1e-03,1e-02)": 29859,
+      "[1e-02,inf)": 117931588
+    },
+    "seg_flips_by_abs_margin_stratum": {
+      "[0e+00,1e-06)": 0,
+      "[1e-06,1e-05)": 0,
+      "[1e-05,1e-04)": 0,
+      "[1e-04,1e-03)": 0,
+      "[1e-03,1e-02)": 0,
+      "[1e-02,inf)": 0
+    },
+    "pose_mse_by_output_dimension": {"0": 0.0, "1": 0.0, "2": 0.0, "3": 0.0, "4": 0.0, "5": 0.0},
+    "decomposition_basis": "official d_seg and d_pose are means of nonnegative per-cell/per-dimension terms; exact aggregate zero implies every component is zero"
+  },
+  "reformulation": {
+    "measured_signal": "exact source fractions close distortion but direct per-camera preimage custody dominates rate",
+    "next_coordinate": "select only hard-oracle-relevant floor/ceil numerator decisions and entropy-code them inside the existing compact plane descriptor",
+    "admission_gate": "charged fractional-selection description <= 70748 bytes while preserving n600 hard-oracle gain; stop at KKT rate break-even",
+    "not_authorized": "no claim that source fractions are a zero-byte receiver property"
+  }
+}
