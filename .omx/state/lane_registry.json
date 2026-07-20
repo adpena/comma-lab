@@ -80033,6 +80033,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_r1b3_producers_20260720",
+      "name": "R1b3 production boundary MDL xi0 producers",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated isolated-worktree $0 local producer build; macOS-CPU advisory only; no paid dispatch; MAIN review required."
     }
   ],
   "level_rules": {
@@ -80042,5 +80083,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T18:22:05Z"
+  "updated_at": "2026-07-20T18:35:48Z"
 }
