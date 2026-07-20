@@ -9,8 +9,10 @@ from tac.boundary_math.r1b4_section_receiver import encode_replay_payload
 from tac.optimization.r1b2_mdl_xi0_compile import _write_zip
 from tac.optimization.r1b3_producer_preflight import encode_xi0_payload
 from tools.audit_r1b5_carrier_bytes import (
+    _BOUNDARY_PREFIX,
     _measure_case,
     _raw_deflate_size,
+    _section_envelope,
     _zero_boundary_payload,
 )
 
@@ -38,3 +40,10 @@ def test_direct_shift_body_is_intrinsic_and_highly_compressible() -> None:
     shifts = np.asarray([-11] * 440 + [-12] * 145 + [-10] * 13 + [-8, -13], dtype=np.int8)
     assert shifts.nbytes == 600
     assert _raw_deflate_size(shifts.tobytes()) < 120
+
+
+def test_boundary_envelope_accounts_for_versioned_prefix() -> None:
+    payload = _zero_boundary_payload()
+    envelope = _section_envelope(payload, _BOUNDARY_PREFIX)
+    assert envelope["body_bytes"] == 3_004
+    assert envelope["total_bytes"] == len(payload)

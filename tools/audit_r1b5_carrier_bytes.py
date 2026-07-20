@@ -139,7 +139,8 @@ def _member_rows(path: Path) -> list[dict[str, Any]]:
 
 
 def _section_envelope(payload: bytes, prefix: struct.Struct) -> dict[str, int]:
-    _magic, header_bytes, body_bytes = prefix.unpack_from(payload)
+    fields = prefix.unpack_from(payload)
+    header_bytes, body_bytes = fields[-2:]
     expected = prefix.size + header_bytes + body_bytes + _CRC_BYTES
     if expected != len(payload):
         raise CarrierAuditError("section envelope length drifted")
