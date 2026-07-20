@@ -79891,12 +79891,12 @@
           "evidence": ""
         }
       },
-      "notes": "Bounded local inverse solve of RATE only at fixed capstone C1 distortion; $0, no paid dispatch, no heavy training, advisory until exact contest-axis replay.",
+      "notes": "FORMULATION_SCOPED_EMPTY_FIXED_DISTORTION_INTERSECTION: strict fixed-C1 cap is 216223 B; no new receiver-closed row; pointer unchanged; durable receipt landed; MAIN review required.",
       "research_only": true,
       "reactivation_criteria": [
-        "compact byte-closed C1 representation",
-        "exact hard CPU-torch replay on shipped bytes",
-        "contest-CPU crossing with full custody"
+        "MAIN approval of PDW2-conditioned receiver-closed optimal form",
+        "n24 actual archive with native-f32 parse-back and hard through-R oracle",
+        "strict n600 fixed-C1 gate: bytes<=216223 and d_seg<=0.00015196 and d_pose<=0.00010184"
       ]
     }
   ],
@@ -79907,5 +79907,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T09:29:48Z"
+  "updated_at": "2026-07-20T09:46:13Z"
 }

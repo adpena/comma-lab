@@ -1,0 +1,252 @@
+{
+  "schema": "inverse_solve_einstein_avenue_receipt.v1",
+  "written_at_utc": "2026-07-20T09:41:58Z",
+  "lane_id": "inverse_solve_einstein_avenue_20260720T092250Z",
+  "research_only": true,
+  "promotion_claim": false,
+  "score_claim": false,
+  "authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/inverse_solve_einstein_avenue_20260720T092250Z.wrapped.prompt.txt",
+    "bytes": 7202,
+    "sha256": "ddd6bb64aac1a3e5a6f1eb0be43248dace5042092d5656c6dae20de9efd153b8",
+    "delegation_checkpoint_key": "codex_delegate:inverse_solve_einstein_avenue:20260720T092250Z"
+  },
+  "execution": {
+    "cost_usd": 0,
+    "paid_dispatch": false,
+    "heavy_training": false,
+    "new_eval_dispatch": false,
+    "reason_no_new_eval": "No newly constructed archive had both a legal spatial/RGB receiver and the carried C1 distortion bounds. Re-evaluating the unchanged 409526925-byte C1 archive would add no information, while evaluating target-only or failed-receiver packets would manufacture authority.",
+    "worktree_head_before_receipt": "cefeadbcaf97d694ab1e37074b624895b0f34496"
+  },
+  "live_pointer": {
+    "score": 0.1910828242,
+    "axis": "[contest-CPU Linux x86_64]",
+    "source_path": "reports/latest.md",
+    "source_sha256": "2c8e987723e68c7b7efcf058776c4052fc4b8990cab733194a7f9923350c291d",
+    "moved": false
+  },
+  "score_law": {
+    "expression": "S = 100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "original_uncompressed_size_bytes": 37545489,
+    "rate_price_score_per_byte": 6.658589531221714e-07,
+    "seg_rate_equivalence_bytes_per_1e_minus_6_d_seg": 150.181956
+  },
+  "carried_c1_exact_row": {
+    "evidence_label": "MEASURED PRIOR EXACT BYTE-CLOSED [contest-CPU]",
+    "new_measurement_this_lane": false,
+    "archive": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
+      "bytes": 409526925,
+      "sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42"
+    },
+    "contest_eval_receipt": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/contest_auth_eval.json",
+      "bytes": 11533,
+      "sha256": "4ef77cc58c4232fc0bfa76f02c74ceb6c258e064707522a4b510e9fe06495e99"
+    },
+    "axis": "[contest-CPU Linux x86_64]",
+    "pairs": 600,
+    "d_seg": 0.00015196,
+    "d_pose": 0.00010184,
+    "seg_score_term": 0.015196,
+    "pose_score_term": 0.03191238004286111,
+    "rate_score_term": 272.687169555842,
+    "canonical_score": 272.73427793588485,
+    "reported_display_score": 272.73,
+    "inflate_elapsed_seconds": 215.805690679,
+    "evaluate_elapsed_seconds": 175.19074854800002,
+    "inflated_raw_bytes": 3662409600,
+    "inflated_raw_sha256": "31d77be9ab9f00e9f814542368396a35ffa119a32571e701636d4747540e255b",
+    "pact_source_commit": "377df459805cadcec64948ac5cceffddf69f5a79"
+  },
+  "fixed_c1_distortion_intersection": {
+    "evidence_label": "DERIVED FROM MEASURED C1 DISTORTIONS AND LIVE POINTER",
+    "fixed_distortion_term": 0.04710838004286111,
+    "continuous_crossing_archive_bytes": 216223.63637531892,
+    "strict_max_integer_archive_bytes": 216223,
+    "score_at_216223_bytes": 0.19108240046379638,
+    "margin_below_pointer_at_216223": 4.237362036252357e-07,
+    "score_at_216224_bytes": 0.1910830663227495,
+    "margin_above_pointer_at_216224": 2.421227494886491e-07,
+    "score_at_authority_rounded_216300_bytes": 0.19113367160318678,
+    "margin_above_pointer_at_216300": 5.084740318678227e-05,
+    "bytes_to_remove_from_c1_archive": 409310702,
+    "c1_archive_over_strict_cap_factor": 1894.002603793306,
+    "strict_cap_amortized_bytes_per_pair": 360.37166666666667,
+    "outer_264320_box_score_at_fixed_c1_distortion": 0.22310821853211343,
+    "outer_264320_box_is_a_fixed_c1_crossing": false,
+    "correction": "The approximate 216300-byte handoff value and older 264000/264320-byte boxes are not strict fixed-C1 crossing caps. The exact strict integer cap is 216223 bytes."
+  },
+  "formulation_evidence": [
+    {
+      "formulation": "lossless exact C1 scorer-plane coordinates",
+      "evidence_label": "MEASURED/EXTRAPOLATED PRIOR; FAMILY-SCOPED LOSSLESS RATE WALL",
+      "best_exact_byteclosed_archive_bytes": 409526925,
+      "best_measured_conditional_floor_bytes_per_pair": 334115.4166666667,
+      "complete_production_floor_n600_bytes": 398401225,
+      "source": ".omx/research/v10_ratecrush_phase1_20260719.md",
+      "source_sha256": "48ad2f5ad2470465c70f7f9bf715c8f9c1ea08217e5e6d10a89e709a6f6af92a",
+      "admitted_to_fixed_c1_intersection": false,
+      "reason": "All exact realizations exceed the 216223-byte cap by orders of magnitude."
+    },
+    {
+      "formulation": "positive-band joint Seg/Pose range-coordinate residual",
+      "evidence_label": "MEASURED PRIOR RANGE COORDINATES; NOT ARCHIVE BYTES",
+      "pair_count": 24,
+      "brotli_q11_bytes_per_pair": 1474579.92,
+      "d_seg": 0,
+      "d_pose": 0.00002521975392375284,
+      "over_fixed_cap_amortized_factor": 4091.8308968056126,
+      "source": ".omx/research/vjp_custody_positive_bands_20260719_codex.md",
+      "source_sha256": "907ecdbec8f6a2e9a306fc4d4a4c9ac153acf16afaca7fe00687628ac050bb77",
+      "admitted_to_fixed_c1_intersection": false,
+      "reason": "The bytes are scorer-numerator range residuals without spatial/RGB receiver, parse-back, archive custody, or exact contest eval."
+    },
+    {
+      "formulation": "PDW2 gauge-fixed quotient target",
+      "evidence_label": "MEASURED PRIOR TARGET PACKET ONLY",
+      "raw_bytes": 138,
+      "brotli_q11_bytes": 133,
+      "source": ".omx/research/pdw2_gauge_packet_probe_20260719_codex.md",
+      "source_sha256": "170fc5cd3470822e291e9951bc6f7ddba4b53ca2386533c3d27d4a4612608416",
+      "admitted_to_fixed_c1_intersection": false,
+      "reason": "No legal spatial/RGB pullback receiver exists, so neither through-R distortion nor archive score exists."
+    },
+    {
+      "formulation": "Cole-Hopf/Gibbs codomain target initializer",
+      "evidence_label": "MEASURED PRIOR TARGET CONSTRUCTION; DERIVED PREIMAGE LIMIT",
+      "n600_target_construction_seconds": 2.5133,
+      "mean_top1": 0.9958448,
+      "source": ".omx/research/alternative_forms_conv_wall_20260718.md",
+      "source_sha256": "5834477d75a891333486670e5c03fe97b7fac3e0faf6c53911c7e880e987dd51",
+      "admitted_to_fixed_c1_intersection": false,
+      "reason": "The solved object is a codomain target, not an RGB/uint8/archive preimage."
+    },
+    {
+      "formulation": "R1 direct-RGB self-oriented curvelet generator plus coded xi",
+      "evidence_label": "MEASURED PRIOR [macOS-CPU advisory] DIFFERENT DISTORTION",
+      "archive_bytes": 89772,
+      "archive_retained": false,
+      "d_seg": 0.004549119737413194,
+      "d_pose": 0.0016095471538913576,
+      "d_seg_over_c1_factor": 29.93629729806,
+      "advisory_score": 0.6415553931939952,
+      "source": ".omx/research/einstein_kolmogorov_xi_blocker_v2_20260720.json",
+      "source_sha256": "2f68c9ff3af26986cefabd65a49641eba0ef38e43d1976b3752dbfc59a0f3fd0",
+      "admitted_to_fixed_c1_intersection": false,
+      "reason": "Its rate is inside the outer box but its realized distortions do not carry C1; the archive was deleted after the settled receipt."
+    },
+    {
+      "formulation": "fresh 91062-byte xi packet",
+      "evidence_label": "MEASURED PACKET BYTES; FAILED RECEIVER; DISTORTION UNKNOWN",
+      "archive_bytes": 91062,
+      "archive_sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a",
+      "failure": "NameError: _CP_XI_FX at the strict bit-exact receiver gate",
+      "admitted_to_fixed_c1_intersection": false,
+      "reason": "Decode and scoring did not occur."
+    }
+  ],
+  "verdict": {
+    "label": "FORMULATION_SCOPED_EMPTY_FIXED_DISTORTION_INTERSECTION",
+    "statement": "No currently custodied exact or receiver-closed description intersects archive_bytes<=216223, d_seg<=0.00015196, and d_pose<=0.00010184. The best exact byte-closed fixed-distortion row remains the carried 409526925-byte C1 archive; no new score row was produced.",
+    "binding_missing_object": "A compact legal spatial/RGB pullback from the quotient target into uint8 frames through the frozen R operator; entropy polishing is not the present blocker.",
+    "scope": "the tested exact-plane, range-coordinate, PDW2 target-only, Cole-Hopf target-only, and settled R1 direct-generator instances listed in this receipt",
+    "not_rejected": [
+      "inverse solving as a family",
+      "the W=(G,xi,T) representation family",
+      "curvelet/shearlet sparse spatial pullbacks",
+      "a corrected receiver-closed xi generator",
+      "branchwise active-set or mixed-integer preimage solves"
+    ]
+  },
+  "next_optimal_form_reformulation": {
+    "name": "PDW2-conditioned Fisher/inner-Jacobian spatial pullback reverse-waterfill",
+    "training_required": false,
+    "construction": "Keep the 133-byte native-float32 PDW2 head target fixed; solve only the missing spatial/RGB pullback in per-stratum edge coordinates, factor pose through xi, and encode residual atoms in a curvelet/shearlet basis. Rank candidate corrections by winner-rival Fisher margin and predict realization with corrected first-order plus secant plus active-set QP inner-Jacobian closure, not a naive first-order proxy.",
+    "score_delta_admission_law": "For B_saved>0, admit a coarsening only when 100*Delta_d_seg + sqrt(10*(d_pose+Delta_d_pose)) - sqrt(10*d_pose) < 25*B_saved/37545489. For a repair adding B_add>0, admit only when 100*Delta_d_seg + sqrt(10*(d_pose+Delta_d_pose)) - sqrt(10*d_pose) + 25*B_add/37545489 < 0.",
+    "hard_first_gate": {
+      "pair_scope": "n24 diagnostic with pre-registered pair IDs, followed by n600 only after receiver closure",
+      "requirements": [
+        "one actual archive.zip including container/runtime/payload bytes",
+        "strict parse-back through the declared native-float32 receiver",
+        "hard CPU-Torch d_seg and d_pose on emitted uint8 frames through R",
+        "retained mismatch bitmap and per-stratum byte ledger",
+        "no promotion inference from n24"
+      ]
+    },
+    "fixed_c1_n600_acceptance": {
+      "archive_bytes_max": 216223,
+      "d_seg_max": 0.00015196,
+      "d_pose_max": 0.00010184,
+      "score_must_be_strictly_below": 0.1910828242
+    },
+    "remaining_charged_bytes_after_133_byte_target_before_container_runtime": 216090,
+    "main_review_required_before_execution": true
+  },
+  "round1_adversarial_review": {
+    "status": "PASS_WITH_FORMULATION_SCOPED_WALL",
+    "attacks": [
+      {
+        "attack": "Treat the rounded 216300 or outer 264320 value as a fixed-C1 crossing.",
+        "result": "REJECTED_BY_EXACT_ARITHMETIC",
+        "detail": "216224 is already above the pointer; 264320 scores 0.22310821853211343 at fixed C1 distortion."
+      },
+      {
+        "attack": "Promote the 1474579.92-byte/pair positive-band row to archive evidence.",
+        "result": "REJECTED_BY_RECEIVER_CUSTODY",
+        "detail": "It is a range-coordinate residual without spatial/RGB parse-back."
+      },
+      {
+        "attack": "Compose the 133-byte PDW2 packet directly with C1 distortion.",
+        "result": "REJECTED_AS TYPE-INVALID",
+        "detail": "A head target is not an emitted pixel witness; the missing pullback is the problem being solved."
+      },
+      {
+        "attack": "Use the 89772-byte xi archive as the requested crossing.",
+        "result": "REJECTED_BY DISTORTION AND AXIS",
+        "detail": "Its measured d_seg is 29.93629729806 times C1 and its evidence is non-promotable macOS-CPU advisory."
+      },
+      {
+        "attack": "Close the whole inverse-solve family after these misses.",
+        "result": "REJECTED_BY OPTIMAL-FORM DISCIPLINE",
+        "detail": "Only the listed formulations are walled; the receiver-closed PDW2-conditioned optimal form is still untested."
+      }
+    ]
+  },
+  "triality": {
+    "dsl": "No typed DSL mutation was needed for this evidence-only $0 lane. Any follow-on must use the existing native-float32 receiver and registered xi/curvelet configuration surfaces rather than invented flags.",
+    "dag": "C1 exact row -> derive strict fixed-distortion cap -> test custody of exact-plane/range/target/direct-generator formulations -> empty admitted intersection -> queue receiver-closed PDW2-conditioned pullback -> n24 parse-back/hard-oracle gate -> n600 exact archive gate.",
+    "equations": [
+      "S = 100*d_seg + sqrt(10*d_pose) + 25*B/37545489",
+      "B_max = ceil((pointer - 100*d_seg - sqrt(10*d_pose))*37545489/25) - 1",
+      "B_max(C1) = 216223"
+    ]
+  },
+  "stores_consulted": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".omx/research/t5_crucible/SPEC_v75_optimal_single_trunk_20260708.md",
+    "reports/latest.md",
+    ".omx/state/lane_registry.json",
+    ".omx/state/subagent_progress.jsonl",
+    ".omx/research/v10_capstone_first_byteclosed_row_20260719.md",
+    ".omx/research/v10_ratecrush_phase1_20260719.md",
+    ".omx/research/generator_description_crux_synthesis_20260719.md",
+    ".omx/research/joint_seg_pose_inverse_solve_20260719_codex.md",
+    ".omx/research/vjp_custody_positive_bands_20260719_codex.md",
+    ".omx/research/yhat_rd_ladder_20260719_codex.json",
+    ".omx/research/pdw2_gauge_packet_probe_20260719_codex.md",
+    ".omx/research/alternative_forms_conv_wall_20260718.md",
+    ".omx/research/einstein_kolmogorov_xi_blocker_v2_20260720.json",
+    "per-arm and broadcast inboxes through 2026-07-19T19:48:01Z"
+  ],
+  "main_landing_review": {
+    "required": true,
+    "focus": [
+      "confirm 216223 as the strict fixed-C1 integer cap and reject 216300/264320 as equivalent caps",
+      "confirm no target-only or range-only bytes were promoted to archive authority",
+      "approve or revise the PDW2-conditioned receiver-closed optimal-form recursion before implementation"
+    ]
+  }
+}
