@@ -1,0 +1,240 @@
+{
+  "axis": "[macOS-CPU advisory] target-cache analysis; no score authority",
+  "blockers": [
+    {
+      "adapter_input_space": "camera RGB or scorer-plane RGB continuous proposal",
+      "code": "MISSING_TYPED_CLASS_OR_RANK4_FEATURE_TO_RGB_PREIMAGE_PULLBACK",
+      "missing_map": "treatment space to camera/scorer-plane RGB continuous proposal",
+      "reason": "surface 1 preserves a supplied RGB proposal through the exact bounded uint8 solve, but it does not derive RGB from class probabilities or rank-4 SegNet-head features",
+      "treatment_space": "five-class sparsemax/Cole-Hopf probability field",
+      "verdict_scope": "matched class-logit/rank-4 treatment -> camera RGB bytes -> parse-back -> fresh frozen CPU-Torch SegNet HARD_ACCEPT composition only; individual prerequisite surfaces remain valid"
+    }
+  ],
+  "candidate_bytes_same_coder": null,
+  "created_at_utc": "2026-07-20T17:39:48Z",
+  "exact_oracle_calls": null,
+  "falsifier": "FALSIFIED if the matched sparsemax arm fails to improve hard accepts, exact-oracle calls, or bytes versus entropy/Cole-Hopf on identical cells and budget.",
+  "falsifier_evaluated": false,
+  "git_head": "be7bac503c4d0c51661858337520953c28bb537d",
+  "hard_accepts": null,
+  "hard_cpu_torch_oracle": {
+    "authority": "fresh frozen SegNet on parsed RGB bytes",
+    "invoked": false,
+    "reason": "no well-typed RGB candidate exists for this treatment"
+  },
+  "inputs": {
+    "frozen_segnet_weights": {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "hard_labels": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8",
+      "sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68"
+    },
+    "logits": {
+      "bytes": 1179648000,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16",
+      "sha256": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52"
+    },
+    "prerequisite_manifest": {
+      "bytes": 1175,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/probe_exec_vjp_extend_20260720T172411Z/.omx/research/prereq_surfaces_flush_20260720/manifest.json",
+      "sha256": "4a8330e79353cfd45dd3c7580c55013a878b6e72fb3e242223c82a0dc03f766f"
+    },
+    "scale": 1.0,
+    "shape": [
+      600,
+      5,
+      384,
+      512
+    ]
+  },
+  "per_stratum_decomposition": {
+    "authority_boundary": "target-only; cached labels are not a decoded candidate HARD_ACCEPT and no receiver/byte benefit is claimed",
+    "beats_preregistered_fraction": false,
+    "delta_vs_preregistered_fraction": 0.0,
+    "measured_exact_one_hot_fraction": 0.9733309173583984,
+    "prediction_maps": {
+      "fp16_argmax_vs_hard_label_mismatches": 2629,
+      "overall": {
+        "entropy_support_size_mean": 5.0,
+        "entropy_target_debt_mean": 0.02234434100916241,
+        "pixels": 117964800,
+        "sparsemax_exact_one_hot_fraction": 0.9733309173583984,
+        "sparsemax_support_size_mean": 1.0268010626898871,
+        "sparsemax_target_debt_mean": 0.006842206702653877
+      },
+      "per_class": {
+        "0": {
+          "entropy_support_size_mean": 5.0,
+          "entropy_target_debt_mean": 0.04250429628967212,
+          "pixels": 27407045,
+          "sparsemax_exact_one_hot_fraction": 0.9437847823433719,
+          "sparsemax_support_size_mean": 1.056443553108334,
+          "sparsemax_target_debt_mean": 0.014052218609141881
+        },
+        "1": {
+          "entropy_support_size_mean": 5.0,
+          "entropy_target_debt_mean": 0.3371544956651384,
+          "pixels": 690639,
+          "sparsemax_exact_one_hot_fraction": 0.25764835174381984,
+          "sparsemax_support_size_mean": 1.7441514307764259,
+          "sparsemax_target_debt_mean": 0.20524057963949427
+        },
+        "2": {
+          "entropy_support_size_mean": 5.0,
+          "entropy_target_debt_mean": 0.012047501223824763,
+          "pixels": 58413281,
+          "sparsemax_exact_one_hot_fraction": 0.991538208579655,
+          "sparsemax_support_size_mean": 1.008518884600918,
+          "sparsemax_target_debt_mean": 0.002135794306270479
+        },
+        "3": {
+          "entropy_support_size_mean": 5.0,
+          "entropy_target_debt_mean": 0.10573777252253161,
+          "pixels": 1460325,
+          "sparsemax_exact_one_hot_fraction": 0.8232277061612997,
+          "sparsemax_support_size_mean": 1.1796134422132059,
+          "sparsemax_target_debt_mean": 0.04715388877442469
+        },
+        "4": {
+          "entropy_support_size_mean": 5.0,
+          "entropy_target_debt_mean": 0.012667104531864,
+          "pixels": 29993510,
+          "sparsemax_exact_one_hot_fraction": 0.9886576462708099,
+          "sparsemax_support_size_mean": 1.011361824608057,
+          "sparsemax_target_debt_mean": 0.0028887533733165656
+        }
+      },
+      "per_class_within_stratum": {
+        "boundary_annulus_or_tie_lt_1": {
+          "0": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.38448118338255055,
+            "pixels": 1540693,
+            "sparsemax_exact_one_hot_fraction": 0.0,
+            "sparsemax_support_size_mean": 2.004061808549789,
+            "sparsemax_target_debt_mean": 0.24997179046739937
+          },
+          "1": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.39359801315370546,
+            "pixels": 512697,
+            "sparsemax_exact_one_hot_fraction": 0.0,
+            "sparsemax_support_size_mean": 2.0024244339249107,
+            "sparsemax_target_debt_mean": 0.2764735285785575
+          },
+          "2": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.38603224449334533,
+            "pixels": 494281,
+            "sparsemax_exact_one_hot_fraction": 0.0,
+            "sparsemax_support_size_mean": 2.0067471741782508,
+            "sparsemax_target_debt_mean": 0.252404508711396
+          },
+          "3": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.39961369843651395,
+            "pixels": 258145,
+            "sparsemax_exact_one_hot_fraction": 0.0,
+            "sparsemax_support_size_mean": 2.0160723624319665,
+            "sparsemax_target_debt_mean": 0.266749317726517
+          },
+          "4": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.3833480894967938,
+            "pixels": 340197,
+            "sparsemax_exact_one_hot_fraction": 0.0,
+            "sparsemax_support_size_mean": 2.001716652410221,
+            "sparsemax_target_debt_mean": 0.25468729350965513
+          }
+        },
+        "high_margin_interior_ge_1": {
+          "0": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.022134922359177765,
+            "pixels": 25866352,
+            "sparsemax_exact_one_hot_fraction": 1.0,
+            "sparsemax_support_size_mean": 1.0,
+            "sparsemax_target_debt_mean": 0.0
+          },
+          "1": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.17452609941334796,
+            "pixels": 177942,
+            "sparsemax_exact_one_hot_fraction": 1.0,
+            "sparsemax_support_size_mean": 1.0,
+            "sparsemax_target_debt_mean": 0.0
+          },
+          "2": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.008855913784676971,
+            "pixels": 57919000,
+            "sparsemax_exact_one_hot_fraction": 1.0,
+            "sparsemax_support_size_mean": 1.0,
+            "sparsemax_target_debt_mean": 0.0
+          },
+          "3": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.04263357773051628,
+            "pixels": 1202180,
+            "sparsemax_exact_one_hot_fraction": 1.0,
+            "sparsemax_support_size_mean": 1.0,
+            "sparsemax_target_debt_mean": 0.0
+          },
+          "4": {
+            "entropy_support_size_mean": 5.0,
+            "entropy_target_debt_mean": 0.008414474849571354,
+            "pixels": 29653313,
+            "sparsemax_exact_one_hot_fraction": 1.0,
+            "sparsemax_support_size_mean": 1.0,
+            "sparsemax_target_debt_mean": 0.0
+          }
+        }
+      },
+      "per_stratum": {
+        "boundary_annulus_or_tie_lt_1": {
+          "entropy_support_size_mean": 5.0,
+          "entropy_target_debt_mean": 0.38732978549196345,
+          "pixels": 3146013,
+          "sparsemax_exact_one_hot_fraction": 0.0,
+          "sparsemax_support_size_mean": 2.004948803453768,
+          "sparsemax_target_debt_mean": 0.25655950729931
+        },
+        "high_margin_interior_ge_1": {
+          "entropy_support_size_mean": 5.0,
+          "entropy_target_debt_mean": 0.012343809013003403,
+          "pixels": 114818787,
+          "sparsemax_exact_one_hot_fraction": 1.0,
+          "sparsemax_support_size_mean": 1.0,
+          "sparsemax_target_debt_mean": 0.0
+        }
+      }
+    },
+    "preregistered_exact_one_hot_fraction": 0.9733309173583984,
+    "status": "MEASURED_N600_TARGET_SURFACE_NOT_RECEIVER_VERDICT",
+    "strata": {
+      "boundary_annulus_or_tie_lt_1": "fp16 top1-top2 margin < unit scale",
+      "high_margin_interior_ge_1": "fp16 top1-top2 margin >= unit scale"
+    },
+    "target_debt_definition": "mean(1 - p[target_hard_label])"
+  },
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "probe_id": "probe_sparsemax_margin_band_preimage_ab_v1",
+  "promotion_eligible": false,
+  "runtime": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "schema": "regmax_family_probe_receipt.v1",
+  "score_claim": false,
+  "surface_presence": {
+    "frozen_rank4_prototype_bank": true,
+    "matched_preimage_adapter": true,
+    "same_coder_comparator": true
+  },
+  "verdict": "BLOCKED_NOT_MEASURED",
+  "verdict_scope": "matched class-logit/rank-4 treatment -> camera RGB bytes -> parse-back -> fresh frozen CPU-Torch SegNet HARD_ACCEPT composition only; individual prerequisite surfaces remain valid"
+}

@@ -1,0 +1,70 @@
+{
+  "axis": "[macOS-CPU advisory] target-cache analysis; no score authority",
+  "created_at_utc": "2026-07-20T17:39:48Z",
+  "elapsed_seconds": 46.56697174999863,
+  "git_head": "be7bac503c4d0c51661858337520953c28bb537d",
+  "inputs": {
+    "frozen_segnet_weights": {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "hard_labels": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8",
+      "sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68"
+    },
+    "logits": {
+      "bytes": 1179648000,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16",
+      "sha256": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52"
+    },
+    "prerequisite_manifest": {
+      "bytes": 1175,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/probe_exec_vjp_extend_20260720T172411Z/.omx/research/prereq_surfaces_flush_20260720/manifest.json",
+      "sha256": "4a8330e79353cfd45dd3c7580c55013a878b6e72fb3e242223c82a0dc03f766f"
+    },
+    "scale": 1.0,
+    "shape": [
+      600,
+      5,
+      384,
+      512
+    ]
+  },
+  "overall_verdict": "P2_FALSIFIED_PRINCIPAL_MIN_BYTE_P1_P3_BLOCKED_ON_TYPED_RGB_PULLBACK",
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "receipts": [
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/probe_exec_vjp_extend_20260720T172411Z/.omx/research/probe_exec_vjp_extend_20260720T173948Z/regmax/probe_sparsemax_margin_band_preimage_ab_v1.json",
+      "probe_id": "probe_sparsemax_margin_band_preimage_ab_v1",
+      "sha256": "91e6a96096b2c005cce37c605eb8f4d67033576da1871d53cfc4f0e690ee4ad6"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/probe_exec_vjp_extend_20260720T172411Z/.omx/research/probe_exec_vjp_extend_20260720T173948Z/regmax/probe_tropical_residuation_principal_cell_representative_v1.json",
+      "probe_id": "probe_tropical_residuation_principal_cell_representative_v1",
+      "sha256": "c7052d74eab25c25893f879f9a24dba8549b23fcba3154945a8cdef0d66fc59d"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/probe_exec_vjp_extend_20260720T172411Z/.omx/research/probe_exec_vjp_extend_20260720T173948Z/regmax/probe_entropy_hopfield_preprox_uint8_v1.json",
+      "probe_id": "probe_entropy_hopfield_preprox_uint8_v1",
+      "sha256": "034f472e41abb27cf604d07dc8df4382179cb81e541f266cf878b8d45184f5f1"
+    }
+  ],
+  "runtime": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "schema": "regmax_family_probe_manifest.v1",
+  "score_claim": false,
+  "surface_presence": {
+    "frozen_rank4_prototype_bank": true,
+    "matched_preimage_adapter": true,
+    "same_coder_comparator": true
+  },
+  "verdicts": {
+    "probe_entropy_hopfield_preprox_uint8_v1": "BLOCKED_NOT_MEASURED",
+    "probe_sparsemax_margin_band_preimage_ab_v1": "BLOCKED_NOT_MEASURED",
+    "probe_tropical_residuation_principal_cell_representative_v1": "FALSIFIED_FORMULATION"
+  }
+}

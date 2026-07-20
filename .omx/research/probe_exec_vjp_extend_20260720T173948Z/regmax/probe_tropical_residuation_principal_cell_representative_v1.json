@@ -1,0 +1,202 @@
+{
+  "axis": "[macOS-CPU advisory] target-cache analysis; no score authority",
+  "candidate_bytes_same_coder": {
+    "aurenhammer_min_generator": 134,
+    "tropical_minus_aurenhammer": 3,
+    "tropical_minus_zero_sum": 6,
+    "tropical_principal": 137,
+    "zero_sum_min_norm": 131
+  },
+  "created_at_utc": "2026-07-20T17:39:48Z",
+  "falsifier": "FALSIFIED if the gauge-fixed principal representative changes the hard cell, is longer after the same coder, or requires uncounted state.",
+  "falsifier_evaluated": true,
+  "git_head": "be7bac503c4d0c51661858337520953c28bb537d",
+  "hard_cpu_torch_oracle": {
+    "invoked": false,
+    "reason": "probe 2 is exact frozen affine-head cell identity plus real coder bytes; it makes no RGB score claim"
+  },
+  "inputs": {
+    "frozen_segnet_weights": {
+      "path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+      "sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "hard_labels": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8",
+      "sha256": "36c6be718916de9b0a62fec0c1229c94e38f84c3313a1fad1357c9a24eef8b68"
+    },
+    "logits": {
+      "bytes": 1179648000,
+      "path": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/gt_segnet_logits.f16",
+      "sha256": "41d3ef535f5b5855fe17aab678580114a50309dc48d04948af62c2f563ed3b52"
+    },
+    "prerequisite_manifest": {
+      "bytes": 1175,
+      "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/probe_exec_vjp_extend_20260720T172411Z/.omx/research/prereq_surfaces_flush_20260720/manifest.json",
+      "sha256": "4a8330e79353cfd45dd3c7580c55013a878b6e72fb3e242223c82a0dc03f766f"
+    },
+    "scale": 1.0,
+    "shape": [
+      600,
+      5,
+      384,
+      512
+    ]
+  },
+  "per_stratum_decomposition": {
+    "joint_packet_rationale": "PDW2 serializes one five-cell affine complex, not separable per-cell packets",
+    "packet_bytes_are_joint": true,
+    "per_frozen_cell": {
+      "0": {
+        "aurenhammer_class": 0,
+        "expected_class": 0,
+        "prototype_margin": 0.9999999403953552,
+        "tropical_class": 0,
+        "zero_sum_class": 0
+      },
+      "1": {
+        "aurenhammer_class": 1,
+        "expected_class": 1,
+        "prototype_margin": 0.9999999403953552,
+        "tropical_class": 1,
+        "zero_sum_class": 1
+      },
+      "2": {
+        "aurenhammer_class": 2,
+        "expected_class": 2,
+        "prototype_margin": 1.0,
+        "tropical_class": 2,
+        "zero_sum_class": 2
+      },
+      "3": {
+        "aurenhammer_class": 3,
+        "expected_class": 3,
+        "prototype_margin": 1.0,
+        "tropical_class": 3,
+        "zero_sum_class": 3
+      },
+      "4": {
+        "aurenhammer_class": 4,
+        "expected_class": 4,
+        "prototype_margin": 1.0,
+        "tropical_class": 4,
+        "zero_sum_class": 4
+      }
+    }
+  },
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "probe_id": "probe_tropical_residuation_principal_cell_representative_v1",
+  "promotion_eligible": false,
+  "runtime": {
+    "numpy": "1.26.4",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12"
+  },
+  "same_coder_comparator": {
+    "authority": "LOCAL_SAME_CODER_STRUCTURAL_COMPARATOR_NOT_SCORE_AUTHORITY",
+    "cell_identity_scope": "five frozen-head strict prototype witnesses",
+    "consumer": "regmax_tropical_aurenhammer_comparator_probe2",
+    "exact_cell_identity": true,
+    "frozen_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "gauge": "PDW2_REFERENCE_CLASS_AFFINE_GAUGE",
+    "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+    "promotion_eligible": false,
+    "prototype_bank_sha256": "5ce0458949acb1cde21022aef7bf642b4491ddb03d1ab66838866b20cb7b162f",
+    "representatives": {
+      "aurenhammer_min_generator_lp": {
+        "candidate_name": "aurenhammer_min_generator_lp",
+        "cell_identity_scope": "caller-supplied strict prototype witnesses",
+        "coded_bytes": 134,
+        "coded_sha256": "628ad7d4f24c0fd5e1e214ebffa8ec30c6dd9c9515f29d51b97bea7775b37a9e",
+        "coder": "brotli_quality_11",
+        "derivation": "shared-affine Linf min-generator LP midpoint solution",
+        "exact_cell_identity": true,
+        "expected_prototype_cell_labels": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "packet_bytes": 142,
+        "packet_serializer": "tac.boundary_math.power_diagram_witness.encode_pdw2",
+        "packet_sha256": "c789720db613b3b9f4a40f875501fcac45c8a4e17a97083017e3b2d2c9d673cf",
+        "prototype_cell_identity_sha256": "a4793757a5e330093e89ca0152d3d5bc6471c30b2dcc8850369dc3b95028b13a",
+        "prototype_cell_labels": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "tropical_residuation_principal": {
+        "candidate_name": "tropical_residuation_principal",
+        "cell_identity_scope": "caller-supplied strict prototype witnesses",
+        "coded_bytes": 137,
+        "coded_sha256": "73054f2082206bf23f8880b734eed9fc031cf8a105cbecf7f896bc767b17e941",
+        "coder": "brotli_quality_11",
+        "derivation": "max-plus principal residuation normalization",
+        "exact_cell_identity": true,
+        "expected_prototype_cell_labels": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "packet_bytes": 142,
+        "packet_serializer": "tac.boundary_math.power_diagram_witness.encode_pdw2",
+        "packet_sha256": "0f70083327fe99e27e2cc941ff994e14571375d5aed5069a6112c5a604fc5e79",
+        "prototype_cell_identity_sha256": "a4793757a5e330093e89ca0152d3d5bc6471c30b2dcc8850369dc3b95028b13a",
+        "prototype_cell_labels": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "zero_sum_min_norm": {
+        "candidate_name": "zero_sum_min_norm",
+        "cell_identity_scope": "caller-supplied strict prototype witnesses",
+        "coded_bytes": 131,
+        "coded_sha256": "decc7a38910f1249fb578b6e7f68a3291b02f9b27d4a6c12254d56d1370adad1",
+        "coder": "brotli_quality_11",
+        "derivation": "shared-affine L2 projection onto zero-sum gauge",
+        "exact_cell_identity": true,
+        "expected_prototype_cell_labels": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "packet_bytes": 142,
+        "packet_serializer": "tac.boundary_math.power_diagram_witness.encode_pdw2",
+        "packet_sha256": "756d5a70893ce23d6b1929807e5a0efadf50b2ed68527ed2c4029eadd98b6467",
+        "prototype_cell_identity_sha256": "a4793757a5e330093e89ca0152d3d5bc6471c30b2dcc8850369dc3b95028b13a",
+        "prototype_cell_labels": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    "same_coder": true,
+    "same_packet_serializer": true,
+    "schema": "aurenhammer_same_coder_comparator_v1",
+    "score_claim": false
+  },
+  "schema": "regmax_family_probe_receipt.v1",
+  "score_claim": false,
+  "surface_presence": {
+    "frozen_rank4_prototype_bank": true,
+    "matched_preimage_adapter": true,
+    "same_coder_comparator": true
+  },
+  "verdict": "FALSIFIED_FORMULATION",
+  "verdict_scope": "tropical principal representative as a minimum-byte representative of the five frozen-head strict prototype cells through PDW2 plus Brotli-q11"
+}

@@ -1,0 +1,47 @@
+{
+  "schema": "vjp_custody_timing_receipt.v1",
+  "axis": "[macOS-arm64 CPU advisory]",
+  "pair_ids": [26, 27, 28],
+  "pair_count": 3,
+  "elapsed_seconds": 33.38,
+  "seconds_per_pair": 11.126666666666667,
+  "projected_pairs": 576,
+  "projected_seconds": 6408.96,
+  "projected_hours": 1.7802666666666667,
+  "peak_rss_bytes": 2670051328,
+  "peak_rss_gib": 2.4866790771484375,
+  "memory_governor": {
+    "projected_gib": 3.0,
+    "decision": "ADMIT",
+    "adaptive_ceiling_gib": 102.264,
+    "projected_system_used_gib": 41.772,
+    "headroom_after_gib": 60.493
+  },
+  "artifacts": {
+    "manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_20260720_timing_026_028/manifest.json",
+      "bytes": 5629,
+      "sha256": "a0c17ec9a3a44863705a66036471996dd7ae96fd7dc48fccb43b9b95302921d7"
+    },
+    "launch_manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_20260720_timing_026_028/launch_manifest.json",
+      "bytes": 1221,
+      "sha256": "56d5eaf7ac6c9975edc9fbe25c8a5052894ca3a0e217527cd20469d66550325d"
+    },
+    "run_log": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_20260720_timing_026_028/run.log",
+      "bytes": 955,
+      "sha256": "b25b48a43d82c3dd25f2738224893b6b9d594f6c27377ce9bfe45c8058838221"
+    }
+  },
+  "failed_preflight_attempt": {
+    "verdict": "REFUSED_WRONG_OUTPUT_TIER",
+    "verdict_scope": "the first timing invocation path only; producer and timing gate remain valid",
+    "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260720/timing_smoke_026_028",
+    "launch_manifest_sha256": "e8c706ce182e761cbd20964a4a3b603b770a6ab60da2a1bc3c77208ee18d984b",
+    "run_log_sha256": "68446fb10c73826616148b7e79d8ba2cc0bf18ae3c6447fccbcac42c48e2a38f"
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED"
+}

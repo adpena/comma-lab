@@ -1,0 +1,34 @@
+{
+  "schema": "vjp_custody_restart_proof.v1",
+  "axis": "[macOS-arm64 CPU advisory]",
+  "data_root": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720",
+  "first_launch": {
+    "pid": 60661,
+    "termination": "SIGTERM to detached process group after pair 29 sidecar checkpoint",
+    "launch_manifest_sha256": "18080c11bf05e230f89e61dd890f00bcb1ef5b7deb35905b09feaf3f7d34224d",
+    "run_log_sha256_after_termination": "72fc21fc7edfdd086c7df88af6c540a3502a7098cbef6f4d89aa86338a7a5317"
+  },
+  "preserved_checkpoint": {
+    "pair_id": 29,
+    "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/extension_n600_20260720/chunk_0029_0040_a9b87f17/pair_0029.vjp.npz",
+    "bytes_before_restart": 151686708,
+    "bytes_after_restart": 151686708,
+    "mtime_seconds_before_restart": 1784569563,
+    "mtime_seconds_after_restart": 1784569563,
+    "sha256_before_restart": "0c64d18dad2506c3e9be62272434bf3fcea12924c97f70feac0c2364b016d365",
+    "sha256_after_restart": "0c64d18dad2506c3e9be62272434bf3fcea12924c97f70feac0c2364b016d365"
+  },
+  "second_launch": {
+    "pid": 62096,
+    "launch_manifest_sha256": "bc3e71c6dabaed50af9b38fc31e8229680f2466687969a7c3becd4db40e3335e",
+    "observed_chunk_status_before": "partial",
+    "observed_chunk_status_after": "complete",
+    "completed_pair_ids": [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+    "producer_returncode": 0
+  },
+  "restart_verdict": "PASS_VALIDATED_EXISTING_PREFIX_SKIPPED_AND_CHUNK_COMPLETED",
+  "verdict_scope": "one intentional detached-worker termination during chunk 29..40; immutable per-pair checkpoint and producer prefix-resume path",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU] UNMOVED"
+}
