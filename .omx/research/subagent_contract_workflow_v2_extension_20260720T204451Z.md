@@ -1,7 +1,7 @@
 # Subagent contract workflow-v2 extension
 
-**UTC:** 2026-07-20T20:44:51Z  
-**Lane:** `workflow_contract_extension_20260720T203932Z`  
+**UTC:** 2026-07-20T20:44:51Z
+**Lane:** `workflow_contract_extension_20260720T203932Z`
 **Authority:** delegated apparatus-only build; no score, GPU, paid-dispatch, or pointer authority.
 
 ## Implementation specification
