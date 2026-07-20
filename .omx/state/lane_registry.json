@@ -79898,6 +79898,47 @@
         "Entropy-code hard-oracle-relevant fractional target decisions inside compact Y descriptor at <=70748 charged bytes",
         "then n600 byte-close."
       ]
+    },
+    {
+      "id": "lane_r2b_sparse_target_selection_20260720",
+      "name": "R2b sparse target selection",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only n600 sparse fractional target-decision measurement; no paid or heavy launch."
     }
   ],
   "level_rules": {
@@ -79907,5 +79948,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T15:56:00Z"
+  "updated_at": "2026-07-20T16:10:18Z"
 }
