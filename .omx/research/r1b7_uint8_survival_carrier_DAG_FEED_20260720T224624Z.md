@@ -1,7 +1,7 @@
 # FEED-R1B7-UINT8-SURVIVAL-20260720
 
-`research_only=true`  
-Authority: `[macOS-CPU advisory]`, `score_claim=false`  
+`research_only=true`
+Authority: `[macOS-CPU advisory]`, `score_claim=false`
 Pointer: `0.1910828242 [contest-CPU] UNMOVED`
 
 `verdict_scope`: sealed R1b4 n16, 498 exact-feasible Fisher-ordered fixed-arm

@@ -1,8 +1,8 @@
 # R1b7 uint8-survival carrier — build specification
 
-Date: 2026-07-20  
-Lane: `r1b7_uint8_survival_carrier`  
-Authority: delegated R1b7 prompt SHA-256 `cf2e4a374583a836b41a9bf56cb154e847743df2786031a377ea31cd1a4f3401`  
+Date: 2026-07-20
+Lane: `r1b7_uint8_survival_carrier`
+Authority: delegated R1b7 prompt SHA-256 `cf2e4a374583a836b41a9bf56cb154e847743df2786031a377ea31cd1a4f3401`
 Execution class: local, research-only, `[macOS-CPU advisory]`
 
 ## Objective
@@ -103,4 +103,3 @@ branch diff and custody claims before merge.
 - DAG: a dated FEED will expose every passed and blocked edge.
 - Equations: consume `realization_breakeven_bytes_v1` by ID and append only a
   scoped empirical refinement when newly measured positive recovery exists.
-

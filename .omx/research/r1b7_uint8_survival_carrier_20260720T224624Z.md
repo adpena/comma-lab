@@ -1,8 +1,8 @@
 # R1b7 uint8-survival carrier — sealed n16 result
 
-Date: 2026-07-20  
-Lane: `r1b7_uint8_survival_carrier`  
-Authority: `[macOS-CPU advisory]`  
+Date: 2026-07-20
+Lane: `r1b7_uint8_survival_carrier`
+Authority: `[macOS-CPU advisory]`
 Pointer: `0.1910828242 [contest-CPU] UNMOVED`
 
 ## Verdict

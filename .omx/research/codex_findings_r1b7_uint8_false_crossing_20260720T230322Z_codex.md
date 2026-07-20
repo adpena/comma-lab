@@ -1,8 +1,8 @@
 # Codex finding — R1b7 integer false-crossing admission
 
-Date: 2026-07-20  
-Lane: `r1b7_uint8_survival_carrier`  
-Authority: `[macOS-CPU advisory]`, `score_claim=false`  
+Date: 2026-07-20
+Lane: `r1b7_uint8_survival_carrier`
+Authority: `[macOS-CPU advisory]`, `score_claim=false`
 Pointer: `0.1910828242 [contest-CPU] UNMOVED`
 
 ## Finding
