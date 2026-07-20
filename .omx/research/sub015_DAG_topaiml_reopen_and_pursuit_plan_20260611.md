@@ -20277,3 +20277,13 @@ gate never fired — no inverse-driver claim.
   `tools/measure_m2_live_target_selection.py`; SSD archive SHA `0fee1b74...f25cfb6b`.
 - **Triality:** DSL N/A; equation anchor appended to
   `bounded_uint8_resize_preimage_cell_feasibility_v1`; DAG=this FEED. MAIN review/merge required.
+
+## FEED-R2B-SPARSE-TARGET-SELECTION-20260720 — signed rounding decisions are real but rate-dead
+
+- **Axis / authority:** n600 `[macOS-CPU advisory]`, `score_claim=false`; pointer `0.1910828242 [contest-CPU]` UNMOVED.
+- **Histogram:** capstone-to-exact target has `17,926` live batch16 flips: Road/Lane/Undriv/Movable/MyCar = `7,831/2,556/3,622/1,346/2,571`; Road-Lane edge `5,193`, other edge `12,468`, nonedge `265`; tie-tight `<1e-3` `1,607`, `[1e-3,1)` `16,319`, interior `>=1` zero. Pose MSE is dominated by dimension 0 (`6.1066e-4`).
+- **MEASURED sparse row:** `16,751` exact signed same-rounded-bin decisions, `27,313 B` charged, hard oracle fixes `1,585` flips (`9.462%` realization), `d_seg 1.51960585e-4 -> 1.38524373e-4`, `d_pose 1.01843474e-4 -> 1.02549263e-4`, nonrate recovery only `0.0012332317 S` versus `0.0181866056 S` rate cost.
+- **KKT:** first 64-decision knee is `342 B`, marginal `1.586e-7 S/B < 6.659e-7`; stop = zero. Even the last scheduled segment is `6.566e-7`, still below price. Full-knee realized break-even is `1,852 B`, requiring another `14.75x` byte reduction.
+- **Scoped verdict:** `FORMULATION_RATE_DEAD_KKT_STOP_ZERO` for one-bit source-sign-chosen fixed-magnitude factor-2 preimages only. Sparse target selection FAMILY OPEN.
+- **Signal / successor:** the selected-cell oracle overpredicts by `11.51x`, confirming inner-Jacobian interactions; next use corrected first-order+secant+QP selection, receiver-bound curvelet/shearlet coordinate grammar, xi-factorized Pose, and the landed full-kernel compiler (`da64a5bc8e`) under coder-admitted minimum-description selection rather than blind null filling.
+- **Artifacts:** `.omx/research/r2b_sparse_target_selection_20260720.{md,json}`; external receipt SHA `c86d15ff...`; stream SHA `cf304b13...`; candidate raw certified then deleted. MAIN review/merge required.
