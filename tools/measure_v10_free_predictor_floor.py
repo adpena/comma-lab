@@ -120,6 +120,14 @@ SCORER_RUNTIME_DISTRIBUTIONS = (
     "safetensors",
 )
 
+# ff88d42ab5 produced a complete immutable precleanup receipt before its
+# cleanup validator discovered that the production receiver writes ``.raw``.
+# Only this exact scientific-tool image may cross that already-certified
+# cleanup window; the final successor records the distinct cleanup tool.
+CLEANUP_COMPATIBLE_PREDECESSOR_TOOL_SHA256S = frozenset(
+    {"45e6539f0f9906a547cecf068949d73e439a03000ff4616aa07cdcb0a36e2cbc"}
+)
+
 _ATTR_MAGIC = b"V10ATTR1"
 _ATTR_PREFIX = struct.Struct("<8sHBBIHHH")
 _ATTR_PAIR = struct.Struct("<IIIII32s32s")
@@ -1774,9 +1782,14 @@ def _validate_banked_receipt_common(
         raise PredictorFloorError("existing banked A/B receipt violates immutable lifecycle custody")
     custody = load_prepared_chunk(args.prepared_manifest)
     rebuildable = lifecycle.get("rebuildable_from")
+    live_tool_sha256 = _sha256_file(Path(__file__).resolve())
+    recorded_tool_sha256 = rebuildable.get("tool_sha256") if isinstance(rebuildable, Mapping) else None
     if not isinstance(rebuildable, Mapping) or (
         rebuildable.get("prepared_manifest_sha256") != custody.manifest_sha256
-        or rebuildable.get("tool_sha256") != _sha256_file(Path(__file__).resolve())
+        or (
+            recorded_tool_sha256 != live_tool_sha256
+            and recorded_tool_sha256 not in CLEANUP_COMPATIBLE_PREDECESSOR_TOOL_SHA256S
+        )
         or rebuildable.get("codec_sha256") != _sha256_file(SRC / "tac/codec/v10_predictor_residual.py")
         or rebuildable.get("receiver_sha256") != _sha256_file(SRC / "tac/witness_dsl/v10_production_receiver.py")
         or rebuildable.get("lattice_sha256") != _sha256_file(SRC / "tac/optimization/uint8_lattice_feasibility.py")
@@ -1809,7 +1822,7 @@ def _validate_banked_scratch(receipt: Mapping[str, Any], output_root: Path) -> N
         if not isinstance(archive, Mapping) or not isinstance(inflated, Mapping):
             raise PredictorFloorError("existing banked A/B receipt arm custody is malformed")
         archive_path = output_root / arm_id / "archive.zip"
-        raw_path = output_root / arm_id / "inflated" / f"v10-banked-ab-{arm_id}.mp4"
+        raw_path = output_root / arm_id / "inflated" / f"v10-banked-ab-{arm_id}.raw"
         if (
             not archive_path.is_file()
             or archive_path.stat().st_size != archive.get("bytes")
@@ -1840,9 +1853,33 @@ def _finalize_banked_cleanup(
         "bytes": precleanup_path.stat().st_size,
         "sha256": _sha256_file(precleanup_path),
     }
+    predecessor_tool_sha256 = lifecycle["rebuildable_from"]["tool_sha256"]
+    lifecycle["cleanup_execution_custody"] = {
+        "git_head": _git_head(),
+        "tool_sha256": _sha256_file(Path(__file__).resolve()),
+        "precleanup_tool_sha256": predecessor_tool_sha256,
+        "cross_version_cleanup_only": predecessor_tool_sha256 != _sha256_file(Path(__file__).resolve()),
+    }
     lifecycle["cleanup_completed_at_utc"] = datetime.now(UTC).isoformat()
     _write_json_once(receipt_path, final)
     return final
+
+
+def _validate_cleanup_execution_custody(lifecycle: Mapping[str, Any]) -> None:
+    cleanup = lifecycle.get("cleanup_execution_custody")
+    rebuildable = lifecycle.get("rebuildable_from")
+    if not isinstance(cleanup, Mapping) or not isinstance(rebuildable, Mapping):
+        raise PredictorFloorError("final cleanup successor lacks execution custody")
+    live_tool_sha256 = _sha256_file(Path(__file__).resolve())
+    predecessor_tool_sha256 = rebuildable.get("tool_sha256")
+    if (
+        cleanup.get("git_head") != _git_head()
+        or cleanup.get("tool_sha256") != live_tool_sha256
+        or cleanup.get("precleanup_tool_sha256") != predecessor_tool_sha256
+        or cleanup.get("cross_version_cleanup_only")
+        is not (predecessor_tool_sha256 != live_tool_sha256)
+    ):
+        raise PredictorFloorError("final cleanup execution custody drifted")
 
 
 def _resume_banked_ab_postreceipt_cleanup(args: argparse.Namespace, receipt_path: Path) -> dict[str, Any]:
@@ -1862,6 +1899,7 @@ def _resume_banked_ab_postreceipt_cleanup(args: argparse.Namespace, receipt_path
         predecessor = lifecycle.get("precleanup_receipt")
         if lifecycle.get("cleanup_completed") is not True or not isinstance(predecessor, Mapping):
             raise PredictorFloorError("existing banked A/B final receipt lacks immutable cleanup closure")
+        _validate_cleanup_execution_custody(lifecycle)
         if _validate_preserved_file(predecessor, "banked A/B precleanup receipt") != precleanup_path.resolve():
             raise PredictorFloorError("banked A/B final receipt points at the wrong predecessor")
         if output_root.exists():
@@ -2115,7 +2153,7 @@ def _validate_rung_e_scratch(receipt: Mapping[str, Any], output_root: Path) -> N
     if not isinstance(archive, Mapping) or not isinstance(inflated, Mapping):
         raise PredictorFloorError("existing rung-E receipt lacks archive/raw custody")
     archive_path = output_root / "archive.zip"
-    raw_path = output_root / "inflated" / "v10-rung-e.mp4"
+    raw_path = output_root / "inflated" / "v10-rung-e.raw"
     if (
         not archive_path.is_file()
         or archive_path.stat().st_size != archive.get("bytes")
@@ -2146,6 +2184,12 @@ def _finalize_rung_e_cleanup(
         "bytes": precleanup_path.stat().st_size,
         "sha256": _sha256_file(precleanup_path),
     }
+    lifecycle["cleanup_execution_custody"] = {
+        "git_head": _git_head(),
+        "tool_sha256": _sha256_file(Path(__file__).resolve()),
+        "precleanup_tool_sha256": lifecycle["rebuildable_from"]["tool_sha256"],
+        "cross_version_cleanup_only": False,
+    }
     lifecycle["cleanup_completed_at_utc"] = datetime.now(UTC).isoformat()
     _write_json_once(receipt_path, final)
     return final
@@ -2166,6 +2210,7 @@ def _resume_rung_e_postreceipt_cleanup(args: argparse.Namespace, receipt_path: P
         predecessor = lifecycle.get("precleanup_receipt")
         if lifecycle.get("cleanup_completed") is not True or not isinstance(predecessor, Mapping):
             raise PredictorFloorError("existing rung-E final receipt lacks immutable cleanup closure")
+        _validate_cleanup_execution_custody(lifecycle)
         if _validate_preserved_file(predecessor, "rung-E precleanup receipt") != precleanup_path.resolve():
             raise PredictorFloorError("rung-E final receipt points at the wrong predecessor")
         if output_root.exists():

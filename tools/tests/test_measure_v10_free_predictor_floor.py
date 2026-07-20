@@ -432,7 +432,7 @@ def test_banked_ab_resume_closes_postreceipt_cleanup_window(tmp_path: Path, monk
     arms: dict[str, Any] = {}
     for arm_id in ("control", "precision_drop"):
         arm_root = output_root / arm_id
-        raw_path = arm_root / "inflated" / f"v10-banked-ab-{arm_id}.mp4"
+        raw_path = arm_root / "inflated" / f"v10-banked-ab-{arm_id}.raw"
         raw_path.parent.mkdir(parents=True)
         archive_path = arm_root / "archive.zip"
         archive_path.write_bytes(f"archive-{arm_id}".encode())
@@ -479,7 +479,7 @@ def test_banked_ab_resume_closes_postreceipt_cleanup_window(tmp_path: Path, monk
             "durable_stage_receipts": stage_rows,
             "rebuildable_from": {
                 "prepared_manifest_sha256": "prepared-manifest-sha",
-                "tool_sha256": measure._sha256_file(Path(measure.__file__).resolve()),
+                "tool_sha256": next(iter(measure.CLEANUP_COMPATIBLE_PREDECESSOR_TOOL_SHA256S)),
                 "codec_sha256": measure._sha256_file(measure.SRC / "tac/codec/v10_predictor_residual.py"),
                 "receiver_sha256": measure._sha256_file(measure.SRC / "tac/witness_dsl/v10_production_receiver.py"),
                 "lattice_sha256": measure._sha256_file(measure.SRC / "tac/optimization/uint8_lattice_feasibility.py"),
@@ -505,6 +505,7 @@ def test_banked_ab_resume_closes_postreceipt_cleanup_window(tmp_path: Path, monk
     resumed = measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
     assert resumed["artifact_lifecycle"]["cleanup_completed"] is True
     assert resumed["artifact_lifecycle"]["precleanup_receipt"]["sha256"] == hashlib.sha256(precleanup_bytes).hexdigest()
+    assert resumed["artifact_lifecycle"]["cleanup_execution_custody"]["cross_version_cleanup_only"] is True
     assert precleanup_path.read_bytes() == precleanup_bytes
     assert not output_root.exists()
     assert measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path) == resumed
@@ -557,7 +558,7 @@ def test_rung_e_resume_closes_cleanup_with_immutable_successor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     output_root = tmp_path / "pact-rung-e-rung-postreceipt"
-    raw_path = output_root / "inflated" / "v10-rung-e.mp4"
+    raw_path = output_root / "inflated" / "v10-rung-e.raw"
     raw_path.parent.mkdir(parents=True)
     archive_path = output_root / "archive.zip"
     archive_path.write_bytes(b"archive")
