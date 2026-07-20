@@ -1,0 +1,87 @@
+{
+  "schema": "r2b_sparse_target_selection_summary.v1",
+  "axis": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "lane_id": "lane_r2b_sparse_target_selection_20260720",
+  "baseline": {
+    "flip_count": 17926,
+    "d_seg": 0.00015196058485243057,
+    "d_pose": 0.00010184347386600314,
+    "seg_score_term": 0.015196058485243056,
+    "pose_score_term": 0.03191292432009375,
+    "nonrate_score": 0.047108982805336805,
+    "hard_oracle_batch_size": 16,
+    "cache_batch32_label_mismatches": 3
+  },
+  "histogram": {
+    "seg_flips_by_source_class": {"0": 7831, "1": 2556, "2": 3622, "3": 1346, "4": 2571},
+    "seg_flips_by_edge_stratum": {"road_lane_edge": 5193, "other_edge": 12468, "nonedge": 265},
+    "seg_flips_by_margin": {
+      "[1e-6,1e-5)": 16,
+      "[1e-5,1e-4)": 143,
+      "[1e-4,1e-3)": 1448,
+      "[1e-3,1e-2)": 9187,
+      "[1e-2,1e-1)": 7110,
+      "[1e-1,1)": 22
+    },
+    "seg_flips_by_tie_stratum": {"tie_tight_<1e-3": 1607, "margin_band_[1e-3,1)": 16319, "interior_>=1": 0},
+    "pose_mse_by_dimension": [0.0006106607479159721, 2.1086305237431416e-7, 1.4290344009718996e-7, 1.6599299284917695e-8, 3.912838188827964e-9, 2.5816650101595507e-8]
+  },
+  "curve": [
+    {"decisions": 0, "charged_bytes": 0, "scheduled_recovered_seg_score_upper_bound": 0.0, "marginal_score_per_byte": null, "kkt_admitted": true},
+    {"decisions": 64, "charged_bytes": 342, "scheduled_recovered_seg_score_upper_bound": 0.00005425347222222222, "marginal_score_per_byte": 1.5863588369070824e-7, "kkt_admitted": false},
+    {"decisions": 256, "charged_bytes": 847, "scheduled_recovered_seg_score_upper_bound": 0.00021701388888888888, "marginal_score_per_byte": 3.2229785478547855e-7, "kkt_admitted": false},
+    {"decisions": 1024, "charged_bytes": 2535, "scheduled_recovered_seg_score_upper_bound": 0.0008680555555555555, "marginal_score_per_byte": 3.8568819115323854e-7, "kkt_admitted": false},
+    {"decisions": 4096, "charged_bytes": 8292, "scheduled_recovered_seg_score_upper_bound": 0.003472222222222222, "marginal_score_per_byte": 4.523478663655839e-7, "kkt_admitted": false},
+    {"decisions": 8375, "charged_bytes": 15533, "scheduled_recovered_seg_score_upper_bound": 0.007099575466579861, "marginal_score_per_byte": 5.009464499872447e-7, "kkt_admitted": false},
+    {"decisions": 12563, "charged_bytes": 21906, "scheduled_recovered_seg_score_upper_bound": 0.010649787055121528, "marginal_score_per_byte": 5.570707027368064e-7, "kkt_admitted": false},
+    {"decisions": 16751, "charged_bytes": 27313, "scheduled_recovered_seg_score_upper_bound": 0.014199998643663194, "marginal_score_per_byte": 6.565954482229825e-7, "kkt_admitted": false}
+  ],
+  "byte_price": 6.658589531221714e-7,
+  "kkt_stop_decisions": 0,
+  "candidate": {
+    "selection_reason": "bounded_full_knee_falsification_after_kkt_zero",
+    "feasible_decisions": 16751,
+    "infeasible_decisions": 1175,
+    "charged_bytes": 27313,
+    "byte_gate_pass": true,
+    "flip_count": 16341,
+    "fixed_flips": 1585,
+    "realization_fraction": 0.09462121664378247,
+    "d_seg": 0.00013852437337239583,
+    "d_pose": 0.0001025492627354498,
+    "seg_score_term": 0.013852437337239583,
+    "pose_score_term": 0.032023313809699616,
+    "nonrate_score": 0.0458757511469392,
+    "nonrate_score_recovery": 0.0012332316583976016,
+    "rate_score_cost": 0.018186605586625867,
+    "net_score_after_rate": -0.016953373928228266,
+    "break_even_bytes_at_realized_recovery": 1852.0914265927563,
+    "required_byte_reduction_factor": 14.747112160789495,
+    "hard_gate_pass": false
+  },
+  "artifact_custody": {
+    "external_receipt": "/Volumes/VertigoDataTier/pact/evidence/r2b_sparse_target_selection_20260720T1621Z/receipt.json",
+    "external_receipt_bytes": 8195,
+    "external_receipt_sha256": "c86d15ff905c1de912c6a66fe63c2122bd69115a536f70265c59d9ae8cd34a68",
+    "stream_sha256": "cf304b13fedb081ee2323a7c1631cf5e1f9b411533063a2d934b825b8d893c02",
+    "archive_sha256": "095353f3ae6cd217965a2d80073393bf3eff30fdecba2781ca48697dd618a023",
+    "candidate_raw_sha256": "9b30d56acf7ebc201fcb126832b1c337e00acdbe9aed8f9e698388b91d9b1f5f",
+    "candidate_raw_bytes": 3662409600,
+    "candidate_raw_deleted_after_certified_rebuild_record": true,
+    "cleanup_receipt_sha256": "8bdea15e8943e42c3b2f069926bbc8e7adeca96a7332df90f52bcc09b744d0bf"
+  },
+  "bounded_self_review": {
+    "finding": "source-distance squares initially overflowed int16 before summation",
+    "fix": "promote source and candidate pixels to int32 before subtraction and squaring",
+    "regression_test": "test_choose_source_sign_uses_nonoverflowing_distance",
+    "superseded_stage_dir": "/Volumes/VertigoDataTier/pact/evidence/r2b_sparse_target_selection_20260720T1621Z/candidate_stages_superseded_int16_distance_3be0f925",
+    "current_stage_binding": "target raw sha + baseline raw sha + scorer binding sha + candidate stream sha"
+  },
+  "verdict": "FORMULATION_RATE_DEAD_KKT_STOP_ZERO",
+  "verdict_scope": "one-bit source-sign-chosen fixed-magnitude same-rounded-bin factor-2 preimage only",
+  "next_coordinate": "corrected inner-Jacobian plus secant/QP selection and a receiver-bound curvelet/shearlet coordinate grammar; factor Pose through xi instead of this frame1-only stream",
+  "main_review_required": true
+}
