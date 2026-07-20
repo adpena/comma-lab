@@ -12,6 +12,7 @@ from tac.boundary_math.shared_receiver_admission import (
 from tools.measure_r1b_boundary_generator_n600 import (
     FIXED_C1_CAP_BYTES,
     R1BMeasurementError,
+    _source_hashes,
     compose_score,
     gate_summary,
     storage_preflight,
@@ -48,3 +49,21 @@ def test_score_and_gate_refuse_invalid_values() -> None:
 def test_storage_preflight_refuses_non_ssd_location(tmp_path: Path) -> None:
     with pytest.raises(R1BMeasurementError, match="scratch_root"):
         storage_preflight(tmp_path)
+
+
+def test_scorer_hashes_follow_upstream_models_subdirectory(tmp_path: Path) -> None:
+    (tmp_path / "models").mkdir()
+    for relative in (
+        "modules.py",
+        "frame_utils.py",
+        "models/posenet.safetensors",
+        "models/segnet.safetensors",
+    ):
+        (tmp_path / relative).write_bytes(relative.encode("ascii"))
+    hashes = _source_hashes(tmp_path)
+    assert set(hashes) == {
+        "modules.py",
+        "frame_utils.py",
+        "posenet.safetensors",
+        "segnet.safetensors",
+    }

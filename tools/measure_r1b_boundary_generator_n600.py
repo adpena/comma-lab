@@ -52,10 +52,10 @@ SSD_ROOTS: Final = (
     Path("/Volumes/APDataStore/pact"),
 )
 SCORER_FILES: Final = (
-    "modules.py",
-    "frame_utils.py",
-    "posenet.safetensors",
-    "segnet.safetensors",
+    ("modules.py", "modules.py"),
+    ("frame_utils.py", "frame_utils.py"),
+    ("posenet.safetensors", "models/posenet.safetensors"),
+    ("segnet.safetensors", "models/segnet.safetensors"),
 )
 
 
@@ -166,7 +166,10 @@ def _git_custody() -> dict[str, Any]:
 
 
 def _source_hashes(upstream: Path) -> dict[str, str]:
-    paths = {name: (upstream / name).resolve(strict=True) for name in SCORER_FILES}
+    paths = {
+        label: (upstream / relative).resolve(strict=True)
+        for label, relative in SCORER_FILES
+    }
     return {name: sha256_file(path) for name, path in paths.items()}
 
 
