@@ -466,6 +466,26 @@ def main(argv: list[str] | None = None) -> int:
 
     if " " in args.label:
         ap.error("--label must not contain spaces")
+
+    # Operator 2026-07-20 (binding): a codex arm must NEVER again be starved of
+    # filesystem access. A prior arm launched with sandbox=workspace-write (writable
+    # roots limited to the worktree + .git) could not write the mandatory SSD evidence
+    # tier (/Volumes/VertigoDataTier/pact/evidence) -> it doom-looped for hours on
+    # in-sandbox apparatus review, burning the operator's codex rate limit. Permanent
+    # fix: a COMMIT-CAPABLE (non-read-only) arm is ALWAYS promoted to danger-full-access
+    # (full filesystem + network). read-only stays available for pure-analysis arms that
+    # write nothing. Worktree isolation (the default) + the commit serializer remain the
+    # commit-discipline guarantee -- they are orthogonal to the OS file sandbox, so full
+    # FS access does NOT relax how commits are made in the per-arm worktree.
+    if args.sandbox == "workspace-write":
+        print(
+            "[codex_delegate] sandbox workspace-write -> danger-full-access "
+            "(operator 2026-07-20: never FS-starve a commit-capable arm; worktree "
+            "isolation + serializer still enforce commit discipline).",
+            file=sys.stderr,
+        )
+        args.sandbox = "danger-full-access"
+
     RUNS.mkdir(parents=True, exist_ok=True)
 
     isolate = not args.no_isolate
