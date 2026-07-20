@@ -1,0 +1,38 @@
+{
+  "schema": "einstein_kolmogorov_crux_cleanup.v2",
+  "utc": "2026-07-19T23:48:54Z",
+  "policy": "certify_or_block",
+  "deleted_bytes": 0,
+  "moved_bytes": 0,
+  "fresh_evidence": {
+    "path": ".omx/research/einstein_kolmogorov_crux_runs_final_20260719",
+    "bytes": 26210105,
+    "file_count": 1638,
+    "sorted_file_hash_manifest_sha256": "03bd658dcc49111758f3fcb67488a5bee1d7b456c9671bb3363288dedfdc0130",
+    "status": "RETAINED_LOCAL_GITIGNORED_BULK_WITH_COMMITTED_ROOT_RECEIPTS",
+    "reason": "fresh post-hardening candidate bytes and immutable per-pair/per-iteration checkpoints are gitignored bulk; root receipts, terminal checkpoints, configs, complete source/runtime closure, and the tree hash manifest are committed",
+    "ssd_move_status": "BLOCKED_LOCAL_FILESYSTEM_POLICY",
+    "ssd_parent": "/Volumes/VertigoDataTier/pact/evidence",
+    "ssd_errno": 1
+  },
+  "superseded_pre_closure_runs": {
+    "path": ".omx/research/einstein_kolmogorov_crux_runs_20260719",
+    "bytes": 18763542,
+    "file_count": 1476,
+    "sorted_file_hash_manifest_sha256": "9003e2f2e91fd84443a50e89b9074cdbbbf23ea2b454a887eb999c89ddfaf706",
+    "status": "RETAINED_UNCOMMITTED_SUPERSEDED",
+    "authority": false,
+    "reason": "precedes final source/runtime-closure and is superseded by fresh runs; deletion remains forbidden because no cold-store copy exists"
+  },
+  "pre_review_invalid_scratch": {
+    "path": ".omx/research/einstein_kolmogorov_crux_runs_20260719_pre_review_invalid",
+    "bytes": 768853,
+    "file_count": 81,
+    "sorted_file_hash_manifest_sha256": "984530e09fcc8b871b2a83fb3a50e7da4f9186b8242eeb60ada9217f3dc938f6",
+    "status": "RETAINED_UNCOMMITTED_QUARANTINE",
+    "authority": false,
+    "reason": "runs predate the DSPSA/resume/custody class fixes; exact uncommitted source bytes were not preserved, so deterministic rebuild certification is incomplete and deletion is forbidden"
+  },
+  "operator_evidence_uses_tmp": false,
+  "pointer_mutated": false
+}

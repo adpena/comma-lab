@@ -1,0 +1,976 @@
+{
+  "completed_pairs": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "config": {
+    "camera_height": 874,
+    "camera_width": 1164,
+    "checkpoint_every_pairs": 1,
+    "family": "global",
+    "gain_alpha": 0.602,
+    "gt_path": "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n24.npz",
+    "gt_sha256": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
+    "iterations": 0,
+    "label_min_run": 0,
+    "lower_bound": 0,
+    "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/.omx/research/einstein_kolmogorov_crux_runs_final_20260719/global",
+    "packet_path": "/Volumes/VertigoDataTier/pact/evidence/pdw1_realization_20260719/pdw1p_n24_payload.bin",
+    "packet_sha256": "8d66286c722e9202d77b54bcdf06942496641bad20ff9632c785800b53a0a02d",
+    "pair_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "schema": "einstein_kolmogorov_crux_config.v1",
+    "scorer_authority": "singleton_cpu_torch_segnet",
+    "scorer_height": 384,
+    "scorer_width": 512,
+    "seed": 20260719,
+    "segnet_path": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "target_first_displacement": 1.0,
+    "upper_bound": 255,
+    "upstream_path": "/Users/adpena/Projects/pact/upstream"
+  },
+  "config_fingerprint": "0030ede247a3f859570fe8ce15311eb1c44d0029aa524660de86766d26762a6b",
+  "fills": [
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ],
+    [
+      [
+        50,
+        50,
+        41
+      ],
+      [
+        76,
+        82,
+        68
+      ],
+      [
+        28,
+        18,
+        16
+      ],
+      [
+        54,
+        40,
+        38
+      ],
+      [
+        15,
+        7,
+        11
+      ]
+    ]
+  ],
+  "in_progress": null,
+  "input_fingerprints": {
+    "gt": "684a2e043f5637eec6f2bc837b845588a7ec759c2a5c4b3b75dcb9f872541ede",
+    "packet": "8d66286c722e9202d77b54bcdf06942496641bad20ff9632c785800b53a0a02d",
+    "segnet": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "reproducibility_closure": {
+    "base_git_head": "889d32db399709aca475c3c6120c81f189dd4b81",
+    "runtime": {
+      "numpy": {
+        "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/numpy/__init__.py",
+        "version": "1.26.4"
+      },
+      "platform": {
+        "machine": "arm64",
+        "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+        "processor": "arm",
+        "release": "25.4.0",
+        "system": "Darwin",
+        "version": "Darwin Kernel Version 25.4.0: Thu Mar 19 19:33:50 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6050"
+      },
+      "python": {
+        "cache_tag": "cpython-313",
+        "executable": "/Users/adpena/.local/share/uv/python/cpython-3.13.12-macos-aarch64-none/bin/python3.13",
+        "implementation": "CPython",
+        "version": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]"
+      },
+      "threads": {
+        "environment": {
+          "MKL_NUM_THREADS": null,
+          "NUMEXPR_NUM_THREADS": null,
+          "OMP_NUM_THREADS": null,
+          "OPENBLAS_NUM_THREADS": null,
+          "VECLIB_MAXIMUM_THREADS": null
+        },
+        "torch_num_interop_threads": 18,
+        "torch_num_threads": 1
+      },
+      "torch": {
+        "module_path": "/Volumes/VertigoDataTier/pact/uv-envs/pact-main/lib/python3.13/site-packages/torch/__init__.py",
+        "version": "2.12.1"
+      }
+    },
+    "schema": "einstein_kolmogorov_reproducibility_closure.v1",
+    "sources": {
+      "frozen_segnet_loader": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/witness_control/factorized_features.py",
+        "sha256": "3c720fc6d81ebbf1779b8370fb5c17b545b609fc39fdf62176b2d17e35edefaf"
+      },
+      "optimization": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/optimization/einstein_kolmogorov_crux.py",
+        "sha256": "3cb5207ae711ce0a2288f528637bf117001c349e12429cfc48b78ee6581ecdad"
+      },
+      "pdw1_codec": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/codec/pdw1_plane_codec.py",
+        "sha256": "ea3456a36f300bde3a6924d7c8d0fcacb92675904e7f68ba56bc3862e7c4b4d9"
+      },
+      "probe": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/tools/probe_einstein_kolmogorov_crux.py",
+        "sha256": "644ba9885422262f2907f6b70fcd5a9595a0902121a3b2577b75f0ec67b7f50f"
+      },
+      "typed_dsl": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/witness_dsl/einstein_kolmogorov_crux_20260719.py",
+        "sha256": "b83616bf48c8a3ce530ac6a121923c8d0283e03ccb1a6c5ffa68adec77849721"
+      },
+      "uint8_lattice_realization": {
+        "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_20260719T212159Z/src/tac/optimization/uint8_lattice_feasibility.py",
+        "sha256": "8f694f06bfd643a598e3f5f9ce768dd73b546f7c5133f34d436b84adea635b17"
+      },
+      "upstream_modules": {
+        "path": "/Users/adpena/Projects/pact/upstream/modules.py",
+        "sha256": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa"
+      }
+    }
+  },
+  "rows": [
+    {
+      "d_seg": 0.012090047200520834,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 2377,
+      "pair": 0
+    },
+    {
+      "d_seg": 0.006876627604166667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1352,
+      "pair": 1
+    },
+    {
+      "d_seg": 0.006256103515625,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1230,
+      "pair": 2
+    },
+    {
+      "d_seg": 0.006983439127604167,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1373,
+      "pair": 3
+    },
+    {
+      "d_seg": 0.006490071614583333,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1276,
+      "pair": 4
+    },
+    {
+      "d_seg": 0.006098429361979167,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1199,
+      "pair": 5
+    },
+    {
+      "d_seg": 0.006022135416666667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1184,
+      "pair": 6
+    },
+    {
+      "d_seg": 0.008982340494791666,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1766,
+      "pair": 7
+    },
+    {
+      "d_seg": 0.019068400065104168,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 3749,
+      "pair": 8
+    },
+    {
+      "d_seg": 0.006708780924479167,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1319,
+      "pair": 9
+    },
+    {
+      "d_seg": 0.005833943684895833,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1147,
+      "pair": 10
+    },
+    {
+      "d_seg": 0.006245930989583333,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1228,
+      "pair": 11
+    },
+    {
+      "d_seg": 0.006968180338541667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1370,
+      "pair": 12
+    },
+    {
+      "d_seg": 0.008473714192708334,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1666,
+      "pair": 13
+    },
+    {
+      "d_seg": 0.007024129231770833,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1381,
+      "pair": 14
+    },
+    {
+      "d_seg": 0.005666097005208333,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1114,
+      "pair": 15
+    },
+    {
+      "d_seg": 0.0136566162109375,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 2685,
+      "pair": 16
+    },
+    {
+      "d_seg": 0.008544921875,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1680,
+      "pair": 17
+    },
+    {
+      "d_seg": 0.006724039713541667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1322,
+      "pair": 18
+    },
+    {
+      "d_seg": 0.005686442057291667,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1118,
+      "pair": 19
+    },
+    {
+      "d_seg": 0.00811767578125,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1596,
+      "pair": 20
+    },
+    {
+      "d_seg": 0.009073893229166666,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1784,
+      "pair": 21
+    },
+    {
+      "d_seg": 0.0061187744140625,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1203,
+      "pair": 22
+    },
+    {
+      "d_seg": 0.005884806315104167,
+      "factor2_certified_exact": true,
+      "factor2_numerator_exact": true,
+      "mismatch_px": 1157,
+      "pair": 23
+    }
+  ],
+  "schema": "einstein_kolmogorov_crux_checkpoint.v2"
+}
