@@ -1,7 +1,7 @@
 # DAG FEED — Task #575 exact inverse row and the missing A-to-B edge
 
-**Date:** 2026-07-20  
-**Lane:** `lane_joint_optimum_575_xhigh_20260720`  
+**Date:** 2026-07-20
+**Lane:** `lane_joint_optimum_575_xhigh_20260720`
 **Verdict scope:** #575 n600 launch refused by governed admission; exact compact B-side pointer
 candidate separately recovered; joint A+B optimum not established
 
@@ -82,8 +82,8 @@ training.
 
 ## Custody pointer
 
-Receipt: `.omx/research/joint_optimum_575_xhigh_exact_row_20260720.json`  
-Launch refusal: `.omx/research/m1_575_governed_launch_refusal_20260720.json`  
-Finding: `.omx/research/codex_findings_joint_optimum_575_xhigh_20260720_codex.md`  
-Archive: `/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/candidate_archive.zip`  
-Pointer delta: `-0.001462893694889944`; pointer not mutated here; MAIN review required.
+- Receipt: `.omx/research/joint_optimum_575_xhigh_exact_row_20260720.json`
+- Launch refusal: `.omx/research/m1_575_governed_launch_refusal_20260720.json`
+- Finding: `.omx/research/codex_findings_joint_optimum_575_xhigh_20260720_codex.md`
+- Archive: `/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/candidate_archive.zip`
+- Pointer delta: `-0.001462893694889944`; pointer not mutated here; MAIN review required.

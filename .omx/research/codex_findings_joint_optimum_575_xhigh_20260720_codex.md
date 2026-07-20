@@ -1,8 +1,8 @@
 # Codex findings — Task #575 C2 governed-fire attempt and recovered exact row
 
-**Date:** 2026-07-20  
-**Lane:** `lane_joint_optimum_575_xhigh_20260720`  
-**Axis:** `[contest-CPU]`, Linux x86_64 CPU-torch, selection and exact eval in the same container  
+**Date:** 2026-07-20
+**Lane:** `lane_joint_optimum_575_xhigh_20260720`
+**Axis:** `[contest-CPU]`, Linux x86_64 CPU-torch, selection and exact eval in the same container
 **Verdict:** `#575 N600 LAUNCH REFUSED RC=4; MEASURED PARTIAL PRESERVED; SEPARATE EXACT POINTER CANDIDATE; MAIN REVIEW REQUIRED`
 
 ## Required #575 outcome

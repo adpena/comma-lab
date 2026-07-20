@@ -1,8 +1,8 @@
 # M1 / Task #575 intent confirmation
 
-**UTC date:** 2026-07-20  
-**Lane:** `lane_joint_optimum_575_xhigh_20260720`  
-**Delegation:** `codex_delegate:joint_optimum_575_xhigh:20260720T090417Z`  
+**UTC date:** 2026-07-20
+**Lane:** `lane_joint_optimum_575_xhigh_20260720`
+**Delegation:** `codex_delegate:joint_optimum_575_xhigh:20260720T090417Z`
 **Authority:** isolated branch build + research + governed launch; MAIN landing review required
 
 ## 1. Deliverable
@@ -63,4 +63,3 @@ checks, and decides whether to land it.
 summary; latest T3 council/design surfaces; v10 Task #575 recovery/glue receipts;
 the per-arm inbox through `2026-07-20T09:09:52Z`; the broadcast inbox through
 `2026-07-19T19:48:01Z`.
-
