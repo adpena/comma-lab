@@ -1,0 +1,205 @@
+{
+  "schema": "joint_optimum_575_exact_row_receipt_v1",
+  "written_at_utc": "2026-07-20T09:33:38Z",
+  "task": "Task #575 joint-optimum inverse-solve arm",
+  "lane_id": "lane_joint_optimum_575_xhigh_20260720",
+  "delegation_checkpoint_key": "codex_delegate:joint_optimum_575_xhigh:20260720T090417Z",
+  "verdict": "EXACT_CONTEST_CPU_POINTER_CANDIDATE_MAIN_REVIEW_REQUIRED_NOT_JOINT_OPTIMUM",
+  "verdict_scope": "A completed compact B-side inverse solve was recovered and exact-evaluated. It crosses the session-start contest-CPU pointer but does not carry the A-capstone SegNet plane into the compact description and therefore is not the requested joint optimum.",
+  "execution": {
+    "kind": "harvest_only_existing_completed_governed_run",
+    "new_training_launched": false,
+    "new_paid_dispatch": false,
+    "call_id": "fc-01KX6DZWCHNPQ6KN59V2MZ845J",
+    "modal_volume": "clickpolish-pr110-vol",
+    "modal_volume_run_path": "/clickpolish/n600_r1",
+    "run_id": "n600_r1",
+    "dispatched_at_utc": "2026-07-10T16:32:52.719934Z",
+    "historical_dispatch_lane_id": "lane_clickpolish_pr110_frontier_20260710",
+    "historical_expected_cost_usd": 4.0,
+    "historical_max_seconds": 30600,
+    "runtime_status": "OK",
+    "selection_and_eval_same_container": true,
+    "axis_note": "selection+eval SAME container (Linux x86_64, CPU-torch)",
+    "microarchitecture": {
+      "machine": "x86_64",
+      "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+      "cpu_model": "unknown",
+      "isa": {
+        "avx2": true,
+        "avx512f": true,
+        "fma": true
+      },
+      "torch": "2.5.1+cpu"
+    },
+    "search_config": {
+      "n_pairs": 600,
+      "latent_dimensions_per_pair": 28,
+      "max_rounds": 2,
+      "sweep_deltas": [1, -1],
+      "resumability": "Modal Volume accepted_clicks_ledger.jsonl replay plus candidate rebank after every accepted round"
+    },
+    "timings_seconds": {
+      "gt_build": 75.1,
+      "search": 12550.8,
+      "exact_eval": 160.9,
+      "total": 12789.5
+    }
+  },
+  "source_custody": {
+    "phase_1_harness_commit": "21c209150",
+    "runtime_tree_fix_commit": "69f83a865",
+    "mounted_code_git_head": null,
+    "mounted_code_git_head_note": "The historical dispatch ledger did not record mounted_code_git_head; MAIN must preserve this as a legacy provenance gap rather than infer a hash.",
+    "upstream_snapshot_sha256": null,
+    "upstream_snapshot_note": "The historical dispatch ledger did not record upstream_snapshot_sha256. Exact upstream/evaluate.py execution and same-container custody are present; snapshot identity must not be silently inferred.",
+    "incumbent_archive_bytes": 177169,
+    "incumbent_archive_sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e",
+    "incumbent_contest_cpu_score_recorded": 0.19109982419209975,
+    "incumbent_roundtrip_byte_exact": true
+  },
+  "candidate_custody": {
+    "durable_ssd_root": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1",
+    "archive_path": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/candidate_archive.zip",
+    "archive_bytes": 177169,
+    "archive_sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f",
+    "zip_member_names": ["x"],
+    "zip_member_uncompressed_bytes": 177069,
+    "zip_test": "PASS",
+    "inflated_raw_bytes": 3662409600,
+    "expected_inflated_raw_bytes": 3662409600,
+    "inflated_raw_custody": "PASS"
+  },
+  "artifact_hashes": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/accepted_clicks_ledger.jsonl",
+      "bytes": 12071,
+      "sha256": "14cf44a3f3f12d13b70e2a807d620bc18accf6573f9ed56ed184614e2e8077e2"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/candidate_archive.zip",
+      "bytes": 177169,
+      "sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/report_cpu.txt",
+      "bytes": 671,
+      "sha256": "0607e75adb1b49c498bf2d46cf5d0808ee2f7d2ab91ac328d4a6ad5a02b20675"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/result_meta.json",
+      "bytes": 15956,
+      "sha256": "b2d58612879b138f9599d89f23a2f98239315589ee9b5039f87f172a91f1bce6"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1/search_result.json",
+      "bytes": 1961,
+      "sha256": "635755192b09e97e93fae6df37fd2c46d9a059d8c36a074f0922a78f019e6304"
+    }
+  ],
+  "official_upstream_evaluate_display": {
+    "command_surface": "upstream/evaluate.py",
+    "samples": 600,
+    "device": "cpu",
+    "batch_size": 16,
+    "num_threads": 2,
+    "seed": 1234,
+    "average_posenet_distortion_displayed": 0.00002931,
+    "average_segnet_distortion_displayed": 0.00054530,
+    "archive_bytes": 177169,
+    "original_uncompressed_bytes": 37545489,
+    "compression_rate_displayed": 0.00471878,
+    "final_score_displayed": 0.19,
+    "note": "The stock report is rounded for display. It independently binds the exact archive bytes, 600-sample CPU evaluator, and raw-output custody. Full-precision components below come from candidate selection in the same container and on the same exact archive bytes."
+  },
+  "full_precision_same_container_selection": {
+    "axis_tag": "[contest-CPU candidate-selection in-container]",
+    "archive_bytes": 177169,
+    "archive_sha256": "cb6cf0ba719a535bf8874b31675a4ec66a893423d320f1e4071a2012cd88a56f",
+    "d_seg": 0.0005453067355847452,
+    "d_pose": 0.00002930838566754801,
+    "score_terms": {
+      "100_times_d_seg": 0.05453067355847452,
+      "sqrt_10_times_d_pose": 0.017119692073033325,
+      "25_times_archive_bytes_over_37545489": 0.11796956486570198
+    },
+    "score_recomputed": 0.18961993049720982,
+    "score_formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "n_pairs_scored": 600,
+    "net_changed_codes": 828,
+    "pairs_touched": 489
+  },
+  "iteration_history": [
+    {
+      "round": 0,
+      "accepted_clicks": 489,
+      "d_seg": 0.0005506473118051266,
+      "d_pose": 0.000029371158479515695,
+      "archive_bytes": 177169,
+      "score": 0.1901723118238698,
+      "delta_score_vs_incumbent": -0.0009275123682299657
+    },
+    {
+      "round": 1,
+      "accepted_clicks": 343,
+      "d_seg": 0.0005453067355847452,
+      "d_pose": 0.00002930838566754801,
+      "archive_bytes": 177169,
+      "score": 0.18961993049720982,
+      "delta_score_vs_previous_round": -0.0005523813266599675,
+      "delta_score_vs_incumbent": -0.0014798936948899333
+    }
+  ],
+  "pointer_comparison": {
+    "session_start_pointer_axis": "[contest-CPU]",
+    "session_start_pointer_score": 0.19108282419209976,
+    "session_start_pointer_archive_sha256": "ad02b0124cbb3405c23d3480ac16f12b4e48cbf6f75878dd77a5e621bebd079c",
+    "candidate_minus_pointer": -0.001462893694889944,
+    "pointer_mutated_in_this_branch": false,
+    "promotion_recommendation": "MAIN_REVIEW_REQUIRED_POINTER_CANDIDATE"
+  },
+  "joint_optimum_gap": {
+    "rate_floor_reference": 0.11797,
+    "candidate_minus_rate_floor": 0.07164993049720982,
+    "candidate_rate_term": 0.11796956486570198,
+    "rate_term_interpretation": "The compact B archive has reached the stated rate-floor scale; the remaining score is distortion debt.",
+    "a_capstone_d_seg_reference": 0.00015196,
+    "a_capstone_d_pose_reference": 0.00010184,
+    "candidate_minus_a_d_seg": 0.00039334673558474517,
+    "candidate_minus_a_d_pose": -0.00007253161433245199,
+    "headroom_below_216300_byte_box": 39131,
+    "headroom_below_264320_byte_box": 87151,
+    "missing_composition": "No receiver-closed map currently carries the A-capstone scorer-plane constraints into the compact B description."
+  },
+  "new_local_launch_memory_preflight": {
+    "intrinsic_projected_peak_gib": 67.6,
+    "intrinsic_70_percent_limit_gib": 89.6,
+    "intrinsic_gate": "SAFE",
+    "system_current_used_gib": 41.1,
+    "system_projected_used_gib": 108.8,
+    "system_adaptive_limit_gib": 101.1,
+    "projected_excess_gib": 7.7,
+    "active_jobs_observed": 4,
+    "system_aware_gate": "REFUSED_NEW_LOCAL_N600_LAUNCH",
+    "bypass_used": false,
+    "effect": "No new n600 launch fired; only the small already-completed Modal artifacts were harvested to the SSD evidence tier."
+  },
+  "triality": {
+    "dsl": "N/A: this is an exact inverse-search tool over an already compiled archive, not a trainer lever; no flags were invented.",
+    "equations": [
+      "clickpolish_exact_gated_discrete_latent_ratchet_v1",
+      "S = 100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489"
+    ],
+    "dag": ".omx/research/joint_optimum_575_xhigh_DAG_FEED_20260720.md"
+  },
+  "stores_consulted": [
+    "reports/latest.md",
+    ".omx/state/lane_registry.json",
+    ".omx/state/subagent_progress.jsonl",
+    ".omx/state/modal_call_id_ledger.jsonl",
+    ".omx/state/active_lane_dispatch_claims.md",
+    ".omx/research/clickpolish_pr110_phase2_modal_runbook_20260710.md",
+    ".omx/research/click_polish_399_20260711T2200Z.md",
+    "/Volumes/VertigoDataTier/pact/evidence/joint_optimum_575_xhigh_20260720/n600_r1/n600_r1"
+  ]
+}
