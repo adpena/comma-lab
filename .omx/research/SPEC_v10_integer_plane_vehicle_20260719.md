@@ -830,3 +830,55 @@ bootstrap) routes the next unit.
 
 **Today's honest position:** pointer 0.19108 UNMOVED; everything above is the measured path, with three of six
 steps live.
+
+## §ADDENDUM 2026-07-20-W — THE WORLDSHEET OBJECT (operator-directed design + philosophy elevation)
+
+**Provenance:** operator 2026-07-20 ("World sheet object should be added to our v10 capstone design doc and
+philosophy"), from the Time-Traveler doctrine-gap convening (G1, `.omx/research/time_traveler_doctrine_gaps_20260720.md`)
+— itself a recognition-and-binding of corpus we already hold: the Chasles screw engine (`tac.lie`), the ξ-keyed
+temporal coder design (#574), the measured flicker mechanism, the phase-advection lever (#424).
+
+### The object
+
+The scored video is not 600 independent pairs. The SegNet separatrix (the codim-1 argmax boundary) exists ONCE
+as a **2+1-dimensional worldsheet** W ⊂ (x, y, t): the 1-D boundary curves of each frame are time-slices of one
+ruled surface swept by the ego-screw ξ(t). Formally, W is (to first order) the orbit of the t=0 separatrix under
+the one-parameter screw family — a ruled/developable surface in spacetime, with deviations from exact
+ξ-transport concentrated at scene events (occlusions, birth/death of dashes, specular stress).
+
+### Design consequences (each with its measured anchor)
+
+1. **SOLVE dimension, not just coder dimension.** The interaction inversion (steer-4 components) extends to
+   SPACETIME components: adjacency = spatial support-overlap ∪ temporal ξ-transport adjacency. One worldsheet
+   solve replaces up to 600 per-slice solves; flip debt clusters along worldsheet geodesics (the flicker
+   decomposition — 90.6% edge-flicker — IS this fact measured as a defect). Anchor: r2b margin histogram +
+   R1 boundary concentration (77.5% within 1px of the slice curve).
+2. **DESCRIPTION dimension (the rate half, elevates #574).** The minimal description of 600 boundary
+   configurations is one curve description + the (already-stored or derived) ξ trajectory + a sparse ledger of
+   deviation EVENTS where transport fails. Expected shape: keyframe curve + per-slice residuals that are
+   near-zero away from events — the MPEG-INTER structure applied to the separatrix itself. Per the tiebreak law
+   this is also the LEAST-COMPLEX carrier: one object instead of 600.
+3. **POSE UNIFICATION.** ξ is dual-use by construction (Chasles): the same screw that transports the worldsheet
+   IS the pose observable (dim-0 dominant). On the worldsheet there is no separate pose problem — pose is the
+   transport field of the seg object. The seg-conditioned-pose ordering law becomes geometric: the sheet must be
+   correct before its transport field is read.
+4. **COMPLEXITY.** The worldsheet is intrinsically low-dimensional: per-curve ~8-dim lane manifold × 1-dim time,
+   with events sparse. Intrinsic-complexity ops (steer 6) on W: banded along curve-parameter, banded along t,
+   per-event local. Ambient-sized ops on W are structurally forbidden.
+
+### Philosophy (the eightfold/master-thesis fold)
+
+The worldsheet is the master thesis applied to TIME: the frozen space contains one spacetime object; slicing it
+into 600 problems was a coordinate choice, not a fact. "It all falls out" — seg boundary, pose transport,
+temporal coding, flicker cure, and rate floor are FACETS of W, exactly as the level-set doctrine's facets were
+of the witness. The joint solve on W is beautiful because it is cheaper (one object), and cheaper because it is
+the right object (least-complex tiebreak).
+
+### Binding plan (no new build wave; sequenced)
+
+- NOW (r1b5 line): unchanged — per-pair row first; the worldsheet does not gate the first candidate row.
+- POST-ROW: #574 elevated from coder to worldsheet solve+description (queue #582(e)/G1); spacetime component
+  partition A/B vs per-pair components (verdict test: worldsheet carrier bytes vs 600× per-pair carrier at
+  equal d_seg); event-ledger schema shares the #315/#344 event vocabulary.
+- Equations leg owed at binding time: worldsheet transport law (ξ-advection of the separatrix + measured
+  deviation-event rate) as a canonical equation with a real evaluator.
