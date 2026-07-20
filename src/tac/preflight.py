@@ -87382,7 +87382,20 @@ _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS: tuple[str, ...] = (
     # design_philosophies_eightfold_20260709 — P1-P8 + clauses A/B + fmtools #259
     # availability). Hardcoded here per the same anti-self-waive design.
     "EIGHTFOLD_CLAUSE",
+    # Workflow-v2 velocity/rigor/autonomy doctrine (operator 2026-07-20).
+    "RESEARCH_AUTHORITY",
+    "DECOMPOSE_HEADLINE",
+    "TIEBREAK_LEAST_COMPLEXITY",
+    "MASTER_THESIS_FRAMING",
+    "VERDICT_SCOPE_LADDER",
 )
+_SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES: dict[str, str] = {
+    "RESEARCH_AUTHORITY": "'$0 local' bounds spend only, never information",
+    "DECOMPOSE_HEADLINE": "a bare composite number is UNMEASURED",
+    "TIEBREAK_LEAST_COMPLEXITY": "without touching score, ALWAYS choose the least complex",
+    "MASTER_THESIS_FRAMING": "formulation × realization × completeness",
+    "VERDICT_SCOPE_LADDER": "INSTANCE < FORMULATION < FAMILY < PARADIGM",
+}
 _SUBAGENT_CONTRACT_GROUNDING_PHRASE = (
     "Before reporting progress, audit each claim against a tool result"
 )
@@ -87445,7 +87458,9 @@ def check_subagent_contract_module_integrity(
                     f"{_SUBAGENT_CONTRACT_REL}: constant {name} missing or empty — "
                     "every named contract block must survive verbatim-grade.")
                 continue
-            phrase = key_phrases.get(name)
+            phrase = _SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES.get(
+                name, key_phrases.get(name)
+            )
             if isinstance(phrase, str) and phrase and phrase not in value:
                 violations.append(
                     f"{_SUBAGENT_CONTRACT_REL}: constant {name} no longer contains its "
@@ -87463,11 +87478,17 @@ def check_subagent_contract_module_integrity(
                 violations.append(
                     f"{_SUBAGENT_CONTRACT_REL}: standard_contract() raised "
                     f"{type(exc).__name__}: {exc}.")
-            if composed and _SUBAGENT_CONTRACT_GROUNDING_PHRASE not in composed:
+            if _SUBAGENT_CONTRACT_GROUNDING_PHRASE not in composed:
                 violations.append(
                     f"{_SUBAGENT_CONTRACT_REL}: standard_contract() output lost the "
                     f"grounded-progress phrase ({_SUBAGENT_CONTRACT_GROUNDING_PHRASE!r}) — "
                     "the highest-value harvest adoption must always be composed in.")
+            for name, phrase in _SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES.items():
+                if phrase not in composed:
+                    violations.append(
+                        f"{_SUBAGENT_CONTRACT_REL}: standard_contract() output lost "
+                        f"workflow-v2 block {name} ({phrase!r}) — every future dispatch "
+                        "must inherit the workflow doctrine.")
 
         review_composer = getattr(module, "review_contract", None)
         if not callable(review_composer):

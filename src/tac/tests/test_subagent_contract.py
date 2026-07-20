@@ -69,6 +69,11 @@ def test_standard_contract_both_false_keeps_core_blocks() -> None:
         "RETRIEVAL_FIRST_CLAUSE",
         "REVIEW_STATUS_CLAUSE",
         "CITATION_CLAUSE",
+        "RESEARCH_AUTHORITY",
+        "DECOMPOSE_HEADLINE",
+        "TIEBREAK_LEAST_COMPLEXITY",
+        "MASTER_THESIS_FRAMING",
+        "VERDICT_SCOPE_LADDER",
         "MANUAL_CITATION",
     ):
         assert getattr(sc, name) in composed, f"core block {name} must always compose"
@@ -83,11 +88,8 @@ def test_standard_contract_grounding_phrase_always_present() -> None:
 
 def test_standard_contract_blocks_separated_by_blank_lines() -> None:
     composed = sc.standard_contract()
-    # 18 blocks by default (6 harvest + AUTONOMOUS_REFORMULATION +
-    # PAPER_WARM_START_FROM_DIVERGENCE + 4 #346 clauses + requirement-S citation clause +
-    # eightfold-philosophies clause + review + triality + commit-discipline + manual)
-    # -> 17 separators.
-    assert composed.count("\n\n") == 17
+    # 23 blocks by default: the previous 18 plus five workflow-v2 doctrine blocks.
+    assert composed.count("\n\n") == 22
 
 
 def test_review_only_names_are_subset_of_contract_names() -> None:
@@ -160,6 +162,24 @@ def test_citation_clause_content_and_composition() -> None:
     for kwargs in ({}, {"review": False}, {"triality": False},
                    {"review": False, "triality": False}):
         assert text in sc.standard_contract(**kwargs)
+
+
+def test_workflow_v2_blocks_are_registered_and_unconditionally_composed() -> None:
+    expected = {
+        "RESEARCH_AUTHORITY": "'$0 local' bounds spend only, never information",
+        "DECOMPOSE_HEADLINE": "a bare composite number is UNMEASURED",
+        "TIEBREAK_LEAST_COMPLEXITY": "without touching score, ALWAYS choose the least complex",
+        "MASTER_THESIS_FRAMING": "formulation × realization × completeness",
+        "VERDICT_SCOPE_LADDER": "INSTANCE < FORMULATION < FAMILY < PARADIGM",
+    }
+    for name, phrase in expected.items():
+        assert name in sc.CONTRACT_CONSTANT_NAMES
+        assert name not in sc.REVIEW_ONLY_CONSTANT_NAMES
+        assert sc.KEY_PHRASES[name] == phrase
+        assert phrase in getattr(sc, name)
+        for kwargs in ({}, {"review": False}, {"triality": False},
+                       {"review": False, "triality": False}):
+            assert getattr(sc, name) in sc.standard_contract(**kwargs)
 
 
 def test_control_law_clause_forbids_tbd_and_names_the_five_forms() -> None:

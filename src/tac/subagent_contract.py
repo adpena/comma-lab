@@ -31,6 +31,7 @@ __all__ = [
     "CONFIRMED_VS_PLAUSIBLE",
     "CONTRACT_CONSTANT_NAMES",
     "CONTROL_LAW_CLAUSE",
+    "DECOMPOSE_HEADLINE",
     "EIGHTFOLD_CLAUSE",
     "EXECUTE_DONT_READ",
     "FINAL_MESSAGE_REGROUNDING",
@@ -39,19 +40,23 @@ __all__ = [
     "GROUNDED_PROGRESS",
     "KEY_PHRASES",
     "MANUAL_CITATION",
+    "MASTER_THESIS_FRAMING",
     "NEVER_REASONING_ECHO",
     "NO_ENDING_ON_PROMISES",
     "NO_MANUFACTURED_FINDINGS",
     "OWN_ROUND1_REVIEW",
     "PAPER_WARM_START_FROM_DIVERGENCE",
     "RECURSION_CLAUSE",
+    "RESEARCH_AUTHORITY",
     "RETRIEVAL_FIRST_CLAUSE",
     "REVIEW_ONLY_CONSTANT_NAMES",
     "REVIEW_STATUS_CLAUSE",
     "RISK_RANKING",
     "SECTION8_CHECKLIST",
     "STATE_THE_BOUNDARIES",
+    "TIEBREAK_LEAST_COMPLEXITY",
     "TRIALITY_WIRING",
+    "VERDICT_SCOPE_LADDER",
     "review_contract",
     "standard_contract",
 ]
@@ -320,6 +325,51 @@ PAPER_WARM_START_FROM_DIVERGENCE = (
     "not a verdict."
 )
 
+# --- Workflow-v2 velocity/rigor/autonomy doctrine (operator 2026-07-20) ----------------------
+
+#: Information authority is independent of dispatch-spend authority.
+RESEARCH_AUTHORITY = (
+    "RESEARCH AUTHORITY: full online research (web, arXiv, documentation, and OSS repositories) "
+    "and use of all open-source software are IN-AUTHORITY. '$0 local' bounds spend only, never "
+    "information: it means no paid dispatch, not no research. On explored territory, search the "
+    "literature and existing implementations first; deep-read relevant methods, preserve exact "
+    "citations and source provenance, then adapt or build instead of rediscovering known work."
+)
+
+#: Composite headlines conceal the interaction terms that decide the next action.
+DECOMPOSE_HEADLINE = (
+    "DECOMPOSE EVERY HEADLINE: a bare composite number is UNMEASURED. Ship the authority-relevant "
+    "per-class, per-stratum, per-byte-section, and per-objective-term decomposition, including "
+    "interaction terms and the surface/axis that produced it. Reuse a canonical splitter when one "
+    "exists; otherwise build the splitter before treating the headline as decision evidence."
+)
+
+#: Score-neutral choices have a deterministic simplicity tiebreak.
+TIEBREAK_LEAST_COMPLEXITY = (
+    "TIEBREAK — LEAST COMPLEXITY: without touching score, ALWAYS choose the least complex "
+    "solution or design. Wall clock and complexity are heuristics for each other: prefer the form "
+    "with fewer stages, states, special cases, and operational dependencies when score authority "
+    "is neutral; score movement remains the primary objective."
+)
+
+#: The pursuit searches the full frozen evaluator information space, not one implementation basin.
+MASTER_THESIS_FRAMING = (
+    "MASTER THESIS FRAMING: treat the frozen contest information space as an inversion over "
+    "formulation × realization × completeness, not ordinary codec fidelity or a single model "
+    "family. Search hybrids across all three axes against the joint (score, wall-clock) objective; "
+    "the winning witness is the shortest complete evaluator-equivalent realization, regardless of "
+    "which familiar representation supplied its parts."
+)
+
+#: A negative must say exactly how much of the search space it actually closes.
+VERDICT_SCOPE_LADDER = (
+    "VERDICT SCOPE LADDER: every negative carries one explicit scope token from "
+    "INSTANCE < FORMULATION < FAMILY < PARADIGM. Default to the narrowest supported scope; one "
+    "failed formulation never kills a family. A family verdict requires a proved bound or at least "
+    "two materially distinct optimal-form formulations, while a paradigm verdict requires explicit "
+    "operator/council authority. Record the still-open reformulations with every narrower negative."
+)
+
 # --- Registry (consumed by tests + the preflight integrity gate) -----------------------------
 
 #: Every named contract constant this module guarantees. The preflight integrity gate
@@ -350,6 +400,11 @@ CONTRACT_CONSTANT_NAMES: tuple[str, ...] = (
     "EXECUTE_DONT_READ",
     "AUTONOMOUS_REFORMULATION",
     "PAPER_WARM_START_FROM_DIVERGENCE",
+    "RESEARCH_AUTHORITY",
+    "DECOMPOSE_HEADLINE",
+    "TIEBREAK_LEAST_COMPLEXITY",
+    "MASTER_THESIS_FRAMING",
+    "VERDICT_SCOPE_LADDER",
 )
 
 #: Review-dispatch-only constants: composed by ``review_contract()``, deliberately NOT
@@ -390,6 +445,11 @@ KEY_PHRASES: dict[str, str] = {
     "EXECUTE_DONT_READ": "not by reading commit messages",
     "AUTONOMOUS_REFORMULATION": "start of the reformulation ladder",
     "PAPER_WARM_START_FROM_DIVERGENCE": "the warm-start, not a verdict",
+    "RESEARCH_AUTHORITY": "'$0 local' bounds spend only, never information",
+    "DECOMPOSE_HEADLINE": "a bare composite number is UNMEASURED",
+    "TIEBREAK_LEAST_COMPLEXITY": "without touching score, ALWAYS choose the least complex",
+    "MASTER_THESIS_FRAMING": "formulation × realization × completeness",
+    "VERDICT_SCOPE_LADDER": "INSTANCE < FORMULATION < FAMILY < PARADIGM",
 }
 
 
@@ -401,7 +461,8 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
     fresh-context verification), the four #346 retrieval-first clauses (recursion-default,
     control laws, retrieval-first, review-status provenance), the requirement-S citation
     clause, the eight design philosophies clause (P1-P8 + clauses A/B + fmtools availability),
-    the #405 commit-through-serializer discipline block, plus the operating-manual citation.
+    the five workflow-v2 doctrine blocks, the #405 commit-through-serializer discipline block,
+    plus the operating-manual citation.
 
     Args:
         review: include the #337 own-round-1 adversarial-review block (default True;
@@ -420,6 +481,11 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         ANTI_GOLDPLATING,
         AUTONOMOUS_REFORMULATION,
         PAPER_WARM_START_FROM_DIVERGENCE,
+        RESEARCH_AUTHORITY,
+        DECOMPOSE_HEADLINE,
+        TIEBREAK_LEAST_COMPLEXITY,
+        MASTER_THESIS_FRAMING,
+        VERDICT_SCOPE_LADDER,
         FRESH_CONTEXT_VERIFIER,
         RECURSION_CLAUSE,
         CONTROL_LAW_CLAUSE,
