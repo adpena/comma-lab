@@ -20252,3 +20252,38 @@ falsifiable, $0, fire on next probe window): probe_entropy_hopfield_preprox_uint
 probe_sparsemax_margin_band_preimage_ab_v1 · probe_tropical_residuation_principal_cell_representative_v1.
 Honest anchor re-affirmed: #542 Cole-Hopf = Gibbs-TARGET builder (top-1 0.9958); preregistered preimage
 gate never fired — no inverse-driver claim.
+
+## FEED-R1R2-MEASURED-VERDICTS-20260720 (Fable custody consolidation; arms' full FEEDs land at branch reconcile #582)
+
+**Pointer 0.19108 [contest-CPU] UNMOVED.** All numbers verified by MAIN re-derivation at disposition.
+
+- **R2 (r2_m2_target_selection, 78636bb610):** unrounded-target hypothesis PROVEN — full **0.04710838 S**
+  non-rate gap recovered (d_seg=0, d_pose=0; 707,788,800/707,788,800 exact numerators, d_A=0.0)
+  [macOS-CPU advisory]. Direct carry-every-numerator formulation RATE-DEAD: +1,307,645,816 B =
+  **18,483× the 70,748.29 B break-even** (net +870.66 S). FORMULATION scope. Addendum "zero-byte
+  widening" CORRECTED to conditional on the ≤70,748 B sparse admission gate. NEW GAP: #49 covers only
+  22.6969% axis-aligned nullity vs 80.6742% full real-linear kernel. Successor r2b LIVE (sparse
+  decision stream, concentration histogram first, KKT stop).
+- **R1 (r1_shared_receiver, 754a43b58a):** FORMULATION-scoped blocker
+  SHARED_RECEIVER_COUNTED_SPATIAL_HARD_ORACLE_INTERSECTION_EMPTY — three formulations priced dead:
+  dense-fp32 field 561,502,227 B (**1958.6× gate**); PDW1 label/fill carrier 496,067 B n600 (1.73×
+  gate, payload 97.6% label stream); n48 sparse-prefix repair (EV 9.42e-9 S/B = **0.0141× the
+  6.6586e-7 waterline** → reverse-waterfill selects ZERO). NOT family-scoped. **THE DECISIVE NUMBER:
+  77.51% of the 38,077 hard-oracle mismatches lie within Chebyshev r=1 of the L\* boundary** (80.74%
+  r≤2, 84.58% r≤4; flips Road→Lane 28.10%, Movable→Road 16.05%) — the residual is BOUNDARY
+  DISPLACEMENT, not region labels; carry boundary/active-set decisions. **CORRECTED CAP: exact
+  fixed-C1 pointer-crossing cap = 216,223 B** (supersedes 216,300/264,320 approximations). Authority
+  hardened: JSON-claimable candidate-success path REMOVED; fail-closed
+  shared_receiver_counted_spatial_hard_oracle_admission_v1 derives all authority from bytes.
+  Successor r1b LIVE (boundary-coordinate counted-generator JOINT solve: #502 curvelet frames +
+  active-set hard-oracle uint8 preimage + PDW2 conditioning + pose-through-ξ + ERM tempering
+  containment; consumes null_compiler_fix projector on land).
+- **regmax_family_probes (14bbca8317):** honest N-A×3 (prereq surfaces absent: matched preimage
+  adapter · frozen prototype bank · Aurenhammer same-coder comparator → queued #582(d)) + three real
+  full-surface measurements: sparsemax exact-one-hot **0.9733309174** (verifies ERM margin-histogram
+  prediction to 4 decimals — sparsemax↔margin equivalence confirmed two-route); Lane exact-one-hot
+  **0.2576** (no-safe-interior quantified); fp16-logit label mismatches **2,629/117,964,800**.
+- **Convergence statement:** R2 (0.047 concentrates at tie-tight cells) + R1 (77.51% of debt within
+  1px of the boundary) + necessity geometry (1.66% camera support) name ONE coordinate — the sparse
+  boundary-displacement/active-set carrier — now attacked by r1b (generator side) and r2b (decision-
+  stream side) with null_compiler_fix (22.70%→80.67% kernel) shrinking the charged set for both.
