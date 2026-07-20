@@ -276,8 +276,14 @@ def _sidecars_from_manifest(
     )
 
 
-def audit_vjp_campaign(path: Path) -> dict[str, Any]:
-    """Audit current campaign custody without mutating or waiting on the live job."""
+def audit_vjp_campaign(path: Path, *, rehash_sidecars: bool = True) -> dict[str, Any]:
+    """Audit campaign custody, optionally deferring the expensive bulk rehash.
+
+    ``rehash_sidecars=False`` is only manifest-level custody.  It exists so a
+    partial compile can report cheaper missing predecessor artifacts without
+    rereading roughly 90 GB of VJP tensors.  A terminal candidate compile must
+    still call the default strict path and rehash every sidecar.
+    """
 
     resolved = path.expanduser().resolve(strict=True)
     campaign, campaign_custody = _read_json_snapshot(resolved)
@@ -343,7 +349,7 @@ def audit_vjp_campaign(path: Path) -> dict[str, Any]:
         if campaign.get("refused_pair_ids") != []:
             blockers.append("VJP_TERMINAL_REFUSED_FIELD_NOT_EMPTY")
     bytes_rehashed = False
-    if not blockers:
+    if not blockers and rehash_sidecars:
         for pair_id in completed_ids:
             row = declared_rows[pair_id]
             if sha256_file(Path(row["path"])) != row["declared_sha256"]:
@@ -362,6 +368,7 @@ def audit_vjp_campaign(path: Path) -> dict[str, Any]:
         "manifest_custody": manifest_custody,
         "per_pair_declared_custody": [declared_rows[index] for index in completed_ids],
         "sidecar_bytes_rehashed_by_r1b2": bytes_rehashed,
+        "sidecar_rehash_requested": rehash_sidecars,
         "blockers": blockers,
     }
 

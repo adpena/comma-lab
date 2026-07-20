@@ -114,6 +114,59 @@ def test_campaign_audit_treats_later_completion_as_superseding_scoped_refusal(
     assert "VJP_REFUSED_PAIR_IDS_PRESENT" not in result["blockers"]
 
 
+def test_terminal_campaign_can_defer_bulk_rehash_without_claiming_it(tmp_path: Path) -> None:
+    sidecar = tmp_path / "shared.vjp.npz"
+    sidecar.write_bytes(b"declared-sidecar")
+    declared_sha = hashlib.sha256(sidecar.read_bytes()).hexdigest()
+    manifest = tmp_path / "manifest.json"
+    _write_json(
+        manifest,
+        {
+            "sidecars": [
+                {
+                    "pair_id": pair_id,
+                    "path": str(sidecar),
+                    "bytes": sidecar.stat().st_size,
+                    "sha256": declared_sha,
+                    "tensor_hashes": {"seg_g_y": "a" * 64},
+                }
+                for pair_id in range(600)
+            ],
+            "refusals": [],
+        },
+    )
+    campaign = tmp_path / "campaign.json"
+    _write_json(
+        campaign,
+        {
+            "schema": "vjp_custody_n600_extension.v1",
+            "updated_at_utc": "2026-07-20T00:00:00Z",
+            "status": "COMPLETE_N600",
+            "final_completed_count": 600,
+            "still_missing_pair_ids": [],
+            "refused_pair_ids": [],
+            "source_manifests": [
+                {
+                    "path": str(manifest),
+                    "sha256": sha256_file(manifest),
+                    "completed_pair_ids": list(range(600)),
+                    "refused_pair_ids": [],
+                }
+            ],
+            "chunks": [],
+        },
+    )
+    sidecar.write_bytes(b"drifted-sidecar!")
+
+    deferred = audit_vjp_campaign(campaign, rehash_sidecars=False)
+    assert deferred["blockers"] == []
+    assert deferred["completed_pair_count"] == 600
+    assert deferred["sidecar_rehash_requested"] is False
+    assert deferred["sidecar_bytes_rehashed_by_r1b2"] is False
+    with pytest.raises(R1B2CompileError, match="sidecar SHA drift"):
+        audit_vjp_campaign(campaign)
+
+
 def _packet(path: Path) -> None:
     packet = BoundaryCoordinatePacket(
         family=FrameFamily.WINDOWED_CURVELET,
