@@ -1,0 +1,49 @@
+{
+  "archive_sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a",
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "command_argv": [
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_v3_20260720T075336Z/.venv/bin/python",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_v3_20260720T075336Z/tools/measure_einstein_kolmogorov_crux_v3.py",
+    "--config",
+    "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_v3_20260720T075336Z/.omx/research/einstein_kolmogorov_crux_v3_measurement_config_20260720.json"
+  ],
+  "inflate_py_sha256": "039f474795485ea2aaf6cf8e2a52eb4389acfb7697f1ebb76ffbba6884466811",
+  "raw_bytes": 3662409600,
+  "raw_path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v3_20260720_xi_diag_n24/inflated/0.raw",
+  "raw_sha256": "e161990ed1c0071a156b3a071758f25b5a7f56bfd1f6c9da69ff1fc47b09e8e6",
+  "rebuildable_from": {
+    "archive": {
+      "bytes": 91062,
+      "member_0bin_bytes": 91916,
+      "member_0bin_sha256": "3f96832dd7e224125d723c654aa920dd1d9457f666c6063c4882754c10921a7e",
+      "path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v3_20260720_xi_diag_n24/archive.zip",
+      "sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a"
+    },
+    "function": "tools.levelset_byte_close_and_eval.run_inflate(max_pairs=None)",
+    "inflate_py": {
+      "bytes": 65459,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v3_20260720_xi_diag_n24/inflate.py",
+      "sha256": "039f474795485ea2aaf6cf8e2a52eb4389acfb7697f1ebb76ffbba6884466811"
+    }
+  },
+  "run_inflate": {
+    "eval_pairs": 600,
+    "expected_bytes": 3662409600,
+    "frame_layout": "(1200, 874, 1164, 3) uint8 [f0,f1 per pair]",
+    "full_output_shape_ok": true,
+    "inflate_stdout": "inflated 1200 frames (600 pairs) -> /Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v3_20260720_xi_diag_n24/inflated/0.raw [1200x874x1164x3 uint8] (18 workers)",
+    "n_frames_emitted": 1200,
+    "raw_bytes": 3662409600,
+    "raw_path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v3_20260720_xi_diag_n24/inflated/0.raw",
+    "storage_preflight": {
+      "expected_raw_bytes": 3662409600,
+      "free_bytes": 786704216064,
+      "ok": true,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v3_20260720_xi_diag_n24/inflated",
+      "required_bytes": 3845530080,
+      "safety_margin": 1.05
+    }
+  },
+  "schema": "einstein_kolmogorov_crux_v3_inflate_stage.v1",
+  "utc": "2026-07-20T08:37:23Z"
+}
