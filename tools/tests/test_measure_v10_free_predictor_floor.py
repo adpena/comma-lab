@@ -349,6 +349,70 @@ def test_projected_action_uses_ceil_population_and_exact_contest_formula() -> No
     assert result["projected_exact_objective"] == pytest.approx(
         0.1 + np.sqrt(0.001) + 25 * 5050 / measure.CONTEST_ARCHIVE_DENOMINATOR
     )
+    cap = result["strict_pointer_byte_cap_at_measured_distortion"]
+    distortion = result["distortion_term"]
+    assert distortion + 25 * cap / measure.CONTEST_ARCHIVE_DENOMINATOR < measure.POINTER_VALUE
+    assert distortion + 25 * (cap + 1) / measure.CONTEST_ARCHIVE_DENOMINATOR >= measure.POINTER_VALUE
+
+
+def test_strict_pointer_byte_cap_refuses_integral_equality_boundary() -> None:
+    desired_equality_bytes = 1_000
+    d_seg = (measure.POINTER_VALUE - 25.0 * desired_equality_bytes / measure.CONTEST_ARCHIVE_DENOMINATOR) / 100.0
+    cap = measure._strict_pointer_byte_cap(d_seg=d_seg, d_pose=0.0)
+    assert cap == desired_equality_bytes - 1
+    assert 100 * d_seg + 25 * cap / measure.CONTEST_ARCHIVE_DENOMINATOR < measure.POINTER_VALUE
+    assert 100 * d_seg + 25 * (cap + 1) / measure.CONTEST_ARCHIVE_DENOMINATOR >= measure.POINTER_VALUE
+
+
+def test_banked_ab_resume_closes_postreceipt_cleanup_window(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    output_root = tmp_path / "pact-rung-e-postreceipt"
+    output_root.mkdir()
+    (output_root / measure._EPHEMERAL_MARKER_NAME).write_bytes(measure._EPHEMERAL_MARKER_BYTES)
+    arms: dict[str, Any] = {}
+    for arm_id in ("control", "precision_drop"):
+        arm_root = output_root / arm_id
+        raw_path = arm_root / "inflated" / f"v10-banked-ab-{arm_id}.mp4"
+        raw_path.parent.mkdir(parents=True)
+        archive_path = arm_root / "archive.zip"
+        archive_path.write_bytes(f"archive-{arm_id}".encode())
+        raw_path.write_bytes(f"raw-{arm_id}".encode())
+        arms[arm_id] = {
+            "stage_complete": True,
+            "archive": {"bytes": archive_path.stat().st_size, "sha256": measure._sha256_file(archive_path)},
+            "inflated": {"bytes": raw_path.stat().st_size, "sha256": measure._sha256_file(raw_path)},
+        }
+    monkeypatch.setattr(
+        measure,
+        "load_prepared_chunk",
+        lambda _path: SimpleNamespace(manifest_sha256="prepared-manifest-sha"),
+    )
+    receipt_path = tmp_path / "receipt.json"
+    receipt = {
+        "schema": measure.SCHEMA_BANKED_AB,
+        "arms": arms,
+        "artifact_lifecycle": {
+            "ephemeral_output": True,
+            "retained": False,
+            "cleanup_completed": False,
+            "rebuildable_from": {
+                "prepared_manifest_sha256": "prepared-manifest-sha",
+                "tool_sha256": measure._sha256_file(Path(measure.__file__).resolve()),
+                "codec_sha256": measure._sha256_file(measure.SRC / "tac/codec/v10_predictor_residual.py"),
+                "receiver_sha256": measure._sha256_file(measure.SRC / "tac/witness_dsl/v10_production_receiver.py"),
+            },
+        },
+    }
+    receipt_path.write_text(json.dumps(receipt))
+    args = argparse.Namespace(
+        resume=True,
+        ephemeral_output=True,
+        output_root=output_root,
+        prepared_manifest=tmp_path / "unused.json",
+    )
+    resumed = measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
+    assert resumed["artifact_lifecycle"]["cleanup_completed"] is True
+    assert not output_root.exists()
+    assert measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path) == resumed
 
 
 def test_score_inflated_raw_preserves_pair_order_and_aggregates(

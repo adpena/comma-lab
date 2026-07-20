@@ -87,8 +87,12 @@ archive, but moves `d_seg` to `0.000497182210` and `d_pose` to `0.005454401104`.
 Its distortion term alone is `0.283264814`, already above the pointer; its projected
 `S=224.297193624` is still rate-dead. This is a real same-harness rate/distortion point,
 not a palette proxy, not the camera-preimage `precision_drop1` row, and not a contest
-score. The durable receipt is `einstein_kolmogorov_banked_n12_ab_20260720.json`; the
-complete comparison is `einstein_kolmogorov_frontier_magnitude_chart_20260720.json`.
+score. The authoritative durable receipt is
+`einstein_kolmogorov_banked_n12_ab_20260720_v2.json`; v2 supersedes the preserved v1
+custody after fixing the strict-pointer integral boundary and the post-receipt cleanup
+resume window. Both arm archives, all measured metrics, and the scientific verdict are
+byte-identical to v1. The complete comparison is
+`einstein_kolmogorov_frontier_magnitude_chart_20260720.json`.
 
 ## Stores consulted
 
@@ -590,6 +594,14 @@ not missing; the primary missing object is a compact predictor/program inside th
 box. A counted arbitrary-numerator codec remains secondary if the interval-solver chart
 is chosen.
 
+The authoritative v2 receipt also closes the crash window between durable receipt write
+and certified scratch cleanup: `--resume --ephemeral-output` revalidates the receipt,
+prepared bank, live tool/codec/receiver hashes, and remaining arm bytes before cleanup,
+and is idempotent after cleanup. Its strict byte cap uses `ceil(bound)-1` plus exact
+objective bracketing, so equality with the pointer is correctly excluded. The preserved
+v1 receipt is historical only; the rerun reproduced both archive SHA-256 values and all
+scientific measurements exactly.
+
 No new full-n600 in-box point was produced.  The existing settled R1 89,772-byte
 macOS-CPU advisory row remains a control, not this lane's result.  The attempted xi
 composition created neither packet nor receipt: the strict SSD preflight raised
@@ -603,7 +615,7 @@ inventory are in `.omx/research/einstein_kolmogorov_crux_measurement_20260719.js
 the corrected bank-vs-wall comparison is in
 `.omx/research/einstein_kolmogorov_operating_point_correction_20260720.json`;
 the exact-receiver A/B is in
-`.omx/research/einstein_kolmogorov_banked_n12_ab_20260720.json`; the unified
+`.omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v2.json`; the unified
 frontier-magnitude chart is
 `.omx/research/einstein_kolmogorov_frontier_magnitude_chart_20260720.json`;
 the executable state transition is in

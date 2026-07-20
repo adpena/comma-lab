@@ -1,6 +1,6 @@
 {
   "schema": "einstein_kolmogorov_frontier_magnitude_chart.v1",
-  "written_at_utc": "2026-07-20T02:01:00Z",
+  "written_at_utc": "2026-07-20T02:42:45Z",
   "lane_id": "lane_einstein_kolmogorov_crux_20260719",
   "research_only": true,
   "score_claim": false,
@@ -56,9 +56,9 @@
       "sha256": "d966e066bfd24deb0f7ad1fda865337ed2f108c03c93244c24dd592ac69682a9"
     },
     {
-      "role": "matched banked n12 exact production-receiver control/treatment",
-      "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720.json",
-      "sha256": "9c031e016300768593d8848d265ed5d5c9fb915f335dd9024b3ba0b8ecfb904a"
+      "role": "matched banked n12 exact production-receiver control/treatment; v2 supersedes v1 custody while preserving byte-identical arm archives and scientific values",
+      "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v2.json",
+      "sha256": "9de355d7208f0256d9e137ace54c24cf0f9b3f6907dbb3753227f9c26807c7c7"
     },
     {
       "role": "n24 reachable-preimage trade-cells curve",

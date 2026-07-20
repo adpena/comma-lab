@@ -59,6 +59,9 @@ from tac.codec.v10_predictor_residual import (  # noqa: E402
     fit_affine6_q12_descriptor,
     predict_plane,
 )
+from tac.codec.v10_predictor_residual import (  # noqa: E402
+    CODEC_ID as PREDICTOR_RESIDUAL_CODEC_ID,
+)
 from tac.optimization.uint8_lattice_feasibility import DisjointResizeOperator  # noqa: E402
 from tools.measure_uint8_lattice_feasibility import stored_npy_memmap  # noqa: E402
 
@@ -1062,7 +1065,7 @@ def load_prepared_chunk(manifest_path: Path) -> PreparedChunkCustody:
         or manifest.get("camera_hw") != list(CAMERA_HW)
         or manifest.get("scorer_hw") != list(SCORER_HW)
         or manifest.get("source_cache_sha256") != EXPECTED_CACHE_SHA256
-        or manifest.get("y_codec_id") != "predictor-residual-u8.v1"
+        or manifest.get("y_codec_id") != PREDICTOR_RESIDUAL_CODEC_ID
         or manifest.get("predictor_mode_id") not in MODE_BY_ID
     ):
         raise PredictorFloorError("prepared chunk manifest violates the settled V10 contract")
@@ -1188,6 +1191,25 @@ def truncate_scorer_plane_predictor_residual(
     }
 
 
+def _strict_pointer_byte_cap(*, d_seg: float, d_pose: float) -> int:
+    """Return the greatest integer byte count whose exact action beats the pointer."""
+
+    distortion_term = 100.0 * d_seg + math.sqrt(10.0 * d_pose)
+    slack = POINTER_VALUE - distortion_term
+    if slack <= 0.0:
+        return -1
+    candidate = math.ceil(slack * CONTEST_ARCHIVE_DENOMINATOR / 25.0) - 1
+
+    def action(byte_count: int) -> float:
+        return distortion_term + 25.0 * byte_count / CONTEST_ARCHIVE_DENOMINATOR
+
+    while candidate >= 0 and action(candidate) >= POINTER_VALUE:
+        candidate -= 1
+    while action(candidate + 1) < POINTER_VALUE:
+        candidate += 1
+    return candidate
+
+
 def projected_action(*, archive_bytes: int, pair_count: int, d_seg: float, d_pose: float) -> dict[str, Any]:
     """Project a subset archive linearly to n600 and apply the exact objective."""
 
@@ -1198,8 +1220,7 @@ def projected_action(*, archive_bytes: int, pair_count: int, d_seg: float, d_pos
     projected_bytes = (archive_bytes * CONTEST_PAIR_COUNT + pair_count - 1) // pair_count
     distortion_term = 100.0 * float(d_seg) + math.sqrt(10.0 * float(d_pose))
     action = distortion_term + 25.0 * projected_bytes / CONTEST_ARCHIVE_DENOMINATOR
-    slack = POINTER_VALUE - distortion_term
-    byte_cap = math.floor(slack * CONTEST_ARCHIVE_DENOMINATOR / 25.0) if slack > 0.0 else -1
+    byte_cap = _strict_pointer_byte_cap(d_seg=float(d_seg), d_pose=float(d_pose))
     return {
         "projection": "ceil(measured subset archive bytes * 600 / measured pair count)",
         "projected_n600_archive_bytes": projected_bytes,
@@ -1493,12 +1514,74 @@ def _run_banked_ab_arm(
     return stage
 
 
+def _resume_banked_ab_postreceipt_cleanup(args: argparse.Namespace, receipt_path: Path) -> dict[str, Any]:
+    """Finish only the certified cleanup window after a durable receipt exists."""
+
+    if not args.resume or not args.ephemeral_output:
+        raise PredictorFloorError(f"write-once banked A/B receipt already exists: {receipt_path}")
+    try:
+        receipt = json.loads(receipt_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PredictorFloorError("existing banked A/B receipt is unreadable") from exc
+    lifecycle = receipt.get("artifact_lifecycle")
+    if (
+        receipt.get("schema") != SCHEMA_BANKED_AB
+        or not isinstance(lifecycle, dict)
+        or lifecycle.get("ephemeral_output") is not True
+        or lifecycle.get("retained") is not False
+    ):
+        raise PredictorFloorError("existing banked A/B receipt cannot authorize ephemeral cleanup")
+    custody = load_prepared_chunk(args.prepared_manifest)
+    rebuildable = lifecycle.get("rebuildable_from")
+    if not isinstance(rebuildable, dict) or (
+        rebuildable.get("prepared_manifest_sha256") != custody.manifest_sha256
+        or rebuildable.get("tool_sha256") != _sha256_file(Path(__file__).resolve())
+        or rebuildable.get("codec_sha256") != _sha256_file(SRC / "tac/codec/v10_predictor_residual.py")
+        or rebuildable.get("receiver_sha256") != _sha256_file(SRC / "tac/witness_dsl/v10_production_receiver.py")
+    ):
+        raise PredictorFloorError("existing banked A/B cleanup custody differs from live immutable sources")
+    output_root = _ephemeral_output_root(args.output_root)
+    if lifecycle.get("cleanup_completed") is True:
+        if output_root.exists():
+            raise PredictorFloorError("completed banked A/B receipt conflicts with a remaining output tree")
+        return receipt
+    if lifecycle.get("cleanup_completed") is not False:
+        raise PredictorFloorError("existing banked A/B receipt has an invalid cleanup state")
+    if output_root.exists():
+        arms = receipt.get("arms")
+        if not isinstance(arms, dict):
+            raise PredictorFloorError("existing banked A/B receipt lacks its arm map")
+        for arm_id in ("control", "precision_drop"):
+            arm = arms.get(arm_id)
+            if not isinstance(arm, dict) or arm.get("stage_complete") is not True:
+                raise PredictorFloorError("existing banked A/B receipt lacks a complete arm")
+            archive = arm.get("archive")
+            inflated = arm.get("inflated")
+            if not isinstance(archive, dict) or not isinstance(inflated, dict):
+                raise PredictorFloorError("existing banked A/B receipt arm custody is malformed")
+            archive_path = output_root / arm_id / "archive.zip"
+            raw_path = output_root / arm_id / "inflated" / f"v10-banked-ab-{arm_id}.mp4"
+            if (
+                not archive_path.is_file()
+                or archive_path.stat().st_size != archive.get("bytes")
+                or _sha256_file(archive_path) != archive.get("sha256")
+                or not raw_path.is_file()
+                or raw_path.stat().st_size != inflated.get("bytes")
+                or _sha256_file(raw_path) != inflated.get("sha256")
+            ):
+                raise PredictorFloorError(f"banked A/B {arm_id} scratch differs from its durable receipt")
+        _cleanup_ephemeral_output(output_root)
+    lifecycle["cleanup_completed"] = True
+    _atomic_json(receipt_path, receipt)
+    return receipt
+
+
 def run_banked_ab(args: argparse.Namespace) -> dict[str, Any]:
     """Run a same-harness receiver-closed control/precision A/B on one banked chunk."""
 
     receipt_path = _durable_path(args.receipt, "banked A/B receipt")
     if receipt_path.exists():
-        raise PredictorFloorError(f"write-once banked A/B receipt already exists: {receipt_path}")
+        return _resume_banked_ab_postreceipt_cleanup(args, receipt_path)
     custody = load_prepared_chunk(args.prepared_manifest)
     if args.cache.expanduser().resolve() != DEFAULT_CACHE.resolve() and not args.allow_noncanonical_cache:
         raise PredictorFloorError("banked A/B cache path differs from canonical custody")

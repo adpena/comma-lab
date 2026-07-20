@@ -382,6 +382,13 @@ def validate_frontier_magnitude_chart(
             rel_tol=0.0,
             abs_tol=1e-15,
         )
+        or not math.isclose(
+            treatment_delta.get("derived_n600_action"),
+            banked_treatment["derived_n600_action_at_unchanged_mean_distortion"]
+            - banked_control["derived_n600_action_at_unchanged_mean_distortion"],
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
     ):
         raise ValueError("banked receiver matched A/B delta drift")
 

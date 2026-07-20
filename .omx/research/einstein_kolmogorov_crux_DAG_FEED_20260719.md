@@ -149,7 +149,9 @@ used. Verdict scope: `BLOCKED_LOCAL_FILESYSTEM_POLICY`, then
 - **DAG:** this FEED; measurement authority is
   `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json` plus
   `.omx/research/einstein_kolmogorov_frontier_magnitude_chart_20260720.json` and its
-  hash-bound matched n12 receipt.
+  hash-bound matched n12 v2 receipt. The preserved v1 receipt is historical: v2 fixes
+  the strict-pointer equality boundary and post-receipt cleanup resume window while
+  reproducing byte-identical arm archives and scientific values.
 
 ## Pointer delta and exact next gate
 
