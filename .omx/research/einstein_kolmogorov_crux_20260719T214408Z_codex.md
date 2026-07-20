@@ -222,7 +222,7 @@ scopes and cannot be ranked as if they were a sealed same-input A/B:
 | quotient/power packet (PDW2) | **MEASURED** 138 raw / 133 Brotli bytes and consumed; spatially non-identifying | Formulation-scoped blocker until a decoder-computable field/pullback exists |
 | `xi` temporal/Pose chart (settled R1) | **MEASURED prior** full-n600 macOS advisory: 89,772 B, `d_seg=0.0045491197`, `d_pose=0.0016095472` | In-box control, not a new result; packet bytes were deleted by the settled run |
 | curvelet/shearlet residual chart | **MEASURED prior** saved-OFF n600 through-R basis rows, but equal scalar support rather than equal bytes | Not archive-rankable; receiver-bound target inverse and exact bytes remain absent |
-| MPEG-4 INTER-CAE / arithmetic self-compression | prior literature and local rate evidence only | Open design family; no new receiver-closed row in this lane |
+| MPEG-4 INTER-CAE / arithmetic self-compression | prior literature and local rate evidence only | Advisory watch: `G` is a per-class shape and `xi` could supply the motion predictor, but no custodied xi-warped shape-residual stream composes with the solved V10 bank, so no run was spent on it |
 | Bregman/Fisher dual chart | full Nielsen deck plus #504/#550/#552 and exact code derivation | Exact quadratic `R`-fiber projection and already-measured global-centroid control; no categorical pullback or byte theorem (§3.1) |
 
 There is consequently **no defensible cross-family winner**. The only new ordering is a
@@ -230,6 +230,15 @@ scoped Seg-only incumbent inside the fixed-label PDW1 palette family. The full m
 mandates remain unmet because the first executable `xi` composition fails the mandatory
 SSD custody preflight before loading the backend; the failure is a local execution-surface
 blocker, not evidence against the unmeasured families.
+
+The operator's later INTER-CAE connection was weighed as advisory. Its shape grammar is
+structurally compatible with the proposed `G` leg and its INTER predictor could reuse
+`xi`, but the existing intake supplies a literature prior, not a measured residual on the
+settled scorer-plane bank. The measured n12 result says the immediate wall is a compact
+two-plane predictor/program, including texture/Pose obligations, at roughly 0.24 MB.
+Building a shape coder before a bank-bound residual and receiver-consumption contract
+exist would not answer that gate, so this run records `WATCH_NOT_SELECTED`, not a family
+negative. No new MPEG-4 search or measurement was repeated.
 
 ## 2. Constructive minimum-description program
 

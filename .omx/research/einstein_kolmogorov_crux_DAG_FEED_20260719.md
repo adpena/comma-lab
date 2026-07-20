@@ -176,4 +176,7 @@ declarative resume receipts do not authorize execution. Contest-CPU Linux evalua
 byte-closed full archive; no paid dispatch is armed because paid evaluation is not yet
 the sole remaining step. The paper intake `arXiv:2606.01086` changes only the
 strong-versus-weak reproducibility framing and remains a compress-time watch item, not a
-decode actuator.
+decode actuator. MPEG-4 INTER-CAE is likewise `WATCH_NOT_SELECTED`: `G`/`xi` give it a
+plausible shape/motion composition, but no bank-bound measured shape residual or
+two-plane receiver-consumption contract exists, so the advisory connection does not
+displace the compact-predictor gate and did not earn a new run.
