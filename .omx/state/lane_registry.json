@@ -79851,6 +79851,53 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "inverse_solve_einstein_avenue_20260720T092250Z",
+      "name": "Inverse-Solve Einstein Avenue",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Bounded local inverse solve of RATE only at fixed capstone C1 distortion; $0, no paid dispatch, no heavy training, advisory until exact contest-axis replay.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "compact byte-closed C1 representation",
+        "exact hard CPU-torch replay on shipped bytes",
+        "contest-CPU crossing with full custody"
+      ]
     }
   ],
   "level_rules": {
@@ -79860,5 +79907,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T07:18:36Z"
+  "updated_at": "2026-07-20T09:29:48Z"
 }
