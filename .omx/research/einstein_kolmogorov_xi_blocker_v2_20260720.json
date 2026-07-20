@@ -1,0 +1,168 @@
+{
+  "schema": "einstein_kolmogorov_xi_blocker.v2",
+  "utc": "2026-07-20T07:30:48Z",
+  "deliverable": "B",
+  "lane_id": "lane_einstein_kolmogorov_crux_v2_20260720",
+  "authority": {
+    "file": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/einstein_kolmogorov_crux_v2_20260720T071044Z.wrapped.prompt.txt",
+    "bytes": 8444,
+    "sha256": "4251d975324bb471d9f1abab1cb18286770a8476036097a2b0f674004e43f61c"
+  },
+  "research_only": true,
+  "promotion_claim": false,
+  "score_claim": false,
+  "pointer": {
+    "value": 0.1910828242,
+    "axis": "[contest-CPU Linux x86_64]",
+    "moved": false
+  },
+  "verdict": {
+    "label": "MEASURED_FORMULATION_SCOPED_XI_BLOCKER",
+    "statement": "The settled R1 self-oriented curvelet direct-RGB generator plus store-nothing xi carrier is byte-feasible but Seg-infeasible: its measured 89,772-byte full-n600 archive is inside the 264,320-byte request box, while its real inflated-frame hard CPU-Torch d_seg is 0.004549119737413194, 29.93629729806 times the reported solved-bank value 0.00015196.",
+    "formulation_scope": "one settled R1 direct-RGB level-set generator with self-oriented curvelet features and store-nothing coded xi; macOS CPU advisory replay on 600 pairs",
+    "not_rejected": [
+      "the xi family",
+      "the W=(G,xi,T) paradigm",
+      "a corrected current generator",
+      "contest-CPU performance"
+    ],
+    "binding_wall": "residual frame-1 G/T segmentation cells, not xi payload rate",
+    "fresh_attempt_status": "A new 91,062-byte n600-coded packet was written to SSD, but its emitted inflate.py failed the strict two-pair bit-exact gate before decode/scoring because _CP_XI_FX was undefined. It supplies packet and implementation-blocker evidence only, not a d_seg row."
+  },
+  "settled_full_n600_measurement": {
+    "evidence_label": "MEASURED_PRIOR_SETTLED_PLUS_DERIVED_INTEGER_CONSTRAINTS",
+    "source": {
+      "git_commit": "6a78ee8209",
+      "git_path": "reports/r1_dxi_238/n600_shipdxi.json",
+      "git_blob": "de05364eec623a4d2096981f4716db9498cb3c88",
+      "receipt_bytes": 11547,
+      "receipt_sha256": "45fb86119d8ba0f8ce3415b17f2bcae3cc50ad497c654479ceac0ac88196b0da"
+    },
+    "axis": "[macOS-CPU advisory] NON-PROMOTABLE",
+    "pairs": 600,
+    "frames": 1200,
+    "scorer_grid_h": 384,
+    "scorer_grid_w": 512,
+    "scorer_cells": 117964800,
+    "archive_zip_bytes": 89772,
+    "archive_zip_sha256": "17f8da14b8ea5408fab442a3a1e3c63f7df9706e6bd192cfe2651b27a73f2902",
+    "archive_retained": false,
+    "archive_retention_note": "The settled receipt says the packet directory was deleted; the receipt and archive hash remain, so this row cannot be newly parse-backed without deterministic rebuild.",
+    "xi_section_bytes": 7195,
+    "coded_xi_bytes": 6634,
+    "keyframe_bytes": 0,
+    "d_seg_realized_on_inflated": 0.004549119737413194,
+    "d_pose_realized_on_inflated": 0.0016095471538913576,
+    "seg_term": 0.4549119737413194,
+    "pose_term": 0.12686792951299228,
+    "rate_term": 0.05977548993968357,
+    "implied_action_advisory": 0.6415553931939952,
+    "hard_cpu_torch_through_real_inflated_frames": true,
+    "full_output_shape_ok": true,
+    "bit_exact_roundtrip_gate_checked": false,
+    "upstream_exact_eval_ran": false,
+    "mismatched_seg_cells": 536636,
+    "mismatched_seg_cells_label": "DERIVED_UNIQUE_NEAREST_INTEGER_FROM_MEASURED_DSEG_TIMES_117964800",
+    "mismatched_seg_cell_identity": null,
+    "mismatched_seg_cell_identity_label": "UNKNOWN_NOT_RETAINED_IN_SETTLED_RECEIPT"
+  },
+  "constraints": {
+    "requested_archive_box": {
+      "max_archive_bytes": 264320,
+      "measured_archive_bytes": 89772,
+      "headroom_bytes": 174548,
+      "feasible": true,
+      "label": "MEASURED_AND_DERIVED"
+    },
+    "frontier_magnitude_dseg_box": {
+      "threshold_d_seg": 0.000152,
+      "threshold_basis": "authority's rounded solved-bank magnitude; solved-bank report is 0.00015196",
+      "max_mismatched_cells_at_or_below_threshold": 17930,
+      "measured_formulation_mismatched_cells": 536636,
+      "minimum_cells_to_correct": 518706,
+      "measured_d_seg_over_reported_solved_bank_ratio": 29.93629729806,
+      "feasible": false,
+      "label": "DERIVED_FROM_MEASURED_DSEG"
+    },
+    "pointer_seg_only_necessary_box": {
+      "assumption": "zero Pose term and zero rate term; necessary but not sufficient",
+      "strict_d_seg_cap": 0.001910828242,
+      "max_mismatched_cells": 225410,
+      "minimum_cells_to_correct": 311226,
+      "feasible": false,
+      "label": "DERIVED"
+    },
+    "pointer_at_fixed_measured_pose_and_rate": {
+      "assumption": "hold measured d_pose=0.0016095471538913576 and archive_bytes=89772 fixed",
+      "pose_plus_rate_term": 0.18664341945267584,
+      "strict_d_seg_cap": 0.0000443940474732416,
+      "max_mismatched_cells": 5236,
+      "minimum_cells_to_correct": 531400,
+      "feasible": false,
+      "label": "DERIVED"
+    }
+  },
+  "fresh_bounded_packet_attempt": {
+    "evidence_label": "MEASURED_PACKET_BYTES_AND_FAILURE; D_SEG_UNMEASURED",
+    "purpose": "bounded max-24-pair diagnostic against n600 source checkpoints; no contest or promotion authority",
+    "packet_scope": "archive encodes the n600 checkpoint; diagnostic decode/scoring was capped at 24 pairs",
+    "archive_zip": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v2_20260720_xi_diag_n24/archive.zip",
+      "bytes": 91062,
+      "sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a"
+    },
+    "evidence_tree": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v2_20260720_xi_diag_n24",
+      "bytes": 221400,
+      "sha256": "673517ce0eb6c23521cff09d27343d89bf97c3a83fe2c9588f68e518fc81b66a"
+    },
+    "launch_manifest": {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v2_20260720_xi_diag_n24_launch/launch_manifest.json",
+      "bytes": 1710,
+      "sha256": "e055136f33f006a0d4dcf272afaba2dfb0439abe5d957383b0c41dca2e3234cb"
+    },
+    "failure_receipt": {
+      "path": ".omx/tmp/einstein_kolmogorov_diag_runtime_20260720/diagnostic_failure.json",
+      "bytes": 10066,
+      "sha256": "b07a1bceb2271a4be7222db6921b8e881d8f2f82bb96fe9bc830f07d23e96593"
+    },
+    "failure_stage": "strict bit-exact receiver gate before inflate/oracle",
+    "failure_type": "RuntimeError wrapping NameError",
+    "failure_symbol": "_CP_XI_FX",
+    "failure_location": "emitted inflate.py line 641",
+    "d_seg": null,
+    "permission_blocked": false,
+    "scientific_verdict_authority": false
+  },
+  "evidence_boundary": {
+    "MEASURED": [
+      "settled full-n600 archive bytes/hash, inflated-frame d_seg, d_pose, and component terms",
+      "fresh SSD packet bytes/hash and strict receiver-gate failure"
+    ],
+    "DERIVED": [
+      "nearest-integer mismatch count and all cell-cap/excess calculations",
+      "frontier ratio and fixed-pose/rate constraint"
+    ],
+    "UNKNOWN": [
+      "identity and per-class distribution of the settled 536,636 mismatched cells",
+      "d_seg of the fresh 91,062-byte packet because decode stopped before scoring",
+      "contest-CPU score or cross-axis parity"
+    ]
+  },
+  "exact_next_action": "After MAIN review, in a separate implementation lane, define and hash-bind _CP_XI_FX/_CP_XI_CX/_CP_XI_CY/_CP_XI_D in the emitted receiver, rerun the strict two-pair bit-exact n24 diagnostic, and only if it passes score the same 91,062-byte n600 archive. If its d_seg remains above 0.000152, retain the exact mismatch bitmap and use the routed Fisher/margin corrected-inner-Jacobian curvelet/shearlet reverse-waterfill on G/T, with a hard target of at least 518,706 corrected cells relative to the settled R1 row before any full authorization.",
+  "triality": {
+    "dsl": "existing Einstein-Kolmogorov xi bridge config only; no DSL change in this landing",
+    "dag": "packet-build -> strict bit-exact gate -> inflate -> CPU oracle; fresh attempt stopped at strict bit-exact gate",
+    "equation": "d_seg = mismatched_cells/(600*384*512); S = 100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489"
+  },
+  "stores_consulted": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/operating_manual_craft_handoff.md",
+    ".omx/research/t5_crucible/SPEC_v75_optimal_single_trunk_20260708.md section 8",
+    "canonical frontier scan and lane registry",
+    "prior Einstein-Kolmogorov branch commit 6a78ee8209 and its four authority files",
+    "settled reports/r1_dxi_238/n600_shipdxi.json",
+    "per-arm and broadcast inboxes through 2026-07-19T19:48:01Z"
+  ]
+}
