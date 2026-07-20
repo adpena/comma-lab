@@ -20413,7 +20413,7 @@ preimage fallback). Pointer 0.19108 [contest-CPU] UNMOVED (means).
   `1,989,784,190 -> 1,717,131,154 B` (`-272,653,036 B`, `-13.70%`), but the counted archive is
   `1,717,172,741 B`. Horizontal predictor wins 41/50 chunks and supplies 81.4% of freed bytes.
   The dominating term is source-dependent fractional-target custody, not null fill.
-- **Scoped verdict:** direct exact-source-preimage payload is RATE-DEAD (FORMULATION only).
+- **Scoped verdict:** direct exact-source-preimage payload is RATE-DEAD (verdict_scope: formulation — direct carry-every-numerator exact-source-preimage payload; NOT the preimage family, NOT the description-family campaign).
   Recovery pays for `70,748 B`; direct custody spends `1.307 GB` extra (`18,483x` over waterline).
   Target-selection / bounded-uint8 / compact-plane families remain OPEN.
 - **Reformulation edge:** start from rounded Y; encode only Fisher/margin-ranked floor/ceil or
