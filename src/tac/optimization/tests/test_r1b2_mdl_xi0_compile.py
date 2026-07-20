@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tac.boundary_math.r1b4_section_receiver import ReplayWrite, encode_replay_payload
 from tac.boundary_math.windowed_curvelet_frame import WindowedCurveletConfig
 from tac.optimization.boundary_coordinate_joint_solve import (
     BoundaryCoordinatePacket,
@@ -16,7 +17,6 @@ from tac.optimization.boundary_coordinate_joint_solve import (
     encode_boundary_packet,
 )
 from tac.optimization.r1b2_mdl_xi0_compile import (
-    CONDITIONAL_CARRIER_LIMIT_BYTES,
     RANK4_SCHEMA,
     R1B2CompileError,
     audit_full_kernel,
@@ -24,9 +24,9 @@ from tac.optimization.r1b2_mdl_xi0_compile import (
     audit_vjp_campaign,
     build_receipt,
     compile_candidate_archive,
-    parse_candidate_archive,
     sha256_file,
 )
+from tac.optimization.r1b3_producer_preflight import encode_xi0_payload
 
 
 def _write_json(path: Path, value: dict) -> None:
@@ -100,8 +100,8 @@ def _packet(path: Path) -> None:
     packet = BoundaryCoordinatePacket(
         family=FrameFamily.WINDOWED_CURVELET,
         frame_config=asdict(WindowedCurveletConfig(n_scales=1, n_orient0=2, n_trans=1)),
-        scorer_height=2,
-        scorer_width=2,
+        scorer_height=384,
+        scorer_width=512,
         atom_indices=np.asarray([0], dtype=np.uint32),
         coefficients=np.zeros((600, 1, 3), dtype=np.int8),
         scales=np.ones(600, dtype=np.float16),
@@ -111,13 +111,15 @@ def _packet(path: Path) -> None:
 
 def _base_zip(path: Path) -> None:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("0.bin", b"base" * 256)
-        archive.writestr("ipe_manifest.json", b"{}")
+        for name, payload in (("0.bin", b"base" * 256), ("ipe_manifest.json", b"{}")):
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            archive.writestr(info, payload, compress_type=zipfile.ZIP_DEFLATED)
 
 
-def test_counted_archive_compile_is_deterministic_parse_back_and_search_free(
-    tmp_path: Path,
-) -> None:
+def test_typed_receiver_fixture_refuses_production_carrier_overhead(tmp_path: Path) -> None:
     control = tmp_path / "control.zip"
     boundary = tmp_path / "boundary.bgj"
     replay = tmp_path / "replay.r1k"
@@ -126,8 +128,8 @@ def test_counted_archive_compile_is_deterministic_parse_back_and_search_free(
     second = tmp_path / "second.zip"
     _base_zip(control)
     _packet(boundary)
-    replay.write_bytes(b"compact-exact-replay" * 8)
-    xi0.write_bytes(b"xi0-only" * 8)
+    replay.write_bytes(encode_replay_payload(()))
+    xi0.write_bytes(encode_xi0_payload(np.full(600, 31.0, dtype=np.float32)))
     kwargs = {
         "control_archive": control,
         "boundary_packet": boundary,
@@ -135,22 +137,15 @@ def test_counted_archive_compile_is_deterministic_parse_back_and_search_free(
         "xi0_payload": xi0,
         "source_manifest_hashes": {"vjp": "a" * 64},
     }
-    row1 = compile_candidate_archive(output=first, **kwargs)
-    row2 = compile_candidate_archive(output=second, **kwargs)
-    assert row1["archive_sha256"] == row2["archive_sha256"]
-    assert first.read_bytes() == second.read_bytes()
-    assert row1["parse_back"] is True
-    assert row1["carrier_delta_bytes"] <= CONDITIONAL_CARRIER_LIMIT_BYTES
-    rate = row1["rate_decomposition"]
-    assert row1["carrier_delta_bytes"] == rate["accounted_archive_delta_bytes"]
-    assert rate["accounted_archive_delta_bytes"] == (
-        rate["base_repack_compressed_delta_bytes"]
-        + rate["extension_compressed_bytes"]
-        + rate["zip_overhead_delta_bytes"]
-    )
-    parsed = parse_candidate_archive(first)
-    assert parsed["manifest"]["receiver_search"] is False
-    assert parsed["manifest"]["xi_coordinate_indices"] == [0]
+    expected_refusal = "compiled carrier delta 2114 exceeds conditional limit 1852"
+    with pytest.raises(R1B2CompileError, match=expected_refusal):
+        compile_candidate_archive(output=first, **kwargs)
+    with pytest.raises(R1B2CompileError, match=expected_refusal):
+        compile_candidate_archive(output=second, **kwargs)
+    assert not first.exists()
+    assert not second.exists()
+    assert list(tmp_path.glob(".*first*")) == []
+    assert list(tmp_path.glob(".*second*")) == []
 
 
 def test_rejected_oversize_candidate_leaves_no_output_or_staging(tmp_path: Path) -> None:
@@ -161,8 +156,12 @@ def test_rejected_oversize_candidate_leaves_no_output_or_staging(tmp_path: Path)
     output = tmp_path / "candidate.zip"
     _base_zip(control)
     _packet(boundary)
-    replay.write_bytes(np.random.default_rng(7).bytes(8_000))
-    xi0.write_bytes(b"xi0-only")
+    replay.write_bytes(
+        encode_replay_payload(
+            tuple(ReplayWrite(pair // 1_164, 0, 0, pair % 1_164, 0, pair % 256) for pair in range(800))
+        )
+    )
+    xi0.write_bytes(encode_xi0_payload(np.linspace(29.0, 33.0, 600, dtype=np.float32)))
     with pytest.raises(R1B2CompileError, match="conditional limit"):
         compile_candidate_archive(
             control_archive=control,
@@ -201,6 +200,35 @@ def test_compile_refuses_non_n600_boundary_packet(tmp_path: Path) -> None:
             replay_payload=replay,
             xi0_payload=xi0,
             source_manifest_hashes={},
+            output=tmp_path / "candidate.zip",
+        )
+
+
+def test_compile_refuses_nonproduction_boundary_geometry(tmp_path: Path) -> None:
+    control = tmp_path / "control.zip"
+    boundary = tmp_path / "boundary.bgj"
+    replay = tmp_path / "replay.r1k"
+    xi0 = tmp_path / "xi0.xi0"
+    _base_zip(control)
+    packet = BoundaryCoordinatePacket(
+        family=FrameFamily.WINDOWED_CURVELET,
+        frame_config=asdict(WindowedCurveletConfig(n_scales=1, n_orient0=2, n_trans=1)),
+        scorer_height=2,
+        scorer_width=2,
+        atom_indices=np.asarray([0], dtype=np.uint32),
+        coefficients=np.zeros((600, 1, 3), dtype=np.int8),
+        scales=np.ones(600, dtype=np.float16),
+    )
+    boundary.write_bytes(encode_boundary_packet(packet))
+    replay.write_bytes(encode_replay_payload(()))
+    xi0.write_bytes(encode_xi0_payload(np.full(600, 31.0, dtype=np.float32)))
+    with pytest.raises(R1B2CompileError, match="production 384x512"):
+        compile_candidate_archive(
+            control_archive=control,
+            boundary_packet=boundary,
+            replay_payload=replay,
+            xi0_payload=xi0,
+            source_manifest_hashes={"vjp": "a" * 64},
             output=tmp_path / "candidate.zip",
         )
 

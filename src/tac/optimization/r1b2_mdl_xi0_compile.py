@@ -19,6 +19,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final
 
+from tac.boundary_math.integer_plane_emitter import SCORER_HEIGHT, SCORER_WIDTH
 from tac.boundary_math.shared_receiver_admission import (
     MAX_ARCHIVE_BYTES,
     MAX_D_SEG,
@@ -44,7 +45,9 @@ CONTROL_ARCHIVE_SHA256: Final = "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae
 CONTROL_D_SEG: Final = 0.003515794640406966
 CONTROL_D_POSE: Final = 127.36588287353516
 CONTROL_SCORE: Final = 36.10275630841103
-FIXED_C1_CAP_BYTES: Final = 216_223
+# Main inbox 2026-07-20T19:22:34Z: use the one-byte-conservative
+# pointer-crossing floor until the registered equation input precision is reconciled.
+FIXED_C1_CAP_BYTES: Final = 216_222
 TASK_CAP_BYTES_PER_PAIR: Final = 477.8
 DECODE_LIMIT_SECONDS: Final = 1_800.0
 CONDITIONAL_CARRIER_LIMIT_BYTES: Final = 1_852
@@ -661,6 +664,17 @@ def _write_zip(path: Path, members: Sequence[tuple[str, bytes]]) -> None:
 
 
 def parse_candidate_archive(path: Path) -> dict[str, Any]:
+    from tac.boundary_math.r1b4_section_receiver import (
+        APPLICATION_ORDER,
+        RECEIVER_SCHEMA,
+        R1B4ReceiverError,
+        decode_replay_payload,
+    )
+    from tac.optimization.r1b3_producer_preflight import (
+        R1B3ProducerError,
+        decode_xi0_payload,
+    )
+
     resolved = path.expanduser().resolve(strict=True)
     members = _zip_members_allow_extensions(resolved)
     names = [name for name, _ in members]
@@ -679,7 +693,10 @@ def parse_candidate_archive(path: Path) -> dict[str, Any]:
     if (
         manifest.get("schema") != ARCHIVE_SCHEMA
         or manifest.get("pair_count") != PAIR_COUNT
+        or manifest.get("artifact_role") != "r1b2_candidate"
         or manifest.get("receiver_search") is not False
+        or manifest.get("receiver_schema") != RECEIVER_SCHEMA
+        or manifest.get("application_order") != list(APPLICATION_ORDER)
         or manifest.get("score_claim") is not False
         or any(
             isinstance(manifest.get(name), bool) or not isinstance(manifest.get(name), int)
@@ -713,10 +730,16 @@ def parse_candidate_archive(path: Path) -> dict[str, Any]:
             raise R1B2CompileError(f"R1b2 section custody mismatch: {name}")
     try:
         packet = decode_boundary_packet(payloads[BOUNDARY_NAME])
-    except BoundaryJointSolveError as exc:
-        raise R1B2CompileError("R1b2 boundary packet parse-back failed") from exc
+        decode_replay_payload(payloads[REPLAY_NAME])
+        xi0_values = decode_xi0_payload(payloads[XI0_NAME])
+    except (BoundaryJointSolveError, R1B4ReceiverError, R1B3ProducerError) as exc:
+        raise R1B2CompileError("R1b2 semantic section parse-back failed") from exc
     if packet.pair_count != PAIR_COUNT:
         raise R1B2CompileError("R1b2 boundary packet is not n600")
+    if (packet.scorer_height, packet.scorer_width) != (SCORER_HEIGHT, SCORER_WIDTH):
+        raise R1B2CompileError("R1b2 boundary packet scorer geometry is not production 384x512")
+    if xi0_values.shape != (PAIR_COUNT,):
+        raise R1B2CompileError("R1b2 xi0 payload is not n600")
     with zipfile.ZipFile(resolved, "r") as archive:
         infos = {row.filename: row for row in archive.infolist()}
     candidate_compressed_bytes = sum(row.compress_size for row in infos.values())
@@ -764,6 +787,20 @@ def compile_candidate_archive(
     source_manifest_hashes: Mapping[str, str],
     output: Path,
 ) -> dict[str, Any]:
+    # Imported lazily to keep the compiler/receiver dependency one-way during
+    # module initialization while still refusing counted-but-unparseable bytes.
+    from tac.boundary_math.r1b4_section_receiver import (
+        APPLICATION_ORDER,
+        RECEIVER_SCHEMA,
+        R1B4ReceiverError,
+        decode_replay_payload,
+        default_receiver_policy,
+    )
+    from tac.optimization.r1b3_producer_preflight import (
+        R1B3ProducerError,
+        decode_xi0_payload,
+    )
+
     base_members = _zip_members(control_archive)
     boundary = boundary_packet.read_bytes()
     replay = replay_payload.read_bytes()
@@ -774,6 +811,15 @@ def compile_candidate_archive(
         raise R1B2CompileError("boundary packet is invalid") from exc
     if packet.pair_count != PAIR_COUNT:
         raise R1B2CompileError("boundary packet must contain exactly n600 pairs")
+    if (packet.scorer_height, packet.scorer_width) != (SCORER_HEIGHT, SCORER_WIDTH):
+        raise R1B2CompileError("boundary packet scorer geometry must be production 384x512")
+    try:
+        decode_replay_payload(replay)
+        decoded_xi0 = decode_xi0_payload(xi0)
+    except (R1B4ReceiverError, R1B3ProducerError) as exc:
+        raise R1B2CompileError("receiver replay/xi0 payload is not strict canonical bytes") from exc
+    if decoded_xi0.shape != (PAIR_COUNT,):
+        raise R1B2CompileError("xi0 payload must contain exactly n600 coordinate-zero values")
     if not source_manifest_hashes or any(not _is_sha256(value) for value in source_manifest_hashes.values()):
         raise R1B2CompileError("source manifest hashes must be nonempty SHA-256 strings")
     with zipfile.ZipFile(control_archive, "r") as archive:
@@ -792,6 +838,7 @@ def compile_candidate_archive(
     manifest = {
         "schema": ARCHIVE_SCHEMA,
         "pair_count": PAIR_COUNT,
+        "artifact_role": "r1b2_candidate",
         "base_archive_sha256": sha256_file(control_archive),
         "base_archive_bytes": control_archive.stat().st_size,
         "base_zip_compressed_bytes": base_zip_compressed_bytes,
@@ -802,6 +849,15 @@ def compile_candidate_archive(
         "offline_full_kernel_selection": True,
         "receiver_search": False,
         "xi_coordinate_indices": [0],
+        "receiver_schema": RECEIVER_SCHEMA,
+        "receiver_policy": default_receiver_policy(),
+        "application_order": list(APPLICATION_ORDER),
+        "final_output_assertion": {
+            "status": "unsealed",
+            "pair_cap": PAIR_COUNT,
+            "decoded_bytes": PAIR_COUNT * 2 * 874 * 1164 * 3,
+            "decoded_sha256": None,
+        },
         "score_claim": False,
     }
     members = [
