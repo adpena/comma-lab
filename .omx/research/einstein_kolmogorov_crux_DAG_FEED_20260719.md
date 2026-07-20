@@ -210,7 +210,19 @@ the successfully completed cleanup. It predates the per-file `cleanup_manifest` 
 machine and does not prove resume from a partial recursive deletion. All future pending
 cleanups require manifest-bound per-file validation/deletion and may resume only at
 deterministic per-file deletion boundaries after revalidating every survivor against the
-immutable precleanup manifest. The exact historical v3 final is accepted
-read-only only under its frozen `5758418c0e`/tool tuple when the output root is absent;
-that compatibility path cannot delete. A pending legacy manifest-less receipt is
-refused and cannot delete any output.
+immutable precleanup manifest. The exact historical v3 final is accepted read-only only
+when its canonical final and precleanup paths/bytes/SHA-256 values validate, the loaded
+final is byte-exact at
+`9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a`, its frozen
+`5758418c0e`/tool tuple validates, and the output root is absent. A tuple-shaped
+lookalike is refused; that compatibility path cannot delete. A pending legacy
+manifest-less receipt is refused and cannot delete any output.
+
+Fresh-review custody boundary: immutable candidate `d30b243c80` is invalidated and the
+seal remains `0/3`. Its review found registry classification loss, tuple-only historical
+cleanup recognition, and chart authority/selection relabeling outside the numeric
+projection checks. The successor preserves all four empirical-verification statuses
+through append/query, binds the exact v3 final plus predecessor, and freezes the complete
+canonical measurement/chart producer bytes after semantic re-derivation. Any later
+content or authority change requires an explicit new producer hash and a new clean seal;
+portable absence of the SSD evidence cannot relax this closure.

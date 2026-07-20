@@ -33,6 +33,7 @@ Path discipline:
   * Bare writes to the path are refused by Catalog #131 sister gate
     (path is registered in ``_SHARED_STATE_PATH_MARKERS``).
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -44,9 +45,10 @@ import socket
 import threading
 import time
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from tac.canonical_equations.equation import (
     CANONICAL_EQUATION_SCHEMA_VERSION,
@@ -62,11 +64,8 @@ from tac.provenance.contract import (
     ProvenanceKind,
 )
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
-CANONICAL_EQUATIONS_REGISTRY_PATH = (
-    REPO_ROOT / ".omx" / "state" / "canonical_equations_registry.jsonl"
-)
+CANONICAL_EQUATIONS_REGISTRY_PATH = REPO_ROOT / ".omx" / "state" / "canonical_equations_registry.jsonl"
 CANONICAL_EQUATIONS_REGISTRY_LOCK = CANONICAL_EQUATIONS_REGISTRY_PATH.with_suffix(
     CANONICAL_EQUATIONS_REGISTRY_PATH.suffix + ".lock"
 )
@@ -146,9 +145,7 @@ def _registry_lock(lock_path: Path | None = None):
                 break
             except BlockingIOError:
                 if time.monotonic() >= deadline:
-                    raise TimeoutError(
-                        f"could not acquire {p} within {LOCK_TIMEOUT_SECONDS}s"
-                    ) from None
+                    raise TimeoutError(f"could not acquire {p} within {LOCK_TIMEOUT_SECONDS}s") from None
                 time.sleep(0.05)
         _set_lock_depth(_get_lock_depth() + 1)
         try:
@@ -226,8 +223,7 @@ def load_equation_registry_strict(
             ) from exc
         if not isinstance(r, dict):
             raise CanonicalEquationsRegistryCorruptError(
-                f"canonical equations registry at {p} line {lineno}: non-dict root "
-                f"(type={type(r).__name__})"
+                f"canonical equations registry at {p} line {lineno}: non-dict root (type={type(r).__name__})"
             )
         rows.append(r)
     return rows
@@ -235,13 +231,9 @@ def load_equation_registry_strict(
 
 def _validate_event_record(record: Mapping[str, Any]) -> None:
     if record.get("schema_version") != CANONICAL_EQUATION_SCHEMA_VERSION:
-        raise ValueError(
-            f"schema_version must be {CANONICAL_EQUATION_SCHEMA_VERSION!r}"
-        )
+        raise ValueError(f"schema_version must be {CANONICAL_EQUATION_SCHEMA_VERSION!r}")
     if record.get("event_type") not in VALID_EVENT_TYPES:
-        raise ValueError(
-            f"event_type must be one of {sorted(VALID_EVENT_TYPES)!r}"
-        )
+        raise ValueError(f"event_type must be one of {sorted(VALID_EVENT_TYPES)!r}")
     eq_id = record.get("equation_id")
     if not isinstance(eq_id, str) or not eq_id.strip():
         raise ValueError("equation_id must be a non-empty string")
@@ -356,8 +348,7 @@ def update_equation_with_empirical_anchor(
     """
     if not isinstance(anchor, EmpiricalAnchor):
         raise InvalidEquationError(
-            f"update_equation_with_empirical_anchor expected EmpiricalAnchor, "
-            f"got {type(anchor).__name__}"
+            f"update_equation_with_empirical_anchor expected EmpiricalAnchor, got {type(anchor).__name__}"
         )
     p_path = path or CANONICAL_EQUATIONS_REGISTRY_PATH
     l_path = lock_path or CANONICAL_EQUATIONS_REGISTRY_LOCK
@@ -374,8 +365,7 @@ def update_equation_with_empirical_anchor(
                 latest_payload = row.get("equation_payload")
         if latest_payload is None:
             raise InvalidEquationError(
-                f"equation_id={equation_id!r} not found in registry; "
-                "call register_canonical_equation first"
+                f"equation_id={equation_id!r} not found in registry; call register_canonical_equation first"
             )
         equation = _equation_from_dict(latest_payload)
         updated = equation.with_new_anchor(anchor)
@@ -443,16 +433,13 @@ def update_equation_with_domain_refinement(
     from dataclasses import replace
 
     if not isinstance(domain_of_validity_extension, Mapping):
-        raise InvalidEquationError(
-            "domain_of_validity_extension must be a Mapping"
-        )
+        raise InvalidEquationError("domain_of_validity_extension must be a Mapping")
     if not isinstance(rationale, str):
         raise InvalidEquationError("rationale must be a string")
     cleaned = rationale.strip()
     if len(cleaned) < 4:
         raise InvalidEquationError(
-            f"rationale must be a substantive non-placeholder string (>= 4 chars); "
-            f"got {rationale!r}"
+            f"rationale must be a substantive non-placeholder string (>= 4 chars); got {rationale!r}"
         )
     placeholder_tokens = ("<rationale>", "<reason>", "<rationale_here>", "<reason_here>")
     if cleaned in placeholder_tokens:
@@ -476,8 +463,7 @@ def update_equation_with_domain_refinement(
                 latest_payload = row.get("equation_payload")
         if latest_payload is None:
             raise InvalidEquationError(
-                f"equation_id={equation_id!r} not found in registry; "
-                "call register_canonical_equation first"
+                f"equation_id={equation_id!r} not found in registry; call register_canonical_equation first"
             )
         equation = _equation_from_dict(latest_payload)
         merged_domain: dict[str, Any] = dict(equation.domain_of_validity)
@@ -499,12 +485,6 @@ def update_equation_with_domain_refinement(
 
 def _equation_from_dict(payload: Mapping[str, Any]) -> CanonicalEquation:
     """Reconstruct a CanonicalEquation from a serialized payload dict."""
-    from tac.provenance.contract import (
-        InvalidProvenanceError,
-        Provenance,
-        ProvenanceEvidenceGrade,
-        ProvenanceKind,
-    )
 
     def _prov_from_dict(d: Mapping[str, Any]) -> Provenance:
         kind = ProvenanceKind(d["artifact_kind"])
@@ -520,9 +500,7 @@ def _equation_from_dict(payload: Mapping[str, Any]) -> CanonicalEquation:
         # the bug class structurally. Empirical anchor: OVERNIGHT-P 2026-05-21
         # HFV2 sparse pair sidecar paired CUDA+CPU equation registration.
         composed_raw = d.get("composed_from", ()) or ()
-        composed: tuple[Provenance, ...] = tuple(
-            _prov_from_dict(c) for c in composed_raw if isinstance(c, Mapping)
-        )
+        composed: tuple[Provenance, ...] = tuple(_prov_from_dict(c) for c in composed_raw if isinstance(c, Mapping))
         return Provenance(
             artifact_kind=kind,
             source_path=d["source_path"],
@@ -551,6 +529,10 @@ def _equation_from_dict(payload: Mapping[str, Any]) -> CanonicalEquation:
             source_artifact=a["source_artifact"],
             measurement_method=a["measurement_method"],
             provenance=_prov_from_dict(a["provenance"]),
+            # Catalog #363 classification is load-bearing authority metadata.
+            # Preserve it on registry reads while leaving legacy rows without
+            # the additive field at their backwards-compatible ``None``.
+            empirical_verification_status=a.get("empirical_verification_status"),
             # P2 noise floor (additive; absent => None for legacy rows — round-trip fidelity).
             noise_floor=a.get("noise_floor"),
             noise_floor_provenance=a.get("noise_floor_provenance"),
@@ -781,7 +763,11 @@ def _refit_residual_map_from_anchors(
     longer matches its own anchors because a sister appended anchors but never
     re-summarized) is what this extincts.
     """
-    excluded_contexts = equation.domain_of_validity.get("excluded_contexts") if isinstance(equation.domain_of_validity, Mapping) else None
+    excluded_contexts = (
+        equation.domain_of_validity.get("excluded_contexts")
+        if isinstance(equation.domain_of_validity, Mapping)
+        else None
+    )
     refit: dict[str, float] = {}
     for anchor in equation.empirical_anchors:
         if _anchor_is_in_excluded_context(anchor, excluded_contexts):
@@ -887,10 +873,7 @@ def auto_recalibrate_from_continual_learning_posterior(
         anchor_count = len(eq.empirical_anchors)
         # Primary refit eligibility: canonical RECALIBRATE_ON_NEW_ANCHORS trigger
         # + 3+ anchors. Mirrors original intent.
-        refit_eligible = (
-            trigger == RECALIBRATE_ON_NEW_ANCHORS
-            and anchor_count >= _AUTO_REFIT_MIN_ANCHORS
-        )
+        refit_eligible = trigger == RECALIBRATE_ON_NEW_ANCHORS and anchor_count >= _AUTO_REFIT_MIN_ANCHORS
         # Secondary NaN-cleanup eligibility per FIX O2: even when below the
         # 3-anchor threshold, if the stored residual map contains NaN/inf
         # residuals that the current EmpiricalAnchor invariants now refuse
@@ -919,15 +902,11 @@ def auto_recalibrate_from_continual_learning_posterior(
                 predicted_vs_empirical_residual=refit_map,
                 last_calibration_utc=_utc_now_iso(),
             )
-            n_axes_changed = sum(
-                1
-                for k, v in refit_map.items()
-                if stored_map.get(k) != v
-            ) + sum(1 for k in stored_map if k not in refit_map)
+            n_axes_changed = sum(1 for k, v in refit_map.items() if stored_map.get(k) != v) + sum(
+                1 for k in stored_map if k not in refit_map
+            )
             cleanup_reason = (
-                "stale-prior orphan extinction"
-                if refit_eligible
-                else "nan-cleanup eligibility (FIX O2 secondary path)"
+                "stale-prior orphan extinction" if refit_eligible else "nan-cleanup eligibility (FIX O2 secondary path)"
             )
             _append_event_locked(
                 EVENT_RECALIBRATED,
@@ -967,26 +946,26 @@ def auto_recalibrate_from_continual_learning_posterior(
 
 
 __all__ = [
-    "CANONICAL_EQUATIONS_REGISTRY_PATH",
     "CANONICAL_EQUATIONS_REGISTRY_LOCK",
-    "LOCK_TIMEOUT_SECONDS",
-    "EVENT_REGISTERED",
+    "CANONICAL_EQUATIONS_REGISTRY_PATH",
     "EVENT_ANCHOR_APPENDED",
-    "EVENT_RECALIBRATED",
     "EVENT_DEPRECATED",
     "EVENT_DOMAIN_REFINED",
+    "EVENT_RECALIBRATED",
+    "EVENT_REGISTERED",
+    "LOCK_TIMEOUT_SECONDS",
     "VALID_EVENT_TYPES",
     "CanonicalEquationsRegistryCorruptError",
     "RecalibrationReport",
-    "load_registry_events_lenient",
-    "load_equation_registry_strict",
-    "register_canonical_equation",
-    "update_equation_with_empirical_anchor",
-    "update_equation_with_domain_refinement",
-    "query_equations",
-    "query_equations_by_domain",
-    "query_equations_by_consumer",
-    "query_equations_by_producer",
-    "get_equation_by_id",
     "auto_recalibrate_from_continual_learning_posterior",
+    "get_equation_by_id",
+    "load_equation_registry_strict",
+    "load_registry_events_lenient",
+    "query_equations",
+    "query_equations_by_consumer",
+    "query_equations_by_domain",
+    "query_equations_by_producer",
+    "register_canonical_equation",
+    "update_equation_with_domain_refinement",
+    "update_equation_with_empirical_anchor",
 ]

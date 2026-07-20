@@ -5,7 +5,7 @@ lane_id: `lane_einstein_kolmogorov_crux_20260719`
 research_only: true  
 axis: `[macOS-CPU advisory]`  
 pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED  
-review_status: fresh-eyes-reviewed(0/3); first recursive round found class defects and reset the seal
+review_status: fresh-eyes-reviewed(0/3); recursive rounds found class defects and every fix reset the seal
 verdict_scope: CONSTRUCTIVE-DESIGN plus n24 component probes and one matched n12 exact-receiver A/B; no new n600 or contest-axis score
 
 > **CURRENT MEASUREMENT, NOT YET A VERDICT SEAL.** The source/global/scoped-Seg
@@ -629,10 +629,13 @@ cross-version cleanup custody. V3 was generated before the new per-file
 recursive deletion. For every future pending cleanup, the repaired tool requires
 manifest-bound validation and deletion of each file and can resume only from deterministic
 per-file deletion boundaries by revalidating every survivor against the immutable
-precleanup manifest. The exact historical v3 final is accepted read-only only
-under its frozen `5758418c0e`/tool tuple and only when the output root is absent; this
-compatibility path cannot authorize deletion. A pending legacy receipt without a
-cleanup manifest is refused and cannot delete any output. V3's strict byte cap uses
+precleanup manifest. The exact historical v3 final is accepted read-only only when the
+canonical final and precleanup paths, byte counts, and SHA-256 values validate, the
+loaded final is byte-exact at SHA-256
+`9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a`, its frozen
+`5758418c0e`/tool tuple validates, and the output root is absent. A tuple-shaped
+lookalike is refused, and this compatibility path cannot authorize deletion. A pending
+legacy receipt without a cleanup manifest is refused and cannot delete any output. V3's strict byte cap uses
 `ceil(bound)-1` plus exact objective bracketing, so equality with the pointer is
 correctly excluded. The preserved v1 and v2 receipts are historical only.
 
@@ -640,6 +643,19 @@ The cleanup review also found a class defect: the validator treated a production
 receiver `.raw` output as though it had to be an `.mp4` artifact. The class fix codifies
 the production receiver's canonical `.raw` path in both banked and rung-E cleanup
 validators and their fixtures, while retaining exact byte and SHA-256 validation.
+
+A later fresh-context review of immutable candidate `d30b243c80` reset the seal again.
+It found three custody classes: registry reads discarded each empirical anchor's
+`empirical_verification_status`; the manifest-less v3 exception recognized only a
+cleanup/tool tuple rather than the exact receipt; and the chart validator allowed
+unvalidated authority labels and selection text to change while numeric projections
+remained equal. The class repairs preserve all four canonical empirical-verification
+statuses through the real append/query registry, bind the v3 final and predecessor by
+canonical path/bytes/SHA, and close the complete canonical measurement/chart bytes with
+frozen producer hashes after the field-level re-derivation checks. Mutation tests cover
+all three classes, including authority relabeling while the portable SSD sources are
+absent. These repairs are unreviewed new code until a new immutable successor completes
+three consecutive fresh-context clean passes; the count therefore remains `0/3`.
 
 No new full-n600 in-box point was produced.  The existing settled R1 89,772-byte
 macOS-CPU advisory row remains a control, not this lane's result.  The attempted xi

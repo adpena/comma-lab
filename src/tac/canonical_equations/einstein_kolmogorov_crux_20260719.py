@@ -35,6 +35,8 @@ SEGMENTATION_WEIGHT = 100.0
 POSE_RADICAND_WEIGHT = 10.0
 SOURCE_MEASUREMENT = ".omx/research/einstein_kolmogorov_crux_measurement_20260719.json"
 SOURCE_FRONTIER_MAGNITUDE = ".omx/research/einstein_kolmogorov_frontier_magnitude_chart_20260720.json"
+SOURCE_MEASUREMENT_SHA256 = "0b2e02e39601f863d07465bca66e006f7bad503b64c9ab3f901b44bed9637451"
+SOURCE_FRONTIER_MAGNITUDE_SHA256 = "1c5926d8e899b32a0ef46c13cfd32f0d6f1f9585cc7435cf52a7605720927ae6"
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BANKED_AB_V3_PATH = ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json"
 BANKED_AB_V3_SHA256 = "9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a"
@@ -118,6 +120,13 @@ EXACT_LATTICE_SOURCE_PROJECTION = {
 
 class InfeasibleByteBudgetError(ValueError):
     """The requested target is already exceeded before any counted bytes."""
+
+
+def _contract_input_path(value: str | Path) -> Path:
+    """Resolve a canonical producer independently of optional evidence mounts."""
+
+    path = Path(value)
+    return path.resolve() if path.is_absolute() else (REPO_ROOT / path).resolve()
 
 
 def _nonnegative_real(value: float | int, field: str) -> float:
@@ -310,7 +319,8 @@ def derive_research_only_decision(*, receipt: MeasuredHardRReceipt, target_actio
 def _load_scoped_measurement(path: str | Path) -> tuple[dict, dict, dict]:
     """Load the immutable n24 aggregate and return payload/source/winner rows."""
 
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    input_path = _contract_input_path(path)
+    payload = json.loads(input_path.read_text(encoding="utf-8"))
     if payload.get("schema") != "einstein_kolmogorov_crux_measurement.v2":
         raise ValueError("unexpected Einstein--Kolmogorov measurement schema")
     if payload.get("research_only") is not True or payload.get("score_claim") is not False:
@@ -351,6 +361,8 @@ def _load_scoped_measurement(path: str | Path) -> tuple[dict, dict, dict]:
         raise ValueError("measurement operating point must fail the Seg-only frontier necessity gate")
     if correction.get("n600_explicit_target_launch_eligible") is not False:
         raise ValueError("infeasible explicit-target operating point must not authorize n600 scaling")
+    if _sha256_file(input_path) != SOURCE_MEASUREMENT_SHA256:
+        raise ValueError("Einstein--Kolmogorov measurement immutable authority hash drifted")
     return payload, source, winner
 
 
@@ -957,7 +969,8 @@ def validate_frontier_magnitude_chart(
     authority or turn linear byte projections into archives.
     """
 
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    input_path = _contract_input_path(path)
+    payload = json.loads(input_path.read_text(encoding="utf-8"))
     if payload.get("schema") != "einstein_kolmogorov_frontier_magnitude_chart.v1":
         raise ValueError("unexpected frontier-magnitude chart schema")
     if (
@@ -1114,6 +1127,8 @@ def validate_frontier_magnitude_chart(
         raise ValueError("frontier-magnitude chart must fail closed on the total-archive cap and conditional ABI gap")
     if payload.get("n600_trade_cells_launch_eligible") is not False:
         raise ValueError("frontier-magnitude chart cannot authorize an n600 trade-cells launch")
+    if _sha256_file(input_path) != SOURCE_FRONTIER_MAGNITUDE_SHA256:
+        raise ValueError("frontier-magnitude chart immutable authority hash drifted")
     return payload
 
 
@@ -1339,7 +1354,9 @@ def populate_einstein_kolmogorov_crux_action_rate_contract_v1(
 __all__ = [
     "EQUATION_ID",
     "SOURCE_FRONTIER_MAGNITUDE",
+    "SOURCE_FRONTIER_MAGNITUDE_SHA256",
     "SOURCE_MEASUREMENT",
+    "SOURCE_MEASUREMENT_SHA256",
     "InfeasibleByteBudgetError",
     "MeasuredHardRReceipt",
     "ResearchOnlyDecision",

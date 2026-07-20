@@ -135,6 +135,16 @@ FROZEN_HISTORICAL_BANKED_CLEANUP = {
     "precleanup_tool_sha256": "45e6539f0f9906a547cecf068949d73e439a03000ff4616aa07cdcb0a36e2cbc",
     "cross_version_cleanup_only": True,
 }
+FROZEN_HISTORICAL_BANKED_RECEIPT = {
+    "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json",
+    "bytes": 30_899,
+    "sha256": "9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a",
+}
+FROZEN_HISTORICAL_BANKED_PRECLEANUP = {
+    "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json.precleanup.json",
+    "bytes": 30_259,
+    "sha256": "184cf2405131242be6c821e6a07da574ed83178d778706e1b60ce65bea455908",
+}
 
 _ATTR_MAGIC = b"V10ATTR1"
 _ATTR_PREFIX = struct.Struct("<8sHBBIHHH")
@@ -1958,15 +1968,33 @@ def _validate_scorer_custody(custody: Mapping[str, Any]) -> None:
 
 
 def _validate_frozen_historical_banked_cleanup(
-    lifecycle: Mapping[str, Any],
+    receipt: Mapping[str, Any],
     output_root: Path,
 ) -> None:
-    """Admit exactly the committed v3 final, never a legacy pending deletion."""
+    """Admit the byte-exact committed v3 final, never a tuple-shaped lookalike."""
 
+    lifecycle = receipt.get("artifact_lifecycle")
+    if not isinstance(lifecycle, Mapping):
+        raise PredictorFloorError("legacy banked A/B cleanup lacks its lifecycle")
+    receipt_sha256 = hashlib.sha256(_json_bytes(receipt)).hexdigest()
+    frozen_receipt_path = _validate_preserved_file(
+        FROZEN_HISTORICAL_BANKED_RECEIPT,
+        "frozen historical banked A/B receipt",
+    )
+    frozen_precleanup_path = _validate_preserved_file(
+        FROZEN_HISTORICAL_BANKED_PRECLEANUP,
+        "frozen historical banked A/B precleanup receipt",
+    )
+    predecessor = lifecycle.get("precleanup_receipt")
     cleanup = lifecycle.get("cleanup_execution_custody")
     rebuildable = lifecycle.get("rebuildable_from")
     if (
-        lifecycle.get("cleanup_completed") is not True
+        frozen_receipt_path != (REPO / FROZEN_HISTORICAL_BANKED_RECEIPT["path"]).resolve()
+        or frozen_precleanup_path != (REPO / FROZEN_HISTORICAL_BANKED_PRECLEANUP["path"]).resolve()
+        or receipt_sha256 != FROZEN_HISTORICAL_BANKED_RECEIPT["sha256"]
+        or not isinstance(predecessor, Mapping)
+        or dict(predecessor) != FROZEN_HISTORICAL_BANKED_PRECLEANUP
+        or lifecycle.get("cleanup_completed") is not True
         or lifecycle.get("cleanup_status") != "complete"
         or "cleanup_manifest" in lifecycle
         or output_root.exists()
@@ -1980,7 +2008,7 @@ def _validate_frozen_historical_banked_cleanup(
         )
         != FROZEN_HISTORICAL_BANKED_CLEANUP["tool_sha256"]
     ):
-        raise PredictorFloorError("legacy banked A/B cleanup is not the frozen complete v3 tuple")
+        raise PredictorFloorError("legacy banked A/B cleanup is not the exact committed v3 receipt")
 
 
 def _validate_banked_receipt_common(
@@ -2008,7 +2036,7 @@ def _validate_banked_receipt_common(
     if "cleanup_manifest" in lifecycle:
         _validate_banked_cleanup_manifest(receipt, output_root)
     else:
-        _validate_frozen_historical_banked_cleanup(lifecycle, output_root)
+        _validate_frozen_historical_banked_cleanup(receipt, output_root)
     custody = load_prepared_chunk(args.prepared_manifest)
     rebuildable = lifecycle.get("rebuildable_from")
     live_tool_sha256 = _sha256_file(Path(__file__).resolve())
@@ -2126,9 +2154,15 @@ def _validate_cleanup_execution_custody(
     lifecycle: Mapping[str, Any],
     *,
     historical_banked_output_root: Path | None = None,
+    historical_banked_receipt: Mapping[str, Any] | None = None,
 ) -> None:
     if historical_banked_output_root is not None and "cleanup_manifest" not in lifecycle:
-        _validate_frozen_historical_banked_cleanup(lifecycle, historical_banked_output_root)
+        if historical_banked_receipt is None:
+            raise PredictorFloorError("historical cleanup validation lacks its exact final receipt")
+        _validate_frozen_historical_banked_cleanup(
+            historical_banked_receipt,
+            historical_banked_output_root,
+        )
         return
     cleanup = lifecycle.get("cleanup_execution_custody")
     rebuildable = lifecycle.get("rebuildable_from")
@@ -2162,7 +2196,11 @@ def _resume_banked_ab_postreceipt_cleanup(args: argparse.Namespace, receipt_path
         predecessor = lifecycle.get("precleanup_receipt")
         if lifecycle.get("cleanup_completed") is not True or not isinstance(predecessor, Mapping):
             raise PredictorFloorError("existing banked A/B final receipt lacks immutable cleanup closure")
-        _validate_cleanup_execution_custody(lifecycle, historical_banked_output_root=output_root)
+        _validate_cleanup_execution_custody(
+            lifecycle,
+            historical_banked_output_root=output_root,
+            historical_banked_receipt=final,
+        )
         if _validate_preserved_file(predecessor, "banked A/B precleanup receipt") != precleanup_path.resolve():
             raise PredictorFloorError("banked A/B final receipt points at the wrong predecessor")
         if output_root.exists():

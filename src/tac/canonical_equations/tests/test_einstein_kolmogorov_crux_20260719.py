@@ -13,7 +13,9 @@ import tac.canonical_equations.einstein_kolmogorov_crux_20260719 as crux_equatio
 from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
     EQUATION_ID,
     SOURCE_FRONTIER_MAGNITUDE,
+    SOURCE_FRONTIER_MAGNITUDE_SHA256,
     SOURCE_MEASUREMENT,
+    SOURCE_MEASUREMENT_SHA256,
     InfeasibleByteBudgetError,
     MeasuredHardRReceipt,
     build_einstein_kolmogorov_crux_action_rate_contract_v1,
@@ -26,6 +28,7 @@ from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
     populate_einstein_kolmogorov_crux_action_rate_contract_v1,
     validate_frontier_magnitude_chart,
 )
+from tac.canonical_equations.equation import VERIFIED_VIA_EMPIRICAL_ANCHOR
 
 
 @pytest.mark.parametrize(
@@ -375,3 +378,46 @@ def test_canonical_equation_registry_query_roundtrip(tmp_path: Path) -> None:
     assert loaded[0].provenance.source_sha256 == equation.provenance.source_sha256
     assert loaded[0].empirical_anchors[0].empirical_output == (equation.empirical_anchors[0].empirical_output)
     assert loaded[0].empirical_anchors[1].empirical_output == (equation.empirical_anchors[1].empirical_output)
+    assert [anchor.empirical_verification_status for anchor in loaded[0].empirical_anchors] == [
+        VERIFIED_VIA_EMPIRICAL_ANCHOR,
+        VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    ]
+
+
+def test_canonical_producer_files_match_frozen_authority_hashes() -> None:
+    assert crux_equation._sha256_file(Path(SOURCE_MEASUREMENT)) == SOURCE_MEASUREMENT_SHA256
+    assert crux_equation._sha256_file(Path(SOURCE_FRONTIER_MAGNITUDE)) == SOURCE_FRONTIER_MAGNITUDE_SHA256
+
+
+def test_frontier_chart_refuses_authority_semantic_relabeling_when_ssd_sources_are_absent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _unmount_absolute_sources(monkeypatch, tmp_path)
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    c1 = next(
+        row for row in payload["exact_archive_rows"] if row["point_id"] == "c1_solved_distortion_n600_contest_cpu"
+    )
+    rung_e = next(
+        row for row in payload["exact_archive_rows"] if row["point_id"] == "v10_rung_e_exact_two_plane_n48_local"
+    )
+    c1["measurement_axis"] = "[contest-CUDA] (relabelled while SSD absent)"
+    c1["verdict"] = "PROMOTION_AUTHORIZED"
+    rung_e["measurement_axis"] = "[contest-CUDA] PROMOTION-GRADE"
+    rung_e["verdict"] = "FRONTIER_PROMOTION_AUTHORIZED"
+    payload["selection"]["exact_receiver_frontier_magnitude_control"] = "invented_unreceipted_row"
+    chart_path = tmp_path / "authority-relabelled-chart.json"
+    chart_path.write_text(json.dumps(payload))
+
+    with pytest.raises(ValueError, match="immutable authority hash drifted"):
+        validate_frontier_magnitude_chart(chart_path)
+
+
+def test_measurement_refuses_unvalidated_authority_metadata_mutation(tmp_path: Path) -> None:
+    payload = json.loads(Path(SOURCE_MEASUREMENT).read_text())
+    payload["axis"] = "[contest-CUDA] PROMOTION-GRADE"
+    measurement_path = tmp_path / "authority-relabelled-measurement.json"
+    measurement_path.write_text(json.dumps(payload))
+
+    with pytest.raises(ValueError, match="immutable authority hash drifted"):
+        crux_equation._load_scoped_measurement(measurement_path)

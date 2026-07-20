@@ -583,20 +583,49 @@ def _legacy_banked_cleanup_case(
     return args, receipt_path, receipt
 
 
-def test_known_v3_legacy_final_remains_idempotently_valid(
+def test_frozen_historical_v3_receipt_is_exactly_content_bound(
+    tmp_path: Path,
+) -> None:
+    frozen_path = measure.REPO / measure.FROZEN_HISTORICAL_BANKED_RECEIPT["path"]
+    frozen_precleanup_path = measure.REPO / measure.FROZEN_HISTORICAL_BANKED_PRECLEANUP["path"]
+    assert frozen_path.stat().st_size == measure.FROZEN_HISTORICAL_BANKED_RECEIPT["bytes"]
+    assert measure._sha256_file(frozen_path) == measure.FROZEN_HISTORICAL_BANKED_RECEIPT["sha256"]
+    assert frozen_precleanup_path.stat().st_size == measure.FROZEN_HISTORICAL_BANKED_PRECLEANUP["bytes"]
+    assert measure._sha256_file(frozen_precleanup_path) == measure.FROZEN_HISTORICAL_BANKED_PRECLEANUP["sha256"]
+    receipt = json.loads(frozen_path.read_text())
+    output_root = tmp_path / "pact-rung-e-frozen-v3-already-absent"
+
+    measure._validate_frozen_historical_banked_cleanup(receipt, output_root)
+
+    assert not output_root.exists()
+
+
+def test_tuple_shaped_historical_v3_lookalike_is_rejected(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     args, receipt_path, receipt = _legacy_banked_cleanup_case(
         tmp_path,
         monkeypatch,
-        name="known-v3-final",
+        name="tuple-shaped-v3-lookalike",
         complete=True,
     )
     measure._write_json_once(receipt_path, receipt)
-    assert measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path) == receipt
-    assert measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path) == receipt
+    with pytest.raises(measure.PredictorFloorError, match="exact committed v3 receipt"):
+        measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
     assert not args.output_root.exists()
+
+
+def test_frozen_historical_v3_mutated_scientific_arm_is_rejected(tmp_path: Path) -> None:
+    frozen_path = measure.REPO / measure.FROZEN_HISTORICAL_BANKED_RECEIPT["path"]
+    receipt = json.loads(frozen_path.read_text())
+    receipt["arms"]["control"]["archive"]["sha256"] = "0" * 64
+
+    with pytest.raises(measure.PredictorFloorError, match="exact committed v3 receipt"):
+        measure._validate_frozen_historical_banked_cleanup(
+            receipt,
+            tmp_path / "pact-rung-e-mutated-v3",
+        )
 
 
 def test_unknown_legacy_final_cleanup_tuple_is_rejected(
@@ -611,7 +640,7 @@ def test_unknown_legacy_final_cleanup_tuple_is_rejected(
         cleanup_overrides={"tool_sha256": "0" * 64},
     )
     measure._write_json_once(receipt_path, receipt)
-    with pytest.raises(measure.PredictorFloorError, match="frozen complete v3 tuple"):
+    with pytest.raises(measure.PredictorFloorError, match="exact committed v3 receipt"):
         measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
     assert not args.output_root.exists()
 
@@ -629,7 +658,7 @@ def test_pending_legacy_precleanup_without_manifest_cannot_delete(
     precleanup_path = measure._precleanup_receipt_path(receipt_path)
     precleanup_path.unlink()
     measure._write_json_once(precleanup_path, receipt)
-    with pytest.raises(measure.PredictorFloorError, match="frozen complete v3 tuple"):
+    with pytest.raises(measure.PredictorFloorError, match="exact committed v3 receipt"):
         measure._resume_banked_ab_postreceipt_cleanup(args, receipt_path)
     assert not receipt_path.exists()
     assert not args.output_root.exists()
