@@ -2927,6 +2927,28 @@ def pose_carrier_confirm(
     }
 
 
+def _pose_carrier_confirmation_payload(packet_dir: Path) -> tuple[bytes, bytes]:
+    """Return the exact blob and pose section that ``run_inflate`` decoded.
+
+    A capped run rewrites ``archive/0.bin`` with sliced and re-quantized code plus a
+    correspondingly capped pose-carrier section.  Confirmation must consume those
+    exact bytes, not the original full blob used to assemble ``archive.zip``.
+    """
+
+    scored_blob_path = packet_dir / "archive" / "0.bin"
+    if not scored_blob_path.is_file():
+        raise RuntimeError(
+            f"pose-carrier confirmation missing decoded blob: {scored_blob_path}"
+        )
+    scored_blob = scored_blob_path.read_bytes()
+    scored_pose_carrier = _read_blob_bytes(scored_blob)[5]
+    if scored_pose_carrier is None:
+        raise RuntimeError(
+            "pose-carrier confirmation requested but the exact decoded blob has no pose section"
+        )
+    return scored_blob, scored_pose_carrier
+
+
 # ---------------------------------------------------------------------------
 # BIT-EXACT ROUND-TRIP GATE (the correctness proof):
 #   shipped inflate.py(archive) output  ==  the canonical numpy-fp32 ORACLE forward
@@ -4015,9 +4037,12 @@ def run(
     # reproduction + the d_pose triad). Only when the carrier is active AND we have GT to score.
     pose_carrier_confirmation: dict[str, Any] = {"checked": False}
     if pose_carrier and pose_carrier_bytes is not None and not skip_parity:
+        confirmation_blob, confirmation_pose_carrier = _pose_carrier_confirmation_payload(
+            packet_dir
+        )
         pose_carrier_confirmation = pose_carrier_confirm(
             Path(inflate_info["raw_path"]), inflate_info["eval_pairs"], gt_cache, inflate_info["eval_pairs"],
-            pose_carrier_bytes, blob=blob)
+            confirmation_pose_carrier, blob=confirmation_blob)
         pose_carrier_confirmation["checked"] = True
         pc_c = pose_carrier_confirmation
         print(f"[pose-carrier CONFIRM] frame0 decode bit-exact={pc_c['frame0_decode_bit_exact']} "

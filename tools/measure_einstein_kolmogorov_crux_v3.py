@@ -160,6 +160,11 @@ def _validate_n24_receipt(config: dict[str, Any], archive_sha256: str) -> dict[s
         raise ValueError("strict n24 receipt does not prove a checked bit-exact gate")
     if int(gate.get("max_abs_uint8_diff", -1)) != 0:
         raise ValueError("strict n24 receipt has nonzero max_abs_uint8_diff")
+    if int(gate.get("gate_pairs", -1)) != 24 or int(gate.get("frames_compared", -1)) != 48:
+        raise ValueError(
+            "strict n24 receipt must prove all 24 pairs / 48 frames; "
+            f"got gate_pairs={gate.get('gate_pairs')} frames_compared={gate.get('frames_compared')}"
+        )
     if packet.get("archive_zip_sha256") != archive_sha256:
         raise ValueError("strict n24 receipt archive SHA does not match the sealed packet")
     custody["bit_exact_gate"] = gate
@@ -168,7 +173,7 @@ def _validate_n24_receipt(config: dict[str, Any], archive_sha256: str) -> dict[s
 
 
 def _inflate_stage_valid(
-    stage_path: Path, raw_path: Path, archive_sha256: str
+    stage_path: Path, raw_path: Path, archive_sha256: str, inflate_py_sha256: str
 ) -> tuple[dict[str, Any], bool]:
     if not stage_path.is_file() or not raw_path.is_file():
         return {}, False
@@ -176,6 +181,8 @@ def _inflate_stage_valid(
     if stage.get("schema") != INFLATE_STAGE_SCHEMA:
         return stage, False
     if stage.get("archive_sha256") != archive_sha256:
+        return stage, False
+    if stage.get("inflate_py_sha256") != inflate_py_sha256:
         return stage, False
     expected_bytes = 1200 * byte_close.CAMERA_H * byte_close.CAMERA_W * 3
     if raw_path.stat().st_size != expected_bytes or stage.get("raw_bytes") != expected_bytes:
@@ -190,7 +197,12 @@ def _run_or_resume_inflate(
     packet_dir = Path(config["packet_dir"]).resolve(strict=True)
     raw_path = packet_dir / "inflated" / "0.raw"
     stage_path = Path(config["inflate_stage_receipt_path"])
-    stage, valid = _inflate_stage_valid(stage_path, raw_path, packet["archive"]["sha256"])
+    stage, valid = _inflate_stage_valid(
+        stage_path,
+        raw_path,
+        packet["archive"]["sha256"],
+        packet["inflate_py"]["sha256"],
+    )
     if valid:
         print(f"[resume] verified full raw stage {stage['raw_sha256']}", flush=True)
         return stage
@@ -221,21 +233,44 @@ def _run_or_resume_inflate(
     return stage
 
 
+def _oracle_custody(config: dict[str, Any]) -> dict[str, Any]:
+    """Content bindings required before a hard-oracle stage may be reused."""
+
+    return {
+        "gt_cache": _require_file(
+            Path(config["gt_cache_path"]), str(config["gt_cache_sha256"])
+        ),
+        "byte_close_tool": _require_file(Path(byte_close.__file__)),
+        "hard_oracle_module": _require_file(Path(byte_close.twr.__file__)),
+        "contest_score": _require_file(Path(contest_score.__file__)),
+    }
+
+
+def _score_stage_valid(
+    stage: dict[str, Any],
+    packet: dict[str, Any],
+    inflate_stage: dict[str, Any],
+    oracle_custody: dict[str, Any],
+) -> bool:
+    scorer = stage.get("scorer") or {}
+    bindings = scorer.get("content_bindings") or {}
+    return bool(
+        stage.get("schema") == SCORE_STAGE_SCHEMA
+        and stage.get("archive_sha256") == packet["archive"]["sha256"]
+        and stage.get("raw_sha256") == inflate_stage["raw_sha256"]
+        and (stage.get("parity") or {}).get("pairs_scored") == 600
+        and bindings == oracle_custody
+    )
+
+
 def _run_or_resume_score(
     config: dict[str, Any], packet: dict[str, Any], inflate_stage: dict[str, Any]
 ) -> dict[str, Any]:
-    gt_custody = _require_file(
-        Path(config["gt_cache_path"]), str(config["gt_cache_sha256"])
-    )
+    oracle_custody = _oracle_custody(config)
     stage_path = Path(config["score_stage_receipt_path"])
     if stage_path.is_file():
         stage = _read_json(stage_path)
-        if (
-            stage.get("schema") == SCORE_STAGE_SCHEMA
-            and stage.get("archive_sha256") == packet["archive"]["sha256"]
-            and stage.get("raw_sha256") == inflate_stage["raw_sha256"]
-            and (stage.get("parity") or {}).get("pairs_scored") == 600
-        ):
+        if _score_stage_valid(stage, packet, inflate_stage, oracle_custody):
             print("[resume] verified full hard-oracle score stage", flush=True)
             return stage
 
@@ -267,7 +302,7 @@ def _run_or_resume_score(
             "device": "cpu",
             "torch_version": torch.__version__,
             "torch_num_threads": torch.get_num_threads(),
-            "gt_cache": gt_custody,
+            "content_bindings": oracle_custody,
         },
     }
     _atomic_json(stage_path, stage)
@@ -366,17 +401,82 @@ def _build_final_receipt(
     }
 
 
+def _resume_existing_result(
+    config_path: Path,
+    config: dict[str, Any],
+    packet: dict[str, Any],
+    n24: dict[str, Any],
+    result_path: Path,
+) -> dict[str, Any]:
+    """Revalidate every content binding and finish interrupted raw cleanup."""
+
+    receipt = _read_json(result_path)
+    if receipt.get("schema") != RECEIPT_SCHEMA or receipt.get("classification") != "A":
+        raise ValueError(f"existing result is not a completed {RECEIPT_SCHEMA} A receipt")
+    if receipt.get("packet") != packet:
+        raise ValueError("existing result packet custody does not match live sealed bytes")
+    if receipt.get("config") != _require_file(config_path):
+        raise ValueError("existing result config content binding does not match live config")
+    if (receipt.get("strict_n24_bit_identity") or {}).get("sha256") != n24["sha256"]:
+        raise ValueError("existing result strict-n24 receipt binding does not match live evidence")
+
+    inflate_stage = receipt.get("full_n600_decode") or {}
+    if not (
+        inflate_stage.get("schema") == INFLATE_STAGE_SCHEMA
+        and inflate_stage.get("archive_sha256") == packet["archive"]["sha256"]
+        and inflate_stage.get("inflate_py_sha256") == packet["inflate_py"]["sha256"]
+    ):
+        raise ValueError("existing result inflate stage is not bound to the live packet/receiver")
+    if _read_json(Path(config["inflate_stage_receipt_path"])) != inflate_stage:
+        raise ValueError("existing result inflate stage differs from its durable stage receipt")
+
+    oracle_custody = _oracle_custody(config)
+    score_stage = receipt.get("full_n600_hard_cpu_torch_oracle") or {}
+    if not _score_stage_valid(score_stage, packet, inflate_stage, oracle_custody):
+        raise ValueError("existing result score stage is not bound to the live GT/oracle sources")
+    if _read_json(Path(config["score_stage_receipt_path"])) != score_stage:
+        raise ValueError("existing result score stage differs from its durable stage receipt")
+
+    source_files = {
+        "measurement_tool": _require_file(Path(__file__)),
+        "byte_close_tool": oracle_custody["byte_close_tool"],
+        "contest_score": oracle_custody["contest_score"],
+        "hard_oracle_module": oracle_custody["hard_oracle_module"],
+    }
+    if receipt.get("source_files") != source_files:
+        raise ValueError("existing result source-file binding does not match live measurement code")
+
+    cleanup = receipt.get("cleanup") or {}
+    raw_path = Path(str(cleanup.get("target", "")))
+    if raw_path.is_file():
+        if raw_path.stat().st_size != int(cleanup.get("bytes", -1)):
+            raise ValueError("cleanup target size differs from the certified raw")
+        if _sha256(raw_path) != cleanup.get("sha256"):
+            raise ValueError("cleanup target hash differs from the certified raw")
+        if config["cleanup_raw_after_success"]:
+            raw_path.unlink()
+            cleanup["performed"] = True
+            cleanup["performed_utc"] = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            cleanup["target_exists_after_cleanup"] = raw_path.exists()
+            receipt["cleanup"] = cleanup
+            _atomic_json(result_path, receipt)
+    elif config["cleanup_raw_after_success"] and cleanup.get("performed") is not True:
+        raise ValueError("raw is absent but existing receipt does not certify completed cleanup")
+    return receipt
+
+
 def execute(config_path: Path, command_argv: list[str]) -> dict[str, Any]:
     config = _load_config(config_path)
     result_path = Path(config["result_receipt_path"])
-    if result_path.is_file():
-        receipt = _read_json(result_path)
-        if receipt.get("schema") == RECEIPT_SCHEMA and receipt.get("classification") == "A":
-            print(json.dumps(receipt["verdict"], sort_keys=True), flush=True)
-            return receipt
-
     packet, manifest = _validate_packet(config)
     n24 = _validate_n24_receipt(config, packet["archive"]["sha256"])
+    if result_path.is_file():
+        receipt = _resume_existing_result(
+            config_path, config, packet, n24, result_path
+        )
+        print(json.dumps(receipt["verdict"], sort_keys=True), flush=True)
+        return receipt
+
     inflate_stage = _run_or_resume_inflate(config, packet, command_argv)
     score_stage = _run_or_resume_score(config, packet, inflate_stage)
     receipt = _build_final_receipt(

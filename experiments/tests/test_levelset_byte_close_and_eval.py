@@ -371,6 +371,29 @@ def test_bit_exact_gate_store_nothing_v2_derive_H(tmp_path, coder):
     assert res["bit_exact"] is True, f"{coder}: shipped inflate derive-H != numpy oracle"
     assert res["max_abs_uint8_diff"] == 0 and res["n_frames_differing"] == 0
 
+    # Review FIX_ONCE: a capped run re-quantizes code and rewrites the extracted blob.
+    # The post-hoc pose confirmation must use those exact scored bytes, not ``blob`` above.
+    inflate = lbce.run_inflate(pkt, n_pairs_total=2, max_pairs=1)
+    scored_blob, scored_pcar = lbce._pose_carrier_confirmation_payload(pkt)
+    scored_manifest, scored_params, scored_code, lanes, scored_pc, chart = lbce._dequant_blob(
+        scored_blob
+    )
+    assert scored_manifest["n_pairs"] == 1
+    assert lbce.parse_pose_carrier(scored_pcar)["hdr"]["n_pairs"] == 1
+    reference, _ = lbce.numpy_oracle_reference_frames(
+        scored_params,
+        scored_code,
+        scored_manifest,
+        1,
+        lanes,
+        pose_carrier=scored_pc,
+        chart_payload=chart,
+    )
+    raw = np.fromfile(inflate["raw_path"], dtype=np.uint8).reshape(
+        2, lbce.CAMERA_H, lbce.CAMERA_W, 3
+    )
+    assert np.array_equal(raw[0], reference[0]), f"{coder}: capped confirmation blob mismatch"
+
 
 def test_bit_exact_gate_detects_corruption(tmp_path):
     """NO-FAKE: if the shipped inflate.py is corrupted, the gate MUST catch it (strict raises)."""
