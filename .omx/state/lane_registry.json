@@ -79939,8 +79939,13 @@
           "evidence": ""
         }
       },
-      "notes": "Local-only counted curvelet/shearlet boundary carrier; pointer unchanged; MAIN review required",
-      "research_only": true
+      "notes": "L0 research-only: solve boundary and full-kernel integration built; exact n600 C2 control measured; no compiled R1b archive candidate; pointer unchanged; MAIN review required",
+      "research_only": true,
+      "reactivation_criteria": [
+        "production moderate-margin first-order plus realized-secant Jacobian custody",
+        "counted boundary packet plus compact full-kernel replay plus xi0 strict archive",
+        "full n600 hard CPU through-R row with receiver runtime at most 1800 seconds"
+      ]
     },
     {
       "id": "lane_null_compiler_full_kernel_20260720",
@@ -79996,5 +80001,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T16:27:04Z"
+  "updated_at": "2026-07-20T17:35:58Z"
 }

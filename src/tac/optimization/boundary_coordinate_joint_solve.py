@@ -31,6 +31,12 @@ from tac.boundary_math.windowed_curvelet_frame import (
     WindowedCurveletConfig,
     windowed_curvelet_feats,
 )
+from tac.optimization.resize_full_kernel import (
+    FullKernelFillResult,
+    FullResizeKernel,
+    FullResizeKernelError,
+    Preference,
+)
 from tac.optimization.uint8_lattice_feasibility import (
     DisjointResizeOperator,
     Factor2ExactVerification,
@@ -562,6 +568,7 @@ class RealizedBoundaryCandidate:
     camera_frame: np.ndarray
     exact_verification: Factor2ExactVerification
     hard_evaluation: HardOracleEvaluation
+    full_kernel_selection: FullKernelFillResult
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -577,6 +584,9 @@ def _render_and_evaluate(
     direction_matrix: np.ndarray,
     operator: DisjointResizeOperator,
     hard_oracle: Callable[[np.ndarray], HardOracleEvaluation],
+    full_kernel: FullResizeKernel,
+    full_kernel_preferences: Sequence[Preference] = ("constant",),
+    full_kernel_max_nodes_per_block: int = 128,
 ) -> RealizedBoundaryCandidate:
     baseline = np.asarray(baseline_scorer_plane)
     directions = np.asarray(direction_matrix, dtype=np.float64)
@@ -595,10 +605,49 @@ def _render_and_evaluate(
     verification = verify_factor2_uint8_scorer_plane(operator, camera, target)
     if not verification.certified_exact:
         raise BoundaryJointSolveError("factor-2 uint8 realization did not certify exact")
+    expected_geometry = (
+        operator.camera_h,
+        operator.camera_w,
+        operator.scorer_h,
+        operator.scorer_w,
+    )
+    actual_geometry = (
+        full_kernel.camera_h,
+        full_kernel.camera_w,
+        full_kernel.scorer_h,
+        full_kernel.scorer_w,
+    )
+    if actual_geometry != expected_geometry:
+        raise BoundaryJointSolveError(
+            "full resize-kernel compiler geometry does not match resize operator"
+        )
+    try:
+        kernel_selection = full_kernel.compile_min_description_preimage(
+            camera,
+            preferences=full_kernel_preferences,
+            max_nodes_per_block=full_kernel_max_nodes_per_block,
+        )
+    except FullResizeKernelError as exc:
+        raise BoundaryJointSolveError(
+            f"full resize-kernel preimage selection failed: {exc}"
+        ) from exc
+    camera = np.asarray(kernel_selection.frame, dtype=np.uint8)
+    verification = verify_factor2_uint8_scorer_plane(operator, camera, target)
+    if not verification.certified_exact:
+        raise BoundaryJointSolveError(
+            "full resize-kernel selection changed the exact scorer preimage"
+        )
     evaluation = hard_oracle(camera.copy())
     if not isinstance(evaluation, HardOracleEvaluation):
         raise BoundaryJointSolveError("hard oracle must return HardOracleEvaluation")
-    return RealizedBoundaryCandidate(coeff, target, camera, verification, evaluation)
+    return RealizedBoundaryCandidate(
+        coeff,
+        target,
+        camera,
+        verification,
+        evaluation,
+        kernel_selection,
+    )
 
 
 @dataclass(frozen=True)
@@ -619,13 +668,23 @@ def solve_joint_boundary_candidate(
     debt: np.ndarray,
     fisher_diagonal: np.ndarray,
     hard_oracle: Callable[[np.ndarray], HardOracleEvaluation],
+    full_kernel: FullResizeKernel,
     max_qp_iterations: int = 128,
+    full_kernel_preferences: Sequence[Preference] = ("constant",),
+    full_kernel_max_nodes_per_block: int = 128,
 ) -> JointBoundarySolveResult:
     """Run corrected QP, exact uint8 realization, and fresh hard admission once."""
 
     zero = np.zeros(np.asarray(direction_matrix).shape[1], dtype=np.float64)
     baseline_candidate = _render_and_evaluate(
-        zero, baseline_scorer_plane, direction_matrix, operator, hard_oracle
+        zero,
+        baseline_scorer_plane,
+        direction_matrix,
+        operator,
+        hard_oracle,
+        full_kernel,
+        full_kernel_preferences,
+        full_kernel_max_nodes_per_block,
     )
     qp = solve_corrected_active_set_qp(
         first_order_jacobian,
@@ -639,7 +698,14 @@ def solve_joint_boundary_candidate(
             JointSolveStatus(qp.status.value), qp, baseline_candidate.hard_evaluation, None
         )
     candidate = _render_and_evaluate(
-        qp.coefficients, baseline_scorer_plane, direction_matrix, operator, hard_oracle
+        qp.coefficients,
+        baseline_scorer_plane,
+        direction_matrix,
+        operator,
+        hard_oracle,
+        full_kernel,
+        full_kernel_preferences,
+        full_kernel_max_nodes_per_block,
     )
     if candidate.hard_evaluation.key[0] == 0:
         status = JointSolveStatus.FEASIBLE_HARD_ACCEPT
@@ -670,9 +736,12 @@ def run_exact_erm_fallback(
     operator: DisjointResizeOperator,
     hard_oracle: Callable[[np.ndarray], HardOracleEvaluation],
     cheap_energy: Callable[[np.ndarray], float],
+    full_kernel: FullResizeKernel,
     seed: int,
     proposal_scale: float = 1.0,
     degeneracy_tolerance: float = 1e-12,
+    full_kernel_preferences: Sequence[Preference] = ("constant",),
+    full_kernel_max_nodes_per_block: int = 128,
 ) -> ERMFallbackResult:
     """Equal-budget 4x16 ERM probe with fresh hard terminal authority.
 
@@ -712,6 +781,9 @@ def run_exact_erm_fallback(
         direction_matrix,
         operator,
         hard_oracle,
+        full_kernel,
+        full_kernel_preferences,
+        full_kernel_max_nodes_per_block,
     )
     generator = np.random.default_rng(seed)
     terminal_proposals: list[np.ndarray] = []
@@ -744,6 +816,9 @@ def run_exact_erm_fallback(
             direction_matrix,
             operator,
             hard_oracle,
+            full_kernel,
+            full_kernel_preferences,
+            full_kernel_max_nodes_per_block,
         )
         for proposal in terminal_proposals
     ]

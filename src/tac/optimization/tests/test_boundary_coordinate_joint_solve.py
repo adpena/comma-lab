@@ -26,6 +26,7 @@ from tac.optimization.boundary_coordinate_joint_solve import (
     solve_corrected_active_set_qp,
     solve_joint_boundary_candidate,
 )
+from tac.optimization.resize_full_kernel import FullResizeKernel
 from tac.optimization.uint8_lattice_feasibility import (
     DisjointResizeOperator,
     HardOracleEvaluation,
@@ -181,6 +182,10 @@ def _operator_and_oracle():
     return operator, oracle, calls
 
 
+def _full_kernel() -> FullResizeKernel:
+    return FullResizeKernel.build(camera_h=2, camera_w=2, scorer_h=1, scorer_w=1)
+
+
 def test_joint_solver_places_exact_uint8_and_hard_oracle_inside_admission() -> None:
     operator, oracle, calls = _operator_and_oracle()
     baseline = np.asarray([[[100, 100, 100]]], dtype=np.uint8)
@@ -194,11 +199,57 @@ def test_joint_solver_places_exact_uint8_and_hard_oracle_inside_admission() -> N
         debt=np.asarray([1.0]),
         fisher_diagonal=np.asarray([1.0]),
         hard_oracle=oracle,
+        full_kernel=_full_kernel(),
     )
     assert result.status is JointSolveStatus.FEASIBLE_HARD_ACCEPT
     assert result.candidate is not None
     assert result.candidate.exact_verification.certified_exact
     assert calls == [100, 101]
+
+
+def test_joint_solver_selects_full_kernel_preimage_before_hard_oracle() -> None:
+    operator, oracle, calls = _operator_and_oracle()
+    result = solve_joint_boundary_candidate(
+        baseline_scorer_plane=np.asarray([[[100, 100, 100]]], dtype=np.uint8),
+        direction_matrix=np.asarray([[1.0], [0.0], [0.0]]),
+        operator=operator,
+        first_order_jacobian=np.asarray([[0.75]]),
+        secant_jacobian=np.asarray([[0.25]]),
+        debt=np.asarray([1.0]),
+        fisher_diagonal=np.asarray([1.0]),
+        hard_oracle=oracle,
+        full_kernel=_full_kernel(),
+        full_kernel_preferences=("constant", "neighbor_mean"),
+        full_kernel_max_nodes_per_block=32,
+    )
+    assert result.status is JointSolveStatus.FEASIBLE_HARD_ACCEPT
+    assert result.candidate is not None
+    selection = result.candidate.full_kernel_selection
+    assert selection is not None
+    assert result.candidate.exact_verification.certified_exact
+    assert selection.selected_bytes["brotli"] <= selection.old_mask_bytes["brotli"]
+    assert selection.selected_bytes["lzma"] <= selection.old_mask_bytes["lzma"]
+    assert calls == [100, 101]
+
+
+def test_joint_solver_refuses_mismatched_full_kernel_before_hard_oracle() -> None:
+    operator, oracle, calls = _operator_and_oracle()
+    wrong_kernel = FullResizeKernel.build(
+        camera_h=4, camera_w=4, scorer_h=2, scorer_w=2
+    )
+    with pytest.raises(BoundaryJointSolveError, match="geometry"):
+        solve_joint_boundary_candidate(
+            baseline_scorer_plane=np.asarray([[[100, 100, 100]]], dtype=np.uint8),
+            direction_matrix=np.asarray([[1.0], [0.0], [0.0]]),
+            operator=operator,
+            first_order_jacobian=np.asarray([[0.75]]),
+            secant_jacobian=np.asarray([[0.25]]),
+            debt=np.asarray([1.0]),
+            fisher_diagonal=np.asarray([1.0]),
+            hard_oracle=oracle,
+            full_kernel=wrong_kernel,
+        )
+    assert calls == []
 
 
 def test_joint_solver_does_not_promote_hard_rejection() -> None:
@@ -213,6 +264,7 @@ def test_joint_solver_does_not_promote_hard_rejection() -> None:
         debt=np.asarray([1.0]),
         fisher_diagonal=np.asarray([1.0]),
         hard_oracle=oracle,
+        full_kernel=_full_kernel(),
     )
     assert result.status is JointSolveStatus.HARD_REJECTED_UNKNOWN
     assert result.candidate is not None
@@ -229,6 +281,7 @@ def test_erm_is_exactly_four_by_sixteen_and_hard_terminal_only() -> None:
         operator=operator,
         hard_oracle=oracle,
         cheap_energy=lambda coefficient: float((coefficient[0] - 2.0) ** 2),
+        full_kernel=_full_kernel(),
         seed=7,
     )
     assert result.status is ERMStatus.HARD_ACCEPT
@@ -249,6 +302,7 @@ def test_erm_degenerate_spread_means_no_adoption() -> None:
         operator=operator,
         hard_oracle=oracle,
         cheap_energy=lambda _coefficient: 1.0,
+        full_kernel=_full_kernel(),
         seed=9,
     )
     assert result.status is ERMStatus.DEGENERATE_ENERGY_SPREAD
@@ -269,6 +323,7 @@ def test_erm_refuses_proven_feasible_route() -> None:
             operator=operator,
             hard_oracle=oracle,
             cheap_energy=lambda coefficient: float(coefficient[0] ** 2),
+            full_kernel=_full_kernel(),
             seed=0,
         )
 
