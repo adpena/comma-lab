@@ -79903,15 +79903,15 @@
       "id": "lane_r2b_sparse_target_selection_20260720",
       "name": "R2b sparse target selection",
       "phase": 0.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/measure_r2b_sparse_target_selection.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/r2b_sparse_target_selection_20260720.json"
         },
         "contest_cuda": {
           "status": false,
@@ -79938,7 +79938,8 @@
           "evidence": ""
         }
       },
-      "notes": "Local-only n600 sparse fractional target-decision measurement; no paid or heavy launch."
+      "notes": "Local-only n600 sparse fractional target-decision measurement; no paid or heavy launch.",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -79948,5 +79949,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T16:10:18Z"
+  "updated_at": "2026-07-20T17:12:37Z"
 }
