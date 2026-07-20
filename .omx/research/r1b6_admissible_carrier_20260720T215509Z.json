@@ -1,0 +1,79 @@
+{
+  "schema": "r1b6_admissible_carrier_receipt.v1",
+  "captured_at_utc": "2026-07-20T21:55:09Z",
+  "verdict": "MEASURED_PREFIX_RECEIVER_BOUND_SINGLETON_NONPOSITIVE_STOP_NO_N600",
+  "verdict_scope": "exact Fisher-ordered prefix n16 with 512 requested and 498 exact-feasible Road-Lane-first sites, absolute-write R1K1 replay, sealed R1B4 double decode, and hard macOS CPU Torch only; not n600, not compact-binary-v2 parse-back, not production rank4 custody, not a contest score, and no boundary/full-kernel family negative",
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "main_landing_review_required": true,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED"
+  },
+  "measurement_receipt": {
+    "path": ".omx/research/r1b6_admissible_carrier_prefix_n16_20260720.json",
+    "sha256": "7bdcffeb838478de3f75dd5b3ad572383175d42b368b006a26e5351175fc1684"
+  },
+  "selection": {
+    "ordering_sha256": "765457d424eaf1de7e05ed8703853175ef415bd3f19fb00137a74a29de52ae00",
+    "requested_sites": 512,
+    "exact_feasible_sites": 498,
+    "infeasible_sites": 14,
+    "road_lane_sites": 498,
+    "other_edge_sites": 0,
+    "nonedge_sites": 0,
+    "replay_writes": 5976,
+    "replay_payload_bytes": 60008
+  },
+  "hard_oracle": {
+    "baseline": {
+      "flip_count": 10002,
+      "d_seg": 0.0031795501708984375,
+      "d_pose": 131.15494709357975,
+      "nonrate_score": 36.53327595914139
+    },
+    "candidate": {
+      "flip_count": 10009,
+      "d_seg": 0.0031817754109700522,
+      "d_pose": 131.15812066486134,
+      "nonrate_score": 36.53393663363314
+    },
+    "realized_combined_recovery_s": -0.0006606744917476703,
+    "realized_seg_recovery_s": -0.00022252400716149534,
+    "seg_realization_fraction": -0.014056224899600732
+  },
+  "break_even": {
+    "equation_id": "realization_breakeven_bytes_v1",
+    "old_n600_r2b_empirical_bytes": 1852.091296201751,
+    "old_callable_bytes": 1852.0914265927563,
+    "new_prefix_formulation_bytes": 0.0,
+    "numeric_anchor_replaced": false,
+    "domain_refinement_registry_row": 765,
+    "domain_refinement_event": "domain_refined"
+  },
+  "receiver": {
+    "candidate_archive_bytes": 120542,
+    "candidate_archive_sha256": "193c4cb5dee2200b8a66a1f3c911c29e0261c345f82c6eda207d9acb5034a3c6",
+    "candidate_delta_vs_94344_control_bytes": 26198,
+    "incremental_replay_delta_vs_receiver_baseline_bytes": 22891,
+    "candidate_decode_seconds": 35.535449458053336,
+    "decode_gate_pass": true,
+    "deterministic_double_decode": true,
+    "receiver_search_invocations": 0
+  },
+  "compact_binary_v2": {
+    "verdict": "R1B6_COMPACT_BINARY_V2_PROJECTION_KILLED_CURRENT_FORMULATION",
+    "verdict_scope": "existing 1273-byte projection and source-closest-sign absolute replay only; no compact cell-grammar or carrier family negative",
+    "projected_bytes": 1273,
+    "projection_parse_back": false,
+    "projection_receiver_bound": false,
+    "operational_absolute_replay_total_delta_bytes": 26198,
+    "operational_realized_recovery_positive": false
+  },
+  "blockers": [
+    "R1B2_RANK4_FIRST_ORDER_REALIZED_SECANT_CUSTODY_ABSENT",
+    "R1B6_FULL_KERNEL_ABSOLUTE_REPLAY_PREFIX_PROVEN_N600_MDL_REPLAY_ABSENT",
+    "VJP_FULL_SIDECAR_REHASH_DEFERRED_UNTIL_PRODUCER_INPUTS_PRESENT"
+  ],
+  "pointer_delta": "none"
+}

@@ -1,0 +1,176 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "captured_at_utc": "2026-07-20T21:52:50.819126Z",
+  "cleanup": {
+    "preserve_raw": false,
+    "rows": [
+      {
+        "bytes": 97664256,
+        "delete_after_receipt_fsync": true,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b6_admissible_carrier_20260720/prefix_n16_512_v2/baseline_discovery.raw",
+        "reason": "success-only receiver/scorer scratch reproducible from sealed archive",
+        "sha256": "8c0bd711c39d2c3cd2a259bce94e905f37f47023181a5b2c974b4615c3b89383"
+      },
+      {
+        "bytes": 97664256,
+        "delete_after_receipt_fsync": true,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b6_admissible_carrier_20260720/prefix_n16_512_v2/baseline_sealed.raw",
+        "reason": "success-only receiver/scorer scratch reproducible from sealed archive",
+        "sha256": "8c0bd711c39d2c3cd2a259bce94e905f37f47023181a5b2c974b4615c3b89383"
+      },
+      {
+        "bytes": 97664256,
+        "delete_after_receipt_fsync": true,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b6_admissible_carrier_20260720/prefix_n16_512_v2/candidate_discovery.raw",
+        "reason": "success-only receiver/scorer scratch reproducible from sealed archive",
+        "sha256": "b0dbc05aecb37f8b2fe0955d7c6e95bae1b19255f71b6a3fd520fd7be21e4adb"
+      },
+      {
+        "bytes": 97664256,
+        "delete_after_receipt_fsync": true,
+        "path": "/Volumes/VertigoDataTier/pact/evidence/r1b6_admissible_carrier_20260720/prefix_n16_512_v2/candidate_sealed.raw",
+        "reason": "success-only receiver/scorer scratch reproducible from sealed archive",
+        "sha256": "b0dbc05aecb37f8b2fe0955d7c6e95bae1b19255f71b6a3fd520fd7be21e4adb"
+      }
+    ],
+    "schema": "certified_rebuildable_scratch_cleanup.v1"
+  },
+  "hard_oracle": {
+    "baseline": {
+      "d_pose": 131.15494709357975,
+      "d_seg": 0.0031795501708984375,
+      "flip_count": 10002,
+      "nonrate_score": 36.53327595914139,
+      "pose_component": 36.21532094205155,
+      "seg_component": 0.31795501708984375
+    },
+    "candidate": {
+      "d_pose": 131.15812066486134,
+      "d_seg": 0.0031817754109700522,
+      "flip_count": 10009,
+      "nonrate_score": 36.53393663363314,
+      "pose_component": 36.21575909253613,
+      "seg_component": 0.31817754109700525
+    }
+  },
+  "inputs": {
+    "base_archive": {
+      "bytes": 94344,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/pre_archive.zip",
+      "sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539"
+    },
+    "base_decoder": {
+      "bytes": 56814,
+      "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+      "sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224"
+    },
+    "fisher_ordering": {
+      "bytes": 2225887,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b5_row_closer_20260720/fisher_ev/fisher_ev_ordering_38077.jsonl.br",
+      "sha256": "765457d424eaf1de7e05ed8703853175ef415bd3f19fb00137a74a29de52ae00"
+    },
+    "target_raw": {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/m2_live_target_selection_20260720T1528Z/inflated/0.raw",
+      "sha256": "a7192f9387856c849d406a322a08ff77080502751ac200cc63fe80a704989dd5"
+    },
+    "xi0": {
+      "bytes": 1500,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b3_producers_20260720T185300Z/xi0.xi0",
+      "sha256": "1b3c72fbe1df7209533a0e92e368fc65253bcb55cbe7196e921502ceb757e58a"
+    }
+  },
+  "realization": {
+    "canonical_refinement_eligible": false,
+    "equation": "B=max(0,Delta_S_realized)*37545489/25",
+    "new_prefix_break_even_bytes": 0.0,
+    "old_anchor": {
+      "break_even_bytes": 1852.091296201751,
+      "realization_fraction": 0.09462121664378247,
+      "realized_recovery_s": 0.0012332316583976016
+    },
+    "realized_prefix_combined_nonrate_recovery_s": -0.0006606744917476703,
+    "realized_prefix_seg_recovery_s": -0.00022252400716149534,
+    "scheduled_prefix_seg_recovery_s": 0.01583099365234375,
+    "seg_realization_fraction": -0.014056224899600732
+  },
+  "receiver": {
+    "baseline_decode_seconds": 34.81912116589956,
+    "baseline_sealed_archive": {
+      "bytes": 97651,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b6_admissible_carrier_20260720/prefix_n16_512_v2/baseline_sealed.zip",
+      "sha256": "e81da354fb7a7d38dd0d58590d143e31ccd2b7d49f6c2d3c811ceaba02afe9b7"
+    },
+    "candidate_archive_delta_bytes_vs_94344_control": 26198,
+    "candidate_decode_seconds": 35.535449458053336,
+    "candidate_sealed_archive": {
+      "bytes": 120542,
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b6_admissible_carrier_20260720/prefix_n16_512_v2/candidate_sealed.zip",
+      "sha256": "193c4cb5dee2200b8a66a1f3c911c29e0261c345f82c6eda207d9acb5034a3c6"
+    },
+    "candidate_under_old_break_even": false,
+    "decode_gate_pass": true,
+    "decode_gate_seconds": 1800.0,
+    "deterministic_double_decode": true,
+    "search_invocations": 0
+  },
+  "runtime": {
+    "argv": [
+      "tools/measure_r1b6_admissible_carrier.py",
+      "--artifact-root",
+      "/Volumes/VertigoDataTier/pact/evidence/r1b6_admissible_carrier_20260720/prefix_n16_512_v2",
+      "--output",
+      ".omx/research/r1b6_admissible_carrier_prefix_n16_20260720.json",
+      "--pair-cap",
+      "16",
+      "--max-sites",
+      "512",
+      "--batch-size",
+      "16",
+      "--decode-workers",
+      "4"
+    ],
+    "batch_size": 16,
+    "decode_workers": 4,
+    "elapsed_seconds": 169.92452545813285,
+    "pair_cap": 16,
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "seed": 1234
+  },
+  "schema": "r1b6_admissible_carrier_prefix_measurement.v1",
+  "selection_and_replay": {
+    "encoder_search_only": true,
+    "exact_numerator_custody_sha256": "5312f00531ced68df348336ec4254c21f092129c37b1c77568e13756e2ce113d",
+    "infeasible_linear_indices_sha256": "f5638ca6cbec159596242e33b67e6afc9be1ffcc22cb2474f69141457c6b1110",
+    "infeasible_site_count": 14,
+    "nonedge_sites": 0,
+    "other_edge_sites": 0,
+    "receiver_search_invocations": 0,
+    "replay_payload_bytes": 60008,
+    "replay_write_count": 5976,
+    "requested_site_count": 512,
+    "road_lane_sites": 498,
+    "selected_linear_indices_sha256": "aaa474bc711754393c2561aced6d7a5c046819878075eb95df0935ac883d6e93",
+    "selected_site_count": 498,
+    "sign_histogram": {
+      "-1": 241,
+      "1": 257
+    },
+    "source_distance_sum": 12044392
+  },
+  "storage_preflight": {
+    "artifact_root": "/Volumes/VertigoDataTier/pact/evidence/r1b6_admissible_carrier_20260720/prefix_n16_512_v2",
+    "expected_one_raw_bytes": 97664256,
+    "free_bytes": 691389411328,
+    "ok": true,
+    "required_free_bytes": 2733469184
+  },
+  "verdict": "MEASURED_PREFIX_RECEIVER_BOUND_SINGLETON_NONPOSITIVE",
+  "verdict_scope": "exact Fisher-ordered prefix n16 with at most 512 sites, absolute-write R1K1 receiver replay, R1b4 sealed double decode, and hard macOS CPU Torch only; not n600, not compact-binary-v2, not production rank4 custody, not a contest score, and no boundary/full-kernel family negative"
+}
