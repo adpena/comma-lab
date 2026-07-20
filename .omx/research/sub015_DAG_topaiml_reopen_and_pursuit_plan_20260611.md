@@ -20360,3 +20360,22 @@ measured finding that could be re-derived. MEMORY.md leg: workflow hook line lan
 (`workflow_v2_velocity_rigor_autonomy_20260720.md`). Caveats resolved at custody: doc-absent =
 worktree cut pre-doc-commit (blocks match §2 verbatim); 110 lane failures = worktree-missing-
 gitignored-evidence (main validates 1,926 clean). Pointer 0.19108 [contest-CPU] UNMOVED (means).
+
+## FEED-R1B5-LINEAGE-MERGE-20260720D (triality-leg record for the drift gate; merge 33903b27b5)
+
+**What merged:** the full r1b→r1b2→r1b3→r1b4→r1b5 critical lineage (35 commits) — VJP custody
+COMPLETE_N600 (600/600, refused=[]) · Fisher EV ordering 38,077 w/ SSD custody · resize-coupling
+audit (16,319 moderate-band cells SINGLETON at 4-tap align_corners=False — local interaction
+exactly diagonal) · ξ0 calibration (secant-typed; post-hoc admission blocked; OPERATOR REFRAME
+2026-07-20: ξ0 numbers are ~4 ORDERS off need → pose routes through plane-proximity/joint-descent
+formulations ONLY, ξ0 demoted to optional 100 B rate item) · carrier audit (1,273 B v2 projection,
+non-admissible) · r1b4 receiver · r1b2 compiler. Verified at custody (SSD SHAs, 132 tests).
+
+**Triality-leg disposition:** DSL leg = N/A-with-rationale: NO trainer lever/launch/curriculum
+change in this lineage — it is codec/compiler/receiver/custody apparatus (boundary_math + tools);
+the one DSL-adjacent object (IntegerPlaneEmitterPolicy) predates this lineage and is already
+DSL-held. Equations leg = refinement DEFERRED-to-row: realization_breakeven_bytes_v1 anchors
+refine when r1b6 lands the measured carrier row (refine, don't fork). DAG leg = this FEED + the
+arm FEEDs merged in-lineage. MEMORY leg = no new durable law this merge (findings already hooked).
+verdict_scope: ξ0 post-hoc = FORMULATION-dead on seg-only frames (photometric wall, 6th
+consistent instance), NOT a screw/ξ family verdict. Pointer 0.19108 [contest-CPU] UNMOVED (means).

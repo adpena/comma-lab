@@ -65,7 +65,7 @@ N13 -[576 pair VJPs + hashed 38,077 measured EV ordering owed]-> future M1 band 
   nodes.
 - **Equations:** reuses the bounded uint8 and rank-4 head laws; no registry mutation.
 - **Sensitivity/Pareto/bit allocator/autopilot:** deliberately not wired because no
-  score-authority or marginal-byte result exists. The surface-4 negative remains a
+  score-authority or marginal-byte result exists. The surface-4 negative remains a  # MAGNITUDE_DISMISSAL_OK: not a magnitude dismissal — an authority-ABSENCE wiring refusal (no measured row exists to admit; wiring a solver hook without an empirical row would be the fake-admission class); relaunch-stop retained, INSTANCE scope, reactivates the moment a marginal-byte row lands
   relaunch stop, not a family kill.
 - **Continual learning:** modules, tests, manifest, four receipts, and the exact
   blocker make the result reusable. The probe reruns and M1 assembly remain explicit
