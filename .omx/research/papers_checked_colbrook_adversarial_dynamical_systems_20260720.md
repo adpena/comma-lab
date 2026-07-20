@@ -1,8 +1,8 @@
 # Papers checked — adversarial dynamical systems and information-model lower bounds (2026-07-20)
 
-research_only: `true`  
-axis: `[theory intake; no score axis]`  
-lane_id: `lane_einstein_kolmogorov_crux_20260719`  
+research_only: `true`
+axis: `[theory intake; no score axis]`
+lane_id: `lane_einstein_kolmogorov_crux_20260719`
 verdict_scope: lower-bound hygiene for the Einstein--Kolmogorov crux; no codec or score result
 
 ## Primary source checked
