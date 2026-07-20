@@ -20175,3 +20175,29 @@ frame-195. verdict_scope: durability-sync unit; no new measurement, no score cla
 ## DAG FEED-EINSTEIN-XI-V2V3 (2026-07-20) — measured ξ-blocker; pointer 0.19108 UNMOVED [magnitude-ok]
 
 Einstein/Kolmogorov crux arm **v2** (relaunched full-FS xhigh after the ultra doom-loop STOP) delivered a **MEASURED FORMULATION-scoped ξ-blocker, NOT an in-box point**. Re-derived facts (macOS hard CPU-Torch): settled n600 baseline **89,772 B / d_seg 0.004549 / d_pose 0.001610** (seg-term 0.455, far above frontier); frontier magnitude permits **17,930** mismatched cells vs **536,636** present → needs **≥518,706 corrections** (≥531,400 with pose/rate fixed). Fresh ŷ/ξ packet **91,062 B (~152 B/pair, UNDER the ≤264,320 B box)** but strict decode FAILED before scoring on undefined `_CP_XI_FX` → fresh **d_seg UNKNOWN** (NO in-box row — a byte count without measured d_seg is a rate-fake, correctly rejected). ξ (shared SE(3) twist, dual-use pose+temporal) is still the binding leg — now walled at the decode-constant level, NOT sandbox permissions (the v1 wall was a codex `workspace-write` writable_roots block starving the SSD evidence tier; PERMANENTLY FIXED — `codex_delegate` now promotes `workspace-write`→`danger-full-access`, worktree isolation + serializer keep commit discipline). Deliverable-B accepted; sol-high review PASS; bounded contract HELD (no custody doom-loop, docs/lane-only commits). Consumed-by: `codex_findings_einstein_kolmogorov_xi_blocker_20260720_codex.md` + `einstein_kolmogorov_xi_blocker_v2_20260720.json` (merged main `49e40bb22c`). **v3 sol-ultra relaunched** to break the decode+score wall: repair `_CP_XI_*` → strict n24 bit-exact decode → SCORE the 91,062 B n600 archive → first real (bytes, d_seg) point. [no-new-equation: measured blocker, not a registered law]
+
+## FEED-M2-LIVE-TARGET-SELECTION-20260720 — exact target closes distortion; direct custody is rate-dead
+
+- **Node / axis:** V10 M2 corrected unrounded target, n600, `[macOS-CPU advisory]`,
+  `score_claim=false`; pointer `0.1910828242 [contest-CPU]` UNMOVED.
+- **MEASURED triple versus capstone:** `(delta_d_seg, delta_d_pose, delta_bytes) =
+  (-1.5196e-4, -1.0184e-4, +1,307,645,816 B)`. The official hard CPU oracle gives
+  `d_seg=0`, `d_pose=0`: full `0.0471083800 S` nonrate recovery is real.
+- **Encode/realize split:** `d_A=0` (`707,788,800/707,788,800` exact source resize
+  numerators), `d_B=0` (zero flips in every class and margin stratum; zero MSE in all six
+  pose dimensions). Target selection is confirmed as the source of the old plane-quantization debt.
+- **Byte decomposition:** canonical #49 integer-null fills reduce direct target sections
+  `1,989,784,190 -> 1,717,131,154 B` (`-272,653,036 B`, `-13.70%`), but the counted archive is
+  `1,717,172,741 B`. Horizontal predictor wins 41/50 chunks and supplies 81.4% of freed bytes.
+  The dominating term is source-dependent fractional-target custody, not null fill.
+- **Scoped verdict:** direct exact-source-preimage payload is RATE-DEAD (FORMULATION only).
+  Recovery pays for `70,748 B`; direct custody spends `1.307 GB` extra (`18,483x` over waterline).
+  Target-selection / bounded-uint8 / compact-plane families remain OPEN.
+- **Reformulation edge:** start from rounded Y; encode only Fisher/margin-ranked floor/ceil or
+  small numerator-residual decisions inside the compact descriptor; reverse-waterfill and KKT-stop
+  at `<=70,748 B`, then n600 byte-close/hard-oracle. Lost source fractions are not a free receiver
+  property.
+- **Artifacts:** `.omx/research/m2_live_target_selection_20260720T1548Z.{md,json}`;
+  `tools/measure_m2_live_target_selection.py`; SSD archive SHA `0fee1b74...f25cfb6b`.
+- **Triality:** DSL N/A; equation anchor appended to
+  `bounded_uint8_resize_preimage_cell_feasibility_v1`; DAG=this FEED. MAIN review/merge required.
