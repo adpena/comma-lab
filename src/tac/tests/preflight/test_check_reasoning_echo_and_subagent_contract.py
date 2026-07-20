@@ -149,3 +149,45 @@ def test_contract_integrity_review_composer_lost_risk_phrase_flagged() -> None:
     )
     violations = check_subagent_contract_module_integrity(_module=drifted)
     assert any("risk-ranking phrase" in v for v in violations)
+
+
+def test_contract_integrity_requires_workflow_v2_constants_and_composition() -> None:
+    import tac.subagent_contract as real
+    from tac.preflight import (
+        _SUBAGENT_CONTRACT_REQUIRED_CONSTANTS,
+        _SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES,
+    )
+
+    expected = {
+        "RESEARCH_AUTHORITY",
+        "DECOMPOSE_HEADLINE",
+        "TIEBREAK_LEAST_COMPLEXITY",
+        "MASTER_THESIS_FRAMING",
+        "VERDICT_SCOPE_LADDER",
+    }
+    assert expected <= set(_SUBAGENT_CONTRACT_REQUIRED_CONSTANTS)
+    assert expected == set(_SUBAGENT_CONTRACT_REQUIRED_KEY_PHRASES)
+
+    drifted = SimpleNamespace(
+        KEY_PHRASES=real.KEY_PHRASES,
+        standard_contract=lambda **kw: real.GROUNDED_PROGRESS,
+        review_contract=real.review_contract,
+        **{name: getattr(real, name) for name in real.CONTRACT_CONSTANT_NAMES},
+    )
+    violations = check_subagent_contract_module_integrity(_module=drifted)
+    for name in expected:
+        assert any(f"workflow-v2 block {name}" in violation for violation in violations)
+
+
+def test_contract_integrity_empty_composer_cannot_fail_open() -> None:
+    import tac.subagent_contract as real
+
+    drifted = SimpleNamespace(
+        KEY_PHRASES=real.KEY_PHRASES,
+        standard_contract=lambda **kw: "",
+        review_contract=real.review_contract,
+        **{name: getattr(real, name) for name in real.CONTRACT_CONSTANT_NAMES},
+    )
+    violations = check_subagent_contract_module_integrity(_module=drifted)
+    assert any("grounded-progress phrase" in violation for violation in violations)
+    assert sum("workflow-v2 block" in violation for violation in violations) == 5
