@@ -1,0 +1,35 @@
+{
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "main_landing_review_required": true,
+    "pointer_mutation": false,
+    "score_claim": false
+  },
+  "findings_fixed": [
+    "campaign JSON is read once and hashed from the same bytes to close the custody TOCTOU window",
+    "terminal no-blocker VJP admission fresh-rehashes all 600 sidecar bytes while partial prefixes preserve declared custody without reading bulk",
+    "candidate archive rate is decomposed into base-repack compressed delta, extension compressed bytes, and ZIP overhead delta",
+    "rejected over-cap candidates remove staging bytes and leave no operator-visible output",
+    "Frechet first-order tangents and realized uint8 endpoint secants are different typed per-block objects with base, delta, norm, remainder, quantization-cell, and hard-endpoint custody",
+    "full-kernel admission requires offline exact MDL selection over bounded uint8 preimages before the hard oracle",
+    "compiled-unmeasured receipts expose archive byte-cap gates while leaving score and decode gates unclaimed"
+  ],
+  "reviewed_files": {
+    "src/tac/optimization/r1b2_mdl_xi0_compile.py": "97d11262dd859b4791ea70a5d6f228d8ae194f30f3f11ddf6b02b1889a0956fb",
+    "src/tac/optimization/tests/test_r1b2_mdl_xi0_compile.py": "e059ed85410292ccc3b56b62c3777b1445cafca88f5f7d3e9db2eca1cbee46fb",
+    "tools/compile_r1b2_mdl_xi0.py": "8c35fbdd221f1d897f91797ba7befa841a72a0f7bbf7b71738d93479da787c64"
+  },
+  "schema": "r1b2_mdl_xi0_compile_review.v1",
+  "terminal_receipt": {
+    "path": ".omx/research/r1b2_mdl_xi0_compile_20260720T181400Z.json",
+    "sha256": "265f8f78e1c3ad9c7adce567510e3ab215344832095ddd72d799495a1257a9ad",
+    "verdict": "DECOMPOSED_PARTIAL_R1B2_PRODUCTION_CUSTODY_BLOCKED"
+  },
+  "verification": {
+    "focused_pytest_passed": 53,
+    "py_compile": "clean",
+    "ruff_check": "clean",
+    "synthetic_archive_evidence_scope": "structural_only_not_score"
+  },
+  "verdict_scope": "owned compiler and custody boundaries only; MAIN must independently review before merge"
+}

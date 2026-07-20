@@ -1,0 +1,40 @@
+{
+  "schema": "pdw1_step2_prior_measurement_summary.v1",
+  "evidence_label": "MEASURED_PRIOR_MACOS_CPU_ADVISORY_TRANSCRIBED_WITH_CONTENT_HASH",
+  "source_branch": "codexwt/pdw1_dB_attack_step2_20260719T192712Z",
+  "source_commit": "143765d34b42a9da00de1b8b1e723381c9efe5d6",
+  "source_receipt_path": ".omx/research/pdw1_step2_realization_confirmation_n48_20260719.json",
+  "source_receipt_sha256": "fd71ea8cf3fb0c511729c13c6157b0ab465d168dca78d2d2d18082d98b39063b",
+  "research_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "n24": {
+    "n_pairs": 24,
+    "residual_pixels": 38077,
+    "first_prefix_net_fixed_pixels": 15,
+    "first_prefix_projected_bytes": 6499,
+    "first_prefix_marginal_seg_score_per_projected_byte": 4.89139004157513e-08,
+    "rate_waterline_per_byte": 6.658589531221714e-07,
+    "selected_ranked_cells": 0,
+    "residual_reason_counts": {
+      "FULL_REFERENCE_PROBE_NOT_HARD_ACCEPT_OR_UINT8_DEAD": 24138,
+      "INTERIOR_OR_NONRESIZE_NECESSITY_ZERO_149_WALL": 3562,
+      "STOPPED_AT_MEASURED_RATE_WATERLINE": 10377
+    }
+  },
+  "n48": {
+    "n_pairs": 48,
+    "residual_pixels": 76669,
+    "first_prefix_net_fixed_pixels": 3,
+    "first_prefix_projected_bytes": 3374,
+    "first_prefix_marginal_seg_score_per_projected_byte": 9.421797237727529e-09,
+    "rate_waterline_per_byte": 6.658589531221714e-07,
+    "selected_ranked_cells": 0,
+    "residual_reason_counts": {
+      "FULL_REFERENCE_PROBE_NOT_HARD_ACCEPT_OR_UINT8_DEAD": 48733,
+      "INTERIOR_OR_NONRESIZE_NECESSITY_ZERO_149_WALL": 6098,
+      "STOPPED_AT_MEASURED_RATE_WATERLINE": 21838
+    }
+  },
+  "scope": "EV-ranked sparse camera-value repair prefix only; no exhaustive joint affine-plus-hard-oracle search and no family-level negative"
+}

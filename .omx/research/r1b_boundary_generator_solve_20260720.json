@@ -1,0 +1,320 @@
+{
+  "archive": {
+    "accounted_archive_bytes": 94344,
+    "archive": "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/pre_archive.zip",
+    "archive_bytes": 94344,
+    "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+    "base_video_payload_counted": true,
+    "compressed_section_bytes": 93772,
+    "ema_authority": true,
+    "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+    "pdw2_spatial_receiver_consumed": false,
+    "pdw2_video_target_payload_counted": true,
+    "repair_video_payload_counted": false,
+    "residual_video_payload_counted": true,
+    "schema": "c2_integer_plane_counted_archive.v1",
+    "score_claim": false,
+    "sections": [
+      {
+        "compressed_bytes": 83730,
+        "name": "0.bin",
+        "sha256": "f0c3e648f00f52e48c7be98997fb7dd57c2e5a607ed385846931af68f88cc78c",
+        "uncompressed_bytes": 84536
+      },
+      {
+        "compressed_bytes": 1036,
+        "name": "ipe_manifest.json",
+        "sha256": "838fe8f7db96599e396e0595747e045074f57394902b4183f3fa036aba9121a0",
+        "uncompressed_bytes": 1857
+      },
+      {
+        "compressed_bytes": 105,
+        "name": "seg_head_target.pdw2",
+        "sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+        "uncompressed_bytes": 138
+      },
+      {
+        "compressed_bytes": 8874,
+        "name": "ipe_codes.f16",
+        "sha256": "b43c4ff506cd7ec4825e1379dad2701e23702f1b359c9e06bc932f21482bb73e",
+        "uncompressed_bytes": 9600
+      },
+      {
+        "compressed_bytes": 27,
+        "name": "ipe_quotient_residual_head.f16",
+        "sha256": "c5d39370644c7b16ccd6e09e4d92a1a6980073baad29214bdb530dca290e647d",
+        "uncompressed_bytes": 24
+      }
+    ],
+    "zip_overhead_bytes": 572
+  },
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "batch_geometry": "upstream_AVVideoDataset_vs_TensorVideoDataset_batch16",
+    "contest_score_claim": false,
+    "hard_cpu_torch": true,
+    "pointer_mutation": false,
+    "through_r": true
+  },
+  "blockers": [
+    "R1B_N600_COUNTED_BOUNDARY_PACKET_ABSENT_FROM_PRODUCTION_ARCHIVE",
+    "R1B_MODERATE_MARGIN_FIRST_ORDER_PLUS_REALIZED_SECANT_JACOBIAN_CUSTODY_ABSENT",
+    "R1B_FULL_KERNEL_MIN_DESCRIPTION_SELECTION_NOT_YET_COMPILED_INTO_PRODUCTION_ARCHIVE",
+    "R1B_FULL_KERNEL_SELECTION_RECEIVER_RUNTIME_AND_COMPACT_REPLAY_NOT_CLOSED",
+    "R1B_XI_POSE_RECEIVER_ABSENT_FROM_THIS_CONTROL_ARCHIVE"
+  ],
+  "candidate": {
+    "boundary_coordinate_packet_present": false,
+    "pdw2_conditioning_counted": true,
+    "pose_custody": {
+      "has_pose_sidecar": false,
+      "pose_carrier_manifest": null,
+      "xi_receiver_present": false
+    },
+    "r1b_candidate_measured": false,
+    "role": "production_receiver_control_no_r1b_packet"
+  },
+  "custody": {
+    "base_decoder": {
+      "path": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+      "sha256": "4b54d512565f7275c53f697a931dd087222a36a69495b6e536a6b65dede36224"
+    },
+    "decoded_raw": {
+      "bytes": 3662409600,
+      "cleanup_reason": "success-only deterministic decode scratch; archive, decoder, source, argv, environment, bytes, and hashes retained in this receipt",
+      "original_path": "/Volumes/VertigoDataTier/pact/evidence/r1b_boundary_generator_solve_20260720/r1b_n600_20260720T165927Z_18935/inflated/0.raw",
+      "rebuild_command": [
+        "tools/measure_r1b_boundary_generator_n600.py",
+        "--archive",
+        "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/pre_archive.zip",
+        "--base-decoder",
+        "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+        "--upstream",
+        "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709",
+        "--scratch-root",
+        "/Volumes/VertigoDataTier/pact/evidence/r1b_boundary_generator_solve_20260720",
+        "--output",
+        ".omx/research/r1b_boundary_generator_solve_20260720.json",
+        "--decode-workers",
+        "8",
+        "--cpu-threads",
+        "8",
+        "--batch-size",
+        "16",
+        "--seed",
+        "1234"
+      ],
+      "rebuildable": true,
+      "sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97"
+    },
+    "git": {
+      "dirty_paths": [],
+      "head": "aa2cb910c9128e79e392a19e49b61f31484bf499"
+    },
+    "scorer_hashes": {
+      "frame_utils.py": "d689aca7d263997cb2fb980d6098d503f955e56e8642cd0a04cc437f0ffdab90",
+      "modules.py": "065961ba97023e393e27818760b0dc8efaa8dd53c5d4cc70a2db8ee1b3cf49aa",
+      "posenet.safetensors": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+      "segnet.safetensors": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+    },
+    "source_video": {
+      "bytes": 37545489,
+      "path": "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709/videos/0.mkv",
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    },
+    "upstream": "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709"
+  },
+  "decode": {
+    "archive_bytes_full": 94344,
+    "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+    "base_decoder_stdout_tail": "inflated 1200 frames (600 pairs) -> /Volumes/VertigoDataTier/pact/evidence/r1b_boundary_generator_solve_20260720/r1b_n600_20260720T165927Z_18935/decode_scratch/c2_byte_close_vih1rzlx/base.raw [1200x874x1164x3 uint8] (8 workers)\n",
+    "canonical_numpy_scorer_sha256": "f09527720969b6552a29db13ff68efe3fd55c908ebac44dd829cfa6b3ec3f6f8",
+    "decoded_raw": "/Volumes/VertigoDataTier/pact/evidence/r1b_boundary_generator_solve_20260720/r1b_n600_20260720T165927Z_18935/inflated/0.raw",
+    "decoded_raw_bytes_capped": 3662409600,
+    "decoded_raw_sha256": "dbfcdcfa9c2ea361cfa51eb6b6e26379b20ad5591fb0fe399ace496315628a97",
+    "factor2_exact": true,
+    "logical_pair_count": 600,
+    "numpy_decode_equal": true,
+    "pair_cap": 600,
+    "parse_back_scorer_sha256": "f09527720969b6552a29db13ff68efe3fd55c908ebac44dd829cfa6b3ec3f6f8",
+    "schema": "c2_integer_plane_byte_close_receipt.v1",
+    "scope": "full_n600_decode_non_score",
+    "score_claim": false,
+    "section_accounting": {
+      "accounted_archive_bytes": 94344,
+      "archive": "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/pre_archive.zip",
+      "archive_bytes": 94344,
+      "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+      "base_video_payload_counted": true,
+      "compressed_section_bytes": 93772,
+      "ema_authority": true,
+      "pdw2_promotion_blocker": "PDW2_COEFFICIENT_ONLY_SPATIAL_NONIDENTIFIABILITY",
+      "pdw2_spatial_receiver_consumed": false,
+      "pdw2_video_target_payload_counted": true,
+      "repair_video_payload_counted": false,
+      "residual_video_payload_counted": true,
+      "schema": "c2_integer_plane_counted_archive.v1",
+      "score_claim": false,
+      "sections": [
+        {
+          "compressed_bytes": 83730,
+          "name": "0.bin",
+          "sha256": "f0c3e648f00f52e48c7be98997fb7dd57c2e5a607ed385846931af68f88cc78c",
+          "uncompressed_bytes": 84536
+        },
+        {
+          "compressed_bytes": 1036,
+          "name": "ipe_manifest.json",
+          "sha256": "838fe8f7db96599e396e0595747e045074f57394902b4183f3fa036aba9121a0",
+          "uncompressed_bytes": 1857
+        },
+        {
+          "compressed_bytes": 105,
+          "name": "seg_head_target.pdw2",
+          "sha256": "93c0d3320e6673aed1975426a6c8c1bbc41475f295ea62b357ad7a6bf9427568",
+          "uncompressed_bytes": 138
+        },
+        {
+          "compressed_bytes": 8874,
+          "name": "ipe_codes.f16",
+          "sha256": "b43c4ff506cd7ec4825e1379dad2701e23702f1b359c9e06bc932f21482bb73e",
+          "uncompressed_bytes": 9600
+        },
+        {
+          "compressed_bytes": 27,
+          "name": "ipe_quotient_residual_head.f16",
+          "sha256": "c5d39370644c7b16ccd6e09e4d92a1a6980073baad29214bdb530dca290e647d",
+          "uncompressed_bytes": 24
+        }
+      ],
+      "zip_overhead_bytes": 572
+    }
+  },
+  "gates": {
+    "archive_bytes": 94344,
+    "archive_gate_pass": true,
+    "archive_margin_bytes": 192336,
+    "d_seg": 0.003515794640406966,
+    "d_seg_gate": 0.000339,
+    "d_seg_gate_pass": false,
+    "d_seg_margin": -0.0031767946404069663,
+    "fixed_c1_cap_bytes": 216223,
+    "fixed_c1_cap_pass": true,
+    "fixed_c1_margin_bytes": 121879,
+    "joint_fixed_c1_gate_pass": false,
+    "joint_task_gate_pass": false,
+    "task_archive_gate_bytes": 286680
+  },
+  "live_directives_consumed": {
+    "full_kernel": {
+      "consumer_commit": "9b50eb4aeb",
+      "measured_constant_preference_one_frame_seconds": 34.76902845897712,
+      "measured_full_real_linear_nullity_fraction": 0.806742,
+      "measured_mask_only_nullity_fraction": 0.226969,
+      "naive_constant_preference_byte_negative": true,
+      "required_selection": "minimum description length joined with scorer-margin custody",
+      "schema": "resize_null_preimage_full_kernel.v1",
+      "source_commit": "da64a5bc8e",
+      "uint8_realizable_canonical_basis_fraction_lower_bound": 0.341931,
+      "verdict_scope": "compiler consumed in the joint candidate and ERM hard-oracle paths; no production R1b archive candidate exists yet"
+    },
+    "r2b_interaction_measurement": {
+      "bounded_uint8_realizable_flip_cell_fraction": 0.934,
+      "break_even_stream_bytes_at_measured_realization": 1852,
+      "gap_flips": 17926,
+      "interaction_term_dominant": true,
+      "moderate_margin_1e_3_to_1_flips": 16319,
+      "moderate_margin_score_debt": 0.01383,
+      "pose_dim0_mse": 0.0006107,
+      "pose_other_dims_mse": [
+        2.1e-7,
+        1.4e-7,
+        1.7e-8,
+        3.9e-9,
+        2.6e-8
+      ],
+      "realized_fraction_of_scheduled_flip_recovery": 0.09462,
+      "realized_flips": 1585,
+      "scheduled_flips": 16751,
+      "source_receipts": "r2b_sparse_target_selection_20260720.{md,json} at 01e8a9e88c..3c62eeb494",
+      "tie_tight_flips": 1607,
+      "tie_tight_score_debt": 0.00136,
+      "verdict_scope": "measured sibling R2b input; not remeasured by R1b"
+    }
+  },
+  "measurement_interpretation": {
+    "archive_bytes_per_pair": 157.24,
+    "d_seg_gate_miss_factor": 10.371075635418779,
+    "d_seg_reduction_required_fraction": 0.9035779860109351,
+    "estimated_mismatched_pixels_nearest_integer": 414740,
+    "estimated_mismatched_pixels_semantics": "DERIVED from aggregate d_seg times 600x384x512; nearest integer only",
+    "fixed_c1_cap_bytes_per_pair": 360.37166666666667,
+    "full_kernel_constant_preference_600_frame_seconds_derived": 20861.417075386274,
+    "full_kernel_runtime_projection_semantics": "DERIVED diagnostic from one-frame null-compiler timing; not a production receiver measurement and not admissible runtime",
+    "task_cap_bytes_per_pair": 477.8
+  },
+  "next_coordinate": "derive batch16 winner-rival first-order plus realized secant Jacobians on moderate-margin boundary debt, use the consumed full resize-kernel compiler offline to select minimum-description exact bounded-uint8 preimages, compile a counted compact replay grammar plus xi dim0-only pose leg into one strict archive with receiver runtime <=1800 seconds, target <=1852 carrier bytes at the measured 9.462% realization or remeasure realization and recompute break-even, then rerun n600",
+  "pointer": "0.19108 [contest-CPU] UNMOVED",
+  "row": {
+    "archive_bytes": 94344,
+    "archive_sha256": "d633e6bfbbb5963b638f6f469ed1298ac86dbe3e04e5eae1b06b08cf64397539",
+    "batch_count": 38,
+    "batch_size": 16,
+    "cpu_threads": 8,
+    "d_pose": 127.36588287353516,
+    "d_seg": 0.003515794640406966,
+    "deterministic_algorithms": true,
+    "device": "cpu",
+    "pair_count": 600,
+    "pose_component": 35.688357047296975,
+    "rate_component": 0.06281979707335814,
+    "score": 36.10275630841103,
+    "seed": 1234,
+    "seg_component": 0.3515794640406966,
+    "torch_version": "2.12.1"
+  },
+  "runtime": {
+    "argv": [
+      "tools/measure_r1b_boundary_generator_n600.py",
+      "--archive",
+      "/Volumes/VertigoDataTier/pact/evidence/m1_c2_glue_rebuild_20260719/pre_archive.zip",
+      "--base-decoder",
+      "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet/inflate.py",
+      "--upstream",
+      "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709",
+      "--scratch-root",
+      "/Volumes/VertigoDataTier/pact/evidence/r1b_boundary_generator_solve_20260720",
+      "--output",
+      ".omx/research/r1b_boundary_generator_solve_20260720.json",
+      "--decode-workers",
+      "8",
+      "--cpu-threads",
+      "8",
+      "--batch-size",
+      "16",
+      "--seed",
+      "1234"
+    ],
+    "decode_seconds": 738.9803147315979,
+    "decode_workers": 8,
+    "hard_score_seconds": 487.2737021446228,
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "total_seconds": 1234.0450530052185
+  },
+  "schema": "r1b_boundary_generator_n600_measurement.v1",
+  "scratch_cleanup": {
+    "certified_rebuildable": true,
+    "path": "/Volumes/VertigoDataTier/pact/evidence/r1b_boundary_generator_solve_20260720/r1b_n600_20260720T165927Z_18935",
+    "policy": "delete only after atomic receipt fsync"
+  },
+  "storage_preflight": {
+    "expected_output_raw_bytes": 3662409600,
+    "free_bytes": 779043606528,
+    "ok": true,
+    "required_free_bytes": 9324819200,
+    "scratch_root": "/Volumes/VertigoDataTier/pact/evidence/r1b_boundary_generator_solve_20260720"
+  },
+  "verdict": "MEASURED_N600_PRODUCTION_RECEIVER_CONTROL_R1B_CANDIDATE_ABSENT",
+  "verdict_scope": "exact existing C2 receiver control only; no counted boundary-coordinate packet, no R1b candidate, no family negative"
+}

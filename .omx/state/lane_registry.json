@@ -79851,6 +79851,270 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_r1_shared_receiver_20260720T151631Z",
+      "name": "R1 shared PDW2 and realization receiver",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Measured formulation-scoped blocker: dense f32 conditional field is 561502227 B, PDW1 label/fill projects to 496067 B with d_seg 0.0080695682, and measured n48 sparse prefix is below rate waterline. Shared hard-admission guard and canonical equation landed; no receiver, score, promotion, or pointer authority. MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "counted curvelet/shearlet boundary generator exists",
+        "scorer-free packet-causal spatial/RGB receiver exists",
+        "exact n600 archive+payload+hard-CPU-oracle hashes pass shared admission",
+        "production receiver parseback and through-R metrics clear 286680 B and d_seg 0.000339 gates"
+      ]
+    },
+    {
+      "id": "r1b_boundary_generator_solve_20260720T161946Z",
+      "name": "R1b boundary-coordinate generator joint hard-oracle solve",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 research-only: solve boundary and full-kernel integration built; exact n600 C2 control measured; no compiled R1b archive candidate; pointer unchanged; MAIN review required",
+      "research_only": true,
+      "reactivation_criteria": [
+        "production moderate-margin first-order plus realized-secant Jacobian custody",
+        "counted boundary packet plus compact full-kernel replay plus xi0 strict archive",
+        "full n600 hard CPU through-R row with receiver runtime at most 1800 seconds"
+      ]
+    },
+    {
+      "id": "lane_null_compiler_full_kernel_20260720",
+      "name": "Resize null preimage full real-linear kernel compiler",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/resize_full_kernel.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Full real-linear kernel compiler complete in isolated branch; one-frame SHA-pinned advisory anchor retained old mask; pointer unmoved; MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "MAIN adoption",
+        "receiver-closed counted-byte win on exact archive bytes"
+      ]
+    },
+    {
+      "id": "lane_r1b2_mdl_xi0_compile_20260720",
+      "name": "R1b2 moderate-margin full-kernel MDL xi0 compile",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/r1b2_mdl_xi0_compile.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_r1b3_producers_20260720",
+      "name": "R1b3 production boundary MDL xi0 producers",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated isolated-worktree $0 local producer build; macOS-CPU advisory only; no paid dispatch; MAIN review required."
+    },
+    {
+      "id": "lane_r1b4_receiver_actuator_20260720",
+      "name": "R1b4 section-aware production receiver and xi0 actuator",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Delegated isolated-worktree local receiver build; exact section consumption and deterministic mutation proof; macOS-CPU advisory only; no scorer in receiver; pointer unchanged; MAIN review required."
     }
   ],
   "level_rules": {
@@ -79860,5 +80124,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T07:18:36Z"
+  "updated_at": "2026-07-20T19:13:35Z"
 }

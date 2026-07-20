@@ -1,0 +1,193 @@
+{
+  "captured_at_utc": "2026-07-20T16:54:10Z",
+  "compiler_schema": "resize_null_preimage_full_kernel.v1",
+  "coverage": {
+    "added_coverage_percentage_points": 57.977305433013285,
+    "added_full_kernel_dimensions_per_channel": 589824,
+    "domain_dimension_per_channel": 1017336,
+    "full_nullity_fraction": 0.8067423152232891,
+    "full_nullity_per_channel": 820728,
+    "full_nullity_percent": 80.67423152232891,
+    "height_axis_nullity": 490,
+    "height_axis_nullity_fraction": 0.5606407322654462,
+    "height_axis_nullity_percent": 56.06407322654462,
+    "identity_check": true,
+    "left_tensor_dimensions": 570360,
+    "old_zero_weight_fraction": 0.22696926089315625,
+    "old_zero_weight_nullity_per_channel": 230904,
+    "old_zero_weight_percent": 22.696926089315625,
+    "resize_rank_per_channel": 196608,
+    "right_tensor_dimensions": 250368,
+    "width_axis_nullity": 652,
+    "width_axis_nullity_fraction": 0.5601374570446735,
+    "width_axis_nullity_percent": 56.013745704467354
+  },
+  "elapsed_seconds": 34.76902845897712,
+  "fixture": {
+    "decoded_frames_sha256": "47492a5864f0521f0ab6b129e4b172717139ba202fc3265a5220b6d1b15c24ed",
+    "expected_sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "n_frames": 1,
+    "path": "/Volumes/VertigoDataTier/pact/molab_witness_machine_upstream_20260709/videos/0.mkv",
+    "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9",
+    "sha256_matches": true
+  },
+  "frame_rows": [
+    {
+      "candidates": [
+        {
+          "budget_blocks": 1,
+          "bytes": {
+            "brotli": 1776431,
+            "lzma": 1803559
+          },
+          "exact_blocks": 589823,
+          "exact_numerator_equal": true,
+          "fallback_blocks": 1,
+          "max_float_projection_residual": 5.684341886080802e-14,
+          "nodes_visited": 3363065,
+          "preference": "constant",
+          "proven_infeasible_blocks": 0
+        }
+      ],
+      "delta_selected_vs_old_mask": {
+        "brotli": 0,
+        "lzma": 0
+      },
+      "delta_selected_vs_original": {
+        "brotli": -183778,
+        "lzma": -167582
+      },
+      "exact_resize_numerator_equal": true,
+      "frame_index": 0,
+      "global_mdl_optimum_claim": false,
+      "old_mask_bytes": {
+        "brotli": 1263881,
+        "lzma": 1257035
+      },
+      "original_bytes": {
+        "brotli": 1447659,
+        "lzma": 1424617
+      },
+      "promotion_eligible": false,
+      "resize_numerator_denominator": 786432,
+      "schema": "resize_null_preimage_full_kernel.v1",
+      "score_claim": false,
+      "selected_bytes": {
+        "brotli": 1263881,
+        "lzma": 1257035
+      },
+      "selected_frame_sha256": "f5f483e8748ee1d3e70421be046db3a0312c68421eb8d58f0ecfd25d999a4a51",
+      "selected_name": "old_zero_weight_mask",
+      "selected_uses_full_kernel": false,
+      "source_frame_sha256": "47492a5864f0521f0ab6b129e4b172717139ba202fc3265a5220b6d1b15c24ed",
+      "uint8_reachability": {
+        "active_cell_channel_rank_histogram": {
+          "0": 509220,
+          "1": 12022,
+          "2": 68582,
+          "3": 0
+        },
+        "active_tensor_directions": 1769472,
+        "channels": 3,
+        "feasible_active_directions": 149186,
+        "feasible_basis_directions_lower_bound": 841898,
+        "feasible_basis_fraction_lower_bound": 0.34193139099271214,
+        "feasible_basis_percent_lower_bound": 34.193139099271214,
+        "feasible_height_col0_directions": 74469,
+        "feasible_height_col1_directions": 74717,
+        "feasible_width_tensor_directions": 0,
+        "full_basis_directions": 2462184,
+        "is_lower_bound_on_full_bounded_lattice_intersection": true,
+        "semantics": "canonical_tensor_primitive_basis_bounded_reachability_lower_bound",
+        "zero_weight_coordinate_directions": 692712
+      }
+    }
+  ],
+  "geometry": {
+    "camera_hw": [
+      874,
+      1164
+    ],
+    "resize": "bilinear_align_corners_false_disjoint_two_tap",
+    "scorer_hw": [
+      384,
+      512
+    ]
+  },
+  "hardware_substrate": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "measurement_axis": "[Darwin-arm64 CPU advisory]",
+  "minimum_description": {
+    "bytes": {
+      "brotli": {
+        "full_kernel_admitted_bytes": 1263881,
+        "full_kernel_delta_vs_old_mask": 0,
+        "full_kernel_delta_vs_original": -183778,
+        "full_kernel_reduction_vs_old_mask_percent": 0.0,
+        "full_kernel_reduction_vs_original_percent": 12.694840428581593,
+        "old_mask_bytes": 1263881,
+        "old_mask_delta_vs_original": -183778,
+        "original_bytes": 1447659
+      },
+      "lzma": {
+        "full_kernel_admitted_bytes": 1257035,
+        "full_kernel_delta_vs_old_mask": 0,
+        "full_kernel_delta_vs_original": -167582,
+        "full_kernel_reduction_vs_old_mask_percent": 0.0,
+        "full_kernel_reduction_vs_original_percent": 11.763301996255835,
+        "old_mask_bytes": 1257035,
+        "old_mask_delta_vs_original": -167582,
+        "original_bytes": 1424617
+      }
+    },
+    "candidate_solver_totals": {
+      "constant": {
+        "all_exact_numerator_equal": true,
+        "budget_blocks": 1,
+        "exact_blocks": 589823,
+        "fallback_blocks": 1,
+        "max_float_projection_residual": 5.684341886080802e-14,
+        "nodes_visited": 3363065,
+        "proven_infeasible_blocks": 0
+      }
+    },
+    "max_nodes_per_block": 128,
+    "preferences": [
+      "constant"
+    ],
+    "selected_full_kernel_frames": 0,
+    "selected_names": [
+      "old_zero_weight_mask"
+    ],
+    "semantics": "bounded deterministic coder-admitted heuristic, not global MDL optimum"
+  },
+  "pointer": "0.19108 [contest-CPU] UNMOVED",
+  "pointer_moved": false,
+  "promotion_eligible": false,
+  "provenance": {
+    "compiler_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/null_compiler_fix_20260720T160856Z/src/tac/optimization/resize_full_kernel.py",
+    "compiler_sha256": "3d2b06a89c292e5c17a2ba076e2bbd2698ecbca0e9320979c6022945f849f242",
+    "git_head": "482a9938a93fa1e1085f5afd467c123824a26a53",
+    "tool_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/null_compiler_fix_20260720T160856Z/tools/measure_resize_full_kernel.py",
+    "tool_sha256": "3bc8fafa6d53c3fc2d829847fcd578f2a30c83a4d7dc00fac5b1f25b81e0a890"
+  },
+  "research_only": true,
+  "schema": "resize_null_preimage_full_kernel_measurement.v1",
+  "score_claim": false,
+  "uint8_reachability": {
+    "active_tensor_directions": 1769472,
+    "class_or_margin_stratum": "not measured: this fixture-only compiler pass loads no frozen scorer labels/margins; kernel-family decomposition is supplied instead",
+    "decomposition_axis": "zero-weight coordinates, height-null col0, height-null col1, row-space x width-null tensor",
+    "feasible_active_directions": 149186,
+    "feasible_basis_directions_lower_bound": 841898,
+    "feasible_basis_fraction_lower_bound": 0.34193139099271214,
+    "feasible_basis_percent_lower_bound": 34.193139099271214,
+    "feasible_height_col0_directions": 74469,
+    "feasible_height_col1_directions": 74717,
+    "feasible_width_tensor_directions": 0,
+    "full_basis_directions": 2462184,
+    "is_lower_bound_on_full_bounded_lattice_intersection": true,
+    "semantics": "canonical_tensor_primitive_basis_bounded_reachability_lower_bound",
+    "zero_weight_coordinate_directions": 692712
+  },
+  "verdict_scope": "one SHA-pinned real fixture subset plus exact structural law"
+}
