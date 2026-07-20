@@ -79997,11 +79997,11 @@
       "id": "lane_r1b2_mdl_xi0_compile_20260720",
       "name": "R1b2 moderate-margin full-kernel MDL xi0 compile",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/optimization/r1b2_mdl_xi0_compile.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -80042,5 +80042,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T17:49:26Z"
+  "updated_at": "2026-07-20T18:22:05Z"
 }
