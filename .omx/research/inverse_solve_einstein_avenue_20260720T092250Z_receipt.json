@@ -78,6 +78,18 @@
     "outer_264320_box_is_a_fixed_c1_crossing": false,
     "correction": "The approximate 216300-byte handoff value and older 264000/264320-byte boxes are not strict fixed-C1 crossing caps. The exact strict integer cap is 216223 bytes."
   },
+  "position_and_remaining_gap": {
+    "evidence_label": "DERIVED SCORE-LAW COMPARISON; THEORETICAL FLOOR IS APPROXIMATE HANDOFF CONTEXT",
+    "carried_c1_score": 272.73427793588485,
+    "live_pointer_score": 0.1910828242,
+    "carried_c1_score_above_pointer": 272.54319511168484,
+    "approximate_theoretical_floor_score": 0.118,
+    "live_pointer_above_approximate_floor": 0.07308282420000001,
+    "carried_c1_score_above_approximate_floor": 272.61627793588485,
+    "fixed_c1_cap_score_above_approximate_floor": 0.07308240046379638,
+    "remaining_rate_gap_to_pointer_bytes": 409310702,
+    "interpretation": "At carried C1 distortion, rate must fall by 409310702 archive bytes merely to cross the live pointer. The approximate 0.118 floor remains another 0.0730828242 score units below that pointer and is context, not a measured row from this lane."
+  },
   "formulation_evidence": [
     {
       "formulation": "lossless exact C1 scorer-plane coordinates",

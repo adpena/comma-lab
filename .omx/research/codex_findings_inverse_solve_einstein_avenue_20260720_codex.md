@@ -25,6 +25,8 @@ Against the live `[contest-CPU]` pointer `0.1910828242`, the continuous byte cro
 
 Thus the handoff's `~216,300 B` is a useful order-of-magnitude pointer but not an admissible strict cap. The `264,320 B` outer box is also not a fixed-C1 crossing. Reaching the exact intersection requires removing **409,310,702 B** from C1, a `1894.00x` reduction to `360.372 B/pair` amortized.
 
+The carried C1 row is `272.54319511168484` score units above the live bank and `272.61627793588485` above the handoff's approximate `S_floor~0.118`. The bank itself remains `0.0730828242` above that approximate floor. These floor distances are **DERIVED context**, not a measured floor row; the concrete remaining bank gap is the `409,310,702 B` rate reduction above.
+
 ## What was actually tested or already settled
 
 | coordinate/formulation | custodied result | admission |
