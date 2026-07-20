@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 from pathlib import Path
 
@@ -35,8 +36,9 @@ from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
         (0.15, 1.0184e-4, 154_524),
     ],
 )
-def test_authority_derived_byte_cap_examples(target: float, d_pose: float, expected: int) -> None:
-    # Values are formula examples from the design memo, not a tournament result.
+def test_reported_center_byte_cap_examples(target: float, d_pose: float, expected: int) -> None:
+    # Formula examples only. The C1 216,223 B row is a reported-center point estimate,
+    # not an exact cap because the official distortion components have eight decimals.
     budget = maximum_byte_budget(target_action=target, d_seg=1.5196e-4, d_pose=d_pose)
     assert budget == expected
 
@@ -135,12 +137,14 @@ def test_hash_bound_canonical_equation_builds_from_frozen_measurement() -> None:
     frontier_anchor = equation.empirical_anchors[1]
     assert frontier_anchor.source_artifact == SOURCE_FRONTIER_MAGNITUDE
     assert frontier_anchor.empirical_output["exact_production_blocker"] == (
-        "NO_COMPACT_PREDICTOR_DESCRIPTION_IN_216_TO_244_KB_BOX"
+        "NO_COMPLETE_N600_ARCHIVE_WITHIN_TOTAL_SCORE_BYTE_CAP"
     )
-    assert frontier_anchor.empirical_output["bank"]["exact_action"] == pytest.approx(
-        272.73427793588485,
-        abs=1e-12,
+    bank = frontier_anchor.empirical_output["bank"]
+    assert bank["derived_action_interval_from_rounded_components"]["label"] == (
+        "DERIVED_INTERVAL_FROM_ROUNDED_COMPONENTS"
     )
+    assert bank["derived_strict_total_archive_cap"]["interval_bytes"] == [216_221, 216_225]
+    assert bank["derived_strict_total_archive_cap"]["guaranteed_safe_cap_bytes"] == 216_221
     assert frontier_anchor.empirical_output["pose_clean_trade_cells_control"]["point_id"] == "precision_drop1"
     assert frontier_anchor.empirical_output["matched_receiver_control"]["archive_bytes"] == 7_898_534
     assert frontier_anchor.empirical_output["matched_receiver_treatment"]["archive_bytes"] == 6_728_570
@@ -159,8 +163,37 @@ def test_frontier_magnitude_chart_recomputes_every_projection() -> None:
     assert chart["selection"]["matched_receiver_positive_band_control"] == ("banked_n12_scorer_plane_precision_drop1")
     assert len(chart["trade_cells_curve"]["points"]) == 10
     assert len(chart["exact_archive_rows"]) == 4
-    assert chart["exact_production_gap"]["blocker"] == "NO_COMPACT_PREDICTOR_DESCRIPTION_IN_216_TO_244_KB_BOX"
+    assert len(chart["source_receipts"]) == 8
+    assert chart["exact_production_gap"]["blocker"] == "NO_COMPLETE_N600_ARCHIVE_WITHIN_TOTAL_SCORE_BYTE_CAP"
     assert chart["exact_production_gap"]["secondary_blocker"] == "MISSING_ARBITRARY_NUMERATOR_PLANE_CODEC"
+    bank = next(row for row in chart["exact_archive_rows"] if row["point_id"].startswith("c1_solved"))
+    assert "exact_action" not in bank
+    assert "strict_bytes_to_beat_pointer_at_measured_distortion" not in bank
+    assert bank["derived_action_interval_from_rounded_components"]["lower"].startswith("272.73427665248019432934")
+    assert bank["derived_action_interval_from_rounded_components"]["upper"].startswith("272.73427921927025974944")
+    assert bank["derived_strict_total_archive_cap"]["scope"] == ("total archive.zip bytes, not a predictor-only budget")
+
+
+def test_frontier_chart_refuses_nonexistent_local_source_receipt(tmp_path: Path) -> None:
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    payload["source_receipts"][3]["path"] = ".omx/research/nonexistent-fake-receipt.json"
+    payload["source_receipts"][3]["sha256"] = "0" * 64
+    chart_path = tmp_path / "fake-source-chart.json"
+    chart_path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="source artifact is absent"):
+        validate_frontier_magnitude_chart(chart_path)
+
+
+def test_frontier_chart_refuses_banked_v3_content_mismatch(tmp_path: Path) -> None:
+    payload = json.loads(Path(SOURCE_FRONTIER_MAGNITUDE).read_text())
+    control = next(
+        row for row in payload["exact_archive_rows"] if row["point_id"] == "banked_n12_exact_receiver_control"
+    )
+    control["archive_bytes"] += 1
+    chart_path = tmp_path / "banked-drift-chart.json"
+    chart_path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="drifted from banked v3 arm control"):
+        validate_frontier_magnitude_chart(chart_path)
 
 
 def test_canonical_equation_registry_query_roundtrip(tmp_path: Path) -> None:

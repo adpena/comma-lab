@@ -10,9 +10,12 @@ frontier authority is created by registration.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
+import subprocess
 from dataclasses import dataclass
+from decimal import ROUND_CEILING, Decimal, localcontext
 from pathlib import Path
 from typing import Literal
 
@@ -32,6 +35,33 @@ SEGMENTATION_WEIGHT = 100.0
 POSE_RADICAND_WEIGHT = 10.0
 SOURCE_MEASUREMENT = ".omx/research/einstein_kolmogorov_crux_measurement_20260719.json"
 SOURCE_FRONTIER_MAGNITUDE = ".omx/research/einstein_kolmogorov_frontier_magnitude_chart_20260720.json"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+BANKED_AB_V3_PATH = ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json"
+BANKED_AB_V3_SHA256 = "9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a"
+BANKED_AB_SUPERSEDED = (
+    {
+        "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720.json",
+        "sha256": "9c031e016300768593d8848d265ed5d5c9fb915f335dd9024b3ba0b8ecfb904a",
+        "reason": "strict total-byte equality boundary and immutable cleanup-successor custody were not closed",
+    },
+    {
+        "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v2.json",
+        "sha256": "9de355d7208f0256d9e137ace54c24cf0f9b3f6907dbb3753227f9c26807c7c7",
+        "reason": "ephemeral output-root identity and receipt-to-chart provenance were not bound",
+    },
+)
+C1_COMPONENT_DECIMAL_PLACES = 8
+C1_ARCHIVE_PATH = (
+    "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip"
+)
+C1_CONTEST_CPU_EVAL_PATH = (
+    "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/"
+    "harvest_fc01KXXRAR/contest_auth_eval.json"
+)
+C1_CONTEST_CPU_VALIDATION_PATH = (
+    "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/"
+    "harvest_fc01KXXRAR/modal_cpu_auth_eval_validation.json"
+)
 
 
 class InfeasibleByteBudgetError(ValueError):
@@ -272,6 +302,366 @@ def _load_scoped_measurement(path: str | Path) -> tuple[dict, dict, dict]:
     return payload, source, winner
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _git_blob_sha256(commit: str, repo_relative_path: str) -> str:
+    if (
+        not isinstance(commit, str)
+        or len(commit) != 40
+        or any(character not in "0123456789abcdef" for character in commit)
+    ):
+        raise ValueError("historical git commit custody is malformed")
+    completed = subprocess.run(
+        ["git", "show", f"{commit}:{repo_relative_path}"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        raise ValueError("historical git blob custody is unavailable")
+    return hashlib.sha256(completed.stdout).hexdigest()
+
+
+def _resolve_source_path(value: str) -> Path:
+    path = Path(value)
+    return path.resolve() if path.is_absolute() else (REPO_ROOT / path).resolve()
+
+
+def _validate_artifact_row(row: dict, *, label: str, portable_absolute: bool = False) -> Path | None:
+    path_value = row.get("path")
+    sha256 = row.get("sha256")
+    if (
+        not isinstance(path_value, str)
+        or not path_value
+        or not isinstance(sha256, str)
+        or len(sha256) != 64
+        or sha256.lower() != sha256
+        or any(character not in "0123456789abcdef" for character in sha256)
+    ):
+        raise ValueError(f"{label} path/SHA custody is malformed")
+    path = _resolve_source_path(path_value)
+    if not Path(path_value).is_absolute() and not path.is_relative_to(REPO_ROOT):
+        raise ValueError(f"{label} relative path escapes the repository")
+    if not path.is_file():
+        if Path(path_value).is_absolute() and portable_absolute and row.get("portable_if_absent") is True:
+            return None
+        raise ValueError(f"{label} source artifact is absent")
+    expected_bytes = row.get("bytes")
+    if expected_bytes is not None and _nonnegative_bytes(expected_bytes, f"{label}.bytes") != path.stat().st_size:
+        raise ValueError(f"{label} byte custody drift")
+    if _sha256_file(path) != sha256:
+        raise ValueError(f"{label} SHA custody drift")
+    return path
+
+
+def _validate_source_receipts(payload: dict) -> dict[str, dict]:
+    rows = payload.get("source_receipts")
+    if not isinstance(rows, list) or len(rows) != 8 or any(not isinstance(row, dict) for row in rows):
+        raise ValueError("frontier-magnitude chart requires exactly eight source receipts")
+    paths = [row.get("path") for row in rows]
+    if any(not isinstance(path, str) for path in paths) or len(set(paths)) != len(paths):
+        raise ValueError("frontier-magnitude source-receipt paths must be unique strings")
+    by_path: dict[str, dict] = {}
+    for index, row in enumerate(rows):
+        _validate_artifact_row(row, label=f"source_receipts[{index}]", portable_absolute=True)
+        by_path[row["path"]] = row
+    return by_path
+
+
+def _decimal_action(*, d_seg: Decimal, d_pose: Decimal, archive_bytes: int) -> Decimal:
+    with localcontext() as context:
+        context.prec = 60
+        return (
+            Decimal(100) * d_seg
+            + (Decimal(10) * d_pose).sqrt()
+            + Decimal(25) * Decimal(archive_bytes) / Decimal(RATE_DENOMINATOR_BYTES)
+        )
+
+
+def _rounded_component_interval(value: float | int, *, decimal_places: int) -> tuple[Decimal, Decimal]:
+    center = Decimal(str(_nonnegative_real(value, "rounded_component")))
+    half_ulp = Decimal(5).scaleb(-(decimal_places + 1))
+    return center - half_ulp, center + half_ulp
+
+
+def _decimal_strict_byte_budget(*, target: Decimal, d_seg: Decimal, d_pose: Decimal) -> int:
+    with localcontext() as context:
+        context.prec = 60
+        slack = target - Decimal(100) * d_seg - (Decimal(10) * d_pose).sqrt()
+        if slack <= 0:
+            raise InfeasibleByteBudgetError("target action cannot be strictly beaten before the rate term")
+        boundary = slack * Decimal(RATE_DENOMINATOR_BYTES) / Decimal(RATE_WEIGHT)
+        candidate = int(boundary.to_integral_value(rounding=ROUND_CEILING)) - 1
+        if not (
+            _decimal_action(d_seg=d_seg, d_pose=d_pose, archive_bytes=candidate) < target
+            and _decimal_action(d_seg=d_seg, d_pose=d_pose, archive_bytes=candidate + 1) >= target
+        ):
+            raise ValueError("decimal strict byte-cap bracketing failed")
+        return candidate
+
+
+def _validate_c1_source_custody(bank: dict, *, source_rows: dict[str, dict]) -> None:
+    archive_source = source_rows.get(C1_ARCHIVE_PATH)
+    eval_source = source_rows.get(C1_CONTEST_CPU_EVAL_PATH)
+    validation_source = source_rows.get(C1_CONTEST_CPU_VALIDATION_PATH)
+    if not all(isinstance(row, dict) for row in (archive_source, eval_source, validation_source)):
+        raise ValueError("C1 archive/evaluation source receipts are incomplete")
+    if (
+        bank.get("archive_bytes") != archive_source.get("bytes")
+        or bank.get("archive_sha256") != archive_source.get("sha256")
+        or bank.get("pair_count") != 600
+    ):
+        raise ValueError("C1 chart archive custody drifted from its exact source receipt")
+    eval_path = _resolve_source_path(C1_CONTEST_CPU_EVAL_PATH)
+    validation_path = _resolve_source_path(C1_CONTEST_CPU_VALIDATION_PATH)
+    if not eval_path.is_file() or not validation_path.is_file():
+        return
+    evaluation = json.loads(eval_path.read_text(encoding="utf-8"), parse_float=Decimal)
+    validation = json.loads(validation_path.read_text(encoding="utf-8"), parse_float=Decimal)
+    reported_d_seg = evaluation.get("avg_segnet_dist")
+    reported_d_pose = evaluation.get("avg_posenet_dist")
+    if (
+        not isinstance(reported_d_seg, Decimal)
+        or not isinstance(reported_d_pose, Decimal)
+        or reported_d_seg.as_tuple().exponent != -C1_COMPONENT_DECIMAL_PLACES
+        or reported_d_pose.as_tuple().exponent != -C1_COMPONENT_DECIMAL_PLACES
+    ):
+        raise ValueError("C1 official evaluation components are not lexically reported to eight decimals")
+    if (
+        Decimal(str(bank.get("d_seg"))) != reported_d_seg
+        or Decimal(str(bank.get("d_pose"))) != reported_d_pose
+        or evaluation.get("archive_size_bytes") != bank.get("archive_bytes")
+        or evaluation.get("n_samples") != bank.get("pair_count")
+        or evaluation.get("score_axis") != "contest_cpu"
+        or evaluation.get("provenance", {}).get("archive_sha256") != bank.get("archive_sha256")
+        or Decimal(str(bank.get("derived_action_point_estimate_from_reported_centers")))
+        != evaluation.get("score_recomputed_from_components")
+    ):
+        raise ValueError("C1 chart values drifted from the official contest-CPU evaluation")
+    if (
+        validation.get("passed") is not True
+        or validation.get("archive_size_bytes") != bank.get("archive_bytes")
+        or validation.get("expected_archive_sha256") != bank.get("archive_sha256")
+        or validation.get("avg_segnet_dist") != reported_d_seg
+        or validation.get("avg_posenet_dist") != reported_d_pose
+        or validation.get("score_axis") != "contest_cpu"
+    ):
+        raise ValueError("C1 chart values drifted from the official policy-clamp receipt")
+
+
+def _validate_c1_rounded_interval(bank: dict, *, target: float) -> None:
+    if (
+        bank.get("archive_measurement_label") != "MEASURED_EXACT_BYTES [contest-CPU custody]"
+        or bank.get("distortion_measurement_label") != "MEASURED_ROUNDED_8DP [contest-CPU]"
+    ):
+        raise ValueError("C1 exact-byte/rounded-distortion authority labels drifted")
+    d_seg_interval = _rounded_component_interval(bank.get("d_seg"), decimal_places=C1_COMPONENT_DECIMAL_PLACES)
+    d_pose_interval = _rounded_component_interval(bank.get("d_pose"), decimal_places=C1_COMPONENT_DECIMAL_PLACES)
+    recorded_components = bank.get("rounded_component_intervals")
+    if not isinstance(recorded_components, dict):
+        raise ValueError("C1 rounded-component interval custody is absent")
+    for name, calculated in (("d_seg", d_seg_interval), ("d_pose", d_pose_interval)):
+        recorded = recorded_components.get(name)
+        if (
+            not isinstance(recorded, dict)
+            or Decimal(str(recorded.get("lower"))) != calculated[0]
+            or Decimal(str(recorded.get("upper"))) != calculated[1]
+            or recorded.get("closure") != "closed_half_ulp"
+        ):
+            raise ValueError(f"C1 {name} rounding interval drift")
+    center_action = contest_action(
+        d_seg=bank.get("d_seg"),
+        d_pose=bank.get("d_pose"),
+        archive_bytes=bank.get("archive_bytes"),
+    )
+    if not math.isclose(
+        center_action,
+        bank.get("derived_action_point_estimate_from_reported_centers"),
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise ValueError("C1 reported-center action arithmetic drift")
+    action_interval = bank.get("derived_action_interval_from_rounded_components")
+    lower_action = _decimal_action(
+        d_seg=d_seg_interval[0],
+        d_pose=d_pose_interval[0],
+        archive_bytes=bank["archive_bytes"],
+    )
+    upper_action = _decimal_action(
+        d_seg=d_seg_interval[1],
+        d_pose=d_pose_interval[1],
+        archive_bytes=bank["archive_bytes"],
+    )
+    if (
+        not isinstance(action_interval, dict)
+        or action_interval.get("label") != "DERIVED_INTERVAL_FROM_ROUNDED_COMPONENTS"
+        or Decimal(str(action_interval.get("lower"))) != lower_action
+        or Decimal(str(action_interval.get("upper"))) != upper_action
+    ):
+        raise ValueError("C1 action interval drift")
+    target_decimal = Decimal(str(target))
+    cap_min = _decimal_strict_byte_budget(
+        target=target_decimal,
+        d_seg=d_seg_interval[1],
+        d_pose=d_pose_interval[1],
+    )
+    cap_max = _decimal_strict_byte_budget(
+        target=target_decimal,
+        d_seg=d_seg_interval[0],
+        d_pose=d_pose_interval[0],
+    )
+    cap = bank.get("derived_strict_total_archive_cap")
+    if (
+        not isinstance(cap, dict)
+        or cap.get("label") != "DERIVED_STRICT_TOTAL_ARCHIVE_CAP_INTERVAL"
+        or cap.get("point_estimate_from_reported_centers")
+        != maximum_byte_budget(target_action=target, d_seg=bank["d_seg"], d_pose=bank["d_pose"])
+        or cap.get("interval_bytes") != [cap_min, cap_max]
+        or cap.get("guaranteed_safe_cap_bytes") != cap_min
+        or cap.get("scope") != "total archive.zip bytes, not a predictor-only budget"
+    ):
+        raise ValueError("C1 total-archive cap interval drift")
+
+
+def _validate_banked_v3_receipt(*, source_rows: dict[str, dict], chart_rows: dict[str, dict]) -> None:
+    source = source_rows.get(BANKED_AB_V3_PATH)
+    if not isinstance(source, dict) or source.get("sha256") != BANKED_AB_V3_SHA256:
+        raise ValueError("frontier chart does not bind the authoritative banked v3 receipt")
+    receipt_path = _resolve_source_path(BANKED_AB_V3_PATH)
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    lifecycle = receipt.get("artifact_lifecycle")
+    if (
+        receipt.get("schema") != "v10_free_predictor_floor_banked_ab.v2"
+        or receipt.get("supersedes") != list(BANKED_AB_SUPERSEDED)
+        or not isinstance(lifecycle, dict)
+        or lifecycle.get("cleanup_completed") is not True
+        or lifecycle.get("cleanup_status") != "complete"
+        or lifecycle.get("per_arm_stage_receipts_preserved_after_success") is not True
+    ):
+        raise ValueError("authoritative banked v3 receipt lacks mechanical supersession/lifecycle closure")
+    for index, superseded in enumerate(BANKED_AB_SUPERSEDED):
+        _validate_artifact_row(superseded, label=f"banked v3 superseded receipt {index}")
+    rebuildable = lifecycle.get("rebuildable_from")
+    cleanup_execution = lifecycle.get("cleanup_execution_custody")
+    measurement_execution = receipt.get("execution_custody")
+    if (
+        not isinstance(rebuildable, dict)
+        or not isinstance(cleanup_execution, dict)
+        or not isinstance(measurement_execution, dict)
+        or cleanup_execution.get("cross_version_cleanup_only") is not True
+        or cleanup_execution.get("precleanup_tool_sha256") != rebuildable.get("tool_sha256")
+        or measurement_execution.get("tool_sha256") != rebuildable.get("tool_sha256")
+        or _git_blob_sha256(
+            measurement_execution.get("git_head_before_measurement"),
+            "tools/measure_v10_free_predictor_floor.py",
+        )
+        != measurement_execution.get("tool_sha256")
+        or _git_blob_sha256(
+            cleanup_execution.get("git_head"),
+            "tools/measure_v10_free_predictor_floor.py",
+        )
+        != cleanup_execution.get("tool_sha256")
+        or cleanup_execution.get("tool_sha256") == cleanup_execution.get("precleanup_tool_sha256")
+    ):
+        raise ValueError("authoritative banked v3 cross-version cleanup custody drifted")
+    predecessor = lifecycle.get("precleanup_receipt")
+    if not isinstance(predecessor, dict):
+        raise ValueError("authoritative banked v3 receipt lacks its immutable predecessor")
+    predecessor_path = _validate_artifact_row(predecessor, label="banked v3 precleanup receipt")
+    if predecessor_path is None:
+        raise ValueError("banked v3 predecessor cannot be portable-only")
+    predecessor_payload = json.loads(predecessor_path.read_text(encoding="utf-8"))
+    predecessor_lifecycle = predecessor_payload.get("artifact_lifecycle")
+    if (
+        predecessor_payload.get("schema") != receipt.get("schema")
+        or not isinstance(predecessor_lifecycle, dict)
+        or predecessor_lifecycle.get("cleanup_completed") is not False
+        or predecessor_lifecycle.get("cleanup_status") != "pending"
+    ):
+        raise ValueError("banked v3 immutable predecessor state drifted")
+    reconstructed = json.loads(json.dumps(receipt))
+    reconstructed_lifecycle = reconstructed["artifact_lifecycle"]
+    reconstructed_lifecycle["cleanup_completed"] = False
+    reconstructed_lifecycle["cleanup_status"] = "pending"
+    for key in ("cleanup_completed_at_utc", "cleanup_execution_custody", "precleanup_receipt"):
+        reconstructed_lifecycle.pop(key, None)
+    if reconstructed != predecessor_payload:
+        raise ValueError("banked v3 final receipt is not an exact cleanup-only successor")
+    stage_rows = lifecycle.get("durable_stage_receipts")
+    if not isinstance(stage_rows, dict) or set(stage_rows) != {"control", "precision-drop"}:
+        raise ValueError("banked v3 does not bind both durable arm stages")
+    expected_stage_arm = {"control": "control", "precision-drop": "precision_drop"}
+    for stage_id, arm_id in expected_stage_arm.items():
+        row = stage_rows.get(stage_id)
+        if not isinstance(row, dict):
+            raise ValueError(f"banked v3 {stage_id} stage custody is malformed")
+        stage_path = _validate_artifact_row(row, label=f"banked v3 {stage_id} stage")
+        if stage_path is None:
+            raise ValueError("banked v3 stages cannot be portable-only")
+        stage = json.loads(stage_path.read_text(encoding="utf-8"))
+        if (
+            stage.get("schema") != "v10_free_predictor_floor_banked_ab_stage.v1"
+            or stage.get("arm_id") != arm_id
+            or stage.get("stage_complete") is not True
+        ):
+            raise ValueError(f"banked v3 {stage_id} stage schema/completion drifted")
+    arms = receipt.get("arms")
+    if not isinstance(arms, dict):
+        raise ValueError("banked v3 receipt lacks its arm map")
+    for chart_id, receipt_id in (
+        ("banked_n12_exact_receiver_control", "control"),
+        ("banked_n12_scorer_plane_precision_drop1", "precision_drop"),
+    ):
+        chart = chart_rows[chart_id]
+        arm = arms.get(receipt_id)
+        if not isinstance(arm, dict):
+            raise ValueError(f"banked v3 receipt lacks arm {receipt_id}")
+        expected_stage = json.loads(json.dumps(arm))
+        expected_stage.pop("projection", None)
+        stage_path = _resolve_source_path(
+            stage_rows["precision-drop" if receipt_id == "precision_drop" else "control"]["path"]
+        )
+        if json.loads(stage_path.read_text(encoding="utf-8")) != expected_stage:
+            raise ValueError(f"banked v3 durable stage drifted from final arm {receipt_id}")
+        projection = arm.get("projection")
+        hard_oracle = arm.get("hard_oracle")
+        if not isinstance(projection, dict) or not isinstance(hard_oracle, dict):
+            raise ValueError(f"banked v3 arm {receipt_id} lacks oracle/projection custody")
+        expected = {
+            "archive_bytes": arm["archive"]["bytes"],
+            "archive_sha256": arm["archive"]["sha256"],
+            "d_seg": hard_oracle["mean_d_seg"],
+            "d_pose": hard_oracle["mean_d_pose"],
+            "derived_n600_linear_archive_bytes": projection["projected_n600_archive_bytes"],
+            "derived_n600_action_at_unchanged_mean_distortion": projection["projected_exact_objective"],
+            "strict_bytes_to_beat_pointer_at_measured_distortion": projection[
+                "strict_pointer_byte_cap_at_measured_distortion"
+            ],
+        }
+        if any(chart.get(key) != value for key, value in expected.items()):
+            raise ValueError(f"frontier chart drifted from banked v3 arm {receipt_id}")
+    receipt_delta = receipt.get("treatment_minus_control")
+    chart_delta = chart_rows["banked_n12_scorer_plane_precision_drop1"].get("treatment_minus_control")
+    if (
+        not isinstance(receipt_delta, dict)
+        or not isinstance(chart_delta, dict)
+        or chart_delta
+        != {
+            "archive_bytes": receipt_delta["archive_bytes"],
+            "d_seg": receipt_delta["mean_d_seg"],
+            "d_pose": receipt_delta["mean_d_pose"],
+            "derived_n600_action": receipt_delta["projected_exact_objective"],
+        }
+    ):
+        raise ValueError("frontier chart treatment delta drifted from banked v3 receipt")
+
+
 def validate_frontier_magnitude_chart(
     path: str | Path = SOURCE_FRONTIER_MAGNITUDE,
 ) -> dict:
@@ -295,6 +685,7 @@ def validate_frontier_magnitude_chart(
     if not isinstance(pointer, dict) or pointer.get("moved") is not False:
         raise ValueError("frontier-magnitude chart must preserve the pointer")
     target = _nonnegative_real(pointer.get("score"), "pointer.score")
+    source_rows = _validate_source_receipts(payload)
 
     archive_rows = payload.get("exact_archive_rows")
     if not isinstance(archive_rows, list):
@@ -306,17 +697,9 @@ def validate_frontier_magnitude_chart(
     banked_treatment = by_id.get("banked_n12_scorer_plane_precision_drop1")
     if not all(isinstance(row, dict) for row in (bank, rung_e, banked_control, banked_treatment)):
         raise ValueError("frontier-magnitude chart lacks an exact receiver control/treatment row")
-    bank_action = contest_action(
-        d_seg=bank.get("d_seg"),
-        d_pose=bank.get("d_pose"),
-        archive_bytes=bank.get("archive_bytes"),
-    )
-    if not math.isclose(bank_action, bank.get("exact_action"), rel_tol=0.0, abs_tol=1e-12):
-        raise ValueError("bank exact-action arithmetic drift")
-    if maximum_byte_budget(target_action=target, d_seg=bank["d_seg"], d_pose=bank["d_pose"]) != bank.get(
-        "strict_bytes_to_beat_pointer_at_measured_distortion"
-    ):
-        raise ValueError("bank strict byte cap drift")
+    _validate_c1_source_custody(bank, source_rows=source_rows)
+    _validate_c1_rounded_interval(bank, target=target)
+    _validate_banked_v3_receipt(source_rows=source_rows, chart_rows=by_id)
     rung_projected_bytes = _nonnegative_bytes(
         rung_e.get("derived_n600_linear_archive_bytes"), "rung_e.derived_n600_linear_archive_bytes"
     )
@@ -428,10 +811,14 @@ def validate_frontier_magnitude_chart(
     gap = payload.get("exact_production_gap")
     if (
         not isinstance(gap, dict)
-        or gap.get("blocker") != "NO_COMPACT_PREDICTOR_DESCRIPTION_IN_216_TO_244_KB_BOX"
+        or gap.get("blocker") != "NO_COMPLETE_N600_ARCHIVE_WITHIN_TOTAL_SCORE_BYTE_CAP"
         or gap.get("secondary_blocker") != "MISSING_ARBITRARY_NUMERATOR_PLANE_CODEC"
+        or gap.get("secondary_blocker_condition")
+        != "applies only if the joint interval-solver arbitrary-numerator representation is selected"
+        or gap.get("rate_subproblem")
+        != "compact predictor/program after debiting all fixed runtime, archive-framing, and Pose overhead"
     ):
-        raise ValueError("frontier-magnitude chart must fail closed on compactness and the remaining ABI gap")
+        raise ValueError("frontier-magnitude chart must fail closed on the total-archive cap and conditional ABI gap")
     if payload.get("n600_trade_cells_launch_eligible") is not False:
         raise ValueError("frontier-magnitude chart cannot authorize an n600 trade-cells launch")
     return payload
@@ -531,7 +918,12 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
                 "archive_bytes": frontier_rows["c1_solved_distortion_n600_contest_cpu"]["archive_bytes"],
                 "d_seg": frontier_rows["c1_solved_distortion_n600_contest_cpu"]["d_seg"],
                 "d_pose": frontier_rows["c1_solved_distortion_n600_contest_cpu"]["d_pose"],
-                "exact_action": frontier_rows["c1_solved_distortion_n600_contest_cpu"]["exact_action"],
+                "derived_action_interval_from_rounded_components": frontier_rows[
+                    "c1_solved_distortion_n600_contest_cpu"
+                ]["derived_action_interval_from_rounded_components"],
+                "derived_strict_total_archive_cap": frontier_rows["c1_solved_distortion_n600_contest_cpu"][
+                    "derived_strict_total_archive_cap"
+                ],
             },
             "exact_receiver_control": {
                 "pair_count": frontier_rows["v10_rung_e_exact_two_plane_n48_local"]["pair_count"],

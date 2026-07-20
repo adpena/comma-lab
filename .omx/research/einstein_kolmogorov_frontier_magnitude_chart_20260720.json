@@ -1,6 +1,6 @@
 {
   "schema": "einstein_kolmogorov_frontier_magnitude_chart.v1",
-  "written_at_utc": "2026-07-20T02:42:45Z",
+  "written_at_utc": "2026-07-20T03:38:39Z",
   "lane_id": "lane_einstein_kolmogorov_crux_20260719",
   "research_only": true,
   "score_claim": false,
@@ -12,7 +12,7 @@
   },
   "labels": {
     "MEASURED": [
-      "C1 n600 exact archive bytes and contest-CPU d_seg/d_pose",
+      "C1 n600 exact archive bytes plus contest-CPU d_seg/d_pose reported to eight decimal places",
       "Rung-E n48 exact archive bytes and local native-f32 hard-oracle d_seg/d_pose",
       "matched banked n12 control/treatment production archive bytes, exact numerator equality, and local native-f32 hard-oracle d_seg/d_pose",
       "n24 direct reachable-preimage hard-oracle d_seg/d_pose and per-pair range-payload bytes",
@@ -20,10 +20,10 @@
       "n600 exact-lattice frame1 d_seg"
     ],
     "DERIVED": [
-      "contest action recompositions",
+      "contest action recompositions, with an interval for rounded C1 components",
       "linear n600 byte projections from declared n24/n48 byte scopes",
       "ceil-linear n600 archive-byte projections from the matched n12 production archives",
-      "strict byte caps from the exact action law",
+      "strict total-archive byte caps from the exact action law, with an interval for rounded C1 components",
       "Seg-only frontier-necessity classifications"
     ],
     "UNKNOWN": [
@@ -38,17 +38,20 @@
       "role": "official solved-distortion production archive",
       "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/capstone_submission/archive.zip",
       "bytes": 409526925,
-      "sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42"
+      "sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+      "portable_if_absent": true
     },
     {
       "role": "official solved-distortion contest-CPU evaluation",
       "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/contest_auth_eval.json",
-      "sha256": "4ef77cc58c4232fc0bfa76f02c74ceb6c258e064707522a4b510e9fe06495e99"
+      "sha256": "4ef77cc58c4232fc0bfa76f02c74ceb6c258e064707522a4b510e9fe06495e99",
+      "portable_if_absent": true
     },
     {
       "role": "official evaluation policy clamp",
       "path": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/modal_contest_cpu/harvest_fc01KXXRAR/modal_cpu_auth_eval_validation.json",
-      "sha256": "7230903c6fdad0474ccc4470160fa9dda36ddcd06af3ba5a8c454cfe4d414196"
+      "sha256": "7230903c6fdad0474ccc4470160fa9dda36ddcd06af3ba5a8c454cfe4d414196",
+      "portable_if_absent": true
     },
     {
       "role": "n48 exact two-plane production archive receipt",
@@ -56,9 +59,9 @@
       "sha256": "d966e066bfd24deb0f7ad1fda865337ed2f108c03c93244c24dd592ac69682a9"
     },
     {
-      "role": "matched banked n12 exact production-receiver control/treatment; v2 supersedes v1 custody while preserving byte-identical arm archives and scientific values",
-      "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v2.json",
-      "sha256": "9de355d7208f0256d9e137ace54c24cf0f9b3f6907dbb3753227f9c26807c7c7"
+      "role": "matched banked n12 exact production-receiver control/treatment; v3 mechanically supersedes v1 and v2, preserves immutable precleanup and arm-stage receipts, and reproduces byte-identical scientific values",
+      "path": ".omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json",
+      "sha256": "9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a"
     },
     {
       "role": "n24 reachable-preimage trade-cells curve",
@@ -73,7 +76,8 @@
     {
       "role": "n600 exact-lattice frame1 solve",
       "path": "/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_n600_20260719/aggregate_n600_receipt.json",
-      "sha256": "1509431e2f06963a0d711819d6fcee131fe44599d997ef137dbf4b352f2f2e60"
+      "sha256": "1509431e2f06963a0d711819d6fcee131fe44599d997ef137dbf4b352f2f2e60",
+      "portable_if_absent": true
     }
   ],
   "exact_archive_rows": [
@@ -83,14 +87,39 @@
       "byte_scope": "actual complete archive.zip",
       "archive_bytes": 409526925,
       "archive_sha256": "e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42",
+      "archive_measurement_label": "MEASURED_EXACT_BYTES [contest-CPU custody]",
       "d_seg": 0.00015196,
       "d_pose": 0.00010184,
-      "seg_term": 0.015196,
-      "pose_term": 0.03191238004286111,
-      "rate_term": 272.687169555842,
-      "exact_action": 272.73427793588485,
+      "distortion_measurement_label": "MEASURED_ROUNDED_8DP [contest-CPU]",
+      "rounded_component_intervals": {
+        "d_seg": {
+          "lower": "0.000151955",
+          "upper": "0.000151965",
+          "closure": "closed_half_ulp"
+        },
+        "d_pose": {
+          "lower": "0.000101835",
+          "upper": "0.000101845",
+          "closure": "closed_half_ulp"
+        }
+      },
+      "derived_seg_term_from_reported_center": 0.015196,
+      "derived_pose_term_from_reported_center": 0.03191238004286111,
+      "rate_term_from_exact_archive_bytes": 272.687169555842,
+      "derived_action_point_estimate_from_reported_centers": 272.73427793588485,
+      "derived_action_interval_from_rounded_components": {
+        "lower": "272.734276652480194329341879403881565986136886270527416194888",
+        "upper": "272.734279219270259749443093661606374284321526534835426449601",
+        "label": "DERIVED_INTERVAL_FROM_ROUNDED_COMPONENTS"
+      },
       "measurement_axis": "contest-CPU Linux x86_64",
-      "strict_bytes_to_beat_pointer_at_measured_distortion": 216223,
+      "derived_strict_total_archive_cap": {
+        "point_estimate_from_reported_centers": 216223,
+        "interval_bytes": [216221, 216225],
+        "guaranteed_safe_cap_bytes": 216221,
+        "label": "DERIVED_STRICT_TOTAL_ARCHIVE_CAP_INTERVAL",
+        "scope": "total archive.zip bytes, not a predictor-only budget"
+      },
       "frontier_relevant_distortion": true,
       "inside_pointer_byte_box": false,
       "verdict": "SOLVED_DISTORTION_PRODUCTION_SPINE_RATE_DEAD"
@@ -311,15 +340,18 @@
     "selection_scope": "controls identify the correct distortion magnitude and rate wall; neither is an in-box n600 candidate"
   },
   "exact_production_gap": {
-    "blocker": "NO_COMPACT_PREDICTOR_DESCRIPTION_IN_216_TO_244_KB_BOX",
+    "blocker": "NO_COMPLETE_N600_ARCHIVE_WITHIN_TOTAL_SCORE_BYTE_CAP",
+    "total_archive_cap_evidence": "C1 rounded contest-CPU components imply 216,221--216,225 total archive bytes; 216,221 B is guaranteed safe. The local n12 control implies 243,943 total archive bytes only at its separate advisory distortion.",
+    "rate_subproblem": "compact predictor/program after debiting all fixed runtime, archive-framing, and Pose overhead",
     "producer_output": "joint_seg_pose_rate.solve_interval_frame emits arbitrary exact integer resize numerators plus a realized camera frame",
     "receiver_input": "v10_production_receiver accepts only exact uint8 scorer planes, so positive-band numerators not divisible by the resize denominator cannot be serialized",
-    "minimum_adapter": "counted two-plane signed-int32 numerator residual against a compact predictor; decode numerators; solve each disjoint block with solve_bounded_integer_block; verify exact numerator equality after inflate",
+    "optional_interval_solver_adapter": "if the joint interval-solver representation is selected: counted two-plane signed-int32 numerator residual against a compact predictor; decode numerators; solve each disjoint block with solve_bounded_integer_block; verify exact numerator equality after inflate",
     "secondary_blocker": "MISSING_ARBITRARY_NUMERATOR_PLANE_CODEC",
+    "secondary_blocker_condition": "applies only if the joint interval-solver arbitrary-numerator representation is selected",
     "denominator_multiple_control": "the matched banked n12 A/B proves exact serialization and inflation for uint8 scorer-plane positive-band treatments; it does not serialize arbitrary non-divisible interval-solver numerators",
-    "current_zero_cost_status": "frontier-magnitude exact receiver, matched positive-band receiver, and direct-RGB controls are measured; the exact matched treatment saves 14.81% archive bytes but violates the pointer on distortion alone and both arms remain more than three orders of magnitude above the byte box"
+    "current_zero_cost_status": "frontier-magnitude exact receiver, matched positive-band receiver, and direct-RGB controls are measured; the exact matched treatment saves 14.81% archive bytes but violates the pointer on distortion alone and both arms remain more than three orders of magnitude above the total-archive cap"
   },
   "n600_trade_cells_launch_eligible": false,
   "pointer_delta": 0.0,
-  "verdict_scope": "cross-axis exact-receipt reuse plus a new matched local n12 receiver A/B and derived byte projections; no new contest score and no claim that projected byte scopes are complete n600 archives"
+  "verdict_scope": "cross-axis exact-receipt reuse plus a matched local n12 receiver A/B and derived byte projections; C1 distortion is rounded to eight decimals and therefore yields score/cap intervals; no new contest score and no claim that projected byte scopes are complete n600 archives"
 }

@@ -5,11 +5,11 @@ lane_id: `lane_einstein_kolmogorov_crux_20260719`
 research_only: true  
 axis: `[macOS-CPU advisory]`  
 pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED  
-review_status: fresh-eyes-reviewed(0); first recursive round found class defects and reset the seal  
+review_status: fresh-eyes-reviewed(0/3); first recursive round found class defects and reset the seal
 verdict_scope: CONSTRUCTIVE-DESIGN plus n24 component probes and one matched n12 exact-receiver A/B; no new n600 or contest-axis score
 
 > **CURRENT MEASUREMENT, NOT YET A VERDICT SEAL.** The source/global/scoped-Seg
-> terminal triplet was freshly replayed under reproducibility closure v2 from base
+> terminal triplet was freshly replayed under historical reproducibility closure v2 from base
 > commit `8eee0e3becdabbfe2f38246ad014678bb11f1e8e`; it reproduced the candidate bytes
 > and metrics. Nonterminal construction receipts retain their historical v1 closure
 > and are explicitly non-authoritative for terminal runtime closure. Recursive
@@ -17,7 +17,11 @@ verdict_scope: CONSTRUCTIVE-DESIGN plus n24 component probes and one matched n12
 > This landing upgrades all future checkpoints and receipts to closure v3, which
 > inventories every installed NumPy, Torch, Brotli, and safetensors distribution file
 > (including native libraries) and binds `uv.lock`; it does not retroactively relabel
-> the historical closure-v2 replay.
+> the historical closure-v2 replay. The authoritative banked A/B receipt is now the
+> schema-v2 final v3 successor
+> `einstein_kolmogorov_banked_n12_ab_20260720_v3.json`, SHA-256
+> `9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a`.
+> It mechanically supersedes v1 and v2; both predecessors are historical only.
 > The operator's 2026-07-20T01:03:29Z correction additionally classifies the
 > n24 row as a **wall characterization, not a frontier operating point**. Its Seg
 > term alone is already above the pointer, so it cannot authorize n600 scaling.
@@ -87,11 +91,15 @@ archive, but moves `d_seg` to `0.000497182210` and `d_pose` to `0.005454401104`.
 Its distortion term alone is `0.283264814`, already above the pointer; its projected
 `S=224.297193624` is still rate-dead. This is a real same-harness rate/distortion point,
 not a palette proxy, not the camera-preimage `precision_drop1` row, and not a contest
-score. The authoritative durable receipt is
-`einstein_kolmogorov_banked_n12_ab_20260720_v2.json`; v2 supersedes the preserved v1
-custody after fixing the strict-pointer integral boundary and the post-receipt cleanup
-resume window. Both arm archives, all measured metrics, and the scientific verdict are
-byte-identical to v1. The complete comparison is
+score. The authoritative durable receipt is the schema-v2 final
+`einstein_kolmogorov_banked_n12_ab_20260720_v3.json`, SHA-256
+`9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a`.
+It mechanically supersedes v1 and v2, which remain historical only. V3 binds the
+immutable redacted precleanup receipt and the two immutable durable per-arm stage
+receipts (`control` and `precision-drop`) before cleanup, and records the
+cross-version cleanup execution custody that binds the write-once final successor to
+its predecessor. Both arm archives, all measured metrics, and the scientific verdict are
+byte-identical to the historical predecessors. The complete comparison is
 `einstein_kolmogorov_frontier_magnitude_chart_20260720.json`.
 
 ## Stores consulted
@@ -145,9 +153,10 @@ The exact stack used for the new measurement was: hash-bound SSD prepared chunk 
 strict predictor decode -> deterministic one-bit scorer-plane residual treatment ->
 production packet/build/parse-back -> resumable production inflate -> exact numerator
 proof -> frozen local CPU SegNet/PoseNet. The missing global step is no longer “a
-receiver exists”; it is a compact predictor/program inside the roughly 216--244 KB
-box, plus an arbitrary-numerator serialization adapter only if the joint interval-solver
-chart is selected.
+receiver exists”; it is a complete n600 archive within the total-score byte-cap interval
+after all fixed runtime/archive/Pose overhead is debited. A compact predictor is only a
+rate subproblem, plus an arbitrary-numerator serialization adapter only if the joint
+interval-solver chart is selected.
 
 ## 1. One invariant and the Einstein-frame change of coordinates
 
@@ -322,14 +331,21 @@ for this nonconvex scorer loss; the method is a tournament arm, not a guaranteed
 
 ### Byte arithmetic
 
-At the exact v10 spine distortion (`d_seg=1.5196e-4`):
+The published C1 contest values `d_seg=0.00015196` and `d_pose=0.00010184` are
+**MEASURED_ROUNDED_8DP**, not exact scalar inputs. Therefore its score is only
+**DERIVED** as the interval
+`[272.73427665248019432934, 272.73427921927025974944]`, not an exact numeric C1 value.
+At that rounded-input C1 operating point, the strict total-archive byte-cap interval is
+`[216221, 216225] B`; `216221 B` is the guaranteed-safe cap and `216223 B` is only a
+center-point estimate. Every candidate must debit fixed runtime/archive/Pose overhead
+before comparing its remaining bytes to that total cap.
 
 | target / pose assumption | derived total byte cap | status |
 |---|---:|---|
-| pointer 0.1910828242, pose 0 | 264,150 B | DERIVED from exact score law |
-| pointer 0.1910828242, `d_pose=1.0184e-4` | 216,223 B | DERIVED |
-| target 0.15, pose 0 | 202,451 B | DERIVED |
-| target 0.15, `d_pose=1.0184e-4` | 154,524 B | DERIVED |
+| pointer 0.1910828242, pose 0 | [264,149, 264,151] B | DERIVED interval; 264,149 B guaranteed safe, 264,150 B center point only |
+| pointer 0.1910828242, `d_pose=1.0184e-4` | [216,221, 216,225] B | DERIVED interval; 216,221 B guaranteed safe, 216,223 B center point only |
+| target 0.15, pose 0 | [202,450, 202,452] B | DERIVED interval; 202,450 B guaranteed safe, 202,451 B center point only |
+| target 0.15, `d_pose=1.0184e-4` | [154,522, 154,526] B | DERIVED interval; 154,522 B guaranteed safe, 154,524 B center point only |
 
 The 83,838-byte generator fits every positive cap above.  It does **not** satisfy any of
 them at its measured `d_seg=0.0034556919`; at that distortion the allowed byte term is
@@ -506,10 +522,12 @@ Corrected promotion chain after the operating-point review:
 1. start from the banked v10 solved-distortion archive/receiver mechanism, preserving
    its exact lattice realization and scorer-plane capability;
 2. **completed locally:** introduce a denominator-multiple scorer-plane rate lever and
-   measure matched `(bytes, d_seg, d_pose, projected exact S)` control/treatment rows;
+   measure matched `(bytes, d_seg, d_pose, DERIVED projected action)` control/treatment rows;
    the treatment saves 14.81% measured bytes but is Pose-infeasible and rate-dead;
-3. build a compact predictor/grammar inside the 216--244 KB distortion-dependent box,
-   or serialize arbitrary exact numerators if the joint interval-solver chart is used;
+3. build a **complete n600 archive** within the total-score byte-cap interval after
+   debiting all fixed runtime/archive/Pose overhead; compact prediction is only one
+   rate subproblem, or serialize arbitrary exact numerators if the joint interval-solver
+   chart is selected;
    refuse n600 until a bounded row has frontier-feasible distortion and a plausible
    exact-action trajectory below `0.1910828242`;
 4. only after that gate, add/retain the compact `xi` frame-0/frame-1 Pose stream, scale
@@ -580,7 +598,7 @@ candidate or a launch predecessor.
 
 The correction was followed by a matched banked n12 production-receiver experiment:
 
-| exact receiver arm | measured archive bytes | local d_seg | local d_pose | DERIVED ceil-linear n600 bytes | DERIVED projected exact S | disposition |
+| exact receiver arm | measured archive bytes | local d_seg | local d_pose | DERIVED ceil-linear n600 bytes | DERIVED projected action | disposition |
 |---|---:|---:|---:|---:|---:|---|
 | settled scorer-plane control | 7,898,534 | 0.000127156576 | 0.000025392805 | 394,926,700 | 262.994129800 | frontier-scale distortion; rate-dead |
 | scorer-plane predictor residual, drop 1 low bit | 6,728,570 | 0.000497182210 | 0.005454401104 | 336,428,500 | 224.297193624 | saves 1,169,964 n12 bytes; distortion term alone exceeds pointer |
@@ -590,17 +608,25 @@ proved exact equality for 14,155,776 factor-2 numerator values. Scratch bytes we
 deleted only after the durable receipt bound the prepared bank, tool, codec, receiver,
 archive, packet, and inflated-output hashes. This closes a real denominator-multiple
 positive-band receiver path. It also narrows the blocker: the production receiver is
-not missing; the primary missing object is a compact predictor/program inside the byte
-box. A counted arbitrary-numerator codec remains secondary if the interval-solver chart
-is chosen.
+not missing; the primary blocker is
+`NO_COMPLETE_N600_ARCHIVE_WITHIN_TOTAL_SCORE_BYTE_CAP`. A compact predictor is only a
+rate subproblem after debiting all fixed runtime/archive/Pose overhead. A counted
+arbitrary-numerator codec remains secondary only if the joint interval-solver
+representation is selected.
 
-The authoritative v2 receipt also closes the crash window between durable receipt write
-and certified scratch cleanup: `--resume --ephemeral-output` revalidates the receipt,
+The authoritative v3 receipt closes the crash window between durable receipt write and
+certified scratch cleanup: the immutable precleanup receipt plus durable control and
+precision-drop stage receipts precede deletion, and the final successor records
+cross-version cleanup custody. `--resume --ephemeral-output` revalidates the receipt,
 prepared bank, live tool/codec/receiver hashes, and remaining arm bytes before cleanup,
 and is idempotent after cleanup. Its strict byte cap uses `ceil(bound)-1` plus exact
 objective bracketing, so equality with the pointer is correctly excluded. The preserved
-v1 receipt is historical only; the rerun reproduced both archive SHA-256 values and all
-scientific measurements exactly.
+v1 and v2 receipts are historical only.
+
+The cleanup review also found a class defect: the validator treated a production
+receiver `.raw` output as though it had to be an `.mp4` artifact. The class fix codifies
+the production receiver's canonical `.raw` path in both banked and rung-E cleanup
+validators and their fixtures, while retaining exact byte and SHA-256 validation.
 
 No new full-n600 in-box point was produced.  The existing settled R1 89,772-byte
 macOS-CPU advisory row remains a control, not this lane's result.  The attempted xi
@@ -615,7 +641,9 @@ inventory are in `.omx/research/einstein_kolmogorov_crux_measurement_20260719.js
 the corrected bank-vs-wall comparison is in
 `.omx/research/einstein_kolmogorov_operating_point_correction_20260720.json`;
 the exact-receiver A/B is in
-`.omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v2.json`; the unified
+`.omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json`, final SHA-256
+`9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a`; v1/v2 are
+historical only; the unified
 frontier-magnitude chart is
 `.omx/research/einstein_kolmogorov_frontier_magnitude_chart_20260720.json`;
 the executable state transition is in
@@ -626,7 +654,7 @@ the executable state transition is in
 - **DSL:** the typed config above owns the only legal local probe configuration.
 - **Equations:**
   `src/tac/canonical_equations/einstein_kolmogorov_crux_20260719.py` now provides
-  `einstein_kolmogorov_crux_action_rate_contract_v1`: exact action arithmetic, byte-cap
+  `einstein_kolmogorov_crux_action_rate_contract_v1`: action arithmetic, interval byte-cap
   refusal, fixed-byte palette delta, and typed receipt-to-decision edges.  It binds the
   exact aggregate measurement and frontier-magnitude chart through canonical provenance
   and two empirical anchors; registration remains research-only and cannot promote any

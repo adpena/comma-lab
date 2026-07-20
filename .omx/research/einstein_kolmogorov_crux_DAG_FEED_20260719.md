@@ -8,11 +8,17 @@ pointer: `0.1910828242 [contest-CPU Linux x86_64]`, **UNMOVED**
 
 Status: **CURRENT MEASUREMENT, REVIEW PENDING.** The source/global/scoped-Seg
 terminal triplet was replayed from base commit
-`8eee0e3becdabbfe2f38246ad014678bb11f1e8e` with v2 source/runtime closure and
+`8eee0e3becdabbfe2f38246ad014678bb11f1e8e` with historical v2 source/runtime closure and
 reproduced the historical bytes and metrics. Nonterminal construction receipts retain
 their disclosed historical v1 closure. Future checkpoints/receipts use closure v3,
 which binds full installed-distribution inventories plus `uv.lock`; historical v2
-receipts are not retroactively upgraded. Recursive clean-pass count remains zero.
+receipts are not retroactively upgraded. Recursive clean-pass count remains **0/3**.
+The authoritative banked receipt is the schema-v2 final v3 successor
+`.omx/research/einstein_kolmogorov_banked_n12_ab_20260720_v3.json`, SHA-256
+`9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a`; it
+mechanically supersedes v1 and v2, which are historical only. V3 binds immutable
+precleanup custody, immutable control and precision-drop stage receipts, and
+cross-version cleanup execution custody.
 Operator correction `2026-07-20T01:03:29Z` reclassifies the n24 result as an
 explicit-target realization-wall characterization: it is not a frontier operating
 point and cannot precede an n600 launch. A subsequent matched banked n12
@@ -29,13 +35,13 @@ frozen scorer rate-distortion cover and exact factor-2 R preimage
         |       |
         |       +--> n12 exact receiver control
         |       |       +--> 7,898,534 B, d_seg 1.2716e-4, d_pose 2.5393e-5
-        |       |       +--> DERIVED n600 S=262.994129800      [RATE-DEAD]
+        |       |       +--> DERIVED n600 action point=262.994129800 [RATE-DEAD]
         |       |
         |       +--> scorer-plane predictor residual drop1
         |               +--> 6,728,570 B, exact numerator equality
         |               +--> d_seg 4.9718e-4, d_pose 5.4544e-3
         |               +--> distortion term 0.283265 > pointer [INFEASIBLE]
-        |               +--> DERIVED n600 S=224.297193624      [RATE-DEAD]
+        |               +--> DERIVED n600 action point=224.297193624 [RATE-DEAD]
         |
         +--> compact quotient coordinates W=(G, xi, T)          [DERIVED design]
         |       |
@@ -79,8 +85,10 @@ The treatment saves 14.81% of measured n12 archive bytes but violates the pointe
 distortion alone. This proves that denominator-multiple positive-band scorer planes are
 serializable; it does not solve compactness and is not equivalent to the camera-preimage
 `precision_drop1` secant. Primary blocker:
-`NO_COMPACT_PREDICTOR_DESCRIPTION_IN_216_TO_244_KB_BOX`. Secondary, only for the joint
-interval-solver chart: `MISSING_ARBITRARY_NUMERATOR_PLANE_CODEC`. The complete exact vs
+`NO_COMPLETE_N600_ARCHIVE_WITHIN_TOTAL_SCORE_BYTE_CAP`. Compact prediction is only a
+rate subproblem after debiting all fixed runtime/archive/Pose overhead. Secondary, only
+if the joint interval-solver representation is selected:
+`MISSING_ARBITRARY_NUMERATOR_PLANE_CODEC`. The complete exact vs
 diagnostic tool inventory is the memo's `INVERSE-SOLVE TOOLCHAIN MAP`.
 
 ## Crux and disposition
@@ -108,7 +116,11 @@ used. Verdict scope: `BLOCKED_LOCAL_FILESYSTEM_POLICY`, then
    delta are empirical anchors. The n12 treatment is a scorer-plane residual control,
    not a Fisher-optimal direction; no Euclidean proxy was promoted.
 2. **Pareto constraint:** every admission uses
-   `S=100*d_seg+sqrt(10*d_pose)+25*B/37_545_489`. Fixed-component-byte palette moves
+   `S=100*d_seg+sqrt(10*d_pose)+25*B/37_545_489`. The published C1 `d_seg=0.00015196`
+   and `d_pose=0.00010184` are **MEASURED_ROUNDED_8DP**, so its score is **DERIVED** as
+   `[272.73427665248019432934,272.73427921927025974944]`, not exact. Its total-archive
+   cap interval is `[216221,216225] B`; `216221 B` is guaranteed-safe and `216223 B`
+   is a center-point estimate only. Fixed-component-byte palette moves
    have an explicit Seg-only diagnostic admission; they cannot invoke the full-action
    helper without Pose. Lossy-label rows use actual component bytes but remain partial
    until Pose and total archive bytes are measured. The matched n12 arms report actual
@@ -125,7 +137,7 @@ used. Verdict scope: `BLOCKED_LOCAL_FILESYSTEM_POLICY`, then
    compactness and distortion gates. A full n600 two-frame archive, writable SSD
    evidence custody, and contest-axis evaluation are required before promotion.
 5. **Continual learning:** the typed aggregate receipt records the whole component
-   tournament, closure-v2 terminal replay, content-addressed evidence bundles,
+   tournament, historical closure-v2 terminal replay, content-addressed evidence bundles,
    heterogeneous cross-family inventory, matched exact-receiver A/B, narrowed blockers,
    Bregman and Strong Stochastic Flow Maps dispositions, and pointer non-delta.
 6. **Probe disambiguator:** source/zero/global/coordinate/DSPSA/hybrid and lossy-label
@@ -149,9 +161,11 @@ used. Verdict scope: `BLOCKED_LOCAL_FILESYSTEM_POLICY`, then
 - **DAG:** this FEED; measurement authority is
   `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json` plus
   `.omx/research/einstein_kolmogorov_frontier_magnitude_chart_20260720.json` and its
-  hash-bound matched n12 v2 receipt. The preserved v1 receipt is historical: v2 fixes
-  the strict-pointer equality boundary and post-receipt cleanup resume window while
-  reproducing byte-identical arm archives and scientific values.
+  hash-bound matched n12 v3 final receipt, SHA-256
+  `9c5d636a76a9ef77bb29dec64e4221b098e449510f5f04c2f7218da885c63f0a`.
+  V3 mechanically supersedes the historical v1 and v2 receipts, binds immutable
+  precleanup plus control/precision-drop stage receipts, and records cross-version
+  cleanup custody while reproducing the byte-identical arm archives and measurements.
 
 ## Pointer delta and exact next gate
 
@@ -166,10 +180,12 @@ cap/repack wiring. It correctly refuses attaching the n24 residual to an n600 st
 the explicit-target row is categorically ineligible for n600 scaling. The next
 zero-cost build gate remains on the solved-distortion V10 mechanism, but the owed local
 frontier-magnitude measurement is now complete: exact n12 control and treatment report
-`(bytes, d_seg, d_pose, projected exact S)`. The primary build gate is a compact
-predictor/program inside the 216--244 KB distortion-dependent box with Pose-feasible
-rate spending; arbitrary-numerator serialization is additionally required only for the
-joint interval-solver chart. No n600 launch is authorized by the rate-dead n12 rows.
+`(bytes, d_seg, d_pose, DERIVED projected action)`. The primary build gate is
+`NO_COMPLETE_N600_ARCHIVE_WITHIN_TOTAL_SCORE_BYTE_CAP`: a complete n600 archive must
+fit after all fixed runtime/archive/Pose overhead is debited. A compact predictor is
+only a rate subproblem; arbitrary-numerator serialization is additionally required only
+if the joint interval-solver representation is selected. No n600 launch is authorized
+by the rate-dead n12 rows.
 After that gate, execution additionally requires writable
 canonical SSD custody, an Ed25519-signed v2 authorization from the canonical trust root,
 a live matching lane claim, the governed-admission marker, and an executable resume ABI
@@ -181,4 +197,9 @@ strong-versus-weak reproducibility framing and remains a compress-time watch ite
 decode actuator. MPEG-4 INTER-CAE is likewise `WATCH_NOT_SELECTED`: `G`/`xi` give it a
 plausible shape/motion composition, but no bank-bound measured shape residual or
 two-plane receiver-consumption contract exists, so the advisory connection does not
-displace the compact-predictor gate and did not earn a new run.
+displace the total-score archive-cap gate and did not earn a new run.
+
+Cleanup class defect: the validator incorrectly required the production receiver output
+to resemble an `.mp4`, while this receiver's canonical output is `.raw`. The class fix
+codifies the canonical `.raw` output path in both banked and rung-E cleanup validators
+and their fixtures while retaining exact bytes/SHA-256 custody.
