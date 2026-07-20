@@ -354,6 +354,35 @@ def test_free_space_refusal_occurs_before_writability_probe_input_load_or_backen
     assert not Path(config.result_json_path).exists()
 
 
+def test_governed_full_requires_hash_bound_resume_contract_before_input_load_or_backend(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inputs = _write_inputs(tmp_path)
+    config = _config(
+        tmp_path,
+        monkeypatch,
+        inputs,
+        execution_mode=config_module.GOVERNED_FULL_MODE,
+        max_pairs=600,
+        operator_authorization_token="OPERATOR-GO:test-receipt",
+    )
+    monkeypatch.setattr(
+        bridge,
+        "_require_file",
+        lambda *_args, **_kwargs: pytest.fail("input loading must follow resume-contract gate"),
+    )
+    monkeypatch.setattr(
+        bridge,
+        "_run_levelset",
+        lambda **_kwargs: pytest.fail("backend must not run without resume contract"),
+    )
+
+    with pytest.raises(bridge.BridgeResumabilityError, match="no hash-bound resume receipt"):
+        bridge.execute(config)
+    assert not Path(config.packet_output_dir).exists()
+    assert not Path(config.result_json_path).exists()
+
+
 def test_backend_partial_output_is_atomically_certified_and_preserved(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -77,6 +77,8 @@ class EinsteinKolmogorovXiBridgeConfig:
     operator_authorization_token: str | None = None
     declared_minimum_free_bytes: int | None = None
     failure_manifest_path: str | None = None
+    backend_resume_receipt_path: str | None = None
+    backend_resume_receipt_sha256: str | None = None
     expected_n_pairs: int = EXPECTED_N_PAIRS
     dxi_scale: float = DXI_SCALE
     pose_carrier_s_t: float = POSE_CARRIER_S_T
@@ -111,6 +113,21 @@ class EinsteinKolmogorovXiBridgeConfig:
                 self,
                 "failure_manifest_path",
                 _absolute(str(self.failure_manifest_path), "failure_manifest_path"),
+            )
+        if (self.backend_resume_receipt_path is None) != (self.backend_resume_receipt_sha256 is None):
+            raise EinsteinKolmogorovBridgeConfigError(
+                "backend resume receipt path and SHA-256 must be supplied together"
+            )
+        if self.backend_resume_receipt_path is not None:
+            object.__setattr__(
+                self,
+                "backend_resume_receipt_path",
+                _absolute(str(self.backend_resume_receipt_path), "backend_resume_receipt_path"),
+            )
+            object.__setattr__(
+                self,
+                "backend_resume_receipt_sha256",
+                _sha256(str(self.backend_resume_receipt_sha256), "backend_resume_receipt_sha256"),
             )
         for field in (
             "generator_npz_sha256",
@@ -156,6 +173,10 @@ class EinsteinKolmogorovXiBridgeConfig:
             if self.operator_authorization_token is not None:
                 raise EinsteinKolmogorovBridgeConfigError(
                     "diagnostic mode must not carry an operator authorization token"
+                )
+            if self.backend_resume_receipt_path is not None:
+                raise EinsteinKolmogorovBridgeConfigError(
+                    "diagnostic mode must not carry a full-backend resume receipt"
                 )
         elif self.execution_mode == GOVERNED_FULL_MODE:
             if self.max_pairs != EXPECTED_N_PAIRS:

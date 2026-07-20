@@ -173,7 +173,7 @@ def _load_scoped_measurement(path: str | Path) -> tuple[dict, dict, dict]:
     """Load the immutable n24 aggregate and return payload/source/winner rows."""
 
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    if payload.get("schema") != "einstein_kolmogorov_crux_measurement.v1":
+    if payload.get("schema") != "einstein_kolmogorov_crux_measurement.v2":
         raise ValueError("unexpected Einstein--Kolmogorov measurement schema")
     if payload.get("research_only") is not True or payload.get("score_claim") is not False:
         raise ValueError("canonical anchor requires an explicit research-only non-score receipt")

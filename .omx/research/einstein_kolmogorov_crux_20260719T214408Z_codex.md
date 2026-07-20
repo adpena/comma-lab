@@ -6,12 +6,12 @@ research_only: true
 axis: `[macOS-CPU advisory]`  
 pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED  
 review_status: fresh-eyes-reviewed(0); first recursive round found class defects and reset the seal  
-verdict_scope: CONSTRUCTIVE-DESIGN plus complete n24 fixed-label palette probe; end-to-end archive still blocked
+verdict_scope: CONSTRUCTIVE-DESIGN plus complete n24 palette/lossy-label component probe; end-to-end archive still blocked
 
-> **DURABILITY CHECKPOINT, NOT A VERDICT SEAL.** The numeric n24 rows below were
-> produced before the reproducibility-closure and projected-bound class fixes. They
-> remain historical exploratory evidence only until every arm is replayed from the
-> committed implementation. The recursive clean-pass count is zero.
+> **CURRENT MEASUREMENT, NOT YET A VERDICT SEAL.** Every numeric n24 row below was
+> replayed after the reproducibility-closure and projected-bound class fixes from
+> committed source `889d32db399709aca475c3c6120c81f189dd4b81`. Recursive clean-pass
+> review is still pending, so the clean count remains zero.
 
 ## Answer first
 
@@ -43,8 +43,11 @@ mismatches from `38,077` to `37,276` (`d_B 0.0080695682 -> 0.0078998142`) at the
 below selected projected middle-point DSPSA-32 followed by coordinate-12: `26,795` mismatches,
 `d_seg=0.0056786007351345485`, the same 19,859 bytes, strict parse-back, and exact
 factor-2 realization on all 24 pairs.  A final fully fingerprinted replay reproduced
-the candidate and metrics.  These numbers are not a score and do not include a compact
-pose-closed frame-0 stream.
+the candidate and metrics.  A separate lossy-topology family proved that short-run
+simplification can exchange distortion for rate (`36,876` mismatches, 19,371 B at rung
+2), but grafting it onto the fill winner raised the local action by `0.0150610065` and
+was rejected.  These numbers are not a score and do not include a compact pose-closed
+frame-0 stream.
 
 ## Stores consulted
 
@@ -66,8 +69,9 @@ code and receipts; the exact scorer factorization; and the canonical-equation so
 named below.  Deliberately not consumed as authority: the retracted terminal finding,
 invalidated round-1 curvelet ranks, MPS scores, or any memo number that could be cheaply
 re-derived from code/bytes.  External fresh intake was restricted to the two primary
-SPSA/DSPSA sources below because the anti-re-research ledger already covers the broad
-codec and geometry families.  The external Claude memory ledger is outside this
+SPSA/DSPSA sources below and Frank Nielsen's full 41-page *Short stories on Bregman
+divergences* deck, after loading prior #504/#550/#552, because the anti-re-research
+ledger already covers the broad codec and geometry families.  The external Claude memory ledger is outside this
 worktree's write authority, so the new-paper intake is durably recorded here for MAIN
 to mirror rather than silently attempting an out-of-scope write.
 
@@ -144,11 +148,12 @@ scopes and cannot be ranked as if they were a sealed same-input A/B:
 |---|---|---|
 | direct counted payload -> RGB (`yhat` rung B) | **MEASURED** 83,838-byte full archive; fresh n24 diagnostic `d_seg=0.0034556919`, `d_pose=63.0309157` | Direct-generator and lossy-cell control: it bypasses explicit `Q/G` labels, but Pose makes it noncompetitive and the row is n24 diagnostic only |
 | explicit fixed labels + palette (PDW1) | **MEASURED here** 19,859-byte n24 component; winner `d_seg=0.0056786007`; Pose unmeasured | Within-family palette probe complete; not a full archive |
+| lossy row-run topology (PDW1) | **MEASURED here** source-fill rung 2: 19,371 B, `d_seg=0.0078150431`; graft on optimized fills worsens local action | Genuine rate--distortion control, but dominated by the fixed-label scoped winner |
 | quotient/power packet (PDW2) | **MEASURED** 138 raw / 133 Brotli bytes and consumed; spatially non-identifying | Formulation-scoped blocker until a decoder-computable field/pullback exists |
 | `xi` temporal/Pose chart (settled R1) | **MEASURED prior** full-n600 macOS advisory: 89,772 B, `d_seg=0.0045491197`, `d_pose=0.0016095472` | In-box control, not a new result; packet bytes were deleted by the settled run |
 | curvelet/shearlet residual chart | **MEASURED prior** saved-OFF n600 through-R basis rows, but equal scalar support rather than equal bytes | Not archive-rankable; receiver-bound target inverse and exact bytes remain absent |
 | MPEG-4 INTER-CAE / arithmetic self-compression | prior literature and local rate evidence only | Open design family; no new receiver-closed row in this lane |
-| Bregman/Fisher dual chart | exact local geometry already derived in #504/#550; no new hard-decode treatment | Advisory prioritizer only; §3.1 explains why the discrete receiver is not globally a Bregman projection |
+| Bregman/Fisher dual chart | full Nielsen deck plus #504/#550/#552 and exact code derivation | Exact quadratic `R`-fiber projection and already-measured global-centroid control; no categorical pullback or byte theorem (§3.1) |
 
 There is consequently **no defensible cross-family winner**.  The only new selected winner
 is inside the fixed-label PDW1 palette family.  The full multi-family and new full-n600
@@ -243,10 +248,11 @@ At the exact v10 spine distortion (`d_seg=1.5196e-4`):
 
 The 83,838-byte generator fits every positive cap above.  It does **not** satisfy any of
 them at its measured `d_seg=0.0034556919`; at that distortion the allowed byte term is
-already negative even for the pointer.  Therefore the path to sub-0.15 is a realization
-reduction to roughly the exact-spine d_seg, not further polishing of the current rate.
-The compact counted `xi` and receiver-bound `T` byte totals remain UNKNOWN until a full
-n600 archive is built and parsed back.
+already negative even for the pointer.  This does not license a distortion-first
+sequence: distortion is spendable whenever the exact rate saving wins.  The admissible
+endpoint is the joint Seg/Pose/rate KKT waterline measured on full exact `S`, and same-pool
+opportunities must not be added.  The compact counted `xi` and receiver-bound `T` byte
+totals remain UNKNOWN until a full n600 archive is built and parsed back.
 
 ## 3. Honest K-floor argument
 
@@ -265,6 +271,11 @@ for this particular instance.  The only honest two-sided statement is:
   by its conditional entropy.  The edge-transition, birth/death, texture-choice, and
   pose-tube symbols must therefore be counted once unless deterministically implied by
   preceding symbols.
+- **DERIVED coordinate-invariance guard:** on a declared finite serialized domain, a
+  gauge-fixed Legendre map `eta=grad F(theta)` with computable inverse is a computable
+  bijection, so `K(eta)=K(theta)+O(1)`.  Dual coordinates do not lower the instance floor
+  by themselves.  Only quotienting a real invariance or a measured quantization/entropy
+  gain can lower counted bytes; Task #550's 20/19-scalar construction is a gauge quotient.
 - **UNKNOWN instance floor:** neither `M` for the realized target family nor the
   algorithmic randomness deficiency of this one video has been measured.  No exact
   `K(target)` or proof of global minimality is asserted.
@@ -283,6 +294,30 @@ It is not itself a lower bound.  The residual gap above the conditional floor li
 duplicated temporal description, full spatial label maps, non-necessary cell interiors,
 and texture values that do not buy a receiver-closed margin.
 
+### 3.1 Bregman scope: exact R-fiber projection, not scorer-cell projection
+
+For each disjoint resize block let `a_j>0`, `sum_j a_j=1`, and define
+`F_R(x)=1/2 sum_j a_j ||x_j||^2`, with a positive quadratic term on unowned
+coordinates.  For an integer scorer-plane target `y`, the landed canonical support
+fill uniquely solves
+
+`argmin_{x in [0,255]^n, A x=y} B_{F_R}(x || 0)`,
+
+and the minimizer is already uint8, so it is also the lattice minimizer.  Realization
+is therefore an exact quadratic Bregman projection onto the fixed linear `R`-fiber.
+It is not a categorical/Fisher projection onto a nonlinear SegNet argmax cell: the
+target plane has already been selected and the realizer neither calls the scorer nor
+optimizes a scorer-cell objective.
+
+The global `5 x RGB` table is likewise the deterministic round/clip of each class's
+arithmetic RGB mean, hence a lattice quadratic-Bregman centroid.  The theorem does not
+promise a hard-label gain; the fresh real-decode row supplies that fact:
+`38,077 -> 37,276` mismatches at 19,859 component bytes.  Frank Nielsen's 2026
+*Short stories on Bregman divergences: Flat and curved geometries*, DOI
+`10.13140/RG.2.2.35617.77929`, was read from the author-hosted 41-page deck pinned at
+commit `b01cdbb9e4a807980f29e0fe615f37322167cd01` (PDF SHA-256
+`d2031206b0f680cea6bfd85c2403eddc351310263253228535b25851eb39e7f4`).
+
 ## 4. $0 verification charter and implemented specification
 
 The implementation adds, without modifying the archival experiment:
@@ -290,7 +325,8 @@ The implementation adds, without modifying the archival experiment:
 1. `src/tac/witness_dsl/einstein_kolmogorov_crux_20260719.py`: frozen typed config
    for input fingerprints, pair set, family, seed, iterations, gain schedule, bounds,
    singleton scorer geometry, and checkpoint cadence.  Validation rejects implicit
-   paths, nondeterministic seeds, non-singleton authority claims, and unknown families.
+   paths, nondeterministic seeds, non-singleton authority claims, and unknown families;
+   it includes a deterministic lossy-label run-length control.
 2. `src/tac/optimization/einstein_kolmogorov_crux.py`: pure score arithmetic,
    deterministic coordinate candidates, projected DSPSA state transition, strict
    best-so-far admission, JSON round-trip, and resume-fingerprint helpers.  No Torch.
@@ -301,7 +337,8 @@ The implementation adds, without modifying the archival experiment:
    SegNet -> L* mismatch`, streaming one camera frame at a time.
 4. `tests/test_einstein_kolmogorov_crux.py`: canaries and mutation-sensitive tests for
    config refusal, deterministic perturbations, bounded projection, no-regression
-   admission, score/byte waterline, checkpoint round-trip, and packet-length identity.
+   admission, score/byte waterline, checkpoint round-trip, source/runtime mutation
+   refusal, packet parse-back, and deterministic simultaneous label simplification.
 
 Pinned n24 inputs for the run:
 
@@ -321,18 +358,19 @@ Tournament order and falsifiers:
 | global 5xRGB palette | positive control | reject direct-plane claim if hard-R replay does not improve |
 | exact `+/-1` coordinate descent | deterministic local control | stop a sweep after zero accepted moves |
 | projected DSPSA | fresh discrete-search arm | reject if best-so-far is worse, bounds fail, or same seed diverges |
+| lossy label run 2/3/4 | separate topology/rate family | measure actual bytes; reject any graft that raises exact ordering action |
 | Fisher/secant-QP palette | optimal-form follow-on | blocked until logits/inner-Jacobian custody is emitted in-run |
 | shearlet/curvelet residual | structured residual follow-on | blocked until receiver-bound bytes and target-boundary inverse exist |
 
-Every accepted candidate preserves exact packet size because labels stay fixed and PDW1
-stores the 360 fill bytes raw.  The tool must still measure actual encoded length and
-parse-back identity; this property may not be assumed from source inspection alone.
+Every fixed-label candidate preserves exact packet size because PDW1 stores the 360 fill
+bytes raw.  Lossy-label controls deliberately change encoded length.  Every arm measures
+actual bytes and parse-back identity; neither property is inferred from source inspection.
 
 ## 5. Completed unit, next unit, and gates
 
-The n24 **fixed-label palette-optimizer** tournament is complete at $0.  It is not a
-multi-family tournament and its output is a component candidate, not a contest archive:
-it has no compact pose-compatible frame 0 and only covers 24 pairs.
+The n24 **palette plus lossy-label component** tournament is complete at $0.  It is not
+a common-scale full-archive tournament and its output is a component candidate: it has
+no compact pose-compatible frame 0 and covers only 24 pairs.
 
 Promotion chain after a positive n24 result:
 
@@ -346,11 +384,13 @@ Promotion chain after a positive n24 result:
 5. only then compare to 0.1910828242 or claim an in-box full witness.
 
 Step 2 remains blocked by the missing optimized-fill/residual section in LVLS1.  A typed
-cross-checkpoint xi bridge now closes the executable pose-composition call surface for a
-diagnostic run, but its execution failed closed before checkpoint loading because this
-managed sandbox cannot write the mandatory SSD evidence tier.  This is a local
-filesystem-custody blocker, not a xi-family negative.  Any heavy n600 or paid dispatch
-remains operator-GO governed.  The current pointer is unchanged.
+cross-checkpoint xi bridge closes the pose-composition call surface, but governed n600
+execution failed before loading its 5.08 GB GT cache because this sandbox cannot write
+the mandatory SSD evidence tier.  Even with filesystem access, the backend now refuses
+until a hash-bound contract proves resume-from-disk and preserved atomic per-stage
+checkpoints.  These are execution-surface blockers, not xi-family negatives.  Zero-cost
+local full work is authorized; only paid dispatch remains operator-GO gated.  The pointer
+is unchanged.
 
 ## 6. Build and measurement result
 
@@ -370,18 +410,25 @@ pair; DSPSA also preserved every integer iteration.
 | projected middle-point DSPSA-8 | 30,667 | 0.006499184502 | 19,859 | repeated byte-for-byte |
 | projected middle-point DSPSA-32 | 28,039 | 0.005942238702 | 19,859 | hybrid parent |
 | DSPSA-32 then coordinate-12 | **26,795** | **0.005678600735** | **19,859** | winner; final fingerprinted replay |
+| label-run 2, source fills | 36,876 | 0.007815043132 | 19,371 | improves source rate--distortion; dominated by winner |
+| label-run 3, source fills | 37,728 | 0.007995605469 | 18,419 | dominated |
+| label-run 4, source fills | 50,535 | 0.010709762573 | 17,207 | negative rung |
+| winner then label-run 2 | 27,521 | 0.005832460192 | 19,371 | graft rejected: `Delta S_local=+0.0150610065` |
 
 The winner removes 11,282 errors (29.6294%) from the source and 10,481 (28.1173%)
 from the global control with zero additional packet bytes.  Its fixed-byte action delta
 relative to the source is `-0.2390967475`; Pose cancels algebraically but remains
 unmeasured.  The pose-zero value `0.5810833665` is therefore local ordering arithmetic,
-not a contest score.
+not a contest score.  The lossy-label rung demonstrates the operator-directed joint-RD
+move, but its best graft pays more Seg score than its 488-byte rate saving buys, so the
+exact component waterline rejects it rather than banking a rate budget.
 
 No new full-n600 in-box point was produced.  The existing settled R1 89,772-byte
 macOS-CPU advisory row remains a control, not this lane's result.  The attempted xi
 composition created neither packet nor receipt: the strict SSD preflight raised
 `PacketOutputFilesystemCustodyError(classification=permission_denied)` and no bulky
-local/tmp fallback was used.  Exact custody and the heterogeneous cross-family evidence inventory are
+local/tmp fallback was used.  A separate read-only receipt reverified all three input
+hashes, including the 5,078,017,610-byte GT cache.  Exact custody and the heterogeneous cross-family evidence inventory are
 in `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json`; the executable
 state transition is in `einstein_kolmogorov_crux_DAG_FEED_20260719.md`.
 
@@ -391,9 +438,9 @@ state transition is in `einstein_kolmogorov_crux_DAG_FEED_20260719.md`.
 - **Equations:**
   `src/tac/canonical_equations/einstein_kolmogorov_crux_20260719.py` now provides
   `einstein_kolmogorov_crux_action_rate_contract_v1`: exact action arithmetic, byte-cap
-  refusal, fixed-byte palette delta, and typed receipt-to-decision edges.  It accepts
-  caller-supplied measured values and does not hardcode or promote the provisional
-  tournament winner.
+  refusal, fixed-byte palette delta, and typed receipt-to-decision edges.  It binds the
+  exact aggregate measurement through canonical provenance and an empirical anchor;
+  registration remains research-only and cannot promote the scoped winner.
 - **DAG:** `FEED-EINSTEIN-KOLMOGOROV-20260719` must record the low-action-preimage obstruction,
   the n24 tournament receipt, the exact blocker to full archive composition, and the
   pointer non-delta.
@@ -403,3 +450,7 @@ state transition is in `einstein_kolmogorov_crux_DAG_FEED_20260719.md`.
   residual is ordered by the Fisher/margin necessity field and reverse-waterfill law.
 - **Autopilot:** research-only until a full parse-back archive and contest-axis scorer
   row exist.  No dispatch hook is armed by this memo.
+- **Receiver-consumption bijection:** any downstream redesign must parse and consume
+  every counted section through `R`; a mutation canary must prove each counted field is
+  active.  Counted-but-inert bytes are forbidden, as are scorer weights or source-derived
+  payload hidden in decoder code.
