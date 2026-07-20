@@ -15,6 +15,7 @@ import datetime as _dt
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -95,6 +96,21 @@ def main() -> int:
     args = parse_args()
     out = args.output_dir.expanduser().resolve(strict=False)
     cwd = args.cwd.expanduser().resolve(strict=False)
+    # Fail fast on unlaunchable argv: a detached child dies silently in run.log otherwise
+    # (2026-07-20 launch_003: script existed only on an unmerged arm branch, not at cwd).
+    # Absolute executables must exist; a relative script path in argv must exist at cwd.
+    exe = args.cmd[0]
+    if "/" in exe and not Path(exe).expanduser().exists():
+        print(json.dumps({"error": f"executable not found: {exe}"}), file=sys.stderr)
+        return 2
+    for part in args.cmd[1:]:
+        if part.endswith(".py"):
+            cand = Path(part) if Path(part).is_absolute() else (cwd / part)
+            if not cand.exists():
+                print(json.dumps({"error": f"script not found at cwd: {cand.as_posix()}"}),
+                      file=sys.stderr)
+                return 2
+            break  # only the first script arg is the entry point
     out.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(dict(item.split("=", 1) for item in args.env))

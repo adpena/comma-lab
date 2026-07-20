@@ -433,13 +433,26 @@ exit $RC
     return launcher
 
 
+def _full_model_id(value: str) -> str:
+    """Refuse model shorthands the API rejects (e.g. 'sol' -> 400 after setup cost)."""
+    if not value.startswith("gpt-"):
+        raise argparse.ArgumentTypeError(
+            f"model {value!r} looks like a shorthand; pass the full ID (e.g. 'gpt-5.6-sol')"
+        )
+    return value
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Delegate a task to codex with auto completion notification.")
     ap.add_argument("--label", required=True, help="short slug for this delegation (no spaces)")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--prompt-file", help="path to a file containing the codex prompt")
     g.add_argument("--prompt", help="inline prompt string (written to a prompt file)")
-    ap.add_argument("--model", default="gpt-5.6-sol")
+    # Full model IDs only: the API 400s on shorthands ("sol") AFTER worktree/ledger setup — a
+    # 2026-07-20 launcher-side rc=1 came from exactly that. Refuse shorthands at parse time.
+    ap.add_argument("--model", default="gpt-5.6-sol",
+                    type=_full_model_id,
+                    help="full codex model ID (e.g. gpt-5.6-sol); shorthands like 'sol' are refused")
     ap.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "ultra"])
     # Sandbox relaxed to FULL AUTHORITY (operator 2026-07-14: "codex is a trusted partner, I trust it
     # with as much authority as you"). danger-full-access lets an arm write .git/objects and COMMIT —
