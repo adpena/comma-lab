@@ -882,3 +882,70 @@ the right object (least-complex tiebreak).
   equal d_seg); event-ledger schema shares the #315/#344 event vocabulary.
 - Equations leg owed at binding time: worldsheet transport law (ξ-advection of the separatrix + measured
   deviation-event rate) as a canonical equation with a real evaluator.
+
+## §ADDENDUM 2026-07-20-X — CELL CENTERS · CELL CODING · DUALITY (operator-directed design + philosophy elevation)
+
+**Provenance:** operator 2026-07-20 ("Cell centers, cell coding, and duality are all philosophies and v10 spec
+doc additions as well"), completing the Time-Traveler gap set (G2/G3/G4,
+`.omx/research/time_traveler_doctrine_gaps_20260720.md`) alongside §W. All three are recognition-and-binding of
+held corpus; all three SIMPLIFY the vehicle (tiebreak law conformant).
+
+### X1 — CELL CENTERS: solve for interiority, never mere feasibility (G2)
+
+**Principle.** The scored object is a decision CELL (argmax polytope ∩ pose tube ∩ uint8 lattice), and every
+realized point carries a quantization ball around it. The correct solve target is the Chebyshev/analytic CENTER
+of the cell — maximum margin to every wall — not any feasible point. A centered solution is immune to rounding
+by construction: no flip on realization, no correction bytes ever owed.
+**Design.** The joint QP objective is max-min-margin (margins measured along the rank-4 head hyperplane
+normals — the steer-3 chart), subject to the byte budget; feasibility-only solves are demoted to fallback.
+**Anchors.** The uint8-breaks-range(A) measurement (#532: Δ=62.74 vs 1.7e-13) is WHY boundary-hugging points
+fail realization; the r2b 9.462% singleton realization is the cost of un-centered edits. Routed live to r1b5.
+**Philosophy.** Robustness is not a post-hoc property to test; it is a geometric property to SOLVE FOR. Depth
+in the cell is free distortion insurance priced in zero bytes.
+
+### X2 — CELL CODING: code the equivalence class, never the point (G3)
+
+**Principle.** The scorers see equivalence classes, not planes. The information-theoretically correct payload
+is WHICH cell, at −log₂ P(cell) under the generator prior (relative-entropy / bits-back coding over argmax
+cells). The true rate floor is K(equivalence class), not K(plane); every bit spent distinguishing points WITHIN
+a cell is paid for information the score discards.
+**Design.** The carrier's coding target migrates from coordinates to cell selectors: the generator prior
+defines P(cell); large (bulk-class) cells cost fractions of a bit; only small boundary-adjacent cells carry
+real information — which is exactly where the measured debt lives (the moderate-margin band). Composes with X1:
+the center realizes the cell; the code names it.
+**Anchors.** #558 REC survey (held, unbound until now); the Laguerre cell geometry (#284); the quotient-codec
+paradigm (#155) — this is its rate-side realization. Pre-registered probe (queue #582(e)): measured
+Σ −log₂ P(cell) over the moderate band vs current carrier bytes.
+**Philosophy.** Shannon done honestly against the ACTUAL observable. The quotient was always the object; cell
+coding is the first coder that speaks its language.
+
+### X3 — DUALITY: allocate in price coordinates (G4)
+
+**Principle.** The costate λ = ∂S/∂x is the exact price field, and byte allocation is a KKT waterfill — so the
+solve should RUN in the dual: a one-dimensional root-find on λ, with every candidate byte admitted iff its
+marginal score-per-byte clears the water level. The organ (#247/#426/#516) was always the solver's coordinate
+system, not an advisor.
+**Design.** The compile admission loop consumes λ directly: realization_breakeven_bytes_v1 and the E9 exchange
+law (150.181956 B per 1e-6 d_seg) are dual-space constants; the 3-axis joint optimum (#536) is the λ root-find
+across seg/pose/rate simultaneously. Primal search is demoted to candidate generation; admission is a price
+comparison.
+**Anchors.** The exchange law E9; the registered break-even equation; the KKT-stop-zero verdict of r2b (a dual
+computation that correctly refused a primal stream in one evaluation).
+**Philosophy.** Legendre's oldest gift: when the objective is additive over a budget, the dual variable is the
+one number that coordinates everything. Optimal wall-clock again: a root-find replaces a search.
+
+### The composed picture (§W + §X)
+
+One spacetime worldsheet (§W) partitioned into decision cells; each cell realized at its CENTER (X1), named by
+its CODE (X2), admitted at its PRICE (X3). Seg is the sheet, pose is its transport field, rate is the cell-code
+length, wall-clock is the intrinsic complexity of the sheet. That single sentence is the v10 endgame geometry —
+every term measured, every construction old mathematics, everything falling out of one object.
+
+### Binding plan
+
+- X1: LIVE (routed to r1b5 as the QP objective swap; cheap, immediate).
+- X2: post-row probe first (Σ −log₂ P(cell) vs carrier bytes, #582(e)); adoption gated on the probe beating the
+  current coder at equal d_seg; consumer #572.
+- X3: #536 charter note (the 3-axis waterfill IS the λ root-find); compile admission loop consumes the dual
+  constants by equation ID.
+- Equations leg owed at binding: cell-center margin-radius law + cell-probability coder law, real evaluators.
