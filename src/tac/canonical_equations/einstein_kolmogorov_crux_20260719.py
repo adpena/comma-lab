@@ -14,7 +14,7 @@ import hashlib
 import json
 import math
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import ROUND_CEILING, Decimal, localcontext
 from pathlib import Path
 from typing import Literal
@@ -127,6 +127,25 @@ def _contract_input_path(value: str | Path) -> Path:
 
     path = Path(value)
     return path.resolve() if path.is_absolute() else (REPO_ROOT / path).resolve()
+
+
+def _canonical_producer_reference(
+    value: str | Path,
+    *,
+    canonical_path: str,
+) -> tuple[Path, str]:
+    """Bind producer custody to the exact canonical path, not byte aliases."""
+
+    candidate = Path(value)
+    requested = candidate.absolute() if candidate.is_absolute() else (REPO_ROOT / candidate).absolute()
+    expected_requested = (REPO_ROOT / canonical_path).absolute()
+    if requested != expected_requested:
+        raise ValueError(f"canonical producer path must resolve to {canonical_path!r}; got {str(requested)!r}")
+    resolved = requested.resolve()
+    expected = expected_requested.resolve()
+    if resolved != expected:
+        raise ValueError(f"canonical producer path {canonical_path!r} changed identity")
+    return expected, canonical_path
 
 
 def _nonnegative_real(value: float | int, field: str) -> float:
@@ -1139,33 +1158,51 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
 ) -> CanonicalEquation:
     """Build the hash-bound, research-only canonical equation and n24 anchor."""
 
-    payload, source, winner = _load_scoped_measurement(measurement_path)
-    frontier_chart = validate_frontier_magnitude_chart(frontier_chart_path)
+    measurement_input_path, measurement_path_str = _canonical_producer_reference(
+        measurement_path,
+        canonical_path=SOURCE_MEASUREMENT,
+    )
+    frontier_input_path, frontier_path_str = _canonical_producer_reference(
+        frontier_chart_path,
+        canonical_path=SOURCE_FRONTIER_MAGNITUDE,
+    )
+    payload, source, winner = _load_scoped_measurement(measurement_input_path)
+    frontier_chart = validate_frontier_magnitude_chart(frontier_input_path)
     correction = payload["operating_point_correction"]
-    measurement_path_str = str(measurement_path)
     measured_utc = str(payload["utc"])
-    provenance = build_provenance_for_research_sidecar(
-        sidecar_path=measurement_path,
-        reactivation_criteria=(
-            "Research-only n24 fixed-label palette evidence. Reactivate for promotion only "
-            "after a complete n600 archive is byte-closed and scored on a contest axis."
+    provenance = replace(
+        build_provenance_for_research_sidecar(
+            sidecar_path=measurement_input_path,
+            reactivation_criteria=(
+                "Research-only n24 fixed-label palette evidence. Reactivate for promotion only "
+                "after a complete n600 archive is byte-closed and scored on a contest axis."
+            ),
+            measurement_axis=RESEARCH_ONLY_AXIS,
+            hardware_substrate="macos_arm64",
+            captured_at_utc=measured_utc,
         ),
-        measurement_axis=RESEARCH_ONLY_AXIS,
-        hardware_substrate="macos_arm64",
-        captured_at_utc=measured_utc,
+        source_path=measurement_path_str,
     )
     frontier_utc = str(frontier_chart["written_at_utc"])
-    frontier_provenance = build_provenance_for_research_sidecar(
-        sidecar_path=frontier_chart_path,
-        reactivation_criteria=(
-            "Cross-axis exact-solver reuse and projected rate controls only. Reactivate "
-            "for promotion after a complete n600 trade-cells archive is byte-closed and "
-            "scored on a contest axis."
+    frontier_provenance = replace(
+        build_provenance_for_research_sidecar(
+            sidecar_path=frontier_input_path,
+            reactivation_criteria=(
+                "Cross-axis exact-solver reuse and projected rate controls only. Reactivate "
+                "for promotion after a complete n600 trade-cells archive is byte-closed and "
+                "scored on a contest axis."
+            ),
+            measurement_axis="[cross-axis exact receipts; axes remain separate]",
+            hardware_substrate="mixed; see frontier chart row custody",
+            captured_at_utc=frontier_utc,
         ),
-        measurement_axis="[cross-axis exact receipts; axes remain separate]",
-        hardware_substrate="mixed; see frontier chart row custody",
-        captured_at_utc=frontier_utc,
+        source_path=frontier_path_str,
     )
+    if (
+        provenance.source_sha256 != SOURCE_MEASUREMENT_SHA256
+        or frontier_provenance.source_sha256 != SOURCE_FRONTIER_MAGNITUDE_SHA256
+    ):
+        raise ValueError("canonical producer provenance hash drifted after validation")
     anchor = EmpiricalAnchor(
         anchor_id="einstein_kolmogorov_n24_fixed_label_palette_20260719",
         measurement_utc=measured_utc,
@@ -1267,7 +1304,7 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
             "pointer_moved": False,
         },
         residual=0.0,
-        source_artifact=str(frontier_chart_path),
+        source_artifact=frontier_path_str,
         measurement_method=(
             "Read-only SHA revalidation, matched n12 production receiver A/B, and exact "
             "score-law composition of the banked C1, Rung-E, zero-band joint-solve, "
@@ -1318,7 +1355,7 @@ def build_einstein_kolmogorov_crux_action_rate_contract_v1(
             "tools.probe_einstein_kolmogorov_crux",
             "tac.optimization.einstein_kolmogorov_crux",
         ),
-        canonical_producers=(measurement_path_str, str(frontier_chart_path)),
+        canonical_producers=(measurement_path_str, frontier_path_str),
         provenance=provenance,
     )
 

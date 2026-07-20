@@ -1452,17 +1452,268 @@ def check_no_fourier_basis_in_witness_representation(
     )
 
 
+def _has_substantive_same_line_waiver(line: str, token: str) -> bool:
+    """Return whether ``line`` carries ``TOKEN:<non-placeholder rationale>``."""
+
+    marker = f"# {token}:"
+    if marker not in line:
+        return False
+    rationale = line.split(marker, 1)[1].strip()
+    return bool(len(rationale) >= 4 and rationale.lower() not in {"<rationale>", "<reason>", "todo", "tbd", "none"})
+
+
+def _check_351_call_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return ""
+
+
+def _check_351_exact_helper_is_closed(helper: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Verify that the producer helper rejects aliases and returns canonical labels."""
+
+    arg_names = {
+        arg.arg
+        for arg in (
+            *helper.args.posonlyargs,
+            *helper.args.args,
+            *helper.args.kwonlyargs,
+        )
+    }
+    if not {"value", "canonical_path"} <= arg_names:
+        return False
+    assignments = {
+        target.id: node.value
+        for node in helper.body
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
+        for target in (node.targets if isinstance(node, ast.Assign) else (node.target,))
+        if isinstance(target, ast.Name)
+    }
+    requested_value = assignments.get("requested")
+    expected_requested_value = assignments.get("expected_requested")
+    resolved_value = assignments.get("resolved")
+    expected_value = assignments.get("expected")
+    if any(
+        value is None
+        for value in (
+            requested_value,
+            expected_requested_value,
+            resolved_value,
+            expected_value,
+        )
+    ):
+        return False
+    assert requested_value is not None
+    assert expected_requested_value is not None
+    assert resolved_value is not None
+    assert expected_value is not None
+    requested_names = {node.id for node in ast.walk(requested_value) if isinstance(node, ast.Name)}
+    requested_calls = {
+        _check_351_call_name(node.func) for node in ast.walk(requested_value) if isinstance(node, ast.Call)
+    }
+    expected_requested_names = {node.id for node in ast.walk(expected_requested_value) if isinstance(node, ast.Name)}
+    expected_requested_calls = {
+        _check_351_call_name(node.func) for node in ast.walk(expected_requested_value) if isinstance(node, ast.Call)
+    }
+    resolved_names = {node.id for node in ast.walk(resolved_value) if isinstance(node, ast.Name)}
+    resolved_calls = {
+        _check_351_call_name(node.func) for node in ast.walk(resolved_value) if isinstance(node, ast.Call)
+    }
+    expected_names = {node.id for node in ast.walk(expected_value) if isinstance(node, ast.Name)}
+    expected_calls = {
+        _check_351_call_name(node.func) for node in ast.walk(expected_value) if isinstance(node, ast.Call)
+    }
+    if (
+        "candidate" not in requested_names
+        or "absolute" not in requested_calls
+        or not {"REPO_ROOT", "canonical_path"} <= expected_requested_names
+        or "absolute" not in expected_requested_calls
+        or "requested" not in resolved_names
+        or "resolve" not in resolved_calls
+        or "expected_requested" not in expected_names
+        or "resolve" not in expected_calls
+    ):
+        return False
+    lexical_fail_closed = False
+    resolved_fail_closed = False
+    for node in ast.walk(helper):
+        if not isinstance(node, ast.If):
+            continue
+        compare_names = {child.id for child in ast.walk(node.test) if isinstance(child, ast.Name)}
+        raises = any(isinstance(child, ast.Raise) for child in ast.walk(node))
+        differs = any(isinstance(op, ast.NotEq) for op in ast.walk(node.test))
+        lexical_fail_closed |= {"requested", "expected_requested"} <= compare_names and differs and raises
+        resolved_fail_closed |= {"resolved", "expected"} <= compare_names and differs and raises
+    if not (lexical_fail_closed and resolved_fail_closed):
+        return False
+    for node in ast.walk(helper):
+        if not isinstance(node, ast.Return) or not isinstance(node.value, ast.Tuple):
+            continue
+        returned = [item.id for item in node.value.elts if isinstance(item, ast.Name)]
+        if "expected" in returned and "canonical_path" in returned:
+            return True
+    return False
+
+
+def _check_351_sha_is_revalidated(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+    constant_name: str,
+) -> bool:
+    provenance_names = {
+        target.id
+        for assignment in ast.walk(function)
+        if isinstance(assignment, (ast.Assign, ast.AnnAssign)) and assignment.value is not None
+        for target in (assignment.targets if isinstance(assignment, ast.Assign) else (assignment.target,))
+        if isinstance(target, ast.Name)
+        and any(
+            isinstance(child, ast.Call) and _check_351_call_name(child.func) == "build_provenance_for_research_sidecar"
+            for child in ast.walk(assignment.value)
+        )
+    }
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Compare):
+            continue
+        has_constant = any(isinstance(child, ast.Name) and child.id == constant_name for child in ast.walk(node))
+        has_source_sha = any(
+            isinstance(child, ast.Attribute)
+            and child.attr == "source_sha256"
+            and isinstance(child.value, ast.Name)
+            and child.value.id in provenance_names
+            for child in ast.walk(node)
+        )
+        if has_constant and has_source_sha:
+            return True
+    return False
+
+
+def _check_351_canonical_producer_identity(repo_root: Path) -> list[str]:
+    """Scope extension of Catalog #351 for parameterized verified producers.
+
+    A canonical-equation builder that accepts producer paths, publishes
+    ``canonical_producers``, builds research-sidecar provenance, and cites a
+    frozen ``SOURCE_*_SHA256`` is an authority boundary.  Such builders must
+    bind each caller path to the exact repo-canonical path (byte-identical
+    aliases are not equivalent) and must re-check the provenance object's SHA.
+    """
+
+    package = repo_root / "src/tac/canonical_equations"
+    if not package.is_dir():
+        return []
+    violations: list[str] = []
+    for path in sorted(package.glob("*.py")):
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+            tree = ast.parse(source)
+        except (OSError, SyntaxError) as exc:
+            violations.append(f"{path.relative_to(repo_root)}: canonical producer source is unreadable: {exc}")
+            continue
+        lines = source.splitlines()
+        sha_constants = {
+            target.id
+            for assignment in tree.body
+            if isinstance(assignment, (ast.Assign, ast.AnnAssign))
+            for target in (assignment.targets if isinstance(assignment, ast.Assign) else (assignment.target,))
+            if isinstance(target, ast.Name) and target.id.startswith("SOURCE_") and target.id.endswith("SHA256")
+        }
+        helpers = {node.name: node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        helper = helpers.get("_canonical_producer_reference")
+        for function in helpers.values():
+            path_args = {
+                arg.arg
+                for arg in (
+                    *function.args.posonlyargs,
+                    *function.args.args,
+                    *function.args.kwonlyargs,
+                )
+                if arg.arg == "path" or arg.arg.endswith("_path")
+            }
+            calls = [node for node in ast.walk(function) if isinstance(node, ast.Call)]
+            call_names = {_check_351_call_name(node.func) for node in calls}
+            has_producer_keyword = any(
+                isinstance(node, ast.keyword) and node.arg == "canonical_producers" for node in ast.walk(function)
+            )
+            used_sha_constants = {
+                node.id for node in ast.walk(function) if isinstance(node, ast.Name) and node.id in sha_constants
+            }
+            if not (
+                path_args
+                and has_producer_keyword
+                and "build_provenance_for_research_sidecar" in call_names
+                and used_sha_constants
+            ):
+                continue
+            definition_line = lines[function.lineno - 1] if function.lineno <= len(lines) else ""
+            if _has_substantive_same_line_waiver(
+                definition_line,
+                "CANONICAL_PRODUCER_IDENTITY_OK",
+            ):
+                continue
+            defects: list[str] = []
+            if helper is None or not _check_351_exact_helper_is_closed(helper):
+                defects.append("missing fail-closed exact-path helper")
+            for arg_name in sorted(path_args):
+                routed = any(
+                    _check_351_call_name(call.func) == "_canonical_producer_reference"
+                    and (
+                        (call.args and isinstance(call.args[0], ast.Name) and call.args[0].id == arg_name)
+                        or any(
+                            keyword.arg == "value"
+                            and isinstance(keyword.value, ast.Name)
+                            and keyword.value.id == arg_name
+                            for keyword in call.keywords
+                        )
+                    )
+                    and any(
+                        keyword.arg == "canonical_path"
+                        and isinstance(keyword.value, ast.Name)
+                        and keyword.value.id.startswith("SOURCE_")
+                        and not keyword.value.id.endswith("SHA256")
+                        for keyword in call.keywords
+                    )
+                    for call in calls
+                )
+                if not routed:
+                    defects.append(f"{arg_name} bypasses exact canonical-path binding")
+            for constant_name in sorted(used_sha_constants):
+                if not _check_351_sha_is_revalidated(function, constant_name):
+                    defects.append(f"{constant_name} is not checked against provenance.source_sha256")
+            if defects:
+                violations.append(
+                    f"{path.relative_to(repo_root)}:{function.lineno}: parameterized verified canonical producer "
+                    + "; ".join(defects)
+                    + ". Route through an exact repo-path guard and reject zero/alias provenance, or add same-line "
+                    "# CANONICAL_PRODUCER_IDENTITY_OK:<rationale>. Catalog #351 scope extension."
+                )
+    return violations
+
+
 def check_evidence_authority_claims_are_custodied(
     repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
 ) -> list[str]:
-    """Refuse exact-authority language on uncustodied advisory evidence."""
+    """Refuse uncustodied claims and non-canonical verified producer identity."""
 
-    return _run_v9_provenance_gate(
+    root = Path(repo_root or Path(__file__).resolve().parents[2])
+    violations = _run_v9_provenance_gate(
         "check_evidence_authority_claims_are_custodied",
-        repo_root=Path(repo_root or Path(__file__).resolve().parents[2]),
+        repo_root=root,
         strict=strict,
         verbose=verbose,
     )
+    anchor_violations = _check_344_anchor_roundtrip_integrity(root)
+    producer_violations = _check_351_canonical_producer_identity(root)
+    if verbose:
+        print(
+            "  [catalog-351-anchor-roundtrip+canonical-producer-identity] "
+            f"{'OK' if not (anchor_violations or producer_violations) else f'{len(anchor_violations) + len(producer_violations)} violation(s)'}"
+        )
+    custody_extensions = [*anchor_violations, *producer_violations]
+    if custody_extensions and strict:
+        raise PreflightError(
+            "check_evidence_authority_claims_are_custodied found authority schema/producer custody defects:\n  "
+            + "\n  ".join(item[:500] for item in custody_extensions[:10])
+        )
+    return [*violations, *custody_extensions]
 
 
 def preflight_all(
@@ -47713,6 +47964,259 @@ def _check_154_extract_destructive_lines(text: str, *, is_python: bool) -> list[
     return matches
 
 
+def _check_154_mentions_cleanup_manifest(node: ast.AST) -> bool:
+    return any(isinstance(child, ast.Constant) and child.value == "cleanup_manifest" for child in ast.walk(node))
+
+
+def _check_154_manifest_absence_implications(node: ast.AST) -> tuple[bool, bool]:
+    """Return whether truth/falsehood of ``node`` proves manifest absence.
+
+    This deliberately models branch polarity.  In particular, the manifest-less
+    path of ``if \"cleanup_manifest\" in lifecycle`` is the ``else`` suite,
+    whereas ``not in`` selects the body.  Treating both bodies as manifest-less
+    silently audits the wrong producer path.
+    """
+
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        true_if_false, false_if_false = _check_154_manifest_absence_implications(node.operand)
+        return false_if_false, true_if_false
+    if isinstance(node, ast.BoolOp):
+        implications = [_check_154_manifest_absence_implications(value) for value in node.values]
+        if isinstance(node.op, ast.And):
+            # All operands are true in the body; any absence proof is enough.
+            # A false result identifies no operand, so every possible false
+            # operand must prove absence before the else suite is authoritative.
+            return (
+                any(truth for truth, _falsehood in implications),
+                all(falsehood for _truth, falsehood in implications),
+            )
+        if isinstance(node.op, ast.Or):
+            # A true result identifies no operand, so every possible true
+            # operand must prove absence.  All operands are false in the else.
+            return (
+                all(truth for truth, _falsehood in implications),
+                any(falsehood for _truth, falsehood in implications),
+            )
+    if not isinstance(node, ast.Compare) or not _check_154_mentions_cleanup_manifest(node):
+        return False, False
+    if len(node.ops) != 1 or len(node.comparators) != 1:
+        return False, False
+    op = node.ops[0]
+    if isinstance(op, ast.NotIn):
+        return True, False
+    if isinstance(op, ast.In):
+        return False, True
+
+    # Also recognize ``mapping.get("cleanup_manifest") is [not] None``.
+    compares_none = any(
+        isinstance(value, ast.Constant) and value.value is None for value in (node.left, *node.comparators)
+    )
+    if compares_none and isinstance(op, (ast.Is, ast.Eq)):
+        return True, False
+    if compares_none and isinstance(op, (ast.IsNot, ast.NotEq)):
+        return False, True
+    return False, False
+
+
+def _check_154_manifestless_suite(node: ast.If) -> list[ast.stmt] | None:
+    true_absent, false_absent = _check_154_manifest_absence_implications(node.test)
+    if true_absent and not false_absent:
+        return node.body
+    if false_absent and not true_absent and node.orelse:
+        # With no explicit else the false path is fallthrough, not a bounded
+        # suite this local scanner can attribute safely.  A later explicit
+        # absence guard (as in the live historical validator) is audited on
+        # its own branch.
+        return node.orelse
+    return None
+
+
+def _check_154_mapping_keys(node: ast.AST | None) -> set[str]:
+    if not isinstance(node, ast.Dict):
+        return set()
+    return {key.value for key in node.keys if isinstance(key, ast.Constant) and isinstance(key.value, str)}
+
+
+def _check_154_compare_reads_mapping_key(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+    mapping_name: str,
+    key: str,
+) -> bool:
+    for compare in (node for node in ast.walk(function) if isinstance(node, ast.Compare)):
+        for subscript in (node for node in ast.walk(compare) if isinstance(node, ast.Subscript)):
+            if not isinstance(subscript.value, ast.Name) or subscript.value.id != mapping_name:
+                continue
+            if isinstance(subscript.slice, ast.Constant) and subscript.slice.value == key:
+                return True
+    return False
+
+
+def _check_154_one_compare_reads_mapping_key(
+    compare: ast.Compare,
+    mapping_name: str,
+    key: str,
+) -> bool:
+    return any(
+        isinstance(subscript.value, ast.Name)
+        and subscript.value.id == mapping_name
+        and isinstance(subscript.slice, ast.Constant)
+        and subscript.slice.value == key
+        for subscript in (node for node in ast.walk(compare) if isinstance(node, ast.Subscript))
+    )
+
+
+def _check_154_validator_binds_exact_history(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+    *,
+    final_name: str,
+    predecessor_name: str,
+) -> bool:
+    calls = [node for node in ast.walk(function) if isinstance(node, ast.Call)]
+    preserve_calls = [node for node in calls if _check_351_call_name(node.func) == "_validate_preserved_file"]
+    if not all(
+        any(
+            any(
+                isinstance(child, ast.Name) and child.id == mapping_name
+                for argument in (
+                    *call.args,
+                    *(keyword.value for keyword in call.keywords),
+                )
+                for child in ast.walk(argument)
+            )
+            for call in preserve_calls
+        )
+        for mapping_name in (final_name, predecessor_name)
+    ):
+        return False
+    if not all(
+        any(isinstance(child, ast.Name) and child.id == name for child in ast.walk(function))
+        for name in (final_name, predecessor_name)
+    ):
+        return False
+    if not all(_check_154_compare_reads_mapping_key(function, name, "path") for name in (final_name, predecessor_name)):
+        return False
+    final_sha_bound = any(
+        isinstance(compare, ast.Compare)
+        and _check_154_one_compare_reads_mapping_key(compare, final_name, "sha256")
+        and any(isinstance(child, ast.Name) and "receipt_sha" in child.id for child in ast.walk(compare))
+        for compare in ast.walk(function)
+    )
+    if not final_sha_bound:
+        return False
+    predecessor_exact = any(
+        isinstance(compare, ast.Compare)
+        and any(isinstance(child, ast.Name) and child.id == predecessor_name for child in ast.walk(compare))
+        and any(
+            isinstance(child, ast.Call) and _check_351_call_name(child.func) == "dict" for child in ast.walk(compare)
+        )
+        for compare in ast.walk(function)
+    )
+    return predecessor_exact
+
+
+def _check_154_manifestless_cleanup_identity(repo_root: Path) -> list[str]:
+    """Scope extension: manifest-less cleanup is valid only for exact frozen bytes."""
+
+    violations: list[str] = []
+    for top_name in ("tools", "scripts", "experiments", "src/tac"):
+        top = repo_root / top_name
+        if not top.is_dir():
+            continue
+        for path in sorted(top.rglob("*.py")):
+            rel = path.relative_to(repo_root).as_posix()
+            if (
+                rel in _CHECK_154_SELF_EXEMPT_PATHS
+                or path.name.startswith("test_")
+                or "/tests/" in f"/{rel}"
+                or any(marker in rel for marker in _CHECK_154_EXCLUDED_PATH_MARKERS)
+            ):
+                continue
+            try:
+                source = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if "cleanup_manifest" not in source:
+                continue
+            try:
+                tree = ast.parse(source)
+            except SyntaxError as exc:
+                violations.append(f"{rel}: cleanup-manifest producer is not parseable: {exc}")
+                continue
+            branches = [
+                (node, suite)
+                for node in ast.walk(tree)
+                if isinstance(node, ast.If) and (suite := _check_154_manifestless_suite(node)) is not None
+            ]
+            if not branches:
+                continue
+            lines = source.splitlines()
+            unwaived = [
+                (branch, suite)
+                for branch, suite in branches
+                if not _has_substantive_same_line_waiver(
+                    lines[branch.lineno - 1] if branch.lineno <= len(lines) else "",
+                    "MANIFESTLESS_CLEANUP_IDENTITY_OK",
+                )
+            ]
+            if not unwaived:
+                continue
+            mappings: dict[str, set[str]] = {}
+            functions: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    functions.append(node)
+                elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                    mappings[node.targets[0].id] = _check_154_mapping_keys(node.value)
+                elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                    mappings[node.target.id] = _check_154_mapping_keys(node.value)
+            exact_keys = {"path", "bytes", "sha256"}
+            finals = [
+                name
+                for name, keys in mappings.items()
+                if exact_keys <= keys
+                and "RECEIPT" in name.upper()
+                and "PRECLEANUP" not in name.upper()
+                and "PREDECESSOR" not in name.upper()
+            ]
+            predecessors = [
+                name
+                for name, keys in mappings.items()
+                if exact_keys <= keys and ("PRECLEANUP" in name.upper() or "PREDECESSOR" in name.upper())
+            ]
+            valid_validators: set[str] = set()
+            for function in functions:
+                low_name = function.name.lower()
+                if "validate" not in low_name or "cleanup" not in low_name:
+                    continue
+                for final_name in finals:
+                    for predecessor_name in predecessors:
+                        if _check_154_validator_binds_exact_history(
+                            function,
+                            final_name=final_name,
+                            predecessor_name=predecessor_name,
+                        ):
+                            valid_validators.add(function.name)
+            routed = all(
+                any(isinstance(statement, ast.Raise) for statement in suite)
+                or any(
+                    isinstance(call, ast.Call) and _check_351_call_name(call.func) in valid_validators
+                    for statement in suite
+                    for call in ast.walk(statement)
+                )
+                for _branch, suite in unwaived
+            )
+            if not routed:
+                first_branch = unwaived[0][0]
+                violations.append(
+                    f"{rel}:{first_branch.lineno}: manifest-less cleanup compatibility is not bound to exact "
+                    "final+precleanup path/bytes/SHA identity and a fail-closed validator. Add frozen mappings, "
+                    "validate both preserved files, compare the receipt payload hash and predecessor mapping, "
+                    "and route every manifest-less branch through it; or add same-line "
+                    "# MANIFESTLESS_CLEANUP_IDENTITY_OK:<rationale>. Catalog #154 scope extension."
+                )
+    return violations
+
+
 def check_experiments_results_gc_helper_is_canonical(
     *,
     repo_root: Path | None = None,
@@ -47773,29 +48277,23 @@ def check_experiments_results_gc_helper_is_canonical(
                 f"# GC_EXPERIMENTS_RESULTS_BYPASS_OK:<reason>"
             )
 
+    violations.extend(_check_154_manifestless_cleanup_identity(root))
+
     if verbose:
         if violations:
-            print(
-                f"  [gc-experiments-results-canonical] {len(violations)} "
-                f"violation(s) across {scanned} candidate(s):"
-            )
+            print(f"  [gc-experiments-results-canonical] {len(violations)} violation(s) across {scanned} candidate(s):")
             for v in violations[:10]:
                 print(f"    - {v[:220]}")
             if len(violations) > 10:
                 print(f"    ... ({len(violations) - 10} more)")
         else:
-            print(
-                "  [gc-experiments-results-canonical] OK "
-                f"({scanned} candidate(s) scanned; 0 violation(s))"
-            )
+            print(f"  [gc-experiments-results-canonical] OK ({scanned} candidate(s) scanned; 0 violation(s))")
 
     if violations and strict:
         raise PreflightError(
             "check_experiments_results_gc_helper_is_canonical found "
-            f"{len(violations)} destructive call(s) under experiments/results/ "
-            "outside the canonical helper "
-            "(tools/gc_experiments_results.py):\n  "
-            + "\n  ".join(v[:300] for v in violations[:5])
+            f"{len(violations)} cleanup custody defect(s) (ad-hoc destructive calls or "
+            "manifest-less historical identity gaps):\n  " + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
 
@@ -80381,6 +80879,129 @@ def _check_344_text_has_valid_waiver(text: str) -> bool:
     return False
 
 
+def _check_344_value_reads_anchor_field(
+    value: ast.AST,
+    field_name: str,
+    *,
+    require_legacy_get: bool,
+) -> bool:
+    for node in ast.walk(value):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "get":
+            if node.args and isinstance(node.args[0], ast.Constant) and node.args[0].value == field_name:
+                return True
+        if require_legacy_get:
+            continue
+        if isinstance(node, ast.Subscript) and isinstance(node.slice, ast.Constant) and node.slice.value == field_name:
+            return True
+    return False
+
+
+def _check_344_anchor_roundtrip_integrity(repo_root: Path) -> list[str]:
+    """Scope extension: every EmpiricalAnchor field must survive registry reads."""
+
+    package = repo_root / "src/tac/canonical_equations"
+    if not package.is_dir():
+        return []
+    registry_path = package / "registry.py"
+    model_paths = [
+        path
+        for path in sorted(package.glob("*.py"))
+        if path != registry_path and "class EmpiricalAnchor" in path.read_text(encoding="utf-8", errors="replace")
+    ]
+    if not model_paths and not registry_path.exists():
+        return []
+    violations: list[str] = []
+    if len(model_paths) != 1:
+        violations.append(
+            "src/tac/canonical_equations: expected exactly one EmpiricalAnchor definition; "
+            f"found {len(model_paths)}. Catalog #344 round-trip scope extension."
+        )
+        return violations
+    if not registry_path.is_file():
+        violations.append(
+            "src/tac/canonical_equations/registry.py: missing registry reader for EmpiricalAnchor. "
+            "Catalog #344 round-trip scope extension."
+        )
+        return violations
+    model_path = model_paths[0]
+    try:
+        model_source = model_path.read_text(encoding="utf-8", errors="replace")
+        model_tree = ast.parse(model_source)
+    except (OSError, SyntaxError) as exc:
+        return [f"{model_path.relative_to(repo_root)}: EmpiricalAnchor definition is unreadable: {exc}"]
+    try:
+        registry_source = registry_path.read_text(encoding="utf-8", errors="replace")
+        registry_tree = ast.parse(registry_source)
+    except (OSError, SyntaxError) as exc:
+        return [f"{registry_path.relative_to(repo_root)}: registry reader is unreadable: {exc}"]
+    anchor_classes = [
+        node for node in model_tree.body if isinstance(node, ast.ClassDef) and node.name == "EmpiricalAnchor"
+    ]
+    if len(anchor_classes) != 1:
+        return [
+            f"{model_path.relative_to(repo_root)}: expected one parseable EmpiricalAnchor class; "
+            f"found {len(anchor_classes)}"
+        ]
+    model_lines = model_source.splitlines()
+    fields: list[tuple[str, bool, int, bool]] = []
+    for statement in anchor_classes[0].body:
+        if not isinstance(statement, ast.AnnAssign) or not isinstance(statement.target, ast.Name):
+            continue
+        line = model_lines[statement.lineno - 1] if statement.lineno <= len(model_lines) else ""
+        waived = _has_substantive_same_line_waiver(line, "CANONICAL_ANCHOR_ROUNDTRIP_OK")
+        fields.append((statement.target.id, statement.value is not None, statement.lineno, waived))
+    constructor_calls = [
+        node
+        for node in ast.walk(registry_tree)
+        if isinstance(node, ast.Call) and _check_351_call_name(node.func) == "EmpiricalAnchor"
+    ]
+    if not constructor_calls:
+        return [
+            f"{registry_path.relative_to(repo_root)}: no EmpiricalAnchor reconstruction call exists. "
+            "Catalog #344 round-trip scope extension."
+        ]
+    field_names = {name for name, _defaulted, _line, _waived in fields}
+    constructor = max(
+        constructor_calls,
+        key=lambda call: sum(keyword.arg in field_names for keyword in call.keywords),
+    )
+    keywords = {keyword.arg: keyword.value for keyword in constructor.keywords if keyword.arg}
+    for field_name, defaulted, line_no, waived in fields:
+        value = keywords.get(field_name)
+        if value is None:
+            if not waived:
+                violations.append(
+                    f"{registry_path.relative_to(repo_root)}:{constructor.lineno}: EmpiricalAnchor field "
+                    f"{field_name!r} from {model_path.name}:{line_no} is dropped during registry reconstruction. "
+                    "Map it from the payload or add same-line "
+                    "# CANONICAL_ANCHOR_ROUNDTRIP_OK:<rationale>. Catalog #344 scope extension."
+                )
+            continue
+        if not _check_344_value_reads_anchor_field(
+            value,
+            field_name,
+            require_legacy_get=defaulted,
+        ):
+            mode = "legacy-compatible payload.get" if defaulted else "same-name payload read"
+            violations.append(
+                f"{registry_path.relative_to(repo_root)}:{getattr(value, 'lineno', constructor.lineno)}: "
+                f"EmpiricalAnchor field {field_name!r} is not reconstructed from its {mode}. "
+                "Catalog #344 scope extension."
+            )
+    durable_registry = repo_root / ".omx/state/canonical_equations_registry.jsonl"
+    if durable_registry.is_file():
+        from tac.canonical_equations.registry import audit_empirical_anchor_roundtrip_fidelity
+
+        for defect in audit_empirical_anchor_roundtrip_fidelity(durable_registry):
+            paths = ", ".join(defect.changed_json_paths[:5]) or "$"
+            violations.append(
+                f"{durable_registry.relative_to(repo_root)}:{defect.registry_line}: "
+                f"event={defect.event_type} equation={defect.equation_id} anchor={defect.anchor_index} "
+                f"is not JSON-roundtrip exact at {paths}. Catalog #344 scope extension."
+            )
+    return violations
+
+
 def check_empirical_finding_memo_references_canonical_equation(
     *,
     repo_root: Path | str | None = None,
@@ -80408,19 +81029,17 @@ def check_empirical_finding_memo_references_canonical_equation(
     Lane: ``lane_canonical_equations_and_models_registry_formalization_framework_20260519``.
     """
     root = Path(repo_root or REPO_ROOT)
+    violations = _check_344_anchor_roundtrip_integrity(root)
     research_root = root / _CHECK_344_RESEARCH_RELPATH
     if not research_root.is_dir():
+        candidates: list[Path] = []
         if verbose:
-            print(
-                f"  [catalog-344] {_CHECK_344_RESEARCH_RELPATH} not present, skipping"
-            )
-        return []
-
-    violations: list[str] = []
-    try:
-        candidates = sorted(research_root.iterdir())
-    except OSError:
-        return []
+            print(f"  [catalog-344] {_CHECK_344_RESEARCH_RELPATH} not present; memo scan skipped")
+    else:
+        try:
+            candidates = sorted(research_root.iterdir())
+        except OSError:
+            candidates = []
 
     for entry in candidates:
         if not entry.is_file() or not entry.name.endswith(".md"):

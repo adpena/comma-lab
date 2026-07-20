@@ -364,7 +364,7 @@ def test_unmounted_absolute_sources_refuse_forged_factor2_lattice_row(
 
 
 def test_canonical_equation_registry_query_roundtrip(tmp_path: Path) -> None:
-    from tac.canonical_equations.registry import query_equations
+    from tac.canonical_equations.registry import query_equations, query_equations_by_producer
 
     registry = tmp_path / "canonical_equations.jsonl"
     equation = populate_einstein_kolmogorov_crux_action_rate_contract_v1(
@@ -382,11 +382,58 @@ def test_canonical_equation_registry_query_roundtrip(tmp_path: Path) -> None:
         VERIFIED_VIA_EMPIRICAL_ANCHOR,
         VERIFIED_VIA_EMPIRICAL_ANCHOR,
     ]
+    assert [item.equation_id for item in query_equations_by_producer(SOURCE_MEASUREMENT, path=registry)] == [
+        EQUATION_ID
+    ]
+    assert [item.equation_id for item in query_equations_by_producer(SOURCE_FRONTIER_MAGNITUDE, path=registry)] == [
+        EQUATION_ID
+    ]
 
 
 def test_canonical_producer_files_match_frozen_authority_hashes() -> None:
     assert crux_equation._sha256_file(Path(SOURCE_MEASUREMENT)) == SOURCE_MEASUREMENT_SHA256
     assert crux_equation._sha256_file(Path(SOURCE_FRONTIER_MAGNITUDE)) == SOURCE_FRONTIER_MAGNITUDE_SHA256
+
+
+def test_builder_provenance_is_cwd_independent_and_keeps_stable_source_labels(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    equation = build_einstein_kolmogorov_crux_action_rate_contract_v1()
+
+    assert equation.provenance.source_path == SOURCE_MEASUREMENT
+    assert equation.provenance.source_sha256 == SOURCE_MEASUREMENT_SHA256
+    assert equation.empirical_anchors[0].provenance.source_sha256 == SOURCE_MEASUREMENT_SHA256
+    assert equation.empirical_anchors[1].provenance.source_path == SOURCE_FRONTIER_MAGNITUDE
+    assert equation.empirical_anchors[1].provenance.source_sha256 == SOURCE_FRONTIER_MAGNITUDE_SHA256
+    assert equation.domain_of_validity["anchor_measurement_sha256"] == SOURCE_MEASUREMENT_SHA256
+    assert equation.domain_of_validity["frontier_magnitude_chart_sha256"] == SOURCE_FRONTIER_MAGNITUDE_SHA256
+    assert equation.canonical_producers == (SOURCE_MEASUREMENT, SOURCE_FRONTIER_MAGNITUDE)
+
+
+@pytest.mark.parametrize("producer", ["measurement", "frontier"])
+def test_builder_refuses_byte_identical_canonical_producer_aliases(
+    producer: str,
+    tmp_path: Path,
+) -> None:
+    measurement_path: str | Path = SOURCE_MEASUREMENT
+    frontier_path: str | Path = SOURCE_FRONTIER_MAGNITUDE
+    if producer == "measurement":
+        alias = tmp_path / "measurement-alias.json"
+        alias.write_bytes(Path(SOURCE_MEASUREMENT).read_bytes())
+        measurement_path = alias
+    else:
+        alias = tmp_path / "frontier-alias.json"
+        alias.write_bytes(Path(SOURCE_FRONTIER_MAGNITUDE).read_bytes())
+        frontier_path = alias
+
+    with pytest.raises(ValueError, match="canonical producer path must resolve to"):
+        build_einstein_kolmogorov_crux_action_rate_contract_v1(
+            measurement_path=measurement_path,
+            frontier_chart_path=frontier_path,
+        )
 
 
 def test_frontier_chart_refuses_authority_semantic_relabeling_when_ssd_sources_are_absent(

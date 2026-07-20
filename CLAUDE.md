@@ -475,6 +475,13 @@ other unit: automated · world-class · recursively-adversarial-reviewed · deep
   embed the exact same canonical metric binding as `policy_bindings.optimal_metric`; absent
   nullable custody fields are missing, never equivalent to explicit `None`. Waivers may only
   downgrade or preserve honest nonselection; no waiver grants mechanism, score, or authority.
+  **2026-07-20 scope extension after recursive adversarial review:** the existing strict
+  `check_evidence_authority_claims_are_custodied` call now also refuses parameterized canonical-
+  equation builders unless every verified producer is bound to its exact repo-canonical path and
+  its resulting provenance SHA is rechecked against an independent frozen `SOURCE_*_SHA256`.
+  Relative-CWD zero hashes, byte-identical copies, symlinks, hardlinks, and alternate lexical paths
+  cannot inherit verified authority. This is a Catalog #351 scope extension, not a new gate or
+  number, per the post-#400 Catalog #299 consolidation rule; extension live count was 0.
 
 ## "Off" is a tracked queue, never a forgotten default — orphaned-signal reconciliation — NON-NEGOTIABLE
 

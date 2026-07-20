@@ -45,7 +45,7 @@ import socket
 import threading
 import time
 import uuid
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -103,6 +103,19 @@ VALID_EVENT_TYPES = frozenset(
 
 class CanonicalEquationsRegistryCorruptError(RuntimeError):
     """Raised when the registry ledger is corrupt; mirrors Catalog #245 sister."""
+
+
+@dataclass(frozen=True)
+class EmpiricalAnchorRoundTripViolation:
+    """One registry event whose empirical-anchor JSON is not round-trip exact."""
+
+    registry_line: int
+    event_type: str
+    equation_id: str
+    anchor_index: int
+    original: Any
+    reconstructed: Any
+    changed_json_paths: tuple[str, ...]
 
 
 _registry_lock_depth_tls = threading.local()
@@ -559,6 +572,110 @@ def _equation_from_dict(payload: Mapping[str, Any]) -> CanonicalEquation:
     )
 
 
+def _json_roundtrip_normalize(value: Any) -> Any:
+    """Normalize a registry value exactly as its durable JSONL representation."""
+
+    return json.loads(json.dumps(value, sort_keys=True, separators=(",", ":")))
+
+
+def _changed_json_paths(left: Any, right: Any, *, prefix: str = "$") -> tuple[str, ...]:
+    if type(left) is not type(right):
+        return (prefix,)
+    if isinstance(left, dict):
+        paths: list[str] = []
+        for key in sorted(set(left) | set(right), key=str):
+            child = f"{prefix}.{key}"
+            if key not in left or key not in right:
+                paths.append(child)
+            else:
+                paths.extend(_changed_json_paths(left[key], right[key], prefix=child))
+        return tuple(paths)
+    if isinstance(left, list):
+        paths = []
+        for index in range(max(len(left), len(right))):
+            child = f"{prefix}[{index}]"
+            if index >= len(left) or index >= len(right):
+                paths.append(child)
+            else:
+                paths.extend(_changed_json_paths(left[index], right[index], prefix=child))
+        return tuple(paths)
+    return () if left == right else (prefix,)
+
+
+def audit_empirical_anchor_roundtrip_fidelity(
+    path: Path | None = None,
+    *,
+    rows: Iterable[Mapping[str, Any]] | None = None,
+) -> tuple[EmpiricalAnchorRoundTripViolation, ...]:
+    """Audit every event for exact empirical-anchor JSON reconstruction.
+
+    This deliberately compares the complete JSON objects instead of a field
+    allowlist.  A future additive authority field therefore fails closed until
+    ``_equation_from_dict`` preserves it.  Legacy optional keys remain absent
+    after round-trip because ``EmpiricalAnchor.to_dict`` omits ``None``.
+    """
+
+    events = list(rows) if rows is not None else load_registry_events_lenient(path)
+    violations: list[EmpiricalAnchorRoundTripViolation] = []
+    for line_no, event in enumerate(events, start=1):
+        payload = event.get("equation_payload")
+        if not isinstance(payload, Mapping):
+            continue
+        equation_id = str(event.get("equation_id") or payload.get("equation_id") or "<missing>")
+        event_type = str(event.get("event_type") or "<missing>")
+        original_raw = payload.get("empirical_anchors", [])
+        try:
+            original = _json_roundtrip_normalize(original_raw)
+            reconstructed = _json_roundtrip_normalize(
+                _equation_from_dict(payload).to_dict().get("empirical_anchors", [])
+            )
+        except Exception as exc:
+            violations.append(
+                EmpiricalAnchorRoundTripViolation(
+                    registry_line=line_no,
+                    event_type=event_type,
+                    equation_id=equation_id,
+                    anchor_index=-1,
+                    original=original_raw,
+                    reconstructed={"reconstruction_error": f"{type(exc).__name__}: {exc}"},
+                    changed_json_paths=("$",),
+                )
+            )
+            continue
+        if original == reconstructed:
+            continue
+        if not isinstance(original, list) or not isinstance(reconstructed, list):
+            violations.append(
+                EmpiricalAnchorRoundTripViolation(
+                    registry_line=line_no,
+                    event_type=event_type,
+                    equation_id=equation_id,
+                    anchor_index=-1,
+                    original=original,
+                    reconstructed=reconstructed,
+                    changed_json_paths=_changed_json_paths(original, reconstructed),
+                )
+            )
+            continue
+        for index in range(max(len(original), len(reconstructed))):
+            before = original[index] if index < len(original) else None
+            after = reconstructed[index] if index < len(reconstructed) else None
+            if before == after:
+                continue
+            violations.append(
+                EmpiricalAnchorRoundTripViolation(
+                    registry_line=line_no,
+                    event_type=event_type,
+                    equation_id=equation_id,
+                    anchor_index=index,
+                    original=before,
+                    reconstructed=after,
+                    changed_json_paths=_changed_json_paths(before, after, prefix=f"$[{index}]"),
+                )
+            )
+    return tuple(violations)
+
+
 def query_equations(
     *,
     path: Path | None = None,
@@ -956,7 +1073,9 @@ __all__ = [
     "LOCK_TIMEOUT_SECONDS",
     "VALID_EVENT_TYPES",
     "CanonicalEquationsRegistryCorruptError",
+    "EmpiricalAnchorRoundTripViolation",
     "RecalibrationReport",
+    "audit_empirical_anchor_roundtrip_fidelity",
     "auto_recalibrate_from_continual_learning_posterior",
     "get_equation_by_id",
     "load_equation_registry_strict",

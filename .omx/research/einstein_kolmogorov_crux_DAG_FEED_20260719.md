@@ -226,3 +226,15 @@ through append/query, binds the exact v3 final plus predecessor, and freezes the
 canonical measurement/chart producer bytes after semantic re-derivation. Any later
 content or authority change requires an explicit new producer hash and a new clean seal;
 portable absence of the SSD evidence cannot relax this closure.
+
+Successor-review boundary: immutable candidate `03ae758880` is also invalidated, so the
+seal remains **0/3**. Its arithmetic and scientific dispositions re-derived cleanly, but
+its provenance path could hash from the caller's working directory, byte-identical
+producer aliases could acquire canonical authority, and the reviewed bug classes lacked
+strict-preflight recurrence protection. The replacement requires exact repo-root
+producer identity plus post-construction hash equality, audits complete empirical-anchor
+JSON through registry reconstruction, and extends existing strict Catalog #351/#344/#154
+umbrellas for producer identity, anchor round-trip fidelity, and manifest-less cleanup
+identity respectively. No new Catalog number is claimed because the strict-gate quota is
+already beyond its configured ceiling. Candidate status stays research-only and pointer
+delta stays `NONE`; the next seal starts only on the immutable replacement commit.

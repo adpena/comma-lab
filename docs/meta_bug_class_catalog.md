@@ -3,6 +3,16 @@
 This document is the extracted, append-only long-form catalog previously embedded in `CLAUDE.md`.
 Rows are preserved verbatim from the source extraction; `CLAUDE.md` retains pointer stubs so the onboarding file stays readable without losing the catalog signal.
 
+## 2026-07-20 adversarial-review scope extensions (no new catalog claims)
+
+- **Catalog #154 scope extension — exact manifest-less cleanup identity.** The existing strict `check_experiments_results_gc_helper_is_canonical` umbrella now AST-scans every manifest-absence branch under `tools/`, `scripts/`, `experiments/`, and `src/tac/`. An accepting branch must route through a fail-closed validator that binds both the final and precleanup artifacts by exact canonical path, byte count, and SHA-256, revalidates both preserved files, compares the loaded final payload hash, and requires the exact predecessor mapping. This closes the tuple/lookalike grandfathering defect found during the Einstein–Kolmogorov recursive review. Scope-extension live count: 0.
+
+- **Catalog #344 scope extension — lossless empirical-anchor registry reconstruction.** The existing strict canonical-equations umbrella now compares every `EmpiricalAnchor` dataclass field against the registry reconstruction call and requires additive/defaulted fields to use legacy-compatible `payload.get`. `audit_empirical_anchor_roundtrip_fidelity` additionally reserializes every durable event and compares the complete anchor JSON, including unknown future keys, rather than trusting an allowlist. This closes the dropped `empirical_verification_status` authority-class defect. Live static and 760-event dynamic mismatch counts: 0.
+
+- **Catalog #351 scope extension — exact verified canonical-producer identity.** The existing strict evidence-authority umbrella now scans parameterized canonical-equation builders that publish `canonical_producers`, consume research-sidecar provenance, and cite frozen `SOURCE_*_SHA256` authorities. Every path argument must be bound to the exact repo-canonical path, byte-identical aliases must be rejected, and the resulting provenance SHA must be compared to the independent frozen hash. This closes cwd-relative zero-hash upgrades and alias-path laundering. Scope-extension live count: 0.
+
+These are scope extensions of already-strict umbrellas, not new gates or callsites. That consolidation is required by the post-#400 Catalog #299 quota and preserves the one-finding/one-refusal-surface substance of the two-landing rule.
+
 ## Meta-bug class catalog (strict-mode preflight)
 
 This catalog lists every meta-bug class that is structurally extinct in this

@@ -703,3 +703,27 @@ the executable state transition is in
   every counted section through `R`; a mutation canary must prove each counted field is
   active.  Counted-but-inert bytes are forbidden, as are scorer weights or source-derived
   payload hidden in decoder code.
+
+## 2026-07-20 immutable-candidate `03ae758880` review reset
+
+Candidate `03ae758880` is invalidated and contributes no clean pass. Three independent
+fresh-context reviews re-derived the scientific arithmetic as clean but found custody
+and recurrence defects in the implementation: provenance hashing depended on the
+caller's current working directory; byte-identical aliases of the two frozen producer
+files could be accepted and published as canonical producers; complete empirical-anchor
+JSON was not checked through the append/query reconstruction; and the three review-found
+bug classes had no mandatory strict-preflight second landing. The seal is therefore
+**0/3**, not partially retained.
+
+The successor resolves repository-relative inputs against the repository root, requires
+the exact canonical producer paths, rechecks both frozen SHA-256 values after provenance
+construction, and publishes only stable repository-relative producer labels. Registry
+round-trip fidelity now compares every original anchor JSON key and value with the
+reconstructed anchor for every durable event, so unknown future additive fields fail
+closed instead of disappearing silently. Recurrence protection is scope-extended under
+existing strict umbrellas rather than claiming Catalog #407: #351 owns canonical
+producer identity and also invokes the anchor round-trip subaudit, #344 owns the native
+registry-fidelity audit, and #154 owns exact manifest-less cleanup identity. The #154
+scanner is branch-polarity aware (`in` selects the explicit `else`; `not in` selects the
+body), preventing the gate itself from auditing the wrong control-flow arm. A new clean
+seal may begin only after these repairs are committed as one immutable successor.
