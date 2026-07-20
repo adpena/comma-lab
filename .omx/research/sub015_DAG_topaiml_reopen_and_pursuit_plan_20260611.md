@@ -20379,3 +20379,22 @@ refine when r1b6 lands the measured carrier row (refine, don't fork). DAG leg = 
 arm FEEDs merged in-lineage. MEMORY leg = no new durable law this merge (findings already hooked).
 verdict_scope: ξ0 post-hoc = FORMULATION-dead on seg-only frames (photometric wall, 6th
 consistent instance), NOT a screw/ξ family verdict. Pointer 0.19108 [contest-CPU] UNMOVED (means).
+
+## FEED-R1B6-NEGATIVE-20260720E (merge e6448a81ce — the realization-is-quantization-gated finding)
+
+**MEASURED (n16 prefix, 498 exact-feasible Fisher-ordered Road-Lane sites, sealed r1b4 receiver +
+hard CPU-torch oracle):** scheduled seg recovery +0.01583 S realized at **−1.4%** (flips
+10,002→10,009, d_pose 131.155→131.158) → formulation-scoped break-even 0 B. verdict_scope=
+FORMULATION (absolute-write source-closest-sign minimal perturbations; NOT the boundary/full-kernel
+family, NOT n600, NOT a cell-grammar verdict). **Mechanism hypothesis grounded in a prior law:**
+#532 uint8-breaks-preimage-exactness (Δ=62.74 vs 1.7e-13) — minimal writes are sub-quantization;
+the R2b FIXED-MAGNITUDE formulation remains the measured-POSITIVE arm (+0.00123 S @ 9.462%, n600).
+KEEPS: receiver mechanics PROVEN (35.5 s n16 decode, double-decode byte-identical, zero search);
+45.97 B/site measured cost; compact-binary-v2 1,273 B projection killed at current formulation.
+
+**Triality legs:** equations = domain_refined row on realization_breakeven_bytes_v1 (merged;
+R2b anchor preserved, domain narrowed to its formulation — refine-don't-fork honored). DSL =
+N/A-with-rationale (measurement tools only; no lever/launch/curriculum change). DAG = this FEED.
+MEMORY = realization_quantization_gated hook (same turn). Next: r1b7_uint8_survival_carrier LIVE
+(per-stage chain autopsy → fixed-magnitude receiver-bound arm → integer-aware uint8-lattice
+preimage fallback). Pointer 0.19108 [contest-CPU] UNMOVED (means).
