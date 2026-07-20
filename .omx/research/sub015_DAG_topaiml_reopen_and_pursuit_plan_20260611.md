@@ -20342,3 +20342,21 @@ OWED main-side registrations, exactly one anchor each: (1) fixed-C1 pointer-cros
 ### B5. Chain state
 
 R1-line: r1b3 producing {rank-4/secant custody · MDL+compact-replay (saturated-LLL-ordered) · ξ[0]} → fail-closed compile at terminal VJP custody → first R1B2 candidate n600 row vs gates (d_seg ≤3.39e-4 @ ≤477.8 B/pair; decode ≤1,800 s; carrier ≤1,852 B or re-measured break-even). Standing-GO gates unchanged (R3/M1 on receiver + surface-4 + memory preflight; governor authoritative). Queue #582: (a) erm_margin_topk_v1 · (b) BATCH RECONCILE now 12+ branches + equations registrations above · (c) R3/M1 relaunch · (d) quadrality claim-ID pullback checker.
+
+## FEED-WORKFLOW-CONTRACT-20260720C (apparatus landing — triality-leg record for the drift gate)
+
+**What landed (merged to main, verified by re-derivation):** `tac.subagent_contract` +5 workflow-v2
+blocks (RESEARCH_AUTHORITY · DECOMPOSE_HEADLINE · TIEBREAK_LEAST_COMPLEXITY · MASTER_THESIS_FRAMING ·
+VERDICT_SCOPE_LADDER) + integrity-gate expected-phrase rows + 67 tests (51 contract + 16 preflight,
+all pass on main) — enforcement surface for `docs/operating_workflow_v2_velocity_rigor_autonomy_20260720.md`
+(operator 2026-07-20 "update workflow, accelerate velocity, rigorous autonomous" + "Einsteinian and
+Kolmogorov everywhere"). Arm feed: `subagent_contract_workflow_v2_extension_DAG_FEED_20260720T204451Z.md`.
+
+**Triality-leg disposition:** DSL/tooling leg = the landing itself (contract module IS the dispatch-
+config surface). DAG leg = this FEED. **Equations leg = N/A-with-rationale: APPARATUS, no new measured
+law** — the blocks REFERENCE existing registered laws/memories (realization_breakeven_bytes_v1 ·
+verdict-scope ladder · tiebreak/master-thesis memories) and register nothing new; nothing here is a
+measured finding that could be re-derived. MEMORY.md leg: workflow hook line landed same turn
+(`workflow_v2_velocity_rigor_autonomy_20260720.md`). Caveats resolved at custody: doc-absent =
+worktree cut pre-doc-commit (blocks match §2 verbatim); 110 lane failures = worktree-missing-
+gitignored-evidence (main validates 1,926 clean). Pointer 0.19108 [contest-CPU] UNMOVED (means).
