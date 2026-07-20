@@ -1,10 +1,14 @@
 # Prerequisite surfaces flush — receiver-closed local build
 
-**UTC:** 2026-07-20T17:10:50Z  
-**Lane:** `lane_prereq_surfaces_flush_20260720`  
-**Implementation commit:** `2000338eef9c36054944ea60297aa16ff1e2de7e`  
+**UTC:** 2026-07-20T17:10:50Z
+
+**Lane:** `lane_prereq_surfaces_flush_20260720`
+
+**Implementation commit:** `2000338eef9c36054944ea60297aa16ff1e2de7e`
+
 **Authority:** local CPU BUILD/readiness only; `research_only=true`; no launch, score,
-rank, or promotion authority  
+rank, or promotion authority
+
 **Pointer:** `0.1910828242 [contest-CPU Linux x86_64]` **UNMOVED**
 
 ## Outcome
