@@ -1,0 +1,135 @@
+{
+  "artifact_materialized": false,
+  "authority": "LOCAL_INPUT_CUSTODY_AUDIT_NOT_SCORE_AUTHORITY",
+  "blockers": [
+    {
+      "code": "INCOMPLETE_PAIR_LOCAL_VJP_CUSTODY",
+      "missing_pair_count": 576,
+      "missing_pair_ids_sha256": "3c3bf00fa07b8d2f847dae1b85d1552e159bbba908959de67defed703fedbc19",
+      "observed_pair_count": 24,
+      "required_pair_count": 600,
+      "verdict_scope": "full-n600 positive-anisotropic assembly only; the 24 custodied sidecars remain valid advisory pair-local evidence"
+    },
+    {
+      "candidate_hard_gate_pass": false,
+      "candidate_promotion_eligible": false,
+      "code": "EXACT_38077_CANDIDATE_EV_FIELD_ABSENT",
+      "measured_ordering_record_present": false,
+      "observed_baseline_hard_oracle_flip_count": 17926,
+      "observed_candidate_evaluation_decisions": 16751,
+      "required_candidate_count": 38077,
+      "verdict_scope": "the inspected real n600 sparse-selection receipt is not the sealed 38,077-candidate measured Fisher EV ordering"
+    }
+  ],
+  "candidate_evidence": {
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "hard_gate_pass": false,
+    "measured_ordering_artifact": null,
+    "measured_ordering_ready": false,
+    "observed_baseline_hard_oracle_flip_count": 17926,
+    "observed_candidate_evaluation_decisions": 16751,
+    "ranking": "road-lane edge, other edge, target top1-top2 Fisher-margin, Lane class, stable linear index",
+    "receipt_bytes": 8195,
+    "receipt_path": "/Volumes/VertigoDataTier/pact/evidence/r2b_sparse_target_selection_20260720T1621Z/receipt.json",
+    "receipt_sha256": "c86d15ff905c1de912c6a66fe63c2122bd69115a536f70265c59d9ae8cd34a68",
+    "required_measured_candidate_count": 38077
+  },
+  "consumer": "M1_relaunch_gate_and_r1b_opportunistic_reuse",
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "promotion_eligible": false,
+  "rank4_head_normals": {
+    "affine_weight_sha256": "44a33ca5b57a452affa98e5686c6cccfab72b7309c48d7911bc14bd4e4714675",
+    "frozen_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "rank": 4,
+    "receipt_bytes": 1530,
+    "receipt_path": ".omx/research/prereq_surfaces_flush_20260720/surface_2_rank4_prototype_bank.json",
+    "receipt_sha256": "bb1f79839c2e2ab8c41856ca0545bd4147d63deccbe0b1200e2ba65e5fa3501f"
+  },
+  "ready_to_assemble": false,
+  "refusal": "NO-FAKE: no n600 radii or positive-band manifest was emitted",
+  "requested_artifact": "c2_anisotropic_band_artifact.v1",
+  "schema": "m1_positive_anisotropic_band_readiness_audit_v1",
+  "score_claim": false,
+  "surface": "M1_rc6_receiver_closure_blocker_1",
+  "vjp_custody": {
+    "covered_pair_count": 24,
+    "covered_pair_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "manifests": [
+      {
+        "bytes": 16268,
+        "pair_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          24
+        ],
+        "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_000_010_024_composed/manifest.json",
+        "sha256": "3d1218a52ededc4b347ae94c5c2bf58d06d70dd8f530bec67bf9cab36ee00694"
+      },
+      {
+        "bytes": 15956,
+        "pair_ids": [
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          19,
+          20,
+          21,
+          22,
+          23,
+          25
+        ],
+        "path": "/Volumes/VertigoDataTier/pact/evidence/vjp_custody_20260719/chunk_012_017_019_023_025_composed/manifest.json",
+        "sha256": "200e8cfa375cbdb8154777156441ae6adadf33e75668c86cc52b816f79488e94"
+      }
+    ],
+    "missing_pair_count": 576,
+    "required_tensor_hashes": [
+      "head_pair_norms",
+      "pose_j_x",
+      "pose_j_y",
+      "rival",
+      "seg_local_lipschitz",
+      "seg_q",
+      "winner"
+    ],
+    "sidecar_bytes_rehashed": true,
+    "sidecar_record_digest_sha256": "77668866f593b446e1084f65ecbe71e5d72e06a4a5a243d16476bfa5b3b63690"
+  }
+}

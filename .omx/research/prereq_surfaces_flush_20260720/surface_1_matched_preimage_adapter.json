@@ -1,0 +1,50 @@
+{
+  "aggregate_status": "FEASIBLE_EXACT",
+  "authority": "LOCAL_RECEIVER_READINESS_NOT_SCORE_AUTHORITY",
+  "bounded_solver": "tac.optimization.uint8_lattice_feasibility.DisjointResizeOperator.solve_uint8",
+  "canary_scope": "structural decoded-numerator HARD_ACCEPT only; each regmax probe must supply its own fresh frozen-SegNet hard oracle",
+  "canonical_law": "bounded_uint8_resize_preimage_cell_feasibility_v1",
+  "certified_exact": true,
+  "consumer": "regmax_sparsemax_entropy_cole_hopf_and_hopfield_probes",
+  "continuous_pre_step_sha256": "be9dce031ba01ed8129d2d99d82a8f4e9eff130af464c12c270f85d0785e3042",
+  "continuous_values_clipped_to_uint8_box": 2,
+  "decoded_uint8_frame_sha256": "4368a7c1886d5b0febc5d0bd22c54914f660afb1fc4552e10eb32bcf8d98248e",
+  "decoded_uint8_payload_bytes": 106,
+  "decoded_uint8_payload_sha256": "2272021451979a2eb2da05e313bc06e77d5791df7963035ed8517749eac50f0d",
+  "exact_blocks": 12,
+  "exact_target_numerators_sha256": "9049b3a1d1c6957f2f431388a8704b9edfca0097d2fd9e82b5dda17db36aac2e",
+  "exact_target_sha256": "8f4bb3f1dcac676456fedbe15f4af4efaf32f09d0ec70321398b9a1f09e05371",
+  "fresh_decoded_uint8_hard_oracle_calls": 1,
+  "hard_accept": true,
+  "hard_oracle_key": [
+    0,
+    0.0,
+    -1.0
+  ],
+  "hard_oracle_margins_sha256": "87d2f38265031bfc0e34a218effe2c6501a9e3659a5b8880da0108403a3895cf",
+  "hard_oracle_satisfied_sha256": "7e08c11cfa735f8e64656a669f00e2df8af864c09370f43ef591cc4c98f4a5cb",
+  "pointer": "0.1910828242 [contest-CPU Linux x86_64] UNMOVED",
+  "pre_step_family": "matched_receiver_structural_canary",
+  "preferred_preimage_sha256": "05be841f5230711d5253bd6db23b50617193b92b9cd266cb375a9dc3b3359a1f",
+  "promotion_eligible": false,
+  "proposal_space": "scorer_plane_lift",
+  "proven_affine_infeasible_blocks": 0,
+  "real_frozen_hard_accept_anchor": {
+    "decoded_frames_with_exact_numerator_equality": 6,
+    "frozen_segnet_decoded_uint8_d_seg": 0.0,
+    "measured_pairs": 6,
+    "pair_ids": [
+      90,
+      175,
+      277,
+      381,
+      424,
+      573
+    ],
+    "path": ".omx/research/v10_uint8_lattice_feasibility_receipt_20260718.json",
+    "sha256": "665ce8ecd789a863eb85fa181f11746f292626b9283f82be9d90cf10b7905779",
+    "transfer_status": "ANCHOR_ONLY_NOT_A_RERUN_OF_CONTINUOUS_PREFERENCE"
+  },
+  "schema": "regmax_logits_to_uint8_preimage_v1",
+  "score_claim": false
+}

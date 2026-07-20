@@ -1,0 +1,29 @@
+{
+  "builder_sha256": "830833039866aa257ecc42d23ec1e03e1a3c1817e114226da7d09897a0e5b747",
+  "inputs_sha256": {
+    "frozen_segnet_weights": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+    "real_hard_accept_anchor": "665ce8ecd789a863eb85fa181f11746f292626b9283f82be9d90cf10b7905779"
+  },
+  "promotion_eligible": false,
+  "receipts": {
+    "surface_1_matched_preimage_adapter.json": {
+      "bytes": 2349,
+      "sha256": "3bc5447e9ddcf0048bbb0409cefe0e4e43411573a2be31cfb5b4d61fdc66e89b"
+    },
+    "surface_2_rank4_prototype_bank.json": {
+      "bytes": 1530,
+      "sha256": "bb1f79839c2e2ab8c41856ca0545bd4147d63deccbe0b1200e2ba65e5fa3501f"
+    },
+    "surface_3_same_coder_comparator.json": {
+      "bytes": 3549,
+      "sha256": "e0eb9976765b61521181263e958d55e4e17ff9fd944312594481d98e983c8396"
+    },
+    "surface_4_m1_positive_band_blocker.json": {
+      "bytes": 4243,
+      "sha256": "2eee00eec1685e2aaff3c0685a26c6705dc4fa4e8e736637815a225c26079c86"
+    }
+  },
+  "schema": "prereq_surfaces_flush_receipt_manifest.v1",
+  "score_claim": false,
+  "surface_4_auditor_sha256": "ed702240471b8d43fde5e4d95a8ee7f08a6e16b05e23082ed5fdefbfe8600c3a"
+}
