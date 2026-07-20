@@ -79851,6 +79851,54 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_r1_shared_receiver_20260720T151631Z",
+      "name": "R1 shared PDW2 and realization receiver",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Measured formulation-scoped blocker: dense f32 conditional field is 561502227 B, PDW1 label/fill projects to 496067 B with d_seg 0.0080695682, and measured n48 sparse prefix is below rate waterline. Shared hard-admission guard and canonical equation landed; no receiver, score, promotion, or pointer authority. MAIN review required.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "counted curvelet/shearlet boundary generator exists",
+        "scorer-free packet-causal spatial/RGB receiver exists",
+        "exact n600 archive+payload+hard-CPU-oracle hashes pass shared admission",
+        "production receiver parseback and through-R metrics clear 286680 B and d_seg 0.000339 gates"
+      ]
     }
   ],
   "level_rules": {
@@ -79860,5 +79908,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-07-20T07:18:36Z"
+  "updated_at": "2026-07-20T15:50:51Z"
 }
