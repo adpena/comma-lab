@@ -51,6 +51,8 @@ The single bounded review found that the first source-distance implementation sq
 
 The next coordinate is not another blanket sign stream. Use corrected first-order + secant + QP inner-Jacobian selection to raise the measured `9.46%` realization fraction, encode positions in a receiver-bound curvelet/shearlet grammar to target the required `14.75x` byte reduction, and factor the dominant Pose dimension through xi rather than frame1-only cells.
 
+MAIN's later directive supplies the exact full-kernel dependency at commit `da64a5bc8e` (`resize_null_preimage_full_kernel.v1`). Its structural nullity is `80.6742315223%`, but the measured canonical-primitive uint8 feasibility is only a `34.1931390993%` lower bound, and its one-frame constant-preference fill costs `+512,550 B` Brotli / `+546,524 B` LZMA versus the old mask. R2b therefore consumes this compiler only through scorer-margin-aware, coder-admitted minimum-description selection. Blind null filling is forbidden, and the joined n600 byte-closed row remains `NOT_MEASURED_IN_THIS_PASS`.
+
 - DSL/receiver: real parse-back and exact bounded-uint8 consumer over the existing V10 rounded-plane descriptor; no launch lever.
 - Equations: consumes the bounded factor-2, Fisher/margin, reverse-waterfill/KKT, inner-Jacobian, and curvelet/shearlet laws; registers no new law.
 - DAG: `M2 exact-source rate-dead -> R2b signed sparse stream -> KKT zero + measured 9.46% realization -> corrected-Jacobian/curvelet/xi successor`.

@@ -80,8 +80,18 @@
     "superseded_stage_dir": "/Volumes/VertigoDataTier/pact/evidence/r2b_sparse_target_selection_20260720T1621Z/candidate_stages_superseded_int16_distance_3be0f925",
     "current_stage_binding": "target raw sha + baseline raw sha + scorer binding sha + candidate stream sha"
   },
+  "full_kernel_successor_binding": {
+    "required_commit": "da64a5bc8e0bcc4c287d18290bbcb50e96621661",
+    "schema": "resize_null_preimage_full_kernel.v1",
+    "exact_real_linear_nullity_percent": 80.67423152232891,
+    "canonical_primitive_uint8_feasibility_lower_bound_percent": 34.193139099271214,
+    "fixture_constant_fill_delta_brotli_bytes_vs_old_mask": 512550,
+    "fixture_constant_fill_delta_lzma_bytes_vs_old_mask": 546524,
+    "r2b_adoption_rule": "join scorer-margin EV to coder-admitted minimum-description selection; never blanket-fill the kernel",
+    "n600_byte_closed_status": "NOT_MEASURED_IN_THIS_PASS"
+  },
   "verdict": "FORMULATION_RATE_DEAD_KKT_STOP_ZERO",
   "verdict_scope": "one-bit source-sign-chosen fixed-magnitude same-rounded-bin factor-2 preimage only",
-  "next_coordinate": "corrected inner-Jacobian plus secant/QP selection and a receiver-bound curvelet/shearlet coordinate grammar; factor Pose through xi instead of this frame1-only stream",
+  "next_coordinate": "corrected inner-Jacobian plus secant/QP selection joined to the full-kernel compiler by minimum-description admission, then a receiver-bound curvelet/shearlet coordinate grammar; factor Pose through xi instead of this frame1-only stream",
   "main_review_required": true
 }
