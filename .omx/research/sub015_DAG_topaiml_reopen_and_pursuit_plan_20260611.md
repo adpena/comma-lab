@@ -20175,3 +20175,43 @@ frame-195. verdict_scope: durability-sync unit; no new measurement, no score cla
 ## DAG FEED-EINSTEIN-XI-V2V3 (2026-07-20) — measured ξ-blocker; pointer 0.19108 UNMOVED [magnitude-ok]
 
 Einstein/Kolmogorov crux arm **v2** (relaunched full-FS xhigh after the ultra doom-loop STOP) delivered a **MEASURED FORMULATION-scoped ξ-blocker, NOT an in-box point**. Re-derived facts (macOS hard CPU-Torch): settled n600 baseline **89,772 B / d_seg 0.004549 / d_pose 0.001610** (seg-term 0.455, far above frontier); frontier magnitude permits **17,930** mismatched cells vs **536,636** present → needs **≥518,706 corrections** (≥531,400 with pose/rate fixed). Fresh ŷ/ξ packet **91,062 B (~152 B/pair, UNDER the ≤264,320 B box)** but strict decode FAILED before scoring on undefined `_CP_XI_FX` → fresh **d_seg UNKNOWN** (NO in-box row — a byte count without measured d_seg is a rate-fake, correctly rejected). ξ (shared SE(3) twist, dual-use pose+temporal) is still the binding leg — now walled at the decode-constant level, NOT sandbox permissions (the v1 wall was a codex `workspace-write` writable_roots block starving the SSD evidence tier; PERMANENTLY FIXED — `codex_delegate` now promotes `workspace-write`→`danger-full-access`, worktree isolation + serializer keep commit discipline). Deliverable-B accepted; sol-high review PASS; bounded contract HELD (no custody doom-loop, docs/lane-only commits). Consumed-by: `codex_findings_einstein_kolmogorov_xi_blocker_20260720_codex.md` + `einstein_kolmogorov_xi_blocker_v2_20260720.json` (merged main `49e40bb22c`). **v3 sol-ultra relaunched** to break the decode+score wall: repair `_CP_XI_*` → strict n24 bit-exact decode → SCORE the 91,062 B n600 archive → first real (bytes, d_seg) point. [no-new-equation: measured blocker, not a registered law]
+
+## FEED-CAPSTONE-FINAL-ROADMAP-20260720 (Fable; operator GO "Proceed with all but R0 — totally focused on v10 capstone")
+
+**Pointer 0.19108 [contest-CPU] UNMOVED.** Everything below is means until R6 lands.
+
+**THE SYNTHESIS (operator framing, verified against the measured record):** rate and distortion are
+INDEPENDENTLY SOLVED — neither implementation optimal, both headline scores terrible, both signals decisive.
+- Distortion solve: C1 spine, d_seg 1.5196e-4 / d_pose 1.0184e-4, cross-host bit-identical through official
+  evaluate.py (S=272.73 only because 409 MB; rate=99.98% of S). Signal bought: targets achievable, drop-in
+  receiver spine, the budget box (~216 KB honest / 264 KB with pose recovered).
+- Rate solve: rung-B generator 139.7 B/pair (2.6x UNDER box) at d_seg 3.455e-3; PDW2 138 B exact head
+  description (TARGET_ONLY); v3 xi-packet collapse (S 35.96, formulation-scoped). Signal bought: bytes NOT
+  binding; the 9-family map; the 4-order (bytes,d_seg) hole; realization named as the wall.
+- Triangulation: STEP-2 receipt d_A=0.0 / d_B=0.008069 — 100% realization, 0% encoding. The waterfill
+  pricing system (E9 150.181956 B per 1e-6 d_seg; #536 MEASURED_SECANT_KKT_CANDIDATE, marginal gap 4.14e-12;
+  band-slack −37.6% law) finds the optimum between the endpoints toward S_floor ~0.118.
+
+**07-20 three-arm convergence (one blocker):** M1 governed refusal rc=6 (no scorer-free PDW2 pullback in
+#543; receiver-bound carrier absent) + inverse_solve arm (216,223 B in-box correction + PDW2-conditioned
+receiver recursion proposal, held on branch) + v3 honest negative (518,706 cells, skip-the-receiver
+formulation dead) → THE SHARED RECEIVER is the single realization crux.
+
+**ROADMAP (approved):** R0 click-polish verification DROPPED (total v10 focus). R1 shared receiver
+(arm r1_shared_receiver LIVE, sol xhigh; gate ≤477.8 B/pair @ d_seg ≤3.39e-4; task #576) · R2 unrounded-
+reference target-selection (arm r2_m2_target_selection LIVE, sol high; ~0.047 S @ 0 bytes; task #577) ·
+R3 M1 relaunch on R1-clear + quiet-memory (gate 60–85 KB @ ≤1e-3; #575) · R4 xi-temporal #574 on first
+single-frame win · R5 composed row seeds-INSIDE-solve (projection S≈0.06–0.14 under 2 named conditionals,
+NO-FAKE #8) · R6 dual-axis exact eval → pointer. Master task #578. Failure-routing pre-registered
+(Apollonius cells; dominating-byte-term diagnosis).
+
+**EINSTEINIAN DOCTRINE (operator verbatim 07-20, pushed to all live arm inboxes + task metadata):** "no
+binary interpretations or accepting failure — negatives as SIGNAL to dig deeper and find the true crux,
+iterating in playful exploration and REFORMULATION." Precedent chain honored: plane-storage negative→budget
+box; v3 collapse→realization crux; M2 'NO-OP'→target-selection axis; d_B receipt→shared receiver. Verdicts
+scoped INSTANCE<FORMULATION<FAMILY<PARADIGM; every negative names its extracted signal + next reformulation.
+
+**Also landed 07-20:** STAC (arXiv 2203.14481) crosswalk CONFIRMATORY — nothing to adopt (#141/#157
+strictly stronger exact-geometry forms; one verify item folded into #574 build: refresh on task certificate
+not PSNR proxy). Day-loop: session cron ticks the chain (custody landings → route findings → fire next
+gated step; paid dispatches still operator-GO).
