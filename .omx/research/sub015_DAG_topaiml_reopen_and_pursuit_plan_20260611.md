@@ -20424,3 +20424,26 @@ preimage fallback). Pointer 0.19108 [contest-CPU] UNMOVED (means).
   `tools/measure_m2_live_target_selection.py`; SSD archive SHA `0fee1b74...f25cfb6b`.
 - **Triality:** DSL N/A; equation anchor appended to
   `bounded_uint8_resize_preimage_cell_feasibility_v1`; DAG=this FEED. MAIN review/merge required.
+
+## FEED-R1B7-AUTOPSY-20260720F (merge legs record — the formulations-coincide finding)
+
+**MEASURED (r1b7, receipt sha 61f3d039…, verified at custody):** (1) fixed-magnitude writes are
+BYTE-IDENTICAL to closest-sign at the 498 top-Fisher Road-Lane sites after uint8 quantization
+(encoder-search-only equivalence) → the r1b6 nonpositive (−0.00066 S) covers BOTH formulations;
+(2) bounded-integer top-8 prefix: **0 true wrong-to-target crossings** — the initial 4 were
+already-correct-at-baseline sites admitted by a margin-positivity-only test (FALSE-CROSSING bug
+class, caught in the arm's own round-1 review, EXTINCTED: 4-condition admission gate + regression
+tests in tools/measure_r1b7_uint8_survival_carrier.py); (3) waterfill admitted 0 sites at the
+measured 45.97 B/site. **verdict_scope: formulation-cluster — post-hoc local uint8 write
+correction of top-Fisher Road-Lane flips on the 94,344 B C2 control (closest-sign ≡
+fixed-magnitude ≡ bounded-integer-top-8); NOT non-local correction, NOT generator-side banding
+(M1 = the live reformulation), NOT other baselines.** Marginal receiver-composed prefix waterfill
+remains the open item (queued #582); no n600 authorized.
+
+**Triality legs:** equations = 2× domain_refined rows on realization_breakeven_bytes_v1 merged to
+main (R2b anchor preserved; domains narrowed; R1b7 false-crossing adjudication recorded — nothing
+re-derivable). DSL = N/A-with-rationale (measurement tool + admission-gate fix; no lever/launch/
+curriculum change). DAG = this FEED + arm FEED in-lineage. MEMORY = body amendment to
+[[realization_is_quantization_gated_minimal_writes_die_at_uint8_20260720]] same turn (the
+coincide-after-quantization extension; hook line already indexed). Pointer 0.19108 [contest-CPU]
+UNMOVED (means).
