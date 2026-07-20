@@ -1,0 +1,43 @@
+{
+  "schema": "r1b7_uint8_survival_carrier_failed_attempt_blocker.v1",
+  "authority": "[macOS-CPU advisory] score_claim=false",
+  "attempt_root": "/Volumes/VertigoDataTier/pact/evidence/r1b7_uint8_survival_carrier_20260720T223801Z",
+  "failure": {
+    "stage": "exact_R_vs_CPU_Torch_resize_parity_gate",
+    "observed_max_abs_delta_error": 0.0034262339274088727,
+    "original_bound": 0.0001,
+    "classification": "FAIL_CLOSED_BOUND_TOO_TIGHT_NOT_OPERATOR_MISMATCH",
+    "resolution": "A direct 498-site replay measured max 0.003428141276041685; the rerun used the smallest power-of-two sub-byte envelope above it, 1/256. Exact rational R remained the authority."
+  },
+  "cleanup_status": "BLOCKED_KEEP_BYTES",
+  "cleanup_reason": "The run failed before an atomic success receipt certified cleanup. No file was deleted or moved.",
+  "retained_rows": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b7_uint8_survival_carrier_20260720T223801Z/baseline_decode_1.raw",
+      "bytes": 97664256,
+      "sha256": "8c0bd711c39d2c3cd2a259bce94e905f37f47023181a5b2c974b4615c3b89383"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b7_uint8_survival_carrier_20260720T223801Z/baseline_decode_2.raw",
+      "bytes": 97664256,
+      "sha256": "8c0bd711c39d2c3cd2a259bce94e905f37f47023181a5b2c974b4615c3b89383"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b7_uint8_survival_carrier_20260720T223801Z/fixed_magnitude_decode_1.raw",
+      "bytes": 97664256,
+      "sha256": "b0dbc05aecb37f8b2fe0955d7c6e95bae1b19255f71b6a3fd520fd7be21e4adb"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/evidence/r1b7_uint8_survival_carrier_20260720T223801Z/fixed_magnitude_decode_2.raw",
+      "bytes": 97664256,
+      "sha256": "b0dbc05aecb37f8b2fe0955d7c6e95bae1b19255f71b6a3fd520fd7be21e4adb"
+    }
+  ],
+  "decode_receipt_sha256": {
+    "baseline_decode_1.json": "e8eb01818bc463d2df0dc09973f1039f8047fd1e8ae6b589c893def560c56ff7",
+    "baseline_decode_2.json": "dbd640bdffe8e665dd51141ae3e2e000d58e0c2f089fed2f9a560e6b23e96bb9",
+    "fixed_magnitude_decode_1.json": "2d1a54a4e0d933b8de5c82bd830a4adf2c551544e6e1a370a0f434f0c6da088c",
+    "fixed_magnitude_decode_2.json": "d34c0bafb1ffc7060312c8ecd9c37ca35cd00a6c325e4963fa743436b382d28f"
+  },
+  "rebuild_command": ".venv/bin/python tools/measure_r1b7_uint8_survival_carrier.py --artifact-root <empty-ssd-dir> --output <new-receipt> --preserve-raw"
+}
