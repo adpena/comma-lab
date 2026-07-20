@@ -80156,6 +80156,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_prereq_surfaces_flush_20260720",
+      "name": "Prerequisite surfaces flush: receiver adapter, rank4 prototypes, same-coder comparator, M1 EV band",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Local-only build. MAIN landing review required. No score authority; pointer unchanged."
     }
   ],
   "level_rules": {

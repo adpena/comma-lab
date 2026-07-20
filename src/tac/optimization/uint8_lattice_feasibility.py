@@ -553,15 +553,23 @@ class DisjointResizeOperator:
         *,
         target_numerators: np.ndarray | None = None,
         reference: np.ndarray | None = None,
+        preferred_preimage: np.ndarray | None = None,
         max_nodes_per_block: int = 4096,
         target_verification_tolerance: float = 5e-10,
     ) -> LatticeFrameResult:
-        """Construct a uint8 preimage using target-derived preferences only.
+        """Construct a uint8 preimage with one unchanged exact block solver.
 
         ``reference`` is retained as a compatibility-time integrity assertion:
         when supplied it must be bit-identical to ``B(target)``.  It is never
         used to choose values.  This fails closed if a hidden/source camera
         frame is accidentally passed through the public solve boundary.
+
+        ``preferred_preimage`` is an explicit, bounded continuous proposal used
+        only to order feasible values inside each call to
+        :func:`solve_bounded_integer_block`.  It cannot change the authoritative
+        target numerator, proof status, or acceptance rule.  Callers must keep
+        custody for how this proposal was produced; decoded hard-oracle
+        acceptance remains a separate mandatory step.
         """
 
         max_nodes_per_block = _require_integral_scalar(
@@ -596,12 +604,24 @@ class DisjointResizeOperator:
                     "source-dependent preferences are forbidden"
                 )
         z = _camera_3d(derived_real, self.camera_h, self.camera_w, y.shape[2])
-        bounded = _camera_3d(
-            self.bounded_continuous_preimage(y, reference=z),
-            self.camera_h,
-            self.camera_w,
-            y.shape[2],
-        )
+        if preferred_preimage is None:
+            bounded = _camera_3d(
+                self.bounded_continuous_preimage(y, reference=z),
+                self.camera_h,
+                self.camera_w,
+                y.shape[2],
+            )
+        else:
+            bounded = _camera_3d(
+                preferred_preimage,
+                self.camera_h,
+                self.camera_w,
+                y.shape[2],
+            )
+            if np.any(bounded < 0.0) or np.any(bounded > 255.0):
+                raise Uint8LatticeError(
+                    "preferred_preimage must stay inside the uint8 box [0,255]"
+                )
         out = np.rint(np.clip(bounded, 0.0, 255.0)).astype(np.uint8)
         counts = dict.fromkeys(BlockSolveStatus, 0)
         candidate_counts = dict.fromkeys(CandidateProvenance, 0)
