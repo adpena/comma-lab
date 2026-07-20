@@ -20215,3 +20215,40 @@ scoped INSTANCE<FORMULATION<FAMILY<PARADIGM; every negative names its extracted 
 strictly stronger exact-geometry forms; one verify item folded into #574 build: refresh on task certificate
 not PSNR proxy). Day-loop: session cron ticks the chain (custody landings → route findings → fire next
 gated step; paid dispatches still operator-GO).
+
+## FEED-REGMAX-FAMILY-PER-STRATUM-20260720 (Fable + erm_2607_10128_crosswalk arm; operator riff "which other stratum has more points on the one-parameter family")
+
+**Pointer 0.19108 UNMOVED — design law + probe registry, no score claim.**
+
+**THE LAW (registered here; equations-leg evaluator owed at first probe measurement):** every smoothed-max
+in the stack is `max − conj(Omega)` for a strongly-convex regularizer Omega (Fenchel-Young / #504 Bregman
+custody). The family parameter is NEVER a constant — it is a FIELD over strata × a TRAJECTORY over training
+phase × a FUNCTION of measurement uncertainty. The frozen scorer is PINNED at the hard-max/torch-tie member
+(zero freedom); all freedom is ours. Recursive-fractal-optimal applied to the algebra.
+
+**Six-surface per-stratum map (each grounded in a measured number):**
+1. Training loss per CLASS-PAIR: curriculum CE→tau→Muon IS a trajectory entropy→tropical; per-pair tau
+   calibrated by measured head normals (Lane 3.75–4.01 vs 2.60–2.95); hosc-beta anneal = same law at the
+   activation level (fixed beta=4 diverges — jump-to-tropical-end fails, trajectory works).
+2. Annulus realization: sparsemax band = the smoothing parameter = the band-slack; width per class-pair from
+   |m|/||dw||. ARM CORRECTION adopted: sparsemax exact-one-hot on **97.33%** of the aggregate surface
+   (measured 2.67% below margin 1.0), NOT "~95%"; Lane exception (interior median 1.54, no safe interior).
+3. Head/cell solve: Sinkhorn (entropy) for gradients, exact OT/Aurenhammer LP + damped-Newton (#288,
+   tropical) for the final solve. Arm caveat adopted: tropical residuation principal solution is canonical
+   but NOT automatically min-byte — must be compared under the same coder.
+4. Candidate selection: temperature LADDER (parallel tempering = many family points at once), cheap
+   margin/Cole-Hopf rank -> exact hard selector; cheap energy NEVER score authority.
+5. KKT waterfill: tau_allocation = measurement uncertainty in the marginal — hard threshold where the secant
+   is exact (#536 marginal gap 4.14e-12), entropy-smoothed hedge where a marginal has one noisy point.
+6. Rate/context coding: per-stratum Gibbs model sharpness matched to per-stratum conditional entropy (why
+   per-class coders beat global — Wave-F).
+
+**ERM crosswalk landed (arm 09cc0026cb, dispositioned closed → #400):** verdict
+ADOPT_TWO_BOUNDED_PROBES / ALREADY_HAVE_EXACT_FINAL_AUTHORITY / NO_RECURSION_SCHEDULE_TRANSFER.
+Consumed: erm_margin_topk_v1 (K=128/k=8 guarded top-k exact-eval scheduler → #400 design note); ONE bounded
+tempering-only directive routed to r1_shared_receiver (nonlinear STALLED/CYCLE/BUDGET cells only, exact
+affine DFS preserved, HARD_ACCEPT terminal, degenerate-spread = no adoption). PROBE REGISTRY (named,
+falsifiable, $0, fire on next probe window): probe_entropy_hopfield_preprox_uint8_v1 ·
+probe_sparsemax_margin_band_preimage_ab_v1 · probe_tropical_residuation_principal_cell_representative_v1.
+Honest anchor re-affirmed: #542 Cole-Hopf = Gibbs-TARGET builder (top-1 0.9958); preregistered preimage
+gate never fired — no inverse-driver claim.
