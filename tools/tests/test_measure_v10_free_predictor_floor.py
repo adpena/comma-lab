@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -262,6 +263,94 @@ def test_build_rung_e_inputs_uses_production_codec_parseback(monkeypatch: pytest
     assert len(result.predictor_payload_sha256) == 64
 
 
+def _write_prepared_chunk(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    from tac.codec.v10_predictor_residual import encode_predictor_residual
+
+    monkeypatch.setattr(measure, "CAMERA_HW", (4, 4))
+    monkeypatch.setattr(measure, "SCORER_HW", (2, 2))
+    y0 = np.arange(2 * 2 * 2 * 3, dtype=np.uint8).reshape(2, 2, 2, 3)
+    y1 = np.flip(y0, axis=2).copy()
+    payload = encode_predictor_residual(
+        y0,
+        y1,
+        modes=measure.SPATIAL_SMOOTH_121_ID,
+        pair_ids=(0, 1),
+    )
+    base = tmp_path / "chunk-0000"
+    y0_path = base.with_suffix(".y0.bin")
+    y1_path = base.with_suffix(".y1.bin")
+    predictor_path = base.with_suffix(".predictor.bin")
+    manifest_path = base.with_suffix(".manifest.json")
+    y0_path.write_bytes(y0.tobytes())
+    y1_path.write_bytes(y1.tobytes())
+    predictor_path.write_bytes(payload)
+
+    def sha(value: bytes) -> str:
+        return hashlib.sha256(value).hexdigest()
+
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": measure.PREPARED_CHUNK_SCHEMA,
+                "complete": True,
+                "pair_ids": [0, 1],
+                "pair_count": 2,
+                "camera_hw": [4, 4],
+                "scorer_hw": [2, 2],
+                "source_cache_sha256": measure.EXPECTED_CACHE_SHA256,
+                "y_codec_id": "predictor-residual-u8.v1",
+                "predictor_mode_id": measure.SPATIAL_SMOOTH_121_ID,
+                "y0_bytes": y0.nbytes,
+                "y0_sha256": sha(y0.tobytes()),
+                "y1_bytes": y1.nbytes,
+                "y1_sha256": sha(y1.tobytes()),
+                "predictor_bytes": len(payload),
+                "predictor_sha256": sha(payload),
+            }
+        )
+    )
+    return manifest_path
+
+
+def test_load_prepared_chunk_closes_manifest_and_predictor_custody(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path = _write_prepared_chunk(tmp_path, monkeypatch)
+    custody = measure.load_prepared_chunk(manifest_path)
+    assert custody.inputs.pair_ids == (0, 1)
+    assert custody.inputs.mode == measure.SPATIAL_SMOOTH_121_ID
+    assert custody.inputs.frame0_y_planes.shape == (2, 2, 2, 3)
+    assert custody.inputs.frame1_y_planes.shape == (2, 2, 2, 3)
+    predictor_path = manifest_path.with_name("chunk-0000.predictor.bin")
+    predictor_path.write_bytes(predictor_path.read_bytes() + b"drift")
+    with pytest.raises(measure.PredictorFloorError, match="custody drifted"):
+        measure.load_prepared_chunk(manifest_path)
+
+
+def test_banked_precision_drop_is_exact_uint8_predictor_toward_zero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    custody = measure.load_prepared_chunk(_write_prepared_chunk(tmp_path, monkeypatch))
+    treated, operation = measure.truncate_scorer_plane_predictor_residual(
+        custody.inputs,
+        drop_low_bits=1,
+    )
+    assert treated.frame0_y_planes is custody.inputs.frame0_y_planes
+    assert treated.frame1_y_planes.dtype == np.uint8
+    assert operation["exact_uint8_reachable_plane"] is True
+    assert operation["camera_preimage_secant_equivalence_claim"] is False
+    assert operation["residual_abs_sum_after"] <= operation["residual_abs_sum_before"]
+
+
+def test_projected_action_uses_ceil_population_and_exact_contest_formula() -> None:
+    result = measure.projected_action(archive_bytes=101, pair_count=12, d_seg=0.001, d_pose=0.0001)
+    assert result["projected_n600_archive_bytes"] == 5050
+    assert result["distortion_term"] == pytest.approx(0.1 + np.sqrt(0.001))
+    assert result["projected_exact_objective"] == pytest.approx(
+        0.1 + np.sqrt(0.001) + 25 * 5050 / measure.CONTEST_ARCHIVE_DENOMINATOR
+    )
+
+
 def test_score_inflated_raw_preserves_pair_order_and_aggregates(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -341,7 +430,7 @@ def test_rung_e_completion_seam_uses_production_completed_field(tmp_path: Path) 
         measure._completed_inflate_raw_path(SimpleNamespace(completed=False, raw_path=raw_path))
 
 
-def test_cli_has_measure_compose_and_rung_e_subcommands() -> None:
+def test_cli_has_all_measurement_subcommands() -> None:
     parser = measure._parser()
     subcommands = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
-    assert set(subcommands.choices) == {"measure", "compose", "rung-e"}
+    assert set(subcommands.choices) == {"measure", "compose", "rung-e", "banked-ab"}

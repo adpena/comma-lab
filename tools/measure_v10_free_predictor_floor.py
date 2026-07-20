@@ -11,6 +11,11 @@ zstd-19 bytes.  Four canonical chunks compose to the n48 advisory surface.
 additive production archive, verifies both factor-2 planes, and only then loads
 the frozen CPU scorers.  Neither the predictor codec nor archive decoder loads
 SegNet, PoseNet, Torch, source frames, labels, or margins.
+
+``banked-ab`` consumes one immutable prepared V10 chunk and runs a matched
+receiver-closed control versus scorer-plane predictor-residual precision drop.
+It reports actual archive bytes and local hard-oracle distortion before any
+explicitly labeled n600 projection.
 """
 
 from __future__ import annotations
@@ -18,6 +23,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import shutil
@@ -61,8 +67,14 @@ SCHEMA_STATE = "v10_free_predictor_floor_state.v1"
 SCHEMA_STAGE = "v10_free_predictor_floor_pair_stage.v1"
 SCHEMA_COMPOSED = "v10_free_predictor_floor_n48.v1"
 SCHEMA_RUNG_E = "v10_free_predictor_floor_rung_e.v1"
+SCHEMA_BANKED_AB = "v10_free_predictor_floor_banked_ab.v1"
+SCHEMA_BANKED_AB_STAGE = "v10_free_predictor_floor_banked_ab_stage.v1"
+PREPARED_CHUNK_SCHEMA = "v10_two_plane_receiver_prepare_chunk.v1"
 SCHEMA_ATTRIBUTION = "v10_predictor_attribution_stream.v1"
 POINTER = "0.1910828242 [contest-CPU Linux x86_64] UNMOVED"
+POINTER_VALUE = 0.1910828242
+CONTEST_ARCHIVE_DENOMINATOR = 37_545_489
+CONTEST_PAIR_COUNT = 600
 AXIS = f"[{platform.system()}-{platform.machine()} CPU advisory real-cache subset] NON-PROMOTABLE"
 CAMERA_HW = (874, 1164)
 SCORER_HW = (384, 512)
@@ -101,6 +113,19 @@ class RungEInputs:
     descriptors: tuple[bytes, ...]
     cache_sha256: str
     predictor_payload_sha256: str
+
+
+@dataclass(frozen=True)
+class PreparedChunkCustody:
+    """One immutable prepared V10 chunk plus its bound source artifacts."""
+
+    inputs: RungEInputs
+    manifest_path: Path
+    manifest_sha256: str
+    manifest: Mapping[str, Any]
+    y0_path: Path
+    y1_path: Path
+    predictor_path: Path
 
 
 def _canonical(value: Any) -> bytes:
@@ -1013,6 +1038,180 @@ def build_rung_e_inputs(
     )
 
 
+def load_prepared_chunk(manifest_path: Path) -> PreparedChunkCustody:
+    """Load one settled n<=12 V10 prepare chunk without re-deriving it."""
+
+    target = manifest_path.expanduser().resolve()
+    if not target.is_file() or not target.name.endswith(".manifest.json"):
+        raise PredictorFloorError("prepared chunk manifest is absent or misnamed")
+    try:
+        manifest = json.loads(target.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PredictorFloorError("prepared chunk manifest is unreadable") from exc
+    pair_ids = manifest.get("pair_ids")
+    pair_count = manifest.get("pair_count")
+    if (
+        manifest.get("schema") != PREPARED_CHUNK_SCHEMA
+        or manifest.get("complete") is not True
+        or type(pair_count) is not int
+        or not isinstance(pair_ids, list)
+        or pair_count != len(pair_ids)
+        or not 1 <= pair_count <= MAX_CHUNK
+        or any(type(value) is not int or value < 0 or value >= 600 for value in pair_ids)
+        or any(right <= left for left, right in pairwise(pair_ids))
+        or manifest.get("camera_hw") != list(CAMERA_HW)
+        or manifest.get("scorer_hw") != list(SCORER_HW)
+        or manifest.get("source_cache_sha256") != EXPECTED_CACHE_SHA256
+        or manifest.get("y_codec_id") != "predictor-residual-u8.v1"
+        or manifest.get("predictor_mode_id") not in MODE_BY_ID
+    ):
+        raise PredictorFloorError("prepared chunk manifest violates the settled V10 contract")
+    prefix = target.name[: -len(".manifest.json")]
+    y0_path = target.with_name(f"{prefix}.y0.bin")
+    y1_path = target.with_name(f"{prefix}.y1.bin")
+    predictor_path = target.with_name(f"{prefix}.predictor.bin")
+    for path, byte_field, sha_field in (
+        (y0_path, "y0_bytes", "y0_sha256"),
+        (y1_path, "y1_bytes", "y1_sha256"),
+        (predictor_path, "predictor_bytes", "predictor_sha256"),
+    ):
+        if (
+            not path.is_file()
+            or type(manifest.get(byte_field)) is not int
+            or path.stat().st_size != manifest[byte_field]
+            or _sha256_file(path) != manifest.get(sha_field)
+        ):
+            raise PredictorFloorError(f"prepared chunk {path.name} custody drifted")
+    shape = (pair_count, *SCORER_HW, 3)
+    expected_plane_bytes = int(np.prod(shape, dtype=np.int64))
+    if manifest["y0_bytes"] != expected_plane_bytes or manifest["y1_bytes"] != expected_plane_bytes:
+        raise PredictorFloorError("prepared chunk plane byte geometry drifted")
+    y0 = np.frombuffer(y0_path.read_bytes(), dtype=np.uint8).reshape(shape).copy()
+    y1 = np.frombuffer(y1_path.read_bytes(), dtype=np.uint8).reshape(shape).copy()
+    predictor_payload = predictor_path.read_bytes()
+    try:
+        decoded = decode_predictor_residual(predictor_payload)
+    except Exception as exc:
+        raise PredictorFloorError("prepared predictor payload parse-back refused") from exc
+    mode = str(manifest["predictor_mode_id"])
+    if (
+        decoded.pair_ids != tuple(pair_ids)
+        or decoded.modes != (mode,) * pair_count
+        or not np.array_equal(decoded.frame0, y0)
+        or not np.array_equal(decoded.frame1, y1)
+    ):
+        raise PredictorFloorError("prepared predictor payload differs from its bound planes")
+    inputs = RungEInputs(
+        pair_ids=tuple(pair_ids),
+        mode=mode,
+        frame0_y_planes=y0,
+        frame1_y_planes=y1,
+        descriptors=decoded.descriptors,
+        cache_sha256=str(manifest["source_cache_sha256"]),
+        predictor_payload_sha256=str(manifest["predictor_sha256"]),
+    )
+    return PreparedChunkCustody(
+        inputs=inputs,
+        manifest_path=target,
+        manifest_sha256=_sha256_file(target),
+        manifest=manifest,
+        y0_path=y0_path,
+        y1_path=y1_path,
+        predictor_path=predictor_path,
+    )
+
+
+def truncate_scorer_plane_predictor_residual(
+    inputs: RungEInputs,
+    *,
+    drop_low_bits: int,
+) -> tuple[RungEInputs, dict[str, Any]]:
+    """Coarsen exact uint8 scorer-plane residuals toward their V10 predictor."""
+
+    if isinstance(drop_low_bits, bool) or int(drop_low_bits) != drop_low_bits:
+        raise PredictorFloorError("banked A/B drop-low-bits must be an exact integer")
+    bits = int(drop_low_bits)
+    if not 1 <= bits <= 7:
+        raise PredictorFloorError("banked A/B drop-low-bits must be in [1,7]")
+    rows: list[np.ndarray] = []
+    changed_values = 0
+    residual_abs_before = 0
+    residual_abs_after = 0
+    for y0, y1, descriptor in zip(
+        inputs.frame0_y_planes,
+        inputs.frame1_y_planes,
+        inputs.descriptors,
+        strict=True,
+    ):
+        predictor = predict_plane(y0, inputs.mode, descriptor)
+        residual = y1.astype(np.int16) - predictor.astype(np.int16)
+        magnitude = np.abs(residual).astype(np.int16)
+        truncated_magnitude = (magnitude >> bits) << bits
+        truncated = np.where(residual < 0, -truncated_magnitude, truncated_magnitude)
+        reconstructed = predictor.astype(np.int16) + truncated
+        if np.any(reconstructed < 0) or np.any(reconstructed > 255):
+            raise PredictorFloorError("banked A/B precision treatment left the uint8 lattice")
+        treated = reconstructed.astype(np.uint8)
+        changed_values += int(np.count_nonzero(treated != y1))
+        residual_abs_before += int(np.abs(residual.astype(np.int32)).sum(dtype=np.int64))
+        residual_abs_after += int(np.abs(truncated.astype(np.int32)).sum(dtype=np.int64))
+        rows.append(treated)
+    frame1 = np.stack(rows)
+    payload = encode_predictor_residual(
+        inputs.frame0_y_planes,
+        frame1,
+        modes=inputs.mode,
+        descriptors=inputs.descriptors,
+        pair_ids=inputs.pair_ids,
+    )
+    decoded = decode_predictor_residual(payload)
+    if not np.array_equal(decoded.frame0, inputs.frame0_y_planes) or not np.array_equal(decoded.frame1, frame1):
+        raise PredictorFloorError("banked A/B treatment predictor parse-back differs")
+    result = RungEInputs(
+        pair_ids=inputs.pair_ids,
+        mode=inputs.mode,
+        frame0_y_planes=inputs.frame0_y_planes,
+        frame1_y_planes=frame1,
+        descriptors=inputs.descriptors,
+        cache_sha256=inputs.cache_sha256,
+        predictor_payload_sha256=_sha256_bytes(payload),
+    )
+    return result, {
+        "operation": "truncate scorer-plane signed predictor residual magnitudes toward zero",
+        "drop_low_bits": bits,
+        "changed_values": changed_values,
+        "changed_fraction": changed_values / int(frame1.size),
+        "residual_abs_sum_before": residual_abs_before,
+        "residual_abs_sum_after": residual_abs_after,
+        "exact_uint8_reachable_plane": True,
+        "camera_preimage_secant_equivalence_claim": False,
+    }
+
+
+def projected_action(*, archive_bytes: int, pair_count: int, d_seg: float, d_pose: float) -> dict[str, Any]:
+    """Project a subset archive linearly to n600 and apply the exact objective."""
+
+    if type(archive_bytes) is not int or archive_bytes <= 0 or type(pair_count) is not int or pair_count <= 0:
+        raise PredictorFloorError("projected action requires positive exact byte/pair counts")
+    if not all(math.isfinite(value) and value >= 0.0 for value in (float(d_seg), float(d_pose))):
+        raise PredictorFloorError("projected action requires finite nonnegative distortion")
+    projected_bytes = (archive_bytes * CONTEST_PAIR_COUNT + pair_count - 1) // pair_count
+    distortion_term = 100.0 * float(d_seg) + math.sqrt(10.0 * float(d_pose))
+    action = distortion_term + 25.0 * projected_bytes / CONTEST_ARCHIVE_DENOMINATOR
+    slack = POINTER_VALUE - distortion_term
+    byte_cap = math.floor(slack * CONTEST_ARCHIVE_DENOMINATOR / 25.0) if slack > 0.0 else -1
+    return {
+        "projection": "ceil(measured subset archive bytes * 600 / measured pair count)",
+        "projected_n600_archive_bytes": projected_bytes,
+        "measured_subset_d_seg": float(d_seg),
+        "measured_subset_d_pose": float(d_pose),
+        "distortion_term": distortion_term,
+        "projected_exact_objective": action,
+        "strict_pointer_byte_cap_at_measured_distortion": byte_cap,
+        "projected_beats_pointer": action < POINTER_VALUE,
+    }
+
+
 def _load_scorers(upstream: Path, cpu_threads: int) -> tuple[Any, Any, Any]:
     if not (upstream / "modules.py").is_file():
         raise PredictorFloorError(f"frozen upstream scorer source is absent: {upstream}")
@@ -1179,6 +1378,264 @@ def _completed_inflate_raw_path(inflate_result: Any) -> Path:
     if type(completed) is not bool or not completed or not isinstance(raw_path, Path):
         raise PredictorFloorError("rung-E inflate did not complete")
     return raw_path
+
+
+def _run_banked_ab_arm(
+    *,
+    arm_id: str,
+    inputs: RungEInputs,
+    output_root: Path,
+    cache_path: Path,
+    upstream: Path,
+    cpu_threads: int,
+    resume: bool,
+    require_canonical_hash: bool,
+    scorer_bundle: tuple[Any, Any, Any],
+) -> dict[str, Any]:
+    """Build, inflate, verify, and hard-score one matched banked A/B arm."""
+
+    from tac.witness_dsl.v10_production_receiver import (
+        PREDICTOR_RESIDUAL_Y_CODEC_ID,
+        build_packet,
+        build_production_archive,
+        decode_y_plane_pair,
+        inflate_archive,
+        parse_packet,
+    )
+
+    if arm_id not in {"control", "precision_drop"}:
+        raise PredictorFloorError("banked A/B arm id is outside the closed registry")
+    arm_root = output_root / arm_id
+    arm_root.mkdir(parents=True, exist_ok=True)
+    packet = build_packet(
+        inputs.frame1_y_planes,
+        camera_height=CAMERA_HW[0],
+        camera_width=CAMERA_HW[1],
+        y_codec_id=PREDICTOR_RESIDUAL_Y_CODEC_ID,
+        frame0_y_planes=inputs.frame0_y_planes,
+        predictor_modes=inputs.mode,
+        predictor_descriptors=inputs.descriptors,
+        predictor_pair_ids=inputs.pair_ids,
+    )
+    parsed = parse_packet(packet)
+    decoded = decode_y_plane_pair(parsed)
+    if not np.array_equal(decoded.frame0, inputs.frame0_y_planes) or not np.array_equal(
+        decoded.frame1, inputs.frame1_y_planes
+    ):
+        raise PredictorFloorError(f"banked A/B {arm_id} packet parse-back differs")
+    archive_path = arm_root / "archive.zip"
+    manifest_path = arm_root / "archive.zip.manifest.json"
+    if archive_path.exists() or manifest_path.exists():
+        if not resume or not archive_path.is_file() or not manifest_path.is_file():
+            raise PredictorFloorError(f"banked A/B {arm_id} archive state requires --resume")
+        if _open_existing_archive(archive_path) != packet:
+            raise PredictorFloorError(f"banked A/B {arm_id} preserved packet differs")
+        try:
+            archive_manifest = json.loads(manifest_path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise PredictorFloorError(f"banked A/B {arm_id} archive manifest is unreadable") from exc
+        archive_bytes = archive_path.stat().st_size
+        archive_sha = _sha256_file(archive_path)
+        if (
+            archive_manifest.get("archive_bytes") != archive_bytes
+            or archive_manifest.get("archive_sha256") != archive_sha
+        ):
+            raise PredictorFloorError(f"banked A/B {arm_id} archive custody drifted")
+    else:
+        built = build_production_archive(
+            inputs.frame1_y_planes,
+            archive_path=archive_path,
+            camera_height=CAMERA_HW[0],
+            camera_width=CAMERA_HW[1],
+            y_codec_id=PREDICTOR_RESIDUAL_Y_CODEC_ID,
+            frame0_y_planes=inputs.frame0_y_planes,
+            predictor_modes=inputs.mode,
+            predictor_descriptors=inputs.descriptors,
+            predictor_pair_ids=inputs.pair_ids,
+            manifest_path=manifest_path,
+        )
+        archive_bytes, archive_sha = built.archive_bytes, built.archive_sha256
+    names_path = arm_root / "video_names.txt"
+    _write_once_or_equal(names_path, f"v10-banked-ab-{arm_id}.mp4\n".encode())
+    inflate_result = inflate_archive(arm_root, arm_root / "inflated", names_path)
+    raw_path = _completed_inflate_raw_path(inflate_result)
+    numerator_proof = _verify_inflated_planes(raw_path, inputs)
+    hard_oracle = score_inflated_raw(
+        raw_path,
+        pair_ids=inputs.pair_ids,
+        cache_path=cache_path,
+        upstream=upstream,
+        cpu_threads=cpu_threads,
+        require_canonical_hash=require_canonical_hash,
+        scorer_bundle=scorer_bundle,
+    )
+    stage = {
+        "schema": SCHEMA_BANKED_AB_STAGE,
+        "arm_id": arm_id,
+        "pair_ids": list(inputs.pair_ids),
+        "archive": {"bytes": archive_bytes, "sha256": archive_sha},
+        "packet": {"bytes": len(packet), "sha256": parsed.packet_sha256},
+        "predictor_payload_sha256": inputs.predictor_payload_sha256,
+        "frame0_y_sha256": _sha256_array(inputs.frame0_y_planes),
+        "frame1_y_sha256": _sha256_array(inputs.frame1_y_planes),
+        "inflated": {
+            "bytes": inflate_result.raw_bytes,
+            "sha256": inflate_result.raw_sha256,
+        },
+        "integer_numerator_proof": numerator_proof,
+        "hard_oracle": hard_oracle,
+        "stage_complete": True,
+    }
+    _write_once_or_equal(
+        arm_root / "stage-receipt.json",
+        json.dumps(stage, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n",
+    )
+    return stage
+
+
+def run_banked_ab(args: argparse.Namespace) -> dict[str, Any]:
+    """Run a same-harness receiver-closed control/precision A/B on one banked chunk."""
+
+    receipt_path = _durable_path(args.receipt, "banked A/B receipt")
+    if receipt_path.exists():
+        raise PredictorFloorError(f"write-once banked A/B receipt already exists: {receipt_path}")
+    custody = load_prepared_chunk(args.prepared_manifest)
+    if args.cache.expanduser().resolve() != DEFAULT_CACHE.resolve() and not args.allow_noncanonical_cache:
+        raise PredictorFloorError("banked A/B cache path differs from canonical custody")
+    output_root = (
+        _ephemeral_output_root(args.output_root)
+        if args.ephemeral_output
+        else _durable_path(
+            args.output_root,
+            "banked A/B output-root",
+            require_ssd=True,
+            allow_local=args.allow_local_output,
+        )
+    )
+    preflight = (
+        _ephemeral_storage_preflight(output_root, 2 * len(custody.inputs.pair_ids)) if args.ephemeral_output else None
+    )
+    marker_path = output_root / _EPHEMERAL_MARKER_NAME
+    if args.ephemeral_output:
+        if args.resume:
+            if not marker_path.is_file() or marker_path.read_bytes() != _EPHEMERAL_MARKER_BYTES:
+                raise PredictorFloorError("ephemeral banked A/B resume lacks its ownership marker")
+        elif output_root.exists():
+            raise PredictorFloorError("new ephemeral banked A/B output root must not already exist")
+    elif output_root.exists() and not args.resume:
+        raise PredictorFloorError("banked A/B output exists; use --resume or a new output root")
+    output_root.mkdir(parents=True, exist_ok=True)
+    if args.ephemeral_output:
+        _write_once_or_equal(marker_path, _EPHEMERAL_MARKER_BYTES)
+
+    treatment, treatment_operation = truncate_scorer_plane_predictor_residual(
+        custody.inputs,
+        drop_low_bits=args.drop_low_bits,
+    )
+    scorer_bundle = _load_scorers(args.upstream.expanduser().resolve(), args.cpu_threads)
+    arm_arguments = {
+        "output_root": output_root,
+        "cache_path": args.cache.expanduser().resolve(),
+        "upstream": args.upstream.expanduser().resolve(),
+        "cpu_threads": args.cpu_threads,
+        "resume": args.resume,
+        "require_canonical_hash": not args.allow_noncanonical_cache,
+        "scorer_bundle": scorer_bundle,
+    }
+    control = _run_banked_ab_arm(arm_id="control", inputs=custody.inputs, **arm_arguments)
+    treated = _run_banked_ab_arm(arm_id="precision_drop", inputs=treatment, **arm_arguments)
+    control_projection = projected_action(
+        archive_bytes=control["archive"]["bytes"],
+        pair_count=len(custody.inputs.pair_ids),
+        d_seg=control["hard_oracle"]["mean_d_seg"],
+        d_pose=control["hard_oracle"]["mean_d_pose"],
+    )
+    treatment_projection = projected_action(
+        archive_bytes=treated["archive"]["bytes"],
+        pair_count=len(custody.inputs.pair_ids),
+        d_seg=treated["hard_oracle"]["mean_d_seg"],
+        d_pose=treated["hard_oracle"]["mean_d_pose"],
+    )
+    receipt = {
+        "schema": SCHEMA_BANKED_AB,
+        "written_at_utc": datetime.now(UTC).isoformat(),
+        "axis": AXIS.replace("subset", f"banked n{len(custody.inputs.pair_ids)} hard-oracle A/B"),
+        "authority": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "pointer": POINTER,
+            "pointer_moved": False,
+            "verdict_scope": "one settled banked chunk; local native-f32 CPU hard oracle; linear n600 byte projection",
+        },
+        "labels": {
+            "MEASURED": [
+                "actual production archive bytes",
+                "production packet parse-back and receiver inflation",
+                "factor-2 exact integer numerator equality",
+                "native-f32 frozen CPU-Torch d_seg/d_pose",
+            ],
+            "DERIVED": [
+                "ceil-linear n600 archive-byte projection",
+                "exact contest objective formula evaluated on projected bytes and measured subset distortion",
+            ],
+            "INFERRED": [],
+        },
+        "source_prepared_chunk": {
+            "manifest": str(custody.manifest_path),
+            "manifest_sha256": custody.manifest_sha256,
+            "y0": {"path": str(custody.y0_path), "sha256": custody.manifest["y0_sha256"]},
+            "y1": {"path": str(custody.y1_path), "sha256": custody.manifest["y1_sha256"]},
+            "predictor": {
+                "path": str(custody.predictor_path),
+                "sha256": custody.manifest["predictor_sha256"],
+            },
+            "source_cache_sha256": custody.inputs.cache_sha256,
+            "pair_ids": list(custody.inputs.pair_ids),
+        },
+        "treatment_operation": treatment_operation,
+        "arms": {
+            "control": {**control, "projection": control_projection},
+            "precision_drop": {**treated, "projection": treatment_projection},
+        },
+        "treatment_minus_control": {
+            "archive_bytes": treated["archive"]["bytes"] - control["archive"]["bytes"],
+            "mean_d_seg": treated["hard_oracle"]["mean_d_seg"] - control["hard_oracle"]["mean_d_seg"],
+            "mean_d_pose": treated["hard_oracle"]["mean_d_pose"] - control["hard_oracle"]["mean_d_pose"],
+            "projected_exact_objective": (
+                treatment_projection["projected_exact_objective"] - control_projection["projected_exact_objective"]
+            ),
+        },
+        "frontier_verdict": {
+            "control_projected_beats_pointer": control_projection["projected_beats_pointer"],
+            "treatment_projected_beats_pointer": treatment_projection["projected_beats_pointer"],
+            "missing_compact_predictor_description": True,
+            "no_n600_launch_authorized": True,
+        },
+        "decode_import_boundary": "production inflate imports no scorer/Torch/source bank; hard oracle ran afterward encode-side",
+        "artifact_lifecycle": {
+            "ephemeral_output": bool(args.ephemeral_output),
+            "temporary_paths_redacted": bool(args.ephemeral_output),
+            "retained": not args.ephemeral_output,
+            "cleanup_completed": False if args.ephemeral_output else None,
+            "storage_preflight": preflight,
+            "per_arm_stage_receipts_preserved_until_success": True,
+            "resume_reopens_exact_archive_and_receiver_pair_stages": True,
+            "rebuildable_from": {
+                "prepared_manifest_sha256": custody.manifest_sha256,
+                "tool_sha256": _sha256_file(Path(__file__).resolve()),
+                "codec_sha256": _sha256_file(SRC / "tac/codec/v10_predictor_residual.py"),
+                "receiver_sha256": _sha256_file(SRC / "tac/witness_dsl/v10_production_receiver.py"),
+            },
+            "cleanup_rule": "durable redacted receipt precedes deletion of only the marker-owned pact-rung-e-* temp tree",
+        },
+        "research_only": True,
+    }
+    _atomic_json(receipt_path, receipt)
+    if args.ephemeral_output:
+        _cleanup_ephemeral_output(output_root)
+        receipt["artifact_lifecycle"]["cleanup_completed"] = True
+        _atomic_json(receipt_path, receipt)
+    return receipt
 
 
 def run_rung_e(args: argparse.Namespace) -> dict[str, Any]:
@@ -1403,6 +1860,20 @@ def _parser() -> argparse.ArgumentParser:
     output_policy.add_argument("--allow-local-output", action="store_true")
     output_policy.add_argument("--ephemeral-output", action="store_true")
     rung.add_argument("--allow-noncanonical-cache", action="store_true", help=argparse.SUPPRESS)
+
+    banked = sub.add_parser("banked-ab", help="run one matched banked n<=12 production-receiver A/B")
+    banked.add_argument("--prepared-manifest", type=Path, required=True)
+    banked.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
+    banked.add_argument("--upstream", type=Path, default=DEFAULT_UPSTREAM)
+    banked.add_argument("--output-root", type=Path, required=True)
+    banked.add_argument("--receipt", type=Path, required=True)
+    banked.add_argument("--drop-low-bits", type=int, default=1, choices=range(1, 8))
+    banked.add_argument("--cpu-threads", type=int, default=4)
+    banked.add_argument("--resume", action="store_true")
+    banked_output = banked.add_mutually_exclusive_group()
+    banked_output.add_argument("--allow-local-output", action="store_true")
+    banked_output.add_argument("--ephemeral-output", action="store_true")
+    banked.add_argument("--allow-noncanonical-cache", action="store_true", help=argparse.SUPPRESS)
     return parser
 
 
@@ -1415,8 +1886,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.command == "compose":
         result = compose_chunks(args.receipts, args.output)
         target = args.output
-    else:
+    elif args.command == "rung-e":
         result = run_rung_e(args)
+        target = args.receipt
+    else:
+        result = run_banked_ab(args)
         target = args.receipt
     print(
         json.dumps(

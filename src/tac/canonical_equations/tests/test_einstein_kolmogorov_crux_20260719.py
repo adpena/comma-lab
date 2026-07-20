@@ -10,6 +10,7 @@ import pytest
 
 from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
     EQUATION_ID,
+    SOURCE_FRONTIER_MAGNITUDE,
     SOURCE_MEASUREMENT,
     InfeasibleByteBudgetError,
     MeasuredHardRReceipt,
@@ -21,6 +22,7 @@ from tac.canonical_equations.einstein_kolmogorov_crux_20260719 import (
     inclusive_maximum_byte_budget,
     maximum_byte_budget,
     populate_einstein_kolmogorov_crux_action_rate_contract_v1,
+    validate_frontier_magnitude_chart,
 )
 
 
@@ -123,13 +125,42 @@ def test_hash_bound_canonical_equation_builds_from_frozen_measurement() -> None:
     assert equation.domain_of_validity["research_only"] is True
     assert equation.domain_of_validity["promotion_eligible"] is False
     assert equation.domain_of_validity["n600_explicit_target_launch_eligible"] is False
-    assert len(equation.empirical_anchors) == 1
+    assert len(equation.empirical_anchors) == 2
     anchor = equation.empirical_anchors[0]
     assert anchor.provenance.source_sha256 == equation.provenance.source_sha256
     assert anchor.empirical_output["winner_hard_mismatch_px"] < (anchor.empirical_output["source_hard_mismatch_px"])
     assert anchor.empirical_output["winner_frontier_feasible_at_zero_pose_zero_rate"] is False
     assert anchor.empirical_output["operating_point_verdict"] == "WRONG_OPERATING_POINT_WALL_CHARACTERIZATION"
     assert anchor.empirical_output["full_archive_or_contest_score_claim"] is False
+    frontier_anchor = equation.empirical_anchors[1]
+    assert frontier_anchor.source_artifact == SOURCE_FRONTIER_MAGNITUDE
+    assert frontier_anchor.empirical_output["exact_production_blocker"] == (
+        "NO_COMPACT_PREDICTOR_DESCRIPTION_IN_216_TO_244_KB_BOX"
+    )
+    assert frontier_anchor.empirical_output["bank"]["exact_action"] == pytest.approx(
+        272.73427793588485,
+        abs=1e-12,
+    )
+    assert frontier_anchor.empirical_output["pose_clean_trade_cells_control"]["point_id"] == "precision_drop1"
+    assert frontier_anchor.empirical_output["matched_receiver_control"]["archive_bytes"] == 7_898_534
+    assert frontier_anchor.empirical_output["matched_receiver_treatment"]["archive_bytes"] == 6_728_570
+    assert frontier_anchor.empirical_output["matched_receiver_treatment"]["derived_n600_action"] == pytest.approx(
+        224.29719362434912,
+        abs=1e-12,
+    )
+    assert frontier_anchor.empirical_output["pointer_moved"] is False
+
+
+def test_frontier_magnitude_chart_recomputes_every_projection() -> None:
+    chart = validate_frontier_magnitude_chart()
+    assert chart["n600_trade_cells_launch_eligible"] is False
+    assert chart["selection"]["exact_receiver_frontier_magnitude_control"] == ("v10_rung_e_exact_two_plane_n48_local")
+    assert chart["selection"]["direct_rgb_frontier_magnitude_pose_clean_control"] == ("precision_drop1")
+    assert chart["selection"]["matched_receiver_positive_band_control"] == ("banked_n12_scorer_plane_precision_drop1")
+    assert len(chart["trade_cells_curve"]["points"]) == 10
+    assert len(chart["exact_archive_rows"]) == 4
+    assert chart["exact_production_gap"]["blocker"] == "NO_COMPACT_PREDICTOR_DESCRIPTION_IN_216_TO_244_KB_BOX"
+    assert chart["exact_production_gap"]["secondary_blocker"] == "MISSING_ARBITRARY_NUMERATOR_PLANE_CODEC"
 
 
 def test_canonical_equation_registry_query_roundtrip(tmp_path: Path) -> None:
@@ -146,3 +177,4 @@ def test_canonical_equation_registry_query_roundtrip(tmp_path: Path) -> None:
     assert [item.equation_id for item in loaded] == [EQUATION_ID]
     assert loaded[0].provenance.source_sha256 == equation.provenance.source_sha256
     assert loaded[0].empirical_anchors[0].empirical_output == (equation.empirical_anchors[0].empirical_output)
+    assert loaded[0].empirical_anchors[1].empirical_output == (equation.empirical_anchors[1].empirical_output)

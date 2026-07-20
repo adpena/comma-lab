@@ -6,7 +6,7 @@ research_only: true
 axis: `[macOS-CPU advisory]`  
 pointer: `0.1910828242 [contest-CPU Linux x86_64]`, UNMOVED  
 review_status: fresh-eyes-reviewed(0); first recursive round found class defects and reset the seal  
-verdict_scope: CONSTRUCTIVE-DESIGN plus complete n24 palette/lossy-label component probe; end-to-end archive still blocked
+verdict_scope: CONSTRUCTIVE-DESIGN plus n24 component probes and one matched n12 exact-receiver A/B; no new n600 or contest-axis score
 
 > **CURRENT MEASUREMENT, NOT YET A VERDICT SEAL.** The source/global/scoped-Seg
 > terminal triplet was freshly replayed under reproducibility closure v2 from base
@@ -21,6 +21,11 @@ verdict_scope: CONSTRUCTIVE-DESIGN plus complete n24 palette/lossy-label compone
 > The operator's 2026-07-20T01:03:29Z correction additionally classifies the
 > n24 row as a **wall characterization, not a frontier operating point**. Its Seg
 > term alone is already above the pointer, so it cannot authorize n600 scaling.
+> A subsequent bounded banked n12 control/treatment closes the previously owed
+> frontier-magnitude receiver experiment. Both arms are exact production archives with
+> exact factor-2 numerator equality and local hard Seg/Pose scores; both remain
+> non-promotable and rate-dead. Review count remains zero until the final immutable
+> landing passes three fresh-context clean reviews.
 
 ## Answer first
 
@@ -67,10 +72,23 @@ incumbent's `d_seg=0.005678600735` is `37.369x` the solved v10 capstone bank
 It is therefore mathematically incapable of moving the frontier. The capstone archive
 was re-hashed this session as
 `e4cd154f79a30e2b1d759af0d26e54444d22807f81700565e475392eae064f42`
-(409,526,925 bytes). The next chart must compose from that solved-distortion receiver
-mechanism and spend distortion for rate; it must not scale this cheap broken-distortion
-corner. The machine-readable correction is
+(409,526,925 bytes). The new chart therefore composes from that solved-distortion
+receiver mechanism and spends distortion for rate; it does not scale the cheap
+broken-distortion corner. The machine-readable correction is
 `einstein_kolmogorov_operating_point_correction_20260720.json`.
+
+**THE FRONTIER-MAGNITUDE RECEIVER A/B (MEASURED locally; DERIVED n600 projection):**
+the settled chunk-0000 V10 bank was consumed read-only, not re-derived. The exact control
+archive is 7,898,534 B at `d_seg=0.000127156576`, `d_pose=0.000025392805`; its
+ceil-linear n600 projection is 394,926,700 B and `S=262.994129800`. Truncating one low
+bit from the signed scorer-plane residual toward the registered V10 predictor produces
+another exact uint8 receiver target and saves 1,169,964 B (14.81%) in the measured n12
+archive, but moves `d_seg` to `0.000497182210` and `d_pose` to `0.005454401104`.
+Its distortion term alone is `0.283264814`, already above the pointer; its projected
+`S=224.297193624` is still rate-dead. This is a real same-harness rate/distortion point,
+not a palette proxy, not the camera-preimage `precision_drop1` row, and not a contest
+score. The durable receipt is `einstein_kolmogorov_banked_n12_ab_20260720.json`; the
+complete comparison is `einstein_kolmogorov_frontier_magnitude_chart_20260720.json`.
 
 ## Stores consulted
 
@@ -98,10 +116,34 @@ covers the broad codec and geometry families. A later operator-routed intake ful
 checked Colbrook--Mezic--Stepanenko (2026), including its 36-page supplement, and
 classified it as a lower-bound information-model guard rather than a codec lever; the
 durable disposition is in
-`papers_checked_colbrook_adversarial_dynamical_systems_20260720.md`. The external
+`papers_checked_colbrook_adversarial_dynamical_systems_20260720.md`. The later routed
+Strong Stochastic Flow Maps intake was checked against the full primary PDF and recorded
+in `papers_checked_strong_stochastic_flow_maps_20260720.md`. The external
 Claude memory ledger is outside this
 worktree's write authority, so the new-paper intake is durably recorded here for MAIN
 to mirror rather than silently attempting an out-of-scope write.
+
+## INVERSE-SOLVE TOOLCHAIN MAP
+
+This map distinguishes executable exact surfaces from planners and diagnostics; names
+in the same row are not claimed equivalent.
+
+| obligation | executable/authoritative surface | exact scope and remaining seam |
+|---|---|---|
+| Seg target construction and repair | `constructive_inverse_solve_harness`, `boundary_solver`, `frame1_seg_repair_atoms` | Construct and repair declared target cells. PDW1 palette/DSPSA is only an explicit-target component search, not the global inverse. |
+| Resize/lattice realization | `uint8_lattice_feasibility`, `tie_aware_preimage`, `through_r.flip_inverse`, `integer_plane_emitter` | Exact bounded integer realization and tie policy for admitted targets. `resize_null_preimage` is restricted, not a universal nonlinear scorer inverse. |
+| Joint Seg/Pose interval solve | `joint_seg_pose_rate.solve_interval_frame`, measured by `measure_joint_seg_pose_rate` | Emits exact integer resize numerators and a realized camera frame. `pose_frame0_inverse_solve_probe` is diagnostic; `v10_constructive_solver` is not wired to production archive construction. |
+| Rate/KKT selection | `evaluator_action_waterfill`, `solve_measured_waterfill`, `witness_sensitivity_bitalloc`, `variable_level_waterfill_allocator` | Exact action arithmetic and measured-secant allocation on their declared rows. The empirical secants do not prove a continuous global optimum. |
+| Byte-close receiver | `v10_production_receiver.build_production_archive` / `inflate_archive`; `v10_two_plane_timing_receiver` for full timing custody | Exact for two uint8 scorer planes, parse-back, resumable per-pair stages, and factor-2 realization. The new banked n12 A/B proves this path for a denominator-multiple positive-band treatment. Arbitrary interval-solver numerators not divisible by the resize denominator still lack a counted production codec. |
+| Score authority | local `score_inflated_raw` after decode; final `experiments/contest_auth_eval.py` guarded by `exact_eval_custody` | The former is `[macOS-CPU advisory]`; only exact archive bytes through the latter on the declared contest axis may move the pointer. |
+
+The exact stack used for the new measurement was: hash-bound SSD prepared chunk ->
+strict predictor decode -> deterministic one-bit scorer-plane residual treatment ->
+production packet/build/parse-back -> resumable production inflate -> exact numerator
+proof -> frozen local CPU SegNet/PoseNet. The missing global step is no longer “a
+receiver exists”; it is a compact predictor/program inside the roughly 216--244 KB
+box, plus an arbitrary-numerator serialization adapter only if the joint interval-solver
+chart is selected.
 
 ## 1. One invariant and the Einstein-frame change of coordinates
 
@@ -372,6 +414,24 @@ promise a hard-label gain; the fresh real-decode row supplies that fact:
 commit `b01cdbb9e4a807980f29e0fe615f37322167cd01` (PDF SHA-256
 `d2031206b0f680cea6bfd85c2403eddc351310263253228535b25851eb39e7f4`).
 
+### 3.3 Strong Stochastic Flow Maps: framing guard, not a decode lever
+
+The full 34-page primary PDF for arXiv:2606.01086, *Strong Stochastic Flow Maps*, was
+checked, including its method, proofs, training details, experiments, and limitations.
+Its transferable distinction is strong versus weak realization: matching a law is not
+enough when one decoded sample path must be coupled to the same driving noise. The paper
+constructs an Ito-map learner using tangent and semigroup constraints, shifted-Legendre
+Brownian coefficients with Chen relations, pathwise rough-path convergence, and
+self-distillation.
+
+That machinery is **not** a legal byte-saving decoder actuator here. Contest inflation
+must be deterministic and byte-identical, so the witness already requires the stronger
+single-realization contract; adding stochastic coefficients would add counted state or
+break reproducibility. A deterministic flow-map surrogate is retained only as a
+compress-time watch item if repeated temporal rollout becomes the measured bottleneck.
+No score, lower bound, or dispatch decision follows. MAIN should mirror the dated paper
+receipt into the external papers-checked ledger.
+
 ## 4. $0 verification charter and implemented specification
 
 The implementation adds, without modifying the archival experiment:
@@ -420,20 +480,25 @@ Every fixed-label candidate preserves exact packet size because PDW1 stores the 
 bytes raw.  Lossy-label controls deliberately change encoded length.  Every arm measures
 actual bytes and parse-back identity; neither property is inferred from source inspection.
 
-## 5. Completed unit, next unit, and gates
+## 5. Completed units and remaining gates
 
-The n24 **palette plus lossy-label component** tournament is complete at $0.  It is not
-a common-scale full-archive tournament and its output is a component candidate: it has
-no compact pose-compatible frame 0 and covers only 24 pairs.
+The n24 **palette plus lossy-label component** tournament and the matched banked n12
+**exact production-receiver A/B** are complete at $0. The former is an explicit-target
+wall characterization. The latter is a real two-frame archive comparison with Pose,
+but only on 12 pairs and `[macOS-CPU advisory]`; neither is a common-scale n600 contest
+tournament.
 
 Corrected promotion chain after the operating-point review:
 
 1. start from the banked v10 solved-distortion archive/receiver mechanism, preserving
    its exact lattice realization and scorer-plane capability;
-2. introduce a decode-to-RGB/trade-cells rate lever inside that mechanism and measure a
-   bounded byte-closed row as `(bytes, d_seg, projected S)`, with Pose scope explicit;
-3. refuse n600 while the Seg term alone exceeds the pointer; require frontier-magnitude
-   `d_seg` near the bank or a byte-closed exact-action trajectory below `0.1910828242`;
+2. **completed locally:** introduce a denominator-multiple scorer-plane rate lever and
+   measure matched `(bytes, d_seg, d_pose, projected exact S)` control/treatment rows;
+   the treatment saves 14.81% measured bytes but is Pose-infeasible and rate-dead;
+3. build a compact predictor/grammar inside the 216--244 KB distortion-dependent box,
+   or serialize arbitrary exact numerators if the joint interval-solver chart is used;
+   refuse n600 until a bounded row has frontier-feasible distortion and a plausible
+   exact-action trajectory below `0.1910828242`;
 4. only after that gate, add/retain the compact `xi` frame-0/frame-1 Pose stream, scale
    with preserved per-stage checkpoints, and measure exact PoseNet;
 5. build `archive.zip`, parse it back, run byte-identical inflate twice, and measure
@@ -454,8 +519,9 @@ unless a committed hash-bound **Ed25519-signed v2** operator authorization from 
 allowlisted trust-root approver, governed-admission marker, live
 matching lane claim, and executable backend resume ABI prove checkpoint/resume roundtrip
 and preserved atomic per-stage checkpoints. Declarative resume JSON is non-authorizing.
-The trust root is currently absent, so committed JSON is custody only and execution
-fails closed even after the resume ABI lands.
+The production trust root/authorization is currently absent, so the landed Ed25519 v2
+verification mechanism and test fixtures are custody/guard evidence only; they do not
+authorize execution.
 These are execution-surface blockers, not xi-family negatives. The operator directed
 zero-cost local pursuit, but the executable full-run gate remains closed until its
 separate signed authorization exists; paid dispatch remains operator-GO gated. The
@@ -499,6 +565,22 @@ before Pose or rate, this chart is infeasible against the pointer even with both
 terms set to zero. It characterizes the explicit-target realization wall; it is not a
 candidate or a launch predecessor.
 
+The correction was followed by a matched banked n12 production-receiver experiment:
+
+| exact receiver arm | measured archive bytes | local d_seg | local d_pose | DERIVED ceil-linear n600 bytes | DERIVED projected exact S | disposition |
+|---|---:|---:|---:|---:|---:|---|
+| settled scorer-plane control | 7,898,534 | 0.000127156576 | 0.000025392805 | 394,926,700 | 262.994129800 | frontier-scale distortion; rate-dead |
+| scorer-plane predictor residual, drop 1 low bit | 6,728,570 | 0.000497182210 | 0.005454401104 | 336,428,500 | 224.297193624 | saves 1,169,964 n12 bytes; distortion term alone exceeds pointer |
+
+Both archives strictly parsed back, inflated through resumable per-pair stages, and
+proved exact equality for 14,155,776 factor-2 numerator values. Scratch bytes were
+deleted only after the durable receipt bound the prepared bank, tool, codec, receiver,
+archive, packet, and inflated-output hashes. This closes a real denominator-multiple
+positive-band receiver path. It also narrows the blocker: the production receiver is
+not missing; the primary missing object is a compact predictor/program inside the byte
+box. A counted arbitrary-numerator codec remains secondary if the interval-solver chart
+is chosen.
+
 No new full-n600 in-box point was produced.  The existing settled R1 89,772-byte
 macOS-CPU advisory row remains a control, not this lane's result.  The attempted xi
 composition created neither packet nor receipt: the strict SSD preflight raised
@@ -511,6 +593,10 @@ byte-identical restore check. Exact custody and the heterogeneous cross-family e
 inventory are in `.omx/research/einstein_kolmogorov_crux_measurement_20260719.json`;
 the corrected bank-vs-wall comparison is in
 `.omx/research/einstein_kolmogorov_operating_point_correction_20260720.json`;
+the exact-receiver A/B is in
+`.omx/research/einstein_kolmogorov_banked_n12_ab_20260720.json`; the unified
+frontier-magnitude chart is
+`.omx/research/einstein_kolmogorov_frontier_magnitude_chart_20260720.json`;
 the executable state transition is in
 `einstein_kolmogorov_crux_DAG_FEED_20260719.md`.
 
@@ -521,15 +607,18 @@ the executable state transition is in
   `src/tac/canonical_equations/einstein_kolmogorov_crux_20260719.py` now provides
   `einstein_kolmogorov_crux_action_rate_contract_v1`: exact action arithmetic, byte-cap
   refusal, fixed-byte palette delta, and typed receipt-to-decision edges.  It binds the
-  exact aggregate measurement through canonical provenance and an empirical anchor;
-  registration remains research-only and cannot promote the scoped winner.
+  exact aggregate measurement and frontier-magnitude chart through canonical provenance
+  and two empirical anchors; registration remains research-only and cannot promote any
+  scoped row.
 - **DAG:** `FEED-EINSTEIN-KOLMOGOROV-20260719` must record the low-action-preimage obstruction,
   the n24 tournament receipt, the exact blocker to full archive composition, and the
   pointer non-delta.
 - **Unified action:** Seg, pose, and exact bytes are admitted only through the existing
   `cgauge_master_action_v1`; no proxy objective may promote a candidate.
-- **Sensitivity / bit allocation:** fill changes are zero-byte substitutions; any later
-  residual is ordered by the Fisher/margin necessity field and reverse-waterfill law.
+- **Sensitivity / bit allocation:** fill changes are zero-byte substitutions; the new
+  measured precision treatment supplies a real byte/Seg/Pose delta but fails the
+  distortion gate. Any later residual is ordered by the Fisher/margin necessity field
+  and reverse-waterfill law.
 - **Autopilot:** research-only until a full parse-back archive and contest-axis scorer
   row exist.  No dispatch hook is armed by this memo.
 - **Receiver-consumption bijection:** any downstream redesign must parse and consume
