@@ -1,0 +1,109 @@
+{
+  "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+  "bridge_diagnostic": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/einstein_kolmogorov_crux_v2_20260720T071044Z/.omx/tmp/einstein_kolmogorov_diag_runtime_20260720/diagnostic_receipt_v3_fix_once.json",
+    "sha256": "d6bd75185142c0d4d49c3cf07b2cf3948582624340de6e43c4910f454d90043c"
+  },
+  "classification": "A",
+  "external_review": {
+    "fix_commit": "261a2c8296049d6bef6a43f1aa545d653618a398",
+    "instance_count": 1,
+    "label": "ek3_review_same_packet",
+    "log_sha256": "839c91873b5d9508d237978c3648f7f033b00e78a3c3ab8f4a65f8ba244f53e4",
+    "review_text_sha256": "08686e1c1eeedcb38baabe2d85f07f7a56f23a83466d0878bc686cce27e32129",
+    "session_id": "019f7eb2-2598-7c22-9256-3157afb88252",
+    "verdict": "FIX_ONCE"
+  },
+  "measured_derived_assumed": {
+    "ASSUMED": [],
+    "DERIVED": [
+      "canonical score terms and projected total S via tac.contest_score",
+      "delta versus the settled 0.1910828242 bank and headroom versus the 264320-byte box"
+    ],
+    "MEASURED": [
+      "archive bytes, archive SHA-256, and identity with the originally scored packet",
+      "all 24 receiver pairs / 48 frames bit-exact against the numpy-fp32 oracle",
+      "capped frame-zero confirmation against the exact extracted archive/0.bin",
+      "the unchanged packet's previously completed all-600-pair d_seg and d_pose"
+    ],
+    "SETTLED_INPUT": [
+      "comparison bank score 0.1910828242",
+      "comparison byte box 264320"
+    ]
+  },
+  "n600_measurement_unchanged": {
+    "archive_bytes": 91062,
+    "archive_sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a",
+    "byte_box_headroom_derived": 173258,
+    "d_pose_measured": 126.30360158587386,
+    "d_seg_measured": 0.003555730183919271,
+    "delta_S_vs_bank_derived": 35.76434263946884,
+    "pairs_scored_measured": 600,
+    "projected_total_S_derived": 35.955425463668846,
+    "reason_not_rerun": "The review fix changes capped-confirmation matching and resume validation only; archive.zip and emitted receiver bytes are unchanged.",
+    "receipt_path": ".omx/research/einstein_kolmogorov_crux_v3_20260720.json",
+    "receipt_sha256": "7cbe7bd533bd8e2172cb86d885fb945d1d3de1431e7efcd1fabf5d3650160673",
+    "score_stage_path": ".omx/research/einstein_kolmogorov_crux_v3_n600_score_stage_20260720.json",
+    "score_stage_sha256": "979f83fde2324ac866d2fd9799dc00b71c9343cb32fa639432572cea00b0e48c"
+  },
+  "nested_levelset_report": {
+    "bit_exact_roundtrip_gate": {
+      "bit_exact": true,
+      "checked": true,
+      "frames_compared": 48,
+      "gate_pairs": 24,
+      "max_abs_uint8_diff": 0,
+      "n_frames_differing": 0,
+      "proves": "shipped inflate.py bit-identically implements the canonical generator on the int8-dequantized checkpoint over all 24 bounded pairs",
+      "reference": "tac.boundary_math.lever_b_levelset_generator.levelset_rgb_forward_numpy (numpy-fp32 oracle) + canonical FREE-table regen + reference R"
+    },
+    "byte_close": {
+      "archive_zip_bytes": 91062,
+      "archive_zip_sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a",
+      "inflate_py_bytes": 65459,
+      "inflate_py_sha256": "039f474795485ea2aaf6cf8e2a52eb4389acfb7697f1ebb76ffbba6884466811",
+      "total_0bin_bytes": 91916
+    },
+    "pose_carrier_confirmation": {
+      "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
+      "checked": true,
+      "d_pose_carrier_warp_f0_witness_f1": 149.22536370323496,
+      "d_pose_ceiling_gtf0_warpf0": 1.9578852175559536,
+      "d_pose_null_pose_blind_ref": 189.62,
+      "d_pose_unwarped_gtf0_witness_f1": 60.036661402069,
+      "frame0_decode_bit_exact": true,
+      "frame0_max_abs_uint8_diff": 0,
+      "frame0_n_frames_differing": 0,
+      "pairs": 24,
+      "pose_carrier_mode": "store_nothing",
+      "promotion_claim": false,
+      "training_side_vs_real_decode_parity": "IDENTICAL by construction against the exact capped archive/0.bin used by shipped decode"
+    }
+  },
+  "operator_redirect": {
+    "consumed": true,
+    "directive_window_utc": "2026-07-20T08:54:58Z/2026-07-20T08:59:03Z",
+    "effect": "This same-packet result is terminal negative evidence. Do not iterate the from-scratch packet; next work composes the proven C1 distortion capstone with the frontier rate solver at the joint three-axis KKT optimum."
+  },
+  "packet": {
+    "archive_bytes": 91062,
+    "archive_path": "/Volumes/VertigoDataTier/pact/evidence/einstein_kolmogorov_crux_v3_20260720_xi_strict_gate_n24/archive.zip",
+    "archive_sha256": "3555bafcccac0827225a87f07dc5b093381de3188560cb7002f2bf9ac2b37c6a",
+    "identical_to_scored_packet": true,
+    "member_0bin_bytes": 91916,
+    "member_0bin_sha256": "3f96832dd7e224125d723c654aa920dd1d9457f666c6063c4882754c10921a7e"
+  },
+  "pointer_moved": false,
+  "promotion_claim": false,
+  "research_only": true,
+  "schema": "einstein_kolmogorov_crux_v3_fix_once.v1",
+  "source_bindings": {
+    "byte_close_tool_sha256": "a5c55a1308145e367cdc1e65ffdc7df04a58c15bfdeeee7f30ab91206394e12c",
+    "contest_score_sha256": "372c407e6e2f62532f12a0a6aaab99fa675f2ada2a11348e0187bd5f278e196f",
+    "gt_cache_sha256": "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6",
+    "hard_oracle_module_sha256": "3168c0a2f6090067ba4027057215326f3705fd0f65f6da832cd4004726d4cf82",
+    "measurement_tool_sha256": "85b131bd31c375e6c47d9b3f5c39545fc626c24d0d102a481021668de7152cd4"
+  },
+  "utc": "2026-07-20T09:08:38Z",
+  "verdict_scope": "Post-review correction receipt for the unchanged same-packet local macOS CPU measurement only; not contest-CPU Linux x86_64 or contest-CUDA authority and cannot move the frontier pointer."
+}
