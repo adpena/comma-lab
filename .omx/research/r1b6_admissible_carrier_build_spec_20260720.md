@@ -52,4 +52,3 @@ deterministic model settings, source hashes, success-only scratch cleanup, and
 tests for stream/order/refusal arithmetic.  Python changes require two clean
 review-tracker passes and serializer commit.  MAIN must independently review
 the branch and rerun focused tests before landing.
-

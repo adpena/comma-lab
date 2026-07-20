@@ -45,4 +45,3 @@
   secant/QP-selected sign is a distinct formulation and remains open.
 
 Pointer `0.1910828242 [contest-CPU]` unchanged.  MAIN landing review required.
-
